@@ -405,12 +405,48 @@ export const useClaimStore = create<ClaimState>()(
           if (!state.currentClaim) return {};
           const newClaim = { ...state.currentClaim };
 
+          // Helper for parsing dates to YYYY-MM-DD for date inputs
+          const parseDate = (d: string) => {
+            if (!d) return '';
+            const t = d.split(' ')[0]; // remove time context
+            if (t.includes('-')) {
+              const p = t.split('-');
+              if (p[0].length === 4) return t;
+              if (p[2]?.length >= 4) return `${p[2].substring(0,4)}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+            }
+            if (t.includes('/')) {
+              const p = t.split('/');
+              if (p[2]?.length === 4) return `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+            }
+            return t;
+          };
+          
+          // Helper for fuel mapping
+          const formatFuel = (f: string) => {
+             if (!f) return '';
+             const up = f.toUpperCase();
+             if (up === 'PETROL') return 'Petrol';
+             if (up === 'DIESEL') return 'Diesel';
+             if (up.includes('PETROL') && up.includes('CNG')) return 'Petrol+CNG';
+             if (up.includes('PETROL') && up.includes('LPG')) return 'Petrol+LPG';
+             if (up === 'CNG') return 'CNG';
+             if (up === 'ELECTRIC' || up === 'EV') return 'Electric';
+             if (up === 'HYBRID') return 'Hybrid';
+             return f;
+          };
+
           // Mapping logic based on document key
           if (key === 'rc') {
+            const hpa = data.hypothecation || newClaim.vehicle.hpa;
+            const rlw = typeof data.gross_weight === 'string' ? data.gross_weight : String(data.gross_weight || newClaim.vehicle.rlw);
+            const yomStr = data.year_of_manufacture?.toString() || '';
+            const yomMatch = yomStr.match(/\b(19|20)\d{2}\b/);
+            const yom = yomMatch ? parseInt(yomMatch[0]) : newClaim.vehicle.yearOfManufacture;
+
             newClaim.vehicle = { 
               ...newClaim.vehicle,
               registrationNumber: data.registration_number || newClaim.vehicle.registrationNumber,
-              dateOfRegistration: data.date_of_registration || newClaim.vehicle.dateOfRegistration,
+              dateOfRegistration: parseDate(data.date_of_registration) || newClaim.vehicle.dateOfRegistration,
               chassisNumber: data.chassis_number || newClaim.vehicle.chassisNumber,
               engineNumber: data.engine_number || newClaim.vehicle.engineNumber,
               make: data.make || newClaim.vehicle.make,
@@ -418,16 +454,18 @@ export const useClaimStore = create<ClaimState>()(
               bodyType: data.body_type || newClaim.vehicle.bodyType,
               cubicCapacity: data.cubic_capacity || newClaim.vehicle.cubicCapacity,
               colour: data.colour || newClaim.vehicle.colour,
-              fuel: data.fuel || newClaim.vehicle.fuel,
+              fuel: formatFuel(data.fuel) || newClaim.vehicle.fuel,
               seatingCapacity: data.seating_capacity || newClaim.vehicle.seatingCapacity,
               unladenWeight: parseFloat(data.unladen_weight) || newClaim.vehicle.unladenWeight,
-              rlw: typeof data.gross_weight === 'string' ? data.gross_weight : String(data.gross_weight || newClaim.vehicle.rlw),
+              rlw: rlw,
+              registeredLoadWeight: rlw || newClaim.vehicle.registeredLoadWeight, // Update alias for UI
               classOfVehicle: data.class_of_vehicle || newClaim.vehicle.classOfVehicle,
               fitnessNo: data.fitness_cert_no || newClaim.vehicle.fitnessNo,
-              fitnessValidUpto: data.fitness_valid_upto || newClaim.vehicle.fitnessValidUpto,
+              fitnessValidUpto: parseDate(data.fitness_valid_upto) || newClaim.vehicle.fitnessValidUpto,
               route: data.route || newClaim.vehicle.route,
-              yearOfManufacture: data.year_of_manufacture || newClaim.vehicle.yearOfManufacture,
-              hpa: data.hypothecation || newClaim.vehicle.hpa,
+              yearOfManufacture: yom,
+              hpa: hpa,
+              hypothecation: hpa || newClaim.vehicle.hypothecation, // Update alias for UI
             };
             newClaim.policy = {
               ...newClaim.policy,
@@ -456,8 +494,8 @@ export const useClaimStore = create<ClaimState>()(
               insurerName: data.insurer_name && data.insurer_address ? `${data.insurer_name} ${data.insurer_address}` : data.insurer_name || newClaim.policy.insurerName,
               idv: data.idv || newClaim.policy.idv,
               hpa: data.hpa_with || newClaim.policy.hpa,
-              periodFrom: data.period_from || newClaim.policy.periodFrom,
-              periodTo: data.period_to || newClaim.policy.periodTo,
+              periodFrom: parseDate(data.period_from) || newClaim.policy.periodFrom,
+              periodTo: parseDate(data.period_to) || newClaim.policy.periodTo,
               policyIssuingOffice: data.policy_issuing_office || newClaim.policy.policyIssuingOffice,
               appointingOffice: data.appointing_office || newClaim.policy.appointingOffice,
               policyType: data.policy_type || newClaim.policy.policyType,
@@ -472,13 +510,13 @@ export const useClaimStore = create<ClaimState>()(
               name: data.holder_name || newClaim.driver.name,
               fatherHusbandName: data.father_or_husband_name || newClaim.driver.fatherHusbandName,
               relationType: data.relation_type || newClaim.driver.relationType,
-              dob: data.date_of_birth || newClaim.driver.dob,
+              dob: parseDate(data.date_of_birth) || newClaim.driver.dob,
               address: data.address || newClaim.driver.address,
-              dateOfIssue: data.date_of_issue || newClaim.driver.dateOfIssue,
+              dateOfIssue: parseDate(data.date_of_issue) || newClaim.driver.dateOfIssue,
               issuingAuthority: data.issuing_authority || data.rto || newClaim.driver.issuingAuthority,
               vehicleClass: data.vehicle_classes || newClaim.driver.vehicleClass,
-              validityNonTransport: data.validity_non_transport || newClaim.driver.validityNonTransport,
-              validityTransport: data.validity_transport || newClaim.driver.validityTransport,
+              validityNonTransport: parseDate(data.validity_non_transport) || newClaim.driver.validityNonTransport,
+              validityTransport: parseDate(data.validity_transport) || newClaim.driver.validityTransport,
             };
             newClaim.spotDetails = {
               ...newClaim.spotDetails,
@@ -487,10 +525,10 @@ export const useClaimStore = create<ClaimState>()(
               mdlNo: data.licence_number || newClaim.spotDetails.mdlNo,
               dlAuthority: data.issuing_authority || data.rto || newClaim.spotDetails.dlAuthority,
               dlType: data.vehicle_classes || newClaim.spotDetails.dlType,
-              dlIssueDate: data.date_of_issue || newClaim.spotDetails.dlIssueDate,
+              dlIssueDate: parseDate(data.date_of_issue) || newClaim.spotDetails.dlIssueDate,
               dlRelation: data.relation_type || newClaim.spotDetails.dlRelation,
-              dlValidNT: data.validity_non_transport || newClaim.spotDetails.dlValidNT,
-              dlValidT: data.validity_transport || newClaim.spotDetails.dlValidT,
+              dlValidNT: parseDate(data.validity_non_transport) || newClaim.spotDetails.dlValidNT,
+              dlValidT: parseDate(data.validity_transport) || newClaim.spotDetails.dlValidT,
             };
           } else if (key === 'claim') {
              newClaim.policy = {
@@ -514,7 +552,7 @@ export const useClaimStore = create<ClaimState>()(
                causeOfAccident: data.cause_of_accident || newClaim.accident.causeOfAccident,
                placeOfSurvey: data.workshop_name || data.place_of_repair || newClaim.accident.placeOfSurvey,
                thirdPartyDetails: data.third_party_details || newClaim.accident.thirdPartyDetails,
-               dateAndTime: data.date_of_accident ? `${data.date_of_accident}T${(data.time_of_accident || '00:00').substring(0, 5)}` : newClaim.accident.dateAndTime,
+               dateAndTime: data.date_of_accident ? `${parseDate(data.date_of_accident)}T${(data.time_of_accident || '00:00').substring(0, 5)}` : newClaim.accident.dateAndTime,
              };
              newClaim.spotDetails = {
                ...newClaim.spotDetails,
@@ -534,8 +572,8 @@ export const useClaimStore = create<ClaimState>()(
                ...newClaim.spotDetails,
                permitNo: data.permit_no || newClaim.spotDetails.permitNo,
                permitType: data.permit_type || newClaim.spotDetails.permitType,
-               permitFrom: data.validity_from || newClaim.spotDetails.permitFrom,
-               permitTo: data.validity_to || newClaim.spotDetails.permitTo,
+               permitFrom: parseDate(data.validity_from) || newClaim.spotDetails.permitFrom,
+               permitTo: parseDate(data.validity_to) || newClaim.spotDetails.permitTo,
              };
              if (data.route) newClaim.vehicle.route = data.route;
              const gvwStr = String(data.gross_vehicle_weight_kg || '0').replace(/[^0-9.]/g, '');
@@ -546,13 +584,13 @@ export const useClaimStore = create<ClaimState>()(
              newClaim.spotDetails = {
                ...newClaim.spotDetails,
                authNo: data.auth_no || newClaim.spotDetails.authNo,
-               authValid: data.validity_to || newClaim.spotDetails.authValid,
+               authValid: parseDate(data.validity_to) || newClaim.spotDetails.authValid,
              };
           } else if (key === 'fitness') {
              newClaim.vehicle.fitnessNo = data.fitness_cert_no || newClaim.vehicle.fitnessNo;
              newClaim.spotDetails.fitnessNo = data.fitness_cert_no || newClaim.spotDetails.fitnessNo;
-             newClaim.vehicle.fitnessValidUpto = data.validity_to || newClaim.vehicle.fitnessValidUpto;
-             newClaim.spotDetails.fitnessValid = data.validity_to || newClaim.spotDetails.fitnessValid;
+             newClaim.vehicle.fitnessValidUpto = parseDate(data.validity_to) || newClaim.vehicle.fitnessValidUpto;
+             newClaim.spotDetails.fitnessValid = parseDate(data.validity_to) || newClaim.spotDetails.fitnessValid;
              
              const gvwStr = String(data.gross_vehicle_weight_kg || '0').replace(/[^0-9.]/g, '');
              const ulwStr = String(data.unladen_weight_kg || '0').replace(/[^0-9.]/g, '');
@@ -562,7 +600,7 @@ export const useClaimStore = create<ClaimState>()(
              newClaim.spotDetails = {
                ...newClaim.spotDetails,
                challanNo: data.challan_no || newClaim.spotDetails.challanNo,
-               challanDate: data.challan_date || newClaim.spotDetails.challanDate,
+               challanDate: parseDate(data.challan_date) || newClaim.spotDetails.challanDate,
                loadOrigin: data.origin || newClaim.spotDetails.loadOrigin,
                loadDest: data.destination || newClaim.spotDetails.loadDest,
                loadDesc: data.goods_description || newClaim.spotDetails.loadDesc,
