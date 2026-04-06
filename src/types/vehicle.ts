@@ -35,9 +35,12 @@ export interface VehicleDetails {
   fuel: FuelType | string;
   dateOfRegistration: string; // ISO date
   hypothecation: string;
+  hpa: string; // Alias for consistency
   fitnessNo: string;
+  fitnessValidUpto: string; // ISO date
   route: string;
   grossWeight: number | null;
+  rlw: string; // Registered Load Weight (string for commercial)
   unladenWeight: number | null;
   registeredLoadWeight: string;
   actualPayload: string;
@@ -51,15 +54,20 @@ export interface VehicleDetails {
 export interface DriverDetails {
   name: string;
   parentName: string;
+  fatherHusbandName: string; // Mirror AI key
   relationType: DLRelation;
   licenceNumber: string;
-  licenseNumber: string; // Alias for spot report compatibility
+  licenseNumber: string;
   dateOfBirth: string; // ISO date
+  dob: string; // Alias
   dateOfIssue: string; // ISO date
+  address: string; // Added for AI mapping
   issuingAuthority: string;
   vehicleClasses: string;
+  vehicleClass: string; // Alias
   validityNonTransport: string; // ISO date
   validityTransport: string; // ISO date
+  validTo: string; // Composite alias
   verificationStatus: DLVerificationStatus;
   invalidRemarks: string;
 }
@@ -78,6 +86,7 @@ export interface PolicyDetails {
   policyIssuingOffice: string;
   appointingOffice: string;
   hpaWith: string;
+  hpa: string; // Alias
 }
 
 export interface AccidentDetails {

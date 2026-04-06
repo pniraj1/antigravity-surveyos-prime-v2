@@ -61,6 +61,7 @@ interface ClaimState {
   // AI Data
   setExtractedData: (key: string, data: any) => void;
   applyExtractedData: (key: string, data: any) => void;
+  reconcileField: (path: string, value: any) => void;
 
   // Claims list
   setClaimsList: (claims: ClaimState['claimsList']) => void;
@@ -406,16 +407,54 @@ export const useClaimStore = create<ClaimState>()(
 
           // Mapping logic based on document key
           if (key === 'rc') {
-            newClaim.vehicle = { ...newClaim.vehicle, ...data };
-            // Map specific fields if the keys differ
-            if (data.registration_number) newClaim.vehicle.registrationNumber = data.registration_number;
-            if (data.date_of_registration) newClaim.vehicle.dateOfRegistration = data.date_of_registration;
+            newClaim.vehicle = { 
+              ...newClaim.vehicle,
+              registrationNumber: data.registration_number || newClaim.vehicle.registrationNumber,
+              dateOfRegistration: data.date_of_registration || newClaim.vehicle.dateOfRegistration,
+              chassisNumber: data.chassis_number || newClaim.vehicle.chassisNumber,
+              engineNumber: data.engine_number || newClaim.vehicle.engineNumber,
+              make: data.make || newClaim.vehicle.make,
+              model: data.model || newClaim.vehicle.model,
+              bodyType: data.body_type || newClaim.vehicle.bodyType,
+              cubicCapacity: data.cubic_capacity || newClaim.vehicle.cubicCapacity,
+              colour: data.colour || newClaim.vehicle.colour,
+              fuel: data.fuel || newClaim.vehicle.fuel,
+              seatingCapacity: data.seating_capacity || newClaim.vehicle.seatingCapacity,
+              unladenWeight: data.unladen_weight || newClaim.vehicle.unladenWeight,
+              rlw: data.gross_weight || newClaim.vehicle.rlw,
+              classOfVehicle: data.class_of_vehicle || newClaim.vehicle.classOfVehicle,
+              fitnessNo: data.fitness_cert_no || newClaim.vehicle.fitnessNo,
+              fitnessValidUpto: data.fitness_valid_upto || newClaim.vehicle.fitnessValidUpto,
+              route: data.route || newClaim.vehicle.route,
+              yearOfManufacture: data.year_of_manufacture || newClaim.vehicle.yearOfManufacture,
+              hpa: data.hypothecation || newClaim.vehicle.hpa,
+            };
           } else if (key === 'policy') {
-            newClaim.policy = { ...newClaim.policy, ...data };
-            if (data.policy_number) newClaim.policy.policyNumber = data.policy_number;
+            newClaim.policy = { 
+              ...newClaim.policy,
+              policyNumber: data.policy_number || newClaim.policy.policyNumber,
+              insuredName: data.insured_name || newClaim.policy.insuredName,
+              insurerName: data.insurer_name || newClaim.policy.insurerName,
+              idv: data.idv || newClaim.policy.idv,
+              hpa: data.hpa_with || newClaim.policy.hpa,
+              periodFrom: data.period_from || newClaim.policy.periodFrom,
+              periodTo: data.period_to || newClaim.policy.periodTo,
+            };
+            if (data.registration_number) newClaim.vehicle.registrationNumber = data.registration_number;
+            if (data.chassis_number) newClaim.vehicle.chassisNumber = data.chassis_number;
+            if (data.engine_number) newClaim.vehicle.engineNumber = data.engine_number;
           } else if (key === 'dl') {
-            newClaim.driver = { ...newClaim.driver, ...data };
-            if (data.licence_number) newClaim.driver.licenceNumber = data.licence_number;
+            newClaim.driver = { 
+              ...newClaim.driver,
+              licenceNumber: data.licence_number || newClaim.driver.licenceNumber,
+              name: data.holder_name || newClaim.driver.name,
+              fatherHusbandName: data.father_or_husband_name || newClaim.driver.fatherHusbandName,
+              dob: data.date_of_birth || newClaim.driver.dob,
+              address: data.address || newClaim.driver.address,
+              issuingAuthority: data.issuing_authority || newClaim.driver.issuingAuthority,
+              vehicleClass: data.vehicle_classes || newClaim.driver.vehicleClass,
+              validTo: data.validity_transport || data.validity_non_transport || newClaim.driver.validTo,
+            };
           } else if (key === 'final-bill') {
             newClaim.billCheck = {
               billNo: data.bill_number || '',
@@ -476,6 +515,31 @@ export const useClaimStore = create<ClaimState>()(
             newClaim.assessmentRows = [...newClaim.assessmentRows, ...newRows];
             if (data.estimate_date) newClaim.accident.dateAndTime = data.estimate_date;
             if (data.workshop_name) newClaim.accident.placeOfSurvey = data.workshop_name;
+          }
+
+          return {
+            currentClaim: { ...newClaim, updatedAt: new Date().toISOString() },
+            isDirty: true,
+          };
+        });
+      },
+
+      reconcileField: (path, value) => {
+        set((state) => {
+          if (!state.currentClaim) return {};
+          const newClaim = { ...state.currentClaim };
+          
+          // Simple deep set for "top.sub" paths
+          const parts = path.split('.');
+          if (parts.length === 2) {
+            const [top, sub] = parts;
+            (newClaim as any)[top] = {
+              ...(newClaim as any)[top],
+              [sub]: value
+            };
+          } else {
+            // Handle root level if needed (though mapping usually uses path.sub)
+            (newClaim as any)[path] = value;
           }
 
           return {

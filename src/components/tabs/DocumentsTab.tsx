@@ -7,8 +7,11 @@ import { uploadFileToDrive } from '@/lib/drive';
 import {
   FileText, Sparkles, Loader2, CheckCircle2, Car, CreditCard,
   FileCheck, Wrench, Camera, ScrollText, Receipt, Shield, AlertTriangle,
-  Upload, Truck,
+  Upload, Truck, Database,
 } from 'lucide-react';
+import { ReconciliationDialog } from './reconciliation/ReconciliationDialog';
+import { getReconciliationFields } from '@/lib/ai/reconciliation';
+import { useState, useMemo } from 'react';
 
 // ─── Document Slot Definitions ──────────────────────────────────────────────
 const DOC_GROUPS = [
@@ -54,6 +57,12 @@ export function DocumentsTab() {
   const currentClaim = useClaimStore(s => s.currentClaim);
   const extractedDocs = currentClaim?.extractedData ?? {};
   const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview } = useAIExtraction();
+  const [isReconOpen, setIsReconOpen] = useState(false);
+
+  const conflicts = useMemo(() => {
+    if (!currentClaim) return [];
+    return getReconciliationFields(currentClaim).filter(f => f.hasConflict);
+  }, [currentClaim]);
 
   if (!currentClaim) return null;
 
@@ -143,6 +152,52 @@ export function DocumentsTab() {
               {progress || 'Scanning document...'}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Conflict Alert Banner ─────────────────────────── */}
+      {conflicts.length > 0 && !isProcessing && (
+        <div
+          className="mx-6 lg:mx-12 mt-6 px-6 py-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 border"
+          style={{
+            background: '#FFF7ED',
+            borderColor: '#FFEDD5',
+            boxShadow: '0 4px 15px rgba(251,146,60,0.1)',
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
+              <AlertTriangle size={20} />
+            </div>
+            <div>
+              <div className="text-sm font-black text-orange-900 uppercase tracking-tight">
+                Data Discrepancies Detected
+              </div>
+              <div className="text-xs font-medium text-orange-700/80">
+                {conflicts.length} fields have conflicting values across your scanned RC, Policy, or DL.
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => setIsReconOpen(true)}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black bg-orange-600 text-white hover:bg-orange-700 transition-all shadow-lg shadow-orange-200 active:scale-95"
+          >
+            <Database size={14} />
+            OPEN RECONCILIATION HUB
+          </button>
+        </div>
+      )}
+
+      {/* ── Manually Open Hub Hub ────────────────────────────── */}
+      {scannedCount > 1 && conflicts.length === 0 && !isProcessing && (
+        <div className="mx-6 lg:mx-12 mt-6 flex justify-end">
+           <button
+            onClick={() => setIsReconOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-white border border-border text-muted-foreground hover:text-primary hover:border-primary/30 transition-all active:scale-95"
+          >
+            <Database size={12} />
+            Data Reconciliation Hub
+          </button>
         </div>
       )}
 
@@ -279,6 +334,12 @@ export function DocumentsTab() {
         onConfirm={confirmApply}
         title={reviewData?.key || ''}
         data={reviewData?.data}
+      />
+
+      {/* AI Reconciliation Hub */}
+      <ReconciliationDialog
+        isOpen={isReconOpen}
+        onClose={() => setIsReconOpen(false)}
       />
     </div>
   );
