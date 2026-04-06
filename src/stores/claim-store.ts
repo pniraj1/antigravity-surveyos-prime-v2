@@ -420,8 +420,8 @@ export const useClaimStore = create<ClaimState>()(
               colour: data.colour || newClaim.vehicle.colour,
               fuel: data.fuel || newClaim.vehicle.fuel,
               seatingCapacity: data.seating_capacity || newClaim.vehicle.seatingCapacity,
-              unladenWeight: data.unladen_weight || newClaim.vehicle.unladenWeight,
-              rlw: data.gross_weight || newClaim.vehicle.rlw,
+              unladenWeight: parseFloat(data.unladen_weight) || newClaim.vehicle.unladenWeight,
+              rlw: typeof data.gross_weight === 'string' ? data.gross_weight : String(data.gross_weight || newClaim.vehicle.rlw),
               classOfVehicle: data.class_of_vehicle || newClaim.vehicle.classOfVehicle,
               fitnessNo: data.fitness_cert_no || newClaim.vehicle.fitnessNo,
               fitnessValidUpto: data.fitness_valid_upto || newClaim.vehicle.fitnessValidUpto,
@@ -429,16 +429,38 @@ export const useClaimStore = create<ClaimState>()(
               yearOfManufacture: data.year_of_manufacture || newClaim.vehicle.yearOfManufacture,
               hpa: data.hypothecation || newClaim.vehicle.hpa,
             };
+            newClaim.policy = {
+              ...newClaim.policy,
+              insuredName: data.owner_name || newClaim.policy.insuredName,
+              insuredAddress: data.address || newClaim.policy.insuredAddress,
+            };
+            
+            const gvwStr = String(data.gross_weight || '0').replace(/[^0-9.]/g, '');
+            const ulwStr = String(data.unladen_weight || '0').replace(/[^0-9.]/g, '');
+            const gvw = gvwStr ? Math.round(parseFloat(gvwStr)) : 0;
+            const ulw = ulwStr ? Math.round(parseFloat(ulwStr)) : 0;
+            
+            newClaim.spotDetails = {
+              ...newClaim.spotDetails,
+              gvw: gvw || newClaim.spotDetails.gvw,
+              ulw: ulw || newClaim.spotDetails.ulw,
+              loadCapacity: (gvw && ulw && gvw > ulw) ? (gvw - ulw) : newClaim.spotDetails.loadCapacity,
+            };
           } else if (key === 'policy') {
             newClaim.policy = { 
               ...newClaim.policy,
               policyNumber: data.policy_number || newClaim.policy.policyNumber,
               insuredName: data.insured_name || newClaim.policy.insuredName,
-              insurerName: data.insurer_name || newClaim.policy.insurerName,
+              insuredAddress: data.insured_address || newClaim.policy.insuredAddress,
+              insuredMobile: data.insured_mobile || newClaim.policy.insuredMobile,
+              insurerName: data.insurer_name && data.insurer_address ? `${data.insurer_name} ${data.insurer_address}` : data.insurer_name || newClaim.policy.insurerName,
               idv: data.idv || newClaim.policy.idv,
               hpa: data.hpa_with || newClaim.policy.hpa,
               periodFrom: data.period_from || newClaim.policy.periodFrom,
               periodTo: data.period_to || newClaim.policy.periodTo,
+              policyIssuingOffice: data.policy_issuing_office || newClaim.policy.policyIssuingOffice,
+              appointingOffice: data.appointing_office || newClaim.policy.appointingOffice,
+              policyType: data.policy_type || newClaim.policy.policyType,
             };
             if (data.registration_number) newClaim.vehicle.registrationNumber = data.registration_number;
             if (data.chassis_number) newClaim.vehicle.chassisNumber = data.chassis_number;
@@ -449,12 +471,104 @@ export const useClaimStore = create<ClaimState>()(
               licenceNumber: data.licence_number || newClaim.driver.licenceNumber,
               name: data.holder_name || newClaim.driver.name,
               fatherHusbandName: data.father_or_husband_name || newClaim.driver.fatherHusbandName,
+              relationType: data.relation_type || newClaim.driver.relationType,
               dob: data.date_of_birth || newClaim.driver.dob,
               address: data.address || newClaim.driver.address,
-              issuingAuthority: data.issuing_authority || newClaim.driver.issuingAuthority,
+              dateOfIssue: data.date_of_issue || newClaim.driver.dateOfIssue,
+              issuingAuthority: data.issuing_authority || data.rto || newClaim.driver.issuingAuthority,
               vehicleClass: data.vehicle_classes || newClaim.driver.vehicleClass,
-              validTo: data.validity_transport || data.validity_non_transport || newClaim.driver.validTo,
+              validityNonTransport: data.validity_non_transport || newClaim.driver.validityNonTransport,
+              validityTransport: data.validity_transport || newClaim.driver.validityTransport,
             };
+            newClaim.spotDetails = {
+              ...newClaim.spotDetails,
+              driverName: data.holder_name || newClaim.spotDetails.driverName,
+              dlParentName: data.father_or_husband_name || newClaim.spotDetails.dlParentName,
+              mdlNo: data.licence_number || newClaim.spotDetails.mdlNo,
+              dlAuthority: data.issuing_authority || data.rto || newClaim.spotDetails.dlAuthority,
+              dlType: data.vehicle_classes || newClaim.spotDetails.dlType,
+              dlIssueDate: data.date_of_issue || newClaim.spotDetails.dlIssueDate,
+              dlRelation: data.relation_type || newClaim.spotDetails.dlRelation,
+              dlValidNT: data.validity_non_transport || newClaim.spotDetails.dlValidNT,
+              dlValidT: data.validity_transport || newClaim.spotDetails.dlValidT,
+            };
+          } else if (key === 'claim') {
+             newClaim.policy = {
+               ...newClaim.policy,
+               claimNumber: data.claim_number || newClaim.policy.claimNumber,
+               policyNumber: data.policy_number || newClaim.policy.policyNumber,
+               insuredName: data.insured_name || newClaim.policy.insuredName,
+             };
+             newClaim.vehicle = {
+               ...newClaim.vehicle,
+               registrationNumber: data.vehicle_number || newClaim.vehicle.registrationNumber,
+             };
+             newClaim.driver = {
+               ...newClaim.driver,
+               name: data.driver_name || newClaim.driver.name,
+               licenceNumber: data.driver_licence_no || newClaim.driver.licenceNumber,
+             };
+             newClaim.accident = {
+               ...newClaim.accident,
+               placeOfAccident: data.place_of_accident || newClaim.accident.placeOfAccident,
+               causeOfAccident: data.cause_of_accident || newClaim.accident.causeOfAccident,
+               placeOfSurvey: data.workshop_name || data.place_of_repair || newClaim.accident.placeOfSurvey,
+               thirdPartyDetails: data.third_party_details || newClaim.accident.thirdPartyDetails,
+               dateAndTime: data.date_of_accident ? `${data.date_of_accident}T${(data.time_of_accident || '00:00').substring(0, 5)}` : newClaim.accident.dateAndTime,
+             };
+             newClaim.spotDetails = {
+               ...newClaim.spotDetails,
+               surveyPlace: data.workshop_name || data.place_of_repair || newClaim.spotDetails.surveyPlace,
+               tpDetails: data.third_party_details || newClaim.spotDetails.tpDetails,
+               driverName: data.driver_name || newClaim.spotDetails.driverName,
+               mdlNo: data.driver_licence_no || newClaim.spotDetails.mdlNo,
+             };
+             if (data.third_party_details && data.third_party_details.toLowerCase() !== 'nil') {
+                const s = data.third_party_details.toLowerCase();
+                const v = (s.includes('injur') || s.includes('death')) && (s.includes('damage') || s.includes('property')) ? 'both' 
+                          : s.includes('injur') || s.includes('death') ? 'tppi' : 'tppd';
+                newClaim.spotDetails.tpInvolved = v;
+             }
+          } else if (key === 'permit') {
+             newClaim.spotDetails = {
+               ...newClaim.spotDetails,
+               permitNo: data.permit_no || newClaim.spotDetails.permitNo,
+               permitType: data.permit_type || newClaim.spotDetails.permitType,
+               permitFrom: data.validity_from || newClaim.spotDetails.permitFrom,
+               permitTo: data.validity_to || newClaim.spotDetails.permitTo,
+             };
+             if (data.route) newClaim.vehicle.route = data.route;
+             const gvwStr = String(data.gross_vehicle_weight_kg || '0').replace(/[^0-9.]/g, '');
+             const ulwStr = String(data.unladen_weight_kg || '0').replace(/[^0-9.]/g, '');
+             if (gvwStr) newClaim.spotDetails.gvw = Math.round(parseFloat(gvwStr));
+             if (ulwStr) newClaim.spotDetails.ulw = Math.round(parseFloat(ulwStr));
+          } else if (key === 'auth') {
+             newClaim.spotDetails = {
+               ...newClaim.spotDetails,
+               authNo: data.auth_no || newClaim.spotDetails.authNo,
+               authValid: data.validity_to || newClaim.spotDetails.authValid,
+             };
+          } else if (key === 'fitness') {
+             newClaim.vehicle.fitnessNo = data.fitness_cert_no || newClaim.vehicle.fitnessNo;
+             newClaim.spotDetails.fitnessNo = data.fitness_cert_no || newClaim.spotDetails.fitnessNo;
+             newClaim.vehicle.fitnessValidUpto = data.validity_to || newClaim.vehicle.fitnessValidUpto;
+             newClaim.spotDetails.fitnessValid = data.validity_to || newClaim.spotDetails.fitnessValid;
+             
+             const gvwStr = String(data.gross_vehicle_weight_kg || '0').replace(/[^0-9.]/g, '');
+             const ulwStr = String(data.unladen_weight_kg || '0').replace(/[^0-9.]/g, '');
+             if (gvwStr) newClaim.spotDetails.gvw = Math.round(parseFloat(gvwStr));
+             if (ulwStr) newClaim.spotDetails.ulw = Math.round(parseFloat(ulwStr));
+          } else if (key === 'lok-challan') {
+             newClaim.spotDetails = {
+               ...newClaim.spotDetails,
+               challanNo: data.challan_no || newClaim.spotDetails.challanNo,
+               challanDate: data.challan_date || newClaim.spotDetails.challanDate,
+               loadOrigin: data.origin || newClaim.spotDetails.loadOrigin,
+               loadDest: data.destination || newClaim.spotDetails.loadDest,
+               loadDesc: data.goods_description || newClaim.spotDetails.loadDesc,
+               actualLoad: parseFloat(data.weight_kg) || newClaim.spotDetails.actualLoad,
+             };
+             newClaim.vehicle.actualPayload = data.weight_kg || newClaim.vehicle.actualPayload;
           } else if (key === 'final-bill') {
             newClaim.billCheck = {
               billNo: data.bill_number || '',
