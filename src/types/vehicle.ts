@@ -40,9 +40,12 @@ export interface VehicleDetails {
   grossWeight: number | null;
   unladenWeight: number | null;
   registeredLoadWeight: string;
+  actualPayload: string;
   odometer: string;
   preAccidentCondition: string;
+  condition: string; // Alias for spot report compatibility
   seatingCapacity: string;
+  isCommercial: boolean;
 }
 
 export interface DriverDetails {
@@ -50,6 +53,7 @@ export interface DriverDetails {
   parentName: string;
   relationType: DLRelation;
   licenceNumber: string;
+  licenseNumber: string; // Alias for spot report compatibility
   dateOfBirth: string; // ISO date
   dateOfIssue: string; // ISO date
   issuingAuthority: string;
@@ -82,6 +86,8 @@ export interface AccidentDetails {
   causeOfAccident: string;
   dateOfSurvey: string; // ISO date
   placeOfSurvey: string;
+  policeStation: string;
+  firNumber: string;
   thirdPartyDetails: string;
 }
 

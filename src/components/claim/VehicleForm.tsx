@@ -25,7 +25,17 @@ export function VehicleDetailsForm() {
               value={v.registrationNumber}
               onChange={(e) => updateVehicle({ registrationNumber: e.target.value.toUpperCase() })}
               placeholder="e.g. MH01AB1234"
-              className="uppercase"
+              className="uppercase font-mono font-bold"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="v-class">Class of Vehicle</Label>
+            <Input
+              id="v-class"
+              value={v.classOfVehicle}
+              onChange={(e) => updateVehicle({ classOfVehicle: e.target.value })}
+              placeholder="e.g. LMV PE"
             />
           </div>
 
@@ -61,12 +71,22 @@ export function VehicleDetailsForm() {
           </div>
 
           <div className="space-y-1">
+            <Label htmlFor="v-body">Body Type</Label>
+            <Input
+              id="v-body"
+              value={v.bodyType}
+              onChange={(e) => updateVehicle({ bodyType: e.target.value })}
+              placeholder="e.g. SALOON / HATCHBACK"
+            />
+          </div>
+
+          <div className="space-y-1">
             <Label htmlFor="v-chassis">Chassis No.</Label>
             <Input
               id="v-chassis"
               value={v.chassisNumber}
               onChange={(e) => updateVehicle({ chassisNumber: e.target.value.toUpperCase() })}
-              className="uppercase"
+              className="uppercase font-mono"
             />
           </div>
 
@@ -76,7 +96,7 @@ export function VehicleDetailsForm() {
               id="v-engine"
               value={v.engineNumber}
               onChange={(e) => updateVehicle({ engineNumber: e.target.value.toUpperCase() })}
-              className="uppercase"
+              className="uppercase font-mono"
             />
           </div>
 
@@ -143,11 +163,39 @@ export function VehicleDetailsForm() {
           </div>
 
           <div className="space-y-1">
+            <Label htmlFor="v-rlw">Registered Load Weight (RLW)</Label>
+            <Input
+              id="v-rlw"
+              value={v.registeredLoadWeight}
+              onChange={(e) => updateVehicle({ registeredLoadWeight: e.target.value })}
+              placeholder="e.g. 1500 KG"
+            />
+          </div>
+
+          <div className="space-y-1">
             <Label htmlFor="v-seats">Seating Capacity</Label>
             <Input
               id="v-seats"
               value={v.seatingCapacity}
               onChange={(e) => updateVehicle({ seatingCapacity: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="v-fitness">Fitness Number/Expiry</Label>
+            <Input
+              id="v-fitness"
+              value={v.fitnessNo}
+              onChange={(e) => updateVehicle({ fitnessNo: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="v-route">Route / Permit</Label>
+            <Input
+              id="v-route"
+              value={v.route}
+              onChange={(e) => updateVehicle({ route: e.target.value })}
             />
           </div>
 

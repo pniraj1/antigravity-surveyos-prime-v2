@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 
 // ─── PDF Document Imports ───────────────────────────────────────────────────
 import { SurveyReportDocument } from '@/components/pdf/SurveyReportDocument';
+import { SpotReportDocument } from '@/components/pdf/SpotReportDocument';
 import { UIICReportDocument } from '@/components/pdf/UIICReportDocument';
 import { BillCheckDocument } from '@/components/pdf/BillCheckDocument';
 import { FeeBillDocument } from '@/components/pdf/FeeBillDocument';
@@ -40,9 +41,10 @@ function PDFLoadingFallback() {
 
 // ─── Format Options ──────────────────────────────────────────────────────────
 // ─── Report Types & Formats ──────────────────────────────────────────────────
-type ReportType = 'survey' | 'bill-check' | 'fee-bill';
+type ReportType = 'spot' | 'survey' | 'bill-check' | 'fee-bill';
 
 const REPORT_TYPES = [
+  { id: 'spot',       label: 'Spot Report',         icon: <FileText size={16} />,     color: '#B91C1C' },
   { id: 'survey',     label: 'Final Survey Report', icon: <FileText size={16} />,     color: '#0D1B2A' },
   { id: 'bill-check', label: 'Bill Check Report',   icon: <CheckCircle2 size={16} />, color: '#059669' },
   { id: 'fee-bill',   label: 'Fee Bill / Invoice',  icon: <Receipt size={16} />,     color: '#D4AF37' },
@@ -106,13 +108,18 @@ export function ReportTab() {
   };
 
   const regNo = currentClaim.vehicle.registrationNumber || 'DRAFT';
-  const pdfFilename = activeReport === 'survey' 
-    ? (format === 'uiic' ? `${regNo}-UIIC-Report.pdf` : `${regNo}-Report.pdf`)
-    : activeReport === 'bill-check' ? `${regNo}-Bill-Check.pdf` : `${regNo}-Fee-Bill.pdf`;
+  const pdfFilename = activeReport === 'spot'
+    ? `${regNo}-Spot-Report.pdf`
+    : activeReport === 'survey' 
+      ? (format === 'uiic' ? `${regNo}-UIIC-Report.pdf` : `${regNo}-Report.pdf`)
+      : activeReport === 'bill-check' ? `${regNo}-Bill-Check.pdf` : `${regNo}-Fee-Bill.pdf`;
 
   // Determine active document
   let ActiveDocument = <SurveyReportDocument claim={currentClaim} summary={safeSummary} />;
-  if (activeReport === 'survey' && format === 'uiic') {
+  
+  if (activeReport === 'spot') {
+    ActiveDocument = <SpotReportDocument claim={currentClaim} />;
+  } else if (activeReport === 'survey' && format === 'uiic') {
     ActiveDocument = <UIICReportDocument claim={currentClaim} summary={safeSummary} profile={profile} />;
   } else if (activeReport === 'bill-check') {
     ActiveDocument = <BillCheckDocument claim={currentClaim} />;

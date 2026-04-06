@@ -64,6 +64,24 @@ export function AccidentDetailsForm() {
               onChange={(e) => updateAccident({ placeOfSurvey: e.target.value })}
             />
           </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="a-police">Police Station</Label>
+            <Input
+              id="a-police"
+              value={a.policeStation}
+              onChange={(e) => updateAccident({ policeStation: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="a-fir">FIR / Diary No.</Label>
+            <Input
+              id="a-fir"
+              value={a.firNumber}
+              onChange={(e) => updateAccident({ firNumber: e.target.value })}
+            />
+          </div>
         </div>
       </CardContent>
     </Card>

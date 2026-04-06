@@ -22,6 +22,8 @@ export interface ClaimData {
   surveyType: SurveyType;
   vehicleType: VehicleType;
   depreciationType: DepreciationType;
+  /** Whether the spot survey phase is finalized */
+  isSpotCompleted: boolean;
 
   // ─── Report Metadata ───────────────────────────────
   reportNo: string;
@@ -79,6 +81,7 @@ export function createBlankClaim(
     surveyType,
     vehicleType,
     depreciationType: 'standard',
+    isSpotCompleted: false,
     reportNo: '',
     reportDate: now.split('T')[0],
 
@@ -101,9 +104,12 @@ export function createBlankClaim(
       grossWeight: null,
       unladenWeight: null,
       registeredLoadWeight: '',
+      actualPayload: '',
       odometer: '',
       preAccidentCondition: '',
+      condition: '',
       seatingCapacity: '',
+      isCommercial: false,
     },
 
     driver: {
@@ -111,6 +117,7 @@ export function createBlankClaim(
       parentName: '',
       relationType: 'S/o',
       licenceNumber: '',
+      licenseNumber: '',
       dateOfBirth: '',
       dateOfIssue: '',
       issuingAuthority: '',
@@ -143,6 +150,8 @@ export function createBlankClaim(
       causeOfAccident: '',
       dateOfSurvey: '',
       placeOfSurvey: '',
+      policeStation: '',
+      firNumber: '',
       thirdPartyDetails: '',
     },
 

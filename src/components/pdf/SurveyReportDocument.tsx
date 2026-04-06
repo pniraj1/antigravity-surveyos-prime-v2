@@ -179,9 +179,29 @@ export function SurveyReportDocument({ claim, summary }: Props) {
             <Text style={styles.colValue}>{claim.vehicle.chassisNumber || 'N/A'}</Text>
           </View>
           <View style={styles.row}>
+            <Text style={styles.colLabel}>Engine Number:</Text>
+            <Text style={styles.colValue}>{claim.vehicle.engineNumber || 'N/A'}</Text>
+          </View>
+          <View style={styles.row}>
             <Text style={styles.colLabel}>Year of Mfg:</Text>
             <Text style={styles.colValue}>{claim.vehicle.yearOfManufacture || 'N/A'}</Text>
           </View>
+          <View style={styles.row}>
+            <Text style={styles.colLabel}>Fitness Number:</Text>
+            <Text style={styles.colValue}>{claim.vehicle.fitnessNo || 'N/A'}</Text>
+          </View>
+          {claim.vehicle.isCommercial && (
+            <>
+              <View style={styles.row}>
+                <Text style={styles.colLabel}>RLW:</Text>
+                <Text style={styles.colValue}>{claim.vehicle.registeredLoadWeight || 'N/A'}</Text>
+              </View>
+              <View style={styles.row}>
+                <Text style={styles.colLabel}>Permit / Route:</Text>
+                <Text style={styles.colValue}>{claim.vehicle.route || 'N/A'}</Text>
+              </View>
+            </>
+          )}
         </View>
         
         <View style={styles.section}>
@@ -193,6 +213,14 @@ export function SurveyReportDocument({ claim, summary }: Props) {
           <View style={styles.row}>
             <Text style={styles.colLabel}>Place of Accident:</Text>
             <Text style={styles.colValue}>{claim.accident.placeOfAccident || 'N/A'}</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.colLabel}>Police Station:</Text>
+            <Text style={styles.colValue}>{claim.accident.policeStation || 'N/A'}</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.colLabel}>FIR / Diary No:</Text>
+            <Text style={styles.colValue}>{claim.accident.firNumber || 'N/A'}</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.colLabel}>Cause:</Text>

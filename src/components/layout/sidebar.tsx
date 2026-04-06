@@ -198,7 +198,19 @@ export function Sidebar() {
         {/* ─── Navigation ──────────────────────────────── */}
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-4">
           {groups.map((group) => {
-            const items = NAV_ITEMS.filter((item) => item.group === group);
+            const items = NAV_ITEMS.filter((item) => {
+              if (item.group !== group) return false;
+              
+              // Workflow Logic: Restrict tabs during Spot Survey phase
+              if (currentClaim?.surveyType === 'spot' && !currentClaim.isSpotCompleted) {
+                // Hide Assessment, Bill Check, Fee Bill, and Reinspection for incomplete Spot surveys
+                const restrictedTabs: AppTab[] = ['assessment', 'bill-check', 'fees', 'reinspection'];
+                if (restrictedTabs.includes(item.id)) return false;
+              }
+              
+              return true;
+            });
+
             if (!items.length) return null;
 
             return (
