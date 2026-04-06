@@ -1,0 +1,30 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // AI Configuration (Read-only for all users)
+    match /ai_config/routing {
+      allow read: if request.auth != null;
+      allow write: if false; 
+    }
+    
+    // Admin Master Access
+    function isAdmin() {
+      return request.auth != null && request.auth.uid == 'QCgRlZdGF3etljVitH8xq3KsTqB2';
+    }
+
+    // Collection Group query support for Admin Panel
+    match /{path=**}/profile/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    // User-specific Claims Data
+    match /users/{userId}/{allPaths=**} {
+      allow read, write: if (request.auth != null && request.auth.uid == userId) || isAdmin();
+    }
+    
+    // Legacy support (if any)
+    match /claims/{claimId} {
+      allow read, write: if false; // Migrated to users/{uid}/claims
+    }
+  }
+}

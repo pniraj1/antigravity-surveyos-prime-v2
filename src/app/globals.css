@@ -1,0 +1,263 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* ═══════════════════════════════════════════════════════════
+   SurveyOS Prime V2 — "Executive Platinum" Design System
+   Palette: Deep Navy + Platinum White + Racing Gold
+   ═══════════════════════════════════════════════════════════ */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Executive Platinum Brand Tokens */
+  --color-navy:        #0D1B2A;  /* Primary — Navigation & Footer */
+  --color-navy-mid:    #162335;  /* Navy hover states */
+  --color-navy-light:  #1e3a5f;  /* Active state in sidebar */
+  --color-platinum:    #F8F9FA;  /* Main background */
+  --color-gold:        #D4AF37;  /* Racing Gold — VIP accents */
+  --color-gold-light:  #f0d870;  /* Gold hover */
+  --color-asphalt:     #4A4E69;  /* Body text */
+  --color-steel:       #8D99AE;  /* Sub-text / icons */
+  --color-ice:         #E8ECF0;  /* Border / subtle bg */
+
+  --color-success: oklch(0.55 0.18 145);
+  --color-danger:  oklch(0.55 0.22 25);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ROOT THEME — Executive Platinum (Light Only)
+   No dark mode. No @media prefers-color-scheme.
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  --radius: 0.5rem;
+  color-scheme: light;
+
+  /* ── Core ──────────────────────────────────────────── */
+  --background:         #F8F9FA;  /* Platinum White */
+  --foreground:         #0D1B2A;  /* Deep Navy */
+
+  /* ── Card ──────────────────────────────────────────── */
+  --card:               #FFFFFF;
+  --card-foreground:    #0D1B2A;
+
+  /* ── Popover ───────────────────────────────────────── */
+  --popover:            #FFFFFF;
+  --popover-foreground: #0D1B2A;
+
+  /* ── Primary = Racing Gold ─────────────────────────── */
+  --primary:            #D4AF37;
+  --primary-foreground: #0D1B2A;
+
+  /* ── Secondary ─────────────────────────────────────── */
+  --secondary:          #E8ECF0;
+  --secondary-foreground: #4A4E69;
+
+  /* ── Muted ─────────────────────────────────────────── */
+  --muted:              #F0F2F5;
+  --muted-foreground:   #8D99AE;
+
+  /* ── Accent = Gold tint ────────────────────────────── */
+  --accent:             #FBF7E6;
+  --accent-foreground:  #0D1B2A;
+
+  /* ── Destructive ───────────────────────────────────── */
+  --destructive:        #C0392B;
+
+  /* ── Structural ────────────────────────────────────── */
+  --border:             #E2E6EA;
+  --input:              #E2E6EA;
+  --ring:               #D4AF37;
+
+  /* ── Charts ────────────────────────────────────────── */
+  --chart-1: #D4AF37;
+  --chart-2: #0D1B2A;
+  --chart-3: #4A4E69;
+  --chart-4: #8D99AE;
+  --chart-5: #1e3a5f;
+
+  /* ── Sidebar = Deep Navy ───────────────────────────── */
+  --sidebar:                    #0D1B2A;
+  --sidebar-foreground:         #E8ECF0;
+  --sidebar-primary:            #D4AF37;
+  --sidebar-primary-foreground: #0D1B2A;
+  --sidebar-accent:             #162335;
+  --sidebar-accent-foreground:  #F8F9FA;
+  --sidebar-border:             rgba(255,255,255,0.08);
+  --sidebar-ring:               #D4AF37;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FORCE LIGHT MODE — Override any OS/browser dark preference
+   ═══════════════════════════════════════════════════════════ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: light;
+    --background:         #F8F9FA;
+    --foreground:         #0D1B2A;
+    --card:               #FFFFFF;
+    --card-foreground:    #0D1B2A;
+    --popover:            #FFFFFF;
+    --popover-foreground: #0D1B2A;
+    --primary:            #D4AF37;
+    --primary-foreground: #0D1B2A;
+    --secondary:          #E8ECF0;
+    --secondary-foreground: #4A4E69;
+    --muted:              #F0F2F5;
+    --muted-foreground:   #8D99AE;
+    --accent:             #FBF7E6;
+    --accent-foreground:  #0D1B2A;
+    --destructive:        #C0392B;
+    --border:             #E2E6EA;
+    --input:              #E2E6EA;
+    --ring:               #D4AF37;
+    --sidebar:                    #0D1B2A;
+    --sidebar-foreground:         #E8ECF0;
+    --sidebar-primary:            #D4AF37;
+    --sidebar-primary-foreground: #0D1B2A;
+    --sidebar-accent:             #162335;
+    --sidebar-accent-foreground:  #F8F9FA;
+    --sidebar-border:             rgba(255,255,255,0.08);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BASE LAYER
+   ═══════════════════════════════════════════════════════════ */
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    color-scheme: light !important;
+  }
+  body {
+    @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SCROLLBAR — Platinum style
+   ═══════════════════════════════════════════════════════════ */
+@layer base {
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #C3C9D4;
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #8D99AE;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   UI COMPONENTS
+   ═══════════════════════════════════════════════════════════ */
+
+/* Gold accent bar on active sidebar item */
+.sidebar-active-bar {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  background: #D4AF37;
+  border-radius: 0 3px 3px 0;
+}
+
+/* AI-filled field indicator */
+.ai-filled {
+  border-left: 3px solid #D4AF37 !important;
+  background: rgba(212, 175, 55, 0.06) !important;
+}
+
+/* Racing Gold shine effect on primary buttons */
+.btn-gold {
+  background: linear-gradient(135deg, #D4AF37 0%, #f0d870 50%, #D4AF37 100%);
+  background-size: 200% auto;
+  transition: background-position 0.4s ease, box-shadow 0.2s ease;
+}
+.btn-gold:hover {
+  background-position: right center;
+  box-shadow: 0 4px 20px rgba(212, 175, 55, 0.35);
+}
+
+/* Premium card shadow */
+.card-premium {
+  box-shadow: 0 1px 3px rgba(13, 27, 42, 0.04), 0 4px 16px rgba(13, 27, 42, 0.06);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.card-premium:hover {
+  box-shadow: 0 4px 24px rgba(13, 27, 42, 0.1);
+  transform: translateY(-1px);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TRANSITIONS
+   ═══════════════════════════════════════════════════════════ */
+@layer base {
+  * {
+    transition-property: color, background-color, border-color, opacity, box-shadow, transform;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SELECTION
+   ═══════════════════════════════════════════════════════════ */
+::selection {
+  background: rgba(212, 175, 55, 0.25);
+  color: #0D1B2A;
+}
