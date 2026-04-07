@@ -405,18 +405,34 @@ export const useClaimStore = create<ClaimState>()(
           if (!state.currentClaim) return {};
           const newClaim = { ...state.currentClaim };
 
-          // Helper for parsing dates to YYYY-MM-DD for date inputs
           const parseDate = (d: string) => {
             if (!d) return '';
             const t = d.split(' ')[0]; // remove time context
-            if (t.includes('-')) {
-              const p = t.split('-');
-              if (p[0].length === 4) return t;
-              if (p[2]?.length >= 4) return `${p[2].substring(0,4)}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+            
+            // Try standard parts
+            if (t.includes('-') || t.includes('/')) {
+              const sep = t.includes('-') ? '-' : '/';
+              const p = t.split(sep);
+              
+              if (p[0].length === 4 && !isNaN(Number(p[0]))) return t; // Already YYYY-MM-DD
+              
+              if (p[2]?.length >= 4) {
+                // Check if p[1] is a letter-based month (e.g. Aug, August)
+                if (isNaN(Number(p[1]))) {
+                  const parsed = new Date(t);
+                  if (!isNaN(parsed.getTime())) {
+                    return parsed.toISOString().split('T')[0];
+                  }
+                }
+                
+                return `${p[2].substring(0,4)}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+              }
             }
-            if (t.includes('/')) {
-              const p = t.split('/');
-              if (p[2]?.length === 4) return `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+            
+            // Fallback native parse
+            const fallback = new Date(t);
+            if (!isNaN(fallback.getTime())) {
+               return fallback.toISOString().split('T')[0];
             }
             return t;
           };
@@ -509,12 +525,15 @@ export const useClaimStore = create<ClaimState>()(
               licenceNumber: data.licence_number || newClaim.driver.licenceNumber,
               name: data.holder_name || newClaim.driver.name,
               fatherHusbandName: data.father_or_husband_name || newClaim.driver.fatherHusbandName,
+              parentName: data.father_or_husband_name || newClaim.driver.parentName, // Alias for UI
               relationType: data.relation_type || newClaim.driver.relationType,
               dob: parseDate(data.date_of_birth) || newClaim.driver.dob,
+              dateOfBirth: parseDate(data.date_of_birth) || newClaim.driver.dateOfBirth, // Alias for UI
               address: data.address || newClaim.driver.address,
               dateOfIssue: parseDate(data.date_of_issue) || newClaim.driver.dateOfIssue,
               issuingAuthority: data.issuing_authority || data.rto || newClaim.driver.issuingAuthority,
               vehicleClass: data.vehicle_classes || newClaim.driver.vehicleClass,
+              vehicleClasses: data.vehicle_classes || newClaim.driver.vehicleClasses, // Alias for UI
               validityNonTransport: parseDate(data.validity_non_transport) || newClaim.driver.validityNonTransport,
               validityTransport: parseDate(data.validity_transport) || newClaim.driver.validityTransport,
             };
