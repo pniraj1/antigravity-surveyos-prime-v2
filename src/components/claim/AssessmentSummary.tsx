@@ -27,7 +27,8 @@ export function AssessmentSummary() {
     ageMonths, 
     currentClaim.depreciationType, 
     fb.salvageValue, 
-    fb.lessExcess
+    fb.compulsoryExcess,
+    fb.voluntaryExcess
   );
 
   return (
@@ -79,19 +80,32 @@ export function AssessmentSummary() {
             />
           </div>
           
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <Label htmlFor="policy-excess" className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Policy Excess (₹)</Label>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="compulsory-excess" className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Compulsory Excess</Label>
+              <Input
+                id="compulsory-excess"
+                type="number"
+                value={fb.compulsoryExcess || ''}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value) || 0;
+                  updateFeeBill({ compulsoryExcess: val, lessExcess: val });
+                }}
+                className="text-right font-bold text-red-600 bg-white border-[#e5e5e5] hover:border-red-600 focus:border-red-600 transition-all h-9"
+                placeholder="1000"
+              />
             </div>
-            <Input
-              id="policy-excess"
-              type="number"
-              value={fb.lessExcess || ''}
-              onChange={(e) => updateFeeBill({ lessExcess: parseFloat(e.target.value) || 0 })}
-              className="text-right font-bold text-red-600 bg-white border-[#e5e5e5] hover:border-red-600 focus:border-red-600 focus:ring-1 focus:ring-red-600/20 shadow-sm transition-all h-9"
-              placeholder="1000.00"
-              min="0"
-            />
+            <div className="space-y-2">
+              <Label htmlFor="voluntary-excess" className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Voluntary Excess</Label>
+              <Input
+                id="voluntary-excess"
+                type="number"
+                value={fb.voluntaryExcess || ''}
+                onChange={(e) => updateFeeBill({ voluntaryExcess: parseFloat(e.target.value) || 0 })}
+                className="text-right font-bold text-red-600 bg-white border-[#e5e5e5] hover:border-red-600 focus:border-red-600 transition-all h-9"
+                placeholder="0"
+              />
+            </div>
           </div>
         </div>
 

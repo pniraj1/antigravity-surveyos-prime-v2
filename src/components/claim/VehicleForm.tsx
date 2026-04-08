@@ -22,7 +22,7 @@ export function VehicleDetailsForm() {
             <Label htmlFor="v-reg">Registration No.</Label>
             <Input
               id="v-reg"
-              value={v.registrationNumber}
+              value={v?.registrationNumber || ''}
               onChange={(e) => updateVehicle({ registrationNumber: e.target.value.toUpperCase() })}
               placeholder="e.g. MH01AB1234"
               className="uppercase font-mono font-bold"
@@ -33,7 +33,7 @@ export function VehicleDetailsForm() {
             <Label htmlFor="v-class">Class of Vehicle</Label>
             <Input
               id="v-class"
-              value={v.classOfVehicle}
+              value={v?.classOfVehicle || ''}
               onChange={(e) => updateVehicle({ classOfVehicle: e.target.value })}
               placeholder="e.g. LMV PE"
             />
@@ -43,7 +43,7 @@ export function VehicleDetailsForm() {
             <Label htmlFor="v-make">Make</Label>
             <Input
               id="v-make"
-              value={v.make}
+              value={v?.make || ''}
               onChange={(e) => updateVehicle({ make: e.target.value })}
               placeholder="e.g. MARUTI SUZUKI"
             />
@@ -53,7 +53,7 @@ export function VehicleDetailsForm() {
             <Label htmlFor="v-model">Model / Variant</Label>
             <Input
               id="v-model"
-              value={v.model}
+              value={v?.model || ''}
               onChange={(e) => updateVehicle({ model: e.target.value })}
               placeholder="e.g. SWIFT VXI"
             />
@@ -64,7 +64,7 @@ export function VehicleDetailsForm() {
             <Input
               id="v-year"
               type="number"
-              value={v.yearOfManufacture || ''}
+              value={v?.yearOfManufacture || ''}
               onChange={(e) => updateVehicle({ yearOfManufacture: parseInt(e.target.value) || null })}
               placeholder="YYYY"
             />
@@ -74,7 +74,7 @@ export function VehicleDetailsForm() {
             <Label htmlFor="v-body">Body Type</Label>
             <Input
               id="v-body"
-              value={v.bodyType}
+              value={v?.bodyType || ''}
               onChange={(e) => updateVehicle({ bodyType: e.target.value })}
               placeholder="e.g. SALOON / HATCHBACK"
             />
@@ -84,7 +84,7 @@ export function VehicleDetailsForm() {
             <Label htmlFor="v-chassis">Chassis No.</Label>
             <Input
               id="v-chassis"
-              value={v.chassisNumber}
+              value={v?.chassisNumber || ''}
               onChange={(e) => updateVehicle({ chassisNumber: e.target.value.toUpperCase() })}
               className="uppercase font-mono"
             />
@@ -94,7 +94,7 @@ export function VehicleDetailsForm() {
             <Label htmlFor="v-engine">Engine No.</Label>
             <Input
               id="v-engine"
-              value={v.engineNumber}
+              value={v?.engineNumber || ''}
               onChange={(e) => updateVehicle({ engineNumber: e.target.value.toUpperCase() })}
               className="uppercase font-mono"
             />
@@ -104,7 +104,7 @@ export function VehicleDetailsForm() {
             <Label htmlFor="v-cc">Cubic Capacity (CC)</Label>
             <Input
               id="v-cc"
-              value={v.cubicCapacity}
+              value={v?.cubicCapacity || ''}
               onChange={(e) => updateVehicle({ cubicCapacity: e.target.value })}
             />
           </div>
@@ -113,7 +113,7 @@ export function VehicleDetailsForm() {
             <Label htmlFor="v-color">Colour</Label>
             <Input
               id="v-color"
-              value={v.colour}
+              value={v?.colour || ''}
               onChange={(e) => updateVehicle({ colour: e.target.value })}
             />
           </div>
@@ -122,7 +122,7 @@ export function VehicleDetailsForm() {
             <Label htmlFor="v-fuel">Fuel Type</Label>
             <select
               id="v-fuel"
-              value={v.fuel}
+              value={v?.fuel || ''}
               onChange={(e) => updateVehicle({ fuel: e.target.value })}
               className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -137,8 +137,48 @@ export function VehicleDetailsForm() {
             <Label htmlFor="v-odo">Odometer</Label>
             <Input
               id="v-odo"
-              value={v.odometer}
+              value={v?.odometer || ''}
               onChange={(e) => updateVehicle({ odometer: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="v-reg-type">Registration Type</Label>
+            <Input
+              id="v-reg-type"
+              value={v?.registrationType || ''}
+              onChange={(e) => updateVehicle({ registrationType: e.target.value.toUpperCase() })}
+              placeholder="e.g. LGV"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="v-reg-auth">Registering Authority</Label>
+            <Input
+              id="v-reg-auth"
+              value={v?.registeringAuthority || ''}
+              onChange={(e) => updateVehicle({ registeringAuthority: e.target.value.toUpperCase() })}
+              placeholder="e.g. RTO MUMBAI"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="v-reg-valid">Registration Valid Up To</Label>
+            <Input
+              id="v-reg-valid"
+              type="date"
+              value={v?.registrationValidUpTo || ''}
+              onChange={(e) => updateVehicle({ registrationValidUpTo: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="v-rc-end">RC Endorsement (Financier)</Label>
+            <Input
+              id="v-rc-end"
+              value={v?.rcEndorsement || ''}
+              onChange={(e) => updateVehicle({ rcEndorsement: e.target.value.toUpperCase() })}
+              placeholder="e.g. NO"
             />
           </div>
 
@@ -147,7 +187,7 @@ export function VehicleDetailsForm() {
             <Input
               id="v-regdate"
               type="date"
-              value={v.dateOfRegistration}
+              value={v?.dateOfRegistration || ''}
               onChange={(e) => updateVehicle({ dateOfRegistration: e.target.value })}
             />
           </div>
@@ -156,7 +196,7 @@ export function VehicleDetailsForm() {
             <Label htmlFor="v-hyp">Hypothecation</Label>
             <Input
               id="v-hyp"
-              value={v.hypothecation}
+              value={v?.hypothecation || ''}
               onChange={(e) => updateVehicle({ hypothecation: e.target.value })}
               placeholder="e.g. HDFC BANK"
             />
@@ -166,7 +206,7 @@ export function VehicleDetailsForm() {
             <Label htmlFor="v-rlw">Registered Load Weight (RLW)</Label>
             <Input
               id="v-rlw"
-              value={v.registeredLoadWeight}
+              value={v?.registeredLoadWeight || ''}
               onChange={(e) => updateVehicle({ registeredLoadWeight: e.target.value })}
               placeholder="e.g. 1500 KG"
             />
@@ -176,7 +216,7 @@ export function VehicleDetailsForm() {
             <Label htmlFor="v-seats">Seating Capacity</Label>
             <Input
               id="v-seats"
-              value={v.seatingCapacity}
+              value={v?.seatingCapacity || ''}
               onChange={(e) => updateVehicle({ seatingCapacity: e.target.value })}
             />
           </div>
@@ -185,7 +225,7 @@ export function VehicleDetailsForm() {
             <Label htmlFor="v-fitness">Fitness Number/Expiry</Label>
             <Input
               id="v-fitness"
-              value={v.fitnessNo}
+              value={v?.fitnessNo || ''}
               onChange={(e) => updateVehicle({ fitnessNo: e.target.value })}
             />
           </div>
@@ -194,7 +234,7 @@ export function VehicleDetailsForm() {
             <Label htmlFor="v-route">Route / Permit</Label>
             <Input
               id="v-route"
-              value={v.route}
+              value={v?.route || ''}
               onChange={(e) => updateVehicle({ route: e.target.value })}
             />
           </div>
@@ -203,7 +243,7 @@ export function VehicleDetailsForm() {
             <Label htmlFor="v-cond">Pre-Accident Condition</Label>
             <Input
               id="v-cond"
-              value={v.preAccidentCondition}
+              value={v?.preAccidentCondition || ''}
               onChange={(e) => updateVehicle({ preAccidentCondition: e.target.value })}
             />
           </div>

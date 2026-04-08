@@ -117,7 +117,7 @@ interface Props {
 }
 
 export function FeeBillDocument({ claim, summary }: Props) {
-  const fb = claim.feeBill;
+  const fb = claim?.feeBill || {};
   const photoCharges = (fb.photosCount || 0) * (fb.photoRate || 0);
   const subTotal = (fb.professionalFee || 0) + (fb.riFee || 0) + (fb.travelExpenses || 0) +
                    photoCharges + (fb.postalCharges || 0) + (fb.haltageCharges || 0);
@@ -135,15 +135,15 @@ export function FeeBillDocument({ claim, summary }: Props) {
         <View style={styles.section}>
           <View style={styles.row}>
             <Text style={styles.label}>Bill No / Ref:</Text>
-            <Text style={styles.value}>{fb.advanceReceipt || 'SB-' + claim.reportNo}</Text>
+            <Text style={styles.value}>{fb.advanceReceipt || 'SB-' + (claim?.reportNo || 'DRAFT')}</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.label}>Bill Date:</Text>
-            <Text style={styles.value}>{fb.billDate}</Text>
+            <Text style={styles.value}>{fb.billDate || '-'}</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.label}>Insurer Name:</Text>
-            <Text style={styles.value}>{claim.policy.insurerName}</Text>
+            <Text style={styles.value}>{claim?.policy?.insurerName || '-'}</Text>
           </View>
         </View>
 
@@ -151,15 +151,15 @@ export function FeeBillDocument({ claim, summary }: Props) {
           <Text style={styles.sectionTitle}>Claim Particulars</Text>
           <View style={styles.row}>
             <Text style={styles.label}>Vehicle Reg No:</Text>
-            <Text style={styles.value}>{claim.vehicle.registrationNumber}</Text>
+            <Text style={styles.value}>{claim?.vehicle?.registrationNumber || 'DRAFT'}</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.label}>Make & Model:</Text>
-            <Text style={styles.value}>{claim.vehicle.make} {claim.vehicle.model}</Text>
+            <Text style={styles.value}>{claim?.vehicle?.make || ''} {claim?.vehicle?.model || ''}</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.label}>Date of Accident:</Text>
-            <Text style={styles.value}>{claim.accident.dateAndTime}</Text>
+            <Text style={styles.value}>{claim?.accident?.dateAndTime || '-'}</Text>
           </View>
         </View>
 

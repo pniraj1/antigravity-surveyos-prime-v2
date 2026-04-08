@@ -47,6 +47,10 @@ export interface VehicleDetails {
   odometer: string;
   preAccidentCondition: string;
   condition: string; // Alias for spot report compatibility
+  registrationType: string;
+  registeringAuthority: string;
+  registrationValidUpTo: string; // ISO date
+  rcEndorsement: string;
   seatingCapacity: string;
   isCommercial: boolean;
 }
@@ -70,6 +74,9 @@ export interface DriverDetails {
   validTo: string; // Composite alias
   verificationStatus: DLVerificationStatus;
   invalidRemarks: string;
+  badgeNumber: string;
+  authorisedToDrive: string;
+  verificationDate: string; // ISO date
 }
 
 export interface PolicyDetails {
@@ -132,6 +139,12 @@ export interface SurveyorProfile {
   // ─── Subscription & Administrative ────────────────────
   /** Unique platform ID (e.g. SUS-1001) */
   surveyorId: string;
+  /** Sequential counter for spot reports */
+  spotSequence?: number;
+  /** Sequential counter for fee bills */
+  feeSequence?: number;
+  /** Current year for report numbering (auto-resets usually) */
+  reportYear?: number;
   /** 'active', 'expired', or 'suspended' */
   subscriptionStatus: 'active' | 'expired' | 'suspended';
   /** ISO date string for subscription expiration */

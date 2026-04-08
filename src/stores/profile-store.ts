@@ -11,6 +11,8 @@ interface ProfileState {
   profile: SurveyorProfile;
   updateProfile: (updates: Partial<SurveyorProfile>) => void;
   getInitials: () => string;
+  /** Sequentially allocates and returns the next spot report number */
+  getNextSpotNumber: () => string;
 }
 
 const DEFAULT_PROFILE: SurveyorProfile = {
@@ -41,6 +43,9 @@ const DEFAULT_PROFILE: SurveyorProfile = {
   isAdmin: false,
   signatureDataUrl: null,
   stampDataUrl: null,
+  spotSequence: 1,
+  feeSequence: 1,
+  reportYear: new Date().getFullYear(),
 };
 
 export const useProfileStore = create<ProfileState>()(
@@ -64,6 +69,33 @@ export const useProfileStore = create<ProfileState>()(
             .substring(0, 2)
             .toUpperCase() || 'SP'
         );
+      },
+
+      getNextSpotNumber: () => {
+        const { profile } = get();
+        const currentYear = new Date().getFullYear();
+        let seq = profile.spotSequence || 1;
+        let year = profile.reportYear || currentYear;
+
+        // Reset sequence if year changed
+        if (year !== currentYear) {
+          seq = 1;
+          year = currentYear;
+        }
+
+        const formattedSeq = seq.toString().padStart(3, '0');
+        const reportNo = `SPO/${year}/${formattedSeq}`;
+
+        // Update sequence for next time
+        set((state) => ({
+          profile: {
+            ...state.profile,
+            spotSequence: seq + 1,
+            reportYear: year
+          }
+        }));
+
+        return reportNo;
       },
     }),
     {

@@ -42,8 +42,10 @@ export interface AssessmentSummary {
   // Totals
   grandTotal: number; // partsTotal + labourTotal
   salvage: number;
-  excess: number;
-  netAssessedLoss: number; // max(0, grandTotal - salvage - excess)
+  compulsoryExcess: number;
+  voluntaryExcess: number;
+  excess: number; // For legacy support/total
+  netAssessedLoss: number; // max(0, grandTotal - salvage - compulsoryExcess - voluntaryExcess)
   netInWords: string;
 
   // Estimated totals (for comparison)
@@ -93,10 +95,22 @@ export interface SpotSurveyDetails {
   permitType: string;
   permitFrom: string;
   permitTo: string;
+  natureOfPermit: string;
+  areaOfOperation: string;
   fitnessNo: string;
   fitnessValid: string;
+  fitnessType: string;
   authNo: string;
   authValid: string;
+  verificationFlags: {
+    rc: string;
+    dl: string;
+    permit: string;
+    fitness: string;
+    loadChallan: string;
+    fireReport: string;
+    fir: string;
+  };
   // Goods
   gvw: number | null;
   ulw: number | null;
@@ -107,6 +121,7 @@ export interface SpotSurveyDetails {
   loadDesc: string;
   loadOrigin: string;
   loadDest: string;
+  repairWorkshop: string;
 }
 
 // ─── RE-INSPECTION ──────────────────────────────────────
@@ -151,7 +166,9 @@ export interface FeeBill {
   advanceReceipt: string;
   cashReceived: string;
   salvageValue: number;
-  lessExcess: number;
+  lessExcess: number; // Compulsory Excess
+  voluntaryExcess: number;
+  compulsoryExcess: number;
 }
 
 // ─── PHOTO SHEET ────────────────────────────────────────
@@ -174,6 +191,8 @@ export interface BillCheckSummary {
   notInBillTotal: number;
   variance: number;
   salvage: number;
+  compulsoryExcess: number;
+  voluntaryExcess: number;
   excess: number;
   netLiability: number;
   netInWords: string;

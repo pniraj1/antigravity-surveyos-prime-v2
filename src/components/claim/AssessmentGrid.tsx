@@ -59,6 +59,7 @@ export function AssessmentGrid() {
               <th className="px-3 py-2 font-medium w-8 text-center" title="Allowed?"><ShieldAlert size={12} className="mx-auto opacity-50" /></th>
               <th className="px-3 py-2 font-medium min-w-[250px]">Particulars</th>
               <th className="px-3 py-2 font-medium w-32">Type</th>
+              <th className="px-3 py-2 font-medium w-16 text-center">GST %</th>
               <th className="px-3 py-2 font-medium w-28">Est. (₹)</th>
               <th className="px-3 py-2 font-medium w-28 text-primary">Assessed (₹)</th>
               <th className="px-3 py-2 font-medium w-20 text-danger text-center">Dep %</th>
@@ -69,7 +70,7 @@ export function AssessmentGrid() {
           <tbody className="divide-y divide-border">
             {assessmentRows.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-6 py-12 text-center text-muted-foreground">
+                <td colSpan={10} className="px-6 py-12 text-center text-muted-foreground">
                   <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-3">
                     <Wrench size={20} className="opacity-50" />
                   </div>
@@ -130,6 +131,17 @@ export function AssessmentGrid() {
                         <option value="paint">🎨 Paint Material</option>
                         <option value="labour">⚙️ Labour</option>
                       </select>
+                    </td>
+                    <td className="px-1 py-2">
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          value={row.gst}
+                          onChange={(e) => updateAssessmentRow(row.id, { gst: parseInt(e.target.value) || 0 })}
+                          className="h-8 text-xs text-center border-transparent hover:border-input focus:bg-background px-1"
+                          placeholder="18"
+                        />
+                      </div>
                     </td>
                     <td className="px-2 py-2">
                       <Input

@@ -1,115 +1,206 @@
 'use client';
 import React from 'react';
-import { Page, Text, View, Document, StyleSheet, Image, Font } from '@react-pdf/renderer';
+import { Page, Text, View, Document, StyleSheet, Image } from '@react-pdf/renderer';
 import type { ClaimData, AssessmentSummary } from '@/types';
-import { formatCurrency } from '@/lib/calculations';
-
-// Optional: If we wanted custom fonts later, we register them here.
-// For now, we rely on standard Helvetica which requires 0 bytes of loading.
+import { formatCurrency, getVehicleAgeMonths, getDepreciationRate, getDepPolicyLabel } from '@/lib/calculations';
 
 const styles = StyleSheet.create({
   page: {
-    padding: 30,
+    padding: 40,
     fontFamily: 'Helvetica',
-    fontSize: 10,
-    color: '#111827',
+    fontSize: 9,
+    lineHeight: 1.4,
+    color: '#1F2937',
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 20,
-    textAlign: 'center',
-    borderBottom: '1px solid #e5e7eb',
+    borderBottom: '2px solid #2563EB',
     paddingBottom: 10,
   },
-  title: {
+  logoSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logoBox: {
+    width: 32,
+    height: 32,
+    backgroundColor: '#2563EB',
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  logoText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+    fontFamily: 'Helvetica-Bold',
+  },
+  companyName: {
     fontSize: 16,
     fontWeight: 'bold',
     fontFamily: 'Helvetica-Bold',
-    marginBottom: 4,
+    color: '#111827',
   },
-  subtitle: {
-    fontSize: 10,
-    color: '#4b5563',
+  reportTitle: {
+    fontSize: 12,
+    fontFamily: 'Helvetica-Bold',
+    color: '#2563EB',
+    textAlign: 'right',
   },
+  reportMeta: {
+    fontSize: 8,
+    color: '#6B7280',
+    textAlign: 'right',
+    marginTop: 2,
+  },
+
   section: {
-    marginBottom: 15,
+    marginBottom: 16,
+  },
+  sectionHeader: {
+    backgroundColor: '#F3F4F6',
+    padding: '4 8',
+    borderLeft: '3px solid #2563EB',
+    marginBottom: 8,
   },
   sectionTitle: {
-    fontSize: 10,
+    fontSize: 9,
     fontFamily: 'Helvetica-Bold',
-    backgroundColor: '#f3f4f6',
-    padding: 4,
-    marginBottom: 6,
+    color: '#111827',
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  row: {
+
+  infoGrid: {
     flexDirection: 'row',
-    marginBottom: 4,
+    flexWrap: 'wrap',
+    gap: 0,
+    border: '1px solid #E5E7EB',
   },
-  colLabel: {
-    width: '30%',
-    fontFamily: 'Helvetica-Bold',
-    fontSize: 9,
-  },
-  colValue: {
-    width: '70%',
-    fontSize: 9,
-  },
-  gridHeaderRow: {
+  infoItem: {
+    width: '50%',
     flexDirection: 'row',
-    backgroundColor: '#e5e7eb',
-    padding: 4,
+    borderBottom: '1px solid #E5E7EB',
+    minHeight: 22,
+    alignItems: 'center',
+  },
+  infoItemFull: {
+    width: '100%',
+    flexDirection: 'row',
+    borderBottom: '1px solid #E5E7EB',
+    minHeight: 22,
+    alignItems: 'center',
+  },
+  label: {
+    width: '40%',
+    backgroundColor: '#F9FAFB',
+    padding: '4 8',
+    color: '#4B5563',
+    fontSize: 8,
     fontFamily: 'Helvetica-Bold',
+    height: '100%',
+    borderRight: '1px solid #E5E7EB',
+  },
+  value: {
+    width: '60%',
+    padding: '4 8',
+    color: '#111827',
     fontSize: 8,
   },
-  gridRow: {
-    flexDirection: 'row',
-    padding: 4,
-    borderBottom: '1px solid #e5e7eb',
+  valueFull: {
+    width: '80%',
+    padding: '4 8',
+    color: '#111827',
     fontSize: 8,
   },
-  colNo: { width: '5%' },
-  colPart: { width: '35%' },
-  colTy: { width: '10%' },
-  colEst: { width: '15%', textAlign: 'right' },
-  colAss: { width: '15%', textAlign: 'right' },
-  colFirst: { width: '20%', textAlign: 'right' },
+
+  table: {
+    width: '100%',
+    marginTop: 8,
+    border: '1px solid #E5E7EB',
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#1F2937',
+    color: '#FFFFFF',
+    fontSize: 7,
+    fontFamily: 'Helvetica-Bold',
+    padding: '4 2',
+    textAlign: 'center',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderBottom: '1px solid #E5E7EB',
+    fontSize: 7,
+    padding: '4 2',
+    alignItems: 'center',
+  },
+  colNo: { width: '4%' },
+  colPart: { width: '28%', textAlign: 'left', paddingLeft: 4 },
+  colTy: { width: '8%' },
+  colEst: { width: '10%', textAlign: 'right', paddingRight: 4 },
+  colAss: { width: '10%', textAlign: 'right', paddingRight: 4 },
+  colDep: { width: '6%', textAlign: 'center' },
+  colDepAmt: { width: '10%', textAlign: 'right', paddingRight: 4 },
+  colGstPer: { width: '8%', textAlign: 'center' },
+  colNet: { width: '16%', textAlign: 'right', paddingRight: 4 },
+
+  summaryContainer: {
+    marginTop: 20,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
   summaryBox: {
-    marginTop: 10,
-    padding: 10,
-    border: '1px solid #e5e7eb',
+    width: '100%',
+    backgroundColor: '#F9FAFB',
+    padding: 12,
+    border: '1px solid #2563EB',
+    borderRadius: 4,
   },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 4,
-    fontSize: 9,
+    fontSize: 8,
   },
   summaryTotal: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 6,
-    paddingTop: 6,
-    borderTop: '1px solid #111827',
-    fontFamily: 'Helvetica-Bold',
+    marginTop: 8,
+    paddingTop: 8,
+    borderTop: '2px solid #2563EB',
     fontSize: 10,
+    fontFamily: 'Helvetica-Bold',
+    color: '#2563EB',
   },
-  photoGrid: {
+
+  footer: {
+    position: 'absolute',
+    bottom: 30,
+    left: 40,
+    right: 40,
+    borderTop: '1px solid #E5E7EB',
+    paddingTop: 10,
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginTop: 10,
+    justifyContent: 'space-between',
+    fontSize: 7,
+    color: '#9CA3AF',
   },
-  photoBox: {
-    marginBottom: 10,
+  signatureBox: {
+    marginTop: 40,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
-  photoImage: {
-    objectFit: 'contain',
-  },
-  photoCaption: {
-    marginTop: 4,
-    fontSize: 8,
+  signature: {
+    width: 150,
     textAlign: 'center',
-    fontFamily: 'Helvetica-Oblique',
+    paddingTop: 10,
+    borderTop: '1px solid #9CA3AF',
+    fontSize: 8,
   }
 });
 
@@ -119,206 +210,282 @@ interface Props {
 }
 
 export function SurveyReportDocument({ claim, summary }: Props) {
-  
-  // Calculate dynamic photo size based on layout (4, 6, 8, 9)
-  const getPhotoWidth = () => {
-    if (claim.photoLayout === 4) return '48%';
-    if (claim.photoLayout === 9) return '31%';
-    return '48%'; // Default for 6 or 8 (we just fit them vertically)
-  };
-  
-  const getPhotoHeight = () => {
-    if (claim.photoLayout === 4) return 250;
-    if (claim.photoLayout === 6) return 180;
-    if (claim.photoLayout === 8) return 140;
-    if (claim.photoLayout === 9) return 180;
-    return 180;
-  };
+  const ageMonths = getVehicleAgeMonths(
+    claim?.vehicle?.dateOfRegistration || null,
+    claim?.vehicle?.yearOfManufacture ? Number(claim.vehicle.yearOfManufacture) : null,
+    claim?.accident?.dateOfSurvey || null
+  );
+
+  const renderInfoItem = (label: string, value: string | number | undefined, isFull = false) => (
+    <View style={isFull ? styles.infoItemFull : styles.infoItem}>
+      <Text style={styles.label}>{label}</Text>
+      <Text style={isFull ? styles.valueFull : styles.value}>{value || '-'}</Text>
+    </View>
+  );
 
   return (
     <Document>
-      {/* ─── PAGE 1: DETAILS ────────────────────────────────── */}
+      {/* ─── PAGE 1: POLICY & VEHICLE & ACCIDENT ────────────────── */}
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
-          <Text style={styles.title}>MOTOR SURVEY REPORT</Text>
-          <Text style={styles.subtitle}>Report No: {claim.reportNo || 'DRAFT'} | Date: {claim.reportDate}</Text>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>1. Insurer Details</Text>
-          <View style={styles.row}>
-            <Text style={styles.colLabel}>Insurer Name:</Text>
-            <Text style={styles.colValue}>{claim.policy.insurerName || 'N/A'}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.colLabel}>Policy Number:</Text>
-            <Text style={styles.colValue}>{claim.policy.policyNumber || 'N/A'}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.colLabel}>Insured Name:</Text>
-            <Text style={styles.colValue}>{claim.policy.insuredName || 'N/A'}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.colLabel}>IDV (₹):</Text>
-            <Text style={styles.colValue}>{claim.policy.idv || 'N/A'}</Text>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>2. Vehicle Details</Text>
-          <View style={styles.row}>
-            <Text style={styles.colLabel}>Registration No:</Text>
-            <Text style={styles.colValue}>{claim.vehicle.registrationNumber || 'N/A'}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.colLabel}>Make & Model:</Text>
-            <Text style={styles.colValue}>{claim.vehicle.make} {claim.vehicle.model}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.colLabel}>Chassis Number:</Text>
-            <Text style={styles.colValue}>{claim.vehicle.chassisNumber || 'N/A'}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.colLabel}>Engine Number:</Text>
-            <Text style={styles.colValue}>{claim.vehicle.engineNumber || 'N/A'}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.colLabel}>Year of Mfg:</Text>
-            <Text style={styles.colValue}>{claim.vehicle.yearOfManufacture || 'N/A'}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.colLabel}>Fitness Number:</Text>
-            <Text style={styles.colValue}>{claim.vehicle.fitnessNo || 'N/A'}</Text>
-          </View>
-          {claim.vehicle.isCommercial && (
-            <>
-              <View style={styles.row}>
-                <Text style={styles.colLabel}>RLW:</Text>
-                <Text style={styles.colValue}>{claim.vehicle.registeredLoadWeight || 'N/A'}</Text>
-              </View>
-              <View style={styles.row}>
-                <Text style={styles.colLabel}>Permit / Route:</Text>
-                <Text style={styles.colValue}>{claim.vehicle.route || 'N/A'}</Text>
-              </View>
-            </>
-          )}
-        </View>
-        
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>3. Accident Details</Text>
-          <View style={styles.row}>
-            <Text style={styles.colLabel}>Date of Loss:</Text>
-            <Text style={styles.colValue}>{claim.accident.dateAndTime || 'N/A'}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.colLabel}>Place of Accident:</Text>
-            <Text style={styles.colValue}>{claim.accident.placeOfAccident || 'N/A'}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.colLabel}>Police Station:</Text>
-            <Text style={styles.colValue}>{claim.accident.policeStation || 'N/A'}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.colLabel}>FIR / Diary No:</Text>
-            <Text style={styles.colValue}>{claim.accident.firNumber || 'N/A'}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.colLabel}>Cause:</Text>
-            <Text style={styles.colValue}>{claim.accident.causeOfAccident || 'N/A'}</Text>
-          </View>
-        </View>
-      </Page>
-
-      {/* ─── PAGE 2+: FINANCIAL MATRIX ─────────────────────── */}
-      <Page size="A4" style={styles.page}>
-        <View style={styles.header}>
-          <Text style={styles.title}>ASSESSMENT SUMMARY</Text>
-          <Text style={styles.subtitle}>{claim.vehicle.registrationNumber} | {claim.vehicle.make} {claim.vehicle.model}</Text>
-        </View>
-
-        {claim.assessmentRows.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.gridHeaderRow}>
-              <Text style={styles.colNo}>#</Text>
-              <Text style={styles.colPart}>Particulars</Text>
-              <Text style={styles.colTy}>Type</Text>
-              <Text style={styles.colEst}>Estimate</Text>
-              <Text style={styles.colAss}>Assessed</Text>
+          <View style={styles.logoSection}>
+            <View style={styles.logoBox}>
+              <Text style={styles.logoText}>S</Text>
             </View>
-            
-            {claim.assessmentRows.filter(r => r.allowed).map((row, idx) => (
-              <View key={row.id} style={styles.gridRow}>
-                <Text style={styles.colNo}>{idx + 1}</Text>
-                <Text style={styles.colPart}>{row.particulars || 'Undefined Part'}</Text>
-                <Text style={{...styles.colTy, textTransform: 'capitalize'}}>{row.partType}</Text>
-                <Text style={styles.colEst}>{formatCurrency(row.estimated)}</Text>
-                <Text style={styles.colAss}>{formatCurrency(row.assessed)}</Text>
-              </View>
-            ))}
+            <View>
+              <Text style={styles.companyName}>SurveyOS Prime</Text>
+              <Text style={{ fontSize: 7, color: '#6B7280' }}>Reliable Insurance Survey Solutions</Text>
+            </View>
           </View>
-        )}
+          <View>
+            <Text style={styles.reportTitle}>MOTOR SURVEY REPORT (FINAL)</Text>
+            <Text style={styles.reportMeta}>Report No: {claim?.reportNo || 'DRAFT'}</Text>
+            <Text style={styles.reportMeta}>Issue Date: {claim?.reportDate || '-'}</Text>
+          </View>
+        </View>
 
-        {/* Financial Summary Block */}
-        <View style={styles.summaryBox}>
-          <View style={styles.summaryRow}>
-            <Text>Total Estimated Repairs:</Text>
-            <Text>{formatCurrency(summary.totalEstimated)}</Text>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>1. POLICY & INSURER DETAILS</Text></View>
+          <View style={styles.infoGrid}>
+            {renderInfoItem('Insurer Name', claim?.policy?.insurerName, true)}
+            {renderInfoItem('Policy Number', claim?.policy?.policyNumber)}
+            {renderInfoItem('Claim Number', claim?.policy?.claimNumber)}
+            {renderInfoItem('Policy Period', `${claim?.policy?.periodFrom || ''} to ${claim?.policy?.periodTo || ''}`)}
+            {renderInfoItem('IDV (Sum Insured)', formatCurrency(Number(claim?.policy?.idv) || 0))}
+            {renderInfoItem('Policy Type', claim?.policy?.policyType)}
+            {renderInfoItem('Appointing Office', claim?.policy?.appointingOffice, true)}
           </View>
-          <View style={styles.summaryRow}>
-            <Text>Total Parts Assessed (Base):</Text>
-            <Text>{formatCurrency(summary.partsBase)}</Text>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>2. INSURED DETAILS</Text></View>
+          <View style={styles.infoGrid}>
+            {renderInfoItem('Insured Name', claim?.policy?.insuredName, true)}
+            {renderInfoItem('Address', claim?.policy?.insuredAddress, true)}
+            {renderInfoItem('Contact No.', claim?.policy?.insuredMobile)}
+            {renderInfoItem('HPA/Financier', claim?.policy?.hpa || 'NIL')}
           </View>
-          <View style={styles.summaryRow}>
-            <Text>Parts GST (CGST+SGST):</Text>
-            <Text>{formatCurrency(summary.partsCGST + summary.partsSGST)}</Text>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>3. VEHICLE PARTICULARS</Text></View>
+          <View style={styles.infoGrid}>
+            {renderInfoItem('Registration No.', claim?.vehicle?.registrationNumber)}
+            {renderInfoItem('Registration Date', claim?.vehicle?.dateOfRegistration)}
+            {renderInfoItem('Make & Model', `${claim?.vehicle?.make || ''} ${claim?.vehicle?.model || ''}`)}
+            {renderInfoItem('Year of Mfg', claim?.vehicle?.yearOfManufacture ?? '-')}
+            {renderInfoItem('Chassis Number', claim?.vehicle?.chassisNumber)}
+            {renderInfoItem('Engine Number', claim?.vehicle?.engineNumber)}
+            {renderInfoItem('Vehicle Class', claim?.vehicle?.classOfVehicle)}
+            {renderInfoItem('Fuel Type', claim?.vehicle?.fuel)}
+            {renderInfoItem('C.C. / HP', claim?.vehicle?.cubicCapacity)}
+            {renderInfoItem('Odometer (KM)', claim?.vehicle?.odometer)}
+            {renderInfoItem('Body Type', claim?.vehicle?.bodyType)}
+            {renderInfoItem('Colour', claim?.vehicle?.colour)}
+            {renderInfoItem('Seating / RLW', claim?.vehicle?.seatingCapacity || claim?.vehicle?.registeredLoadWeight)}
+            {renderInfoItem('Fitness Expiry', claim?.vehicle?.fitnessValidUpto)}
           </View>
-          <View style={styles.summaryRow}>
-            <Text>Total Labour Assessed (Base):</Text>
-            <Text>{formatCurrency(summary.labourBase)}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text>Labour GST:</Text>
-            <Text>{formatCurrency(summary.labourGST)}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text>Less: Expected Salvage:</Text>
-            <Text>- {formatCurrency(summary.salvage)}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text>Less: Policy Excess:</Text>
-            <Text>- {formatCurrency(summary.excess)}</Text>
-          </View>
-          <View style={styles.summaryTotal}>
-            <Text>NET ASSESSED LIABILITY:</Text>
-            <Text>{formatCurrency(summary.netAssessedLoss)}</Text>
-          </View>
-          <Text style={{ marginTop: 8, fontSize: 8, fontFamily: 'Helvetica-Oblique' }}>
-            Amount In Words: {summary.netInWords}
-          </Text>
+        </View>
+
+        <View style={styles.footer}>
+          <Text>SurveyOS Prime - Professional Survey Report</Text>
+          <Text render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} fixed />
         </View>
       </Page>
 
-      {/* ─── PAGE 3+: PHOTOS ─────────────────────────────────── */}
-      {claim.photos.length > 0 && (
-        <Page size="A4" style={styles.page}>
-          <View style={styles.header}>
-            <Text style={styles.title}>VEHICLE DAMAGE PHOTOS</Text>
+      {/* ─── PAGE 2: DRIVER & ACCIDENT & DOCUMENT VERIFICATION ─── */}
+      <Page size="A4" style={styles.page}>
+        <View style={styles.header}>
+          <View style={styles.logoSection}>
+            <Text style={styles.companyName}>SurveyOS Prime</Text>
           </View>
-          <View style={styles.photoGrid}>
-            {claim.photos.map((photo, idx) => (
-              <View key={idx} style={{ ...styles.photoBox, width: getPhotoWidth() }}>
-                <Image 
-                  src={photo.dataUrl} 
-                  style={{ ...styles.photoImage, height: getPhotoHeight() }} 
-                />
-                <Text style={styles.photoCaption}>
-                  Photo {idx + 1}: {photo.name || 'Damage reference'}
-                </Text>
+          <Text style={styles.reportTitle}>PARTICULARS OF ACCIDENT</Text>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>4. DRIVER'S PARTICULARS</Text></View>
+          <View style={styles.infoGrid}>
+            {renderInfoItem('Driver Name', claim?.driver?.name, true)}
+            {renderInfoItem('Parentage', claim?.driver?.parentName || claim?.driver?.fatherHusbandName, true)}
+            {renderInfoItem('Date of Birth', claim?.driver?.dateOfBirth || claim?.driver?.dob)}
+            {renderInfoItem('License Number', claim?.driver?.licenseNumber || claim?.driver?.licenceNumber)}
+            {renderInfoItem('Issue Date', claim?.driver?.dateOfIssue)}
+            {renderInfoItem('N.T. Validity', claim?.driver?.validityNonTransport)}
+            {renderInfoItem('TR Validity', claim?.driver?.validityTransport)}
+            {renderInfoItem('Issuing Authority', claim?.driver?.issuingAuthority, true)}
+            {renderInfoItem('Allowed Classes', claim?.driver?.vehicleClasses, true)}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>5. ACCIDENT DETAILS</Text></View>
+          <View style={styles.infoGrid}>
+            {renderInfoItem('Date & Time', claim?.accident?.dateAndTime)}
+            {renderInfoItem('Accident Location', claim?.accident?.placeOfAccident, true)}
+            {renderInfoItem('Police Station', claim?.accident?.policeStation)}
+            {renderInfoItem('FIR / Diary No.', claim?.accident?.firNumber)}
+            {renderInfoItem('Cause & Nature', claim?.accident?.causeOfAccident, true)}
+            {renderInfoItem('TP Involvement', claim?.accident?.thirdPartyDetails || 'NIL', true)}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>6. DOCUMENT VERIFICATION</Text></View>
+          <View style={styles.infoGrid}>
+            {renderInfoItem('RC Verified?', claim?.vehicle?.registrationNumber ? 'YES' : 'NO')}
+            {renderInfoItem('DL Verified?', claim?.driver?.licenseNumber ? 'YES' : 'NO')}
+            {renderInfoItem('Permit Category', claim?.spotDetails?.permitType || 'NA')}
+            {renderInfoItem('Permit Valid Upto', claim?.spotDetails?.permitTo || 'NA')}
+            {renderInfoItem('Fitness Valid Upto', claim?.vehicle?.fitnessValidUpto || 'NA')}
+            {renderInfoItem('Authorization', claim?.spotDetails?.authNo || 'NA')}
+          </View>
+        </View>
+
+        <View style={styles.footer}>
+          <Text>SurveyOS Prime - Professional Survey Report</Text>
+          <Text render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} fixed />
+        </View>
+      </Page>
+
+      {/* ─── PAGE 3: ASSESSMENT TABLE ──────────────────────────── */}
+      <Page size="A4" style={styles.page}>
+        <View style={styles.header}>
+          <Text style={styles.companyName}>SurveyOS Prime</Text>
+          <Text style={styles.reportTitle}>ASSESSMENT DETAILS</Text>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>7. DETAILED ASSESSMENT ({getDepPolicyLabel(claim.depreciationType, ageMonths)})</Text></View>
+          <View style={styles.table}>
+            <View style={styles.tableHeader}>
+              <Text style={styles.colNo}>No</Text>
+              <Text style={styles.colPart}>Particulars of Parts</Text>
+              <Text style={styles.colTy}>Type</Text>
+              <Text style={styles.colEst}>Estimated</Text>
+              <Text style={styles.colAss}>Assessed</Text>
+              <Text style={styles.colDep}>Dep%</Text>
+              <Text style={styles.colDepAmt}>Dep.Amt</Text>
+              <Text style={styles.colGstPer}>GST%</Text>
+              <Text style={styles.colNet}>Net Amt</Text>
+            </View>
+            {(claim?.assessmentRows || []).map((row, index) => {
+              const depRate = getDepreciationRate(row.partType, ageMonths, claim?.depreciationType || 'Standard');
+              const depAmt = (row.assessed || 0) * (depRate / 100);
+              const valueAfterDep = (row.assessed || 0) - depAmt;
+              const gstAmt = valueAfterDep * ((row.gst || 0) / 100);
+              const netAmt = valueAfterDep + gstAmt;
+
+              return (
+                <View key={row.id} style={styles.tableRow}>
+                  <Text style={styles.colNo}>{index + 1}</Text>
+                  <Text style={styles.colPart}>{row.particulars}</Text>
+                  <Text style={styles.colTy}>{row.partType.substring(0, 3).toUpperCase()}</Text>
+                  <Text style={styles.colEst}>{formatCurrency(row.estimated)}</Text>
+                  <Text style={styles.colAss}>{formatCurrency(row.assessed)}</Text>
+                  <Text style={styles.colDep}>{depRate}%</Text>
+                  <Text style={styles.colDepAmt}>{formatCurrency(depAmt)}</Text>
+                  <Text style={styles.colGstPer}>{row.gst}%</Text>
+                  <Text style={styles.colNet}>{formatCurrency(netAmt)}</Text>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+
+        <View style={styles.footer}>
+          <Text>SurveyOS Prime - Professional Survey Report</Text>
+          <Text render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} fixed />
+        </View>
+      </Page>
+
+      {/* ─── PAGE 4: SUMMARY & SIGNATURE ───────────────────────── */}
+      <Page size="A4" style={styles.page}>
+        <View style={styles.header}>
+          <Text style={styles.companyName}>SurveyOS Prime</Text>
+          <Text style={styles.reportTitle}>FINAL SUMMARY</Text>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>8. SUMMARY OF LOSS (LIABILITY)</Text></View>
+          <View style={styles.summaryContainer}>
+            <View style={styles.summaryBox}>
+              <View style={styles.summaryRow}>
+                <Text>Net Parts (After Depreciation)</Text>
+                <Text>{formatCurrency(summary.partsBase)}</Text>
               </View>
-            ))}
+              <View style={styles.summaryRow}>
+                <Text style={{ fontSize: 7, color: '#6B7280', paddingLeft: 10 }}>Add CGST on Parts (9%)</Text>
+                <Text style={{ fontSize: 7, color: '#6B7280' }}>{formatCurrency(summary.partsCGST)}</Text>
+              </View>
+              <View style={styles.summaryRow}>
+                <Text style={{ fontSize: 7, color: '#6B7280', paddingLeft: 10 }}>Add SGST on Parts (9%)</Text>
+                <Text style={{ fontSize: 7, color: '#6B7280' }}>{formatCurrency(summary.partsSGST)}</Text>
+              </View>
+              
+              <View style={[styles.summaryRow, { marginTop: 4 }]}>
+                <Text>Labour & Painting Charges (Assessed)</Text>
+                <Text>{formatCurrency(summary.labourBase)}</Text>
+              </View>
+              <View style={styles.summaryRow}>
+                <Text style={{ fontSize: 7, color: '#6B7280', paddingLeft: 10 }}>Add GST on Labour (18%)</Text>
+                <Text style={{ fontSize: 7, color: '#6B7280' }}>{formatCurrency(summary.labourGST)}</Text>
+              </View>
+
+              <View style={styles.summaryTotal}>
+                <Text>Gross Assessed Liability</Text>
+                <Text>{formatCurrency(summary.grandTotal)}</Text>
+              </View>
+              
+              <View style={[styles.summaryRow, { marginTop: 4, color: '#DC2626' }]}>
+                <Text>Less: Salvage Value (Expected)</Text>
+                <Text>- {formatCurrency(summary.salvage)}</Text>
+              </View>
+              {summary.voluntaryExcess > 0 && (
+                <View style={[styles.summaryRow, { color: '#DC2626' }]}>
+                  <Text>Less: Voluntary Excess</Text>
+                  <Text>- {formatCurrency(summary.voluntaryExcess)}</Text>
+                </View>
+              )}
+              <View style={[styles.summaryRow, { color: '#DC2626' }]}>
+                <Text>Less: Compulsory Excess / Deductible</Text>
+                <Text>- {formatCurrency(summary.compulsoryExcess)}</Text>
+              </View>
+              
+              <View style={[styles.summaryTotal, { backgroundColor: '#2563EB', color: '#FFFFFF', padding: 8, marginTop: 10, borderRadius: 4 }]}>
+                <Text>NET PAYABLE LOSS</Text>
+                <Text>{formatCurrency(summary.netAssessedLoss)}</Text>
+              </View>
+              
+              <Text style={{ fontSize: 7, marginTop: 8, fontStyle: 'italic', color: '#111827', fontFamily: 'Helvetica-Bold' }}>
+                ({summary.netInWords})
+              </Text>
+            </View>
           </View>
-        </Page>
-      )}
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>9. SURVEYOR'S REMARKS & DECLARATION</Text></View>
+          <View style={{ border: '1px solid #E5E7EB', padding: 8, minHeight: 80, backgroundColor: '#F9FAFB' }}>
+            <Text style={{ fontSize: 8, color: '#374151', lineHeight: 1.5 }}>
+              The assessment above is based on a thorough physical inspection of the vehicle. The damages noted are consistent with the reported cause and nature of the accident. All replaced parts have been physically verified against the old damaged units. This report is issued without prejudice, subject to the terms, conditions, and exceptions of the insurance policy.
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.signatureBox}>
+          <View style={styles.signature}>
+            <Text>Insured Signature</Text>
+          </View>
+          <View style={styles.signature}>
+            <Text>Surveyor Signature & Stamp</Text>
+          </View>
+        </View>
+
+        <View style={styles.footer}>
+          <Text>SurveyOS Prime - Professional Survey Report</Text>
+          <Text render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} fixed />
+        </View>
+      </Page>
     </Document>
   );
 }

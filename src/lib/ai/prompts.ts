@@ -4,10 +4,10 @@
 // ═══════════════════════════════════════════════════════════
 
 export const DOC_PROMPTS: Record<string, string> = {
-  rc: `You are an expert at reading Indian vehicle RC (Registration Certificate) documents. Extract ALL visible fields from this RC book image. Return ONLY a JSON object with these keys (use empty string if not found):
+  rc: `You are an expert at reading Indian vehicle RC (Registration Certificate) documents. Extract ALL visible fields from this RC book image. Pay special attention to the Registration Date. Return ONLY a JSON object with these keys (use empty string if not found):
 {
   "registration_number": "",
-  "date_of_registration": "",
+  "date_of_registration": "Look for 'Regn Date' or 'Date of Registration' - return as YYYY-MM-DD",
   "owner_name": "",
   "address": "",
   "make": "",
@@ -32,20 +32,20 @@ export const DOC_PROMPTS: Record<string, string> = {
 }
 Return ONLY the JSON. No explanation, no markdown, no backticks.`,
 
-  dl: `You are an expert at reading Indian Driving Licence (DL/MDL) documents. Extract ALL visible fields including BOTH validity dates. Return ONLY a JSON object:
+  dl: `You are an expert at reading Indian Driving Licence (DL/MDL) documents. Extract ALL visible fields including Father/Husband name and ALL validity dates. Return ONLY a JSON object:
 {
   "licence_number": "",
   "holder_name": "",
   "relation_type": "S/o or D/o or W/o",
-  "father_or_husband_name": "",
-  "date_of_birth": "",
+  "father_or_husband_name": "Extract parent/spouse name from document",
+  "date_of_birth": "Extract DOB - return as YYYY-MM-DD",
   "address": "",
   "date_of_issue": "",
   "validity_non_transport": "expiry date of LMV/Non-Transport licence",
   "validity_transport": "expiry date of Transport/HMV/TRANS licence (if present)",
-  "issuing_authority": "",
+  "issuing_authority": "RTO name",
   "rto": "",
-  "vehicle_classes": "all classes listed e.g. LMV, MCWG, TRANS, HMV",
+  "vehicle_classes": "all classes listed e.g. LMV-NT, MCWG, TRANS, HMV",
   "badge_no": ""
 }
 Return ONLY the JSON. No explanation, no markdown, no backticks.`,

@@ -62,7 +62,8 @@ export function BillCheckTab() {
     ageMonths,
     currentClaim.depreciationType,
     fb?.salvageValue ?? 0,
-    fb?.lessExcess ?? 0,
+    fb?.compulsoryExcess ?? 0,
+    fb?.voluntaryExcess ?? 0,
   );
 
   const bcSummary = calculateBillCheckSummary(
@@ -70,7 +71,8 @@ export function BillCheckTab() {
     ageMonths,
     currentClaim.depreciationType,
     fb?.salvageValue ?? 0,
-    fb?.lessExcess ?? 0,
+    fb?.compulsoryExcess ?? 0,
+    fb?.voluntaryExcess ?? 0,
   );
 
 

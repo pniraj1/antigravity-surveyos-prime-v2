@@ -407,34 +407,39 @@ export const useClaimStore = create<ClaimState>()(
 
           const parseDate = (d: string) => {
             if (!d) return '';
-            const t = d.split(' ')[0]; // remove time context
+            const clean = d.trim().replace(/[^\w\s\-/]/g, ' '); // Basic cleaning
             
-            // Try standard parts
-            if (t.includes('-') || t.includes('/')) {
-              const sep = t.includes('-') ? '-' : '/';
-              const p = t.split(sep);
-              
-              if (p[0].length === 4 && !isNaN(Number(p[0]))) return t; // Already YYYY-MM-DD
-              
-              if (p[2]?.length >= 4) {
-                // Check if p[1] is a letter-based month (e.g. Aug, August)
-                if (isNaN(Number(p[1]))) {
-                  const parsed = new Date(t);
-                  if (!isNaN(parsed.getTime())) {
-                    return parsed.toISOString().split('T')[0];
-                  }
-                }
-                
-                return `${p[2].substring(0,4)}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+            // If it's already YYYY-MM-DD
+            if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) return clean;
+
+            // Split by space, dash, or slash
+            const parts = clean.split(/[\s\-/]+/);
+            if (parts.length >= 3) {
+              let day = parts[0];
+              let month = parts[1];
+              let year = parts[2];
+
+              // Handle "20 Nov 2022" or "Nov 20 2022"
+              const dateObj = new Date(clean);
+              if (!isNaN(dateObj.getTime())) {
+                const y = dateObj.getFullYear();
+                const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const dayStr = String(dateObj.getDate()).padStart(2, '0');
+                return `${y}-${m}-${dayStr}`;
+              }
+
+              // Standard Indian DD-MM-YYYY
+              if (year.length === 4 && day.length <= 2) {
+                return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
               }
             }
             
-            // Fallback native parse
-            const fallback = new Date(t);
+            // Final fallback
+            const fallback = new Date(clean);
             if (!isNaN(fallback.getTime())) {
                return fallback.toISOString().split('T')[0];
             }
-            return t;
+            return d; // Return original if all else fails
           };
           
           // Helper for fuel mapping
@@ -453,31 +458,31 @@ export const useClaimStore = create<ClaimState>()(
 
           // Mapping logic based on document key
           if (key === 'rc') {
-            const hpa = data.hypothecation || newClaim.vehicle.hpa;
-            const rlw = typeof data.gross_weight === 'string' ? data.gross_weight : String(data.gross_weight || newClaim.vehicle.rlw);
-            const yomStr = data.year_of_manufacture?.toString() || '';
+            const hpa = data.hypothecation || data.hpa || newClaim.vehicle.hpa;
+            const rlw = typeof data.gross_weight === 'string' ? data.gross_weight : String(data.gross_weight || data.rlw || newClaim.vehicle.rlw);
+            const yomStr = (data.year_of_manufacture || data.yom)?.toString() || '';
             const yomMatch = yomStr.match(/\b(19|20)\d{2}\b/);
             const yom = yomMatch ? parseInt(yomMatch[0]) : newClaim.vehicle.yearOfManufacture;
 
             newClaim.vehicle = { 
               ...newClaim.vehicle,
-              registrationNumber: data.registration_number || newClaim.vehicle.registrationNumber,
-              dateOfRegistration: parseDate(data.date_of_registration) || newClaim.vehicle.dateOfRegistration,
-              chassisNumber: data.chassis_number || newClaim.vehicle.chassisNumber,
-              engineNumber: data.engine_number || newClaim.vehicle.engineNumber,
+              registrationNumber: data.registration_number || data.reg_no || newClaim.vehicle.registrationNumber,
+              dateOfRegistration: parseDate(data.date_of_registration || data.registration_date || data.reg_date) || newClaim.vehicle.dateOfRegistration,
+              chassisNumber: data.chassis_number || data.chassis_no || newClaim.vehicle.chassisNumber,
+              engineNumber: data.engine_number || data.engine_no || newClaim.vehicle.engineNumber,
               make: data.make || newClaim.vehicle.make,
               model: data.model || newClaim.vehicle.model,
               bodyType: data.body_type || newClaim.vehicle.bodyType,
-              cubicCapacity: data.cubic_capacity || newClaim.vehicle.cubicCapacity,
-              colour: data.colour || newClaim.vehicle.colour,
+              cubicCapacity: data.cubic_capacity || data.cc || newClaim.vehicle.cubicCapacity,
+              colour: data.colour || data.color || newClaim.vehicle.colour,
               fuel: formatFuel(data.fuel) || newClaim.vehicle.fuel,
-              seatingCapacity: data.seating_capacity || newClaim.vehicle.seatingCapacity,
-              unladenWeight: parseFloat(data.unladen_weight) || newClaim.vehicle.unladenWeight,
+              seatingCapacity: data.seating_capacity || data.seats || newClaim.vehicle.seatingCapacity,
+              unladenWeight: parseFloat(data.unladen_weight || data.ulw) || newClaim.vehicle.unladenWeight,
               rlw: rlw,
               registeredLoadWeight: rlw || newClaim.vehicle.registeredLoadWeight, // Update alias for UI
-              classOfVehicle: data.class_of_vehicle || newClaim.vehicle.classOfVehicle,
-              fitnessNo: data.fitness_cert_no || newClaim.vehicle.fitnessNo,
-              fitnessValidUpto: parseDate(data.fitness_valid_upto) || newClaim.vehicle.fitnessValidUpto,
+              classOfVehicle: data.class_of_vehicle || data.vehicle_class || newClaim.vehicle.classOfVehicle,
+              fitnessNo: data.fitness_cert_no || data.fitness_no || newClaim.vehicle.fitnessNo,
+              fitnessValidUpto: parseDate(data.fitness_valid_upto || data.fitness_expiry) || newClaim.vehicle.fitnessValidUpto,
               route: data.route || newClaim.vehicle.route,
               yearOfManufacture: yom,
               hpa: hpa,
@@ -485,7 +490,7 @@ export const useClaimStore = create<ClaimState>()(
             };
             newClaim.policy = {
               ...newClaim.policy,
-              insuredName: data.owner_name || newClaim.policy.insuredName,
+              insuredName: data.owner_name || data.name || newClaim.policy.insuredName,
               insuredAddress: data.address || newClaim.policy.insuredAddress,
             };
             
@@ -522,32 +527,32 @@ export const useClaimStore = create<ClaimState>()(
           } else if (key === 'dl') {
             newClaim.driver = { 
               ...newClaim.driver,
-              licenceNumber: data.licence_number || newClaim.driver.licenceNumber,
-              name: data.holder_name || newClaim.driver.name,
-              fatherHusbandName: data.father_or_husband_name || newClaim.driver.fatherHusbandName,
-              parentName: data.father_or_husband_name || newClaim.driver.parentName, // Alias for UI
+              licenceNumber: data.licence_number || data.dl_no || newClaim.driver.licenceNumber,
+              name: data.holder_name || data.name || newClaim.driver.name,
+              fatherHusbandName: data.father_or_husband_name || data.father_name || data.parent_name || newClaim.driver.fatherHusbandName,
+              parentName: data.father_or_husband_name || data.father_name || data.parent_name || newClaim.driver.parentName, // Alias for UI
               relationType: data.relation_type || newClaim.driver.relationType,
-              dob: parseDate(data.date_of_birth) || newClaim.driver.dob,
-              dateOfBirth: parseDate(data.date_of_birth) || newClaim.driver.dateOfBirth, // Alias for UI
+              dob: parseDate(data.date_of_birth || data.dob) || newClaim.driver.dob,
+              dateOfBirth: parseDate(data.date_of_birth || data.dob) || newClaim.driver.dateOfBirth, // Alias for UI
               address: data.address || newClaim.driver.address,
-              dateOfIssue: parseDate(data.date_of_issue) || newClaim.driver.dateOfIssue,
+              dateOfIssue: parseDate(data.date_of_issue || data.issue_date) || newClaim.driver.dateOfIssue,
               issuingAuthority: data.issuing_authority || data.rto || newClaim.driver.issuingAuthority,
-              vehicleClass: data.vehicle_classes || newClaim.driver.vehicleClass,
-              vehicleClasses: data.vehicle_classes || newClaim.driver.vehicleClasses, // Alias for UI
-              validityNonTransport: parseDate(data.validity_non_transport) || newClaim.driver.validityNonTransport,
-              validityTransport: parseDate(data.validity_transport) || newClaim.driver.validityTransport,
+              vehicleClass: data.vehicle_classes || data.classes || data.authorized_classes || newClaim.driver.vehicleClass,
+              vehicleClasses: data.vehicle_classes || data.classes || data.authorized_classes || newClaim.driver.vehicleClasses, // Alias for UI
+              validityNonTransport: parseDate(data.validity_non_transport || data.valid_nt) || newClaim.driver.validityNonTransport,
+              validityTransport: parseDate(data.validity_transport || data.valid_t) || newClaim.driver.validityTransport,
             };
             newClaim.spotDetails = {
               ...newClaim.spotDetails,
-              driverName: data.holder_name || newClaim.spotDetails.driverName,
-              dlParentName: data.father_or_husband_name || newClaim.spotDetails.dlParentName,
-              mdlNo: data.licence_number || newClaim.spotDetails.mdlNo,
+              driverName: data.holder_name || data.name || newClaim.spotDetails.driverName,
+              dlParentName: data.father_or_husband_name || data.father_name || data.parent_name || newClaim.spotDetails.dlParentName,
+              mdlNo: data.licence_number || data.dl_no || newClaim.spotDetails.mdlNo,
               dlAuthority: data.issuing_authority || data.rto || newClaim.spotDetails.dlAuthority,
-              dlType: data.vehicle_classes || newClaim.spotDetails.dlType,
-              dlIssueDate: parseDate(data.date_of_issue) || newClaim.spotDetails.dlIssueDate,
+              dlType: data.vehicle_classes || data.classes || data.authorized_classes || newClaim.spotDetails.dlType,
+              dlIssueDate: parseDate(data.date_of_issue || data.issue_date) || newClaim.spotDetails.dlIssueDate,
               dlRelation: data.relation_type || newClaim.spotDetails.dlRelation,
-              dlValidNT: parseDate(data.validity_non_transport) || newClaim.spotDetails.dlValidNT,
-              dlValidT: parseDate(data.validity_transport) || newClaim.spotDetails.dlValidT,
+              dlValidNT: parseDate(data.validity_non_transport || data.valid_nt) || newClaim.spotDetails.dlValidNT,
+              dlValidT: parseDate(data.validity_transport || data.valid_t) || newClaim.spotDetails.dlValidT,
             };
           } else if (key === 'claim') {
              newClaim.policy = {

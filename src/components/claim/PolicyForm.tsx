@@ -22,7 +22,7 @@ export function PolicyDetailsForm() {
             <Label htmlFor="p-ins">Insurer Name</Label>
             <Input
               id="p-ins"
-              value={p.insurerName}
+              value={p?.insurerName || ''}
               onChange={(e) => updatePolicy({ insurerName: e.target.value })}
             />
           </div>
@@ -31,7 +31,7 @@ export function PolicyDetailsForm() {
             <Label htmlFor="p-polno">Policy No.</Label>
             <Input
               id="p-polno"
-              value={p.policyNumber}
+              value={p?.policyNumber || ''}
               onChange={(e) => updatePolicy({ policyNumber: e.target.value })}
             />
           </div>
@@ -40,7 +40,7 @@ export function PolicyDetailsForm() {
             <Label htmlFor="p-claimno">Claim No.</Label>
             <Input
               id="p-claimno"
-              value={p.claimNumber}
+              value={p?.claimNumber || ''}
               onChange={(e) => updatePolicy({ claimNumber: e.target.value })}
             />
           </div>
@@ -49,7 +49,7 @@ export function PolicyDetailsForm() {
             <Label htmlFor="p-type">Policy Type</Label>
             <select
               id="p-type"
-              value={p.policyType}
+              value={p?.policyType || ''}
               onChange={(e) => updatePolicy({ policyType: e.target.value })}
               className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
@@ -65,7 +65,7 @@ export function PolicyDetailsForm() {
             <Input
               id="p-from"
               type="date"
-              value={p.periodFrom}
+              value={p?.periodFrom || ''}
               onChange={(e) => updatePolicy({ periodFrom: e.target.value })}
             />
           </div>
@@ -75,7 +75,7 @@ export function PolicyDetailsForm() {
             <Input
               id="p-to"
               type="date"
-              value={p.periodTo}
+              value={p?.periodTo || ''}
               onChange={(e) => updatePolicy({ periodTo: e.target.value })}
             />
           </div>
@@ -85,7 +85,7 @@ export function PolicyDetailsForm() {
             <Input
               id="p-idv"
               type="number"
-              value={p.idv}
+              value={p?.idv || ''}
               onChange={(e) => updatePolicy({ idv: e.target.value })}
               placeholder="0.00"
             />
@@ -95,7 +95,7 @@ export function PolicyDetailsForm() {
             <Label htmlFor="p-name">Insured Name</Label>
             <Input
               id="p-name"
-              value={p.insuredName}
+              value={p?.insuredName || ''}
               onChange={(e) => updatePolicy({ insuredName: e.target.value })}
             />
           </div>
@@ -104,7 +104,7 @@ export function PolicyDetailsForm() {
             <Label htmlFor="p-addr">Insured Address</Label>
             <Input
               id="p-addr"
-              value={p.insuredAddress}
+              value={p?.insuredAddress || ''}
               onChange={(e) => updatePolicy({ insuredAddress: e.target.value })}
             />
           </div>
@@ -113,7 +113,7 @@ export function PolicyDetailsForm() {
             <Label htmlFor="p-mob">Mobile</Label>
             <Input
               id="p-mob"
-              value={p.insuredMobile}
+              value={p?.insuredMobile || ''}
               onChange={(e) => updatePolicy({ insuredMobile: e.target.value })}
             />
           </div>
@@ -122,7 +122,7 @@ export function PolicyDetailsForm() {
             <Label htmlFor="p-office">Issuing Office</Label>
             <Input
               id="p-office"
-              value={p.policyIssuingOffice}
+              value={p?.policyIssuingOffice || ''}
               onChange={(e) => updatePolicy({ policyIssuingOffice: e.target.value })}
             />
           </div>

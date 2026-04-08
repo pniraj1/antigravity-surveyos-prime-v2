@@ -120,7 +120,7 @@ export function SpotReportDocument({ claim }: Props) {
         <View style={styles.header}>
           <Text style={styles.title}>SPOT SURVEY REPORT</Text>
           <Text style={styles.subtitle}>
-            Report No: {claim.reportNo || 'DRAFT'} | Date: {claim.reportDate}
+            Report No: {claim?.reportNo || 'DRAFT'} | Date: {claim?.reportDate || '-'}
           </Text>
         </View>
 
@@ -129,15 +129,15 @@ export function SpotReportDocument({ claim }: Props) {
           <Text style={styles.sectionTitle}>1. Policy & Insured Information</Text>
           <View style={styles.row}>
             <Text style={styles.colLabel}>Insured Name:</Text>
-            <Text style={styles.colValue}>{claim.policy.insuredName || 'N/A'}</Text>
+            <Text style={styles.colValue}>{claim?.policy?.insuredName || 'N/A'}</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.colLabel}>Policy Number:</Text>
-            <Text style={styles.colValue}>{claim.policy.policyNumber || 'N/A'}</Text>
+            <Text style={styles.colValue}>{claim?.policy?.policyNumber || 'N/A'}</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.colLabel}>Insurer:</Text>
-            <Text style={styles.colValue}>{claim.policy.insurerName || 'N/A'}</Text>
+            <Text style={styles.colValue}>{claim?.policy?.insurerName || 'N/A'}</Text>
           </View>
         </View>
 
@@ -146,20 +146,20 @@ export function SpotReportDocument({ claim }: Props) {
           <Text style={styles.sectionTitle}>2. Vehicle Details</Text>
           <View style={styles.row}>
             <Text style={styles.colLabel}>Registration No:</Text>
-            <Text style={styles.colValue}>{claim.vehicle.registrationNumber || 'N/A'}</Text>
+            <Text style={styles.colValue}>{claim?.vehicle?.registrationNumber || 'N/A'}</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.colLabel}>Make & Model:</Text>
-            <Text style={styles.colValue}>{claim.vehicle.make} {claim.vehicle.model}</Text>
+            <Text style={styles.colValue}>{claim?.vehicle?.make || ''} {claim?.vehicle?.model || ''}</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.colLabel}>Condition of Vehicle:</Text>
-            <Text style={styles.colValue}>{claim.vehicle.condition || 'Not specified'}</Text>
+            <Text style={styles.colValue}>{claim?.vehicle?.condition || 'Not specified'}</Text>
           </View>
-          {claim.vehicle.isCommercial && (
+          {claim?.vehicle?.isCommercial && (
             <View style={styles.row}>
               <Text style={styles.colLabel}>RLW / PayLoad:</Text>
-              <Text style={styles.colValue}>{claim.vehicle.registeredLoadWeight || 'N/A'} / {claim.vehicle.actualPayload || 'N/A'}</Text>
+              <Text style={styles.colValue}>{claim?.vehicle?.registeredLoadWeight || 'N/A'} / {claim?.vehicle?.actualPayload || 'N/A'}</Text>
             </View>
           )}
         </View>
@@ -169,11 +169,23 @@ export function SpotReportDocument({ claim }: Props) {
           <Text style={styles.sectionTitle}>3. Driver Information (at Spot)</Text>
           <View style={styles.row}>
             <Text style={styles.colLabel}>Driver Name:</Text>
-            <Text style={styles.colValue}>{claim.driver.name || 'N/A'}</Text>
+            <Text style={styles.colValue}>{claim?.spotDetails?.driverName || 'N/A'}</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.colLabel}>DL Number:</Text>
-            <Text style={styles.colValue}>{claim.driver.licenseNumber || 'N/A'}</Text>
+            <Text style={styles.colValue}>{claim?.spotDetails?.mdlNo || 'N/A'}</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.colLabel}>DL Issue Date:</Text>
+            <Text style={styles.colValue}>{claim?.spotDetails?.dlIssueDate || 'N/A'}</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.colLabel}>Valid Upto (NT/T):</Text>
+            <Text style={styles.colValue}>{claim?.spotDetails?.dlValidNT || 'N/A'} / {claim?.spotDetails?.dlValidT || 'N/A'}</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.colLabel}>Verification Status:</Text>
+            <Text style={{...styles.colValue, fontFamily: 'Helvetica-Bold'}}>{claim?.spotDetails?.mdlVerified || 'Pending'}</Text>
           </View>
         </View>
 
@@ -182,36 +194,76 @@ export function SpotReportDocument({ claim }: Props) {
           <Text style={styles.sectionTitle}>4. Occurrence & Authorities</Text>
           <View style={styles.row}>
             <Text style={styles.colLabel}>Date & Time:</Text>
-            <Text style={styles.colValue}>{claim.accident.dateAndTime || 'N/A'}</Text>
+            <Text style={styles.colValue}>{claim?.accident?.dateAndTime || 'N/A'}</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.colLabel}>Place of Accident:</Text>
-            <Text style={styles.colValue}>{claim.accident.placeOfAccident || 'N/A'}</Text>
+            <Text style={styles.colValue}>{claim?.accident?.placeOfAccident || 'N/A'}</Text>
           </View>
           <View style={styles.row}>
-            <Text style={styles.colLabel}>Police Station:</Text>
-            <Text style={styles.colValue}>{claim.accident.policeStation || 'N/A'}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.colLabel}>FIR / Diary No:</Text>
-            <Text style={styles.colValue}>{claim.accident.firNumber || 'N/A'}</Text>
+            <Text style={styles.colLabel}>Police Station / FIR:</Text>
+            <Text style={styles.colValue}>{claim?.spotDetails?.policeStation || 'N/A'} / {claim?.spotDetails?.diaryNo || 'N/A'}</Text>
           </View>
         </View>
 
-        {/* 5. Damage Matrix */}
+        {/* 5. Commercial & Load Details */}
+        {claim?.vehicle?.isCommercial && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>5. Commercial Compliance & Logistics</Text>
+            <View style={styles.row}>
+              <Text style={styles.colLabel}>Permit No / Type:</Text>
+              <Text style={styles.colValue}>{claim?.spotDetails?.permitNo || 'N/A'} ({claim?.spotDetails?.permitType || '-'})</Text>
+            </View>
+            <div style={styles.row}>
+              <Text style={styles.colLabel}>Permit Valid Upto:</Text>
+              <Text style={styles.colValue}>{claim?.spotDetails?.permitTo || 'N/A'}</Text>
+            </div>
+            <View style={styles.row}>
+              <Text style={styles.colLabel}>Fitness Valid Upto:</Text>
+              <Text style={styles.colValue}>{claim?.spotDetails?.fitnessValid || 'N/A'}</Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.colLabel}>GVW / ULW / Cap:</Text>
+              <Text style={styles.colValue}>{claim?.spotDetails?.gvw || 0} / {claim?.spotDetails?.ulw || 0} / {claim?.spotDetails?.loadCapacity || 0} KG</Text>
+            </View>
+            <View style={{...styles.row, backgroundColor: (claim?.spotDetails?.actualLoad || 0) > (claim?.spotDetails?.loadCapacity || 0) ? '#fee2e2' : '#f0fdf4'}}>
+              <Text style={styles.colLabel}>Actual Load:</Text>
+              <Text style={{...styles.colValue, fontFamily: 'Helvetica-Bold'}}>{claim?.spotDetails?.actualLoad || 0} KG {(claim?.spotDetails?.actualLoad || 0) > (claim?.spotDetails?.loadCapacity || 0) ? '(OVERLOADED)' : ''}</Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.colLabel}>Load Origin-Dest:</Text>
+              <Text style={styles.colValue}>{claim?.spotDetails?.loadOrigin || '-'} to {claim?.spotDetails?.loadDest || '-'}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* 6. Physical Verification Matrix */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>5. Damage Matrix</Text>
+          <Text style={styles.sectionTitle}>6. Document Verification Highlights</Text>
+          <View style={{flexDirection: 'row', flexWrap: 'wrap'}}>
+            {Object.entries(claim?.spotDetails?.verificationFlags || {}).map(([key, val]) => (
+              <View key={key} style={{width: '25%', padding: 4, border: '0.5px solid #e5e7eb'}}>
+                <Text style={{fontSize: 7, color: '#6b7280', textTransform: 'uppercase'}}>{key}</Text>
+                <Text style={{fontSize: 8, fontFamily: 'Helvetica-Bold'}}>{val || '-'}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* 7. Damage Matrix */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>7. Damage Matrix / Site Findings</Text>
           <View style={styles.gridHeaderRow}>
             <Text style={styles.colNo}>#</Text>
             <Text style={styles.colPart}>Damaged Parts Observed</Text>
-            <Text style={styles.colType}>Type</Text>
+            <Text style={styles.colType}>Damage Description</Text>
           </View>
-          {claim.assessmentRows.length > 0 ? (
-            claim.assessmentRows.map((row, idx) => (
+          { (claim?.spotDamageRows || []).length > 0 ? (
+            (claim?.spotDamageRows || []).map((row, idx) => (
               <View key={row.id} style={styles.gridRow}>
                 <Text style={styles.colNo}>{idx + 1}</Text>
-                <Text style={styles.colPart}>{row.particulars}</Text>
-                <Text style={{...styles.colType, textTransform: 'capitalize'}}>{row.partType}</Text>
+                <Text style={{...styles.colPart, fontFamily: 'Helvetica-Bold'}}>{row.component}</Text>
+                <Text style={styles.colType}>{row.damage}</Text>
               </View>
             ))
           ) : (
@@ -221,28 +273,41 @@ export function SpotReportDocument({ claim }: Props) {
           )}
         </View>
 
+        {/* 8. Observations & Remarks */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>8. Observations & Final Remarks</Text>
+          <View style={styles.row}>
+            <Text style={styles.colLabel}>Workshop Selected:</Text>
+            <Text style={styles.colValue}>{claim?.spotDetails?.repairWorkshop || 'N/A'}</Text>
+          </View>
+          <View style={{...styles.row, minHeight: 40}}>
+            <Text style={styles.colLabel}>Final Remarks:</Text>
+            <Text style={styles.colValue}>{claim?.spotDetails?.comments || 'Site inspection completed. Cause of accident verified...'}</Text>
+          </View>
+        </View>
+
         <Text style={styles.footer}>
           SurveyOS Prime V2 | Professional Field Report | Digitally Generated
         </Text>
       </Page>
 
       {/* 6. Photos Page */}
-      {claim.photos.length > 0 && (
+      { (claim?.photos || []).length > 0 && (
         <Page size="A4" style={styles.page}>
           <View style={styles.header}>
             <Text style={styles.title}>SITE PHOTOGRAPHS</Text>
           </View>
           <View style={styles.photoGrid}>
-            {claim.photos.map((photo, idx) => (
+            {(claim?.photos || []).map((photo, idx) => (
               <View key={idx} style={styles.photoBox}>
-                <Image src={photo.dataUrl} style={styles.photoImage} />
+                {photo?.dataUrl && <Image src={photo.dataUrl} style={styles.photoImage} />}
                 <Text style={styles.photoCaption}>
-                  Fig {idx + 1}: {photo.name || 'Damage reference'}
+                  Fig {idx + 1}: {photo?.name || 'Damage reference'}
                 </Text>
               </View>
             ))}
           </View>
-          <Text style={styles.footer}>Page 2 of 2 | Evidence Annexure</Text>
+          <Text style={styles.footer}>Evidence Annexure</Text>
         </Page>
       )}
     </Document>

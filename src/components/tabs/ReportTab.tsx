@@ -17,6 +17,7 @@ import { SpotReportDocument } from '@/components/pdf/SpotReportDocument';
 import { UIICReportDocument } from '@/components/pdf/UIICReportDocument';
 import { BillCheckDocument } from '@/components/pdf/BillCheckDocument';
 import { FeeBillDocument } from '@/components/pdf/FeeBillDocument';
+import { PhotoSheetDocument } from '@/components/pdf/PhotoSheetDocument';
 
 // ─── Dynamic PDF imports ─────────────────────────────────────────────────────
 const PDFViewer = dynamic(
@@ -27,6 +28,11 @@ const PDFDownloadLink = dynamic(
   () => import('@react-pdf/renderer').then(m => m.PDFDownloadLink),
   { ssr: false }
 );
+import { useReactToPrint } from 'react-to-print';
+import { UIICPrintReport } from '@/components/print/UIICPrintReport';
+import { UIICExcelBuilder } from '@/lib/reports/uiic-excel-builder';
+import { useRef } from 'react';
+import { SpotPrintReport } from '@/components/print/SpotPrintReport';
 
 function PDFLoadingFallback() {
   return (
@@ -41,13 +47,14 @@ function PDFLoadingFallback() {
 
 // ─── Format Options ──────────────────────────────────────────────────────────
 // ─── Report Types & Formats ──────────────────────────────────────────────────
-type ReportType = 'spot' | 'survey' | 'bill-check' | 'fee-bill';
+type ReportType = 'spot' | 'survey' | 'bill-check' | 'fee-bill' | 'photo-sheet';
 
 const REPORT_TYPES = [
   { id: 'spot',       label: 'Spot Report',         icon: <FileText size={16} />,     color: '#B91C1C' },
   { id: 'survey',     label: 'Final Survey Report', icon: <FileText size={16} />,     color: '#0D1B2A' },
   { id: 'bill-check', label: 'Bill Check Report',   icon: <CheckCircle2 size={16} />, color: '#059669' },
   { id: 'fee-bill',   label: 'Fee Bill / Invoice',  icon: <Receipt size={16} />,     color: '#D4AF37' },
+  { id: 'photo-sheet', label: 'Photo Sheet',        icon: <DownloadCloud size={16} />, color: '#2563EB' },
 ];
 
 const FORMATS = [
@@ -80,31 +87,44 @@ export function ReportTab() {
   const [activeReport, setActiveReport] = useState<ReportType>('survey');
   const [format, setFormat] = useState<'standard' | 'uiic'>('standard');
   const [isExportingWord, setIsExportingWord] = useState(false);
+  const { updateClaim } = useClaimStore();
+  
+  const contentRef = useRef<HTMLDivElement>(null);
+  const handlePrint = useReactToPrint({
+    contentRef,
+    documentTitle: `UIIC-Survey-Report-${currentClaim?.vehicle?.registrationNumber || 'Draft'}`,
+  });
 
   useEffect(() => { setMounted(true); }, []);
 
   if (!currentClaim || !mounted) return <PDFLoadingFallback />;
 
   const ageMonths = getVehicleAgeMonths(
-    currentClaim.vehicle.dateOfRegistration,
-    currentClaim.vehicle.yearOfManufacture,
-    currentClaim.accident.dateAndTime,
+    currentClaim?.vehicle?.dateOfRegistration || null,
+    currentClaim?.vehicle?.yearOfManufacture ? Number(currentClaim.vehicle.yearOfManufacture) : null,
+    currentClaim?.accident?.dateAndTime || null,
   );
-  const fb = currentClaim.feeBill;
+  const fb = currentClaim?.feeBill || {};
   const summary = calculateAssessmentSummary(
-    currentClaim.assessmentRows,
+    currentClaim?.assessmentRows || [],
     ageMonths,
-    currentClaim.depreciationType,
-    fb.salvageValue,
-    fb.lessExcess,
-  ) || {};
+    currentClaim?.depreciationType || 'Standard',
+    fb?.salvageValue || 0,
+    fb?.lessExcess || 0,
+  );
 
   // Safety fallback for summary values
   const safeSummary = {
     ...summary,
     netInWords: summary?.netInWords || 'ZERO',
     totalEstimated: summary?.totalEstimated || 0,
-    netAssessedLoss: summary?.netAssessedLoss || 0
+    netAssessedLoss: summary?.netAssessedLoss || 0,
+    partsTotal: summary?.partsTotal || 0,
+    labourBase: summary?.labourBase || 0,
+    partsBase: summary?.partsBase || 0,
+    grandTotal: summary?.grandTotal || 0,
+    partsCGST: summary?.partsCGST || 0,
+    partsSGST: summary?.partsSGST || 0,
   };
 
   const regNo = currentClaim.vehicle.registrationNumber || 'DRAFT';
@@ -112,7 +132,9 @@ export function ReportTab() {
     ? `${regNo}-Spot-Report.pdf`
     : activeReport === 'survey' 
       ? (format === 'uiic' ? `${regNo}-UIIC-Report.pdf` : `${regNo}-Report.pdf`)
-      : activeReport === 'bill-check' ? `${regNo}-Bill-Check.pdf` : `${regNo}-Fee-Bill.pdf`;
+      : activeReport === 'bill-check' ? `${regNo}-Bill-Check.pdf` 
+      : activeReport === 'photo-sheet' ? `${regNo}-Photos.pdf`
+      : `${regNo}-Fee-Bill.pdf`;
 
   // Determine active document
   let ActiveDocument = <SurveyReportDocument claim={currentClaim} summary={safeSummary} />;
@@ -125,6 +147,8 @@ export function ReportTab() {
     ActiveDocument = <BillCheckDocument claim={currentClaim} />;
   } else if (activeReport === 'fee-bill') {
     ActiveDocument = <FeeBillDocument claim={currentClaim} summary={safeSummary} />;
+  } else if (activeReport === 'photo-sheet') {
+    ActiveDocument = <PhotoSheetDocument claim={currentClaim} />;
   }
 
   return (
@@ -219,6 +243,34 @@ export function ReportTab() {
         </div>
       )}
 
+      {/* ── Photo Layout Selector (Only for Photo Sheet) ───── */}
+      {activeReport === 'photo-sheet' && (
+        <div className="mb-6 flex flex-col gap-3">
+          <div className="text-[10px] font-black uppercase tracking-widest text-[#8D99AE]">
+            Selection: Photos per page
+          </div>
+          <div className="flex gap-2">
+            {[4, 6, 8, 9].map(num => (
+              <button
+                key={num}
+                onClick={() => updateClaim({ photoLayout: num as any })}
+                className="flex-1 py-3 px-4 rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-1"
+                style={{
+                  background: currentClaim.photoLayout === num ? '#2563EB' : '#FFFFFF',
+                  borderColor: currentClaim.photoLayout === num ? '#2563EB' : '#E2E6EA',
+                  color: currentClaim.photoLayout === num ? '#FFFFFF' : '#0D1B2A',
+                }}
+              >
+                <span className="text-sm font-black">{num} Photos</span>
+                <span className="text-[9px] opacity-60 font-bold">
+                  {num === 4 ? '2 x 2' : num === 6 ? '2 x 3' : num === 8 ? '2 x 4' : '3 x 3'}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── Action Buttons ───────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-3 mb-5">
         {/* Word only for standard */}
@@ -249,41 +301,84 @@ export function ReportTab() {
           </button>
         )}
 
-        {/* PDF Download */}
-        {/* @ts-ignore dynamic */}
-        <PDFDownloadLink
-          document={ActiveDocument}
-          fileName={pdfFilename}
-        >
-          {/* @ts-ignore */}
-          {({ loading }) => (
-            <button
-              disabled={loading}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-black text-sm transition-all shadow-md"
-              style={{
-                background: loading
-                  ? '#F0F2F5'
-                  : format === 'uiic'
-                    ? 'linear-gradient(135deg, #006838, #009A52)'
+        {/* PDF Download - HIDDEN for UIIC as per new standard */}
+        {format !== 'uiic' && (
+          <PDFDownloadLink
+            document={ActiveDocument}
+            fileName={pdfFilename}
+          >
+            {/* @ts-ignore */}
+            {({ loading }) => (
+              <button
+                disabled={loading}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-black text-sm transition-all shadow-md"
+                style={{
+                  background: loading
+                    ? '#F0F2F5'
                     : 'linear-gradient(135deg, #D4AF37, #f0d870)',
-                color: loading ? '#8D99AE' : (format === 'uiic' ? '#FFFFFF' : '#0D1B2A'),
-                cursor: loading ? 'not-allowed' : 'pointer',
-              }}
-            >
-              {loading ? <Loader2 size={15} className="animate-spin" /> : <DownloadCloud size={15} />}
-              {loading
-                ? 'Preparing PDF…'
-                : activeReport === 'survey'
-                  ? (format === 'uiic' ? 'Download UIIC Report' : 'Download Standard PDF')
-                  : activeReport === 'bill-check' ? 'Download Bill Check' : 'Download Fee Bill'}
-            </button>
-          )}
-        </PDFDownloadLink>
+                  color: loading ? '#8D99AE' : '#FFFFFF',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {loading ? <Loader2 size={15} className="animate-spin" /> : <DownloadCloud size={15} />}
+                {loading
+                  ? 'Preparing PDF…'
+                  : activeReport === 'survey'
+                    ? 'Download Standard PDF'
+                    : activeReport === 'bill-check' ? 'Download Bill Check' : 'Download Fee Bill'}
+              </button>
+            )}
+          </PDFDownloadLink>
+        )}
+
+        {/* UIIC Exclusive Excel Bridge */}
+        {activeReport === 'survey' && format === 'uiic' && (
+          <button
+            onClick={async () => {
+              const builder = new UIICExcelBuilder(currentClaim!, safeSummary, profile!);
+              await builder.build();
+            }}
+            className="flex items-center gap-2 px-8 py-3 rounded-xl font-black text-sm transition-all shadow-xl hover:scale-105 active:scale-95"
+            style={{
+              background: 'linear-gradient(135deg, #022c22, #064e3b)',
+              color: '#FFFFFF',
+              cursor: 'pointer',
+              border: 'none'
+            }}
+          >
+            <div className="w-3 h-3 rounded-sm bg-emerald-400 animate-pulse" />
+            DOWNLOAD PROFESSIONAL EXCEL REPORT
+          </button>
+        )}
+
+        {/* Power Print (Shared for Spot and Standard Survey) */}
+        {((activeReport === 'survey' && format !== 'uiic') || activeReport === 'spot') && (
+          <button
+            onClick={() => handlePrint()}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-black text-sm transition-all shadow-md border-2 border-green-700 text-green-700 hover:bg-green-50"
+            style={{
+              background: '#FFFFFF',
+              cursor: 'pointer',
+            }}
+          >
+            <div className="w-2 h-2 rounded-full bg-green-600 animate-pulse" />
+            {activeReport === 'spot' ? 'POWER PRINT (SPOT)' : 'POWER PRINT (HIGH-RES)'}
+          </button>
+        )}
 
         {isDirty && (
           <div className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg" style={{ background: 'rgba(251,191,36,0.1)', color: '#D97706', border: '1px solid rgba(217,119,6,0.2)' }}>
             <AlertCircle size={12} /> Unsaved changes — PDF updates live
           </div>
+        )}
+      </div>
+
+      {/* Hidden print component */}
+      <div style={{ display: 'none' }}>
+        {activeReport === 'spot' ? (
+          <SpotPrintReport ref={contentRef} claim={currentClaim} profile={profile!} />
+        ) : (
+          <UIICPrintReport ref={contentRef} claim={currentClaim} summary={safeSummary} profile={profile!} />
         )}
       </div>
 

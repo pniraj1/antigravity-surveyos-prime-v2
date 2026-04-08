@@ -27,46 +27,46 @@ export function calculateAssessmentSummary(
   ageMonths: number,
   depType: DepreciationType,
   salvage: number = 0,
-  excess: number = 500
+  compulsoryExcess: number = 500,
+  voluntaryExcess: number = 0
 ): AssessmentSummary {
   let metal = 0;
   let plastic = 0;
   let glass = 0;
   let labourBase = 0;
+  let partsGSTAccumulator = 0;
+  let labourGSTAccumulator = 0;
 
-  // ─── Parts: apply depreciation and bucket ───────────
-  rows
-    .filter((r) => r.section === 'parts')
-    .forEach((r) => {
-      if (!r.allowed) return;
-      const depRate = getDepreciationRate(r.partType, ageMonths, depType);
-      const afterDep = r.assessed * (1 - depRate / 100);
+  // ─── Assessment Logic ──────────────────────────────
+  rows.forEach((r) => {
+    if (!r.allowed) return;
+    const depRate = getDepreciationRate(r.partType, ageMonths, depType);
+    const valueAfterDep = r.assessed * (1 - depRate / 100);
+    const rowGST = valueAfterDep * (r.gst / 100);
 
-      if (r.partType === 'metal') metal += afterDep;
-      else if (r.partType === 'glass') glass += afterDep;
-      else plastic += afterDep; // plastic/rubber
-    });
+    if (r.section === 'parts') {
+      if (r.partType === 'metal') metal += valueAfterDep;
+      else if (r.partType === 'glass') glass += valueAfterDep;
+      else plastic += valueAfterDep;
+      
+      partsGSTAccumulator += rowGST;
+    } else {
+      labourBase += valueAfterDep;
+      labourGSTAccumulator += rowGST;
+    }
+  });
 
-  // ─── Labour + Paint: no depreciation ────────────────
-  rows
-    .filter((r) => r.section === 'labour' || r.section === 'paint')
-    .forEach((r) => {
-      if (r.allowed) labourBase += r.assessed;
-    });
-
-  // ─── GST calculations ──────────────────────────────
   const partsBase = metal + plastic + glass;
-  const partsGST = calculatePartsGST(partsBase);
-  const labourGST = calculateLabourGST(labourBase);
-
-  // ─── Totals ────────────────────────────────────────
-  const grandTotal = partsGST.totalWithGST + labourGST.totalWithGST;
-  const netAssessedLoss = Math.max(0, grandTotal - salvage - excess);
+  const totalGST = partsGSTAccumulator + labourGSTAccumulator;
+  const grandTotal = partsBase + partsGSTAccumulator + labourBase + labourGSTAccumulator;
+  
+  const totalExcess = compulsoryExcess + voluntaryExcess;
+  const netAssessedLoss = Math.max(0, grandTotal - salvage - totalExcess);
 
   // ─── Estimated total (for comparison) ──────────────
   let totalEstimated = 0;
   rows.forEach((r) => {
-    totalEstimated += r.estimated * (1 + r.gst / 100);
+    totalEstimated += r.estimated * (1 + (r.gst || 18) / 100);
   });
 
   return {
@@ -74,17 +74,19 @@ export function calculateAssessmentSummary(
     plasticTotal: plastic,
     glassTotal: glass,
     partsBase,
-    partsCGST: partsGST.cgst,
-    partsSGST: partsGST.sgst,
-    partsTotal: partsGST.totalWithGST,
+    partsCGST: partsGSTAccumulator / 2,
+    partsSGST: partsGSTAccumulator / 2,
+    partsTotal: partsBase + partsGSTAccumulator,
 
     labourBase,
-    labourGST: labourGST.totalGST,
-    labourTotal: labourGST.totalWithGST,
+    labourGST: labourGSTAccumulator,
+    labourTotal: labourBase + labourGSTAccumulator,
 
     grandTotal,
     salvage,
-    excess,
+    compulsoryExcess,
+    voluntaryExcess,
+    excess: totalExcess,
     netAssessedLoss,
     netInWords: `RUPEES ${numberToWords(netAssessedLoss)} ONLY`,
 
@@ -97,60 +99,46 @@ export function calculateBillCheckSummary(
   ageMonths: number,
   depType: DepreciationType,
   salvage: number = 0,
-  excess: number = 500
+  compulsoryExcess: number = 500,
+  voluntaryExcess: number = 0
 ): BillCheckSummary {
-  let assessedTotal = 0;
-  let billedTotal = 0;
+  let assessedBaseSum = 0;
+  let billedBaseSum = 0;
   let notInBillTotal = 0;
-
-  const allowedRows = rows.filter(r => r.allowed);
   
-  allowedRows.forEach(r => {
-    assessedTotal += r.assessed;
-    if (r.billStatus === 'in-bill' || r.billStatus === 'partial') {
-      billedTotal += (r.billedAmount || 0);
-    } else if (r.billStatus === 'not-in-bill') {
-      notInBillTotal += r.assessed;
-    }
-  });
+  let billedGrandTotal = 0;
 
-  // Since bill-check is about final liability, we use the same summary logic 
-  // but we need to compare it.
-  // The grand total in Bill Check is usually the sum of Depreciated Billed amounts + Labour.
-  
-  let billedMetal = 0;
-  let billedPlastic = 0;
-  let billedGlass = 0;
-  let billedLabour = 0;
-
-  allowedRows.forEach(r => {
-    const amount = (r.billStatus === 'not-in-bill') ? 0 : (r.billedAmount || 0);
+  rows.forEach(r => {
+    if (!r.allowed) return;
+    
+    // Row math
     const depRate = getDepreciationRate(r.partType, ageMonths, depType);
-    const afterDep = amount * (1 - depRate / 100);
+    const amount = (r.billStatus === 'not-in-bill') ? 0 : (r.billedAmount || 0);
+    const valueBilledAfterDep = amount * (1 - depRate / 100);
+    const billedGST = valueBilledAfterDep * (r.gst / 100);
 
-    if (r.section === 'parts') {
-      if (r.partType === 'metal') billedMetal += afterDep;
-      else if (r.partType === 'glass') billedGlass += afterDep;
-      else billedPlastic += afterDep;
+    assessedBaseSum += r.assessed;
+    billedBaseSum += amount;
+
+    if (r.billStatus === 'not-in-bill') {
+      notInBillTotal += r.assessed;
     } else {
-      billedLabour += amount;
+      billedGrandTotal += (valueBilledAfterDep + billedGST);
     }
   });
 
-  const billedPartsBase = billedMetal + billedPlastic + billedGlass;
-  const billedPartsGST = calculatePartsGST(billedPartsBase);
-  const billedLabourGST = calculateLabourGST(billedLabour);
-  
-  const grandTotalBilled = billedPartsGST.totalWithGST + billedLabourGST.totalWithGST;
-  const netLiability = Math.max(0, grandTotalBilled - salvage - excess);
+  const totalExcess = compulsoryExcess + voluntaryExcess;
+  const netLiability = Math.max(0, billedGrandTotal - salvage - totalExcess);
 
   return {
-    grandTotalAssessed: assessedTotal, // note: this is raw sum, summary.grandTotal is depreciated
-    grandTotalBilled,
+    grandTotalAssessed: assessedBaseSum, 
+    grandTotalBilled: billedGrandTotal,
     notInBillTotal,
-    variance: (assessedTotal - billedTotal),
+    variance: (assessedBaseSum - billedBaseSum),
     salvage,
-    excess,
+    compulsoryExcess,
+    voluntaryExcess,
+    excess: totalExcess,
     netLiability,
     netInWords: `RUPEES ${numberToWords(netLiability)} ONLY`,
   };
