@@ -24,6 +24,10 @@ export interface ClaimData {
   depreciationType: DepreciationType;
   /** Whether the spot survey phase is finalized */
   isSpotCompleted: boolean;
+  /** Whether the final survey report is fully completed */
+  isCompleted: boolean;
+  /** Whether this claim is active (false = archived/inactive) */
+  isActive: boolean;
 
   // ─── Report Metadata ───────────────────────────────
   reportNo: string;
@@ -50,6 +54,17 @@ export interface ClaimData {
 
   // ─── Bill Check Report ─────────────────────────────
   billCheck: BillCheckDetails;
+
+  // ─── Document Verification Statuses (Main Claim) ───
+  documentVerification: {
+    rc: { status: string; detail: string };
+    dl: { status: string; detail: string };
+    permit: { status: string; detail: string };
+    loadChallan: { status: string; detail: string };
+    fitness: { status: string; detail: string };
+    fireReport: { status: string; detail: string };
+    fir: { status: string; detail: string };
+  };
 
   // ─── Photo Sheet ───────────────────────────────────
   photos: PhotoItem[];
@@ -82,6 +97,8 @@ export function createBlankClaim(
     vehicleType,
     depreciationType: 'standard',
     isSpotCompleted: false,
+    isCompleted: false,
+    isActive: true,
     reportNo: '',
     reportDate: now.split('T')[0],
 
@@ -116,7 +133,17 @@ export function createBlankClaim(
       registrationValidUpTo: '',
       rcEndorsement: '',
       seatingCapacity: '',
+      seatingCapacityTotal: '',
+      passengersAtAccident: '',
+      passengerType: '',
+      goodsWeightAtAccident: '',
+      natureOfGoods: '',
+      fitnessType: 'NORMAL',
       isCommercial: false,
+      passengersContravention: '',
+      loadChallanNumber: '',
+      loadChallanDate: '',
+      detailsOfGoodsCarried: '',
     },
 
     driver: {
@@ -124,6 +151,7 @@ export function createBlankClaim(
       parentName: '',
       fatherHusbandName: '',
       relationType: 'S/o',
+      licenceType: '',
       licenceNumber: '',
       licenseNumber: '',
       dateOfBirth: '',
@@ -168,6 +196,17 @@ export function createBlankClaim(
       placeOfSurvey: '',
       policeStation: '',
       firNumber: '',
+      firDate: '',
+      fireBrigadeReportNo: '',
+      pincode: '',
+      locationCode: '',
+      appointmentDate: '',
+      workshopName: '',
+      workshopAddress: '',
+      workshopPhone: '',
+      workshopFax: '',
+      workshopEmail: '',
+      remarks: '',
       thirdPartyDetails: '',
     },
 
@@ -178,23 +217,8 @@ export function createBlankClaim(
       reportDate: '',
       allotmentDate: '',
       surveyDatetime: '',
-      surveyPlace: '',
-      driverName: '',
-      dlParentName: '',
-      dlRelation: '',
-      mdlNo: '',
-      dlAuthority: '',
-      dlType: '',
-      dlIssueDate: '',
-      dlValidNT: '',
-      dlValidT: '',
-      mdlVerified: '',
-      dlInvalidRemarks: '',
       tpInvolved: 'no',
-      tpDetails: '',
       policeReported: 'no',
-      policeStation: '',
-      diaryNo: '',
       panchanama: 'no',
       damageSeverity: 'moderate',
       airbags: 'no',
@@ -208,8 +232,6 @@ export function createBlankClaim(
       permitTo: '',
       natureOfPermit: '',
       areaOfOperation: '',
-      fitnessNo: '',
-      fitnessValid: '',
       fitnessType: '',
       authNo: '',
       authValid: '',
@@ -245,6 +267,11 @@ export function createBlankClaim(
       vehicleCondition: 'roadworthy',
       salvageStatus: 'na',
       observations: '',
+      riAppointmentDate: '',
+      repairsAsAssessed: 'YES',
+      repairAuthDate: '',
+      estCompletionDate: '',
+      actualCompletionDate: '',
       parts: [],
     },
 
@@ -265,12 +292,23 @@ export function createBlankClaim(
       lessExcess: 0,
       compulsoryExcess: 0,
       voluntaryExcess: 0,
+      feePaid: false,
     },
 
     billCheck: {
       billNo: '',
       billDate: '',
       billTotal: 0,
+    },
+
+    documentVerification: {
+      rc: { status: 'NO', detail: '' },
+      dl: { status: 'NO', detail: '' },
+      permit: { status: 'NO', detail: '' },
+      loadChallan: { status: 'NO', detail: '' },
+      fitness: { status: 'NO', detail: '' },
+      fireReport: { status: 'NO', detail: '' },
+      fir: { status: 'NO', detail: '' },
     },
 
     photos: [],

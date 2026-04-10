@@ -8,10 +8,7 @@ import {
 import { useState } from 'react';
 
 export function ReinspectionTab() {
-  const { currentClaim } = useClaimStore();
-  const [riDate, setRiDate] = useState('');
-  const [riPlace, setRiPlace] = useState('');
-  const [remarks, setRemarks] = useState('');
+  const { currentClaim, updateReinspection } = useClaimStore();
 
   if (!currentClaim) return null;
 
@@ -56,22 +53,64 @@ export function ReinspectionTab() {
                 <label className="text-[10px] font-black uppercase tracking-widest text-[#8D99AE] block mb-1.5">Date of Re-inspection</label>
                 <input 
                   type="date" 
-                  value={riDate} 
-                  onChange={e => setRiDate(e.target.value)}
+                  value={currentClaim.reinspection.date || ''} 
+                  onChange={e => updateReinspection({ date: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg border border-[#E2E6EA] outline-none text-sm font-semibold"
                 />
               </div>
               <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-[#8D99AE] block mb-1.5">Place of Re-inspection</label>
-                <div className="relative">
-                  <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8D99AE]" />
-                  <input 
-                    placeholder="e.g. ABC Workshop, Delhi"
-                    value={riPlace}
-                    onChange={e => setRiPlace(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 rounded-lg border border-[#E2E6EA] outline-none text-sm font-semibold"
-                  />
+                <label className="text-[10px] font-black uppercase tracking-widest text-[#8D99AE] block mb-1.5">RI Appointment Date</label>
+                <input 
+                  type="date" 
+                  value={currentClaim.reinspection.riAppointmentDate || ''} 
+                  onChange={e => updateReinspection({ riAppointmentDate: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-[#E2E6EA] outline-none text-sm font-semibold"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-[#8D99AE] block mb-1.5">Repair Auth. Date</label>
+                <input 
+                  type="date" 
+                  value={currentClaim.reinspection.repairAuthDate || ''} 
+                  onChange={e => updateReinspection({ repairAuthDate: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-[#E2E6EA] outline-none text-sm font-semibold"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-[#8D99AE] block mb-1.5">Repairs Done as Assessed?</label>
+                <div className="flex gap-2">
+                  {['YES', 'NO', 'PARTIAL'].map(val => (
+                    <button
+                      key={val}
+                      onClick={() => updateReinspection({ repairsAsAssessed: val as any })}
+                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-black transition-all ${
+                        currentClaim.reinspection.repairsAsAssessed === val 
+                        ? 'bg-[#D4AF37] text-[#0D1B2A]' 
+                        : 'bg-[#FAFAFA] border border-[#E2E6EA] text-[#8D99AE]'
+                      }`}
+                    >
+                      {val}
+                    </button>
+                  ))}
                 </div>
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-[#8D99AE] block mb-1.5">Est. Completion Date</label>
+                <input 
+                  type="date" 
+                  value={currentClaim.reinspection.estCompletionDate || ''} 
+                  onChange={e => updateReinspection({ estCompletionDate: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-[#E2E6EA] outline-none text-sm font-semibold"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-[#8D99AE] block mb-1.5">Actual Completion Date</label>
+                <input 
+                  type="date" 
+                  value={currentClaim.reinspection.actualCompletionDate || ''} 
+                  onChange={e => updateReinspection({ actualCompletionDate: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-[#E2E6EA] outline-none text-sm font-semibold"
+                />
               </div>
             </div>
           </div>
@@ -140,8 +179,8 @@ export function ReinspectionTab() {
           </h3>
           <textarea 
             rows={4}
-            value={remarks}
-            onChange={e => setRemarks(e.target.value)}
+            value={currentClaim.reinspection.observations || ''}
+            onChange={e => updateReinspection({ observations: e.target.value })}
             placeholder="I have personally re-inspected the vehicle... All parts replaced are as per assessment..."
             className="w-full px-4 py-3 rounded-xl border border-[#E2E6EA] outline-none text-sm text-[#4A4E69] bg-[#FAFAFA] focus:bg-white transition-all"
           />

@@ -137,8 +137,19 @@ export class UIICExcelBuilder {
     addFourColumnRow('Color', this.claim.vehicle?.colour || 'N/A', 'Fuel Type', this.claim.vehicle?.fuel || 'N/A');
     addFourColumnRow('Odometer', this.claim.vehicle?.odometer || 'N/A', 'Date of Reg', this.claim.vehicle?.dateOfRegistration || 'N/A');
 
+    addSectionHeader('III. DRIVER DETAILS');
+    addFourColumnRow('Driver Name', this.claim.driver?.name || 'N/A', 'Licence No', this.claim.driver?.licenceNumber || 'N/A');
+    addFourColumnRow('Date of Issue', this.claim.driver?.dateOfIssue || 'N/A', 'Issuing Authority', this.claim.driver?.issuingAuthority || 'N/A');
+    addFourColumnRow('Validity (NT)', this.claim.driver?.validityNonTransport || 'N/A', 'Validity (T)', this.claim.driver?.validityTransport || 'N/A');
+    addFourColumnRow('Class of Vehicle', this.claim.driver?.vehicleClass || 'N/A', 'Date of Birth', this.claim.driver?.dateOfBirth || 'N/A');
+
     currRow++;
-    addSectionHeader('III. ASSESSMENT DETAILS');
+    addSectionHeader('IV. ACCIDENT DETAILS');
+    addFourColumnRow('Date & Time', this.claim.accident?.dateAndTime || 'N/A', 'Place of Loss', this.claim.accident?.placeOfAccident || 'N/A');
+    addFourColumnRow('Cause of Accident', this.claim.accident?.causeOfAccident || 'N/A', 'Place of Survey', this.claim.accident?.placeOfSurvey || 'N/A');
+    
+    currRow++;
+    addSectionHeader('V. ASSESSMENT DETAILS');
     
     const tableHeaderRow = this.worksheet.getRow(currRow);
     const headers = ['Sr.', 'Description of Parts', 'Qty', 'Rate', 'Depr %', 'Depr Amt', '', 'Net Amount'];
@@ -181,7 +192,7 @@ export class UIICExcelBuilder {
     const finalSparesRow = currRow;
     currRow += 2;
 
-    addSectionHeader('IV. LABOUR CHARGES');
+    addSectionHeader('VI. LABOUR CHARGES');
     const labours = this.claim.assessmentRows.filter(r => r.section === 'labour');
     const labourStartRow = currRow;
     labours.forEach((l, idx) => {
@@ -206,7 +217,7 @@ export class UIICExcelBuilder {
     const finalLabourRow = currRow;
     currRow += 2;
 
-    addSectionHeader('V. FINAL LIABILITY SUMMARY');
+    addSectionHeader('VII. FINAL LIABILITY SUMMARY');
     const addSummRow = (label: string, val: any, bold = false) => {
         this.worksheet.mergeCells(`A${currRow}:G${currRow}`);
         const l = this.worksheet.getCell(`A${currRow}`);

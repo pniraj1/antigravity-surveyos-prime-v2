@@ -28,7 +28,8 @@ export const DOC_PROMPTS: Record<string, string> = {
   "route": "",
   "road_tax": "",
   "year_of_manufacture": "",
-  "hypothecation": ""
+  "hypothecation": "",
+  "fitness_type": "Extract 'Goods' or 'Passenger' or 'Private' if mentioned near fitness"
 }
 Return ONLY the JSON. No explanation, no markdown, no backticks.`,
 
@@ -165,7 +166,8 @@ Return ONLY the JSON. No explanation, no markdown, no backticks.`,
   "gross_vehicle_weight_kg": "",
   "unladen_weight_kg": "",
   "seating_capacity": "",
-  "fuel_type": ""
+  "fuel_type": "",
+  "fitness_type": "e.g. Goods Carriage, Passenger Vehicle, etc."
 }
 Return ONLY the JSON. No explanation, no markdown, no backticks.`,
 
@@ -200,6 +202,20 @@ Return ONLY the JSON. No explanation, no markdown, no backticks.`,
   "workshop_name": "",
   "place_of_repair": "",
   "third_party_details": ""
+}
+Return ONLY the JSON. No explanation, no markdown, no backticks.`,
+  fir: `You are an expert at reading Indian Police FIR (First Information Report) or Spot Panchnama documents. Extract incident and vehicle details. Return ONLY a JSON object:
+{
+  "fir_number": "",
+  "fir_date": "YYYY-MM-DD",
+  "police_station": "",
+  "date_of_accident": "YYYY-MM-DD",
+  "time_of_accident": "HH:MM (24-hour format)",
+  "place_of_accident": "",
+  "pincode": "",
+  "vehicle_number": "",
+  "driver_name": "",
+  "brief_accident_details": ""
 }
 Return ONLY the JSON. No explanation, no markdown, no backticks.`
 };

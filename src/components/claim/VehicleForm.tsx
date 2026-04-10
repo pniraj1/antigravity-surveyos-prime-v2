@@ -213,7 +213,18 @@ export function VehicleDetailsForm() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="v-seats">Seating Capacity</Label>
+            <Label htmlFor="v-ulw">Unladen Weight (ULW)</Label>
+            <Input
+              id="v-ulw"
+              type="number"
+              value={v?.unladenWeight || ''}
+              onChange={(e) => updateVehicle({ unladenWeight: parseInt(e.target.value) || null })}
+              placeholder="e.g. 800"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="v-seats">Seating Capacity (Excl. Driver)</Label>
             <Input
               id="v-seats"
               value={v?.seatingCapacity || ''}
@@ -222,12 +233,83 @@ export function VehicleDetailsForm() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="v-fitness">Fitness Number/Expiry</Label>
+            <Label htmlFor="v-seats-total">Seating Capacity (Total)</Label>
+            <Input
+              id="v-seats-total"
+              value={(v as any)?.seatingCapacityTotal || ''}
+              onChange={(e) => updateVehicle({ seatingCapacityTotal: e.target.value })}
+              placeholder="e.g. 5"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="v-pass-acc">Passengers at Accident</Label>
+            <Input
+              id="v-pass-acc"
+              value={(v as any)?.passengersAtAccident || ''}
+              onChange={(e) => updateVehicle({ passengersAtAccident: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="v-pass-type">Passenger Type</Label>
+            <Input
+              id="v-pass-type"
+              value={(v as any)?.passengerType || ''}
+              onChange={(e) => updateVehicle({ passengerType: e.target.value.toUpperCase() })}
+              placeholder="e.g. OWNER / PAID"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="v-goods-weight">Goods Weight at Accident</Label>
+            <Input
+              id="v-goods-weight"
+              value={(v as any)?.goodsWeightAtAccident || ''}
+              onChange={(e) => updateVehicle({ goodsWeightAtAccident: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="v-goods-nature">Nature of Goods</Label>
+            <Input
+              id="v-goods-nature"
+              value={(v as any)?.natureOfGoods || ''}
+              onChange={(e) => updateVehicle({ natureOfGoods: e.target.value.toUpperCase() })}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="v-fitness">Fitness Number</Label>
             <Input
               id="v-fitness"
               value={v?.fitnessNo || ''}
               onChange={(e) => updateVehicle({ fitnessNo: e.target.value })}
             />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="v-fitness-valid">Fitness Valid Upto</Label>
+            <Input
+              id="v-fitness-valid"
+              type="date"
+              value={v?.fitnessValidUpto || ''}
+              onChange={(e) => updateVehicle({ fitnessValidUpto: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="v-fitness-type">Fitness Type</Label>
+            <select
+              id="v-fitness-type"
+              value={(v as any)?.fitnessType || 'NORMAL'}
+              onChange={(e) => updateVehicle({ fitnessType: e.target.value })}
+              className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="NORMAL">NORMAL</option>
+              <option value="EXECUTIVE">EXECUTIVE</option>
+              <option value="TOURIST">TOURIST</option>
+            </select>
           </div>
 
           <div className="space-y-1">

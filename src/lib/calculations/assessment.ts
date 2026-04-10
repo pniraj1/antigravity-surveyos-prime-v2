@@ -33,6 +33,7 @@ export function calculateAssessmentSummary(
   let metal = 0;
   let plastic = 0;
   let glass = 0;
+  let fiberglass = 0;
   let labourBase = 0;
   let partsGSTAccumulator = 0;
   let labourGSTAccumulator = 0;
@@ -47,6 +48,7 @@ export function calculateAssessmentSummary(
     if (r.section === 'parts') {
       if (r.partType === 'metal') metal += valueAfterDep;
       else if (r.partType === 'glass') glass += valueAfterDep;
+      else if (r.partType === 'fiberglass') fiberglass += valueAfterDep;
       else plastic += valueAfterDep;
       
       partsGSTAccumulator += rowGST;
@@ -56,7 +58,7 @@ export function calculateAssessmentSummary(
     }
   });
 
-  const partsBase = metal + plastic + glass;
+  const partsBase = metal + plastic + glass + fiberglass;
   const totalGST = partsGSTAccumulator + labourGSTAccumulator;
   const grandTotal = partsBase + partsGSTAccumulator + labourBase + labourGSTAccumulator;
   
@@ -73,6 +75,7 @@ export function calculateAssessmentSummary(
     metalTotal: metal,
     plasticTotal: plastic,
     glassTotal: glass,
+    fiberglassTotal: fiberglass,
     partsBase,
     partsCGST: partsGSTAccumulator / 2,
     partsSGST: partsGSTAccumulator / 2,

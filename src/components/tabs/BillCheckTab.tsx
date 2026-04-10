@@ -2,12 +2,13 @@
 
 import { useClaimStore } from '@/stores/claim-store';
 import { calculateAssessmentSummary, calculateBillCheckSummary, getVehicleAgeMonths, formatCurrency } from '@/lib/calculations';
-
+import { triggerUIICBillCheckPrint } from '@/lib/reports/uiic-final-builder';
+import { useProfileStore } from '@/stores/profile-store';
 import { useAIExtraction } from '@/hooks/useAIExtraction';
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import {
   Receipt, DollarSign, Calculator, CheckCircle2, XCircle,
-  AlertCircle, FileText, Sparkles, Upload, Loader2, Minus,
+  AlertCircle, FileText, Sparkles, Upload, Loader2, Minus, Printer,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -38,7 +39,8 @@ export function BillCheckTab() {
   const currentClaim  = useClaimStore(s => s.currentClaim);
   const updateAssessmentRow = useClaimStore(s => s.updateAssessmentRow);
   const updateBillCheck = useClaimStore(s => s.updateBillCheck);
-  
+  const { profile } = useProfileStore();
+
   const fb = currentClaim?.feeBill;
   const bc = currentClaim?.billCheck || { billNo: '', billDate: '', billTotal: 0 };
   const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview } = useAIExtraction();
@@ -422,17 +424,50 @@ export function BillCheckTab() {
           </div>
         </div>
 
-        {/* ── Bill Check Info ───────────────────────── */}
+        {/* ── Power Print — Bill Check Report ─────────── */}
+        <div
+          className="rounded-2xl overflow-hidden"
+          style={{ background: '#FFFFFF', border: '1px solid #E2E6EA' }}
+        >
+          <div className="px-6 py-4" style={{ borderBottom: '1px solid #F0F2F5', background: '#FAFAFA' }}>
+            <div className="text-sm font-black" style={{ color: '#0D1B2A' }}>Download Bill Check Report</div>
+            <div className="text-xs mt-0.5" style={{ color: '#8D99AE' }}>
+              Generates a UIIC-compliant Bill Check Report — only allowed items, original serial numbers
+            </div>
+          </div>
+          <div className="p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex-1 text-xs leading-relaxed" style={{ color: '#4A4E69' }}>
+              <strong>How Bill Check works:</strong> The Final Survey logs what was <em>allowed</em>.
+              Once repairs are done, the workshop submits a final bill. This report verifies every
+              allowed item appears in the bill — flagging missing or mismatched amounts. Only allowed
+              items appear in this report; disallowed items are excluded.
+            </div>
+            <button
+              id="btn-print-bill-check"
+              onClick={() => currentClaim && triggerUIICBillCheckPrint(currentClaim, profile)}
+              className="inline-flex items-center gap-2.5 px-6 py-3 rounded-xl text-sm font-bold whitespace-nowrap transition-all duration-200 hover:scale-105 active:scale-95"
+              style={{
+                background: 'linear-gradient(135deg, #0D1B2A 0%, #1e3a5f 100%)',
+                color: '#F8F9FA',
+                boxShadow: '0 4px 14px rgba(13,27,42,0.3)',
+              }}
+            >
+              <Printer size={16} />
+              Power Print — Bill Check Report
+            </button>
+          </div>
+        </div>
+
+        {/* ── Info note ───────────────────────────────── */}
         <div
           className="flex items-start gap-3 p-4 rounded-xl"
           style={{ background: 'rgba(212,175,55,0.07)', border: '1px solid rgba(212,175,55,0.2)' }}
         >
           <FileText size={16} style={{ color: '#D4AF37', flexShrink: 0, marginTop: 1 }} />
           <div className="text-xs" style={{ color: '#4A4E69', lineHeight: 1.6 }}>
-            <strong>How Bill Check works:</strong> The Final Survey Report logs what the assessor <em>allowed</em>.
-            Once the workshop completes repairs, they submit a final bill to the insurer. The Bill Check Report
-            verifies that every allowed item is actually reflected in the final bill — and flags any discrepancies,
-            missing items, or amounts that differ from the assessment. Go to <strong>Reports</strong> tab to generate the Bill Check PDF.
+            <strong>Note:</strong> The Bill Check Report will open in a new tab. Use your browser&apos;s print dialog
+            (Ctrl+P / ⌘P) to save as PDF. Ensure &quot;Background graphics&quot; is enabled in print settings for
+            full colour output.
           </div>
         </div>
       </div>

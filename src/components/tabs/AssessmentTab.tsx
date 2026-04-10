@@ -30,7 +30,6 @@ export function AssessmentTab() {
           >
             <option value="standard">Standard (Age Based)</option>
             <option value="nil">Nil Depreciation</option>
-            <option value="zero">Zero Depreciation</option>
           </select>
         </div>
       </div>

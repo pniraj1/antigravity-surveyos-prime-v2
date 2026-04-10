@@ -17,12 +17,12 @@ export function ReconciliationDialog({ isOpen, onClose }: ReconciliationDialogPr
 
   const fields = useMemo(() => {
     if (!currentClaim) return [];
-    return getReconciliationFields(currentClaim);
+    return getReconciliationFields(currentClaim).filter(f => f.hasConflict);
   }, [currentClaim]);
 
   if (!isOpen || !currentClaim) return null;
 
-  const totalConflicts = fields.filter(f => f.hasConflict).length;
+  const totalConflicts = fields.length;
 
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300">

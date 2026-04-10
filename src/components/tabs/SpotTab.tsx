@@ -9,7 +9,7 @@ import { Trash2, PlusCircle, AlertTriangle, ShieldCheck, Truck, User, MapPin, Ga
 import { toast } from 'sonner';
 
 export function SpotTab() {
-  const { currentClaim, updateSpotDetails, addSpotDamageRow, updateSpotDamageRow, deleteSpotDamageRow, updateClaim } = useClaimStore();
+  const { currentClaim, updateSpotDetails, updateDriver, updateAccident, updateVehicle, addSpotDamageRow, updateSpotDamageRow, deleteSpotDamageRow, updateClaim } = useClaimStore();
   const { getNextSpotNumber } = useProfileStore();
 
   if (!currentClaim) return null;
@@ -26,7 +26,7 @@ export function SpotTab() {
     }
   };
 
-  const { spotDetails, spotDamageRows, vehicleType } = currentClaim;
+  const { spotDetails, spotDamageRows, vehicleType, driver, accident, vehicle } = currentClaim;
   const isCommercial = vehicleType !== 'private';
   const overloaded = (spotDetails.actualLoad || 0) > (spotDetails.loadCapacity || 0);
 
@@ -129,8 +129,8 @@ export function SpotTab() {
             <div className="sm:col-span-2 space-y-1.5">
               <Label className="text-xs font-bold uppercase text-muted-foreground">Survey Place / Workshop</Label>
               <Input
-                value={spotDetails.surveyPlace}
-                onChange={(e) => handleUpdate({ surveyPlace: e.target.value })}
+                value={accident.placeOfSurvey}
+                onChange={(e) => updateAccident({ placeOfSurvey: e.target.value })}
                 placeholder="Exact location of scene or workshop"
                 className="font-semibold"
               />
@@ -153,16 +153,16 @@ export function SpotTab() {
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold uppercase text-muted-foreground">Police Station</Label>
                   <Input
-                    value={spotDetails.policeStation}
-                    onChange={(e) => handleUpdate({ policeStation: e.target.value })}
+                    value={accident.policeStation}
+                    onChange={(e) => updateAccident({ policeStation: e.target.value })}
                     placeholder="Station Name"
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold uppercase text-muted-foreground">FIR / Diary No.</Label>
                   <Input
-                    value={spotDetails.diaryNo}
-                    onChange={(e) => handleUpdate({ diaryNo: e.target.value })}
+                    value={accident.firNumber}
+                    onChange={(e) => updateAccident({ firNumber: e.target.value })}
                     placeholder="Enter Number"
                   />
                 </div>
@@ -198,8 +198,8 @@ export function SpotTab() {
               <div className="sm:col-span-2 space-y-1.5">
                 <Label className="text-xs font-bold uppercase text-muted-foreground">TP Details</Label>
                 <Input
-                  value={spotDetails.tpDetails}
-                  onChange={(e) => handleUpdate({ tpDetails: e.target.value })}
+                  value={accident.thirdPartyDetails}
+                  onChange={(e) => updateAccident({ thirdPartyDetails: e.target.value })}
                   placeholder="Details of TP victim/property"
                 />
               </div>
@@ -207,117 +207,7 @@ export function SpotTab() {
           </CardContent>
         </Card>
 
-        {/* SECTION 2: DRIVER (AT SPOT) */}
-        <Card className="border-border shadow-sm overflow-hidden">
-          <CardHeader className="bg-muted/50 pb-4 border-b border-border">
-            <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <User size={16} className="text-amber-600" />
-              Driver Particulars
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="sm:col-span-2 space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">Driver Name</Label>
-              <Input
-                value={spotDetails.driverName}
-                onChange={(e) => handleUpdate({ driverName: e.target.value.toUpperCase() })}
-                className="font-bold underline decoration-amber/30 underline-offset-4"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">Relation</Label>
-              <select
-                value={spotDetails.dlRelation}
-                onChange={(e) => handleUpdate({ dlRelation: e.target.value })}
-                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm font-semibold"
-              >
-                <option value="S/o">S/o</option>
-                <option value="D/o">D/o</option>
-                <option value="W/o">W/o</option>
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">Parent / Spouse Name</Label>
-              <Input
-                value={spotDetails.dlParentName}
-                onChange={(e) => handleUpdate({ dlParentName: e.target.value.toUpperCase() })}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">MDL Number</Label>
-              <Input
-                value={spotDetails.mdlNo}
-                onChange={(e) => handleUpdate({ mdlNo: e.target.value.toUpperCase() })}
-                className="font-mono font-bold"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">DL Issue Date</Label>
-              <Input
-                type="date"
-                value={spotDetails.dlIssueDate}
-                onChange={(e) => handleUpdate({ dlIssueDate: e.target.value })}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground text-blue-600">Non-Transport Valid Upto</Label>
-              <Input
-                type="date"
-                value={spotDetails.dlValidNT}
-                onChange={(e) => handleUpdate({ dlValidNT: e.target.value })}
-                className="border-blue-100"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground text-orange-600">Transport Valid Upto</Label>
-              <Input
-                type="date"
-                value={spotDetails.dlValidT}
-                onChange={(e) => handleUpdate({ dlValidT: e.target.value })}
-                className="border-orange-100"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">Licence Classes</Label>
-              <Input
-                value={spotDetails.dlType}
-                onChange={(e) => handleUpdate({ dlType: e.target.value.toUpperCase() })}
-                placeholder="e.g. LMV, MCWG, TRANS"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">Issuing Authority</Label>
-              <Input
-                value={spotDetails.dlAuthority}
-                onChange={(e) => handleUpdate({ dlAuthority: e.target.value })}
-                placeholder="RTO Location"
-              />
-            </div>
-            <div className="sm:col-span-2 space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">MDL Verification</Label>
-              <select
-                value={spotDetails.mdlVerified}
-                onChange={(e) => handleUpdate({ mdlVerified: e.target.value })}
-                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm font-semibold"
-              >
-                <option value="verified">Original Verified</option>
-                <option value="photocopy">Photocopy Verified</option>
-                <option value="not-available">Not Available</option>
-              </select>
-            </div>
-            {(spotDetails.mdlVerified === 'not-available') && (
-              <div className="sm:col-span-2 space-y-1.5">
-                <Label className="text-xs font-bold uppercase text-red-600">DL Invalidity Remarks (Mandatory)</Label>
-                <textarea
-                  value={spotDetails.dlInvalidRemarks}
-                  onChange={(e) => handleUpdate({ dlInvalidRemarks: e.target.value })}
-                  className="w-full min-h-[60px] rounded-md border border-red-200 bg-red-50/30 p-3 text-sm focus:ring-2 focus:ring-red-200"
-                  placeholder="Explain why DL was not verified or is invalid..."
-                />
-              </div>
-            )}
-          </CardContent>
-        </Card>
+
 
         {/* SECTION 3: VEHICLE STATUS */}
         <Card className="border-border shadow-sm overflow-hidden">
@@ -455,8 +345,8 @@ export function SpotTab() {
                 <div className="space-y-1.5 md:col-span-2">
                   <Label className="text-xs font-bold uppercase text-muted-foreground">Fitness No.</Label>
                   <Input
-                    value={spotDetails.fitnessNo}
-                    onChange={(e) => handleUpdate({ fitnessNo: e.target.value.toUpperCase() })}
+                    value={vehicle.fitnessNo}
+                    onChange={(e) => updateVehicle({ fitnessNo: e.target.value.toUpperCase() })}
                     disabled={isCompleted}
                   />
                 </div>
@@ -464,8 +354,8 @@ export function SpotTab() {
                   <Label className="text-xs font-bold uppercase text-muted-foreground">Fitness Valid Upto</Label>
                   <Input
                     type="date"
-                    value={spotDetails.fitnessValid}
-                    onChange={(e) => handleUpdate({ fitnessValid: e.target.value })}
+                    value={vehicle.fitnessValidUpto}
+                    onChange={(e) => updateVehicle({ fitnessValidUpto: e.target.value })}
                     disabled={isCompleted}
                   />
                 </div>
@@ -739,9 +629,9 @@ export function SpotTab() {
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold uppercase text-muted-foreground">Survey Place / Location</Label>
                   <Input
-                    value={spotDetails.surveyPlace}
+                    value={accident.placeOfSurvey}
                     placeholder="Where was survey conducted?"
-                    onChange={(e) => handleUpdate({ surveyPlace: e.target.value })}
+                    onChange={(e) => updateAccident({ placeOfSurvey: e.target.value })}
                   />
                 </div>
               </div>

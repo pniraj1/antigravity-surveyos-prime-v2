@@ -49,8 +49,8 @@ export const UIICPrintReport = React.forwardRef<HTMLDivElement, UIICPrintReportP
 
       {/* --- PAGE 1: DOCUMENT VERIFICATION --- */}
       <div className="print-page">
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-          <div style={{ border: '2px solid black', padding: '5px 15px', fontWeight: '900', fontSize: '14px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 10 }}>
+          <div style={{ border: '2px solid black', padding: '5px 15px', fontWeight: '900', fontSize: '14px', marginBottom: 5 }}>
             {profile?.name || 'SURVEYOR'}
           </div>
           <div style={{ border: '1px solid black', padding: '5px 10px', fontSize: '10px', fontStyle: 'italic' }}>
@@ -117,7 +117,7 @@ export const UIICPrintReport = React.forwardRef<HTMLDivElement, UIICPrintReportP
 
       {/* --- PAGE 2: CLAIM & VEHICLE GRID --- */}
       <div className="print-page">
-        <div style={{ border: '2px solid black', padding: '5px 15px', fontWeight: '900', fontSize: '14px', width: 'fit-content', marginBottom: 10 }}>
+        <div style={{ border: '2px solid black', padding: '5px 15px', fontWeight: '900', fontSize: '14px', width: 'fit-content', margin: '0 auto 10px auto' }}>
           {profile?.name || 'SURVEYOR'}
         </div>
 

@@ -4,7 +4,7 @@
 // from Surveyor_V6_MASTER.html
 // ═══════════════════════════════════════════════════════════
 
-export type PartType = 'metal' | 'plastic' | 'glass' | 'labour' | 'paint';
+export type PartType = 'metal' | 'plastic' | 'glass' | 'fiberglass' | 'labour' | 'paint';
 export type AssessmentSection = 'parts' | 'labour' | 'paint';
 
 export type BillStatus = 'in-bill' | 'not-in-bill' | 'partial' | 'pending';
@@ -29,7 +29,8 @@ export interface AssessmentSummary {
   metalTotal: number;
   plasticTotal: number;
   glassTotal: number;
-  partsBase: number; // metal + plastic + glass
+  fiberglassTotal: number;
+  partsBase: number; // metal + plastic + glass + fiberglass
   partsCGST: number; // partsBase * 0.09
   partsSGST: number; // partsBase * 0.09
   partsTotal: number; // partsBase + CGST + SGST
@@ -62,43 +63,33 @@ export interface SpotDamageRow {
 export type DamageSeverity = 'minor' | 'moderate' | 'major';
 
 export interface SpotSurveyDetails {
+  // ─── Spot Report Metadata ────────────────────────────
   reportNo: string;
   reportDate: string;
   allotmentDate: string;
   surveyDatetime: string;
-  surveyPlace: string;
-  driverName: string;
-  dlParentName: string;
-  dlRelation: string;
-  mdlNo: string;
-  dlAuthority: string;
-  dlType: string;
-  dlIssueDate: string;
-  dlValidNT: string;
-  dlValidT: string;
-  mdlVerified: string;
-  dlInvalidRemarks: string;
-  tpInvolved: string;
-  tpDetails: string;
-  policeReported: string;
-  policeStation: string;
-  diaryNo: string;
-  panchanama: string;
+
+  // ─── Spot-Only Scene Assessment ──────────────────────
+  // NOTE: Driver fields (name, DL, validity) live in ClaimData.driver
+  // NOTE: Accident fields (policeStation, FIR, place) live in ClaimData.accident
+  // NOTE: Vehicle fields (fitnessNo, fitnessValidUpto) live in ClaimData.vehicle
+  tpInvolved: string;          // Enriched enum: no | tppd | tppi | both
+  policeReported: string;      // yes | no
+  panchanama: string;          // yes | no
   damageSeverity: DamageSeverity;
   airbags: string;
   drivable: string;
   comments: string;
   repairs: string;
   enclosures: string;
-  // Commercial
+
+  // ─── Commercial (Spot-Only) ──────────────────────────
   permitNo: string;
   permitType: string;
   permitFrom: string;
   permitTo: string;
   natureOfPermit: string;
   areaOfOperation: string;
-  fitnessNo: string;
-  fitnessValid: string;
   fitnessType: string;
   authNo: string;
   authValid: string;
@@ -111,7 +102,8 @@ export interface SpotSurveyDetails {
     fireReport: string;
     fir: string;
   };
-  // Goods
+
+  // ─── Goods / Load Details ────────────────────────────
   gvw: number | null;
   ulw: number | null;
   loadCapacity: number | null;
@@ -144,6 +136,11 @@ export interface ReinspectionDetails {
   date: string;
   surveyRef: string;
   surveyDate: string;
+  riAppointmentDate?: string;
+  repairsAsAssessed?: 'YES' | 'NO' | 'PARTIAL';
+  repairAuthDate?: string;
+  estCompletionDate?: string;
+  actualCompletionDate?: string;
   repairQuality: RepairQuality;
   vehicleCondition: VehicleCondition;
   salvageStatus: SalvageStatus;
@@ -169,6 +166,8 @@ export interface FeeBill {
   lessExcess: number; // Compulsory Excess
   voluntaryExcess: number;
   compulsoryExcess: number;
+  /** Whether the surveyor fee has been received from the insurer */
+  feePaid: boolean;
 }
 
 // ─── PHOTO SHEET ────────────────────────────────────────

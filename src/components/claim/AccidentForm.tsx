@@ -82,11 +82,108 @@ export function AccidentDetailsForm() {
               onChange={(e) => updateAccident({ firNumber: e.target.value })}
             />
           </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="a-fir-date">FIR Date</Label>
+            <Input
+              id="a-fir-date"
+              type="date"
+              value={a?.firDate || ''}
+              onChange={(e) => updateAccident({ firDate: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="a-pincode">Pincode</Label>
+            <Input
+              id="a-pincode"
+              value={a?.pincode || ''}
+              onChange={(e) => updateAccident({ pincode: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="a-location-code">Location Code</Label>
+            <Input
+              id="a-location-code"
+              value={a?.locationCode || ''}
+              onChange={(e) => updateAccident({ locationCode: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="a-app-date">Survey Appointment Date</Label>
+            <Input
+              id="a-app-date"
+              type="date"
+              value={a?.appointmentDate || ''}
+              onChange={(e) => updateAccident({ appointmentDate: e.target.value })}
+            />
+          </div>
+        </div>
+
+        {currentClaim.surveyType !== 'spot' && (
+          <div className="mt-8 pt-6 border-t">
+            <Label className="text-md font-bold mb-4 block">Workshop Details</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="space-y-1 lg:col-span-2">
+                <Label htmlFor="w-name">Workshop Name</Label>
+                <Input
+                  id="w-name"
+                  value={a?.workshopName || ''}
+                  onChange={(e) => updateAccident({ workshopName: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="w-phone">Workshop Phone</Label>
+                <Input
+                  id="w-phone"
+                  value={a?.workshopPhone || ''}
+                  onChange={(e) => updateAccident({ workshopPhone: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1 lg:col-span-3">
+                <Label htmlFor="w-addr">Workshop Address</Label>
+                <Input
+                  id="w-addr"
+                  value={a?.workshopAddress || ''}
+                  onChange={(e) => updateAccident({ workshopAddress: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="w-fax">Workshop Fax</Label>
+                <Input
+                  id="w-fax"
+                  value={a?.workshopFax || ''}
+                  onChange={(e) => updateAccident({ workshopFax: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1 lg:col-span-2">
+                <Label htmlFor="w-email">Workshop Email</Label>
+                <Input
+                  id="w-email"
+                  type="email"
+                  value={a?.workshopEmail || ''}
+                  onChange={(e) => updateAccident({ workshopEmail: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-6">
+          <Label htmlFor="a-remarks">Surveyor Remarks (General Status)</Label>
+          <Input
+            id="a-remarks"
+            value={a?.remarks || ''}
+            onChange={(e) => updateAccident({ remarks: e.target.value })}
+            placeholder="e.g. Repairs completed as per assessment..."
+          />
         </div>
 
         <div className="mt-8 pt-6 border-t">
           <Label className="text-md font-bold mb-4 block">Document Verification Checklist (Photocopies Obtained?)</Label>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
             {[
               { id: 'rc', label: 'RC' },
               { id: 'dl', label: 'DL' },
@@ -96,31 +193,45 @@ export function AccidentDetailsForm() {
               { id: 'fireReport', label: 'Fire Report' },
               { id: 'fir', label: 'FIR' },
             ].map((flag) => {
-              const flags = currentClaim.spotDetails?.verificationFlags || {};
-              const value = (flags as any)[flag.id] || 'NO';
+              const flags = currentClaim.documentVerification || {};
+              const doc = (flags as any)[flag.id] || { status: 'NO', detail: '' };
 
               return (
-                <div key={flag.id} className="flex items-center space-x-2">
-                  <select
-                    className="h-8 rounded-md border border-input bg-background px-2 text-xs"
-                    value={value}
+                <div key={flag.id} className="p-3 border rounded-lg bg-muted/30 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label className="text-xs font-bold uppercase">{flag.label}</Label>
+                    <select
+                      className="h-8 w-16 rounded-md border border-input bg-background px-1 text-[10px]"
+                      value={doc.status}
+                      onChange={(e) => {
+                        const newFlags = { 
+                          ...flags, 
+                          [flag.id]: { ...doc, status: e.target.value } 
+                        };
+                        useClaimStore.getState().updateClaim({ 
+                          documentVerification: newFlags 
+                        });
+                      }}
+                    >
+                      <option value="YES">YES</option>
+                      <option value="NO">NO</option>
+                      <option value="N.A.">N.A.</option>
+                    </select>
+                  </div>
+                  <Input
+                    placeholder="e.g. Original"
+                    className="h-7 text-[10px] px-2"
+                    value={doc.detail || ''}
                     onChange={(e) => {
-                      const currentFlags = currentClaim.spotDetails?.verificationFlags || {};
-                      const newFlags = { ...currentFlags, [flag.id]: e.target.value };
-                      
+                      const newFlags = { 
+                        ...flags, 
+                        [flag.id]: { ...doc, detail: e.target.value } 
+                      };
                       useClaimStore.getState().updateClaim({ 
-                        spotDetails: { 
-                          ...(currentClaim.spotDetails || {}), 
-                          verificationFlags: newFlags 
-                        } 
+                        documentVerification: newFlags 
                       });
                     }}
-                  >
-                    <option value="YES">YES</option>
-                    <option value="NO">NO</option>
-                    <option value="N.A.">N.A.</option>
-                  </select>
-                  <Label className="text-xs">{flag.label}</Label>
+                  />
                 </div>
               );
             })}

@@ -18,7 +18,20 @@ interface ClaimState {
   isDirty: boolean;
 
   // ─── Saved Claims List ──────────────────────────────
-  claimsList: { id: string; label: string; updatedAt: string; surveyType: SurveyType }[];
+  claimsList: {
+    id: string;
+    label: string;
+    updatedAt: string;
+    surveyType: SurveyType;
+    reportNo: string;
+    vehicleNo: string;
+    insurerName: string;
+    insuredName: string;
+    stage: 'spot' | 'final' | 'reinspection' | 'bill-check';
+    isCompleted: boolean;
+    feePaid: boolean;
+    isActive: boolean;
+  }[];
 
   // ─── Actions ────────────────────────────────────────
   newClaim: (surveyType: SurveyType, vehicleType: VehicleType) => void;
@@ -30,6 +43,7 @@ interface ClaimState {
   updateDriver: (updates: Partial<ClaimData['driver']>) => void;
   updatePolicy: (updates: Partial<ClaimData['policy']>) => void;
   updateAccident: (updates: Partial<ClaimData['accident']>) => void;
+  updateReinspection: (updates: Partial<ClaimData['reinspection']>) => void;
   updateSpotDetails: (updates: Partial<ClaimData['spotDetails']>) => void;
 
   // Depreciation
@@ -156,6 +170,19 @@ export const useClaimStore = create<ClaimState>()(
             ? {
                 ...state.currentClaim,
                 accident: { ...state.currentClaim.accident, ...updates },
+                updatedAt: new Date().toISOString(),
+              }
+            : null,
+          isDirty: true,
+        }));
+      },
+
+      updateReinspection: (updates) => {
+        set((state) => ({
+          currentClaim: state.currentClaim
+            ? {
+                ...state.currentClaim,
+                reinspection: { ...state.currentClaim.reinspection, ...updates },
                 updatedAt: new Date().toISOString(),
               }
             : null,
@@ -542,18 +569,7 @@ export const useClaimStore = create<ClaimState>()(
               validityNonTransport: parseDate(data.validity_non_transport || data.valid_nt) || newClaim.driver.validityNonTransport,
               validityTransport: parseDate(data.validity_transport || data.valid_t) || newClaim.driver.validityTransport,
             };
-            newClaim.spotDetails = {
-              ...newClaim.spotDetails,
-              driverName: data.holder_name || data.name || newClaim.spotDetails.driverName,
-              dlParentName: data.father_or_husband_name || data.father_name || data.parent_name || newClaim.spotDetails.dlParentName,
-              mdlNo: data.licence_number || data.dl_no || newClaim.spotDetails.mdlNo,
-              dlAuthority: data.issuing_authority || data.rto || newClaim.spotDetails.dlAuthority,
-              dlType: data.vehicle_classes || data.classes || data.authorized_classes || newClaim.spotDetails.dlType,
-              dlIssueDate: parseDate(data.date_of_issue || data.issue_date) || newClaim.spotDetails.dlIssueDate,
-              dlRelation: data.relation_type || newClaim.spotDetails.dlRelation,
-              dlValidNT: parseDate(data.validity_non_transport || data.valid_nt) || newClaim.spotDetails.dlValidNT,
-              dlValidT: parseDate(data.validity_transport || data.valid_t) || newClaim.spotDetails.dlValidT,
-            };
+            // NOTE: driver fields are now exclusively in driver.* — no spotDetails dual-write needed.
           } else if (key === 'claim') {
              newClaim.policy = {
                ...newClaim.policy,
@@ -578,13 +594,8 @@ export const useClaimStore = create<ClaimState>()(
                thirdPartyDetails: data.third_party_details || newClaim.accident.thirdPartyDetails,
                dateAndTime: data.date_of_accident ? `${parseDate(data.date_of_accident)}T${(data.time_of_accident || '00:00').substring(0, 5)}` : newClaim.accident.dateAndTime,
              };
-             newClaim.spotDetails = {
-               ...newClaim.spotDetails,
-               surveyPlace: data.workshop_name || data.place_of_repair || newClaim.spotDetails.surveyPlace,
-               tpDetails: data.third_party_details || newClaim.spotDetails.tpDetails,
-               driverName: data.driver_name || newClaim.spotDetails.driverName,
-               mdlNo: data.driver_licence_no || newClaim.spotDetails.mdlNo,
-             };
+             // NOTE: surveyPlace -> accident.placeOfSurvey, thirdPartyDetails -> accident.thirdPartyDetails
+             // driver.name and driver.licenceNumber already set above — no spotDetails dual-write needed.
              if (data.third_party_details && data.third_party_details.toLowerCase() !== 'nil') {
                 const s = data.third_party_details.toLowerCase();
                 const v = (s.includes('injur') || s.includes('death')) && (s.includes('damage') || s.includes('property')) ? 'both' 
@@ -612,9 +623,8 @@ export const useClaimStore = create<ClaimState>()(
              };
           } else if (key === 'fitness') {
              newClaim.vehicle.fitnessNo = data.fitness_cert_no || newClaim.vehicle.fitnessNo;
-             newClaim.spotDetails.fitnessNo = data.fitness_cert_no || newClaim.spotDetails.fitnessNo;
              newClaim.vehicle.fitnessValidUpto = parseDate(data.validity_to) || newClaim.vehicle.fitnessValidUpto;
-             newClaim.spotDetails.fitnessValid = parseDate(data.validity_to) || newClaim.spotDetails.fitnessValid;
+             // NOTE: fitnessNo/fitnessValid removed from spotDetails — vehicle.* is the single source of truth.
              
              const gvwStr = String(data.gross_vehicle_weight_kg || '0').replace(/[^0-9.]/g, '');
              const ulwStr = String(data.unladen_weight_kg || '0').replace(/[^0-9.]/g, '');

@@ -120,6 +120,7 @@ export function AssessmentGrid() {
                         className={`h-8 w-full text-xs rounded-md border border-transparent hover:border-input focus:border-input focus:bg-background bg-transparent px-2 disabled:cursor-not-allowed
                           ${row.partType === 'metal' ? 'text-blue-500' : 
                             row.partType === 'plastic' ? 'text-amber' : 
+                            row.partType === 'fiberglass' ? 'text-fuchsia-500' :
                             row.partType === 'glass' ? 'text-teal' : 
                             row.partType === 'paint' ? 'text-purple-500' : 
                             'text-sidebar-foreground'} font-medium
@@ -127,6 +128,7 @@ export function AssessmentGrid() {
                       >
                         <option value="metal">🟦 Metal</option>
                         <option value="plastic">🟧 Plastic / Rubber</option>
+                        <option value="fiberglass">🟪 Fibre Glass</option>
                         <option value="glass">🟩 Glass</option>
                         <option value="paint">🎨 Paint Material</option>
                         <option value="labour">⚙️ Labour</option>

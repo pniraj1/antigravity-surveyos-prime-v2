@@ -66,6 +66,15 @@ function getDB(): Promise<IDBPDatabase<SurveyOSDB>> {
 export async function saveClaim(claim: ClaimData): Promise<void> {
   const db = await getDB();
   await db.put('claims', { ...claim, updatedAt: new Date().toISOString() });
+  
+  // Notify other tabs and useClaimsLoader
+  try {
+    const channel = new BroadcastChannel('surveyos_claims_sync');
+    channel.postMessage('CLAIMS_UPDATED');
+    channel.close();
+  } catch (e) {
+    // Ignore error in environments without BroadcastChannel
+  }
 }
 
 export async function getClaim(id: string): Promise<ClaimData | undefined> {

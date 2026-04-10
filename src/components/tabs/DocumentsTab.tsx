@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { ReconciliationDialog } from './reconciliation/ReconciliationDialog';
 import { getReconciliationFields } from '@/lib/ai/reconciliation';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 // ─── Document Slot Definitions ──────────────────────────────────────────────
 const DOC_GROUPS = [
@@ -23,6 +23,7 @@ const DOC_GROUPS = [
       { id: 'dl',      label: 'Driving Licence',   subLabel: 'DL / MDL',                   icon: CreditCard,   color: '#1e3a5f', bg: 'rgba(30,58,95,0.07)',   accept: 'image/*,application/pdf' },
       { id: 'policy',  label: 'Policy Schedule',   subLabel: 'Insurance Policy',            icon: Shield,       color: '#D4AF37', bg: 'rgba(212,175,55,0.08)', accept: 'image/*,application/pdf' },
       { id: 'claim',   label: 'Claim Form',        subLabel: 'Intimation / Claim Form',     icon: FileCheck,    color: '#4A4E69', bg: 'rgba(74,78,105,0.07)',  accept: 'image/*,application/pdf' },
+      { id: 'fir',     label: 'Police FIR',        subLabel: 'Spot Panchnama / FIR',       icon: ScrollText,   color: '#0D1B2A', bg: 'rgba(13,27,42,0.06)',   accept: 'image/*,application/pdf' },
     ],
   },
   {
@@ -63,6 +64,14 @@ export function DocumentsTab() {
     if (!currentClaim) return [];
     return getReconciliationFields(currentClaim).filter(f => f.hasConflict);
   }, [currentClaim]);
+
+  // Auto-close dialog when all conflicts are resolved
+  useEffect(() => {
+    if (isReconOpen && conflicts.length === 0) {
+      setIsReconOpen(false);
+    }
+  }, [conflicts.length, isReconOpen]);
+
 
   if (!currentClaim) return null;
 
