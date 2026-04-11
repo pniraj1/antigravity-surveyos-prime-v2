@@ -98,23 +98,33 @@ export async function pullClaimsFromCloud(uid: string) {
 
 /**
  * Pushes the current profile to Firestore.
+ * signatureDataUrl and stampDataUrl are stripped — large base64 blobs are
+ * kept locally only (same pattern as claim photos).
  */
 export async function pushProfileToCloud(uid: string, profile: SurveyorProfile) {
   const profileRef = doc(db, `users/${uid}/profile`, 'main');
-  await setDoc(profileRef, { ...profile, ownerId: uid }, { merge: true });
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { signatureDataUrl: _sig, stampDataUrl: _stamp, ...cloudProfile } = profile as any;
+  await setDoc(profileRef, { ...cloudProfile, ownerId: uid }, { merge: true });
   console.log(`[Sync] Profile pushed to cloud for user ${uid}.`);
 }
 
 /**
- * Pulls the profile from Firestore.
+ * Pulls the profile from Firestore and merges into the local store.
+ * Local signatureDataUrl and stampDataUrl are preserved (not stored in cloud).
  */
 export async function pullProfileFromCloud(uid: string) {
   const profileRef = doc(db, `users/${uid}/profile`, 'main');
   const snap = await getDoc(profileRef);
-  
+
   if (snap.exists()) {
     const remoteProfile = snap.data() as SurveyorProfile;
-    useProfileStore.getState().updateProfile(remoteProfile);
+    const local = useProfileStore.getState().profile;
+    useProfileStore.getState().updateProfile({
+      ...remoteProfile,
+      signatureDataUrl: local.signatureDataUrl,
+      stampDataUrl: local.stampDataUrl,
+    });
     console.log(`[Sync] Local profile updated from cloud for user ${uid}.`);
     return remoteProfile;
   }

@@ -23,6 +23,7 @@ import {
   removeSyncItem,
   getClaim,
 } from '@/lib/storage/indexeddb';
+import { flushDriveQueue } from '@/lib/drive';
 
 export function useCloudSync() {
   const { user, isAuthenticated } = useAuthStore();
@@ -30,6 +31,7 @@ export function useCloudSync() {
   const { profile } = useProfileStore();
   const { isOnline, setSaveStatus } = useUIStore();
   const isSyncingFullRef = useRef(false);
+  const profileSyncReadyRef = useRef(false);
   const cloudTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isDrainingRef = useRef(false);
 
@@ -45,6 +47,10 @@ export function useCloudSync() {
             console.log('[useCloudSync] No remote profile found, creating initial cloud profile.');
             await pushProfileToCloud(user.uid, profile);
           }
+          // Only allow Section 4 to push profile AFTER the initial pull is complete.
+          // This prevents the race condition where an empty local profile (new browser)
+          // overwrites the good Firestore profile during login.
+          profileSyncReadyRef.current = true;
           await syncAllLocalToCloud(user.uid);
           await pullClaimsFromCloud(user.uid);
           console.log('[useCloudSync] Initial full sync complete.');
@@ -55,6 +61,7 @@ export function useCloudSync() {
       })();
     } else if (!isAuthenticated) {
       isSyncingFullRef.current = false;
+      profileSyncReadyRef.current = false;
     }
   }, [isAuthenticated, user]);
 
@@ -135,12 +142,19 @@ export function useCloudSync() {
       } finally {
         isDrainingRef.current = false;
       }
+
+      // Also drain any pending Drive uploads
+      flushDriveQueue().catch(err => {
+        console.error('[useCloudSync] Drive queue drain failed:', err);
+      });
     })();
   }, [isOnline, isAuthenticated, user, setSaveStatus]);
 
   // ─── 4. Profile Sync on Profile Changes ───────────────────
+  // Only fires after the initial pull completes (profileSyncReadyRef = true).
+  // This prevents a new browser's empty profile from overwriting Firestore.
   useEffect(() => {
-    if (isAuthenticated && user && profile && isSyncingFullRef.current) {
+    if (isAuthenticated && user && profile && profileSyncReadyRef.current) {
       pushProfileToCloud(user.uid, profile).catch(err => {
         console.error('[useCloudSync] Profile cloud push failed:', err);
       });
