@@ -36,10 +36,12 @@ const DEFAULT_PROFILE: SurveyorProfile = {
   bankIFSC: '',
   panNumber: '',
   aiProvider: 'gemini',
-  groqApiKey: '',
-  groqModel: 'meta-llama/llama-4-scout-17b-16e-instruct',
+  // Multi-key arrays (new)
+  geminiApiKeys: [],
+  groqApiKeys: [],
+  // Deprecated single-key fields (kept for migration)
   geminiApiKey: '',
-  geminiModel: 'gemini-1.5-flash',
+  groqApiKey: '',
   googleClientId: '',
   surveyorId: '',
   subscriptionStatus: 'active',
@@ -52,6 +54,28 @@ const DEFAULT_PROFILE: SurveyorProfile = {
   feeSequence: 1,
   reportYear: new Date().getFullYear(),
 };
+
+/**
+ * Migrates legacy single groqApiKey/geminiApiKey fields to the new arrays.
+ * Called once when the store loads a persisted profile.
+ */
+function migrateProfile(profile: SurveyorProfile): SurveyorProfile {
+  let updated = { ...profile };
+
+  // Ensure arrays exist (profiles persisted before this version won't have them)
+  if (!Array.isArray(updated.geminiApiKeys)) updated.geminiApiKeys = [];
+  if (!Array.isArray(updated.groqApiKeys)) updated.groqApiKeys = [];
+
+  // Migrate single key → array if array is empty
+  if (updated.geminiApiKey && updated.geminiApiKeys.length === 0) {
+    updated.geminiApiKeys = [updated.geminiApiKey];
+  }
+  if (updated.groqApiKey && updated.groqApiKeys.length === 0) {
+    updated.groqApiKeys = [updated.groqApiKey];
+  }
+
+  return updated;
+}
 
 export const useProfileStore = create<ProfileState>()(
   persist(
@@ -135,6 +159,11 @@ export const useProfileStore = create<ProfileState>()(
     }),
     {
       name: 'surveyos-profile',
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.profile = migrateProfile(state.profile);
+        }
+      },
     }
   )
 );

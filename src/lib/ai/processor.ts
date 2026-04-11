@@ -6,6 +6,7 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import { callAIGateway } from './service';
 import { DOC_PROMPTS } from './prompts';
+import { toast } from 'sonner';
 
 // Setup PDF.js worker — using unpkg for better reliability with version 5.6.205
 if (typeof window !== 'undefined') {
@@ -165,8 +166,21 @@ export async function extractDocument(
       // Small throttle delay between pages to avoid rate limiting
       if (i > 0) await new Promise(r => setTimeout(r, 600));
 
-      const rawResponse = await callAIGateway(prompt, chunk);
-      
+      let rawResponse: string;
+      try {
+        rawResponse = await callAIGateway(prompt, chunk);
+      } catch (firstErr) {
+        // One retry after 500ms before giving up
+        await new Promise(r => setTimeout(r, 500));
+        try {
+          rawResponse = await callAIGateway(prompt, chunk);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Unknown error';
+          toast.error(`AI extraction failed — ${msg}. Please enter fields manually.`);
+          throw err;
+        }
+      }
+
       try {
         const fragment = JSON.parse(rawResponse);
         finalResult = mergeAIResults(finalResult, fragment);

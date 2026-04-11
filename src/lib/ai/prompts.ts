@@ -4,10 +4,12 @@
 // ═══════════════════════════════════════════════════════════
 
 export const DOC_PROMPTS: Record<string, string> = {
-  rc: `You are an expert at reading Indian vehicle RC (Registration Certificate) documents. Extract ALL visible fields from this RC book image. Pay special attention to the Registration Date. Return ONLY a JSON object with these keys (use empty string if not found):
+  rc: `You are an expert at reading Indian vehicle RC (Registration Certificate) documents. Extract ALL visible fields from this RC book image. Return ONLY a JSON object with these keys (use empty string if not found):
 {
   "registration_number": "",
   "date_of_registration": "Look for 'Regn Date' or 'Date of Registration' - return as YYYY-MM-DD",
+  "registration_valid_upto": "Look for 'Regn Valid Upto' or 'Registration Valid Upto' - return as YYYY-MM-DD",
+  "year_of_manufacture": "Look for 'Mfg Yr', 'Year of Manufacture', 'YOM' - return as 4-digit number e.g. 2019",
   "owner_name": "",
   "address": "",
   "make": "",
@@ -27,7 +29,6 @@ export const DOC_PROMPTS: Record<string, string> = {
   "permit_no": "",
   "route": "",
   "road_tax": "",
-  "year_of_manufacture": "",
   "hypothecation": "",
   "fitness_type": "Extract 'Goods' or 'Passenger' or 'Private' if mentioned near fitness"
 }

@@ -148,14 +148,18 @@ export interface SurveyorProfile {
   // ─── AI Configuration ─────────────────────────────────
   /** Which provider to use: 'groq' | 'gemini' */
   aiProvider: 'groq' | 'gemini';
-  /** Groq API key (free tier, high-speed) */
-  groqApiKey: string;
-  /** Override model name — defaults are safe but can be changed without rebuilding */
-  groqModel: string;
-  /** Google Gemini API key (Google AI Studio — free tier) */
+  /** Up to 3 Gemini API keys — rotated automatically on rate-limit/error */
+  geminiApiKeys: string[];
+  /** Up to 3 Groq API keys — rotated automatically on rate-limit/error */
+  groqApiKeys: string[];
+  /** @deprecated — use geminiApiKeys[0]. Kept for backward-compat migration. */
   geminiApiKey: string;
-  /** Gemini model override — e.g. gemini-2.0-flash, gemini-1.5-pro */
-  geminiModel: string;
+  /** @deprecated — use groqApiKeys[0]. Kept for backward-compat migration. */
+  groqApiKey: string;
+  /** Optional model override for Gemini. Blank = developer default (gemini-2.0-flash). */
+  geminiModel?: string;
+  /** Optional model override for Groq. Blank = developer default (llama-4-scout). */
+  groqModel?: string;
   /** Legacy Google OAuth client id */
   googleClientId: string;
   // ─── Subscription & Administrative ────────────────────
