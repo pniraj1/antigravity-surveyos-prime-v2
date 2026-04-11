@@ -11,6 +11,7 @@ import { generateWordReport } from '@/lib/reports/word-builder';
 import { FileText, Sparkles, Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { SpotTab } from '@/components/tabs/SpotTab';
 
 export function DetailsTab() {
   const currentClaim = useClaimStore(s => s.currentClaim);
@@ -86,13 +87,15 @@ export function DetailsTab() {
         <AccidentDetailsForm />
       </div>
 
-      <AIReviewDialog 
+      <AIReviewDialog
         isOpen={!!reviewData}
         onClose={cancelReview}
         onConfirm={confirmApply}
         title={reviewData?.key || ''}
         data={reviewData?.data}
       />
+
+      {currentClaim.surveyType === 'spot' && <SpotTab />}
     </div>
   );
 }

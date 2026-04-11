@@ -456,7 +456,6 @@ import { ErrorBoundary } from '@/components/layout/ErrorBoundary';
 // - ReportTab: @react-pdf/renderer, docx, file-saver
 const DetailsTab    = dynamicImport(() => import('@/components/tabs/DetailsTab').then(m    => ({ default: m.DetailsTab    })), { ssr: false });
 const AssessmentTab = dynamicImport(() => import('@/components/tabs/AssessmentTab').then(m => ({ default: m.AssessmentTab })), { ssr: false });
-const SpotTab       = dynamicImport(() => import('@/components/tabs/SpotTab').then(m       => ({ default: m.SpotTab       })), { ssr: false });
 const PhotosTab     = dynamicImport(() => import('@/components/tabs/PhotosTab').then(m     => ({ default: m.PhotosTab     })), { ssr: false });
 const ReportTab     = dynamicImport(() => import('@/components/tabs/ReportTab').then(m     => ({ default: m.ReportTab     })), { ssr: false });
 const DocumentsTab  = dynamicImport(() => import('@/components/tabs/DocumentsTab').then(m  => ({ default: m.DocumentsTab  })), { ssr: false });
@@ -473,7 +472,6 @@ function TabPlaceholder({ tab }: { tab: string }) {
   if (tab === 'review')      return <ReviewTab />;
   if (tab === 'details')     return <DetailsTab />;
   if (tab === 'assessment')  return <AssessmentTab />;
-  if (tab === 'spot')        return <SpotTab />;
   if (tab === 'photos')      return <PhotosTab />;
   if (tab === 'reports')     return <ReportTab />;
   if (tab === 'bill-check')  return <BillCheckTab />;

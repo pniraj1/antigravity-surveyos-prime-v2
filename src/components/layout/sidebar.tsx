@@ -10,7 +10,6 @@ import {
   ScanSearch,
   ClipboardList,
   ClipboardCheck,
-  MapPin,
   Calculator,
   Printer,
   Camera,
@@ -49,7 +48,6 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'documents', label: 'Documents', icon: <FileText size={17} />, group: 'claim', requiresClaim: true },
   { id: 'review', label: 'AI Review', icon: <ScanSearch size={17} />, group: 'claim', requiresClaim: true },
   { id: 'details', label: 'Claim Details', icon: <ClipboardList size={17} />, group: 'claim', requiresClaim: true },
-  { id: 'spot', label: 'Spot Survey', icon: <MapPin size={17} />, group: 'claim', requiresClaim: true },
   { id: 'assessment', label: 'Assessment', icon: <Calculator size={17} />, group: 'claim', requiresClaim: true },
   { id: 'reports',      label: 'Report Center',   icon: <Printer size={17} />,    group: 'output',   requiresClaim: true },
   { id: 'bill-check',  label: 'Bill Check',     icon: <ClipboardCheck size={17} />, group: 'output', requiresClaim: true },
@@ -217,12 +215,8 @@ export function Sidebar() {
               
               // Workflow Logic: Restrict tabs based on Survey Type
               if (currentClaim?.surveyType === 'spot') {
-                // Spot surveys definitively never see these tabs
+                // Spot surveys never see assessment/billing/reinspection tabs
                 const restrictedTabs: AppTab[] = ['assessment', 'bill-check', 'reinspection'];
-                if (restrictedTabs.includes(item.id)) return false;
-              } else if (currentClaim?.surveyType === 'final') {
-                // Final surveys definitively never see Spot Survey tab
-                const restrictedTabs: AppTab[] = ['spot'];
                 if (restrictedTabs.includes(item.id)) return false;
               }
               

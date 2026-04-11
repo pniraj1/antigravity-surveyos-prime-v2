@@ -7,6 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Trash2, PlusCircle, AlertTriangle, ShieldCheck, Truck, User, MapPin, Gauge, CheckCircle2, Zap, Lock, FileText, ClipboardList, Wand2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { saveClaim } from '@/lib/storage/indexeddb';
+
+const S = () => <span className="ml-1 inline-block w-2 h-2 rounded-full bg-green-500 align-middle" title="Used in Spot Report" />;
 
 export function SpotTab() {
   const { currentClaim, updateSpotDetails, updateDriver, updateAccident, updateVehicle, addSpotDamageRow, updateSpotDamageRow, deleteSpotDamageRow, updateClaim } = useClaimStore();
@@ -16,17 +19,20 @@ export function SpotTab() {
 
   const isCompleted = currentClaim.isSpotCompleted;
 
-  const handleFinalize = () => {
+  const handleFinalize = async () => {
     if (confirm('Are you sure you want to finalize the Spot Survey? This will unlock the Final Survey workflow.')) {
-      updateClaim({ 
-        isSpotCompleted: true, 
-        surveyType: 'final' 
-      });
-      toast.success('Spot Survey Finalized! Final Workflow Unlocked.');
+      try {
+        await saveClaim(currentClaim);
+        updateClaim({ isSpotCompleted: true, surveyType: 'final' });
+        toast.success('Spot Survey Finalized! Final Workflow Unlocked.');
+      } catch {
+        toast.error('Failed to save spot data — please try again.');
+      }
     }
   };
 
-  const { spotDetails, spotDamageRows, vehicleType, driver, accident, vehicle } = currentClaim;
+  const { spotDetails, vehicleType, driver, accident, vehicle } = currentClaim;
+  const spotDamageRows = currentClaim.spotDamageRows ?? [];
   const isCommercial = vehicleType !== 'private';
   const overloaded = (spotDetails.actualLoad || 0) > (spotDetails.loadCapacity || 0);
 
@@ -35,7 +41,7 @@ export function SpotTab() {
   };
 
   return (
-    <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div className="space-y-8 border-t pt-8 animate-in fade-in duration-300">
       <div className="flex justify-between items-end">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-primary">Spot Survey Details</h2>
@@ -127,7 +133,7 @@ export function SpotTab() {
           </CardHeader>
           <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2 space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">Survey Place / Workshop</Label>
+              <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Survey Place / Workshop<S /></Label>
               <Input
                 value={accident.placeOfSurvey}
                 onChange={(e) => updateAccident({ placeOfSurvey: e.target.value })}
@@ -137,7 +143,7 @@ export function SpotTab() {
             </div>
             
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">Police Reported?</Label>
+              <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Police Reported?<S /></Label>
               <select
                 value={spotDetails.policeReported}
                 onChange={(e) => handleUpdate({ policeReported: e.target.value })}
@@ -151,7 +157,7 @@ export function SpotTab() {
             {spotDetails.policeReported === 'yes' && (
               <>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Police Station</Label>
+                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Police Station<S /></Label>
                   <Input
                     value={accident.policeStation}
                     onChange={(e) => updateAccident({ policeStation: e.target.value })}
@@ -159,7 +165,7 @@ export function SpotTab() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">FIR / Diary No.</Label>
+                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">FIR / Diary No.<S /></Label>
                   <Input
                     value={accident.firNumber}
                     onChange={(e) => updateAccident({ firNumber: e.target.value })}
@@ -167,7 +173,7 @@ export function SpotTab() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Panchanama?</Label>
+                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Panchanama?<S /></Label>
                   <select
                     value={spotDetails.panchanama}
                     onChange={(e) => handleUpdate({ panchanama: e.target.value })}
@@ -181,7 +187,7 @@ export function SpotTab() {
             )}
 
             <div className="sm:col-span-2 space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">Third Party Involvement</Label>
+              <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Third Party Involvement<S /></Label>
               <select
                 value={spotDetails.tpInvolved}
                 onChange={(e) => handleUpdate({ tpInvolved: e.target.value })}
@@ -196,7 +202,7 @@ export function SpotTab() {
             
             {(spotDetails.tpInvolved !== 'no') && (
               <div className="sm:col-span-2 space-y-1.5">
-                <Label className="text-xs font-bold uppercase text-muted-foreground">TP Details</Label>
+                <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">TP Details<S /></Label>
                 <Input
                   value={accident.thirdPartyDetails}
                   onChange={(e) => updateAccident({ thirdPartyDetails: e.target.value })}
@@ -219,7 +225,7 @@ export function SpotTab() {
           </CardHeader>
           <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">Is Drivable?</Label>
+              <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Is Drivable?<S /></Label>
               <select
                 value={spotDetails.drivable}
                 onChange={(e) => handleUpdate({ drivable: e.target.value })}
@@ -230,7 +236,7 @@ export function SpotTab() {
               </select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">Damage Severity</Label>
+              <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Damage Severity<S /></Label>
               <select
                 value={spotDetails.damageSeverity}
                 onChange={(e) => handleUpdate({ damageSeverity: e.target.value as any })}
@@ -242,7 +248,7 @@ export function SpotTab() {
               </select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">Airbags Status</Label>
+              <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Airbags Status<S /></Label>
               <select
                 value={spotDetails.airbags}
                 onChange={(e) => handleUpdate({ airbags: e.target.value })}
@@ -254,7 +260,7 @@ export function SpotTab() {
               </select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">Temporary Repairs Suggested</Label>
+              <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Temporary Repairs Suggested<S /></Label>
               <Input
                 value={spotDetails.repairs}
                 onChange={(e) => handleUpdate({ repairs: e.target.value })}
@@ -276,14 +282,14 @@ export function SpotTab() {
               </CardHeader>
               <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Permit No.</Label>
+                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Permit No.<S /></Label>
                   <Input
                     value={spotDetails.permitNo}
                     onChange={(e) => handleUpdate({ permitNo: e.target.value.toUpperCase() })}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Permit Type</Label>
+                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Permit Type<S /></Label>
                   <select
                     className="w-full bg-background border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary h-10"
                     value={spotDetails.permitType}
@@ -298,7 +304,7 @@ export function SpotTab() {
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Permit Valid Upto</Label>
+                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Permit Valid Upto<S /></Label>
                   <Input
                     type="date"
                     value={spotDetails.permitTo}
@@ -306,14 +312,14 @@ export function SpotTab() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Auth No.</Label>
+                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Auth No.<S /></Label>
                   <Input
                     value={spotDetails.authNo}
                     onChange={(e) => handleUpdate({ authNo: e.target.value.toUpperCase() })}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Actual Load (KG)</Label>
+                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Actual Load (KG)<S /></Label>
                   <Input
                     type="number"
                     className={`font-mono font-bold ${overloaded ? 'text-red-600 border-red-200 bg-red-50' : 'text-green-600'}`}
@@ -324,7 +330,7 @@ export function SpotTab() {
 
                 {/* Challan Info */}
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Challan No.</Label>
+                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Challan No.<S /></Label>
                   <Input
                     value={spotDetails.challanNo}
                     placeholder="CN Number"
@@ -333,7 +339,7 @@ export function SpotTab() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Challan Date</Label>
+                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Challan Date<S /></Label>
                   <Input
                     type="date"
                     value={spotDetails.challanDate}
@@ -343,7 +349,7 @@ export function SpotTab() {
                 </div>
 
                 <div className="space-y-1.5 md:col-span-2">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Fitness No.</Label>
+                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Fitness No.<S /></Label>
                   <Input
                     value={vehicle.fitnessNo}
                     onChange={(e) => updateVehicle({ fitnessNo: e.target.value.toUpperCase() })}
@@ -351,7 +357,7 @@ export function SpotTab() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Fitness Valid Upto</Label>
+                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Fitness Valid Upto<S /></Label>
                   <Input
                     type="date"
                     value={vehicle.fitnessValidUpto}
@@ -360,7 +366,7 @@ export function SpotTab() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Log Book / Tax Paid</Label>
+                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Log Book / Tax Paid<S /></Label>
                   <Input
                     value={spotDetails.fitnessType}
                     onChange={(e) => handleUpdate({ fitnessType: e.target.value })}
@@ -369,7 +375,7 @@ export function SpotTab() {
                   />
                 </div>
                 <div className="sm:col-span-2 space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Area of Operation</Label>
+                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Area of Operation<S /></Label>
                   <Input
                     value={spotDetails.areaOfOperation}
                     onChange={(e) => handleUpdate({ areaOfOperation: e.target.value })}
@@ -390,7 +396,7 @@ export function SpotTab() {
               <CardContent className="p-6 space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground">GVW / RLW (KG)</Label>
+                    <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">GVW / RLW (KG)<S /></Label>
                     <Input
                       type="number"
                       value={spotDetails.gvw || ''}
@@ -406,7 +412,7 @@ export function SpotTab() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground">ULW (KG)</Label>
+                    <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">ULW (KG)<S /></Label>
                     <Input
                       type="number"
                       value={spotDetails.ulw || ''}
@@ -421,7 +427,7 @@ export function SpotTab() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground">Payload Capacity</Label>
+                    <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Payload Capacity<S /></Label>
                     <Input
                       type="number"
                       value={spotDetails.loadCapacity || ''}
@@ -433,7 +439,7 @@ export function SpotTab() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-4 border-t border-border/50">
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground">Goods Description</Label>
+                    <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Goods Description<S /></Label>
                     <Input
                       value={spotDetails.loadDesc}
                       onChange={(e) => handleUpdate({ loadDesc: e.target.value })}
@@ -443,7 +449,7 @@ export function SpotTab() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-bold uppercase text-muted-foreground">Route From</Label>
+                      <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Route From<S /></Label>
                       <Input
                         value={spotDetails.loadOrigin}
                         onChange={(e) => handleUpdate({ loadOrigin: e.target.value })}
@@ -451,7 +457,7 @@ export function SpotTab() {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-bold uppercase text-muted-foreground">Route To</Label>
+                      <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Route To<S /></Label>
                       <Input
                         value={spotDetails.loadDest}
                         onChange={(e) => handleUpdate({ loadDest: e.target.value })}
@@ -517,6 +523,30 @@ export function SpotTab() {
         </Card>
       </div>
 
+      <datalist id="spot-components-list">
+        {[
+          'FRONT END STRUCTURE / DRIVERS CABIN',
+          'INSTRUMENTS',
+          'COOLING SYSTEM',
+          'ENGINE & TRANSMISSION',
+          'CHASSIS ASSY',
+          'LOAD BODY',
+          'STEERING SYSTEM',
+          'FRONT SUSPENSION',
+          'REAR SUSPENSION',
+          'WHEEL DISCS & TYRES',
+          'FRONT AXLE ASSY',
+          'REAR AXLE ASSY',
+          'BRAKING SYSTEM',
+          'ELECTRICAL SYSTEM',
+          'FUEL SYSTEM',
+          'EXHAUST SYSTEM',
+          'BODY PANELS',
+          'WINDSHIELD & GLASS',
+          'INTERIOR',
+        ].map((c) => <option key={c} value={c} />)}
+      </datalist>
+
       {/* SECTION 5: DAMAGE MATRIX */}
       <Card className="border-border shadow-sm">
         <CardHeader className="bg-muted/50 pb-4 border-b border-border flex flex-row items-center justify-between">
@@ -560,12 +590,13 @@ export function SpotTab() {
                       {String(idx + 1).padStart(2, '0')}
                     </td>
                     <td className="px-6 py-4">
-                      <Input
+                      <input
+                        list="spot-components-list"
                         value={row.component}
                         onChange={(e) => updateSpotDamageRow(row.id, { component: e.target.value })}
                         disabled={isCompleted}
-                        className="h-9 text-sm font-bold ring-0 border-0 bg-transparent focus:bg-background focus:ring-1 focus:ring-primary/20"
-                        placeholder="e.g. Right Headlamp Assembly"
+                        className="h-9 w-full text-sm font-bold ring-0 border-0 bg-transparent focus:bg-background focus:ring-1 focus:ring-primary/20 rounded px-2 outline-none"
+                        placeholder="Select Component"
                       />
                     </td>
                     <td className="px-6 py-4">
@@ -606,7 +637,7 @@ export function SpotTab() {
         <CardContent className="p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">Spot Observations / Comments</Label>
+              <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Spot Observations / Comments<S /></Label>
               <textarea
                 value={spotDetails.comments}
                 onChange={(e) => handleUpdate({ comments: e.target.value })}
@@ -618,16 +649,16 @@ export function SpotTab() {
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Workshop / Repairer Selection</Label>
+                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Further Repairs<S /></Label>
                   <Input
-                    value={spotDetails.repairWorkshop}
-                    placeholder="Enter workshop name"
+                    value={spotDetails.repairWorkshop ?? ''}
+                    placeholder="Workshop where vehicle will go for further repairs"
                     onChange={(e) => handleUpdate({ repairWorkshop: e.target.value })}
                     disabled={isCompleted}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Survey Place / Location</Label>
+                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Survey Place / Location<S /></Label>
                   <Input
                     value={accident.placeOfSurvey}
                     placeholder="Where was survey conducted?"
@@ -636,7 +667,7 @@ export function SpotTab() {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase text-muted-foreground">Enclosed Documents</Label>
+                <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Enclosed Documents<S /></Label>
                 <textarea
                   value={spotDetails.enclosures}
                   onChange={(e) => handleUpdate({ enclosures: e.target.value })}

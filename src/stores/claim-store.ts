@@ -288,7 +288,7 @@ export const useClaimStore = create<ClaimState>()(
           return {
             currentClaim: {
               ...state.currentClaim,
-              spotDamageRows: [...state.currentClaim.spotDamageRows, newRow],
+              spotDamageRows: [...(state.currentClaim.spotDamageRows ?? []), newRow],
               updatedAt: new Date().toISOString(),
             },
             isDirty: true,
@@ -302,7 +302,7 @@ export const useClaimStore = create<ClaimState>()(
           return {
             currentClaim: {
               ...state.currentClaim,
-              spotDamageRows: state.currentClaim.spotDamageRows.map((r) =>
+              spotDamageRows: (state.currentClaim.spotDamageRows ?? []).map((r) =>
                 r.id === id ? { ...r, ...updates } : r
               ),
               updatedAt: new Date().toISOString(),
@@ -318,7 +318,7 @@ export const useClaimStore = create<ClaimState>()(
           return {
             currentClaim: {
               ...state.currentClaim,
-              spotDamageRows: state.currentClaim.spotDamageRows.filter((r) => r.id !== id),
+              spotDamageRows: (state.currentClaim.spotDamageRows ?? []).filter((r) => r.id !== id),
               updatedAt: new Date().toISOString(),
             },
             isDirty: true,
@@ -508,10 +508,13 @@ export const useClaimStore = create<ClaimState>()(
               rlw: rlw,
               registeredLoadWeight: rlw || newClaim.vehicle.registeredLoadWeight, // Update alias for UI
               classOfVehicle: data.class_of_vehicle || data.vehicle_class || newClaim.vehicle.classOfVehicle,
+              registrationType: data.class_of_vehicle || data.vehicle_class || newClaim.vehicle.registrationType,
               fitnessNo: data.fitness_cert_no || data.fitness_no || newClaim.vehicle.fitnessNo,
               fitnessValidUpto: parseDate(data.fitness_valid_upto || data.fitness_expiry) || newClaim.vehicle.fitnessValidUpto,
               route: data.route || newClaim.vehicle.route,
               yearOfManufacture: yom,
+              registrationValidUpTo: parseDate(data.registration_valid_upto || data.reg_valid_upto || data.regn_valid_upto) || newClaim.vehicle.registrationValidUpTo,
+              fitnessType: data.fitness_type || newClaim.vehicle.fitnessType,
               hpa: hpa,
               hypothecation: hpa || newClaim.vehicle.hypothecation, // Update alias for UI
             };
@@ -551,6 +554,13 @@ export const useClaimStore = create<ClaimState>()(
             if (data.registration_number) newClaim.vehicle.registrationNumber = data.registration_number;
             if (data.chassis_number) newClaim.vehicle.chassisNumber = data.chassis_number;
             if (data.engine_number) newClaim.vehicle.engineNumber = data.engine_number;
+            if (data.make_model && !newClaim.vehicle.make) {
+              const parts = data.make_model.split(/[/,\s]+/);
+              if (parts.length >= 2) {
+                newClaim.vehicle.make = parts[0].trim();
+                newClaim.vehicle.model = parts.slice(1).join(' ').trim();
+              }
+            }
           } else if (key === 'dl') {
             newClaim.driver = { 
               ...newClaim.driver,
@@ -624,6 +634,10 @@ export const useClaimStore = create<ClaimState>()(
           } else if (key === 'fitness') {
              newClaim.vehicle.fitnessNo = data.fitness_cert_no || newClaim.vehicle.fitnessNo;
              newClaim.vehicle.fitnessValidUpto = parseDate(data.validity_to) || newClaim.vehicle.fitnessValidUpto;
+             if (data.seating_capacity) newClaim.vehicle.seatingCapacity = data.seating_capacity;
+             if (data.chassis_number) newClaim.vehicle.chassisNumber = data.chassis_number || newClaim.vehicle.chassisNumber;
+             if (data.engine_number) newClaim.vehicle.engineNumber = data.engine_number || newClaim.vehicle.engineNumber;
+             if (data.fitness_type) newClaim.vehicle.fitnessType = data.fitness_type;
              // NOTE: fitnessNo/fitnessValid removed from spotDetails — vehicle.* is the single source of truth.
              
              const gvwStr = String(data.gross_vehicle_weight_kg || '0').replace(/[^0-9.]/g, '');
