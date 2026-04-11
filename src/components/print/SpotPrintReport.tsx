@@ -127,8 +127,8 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
           <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt', width: '18%' }}>Spot Report No.</td>
             <td style={{ ...parseInline(styles.td), fontWeight: 700, width: '32%' }}>{spotDetails.reportNo}</td>
-            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Date of Report</td>
-            <td style={{ ...parseInline(styles.td), fontWeight: 700 }}>{formatDateDMY(spotDetails.reportDate)}</td>
+            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Date & Time of Report</td>
+            <td style={{ ...parseInline(styles.td), fontWeight: 700 }}>{formatDateTimeDMY(spotDetails.reportDate)}</td>
           </tr>
           <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Date of Allotment</td>
