@@ -39,22 +39,21 @@ function g(v: string | number | null | undefined): string {
   return v !== null && v !== undefined ? String(v) : '';
 }
 
-function numberToWords(num: number): string {
-  if (!num || isNaN(num)) return 'ZERO';
-  const ones = ['', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE',
-    'TEN', 'ELEVEN', 'TWELVE', 'THIRTEEN', 'FOURTEEN', 'FIFTEEN', 'SIXTEEN', 'SEVENTEEN', 'EIGHTEEN', 'NINETEEN'];
-  const tens = ['', '', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY', 'EIGHTY', 'NINETY'];
-  function c(n: number): string {
-    if (n < 20) return ones[n];
-    if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 ? ' ' + ones[n % 10] : '');
-    if (n < 1000) return ones[Math.floor(n / 100)] + ' HUNDRED' + (n % 100 ? ' ' + c(n % 100) : '');
-    if (n < 100000) return c(Math.floor(n / 1000)) + ' THOUSAND' + (n % 1000 ? ' ' + c(n % 1000) : '');
-    if (n < 10000000) return c(Math.floor(n / 100000)) + ' LAKH' + (n % 100000 ? ' ' + c(n % 100000) : '');
-    return c(Math.floor(n / 10000000)) + ' CRORE' + (n % 10000000 ? ' ' + c(n % 10000000) : '');
-  }
-  return c(Math.floor(num));
-}
+import { numberToWords, getVehicleAgeMonths, getSurveyorHeader, getSigBlock } from './report-utils';
 
+// ─── HTML/PDF SYNC CHECKLIST ──────────────────────────────────────────────────
+// Fields that must stay identical between this HTML builder and
+// UIICReportDocument.tsx (React-PDF). Update both when changing these:
+//   • vehicle: registrationNumber, makeModel, colour, fuelType, seatingCapacity,
+//              chassisNumber, engineNumber, dateOfRegistration, yearOfManufacture
+//   • policy: policyNumber, insuredName, sumInsured, coverageType, depreciationType
+//   • accident: dateAndTime, place, natureOfAccident
+//   • assessment table: parts, labour, paint rows + depreciation + GST + net assessed loss
+//   • Document checklist (Page 2): all 3-column doc verification fields
+//   • surveyor header / signature block (shared via report-utils.ts)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// getDepRate has a different param order here (partType, ageMonths, depType) vs standard builder
 function getDepRate(partType: string, ageMonths: number, depType: string): number {
   const dt = (depType || 'standard').toLowerCase();
   if (dt === 'nil' || dt === 'nil depreciation') return 0;
@@ -69,53 +68,6 @@ function getDepRate(partType: string, ageMonths: number, depType: string): numbe
   if (ageMonths <= 60) return 35;
   if (ageMonths <= 120) return 40;
   return 50;
-}
-
-function getVehicleAgeMonths(regDate: string | null, year: number | null, doa: string | null): number {
-  const start: Date | null = regDate ? new Date(regDate) : (year ? new Date(year, 0, 1) : null);
-  if (!start) return 0;
-  const ref = doa ? new Date(doa) : new Date();
-  if (isNaN(start.getTime()) || isNaN(ref.getTime()) || ref < start) return 0;
-  return (ref.getFullYear() - start.getFullYear()) * 12 + ref.getMonth() - start.getMonth();
-}
-
-// ─── Surveyor Header (matches benchmark getSurveyorHeader) ────────────────────
-
-function getSurveyorHeader(profile: SurveyorProfile | null): string {
-  const name = profile?.name || 'SURVEYOR NAME';
-  const qual = profile?.qualifications || 'B.Sc., Dip. in Auto Engg.';
-  const addr = profile?.address || '';
-  const lic = profile?.licenceNumber || '—';
-  const exp = (profile as any)?.licenceExpiry || '—';
-  const iiisla = profile?.iiislaNumber || '—';
-  const email = profile?.email || '—';
-  const mob = profile?.mobile || '—';
-  const cats = profile?.categories || 'MOTOR';
-
-  return `<div style="border-bottom:1.2pt solid #000;padding-bottom:5px;margin-bottom:6px;">
-    <div style="text-align:center;">
-      <div style="font-size:13pt;font-weight:700;">${name}</div>
-      <div style="font-size:7pt;">${qual}</div>
-      <div style="font-size:7.5pt;font-weight:700;">INSURANCE SURVEYOR, LOSS ASSESSOR &amp; VALUER</div>
-    </div>
-    <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:6.8pt;">
-      <div>Lic. No.: <b>${lic}</b> &nbsp;|&nbsp; Expiry: <b>${exp}</b> &nbsp;|&nbsp; IIISLA: <b>${iiisla}</b> &nbsp;|&nbsp; E-mail: ${email} &nbsp;|&nbsp; Cell: ${mob}</div>
-      <div style="text-align:right;font-weight:700;">${cats}<br/><span style="font-weight:400;">${addr}</span></div>
-    </div>
-  </div>`;
-}
-
-// ─── Signature Block ──────────────────────────────────────────────────────────
-
-function getSigBlock(profile: SurveyorProfile | null): string {
-  const name = profile?.name || 'SURVEYOR NAME';
-  return `<div style="display:flex;justify-content:flex-end;align-items:flex-end;margin-top:14px;gap:8px;">
-    <div style="text-align:center;">
-      <div style="min-height:60px;"></div>
-      <div style="font-weight:700;font-size:7.5pt;margin-top:2px;">${name}</div>
-      <div style="font-size:6.5pt;color:#555;">Licenced Surveyor &amp; Loss Assessor</div>
-    </div>
-  </div>`;
 }
 
 // ─── Main UIIC Final HTML builder ─────────────────────────────────────────────
