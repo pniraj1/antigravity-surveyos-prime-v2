@@ -1,0 +1,1 @@
+{"nodes": [{"id": "cls", "label": "cls.ts", "file_type": "code", "source_file": "node_modules\\web-vitals\\src\\types\\cls.ts", "source_location": "L1"}], "edges": [{"source": "cls", "target": "base_js", "relation": "imports_from", "confidence": "EXTRACTED", "source_file": "node_modules\\web-vitals\\src\\types\\cls.ts", "source_location": "L17", "weight": 1.0}]}

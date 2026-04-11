@@ -1,0 +1,1 @@
+{"nodes": [{"id": "pt_br_d", "label": "pt-BR.d.ts", "file_type": "code", "source_file": "node_modules\\date-fns\\locale\\pt-BR.d.ts", "source_location": "L1"}], "edges": [{"source": "pt_br_d", "target": "types_js", "relation": "imports_from", "confidence": "EXTRACTED", "source_file": "node_modules\\date-fns\\locale\\pt-BR.d.ts", "source_location": "L1", "weight": 1.0}]}

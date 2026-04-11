@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SurveyOS Field Flow Map</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f1117;color:#e2e8f0;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+  header{padding:10px 16px;background:#1a1f2e;border-bottom:1px solid #2d3748;display:flex;align-items:center;gap:16px;flex-shrink:0;flex-wrap:wrap}
+  header h1{font-size:15px;font-weight:700;color:#e2e8f0;white-space:nowrap}
+  .legend{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:11px}
+  .leg{display:flex;align-items:center;gap:5px;white-space:nowrap}
+  .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+  .dot-full{background:#22c55e}.dot-orphan{background:#f59e0b}.dot-dropped{background:#ef4444}.dot-manual{background:#6366f1}.dot-store-orphan{background:#dc2626}
+  .btn{padding:5px 12px;border-radius:6px;border:1px solid #4a5568;background:#2d3748;color:#e2e8f0;font-size:11px;cursor:pointer;white-space:nowrap}
+  .btn:hover{background:#4a5568}
+  .btn.active{background:#1e3a5f;border-color:#3b82f6;color:#93c5fd}
+  .stats{font-size:11px;color:#718096;white-space:nowrap}
+  .cols{display:flex;flex:1;overflow:hidden;gap:0}
+  .col{flex:1;overflow-y:auto;padding:12px;border-right:1px solid #1e2433;min-width:0}
+  .col:last-child{border-right:none}
+  .col-header{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.15em;color:#718096;padding:6px 0 8px;border-bottom:1px solid #1e2433;margin-bottom:10px}
+  .group{margin-bottom:14px}
+  .group-title{font-size:11px;font-weight:700;padding:5px 8px;border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none;margin-bottom:4px}
+  .group-title:hover{opacity:.85}
+  .group-title .badge-count{font-size:9px;padding:1px 5px;border-radius:10px;background:rgba(255,255,255,.12);font-weight:600}
+  .group-body{display:flex;flex-direction:column;gap:2px}
+  .group-body.collapsed{display:none}
+  .field-node{font-size:10.5px;padding:4px 8px;border-radius:4px;cursor:pointer;border:1px solid transparent;transition:all .15s;display:flex;align-items:center;gap:6px;position:relative}
+  .field-node:hover{filter:brightness(1.2)}
+  .field-node.highlighted{outline:2px solid #fff;outline-offset:1px;filter:brightness(1.3)}
+  .field-node.dimmed{opacity:.25}
+  .field-node .status-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+  .field-node .fn-label{flex:1;font-family:'Consolas','Courier New',monospace;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .field-node .fn-arrow{font-size:9px;color:#718096;flex-shrink:0}
+  /* Status colors */
+  .s-full{background:#052e16;border-color:#15803d;color:#86efac}
+  .s-full .status-dot{background:#22c55e}
+  .s-orphan{background:#451a03;border-color:#b45309;color:#fcd34d}
+  .s-orphan .status-dot{background:#f59e0b}
+  .s-dropped{background:#3b0f0f;border-color:#991b1b;color:#fca5a5}
+  .s-dropped .status-dot{background:#ef4444}
+  .s-manual{background:#1e1b4b;border-color:#4338ca;color:#a5b4fc}
+  .s-manual .status-dot{background:#6366f1}
+  .s-store-orphan{background:#2d0909;border-color:#7f1d1d;color:#f87171}
+  .s-store-orphan .status-dot{background:#dc2626}
+  /* Report cards */
+  .report-card{border:1px solid #2d3748;border-radius:6px;margin-bottom:8px;overflow:hidden}
+  .report-card-header{padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:space-between}
+  .report-card-header:hover{filter:brightness(1.15)}
+  .report-card-body{padding:6px 10px 8px;display:flex;flex-direction:column;gap:2px}
+  .report-field{font-size:10px;font-family:monospace;padding:2px 5px;border-radius:3px;background:rgba(255,255,255,.05);color:#94a3b8;cursor:default}
+  .report-field.highlighted{background:rgba(34,197,94,.15);color:#86efac}
+  /* Info panel */
+  #info-panel{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1a1f2e;border:1px solid #2d3748;border-radius:8px;padding:10px 16px;font-size:11px;max-width:600px;width:90%;z-index:200;display:none;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+  #info-panel.visible{display:block}
+  #info-panel h3{font-size:12px;font-weight:700;margin-bottom:6px;color:#e2e8f0}
+  #info-panel .flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+  #info-panel .flow-node{padding:3px 8px;border-radius:4px;font-family:monospace;font-size:10px}
+  #info-panel .flow-arrow{color:#718096;font-size:14px}
+  #info-panel .rec{background:#1e3a5f;border:1px solid #2563eb;border-radius:4px;padding:6px 10px;color:#93c5fd;font-size:10.5px}
+  /* SVG overlay */
+  #svg-lines{position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:150}
+  /* Gaps sidebar */
+  #gaps-sidebar{position:fixed;right:0;top:0;height:100vh;width:280px;background:#12161f;border-left:1px solid #1e2433;overflow-y:auto;padding:12px;z-index:300;transform:translateX(100%);transition:transform .25s}
+  #gaps-sidebar.open{transform:translateX(0)}
+  #gaps-sidebar h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#718096;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #1e2433}
+  .gap-item{margin-bottom:8px;padding:8px;border-radius:5px;font-size:10.5px}
+  .gap-item .gi-field{font-family:monospace;font-weight:700;margin-bottom:3px}
+  .gap-item .gi-rec{color:#94a3b8;font-size:10px;line-height:1.4}
+  .gap-dropped{background:#1f0808;border:1px solid #7f1d1d}
+  .gap-dropped .gi-field{color:#fca5a5}
+  .gap-orphan{background:#1c1008;border:1px solid #78350f}
+  .gap-orphan .gi-field{color:#fcd34d}
+  #gaps-btn{position:fixed;right:16px;bottom:16px;z-index:400;padding:8px 14px;border-radius:20px;background:#1e3a5f;border:1px solid #3b82f6;color:#93c5fd;font-size:11px;font-weight:700;cursor:pointer}
+  #gaps-btn:hover{background:#1e40af}
+  #gaps-close{float:right;cursor:pointer;font-size:16px;color:#718096;background:none;border:none;line-height:1}
+  .gap-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;padding:8px 0 4px;color:#718096;border-top:1px solid #1e2433;margin-top:8px}
+  .gap-section-title:first-child{border-top:none;margin-top:0}
+  /* Scrollbar */
+  ::-webkit-scrollbar{width:5px;height:5px}
+  ::-webkit-scrollbar-track{background:#0f1117}
+  ::-webkit-scrollbar-thumb{background:#2d3748;border-radius:4px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ SurveyOS Field Flow Map</h1>
+  <div class="legend">
+    <span class="leg"><span class="dot dot-full"></span>Full flow (AI→Store→Report)</span>
+    <span class="leg"><span class="dot dot-orphan"></span>AI→Store, no report</span>
+    <span class="leg"><span class="dot dot-dropped"></span>AI extracts, DROPPED</span>
+    <span class="leg"><span class="dot dot-manual"></span>Manual entry → Report</span>
+    <span class="leg"><span class="dot dot-store-orphan"></span>In Store, unused everywhere</span>
+  </div>
+  <button class="btn" id="btn-gaps-only">Show Gaps Only</button>
+  <button class="btn" id="btn-clear">Clear Selection</button>
+  <span class="stats" id="stats-text"></span>
+</header>
+
+<div class="cols">
+  <!-- Column 1: AI Sources -->
+  <div class="col" id="col-ai">
+    <div class="col-header">AI Document Sources</div>
+    <div id="ai-groups"></div>
+  </div>
+
+  <!-- Column 2: Claim Store -->
+  <div class="col" id="col-store">
+    <div class="col-header">Claim Store Fields</div>
+    <div id="store-groups"></div>
+  </div>
+
+  <!-- Column 3: Reports -->
+  <div class="col" id="col-reports">
+    <div class="col-header">Report Outputs</div>
+    <div id="report-cards"></div>
+  </div>
+</div>
+
+<svg id="svg-lines"></svg>
+
+<div id="info-panel">
+  <h3 id="info-title"></h3>
+  <div class="flow" id="info-flow"></div>
+  <div class="rec" id="info-rec" style="display:none"></div>
+</div>
+
+<button id="gaps-btn">⚠ View All Gaps</button>
+
+<div id="gaps-sidebar">
+  <h2>Gaps & Recommendations <button id="gaps-close">✕</button></h2>
+  <div id="gaps-content"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════
+
+const REPORT_LABELS = {
+  spot_html: 'HTML/PDF — Spot Report (Print)',
+  spot_pdf: 'PDF — Spot Report (react-pdf)',
+  word_spot: 'Word — Spot Survey',
+  word_final: 'Word — Final Survey',
+  fee_bill: 'HTML — Spot Fee Bill',
+  excel: 'Excel — UIIC Report',
+  uiic_final: 'HTML — UIIC Final (5pp)',
+  standard: 'HTML — Standard Final',
+  bill_check: 'Bill Check Tab'
+};
+
+// spot_html and spot_pdf use the same field set as word_spot
+// (SpotPrintReport.tsx + SpotReportDocument.tsx)
+const REPORT_ALIASES = {
+  spot_html: 'word_spot',
+  spot_pdf:  'word_spot',
+};
+
+const REPORT_COLORS = {
+  spot_html: '#7c2d12', spot_pdf: '#92400e',
+  word_spot: '#1e40af', word_final: '#1e3a5f', fee_bill: '#14532d',
+  excel: '#713f12', uiic_final: '#4c1d95', standard: '#831843', bill_check: '#374151'
+};
+
+const DOC_LABELS = {
+  rc:'RC Book', dl:'Driving Licence', policy:'Policy Schedule',
+  estimate:'Repair Estimate', 'final-bill':'Final Bill', photos:'Damage Photos',
+  permit:'Vehicle Permit', auth:'Auth Certificate', fitness:'Fitness Cert',
+  'lok-challan':'Lok Challan', claim:'Claim Form', fir:'Police FIR'
+};
+
+const DOC_COLORS = {
+  rc:'#1e3a5f', dl:'#1e3a5f', policy:'#1e3a5f',
+  estimate:'#3b1f00', 'final-bill':'#3b1f00', photos:'#1f2d00',
+  permit:'#1a1000', auth:'#1a1000', fitness:'#1a1000',
+  'lok-challan':'#1f0030', claim:'#001f2e', fir:'#001f2e'
+};
+
+// status: 'full' | 'orphan' | 'dropped' | 'manual' | 'store-orphan'
+const FIELDS = [
+  // ── RC ──
+  {id:'rc_reg',doc:'rc',aiKey:'registration_number',storePath:'vehicle.registrationNumber',reports:['word_spot','word_final','fee_bill','excel','uiic_final','standard'],status:'full'},
+  {id:'rc_date',doc:'rc',aiKey:'date_of_registration',storePath:'vehicle.dateOfRegistration',reports:['word_spot','word_final','excel','uiic_final','standard'],status:'full'},
+  {id:'rc_valid',doc:'rc',aiKey:'registration_valid_upto',storePath:'vehicle.registrationValidUpTo',reports:['uiic_final'],status:'full'},
+  {id:'rc_yom',doc:'rc',aiKey:'year_of_manufacture',storePath:'vehicle.yearOfManufacture',reports:['word_spot','word_final','excel','uiic_final','standard'],status:'full'},
+  {id:'rc_owner',doc:'rc',aiKey:'owner_name',storePath:'policy.insuredName',reports:['word_spot','word_final','fee_bill','excel','uiic_final','standard'],status:'full'},
+  {id:'rc_addr',doc:'rc',aiKey:'address',storePath:'policy.insuredAddress',reports:['word_spot','uiic_final','standard'],status:'full'},
+  {id:'rc_make',doc:'rc',aiKey:'make',storePath:'vehicle.make',reports:['word_spot','word_final','fee_bill','excel','uiic_final','standard'],status:'full'},
+  {id:'rc_model',doc:'rc',aiKey:'model',storePath:'vehicle.model',reports:['word_spot','word_final','fee_bill','excel','uiic_final','standard'],status:'full'},
+  {id:'rc_body',doc:'rc',aiKey:'body_type',storePath:'vehicle.bodyType',reports:['word_spot','uiic_final','standard'],status:'full'},
+  {id:'rc_chassis',doc:'rc',aiKey:'chassis_number',storePath:'vehicle.chassisNumber',reports:['word_spot','word_final','excel','uiic_final','standard'],status:'full'},
+  {id:'rc_engine',doc:'rc',aiKey:'engine_number',storePath:'vehicle.engineNumber',reports:['word_spot','word_final','excel','uiic_final','standard'],status:'full'},
+  {id:'rc_cc',doc:'rc',aiKey:'cubic_capacity',storePath:'vehicle.cubicCapacity',reports:['word_spot','excel','uiic_final','standard'],status:'full'},
+  {id:'rc_colour',doc:'rc',aiKey:'colour',storePath:'vehicle.colour',reports:['word_spot','uiic_final','standard'],status:'full'},
+  {id:'rc_fuel',doc:'rc',aiKey:'fuel',storePath:'vehicle.fuel',reports:['word_spot','excel','uiic_final','standard'],status:'full'},
+  {id:'rc_seating',doc:'rc',aiKey:'seating_capacity',storePath:'vehicle.seatingCapacity',reports:['uiic_final'],status:'full'},
+  {id:'rc_ulw',doc:'rc',aiKey:'unladen_weight',storePath:'vehicle.unladenWeight',reports:['uiic_final'],status:'full'},
+  {id:'rc_gvw',doc:'rc',aiKey:'gross_weight',storePath:'vehicle.rlw',reports:['word_spot'],status:'full'},
+  {id:'rc_class',doc:'rc',aiKey:'class_of_vehicle',storePath:'vehicle.classOfVehicle',reports:['word_spot','uiic_final'],status:'full'},
+  {id:'rc_fit_no',doc:'rc',aiKey:'fitness_cert_no',storePath:'vehicle.fitnessNo',reports:['word_spot','uiic_final'],status:'full'},
+  {id:'rc_fit_valid',doc:'rc',aiKey:'fitness_valid_upto',storePath:'vehicle.fitnessValidUpto',reports:['word_spot','uiic_final'],status:'full'},
+  {id:'rc_route',doc:'rc',aiKey:'route',storePath:'vehicle.route',reports:['word_spot'],status:'full'},
+  {id:'rc_road_tax',doc:'rc',aiKey:'road_tax',storePath:null,reports:[],status:'dropped',rec:'Add vehicle.roadTax field; show in UIIC Final page 2'},
+  {id:'rc_hypo',doc:'rc',aiKey:'hypothecation',storePath:'vehicle.hypothecation',reports:['word_spot','uiic_final','standard'],status:'full'},
+  {id:'rc_fit_type',doc:'rc',aiKey:'fitness_type',storePath:'vehicle.fitnessType',reports:[],status:'orphan',rec:'Use in commercial vehicle section of reports'},
+  // ── DL ──
+  {id:'dl_lic',doc:'dl',aiKey:'licence_number',storePath:'driver.licenceNumber',reports:['word_spot','word_final','excel','uiic_final','standard'],status:'full'},
+  {id:'dl_name',doc:'dl',aiKey:'holder_name',storePath:'driver.name',reports:['word_spot','word_final','excel','uiic_final','standard'],status:'full'},
+  {id:'dl_rel',doc:'dl',aiKey:'relation_type',storePath:'driver.relationType',reports:['word_spot','uiic_final','standard'],status:'full'},
+  {id:'dl_parent',doc:'dl',aiKey:'father_or_husband_name',storePath:'driver.fatherHusbandName',reports:['word_spot','uiic_final','standard'],status:'full'},
+  {id:'dl_dob',doc:'dl',aiKey:'date_of_birth',storePath:'driver.dateOfBirth',reports:['word_spot','excel','uiic_final','standard'],status:'full'},
+  {id:'dl_addr',doc:'dl',aiKey:'address',storePath:'driver.address',reports:[],status:'orphan',rec:'Add driver address to UIIC Final page 2 driver section'},
+  {id:'dl_issue',doc:'dl',aiKey:'date_of_issue',storePath:'driver.dateOfIssue',reports:['word_spot','excel','uiic_final','standard'],status:'full'},
+  {id:'dl_nt',doc:'dl',aiKey:'validity_non_transport',storePath:'driver.validityNonTransport',reports:['word_spot','excel','uiic_final','standard'],status:'full'},
+  {id:'dl_t',doc:'dl',aiKey:'validity_transport',storePath:'driver.validityTransport',reports:['word_spot','excel','uiic_final','standard'],status:'full'},
+  {id:'dl_auth',doc:'dl',aiKey:'issuing_authority',storePath:'driver.issuingAuthority',reports:['word_spot','excel','uiic_final','standard'],status:'full'},
+  {id:'dl_rto',doc:'dl',aiKey:'rto',storePath:null,reports:[],status:'dropped',rec:'Map to driver.rto or merge with issuingAuthority'},
+  {id:'dl_classes',doc:'dl',aiKey:'vehicle_classes',storePath:'driver.vehicleClasses',reports:['word_spot','excel','uiic_final','standard'],status:'full'},
+  {id:'dl_badge',doc:'dl',aiKey:'badge_no',storePath:'driver.badgeNumber',reports:['uiic_final'],status:'full'},
+  // ── POLICY ──
+  {id:'pol_no',doc:'policy',aiKey:'policy_number',storePath:'policy.policyNumber',reports:['word_spot','word_final','fee_bill','excel','uiic_final','standard'],status:'full'},
+  {id:'pol_insurer',doc:'policy',aiKey:'insurer_name',storePath:'policy.insurerName',reports:['word_spot','word_final','fee_bill','excel','uiic_final','standard'],status:'full'},
+  {id:'pol_insurer_addr',doc:'policy',aiKey:'insurer_address',storePath:'policy.insurerName',reports:['word_spot','word_final','fee_bill','excel','uiic_final','standard'],status:'full'},
+  {id:'pol_insured',doc:'policy',aiKey:'insured_name',storePath:'policy.insuredName',reports:['word_spot','word_final','fee_bill','excel','uiic_final','standard'],status:'full'},
+  {id:'pol_ins_addr',doc:'policy',aiKey:'insured_address',storePath:'policy.insuredAddress',reports:['word_spot','uiic_final','standard'],status:'full'},
+  {id:'pol_mobile',doc:'policy',aiKey:'insured_mobile',storePath:'policy.insuredMobile',reports:['word_spot','excel','uiic_final','standard'],status:'full'},
+  {id:'pol_reg',doc:'policy',aiKey:'registration_number',storePath:'vehicle.registrationNumber',reports:['word_spot','word_final','fee_bill','excel','uiic_final','standard'],status:'full'},
+  {id:'pol_make_model',doc:'policy',aiKey:'make_model',storePath:null,reports:[],status:'dropped',rec:'Parse and split into vehicle.make + vehicle.model in claim store mapping'},
+  {id:'pol_chassis',doc:'policy',aiKey:'chassis_number',storePath:'vehicle.chassisNumber',reports:['word_spot','word_final','excel','uiic_final','standard'],status:'full'},
+  {id:'pol_engine',doc:'policy',aiKey:'engine_number',storePath:'vehicle.engineNumber',reports:['word_spot','word_final','excel','uiic_final','standard'],status:'full'},
+  {id:'pol_type',doc:'policy',aiKey:'policy_type',storePath:'policy.policyType',reports:['word_spot','excel','uiic_final','standard'],status:'full'},
+  {id:'pol_from',doc:'policy',aiKey:'period_from',storePath:'policy.periodFrom',reports:['word_spot','word_final','excel','uiic_final','standard'],status:'full'},
+  {id:'pol_to',doc:'policy',aiKey:'period_to',storePath:'policy.periodTo',reports:['word_spot','word_final','excel','uiic_final','standard'],status:'full'},
+  {id:'pol_idv',doc:'policy',aiKey:'idv',storePath:'policy.idv',reports:['word_spot','word_final','excel','uiic_final','standard'],status:'full'},
+  {id:'pol_office',doc:'policy',aiKey:'policy_issuing_office',storePath:'policy.policyIssuingOffice',reports:['word_spot','excel','uiic_final','standard'],status:'full'},
+  {id:'pol_appoint',doc:'policy',aiKey:'appointing_office',storePath:'policy.appointingOffice',reports:['word_spot','excel','uiic_final','standard'],status:'full'},
+  {id:'pol_hpa',doc:'policy',aiKey:'hpa_with',storePath:'policy.hpaWith',reports:['word_spot','uiic_final','standard'],status:'full'},
+  // ── ESTIMATE ──
+  {id:'est_wkshp',doc:'estimate',aiKey:'workshop_name',storePath:'accident.placeOfSurvey',reports:['word_spot','fee_bill','excel','uiic_final','standard'],status:'full'},
+  {id:'est_wkshp_addr',doc:'estimate',aiKey:'workshop_address',storePath:null,reports:[],status:'dropped',rec:'Map to accident.workshopAddress (field exists in store but estimate→workshopAddress mapping is missing)'},
+  {id:'est_veh',doc:'estimate',aiKey:'vehicle_number',storePath:null,reports:[],status:'dropped',rec:'Map to vehicle.registrationNumber as fallback source'},
+  {id:'est_date',doc:'estimate',aiKey:'estimate_date',storePath:'accident.dateAndTime',reports:['word_spot','word_final','fee_bill','excel','uiic_final','standard'],status:'full'},
+  {id:'est_bill_no',doc:'estimate',aiKey:'bill_number',storePath:null,reports:[],status:'dropped',rec:'Map to a new accident.estimateNo field for reference'},
+  {id:'est_parts',doc:'estimate',aiKey:'spare_parts[ ]',storePath:'assessmentRows',reports:['word_final','excel','uiic_final','standard'],status:'full'},
+  {id:'est_unit_price',doc:'estimate',aiKey:'↳ unit_price',storePath:null,reports:[],status:'dropped',rec:'Add to AssessmentRow schema; show in Bill Check comparison'},
+  {id:'est_qty',doc:'estimate',aiKey:'↳ quantity',storePath:null,reports:[],status:'dropped',rec:'Add to AssessmentRow schema for audit trail'},
+  {id:'est_labour',doc:'estimate',aiKey:'labour_items[ ]',storePath:'assessmentRows',reports:['word_final','excel','uiic_final','standard'],status:'full'},
+  {id:'est_paint',doc:'estimate',aiKey:'painting_items[ ]',storePath:'assessmentRows',reports:['word_final','excel','uiic_final','standard'],status:'full'},
+  {id:'est_subtotals',doc:'estimate',aiKey:'subtotal_* (3 fields)',storePath:null,reports:[],status:'dropped',rec:'Store as assessmentSummary; show as section subtotals in assessment grid'},
+  {id:'est_total',doc:'estimate',aiKey:'total_amount',storePath:null,reports:[],status:'dropped',rec:'Store as accident.estimateTotal; display in bill check'},
+  // ── FINAL BILL ──
+  {id:'fb_wkshp',doc:'final-bill',aiKey:'workshop_name',storePath:'accident.workshopName',reports:['uiic_final'],status:'full'},
+  {id:'fb_bill_no',doc:'final-bill',aiKey:'bill_number',storePath:'billCheck.billNo',reports:['uiic_final'],status:'full'},
+  {id:'fb_bill_date',doc:'final-bill',aiKey:'bill_date',storePath:'billCheck.billDate',reports:['uiic_final'],status:'full'},
+  {id:'fb_parts',doc:'final-bill',aiKey:'spare_parts[ ] →billedAmt',storePath:'assessmentRows',reports:['bill_check'],status:'orphan',rec:'billedAmount only visible in Bill Check tab, not in any printable report'},
+  {id:'fb_total',doc:'final-bill',aiKey:'total_amount',storePath:'billCheck.billTotal',reports:['bill_check'],status:'orphan',rec:'billTotal shown only in Bill Check tab, not in printable reports'},
+  // ── PHOTOS ──
+  {id:'ph_parts',doc:'photos',aiKey:'damaged_parts[ ]',storePath:null,reports:[],status:'dropped',rec:'Store in claim.photoDamageAssessment[]; use to pre-populate assessment grid damage recommendations'},
+  {id:'ph_summary',doc:'photos',aiKey:'overall_damage_summary',storePath:null,reports:[],status:'dropped',rec:'Store as claim.aiDamageSummary; show in spot report observations'},
+  {id:'ph_assess',doc:'photos',aiKey:'overall_assessment',storePath:null,reports:[],status:'dropped',rec:'Store severity/total_cost/repair_days; show in spot report summary box'},
+  // ── PERMIT ──
+  {id:'pmt_no',doc:'permit',aiKey:'permit_no',storePath:'spotDetails.permitNo',reports:['word_spot','uiic_final'],status:'full'},
+  {id:'pmt_type',doc:'permit',aiKey:'permit_type',storePath:'spotDetails.permitType',reports:['word_spot'],status:'full'},
+  {id:'pmt_veh',doc:'permit',aiKey:'vehicle_number',storePath:null,reports:[],status:'dropped',rec:'Map to vehicle.registrationNumber as additional source'},
+  {id:'pmt_from',doc:'permit',aiKey:'validity_from',storePath:'spotDetails.permitFrom',reports:['word_spot'],status:'full'},
+  {id:'pmt_to',doc:'permit',aiKey:'validity_to',storePath:'spotDetails.permitTo',reports:['word_spot','uiic_final'],status:'full'},
+  {id:'pmt_route',doc:'permit',aiKey:'route',storePath:'vehicle.route',reports:['word_spot'],status:'full'},
+  {id:'pmt_authority',doc:'permit',aiKey:'issuing_authority',storePath:null,reports:[],status:'dropped',rec:'Map to spotDetails.permitAuthority; add to Spot Word Report permit section'},
+  {id:'pmt_goods_cat',doc:'permit',aiKey:'goods_category',storePath:null,reports:[],status:'dropped',rec:'Map to spotDetails.goodsCategory; add to Spot Word Report goods section'},
+  {id:'pmt_gvw',doc:'permit',aiKey:'gross_vehicle_weight_kg',storePath:'spotDetails.gvw',reports:['word_spot','uiic_final'],status:'full'},
+  {id:'pmt_ulw',doc:'permit',aiKey:'unladen_weight_kg',storePath:'spotDetails.ulw',reports:['word_spot','uiic_final'],status:'full'},
+  // ── AUTH ──
+  {id:'auth_no',doc:'auth',aiKey:'auth_no',storePath:'spotDetails.authNo',reports:['word_spot','uiic_final'],status:'full'},
+  {id:'auth_type',doc:'auth',aiKey:'auth_type',storePath:null,reports:[],status:'dropped',rec:'Map to spotDetails.authType; add to Spot Word Report'},
+  {id:'auth_veh',doc:'auth',aiKey:'vehicle_number',storePath:null,reports:[],status:'dropped',rec:'Cross-check against vehicle.registrationNumber'},
+  {id:'auth_from',doc:'auth',aiKey:'validity_from',storePath:null,reports:[],status:'dropped',rec:'Map to spotDetails.authFrom'},
+  {id:'auth_to',doc:'auth',aiKey:'validity_to',storePath:'spotDetails.authValid',reports:['word_spot','uiic_final'],status:'full'},
+  {id:'auth_authority',doc:'auth',aiKey:'issuing_authority',storePath:null,reports:[],status:'dropped',rec:'Map to spotDetails.authAuthority'},
+  {id:'auth_remarks',doc:'auth',aiKey:'remarks',storePath:null,reports:[],status:'dropped',rec:'Map to spotDetails.authRemarks'},
+  // ── FITNESS ──
+  {id:'fit_cert',doc:'fitness',aiKey:'fitness_cert_no',storePath:'vehicle.fitnessNo',reports:['word_spot','uiic_final'],status:'full'},
+  {id:'fit_veh',doc:'fitness',aiKey:'vehicle_number',storePath:'vehicle.registrationNumber',reports:['word_spot','word_final','fee_bill','excel','uiic_final','standard'],status:'full'},
+  {id:'fit_chassis',doc:'fitness',aiKey:'chassis_number',storePath:'vehicle.chassisNumber',reports:['word_spot','word_final','excel','uiic_final','standard'],status:'full'},
+  {id:'fit_engine',doc:'fitness',aiKey:'engine_number',storePath:'vehicle.engineNumber',reports:['word_spot','word_final','excel','uiic_final','standard'],status:'full'},
+  {id:'fit_valid_from',doc:'fitness',aiKey:'validity_from',storePath:null,reports:[],status:'dropped',rec:'Map to vehicle.fitnessFrom or spotDetails.fitnessFrom'},
+  {id:'fit_valid_to',doc:'fitness',aiKey:'validity_to',storePath:'vehicle.fitnessValidUpto',reports:['word_spot','uiic_final'],status:'full'},
+  {id:'fit_authority',doc:'fitness',aiKey:'issuing_authority',storePath:null,reports:[],status:'dropped',rec:'Map to vehicle.fitnessAuthority; add to UIIC Final fitness section'},
+  {id:'fit_gvw',doc:'fitness',aiKey:'gross_vehicle_weight_kg',storePath:'spotDetails.gvw',reports:['word_spot','uiic_final'],status:'full'},
+  {id:'fit_ulw',doc:'fitness',aiKey:'unladen_weight_kg',storePath:'spotDetails.ulw',reports:['word_spot','uiic_final'],status:'full'},
+  {id:'fit_seating',doc:'fitness',aiKey:'seating_capacity',storePath:'vehicle.seatingCapacity',reports:['uiic_final'],status:'full'},
+  {id:'fit_fuel',doc:'fitness',aiKey:'fuel_type',storePath:'vehicle.fuel',reports:['word_spot','excel','uiic_final','standard'],status:'full'},
+  {id:'fit_type',doc:'fitness',aiKey:'fitness_type',storePath:'vehicle.fitnessType',reports:[],status:'orphan',rec:'vehicle.fitnessType is collected but never used in any report'},
+  // ── LOK CHALLAN ──
+  {id:'lok_no',doc:'lok-challan',aiKey:'challan_no',storePath:'spotDetails.challanNo',reports:['word_spot'],status:'full'},
+  {id:'lok_date',doc:'lok-challan',aiKey:'challan_date',storePath:'spotDetails.challanDate',reports:['word_spot'],status:'full'},
+  {id:'lok_veh',doc:'lok-challan',aiKey:'vehicle_number',storePath:null,reports:[],status:'dropped',rec:'Map to vehicle.registrationNumber as additional source'},
+  {id:'lok_origin',doc:'lok-challan',aiKey:'origin',storePath:'spotDetails.loadOrigin',reports:['word_spot'],status:'full'},
+  {id:'lok_dest',doc:'lok-challan',aiKey:'destination',storePath:'spotDetails.loadDest',reports:['word_spot'],status:'full'},
+  {id:'lok_consignor',doc:'lok-challan',aiKey:'consignor',storePath:null,reports:[],status:'dropped',rec:'Map to spotDetails.consignor; add to Spot Word Report load section'},
+  {id:'lok_consignee',doc:'lok-challan',aiKey:'consignee',storePath:null,reports:[],status:'dropped',rec:'Map to spotDetails.consignee; add to Spot Word Report load section'},
+  {id:'lok_goods',doc:'lok-challan',aiKey:'goods_description',storePath:'spotDetails.loadDesc',reports:['word_spot'],status:'full'},
+  {id:'lok_weight',doc:'lok-challan',aiKey:'weight_kg',storePath:'spotDetails.actualLoad',reports:['word_spot'],status:'full'},
+  {id:'lok_freight',doc:'lok-challan',aiKey:'freight_amount',storePath:null,reports:[],status:'dropped',rec:'Map to spotDetails.freightAmount; useful for overloading analysis'},
+  {id:'lok_remarks',doc:'lok-challan',aiKey:'remarks',storePath:null,reports:[],status:'dropped',rec:'Map to spotDetails.challanRemarks'},
+  // ── CLAIM FORM ──
+  {id:'cl_claim',doc:'claim',aiKey:'claim_number',storePath:'policy.claimNumber',reports:['word_spot','word_final','fee_bill','excel','uiic_final','standard'],status:'full'},
+  {id:'cl_pol',doc:'claim',aiKey:'policy_number',storePath:'policy.policyNumber',reports:['word_spot','word_final','fee_bill','excel','uiic_final','standard'],status:'full'},
+  {id:'cl_insured',doc:'claim',aiKey:'insured_name',storePath:'policy.insuredName',reports:['word_spot','word_final','fee_bill','excel','uiic_final','standard'],status:'full'},
+  {id:'cl_veh',doc:'claim',aiKey:'vehicle_number',storePath:'vehicle.registrationNumber',reports:['word_spot','word_final','fee_bill','excel','uiic_final','standard'],status:'full'},
+  {id:'cl_acc_date',doc:'claim',aiKey:'date_of_accident',storePath:'accident.dateAndTime',reports:['word_spot','word_final','fee_bill','excel','uiic_final','standard'],status:'full'},
+  {id:'cl_acc_time',doc:'claim',aiKey:'time_of_accident',storePath:'accident.dateAndTime',reports:['word_spot','word_final','fee_bill','excel','uiic_final','standard'],status:'full'},
+  {id:'cl_place',doc:'claim',aiKey:'place_of_accident',storePath:'accident.placeOfAccident',reports:['word_spot','word_final','excel','uiic_final','standard'],status:'full'},
+  {id:'cl_cause',doc:'claim',aiKey:'cause_of_accident',storePath:'accident.causeOfAccident',reports:['word_spot','word_final','excel','uiic_final','standard'],status:'full'},
+  {id:'cl_driver',doc:'claim',aiKey:'driver_name',storePath:'driver.name',reports:['word_spot','word_final','excel','uiic_final','standard'],status:'full'},
+  {id:'cl_dl',doc:'claim',aiKey:'driver_licence_no',storePath:'driver.licenceNumber',reports:['word_spot','word_final','excel','uiic_final','standard'],status:'full'},
+  {id:'cl_wkshp',doc:'claim',aiKey:'workshop_name',storePath:'accident.placeOfSurvey',reports:['word_spot','fee_bill','excel','uiic_final','standard'],status:'full'},
+  {id:'cl_repair',doc:'claim',aiKey:'place_of_repair',storePath:'accident.placeOfSurvey',reports:['word_spot','fee_bill','excel','uiic_final','standard'],status:'full'},
+  {id:'cl_tp',doc:'claim',aiKey:'third_party_details',storePath:'accident.thirdPartyDetails',reports:['word_spot','uiic_final','standard'],status:'full'},
+  // ── FIR ──
+  {id:'fir_no',doc:'fir',aiKey:'fir_number',storePath:'accident.firNumber',reports:['word_spot','uiic_final'],status:'full'},
+  {id:'fir_date',doc:'fir',aiKey:'fir_date',storePath:'accident.firDate',reports:['word_spot'],status:'full'},
+  {id:'fir_ps',doc:'fir',aiKey:'police_station',storePath:'accident.policeStation',reports:['word_spot'],status:'full'},
+  {id:'fir_acc_date',doc:'fir',aiKey:'date_of_accident',storePath:'accident.dateAndTime',reports:['word_spot','word_final','fee_bill','excel','uiic_final','standard'],status:'full'},
+  {id:'fir_time',doc:'fir',aiKey:'time_of_accident',storePath:null,reports:[],status:'dropped',rec:'Combine with date_of_accident into accident.dateAndTime (same as claim form)'},
+  {id:'fir_place',doc:'fir',aiKey:'place_of_accident',storePath:'accident.placeOfAccident',reports:['word_spot','word_final','excel','uiic_final','standard'],status:'full'},
+  {id:'fir_pincode',doc:'fir',aiKey:'pincode',storePath:'accident.pincode',reports:['uiic_final'],status:'full'},
+  {id:'fir_veh',doc:'fir',aiKey:'vehicle_number',storePath:'vehicle.registrationNumber',reports:['word_spot','word_final','fee_bill','excel','uiic_final','standard'],status:'full'},
+  {id:'fir_driver',doc:'fir',aiKey:'driver_name',storePath:'driver.name',reports:['word_spot','word_final','excel','uiic_final','standard'],status:'full'},
+  {id:'fir_details',doc:'fir',aiKey:'brief_accident_details',storePath:'accident.causeOfAccident',reports:['word_spot','word_final','excel','uiic_final','standard'],status:'full'},
+];
+
+// Manual store fields (not from AI)
+const MANUAL_FIELDS = [
+  {id:'m_odom',storePath:'vehicle.odometer',label:'vehicle.odometer',reports:['word_spot','excel','uiic_final','standard'],status:'manual'},
+  {id:'m_precon',storePath:'vehicle.preAccidentCondition',label:'vehicle.preAccidentCondition',reports:['word_spot','standard'],status:'manual'},
+  {id:'m_regtype',storePath:'vehicle.registrationType',label:'vehicle.registrationType',reports:['uiic_final'],status:'manual'},
+  {id:'m_rc_end',storePath:'vehicle.rcEndorsement',label:'vehicle.rcEndorsement',reports:['uiic_final'],status:'manual'},
+  {id:'m_seat_tot',storePath:'vehicle.seatingCapacityTotal',label:'vehicle.seatingCapacityTotal',reports:[],status:'store-orphan',rec:'Collected in VehicleForm but never used in any report — add to UIIC Final vehicle section'},
+  {id:'m_pass',storePath:'vehicle.passengersAtAccident',label:'vehicle.passengersAtAccident',reports:['uiic_final'],status:'manual'},
+  {id:'m_gds_wt',storePath:'vehicle.goodsWeightAtAccident',label:'vehicle.goodsWeightAtAccident',reports:[],status:'store-orphan',rec:'Add to Spot Word Report goods/overloading section'},
+  {id:'m_nature',storePath:'vehicle.natureOfGoods',label:'vehicle.natureOfGoods',reports:[],status:'store-orphan',rec:'Add to Spot Word Report goods section'},
+  {id:'m_lc_no',storePath:'vehicle.loadChallanNumber',label:'vehicle.loadChallanNumber',reports:[],status:'store-orphan',rec:'Duplicate of spotDetails.challanNo — consider removing from VehicleForm'},
+  {id:'m_details_gds',storePath:'vehicle.detailsOfGoodsCarried',label:'vehicle.detailsOfGoodsCarried',reports:[],status:'store-orphan',rec:'Add to Spot Word Report goods section'},
+  {id:'m_drv_addr',storePath:'driver.address',label:'driver.address',reports:[],status:'store-orphan',rec:'Add to UIIC Final page 2 driver section'},
+  {id:'m_verif',storePath:'driver.verificationStatus',label:'driver.verificationStatus',reports:['word_spot','standard'],status:'manual'},
+  {id:'m_auth_drv',storePath:'driver.authorisedToDrive',label:'driver.authorisedToDrive',reports:['uiic_final'],status:'manual'},
+  {id:'m_dsurv',storePath:'accident.dateOfSurvey',label:'accident.dateOfSurvey',reports:['word_spot','fee_bill','excel','uiic_final','standard'],status:'manual'},
+  {id:'m_lcode',storePath:'accident.locationCode',label:'accident.locationCode',reports:[],status:'store-orphan',rec:'Add to UIIC Final if insurer requires it; otherwise remove from form'},
+  {id:'m_remarks',storePath:'accident.remarks',label:'accident.remarks (Surveyor)',reports:[],status:'store-orphan',rec:'Add as "Surveyor Remarks" footer to all survey reports'},
+  {id:'m_appt',storePath:'accident.appointmentDate',label:'accident.appointmentDate',reports:['uiic_final'],status:'manual'},
+  {id:'m_wphone',storePath:'accident.workshopPhone',label:'accident.workshopPhone',reports:['uiic_final'],status:'manual'},
+  {id:'m_wfax',storePath:'accident.workshopFax',label:'accident.workshopFax',reports:['uiic_final'],status:'manual'},
+  {id:'m_wemail',storePath:'accident.workshopEmail',label:'accident.workshopEmail',reports:['uiic_final'],status:'manual'},
+  {id:'m_less_excess',storePath:'feeBill.lessExcess',label:'feeBill.lessExcess',reports:[],status:'store-orphan',rec:'Deprecated field — alias to compulsoryExcess or remove from schema'},
+];
+
+// Store field groups for column 2
+const STORE_GROUPS = {
+  'vehicle': 'Vehicle Details',
+  'driver': 'Driver Details',
+  'policy': 'Policy Details',
+  'accident': 'Accident & Survey',
+  'spotDetails': 'Spot Survey Details',
+  'assessmentRows': 'Assessment Rows',
+  'billCheck': 'Bill Check',
+  'feeBill': 'Fee Bill',
+};
+
+// Build a lookup: storePath → all field ids that map to it
+const storeToAI = {};
+FIELDS.forEach(f => {
+  if (f.storePath) {
+    if (!storeToAI[f.storePath]) storeToAI[f.storePath] = [];
+    storeToAI[f.storePath].push(f.id);
+  }
+});
+
+// Build unique store paths
+const uniqueStorePaths = {};
+FIELDS.filter(f=>f.storePath).forEach(f => {
+  if (!uniqueStorePaths[f.storePath]) {
+    const section = f.storePath.split('.')[0];
+    const allReports = [...new Set(FIELDS.filter(x=>x.storePath===f.storePath).flatMap(x=>x.reports))];
+    const hasNoReport = allReports.length === 0;
+    uniqueStorePaths[f.storePath] = {
+      storePath: f.storePath,
+      section,
+      reports: allReports,
+      status: hasNoReport ? 'orphan' : 'full'
+    };
+  }
+});
+
+// Add manual fields
+MANUAL_FIELDS.forEach(f => {
+  if (!uniqueStorePaths[f.storePath]) {
+    uniqueStorePaths[f.storePath] = {storePath:f.storePath, section:f.storePath.split('.')[0], reports:f.reports, status:f.status};
+  }
+});
+
+// ═══════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════
+
+let activeField = null;
+let gapsOnly = false;
+
+function statusClass(s){ return `s-${s}`; }
+
+function renderAI() {
+  const container = document.getElementById('ai-groups');
+  container.innerHTML = '';
+  const docs = Object.keys(DOC_LABELS);
+  docs.forEach(doc => {
+    const fields = FIELDS.filter(f=>f.doc===doc);
+    const dropped = fields.filter(f=>f.status==='dropped').length;
+    const orphan = fields.filter(f=>f.status==='orphan').length;
+    const g = document.createElement('div');
+    g.className = 'group';
+    const color = DOC_COLORS[doc]||'#1a1f2e';
+    g.innerHTML = `<div class="group-title" style="background:${color};border:1px solid rgba(255,255,255,.1)" data-group="${doc}">
+      <span>${DOC_LABELS[doc]}</span>
+      <span>
+        ${dropped?`<span class="badge-count" style="background:#7f1d1d;color:#fca5a5">${dropped}✗</span> `:''}
+        ${orphan?`<span class="badge-count" style="background:#78350f;color:#fcd34d">${orphan}⚠</span> `:''}
+        <span class="badge-count">${fields.length}</span>
+      </span>
+    </div>
+    <div class="group-body" id="gb-${doc}">
+      ${fields.map(f=>`<div class="field-node ${statusClass(f.status)}" data-id="${f.id}" data-type="ai" title="${f.storePath||'DROPPED — no mapping'}">
+        <span class="status-dot"></span>
+        <span class="fn-label">${f.aiKey}</span>
+        ${f.storePath?`<span class="fn-arrow">→ ${f.storePath.split('.')[1]||f.storePath}</span>`:'<span class="fn-arrow" style="color:#ef4444">✗</span>'}
+      </div>`).join('')}
+    </div>`;
+    container.appendChild(g);
+    g.querySelector('.group-title').addEventListener('click', ()=>{
+      const body = document.getElementById(`gb-${doc}`);
+      body.classList.toggle('collapsed');
+    });
+  });
+}
+
+function renderStore() {
+  const container = document.getElementById('store-groups');
+  container.innerHTML = '';
+  const sections = Object.keys(STORE_GROUPS);
+  sections.forEach(sec => {
+    const paths = Object.values(uniqueStorePaths).filter(p=>p.section===sec);
+    if (!paths.length) return;
+    const orphans = paths.filter(p=>p.status==='orphan'||p.status==='store-orphan').length;
+    const g = document.createElement('div');
+    g.className = 'group';
+    g.innerHTML = `<div class="group-title" style="background:#1a1f2e;border:1px solid #2d3748" data-group="store-${sec}">
+      <span>${STORE_GROUPS[sec]}</span>
+      <span>
+        ${orphans?`<span class="badge-count" style="background:#78350f;color:#fcd34d">${orphans}⚠</span> `:''}
+        <span class="badge-count">${paths.length}</span>
+      </span>
+    </div>
+    <div class="group-body" id="gb-store-${sec}">
+      ${paths.map(p=>{
+        const aiSources = storeToAI[p.storePath]||[];
+        const mf = MANUAL_FIELDS.find(m=>m.storePath===p.storePath);
+        const st = mf ? mf.status : p.status;
+        const shortLabel = p.storePath.split('.')[1]||p.storePath;
+        return `<div class="field-node ${statusClass(st)}" data-store="${p.storePath}" data-type="store" title="${p.storePath} | AI sources: ${aiSources.length} | Reports: ${p.reports.join(', ')||'NONE'}">
+          <span class="status-dot"></span>
+          <span class="fn-label">${shortLabel}</span>
+          <span class="fn-arrow">${p.reports.length?'→ '+p.reports.length+'R':'✗'}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+    container.appendChild(g);
+    g.querySelector('.group-title').addEventListener('click',()=>{
+      document.getElementById(`gb-store-${sec}`).classList.toggle('collapsed');
+    });
+  });
+}
+
+function renderReports() {
+  const container = document.getElementById('report-cards');
+  container.innerHTML = '';
+  Object.keys(REPORT_LABELS).forEach(rid => {
+    // Resolve alias: spot_html and spot_pdf share word_spot's field set
+    const resolvedId = REPORT_ALIASES[rid] || rid;
+    const usedPaths = [...new Set(FIELDS.filter(f=>f.reports.includes(resolvedId)).map(f=>f.storePath).filter(Boolean))];
+    const manualPaths = MANUAL_FIELDS.filter(m=>m.reports.includes(resolvedId)).map(m=>m.storePath);
+    const allPaths = [...new Set([...usedPaths,...manualPaths])];
+    const color = REPORT_COLORS[rid]||'#1a1f2e';
+    const card = document.createElement('div');
+    card.className = 'report-card';
+    card.innerHTML = `<div class="report-card-header" style="background:${color}" data-report="${rid}">
+      <span>${REPORT_LABELS[rid]}</span>
+      <span class="badge-count">${allPaths.length} fields</span>
+    </div>
+    <div class="report-card-body" id="rb-${rid}">
+      ${allPaths.slice(0,8).map(p=>`<div class="report-field" data-report-field="${p}" data-report="${rid}">${p}</div>`).join('')}
+      ${allPaths.length>8?`<div class="report-field" style="color:#718096;cursor:pointer" data-expand="${rid}">+${allPaths.length-8} more…</div>`:''}
+    </div>`;
+    container.appendChild(card);
+  });
+
+  // Expand handlers
+  document.querySelectorAll('[data-expand]').forEach(el=>{
+    el.addEventListener('click',()=>{
+      const rid = el.dataset.expand;
+      const usedPaths = [...new Set(FIELDS.filter(f=>f.reports.includes(rid)).map(f=>f.storePath).filter(Boolean))];
+      const manualPaths = MANUAL_FIELDS.filter(m=>m.reports.includes(rid)).map(m=>m.storePath);
+      const allPaths = [...new Set([...usedPaths,...manualPaths])];
+      const body = document.getElementById(`rb-${rid}`);
+      body.innerHTML = allPaths.map(p=>`<div class="report-field" data-report-field="${p}" data-report="${rid}">${p}</div>`).join('');
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// INTERACTIONS
+// ═══════════════════════════════════════════════════
+
+function clearSelection() {
+  document.querySelectorAll('.field-node, .report-field').forEach(el=>{
+    el.classList.remove('highlighted','dimmed');
+  });
+  document.getElementById('svg-lines').innerHTML='';
+  document.getElementById('info-panel').classList.remove('visible');
+  activeField = null;
+}
+
+function drawCurve(svg, r1, r2, color, opacity=0.7) {
+  const x1 = r1.right, y1 = r1.top + r1.height/2;
+  const x2 = r2.left, y2 = r2.top + r2.height/2;
+  const cx = (x1+x2)/2;
+  const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+  path.setAttribute('d',`M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`);
+  path.setAttribute('stroke',color);
+  path.setAttribute('stroke-width','1.5');
+  path.setAttribute('fill','none');
+  path.setAttribute('opacity',opacity);
+  svg.appendChild(path);
+}
+
+function getStatusColor(st){
+  const map={full:'#22c55e',orphan:'#f59e0b',dropped:'#ef4444',manual:'#6366f1','store-orphan':'#dc2626'};
+  return map[st]||'#718096';
+}
+
+function selectField(fieldId) {
+  clearSelection();
+  activeField = fieldId;
+  const f = FIELDS.find(x=>x.id===fieldId);
+  if (!f) return;
+
+  const color = getStatusColor(f.status);
+  const svg = document.getElementById('svg-lines');
+  const aiNode = document.querySelector(`.field-node[data-id="${fieldId}"]`);
+
+  // Highlight AI node
+  if (aiNode) aiNode.classList.add('highlighted');
+
+  // Highlight store node
+  let storeNode = null;
+  if (f.storePath) {
+    storeNode = document.querySelector(`.field-node[data-store="${f.storePath}"]`);
+    if (storeNode) storeNode.classList.add('highlighted');
+  }
+
+  // Highlight report fields & cards
+  f.reports.forEach(rid=>{
+    document.querySelectorAll(`.report-field[data-report="${rid}"][data-report-field="${f.storePath}"]`).forEach(el=>el.classList.add('highlighted'));
+  });
+
+  // Draw lines
+  if (aiNode && storeNode) {
+    drawCurve(svg, aiNode.getBoundingClientRect(), storeNode.getBoundingClientRect(), color);
+    f.reports.forEach(rid=>{
+      const rHeader = document.querySelector(`.report-card-header[data-report="${rid}"]`);
+      if (rHeader) drawCurve(svg, storeNode.getBoundingClientRect(), rHeader.getBoundingClientRect(), color, 0.5);
+    });
+  } else if (aiNode && !f.storePath) {
+    // Dropped — red glow only, no lines to draw
+  }
+
+  // Dim everything else
+  document.querySelectorAll('.field-node:not(.highlighted)').forEach(el=>el.classList.add('dimmed'));
+
+  // Info panel
+  const panel = document.getElementById('info-panel');
+  const title = document.getElementById('info-title');
+  const flowEl = document.getElementById('info-flow');
+  const recEl = document.getElementById('info-rec');
+
+  title.textContent = `${DOC_LABELS[f.doc]} → ${f.aiKey}`;
+
+  let flowHTML = `<span class="flow-node" style="background:${DOC_COLORS[f.doc]};border:1px solid rgba(255,255,255,.2)">${f.doc}.${f.aiKey}</span>`;
+  flowHTML += `<span class="flow-arrow">→</span>`;
+  if (f.storePath) {
+    flowHTML += `<span class="flow-node" style="background:#1e2d3d;border:1px solid #2d4a6a">${f.storePath}</span>`;
+    if (f.reports.length) {
+      flowHTML += `<span class="flow-arrow">→</span>`;
+      flowHTML += f.reports.map(r=>`<span class="flow-node" style="background:${REPORT_COLORS[r]};font-size:9px">${REPORT_LABELS[r].split('—')[0].trim()}</span>`).join(' ');
+    } else {
+      flowHTML += `<span class="flow-arrow">→</span><span class="flow-node" style="background:#3b0f0f;border:1px solid #991b1b;color:#fca5a5">⚠ No Report</span>`;
+    }
+  } else {
+    flowHTML += `<span class="flow-node" style="background:#3b0f0f;border:1px solid #991b1b;color:#fca5a5">✗ DROPPED — no mapping</span>`;
+  }
+  flowEl.innerHTML = flowHTML;
+
+  if (f.rec) {
+    recEl.style.display='block';
+    recEl.textContent = '💡 ' + f.rec;
+  } else {
+    recEl.style.display='none';
+  }
+  panel.classList.add('visible');
+}
+
+function selectStore(storePath) {
+  clearSelection();
+  const relatedAI = FIELDS.filter(f=>f.storePath===storePath);
+  const storeNode = document.querySelector(`.field-node[data-store="${storePath}"]`);
+  if (storeNode) storeNode.classList.add('highlighted');
+  const allReports = [...new Set(relatedAI.flatMap(f=>f.reports))];
+  const svg = document.getElementById('svg-lines');
+
+  relatedAI.forEach(f=>{
+    const aiNode = document.querySelector(`.field-node[data-id="${f.id}"]`);
+    if (aiNode && storeNode) {
+      aiNode.classList.add('highlighted');
+      drawCurve(svg, aiNode.getBoundingClientRect(), storeNode.getBoundingClientRect(), getStatusColor(f.status));
+    }
+  });
+  allReports.forEach(rid=>{
+    document.querySelectorAll(`.report-field[data-report="${rid}"][data-report-field="${storePath}"]`).forEach(el=>el.classList.add('highlighted'));
+    const rh = document.querySelector(`.report-card-header[data-report="${rid}"]`);
+    if (rh && storeNode) drawCurve(svg, storeNode.getBoundingClientRect(), rh.getBoundingClientRect(), '#22c55e', 0.5);
+  });
+  document.querySelectorAll('.field-node:not(.highlighted)').forEach(el=>el.classList.add('dimmed'));
+}
+
+// ═══════════════════════════════════════════════════
+// GAPS SIDEBAR
+// ═══════════════════════════════════════════════════
+
+function renderGaps() {
+  const container = document.getElementById('gaps-content');
+  const dropped = FIELDS.filter(f=>f.status==='dropped');
+  const orphanAI = FIELDS.filter(f=>f.status==='orphan');
+  const storeOrphans = MANUAL_FIELDS.filter(f=>f.status==='store-orphan');
+
+  let html = `<div class="gap-section-title">🔴 AI Extracts → DROPPED (${dropped.length} fields)</div>`;
+  dropped.forEach(f=>{
+    html+=`<div class="gap-item gap-dropped"><div class="gi-field">${f.doc}.${f.aiKey}</div><div class="gi-rec">${f.rec||'No recommendation yet'}</div></div>`;
+  });
+  html+=`<div class="gap-section-title">🟡 AI→Store but No Report (${orphanAI.length} fields)</div>`;
+  orphanAI.forEach(f=>{
+    html+=`<div class="gap-item gap-orphan"><div class="gi-field">${f.storePath}</div><div class="gi-rec">${f.rec||'Field mapped but no report builder uses it'}</div></div>`;
+  });
+  html+=`<div class="gap-section-title">🔴 Store Field → No Report (${storeOrphans.length} fields)</div>`;
+  storeOrphans.forEach(f=>{
+    html+=`<div class="gap-item gap-dropped"><div class="gi-field">${f.label}</div><div class="gi-rec">${f.rec||'Collected in form, never used in reports'}</div></div>`;
+  });
+  container.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════
+// STATS
+// ═══════════════════════════════════════════════════
+
+function renderStats(){
+  const total = FIELDS.length;
+  const dropped = FIELDS.filter(f=>f.status==='dropped').length;
+  const orphan = FIELDS.filter(f=>f.status==='orphan').length;
+  const full = FIELDS.filter(f=>f.status==='full').length;
+  const storeOrphans = MANUAL_FIELDS.filter(f=>f.status==='store-orphan').length;
+  document.getElementById('stats-text').textContent =
+    `${total} AI fields | ✓${full} full flow | ⚠${orphan} no-report | ✗${dropped} dropped | ${storeOrphans} store-orphans`;
+}
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+
+renderAI();
+renderStore();
+renderReports();
+renderGaps();
+renderStats();
+
+// Click handlers
+document.getElementById('col-ai').addEventListener('click', e=>{
+  const node = e.target.closest('.field-node[data-id]');
+  if (node) selectField(node.dataset.id);
+});
+document.getElementById('col-store').addEventListener('click', e=>{
+  const node = e.target.closest('.field-node[data-store]');
+  if (node) selectStore(node.dataset.store);
+});
+
+// Gaps Only toggle
+document.getElementById('btn-gaps-only').addEventListener('click', function(){
+  gapsOnly = !gapsOnly;
+  this.classList.toggle('active', gapsOnly);
+  this.textContent = gapsOnly ? 'Show All Fields' : 'Show Gaps Only';
+  document.querySelectorAll('.field-node[data-id]').forEach(el=>{
+    const f = FIELDS.find(x=>x.id===el.dataset.id);
+    if (f && gapsOnly && f.status==='full') el.style.display='none';
+    else el.style.display='';
+  });
+  document.querySelectorAll('.field-node[data-store]').forEach(el=>{
+    const sp = el.dataset.store;
+    const mf = MANUAL_FIELDS.find(m=>m.storePath===sp);
+    const sp_data = uniqueStorePaths[sp];
+    const st = mf ? mf.status : (sp_data ? sp_data.status : 'full');
+    if (gapsOnly && st==='full') el.style.display='none';
+    else el.style.display='';
+  });
+});
+
+document.getElementById('btn-clear').addEventListener('click', clearSelection);
+document.getElementById('gaps-btn').addEventListener('click',()=>document.getElementById('gaps-sidebar').classList.add('open'));
+document.getElementById('gaps-close').addEventListener('click',()=>document.getElementById('gaps-sidebar').classList.remove('open'));
+
+// Close info panel on background click
+document.addEventListener('click', e=>{
+  if (!e.target.closest('.field-node') && !e.target.closest('#info-panel') && !e.target.closest('#btn-clear')) {
+    if (activeField) clearSelection();
+  }
+});
+
+// Redraw lines on scroll
+document.querySelectorAll('.col').forEach(col=>{
+  col.addEventListener('scroll', ()=>{ if (activeField) selectField(activeField); });
+});
+</script>
+</body>
+</html>

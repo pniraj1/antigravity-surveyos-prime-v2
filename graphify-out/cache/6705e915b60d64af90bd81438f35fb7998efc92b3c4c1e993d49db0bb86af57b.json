@@ -1,0 +1,1 @@
+{"nodes": [{"id": "no_sync_scripts", "label": "no-sync-scripts.js", "file_type": "code", "source_file": "node_modules\\@next\\eslint-plugin-next\\dist\\rules\\no-sync-scripts.js", "source_location": "L1"}], "edges": []}

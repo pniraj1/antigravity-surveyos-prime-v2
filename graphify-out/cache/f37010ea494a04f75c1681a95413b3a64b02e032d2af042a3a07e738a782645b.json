@@ -1,0 +1,1 @@
+{"nodes": [{"id": "if_any_d", "label": "if-any.d.ts", "file_type": "code", "source_file": "node_modules\\type-fest\\source\\if-any.d.ts", "source_location": "L1"}], "edges": [{"source": "if_any_d", "target": "is_any_d_ts", "relation": "imports_from", "confidence": "EXTRACTED", "source_file": "node_modules\\type-fest\\source\\if-any.d.ts", "source_location": "L1", "weight": 1.0}]}

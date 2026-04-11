@@ -1,0 +1,1 @@
+{"nodes": [{"id": "es2018_d", "label": "es2018.d.ts", "file_type": "code", "source_file": "node_modules\\ast-types\\lib\\def\\es2018.d.ts", "source_location": "L1"}], "edges": [{"source": "es2018_d", "target": "types", "relation": "imports_from", "confidence": "EXTRACTED", "source_file": "node_modules\\ast-types\\lib\\def\\es2018.d.ts", "source_location": "L1", "weight": 1.0}]}
