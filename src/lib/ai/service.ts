@@ -244,8 +244,19 @@ async function callWithKey(provider: AIProvider, key: string, prompt: string, im
  * Calls a provider, rotating through all its keys on 429/401 errors.
  * Returns the response text or throws if all keys fail.
  */
+/** Returns true if the error is a billing/free-tier quota exhaustion (not a temporary rate limit). */
+function isQuotaExhausted(err: any): boolean {
+  const msg: string = err?.message ?? '';
+  return err?.status === 429 && (
+    msg.toLowerCase().includes('quota exceeded') ||
+    msg.toLowerCase().includes('free_tier') ||
+    msg.toLowerCase().includes('limit: 0')
+  );
+}
+
 async function callWithRotation(provider: AIProvider, prompt: string, images: string[]): Promise<string> {
   let lastError: Error = new Error('No keys available');
+  const providerLabel = provider.name === 'gemini' ? 'Gemini' : 'Groq';
 
   for (let i = 0; i < provider.keys.length; i++) {
     const key = provider.keys[i];
@@ -253,14 +264,22 @@ async function callWithRotation(provider: AIProvider, prompt: string, images: st
       return await callWithKey(provider, key, prompt, images);
     } catch (err: any) {
       lastError = err;
-      const isRateLimit = err.status === 429;
       const isAuthError = err.status === 401 || err.status === 403;
 
-      if (isRateLimit) {
+      if (isQuotaExhausted(err)) {
+        // Free-tier quota exhausted — all keys share the same billing account, no point rotating
+        useUIStore.getState().setAIProviderHealth(provider.name as 'gemini' | 'groq', 'error');
+        toast.error(
+          `${providerLabel} free-tier quota exhausted. Switch to ${provider.name === 'gemini' ? 'Groq' : 'Gemini'} in Profile → AI & Documents Intelligence, or wait for quota reset.`,
+          { duration: 10000 }
+        );
+        break;
+      } else if (err.status === 429) {
+        // Temporary rate limit — try next key
         useUIStore.getState().setAIProviderHealth(provider.name as 'gemini' | 'groq', 'rate-limited');
         if (i + 1 < provider.keys.length) {
           toast.warning(
-            `${provider.name === 'gemini' ? 'Gemini' : 'Groq'} key ${i + 1} rate limited — switching to backup key ${i + 2}.`,
+            `${providerLabel} key ${i + 1} rate limited — switching to backup key ${i + 2}.`,
             { duration: 4000 }
           );
           await new Promise(r => setTimeout(r, 300));
@@ -269,10 +288,9 @@ async function callWithRotation(provider: AIProvider, prompt: string, images: st
       } else if (isAuthError) {
         useUIStore.getState().setAIProviderHealth(provider.name as 'gemini' | 'groq', 'error');
         toast.error(
-          `${provider.name === 'gemini' ? 'Gemini' : 'Groq'} key ${i + 1} is invalid — check your API key in Profile.`,
+          `${providerLabel} key ${i + 1} is invalid — check your API key in Profile → AI & Documents Intelligence.`,
           { duration: 6000 }
         );
-        // Don't retry other keys for auth errors — they all share the same account usually
         break;
       } else {
         // Network or server error — try next key
@@ -311,12 +329,19 @@ export async function callAIGateway(prompt: string, images: string[] = []): Prom
         try {
           return await callWithRotation(fallbackProvider, prompt, images);
         } catch (fallbackErr: any) {
-          const msg = fallbackErr instanceof Error ? fallbackErr.message : 'Unknown error';
-          toast.error(`All AI providers failed — ${msg}. Please check your API keys in Profile.`, { duration: 8000 });
+          toast.error(
+            `Both Gemini and Groq failed. Check your API keys in Profile → AI & Documents Intelligence.`,
+            { duration: 10000 }
+          );
           throw fallbackErr;
         }
       }
-      // No fallback — surface the primary error
+      // No fallback configured — give actionable guidance
+      const fallbackLabel = preferred === 'gemini' ? 'Groq' : 'Gemini';
+      toast.error(
+        `${preferred === 'gemini' ? 'Gemini' : 'Groq'} failed and no ${fallbackLabel} key is configured as backup. Add a ${fallbackLabel} key in Profile → AI & Documents Intelligence.`,
+        { duration: 10000 }
+      );
       throw primaryErr;
     }
   }
