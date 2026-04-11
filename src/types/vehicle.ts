@@ -15,7 +15,7 @@ export type PolicyType =
   | 'Commercial Comprehensive'
   | 'Commercial TP';
 
-export type DepreciationType = 'standard' | 'nil' | 'zero';
+export type DepreciationType = 'standard' | 'nil';
 
 export type DLRelation = 'S/o' | 'D/o' | 'W/o';
 
@@ -52,7 +52,17 @@ export interface VehicleDetails {
   registrationValidUpTo: string; // ISO date
   rcEndorsement: string;
   seatingCapacity: string;
+  seatingCapacityTotal?: string; // For commercial
+  passengersAtAccident?: string;
+  passengerType?: string;
+  goodsWeightAtAccident?: string;
+  natureOfGoods?: string;
+  fitnessType?: string;
   isCommercial: boolean;
+  passengersContravention?: string;
+  loadChallanNumber?: string;
+  loadChallanDate?: string;
+  detailsOfGoodsCarried?: string;
 }
 
 export interface DriverDetails {
@@ -60,6 +70,7 @@ export interface DriverDetails {
   parentName: string;
   fatherHusbandName: string; // Mirror AI key
   relationType: DLRelation;
+  licenceType?: string; // e.g. MCWG, LMV-TR
   licenceNumber: string;
   licenseNumber: string;
   dateOfBirth: string; // ISO date
@@ -104,7 +115,18 @@ export interface AccidentDetails {
   placeOfSurvey: string;
   policeStation: string;
   firNumber: string;
+  firDate?: string;
+  fireBrigadeReportNo?: string;
+  pincode?: string;
+  locationCode?: string;
+  appointmentDate?: string;
   thirdPartyDetails: string;
+  workshopName?: string;
+  workshopAddress?: string;
+  workshopPhone?: string;
+  workshopFax?: string;
+  workshopEmail?: string;
+  remarks?: string; // Surveyor Remarks
 }
 
 export interface SurveyorProfile {
@@ -126,14 +148,18 @@ export interface SurveyorProfile {
   // ─── AI Configuration ─────────────────────────────────
   /** Which provider to use: 'groq' | 'gemini' */
   aiProvider: 'groq' | 'gemini';
-  /** Groq API key (free tier, high-speed) */
-  groqApiKey: string;
-  /** Override model name — defaults are safe but can be changed without rebuilding */
-  groqModel: string;
-  /** Google Gemini API key (Google AI Studio — free tier) */
+  /** Up to 3 Gemini API keys — rotated automatically on rate-limit/error */
+  geminiApiKeys: string[];
+  /** Up to 3 Groq API keys — rotated automatically on rate-limit/error */
+  groqApiKeys: string[];
+  /** @deprecated — use geminiApiKeys[0]. Kept for backward-compat migration. */
   geminiApiKey: string;
-  /** Gemini model override — e.g. gemini-2.0-flash, gemini-1.5-pro */
-  geminiModel: string;
+  /** @deprecated — use groqApiKeys[0]. Kept for backward-compat migration. */
+  groqApiKey: string;
+  /** Optional model override for Gemini. Blank = developer default (gemini-2.0-flash). */
+  geminiModel?: string;
+  /** Optional model override for Groq. Blank = developer default (llama-4-scout). */
+  groqModel?: string;
   /** Legacy Google OAuth client id */
   googleClientId: string;
   // ─── Subscription & Administrative ────────────────────
@@ -141,6 +167,8 @@ export interface SurveyorProfile {
   surveyorId: string;
   /** Sequential counter for spot reports */
   spotSequence?: number;
+  /** Sequential counter for final/reinspection/billcheck reports */
+  finalSequence?: number;
   /** Sequential counter for fee bills */
   feeSequence?: number;
   /** Current year for report numbering (auto-resets usually) */

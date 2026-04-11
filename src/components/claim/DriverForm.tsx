@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { DLRelation, DLVerificationStatus } from '@/types';
 
+const S = () => <span className="ml-1 inline-block w-2 h-2 rounded-full bg-green-500 align-middle" title="Used in Spot Report" />;
+
 export function DriverDetailsForm() {
   const { currentClaim, updateDriver } = useClaimStore();
 
@@ -20,7 +22,7 @@ export function DriverDetailsForm() {
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           <div className="space-y-1">
-            <Label htmlFor="d-name">Driver Name</Label>
+            <Label htmlFor="d-name">Driver Name<S /></Label>
             <Input
               id="d-name"
               value={d?.name || ''}
@@ -30,7 +32,7 @@ export function DriverDetailsForm() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="d-rel">Relation</Label>
+            <Label htmlFor="d-rel">Relation<S /></Label>
             <select
               id="d-rel"
               value={d?.relationType || 'S/o'}
@@ -44,7 +46,7 @@ export function DriverDetailsForm() {
           </div>
 
           <div className="space-y-1 xl:col-span-2">
-            <Label htmlFor="d-parent">Parent / Spouse Name</Label>
+            <Label htmlFor="d-parent">Parent / Spouse Name<S /></Label>
             <Input
               id="d-parent"
               value={d?.parentName || ''}
@@ -54,7 +56,7 @@ export function DriverDetailsForm() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="d-dlno">Licence No.</Label>
+            <Label htmlFor="d-dlno">Licence No.<S /></Label>
             <Input
               id="d-dlno"
               value={d?.licenceNumber || ''}
@@ -64,7 +66,7 @@ export function DriverDetailsForm() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="d-dob">Date of Birth</Label>
+            <Label htmlFor="d-dob">Date of Birth<S /></Label>
             <Input
               id="d-dob"
               type="date"
@@ -74,7 +76,7 @@ export function DriverDetailsForm() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="d-issue">Date of Issue</Label>
+            <Label htmlFor="d-issue">Date of Issue<S /></Label>
             <Input
               id="d-issue"
               type="date"
@@ -84,7 +86,7 @@ export function DriverDetailsForm() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="d-auth">Issuing Authority</Label>
+            <Label htmlFor="d-auth">Issuing Authority<S /></Label>
             <Input
               id="d-auth"
               value={d?.issuingAuthority || ''}
@@ -94,7 +96,7 @@ export function DriverDetailsForm() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="d-class">Authorized Classes</Label>
+            <Label htmlFor="d-class">Authorized Classes<S /></Label>
             <Input
               id="d-class"
               value={d?.vehicleClasses || ''}
@@ -104,7 +106,7 @@ export function DriverDetailsForm() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="d-validnt">Valid Non-Transport (NT)</Label>
+            <Label htmlFor="d-validnt">Valid Non-Transport (NT)<S /></Label>
             <Input
               id="d-validnt"
               type="date"
@@ -114,7 +116,7 @@ export function DriverDetailsForm() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="d-validt">Valid Transport (T)</Label>
+            <Label htmlFor="d-validt">Valid Transport (T)<S /></Label>
             <Input
               id="d-validt"
               type="date"
@@ -154,7 +156,7 @@ export function DriverDetailsForm() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="d-verif">Verification Status</Label>
+            <Label htmlFor="d-verif">Verification Status<S /></Label>
             <select
               id="d-verif"
               value={d?.verificationStatus || 'photocopy'}

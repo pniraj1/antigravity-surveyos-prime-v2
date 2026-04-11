@@ -10,7 +10,7 @@ interface SpotPrintReportProps {
 }
 
 export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportProps>(({ claim, profile }, ref) => {
-  const { spotDetails, spotDamageRows, vehicle, policy, accident } = claim;
+  const { spotDetails, spotDamageRows, vehicle, policy, accident, driver } = claim;
 
   // Helpers for logic in the template
   const isComm = claim.vehicleType !== 'private';
@@ -18,8 +18,8 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const ntExpired = spotDetails.dlValidNT && new Date(spotDetails.dlValidNT) < today;
-  const tExpired = spotDetails.dlValidT && new Date(spotDetails.dlValidT) < today;
+  const ntExpired = driver.validityNonTransport && new Date(driver.validityNonTransport) < today;
+  const tExpired = driver.validityTransport && new Date(driver.validityTransport) < today;
 
   const gvwVal = parseFloat(String(spotDetails.gvw)) || 0;
   const ulwVal = parseFloat(String(spotDetails.ulw)) || 0;
@@ -64,8 +64,8 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
           color: #000;
           margin: 0;
           padding: 0;
-          width: 210mm;
-          background: #white;
+          width: 100%;
+          background: #fff;
         }
 
         .spot-report-print-container table {
@@ -127,8 +127,8 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
           <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt', width: '18%' }}>Spot Report No.</td>
             <td style={{ ...parseInline(styles.td), fontWeight: 700, width: '32%' }}>{spotDetails.reportNo}</td>
-            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Date of Report</td>
-            <td style={{ ...parseInline(styles.td), fontWeight: 700 }}>{formatDateDMY(spotDetails.reportDate)}</td>
+            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Date & Time of Report</td>
+            <td style={{ ...parseInline(styles.td), fontWeight: 700 }}>{formatDateTimeDMY(spotDetails.reportDate)}</td>
           </tr>
           <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Date of Allotment</td>
@@ -247,36 +247,36 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
           <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', width: '18%', fontSize: '6.8pt' }}>Driver Name</td>
             <td style={{ ...parseInline(styles.td), fontWeight: 600, width: '32%' }}>
-              {spotDetails.driverName || '—'}{spotDetails.dlParentName ? ` ${spotDetails.dlRelation || 'S/o'} ${spotDetails.dlParentName}` : ''}
+              {driver.name || '—'}{driver.parentName ? ` ${driver.relationType || 'S/o'} ${driver.parentName}` : ''}
             </td>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>MDL No.</td>
-            <td style={{ ...parseInline(styles.td), fontFamily: 'monospace' }}>{spotDetails.mdlNo || '—'}</td>
+            <td style={{ ...parseInline(styles.td), fontFamily: 'monospace' }}>{driver.licenceNumber || '—'}</td>
           </tr>
           <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Date of Birth</td>
             <td style={{ ...parseInline(styles.td) }}>{formatDateDMY(claim.driver.dob) || '—'}</td>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Issuing Authority</td>
-            <td style={{ ...parseInline(styles.td) }}>{spotDetails.dlAuthority || '—'}</td>
+            <td style={{ ...parseInline(styles.td) }}>{driver.issuingAuthority || '—'}</td>
           </tr>
           <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Licence Classes / Issue Date</td>
-            <td style={{ ...parseInline(styles.td) }} colSpan={3}>{spotDetails.dlType || '—'} &nbsp;|&nbsp; Issued: {formatDateDMY(spotDetails.dlIssueDate) || '—'}</td>
+            <td style={{ ...parseInline(styles.td) }} colSpan={3}>{driver.vehicleClass || '—'} &nbsp;|&nbsp; Issued: {formatDateDMY(driver.dateOfIssue) || '—'}</td>
           </tr>
           <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Non-Transport Valid</td>
             <td style={{ ...parseInline(styles.td), ...(ntExpired ? { color: '#c00', fontWeight: '700' } : {}) }}>
-              {formatDateDMY(spotDetails.dlValidNT) || '—'}{ntExpired ? ' ⚠ EXPIRED' : ''}
+              {formatDateDMY(driver.validityNonTransport) || '—'}{ntExpired ? ' ⚠ EXPIRED' : ''}
             </td>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Transport Valid</td>
             <td style={{ ...parseInline(styles.td), ...(tExpired ? { color: '#c00', fontWeight: '700' } : {}) }}>
-              {formatDateDMY(spotDetails.dlValidT) || '—'}{tExpired ? ' ⚠ EXPIRED' : ''}
+              {formatDateDMY(driver.validityTransport) || '—'}{tExpired ? ' ⚠ EXPIRED' : ''}
             </td>
           </tr>
           <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>MDL Status</td>
             <td style={{ ...parseInline(styles.td) }} colSpan={3}>
-              <b>{spotDetails.mdlVerified === 'verified' ? 'ORIGINAL MDL VERIFIED' : spotDetails.mdlVerified === 'photocopy' ? 'PHOTOCOPY VERIFIED' : 'NOT AVAILABLE'}</b>
-              {spotDetails.dlInvalidRemarks ? ` — ${spotDetails.dlInvalidRemarks}` : ''}
+              <b>{driver.verificationStatus === 'verified' ? 'ORIGINAL MDL VERIFIED' : driver.verificationStatus === 'photocopy' ? 'PHOTOCOPY VERIFIED' : 'NOT AVAILABLE'}</b>
+              {driver.invalidRemarks ? ` — ${driver.invalidRemarks}` : ''}
             </td>
           </tr>
         </tbody>
@@ -298,18 +298,18 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Date of Survey</td>
             <td style={{ ...parseInline(styles.td) }}>{formatDateDMY(accident.dateOfSurvey) || '—'}</td>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Place of Survey</td>
-            <td style={{ ...parseInline(styles.td) }}>{spotDetails.surveyPlace}</td>
+            <td style={{ ...parseInline(styles.td) }}>{accident.placeOfSurvey}</td>
           </tr>
           <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Third Party</td>
             <td style={{ ...parseInline(styles.td) }}>{spotDetails.tpInvolved === 'no' ? 'NIL' : spotDetails.tpInvolved.toUpperCase()}</td>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>TP Details</td>
-            <td style={{ ...parseInline(styles.td) }}>{spotDetails.tpDetails || 'NIL'}</td>
+            <td style={{ ...parseInline(styles.td) }}>{accident.thirdPartyDetails || 'NIL'}</td>
           </tr>
           <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Police Reported</td>
             <td style={{ ...parseInline(styles.td) }}>
-              {spotDetails.policeReported === 'yes' ? `Yes — ${spotDetails.policeStation} | Diary: ${spotDetails.diaryNo}` : 'No'}
+              {spotDetails.policeReported === 'yes' ? `Yes — ${accident.policeStation} | Diary: ${accident.firNumber}` : 'No'}
             </td>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Panchanama</td>
             <td style={{ ...parseInline(styles.td) }}>{spotDetails.panchanama === 'yes' ? 'Yes' : 'No'}</td>
@@ -339,10 +339,10 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
               </tr>
               <tr>
                 <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Fitness No.</td>
-                <td style={{ ...parseInline(styles.td), fontFamily: 'monospace' }}>{spotDetails.fitnessNo || '—'}</td>
+                <td style={{ ...parseInline(styles.td), fontFamily: 'monospace' }}>{vehicle.fitnessNo || '—'}</td>
                 <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Fitness Valid To</td>
-                <td style={{ ...parseInline(styles.td), ...(spotDetails.fitnessValid && new Date(spotDetails.fitnessValid) < today ? { color: '#c00', fontWeight: '700' } : {}) }}>
-                  {spotDetails.fitnessValid || '—'}{spotDetails.fitnessValid && new Date(spotDetails.fitnessValid) < today ? ' ⚠ EXPIRED' : ''}
+                <td style={{ ...parseInline(styles.td), ...(vehicle.fitnessValidUpto && new Date(vehicle.fitnessValidUpto) < today ? { color: '#c00', fontWeight: '700' } : {}) }}>
+                  {vehicle.fitnessValidUpto || '—'}{vehicle.fitnessValidUpto && new Date(vehicle.fitnessValidUpto) < today ? ' ⚠ EXPIRED' : ''}
                 </td>
               </tr>
               <tr>

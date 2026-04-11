@@ -12,7 +12,6 @@ export type AppTab =
   | 'documents'
   | 'review'
   | 'details'
-  | 'spot'
   | 'assessment'
   | 'reports'
   | 'bill-check'
@@ -44,6 +43,12 @@ interface UIState {
   // ─── Save Status ────────────────────────────────────
   saveStatus: 'idle' | 'saving' | 'saved' | 'queued';
 
+  // ─── AI Provider Health ──────────────────────────────
+  aiProviderHealth: {
+    gemini: 'ok' | 'rate-limited' | 'error' | 'unknown';
+    groq:   'ok' | 'rate-limited' | 'error' | 'unknown';
+  };
+
   // ─── Actions ────────────────────────────────────────
   setActiveTab: (tab: AppTab) => void;
   toggleSidebar: () => void;
@@ -54,6 +59,7 @@ interface UIState {
   setDriveConnected: (connected: boolean, email?: string) => void;
   setSaveStatus: (status: UIState['saveStatus']) => void;
   setCurrentClaimId: (id: string | null) => void;
+  setAIProviderHealth: (provider: 'gemini' | 'groq', status: 'ok' | 'rate-limited' | 'error' | 'unknown') => void;
 }
 
 export const useUIStore = create<UIState>()(
@@ -70,6 +76,7 @@ export const useUIStore = create<UIState>()(
       isDriveConnected: false,
       driveEmail: '',
       saveStatus: 'idle',
+      aiProviderHealth: { gemini: 'unknown', groq: 'unknown' },
 
       setActiveTab: (tab) => {
         set((state) => ({
@@ -98,6 +105,11 @@ export const useUIStore = create<UIState>()(
       setSaveStatus: (status) => set({ saveStatus: status }),
 
       setCurrentClaimId: (id) => set({ currentClaimId: id }),
+
+      setAIProviderHealth: (provider, status) =>
+        set((state) => ({
+          aiProviderHealth: { ...state.aiProviderHealth, [provider]: status },
+        })),
     }),
     {
       name: 'surveyos-ui-storage',

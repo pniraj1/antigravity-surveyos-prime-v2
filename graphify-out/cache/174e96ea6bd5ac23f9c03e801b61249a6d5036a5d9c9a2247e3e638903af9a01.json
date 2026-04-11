@@ -1,0 +1,1 @@
+{"nodes": [{"id": "byte_stream_reader_d", "label": "byte_stream_reader.d.ts", "file_type": "code", "source_file": "node_modules\\@firebase\\firestore\\dist\\intermediate\\lite\\firestore\\src\\platform\\node_lite\\byte_stream_reader.d.ts", "source_location": "L1"}], "edges": []}

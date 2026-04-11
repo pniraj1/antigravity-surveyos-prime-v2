@@ -1,0 +1,1 @@
+{"nodes": [{"id": "sync_engine_d", "label": "sync_engine.d.ts", "file_type": "code", "source_file": "node_modules\\@firebase\\firestore\\dist\\lite\\firestore\\src\\core\\sync_engine.d.ts", "source_location": "L1"}], "edges": []}

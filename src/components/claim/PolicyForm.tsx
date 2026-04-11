@@ -5,6 +5,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
+const S = () => <span className="ml-1 inline-block w-2 h-2 rounded-full bg-green-500 align-middle" title="Used in Spot Report" />;
+
 export function PolicyDetailsForm() {
   const { currentClaim, updatePolicy } = useClaimStore();
 
@@ -19,7 +21,7 @@ export function PolicyDetailsForm() {
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           <div className="space-y-1">
-            <Label htmlFor="p-ins">Insurer Name</Label>
+            <Label htmlFor="p-ins">Insurer Name<S /></Label>
             <Input
               id="p-ins"
               value={p?.insurerName || ''}
@@ -28,7 +30,7 @@ export function PolicyDetailsForm() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="p-polno">Policy No.</Label>
+            <Label htmlFor="p-polno">Policy No.<S /></Label>
             <Input
               id="p-polno"
               value={p?.policyNumber || ''}
@@ -37,7 +39,7 @@ export function PolicyDetailsForm() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="p-claimno">Claim No.</Label>
+            <Label htmlFor="p-claimno">Claim No.<S /></Label>
             <Input
               id="p-claimno"
               value={p?.claimNumber || ''}
@@ -46,7 +48,7 @@ export function PolicyDetailsForm() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="p-type">Policy Type</Label>
+            <Label htmlFor="p-type">Policy Type<S /></Label>
             <select
               id="p-type"
               value={p?.policyType || ''}
@@ -61,7 +63,7 @@ export function PolicyDetailsForm() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="p-from">Valid From</Label>
+            <Label htmlFor="p-from">Valid From<S /></Label>
             <Input
               id="p-from"
               type="date"
@@ -71,7 +73,7 @@ export function PolicyDetailsForm() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="p-to">Valid To</Label>
+            <Label htmlFor="p-to">Valid To<S /></Label>
             <Input
               id="p-to"
               type="date"
@@ -81,7 +83,7 @@ export function PolicyDetailsForm() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="p-idv">Insured Declared Value (IDV)</Label>
+            <Label htmlFor="p-idv">Insured Declared Value (IDV)<S /></Label>
             <Input
               id="p-idv"
               type="number"
@@ -92,7 +94,7 @@ export function PolicyDetailsForm() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="p-name">Insured Name</Label>
+            <Label htmlFor="p-name">Insured Name<S /></Label>
             <Input
               id="p-name"
               value={p?.insuredName || ''}
@@ -101,7 +103,7 @@ export function PolicyDetailsForm() {
           </div>
 
           <div className="space-y-1 md:col-span-2">
-            <Label htmlFor="p-addr">Insured Address</Label>
+            <Label htmlFor="p-addr">Insured Address<S /></Label>
             <Input
               id="p-addr"
               value={p?.insuredAddress || ''}
@@ -110,7 +112,7 @@ export function PolicyDetailsForm() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="p-mob">Mobile</Label>
+            <Label htmlFor="p-mob">Mobile<S /></Label>
             <Input
               id="p-mob"
               value={p?.insuredMobile || ''}
@@ -119,7 +121,7 @@ export function PolicyDetailsForm() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="p-office">Issuing Office</Label>
+            <Label htmlFor="p-office">Issuing Office<S /></Label>
             <Input
               id="p-office"
               value={p?.policyIssuingOffice || ''}

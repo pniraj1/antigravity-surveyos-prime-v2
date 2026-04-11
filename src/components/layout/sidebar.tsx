@@ -3,13 +3,13 @@
 import { useUIStore, type AppTab } from '@/stores/ui-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { useClaimStore } from '@/stores/claim-store';
+import { getReconciliationFields } from '@/lib/ai/reconciliation';
 import {
   LayoutDashboard,
   FileText,
   ScanSearch,
   ClipboardList,
   ClipboardCheck,
-  MapPin,
   Calculator,
   Printer,
   Camera,
@@ -48,9 +48,8 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'documents', label: 'Documents', icon: <FileText size={17} />, group: 'claim', requiresClaim: true },
   { id: 'review', label: 'AI Review', icon: <ScanSearch size={17} />, group: 'claim', requiresClaim: true },
   { id: 'details', label: 'Claim Details', icon: <ClipboardList size={17} />, group: 'claim', requiresClaim: true },
-  { id: 'spot', label: 'Spot Survey', icon: <MapPin size={17} />, group: 'claim', requiresClaim: true },
   { id: 'assessment', label: 'Assessment', icon: <Calculator size={17} />, group: 'claim', requiresClaim: true },
-  { id: 'reports',      label: 'Final Report',   icon: <Printer size={17} />,    group: 'output',   requiresClaim: true },
+  { id: 'reports',      label: 'Report Center',   icon: <Printer size={17} />,    group: 'output',   requiresClaim: true },
   { id: 'bill-check',  label: 'Bill Check',     icon: <ClipboardCheck size={17} />, group: 'output', requiresClaim: true },
   { id: 'photos',      label: 'Photo Sheet',    icon: <Camera size={17} />,     group: 'output',   requiresClaim: true },
   { id: 'fees',        label: 'Fee Bill',       icon: <Receipt size={17} />,    group: 'output',   requiresClaim: true },
@@ -80,6 +79,19 @@ export function Sidebar() {
 
   const hasClaim = !!currentClaim;
   const groups = ['main', 'claim', 'output', 'settings'] as const;
+
+  const handleTabChange = (targetTab: AppTab) => {
+    // Show a soft warning if navigating away with unresolved AI conflicts
+    if (activeTab === 'documents' && currentClaim) {
+      const conflicts = getReconciliationFields(currentClaim).filter(f => f.hasConflict);
+      if (conflicts.length > 0) {
+        useUIStore.getState().setSidebarMobileOpen(false); // Close mobile menu if open
+        toast.warning(`You have ${conflicts.length} unresolved AI data discrepancies that need attention.`);
+        // Note: No return statement here, so it allows navigation (soft block)
+      }
+    }
+    setActiveTab(targetTab);
+  };
 
   return (
     <>
@@ -201,10 +213,10 @@ export function Sidebar() {
             const items = NAV_ITEMS.filter((item) => {
               if (item.group !== group) return false;
               
-              // Workflow Logic: Restrict tabs during Spot Survey phase
-              if (currentClaim?.surveyType === 'spot' && !currentClaim.isSpotCompleted) {
-                // Hide Assessment, Bill Check, Fee Bill, and Reinspection for incomplete Spot surveys
-                const restrictedTabs: AppTab[] = ['assessment', 'bill-check', 'fees', 'reinspection'];
+              // Workflow Logic: Restrict tabs based on Survey Type
+              if (currentClaim?.surveyType === 'spot') {
+                // Spot surveys never see assessment/billing/reinspection tabs
+                const restrictedTabs: AppTab[] = ['assessment', 'bill-check', 'reinspection'];
                 if (restrictedTabs.includes(item.id)) return false;
               }
               
@@ -234,7 +246,7 @@ export function Sidebar() {
                     return (
                       <button
                         key={item.id}
-                        onClick={() => !disabled && setActiveTab(item.id)}
+                        onClick={() => !disabled && handleTabChange(item.id)}
                         disabled={disabled}
                         title={sidebarCollapsed ? item.label : undefined}
                         className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium relative transition-all ${sidebarCollapsed ? 'justify-center' : ''}`}

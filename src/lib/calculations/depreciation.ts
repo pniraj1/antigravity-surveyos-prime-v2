@@ -56,12 +56,13 @@ export function getDepreciationRate(
   ageMonths: number,
   policyType: DepreciationType
 ): number {
-  // Nil depreciation and Zero dep policies = 0% on everything
-  if (policyType === 'nil' || policyType === 'zero') return 0;
+  // Nil depreciation = 0% on everything
+  if (policyType === 'nil') return 0;
 
   // Standard IRDAI depreciation
   if (partType === 'glass') return 0;
   if (partType === 'plastic') return 50;
+  if (partType === 'fiberglass') return 30;
   if (partType === 'labour' || partType === 'paint') return 0;
 
   // Metal — age-based scale
@@ -107,7 +108,6 @@ export function getDepPolicyLabel(
 ): string {
   switch (policyType) {
     case 'nil': return 'Nil Depreciation';
-    case 'zero': return 'Zero Dep Policy';
     case 'standard':
     default:
       return `Standard IRDAI ${getAgeLabel(ageMonths)}`;

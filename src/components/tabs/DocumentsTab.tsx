@@ -3,15 +3,52 @@
 import { useAIExtraction } from '@/hooks/useAIExtraction';
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import { useClaimStore } from '@/stores/claim-store';
+import { useProfileStore } from '@/stores/profile-store';
+import { useUIStore } from '@/stores/ui-store';
 import { uploadFileToDrive } from '@/lib/drive';
+import { CURRENT_MODELS } from '@/lib/ai/service';
 import {
   FileText, Sparkles, Loader2, CheckCircle2, Car, CreditCard,
   FileCheck, Wrench, Camera, ScrollText, Receipt, Shield, AlertTriangle,
-  Upload, Truck, Database,
+  Upload, Truck, Zap, Brain, Database,
 } from 'lucide-react';
 import { ReconciliationDialog } from './reconciliation/ReconciliationDialog';
 import { getReconciliationFields } from '@/lib/ai/reconciliation';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+
+// ─── Provider Health Badge ───────────────────────────────────────────────────
+function ProviderHealthBadge() {
+  const { aiProviderHealth } = useUIStore();
+  const { profile } = useProfileStore();
+  const provider = profile.aiProvider ?? 'gemini';
+  const health = aiProviderHealth[provider];
+  const model = provider === 'gemini'
+    ? (profile.geminiModel?.trim() || CURRENT_MODELS.gemini)
+    : (profile.groqModel?.trim() || CURRENT_MODELS.groq);
+  const shortModel = model.split('/').pop()?.replace('gemini-', 'Gemini ').replace('-instruct', '') ?? model;
+
+  const dot = health === 'ok'           ? '#22c55e'
+            : health === 'rate-limited' ? '#f59e0b'
+            : health === 'error'        ? '#ef4444'
+            :                            '#8D99AE';
+  const label = health === 'ok'           ? 'Ready'
+              : health === 'rate-limited' ? 'Rate Limited'
+              : health === 'error'        ? 'Key Error — check Profile'
+              :                            'Not tested yet';
+
+  return (
+    <div
+      className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold"
+      style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}
+      title={`${provider === 'gemini' ? 'Google Gemini' : 'Groq'} · ${model} · ${label}`}
+    >
+      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: dot }} />
+      <span style={{ color: '#F8F9FA' }}>{shortModel}</span>
+      <span style={{ color: 'rgba(232,236,240,0.5)' }}>·</span>
+      <span style={{ color: dot }}>{label}</span>
+    </div>
+  );
+}
 
 // ─── Document Slot Definitions ──────────────────────────────────────────────
 const DOC_GROUPS = [
@@ -23,6 +60,7 @@ const DOC_GROUPS = [
       { id: 'dl',      label: 'Driving Licence',   subLabel: 'DL / MDL',                   icon: CreditCard,   color: '#1e3a5f', bg: 'rgba(30,58,95,0.07)',   accept: 'image/*,application/pdf' },
       { id: 'policy',  label: 'Policy Schedule',   subLabel: 'Insurance Policy',            icon: Shield,       color: '#D4AF37', bg: 'rgba(212,175,55,0.08)', accept: 'image/*,application/pdf' },
       { id: 'claim',   label: 'Claim Form',        subLabel: 'Intimation / Claim Form',     icon: FileCheck,    color: '#4A4E69', bg: 'rgba(74,78,105,0.07)',  accept: 'image/*,application/pdf' },
+      { id: 'fir',     label: 'Police FIR',        subLabel: 'Spot Panchnama / FIR',       icon: ScrollText,   color: '#0D1B2A', bg: 'rgba(13,27,42,0.06)',   accept: 'image/*,application/pdf' },
     ],
   },
   {
@@ -57,12 +95,22 @@ export function DocumentsTab() {
   const currentClaim = useClaimStore(s => s.currentClaim);
   const extractedDocs = currentClaim?.extractedData ?? {};
   const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview } = useAIExtraction();
+  const { profile, updateProfile } = useProfileStore();
+  const aiProvider = profile.aiProvider ?? 'gemini';
   const [isReconOpen, setIsReconOpen] = useState(false);
 
   const conflicts = useMemo(() => {
     if (!currentClaim) return [];
     return getReconciliationFields(currentClaim).filter(f => f.hasConflict);
   }, [currentClaim]);
+
+  // Auto-close dialog when all conflicts are resolved
+  useEffect(() => {
+    if (isReconOpen && conflicts.length === 0) {
+      setIsReconOpen(false);
+    }
+  }, [conflicts.length, isReconOpen]);
+
 
   if (!currentClaim) return null;
 
@@ -99,19 +147,52 @@ export function DocumentsTab() {
         }}
       >
         <div className="max-w-5xl mx-auto">
-          <div
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] mb-4"
-            style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)' }}
-          >
-            <Sparkles size={11} className="animate-pulse" />
-            Gemini Vision — Instant Document Reading
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <div
+                className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] mb-4"
+                style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)' }}
+              >
+                <Sparkles size={11} className="animate-pulse" />
+                AI Vision — Instant Document Reading
+              </div>
+              <h1 className="text-2xl lg:text-3xl font-black mb-2" style={{ color: '#F8F9FA', letterSpacing: '-0.02em' }}>
+                AI Document Scanner
+              </h1>
+              <p className="text-sm font-medium" style={{ color: 'rgba(232,236,240,0.65)' }}>
+                Upload any document — RC, DL, Policy, Estimate. Our AI reads it and auto-fills your claim fields instantly.
+              </p>
+            </div>
+
+            {/* Provider toggle + health */}
+            <div className="flex flex-col items-end gap-2 flex-shrink-0">
+              <div className="flex items-center p-1 rounded-xl gap-1" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                <button
+                  onClick={() => updateProfile({ aiProvider: 'gemini' })}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black transition-all"
+                  style={{
+                    background: aiProvider === 'gemini' ? 'rgba(212,175,55,0.9)' : 'transparent',
+                    color: aiProvider === 'gemini' ? '#0D1B2A' : 'rgba(232,236,240,0.6)',
+                  }}
+                >
+                  <Sparkles size={11} />
+                  Gemini
+                </button>
+                <button
+                  onClick={() => updateProfile({ aiProvider: 'groq' })}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black transition-all"
+                  style={{
+                    background: aiProvider === 'groq' ? 'rgba(242,102,57,0.9)' : 'transparent',
+                    color: aiProvider === 'groq' ? '#FFFFFF' : 'rgba(232,236,240,0.6)',
+                  }}
+                >
+                  <Zap size={11} />
+                  Groq
+                </button>
+              </div>
+              <ProviderHealthBadge />
+            </div>
           </div>
-          <h1 className="text-2xl lg:text-3xl font-black mb-2" style={{ color: '#F8F9FA', letterSpacing: '-0.02em' }}>
-            AI Document Scanner
-          </h1>
-          <p className="text-sm font-medium" style={{ color: 'rgba(232,236,240,0.65)' }}>
-            Upload any document — RC, DL, Policy, Estimate. Our AI reads it and auto-fills your claim fields instantly.
-          </p>
 
           {/* Progress bar */}
           <div className="flex items-center gap-4 mt-6">

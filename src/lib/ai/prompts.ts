@@ -4,10 +4,12 @@
 // ═══════════════════════════════════════════════════════════
 
 export const DOC_PROMPTS: Record<string, string> = {
-  rc: `You are an expert at reading Indian vehicle RC (Registration Certificate) documents. Extract ALL visible fields from this RC book image. Pay special attention to the Registration Date. Return ONLY a JSON object with these keys (use empty string if not found):
+  rc: `You are an expert at reading Indian vehicle RC (Registration Certificate) documents. Extract ALL visible fields from this RC book image. Return ONLY a JSON object with these keys (use empty string if not found):
 {
   "registration_number": "",
   "date_of_registration": "Look for 'Regn Date' or 'Date of Registration' - return as YYYY-MM-DD",
+  "registration_valid_upto": "Look for 'Regn Valid Upto' or 'Registration Valid Upto' - return as YYYY-MM-DD",
+  "year_of_manufacture": "Look for 'Mfg Yr', 'Year of Manufacture', 'YOM' - return as 4-digit number e.g. 2019",
   "owner_name": "",
   "address": "",
   "make": "",
@@ -27,8 +29,8 @@ export const DOC_PROMPTS: Record<string, string> = {
   "permit_no": "",
   "route": "",
   "road_tax": "",
-  "year_of_manufacture": "",
-  "hypothecation": ""
+  "hypothecation": "",
+  "fitness_type": "Extract 'Goods' or 'Passenger' or 'Private' if mentioned near fitness"
 }
 Return ONLY the JSON. No explanation, no markdown, no backticks.`,
 
@@ -165,7 +167,8 @@ Return ONLY the JSON. No explanation, no markdown, no backticks.`,
   "gross_vehicle_weight_kg": "",
   "unladen_weight_kg": "",
   "seating_capacity": "",
-  "fuel_type": ""
+  "fuel_type": "",
+  "fitness_type": "e.g. Goods Carriage, Passenger Vehicle, etc."
 }
 Return ONLY the JSON. No explanation, no markdown, no backticks.`,
 
@@ -200,6 +203,20 @@ Return ONLY the JSON. No explanation, no markdown, no backticks.`,
   "workshop_name": "",
   "place_of_repair": "",
   "third_party_details": ""
+}
+Return ONLY the JSON. No explanation, no markdown, no backticks.`,
+  fir: `You are an expert at reading Indian Police FIR (First Information Report) or Spot Panchnama documents. Extract incident and vehicle details. Return ONLY a JSON object:
+{
+  "fir_number": "",
+  "fir_date": "YYYY-MM-DD",
+  "police_station": "",
+  "date_of_accident": "YYYY-MM-DD",
+  "time_of_accident": "HH:MM (24-hour format)",
+  "place_of_accident": "",
+  "pincode": "",
+  "vehicle_number": "",
+  "driver_name": "",
+  "brief_accident_details": ""
 }
 Return ONLY the JSON. No explanation, no markdown, no backticks.`
 };

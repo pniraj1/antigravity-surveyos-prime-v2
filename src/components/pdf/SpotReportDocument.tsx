@@ -120,7 +120,7 @@ export function SpotReportDocument({ claim }: Props) {
         <View style={styles.header}>
           <Text style={styles.title}>SPOT SURVEY REPORT</Text>
           <Text style={styles.subtitle}>
-            Report No: {claim?.reportNo || 'DRAFT'} | Date: {claim?.reportDate || '-'}
+            Report No: {claim?.reportNo || 'DRAFT'} | Date & Time of Survey: {claim?.spotDetails?.surveyDatetime || claim?.reportDate || '-'}
           </Text>
         </View>
 
@@ -169,23 +169,23 @@ export function SpotReportDocument({ claim }: Props) {
           <Text style={styles.sectionTitle}>3. Driver Information (at Spot)</Text>
           <View style={styles.row}>
             <Text style={styles.colLabel}>Driver Name:</Text>
-            <Text style={styles.colValue}>{claim?.spotDetails?.driverName || 'N/A'}</Text>
+            <Text style={styles.colValue}>{claim?.driver?.name || 'N/A'}</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.colLabel}>DL Number:</Text>
-            <Text style={styles.colValue}>{claim?.spotDetails?.mdlNo || 'N/A'}</Text>
+            <Text style={styles.colValue}>{claim?.driver?.licenceNumber || 'N/A'}</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.colLabel}>DL Issue Date:</Text>
-            <Text style={styles.colValue}>{claim?.spotDetails?.dlIssueDate || 'N/A'}</Text>
+            <Text style={styles.colValue}>{claim?.driver?.dateOfIssue || 'N/A'}</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.colLabel}>Valid Upto (NT/T):</Text>
-            <Text style={styles.colValue}>{claim?.spotDetails?.dlValidNT || 'N/A'} / {claim?.spotDetails?.dlValidT || 'N/A'}</Text>
+            <Text style={styles.colValue}>{claim?.driver?.validityNonTransport || 'N/A'} / {claim?.driver?.validityTransport || 'N/A'}</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.colLabel}>Verification Status:</Text>
-            <Text style={{...styles.colValue, fontFamily: 'Helvetica-Bold'}}>{claim?.spotDetails?.mdlVerified || 'Pending'}</Text>
+            <Text style={{...styles.colValue, fontFamily: 'Helvetica-Bold'}}>{claim?.driver?.verificationStatus || 'Pending'}</Text>
           </View>
         </View>
 
@@ -197,12 +197,18 @@ export function SpotReportDocument({ claim }: Props) {
             <Text style={styles.colValue}>{claim?.accident?.dateAndTime || 'N/A'}</Text>
           </View>
           <View style={styles.row}>
+            <Text style={styles.colLabel}>Cause of Accident:</Text>
+            <Text style={styles.colValue}>{claim?.accident?.causeOfAccident || 'N/A'}</Text>
+          </View>
+          <View style={styles.row}>
             <Text style={styles.colLabel}>Place of Accident:</Text>
             <Text style={styles.colValue}>{claim?.accident?.placeOfAccident || 'N/A'}</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.colLabel}>Police Station / FIR:</Text>
-            <Text style={styles.colValue}>{claim?.spotDetails?.policeStation || 'N/A'} / {claim?.spotDetails?.diaryNo || 'N/A'}</Text>
+            <Text style={styles.colValue}>
+              {claim?.accident?.policeStation || 'N/A'} / {claim?.accident?.firNumber || 'N/A'}
+            </Text>
           </View>
         </View>
 
@@ -220,7 +226,7 @@ export function SpotReportDocument({ claim }: Props) {
             </div>
             <View style={styles.row}>
               <Text style={styles.colLabel}>Fitness Valid Upto:</Text>
-              <Text style={styles.colValue}>{claim?.spotDetails?.fitnessValid || 'N/A'}</Text>
+              <Text style={styles.colValue}>{claim?.vehicle?.fitnessValidUpto || 'N/A'}</Text>
             </View>
             <View style={styles.row}>
               <Text style={styles.colLabel}>GVW / ULW / Cap:</Text>
@@ -241,12 +247,17 @@ export function SpotReportDocument({ claim }: Props) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>6. Document Verification Highlights</Text>
           <View style={{flexDirection: 'row', flexWrap: 'wrap'}}>
-            {Object.entries(claim?.spotDetails?.verificationFlags || {}).map(([key, val]) => (
-              <View key={key} style={{width: '25%', padding: 4, border: '0.5px solid #e5e7eb'}}>
-                <Text style={{fontSize: 7, color: '#6b7280', textTransform: 'uppercase'}}>{key}</Text>
-                <Text style={{fontSize: 8, fontFamily: 'Helvetica-Bold'}}>{val || '-'}</Text>
-              </View>
-            ))}
+            {Object.entries(claim?.documentVerification || {}).map(([key, val]) => {
+              const res = val as { status: string; detail: string };
+              const displayVal = res.detail ? `${res.status} (${res.detail})` : res.status;
+              
+              return (
+                <View key={key} style={{width: '25%', padding: 4, border: '0.5px solid #e5e7eb'}}>
+                  <Text style={{fontSize: 7, color: '#6b7280', textTransform: 'uppercase'}}>{key}</Text>
+                  <Text style={{fontSize: 8, fontFamily: 'Helvetica-Bold'}}>{displayVal || '-'}</Text>
+                </View>
+              );
+            })}
           </View>
         </View>
 

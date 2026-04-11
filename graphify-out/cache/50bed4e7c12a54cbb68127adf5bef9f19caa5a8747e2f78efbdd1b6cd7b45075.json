@@ -1,0 +1,1 @@
+{"nodes": [{"id": "snapshot_to_json_d", "label": "snapshot_to_json.d.ts", "file_type": "code", "source_file": "node_modules\\@firebase\\firestore\\dist\\lite\\firestore\\src\\platform\\rn\\snapshot_to_json.d.ts", "source_location": "L1"}], "edges": []}

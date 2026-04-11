@@ -5,6 +5,14 @@
 
 import { useUIStore } from '@/stores/ui-store';
 import { useProfileStore } from '@/stores/profile-store';
+import { toast } from 'sonner';
+import {
+  addToDriveQueue,
+  getDriveQueue,
+  removeDriveQueueItem,
+  incrementDriveQueueRetry,
+  getDriveQueueCount,
+} from '@/lib/storage/indexeddb';
 
 // ─── Token State (in-memory) ─────────────────────────────────────────────────
 let accessToken: string | null = null;
@@ -12,8 +20,7 @@ let tokenExpiryTimestamp: number = 0;
 const ROOT_FOLDER_NAME = 'SurveyOS';
 const INDEX_FILE_NAME  = 'surveyos_index.json';
 
-// Pending uploads queue — for files uploaded before Drive folder is ready
-const pendingQueue: { claimId: string; fileName: string; blob: Blob }[] = [];
+const MAX_RETRIES = 3;
 
 export function getDriveToken(): string | null {
   if (accessToken && Date.now() < tokenExpiryTimestamp) return accessToken;
@@ -28,15 +35,15 @@ export function linkGoogleDrive(): Promise<boolean> {
       return reject(new Error('Google Identity Services not loaded. Please wait a moment and try again.'));
     }
 
-    const { profile } = useProfileStore.getState();
-    if (!profile.googleClientId?.trim()) {
-      return reject(new Error('Google Client ID is missing. Please paste it in the field below first.'));
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID;
+    if (!clientId?.trim()) {
+      return reject(new Error('Google Drive is not configured. Contact support.'));
     }
 
     try {
       // @ts-ignore
       const tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: profile.googleClientId.trim(),
+        client_id: clientId.trim(),
         scope: [
           'https://www.googleapis.com/auth/drive.file',
           'https://www.googleapis.com/auth/userinfo.email',
@@ -62,7 +69,7 @@ export function linkGoogleDrive(): Promise<boolean> {
           }
 
           // Flush any queued uploads now that we have a token
-          flushPendingQueue();
+          flushDriveQueue();
           resolve(true);
         },
       });
@@ -228,7 +235,8 @@ export async function getOrCreateClaimFolder(claimId: string, label: string): Pr
 
 /**
  * Upload a file (Blob or File) to the claim's Drive folder.
- * Queues silently if Drive is not linked yet.
+ * If Drive is not linked or network fails, queues to IndexedDB for retry on reconnect.
+ * Shows toast notifications — never silent.
  */
 export async function uploadFileToDrive(
   claimId: string,
@@ -237,9 +245,11 @@ export async function uploadFileToDrive(
   claimLabel: string = claimId
 ): Promise<void> {
   if (!getDriveToken()) {
-    // Queue for later
-    pendingQueue.push({ claimId, fileName, blob });
-    console.log(`[Drive] Queued "${fileName}" — Drive not linked yet.`);
+    // Drive not linked — queue persistently
+    const fileData = await blob.arrayBuffer();
+    await addToDriveQueue({ claimId, claimLabel, fileName, fileData, mimeType: blob.type || 'application/octet-stream' });
+    const count = await getDriveQueueCount();
+    toast.warning(`Drive not linked — "${fileName}" queued (${count} pending). Link Drive in Profile to sync.`, { duration: 5000 });
     return;
   }
 
@@ -254,17 +264,68 @@ export async function uploadFileToDrive(
       'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
       { method: 'POST', body: form }
     );
-    console.log(`[Drive] Uploaded "${fileName}" to folder ${folderId}`);
-  } catch (e) {
-    console.warn(`[Drive] Upload failed for "${fileName}":`, e);
+    toast.success(`"${fileName}" uploaded to Drive.`, { duration: 2500 });
+  } catch (e: any) {
+    // Network failure — queue to IndexedDB for retry
+    const fileData = await blob.arrayBuffer();
+    await addToDriveQueue({ claimId, claimLabel, fileName, fileData, mimeType: blob.type || 'application/octet-stream' });
+    const count = await getDriveQueueCount();
+    toast.error(`Upload failed for "${fileName}" — queued for retry when online (${count} pending).`, { duration: 6000 });
   }
 }
 
-/** Replay all queued uploads after Drive is linked. */
-async function flushPendingQueue() {
-  const items = [...pendingQueue];
-  pendingQueue.length = 0;
-  for (const item of items) {
-    await uploadFileToDrive(item.claimId, item.fileName, item.blob);
+/**
+ * Drain the persistent Drive upload queue.
+ * Called on reconnect or after Drive is linked.
+ * Returns number of successfully uploaded files.
+ */
+export async function flushDriveQueue(): Promise<number> {
+  if (!getDriveToken()) {
+    toast.warning('Link your Google Drive in Profile to sync pending files.', { duration: 5000 });
+    return 0;
   }
+
+  const items = await getDriveQueue();
+  if (items.length === 0) return 0;
+
+  toast.info(`Syncing ${items.length} pending file(s) to Drive…`, { duration: 3000 });
+  let successCount = 0;
+
+  for (const item of items) {
+    if (item.retries >= MAX_RETRIES) {
+      toast.error(`"${item.fileName}" failed after ${MAX_RETRIES} attempts — please re-upload manually.`, { duration: 8000 });
+      await removeDriveQueueItem(item.id);
+      continue;
+    }
+
+    try {
+      const blob = new Blob([item.fileData], { type: item.mimeType });
+      const folderId = await getOrCreateClaimFolder(item.claimId, item.claimLabel);
+      const metadata = { name: item.fileName, parents: [folderId] };
+      const form = new FormData();
+      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+      form.append('file', blob);
+
+      await driveRequest(
+        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+        { method: 'POST', body: form }
+      );
+
+      await removeDriveQueueItem(item.id);
+      successCount++;
+    } catch {
+      await incrementDriveQueueRetry(item.id);
+    }
+  }
+
+  if (successCount > 0) {
+    toast.success(`${successCount} file(s) synced to Drive.`, { duration: 3000 });
+  }
+
+  const remaining = await getDriveQueueCount();
+  if (remaining > 0) {
+    toast.warning(`${remaining} file(s) still pending — will retry when online.`, { duration: 5000 });
+  }
+
+  return successCount;
 }

@@ -1,0 +1,1 @@
+{"nodes": [{"id": "ttfb", "label": "ttfb.ts", "file_type": "code", "source_file": "node_modules\\web-vitals\\src\\types\\ttfb.ts", "source_location": "L1"}], "edges": [{"source": "ttfb", "target": "base_js", "relation": "imports_from", "confidence": "EXTRACTED", "source_file": "node_modules\\web-vitals\\src\\types\\ttfb.ts", "source_location": "L17", "weight": 1.0}]}

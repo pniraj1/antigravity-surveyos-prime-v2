@@ -8,7 +8,7 @@ import {
   User, Shield, Phone, Mail, MapPin, CreditCard, Building2,
   Landmark, Sparkles, Camera, Stamp, Key, RefreshCw, CheckCircle2,
   AlertCircle, Upload, Trash2, Cpu, ExternalLink, Cloud, CloudOff, Link,
-  LayoutDashboard, ShieldCheck
+  LayoutDashboard, ShieldCheck, Plus, Eye, EyeOff
 } from 'lucide-react';
 
 // ─── Section Wrapper ─────────────────────────────────────────────────────────
@@ -55,6 +55,93 @@ function Field({
         onBlur={e => { e.currentTarget.style.borderColor = '#E2E6EA'; }}
       />
       {hint && <p className="mt-1 text-[9px] font-bold" style={{ color: '#8D99AE' }}>{hint}</p>}
+    </div>
+  );
+}
+
+// ─── Multi-Key Input ─────────────────────────────────────────────────────────
+function MultiKeyInput({
+  keys, onChange, placeholder, accentColor,
+}: {
+  keys: string[]; onChange: (keys: string[]) => void; placeholder: string; accentColor: string;
+}) {
+  const [visible, setVisible] = useState<Record<number, boolean>>({});
+
+  const updateKey = (i: number, v: string) => {
+    const next = [...keys];
+    next[i] = v;
+    onChange(next);
+  };
+
+  const removeKey = (i: number) => {
+    const next = keys.filter((_, idx) => idx !== i);
+    onChange(next);
+    setVisible(prev => {
+      const updated: Record<number, boolean> = {};
+      Object.keys(prev).forEach(k => {
+        const ki = Number(k);
+        if (ki < i) updated[ki] = prev[ki];
+        else if (ki > i) updated[ki - 1] = prev[ki];
+      });
+      return updated;
+    });
+  };
+
+  const addKey = () => {
+    if (keys.length < 3) onChange([...keys, '']);
+  };
+
+  const displayKeys = keys.length > 0 ? keys : [''];
+
+  return (
+    <div className="space-y-2">
+      {displayKeys.map((k, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <div className="flex-1 flex items-center rounded-lg overflow-hidden" style={{ border: '1px solid #E2E6EA', background: '#FAFAFA' }}>
+            <input
+              type={visible[i] ? 'text' : 'password'}
+              value={k}
+              onChange={e => updateKey(i, e.target.value)}
+              placeholder={i === 0 ? placeholder : `Backup key ${i + 1} (optional)`}
+              className="flex-1 px-3 py-2 text-sm bg-transparent outline-none"
+              style={{ color: '#0D1B2A', fontWeight: 600 }}
+              onFocus={e => (e.currentTarget.parentElement!.style.borderColor = accentColor)}
+              onBlur={e => (e.currentTarget.parentElement!.style.borderColor = '#E2E6EA')}
+            />
+            <button
+              type="button"
+              onClick={() => setVisible(prev => ({ ...prev, [i]: !prev[i] }))}
+              className="px-2 py-2 flex-shrink-0"
+              style={{ color: '#8D99AE' }}
+            >
+              {visible[i] ? <EyeOff size={13} /> : <Eye size={13} />}
+            </button>
+          </div>
+          {(keys.length > 1 || (keys.length === 1 && keys[0])) && (
+            <button
+              type="button"
+              onClick={() => removeKey(i)}
+              className="flex-shrink-0 p-1.5 rounded-lg transition-colors hover:bg-red-50"
+              style={{ color: '#ef4444' }}
+            >
+              <Trash2 size={13} />
+            </button>
+          )}
+        </div>
+      ))}
+      {keys.length < 3 && (
+        <button
+          type="button"
+          onClick={addKey}
+          className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wide transition-opacity hover:opacity-70"
+          style={{ color: accentColor }}
+        >
+          <Plus size={11} /> Add backup key
+        </button>
+      )}
+      <p className="text-[9px] font-bold" style={{ color: '#8D99AE' }}>
+        Keys are used in order — if key 1 hits rate limit, key 2 is tried automatically.
+      </p>
     </div>
   );
 }
@@ -150,19 +237,17 @@ export function ProfileTab() {
   const handleSave = () => {
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
+    // Cloud push is handled automatically by useCloudSync (section 4 effect)
+    // which watches profile state changes and pushes to Firestore.
   };
 
   const handleLinkDrive = async () => {
     setDriveError('');
-    if (!profile.googleClientId?.trim()) {
-      setDriveError('Please enter your Google Client ID first.');
-      return;
-    }
     setDriveLinking(true);
     try {
       await linkGoogleDrive();
     } catch (e: any) {
-      const msg = e?.message || 'Drive linking failed. Check your Client ID and try again.';
+      const msg = e?.message || 'Drive linking failed. Please try again.';
       setDriveError(msg);
     } finally {
       setDriveLinking(false);
@@ -310,67 +395,52 @@ export function ProfileTab() {
 
             {/* Gemini Section */}
             {profile.aiProvider === 'gemini' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                <div className="sm:col-span-2 flex items-center justify-between p-3 rounded-xl" style={{ background: 'rgba(66,133,244,0.05)', border: '1px solid rgba(66,133,244,0.1)' }}>
+              <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: 'rgba(66,133,244,0.05)', border: '1px solid rgba(66,133,244,0.1)' }}>
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-lg bg-white shadow-sm">
                       <Cpu size={18} style={{ color: '#4285F4' }} />
                     </div>
                     <div>
                       <div className="text-xs font-black" style={{ color: '#0D1B2A' }}>Google Gemini AI</div>
-                      <div className="text-[10px] font-bold" style={{ color: '#8D99AE' }}>Recommended: gemini-2.0-flash (Free/Fast)</div>
+                      <div className="text-[10px] font-bold" style={{ color: '#8D99AE' }}>Auto-selects best model · Add up to 3 keys for rate-limit resilience</div>
                     </div>
                   </div>
                   <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all hover:opacity-80" style={{ background: '#4285F4', color: '#FFFFFF' }}>
                     Get Key <ExternalLink size={10} />
                   </a>
                 </div>
-                <Field
-                  label="Gemini API Key"
-                  value={profile.geminiApiKey || ''}
-                  onChange={v => updateProfile({ geminiApiKey: v })}
+                <MultiKeyInput
+                  keys={profile.geminiApiKeys || []}
+                  onChange={keys => updateProfile({ geminiApiKeys: keys })}
                   placeholder="AIzaSy..."
-                  type="password"
-                />
-                <Field
-                  label="Gemini Model"
-                  value={profile.geminiModel || 'gemini-2.0-flash'}
-                  onChange={v => updateProfile({ geminiModel: v })}
-                  placeholder="gemini-2.0-flash"
-                  hint="Future-proof: Change this when Google releases new models."
+                  accentColor="#4285F4"
                 />
               </div>
             )}
 
             {/* Groq Section */}
             {profile.aiProvider === 'groq' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                <div className="sm:col-span-2 flex items-center justify-between p-3 rounded-xl" style={{ background: 'rgba(242,102,57,0.05)', border: '1px solid rgba(242,102,57,0.1)' }}>
+              <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: 'rgba(242,102,57,0.05)', border: '1px solid rgba(242,102,57,0.1)' }}>
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-lg bg-white shadow-sm">
                       <Cpu size={18} style={{ color: '#F26639' }} />
                     </div>
                     <div>
                       <div className="text-xs font-black" style={{ color: '#0D1B2A' }}>Groq LPQ Intelligence</div>
-                      <div className="text-[10px] font-bold" style={{ color: '#8D99AE' }}>Fastest Inference Engine</div>
+                      <div className="text-[10px] font-bold" style={{ color: '#8D99AE' }}>Fastest Inference Engine · Add up to 3 keys for rate-limit resilience</div>
                     </div>
                   </div>
                   <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all hover:opacity-80" style={{ background: '#F26639', color: '#FFFFFF' }}>
                     Get Key <ExternalLink size={10} />
                   </a>
                 </div>
-                <Field
-                  label="Groq API Key"
-                  value={profile.groqApiKey || ''}
-                  onChange={v => updateProfile({ groqApiKey: v })}
+                <MultiKeyInput
+                  keys={profile.groqApiKeys || []}
+                  onChange={keys => updateProfile({ groqApiKeys: keys })}
                   placeholder="gsk_..."
-                  type="password"
-                />
-                <Field
-                  label="Groq Model"
-                  value={profile.groqModel || 'meta-llama/llama-4-scout-17b-16e-instruct'}
-                  onChange={v => updateProfile({ groqModel: v })}
-                  placeholder="meta-llama/..."
+                  accentColor="#F26639"
                 />
               </div>
             )}
@@ -379,23 +449,12 @@ export function ProfileTab() {
 
         {/* ── Google Drive ───────────────────────────────── */}
         <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E2E6EA' }}>
-          <div className="px-6 py-4 flex items-center justify-between gap-2" style={{ borderBottom: '1px solid #F0F2F5', background: '#FAFAFA' }}>
-            <div className="flex items-center gap-2">
-              <Cloud size={14} style={{ color: isDriveConnected ? '#22c55e' : '#D4AF37' }} />
-              <span className="text-sm font-black" style={{ color: '#0D1B2A' }}>Google Drive Sync</span>
-              {isDriveConnected && (
-                <span className="ml-1 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider" style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e' }}>Linked</span>
-              )}
-            </div>
-            <a
-              href="https://console.cloud.google.com/apis/credentials"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all hover:opacity-80"
-              style={{ background: '#4285F4', color: '#FFFFFF' }}
-            >
-              GCP Console <ExternalLink size={10} />
-            </a>
+          <div className="px-6 py-4 flex items-center gap-2" style={{ borderBottom: '1px solid #F0F2F5', background: '#FAFAFA' }}>
+            <Cloud size={14} style={{ color: isDriveConnected ? '#22c55e' : '#D4AF37' }} />
+            <span className="text-sm font-black" style={{ color: '#0D1B2A' }}>Google Drive Sync</span>
+            {isDriveConnected && (
+              <span className="ml-1 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider" style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e' }}>Linked</span>
+            )}
           </div>
           <div className="p-5 space-y-4">
             {/* Status banner */}
@@ -415,31 +474,9 @@ export function ProfileTab() {
                 </div>
                 <div className="text-[10px] font-bold" style={{ color: '#8D99AE' }}>
                   {isDriveConnected
-                    ? 'Documents will automatically sync to your Google Drive.'
-                    : 'Enter your Google Client ID below and click Link Drive.'}
+                    ? 'Your reports and documents will automatically sync to your Google Drive folder: SurveyOS/'
+                    : 'Click the button below to grant SurveyOS permission to upload files to your Google Drive.'}
                 </div>
-              </div>
-            </div>
-
-            {/* Client ID input */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="sm:col-span-2">
-                <label className="block mb-1.5 text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: '#8D99AE' }}>
-                  Google Client ID (OAuth 2.0)
-                </label>
-                <input
-                  type="text"
-                  value={profile.googleClientId || ''}
-                  onChange={e => updateProfile({ googleClientId: e.target.value })}
-                  placeholder="123456789-abc...apps.googleusercontent.com"
-                  className="w-full px-3 py-2 rounded-lg text-sm border outline-none transition-all"
-                  style={{ border: '1px solid #E2E6EA', background: '#FAFAFA', color: '#0D1B2A', fontWeight: 600 }}
-                  onFocus={e => { e.currentTarget.style.borderColor = '#4285F4'; }}
-                  onBlur={e => { e.currentTarget.style.borderColor = '#E2E6EA'; }}
-                />
-                <p className="mt-1 text-[9px] font-bold" style={{ color: '#8D99AE' }}>
-                  Create an OAuth 2.0 Web Client in GCP Console → APIs &amp; Services → Credentials. Add <code>https://surveyos-v2-antigravity.web.app</code> as an authorised JS origin.
-                </p>
               </div>
             </div>
 
@@ -455,7 +492,7 @@ export function ProfileTab() {
             <button
               onClick={handleLinkDrive}
               disabled={driveLinking}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-black text-sm transition-all"
+              className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-black text-sm transition-all"
               style={{
                 background: isDriveConnected
                   ? 'linear-gradient(135deg, #059669, #34d399)'

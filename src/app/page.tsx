@@ -1,9 +1,12 @@
 'use client';
+import React, { useState } from 'react';
 import dynamicImport from 'next/dynamic';
 
 import { Sidebar, MobileMenuButton } from '@/components/layout/sidebar';
 import { useUIStore } from '@/stores/ui-store';
 import { useClaimStore } from '@/stores/claim-store';
+import { useClaimsLoader } from '@/hooks/useClaimsLoader';
+import { getClaim, saveClaim } from '@/lib/storage/indexeddb';
 import {
   LayoutDashboard,
   Plus,
@@ -12,12 +15,41 @@ import {
   FileCheck,
   Zap,
   FolderOpen,
+  Archive,
+  ArchiveRestore,
+  Search,
+  ArrowUpDown,
+  CheckCircle,
 } from 'lucide-react';
 
 // ─── Dashboard Tab Content ──────────────────────────────
 function DashboardContent() {
   const { setNewClaimDialogOpen, setClaimsListOpen } = useUIStore();
   const { claimsList } = useClaimStore();
+  const [showArchived, setShowArchived] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+
+  const filteredClaims = claimsList.filter(c => {
+    // Stage 1: Active/Archived
+    if (showArchived ? c.isActive : !c.isActive) return false;
+    
+    // Stage 2: Text Search
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      (c.reportNo || '').toLowerCase().includes(q) ||
+      (c.vehicleNo || '').toLowerCase().includes(q) ||
+      (c.insurerName || '').toLowerCase().includes(q) ||
+      (c.insuredName || '').toLowerCase().includes(q)
+    );
+  });
+
+  const displayClaims = filteredClaims.sort((a, b) => {
+    const timeA = new Date(a.updatedAt).getTime();
+    const timeB = new Date(b.updatedAt).getTime();
+    return sortOrder === 'desc' ? timeB - timeA : timeA - timeB;
+  });
 
   return (
     <div className="h-full overflow-y-auto" style={{ background: '#F8F9FA' }}>
@@ -203,23 +235,73 @@ function DashboardContent() {
 
         {/* Recent Claims Table */}
         <div>
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-xs font-black uppercase tracking-[0.2em]" style={{ color: '#8D99AE' }}>
-              Recent Claims
-            </h2>
-            <span
-              className="text-[11px] font-bold px-2.5 py-1 rounded-lg"
-              style={{ background: '#0D1B2A', color: '#D4AF37' }}
-            >
-              {claimsList.length} total
-            </span>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-5 gap-4">
+            <div className="flex items-center space-x-4">
+              <h2 className="text-xs font-black uppercase tracking-[0.2em]" style={{ color: '#8D99AE' }}>
+                {showArchived ? 'Archived Claims' : 'Recent Claims'}
+              </h2>
+              <div className="flex space-x-1" style={{ background: '#F0F2F5', padding: '2px', borderRadius: '8px' }}>
+                <button
+                  className={`px-3 py-1 text-[11px] font-bold rounded-md transition-all ${
+                    !showArchived ? 'bg-white text-[#0D1B2A] shadow-sm' : 'text-[#8D99AE] hover:text-[#0D1B2A]'
+                  }`}
+                  onClick={() => setShowArchived(false)}
+                >
+                  Active
+                </button>
+                <button
+                  className={`px-3 py-1 text-[11px] font-bold rounded-md transition-all ${
+                    showArchived ? 'bg-white text-[#0D1B2A] shadow-sm' : 'text-[#8D99AE] hover:text-[#0D1B2A]'
+                  }`}
+                  onClick={() => setShowArchived(true)}
+                >
+                  Archived
+                </button>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <div className="relative flex-1 sm:w-64">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search by Report No, Vehicle, Insured..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 rounded-xl text-xs font-medium focus:outline-none focus:ring-2"
+                  style={{
+                    background: '#FFFFFF',
+                    border: '1px solid #E2E6EA',
+                    color: '#0D1B2A',
+                  }}
+                />
+              </div>
+              <button
+                onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all"
+                style={{
+                  background: '#FFFFFF',
+                  border: '1px solid #E2E6EA',
+                  color: '#4A4E69',
+                }}
+                title={`Sort by Date: ${sortOrder === 'desc' ? 'Newest first' : 'Oldest first'}`}
+              >
+                <ArrowUpDown size={14} />
+                <span className="hidden sm:inline">Sort {sortOrder === 'desc' ? '(New)' : '(Old)'}</span>
+              </button>
+              <span
+                className="text-[11px] font-bold px-2.5 py-1.5 rounded-lg flex-shrink-0"
+                style={{ background: '#0D1B2A', color: '#D4AF37' }}
+              >
+                {displayClaims.length} total
+              </span>
+            </div>
           </div>
 
           <div
             className="rounded-2xl overflow-hidden"
             style={{ background: '#FFFFFF', border: '1px solid #E2E6EA', boxShadow: '0 1px 3px rgba(13,27,42,0.04)' }}
           >
-            {claimsList.length === 0 ? (
+            {displayClaims.length === 0 ? (
               <div className="p-16 text-center flex flex-col items-center">
                 <div
                   className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5"
@@ -246,37 +328,68 @@ function DashboardContent() {
             ) : (
               <div>
                 <div
-                  className="px-6 py-3 grid grid-cols-[1fr_120px_120px] gap-4 text-[10px] font-black uppercase tracking-[0.15em]"
+                  className="px-6 py-3 grid grid-cols-[1.5fr_1fr_2fr_100px_100px_120px_60px] gap-4 text-[10px] font-black uppercase tracking-[0.15em] items-center"
                   style={{ borderBottom: '1px solid #E2E6EA', color: '#8D99AE', background: '#FAFAFA' }}
                 >
-                  <span>Claim</span>
-                  <span>Type</span>
+                  <span>Report No.</span>
+                  <span>Stage</span>
+                  <span>Vehicle & Parties</span>
+                  <span>Status</span>
+                  <span>Fee</span>
                   <span>Date</span>
+                  <span className="text-right">Action</span>
                 </div>
-                <div>
-                  {claimsList.slice(0, 10).map((claim) => (
+                <div className="divide-y divide-gray-100">
+                  {displayClaims.slice(0, 50).map((claim) => (
                     <div
                       key={claim.id}
-                      className="px-6 py-4 grid grid-cols-[1fr_120px_120px] gap-4 items-center cursor-pointer transition-all"
+                      onClick={async () => {
+                        const fullClaim = await getClaim(claim.id);
+                        if (fullClaim) {
+                          useClaimStore.getState().loadClaim(fullClaim);
+                          useUIStore.getState().setActiveTab('details');
+                        }
+                      }}
+                      className="px-6 py-4 grid grid-cols-[1.5fr_1fr_2fr_100px_100px_120px_60px] gap-4 items-center cursor-pointer transition-all"
                       style={{ borderBottom: '1px solid #F0F2F5' }}
                       onMouseEnter={e => (e.currentTarget.style.background = '#FAFBFC')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >
                       <div className="text-sm font-bold truncate" style={{ color: '#0D1B2A' }}>
-                        {claim.label || 'Untitled Claim'}
+                        {claim.reportNo || 'Draft'}
                       </div>
                       <div>
                         <span
                           className="text-[10px] font-bold px-2.5 py-1 rounded-lg uppercase tracking-wider"
                           style={
-                            claim.surveyType === 'spot'
+                            claim.stage === 'spot'
                               ? { background: '#FEF3C7', color: '#92400E', border: '1px solid #FDE68A' }
-                              : claim.surveyType === 'final'
+                              : claim.stage === 'final'
                               ? { background: '#D1FAE5', color: '#065F46', border: '1px solid #A7F3D0' }
-                              : { background: '#E8ECF0', color: '#4A4E69', border: '1px solid #D1D5DB' }
+                              : claim.stage === 'reinspection'
+                              ? { background: '#E0E7FF', color: '#3730A3', border: '1px solid #C7D2FE' }
+                              : { background: '#F1F5F9', color: '#475569', border: '1px solid #E2E8F0' }
                           }
                         >
-                          {claim.surveyType}
+                          {claim.stage}
+                        </span>
+                      </div>
+                      <div className="flex flex-col truncate">
+                        <span className="text-sm font-bold uppercase" style={{ color: '#0D1B2A' }}>{claim.vehicleNo || 'Unknown'}</span>
+                        <div className="flex gap-2 text-[10px] text-muted-foreground truncate opacity-80 mt-0.5">
+                          {claim.insuredName && <span className="truncate" title={`Insured: ${claim.insuredName}`}>👤 {claim.insuredName}</span>}
+                          {claim.insurerName && <span className="truncate" title={`Insurer: ${claim.insurerName}`}>🏛 {claim.insurerName}</span>}
+                          {!claim.insuredName && !claim.insurerName && <span>No Party Details</span>}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded border uppercase" style={claim.isActive ? (claim.isCompleted ? { borderColor: '#10B981', color: '#10B981' } : { borderColor: '#F59E0B', color: '#F59E0B' }) : { borderColor: '#EF4444', color: '#EF4444' }}>
+                          {!claim.isActive ? 'Archived' : (claim.isCompleted ? 'Done' : 'Active')}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded border uppercase" style={claim.feePaid ? { borderColor: '#10B981', color: '#10B981' } : { borderColor: '#EF4444', color: '#EF4444' }}>
+                          {claim.feePaid ? 'Paid' : 'Unpaid'}
                         </span>
                       </div>
                       <div className="text-xs font-medium" style={{ color: '#8D99AE' }}>
@@ -285,6 +398,41 @@ function DashboardContent() {
                           month: 'short',
                           day: 'numeric',
                         })}
+                      </div>
+                      <div className="flex justify-end gap-1.5">
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            const fullClaim = await getClaim(claim.id);
+                            if (fullClaim) {
+                              await saveClaim({ ...fullClaim, isCompleted: !fullClaim.isCompleted });
+                              // We simulate an update to trigger useClaimsLoader Broadcast Channel since it's an indexeddb operation.
+                              const channel = new BroadcastChannel('surveyos_claims_sync');
+                              channel.postMessage('CLAIMS_UPDATED');
+                              channel.close();
+                            }
+                          }}
+                          className={`p-1.5 rounded-lg transition-colors ${claim.isCompleted ? 'bg-green-100 text-green-600' : 'text-gray-400 hover:bg-gray-100 hover:text-green-600'}`}
+                          title={claim.isCompleted ? "Mark Incomplete" : "Mark Completed"}
+                        >
+                          <CheckCircle size={16} />
+                        </button>
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            const fullClaim = await getClaim(claim.id);
+                            if (fullClaim) {
+                              await saveClaim({ ...fullClaim, isActive: !fullClaim.isActive });
+                              const channel = new BroadcastChannel('surveyos_claims_sync');
+                              channel.postMessage('CLAIMS_UPDATED');
+                              channel.close();
+                            }
+                          }}
+                          className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-700"
+                          title={claim.isActive ? "Archive Claim" : "Restore Claim"}
+                        >
+                          {claim.isActive ? <Archive size={16} /> : <ArchiveRestore size={16} />}
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -308,7 +456,6 @@ import { ErrorBoundary } from '@/components/layout/ErrorBoundary';
 // - ReportTab: @react-pdf/renderer, docx, file-saver
 const DetailsTab    = dynamicImport(() => import('@/components/tabs/DetailsTab').then(m    => ({ default: m.DetailsTab    })), { ssr: false });
 const AssessmentTab = dynamicImport(() => import('@/components/tabs/AssessmentTab').then(m => ({ default: m.AssessmentTab })), { ssr: false });
-const SpotTab       = dynamicImport(() => import('@/components/tabs/SpotTab').then(m       => ({ default: m.SpotTab       })), { ssr: false });
 const PhotosTab     = dynamicImport(() => import('@/components/tabs/PhotosTab').then(m     => ({ default: m.PhotosTab     })), { ssr: false });
 const ReportTab     = dynamicImport(() => import('@/components/tabs/ReportTab').then(m     => ({ default: m.ReportTab     })), { ssr: false });
 const DocumentsTab  = dynamicImport(() => import('@/components/tabs/DocumentsTab').then(m  => ({ default: m.DocumentsTab  })), { ssr: false });
@@ -325,7 +472,6 @@ function TabPlaceholder({ tab }: { tab: string }) {
   if (tab === 'review')      return <ReviewTab />;
   if (tab === 'details')     return <DetailsTab />;
   if (tab === 'assessment')  return <AssessmentTab />;
-  if (tab === 'spot')        return <SpotTab />;
   if (tab === 'photos')      return <PhotosTab />;
   if (tab === 'reports')     return <ReportTab />;
   if (tab === 'bill-check')  return <BillCheckTab />;
@@ -350,6 +496,9 @@ function TabPlaceholder({ tab }: { tab: string }) {
 export default function Home() {
   const { activeTab } = useUIStore();
   
+  // Hydrate claims list on mount and listen for broadcasts
+  useClaimsLoader();
+
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />

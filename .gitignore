@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# code review graph ignores
+.firebase/
+tmp_pdf/
+.claude/
+.cursor/
+.code-review-graph/

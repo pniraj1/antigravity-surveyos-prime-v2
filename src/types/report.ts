@@ -5,7 +5,7 @@
 
 export type ReportType = 'final' | 'spot' | 'bill-check' | 'reinspection' | 'fee-bill' | 'photo-sheet';
 
-export type SurveyType = 'spot' | 'final' | 'reinspection';
+export type SurveyType = 'spot' | 'final';
 
 export interface ReportFieldMapping {
   /** Label shown in the report */

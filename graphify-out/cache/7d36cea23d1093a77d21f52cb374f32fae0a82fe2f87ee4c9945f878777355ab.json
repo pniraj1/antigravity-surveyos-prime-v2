@@ -1,0 +1,1 @@
+{"nodes": [{"id": "text_serializer_d", "label": "text_serializer.d.ts", "file_type": "code", "source_file": "node_modules\\@firebase\\firestore\\dist\\lite\\firestore\\src\\platform\\rn_lite\\text_serializer.d.ts", "source_location": "L1"}], "edges": []}
