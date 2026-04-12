@@ -7,14 +7,19 @@ import { AccidentDetailsForm } from '@/components/claim/AccidentForm';
 import { useAIExtraction } from '@/hooks/useAIExtraction';
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import { useClaimStore } from '@/stores/claim-store';
+import { useProfileStore } from '@/stores/profile-store';
 import { generateWordReport } from '@/lib/reports/word-builder';
-import { FileText, Sparkles, Download, Loader2 } from 'lucide-react';
+import { FileText, Sparkles, Download, Loader2, Hash, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { SpotTab } from '@/components/tabs/SpotTab';
 
 export function DetailsTab() {
   const currentClaim = useClaimStore(s => s.currentClaim);
+  const updateClaim = useClaimStore(s => s.updateClaim);
+  const updateSpotDetails = useClaimStore(s => s.updateSpotDetails);
+  const getNextSpotNumber = useProfileStore(s => s.getNextSpotNumber);
+  const getNextFinalNumber = useProfileStore(s => s.getNextFinalNumber);
   const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview } = useAIExtraction();
 
   if (!currentClaim) return null;
@@ -30,8 +35,74 @@ export function DetailsTab() {
     { id: 'policy', label: 'Policy Schedule' }
   ];
 
+  const surveyLabel = currentClaim.surveyType === 'spot' ? 'Spot Survey' :
+                      currentClaim.surveyType === 'final' ? 'Final Survey' :
+                      currentClaim.surveyType === 'reinspection' ? 'Reinspection' : 'Survey';
+
   return (
     <div className="p-6 lg:p-8 max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+
+      {/* ── Report Number — always on top ─────────────────── */}
+      <div
+        className="flex items-center gap-4 px-5 py-4 rounded-2xl"
+        style={{ background: 'linear-gradient(135deg, #0D1B2A, #1e3a5f)', border: '1px solid rgba(212,175,55,0.2)' }}
+      >
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+          style={{ background: 'rgba(212,175,55,0.15)' }}
+        >
+          <Hash size={16} style={{ color: '#D4AF37' }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style={{ color: 'rgba(212,175,55,0.7)' }}>
+            {surveyLabel} Report No.
+          </div>
+          <input
+            value={currentClaim.reportNo || ''}
+            onChange={e => {
+              updateClaim({ reportNo: e.target.value });
+              if (currentClaim.surveyType === 'spot') {
+                updateSpotDetails({ reportNo: e.target.value });
+              }
+            }}
+            placeholder="Auto-assigned on creation — edit if needed"
+            className="w-full bg-transparent text-lg font-black tracking-wide focus:outline-none placeholder:font-normal placeholder:text-sm"
+            style={{ color: '#F8F9FA', caretColor: '#D4AF37' }}
+          />
+        </div>
+        {/* Auto-allocate wand button */}
+        <button
+          type="button"
+          onClick={() => {
+            if (currentClaim.reportNo && !confirm('Overwrite existing report number?')) return;
+            const next = currentClaim.surveyType === 'spot'
+              ? getNextSpotNumber()
+              : getNextFinalNumber();
+            updateClaim({ reportNo: next });
+            if (currentClaim.surveyType === 'spot') {
+              const today = new Date().toISOString().split('T')[0];
+              updateSpotDetails({
+                reportNo: next,
+                ...(!currentClaim.spotDetails?.reportDate && { reportDate: today }),
+                ...(!currentClaim.spotDetails?.allotmentDate && { allotmentDate: today }),
+              });
+            }
+            toast.success(`Allocated: ${next}`);
+          }}
+          className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all hover:scale-110"
+          style={{ background: 'rgba(212,175,55,0.2)', color: '#D4AF37' }}
+          title="Auto-allocate next sequential number"
+        >
+          <Wand2 size={15} />
+        </button>
+        <div
+          className="text-[10px] font-bold px-3 py-1 rounded-full flex-shrink-0"
+          style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)' }}
+        >
+          {currentClaim.reportNo ? 'Assigned' : 'Pending'}
+        </div>
+      </div>
+
       <div className="flex justify-between items-start">
         <div className="mb-4">
           <h2 className="text-2xl font-bold tracking-tight">Claim Details</h2>

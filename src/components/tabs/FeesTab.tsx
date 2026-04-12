@@ -8,7 +8,7 @@ import { triggerSpotFeeBillPrint } from '@/lib/reports/spot-fee-bill-builder';
 import {
   Receipt, DollarSign, Calculator, Percent, Plus, Minus,
   TrendingDown, FileText, Calendar, Banknote, Car, Camera,
-  Package, Phone, Truck,
+  Package, Phone, Truck, CheckCircle, XCircle,
 } from 'lucide-react';
 
 // ─── Fee Bill Section ────────────────────────────────────────────────────────
@@ -154,6 +154,28 @@ export function FeesTab() {
                 <div className="col-span-2">
                   <label style={labelStyle}>Cash / Cheque Received</label>
                   <input value={fb.cashReceived} onChange={e => set('cashReceived', e.target.value)} placeholder="e.g. ₹5,000 cash received on 01/04/2026" style={inputStyle} />
+                </div>
+                <div className="col-span-2">
+                  <label style={labelStyle}>Payment Status</label>
+                  <button
+                    onClick={() => set('feePaid', !fb.feePaid)}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left"
+                    style={{
+                      background: fb.feePaid ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.05)',
+                      border: `1.5px solid ${fb.feePaid ? '#10B981' : '#FECACA'}`,
+                    }}
+                  >
+                    {fb.feePaid
+                      ? <CheckCircle size={18} style={{ color: '#10B981', flexShrink: 0 }} />
+                      : <XCircle size={18} style={{ color: '#EF4444', flexShrink: 0 }} />
+                    }
+                    <span className="text-sm font-black" style={{ color: fb.feePaid ? '#10B981' : '#EF4444' }}>
+                      {fb.feePaid ? 'Fee Received' : 'Fee Not Yet Received'}
+                    </span>
+                    <span className="ml-auto text-[10px] font-semibold" style={{ color: '#8D99AE' }}>
+                      tap to toggle
+                    </span>
+                  </button>
                 </div>
               </div>
             </div>

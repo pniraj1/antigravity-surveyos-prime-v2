@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useClaimStore } from '@/stores/claim-store';
 import { getAllClaims } from '@/lib/storage/indexeddb';
+import { calculateFeeSummary } from '@/lib/calculations/fees';
 
 export function useClaimsLoader() {
   const { setClaimsList } = useClaimStore();
@@ -32,6 +33,7 @@ export function useClaimsLoader() {
             stage,
             isCompleted: c.isCompleted || false,
             feePaid: c.feeBill?.feePaid || false,
+            feeTotal: c.feeBill ? calculateFeeSummary(c.feeBill).grandTotal : 0,
             isActive: c.isActive !== false,
           };
         });

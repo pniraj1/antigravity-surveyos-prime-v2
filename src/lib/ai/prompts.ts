@@ -215,5 +215,23 @@ Return ONLY the JSON. No explanation, no markdown, no backticks.`,
   "driver_name": "",
   "brief_accident_details": ""
 }
-Return ONLY the JSON. No explanation, no markdown, no backticks.`
+Return ONLY the JSON. No explanation, no markdown, no backticks.`,
+
+  'bank-statement': `You are an expert at reading Indian bank account statements. Extract ALL credit/incoming transactions (money received). Return ONLY a JSON object:
+{
+  "transactions": [
+    {
+      "date": "YYYY-MM-DD",
+      "amount": 0,
+      "narration": "full transaction description/narration",
+      "reference": "UTR/reference number if visible, else empty string"
+    }
+  ]
+}
+Rules:
+- Include ONLY credit entries (deposits, NEFT received, IMPS received, UPI received, cheque deposits).
+- Exclude debit entries (withdrawals, payments, charges).
+- Amount must be a plain number (no ₹ symbol, no commas).
+- If date is ambiguous use DD/MM/YYYY context from the statement header.
+- Return ONLY the JSON. No explanation, no markdown, no backticks.`
 };

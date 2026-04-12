@@ -3,10 +3,11 @@
 > **AI INSTRUCTION**: Read this file first when entering a new session if you need to understand the project architecture without burning tokens scanning the whole filesystem.
 
 ## Rules for AI Token Optimization
-1. **Never scan the whole src/ folder.** Find the component you need via `[[00_Project_Map]]` first.
-2. **Use the Knowledge Graph:** Always use `semantic_search_nodes` or `query_graph` MCP tools before falling back to manual grep.
+1. **Never scan the whole src/ folder.** Use `query_graph()` first — see `[[Token_Optimization_Guide]]`.
+2. **Use the Knowledge Graph:** Always use `query_graph` MCP tools before manual grep — saves 70-80% tokens.
 3. **Save State before Resetting:** If your token usage gets high, summarize your thoughts into `[[Tasks]]` and tell the user to reset the conversation.
 4. **Distill Insights:** When you solve a difficult bug or complex logic, write a brief explanation into the `Patterns/` or `Modules/` folders in this vault. Do not make the human explain it again later.
+5. **Reference the Token Optimization Guide** (`[[Token_Optimization_Guide]]`) for concrete DO's and DON'Ts.
 
 ## Vault Mapping
 - **Status & Todos:** See `[[Tasks]]`
@@ -14,3 +15,6 @@
 - **Data Dictionary:** See `[[Data_Dictionary_and_Flow]]`
 - **User Personas:** See `[[Surveyor_User_Manual]]` and `[[Claim_Lifecycle_Workflow]]`
 - **AI Tooling rules:** See `[[ANTIGRAVITY_BIBLE]]`
+- **AI Field Extraction & Mappings:** See `[[AI_Field_Extraction_Mapping]]` ⭐ **Start here for field bugs**
+- **Error Handling & Recovery:** See `[[Error_Handling_and_Recovery]]` ⭐ **Start here for error issues**
+- **Token Optimization Guide:** See `[[Token_Optimization_Guide]]` ⭐ **DO's and DON'Ts for efficient development**

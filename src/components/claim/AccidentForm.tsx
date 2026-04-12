@@ -94,24 +94,6 @@ export function AccidentDetailsForm() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="a-pincode">Pincode</Label>
-            <Input
-              id="a-pincode"
-              value={a?.pincode || ''}
-              onChange={(e) => updateAccident({ pincode: e.target.value })}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <Label htmlFor="a-location-code">Location Code</Label>
-            <Input
-              id="a-location-code"
-              value={a?.locationCode || ''}
-              onChange={(e) => updateAccident({ locationCode: e.target.value })}
-            />
-          </div>
-
-          <div className="space-y-1">
             <Label htmlFor="a-app-date">Survey Appointment Date</Label>
             <Input
               id="a-app-date"
@@ -170,16 +152,6 @@ export function AccidentDetailsForm() {
             </div>
           </div>
         )}
-
-        <div className="mt-6">
-          <Label htmlFor="a-remarks">Surveyor Remarks (General Status)</Label>
-          <Input
-            id="a-remarks"
-            value={a?.remarks || ''}
-            onChange={(e) => updateAccident({ remarks: e.target.value })}
-            placeholder="e.g. Repairs completed as per assessment..."
-          />
-        </div>
 
         <div className="mt-8 pt-6 border-t">
           <Label className="text-md font-bold mb-4 block">Document Verification Checklist (Photocopies Obtained?)</Label>

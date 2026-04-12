@@ -1,11 +1,10 @@
 'use client';
 
 import { useClaimStore } from '@/stores/claim-store';
-import { useProfileStore } from '@/stores/profile-store';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, PlusCircle, AlertTriangle, ShieldCheck, Truck, User, MapPin, Gauge, CheckCircle2, Zap, Lock, FileText, ClipboardList, Wand2 } from 'lucide-react';
+import { Trash2, PlusCircle, AlertTriangle, ShieldCheck, Truck, User, MapPin, Gauge, CheckCircle2, Zap, Lock, FileText, ClipboardList } from 'lucide-react';
 import { toast } from 'sonner';
 import { saveClaim } from '@/lib/storage/indexeddb';
 
@@ -13,7 +12,6 @@ const S = () => <span className="ml-1 inline-block w-2 h-2 rounded-full bg-green
 
 export function SpotTab() {
   const { currentClaim, updateSpotDetails, updateDriver, updateAccident, updateVehicle, addSpotDamageRow, updateSpotDamageRow, deleteSpotDamageRow, updateClaim } = useClaimStore();
-  const { getNextSpotNumber } = useProfileStore();
 
   if (!currentClaim) return null;
 
@@ -54,44 +52,15 @@ export function SpotTab() {
         </div>
       </div>
 
-      {/* ── SECTION: SPOT METADATA ── */}
+      {/* ── SECTION: SURVEY DATES ── */}
       <Card className="border-primary/20 shadow-lg overflow-hidden bg-white/50 backdrop-blur-sm">
         <CardHeader className="bg-primary/5 pb-4 border-b border-primary/10">
           <CardTitle className="text-sm font-black flex items-center gap-2 uppercase tracking-widest text-primary">
             <Zap size={16} />
-            Spot Report Identification
+            Survey Dates
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-4 gap-6">
-          <div className="space-y-1.5">
-            <Label className="text-[10px] font-black uppercase text-muted-foreground/70 tracking-tighter">Spot Report No.</Label>
-            <div className="flex gap-2">
-              <Input
-                value={spotDetails.reportNo}
-                onChange={(e) => handleUpdate({ reportNo: e.target.value.toUpperCase() })}
-                placeholder="e.g. SPO/2026/001"
-                className="h-10 font-mono font-bold border-primary/10 focus:border-primary/30"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  if (spotDetails.reportNo && !confirm('Overwriting existing report number?')) return;
-                  const nextNo = getNextSpotNumber();
-                  const today = new Date().toISOString().split('T')[0];
-                  const updates: any = { reportNo: nextNo };
-                  if (!spotDetails.reportDate) updates.reportDate = today;
-                  if (!spotDetails.allotmentDate) updates.allotmentDate = today;
-                  handleUpdate(updates);
-                  toast.success(`Allocated Seq No: ${nextNo}`);
-                }}
-                disabled={isCompleted}
-                className="h-10 px-3 flex items-center justify-center bg-primary text-white rounded-md hover:bg-primary/90 transition-colors shadow-sm disabled:opacity-50"
-                title="Auto-allocate Sequential Number"
-              >
-                <Wand2 size={16} />
-              </button>
-            </div>
-          </div>
+        <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-3 gap-6">
           <div className="space-y-1.5">
             <Label className="text-[10px] font-black uppercase text-muted-foreground/70 tracking-tighter">Report Date</Label>
             <Input
@@ -132,16 +101,6 @@ export function SpotTab() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="sm:col-span-2 space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Survey Place / Workshop<S /></Label>
-              <Input
-                value={accident.placeOfSurvey}
-                onChange={(e) => updateAccident({ placeOfSurvey: e.target.value })}
-                placeholder="Exact location of scene or workshop"
-                className="font-semibold"
-              />
-            </div>
-            
             <div className="space-y-1.5">
               <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Police Reported?<S /></Label>
               <select
@@ -156,22 +115,6 @@ export function SpotTab() {
 
             {spotDetails.policeReported === 'yes' && (
               <>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Police Station<S /></Label>
-                  <Input
-                    value={accident.policeStation}
-                    onChange={(e) => updateAccident({ policeStation: e.target.value })}
-                    placeholder="Station Name"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">FIR / Diary No.<S /></Label>
-                  <Input
-                    value={accident.firNumber}
-                    onChange={(e) => updateAccident({ firNumber: e.target.value })}
-                    placeholder="Enter Number"
-                  />
-                </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Panchanama?<S /></Label>
                   <select
@@ -348,23 +291,6 @@ export function SpotTab() {
                   />
                 </div>
 
-                <div className="space-y-1.5 md:col-span-2">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Fitness No.<S /></Label>
-                  <Input
-                    value={vehicle.fitnessNo}
-                    onChange={(e) => updateVehicle({ fitnessNo: e.target.value.toUpperCase() })}
-                    disabled={isCompleted}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Fitness Valid Upto<S /></Label>
-                  <Input
-                    type="date"
-                    value={vehicle.fitnessValidUpto}
-                    onChange={(e) => updateVehicle({ fitnessValidUpto: e.target.value })}
-                    disabled={isCompleted}
-                  />
-                </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Log Book / Tax Paid<S /></Label>
                   <Input
@@ -478,49 +404,6 @@ export function SpotTab() {
             </div>
           </Card>
         )}
-        {/* SECTION 5: PHYSICAL VERIFICATION CHECKLIST */}
-        <Card className="border-border shadow-sm overflow-hidden">
-          <CardHeader className="bg-muted/50 pb-4 border-b border-border">
-            <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-tight">
-              <ShieldCheck size={16} className="text-primary" />
-              Physical Documents Verification
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { id: 'rc', label: 'RC (Original)' },
-                { id: 'dl', label: 'Driving Licence' },
-                { id: 'permit', label: 'Permit / Auth' },
-                { id: 'fitness', label: 'Fitness Cert' },
-                { id: 'loadChallan', label: 'Load Challan' },
-                { id: 'fir', label: 'FIR / Diary' },
-                { id: 'fireReport', label: 'Fire Report' },
-              ].map((flag) => (
-                <div key={flag.id} className="flex flex-col gap-2 p-3 rounded-lg border border-border bg-muted/10 hover:bg-muted/30 transition-colors">
-                  <Label className="text-[10px] font-black uppercase text-muted-foreground">{flag.label}</Label>
-                  <select
-                    value={(spotDetails.verificationFlags as any)?.[flag.id] || 'pending'}
-                    onChange={(e) => handleUpdate({ 
-                      verificationFlags: { 
-                        ...(spotDetails.verificationFlags || {}), 
-                        [flag.id]: e.target.value 
-                      } 
-                    })}
-                    className="w-full bg-transparent text-xs font-bold focus:outline-none"
-                    disabled={isCompleted}
-                  >
-                    <option value="pending">PENDING</option>
-                    <option value="verified">VERIFIED</option>
-                    <option value="photocopy">PHOTOCOPY</option>
-                    <option value="m-parivahan">M-PARIVAHAN</option>
-                    <option value="not-available">N/A</option>
-                  </select>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       <datalist id="spot-components-list">
@@ -655,14 +538,6 @@ export function SpotTab() {
                     placeholder="Workshop where vehicle will go for further repairs"
                     onChange={(e) => handleUpdate({ repairWorkshop: e.target.value })}
                     disabled={isCompleted}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Survey Place / Location<S /></Label>
-                  <Input
-                    value={accident.placeOfSurvey}
-                    placeholder="Where was survey conducted?"
-                    onChange={(e) => updateAccident({ placeOfSurvey: e.target.value })}
                   />
                 </div>
               </div>

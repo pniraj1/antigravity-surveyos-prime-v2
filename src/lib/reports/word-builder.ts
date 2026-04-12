@@ -257,12 +257,46 @@ export async function generateSpotWordReport(claim: ClaimData, profile: Surveyor
         createKVRow("Date of Survey", formatDateDMY(accident.dateOfSurvey), "Place of Survey", accident.placeOfSurvey),
         createKVRow("Third Party", spotDetails.tpInvolved === 'no' ? 'NIL' : spotDetails.tpInvolved.toUpperCase(), "TP Details", accident.thirdPartyDetails || 'NIL'),
         createKVRow("Police Reported", spotDetails.policeReported === 'yes' ? `Yes — ${accident.policeStation} | Diary: ${accident.firNumber}` : 'No', "Panchanama", spotDetails.panchanama === 'yes' ? 'Yes' : 'No'),
+        createKVRow("FIR Date", formatDateDMY(accident.firDate), "Survey Appointment Date", formatDateDMY(accident.appointmentDate)),
+      ]
+    }),
+
+    new Paragraph({ text: "\nD. DOCUMENT VERIFICATION", ...sectionHeaderStyle }),
+    new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Document", bold: true, size: 16 })] })] }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Status", bold: true, size: 16 })] })] }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Remarks", bold: true, size: 16 })] })] }),
+          ]
+        }),
+        ...[
+          { id: 'rc', label: 'RC' },
+          { id: 'dl', label: 'DL' },
+          { id: 'permit', label: 'Permit' },
+          { id: 'fitness', label: 'Fitness' },
+          { id: 'loadChallan', label: 'Load Challan' },
+          { id: 'fireReport', label: 'Fire Report' },
+          { id: 'fir', label: 'FIR' },
+        ].map(({ id, label }) => {
+          const docFlags = (claim.documentVerification || {}) as Record<string, { status: string; detail: string }>;
+          const doc = docFlags[id] || { status: 'NO', detail: '' };
+          return new TableRow({
+            children: [
+              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: label, size: 18 })] })] }),
+              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: doc.status || '—', bold: true, size: 18 })] })] }),
+              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: doc.detail || '—', size: 18 })] })] }),
+            ]
+          });
+        })
       ]
     }),
   ];
 
   if (isComm) {
-    sections.push(new Paragraph({ text: "\nD. COMMERCIAL VEHICLE DOCUMENTS", ...sectionHeaderStyle }));
+    sections.push(new Paragraph({ text: "\nE. COMMERCIAL VEHICLE DOCUMENTS", ...sectionHeaderStyle }));
     sections.push(new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       rows: [
@@ -275,7 +309,7 @@ export async function generateSpotWordReport(claim: ClaimData, profile: Surveyor
   }
 
   if (isGoods) {
-    sections.push(new Paragraph({ text: "\nE. LOAD DETAILS", ...sectionHeaderStyle }));
+    sections.push(new Paragraph({ text: "\nF. LOAD DETAILS", ...sectionHeaderStyle }));
     sections.push(new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       rows: [
@@ -288,10 +322,10 @@ export async function generateSpotWordReport(claim: ClaimData, profile: Surveyor
     }));
   }
 
-  sections.push(new Paragraph({ text: "\nF. CAUSE OF ACCIDENT", ...sectionHeaderStyle }));
+  sections.push(new Paragraph({ text: "\nG. CAUSE OF ACCIDENT", ...sectionHeaderStyle }));
   sections.push(new Paragraph({ text: accident.causeOfAccident || "—" }));
 
-  sections.push(new Paragraph({ text: "\nG. DAMAGE PARTICULARS AT SPOT", ...sectionHeaderStyle }));
+  sections.push(new Paragraph({ text: "\nH. DAMAGE PARTICULARS AT SPOT", ...sectionHeaderStyle }));
   sections.push(new Paragraph({ text: `Severity: ${spotDetails.damageSeverity?.toUpperCase() || ''} | Airbags Deployed: ${spotDetails.airbags?.toUpperCase() || ''} | Drivable: ${spotDetails.drivable || ''}\n` }));
 
   if (spotDamageRows.length > 0) {
@@ -324,7 +358,7 @@ export async function generateSpotWordReport(claim: ClaimData, profile: Surveyor
   
   sections.push(new Paragraph({ text: `Repairs: ${spotDetails.repairs || ''}` }));
 
-  sections.push(new Paragraph({ text: "\nWe hereby certify that we have carried out spot survey of the above vehicle and report as above without prejudice and subject to terms and conditions of the policy.\n" }));
+  sections.push(new Paragraph({ text: "\nWe have noted down maximum possible visible damages at accident spot. Any other unseen/hidden damages which are related to cause of accident if noticed may be considered on dismantled checkup. This report is issued without prejudice subject to policy terms and condition and the damages stated in this report are based on physical inspection of accidental I.V. on the spot of the accident.\n" }));
 
   sections.push(new Paragraph({
     alignment: AlignmentType.RIGHT,

@@ -1,6 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import dynamicImport from 'next/dynamic';
+import { BankReconcileDialog } from '@/components/dialogs/BankReconcileDialog';
 
 import { Sidebar, MobileMenuButton } from '@/components/layout/sidebar';
 import { FloatingReportPreview } from '@/components/layout/FloatingReportPreview';
@@ -30,6 +31,19 @@ function DashboardContent() {
   const [showArchived, setShowArchived] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+  const [showReconcile, setShowReconcile] = useState(false);
+
+  const activeClaims = claimsList.filter(c => c.isActive);
+  const today = new Date().toDateString();
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const claimsToday = activeClaims.filter(c => new Date(c.updatedAt).toDateString() === today).length;
+  const claimsWeek = activeClaims.filter(c => new Date(c.updatedAt).getTime() >= weekAgo).length;
+  const claimsPending = activeClaims.filter(c => !c.isCompleted).length;
+  const archivedCount = claimsList.filter(c => !c.isActive).length;
+
+  const feesBilled = activeClaims.reduce((sum, c) => sum + (c.feeTotal || 0), 0);
+  const feesReceived = activeClaims.filter(c => c.feePaid).reduce((sum, c) => sum + (c.feeTotal || 0), 0);
+  const feesOutstanding = activeClaims.filter(c => !c.feePaid && c.feeTotal > 0).reduce((sum, c) => sum + (c.feeTotal || 0), 0);
 
   const filteredClaims = claimsList.filter(c => {
     // Stage 1: Active/Archived
@@ -134,9 +148,9 @@ function DashboardContent() {
         {/* Stats Row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'Claims Today', value: '0', icon: <LayoutDashboard size={16} />, accent: '#D4AF37' },
-            { label: 'This Week', value: '0', icon: <TrendingUp size={16} />, accent: '#22c55e' },
-            { label: 'Pending', value: '0', icon: <Clock size={16} />, accent: '#f59e0b' },
+            { label: 'Claims Today', value: String(claimsToday), icon: <LayoutDashboard size={16} />, accent: '#D4AF37' },
+            { label: 'This Week', value: String(claimsWeek), icon: <TrendingUp size={16} />, accent: '#22c55e' },
+            { label: 'Pending', value: String(claimsPending), icon: <Clock size={16} />, accent: '#f59e0b' },
             { label: 'Total Claims', value: String(claimsList.length), icon: <FileCheck size={16} />, accent: '#0D1B2A' },
           ].map((stat) => (
             <div
@@ -163,6 +177,59 @@ function DashboardContent() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Fees Overview */}
+        <div>
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-xs font-black uppercase tracking-[0.2em]" style={{ color: '#8D99AE' }}>
+              Fees Overview
+            </h2>
+            <button
+              onClick={() => setShowReconcile(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
+              style={{ background: 'rgba(212,175,55,0.1)', color: '#92400E', border: '1px solid rgba(212,175,55,0.3)' }}
+            >
+              Reconcile Bank Statement
+            </button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[
+              {
+                label: 'Total Billed',
+                value: feesBilled > 0 ? `₹${feesBilled.toLocaleString('en-IN')}` : '—',
+                accent: '#4A4E69',
+                desc: 'across active claims',
+              },
+              {
+                label: 'Fees Received',
+                value: feesReceived > 0 ? `₹${feesReceived.toLocaleString('en-IN')}` : '—',
+                accent: '#10B981',
+                desc: `${activeClaims.filter(c => c.feePaid).length} claim(s) paid`,
+              },
+              {
+                label: 'Outstanding',
+                value: feesOutstanding > 0 ? `₹${feesOutstanding.toLocaleString('en-IN')}` : '—',
+                accent: '#EF4444',
+                desc: `${activeClaims.filter(c => !c.feePaid && c.feeTotal > 0).length} claim(s) unpaid`,
+              },
+            ].map((card) => (
+              <div
+                key={card.label}
+                className="p-5 rounded-2xl relative overflow-hidden"
+                style={{ background: '#FFFFFF', border: '1px solid #E2E6EA', boxShadow: '0 1px 3px rgba(13,27,42,0.04)' }}
+              >
+                <div className="absolute top-0 left-0 w-full h-[3px] rounded-t-2xl" style={{ background: card.accent }} />
+                <div className="text-[10px] font-bold uppercase tracking-[0.15em] mb-2 mt-1" style={{ color: '#8D99AE' }}>
+                  {card.label}
+                </div>
+                <div className="text-2xl font-black tracking-tight mb-1" style={{ color: card.accent }}>
+                  {card.value}
+                </div>
+                <div className="text-[10px]" style={{ color: '#8D99AE' }}>{card.desc}</div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Quick Actions */}
@@ -251,12 +318,20 @@ function DashboardContent() {
                   Active
                 </button>
                 <button
-                  className={`px-3 py-1 text-[11px] font-bold rounded-md transition-all ${
+                  className={`px-3 py-1 text-[11px] font-bold rounded-md transition-all flex items-center gap-1.5 ${
                     showArchived ? 'bg-white text-[#0D1B2A] shadow-sm' : 'text-[#8D99AE] hover:text-[#0D1B2A]'
                   }`}
                   onClick={() => setShowArchived(true)}
                 >
                   Archived
+                  {archivedCount > 0 && (
+                    <span
+                      className="text-[9px] font-black px-1.5 py-0.5 rounded-full"
+                      style={{ background: showArchived ? '#E2E6EA' : 'rgba(239,68,68,0.12)', color: showArchived ? '#0D1B2A' : '#EF4444' }}
+                    >
+                      {archivedCount}
+                    </span>
+                  )}
                 </button>
               </div>
             </div>
@@ -443,6 +518,8 @@ function DashboardContent() {
           </div>
         </div>
       </div>
+
+      {showReconcile && <BankReconcileDialog onClose={() => setShowReconcile(false)} />}
     </div>
   );
 }

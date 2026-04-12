@@ -210,6 +210,14 @@ export function SpotReportDocument({ claim }: Props) {
               {claim?.accident?.policeStation || 'N/A'} / {claim?.accident?.firNumber || 'N/A'}
             </Text>
           </View>
+          <View style={styles.row}>
+            <Text style={styles.colLabel}>FIR Date:</Text>
+            <Text style={styles.colValue}>{claim?.accident?.firDate || 'N/A'}</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.colLabel}>Survey Appointment Date:</Text>
+            <Text style={styles.colValue}>{claim?.accident?.appointmentDate || 'N/A'}</Text>
+          </View>
         </View>
 
         {/* 5. Commercial & Load Details */}
@@ -295,6 +303,13 @@ export function SpotReportDocument({ claim }: Props) {
             <Text style={styles.colLabel}>Final Remarks:</Text>
             <Text style={styles.colValue}>{claim?.spotDetails?.comments || 'Site inspection completed. Cause of accident verified...'}</Text>
           </View>
+        </View>
+
+        {/* Certification Statement */}
+        <View style={{...styles.section, marginTop: 20, padding: 10, border: '1px solid #d1d5db', backgroundColor: '#f9fafb'}}>
+          <Text style={{fontSize: 9, lineHeight: 1.6, textAlign: 'justify', color: '#374151'}}>
+            We have noted down maximum possible visible damages at accident spot. Any other unseen/hidden damages which are related to cause of accident if noticed may be considered on dismantled checkup. This report is issued without prejudice subject to policy terms and condition and the damages stated in this report are based on physical inspection of accidental I.V. on the spot of the accident.
+          </Text>
         </View>
 
         <Text style={styles.footer}>

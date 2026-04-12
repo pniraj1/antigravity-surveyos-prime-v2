@@ -314,10 +314,71 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Panchanama</td>
             <td style={{ ...parseInline(styles.td) }}>{spotDetails.panchanama === 'yes' ? 'Yes' : 'No'}</td>
           </tr>
+          <tr>
+            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>FIR Date</td>
+            <td style={{ ...parseInline(styles.td) }}>{formatDateDMY(accident.firDate) || '—'}</td>
+            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Appointment Date</td>
+            <td style={{ ...parseInline(styles.td) }}>{formatDateDMY(accident.appointmentDate) || '—'}</td>
+          </tr>
         </tbody>
       </table>
 
-      {/* D. COMMERCIAL VEHICLE DOCUMENTS */}
+      {/* D. DOCUMENT VERIFICATION */}
+      <div style={{ fontWeight: 700, fontSize: '7pt', background: '#0d1b2a', color: '#fff', padding: '2px 4px', marginBottom: '2px' }}>
+        D. DOCUMENT VERIFICATION
+      </div>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '7.8pt', marginBottom: '4px' }}>
+        <thead>
+          <tr>
+            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt', fontWeight: 700, width: '20%' }}>Document</td>
+            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt', fontWeight: 700, width: '15%' }}>Status</td>
+            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt', fontWeight: 700 }}>Remarks</td>
+            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt', fontWeight: 700, width: '20%' }}>Document</td>
+            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt', fontWeight: 700, width: '15%' }}>Status</td>
+            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt', fontWeight: 700 }}>Remarks</td>
+          </tr>
+        </thead>
+        <tbody>
+          {(() => {
+            const dv = claim.documentVerification || {};
+            const docs = [
+              { id: 'rc', label: 'RC' },
+              { id: 'dl', label: 'Driving Licence' },
+              { id: 'permit', label: 'Permit' },
+              { id: 'fitness', label: 'Fitness Cert' },
+              { id: 'loadChallan', label: 'Load Challan' },
+              { id: 'fir', label: 'FIR / Diary' },
+              { id: 'fireReport', label: 'Fire Report' },
+            ];
+            const rows = [];
+            for (let i = 0; i < docs.length; i += 2) {
+              const a = docs[i];
+              const b = docs[i + 1];
+              const da = (dv as any)[a.id] || { status: '—', detail: '' };
+              const db = b ? ((dv as any)[b.id] || { status: '—', detail: '' }) : null;
+              rows.push(
+                <tr key={a.id}>
+                  <td style={{ ...parseInline(styles.td), fontSize: '6.8pt' }}>{a.label}</td>
+                  <td style={{ ...parseInline(styles.td), fontWeight: 700 }}>{da.status || '—'}</td>
+                  <td style={{ ...parseInline(styles.td), fontSize: '6.8pt' }}>{da.detail || '—'}</td>
+                  {db ? (
+                    <>
+                      <td style={{ ...parseInline(styles.td), fontSize: '6.8pt' }}>{b!.label}</td>
+                      <td style={{ ...parseInline(styles.td), fontWeight: 700 }}>{db.status || '—'}</td>
+                      <td style={{ ...parseInline(styles.td), fontSize: '6.8pt' }}>{db.detail || '—'}</td>
+                    </>
+                  ) : (
+                    <><td style={parseInline(styles.td)} /><td style={parseInline(styles.td)} /><td style={parseInline(styles.td)} /></>
+                  )}
+                </tr>
+              );
+            }
+            return rows;
+          })()}
+        </tbody>
+      </table>
+
+      {/* E. COMMERCIAL VEHICLE DOCUMENTS */}
       {isComm && (
         <>
           <div style={{ fontWeight: 700, fontSize: '7pt', background: '#0d1b2a', color: '#fff', padding: '2px 4px', marginBottom: '2px' }}>
@@ -460,8 +521,14 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
         </div>
       )}
 
+      {spotDetails.repairWorkshop && (
+        <div style={{ fontSize: '7.2pt', marginTop: '4px', padding: '3px 4px', border: '0.4pt solid #bbb', background: '#f9f9f6' }}>
+          <b>Further Repairs:</b> {spotDetails.repairWorkshop}
+        </div>
+      )}
+
       <p style={{ fontSize: '6.5pt', lineHeight: 1.5, margin: '8px 0', textAlign: 'justify', color: '#333' }}>
-        We hereby certify that we have carried out spot survey of the above vehicle and report as above without prejudice and subject to terms and conditions of the policy.
+        We have noted down maximum possible visible damages at accident spot. Any other unseen/hidden damages which are related to cause of accident if noticed may be considered on dismantled checkup. This report is issued without prejudice subject to policy terms and condition and the damages stated in this report are based on physical inspection of accidental I.V. on the spot of the accident.
       </p>
 
       {/* SIGNATURE BLOCK */}

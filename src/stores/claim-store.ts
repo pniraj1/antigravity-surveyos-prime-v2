@@ -30,6 +30,7 @@ interface ClaimState {
     stage: 'spot' | 'final' | 'reinspection' | 'bill-check';
     isCompleted: boolean;
     feePaid: boolean;
+    feeTotal: number;
     isActive: boolean;
   }[];
 
