@@ -38,7 +38,7 @@ export function AccidentDetailsForm() {
           </div>
 
           <div className="space-y-1 lg:col-span-2 xl:col-span-4">
-            <Label htmlFor="a-cause">Cause of Loss</Label>
+            <Label htmlFor="a-cause">Cause and Nature of Accident</Label>
             <Input
               id="a-cause"
               value={a?.causeOfAccident || ''}

@@ -298,7 +298,7 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Date of Survey</td>
             <td style={{ ...parseInline(styles.td) }}>{formatDateDMY(accident.dateOfSurvey) || '—'}</td>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Place of Survey</td>
-            <td style={{ ...parseInline(styles.td) }}>{accident.placeOfSurvey}</td>
+            <td style={{ ...parseInline(styles.td) }}>{accident.placeOfSurvey || accident.workshopName || '—'}</td>
           </tr>
           <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Third Party</td>
@@ -350,6 +350,12 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
                 <td style={{ ...parseInline(styles.td), fontFamily: 'monospace' }}>{spotDetails.authNo || '—'}</td>
                 <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Auth Valid To</td>
                 <td style={{ ...parseInline(styles.td) }}>{spotDetails.authValid || '—'}</td>
+              </tr>
+              <tr>
+                <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Fitness Type</td>
+                <td style={{ ...parseInline(styles.td) }}>{spotDetails.fitnessType || vehicle.fitnessType || '—'}</td>
+                <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Area of Operation</td>
+                <td style={{ ...parseInline(styles.td) }}>{spotDetails.areaOfOperation || '—'}</td>
               </tr>
             </tbody>
           </table>
@@ -403,7 +409,7 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
 
       {/* F. CAUSE OF ACCIDENT */}
       <div style={{ fontWeight: 700, fontSize: '7pt', background: '#0d1b2a', color: '#fff', padding: '2px 4px', marginBottom: '2px' }}>
-        F. CAUSE OF ACCIDENT
+        F. CAUSE AND NATURE OF ACCIDENT
       </div>
       <div style={{ fontSize: '7.2pt', marginBottom: '4px', padding: '2px 4px', border: '0.4pt solid #bbb', lineHeight: 1.5 }}>
         {claim.accident.causeOfAccident || '—'}
@@ -442,12 +448,6 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
         <p style={{ fontSize: '7pt', padding: '2px 4px', border: '0.4pt solid #bbb' }}>
           Damage observations: {spotDetails.comments || 'NIL'}
         </p>
-      )}
-
-      {spotDetails.comments && (
-        <div style={{ fontSize: '7pt', marginTop: '4px', padding: '2px 4px', border: '0.4pt solid #bbb' }}>
-          Comments: {spotDetails.comments}
-        </div>
       )}
 
       {spotDetails.repairs ? (

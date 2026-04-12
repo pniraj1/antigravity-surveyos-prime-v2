@@ -509,12 +509,9 @@ export const useClaimStore = create<ClaimState>()(
               registeredLoadWeight: rlw || newClaim.vehicle.registeredLoadWeight, // Update alias for UI
               classOfVehicle: data.class_of_vehicle || data.vehicle_class || newClaim.vehicle.classOfVehicle,
               registrationType: data.class_of_vehicle || data.vehicle_class || newClaim.vehicle.registrationType,
-              fitnessNo: data.fitness_cert_no || data.fitness_no || newClaim.vehicle.fitnessNo,
-              fitnessValidUpto: parseDate(data.fitness_valid_upto || data.fitness_expiry) || newClaim.vehicle.fitnessValidUpto,
               route: data.route || newClaim.vehicle.route,
               yearOfManufacture: yom,
               registrationValidUpTo: parseDate(data.registration_valid_upto || data.reg_valid_upto || data.regn_valid_upto) || newClaim.vehicle.registrationValidUpTo,
-              fitnessType: data.fitness_type || newClaim.vehicle.fitnessType,
               hpa: hpa,
               hypothecation: hpa || newClaim.vehicle.hypothecation, // Update alias for UI
             };
@@ -713,7 +710,6 @@ export const useClaimStore = create<ClaimState>()(
               }));
             });
             newClaim.assessmentRows = [...newClaim.assessmentRows, ...newRows];
-            if (data.estimate_date) newClaim.accident.dateAndTime = data.estimate_date;
             if (data.workshop_name) newClaim.accident.placeOfSurvey = data.workshop_name;
           }
 

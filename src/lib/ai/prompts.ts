@@ -24,13 +24,10 @@ export const DOC_PROMPTS: Record<string, string> = {
   "unladen_weight": "",
   "gross_weight": "",
   "class_of_vehicle": "",
-  "fitness_cert_no": "",
-  "fitness_valid_upto": "",
   "permit_no": "",
   "route": "",
   "road_tax": "",
-  "hypothecation": "",
-  "fitness_type": "Extract 'Goods' or 'Passenger' or 'Private' if mentioned near fitness"
+  "hypothecation": ""
 }
 Return ONLY the JSON. No explanation, no markdown, no backticks.`,
 
