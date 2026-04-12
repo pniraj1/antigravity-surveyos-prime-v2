@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import dynamicImport from 'next/dynamic';
 
 import { Sidebar, MobileMenuButton } from '@/components/layout/sidebar';
+import { FloatingReportPreview } from '@/components/layout/FloatingReportPreview';
 import { useUIStore } from '@/stores/ui-store';
 import { useClaimStore } from '@/stores/claim-store';
 import { useClaimsLoader } from '@/hooks/useClaimsLoader';
@@ -512,6 +513,9 @@ export default function Home() {
 
       {/* Global Modals */}
       <NewClaimDialog />
+
+      {/* Floating live report preview — visible on all tabs except Reports */}
+      <FloatingReportPreview />
     </div>
   );
 }
