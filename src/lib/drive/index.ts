@@ -16,16 +16,37 @@ import {
   saveClaim,
 } from '@/lib/storage/indexeddb';
 
-// ─── Token State (in-memory) ─────────────────────────────────────────────────
-let accessToken: string | null = null;
-let tokenExpiryTimestamp: number = 0;
+// ─── Token State ─────────────────────────────────────────────────────────────
+// Stored in localStorage so it survives page refreshes within the 58-min window.
+const TOKEN_KEY  = 'surveyos_drive_token';
+const EXPIRY_KEY = 'surveyos_drive_token_expiry';
 const ROOT_FOLDER_NAME = 'SurveyOS';
 const INDEX_FILE_NAME  = 'surveyos_index.json';
-
 const MAX_RETRIES = 3;
 
+function setStoredToken(token: string, expiresIn: number) {
+  const expiry = Date.now() + expiresIn * 1000;
+  try {
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(EXPIRY_KEY, String(expiry));
+  } catch { /* storage full — ignore */ }
+}
+
+function clearStoredToken() {
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(EXPIRY_KEY);
+  } catch { /* ignore */ }
+}
+
 export function getDriveToken(): string | null {
-  if (accessToken && Date.now() < tokenExpiryTimestamp) return accessToken;
+  try {
+    const token  = localStorage.getItem(TOKEN_KEY);
+    const expiry = Number(localStorage.getItem(EXPIRY_KEY) || 0);
+    if (token && Date.now() < expiry) return token;
+    // Token expired — clean up storage
+    if (token) clearStoredToken();
+  } catch { /* localStorage unavailable */ }
   return null;
 }
 
@@ -58,14 +79,13 @@ export function silentlyRestoreDriveToken(): Promise<boolean> {
         ].join(' '),
         callback: async (response: any) => {
           if (response.error) {
-            // Silent auth failed — clear connected state, user must re-link manually
-            useUIStore.getState().setDriveConnected(false);
+            // Silent auth failed — do NOT disconnect. The token in localStorage
+            // may still be valid (getDriveToken() checks expiry). If both are
+            // gone, uploads will queue and the user will see a toast to re-link.
             resolve(false);
             return;
           }
-          accessToken = response.access_token;
-          tokenExpiryTimestamp = Date.now() + ((response.expires_in ?? 3500) * 1000);
-          // Flush any pending queue now that we have a fresh token
+          setStoredToken(response.access_token, response.expires_in ?? 3500);
           flushDriveQueue().catch(() => {});
           resolve(true);
         },
@@ -77,7 +97,7 @@ export function silentlyRestoreDriveToken(): Promise<boolean> {
         ...(driveEmail ? { login_hint: driveEmail } : {}),
       });
     } catch {
-      useUIStore.getState().setDriveConnected(false);
+      // Silent auth unavailable — don't disconnect, token may still be in localStorage
       resolve(false);
     }
   });
@@ -110,13 +130,12 @@ export function linkGoogleDrive(): Promise<boolean> {
             return reject(new Error(response.error_description || response.error));
           }
 
-          accessToken = response.access_token;
-          tokenExpiryTimestamp = Date.now() + ((response.expires_in ?? 3500) * 1000);
+          setStoredToken(response.access_token, response.expires_in ?? 3500);
 
           // Fetch the user's email
           try {
             const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-              headers: { Authorization: `Bearer ${accessToken}` },
+              headers: { Authorization: `Bearer ${response.access_token}` },
             });
             const info = res.ok ? await res.json() : {};
             useUIStore.getState().setDriveConnected(true, info.email ?? 'Google Drive Linked');
