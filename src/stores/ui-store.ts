@@ -114,11 +114,13 @@ export const useUIStore = create<UIState>()(
     {
       name: 'surveyos-ui-storage',
       storage: createJSONStorage(() => localStorage),
-      // Only persist navigation and workspace metadata
+      // Persist navigation, workspace metadata, and Drive connection state
       partialize: (state) => ({
         activeTab: state.activeTab,
         sidebarCollapsed: state.sidebarCollapsed,
         currentClaimId: state.currentClaimId,
+        isDriveConnected: state.isDriveConnected,
+        driveEmail: state.driveEmail,
       }),
     }
   )
