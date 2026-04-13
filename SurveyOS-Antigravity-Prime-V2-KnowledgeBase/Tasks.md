@@ -15,7 +15,7 @@
 ---
 
 ## Current Objective
-Security hardening + knowledge base documentation complete. Ready for next feature work.
+✅ IRDAI Annual Summary Export feature complete + deployed. Next: Security hardening backlog.
 
 ## 🔐 Security Backlog
 > Full details: [[Security_Audit_2026-04-13]]
@@ -55,6 +55,7 @@ Security hardening + knowledge base documentation complete. Ready for next featu
 - [x] SpotTab deduplication: removed placeOfSurvey, verificationFlags
 - [x] Admin panel fixed: now accessible via master UID regardless of isAdmin flag
 - [x] Knowledge base vault structured and populated
+- [x] **IRDAI Annual Summary Export** — "Export Annual Summary" button on dashboard (FY selector, live preview, 4-sheet Excel workbook with Claim Register, Insurer-wise, Month-wise Fees, Analytics)
 
 ### Security (2026-04-13)
 - [x] Full security audit performed
