@@ -6,18 +6,19 @@ import { uploadFileToDrive } from '@/lib/drive';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { DownloadCloud, Trash2, Image as ImageIcon, Settings, Loader2, UploadCloud } from 'lucide-react';
+import { Trash2, Image as ImageIcon, Settings, Loader2, UploadCloud } from 'lucide-react';
 import { PhotoLayout } from '@/types';
 import dynamic from 'next/dynamic';
 
-const PDFDownloadLink = dynamic(
-  () => import('@react-pdf/renderer').then(mod => mod.PDFDownloadLink),
-  { ssr: false }
-);
-
-const PhotoSheetDocument = dynamic(
-  () => import('@/components/pdf/PhotoSheetDocument').then(mod => mod.PhotoSheetDocument),
-  { ssr: false }
+// Single dynamic boundary — PhotoSheetDownloadButton statically imports both
+// PDFDownloadLink and PhotoSheetDocument so react-pdf gets a real Document tree.
+const PhotoSheetDownloadButton = dynamic(
+  () => import('@/components/pdf/PhotoSheetDownloadButton').then(mod => mod.PhotoSheetDownloadButton),
+  { ssr: false, loading: () => (
+    <button disabled className="flex items-center gap-2 px-6 py-2.5 rounded-md font-semibold text-sm bg-muted text-muted-foreground cursor-not-allowed shadow-sm">
+      <Loader2 size={16} className="animate-spin" /> Loading…
+    </button>
+  ) }
 );
 
 export function PhotosTab() {
@@ -65,25 +66,7 @@ export function PhotosTab() {
 
         {currentClaim.photos.length > 0 && (
           <div className="flex items-center gap-3">
-            <PDFDownloadLink
-              document={<PhotoSheetDocument claim={currentClaim} />}
-              fileName={`${currentClaim.vehicle.registrationNumber || 'DRAFT'}-Photo-Sheet.pdf`}
-            >
-              {/* @ts-ignore */}
-              {({ loading }) => (
-                <button
-                  disabled={loading}
-                  className={`flex items-center gap-2 px-6 py-2.5 rounded-md font-semibold text-sm transition-all shadow-sm ${
-                    loading 
-                      ? 'bg-muted text-muted-foreground cursor-not-allowed' 
-                      : 'bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow'
-                  }`}
-                >
-                  {loading ? <Loader2 size={16} className="animate-spin" /> : <DownloadCloud size={16} />}
-                  {loading ? 'Preparing Sheet...' : 'Download Photo Sheet'}
-                </button>
-              )}
-            </PDFDownloadLink>
+            <PhotoSheetDownloadButton claim={currentClaim} />
           </div>
         )}
       </div>
