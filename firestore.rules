@@ -1,10 +1,9 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // AI Configuration (Read-only for all users)
+    // AI Configuration — admin-only (contains master API keys)
     match /ai_config/routing {
-      allow read: if request.auth != null;
-      allow write: if false; 
+      allow read, write: if isAdmin();
     }
     
     // Admin Master Access

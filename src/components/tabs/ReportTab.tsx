@@ -33,6 +33,7 @@ import { SpotPrintReport } from '@/components/print/SpotPrintReport';
 import { UIICPrintReport } from '@/components/print/UIICPrintReport';
 import { buildStandardFinalSurveyHTML } from '@/lib/reports/standard-report-builder';
 import { buildUIICFinalHTML } from '@/lib/reports/uiic-final-builder';
+import DOMPurify from 'dompurify';
 import { useRef } from 'react';
 
 function PDFLoadingFallback() {
@@ -258,10 +259,10 @@ export function ReportTab() {
                 )}
                 
                 {activeReport === 'survey' && format === 'standard' && (
-                  <div dangerouslySetInnerHTML={{ __html: buildStandardFinalSurveyHTML(currentClaim, safeSummary, profile!) }} />
+                  <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(buildStandardFinalSurveyHTML(currentClaim, safeSummary, profile!)) }} />
                 )}
                 {activeReport === 'survey' && format === 'uiic' && (
-                  <div dangerouslySetInnerHTML={{ __html: buildUIICFinalHTML(currentClaim, profile!) }} />
+                  <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(buildUIICFinalHTML(currentClaim, profile!)) }} />
                 )}
                 {activeReport === 'spot' && (
                   <SpotPrintReport claim={currentClaim} profile={profile!} />

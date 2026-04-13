@@ -7,14 +7,21 @@ import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
+// Non-secret values come from .env.production (committed, safe to expose).
+// API key comes from .env.local only — rotate it in Firebase Console after any accidental exposure.
+// Firebase web API keys are restricted by Firestore Rules + Auth, not by secrecy.
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'AIzaSyCimnYVKZ0n-iX8MOHO2f3TP3GoBvNMqpk',
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'surveyos-v2-antigravity.firebaseapp.com',
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'surveyos-v2-antigravity',
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'surveyos-v2-antigravity.firebasestorage.app',
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '926682149516',
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '1:926682149516:web:7a4b8de9b48e2ebf4dc1a9',
+  apiKey:            process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
+  authDomain:        process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
+  projectId:         process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
+  storageBucket:     process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET!,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
+  appId:             process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
 };
+
+if (!firebaseConfig.apiKey) {
+  throw new Error('NEXT_PUBLIC_FIREBASE_API_KEY is missing. Add it to .env.local for local dev.');
+}
 
 let app: FirebaseApp;
 
