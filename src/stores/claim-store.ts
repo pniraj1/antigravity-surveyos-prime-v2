@@ -69,7 +69,7 @@ interface ClaimState {
   updateBillCheck: (updates: Partial<ClaimData['billCheck']>) => void;
 
   // Photos
-  addPhoto: (dataUrl: string, name: string) => void;
+  addPhoto: (dataUrl: string, name: string, w?: number, h?: number) => void;
   deletePhoto: (index: number) => void;
   updatePhotoName: (index: number, name: string) => void;
   updatePhotoLayout: (layout: ClaimData['photoLayout']) => void;
@@ -361,13 +361,13 @@ export const useClaimStore = create<ClaimState>()(
         }));
       },
 
-      addPhoto: (dataUrl, name) => {
+      addPhoto: (dataUrl, name, w, h) => {
         set((state) => {
           if (!state.currentClaim) return {};
           return {
             currentClaim: {
               ...state.currentClaim,
-              photos: [...state.currentClaim.photos, { dataUrl, name }],
+              photos: [...state.currentClaim.photos, { dataUrl, name, w, h }],
               updatedAt: new Date().toISOString(),
             },
             isDirty: true,

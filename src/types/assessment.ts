@@ -174,9 +174,26 @@ export interface FeeBill {
 export interface PhotoItem {
   dataUrl: string;
   name: string;
+  /** Original pixel width captured at upload time (used for orientation detection) */
+  w?: number;
+  /** Original pixel height captured at upload time (used for orientation detection) */
+  h?: number;
 }
 
-export type PhotoLayout = 4 | 6 | 8 | 9;
+/** Number of photos to show per A4 page */
+export type PhotoLayout = 2 | 4 | 6 | 8 | 9;
+
+/** Runtime options for the PDF photo sheet (not persisted to claim) */
+export interface PhotoSheetOptions {
+  /** Page padding in points (15–45, default 30) */
+  pagePadding: number;
+  /** Gap between photo cells in points (4–20, default 10) */
+  cellGap: number;
+  /** Show border around each photo cell */
+  showBorder: boolean;
+  /** Border colour (CSS hex) */
+  borderColor: string;
+}
 
 export interface BillCheckDetails {
   billNo: string;

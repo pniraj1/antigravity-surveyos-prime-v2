@@ -9,30 +9,31 @@
  * Next.js `dynamic()` it becomes a React component wrapper — not a real
  * react-pdf Document — and PDFDownloadLink silently fails or throws.
  *
- * The fix: keep BOTH imports static here, then wrap *this entire component*
- * in a single `dynamic()` call (with ssr:false) from the consumer (PhotosTab).
- * That way PDFDownloadLink always receives a genuine react-pdf Document tree.
+ * Fix: keep BOTH imports static here, then wrap *this entire component*
+ * in a single `dynamic()` call (ssr:false) from the consumer (PhotosTab).
  */
 
-// ── Static imports (both must live in the same bundle chunk) ───────────────
+// ── Static imports (both must live in the same bundle chunk) ─────────────────
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import { PhotoSheetDocument } from './PhotoSheetDocument';
-// ───────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 
 import type { ClaimData } from '@/types';
+import type { PhotoSheetOptions } from '@/types/assessment';
 import { DownloadCloud, Loader2 } from 'lucide-react';
 
 interface Props {
-  claim: ClaimData;
+  claim:   ClaimData;
+  options: Partial<PhotoSheetOptions>;
 }
 
-export function PhotoSheetDownloadButton({ claim }: Props) {
+export function PhotoSheetDownloadButton({ claim, options }: Props) {
   const fileName =
     `${claim?.vehicle?.registrationNumber || 'DRAFT'}-Photo-Sheet.pdf`;
 
   return (
     <PDFDownloadLink
-      document={<PhotoSheetDocument claim={claim} />}
+      document={<PhotoSheetDocument claim={claim} options={options} />}
       fileName={fileName}
     >
       {({ loading, error }) => {
@@ -40,11 +41,10 @@ export function PhotoSheetDownloadButton({ claim }: Props) {
           return (
             <button
               disabled
-              className="flex items-center gap-2 px-6 py-2.5 rounded-md font-semibold text-sm bg-destructive/20 text-destructive cursor-not-allowed shadow-sm"
               title={String(error)}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-md font-semibold text-sm bg-destructive/20 text-destructive cursor-not-allowed shadow-sm"
             >
-              <DownloadCloud size={16} />
-              PDF Error
+              <DownloadCloud size={16} /> PDF Error
             </button>
           );
         }
@@ -52,7 +52,7 @@ export function PhotoSheetDownloadButton({ claim }: Props) {
         return (
           <button
             disabled={loading}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-md font-semibold text-sm transition-all shadow-sm ${
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-md font-semibold text-sm transition-all shadow-sm ${
               loading
                 ? 'bg-muted text-muted-foreground cursor-not-allowed'
                 : 'bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow'
@@ -61,7 +61,7 @@ export function PhotoSheetDownloadButton({ claim }: Props) {
             {loading
               ? <Loader2 size={16} className="animate-spin" />
               : <DownloadCloud size={16} />}
-            {loading ? 'Preparing Sheet…' : 'Download Photo Sheet'}
+            {loading ? 'Preparing…' : 'Download PDF'}
           </button>
         );
       }}
