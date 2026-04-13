@@ -23,6 +23,7 @@ import {
   Search,
   ArrowUpDown,
   CheckCircle,
+  HardDrive,
 } from 'lucide-react';
 
 // ─── Dashboard Tab Content ──────────────────────────────
@@ -442,8 +443,15 @@ function DashboardContent() {
                       onMouseEnter={e => (e.currentTarget.style.background = '#FAFBFC')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >
-                      <div className="text-sm font-bold truncate" style={{ color: '#0D1B2A' }}>
-                        {claim.reportNo || 'Draft'}
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-sm font-bold truncate" style={{ color: '#0D1B2A' }}>
+                          {claim.reportNo || 'Draft'}
+                        </span>
+                        {claim.gDriveFolderId && (
+                          <span title="Synced to Google Drive">
+                            <HardDrive size={11} style={{ color: '#16a34a', flexShrink: 0 }} />
+                          </span>
+                        )}
                       </div>
                       <div>
                         <span

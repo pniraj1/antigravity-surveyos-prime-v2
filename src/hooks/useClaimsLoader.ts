@@ -35,6 +35,7 @@ export function useClaimsLoader() {
             feePaid: c.feeBill?.feePaid || false,
             feeTotal: c.feeBill ? calculateFeeSummary(c.feeBill).grandTotal : 0,
             isActive: c.isActive !== false,
+            gDriveFolderId: c.gDriveFolderId ?? null,
           };
         });
 

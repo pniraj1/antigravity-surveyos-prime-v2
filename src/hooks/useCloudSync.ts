@@ -23,7 +23,7 @@ import {
   removeSyncItem,
   getClaim,
 } from '@/lib/storage/indexeddb';
-import { flushDriveQueue } from '@/lib/drive';
+import { flushDriveQueue, silentlyRestoreDriveToken } from '@/lib/drive';
 
 export function useCloudSync() {
   const { user, isAuthenticated } = useAuthStore();
@@ -34,6 +34,28 @@ export function useCloudSync() {
   const profileSyncReadyRef = useRef(false);
   const cloudTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isDrainingRef = useRef(false);
+  const driveRestoreAttemptedRef = useRef(false);
+
+  // ─── 0. Silent Drive token restore on page load ───────────
+  // If Drive was linked in a previous session (isDriveConnected persisted in
+  // localStorage), silently re-acquire a token without a popup so the user
+  // doesn't have to re-link Drive on every refresh.
+  const { isDriveConnected } = useUIStore();
+  useEffect(() => {
+    if (isDriveConnected && !driveRestoreAttemptedRef.current) {
+      driveRestoreAttemptedRef.current = true;
+      // Wait for GIS script to load (it's loaded async in the page head)
+      const attempt = () => silentlyRestoreDriveToken().catch(() => {});
+      // @ts-ignore
+      if (typeof google !== 'undefined' && google?.accounts?.oauth2) {
+        attempt();
+      } else {
+        // Script not yet loaded — wait up to 5 seconds
+        const timeout = setTimeout(attempt, 2000);
+        return () => clearTimeout(timeout);
+      }
+    }
+  }, [isDriveConnected]);
 
   // ─── 1. Initial Full Sync on Login ────────────────────────
   useEffect(() => {

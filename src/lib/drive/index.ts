@@ -12,6 +12,8 @@ import {
   removeDriveQueueItem,
   incrementDriveQueueRetry,
   getDriveQueueCount,
+  getClaim,
+  saveClaim,
 } from '@/lib/storage/indexeddb';
 
 // ─── Token State (in-memory) ─────────────────────────────────────────────────
@@ -25,6 +27,60 @@ const MAX_RETRIES = 3;
 export function getDriveToken(): string | null {
   if (accessToken && Date.now() < tokenExpiryTimestamp) return accessToken;
   return null;
+}
+
+// ─── Silent token restore on page reload ─────────────────────────────────────
+/**
+ * Silently re-acquire a Drive access token without a popup.
+ * Called on app load if `isDriveConnected` is true in localStorage.
+ * Uses `prompt: 'none'` — if Google session is still active, returns a new token.
+ * On failure (session expired, access revoked), clears the connected state.
+ */
+export function silentlyRestoreDriveToken(): Promise<boolean> {
+  return new Promise((resolve) => {
+    // @ts-ignore
+    if (typeof google === 'undefined' || !google?.accounts?.oauth2) {
+      resolve(false);
+      return;
+    }
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID;
+    if (!clientId?.trim()) { resolve(false); return; }
+
+    const { driveEmail } = useUIStore.getState();
+
+    try {
+      // @ts-ignore
+      const tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: clientId.trim(),
+        scope: [
+          'https://www.googleapis.com/auth/drive.file',
+          'https://www.googleapis.com/auth/userinfo.email',
+        ].join(' '),
+        callback: async (response: any) => {
+          if (response.error) {
+            // Silent auth failed — clear connected state, user must re-link manually
+            useUIStore.getState().setDriveConnected(false);
+            resolve(false);
+            return;
+          }
+          accessToken = response.access_token;
+          tokenExpiryTimestamp = Date.now() + ((response.expires_in ?? 3500) * 1000);
+          // Flush any pending queue now that we have a fresh token
+          flushDriveQueue().catch(() => {});
+          resolve(true);
+        },
+      });
+
+      // `prompt: 'none'` + login_hint allows silent re-auth without a popup
+      tokenClient.requestAccessToken({
+        prompt: 'none',
+        ...(driveEmail ? { login_hint: driveEmail } : {}),
+      });
+    } catch {
+      useUIStore.getState().setDriveConnected(false);
+      resolve(false);
+    }
+  });
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -223,10 +279,23 @@ export async function getOrCreateClaimFolder(claimId: string, label: string): Pr
   const folderName = `${label}_${claimId.slice(-6)}`;
   const folderId = await createFolder(folderName, rootId);
 
-  // Update index
+  // Update Drive index + localStorage cache
   index[claimId] = folderId;
   await saveDriveIndex(index);
   localStorage.setItem(cacheKey, folderId);
+
+  // Persist folder ID back to the claim in IndexedDB so the sync indicator works
+  try {
+    const claim = await getClaim(claimId);
+    if (claim) {
+      await saveClaim({ ...claim, gDriveFolderId: folderId });
+      const channel = new BroadcastChannel('surveyos_claims_sync');
+      channel.postMessage('CLAIMS_UPDATED');
+      channel.close();
+    }
+  } catch {
+    // Non-critical — indicator will show on next folder access
+  }
 
   return folderId;
 }

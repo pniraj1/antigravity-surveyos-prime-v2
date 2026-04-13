@@ -32,6 +32,7 @@ interface ClaimState {
     feePaid: boolean;
     feeTotal: number;
     isActive: boolean;
+    gDriveFolderId: string | null;
   }[];
 
   // ─── Actions ────────────────────────────────────────
