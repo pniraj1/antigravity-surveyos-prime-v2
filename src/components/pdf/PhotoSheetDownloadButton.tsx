@@ -21,6 +21,7 @@ import { PhotoSheetDocument } from './PhotoSheetDocument';
 import type { ClaimData } from '@/types';
 import type { PhotoSheetOptions } from '@/types/assessment';
 import { DownloadCloud, Loader2 } from 'lucide-react';
+import { useProfileStore } from '@/stores/profile-store';
 
 interface Props {
   claim:   ClaimData;
@@ -28,12 +29,13 @@ interface Props {
 }
 
 export function PhotoSheetDownloadButton({ claim, options }: Props) {
+  const surveyorName = useProfileStore(s => s.profile.name);
   const fileName =
     `${claim?.vehicle?.registrationNumber || 'DRAFT'}-Photo-Sheet.pdf`;
 
   return (
     <PDFDownloadLink
-      document={<PhotoSheetDocument claim={claim} options={options} />}
+      document={<PhotoSheetDocument claim={claim} surveyorName={surveyorName} options={options} />}
       fileName={fileName}
     >
       {({ loading, error }) => {

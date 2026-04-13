@@ -202,11 +202,12 @@ export const DEFAULT_PHOTO_SHEET_OPTIONS: PhotoSheetOptions = {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 interface Props {
-  claim:    ClaimData;
-  options?: Partial<PhotoSheetOptions>;
+  claim:         ClaimData;
+  surveyorName?: string;
+  options?:      Partial<PhotoSheetOptions>;
 }
 
-export function PhotoSheetDocument({ claim, options = {} }: Props) {
+export function PhotoSheetDocument({ claim, surveyorName = '', options = {} }: Props) {
   const opts: PhotoSheetOptions = { ...DEFAULT_PHOTO_SHEET_OPTIONS, ...options };
 
   const photos      = Array.isArray(claim?.photos) ? claim.photos : [];
@@ -224,8 +225,9 @@ export function PhotoSheetDocument({ claim, options = {} }: Props) {
   }
 
   const regNum    = claim?.vehicle?.registrationNumber || 'DRAFT';
-  const makeModel = [claim?.vehicle?.make, claim?.vehicle?.model].filter(Boolean).join(' ');
-  const claimNum  = claim?.policy?.claimNumber || 'N/A';
+  const insurer   = claim?.policy?.insurerName        || '';
+  const reportNo  = claim?.reportNo                   || '';
+  const claimNum  = claim?.policy?.claimNumber        || 'N/A';
 
   const pageSize      = config.pagePortrait ? 'A4' : ([842, 595] as [number, number]);
   const footerLeft    = pad;
@@ -249,13 +251,14 @@ export function PhotoSheetDocument({ claim, options = {} }: Props) {
             {/* ── Header ── */}
             <View style={S.header}>
               <View style={S.titleSection}>
-                <Text style={S.title}>PHOTOGRAPHIC EVIDENCE SHEET</Text>
+                {/* Row 1: Surveyor name + Vehicle number */}
+                <Text style={S.title}>
+                  {surveyorName || 'Surveyor'}{'  ·  '}{regNum}
+                </Text>
+                {/* Row 2: Insurance company + Report number */}
                 <Text style={S.subtitle}>
-                  {makeModel ? `${makeModel}  |  ` : ''}{regNum}
-                  {'  ·  '}
-                  {config.pagePortrait ? 'Portrait' : 'Landscape'} layout
-                  {'  ·  '}
-                  {config.cols}×{config.rows} grid
+                  {insurer ? `${insurer}  ·  ` : ''}
+                  {reportNo ? `Report No: ${reportNo}` : ''}
                 </Text>
               </View>
               <View style={S.regBadge}>
@@ -292,12 +295,11 @@ export function PhotoSheetDocument({ claim, options = {} }: Props) {
                       )}
                     </View>
 
-                    {/* Caption bar */}
-                    <View style={S.captionRow}>
-                      <Text style={S.captionText}>
-                        {(photo?.name || 'DAMAGE DETAIL').substring(0, 30).toUpperCase()}
+                    {/* Caption bar — index only, no filename */}
+                    <View style={[S.captionRow, { justifyContent: 'center' }]}>
+                      <Text style={S.indexText}>
+                        {String(globalIdx).padStart(2, '0')} / {pageIdx * config.perPage + pagePhotos.length}
                       </Text>
-                      <Text style={S.indexText}>#{String(globalIdx).padStart(2, '0')}</Text>
                     </View>
                   </View>
                 );

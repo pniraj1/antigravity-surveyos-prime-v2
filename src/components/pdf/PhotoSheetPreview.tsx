@@ -17,6 +17,7 @@ import { PhotoSheetDocument } from './PhotoSheetDocument';
 
 import type { ClaimData } from '@/types';
 import type { PhotoSheetOptions } from '@/types/assessment';
+import { useProfileStore } from '@/stores/profile-store';
 
 interface Props {
   claim:   ClaimData;
@@ -24,6 +25,8 @@ interface Props {
 }
 
 export function PhotoSheetPreview({ claim, options }: Props) {
+  const surveyorName = useProfileStore(s => s.profile.name);
+
   return (
     <PDFViewer
       style={{
@@ -34,7 +37,7 @@ export function PhotoSheetPreview({ claim, options }: Props) {
       }}
       showToolbar
     >
-      <PhotoSheetDocument claim={claim} options={options} />
+      <PhotoSheetDocument claim={claim} surveyorName={surveyorName} options={options} />
     </PDFViewer>
   );
 }
