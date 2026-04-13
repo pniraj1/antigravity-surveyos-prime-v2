@@ -27,6 +27,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase/config';
 import { useAuthStore } from '@/stores/auth-store';
 import { initUserDB, closeUserDB } from '@/lib/storage/indexeddb';
+import { resetAllState } from '@/lib/auth/resetAllState';
 
 export function useAuth() {
   const setUser = useAuthStore(s => s.setUser);
@@ -49,6 +50,9 @@ export function useAuth() {
         // Close the database BEFORE clearing auth state so no
         // in-flight read/write races with the next user's login.
         await closeUserDB();
+        // Wipe all user-specific state: Drive tokens, claim list,
+        // profile. Surveyor B will start with a completely clean slate.
+        resetAllState();
         setUser(null);
       }
     });

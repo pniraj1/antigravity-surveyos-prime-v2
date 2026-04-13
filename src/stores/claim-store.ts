@@ -82,6 +82,13 @@ interface ClaimState {
   // Claims list
   setClaimsList: (claims: ClaimState['claimsList']) => void;
   markClean: () => void;
+
+  /**
+   * Wipes all in-memory claim state on logout.
+   * Called by resetAllState() in src/lib/auth/resetAllState.ts.
+   * Ensures Surveyor B never sees Surveyor A's claims after a user switch.
+   */
+  resetStore: () => void;
 }
 
 export const useClaimStore = create<ClaimState>()(
@@ -415,6 +422,13 @@ export const useClaimStore = create<ClaimState>()(
 
       setClaimsList: (claims) => set({ claimsList: claims }),
       markClean: () => set({ isDirty: false }),
+
+      resetStore: () => set({
+        currentClaim: null,
+        currentClaimId: null,
+        isDirty: false,
+        claimsList: [],
+      }),
 
       setExtractedData: (key, data) => {
         set((state) => ({

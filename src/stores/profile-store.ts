@@ -17,6 +17,14 @@ interface ProfileState {
   getNextFinalNumber: () => string;
   /** Convenience wrapper — picks the right allocator by survey type */
   getNextReportNumber: (surveyType: SurveyType) => string;
+  /**
+   * Wipes all profile data on logout.
+   * Called by resetAllState() in src/lib/auth/resetAllState.ts.
+   * Clears both Zustand state and the persisted localStorage key so
+   * the next surveyor who logs in sees a blank profile, not the previous
+   * surveyor's name, signature, API keys, or bank details.
+   */
+  resetProfile: () => void;
 }
 
 const DEFAULT_PROFILE: SurveyorProfile = {
@@ -155,6 +163,16 @@ export const useProfileStore = create<ProfileState>()(
       getNextReportNumber: (surveyType) => {
         if (surveyType === 'spot') return get().getNextSpotNumber();
         return get().getNextFinalNumber();
+      },
+
+      resetProfile: () => {
+        // Reset in-memory Zustand state to blank defaults
+        set({ profile: { ...DEFAULT_PROFILE } });
+        // Also wipe the persisted localStorage key so the next user
+        // who opens the app doesn't inherit this surveyor's data
+        try {
+          localStorage.removeItem('surveyos-profile');
+        } catch { /* ignore in SSR/test environments */ }
       },
     }),
     {
