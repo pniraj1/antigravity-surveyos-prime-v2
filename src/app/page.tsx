@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import dynamicImport from 'next/dynamic';
 import { BankReconcileDialog } from '@/components/dialogs/BankReconcileDialog';
+import { IRDAISummaryDialog } from '@/components/dialogs/IRDAISummaryDialog';
 
 import { Sidebar, MobileMenuButton } from '@/components/layout/sidebar';
 import { FloatingReportPreview } from '@/components/layout/FloatingReportPreview';
@@ -32,6 +33,7 @@ function DashboardContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   const [showReconcile, setShowReconcile] = useState(false);
+  const [showIRDAI, setShowIRDAI] = useState(false);
 
   const activeClaims = claimsList.filter(c => c.isActive);
   const today = new Date().toDateString();
@@ -185,13 +187,22 @@ function DashboardContent() {
             <h2 className="text-xs font-black uppercase tracking-[0.2em]" style={{ color: '#8D99AE' }}>
               Fees Overview
             </h2>
-            <button
-              onClick={() => setShowReconcile(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
-              style={{ background: 'rgba(212,175,55,0.1)', color: '#92400E', border: '1px solid rgba(212,175,55,0.3)' }}
-            >
-              Reconcile Bank Statement
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowIRDAI(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
+                style={{ background: 'rgba(34,197,94,0.08)', color: '#16a34a', border: '1px solid rgba(34,197,94,0.25)' }}
+              >
+                Export Annual Summary
+              </button>
+              <button
+                onClick={() => setShowReconcile(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
+                style={{ background: 'rgba(212,175,55,0.1)', color: '#92400E', border: '1px solid rgba(212,175,55,0.3)' }}
+              >
+                Reconcile Bank Statement
+              </button>
+            </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
@@ -520,6 +531,7 @@ function DashboardContent() {
       </div>
 
       {showReconcile && <BankReconcileDialog onClose={() => setShowReconcile(false)} />}
+      {showIRDAI && <IRDAISummaryDialog onClose={() => setShowIRDAI(false)} />}
     </div>
   );
 }
