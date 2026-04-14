@@ -4,9 +4,14 @@ import { useProfileStore } from '@/stores/profile-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { Lock, CreditCard, ExternalLink, Mail } from 'lucide-react';
 
+const SANDBOX_MODE = process.env.NEXT_PUBLIC_SANDBOX_MODE === 'true';
+
 export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
   const { profile } = useProfileStore();
   const { isAuthenticated } = useAuthStore();
+
+  // ── Sandbox bypass: skip subscription check in preview channel builds ──
+  if (SANDBOX_MODE) return <>{children}</>;
 
   if (!isAuthenticated || profile.isAdmin) return <>{children}</>;
 

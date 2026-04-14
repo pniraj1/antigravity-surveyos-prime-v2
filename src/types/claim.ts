@@ -71,6 +71,25 @@ export interface ClaimData {
   photoLayout: PhotoLayout;
   photoLandscape: boolean;
 
+  // ─── Total Loss Settlement ─────────────────────────
+  /**
+   * Surveyor-confirmed flag. System may SUGGEST this when Assessment > 75% IDV,
+   * but the surveyor must explicitly enable it via the toggle in the Report tab.
+   * Defaults to false / undefined on older claims.
+   */
+  isTotalLoss?: boolean;
+  /**
+   * Only populated when the surveyor has enabled Total Loss mode.
+   * The 4 values feed the UIIC 4-way liability comparison table.
+   */
+  totalLossDetails?: {
+    salvageWithRC: number;
+    salvageWithoutRC: number;
+    towingExpenses: number;
+    workshopRent: number;
+    remarks: string;
+  };
+
   // ─── AI Extraction Cache ───────────────────────────
   extractedData: Record<string, unknown>;
 
@@ -314,6 +333,14 @@ export function createBlankClaim(
     photos: [],
     photoLayout: 6,
     photoLandscape: false,
+    isTotalLoss: false,
+    totalLossDetails: {
+      salvageWithRC: 0,
+      salvageWithoutRC: 0,
+      towingExpenses: 0,
+      workshopRent: 0,
+      remarks: 'NOTE: Since the assessed repair cost is substantial relative to the IDV, the settlement comparison is provided above for the insurer\'s final decision.'
+    },
     extractedData: {},
     gDriveFolderId: null,
     telemetrySent: false,

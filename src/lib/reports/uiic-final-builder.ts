@@ -598,6 +598,78 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
 ${getSurveyorHeader(profile)}
 <div style="font-weight:700;font-size:9pt;text-align:right;margin-bottom:2px;">${nm}</div>
 <div style="text-align:center;font-weight:700;font-size:9.5pt;border:1pt solid #000;padding:4px;margin-bottom:4px;background:#f0f0f0;">BILL CHECK REPORT — MOTOR SURVEY (FINAL)</div>
+
+${claim.isTotalLoss && claim.totalLossDetails ? (() => {
+  const idv = parseFloat(String(claim.policy?.idv || '0').replace(/,/g, '')) || 0;
+  const totalExcess = compExcess + volExcess;
+  const tlLiability = Math.max(0, idv - totalExcess);
+  const netWithRC = Math.max(0, tlLiability - (claim.totalLossDetails.salvageWithRC || 0));
+  const netWithoutRC = Math.max(0, tlLiability - (claim.totalLossDetails.salvageWithoutRC || 0));
+  const repairBasis = net;
+
+  return `
+    <div style="margin-top:10px; margin-bottom:15px; border:1pt solid #006838; border-radius:4px; overflow:hidden;">
+      <div style="background:#006838; color:#fff; font-weight:900; font-size:8pt; padding:6px; text-align:center; letter-spacing:1px;">
+        COMPARISON OF INSURER'S LIABILITY (TOTAL LOSS ASSESSMENT)
+      </div>
+      <table style="width:100%; border-collapse:collapse; font-size:7.5pt;">
+        <thead>
+          <tr style="background:#f9fafb;">
+            <th style="${th}text-align:left;color:#006838;">DESCRIPTION</th>
+            <th style="${th}width:18%;text-align:right;">REPAIR BASIS</th>
+            <th style="${th}width:18%;text-align:right;">TOTAL LOSS</th>
+            <th style="${th}width:18%;text-align:right;">NET LOSS (W/RC)</th>
+            <th style="${th}width:18%;text-align:right;">NET LOSS (W/O RC)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="${td}font-weight:700;">Insured Declared Value (IDV)</td>
+            <td style="${td}text-align:right;color:#666;">-</td>
+            <td style="${td}text-align:right;font-weight:700;">${fa(idv)}</td>
+            <td style="${td}text-align:right;font-weight:700;">${fa(idv)}</td>
+            <td style="${td}text-align:right;font-weight:700;">${fa(idv)}</td>
+          </tr>
+          <tr>
+            <td style="${td}color:#666;">Less: Compulsory/Vol. Excess</td>
+            <td style="${td}text-align:right;color:#666;">-</td>
+            <td style="${td}text-align:right;color:#b91c1c;">- ${fa(totalExcess)}</td>
+            <td style="${td}text-align:right;color:#b91c1c;">- ${fa(totalExcess)}</td>
+            <td style="${td}text-align:right;color:#b91c1c;">- ${fa(totalExcess)}</td>
+          </tr>
+          <tr>
+            <td style="${td}color:#666;">Less: Salvage Value</td>
+            <td style="${td}text-align:right;color:#666;">-</td>
+            <td style="${td}text-align:right;color:#666;">-</td>
+            <td style="${td}text-align:right;color:#b91c1c;">- ${fa(claim.totalLossDetails.salvageWithRC)}</td>
+            <td style="${td}text-align:right;color:#b91c1c;">- ${fa(claim.totalLossDetails.salvageWithoutRC)}</td>
+          </tr>
+          <tr>
+            <td style="${td}color:#666;">Add: Towing / Workshop Expenses</td>
+            <td style="${td}text-align:right;color:#666;">-</td>
+            <td style="${td}text-align:right;color:#065f46;">+ ${fa((claim.totalLossDetails.towingExpenses || 0) + (claim.totalLossDetails.workshopRent || 0))}</td>
+            <td style="${td}text-align:right;color:#065f46;">+ ${fa((claim.totalLossDetails.towingExpenses || 0) + (claim.totalLossDetails.workshopRent || 0))}</td>
+            <td style="${td}text-align:right;color:#065f46;">+ ${fa((claim.totalLossDetails.towingExpenses || 0) + (claim.totalLossDetails.workshopRent || 0))}</td>
+          </tr>
+          <tr style="background:#f0fdf4;">
+            <td style="${td}font-weight:900;color:#006838;font-size:8pt;">NET PAYABLE LIABILITY</td>
+            <td style="${td}text-align:right;font-weight:900;font-size:8pt;border-top:1pt solid #006838;">₹ ${fa(repairBasis)}</td>
+            <td style="${td}text-align:right;font-weight:900;font-size:8pt;border-top:1pt solid #006838;">₹ ${fa(tlLiability + (claim.totalLossDetails.towingExpenses || 0) + (claim.totalLossDetails.workshopRent || 0))}</td>
+            <td style="${td}text-align:right;font-weight:900;font-size:8pt;border-top:1pt solid #006838;background:#dcfce7;">₹ ${fa(netWithRC + (claim.totalLossDetails.towingExpenses || 0) + (claim.totalLossDetails.workshopRent || 0))}</td>
+            <td style="${td}text-align:right;font-weight:900;font-size:8pt;border-top:1pt solid #006838;">₹ ${fa(netWithoutRC + (claim.totalLossDetails.towingExpenses || 0) + (claim.totalLossDetails.workshopRent || 0))}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="padding:8px; font-size:7pt; color:#444; border-top:1pt dashed #006838; background:rgba(0,104,56,0.02); line-height:1.4;">
+        <div style="color:#006838; font-weight:900; margin-bottom:3px; font-size:6.5pt; text-transform:uppercase; letter-spacing:0.5px;">Surveyor's Observation / Recommendation:</div>
+        ${claim.totalLossDetails.remarks || `Since the repair cost is significant relative to the IDV, the Insurer may opt for the most economical settlement mode as per the above comparison.`} 
+        <div style="margin-top:4px; font-style:italic; font-size:6.5pt; color:#666;">
+          * Expenses for towing (₹${fa(claim.totalLossDetails.towingExpenses)}) and workshop storage (₹${fa(claim.totalLossDetails.workshopRent)}) are added to TL/Net estimates if applicable.
+        </div>
+      </div>
+    </div>
+  `;
+})() : ''}
 <table style="${ts}"><tr><td style="${tdl}width:25%;">Report Number:</td><td style="${tdb}width:25%;">${g(claim.reportNo)}</td><td style="${tdl}width:25%;">Report Date:</td><td style="${tdb}">${fd(claim.reportDate)}</td></tr>
 <tr><td style="${tdl}">Bill / Invoice No.:</td><td style="${tdb}">${g(bc?.billNo)}</td><td style="${tdl}">Bill / Invoice Date:</td><td style="${tdb}">${fd(bc?.billDate)}</td></tr></table>
 

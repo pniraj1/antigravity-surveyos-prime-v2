@@ -168,3 +168,33 @@ export function createAssessmentRow(
 }
 
 
+// ─── Constructive Total Loss Detection ─────────────────────────────────────
+// IRDA / industry standard threshold: repair cost ≥ 75% of IDV.
+// This function ONLY detects — the surveyor makes the final call via UI toggle.
+
+export const CTL_THRESHOLD = 0.75;
+
+export interface CTLStatus {
+  /** True when netAssessedLoss / idv >= CTL_THRESHOLD */
+  isCTL: boolean;
+  /** Ratio as a decimal, e.g. 0.975 for 97.5% */
+  ratio: number;
+  netAssessedLoss: number;
+  idv: number;
+}
+
+/**
+ * Detect if a claim's repair cost exceeds the CTL threshold.
+ * Safe to call with any IDV string (handles commas, blanks, zeros).
+ */
+export function detectCTL(
+  netAssessedLoss: number,
+  idvRaw: string | number | undefined
+): CTLStatus {
+  const idv = parseFloat(String(idvRaw ?? '0').replace(/,/g, '')) || 0;
+  if (idv <= 0) {
+    return { isCTL: false, ratio: 0, netAssessedLoss, idv: 0 };
+  }
+  const ratio = netAssessedLoss / idv;
+  return { isCTL: ratio >= CTL_THRESHOLD, ratio, netAssessedLoss, idv };
+}

@@ -43,13 +43,21 @@ interface SurveyActionsProps {
 }
 
 export function SurveyActions({
-  claim, summary, profile, format, setFormat,
-  isExportingWord, setIsExportingWord, zoom, setZoom,
+  claim,
+  summary,
+  profile,
+  format,
+  setFormat,
+  isExportingWord,
+  setIsExportingWord,
+  zoom,
+  setZoom,
 }: SurveyActionsProps) {
+
   return (
     <>
       {/* Format Selector */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5 w-full">
         {FORMATS.map(f => (
           <button
             key={f.id}

@@ -3,17 +3,10 @@
 // Handles PDF-to-Image conversion and throttled execution
 // ═══════════════════════════════════════════════════════════
 
-import * as pdfjsLib from 'pdfjs-dist';
+// import * as pdfjsLib from 'pdfjs-dist'; // DO NOT STACTIC IMPORT THIS
 import { callAIGateway } from './service';
 import { DOC_PROMPTS } from './prompts';
 import { toast } from 'sonner';
-
-// Setup PDF.js worker — using unpkg for better reliability with version 5.6.205
-if (typeof window !== 'undefined') {
-  // We use unpkg as it provides a direct mapping for the mjs worker version.
-  const version = pdfjsLib.version;
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${version}/build/pdf.worker.min.mjs`;
-}
 
 /**
  * Converts a file (Image or PDF) to a list of base64 strings.
@@ -23,6 +16,10 @@ export async function fileToImages(
   onProgress?: (page: number, total: number) => void
 ): Promise<string[]> {
   if (file.type === 'application/pdf') {
+    const pdfjsLib = await import('pdfjs-dist');
+    const version = pdfjsLib.version;
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${version}/build/pdf.worker.min.mjs`;
+
     const arrayBuffer = await file.arrayBuffer();
     const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
     const pdf = await loadingTask.promise;

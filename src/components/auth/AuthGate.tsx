@@ -9,8 +9,13 @@ import { Shield } from 'lucide-react';
  * Shows a loading spinner while Firebase resolves the auth state,
  * then either renders the app or the sign-in screen.
  */
+const SANDBOX_MODE = process.env.NEXT_PUBLIC_SANDBOX_MODE === 'true';
+
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuthStore();
+
+  // ── Sandbox bypass: skip auth entirely for preview channel deployments ──
+  if (SANDBOX_MODE) return <>{children}</>;
 
   // Firebase is still checking the session — show a silent loader
   if (loading) {
