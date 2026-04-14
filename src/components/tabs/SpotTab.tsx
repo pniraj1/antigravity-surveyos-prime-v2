@@ -4,30 +4,16 @@ import { useClaimStore } from '@/stores/claim-store';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, PlusCircle, AlertTriangle, ShieldCheck, Truck, User, MapPin, Gauge, CheckCircle2, Zap, Lock, FileText, ClipboardList } from 'lucide-react';
-import { toast } from 'sonner';
-import { saveClaim } from '@/lib/storage/indexeddb';
+import { Trash2, PlusCircle, AlertTriangle, ShieldCheck, Truck, User, MapPin, Gauge, Zap, FileText, ClipboardList } from 'lucide-react';
 
 const S = () => <span className="ml-1 inline-block w-2 h-2 rounded-full bg-green-500 align-middle" title="Used in Spot Report" />;
 
 export function SpotTab() {
-  const { currentClaim, updateSpotDetails, updateDriver, updateAccident, updateVehicle, addSpotDamageRow, updateSpotDamageRow, deleteSpotDamageRow, updateClaim } = useClaimStore();
+  const { currentClaim, updateSpotDetails, updateDriver, updateAccident, updateVehicle, addSpotDamageRow, updateSpotDamageRow, deleteSpotDamageRow } = useClaimStore();
 
   if (!currentClaim) return null;
 
   const isCompleted = currentClaim.isSpotCompleted;
-
-  const handleFinalize = async () => {
-    if (confirm('Are you sure you want to finalize the Spot Survey? This will unlock the Final Survey workflow.')) {
-      try {
-        await saveClaim(currentClaim);
-        updateClaim({ isSpotCompleted: true, surveyType: 'final' });
-        toast.success('Spot Survey Finalized! Final Workflow Unlocked.');
-      } catch {
-        toast.error('Failed to save spot data — please try again.');
-      }
-    }
-  };
 
   const { spotDetails, vehicleType, driver, accident, vehicle } = currentClaim;
   const spotDamageRows = currentClaim.spotDamageRows ?? [];
@@ -562,46 +548,6 @@ export function SpotTab() {
           The spot survey report is a preliminary scene inspection. Ensure photographs are captured sequentially from 360&deg; including Chassis/VIN and Odometer reading before vehicle movement to workshop.
         </div>
       </div>
-      {/* ── Section 6: Handoff & Finalization ───────────── */}
-      <Card className="border-2 border-emerald-100 bg-emerald-50/30 shadow-sm mb-10 overflow-hidden">
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center flex-shrink-0 text-emerald-600">
-                <CheckCircle2 size={24} />
-              </div>
-              <div>
-                <h3 className="text-lg font-black text-emerald-900 tracking-tight">
-                  {isCompleted ? 'Spot Survey Finalized' : 'Finalize Spot Survey'}
-                </h3>
-                <p className="text-sm text-emerald-700/70 max-w-lg mt-1">
-                  Once the spot survey is complete, finalize it to generate the professional spot report. 
-                  This will also unlock the Assessment and Billing sections for the final survey stage.
-                </p>
-              </div>
-            </div>
-            
-            {!isCompleted ? (
-              <button
-                onClick={handleFinalize}
-                className="flex items-center gap-2 px-8 py-3.5 rounded-xl font-black text-sm transition-all shadow-md hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
-                style={{
-                  background: 'linear-gradient(135deg, #10B981, #059669)',
-                  color: '#FFFFFF',
-                }}
-              >
-                <Zap size={16} />
-                Finish Spot & Handover
-              </button>
-            ) : (
-              <div className="flex items-center gap-3 px-6 py-2.5 rounded-xl bg-emerald-100 text-emerald-700 font-bold text-sm border border-emerald-200">
-                <Lock size={16} />
-                Workflow In Final Stage
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
