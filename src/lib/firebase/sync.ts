@@ -102,7 +102,7 @@ export async function pullClaimsFromCloud(uid: string) {
  * kept locally only (same pattern as claim photos).
  */
 export async function pushProfileToCloud(uid: string, profile: SurveyorProfile) {
-  const profileRef = doc(db, `users/${uid}/profile`, 'main');
+  const profileRef = doc(db, `users/${uid}/profile`, 'current');
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { signatureDataUrl: _sig, stampDataUrl: _stamp, ...cloudProfile } = profile as any;
   await setDoc(profileRef, { ...cloudProfile, ownerId: uid }, { merge: true });
@@ -114,7 +114,7 @@ export async function pushProfileToCloud(uid: string, profile: SurveyorProfile) 
  * Local signatureDataUrl and stampDataUrl are preserved (not stored in cloud).
  */
 export async function pullProfileFromCloud(uid: string) {
-  const profileRef = doc(db, `users/${uid}/profile`, 'main');
+  const profileRef = doc(db, `users/${uid}/profile`, 'current');
   const snap = await getDoc(profileRef);
 
   if (snap.exists()) {

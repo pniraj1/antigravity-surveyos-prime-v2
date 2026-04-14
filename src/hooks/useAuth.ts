@@ -24,7 +24,7 @@
 
 import { useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/config';
 import { useAuthStore } from '@/stores/auth-store';
 import { initUserDB, closeUserDB } from '@/lib/storage/indexeddb';
@@ -46,14 +46,28 @@ export function useAuth() {
         // this update is deployed.
         await initUserDB(user.uid);
 
-        // Auto-create a pending profile for brand new users.
-        // If the profile doc doesn't exist yet, write it now so
-        // SubscriptionGuard always sees a defined status ('pending')
-        // rather than undefined, which could accidentally let strangers in.
-        const profileRef = doc(db, 'users', user.uid, 'profile', 'current');
-        const profileSnap = await getDoc(profileRef);
-        if (!profileSnap.exists()) {
-          await setDoc(profileRef, {
+        // ── Profile bootstrap & migration ─────────────────────
+        // All profiles must live at profile/current (not profile/main).
+        // If a legacy profile/main doc exists, migrate it first.
+        const currentRef = doc(db, 'users', user.uid, 'profile', 'current');
+        const mainRef    = doc(db, 'users', user.uid, 'profile', 'main');
+
+        const [currentSnap, mainSnap] = await Promise.all([
+          getDoc(currentRef),
+          getDoc(mainRef),
+        ]);
+
+        let profileStatus: string = 'pending';
+
+        if (!currentSnap.exists() && mainSnap.exists()) {
+          // ── Migrate: copy profile/main → profile/current ──
+          const mainData = mainSnap.data();
+          await setDoc(currentRef, mainData);
+          await deleteDoc(mainRef);
+          profileStatus = mainData?.subscriptionStatus ?? 'pending';
+        } else if (!currentSnap.exists()) {
+          // ── Brand new user: create pending profile ─────────
+          await setDoc(currentRef, {
             subscriptionStatus: 'pending',
             subscriptionExpiry: null,
             isAdmin: false,
@@ -61,14 +75,26 @@ export function useAuth() {
             displayName: user.displayName ?? '',
             createdAt: Timestamp.now(),
           });
-          // Also write to newSignups so admin can see and approve them
-          const signupRef = doc(db, 'newSignups', user.uid);
-          await setDoc(signupRef, {
-            email: user.email ?? '',
-            displayName: user.displayName ?? '',
-            signedUpAt: Timestamp.now(),
-            status: 'pending',
-          });
+          profileStatus = 'pending';
+        } else {
+          profileStatus = currentSnap.data()?.subscriptionStatus ?? 'pending';
+        }
+
+        // ── Write to newSignups if user is still pending ──────
+        // Done in a separate try/catch so a rules or network error
+        // here never blocks the login flow. Admin sees them regardless.
+        if (profileStatus === 'pending') {
+          try {
+            const signupRef = doc(db, 'newSignups', user.uid);
+            await setDoc(signupRef, {
+              email: user.email ?? '',
+              displayName: user.displayName ?? '',
+              signedUpAt: Timestamp.now(),
+              status: 'pending',
+            }, { merge: true }); // merge:true so re-logins don't reset timestamp
+          } catch {
+            // Non-fatal — admin can still see the user via profile collection
+          }
         }
 
         setUser(user);
