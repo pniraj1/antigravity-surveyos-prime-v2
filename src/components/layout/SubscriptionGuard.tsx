@@ -2,7 +2,7 @@
 
 import { useProfileStore } from '@/stores/profile-store';
 import { useAuthStore } from '@/stores/auth-store';
-import { Lock, CreditCard, ExternalLink, Mail } from 'lucide-react';
+import { Lock, CreditCard, Mail, Clock } from 'lucide-react';
 
 const SANDBOX_MODE = process.env.NEXT_PUBLIC_SANDBOX_MODE === 'true';
 
@@ -15,12 +15,68 @@ export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
 
   if (!isAuthenticated || profile.isAdmin) return <>{children}</>;
 
+  const isPending = profile.subscriptionStatus === 'pending';
   const isExpired = profile.subscriptionStatus === 'expired';
   const isSuspended = profile.subscriptionStatus === 'suspended';
   const expiryDate = profile.subscriptionExpiry ? new Date(profile.subscriptionExpiry) : null;
   const isDateExpired = expiryDate && expiryDate < new Date();
 
-  // If status is active but date is in the past, consider it expired
+  // Pending — new user waiting for admin approval
+  if (isPending) {
+    return (
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#0D1B2A] text-white p-6 text-center">
+        <div className="max-w-md space-y-8 animate-in fade-in zoom-in duration-500">
+          <div className="mx-auto w-20 h-20 bg-yellow-500/20 rounded-full flex items-center justify-center">
+            <Clock className="text-yellow-400" size={40} />
+          </div>
+
+          <div className="space-y-4">
+            <h1 className="text-3xl font-black tracking-tight">Account Pending Approval</h1>
+            <p className="text-slate-400 font-medium">
+              Your account has been registered and is awaiting admin activation.
+              You will be notified at <span className="text-white font-bold">{profile.email}</span> once approved.
+            </p>
+          </div>
+
+          <div className="p-6 bg-slate-800/50 rounded-2xl border border-slate-700/50 space-y-4">
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-400">Account Status:</span>
+              <span className="font-bold text-yellow-400 uppercase tracking-wider">Pending</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-400">Next step:</span>
+              <span className="font-bold text-slate-300">Admin approval required</span>
+            </div>
+          </div>
+
+          <div className="grid gap-4">
+            <a
+              href="mailto:support@surveyos.in"
+              className="flex items-center justify-center gap-2 w-full py-4 bg-[#D4AF37] text-[#0D1B2A] font-black rounded-xl hover:scale-105 transition-transform"
+            >
+              <Mail size={18} />
+              Contact Support
+            </a>
+            <button
+              onClick={() => window.location.reload()}
+              className="text-sm font-bold text-slate-400 hover:text-white transition-colors"
+            >
+              Already approved? Check again
+            </button>
+          </div>
+
+          <div className="pt-8 border-t border-slate-800">
+            <div className="flex items-center justify-center gap-2 text-xs text-slate-500">
+              <Mail size={12} />
+              support@surveyos.in
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Expired or suspended
   const showBlock = isExpired || isSuspended || isDateExpired;
 
   if (showBlock) {
@@ -30,11 +86,11 @@ export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
           <div className="mx-auto w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center">
             <Lock className="text-red-500" size={40} />
           </div>
-          
+
           <div className="space-y-4">
             <h1 className="text-3xl font-black tracking-tight">Access Suspended</h1>
             <p className="text-slate-400 font-medium">
-              Your SurveyOS-Prime subscription has {isExpired || isDateExpired ? 'expired' : 'not yet been activated'}. 
+              Your SurveyOS-Prime subscription has {isExpired || isDateExpired ? 'expired' : 'been suspended'}.
               Please complete your monthly payment to restore full access to your claims and AI tools.
             </p>
           </div>
@@ -53,15 +109,14 @@ export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="grid gap-4">
-            <a 
-              href="mailto:support@surveyos.in" 
+            <a
+              href="mailto:support@surveyos.in"
               className="flex items-center justify-center gap-2 w-full py-4 bg-[#D4AF37] text-[#0D1B2A] font-black rounded-xl hover:scale-105 transition-transform"
             >
               <CreditCard size={18} />
               Renew Subscription
             </a>
-            
-            <button 
+            <button
               onClick={() => window.location.reload()}
               className="text-sm font-bold text-slate-400 hover:text-white transition-colors"
             >

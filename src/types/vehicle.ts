@@ -174,9 +174,9 @@ export interface SurveyorProfile {
   /** Current year for report numbering (auto-resets usually) */
   reportYear?: number;
   /** 'active', 'expired', or 'suspended' */
-  subscriptionStatus: 'active' | 'expired' | 'suspended';
-  /** ISO date string for subscription expiration */
-  subscriptionExpiry: string;
+  subscriptionStatus: 'active' | 'expired' | 'suspended' | 'pending';
+  /** ISO date string for subscription expiration, null for pending/unset accounts */
+  subscriptionExpiry: string | null;
   /** Whether this user can manage other subscriptions */
   isAdmin: boolean;
   // ─── Signature & Stamp ────────────────────────────────

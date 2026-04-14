@@ -1,14 +1,30 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // Role-based admin check — reads isAdmin flag from the user's own profile.
+    // Any user can be promoted to admin by setting isAdmin: true in their profile.
+    // Replaces old hardcoded UID approach.
+    function isAdmin() {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)/profile/current) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)/profile/current).data.isAdmin == true;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
     // AI Configuration — admin-only (contains master API keys)
     match /ai_config/routing {
       allow read, write: if isAdmin();
     }
-    
-    // Admin Master Access
-    function isAdmin() {
-      return request.auth != null && request.auth.uid == 'QCgRlZdGF3etljVitH8xq3KsTqB2';
+
+    // New signup notifications — users create their own entry on first login,
+    // only admins can read or manage them
+    match /newSignups/{uid} {
+      allow create: if isSignedIn() && request.auth.uid == uid;
+      allow read, update, delete: if isAdmin();
     }
 
     // Collection Group query support for Admin Panel
@@ -16,12 +32,12 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // User-specific Claims Data
+    // User-specific data — each user accesses only their own data
     match /users/{userId}/{allPaths=**} {
-      allow read, write: if (request.auth != null && request.auth.uid == userId) || isAdmin();
+      allow read, write: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
     }
-    
-    // Legacy support (if any)
+
+    // Legacy support
     match /claims/{claimId} {
       allow read, write: if false; // Migrated to users/{uid}/claims
     }

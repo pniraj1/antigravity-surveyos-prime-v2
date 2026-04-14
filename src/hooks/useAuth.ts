@@ -24,7 +24,8 @@
 
 import { useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase/config';
+import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase/config';
 import { useAuthStore } from '@/stores/auth-store';
 import { initUserDB, closeUserDB } from '@/lib/storage/indexeddb';
 import { resetAllState } from '@/lib/auth/resetAllState';
@@ -44,6 +45,32 @@ export function useAuth() {
         // shared "surveyos-v2" database on the first login after
         // this update is deployed.
         await initUserDB(user.uid);
+
+        // Auto-create a pending profile for brand new users.
+        // If the profile doc doesn't exist yet, write it now so
+        // SubscriptionGuard always sees a defined status ('pending')
+        // rather than undefined, which could accidentally let strangers in.
+        const profileRef = doc(db, 'users', user.uid, 'profile', 'current');
+        const profileSnap = await getDoc(profileRef);
+        if (!profileSnap.exists()) {
+          await setDoc(profileRef, {
+            subscriptionStatus: 'pending',
+            subscriptionExpiry: null,
+            isAdmin: false,
+            email: user.email ?? '',
+            displayName: user.displayName ?? '',
+            createdAt: Timestamp.now(),
+          });
+          // Also write to newSignups so admin can see and approve them
+          const signupRef = doc(db, 'newSignups', user.uid);
+          await setDoc(signupRef, {
+            email: user.email ?? '',
+            displayName: user.displayName ?? '',
+            signedUpAt: Timestamp.now(),
+            status: 'pending',
+          });
+        }
+
         setUser(user);
       } else {
         // ── LOGOUT ─────────────────────────────────────────────
