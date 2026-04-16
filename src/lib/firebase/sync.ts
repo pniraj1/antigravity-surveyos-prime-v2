@@ -94,6 +94,10 @@ export async function pullClaimsFromCloud(uid: string) {
     }
   }
 
+  const channel = new BroadcastChannel('surveyos_claims_sync');
+  channel.postMessage('CLAIMS_UPDATED');
+  channel.close();
+
   return remoteClaims;
 }
 
@@ -133,6 +137,10 @@ export async function pullProfileFromCloud(uid: string) {
       ...remoteProfile,
       signatureDataUrl: local.signatureDataUrl,
       stampDataUrl: local.stampDataUrl,
+      geminiApiKey: local.geminiApiKey,
+      geminiApiKeys: local.geminiApiKeys,
+      groqApiKey: local.groqApiKey,
+      groqApiKeys: local.groqApiKeys,
     });
     logger.log(`[Sync] Local profile updated from cloud for user ${uid}.`);
     return remoteProfile;
