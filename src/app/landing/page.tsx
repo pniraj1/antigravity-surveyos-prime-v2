@@ -4,6 +4,7 @@ import { motion, AnimatePresence, useScroll, useTransform, useSpring, useMotionV
 import { ArrowRight, Cloud, Camera, Shield, FileText, ChevronRight, Play, Zap, FileCheck2, Cpu, User, Clock, FileWarning, Lock, Database } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { signInWithGoogle } from '@/lib/firebase/auth';
 import { useAuthStore } from '@/stores/auth-store';
 import { Loader2 } from 'lucide-react';
@@ -306,10 +307,17 @@ function StickySimulation() {
 export default function LandingPage() {
   const { isAuthenticated, loading: authLoading } = useAuthStore();
   const [signingIn, setSigningIn] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isAuthenticated && !authLoading) {
+      router.push('/');
+    }
+  }, [isAuthenticated, authLoading, router]);
 
   const handleAction = async () => {
     if (isAuthenticated) {
-      window.location.href = '/'; // Ensure we go to the root router
+      router.push('/');
       return;
     }
     setSigningIn(true);
@@ -323,7 +331,7 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FBFBFD] text-[#1D1D1F] selection:bg-amber-500/20 font-sans overflow-x-clip">
+    <div className="min-h-screen bg-[#FBFBFD] text-[#1D1D1F] selection:bg-amber-500/20 font-sans">
       {/* ── Navigation ── */}
       <nav className="relative z-50 flex items-center justify-between px-6 lg:px-12 py-4 bg-white/70 backdrop-blur-xl border-b border-gray-200/50 sticky top-0">
         <div className="flex items-center gap-3">
