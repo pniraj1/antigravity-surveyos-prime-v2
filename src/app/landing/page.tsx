@@ -273,8 +273,8 @@ function StickySimulation() {
   });
 
   return (
-    <div ref={targetRef} className="h-full w-full">
-      <div className="sticky top-0 h-screen flex flex-col justify-center items-center px-6 overflow-hidden">
+    <div ref={targetRef} className="h-full w-full relative">
+      <div className="sticky top-16 h-[calc(100vh-64px)] flex flex-col justify-center items-center px-6 overflow-hidden">
         <div className="max-w-4xl w-full mb-12 text-center">
           <motion.div
             key={tabIndex}
@@ -323,7 +323,7 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FBFBFD] text-[#1D1D1F] selection:bg-amber-500/20 font-sans overflow-clip">
+    <div className="min-h-screen bg-[#FBFBFD] text-[#1D1D1F] selection:bg-amber-500/20 font-sans overflow-x-clip">
       {/* ── Navigation ── */}
       <nav className="relative z-50 flex items-center justify-between px-6 lg:px-12 py-4 bg-white/70 backdrop-blur-xl border-b border-gray-200/50 sticky top-0">
         <div className="flex items-center gap-3">
