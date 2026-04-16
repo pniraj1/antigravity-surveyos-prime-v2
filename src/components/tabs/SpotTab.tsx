@@ -4,12 +4,22 @@ import { useClaimStore } from '@/stores/claim-store';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, PlusCircle, AlertTriangle, ShieldCheck, Truck, User, MapPin, Gauge, Zap, FileText, ClipboardList } from 'lucide-react';
+import { Trash2, PlusCircle, AlertTriangle, ShieldCheck, Truck, User, MapPin, Gauge, Zap, FileText, ClipboardList, Sparkles } from 'lucide-react';
 
 const S = () => <span className="ml-1 inline-block w-2 h-2 rounded-full bg-green-500 align-middle" title="Used in Spot Report" />;
 
 export function SpotTab() {
-  const { currentClaim, updateSpotDetails, updateDriver, updateAccident, updateVehicle, addSpotDamageRow, updateSpotDamageRow, deleteSpotDamageRow } = useClaimStore();
+  const { 
+    currentClaim, 
+    updateSpotDetails, 
+    updateDriver, 
+    updateAccident, 
+    updateVehicle, 
+    updatePolicy,
+    addSpotDamageRow, 
+    updateSpotDamageRow, 
+    deleteSpotDamageRow 
+  } = useClaimStore();
 
   if (!currentClaim) return null;
 
@@ -48,7 +58,7 @@ export function SpotTab() {
         </CardHeader>
         <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-3 gap-6">
           <div className="space-y-1.5">
-            <Label className="text-[10px] font-black uppercase text-muted-foreground/70 tracking-tighter">Report Date</Label>
+            <Label className="text-[10px] font-black uppercase text-muted-foreground/70 tracking-tighter">Date of report</Label>
             <Input
               type="date"
               value={spotDetails.reportDate}
@@ -72,6 +82,27 @@ export function SpotTab() {
               value={spotDetails.surveyDatetime}
               onChange={(e) => handleUpdate({ surveyDatetime: e.target.value })}
               className="h-10 font-bold border-primary/20 bg-primary/5 ring-primary/10"
+            />
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* ── SECTION: ASSIGNMENT & POLICY ── */}
+      <Card className="border-teal/20 shadow-lg overflow-hidden bg-teal/[0.02]">
+        <CardHeader className="bg-teal/5 pb-4 border-b border-teal/10">
+          <CardTitle className="text-sm font-black flex items-center gap-2 uppercase tracking-widest text-teal">
+            <Sparkles size={16} />
+            Assignment & Policy Details (Manual Entry)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="space-y-1.5 max-w-md">
+            <Label className="text-[10px] font-black uppercase text-muted-foreground/70 tracking-tighter">Appointing Office</Label>
+            <Input
+              value={currentClaim.policy.appointingOffice || ''}
+              onChange={(e) => updatePolicy({ appointingOffice: e.target.value })}
+              placeholder="e.g. Regional Office, Bangalore"
+              className="h-10 font-bold border-teal/10 focus-visible:ring-teal"
             />
           </div>
         </CardContent>
@@ -187,14 +218,6 @@ export function SpotTab() {
                 <option value="yes">Deployed</option>
                 <option value="na">N/A (No Airbags)</option>
               </select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Temporary Repairs Suggested<S /></Label>
-              <Input
-                value={spotDetails.repairs}
-                onChange={(e) => handleUpdate({ repairs: e.target.value })}
-                placeholder="Immediate actions taken..."
-              />
             </div>
           </CardContent>
         </Card>

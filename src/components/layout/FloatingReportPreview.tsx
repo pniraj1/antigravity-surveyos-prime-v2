@@ -5,14 +5,15 @@ import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { useUIStore } from '@/stores/ui-store';
 import { buildStandardFinalSurveyHTML } from '@/lib/reports/standard-report-builder';
-import { buildUIICFinalHTML } from '@/lib/reports/uiic-final-builder';
+import { buildUIICFinalHTML, buildUIICBillCheckHTML } from '@/lib/reports/uiic-final-builder';
+import { buildSpotFeeBillHTML } from '@/lib/reports/spot-fee-bill-builder';
 import { calculateAssessmentSummary } from '@/lib/calculations';
 import { getVehicleAgeMonths } from '@/lib/calculations/depreciation';
 import { SpotPrintReport } from '@/components/print/SpotPrintReport';
 import { useReactToPrint } from 'react-to-print';
 import { FileText, Printer, X, Minus, GripHorizontal } from 'lucide-react';
 
-type ReportFormat = 'standard' | 'uiic' | 'spot';
+type ReportFormat = 'standard' | 'uiic' | 'spot' | 'bill-check' | 'fee-bill';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -38,15 +39,30 @@ export function FloatingReportPreview() {
   const dragOffset = useRef({ x: 0, y: 0 });
   const spotPrintRef = useRef<HTMLDivElement>(null);
 
-  // ── Auto-detect format on claim change ──────────────────────────────────────
+  // ── Auto-detect format on tab / claim change ────────────────────────────────
   useEffect(() => {
     if (!currentClaim) return;
-    const hasSpotData =
-      !!currentClaim.spotDetails?.reportDate ||
-      !!currentClaim.spotDetails?.reportNo ||
-      (currentClaim.spotDamageRows?.length ?? 0) > 0;
-    setFormat(hasSpotData ? 'spot' : 'standard');
-  }, [currentClaim?.id]);
+    
+    if (activeTab === 'fees') {
+      setFormat('fee-bill');
+      return;
+    }
+    
+    if (currentClaim.surveyType === 'spot') {
+      setFormat('spot');
+    } else {
+      if (activeTab === 'bill-check') {
+        setFormat('bill-check');
+      } else if (activeTab === 'reinspection') {
+        // UIIC format directly represents Reinspection well
+        if (format !== 'standard' && format !== 'uiic') setFormat('uiic');
+      } else {
+        if (format === 'bill-check' || format === 'fee-bill') {
+          setFormat('standard');
+        }
+      }
+    }
+  }, [currentClaim?.id, currentClaim?.surveyType, activeTab]);
 
   // ── Debounced HTML generation ────────────────────────────────────────────────
   useEffect(() => {
@@ -71,10 +87,16 @@ export function FloatingReportPreview() {
           fb?.lessExcess ?? 500,
           fb?.voluntaryExcess || 0
         );
-        const out =
-          format === 'uiic'
-            ? buildUIICFinalHTML(currentClaim, profile)
-            : buildStandardFinalSurveyHTML(currentClaim, summary, profile);
+        let out = '';
+        if (format === 'uiic') {
+          out = buildUIICFinalHTML(currentClaim, profile);
+        } else if (format === 'bill-check') {
+          out = buildUIICBillCheckHTML(currentClaim, profile);
+        } else if (format === 'fee-bill') {
+          out = buildSpotFeeBillHTML(currentClaim, profile);
+        } else {
+          out = buildStandardFinalSurveyHTML(currentClaim, summary, profile);
+        }
         setHtml(out);
       } catch {
         setHtml('');
@@ -183,7 +205,9 @@ export function FloatingReportPreview() {
             className="flex items-center gap-0.5 rounded-lg p-0.5 flex-shrink-0"
             style={{ background: 'rgba(255,255,255,0.08)' }}
           >
-            {(['standard', 'uiic', 'spot'] as ReportFormat[]).map(f => (
+            {(currentClaim?.surveyType === 'spot' 
+                ? (['spot', 'fee-bill'] as const) 
+                : (['standard', 'uiic', 'bill-check', 'fee-bill'] as const)).map(f => (
               <button
                 key={f}
                 onPointerDown={e => e.stopPropagation()}
@@ -194,7 +218,10 @@ export function FloatingReportPreview() {
                   color: format === f ? '#0D1B2A' : '#8D99AE',
                 }}
               >
-                {f === 'standard' ? 'Std' : f === 'uiic' ? 'UIIC' : 'Spot'}
+                {f === 'standard' ? 'Std' : 
+                 f === 'uiic' ? 'UIIC' : 
+                 f === 'bill-check' ? 'Bill Chk' : 
+                 f === 'fee-bill' ? 'Fees' : 'Spot'}
               </button>
             ))}
           </div>

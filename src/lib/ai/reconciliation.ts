@@ -29,7 +29,7 @@ const FIELD_MAPPINGS = [
   { label: 'Class of Vehicle',    path: 'vehicle.classOfVehicle',    aiKeys: { rc: 'class_of_vehicle' } },
   { label: 'Unladen Weight',      path: 'vehicle.unladenWeight',     aiKeys: { rc: 'unladen_weight', fitness: 'unladen_weight_kg', permit: 'unladen_weight_kg' } },
   { label: 'Gross Weight',        path: 'vehicle.grossWeight',       aiKeys: { rc: 'gross_weight', fitness: 'gross_vehicle_weight_kg', permit: 'gross_vehicle_weight_kg' } },
-  { label: 'Seating Capacity',    path: 'vehicle.seatingCapacity',   aiKeys: { rc: 'seating_capacity', fitness: 'seating_capacity' } },
+  { label: 'Seating Capacity',    path: 'vehicle.seatingCapacityTotal', aiKeys: { rc: 'seating_capacity', fitness: 'seating_capacity' } },
   { label: 'Fitness Valid Upto',  path: 'vehicle.fitnessValidUpto',  aiKeys: { fitness: 'validity_to' } },
   { label: 'Fitness Type',        path: 'vehicle.fitnessType',       aiKeys: { fitness: 'fitness_type' } },
   { label: 'Fitness Cert No',     path: 'vehicle.fitnessNo',         aiKeys: { fitness: 'fitness_cert_no' } },

@@ -247,8 +247,12 @@ export function SurveyReportDocument({ claim }: Props) {
             <View style={styles.gridItem}><Text style={styles.label}>Chassis No:</Text><Text style={styles.value}>{g(v.chassisNumber)}</Text></View>
             <View style={styles.gridItem}><Text style={styles.label}>Make/Model:</Text><Text style={styles.value}>{g(v.make)} / {g(v.model)}</Text></View>
             <View style={styles.gridItem}><Text style={styles.label}>Reg. Date:</Text><Text style={styles.value}>{fd(v.dateOfRegistration)}</Text></View>
+            <View style={styles.gridItem}><Text style={styles.label}>Seating Cap:</Text><Text style={styles.value}>{g(v.seatingCapacityTotal)}</Text></View>
             <View style={styles.gridItem}><Text style={styles.label}>Accident Date:</Text><Text style={styles.value}>{fd(a.dateAndTime)}</Text></View>
             <View style={styles.gridItem}><Text style={styles.label}>Place:</Text><Text style={styles.value}>{g(a.placeOfAccident)}</Text></View>
+            <View style={styles.gridItem}><Text style={styles.label}>Police Station:</Text><Text style={styles.value}>{g(a.policeStation)}</Text></View>
+            <View style={styles.gridItem}><Text style={styles.label}>FIR No:</Text><Text style={styles.value}>{g(a.firNumber)}</Text></View>
+            <View style={styles.gridItem}><Text style={styles.label}>FIR Date:</Text><Text style={styles.value}>{fd(a.firDate)}</Text></View>
           </View>
         </View>
 

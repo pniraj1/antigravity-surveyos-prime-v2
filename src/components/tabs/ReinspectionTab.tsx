@@ -1,14 +1,34 @@
 'use client';
 
 import { useClaimStore } from '@/stores/claim-store';
+import { useProfileStore } from '@/stores/profile-store';
+import { buildUIICFinalHTML, triggerUIICFinalPrint } from '@/lib/reports/uiic-final-builder';
+import { ReportPreviewPanel } from '@/components/shared/ReportPreviewPanel';
 import {
   RotateCcw, Calendar, MapPin, Camera, ClipboardCheck,
   CheckCircle2, AlertCircle, FileText, ArrowRight,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+
+// ─── Inline Live Preview ─────────────────────────────────────────────────────
+function RIPreview({ claim, profile }: { claim: any; profile: any }) {
+  const html = useMemo(() => {
+    try { return buildUIICFinalHTML(claim, profile); } catch { return ''; }
+  }, [claim, profile]);
+
+  return (
+    <ReportPreviewPanel
+      html={html}
+      title="Re-inspection / UIIC Report — Live Preview"
+      printLabel="Power Print"
+      onPrint={() => triggerUIICFinalPrint(claim, profile)}
+    />
+  );
+}
 
 export function ReinspectionTab() {
   const { currentClaim, updateReinspection } = useClaimStore();
+  const { profile } = useProfileStore();
 
   if (!currentClaim) return null;
 
@@ -198,8 +218,9 @@ export function ReinspectionTab() {
           <button 
             className="relative z-10 px-6 py-2.5 rounded-xl text-sm font-black transition-all hover:scale-105 active:scale-95"
             style={{ background: '#D4AF37', color: '#0D1B2A' }}
+            onClick={() => triggerUIICFinalPrint(currentClaim, profile)}
           >
-            Download RI Certificate
+            Print RI Report
           </button>
           
           {/* Decorative Shield */}
@@ -207,6 +228,9 @@ export function ReinspectionTab() {
             <RotateCcw size={120} color="#FFFFFF" strokeWidth={1} />
           </div>
         </div>
+
+        {/* ── Live RI Report Preview ────────────────────────── */}
+        <RIPreview claim={currentClaim} profile={profile} />
 
       </div>
     </div>

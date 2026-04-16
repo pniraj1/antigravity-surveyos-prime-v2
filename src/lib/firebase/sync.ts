@@ -10,6 +10,7 @@ import { db } from './config';
 import { ClaimData, SurveyorProfile } from '@/types';
 import { getAllClaims, saveClaim } from '../storage/indexeddb';
 import { useProfileStore } from '@/stores/profile-store';
+import { logger } from '../utils/logger';
 
 /**
  * Strips photos from a claim before writing to Firestore.
@@ -33,14 +34,14 @@ export async function pushClaimToCloud(uid: string, claim: ClaimData) {
   if (cloudSnap.exists()) {
     const cloudData = cloudSnap.data() as ClaimData;
     if (new Date(cloudData.updatedAt) > new Date(claim.updatedAt)) {
-      console.warn(`[Sync] Skipping push for ${claim.id}. Cloud version is newer.`);
+      logger.warn(`[Sync] Skipping push for ${claim.id}. Cloud version is newer.`);
       return cloudData;
     }
   }
 
   const payload = stripPhotos(claim);
   await setDoc(claimRef, { ...payload, ownerId: uid });
-  console.log(`[Sync] Pushed claim ${claim.id} to cloud (photos excluded).`);
+  logger.log(`[Sync] Pushed claim ${claim.id} to cloud (photos excluded).`);
   return claim;
 }
 
@@ -52,7 +53,7 @@ export async function syncAllLocalToCloud(uid: string) {
   const localClaims = await getAllClaims();
   if (localClaims.length === 0) return;
 
-  console.log(`[Sync] Starting migration of ${localClaims.length} claims for user ${uid}...`);
+  logger.log(`[Sync] Starting migration of ${localClaims.length} claims for user ${uid}...`);
   const batch = writeBatch(db);
   
   for (const claim of localClaims) {
@@ -61,7 +62,7 @@ export async function syncAllLocalToCloud(uid: string) {
   }
 
   await batch.commit();
-  console.log('[Sync] All local claims successfully backed up to cloud (photos kept local).');
+  logger.log('[Sync] All local claims successfully backed up to cloud (photos kept local).');
 }
 
 /**
@@ -89,7 +90,7 @@ export async function pullClaimsFromCloud(uid: string) {
         photos: local?.photos ?? [],
       };
       await saveClaim(mergedClaim);
-      console.log(`[Sync] Updated local claim ${remote.id} from cloud (photos preserved).`);
+      logger.log(`[Sync] Updated local claim ${remote.id} from cloud (photos preserved).`);
     }
   }
 
@@ -104,9 +105,17 @@ export async function pullClaimsFromCloud(uid: string) {
 export async function pushProfileToCloud(uid: string, profile: SurveyorProfile) {
   const profileRef = doc(db, `users/${uid}/profile`, 'current');
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { signatureDataUrl: _sig, stampDataUrl: _stamp, ...cloudProfile } = profile as any;
+  const { 
+    signatureDataUrl: _sig, 
+    stampDataUrl: _stamp,
+    geminiApiKey: _gak,
+    geminiApiKeys: _gaks,
+    groqApiKey: _grak,
+    groqApiKeys: _graks,
+    ...cloudProfile 
+  } = profile as any;
   await setDoc(profileRef, { ...cloudProfile, ownerId: uid }, { merge: true });
-  console.log(`[Sync] Profile pushed to cloud for user ${uid}.`);
+  logger.log(`[Sync] Profile pushed to cloud for user ${uid}.`);
 }
 
 /**
@@ -125,7 +134,7 @@ export async function pullProfileFromCloud(uid: string) {
       signatureDataUrl: local.signatureDataUrl,
       stampDataUrl: local.stampDataUrl,
     });
-    console.log(`[Sync] Local profile updated from cloud for user ${uid}.`);
+    logger.log(`[Sync] Local profile updated from cloud for user ${uid}.`);
     return remoteProfile;
   }
   return null;

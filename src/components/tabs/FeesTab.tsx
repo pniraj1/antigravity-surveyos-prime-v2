@@ -2,14 +2,31 @@
 
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
-import { calculateAssessmentSummary } from '@/lib/calculations';
-import { getVehicleAgeMonths } from '@/lib/calculations/depreciation';
-import { triggerSpotFeeBillPrint } from '@/lib/reports/spot-fee-bill-builder';
+
+import { triggerSpotFeeBillPrint, buildSpotFeeBillHTML } from '@/lib/reports/spot-fee-bill-builder';
+import { ReportPreviewPanel } from '@/components/shared/ReportPreviewPanel';
 import {
-  Receipt, DollarSign, Calculator, Percent, Plus, Minus,
+  Receipt, Calculator, Percent, Plus, Minus,
   TrendingDown, FileText, Calendar, Banknote, Car, Camera,
   Package, Phone, Truck, CheckCircle, XCircle,
 } from 'lucide-react';
+import { useMemo } from 'react';
+
+// ─── Inline Live Preview ─────────────────────────────────────────────────────
+function FeeBillPreview({ claim, profile }: { claim: any; profile: any }) {
+  const html = useMemo(() => {
+    try { return buildSpotFeeBillHTML(claim, profile); } catch { return ''; }
+  }, [claim, profile]);
+
+  return (
+    <ReportPreviewPanel
+      html={html}
+      title="Surveyor Fee Bill — Live Preview"
+      printLabel="Power Print — Fee Bill"
+      onPrint={() => triggerSpotFeeBillPrint(claim, profile)}
+    />
+  );
+}
 
 // ─── Fee Bill Section ────────────────────────────────────────────────────────
 function FeeLine({ label, value }: { label: string; value: string }) {
@@ -37,18 +54,7 @@ export function FeesTab() {
   const gstAmount      = fb.includeGST ? subTotal * 0.18 : 0;
   const grossTotal     = subTotal + gstAmount;
 
-  const ageMonths = getVehicleAgeMonths(
-    currentClaim.vehicle.dateOfRegistration,
-    currentClaim.vehicle.yearOfManufacture,
-    currentClaim.accident.dateAndTime,
-  );
-  const summary = calculateAssessmentSummary(
-    currentClaim.assessmentRows,
-    ageMonths,
-    currentClaim.depreciationType,
-    fb.salvageValue,
-    fb.lessExcess,
-  );
+
 
   const fmt = (n: number) => `₹${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -102,11 +108,7 @@ export function FeesTab() {
             <div className="px-3 py-1.5 rounded-full text-xs font-bold" style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37' }}>
               Gross Total: {fmt(grossTotal)}
             </div>
-            {currentClaim.surveyType !== 'spot' && (
-              <div className="px-3 py-1.5 rounded-full text-xs font-bold" style={{ background: 'rgba(5,150,105,0.15)', color: '#34d399' }}>
-                Net Loss: {fmt(summary.netAssessedLoss)}
-              </div>
-            )}
+
             
             <div className="flex-1" />
             <button
@@ -259,27 +261,7 @@ export function FeesTab() {
               </div>
             </div>
 
-            {/* Settlement Info - Only for Final Survey */}
-            {currentClaim.surveyType !== 'spot' && (
-              <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E2E6EA' }}>
-                <div className="px-6 py-4" style={{ borderBottom: '1px solid #F0F2F5', background: '#FAFAFA' }}>
-                  <div className="flex items-center gap-2">
-                    <DollarSign size={14} style={{ color: '#D4AF37' }} />
-                    <span className="text-sm font-black" style={{ color: '#0D1B2A' }}>Settlement Deductions</span>
-                  </div>
-                </div>
-                <div className="p-5 grid grid-cols-2 gap-4">
-                  <div>
-                    <label style={labelStyle}>Salvage Value (₹)</label>
-                    <input type="number" min={0} value={fb.salvageValue || ''} onChange={e => set('salvageValue', Number(e.target.value))} style={inputStyle} />
-                  </div>
-                  <div>
-                    <label style={labelStyle}>Policy Excess (₹)</label>
-                    <input type="number" min={0} value={fb.lessExcess || ''} onChange={e => set('lessExcess', Number(e.target.value))} style={inputStyle} />
-                  </div>
-                </div>
-              </div>
-            )}
+
           </div>
 
           {/* ── RIGHT: Fee Summary ─────────────────────── */}
@@ -347,34 +329,13 @@ export function FeesTab() {
                 </div>
               </div>
 
-              {/* Assessment Summary Reference - Only for Final Survey */}
-              {currentClaim.surveyType !== 'spot' && (
-                <div className="px-5 py-4" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-                  <div className="text-[9px] font-black uppercase tracking-[0.2em] mb-3" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                    Assessment Reference
-                  </div>
-                  {[
-                    { label: 'Grand Total', val: summary.grandTotal },
-                    { label: '— Salvage',   val: -(fb.salvageValue || 0) },
-                    { label: '— Excess',    val: -(fb.lessExcess || 0) },
-                  ].map(({ label, val }) => (
-                    <div key={label} className="flex items-center justify-between py-1.5">
-                      <span className="text-[11px]" style={{ color: 'rgba(232,236,240,0.4)' }}>{label}</span>
-                      <span className="text-[11px] font-bold" style={{ color: 'rgba(232,236,240,0.7)' }}>{fmt(Math.abs(val))}</span>
-                    </div>
-                  ))}
-                  <div
-                    className="flex items-center justify-between py-2 px-3 rounded-lg mt-2"
-                    style={{ background: 'rgba(212,175,55,0.15)', border: '1px solid rgba(212,175,55,0.25)' }}
-                  >
-                    <span className="text-xs font-bold" style={{ color: '#D4AF37' }}>Net Assessed Loss</span>
-                    <span className="text-sm font-black" style={{ color: '#D4AF37' }}>{fmt(summary.netAssessedLoss)}</span>
-                  </div>
-                </div>
-              )}
+
             </div>
           </div>
         </div>
+
+        {/* ── Live Fee Bill Preview ──────────────────────────── */}
+        <FeeBillPreview claim={currentClaim} profile={profile!} />
       </div>
     </div>
   );

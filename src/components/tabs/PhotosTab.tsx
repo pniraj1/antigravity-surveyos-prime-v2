@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { useClaimStore } from '@/stores/claim-store';
+import { useProfileStore } from '@/stores/profile-store';
 import { uploadFileToDrive } from '@/lib/drive';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -125,11 +126,14 @@ export function PhotosTab() {
         const file = files[i];
         if (!file.type.startsWith('image/')) continue;
         try {
-          const { dataUrl, w, h } = await compressImage(file, 900, 0.78);
+          const { dataUrl, w, h } = await compressImage(file, 1600, 0.90);
           const name = file.name.split('.')[0].substring(0, 30);
           // Store dimensions for orientation detection
           addPhoto(dataUrl, name, w, h);
-          uploadFileToDrive(claimId, `photo_${Date.now()}_${name}.jpg`, file, label).catch(() => {});
+          const { profile } = useProfileStore.getState();
+          if (profile.autoUploadDrive !== false) {
+            uploadFileToDrive(claimId, `photo_${Date.now()}_${name}.jpg`, file, label).catch(() => {});
+          }
         } catch {
           // silently skip failed images
         }

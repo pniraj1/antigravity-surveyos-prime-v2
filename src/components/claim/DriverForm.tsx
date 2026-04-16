@@ -136,16 +136,6 @@ export function DriverDetailsForm() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="d-authdrive">Authorised To Drive</Label>
-            <Input
-              id="d-authdrive"
-              value={d?.authorisedToDrive || ''}
-              onChange={(e) => updateDriver({ authorisedToDrive: e.target.value.toUpperCase() })}
-              placeholder="e.g. LMV, MCWG"
-            />
-          </div>
-
-          <div className="space-y-1">
             <Label htmlFor="d-verifdate">Verification Date</Label>
             <Input
               id="d-verifdate"

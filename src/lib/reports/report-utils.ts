@@ -98,9 +98,15 @@ export function getSurveyorHeader(profile: SurveyorProfile | null, marginBottom 
  */
 export function getSigBlock(profile: SurveyorProfile | null, marginTop = '14px'): string {
   const name = profile?.name || 'SURVEYOR NAME';
-  return `<div style="display:flex;justify-content:flex-end;align-items:flex-end;margin-top:${marginTop};gap:8px;">
+  const sig = profile?.signatureDataUrl;
+  const stamp = profile?.stampDataUrl;
+
+  return `<div style="display:flex;justify-content:flex-end;align-items:flex-end;margin-top:${marginTop};gap:15px;">
+    ${stamp ? `<img src="${stamp}" style="max-height:80px;max-width:80px;object-fit:contain;margin-bottom:-5px;"/>` : ''}
     <div style="text-align:center;">
-      <div style="min-height:60px;"></div>
+      <div style="min-height:60px;display:flex;align-items:flex-end;justify-content:center;">
+        ${sig ? `<img src="${sig}" style="max-height:60px;max-width:140px;object-fit:contain;"/>` : ''}
+      </div>
       <div style="font-weight:700;font-size:7.5pt;margin-top:2px;">${name}</div>
       <div style="font-size:6.5pt;color:#555;">Licenced Surveyor &amp; Loss Assessor</div>
     </div>

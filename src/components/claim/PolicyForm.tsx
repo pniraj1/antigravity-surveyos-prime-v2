@@ -128,6 +128,24 @@ export function PolicyDetailsForm() {
               onChange={(e) => updatePolicy({ policyIssuingOffice: e.target.value })}
             />
           </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="p-appoint">Appointing Office<S /></Label>
+            <Input
+              id="p-appoint"
+              value={p?.appointingOffice || ''}
+              onChange={(e) => updatePolicy({ appointingOffice: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="p-hpa">Hypothecation (HPA)<S /></Label>
+            <Input
+              id="p-hpa"
+              value={p?.hpaWith || p?.hpa || ''}
+              onChange={(e) => updatePolicy({ hpaWith: e.target.value, hpa: e.target.value })}
+            />
+          </div>
         </div>
       </CardContent>
     </Card>

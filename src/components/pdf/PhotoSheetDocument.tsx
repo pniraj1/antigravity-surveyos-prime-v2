@@ -10,10 +10,10 @@ import type { PhotoSheetOptions } from '@/types/assessment';
 // Footer clearance (absolute footer at bottom:20, height ~15 pt):  ~42 pt
 // Caption bar per cell: ~14 pt  (padding 4+4 + font 6 pt)
 // ─────────────────────────────────────────────────────────────────────────────
-const HEADER_H  = 52;
-const FOOTER_H  = 42;
-const CAPTION_H = 14;
-const BORDER_W  =  2; // 1 px border on each side
+const HEADER_H  = 45;
+const FOOTER_H  = 25;
+const CAPTION_H = 0;
+const BORDER_W  = 2; // 1 px border on each side
 
 const ACCENT = '#2563EB';
 const DARK   = '#111827';
@@ -24,9 +24,9 @@ const S = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: 10,
     borderBottom: `2px solid ${ACCENT}`,
-    paddingBottom: 8,
+    paddingBottom: 6,
   },
   titleSection: { flexDirection: 'column' },
   title: {
@@ -93,14 +93,13 @@ const S = StyleSheet.create({
   },
   footer: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     fontSize: 7,
     color: '#9CA3AF',
     fontFamily: 'Helvetica-Oblique',
-    borderTop: `1px solid #E5E7EB`,
-    paddingTop: 6,
+    paddingTop: 4,
   },
 });
 
@@ -194,8 +193,8 @@ function buildLayout(
 
 // ─── Default options (exported for consumers) ─────────────────────────────────
 export const DEFAULT_PHOTO_SHEET_OPTIONS: PhotoSheetOptions = {
-  pagePadding: 30,
-  cellGap:     10,
+  pagePadding: 20,
+  cellGap:     8,
   showBorder:  true,
   borderColor: '#E5E7EB',
 };
@@ -261,9 +260,6 @@ export function PhotoSheetDocument({ claim, surveyorName = '', options = {} }: P
                   {reportNo ? `Report No: ${reportNo}` : ''}
                 </Text>
               </View>
-              <View style={S.regBadge}>
-                <Text>PAGE {pageIdx + 1}</Text>
-              </View>
             </View>
 
             {/* ── Photo grid ── */}
@@ -294,13 +290,6 @@ export function PhotoSheetDocument({ claim, surveyorName = '', options = {} }: P
                         <Text style={{ color: GREY, fontSize: 7 }}>No image</Text>
                       )}
                     </View>
-
-                    {/* Caption bar — index only, no filename */}
-                    <View style={[S.captionRow, { justifyContent: 'center' }]}>
-                      <Text style={S.indexText}>
-                        {String(globalIdx).padStart(2, '0')} / {pageIdx * config.perPage + pagePhotos.length}
-                      </Text>
-                    </View>
                   </View>
                 );
               })}
@@ -308,10 +297,7 @@ export function PhotoSheetDocument({ claim, surveyorName = '', options = {} }: P
 
             {/* ── Footer ── */}
             <View style={[S.footer, { left: footerLeft, right: footerRight }]} fixed>
-              <Text>SurveyOS Prime  |  Claim: {claimNum}</Text>
-              <Text render={({ pageNumber, totalPages }) =>
-                `Evidence Sheet  ${pageNumber} / ${totalPages}`
-              } />
+              <Text>SurveyOS Prime</Text>
             </View>
           </Page>
         ))

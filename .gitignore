@@ -47,3 +47,6 @@ tmp_pdf/
 .claude/
 .cursor/
 .code-review-graph/
+.agent/
+.graphify_*.json
+graphify-out/

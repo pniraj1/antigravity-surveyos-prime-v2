@@ -213,7 +213,7 @@ export function buildStandardFinalSurveyHTML(
   <tr>
     <td style="${td}color:#444;width:18%;font-size:6.8pt;">Report No.</td>
     <td style="${td}font-weight:700;width:32%;">${claim.reportNo || '—'}</td>
-    <td style="${td}color:#444;width:18%;font-size:6.8pt;">Date</td>
+    <td style="${td}color:#444;width:18%;font-size:6.8pt;">Date of report</td>
     <td style="${td}font-weight:700;">${formatDateDMY(claim.reportDate)}</td>
   </tr>
   <tr>
@@ -284,6 +284,10 @@ export function buildStandardFinalSurveyHTML(
     <td style="${td}color:#444;font-size:6.8pt;">Pre-Accident Cond.</td>
     <td style="${td}">${vehicle.preAccidentCondition || vehicle.condition || '—'}</td>
   </tr>
+  <tr>
+    <td style="${td}color:#444;font-size:6.8pt;">Seating Capacity</td>
+    <td style="${td}" colspan="3">${(vehicle as any).seatingCapacityTotal || '—'}</td>
+  </tr>
 </table>
 
 <div style="font-weight:700;font-size:7pt;background:#0d1b2a;color:#fff;padding:2px 4px;margin-bottom:2px;">3. DRIVER'S PARTICULARS</div>
@@ -317,6 +321,12 @@ export function buildStandardFinalSurveyHTML(
     <td style="${td}width:32%;">${formatDateTimeDMY(accident.dateAndTime)}</td>
     <td style="${td}color:#444;font-size:6.8pt;">Place</td>
     <td style="${td}">${accident.placeOfAccident || '—'}</td>
+  </tr>
+  <tr>
+    <td style="${td}color:#444;font-size:6.8pt;">Police Station</td>
+    <td style="${td}">${accident.policeStation || '—'}</td>
+    <td style="${td}color:#444;font-size:6.8pt;">FIR No. & Date</td>
+    <td style="${td}">${accident.firNumber || '—'} / ${formatDateDMY(accident.firDate)}</td>
   </tr>
   <tr>
     <td style="${td}color:#444;font-size:6.8pt;">Date of Survey</td>

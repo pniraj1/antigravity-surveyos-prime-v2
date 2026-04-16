@@ -57,6 +57,8 @@ const DEFAULT_PROFILE: SurveyorProfile = {
   isAdmin: false,
   signatureDataUrl: null,
   stampDataUrl: null,
+  accessRequestSubmitted: false,
+  irdaiLicence: '',
   spotSequence: 1,
   finalSequence: 1,
   feeSequence: 1,

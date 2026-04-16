@@ -1,7 +1,8 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth-store';
-import { SignInScreen } from '@/components/auth/SignInScreen';
+import LandingPage from '@/app/landing/page';
 import { Shield } from 'lucide-react';
 
 /**
@@ -13,9 +14,10 @@ const SANDBOX_MODE = process.env.NEXT_PUBLIC_SANDBOX_MODE === 'true';
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuthStore();
+  const pathname = usePathname();
 
-  // ── Sandbox bypass: skip auth entirely for preview channel deployments ──
-  if (SANDBOX_MODE) return <>{children}</>;
+  // ── Sandbox & Public Route bypass: skip auth entirely ──
+  if (SANDBOX_MODE || pathname === '/' || pathname?.startsWith('/landing')) return <>{children}</>;
 
   // Firebase is still checking the session — show a silent loader
   if (loading) {
@@ -37,9 +39,11 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Not signed in — show the sign-in page
+  // Not signed in — show the landing page (which has login buttons)
   if (!isAuthenticated) {
-    return <SignInScreen />;
+    // We import this dynamically or just use the root redirect logic.
+    // However, since AuthGate is a wrapper, returning the LandingPage here is a robust fallback.
+    return <LandingPage />;
   }
 
   // Authenticated — render the full application

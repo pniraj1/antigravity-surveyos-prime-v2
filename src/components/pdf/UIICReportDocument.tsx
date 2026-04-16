@@ -344,6 +344,16 @@ export function UIICReportDocument({ claim, profile }: Props) {
             <View style={[styles.tableCell, { width: '25%' }]}><Text style={styles.cellLabel}>Policy issuing office address</Text></View>
             <View style={[styles.tableCell, { width: '75%' }]}><Text style={styles.cellValuePlain}>{g(p.appointingOffice)}</Text></View>
           </View>
+          <View style={styles.tableRow}>
+            <View style={[styles.tableCell, { width: '25%' }]}><Text style={styles.cellLabel}>Police Station</Text></View>
+            <View style={[styles.tableCell, { width: '25%' }]}><Text style={styles.cellValuePlain}>{g(a.policeStation)}</Text></View>
+            <View style={[styles.tableCell, { width: '25%' }]}><Text style={styles.cellLabel}>FIR / Diary No.</Text></View>
+            <View style={[styles.tableCell, { width: '25%' }]}><Text style={styles.cellValuePlain}>{g(a.firNumber)}</Text></View>
+          </View>
+          <View style={styles.tableRow}>
+            <View style={[styles.tableCell, { width: '25%' }]}><Text style={styles.cellLabel}>FIR Date</Text></View>
+            <View style={[styles.tableCell, { width: '75%' }]}><Text style={styles.cellValuePlain}>{fd(a.firDate)}</Text></View>
+          </View>
         </View>
 
         <View style={styles.tableRow}>
@@ -474,7 +484,7 @@ export function UIICReportDocument({ claim, profile }: Props) {
                </View>
                <View style={{ flexDirection: 'row', borderBottom: '0.5pt solid #000' }}>
                  <View style={{ width: '60%', borderRight: '0.5pt solid #000', padding: '3 5' }}><Text>Registered Seating Capacity</Text></View>
-                 <View style={{ flex: 1, padding: '3 5' }}><Text>{g(v.seatingCapacity)}</Text></View>
+                 <View style={{ flex: 1, padding: '3 5' }}><Text>{g(v.seatingCapacityTotal)}</Text></View>
                </View>
                <View style={{ flexDirection: 'row', borderBottom: '0.5pt solid #000' }}>
                  <View style={{ width: '60%', borderRight: '0.5pt solid #000', padding: '3 5' }}><Text>Number of Passengers carried at the time of accident</Text></View>
@@ -540,10 +550,7 @@ export function UIICReportDocument({ claim, profile }: Props) {
                  <View style={{ width: '60%', borderRight: '0.5pt solid #000', padding: '3 5' }}><Text>Badge number</Text></View>
                  <View style={{ flex: 1, padding: '3 5' }}><Text>{g(d.badgeNumber)}</Text></View>
                </View>
-               <View style={{ flexDirection: 'row', borderBottom: '0.5pt solid #000' }}>
-                 <View style={{ width: '60%', borderRight: '0.5pt solid #000', padding: '3 5' }}><Text>Authorised To Drive</Text></View>
-                 <View style={{ flex: 1, padding: '3 5' }}><Text>{g(d.authorisedToDrive)}</Text></View>
-               </View>
+
                <View style={{ flexDirection: 'row' }}>
                  <View style={{ width: '60%', borderRight: '0.5pt solid #000', padding: '3 5' }}><Text>Date of verification of licence</Text></View>
                  <View style={{ flex: 1, padding: '3 5' }}><Text>{fd(d.verificationDate)}</Text></View>

@@ -520,6 +520,7 @@ export const useClaimStore = create<ClaimState>()(
               colour: data.colour || data.color || newClaim.vehicle.colour,
               fuel: formatFuel(data.fuel) || newClaim.vehicle.fuel,
               seatingCapacity: data.seating_capacity || data.seats || newClaim.vehicle.seatingCapacity,
+              seatingCapacityTotal: data.seating_capacity || data.seats || newClaim.vehicle.seatingCapacityTotal,
               unladenWeight: parseFloat(data.unladen_weight || data.ulw) || newClaim.vehicle.unladenWeight,
               rlw: rlw,
               registeredLoadWeight: rlw || newClaim.vehicle.registeredLoadWeight, // Update alias for UI
@@ -647,7 +648,10 @@ export const useClaimStore = create<ClaimState>()(
           } else if (key === 'fitness') {
              newClaim.vehicle.fitnessNo = data.fitness_cert_no || newClaim.vehicle.fitnessNo;
              newClaim.vehicle.fitnessValidUpto = parseDate(data.validity_to) || newClaim.vehicle.fitnessValidUpto;
-             if (data.seating_capacity) newClaim.vehicle.seatingCapacity = data.seating_capacity;
+             if (data.seating_capacity) {
+               newClaim.vehicle.seatingCapacity = data.seating_capacity;
+               newClaim.vehicle.seatingCapacityTotal = data.seating_capacity;
+             }
              if (data.chassis_number) newClaim.vehicle.chassisNumber = data.chassis_number || newClaim.vehicle.chassisNumber;
              if (data.engine_number) newClaim.vehicle.engineNumber = data.engine_number || newClaim.vehicle.engineNumber;
              if (data.fitness_type) newClaim.vehicle.fitnessType = data.fitness_type;

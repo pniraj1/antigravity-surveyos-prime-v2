@@ -132,7 +132,7 @@ export function buildUIICFinalHTML(claim: ClaimData, profile: SurveyorProfile | 
 ${getSurveyorHeader(profile)}
 <div style="font-weight:700;font-size:9pt;text-align:right;margin-bottom:2px;">${nm}</div>
 <div style="text-align:center;font-weight:700;font-size:9.5pt;border:1pt solid #000;padding:4px;margin-bottom:4px;background:#f0f0f0;">MOTOR SURVEY REPORT - ( FINAL/ RE INSPECTION)</div>
-<table style="${ts}"><tr><td style="${tdl}width:25%;">Report Number:</td><td style="${tdb}width:25%;">${g(claim.reportNo)}</td><td style="${tdl}width:25%;">Report Date :</td><td style="${tdb}">${fd(claim.reportDate)}</td></tr></table>
+<table style="${ts}"><tr><td style="${tdl}width:25%;">Report Number:</td><td style="${tdb}width:25%;">${g(claim.reportNo)}</td><td style="${tdl}width:25%;">Date of report :</td><td style="${tdb}">${fd(claim.reportDate)}</td></tr></table>
 <div style="${sec}">POLICY DETAILS</div>
 <table style="${ts}">
 <tr><td style="${tdl}width:25%;">Policy / Cover Note Number</td><td style="${td}width:25%;">${g(p.policyNumber)}</td><td style="${tdl}width:25%;">Claim no.</td><td style="${td}">${g(p.claimNumber)}</td></tr>
@@ -144,6 +144,8 @@ ${getSurveyorHeader(profile)}
 <tr><td style="${tdl}">Loss Date</td><td style="${td}">${fd(a.dateAndTime)}</td><td style="${tdl}">Insured Declared Value</td><td style="${tdb}">${fa(p.idv)}</td></tr>
 <tr><td style="${tdl}">Policy Issuing Office Code</td><td style="${td}">${g(p.policyIssuingOffice)}</td><td style="${tdl}">Pincode of place of accident</td><td style="${td}">${g(a.pincode)}</td></tr>
 <tr><td style="${tdl}">Policy issuing office address</td><td style="${td}" colspan="3">${g(p.appointingOffice)}</td></tr>
+<tr><td style="${tdl}">Police Station</td><td style="${td}">${g(a.policeStation)}</td><td style="${tdl}">FIR / Diary No.</td><td style="${td}">${g(a.firNumber)}</td></tr>
+<tr><td style="${tdl}">FIR Date</td><td style="${td}" colspan="3">${fd(a.firDate)}</td></tr>
 </table>
 <table style="${ts}"><tr><td style="${sec}width:50%;">INSURED / CLAIMANT DETAILS</td><td style="${sec}">SPOT SURVEY DETAILS</td></tr>
 <tr><td style="${td}vertical-align:top;"><table style="width:100%;border-collapse:collapse;font-size:7pt;">
@@ -211,7 +213,7 @@ ${getSurveyorHeader(profile)}
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Registration valid up to</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${fd(v.registrationValidUpTo)}</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">RC endorsement on financier interest</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(v.rcEndorsement)}</td></tr>
       <tr><td colspan="2" style="background:#e8e8e8;text-align:center;font-weight:700;padding:3px 5px;border-bottom:0.5pt solid #000;">ADDITIONAL DETAILS - PASSENGER CARRYING VEHICLE</td></tr>
-      <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Registered Seating Capacity</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(v.seatingCapacity)}</td></tr>
+      <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Registered Seating Capacity</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(v.seatingCapacityTotal)}</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Number of Passengers carried at the time of accident</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g((v as any).passengersAtAccident)}</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Type of passenger carried (Employee / Hire / Gratuitous)</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g((v as any).passengerType)}</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Whether Passengers carried in contravention of rule?</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g((v as any).passengersContravention)}</td></tr>
@@ -234,7 +236,7 @@ ${getSurveyorHeader(profile)}
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Date of Issue of Licence</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${fd(d.dateOfIssue)}</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">License Valid upto</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${fd(d.validityNonTransport || d.validityTransport || d.validTo)}</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Badge number</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(d.badgeNumber)}</td></tr>
-      <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Authorised To Drive</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(d.authorisedToDrive)}</td></tr>
+
       <tr><td style="padding:3px 5px;border-right:0.5pt solid #000;">Date of verification of licence</td><td style="padding:3px 5px;">${fd(d.verificationDate)}</td></tr>
     </table>
   </td>

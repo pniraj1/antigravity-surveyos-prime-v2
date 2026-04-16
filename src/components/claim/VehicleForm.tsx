@@ -185,16 +185,6 @@ export function VehicleDetailsForm() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="v-hyp">Hypothecation</Label>
-            <Input
-              id="v-hyp"
-              value={v?.hypothecation || ''}
-              onChange={(e) => updateVehicle({ hypothecation: e.target.value })}
-              placeholder="e.g. HDFC BANK"
-            />
-          </div>
-
-          <div className="space-y-1">
             <Label htmlFor="v-rlw">Registered Load Weight (RLW)<S /></Label>
             <Input
               id="v-rlw"
@@ -216,16 +206,7 @@ export function VehicleDetailsForm() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="v-seats">Seating Capacity (Excl. Driver)</Label>
-            <Input
-              id="v-seats"
-              value={v?.seatingCapacity || ''}
-              onChange={(e) => updateVehicle({ seatingCapacity: e.target.value })}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <Label htmlFor="v-seats-total">Seating Capacity (Total)</Label>
+            <Label htmlFor="v-seats-total">Seating Capacity</Label>
             <Input
               id="v-seats-total"
               value={(v as any)?.seatingCapacityTotal || ''}
@@ -262,14 +243,16 @@ export function VehicleDetailsForm() {
             />
           </div>
 
-          <div className="space-y-1">
-            <Label htmlFor="v-goods-nature">Nature of Goods</Label>
-            <Input
-              id="v-goods-nature"
-              value={(v as any)?.natureOfGoods || ''}
-              onChange={(e) => updateVehicle({ natureOfGoods: e.target.value.toUpperCase() })}
-            />
-          </div>
+          {currentClaim.surveyType !== 'spot' && (
+            <div className="space-y-1">
+              <Label htmlFor="v-goods-nature">Nature of Goods</Label>
+              <Input
+                id="v-goods-nature"
+                value={(v as any)?.natureOfGoods || ''}
+                onChange={(e) => updateVehicle({ natureOfGoods: e.target.value.toUpperCase() })}
+              />
+            </div>
+          )}
 
           <div className="space-y-1">
             <Label htmlFor="v-fitness">Fitness Number<S /></Label>

@@ -61,7 +61,7 @@ export function ReportTab() {
   const { profile } = useProfileStore();
   const [mounted, setMounted] = useState(false);
   
-  const [activeReport, setActiveReport] = useState<ReportType>('survey');
+  const [activeReport, setActiveReport] = useState<ReportType>(currentClaim?.surveyType === 'spot' ? 'spot' : 'survey');
   const [format, setFormat] = useState<'standard' | 'uiic'>('standard');
   const [isExportingWord, setIsExportingWord] = useState(false);
   const [zoom, setZoom] = useState<number>(0.9); // Default to 90% for better fit
@@ -93,9 +93,11 @@ export function ReportTab() {
 
   const availableReports = REPORT_TYPES.filter(rt => {
     if (currentClaim.surveyType === 'spot') {
-      return ['spot'].includes(rt.id);
+      return rt.id === 'spot';
     } else {
-      return ['survey'].includes(rt.id);
+      // For final surveys, we might show both or just final. 
+      // Usually just 'survey' (final).
+      return rt.id === 'survey';
     }
   });
 

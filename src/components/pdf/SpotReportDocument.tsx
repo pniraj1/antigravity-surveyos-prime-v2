@@ -2,6 +2,7 @@
 import React from 'react';
 import { Page, Text, View, Document, StyleSheet, Image, Font } from '@react-pdf/renderer';
 import type { ClaimData } from '@/types';
+import { formatDateDMY } from '@/lib/calculations';
 
 const styles = StyleSheet.create({
   page: {
@@ -120,7 +121,7 @@ export function SpotReportDocument({ claim }: Props) {
         <View style={styles.header}>
           <Text style={styles.title}>SPOT SURVEY REPORT</Text>
           <Text style={styles.subtitle}>
-            Report No: {claim?.reportNo || 'DRAFT'} | Date & Time of Survey: {claim?.spotDetails?.surveyDatetime || claim?.reportDate || '-'}
+            Report No: {claim?.reportNo || 'DRAFT'} | Date of Report: {formatDateDMY(claim?.reportDate || claim?.createdAt)}
           </Text>
         </View>
 
@@ -213,10 +214,6 @@ export function SpotReportDocument({ claim }: Props) {
           <View style={styles.row}>
             <Text style={styles.colLabel}>FIR Date:</Text>
             <Text style={styles.colValue}>{claim?.accident?.firDate || 'N/A'}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.colLabel}>Survey Appointment Date:</Text>
-            <Text style={styles.colValue}>{claim?.accident?.appointmentDate || 'N/A'}</Text>
           </View>
         </View>
 

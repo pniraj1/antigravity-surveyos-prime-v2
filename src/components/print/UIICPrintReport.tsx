@@ -84,7 +84,7 @@ export const UIICPrintReport = React.forwardRef<HTMLDivElement, UIICPrintReportP
 
           <div className="grid-header">ADDITIONAL DETAILS - PASSENGER / GOODS VEHICLE</div>
           <div className="row">
-             <div className="label">Seating Cap.</div><div className="value">{claim.vehicle.seatingCapacity}</div>
+             <div className="label">Seating Cap.</div><div className="value">{claim.vehicle.seatingCapacityTotal}</div>
              <div className="label">Gross Weight</div><div className="value">{claim.vehicle.grossWeight ? `${claim.vehicle.grossWeight} KG` : ''}</div>
           </div>
 
@@ -97,8 +97,7 @@ export const UIICPrintReport = React.forwardRef<HTMLDivElement, UIICPrintReportP
               <div className="row"><div className="label">Holder</div><div className="value">{claim.driver.name}</div></div>
               <div className="row"><div className="label">DL No.</div><div className="value">{claim.driver.licenceNumber}</div></div>
               <div className="row"><div className="label">Class</div><div className="value">{claim.driver.vehicleClasses}</div></div>
-              <div className="row"><div className="label">Validity</div><div className="value">{claim.driver.validityTransport || claim.driver.validityNonTransport}</div></div>
-              <div className="row" style={{ borderBottom: 0 }}><div className="label">Authorised?</div><div className="value">{claim.driver.authorisedToDrive}</div></div>
+              <div className="row" style={{ borderBottom: 0 }}><div className="label">Validity</div><div className="value">{claim.driver.validityTransport || claim.driver.validityNonTransport}</div></div>
             </div>
           </div>
 
@@ -123,7 +122,7 @@ export const UIICPrintReport = React.forwardRef<HTMLDivElement, UIICPrintReportP
 
         <div style={{ display: 'flex', border: '1px solid #006838', marginBottom: 10 }}>
            <div className="label">REPORT NO: {claim.reportNo}</div>
-           <div className="value">DATE: {claim.reportDate}</div>
+           <div className="value">DATE: {formatDateDMY(claim.reportDate)}</div>
         </div>
 
         <div className="report-box" style={{ display: 'flex' }}>
@@ -138,6 +137,8 @@ export const UIICPrintReport = React.forwardRef<HTMLDivElement, UIICPrintReportP
             <div className="row"><div className="label">Claim No</div><div className="value">{claim.policy.claimNumber}</div></div>
             <div className="row"><div className="label">Loss Date</div><div className="value">{claim.accident.dateAndTime}</div></div>
             <div className="row"><div className="label">Place</div><div className="value">{claim.accident.placeOfAccident}</div></div>
+            <div className="row"><div className="label">Police St.</div><div className="value">{claim.accident.policeStation}</div></div>
+            <div className="row"><div className="label">FIR / Date</div><div className="value">{claim.accident.firNumber} / {claim.accident.firDate}</div></div>
           </div>
         </div>
 

@@ -6,9 +6,15 @@ service cloud.firestore {
     // Any user can be promoted to admin by setting isAdmin: true in their profile.
     // Replaces old hardcoded UID approach.
     function isAdmin() {
-      return request.auth != null &&
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)/profile/current) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)/profile/current).data.isAdmin == true;
+      // Temporary hardcoded bypass for owner account (pniraj.india@gmail.com)
+      // while profile/current doc is being corrected. Remove once profile is fixed.
+      return request.auth != null && (
+        request.auth.uid == 'QCgRlZdGF3etljVitH8xq3KsTqB2' ||
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)/profile/current) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)/profile/current).data.isAdmin == true
+        )
+      );
     }
 
     function isSignedIn() {

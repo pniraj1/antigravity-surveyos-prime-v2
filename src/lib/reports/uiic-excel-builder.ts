@@ -146,7 +146,9 @@ export class UIICExcelBuilder {
     currRow++;
     addSectionHeader('IV. ACCIDENT DETAILS');
     addFourColumnRow('Date & Time', this.claim.accident?.dateAndTime || 'N/A', 'Place of Loss', this.claim.accident?.placeOfAccident || 'N/A');
-    addFourColumnRow('Cause of Accident', this.claim.accident?.causeOfAccident || 'N/A', 'Place of Survey', this.claim.accident?.placeOfSurvey || 'N/A');
+    addFourColumnRow('Police Station', this.claim.accident?.policeStation || 'N/A', 'FIR / Diary No.', this.claim.accident?.firNumber || 'N/A');
+    addFourColumnRow('FIR Date', this.claim.accident?.firDate || 'N/A', 'Place of Survey', this.claim.accident?.placeOfSurvey || 'N/A');
+    addFourColumnRow('Cause of Accident', this.claim.accident?.causeOfAccident || 'N/A', '', '');
     
     currRow++;
     addSectionHeader('V. ASSESSMENT DETAILS');

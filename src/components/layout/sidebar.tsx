@@ -29,6 +29,7 @@ import {
   LogOut,
   Shield,
   ShieldCheck,
+  Zap,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { signInWithGoogle, signOutUser } from '@/lib/firebase/auth';
@@ -52,12 +53,13 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'reports',      label: 'Report Center',   icon: <Printer size={17} />,    group: 'output',   requiresClaim: true },
   { id: 'bill-check',  label: 'Bill Check',     icon: <ClipboardCheck size={17} />, group: 'output', requiresClaim: true },
   { id: 'photos',      label: 'Photo Sheet',    icon: <Camera size={17} />,     group: 'output',   requiresClaim: true },
-  { id: 'fees',        label: 'Fee Bill',       icon: <Receipt size={17} />,    group: 'output',   requiresClaim: true },
+  { id: 'fees',        label: 'Survey Fees Bill', icon: <Receipt size={17} />,    group: 'output',   requiresClaim: true },
   { id: 'reinspection',label: 'Reinspection',  icon: <RotateCcw size={17} />,  group: 'output',   requiresClaim: true },
   { id: 'profile', label: 'Profile', icon: <User size={17} />, group: 'settings' },
   { id: 'cloud-vault', label: 'Cloud Vault', icon: <Cloud size={17} />, group: 'settings' },
   { id: 'learning', label: 'Learning', icon: <Brain size={17} />, group: 'settings' },
   { id: 'admin', label: 'Admin Panel', icon: <ShieldCheck size={17} />, group: 'settings' },
+  { id: 'landing' as AppTab, label: 'Feature Overview', icon: <Zap size={17} />, group: 'settings' },
 ];
 
 const GROUP_LABELS: Record<string, string> = {
@@ -81,6 +83,12 @@ export function Sidebar() {
   const groups = ['main', 'claim', 'output', 'settings'] as const;
 
   const handleTabChange = (targetTab: AppTab) => {
+    // Landing page is a separate route
+    if ((targetTab as string) === 'landing') {
+      window.location.href = '/landing';
+      return;
+    }
+
     // Show a soft warning if navigating away with unresolved AI conflicts
     if (activeTab === 'documents' && currentClaim) {
       const conflicts = getReconciliationFields(currentClaim).filter(f => f.hasConflict);
@@ -239,7 +247,7 @@ export function Sidebar() {
                   {items.map((item) => {
                     // Hide admin tab from non-admins
                     // Master admin UID always gets access regardless of profile flag
-                    const MASTER_ADMIN_UID = 'QCgRlZdGF3etljVitH8xq3KsTqB2';
+                    const MASTER_ADMIN_UID = process.env.NEXT_PUBLIC_MASTER_ADMIN_UID;
                     const isAdminUser = profile.isAdmin || user?.uid === MASTER_ADMIN_UID;
                     if (item.id === 'admin' && !isAdminUser) return null;
 
@@ -303,17 +311,28 @@ export function Sidebar() {
           style={{ borderTop: '1px solid #F0F2F5' }}
         >
           {isAuthenticated ? (
-            <button
-              onClick={() => { signOutUser(); toast.success('Signed out'); }}
-              className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-xs font-bold transition-all ${sidebarCollapsed ? 'justify-center' : ''}`}
-              style={{ color: '#EF4444' }}
-              onMouseEnter={e => (e.currentTarget.style.background = '#FEF2F2')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-              title="Sign Out"
-            >
-              <LogOut size={15} />
-              {!sidebarCollapsed && 'Sign Out'}
-            </button>
+            user?.email === 'pniraj.india@gmail.com' ? (
+              <div
+                className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-xs font-bold transition-all opacity-50 cursor-not-allowed ${sidebarCollapsed ? 'justify-center' : ''}`}
+                style={{ color: '#0D1B2A' }}
+                title="Admin session permanently active"
+              >
+                <ShieldCheck size={15} className="text-primary" />
+                {!sidebarCollapsed && 'Admin Active'}
+              </div>
+            ) : (
+              <button
+                onClick={() => { signOutUser(); toast.success('Signed out'); }}
+                className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-xs font-bold transition-all ${sidebarCollapsed ? 'justify-center' : ''}`}
+                style={{ color: '#EF4444' }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#FEF2F2')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                title="Sign Out"
+              >
+                <LogOut size={15} />
+                {!sidebarCollapsed && 'Sign Out'}
+              </button>
+            )
           ) : (
             <button
               onClick={async () => {

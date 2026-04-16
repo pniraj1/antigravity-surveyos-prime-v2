@@ -9,6 +9,7 @@ import { useEffect } from 'react';
 import { useUIStore } from '@/stores/ui-store';
 import { useClaimStore } from '@/stores/claim-store';
 import { getClaim } from '@/lib/storage/indexeddb';
+import { logger } from '@/lib/utils/logger';
 
 /**
  * A wrapper component that initializes global Auth and Cloud Sync listeners.
@@ -27,18 +28,18 @@ export function AuthSyncWrapper({ children }: { children: React.ReactNode }) {
   // Recovery Logic: If we have a persisted ID but no loaded claim, load it.
   useEffect(() => {
     if (currentClaimId && !currentClaim) {
-      console.log('[Recovery] Attempting to recover claim:', currentClaimId);
+      logger.log('[Recovery] Attempting to recover claim:', currentClaimId);
       getClaim(currentClaimId)
         .then((claim) => {
           if (claim) {
             loadClaim(claim);
-            console.log('[Recovery] Successfully recovered claim:', currentClaimId);
+            logger.log('[Recovery] Successfully recovered claim:', currentClaimId);
           } else {
-            console.warn('[Recovery] Claim ID persisted but not found in DB:', currentClaimId);
+            logger.warn('[Recovery] Claim ID persisted but not found in DB:', currentClaimId);
           }
         })
         .catch((err) => {
-          console.error('[Recovery] Failed to recover claim:', err);
+          logger.error('[Recovery] Failed to recover claim:', err);
         });
     }
   }, [currentClaimId, currentClaim, loadClaim]);

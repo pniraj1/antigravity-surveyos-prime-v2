@@ -162,6 +162,8 @@ export interface SurveyorProfile {
   groqModel?: string;
   /** Legacy Google OAuth client id */
   googleClientId: string;
+  /** Whether to automatically upload photos and documents to Drive */
+  autoUploadDrive?: boolean;
   // ─── Subscription & Administrative ────────────────────
   /** Unique platform ID (e.g. SUS-1001) */
   surveyorId: string;
@@ -182,4 +184,11 @@ export interface SurveyorProfile {
   // ─── Signature & Stamp ────────────────────────────────
   signatureDataUrl: string | null;
   stampDataUrl: string | null;
+  // ─── Access Request ────────────────────────────────────
+  /** Set to true once the surveyor submits the registration form */
+  accessRequestSubmitted: boolean;
+  /** IRDAI Licence number — submitted at registration, editable by surveyor */
+  irdaiLicence: string;
+  /** Set by admin when dismissing a request, shown to surveyor on re-submit form */
+  dismissReason?: string;
 }

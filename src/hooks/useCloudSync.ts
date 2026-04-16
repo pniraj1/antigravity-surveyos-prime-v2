@@ -10,6 +10,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { useUIStore } from '@/stores/ui-store';
+import { logger } from '@/lib/utils/logger';
 import {
   pushClaimToCloud,
   pullClaimsFromCloud,
@@ -63,10 +64,10 @@ export function useCloudSync() {
       isSyncingFullRef.current = true;
       (async () => {
         try {
-          console.log('[useCloudSync] Initial full sync started...');
+          logger.log('[useCloudSync] Initial full sync started...');
           const remoteProfile = await pullProfileFromCloud(user.uid);
           if (!remoteProfile) {
-            console.log('[useCloudSync] No remote profile found, creating initial cloud profile.');
+            logger.log('[useCloudSync] No remote profile found, creating initial cloud profile.');
             await pushProfileToCloud(user.uid, profile);
           }
           // Only allow Section 4 to push profile AFTER the initial pull is complete.
@@ -75,9 +76,9 @@ export function useCloudSync() {
           profileSyncReadyRef.current = true;
           await syncAllLocalToCloud(user.uid);
           await pullClaimsFromCloud(user.uid);
-          console.log('[useCloudSync] Initial full sync complete.');
+          logger.log('[useCloudSync] Initial full sync complete.');
         } catch (err) {
-          console.error('[useCloudSync] Initial sync failed:', err);
+          logger.error('[useCloudSync] Initial sync failed:', err);
           isSyncingFullRef.current = false;
         }
       })();
@@ -100,16 +101,16 @@ export function useCloudSync() {
         if (isOnline) {
           await pushClaimToCloud(user.uid, currentClaim);
           setSaveStatus('saved');
-          console.log(`[useCloudSync] Pushed claim ${currentClaim.id} to Firestore.`);
+          logger.log(`[useCloudSync] Pushed claim ${currentClaim.id} to Firestore.`);
         } else {
           // Offline — add to the sync queue for retry on reconnect
           await addToSyncQueue('claim-backup', { claimId: currentClaim.id, uid: user.uid });
           setSaveStatus('queued');
-          console.log(`[useCloudSync] Offline — claim ${currentClaim.id} queued for sync.`);
+          logger.log(`[useCloudSync] Offline — claim ${currentClaim.id} queued for sync.`);
         }
       } catch (err) {
         // Network error mid-push — queue it
-        console.error('[useCloudSync] Cloud push failed, queuing:', err);
+        logger.error('[useCloudSync] Cloud push failed, queuing:', err);
         await addToSyncQueue('claim-backup', { claimId: currentClaim.id, uid: user.uid });
         setSaveStatus('queued');
       }
@@ -135,7 +136,7 @@ export function useCloudSync() {
           return;
         }
 
-        console.log(`[useCloudSync] Draining ${claimItems.length} queued item(s)...`);
+        logger.log(`[useCloudSync] Draining ${claimItems.length} queued item(s)...`);
         setSaveStatus('saving');
 
         for (const item of claimItems) {
@@ -146,28 +147,28 @@ export function useCloudSync() {
             if (claim) {
               await pushClaimToCloud(payload.uid, claim);
               await removeSyncItem(item.id);
-              console.log(`[useCloudSync] Queue item ${item.id} synced and removed.`);
+              logger.log(`[useCloudSync] Queue item ${item.id} synced and removed.`);
             } else {
               // Claim no longer exists locally — remove orphaned queue item
               await removeSyncItem(item.id);
             }
           } catch (err) {
-            console.error(`[useCloudSync] Failed to drain item ${item.id}:`, err);
+            logger.error(`[useCloudSync] Failed to drain item ${item.id}:`, err);
             // Leave it in the queue for next reconnect
           }
         }
 
         setSaveStatus('saved');
-        console.log('[useCloudSync] Queue drain complete.');
+        logger.log('[useCloudSync] Queue drain complete.');
       } catch (err) {
-        console.error('[useCloudSync] Queue drain failed:', err);
+        logger.error('[useCloudSync] Queue drain failed:', err);
       } finally {
         isDrainingRef.current = false;
       }
 
       // Also drain any pending Drive uploads
       flushDriveQueue().catch(err => {
-        console.error('[useCloudSync] Drive queue drain failed:', err);
+        logger.error('[useCloudSync] Drive queue drain failed:', err);
       });
     })();
   }, [isOnline, isAuthenticated, user, setSaveStatus]);
@@ -178,7 +179,7 @@ export function useCloudSync() {
   useEffect(() => {
     if (isAuthenticated && user && profile && profileSyncReadyRef.current) {
       pushProfileToCloud(user.uid, profile).catch(err => {
-        console.error('[useCloudSync] Profile cloud push failed:', err);
+        logger.error('[useCloudSync] Profile cloud push failed:', err);
       });
     }
   }, [isAuthenticated, user, profile]);

@@ -95,6 +95,9 @@ export async function generateWordReport(claim: ClaimData, summary: AssessmentSu
               new TextRun({ text: `Date & Time: ${claim.accident.dateAndTime || "—"}` }),
               new TextRun({ text: `\nPlace: ${claim.accident.placeOfAccident || "—"}`, break: 1 }),
               new TextRun({ text: `\nCause: ${claim.accident.causeOfAccident || "—"}`, break: 1 }),
+              new TextRun({ text: `\nPolice Station: ${claim.accident.policeStation || "—"}`, break: 1 }),
+              new TextRun({ text: `\nFIR / Diary No: ${claim.accident.firNumber || "—"}`, break: 1 }),
+              new TextRun({ text: `\nFIR Date: ${claim.accident.firDate || "—"}`, break: 1 }),
             ],
           }),
 
@@ -257,7 +260,7 @@ export async function generateSpotWordReport(claim: ClaimData, profile: Surveyor
         createKVRow("Date of Survey", formatDateDMY(accident.dateOfSurvey), "Place of Survey", accident.placeOfSurvey),
         createKVRow("Third Party", spotDetails.tpInvolved === 'no' ? 'NIL' : spotDetails.tpInvolved.toUpperCase(), "TP Details", accident.thirdPartyDetails || 'NIL'),
         createKVRow("Police Reported", spotDetails.policeReported === 'yes' ? `Yes — ${accident.policeStation} | Diary: ${accident.firNumber}` : 'No', "Panchanama", spotDetails.panchanama === 'yes' ? 'Yes' : 'No'),
-        createKVRow("FIR Date", formatDateDMY(accident.firDate), "Survey Appointment Date", formatDateDMY(accident.appointmentDate)),
+        createKVRow("FIR Date", formatDateDMY(accident.firDate), "", ""),
       ]
     }),
 
@@ -322,8 +325,11 @@ export async function generateSpotWordReport(claim: ClaimData, profile: Surveyor
     }));
   }
 
-  sections.push(new Paragraph({ text: "\nG. CAUSE OF ACCIDENT", ...sectionHeaderStyle }));
+  sections.push(new Paragraph({ text: "\nF. CAUSE AND NATURE OF ACCIDENT", ...sectionHeaderStyle }));
   sections.push(new Paragraph({ text: accident.causeOfAccident || "—" }));
+
+  sections.push(new Paragraph({ text: "\nG. SPOT OBSERVATIONS / COMMENTS / REMARKS", ...sectionHeaderStyle }));
+  sections.push(new Paragraph({ text: spotDetails.comments || "NIL" }));
 
   sections.push(new Paragraph({ text: "\nH. DAMAGE PARTICULARS AT SPOT", ...sectionHeaderStyle }));
   sections.push(new Paragraph({ text: `Severity: ${spotDetails.damageSeverity?.toUpperCase() || ''} | Airbags Deployed: ${spotDetails.airbags?.toUpperCase() || ''} | Drivable: ${spotDetails.drivable || ''}\n` }));
@@ -349,15 +355,17 @@ export async function generateSpotWordReport(claim: ClaimData, profile: Surveyor
       ]
     }));
   } else {
-    sections.push(new Paragraph({ text: `Damage observations: ${spotDetails.comments || 'NIL'}` }));
-  }
-
-  if (spotDetails.comments) {
-    sections.push(new Paragraph({ text: `\nComments: ${spotDetails.comments}` }));
+    sections.push(new Paragraph({ 
+      children: [
+        new TextRun({ 
+          text: "No specific damage items listed. Refer to observations above.", 
+          italics: true, 
+          color: "666666" 
+        })
+      ]
+    }));
   }
   
-  sections.push(new Paragraph({ text: `Repairs: ${spotDetails.repairs || ''}` }));
-
   sections.push(new Paragraph({ text: "\nWe have noted down maximum possible visible damages at accident spot. Any other unseen/hidden damages which are related to cause of accident if noticed may be considered on dismantled checkup. This report is issued without prejudice subject to policy terms and condition and the damages stated in this report are based on physical inspection of accidental I.V. on the spot of the accident.\n" }));
 
   sections.push(new Paragraph({

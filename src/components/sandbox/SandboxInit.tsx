@@ -17,6 +17,7 @@
 import { useEffect } from 'react';
 import { useClaimStore } from '@/stores/claim-store';
 import { createBlankClaim } from '@/types';
+import { logger } from '@/lib/utils/logger';
 
 const SANDBOX_CLAIM = (() => {
   const base = createBlankClaim('final', 'private');
@@ -142,7 +143,7 @@ export function SandboxInit() {
   useEffect(() => {
     if (!currentClaim) {
       loadClaim(SANDBOX_CLAIM);
-      console.log('[SandboxInit] CTL demo claim loaded.');
+      logger.log('[SandboxInit] CTL demo claim loaded.');
     }
   }, [currentClaim, loadClaim]);
 

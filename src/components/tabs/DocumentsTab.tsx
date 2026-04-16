@@ -122,7 +122,7 @@ export function DocumentsTab() {
     triggerExtraction(key, file);
 
     // Non-blocking Drive upload
-    if (currentClaim?.id) {
+    if (currentClaim?.id && profile.autoUploadDrive !== false) {
       const label = currentClaim.vehicle?.registrationNumber || currentClaim.id;
       const ext   = file.name.split('.').pop() ?? 'bin';
       const driveName = `${key}.${ext}`;

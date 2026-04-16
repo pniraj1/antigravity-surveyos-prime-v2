@@ -73,6 +73,8 @@ export function useAuth() {
             isAdmin: false,
             email: user.email ?? '',
             displayName: user.displayName ?? '',
+            accessRequestSubmitted: false,
+            irdaiLicence: '',
             createdAt: Timestamp.now(),
           });
           profileStatus = 'pending';
@@ -80,18 +82,22 @@ export function useAuth() {
           profileStatus = currentSnap.data()?.subscriptionStatus ?? 'pending';
         }
 
-        // ── Write to newSignups if user is still pending ──────
-        // Done in a separate try/catch so a rules or network error
-        // here never blocks the login flow. Admin sees them regardless.
+        // ── Write to newSignups if user is still pending AND hasn't submitted form yet ──
+        // Guard with accessRequestSubmitted so dismissed users don't ghost-resurface
+        // in the admin queue just by logging in again.
         if (profileStatus === 'pending') {
           try {
-            const signupRef = doc(db, 'newSignups', user.uid);
-            await setDoc(signupRef, {
-              email: user.email ?? '',
-              displayName: user.displayName ?? '',
-              signedUpAt: Timestamp.now(),
-              status: 'pending',
-            }, { merge: true }); // merge:true so re-logins don't reset timestamp
+            const currentData = currentSnap.exists() ? currentSnap.data() : null;
+            const alreadySubmitted = currentData?.accessRequestSubmitted === true;
+            if (!alreadySubmitted) {
+              const signupRef = doc(db, 'newSignups', user.uid);
+              await setDoc(signupRef, {
+                email: user.email ?? '',
+                displayName: user.displayName ?? '',
+                signedUpAt: Timestamp.now(),
+                status: 'pending',
+              }, { merge: true }); // merge:true so re-logins don't reset timestamp
+            }
           } catch {
             // Non-fatal — admin can still see the user via profile collection
           }

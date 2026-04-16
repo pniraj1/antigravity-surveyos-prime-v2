@@ -8,6 +8,7 @@ import { useEffect, useRef } from 'react';
 import { useClaimStore } from '@/stores/claim-store';
 import { useUIStore } from '@/stores/ui-store';
 import { saveClaim } from '@/lib/storage/indexeddb';
+import { logger } from '@/lib/utils/logger';
 
 /**
  * Layer 1: Instant IndexedDB save on every claim change.
@@ -31,10 +32,10 @@ export function useAutoSave(debounceMs = 2000) {
       .then(() => {
         lastSavedRef.current = currentClaim.updatedAt;
         markClean(); // Signals useCloudSync to begin cloud push
-        console.log(`[AutoSave] Claim ${currentClaim.id} saved to IndexedDB`);
+        logger.log(`[AutoSave] Claim ${currentClaim.id} saved to IndexedDB`);
       })
       .catch(err => {
-        console.error('[AutoSave] IndexedDB save failed:', err);
+        logger.error('[AutoSave] IndexedDB save failed:', err);
         setSaveStatus('idle');
       });
 

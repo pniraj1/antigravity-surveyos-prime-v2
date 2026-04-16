@@ -127,8 +127,8 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
           <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt', width: '18%' }}>Spot Report No.</td>
             <td style={{ ...parseInline(styles.td), fontWeight: 700, width: '32%' }}>{spotDetails.reportNo}</td>
-            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Date & Time of Report</td>
-            <td style={{ ...parseInline(styles.td), fontWeight: 700 }}>{formatDateTimeDMY(spotDetails.reportDate)}</td>
+            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Date of Report</td>
+            <td style={{ ...parseInline(styles.td), fontWeight: 700 }}>{formatDateDMY(spotDetails.reportDate)}</td>
           </tr>
           <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Date of Allotment</td>
@@ -201,7 +201,7 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
           </tr>
           <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>RLW / GVW / Seating</td>
-            <td style={{ ...parseInline(styles.td) }}>{vehicle.rlw || '—'}</td>
+            <td style={{ ...parseInline(styles.td) }}>{vehicle.rlw || '—'} / {vehicle.grossWeight || '—'} / {vehicle.seatingCapacityTotal || '—'}</td>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Odometer (KM)</td>
             <td style={{ ...parseInline(styles.td) }}>{vehicle.odometer || '—'}</td>
           </tr>
@@ -254,13 +254,13 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
           </tr>
           <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Date of Birth</td>
-            <td style={{ ...parseInline(styles.td) }}>{formatDateDMY(claim.driver.dob) || '—'}</td>
+            <td style={{ ...parseInline(styles.td) }}>{formatDateDMY(driver.dateOfBirth) || '—'}</td>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Issuing Authority</td>
             <td style={{ ...parseInline(styles.td) }}>{driver.issuingAuthority || '—'}</td>
           </tr>
           <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Licence Classes / Issue Date</td>
-            <td style={{ ...parseInline(styles.td) }} colSpan={3}>{driver.vehicleClass || '—'} &nbsp;|&nbsp; Issued: {formatDateDMY(driver.dateOfIssue) || '—'}</td>
+            <td style={{ ...parseInline(styles.td) }} colSpan={3}>{driver.vehicleClasses || '—'} &nbsp;|&nbsp; Issued: {formatDateDMY(driver.dateOfIssue) || '—'}</td>
           </tr>
           <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Non-Transport Valid</td>
@@ -295,6 +295,12 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
             <td style={{ ...parseInline(styles.td) }}>{accident.placeOfAccident}</td>
           </tr>
           <tr>
+            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Police Station</td>
+            <td style={{ ...parseInline(styles.td) }}>{accident.policeStation || '—'}</td>
+            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>FIR No. & Date</td>
+            <td style={{ ...parseInline(styles.td) }}>{accident.firNumber || '—'} / {formatDateDMY(accident.firDate)}</td>
+          </tr>
+          <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Date of Survey</td>
             <td style={{ ...parseInline(styles.td) }}>{formatDateDMY(accident.dateOfSurvey) || '—'}</td>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Place of Survey</td>
@@ -313,12 +319,6 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
             </td>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Panchanama</td>
             <td style={{ ...parseInline(styles.td) }}>{spotDetails.panchanama === 'yes' ? 'Yes' : 'No'}</td>
-          </tr>
-          <tr>
-            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>FIR Date</td>
-            <td style={{ ...parseInline(styles.td) }}>{formatDateDMY(accident.firDate) || '—'}</td>
-            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Appointment Date</td>
-            <td style={{ ...parseInline(styles.td) }}>{formatDateDMY(accident.appointmentDate) || '—'}</td>
           </tr>
         </tbody>
       </table>
@@ -476,9 +476,17 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
         {claim.accident.causeOfAccident || '—'}
       </div>
 
-      {/* G. DAMAGE PARTICULARS AT SPOT */}
+      {/* G. SPOT OBSERVATIONS / COMMENTS */}
       <div style={{ fontWeight: 700, fontSize: '7pt', background: '#0d1b2a', color: '#fff', padding: '2px 4px', marginBottom: '2px' }}>
-        G. DAMAGE PARTICULARS AT SPOT
+        G. SPOT OBSERVATIONS / COMMENTS / REMARKS
+      </div>
+      <div style={{ fontSize: '7.2pt', marginBottom: '4px', padding: '2px 4px', border: '0.4pt solid #bbb', lineHeight: 1.5, minHeight: '30px' }}>
+        {spotDetails.comments || 'NIL'}
+      </div>
+
+      {/* H. DAMAGE PARTICULARS AT SPOT */}
+      <div style={{ fontWeight: 700, fontSize: '7pt', background: '#0d1b2a', color: '#fff', padding: '2px 4px', marginBottom: '2px' }}>
+        H. DAMAGE PARTICULARS AT SPOT
       </div>
       <div style={{ fontSize: '6.8pt', marginBottom: '3px', padding: '2px 4px' }}>
         Severity: <b>{spotDetails.damageSeverity?.toUpperCase()}</b> &nbsp;|&nbsp; 
@@ -506,20 +514,11 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
           </tbody>
         </table>
       ) : (
-        <p style={{ fontSize: '7pt', padding: '2px 4px', border: '0.4pt solid #bbb' }}>
-          Damage observations: {spotDetails.comments || 'NIL'}
-        </p>
+        <div style={{ fontSize: '7pt', padding: '4px', border: '0.4pt solid #bbb', fontStyle: 'italic', color: '#666' }}>
+          No specific damage items listed. Refer to observations above.
+        </div>
       )}
 
-      {spotDetails.repairs ? (
-        <div style={{ fontSize: '7.2pt', marginTop: '6px', padding: '3px 4px', border: '0.4pt solid #bbb', background: '#f9f9f6' }}>
-          <b>Repairs:</b> {spotDetails.repairs}
-        </div>
-      ) : (
-        <div style={{ fontSize: '7.2pt', marginTop: '6px', padding: '3px 4px', border: '0.4pt solid #bbb', background: '#f9f9f6' }}>
-          <b>Repairs:</b> &nbsp;
-        </div>
-      )}
 
       {spotDetails.repairWorkshop && (
         <div style={{ fontSize: '7.2pt', marginTop: '4px', padding: '3px 4px', border: '0.4pt solid #bbb', background: '#f9f9f6' }}>

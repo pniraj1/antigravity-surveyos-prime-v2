@@ -248,7 +248,7 @@ function buildClaimRegister(wb: ExcelJS.Workbook, rows: ClaimRow[], fyLabel: str
 
   // Row 2: Column headers
   const headers = [
-    'Sr.', 'Report No.', 'Report Date', 'Insurer', 'Insured', 'Claim No.',
+    'Sr.', 'Report No.', 'Date of report', 'Insurer', 'Insured', 'Claim No.',
     'Vehicle Reg.', 'Vehicle Type', 'Type', 'Net Assessed (₹)',
     'Prof. Fee (₹)', 'RI Fee (₹)', 'Travel (₹)', 'Photography (₹)',
     'Postal+Halt (₹)', 'GST (₹)', 'Total Fee (₹)', 'Paid', 'Status',

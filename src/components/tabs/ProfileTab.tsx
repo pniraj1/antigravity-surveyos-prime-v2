@@ -8,7 +8,7 @@ import {
   User, Shield, Phone, Mail, MapPin, CreditCard, Building2,
   Landmark, Sparkles, Camera, Stamp, Key, RefreshCw, CheckCircle2,
   AlertCircle, Upload, Trash2, Cpu, ExternalLink, Cloud, CloudOff, Link,
-  LayoutDashboard, ShieldCheck, Plus, Eye, EyeOff
+  LayoutDashboard, ShieldCheck, Plus, Eye, EyeOff, Lock
 } from 'lucide-react';
 
 // ─── Section Wrapper ─────────────────────────────────────────────────────────
@@ -232,6 +232,8 @@ export function ProfileTab() {
   const [driveLinking, setDriveLinking] = useState(false);
   const [driveError, setDriveError] = useState('');
 
+  const isNameLocked = !profile.isAdmin; // Only admins can rename
+
   const set = (key: string) => (v: string) => updateProfile({ [key]: v } as any);
 
   const handleSave = () => {
@@ -307,7 +309,42 @@ export function ProfileTab() {
 
         {/* ── Personal ──────────────────────────────────── */}
         <Section title="Personal Details" icon={<User size={14} />}>
-          <Field label="Full Name" value={profile.name} onChange={set('name')} placeholder="e.g. Niraj P." />
+          <div className={isNameLocked ? '' : ''}>
+            <label className="flex items-center gap-1.5 mb-1.5 text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: '#8D99AE' }}>
+              Full Name
+              {isNameLocked && (
+                <span
+                  className="flex items-center gap-1 ml-1 px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase"
+                  style={{ background: 'rgba(212,175,55,0.12)', color: '#D4AF37' }}
+                  title="Name is identity-locked. Contact an admin to change it."
+                >
+                  <Lock size={8} /> Identity-Locked
+                </span>
+              )}
+            </label>
+            <input
+              type="text"
+              value={profile.name}
+              readOnly={isNameLocked}
+              onChange={e => !isNameLocked && updateProfile({ name: e.target.value })}
+              placeholder="e.g. Niraj P."
+              className="w-full px-3 py-2 rounded-lg text-sm border outline-none transition-all"
+              style={{
+                border: '1px solid #E2E6EA',
+                background: isNameLocked ? '#F0F2F5' : '#FAFAFA',
+                color: '#0D1B2A',
+                fontWeight: 600,
+                cursor: isNameLocked ? 'not-allowed' : 'text',
+              }}
+              onFocus={e => { if (!isNameLocked) e.currentTarget.style.borderColor = '#D4AF37'; }}
+              onBlur={e => { e.currentTarget.style.borderColor = '#E2E6EA'; }}
+            />
+            {isNameLocked && (
+              <p className="mt-1 text-[9px] font-bold" style={{ color: '#8D99AE' }}>
+                Contact an administrator to update your name.
+              </p>
+            )}
+          </div>
           <Field label="Qualifications" value={profile.qualifications} onChange={set('qualifications')} placeholder="e.g. B.E. Mechanical, AMII" />
           <Field label="Mobile" value={profile.mobile} onChange={set('mobile')} placeholder="+91 98765 43210" type="tel" />
           <Field label="Email" value={profile.email} onChange={set('email')} placeholder="surveyor@example.com" type="email" />
@@ -478,6 +515,24 @@ export function ProfileTab() {
                     : 'Click the button below to grant SurveyOS permission to upload files to your Google Drive.'}
                 </div>
               </div>
+            </div>
+
+            {/* Auto-Upload Toggle */}
+            <div className="flex items-center justify-between p-3 rounded-xl border" style={{ borderColor: '#E2E6EA', background: '#FAFAFA' }}>
+              <div>
+                <div className="text-sm font-black" style={{ color: '#0D1B2A' }}>Auto Push Files</div>
+                <div className="text-[10px] font-bold" style={{ color: '#8D99AE' }}>Automatically upload photos and documents to Drive</div>
+              </div>
+              <button
+                onClick={() => updateProfile({ autoUploadDrive: profile.autoUploadDrive === false ? true : false })}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                  profile.autoUploadDrive !== false ? 'bg-[#22c55e]' : 'bg-[#C3C9D4]'
+                }`}
+              >
+                <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${
+                  profile.autoUploadDrive !== false ? 'translate-x-4' : 'translate-x-0.5'
+                }`} />
+              </button>
             </div>
 
             {/* Error */}

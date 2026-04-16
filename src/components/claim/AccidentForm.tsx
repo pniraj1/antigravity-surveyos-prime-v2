@@ -93,15 +93,17 @@ export function AccidentDetailsForm() {
             />
           </div>
 
-          <div className="space-y-1">
-            <Label htmlFor="a-app-date">Survey Appointment Date</Label>
-            <Input
-              id="a-app-date"
-              type="date"
-              value={a?.appointmentDate || ''}
-              onChange={(e) => updateAccident({ appointmentDate: e.target.value })}
-            />
-          </div>
+          {currentClaim.surveyType !== 'spot' && (
+            <div className="space-y-1">
+              <Label htmlFor="a-app-date">Survey Appointment Date</Label>
+              <Input
+                id="a-app-date"
+                type="date"
+                value={a?.appointmentDate || ''}
+                onChange={(e) => updateAccident({ appointmentDate: e.target.value })}
+              />
+            </div>
+          )}
         </div>
 
         {currentClaim.surveyType !== 'spot' && (

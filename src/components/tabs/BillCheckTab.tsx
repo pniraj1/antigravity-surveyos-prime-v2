@@ -2,15 +2,16 @@
 
 import { useClaimStore } from '@/stores/claim-store';
 import { calculateAssessmentSummary, calculateBillCheckSummary, getVehicleAgeMonths, formatCurrency } from '@/lib/calculations';
-import { triggerUIICBillCheckPrint } from '@/lib/reports/uiic-final-builder';
+import { triggerUIICBillCheckPrint, buildUIICBillCheckHTML } from '@/lib/reports/uiic-final-builder';
 import { useProfileStore } from '@/stores/profile-store';
 import { useAIExtraction } from '@/hooks/useAIExtraction';
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
+import { ReportPreviewPanel } from '@/components/shared/ReportPreviewPanel';
 import {
   Receipt, DollarSign, Calculator, CheckCircle2, XCircle,
   AlertCircle, FileText, Sparkles, Upload, Loader2, Minus, Printer,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 // ─── Bill Check Row State ───────────────────────────────────────────────────
 type BillStatus = 'in-bill' | 'not-in-bill' | 'partial' | 'pending';
@@ -32,6 +33,22 @@ function statusLabel(s: BillStatus) {
     case 'partial':     return { label: 'Partial',         color: '#d97706', bg: 'rgba(217,119,6,0.1)' };
     default:            return { label: 'Pending Review',  color: '#8D99AE', bg: 'rgba(141,153,174,0.1)' };
   }
+}
+
+// ─── Inline Live Preview ─────────────────────────────────────────────────────
+function BillCheckPreview({ claim, profile }: { claim: any; profile: any }) {
+  const html = useMemo(() => {
+    try { return buildUIICBillCheckHTML(claim, profile); } catch { return ''; }
+  }, [claim, profile]);
+
+  return (
+    <ReportPreviewPanel
+      html={html}
+      title="Bill Check Report — Live Preview"
+      printLabel="Power Print"
+      onPrint={() => triggerUIICBillCheckPrint(claim, profile)}
+    />
+  );
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -470,6 +487,9 @@ export function BillCheckTab() {
             full colour output.
           </div>
         </div>
+
+        {/* ── Live Bill Check Report Preview ──────────── */}
+        <BillCheckPreview claim={currentClaim} profile={profile} />
       </div>
 
       <AIReviewDialog
