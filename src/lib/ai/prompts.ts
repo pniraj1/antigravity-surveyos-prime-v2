@@ -3,7 +3,22 @@
 // specialized for Motor Insurance Survey (India)
 // ═══════════════════════════════════════════════════════════
 
-export const DOC_PROMPTS: Record<string, string> = {
+/**
+ * Appended to every prompt so the AI also returns a short text snippet
+ * for each extracted field — used by the Evidence Viewer to show WHERE
+ * in the document a value was found. The snippet is the surrounding text
+ * from the source document (5–15 words), NOT an explanation.
+ *
+ * Convention: for a key "foo", the evidence snippet lives at "foo_context".
+ * Example: "registration_number_context": "Regn No.: MH12AB1234 Date of Reg: 20-11-2019"
+ */
+const CONTEXT_INSTRUCTION = `
+ADDITIONALLY: For EVERY field you extract (where the value is non-empty), also return a "_context" key containing a short 5-15 word verbatim text snippet copied directly from the document around where that field value appears. This helps users verify the source.
+Example: if you extract "registration_number": "MH12AB1234", also return "registration_number_context": "Regn No: MH12AB1234  Regn Date: 20-Nov-2019".
+Do NOT invent or paraphrase. Copy the text exactly as it appears in the document. Only include _context keys for non-empty fields.`;
+
+// ─── Raw prompt bodies (without context instruction) ─────────────────────────
+const RAW_PROMPTS: Record<string, string> = {
   rc: `You are an expert at reading Indian vehicle RC (Registration Certificate) documents. Extract ALL visible fields from this RC book image. Return ONLY a JSON object with these keys (use empty string if not found):
 {
   "registration_number": "",
@@ -24,10 +39,11 @@ export const DOC_PROMPTS: Record<string, string> = {
   "unladen_weight": "",
   "gross_weight": "",
   "class_of_vehicle": "",
+  "registering_authority": "Look for 'Registering Authority', 'RTO', 'Regn Authority', 'Issuing Authority' - the RTO office name that issued the RC",
   "permit_no": "",
   "route": "",
   "road_tax": "",
-  "hypothecation": ""
+  "hypothecation": "Look for 'Hypothecation', 'Financer', 'HP Agreement', 'Under Hypothecation to' - the bank/NBFC name if vehicle is financed"
 }
 Return ONLY the JSON. No explanation, no markdown, no backticks.`,
 
@@ -66,12 +82,40 @@ Return ONLY the JSON. No explanation, no markdown, no backticks.`,
   "period_to": "",
   "idv": "",
   "policy_issuing_office": "",
-  "appointing_office": "",
   "hpa_with": ""
 }
 Return ONLY the JSON. No explanation, no markdown, no backticks.`,
 
-  estimate: `You are an expert at reading Indian vehicle repair estimates and workshop bills. Extract ALL line items and totals. Return ONLY a JSON object:
+  estimate: `You are an expert at reading Indian vehicle repair estimates, proforma invoices, and workshop bills (e.g. Tata DTC, Maruti MGA, Hyundai etc.).
+
+CRITICAL RULES:
+1. Extract EVERY SINGLE line item from ALL pages. Do NOT stop at page 1. This document may have 50-80+ items across 3-5 pages.
+2. PRESERVE the original serial number (Sr No / S.No / #) from the document as "sr_no". If not numbered, assign 1, 2, 3... in the order items appear.
+3. Classify each item into one of three categories based on these rules:
+   - spare_parts: Physical parts (HSN code starting with 87xx, 85xx, 27xx, 35xx etc.). These have part_number columns.
+   - labour_items: Labour/service charges (SAC code starting with 9987). Descriptions contain words like "REPLACE", "R & R", "REMOVE", "FITMENT CHARGES", "DIAGNOSIS", "CUTTING", "WELDING", "GAS CHARGES". Do NOT put these in spare_parts.
+   - painting_items: Painting jobs (SAC 9987). Descriptions contain "PAINTING", "SOLID COLOUR", "METALLIC COLOUR", "TOUCH UP". Do NOT put these in labour_items.
+4. AMOUNTS — extract BOTH per line item (these are separate columns on the invoice):
+   - "taxable_amount": the TAXABLE VALUE / BASE AMOUNT before GST (Qty × Unit Price column). This is the NET amount.
+   - "cgst_amount": CGST amount for this line (printed on invoice).
+   - "sgst_amount": SGST amount for this line (printed on invoice).
+   - "total_amount": the FINAL AMOUNT including GST (last column). This is the GROSS amount.
+   If only one amount column exists, put it in "total_amount" and set "taxable_amount" to total_amount / (1 + gst_percent/100).
+5. For "category" on spare_parts: classify as "metal", "plastic", or "glass" based on the part name:
+   - glass: windshield, window, mirror glass
+   - plastic: bumper, cladding, grille, garnish, cap, air duct, skid plate, fender liner
+   - metal: everything else (brackets, radiator, intercooler, hinges, cross member, structural parts, headlamp assy, fan assy, airbag, sensor, seat belt)
+6. Look at the LAST PAGE for summary totals. Extract them as:
+   - "subtotal_parts_taxable": Sum of parts taxable amounts (before GST)
+   - "subtotal_labour_taxable": Sum of labour taxable amounts (before GST)
+   - "subtotal_painting_taxable": Sum of painting taxable amounts (before GST)
+   - "total_cgst": Total CGST from the invoice
+   - "total_sgst": Total SGST from the invoice
+   - "total_tax": Total tax (CGST + SGST)
+   - "gross_amount": Final grand total (all items + all tax)
+7. Extract the HSN/SAC code for each line item as "hsn_sac". It is typically a 4-8 digit code in a column.
+
+Return ONLY a JSON object:
 {
   "workshop_name": "",
   "workshop_address": "",
@@ -81,23 +125,36 @@ Return ONLY the JSON. No explanation, no markdown, no backticks.`,
   "estimate_date": "",
   "bill_number": "",
   "spare_parts": [
-    { "description": "", "part_number": "", "quantity": 1, "unit_price": 0, "amount": 0, "gst_percent": 18, "category": "metal or plastic or glass" }
+    { "sr_no": 1, "description": "", "part_number": "", "hsn_sac": "", "quantity": 1, "unit_price": 0, "taxable_amount": 0, "cgst_amount": 0, "sgst_amount": 0, "total_amount": 0, "gst_percent": 18, "category": "metal or plastic or glass" }
   ],
   "labour_items": [
-    { "description": "", "amount": 0, "gst_percent": 18 }
+    { "sr_no": 1, "description": "", "hsn_sac": "", "quantity": 1, "unit_price": 0, "taxable_amount": 0, "cgst_amount": 0, "sgst_amount": 0, "total_amount": 0, "gst_percent": 18 }
   ],
   "painting_items": [
-    { "description": "", "amount": 0, "gst_percent": 18 }
+    { "sr_no": 1, "description": "", "hsn_sac": "", "quantity": 1, "unit_price": 0, "taxable_amount": 0, "cgst_amount": 0, "sgst_amount": 0, "total_amount": 0, "gst_percent": 18 }
   ],
-  "subtotal_parts": 0,
-  "subtotal_labour": 0,
-  "subtotal_painting": 0,
-  "gst_amount": 0,
-  "total_amount": 0
+  "subtotal_parts_taxable": 0,
+  "subtotal_labour_taxable": 0,
+  "subtotal_painting_taxable": 0,
+  "total_cgst": 0,
+  "total_sgst": 0,
+  "total_tax": 0,
+  "gross_amount": 0
 }
 Return ONLY the JSON. No explanation, no markdown, no backticks.`,
 
-  'final-bill': `You are an expert at reading Indian FINAL WORKSHOP BILLS (Invoices). Extract ALL final billed line items. Return ONLY a JSON object:
+  'final-bill': `You are an expert at reading Indian FINAL WORKSHOP BILLS (Invoices/Tax Invoices). Extract ALL final billed line items from ALL pages.
+
+CRITICAL RULES:
+1. Extract EVERY line item from ALL pages. Do NOT stop early.
+2. Classify items:
+   - spare_parts: Physical parts (HSN codes 87xx, 85xx etc.)
+   - labour_items: Labour/service (SAC 9987) — "REPLACE", "R & R", "FITMENT CHARGES", "DIAGNOSIS", "WELDING" etc.
+   - painting_items: Paint jobs (SAC 9987) — descriptions containing "PAINTING", "SOLID COLOUR", "METALLIC"
+3. "amount" = final amount with GST included (last column).
+4. "category": glass (windshield/window), plastic (bumper/grille/cladding/garnish), metal (everything else).
+
+Return ONLY a JSON object:
 {
   "workshop_name": "",
   "bill_number": "",
@@ -202,6 +259,7 @@ Return ONLY the JSON. No explanation, no markdown, no backticks.`,
   "third_party_details": ""
 }
 Return ONLY the JSON. No explanation, no markdown, no backticks.`,
+
   fir: `You are an expert at reading Indian Police FIR (First Information Report) or Spot Panchnama documents. Extract incident and vehicle details. Return ONLY a JSON object:
 {
   "fir_number": "",
@@ -233,5 +291,27 @@ Rules:
 - Exclude debit entries (withdrawals, payments, charges).
 - Amount must be a plain number (no ₹ symbol, no commas).
 - If date is ambiguous use DD/MM/YYYY context from the statement header.
-- Return ONLY the JSON. No explanation, no markdown, no backticks.`
+- Return ONLY the JSON. No explanation, no markdown, no backticks.`,
 };
+
+// ─── Public API ───────────────────────────────────────────────────────────────
+
+/**
+ * Returns a prompt for the given document type with the context-snippet
+ * instruction appended. This is the preferred way to get prompts so that
+ * every extraction response includes `fieldName_context` keys that power
+ * the Evidence Viewer.
+ *
+ * @param docType  One of the keys in RAW_PROMPTS (e.g. "rc", "policy", "dl")
+ * @param withContext  Set to false to skip the context instruction (default: true)
+ */
+export function getDocPrompt(docType: string, withContext = true): string {
+  const base = RAW_PROMPTS[docType] ?? '';
+  return withContext ? `${base}\n${CONTEXT_INSTRUCTION}` : base;
+}
+
+/**
+ * @deprecated  Use getDocPrompt() instead so that context snippets are included.
+ * Kept for backward compatibility with any legacy callers.
+ */
+export const DOC_PROMPTS: Record<string, string> = RAW_PROMPTS;

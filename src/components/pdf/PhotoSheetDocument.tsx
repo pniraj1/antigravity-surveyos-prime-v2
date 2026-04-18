@@ -58,14 +58,14 @@ const S = StyleSheet.create({
     marginBottom: FOOTER_H,
   },
   imageContainer: {
-    // Grey letterbox bars for non-matching aspect ratios — no cropping
-    backgroundColor: '#ECECEC',
+    // White background to match page, images will cover to avoid letterboxing
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
   photoImage: {
-    objectFit: 'contain',
+    objectFit: 'fill',
     width: '100%',
     height: '100%',
   },
@@ -117,17 +117,7 @@ interface LayoutConfig {
   pagePortrait: boolean;
 }
 
-/**
- * Detect whether the majority of photos are portrait-oriented.
- * Falls back to `true` (portrait) when dimension data is absent — matching
- * the typical mobile-camera workflow shown in the surveyor sample image.
- */
-function detectPortraitDominant(photos: ClaimData['photos']): boolean {
-  const withDims = photos.filter(p => p.w != null && p.h != null);
-  if (withDims.length === 0) return true; // default: assume portrait (9:16 mobile)
-  const portraitCount = withDims.filter(p => (p.h ?? 0) > (p.w ?? 0)).length;
-  return portraitCount >= withDims.length / 2;
-}
+// Removed auto-detect orientation logic as per user request
 
 /**
  * Build layout configuration.
@@ -173,9 +163,10 @@ function buildLayout(
       return { cols, rows, ...cell(cols, rows), gap: g, perPage: 4, pagePortrait };
     }
     case 6: {
-      // Portrait page → 3 cols × 2 rows (best for 9:16 portrait photos)
-      // Landscape page → 3 cols × 2 rows (balanced for 16:9 landscape photos)
-      const cols = 3, rows = 2;
+      // Portrait page → 2 cols × 3 rows (best for portrait mobile photos)
+      // Landscape page → 3 cols × 2 rows (balanced for landscape photos)
+      const cols = pagePortrait ? 2 : 3;
+      const rows = pagePortrait ? 3 : 2;
       return { cols, rows, ...cell(cols, rows), gap: g, perPage: 6, pagePortrait };
     }
     case 8: {
@@ -197,6 +188,7 @@ export const DEFAULT_PHOTO_SHEET_OPTIONS: PhotoSheetOptions = {
   cellGap:     8,
   showBorder:  true,
   borderColor: '#E5E7EB',
+  pageOrientation: 'portrait',
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -212,8 +204,8 @@ export function PhotoSheetDocument({ claim, surveyorName = '', options = {} }: P
   const photos      = Array.isArray(claim?.photos) ? claim.photos : [];
   const photoLayout = claim?.photoLayout ?? 6;
 
-  // Auto-select page orientation based on dominant photo aspect ratio
-  const pagePortrait = detectPortraitDominant(photos);
+  // Use manual page orientation override
+  const pagePortrait = opts.pageOrientation !== 'landscape';
   const config       = buildLayout(photoLayout, opts, pagePortrait);
   const pad          = opts.pagePadding;
 
@@ -282,7 +274,7 @@ export function PhotoSheetDocument({ claim, surveyorName = '', options = {} }: P
                       overflow:      'hidden',
                     }}
                   >
-                    {/* Image area with contain fit — no cropping */}
+                    {/* Image area with cover fit — full grid cell filling */}
                     <View style={[S.imageContainer, { height: config.imageH, width: config.cellW }]}>
                       {photo?.dataUrl ? (
                         <Image src={photo.dataUrl} style={S.photoImage} />

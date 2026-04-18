@@ -3,37 +3,82 @@ import { useClaimStore } from '@/stores/claim-store';
 import { extractDocument } from '@/lib/ai/processor';
 import { toast } from 'sonner';
 
+// ─── Session-storage helpers for Evidence Viewer ─────────────────────────────
+/** Save base64 page images for a doc key in sessionStorage. */
+export function saveEvidenceImages(claimId: string, docKey: string, images: string[]) {
+  try {
+    sessionStorage.setItem(`evidence_${claimId}_${docKey}`, JSON.stringify(images));
+  } catch {
+    // sessionStorage can be full on very large PDFs — fail silently
+  }
+}
+
+/** Retrieve base64 page images for a doc key from sessionStorage. */
+export function getEvidenceImages(claimId: string, docKey: string): string[] {
+  try {
+    const raw = sessionStorage.getItem(`evidence_${claimId}_${docKey}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
 export function useAIExtraction() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState('');
-  const [reviewData, setReviewData] = useState<{ key: string; data: any } | null>(null);
+  const [reviewData, setReviewData] = useState<{ key: string; data: any; file: File } | null>(null);
   
   const setExtractedData = useClaimStore(s => s.setExtractedData);
   const applyExtractedData = useClaimStore(s => s.applyExtractedData);
+  const currentClaim = useClaimStore(s => s.currentClaim);
 
-  const triggerExtraction = useCallback(async (key: string, file: File) => {
+  const triggerExtraction = useCallback(async (key: string, file: File, feedback?: string) => {
     setIsProcessing(true);
-    setProgress('Preparing...');
+    setProgress(feedback ? 'Re-scanning with feedback...' : 'Preparing...');
     
     try {
-      const data = await extractDocument(key, file, (msg) => {
+      const { data, images } = await extractDocument(key, file, (msg) => {
         setProgress(msg);
-      });
+      }, feedback);
       
-      // Store in raw cache first
+      // Persist source images so Evidence Viewer can display them (session-only)
+      if (currentClaim?.id && images.length > 0) {
+        saveEvidenceImages(currentClaim.id, key, images);
+      }
+
+      // Store extracted JSON in claim cache
       setExtractedData(key, data);
       
       // Open review dialog
-      setReviewData({ key, data });
+      setReviewData({ key, data, file });
       
-      toast.success(`${key.toUpperCase()} extracted successfully!`);
+      if (key === 'estimate' || key === 'final-bill') {
+        const p = data.spare_parts?.reduce((sum: number, item: any) => sum + (Number(item.amount) || 0), 0) || 0;
+        const l = data.labour_items?.reduce((sum: number, item: any) => sum + (Number(item.amount) || 0), 0) || 0;
+        const pt = data.painting_items?.reduce((sum: number, item: any) => sum + (Number(item.amount) || 0), 0) || 0;
+        const gst = Number(data.gst_amount) || 0;
+        
+        const calculatedTotal = p + l + pt + gst;
+        const documentTotal = Number(data.total_amount) || 0;
+        
+        if (documentTotal > 0 && Math.abs(calculatedTotal - documentTotal) > 5) {
+          toast.warning(
+            `Mismatch Detected: Sum of items (₹${calculatedTotal.toFixed(2)}) doesn't match document total (₹${documentTotal.toFixed(2)}). Please review carefully.`, 
+            { duration: 10000 }
+          );
+        } else {
+          toast.success(`${key.toUpperCase()} extracted successfully and totals match!`);
+        }
+      } else {
+        toast.success(`${key.toUpperCase()} extracted successfully!`);
+      }
     } catch (err: any) {
       toast.error(`Extraction failed: ${err.message}`);
     } finally {
       setIsProcessing(false);
       setProgress('');
     }
-  }, [setExtractedData]);
+  }, [setExtractedData, currentClaim?.id]);
 
   const confirmApply = useCallback(() => {
     if (reviewData) {
@@ -47,12 +92,21 @@ export function useAIExtraction() {
     setReviewData(null);
   }, []);
 
+  const reScanWithFeedback = useCallback((feedback: string) => {
+    if (reviewData) {
+      triggerExtraction(reviewData.key, reviewData.file, feedback);
+      // Optional: hide dialog immediately while processing
+      setReviewData(null);
+    }
+  }, [reviewData, triggerExtraction]);
+
   return {
     isProcessing,
     progress,
     reviewData,
     triggerExtraction,
     confirmApply,
-    cancelReview
+    cancelReview,
+    reScanWithFeedback
   };
 }

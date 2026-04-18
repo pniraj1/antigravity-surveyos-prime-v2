@@ -15,20 +15,33 @@ import { useUIStore } from '@/stores/ui-store';
 import { toast } from 'sonner';
 
 // ─── Developer-controlled model defaults ─────────────────────────────────────
-// Update these constants when providers release better models.
-// Surveyors never touch model names.
+// Last verified: April 2026 — Free Tier limits:
+//   gemini-2.5-flash : 10 RPM · 500 RPD · 250K TPM  ← best stable free model
+//   gemini-2.5-pro   :  5 RPM · 100 RPD · 250K TPM
+//   gemini-3-flash   : 15 RPM · 1000 RPD · 500K TPM (preview — may be unstable)
 export const CURRENT_MODELS = {
-  gemini: 'gemini-2.0-flash',
+  gemini: 'gemini-2.5-flash',  // best free-tier stable model (April 2026)
   groq:   'meta-llama/llama-4-scout-17b-16e-instruct',
 };
 
-// Retired Gemini model names → auto-migrated to current default
+// ─── Fallback chain when a model is unavailable on this account tier ──────────
+// Tried in order until one succeeds before giving up and switching to Groq.
+const GEMINI_FALLBACK_CHAIN = [
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash-latest',
+];
+
+// Old model names stored in user profiles → auto-migrated to current default
 const DEPRECATED_GEMINI_MODELS: Record<string, string> = {
-  'gemini-1.5-flash':      'gemini-2.0-flash',
-  'gemini-1.5-pro':        'gemini-2.0-flash',
-  'gemini-1.0-pro':        'gemini-2.0-flash',
-  'gemini-pro':            'gemini-2.0-flash',
-  'gemini-pro-vision':     'gemini-2.0-flash',
+  'gemini-pro':              'gemini-2.5-flash',
+  'gemini-pro-vision':       'gemini-2.5-flash',
+  'gemini-1.0-pro':          'gemini-2.5-flash',
+  'gemini-1.5-flash':        'gemini-2.5-flash',
+  'gemini-1.5-flash-latest': 'gemini-2.5-flash',
+  'gemini-1.5-pro':          'gemini-2.5-flash',
+  'gemini-2.0-flash':        'gemini-2.5-flash',
+  'gemini-2.0-flash-exp':    'gemini-2.5-flash',
 };
 
 export interface AIProvider {
@@ -171,20 +184,59 @@ export async function getAIProvider(): Promise<AIProvider> {
 }
 
 /** Calls one provider with one specific key. Throws on error. */
+/** Strip data URL prefix if present — APIs need raw base64 only */
+function toRawBase64(img: string): string {
+  const idx = img.indexOf(',');
+  return idx !== -1 ? img.slice(idx + 1) : img;
+}
+
+/** Detect MIME type from data URL prefix; falls back to image/jpeg */
+function getMimeType(img: string): string {
+  const match = img.match(/^data:([^;]+);base64,/);
+  return match ? match[1] : 'image/jpeg';
+}
+
+/** Returns true when the error indicates the model is unavailable/not-found on this account tier. */
+function isModelUnavailable(err: any): boolean {
+  const msg: string = (err?.message ?? '').toLowerCase();
+  return err?.status === 404 || msg.includes('not found') || msg.includes('model') && msg.includes('does not exist');
+}
+
 async function callWithKey(provider: AIProvider, key: string, prompt: string, images: string[]): Promise<string> {
   if (provider.name === 'gemini') {
-    const url = `${provider.endpoint}?key=${key}`;
+    // ── Auth: AIza... = API key (?key= param); anything else = OAuth Bearer token ──
+    // Keys from AI Studio start with "AIza".
+    // OAuth access tokens (ya29., AQ., etc.) must go in the Authorization header.
+    const isApiKey = key.startsWith('AIza');
+    const url = isApiKey
+      ? `${provider.endpoint}?key=${key}`
+      : provider.endpoint;  // OAuth: no key in URL
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (!isApiKey) headers['Authorization'] = `Bearer ${key}`;
+
     const parts: any[] = images.map(img => ({
-      inlineData: { mimeType: 'image/jpeg', data: img },
+      inlineData: { mimeType: getMimeType(img), data: toRawBase64(img) },
     }));
     parts.push({ text: prompt });
 
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         contents: [{ parts }],
-        generationConfig: { temperature: 0.1, topP: 0.95, topK: 40, maxOutputTokens: 8192 },
+        generationConfig: { 
+          temperature: 0.1, 
+          topP: 0.95, 
+          topK: 40, 
+          maxOutputTokens: 65536,  // gemini-2.5-flash supports up to 65K — needed for multi-page invoices
+          responseMimeType: "application/json"
+        },
+        safetySettings: [
+          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+        ]
       }),
     });
 
@@ -198,6 +250,11 @@ async function callWithKey(provider: AIProvider, key: string, prompt: string, im
     }
 
     const data = await res.json();
+    
+    if (data.candidates?.[0]?.finishReason === 'SAFETY') {
+      throw new Error("Gemini blocked the extraction due to safety filters (it likely detected personal info in the document).");
+    }
+
     useUIStore.getState().setAIProviderHealth('gemini', 'ok');
     return (data.candidates?.[0]?.content?.parts?.[0]?.text || '').replace(/```json|```/g, '').trim();
   }
@@ -208,7 +265,7 @@ async function callWithKey(provider: AIProvider, key: string, prompt: string, im
     const safeImages = images.slice(0, 5);
     const content: any[] = safeImages.map(img => ({
       type: 'image_url',
-      image_url: { url: `data:image/jpeg;base64,${img}` },
+      image_url: { url: img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}` },
     }));
     content.push({ type: 'text', text: prompt });
     messages.push({ role: 'user', content });
@@ -258,13 +315,39 @@ async function callWithRotation(provider: AIProvider, prompt: string, images: st
   let lastError: Error = new Error('No keys available');
   const providerLabel = provider.name === 'gemini' ? 'Gemini' : 'Groq';
 
-  for (let i = 0; i < provider.keys.length; i++) {
-    const key = provider.keys[i];
+  // For Gemini: walk the fallback chain when a model is unavailable on this account tier.
+  // e.g. 2.5-flash → 2.0-flash → 1.5-flash-latest, then gives up to Groq.
+  let downgradedProvider = provider;
+  const triedModels = new Set<string>([provider.model]);
+
+  for (let i = 0; i < downgradedProvider.keys.length; i++) {
+    const key = downgradedProvider.keys[i];
     try {
-      return await callWithKey(provider, key, prompt, images);
+      return await callWithKey(downgradedProvider, key, prompt, images);
     } catch (err: any) {
       lastError = err;
       const isAuthError = err.status === 401 || err.status === 403;
+
+      // ── Model not found on this account → try next in fallback chain ──
+      if (provider.name === 'gemini' && isModelUnavailable(err)) {
+        const nextModel = GEMINI_FALLBACK_CHAIN.find(m => !triedModels.has(m));
+        if (nextModel) {
+          triedModels.add(nextModel);
+          toast.info(
+            `${downgradedProvider.model} unavailable — trying ${nextModel} automatically.`,
+            { duration: 4000 }
+          );
+          downgradedProvider = {
+            ...provider,
+            model: nextModel,
+            endpoint: `https://generativelanguage.googleapis.com/v1beta/models/${nextModel}:generateContent`,
+          };
+          i = -1; // restart key loop with new model
+          continue;
+        }
+        // All models in chain exhausted — fall through to Groq
+        break;
+      }
 
       if (isQuotaExhausted(err)) {
         // Free-tier quota exhausted — all keys share the same billing account, no point rotating
@@ -277,7 +360,7 @@ async function callWithRotation(provider: AIProvider, prompt: string, images: st
       } else if (err.status === 429) {
         // Temporary rate limit — try next key
         useUIStore.getState().setAIProviderHealth(provider.name as 'gemini' | 'groq', 'rate-limited');
-        if (i + 1 < provider.keys.length) {
+        if (i + 1 < downgradedProvider.keys.length) {
           toast.warning(
             `${providerLabel} key ${i + 1} rate limited — switching to backup key ${i + 2}.`,
             { duration: 4000 }
@@ -294,7 +377,7 @@ async function callWithRotation(provider: AIProvider, prompt: string, images: st
         break;
       } else {
         // Network or server error — try next key
-        if (i + 1 < provider.keys.length) continue;
+        if (i + 1 < downgradedProvider.keys.length) continue;
       }
     }
   }

@@ -38,31 +38,97 @@ export function AssessmentSummary() {
       </CardHeader>
       
       <CardContent className="p-0">
-        <div className="p-5 space-y-4">
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-muted-foreground font-medium">Total Parts Assessed</span>
-            <span className="font-bold text-foreground">{formatCurrency(summary.partsBase)}</span>
+        {/* ─── Estimated vs Assessed Comparison Table ─────────────────────── */}
+        <div className="p-5">
+          <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-3">Estimate vs Assessment Comparison</div>
+          <div className="border border-[#e5e5e5] rounded-lg overflow-hidden text-xs">
+            {/* Header */}
+            <div className="grid grid-cols-3 bg-zinc-100 border-b border-[#e5e5e5]">
+              <div className="p-2.5 font-bold text-muted-foreground uppercase tracking-wider text-[10px]">Particulars</div>
+              <div className="p-2.5 text-right font-bold text-muted-foreground uppercase tracking-wider text-[10px] border-l border-[#e5e5e5]">Estimated</div>
+              <div className="p-2.5 text-right font-bold text-muted-foreground uppercase tracking-wider text-[10px] border-l border-[#e5e5e5]">Assessed</div>
+            </div>
+
+            {/* Sub Total: Parts (Taxable) */}
+            <div className="grid grid-cols-3 border-b border-[#f0f0f0] hover:bg-zinc-50/50 transition-colors">
+              <div className="p-2.5 font-medium text-foreground">Sub Total: Parts</div>
+              <div className="p-2.5 text-right font-semibold text-foreground border-l border-[#f0f0f0]">{formatCurrency(summary.estimatePartsBase)}</div>
+              <div className="p-2.5 text-right font-semibold text-foreground border-l border-[#f0f0f0]">{formatCurrency(summary.partsBase)}</div>
+            </div>
+
+            {/* Tax on Parts */}
+            <div className="grid grid-cols-3 border-b border-[#f0f0f0] hover:bg-zinc-50/50 transition-colors">
+              <div className="p-2.5 text-muted-foreground pl-5">↳ CGST on Parts</div>
+              <div className="p-2.5 text-right text-muted-foreground border-l border-[#f0f0f0]">{formatCurrency(summary.estimatePartsGST / 2)}</div>
+              <div className="p-2.5 text-right text-muted-foreground border-l border-[#f0f0f0]">{formatCurrency(summary.partsCGST)}</div>
+            </div>
+            <div className="grid grid-cols-3 border-b border-[#f0f0f0] hover:bg-zinc-50/50 transition-colors">
+              <div className="p-2.5 text-muted-foreground pl-5">↳ SGST on Parts</div>
+              <div className="p-2.5 text-right text-muted-foreground border-l border-[#f0f0f0]">{formatCurrency(summary.estimatePartsGST / 2)}</div>
+              <div className="p-2.5 text-right text-muted-foreground border-l border-[#f0f0f0]">{formatCurrency(summary.partsSGST)}</div>
+            </div>
+            <div className="grid grid-cols-3 border-b border-[#e5e5e5] bg-zinc-50/30 hover:bg-zinc-50/50 transition-colors">
+              <div className="p-2.5 font-semibold text-foreground">Total Tax on Parts</div>
+              <div className="p-2.5 text-right font-semibold text-foreground border-l border-[#e5e5e5]">{formatCurrency(summary.estimatePartsGST)}</div>
+              <div className="p-2.5 text-right font-semibold text-foreground border-l border-[#e5e5e5]">{formatCurrency(summary.partsCGST + summary.partsSGST)}</div>
+            </div>
+
+            {/* Final Parts Invoice Amount */}
+            <div className="grid grid-cols-3 border-b border-[#e5e5e5] bg-blue-50/40 hover:bg-blue-50/60 transition-colors">
+              <div className="p-2.5 font-bold text-foreground">Final Parts Invoice Amt</div>
+              <div className="p-2.5 text-right font-bold text-blue-700 border-l border-[#e5e5e5]">{formatCurrency(summary.estimatePartsTotal)}</div>
+              <div className="p-2.5 text-right font-bold text-blue-700 border-l border-[#e5e5e5]">{formatCurrency(summary.partsTotal)}</div>
+            </div>
+
+            {/* Sub Total: Labour (Taxable) */}
+            <div className="grid grid-cols-3 border-b border-[#f0f0f0] hover:bg-zinc-50/50 transition-colors">
+              <div className="p-2.5 font-medium text-foreground">Sub Total: Labour</div>
+              <div className="p-2.5 text-right font-semibold text-foreground border-l border-[#f0f0f0]">{formatCurrency(summary.estimateLabourBase)}</div>
+              <div className="p-2.5 text-right font-semibold text-foreground border-l border-[#f0f0f0]">{formatCurrency(summary.labourBase)}</div>
+            </div>
+
+            {/* Tax on Labour */}
+            <div className="grid grid-cols-3 border-b border-[#e5e5e5] bg-zinc-50/30 hover:bg-zinc-50/50 transition-colors">
+              <div className="p-2.5 font-semibold text-foreground">Total Tax on Labour</div>
+              <div className="p-2.5 text-right font-semibold text-foreground border-l border-[#e5e5e5]">{formatCurrency(summary.estimateLabourGST)}</div>
+              <div className="p-2.5 text-right font-semibold text-foreground border-l border-[#e5e5e5]">{formatCurrency(summary.labourGST)}</div>
+            </div>
+
+            {/* Final Labour Invoice Amount */}
+            <div className="grid grid-cols-3 border-b border-[#e5e5e5] bg-blue-50/40 hover:bg-blue-50/60 transition-colors">
+              <div className="p-2.5 font-bold text-foreground">Final Labour Invoice Amt</div>
+              <div className="p-2.5 text-right font-bold text-blue-700 border-l border-[#e5e5e5]">{formatCurrency(summary.estimateLabourTotal)}</div>
+              <div className="p-2.5 text-right font-bold text-blue-700 border-l border-[#e5e5e5]">{formatCurrency(summary.labourTotal)}</div>
+            </div>
+
+            {/* Total Tax */}
+            <div className="grid grid-cols-3 border-b border-[#e5e5e5] hover:bg-zinc-50/50 transition-colors">
+              <div className="p-2.5 font-semibold text-foreground">Total Tax (GST)</div>
+              <div className="p-2.5 text-right font-semibold text-foreground border-l border-[#e5e5e5]">{formatCurrency(summary.estimatePartsGST + summary.estimateLabourGST)}</div>
+              <div className="p-2.5 text-right font-semibold text-foreground border-l border-[#e5e5e5]">{formatCurrency(summary.partsCGST + summary.partsSGST + summary.labourGST)}</div>
+            </div>
+
+            {/* Gross Amount */}
+            <div className="grid grid-cols-3 bg-zinc-900 text-white">
+              <div className="p-3 font-bold uppercase tracking-wider text-[11px]">Gross Amount</div>
+              <div className="p-3 text-right font-bold text-[13px] border-l border-zinc-700">{formatCurrency(summary.estimateGrossTotal)}</div>
+              <div className="p-3 text-right font-bold text-[13px] border-l border-zinc-700">{formatCurrency(summary.grandTotal)}</div>
+            </div>
           </div>
-          
-          <Separator className="bg-[#f0f0f0]" />
-          
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-muted-foreground font-medium">Total Labour Assessed</span>
-            <span className="font-bold text-foreground">{formatCurrency(summary.labourBase)}</span>
-          </div>
-          
-          <Separator className="bg-[#f0f0f0]" />
-          
-          <div className="flex justify-between items-center text-sm font-semibold text-foreground">
-            <span>Net Assessment before GST</span>
-            <span>{formatCurrency(summary.partsBase + summary.labourBase)}</span>
-          </div>
-          
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-muted-foreground font-medium">Total GST Additions</span>
-            <span className="font-bold text-foreground">{formatCurrency(summary.partsCGST + summary.partsSGST + summary.labourGST)}</span>
-          </div>
+
+          {/* Variance indicator */}
+          {summary.estimateGrossTotal > 0 && (
+            <div className="mt-3 flex items-center justify-between text-xs">
+              <span className="text-muted-foreground font-medium">Variance (Est − Assessed)</span>
+              <span className={`font-bold ${summary.estimateGrossTotal - summary.grandTotal > 0 ? 'text-green-600' : summary.estimateGrossTotal - summary.grandTotal < 0 ? 'text-red-600' : 'text-foreground'}`}>
+                {summary.estimateGrossTotal - summary.grandTotal > 0 ? '↓ ' : summary.estimateGrossTotal - summary.grandTotal < 0 ? '↑ ' : ''}
+                {formatCurrency(Math.abs(summary.estimateGrossTotal - summary.grandTotal))}
+              </span>
+            </div>
+          )}
         </div>
+
+        <Separator className="bg-[#e5e5e5]" />
 
         <div className="bg-zinc-50/50 p-5 border-y border-[#f0f0f0] space-y-5">
           <div className="space-y-2">

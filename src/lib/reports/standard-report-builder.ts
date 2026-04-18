@@ -265,6 +265,10 @@ export function buildStandardFinalSurveyHTML(
     <td style="${td}">${formatDateDMY(vehicle.dateOfRegistration)}</td>
   </tr>
   <tr>
+    <td style="${td}color:#444;font-size:6.8pt;">Registering Authority</td>
+    <td style="${td}" colspan="3">${vehicle.registeringAuthority || '—'}</td>
+  </tr>
+  <tr>
     <td style="${td}color:#444;font-size:6.8pt;">Make / Model / Year</td>
     <td style="${td}" colspan="3"><b>${vehicle.make || '—'}</b> / ${vehicle.model || '—'} / ${vehicle.yearOfManufacture || '—'}</td>
   </tr>

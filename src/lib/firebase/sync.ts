@@ -108,23 +108,22 @@ export async function pullClaimsFromCloud(uid: string) {
  */
 export async function pushProfileToCloud(uid: string, profile: SurveyorProfile) {
   const profileRef = doc(db, `users/${uid}/profile`, 'current');
+  // Only strip the heavy base64 strings so we don't blow up Firebase quotas
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { 
     signatureDataUrl: _sig, 
     stampDataUrl: _stamp,
-    geminiApiKey: _gak,
-    geminiApiKeys: _gaks,
-    groqApiKey: _grak,
-    groqApiKeys: _graks,
     ...cloudProfile 
-  } = profile as any;
+  } = profile;
+  
   await setDoc(profileRef, { ...cloudProfile, ownerId: uid }, { merge: true });
-  logger.log(`[Sync] Profile pushed to cloud for user ${uid}.`);
+  logger.log(`[Sync] Profile pushed to cloud for user ${uid} (API keys included, signatures excluded).`);
 }
 
 /**
  * Pulls the profile from Firestore and merges into the local store.
  * Local signatureDataUrl and stampDataUrl are preserved (not stored in cloud).
+ * API keys pulled from the cloud will overwrite local keys.
  */
 export async function pullProfileFromCloud(uid: string) {
   const profileRef = doc(db, `users/${uid}/profile`, 'current');
@@ -133,15 +132,14 @@ export async function pullProfileFromCloud(uid: string) {
   if (snap.exists()) {
     const remoteProfile = snap.data() as SurveyorProfile;
     const local = useProfileStore.getState().profile;
+    
+    // Merge cloud data but KEEP local signatures since they aren't kept in Vault
     useProfileStore.getState().updateProfile({
       ...remoteProfile,
       signatureDataUrl: local.signatureDataUrl,
       stampDataUrl: local.stampDataUrl,
-      geminiApiKey: local.geminiApiKey,
-      geminiApiKeys: local.geminiApiKeys,
-      groqApiKey: local.groqApiKey,
-      groqApiKeys: local.groqApiKeys,
     });
+    
     logger.log(`[Sync] Local profile updated from cloud for user ${uid}.`);
     return remoteProfile;
   }

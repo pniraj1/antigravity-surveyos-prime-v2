@@ -24,7 +24,7 @@ import {
   removeSyncItem,
   getClaim,
 } from '@/lib/storage/indexeddb';
-import { flushDriveQueue, silentlyRestoreDriveToken } from '@/lib/drive';
+import { flushDriveQueue, silentlyRestoreDriveToken, backupProfileToDrive, restoreProfileFromDrive } from '@/lib/drive';
 
 export function useCloudSync() {
   const { user, isAuthenticated } = useAuthStore();
@@ -65,8 +65,17 @@ export function useCloudSync() {
       (async () => {
         try {
           logger.log('[useCloudSync] Initial full sync started...');
+          
+          // 1. First attempt to restore heavy assets (signatures) and keys from Drive
+          const driveProfile = await restoreProfileFromDrive();
+          if (driveProfile) {
+            logger.log('[useCloudSync] Restored profile details/signatures from Google Drive.');
+            useProfileStore.getState().updateProfile(driveProfile);
+          }
+
+          // 2. Then pull from Firestore (cloud Vault) to ensure latest text sync
           const remoteProfile = await pullProfileFromCloud(user.uid);
-          if (!remoteProfile) {
+          if (!remoteProfile && !driveProfile) {
             logger.log('[useCloudSync] No remote profile found, creating initial cloud profile.');
             await pushProfileToCloud(user.uid, profile);
           }
@@ -180,6 +189,10 @@ export function useCloudSync() {
     if (isAuthenticated && user && profile && profileSyncReadyRef.current) {
       pushProfileToCloud(user.uid, profile).catch(err => {
         logger.error('[useCloudSync] Profile cloud push failed:', err);
+      });
+      // Also backup the full profile (including signatures) to Google Drive
+      backupProfileToDrive(profile).catch(err => {
+        logger.error('[useCloudSync] Profile drive backup failed:', err);
       });
     }
   }, [isAuthenticated, user, profile]);

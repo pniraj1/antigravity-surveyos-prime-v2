@@ -290,7 +290,6 @@ export function UIICReportDocument({ claim, profile }: Props) {
       {/* ── PAGE 1: Policy / Claim / Vehicle ─────────────────────────────────── */}
       <Page size="A4" style={styles.page}>
         {renderHeader()}
-        <Text style={{ textAlign: 'right', fontFamily: 'Helvetica-Bold', fontSize: 9, marginBottom: 2 }}>{nm}</Text>
         <View style={styles.reportTitleBox}>
           <Text>MOTOR SURVEY REPORT - ( FINAL/ RE INSPECTION)</Text>
         </View>

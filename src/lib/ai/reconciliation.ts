@@ -25,6 +25,7 @@ const FIELD_MAPPINGS = [
   { label: 'Date of Reg',         path: 'vehicle.dateOfRegistration', aiKeys: { rc: 'date_of_registration' } },
   { label: 'Cubic Capacity',      path: 'vehicle.cubicCapacity',      aiKeys: { rc: 'cubic_capacity' } },
   { label: 'Year of Mfg',         path: 'vehicle.yearOfManufacture', aiKeys: { rc: 'year_of_manufacture' } },
+  { label: 'Registering Authority (RTO)', path: 'vehicle.registeringAuthority', aiKeys: { rc: 'registering_authority' } },
   { label: 'Body Type',           path: 'vehicle.bodyType',          aiKeys: { rc: 'body_type' } },
   { label: 'Class of Vehicle',    path: 'vehicle.classOfVehicle',    aiKeys: { rc: 'class_of_vehicle' } },
   { label: 'Unladen Weight',      path: 'vehicle.unladenWeight',     aiKeys: { rc: 'unladen_weight', fitness: 'unladen_weight_kg', permit: 'unladen_weight_kg' } },

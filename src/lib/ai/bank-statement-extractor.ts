@@ -6,7 +6,7 @@
 
 import { fileToImages } from './processor';
 import { callAIGateway } from './service';
-import { DOC_PROMPTS } from './prompts';
+import { getDocPrompt } from './prompts';
 
 export interface BankTransaction {
   date: string;       // YYYY-MM-DD
@@ -71,14 +71,14 @@ export async function extractBankStatement(file: File): Promise<BankTransaction[
   }
 
   // ── PDF / Image: use AI vision ───────────────────────────
-  const images = await fileToImages(file);
-  if (!images.length) return [];
+  const { apiImages } = await fileToImages(file);
+  if (!apiImages.length) return [];
 
-  const prompt = DOC_PROMPTS['bank-statement'];
+  const prompt = getDocPrompt('bank-statement');
   let raw = '';
 
   // Process up to 6 pages to keep within token limits
-  const pages = images.slice(0, 6);
+  const pages = apiImages.slice(0, 6);
   const allTx: BankTransaction[] = [];
 
   for (const page of pages) {

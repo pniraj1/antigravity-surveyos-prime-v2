@@ -66,6 +66,7 @@
 ### Deployments
 - [x] `npm run build && firebase deploy --only hosting,firestore:rules`
 - [x] Live: https://surveyos-v2-antigravity.web.app
+- [x] **Cloud Sync Distinction Documented** — Created `Cloud_Sync_Logic.md` to formalize the difference between high-bandwidth asset pushes (photos/docs) and critical system backups (keys/stamps).
 
 ---
 
@@ -77,6 +78,7 @@
 4. **Admin access = isAdmin flag OR master UID** — prevents access loss if Firestore profile resets
 5. **Report numbers stay local** — localStorage only, not synced to Firestore, reset yearly
 6. **Dual storage (IndexedDB + Firestore)** — not offline-first, just resilience for photo handling
+7. **Cloud Sync Distinction** — "Auto Push Files" toggle ONLY applies to photos and documents. Critical profile data (API keys, stamps, signatures) is ALWAYS backed up to `surveyos_profile_backup.json` to ensure system state persistence.
 
 ---
 

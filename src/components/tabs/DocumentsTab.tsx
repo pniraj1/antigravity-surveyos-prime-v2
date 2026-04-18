@@ -1,6 +1,6 @@
 'use client';
 
-import { useAIExtraction } from '@/hooks/useAIExtraction';
+import { useAIExtraction, getEvidenceImages } from '@/hooks/useAIExtraction';
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
@@ -94,7 +94,7 @@ const DOC_GROUPS = [
 export function DocumentsTab() {
   const currentClaim = useClaimStore(s => s.currentClaim);
   const extractedDocs = currentClaim?.extractedData ?? {};
-  const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview } = useAIExtraction();
+  const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview, reScanWithFeedback } = useAIExtraction();
   const { profile, updateProfile } = useProfileStore();
   const aiProvider = profile.aiProvider ?? 'gemini';
   const [isReconOpen, setIsReconOpen] = useState(false);
@@ -113,6 +113,7 @@ export function DocumentsTab() {
 
 
   if (!currentClaim) return null;
+  const evidenceImages = currentClaim && reviewData ? getEvidenceImages(currentClaim.id, reviewData.key) : [];
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>, key: string) => {
     const file = e.target.files?.[0];
@@ -413,8 +414,10 @@ export function DocumentsTab() {
         isOpen={!!reviewData}
         onClose={cancelReview}
         onConfirm={confirmApply}
+        onReScan={reScanWithFeedback}
         title={reviewData?.key || ''}
         data={reviewData?.data}
+        evidenceImages={evidenceImages}
       />
 
       {/* AI Reconciliation Hub */}

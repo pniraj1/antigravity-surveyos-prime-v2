@@ -246,9 +246,26 @@ export const useClaimStore = create<ClaimState>()(
           return {
             currentClaim: {
               ...state.currentClaim,
-              assessmentRows: state.currentClaim.assessmentRows.map((r) =>
-                r.id === id ? { ...r, ...updates } : r
-              ),
+              assessmentRows: state.currentClaim.assessmentRows.map((r) => {
+                if (r.id === id) {
+                  const updatedRow = { ...r, ...updates };
+                  
+                  // Auto-calculate estimated if unitPrice or quantity changes
+                  if ('unitPrice' in updates || 'quantity' in updates) {
+                    updatedRow.estimated = (updatedRow.unitPrice || 0) * (updatedRow.quantity || 1);
+                  }
+                  
+                  // If allowed changed, or if it's currently allowed and we just changed unitPrice/quantity, update assessed
+                  if ('allowed' in updates || (updatedRow.allowed && ('unitPrice' in updates || 'quantity' in updates))) {
+                    if (updatedRow.allowed) {
+                      updatedRow.assessed = updatedRow.estimated;
+                    }
+                  }
+                  
+                  return updatedRow;
+                }
+                return r;
+              }),
               updatedAt: new Date().toISOString(),
             },
             isDirty: true,
@@ -276,9 +293,17 @@ export const useClaimStore = create<ClaimState>()(
           return {
             currentClaim: {
               ...state.currentClaim,
-              assessmentRows: state.currentClaim.assessmentRows.map((r) =>
-                r.id === id ? { ...r, allowed: !r.allowed } : r
-              ),
+              assessmentRows: state.currentClaim.assessmentRows.map((r) => {
+                if (r.id === id) {
+                  const allowed = !r.allowed;
+                  return { 
+                    ...r, 
+                    allowed,
+                    ...(allowed && { assessed: r.estimated })
+                  };
+                }
+                return r;
+              }),
               updatedAt: new Date().toISOString(),
             },
             isDirty: true,
@@ -526,6 +551,7 @@ export const useClaimStore = create<ClaimState>()(
               registeredLoadWeight: rlw || newClaim.vehicle.registeredLoadWeight, // Update alias for UI
               classOfVehicle: data.class_of_vehicle || data.vehicle_class || newClaim.vehicle.classOfVehicle,
               registrationType: data.class_of_vehicle || data.vehicle_class || newClaim.vehicle.registrationType,
+              registeringAuthority: data.registering_authority || data.rto || newClaim.vehicle.registeringAuthority,
               route: data.route || newClaim.vehicle.route,
               yearOfManufacture: yom,
               registrationValidUpTo: parseDate(data.registration_valid_upto || data.reg_valid_upto || data.regn_valid_upto) || newClaim.vehicle.registrationValidUpTo,
@@ -536,6 +562,9 @@ export const useClaimStore = create<ClaimState>()(
               ...newClaim.policy,
               insuredName: data.owner_name || data.name || newClaim.policy.insuredName,
               insuredAddress: data.address || newClaim.policy.insuredAddress,
+              // Sync HPA from RC into policy so standard report HPA row is always populated
+              hpaWith: hpa || newClaim.policy.hpaWith,
+              hpa: hpa || newClaim.policy.hpa,
             };
             
             const gvwStr = String(data.gross_weight || '0').replace(/[^0-9.]/g, '');
@@ -558,11 +587,14 @@ export const useClaimStore = create<ClaimState>()(
               insuredMobile: data.insured_mobile || newClaim.policy.insuredMobile,
               insurerName: data.insurer_name && data.insurer_address ? `${data.insurer_name} ${data.insurer_address}` : data.insurer_name || newClaim.policy.insurerName,
               idv: data.idv || newClaim.policy.idv,
+              // Write to both hpaWith (primary) and hpa (alias) so all report paths are covered
+              hpaWith: data.hpa_with || newClaim.policy.hpaWith,
               hpa: data.hpa_with || newClaim.policy.hpa,
               periodFrom: parseDate(data.period_from) || newClaim.policy.periodFrom,
               periodTo: parseDate(data.period_to) || newClaim.policy.periodTo,
               policyIssuingOffice: data.policy_issuing_office || newClaim.policy.policyIssuingOffice,
-              appointingOffice: data.appointing_office || newClaim.policy.appointingOffice,
+              // appointingOffice is intentionally NOT read from AI — surveyor fills this manually
+              appointingOffice: newClaim.policy.appointingOffice,
               policyType: data.policy_type || newClaim.policy.policyType,
             };
             if (data.registration_number) newClaim.vehicle.registrationNumber = data.registration_number;
@@ -702,33 +734,78 @@ export const useClaimStore = create<ClaimState>()(
             });
           } else if (key === 'estimate') {
             const newRows: AssessmentRow[] = [];
-            (data.spare_parts || []).forEach((item: any) => {
+            let runningSerial = 1;
+            (data.spare_parts || []).forEach((item: any, idx: number) => {
+              // The estimate AI prompt extracts taxable_amount (net, before GST) directly.
+              // Prefer it. Fall back to back-calculating from total_amount if missing.
+              const gstPct = item.gst_percent || 18;
+              let base: number;
+              if (item.taxable_amount && item.taxable_amount > 0) {
+                base = item.taxable_amount;
+              } else {
+                const gross = item.total_amount || item.amount || 0;
+                base = gross / (1 + gstPct / 100);
+              }
+              const rounded = Math.round(base * 100) / 100;
               newRows.push(createAssessmentRow('parts', {
+                srNo: item.sr_no || runningSerial++,
                 particulars: item.description || 'Unnamed Part',
-                estimated: item.amount || 0,
-                assessed: item.amount || 0,
+                partNumber: item.part_number || '',
+                hsnSac: item.hsn_sac || '',
+                quantity: item.quantity || 1,
+                unitPrice: item.unit_price || 0,
+                estimated: rounded,
+                assessed: rounded,
                 partType: (item.category as any) || 'metal',
-                gst: item.gst_percent || 18,
+                gst: gstPct,
               }));
             });
             (data.labour_items || []).forEach((item: any) => {
+              const gstPct = item.gst_percent || 18;
+              let base: number;
+              if (item.taxable_amount && item.taxable_amount > 0) {
+                base = item.taxable_amount;
+              } else {
+                const gross = item.total_amount || item.amount || 0;
+                base = gross / (1 + gstPct / 100);
+              }
+              const rounded = Math.round(base * 100) / 100;
               newRows.push(createAssessmentRow('labour', {
+                srNo: item.sr_no || runningSerial++,
                 particulars: item.description || 'Labour Item',
-                estimated: item.amount || 0,
-                assessed: item.amount || 0,
+                hsnSac: item.hsn_sac || '',
+                quantity: item.quantity || 1,
+                unitPrice: item.unit_price || 0,
+                estimated: rounded,
+                assessed: rounded,
                 partType: 'labour',
-                gst: item.gst_percent || 18,
+                gst: gstPct,
               }));
             });
             (data.painting_items || []).forEach((item: any) => {
+              const gstPct = item.gst_percent || 18;
+              let base: number;
+              if (item.taxable_amount && item.taxable_amount > 0) {
+                base = item.taxable_amount;
+              } else {
+                const gross = item.total_amount || item.amount || 0;
+                base = gross / (1 + gstPct / 100);
+              }
+              const rounded = Math.round(base * 100) / 100;
               newRows.push(createAssessmentRow('paint', {
+                srNo: item.sr_no || runningSerial++,
                 particulars: item.description || 'Painting Item',
-                estimated: item.amount || 0,
-                assessed: item.amount || 0,
+                hsnSac: item.hsn_sac || '',
+                quantity: item.quantity || 1,
+                unitPrice: item.unit_price || 0,
+                estimated: rounded,
+                assessed: rounded,
                 partType: 'paint',
-                gst: item.gst_percent || 18,
+                gst: gstPct,
               }));
             });
+            // Sort by original serial number to preserve invoice order
+            newRows.sort((a, b) => (a.srNo || 0) - (b.srNo || 0));
             newClaim.assessmentRows = [...newClaim.assessmentRows, ...newRows];
             if (data.workshop_name) newClaim.accident.placeOfSurvey = data.workshop_name;
           }

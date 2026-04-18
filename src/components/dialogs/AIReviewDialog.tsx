@@ -1,17 +1,22 @@
 'use client';
 
+import { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
-import { Check, X, Sparkles } from 'lucide-react';
+import { Check, X, Sparkles, RefreshCw } from 'lucide-react';
 
 interface AIReviewDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
+  onReScan?: (feedback: string) => void;
   title: string;
   data: any;
+  evidenceImages?: string[];
 }
 
-export function AIReviewDialog({ isOpen, onClose, onConfirm, title, data }: AIReviewDialogProps) {
+export function AIReviewDialog({ isOpen, onClose, onConfirm, onReScan, title, data, evidenceImages = [] }: AIReviewDialogProps) {
+  const [feedback, setFeedback] = useState('');
+
   if (!isOpen) return null;
 
   // Flatten sample data for display
@@ -24,7 +29,7 @@ export function AIReviewDialog({ isOpen, onClose, onConfirm, title, data }: AIRe
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-in fade-in duration-300">
-      <Card className="w-full max-w-lg shadow-2xl border-primary/20 overflow-hidden flex flex-col max-h-[85vh]">
+      <Card className={`w-full ${evidenceImages.length > 0 ? 'max-w-5xl' : 'max-w-lg'} shadow-2xl border-primary/20 overflow-hidden flex flex-col max-h-[85vh]`}>
         <CardHeader className="bg-primary/5 border-b border-primary/10">
           <CardTitle className="flex items-center gap-2 text-primary">
             <Sparkles size={20} className="text-primary animate-pulse" />
@@ -35,8 +40,29 @@ export function AIReviewDialog({ isOpen, onClose, onConfirm, title, data }: AIRe
           </p>
         </CardHeader>
 
-        <CardContent className="p-0 flex-1 overflow-hidden">
-          <div className="h-full max-h-[50vh] p-6 overflow-y-auto">
+        <CardContent className={`p-0 flex-1 overflow-hidden flex flex-col ${evidenceImages.length > 0 ? 'md:flex-row' : ''}`}>
+          {evidenceImages.length > 0 && (
+            <div className="w-full md:w-1/2 border-b md:border-b-0 md:border-r border-border/40 bg-zinc-100/50 flex flex-col">
+              <div className="p-3 bg-zinc-100 border-b border-border/40 font-semibold text-xs text-muted-foreground flex items-center justify-between">
+                <span>EVIDENCE VIEWER</span>
+                <span className="text-[10px] bg-white px-2 py-0.5 rounded border border-zinc-200">
+                  {evidenceImages.length} PAGE{evidenceImages.length > 1 ? 'S' : ''}
+                </span>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 max-h-[40vh] md:max-h-[60vh] bg-zinc-200/50">
+                {evidenceImages.map((img, i) => (
+                  <img 
+                    key={i} 
+                    src={img}
+                    alt={`Evidence Page ${i + 1}`} 
+                    className="w-full rounded-md shadow-md border border-zinc-200 bg-white" 
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className={`w-full ${evidenceImages.length > 0 ? 'md:w-1/2' : ''} h-full max-h-[50vh] md:max-h-[60vh] p-6 overflow-y-auto`}>
             <div className="space-y-4">
               {displayFields.length > 0 ? (
                 displayFields.map((field, i) => (
@@ -63,6 +89,32 @@ export function AIReviewDialog({ isOpen, onClose, onConfirm, title, data }: AIRe
                    </div>
                 </div>
               )}
+              
+              <div className="mt-4 p-3 bg-zinc-50 border border-zinc-200 rounded-lg">
+                <label className="text-[10px] font-bold text-zinc-600 uppercase mb-2 block tracking-wider">
+                  Is something incorrect?
+                </label>
+                <textarea 
+                  className="w-full text-sm p-2 border border-zinc-200 rounded-md focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none"
+                  rows={2}
+                  placeholder="E.g. Column 3 is Net Amount, don't confuse it with Gross Amount..."
+                  value={feedback}
+                  onChange={(e) => setFeedback(e.target.value)}
+                />
+                <button 
+                  onClick={() => {
+                    if (onReScan && feedback.trim()) {
+                      onReScan(feedback);
+                      setFeedback('');
+                    }
+                  }}
+                  disabled={!feedback.trim()}
+                  className="mt-2 w-full flex justify-center items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-white py-2 rounded-md text-xs font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <RefreshCw size={14} />
+                  Re-scan with Feedback
+                </button>
+              </div>
             </div>
           </div>
         </CardContent>

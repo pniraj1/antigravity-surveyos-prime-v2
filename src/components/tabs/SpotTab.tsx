@@ -3,6 +3,7 @@
 import { useClaimStore } from '@/stores/claim-store';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Trash2, PlusCircle, AlertTriangle, ShieldCheck, Truck, User, MapPin, Gauge, Zap, FileText, ClipboardList, Sparkles } from 'lucide-react';
 
@@ -492,11 +493,11 @@ export function SpotTab() {
                       />
                     </td>
                     <td className="px-6 py-4">
-                      <Input
+                      <Textarea
                         value={row.damage}
                         onChange={(e) => updateSpotDamageRow(row.id, { damage: e.target.value })}
                         disabled={isCompleted}
-                        className="h-9 text-sm ring-0 border-0 bg-transparent focus:bg-background focus:ring-1 focus:ring-primary/20"
+                        className="min-h-[60px] text-sm ring-0 border-0 bg-transparent focus:bg-background focus:ring-1 focus:ring-primary/20 resize-y"
                         placeholder="e.g. Glass broken, internal bracket snapped"
                       />
                     </td>

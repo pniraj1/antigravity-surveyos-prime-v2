@@ -5,16 +5,20 @@
 
 // import * as pdfjsLib from 'pdfjs-dist'; // DO NOT STACTIC IMPORT THIS
 import { callAIGateway } from './service';
-import { DOC_PROMPTS } from './prompts';
+import { getDocPrompt } from './prompts';
 import { toast } from 'sonner';
 
 /**
  * Converts a file (Image or PDF) to a list of base64 strings.
+ *
+ * Returns two arrays:
+ *   - viewImages: high-res PNG (scale 3×) for the Evidence Viewer sidebar
+ *   - apiImages:  compressed JPEG (scale 1.5×) for AI API calls (stays under 4MB/image)
  */
 export async function fileToImages(
   file: File, 
   onProgress?: (page: number, total: number) => void
-): Promise<string[]> {
+): Promise<{ viewImages: string[]; apiImages: string[] }> {
   if (file.type === 'application/pdf') {
     const pdfjsLib = await import('pdfjs-dist');
     const version = pdfjsLib.version;
@@ -23,38 +27,46 @@ export async function fileToImages(
     const arrayBuffer = await file.arrayBuffer();
     const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
     const pdf = await loadingTask.promise;
-    const images: string[] = [];
+    const viewImages: string[] = [];
+    const apiImages: string[] = [];
 
     for (let i = 1; i <= pdf.numPages; i++) {
       if (onProgress) onProgress(i, pdf.numPages);
       const page = await pdf.getPage(i);
-      const viewport = page.getViewport({ scale: 2.0 });
-      
-      const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d');
-      if (!context) throw new Error('Canvas context failed');
-      
-      canvas.height = viewport.height;
-      canvas.width = viewport.width;
 
-      await page.render({
-        canvasContext: context,
-        canvas: canvas,
-        viewport: viewport
-      }).promise;
+      // ── High-res view image (PNG, scale 3×) ────────────────────────────
+      // Scale 3.0 → ~2550×3300px for a typical A4 — crisp enough for zooming
+      const viewViewport = page.getViewport({ scale: 3.0 });
+      const viewCanvas = document.createElement('canvas');
+      const viewCtx = viewCanvas.getContext('2d');
+      if (!viewCtx) throw new Error('Canvas context failed');
+      viewCanvas.height = viewViewport.height;
+      viewCanvas.width  = viewViewport.width;
+      await page.render({ canvasContext: viewCtx, canvas: viewCanvas, viewport: viewViewport }).promise;
+      viewImages.push(viewCanvas.toDataURL('image/png'));
 
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-      images.push(dataUrl.split(',')[1]);
+      // ── API image (JPEG 80%, scale 1.5×) ───────────────────────────────
+      // Gemini has a 4MB inline-data limit per image.
+      // 1.5× scale gives ~1275×1650px JPEG ≈ 400-800 KB — well within limits
+      // while still containing all text clearly legible for OCR.
+      const apiViewport = page.getViewport({ scale: 1.5 });
+      const apiCanvas = document.createElement('canvas');
+      const apiCtx = apiCanvas.getContext('2d');
+      if (!apiCtx) throw new Error('Canvas context failed');
+      apiCanvas.height = apiViewport.height;
+      apiCanvas.width  = apiViewport.width;
+      await page.render({ canvasContext: apiCtx, canvas: apiCanvas, viewport: apiViewport }).promise;
+      apiImages.push(apiCanvas.toDataURL('image/jpeg', 0.80));
     }
-    return images;
+    return { viewImages, apiImages };
   }
 
-  // Handle standard images
+  // Handle standard images — same data URL used for both view and API
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
-      const b64 = e.target?.result?.toString().split(',')[1];
-      if (b64) resolve([b64]);
+      const dataUrl = e.target?.result?.toString();
+      if (dataUrl) resolve({ viewImages: [dataUrl], apiImages: [dataUrl] });
       else reject(new Error('Failed to read image'));
     };
     reader.onerror = reject;
@@ -128,27 +140,37 @@ function mergeAIResults(acc: any, fragment: any): any {
  * High-level orchestrator for document extraction.
  * Handles multi-page PDFs by chunking (respecting Groq's 5-image limit).
  */
+export interface ExtractionResult {
+  data: any;
+  /** High-res PNG pages for Evidence Viewer display (stored in sessionStorage) */
+  images: string[];
+}
+
 export async function extractDocument(
   key: string, 
   file: File,
-  onProgress?: (msg: string) => void
-): Promise<any> {
-  const prompt = DOC_PROMPTS[key] || "Extract all visible details from this document as JSON.";
+  onProgress?: (msg: string) => void,
+  feedback?: string
+): Promise<ExtractionResult> {
+  const basePrompt = getDocPrompt(key) || "Extract all visible details from this document as JSON.";
+  const prompt = feedback 
+    ? `${basePrompt}\n\nUSER FEEDBACK ON PREVIOUS EXTRACTION:\n"""\n${feedback}\n"""\nPlease pay STRICT ATTENTION to this feedback. Correct your mappings accordingly (e.g. if the user says column X is net amount and column Y is gross amount, apply that to the JSON output).`
+    : basePrompt;
   
   return aiQueue.add(async () => {
     if (onProgress) onProgress('Scanning document...');
-    const images = await fileToImages(file, (p, t) => {
+    const { viewImages, apiImages } = await fileToImages(file, (p, t) => {
       if (onProgress) onProgress(`Processing page ${p} of ${t}...`);
     });
 
-    const totalPages = images.length;
-    // Set chunk size to 1 to guarantee 100% compatibility with Groq Vision.
-    // While slower for massive PDFs, it prevents all "Too many images" errors.
-    const CHUNK_SIZE = 1; 
+    const totalPages = apiImages.length;
+    // For estimate/final-bill: use larger chunks so all line items are seen together
+    // For other docs: keep CHUNK_SIZE=1 for Groq compatibility
+    const CHUNK_SIZE = (key === 'estimate' || key === 'final-bill') ? 5 : 1;
     let finalResult: any = null;
 
     for (let i = 0; i < totalPages; i += CHUNK_SIZE) {
-      const chunk = images.slice(i, i + CHUNK_SIZE);
+      const chunk = apiImages.slice(i, i + CHUNK_SIZE);  // send small JPEG to API
       const currentBatchStart = i + 1;
       const currentBatchEnd = Math.min(i + CHUNK_SIZE, totalPages);
 
@@ -189,6 +211,19 @@ export async function extractDocument(
       }
     }
 
-    return finalResult;
+    // Log extraction summary for estimate/final-bill documents
+    if ((key === 'estimate' || key === 'final-bill') && finalResult) {
+      const parts = Array.isArray(finalResult.spare_parts) ? finalResult.spare_parts.length : 0;
+      const labour = Array.isArray(finalResult.labour_items) ? finalResult.labour_items.length : 0;
+      const painting = Array.isArray(finalResult.painting_items) ? finalResult.painting_items.length : 0;
+      const total = finalResult.total_amount ?? 'N/A';
+      if (onProgress) {
+        onProgress(`Extracted ${parts} parts, ${labour} labour, ${painting} painting items. Total: ₹${total}`);
+      }
+      console.log(`[AI Extraction] ${key}: ${parts} parts, ${labour} labour, ${painting} painting. Total: ${total}`);
+    }
+
+    // Return high-res view images to caller so they can be stored in sessionStorage
+    return { data: finalResult, images: viewImages };
   });
 }

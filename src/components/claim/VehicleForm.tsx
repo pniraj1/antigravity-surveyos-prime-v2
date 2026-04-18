@@ -4,11 +4,20 @@ import { useClaimStore } from '@/stores/claim-store';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useFieldEvidence } from '@/hooks/useFieldEvidence';
+import { Eye } from 'lucide-react';
 
 const S = () => <span className="ml-1 inline-block w-2 h-2 rounded-full bg-green-500 align-middle" title="Used in Spot Report" />;
 
+/** Small eye icon shown on label when AI evidence is available for that field */
+function EvidenceDot({ has }: { has: boolean }) {
+  if (!has) return null;
+  return <span title="Click field to view source document"><Eye size={10} className="inline ml-1 opacity-50 text-blue-400" /></span>;
+}
+
 export function VehicleDetailsForm() {
   const { currentClaim, updateVehicle } = useClaimStore();
+  const { triggerField, hasEvidence } = useFieldEvidence();
 
   if (!currentClaim) return null;
   const v = currentClaim.vehicle;
@@ -21,111 +30,122 @@ export function VehicleDetailsForm() {
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           <div className="space-y-1">
-            <Label htmlFor="v-reg">Registration No.<S /></Label>
+            <Label htmlFor="v-reg">Registration No.<S /><EvidenceDot has={hasEvidence('registrationNumber')} /></Label>
             <Input
               id="v-reg"
               value={v?.registrationNumber || ''}
               onChange={(e) => updateVehicle({ registrationNumber: e.target.value.toUpperCase() })}
+              onFocus={() => triggerField('registrationNumber')}
               placeholder="e.g. MH01AB1234"
               className="uppercase font-mono font-bold"
             />
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="v-class">Class of Vehicle<S /></Label>
+            <Label htmlFor="v-class">Class of Vehicle<S /><EvidenceDot has={hasEvidence('classOfVehicle')} /></Label>
             <Input
               id="v-class"
               value={v?.classOfVehicle || ''}
               onChange={(e) => updateVehicle({ classOfVehicle: e.target.value, registrationType: e.target.value })}
+              onFocus={() => triggerField('classOfVehicle')}
               placeholder="e.g. LMV PE"
             />
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="v-make">Make<S /></Label>
+            <Label htmlFor="v-make">Make<S /><EvidenceDot has={hasEvidence('make')} /></Label>
             <Input
               id="v-make"
               value={v?.make || ''}
               onChange={(e) => updateVehicle({ make: e.target.value })}
+              onFocus={() => triggerField('make')}
               placeholder="e.g. MARUTI SUZUKI"
             />
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="v-model">Model / Variant<S /></Label>
+            <Label htmlFor="v-model">Model / Variant<S /><EvidenceDot has={hasEvidence('model')} /></Label>
             <Input
               id="v-model"
               value={v?.model || ''}
               onChange={(e) => updateVehicle({ model: e.target.value })}
+              onFocus={() => triggerField('model')}
               placeholder="e.g. SWIFT VXI"
             />
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="v-year">Year of Mfg (YOM)<S /></Label>
+            <Label htmlFor="v-year">Year of Mfg (YOM)<S /><EvidenceDot has={hasEvidence('yearOfManufacture')} /></Label>
             <Input
               id="v-year"
               type="number"
               value={v?.yearOfManufacture || ''}
               onChange={(e) => updateVehicle({ yearOfManufacture: parseInt(e.target.value) || null })}
+              onFocus={() => triggerField('yearOfManufacture')}
               placeholder="YYYY"
             />
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="v-body">Body Type<S /></Label>
+            <Label htmlFor="v-body">Body Type<S /><EvidenceDot has={hasEvidence('bodyType')} /></Label>
             <Input
               id="v-body"
               value={v?.bodyType || ''}
               onChange={(e) => updateVehicle({ bodyType: e.target.value })}
+              onFocus={() => triggerField('bodyType')}
               placeholder="e.g. SALOON / HATCHBACK"
             />
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="v-chassis">Chassis No.<S /></Label>
+            <Label htmlFor="v-chassis">Chassis No.<S /><EvidenceDot has={hasEvidence('chassisNumber')} /></Label>
             <Input
               id="v-chassis"
               value={v?.chassisNumber || ''}
               onChange={(e) => updateVehicle({ chassisNumber: e.target.value.toUpperCase() })}
+              onFocus={() => triggerField('chassisNumber')}
               className="uppercase font-mono"
             />
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="v-engine">Engine No.<S /></Label>
+            <Label htmlFor="v-engine">Engine No.<S /><EvidenceDot has={hasEvidence('engineNumber')} /></Label>
             <Input
               id="v-engine"
               value={v?.engineNumber || ''}
               onChange={(e) => updateVehicle({ engineNumber: e.target.value.toUpperCase() })}
+              onFocus={() => triggerField('engineNumber')}
               className="uppercase font-mono"
             />
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="v-cc">Cubic Capacity (CC)<S /></Label>
+            <Label htmlFor="v-cc">Cubic Capacity (CC)<S /><EvidenceDot has={hasEvidence('cubicCapacity')} /></Label>
             <Input
               id="v-cc"
               value={v?.cubicCapacity || ''}
               onChange={(e) => updateVehicle({ cubicCapacity: e.target.value })}
+              onFocus={() => triggerField('cubicCapacity')}
             />
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="v-color">Colour<S /></Label>
+            <Label htmlFor="v-color">Colour<S /><EvidenceDot has={hasEvidence('colour')} /></Label>
             <Input
               id="v-color"
               value={v?.colour || ''}
               onChange={(e) => updateVehicle({ colour: e.target.value })}
+              onFocus={() => triggerField('colour')}
             />
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="v-fuel">Fuel Type<S /></Label>
+            <Label htmlFor="v-fuel">Fuel Type<S /><EvidenceDot has={hasEvidence('fuel')} /></Label>
             <select
               id="v-fuel"
               value={v?.fuel || ''}
               onChange={(e) => updateVehicle({ fuel: e.target.value })}
+              onFocus={() => triggerField('fuel')}
               className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="">Select Fuel</option>
@@ -136,81 +156,89 @@ export function VehicleDetailsForm() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="v-odo">Odometer<S /></Label>
+            <Label htmlFor="v-odo">Odometer<S /><EvidenceDot has={hasEvidence('odometer')} /></Label>
             <Input
               id="v-odo"
               value={v?.odometer || ''}
               onChange={(e) => updateVehicle({ odometer: e.target.value })}
+              onFocus={() => triggerField('odometer')}
             />
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="v-reg-auth">Registering Authority</Label>
+            <Label htmlFor="v-reg-auth">Registering Authority<EvidenceDot has={hasEvidence('registeringAuthority')} /></Label>
             <Input
               id="v-reg-auth"
               value={v?.registeringAuthority || ''}
               onChange={(e) => updateVehicle({ registeringAuthority: e.target.value.toUpperCase() })}
+              onFocus={() => triggerField('registeringAuthority')}
               placeholder="e.g. RTO MUMBAI"
             />
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="v-reg-valid">Registration Valid Up To</Label>
+            <Label htmlFor="v-reg-valid">Registration Valid Up To<EvidenceDot has={hasEvidence('registrationValidUpTo')} /></Label>
             <Input
               id="v-reg-valid"
               type="date"
               value={v?.registrationValidUpTo || ''}
               onChange={(e) => updateVehicle({ registrationValidUpTo: e.target.value })}
+              onFocus={() => triggerField('registrationValidUpTo')}
             />
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="v-rc-end">RC Endorsement (Financier)</Label>
+            <Label htmlFor="v-rc-end">RC Endorsement (Financier)<EvidenceDot has={hasEvidence('rcEndorsement')} /></Label>
             <Input
               id="v-rc-end"
               value={v?.rcEndorsement || ''}
               onChange={(e) => updateVehicle({ rcEndorsement: e.target.value.toUpperCase() })}
+              onFocus={() => triggerField('rcEndorsement')}
               placeholder="e.g. NO"
             />
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="v-regdate">Date of Registration<S /></Label>
+            <Label htmlFor="v-regdate">Date of Registration<S /><EvidenceDot has={hasEvidence('dateOfRegistration')} /></Label>
             <Input
               id="v-regdate"
               type="date"
               value={v?.dateOfRegistration || ''}
               onChange={(e) => updateVehicle({ dateOfRegistration: e.target.value })}
+              onFocus={() => triggerField('dateOfRegistration')}
             />
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="v-rlw">Registered Load Weight (RLW)<S /></Label>
+            <Label htmlFor="v-rlw">Registered Load Weight (RLW)<S /><EvidenceDot has={hasEvidence('registeredLoadWeight')} /></Label>
             <Input
               id="v-rlw"
               value={v?.registeredLoadWeight || ''}
               onChange={(e) => updateVehicle({ registeredLoadWeight: e.target.value })}
+              onFocus={() => triggerField('registeredLoadWeight')}
               placeholder="e.g. 1500 KG"
             />
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="v-ulw">Unladen Weight (ULW)</Label>
+            <Label htmlFor="v-ulw">Unladen Weight (ULW)<EvidenceDot has={hasEvidence('unladenWeight')} /></Label>
             <Input
               id="v-ulw"
               type="number"
               value={v?.unladenWeight || ''}
               onChange={(e) => updateVehicle({ unladenWeight: parseInt(e.target.value) || null })}
+              onFocus={() => triggerField('unladenWeight')}
               placeholder="e.g. 800"
             />
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="v-seats-total">Seating Capacity</Label>
+            <Label htmlFor="v-seats-total">Seating Capacity<EvidenceDot has={hasEvidence('seatingCapacityTotal')} /></Label>
             <Input
               id="v-seats-total"
               value={(v as any)?.seatingCapacityTotal || ''}
               onChange={(e) => updateVehicle({ seatingCapacityTotal: e.target.value })}
+              onFocus={() => triggerField('seatingCapacityTotal')}
               placeholder="e.g. 5"
             />
           </div>
@@ -255,21 +283,23 @@ export function VehicleDetailsForm() {
           )}
 
           <div className="space-y-1">
-            <Label htmlFor="v-fitness">Fitness Number<S /></Label>
+            <Label htmlFor="v-fitness">Fitness Number<S /><EvidenceDot has={hasEvidence('fitnessNo')} /></Label>
             <Input
               id="v-fitness"
               value={v?.fitnessNo || ''}
               onChange={(e) => updateVehicle({ fitnessNo: e.target.value })}
+              onFocus={() => triggerField('fitnessNo')}
             />
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="v-fitness-valid">Fitness Valid Upto<S /></Label>
+            <Label htmlFor="v-fitness-valid">Fitness Valid Upto<S /><EvidenceDot has={hasEvidence('fitnessValidUpto')} /></Label>
             <Input
               id="v-fitness-valid"
               type="date"
               value={v?.fitnessValidUpto || ''}
               onChange={(e) => updateVehicle({ fitnessValidUpto: e.target.value })}
+              onFocus={() => triggerField('fitnessValidUpto')}
             />
           </div>
 
@@ -288,11 +318,12 @@ export function VehicleDetailsForm() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="v-route">Route / Permit<S /></Label>
+            <Label htmlFor="v-route">Route / Permit<S /><EvidenceDot has={hasEvidence('route')} /></Label>
             <Input
               id="v-route"
               value={v?.route || ''}
               onChange={(e) => updateVehicle({ route: e.target.value })}
+              onFocus={() => triggerField('route')}
             />
           </div>
 

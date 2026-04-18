@@ -12,7 +12,17 @@ export type BillStatus = 'in-bill' | 'not-in-bill' | 'partial' | 'pending';
 
 export interface AssessmentRow {
   id: string;
+  /** Original serial number from the estimate (preserves invoice order) */
+  srNo?: number;
   particulars: string;
+  /** OEM part number (e.g. "56100-0R190") */
+  partNumber?: string;
+  /** HSN code for parts (87xx) or SAC code for labour/paint (9987xx) */
+  hsnSac?: string;
+  /** Quantity from the estimate */
+  quantity?: number;
+  /** Per-unit price before tax */
+  unitPrice?: number;
   estimated: number;
   assessed: number;
   billedAmount?: number;
@@ -22,6 +32,10 @@ export interface AssessmentRow {
   gst: number; // percentage, default 18
   section: AssessmentSection;
   allowed: boolean;
+  /** Surveyor action: REPLACE / REPAIR / DISALLOW */
+  action?: 'replace' | 'repair' | 'disallow' | '';
+  /** Surveyor remarks for this line item */
+  remarks?: string;
 }
 
 export interface AssessmentSummary {
@@ -49,8 +63,15 @@ export interface AssessmentSummary {
   netAssessedLoss: number; // max(0, grandTotal - salvage - compulsoryExcess - voluntaryExcess)
   netInWords: string;
 
-  // Estimated totals (for comparison)
+  // ─── Estimated Totals (from Invoice) ────────────────
   totalEstimated: number;
+  estimatePartsBase: number;
+  estimatePartsGST: number;
+  estimatePartsTotal: number;
+  estimateLabourBase: number;
+  estimateLabourGST: number;
+  estimateLabourTotal: number;
+  estimateGrossTotal: number;
 }
 
 // ─── SPOT SURVEY DAMAGE ─────────────────────────────────
@@ -184,6 +205,8 @@ export interface PhotoItem {
 export type PhotoLayout = 2 | 4 | 6 | 8 | 9;
 
 /** Runtime options for the PDF photo sheet (not persisted to claim) */
+export type PageOrientation = 'portrait' | 'landscape';
+
 export interface PhotoSheetOptions {
   /** Page padding in points (15–45, default 30) */
   pagePadding: number;
@@ -193,6 +216,8 @@ export interface PhotoSheetOptions {
   showBorder: boolean;
   /** Border colour (CSS hex) */
   borderColor: string;
+  /** Manual page orientation override */
+  pageOrientation?: PageOrientation;
 }
 
 export interface BillCheckDetails {

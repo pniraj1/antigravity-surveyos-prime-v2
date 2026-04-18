@@ -65,11 +65,24 @@ export function calculateAssessmentSummary(
   const totalExcess = compulsoryExcess + voluntaryExcess;
   const netAssessedLoss = Math.max(0, grandTotal - salvage - totalExcess);
 
-  // ─── Estimated total (for comparison) ──────────────
-  let totalEstimated = 0;
+  // ─── Estimated totals (from Invoice — computed locally, zero API cost) ──────
+  // NOTE: estimated/assessed store BASE (taxable) amounts; GST is added here.
+  let estPartsBase = 0;
+  let estPartsGST = 0;
+  let estLabourBase = 0;
+  let estLabourGST = 0;
   rows.forEach((r) => {
-    totalEstimated += r.estimated * (1 + (r.gst || 18) / 100);
+    const gstRate = (r.gst || 18) / 100;
+    if (r.section === 'parts') {
+      estPartsBase += r.estimated;
+      estPartsGST += r.estimated * gstRate;
+    } else {
+      // labour + paint
+      estLabourBase += r.estimated;
+      estLabourGST += r.estimated * gstRate;
+    }
   });
+  const totalEstimated = estPartsBase + estPartsGST + estLabourBase + estLabourGST;
 
   return {
     metalTotal: metal,
@@ -94,6 +107,13 @@ export function calculateAssessmentSummary(
     netInWords: `RUPEES ${numberToWords(netAssessedLoss)} ONLY`,
 
     totalEstimated,
+    estimatePartsBase: estPartsBase,
+    estimatePartsGST: estPartsGST,
+    estimatePartsTotal: estPartsBase + estPartsGST,
+    estimateLabourBase: estLabourBase,
+    estimateLabourGST: estLabourGST,
+    estimateLabourTotal: estLabourBase + estLabourGST,
+    estimateGrossTotal: totalEstimated,
   };
 }
 

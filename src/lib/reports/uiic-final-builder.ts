@@ -130,7 +130,6 @@ export function buildUIICFinalHTML(claim: ClaimData, profile: SurveyorProfile | 
   // ── PAGE 1: Policy / Claim / Vehicle / Survey / Reinspection details ────────
   const p1 = `
 ${getSurveyorHeader(profile)}
-<div style="font-weight:700;font-size:9pt;text-align:right;margin-bottom:2px;">${nm}</div>
 <div style="text-align:center;font-weight:700;font-size:9.5pt;border:1pt solid #000;padding:4px;margin-bottom:4px;background:#f0f0f0;">MOTOR SURVEY REPORT - ( FINAL/ RE INSPECTION)</div>
 <table style="${ts}"><tr><td style="${tdl}width:25%;">Report Number:</td><td style="${tdb}width:25%;">${g(claim.reportNo)}</td><td style="${tdl}width:25%;">Date of report :</td><td style="${tdb}">${fd(claim.reportDate)}</td></tr></table>
 <div style="${sec}">POLICY DETAILS</div>

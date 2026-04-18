@@ -417,3 +417,85 @@ export async function flushDriveQueue(): Promise<number> {
 
   return successCount;
 }
+
+// ─── Profile Backup / Restore ────────────────────────────────────────────────
+
+const PROFILE_FILE_NAME = 'surveyos_profile_backup.json';
+
+/**
+ * Backs up the entire SurveyorProfile (including base64 signatures and API keys) 
+ * to Google Drive as a JSON file in the root folder.
+ */
+export async function backupProfileToDrive(profile: any): Promise<void> {
+  const token = getDriveToken();
+  if (!token) return; // Silent return if not linked
+
+  try {
+    const rootId = await getRootFolder();
+    
+    // Check if the file already exists
+    const q = `name='${PROFILE_FILE_NAME}' and '${rootId}' in parents and trashed=false`;
+    const searchRes = await driveRequest(
+      `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id)`
+    );
+    const searchData = await searchRes.json();
+    const fileId = searchData.files?.[0]?.id ?? null;
+
+    const content = JSON.stringify(profile, null, 2);
+    const blob = new Blob([content], { type: 'application/json' });
+
+    if (fileId) {
+      // Update existing
+      const form = new FormData();
+      form.append('metadata', new Blob([JSON.stringify({})], { type: 'application/json' }));
+      form.append('file', blob);
+      await driveRequest(
+        `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`,
+        { method: 'PATCH', body: form }
+      );
+    } else {
+      // Create new
+      const form = new FormData();
+      form.append('metadata', new Blob([JSON.stringify({ name: PROFILE_FILE_NAME, parents: [rootId] })], { type: 'application/json' }));
+      form.append('file', blob);
+      await driveRequest(
+        `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`,
+        { method: 'POST', body: form }
+      );
+    }
+  } catch (e) {
+    console.warn('[Drive] Failed to backup profile:', e);
+  }
+}
+
+/**
+ * Restores the SurveyorProfile from Google Drive.
+ * This should typically be done once per session initialization.
+ * Returns the profile object if found, otherwise null.
+ */
+export async function restoreProfileFromDrive(): Promise<any | null> {
+  const token = getDriveToken();
+  if (!token) return null; // Silent return if not linked
+
+  try {
+    const rootId = await getRootFolder();
+    
+    const q = `name='${PROFILE_FILE_NAME}' and '${rootId}' in parents and trashed=false`;
+    const searchRes = await driveRequest(
+      `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id)`
+    );
+    const searchData = await searchRes.json();
+    const fileId = searchData.files?.[0]?.id ?? null;
+
+    if (!fileId) return null;
+
+    const res = await driveRequest(
+      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`
+    );
+    return await res.json();
+  } catch (e) {
+    console.warn('[Drive] Failed to restore profile:', e);
+    return null;
+  }
+}
+

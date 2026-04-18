@@ -11,7 +11,7 @@ import {
   Trash2, Image as ImageIcon, Settings, Loader2,
   UploadCloud, Eye, EyeOff, LayoutGrid, Sliders,
 } from 'lucide-react';
-import type { PhotoLayout, PhotoSheetOptions } from '@/types/assessment';
+import type { PhotoLayout, PhotoSheetOptions, PageOrientation } from '@/types/assessment';
 import { DEFAULT_PHOTO_SHEET_OPTIONS } from '@/components/pdf/PhotoSheetDocument';
 import dynamic from 'next/dynamic';
 
@@ -71,7 +71,7 @@ function compressImage(
         const ctx = canvas.getContext('2d');
         if (!ctx) { reject(new Error('No canvas context')); return; }
         ctx.drawImage(img, 0, 0, width, height);
-        resolve({ dataUrl: canvas.toDataURL('image/jpeg', quality), w: width, h: height });
+        resolve({ dataUrl: canvas.toDataURL('image/png'), w: width, h: height });
       };
       img.onerror = reject;
     };
@@ -80,7 +80,6 @@ function compressImage(
 }
 
 const LAYOUT_OPTIONS: { value: PhotoLayout; label: string }[] = [
-  { value: 2, label: '2 Photos  –  Large format'      },
   { value: 4, label: '4 Photos  –  2 × 2'             },
   { value: 6, label: '6 Photos  –  3 × 2 (recommended)' },
   { value: 8, label: '8 Photos  –  2 × 4'             },
@@ -104,13 +103,7 @@ export function PhotosTab() {
 
   if (!currentClaim) return null;
 
-  // ── Orientation detection (for info badge) ──────────────────────────────
-  const dominantOrientation = useMemo(() => {
-    const withDims = currentClaim.photos.filter(p => p.w != null && p.h != null);
-    if (withDims.length === 0) return 'portrait'; // default (mobile cameras)
-    const portraitCount = withDims.filter(p => (p.h ?? 0) > (p.w ?? 0)).length;
-    return portraitCount >= withDims.length / 2 ? 'portrait' : 'landscape';
-  }, [currentClaim.photos]);
+
 
   // ── Upload handler ────────────────────────────────────────────────────────
   const handleFileUpload = useCallback(
@@ -126,7 +119,7 @@ export function PhotosTab() {
         const file = files[i];
         if (!file.type.startsWith('image/')) continue;
         try {
-          const { dataUrl, w, h } = await compressImage(file, 1600, 0.90);
+          const { dataUrl, w, h } = await compressImage(file, 600, 1.0);
           const name = file.name.split('.')[0].substring(0, 30);
           // Store dimensions for orientation detection
           addPhoto(dataUrl, name, w, h);
@@ -212,15 +205,20 @@ export function PhotosTab() {
                 </select>
               </div>
 
-              {/* Orientation badge */}
-              {hasPhotos && (
-                <div className="flex items-center gap-2 text-xs rounded-md bg-muted px-3 py-2">
-                  <span className="text-muted-foreground">Auto-detected:</span>
-                  <span className={`font-semibold ${dominantOrientation === 'portrait' ? 'text-blue-600' : 'text-amber-600'}`}>
-                    {dominantOrientation === 'portrait' ? '▯ Portrait A4' : '▭ Landscape A4'}
-                  </span>
+              {/* Orientation Option */}
+              <div className="space-y-1.5 mt-4">
+                <div className="flex justify-between items-center">
+                  <Label className="text-xs text-muted-foreground">Page Orientation</Label>
                 </div>
-              )}
+                <select
+                  value={options.pageOrientation}
+                  onChange={(e) => setOpt('pageOrientation', e.target.value as PageOrientation)}
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:ring-1 focus:ring-primary"
+                >
+                  <option value="portrait">Portrait A4</option>
+                  <option value="landscape">Landscape A4</option>
+                </select>
+              </div>
             </CardContent>
           </Card>
 
@@ -304,11 +302,6 @@ export function PhotosTab() {
           <div className="text-xs text-muted-foreground bg-muted p-3 rounded-md space-y-1">
             <p><strong>{currentClaim.photos.length}</strong> photo(s) loaded</p>
             <p>Stored as compressed JPEG in browser memory (IndexedDB).</p>
-            {dominantOrientation === 'portrait' && (
-              <p className="text-blue-600 font-medium mt-1">
-                Tip: 6-photo (3×2) layout is optimised for your portrait photos.
-              </p>
-            )}
           </div>
         </div>
 
