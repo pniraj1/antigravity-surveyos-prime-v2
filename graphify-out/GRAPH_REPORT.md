@@ -1,13 +1,13 @@
-# Graph Report - .  (2026-04-15)
+# Graph Report - .  (2026-04-19)
 
 ## Corpus Check
-- 144 files Â· ~118,201 words
+- 177 files · ~286,628 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 335 nodes Â· 592 edges Â· 23 communities detected
-- Extraction: 100% EXTRACTED Â· 0% INFERRED Â· 0% AMBIGUOUS
-- Token cost: 0 input Â· 0 output
+- 335 nodes · 592 edges · 23 communities detected
+- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
+- Token cost: 0 input · 0 output
 
 ## God Nodes (most connected - your core abstractions)
 1. `getDB()` - 16 edges
@@ -26,51 +26,51 @@
 
 ## Communities
 
-### Community 0 - "Profile & Reconciliation"
+### Community 0 - "Community 0"
 Cohesion: 0.07
 Nodes (4): fetchAllProfiles(), handleApprove(), getNestedValue(), getReconciliationFields()
 
-### Community 1 - "Formatting & Print Utilities"
+### Community 1 - "Community 1"
 Cohesion: 0.07
 Nodes (13): formatDateDMY(), formatDateTimeDMY(), buildSpotFeeBillDocument(), buildSpotFeeBillHTML(), triggerSpotFeeBillPrint(), buildStandardFinalSurveyHTML(), buildStandardPrintDocument(), fmt2() (+5 more)
 
-### Community 2 - "Date Utilities"
+### Community 2 - "Community 2"
 Cohesion: 0.06
 Nodes (2): formatDateDMY(), formatDateTimeDMY()
 
-### Community 3 - "Unknown Cluster"
+### Community 3 - "Community 3"
 Cohesion: 0.14
 Nodes (0): 
 
-### Community 4 - "Database & Sync Queue"
+### Community 4 - "Community 4"
 Cohesion: 0.11
 Nodes (17): addToDriveQueue(), addToSyncQueue(), deleteClaim(), getAllClaims(), getClaim(), getDB(), getDriveQueue(), getDriveQueueCount() (+9 more)
 
-### Community 5 - "Depreciation Logic"
+### Community 5 - "Community 5"
 Cohesion: 0.08
 Nodes (4): applyDepreciation(), getAgeLabel(), getDepPolicyLabel(), getDepreciationRate()
 
-### Community 6 - "AI Gateway & Extraction"
+### Community 6 - "Community 6"
 Cohesion: 0.15
 Nodes (15): extractBankStatement(), parseCsvTransactions(), AITaskQueue, extractDocument(), buildProvider(), callAIGateway(), callWithKey(), callWithRotation() (+7 more)
 
-### Community 7 - "Google Drive Integration"
+### Community 7 - "Community 7"
 Cohesion: 0.32
 Nodes (12): clearStoredToken(), createFolder(), driveRequest(), findFolder(), flushDriveQueue(), getDriveToken(), getIndexFileId(), getOrCreateClaimFolder() (+4 more)
 
-### Community 8 - "UIIC Bill & Document Building"
+### Community 8 - "Community 8"
 Cohesion: 0.23
 Nodes (9): buildUIICBillCheckHTML(), buildUIICBillCheckPrintDocument(), buildUIICFinalHTML(), buildUIICFinalPrintDocument(), fa(), fd(), g(), triggerUIICBillCheckPrint() (+1 more)
 
-### Community 9 - "Analytics & Reporting Engine"
+### Community 9 - "Community 9"
 Cohesion: 0.23
 Nodes (8): buildAnalytics(), buildClaimRegister(), buildInsurerSummary(), buildMonthSummary(), filterClaimsForExport(), generateIRDAISummary(), getFYLabel(), getFYRange()
 
-### Community 10 - "Empty Cluster"
+### Community 10 - "Community 10"
 Cohesion: 0.22
 Nodes (0): 
 
-### Community 11 - "Cloud Sync & Data Pipeline"
+### Community 11 - "Community 11"
 Cohesion: 0.27
 Nodes (5): fetchData(), handleRestore(), pushClaimToCloud(), stripPhotos(), syncAllLocalToCloud()
 
@@ -82,11 +82,11 @@ Nodes (0):
 Cohesion: 0.33
 Nodes (0): 
 
-### Community 14 - "UIIC Excel Export"
+### Community 14 - "Community 14"
 Cohesion: 0.47
 Nodes (1): UIICExcelBuilder
 
-### Community 15 - "Error Handling"
+### Community 15 - "Community 15"
 Cohesion: 0.4
 Nodes (1): ErrorBoundary
 
@@ -137,15 +137,15 @@ Nodes (0):
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Should `Profile & Reconciliation` be split into smaller, more focused modules?**
+- **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.07 - nodes in this community are weakly interconnected._
-- **Should `Formatting & Print Utilities` be split into smaller, more focused modules?**
+- **Should `Community 1` be split into smaller, more focused modules?**
   _Cohesion score 0.07 - nodes in this community are weakly interconnected._
-- **Should `Date Utilities` be split into smaller, more focused modules?**
+- **Should `Community 2` be split into smaller, more focused modules?**
   _Cohesion score 0.06 - nodes in this community are weakly interconnected._
-- **Should `Unknown Cluster` be split into smaller, more focused modules?**
+- **Should `Community 3` be split into smaller, more focused modules?**
   _Cohesion score 0.14 - nodes in this community are weakly interconnected._
-- **Should `Database & Sync Queue` be split into smaller, more focused modules?**
+- **Should `Community 4` be split into smaller, more focused modules?**
   _Cohesion score 0.11 - nodes in this community are weakly interconnected._
-- **Should `Depreciation Logic` be split into smaller, more focused modules?**
+- **Should `Community 5` be split into smaller, more focused modules?**
   _Cohesion score 0.08 - nodes in this community are weakly interconnected._

@@ -2,7 +2,7 @@
 
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
-import { buildUIICFinalHTML, triggerUIICFinalPrint } from '@/lib/reports/uiic-final-builder';
+import { buildReinspectionHTML, triggerReinspectionPrint } from '@/lib/reports/reinspection-report-builder';
 import { ReportPreviewPanel } from '@/components/shared/ReportPreviewPanel';
 import {
   RotateCcw, Calendar, MapPin, Camera, ClipboardCheck,
@@ -13,15 +13,15 @@ import { useState, useMemo } from 'react';
 // ─── Inline Live Preview ─────────────────────────────────────────────────────
 function RIPreview({ claim, profile }: { claim: any; profile: any }) {
   const html = useMemo(() => {
-    try { return buildUIICFinalHTML(claim, profile); } catch { return ''; }
+    try { return buildReinspectionHTML(claim, profile); } catch { return ''; }
   }, [claim, profile]);
 
   return (
     <ReportPreviewPanel
       html={html}
-      title="Re-inspection / UIIC Report — Live Preview"
+      title="Re-inspection Report — Live Preview"
       printLabel="Power Print"
-      onPrint={() => triggerUIICFinalPrint(claim, profile)}
+      onPrint={() => triggerReinspectionPrint(claim, profile)}
     />
   );
 }
@@ -215,10 +215,10 @@ export function ReinspectionTab() {
             <h3 className="text-base font-black text-white mb-1">Re-inspection Certificate</h3>
             <p className="text-xs text-white/60">Ready to issue certificate for claim {currentClaim.reportNo || 'DRAFT'}</p>
           </div>
-          <button 
+          <button
             className="relative z-10 px-6 py-2.5 rounded-xl text-sm font-black transition-all hover:scale-105 active:scale-95"
             style={{ background: '#D4AF37', color: '#0D1B2A' }}
-            onClick={() => triggerUIICFinalPrint(currentClaim, profile)}
+            onClick={() => triggerReinspectionPrint(currentClaim, profile)}
           >
             Print RI Report
           </button>

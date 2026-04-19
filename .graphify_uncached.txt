@@ -1,0 +1,57 @@
+AGENTS.md
+CLAUDE.md
+claude_handover.md
+diff_report.txt
+GEMINI.md
+head_report.txt
+README.md
+total_loss_text.txt
+docs\access-control-improvements.md
+docs\ADMIN.md
+docs\ARCHITECTURE.md
+docs\LAUNCH_CHECKLIST.md
+graphify-out\GRAPH_REPORT.md
+SurveyOS-Antigravity-Prime-V2-KnowledgeBase\00_Project_Map.md
+SurveyOS-Antigravity-Prime-V2-KnowledgeBase\01_Architecture_and_Status.md
+SurveyOS-Antigravity-Prime-V2-KnowledgeBase\AI_Context_Index.md
+SurveyOS-Antigravity-Prime-V2-KnowledgeBase\AI_Field_Extraction_Mapping.md
+SurveyOS-Antigravity-Prime-V2-KnowledgeBase\ANTIGRAVITY_BIBLE.md
+SurveyOS-Antigravity-Prime-V2-KnowledgeBase\Claim_Lifecycle_Workflow.md
+SurveyOS-Antigravity-Prime-V2-KnowledgeBase\Data_Dictionary_and_Flow.md
+SurveyOS-Antigravity-Prime-V2-KnowledgeBase\Error_Handling_and_Recovery.md
+SurveyOS-Antigravity-Prime-V2-KnowledgeBase\READ_ME_FIRST.md
+SurveyOS-Antigravity-Prime-V2-KnowledgeBase\Security_Audit_2026-04-13.md
+SurveyOS-Antigravity-Prime-V2-KnowledgeBase\Surveyor_User_Manual.md
+SurveyOS-Antigravity-Prime-V2-KnowledgeBase\Tasks.md
+SurveyOS-Antigravity-Prime-V2-KnowledgeBase\USER_MANUAL.md
+SurveyOS-Antigravity-Prime-V2-KnowledgeBase\Modules\Dashboard.md
+SurveyOS-Antigravity-Prime-V2-KnowledgeBase\Modules\Reporting_Engine.md
+SurveyOS-Antigravity-Prime-V2-KnowledgeBase\Modules\State_Management.md
+SurveyOS-Antigravity-Prime-V2-KnowledgeBase\Patterns\Sequential_Numbering.md
+SurveyOS-Antigravity-Prime-V2-KnowledgeBase\Storage\Cloud_Sync_Logic.md
+SurveyOS-Antigravity-Prime-V2-KnowledgeBase\Storage\IndexedDB_Schema.md
+total loss report sample.pdf
+photosheetsforreview_extracted\DTC Proforma Invoice-1.PDF
+photosheetsforreview_extracted\SAMPLE PHOTOSHEET SWAR.pdf
+photosheetsforreview_extracted\SURVEY OS PHOTOSHEET.pdf
+photosheetsforreview_extracted\images\WhatsApp Unknown 2026-04-16 at 1.25.41 PM\WhatsApp Image 2026-04-16 at 1.25.31 PM.jpeg
+photosheetsforreview_extracted\images\WhatsApp Unknown 2026-04-16 at 1.25.41 PM\WhatsApp Image 2026-04-16 at 1.25.32 PM (1).jpeg
+photosheetsforreview_extracted\images\WhatsApp Unknown 2026-04-16 at 1.25.41 PM\WhatsApp Image 2026-04-16 at 1.25.32 PM.jpeg
+photosheetsforreview_extracted\images\WhatsApp Unknown 2026-04-16 at 1.25.41 PM\WhatsApp Image 2026-04-16 at 1.25.33 PM (1).jpeg
+photosheetsforreview_extracted\images\WhatsApp Unknown 2026-04-16 at 1.25.41 PM\WhatsApp Image 2026-04-16 at 1.25.33 PM.jpeg
+photosheetsforreview_extracted\images\WhatsApp Unknown 2026-04-16 at 1.25.41 PM\WhatsApp Image 2026-04-16 at 1.25.34 PM (1).jpeg
+photosheetsforreview_extracted\images\WhatsApp Unknown 2026-04-16 at 1.25.41 PM\WhatsApp Image 2026-04-16 at 1.25.34 PM (2).jpeg
+photosheetsforreview_extracted\images\WhatsApp Unknown 2026-04-16 at 1.25.41 PM\WhatsApp Image 2026-04-16 at 1.25.34 PM.jpeg
+photosheetsforreview_extracted\images\WhatsApp Unknown 2026-04-16 at 1.25.41 PM\WhatsApp Image 2026-04-16 at 1.25.35 PM (1).jpeg
+photosheetsforreview_extracted\images\WhatsApp Unknown 2026-04-16 at 1.25.41 PM\WhatsApp Image 2026-04-16 at 1.25.35 PM.jpeg
+photosheetsforreview_extracted\images\WhatsApp Unknown 2026-04-16 at 1.25.41 PM\WhatsApp Image 2026-04-16 at 1.25.36 PM (1).jpeg
+photosheetsforreview_extracted\images\WhatsApp Unknown 2026-04-16 at 1.25.41 PM\WhatsApp Image 2026-04-16 at 1.25.36 PM (2).jpeg
+photosheetsforreview_extracted\images\WhatsApp Unknown 2026-04-16 at 1.25.41 PM\WhatsApp Image 2026-04-16 at 1.25.36 PM.jpeg
+photosheetsforreview_extracted\images\WhatsApp Unknown 2026-04-16 at 1.25.41 PM\WhatsApp Image 2026-04-16 at 1.25.37 PM (1).jpeg
+photosheetsforreview_extracted\images\WhatsApp Unknown 2026-04-16 at 1.25.41 PM\WhatsApp Image 2026-04-16 at 1.25.37 PM (2).jpeg
+photosheetsforreview_extracted\images\WhatsApp Unknown 2026-04-16 at 1.25.41 PM\WhatsApp Image 2026-04-16 at 1.25.37 PM.jpeg
+public\file.svg
+public\globe.svg
+public\next.svg
+public\vercel.svg
+public\window.svg
