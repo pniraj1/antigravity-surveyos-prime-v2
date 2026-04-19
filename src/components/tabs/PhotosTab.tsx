@@ -3,13 +3,14 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
-import { uploadFileToDrive } from '@/lib/drive';
+import { uploadFileToDrive, listFilesInFolder, downloadFileAsBase64 } from '@/lib/drive';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 import {
   Trash2, Image as ImageIcon, Settings, Loader2,
-  UploadCloud, Eye, EyeOff, LayoutGrid, Sliders,
+  UploadCloud, Eye, EyeOff, LayoutGrid, Sliders, CloudDownload,
 } from 'lucide-react';
 import type { PhotoLayout, PhotoSheetOptions, PageOrientation } from '@/types/assessment';
 import { DEFAULT_PHOTO_SHEET_OPTIONS } from '@/components/pdf/PhotoSheetDocument';
@@ -100,6 +101,7 @@ export function PhotosTab() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPreview,  setShowPreview]  = useState(false);
   const [options, setOptions] = useState<PhotoSheetOptions>({ ...DEFAULT_PHOTO_SHEET_OPTIONS });
+  const [restoringDrive, setRestoringDrive] = useState(false);
 
   if (!currentClaim) return null;
 
@@ -143,7 +145,43 @@ export function PhotosTab() {
 
   const resetOptions = () => setOptions({ ...DEFAULT_PHOTO_SHEET_OPTIONS });
 
+  const handleRestoreFromDrive = async () => {
+    if (!currentClaim.gDriveFolderId) return;
+    setRestoringDrive(true);
+    try {
+      const files = await listFilesInFolder(currentClaim.gDriveFolderId);
+      const imageFiles = files.filter(f => f.mimeType.startsWith('image/'));
+      if (imageFiles.length === 0) {
+        toast.info('No photos found in Drive folder for this claim.');
+        return;
+      }
+      let restored = 0;
+      for (const file of imageFiles) {
+        try {
+          const dataUrl = await downloadFileAsBase64(file.id, file.mimeType);
+          // Derive dimensions by loading image
+          const dims = await new Promise<{ w: number; h: number }>((resolve) => {
+            const img = new Image();
+            img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+            img.onerror = () => resolve({ w: 800, h: 600 });
+            img.src = dataUrl;
+          });
+          addPhoto(dataUrl, file.name.replace(/\.[^.]+$/, '').substring(0, 30), dims.w, dims.h);
+          restored++;
+        } catch {
+          // skip individual failures
+        }
+      }
+      toast.success(`Restored ${restored} photo(s) from Google Drive.`);
+    } catch {
+      toast.error('Failed to restore photos from Drive. Check your Drive connection.');
+    } finally {
+      setRestoringDrive(false);
+    }
+  };
+
   const hasPhotos = currentClaim.photos.length > 0;
+  const canRestoreFromDrive = !hasPhotos && !currentClaim.isActive && !!currentClaim.gDriveFolderId;
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -322,6 +360,37 @@ export function PhotosTab() {
               </CardHeader>
               <CardContent className="p-0">
                 <PhotoSheetPreview claim={currentClaim} options={options} />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Restore from Drive — shown for archived claims with no local photos */}
+          {canRestoreFromDrive && (
+            <Card className="border-amber-200 shadow-sm bg-amber-50/40">
+              <CardContent className="p-6 flex flex-col items-center justify-center text-center gap-3">
+                <CloudDownload size={36} className="text-amber-500 opacity-80" />
+                <div>
+                  <h3 className="text-sm font-bold text-amber-900">Photos cleared on archive</h3>
+                  <p className="text-xs text-amber-700 mt-1 max-w-xs mx-auto">
+                    Photos were removed from this device when the claim was archived to free up space.
+                    They are still saved in your Google Drive.
+                  </p>
+                </div>
+                <button
+                  onClick={handleRestoreFromDrive}
+                  disabled={restoringDrive}
+                  className="flex items-center gap-2 px-5 py-2 rounded-md text-sm font-semibold transition-all"
+                  style={{
+                    background: restoringDrive ? '#E2E6EA' : '#D4AF37',
+                    color: '#0D1B2A',
+                    cursor: restoringDrive ? 'not-allowed' : 'pointer',
+                    opacity: restoringDrive ? 0.7 : 1,
+                  }}
+                >
+                  {restoringDrive
+                    ? <><Loader2 size={14} className="animate-spin" /> Restoring…</>
+                    : <><CloudDownload size={14} /> Restore from Google Drive</>}
+                </button>
               </CardContent>
             </Card>
           )}

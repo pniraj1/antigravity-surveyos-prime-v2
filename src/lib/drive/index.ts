@@ -368,6 +368,36 @@ export async function uploadFileToDrive(
 }
 
 /**
+ * List all files (not folders) inside a Drive folder.
+ */
+export async function listFilesInFolder(
+  folderId: string
+): Promise<{ id: string; name: string; mimeType: string }[]> {
+  const q = `'${folderId}' in parents and mimeType != 'application/vnd.google-apps.folder' and trashed=false`;
+  const res = await driveRequest(
+    `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name,mimeType)&spaces=drive`
+  );
+  const data = await res.json();
+  return (data.files ?? []) as { id: string; name: string; mimeType: string }[];
+}
+
+/**
+ * Download a Drive file by ID and return it as a base64 data URL.
+ */
+export async function downloadFileAsBase64(fileId: string, mimeType: string): Promise<string> {
+  const res = await driveRequest(
+    `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`
+  );
+  const blob = await res.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+/**
  * Drain the persistent Drive upload queue.
  * Called on reconnect or after Drive is linked.
  * Returns number of successfully uploaded files.

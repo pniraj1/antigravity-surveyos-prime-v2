@@ -4,14 +4,14 @@ import { useUIStore } from '@/stores/ui-store';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { getOrCreateClaimFolder } from '@/lib/drive';
-import { getAllClaims } from '@/lib/storage/indexeddb';
+import { getAllClaims, getClaim, saveClaim } from '@/lib/storage/indexeddb';
 import { normalizeVehicleNumber } from '@/lib/utils/vehicle';
 import { useState, useEffect, useRef } from 'react';
 import type { VehicleType } from '@/types';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { AlertTriangle, CheckCircle2, Loader2, Car } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Loader2, Car, Archive, AlertCircle } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -25,7 +25,118 @@ interface DuplicateMatch {
 
 type DupState = 'idle' | 'checking' | 'duplicate' | 'clear';
 
-// ─── Component ────────────────────────────────────────────────────────────────
+interface ActiveClaimSummary {
+  id: string;
+  registrationNumber: string;
+  reportNo?: string;
+  surveyType?: string;
+  updatedAt?: string;
+}
+
+const ACTIVE_CLAIM_LIMIT = 50;
+
+// ─── Archive-first screen ─────────────────────────────────────────────────────
+
+function ArchiveFirstScreen({
+  activeClaims,
+  onArchived,
+  onClose,
+}: {
+  activeClaims: ActiveClaimSummary[];
+  onArchived: () => void;
+  onClose: () => void;
+}) {
+  const [archivingId, setArchivingId] = useState<string | null>(null);
+
+  const handleArchive = async (id: string) => {
+    setArchivingId(id);
+    try {
+      const fullClaim = await getClaim(id);
+      if (fullClaim) {
+        await saveClaim({ ...fullClaim, isActive: false, photos: [] });
+        const docTypes = ['rc','dl','policy','fitness','permit','fir','claim','estimate','final-bill','photos'];
+        docTypes.forEach(t => sessionStorage.removeItem(`evidence_${id}_${t}`));
+        const channel = new BroadcastChannel('surveyos_claims_sync');
+        channel.postMessage('CLAIMS_UPDATED');
+        channel.close();
+        onArchived();
+      }
+    } finally {
+      setArchivingId(null);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <Card className="w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-200">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-amber-600">
+            <AlertCircle size={18} />
+            Active Claim Limit Reached
+          </CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            You have {activeClaims.length} active claims — the maximum is {ACTIVE_CLAIM_LIMIT}.
+            Archive at least one completed claim to create a new one.
+          </p>
+        </CardHeader>
+
+        <CardContent>
+          <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
+            {activeClaims.map(c => (
+              <div
+                key={c.id}
+                className="flex items-center justify-between px-3 py-2.5 rounded-lg border"
+                style={{ background: '#FAFAFA' }}
+              >
+                <div className="min-w-0">
+                  <div className="text-sm font-bold truncate">
+                    {c.registrationNumber || 'No reg. no.'}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground flex gap-2">
+                    {c.reportNo && <span>{c.reportNo}</span>}
+                    {c.surveyType && (
+                      <span className="capitalize">{c.surveyType}</span>
+                    )}
+                    {c.updatedAt && (
+                      <span>{new Date(c.updatedAt).toLocaleDateString('en-IN')}</span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleArchive(c.id)}
+                  disabled={archivingId === c.id}
+                  className="ml-3 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold border transition-colors flex-shrink-0"
+                  style={{
+                    borderColor: '#D4AF37',
+                    color: archivingId === c.id ? '#8D99AE' : '#0D1B2A',
+                    background: archivingId === c.id ? '#F0F2F5' : 'rgba(212,175,55,0.08)',
+                    cursor: archivingId === c.id ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {archivingId === c.id
+                    ? <Loader2 size={12} className="animate-spin" />
+                    : <Archive size={12} />}
+                  {archivingId === c.id ? 'Archiving…' : 'Archive'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+
+        <CardFooter className="justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-md text-sm font-semibold text-muted-foreground hover:bg-muted"
+          >
+            Cancel
+          </button>
+        </CardFooter>
+      </Card>
+    </div>
+  );
+}
+
+// ─── Main Component ────────────────────────────────────────────────────────────
 
 export function NewClaimDialog() {
   const { isNewClaimDialogOpen, setNewClaimDialogOpen, setActiveTab } = useUIStore();
@@ -34,24 +145,57 @@ export function NewClaimDialog() {
   const [vehicleNo, setVehicleNo]   = useState('');
   const [surveyType, setSurveyType] = useState<'spot' | 'final'>('final');
   const [vehicleType, setVehicleType] = useState<VehicleType>('private');
+  const [activeClaims, setActiveClaims] = useState<ActiveClaimSummary[]>([]);
+  const [limitReached, setLimitReached] = useState(false);
 
-  // Duplicate detection state
   const [dupState, setDupState]     = useState<DupState>('idle');
   const [dupMatches, setDupMatches] = useState<DuplicateMatch[]>([]);
-  const [confirmed, setConfirmed]   = useState(false); // user explicitly chose to proceed
+  const [confirmed, setConfirmed]   = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ── Reset state when dialog opens ────────────────────────────
+  // Check active claim count whenever dialog opens
   useEffect(() => {
-    if (isNewClaimDialogOpen) {
-      setVehicleNo('');
-      setDupState('idle');
-      setDupMatches([]);
-      setConfirmed(false);
-    }
+    if (!isNewClaimDialogOpen) return;
+    setVehicleNo('');
+    setDupState('idle');
+    setDupMatches([]);
+    setConfirmed(false);
+
+    getAllClaims().then(all => {
+      const active = all
+        .filter(c => c.isActive)
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+        .map(c => ({
+          id: c.id,
+          registrationNumber: c.vehicle?.registrationNumber ?? '',
+          reportNo: c.reportNo,
+          surveyType: c.surveyType,
+          updatedAt: c.updatedAt,
+        }));
+      setActiveClaims(active);
+      setLimitReached(active.length >= ACTIVE_CLAIM_LIMIT);
+    });
   }, [isNewClaimDialogOpen]);
 
-  // ── Debounced duplicate check ─────────────────────────────────
+  // Re-check after an archive action
+  const refreshActiveCount = () => {
+    getAllClaims().then(all => {
+      const active = all
+        .filter(c => c.isActive)
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+        .map(c => ({
+          id: c.id,
+          registrationNumber: c.vehicle?.registrationNumber ?? '',
+          reportNo: c.reportNo,
+          surveyType: c.surveyType,
+          updatedAt: c.updatedAt,
+        }));
+      setActiveClaims(active);
+      setLimitReached(active.length >= ACTIVE_CLAIM_LIMIT);
+    });
+  };
+
+  // Debounced duplicate check
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
@@ -91,7 +235,6 @@ export function NewClaimDialog() {
           setDupState('clear');
         }
       } catch {
-        // IndexedDB not ready yet — treat as clear
         setDupState('clear');
       }
     }, 350);
@@ -104,14 +247,22 @@ export function NewClaimDialog() {
 
   if (!isNewClaimDialogOpen) return null;
 
-  // ── Create handler ─────────────────────────────────────────────
+  // Show archive-first screen if at limit
+  if (limitReached) {
+    return (
+      <ArchiveFirstScreen
+        activeClaims={activeClaims}
+        onArchived={refreshActiveCount}
+        onClose={() => setNewClaimDialogOpen(false)}
+      />
+    );
+  }
+
   const handleCreate = () => {
     if (!vehicleNo.trim()) return;
-    // Block if duplicate detected and not yet confirmed
     if (dupState === 'duplicate' && !confirmed) return;
 
     const reportNo = useProfileStore.getState().getNextReportNumber(surveyType);
-
     newClaim(surveyType, vehicleType);
     useClaimStore.getState().updateVehicle({ registrationNumber: vehicleNo.toUpperCase() });
     useClaimStore.getState().updateClaim({ reportNo });
@@ -120,7 +271,7 @@ export function NewClaimDialog() {
     if (currentClaimId) {
       const label = vehicleNo.toUpperCase();
       getOrCreateClaimFolder(currentClaimId, label).catch(e =>
-        console.warn('[Drive] Folder creation skipped (Drive not linked):', e.message)
+        console.warn('[Drive] Folder creation skipped:', e.message)
       );
     }
 
@@ -134,7 +285,6 @@ export function NewClaimDialog() {
     dupState === 'checking' ||
     (dupState === 'duplicate' && !confirmed);
 
-  // ─── Shared styles ─────────────────────────────────────────────
   const surveyBtn = (type: 'spot' | 'final') =>
     `flex-1 py-2 text-sm font-semibold rounded-md border transition-all ${
       surveyType === type
@@ -161,7 +311,6 @@ export function NewClaimDialog() {
 
         <CardContent className="space-y-5">
 
-          {/* ── Vehicle No Input ─────────────────────────────── */}
           <div className="space-y-2">
             <Label>Vehicle Registration No.</Label>
             <div className="relative">
@@ -175,79 +324,39 @@ export function NewClaimDialog() {
                   if (e.key === 'Enter' && !isCreateDisabled) handleCreate();
                 }}
               />
-              {/* Status icon inside input */}
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                {dupState === 'checking' && (
-                  <Loader2 size={15} className="animate-spin text-muted-foreground" />
-                )}
-                {dupState === 'clear' && (
-                  <CheckCircle2 size={15} className="text-emerald-500" />
-                )}
-                {dupState === 'duplicate' && (
-                  <AlertTriangle size={15} className="text-amber-500" />
-                )}
+                {dupState === 'checking' && <Loader2 size={15} className="animate-spin text-muted-foreground" />}
+                {dupState === 'clear'    && <CheckCircle2 size={15} className="text-emerald-500" />}
+                {dupState === 'duplicate' && <AlertTriangle size={15} className="text-amber-500" />}
               </div>
             </div>
 
-            {/* ── Duplicate warning banner ─── */}
             {dupState === 'duplicate' && (
-              <div
-                className="rounded-xl overflow-hidden border border-amber-300"
-                style={{ background: 'rgba(251,191,36,0.08)' }}
-              >
-                {/* Header */}
+              <div className="rounded-xl overflow-hidden border border-amber-300" style={{ background: 'rgba(251,191,36,0.08)' }}>
                 <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-400/10 border-b border-amber-300/40">
                   <AlertTriangle size={14} className="text-amber-500 flex-shrink-0" />
-                  <span className="text-xs font-black text-amber-700 uppercase tracking-wide">
-                    Duplicate Vehicle Number
-                  </span>
+                  <span className="text-xs font-black text-amber-700 uppercase tracking-wide">Duplicate Vehicle Number</span>
                 </div>
-
-                {/* Matches */}
                 <div className="px-4 py-2 space-y-1.5">
                   <p className="text-[11px] text-amber-800/80 mb-2 leading-snug">
                     This vehicle number already exists in your records.
-                    Different separators like dashes, dots, or spaces are treated as the same number.
                   </p>
                   {dupMatches.map(m => (
-                    <div
-                      key={m.id}
-                      className="flex items-center justify-between py-1.5 px-3 rounded-lg"
-                      style={{ background: 'rgba(251,191,36,0.12)' }}
-                    >
+                    <div key={m.id} className="flex items-center justify-between py-1.5 px-3 rounded-lg" style={{ background: 'rgba(251,191,36,0.12)' }}>
                       <div>
-                        <span className="text-xs font-black text-amber-900">
-                          {m.registrationNumber.toUpperCase()}
-                        </span>
-                        {m.reportNo && (
-                          <span className="ml-2 text-[10px] text-amber-700/70">
-                            Report: {m.reportNo}
-                          </span>
-                        )}
+                        <span className="text-xs font-black text-amber-900">{m.registrationNumber.toUpperCase()}</span>
+                        {m.reportNo && <span className="ml-2 text-[10px] text-amber-700/70">Report: {m.reportNo}</span>}
                       </div>
-                      <span
-                        className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full"
-                        style={{
-                          background: m.surveyType === 'spot'
-                            ? 'rgba(59,130,246,0.15)' : 'rgba(16,185,129,0.15)',
-                          color: m.surveyType === 'spot' ? '#2563eb' : '#059669',
-                        }}
-                      >
+                      <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full"
+                        style={{ background: m.surveyType === 'spot' ? 'rgba(59,130,246,0.15)' : 'rgba(16,185,129,0.15)', color: m.surveyType === 'spot' ? '#2563eb' : '#059669' }}>
                         {m.surveyType ?? 'claim'}
                       </span>
                     </div>
                   ))}
                 </div>
-
-                {/* Confirmation toggle */}
                 <div className="px-4 py-3 border-t border-amber-300/40">
                   <label className="flex items-start gap-2.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="mt-0.5 w-4 h-4 accent-amber-500 flex-shrink-0"
-                      checked={confirmed}
-                      onChange={e => setConfirmed(e.target.checked)}
-                    />
+                    <input type="checkbox" className="mt-0.5 w-4 h-4 accent-amber-500 flex-shrink-0" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} />
                     <span className="text-[11px] text-amber-800 font-semibold leading-snug">
                       I understand this is a duplicate entry and still want to create a new claim.
                     </span>
@@ -256,7 +365,6 @@ export function NewClaimDialog() {
               </div>
             )}
 
-            {/* ── All-clear badge ─── */}
             {dupState === 'clear' && vehicleNo.trim().length >= 4 && (
               <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 font-semibold px-1">
                 <CheckCircle2 size={12} />
@@ -265,7 +373,6 @@ export function NewClaimDialog() {
             )}
           </div>
 
-          {/* ── Survey Type ──────────────────────────────────── */}
           <div className="space-y-2">
             <Label>Survey Type</Label>
             <div className="flex gap-2">
@@ -274,29 +381,19 @@ export function NewClaimDialog() {
             </div>
           </div>
 
-          {/* ── Vehicle Type ─────────────────────────────────── */}
           <div className="space-y-2">
             <Label>Vehicle Type</Label>
             <div className="flex gap-2 text-center">
-              <button onClick={() => setVehicleType('private')} className={vtBtn('private')}>
-                Private<br/>Vehicle
-              </button>
-              <button onClick={() => setVehicleType('comm-goods')} className={vtBtn('comm-goods')}>
-                Commercial<br/>Goods
-              </button>
-              <button onClick={() => setVehicleType('comm-passenger')} className={vtBtn('comm-passenger')}>
-                Commercial<br/>Passenger
-              </button>
+              <button onClick={() => setVehicleType('private')} className={vtBtn('private')}>Private<br/>Vehicle</button>
+              <button onClick={() => setVehicleType('comm-goods')} className={vtBtn('comm-goods')}>Commercial<br/>Goods</button>
+              <button onClick={() => setVehicleType('comm-passenger')} className={vtBtn('comm-passenger')}>Commercial<br/>Passenger</button>
             </div>
           </div>
 
         </CardContent>
 
         <CardFooter className="flex justify-end gap-2 mt-2">
-          <button
-            onClick={() => setNewClaimDialogOpen(false)}
-            className="px-4 py-2 rounded-md text-sm font-semibold text-muted-foreground hover:bg-muted"
-          >
+          <button onClick={() => setNewClaimDialogOpen(false)} className="px-4 py-2 rounded-md text-sm font-semibold text-muted-foreground hover:bg-muted">
             Cancel
           </button>
           <button
@@ -304,9 +401,7 @@ export function NewClaimDialog() {
             disabled={isCreateDisabled}
             className="px-4 py-2 rounded-md text-sm font-semibold bg-primary text-primary-foreground disabled:opacity-40 transition-opacity"
           >
-            {dupState === 'duplicate' && !confirmed
-              ? 'Confirm duplicate ↑'
-              : 'Create Claim'}
+            {dupState === 'duplicate' && !confirmed ? 'Confirm duplicate ↑' : 'Create Claim'}
           </button>
         </CardFooter>
       </Card>

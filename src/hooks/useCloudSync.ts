@@ -26,7 +26,7 @@ import {
   removeSyncItem,
   getClaim,
 } from '@/lib/storage/indexeddb';
-import { flushDriveQueue, silentlyRestoreDriveToken, backupProfileToDrive, restoreProfileFromDrive } from '@/lib/drive';
+import { flushDriveQueue, silentlyRestoreDriveToken, backupProfileToDrive, restoreProfileFromDrive, getDriveToken } from '@/lib/drive';
 
 export function useCloudSync() {
   const { user, isAuthenticated } = useAuthStore();
@@ -48,7 +48,14 @@ export function useCloudSync() {
   useEffect(() => {
     if (isDriveConnected && !driveRestoreAttemptedRef.current) {
       driveRestoreAttemptedRef.current = true;
-      const attempt = () => silentlyRestoreDriveToken().catch(() => {});
+      const attempt = () => silentlyRestoreDriveToken().then(success => {
+        // If silent restore failed AND no valid token in localStorage, Drive is truly disconnected
+        if (!success && !getDriveToken()) {
+          useUIStore.getState().setDriveConnected(false);
+        }
+      }).catch(() => {
+        if (!getDriveToken()) useUIStore.getState().setDriveConnected(false);
+      });
       // @ts-ignore
       if (typeof google !== 'undefined' && google?.accounts?.oauth2) {
         attempt();
