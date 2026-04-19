@@ -6,8 +6,9 @@ service cloud.firestore {
     // Any user can be promoted to admin by setting isAdmin: true in their profile.
     // Replaces old hardcoded UID approach.
     function isAdmin() {
-      // Temporary hardcoded bypass for owner account (pniraj.india@gmail.com)
-      // while profile/current doc is being corrected. Remove once profile is fixed.
+      // Hardcoded bypass for owner account (pniraj.india@gmail.com).
+      // TODO: Verify isAdmin:true is set on this UID's Firestore profile doc,
+      // then remove this line so all admin access flows through the profile flag.
       return request.auth != null && (
         request.auth.uid == 'QCgRlZdGF3etljVitH8xq3KsTqB2' ||
         (

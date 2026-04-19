@@ -172,6 +172,11 @@ async function driveRequest(url: string, options: RequestInit = {}): Promise<Res
 
   if (!res.ok) {
     const text = await res.text().catch(() => '');
+    if (res.status === 401) {
+      // Token expired or revoked — clear connected state so the Drive gate re-engages
+      clearStoredToken();
+      useUIStore.getState().setDriveConnected(false);
+    }
     throw new Error(`Drive API error ${res.status}: ${text}`);
   }
   return res;
@@ -381,7 +386,14 @@ export async function flushDriveQueue(): Promise<number> {
 
   for (const item of items) {
     if (item.retries >= MAX_RETRIES) {
-      toast.error(`"${item.fileName}" failed after ${MAX_RETRIES} attempts — please re-upload manually.`, { duration: 8000 });
+      // Record failure in localStorage so the UI can surface a recovery prompt
+      try {
+        const key = 'surveyos_failed_uploads';
+        const existing = JSON.parse(localStorage.getItem(key) ?? '[]');
+        existing.push({ claimId: item.claimId, claimLabel: item.claimLabel, fileName: item.fileName, failedAt: new Date().toISOString() });
+        localStorage.setItem(key, JSON.stringify(existing));
+      } catch { /* localStorage full — ignore */ }
+      toast.error(`"${item.fileName}" failed after ${MAX_RETRIES} attempts. Check Settings > Failed Uploads to retry.`, { duration: 10000 });
       await removeDriveQueueItem(item.id);
       continue;
     }

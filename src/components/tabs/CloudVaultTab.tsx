@@ -33,7 +33,7 @@ export function CloudVaultTab() {
     if (!isAuthenticated || !user) return;
     setLoading(true);
     try {
-      const cloud = await pullClaimsFromCloud(user.uid);
+      const cloud = await pullClaimsFromCloud(user.uid, null);
       const local = await getAllClaims();
       setCloudClaims(cloud);
       setLocalClaims(local);

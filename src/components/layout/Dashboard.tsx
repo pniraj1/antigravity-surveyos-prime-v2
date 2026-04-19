@@ -532,7 +532,19 @@ export function DashboardContent() {
                             e.stopPropagation();
                             const fullClaim = await getClaim(claim.id);
                             if (fullClaim) {
-                              await saveClaim({ ...fullClaim, isActive: !fullClaim.isActive });
+                              const archiving = fullClaim.isActive;
+                              await saveClaim({
+                                ...fullClaim,
+                                isActive: !fullClaim.isActive,
+                                // Free ~6 MB of IndexedDB per claim when archiving.
+                                // Photos are already in Google Drive at this point.
+                                ...(archiving ? { photos: [] } : {}),
+                              });
+                              // Clear sessionStorage evidence entries for this claim
+                              if (archiving) {
+                                const docTypes = ['rc','dl','policy','fitness','permit','fir','claim','estimate','final-bill','photos'];
+                                docTypes.forEach(t => sessionStorage.removeItem(`evidence_${fullClaim.id}_${t}`));
+                              }
                               const channel = new BroadcastChannel('surveyos_claims_sync');
                               channel.postMessage('CLAIMS_UPDATED');
                               channel.close();

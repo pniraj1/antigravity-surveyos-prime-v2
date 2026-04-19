@@ -14,9 +14,11 @@ import { logger } from '@/lib/utils/logger';
 import {
   pushClaimToCloud,
   pullClaimsFromCloud,
-  syncAllLocalToCloud,
+  syncDeltaToCloud,
   pullProfileFromCloud,
   pushProfileToCloud,
+  getLastSyncTimestamp,
+  setLastSyncTimestamp,
 } from '@/lib/firebase/sync';
 import {
   addToSyncQueue,
@@ -34,6 +36,7 @@ export function useCloudSync() {
   const isSyncingFullRef = useRef(false);
   const profileSyncReadyRef = useRef(false);
   const cloudTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const profileTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isDrainingRef = useRef(false);
   const driveRestoreAttemptedRef = useRef(false);
 
@@ -45,49 +48,58 @@ export function useCloudSync() {
   useEffect(() => {
     if (isDriveConnected && !driveRestoreAttemptedRef.current) {
       driveRestoreAttemptedRef.current = true;
-      // Wait for GIS script to load (it's loaded async in the page head)
       const attempt = () => silentlyRestoreDriveToken().catch(() => {});
       // @ts-ignore
       if (typeof google !== 'undefined' && google?.accounts?.oauth2) {
         attempt();
       } else {
-        // Script not yet loaded — wait up to 5 seconds
         const timeout = setTimeout(attempt, 2000);
         return () => clearTimeout(timeout);
       }
     }
   }, [isDriveConnected]);
 
-  // ─── 1. Initial Full Sync on Login ────────────────────────
+  // ─── 1. Delta Sync on Login ───────────────────────────────
+  // Reads lastSyncTimestamp from localStorage to push/pull only claims
+  // that changed since the last successful sync. Falls back to full
+  // sync on first login on this device (timestamp is null).
   useEffect(() => {
     if (isAuthenticated && user && !isSyncingFullRef.current) {
       isSyncingFullRef.current = true;
       (async () => {
         try {
-          logger.log('[useCloudSync] Initial full sync started...');
-          
-          // 1. First attempt to restore heavy assets (signatures) and keys from Drive
+          logger.log('[useCloudSync] Login sync started...');
+
+          // Restore profile: Drive first (has signatures), then Firestore (has latest text)
           const driveProfile = await restoreProfileFromDrive();
           if (driveProfile) {
-            logger.log('[useCloudSync] Restored profile details/signatures from Google Drive.');
+            logger.log('[useCloudSync] Restored profile from Google Drive.');
             useProfileStore.getState().updateProfile(driveProfile);
           }
 
-          // 2. Then pull from Firestore (cloud Vault) to ensure latest text sync
           const remoteProfile = await pullProfileFromCloud(user.uid);
           if (!remoteProfile && !driveProfile) {
-            logger.log('[useCloudSync] No remote profile found, creating initial cloud profile.');
+            logger.log('[useCloudSync] No remote profile — pushing local profile.');
             await pushProfileToCloud(user.uid, profile);
           }
-          // Only allow Section 4 to push profile AFTER the initial pull is complete.
-          // This prevents the race condition where an empty local profile (new browser)
-          // overwrites the good Firestore profile during login.
+
+          // Allow profile useEffect (Section 4) to push changes only after initial pull.
+          // Prevents an empty new-device profile from overwriting Firestore on login.
           profileSyncReadyRef.current = true;
-          await syncAllLocalToCloud(user.uid);
-          await pullClaimsFromCloud(user.uid);
-          logger.log('[useCloudSync] Initial full sync complete.');
+
+          // Capture timestamp BEFORE sync so any claims edited during sync are caught next time
+          const sinceTimestamp = getLastSyncTimestamp(user.uid);
+          const syncStartedAt = new Date().toISOString();
+
+          await syncDeltaToCloud(user.uid, sinceTimestamp);
+          await pullClaimsFromCloud(user.uid, sinceTimestamp);
+
+          // Only update the timestamp after both push and pull succeed
+          setLastSyncTimestamp(user.uid, syncStartedAt);
+          logger.log(`[useCloudSync] Login sync complete. Next sync will be delta from ${syncStartedAt}.`);
         } catch (err) {
-          logger.error('[useCloudSync] Initial sync failed:', err);
+          logger.error('[useCloudSync] Login sync failed:', err);
+          // Reset so next login retries rather than skipping
           isSyncingFullRef.current = false;
         }
       })();
@@ -97,7 +109,7 @@ export function useCloudSync() {
     }
   }, [isAuthenticated, user]);
 
-  // ─── 2. Layer 2: Debounced Firestore Push ─────────────────
+  // ─── 2. Debounced Firestore Push on Claim Save ────────────
   // Fires 2s after claim becomes "clean" (IndexedDB already saved)
   useEffect(() => {
     if (!isAuthenticated || !user || !currentClaim || isDirty) return;
@@ -112,13 +124,11 @@ export function useCloudSync() {
           setSaveStatus('saved');
           logger.log(`[useCloudSync] Pushed claim ${currentClaim.id} to Firestore.`);
         } else {
-          // Offline — add to the sync queue for retry on reconnect
           await addToSyncQueue('claim-backup', { claimId: currentClaim.id, uid: user.uid });
           setSaveStatus('queued');
           logger.log(`[useCloudSync] Offline — claim ${currentClaim.id} queued for sync.`);
         }
       } catch (err) {
-        // Network error mid-push — queue it
         logger.error('[useCloudSync] Cloud push failed, queuing:', err);
         await addToSyncQueue('claim-backup', { claimId: currentClaim.id, uid: user.uid });
         setSaveStatus('queued');
@@ -130,7 +140,7 @@ export function useCloudSync() {
     };
   }, [isAuthenticated, user, currentClaim, isDirty, isOnline, setSaveStatus]);
 
-  // ─── 3. Layer 3: Drain Sync Queue on Reconnect ────────────
+  // ─── 3. Drain Sync Queue on Reconnect ────────────────────
   useEffect(() => {
     if (!isAuthenticated || !user || !isOnline || isDrainingRef.current) return;
 
@@ -151,19 +161,16 @@ export function useCloudSync() {
         for (const item of claimItems) {
           try {
             const payload = item.payload as { claimId: string; uid: string };
-            // Fetch the full claim from IndexedDB (has latest data including photos locally)
             const claim = await getClaim(payload.claimId);
             if (claim) {
               await pushClaimToCloud(payload.uid, claim);
               await removeSyncItem(item.id);
               logger.log(`[useCloudSync] Queue item ${item.id} synced and removed.`);
             } else {
-              // Claim no longer exists locally — remove orphaned queue item
               await removeSyncItem(item.id);
             }
           } catch (err) {
             logger.error(`[useCloudSync] Failed to drain item ${item.id}:`, err);
-            // Leave it in the queue for next reconnect
           }
         }
 
@@ -175,25 +182,34 @@ export function useCloudSync() {
         isDrainingRef.current = false;
       }
 
-      // Also drain any pending Drive uploads
       flushDriveQueue().catch(err => {
         logger.error('[useCloudSync] Drive queue drain failed:', err);
       });
     })();
   }, [isOnline, isAuthenticated, user, setSaveStatus]);
 
-  // ─── 4. Profile Sync on Profile Changes ───────────────────
+  // ─── 4. Debounced Profile Sync on Profile Changes ─────────
   // Only fires after the initial pull completes (profileSyncReadyRef = true).
-  // This prevents a new browser's empty profile from overwriting Firestore.
+  // Debounced 3s to avoid a write storm while the user types in profile fields.
   useEffect(() => {
-    if (isAuthenticated && user && profile && profileSyncReadyRef.current) {
+    if (!isAuthenticated || !user || !profile || !profileSyncReadyRef.current) return;
+
+    if (profileTimerRef.current) clearTimeout(profileTimerRef.current);
+
+    profileTimerRef.current = setTimeout(() => {
       pushProfileToCloud(user.uid, profile).catch(err => {
         logger.error('[useCloudSync] Profile cloud push failed:', err);
       });
-      // Also backup the full profile (including signatures) to Google Drive
+      // SECURITY NOTE: backupProfileToDrive writes API keys to the user's own Drive.
+      // This is intentional for multi-device restore. See sync.ts pushProfileToCloud
+      // for the full security note.
       backupProfileToDrive(profile).catch(err => {
         logger.error('[useCloudSync] Profile drive backup failed:', err);
       });
-    }
+    }, 3000);
+
+    return () => {
+      if (profileTimerRef.current) clearTimeout(profileTimerRef.current);
+    };
   }, [isAuthenticated, user, profile]);
 }

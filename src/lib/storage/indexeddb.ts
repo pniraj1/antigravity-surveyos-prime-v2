@@ -260,11 +260,24 @@ async function migrateFromLegacyDB(uid: string): Promise<void> {
  * Save or update a claim in the current user's database.
  * Automatically updates `updatedAt` and notifies other tabs via BroadcastChannel.
  */
+export class StorageFullError extends Error {
+  constructor() {
+    super('STORAGE_QUOTA_EXCEEDED');
+    this.name = 'StorageFullError';
+  }
+}
+
 export async function saveClaim(claim: ClaimData): Promise<void> {
   const db = await getDB();
-  await db.put('claims', { ...claim, updatedAt: new Date().toISOString() });
+  try {
+    await db.put('claims', { ...claim, updatedAt: new Date().toISOString() });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'QuotaExceededError') {
+      throw new StorageFullError();
+    }
+    throw err;
+  }
 
-  // Notify other open tabs so their claim lists refresh
   try {
     const channel = new BroadcastChannel('surveyos_claims_sync');
     channel.postMessage('CLAIMS_UPDATED');
@@ -325,10 +338,20 @@ export async function removeSyncItem(id: string): Promise<void> {
 // Files are stored as ArrayBuffer so IndexedDB can serialise them.
 // Drained automatically by flushDriveQueue() in src/lib/drive/index.ts.
 
+const DRIVE_QUEUE_SIZE_LIMIT = 500 * 1024 * 1024; // 500 MB
+
 export async function addToDriveQueue(
   item: Omit<DriveQueueItem, 'id' | 'createdAt' | 'retries'>
 ): Promise<void> {
   const db = await getDB();
+
+  const existing = await db.getAll('driveQueue');
+  const totalBytes = existing.reduce((sum, q) => sum + q.fileData.byteLength, 0);
+  if (totalBytes + item.fileData.byteLength > DRIVE_QUEUE_SIZE_LIMIT) {
+    console.warn('[DriveQueue] Queue exceeds 500 MB — Drive may not be syncing. Item rejected:', item.fileName);
+    throw new Error('DRIVE_QUEUE_FULL');
+  }
+
   await db.put('driveQueue', {
     ...item,
     id: `drive-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,

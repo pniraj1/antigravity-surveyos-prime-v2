@@ -5,12 +5,31 @@
 // Uses "Latest Update Wins" (updatedAt) approach
 // ═══════════════════════════════════════════════════════════
 
-import { doc, setDoc, getDoc, collection, query, getDocs, writeBatch } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from './config';
 import { ClaimData, SurveyorProfile } from '@/types';
 import { getAllClaims, saveClaim } from '../storage/indexeddb';
 import { useProfileStore } from '@/stores/profile-store';
 import { logger } from '../utils/logger';
+
+const LAST_SYNC_KEY_PREFIX = 'surveyos_last_sync_';
+const BATCH_SIZE = 499;
+
+/**
+ * Returns the ISO timestamp of the last successful cloud sync for this user.
+ * null = never synced (full sync required).
+ */
+export function getLastSyncTimestamp(uid: string): string | null {
+  return localStorage.getItem(`${LAST_SYNC_KEY_PREFIX}${uid}`);
+}
+
+/**
+ * Records a successful sync completion time.
+ * Call this after both push and pull succeed.
+ */
+export function setLastSyncTimestamp(uid: string, timestamp: string): void {
+  localStorage.setItem(`${LAST_SYNC_KEY_PREFIX}${uid}`, timestamp);
+}
 
 /**
  * Strips photos from a claim before writing to Firestore.
@@ -24,21 +43,12 @@ function stripPhotos(claim: ClaimData): Omit<ClaimData, 'photos'> & { photos: []
 }
 
 /**
- * Pushes a local claim to Firestore (without photos).
+ * Pushes a single local claim to Firestore (without photos).
+ * Used by the 2s debounced auto-save in useCloudSync.
+ * No conflict check — debounced saves always win (last write wins).
  */
 export async function pushClaimToCloud(uid: string, claim: ClaimData) {
   const claimRef = doc(db, `users/${uid}/claims`, claim.id);
-  
-  // Before pushing, check if cloud has a newer version (conflict resolution)
-  const cloudSnap = await getDoc(claimRef);
-  if (cloudSnap.exists()) {
-    const cloudData = cloudSnap.data() as ClaimData;
-    if (new Date(cloudData.updatedAt) > new Date(claim.updatedAt)) {
-      logger.warn(`[Sync] Skipping push for ${claim.id}. Cloud version is newer.`);
-      return cloudData;
-    }
-  }
-
   const payload = stripPhotos(claim);
   await setDoc(claimRef, { ...payload, ownerId: uid });
   logger.log(`[Sync] Pushed claim ${claim.id} to cloud (photos excluded).`);
@@ -46,45 +56,69 @@ export async function pushClaimToCloud(uid: string, claim: ClaimData) {
 }
 
 /**
- * Syncs all local claims to cloud (First Login Migration).
- * Also excludes photos from cloud storage.
+ * Delta sync: pushes only claims changed since the last sync.
+ * Falls back to full push if sinceTimestamp is null (first login on this device).
+ * Batches writes in groups of 499 to stay within Firestore's batch limit.
  */
-export async function syncAllLocalToCloud(uid: string) {
+export async function syncDeltaToCloud(uid: string, sinceTimestamp: string | null) {
   const localClaims = await getAllClaims();
-  if (localClaims.length === 0) return;
+  const changed = sinceTimestamp
+    ? localClaims.filter(c => c.updatedAt > sinceTimestamp)
+    : localClaims;
 
-  logger.log(`[Sync] Starting migration of ${localClaims.length} claims for user ${uid}...`);
-  const batch = writeBatch(db);
-  
-  for (const claim of localClaims) {
-    const claimRef = doc(db, `users/${uid}/claims`, claim.id);
-    batch.set(claimRef, { ...stripPhotos(claim), ownerId: uid });
+  if (changed.length === 0) {
+    logger.log('[Sync] Delta push: no local changes since last sync.');
+    return;
   }
 
-  await batch.commit();
-  logger.log('[Sync] All local claims successfully backed up to cloud (photos kept local).');
+  logger.log(`[Sync] Delta push: ${changed.length} claim(s) changed since ${sinceTimestamp ?? 'never'}.`);
+
+  for (let i = 0; i < changed.length; i += BATCH_SIZE) {
+    const chunk = changed.slice(i, i + BATCH_SIZE);
+    const batch = writeBatch(db);
+    for (const claim of chunk) {
+      const claimRef = doc(db, `users/${uid}/claims`, claim.id);
+      batch.set(claimRef, { ...stripPhotos(claim), ownerId: uid });
+    }
+    await batch.commit();
+    logger.log(`[Sync] Delta push: committed batch ${Math.floor(i / BATCH_SIZE) + 1} (${chunk.length} claims).`);
+  }
+
+  logger.log(`[Sync] Delta push complete (${changed.length} claims).`);
 }
 
 /**
- * Pulls all claims from cloud for the current user.
- * Reconciles local data: Only overwrites if cloud is newer.
- * NOTE: Cloud docs won't have photos — local photos are preserved.
+ * Pulls claims from Firestore that changed since sinceTimestamp.
+ * Falls back to full pull if sinceTimestamp is null (first login on this device).
+ * Reconciles with local: only overwrites if cloud version is newer.
+ * Local photos are always preserved (cloud never stores them).
  */
-export async function pullClaimsFromCloud(uid: string) {
+export async function pullClaimsFromCloud(uid: string, sinceTimestamp: string | null) {
   const claimsRef = collection(db, `users/${uid}/claims`);
-  const q = query(claimsRef);
+  const q = sinceTimestamp
+    ? query(claimsRef, where('updatedAt', '>', sinceTimestamp))
+    : query(claimsRef);
   const querySnap = await getDocs(q);
 
   const remoteClaims: ClaimData[] = [];
-  querySnap.forEach((doc) => {
-    remoteClaims.push(doc.data() as ClaimData);
+  querySnap.forEach((d) => {
+    remoteClaims.push(d.data() as ClaimData);
   });
 
+  if (remoteClaims.length === 0) {
+    logger.log('[Sync] Pull: no remote changes since last sync.');
+    return remoteClaims;
+  }
+
+  logger.log(`[Sync] Pull: merging ${remoteClaims.length} claim(s) from cloud.`);
+
+  // Hoist getAllClaims() once — avoids O(n²) from calling inside the loop
+  const localList = await getAllClaims();
+  const localMap = new Map(localList.map(c => [c.id, c]));
+
   for (const remote of remoteClaims) {
-    const localList = await getAllClaims();
-    const local = localList.find(c => c.id === remote.id);
-    if (!local || new Date(remote.updatedAt) > new Date(local.updatedAt)) {
-      // Preserve local photos if they exist — don't overwrite with empty array from cloud
+    const local = localMap.get(remote.id);
+    if (!local || remote.updatedAt > local.updatedAt) {
       const mergedClaim: ClaimData = {
         ...remote,
         photos: local?.photos ?? [],
@@ -105,19 +139,22 @@ export async function pullClaimsFromCloud(uid: string) {
  * Pushes the current profile to Firestore.
  * signatureDataUrl and stampDataUrl are stripped — large base64 blobs are
  * kept locally only (same pattern as claim photos).
+ * SECURITY NOTE: geminiApiKeys and groqApiKeys are included in the cloud backup
+ * intentionally — they enable multi-device restore. Access is restricted to the
+ * owner UID by firestore.rules. If Firebase console access is ever shared with
+ * team members, consider encrypting these fields before storage.
  */
 export async function pushProfileToCloud(uid: string, profile: SurveyorProfile) {
   const profileRef = doc(db, `users/${uid}/profile`, 'current');
-  // Only strip the heavy base64 strings so we don't blow up Firebase quotas
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { 
-    signatureDataUrl: _sig, 
+  const {
+    signatureDataUrl: _sig,
     stampDataUrl: _stamp,
-    ...cloudProfile 
+    ...cloudProfile
   } = profile;
-  
+
   await setDoc(profileRef, { ...cloudProfile, ownerId: uid }, { merge: true });
-  logger.log(`[Sync] Profile pushed to cloud for user ${uid} (API keys included, signatures excluded).`);
+  logger.log(`[Sync] Profile pushed to cloud for user ${uid}.`);
 }
 
 /**
@@ -127,19 +164,18 @@ export async function pushProfileToCloud(uid: string, profile: SurveyorProfile) 
  */
 export async function pullProfileFromCloud(uid: string) {
   const profileRef = doc(db, `users/${uid}/profile`, 'current');
-  const snap = await getDoc(profileRef);
+  const profileSnap = await getDoc(profileRef);
 
-  if (snap.exists()) {
-    const remoteProfile = snap.data() as SurveyorProfile;
+  if (profileSnap.exists()) {
+    const remoteProfile = profileSnap.data() as SurveyorProfile;
     const local = useProfileStore.getState().profile;
-    
-    // Merge cloud data but KEEP local signatures since they aren't kept in Vault
+
     useProfileStore.getState().updateProfile({
       ...remoteProfile,
       signatureDataUrl: local.signatureDataUrl,
       stampDataUrl: local.stampDataUrl,
     });
-    
+
     logger.log(`[Sync] Local profile updated from cloud for user ${uid}.`);
     return remoteProfile;
   }

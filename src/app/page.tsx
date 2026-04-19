@@ -2,9 +2,11 @@
 
 import React from 'react';
 import { useAuthStore } from '@/stores/auth-store';
+import { useUIStore } from '@/stores/ui-store';
 import { useClaimsLoader } from '@/hooks/useClaimsLoader';
 import LandingPage from './landing/page';
 import Dashboard from '@/components/layout/Dashboard';
+import { DriveGateScreen } from '@/components/auth/DriveGateScreen';
 
 /**
  * SurveyOS Root Router
@@ -14,6 +16,7 @@ import Dashboard from '@/components/layout/Dashboard';
  */
 export default function Home() {
   const { isAuthenticated, loading } = useAuthStore();
+  const { isDriveConnected } = useUIStore();
   
   // Hydrate claims list and sync across tabs
   useClaimsLoader();
@@ -38,6 +41,11 @@ export default function Home() {
     return <LandingPage />;
   }
 
-  // Authenticated users enter the main app
+  // Drive must be linked before accessing the dashboard
+  if (!isDriveConnected) {
+    return <DriveGateScreen />;
+  }
+
+  // Authenticated + Drive linked — enter the main app
   return <Dashboard />;
 }
