@@ -1,11 +1,11 @@
 // ═══════════════════════════════════════════════════════════
 // CLOUD SYNC HOOK — Layer 2 (Firestore) + Layer 3 (Queue Drain)
-// - Pushes clean claims to Firestore with 2s debounce
-// - Queues failed pushes when offline
-// - Drains the queue automatically on reconnect
+// - Pushes to Firestore only on milestones (tab switch, claim switch, page close)
+// - Queues failed pushes when offline; drains automatically on reconnect
 // ═══════════════════════════════════════════════════════════
 
 import { useEffect, useRef } from 'react';
+import type { ClaimData } from '@/types';
 import { useAuthStore } from '@/stores/auth-store';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
@@ -30,15 +30,57 @@ import { flushDriveQueue, silentlyRestoreDriveToken, backupProfileToDrive, resto
 
 export function useCloudSync() {
   const { user, isAuthenticated } = useAuthStore();
-  const { currentClaim, isDirty } = useClaimStore();
+  const { currentClaim } = useClaimStore();
   const { profile } = useProfileStore();
-  const { isOnline, setSaveStatus } = useUIStore();
+  const { isOnline, setSaveStatus, activeTab } = useUIStore();
   const isSyncingFullRef = useRef(false);
   const profileSyncReadyRef = useRef(false);
-  const cloudTimerRef = useRef<NodeJS.Timeout | null>(null);
   const profileTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isDrainingRef = useRef(false);
   const driveRestoreAttemptedRef = useRef(false);
+
+  // Always-fresh refs — safe to read inside effects with stable deps
+  const currentClaimRef = useRef<ClaimData | null>(currentClaim);
+  const prevClaimRef = useRef<ClaimData | null>(null);
+  const userRef = useRef(user);
+  const isAuthRef = useRef(isAuthenticated);
+  currentClaimRef.current = currentClaim;
+  userRef.current = user;
+  isAuthRef.current = isAuthenticated;
+
+  // Stable ref to the milestone push fn (avoids stale closures in effects)
+  const milestonePushRef = useRef(async (_claim: ClaimData, _uid: string) => {});
+  milestonePushRef.current = async (claim: ClaimData, uid: string) => {
+    if (!navigator.onLine) {
+      await addToSyncQueue('claim-backup', { claimId: claim.id, uid });
+      setSaveStatus('queued');
+      logger.log(`[useCloudSync] Offline — claim ${claim.id} queued.`);
+      return;
+    }
+    setSaveStatus('saving');
+    try {
+      await pushClaimToCloud(uid, claim);
+      setSaveStatus('saved');
+      logger.log(`[useCloudSync] Milestone push: claim ${claim.id}`);
+    } catch (err) {
+      logger.error('[useCloudSync] Milestone push failed:', err);
+      await addToSyncQueue('claim-backup', { claimId: claim.id, uid });
+      setSaveStatus('queued');
+    }
+  };
+
+  // ─── Online/offline → store sync ─────────────────────────
+  useEffect(() => {
+    const { setOnline } = useUIStore.getState();
+    const onOnline  = () => setOnline(true);
+    const onOffline = () => setOnline(false);
+    window.addEventListener('online',  onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => {
+      window.removeEventListener('online',  onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
+  }, []);
 
   // ─── 0. Silent Drive token restore on page load ───────────
   // If Drive was linked in a previous session (isDriveConnected persisted in
@@ -116,36 +158,40 @@ export function useCloudSync() {
     }
   }, [isAuthenticated, user]);
 
-  // ─── 2. Debounced Firestore Push on Claim Save ────────────
-  // Fires 2s after claim becomes "clean" (IndexedDB already saved)
+  // ─── 2a. Milestone: Tab switch ───────────────────────────
+  // Push current claim whenever the surveyor moves to a different tab.
+  const tabInitRef = useRef(false);
   useEffect(() => {
-    if (!isAuthenticated || !user || !currentClaim || isDirty) return;
+    if (!tabInitRef.current) { tabInitRef.current = true; return; } // skip mount
+    const claim = currentClaimRef.current;
+    const uid = userRef.current?.uid;
+    if (!claim || !uid || !isAuthRef.current) return;
+    milestonePushRef.current(claim, uid);
+  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    if (cloudTimerRef.current) clearTimeout(cloudTimerRef.current);
+  // ─── 2b. Milestone: Claim switch ────────────────────────
+  // Push the claim being left when the surveyor opens a different claim.
+  useEffect(() => {
+    const prev = prevClaimRef.current;
+    prevClaimRef.current = currentClaim;
+    if (!prev || prev.id === currentClaim?.id) return;
+    const uid = userRef.current?.uid;
+    if (!uid || !isAuthRef.current) return;
+    milestonePushRef.current(prev, uid);
+  }, [currentClaim?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    cloudTimerRef.current = setTimeout(async () => {
-      setSaveStatus('saving');
-      try {
-        if (isOnline) {
-          await pushClaimToCloud(user.uid, currentClaim);
-          setSaveStatus('saved');
-          logger.log(`[useCloudSync] Pushed claim ${currentClaim.id} to Firestore.`);
-        } else {
-          await addToSyncQueue('claim-backup', { claimId: currentClaim.id, uid: user.uid });
-          setSaveStatus('queued');
-          logger.log(`[useCloudSync] Offline — claim ${currentClaim.id} queued for sync.`);
-        }
-      } catch (err) {
-        logger.error('[useCloudSync] Cloud push failed, queuing:', err);
-        await addToSyncQueue('claim-backup', { claimId: currentClaim.id, uid: user.uid });
-        setSaveStatus('queued');
-      }
-    }, 2000);
-
-    return () => {
-      if (cloudTimerRef.current) clearTimeout(cloudTimerRef.current);
+  // ─── 2c. Milestone: Page close / refresh ────────────────
+  // Queue for next-login drain (can't await async in beforeunload).
+  useEffect(() => {
+    const handler = () => {
+      const claim = currentClaimRef.current;
+      const uid = userRef.current?.uid;
+      if (!claim || !uid) return;
+      addToSyncQueue('claim-backup', { claimId: claim.id, uid }).catch(() => {});
     };
-  }, [isAuthenticated, user, currentClaim, isDirty, isOnline, setSaveStatus]);
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, []);
 
   // ─── 3. Drain Sync Queue on Reconnect ────────────────────
   useEffect(() => {

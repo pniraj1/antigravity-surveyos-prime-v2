@@ -3,6 +3,7 @@
 import { useClaimStore } from '@/stores/claim-store';
 import { AssessmentGrid } from '@/components/claim/AssessmentGrid';
 import { AssessmentSummary } from '@/components/claim/AssessmentSummary';
+import { TotalLossForm } from '@/components/claim/TotalLossForm';
 import { Label } from '@/components/ui/label';
 
 export function AssessmentTab() {
@@ -44,6 +45,10 @@ export function AssessmentTab() {
         <div className="lg:col-span-4 xl:col-span-3">
           <AssessmentSummary />
         </div>
+      </div>
+
+      <div className="mt-8">
+        <TotalLossForm />
       </div>
     </div>
   );

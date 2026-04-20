@@ -31,15 +31,24 @@ export function setLastSyncTimestamp(uid: string, timestamp: string): void {
   localStorage.setItem(`${LAST_SYNC_KEY_PREFIX}${uid}`, timestamp);
 }
 
+/** Recursively replaces undefined values with null for Firestore compatibility. */
+function sanitize<T>(obj: T): T {
+  if (obj === undefined) return null as unknown as T;
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(sanitize) as unknown as T;
+  return Object.fromEntries(
+    Object.entries(obj as Record<string, unknown>).map(([k, v]) => [k, sanitize(v)])
+  ) as T;
+}
+
 /**
  * Strips photos from a claim before writing to Firestore.
- * Photos are base64 data URLs that can easily exceed Firestore's 1MB doc limit.
- * They remain safely in IndexedDB (local) only.
+ * Also sanitizes undefined → null (Firestore rejects undefined values).
  */
 function stripPhotos(claim: ClaimData): Omit<ClaimData, 'photos'> & { photos: [] } {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { photos: _photos, ...rest } = claim;
-  return { ...rest, photos: [] };
+  return sanitize({ ...rest, photos: [] }) as Omit<ClaimData, 'photos'> & { photos: [] };
 }
 
 /**

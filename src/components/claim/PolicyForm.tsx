@@ -14,6 +14,8 @@ function EvidenceDot({ has }: { has: boolean }) {
   return <span title="Click field to view source document"><Eye size={10} className="inline ml-1 opacity-50 text-blue-400" /></span>;
 }
 
+const r = (v: any) => !v ? 'border-red-400' : '';
+
 export function PolicyDetailsForm() {
   const { currentClaim, updatePolicy } = useClaimStore();
   const { triggerField, hasEvidence } = useFieldEvidence();
@@ -35,6 +37,7 @@ export function PolicyDetailsForm() {
               value={p?.insurerName || ''}
               onChange={(e) => updatePolicy({ insurerName: e.target.value })}
               onFocus={() => triggerField('insurerName')}
+              className={r(p?.insurerName)}
             />
           </div>
 
@@ -45,6 +48,7 @@ export function PolicyDetailsForm() {
               value={p?.policyNumber || ''}
               onChange={(e) => updatePolicy({ policyNumber: e.target.value })}
               onFocus={() => triggerField('policyNumber')}
+              className={r(p?.policyNumber)}
             />
           </div>
 
@@ -55,6 +59,7 @@ export function PolicyDetailsForm() {
               value={p?.claimNumber || ''}
               onChange={(e) => updatePolicy({ claimNumber: e.target.value })}
               onFocus={() => triggerField('claimNumber')}
+              className={r(p?.claimNumber)}
             />
           </div>
 
@@ -65,7 +70,7 @@ export function PolicyDetailsForm() {
               value={p?.policyType || ''}
               onChange={(e) => updatePolicy({ policyType: e.target.value })}
               onFocus={() => triggerField('policyType')}
-              className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className={`flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm ${r(p?.policyType)}`}
             >
               <option value="">Select Type</option>
               {['Comprehensive', 'Third Party', 'Standalone OD', 'Package', 'Commercial Comprehensive', 'Commercial TP'].map(opt => (
@@ -82,6 +87,7 @@ export function PolicyDetailsForm() {
               value={p?.periodFrom || ''}
               onChange={(e) => updatePolicy({ periodFrom: e.target.value })}
               onFocus={() => triggerField('periodFrom')}
+              className={r(p?.periodFrom)}
             />
           </div>
 
@@ -93,6 +99,7 @@ export function PolicyDetailsForm() {
               value={p?.periodTo || ''}
               onChange={(e) => updatePolicy({ periodTo: e.target.value })}
               onFocus={() => triggerField('periodTo')}
+              className={r(p?.periodTo)}
             />
           </div>
 
@@ -105,6 +112,7 @@ export function PolicyDetailsForm() {
               onChange={(e) => updatePolicy({ idv: e.target.value })}
               onFocus={() => triggerField('idv')}
               placeholder="0.00"
+              className={r(p?.idv)}
             />
           </div>
 
@@ -115,6 +123,7 @@ export function PolicyDetailsForm() {
               value={p?.insuredName || ''}
               onChange={(e) => updatePolicy({ insuredName: e.target.value })}
               onFocus={() => triggerField('insuredName')}
+              className={r(p?.insuredName)}
             />
           </div>
 
@@ -125,6 +134,7 @@ export function PolicyDetailsForm() {
               value={p?.insuredAddress || ''}
               onChange={(e) => updatePolicy({ insuredAddress: e.target.value })}
               onFocus={() => triggerField('insuredAddress')}
+              className={r(p?.insuredAddress)}
             />
           </div>
 
@@ -135,6 +145,7 @@ export function PolicyDetailsForm() {
               value={p?.insuredMobile || ''}
               onChange={(e) => updatePolicy({ insuredMobile: e.target.value })}
               onFocus={() => triggerField('insuredMobile')}
+              className={r(p?.insuredMobile)}
             />
           </div>
 
@@ -145,19 +156,20 @@ export function PolicyDetailsForm() {
               value={p?.policyIssuingOffice || ''}
               onChange={(e) => updatePolicy({ policyIssuingOffice: e.target.value })}
               onFocus={() => triggerField('policyIssuingOffice')}
+              className={r(p?.policyIssuingOffice)}
             />
           </div>
 
           <div className="space-y-1">
             <Label htmlFor="p-appoint">
               Appointing Office<S />
-              {/* NOTE: This field is manual-only — no AI evidence dot shown */}
             </Label>
             <Input
               id="p-appoint"
               value={p?.appointingOffice || ''}
               onChange={(e) => updatePolicy({ appointingOffice: e.target.value })}
               placeholder="Enter manually"
+              className={r(p?.appointingOffice)}
             />
           </div>
 
@@ -168,6 +180,7 @@ export function PolicyDetailsForm() {
               value={p?.hpaWith || p?.hpa || ''}
               onChange={(e) => updatePolicy({ hpaWith: e.target.value, hpa: e.target.value })}
               onFocus={() => triggerField('hpaWith')}
+              className={r(p?.hpaWith || p?.hpa)}
             />
           </div>
         </div>

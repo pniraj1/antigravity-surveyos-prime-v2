@@ -14,7 +14,7 @@
  *   printLabel – Label on the print button (default "Print / Export").
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { Printer, FileText } from 'lucide-react';
 
 interface ReportPreviewPanelProps {
@@ -66,10 +66,32 @@ export function ReportPreviewPanel({
   title = 'Live Report Preview',
   printLabel = 'Print / Export',
 }: ReportPreviewPanelProps) {
+  const [height, setHeight] = useState(520);
+  const containerRef = useRef<HTMLDivElement>(null);
   const srcDoc = useMemo(() => (html ? wrapInDocument(html) : ''), [html]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    const startY = e.clientY;
+    const startHeight = height;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const delta = moveEvent.clientY - startY;
+      const newHeight = Math.max(300, startHeight + delta);
+      setHeight(newHeight);
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
 
   return (
     <div
+      ref={containerRef}
       className="rounded-2xl overflow-hidden"
       style={{ background: '#FFFFFF', border: '1px solid #E2E6EA' }}
     >
@@ -101,7 +123,7 @@ export function ReportPreviewPanel({
       <div
         style={{
           background: '#E8EAED',
-          height: 520,
+          height,
           overflow: 'hidden',
           position: 'relative',
         }}
@@ -114,10 +136,9 @@ export function ReportPreviewPanel({
             style={{
               border: 'none',
               display: 'block',
-              /* zoom shrinks 210mm (~794px) A4 to fit the 420px panel */
               zoom: 0.52,
               width: '210mm',
-              height: '1400px',
+              height: `${Math.ceil(height / 0.52) + 400}px`,
               transformOrigin: 'top left',
             }}
           />
@@ -131,6 +152,28 @@ export function ReportPreviewPanel({
             </p>
           </div>
         )}
+      </div>
+
+      {/* ── Resize handle ── */}
+      <div
+        onMouseDown={handleMouseDown}
+        style={{
+          height: 14,
+          cursor: 'ns-resize',
+          background: '#0D1B2A',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 4,
+          userSelect: 'none',
+        }}
+      >
+        {[0, 1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            style={{ width: 4, height: 4, borderRadius: '50%', background: '#D4AF37', opacity: 0.5 }}
+          />
+        ))}
       </div>
     </div>
   );

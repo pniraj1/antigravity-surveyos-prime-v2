@@ -15,6 +15,8 @@ function EvidenceDot({ has }: { has: boolean }) {
   return <span title="Click field to view source document"><Eye size={10} className="inline ml-1 opacity-50 text-blue-400" /></span>;
 }
 
+const r = (v: any) => !v ? 'border-red-400' : '';
+
 export function DriverDetailsForm() {
   const { currentClaim, updateDriver } = useClaimStore();
   const { triggerField, hasEvidence } = useFieldEvidence();
@@ -36,7 +38,7 @@ export function DriverDetailsForm() {
               value={d?.name || ''}
               onChange={(e) => updateDriver({ name: e.target.value })}
               onFocus={() => triggerField('name')}
-              className="uppercase"
+              className={`uppercase ${r(d?.name)}`}
             />
           </div>
 
@@ -62,7 +64,7 @@ export function DriverDetailsForm() {
               value={d?.parentName || ''}
               onChange={(e) => updateDriver({ parentName: e.target.value })}
               onFocus={() => triggerField('parentName')}
-              className="uppercase"
+              className={`uppercase ${r(d?.parentName)}`}
             />
           </div>
 
@@ -73,7 +75,7 @@ export function DriverDetailsForm() {
               value={d?.licenceNumber || ''}
               onChange={(e) => updateDriver({ licenceNumber: e.target.value.toUpperCase() })}
               onFocus={() => triggerField('licenceNumber')}
-              className="uppercase"
+              className={`uppercase ${r(d?.licenceNumber)}`}
             />
           </div>
 
@@ -85,6 +87,7 @@ export function DriverDetailsForm() {
               value={d?.dateOfBirth || ''}
               onChange={(e) => updateDriver({ dateOfBirth: e.target.value })}
               onFocus={() => triggerField('dateOfBirth')}
+              className={r(d?.dateOfBirth)}
             />
           </div>
 
@@ -96,6 +99,7 @@ export function DriverDetailsForm() {
               value={d?.dateOfIssue || ''}
               onChange={(e) => updateDriver({ dateOfIssue: e.target.value })}
               onFocus={() => triggerField('dateOfIssue')}
+              className={r(d?.dateOfIssue)}
             />
           </div>
 
@@ -106,7 +110,7 @@ export function DriverDetailsForm() {
               value={d?.issuingAuthority || ''}
               onChange={(e) => updateDriver({ issuingAuthority: e.target.value.toUpperCase() })}
               onFocus={() => triggerField('issuingAuthority')}
-              className="uppercase"
+              className={`uppercase ${r(d?.issuingAuthority)}`}
             />
           </div>
 
@@ -118,6 +122,7 @@ export function DriverDetailsForm() {
               onChange={(e) => updateDriver({ vehicleClasses: e.target.value })}
               onFocus={() => triggerField('vehicleClasses')}
               placeholder="e.g. LMV-NT, MCWG"
+              className={r(d?.vehicleClasses)}
             />
           </div>
 
@@ -129,6 +134,7 @@ export function DriverDetailsForm() {
               value={d?.validityNonTransport || ''}
               onChange={(e) => updateDriver({ validityNonTransport: e.target.value })}
               onFocus={() => triggerField('validityNonTransport')}
+              className={r(d?.validityNonTransport)}
             />
           </div>
 
@@ -140,6 +146,7 @@ export function DriverDetailsForm() {
               value={d?.validityTransport || ''}
               onChange={(e) => updateDriver({ validityTransport: e.target.value })}
               onFocus={() => triggerField('validityTransport')}
+              className={r(d?.validityTransport)}
             />
           </div>
 
@@ -150,6 +157,7 @@ export function DriverDetailsForm() {
               value={d?.badgeNumber || ''}
               onChange={(e) => updateDriver({ badgeNumber: e.target.value.toUpperCase() })}
               placeholder="e.g. 123456"
+              className={r(d?.badgeNumber)}
             />
           </div>
 
@@ -160,6 +168,7 @@ export function DriverDetailsForm() {
               type="date"
               value={d?.verificationDate || ''}
               onChange={(e) => updateDriver({ verificationDate: e.target.value })}
+              className={r(d?.verificationDate)}
             />
           </div>
 

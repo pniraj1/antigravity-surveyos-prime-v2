@@ -19,7 +19,7 @@ export function AuthSyncWrapper({ children }: { children: React.ReactNode }) {
   useAuth();
   
   useCloudSync();
-  useAutoSave(2000); // 2s debounce before cloud push
+  useAutoSave();
 
   const currentClaimId = useUIStore((state) => state.currentClaimId);
   const currentClaim = useClaimStore((state) => state.currentClaim);

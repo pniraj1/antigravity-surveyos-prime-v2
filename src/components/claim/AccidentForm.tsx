@@ -5,6 +5,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
+const r = (v: any) => !v ? 'border-red-400' : '';
+
 export function AccidentDetailsForm() {
   const { currentClaim, updateAccident } = useClaimStore();
 
@@ -25,6 +27,7 @@ export function AccidentDetailsForm() {
               type="datetime-local"
               value={a?.dateAndTime || ''}
               onChange={(e) => updateAccident({ dateAndTime: e.target.value })}
+              className={r(a?.dateAndTime)}
             />
           </div>
 
@@ -34,6 +37,7 @@ export function AccidentDetailsForm() {
               id="a-place"
               value={a?.placeOfAccident || ''}
               onChange={(e) => updateAccident({ placeOfAccident: e.target.value })}
+              className={r(a?.placeOfAccident)}
             />
           </div>
 
@@ -43,6 +47,7 @@ export function AccidentDetailsForm() {
               id="a-cause"
               value={a?.causeOfAccident || ''}
               onChange={(e) => updateAccident({ causeOfAccident: e.target.value })}
+              className={r(a?.causeOfAccident)}
             />
           </div>
 
@@ -53,6 +58,7 @@ export function AccidentDetailsForm() {
               type="date"
               value={a?.dateOfSurvey || ''}
               onChange={(e) => updateAccident({ dateOfSurvey: e.target.value })}
+              className={r(a?.dateOfSurvey)}
             />
           </div>
 
@@ -62,6 +68,7 @@ export function AccidentDetailsForm() {
               id="a-splace"
               value={a?.placeOfSurvey || ''}
               onChange={(e) => updateAccident({ placeOfSurvey: e.target.value })}
+              className={r(a?.placeOfSurvey)}
             />
           </div>
 
@@ -71,6 +78,7 @@ export function AccidentDetailsForm() {
               id="a-police"
               value={a?.policeStation || ''}
               onChange={(e) => updateAccident({ policeStation: e.target.value })}
+              className={r(a?.policeStation)}
             />
           </div>
 
@@ -80,6 +88,7 @@ export function AccidentDetailsForm() {
               id="a-fir"
               value={a?.firNumber || ''}
               onChange={(e) => updateAccident({ firNumber: e.target.value })}
+              className={r(a?.firNumber)}
             />
           </div>
 
@@ -90,6 +99,7 @@ export function AccidentDetailsForm() {
               type="date"
               value={a?.firDate || ''}
               onChange={(e) => updateAccident({ firDate: e.target.value })}
+              className={r(a?.firDate)}
             />
           </div>
 
@@ -101,6 +111,7 @@ export function AccidentDetailsForm() {
                 type="date"
                 value={a?.appointmentDate || ''}
                 onChange={(e) => updateAccident({ appointmentDate: e.target.value })}
+                className={r(a?.appointmentDate)}
               />
             </div>
           )}
@@ -116,6 +127,7 @@ export function AccidentDetailsForm() {
                   id="w-name"
                   value={a?.workshopName || ''}
                   onChange={(e) => updateAccident({ workshopName: e.target.value })}
+                  className={r(a?.workshopName)}
                 />
               </div>
               <div className="space-y-1">
@@ -124,6 +136,7 @@ export function AccidentDetailsForm() {
                   id="w-phone"
                   value={a?.workshopPhone || ''}
                   onChange={(e) => updateAccident({ workshopPhone: e.target.value })}
+                  className={r(a?.workshopPhone)}
                 />
               </div>
               <div className="space-y-1 lg:col-span-3">
@@ -132,6 +145,7 @@ export function AccidentDetailsForm() {
                   id="w-addr"
                   value={a?.workshopAddress || ''}
                   onChange={(e) => updateAccident({ workshopAddress: e.target.value })}
+                  className={r(a?.workshopAddress)}
                 />
               </div>
               <div className="space-y-1">
@@ -140,6 +154,7 @@ export function AccidentDetailsForm() {
                   id="w-fax"
                   value={a?.workshopFax || ''}
                   onChange={(e) => updateAccident({ workshopFax: e.target.value })}
+                  className={r(a?.workshopFax)}
                 />
               </div>
               <div className="space-y-1 lg:col-span-2">
@@ -149,6 +164,7 @@ export function AccidentDetailsForm() {
                   type="email"
                   value={a?.workshopEmail || ''}
                   onChange={(e) => updateAccident({ workshopEmail: e.target.value })}
+                  className={r(a?.workshopEmail)}
                 />
               </div>
             </div>
@@ -178,12 +194,12 @@ export function AccidentDetailsForm() {
                       className="h-8 w-16 rounded-md border border-input bg-background px-1 text-[10px]"
                       value={doc.status}
                       onChange={(e) => {
-                        const newFlags = { 
-                          ...flags, 
-                          [flag.id]: { ...doc, status: e.target.value } 
+                        const newFlags = {
+                          ...flags,
+                          [flag.id]: { ...doc, status: e.target.value }
                         };
-                        useClaimStore.getState().updateClaim({ 
-                          documentVerification: newFlags 
+                        useClaimStore.getState().updateClaim({
+                          documentVerification: newFlags
                         });
                       }}
                     >
@@ -197,12 +213,12 @@ export function AccidentDetailsForm() {
                     className="h-7 text-[10px] px-2"
                     value={doc.detail || ''}
                     onChange={(e) => {
-                      const newFlags = { 
-                        ...flags, 
-                        [flag.id]: { ...doc, detail: e.target.value } 
+                      const newFlags = {
+                        ...flags,
+                        [flag.id]: { ...doc, detail: e.target.value }
                       };
-                      useClaimStore.getState().updateClaim({ 
-                        documentVerification: newFlags 
+                      useClaimStore.getState().updateClaim({
+                        documentVerification: newFlags
                       });
                     }}
                   />

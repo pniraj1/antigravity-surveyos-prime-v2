@@ -34,9 +34,12 @@ export function FloatingReportPreview() {
   const [format, setFormat] = useState<ReportFormat>('standard');
   const [html, setHtml] = useState('');
   const [pos, setPos] = useState(safePos);
+  const [size, setSize] = useState({ width: 420, height: 580 });
 
   const dragging = useRef(false);
   const dragOffset = useRef({ x: 0, y: 0 });
+  const resizing = useRef(false);
+  const resizeStart = useRef({ x: 0, y: 0, w: 420, h: 580, px: 0, py: 0 });
   const spotPrintRef = useRef<HTMLDivElement>(null);
 
   // ── Auto-detect format on tab / claim change ────────────────────────────────
@@ -117,14 +120,45 @@ export function FloatingReportPreview() {
 
   const onPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (!dragging.current) return;
-    setPos({
-      x: Math.max(0, Math.min(window.innerWidth - 420, e.clientX - dragOffset.current.x)),
+    setPos(prev => ({
+      x: Math.max(0, Math.min(window.innerWidth - size.width, e.clientX - dragOffset.current.x)),
       y: Math.max(0, Math.min(window.innerHeight - 48, e.clientY - dragOffset.current.y)),
-    });
-  }, []);
+    }));
+  }, [size.width]);
 
   const onPointerUp = useCallback(() => {
     dragging.current = false;
+  }, []);
+
+  // ── Resizing ──────────────────────────────────────────────────────────────────
+  // Top-left grip: dragging left/up expands width/height and moves pos accordingly
+  const onResizePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    resizing.current = true;
+    resizeStart.current = { x: e.clientX, y: e.clientY, w: size.width, h: size.height, px: pos.x, py: pos.y };
+    (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+  }, [size, pos]);
+
+  const onResizePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!resizing.current) return;
+    const { x: sx, y: sy, w: sw, h: sh, px, py } = resizeStart.current;
+    const dx = e.clientX - sx;
+    const dy = e.clientY - sy;
+
+    // Right and bottom edges stay fixed; top-left corner moves
+    const rightEdge = px + sw;
+    const bottomEdge = py + sh;
+
+    // Clamp new top-left pos: can't go below 0, can't make panel smaller than min
+    const newPosX = Math.max(0, Math.min(rightEdge - 320, px + dx));
+    const newPosY = Math.max(0, Math.min(bottomEdge - 300, py + dy));
+
+    setPos({ x: newPosX, y: newPosY });
+    setSize({ width: rightEdge - newPosX, height: bottomEdge - newPosY });
+  }, []);
+
+  const onResizePointerUp = useCallback(() => {
+    resizing.current = false;
   }, []);
 
   // ── Print ─────────────────────────────────────────────────────────────────────
@@ -144,6 +178,9 @@ export function FloatingReportPreview() {
   }, [html]);
 
   const handlePrint = format === 'spot' ? handleSpotPrint : handleHtmlPrint;
+
+  // Zoom scales with panel width so content gets bigger as popup grows
+  const zoom = Math.max(0.3, (size.width - 20) / 794);
 
   // ── Guard ─────────────────────────────────────────────────────────────────────
   if (!currentClaim || activeTab === 'reports') return null;
@@ -173,12 +210,12 @@ export function FloatingReportPreview() {
       style={{
         left: pos.x,
         top: pos.y,
-        width: 420,
-        height: minimised ? 48 : 580,
+        width: size.width,
+        height: minimised ? 48 : size.height,
         background: '#FFFFFF',
         border: '1px solid #E2E6EA',
         boxShadow: '0 20px 60px rgba(13,27,42,0.35)',
-        transition: 'height 0.18s ease',
+        transition: minimised ? 'height 0.18s ease' : undefined,
         userSelect: 'none',
       }}
     >
@@ -265,21 +302,13 @@ export function FloatingReportPreview() {
       {!minimised && (
         <div
           className="flex-1 overflow-auto"
-          style={{ background: '#E8EAED' }}
+          style={{ background: '#E8EAED', position: 'relative' }}
         >
           {format === 'spot' ? (
-            /* Spot: render SpotPrintReport directly, zoom to fit panel */
-            <div
-              style={{
-                padding: 8,
-                /* zoom scales layout space too — no overflow issues */
-                zoom: 0.46,
-              }}
-            >
+            <div style={{ padding: 8, zoom }}>
               <SpotPrintReport ref={spotPrintRef} claim={currentClaim} profile={profile} />
             </div>
           ) : html ? (
-            /* Standard / UIIC: inject complete HTML doc into iframe */
             <iframe
               key={format}
               srcDoc={html}
@@ -287,10 +316,9 @@ export function FloatingReportPreview() {
               style={{
                 border: 'none',
                 display: 'block',
-                /* zoom shrinks 793px A4 to ~364px — fits panel width of 420px */
-                zoom: 0.46,
+                zoom,
                 width: '210mm',
-                height: '1400px',
+                height: `${Math.ceil(size.height / zoom) + 400}px`,
               }}
             />
           ) : (
@@ -300,6 +328,32 @@ export function FloatingReportPreview() {
               </span>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Resize grip (top-left corner) ── */}
+      {!minimised && (
+        <div
+          onPointerDown={onResizePointerDown}
+          onPointerMove={onResizePointerMove}
+          onPointerUp={onResizePointerUp}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: 22,
+            height: 22,
+            cursor: 'nwse-resize',
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'flex-start',
+            padding: 4,
+            zIndex: 10,
+          }}
+        >
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            <path d="M1 9L9 1M1 5L5 1M1 1" stroke="#D4AF37" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
         </div>
       )}
     </div>

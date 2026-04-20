@@ -9,11 +9,12 @@ import { Eye } from 'lucide-react';
 
 const S = () => <span className="ml-1 inline-block w-2 h-2 rounded-full bg-green-500 align-middle" title="Used in Spot Report" />;
 
-/** Small eye icon shown on label when AI evidence is available for that field */
 function EvidenceDot({ has }: { has: boolean }) {
   if (!has) return null;
   return <span title="Click field to view source document"><Eye size={10} className="inline ml-1 opacity-50 text-blue-400" /></span>;
 }
+
+const r = (v: any) => !v ? 'border-red-400' : '';
 
 export function VehicleDetailsForm() {
   const { currentClaim, updateVehicle } = useClaimStore();
@@ -37,7 +38,7 @@ export function VehicleDetailsForm() {
               onChange={(e) => updateVehicle({ registrationNumber: e.target.value.toUpperCase() })}
               onFocus={() => triggerField('registrationNumber')}
               placeholder="e.g. MH01AB1234"
-              className="uppercase font-mono font-bold"
+              className={`uppercase font-mono font-bold ${r(v?.registrationNumber)}`}
             />
           </div>
 
@@ -49,6 +50,7 @@ export function VehicleDetailsForm() {
               onChange={(e) => updateVehicle({ classOfVehicle: e.target.value, registrationType: e.target.value })}
               onFocus={() => triggerField('classOfVehicle')}
               placeholder="e.g. LMV PE"
+              className={r(v?.classOfVehicle)}
             />
           </div>
 
@@ -60,6 +62,7 @@ export function VehicleDetailsForm() {
               onChange={(e) => updateVehicle({ make: e.target.value })}
               onFocus={() => triggerField('make')}
               placeholder="e.g. MARUTI SUZUKI"
+              className={r(v?.make)}
             />
           </div>
 
@@ -71,6 +74,7 @@ export function VehicleDetailsForm() {
               onChange={(e) => updateVehicle({ model: e.target.value })}
               onFocus={() => triggerField('model')}
               placeholder="e.g. SWIFT VXI"
+              className={r(v?.model)}
             />
           </div>
 
@@ -83,6 +87,7 @@ export function VehicleDetailsForm() {
               onChange={(e) => updateVehicle({ yearOfManufacture: parseInt(e.target.value) || null })}
               onFocus={() => triggerField('yearOfManufacture')}
               placeholder="YYYY"
+              className={r(v?.yearOfManufacture)}
             />
           </div>
 
@@ -94,6 +99,7 @@ export function VehicleDetailsForm() {
               onChange={(e) => updateVehicle({ bodyType: e.target.value })}
               onFocus={() => triggerField('bodyType')}
               placeholder="e.g. SALOON / HATCHBACK"
+              className={r(v?.bodyType)}
             />
           </div>
 
@@ -104,7 +110,7 @@ export function VehicleDetailsForm() {
               value={v?.chassisNumber || ''}
               onChange={(e) => updateVehicle({ chassisNumber: e.target.value.toUpperCase() })}
               onFocus={() => triggerField('chassisNumber')}
-              className="uppercase font-mono"
+              className={`uppercase font-mono ${r(v?.chassisNumber)}`}
             />
           </div>
 
@@ -115,7 +121,7 @@ export function VehicleDetailsForm() {
               value={v?.engineNumber || ''}
               onChange={(e) => updateVehicle({ engineNumber: e.target.value.toUpperCase() })}
               onFocus={() => triggerField('engineNumber')}
-              className="uppercase font-mono"
+              className={`uppercase font-mono ${r(v?.engineNumber)}`}
             />
           </div>
 
@@ -126,6 +132,7 @@ export function VehicleDetailsForm() {
               value={v?.cubicCapacity || ''}
               onChange={(e) => updateVehicle({ cubicCapacity: e.target.value })}
               onFocus={() => triggerField('cubicCapacity')}
+              className={r(v?.cubicCapacity)}
             />
           </div>
 
@@ -136,6 +143,7 @@ export function VehicleDetailsForm() {
               value={v?.colour || ''}
               onChange={(e) => updateVehicle({ colour: e.target.value })}
               onFocus={() => triggerField('colour')}
+              className={r(v?.colour)}
             />
           </div>
 
@@ -146,7 +154,7 @@ export function VehicleDetailsForm() {
               value={v?.fuel || ''}
               onChange={(e) => updateVehicle({ fuel: e.target.value })}
               onFocus={() => triggerField('fuel')}
-              className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
+              className={`flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 ${r(v?.fuel)}`}
             >
               <option value="">Select Fuel</option>
               {['Petrol', 'Diesel', 'CNG', 'LPG', 'Electric', 'Hybrid', 'Petrol+CNG', 'Petrol+LPG'].map(opt => (
@@ -162,6 +170,7 @@ export function VehicleDetailsForm() {
               value={v?.odometer || ''}
               onChange={(e) => updateVehicle({ odometer: e.target.value })}
               onFocus={() => triggerField('odometer')}
+              className={r(v?.odometer)}
             />
           </div>
 
@@ -173,6 +182,7 @@ export function VehicleDetailsForm() {
               onChange={(e) => updateVehicle({ registeringAuthority: e.target.value.toUpperCase() })}
               onFocus={() => triggerField('registeringAuthority')}
               placeholder="e.g. RTO MUMBAI"
+              className={`uppercase ${r(v?.registeringAuthority)}`}
             />
           </div>
 
@@ -184,6 +194,7 @@ export function VehicleDetailsForm() {
               value={v?.registrationValidUpTo || ''}
               onChange={(e) => updateVehicle({ registrationValidUpTo: e.target.value })}
               onFocus={() => triggerField('registrationValidUpTo')}
+              className={r(v?.registrationValidUpTo)}
             />
           </div>
 
@@ -195,6 +206,7 @@ export function VehicleDetailsForm() {
               onChange={(e) => updateVehicle({ rcEndorsement: e.target.value.toUpperCase() })}
               onFocus={() => triggerField('rcEndorsement')}
               placeholder="e.g. NO"
+              className={`uppercase ${r(v?.rcEndorsement)}`}
             />
           </div>
 
@@ -206,6 +218,7 @@ export function VehicleDetailsForm() {
               value={v?.dateOfRegistration || ''}
               onChange={(e) => updateVehicle({ dateOfRegistration: e.target.value })}
               onFocus={() => triggerField('dateOfRegistration')}
+              className={r(v?.dateOfRegistration)}
             />
           </div>
 
@@ -217,6 +230,7 @@ export function VehicleDetailsForm() {
               onChange={(e) => updateVehicle({ registeredLoadWeight: e.target.value })}
               onFocus={() => triggerField('registeredLoadWeight')}
               placeholder="e.g. 1500 KG"
+              className={r(v?.registeredLoadWeight)}
             />
           </div>
 
@@ -229,6 +243,7 @@ export function VehicleDetailsForm() {
               onChange={(e) => updateVehicle({ unladenWeight: parseInt(e.target.value) || null })}
               onFocus={() => triggerField('unladenWeight')}
               placeholder="e.g. 800"
+              className={r(v?.unladenWeight)}
             />
           </div>
 
@@ -240,6 +255,7 @@ export function VehicleDetailsForm() {
               onChange={(e) => updateVehicle({ seatingCapacityTotal: e.target.value })}
               onFocus={() => triggerField('seatingCapacityTotal')}
               placeholder="e.g. 5"
+              className={r((v as any)?.seatingCapacityTotal)}
             />
           </div>
 
@@ -289,6 +305,7 @@ export function VehicleDetailsForm() {
               value={v?.fitnessNo || ''}
               onChange={(e) => updateVehicle({ fitnessNo: e.target.value })}
               onFocus={() => triggerField('fitnessNo')}
+              className={r(v?.fitnessNo)}
             />
           </div>
 
@@ -300,6 +317,7 @@ export function VehicleDetailsForm() {
               value={v?.fitnessValidUpto || ''}
               onChange={(e) => updateVehicle({ fitnessValidUpto: e.target.value })}
               onFocus={() => triggerField('fitnessValidUpto')}
+              className={r(v?.fitnessValidUpto)}
             />
           </div>
 
@@ -324,6 +342,7 @@ export function VehicleDetailsForm() {
               value={v?.route || ''}
               onChange={(e) => updateVehicle({ route: e.target.value })}
               onFocus={() => triggerField('route')}
+              className={r(v?.route)}
             />
           </div>
 
@@ -333,6 +352,7 @@ export function VehicleDetailsForm() {
               id="v-cond"
               value={v?.preAccidentCondition || ''}
               onChange={(e) => updateVehicle({ preAccidentCondition: e.target.value })}
+              className={r(v?.preAccidentCondition)}
             />
           </div>
         </div>

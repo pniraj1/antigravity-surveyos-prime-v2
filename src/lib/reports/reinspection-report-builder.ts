@@ -31,8 +31,6 @@ export function buildReinspectionHTML(claim: ClaimData, profile: SurveyorProfile
   const v = claim.vehicle;
   const p = claim.policy;
   const ri = claim.reinspection;
-  const riParts = ri.parts || [];
-
   const ageMonths = getVehicleAgeMonths(
     v.dateOfRegistration || null,
     v.yearOfManufacture ? Number(v.yearOfManufacture) : null,
@@ -45,7 +43,6 @@ export function buildReinspectionHTML(claim: ClaimData, profile: SurveyorProfile
   const td = B + 'padding:3px 5px;vertical-align:top;';
   const tdl = td + 'font-size:7pt;color:#333;';
   const tdb = td + 'font-weight:700;';
-  const th = 'background:#e8e8e8;' + B + 'padding:3px 5px;font-size:7pt;font-weight:700;text-align:center;';
   const sec = 'background:#ddd;' + B + 'padding:3px 5px;font-weight:700;font-size:7.5pt;text-transform:uppercase;';
 
   // ── PAGE 1: Reinspection Report ─────────────────────────────────────────
@@ -79,10 +76,10 @@ ${getSurveyorHeader(profile)}
   <td style="${tdb}">${fd(ri.surveyDate)}</td>
 </tr>
 <tr>
-  <td style="${tdl}">RI Appointment Date</td>
-  <td style="${tdb}">${fd(ri.riAppointmentDate)}</td>
   <td style="${tdl}">Repair Auth. Date</td>
   <td style="${tdb}">${fd(ri.repairAuthDate)}</td>
+  <td style="${tdl}">Actual Completion Date</td>
+  <td style="${tdb}">${fd(ri.actualCompletionDate)}</td>
 </tr>
 </table>
 
@@ -115,6 +112,12 @@ ${getSurveyorHeader(profile)}
   <td style="${tdb}">${g(p.insuredName)}</td>
 </tr>
 <tr>
+  <td style="${tdl}">Policy From</td>
+  <td style="${tdb}">${fd(p.periodFrom)}</td>
+  <td style="${tdl}">Policy Valid Upto</td>
+  <td style="${tdb}">${fd(p.periodTo)}</td>
+</tr>
+<tr>
   <td style="${tdl}">IDV</td>
   <td style="${tdb}">${fa(p.idv)}</td>
   <td style="${tdl}">Vehicle Age (Months)</td>
@@ -140,24 +143,6 @@ ${getSurveyorHeader(profile)}
 </tr>
 </table>
 
-<div style="${sec}">PARTS ASSESSMENT - RE-INSPECTION STATUS</div>
-<table style="${ts}">
-<tr>
-  <th style="${th}width:45%;">Particulars</th>
-  <th style="${th}width:15%;">Assessed Amt (₹)</th>
-  <th style="${th}width:20%;">Status</th>
-  <th style="${th}width:20%;">Remarks</th>
-</tr>
-${riParts.map(part => `
-<tr>
-  <td style="${td}width:45%;font-size:7.5pt;">${g(part.particulars)}</td>
-  <td style="${td}width:15%;text-align:right;font-size:7.5pt;">${fa(part.assessed)}</td>
-  <td style="${td}width:20%;font-size:7.5pt;font-weight:700;">${g(part.status).toUpperCase()}</td>
-  <td style="${td}width:20%;font-size:7pt;">${g(part.remarks)}</td>
-</tr>
-`).join('')}
-${riParts.length === 0 ? `<tr><td style="${td}" colspan="4">No parts recorded</td></tr>` : ''}
-</table>
 
 <div style="${sec}">SURVEYOR CONCLUSION</div>
 <div style="border:0.5pt solid #000;padding:5px;font-size:7.5pt;line-height:1.4;margin-bottom:6px;min-height:40px;">

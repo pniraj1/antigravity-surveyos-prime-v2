@@ -5,7 +5,6 @@ import { VehicleDetailsForm } from '@/components/claim/VehicleForm';
 import { DriverDetailsForm } from '@/components/claim/DriverForm';
 import { PolicyDetailsForm } from '@/components/claim/PolicyForm';
 import { AccidentDetailsForm } from '@/components/claim/AccidentForm';
-import { TotalLossForm } from '@/components/claim/TotalLossForm';
 import { useAIExtraction } from '@/hooks/useAIExtraction';
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import { useClaimStore } from '@/stores/claim-store';
@@ -364,7 +363,6 @@ export function DetailsTab() {
             <PolicyDetailsForm />
             <DriverDetailsForm />
             <AccidentDetailsForm />
-            <TotalLossForm />
           </div>
 
           {currentClaim.surveyType === 'spot' && <SpotTab />}

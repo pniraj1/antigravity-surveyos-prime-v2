@@ -27,6 +27,7 @@ import { NewClaimDialog } from '@/components/dialogs/NewClaimDialog';
 import { ErrorBoundary } from '@/components/layout/ErrorBoundary';
 import { Sidebar, MobileMenuButton } from '@/components/layout/sidebar';
 import { FloatingReportPreview } from '@/components/layout/FloatingReportPreview';
+import { ClaimHeader } from '@/components/layout/ClaimHeader';
 
 // Dynamically import ALL tabs with ssr:false — they all use browser-only APIs:
 const DetailsTab    = dynamicImport(() => import('@/components/tabs/DetailsTab').then(m    => ({ default: m.DetailsTab    })), { ssr: false });
@@ -39,7 +40,8 @@ const BillCheckTab  = dynamicImport(() => import('@/components/tabs/BillCheckTab
 const FeesTab       = dynamicImport(() => import('@/components/tabs/FeesTab').then(m       => ({ default: m.FeesTab       })), { ssr: false });
 const ProfileTab    = dynamicImport(() => import('@/components/tabs/ProfileTab').then(m    => ({ default: m.ProfileTab    })), { ssr: false });
 const AdminDashboard = dynamicImport(() => import('@/components/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })), { ssr: false });
-const CloudVaultTab = dynamicImport(() => import('@/components/tabs/CloudVaultTab').then(m => ({ default: m.CloudVaultTab })), { ssr: false });
+const CloudVaultTab    = dynamicImport(() => import('@/components/tabs/CloudVaultTab').then(m    => ({ default: m.CloudVaultTab    })), { ssr: false });
+const ReinspectionTab  = dynamicImport(() => import('@/components/tabs/ReinspectionTab').then(m  => ({ default: m.ReinspectionTab  })), { ssr: false });
 
 // ─── Dashboard Tab Content ──────────────────────────────
 export function DashboardContent() {
@@ -583,7 +585,8 @@ export function TabPlaceholder({ tab }: { tab: string }) {
   if (tab === 'fees')        return <FeesTab />;
   if (tab === 'profile')     return <ProfileTab />;
   if (tab === 'admin')       return <AdminDashboard />;
-  if (tab === 'cloud-vault') return <CloudVaultTab />;
+  if (tab === 'cloud-vault')  return <CloudVaultTab />;
+  if (tab === 'reinspection') return <ReinspectionTab />;
 
   // Genuinely unimplemented
   return (
@@ -606,6 +609,7 @@ export default function Dashboard() {
       <MobileMenuButton />
 
       <main className="flex-1 overflow-y-auto bg-background">
+        <ClaimHeader />
         <ErrorBoundary key={activeTab}>
           {activeTab === 'dashboard' ? <DashboardContent /> : <TabPlaceholder tab={activeTab} />}
         </ErrorBoundary>
