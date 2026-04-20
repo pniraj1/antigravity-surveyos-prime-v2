@@ -19,10 +19,13 @@ import {
   buildDismissalEmail,
   buildCustomEmail,
 } from '@/lib/email/sendEmail';
+import { useAuthStore } from '@/stores/auth-store';
+import { useProfileStore } from '@/stores/profile-store';
 import {
   Users,
   Search,
   ShieldCheck,
+  ShieldAlert,
   UserX,
   Calendar,
   Loader2,
@@ -62,6 +65,17 @@ interface NewSignup {
 }
 
 export function AdminDashboard() {
+  // ─── Runtime authorization gate ──────────────────────────
+  // Client-side sidebar hiding is not enough — a determined user can force
+  // the admin route. Block all Firestore queries unless the current user
+  // is an admin (profile.isAdmin === true OR matches the master UID env).
+  const user = useAuthStore((s) => s.user);
+  const profile = useProfileStore((s) => s.profile);
+  const MASTER_ADMIN_UID = process.env.NEXT_PUBLIC_MASTER_ADMIN_UID;
+  const isAuthorized = Boolean(
+    user && (profile?.isAdmin === true || (MASTER_ADMIN_UID && user.uid === MASTER_ADMIN_UID))
+  );
+
   const [activeTab, setActiveTab] = useState<'surveyors' | 'signups'>('surveyors');
   const [surveyors, setSurveyors] = useState<SurveyorAdminProfile[]>([]);
   const [signups, setSignups] = useState<NewSignup[]>([]);
@@ -90,12 +104,16 @@ export function AdminDashboard() {
     setLoading(true);
     try {
       const querySnapshot = await getDocs(query(collectionGroup(db, 'profile')));
-      const results: SurveyorAdminProfile[] = [];
+      const seen = new Map<string, SurveyorAdminProfile>();
       querySnapshot.forEach((docSnap) => {
         const data = docSnap.data();
         const pathSegments = docSnap.ref.path.split('/');
+        // Only process documents directly under users/{uid}/profile
+        if (pathSegments.length !== 4 || pathSegments[0] !== 'users' || pathSegments[2] !== 'profile') return;
         const uid = pathSegments[1];
-        results.push({
+        // Prefer the 'current' document; skip others if 'current' already loaded
+        if (seen.has(uid) && docSnap.id !== 'current') return;
+        seen.set(uid, {
           id: uid,
           name: data.name || 'Unknown',
           email: data.email || 'N/A',
@@ -108,7 +126,7 @@ export function AdminDashboard() {
           isAdmin: data.isAdmin || false,
         });
       });
-      setSurveyors(results);
+      setSurveyors(Array.from(seen.values()));
     } catch (error) {
       console.error('Error fetching profiles:', error);
     } finally {
@@ -147,11 +165,11 @@ export function AdminDashboard() {
   };
 
   useEffect(() => {
+    if (!isAuthorized) return;
     fetchAllProfiles();
     fetchSignups();
-  }, []);
+  }, [isAuthorized]);
 
-  // ─── Approve New Signup ─────────────────────────────────
   // ─── Approve New Signup ─────────────────────────────────
   const handleApprove = async (signup: NewSignup) => {
     setApprovingId(signup.uid);
@@ -307,6 +325,24 @@ export function AdminDashboard() {
     s.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
     s.email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Hard block: render unauthorized screen before any admin UI
+  if (!isAuthorized) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center bg-[#F8F9FA] p-8">
+        <div className="max-w-md w-full bg-white border border-[#E2E6EA] rounded-2xl shadow-sm p-8 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
+            <ShieldAlert size={32} className="text-red-600" />
+          </div>
+          <h2 className="text-lg font-black text-[#0D1B2A] mb-2">Not Authorized</h2>
+          <p className="text-sm text-[#8D99AE] font-medium">
+            The administrator dashboard is restricted to accounts with admin privileges.
+            This attempt has been logged.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col bg-[#F8F9FA]">

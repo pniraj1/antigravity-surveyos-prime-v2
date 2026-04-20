@@ -5,10 +5,18 @@
 // Uses "Latest Update Wins" (updatedAt) approach
 // ═══════════════════════════════════════════════════════════
 
-import { doc, setDoc, getDoc, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
+import { doc, setDoc, getDoc, deleteDoc, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from './config';
 import { ClaimData, SurveyorProfile } from '@/types';
-import { getAllClaims, saveClaim } from '../storage/indexeddb';
+import {
+  getAllClaims,
+  saveClaim,
+  setPushedAt,
+  getAllPushedAt,
+  getTombstones,
+  getTombstoneIds,
+  removeTombstone,
+} from '../storage/indexeddb';
 import { useProfileStore } from '@/stores/profile-store';
 import { logger } from '../utils/logger';
 
@@ -60,8 +68,34 @@ export async function pushClaimToCloud(uid: string, claim: ClaimData) {
   const claimRef = doc(db, `users/${uid}/claims`, claim.id);
   const payload = stripPhotos(claim);
   await setDoc(claimRef, { ...payload, ownerId: uid });
+  // Record the successfully-pushed updatedAt so the pull reconciler can
+  // detect locally-dirty claims that must not be overwritten by remote.
+  await setPushedAt(claim.id, claim.updatedAt);
   logger.log(`[Sync] Pushed claim ${claim.id} to cloud (photos excluded).`);
   return claim;
+}
+
+/**
+ * Deletes tombstoned claims from Firestore and clears local tombstones.
+ * Call this before pullClaimsFromCloud so the pull doesn't resurrect
+ * anything the user just deleted.
+ */
+export async function syncTombstones(uid: string): Promise<void> {
+  const tombstones = await getTombstones();
+  if (tombstones.length === 0) return;
+
+  logger.log(`[Sync] Deleting ${tombstones.length} tombstoned claim(s) from cloud.`);
+  for (const t of tombstones) {
+    try {
+      const claimRef = doc(db, `users/${uid}/claims`, t.id);
+      await deleteDoc(claimRef);
+      await removeTombstone(t.id);
+      logger.log(`[Sync] Cloud delete for tombstoned claim ${t.id} succeeded.`);
+    } catch (err) {
+      // Keep the tombstone for the next sync attempt
+      logger.error(`[Sync] Cloud delete for tombstoned claim ${t.id} failed:`, err);
+    }
+  }
 }
 
 /**
@@ -90,6 +124,9 @@ export async function syncDeltaToCloud(uid: string, sinceTimestamp: string | nul
       batch.set(claimRef, { ...stripPhotos(claim), ownerId: uid });
     }
     await batch.commit();
+    // Record pushed updatedAt for every claim in this chunk — only runs if
+    // batch.commit() succeeded.
+    await Promise.all(chunk.map(c => setPushedAt(c.id, c.updatedAt)));
     logger.log(`[Sync] Delta push: committed batch ${Math.floor(i / BATCH_SIZE) + 1} (${chunk.length} claims).`);
   }
 
@@ -121,18 +158,49 @@ export async function pullClaimsFromCloud(uid: string, sinceTimestamp: string | 
 
   logger.log(`[Sync] Pull: merging ${remoteClaims.length} claim(s) from cloud.`);
 
-  // Hoist getAllClaims() once — avoids O(n²) from calling inside the loop
+  // Hoist lookups once — avoids O(n²) from calling inside the loop
   const localList = await getAllClaims();
   const localMap = new Map(localList.map(c => [c.id, c]));
+  const tombstoneIds = await getTombstoneIds();
+  const pushedMap = await getAllPushedAt();
 
   for (const remote of remoteClaims) {
+    // Skip any claim the user deleted locally — syncTombstones() is responsible
+    // for deleting it from the cloud on the next push cycle.
+    if (tombstoneIds.has(remote.id)) {
+      logger.log(`[Sync] Skipping resurrection of tombstoned claim ${remote.id}.`);
+      continue;
+    }
     const local = localMap.get(remote.id);
-    if (!local || remote.updatedAt > local.updatedAt) {
+
+    // Case 1: brand-new claim from cloud — always accept
+    if (!local) {
+      await saveClaim({ ...remote, photos: [] }, { preserveUpdatedAt: true });
+      await setPushedAt(remote.id, remote.updatedAt);
+      logger.log(`[Sync] Imported new claim ${remote.id} from cloud.`);
+      continue;
+    }
+
+    // Case 2: local has unpushed edits — remote must NOT overwrite them.
+    // A claim is "locally dirty" when its current updatedAt is newer than
+    // the last value we successfully pushed to Firestore.
+    const lastPushed = pushedMap.get(remote.id);
+    const locallyDirty = !lastPushed || local.updatedAt > lastPushed;
+    if (locallyDirty) {
+      logger.log(`[Sync] Keeping local dirty claim ${remote.id} (unpushed edits).`);
+      continue;
+    }
+
+    // Case 3: local is clean AND remote is newer — safe to overwrite.
+    // Preserve local photos (never synced via Firestore).
+    if (remote.updatedAt > local.updatedAt) {
       const mergedClaim: ClaimData = {
         ...remote,
-        photos: local?.photos ?? [],
+        photos: local.photos ?? [],
       };
-      await saveClaim(mergedClaim);
+      await saveClaim(mergedClaim, { preserveUpdatedAt: true });
+      // Re-record as pushed since local now matches remote.
+      await setPushedAt(remote.id, remote.updatedAt);
       logger.log(`[Sync] Updated local claim ${remote.id} from cloud (photos preserved).`);
     }
   }

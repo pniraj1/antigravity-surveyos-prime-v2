@@ -10,6 +10,7 @@ import { createBlankClaim } from '@/types';
 import { createAssessmentRow } from '@/lib/calculations';
 import { saveClaim } from '@/lib/storage/indexeddb';
 import { useUIStore } from '@/stores/ui-store';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface ClaimState {
   // ─── Current Claim ──────────────────────────────────
@@ -100,7 +101,8 @@ export const useClaimStore = create<ClaimState>()(
       claimsList: [],
 
       newClaim: (surveyType, vehicleType) => {
-        const claim = createBlankClaim(surveyType, vehicleType);
+        const uid = useAuthStore.getState().user?.uid;
+        const claim = { ...createBlankClaim(surveyType, vehicleType), ...(uid ? { ownerId: uid } : {}) };
         set({
           currentClaim: claim,
           currentClaimId: claim.id,

@@ -15,6 +15,7 @@ import {
   pushClaimToCloud,
   pullClaimsFromCloud,
   syncDeltaToCloud,
+  syncTombstones,
   pullProfileFromCloud,
   pushProfileToCloud,
   getLastSyncTimestamp,
@@ -140,6 +141,9 @@ export function useCloudSync() {
           const sinceTimestamp = getLastSyncTimestamp(user.uid);
           const syncStartedAt = new Date().toISOString();
 
+          // Delete tombstoned claims from cloud BEFORE pulling so the pull
+          // can't resurrect anything the user just deleted.
+          await syncTombstones(user.uid);
           await syncDeltaToCloud(user.uid, sinceTimestamp);
           await pullClaimsFromCloud(user.uid, sinceTimestamp);
 

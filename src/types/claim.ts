@@ -13,6 +13,8 @@ import type { SurveyType } from './report';
 export interface ClaimData {
   /** Unique claim identifier */
   id: string;
+  /** Firebase UID of the user who owns this claim */
+  ownerId?: string;
   /** Creation timestamp */
   createdAt: string; // ISO
   /** Last modified timestamp */

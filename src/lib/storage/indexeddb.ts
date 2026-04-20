@@ -57,7 +57,7 @@ const LEGACY_DB_NAME = 'surveyos-v2';
  * Current database version. Bump this when adding new object stores
  * or indexes. The `upgrade` function handles all version transitions.
  */
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 /**
  * localStorage key prefix for tracking whether a user's legacy data
@@ -122,6 +122,14 @@ interface SurveyOSDB {
     key: string;
     value: unknown;
   };
+  tombstones: {
+    key: string;
+    value: { id: string; deletedAt: string };
+  };
+  pushTracking: {
+    key: string;
+    value: { id: string; pushedUpdatedAt: string };
+  };
 }
 
 // ─── DB Lifecycle ─────────────────────────────────────────────────────────────
@@ -167,6 +175,14 @@ export async function initUserDB(uid: string): Promise<void> {
       // Drive queue — pending Google Drive uploads (added in v2)
       if (oldVersion < 2 && !db.objectStoreNames.contains('driveQueue')) {
         db.createObjectStore('driveQueue', { keyPath: 'id' });
+      }
+      // Tombstones — deleted claim IDs, pushed to cloud to prevent resurrection (v3)
+      if (oldVersion < 3 && !db.objectStoreNames.contains('tombstones')) {
+        db.createObjectStore('tombstones', { keyPath: 'id' });
+      }
+      // Push tracking — last successfully-pushed updatedAt per claim (v3)
+      if (oldVersion < 3 && !db.objectStoreNames.contains('pushTracking')) {
+        db.createObjectStore('pushTracking', { keyPath: 'id' });
       }
     },
   });
@@ -223,32 +239,43 @@ async function migrateFromLegacyDB(uid: string): Promise<void> {
   // Skip if already migrated
   if (localStorage.getItem(migrationKey) === 'done') return;
 
+  // Step 1: Try to open the legacy DB. If it doesn't exist, migration is
+  // trivially complete — mark done and return.
   let legacyDb: IDBPDatabase | null = null;
+  let legacyClaims: ClaimData[] = [];
   try {
-    // Check if the legacy DB exists by trying to open it
     legacyDb = await openDB(LEGACY_DB_NAME, DB_VERSION);
-    const legacyClaims = await legacyDb.getAll('claims');
+    legacyClaims = (await legacyDb.getAll('claims')) as ClaimData[];
+  } catch {
+    // Legacy DB doesn't exist on this device — normal for fresh installs
+    localStorage.setItem(migrationKey, 'done');
+    legacyDb?.close();
+    return;
+  }
 
-    if (!legacyClaims || legacyClaims.length === 0) {
-      // Nothing to migrate
+  // Step 2: Perform migration. If anything throws here, DO NOT mark done —
+  // we want the next login to retry so data isn't lost permanently.
+  try {
+    // Strict ownerId match: un-owned legacy claims stay in legacy DB for
+    // manual recovery. This prevents cross-account leakage on shared devices.
+    const owned = legacyClaims.filter((c: ClaimData) => c.ownerId === uid);
+    if (owned.length === 0) {
       localStorage.setItem(migrationKey, 'done');
-      legacyDb.close();
       return;
     }
-
-    // Write all legacy claims into the user's personal DB
     const db = await getDB();
     const tx = db.transaction('claims', 'readwrite');
-    await Promise.all(legacyClaims.map(claim => tx.store.put(claim)));
+    await Promise.all(owned.map((c: ClaimData) => tx.store.put(c)));
     await tx.done;
 
+    // Only mark done after the transaction has committed successfully.
     localStorage.setItem(migrationKey, 'done');
     console.info(
-      `[DB] Migrated ${legacyClaims.length} claim(s) from legacy DB to surveyos-v2-${uid}`
+      `[DB] Migrated ${owned.length} of ${legacyClaims.length} legacy claim(s) to surveyos-v2-${uid}`
     );
-  } catch {
-    // Legacy DB may not exist on this device — perfectly normal for new installs
-    localStorage.setItem(migrationKey, 'done');
+  } catch (err) {
+    // Transaction failed — leave flag unset so migration retries next login
+    console.warn('[DB] Legacy migration transaction failed, will retry on next login:', err);
   } finally {
     legacyDb?.close();
   }
@@ -267,10 +294,16 @@ export class StorageFullError extends Error {
   }
 }
 
-export async function saveClaim(claim: ClaimData): Promise<void> {
+export async function saveClaim(
+  claim: ClaimData,
+  options: { preserveUpdatedAt?: boolean } = {}
+): Promise<void> {
   const db = await getDB();
+  const toWrite = options.preserveUpdatedAt
+    ? claim
+    : { ...claim, updatedAt: new Date().toISOString() };
   try {
-    await db.put('claims', { ...claim, updatedAt: new Date().toISOString() });
+    await db.put('claims', toWrite);
   } catch (err) {
     if (err instanceof DOMException && err.name === 'QuotaExceededError') {
       throw new StorageFullError();
@@ -299,10 +332,61 @@ export async function getAllClaims(): Promise<ClaimData[]> {
   return db.getAllFromIndex('claims', 'by-updated');
 }
 
-/** Permanently delete a claim from the current user's database. */
+/**
+ * Permanently delete a claim from the current user's database and
+ * record a tombstone so the cloud deletion can be synced later and so
+ * the next pull doesn't resurrect the claim.
+ */
 export async function deleteClaim(id: string): Promise<void> {
   const db = await getDB();
-  await db.delete('claims', id);
+  const tx = db.transaction(['claims', 'tombstones', 'pushTracking'], 'readwrite');
+  await tx.objectStore('claims').delete(id);
+  await tx.objectStore('tombstones').put({ id, deletedAt: new Date().toISOString() });
+  // Clean up push tracking for the deleted claim
+  await tx.objectStore('pushTracking').delete(id);
+  await tx.done;
+}
+
+// ─── Tombstones ──────────────────────────────────────────────────────────────
+// Records deleted claim IDs so the cloud can be told to delete them and
+// the pull reconciler can skip any remote docs that were deleted locally.
+
+export async function getTombstones(): Promise<{ id: string; deletedAt: string }[]> {
+  const db = await getDB();
+  return db.getAll('tombstones');
+}
+
+export async function getTombstoneIds(): Promise<Set<string>> {
+  const db = await getDB();
+  const all = await db.getAll('tombstones');
+  return new Set(all.map(t => t.id));
+}
+
+export async function removeTombstone(id: string): Promise<void> {
+  const db = await getDB();
+  await db.delete('tombstones', id);
+}
+
+// ─── Push Tracking ───────────────────────────────────────────────────────────
+// Records the `updatedAt` value that was last successfully pushed to Firestore.
+// Used by the pull reconciler to detect locally-dirty claims that must not be
+// overwritten by remote even if remote.updatedAt > local.updatedAt.
+
+export async function setPushedAt(id: string, pushedUpdatedAt: string): Promise<void> {
+  const db = await getDB();
+  await db.put('pushTracking', { id, pushedUpdatedAt });
+}
+
+export async function getPushedAt(id: string): Promise<string | null> {
+  const db = await getDB();
+  const rec = await db.get('pushTracking', id);
+  return rec?.pushedUpdatedAt ?? null;
+}
+
+export async function getAllPushedAt(): Promise<Map<string, string>> {
+  const db = await getDB();
+  const all = await db.getAll('pushTracking');
+  return new Map(all.map(r => [r.id, r.pushedUpdatedAt]));
 }
 
 // ─── Sync Queue ───────────────────────────────────────────────────────────────
