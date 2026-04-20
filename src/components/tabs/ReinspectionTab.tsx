@@ -72,24 +72,8 @@ export function ReinspectionTab() {
                 className="w-full px-3 py-2 rounded-lg border border-[#E2E6EA] outline-none text-sm font-semibold"
               />
             </div>
-            <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-[#8D99AE] block mb-1.5">Repair Auth. Date</label>
-              <input
-                type="date"
-                value={currentClaim.reinspection.repairAuthDate || ''}
-                onChange={e => updateReinspection({ repairAuthDate: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg border border-[#E2E6EA] outline-none text-sm font-semibold"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-[#8D99AE] block mb-1.5">Est. Completion Date</label>
-              <input
-                type="date"
-                value={currentClaim.reinspection.estCompletionDate || ''}
-                onChange={e => updateReinspection({ estCompletionDate: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg border border-[#E2E6EA] outline-none text-sm font-semibold"
-              />
-            </div>
+
+
             <div>
               <label className="text-[10px] font-black uppercase tracking-widest text-[#8D99AE] block mb-1.5">Actual Completion Date</label>
               <input

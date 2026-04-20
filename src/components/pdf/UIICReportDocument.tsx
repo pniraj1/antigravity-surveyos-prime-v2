@@ -406,12 +406,6 @@ export function UIICReportDocument({ claim, profile }: Props) {
           <View style={styles.tableRow}>
             <View style={[styles.tableCell, { width: '25%' }]}><Text style={styles.cellLabel}>RI Appt Date</Text></View>
             <View style={[styles.tableCell, { width: '25%' }]}><Text style={styles.cellValuePlain}>{fd(ri.riAppointmentDate || ri.date)}</Text></View>
-            <View style={[styles.tableCell, { width: '25%' }]}><Text style={styles.cellLabel}>Repair Auth Date</Text></View>
-            <View style={[styles.tableCell, { width: '25%' }]}><Text style={styles.cellValuePlain}>{fd(ri.repairAuthDate)}</Text></View>
-          </View>
-          <View style={styles.tableRow}>
-            <View style={[styles.tableCell, { width: '25%' }]}><Text style={styles.cellLabel}>Exp Completion</Text></View>
-            <View style={[styles.tableCell, { width: '25%' }]}><Text style={styles.cellValuePlain}>{fd(ri.estCompletionDate)}</Text></View>
             <View style={[styles.tableCell, { width: '25%' }]}><Text style={styles.cellLabel}>Actual Completion</Text></View>
             <View style={[styles.tableCell, { width: '25%' }]}><Text style={styles.cellValuePlain}>{fd(ri.actualCompletionDate)}</Text></View>
           </View>

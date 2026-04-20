@@ -76,10 +76,8 @@ ${getSurveyorHeader(profile)}
   <td style="${tdb}">${fd(ri.surveyDate)}</td>
 </tr>
 <tr>
-  <td style="${tdl}">Repair Auth. Date</td>
-  <td style="${tdb}">${fd(ri.repairAuthDate)}</td>
   <td style="${tdl}">Actual Completion Date</td>
-  <td style="${tdb}">${fd(ri.actualCompletionDate)}</td>
+  <td style="${tdb}" colspan="3">${fd(ri.actualCompletionDate)}</td>
 </tr>
 </table>
 
