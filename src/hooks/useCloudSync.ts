@@ -191,7 +191,9 @@ export function useCloudSync() {
       const claim = currentClaimRef.current;
       const uid = userRef.current?.uid;
       if (!claim || !uid) return;
-      addToSyncQueue('claim-backup', { claimId: claim.id, uid }).catch(() => {});
+      addToSyncQueue('claim-backup', { claimId: claim.id, uid }).catch(err => {
+        logger.error('[useCloudSync] beforeunload queue failed — claim may not sync:', err);
+      });
     };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);

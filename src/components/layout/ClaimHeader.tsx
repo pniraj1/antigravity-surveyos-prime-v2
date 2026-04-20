@@ -29,8 +29,16 @@ export function ClaimHeader() {
       if (isDriveConnected) {
         const pending = await getDriveQueueCount().catch(() => 0);
         if (pending > 0) {
-          const flushed = await flushDriveQueue().catch(() => 0);
-          if (flushed > 0) {
+          let flushed = 0;
+          let driveError = false;
+          try {
+            flushed = await flushDriveQueue();
+          } catch {
+            driveError = true;
+          }
+          if (driveError) {
+            toast.success('Saved to Cloud Vault · Drive sync failed (photos queued)');
+          } else if (flushed > 0) {
             toast.success(
               `Cloud Vault saved · ${flushed} photo${flushed > 1 ? 's' : ''} synced to Drive`
             );

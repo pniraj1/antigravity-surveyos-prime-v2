@@ -116,20 +116,30 @@ export async function syncDeltaToCloud(uid: string, sinceTimestamp: string | nul
 
   logger.log(`[Sync] Delta push: ${changed.length} claim(s) changed since ${sinceTimestamp ?? 'never'}.`);
 
+  let batchErrors = 0;
   for (let i = 0; i < changed.length; i += BATCH_SIZE) {
+    const batchNum = Math.floor(i / BATCH_SIZE) + 1;
     const chunk = changed.slice(i, i + BATCH_SIZE);
     const batch = writeBatch(db);
     for (const claim of chunk) {
       const claimRef = doc(db, `users/${uid}/claims`, claim.id);
       batch.set(claimRef, { ...stripPhotos(claim), ownerId: uid });
     }
-    await batch.commit();
-    // Record pushed updatedAt for every claim in this chunk — only runs if
-    // batch.commit() succeeded.
-    await Promise.all(chunk.map(c => setPushedAt(c.id, c.updatedAt)));
-    logger.log(`[Sync] Delta push: committed batch ${Math.floor(i / BATCH_SIZE) + 1} (${chunk.length} claims).`);
+    try {
+      await batch.commit();
+      // Record pushed updatedAt only after successful commit
+      await Promise.all(chunk.map(c => setPushedAt(c.id, c.updatedAt)));
+      logger.log(`[Sync] Delta push: committed batch ${batchNum} (${chunk.length} claims).`);
+    } catch (err) {
+      batchErrors++;
+      logger.error(`[Sync] Delta push: batch ${batchNum} failed (${chunk.length} claims skipped):`, err);
+    }
   }
 
+  if (batchErrors > 0) {
+    logger.error(`[Sync] Delta push completed with ${batchErrors} failed batch(es). Affected claims will retry on next sync.`);
+    throw new Error(`Delta push: ${batchErrors} batch(es) failed`);
+  }
   logger.log(`[Sync] Delta push complete (${changed.length} claims).`);
 }
 

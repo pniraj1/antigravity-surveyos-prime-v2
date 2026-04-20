@@ -127,7 +127,9 @@ export function DocumentsTab() {
       const label = currentClaim.vehicle?.registrationNumber || currentClaim.id;
       const ext   = file.name.split('.').pop() ?? 'bin';
       const driveName = `${key}.${ext}`;
-      uploadFileToDrive(currentClaim.id, driveName, file, label).catch(() => {});
+      uploadFileToDrive(currentClaim.id, driveName, file, label).catch(err => {
+        console.error('[DocumentsTab] Drive upload failed, file may not be synced:', err);
+      });
     }
 
     e.target.value = '';

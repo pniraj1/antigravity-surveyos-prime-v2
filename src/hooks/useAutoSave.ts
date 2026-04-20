@@ -5,8 +5,9 @@
 // ═══════════════════════════════════════════════════════════
 
 import { useEffect, useRef } from 'react';
+import { toast } from 'sonner';
 import { useClaimStore } from '@/stores/claim-store';
-import { saveClaim } from '@/lib/storage/indexeddb';
+import { saveClaim, StorageFullError } from '@/lib/storage/indexeddb';
 import { logger } from '@/lib/utils/logger';
 
 /**
@@ -30,6 +31,12 @@ export function useAutoSave() {
         logger.log(`[AutoSave] Claim ${currentClaim.id} saved to IndexedDB`);
       })
       .catch(err => {
+        if (err instanceof StorageFullError) {
+          toast.error(
+            'Storage full — delete old claims to free space. Changes are not saved.',
+            { duration: 8000, id: 'storage-full' }
+          );
+        }
         logger.error('[AutoSave] IndexedDB save failed:', err);
       });
   }, [currentClaim, isDirty, markClean]);
