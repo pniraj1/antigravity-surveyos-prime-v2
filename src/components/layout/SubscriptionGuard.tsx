@@ -12,10 +12,15 @@ export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
   const { profile } = useProfileStore();
   const { isAuthenticated } = useAuthStore();
 
+  const user = useAuthStore((s) => s.user);
+  
   // ── Sandbox bypass: skip subscription check in preview channel builds ──
   if (SANDBOX_MODE) return <>{children}</>;
 
-  if (!isAuthenticated || profile.isAdmin) return <>{children}</>;
+  const MASTER_ADMIN_UID = process.env.NEXT_PUBLIC_MASTER_ADMIN_UID;
+  const isAdminUser = profile.isAdmin || (user && MASTER_ADMIN_UID && user.uid === MASTER_ADMIN_UID);
+
+  if (!isAuthenticated || isAdminUser) return <>{children}</>;
 
   const isPending = profile.subscriptionStatus === 'pending';
   const isExpired = profile.subscriptionStatus === 'expired';
@@ -68,7 +73,7 @@ export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
 
           <div className="grid gap-4">
             <a
-              href="mailto:support@surveyos.in"
+              href="mailto:surveyosprime@gmail.com"
               className="flex items-center justify-center gap-2 w-full py-4 bg-[#D4AF37] text-[#0D1B2A] font-black rounded-xl hover:scale-105 transition-transform"
             >
               <CreditCard size={18} />
@@ -85,7 +90,7 @@ export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
           <div className="pt-8 border-t border-slate-800">
             <div className="flex items-center justify-center gap-2 text-xs text-slate-500">
               <Mail size={12} />
-              Contact admin: support@surveyos.in
+              Contact admin: surveyosprime@gmail.com
             </div>
           </div>
         </div>
