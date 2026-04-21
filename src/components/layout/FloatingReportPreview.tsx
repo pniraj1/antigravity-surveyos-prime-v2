@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import DOMPurify from 'dompurify';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { useUIStore } from '@/stores/ui-store';
@@ -41,6 +42,18 @@ export function FloatingReportPreview() {
   const resizing = useRef(false);
   const resizeStart = useRef({ x: 0, y: 0, w: 420, h: 580, px: 0, py: 0 });
   const spotPrintRef = useRef<HTMLDivElement>(null);
+
+  // Sanitize report HTML to prevent XSS via user-supplied claim field content.
+  // WHOLE_DOCUMENT preserves <html>/<head>/<body> structure needed for iframe srcDoc.
+  const sanitizedHtml = useMemo(() => {
+    if (!html || typeof window === 'undefined') return html;
+    return DOMPurify.sanitize(html, {
+      WHOLE_DOCUMENT: true,
+      FORCE_BODY: false,
+      ADD_TAGS: ['style', 'link'],
+      ADD_ATTR: ['style', 'media', 'type'],
+    });
+  }, [html]);
 
   // ── Auto-detect format on tab / claim change ────────────────────────────────
   useEffect(() => {
@@ -168,10 +181,10 @@ export function FloatingReportPreview() {
   });
 
   const handleHtmlPrint = useCallback(() => {
-    if (!html) return;
+    if (!sanitizedHtml) return;
     const win = window.open('', '_blank');
     if (!win) return;
-    win.document.write(html);
+    win.document.write(sanitizedHtml);
     win.document.close();
     win.focus();
     setTimeout(() => win.print(), 300);
@@ -308,10 +321,10 @@ export function FloatingReportPreview() {
             <div style={{ padding: 8, zoom }}>
               <SpotPrintReport ref={spotPrintRef} claim={currentClaim} profile={profile} />
             </div>
-          ) : html ? (
+          ) : sanitizedHtml ? (
             <iframe
               key={format}
-              srcDoc={html}
+              srcDoc={sanitizedHtml}
               title="Report Preview"
               style={{
                 border: 'none',

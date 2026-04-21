@@ -15,6 +15,7 @@
  */
 
 import { useMemo, useState, useRef } from 'react';
+import DOMPurify from 'dompurify';
 import { Printer, FileText } from 'lucide-react';
 
 interface ReportPreviewPanelProps {
@@ -68,7 +69,15 @@ export function ReportPreviewPanel({
 }: ReportPreviewPanelProps) {
   const [height, setHeight] = useState(520);
   const containerRef = useRef<HTMLDivElement>(null);
-  const srcDoc = useMemo(() => (html ? wrapInDocument(html) : ''), [html]);
+  const srcDoc = useMemo(() => {
+    if (!html) return '';
+    // Sanitize the body fragment before wrapping — prevents XSS from
+    // user-supplied claim/profile data interpolated into report HTML.
+    const clean = typeof window !== 'undefined'
+      ? DOMPurify.sanitize(html, { ADD_TAGS: ['style'], ADD_ATTR: ['style'] })
+      : html;
+    return wrapInDocument(clean);
+  }, [html]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     const startY = e.clientY;

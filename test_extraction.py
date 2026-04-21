@@ -28,7 +28,9 @@ except ImportError:
     import requests
 
 
-API_KEY = "AIzaSyCiUeCBJkMHpthFCr6sf5qCyMBIWYXrV80"
+API_KEY = os.environ.get("GEMINI_API_KEY", "")
+if not API_KEY:
+    raise ValueError("Set the GEMINI_API_KEY environment variable before running this script.")
 MODEL = "gemini-2.5-flash"
 PDF_PATH = r"C:\Users\Manasi\OneDrive\Desktop\Antigravity Surveyor V6 fixed\SurveyOS-Prime-V2\photosheetsforreview_extracted\DTC Proforma Invoice-1.PDF"
 

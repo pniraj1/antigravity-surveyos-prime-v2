@@ -41,6 +41,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# local dev/test scripts (may contain env vars, local paths)
+test_extraction.py
+photosheetsforreview_extracted/
+
 # code review graph ignores
 .firebase/
 tmp_pdf/
