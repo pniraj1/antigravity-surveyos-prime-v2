@@ -8,6 +8,9 @@ import { useRouter } from 'next/navigation';
 import { signInWithGoogle } from '@/lib/firebase/auth';
 import { useAuthStore } from '@/stores/auth-store';
 import { Loader2 } from 'lucide-react';
+import Logo from '@/components/ui/Logo';
+import DemoSection from '@/components/landing/DemoSection';
+import PricingSection from '@/components/landing/PricingSection';
 
 // Reusable animated container
 const FadeIn = ({ children, delay = 0, className = '' }: { children: React.ReactNode, delay?: number, className?: string }) => (
@@ -334,12 +337,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-[#FBFBFD] text-[#1D1D1F] selection:bg-amber-500/20 font-sans">
       {/* ── Navigation ── */}
       <nav className="relative z-50 flex items-center justify-between px-6 lg:px-12 py-4 bg-white/70 backdrop-blur-xl border-b border-gray-200/50 sticky top-0">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white shadow-xl shadow-amber-500/20">
-            <Zap size={18} className="fill-current" />
-          </div>
-          <span className="text-xl font-bold tracking-tight text-gray-900">SurveyOS<span className="text-amber-500">.</span></span>
-        </div>
+        <Logo variant="light" size="md" />
         <div className="hidden md:flex items-center gap-8 text-sm font-semibold text-gray-500">
           <a href="#features" className="hover:text-amber-600 transition-colors">Features</a>
           <a href="#how" className="hover:text-amber-600 transition-colors">How it works</a>
@@ -401,7 +399,10 @@ export default function LandingPage() {
               {signingIn ? <Loader2 size={20} className="animate-spin" /> : (isAuthenticated ? "Enter Dashboard" : "Start Free Trial")}
               {!signingIn && <ChevronRight size={18} className="transition-transform group-hover:translate-x-1" />}
             </button>
-            <button className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 text-base font-bold text-gray-700 bg-white border border-gray-200 shadow-sm rounded-full hover:bg-gray-50 transition-all">
+            <button
+              onClick={() => document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' })}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 text-base font-bold text-gray-700 bg-white border border-gray-200 shadow-sm rounded-full hover:bg-gray-50 transition-all"
+            >
               <Play size={18} className="text-amber-500" />
               Watch Demo
             </button>
@@ -469,6 +470,12 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* ── Demo Section ── */}
+        <DemoSection onCta={handleAction} />
+
+        {/* ── Pricing Section ── */}
+        <PricingSection onCta={handleAction} />
+
         {/* ── Call to Action ── */}
         <section className="py-32 px-6 lg:px-12 text-center relative overflow-hidden bg-[#05050A] text-white">
           <div className="absolute inset-0 bg-gradient-to-b from-transparent to-amber-900/20 pointer-events-none" />
@@ -489,10 +496,7 @@ export default function LandingPage() {
 
       {/* ── Footer ── */}
       <footer className="py-12 border-t border-gray-800 text-center text-sm text-gray-500 relative z-10 bg-[#05050A]">
-        <div className="flex items-center justify-center gap-2 mb-4">
-          <Zap size={14} className="text-amber-500 fill-current" />
-          <span className="font-bold text-gray-300">SurveyOS</span>
-        </div>
+        <Logo variant="dark" size="sm" className="justify-center mb-4" />
         © {new Date().getFullYear()} SurveyOS Prime. Engineered for Surveyors.
       </footer>
     </div>
