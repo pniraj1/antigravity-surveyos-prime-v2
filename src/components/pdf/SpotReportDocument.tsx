@@ -155,7 +155,7 @@ export function SpotReportDocument({ claim }: Props) {
           </View>
           <View style={styles.row}>
             <Text style={styles.colLabel}>Condition of Vehicle:</Text>
-            <Text style={styles.colValue}>{claim?.vehicle?.condition || 'Not specified'}</Text>
+            <Text style={styles.colValue}>{claim?.vehicle?.preAccidentCondition || 'Not specified'}</Text>
           </View>
           {claim?.vehicle?.isCommercial && (
             <View style={styles.row}>

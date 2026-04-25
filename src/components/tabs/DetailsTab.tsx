@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { SpotTab } from '@/components/tabs/SpotTab';
 import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
+import { ProcessingProgressOverlay } from '@/components/ui/ProcessingProgressOverlay';
 
 // ─── Inline Evidence Panel ────────────────────────────────────────────────────
 // Mirrors the DocumentEvidenceViewer logic but renders inline (not fixed-position)
@@ -38,27 +39,34 @@ function getStorageKey(claimId: string, docType: string) {
   return `evidence_${claimId}_${docType}`;
 }
 
-function loadImage(claimId: string | null, docType: string | null): string | null {
-  if (!claimId || !docType) return null;
+function loadPages(claimId: string | null, docType: string | null): string[] {
+  if (!claimId || !docType) return [];
   try {
     const raw = sessionStorage.getItem(getStorageKey(claimId, docType));
-    if (!raw) return null;
-    const pages: string[] = JSON.parse(raw);
-    return pages[0] ?? null;
+    if (!raw) return [];
+    return JSON.parse(raw) as string[];
   } catch {
-    return null;
+    return [];
   }
 }
 
 function InlineEvidencePanel({ claimId }: { claimId: string }) {
-  const { field } = useEvidenceStore();
-  const [imgSrc, setImgSrc] = useState<string | null>(null);
+  const { field, imageVersion } = useEvidenceStore();
+  const [pages, setPages] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState(0);
   const [zoom, setZoom] = useState(1);
 
   useEffect(() => {
-    setImgSrc(loadImage(claimId, field?.docType ?? null));
+    setPages(loadPages(claimId, field?.docType ?? null));
+    setCurrentPage(0);
     setZoom(1);
-  }, [claimId, field?.docType]);
+  }, [claimId, field?.docType, imageVersion]);
+
+  const totalPages = pages.length;
+  const imgSrc = pages[currentPage] ?? null;
+
+  const prevPage = useCallback(() => setCurrentPage(p => Math.max(p - 1, 0)), []);
+  const nextPage = useCallback(() => setCurrentPage(p => Math.min(p + 1, totalPages - 1)), [totalPages]);
 
   const zoomIn  = useCallback(() => setZoom(z => Math.min(z + 0.25, 4)), []);
   const zoomOut = useCallback(() => setZoom(z => Math.max(z - 0.25, 0.5)), []);
@@ -85,6 +93,16 @@ function InlineEvidencePanel({ claimId }: { claimId: string }) {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          {totalPages > 1 && (
+            <>
+              <EvidenceIconBtn onClick={prevPage} title="Previous Page"><ChevronLeft size={13} /></EvidenceIconBtn>
+              <span style={{ color: '#93c5fd', fontSize: 10, fontWeight: 600, minWidth: 40, textAlign: 'center' }}>
+                {currentPage + 1} / {totalPages}
+              </span>
+              <EvidenceIconBtn onClick={nextPage} title="Next Page"><ChevronRight size={13} /></EvidenceIconBtn>
+              <div style={{ width: 1, height: 14, background: 'rgba(255,255,255,0.15)', margin: '0 2px' }} />
+            </>
+          )}
           <EvidenceIconBtn onClick={zoomOut} title="Zoom Out"><ZoomOut size={13} /></EvidenceIconBtn>
           <button
             onClick={resetZoom}
@@ -422,6 +440,12 @@ export function DetailsTab() {
         onConfirm={confirmApply}
         title={reviewData?.key || ''}
         data={reviewData?.data}
+      />
+
+      <ProcessingProgressOverlay
+        isVisible={isProcessing}
+        progress={progress}
+        onCancel={cancelReview}
       />
     </div>
   );

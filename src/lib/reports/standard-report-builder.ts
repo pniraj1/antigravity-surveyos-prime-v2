@@ -252,7 +252,7 @@ export function buildStandardFinalSurveyHTML(
   </tr>
   <tr>
     <td style="${td}color:#444;font-size:6.8pt;">H.P.A.</td>
-    <td style="${td}" colspan="3">${policy.hpaWith || policy.hpa || vehicle.hypothecation || vehicle.hpa || 'NIL'}</td>
+    <td style="${td}" colspan="3">${policy.hpaWith || vehicle.hypothecation || 'NIL'}</td>
   </tr>
 </table>
 
@@ -286,11 +286,11 @@ export function buildStandardFinalSurveyHTML(
     <td style="${td}color:#444;font-size:6.8pt;">CC / Odometer</td>
     <td style="${td}">${vehicle.cubicCapacity || '—'} / ${vehicle.odometer || '—'} KM</td>
     <td style="${td}color:#444;font-size:6.8pt;">Pre-Accident Cond.</td>
-    <td style="${td}">${vehicle.preAccidentCondition || vehicle.condition || '—'}</td>
+    <td style="${td}" colspan="3">${vehicle.preAccidentCondition || '—'}</td>
   </tr>
   <tr>
     <td style="${td}color:#444;font-size:6.8pt;">Seating Capacity</td>
-    <td style="${td}" colspan="3">${(vehicle as any).seatingCapacityTotal || '—'}</td>
+    <td style="${td}" colspan="3">${vehicle.seatingCapacity || '—'}</td>
   </tr>
 </table>
 
@@ -302,13 +302,13 @@ export function buildStandardFinalSurveyHTML(
   </tr>
   <tr>
     <td style="${td}color:#444;font-size:6.8pt;">M.D.L. No.</td>
-    <td style="${td}font-family:monospace;width:32%;">${driver.licenceNumber || driver.licenseNumber || '—'}</td>
+    <td style="${td}font-family:monospace;width:32%;">${driver.licenceNumber || '—'}</td>
     <td style="${td}color:#444;font-size:6.8pt;">Date of Birth</td>
-    <td style="${td}">${formatDateDMY(driver.dateOfBirth || driver.dob) || '—'}</td>
+    <td style="${td}">${formatDateDMY(driver.dateOfBirth) || '—'}</td>
   </tr>
   <tr>
     <td style="${td}color:#444;font-size:6.8pt;">Licence Classes</td>
-    <td style="${td}" colspan="3">${driver.vehicleClasses || driver.vehicleClass || '—'}</td>
+    <td style="${td}" colspan="3">${driver.vehicleClasses || '—'}</td>
   </tr>
   <tr>
     <td style="${td}color:#444;font-size:6.8pt;">Non-Transport Valid</td>

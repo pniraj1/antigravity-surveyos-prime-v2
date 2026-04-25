@@ -7,6 +7,10 @@
       "**/.*",
       "**/node_modules/**"
     ],
+    "redirects": [
+      { "source": "/landing",  "destination": "/", "type": 301 },
+      { "source": "/landing/", "destination": "/", "type": 301 }
+    ],
     "rewrites": [
       {
         "source": "**",

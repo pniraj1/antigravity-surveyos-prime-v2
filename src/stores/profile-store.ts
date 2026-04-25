@@ -44,9 +44,10 @@ const DEFAULT_PROFILE: SurveyorProfile = {
   bankIFSC: '',
   panNumber: '',
   aiProvider: 'gemini',
-  // Multi-key arrays (new)
+  // Multi-key arrays
   geminiApiKeys: [],
   groqApiKeys: [],
+  nvidiaApiKeys: [],
   // Deprecated single-key fields (kept for migration)
   geminiApiKey: '',
   groqApiKey: '',
@@ -75,6 +76,7 @@ function migrateProfile(profile: SurveyorProfile): SurveyorProfile {
   // Ensure arrays exist (profiles persisted before this version won't have them)
   if (!Array.isArray(updated.geminiApiKeys)) updated.geminiApiKeys = [];
   if (!Array.isArray(updated.groqApiKeys)) updated.groqApiKeys = [];
+  if (!Array.isArray(updated.nvidiaApiKeys)) updated.nvidiaApiKeys = [];
 
   // Migrate single key → array if array is empty
   if (updated.geminiApiKey && updated.geminiApiKeys.length === 0) {

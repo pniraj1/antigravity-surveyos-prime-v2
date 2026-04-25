@@ -55,7 +55,9 @@
 - [x] SpotTab deduplication: removed placeOfSurvey, verificationFlags
 - [x] Admin panel fixed: now accessible via master UID regardless of isAdmin flag
 - [x] Knowledge base vault structured and populated
-- [x] **IRDAI Annual Summary Export** — "Export Annual Summary" button on dashboard (FY selector, live preview, 4-sheet Excel workbook with Claim Register, Insurer-wise, Month-wise Fees, Analytics)
+- [x] **Reinspection Report Polish** — Removed 'Est. Completion Date' and 'Repair Auth.' from UI, HTML Power Print, and UIIC PDF format.
+- [x] **Project ID Research** — Verified `surveyos.web.app` and `surveyosprime.web.app` are taken; recommended custom domain approach.
+
 
 ### Security (2026-04-13)
 - [x] Full security audit performed

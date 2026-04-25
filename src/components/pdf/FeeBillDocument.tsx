@@ -145,6 +145,10 @@ export function FeeBillDocument({ claim, summary }: Props) {
             <Text style={styles.label}>Insurer Name:</Text>
             <Text style={styles.value}>{claim?.policy?.insurerName || '-'}</Text>
           </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>Policy Issuing Office:</Text>
+            <Text style={styles.value}>{claim?.policy?.policyIssuingOffice || '-'}</Text>
+          </View>
         </View>
 
         <View style={styles.section}>

@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useClaimStore } from '@/stores/claim-store';
 import { extractDocument } from '@/lib/ai/processor';
+import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
 import { toast } from 'sonner';
 
 // ─── Session-storage helpers for Evidence Viewer ─────────────────────────────
@@ -27,23 +28,26 @@ export function useAIExtraction() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState('');
   const [reviewData, setReviewData] = useState<{ key: string; data: any; file: File } | null>(null);
+  const [lastFiles, setLastFiles] = useState<Record<string, File>>({});
   
   const setExtractedData = useClaimStore(s => s.setExtractedData);
   const applyExtractedData = useClaimStore(s => s.applyExtractedData);
   const currentClaim = useClaimStore(s => s.currentClaim);
 
-  const triggerExtraction = useCallback(async (key: string, file: File, feedback?: string) => {
+  const triggerExtraction = useCallback(async (key: string, file: File, feedback?: string, previousData?: any) => {
     setIsProcessing(true);
     setProgress(feedback ? 'Re-scanning with feedback...' : 'Preparing...');
+    setLastFiles(prev => ({ ...prev, [key]: file }));
     
     try {
       const { data, images } = await extractDocument(key, file, (msg) => {
         setProgress(msg);
-      }, feedback);
+      }, feedback, previousData);
       
       // Persist source images so Evidence Viewer can display them (session-only)
       if (currentClaim?.id && images.length > 0) {
         saveEvidenceImages(currentClaim.id, key, images);
+        useEvidenceStore.getState().bumpImageVersion();
       }
 
       // Store extracted JSON in claim cache
@@ -94,11 +98,21 @@ export function useAIExtraction() {
 
   const reScanWithFeedback = useCallback((feedback: string) => {
     if (reviewData) {
-      triggerExtraction(reviewData.key, reviewData.file, feedback);
+      triggerExtraction(reviewData.key, reviewData.file, feedback, reviewData.data);
       // Optional: hide dialog immediately while processing
       setReviewData(null);
     }
   }, [reviewData, triggerExtraction]);
+
+  const reScanLatest = useCallback((key: string, feedback: string) => {
+    const file = lastFiles[key];
+    const prevData = currentClaim?.extractedData?.[key];
+    if (file) {
+      triggerExtraction(key, file, feedback, prevData);
+    } else {
+      toast.error(`No previous ${key} document found to re-scan. Please upload it again.`);
+    }
+  }, [lastFiles, currentClaim?.extractedData, triggerExtraction]);
 
   return {
     isProcessing,
@@ -107,6 +121,8 @@ export function useAIExtraction() {
     triggerExtraction,
     confirmApply,
     cancelReview,
-    reScanWithFeedback
+    reScanWithFeedback,
+    reScanLatest,
+    hasFile: (key: string) => !!lastFiles[key]
   };
 }

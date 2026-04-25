@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useClaimStore } from '@/stores/claim-store';
 import { getDepreciationRate, getVehicleAgeMonths } from '@/lib/calculations/depreciation';
 import { formatCurrency } from '@/lib/calculations/utils';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Trash2, PlusCircle, Wrench, ShieldAlert, Settings2, Eye, EyeOff } from 'lucide-react';
+import { Trash2, PlusCircle, Wrench, ShieldAlert, Settings2, Eye, EyeOff, FileSearch } from 'lucide-react';
 import type { PartType } from '@/types';
+import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
 
 // ─── Column Visibility Configuration ─────────────────────────────
 // Keys for optional columns that the user can show/hide
@@ -66,15 +67,37 @@ function saveVisibility(v: Record<OptionalColumn, boolean>) {
 
 // ─── Component ───────────────────────────────────────────────────
 export function AssessmentGrid() {
-  const { 
-    currentClaim, 
-    addAssessmentRow, 
-    updateAssessmentRow, 
+  const {
+    currentClaim,
+    addAssessmentRow,
+    updateAssessmentRow,
     deleteAssessmentRow,
-    toggleRowAllowed 
+    deleteAssessmentRows,
+    toggleRowAllowed
   } = useClaimStore();
 
   const [visible, setVisible] = useState<Record<OptionalColumn, boolean>>(DEFAULT_VISIBLE);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const toggleSelect = (id: string) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const toggleSelectAll = (rowIds: string[]) => {
+    setSelected(prev => {
+      const allSelected = rowIds.length > 0 && rowIds.every(id => prev.has(id));
+      return allSelected ? new Set() : new Set(rowIds);
+    });
+  };
+  const handleBulkDelete = () => {
+    if (selected.size === 0) return;
+    if (!confirm(`Delete ${selected.size} selected row${selected.size === 1 ? '' : 's'}? This cannot be undone.`)) return;
+    deleteAssessmentRows(Array.from(selected));
+    setSelected(new Set());
+  };
   const [showSettings, setShowSettings] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
 
@@ -113,6 +136,63 @@ export function AssessmentGrid() {
 
   const visibleCount = Object.values(visible).filter(Boolean).length;
 
+  const handleGridNavigation = (e: React.KeyboardEvent<HTMLTableSectionElement>) => {
+    if (!e.shiftKey) return;
+    
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+      const target = e.target as HTMLElement;
+      if (target.tagName !== 'INPUT' && target.tagName !== 'SELECT') return;
+
+      const td = target.closest('td');
+      const tr = td?.closest('tr');
+      const tbody = tr?.closest('tbody');
+      
+      if (!td || !tr || !tbody) return;
+      
+      e.preventDefault();
+
+      const tds = Array.from(tr.children);
+      const colIndex = tds.indexOf(td);
+      const trs = Array.from(tbody.children);
+      const rowIndex = trs.indexOf(tr);
+
+      let nextInput: HTMLElement | null = null;
+
+      if (e.key === 'ArrowRight') {
+        for (let i = colIndex + 1; i < tds.length; i++) {
+          const input = tds[i].querySelector('input:not([disabled]), select:not([disabled])') as HTMLElement;
+          if (input) {
+            nextInput = input;
+            break;
+          }
+        }
+      } else if (e.key === 'ArrowLeft') {
+        for (let i = colIndex - 1; i >= 0; i--) {
+          const input = tds[i].querySelector('input:not([disabled]), select:not([disabled])') as HTMLElement;
+          if (input) {
+            nextInput = input;
+            break;
+          }
+        }
+      } else if (e.key === 'ArrowDown') {
+        if (rowIndex < trs.length - 1) {
+          nextInput = trs[rowIndex + 1].children[colIndex]?.querySelector('input:not([disabled]), select:not([disabled])') as HTMLElement;
+        }
+      } else if (e.key === 'ArrowUp') {
+        if (rowIndex > 0) {
+          nextInput = trs[rowIndex - 1].children[colIndex]?.querySelector('input:not([disabled]), select:not([disabled])') as HTMLElement;
+        }
+      }
+
+      if (nextInput) {
+        nextInput.focus();
+        if (nextInput instanceof HTMLInputElement && nextInput.type !== 'checkbox') {
+          nextInput.select();
+        }
+      }
+    }
+  };
+
   if (!currentClaim) return null;
 
   const { assessmentRows, vehicle, accident, depreciationType } = currentClaim;
@@ -123,8 +203,26 @@ export function AssessmentGrid() {
     accident.dateAndTime
   );
 
-  // Dynamic column count: 5 always-on (Sr, ✓, Particulars, Assessed, Dep%, Net, Delete) + visible optionals
-  const totalCols = 7 + visibleCount;
+  // Find duplicate particulars
+  const duplicateParticulars = new Set<string>();
+  const seenParticulars = new Set<string>();
+  
+  assessmentRows.forEach(row => {
+    if (row.particulars?.trim()) {
+      const normalized = row.particulars.replace(/\s+/g, ' ').trim().toLowerCase();
+      if (seenParticulars.has(normalized)) {
+        duplicateParticulars.add(normalized);
+      } else {
+        seenParticulars.add(normalized);
+      }
+    }
+  });
+
+  // Dynamic column count: 8 always-on (Select, Sr, Allowed, Particulars, Assessed, Dep%, Net, Delete) + visible optionals
+  const totalCols = 8 + visibleCount;
+  const allRowIds = assessmentRows.map(r => r.id);
+  const allSelected = allRowIds.length > 0 && allRowIds.every(id => selected.has(id));
+  const someSelected = selected.size > 0 && !allSelected;
 
   return (
     <Card className="flex flex-col h-full border-border">
@@ -146,6 +244,16 @@ export function AssessmentGrid() {
           >
             <PlusCircle size={14} /> Labour Row
           </button>
+
+          {selected.size > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition-colors"
+              title={`Delete ${selected.size} selected row${selected.size === 1 ? '' : 's'}`}
+            >
+              <Trash2 size={14} /> Delete Selected ({selected.size})
+            </button>
+          )}
 
           {/* ─── Settings Gear ─────────────────────────── */}
           <div className="relative" ref={settingsRef}>
@@ -220,9 +328,18 @@ export function AssessmentGrid() {
           <thead className="bg-muted/50 text-muted-foreground text-xs uppercase sticky top-0 z-0 shadow-sm">
             <tr>
               {/* ─── Always-on columns ──────────────────── */}
+              <th className="px-2 py-2 font-medium w-8 text-center" title="Select all">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  ref={el => { if (el) el.indeterminate = someSelected; }}
+                  onChange={() => toggleSelectAll(allRowIds)}
+                  className="rounded border-border h-3.5 w-3.5 cursor-pointer accent-red-600"
+                />
+              </th>
               <th className="px-2 py-2 font-medium w-10 text-center">Sr</th>
               <th className="px-2 py-2 font-medium w-8 text-center" title="Allowed?"><ShieldAlert size={12} className="mx-auto opacity-50" /></th>
-              <th className="px-2 py-2 font-medium min-w-[200px]">Particulars</th>
+              <th className="px-2 py-2 font-medium min-w-[350px] w-[40%]">Particulars</th>
 
               {/* ─── Optional columns ──────────────────── */}
               {visible.partNumber && <th className="px-2 py-2 font-medium w-24">Part No.</th>}
@@ -246,7 +363,7 @@ export function AssessmentGrid() {
               <th className="px-1 py-2 font-medium w-8"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody className="divide-y divide-border" onKeyDown={handleGridNavigation}>
             {assessmentRows.length === 0 ? (
               <tr>
                 <td colSpan={totalCols} className="px-6 py-12 text-center text-muted-foreground">
@@ -263,8 +380,31 @@ export function AssessmentGrid() {
                 const depFactor = depRate / 100;
                 const netAssessed = row.assessed * (1 - depFactor);
 
+                const handleEvidenceClick = () => {
+                  if (!currentClaim?.id) return;
+                  useEvidenceStore.getState().openField(currentClaim.id, {
+                    docType: 'estimate',
+                    fieldKey: 'particulars',
+                    contextSnippet: row.particulars
+                      ? `${row.particulars}${row.estimated ? ` — Taxable: ₹${row.estimated}` : ''}${row.partNumber ? ` (Part No: ${row.partNumber})` : ''}`
+                      : 'Click any field in the estimate document.',
+                  });
+                };
+
+                const normalizedParticulars = row.particulars?.replace(/\s+/g, ' ').trim().toLowerCase();
+                const isDuplicate = normalizedParticulars ? duplicateParticulars.has(normalizedParticulars) : false;
+
                 return (
-                  <tr key={row.id} className={`hover:bg-accent/30 transition-colors ${!row.allowed ? 'opacity-40 bg-muted/20' : ''}`}>
+                  <tr key={row.id} className={`hover:bg-accent/30 transition-colors ${selected.has(row.id) ? 'bg-red-500/5' : ''} ${!row.allowed ? 'opacity-40 bg-muted/20' : ''} ${isDuplicate ? 'bg-orange-500/10' : ''}`}>
+                    {/* Select checkbox — always on */}
+                    <td className={`px-2 py-1.5 text-center ${isDuplicate ? 'border-l-4 border-orange-500' : ''}`}>
+                      <input
+                        type="checkbox"
+                        checked={selected.has(row.id)}
+                        onChange={() => toggleSelect(row.id)}
+                        className="rounded border-border h-3.5 w-3.5 cursor-pointer accent-red-600"
+                      />
+                    </td>
                     {/* Sr No — always on */}
                     <td className="px-2 py-1.5 text-xs font-medium text-muted-foreground text-center">
                       {row.srNo || idx + 1}
@@ -278,14 +418,25 @@ export function AssessmentGrid() {
                         className="rounded border-border focus:ring-primary h-3.5 w-3.5 cursor-pointer accent-primary" 
                       />
                     </td>
-                    {/* Particulars — always on */}
+                    {/* Particulars — always on — click opens Evidence Viewer */}
                     <td className="px-2 py-1.5">
-                      <Input
-                        value={row.particulars}
-                        onChange={(e) => updateAssessmentRow(row.id, { particulars: e.target.value })}
-                        className="h-7 text-xs font-semibold bg-transparent border-transparent hover:border-input focus:bg-background"
-                        placeholder="Item Description"
-                      />
+                      <div className="relative group flex items-center gap-1">
+                        <Input
+                          value={row.particulars}
+                          onChange={(e) => updateAssessmentRow(row.id, { particulars: e.target.value })}
+                          className="h-7 text-xs font-semibold bg-transparent border-transparent hover:border-input focus:bg-background"
+                          placeholder="Item Description"
+                          title={row.particulars}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleEvidenceClick}
+                          title="View in Evidence Viewer"
+                          className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary"
+                        >
+                          <FileSearch size={12} />
+                        </button>
+                      </div>
                     </td>
 
                     {/* ─── Optional columns ────────────────── */}

@@ -7,7 +7,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import type { VehicleDetails, DriverDetails, PolicyDetails, AccidentDetails, VehicleType, DepreciationType } from './vehicle';
-import type { AssessmentRow, SpotDamageRow, SpotSurveyDetails, ReinspectionDetails, FeeBill, PhotoItem, PhotoLayout, BillCheckDetails } from './assessment';
+import type { AssessmentRow, SpotDamageRow, SpotSurveyDetails, ReinspectionDetails, FeeBill, PhotoItem, PhotoLayout, BillCheckDetails, ExtraBillItem } from './assessment';
 import type { SurveyType } from './report';
 
 export interface ClaimData {
@@ -56,6 +56,8 @@ export interface ClaimData {
 
   // ─── Bill Check Report ─────────────────────────────
   billCheck: BillCheckDetails;
+  /** Items present in the final workshop bill that did not match any assessment row */
+  extraBillItems?: ExtraBillItem[];
 
   // ─── Document Verification Statuses (Main Claim) ───
   documentVerification: {
@@ -137,24 +139,20 @@ export function createBlankClaim(
       fuel: '',
       dateOfRegistration: '',
       hypothecation: '',
-      hpa: '',
       fitnessNo: '',
       fitnessValidUpto: '',
       route: '',
       grossWeight: null,
-      rlw: '',
       unladenWeight: null,
       registeredLoadWeight: '',
       actualPayload: '',
       odometer: '',
       preAccidentCondition: '',
-      condition: '',
       registrationType: '',
       registeringAuthority: '',
       registrationValidUpTo: '',
       rcEndorsement: '',
       seatingCapacity: '',
-      seatingCapacityTotal: '',
       passengersAtAccident: '',
       passengerType: '',
       goodsWeightAtAccident: '',
@@ -170,21 +168,16 @@ export function createBlankClaim(
     driver: {
       name: '',
       parentName: '',
-      fatherHusbandName: '',
       relationType: 'S/o',
       licenceType: '',
       licenceNumber: '',
-      licenseNumber: '',
       dateOfBirth: '',
-      dob: '',
       dateOfIssue: '',
       address: '',
       issuingAuthority: '',
       vehicleClasses: '',
-      vehicleClass: '',
       validityNonTransport: '',
       validityTransport: '',
-      validTo: '',
       verificationStatus: 'verified',
       invalidRemarks: '',
       badgeNumber: '',
@@ -206,7 +199,6 @@ export function createBlankClaim(
       policyIssuingOffice: '',
       appointingOffice: '',
       hpaWith: '',
-      hpa: '',
     },
 
     accident: {
@@ -321,6 +313,7 @@ export function createBlankClaim(
       billDate: '',
       billTotal: 0,
     },
+    extraBillItems: [],
 
     documentVerification: {
       rc: { status: 'NO', detail: '' },

@@ -2,15 +2,16 @@
 
 import { useAIExtraction, getEvidenceImages } from '@/hooks/useAIExtraction';
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
+import { ProcessingProgressOverlay } from '@/components/ui/ProcessingProgressOverlay';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { useUIStore } from '@/stores/ui-store';
 import { uploadFileToDrive } from '@/lib/drive';
-import { CURRENT_MODELS } from '@/lib/ai/service';
+import { CURRENT_MODELS, PROVIDER_MODELS, fetchAvailableGeminiModels } from '@/lib/ai/service';
 import {
   FileText, Sparkles, Loader2, CheckCircle2, Car, CreditCard,
   FileCheck, Wrench, Camera, ScrollText, Receipt, Shield, AlertTriangle,
-  Upload, Truck, Zap, Brain, Database,
+  Upload, Truck, Zap, Brain, Database, ChevronDown,
 } from 'lucide-react';
 import { ReconciliationDialog } from './reconciliation/ReconciliationDialog';
 import { getReconciliationFields } from '@/lib/ai/reconciliation';
@@ -21,9 +22,12 @@ function ProviderHealthBadge() {
   const { aiProviderHealth } = useUIStore();
   const { profile } = useProfileStore();
   const provider = profile.aiProvider ?? 'gemini';
-  const health = aiProviderHealth[provider];
+  const healthKey = provider === 'groq' ? 'groq' : 'gemini';
+  const health = aiProviderHealth[healthKey];
   const model = provider === 'gemini'
     ? (profile.geminiModel?.trim() || CURRENT_MODELS.gemini)
+    : provider === 'nvidia'
+    ? (profile.nvidiaModel?.trim() || CURRENT_MODELS.nvidia)
     : (profile.groqModel?.trim() || CURRENT_MODELS.groq);
   const shortModel = model.split('/').pop()?.replace('gemini-', 'Gemini ').replace('-instruct', '') ?? model;
 
@@ -50,6 +54,111 @@ function ProviderHealthBadge() {
   );
 }
 
+// ─── Model Selector ──────────────────────────────────────────────────────────
+function ModelSelector() {
+  const { profile, updateProfile } = useProfileStore();
+  const { availableGeminiModels, setAvailableGeminiModels } = useUIStore();
+  const [open, setOpen] = useState(false);
+
+  const provider = (profile.aiProvider ?? 'gemini') as 'gemini' | 'groq' | 'nvidia';
+
+  // For Gemini: prefer live-fetched list; fall back to static list
+  const models = provider === 'gemini'
+    ? (availableGeminiModels ?? PROVIDER_MODELS.gemini)
+    : PROVIDER_MODELS[provider] ?? [];
+
+  const activeId = provider === 'gemini'
+    ? (profile.geminiModel?.trim() || CURRENT_MODELS.gemini)
+    : provider === 'nvidia'
+    ? (profile.nvidiaModel?.trim() || CURRENT_MODELS.nvidia)
+    : (profile.groqModel?.trim() || CURRENT_MODELS.groq);
+
+  // Auto-fetch live Gemini model list once when provider is Gemini and a key exists
+  useEffect(() => {
+    if (provider !== 'gemini' || availableGeminiModels !== null) return;
+    const key = profile.geminiApiKeys?.[0]?.trim() || profile.geminiApiKey?.trim();
+    if (!key) return;
+    fetchAvailableGeminiModels(key).then(list => {
+      if (list && list.length > 0) setAvailableGeminiModels(list);
+    });
+  }, [provider, availableGeminiModels, profile.geminiApiKeys, profile.geminiApiKey, setAvailableGeminiModels]);
+
+  const active = models.find(m => m.id === activeId) ?? models[0];
+
+  function select(id: string) {
+    if (provider === 'gemini') updateProfile({ geminiModel: id });
+    else if (provider === 'nvidia') updateProfile({ nvidiaModel: id });
+    else updateProfile({ groqModel: id });
+    setOpen(false);
+  }
+
+  const accentColor = provider === 'groq' ? '#F26639' : provider === 'nvidia' ? '#76B900' : '#D4AF37';
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all"
+        style={{
+          background: 'rgba(255,255,255,0.08)',
+          border: '1px solid rgba(255,255,255,0.12)',
+          color: 'rgba(232,236,240,0.85)',
+        }}
+      >
+        <span style={{ color: accentColor }}>{active?.label ?? activeId.split('/').pop()}</span>
+        <ChevronDown size={10} style={{ opacity: 0.6, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+      </button>
+
+      {open && (
+        <>
+          {/* Backdrop */}
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          {/* Dropdown */}
+          <div
+            className="absolute right-0 top-full mt-1.5 z-20 rounded-xl overflow-hidden py-1"
+            style={{
+              background: '#1a2d45',
+              border: '1px solid rgba(255,255,255,0.12)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+              minWidth: 210,
+            }}
+          >
+            {models.map(m => {
+              const isActive = m.id === activeId;
+              return (
+                <button
+                  key={m.id}
+                  onClick={() => select(m.id)}
+                  className="w-full flex items-start gap-2 px-4 py-2.5 text-left transition-colors"
+                  style={{
+                    background: isActive ? 'rgba(255,255,255,0.06)' : 'transparent',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = isActive ? 'rgba(255,255,255,0.06)' : 'transparent'; }}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-black" style={{ color: isActive ? accentColor : '#F8F9FA' }}>
+                        {m.label}
+                      </span>
+                      {isActive && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: `${accentColor}25`, color: accentColor }}>
+                          Active
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[10px] mt-0.5" style={{ color: 'rgba(232,236,240,0.45)' }}>{m.note}</div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── Document Slot Definitions ──────────────────────────────────────────────
 const DOC_GROUPS = [
   {
@@ -67,7 +176,6 @@ const DOC_GROUPS = [
     title: 'Workshop & Damage',
     description: 'Estimate and damage evidence',
     docs: [
-      { id: 'estimate',   label: 'Repair Estimate',  subLabel: 'Initial Estimate',           icon: Wrench,       color: '#059669', bg: 'rgba(5,150,105,0.07)',  accept: 'image/*,application/pdf' },
       { id: 'final-bill', label: 'Final Garage Bill', subLabel: 'Final Workshop Invoice',     icon: Receipt,      color: '#0284c7', bg: 'rgba(2,132,199,0.07)',  accept: 'image/*,application/pdf' },
       { id: 'photos',     label: 'Damage Photos',    subLabel: 'AI damage assessment',        icon: Camera,       color: '#7c3aed', bg: 'rgba(124,58,237,0.07)', accept: 'image/*' },
     ],
@@ -193,7 +301,10 @@ export function DocumentsTab() {
                   Groq
                 </button>
               </div>
-              <ProviderHealthBadge />
+              <div className="flex items-center gap-2">
+                <ModelSelector />
+                <ProviderHealthBadge />
+              </div>
             </div>
           </div>
 
@@ -426,6 +537,13 @@ export function DocumentsTab() {
       <ReconciliationDialog
         isOpen={isReconOpen}
         onClose={() => setIsReconOpen(false)}
+      />
+
+      {/* Persistent progress overlay during PDF extraction */}
+      <ProcessingProgressOverlay
+        isVisible={isProcessing}
+        progress={progress}
+        onCancel={cancelReview}
       />
     </div>
   );

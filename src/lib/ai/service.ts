@@ -17,38 +17,76 @@ import { toast } from 'sonner';
 // ─── Developer-controlled model defaults ─────────────────────────────────────
 // Last verified: April 2026 — Free Tier limits:
 //   gemini-2.5-flash : 10 RPM · 500 RPD · 250K TPM  ← best stable free model
-//   gemini-2.5-pro   :  5 RPM · 100 RPD · 250K TPM
-//   gemini-3-flash   : 15 RPM · 1000 RPD · 500K TPM (preview — may be unstable)
+//   gemini-2.5-flash-lite : 15 RPM · 1000 RPD
 export const CURRENT_MODELS = {
-  gemini: 'gemini-2.5-flash',  // best free-tier stable model (April 2026)
+  gemini: 'gemini-2.5-flash',
+  // Llama 4 Scout — vision-capable, broadly available on Groq free tier
   groq:   'meta-llama/llama-4-scout-17b-16e-instruct',
+  // NVIDIA NIM free tier: model prefix is "meta/" not "nvidia/"
+  nvidia: 'meta/llama-3.2-90b-vision-instruct',
+};
+
+export interface ModelOption {
+  id: string;
+  label: string;
+  note: string;
+}
+
+/**
+ * Static fallback model list — used when live fetch hasn't completed yet.
+ * Only lists models confirmed functional on the free tier (April 2026).
+ * The app auto-fetches the live list from the Gemini API when a key is available.
+ */
+export const PROVIDER_MODELS: Record<'gemini' | 'groq' | 'nvidia', ModelOption[]> = {
+  gemini: [
+    { id: 'gemini-2.5-flash',      label: '2.5 Flash',      note: 'Best · 10 RPM · 500/day' },
+    { id: 'gemini-2.5-flash-lite', label: '2.5 Flash-Lite', note: 'Fastest · 15 RPM · 1000/day' },
+  ],
+  groq: [
+    { id: 'meta-llama/llama-4-scout-17b-16e-instruct',     label: 'Llama 4 Scout',    note: 'Recommended · vision · free tier' },
+    { id: 'meta-llama/llama-4-maverick-17b-128e-instruct', label: 'Llama 4 Maverick', note: 'Higher quality · check availability' },
+    { id: 'llama-3.3-70b-versatile',                       label: 'Llama 3.3 70B',    note: 'Text only · no vision' },
+    { id: 'llama-3.1-8b-instant',                          label: 'Llama 3.1 8B',     note: 'Fastest · text only' },
+  ],
+  nvidia: [
+    { id: 'meta/llama-3.2-90b-vision-instruct', label: 'Llama 3.2 90B', note: 'Default · best vision' },
+    { id: 'meta/llama-3.2-11b-vision-instruct', label: 'Llama 3.2 11B', note: 'Smaller · faster' },
+  ],
 };
 
 // ─── Fallback chain when a model is unavailable on this account tier ──────────
-// Tried in order until one succeeds before giving up and switching to Groq.
+// Tried in order. All three are currently free-tier functional (April 2026).
 const GEMINI_FALLBACK_CHAIN = [
   'gemini-2.5-flash',
-  'gemini-2.0-flash',
-  'gemini-1.5-flash-latest',
+  'gemini-2.5-flash-lite',
 ];
 
 // Old model names stored in user profiles → auto-migrated to current default
 const DEPRECATED_GEMINI_MODELS: Record<string, string> = {
-  'gemini-pro':              'gemini-2.5-flash',
-  'gemini-pro-vision':       'gemini-2.5-flash',
-  'gemini-1.0-pro':          'gemini-2.5-flash',
-  'gemini-1.5-flash':        'gemini-2.5-flash',
-  'gemini-1.5-flash-latest': 'gemini-2.5-flash',
-  'gemini-1.5-pro':          'gemini-2.5-flash',
-  'gemini-2.0-flash':        'gemini-2.5-flash',
-  'gemini-2.0-flash-exp':    'gemini-2.5-flash',
+  'gemini-pro':               'gemini-2.5-flash',
+  'gemini-pro-vision':        'gemini-2.5-flash',
+  'gemini-1.0-pro':           'gemini-2.5-flash',
+  'gemini-1.5-flash':         'gemini-2.5-flash',
+  'gemini-1.5-flash-latest':  'gemini-2.5-flash',
+  'gemini-1.5-pro':           'gemini-2.5-flash',
+  'gemini-2.0-flash':         'gemini-2.5-flash',
+  'gemini-2.0-flash-exp':     'gemini-2.5-flash',
+  'gemini-2.5-pro':           'gemini-2.5-flash',
+};
+
+const DEPRECATED_GROQ_MODELS: Record<string, string> = {
+  'meta-llama/llama-4-maverick-17b-128e-instruct': 'meta-llama/llama-4-scout-17b-16e-instruct',
+  'llama-3.2-90b-vision-preview':                  'meta-llama/llama-4-scout-17b-16e-instruct',
+  'llama-3.2-11b-vision-preview':                  'meta-llama/llama-4-scout-17b-16e-instruct',
 };
 
 export interface AIProvider {
-  name: 'groq' | 'gemini' | 'openai' | 'openrouter';
+  name: 'groq' | 'gemini' | 'openai' | 'nvidia';
   endpoint: string;
   model: string;
-  keys: string[];  // ordered list — key[0] tried first
+  keys: string[];
+  /** Max images per request. Groq is limited to 5; undefined = unlimited. */
+  maxImages?: number;
 }
 
 // ─── Read profile from Zustand ────────────────────────────────────────────────
@@ -74,10 +112,17 @@ function resolveGeminiModel(profile: ReturnType<typeof getProfileFromStorage>): 
   return stored;
 }
 
-/** Resolves effective Groq model — uses developer default if blank. */
+/** Resolves effective Groq model — migrates deprecated names, uses developer default if blank. */
 function resolveGroqModel(profile: ReturnType<typeof getProfileFromStorage>): string {
   const stored = profile?.groqModel?.trim();
-  return stored || CURRENT_MODELS.groq;
+  if (!stored) return CURRENT_MODELS.groq;
+  if (DEPRECATED_GROQ_MODELS[stored]) {
+    const migrated = DEPRECATED_GROQ_MODELS[stored];
+    useProfileStore.getState().updateProfile({ groqModel: migrated });
+    toast.info(`Groq model updated: ${stored} → ${migrated} (old model unavailable).`, { duration: 6000 });
+    return migrated;
+  }
+  return stored;
 }
 
 /** Collect all non-empty keys for a provider (new array + legacy single key). */
@@ -104,12 +149,21 @@ function resolveGroqKeys(profile: ReturnType<typeof getProfileFromStorage>): str
   return keys;
 }
 
+function resolveNvidiaKeys(profile: ReturnType<typeof getProfileFromStorage>): string[] {
+  if (!Array.isArray(profile?.nvidiaApiKeys)) return [];
+  return profile.nvidiaApiKeys.filter(k => k?.trim());
+}
+
+function resolveNvidiaModel(profile: ReturnType<typeof getProfileFromStorage>): string {
+  return profile?.nvidiaModel?.trim() || CURRENT_MODELS.nvidia;
+}
+
 /**
  * Resolves provider config for a given provider name.
  * Returns null if no keys are configured.
  */
 function buildProvider(
-  name: 'gemini' | 'groq',
+  name: 'gemini' | 'groq' | 'nvidia',
   profile: ReturnType<typeof getProfileFromStorage>
 ): AIProvider | null {
   if (name === 'gemini') {
@@ -123,6 +177,18 @@ function buildProvider(
       keys,
     };
   }
+  if (name === 'nvidia') {
+    const keys = resolveNvidiaKeys(profile);
+    if (keys.length === 0) return null;
+    const model = resolveNvidiaModel(profile);
+    return {
+      name: 'nvidia',
+      endpoint: 'https://integrate.api.nvidia.com/v1/chat/completions',
+      model,
+      keys,
+      // No maxImages cap — NVIDIA NIM handles full documents
+    };
+  }
   // groq
   const keys = resolveGroqKeys(profile);
   if (keys.length === 0) return null;
@@ -132,6 +198,7 @@ function buildProvider(
     endpoint: 'https://api.groq.com/openai/v1/chat/completions',
     model,
     keys,
+    maxImages: 5,
   };
 }
 
@@ -143,8 +210,8 @@ export async function getAIProvider(): Promise<AIProvider> {
   const profile = getProfileFromStorage();
 
   if (profile) {
-    const preferred = profile.aiProvider ?? 'gemini';
-    const fallback  = preferred === 'gemini' ? 'groq' : 'gemini';
+    const preferred = (profile.aiProvider ?? 'gemini') as 'gemini' | 'groq' | 'nvidia';
+    const fallback: 'gemini' | 'groq' = preferred === 'groq' ? 'gemini' : 'groq';
 
     const primary = buildProvider(preferred, profile);
     if (primary) return primary;
@@ -152,8 +219,9 @@ export async function getAIProvider(): Promise<AIProvider> {
     // Preferred has no keys — try fallback with a visible warning
     const fallbackProvider = buildProvider(fallback, profile);
     if (fallbackProvider) {
+      const names: Record<string, string> = { gemini: 'Google Gemini', groq: 'Groq', nvidia: 'NVIDIA NIM' };
       toast.warning(
-        `No ${preferred === 'gemini' ? 'Gemini' : 'Groq'} API key — falling back to ${fallback === 'gemini' ? 'Google Gemini' : 'Groq'} for this extraction.`,
+        `No ${names[preferred]} API key — falling back to ${names[fallback]} for this extraction.`,
         { duration: 5000 }
       );
       return fallbackProvider;
@@ -259,10 +327,12 @@ async function callWithKey(provider: AIProvider, key: string, prompt: string, im
     return (data.candidates?.[0]?.content?.parts?.[0]?.text || '').replace(/```json|```/g, '').trim();
   }
 
-  // Groq / OpenAI-compatible
+  // Groq / NVIDIA NIM / OpenAI-compatible
   const messages: any[] = [];
   if (images.length > 0) {
-    const safeImages = images.slice(0, 5);
+    // Apply per-provider image cap (Groq = 5, NVIDIA/others = unlimited)
+    const cap = provider.maxImages ?? images.length;
+    const safeImages = images.slice(0, cap);
     const content: any[] = safeImages.map(img => ({
       type: 'image_url',
       image_url: { url: img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}` },
@@ -281,6 +351,7 @@ async function callWithKey(provider: AIProvider, key: string, prompt: string, im
       messages,
       temperature: 0.1,
       response_format: { type: 'json_object' },
+      max_tokens: 4096,
     }),
   });
 
@@ -293,148 +364,218 @@ async function callWithKey(provider: AIProvider, key: string, prompt: string, im
   }
 
   const data = await res.json();
-  useUIStore.getState().setAIProviderHealth('groq', 'ok');
+  useUIStore.getState().setAIProviderHealth(provider.name as 'groq' | 'gemini', 'ok');
   return (data.choices?.[0]?.message?.content || '').trim();
 }
 
-/**
- * Calls a provider, rotating through all its keys on 429/401 errors.
- * Returns the response text or throws if all keys fail.
- */
 /** Returns true if the error is a billing/free-tier quota exhaustion (not a temporary rate limit). */
 function isQuotaExhausted(err: any): boolean {
-  const msg: string = err?.message ?? '';
+  const msg: string = (err?.message ?? '').toLowerCase();
   return err?.status === 429 && (
-    msg.toLowerCase().includes('quota exceeded') ||
-    msg.toLowerCase().includes('free_tier') ||
-    msg.toLowerCase().includes('limit: 0')
+    msg.includes('quota exceeded') ||
+    msg.includes('free_tier') ||
+    msg.includes('limit: 0')
   );
 }
 
+/** Returns true when Gemini is temporarily overloaded (not a quota or auth issue). */
+function isHighDemandError(err: any): boolean {
+  const msg: string = (err?.message ?? '').toLowerCase();
+  return (err?.status === 503 || err?.status === 500) && (
+    msg.includes('high demand') ||
+    msg.includes('overloaded') ||
+    msg.includes('service unavailable') ||
+    msg.includes('try again')
+  );
+}
+
+const PROVIDER_LABELS: Record<string, string> = {
+  gemini: 'Gemini',
+  groq: 'Groq',
+  nvidia: 'NVIDIA NIM',
+};
+
+/**
+ * Calls a provider with key rotation.
+ * On Gemini 503 high-demand: retries same key up to 2× with 1.5s wait before moving on.
+ * On 429 rate-limit: rotates to next key.
+ */
 async function callWithRotation(provider: AIProvider, prompt: string, images: string[]): Promise<string> {
   let lastError: Error = new Error('No keys available');
-  const providerLabel = provider.name === 'gemini' ? 'Gemini' : 'Groq';
+  const providerLabel = PROVIDER_LABELS[provider.name] ?? provider.name;
 
-  // For Gemini: walk the fallback chain when a model is unavailable on this account tier.
-  // e.g. 2.5-flash → 2.0-flash → 1.5-flash-latest, then gives up to Groq.
   let downgradedProvider = provider;
   const triedModels = new Set<string>([provider.model]);
 
   for (let i = 0; i < downgradedProvider.keys.length; i++) {
     const key = downgradedProvider.keys[i];
-    try {
-      return await callWithKey(downgradedProvider, key, prompt, images);
-    } catch (err: any) {
-      lastError = err;
-      const isAuthError = err.status === 401 || err.status === 403;
 
-      // ── Model not found on this account → try next in fallback chain ──
-      if (provider.name === 'gemini' && isModelUnavailable(err)) {
-        const nextModel = GEMINI_FALLBACK_CHAIN.find(m => !triedModels.has(m));
-        if (nextModel) {
-          triedModels.add(nextModel);
-          toast.info(
-            `${downgradedProvider.model} unavailable — trying ${nextModel} automatically.`,
-            { duration: 4000 }
-          );
-          downgradedProvider = {
-            ...provider,
-            model: nextModel,
-            endpoint: `https://generativelanguage.googleapis.com/v1beta/models/${nextModel}:generateContent`,
-          };
-          i = -1; // restart key loop with new model
+    // ── High-demand retry: up to 2 retries with 1.5s gap before rotating key ──
+    let demandRetries = 0;
+    while (demandRetries <= 2) {
+      try {
+        return await callWithKey(downgradedProvider, key, prompt, images);
+      } catch (err: any) {
+        lastError = err;
+
+        if (isHighDemandError(err) && demandRetries < 2) {
+          demandRetries++;
+          if (demandRetries === 1) {
+            toast.info(`${providerLabel} is under high demand — retrying in 1.5s…`, { duration: 3000 });
+          }
+          await new Promise(r => setTimeout(r, 1500));
           continue;
         }
-        // All models in chain exhausted — fall through to Groq
-        break;
-      }
 
-      if (isQuotaExhausted(err)) {
-        // Free-tier quota exhausted — all keys share the same billing account, no point rotating
-        useUIStore.getState().setAIProviderHealth(provider.name as 'gemini' | 'groq', 'error');
-        toast.error(
-          `${providerLabel} free-tier quota exhausted. Switch to ${provider.name === 'gemini' ? 'Groq' : 'Gemini'} in Profile → AI & Documents Intelligence, or wait for quota reset.`,
-          { duration: 10000 }
-        );
+        // Not a high-demand error, or retries exhausted — break to key rotation logic
         break;
-      } else if (err.status === 429) {
-        // Temporary rate limit — try next key
-        useUIStore.getState().setAIProviderHealth(provider.name as 'gemini' | 'groq', 'rate-limited');
-        if (i + 1 < downgradedProvider.keys.length) {
-          toast.warning(
-            `${providerLabel} key ${i + 1} rate limited — switching to backup key ${i + 2}.`,
-            { duration: 4000 }
-          );
-          await new Promise(r => setTimeout(r, 300));
-          continue;
-        }
-      } else if (isAuthError) {
-        useUIStore.getState().setAIProviderHealth(provider.name as 'gemini' | 'groq', 'error');
-        toast.error(
-          `${providerLabel} key ${i + 1} is invalid — check your API key in Profile → AI & Documents Intelligence.`,
-          { duration: 6000 }
-        );
-        break;
-      } else {
-        // Network or server error — try next key
-        if (i + 1 < downgradedProvider.keys.length) continue;
       }
+    }
+
+    const err = lastError as any;
+    const isAuthError = err.status === 401 || err.status === 403;
+
+    // ── Model not found on this account → walk Gemini fallback chain ──
+    if (provider.name === 'gemini' && isModelUnavailable(err)) {
+      const nextModel = GEMINI_FALLBACK_CHAIN.find(m => !triedModels.has(m));
+      if (nextModel) {
+        triedModels.add(nextModel);
+        toast.info(`${downgradedProvider.model} unavailable — trying ${nextModel} automatically.`, { duration: 4000 });
+        downgradedProvider = {
+          ...provider,
+          model: nextModel,
+          endpoint: `https://generativelanguage.googleapis.com/v1beta/models/${nextModel}:generateContent`,
+        };
+        i = -1;
+        continue;
+      }
+      break;
+    }
+
+    if (isQuotaExhausted(err)) {
+      const healthKey = provider.name === 'gemini' || provider.name === 'groq' ? provider.name : 'groq';
+      useUIStore.getState().setAIProviderHealth(healthKey, 'error');
+      toast.error(
+        `${providerLabel} free-tier quota exhausted. Switch provider in Profile → AI & Documents Intelligence, or wait for quota reset.`,
+        { duration: 10000 }
+      );
+      break;
+    } else if (err.status === 429) {
+      const healthKey = provider.name === 'gemini' || provider.name === 'groq' ? provider.name : 'groq';
+      useUIStore.getState().setAIProviderHealth(healthKey, 'rate-limited');
+      if (i + 1 < downgradedProvider.keys.length) {
+        toast.warning(`${providerLabel} key ${i + 1} rate limited — switching to backup key ${i + 2}.`, { duration: 4000 });
+        await new Promise(r => setTimeout(r, 300));
+        continue;
+      }
+    } else if (isAuthError) {
+      const healthKey = provider.name === 'gemini' || provider.name === 'groq' ? provider.name : 'groq';
+      useUIStore.getState().setAIProviderHealth(healthKey, 'error');
+      toast.error(`${providerLabel} key ${i + 1} is invalid — check your API key in Profile → AI & Documents Intelligence.`, { duration: 6000 });
+      break;
+    } else {
+      if (i + 1 < downgradedProvider.keys.length) continue;
     }
   }
 
-  useUIStore.getState().setAIProviderHealth(provider.name as 'gemini' | 'groq', 'error');
+  const healthKey = provider.name === 'gemini' || provider.name === 'groq' ? provider.name : 'groq';
+  useUIStore.getState().setAIProviderHealth(healthKey, 'error');
   throw lastError;
 }
 
 /**
  * Main entry point. Calls the configured AI provider with key rotation.
- * If all keys for the primary provider fail, automatically falls back to the other provider.
+ * Fallback chain: primary → secondary → NVIDIA NIM (if keys configured).
  */
 export async function callAIGateway(prompt: string, images: string[] = []): Promise<string> {
   const profile = getProfileFromStorage();
-  const preferred = profile?.aiProvider ?? 'gemini';
-  const fallbackName = preferred === 'gemini' ? 'groq' : 'gemini';
+  const preferred = (profile?.aiProvider ?? 'gemini') as 'gemini' | 'groq' | 'nvidia';
+  const secondaryName: 'gemini' | 'groq' = preferred === 'groq' ? 'gemini' : 'groq';
 
-  const primaryProvider = profile ? buildProvider(preferred, profile) : null;
-  const fallbackProvider = profile ? buildProvider(fallbackName, profile) : null;
+  const primaryProvider  = profile ? buildProvider(preferred, profile) : null;
+  const secondaryProvider = profile ? buildProvider(secondaryName, profile) : null;
+  const nvidiaProvider   = profile ? buildProvider('nvidia', profile) : null;
 
   // Try primary provider
   if (primaryProvider) {
     try {
       return await callWithRotation(primaryProvider, prompt, images);
-    } catch (primaryErr: any) {
-      // All keys for primary exhausted — try fallback if available
-      if (fallbackProvider) {
-        toast.warning(
-          `${preferred === 'gemini' ? 'Gemini' : 'Groq'} unavailable — automatically switching to ${fallbackName === 'gemini' ? 'Google Gemini' : 'Groq'}.`,
-          { duration: 5000 }
-        );
-        try {
-          return await callWithRotation(fallbackProvider, prompt, images);
-        } catch (fallbackErr: any) {
-          toast.error(
-            `Both Gemini and Groq failed. Check your API keys in Profile → AI & Documents Intelligence.`,
-            { duration: 10000 }
-          );
-          throw fallbackErr;
-        }
-      }
-      // No fallback configured — give actionable guidance
-      const fallbackLabel = preferred === 'gemini' ? 'Groq' : 'Gemini';
-      toast.error(
-        `${preferred === 'gemini' ? 'Gemini' : 'Groq'} failed and no ${fallbackLabel} key is configured as backup. Add a ${fallbackLabel} key in Profile → AI & Documents Intelligence.`,
-        { duration: 10000 }
-      );
-      throw primaryErr;
+    } catch {
+      // fall through to secondary
     }
+    if (secondaryProvider) {
+      toast.warning(
+        `${PROVIDER_LABELS[preferred]} unavailable — switching to ${PROVIDER_LABELS[secondaryName]}.`,
+        { duration: 5000 }
+      );
+      try {
+        return await callWithRotation(secondaryProvider, prompt, images);
+      } catch {
+        // fall through to NVIDIA
+      }
+    }
+    if (nvidiaProvider) {
+      toast.warning('Gemini and Groq both failed — trying NVIDIA NIM as last resort.', { duration: 5000 });
+      try {
+        return await callWithRotation(nvidiaProvider, prompt, images);
+      } catch (nvidiaErr: any) {
+        toast.error('All AI providers failed. Check your API keys in Profile → AI & Documents Intelligence.', { duration: 10000 });
+        throw nvidiaErr;
+      }
+    }
+    // No secondary or nvidia configured
+    toast.error(
+      `${PROVIDER_LABELS[preferred]} failed. Add a backup key in Profile → AI & Documents Intelligence.`,
+      { duration: 10000 }
+    );
+    throw new Error(`${PROVIDER_LABELS[preferred]} failed and no fallback provider is configured.`);
   }
 
-  // No primary keys — go straight to fallback (already warned in getAIProvider)
-  if (fallbackProvider) {
-    return callWithRotation(fallbackProvider, prompt, images);
-  }
+  // No primary keys — go straight to secondary or NVIDIA
+  if (secondaryProvider) return callWithRotation(secondaryProvider, prompt, images);
+  if (nvidiaProvider) return callWithRotation(nvidiaProvider, prompt, images);
 
   // Nothing configured — try Firestore master config
   const masterProvider = await getAIProvider();
   return callWithRotation(masterProvider, prompt, images);
+}
+
+/**
+ * Fetches available Gemini models live from the API using the first configured key.
+ * Filters to only models that support generateContent (i.e. can do extraction).
+ * Returns null if the fetch fails — caller should fall back to PROVIDER_MODELS.gemini.
+ */
+export async function fetchAvailableGeminiModels(apiKey: string): Promise<ModelOption[] | null> {
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?pageSize=100&key=${apiKey}`
+    );
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    const raw: Array<{ name: string; displayName: string; supportedGenerationMethods?: string[] }> =
+      data.models ?? [];
+
+    const vision = raw.filter(m =>
+      m.supportedGenerationMethods?.includes('generateContent') &&
+      // Exclude embedding / AQA / tuning-only models
+      !m.name.includes('embedding') &&
+      !m.name.includes('aqa')
+    );
+
+    if (vision.length === 0) return null;
+
+    return vision.map(m => {
+      const id = m.name.replace('models/', '');
+      // Match against static list to get the human note; fallback to display name
+      const staticMatch = PROVIDER_MODELS.gemini.find(s => s.id === id);
+      return {
+        id,
+        label: m.displayName ?? id,
+        note: staticMatch?.note ?? 'Available on your account',
+      };
+    });
+  } catch {
+    return null;
+  }
 }

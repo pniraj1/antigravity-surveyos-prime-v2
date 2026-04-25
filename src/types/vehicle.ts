@@ -35,24 +35,20 @@ export interface VehicleDetails {
   fuel: FuelType | string;
   dateOfRegistration: string; // ISO date
   hypothecation: string;
-  hpa: string; // Alias for consistency
   fitnessNo: string;
   fitnessValidUpto: string; // ISO date
   route: string;
   grossWeight: number | null;
-  rlw: string; // Registered Load Weight (string for commercial)
   unladenWeight: number | null;
   registeredLoadWeight: string;
   actualPayload: string;
   odometer: string;
   preAccidentCondition: string;
-  condition: string; // Alias for spot report compatibility
   registrationType: string;
   registeringAuthority: string;
   registrationValidUpTo: string; // ISO date
   rcEndorsement: string;
   seatingCapacity: string;
-  seatingCapacityTotal?: string; // For commercial
   passengersAtAccident?: string;
   passengerType?: string;
   goodsWeightAtAccident?: string;
@@ -68,21 +64,16 @@ export interface VehicleDetails {
 export interface DriverDetails {
   name: string;
   parentName: string;
-  fatherHusbandName: string; // Mirror AI key
   relationType: DLRelation;
   licenceType?: string; // e.g. MCWG, LMV-TR
   licenceNumber: string;
-  licenseNumber: string;
   dateOfBirth: string; // ISO date
-  dob: string; // Alias
   dateOfIssue: string; // ISO date
   address: string; // Added for AI mapping
   issuingAuthority: string;
   vehicleClasses: string;
-  vehicleClass: string; // Alias
   validityNonTransport: string; // ISO date
   validityTransport: string; // ISO date
-  validTo: string; // Composite alias
   verificationStatus: DLVerificationStatus;
   invalidRemarks: string;
   badgeNumber: string;
@@ -104,7 +95,6 @@ export interface PolicyDetails {
   policyIssuingOffice: string;
   appointingOffice: string;
   hpaWith: string;
-  hpa: string; // Alias
 }
 
 export interface AccidentDetails {
@@ -146,20 +136,24 @@ export interface SurveyorProfile {
   bankIFSC: string;
   panNumber: string;
   // ─── AI Configuration ─────────────────────────────────
-  /** Which provider to use: 'groq' | 'gemini' */
-  aiProvider: 'groq' | 'gemini';
+  /** Which provider to use as primary */
+  aiProvider: 'groq' | 'gemini' | 'nvidia';
   /** Up to 3 Gemini API keys — rotated automatically on rate-limit/error */
   geminiApiKeys: string[];
   /** Up to 3 Groq API keys — rotated automatically on rate-limit/error */
   groqApiKeys: string[];
+  /** Up to 3 NVIDIA NIM API keys — used as automatic 3rd-provider fallback */
+  nvidiaApiKeys: string[];
   /** @deprecated — use geminiApiKeys[0]. Kept for backward-compat migration. */
   geminiApiKey: string;
   /** @deprecated — use groqApiKeys[0]. Kept for backward-compat migration. */
   groqApiKey: string;
-  /** Optional model override for Gemini. Blank = developer default (gemini-2.0-flash). */
+  /** Optional model override for Gemini. Blank = developer default. */
   geminiModel?: string;
-  /** Optional model override for Groq. Blank = developer default (llama-4-scout). */
+  /** Optional model override for Groq. Blank = developer default. */
   groqModel?: string;
+  /** Optional model override for NVIDIA NIM. Blank = developer default. */
+  nvidiaModel?: string;
   /** Legacy Google OAuth client id */
   googleClientId: string;
   /** Whether to automatically upload photos and documents to Drive */

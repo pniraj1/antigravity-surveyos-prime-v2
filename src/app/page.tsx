@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useUIStore } from '@/stores/ui-store';
 import { useClaimsLoader } from '@/hooks/useClaimsLoader';
@@ -16,6 +16,26 @@ import { DriveGateScreen } from '@/components/auth/DriveGateScreen';
  */
 export default function Home() {
   const { isAuthenticated, loading } = useAuthStore();
+
+  // Inject noindex for authenticated sessions — prevents app dashboard from being indexed.
+  // Googlebot never has Firebase auth, so it always sees the landing page with index,follow.
+  useEffect(() => {
+    const existing = document.querySelector('meta[name="robots"][data-dynamic]');
+    if (isAuthenticated && !loading) {
+      if (!existing) {
+        const el = document.createElement('meta');
+        el.setAttribute('name', 'robots');
+        el.setAttribute('content', 'noindex, nofollow');
+        el.setAttribute('data-dynamic', 'true');
+        document.head.appendChild(el);
+      }
+    } else {
+      existing?.remove();
+    }
+    return () => {
+      document.querySelector('meta[name="robots"][data-dynamic]')?.remove();
+    };
+  }, [isAuthenticated, loading]);
   const { isDriveConnected } = useUIStore();
   
   // Hydrate claims list and sync across tabs

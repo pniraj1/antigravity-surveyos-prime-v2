@@ -37,7 +37,7 @@ const RAW_PROMPTS: Record<string, string> = {
   "fuel": "",
   "seating_capacity": "",
   "unladen_weight": "",
-  "gross_weight": "",
+  "gross_weight": "Look for 'Gross Weight', 'GVW', 'RLW', 'Registered Laden Weight', 'Laden Weight', 'G.V.W.' - these all mean the same thing",
   "class_of_vehicle": "",
   "registering_authority": "Look for 'Registering Authority', 'RTO', 'Regn Authority', 'Issuing Authority' - the RTO office name that issued the RC",
   "permit_no": "",
@@ -114,6 +114,7 @@ CRITICAL RULES:
    - "total_tax": Total tax (CGST + SGST)
    - "gross_amount": Final grand total (all items + all tax)
 7. Extract the HSN/SAC code for each line item as "hsn_sac". It is typically a 4-8 digit code in a column.
+8. DO NOT DUPLICATE ITEMS: If an item has only ONE price, place it in ONLY ONE category (spare_parts OR labour_items OR painting_items). ONLY split a line item if it explicitly has TWO separate price columns (e.g. a Part Price column AND a Labour Price column). If you DO split it, you MUST append " (Part)" and " (Labour)" to their descriptions respectively.
 
 Return ONLY a JSON object:
 {
@@ -146,13 +147,22 @@ Return ONLY the JSON. No explanation, no markdown, no backticks.`,
   'final-bill': `You are an expert at reading Indian FINAL WORKSHOP BILLS (Invoices/Tax Invoices). Extract ALL final billed line items from ALL pages.
 
 CRITICAL RULES:
-1. Extract EVERY line item from ALL pages. Do NOT stop early.
-2. Classify items:
-   - spare_parts: Physical parts (HSN codes 87xx, 85xx etc.)
-   - labour_items: Labour/service (SAC 9987) — "REPLACE", "R & R", "FITMENT CHARGES", "DIAGNOSIS", "WELDING" etc.
-   - painting_items: Paint jobs (SAC 9987) — descriptions containing "PAINTING", "SOLID COLOUR", "METALLIC"
-3. "amount" = final amount with GST included (last column).
-4. "category": glass (windshield/window), plastic (bumper/grille/cladding/garnish), metal (everything else).
+1. Extract EVERY SINGLE line item from ALL pages. Do NOT stop early. Multi-page bills may have 50-80+ items.
+2. PRESERVE the original serial number (Sr No / S.No / #) from the bill as "sr_no". If not numbered, assign 1, 2, 3... in order of appearance.
+3. Classify items:
+   - spare_parts: Physical parts (HSN 87xx, 85xx, 27xx, 35xx etc.). Have part_number columns.
+   - labour_items: Labour/service (SAC 9987) — "REPLACE", "R & R", "REMOVE", "FITMENT CHARGES", "DIAGNOSIS", "CUTTING", "WELDING", "GAS CHARGES".
+   - painting_items: Paint jobs (SAC 9987) — "PAINTING", "SOLID COLOUR", "METALLIC COLOUR", "TOUCH UP".
+4. AMOUNTS — extract BOTH per line (separate columns on the invoice):
+   - "taxable_amount": TAXABLE VALUE / BASE AMOUNT before GST (Qty × Unit Price). This is the NET amount and is the PRIMARY anchor for matching against the estimate.
+   - "cgst_amount": CGST for this line (if printed).
+   - "sgst_amount": SGST for this line (if printed).
+   - "total_amount": FINAL amount INCLUDING GST (last column, gross).
+   If only one amount column exists, put it in "total_amount" and set "taxable_amount" to total_amount / (1 + gst_percent/100).
+5. "part_number": extract for spare_parts ALWAYS. Also extract for labour/paint if the bill prints a code/SAC-ref in a part-number column (some workshops do this).
+6. "hsn_sac": 4-8 digit HSN/SAC code per line.
+7. "category" on spare_parts: glass (windshield/window/mirror glass), plastic (bumper/grille/cladding/garnish/cap/air duct/skid plate/fender liner), metal (everything else).
+8. DO NOT DUPLICATE ITEMS: If an item has only ONE price, place it in ONLY ONE category (spare_parts OR labour_items OR painting_items). ONLY split a line item if it explicitly has TWO separate price columns (e.g. a Part Price column AND a Labour Price column). If you DO split it, you MUST append " (Part)" and " (Labour)" to their descriptions respectively.
 
 Return ONLY a JSON object:
 {
@@ -160,13 +170,13 @@ Return ONLY a JSON object:
   "bill_number": "",
   "bill_date": "",
   "spare_parts": [
-    { "description": "", "part_number": "", "quantity": 1, "unit_price": 0, "amount": 0, "gst_percent": 18, "category": "metal or plastic or glass" }
+    { "sr_no": 1, "description": "", "part_number": "", "hsn_sac": "", "quantity": 1, "unit_price": 0, "taxable_amount": 0, "cgst_amount": 0, "sgst_amount": 0, "total_amount": 0, "gst_percent": 18, "category": "metal or plastic or glass" }
   ],
   "labour_items": [
-    { "description": "", "amount": 0, "gst_percent": 18 }
+    { "sr_no": 1, "description": "", "part_number": "", "hsn_sac": "", "quantity": 1, "unit_price": 0, "taxable_amount": 0, "cgst_amount": 0, "sgst_amount": 0, "total_amount": 0, "gst_percent": 18 }
   ],
   "painting_items": [
-    { "description": "", "amount": 0, "gst_percent": 18 }
+    { "sr_no": 1, "description": "", "part_number": "", "hsn_sac": "", "quantity": 1, "unit_price": 0, "taxable_amount": 0, "cgst_amount": 0, "sgst_amount": 0, "total_amount": 0, "gst_percent": 18 }
   ],
   "total_amount": 0
 }
@@ -192,7 +202,7 @@ Return ONLY the JSON. No explanation, no markdown, no backticks.`,
   "route": "",
   "issuing_authority": "",
   "goods_category": "",
-  "gross_vehicle_weight_kg": "",
+  "gross_vehicle_weight_kg": "Look for 'Gross Vehicle Weight', 'GVW', 'RLW', 'Registered Laden Weight', 'Laden Weight', 'G.V.W.' - these all mean the same thing",
   "unladen_weight_kg": ""
 }
 Return ONLY the JSON. No explanation, no markdown, no backticks.`,
@@ -218,7 +228,7 @@ Return ONLY the JSON. No explanation, no markdown, no backticks.`,
   "validity_from": "",
   "validity_to": "",
   "issuing_authority": "",
-  "gross_vehicle_weight_kg": "",
+  "gross_vehicle_weight_kg": "Look for 'Gross Vehicle Weight', 'GVW', 'RLW', 'Registered Laden Weight', 'Laden Weight', 'G.V.W.' - these all mean the same thing",
   "unladen_weight_kg": "",
   "seating_capacity": "",
   "fuel_type": "",
@@ -297,16 +307,32 @@ Rules:
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
+ * Document types that produce high-volume line-item arrays (60+ rows).
+ * For these, we skip the CONTEXT_INSTRUCTION entirely:
+ *   - Halves the AI output token count → faster response
+ *   - The Evidence Viewer still shows the full PDF pages (images are stored
+ *     separately in sessionStorage and are unaffected)
+ *   - Field-level text snippets are not useful for tabular line items anyway
+ */
+const NO_CONTEXT_TYPES = new Set(['estimate', 'final-bill', 'bank-statement']);
+
+/**
  * Returns a prompt for the given document type with the context-snippet
  * instruction appended. This is the preferred way to get prompts so that
  * every extraction response includes `fieldName_context` keys that power
  * the Evidence Viewer.
+ *
+ * For high-volume line-item documents (estimate, final-bill, bank-statement)
+ * the context instruction is intentionally omitted to reduce output token
+ * count and improve extraction speed.
  *
  * @param docType  One of the keys in RAW_PROMPTS (e.g. "rc", "policy", "dl")
  * @param withContext  Set to false to skip the context instruction (default: true)
  */
 export function getDocPrompt(docType: string, withContext = true): string {
   const base = RAW_PROMPTS[docType] ?? '';
+  // Skip context snippets for high-volume tabular documents
+  if (NO_CONTEXT_TYPES.has(docType)) return base;
   return withContext ? `${base}\n${CONTEXT_INSTRUCTION}` : base;
 }
 

@@ -201,7 +201,7 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
           </tr>
           <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>RLW / GVW / Seating</td>
-            <td style={{ ...parseInline(styles.td) }}>{vehicle.rlw || '—'} / {vehicle.grossWeight || '—'} / {vehicle.seatingCapacityTotal || '—'}</td>
+            <td style={{ ...parseInline(styles.td) }}>{vehicle.registeredLoadWeight || '—'} / {vehicle.grossWeight || '—'} / {vehicle.seatingCapacity || '—'}</td>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Odometer (KM)</td>
             <td style={{ ...parseInline(styles.td) }}>{vehicle.odometer || '—'}</td>
           </tr>
@@ -227,7 +227,7 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Insured Mobile</td>
             <td style={{ ...parseInline(styles.td) }}>{policy.insuredMobile || '—'}</td>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>HPA / Finance With</td>
-            <td style={{ ...parseInline(styles.td) }}>{policy.hpa || 'NIL'}</td>
+            <td style={{ ...parseInline(styles.td) }}>{policy.hpaWith || 'NIL'}</td>
           </tr>
           {policy.insuredAddress && (
             <tr>

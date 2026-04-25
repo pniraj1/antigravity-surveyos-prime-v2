@@ -5,7 +5,7 @@
 
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import type { ClaimData, AssessmentRow, SpotDamageRow, SurveyType, VehicleType, DepreciationType } from '@/types';
+import type { ClaimData, AssessmentRow, SpotDamageRow, SurveyType, VehicleType, DepreciationType, ExtraBillItem } from '@/types';
 import { createBlankClaim } from '@/types';
 import { createAssessmentRow } from '@/lib/calculations';
 import { saveClaim } from '@/lib/storage/indexeddb';
@@ -56,6 +56,9 @@ interface ClaimState {
   addAssessmentRow: (section: AssessmentRow['section']) => void;
   updateAssessmentRow: (id: string, updates: Partial<AssessmentRow>) => void;
   deleteAssessmentRow: (id: string) => void;
+  deleteAssessmentRows: (ids: string[]) => void;
+  deleteExtraBillItem: (id: string) => void;
+  clearExtraBillItems: () => void;
   toggleRowAllowed: (id: string) => void;
 
   // Spot Damage
@@ -137,16 +140,30 @@ export const useClaimStore = create<ClaimState>()(
       },
 
       updateVehicle: (updates) => {
-        set((state) => ({
-          currentClaim: state.currentClaim
-            ? {
-                ...state.currentClaim,
-                vehicle: { ...state.currentClaim.vehicle, ...updates },
-                updatedAt: new Date().toISOString(),
-              }
-            : null,
-          isDirty: true,
-        }));
+        set((state) => {
+          if (!state.currentClaim) return { currentClaim: null };
+          const updatedVehicle = { ...state.currentClaim.vehicle, ...updates };
+
+          // Keep spotDetails.gvw in sync when RLW/registeredLoadWeight is manually edited
+          let updatedSpotDetails = state.currentClaim.spotDetails;
+          const rlwRaw = updates.registeredLoadWeight;
+          if (rlwRaw !== undefined) {
+            const parsed = Math.round(parseFloat(String(rlwRaw).replace(/[^0-9.]/g, '')));
+            if (parsed > 0) {
+              updatedSpotDetails = { ...updatedSpotDetails, gvw: parsed };
+            }
+          }
+
+          return {
+            currentClaim: {
+              ...state.currentClaim,
+              vehicle: updatedVehicle,
+              spotDetails: updatedSpotDetails,
+              updatedAt: new Date().toISOString(),
+            },
+            isDirty: true,
+          };
+        });
       },
 
       updateDriver: (updates) => {
@@ -282,6 +299,49 @@ export const useClaimStore = create<ClaimState>()(
             currentClaim: {
               ...state.currentClaim,
               assessmentRows: state.currentClaim.assessmentRows.filter((r) => r.id !== id),
+              updatedAt: new Date().toISOString(),
+            },
+            isDirty: true,
+          };
+        });
+      },
+
+      deleteAssessmentRows: (ids) => {
+        set((state) => {
+          if (!state.currentClaim) return {};
+          const idSet = new Set(ids);
+          return {
+            currentClaim: {
+              ...state.currentClaim,
+              assessmentRows: state.currentClaim.assessmentRows.filter((r) => !idSet.has(r.id)),
+              updatedAt: new Date().toISOString(),
+            },
+            isDirty: true,
+          };
+        });
+      },
+
+      deleteExtraBillItem: (id) => {
+        set((state) => {
+          if (!state.currentClaim) return {};
+          return {
+            currentClaim: {
+              ...state.currentClaim,
+              extraBillItems: (state.currentClaim.extraBillItems || []).filter((i) => i.id !== id),
+              updatedAt: new Date().toISOString(),
+            },
+            isDirty: true,
+          };
+        });
+      },
+
+      clearExtraBillItems: () => {
+        set((state) => {
+          if (!state.currentClaim) return {};
+          return {
+            currentClaim: {
+              ...state.currentClaim,
+              extraBillItems: [],
               updatedAt: new Date().toISOString(),
             },
             isDirty: true,
@@ -528,8 +588,8 @@ export const useClaimStore = create<ClaimState>()(
 
           // Mapping logic based on document key
           if (key === 'rc') {
-            const hpa = data.hypothecation || data.hpa || newClaim.vehicle.hpa;
-            const rlw = typeof data.gross_weight === 'string' ? data.gross_weight : String(data.gross_weight || data.rlw || newClaim.vehicle.rlw);
+            const hypothecation = data.hypothecation || data.hpa || newClaim.vehicle.hypothecation;
+            const rlw = typeof data.gross_weight === 'string' ? data.gross_weight : String(data.gross_weight || data.rlw || newClaim.vehicle.registeredLoadWeight);
             const yomStr = (data.year_of_manufacture || data.yom)?.toString() || '';
             const yomMatch = yomStr.match(/\b(19|20)\d{2}\b/);
             const yom = yomMatch ? parseInt(yomMatch[0]) : newClaim.vehicle.yearOfManufacture;
@@ -547,26 +607,22 @@ export const useClaimStore = create<ClaimState>()(
               colour: data.colour || data.color || newClaim.vehicle.colour,
               fuel: formatFuel(data.fuel) || newClaim.vehicle.fuel,
               seatingCapacity: data.seating_capacity || data.seats || newClaim.vehicle.seatingCapacity,
-              seatingCapacityTotal: data.seating_capacity || data.seats || newClaim.vehicle.seatingCapacityTotal,
               unladenWeight: parseFloat(data.unladen_weight || data.ulw) || newClaim.vehicle.unladenWeight,
-              rlw: rlw,
-              registeredLoadWeight: rlw || newClaim.vehicle.registeredLoadWeight, // Update alias for UI
+              registeredLoadWeight: rlw || newClaim.vehicle.registeredLoadWeight,
               classOfVehicle: data.class_of_vehicle || data.vehicle_class || newClaim.vehicle.classOfVehicle,
               registrationType: data.class_of_vehicle || data.vehicle_class || newClaim.vehicle.registrationType,
               registeringAuthority: data.registering_authority || data.rto || newClaim.vehicle.registeringAuthority,
               route: data.route || newClaim.vehicle.route,
               yearOfManufacture: yom,
               registrationValidUpTo: parseDate(data.registration_valid_upto || data.reg_valid_upto || data.regn_valid_upto) || newClaim.vehicle.registrationValidUpTo,
-              hpa: hpa,
-              hypothecation: hpa || newClaim.vehicle.hypothecation, // Update alias for UI
+              hypothecation: hypothecation,
             };
             newClaim.policy = {
               ...newClaim.policy,
               insuredName: data.owner_name || data.name || newClaim.policy.insuredName,
               insuredAddress: data.address || newClaim.policy.insuredAddress,
               // Sync HPA from RC into policy so standard report HPA row is always populated
-              hpaWith: hpa || newClaim.policy.hpaWith,
-              hpa: hpa || newClaim.policy.hpa,
+              hpaWith: hypothecation || newClaim.policy.hpaWith,
             };
             
             const gvwStr = String(data.gross_weight || '0').replace(/[^0-9.]/g, '');
@@ -591,7 +647,6 @@ export const useClaimStore = create<ClaimState>()(
               idv: data.idv || newClaim.policy.idv,
               // Write to both hpaWith (primary) and hpa (alias) so all report paths are covered
               hpaWith: data.hpa_with || newClaim.policy.hpaWith,
-              hpa: data.hpa_with || newClaim.policy.hpa,
               periodFrom: parseDate(data.period_from) || newClaim.policy.periodFrom,
               periodTo: parseDate(data.period_to) || newClaim.policy.periodTo,
               policyIssuingOffice: data.policy_issuing_office || newClaim.policy.policyIssuingOffice,
@@ -613,17 +668,13 @@ export const useClaimStore = create<ClaimState>()(
             newClaim.driver = { 
               ...newClaim.driver,
               licenceNumber: data.licence_number || data.dl_no || newClaim.driver.licenceNumber,
-              name: data.holder_name || data.name || newClaim.driver.name,
-              fatherHusbandName: data.father_or_husband_name || data.father_name || data.parent_name || newClaim.driver.fatherHusbandName,
-              parentName: data.father_or_husband_name || data.father_name || data.parent_name || newClaim.driver.parentName, // Alias for UI
+              parentName: data.father_or_husband_name || data.father_name || data.parent_name || newClaim.driver.parentName,
               relationType: data.relation_type || newClaim.driver.relationType,
-              dob: parseDate(data.date_of_birth || data.dob) || newClaim.driver.dob,
-              dateOfBirth: parseDate(data.date_of_birth || data.dob) || newClaim.driver.dateOfBirth, // Alias for UI
+              dateOfBirth: parseDate(data.date_of_birth || data.dob) || newClaim.driver.dateOfBirth,
               address: data.address || newClaim.driver.address,
               dateOfIssue: parseDate(data.date_of_issue || data.issue_date) || newClaim.driver.dateOfIssue,
               issuingAuthority: data.issuing_authority || data.rto || newClaim.driver.issuingAuthority,
-              vehicleClass: data.vehicle_classes || data.classes || data.authorized_classes || newClaim.driver.vehicleClass,
-              vehicleClasses: data.vehicle_classes || data.classes || data.authorized_classes || newClaim.driver.vehicleClasses, // Alias for UI
+              vehicleClasses: data.vehicle_classes || data.classes || data.authorized_classes || newClaim.driver.vehicleClasses,
               validityNonTransport: parseDate(data.validity_non_transport || data.valid_nt) || newClaim.driver.validityNonTransport,
               validityTransport: parseDate(data.validity_transport || data.valid_t) || newClaim.driver.validityTransport,
             };
@@ -684,7 +735,6 @@ export const useClaimStore = create<ClaimState>()(
              newClaim.vehicle.fitnessValidUpto = parseDate(data.validity_to) || newClaim.vehicle.fitnessValidUpto;
              if (data.seating_capacity) {
                newClaim.vehicle.seatingCapacity = data.seating_capacity;
-               newClaim.vehicle.seatingCapacityTotal = data.seating_capacity;
              }
              if (data.chassis_number) newClaim.vehicle.chassisNumber = data.chassis_number || newClaim.vehicle.chassisNumber;
              if (data.engine_number) newClaim.vehicle.engineNumber = data.engine_number || newClaim.vehicle.engineNumber;
@@ -713,27 +763,162 @@ export const useClaimStore = create<ClaimState>()(
               billTotal: data.total_amount || 0,
             };
 
-            const billItems = [
-              ...(data.spare_parts || []).map((i: any) => ({ ...i, type: 'parts' })),
-              ...(data.labour_items || []).map((i: any) => ({ ...i, type: 'labour' })),
-              ...(data.painting_items || []).map((i: any) => ({ ...i, type: 'paint' })),
-            ];
+            // Build bill items with normalized section tags matching assessment sections.
+            const billItems: Array<{
+              idx: number;
+              description: string;
+              partNumber: string;
+              taxableAmount: number;
+              totalAmount: number;
+              gstPercent: number;
+              section: 'parts' | 'labour' | 'paint';
+              category?: string;
+              raw: any;
+            }> = [];
+            const pushItems = (arr: any[], section: 'parts' | 'labour' | 'paint') => {
+              (arr || []).forEach((i: any) => {
+                const gstPct = i.gst_percent || 18;
+                let taxable = i.taxable_amount;
+                const total = i.total_amount || i.amount || 0;
+                if (!taxable || taxable <= 0) {
+                  taxable = total / (1 + gstPct / 100);
+                }
+                billItems.push({
+                  idx: billItems.length,
+                  description: (i.description || '').toString(),
+                  partNumber: (i.part_number || '').toString(),
+                  taxableAmount: Math.round(taxable * 100) / 100,
+                  totalAmount: Math.round(total * 100) / 100,
+                  gstPercent: gstPct,
+                  section,
+                  category: i.category,
+                  raw: i,
+                });
+              });
+            };
+            pushItems(data.spare_parts || [], 'parts');
+            pushItems(data.labour_items || [], 'labour');
+            pushItems(data.painting_items || [], 'paint');
 
-            newClaim.assessmentRows = newClaim.assessmentRows.map(row => {
-              if (!row.allowed) return row;
-              const match = billItems.find((bi: any) => 
-                bi.description?.toLowerCase().includes(row.particulars.toLowerCase()) ||
-                row.particulars.toLowerCase().includes(bi.description?.toLowerCase())
+            const normalizePart = (s: string) => s.toLowerCase().replace(/[\s\-_.]/g, '');
+            const normalizeDesc = (s: string) => s.toLowerCase().trim();
+            const AMT_TOL = 1; // ₹1 tolerance
+
+            const matchedBillIds = new Set<number>();
+            const rowMatches = new Map<string, { bill: typeof billItems[0]; reason: 'part' | 'amount' | 'desc' }>();
+
+            // --- Step 1: Exact part-number match ---
+            newClaim.assessmentRows.forEach(row => {
+              if (rowMatches.has(row.id)) return;
+              const rowPart = normalizePart(row.partNumber || '');
+              if (!rowPart) return;
+              const hit = billItems.find(bi => {
+                if (matchedBillIds.has(bi.idx)) return false;
+                const biPart = normalizePart(bi.partNumber);
+                return biPart && biPart === rowPart;
+              });
+              if (hit) {
+                matchedBillIds.add(hit.idx);
+                rowMatches.set(row.id, { bill: hit, reason: 'part' });
+              }
+            });
+
+            // --- Step 2: Taxable-amount + section match (± ₹1) ---
+            newClaim.assessmentRows.forEach(row => {
+              if (rowMatches.has(row.id)) return;
+              const rowAmt = row.estimated || 0;
+              if (rowAmt <= 0) return;
+              // Find all unmatched bill items in same section within tolerance
+              const candidates = billItems.filter(bi =>
+                !matchedBillIds.has(bi.idx) &&
+                bi.section === row.section &&
+                Math.abs(bi.taxableAmount - rowAmt) <= AMT_TOL
               );
-              if (match) {
+              if (candidates.length === 0) return;
+              let pick = candidates[0];
+              let ambiguous = false;
+              if (candidates.length > 1) {
+                // Tiebreaker: description overlap
+                const rowDesc = normalizeDesc(row.particulars);
+                const scored = candidates.map(c => {
+                  const cDesc = normalizeDesc(c.description);
+                  const overlap =
+                    (rowDesc && cDesc && (cDesc.includes(rowDesc) || rowDesc.includes(cDesc))) ? 2 :
+                    (rowDesc && cDesc && cDesc.split(' ').some(w => w.length > 3 && rowDesc.includes(w))) ? 1 : 0;
+                  return { c, overlap };
+                });
+                scored.sort((a, b) => b.overlap - a.overlap);
+                pick = scored[0].c;
+                if (scored[0].overlap === 0 || (scored[1] && scored[0].overlap === scored[1].overlap)) {
+                  ambiguous = true;
+                }
+              }
+              matchedBillIds.add(pick.idx);
+              rowMatches.set(row.id, { bill: pick, reason: ambiguous ? 'desc' : 'amount' });
+              if (ambiguous) {
+                // Mark the row as needing review — handled below via billRemarks
+                (pick as any)._ambiguous = true;
+              }
+            });
+
+            // --- Step 3: Fuzzy description fallback ---
+            newClaim.assessmentRows.forEach(row => {
+              if (rowMatches.has(row.id)) return;
+              const rowDesc = normalizeDesc(row.particulars);
+              if (!rowDesc) return;
+              const hit = billItems.find(bi => {
+                if (matchedBillIds.has(bi.idx)) return false;
+                if (bi.section !== row.section) return false;
+                const biDesc = normalizeDesc(bi.description);
+                if (!biDesc) return false;
+                return biDesc.includes(rowDesc) || rowDesc.includes(biDesc);
+              });
+              if (hit) {
+                matchedBillIds.add(hit.idx);
+                rowMatches.set(row.id, { bill: hit, reason: 'desc' });
+              }
+            });
+
+            // --- Apply matches to rows ---
+            newClaim.assessmentRows = newClaim.assessmentRows.map(row => {
+              const m = rowMatches.get(row.id);
+              if (!m) return row;
+              const billedAmt = m.bill.totalAmount || 0;
+              const billedTax = m.bill.taxableAmount || 0;
+              const partial =
+                m.reason === 'part' &&
+                row.estimated > 0 &&
+                Math.abs(m.bill.taxableAmount - row.estimated) > AMT_TOL;
+              if (!row.allowed) {
                 return {
                   ...row,
-                  billedAmount: match.amount || 0,
-                  billStatus: 'in-bill',
+                  billedTaxable: billedTax,
+                  billedAmount: billedAmt,
+                  billStatus: 'not-allowed' as const,
+                  billRemarks: row.billRemarks || 'Workshop billed for a disallowed item',
                 };
               }
-              return row;
+              const status: 'in-bill' | 'partial' = partial ? 'partial' : 'in-bill';
+              const remark = (m.bill as any)._ambiguous
+                ? 'Ambiguous amount match — please verify'
+                : row.billRemarks;
+              return { ...row, billedTaxable: billedTax, billedAmount: billedAmt, billStatus: status, billRemarks: remark };
             });
+
+            // --- Unmatched bill items become extras ---
+            const unmatched: ExtraBillItem[] = billItems
+              .filter(bi => !matchedBillIds.has(bi.idx))
+              .map((bi, i) => ({
+                id: `extra-${Date.now()}-${i}`,
+                description: bi.description || 'Unnamed item',
+                amount: bi.totalAmount,
+                category:
+                  bi.section === 'parts' ? 'spare_parts' :
+                  bi.section === 'labour' ? 'labour' :
+                  'painting',
+                source: 'final-bill' as const,
+              }));
+            newClaim.extraBillItems = unmatched;
           } else if (key === 'estimate') {
             const newRows: AssessmentRow[] = [];
             let runningSerial = 1;

@@ -363,7 +363,7 @@ export function UIICReportDocument({ claim, profile }: Props) {
           <View style={[styles.tableCell, { width: '50%' }]}>
             <Text style={{ fontSize: 7, marginBottom: 2 }}>Insured / Claimant Name & Address: <Text style={{ fontFamily: 'Helvetica-Bold' }}>{g(p.insuredName)}</Text></Text>
             <Text style={{ fontSize: 7, marginBottom: 2 }}>{g(p.insuredAddress)}</Text>
-            <Text style={{ fontSize: 7, marginBottom: 2 }}>FINANCIER INTEREST: <Text style={{ fontFamily: 'Helvetica-Bold' }}>{g(p.hpaWith || p.hpa || v.hypothecation || v.hpa) || 'NIL'}</Text></Text>
+            <Text style={{ fontSize: 7, marginBottom: 2 }}>FINANCIER INTEREST: <Text style={{ fontFamily: 'Helvetica-Bold' }}>{g(p.hpaWith || v.hypothecation) || 'NIL'}</Text></Text>
             <Text style={{ fontSize: 7 }}>Contact: {g(p.insuredMobile)}</Text>
           </View>
           <View style={[styles.tableCell, { width: '50%' }]}>
@@ -477,7 +477,7 @@ export function UIICReportDocument({ claim, profile }: Props) {
                </View>
                <View style={{ flexDirection: 'row', borderBottom: '0.5pt solid #000' }}>
                  <View style={{ width: '60%', borderRight: '0.5pt solid #000', padding: '3 5' }}><Text>Registered Seating Capacity</Text></View>
-                 <View style={{ flex: 1, padding: '3 5' }}><Text>{g(v.seatingCapacityTotal)}</Text></View>
+                 <View style={{ flex: 1, padding: '3 5' }}><Text>{g(v.seatingCapacity)}</Text></View>
                </View>
                <View style={{ flexDirection: 'row', borderBottom: '0.5pt solid #000' }}>
                  <View style={{ width: '60%', borderRight: '0.5pt solid #000', padding: '3 5' }}><Text>Number of Passengers carried at the time of accident</Text></View>
@@ -497,7 +497,7 @@ export function UIICReportDocument({ claim, profile }: Props) {
                </View>
                <View style={{ flexDirection: 'row', borderBottom: '0.5pt solid #000' }}>
                  <View style={{ width: '60%', borderRight: '0.5pt solid #000', padding: '3 5' }}><Text>Registered Laden Weight</Text></View>
-                 <View style={{ flex: 1, padding: '3 5' }}><Text>{g(v.registeredLoadWeight || v.rlw || v.grossWeight)}</Text></View>
+                 <View style={{ flex: 1, padding: '3 5' }}><Text>{g(v.registeredLoadWeight || v.grossWeight)}</Text></View>
                </View>
                <View style={{ flexDirection: 'row' }}>
                  <View style={{ width: '60%', borderRight: '0.5pt solid #000', padding: '3 5' }}><Text>Registered Unladen Weight</Text></View>
@@ -517,7 +517,7 @@ export function UIICReportDocument({ claim, profile }: Props) {
                </View>
                <View style={{ flexDirection: 'row', borderBottom: '0.5pt solid #000' }}>
                  <View style={{ width: '60%', borderRight: '0.5pt solid #000', padding: '3 5' }}><Text>Driving Licence Number</Text></View>
-                 <View style={{ flex: 1, padding: '3 5' }}><Text>{g(d.licenceNumber || d.licenseNumber)}</Text></View>
+                 <View style={{ flex: 1, padding: '3 5' }}><Text>{g(d.licenceNumber)}</Text></View>
                </View>
                <View style={{ flexDirection: 'row', borderBottom: '0.5pt solid #000' }}>
                  <View style={{ width: '60%', borderRight: '0.5pt solid #000', padding: '3 5' }}><Text>Licence Type</Text></View>
@@ -525,7 +525,7 @@ export function UIICReportDocument({ claim, profile }: Props) {
                </View>
                <View style={{ flexDirection: 'row', borderBottom: '0.5pt solid #000' }}>
                  <View style={{ width: '60%', borderRight: '0.5pt solid #000', padding: '3 5' }}><Text>Class of vehicles licenced to drive</Text></View>
-                 <View style={{ flex: 1, padding: '3 5' }}><Text>{g(d.vehicleClasses || d.vehicleClass)}</Text></View>
+                 <View style={{ flex: 1, padding: '3 5' }}><Text>{g(d.vehicleClasses)}</Text></View>
                </View>
                <View style={{ flexDirection: 'row', borderBottom: '0.5pt solid #000' }}>
                  <View style={{ width: '60%', borderRight: '0.5pt solid #000', padding: '3 5' }}><Text>Licence Issuing Authority</Text></View>
@@ -537,7 +537,7 @@ export function UIICReportDocument({ claim, profile }: Props) {
                </View>
                <View style={{ flexDirection: 'row', borderBottom: '0.5pt solid #000' }}>
                  <View style={{ width: '60%', borderRight: '0.5pt solid #000', padding: '3 5' }}><Text>License Valid upto</Text></View>
-                 <View style={{ flex: 1, padding: '3 5' }}><Text>{fd(d.validityNonTransport || d.validityTransport || d.validTo)}</Text></View>
+                 <View style={{ flex: 1, padding: '3 5' }}><Text>{fd(d.validityNonTransport || d.validityTransport)}</Text></View>
                </View>
                <View style={{ flexDirection: 'row', borderBottom: '0.5pt solid #000' }}>
                  <View style={{ width: '60%', borderRight: '0.5pt solid #000', padding: '3 5' }}><Text>Badge number</Text></View>

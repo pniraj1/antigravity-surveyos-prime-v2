@@ -7,7 +7,15 @@
 export type PartType = 'metal' | 'plastic' | 'glass' | 'fiberglass' | 'labour' | 'paint';
 export type AssessmentSection = 'parts' | 'labour' | 'paint';
 
-export type BillStatus = 'in-bill' | 'not-in-bill' | 'partial' | 'pending';
+export type BillStatus = 'in-bill' | 'not-in-bill' | 'partial' | 'pending' | 'not-allowed';
+
+export interface ExtraBillItem {
+  id: string;
+  description: string;
+  amount: number;
+  category?: 'spare_parts' | 'labour' | 'painting';
+  source: 'final-bill';
+}
 
 
 export interface AssessmentRow {
@@ -25,6 +33,9 @@ export interface AssessmentRow {
   unitPrice?: number;
   estimated: number;
   assessed: number;
+  /** Billed taxable (net) amount — before GST, from workshop's final bill */
+  billedTaxable?: number;
+  /** Billed total (incl GST) from workshop's final bill */
   billedAmount?: number;
   billStatus?: BillStatus;
   billRemarks?: string;

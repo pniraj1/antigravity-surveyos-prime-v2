@@ -177,10 +177,10 @@ export function PolicyDetailsForm() {
             <Label htmlFor="p-hpa">Hypothecation (HPA)<S /><EvidenceDot has={hasEvidence('hpaWith')} /></Label>
             <Input
               id="p-hpa"
-              value={p?.hpaWith || p?.hpa || ''}
-              onChange={(e) => updatePolicy({ hpaWith: e.target.value, hpa: e.target.value })}
+              value={p?.hpaWith || ''}
+              onChange={(e) => updatePolicy({ hpaWith: e.target.value })}
               onFocus={() => triggerField('hpaWith')}
-              className={r(p?.hpaWith || p?.hpa)}
+              className={r(p?.hpaWith)}
             />
           </div>
         </div>

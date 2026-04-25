@@ -30,7 +30,7 @@ const FIELD_MAPPINGS = [
   { label: 'Class of Vehicle',    path: 'vehicle.classOfVehicle',    aiKeys: { rc: 'class_of_vehicle' } },
   { label: 'Unladen Weight',      path: 'vehicle.unladenWeight',     aiKeys: { rc: 'unladen_weight', fitness: 'unladen_weight_kg', permit: 'unladen_weight_kg' } },
   { label: 'Gross Weight',        path: 'vehicle.grossWeight',       aiKeys: { rc: 'gross_weight', fitness: 'gross_vehicle_weight_kg', permit: 'gross_vehicle_weight_kg' } },
-  { label: 'Seating Capacity',    path: 'vehicle.seatingCapacityTotal', aiKeys: { rc: 'seating_capacity', fitness: 'seating_capacity' } },
+  { label: 'Seating Capacity',    path: 'vehicle.seatingCapacity', aiKeys: { rc: 'seating_capacity', fitness: 'seating_capacity' } },
   { label: 'Fitness Valid Upto',  path: 'vehicle.fitnessValidUpto',  aiKeys: { fitness: 'validity_to' } },
   { label: 'Fitness Type',        path: 'vehicle.fitnessType',       aiKeys: { fitness: 'fitness_type' } },
   { label: 'Fitness Cert No',     path: 'vehicle.fitnessNo',         aiKeys: { fitness: 'fitness_cert_no' } },
@@ -40,7 +40,8 @@ const FIELD_MAPPINGS = [
   { label: 'Insured Name',        path: 'policy.insuredName',        aiKeys: { policy: 'insured_name', rc: 'owner_name', claim: 'insured_name' } },
   { label: 'Insurer Name',        path: 'policy.insurerName',        aiKeys: { policy: 'insurer_name' } },
   { label: 'IDV',                 path: 'policy.idv',                aiKeys: { policy: 'idv' } },
-  { label: 'HPA/Hypothecation',   path: 'policy.hpaWith',            aiKeys: { policy: 'hpa_with', rc: 'hypothecation' } },
+  { label: 'HPA',                 path: 'policy.hpaWith',            aiKeys: { policy: 'hpa_with' } },
+  { label: 'Hypothecation',       path: 'vehicle.hypothecation',     aiKeys: { rc: 'hypothecation' } },
   
   // ─── Driver Details ───────────────────────────────────────────────────────
   { label: 'Driver Name',         path: 'driver.name',               aiKeys: { dl: 'holder_name', claim: 'driver_name', fir: 'driver_name' } },

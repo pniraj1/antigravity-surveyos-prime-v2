@@ -40,8 +40,28 @@ service cloud.firestore {
     }
 
     // User-specific data — each user accesses only their own data
-    match /users/{userId}/{allPaths=**} {
-      allow read, write: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
+    match /users/{userId} {
+      // 1. Profile collection gets special protection to prevent users making themselves admin
+      match /profile/{docId} {
+        allow read: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
+        
+        allow create: if isAdmin() || (
+          isSignedIn() && request.auth.uid == userId && 
+          (!request.resource.data.keys().hasAny(['isAdmin']) || request.resource.data.isAdmin == false)
+        );
+        
+        allow update: if isAdmin() || (
+          isSignedIn() && request.auth.uid == userId && 
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin'])
+        );
+        
+        allow delete: if isAdmin();
+      }
+      
+      // 2. All other user data (claims, photos, etc) is fully writable by the user
+      match /{collectionId}/{document=**} {
+        allow read, write: if isAdmin() || (isSignedIn() && request.auth.uid == userId && collectionId != 'profile');
+      }
     }
 
     // Legacy support
