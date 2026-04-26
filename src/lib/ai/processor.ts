@@ -40,6 +40,25 @@ function hasFinancialData(text: string): boolean {
 const TEXT_RICH_THRESHOLD = 200;  // chars/page → clearly digitally-born
 const TEXT_POOR_THRESHOLD = 30;   // chars/page → clearly scanned / image-only
 
+// ─── Token Budget ─────────────────────────────────────────────────────────────
+// Groq's on-demand (free) tier: 8,000 TPM cap.
+// We budget 4,500 tokens for the ENTIRE prompt (instructions + page text).
+// This leaves ~3,500 tokens headroom for the JSON output (needed for large estimates).
+// Conservative estimate: estimate prompt ≈ 900 tokens, page budget ≈ 3,600 tokens.
+// 1 token ≈ 4 chars is the standard rough estimate.
+const MAX_PROMPT_TOKENS = 4_500;
+const CHARS_PER_TOKEN   = 4;
+
+// Maximum characters of page text we'll send per chunk in text-mode.
+// 3,600 tokens × 4 chars = 14,400 chars — but be conservative with 12,000 chars
+// to account for prompt overhead and Groq's approximate tokenization.
+const MAX_PAGE_TEXT_CHARS = 12_000;
+
+/** Rough token estimate for a text string (4 chars per token). */
+function estimateTokens(text: string): number {
+  return Math.ceil(text.length / CHARS_PER_TOKEN);
+}
+
 /**
  * Returns true if the text is mostly garbage (corrupted export from legacy ERP).
  * A garbled text layer has high char count but unreadable content — we should
@@ -183,7 +202,7 @@ class AITaskQueue {
       this.queue.push(async () => {
         try {
           const res = await task();
-          resolve(res);
+          resolve(res as T);
         } catch (err) {
           reject(err);
         }
@@ -196,7 +215,7 @@ class AITaskQueue {
     if (this.isProcessing || this.queue.length === 0) return;
     this.isProcessing = true;
     const task = this.queue.shift();
-    if (task) await task();
+    if (task) await task().catch(() => { /* individual task already rejects its own promise */ });
     this.isProcessing = false;
     this.process();
   }
@@ -208,6 +227,16 @@ const aiQueue = new AITaskQueue();
  * Helper to deep merge AI JSON fragments from multi-page extractions.
  * Concatenates arrays and fills in empty/new fields.
  */
+// Fields that represent document-level financial totals.
+// For these we keep the LARGEST non-zero value seen across all page chunks
+// (a page that has no summary row returns 0, which should never overwrite
+// a real total found on a later page).
+const TOTAL_FIELDS = new Set([
+  'total_amount', 'gross_amount', 'net_amount', 'payable_amount',
+  'subtotal_parts_taxable', 'subtotal_labour_taxable', 'subtotal_painting_taxable',
+  'gst_amount', 'discount_amount', 'tds_amount',
+]);
+
 function mergeAIResults(acc: any, fragment: any): any {
   if (!acc) return fragment;
   const result = { ...acc };
@@ -222,9 +251,16 @@ function mergeAIResults(acc: any, fragment: any): any {
     } else if (typeof newVal === 'object' && newVal !== null) {
       // Recursive merge for sub-objects
       result[key] = mergeAIResults(oldVal || {}, newVal);
+    } else if (TOTAL_FIELDS.has(key)) {
+      // Financial totals: keep the largest non-zero value across all pages.
+      // This prevents a page-1 zero from permanently hiding the real total
+      // found on a later summary page.
+      const oldNum = Number(oldVal) || 0;
+      const newNum = Number(newVal) || 0;
+      result[key] = Math.max(oldNum, newNum) || oldVal;
     } else {
       // Simple values: prefer existing if already set, otherwise take new
-      if (oldVal === undefined || oldVal === null || oldVal === '' || oldVal === 0) {
+      if (oldVal === undefined || oldVal === null || oldVal === '') {
         result[key] = newVal;
       }
     }
@@ -245,14 +281,90 @@ export interface ExtractionResult {
 }
 
 /**
+ * Merge strategy for targeted rescan results.
+ * Unlike mergeAIResults (which appends arrays), this REPLACES non-empty arrays
+ * and always updates scalar fields — so corrected totals overwrite stale ones.
+ */
+function applyTargetedUpdate(existing: any, partial: any): any {
+  if (!partial) return existing;
+  const result = { ...existing };
+  for (const k in partial) {
+    const v = partial[k];
+    if (Array.isArray(v) && v.length > 0) {
+      result[k] = v; // replace, not append
+    } else if (!Array.isArray(v) && v !== null && v !== undefined && v !== '') {
+      result[k] = v;
+    }
+  }
+  return result;
+}
+
+/**
+ * Rescans only specific pages of a document — used when math discrepancies
+ * are detected after initial extraction. Typically targets the last 1-2 pages
+ * where the summary / totals section lives.
+ *
+ * Much cheaper than a full rescan: only the specified pages are sent to the AI.
+ */
+export async function rescanTargetPages(
+  key: string,
+  file: File,
+  pageIndices: number[],
+  focusHint: string,
+  onProgress?: (msg: string) => void,
+): Promise<{ partialData: any; discrepancies: string[] }> {
+  const basePrompt = getDocPrompt(key) ?? 'Extract all visible details from this document as JSON.';
+  const targetedPrompt =
+    `${basePrompt}\n\n` +
+    `TARGETED RESCAN — fix specific fields only.\n` +
+    `Pay special attention to: ${focusHint}\n` +
+    `Return the COMPLETE corrected JSON for the affected section(s), including ALL line items.`;
+
+  return aiQueue.add(async () => {
+    if (onProgress) onProgress('Smart Fix: loading document...');
+    const { apiImages } = await fileToImages(file);
+
+    const total = apiImages.length;
+    const valid = pageIndices.filter(i => i >= 0 && i < total);
+    if (valid.length === 0) throw new Error('No valid pages for targeted rescan.');
+
+    const label = valid.map(i => i + 1).join(', ');
+    if (onProgress) onProgress(`Smart Fix: rescanning page${valid.length > 1 ? 's' : ''} ${label} of ${total}...`);
+
+    let partialData: any = null;
+    for (const idx of valid) {
+      try {
+        const raw = await callAIGateway(targetedPrompt, [apiImages[idx]]);
+        const fragment = JSON.parse(raw);
+        partialData = mergeAIResults(partialData, fragment);
+      } catch {
+        console.warn(`[Smart Fix] Page ${idx + 1} returned unparseable response — skipping.`);
+      }
+    }
+
+    const mathCheck = validateMath(partialData, key);
+    return { partialData, discrepancies: mathCheck.discrepancies };
+  });
+}
+
+export { applyTargetedUpdate };
+
+/**
  * Validates math logic for estimates and bills.
  * Checks if sum of individual items roughly matches the extracted subtotals/totals.
  */
+/**
+ * Returns a tolerance amount that scales with the expected value.
+ * Small amounts use a flat ₹5 floor; large amounts use 0.1% of the expected
+ * value so a ₹500,000 estimate doesn't falsely flag on normal rounding.
+ */
+function tolerance(expected: number): number {
+  return Math.max(5, expected * 0.001);
+}
+
 function validateMath(data: any, docType: string): { isValid: boolean; discrepancies: string[] } {
   const discrepancies: string[] = [];
   if (docType !== 'estimate' && docType !== 'final-bill') return { isValid: true, discrepancies };
-
-  const TOLERANCE = 5; // Allow small rounding differences
 
   const parts = Array.isArray(data.spare_parts) ? data.spare_parts : [];
   const labour = Array.isArray(data.labour_items) ? data.labour_items : [];
@@ -267,19 +379,19 @@ function validateMath(data: any, docType: string): { isValid: boolean; discrepan
   const expectedPaintTotal = Number(data.subtotal_painting_taxable) || 0;
   const actualPaintTotal = paint.reduce((sum: number, item: any) => sum + (Number(item.taxable_amount) || 0), 0);
 
-  if (expectedPartsTotal > 0 && Math.abs(actualPartsTotal - expectedPartsTotal) > TOLERANCE) {
+  if (expectedPartsTotal > 0 && Math.abs(actualPartsTotal - expectedPartsTotal) > tolerance(expectedPartsTotal)) {
     discrepancies.push(`Parts sum (₹${actualPartsTotal.toFixed(2)}) doesn't match document parts total (₹${expectedPartsTotal.toFixed(2)})`);
   }
   
-  if (expectedLabourTotal > 0 && Math.abs(actualLabourTotal - expectedLabourTotal) > TOLERANCE) {
+  if (expectedLabourTotal > 0 && Math.abs(actualLabourTotal - expectedLabourTotal) > tolerance(expectedLabourTotal)) {
     discrepancies.push(`Labour sum (₹${actualLabourTotal.toFixed(2)}) doesn't match document labour total (₹${expectedLabourTotal.toFixed(2)})`);
   }
   
-  if (expectedPaintTotal > 0 && Math.abs(actualPaintTotal - expectedPaintTotal) > TOLERANCE) {
+  if (expectedPaintTotal > 0 && Math.abs(actualPaintTotal - expectedPaintTotal) > tolerance(expectedPaintTotal)) {
     discrepancies.push(`Painting sum (₹${actualPaintTotal.toFixed(2)}) doesn't match document painting total (₹${expectedPaintTotal.toFixed(2)})`);
   }
 
-  // overall total
+  // Overall gross total check
   const expectedGross = Number(data.gross_amount) || Number(data.total_amount) || 0;
   if (expectedGross > 0) {
     const totalPartsGross = parts.reduce((sum: number, item: any) => sum + (Number(item.total_amount) || 0), 0);
@@ -287,8 +399,7 @@ function validateMath(data: any, docType: string): { isValid: boolean; discrepan
     const totalPaintGross = paint.reduce((sum: number, item: any) => sum + (Number(item.total_amount) || 0), 0);
     const sumGross = totalPartsGross + totalLabourGross + totalPaintGross;
     
-    // Allow a bit more tolerance for gross total
-    if (sumGross > 0 && Math.abs(sumGross - expectedGross) > 10) {
+    if (sumGross > 0 && Math.abs(sumGross - expectedGross) > tolerance(expectedGross)) {
       discrepancies.push(`Sum of all items (₹${sumGross.toFixed(2)}) doesn't match document gross total (₹${expectedGross.toFixed(2)})`);
     }
   }
@@ -304,7 +415,8 @@ export async function extractDocument(
   file: File,
   onProgress?: (msg: string) => void,
   feedback?: string,
-  previousData?: any
+  previousData?: any,
+  forceDocMode?: 'text' | 'vision'
 ): Promise<ExtractionResult> {
   const basePrompt = getDocPrompt(key) || "Extract all visible details from this document as JSON.";
   
@@ -330,9 +442,11 @@ export async function extractDocument(
     // If ≥85% of pages have a rich text layer (and not garbled), send text to
     // the AI directly — no images, no encoding overhead, Groq-compatible.
     // Otherwise fall through to the existing image/vision path.
-    const { pages: pageProfiles, docMode } = textLayers
+    const { pages: pageProfiles, docMode: detectedMode } = textLayers
       ? profilePages(textLayers)
       : { pages: [], docMode: 'vision' as DocMode };
+
+    const docMode = forceDocMode ?? detectedMode;
 
     const useTextMode = docMode === 'text';
     if (useTextMode) {
@@ -341,26 +455,26 @@ export async function extractDocument(
       console.log(`[AI Extraction] ${key}: vision-mode (${docMode})`);
     }
 
-    // Chunk size: estimates need 2 pages per call; everything else 1
-    let CHUNK_SIZE = 1;
-    if (key === 'estimate' || key === 'final-bill') {
-      CHUNK_SIZE = 2;
-    }
+    // Chunk size: always 1 page per call in text-mode (avoids 413 on dense documents).
+    // In vision-mode: estimates get 2 pages per call for efficiency; others get 1.
+    const VISION_CHUNK_SIZE = (key === 'estimate' || key === 'final-bill') ? 2 : 1;
+    const CHUNK_SIZE = useTextMode ? 1 : VISION_CHUNK_SIZE;
 
     // Build the base prompt — for vision mode on digitally-born docs we still
     // hint the AI with the text layer for accuracy, but send images too.
     let enhancedPrompt = prompt;
-    if (!useTextMode && textLayers && textLayers.some(t => hasFinancialData(t))) {
+    if (docMode !== 'vision' && textLayers && textLayers.some(t => hasFinancialData(t))) {
       const textPreview = textLayers.slice(0, 3).join('\n---PAGE BREAK---\n');
       enhancedPrompt = `${prompt}\n\nNOTE: This appears to be a digitally-created document (not scanned). The extracted text layer is provided below for reference to guide your extraction:\n\n${textPreview}\n\nUse this text as a reference to ensure accuracy, but validate against the visual document.`;
     }
 
-    const MAX_RETRIES = 1;
-    let autoRetryCount = 0;
+    // Single-pass extraction — no automatic re-scan on math discrepancies.
+    // Discrepancies are surfaced to the surveyor via a toast; they evaluate manually.
     let finalResult: any = null;
     let discrepancies: string[] = [];
 
-    while (autoRetryCount <= MAX_RETRIES) {
+    // Single pass — no retry loop
+    {
       finalResult = null;
 
       for (let i = 0; i < totalPages; i += CHUNK_SIZE) {
@@ -371,7 +485,7 @@ export async function extractDocument(
           let msg = totalPages > 1
             ? `Analyzing page ${currentBatchStart}–${currentBatchEnd} of ${totalPages}...`
             : 'Analyzing document...';
-          if (autoRetryCount > 0) msg = `Auto-retry: ${msg}`;
+          // Single pass — no retry prefix needed
           onProgress(msg);
         }
 
@@ -385,12 +499,45 @@ export async function extractDocument(
         if (useTextMode) {
           // Text-native PDF: embed the raw text directly in the prompt.
           // No images sent → works with all providers including Groq.
-          const chunkText = pageProfiles
-            .slice(i, i + CHUNK_SIZE)
-            .map((p, idx) => `--- PAGE ${i + idx + 1} ---\n${p.text}`)
-            .join('\n\n');
-          chunkPrompt = `${enhancedPrompt}\n\n--- DOCUMENT TEXT (pages ${currentBatchStart}–${currentBatchEnd}) ---\n${chunkText}`;
-          chunkImages = []; // no images
+          //
+          // ⚠️  TOKEN BUDGET GUARD (Groq 8K TPM limit)
+          // Build the chunk text for the current CHUNK_SIZE window, then measure
+          // estimated tokens. If the full prompt would exceed MAX_PROMPT_TOKENS,
+          // shrink the window page-by-page until it fits.
+          // If even a SINGLE page is too large, fall back to vision for that chunk.
+
+          // Since CHUNK_SIZE=1 in text-mode, we always process exactly one page at a time.
+          // Build the page text, but truncate it hard if it exceeds MAX_PAGE_TEXT_CHARS.
+          // This prevents 413s even on pathologically dense pages (e.g. 200-line estimates).
+          let pageText = pageProfiles[i]?.text ?? '';
+          if (pageText.length > MAX_PAGE_TEXT_CHARS) {
+            console.warn(
+              `[AI Extraction] ${key}: page ${currentBatchStart} text is very large ` +
+              `(${pageText.length} chars) — truncating to ${MAX_PAGE_TEXT_CHARS} chars.`
+            );
+            // Truncate to the last complete line before the limit to avoid mid-row cuts.
+            const truncated = pageText.slice(0, MAX_PAGE_TEXT_CHARS);
+            const lastNewline = truncated.lastIndexOf('\n');
+            pageText = lastNewline > MAX_PAGE_TEXT_CHARS * 0.8
+              ? truncated.slice(0, lastNewline)
+              : truncated;
+          }
+
+          const chunkText = `--- PAGE ${currentBatchStart} ---\n${pageText}`;
+          let candidatePrompt = `${enhancedPrompt}\n\n--- DOCUMENT TEXT (page ${currentBatchStart} of ${totalPages}) ---\n${chunkText}`;
+
+          // If even the truncated single-page prompt is still too large, fall back to vision.
+          if (estimateTokens(candidatePrompt) > MAX_PROMPT_TOKENS) {
+            console.warn(
+              `[AI Extraction] ${key}: page ${currentBatchStart} still too large for text-mode ` +
+              `(~${estimateTokens(candidatePrompt)} tokens) — falling back to vision.`
+            );
+            chunkImages = apiImages.slice(i, i + 1);
+            chunkPrompt = enhancedPrompt;
+          } else {
+            chunkPrompt = candidatePrompt;
+            chunkImages = []; // pure text mode — no images
+          }
         } else {
           // Vision path: send JPEG images (existing behaviour)
           chunkImages = apiImages.slice(i, i + CHUNK_SIZE);
@@ -400,15 +547,61 @@ export async function extractDocument(
         let rawResponse: string;
         try {
           rawResponse = await callAIGateway(chunkPrompt, chunkImages);
-        } catch (firstErr) {
-          // One retry after 500ms before giving up
-          await new Promise(r => setTimeout(r, 500));
-          try {
-            rawResponse = await callAIGateway(chunkPrompt, chunkImages);
-          } catch (err) {
-            const msg = err instanceof Error ? err.message : 'Unknown error';
-            toast.error(`AI extraction failed — ${msg}. Please enter fields manually.`);
-            throw err;
+        } catch (firstErr: any) {
+          // ── Payload too large → auto-fallback to vision for this chunk ──────
+          // The gateway signals PAYLOAD_TOO_LARGE when even the shortest text-mode
+          // prompt exceeds the provider's token cap. Retrying with the same prompt
+          // won't help, but sending the page as an image almost certainly will.
+          const isTooBig =
+            firstErr?.status === 413 ||
+            (firstErr?.message ?? '').includes('PAYLOAD_TOO_LARGE');
+
+          if (isTooBig && chunkImages.length === 0) {
+            // We were in text-mode — retry this chunk in vision-mode
+            console.warn(
+              `[AI Extraction] ${key}: PAYLOAD_TOO_LARGE on text chunk ${currentBatchStart} ` +
+              `— retrying as vision (image) chunk.`
+            );
+            const visionImages = apiImages.slice(i, i + 1); // 1 page vision fallback
+            try {
+              rawResponse = await callAIGateway(enhancedPrompt, visionImages);
+            } catch (visionErr: any) {
+              // Both text-mode and vision-mode failed (provider token limit too restrictive).
+              // This typically means Groq's 8K TPM is too small for this document.
+              // Guide the user to add a Gemini key which has 250K TPM.
+              const isVisionTooBig =
+                (visionErr as any)?.status === 413 ||
+                (visionErr?.message ?? '').includes('PAYLOAD_TOO_LARGE');
+              if (isVisionTooBig) {
+                toast.error(
+                  'This document is too large for Groq\'s free tier (8K token limit). ' +
+                  'Add a Google Gemini API key in Profile → AI & Documents Intelligence — it supports documents up to 250K tokens.',
+                  { duration: 12000 }
+                );
+              } else {
+                const msg = visionErr instanceof Error ? visionErr.message : 'Unknown error';
+                toast.error(`AI extraction failed — ${msg}. Please enter fields manually.`);
+              }
+              throw visionErr;
+            }
+          } else if (isTooBig) {
+            // Vision-mode was already in use, but prompt is still too large.
+            toast.error(
+              'This document is too large for your current AI provider\'s token limit. ' +
+              'Add a Google Gemini API key in Profile → AI & Documents Intelligence — it supports documents up to 250K tokens.',
+              { duration: 12000 }
+            );
+            throw firstErr;
+          } else {
+            // Generic transient error — retry once after 500ms
+            await new Promise(r => setTimeout(r, 500));
+            try {
+              rawResponse = await callAIGateway(chunkPrompt, chunkImages);
+            } catch (err: any) {
+              const msg = err instanceof Error ? err.message : 'Unknown error';
+              toast.error(`AI extraction failed — ${msg}. Please enter fields manually.`);
+              throw err;
+            }
           }
         }
 
@@ -416,27 +609,23 @@ export async function extractDocument(
           const fragment = JSON.parse(rawResponse);
           finalResult = mergeAIResults(finalResult, fragment);
         } catch (err) {
-          console.error('AI JSON Parse Error in batch:', rawResponse);
-          // If it's a multi-batch request and one fails, we might still want the partial results,
-          // but for now we'll throw to ensure data integrity.
-          throw new Error("AI returned an invalid format for one or more pages.");
+          // For multi-page docs: one bad page should not abort the whole extraction.
+          // Log the failure and continue accumulating results from other pages.
+          console.warn(
+            `[AI Extraction] ${key}: page chunk ${currentBatchStart}–${currentBatchEnd} returned unparseable JSON — skipping this chunk.`,
+            '\nRaw response (first 500 chars):', rawResponse?.slice(0, 500)
+          );
+          if (totalPages === 1) {
+            // Single-page doc with no fallback — propagate as before
+            throw new Error('AI returned an invalid format. Please try again or enter fields manually.');
+          }
+          // Multi-page: continue with whatever we have accumulated so far
         }
       }
 
-      // Check math if estimate or final-bill
+      // Validate math — result surfaced to UI layer, no automatic re-scan.
       const mathCheck = validateMath(finalResult, key);
       discrepancies = mathCheck.discrepancies;
-      
-      if (mathCheck.isValid || autoRetryCount >= MAX_RETRIES) {
-        break; // Stop retrying if valid or reached max retries
-      } else {
-        // Prepare for retry
-        enhancedPrompt += `\n\nCRITICAL FEEDBACK ON PREVIOUS ATTEMPT:\nYour previous extraction had the following math discrepancies:\n- ${discrepancies.join('\n- ')}\n\nPlease ensure you extract EVERY line item carefully and check your totals. Do NOT skip any items from any page.`;
-        if (onProgress) onProgress(`Math discrepancies found. Auto-retrying extraction...`);
-        autoRetryCount++;
-        // short delay before retry
-        await new Promise(r => setTimeout(r, 1000));
-      }
     }
 
     // Log extraction summary for estimate/final-bill documents

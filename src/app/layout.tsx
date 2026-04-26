@@ -75,9 +75,6 @@ import { AuthSyncWrapper } from '@/components/AuthSyncWrapper';
 import { AuthGate } from '@/components/auth/AuthGate';
 import { SubscriptionGuard } from '@/components/layout/SubscriptionGuard';
 import Script from 'next/script';
-import { SandboxInit } from '@/components/sandbox/SandboxInit';
-
-const SANDBOX_MODE = process.env.NEXT_PUBLIC_SANDBOX_MODE === 'true';
 
 export default function RootLayout({
   children,
@@ -90,7 +87,6 @@ export default function RootLayout({
         <AuthSyncWrapper>
           <AuthGate>
             <SubscriptionGuard>
-              {SANDBOX_MODE && <SandboxInit />}
               {children}
             </SubscriptionGuard>
           </AuthGate>

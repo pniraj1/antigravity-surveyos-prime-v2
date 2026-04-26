@@ -1,163 +1,23 @@
 'use client';
 
-import { useAIExtraction, getEvidenceImages } from '@/hooks/useAIExtraction';
+import { useAIExtraction } from '@/hooks/useAIExtraction';
+import { storeBlobUrl } from '@/components/evidence/DocumentEvidenceViewer';
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import { ProcessingProgressOverlay } from '@/components/ui/ProcessingProgressOverlay';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
-import { useUIStore } from '@/stores/ui-store';
 import { uploadFileToDrive } from '@/lib/drive';
-import { CURRENT_MODELS, PROVIDER_MODELS, fetchAvailableGeminiModels } from '@/lib/ai/service';
 import {
   FileText, Sparkles, Loader2, CheckCircle2, Car, CreditCard,
-  FileCheck, Wrench, Camera, ScrollText, Receipt, Shield, AlertTriangle,
-  Upload, Truck, Zap, Brain, Database, ChevronDown,
+  FileCheck, Camera, ScrollText, Receipt, Shield, AlertTriangle,
+  Upload, Truck, Zap, Database,
 } from 'lucide-react';
+import { ProviderHealthBadge, ModelSelector, DocModeToggle, ProviderToggle } from '@/components/ai/AIControls';
 import { ReconciliationDialog } from './reconciliation/ReconciliationDialog';
 import { getReconciliationFields } from '@/lib/ai/reconciliation';
 import { useState, useMemo, useEffect } from 'react';
 
-// ─── Provider Health Badge ───────────────────────────────────────────────────
-function ProviderHealthBadge() {
-  const { aiProviderHealth } = useUIStore();
-  const { profile } = useProfileStore();
-  const provider = profile.aiProvider ?? 'gemini';
-  const healthKey = provider === 'groq' ? 'groq' : 'gemini';
-  const health = aiProviderHealth[healthKey];
-  const model = provider === 'gemini'
-    ? (profile.geminiModel?.trim() || CURRENT_MODELS.gemini)
-    : provider === 'nvidia'
-    ? (profile.nvidiaModel?.trim() || CURRENT_MODELS.nvidia)
-    : (profile.groqModel?.trim() || CURRENT_MODELS.groq);
-  const shortModel = model.split('/').pop()?.replace('gemini-', 'Gemini ').replace('-instruct', '') ?? model;
 
-  const dot = health === 'ok'           ? '#22c55e'
-            : health === 'rate-limited' ? '#f59e0b'
-            : health === 'error'        ? '#ef4444'
-            :                            '#8D99AE';
-  const label = health === 'ok'           ? 'Ready'
-              : health === 'rate-limited' ? 'Rate Limited'
-              : health === 'error'        ? 'Key Error — check Profile'
-              :                            'Not tested yet';
-
-  return (
-    <div
-      className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold"
-      style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}
-      title={`${provider === 'gemini' ? 'Google Gemini' : 'Groq'} · ${model} · ${label}`}
-    >
-      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: dot }} />
-      <span style={{ color: '#F8F9FA' }}>{shortModel}</span>
-      <span style={{ color: 'rgba(232,236,240,0.5)' }}>·</span>
-      <span style={{ color: dot }}>{label}</span>
-    </div>
-  );
-}
-
-// ─── Model Selector ──────────────────────────────────────────────────────────
-function ModelSelector() {
-  const { profile, updateProfile } = useProfileStore();
-  const { availableGeminiModels, setAvailableGeminiModels } = useUIStore();
-  const [open, setOpen] = useState(false);
-
-  const provider = (profile.aiProvider ?? 'gemini') as 'gemini' | 'groq' | 'nvidia';
-
-  // For Gemini: prefer live-fetched list; fall back to static list
-  const models = provider === 'gemini'
-    ? (availableGeminiModels ?? PROVIDER_MODELS.gemini)
-    : PROVIDER_MODELS[provider] ?? [];
-
-  const activeId = provider === 'gemini'
-    ? (profile.geminiModel?.trim() || CURRENT_MODELS.gemini)
-    : provider === 'nvidia'
-    ? (profile.nvidiaModel?.trim() || CURRENT_MODELS.nvidia)
-    : (profile.groqModel?.trim() || CURRENT_MODELS.groq);
-
-  // Auto-fetch live Gemini model list once when provider is Gemini and a key exists
-  useEffect(() => {
-    if (provider !== 'gemini' || availableGeminiModels !== null) return;
-    const key = profile.geminiApiKeys?.[0]?.trim() || profile.geminiApiKey?.trim();
-    if (!key) return;
-    fetchAvailableGeminiModels(key).then(list => {
-      if (list && list.length > 0) setAvailableGeminiModels(list);
-    });
-  }, [provider, availableGeminiModels, profile.geminiApiKeys, profile.geminiApiKey, setAvailableGeminiModels]);
-
-  const active = models.find(m => m.id === activeId) ?? models[0];
-
-  function select(id: string) {
-    if (provider === 'gemini') updateProfile({ geminiModel: id });
-    else if (provider === 'nvidia') updateProfile({ nvidiaModel: id });
-    else updateProfile({ groqModel: id });
-    setOpen(false);
-  }
-
-  const accentColor = provider === 'groq' ? '#F26639' : provider === 'nvidia' ? '#76B900' : '#D4AF37';
-
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all"
-        style={{
-          background: 'rgba(255,255,255,0.08)',
-          border: '1px solid rgba(255,255,255,0.12)',
-          color: 'rgba(232,236,240,0.85)',
-        }}
-      >
-        <span style={{ color: accentColor }}>{active?.label ?? activeId.split('/').pop()}</span>
-        <ChevronDown size={10} style={{ opacity: 0.6, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
-      </button>
-
-      {open && (
-        <>
-          {/* Backdrop */}
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          {/* Dropdown */}
-          <div
-            className="absolute right-0 top-full mt-1.5 z-20 rounded-xl overflow-hidden py-1"
-            style={{
-              background: '#1a2d45',
-              border: '1px solid rgba(255,255,255,0.12)',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-              minWidth: 210,
-            }}
-          >
-            {models.map(m => {
-              const isActive = m.id === activeId;
-              return (
-                <button
-                  key={m.id}
-                  onClick={() => select(m.id)}
-                  className="w-full flex items-start gap-2 px-4 py-2.5 text-left transition-colors"
-                  style={{
-                    background: isActive ? 'rgba(255,255,255,0.06)' : 'transparent',
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = isActive ? 'rgba(255,255,255,0.06)' : 'transparent'; }}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-black" style={{ color: isActive ? accentColor : '#F8F9FA' }}>
-                        {m.label}
-                      </span>
-                      {isActive && (
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: `${accentColor}25`, color: accentColor }}>
-                          Active
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-[10px] mt-0.5" style={{ color: 'rgba(232,236,240,0.45)' }}>{m.note}</div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
 
 // ─── Document Slot Definitions ──────────────────────────────────────────────
 const DOC_GROUPS = [
@@ -221,11 +81,16 @@ export function DocumentsTab() {
 
 
   if (!currentClaim) return null;
-  const evidenceImages = currentClaim && reviewData ? getEvidenceImages(currentClaim.id, reviewData.key) : [];
+  const evidenceImages: string[] = [];
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>, key: string) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Register file in EvidenceStore so the Evidence Viewer can display it
+    if (currentClaim?.id) {
+      storeBlobUrl(currentClaim.id, key, file);
+    }
 
     // AI extraction
     triggerExtraction(key, file);
@@ -275,33 +140,11 @@ export function DocumentsTab() {
               </p>
             </div>
 
-            {/* Provider toggle + health */}
+            {/* Provider toggle + model + mode */}
             <div className="flex flex-col items-end gap-2 flex-shrink-0">
-              <div className="flex items-center p-1 rounded-xl gap-1" style={{ background: 'rgba(255,255,255,0.08)' }}>
-                <button
-                  onClick={() => updateProfile({ aiProvider: 'gemini' })}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black transition-all"
-                  style={{
-                    background: aiProvider === 'gemini' ? 'rgba(212,175,55,0.9)' : 'transparent',
-                    color: aiProvider === 'gemini' ? '#0D1B2A' : 'rgba(232,236,240,0.6)',
-                  }}
-                >
-                  <Sparkles size={11} />
-                  Gemini
-                </button>
-                <button
-                  onClick={() => updateProfile({ aiProvider: 'groq' })}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black transition-all"
-                  style={{
-                    background: aiProvider === 'groq' ? 'rgba(242,102,57,0.9)' : 'transparent',
-                    color: aiProvider === 'groq' ? '#FFFFFF' : 'rgba(232,236,240,0.6)',
-                  }}
-                >
-                  <Zap size={11} />
-                  Groq
-                </button>
-              </div>
+              <ProviderToggle />
               <div className="flex items-center gap-2">
+                <DocModeToggle />
                 <ModelSelector />
                 <ProviderHealthBadge />
               </div>

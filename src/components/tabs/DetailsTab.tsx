@@ -10,7 +10,7 @@ import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { generateWordReport } from '@/lib/reports/word-builder';
-import { FileText, Sparkles, Download, Loader2, Hash, Wand2, FileSearch, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, PanelRightOpen, PanelRightClose } from 'lucide-react';
+import { FileText, Sparkles, Download, Loader2, Hash, Wand2, FileSearch, PanelRightOpen, PanelRightClose, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { SpotTab } from '@/components/tabs/SpotTab';
@@ -18,7 +18,7 @@ import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
 import { ProcessingProgressOverlay } from '@/components/ui/ProcessingProgressOverlay';
 
 // ─── Inline Evidence Panel ────────────────────────────────────────────────────
-// Mirrors the DocumentEvidenceViewer logic but renders inline (not fixed-position)
+// Uses blob URLs stored in the evidence store — no PNG conversion needed.
 
 const DOC_LABELS: Record<string, string> = {
   rc: 'Registration Certificate',
@@ -35,51 +35,23 @@ const DOC_LABELS: Record<string, string> = {
   photos: 'Damage Photos',
 };
 
-function getStorageKey(claimId: string, docType: string) {
-  return `evidence_${claimId}_${docType}`;
-}
-
-function loadPages(claimId: string | null, docType: string | null): string[] {
-  if (!claimId || !docType) return [];
-  try {
-    const raw = sessionStorage.getItem(getStorageKey(claimId, docType));
-    if (!raw) return [];
-    return JSON.parse(raw) as string[];
-  } catch {
-    return [];
-  }
-}
-
 function InlineEvidencePanel({ claimId }: { claimId: string }) {
-  const { field, imageVersion } = useEvidenceStore();
-  const [pages, setPages] = useState<string[]>([]);
-  const [currentPage, setCurrentPage] = useState(0);
-  const [zoom, setZoom] = useState(1);
+  const { field, blobUrls } = useEvidenceStore();
 
-  useEffect(() => {
-    setPages(loadPages(claimId, field?.docType ?? null));
-    setCurrentPage(0);
-    setZoom(1);
-  }, [claimId, field?.docType, imageVersion]);
-
-  const totalPages = pages.length;
-  const imgSrc = pages[currentPage] ?? null;
-
-  const prevPage = useCallback(() => setCurrentPage(p => Math.max(p - 1, 0)), []);
-  const nextPage = useCallback(() => setCurrentPage(p => Math.min(p + 1, totalPages - 1)), [totalPages]);
-
-  const zoomIn  = useCallback(() => setZoom(z => Math.min(z + 0.25, 4)), []);
-  const zoomOut = useCallback(() => setZoom(z => Math.max(z - 0.25, 0.5)), []);
-  const resetZoom = useCallback(() => setZoom(1), []);
-
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-      setZoom(z => Math.min(Math.max(z + (e.deltaY > 0 ? -0.1 : 0.1), 0.5), 4));
+  // Determine which document to show: active field's doc or first available
+  let effectiveDocType = field?.docType;
+  if (!effectiveDocType) {
+    for (const type of ['rc', 'policy', 'dl', 'estimate']) {
+      if (blobUrls[`${claimId}_${type}`]) {
+        effectiveDocType = type;
+        break;
+      }
     }
-  }, []);
+  }
 
-  const docLabel = field ? (DOC_LABELS[field.docType] ?? field.docType.toUpperCase()) : '';
+  const docLabel = effectiveDocType ? (DOC_LABELS[effectiveDocType] ?? effectiveDocType.toUpperCase()) : '';
+  const blobEntry = effectiveDocType ? blobUrls[`${claimId}_${effectiveDocType}`] : undefined;
+  const isPdf = blobEntry?.mimeType === 'application/pdf';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0f172a', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
@@ -92,27 +64,16 @@ function InlineEvidencePanel({ claimId }: { claimId: string }) {
             {docLabel && <div style={{ color: '#93c5fd', fontSize: 10, marginTop: 1 }}>{docLabel}</div>}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-          {totalPages > 1 && (
-            <>
-              <EvidenceIconBtn onClick={prevPage} title="Previous Page"><ChevronLeft size={13} /></EvidenceIconBtn>
-              <span style={{ color: '#93c5fd', fontSize: 10, fontWeight: 600, minWidth: 40, textAlign: 'center' }}>
-                {currentPage + 1} / {totalPages}
-              </span>
-              <EvidenceIconBtn onClick={nextPage} title="Next Page"><ChevronRight size={13} /></EvidenceIconBtn>
-              <div style={{ width: 1, height: 14, background: 'rgba(255,255,255,0.15)', margin: '0 2px' }} />
-            </>
-          )}
-          <EvidenceIconBtn onClick={zoomOut} title="Zoom Out"><ZoomOut size={13} /></EvidenceIconBtn>
-          <button
-            onClick={resetZoom}
-            title="Reset zoom"
-            style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 5, padding: '3px 7px', cursor: 'pointer', color: '#93c5fd', fontSize: 10, fontWeight: 600, minWidth: 38 }}
+        {blobEntry && (
+          <a
+            href={blobEntry.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#93c5fd', fontSize: 10, textDecoration: 'underline' }}
           >
-            {Math.round(zoom * 100)}%
-          </button>
-          <EvidenceIconBtn onClick={zoomIn} title="Zoom In"><ZoomIn size={13} /></EvidenceIconBtn>
-        </div>
+            Open in new tab
+          </a>
+        )}
       </div>
 
       {/* Context snippet */}
@@ -123,23 +84,31 @@ function InlineEvidencePanel({ claimId }: { claimId: string }) {
         </div>
       )}
 
-      {/* Document image */}
-      <div onWheel={handleWheel} style={{ flex: 1, overflow: 'auto', padding: 10 }}>
-        {imgSrc ? (
-          <div style={{ display: 'inline-block', minWidth: '100%', transformOrigin: 'top left', transform: `scale(${zoom})`, transition: 'transform 0.15s ease' }}>
-            <img
-              src={imgSrc}
-              alt={`${docLabel} source document`}
-              style={{ width: '100%', display: 'block', borderRadius: 6, boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}
+      {/* Document viewer */}
+      <div style={{ flex: 1, overflow: 'hidden', padding: blobEntry ? 0 : 10 }}>
+        {blobEntry ? (
+          isPdf ? (
+            <iframe
+              src={blobEntry.url}
+              style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+              title={docLabel}
             />
-          </div>
+          ) : (
+            <div style={{ height: '100%', overflow: 'auto', padding: 10 }}>
+              <img
+                src={blobEntry.url}
+                alt={`${docLabel} source document`}
+                style={{ width: '100%', display: 'block', borderRadius: 6, boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}
+              />
+            </div>
+          )
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center', color: '#475569', padding: 20 }}>
             <div>
               <FileSearch size={36} style={{ opacity: 0.3, marginBottom: 10 }} />
               <p style={{ fontSize: 12, margin: 0 }}>
                 {field
-                  ? 'Document image not available.\nRe-scan the document to enable this view.'
+                  ? 'Upload the document to view it here.'
                   : 'Scan a document (RC / Policy / DL)\nto see the source here.'}
               </p>
             </div>
@@ -150,7 +119,7 @@ function InlineEvidencePanel({ claimId }: { claimId: string }) {
       {/* Footer */}
       <div style={{ padding: '6px 12px', borderTop: '1px solid rgba(255,255,255,0.06)', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}>
         <ChevronRight size={12} color="#475569" />
-        <span style={{ color: '#475569', fontSize: 10 }}>Scan a document above to populate this panel</span>
+        <span style={{ color: '#475569', fontSize: 10 }}>Upload a document above to populate this panel</span>
       </div>
     </div>
   );

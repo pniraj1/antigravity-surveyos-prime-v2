@@ -92,23 +92,26 @@ const DOC_LABELS: Record<string, string> = {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 interface Props {
-  /** Width of the panel when open, e.g. "420px" */
   panelWidth?: string;
   embedded?: boolean;
+  defaultDocType?: string;
 }
 
-export function DocumentEvidenceViewer({ panelWidth = '420px', embedded = false }: Props) {
+export function DocumentEvidenceViewer({ panelWidth = '420px', embedded = false, defaultDocType }: Props) {
   const { isOpen, field, claimId, close, blobUrls } = useEvidenceStore();
 
+  // Resolve the docType: current field or fallback to default
+  const effectiveDocType = field?.docType || defaultDocType;
+
   // Resolve the blob URL for the current doc
-  const blobEntry = claimId && field?.docType
-    ? blobUrls[`${claimId}_${field.docType}`] ?? null
+  const blobEntry = claimId && effectiveDocType
+    ? blobUrls[`${claimId}_${effectiveDocType}`] ?? null
     : null;
   const blobUrl  = blobEntry?.url ?? null;
   const isPdf    = blobEntry?.mimeType === 'application/pdf';
   const isImage  = blobEntry?.mimeType.startsWith('image/') ?? false;
 
-  const docLabel = field ? (DOC_LABELS[field.docType] ?? field.docType.toUpperCase()) : '';
+  const docLabel = effectiveDocType ? (DOC_LABELS[effectiveDocType] ?? effectiveDocType.toUpperCase()) : '';
 
   return (
     <>

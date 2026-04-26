@@ -9,13 +9,14 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
 import { PanelRightOpen, PanelRightClose, Upload } from 'lucide-react';
-import { DocumentEvidenceViewer } from '@/components/evidence/DocumentEvidenceViewer';
-import { useAIExtraction, getEvidenceImages } from '@/hooks/useAIExtraction';
+import { DocumentEvidenceViewer, storeBlobUrl, useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
+import { useAIExtraction } from '@/hooks/useAIExtraction';
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import { ProcessingProgressOverlay } from '@/components/ui/ProcessingProgressOverlay';
 import { useProfileStore } from '@/stores/profile-store';
 import { uploadFileToDrive } from '@/lib/drive';
 import { AssessmentChatbot } from '@/components/chat/AssessmentChatbot';
+import { ModelSelector, DocModeToggle, ProviderHealthBadge, ProviderToggle } from '@/components/ai/AIControls';
 
 export function AssessmentTab() {
   const { currentClaim, setDepreciationType } = useClaimStore();
@@ -27,6 +28,19 @@ export function AssessmentTab() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Store blob URL for the Evidence Viewer to display the file natively
+    if (currentClaim?.id) {
+      storeBlobUrl(currentClaim.id, 'estimate', file);
+      
+      // Auto-open evidence panel and focus on estimate
+      setShowEvidence(true);
+      useEvidenceStore.getState().openField(currentClaim.id, {
+        docType: 'estimate',
+        fieldKey: '',
+        contextSnippet: ''
+      });
+    }
+
     triggerExtraction('estimate', file);
 
     if (currentClaim?.id && profile.autoUploadDrive !== false) {
@@ -37,7 +51,7 @@ export function AssessmentTab() {
     e.target.value = '';
   };
 
-  const evidenceImages = currentClaim && reviewData ? getEvidenceImages(currentClaim.id, reviewData.key) : [];
+  const evidenceImages: string[] = [];
 
   if (!currentClaim) return null;
 
@@ -51,43 +65,57 @@ export function AssessmentTab() {
           </p>
         </div>
         
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-3 bg-card p-3 rounded-xl border border-border">
-            <Label htmlFor="dep-type" className="font-semibold text-sm">Policy Depreciation:</Label>
-            <select
-              id="dep-type"
-              value={currentClaim.depreciationType}
-              onChange={(e) => setDepreciationType(e.target.value as any)}
-              className="h-8 rounded-md border border-input bg-background px-3 text-sm focus:ring-1 focus:ring-primary font-bold text-primary"
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 bg-card p-3 rounded-xl border border-border">
+              <Label htmlFor="dep-type" className="font-semibold text-sm">Policy Depreciation:</Label>
+              <select
+                id="dep-type"
+                value={currentClaim.depreciationType}
+                onChange={(e) => setDepreciationType(e.target.value as any)}
+                className="h-8 rounded-md border border-input bg-background px-3 text-sm focus:ring-1 focus:ring-primary font-bold text-primary"
+              >
+                <option value="standard">Standard (Age Based)</option>
+                <option value="nil">Nil Depreciation</option>
+              </select>
+            </div>
+
+            <div className="relative">
+              <input
+                type="file"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                accept="image/*,application/pdf"
+                onChange={handleEstimateUpload}
+                disabled={isProcessing}
+                title="Upload Estimate"
+              />
+              <Button variant="outline" className="gap-2 h-12 w-full" tabIndex={-1} disabled={isProcessing}>
+                <Upload size={16} />
+                Upload Estimate
+              </Button>
+            </div>
+
+            <Button
+              variant={showEvidence ? 'secondary' : 'outline'}
+              onClick={() => setShowEvidence(!showEvidence)}
+              className={`gap-2 h-12 ${showEvidence ? 'bg-primary/20 text-primary border-primary/30 hover:bg-primary/30' : ''}`}
             >
-              <option value="standard">Standard (Age Based)</option>
-              <option value="nil">Nil Depreciation</option>
-            </select>
-          </div>
-          
-          <div className="relative">
-            <input
-              type="file"
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-              accept="image/*,application/pdf"
-              onChange={handleEstimateUpload}
-              disabled={isProcessing}
-              title="Upload Estimate"
-            />
-            <Button variant="outline" className="gap-2 h-12 w-full" tabIndex={-1} disabled={isProcessing}>
-              <Upload size={16} />
-              Upload Estimate
+              {showEvidence ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
+              {showEvidence ? 'Hide Evidence' : 'Show Evidence'}
             </Button>
           </div>
 
-          <Button
-            variant={showEvidence ? 'secondary' : 'outline'}
-            onClick={() => setShowEvidence(!showEvidence)}
-            className={`gap-2 h-12 ${showEvidence ? 'bg-primary/20 text-primary border-primary/30 hover:bg-primary/30' : ''}`}
+          {/* AI extraction controls */}
+          <div
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl"
+            style={{ background: '#0D1B2A', border: '1px solid rgba(255,255,255,0.08)' }}
           >
-            {showEvidence ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
-            {showEvidence ? 'Hide Evidence' : 'Show Evidence'}
-          </Button>
+            <span className="text-[10px] font-bold mr-1" style={{ color: 'rgba(232,236,240,0.4)' }}>AI</span>
+            <ProviderToggle />
+            <DocModeToggle />
+            <ModelSelector />
+            <ProviderHealthBadge />
+          </div>
         </div>
       </div>
 
@@ -120,7 +148,7 @@ export function AssessmentTab() {
               {/* Evidence Viewer Panel */}
               <Panel defaultSize={40} minSize={20}>
                 <div className="h-full bg-card">
-                  <DocumentEvidenceViewer embedded={true} />
+                  <DocumentEvidenceViewer embedded={true} defaultDocType="estimate" />
                 </div>
               </Panel>
             </>

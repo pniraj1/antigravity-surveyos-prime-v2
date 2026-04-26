@@ -16,12 +16,15 @@ import { toast } from 'sonner';
 
 // ─── Developer-controlled model defaults ─────────────────────────────────────
 // Last verified: April 2026 — Free Tier limits:
-//   gemini-2.5-flash : 10 RPM · 500 RPD · 250K TPM  ← best stable free model
+//   gemini-2.5-flash     : 10 RPM · 500 RPD · 250K TPM  ← best stable free model
 //   gemini-2.5-flash-lite : 15 RPM · 1000 RPD
+//   openai/gpt-oss-120b  : Groq Production tier, vision-capable, ~500 tps
 export const CURRENT_MODELS = {
   gemini: 'gemini-2.5-flash',
-  // Llama 4 Scout — vision-capable, broadly available on Groq free tier
-  groq:   'meta-llama/llama-4-scout-17b-16e-instruct',
+  // GPT-OSS 120B — Production tier on Groq, vision-capable, highest quality
+  // ⚠️  DO NOT use 'meta-llama/llama-4-scout-17b-16e-instruct' as default —
+  //     it is a Preview-only model and can be discontinued without notice.
+  groq:   'openai/gpt-oss-120b',
   // NVIDIA NIM free tier: model prefix is "meta/" not "nvidia/"
   nvidia: 'meta/llama-3.2-90b-vision-instruct',
 };
@@ -39,14 +42,18 @@ export interface ModelOption {
  */
 export const PROVIDER_MODELS: Record<'gemini' | 'groq' | 'nvidia', ModelOption[]> = {
   gemini: [
-    { id: 'gemini-2.5-flash',      label: '2.5 Flash',      note: 'Best · 10 RPM · 500/day' },
-    { id: 'gemini-2.5-flash-lite', label: '2.5 Flash-Lite', note: 'Fastest · 15 RPM · 1000/day' },
+    { id: 'gemini-2.5-pro',        label: '2.5 Pro',        note: 'Most capable · deep reasoning · complex docs' },
+    { id: 'gemini-2.5-flash',      label: '2.5 Flash ✓',    note: 'Best value · 10 RPM · 500/day' },
+    { id: 'gemini-2.5-flash-lite', label: '2.5 Flash-Lite', note: 'Fastest · cheapest · 15 RPM · 1000/day' },
   ],
   groq: [
-    { id: 'meta-llama/llama-4-scout-17b-16e-instruct',     label: 'Llama 4 Scout',    note: 'Recommended · vision · free tier' },
-    { id: 'meta-llama/llama-4-maverick-17b-128e-instruct', label: 'Llama 4 Maverick', note: 'Higher quality · check availability' },
-    { id: 'llama-3.3-70b-versatile',                       label: 'Llama 3.3 70B',    note: 'Text only · no vision' },
-    { id: 'llama-3.1-8b-instant',                          label: 'Llama 3.1 8B',     note: 'Fastest · text only' },
+    // Production models (stable, verified April 2026)
+    { id: 'openai/gpt-oss-120b',      label: 'GPT-OSS 120B ✓',   note: 'Best · Production · vision + text · ~500 tps' },
+    { id: 'openai/gpt-oss-20b',       label: 'GPT-OSS 20B',      note: 'Production · faster · vision + text' },
+    { id: 'llama-3.3-70b-versatile',  label: 'Llama 3.3 70B',    note: 'Production · text only · reliable' },
+    { id: 'llama-3.1-8b-instant',     label: 'Llama 3.1 8B',     note: 'Production · fastest · text only' },
+    // Preview (may be discontinued at short notice)
+    { id: 'meta-llama/llama-4-scout-17b-16e-instruct', label: 'Llama 4 Scout ⚠️ Preview', note: 'Preview only · vision capable · not for production' },
   ],
   nvidia: [
     { id: 'meta/llama-3.2-90b-vision-instruct', label: 'Llama 3.2 90B', note: 'Default · best vision' },
@@ -55,10 +62,19 @@ export const PROVIDER_MODELS: Record<'gemini' | 'groq' | 'nvidia', ModelOption[]
 };
 
 // ─── Fallback chain when a model is unavailable on this account tier ──────────
-// Tried in order. All three are currently free-tier functional (April 2026).
+// Tried in order. All are currently free-tier functional (April 2026).
 const GEMINI_FALLBACK_CHAIN = [
   'gemini-2.5-flash',
   'gemini-2.5-flash-lite',
+];
+
+// Groq fallback chain — all Production tier (April 2026).
+// gpt-oss-120b (vision) → gpt-oss-20b (vision, smaller) → llama-3.3-70b (text) → llama-3.1-8b (fastest text)
+const GROQ_FALLBACK_CHAIN = [
+  'openai/gpt-oss-120b',                        // Production · vision + text · best
+  'openai/gpt-oss-20b',                         // Production · vision + text · faster
+  'llama-3.3-70b-versatile',                    // Production · text-only
+  'llama-3.1-8b-instant',                       // Production · fastest text-only
 ];
 
 // Old model names stored in user profiles → auto-migrated to current default
@@ -69,15 +85,20 @@ const DEPRECATED_GEMINI_MODELS: Record<string, string> = {
   'gemini-1.5-flash':         'gemini-2.5-flash',
   'gemini-1.5-flash-latest':  'gemini-2.5-flash',
   'gemini-1.5-pro':           'gemini-2.5-flash',
-  'gemini-2.0-flash':         'gemini-2.5-flash',
+  'gemini-2.0-flash':         'gemini-2.5-flash',       // deprecated, being shut down
+  'gemini-2.0-flash-lite':    'gemini-2.5-flash-lite',  // deprecated, being shut down
   'gemini-2.0-flash-exp':     'gemini-2.5-flash',
-  'gemini-2.5-pro':           'gemini-2.5-flash',
+  'gemini-3-pro-preview':     'gemini-3.1-pro-preview', // shut down March 9, 2026
 };
 
 const DEPRECATED_GROQ_MODELS: Record<string, string> = {
-  'meta-llama/llama-4-maverick-17b-128e-instruct': 'meta-llama/llama-4-scout-17b-16e-instruct',
-  'llama-3.2-90b-vision-preview':                  'meta-llama/llama-4-scout-17b-16e-instruct',
-  'llama-3.2-11b-vision-preview':                  'meta-llama/llama-4-scout-17b-16e-instruct',
+  // Maverick deprecated March 9, 2026 → migrate to production GPT-OSS 120B
+  'meta-llama/llama-4-maverick-17b-128e-instruct': 'openai/gpt-oss-120b',
+  // Scout is Preview-only (not for production) → migrate saved profiles to production model
+  'meta-llama/llama-4-scout-17b-16e-instruct':     'openai/gpt-oss-120b',
+  // Old vision-preview models removed by Groq
+  'llama-3.2-90b-vision-preview':                  'openai/gpt-oss-120b',
+  'llama-3.2-11b-vision-preview':                  'openai/gpt-oss-120b',
 };
 
 export interface AIProvider {
@@ -329,6 +350,13 @@ async function callWithKey(provider: AIProvider, key: string, prompt: string, im
 
   // Groq / NVIDIA NIM / OpenAI-compatible
   const messages: any[] = [];
+
+  // Groq JSON mode requires the word "JSON" to appear somewhere in the conversation.
+  // Add a system message to guarantee compliance regardless of what the user prompt contains.
+  if (provider.name === 'groq') {
+    messages.push({ role: 'system', content: 'You are a document extraction assistant. Always respond in valid JSON format.' });
+  }
+
   if (images.length > 0) {
     // Apply per-provider image cap (Groq = 5, NVIDIA/others = unlimited)
     const cap = provider.maxImages ?? images.length;
@@ -351,7 +379,9 @@ async function callWithKey(provider: AIProvider, key: string, prompt: string, im
       messages,
       temperature: 0.1,
       response_format: { type: 'json_object' },
-      max_tokens: 4096,
+      // GPT-OSS 120B supports up to 32K — 4096 silently truncated large estimates.
+      // 8192 is safe for all models in the Groq fallback chain.
+      max_tokens: 8192,
     }),
   });
 
@@ -386,6 +416,22 @@ function isHighDemandError(err: any): boolean {
     msg.includes('overloaded') ||
     msg.includes('service unavailable') ||
     msg.includes('try again')
+  );
+}
+
+/**
+ * Returns true when the request was rejected because the prompt is too large
+ * (HTTP 413 or Groq's "tokens per minute" / "Request too large" messages).
+ * Rotating keys will NOT help — the payload itself must shrink.
+ */
+function isPayloadTooLarge(err: any): boolean {
+  if (err?.status === 413) return true;
+  const msg: string = (err?.message ?? '').toLowerCase();
+  return (
+    msg.includes('request too large') ||
+    msg.includes('tokens per minute') ||
+    msg.includes('reduce your message size') ||
+    msg.includes('context_length_exceeded')
   );
 }
 
@@ -435,6 +481,17 @@ async function callWithRotation(provider: AIProvider, prompt: string, images: st
     const err = lastError as any;
     const isAuthError = err.status === 401 || err.status === 403;
 
+    // ── Payload too large: no point rotating keys — the prompt must shrink ──
+    if (isPayloadTooLarge(err)) {
+      const healthKey = provider.name === 'gemini' || provider.name === 'groq' ? provider.name : 'groq';
+      useUIStore.getState().setAIProviderHealth(healthKey, 'error');
+      // Re-throw immediately with a clear signal so the processor can adapt
+      throw Object.assign(
+        new Error(`PAYLOAD_TOO_LARGE: ${err.message}`),
+        { status: 413 }
+      );
+    }
+
     // ── Model not found on this account → walk Gemini fallback chain ──
     if (provider.name === 'gemini' && isModelUnavailable(err)) {
       const nextModel = GEMINI_FALLBACK_CHAIN.find(m => !triedModels.has(m));
@@ -446,6 +503,23 @@ async function callWithRotation(provider: AIProvider, prompt: string, images: st
           model: nextModel,
           endpoint: `https://generativelanguage.googleapis.com/v1beta/models/${nextModel}:generateContent`,
         };
+        i = -1;
+        continue;
+      }
+      break;
+    }
+
+    // ── Model not found on this account → walk Groq fallback chain ──
+    if (provider.name === 'groq' && isModelUnavailable(err)) {
+      const nextModel = GROQ_FALLBACK_CHAIN.find(m => !triedModels.has(m));
+      if (nextModel) {
+        triedModels.add(nextModel);
+        const isVision = nextModel.startsWith('openai/gpt-oss');
+        toast.info(
+          `Groq: ${downgradedProvider.model} unavailable — trying ${nextModel}${ isVision ? '' : ' (text-only)' } automatically.`,
+          { duration: 4000 }
+        );
+        downgradedProvider = { ...provider, model: nextModel };
         i = -1;
         continue;
       }
@@ -500,8 +574,21 @@ export async function callAIGateway(prompt: string, images: string[] = []): Prom
   if (primaryProvider) {
     try {
       return await callWithRotation(primaryProvider, prompt, images);
-    } catch {
-      // fall through to secondary
+    } catch (primaryErr: any) {
+      // ── PAYLOAD_TOO_LARGE: re-throw immediately ──────────────────────────
+      // Rotating keys or switching providers won't fix an oversized prompt.
+      // processor.ts catches this specific signal and retries in vision-mode.
+      if (isPayloadTooLarge(primaryErr)) {
+        throw Object.assign(
+          new Error(`PAYLOAD_TOO_LARGE: ${primaryErr.message}`),
+          { status: 413 }
+        );
+      }
+      // Log the real error so it's traceable in production devtools
+      console.warn(
+        `[AI Gateway] Primary provider (${PROVIDER_LABELS[preferred]}) failed — falling back to secondary.`,
+        primaryErr?.message ?? primaryErr
+      );
     }
     if (secondaryProvider) {
       toast.warning(
@@ -556,12 +643,23 @@ export async function fetchAvailableGeminiModels(apiKey: string): Promise<ModelO
     const raw: Array<{ name: string; displayName: string; supportedGenerationMethods?: string[] }> =
       data.models ?? [];
 
-    const vision = raw.filter(m =>
-      m.supportedGenerationMethods?.includes('generateContent') &&
-      // Exclude embedding / AQA / tuning-only models
-      !m.name.includes('embedding') &&
-      !m.name.includes('aqa')
-    );
+    const vision = raw.filter(m => {
+      const n = m.name;
+      return (
+        m.supportedGenerationMethods?.includes('generateContent') &&
+        // Only text/vision multimodal Gemini models — skip everything else
+        n.startsWith('models/gemini-') &&
+        !n.includes('embedding') &&
+        !n.includes('aqa') &&
+        !n.includes('-tts') &&       // text-to-speech
+        !n.includes('-image') &&     // image generation (Nano Banana variants)
+        !n.includes('-live') &&      // live/streaming audio
+        !n.includes('robotics') &&   // embodied reasoning
+        !n.includes('computer-use') &&
+        !n.includes('deep-research') &&
+        !n.includes('-exp')          // experimental / unstable
+      );
+    });
 
     if (vision.length === 0) return null;
 

@@ -158,6 +158,8 @@ export interface SurveyorProfile {
   googleClientId: string;
   /** Whether to automatically upload photos and documents to Drive */
   autoUploadDrive?: boolean;
+  /** Override PDF extraction mode. 'auto' = smart detect (default). */
+  aiDocMode?: 'auto' | 'text' | 'vision';
   // ─── Subscription & Administrative ────────────────────
   /** Unique platform ID (e.g. SUS-1001) */
   surveyorId: string;
