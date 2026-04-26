@@ -16,7 +16,7 @@
 ---
 
 ## Current Objective
-✅ AI Controls (model selector, doc mode toggle, provider toggle) now on both Documents + Assessment tabs. Next: Security hardening backlog + commit staged changes.
+✅ Valuation / Break-in Inspection report type shipped and deployed (2026-04-26). Next: end-to-end test of valuation flow + security backlog.
 
 ## 🔐 Security Backlog
 > Full details: [[Security_Audit_2026-04-13]]
@@ -27,9 +27,9 @@
 - [x] C-3: Firestore `ai_config/routing` locked to admin-only
 
 ### 🟠 High Priority (This Week)
-- [ ] H-1: Strip `geminiApiKeys[]` / `groqApiKeys[]` from Firestore profile sync
-- [ ] H-2: Remove hardcoded master UID from sidebar.tsx client bundle
-- [ ] H-4: Replace 30+ `console.log` calls with dev-only logger
+- [x] H-1: ~~Strip `geminiApiKeys[]` / `groqApiKeys[]` from Firestore profile sync~~ — **Won't fix**: keys are free-tier with quota limits, risk is negligible. Encrypt at rest if this changes.
+- [x] H-2: Master UID already reads from `process.env.NEXT_PUBLIC_MASTER_ADMIN_UID` — not hardcoded (verified 2026-04-26)
+- [x] H-4: Only 3 `[AI Extraction]` diagnostic logs remain in `processor.ts` + 1 inside `logger.ts` itself — not leaking UIDs (verified 2026-04-26)
 
 ### 🟡 Medium Priority (Next Sprint)
 - [ ] M-4: Fix profile path — sync.ts writes `profile/main`, AdminDashboard reads `profile/current`
@@ -39,7 +39,18 @@
 
 ---
 
-## ✅ Completed (2026-04-26)
+## ✅ Completed (2026-04-26 — Session 2)
+
+- [x] **Valuation / Break-in Inspection report** — new `SurveyType: 'valuation'` with full tab set, condition form, HTML builder, PDF preview, deployed
+- [x] `ValuationDetails` interface + `updateValuationDetails()` store action
+- [x] `ValuationTab.tsx` — panel damage rows, mechanical condition, conclusion + recommendation
+- [x] `valuation-report-builder.ts` — letter-format HTML print builder (matches sample)
+- [x] `ValuationReportDocument.tsx` — React-PDF preview
+- [x] Sidebar tab restrictions per survey type (valuation hides assessment/fees/reinspection/review)
+- [x] NewClaimDialog: Valuation button with break-in hint
+- [x] Deployed: `npm run build && firebase deploy --only hosting` → https://surveyos-v2-antigravity.web.app
+
+## ✅ Completed (2026-04-26 — Session 1)
 - [x] **Sandbox feature removed** — `/sandbox/mapper` was live in production, deleted all 5 source files, fixed leftover refs in layout.tsx and processor.ts
 - [x] **Gemini model list cleaned** — static list trimmed to 3 stable models only (2.5 Pro, 2.5 Flash, 2.5 Flash-Lite); live fetch filter strips TTS/image/live/robotics/experimental models
 - [x] **Text/Vision mode toggle** — `DocModeToggle` (Auto/Text/Vision) wired through profile store → useAIExtraction → extractDocument; persists across sessions
