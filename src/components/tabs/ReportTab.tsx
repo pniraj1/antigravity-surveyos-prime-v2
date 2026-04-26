@@ -33,6 +33,7 @@ import { SpotPrintReport } from '@/components/print/SpotPrintReport';
 import { UIICPrintReport } from '@/components/print/UIICPrintReport';
 import { buildStandardFinalSurveyHTML } from '@/lib/reports/standard-report-builder';
 import { buildUIICFinalHTML } from '@/lib/reports/uiic-final-builder';
+import { buildValuationReportHTML } from '@/lib/reports/valuation-report-builder';
 import DOMPurify from 'dompurify';
 import { useRef } from 'react';
 
@@ -48,11 +49,12 @@ function PDFLoadingFallback() {
 }
 
 // ─── Report Types ─────────────────────────────────────────────────────────────
-type ReportType = 'spot' | 'survey';
+type ReportType = 'spot' | 'survey' | 'valuation';
 
 const REPORT_TYPES = [
-  { id: 'spot',   label: 'Spot Report',         icon: <FileText size={16} />, color: '#B91C1C' },
-  { id: 'survey', label: 'Final Survey Report', icon: <FileText size={16} />, color: '#0D1B2A' },
+  { id: 'spot',      label: 'Spot Report',              icon: <FileText size={16} />, color: '#B91C1C' },
+  { id: 'survey',    label: 'Final Survey Report',      icon: <FileText size={16} />, color: '#0D1B2A' },
+  { id: 'valuation', label: 'Valuation / Break-in',     icon: <FileText size={16} />, color: '#92400E' },
 ];
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -61,7 +63,10 @@ export function ReportTab() {
   const { profile } = useProfileStore();
   const [mounted, setMounted] = useState(false);
   
-  const [activeReport, setActiveReport] = useState<ReportType>(currentClaim?.surveyType === 'spot' ? 'spot' : 'survey');
+  const [activeReport, setActiveReport] = useState<ReportType>(
+    currentClaim?.surveyType === 'spot' ? 'spot' :
+    currentClaim?.surveyType === 'valuation' ? 'valuation' : 'survey'
+  );
   const [format, setFormat] = useState<'standard' | 'uiic'>('standard');
   const [isExportingWord, setIsExportingWord] = useState(false);
   const [zoom, setZoom] = useState<number>(0.9); // Default to 90% for better fit
@@ -81,10 +86,12 @@ export function ReportTab() {
 
   useEffect(() => {
     if (currentClaim) {
-      if (currentClaim.surveyType === 'spot' && !['spot'].includes(activeReport)) {
+      if (currentClaim.surveyType === 'spot' && activeReport !== 'spot') {
         setActiveReport('spot');
-      } else if (currentClaim.surveyType === 'final' && !['survey'].includes(activeReport)) {
+      } else if (currentClaim.surveyType === 'final' && activeReport !== 'survey') {
         setActiveReport('survey');
+      } else if (currentClaim.surveyType === 'valuation' && activeReport !== 'valuation') {
+        setActiveReport('valuation');
       }
     }
   }, [currentClaim?.surveyType, activeReport]);
@@ -92,13 +99,9 @@ export function ReportTab() {
   if (!currentClaim || !mounted) return <PDFLoadingFallback />;
 
   const availableReports = REPORT_TYPES.filter(rt => {
-    if (currentClaim.surveyType === 'spot') {
-      return rt.id === 'spot';
-    } else {
-      // For final surveys, we might show both or just final. 
-      // Usually just 'survey' (final).
-      return rt.id === 'survey';
-    }
+    if (currentClaim.surveyType === 'spot') return rt.id === 'spot';
+    if (currentClaim.surveyType === 'valuation') return rt.id === 'valuation';
+    return rt.id === 'survey';
   });
 
   const ageMonths = getVehicleAgeMonths(
@@ -201,6 +204,19 @@ export function ReportTab() {
             setZoom={setZoom}
           />
         )}
+        {activeReport === 'valuation' && (
+          <button
+            onClick={() => {
+              const html = buildValuationReportHTML(currentClaim, profile!);
+              const win = window.open('', '_blank');
+              if (win) { win.document.write(html); win.document.close(); win.print(); }
+            }}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-sm"
+            style={{ background: '#92400E', color: '#fff' }}
+          >
+            <FileText size={14} /> Print / Download PDF
+          </button>
+        )}
         {isDirty && (
           <div className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg" style={{ background: 'rgba(251,191,36,0.1)', color: '#D97706', border: '1px solid rgba(217,119,6,0.2)' }}>
             <AlertCircle size={12} /> Unsaved changes — PDF updates live
@@ -224,7 +240,7 @@ export function ReportTab() {
         style={{ border: '1px solid #E2E6EA' }}
       >
         <CardContent className="p-0 w-full h-[calc(100vh-340px)] min-h-[520px]" style={{ background: '#525659' }}>
-          {(activeReport === 'survey' || activeReport === 'spot') ? (
+          {(activeReport === 'survey' || activeReport === 'spot' || activeReport === 'valuation') ? (
             <div className="w-full h-full overflow-auto flex justify-center py-8">
               <div 
                 className="bg-white shadow-2xl relative"
@@ -268,6 +284,9 @@ export function ReportTab() {
                 )}
                 {activeReport === 'spot' && (
                   <SpotPrintReport claim={currentClaim} profile={profile!} />
+                )}
+                {activeReport === 'valuation' && (
+                  <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(buildValuationReportHTML(currentClaim, profile!)) }} />
                 )}
               </div>
             </div>

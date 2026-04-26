@@ -30,6 +30,7 @@ import {
   Shield,
   ShieldCheck,
   Zap,
+  CarFront,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { signInWithGoogle, signOutUser } from '@/lib/firebase/auth';
@@ -55,6 +56,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'photos',      label: 'Photo Sheet',    icon: <Camera size={17} />,     group: 'output',   requiresClaim: true },
   { id: 'fees',        label: 'Survey Fees Bill', icon: <Receipt size={17} />,    group: 'output',   requiresClaim: true },
   { id: 'reinspection',label: 'Reinspection',  icon: <RotateCcw size={17} />,  group: 'output',   requiresClaim: true },
+  { id: 'valuation',   label: 'Valuation',     icon: <CarFront size={17} />,   group: 'output',   requiresClaim: true },
   { id: 'profile', label: 'Profile', icon: <User size={17} />, group: 'settings' },
   { id: 'cloud-vault', label: 'Cloud Vault', icon: <Cloud size={17} />, group: 'settings' },
   { id: 'learning', label: 'Learning', icon: <Brain size={17} />, group: 'settings' },
@@ -224,9 +226,21 @@ export function Sidebar() {
               // Workflow Logic: Restrict tabs based on Survey Type
               if (currentClaim?.surveyType === 'spot') {
                 // Spot surveys never see assessment/billing/reinspection tabs
-                const restrictedTabs: AppTab[] = ['assessment', 'bill-check', 'reinspection'];
+                const restrictedTabs: AppTab[] = ['assessment', 'bill-check', 'reinspection', 'valuation'];
                 if (restrictedTabs.includes(item.id)) return false;
               }
+
+              if (currentClaim?.surveyType === 'final') {
+                if (item.id === 'valuation') return false;
+              }
+
+              if (currentClaim?.surveyType === 'valuation') {
+                // Valuation report only needs: details, documents, valuation, photos, reports
+                const restrictedTabs: AppTab[] = ['assessment', 'bill-check', 'reinspection', 'fees', 'review'];
+                if (restrictedTabs.includes(item.id)) return false;
+              }
+
+              if (!currentClaim && item.id === 'valuation') return false;
               
               return true;
             });

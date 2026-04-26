@@ -218,7 +218,7 @@ export function DetailsTab() {
 
   const surveyLabel = currentClaim.surveyType === 'spot' ? 'Spot Survey' :
                       currentClaim.surveyType === 'final' ? 'Final Survey' :
-                      currentClaim.surveyType === 'reinspection' ? 'Reinspection' : 'Survey';
+                      currentClaim.surveyType === 'valuation' ? 'Valuation / Break-in' : 'Survey';
 
   return (
     <div ref={containerRef} style={{ display: 'flex', height: '100%', gap: 0, overflow: 'hidden', position: 'relative' }}>

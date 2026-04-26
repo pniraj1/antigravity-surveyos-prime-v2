@@ -18,6 +18,7 @@ export type AppTab =
   | 'photos'
   | 'fees'
   | 'reinspection'
+  | 'valuation'
   | 'profile'
   | 'learning'
   | 'admin'

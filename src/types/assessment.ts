@@ -250,4 +250,43 @@ export interface BillCheckSummary {
   netInWords: string;
 }
 
+// ─── Valuation / Break-in Inspection ──────────────────────────────────────────
+
+export interface ValuationConditionRow {
+  id: string;
+  component: string;
+  condition: string;
+}
+
+export interface ValuationDetails {
+  inspectionDate: string;
+  inspectionPlace: string;
+  odometer: string;
+
+  chassis: string;
+  engineTransmission: string;
+  suspension: string;
+  seats: string;
+  electricals: string;
+
+  batteryMake: string;
+  batteryCondition: string;
+
+  tyreCount: string;
+  stepneyCount: string;
+  tyreMake: string;
+  tyreCondition: string;
+
+  glassCondition: string;
+
+  panelRows: ValuationConditionRow[];
+
+  isInsurable: boolean;
+  coverRecommendation: string;
+  documentVerificationNote: string;
+
+  enclosures: string;
+  remarks: string;
+}
+
 

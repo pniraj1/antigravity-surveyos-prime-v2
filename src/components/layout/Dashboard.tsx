@@ -42,6 +42,7 @@ const ProfileTab    = dynamicImport(() => import('@/components/tabs/ProfileTab')
 const AdminDashboard = dynamicImport(() => import('@/components/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })), { ssr: false });
 const CloudVaultTab    = dynamicImport(() => import('@/components/tabs/CloudVaultTab').then(m    => ({ default: m.CloudVaultTab    })), { ssr: false });
 const ReinspectionTab  = dynamicImport(() => import('@/components/tabs/ReinspectionTab').then(m  => ({ default: m.ReinspectionTab  })), { ssr: false });
+const ValuationTab     = dynamicImport(() => import('@/components/tabs/ValuationTab').then(m     => ({ default: m.ValuationTab     })), { ssr: false });
 
 // ─── Dashboard Tab Content ──────────────────────────────
 export function DashboardContent() {
@@ -587,6 +588,7 @@ export function TabPlaceholder({ tab }: { tab: string }) {
   if (tab === 'admin')       return <AdminDashboard />;
   if (tab === 'cloud-vault')  return <CloudVaultTab />;
   if (tab === 'reinspection') return <ReinspectionTab />;
+  if (tab === 'valuation')   return <ValuationTab />;
 
   // Genuinely unimplemented
   return (

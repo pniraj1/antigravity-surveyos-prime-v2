@@ -7,7 +7,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import type { VehicleDetails, DriverDetails, PolicyDetails, AccidentDetails, VehicleType, DepreciationType } from './vehicle';
-import type { AssessmentRow, SpotDamageRow, SpotSurveyDetails, ReinspectionDetails, FeeBill, PhotoItem, PhotoLayout, BillCheckDetails, ExtraBillItem } from './assessment';
+import type { AssessmentRow, SpotDamageRow, SpotSurveyDetails, ReinspectionDetails, FeeBill, PhotoItem, PhotoLayout, BillCheckDetails, ExtraBillItem, ValuationDetails } from './assessment';
 import type { SurveyType } from './report';
 
 export interface ClaimData {
@@ -53,6 +53,9 @@ export interface ClaimData {
 
   // ─── Fee Bill ──────────────────────────────────────
   feeBill: FeeBill;
+
+  // ─── Valuation / Break-in Inspection ──────────────
+  valuationDetails: ValuationDetails;
 
   // ─── Bill Check Report ─────────────────────────────
   billCheck: BillCheckDetails;
@@ -306,6 +309,30 @@ export function createBlankClaim(
       compulsoryExcess: 0,
       voluntaryExcess: 0,
       feePaid: false,
+    },
+
+    valuationDetails: {
+      inspectionDate: '',
+      inspectionPlace: '',
+      odometer: '',
+      chassis: '',
+      engineTransmission: '',
+      suspension: '',
+      seats: '',
+      electricals: '',
+      batteryMake: '',
+      batteryCondition: '',
+      tyreCount: '',
+      stepneyCount: '',
+      tyreMake: '',
+      tyreCondition: '',
+      glassCondition: '',
+      panelRows: [],
+      isInsurable: true,
+      coverRecommendation: '',
+      documentVerificationNote: '',
+      enclosures: '',
+      remarks: '',
     },
 
     billCheck: {

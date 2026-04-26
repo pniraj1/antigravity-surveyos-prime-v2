@@ -48,6 +48,7 @@ interface ClaimState {
   updateAccident: (updates: Partial<ClaimData['accident']>) => void;
   updateReinspection: (updates: Partial<ClaimData['reinspection']>) => void;
   updateSpotDetails: (updates: Partial<ClaimData['spotDetails']>) => void;
+  updateValuationDetails: (updates: Partial<ClaimData['valuationDetails']>) => void;
 
   // Depreciation
   setDepreciationType: (depType: DepreciationType) => void;
@@ -224,6 +225,19 @@ export const useClaimStore = create<ClaimState>()(
             ? {
                 ...state.currentClaim,
                 spotDetails: { ...state.currentClaim.spotDetails, ...updates },
+                updatedAt: new Date().toISOString(),
+              }
+            : null,
+          isDirty: true,
+        }));
+      },
+
+      updateValuationDetails: (updates) => {
+        set((state) => ({
+          currentClaim: state.currentClaim
+            ? {
+                ...state.currentClaim,
+                valuationDetails: { ...state.currentClaim.valuationDetails, ...updates },
                 updatedAt: new Date().toISOString(),
               }
             : null,
