@@ -11,11 +11,12 @@
   1. Firebase Console → Project Settings → General → Web API Key → Regenerate
   2. Update `.env.local` and `.env.production` with new key
   3. `npm run build && firebase deploy --only hosting`
+- [ ] **Commit today's changes** — large batch of uncommitted work from 2026-04-26 session (see [[Sessions/2026-04-26]])
 
 ---
 
 ## Current Objective
-✅ IRDAI Annual Summary Export feature complete + deployed. Next: Security hardening backlog.
+✅ AI Controls (model selector, doc mode toggle, provider toggle) now on both Documents + Assessment tabs. Next: Security hardening backlog + commit staged changes.
 
 ## 🔐 Security Backlog
 > Full details: [[Security_Audit_2026-04-13]]
@@ -35,6 +36,16 @@
 - [ ] L-2: Add CSP headers to firebase.json
 - [ ] M-3: Firestore field-level validation + doc size limits
 - [ ] H-3: Sanitize claim text before injecting into AI prompts
+
+---
+
+## ✅ Completed (2026-04-26)
+- [x] **Sandbox feature removed** — `/sandbox/mapper` was live in production, deleted all 5 source files, fixed leftover refs in layout.tsx and processor.ts
+- [x] **Gemini model list cleaned** — static list trimmed to 3 stable models only (2.5 Pro, 2.5 Flash, 2.5 Flash-Lite); live fetch filter strips TTS/image/live/robotics/experimental models
+- [x] **Text/Vision mode toggle** — `DocModeToggle` (Auto/Text/Vision) wired through profile store → useAIExtraction → extractDocument; persists across sessions
+- [x] **AI controls on Assessment tab** — ProviderToggle + DocModeToggle + ModelSelector + ProviderHealthBadge added; DocumentsTab uses same shared `AIControls.tsx`
+- [x] **60-second extraction timeout removed** — large PDFs were silently failing; queue now waits as long as the API needs
+- [x] **Obsidian session logging established** — Sessions/ folder created, daily logs written by AI at end of each session
 
 ---
 
