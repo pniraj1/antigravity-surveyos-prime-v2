@@ -142,8 +142,17 @@ export function Sidebar() {
               <div className="text-sm font-black tracking-tight" style={{ color: '#0D1B2A', letterSpacing: '-0.01em' }}>
                 {isAuthenticated && user ? user.displayName : (profile.name || 'SurveyOS')}
               </div>
-              <div className="text-[10px] font-semibold uppercase tracking-widest mt-0.5" style={{ color: '#D4AF37', opacity: 0.9 }}>
-                {isAuthenticated && user ? 'Surveyor' : 'V2 · Executive'}
+              <div className="flex items-center gap-2 mt-0.5">
+                <div className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#D4AF37', opacity: 0.9 }}>
+                  {isAuthenticated && user ? 'Surveyor' : 'V2 · Executive'}
+                </div>
+                <span
+                  className="text-[8px] font-black font-mono px-1 py-0.5 rounded"
+                  style={{ background: 'rgba(13,27,42,0.06)', color: '#8D99AE', letterSpacing: '0.05em' }}
+                  title="Deployed build version"
+                >
+                  v{process.env.NEXT_PUBLIC_APP_VERSION}
+                </span>
               </div>
             </div>
           )}

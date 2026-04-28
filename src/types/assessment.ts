@@ -47,6 +47,17 @@ export interface AssessmentRow {
   action?: 'replace' | 'repair' | 'disallow' | '';
   /** Surveyor remarks for this line item */
   remarks?: string;
+  /**
+   * Disposal / used part flag.
+   * When true: no GST is applied on this row.
+   * Net = assessed × (1 − dep%) × (disposalPercent / 100)
+   */
+  isDisposal?: boolean;
+  /**
+   * Surveyor's allowed percentage of the depreciated value for a disposal item.
+   * Industry norm is 50%. Range 0–100. Only meaningful when isDisposal = true.
+   */
+  disposalPercent?: number;
 }
 
 export interface AssessmentSummary {

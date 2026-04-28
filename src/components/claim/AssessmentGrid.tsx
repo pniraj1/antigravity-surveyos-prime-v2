@@ -4,9 +4,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useClaimStore } from '@/stores/claim-store';
 import { getDepreciationRate, getVehicleAgeMonths } from '@/lib/calculations/depreciation';
 import { formatCurrency } from '@/lib/calculations/utils';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Trash2, PlusCircle, Wrench, ShieldAlert, Settings2, Eye, EyeOff, FileSearch } from 'lucide-react';
+import { Trash2, PlusCircle, Wrench, ShieldAlert, Settings2, Eye, EyeOff, FileSearch, PackageX } from 'lucide-react';
 import type { PartType } from '@/types';
 import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
 
@@ -19,6 +19,7 @@ type OptionalColumn =
   | 'quantity'
   | 'unitPrice'
   | 'gst'
+  | 'disposal'
   | 'action'
   | 'remarks';
 
@@ -29,14 +30,15 @@ interface ColumnMeta {
 }
 
 const OPTIONAL_COLUMNS: ColumnMeta[] = [
-  { key: 'partNumber', label: 'Part No.',   description: 'OEM part number' },
-  { key: 'hsnSac',     label: 'HSN/SAC',    description: 'Tax classification code' },
-  { key: 'type',        label: 'Type',       description: 'Metal / Plastic / Glass / Labour' },
-  { key: 'quantity',    label: 'Qty',        description: 'Quantity from estimate' },
-  { key: 'unitPrice',   label: 'Estimate (taxable amt)',   description: 'Taxable amount from estimate (net, before GST)' },
-  { key: 'gst',         label: 'GST %',      description: 'GST percentage' },
-  { key: 'action',      label: 'Action',     description: 'Replace / Repair / Disallow' },
-  { key: 'remarks',     label: 'Remarks',    description: 'Surveyor notes' },
+  { key: 'partNumber', label: 'Part No.',            description: 'OEM part number' },
+  { key: 'hsnSac',     label: 'HSN/SAC',             description: 'Tax classification code' },
+  { key: 'type',       label: 'Type',                description: 'Metal / Plastic / Glass / Labour' },
+  { key: 'quantity',   label: 'Qty',                 description: 'Quantity from estimate' },
+  { key: 'unitPrice',  label: 'Estimate (taxable)',  description: 'Taxable amount from estimate (net, before GST)' },
+  { key: 'gst',        label: 'GST %',               description: 'GST percentage (0 for disposal rows)' },
+  { key: 'disposal',   label: 'Disposal',            description: 'Used/salvaged part — no GST; surveyor decides % of depreciated value' },
+  { key: 'action',     label: 'Action',              description: 'Replace / Repair / Disallow' },
+  { key: 'remarks',    label: 'Remarks',             description: 'Surveyor notes' },
 ];
 
 const DEFAULT_VISIBLE: Record<OptionalColumn, boolean> = {
@@ -46,6 +48,7 @@ const DEFAULT_VISIBLE: Record<OptionalColumn, boolean> = {
   quantity: false,
   unitPrice: true,
   gst: true,
+  disposal: true,
   action: true,
   remarks: false,
 };
@@ -348,7 +351,14 @@ export function AssessmentGrid() {
               {visible.quantity && <th className="px-2 py-2 font-medium w-12 text-center">Qty</th>}
               {visible.unitPrice && <th className="px-2 py-2 font-medium w-20">Estimate(taxable amount)</th>}
               {visible.gst && <th className="px-2 py-2 font-medium w-14 text-center">GST%</th>}
-
+              {visible.disposal && (
+                <th className="px-2 py-2 font-medium w-28 text-center text-amber-600" title="Disposal: used/salvaged part — no GST">
+                  <span className="flex items-center justify-center gap-1">
+                    <PackageX size={11} />
+                    Disposal
+                  </span>
+                </th>
+              )}
 
               {/* ─── Always-on assessment columns ──────── */}
               <th className="px-2 py-2 font-medium w-24 text-primary">Assessed</th>
@@ -378,7 +388,11 @@ export function AssessmentGrid() {
               assessmentRows.map((row, idx) => {
                 const depRate = getDepreciationRate(row.partType, ageMonths, depreciationType);
                 const depFactor = depRate / 100;
-                const netAssessed = row.assessed * (1 - depFactor);
+                const valueAfterDep = row.assessed * (1 - depFactor);
+                // Disposal: no GST; surveyor allows disposalPercent% of the depreciated value
+                const netAssessed = row.isDisposal
+                  ? valueAfterDep * ((row.disposalPercent ?? 50) / 100)
+                  : valueAfterDep;
 
                 const handleEvidenceClick = () => {
                   if (!currentClaim?.id) return;
@@ -395,7 +409,7 @@ export function AssessmentGrid() {
                 const isDuplicate = normalizedParticulars ? duplicateParticulars.has(normalizedParticulars) : false;
 
                 return (
-                  <tr key={row.id} className={`hover:bg-accent/30 transition-colors ${selected.has(row.id) ? 'bg-red-500/5' : ''} ${!row.allowed ? 'opacity-40 bg-muted/20' : ''} ${isDuplicate ? 'bg-orange-500/10' : ''}`}>
+                  <tr key={row.id} className={`hover:bg-accent/30 transition-colors ${selected.has(row.id) ? 'bg-red-500/5' : ''} ${!row.allowed ? 'opacity-40 bg-muted/20' : ''} ${isDuplicate ? 'bg-orange-500/10' : ''} ${row.isDisposal && row.allowed ? 'bg-amber-500/5' : ''}`}>
                     {/* Select checkbox — always on */}
                     <td className={`px-2 py-1.5 text-center ${isDuplicate ? 'border-l-4 border-orange-500' : ''}`}>
                       <input
@@ -524,14 +538,45 @@ export function AssessmentGrid() {
                       <td className="px-1 py-1.5">
                         <Input
                           type="number"
-                          value={row.gst}
+                          value={row.isDisposal ? 0 : row.gst}
                           onChange={(e) => updateAssessmentRow(row.id, { gst: parseInt(e.target.value) || 0 })}
-                          className="h-7 text-[11px] text-center border-transparent hover:border-input focus:bg-background px-0"
+                          disabled={!!row.isDisposal}
+                          className="h-7 text-[11px] text-center border-transparent hover:border-input focus:bg-background px-0 disabled:opacity-40 disabled:cursor-not-allowed"
                           placeholder="18"
+                          title={row.isDisposal ? 'No GST on disposal parts' : undefined}
                         />
                       </td>
                     )}
 
+                    {/* ─── Disposal column ─────────────────── */}
+                    {visible.disposal && (
+                      <td className="px-2 py-1.5">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <input
+                            type="checkbox"
+                            checked={!!row.isDisposal}
+                            onChange={(e) => updateAssessmentRow(row.id, { isDisposal: e.target.checked })}
+                            className="h-3.5 w-3.5 cursor-pointer rounded accent-amber-500 shrink-0"
+                            title="Disposal / Used Part (No GST)"
+                          />
+                          {row.isDisposal && (
+                            <div className="flex items-center gap-0.5">
+                              <Input
+                                type="number"
+                                value={row.disposalPercent ?? 50}
+                                onChange={(e) => updateAssessmentRow(row.id, { disposalPercent: parseFloat(e.target.value) || 0 })}
+                                className="h-6 w-12 text-[11px] text-center px-0 font-bold"
+                                style={{ borderColor: '#f59e0b', background: 'rgba(251,191,36,0.08)', color: '#92400e' }}
+                                min="0"
+                                max="100"
+                                title="Disposal % of depreciated value"
+                              />
+                              <span className="text-[10px] font-bold text-amber-600">%</span>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    )}
 
                     {/* ─── Always-on assessment columns ────── */}
                     <td className="px-1 py-1.5">
@@ -548,7 +593,20 @@ export function AssessmentGrid() {
                       {row.allowed && row.section === 'parts' ? `${depRate}%` : '-'}
                     </td>
                     <td className="px-2 py-1.5 text-right text-xs font-black tabular-nums">
-                      {row.allowed ? formatCurrency(netAssessed) : '₹0.00'}
+                      {row.allowed ? (
+                        <span className={row.isDisposal ? 'text-amber-700' : ''}>
+                          {formatCurrency(netAssessed)}
+                          {row.isDisposal && (
+                            <span
+                              className="ml-1 inline-block text-[8px] font-bold uppercase tracking-wide px-1 py-0.5 rounded"
+                              style={{ background: 'rgba(251,191,36,0.2)', color: '#92400e' }}
+                              title={`Disposal: ${row.disposalPercent ?? 50}% of depreciated value, no GST`}
+                            >
+                              DISP
+                            </span>
+                          )}
+                        </span>
+                      ) : '₹0.00'}
                     </td>
 
                     {/* ─── Optional trailing columns ─────────── */}
