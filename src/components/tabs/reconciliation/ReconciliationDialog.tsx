@@ -231,7 +231,17 @@ export function ReconciliationDialog({
   );
 }
 
-function FieldRow({ field, onSelect }: { field: ReconciliationField; onSelect: (val: string) => void }) {
+function FieldRow({
+  field,
+  onSelect,
+  onEvidenceClick,
+  activeOrigin,
+}: {
+  field: ReconciliationField;
+  onSelect: (val: string) => void;
+  onEvidenceClick: (origin: string) => void;
+  activeOrigin: string | null;
+}) {
   return (
     <div className="grid grid-cols-[1.5fr,1.5fr,3fr] gap-4 px-6 py-4 items-center transition-colors hover:bg-zinc-50/50 bg-orange-50/20">
       <div className="flex flex-col">
@@ -248,14 +258,20 @@ function FieldRow({ field, onSelect }: { field: ReconciliationField; onSelect: (
       <div className="flex flex-wrap gap-2">
         {field.sources.map((source, i) => {
           const isSelected = field.current === source.value;
+          const isActiveEvidence = !isSelected && activeOrigin === source.origin;
           return (
             <button
               key={`${source.origin}-${i}`}
-              onClick={() => onSelect(source.value)}
+              onClick={() => {
+                onSelect(source.value);
+                onEvidenceClick(source.origin);
+              }}
               className={`
                 group flex flex-col items-start px-3 py-1.5 rounded-xl border text-left transition-all max-w-[180px]
                 ${isSelected
                   ? 'bg-primary border-primary text-primary-foreground shadow-md scale-105 z-10'
+                  : isActiveEvidence
+                  ? 'bg-primary/5 border-primary/50 text-foreground ring-2 ring-primary/20'
                   : 'bg-white border-border text-foreground hover:border-primary/50 hover:bg-primary/5 active:scale-95'}
               `}
             >
@@ -271,7 +287,15 @@ function FieldRow({ field, onSelect }: { field: ReconciliationField; onSelect: (
   );
 }
 
-function AutoFilledRow({ field, onOverride }: { field: ReconciliationField; onOverride: (val: string) => void }) {
+function AutoFilledRow({
+  field,
+  onOverride,
+  onEvidenceClick,
+}: {
+  field: ReconciliationField;
+  onOverride: (val: string) => void;
+  onEvidenceClick: (origin: string) => void;
+}) {
   const filledValue = field.sources[0]?.value ?? '';
 
   return (
@@ -287,7 +311,10 @@ function AutoFilledRow({ field, onOverride }: { field: ReconciliationField; onOv
         {field.sources.map((source, i) => (
           <button
             key={`${source.origin}-${i}`}
-            onClick={() => onOverride(source.value)}
+            onClick={() => {
+              onOverride(source.value);
+              onEvidenceClick(source.origin);
+            }}
             className="flex flex-col items-start px-2.5 py-1 rounded-lg border border-green-200 bg-white text-left hover:border-primary/40 hover:bg-primary/5 transition-all active:scale-95 max-w-[160px]"
           >
             <span className="text-[8px] font-bold uppercase tracking-wider text-green-600 mb-0.5">{source.label}</span>
