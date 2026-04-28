@@ -328,6 +328,8 @@ export function createBlankClaim(
       tyreCondition: '',
       glassCondition: '',
       panelRows: [],
+      toName: '',
+      toAddress: '',
       isInsurable: true,
       coverRecommendation: '',
       documentVerificationNote: '',

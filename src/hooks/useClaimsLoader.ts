@@ -15,9 +15,10 @@ export function useClaimsLoader() {
         claims.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
         const list = claims.map(c => {
-          let stage: 'spot' | 'final' | 'reinspection' | 'bill-check' = 'spot';
+          let stage: 'spot' | 'final' | 'reinspection' | 'bill-check' | 'valuation' = 'spot';
           // Simple logic to detect stage
-          if (c.billCheck?.billTotal > 0) stage = 'bill-check';
+          if (c.surveyType === 'valuation') stage = 'valuation';
+          else if (c.billCheck?.billTotal > 0) stage = 'bill-check';
           else if (c.reinspection?.parts?.length > 0) stage = 'reinspection';
           else if (c.surveyType === 'final') stage = 'final';
 

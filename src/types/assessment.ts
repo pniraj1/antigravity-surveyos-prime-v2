@@ -281,6 +281,9 @@ export interface ValuationDetails {
 
   panelRows: ValuationConditionRow[];
 
+  toName: string;
+  toAddress: string;
+
   isInsurable: boolean;
   coverRecommendation: string;
   documentVerificationNote: string;

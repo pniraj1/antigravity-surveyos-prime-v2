@@ -48,7 +48,7 @@ export function buildValuationReportHTML(claim: ClaimData, profile: SurveyorProf
     ? vd.panelRows.map(row =>
         `<tr>
           <td style="${tdl}">${g(row.component)}</td>
-          <td style="${td}color:#c00;" colspan="3">${g(row.condition)}</td>
+          <td style="${td}" colspan="3">${g(row.condition)}</td>
         </tr>`
       ).join('')
     : `<tr><td colspan="4" style="${td}color:#555;">No panel damage reported.</td></tr>`;
@@ -93,8 +93,8 @@ ${getSurveyorHeader(profile)}
   <tr>
     <td style="font-size:8.5pt;">
       <strong>TO,</strong><br/>
-      ${g(p.insurerName) !== '—' ? g(p.insurerName) : 'The Insurance Company'}<br/>
-      ${g(p.policyIssuingOffice)}
+      ${vd.toName?.trim() || (g(p.insurerName) !== '—' ? g(p.insurerName) : 'The Insurance Company')}<br/>
+      ${vd.toAddress?.trim() || g(p.policyIssuingOffice)}
     </td>
     <td style="text-align:right;font-size:8pt;">
       <strong>Date:</strong> ${fd(vd.inspectionDate) !== '—' ? fd(vd.inspectionDate) : fd(claim.reportDate)}<br/>

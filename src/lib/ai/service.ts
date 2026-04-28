@@ -48,8 +48,8 @@ export const PROVIDER_MODELS: Record<'gemini' | 'groq' | 'nvidia', ModelOption[]
   ],
   groq: [
     // Production models (stable, verified April 2026)
-    { id: 'openai/gpt-oss-120b',      label: 'GPT-OSS 120B ✓',   note: 'Best · Production · vision + text · ~500 tps' },
-    { id: 'openai/gpt-oss-20b',       label: 'GPT-OSS 20B',      note: 'Production · faster · vision + text' },
+    { id: 'openai/gpt-oss-120b',      label: 'GPT-OSS 120B ✓ (Groq)',   note: 'Best · Groq-hosted · vision + text · ~500 tps' },
+    { id: 'openai/gpt-oss-20b',       label: 'GPT-OSS 20B (Groq)',      note: 'Groq-hosted · faster · vision + text' },
     { id: 'llama-3.3-70b-versatile',  label: 'Llama 3.3 70B',    note: 'Production · text only · reliable' },
     { id: 'llama-3.1-8b-instant',     label: 'Llama 3.1 8B',     note: 'Production · fastest · text only' },
     // Preview (may be discontinued at short notice)
@@ -76,6 +76,14 @@ const GROQ_FALLBACK_CHAIN = [
   'llama-3.3-70b-versatile',                    // Production · text-only
   'llama-3.1-8b-instant',                       // Production · fastest text-only
 ];
+
+// Models in the Groq fallback chain that support image/vision inputs.
+// Text-only models are skipped when the extraction includes images (e.g. RC scans).
+const GROQ_VISION_MODELS = new Set([
+  'openai/gpt-oss-120b',
+  'openai/gpt-oss-20b',
+  'meta-llama/llama-4-scout-17b-16e-instruct',
+]);
 
 // Old model names stored in user profiles → auto-migrated to current default
 const DEPRECATED_GEMINI_MODELS: Record<string, string> = {
@@ -511,10 +519,17 @@ async function callWithRotation(provider: AIProvider, prompt: string, images: st
 
     // ── Model not found on this account → walk Groq fallback chain ──
     if (provider.name === 'groq' && isModelUnavailable(err)) {
-      const nextModel = GROQ_FALLBACK_CHAIN.find(m => !triedModels.has(m));
+      const needsVision = images.length > 0;
+      const nextModel = GROQ_FALLBACK_CHAIN.find(m => {
+        if (triedModels.has(m)) return false;
+        // When processing images, skip text-only models — they will silently
+        // ignore the images and return a useless response for visual docs like RCs.
+        if (needsVision && !GROQ_VISION_MODELS.has(m)) return false;
+        return true;
+      });
       if (nextModel) {
         triedModels.add(nextModel);
-        const isVision = nextModel.startsWith('openai/gpt-oss');
+        const isVision = GROQ_VISION_MODELS.has(nextModel);
         toast.info(
           `Groq: ${downgradedProvider.model} unavailable — trying ${nextModel}${ isVision ? '' : ' (text-only)' } automatically.`,
           { duration: 4000 }
@@ -522,6 +537,13 @@ async function callWithRotation(provider: AIProvider, prompt: string, images: st
         downgradedProvider = { ...provider, model: nextModel };
         i = -1;
         continue;
+      }
+      // No suitable fallback for this input type — surface a helpful error
+      if (needsVision) {
+        toast.error(
+          'No Groq vision model is available on your plan. Switch to Gemini in Profile → AI & Documents Intelligence.',
+          { duration: 8000 }
+        );
       }
       break;
     }

@@ -481,6 +481,8 @@ export function DashboardContent() {
                               ? { background: '#D1FAE5', color: '#065F46', border: '1px solid #A7F3D0' }
                               : claim.stage === 'reinspection'
                               ? { background: '#E0E7FF', color: '#3730A3', border: '1px solid #C7D2FE' }
+                              : claim.stage === 'valuation'
+                              ? { background: '#FFF7ED', color: '#9A3412', border: '1px solid #FDBA74' }
                               : { background: '#F1F5F9', color: '#475569', border: '1px solid #E2E8F0' }
                           }
                         >

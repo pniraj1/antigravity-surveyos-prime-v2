@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { PlusCircle, Trash2, Car, Gauge, ShieldCheck, Zap, FileText } from 'lucide-react';
+import { PlusCircle, Trash2, Car, Gauge, ShieldCheck, Zap, FileText, MapPin } from 'lucide-react';
 import type { ValuationConditionRow } from '@/types/assessment';
 
 const CONDITION_OPTIONS = ['Good', 'Satisfactory', 'Average / Serviceable', 'Damaged', 'N/A'];
@@ -18,6 +18,34 @@ const PANEL_PRESETS = [
   'Underbody / Chassis',
 ];
 
+// ── Shared 2-col row layout ────────────────────────────────────────────────────
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-[200px_1fr] items-stretch">
+      <span className="px-5 py-3 text-xs font-black uppercase tracking-wider text-muted-foreground bg-muted/20 flex items-center border-r border-border self-stretch">
+        {label}
+      </span>
+      <div className="px-5 py-2.5 flex items-center">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+const COND_DATALIST_ID = 'condition-presets';
+
+function CondInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <input
+      list={COND_DATALIST_ID}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder="Type or pick: Good, Satisfactory…"
+      className="h-9 w-full rounded border border-input bg-background px-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/30"
+    />
+  );
+}
+
 export function ValuationTab() {
   const { currentClaim, updateValuationDetails } = useClaimStore();
 
@@ -28,7 +56,6 @@ export function ValuationTab() {
 
   const handle = (updates: Partial<typeof vd>) => updateValuationDetails(updates);
 
-  // ── Panel row helpers ──────────────────────────────────────────────────────
   function addRow() {
     const newRow: ValuationConditionRow = { id: `vrow-${Date.now()}`, component: '', condition: '' };
     handle({ panelRows: [...rows, newRow] });
@@ -40,35 +67,6 @@ export function ValuationTab() {
 
   function deleteRow(id: string) {
     handle({ panelRows: rows.filter(r => r.id !== id) });
-  }
-
-  // ── Condition select helper ────────────────────────────────────────────────
-  function condSelect(
-    label: string,
-    key: keyof typeof vd,
-    noteKey?: keyof typeof vd,
-  ) {
-    return (
-      <div className="space-y-1.5">
-        <Label className="text-[10px] font-black uppercase text-muted-foreground/70 tracking-tighter">{label}</Label>
-        <select
-          value={String(vd[key] ?? '')}
-          onChange={(e) => handle({ [key]: e.target.value } as Partial<typeof vd>)}
-          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/30"
-        >
-          <option value="">— Select —</option>
-          {CONDITION_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-        </select>
-        {noteKey && (
-          <Input
-            value={String(vd[noteKey] ?? '')}
-            onChange={(e) => handle({ [noteKey]: e.target.value } as Partial<typeof vd>)}
-            placeholder="Additional note (optional)"
-            className="h-8 text-xs border-primary/10 mt-1"
-          />
-        )}
-      </div>
-    );
   }
 
   return (
@@ -84,6 +82,36 @@ export function ValuationTab() {
           BREAK-IN MODE
         </div>
       </div>
+
+      {/* ── SECTION 0: ADDRESSED TO ── */}
+      <Card className="border-primary/20 shadow-lg overflow-hidden bg-white/50 backdrop-blur-sm">
+        <CardHeader className="bg-primary/5 pb-4 border-b border-primary/10">
+          <CardTitle className="text-sm font-black flex items-center gap-2 uppercase tracking-widest text-primary">
+            <MapPin size={16} />
+            Addressed To
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="divide-y divide-border">
+            <Row label="To (Name)">
+              <Input
+                value={vd.toName}
+                onChange={(e) => handle({ toName: e.target.value })}
+                placeholder="e.g. Reliance General Insurance, Mr. Ramesh Kumar"
+                className="h-9 font-bold border-primary/10 w-full"
+              />
+            </Row>
+            <Row label="Address">
+              <Input
+                value={vd.toAddress}
+                onChange={(e) => handle({ toAddress: e.target.value })}
+                placeholder="e.g. Andheri Branch, Mumbai — 400053"
+                className="h-9 font-bold border-primary/10 w-full"
+              />
+            </Row>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* ── SECTION 1: INSPECTION DETAILS ── */}
       <Card className="border-primary/20 shadow-lg overflow-hidden bg-white/50 backdrop-blur-sm">
@@ -132,12 +160,24 @@ export function ValuationTab() {
             Mechanical Condition
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {condSelect('Chassis', 'chassis')}
-          {condSelect('Engine & Transmission', 'engineTransmission')}
-          {condSelect('Suspension', 'suspension')}
-          {condSelect('Seats & Upholstery', 'seats')}
-          {condSelect('Electricals', 'electricals')}
+        <CardContent className="p-0">
+          <div className="divide-y divide-border">
+            <Row label="Chassis">
+              <CondInput value={vd.chassis} onChange={(v) => handle({ chassis: v })} />
+            </Row>
+            <Row label="Engine & Transmission">
+              <CondInput value={vd.engineTransmission} onChange={(v) => handle({ engineTransmission: v })} />
+            </Row>
+            <Row label="Suspension">
+              <CondInput value={vd.suspension} onChange={(v) => handle({ suspension: v })} />
+            </Row>
+            <Row label="Seats & Upholstery">
+              <CondInput value={vd.seats} onChange={(v) => handle({ seats: v })} />
+            </Row>
+            <Row label="Electricals">
+              <CondInput value={vd.electricals} onChange={(v) => handle({ electricals: v })} />
+            </Row>
+          </div>
         </CardContent>
       </Card>
 
@@ -149,17 +189,20 @@ export function ValuationTab() {
             Battery
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <div className="space-y-1.5">
-            <Label className="text-[10px] font-black uppercase text-muted-foreground/70 tracking-tighter">Battery Make</Label>
-            <Input
-              value={vd.batteryMake}
-              onChange={(e) => handle({ batteryMake: e.target.value })}
-              placeholder="e.g. Amron, Exide"
-              className="h-10 font-bold border-primary/10"
-            />
+        <CardContent className="p-0">
+          <div className="divide-y divide-border">
+            <Row label="Battery Make">
+              <Input
+                value={vd.batteryMake}
+                onChange={(e) => handle({ batteryMake: e.target.value })}
+                placeholder="e.g. Amron, Exide"
+                className="h-9 font-bold border-primary/10 w-full"
+              />
+            </Row>
+            <Row label="Battery Condition">
+              <CondInput value={vd.batteryCondition} onChange={(v) => handle({ batteryCondition: v })} />
+            </Row>
           </div>
-          {condSelect('Battery Condition', 'batteryCondition')}
         </CardContent>
       </Card>
 
@@ -171,35 +214,36 @@ export function ValuationTab() {
             Tyres & Stepney
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="space-y-1.5">
-            <Label className="text-[10px] font-black uppercase text-muted-foreground/70 tracking-tighter">No. of Tyres</Label>
-            <Input
-              value={vd.tyreCount}
-              onChange={(e) => handle({ tyreCount: e.target.value })}
-              placeholder="e.g. 4"
-              className="h-10 font-bold border-primary/10"
-            />
+        <CardContent className="p-0">
+          <div className="divide-y divide-border">
+            <Row label="No. of Tyres">
+              <Input
+                value={vd.tyreCount}
+                onChange={(e) => handle({ tyreCount: e.target.value })}
+                placeholder="e.g. 4"
+                className="h-9 font-bold border-primary/10 w-full"
+              />
+            </Row>
+            <Row label="No. of Stepney">
+              <Input
+                value={vd.stepneyCount}
+                onChange={(e) => handle({ stepneyCount: e.target.value })}
+                placeholder="e.g. 1"
+                className="h-9 font-bold border-primary/10 w-full"
+              />
+            </Row>
+            <Row label="Tyre Make">
+              <Input
+                value={vd.tyreMake}
+                onChange={(e) => handle({ tyreMake: e.target.value })}
+                placeholder="e.g. CEAT, MRF"
+                className="h-9 font-bold border-primary/10 w-full"
+              />
+            </Row>
+            <Row label="Tyre Condition">
+              <CondInput value={vd.tyreCondition} onChange={(v) => handle({ tyreCondition: v })} />
+            </Row>
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-[10px] font-black uppercase text-muted-foreground/70 tracking-tighter">No. of Stepney</Label>
-            <Input
-              value={vd.stepneyCount}
-              onChange={(e) => handle({ stepneyCount: e.target.value })}
-              placeholder="e.g. 1"
-              className="h-10 font-bold border-primary/10"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-[10px] font-black uppercase text-muted-foreground/70 tracking-tighter">Tyre Make</Label>
-            <Input
-              value={vd.tyreMake}
-              onChange={(e) => handle({ tyreMake: e.target.value })}
-              placeholder="e.g. CEAT, MRF"
-              className="h-10 font-bold border-primary/10"
-            />
-          </div>
-          {condSelect('Tyre Condition', 'tyreCondition')}
         </CardContent>
       </Card>
 
@@ -211,19 +255,23 @@ export function ValuationTab() {
             Glass Condition
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-6">
-          <Textarea
-            value={vd.glassCondition}
-            onChange={(e) => handle({ glassCondition: e.target.value })}
-            placeholder="e.g. Windshield, rear door glass, LH/RH side glasses found without any crack or earlier damage"
-            rows={2}
-            className="font-bold border-primary/10"
-          />
+        <CardContent className="p-0">
+          <div className="divide-y divide-border">
+            <Row label="Glass Condition">
+              <Textarea
+                value={vd.glassCondition}
+                onChange={(e) => handle({ glassCondition: e.target.value })}
+                placeholder="e.g. Windshield, rear door glass, LH/RH side glasses found without any crack or earlier damage"
+                rows={2}
+                className="font-bold border-primary/10 w-full resize-none"
+              />
+            </Row>
+          </div>
         </CardContent>
       </Card>
 
-      {/* ── SECTION 6: PANEL DAMAGE MATRIX ── */}
-      <Card className="border-border shadow-sm">
+      {/* ── SECTION 6: CABIN & BODY PANEL CONDITION ── */}
+      <Card className="border-border shadow-sm overflow-hidden">
         <CardHeader className="bg-muted/50 pb-4 border-b border-border flex flex-row items-center justify-between">
           <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-wider">
             <ShieldCheck size={16} className="text-primary" />
@@ -236,66 +284,52 @@ export function ValuationTab() {
             <PlusCircle size={14} /> ADD PANEL
           </button>
         </CardHeader>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-muted/30 text-muted-foreground text-xs uppercase sticky top-0">
-              <tr>
-                <th className="px-6 py-3 font-bold w-12 border-b">#</th>
-                <th className="px-6 py-3 font-bold w-2/5 border-b">Panel / Component</th>
-                <th className="px-6 py-3 font-bold border-b">Condition / Damage Description</th>
-                <th className="px-6 py-3 font-bold w-12 border-b"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {rows.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-6 py-16 text-center">
-                    <div className="flex flex-col items-center gap-3 opacity-30">
-                      <Car size={48} />
-                      <div className="text-sm font-bold uppercase tracking-widest">No Panels Added</div>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                rows.map((row, idx) => (
-                  <tr key={row.id} className="hover:bg-accent/5 transition-colors group">
-                    <td className="px-6 py-4 text-xs font-bold text-muted-foreground">
-                      {String(idx + 1).padStart(2, '0')}
-                    </td>
-                    <td className="px-6 py-4">
-                      <input
-                        list="panel-presets-list"
-                        value={row.component}
-                        onChange={(e) => updateRow(row.id, { component: e.target.value })}
-                        className="h-9 w-full text-sm font-bold ring-0 border-0 bg-transparent focus:bg-background focus:ring-1 focus:ring-primary/20 rounded px-2 outline-none"
-                        placeholder="Select / type panel"
-                      />
-                    </td>
-                    <td className="px-6 py-4">
-                      <Textarea
-                        value={row.condition}
-                        onChange={(e) => updateRow(row.id, { condition: e.target.value })}
-                        placeholder="e.g. Dented at RH side, Found intact"
-                        rows={1}
-                        className="text-sm resize-none border-0 bg-transparent focus:bg-background focus:ring-1 focus:ring-primary/20 rounded px-2 outline-none min-h-[36px]"
-                      />
-                    </td>
-                    <td className="px-6 py-4">
-                      <button
-                        onClick={() => deleteRow(row.id)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive/80"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <CardContent className="p-0">
+          {rows.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 py-16 opacity-30">
+              <Car size={48} />
+              <div className="text-sm font-bold uppercase tracking-widest">No Panels Added</div>
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              {rows.map((row) => (
+                <div key={row.id} className="grid grid-cols-[200px_1fr_40px] items-stretch group">
+                  <div className="px-5 py-2.5 bg-muted/20 border-r border-border flex items-center">
+                    <input
+                      list="panel-presets-list"
+                      value={row.component}
+                      onChange={(e) => updateRow(row.id, { component: e.target.value })}
+                      className="h-9 w-full text-sm font-bold ring-0 border border-input rounded bg-background focus:ring-1 focus:ring-primary/20 px-3 outline-none"
+                      placeholder="Select / type panel"
+                    />
+                  </div>
+                  <div className="px-5 py-2.5 flex items-center">
+                    <Textarea
+                      value={row.condition}
+                      onChange={(e) => updateRow(row.id, { condition: e.target.value })}
+                      placeholder="e.g. Dented at RH side corner, Found intact"
+                      rows={1}
+                      className="text-sm resize-none border border-input bg-background focus:ring-1 focus:ring-primary/20 rounded px-3 outline-none min-h-[36px] w-full font-medium"
+                    />
+                  </div>
+                  <div className="flex items-center justify-center">
+                    <button
+                      onClick={() => deleteRow(row.id)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive/80 p-1"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
         <datalist id="panel-presets-list">
           {PANEL_PRESETS.map(p => <option key={p} value={p} />)}
+        </datalist>
+        <datalist id={COND_DATALIST_ID}>
+          {CONDITION_OPTIONS.map(o => <option key={o} value={o} />)}
         </datalist>
       </Card>
 
