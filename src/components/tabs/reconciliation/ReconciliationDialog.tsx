@@ -1,16 +1,18 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
-import { Sparkles, Check, AlertTriangle, Info, ChevronDown, ChevronUp, Zap } from 'lucide-react';
+import { Sparkles, Check, AlertTriangle, Info, ChevronDown, ChevronUp, Zap, FileSearch, Upload } from 'lucide-react';
 import { useClaimStore } from '@/stores/claim-store';
 import { ReconciliationField, getBestSourceValue } from '@/lib/ai/reconciliation';
+import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
 
 interface ReconciliationDialogProps {
   isOpen: boolean;
   onClose: () => void;
   conflictFields: ReconciliationField[];
   autoFilledFields: ReconciliationField[];
+  claimId: string;
 }
 
 export function ReconciliationDialog({
@@ -18,10 +20,23 @@ export function ReconciliationDialog({
   onClose,
   conflictFields,
   autoFilledFields,
+  claimId,
 }: ReconciliationDialogProps) {
   const reconcileField = useClaimStore((state) => state.reconcileField);
   const batchReconcile = useClaimStore((state) => state.batchReconcile);
   const [isAutoFilledExpanded, setIsAutoFilledExpanded] = useState(false);
+  const [activeOrigin, setActiveOrigin] = useState<string | null>(null);
+
+  const blobUrls = useEvidenceStore((state) => state.blobUrls);
+  const hasAnyEvidence = useMemo(
+    () => conflictFields.some(f => f.sources.some(s => !!blobUrls[`${claimId}_${s.origin}`])),
+    [conflictFields, claimId, blobUrls]
+  );
+
+  // Reset active doc when modal closes
+  useEffect(() => {
+    if (!isOpen) setActiveOrigin(null);
+  }, [isOpen]);
 
   const totalConflicts = conflictFields.length;
 

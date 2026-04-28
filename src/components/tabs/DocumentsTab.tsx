@@ -62,6 +62,7 @@ const DOC_GROUPS = [
 // ─── Component ───────────────────────────────────────────────────────────────
 export function DocumentsTab() {
   const currentClaim = useClaimStore(s => s.currentClaim);
+  const currentClaimId = useClaimStore(s => s.currentClaimId);
   const batchReconcile = useClaimStore(s => s.batchReconcile);
   const setReconciliationConflictCount = useClaimStore(s => s.setReconciliationConflictCount);
   const extractedDocs = currentClaim?.extractedData ?? {};
@@ -411,6 +412,7 @@ export function DocumentsTab() {
         onClose={() => setIsReconOpen(false)}
         conflictFields={conflicts}
         autoFilledFields={autoFilledFields}
+        claimId={currentClaimId ?? ''}
       />
 
       {/* Persistent progress overlay during PDF extraction */}
