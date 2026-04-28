@@ -3,7 +3,7 @@
 import { useUIStore, type AppTab } from '@/stores/ui-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { useClaimStore } from '@/stores/claim-store';
-import { getReconciliationFields } from '@/lib/ai/reconciliation';
+import { getConflictFields } from '@/lib/ai/reconciliation';
 import {
   LayoutDashboard,
   FileText,
@@ -93,7 +93,7 @@ export function Sidebar() {
 
     // Show a soft warning if navigating away with unresolved AI conflicts
     if (activeTab === 'documents' && currentClaim) {
-      const conflicts = getReconciliationFields(currentClaim).filter(f => f.hasConflict);
+      const conflicts = getConflictFields(currentClaim);
       if (conflicts.length > 0) {
         useUIStore.getState().setSidebarMobileOpen(false); // Close mobile menu if open
         toast.warning(`You have ${conflicts.length} unresolved AI data discrepancies that need attention.`);

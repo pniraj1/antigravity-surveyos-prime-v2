@@ -14,8 +14,9 @@ import {
 } from 'lucide-react';
 import { ProviderHealthBadge, ModelSelector, DocModeToggle, ProviderToggle } from '@/components/ai/AIControls';
 import { ReconciliationDialog } from './reconciliation/ReconciliationDialog';
-import { getReconciliationFields } from '@/lib/ai/reconciliation';
-import { useState, useMemo, useEffect } from 'react';
+import { getConflictFields, getUnanimousFields, ReconciliationField } from '@/lib/ai/reconciliation';
+import { toast } from 'sonner';
+import { useState, useMemo, useEffect, useRef } from 'react';
 
 
 
@@ -61,15 +62,43 @@ const DOC_GROUPS = [
 // ─── Component ───────────────────────────────────────────────────────────────
 export function DocumentsTab() {
   const currentClaim = useClaimStore(s => s.currentClaim);
+  const batchReconcile = useClaimStore(s => s.batchReconcile);
+  const setReconciliationConflictCount = useClaimStore(s => s.setReconciliationConflictCount);
   const extractedDocs = currentClaim?.extractedData ?? {};
   const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview, reScanWithFeedback } = useAIExtraction();
   const { profile, updateProfile } = useProfileStore();
   const aiProvider = profile.aiProvider ?? 'gemini';
   const [isReconOpen, setIsReconOpen] = useState(false);
+  const [autoFilledFields, setAutoFilledFields] = useState<ReconciliationField[]>([]);
+  const prevClaimIdRef = useRef<string | null>(null);
 
   const conflicts = useMemo(() => {
     if (!currentClaim) return [];
-    return getReconciliationFields(currentClaim).filter(f => f.hasConflict);
+    return getConflictFields(currentClaim);
+  }, [currentClaim]);
+
+  // Sync conflict count to store so sidebar can read it
+  useEffect(() => {
+    setReconciliationConflictCount(conflicts.length);
+  }, [conflicts.length, setReconciliationConflictCount]);
+
+  // Reset auto-filled list when switching claims
+  useEffect(() => {
+    if (currentClaim?.id !== prevClaimIdRef.current) {
+      prevClaimIdRef.current = currentClaim?.id ?? null;
+      setAutoFilledFields([]);
+    }
+  }, [currentClaim?.id]);
+
+  // Auto-fill fields where all sources unanimously agree but claim value is unset
+  useEffect(() => {
+    if (!currentClaim) return;
+    const unanimous = getUnanimousFields(currentClaim);
+    if (unanimous.length === 0) return;
+    const updates = unanimous.map(f => ({ path: f.path, value: f.sources[0].value }));
+    batchReconcile(updates);
+    setAutoFilledFields(unanimous);
+    toast.success(`${unanimous.length} field${unanimous.length === 1 ? '' : 's'} filled automatically from scanned documents.`);
   }, [currentClaim]);
 
   // Auto-close dialog when all conflicts are resolved
@@ -380,6 +409,8 @@ export function DocumentsTab() {
       <ReconciliationDialog
         isOpen={isReconOpen}
         onClose={() => setIsReconOpen(false)}
+        conflictFields={conflicts}
+        autoFilledFields={autoFilledFields}
       />
 
       {/* Persistent progress overlay during PDF extraction */}

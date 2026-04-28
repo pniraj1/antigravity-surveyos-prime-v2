@@ -3,9 +3,12 @@ import type { ClaimData, AssessmentRow, ExtraBillItem } from '@/types';
 import { createAssessmentRow } from '@/lib/calculations';
 
 export interface AIDataSlice {
+  reconciliationConflictCount: number;
   setExtractedData: (key: string, data: any) => void;
   applyExtractedData: (key: string, data: any) => void;
   reconcileField: (path: string, value: any) => void;
+  batchReconcile: (updates: { path: string; value: string }[]) => void;
+  setReconciliationConflictCount: (count: number) => void;
 }
 
 type WithClaim = { currentClaim: ClaimData | null };
@@ -547,6 +550,32 @@ function applyEstimate(claim: ClaimData, data: any): ClaimData {
 // ─── Slice ────────────────────────────────────────────────────────────────────
 
 export const createAIDataSlice: StateCreator<any, any, any, AIDataSlice> = (set) => ({
+  reconciliationConflictCount: 0,
+
+  setReconciliationConflictCount: (count) => {
+    set({ reconciliationConflictCount: count });
+  },
+
+  batchReconcile: (updates) => {
+    set((state: WithClaim) => {
+      if (!state.currentClaim) return {};
+      let newClaim = { ...state.currentClaim };
+      for (const { path, value } of updates) {
+        const parts = path.split('.');
+        if (parts.length === 2) {
+          const [top, sub] = parts;
+          (newClaim as any)[top] = { ...(newClaim as any)[top], [sub]: value };
+        } else {
+          (newClaim as any)[path] = value;
+        }
+      }
+      return {
+        currentClaim: { ...newClaim, updatedAt: new Date().toISOString() },
+        isDirty: true,
+      };
+    });
+  },
+
   setExtractedData: (key, data) => {
     set((state: WithClaim) => ({
       currentClaim: state.currentClaim
