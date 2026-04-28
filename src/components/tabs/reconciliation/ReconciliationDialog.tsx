@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Sparkles, Check, AlertTriangle, Info, ChevronDown, ChevronUp, Zap, FileSearch, Upload } from 'lucide-react';
 import { useClaimStore } from '@/stores/claim-store';
 import { ReconciliationField, getBestSourceValue } from '@/lib/ai/reconciliation';
@@ -89,9 +89,9 @@ export function ReconciliationDialog({
 
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
-      <Card className="w-full max-w-4xl shadow-2xl border-primary/20 overflow-hidden flex flex-col max-h-[90vh] bg-white">
+      <Card className="w-full max-w-7xl shadow-2xl border-primary/20 overflow-hidden flex flex-col max-h-[90vh] bg-white">
         {/* ── Header ── */}
-        <CardHeader className="bg-primary/5 border-b border-primary/10 py-6">
+        <CardHeader className="bg-primary/5 border-b border-primary/10 py-6 flex-shrink-0">
           <div className="flex justify-between items-start">
             <div>
               <CardTitle className="flex items-center gap-2 text-primary text-2xl font-bold">
@@ -111,109 +111,124 @@ export function ReconciliationDialog({
           </div>
         </CardHeader>
 
-        <CardContent className="p-0 flex-1 overflow-hidden flex flex-col">
-          {/* ── Bulk Accept Bar (only when conflicts exist) ── */}
-          {totalConflicts > 0 && (
-            <div className="flex flex-wrap items-center gap-3 px-6 py-3 bg-orange-50/60 border-b border-orange-100">
-              <button
-                onClick={handleAcceptRecommended}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black bg-primary text-primary-foreground hover:bg-primary/90 transition-all active:scale-95 shadow-sm"
-              >
-                <Zap size={13} />
-                Accept Recommended
-                {recommendedSummary && (
-                  <span className="font-normal opacity-80 ml-1">({recommendedSummary})</span>
-                )}
-              </button>
+        {/* NEW: flex-row body replacing CardContent */}
+        <div className="flex flex-row flex-1 overflow-hidden min-h-0">
+          {/* LEFT panel: existing content */}
+          <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+            {/* ── Bulk Accept Bar (only when conflicts exist) ── */}
+            {totalConflicts > 0 && (
+              <div className="flex flex-wrap items-center gap-3 px-6 py-3 bg-orange-50/60 border-b border-orange-100 flex-shrink-0">
+                <button
+                  onClick={handleAcceptRecommended}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black bg-primary text-primary-foreground hover:bg-primary/90 transition-all active:scale-95 shadow-sm"
+                >
+                  <Zap size={13} />
+                  Accept Recommended
+                  {recommendedSummary && (
+                    <span className="font-normal opacity-80 ml-1">({recommendedSummary})</span>
+                  )}
+                </button>
 
-              {availableSources.length > 1 && (
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">or accept all from</span>
-                  <select
-                    className="text-xs font-bold border border-border rounded-lg px-3 py-1.5 bg-white text-foreground cursor-pointer hover:border-primary/40 transition-colors"
-                    defaultValue=""
-                    onChange={e => {
-                      if (e.target.value) {
-                        handleAcceptFromSource(e.target.value);
-                        e.target.value = '';
-                      }
-                    }}
+                {availableSources.length > 1 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">or accept all from</span>
+                    <select
+                      className="text-xs font-bold border border-border rounded-lg px-3 py-1.5 bg-white text-foreground cursor-pointer hover:border-primary/40 transition-colors"
+                      defaultValue=""
+                      onChange={e => {
+                        if (e.target.value) {
+                          handleAcceptFromSource(e.target.value);
+                          e.target.value = '';
+                        }
+                      }}
+                    >
+                      <option value="" disabled>Select source…</option>
+                      {availableSources.map(src => (
+                        <option key={src} value={src}>{src.toUpperCase()}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Column Headers ── */}
+            {totalConflicts > 0 && (
+              <div className="grid grid-cols-[1.5fr,1.5fr,3fr] gap-4 px-6 py-4 bg-muted/30 border-b text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex-shrink-0">
+                <div>Field Name</div>
+                <div>Current Value</div>
+                <div>Scanned Data (Click to Select)</div>
+              </div>
+            )}
+
+            {/* Scrollable rows */}
+            <div className="flex-1 overflow-y-auto scrollbar-thin">
+              {/* ── Conflict Rows ── */}
+              {totalConflicts > 0 ? (
+                <div className="divide-y divide-border/50">
+                  {conflictFields.map(field => (
+                    <FieldRow
+                      key={field.id}
+                      field={field}
+                      onSelect={val => reconcileField(field.path, val)}
+                      onEvidenceClick={setActiveOrigin}
+                      activeOrigin={activeOrigin}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-10 text-center gap-2">
+                  <Check size={36} className="text-green-500" />
+                  <p className="text-sm font-bold text-green-700">All conflicts resolved</p>
+                  <p className="text-xs text-muted-foreground">Review auto-filled fields below if needed.</p>
+                </div>
+              )}
+
+              {/* ── Auto-filled Section ── */}
+              {autoFilledFields.length > 0 && (
+                <div className="border-t border-border">
+                  <button
+                    onClick={() => setIsAutoFilledExpanded(v => !v)}
+                    className="w-full flex items-center justify-between px-6 py-3 bg-green-50/50 hover:bg-green-50 transition-colors text-left"
                   >
-                    <option value="" disabled>Select source…</option>
-                    {availableSources.map(src => (
-                      <option key={src} value={src}>{src.toUpperCase()}</option>
-                    ))}
-                  </select>
+                    <div className="flex items-center gap-2">
+                      <Zap size={13} className="text-green-600" />
+                      <span className="text-xs font-bold text-green-800">
+                        Auto-filled from documents ({autoFilledFields.length} field{autoFilledFields.length !== 1 ? 's' : ''})
+                      </span>
+                    </div>
+                    {showAutoFilledExpanded
+                      ? <ChevronUp size={14} className="text-green-600" />
+                      : <ChevronDown size={14} className="text-green-600" />}
+                  </button>
+
+                  {showAutoFilledExpanded && (
+                    <div className="divide-y divide-border/30 bg-green-50/20">
+                      {autoFilledFields.map(field => (
+                        <AutoFilledRow
+                          key={field.id}
+                          field={field}
+                          onOverride={val => reconcileField(field.path, val)}
+                          onEvidenceClick={setActiveOrigin}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-          )}
+          </div>
 
-          {/* ── Column Headers ── */}
-          {totalConflicts > 0 && (
-            <div className="grid grid-cols-[1.5fr,1.5fr,3fr] gap-4 px-6 py-4 bg-muted/30 border-b text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-              <div>Field Name</div>
-              <div>Current Value</div>
-              <div>Scanned Data (Click to Select)</div>
+          {/* RIGHT: evidence panel — only if any blob URL exists */}
+          {hasAnyEvidence && (
+            <div className="w-[480px] flex-shrink-0 border-l border-border flex flex-col overflow-hidden">
+              <EvidencePanel claimId={claimId} activeOrigin={activeOrigin} />
             </div>
           )}
-
-          <div className="flex-1 overflow-y-auto scrollbar-thin">
-            {/* ── Conflict Rows ── */}
-            {totalConflicts > 0 ? (
-              <div className="divide-y divide-border/50">
-                {conflictFields.map(field => (
-                  <FieldRow
-                    key={field.id}
-                    field={field}
-                    onSelect={val => reconcileField(field.path, val)}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-10 text-center gap-2">
-                <Check size={36} className="text-green-500" />
-                <p className="text-sm font-bold text-green-700">All conflicts resolved</p>
-                <p className="text-xs text-muted-foreground">Review auto-filled fields below if needed.</p>
-              </div>
-            )}
-
-            {/* ── Auto-filled Section ── */}
-            {autoFilledFields.length > 0 && (
-              <div className="border-t border-border">
-                <button
-                  onClick={() => setIsAutoFilledExpanded(v => !v)}
-                  className="w-full flex items-center justify-between px-6 py-3 bg-green-50/50 hover:bg-green-50 transition-colors text-left"
-                >
-                  <div className="flex items-center gap-2">
-                    <Zap size={13} className="text-green-600" />
-                    <span className="text-xs font-bold text-green-800">
-                      Auto-filled from documents ({autoFilledFields.length} field{autoFilledFields.length !== 1 ? 's' : ''})
-                    </span>
-                  </div>
-                  {showAutoFilledExpanded
-                    ? <ChevronUp size={14} className="text-green-600" />
-                    : <ChevronDown size={14} className="text-green-600" />}
-                </button>
-
-                {showAutoFilledExpanded && (
-                  <div className="divide-y divide-border/30 bg-green-50/20">
-                    {autoFilledFields.map(field => (
-                      <AutoFilledRow
-                        key={field.id}
-                        field={field}
-                        onOverride={val => reconcileField(field.path, val)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </CardContent>
+        </div>
 
         {/* ── Footer ── */}
-        <CardFooter className="flex justify-between items-center gap-3 bg-muted/30 p-6 border-t border-border">
+        <CardFooter className="flex justify-between items-center gap-3 bg-muted/30 p-6 border-t border-border flex-shrink-0">
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground bg-white/50 px-3 py-2 rounded-lg border border-border">
             <Info size={14} className="text-primary" />
             Selection instantly updates the active claim. Review carefully before closing.
