@@ -298,3 +298,59 @@ function AutoFilledRow({ field, onOverride }: { field: ReconciliationField; onOv
     </div>
   );
 }
+
+function EvidencePanel({ claimId, activeOrigin }: { claimId: string; activeOrigin: string | null }) {
+  const blobUrls = useEvidenceStore((state) => state.blobUrls);
+
+  if (!activeOrigin) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center gap-3 p-6 bg-muted/10">
+        <FileSearch size={32} className="text-muted-foreground/25" />
+        <p className="text-xs text-muted-foreground/60 font-medium">
+          Click any value to view its source document
+        </p>
+      </div>
+    );
+  }
+
+  const entry = blobUrls[`${claimId}_${activeOrigin}`];
+
+  if (!entry) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center gap-3 p-6 bg-muted/10">
+        <Upload size={28} className="text-muted-foreground/25" />
+        <p className="text-xs font-bold text-muted-foreground">{activeOrigin.toUpperCase()} not uploaded</p>
+        <p className="text-[10px] text-muted-foreground/50">Upload in Documents tab to view evidence</p>
+      </div>
+    );
+  }
+
+  const isPdf = entry.mimeType === 'application/pdf';
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="px-4 py-2.5 border-b border-border bg-muted/30 flex items-center gap-2 flex-shrink-0">
+        <FileSearch size={13} className="text-primary" />
+        <span className="text-xs font-bold text-foreground">{activeOrigin.toUpperCase()}</span>
+        <span className="text-[10px] text-muted-foreground ml-auto">Source document</span>
+      </div>
+      <div className="flex-1 overflow-hidden">
+        {isPdf ? (
+          <iframe
+            src={entry.url}
+            className="w-full h-full border-0"
+            title={`${activeOrigin} document`}
+          />
+        ) : (
+          <div className="w-full h-full overflow-auto p-3 flex items-start justify-center bg-zinc-50">
+            <img
+              src={entry.url}
+              alt={`${activeOrigin} document`}
+              className="max-w-full rounded-lg shadow-md"
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
