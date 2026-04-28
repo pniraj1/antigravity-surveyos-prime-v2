@@ -29,8 +29,10 @@ export function ReconciliationDialog({
 
   const blobUrls = useEvidenceStore((state) => state.blobUrls);
   const hasAnyEvidence = useMemo(
-    () => conflictFields.some(f => f.sources.some(s => !!blobUrls[`${claimId}_${s.origin}`])),
-    [conflictFields, claimId, blobUrls]
+    () =>
+      conflictFields.some(f => f.sources.some(s => !!blobUrls[`${claimId}_${s.origin}`])) ||
+      autoFilledFields.some(f => f.sources.some(s => !!blobUrls[`${claimId}_${s.origin}`])),
+    [conflictFields, autoFilledFields, claimId, blobUrls]
   );
 
   // Reset active doc when modal closes
@@ -74,6 +76,7 @@ export function ReconciliationDialog({
   const handleAcceptRecommended = () => {
     if (recommendedActions.length === 0) return;
     batchReconcile(recommendedActions.map(a => ({ path: a.path, value: a.value })));
+    setActiveOrigin(null);
   };
 
   const handleAcceptFromSource = (origin: string) => {
@@ -82,7 +85,10 @@ export function ReconciliationDialog({
       const source = field.sources.find(s => s.origin === origin);
       if (source) updates.push({ path: field.path, value: source.value });
     }
-    if (updates.length > 0) batchReconcile(updates);
+    if (updates.length > 0) {
+      batchReconcile(updates);
+      setActiveOrigin(null);
+    }
   };
 
   if (!isOpen) return null;

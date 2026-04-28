@@ -412,7 +412,7 @@ export function DocumentsTab() {
         onClose={() => setIsReconOpen(false)}
         conflictFields={conflicts}
         autoFilledFields={autoFilledFields}
-        claimId={currentClaimId ?? ''}
+        claimId={currentClaim.id}
       />
 
       {/* Persistent progress overlay during PDF extraction */}
