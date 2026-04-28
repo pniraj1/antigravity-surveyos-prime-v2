@@ -348,8 +348,8 @@ export function DetailsTab() {
           <div className="space-y-6">
             <VehicleDetailsForm />
             <PolicyDetailsForm />
-            <DriverDetailsForm />
-            <AccidentDetailsForm />
+            {currentClaim.surveyType !== 'valuation' && <DriverDetailsForm />}
+            {currentClaim.surveyType !== 'valuation' && <AccidentDetailsForm />}
           </div>
 
           {currentClaim.surveyType === 'spot' && <SpotTab />}
