@@ -244,8 +244,8 @@ export function Sidebar() {
               }
 
               if (currentClaim?.surveyType === 'valuation') {
-                // Valuation report only needs: details, documents, valuation, photos, reports
-                const restrictedTabs: AppTab[] = ['assessment', 'bill-check', 'reinspection', 'fees', 'review'];
+                // Valuation report only needs: details, documents, valuation, photos, fees, reports
+                const restrictedTabs: AppTab[] = ['assessment', 'bill-check', 'reinspection', 'review'];
                 if (restrictedTabs.includes(item.id)) return false;
               }
 
