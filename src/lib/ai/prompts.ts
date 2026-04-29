@@ -341,3 +341,72 @@ export function getDocPrompt(docType: string, withContext = true): string {
  * Kept for backward compatibility with any legacy callers.
  */
 export const DOC_PROMPTS: Record<string, string> = RAW_PROMPTS;
+
+// ─── Insured Report Prompts ───────────────────────────────────────────────────
+
+const LANGUAGE_INSTRUCTION: Record<string, string> = {
+  english: 'Respond in simple, clear English that a non-expert can understand.',
+  hindi:   'Respond in simple, everyday Hindi (Devanagari script) that a layman can understand.',
+  marathi: 'Respond in simple, everyday Marathi (Devanagari script) that a layman can understand.',
+};
+
+/**
+ * Pass 1: Extracts relevant clauses from the policy document images.
+ * If no images available, caller should use getIRDAIStandardClauses() instead.
+ */
+export function buildPolicyAnalysisPrompt(language: string): string {
+  const lang = LANGUAGE_INSTRUCTION[language] ?? LANGUAGE_INSTRUCTION.english;
+  return `You are an Indian motor insurance expert. Analyze this insurance policy document and extract the key clauses that will affect the claim settlement.
+
+${lang}
+
+Focus on: excess/deductible clauses, depreciation clauses, consumables exclusions, any specific exclusions, NCB (no-claim bonus) impact, and salvage terms.
+
+Return ONLY a JSON object:
+{
+  "clauses": [
+    {
+      "clauseType": "excess OR depreciation OR consumables-exclusion OR specific-exclusion OR ncb OR salvage",
+      "clauseTitle": "Short title of the clause (5-8 words)",
+      "policyText": "Verbatim text from the policy — maximum 2 sentences",
+      "plainLanguage": "Simple explanation for the insured — maximum 2 sentences. ${lang}"
+    }
+  ]
+}
+Return between 3 and 6 clauses. Return ONLY the JSON. No explanation, no markdown, no backticks.`;
+}
+
+/**
+ * Pass 2: Generates plain-language explanations per assessment row.
+ * rowsJson: JSON.stringify of the simplified row array.
+ */
+export function buildLineExplanationPrompt(language: string, rowsJson: string): string {
+  const lang = LANGUAGE_INSTRUCTION[language] ?? LANGUAGE_INSTRUCTION.english;
+  return `You are helping an Indian motor insurance surveyor explain claim decisions to the vehicle owner.
+
+${lang}
+
+For each row below, write a plain-language explanation of why the insurance amount differs from the garage bill. Use simple words — no technical jargon.
+
+Rules:
+- If "remarks" is present, use it as the basis for your explanation.
+- If "billedAmount" > "assessed" for labour or paint: the surveyor negotiated the rate down. Mention the actual amounts.
+- If "allowed" is false or "action" is "disallow": explain it was not covered and why (use "remarks" if present).
+- If "isDisposal" is true: explain the old part goes to the insurer as salvage.
+- If you lack enough context to explain why (no remarks, unclear action), set "isFlagged" to true.
+- "deductionCategory" must be one of: depreciation, consumable, negotiated, not-covered, previous-damage, safe, salvage.
+
+Assessment rows:
+${rowsJson}
+
+Return ONLY a JSON array:
+[
+  {
+    "assessmentRowId": "row id from input",
+    "aiExplanation": "Plain language explanation. ${lang}",
+    "deductionCategory": "one of the allowed values",
+    "isFlagged": false
+  }
+]
+Return ONLY the JSON array. No explanation, no markdown, no backticks.`;
+}
