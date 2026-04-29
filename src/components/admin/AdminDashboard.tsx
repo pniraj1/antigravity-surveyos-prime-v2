@@ -327,8 +327,32 @@ export function AdminDashboard() {
     }
   };
 
+  // ─── Toggle Insured Report ─────────────────────────────
+  const handleToggleInsuredReport = async (surveyor: SurveyorAdminProfile) => {
+    setUpdatingId(surveyor.id);
+    try {
+      const current: InsuredReportSettings = surveyor.insuredReportSettings ?? {
+        enabled: false,
+        allowedLanguages: ['english'] as InsuredReportLanguage[],
+        defaultLanguage: 'english' as InsuredReportLanguage,
+        enabledStages: ['preliminary', 'final'] as InsuredReportStage[],
+      };
+      const updated: InsuredReportSettings = { ...current, enabled: !current.enabled };
+      const profileRef = doc(db, 'users', surveyor.id, 'profile', 'current');
+      await updateDoc(profileRef, { insuredReportSettings: updated });
+      setSurveyors(prev =>
+        prev.map(s => s.id === surveyor.id ? { ...s, insuredReportSettings: updated } : s)
+      );
+    } catch (err) {
+      console.error('Failed to toggle insured report:', err);
+      alert('Failed to update. Check console.');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   // ─── Filtering ──────────────────────────────────────────
-  const filteredSurveyors = surveyors.filter(s => 
+  const filteredSurveyors = surveyors.filter(s =>
     s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     s.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
     s.email?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -688,19 +712,8 @@ export function AdminDashboard() {
                               )}
                               {/* Insured Report Feature Toggle */}
                               <button
-                                onClick={async () => {
-                                  const current: InsuredReportSettings = surveyor.insuredReportSettings ?? {
-                                    enabled: false,
-                                    allowedLanguages: ['english'] as InsuredReportLanguage[],
-                                    defaultLanguage: 'english' as InsuredReportLanguage,
-                                    enabledStages: ['preliminary', 'final'] as InsuredReportStage[],
-                                  };
-                                  const updated: InsuredReportSettings = { ...current, enabled: !current.enabled };
-                                  const profileRef = doc(db, 'users', surveyor.id, 'profile', 'current');
-                                  await updateDoc(profileRef, { insuredReportSettings: updated });
-                                  setSurveyors(prev => prev.map(s => s.id === surveyor.id ? { ...s, insuredReportSettings: updated } : s));
-                                  alert(`Insured Report ${updated.enabled ? 'enabled' : 'disabled'} for ${surveyor.name}`);
-                                }}
+                                onClick={() => handleToggleInsuredReport(surveyor)}
+                                disabled={updatingId === surveyor.id}
                                 className="text-[10px] font-bold px-3 py-1.5 rounded-lg"
                                 style={{
                                   background: surveyor.insuredReportSettings?.enabled ? '#ECFDF5' : '#F0F2F5',
