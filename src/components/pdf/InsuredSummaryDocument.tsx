@@ -164,7 +164,7 @@ export function InsuredSummaryDocument({
             </View>
           )}
           {policyMappings.map((clause, i) => (
-            <View key={i} style={{ marginBottom: 8 }}>
+            <View key={clause.clauseType} style={{ marginBottom: 8 }}>
               <Text style={styles.clauseTitle}>{clause.clauseTitle}</Text>
               <Text style={styles.clauseText}>{clause.plainLanguage}</Text>
             </View>
@@ -191,7 +191,7 @@ export function InsuredSummaryDocument({
             </View>
             {lineExplanations.map((item, i) => (
               <View
-                key={i}
+                key={item.assessmentRowId}
                 style={[styles.lineItemRow, item.isFlagged ? { backgroundColor: '#FFFBEB' } : {}]}
               >
                 <Text style={styles.liDesc}>{item.partDescription}</Text>
@@ -212,7 +212,7 @@ export function InsuredSummaryDocument({
           <View style={{ marginBottom: 20 }}>
             <Text style={styles.sectionTitle}>D. About Salvage / Disposal</Text>
             <Text style={styles.clauseText}>
-              {`When a damaged part is replaced, the old part belongs to the insurance company. Its estimated scrap value (₹${fs.salvageTotal.toLocaleString('en-IN')}) has been deducted from your claim settlement.`}
+              When a damaged part is replaced, the old part belongs to the insurance company. Its estimated scrap value ({fmt(fs.salvageTotal)}) has been deducted from your claim settlement.
             </Text>
           </View>
         )}
