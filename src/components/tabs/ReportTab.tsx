@@ -61,7 +61,7 @@ const REPORT_TYPES = [
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function ReportTab() {
-  const { currentClaim, isDirty } = useClaimStore();
+  const { currentClaim, isDirty, updateClaim } = useClaimStore();
   const { profile } = useProfileStore();
   const [mounted, setMounted] = useState(false);
   
@@ -73,8 +73,6 @@ export function ReportTab() {
   const [isExportingWord, setIsExportingWord] = useState(false);
   const [zoom, setZoom] = useState<number>(0.9); // Default to 90% for better fit
   const [insuredDialogStage, setInsuredDialogStage] = useState<InsuredReportStage | null>(null);
-  const { updateClaim } = useClaimStore();
-  
   const contentRef = useRef<HTMLDivElement>(null);
   
   const handlePrint = useReactToPrint({
@@ -335,7 +333,7 @@ export function ReportTab() {
                 )}
               </div>
             )}
-            {profile.insuredReportSettings.enabledStages.includes('final') && currentClaim.billCheck.billTotal > 0 && (
+            {profile.insuredReportSettings.enabledStages.includes('final') && (currentClaim.billCheck?.billTotal ?? 0) > 0 && (
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setInsuredDialogStage('final')}
