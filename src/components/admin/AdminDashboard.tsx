@@ -12,6 +12,7 @@ import {
   deleteDoc,
   Timestamp
 } from 'firebase/firestore';
+import type { InsuredReportSettings, InsuredReportLanguage, InsuredReportStage } from '@/types/insured-report';
 import { db } from '@/lib/firebase/config';
 import {
   sendEmail,
@@ -55,6 +56,7 @@ interface SurveyorAdminProfile {
   surveyorId: string;
   lastSync?: unknown;
   isAdmin?: boolean;
+  insuredReportSettings?: InsuredReportSettings;
 }
 
 interface NewSignup {
@@ -129,6 +131,7 @@ export function AdminDashboard() {
           surveyorId: data.surveyorId || '',
           lastSync: data.lastSync,
           isAdmin: data.isAdmin || false,
+          insuredReportSettings: data.insuredReportSettings ?? undefined,
         });
       });
       setSurveyors(Array.from(seen.values()));
@@ -683,6 +686,32 @@ export function AdminDashboard() {
                                   Suspend
                                 </button>
                               )}
+                              {/* Insured Report Feature Toggle */}
+                              <button
+                                onClick={async () => {
+                                  const current: InsuredReportSettings = surveyor.insuredReportSettings ?? {
+                                    enabled: false,
+                                    allowedLanguages: ['english'] as InsuredReportLanguage[],
+                                    defaultLanguage: 'english' as InsuredReportLanguage,
+                                    enabledStages: ['preliminary', 'final'] as InsuredReportStage[],
+                                  };
+                                  const updated: InsuredReportSettings = { ...current, enabled: !current.enabled };
+                                  const profileRef = doc(db, 'users', surveyor.id, 'profile', 'current');
+                                  await updateDoc(profileRef, { insuredReportSettings: updated });
+                                  setSurveyors(prev => prev.map(s => s.id === surveyor.id ? { ...s, insuredReportSettings: updated } : s));
+                                  alert(`Insured Report ${updated.enabled ? 'enabled' : 'disabled'} for ${surveyor.name}`);
+                                }}
+                                className="text-[10px] font-bold px-3 py-1.5 rounded-lg"
+                                style={{
+                                  background: surveyor.insuredReportSettings?.enabled ? '#ECFDF5' : '#F0F2F5',
+                                  color: surveyor.insuredReportSettings?.enabled ? '#065F46' : '#8D99AE',
+                                  border: '1px solid',
+                                  borderColor: surveyor.insuredReportSettings?.enabled ? '#6EE7B7' : '#E2E6EA',
+                                }}
+                                title={`Insured Report: ${surveyor.insuredReportSettings?.enabled ? 'Enabled' : 'Disabled'}`}
+                              >
+                                {surveyor.insuredReportSettings?.enabled ? '✓ IR On' : 'IR Off'}
+                              </button>
                             </div>
                           </td>
                         </tr>
