@@ -3,6 +3,8 @@
 // Mirrors legacy Surveyor_V6_MASTER.html field structure
 // ═══════════════════════════════════════════════════════════
 
+import type { InsuredReportSettings } from './insured-report';
+
 export type FuelType = 'Petrol' | 'Diesel' | 'CNG' | 'LPG' | 'Electric' | 'Hybrid' | 'Petrol+CNG' | 'Petrol+LPG';
 
 export type VehicleType = 'private' | 'comm-passenger' | 'comm-goods';
@@ -154,6 +156,8 @@ export interface SurveyorProfile {
   groqModel?: string;
   /** Optional model override for NVIDIA NIM. Blank = developer default. */
   nvidiaModel?: string;
+  /** Insured Report (Premium) — admin-controlled feature gate */
+  insuredReportSettings?: InsuredReportSettings;
   /** Legacy Google OAuth client id */
   googleClientId: string;
   /** Whether to automatically upload photos and documents to Drive */

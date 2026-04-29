@@ -7,6 +7,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import type { VehicleDetails, DriverDetails, PolicyDetails, AccidentDetails, VehicleType, DepreciationType } from './vehicle';
+import type { InsuredReportDraft } from './insured-report';
 import type { AssessmentRow, SpotDamageRow, SpotSurveyDetails, ReinspectionDetails, FeeBill, PhotoItem, PhotoLayout, BillCheckDetails, ExtraBillItem, ValuationDetails } from './assessment';
 import type { SurveyType } from './report';
 
@@ -96,6 +97,10 @@ export interface ClaimData {
     workshopRent: number;
     remarks: string;
   };
+
+  // ─── Insured Report Drafts (Premium) ───────────────────
+  insuredReportPreliminary?: InsuredReportDraft;
+  insuredReportFinal?: InsuredReportDraft;
 
   // ─── AI Extraction Cache ───────────────────────────
   extractedData: Record<string, unknown>;

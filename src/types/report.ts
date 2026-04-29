@@ -3,7 +3,7 @@
 // Config-driven report format system (JSON per insurer)
 // ═══════════════════════════════════════════════════════════
 
-export type ReportType = 'final' | 'spot' | 'bill-check' | 'reinspection' | 'fee-bill' | 'photo-sheet';
+export type ReportType = 'final' | 'spot' | 'bill-check' | 'reinspection' | 'fee-bill' | 'photo-sheet' | 'insured-preliminary' | 'insured-final';
 
 export type SurveyType = 'spot' | 'final' | 'valuation';
 
