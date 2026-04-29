@@ -42,7 +42,7 @@ export function InsuredReportReviewDialog({
     try {
       const generated = await generateInsuredReport({
         claim, stage, language: lang,
-        policyImages: [],
+        policyImages: [], // TODO: populate from claim policy PDF once ClaimData stores uploaded policy images
         onProgress: setLoadingMsg,
       });
       setDraft(generated);
@@ -57,6 +57,7 @@ export function InsuredReportReviewDialog({
   }
 
   async function handleLanguageChange(lang: InsuredReportLanguage) {
+    if (loading) return;
     setLanguage(lang);
     if (draft) await handleGenerate(lang);
   }
@@ -96,7 +97,9 @@ export function InsuredReportReviewDialog({
       const a = document.createElement('a');
       a.href = url;
       a.download = `${claim.vehicle.registrationNumber || 'Claim'}-Insured-Summary.pdf`;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
       onApproved(approved);
       toast.success('Insured report approved and downloaded.');
@@ -278,11 +281,13 @@ export function InsuredReportReviewDialog({
           <div className="flex items-center justify-between p-6 border-t" style={{ borderColor: '#E2E6EA' }}>
             <button
               onClick={() => handleGenerate()}
+              disabled={loading || downloading}
               className="flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-xl border"
               style={{ borderColor: '#E2E6EA', color: '#8D99AE' }}
             >
               <RefreshCw size={14} /> Regenerate
             </button>
+
             <button
               onClick={handleApprove}
               disabled={downloading}
