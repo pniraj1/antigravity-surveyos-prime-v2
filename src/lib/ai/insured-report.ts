@@ -84,7 +84,7 @@ export async function generateInsuredReport({
 
   if (rowInput.length > 0) {
     try {
-      const prompt = buildLineExplanationPrompt(language, JSON.stringify(rowInput, null, 2));
+      const prompt = buildLineExplanationPrompt(language, JSON.stringify(rowInput));
       const raw = await callAIGateway(prompt, []);
       const parsed = JSON.parse(raw) as Array<{
         assessmentRowId: string;
@@ -92,6 +92,7 @@ export async function generateInsuredReport({
         deductionCategory: InsuredReportLineExplanation['deductionCategory'];
         isFlagged: boolean;
       }>;
+      if (!Array.isArray(parsed)) throw new Error('AI returned non-array for line explanations');
 
       lineExplanations = parsed.map(item => {
         const sourceRow = claim.assessmentRows.find(r => r.id === item.assessmentRowId);
