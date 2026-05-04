@@ -45,7 +45,7 @@ const prompt = buildCoveringNarrativePrompt(
 );
 
 async function runLiveTest(): Promise<void> {
-  const apiKey = "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";
+  const apiKey = process.env.GROQ_API_KEY ?? "";
   
   console.log('--- CALLING GROQ WITH LIVE-STYLE DATA ---\n');
 
