@@ -6,6 +6,7 @@
 import { useUIStore } from '@/stores/ui-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { toast } from 'sonner';
+import { logger } from '@/lib/utils/logger';
 import {
   addToDriveQueue,
   getDriveQueue,
@@ -276,7 +277,7 @@ export async function saveDriveIndex(index: Record<string, string>): Promise<voi
       );
     }
   } catch (e) {
-    console.warn('[Drive] Failed to save index:', e);
+    logger.warn('[Drive] Failed to save index:', e);
   }
 }
 
@@ -506,7 +507,7 @@ export async function backupProfileToDrive(profile: any): Promise<void> {
       );
     }
   } catch (e) {
-    console.warn('[Drive] Failed to backup profile:', e);
+    logger.warn('[Drive] Failed to backup profile:', e);
   }
 }
 
@@ -536,7 +537,7 @@ export async function restoreProfileFromDrive(): Promise<any | null> {
     );
     return await res.json();
   } catch (e) {
-    console.warn('[Drive] Failed to restore profile:', e);
+    logger.warn('[Drive] Failed to restore profile:', e);
     return null;
   }
 }

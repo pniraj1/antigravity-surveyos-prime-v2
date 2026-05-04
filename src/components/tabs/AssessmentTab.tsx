@@ -17,6 +17,7 @@ import { useProfileStore } from '@/stores/profile-store';
 import { uploadFileToDrive } from '@/lib/drive';
 import { AssessmentChatbot } from '@/components/chat/AssessmentChatbot';
 import { ModelSelector, DocModeToggle, ProviderHealthBadge, ProviderToggle } from '@/components/ai/AIControls';
+import { logger } from '@/lib/utils/logger';
 
 export function AssessmentTab() {
   const { currentClaim, setDepreciationType } = useClaimStore();
@@ -46,7 +47,7 @@ export function AssessmentTab() {
     if (currentClaim?.id && profile.autoUploadDrive !== false) {
       const label = currentClaim.vehicle?.registrationNumber || currentClaim.id;
       const ext = file.name.split('.').pop() ?? 'bin';
-      uploadFileToDrive(currentClaim.id, `estimate.${ext}`, file, label).catch(console.error);
+      uploadFileToDrive(currentClaim.id, `estimate.${ext}`, file, label).catch(logger.error);
     }
     e.target.value = '';
   };

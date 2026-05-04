@@ -20,6 +20,7 @@ import type {
 import { generateInsuredReport } from '@/lib/ai/insured-report';
 import { InsuredSummaryDocument } from '@/components/pdf/InsuredSummaryDocument';
 import { fileToImages } from '@/lib/ai/processor';
+import { logger } from '@/lib/utils/logger';
 
 // ─── helpers ──────────────────────────────────────────────
 
@@ -76,7 +77,7 @@ export function InsuredReportTab() {
         toast.success(`Policy linked from Documents tab: ${imgs.length} page${imgs.length !== 1 ? 's' : ''}`);
       })
       .catch(err => {
-        console.warn('[InsuredReportTab] Auto-convert failed:', err);
+        logger.warn('[InsuredReportTab] Auto-convert failed:', err);
         setPolicyImages([]);
         setPolicyFileName('');
       })

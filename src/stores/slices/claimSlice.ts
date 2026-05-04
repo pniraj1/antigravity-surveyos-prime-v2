@@ -4,6 +4,7 @@ import { createBlankClaim } from '@/types';
 import { saveClaim } from '@/lib/storage/indexeddb';
 import { useUIStore } from '@/stores/ui-store';
 import { useAuthStore } from '@/stores/auth-store';
+import { logger } from '@/lib/utils/logger';
 
 export interface ClaimSlice {
   currentClaim: ClaimData | null;
@@ -67,7 +68,7 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
       isDirty: true,
     });
     useUIStore.getState().setCurrentClaimId(claim.id);
-    saveClaim(claim).catch(err => console.error('[ClaimStore] Failed to save new claim:', err));
+    saveClaim(claim).catch(err => logger.error('[ClaimStore] Failed to save new claim:', err));
   },
 
   loadClaim: (claim) => {

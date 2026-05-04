@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useClaimStore } from '@/stores/claim-store';
 import { getAllClaims } from '@/lib/storage/indexeddb';
 import { calculateFeeSummary } from '@/lib/calculations/fees';
+import { logger } from '@/lib/utils/logger';
 
 export function useClaimsLoader() {
   const { setClaimsList } = useClaimStore();
@@ -42,7 +43,7 @@ export function useClaimsLoader() {
 
         setClaimsList(list);
       } catch (err) {
-        console.error('[useClaimsLoader] Failed to load claims:', err);
+        logger.error('[useClaimsLoader] Failed to load claims:', err);
       }
     }
 

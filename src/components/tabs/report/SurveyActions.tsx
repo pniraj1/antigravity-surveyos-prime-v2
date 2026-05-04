@@ -8,6 +8,7 @@ import type { SurveyorProfile } from '@/types/vehicle';
 import { generateWordReport } from '@/lib/reports/word-builder';
 import { triggerStandardPrint } from '@/lib/reports/standard-report-builder';
 import { triggerUIICFinalPrint } from '@/lib/reports/uiic-final-builder';
+import { logger } from '@/lib/utils/logger';
 
 const FORMATS = [
   {
@@ -127,7 +128,7 @@ export function SurveyActions({
               await generateWordReport(claim, summary);
               toast.success('Word report generated!');
             } catch (e) {
-              console.error(e);
+              logger.error(e);
               toast.error('Failed to generate Word report');
             } finally {
               setIsExportingWord(false);

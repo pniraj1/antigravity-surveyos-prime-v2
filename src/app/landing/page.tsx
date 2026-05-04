@@ -11,6 +11,7 @@ import { Loader2 } from 'lucide-react';
 import Logo from '@/components/ui/Logo';
 import DemoSection from '@/components/landing/DemoSection';
 import PricingSection from '@/components/landing/PricingSection';
+import { logger } from '@/lib/utils/logger';
 
 // Reusable animated container
 const FadeIn = ({ children, delay = 0, className = '' }: { children: React.ReactNode, delay?: number, className?: string }) => (
@@ -327,7 +328,7 @@ export default function LandingPage() {
     try {
       await signInWithGoogle();
     } catch (error) {
-      console.error("Sign in failed", error);
+      logger.error("Sign in failed", error);
     } finally {
       setSigningIn(false);
     }

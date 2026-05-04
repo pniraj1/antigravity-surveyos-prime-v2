@@ -2,6 +2,7 @@
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RotateCcw } from 'lucide-react';
+import { logger } from '@/lib/utils/logger';
 
 interface Props {
   children?: ReactNode;
@@ -25,7 +26,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Uncaught error in tab:', error, errorInfo);
+    logger.error('Uncaught error in tab:', error, errorInfo);
   }
 
   public render() {

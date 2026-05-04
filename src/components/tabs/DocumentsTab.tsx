@@ -17,6 +17,7 @@ import { ReconciliationDialog } from './reconciliation/ReconciliationDialog';
 import { getConflictFields, getUnanimousFields, ReconciliationField } from '@/lib/ai/reconciliation';
 import { toast } from 'sonner';
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { logger } from '@/lib/utils/logger';
 
 
 
@@ -131,7 +132,7 @@ export function DocumentsTab() {
       const ext   = file.name.split('.').pop() ?? 'bin';
       const driveName = `${key}.${ext}`;
       uploadFileToDrive(currentClaim.id, driveName, file, label).catch(err => {
-        console.error('[DocumentsTab] Drive upload failed, file may not be synced:', err);
+        logger.error('[DocumentsTab] Drive upload failed, file may not be synced:', err);
       });
     }
 

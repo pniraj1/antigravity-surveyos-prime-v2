@@ -13,6 +13,7 @@ import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { useProfileStore } from '@/stores/profile-store';
 import { useUIStore } from '@/stores/ui-store';
 import { toast } from 'sonner';
+import { logger } from '@/lib/utils/logger';
 
 // ─── Developer-controlled model defaults ─────────────────────────────────────
 // Last verified: April 2026 — Free Tier limits:
@@ -262,7 +263,7 @@ export async function getAIProvider(): Promise<AIProvider> {
       }
     }
   } catch (err) {
-    console.warn('[AI Service] Master config unreachable:', err);
+    logger.warn('[AI Service] Master config unreachable:', err);
   }
 
   throw new Error(
@@ -607,7 +608,7 @@ export async function callAIGateway(prompt: string, images: string[] = [], respo
         );
       }
       // Log the real error so it's traceable in production devtools
-      console.warn(
+      logger.warn(
         `[AI Gateway] Primary provider (${PROVIDER_LABELS[preferred]}) failed — falling back to secondary.`,
         primaryErr?.message ?? primaryErr
       );

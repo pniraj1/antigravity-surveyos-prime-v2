@@ -5,12 +5,18 @@ import {
   collectionGroup,
   collection,
   getDocs,
+  getDoc,
   query,
+  where,
+  orderBy,
+  limit,
+  startAfter,
   doc,
   updateDoc,
   setDoc,
   deleteDoc,
-  Timestamp
+  Timestamp,
+  type DocumentSnapshot,
 } from 'firebase/firestore';
 import type { InsuredReportSettings, InsuredReportLanguage, InsuredReportStage } from '@/types/insured-report';
 import { db } from '@/lib/firebase/config';
@@ -22,6 +28,7 @@ import {
 } from '@/lib/email/sendEmail';
 import { useAuthStore } from '@/stores/auth-store';
 import { useProfileStore } from '@/stores/profile-store';
+import { logger } from '@/lib/utils/logger';
 import {
   Users,
   Search,
@@ -87,8 +94,15 @@ export function AdminDashboard() {
   const [surveyors, setSurveyors] = useState<SurveyorAdminProfile[]>([]);
   const [signups, setSignups] = useState<NewSignup[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [signupsLoading, setSignupsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [lastVisibleProfile, setLastVisibleProfile] = useState<any>(null);
+  const [hasMoreProfiles, setHasMoreProfiles] = useState(true);
+  const [lastVisibleSignup, setLastVisibleSignup] = useState<any>(null);
+  const [hasMoreSignups, setHasMoreSignups] = useState(true);
+  
+  const PAGE_SIZE = 50;
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   // ── Dismiss modal state ─────────────────────────────────
@@ -107,10 +121,48 @@ export function AdminDashboard() {
   });
 
   // ─── Fetch All Profiles ─────────────────────────────────
-  const fetchAllProfiles = async () => {
-    setLoading(true);
+  const fetchAllProfiles = async (loadMore = false) => {
+    if (loadMore) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+      setLastVisibleProfile(null);
+    }
+    
     try {
-      const querySnapshot = await getDocs(query(collectionGroup(db, 'profile')));
+      // Build server-side query
+      let profileQuery = query(collectionGroup(db, 'profile'));
+      
+      if (searchQuery) {
+        const trimmedQuery = searchQuery.trim();
+        if (trimmedQuery.includes('@')) {
+          profileQuery = query(profileQuery, where('email', '==', trimmedQuery));
+        } else if (trimmedQuery === trimmedQuery.toUpperCase() && trimmedQuery.length > 3) {
+          profileQuery = query(profileQuery, where('surveyorId', '==', trimmedQuery));
+        } else {
+          // Note: This prefix search requires an index on 'name' for collectionGroup 'profile'
+          profileQuery = query(profileQuery, where('name', '>=', trimmedQuery), where('name', '<=', trimmedQuery + '\uf8ff'));
+        }
+      }
+      
+      profileQuery = query(profileQuery, limit(PAGE_SIZE));
+      
+      if (loadMore && lastVisibleProfile) {
+        profileQuery = query(profileQuery, startAfter(lastVisibleProfile));
+      }
+
+      const querySnapshot = await getDocs(profileQuery);
+      
+      if (querySnapshot.docs.length < PAGE_SIZE) {
+        setHasMoreProfiles(false);
+      } else {
+        setHasMoreProfiles(true);
+      }
+      
+      if (querySnapshot.docs.length > 0) {
+        setLastVisibleProfile(querySnapshot.docs[querySnapshot.docs.length - 1]);
+      }
+
       const seen = new Map<string, SurveyorAdminProfile>();
       querySnapshot.forEach((docSnap) => {
         const data = docSnap.data();
@@ -118,7 +170,6 @@ export function AdminDashboard() {
         // Only process documents directly under users/{uid}/profile
         if (pathSegments.length !== 4 || pathSegments[0] !== 'users' || pathSegments[2] !== 'profile') return;
         const uid = pathSegments[1];
-        // Prefer the 'current' document; skip others if 'current' already loaded
         if (seen.has(uid) && docSnap.id !== 'current') return;
         seen.set(uid, {
           id: uid,
@@ -134,19 +185,55 @@ export function AdminDashboard() {
           insuredReportSettings: data.insuredReportSettings ?? undefined,
         });
       });
-      setSurveyors(Array.from(seen.values()));
-    } catch (error) {
-      console.error('Error fetching profiles:', error);
+      
+      if (loadMore) {
+        setSurveyors(prev => {
+          const newArray = [...prev];
+          const prevIds = new Set(prev.map(s => s.id));
+          Array.from(seen.values()).forEach(s => {
+            if (!prevIds.has(s.id)) newArray.push(s);
+          });
+          return newArray;
+        });
+      } else {
+        setSurveyors(Array.from(seen.values()));
+      }
+    } catch (error: any) {
+      logger.error('Error fetching profiles:', error);
+      if (error.message && error.message.includes('requires an index')) {
+        alert('Server-side search requires a Firestore index. Check console for link to create it.');
+      }
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
   // ─── Fetch New Signups ──────────────────────────────────
-  const fetchSignups = async () => {
+  const fetchSignups = async (loadMore = false) => {
     setSignupsLoading(true);
     try {
-      const snap = await getDocs(collection(db, 'newSignups'));
+      // Create a query against the collection. 
+      // Firestore automatically creates an index for single fields, so ordering by signedUpAt desc is safe.
+      let signupsQuery = query(collection(db, 'newSignups'), limit(PAGE_SIZE));
+      // NOTE: If orderBy('signedUpAt', 'desc') causes index issues, we can remove it, but it should be fine.
+      
+      if (loadMore && lastVisibleSignup) {
+        signupsQuery = query(signupsQuery, startAfter(lastVisibleSignup));
+      }
+      
+      const snap = await getDocs(signupsQuery);
+      
+      if (snap.docs.length < PAGE_SIZE) {
+        setHasMoreSignups(false);
+      } else {
+        setHasMoreSignups(true);
+      }
+      
+      if (snap.docs.length > 0) {
+        setLastVisibleSignup(snap.docs[snap.docs.length - 1]);
+      }
+      
       const results: NewSignup[] = [];
       snap.forEach((docSnap) => {
         const data = docSnap.data();
@@ -162,15 +249,30 @@ export function AdminDashboard() {
           status: data.status || 'pending',
         });
       });
-      // Most recent first
-      results.sort((a, b) => b.signedUpAt?.seconds - a.signedUpAt?.seconds);
-      setSignups(results);
+      
+      // Most recent first (also sorting client side just in case)
+      results.sort((a, b) => (b.signedUpAt?.seconds || 0) - (a.signedUpAt?.seconds || 0));
+      
+      if (loadMore) {
+        setSignups(prev => [...prev, ...results]);
+      } else {
+        setSignups(results);
+      }
     } catch (error) {
-      console.error('Error fetching signups:', error);
+      logger.error('Error fetching signups:', error);
     } finally {
       setSignupsLoading(false);
     }
   };
+
+  // Trigger fetch when search query changes (with debounce in a real app, but here we'll just hook it)
+  useEffect(() => {
+    if (!isAuthorized) return;
+    const timer = setTimeout(() => {
+      fetchAllProfiles(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery, isAuthorized]);
 
   useEffect(() => {
     if (!isAuthorized) return;
@@ -203,7 +305,7 @@ export function AdminDashboard() {
       setSignups(prev => prev.filter(s => s.uid !== signup.uid));
       await fetchAllProfiles();
     } catch (error) {
-      console.error('Failed to approve:', error);
+      logger.error('Failed to approve:', error);
       alert('Approval failed. Check console.');
     } finally {
       setApprovingId(null);
@@ -245,7 +347,7 @@ export function AdminDashboard() {
       setDismissReason('');
       setSendEmailOnDismiss(true);
     } catch (error) {
-      console.error('Failed to dismiss:', error);
+      logger.error('Failed to dismiss:', error);
     } finally {
       setApprovingId(null);
     }
@@ -264,7 +366,7 @@ export function AdminDashboard() {
       setCustomBody('');
       alert('Your email client was opened. Please hit "Send" from surveyosprime@gmail.com.');
     } catch (error) {
-      console.error('Failed to send email:', error);
+      logger.error('Failed to send email:', error);
       alert('Failed to queue email. Check console.');
     } finally {
       setSendingEmail(false);
@@ -284,7 +386,7 @@ export function AdminDashboard() {
       // Update local state
       setSurveyors(prev => prev.map(s => s.id === uid ? { ...s, subscriptionStatus: status } : s));
     } catch (error) {
-      console.error('Failed to update status:', error);
+      logger.error('Failed to update status:', error);
       alert('Failed to update status. Check console.');
     } finally {
       setUpdatingId(null);
@@ -303,7 +405,7 @@ export function AdminDashboard() {
       // Update local state
       setSurveyors(prev => prev.map(s => s.id === uid ? { ...s, subscriptionExpiry: date } : s));
     } catch (error) {
-      console.error('Failed to update expiry:', error);
+      logger.error('Failed to update expiry:', error);
       alert('Failed to update expiry. Check console.');
     } finally {
       setUpdatingId(null);
@@ -321,7 +423,7 @@ export function AdminDashboard() {
       
       setSurveyors(prev => prev.map(s => s.id === uid ? { ...s, surveyorId: idStr } : s));
     } catch (error) {
-      console.error('Failed to update ID:', error);
+      logger.error('Failed to update ID:', error);
     } finally {
       setUpdatingId(null);
     }
@@ -344,7 +446,7 @@ export function AdminDashboard() {
         prev.map(s => s.id === surveyor.id ? { ...s, insuredReportSettings: updated } : s)
       );
     } catch (err) {
-      console.error('Failed to toggle insured report:', err);
+      logger.error('Failed to toggle insured report:', err);
       alert('Failed to update. Check console.');
     } finally {
       setUpdatingId(null);
@@ -352,11 +454,8 @@ export function AdminDashboard() {
   };
 
   // ─── Filtering ──────────────────────────────────────────
-  const filteredSurveyors = surveyors.filter(s =>
-    s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.email?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Search is now handled server-side in fetchAllProfiles.
+  const filteredSurveyors = surveyors;
 
   // Hard block: render unauthorized screen before any admin UI
   if (!isAuthorized) {
@@ -408,10 +507,10 @@ export function AdminDashboard() {
                   <Mail size={16} className="text-primary" /> Copy All Emails
                 </button>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8D99AE]" size={16} />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8D99AE]" size={16} />
                   <input
                     type="text"
-                    placeholder="Search by name or UID..."
+                    placeholder="Search by name, email, ID..."
                     className="pl-10 pr-4 py-2.5 rounded-xl border border-[#E2E6EA] text-sm w-64 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
@@ -599,6 +698,19 @@ export function AdminDashboard() {
                       ))}
                     </tbody>
                   </table>
+                  
+                  {hasMoreSignups && (
+                    <div className="p-4 bg-[#FAFBFC] border-t border-[#E2E6EA] flex justify-center">
+                      <button
+                        onClick={() => fetchSignups(true)}
+                        disabled={signupsLoading}
+                        className="px-6 py-2 rounded-xl border border-[#E2E6EA] text-[#0D1B2A] bg-white hover:bg-[#F8F9FA] transition-all font-bold text-xs flex items-center gap-2 shadow-sm"
+                      >
+                        {signupsLoading ? <Loader2 size={14} className="animate-spin" /> : null}
+                        Load More Signups
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </>
@@ -739,6 +851,19 @@ export function AdminDashboard() {
                       </div>
                       <h3 className="text-base font-bold text-[#0D1B2A]">No surveyors found</h3>
                       <p className="text-sm text-[#8D99AE] mt-1">Try adjusting your search criteria.</p>
+                    </div>
+                  )}
+                  
+                  {hasMoreProfiles && filteredSurveyors.length > 0 && (
+                    <div className="p-4 bg-[#FAFBFC] border-t border-[#E2E6EA] flex justify-center">
+                      <button
+                        onClick={() => fetchAllProfiles(true)}
+                        disabled={loadingMore}
+                        className="px-6 py-2 rounded-xl border border-[#E2E6EA] text-[#0D1B2A] bg-white hover:bg-[#F8F9FA] transition-all font-bold text-xs flex items-center gap-2 shadow-sm"
+                      >
+                        {loadingMore ? <Loader2 size={14} className="animate-spin" /> : null}
+                        Load More Profiles
+                      </button>
                     </div>
                   )}
                 </div>

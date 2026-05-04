@@ -12,6 +12,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/componen
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AlertTriangle, CheckCircle2, Loader2, Car, Archive, AlertCircle } from 'lucide-react';
+import { logger } from '@/lib/utils/logger';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -271,7 +272,7 @@ export function NewClaimDialog() {
     if (currentClaimId) {
       const label = vehicleNo.toUpperCase();
       getOrCreateClaimFolder(currentClaimId, label).catch(e =>
-        console.warn('[Drive] Folder creation skipped:', e.message)
+        logger.warn('[Drive] Folder creation skipped:', e.message)
       );
     }
 

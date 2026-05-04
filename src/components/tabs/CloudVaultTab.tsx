@@ -20,6 +20,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { logger } from '@/lib/utils/logger';
 
 export function CloudVaultTab() {
   const { user, isAuthenticated } = useAuthStore();
@@ -38,7 +39,7 @@ export function CloudVaultTab() {
       setCloudClaims(cloud);
       setLocalClaims(local);
     } catch (error) {
-      console.error('Vault fetch error:', error);
+      logger.error('Vault fetch error:', error);
       toast.error('Failed to connect to Cloud Vault');
     } finally {
       setLoading(false);

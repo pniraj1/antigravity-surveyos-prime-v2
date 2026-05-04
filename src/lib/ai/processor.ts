@@ -7,6 +7,7 @@
 import { callAIGateway } from './service';
 import { getDocPrompt } from './prompts';
 import { toast } from 'sonner';
+import { logger } from '@/lib/utils/logger';
 
 /**
  * Extracts text content from a PDF page (if it has a text layer).
@@ -338,7 +339,7 @@ export async function rescanTargetPages(
         const fragment = JSON.parse(raw);
         partialData = mergeAIResults(partialData, fragment);
       } catch {
-        console.warn(`[Smart Fix] Page ${idx + 1} returned unparseable response — skipping.`);
+        logger.warn(`[Smart Fix] Page ${idx + 1} returned unparseable response — skipping.`);
       }
     }
 
@@ -450,9 +451,9 @@ export async function extractDocument(
 
     const useTextMode = docMode === 'text';
     if (useTextMode) {
-      console.log(`[AI Extraction] ${key}: text-mode detected (${totalPages} pages, text-native PDF)`);
+      logger.log(`[AI Extraction] ${key}: text-mode detected (${totalPages} pages, text-native PDF)`);
     } else {
-      console.log(`[AI Extraction] ${key}: vision-mode (${docMode})`);
+      logger.log(`[AI Extraction] ${key}: vision-mode (${docMode})`);
     }
 
     // Chunk size: always 1 page per call in text-mode (avoids 413 on dense documents).
@@ -511,7 +512,7 @@ export async function extractDocument(
           // This prevents 413s even on pathologically dense pages (e.g. 200-line estimates).
           let pageText = pageProfiles[i]?.text ?? '';
           if (pageText.length > MAX_PAGE_TEXT_CHARS) {
-            console.warn(
+            logger.warn(
               `[AI Extraction] ${key}: page ${currentBatchStart} text is very large ` +
               `(${pageText.length} chars) — truncating to ${MAX_PAGE_TEXT_CHARS} chars.`
             );
@@ -528,7 +529,7 @@ export async function extractDocument(
 
           // If even the truncated single-page prompt is still too large, fall back to vision.
           if (estimateTokens(candidatePrompt) > MAX_PROMPT_TOKENS) {
-            console.warn(
+            logger.warn(
               `[AI Extraction] ${key}: page ${currentBatchStart} still too large for text-mode ` +
               `(~${estimateTokens(candidatePrompt)} tokens) — falling back to vision.`
             );
@@ -558,7 +559,7 @@ export async function extractDocument(
 
           if (isTooBig && chunkImages.length === 0) {
             // We were in text-mode — retry this chunk in vision-mode
-            console.warn(
+            logger.warn(
               `[AI Extraction] ${key}: PAYLOAD_TOO_LARGE on text chunk ${currentBatchStart} ` +
               `— retrying as vision (image) chunk.`
             );
@@ -611,7 +612,7 @@ export async function extractDocument(
         } catch (err) {
           // For multi-page docs: one bad page should not abort the whole extraction.
           // Log the failure and continue accumulating results from other pages.
-          console.warn(
+          logger.warn(
             `[AI Extraction] ${key}: page chunk ${currentBatchStart}–${currentBatchEnd} returned unparseable JSON — skipping this chunk.`,
             '\nRaw response (first 500 chars):', rawResponse?.slice(0, 500)
           );
@@ -637,7 +638,7 @@ export async function extractDocument(
       if (onProgress) {
         onProgress(`Extracted ${parts} parts, ${labour} labour, ${painting} painting items. Total: ₹${total}`);
       }
-      console.log(`[AI Extraction] ${key}: ${parts} parts, ${labour} labour, ${painting} painting. Total: ${total}`);
+      logger.log(`[AI Extraction] ${key}: ${parts} parts, ${labour} labour, ${painting} painting. Total: ${total}`);
     }
 
     // Return high-res view images to caller so they can be stored in sessionStorage
