@@ -27,11 +27,23 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/config';
 import { useAuthStore } from '@/stores/auth-store';
+import { useProfileStore } from '@/stores/profile-store';
 import { initUserDB, closeUserDB } from '@/lib/storage/indexeddb';
 import { resetAllState } from '@/lib/auth/resetAllState';
+import type { InsuredReportSettings } from '@/types/insured-report';
+
+const ADMIN_DEFAULT_INSURED_SETTINGS: InsuredReportSettings = {
+  enabled: true,
+  allowedLanguages: ['english', 'hindi', 'marathi'],
+  defaultLanguage: 'english',
+  enabledStages: ['preliminary', 'final'],
+};
+
+const ADMIN_EMAILS = new Set(['pniraj.india@gmail.com']);
 
 export function useAuth() {
   const setUser = useAuthStore(s => s.setUser);
+  const updateProfile = useProfileStore(s => s.updateProfile);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -104,6 +116,34 @@ export function useAuth() {
         }
 
         setUser(user);
+
+        // ── Sync admin-controlled fields from Firestore → Zustand ──
+        // The profile store is localStorage-only, so it never picks up
+        // changes an admin makes in Firestore (e.g. enabling insuredReportSettings).
+        // We re-read the current Firestore snapshot here so that every login
+        // gets a fresh copy of server-side settings.
+        try {
+          const freshSnap = await getDoc(currentRef);
+          const firestoreData = freshSnap.exists() ? freshSnap.data() : {};
+
+          const isAdminUser =
+            firestoreData?.isAdmin === true || ADMIN_EMAILS.has(user.email ?? '');
+
+          // Admins always get insuredReportSettings enabled; regular users
+          // only get it if the admin has written it to their Firestore profile.
+          const insuredSettings: InsuredReportSettings | undefined =
+            isAdminUser
+              ? ADMIN_DEFAULT_INSURED_SETTINGS
+              : (firestoreData?.insuredReportSettings as InsuredReportSettings | undefined);
+
+          updateProfile({
+            isAdmin: isAdminUser,
+            subscriptionStatus: firestoreData?.subscriptionStatus ?? 'pending',
+            ...(insuredSettings ? { insuredReportSettings: insuredSettings } : {}),
+          });
+        } catch {
+          // Non-fatal — profile will keep whatever is in localStorage
+        }
       } else {
         // ── LOGOUT ─────────────────────────────────────────────
         // Close the database BEFORE clearing auth state so no
@@ -117,5 +157,5 @@ export function useAuth() {
     });
 
     return () => unsubscribe();
-  }, [setUser]);
+  }, [setUser, updateProfile]);
 }

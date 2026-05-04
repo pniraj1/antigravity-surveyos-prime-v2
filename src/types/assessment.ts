@@ -215,11 +215,20 @@ export interface FeeBill {
 
 // ─── PHOTO SHEET ────────────────────────────────────────
 export interface PhotoItem {
+  id: string;
   dataUrl: string;
   name: string;
   /** Original pixel width captured at upload time (used for orientation detection) */
   w?: number;
   /** Original pixel height captured at upload time (used for orientation detection) */
+  h?: number;
+}
+
+/** Metadata only, for storage in the main ClaimData object to save memory */
+export interface PhotoMetadata {
+  id: string;
+  name: string;
+  w?: number;
   h?: number;
 }
 

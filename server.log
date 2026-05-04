@@ -1,0 +1,4 @@
+{"time": "2026-04-30 11:43:41.982234+02:00", "level": "INFO", "message": "Starting Claude Code Proxy...", "module": "api.runtime", "function": "startup", "line": 84}
+{"time": "2026-04-30 11:43:42.158685+02:00", "level": "INFO", "message": "No Discord bot token configured, skipping platform setup", "module": "messaging.platforms.factory", "function": "create_messaging_platform", "line": 80}
+{"time": "2026-04-30 11:44:30.793313+02:00", "level": "INFO", "message": "Shutdown requested, cleaning up...", "module": "api.runtime", "function": "shutdown", "line": 105}
+{"time": "2026-04-30 11:44:30.799594+02:00", "level": "INFO", "message": "Server shut down cleanly", "module": "api.runtime", "function": "shutdown", "line": 125}

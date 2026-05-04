@@ -2,16 +2,13 @@ import React from 'react';
 import { Page, Text, View, Document, StyleSheet } from '@react-pdf/renderer';
 import type { ClaimData, AssessmentSummary, SurveyorProfile } from '@/types';
 
+import { formatDateDMY } from '@/lib/calculations';
+
 // ─── Helpers (Ported from uiic-final-builder.ts) ─────────────────────────────
 
 function fd(v: string | null | undefined): string {
   if (!v) return '';
-  const s = String(v).split('T')[0];
-  const parts = s.split('-');
-  if (parts.length === 3 && parts[0].length === 4) {
-    return `${parts[2]}.${parts[1]}.${parts[0]}`;
-  }
-  return v;
+  return formatDateDMY(v);
 }
 
 function fa(v: number | string | null | undefined): string {

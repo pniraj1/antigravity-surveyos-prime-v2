@@ -376,37 +376,180 @@ Return ONLY a JSON object:
 Return between 3 and 6 clauses. Return ONLY the JSON. No explanation, no markdown, no backticks.`;
 }
 
+// ─── Policy Context Summary ──────────────────────────────────────────────────
+
+/**
+ * Structured summary of the active policy's key terms.
+ * Extracted from Pass 1 AI output or derived from IRDAI standard clauses.
+ * Passed into Pass 2 so the AI can reason against specific policy conditions.
+ */
+export interface PolicyContextSummary {
+  /** e.g. "Own Damage only" | "Comprehensive" | "Zero Depreciation" */
+  policyType?: string;
+  /** Whether the policy includes a Zero Depreciation add-on */
+  zeroDep: boolean;
+  /** Compulsory excess amount in rupees */
+  compulsoryExcess: number;
+  /** Voluntary excess amount in rupees (0 if none) */
+  voluntaryExcess: number;
+  /** Whether consumables (oil, grease, nuts, bolts, sealants) are excluded */
+  consumablesExcluded: boolean;
+  /** Short text describing NCB impact, if any. e.g. "NCB forfeited on final settlement" */
+  ncbImpact?: string;
+  /** Any specific exclusions verbatim from Pass 1. e.g. "Damage to Engine not caused by accident" */
+  specificExclusions?: string[];
+}
+
 /**
  * Pass 2: Generates plain-language explanations per assessment row.
- * rowsJson: JSON.stringify of the simplified row array.
+ * Uses Chain-of-Thought reasoning to correlate policy terms with each row before writing the explanation.
+ *
+ * @param language       Target language for the output.
+ * @param rowsJson       JSON.stringify of the simplified assessment row array.
+ * @param policy         Structured policy context from Pass 1 (or IRDAI standard defaults).
+ * @param accidentContext Optional short description of the accident for richer explanations.
  */
-export function buildLineExplanationPrompt(language: string, rowsJson: string): string {
+export function buildLineExplanationPrompt(
+  language: string,
+  rowsJson: string,
+  policy: PolicyContextSummary,
+  accidentContext?: string,
+): string {
   const lang = LANGUAGE_INSTRUCTION[language] ?? LANGUAGE_INSTRUCTION.english;
-  return `You are helping an Indian motor insurance surveyor explain claim decisions to the vehicle owner.
+  const contextLine = accidentContext
+    ? `Accident context: ${accidentContext}\n`
+    : '';
+
+  // Serialize the policy context into a readable block so the AI can reference it.
+  const policyBlock = [
+    `Policy type: ${policy.policyType ?? 'Standard Own Damage'}`,
+    `Zero Depreciation add-on: ${policy.zeroDep ? 'YES — no depreciation deducted on parts' : 'NO — IRDAI depreciation schedule applies'}`,
+    `Compulsory excess: ₹${policy.compulsoryExcess}`,
+    `Voluntary excess: ₹${policy.voluntaryExcess}`,
+    `Consumables (oil, lubricants, nuts, bolts, sealants, grease): ${policy.consumablesExcluded ? 'EXCLUDED — not payable under this policy' : 'COVERED under this policy'}`,
+    policy.ncbImpact ? `NCB impact: ${policy.ncbImpact}` : null,
+    policy.specificExclusions?.length
+      ? `Specific exclusions: ${policy.specificExclusions.join('; ')}`
+      : null,
+  ].filter(Boolean).join('\n');
+
+  return `You are an expert Indian motor insurance claims consultant helping a licensed surveyor explain claim decisions to the vehicle owner in simple language.
 
 ${lang}
 
-For each row below, write a plain-language explanation of why the insurance amount differs from the garage bill. Use simple words — no technical jargon.
+── ACTIVE POLICY TERMS ─────────────────────────────────────
+${policyBlock}
+────────────────────────────────────────────────────────────
 
-Rules:
-- If "remarks" is present, use it as the basis for your explanation.
-- If "billedAmount" > "assessed" for labour or paint: the surveyor negotiated the rate down. Mention the actual amounts.
-- If "allowed" is false or "action" is "disallow": explain it was not covered and why (use "remarks" if present).
-- If "isDisposal" is true: explain the old part goes to the insurer as salvage.
-- If you lack enough context to explain why (no remarks, unclear action), set "isFlagged" to true.
-- "deductionCategory" must be one of: depreciation, consumable, negotiated, not-covered, previous-damage, safe, salvage.
+${contextLine}
+For EACH row in the assessment below, follow this exact 3-step chain-of-thought BEFORE writing the explanation:
+
+STEP 1 — Classify the item:
+  - Is it a spare PART (metal/plastic/glass), LABOUR, PAINT, or a CONSUMABLE (oil, grease, sealant, nut, bolt, coolant, brake fluid, etc.)?
+  - Consumable keyword triggers: oil, lubricant, grease, sealant, nut, bolt, washer, coolant, brake fluid, adhesive, anti-rust, clip.
+
+STEP 2 — Apply policy rules:
+  - If CONSUMABLE and consumables are excluded → deductionCategory = "consumable".
+  - If PART and zeroDep = false → depreciation applies based on vehicle age.
+  - If action = "disallow" or allowed = false → deductionCategory = "not-covered" (use remarks for specifics).
+  - If billedAmount > assessed for LABOUR/PAINT → surveyor negotiated rate down → deductionCategory = "negotiated".
+  - If isDisposal = true → deductionCategory = "salvage".
+  - If previous damage noted in remarks → deductionCategory = "previous-damage".
+  - If correctly approved with no deduction → deductionCategory = "safe".
+
+STEP 3 — Write the explanation:
+  - Use simple words. No jargon. Max 2 sentences.
+  - Reference the actual rupee amounts where relevant.
+  - If context is insufficient (no remarks, unclear action), set isFlagged = true.
 
 Assessment rows:
 ${rowsJson}
 
-Return ONLY a JSON array:
-[
-  {
-    "assessmentRowId": "row id from input",
-    "aiExplanation": "Plain language explanation. ${lang}",
-    "deductionCategory": "one of the allowed values",
-    "isFlagged": false
+Return ONLY a JSON object with an "items" key. Do NOT include the chain-of-thought reasoning in the output — only the final result per row:
+{
+  "items": [
+    {
+      "assessmentRowId": "row id from input",
+      "aiExplanation": "Plain language explanation. ${lang}",
+      "deductionCategory": "one of: depreciation | consumable | negotiated | not-covered | previous-damage | safe | salvage",
+      "isFlagged": false
+    }
+  ]
+}
+Return ONLY the JSON object. No explanation, no markdown, no backticks.`;
+}
+
+/**
+ * Pass 3: Generates a professional covering narrative for the insured.
+ * This is a 3-paragraph formal letter summarising the claim settlement.
+ *
+ * @param language         Target language for the letter.
+ * @param claimSummaryJson JSON string with key claim fields (vehicle, accident, financial totals).
+ * @param deductionLines   Array of human-readable financial deduction summaries (amounts).
+ * @param groupedItems     All assessed parts grouped by their decision category.
+ *                         This is the primary evidence for per-group justification.
+ */
+export function buildCoveringNarrativePrompt(
+  language: string,
+  claimSummaryJson: string,
+  deductionLines: string[],
+  groupedItems?: Record<string, string[]>,
+): string {
+  const lang = LANGUAGE_INSTRUCTION[language] ?? LANGUAGE_INSTRUCTION.english;
+  const deductionBlock = deductionLines
+    .map((line, i) => `${i + 1}. ${line}`)
+    .join('\n');
+
+  // Human-readable labels for each category
+  const CATEGORY_LABELS: Record<string, string> = {
+    safe:              'Parts found safe / no replacement needed',
+    consumable:        'Consumable items (excluded under standard policy)',
+    salvage:           'Salvage / disposal parts (value deducted)',
+    'not-covered':     'Items not payable under this policy',
+    'previous-damage': 'Pre-existing damage (unrelated to this accident)',
+    depreciation:      'Parts with depreciation applied',
+    negotiated:        'Labour / painting rates negotiated with garage',
+    other:             'Other adjustments',
+  };
+
+  // Build the grouped evidence block only if data is available
+  let groupedBlock = '';
+  if (groupedItems && Object.keys(groupedItems).length > 0) {
+    const lines: string[] = [];
+    for (const [cat, parts] of Object.entries(groupedItems)) {
+      if (parts.length === 0) continue;
+      const label = CATEGORY_LABELS[cat] ?? cat;
+      lines.push(`${label}:\n  ${parts.join(', ')}`);
+    }
+    if (lines.length > 0) {
+      groupedBlock = `\nAssessment decisions by category (use these to justify each deduction group):\n${lines.join('\n\n')}\n`;
+    }
   }
-]
-Return ONLY the JSON array. No explanation, no markdown, no backticks.`;
+
+  return `You are a senior Indian motor insurance loss assessor writing a formal, empathetic letter to the vehicle owner (the insured) explaining their claim settlement.
+
+${lang}
+
+Claim summary:
+${claimSummaryJson}
+
+Key deductions made (already approved by the surveyor):
+${deductionBlock}
+${groupedBlock}
+Write a professional yet empathetic covering narrative in exactly 3 paragraphs:
+
+Paragraph 1 — Context (2-3 sentences):
+  Acknowledge the accident, thank the insured for their co-operation, and confirm the survey has been completed.
+
+Paragraph 2 — Deductions explained (4-6 sentences):
+  For EACH deduction category that has items (safe parts, consumables, disposal, not-covered, previous damage):
+  - Name the group clearly: "The following parts were found safe and did not require replacement: [list]."
+  - Explain why that category was handled the way it was (safe = no damage, consumable = excluded by policy, etc.).
+  - Reference rupee amounts where provided.
+  Be empathetic — the tone should feel like an expert friend explaining, not a bureaucrat.
+
+Paragraph 3 — Settlement summary (2-3 sentences):
+  State the final amount the insurance company will pay and the amount the insured needs to pay to the garage. Encourage them to contact the surveyor if they have questions.
+
+Return ONLY a plain text string — the narrative itself. No JSON, no markdown, no labels, no heading. Write it as if it will be pasted directly into a letter.`;
 }

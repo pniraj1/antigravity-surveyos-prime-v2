@@ -1,13 +1,20 @@
 'use client';
 
-import { useState } from 'react';
-import { Loader2, AlertTriangle, CheckCircle2, RefreshCw } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Loader2, AlertTriangle, CheckCircle2, RefreshCw, Upload, FileText, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { pdf } from '@react-pdf/renderer';
 import type { ClaimData } from '@/types/claim';
-import type { InsuredReportDraft, InsuredReportLanguage, InsuredReportStage, InsuredReportLineExplanation, InsuredReportPolicyClause } from '@/types/insured-report';
+import type {
+  InsuredReportDraft,
+  InsuredReportLanguage,
+  InsuredReportStage,
+  InsuredReportLineExplanation,
+  InsuredReportPolicyClause,
+} from '@/types/insured-report';
 import { generateInsuredReport } from '@/lib/ai/insured-report';
 import { InsuredSummaryDocument } from '@/components/pdf/InsuredSummaryDocument';
+import { fileToImages } from '@/lib/ai/processor';
 
 interface Props {
   claim: ClaimData;
@@ -24,6 +31,36 @@ interface Props {
 
 type Tab = 'financial' | 'policy' | 'lineitems';
 
+// ─── Policy image helpers ─────────────────────────────────────────────────────
+
+/**
+ * Reads compressed API-quality images from sessionStorage where the Documents
+ * tab stores them after extraction (key: evidence_<claimId>_policy).
+ * These are the same high-res PNGs used for the Evidence Viewer.
+ */
+function getPolicyImagesFromSession(claimId: string): string[] {
+  try {
+    const raw = sessionStorage.getItem(`evidence_${claimId}_policy`);
+    if (!raw) return [];
+    const pages: string[] = JSON.parse(raw);
+    return pages.filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+/** Converts a newly uploaded File into base64 JPEG API images. */
+async function convertPolicyFile(
+  file: File,
+  onProgress: (msg: string) => void,
+): Promise<string[]> {
+  onProgress('Converting policy document…');
+  const { apiImages } = await fileToImages(file, (p, t) => {
+    onProgress(`Processing policy page ${p} of ${t}…`);
+  });
+  return apiImages;
+}
+
 export function InsuredReportReviewDialog({
   claim, stage, allowedLanguages, defaultLanguage,
   surveyorName, surveyorLicence, surveyorMobile,
@@ -36,13 +73,58 @@ export function InsuredReportReviewDialog({
   const [loadingMsg, setLoadingMsg] = useState('');
   const [downloading, setDownloading] = useState(false);
 
+  // Policy document state
+  // null = not yet checked; string[] (may be empty) = resolved
+  const [policyImages, setPolicyImages] = useState<string[] | null>(null);
+  const [policyFileName, setPolicyFileName] = useState<string>('');
+  const [policyConverting, setPolicyConverting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  /**
+   * Resolves policy images: prefers freshly-uploaded file, then falls back to
+   * sessionStorage (from Documents tab), then returns empty (IRDAI fallback).
+   */
+  function getResolvedPolicyImages(): string[] {
+    if (policyImages !== null) return policyImages;
+    // First call — check sessionStorage
+    const fromSession = getPolicyImagesFromSession(claim.id);
+    setPolicyImages(fromSession);
+    if (fromSession.length > 0) {
+      setPolicyFileName('(from Documents tab)');
+    }
+    return fromSession;
+  }
+
+  async function handlePolicyUpload(file: File) {
+    setPolicyConverting(true);
+    try {
+      const images = await convertPolicyFile(file, setLoadingMsg);
+      setPolicyImages(images);
+      setPolicyFileName(file.name);
+      toast.success(`Policy loaded: ${file.name} (${images.length} page${images.length !== 1 ? 's' : ''})`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      toast.error(`Failed to process policy: ${msg}`);
+    } finally {
+      setPolicyConverting(false);
+      setLoadingMsg('');
+    }
+  }
+
+  function handleClearPolicy() {
+    setPolicyImages([]);
+    setPolicyFileName('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
   async function handleGenerate(lang: InsuredReportLanguage = language) {
     setLoading(true);
     setDraft(null);
     try {
+      const imgs = getResolvedPolicyImages();
       const generated = await generateInsuredReport({
         claim, stage, language: lang,
-        policyImages: [], // TODO: populate from claim policy PDF once ClaimData stores uploaded policy images
+        policyImages: imgs,
         onProgress: setLoadingMsg,
       });
       setDraft(generated);
@@ -113,6 +195,10 @@ export function InsuredReportReviewDialog({
 
   const flaggedCount = draft?.lineExplanations.filter(e => e.isFlagged).length ?? 0;
 
+  // Resolved state for UI
+  const resolvedImages = policyImages ?? getPolicyImagesFromSession(claim.id);
+  const hasPolicyDoc = resolvedImages.length > 0;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col" style={{ color: '#0D1B2A' }}>
@@ -144,15 +230,83 @@ export function InsuredReportReviewDialog({
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-6">
 
-          {!draft && !loading && (
-            <div className="text-center py-16">
-              <p className="text-sm mb-6" style={{ color: '#8D99AE' }}>
-                AI will analyze the policy and explain each deduction in plain language.
+          {/* ── Policy Document Section ─────────────────────────────────────── */}
+          <div className="mb-5 rounded-xl border p-4" style={{ borderColor: hasPolicyDoc ? '#D4AF37' : '#E2E6EA', background: hasPolicyDoc ? '#FFFBEB' : '#FAFAFA' }}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <FileText size={15} style={{ color: hasPolicyDoc ? '#D4AF37' : '#8D99AE' }} />
+                <span className="text-xs font-bold" style={{ color: '#0D1B2A' }}>
+                  Policy Document
+                </span>
+                {hasPolicyDoc && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: '#FEF3C7', color: '#92400E' }}>
+                    {resolvedImages.length} page{resolvedImages.length !== 1 ? 's' : ''} · AI will extract clauses
+                  </span>
+                )}
+                {!hasPolicyDoc && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: '#F0F2F5', color: '#8D99AE' }}>
+                    No policy · IRDAI standard clauses will be used
+                  </span>
+                )}
+              </div>
+              {hasPolicyDoc && policyFileName && (
+                <button
+                  onClick={handleClearPolicy}
+                  className="text-[10px] flex items-center gap-1 font-bold"
+                  style={{ color: '#8D99AE' }}
+                  title="Remove policy — will use IRDAI standard clauses"
+                >
+                  <X size={11} /> Remove
+                </button>
+              )}
+            </div>
+
+            {policyFileName && (
+              <p className="text-[10px] mb-2 truncate" style={{ color: '#8D99AE' }}>
+                {policyFileName}
               </p>
+            )}
+
+            {/* Upload button */}
+            <div className="flex items-center gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/pdf,image/*"
+                className="hidden"
+                onChange={e => {
+                  const file = e.target.files?.[0];
+                  if (file) handlePolicyUpload(file);
+                }}
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={policyConverting || loading}
+                className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg border transition-all"
+                style={{
+                  borderColor: '#E2E6EA',
+                  color: '#0D1B2A',
+                  opacity: policyConverting || loading ? 0.5 : 1,
+                }}
+              >
+                {policyConverting
+                  ? <Loader2 size={12} className="animate-spin" />
+                  : <Upload size={12} />}
+                {hasPolicyDoc ? 'Re-upload Policy' : 'Upload Policy PDF'}
+              </button>
+              <span className="text-[10px]" style={{ color: '#8D99AE' }}>
+                Upload to get real clause extraction · otherwise IRDAI standard clauses are used
+              </span>
+            </div>
+          </div>
+
+          {!draft && !loading && (
+            <div className="text-center py-12">
               <button
                 onClick={() => handleGenerate()}
+                disabled={policyConverting}
                 className="px-6 py-3 rounded-xl font-bold text-sm text-white"
-                style={{ background: '#0D1B2A' }}
+                style={{ background: '#0D1B2A', opacity: policyConverting ? 0.5 : 1 }}
               >
                 Generate Insured Report
               </button>
@@ -201,7 +355,8 @@ export function InsuredReportReviewDialog({
                     { label: 'Amount negotiated with garage', value: draft.financialSummary.negotiatedSavings, prefix: '−' },
                     { label: 'Depreciation on parts', value: draft.financialSummary.depreciationTotal, prefix: '−' },
                     { label: 'Excess (compulsory + voluntary)', value: draft.financialSummary.excessTotal, prefix: '−' },
-                    { label: 'Items not covered / consumables', value: draft.financialSummary.consumablesTotal + draft.financialSummary.notCoveredTotal, prefix: '−' },
+                    { label: 'Consumables deduction', value: draft.financialSummary.consumablesTotal, prefix: '−' },
+                    { label: 'Items not covered by policy', value: draft.financialSummary.notCoveredTotal, prefix: '−' },
                     { label: 'Salvage / disposal deduction', value: draft.financialSummary.salvageTotal, prefix: '−' },
                   ].filter(r => r.value > 0).map((row, i) => (
                     <div key={i} className="flex justify-between py-2.5 text-sm border-b" style={{ borderColor: '#F0F2F5' }}>
@@ -228,7 +383,7 @@ export function InsuredReportReviewDialog({
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs font-bold">{clause.clauseTitle}</span>
                         <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: clause.source === 'policy-pdf' ? '#ECFDF5' : '#FFFBEB', color: clause.source === 'policy-pdf' ? '#065F46' : '#92400E' }}>
-                          {clause.source === 'policy-pdf' ? 'From Policy' : 'IRDAI Standard'}
+                          {clause.source === 'policy-pdf' ? '✓ From Policy' : 'IRDAI Standard'}
                         </span>
                       </div>
                       <textarea
@@ -253,7 +408,7 @@ export function InsuredReportReviewDialog({
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-bold">{item.partDescription}</span>
                         <div className="flex items-center gap-3 text-xs" style={{ color: '#8D99AE' }}>
-                          <span>Billed: ₹{item.billedAmount.toLocaleString('en-IN')}</span>
+                          <span>Billed (taxable): ₹{item.billedAmount.toLocaleString('en-IN')}</span>
                           <span>Assessed: ₹{item.surveyorAmount.toLocaleString('en-IN')}</span>
                           {item.isFlagged && <span style={{ color: '#92400E' }}>⚠ Needs context</span>}
                         </div>

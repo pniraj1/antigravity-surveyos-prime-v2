@@ -28,17 +28,18 @@ export function computeInsuredFinancialSummary(
   const hasBillCheck = claim.billCheck.billTotal > 0;
   const garageEstimate = hasBillCheck
     ? claim.billCheck.billTotal
+    // Sum of row taxable amounts + GST when no bill check done
     : rows.reduce((sum, r) => sum + r.estimated * (1 + r.gst / 100), 0);
 
-  // ─── Negotiated Savings ─────────────────────────────────
-  // Labour/paint rows where workshop billed more than surveyor assessed.
+  // Use billedTaxable (pre-GST) — billedAmount includes GST and would always
+  // appear higher than assessed (pre-GST), distorting the negotiated savings.
   const negotiatedSavings = rows
     .filter(
       (r) =>
         (r.section === 'labour' || r.section === 'paint') &&
-        (r.billedAmount ?? 0) > r.assessed,
+        (r.billedTaxable ?? r.estimated) > r.assessed,
     )
-    .reduce((sum, r) => sum + ((r.billedAmount ?? 0) - r.assessed), 0);
+    .reduce((sum, r) => sum + ((r.billedTaxable ?? r.estimated) - r.assessed), 0);
 
   // ─── Depreciation ───────────────────────────────────────
   // Parts rows that are allowed and not disallowed — gap between

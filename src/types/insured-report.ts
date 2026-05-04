@@ -70,4 +70,15 @@ export interface InsuredReportDraft {
   financialSummary: InsuredReportFinancialSummary;
   policyMappings: InsuredReportPolicyClause[];
   lineExplanations: InsuredReportLineExplanation[];
+  /**
+   * Pass 3: AI-generated professional covering letter addressed to the insured.
+   * Three paragraphs: context → deductions explained → settlement amount.
+   * Surveyors can edit before approving.
+   */
+  coveringNarrative?: string;
+  /**
+   * If Pass 3 (narrative) failed, this contains the specific error message
+   * (e.g. "Safety filter blocked", "Quota exceeded") so the UI can surface it.
+   */
+  narrativeError?: string;
 }

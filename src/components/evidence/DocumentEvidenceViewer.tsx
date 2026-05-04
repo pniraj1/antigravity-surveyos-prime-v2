@@ -34,6 +34,8 @@ interface EvidenceState {
   close: () => void;
   // Blob URL map: "claimId_docType" → { url, mimeType }
   blobUrls: Record<string, { url: string; mimeType: string }>;
+  // Raw File map: "claimId_docType" → File (for downstream processing)
+  rawFiles: Record<string, File>;
   storeBlobUrl: (claimId: string, docType: string, file: File) => void;
   revokeBlobUrls: (claimId: string) => void;
 }
@@ -43,6 +45,7 @@ export const useEvidenceStore = create<EvidenceState>((set, get) => ({
   field: null,
   claimId: null,
   blobUrls: {},
+  rawFiles: {},
   openField: (claimId, field) => set({ isOpen: true, field, claimId }),
   close: () => set({ isOpen: false, field: null }),
   storeBlobUrl: (claimId, docType, file) => {
@@ -51,11 +54,16 @@ export const useEvidenceStore = create<EvidenceState>((set, get) => ({
     const existing = get().blobUrls[key];
     if (existing) URL.revokeObjectURL(existing.url);
     const url = URL.createObjectURL(file);
-    set(s => ({ blobUrls: { ...s.blobUrls, [key]: { url, mimeType: file.type } } }));
+    set(s => ({
+      blobUrls: { ...s.blobUrls, [key]: { url, mimeType: file.type } },
+      rawFiles: { ...s.rawFiles, [key]: file },
+    }));
   },
   revokeBlobUrls: (claimId) => {
     const current = get().blobUrls;
+    const rawCurrent = get().rawFiles;
     const next: Record<string, { url: string; mimeType: string }> = {};
+    const rawNext: Record<string, File> = {};
     for (const [key, val] of Object.entries(current)) {
       if (key.startsWith(`${claimId}_`)) {
         URL.revokeObjectURL(val.url);
@@ -63,13 +71,21 @@ export const useEvidenceStore = create<EvidenceState>((set, get) => ({
         next[key] = val;
       }
     }
-    set({ blobUrls: next });
+    for (const [key, file] of Object.entries(rawCurrent)) {
+      if (!key.startsWith(`${claimId}_`)) rawNext[key] = file;
+    }
+    set({ blobUrls: next, rawFiles: rawNext });
   },
 }));
 
 /** Convenience: store a blob URL for a file. Call this right after upload. */
 export function storeBlobUrl(claimId: string, docType: string, file: File) {
   useEvidenceStore.getState().storeBlobUrl(claimId, docType, file);
+}
+
+/** Retrieve the raw File object for a previously uploaded document. Returns null if not stored. */
+export function getRawFile(claimId: string, docType: string): File | null {
+  return useEvidenceStore.getState().rawFiles[`${claimId}_${docType}`] ?? null;
 }
 
 // ─── Doc type labels ──────────────────────────────────────────────────────────
