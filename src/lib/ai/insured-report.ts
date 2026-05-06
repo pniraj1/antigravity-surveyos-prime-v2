@@ -6,6 +6,7 @@ import type {
   InsuredReportLineExplanation,
   InsuredReportStage,
 } from '@/types/insured-report';
+import type { DeductionCategory } from '@/lib/constants/deduction-categories';
 import { callAIGateway } from './service';
 import {
   buildPolicyAnalysisPrompt,
@@ -15,6 +16,98 @@ import {
 } from './prompts';
 import { getIRDAIStandardClauses, getVehicleAgeMonths } from '@/lib/calculations/depreciation';
 import { computeInsuredFinancialSummary } from '@/lib/calculations/insured-report';
+
+// ─── Gate: returns rows that block report generation ─────────────────────────
+// Rules: block when the deduction reason CANNOT be inferred from data alone.
+// 1. Disallowed rows with no remarks — surveyor must document why.
+// 2. ZeroDep policy + parts reduced with no remarks — cannot assume depreciation.
+// Always call this BEFORE generateInsuredReport. If length > 0, show the gate UI.
+export function getBlockingRows(
+  claim: ClaimData,
+  zeroDep: boolean,
+): Array<{ id: string; particulars: string; billed: number; assessed: number; reason: string }> {
+  return (claim.assessmentRows ?? []).filter(row => {
+    const hasRemark = (row.remarks ?? '').trim().length > 0;
+    if (hasRemark) return false; // A remark always satisfies the gate
+    const billed = row.billedTaxable ?? row.estimated;
+    // Rule 1: explicitly disallowed with no explanation
+    if (!row.allowed || row.action === 'disallow') return true;
+    // Rule 2: zeroDep policy — a parts reduction cannot be depreciation
+    if (zeroDep && row.section === 'parts' && row.assessed < billed) return true;
+    return false;
+  }).map(row => ({
+    id: row.id,
+    particulars: row.particulars,
+    billed: row.billedTaxable ?? row.estimated,
+    assessed: row.assessed,
+    reason: (!row.allowed || row.action === 'disallow')
+      ? 'Item disallowed — reason not documented'
+      : 'Zero-Dep policy: parts reduction reason not documented',
+  }));
+}
+
+// ─── Pre-classifier: deterministic explanations for unambiguous rows ──────────
+// These rows do NOT need the AI — the category and explanation are certain.
+// Returning them here removes them from the AI call, reducing token usage.
+function buildPreClassifiedExplanations(
+  claim: ClaimData,
+  zeroDep: boolean,
+): InsuredReportLineExplanation[] {
+  const results: InsuredReportLineExplanation[] = [];
+  for (const row of claim.assessmentRows ?? []) {
+    const billed = row.billedTaxable ?? row.estimated;
+    const delta = Math.abs(billed - row.assessed);
+
+    // Safe: allowed, no meaningful adjustment
+    if (row.allowed && delta < 1) {
+      results.push({
+        assessmentRowId: row.id,
+        partDescription: row.particulars,
+        surveyorRemarks: row.remarks ?? '',
+        aiExplanation: 'This item was inspected and found safe — no replacement or adjustment was required.',
+        deductionCategory: 'safe' as DeductionCategory,
+        surveyorAmount: row.assessed,
+        billedAmount: billed,
+        isFlagged: false,
+      });
+      continue;
+    }
+
+    // Disposal / salvage: marked explicitly
+    if (row.isDisposal) {
+      results.push({
+        assessmentRowId: row.id,
+        partDescription: row.particulars,
+        surveyorRemarks: row.remarks ?? '',
+        aiExplanation:
+          `${row.particulars} was replaced. The salvage / scrap value of the old part ` +
+          `(₹${row.assessed.toLocaleString('en-IN')}) has been deducted from the payable amount.`,
+        deductionCategory: 'salvage' as DeductionCategory,
+        surveyorAmount: row.assessed,
+        billedAmount: billed,
+        isFlagged: false,
+      });
+      continue;
+    }
+  }
+  return results;
+}
+
+// ─── Honest fallback: for rows the AI still flags ─────────────────────────────
+// Never leave aiExplanation blank. Reference actual ₹ amounts so the insured
+// understands exactly what was adjusted, even without a documented reason.
+function buildHonestFallback(row: InsuredReportLineExplanation): string {
+  const billed = row.billedAmount.toLocaleString('en-IN');
+  const assessed = row.surveyorAmount.toLocaleString('en-IN');
+  if (row.surveyorAmount === row.billedAmount) {
+    return `${row.partDescription} was assessed and no adjustment was required.`;
+  }
+  return (
+    `The surveyor assessed "${row.partDescription}" at ₹${assessed} against the workshop ` +
+    `bill of ₹${billed}. The specific reason for this adjustment was not documented in the ` +
+    `survey notes — please contact your surveyor for a detailed explanation.`
+  );
+}
 
 interface GenerateInsuredReportParams {
   claim: ClaimData;
@@ -124,13 +217,19 @@ export async function generateInsuredReport({
   // ── Pass 2: Line Item Explanations ────────────────────────────────────────
   onProgress?.('Processing line items…');
 
+  // ── Pre-classify deterministic rows (safe, salvage) ─────────────────────
+  // These never need AI — category and explanation are 100% certain from data.
+  const preClassified = buildPreClassifiedExplanations(claim, policyContext.zeroDep);
+  const preClassifiedIds = new Set(preClassified.map(e => e.assessmentRowId));
+
   // ── Surgical selection: only send rows that actually need explaining ───────
-  // We skip rows that are fully approved and have no discrepancy — they don't
-  // need an explanation for the insured and avoiding them keeps token usage low.
-  const relevantRows = claim.assessmentRows.filter(
-    r => !r.allowed || r.action === 'disallow' || r.isDisposal ||
+  // Pre-classified rows are excluded — already handled above.
+  const relevantRows = (claim.assessmentRows ?? []).filter(
+    r => !preClassifiedIds.has(r.id) && (
+      !r.allowed || r.action === 'disallow' || r.isDisposal ||
       ((r.billedTaxable ?? r.estimated) > r.assessed) ||
       (r.section === 'parts' && r.allowed && r.estimated > r.assessed)
+    )
   );
 
   const accidentContext = [
@@ -154,7 +253,8 @@ export async function generateInsuredReport({
     partType: r.partType,
   }));
 
-  let lineExplanations: InsuredReportLineExplanation[] = [];
+  // Start with pre-classified rows (safe + salvage) — already explained
+  let lineExplanations: InsuredReportLineExplanation[] = [...preClassified];
 
   if (rowInput.length > 0) {
     try {
@@ -174,37 +274,57 @@ export async function generateInsuredReport({
         throw new Error(`AI returned unexpected format (not an array): ${typeof parsed}`);
       }
 
-      lineExplanations = (parsed as Array<{
+      const aiExplanations = (parsed as Array<{
         assessmentRowId: string;
         aiExplanation: string;
         deductionCategory: InsuredReportLineExplanation['deductionCategory'];
         isFlagged: boolean;
       }>).map(item => {
-        const sourceRow = claim.assessmentRows.find(r => r.id === item.assessmentRowId);
-        return {
+        const sourceRow = (claim.assessmentRows ?? []).find(r => r.id === item.assessmentRowId);
+        const mapped: InsuredReportLineExplanation = {
           assessmentRowId: item.assessmentRowId,
           partDescription: sourceRow?.particulars ?? item.assessmentRowId,
           surveyorRemarks: sourceRow?.remarks ?? sourceRow?.billRemarks ?? '',
           aiExplanation: item.aiExplanation ?? '',
-          deductionCategory: item.deductionCategory ?? 'not-covered',
+          deductionCategory: (item.deductionCategory ?? 'not-covered') as DeductionCategory,
           surveyorAmount: sourceRow?.assessed ?? 0,
           billedAmount: sourceRow?.billedTaxable ?? sourceRow?.estimated ?? 0,
           isFlagged: item.isFlagged ?? false,
         };
+        // Replace blank aiExplanation with honest fallback (never leave blank)
+        if (!mapped.aiExplanation || mapped.isFlagged) {
+          mapped.aiExplanation = buildHonestFallback(mapped);
+        }
+        return mapped;
       });
+      lineExplanations = [...lineExplanations, ...aiExplanations];
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
-      onProgress?.(`⚠ Line explanations AI failed: ${msg} — items flagged for manual review.`);
-      lineExplanations = relevantRows.map(r => ({
-        assessmentRowId: r.id,
-        partDescription: r.particulars,
-        surveyorRemarks: r.remarks ?? '',
-        aiExplanation: '',
-        deductionCategory: 'not-covered' as const,
-        surveyorAmount: r.assessed,
-        billedAmount: r.billedTaxable ?? r.estimated,
-        isFlagged: true,
-      }));
+      onProgress?.(`⚠ Line explanations AI failed: ${msg} — generating fallback explanations.`);
+      const fallbacks = relevantRows.map(r => {
+        const billed = r.billedTaxable ?? r.estimated;
+        const explanation = buildHonestFallback({
+          assessmentRowId: r.id,
+          partDescription: r.particulars,
+          surveyorRemarks: r.remarks ?? '',
+          aiExplanation: '',
+          deductionCategory: 'not-covered' as DeductionCategory,
+          surveyorAmount: r.assessed,
+          billedAmount: billed,
+          isFlagged: true,
+        });
+        return {
+          assessmentRowId: r.id,
+          partDescription: r.particulars,
+          surveyorRemarks: r.remarks ?? '',
+          aiExplanation: explanation,
+          deductionCategory: 'not-covered' as DeductionCategory,
+          surveyorAmount: r.assessed,
+          billedAmount: billed,
+          isFlagged: true,
+        };
+      });
+      lineExplanations = [...lineExplanations, ...fallbacks];
     }
   }
 

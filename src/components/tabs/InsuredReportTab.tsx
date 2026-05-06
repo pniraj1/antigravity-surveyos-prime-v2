@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect } from 'react';
 import {
   Loader2, AlertTriangle, CheckCircle2, RefreshCw,
-  Upload, FileText, X, FileCheck,
+  Upload, FileText, X, FileCheck, AlertCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { pdf } from '@react-pdf/renderer';
@@ -17,10 +17,11 @@ import type {
   InsuredReportLineExplanation,
   InsuredReportPolicyClause,
 } from '@/types/insured-report';
-import { generateInsuredReport } from '@/lib/ai/insured-report';
+import { generateInsuredReport, getBlockingRows } from '@/lib/ai/insured-report';
 import { InsuredSummaryDocument } from '@/components/pdf/InsuredSummaryDocument';
 import { fileToImages } from '@/lib/ai/processor';
 import { logger } from '@/lib/utils/logger';
+import { CATEGORY_BADGE_LABELS, CATEGORY_BADGE_COLOURS } from '@/lib/constants/deduction-categories';
 
 // ─── helpers ──────────────────────────────────────────────
 
@@ -216,6 +217,15 @@ export function InsuredReportTab() {
   const hasPolicyDoc = resolvedImages.length > 0;
   const flaggedCount = draft?.lineExplanations.filter(e => e.isFlagged).length ?? 0;
 
+  // ── Gate: derive zeroDep and blocking rows ────────────────────────────────
+  const zeroDep = (
+    (claim.depreciationType === 'nil') ||
+    ((claim.policy as any)?.policyType?.toLowerCase().includes('zero dep')) ||
+    false
+  );
+  const blockingRows = getBlockingRows(claim, zeroDep);
+  const isGateBlocked = blockingRows.length > 0;
+
   return (
     <div className="h-full overflow-y-auto" style={{ background: '#F8F9FA' }}>
       {/* ── Header ─────────────────────────────────────── */}
@@ -347,27 +357,82 @@ export function InsuredReportTab() {
           </div>
         </div>
 
+        {/* Gate: blocking rows panel — appears before generate button */}
+        {isGateBlocked && !draft && !loading && (
+          <div
+            className="rounded-2xl border p-5 space-y-3"
+            style={{ background: '#FFF5F5', borderColor: '#FECACA' }}
+          >
+            <div className="flex items-start gap-3">
+              <AlertCircle size={16} className="mt-0.5 shrink-0" style={{ color: '#DC2626' }} />
+              <div>
+                <p className="text-sm font-bold" style={{ color: '#991B1B' }}>
+                  {blockingRows.length} item{blockingRows.length > 1 ? 's' : ''} need{blockingRows.length === 1 ? 's' : ''} remarks before the report can be generated
+                </p>
+                <p className="text-xs mt-0.5" style={{ color: '#B91C1C' }}>
+                  Add surveyor remarks in the Assessment tab for the items below, then return here to generate.
+                </p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {blockingRows.map(row => (
+                <div
+                  key={row.id}
+                  className="flex items-center justify-between px-3 py-2 rounded-xl"
+                  style={{ background: '#FEE2E2', border: '1px solid #FECACA' }}
+                >
+                  <div>
+                    <span className="text-xs font-bold" style={{ color: '#7F1D1D' }}>
+                      {row.particulars}
+                    </span>
+                    <span className="text-xs ml-2" style={{ color: '#B91C1C' }}>
+                      {row.reason}
+                    </span>
+                  </div>
+                  <div className="text-right shrink-0 ml-4">
+                    <span className="text-[11px] font-mono" style={{ color: '#991B1B' }}>
+                      Billed ₹{row.billed.toLocaleString('en-IN')}
+                      {row.assessed !== row.billed && (
+                        <> &rarr; Assessed ₹{row.assessed.toLocaleString('en-IN')}</>
+                      )}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Generate button (pre-generation) */}
         {!draft && !loading && (
           <div className="text-center py-10">
             <button
               onClick={() => handleGenerate()}
-              disabled={policyConverting}
+              disabled={policyConverting || isGateBlocked}
               className="px-8 py-3.5 rounded-2xl font-bold text-sm transition-all shadow-md"
               style={{
-                background: 'linear-gradient(135deg, #0D1B2A, #1e3a5f)',
-                color: '#F8F9FA',
+                background: isGateBlocked
+                  ? '#E2E6EA'
+                  : 'linear-gradient(135deg, #0D1B2A, #1e3a5f)',
+                color: isGateBlocked ? '#8D99AE' : '#F8F9FA',
+                cursor: isGateBlocked ? 'not-allowed' : 'pointer',
                 opacity: policyConverting ? 0.5 : 1,
               }}
-              onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 6px 24px rgba(13,27,42,0.25)')}
+              onMouseEnter={e => {
+                if (!isGateBlocked) e.currentTarget.style.boxShadow = '0 6px 24px rgba(13,27,42,0.25)';
+              }}
               onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(13,27,42,0.15)')}
             >
-              Generate Insured Report
+              {isGateBlocked
+                ? `Add remarks for ${blockingRows.length} item${blockingRows.length > 1 ? 's' : ''} first`
+                : 'Generate Insured Report'}
             </button>
             <p className="text-xs mt-3" style={{ color: '#8D99AE' }}>
-              {hasPolicyDoc
-                ? 'AI will extract clauses from your uploaded policy, then explain each deduction.'
-                : 'IRDAI standard clauses will be used. Upload a policy PDF above for specific clause extraction.'}
+              {isGateBlocked
+                ? 'Fill in surveyor remarks for the highlighted items in the Assessment tab, then return here.'
+                : hasPolicyDoc
+                  ? 'AI will extract clauses from your uploaded policy, then explain each deduction.'
+                  : 'IRDAI standard clauses will be used. Upload a policy PDF above for specific clause extraction.'}
             </p>
           </div>
         )}
@@ -387,7 +452,7 @@ export function InsuredReportTab() {
               <div className="flex items-start gap-3 p-4 rounded-2xl" style={{ background: '#FFFBEB', border: '1px solid #FCD34D' }}>
                 <AlertTriangle size={16} className="mt-0.5 shrink-0" style={{ color: '#92400E' }} />
                 <p className="text-xs" style={{ color: '#92400E' }}>
-                  {flaggedCount} item{flaggedCount > 1 ? 's' : ''} could not be fully explained (no surveyor remarks). They are highlighted in Line Items. The report can still be approved — flagged items will show a generic note.
+                  {flaggedCount} item{flaggedCount > 1 ? 's' : ''} had insufficient context for a full explanation. Each has been given a professional fallback note referencing the actual amounts — review in Line Items before approving.
                 </p>
               </div>
             )}

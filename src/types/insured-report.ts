@@ -4,17 +4,13 @@
 // to the vehicle owner in plain language.
 // ═══════════════════════════════════════════════════════════
 
+// DeductionCategory is the single source of truth — defined in constants.
+// Imported locally for use inside this file; re-exported for external consumers.
+import type { DeductionCategory } from '@/lib/constants/deduction-categories';
+export type { DeductionCategory };
+
 export type InsuredReportStage = 'preliminary' | 'final';
 export type InsuredReportLanguage = 'english' | 'hindi' | 'marathi';
-
-export type DeductionCategory =
-  | 'depreciation'
-  | 'consumable'
-  | 'negotiated'
-  | 'not-covered'
-  | 'previous-damage'
-  | 'safe'
-  | 'salvage';
 
 export type PolicyClauseType =
   | 'excess'

@@ -450,17 +450,25 @@ STEP 1 — Classify the item:
 
 STEP 2 — Apply policy rules:
   - If CONSUMABLE and consumables are excluded → deductionCategory = "consumable".
-  - If PART and zeroDep = false → depreciation applies based on vehicle age.
+  - If PART and zeroDep = false → depreciation applies based on vehicle age → deductionCategory = "depreciation".
   - If action = "disallow" or allowed = false → deductionCategory = "not-covered" (use remarks for specifics).
   - If billedAmount > assessed for LABOUR/PAINT → surveyor negotiated rate down → deductionCategory = "negotiated".
   - If isDisposal = true → deductionCategory = "salvage".
   - If previous damage noted in remarks → deductionCategory = "previous-damage".
   - If correctly approved with no deduction → deductionCategory = "safe".
+  - If remarks indicate repair was assessed instead of replacement → deductionCategory = "partial-repair".
+  - If remarks indicate age/use degradation unrelated to accident → deductionCategory = "wear-and-tear".
+  - If remarks indicate OEM price was reduced to OES/market rate → deductionCategory = "overpricing".
 
 STEP 3 — Write the explanation:
   - Use simple words. No jargon. Max 2 sentences.
   - Reference the actual rupee amounts where relevant.
-  - If context is insufficient (no remarks, unclear action), set isFlagged = true.
+  - IMPORTANT: If remarks is empty, do NOT immediately flag. First infer from numeric signals:
+      * assessed ≈ billedAmount → safe
+      * section=labour or section=paint AND billedAmount > assessed → negotiated
+      * section=parts AND zeroDep=false AND assessed < billedAmount → depreciation
+      * isDisposal=true → salvage
+  - Only set isFlagged: true if even numeric inference is inconclusive.
 
 Assessment rows:
 ${rowsJson}
@@ -471,7 +479,7 @@ Return ONLY a JSON object with an "items" key. Do NOT include the chain-of-thoug
     {
       "assessmentRowId": "row id from input",
       "aiExplanation": "Plain language explanation. ${lang}",
-      "deductionCategory": "one of: depreciation | consumable | negotiated | not-covered | previous-damage | safe | salvage",
+      "deductionCategory": "one of: depreciation | consumable | negotiated | not-covered | previous-damage | safe | salvage | partial-repair | wear-and-tear | overpricing",
       "isFlagged": false
     }
   ]
@@ -500,7 +508,7 @@ export function buildCoveringNarrativePrompt(
     .map((line, i) => `${i + 1}. ${line}`)
     .join('\n');
 
-  // Human-readable labels for each category
+  // Human-readable labels for each category — kept in sync with deduction-categories.ts
   const CATEGORY_LABELS: Record<string, string> = {
     safe:              'Parts found safe / no replacement needed',
     consumable:        'Consumable items (excluded under standard policy)',
@@ -509,6 +517,9 @@ export function buildCoveringNarrativePrompt(
     'previous-damage': 'Pre-existing damage (unrelated to this accident)',
     depreciation:      'Parts with depreciation applied',
     negotiated:        'Labour / painting rates negotiated with garage',
+    'partial-repair':  'Parts assessed for repair (not replacement)',
+    'wear-and-tear':   'Wear and tear / mechanical condition (not accident damage)',
+    overpricing:       'Parts assessed at OES / market rate (OEM rate not applicable)',
     other:             'Other adjustments',
   };
 
