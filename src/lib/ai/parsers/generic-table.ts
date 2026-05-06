@@ -26,11 +26,13 @@ const PARTS_SUB_PAT    = /sub.?total\s*parts|parts\s*sub.?total/i;
 const LABOUR_SUB_PAT   = /sub.?total\s*labour/i;
 const PAINTING_SUB_PAT = /sub.?total\s*paint/i;
 
-const VEHICLE_PAT  = /(?:vehicle|veh\.?\s*no\.?|reg\.?\s*no\.?)\s*:?\s*([A-Z]{2}\d{1,2}[A-Z]{1,3}\d{4})/i;
+const VEHICLE_PAT     = /(?:vehicle|veh\.?\s*no\.?|reg\.?\s*no\.?)\s*:?\s*([A-Z]{2}\d{1,2}[A-Z]{1,3}\d{4})/i;
+const BARE_PLATE_PAT  = /\b([A-Z]{2}\d{1,2}[A-Z]{1,3}\d{4})\b/i;
 const DATE_PAT     = /(?:date|dt\.?)\s*:?\s*(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/i;
 const WORKSHOP_PAT = /^([A-Z][A-Z\s&.'-]{4,60})$/;
 
 export function parseGenericTable(textLayers: string[]): ParserResult {
+  // spare_parts includes category ('' = unclassified material) per ExtractedEstimate type
   const spare_parts:    EstimateLineItem[]                    = [];
   const labour_items:   Omit<EstimateLineItem, 'category'>[] = [];
   const painting_items: Omit<EstimateLineItem, 'category'>[] = [];
@@ -50,13 +52,19 @@ export function parseGenericTable(textLayers: string[]): ParserResult {
   for (const page of textLayers) {
     const lines = page.split('\n');
 
-    for (const line of lines) {
-      const trimmed = line.trim();
+    for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+      const trimmed = lines[lineIdx].trim();
       if (!trimmed) continue;
 
       // Header fields
       const vm = trimmed.match(VEHICLE_PAT);
       if (vm) vehicle_number = vm[1].toUpperCase();
+
+      // Fix 3: Bare plate fallback — try standalone plate regex on first 10 lines per page
+      if (!vehicle_number && lineIdx < 10) {
+        const bm = trimmed.match(BARE_PLATE_PAT);
+        if (bm) vehicle_number = bm[1].toUpperCase();
+      }
 
       const dm = trimmed.match(DATE_PAT);
       if (dm && !estimate_date) estimate_date = dm[1];
@@ -99,7 +107,13 @@ export function parseGenericTable(textLayers: string[]): ParserResult {
 
       // Data rows
       const match = trimmed.match(DATA_ROW);
-      if (!match) continue;
+      if (!match) {
+        // Fix 2: Capture lines that didn't match any known pattern into unparsableSections
+        if (trimmed.length > 10 && unparsableSections.length < 50) {
+          unparsableSections.push(trimmed);
+        }
+        continue;
+      }
 
       const [, sr, desc, col3, col4, col5, col6, col7, col8] = match;
       const nums = [col3, col4, col5, col6, col7, col8]
@@ -150,8 +164,8 @@ export function parseGenericTable(textLayers: string[]): ParserResult {
     estimate_date,
     bill_number:      '',
     spare_parts,
-    labour_items:     labour_items as EstimateLineItem[],
-    painting_items:   painting_items as EstimateLineItem[],
+    labour_items,
+    painting_items,
     subtotal_parts_taxable:    subtotal_parts,
     subtotal_labour_taxable:   subtotal_labour,
     subtotal_painting_taxable: subtotal_painting,
