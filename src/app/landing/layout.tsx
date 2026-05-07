@@ -5,13 +5,13 @@ export const metadata: Metadata = {
   description:
     'AI-powered motor insurance survey software for IRDAI-licensed surveyors. Auto-extracts RC, licence & policy data, generates reports in 10 mins. 60-day free trial!',
   alternates: {
-    canonical: 'https://surveyos-v2-antigravity.web.app/',
+    canonical: 'https://motorsurveyos.web.app/',
   },
   openGraph: {
     title: 'SurveyOS Prime — AI Motor Insurance Survey Software for IRDAI Surveyors',
     description:
       'Generate motor insurance survey reports in under 10 minutes with AI. Auto-extract data from RC books, driving licences & policies. Works offline, syncs to Google Drive. 60-day free trial!',
-    url: 'https://surveyos-v2-antigravity.web.app/',
+    url: 'https://motorsurveyos.web.app/',
     siteName: 'SurveyOS Prime',
     type: 'website',
     locale: 'en_IN',
