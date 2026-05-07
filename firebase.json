@@ -12,10 +12,7 @@
       { "source": "/landing/", "destination": "/", "type": 301 }
     ],
     "rewrites": [
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
+      { "source": "**", "destination": "/index.html" }
     ]
   },
   "firestore": {
