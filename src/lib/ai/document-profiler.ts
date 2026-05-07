@@ -22,7 +22,7 @@ const FORMAT_SIGNATURES: Array<{
   signals: RegExp[];
   weight: number;
 }> = [
-  { format: 'tata-dtc',     signals: [/TATA MOTORS/i, /AUTHORIS[E|A]D SERVICE/i], weight: 0.95 },
+  { format: 'tata-dtc',     signals: [/TATA MOTORS/i, /AUTHORIS[EA]D SERVICE/i], weight: 0.95 },
   { format: 'maruti-mga',   signals: [/MARUTI SUZUKI/i, /MGA/i],                  weight: 0.95 },
   { format: 'hyundai-dms',  signals: [/HYUNDAI/i, /DMS|DEALER MANAGEMENT/i],      weight: 0.90 },
   { format: 'mahindra-mds', signals: [/MAHINDRA/i, /MDS|DEALER SOLUTION/i],       weight: 0.90 },
