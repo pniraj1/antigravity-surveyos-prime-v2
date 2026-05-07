@@ -556,14 +556,14 @@ export async function extractDocument(
           onProgress(msg);
         }
 
-        // Small throttle delay between chunks to avoid rate limiting
-        if (i > 0) await new Promise(r => setTimeout(r, 600));
-
         // ── Layer 4: Skip pages already completed in a prior run ──────────────────
         if (completedPages.has(i)) {
           logger.log(`[AI Extraction] ${key}: skipping page ${currentBatchStart} (already completed in prior run)`);
           continue;
         }
+
+        // Small throttle delay between chunks to avoid rate limiting
+        if (i > 0) await new Promise(r => setTimeout(r, 600));
 
         // ── Choose text-mode or vision-mode payload ──────────────────────────
         let chunkImages: string[];
@@ -686,18 +686,6 @@ export async function extractDocument(
         try {
           const fragment = JSON.parse(rawResponse);
           finalResult = mergeAIResults(finalResult, fragment);
-
-          // ── Layer 6: Save streaming progress ──────────────────────────────────────
-          completedPages.add(i);
-          await saveExtractionProgress({
-            fileHash,
-            docType: key,
-            totalPages,
-            completedPages: Array.from(completedPages),
-            failedPages: [],
-            partialData: finalResult,
-            updatedAt: Date.now(),
-          });
         } catch (err) {
           // For multi-page docs: one bad page should not abort the whole extraction.
           // Log the failure and continue accumulating results from other pages.
@@ -711,6 +699,23 @@ export async function extractDocument(
           }
           // Multi-page: continue with whatever we have accumulated so far
         }
+
+        // ── Layer 6: Save streaming progress ──────────────────────────────────────
+        // Wrap in its own try/catch so storage failures don't mask JSON parse errors
+        try {
+          completedPages.add(i);
+          await saveExtractionProgress({
+            fileHash,
+            docType: key,
+            totalPages,
+            completedPages: Array.from(completedPages),
+            failedPages: [],
+            partialData: finalResult,
+            updatedAt: Date.now(),
+          });
+        } catch (progressErr) {
+          logger.warn('[AI Extraction] Failed to save extraction progress — continuing.', progressErr);
+        }
       }
 
       // Validate math — result surfaced to UI layer, no automatic re-scan.
@@ -719,14 +724,18 @@ export async function extractDocument(
 
       // ── Layer 7: Cache completed AI result + clear resume progress ─────────────
       if (finalResult) {
-        await saveCachedExtraction({
-          fileHash,
-          docType: key,
-          extractedAt: Date.now(),
-          data: finalResult,
-          source: useTextMode ? 'ai-text' : 'ai-vision',
-        });
-        await clearExtractionProgress(fileHash, key);
+        try {
+          await saveCachedExtraction({
+            fileHash,
+            docType: key,
+            extractedAt: Date.now(),
+            data: finalResult,
+            source: useTextMode ? 'ai-text' : 'ai-vision',
+          });
+          await clearExtractionProgress(fileHash, key);
+        } catch (cacheErr) {
+          logger.warn('[AI Extraction] Failed to persist cache/progress — result still returned.', cacheErr);
+        }
       }
     }
 
