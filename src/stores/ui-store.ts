@@ -122,9 +122,9 @@ export const useUIStore = create<UIState>()(
     {
       name: 'surveyos-ui-storage',
       storage: createJSONStorage(() => localStorage),
-      // Persist navigation, workspace metadata, and Drive connection state
+      // activeTab is intentionally excluded — the URL (?tab=…) is the source of truth.
+      // Persisting it caused stale tab state on hard reload when the URL differed.
       partialize: (state) => ({
-        activeTab: state.activeTab,
         sidebarCollapsed: state.sidebarCollapsed,
         currentClaimId: state.currentClaimId,
         isDriveConnected: state.isDriveConnected,

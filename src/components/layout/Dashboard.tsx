@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import dynamicImport from 'next/dynamic';
 import { useUIStore } from '@/stores/ui-store';
+import { useTabRouting } from '@/hooks/useTabRouting';
 import { useClaimStore } from '@/stores/claim-store';
 import { getClaim, saveClaim } from '@/lib/storage/indexeddb';
 import {
@@ -608,6 +609,7 @@ export function TabPlaceholder({ tab }: { tab: string }) {
 
 export default function Dashboard() {
   const { activeTab } = useUIStore();
+  useTabRouting();
 
   return (
     <div className="flex h-screen overflow-hidden">

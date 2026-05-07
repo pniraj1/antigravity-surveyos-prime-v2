@@ -17,7 +17,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   // ── Sandbox & Public Route bypass: skip auth entirely ──
-  if (SANDBOX_MODE || pathname === '/' || pathname?.startsWith('/landing')) return <>{children}</>;
+  if (SANDBOX_MODE || pathname === '/' || pathname?.startsWith('/landing') || pathname?.startsWith('/login')) return <>{children}</>;
 
   // Firebase is still checking the session — show a silent loader
   if (loading) {

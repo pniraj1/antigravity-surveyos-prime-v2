@@ -26,15 +26,15 @@ export const metadata: Metadata = {
     'IRDAI surveyor app',
   ],
   authors: [{ name: 'SurveyOS' }],
-  metadataBase: new URL('https://surveyos-v2-antigravity.web.app'),
+  metadataBase: new URL('https://motorsurveyos.web.app'),
   alternates: {
-    canonical: 'https://surveyos-v2-antigravity.web.app/',
+    canonical: 'https://motorsurveyos.web.app/',
   },
   openGraph: {
     title: 'SurveyOS Prime - AI Motor Insurance Survey Software for IRDAI Surveyors',
     description:
       'Generate motor insurance survey reports in under 10 minutes with AI. Auto-extract data from RC books, driving licences & policies. Works offline, syncs to Google Drive. 60-day free trial!',
-    url: 'https://surveyos-v2-antigravity.web.app/',
+    url: 'https://motorsurveyos.web.app/',
     siteName: 'SurveyOS Prime',
     type: 'website',
     locale: 'en_IN',
@@ -112,11 +112,6 @@ export default function RootLayout({
                 priceValidUntil: '2027-12-31',
                 description: '60-day free trial then ₹999/month',
               },
-              aggregateRating: {
-                '@type': 'AggregateRating',
-                ratingValue: '4.8',
-                reviewCount: '47',
-              },
             }),
           }}
         />
@@ -129,7 +124,7 @@ export default function RootLayout({
               '@context': 'https://schema.org',
               '@type': 'Organization',
               name: 'SurveyOS',
-              url: 'https://surveyos-v2-antigravity.web.app',
+              url: 'https://motorsurveyos.web.app',
               contactPoint: {
                 '@type': 'ContactPoint',
                 email: 'surveyosprime@gmail.com',

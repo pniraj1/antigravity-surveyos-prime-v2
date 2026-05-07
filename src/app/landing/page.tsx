@@ -315,13 +315,13 @@ export default function LandingPage() {
 
   useEffect(() => {
     if (isAuthenticated && !authLoading) {
-      router.push('/');
+      router.replace('/dashboard/');
     }
   }, [isAuthenticated, authLoading, router]);
 
   const handleAction = async () => {
     if (isAuthenticated) {
-      router.push('/');
+      router.push('/dashboard/');
       return;
     }
     setSigningIn(true);

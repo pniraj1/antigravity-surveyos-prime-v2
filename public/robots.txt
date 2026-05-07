@@ -1,11 +1,9 @@
 User-agent: *
 Allow: /
 
-# Redirect target — disallow crawling the old /landing/ path (301 → /)
-Disallow: /landing/
-
-# Block build artifacts
+# Keep authenticated app and build artifacts private
+Disallow: /dashboard/
 Disallow: /api/
 Disallow: /_next/
 
-Sitemap: https://surveyos-v2-antigravity.web.app/sitemap.xml
+Sitemap: https://motorsurveyos.web.app/sitemap.xml

@@ -86,9 +86,9 @@ export function Sidebar() {
   const groups = ['main', 'claim', 'output', 'settings'] as const;
 
   const handleTabChange = (targetTab: AppTab) => {
-    // Landing page is a separate route
+    // Landing page is the root route
     if ((targetTab as string) === 'landing') {
-      window.location.href = '/landing';
+      window.location.href = '/';
       return;
     }
 
@@ -278,36 +278,14 @@ export function Sidebar() {
                     const disabled = item.requiresClaim && !hasClaim;
                     const isActive = activeTab === item.id;
 
-                    return (
-                      <button
-                        key={item.id}
-                        onClick={() => !disabled && handleTabChange(item.id)}
-                        disabled={disabled}
-                        title={sidebarCollapsed ? item.label : undefined}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium relative transition-all ${sidebarCollapsed ? 'justify-center' : ''}`}
-                        style={{
-                          color: isActive
-                            ? '#0D1B2A'
-                            : disabled
-                            ? '#E2E6EA'
-                            : '#4A4E69',
-                          background: isActive ? '#F0F2F5' : 'transparent',
-                          cursor: disabled ? 'not-allowed' : 'pointer',
-                        }}
-                        onMouseEnter={e => {
-                          if (!disabled && !isActive) {
-                            e.currentTarget.style.background = '#F8F9FA';
-                            e.currentTarget.style.color = '#0D1B2A';
-                          }
-                        }}
-                        onMouseLeave={e => {
-                          if (!disabled && !isActive) {
-                            e.currentTarget.style.background = 'transparent';
-                            e.currentTarget.style.color = '#4A4E69';
-                          }
-                        }}
-                      >
-                        {/* Gold active bar */}
+                    const navClassName = `w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium relative transition-all ${sidebarCollapsed ? 'justify-center' : ''}`;
+                    const navStyle = {
+                      color: isActive ? '#0D1B2A' : disabled ? '#E2E6EA' : '#4A4E69',
+                      background: isActive ? '#F0F2F5' : 'transparent',
+                      cursor: disabled ? 'not-allowed' : 'pointer',
+                    };
+                    const navContent = (
+                      <>
                         {isActive && (
                           <span
                             className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full"
@@ -320,7 +298,53 @@ export function Sidebar() {
                         {!sidebarCollapsed && (
                           <span className="truncate font-semibold">{item.label}</span>
                         )}
-                      </button>
+                      </>
+                    );
+                    const hoverHandlers = {
+                      onMouseEnter: (e: React.MouseEvent<HTMLElement>) => {
+                        e.currentTarget.style.background = '#F8F9FA';
+                        e.currentTarget.style.color = '#0D1B2A';
+                      },
+                      onMouseLeave: (e: React.MouseEvent<HTMLElement>) => {
+                        e.currentTarget.style.background = isActive ? '#F0F2F5' : 'transparent';
+                        e.currentTarget.style.color = isActive ? '#0D1B2A' : '#4A4E69';
+                      },
+                    };
+
+                    if (disabled) {
+                      return (
+                        <button
+                          key={item.id}
+                          disabled
+                          title={sidebarCollapsed ? item.label : undefined}
+                          className={navClassName}
+                          style={navStyle}
+                        >
+                          {navContent}
+                        </button>
+                      );
+                    }
+
+                    // Non-disabled items render as <a> so middle-click, right-click,
+                    // and URL-bar hover all work correctly.
+                    const isLanding = (item.id as string) === 'landing';
+                    return (
+                      <a
+                        key={item.id}
+                        href={isLanding ? '/' : `?tab=${item.id}`}
+                        onClick={(e) => {
+                          // For real tabs, prevent full navigation — let useTabRouting handle it.
+                          // For the landing item, allow the browser to navigate to /.
+                          if (!isLanding) e.preventDefault();
+                          handleTabChange(item.id);
+                        }}
+                        title={sidebarCollapsed ? item.label : undefined}
+                        className={navClassName}
+                        style={navStyle}
+                        {...(!isActive ? hoverHandlers : {})}
+                      >
+                        {navContent}
+                      </a>
                     );
                   })}
                 </div>
