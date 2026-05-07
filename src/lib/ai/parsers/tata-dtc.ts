@@ -168,7 +168,7 @@ export function parseTataDtc(textLayers: string[]): ParserResult {
       rowsParsed++;
 
       if (cat === 'spare_parts') {
-        spare_parts.push({ ...base, category: '' });
+        spare_parts.push({ ...base, category: '' }); // '' = unclassified material; Task 8 categorizer fills metal/plastic/glass
       } else if (cat === 'painting_items') {
         painting_items.push(base);
       } else {

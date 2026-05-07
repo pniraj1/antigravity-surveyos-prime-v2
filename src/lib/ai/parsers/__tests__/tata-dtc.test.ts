@@ -83,4 +83,15 @@ describe('parseTataDtc', () => {
     expect(result.confidence.items).toBe(0);
     expect(result.confidence.totals).toBe(0);
   });
+
+  it('extracts part number for structured row', () => {
+    const result = parseTataDtc([DTC_SAMPLE]);
+    const bumper = result.data.spare_parts.find(p => p.description.includes('FRONT BUMPER ASSY'));
+    expect(bumper?.part_number).toBeTruthy();
+  });
+
+  it('extracts subtotal parts taxable', () => {
+    const result = parseTataDtc([DTC_SAMPLE]);
+    expect(result.data.subtotal_parts_taxable).toBe(8500);
+  });
 });
