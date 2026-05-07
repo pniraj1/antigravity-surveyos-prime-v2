@@ -8,6 +8,17 @@ import { callAIGateway } from './service';
 import { getDocPrompt } from './prompts';
 import { toast } from 'sonner';
 import { logger } from '@/lib/utils/logger';
+import { hashFile, buildProfile } from './document-profiler';
+import {
+  getCachedExtraction,
+  saveCachedExtraction,
+  getExtractionProgress,
+  saveExtractionProgress,
+  clearExtractionProgress,
+} from './extraction-cache';
+import { runParser, parserMeetsThreshold, needsCategorization } from './parsers/index';
+import { categorizeItems } from './categorizer';
+import { getPageScopeSuffix } from './prompts';
 
 /**
  * Extracts text content from a PDF page (if it has a text layer).
@@ -432,6 +443,15 @@ export async function extractDocument(
 
   return aiQueue.add(async () => {
     if (onProgress) onProgress('Scanning document...');
+
+    // ── Layer 1: File hash + cache lookup ──────────────────────────────────────
+    const fileHash = await hashFile(file);
+    const cached = await getCachedExtraction(fileHash, key);
+    if (cached) {
+      if (onProgress) onProgress('Loaded from cache (instant).');
+      return { data: cached.data, images: [], discrepancies: [] };
+    }
+
     const { viewImages, apiImages, textLayers } = await fileToImages(file, (p, t) => {
       if (onProgress) onProgress(`Processing page ${p} of ${t}...`);
     });
@@ -456,6 +476,49 @@ export async function extractDocument(
       logger.log(`[AI Extraction] ${key}: vision-mode (${docMode})`);
     }
 
+    // ── Layer 2: Deterministic parser fast-path (estimate/final-bill only) ─────
+    // For digitally-born PDFs with a recognised format, run a zero-API-call
+    // TypeScript parser. If it meets the confidence threshold (0.85 items + totals),
+    // skip AI entirely and go straight to categorisation.
+    if (
+      (key === 'estimate' || key === 'final-bill') &&
+      textLayers &&
+      useTextMode
+    ) {
+      const profile = buildProfile(fileHash, totalPages, textLayers);
+      const parserResult = runParser(profile);
+
+      if (parserMeetsThreshold(parserResult)) {
+        if (onProgress) onProgress('Parsed digitally — zero AI calls needed.');
+
+        // Run categorisation if spare_parts have empty material categories
+        let parsedData = parserResult.data;
+        if (needsCategorization(parserResult)) {
+          if (onProgress) onProgress('Categorising parts...');
+          try {
+            const catResult = await categorizeItems(parsedData.spare_parts);
+            parsedData = { ...parsedData, spare_parts: catResult.categorized };
+          } catch {
+            // categorisation is non-blocking — proceed with uncategorised items
+          }
+        }
+
+        // Cache the parser result and return immediately
+        await saveCachedExtraction({
+          fileHash,
+          docType: key,
+          extractedAt: Date.now(),
+          data: parsedData,
+          source: 'parser',
+          parserName: parserResult.parserName,
+        });
+
+        const mathCheck = validateMath(parsedData, key);
+        return { data: parsedData, images: viewImages, discrepancies: mathCheck.discrepancies };
+      }
+      // Parser confidence below threshold — fall through to AI extraction
+    }
+
     // Chunk size: always 1 page per call in text-mode (avoids 413 on dense documents).
     // In vision-mode: estimates get 2 pages per call for efficiency; others get 1.
     const VISION_CHUNK_SIZE = (key === 'estimate' || key === 'final-bill') ? 2 : 1;
@@ -471,12 +534,15 @@ export async function extractDocument(
 
     // Single-pass extraction — no automatic re-scan on math discrepancies.
     // Discrepancies are surfaced to the surveyor via a toast; they evaluate manually.
-    let finalResult: any = null;
+
+    // ── Layer 3: Resume — restore partial results from a previous interrupted run ──
+    const savedProgress = await getExtractionProgress(fileHash, key);
+    let completedPages = new Set<number>(savedProgress?.completedPages ?? []);
+    let finalResult: any = savedProgress?.partialData ?? null;
     let discrepancies: string[] = [];
 
     // Single pass — no retry loop
     {
-      finalResult = null;
 
       for (let i = 0; i < totalPages; i += CHUNK_SIZE) {
         const currentBatchStart = i + 1;
@@ -492,6 +558,12 @@ export async function extractDocument(
 
         // Small throttle delay between chunks to avoid rate limiting
         if (i > 0) await new Promise(r => setTimeout(r, 600));
+
+        // ── Layer 4: Skip pages already completed in a prior run ──────────────────
+        if (completedPages.has(i)) {
+          logger.log(`[AI Extraction] ${key}: skipping page ${currentBatchStart} (already completed in prior run)`);
+          continue;
+        }
 
         // ── Choose text-mode or vision-mode payload ──────────────────────────
         let chunkImages: string[];
@@ -543,6 +615,11 @@ export async function extractDocument(
           // Vision path: send JPEG images (existing behaviour)
           chunkImages = apiImages.slice(i, i + CHUNK_SIZE);
           chunkPrompt = enhancedPrompt;
+        }
+
+        // ── Layer 5: Page-scope suffix (reduces output tokens for long estimates) ──
+        if (key === 'estimate' || key === 'final-bill') {
+          chunkPrompt = chunkPrompt + getPageScopeSuffix(currentBatchStart, totalPages);
         }
 
         let rawResponse: string;
@@ -609,6 +686,18 @@ export async function extractDocument(
         try {
           const fragment = JSON.parse(rawResponse);
           finalResult = mergeAIResults(finalResult, fragment);
+
+          // ── Layer 6: Save streaming progress ──────────────────────────────────────
+          completedPages.add(i);
+          await saveExtractionProgress({
+            fileHash,
+            docType: key,
+            totalPages,
+            completedPages: Array.from(completedPages),
+            failedPages: [],
+            partialData: finalResult,
+            updatedAt: Date.now(),
+          });
         } catch (err) {
           // For multi-page docs: one bad page should not abort the whole extraction.
           // Log the failure and continue accumulating results from other pages.
@@ -627,6 +716,18 @@ export async function extractDocument(
       // Validate math — result surfaced to UI layer, no automatic re-scan.
       const mathCheck = validateMath(finalResult, key);
       discrepancies = mathCheck.discrepancies;
+
+      // ── Layer 7: Cache completed AI result + clear resume progress ─────────────
+      if (finalResult) {
+        await saveCachedExtraction({
+          fileHash,
+          docType: key,
+          extractedAt: Date.now(),
+          data: finalResult,
+          source: useTextMode ? 'ai-text' : 'ai-vision',
+        });
+        await clearExtractionProgress(fileHash, key);
+      }
     }
 
     // Log extraction summary for estimate/final-bill documents
