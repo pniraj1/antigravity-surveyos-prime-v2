@@ -17,12 +17,11 @@ import { logger } from '@/lib/utils/logger';
 
 // ─── Developer-controlled model defaults ─────────────────────────────────────
 // Last verified: April 2026 — Free Tier limits:
-//   gemini-2.5-flash     : 10 RPM · 500 RPD · 250K TPM  ← best stable free model
+//   gemini-2.5-flash      : 10 RPM · 500 RPD · 250K TPM  ← best stable free model
 //   gemini-2.5-flash-lite : 15 RPM · 1000 RPD
-//   openai/gpt-oss-120b  : Groq Production tier, vision-capable, ~500 tps
+//   llama-3.3-70b-versatile : Groq Production tier, text-only, reliable
 export const CURRENT_MODELS = {
-  gemini: 'gemini-1.5-flash',
-  // GPT-OSS 120B — Production tier on Groq, vision-capable, highest quality
+  gemini: 'gemini-2.5-flash',
   // ⚠️  DO NOT use 'meta-llama/llama-4-scout-17b-16e-instruct' as default —
   //     it is a Preview-only model and can be discontinued without notice.
   groq:   'llama-3.3-70b-versatile',
@@ -43,9 +42,9 @@ export interface ModelOption {
  */
 export const PROVIDER_MODELS: Record<'gemini' | 'groq' | 'nvidia', ModelOption[]> = {
   gemini: [
-    { id: 'gemini-1.5-pro',        label: '1.5 Pro',        note: 'Most capable · deep reasoning · complex docs' },
-    { id: 'gemini-1.5-flash',      label: '1.5 Flash ✓',    note: 'Best value · 15 RPM · 1500/day' },
-    { id: 'gemini-1.5-flash-8b',   label: '1.5 Flash-8B',   note: 'Fastest · 15 RPM · 1500/day' },
+    { id: 'gemini-2.5-flash',      label: '2.5 Flash ✓',    note: 'Default · 10 RPM · 500/day · 250K TPM' },
+    { id: 'gemini-2.5-flash-lite', label: '2.5 Flash Lite',  note: '15 RPM · 1000/day · 250K TPM' },
+    { id: 'gemini-1.5-flash',      label: '1.5 Flash',       note: 'Fallback · 15 RPM · 1500/day' },
   ],
   groq: [
     // Production models (stable, verified April 2026)
@@ -61,12 +60,13 @@ export const PROVIDER_MODELS: Record<'gemini' | 'groq' | 'nvidia', ModelOption[]
 // ─── Fallback chain when a model is unavailable on this account tier ──────────
 // Tried in order. All are currently free-tier functional (April 2026).
 const GEMINI_FALLBACK_CHAIN = [
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
   'gemini-1.5-flash',
-  'gemini-1.5-flash-8b',
 ];
 
 // Groq fallback chain — all Production tier (April 2026).
-// gpt-oss-120b (vision) → gpt-oss-20b (vision, smaller) → llama-3.3-70b (text) → llama-3.1-8b (fastest text)
+// llama-3.3-70b (text) → llama-3.1-8b (fastest text)
 const GROQ_FALLBACK_CHAIN = [
   'llama-3.3-70b-versatile',                    // Production · text-only
   'llama-3.1-8b-instant',                       // Production · fastest text-only
@@ -81,23 +81,19 @@ const GROQ_VISION_MODELS = new Set<string>();
 
 // Old model names stored in user profiles → auto-migrated to current default
 const DEPRECATED_GEMINI_MODELS: Record<string, string> = {
-  'gemini-pro':               'gemini-1.5-flash',
-  'gemini-pro-vision':        'gemini-1.5-flash',
-  'gemini-1.0-pro':           'gemini-1.5-flash',
-  'gemini-2.0-flash':         'gemini-1.5-flash',
-  'gemini-2.0-flash-lite':    'gemini-1.5-flash',
-  'gemini-2.0-flash-exp':     'gemini-1.5-flash',
-  'gemini-2.5-flash':         'gemini-1.5-flash',
+  'gemini-pro':         'gemini-2.5-flash',
+  'gemini-pro-vision':  'gemini-2.5-flash',
+  'gemini-1.0-pro':     'gemini-2.5-flash',
 };
 
 const DEPRECATED_GROQ_MODELS: Record<string, string> = {
-  // Maverick deprecated March 9, 2026 → migrate to production GPT-OSS 120B
-  'meta-llama/llama-4-maverick-17b-128e-instruct': 'openai/gpt-oss-120b',
+  // Maverick deprecated March 9, 2026 → migrate to production default
+  'meta-llama/llama-4-maverick-17b-128e-instruct': 'llama-3.3-70b-versatile',
   // Scout is Preview-only (not for production) → migrate saved profiles to production model
-  'meta-llama/llama-4-scout-17b-16e-instruct':     'openai/gpt-oss-120b',
+  'meta-llama/llama-4-scout-17b-16e-instruct':     'llama-3.3-70b-versatile',
   // Old vision-preview models removed by Groq
-  'llama-3.2-90b-vision-preview':                  'openai/gpt-oss-120b',
-  'llama-3.2-11b-vision-preview':                  'openai/gpt-oss-120b',
+  'llama-3.2-90b-vision-preview':                  'llama-3.3-70b-versatile',
+  'llama-3.2-11b-vision-preview':                  'llama-3.3-70b-versatile',
 };
 
 export interface AIProvider {
