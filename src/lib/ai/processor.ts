@@ -619,7 +619,7 @@ export async function extractDocument(
 
         // ── Layer 5: Page-scope suffix (reduces output tokens for long estimates) ──
         if (key === 'estimate' || key === 'final-bill') {
-          chunkPrompt = chunkPrompt + getPageScopeSuffix(currentBatchStart, totalPages);
+          chunkPrompt = chunkPrompt + getPageScopeSuffix(currentBatchStart, totalPages, currentBatchEnd);
         }
 
         let rawResponse: string;

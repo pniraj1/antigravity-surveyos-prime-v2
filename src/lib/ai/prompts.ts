@@ -570,6 +570,9 @@ Return ONLY a plain text string — the narrative itself. No JSON, no markdown, 
  * Appended to the main prompt to prevent the model from hallucinating
  * items from other pages and to reduce output token count.
  */
-export function getPageScopeSuffix(pageNumber: number, totalPages: number): string {
-  return `\n\nIMPORTANT: Extract ONLY line items that are physically visible on page ${pageNumber} of ${totalPages}. Do NOT include items from other pages. Do NOT repeat items already extracted. Focus solely on what is on this specific page.`;
+export function getPageScopeSuffix(startPage: number, totalPages: number, endPage?: number): string {
+  const pageRef = endPage && endPage > startPage
+    ? `pages ${startPage}–${endPage}`
+    : `page ${startPage}`;
+  return `\n\nIMPORTANT: Extract ONLY line items that are physically visible on ${pageRef} of ${totalPages}. Do NOT include items from other pages. Do NOT repeat items already extracted. Focus solely on what is on these specific pages.`;
 }
