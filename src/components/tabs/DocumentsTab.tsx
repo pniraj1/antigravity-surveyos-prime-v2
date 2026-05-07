@@ -67,7 +67,7 @@ export function DocumentsTab() {
   const batchReconcile = useClaimStore(s => s.batchReconcile);
   const setReconciliationConflictCount = useClaimStore(s => s.setReconciliationConflictCount);
   const extractedDocs = currentClaim?.extractedData ?? {};
-  const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview, reScanWithFeedback } = useAIExtraction();
+  const { isProcessing, progress, reviewData, inProgressDocs, triggerExtraction, confirmApply, cancelReview, reScanWithFeedback } = useAIExtraction();
   const { profile, updateProfile } = useProfileStore();
   const aiProvider = profile.aiProvider ?? 'gemini';
   const [isReconOpen, setIsReconOpen] = useState(false);
@@ -219,6 +219,34 @@ export function DocumentsTab() {
             </div>
             <div className="text-sm font-semibold" style={{ color: 'rgba(13,27,42,0.75)' }}>
               {progress || 'Scanning document...'}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Resume Banner ───────────────────────────────────── */}
+      {inProgressDocs.length > 0 && (
+        <div className="max-w-5xl mx-auto px-8 py-4">
+          <div
+            className="rounded-lg px-4 py-3 flex items-start gap-3"
+            style={{
+              background: 'rgba(234, 179, 8, 0.1)',
+              border: '1px solid rgba(234, 179, 8, 0.3)',
+            }}
+          >
+            <span style={{ fontSize: 16 }}>⚡</span>
+            <div>
+              <p className="text-sm font-medium" style={{ color: '#ca8a04' }}>
+                Interrupted extraction detected
+              </p>
+              <p className="text-xs mt-0.5" style={{ color: '#92400e' }}>
+                {inProgressDocs.map(d => (
+                  <span key={d.docType}>
+                    <strong>{d.docType}</strong>: {d.completedPages}/{d.totalPages} pages done.{' '}
+                  </span>
+                ))}
+                Re-upload the file to resume from where it stopped.
+              </p>
             </div>
           </div>
         </div>

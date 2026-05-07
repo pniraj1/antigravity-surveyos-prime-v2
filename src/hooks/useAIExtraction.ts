@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { extractDocument, rescanTargetPages, applyTargetedUpdate } from '@/lib/ai/processor';
+import { getAllExtractionProgress } from '@/lib/ai/extraction-cache';
 import { toast } from 'sonner';
 
 // sessionStorage key for persisting lastFiles metadata across page reloads.
@@ -30,6 +31,7 @@ export function useAIExtraction() {
   const [progress, setProgress] = useState('');
   const [reviewData, setReviewData] = useState<{ key: string; data: any; file: File } | null>(null);
   const [lastFiles, setLastFiles] = useState<Record<string, File>>({});
+  const [inProgressDocs, setInProgressDocs] = useState<Array<{ docType: string; completedPages: number; totalPages: number }>>([]);
 
   // Context saved after an extraction that produced discrepancies.
   // Used by triggerTargetedRescan to know which pages / what to fix.
@@ -59,6 +61,18 @@ export function useAIExtraction() {
       sessionStorage.setItem(SS_LAST_FILES_KEY, JSON.stringify(lastFileNames));
     } catch { /* storage quota exceeded — non-fatal */ }
   }, [lastFileNames]);
+
+  useEffect(() => {
+    getAllExtractionProgress().then(entries => {
+      if (entries.length > 0) {
+        setInProgressDocs(entries.map(e => ({
+          docType: e.docType,
+          completedPages: e.completedPages.length,
+          totalPages: e.totalPages,
+        })));
+      }
+    });
+  }, []);
 
   // ─── Targeted (Smart Fix) rescan ────────────────────────────────────────────
   const triggerTargetedRescan = useCallback(async () => {
@@ -123,6 +137,7 @@ export function useAIExtraction() {
       }, feedback, previousData, forceDocMode);
 
       setExtractedData(key, data);
+      setInProgressDocs(prev => prev.filter(d => d.docType !== key));
       setReviewData({ key, data, file });
 
       if (discrepancies && discrepancies.length > 0) {
@@ -188,6 +203,7 @@ export function useAIExtraction() {
     isProcessing,
     progress,
     reviewData,
+    inProgressDocs,
     triggerExtraction,
     triggerTargetedRescan,
     confirmApply,

@@ -117,3 +117,14 @@ export async function clearExtractionCache(): Promise<void> {
     // Opportunistic
   }
 }
+
+export async function getAllExtractionProgress(): Promise<ExtractionProgress[]> {
+  try {
+    const db = await getDB();
+    const all = await db.getAll(STORE_PROGRESS);
+    const now = Date.now();
+    return all.filter(entry => now - entry.updatedAt < PROGRESS_TTL_MS);
+  } catch {
+    return [];
+  }
+}
