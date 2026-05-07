@@ -74,10 +74,10 @@ const GROQ_FALLBACK_CHAIN = [
 
 // Models in the Groq fallback chain that support image/vision inputs.
 // Text-only models are skipped when the extraction includes images (e.g. RC scans).
-const GROQ_VISION_MODELS = new Set([
-  'llama-3.2-90b-vision-preview',
-  'llama-3.2-11b-vision-preview',
-]);
+// Vision preview models removed from Groq in early 2025 (deprecated).
+// Groq's production models (llama-3.3-70b-versatile, llama-3.1-8b-instant) are text-only.
+// Estimate vision extraction uses Gemini; Groq is text-only for this pipeline.
+const GROQ_VISION_MODELS = new Set<string>();
 
 // Old model names stored in user profiles → auto-migrated to current default
 const DEPRECATED_GEMINI_MODELS: Record<string, string> = {
@@ -388,9 +388,9 @@ async function callWithKey(provider: AIProvider, key: string, prompt: string, im
       // Pass 3 (covering narrative) returns plain text — json_object mode would
       // force the model to wrap the letter in JSON or produce a parse error.
       ...(responseFormat === 'json' ? { response_format: { type: 'json_object' } } : {}),
-      // GPT-OSS 120B supports up to 32K — 4096 silently truncated large estimates.
-      // 8192 is safe for all models in the Groq fallback chain.
-      max_tokens: 8192,
+      // GPT-OSS 120B supports up to 32K. 16384 accommodates 80+ item JSON responses
+      // without truncation. Previous 8192 limit caused JSON.parse failures on large estimates.
+      max_tokens: 16384,
     }),
   });
 
