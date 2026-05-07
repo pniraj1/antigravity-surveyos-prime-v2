@@ -564,3 +564,12 @@ Paragraph 3 — Settlement summary (2-3 sentences):
 
 Return ONLY a plain text string — the narrative itself. No JSON, no markdown, no labels, no heading. Write it as if it will be pasted directly into a letter.`;
 }
+
+/**
+ * Returns a suffix to scope AI extraction to a single page.
+ * Appended to the main prompt to prevent the model from hallucinating
+ * items from other pages and to reduce output token count.
+ */
+export function getPageScopeSuffix(pageNumber: number, totalPages: number): string {
+  return `\n\nIMPORTANT: Extract ONLY line items that are physically visible on page ${pageNumber} of ${totalPages}. Do NOT include items from other pages. Do NOT repeat items already extracted. Focus solely on what is on this specific page.`;
+}
