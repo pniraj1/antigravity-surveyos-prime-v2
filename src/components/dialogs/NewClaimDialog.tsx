@@ -12,6 +12,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/componen
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AlertTriangle, CheckCircle2, Loader2, Car, Archive, AlertCircle } from 'lucide-react';
+import { logger } from '@/lib/utils/logger';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -143,7 +144,7 @@ export function NewClaimDialog() {
   const { newClaim } = useClaimStore();
 
   const [vehicleNo, setVehicleNo]   = useState('');
-  const [surveyType, setSurveyType] = useState<'spot' | 'final'>('final');
+  const [surveyType, setSurveyType] = useState<'spot' | 'final' | 'valuation'>('final');
   const [vehicleType, setVehicleType] = useState<VehicleType>('private');
   const [activeClaims, setActiveClaims] = useState<ActiveClaimSummary[]>([]);
   const [limitReached, setLimitReached] = useState(false);
@@ -271,7 +272,7 @@ export function NewClaimDialog() {
     if (currentClaimId) {
       const label = vehicleNo.toUpperCase();
       getOrCreateClaimFolder(currentClaimId, label).catch(e =>
-        console.warn('[Drive] Folder creation skipped:', e.message)
+        logger.warn('[Drive] Folder creation skipped:', e.message)
       );
     }
 
@@ -285,7 +286,7 @@ export function NewClaimDialog() {
     dupState === 'checking' ||
     (dupState === 'duplicate' && !confirmed);
 
-  const surveyBtn = (type: 'spot' | 'final') =>
+  const surveyBtn = (type: 'spot' | 'final' | 'valuation') =>
     `flex-1 py-2 text-sm font-semibold rounded-md border transition-all ${
       surveyType === type
         ? 'border-primary bg-primary/10 text-primary'
@@ -378,7 +379,15 @@ export function NewClaimDialog() {
             <div className="flex gap-2">
               <button onClick={() => setSurveyType('spot')} className={surveyBtn('spot')}>Spot</button>
               <button onClick={() => setSurveyType('final')} className={surveyBtn('final')}>Final</button>
+              <button onClick={() => setSurveyType('valuation')} className={surveyBtn('valuation')}>
+                Valuation
+              </button>
             </div>
+            {surveyType === 'valuation' && (
+              <p className="text-[11px] text-amber-700 font-semibold px-1">
+                Break-in inspection — RC upload auto-fills vehicle details, surveyor fills condition manually.
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">

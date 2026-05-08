@@ -1,54 +1,25 @@
 'use client';
 
-import { useAIExtraction, getEvidenceImages } from '@/hooks/useAIExtraction';
+import { useAIExtraction } from '@/hooks/useAIExtraction';
+import { storeBlobUrl } from '@/components/evidence/DocumentEvidenceViewer';
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
+import { ProcessingProgressOverlay } from '@/components/ui/ProcessingProgressOverlay';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
-import { useUIStore } from '@/stores/ui-store';
 import { uploadFileToDrive } from '@/lib/drive';
-import { CURRENT_MODELS } from '@/lib/ai/service';
 import {
   FileText, Sparkles, Loader2, CheckCircle2, Car, CreditCard,
-  FileCheck, Wrench, Camera, ScrollText, Receipt, Shield, AlertTriangle,
-  Upload, Truck, Zap, Brain, Database,
+  FileCheck, Camera, ScrollText, Receipt, Shield, AlertTriangle,
+  Upload, Truck, Zap, Database,
 } from 'lucide-react';
+import { ProviderHealthBadge, ModelSelector, DocModeToggle, ProviderToggle } from '@/components/ai/AIControls';
 import { ReconciliationDialog } from './reconciliation/ReconciliationDialog';
-import { getReconciliationFields } from '@/lib/ai/reconciliation';
-import { useState, useMemo, useEffect } from 'react';
+import { getConflictFields, getUnanimousFields, ReconciliationField } from '@/lib/ai/reconciliation';
+import { toast } from 'sonner';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { logger } from '@/lib/utils/logger';
 
-// ─── Provider Health Badge ───────────────────────────────────────────────────
-function ProviderHealthBadge() {
-  const { aiProviderHealth } = useUIStore();
-  const { profile } = useProfileStore();
-  const provider = profile.aiProvider ?? 'gemini';
-  const health = aiProviderHealth[provider];
-  const model = provider === 'gemini'
-    ? (profile.geminiModel?.trim() || CURRENT_MODELS.gemini)
-    : (profile.groqModel?.trim() || CURRENT_MODELS.groq);
-  const shortModel = model.split('/').pop()?.replace('gemini-', 'Gemini ').replace('-instruct', '') ?? model;
 
-  const dot = health === 'ok'           ? '#22c55e'
-            : health === 'rate-limited' ? '#f59e0b'
-            : health === 'error'        ? '#ef4444'
-            :                            '#8D99AE';
-  const label = health === 'ok'           ? 'Ready'
-              : health === 'rate-limited' ? 'Rate Limited'
-              : health === 'error'        ? 'Key Error — check Profile'
-              :                            'Not tested yet';
-
-  return (
-    <div
-      className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold"
-      style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}
-      title={`${provider === 'gemini' ? 'Google Gemini' : 'Groq'} · ${model} · ${label}`}
-    >
-      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: dot }} />
-      <span style={{ color: '#F8F9FA' }}>{shortModel}</span>
-      <span style={{ color: 'rgba(232,236,240,0.5)' }}>·</span>
-      <span style={{ color: dot }}>{label}</span>
-    </div>
-  );
-}
 
 // ─── Document Slot Definitions ──────────────────────────────────────────────
 const DOC_GROUPS = [
@@ -67,7 +38,6 @@ const DOC_GROUPS = [
     title: 'Workshop & Damage',
     description: 'Estimate and damage evidence',
     docs: [
-      { id: 'estimate',   label: 'Repair Estimate',  subLabel: 'Initial Estimate',           icon: Wrench,       color: '#059669', bg: 'rgba(5,150,105,0.07)',  accept: 'image/*,application/pdf' },
       { id: 'final-bill', label: 'Final Garage Bill', subLabel: 'Final Workshop Invoice',     icon: Receipt,      color: '#0284c7', bg: 'rgba(2,132,199,0.07)',  accept: 'image/*,application/pdf' },
       { id: 'photos',     label: 'Damage Photos',    subLabel: 'AI damage assessment',        icon: Camera,       color: '#7c3aed', bg: 'rgba(124,58,237,0.07)', accept: 'image/*' },
     ],
@@ -93,15 +63,44 @@ const DOC_GROUPS = [
 // ─── Component ───────────────────────────────────────────────────────────────
 export function DocumentsTab() {
   const currentClaim = useClaimStore(s => s.currentClaim);
+  const currentClaimId = useClaimStore(s => s.currentClaimId);
+  const batchReconcile = useClaimStore(s => s.batchReconcile);
+  const setReconciliationConflictCount = useClaimStore(s => s.setReconciliationConflictCount);
   const extractedDocs = currentClaim?.extractedData ?? {};
-  const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview, reScanWithFeedback } = useAIExtraction();
+  const { isProcessing, progress, reviewData, inProgressDocs, triggerExtraction, confirmApply, cancelReview, reScanWithFeedback } = useAIExtraction();
   const { profile, updateProfile } = useProfileStore();
   const aiProvider = profile.aiProvider ?? 'gemini';
   const [isReconOpen, setIsReconOpen] = useState(false);
+  const [autoFilledFields, setAutoFilledFields] = useState<ReconciliationField[]>([]);
+  const prevClaimIdRef = useRef<string | null>(null);
 
   const conflicts = useMemo(() => {
     if (!currentClaim) return [];
-    return getReconciliationFields(currentClaim).filter(f => f.hasConflict);
+    return getConflictFields(currentClaim);
+  }, [currentClaim]);
+
+  // Sync conflict count to store so sidebar can read it
+  useEffect(() => {
+    setReconciliationConflictCount(conflicts.length);
+  }, [conflicts.length, setReconciliationConflictCount]);
+
+  // Reset auto-filled list when switching claims
+  useEffect(() => {
+    if (currentClaim?.id !== prevClaimIdRef.current) {
+      prevClaimIdRef.current = currentClaim?.id ?? null;
+      setAutoFilledFields([]);
+    }
+  }, [currentClaim?.id]);
+
+  // Auto-fill fields where all sources unanimously agree but claim value is unset
+  useEffect(() => {
+    if (!currentClaim) return;
+    const unanimous = getUnanimousFields(currentClaim);
+    if (unanimous.length === 0) return;
+    const updates = unanimous.map(f => ({ path: f.path, value: f.sources[0].value }));
+    batchReconcile(updates);
+    setAutoFilledFields(unanimous);
+    toast.success(`${unanimous.length} field${unanimous.length === 1 ? '' : 's'} filled automatically from scanned documents.`);
   }, [currentClaim]);
 
   // Auto-close dialog when all conflicts are resolved
@@ -113,11 +112,16 @@ export function DocumentsTab() {
 
 
   if (!currentClaim) return null;
-  const evidenceImages = currentClaim && reviewData ? getEvidenceImages(currentClaim.id, reviewData.key) : [];
+  const evidenceImages: string[] = [];
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>, key: string) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Register file in EvidenceStore so the Evidence Viewer can display it
+    if (currentClaim?.id) {
+      storeBlobUrl(currentClaim.id, key, file);
+    }
 
     // AI extraction
     triggerExtraction(key, file);
@@ -128,7 +132,7 @@ export function DocumentsTab() {
       const ext   = file.name.split('.').pop() ?? 'bin';
       const driveName = `${key}.${ext}`;
       uploadFileToDrive(currentClaim.id, driveName, file, label).catch(err => {
-        console.error('[DocumentsTab] Drive upload failed, file may not be synced:', err);
+        logger.error('[DocumentsTab] Drive upload failed, file may not be synced:', err);
       });
     }
 
@@ -167,33 +171,14 @@ export function DocumentsTab() {
               </p>
             </div>
 
-            {/* Provider toggle + health */}
+            {/* Provider toggle + model + mode */}
             <div className="flex flex-col items-end gap-2 flex-shrink-0">
-              <div className="flex items-center p-1 rounded-xl gap-1" style={{ background: 'rgba(255,255,255,0.08)' }}>
-                <button
-                  onClick={() => updateProfile({ aiProvider: 'gemini' })}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black transition-all"
-                  style={{
-                    background: aiProvider === 'gemini' ? 'rgba(212,175,55,0.9)' : 'transparent',
-                    color: aiProvider === 'gemini' ? '#0D1B2A' : 'rgba(232,236,240,0.6)',
-                  }}
-                >
-                  <Sparkles size={11} />
-                  Gemini
-                </button>
-                <button
-                  onClick={() => updateProfile({ aiProvider: 'groq' })}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black transition-all"
-                  style={{
-                    background: aiProvider === 'groq' ? 'rgba(242,102,57,0.9)' : 'transparent',
-                    color: aiProvider === 'groq' ? '#FFFFFF' : 'rgba(232,236,240,0.6)',
-                  }}
-                >
-                  <Zap size={11} />
-                  Groq
-                </button>
+              <ProviderToggle />
+              <div className="flex items-center gap-2">
+                <DocModeToggle />
+                <ModelSelector />
+                <ProviderHealthBadge />
               </div>
-              <ProviderHealthBadge />
             </div>
           </div>
 
@@ -234,6 +219,34 @@ export function DocumentsTab() {
             </div>
             <div className="text-sm font-semibold" style={{ color: 'rgba(13,27,42,0.75)' }}>
               {progress || 'Scanning document...'}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Resume Banner ───────────────────────────────────── */}
+      {inProgressDocs.length > 0 && (
+        <div className="max-w-5xl mx-auto px-8 py-4">
+          <div
+            className="rounded-lg px-4 py-3 flex items-start gap-3"
+            style={{
+              background: 'rgba(234, 179, 8, 0.1)',
+              border: '1px solid rgba(234, 179, 8, 0.3)',
+            }}
+          >
+            <span style={{ fontSize: 16 }}>⚡</span>
+            <div>
+              <p className="text-sm font-medium" style={{ color: '#ca8a04' }}>
+                Interrupted extraction detected
+              </p>
+              <p className="text-xs mt-0.5" style={{ color: '#92400e' }}>
+                {inProgressDocs.map(d => (
+                  <span key={d.docType}>
+                    <strong>{d.docType}</strong>: {d.completedPages}/{d.totalPages} pages done.{' '}
+                  </span>
+                ))}
+                Re-upload the file to resume from where it stopped.
+              </p>
             </div>
           </div>
         </div>
@@ -426,6 +439,16 @@ export function DocumentsTab() {
       <ReconciliationDialog
         isOpen={isReconOpen}
         onClose={() => setIsReconOpen(false)}
+        conflictFields={conflicts}
+        autoFilledFields={autoFilledFields}
+        claimId={currentClaim.id}
+      />
+
+      {/* Persistent progress overlay during PDF extraction */}
+      <ProcessingProgressOverlay
+        isVisible={isProcessing}
+        progress={progress}
+        onCancel={cancelReview}
       />
     </div>
   );

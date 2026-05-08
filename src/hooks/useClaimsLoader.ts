@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useClaimStore } from '@/stores/claim-store';
 import { getAllClaims } from '@/lib/storage/indexeddb';
 import { calculateFeeSummary } from '@/lib/calculations/fees';
+import { logger } from '@/lib/utils/logger';
 
 export function useClaimsLoader() {
   const { setClaimsList } = useClaimStore();
@@ -15,9 +16,10 @@ export function useClaimsLoader() {
         claims.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
         const list = claims.map(c => {
-          let stage: 'spot' | 'final' | 'reinspection' | 'bill-check' = 'spot';
+          let stage: 'spot' | 'final' | 'reinspection' | 'bill-check' | 'valuation' = 'spot';
           // Simple logic to detect stage
-          if (c.billCheck?.billTotal > 0) stage = 'bill-check';
+          if (c.surveyType === 'valuation') stage = 'valuation';
+          else if (c.billCheck?.billTotal > 0) stage = 'bill-check';
           else if (c.reinspection?.parts?.length > 0) stage = 'reinspection';
           else if (c.surveyType === 'final') stage = 'final';
 
@@ -41,7 +43,7 @@ export function useClaimsLoader() {
 
         setClaimsList(list);
       } catch (err) {
-        console.error('[useClaimsLoader] Failed to load claims:', err);
+        logger.error('[useClaimsLoader] Failed to load claims:', err);
       }
     }
 

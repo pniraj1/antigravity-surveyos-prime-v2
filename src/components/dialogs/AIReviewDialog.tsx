@@ -12,9 +12,10 @@ interface AIReviewDialogProps {
   title: string;
   data: any;
   evidenceImages?: string[];
+  discrepancies?: string[];
 }
 
-export function AIReviewDialog({ isOpen, onClose, onConfirm, onReScan, title, data, evidenceImages = [] }: AIReviewDialogProps) {
+export function AIReviewDialog({ isOpen, onClose, onConfirm, onReScan, title, data, evidenceImages = [], discrepancies = [] }: AIReviewDialogProps) {
   const [feedback, setFeedback] = useState('');
 
   if (!isOpen) return null;
@@ -81,39 +82,64 @@ export function AIReviewDialog({ isOpen, onClose, onConfirm, onReScan, title, da
                 </div>
               )}
               
-              {data?.spare_parts?.length > 0 && (
+              {discrepancies.length > 0 && (
+                <div className="mt-4 p-3 bg-red-50/50 rounded-lg border border-red-200">
+                   <div className="text-[10px] font-bold text-red-700 uppercase mb-2">Math Validation Warnings</div>
+                   <ul className="text-xs text-red-900 font-medium list-disc pl-4 space-y-1">
+                     {discrepancies.map((d, idx) => (
+                       <li key={idx}>{d}</li>
+                     ))}
+                   </ul>
+                   <div className="text-xs text-red-800 mt-2 font-semibold">
+                     Please carefully review the extracted items before applying, or provide feedback below to auto-correct.
+                   </div>
+                </div>
+              )}
+
+              {(data?.spare_parts?.length > 0 || data?.labour_items?.length > 0 || data?.painting_items?.length > 0) && (
                 <div className="mt-4 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
-                   <div className="text-[10px] font-bold text-blue-700 uppercase mb-2">Spare Parts Extracted</div>
-                   <div className="text-xs text-blue-900 font-medium">
-                     {data.spare_parts.length} line items detected. These will be added to your assessment table.
+                   <div className="text-[10px] font-bold text-blue-700 uppercase mb-2">Extracted Items Summary</div>
+                   <div className="text-xs text-blue-900 font-medium flex flex-wrap gap-4">
+                     {data?.spare_parts?.length > 0 && <span>• {data.spare_parts.length} Parts</span>}
+                     {data?.labour_items?.length > 0 && <span>• {data.labour_items.length} Labour</span>}
+                     {data?.painting_items?.length > 0 && <span>• {data.painting_items.length} Paint</span>}
                    </div>
                 </div>
               )}
               
               <div className="mt-4 p-3 bg-zinc-50 border border-zinc-200 rounded-lg">
                 <label className="text-[10px] font-bold text-zinc-600 uppercase mb-2 block tracking-wider">
-                  Is something incorrect?
+                  Data missing or incorrect? Tell AI to fix it
                 </label>
-                <textarea 
-                  className="w-full text-sm p-2 border border-zinc-200 rounded-md focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none"
-                  rows={2}
-                  placeholder="E.g. Column 3 is Net Amount, don't confuse it with Gross Amount..."
-                  value={feedback}
-                  onChange={(e) => setFeedback(e.target.value)}
-                />
-                <button 
-                  onClick={() => {
-                    if (onReScan && feedback.trim()) {
-                      onReScan(feedback);
-                      setFeedback('');
-                    }
-                  }}
-                  disabled={!feedback.trim()}
-                  className="mt-2 w-full flex justify-center items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-white py-2 rounded-md text-xs font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <RefreshCw size={14} />
-                  Re-scan with Feedback
-                </button>
+                <div className="relative">
+                  <textarea 
+                    className="w-full text-sm p-3 pb-10 border border-zinc-200 rounded-md focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none bg-white"
+                    rows={3}
+                    placeholder="E.g. 'Items between line 2 and 42 are missing, please pull those lines' or 'Column 3 is Net Amount...'"
+                    value={feedback}
+                    onChange={(e) => setFeedback(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey && feedback.trim() && onReScan) {
+                        e.preventDefault();
+                        onReScan(feedback);
+                        setFeedback('');
+                      }
+                    }}
+                  />
+                  <button 
+                    onClick={() => {
+                      if (onReScan && feedback.trim()) {
+                        onReScan(feedback);
+                        setFeedback('');
+                      }
+                    }}
+                    disabled={!feedback.trim()}
+                    className="absolute bottom-2 right-2 flex justify-center items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-1.5 rounded text-[10px] font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <RefreshCw size={12} />
+                    Update Extraction
+                  </button>
+                </div>
               </div>
             </div>
           </div>

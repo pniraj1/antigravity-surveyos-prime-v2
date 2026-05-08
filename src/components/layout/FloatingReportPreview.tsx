@@ -8,13 +8,14 @@ import { useUIStore } from '@/stores/ui-store';
 import { buildStandardFinalSurveyHTML } from '@/lib/reports/standard-report-builder';
 import { buildUIICFinalHTML, buildUIICBillCheckHTML } from '@/lib/reports/uiic-final-builder';
 import { buildSpotFeeBillHTML } from '@/lib/reports/spot-fee-bill-builder';
+import { buildValuationReportHTML } from '@/lib/reports/valuation-report-builder';
 import { calculateAssessmentSummary } from '@/lib/calculations';
 import { getVehicleAgeMonths } from '@/lib/calculations/depreciation';
 import { SpotPrintReport } from '@/components/print/SpotPrintReport';
 import { useReactToPrint } from 'react-to-print';
 import { FileText, Printer, X, Minus, GripHorizontal } from 'lucide-react';
 
-type ReportFormat = 'standard' | 'uiic' | 'spot' | 'bill-check' | 'fee-bill';
+type ReportFormat = 'standard' | 'uiic' | 'spot' | 'bill-check' | 'fee-bill' | 'valuation';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -66,6 +67,8 @@ export function FloatingReportPreview() {
     
     if (currentClaim.surveyType === 'spot') {
       setFormat('spot');
+    } else if (currentClaim.surveyType === 'valuation') {
+      if (format !== 'valuation' && format !== 'fee-bill') setFormat('valuation');
     } else {
       if (activeTab === 'bill-check') {
         setFormat('bill-check');
@@ -73,7 +76,7 @@ export function FloatingReportPreview() {
         // UIIC format directly represents Reinspection well
         if (format !== 'standard' && format !== 'uiic') setFormat('uiic');
       } else {
-        if (format === 'bill-check' || format === 'fee-bill') {
+        if (format === 'bill-check' || format === 'fee-bill' || format === 'valuation') {
           setFormat('standard');
         }
       }
@@ -110,6 +113,8 @@ export function FloatingReportPreview() {
           out = buildUIICBillCheckHTML(currentClaim, profile);
         } else if (format === 'fee-bill') {
           out = buildSpotFeeBillHTML(currentClaim, profile);
+        } else if (format === 'valuation') {
+          out = buildValuationReportHTML(currentClaim, profile);
         } else {
           out = buildStandardFinalSurveyHTML(currentClaim, summary, profile);
         }
@@ -255,8 +260,10 @@ export function FloatingReportPreview() {
             className="flex items-center gap-0.5 rounded-lg p-0.5 flex-shrink-0"
             style={{ background: 'rgba(255,255,255,0.08)' }}
           >
-            {(currentClaim?.surveyType === 'spot' 
-                ? (['spot', 'fee-bill'] as const) 
+            {(currentClaim?.surveyType === 'spot'
+                ? (['spot', 'fee-bill'] as const)
+                : currentClaim?.surveyType === 'valuation'
+                ? (['valuation', 'fee-bill'] as const)
                 : (['standard', 'uiic', 'bill-check', 'fee-bill'] as const)).map(f => (
               <button
                 key={f}
@@ -268,10 +275,11 @@ export function FloatingReportPreview() {
                   color: format === f ? '#0D1B2A' : '#8D99AE',
                 }}
               >
-                {f === 'standard' ? 'Std' : 
-                 f === 'uiic' ? 'UIIC' : 
-                 f === 'bill-check' ? 'Bill Chk' : 
-                 f === 'fee-bill' ? 'Fees' : 'Spot'}
+                {f === 'standard' ? 'Std' :
+                 f === 'uiic' ? 'UIIC' :
+                 f === 'bill-check' ? 'Bill Chk' :
+                 f === 'fee-bill' ? 'Fees' :
+                 f === 'valuation' ? 'Valuation' : 'Spot'}
               </button>
             ))}
           </div>

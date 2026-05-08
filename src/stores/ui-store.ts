@@ -14,10 +14,12 @@ export type AppTab =
   | 'details'
   | 'assessment'
   | 'reports'
+  | 'insured-report'
   | 'bill-check'
   | 'photos'
   | 'fees'
   | 'reinspection'
+  | 'valuation'
   | 'profile'
   | 'learning'
   | 'admin'
@@ -48,6 +50,8 @@ interface UIState {
     gemini: 'ok' | 'rate-limited' | 'error' | 'unknown';
     groq:   'ok' | 'rate-limited' | 'error' | 'unknown';
   };
+  // Live model list fetched from Gemini API — null = not fetched yet
+  availableGeminiModels: Array<{ id: string; label: string; note: string }> | null;
 
   // ─── Actions ────────────────────────────────────────
   setActiveTab: (tab: AppTab) => void;
@@ -60,6 +64,7 @@ interface UIState {
   setSaveStatus: (status: UIState['saveStatus']) => void;
   setCurrentClaimId: (id: string | null) => void;
   setAIProviderHealth: (provider: 'gemini' | 'groq', status: 'ok' | 'rate-limited' | 'error' | 'unknown') => void;
+  setAvailableGeminiModels: (models: Array<{ id: string; label: string; note: string }>) => void;
 }
 
 export const useUIStore = create<UIState>()(
@@ -77,6 +82,7 @@ export const useUIStore = create<UIState>()(
       driveEmail: '',
       saveStatus: 'idle',
       aiProviderHealth: { gemini: 'unknown', groq: 'unknown' },
+      availableGeminiModels: null,
 
       setActiveTab: (tab) => {
         set((state) => ({
@@ -110,13 +116,15 @@ export const useUIStore = create<UIState>()(
         set((state) => ({
           aiProviderHealth: { ...state.aiProviderHealth, [provider]: status },
         })),
+
+      setAvailableGeminiModels: (models) => set({ availableGeminiModels: models }),
     }),
     {
       name: 'surveyos-ui-storage',
       storage: createJSONStorage(() => localStorage),
-      // Persist navigation, workspace metadata, and Drive connection state
+      // activeTab is intentionally excluded — the URL (?tab=…) is the source of truth.
+      // Persisting it caused stale tab state on hard reload when the URL differed.
       partialize: (state) => ({
-        activeTab: state.activeTab,
         sidebarCollapsed: state.sidebarCollapsed,
         currentClaimId: state.currentClaimId,
         isDriveConnected: state.isDriveConnected,

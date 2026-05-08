@@ -3,10 +3,10 @@ import { ClaimData } from '@/types';
 export interface ReconciliationField {
   id: string;
   label: string;
-  path: string; // e.g. "vehicle.registrationNumber"
+  path: string;
   current: string;
   sources: {
-    origin: string; // e.g. "rc", "policy", "dl"
+    origin: string;
     value: string;
     label: string;
   }[];
@@ -30,18 +30,19 @@ const FIELD_MAPPINGS = [
   { label: 'Class of Vehicle',    path: 'vehicle.classOfVehicle',    aiKeys: { rc: 'class_of_vehicle' } },
   { label: 'Unladen Weight',      path: 'vehicle.unladenWeight',     aiKeys: { rc: 'unladen_weight', fitness: 'unladen_weight_kg', permit: 'unladen_weight_kg' } },
   { label: 'Gross Weight',        path: 'vehicle.grossWeight',       aiKeys: { rc: 'gross_weight', fitness: 'gross_vehicle_weight_kg', permit: 'gross_vehicle_weight_kg' } },
-  { label: 'Seating Capacity',    path: 'vehicle.seatingCapacityTotal', aiKeys: { rc: 'seating_capacity', fitness: 'seating_capacity' } },
+  { label: 'Seating Capacity',    path: 'vehicle.seatingCapacity', aiKeys: { rc: 'seating_capacity', fitness: 'seating_capacity' } },
   { label: 'Fitness Valid Upto',  path: 'vehicle.fitnessValidUpto',  aiKeys: { fitness: 'validity_to' } },
   { label: 'Fitness Type',        path: 'vehicle.fitnessType',       aiKeys: { fitness: 'fitness_type' } },
   { label: 'Fitness Cert No',     path: 'vehicle.fitnessNo',         aiKeys: { fitness: 'fitness_cert_no' } },
-  
+
   // ─── Policy Details ───────────────────────────────────────────────────────
   { label: 'Policy Number',       path: 'policy.policyNumber',       aiKeys: { policy: 'policy_number', claim: 'policy_number' } },
   { label: 'Insured Name',        path: 'policy.insuredName',        aiKeys: { policy: 'insured_name', rc: 'owner_name', claim: 'insured_name' } },
   { label: 'Insurer Name',        path: 'policy.insurerName',        aiKeys: { policy: 'insurer_name' } },
   { label: 'IDV',                 path: 'policy.idv',                aiKeys: { policy: 'idv' } },
-  { label: 'HPA/Hypothecation',   path: 'policy.hpaWith',            aiKeys: { policy: 'hpa_with', rc: 'hypothecation' } },
-  
+  { label: 'HPA',                 path: 'policy.hpaWith',            aiKeys: { policy: 'hpa_with' } },
+  { label: 'Hypothecation',       path: 'vehicle.hypothecation',     aiKeys: { rc: 'hypothecation' } },
+
   // ─── Driver Details ───────────────────────────────────────────────────────
   { label: 'Driver Name',         path: 'driver.name',               aiKeys: { dl: 'holder_name', claim: 'driver_name', fir: 'driver_name' } },
   { label: 'Father/Husband Name', path: 'driver.fatherHusbandName',  aiKeys: { dl: 'father_or_husband_name' } },
@@ -65,36 +66,41 @@ const FIELD_MAPPINGS = [
   { label: 'Workshop Name',       path: 'accident.workshopName',     aiKeys: { estimate: 'workshop_name', 'final-bill': 'workshop_name', claim: 'workshop_name' } },
 ];
 
-/**
- * Gets a nested value from an object using a dot-path.
- */
-function getNestedValue(obj: any, path: string): string {
-  return path.split('.').reduce((acc, part) => acc && acc[part], obj) || '';
+// Recommended source priority per claim category (highest trust first)
+export const SOURCE_PRIORITY: Record<string, string[]> = {
+  vehicle:  ['rc', 'fitness', 'policy', 'estimate', 'claim', 'fir'],
+  policy:   ['policy', 'claim'],
+  driver:   ['dl', 'claim', 'fir'],
+  accident: ['fir', 'claim', 'estimate', 'final-bill'],
+};
+
+function getNestedValue(obj: Record<string, unknown>, path: string): string {
+  const result = path.split('.').reduce<unknown>((acc, part) => {
+    if (acc !== null && acc !== undefined && typeof acc === 'object') {
+      return (acc as Record<string, unknown>)[part];
+    }
+    return undefined;
+  }, obj);
+  return result !== null && result !== undefined ? String(result) : '';
 }
 
-/**
- * Normalizes values for comparison (removes spaces, dashes, case-insensitive).
- */
-function normalize(val: any): string {
+// Strips spaces, dashes, and slashes for comparison (handles MH02AB1234 / MH-02-AB-1234 / 01/01/2020 etc.)
+function normalize(val: unknown): string {
   if (val === null || val === undefined) return '';
-  return String(val).replace(/[\s-]/g, '').toLowerCase();
+  return String(val).replace(/[\s\-\/]/g, '').toLowerCase();
 }
 
-/**
- * Logic to identify all available data points for a claim.
- */
-export function getReconciliationFields(claim: ClaimData): ReconciliationField[] {
+function buildFields(claim: ClaimData): ReconciliationField[] {
   const result: ReconciliationField[] = [];
-  const extractedStore = (claim.extractedData || {}) as Record<string, any>;
+  const extractedStore = (claim.extractedData ?? {}) as Record<string, Record<string, unknown>>;
 
   for (const mapping of FIELD_MAPPINGS) {
-    const currentValue = String(getNestedValue(claim, mapping.path));
+    const currentValue = getNestedValue(claim as unknown as Record<string, unknown>, mapping.path);
     const sources: ReconciliationField['sources'] = [];
 
-    // Check all potential AI sources for this field
     Object.entries(mapping.aiKeys).forEach(([docKey, aiKey]) => {
-      const docData = extractedStore[docKey] as Record<string, any>;
-      if (docData && docData[aiKey]) {
+      const docData = extractedStore[docKey];
+      if (docData?.[aiKey]) {
         sources.push({
           origin: docKey,
           label: docKey.toUpperCase(),
@@ -105,15 +111,11 @@ export function getReconciliationFields(claim: ClaimData): ReconciliationField[]
 
     if (sources.length === 0) continue;
 
-    // A conflict exists if:
-    // 1. Any source value differs from current value
-    // 2. Multiple sources exist with different values
     const allValues = [currentValue, ...sources.map(s => s.value)];
     const uniqueNormalized = new Set(allValues.filter(v => v !== '').map(normalize));
-    
-    // It's a conflict if the sources disagree (size > 1), or if the field isn't set yet.
-    const isCurrentSet = currentValue !== '';
-    const hasConflict = uniqueNormalized.size > 1 || !isCurrentSet;
+
+    // A conflict exists only when values genuinely disagree — never flag unset fields as conflicts
+    const hasConflict = uniqueNormalized.size > 1;
 
     result.push({
       id: mapping.path,
@@ -126,4 +128,29 @@ export function getReconciliationFields(claim: ClaimData): ReconciliationField[]
   }
 
   return result;
+}
+
+/** Returns fields where extracted sources genuinely disagree. */
+export function getConflictFields(claim: ClaimData): ReconciliationField[] {
+  return buildFields(claim).filter(f => f.hasConflict);
+}
+
+/** Returns fields where the claim value is unset but all sources unanimously agree. */
+export function getUnanimousFields(claim: ClaimData): ReconciliationField[] {
+  return buildFields(claim).filter(
+    f => !f.hasConflict && f.current === '' && f.sources.some(s => s.value !== '')
+  );
+}
+
+/** Returns the highest-priority source value for a field given its claim category. */
+export function getBestSourceValue(
+  field: ReconciliationField,
+  category: string
+): { origin: string; value: string } | null {
+  const priority = SOURCE_PRIORITY[category] ?? [];
+  for (const origin of priority) {
+    const source = field.sources.find(s => s.origin === origin);
+    if (source) return { origin: source.origin, value: source.value };
+  }
+  return field.sources[0] ?? null;
 }

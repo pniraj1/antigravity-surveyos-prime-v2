@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useClaimStore } from '@/stores/claim-store';
 import { getDepreciationRate, getVehicleAgeMonths } from '@/lib/calculations/depreciation';
 import { formatCurrency } from '@/lib/calculations/utils';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Trash2, PlusCircle, Wrench, ShieldAlert, Settings2, Eye, EyeOff } from 'lucide-react';
+import { Trash2, PlusCircle, Wrench, ShieldAlert, Settings2, Eye, EyeOff, FileSearch, PackageX } from 'lucide-react';
 import type { PartType } from '@/types';
+import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
 
 // ─── Column Visibility Configuration ─────────────────────────────
 // Keys for optional columns that the user can show/hide
@@ -18,6 +19,7 @@ type OptionalColumn =
   | 'quantity'
   | 'unitPrice'
   | 'gst'
+  | 'disposal'
   | 'action'
   | 'remarks';
 
@@ -28,14 +30,15 @@ interface ColumnMeta {
 }
 
 const OPTIONAL_COLUMNS: ColumnMeta[] = [
-  { key: 'partNumber', label: 'Part No.',   description: 'OEM part number' },
-  { key: 'hsnSac',     label: 'HSN/SAC',    description: 'Tax classification code' },
-  { key: 'type',        label: 'Type',       description: 'Metal / Plastic / Glass / Labour' },
-  { key: 'quantity',    label: 'Qty',        description: 'Quantity from estimate' },
-  { key: 'unitPrice',   label: 'Estimate (taxable amt)',   description: 'Taxable amount from estimate (net, before GST)' },
-  { key: 'gst',         label: 'GST %',      description: 'GST percentage' },
-  { key: 'action',      label: 'Action',     description: 'Replace / Repair / Disallow' },
-  { key: 'remarks',     label: 'Remarks',    description: 'Surveyor notes' },
+  { key: 'partNumber', label: 'Part No.',            description: 'OEM part number' },
+  { key: 'hsnSac',     label: 'HSN/SAC',             description: 'Tax classification code' },
+  { key: 'type',       label: 'Type',                description: 'Metal / Plastic / Glass / Labour' },
+  { key: 'quantity',   label: 'Qty',                 description: 'Quantity from estimate' },
+  { key: 'unitPrice',  label: 'Estimate (taxable)',  description: 'Taxable amount from estimate (net, before GST)' },
+  { key: 'gst',        label: 'GST %',               description: 'GST percentage (0 for disposal rows)' },
+  { key: 'disposal',   label: 'Disposal',            description: 'Used/salvaged part — no GST; surveyor decides % of depreciated value' },
+  { key: 'action',     label: 'Action',              description: 'Replace / Repair / Disallow' },
+  { key: 'remarks',    label: 'Remarks',             description: 'Surveyor notes' },
 ];
 
 const DEFAULT_VISIBLE: Record<OptionalColumn, boolean> = {
@@ -45,6 +48,7 @@ const DEFAULT_VISIBLE: Record<OptionalColumn, boolean> = {
   quantity: false,
   unitPrice: true,
   gst: true,
+  disposal: true,
   action: true,
   remarks: false,
 };
@@ -66,15 +70,37 @@ function saveVisibility(v: Record<OptionalColumn, boolean>) {
 
 // ─── Component ───────────────────────────────────────────────────
 export function AssessmentGrid() {
-  const { 
-    currentClaim, 
-    addAssessmentRow, 
-    updateAssessmentRow, 
+  const {
+    currentClaim,
+    addAssessmentRow,
+    updateAssessmentRow,
     deleteAssessmentRow,
-    toggleRowAllowed 
+    deleteAssessmentRows,
+    toggleRowAllowed
   } = useClaimStore();
 
   const [visible, setVisible] = useState<Record<OptionalColumn, boolean>>(DEFAULT_VISIBLE);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const toggleSelect = (id: string) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const toggleSelectAll = (rowIds: string[]) => {
+    setSelected(prev => {
+      const allSelected = rowIds.length > 0 && rowIds.every(id => prev.has(id));
+      return allSelected ? new Set() : new Set(rowIds);
+    });
+  };
+  const handleBulkDelete = () => {
+    if (selected.size === 0) return;
+    if (!confirm(`Delete ${selected.size} selected row${selected.size === 1 ? '' : 's'}? This cannot be undone.`)) return;
+    deleteAssessmentRows(Array.from(selected));
+    setSelected(new Set());
+  };
   const [showSettings, setShowSettings] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
 
@@ -113,6 +139,63 @@ export function AssessmentGrid() {
 
   const visibleCount = Object.values(visible).filter(Boolean).length;
 
+  const handleGridNavigation = (e: React.KeyboardEvent<HTMLTableSectionElement>) => {
+    if (!e.shiftKey) return;
+    
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+      const target = e.target as HTMLElement;
+      if (target.tagName !== 'INPUT' && target.tagName !== 'SELECT') return;
+
+      const td = target.closest('td');
+      const tr = td?.closest('tr');
+      const tbody = tr?.closest('tbody');
+      
+      if (!td || !tr || !tbody) return;
+      
+      e.preventDefault();
+
+      const tds = Array.from(tr.children);
+      const colIndex = tds.indexOf(td);
+      const trs = Array.from(tbody.children);
+      const rowIndex = trs.indexOf(tr);
+
+      let nextInput: HTMLElement | null = null;
+
+      if (e.key === 'ArrowRight') {
+        for (let i = colIndex + 1; i < tds.length; i++) {
+          const input = tds[i].querySelector('input:not([disabled]), select:not([disabled])') as HTMLElement;
+          if (input) {
+            nextInput = input;
+            break;
+          }
+        }
+      } else if (e.key === 'ArrowLeft') {
+        for (let i = colIndex - 1; i >= 0; i--) {
+          const input = tds[i].querySelector('input:not([disabled]), select:not([disabled])') as HTMLElement;
+          if (input) {
+            nextInput = input;
+            break;
+          }
+        }
+      } else if (e.key === 'ArrowDown') {
+        if (rowIndex < trs.length - 1) {
+          nextInput = trs[rowIndex + 1].children[colIndex]?.querySelector('input:not([disabled]), select:not([disabled])') as HTMLElement;
+        }
+      } else if (e.key === 'ArrowUp') {
+        if (rowIndex > 0) {
+          nextInput = trs[rowIndex - 1].children[colIndex]?.querySelector('input:not([disabled]), select:not([disabled])') as HTMLElement;
+        }
+      }
+
+      if (nextInput) {
+        nextInput.focus();
+        if (nextInput instanceof HTMLInputElement && nextInput.type !== 'checkbox') {
+          nextInput.select();
+        }
+      }
+    }
+  };
+
   if (!currentClaim) return null;
 
   const { assessmentRows, vehicle, accident, depreciationType } = currentClaim;
@@ -123,8 +206,26 @@ export function AssessmentGrid() {
     accident.dateAndTime
   );
 
-  // Dynamic column count: 5 always-on (Sr, ✓, Particulars, Assessed, Dep%, Net, Delete) + visible optionals
-  const totalCols = 7 + visibleCount;
+  // Find duplicate particulars
+  const duplicateParticulars = new Set<string>();
+  const seenParticulars = new Set<string>();
+  
+  assessmentRows.forEach(row => {
+    if (row.particulars?.trim()) {
+      const normalized = row.particulars.replace(/\s+/g, ' ').trim().toLowerCase();
+      if (seenParticulars.has(normalized)) {
+        duplicateParticulars.add(normalized);
+      } else {
+        seenParticulars.add(normalized);
+      }
+    }
+  });
+
+  // Dynamic column count: 8 always-on (Select, Sr, Allowed, Particulars, Assessed, Dep%, Net, Delete) + visible optionals
+  const totalCols = 8 + visibleCount;
+  const allRowIds = assessmentRows.map(r => r.id);
+  const allSelected = allRowIds.length > 0 && allRowIds.every(id => selected.has(id));
+  const someSelected = selected.size > 0 && !allSelected;
 
   return (
     <Card className="flex flex-col h-full border-border">
@@ -146,6 +247,16 @@ export function AssessmentGrid() {
           >
             <PlusCircle size={14} /> Labour Row
           </button>
+
+          {selected.size > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition-colors"
+              title={`Delete ${selected.size} selected row${selected.size === 1 ? '' : 's'}`}
+            >
+              <Trash2 size={14} /> Delete Selected ({selected.size})
+            </button>
+          )}
 
           {/* ─── Settings Gear ─────────────────────────── */}
           <div className="relative" ref={settingsRef}>
@@ -220,9 +331,18 @@ export function AssessmentGrid() {
           <thead className="bg-muted/50 text-muted-foreground text-xs uppercase sticky top-0 z-0 shadow-sm">
             <tr>
               {/* ─── Always-on columns ──────────────────── */}
+              <th className="px-2 py-2 font-medium w-8 text-center" title="Select all">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  ref={el => { if (el) el.indeterminate = someSelected; }}
+                  onChange={() => toggleSelectAll(allRowIds)}
+                  className="rounded border-border h-3.5 w-3.5 cursor-pointer accent-red-600"
+                />
+              </th>
               <th className="px-2 py-2 font-medium w-10 text-center">Sr</th>
               <th className="px-2 py-2 font-medium w-8 text-center" title="Allowed?"><ShieldAlert size={12} className="mx-auto opacity-50" /></th>
-              <th className="px-2 py-2 font-medium min-w-[200px]">Particulars</th>
+              <th className="px-2 py-2 font-medium min-w-[350px] w-[40%]">Particulars</th>
 
               {/* ─── Optional columns ──────────────────── */}
               {visible.partNumber && <th className="px-2 py-2 font-medium w-24">Part No.</th>}
@@ -231,7 +351,14 @@ export function AssessmentGrid() {
               {visible.quantity && <th className="px-2 py-2 font-medium w-12 text-center">Qty</th>}
               {visible.unitPrice && <th className="px-2 py-2 font-medium w-20">Estimate(taxable amount)</th>}
               {visible.gst && <th className="px-2 py-2 font-medium w-14 text-center">GST%</th>}
-
+              {visible.disposal && (
+                <th className="px-2 py-2 font-medium w-28 text-center text-amber-600" title="Disposal: used/salvaged part — no GST">
+                  <span className="flex items-center justify-center gap-1">
+                    <PackageX size={11} />
+                    Disposal
+                  </span>
+                </th>
+              )}
 
               {/* ─── Always-on assessment columns ──────── */}
               <th className="px-2 py-2 font-medium w-24 text-primary">Assessed</th>
@@ -246,7 +373,7 @@ export function AssessmentGrid() {
               <th className="px-1 py-2 font-medium w-8"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody className="divide-y divide-border" onKeyDown={handleGridNavigation}>
             {assessmentRows.length === 0 ? (
               <tr>
                 <td colSpan={totalCols} className="px-6 py-12 text-center text-muted-foreground">
@@ -261,10 +388,37 @@ export function AssessmentGrid() {
               assessmentRows.map((row, idx) => {
                 const depRate = getDepreciationRate(row.partType, ageMonths, depreciationType);
                 const depFactor = depRate / 100;
-                const netAssessed = row.assessed * (1 - depFactor);
+                const valueAfterDep = row.assessed * (1 - depFactor);
+                // Disposal: no GST; surveyor allows disposalPercent% of the depreciated value
+                const netAssessed = row.isDisposal
+                  ? valueAfterDep * ((row.disposalPercent ?? 50) / 100)
+                  : valueAfterDep;
+
+                const handleEvidenceClick = () => {
+                  if (!currentClaim?.id) return;
+                  useEvidenceStore.getState().openField(currentClaim.id, {
+                    docType: 'estimate',
+                    fieldKey: 'particulars',
+                    contextSnippet: row.particulars
+                      ? `${row.particulars}${row.estimated ? ` — Taxable: ₹${row.estimated}` : ''}${row.partNumber ? ` (Part No: ${row.partNumber})` : ''}`
+                      : 'Click any field in the estimate document.',
+                  });
+                };
+
+                const normalizedParticulars = row.particulars?.replace(/\s+/g, ' ').trim().toLowerCase();
+                const isDuplicate = normalizedParticulars ? duplicateParticulars.has(normalizedParticulars) : false;
 
                 return (
-                  <tr key={row.id} className={`hover:bg-accent/30 transition-colors ${!row.allowed ? 'opacity-40 bg-muted/20' : ''}`}>
+                  <tr key={row.id} className={`hover:bg-accent/30 transition-colors ${selected.has(row.id) ? 'bg-red-500/5' : ''} ${!row.allowed ? 'opacity-40 bg-muted/20' : ''} ${isDuplicate ? 'bg-orange-500/10' : ''} ${row.isDisposal && row.allowed ? 'bg-amber-500/5' : ''}`}>
+                    {/* Select checkbox — always on */}
+                    <td className={`px-2 py-1.5 text-center ${isDuplicate ? 'border-l-4 border-orange-500' : ''}`}>
+                      <input
+                        type="checkbox"
+                        checked={selected.has(row.id)}
+                        onChange={() => toggleSelect(row.id)}
+                        className="rounded border-border h-3.5 w-3.5 cursor-pointer accent-red-600"
+                      />
+                    </td>
                     {/* Sr No — always on */}
                     <td className="px-2 py-1.5 text-xs font-medium text-muted-foreground text-center">
                       {row.srNo || idx + 1}
@@ -278,14 +432,25 @@ export function AssessmentGrid() {
                         className="rounded border-border focus:ring-primary h-3.5 w-3.5 cursor-pointer accent-primary" 
                       />
                     </td>
-                    {/* Particulars — always on */}
+                    {/* Particulars — always on — click opens Evidence Viewer */}
                     <td className="px-2 py-1.5">
-                      <Input
-                        value={row.particulars}
-                        onChange={(e) => updateAssessmentRow(row.id, { particulars: e.target.value })}
-                        className="h-7 text-xs font-semibold bg-transparent border-transparent hover:border-input focus:bg-background"
-                        placeholder="Item Description"
-                      />
+                      <div className="relative group flex items-center gap-1">
+                        <Input
+                          value={row.particulars}
+                          onChange={(e) => updateAssessmentRow(row.id, { particulars: e.target.value })}
+                          className="h-7 text-xs font-semibold bg-transparent border-transparent hover:border-input focus:bg-background"
+                          placeholder="Item Description"
+                          title={row.particulars}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleEvidenceClick}
+                          title="View in Evidence Viewer"
+                          className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary"
+                        >
+                          <FileSearch size={12} />
+                        </button>
+                      </div>
                     </td>
 
                     {/* ─── Optional columns ────────────────── */}
@@ -373,14 +538,45 @@ export function AssessmentGrid() {
                       <td className="px-1 py-1.5">
                         <Input
                           type="number"
-                          value={row.gst}
+                          value={row.isDisposal ? 0 : row.gst}
                           onChange={(e) => updateAssessmentRow(row.id, { gst: parseInt(e.target.value) || 0 })}
-                          className="h-7 text-[11px] text-center border-transparent hover:border-input focus:bg-background px-0"
+                          disabled={!!row.isDisposal}
+                          className="h-7 text-[11px] text-center border-transparent hover:border-input focus:bg-background px-0 disabled:opacity-40 disabled:cursor-not-allowed"
                           placeholder="18"
+                          title={row.isDisposal ? 'No GST on disposal parts' : undefined}
                         />
                       </td>
                     )}
 
+                    {/* ─── Disposal column ─────────────────── */}
+                    {visible.disposal && (
+                      <td className="px-2 py-1.5">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <input
+                            type="checkbox"
+                            checked={!!row.isDisposal}
+                            onChange={(e) => updateAssessmentRow(row.id, { isDisposal: e.target.checked })}
+                            className="h-3.5 w-3.5 cursor-pointer rounded accent-amber-500 shrink-0"
+                            title="Disposal / Used Part (No GST)"
+                          />
+                          {row.isDisposal && (
+                            <div className="flex items-center gap-0.5">
+                              <Input
+                                type="number"
+                                value={row.disposalPercent ?? 50}
+                                onChange={(e) => updateAssessmentRow(row.id, { disposalPercent: parseFloat(e.target.value) || 0 })}
+                                className="h-6 w-12 text-[11px] text-center px-0 font-bold"
+                                style={{ borderColor: '#f59e0b', background: 'rgba(251,191,36,0.08)', color: '#92400e' }}
+                                min="0"
+                                max="100"
+                                title="Disposal % of depreciated value"
+                              />
+                              <span className="text-[10px] font-bold text-amber-600">%</span>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    )}
 
                     {/* ─── Always-on assessment columns ────── */}
                     <td className="px-1 py-1.5">
@@ -397,7 +593,20 @@ export function AssessmentGrid() {
                       {row.allowed && row.section === 'parts' ? `${depRate}%` : '-'}
                     </td>
                     <td className="px-2 py-1.5 text-right text-xs font-black tabular-nums">
-                      {row.allowed ? formatCurrency(netAssessed) : '₹0.00'}
+                      {row.allowed ? (
+                        <span className={row.isDisposal ? 'text-amber-700' : ''}>
+                          {formatCurrency(netAssessed)}
+                          {row.isDisposal && (
+                            <span
+                              className="ml-1 inline-block text-[8px] font-bold uppercase tracking-wide px-1 py-0.5 rounded"
+                              style={{ background: 'rgba(251,191,36,0.2)', color: '#92400e' }}
+                              title={`Disposal: ${row.disposalPercent ?? 50}% of depreciated value, no GST`}
+                            >
+                              DISP
+                            </span>
+                          )}
+                        </span>
+                      ) : '₹0.00'}
                     </td>
 
                     {/* ─── Optional trailing columns ─────────── */}

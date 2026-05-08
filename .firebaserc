@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "surveyos-v2-antigravity"
-  }
+  },
+  "targets": {
+    "surveyos-v2-antigravity": {
+      "hosting": {
+        "motorsurveyos": [
+          "motorsurveyos"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

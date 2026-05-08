@@ -5,13 +5,20 @@ import {
   collectionGroup,
   collection,
   getDocs,
+  getDoc,
   query,
+  where,
+  orderBy,
+  limit,
+  startAfter,
   doc,
   updateDoc,
   setDoc,
   deleteDoc,
-  Timestamp
+  Timestamp,
+  type DocumentSnapshot,
 } from 'firebase/firestore';
+import type { InsuredReportSettings, InsuredReportLanguage, InsuredReportStage } from '@/types/insured-report';
 import { db } from '@/lib/firebase/config';
 import {
   sendEmail,
@@ -21,6 +28,7 @@ import {
 } from '@/lib/email/sendEmail';
 import { useAuthStore } from '@/stores/auth-store';
 import { useProfileStore } from '@/stores/profile-store';
+import { logger } from '@/lib/utils/logger';
 import {
   Users,
   Search,
@@ -36,7 +44,12 @@ import {
   IdCard,
   UserPlus,
   Bell,
-  Mail
+  Mail,
+  Code2,
+  AlertTriangle,
+  Cpu,
+  RefreshCcw,
+  BookOpen,
 } from 'lucide-react';
 
 interface SurveyorAdminProfile {
@@ -50,6 +63,7 @@ interface SurveyorAdminProfile {
   surveyorId: string;
   lastSync?: unknown;
   isAdmin?: boolean;
+  insuredReportSettings?: InsuredReportSettings;
 }
 
 interface NewSignup {
@@ -59,6 +73,8 @@ interface NewSignup {
   name: string;
   irdaiLicence: string;
   mobile: string;
+  city?: string;
+  state?: string;
   signedUpAt: Timestamp;
   updatedAt?: Timestamp;
   status: string;
@@ -76,12 +92,19 @@ export function AdminDashboard() {
     user && (profile?.isAdmin === true || (MASTER_ADMIN_UID && user.uid === MASTER_ADMIN_UID))
   );
 
-  const [activeTab, setActiveTab] = useState<'surveyors' | 'signups'>('surveyors');
+  const [activeTab, setActiveTab] = useState<'surveyors' | 'signups' | 'dev-notes'>('surveyors');
   const [surveyors, setSurveyors] = useState<SurveyorAdminProfile[]>([]);
   const [signups, setSignups] = useState<NewSignup[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [signupsLoading, setSignupsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [lastVisibleProfile, setLastVisibleProfile] = useState<any>(null);
+  const [hasMoreProfiles, setHasMoreProfiles] = useState(true);
+  const [lastVisibleSignup, setLastVisibleSignup] = useState<any>(null);
+  const [hasMoreSignups, setHasMoreSignups] = useState(true);
+  
+  const PAGE_SIZE = 50;
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   // ── Dismiss modal state ─────────────────────────────────
@@ -100,10 +123,48 @@ export function AdminDashboard() {
   });
 
   // ─── Fetch All Profiles ─────────────────────────────────
-  const fetchAllProfiles = async () => {
-    setLoading(true);
+  const fetchAllProfiles = async (loadMore = false) => {
+    if (loadMore) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+      setLastVisibleProfile(null);
+    }
+    
     try {
-      const querySnapshot = await getDocs(query(collectionGroup(db, 'profile')));
+      // Build server-side query
+      let profileQuery = query(collectionGroup(db, 'profile'));
+      
+      if (searchQuery) {
+        const trimmedQuery = searchQuery.trim();
+        if (trimmedQuery.includes('@')) {
+          profileQuery = query(profileQuery, where('email', '==', trimmedQuery));
+        } else if (trimmedQuery === trimmedQuery.toUpperCase() && trimmedQuery.length > 3) {
+          profileQuery = query(profileQuery, where('surveyorId', '==', trimmedQuery));
+        } else {
+          // Note: This prefix search requires an index on 'name' for collectionGroup 'profile'
+          profileQuery = query(profileQuery, where('name', '>=', trimmedQuery), where('name', '<=', trimmedQuery + '\uf8ff'));
+        }
+      }
+      
+      profileQuery = query(profileQuery, limit(PAGE_SIZE));
+      
+      if (loadMore && lastVisibleProfile) {
+        profileQuery = query(profileQuery, startAfter(lastVisibleProfile));
+      }
+
+      const querySnapshot = await getDocs(profileQuery);
+      
+      if (querySnapshot.docs.length < PAGE_SIZE) {
+        setHasMoreProfiles(false);
+      } else {
+        setHasMoreProfiles(true);
+      }
+      
+      if (querySnapshot.docs.length > 0) {
+        setLastVisibleProfile(querySnapshot.docs[querySnapshot.docs.length - 1]);
+      }
+
       const seen = new Map<string, SurveyorAdminProfile>();
       querySnapshot.forEach((docSnap) => {
         const data = docSnap.data();
@@ -111,7 +172,6 @@ export function AdminDashboard() {
         // Only process documents directly under users/{uid}/profile
         if (pathSegments.length !== 4 || pathSegments[0] !== 'users' || pathSegments[2] !== 'profile') return;
         const uid = pathSegments[1];
-        // Prefer the 'current' document; skip others if 'current' already loaded
         if (seen.has(uid) && docSnap.id !== 'current') return;
         seen.set(uid, {
           id: uid,
@@ -124,21 +184,58 @@ export function AdminDashboard() {
           surveyorId: data.surveyorId || '',
           lastSync: data.lastSync,
           isAdmin: data.isAdmin || false,
+          insuredReportSettings: data.insuredReportSettings ?? undefined,
         });
       });
-      setSurveyors(Array.from(seen.values()));
-    } catch (error) {
-      console.error('Error fetching profiles:', error);
+      
+      if (loadMore) {
+        setSurveyors(prev => {
+          const newArray = [...prev];
+          const prevIds = new Set(prev.map(s => s.id));
+          Array.from(seen.values()).forEach(s => {
+            if (!prevIds.has(s.id)) newArray.push(s);
+          });
+          return newArray;
+        });
+      } else {
+        setSurveyors(Array.from(seen.values()));
+      }
+    } catch (error: any) {
+      logger.error('Error fetching profiles:', error);
+      if (error.message && error.message.includes('requires an index')) {
+        alert('Server-side search requires a Firestore index. Check console for link to create it.');
+      }
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
   // ─── Fetch New Signups ──────────────────────────────────
-  const fetchSignups = async () => {
+  const fetchSignups = async (loadMore = false) => {
     setSignupsLoading(true);
     try {
-      const snap = await getDocs(collection(db, 'newSignups'));
+      // Create a query against the collection. 
+      // Firestore automatically creates an index for single fields, so ordering by signedUpAt desc is safe.
+      let signupsQuery = query(collection(db, 'newSignups'), limit(PAGE_SIZE));
+      // NOTE: If orderBy('signedUpAt', 'desc') causes index issues, we can remove it, but it should be fine.
+      
+      if (loadMore && lastVisibleSignup) {
+        signupsQuery = query(signupsQuery, startAfter(lastVisibleSignup));
+      }
+      
+      const snap = await getDocs(signupsQuery);
+      
+      if (snap.docs.length < PAGE_SIZE) {
+        setHasMoreSignups(false);
+      } else {
+        setHasMoreSignups(true);
+      }
+      
+      if (snap.docs.length > 0) {
+        setLastVisibleSignup(snap.docs[snap.docs.length - 1]);
+      }
+      
       const results: NewSignup[] = [];
       snap.forEach((docSnap) => {
         const data = docSnap.data();
@@ -149,20 +246,37 @@ export function AdminDashboard() {
           name: data.name || data.displayName || '',
           irdaiLicence: data.irdaiLicence || '',
           mobile: data.mobile || '',
+          city: data.city || '',
+          state: data.state || '',
           signedUpAt: data.signedUpAt,
           updatedAt: data.updatedAt,
           status: data.status || 'pending',
         });
       });
-      // Most recent first
-      results.sort((a, b) => b.signedUpAt?.seconds - a.signedUpAt?.seconds);
-      setSignups(results);
+      
+      // Most recent first (also sorting client side just in case)
+      results.sort((a, b) => (b.signedUpAt?.seconds || 0) - (a.signedUpAt?.seconds || 0));
+      
+      if (loadMore) {
+        setSignups(prev => [...prev, ...results]);
+      } else {
+        setSignups(results);
+      }
     } catch (error) {
-      console.error('Error fetching signups:', error);
+      logger.error('Error fetching signups:', error);
     } finally {
       setSignupsLoading(false);
     }
   };
+
+  // Trigger fetch when search query changes (with debounce in a real app, but here we'll just hook it)
+  useEffect(() => {
+    if (!isAuthorized) return;
+    const timer = setTimeout(() => {
+      fetchAllProfiles(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery, isAuthorized]);
 
   useEffect(() => {
     if (!isAuthorized) return;
@@ -195,7 +309,7 @@ export function AdminDashboard() {
       setSignups(prev => prev.filter(s => s.uid !== signup.uid));
       await fetchAllProfiles();
     } catch (error) {
-      console.error('Failed to approve:', error);
+      logger.error('Failed to approve:', error);
       alert('Approval failed. Check console.');
     } finally {
       setApprovingId(null);
@@ -237,7 +351,7 @@ export function AdminDashboard() {
       setDismissReason('');
       setSendEmailOnDismiss(true);
     } catch (error) {
-      console.error('Failed to dismiss:', error);
+      logger.error('Failed to dismiss:', error);
     } finally {
       setApprovingId(null);
     }
@@ -256,7 +370,7 @@ export function AdminDashboard() {
       setCustomBody('');
       alert('Your email client was opened. Please hit "Send" from surveyosprime@gmail.com.');
     } catch (error) {
-      console.error('Failed to send email:', error);
+      logger.error('Failed to send email:', error);
       alert('Failed to queue email. Check console.');
     } finally {
       setSendingEmail(false);
@@ -276,7 +390,7 @@ export function AdminDashboard() {
       // Update local state
       setSurveyors(prev => prev.map(s => s.id === uid ? { ...s, subscriptionStatus: status } : s));
     } catch (error) {
-      console.error('Failed to update status:', error);
+      logger.error('Failed to update status:', error);
       alert('Failed to update status. Check console.');
     } finally {
       setUpdatingId(null);
@@ -295,7 +409,7 @@ export function AdminDashboard() {
       // Update local state
       setSurveyors(prev => prev.map(s => s.id === uid ? { ...s, subscriptionExpiry: date } : s));
     } catch (error) {
-      console.error('Failed to update expiry:', error);
+      logger.error('Failed to update expiry:', error);
       alert('Failed to update expiry. Check console.');
     } finally {
       setUpdatingId(null);
@@ -313,18 +427,39 @@ export function AdminDashboard() {
       
       setSurveyors(prev => prev.map(s => s.id === uid ? { ...s, surveyorId: idStr } : s));
     } catch (error) {
-      console.error('Failed to update ID:', error);
+      logger.error('Failed to update ID:', error);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  // ─── Toggle Insured Report ─────────────────────────────
+  const handleToggleInsuredReport = async (surveyor: SurveyorAdminProfile) => {
+    setUpdatingId(surveyor.id);
+    try {
+      const current: InsuredReportSettings = surveyor.insuredReportSettings ?? {
+        enabled: false,
+        allowedLanguages: ['english'] as InsuredReportLanguage[],
+        defaultLanguage: 'english' as InsuredReportLanguage,
+        enabledStages: ['preliminary', 'final'] as InsuredReportStage[],
+      };
+      const updated: InsuredReportSettings = { ...current, enabled: !current.enabled };
+      const profileRef = doc(db, 'users', surveyor.id, 'profile', 'current');
+      await updateDoc(profileRef, { insuredReportSettings: updated });
+      setSurveyors(prev =>
+        prev.map(s => s.id === surveyor.id ? { ...s, insuredReportSettings: updated } : s)
+      );
+    } catch (err) {
+      logger.error('Failed to toggle insured report:', err);
+      alert('Failed to update. Check console.');
     } finally {
       setUpdatingId(null);
     }
   };
 
   // ─── Filtering ──────────────────────────────────────────
-  const filteredSurveyors = surveyors.filter(s => 
-    s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.email?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Search is now handled server-side in fetchAllProfiles.
+  const filteredSurveyors = surveyors;
 
   // Hard block: render unauthorized screen before any admin UI
   if (!isAuthorized) {
@@ -376,10 +511,10 @@ export function AdminDashboard() {
                   <Mail size={16} className="text-primary" /> Copy All Emails
                 </button>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8D99AE]" size={16} />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8D99AE]" size={16} />
                   <input
                     type="text"
-                    placeholder="Search by name or UID..."
+                    placeholder="Search by name, email, ID..."
                     className="pl-10 pr-4 py-2.5 rounded-xl border border-[#E2E6EA] text-sm w-64 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
@@ -428,6 +563,17 @@ export function AdminDashboard() {
                 {signups.length}
               </span>
             )}
+          </button>
+          <button
+            onClick={() => setActiveTab('dev-notes')}
+            className={`flex items-center gap-2 px-5 py-2.5 text-xs font-black uppercase tracking-wider rounded-t-lg transition-all ${
+              activeTab === 'dev-notes'
+                ? 'bg-white border border-b-white border-[#E2E6EA] text-primary -mb-px'
+                : 'text-[#8D99AE] hover:text-[#0D1B2A]'
+            }`}
+          >
+            <Code2 size={14} />
+            Dev Notes
           </button>
         </div>
       </div>
@@ -508,6 +654,11 @@ export function AdminDashboard() {
                           {/* Phone */}
                           <td className="px-6 py-5">
                             <div className="text-sm font-medium text-[#0D1B2A]">{signup.mobile || '—'}</div>
+                            {(signup.city || signup.state) && (
+                              <span className="text-xs text-gray-500">
+                                {[signup.city, signup.state].filter(Boolean).join(', ')}
+                              </span>
+                            )}
                           </td>
                           {/* Submitted date */}
                           <td className="px-6 py-5">
@@ -556,6 +707,19 @@ export function AdminDashboard() {
                       ))}
                     </tbody>
                   </table>
+                  
+                  {hasMoreSignups && (
+                    <div className="p-4 bg-[#FAFBFC] border-t border-[#E2E6EA] flex justify-center">
+                      <button
+                        onClick={() => fetchSignups(true)}
+                        disabled={signupsLoading}
+                        className="px-6 py-2 rounded-xl border border-[#E2E6EA] text-[#0D1B2A] bg-white hover:bg-[#F8F9FA] transition-all font-bold text-xs flex items-center gap-2 shadow-sm"
+                      >
+                        {signupsLoading ? <Loader2 size={14} className="animate-spin" /> : null}
+                        Load More Signups
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </>
@@ -667,6 +831,21 @@ export function AdminDashboard() {
                                   Suspend
                                 </button>
                               )}
+                              {/* Insured Report Feature Toggle */}
+                              <button
+                                onClick={() => handleToggleInsuredReport(surveyor)}
+                                disabled={updatingId === surveyor.id}
+                                className="text-[10px] font-bold px-3 py-1.5 rounded-lg"
+                                style={{
+                                  background: surveyor.insuredReportSettings?.enabled ? '#ECFDF5' : '#F0F2F5',
+                                  color: surveyor.insuredReportSettings?.enabled ? '#065F46' : '#8D99AE',
+                                  border: '1px solid',
+                                  borderColor: surveyor.insuredReportSettings?.enabled ? '#6EE7B7' : '#E2E6EA',
+                                }}
+                                title={`Insured Report: ${surveyor.insuredReportSettings?.enabled ? 'Enabled' : 'Disabled'}`}
+                              >
+                                {surveyor.insuredReportSettings?.enabled ? '✓ IR On' : 'IR Off'}
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -683,10 +862,196 @@ export function AdminDashboard() {
                       <p className="text-sm text-[#8D99AE] mt-1">Try adjusting your search criteria.</p>
                     </div>
                   )}
+                  
+                  {hasMoreProfiles && filteredSurveyors.length > 0 && (
+                    <div className="p-4 bg-[#FAFBFC] border-t border-[#E2E6EA] flex justify-center">
+                      <button
+                        onClick={() => fetchAllProfiles(true)}
+                        disabled={loadingMore}
+                        className="px-6 py-2 rounded-xl border border-[#E2E6EA] text-[#0D1B2A] bg-white hover:bg-[#F8F9FA] transition-all font-bold text-xs flex items-center gap-2 shadow-sm"
+                      >
+                        {loadingMore ? <Loader2 size={14} className="animate-spin" /> : null}
+                        Load More Profiles
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </>
           )}
+          {/* ── Dev Notes Tab ───────────────────────────────── */}
+          {activeTab === 'dev-notes' && (
+            <div className="space-y-6 max-w-3xl">
+
+              {/* AI Model Management */}
+              <div className="bg-white rounded-2xl border border-[#E2E6EA] shadow-sm overflow-hidden">
+                <div className="px-6 py-4 flex items-center gap-3 border-b border-[#F0F2F5] bg-[#FAFAFA]">
+                  <Cpu size={16} className="text-[#D4AF37]" />
+                  <h2 className="text-sm font-black text-[#0D1B2A]">AI Model Management</h2>
+                  <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">src/lib/ai/service.ts</span>
+                </div>
+                <div className="p-6 space-y-5 text-sm text-[#4A4E69] leading-relaxed">
+
+                  <div className="p-4 rounded-xl border border-amber-200 bg-amber-50">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle size={14} className="text-amber-600 mt-0.5 flex-shrink-0" />
+                      <p className="text-xs font-bold text-amber-800">
+                        The model dropdown in the Documents tab auto-fetches live models from the Gemini API using the surveyor&apos;s key. The developer only needs to act when a model is <em>retired</em> — not when new ones are added.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-xs font-black uppercase tracking-wider text-[#0D1B2A] mb-3">How the model system works</h3>
+                    <ol className="space-y-2 text-xs font-medium list-none">
+                      {[
+                        'When a surveyor opens the Documents tab, the app calls GET /v1beta/models using their first Gemini API key.',
+                        'The API returns all models currently active on their account — new models appear automatically, retired ones disappear.',
+                        'The dropdown shows this live list. If the fetch fails (offline / bad key), it falls back to the static PROVIDER_MODELS list in service.ts.',
+                        'On extraction, the chosen model is sent to the Gemini API. If it returns 404 (retired), GEMINI_FALLBACK_CHAIN steps through alternatives automatically.',
+                      ].map((step, i) => (
+                        <li key={i} className="flex items-start gap-3">
+                          <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#D4AF37] text-[#0D1B2A] text-[10px] font-black flex items-center justify-center mt-0.5">{i + 1}</span>
+                          <span className="text-[#4A4E69]">{step}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+
+                  <div>
+                    <h3 className="text-xs font-black uppercase tracking-wider text-[#0D1B2A] mb-3">When a Gemini model is retired — update these 4 things</h3>
+                    <div className="space-y-3">
+                      {[
+                        {
+                          label: 'CURRENT_MODELS.gemini',
+                          line: '~line 22',
+                          action: 'Change the default model ID to the new best free-tier model.',
+                          example: "gemini: 'gemini-2.5-flash'  →  'gemini-3-flash'",
+                        },
+                        {
+                          label: 'DEPRECATED_GEMINI_MODELS',
+                          line: '~line 50',
+                          action: 'Add the retired model ID → new model ID mapping so any surveyor who has the old model saved in their profile gets auto-migrated on next load.',
+                          example: "'gemini-2.5-flash': 'gemini-3-flash'",
+                        },
+                        {
+                          label: 'GEMINI_FALLBACK_CHAIN',
+                          line: '~line 37',
+                          action: 'Replace the retired model with the new one in the fallback array. Order: best → lighter → preview.',
+                          example: "['gemini-3-flash', 'gemini-2.5-flash', 'gemini-2.5-flash-lite']",
+                        },
+                        {
+                          label: 'PROVIDER_MODELS.gemini',
+                          line: '~line 75',
+                          action: 'Update the static fallback list (used when live fetch fails). Remove retired model, add new one with correct RPM/RPD note.',
+                          example: "{ id: 'gemini-3-flash', label: '3 Flash', note: '15 RPM · 1000/day' }",
+                        },
+                      ].map(item => (
+                        <div key={item.label} className="rounded-xl border border-[#E2E6EA] overflow-hidden">
+                          <div className="flex items-center justify-between px-4 py-2.5 bg-[#F8F9FA] border-b border-[#E2E6EA]">
+                            <code className="text-xs font-black text-[#0D1B2A]">{item.label}</code>
+                            <span className="text-[10px] font-bold text-[#8D99AE]">{item.line}</span>
+                          </div>
+                          <div className="px-4 py-3 space-y-1.5">
+                            <p className="text-xs text-[#4A4E69]">{item.action}</p>
+                            <code className="block text-[11px] bg-[#F0F2F5] rounded-lg px-3 py-2 text-[#0D1B2A] font-mono">{item.example}</code>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-xs font-black uppercase tracking-wider text-[#0D1B2A] mb-3">Currently active Gemini free-tier models (April 2026)</h3>
+                    <div className="rounded-xl border border-[#E2E6EA] overflow-hidden">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="bg-[#FAFAFA] border-b border-[#E2E6EA]">
+                            <th className="px-4 py-2.5 text-left font-black text-[#8D99AE] uppercase tracking-wider text-[10px]">Model ID</th>
+                            <th className="px-4 py-2.5 text-left font-black text-[#8D99AE] uppercase tracking-wider text-[10px]">RPM</th>
+                            <th className="px-4 py-2.5 text-left font-black text-[#8D99AE] uppercase tracking-wider text-[10px]">RPD</th>
+                            <th className="px-4 py-2.5 text-left font-black text-[#8D99AE] uppercase tracking-wider text-[10px]">TPM</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#F0F2F5]">
+                          {[
+                            { id: 'gemini-2.5-flash-lite', rpm: '15', rpd: '1,000', tpm: '250,000' },
+                            { id: 'gemini-2.5-flash', rpm: '10', rpd: '500', tpm: '250,000' },
+                            { id: 'gemini-3-flash-preview', rpm: 'Shared', rpd: '~160', tpm: '250,000' },
+                          ].map(m => (
+                            <tr key={m.id} className="hover:bg-[#FAFAFA]">
+                              <td className="px-4 py-2.5 font-mono font-bold text-[#0D1B2A]">{m.id}</td>
+                              <td className="px-4 py-2.5 text-[#4A4E69]">{m.rpm}</td>
+                              <td className="px-4 py-2.5 text-[#4A4E69]">{m.rpd}</td>
+                              <td className="px-4 py-2.5 text-[#4A4E69]">{m.tpm}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Fallback Chain */}
+              <div className="bg-white rounded-2xl border border-[#E2E6EA] shadow-sm overflow-hidden">
+                <div className="px-6 py-4 flex items-center gap-3 border-b border-[#F0F2F5] bg-[#FAFAFA]">
+                  <RefreshCcw size={16} className="text-[#D4AF37]" />
+                  <h2 className="text-sm font-black text-[#0D1B2A]">Provider Fallback Chain</h2>
+                </div>
+                <div className="p-6 space-y-4 text-xs text-[#4A4E69]">
+                  <p>Every extraction attempt walks this chain automatically — the surveyor never sees provider switching unless all fail:</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {[
+                      { label: 'Gemini', sub: '503 → retry 2× (1.5s)', color: '#4285F4' },
+                      { label: '→ Groq', sub: 'if all Gemini keys fail', color: '#F26639' },
+                      { label: '→ NVIDIA NIM', sub: 'last resort (free, 40 RPM)', color: '#76B900' },
+                      { label: '→ Firestore master key', sub: 'admin-configured fallback', color: '#D4AF37' },
+                    ].map(p => (
+                      <div key={p.label} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#E2E6EA] bg-[#F8F9FA]">
+                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: p.color }} />
+                        <div>
+                          <div className="font-black text-[#0D1B2A] text-[11px]">{p.label}</div>
+                          <div className="text-[10px] text-[#8D99AE]">{p.sub}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[11px] font-bold text-[#8D99AE] mt-2">
+                    Groq default model: <code className="bg-[#F0F2F5] px-1.5 py-0.5 rounded font-mono text-[#0D1B2A]">llama-4-maverick-17b-128e-instruct</code> (upgraded from Scout — better structured extraction for Indian estimates).
+                  </p>
+                </div>
+              </div>
+
+              {/* Quick reference */}
+              <div className="bg-white rounded-2xl border border-[#E2E6EA] shadow-sm overflow-hidden">
+                <div className="px-6 py-4 flex items-center gap-3 border-b border-[#F0F2F5] bg-[#FAFAFA]">
+                  <BookOpen size={16} className="text-[#D4AF37]" />
+                  <h2 className="text-sm font-black text-[#0D1B2A]">Key Files Quick Reference</h2>
+                </div>
+                <div className="p-6">
+                  <div className="space-y-2">
+                    {[
+                      { file: 'src/lib/ai/service.ts', desc: 'All AI provider logic — models, keys, retry, fallback chain, live fetch' },
+                      { file: 'src/lib/ai/processor.ts', desc: 'PDF → images conversion, chunking for multi-page estimates' },
+                      { file: 'src/lib/ai/prompts.ts', desc: 'Extraction prompts for each document type (RC, DL, estimate, etc.)' },
+                      { file: 'src/stores/profile-store.ts', desc: 'Surveyor profile + API keys storage (gemini/groq/nvidia key arrays)' },
+                      { file: 'src/stores/ui-store.ts', desc: 'Live Gemini model list cache (availableGeminiModels)' },
+                      { file: 'src/components/tabs/DocumentsTab.tsx', desc: 'ModelSelector component — provider toggle + live model dropdown' },
+                      { file: 'src/components/admin/AdminDashboard.tsx', desc: 'This file — surveyor management + these dev notes' },
+                    ].map(item => (
+                      <div key={item.file} className="flex items-start gap-3 py-2 border-b border-[#F0F2F5] last:border-0">
+                        <code className="text-[10px] font-mono font-bold text-[#0D1B2A] bg-[#F0F2F5] px-2 py-1 rounded flex-shrink-0 mt-0.5">{item.file}</code>
+                        <span className="text-xs text-[#4A4E69]">{item.desc}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          )}
+
         </div>
       </div>
 

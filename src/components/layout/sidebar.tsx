@@ -3,7 +3,7 @@
 import { useUIStore, type AppTab } from '@/stores/ui-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { useClaimStore } from '@/stores/claim-store';
-import { getReconciliationFields } from '@/lib/ai/reconciliation';
+import { getConflictFields } from '@/lib/ai/reconciliation';
 import {
   LayoutDashboard,
   FileText,
@@ -30,6 +30,7 @@ import {
   Shield,
   ShieldCheck,
   Zap,
+  CarFront,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { signInWithGoogle, signOutUser } from '@/lib/firebase/auth';
@@ -50,11 +51,13 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'review', label: 'AI Review', icon: <ScanSearch size={17} />, group: 'claim', requiresClaim: true },
   { id: 'details', label: 'Claim Details', icon: <ClipboardList size={17} />, group: 'claim', requiresClaim: true },
   { id: 'assessment', label: 'Assessment', icon: <Calculator size={17} />, group: 'claim', requiresClaim: true },
-  { id: 'reports',      label: 'Report Center',   icon: <Printer size={17} />,    group: 'output',   requiresClaim: true },
-  { id: 'bill-check',  label: 'Bill Check',     icon: <ClipboardCheck size={17} />, group: 'output', requiresClaim: true },
+  { id: 'reports',       label: 'Report Center',     icon: <Printer size={17} />,       group: 'output',   requiresClaim: true },
+  { id: 'insured-report', label: 'Insured Report',   icon: <FileText size={17} />,       group: 'output',   requiresClaim: true },
+  { id: 'bill-check',   label: 'Bill Check',       icon: <ClipboardCheck size={17} />, group: 'output',   requiresClaim: true },
   { id: 'photos',      label: 'Photo Sheet',    icon: <Camera size={17} />,     group: 'output',   requiresClaim: true },
   { id: 'fees',        label: 'Survey Fees Bill', icon: <Receipt size={17} />,    group: 'output',   requiresClaim: true },
   { id: 'reinspection',label: 'Reinspection',  icon: <RotateCcw size={17} />,  group: 'output',   requiresClaim: true },
+  { id: 'valuation',   label: 'Valuation',     icon: <CarFront size={17} />,   group: 'output',   requiresClaim: true },
   { id: 'profile', label: 'Profile', icon: <User size={17} />, group: 'settings' },
   { id: 'cloud-vault', label: 'Cloud Vault', icon: <Cloud size={17} />, group: 'settings' },
   { id: 'learning', label: 'Learning', icon: <Brain size={17} />, group: 'settings' },
@@ -83,15 +86,15 @@ export function Sidebar() {
   const groups = ['main', 'claim', 'output', 'settings'] as const;
 
   const handleTabChange = (targetTab: AppTab) => {
-    // Landing page is a separate route
+    // Landing page is the root route
     if ((targetTab as string) === 'landing') {
-      window.location.href = '/landing';
+      window.location.href = '/';
       return;
     }
 
     // Show a soft warning if navigating away with unresolved AI conflicts
     if (activeTab === 'documents' && currentClaim) {
-      const conflicts = getReconciliationFields(currentClaim).filter(f => f.hasConflict);
+      const conflicts = getConflictFields(currentClaim);
       if (conflicts.length > 0) {
         useUIStore.getState().setSidebarMobileOpen(false); // Close mobile menu if open
         toast.warning(`You have ${conflicts.length} unresolved AI data discrepancies that need attention.`);
@@ -140,8 +143,17 @@ export function Sidebar() {
               <div className="text-sm font-black tracking-tight" style={{ color: '#0D1B2A', letterSpacing: '-0.01em' }}>
                 {isAuthenticated && user ? user.displayName : (profile.name || 'SurveyOS')}
               </div>
-              <div className="text-[10px] font-semibold uppercase tracking-widest mt-0.5" style={{ color: '#D4AF37', opacity: 0.9 }}>
-                {isAuthenticated && user ? 'Surveyor' : 'V2 · Executive'}
+              <div className="flex items-center gap-2 mt-0.5">
+                <div className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#D4AF37', opacity: 0.9 }}>
+                  {isAuthenticated && user ? 'Surveyor' : 'V2 · Executive'}
+                </div>
+                <span
+                  className="text-[8px] font-black font-mono px-1 py-0.5 rounded"
+                  style={{ background: 'rgba(13,27,42,0.06)', color: '#8D99AE', letterSpacing: '0.05em' }}
+                  title="Deployed build version"
+                >
+                  v{process.env.NEXT_PUBLIC_APP_VERSION}
+                </span>
               </div>
             </div>
           )}
@@ -224,9 +236,21 @@ export function Sidebar() {
               // Workflow Logic: Restrict tabs based on Survey Type
               if (currentClaim?.surveyType === 'spot') {
                 // Spot surveys never see assessment/billing/reinspection tabs
-                const restrictedTabs: AppTab[] = ['assessment', 'bill-check', 'reinspection'];
+                const restrictedTabs: AppTab[] = ['assessment', 'bill-check', 'reinspection', 'valuation'];
                 if (restrictedTabs.includes(item.id)) return false;
               }
+
+              if (currentClaim?.surveyType === 'final') {
+                if (item.id === 'valuation') return false;
+              }
+
+              if (currentClaim?.surveyType === 'valuation') {
+                // Valuation report only needs: details, valuation, photos, fees, reports
+                const restrictedTabs: AppTab[] = ['assessment', 'bill-check', 'reinspection', 'review', 'documents'];
+                if (restrictedTabs.includes(item.id)) return false;
+              }
+
+              if (!currentClaim && item.id === 'valuation') return false;
               
               return true;
             });
@@ -254,36 +278,14 @@ export function Sidebar() {
                     const disabled = item.requiresClaim && !hasClaim;
                     const isActive = activeTab === item.id;
 
-                    return (
-                      <button
-                        key={item.id}
-                        onClick={() => !disabled && handleTabChange(item.id)}
-                        disabled={disabled}
-                        title={sidebarCollapsed ? item.label : undefined}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium relative transition-all ${sidebarCollapsed ? 'justify-center' : ''}`}
-                        style={{
-                          color: isActive
-                            ? '#0D1B2A'
-                            : disabled
-                            ? '#E2E6EA'
-                            : '#4A4E69',
-                          background: isActive ? '#F0F2F5' : 'transparent',
-                          cursor: disabled ? 'not-allowed' : 'pointer',
-                        }}
-                        onMouseEnter={e => {
-                          if (!disabled && !isActive) {
-                            e.currentTarget.style.background = '#F8F9FA';
-                            e.currentTarget.style.color = '#0D1B2A';
-                          }
-                        }}
-                        onMouseLeave={e => {
-                          if (!disabled && !isActive) {
-                            e.currentTarget.style.background = 'transparent';
-                            e.currentTarget.style.color = '#4A4E69';
-                          }
-                        }}
-                      >
-                        {/* Gold active bar */}
+                    const navClassName = `w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium relative transition-all ${sidebarCollapsed ? 'justify-center' : ''}`;
+                    const navStyle = {
+                      color: isActive ? '#0D1B2A' : disabled ? '#E2E6EA' : '#4A4E69',
+                      background: isActive ? '#F0F2F5' : 'transparent',
+                      cursor: disabled ? 'not-allowed' : 'pointer',
+                    };
+                    const navContent = (
+                      <>
                         {isActive && (
                           <span
                             className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full"
@@ -296,7 +298,53 @@ export function Sidebar() {
                         {!sidebarCollapsed && (
                           <span className="truncate font-semibold">{item.label}</span>
                         )}
-                      </button>
+                      </>
+                    );
+                    const hoverHandlers = {
+                      onMouseEnter: (e: React.MouseEvent<HTMLElement>) => {
+                        e.currentTarget.style.background = '#F8F9FA';
+                        e.currentTarget.style.color = '#0D1B2A';
+                      },
+                      onMouseLeave: (e: React.MouseEvent<HTMLElement>) => {
+                        e.currentTarget.style.background = isActive ? '#F0F2F5' : 'transparent';
+                        e.currentTarget.style.color = isActive ? '#0D1B2A' : '#4A4E69';
+                      },
+                    };
+
+                    if (disabled) {
+                      return (
+                        <button
+                          key={item.id}
+                          disabled
+                          title={sidebarCollapsed ? item.label : undefined}
+                          className={navClassName}
+                          style={navStyle}
+                        >
+                          {navContent}
+                        </button>
+                      );
+                    }
+
+                    // Non-disabled items render as <a> so middle-click, right-click,
+                    // and URL-bar hover all work correctly.
+                    const isLanding = (item.id as string) === 'landing';
+                    return (
+                      <a
+                        key={item.id}
+                        href={isLanding ? '/' : `?tab=${item.id}`}
+                        onClick={(e) => {
+                          // For real tabs, prevent full navigation — let useTabRouting handle it.
+                          // For the landing item, allow the browser to navigate to /.
+                          if (!isLanding) e.preventDefault();
+                          handleTabChange(item.id);
+                        }}
+                        title={sidebarCollapsed ? item.label : undefined}
+                        className={navClassName}
+                        style={navStyle}
+                        {...(!isActive ? hoverHandlers : {})}
+                      >
+                        {navContent}
+                      </a>
                     );
                   })}
                 </div>

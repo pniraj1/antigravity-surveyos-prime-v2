@@ -248,14 +248,14 @@ export function VehicleDetailsForm() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="v-seats-total">Seating Capacity<EvidenceDot has={hasEvidence('seatingCapacityTotal')} /></Label>
+            <Label htmlFor="v-seats-total">Seating Capacity<EvidenceDot has={hasEvidence('seatingCapacity')} /></Label>
             <Input
               id="v-seats-total"
-              value={(v as any)?.seatingCapacityTotal || ''}
-              onChange={(e) => updateVehicle({ seatingCapacityTotal: e.target.value })}
-              onFocus={() => triggerField('seatingCapacityTotal')}
+              value={v?.seatingCapacity || ''}
+              onChange={(e) => updateVehicle({ seatingCapacity: e.target.value })}
+              onFocus={() => triggerField('seatingCapacity')}
               placeholder="e.g. 5"
-              className={r((v as any)?.seatingCapacityTotal)}
+              className={r(v?.seatingCapacity)}
             />
           </div>
 

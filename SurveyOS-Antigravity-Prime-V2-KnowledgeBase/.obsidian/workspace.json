@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Tasks.md",
+                "file": "Surveyor_User_Manual.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Tasks"
+              "title": "Surveyor_User_Manual"
             }
           }
         ]
@@ -185,8 +185,11 @@
   },
   "active": "22ab616556b3f98a",
   "lastOpenFiles": [
-    "AI_Context_Index.md",
+    "Sessions/2026-04-26.md",
+    "Sessions",
     "Tasks.md",
+    "Token_Optimization_Guide.md",
+    "AI_Context_Index.md",
     "Claim_Lifecycle_Workflow.md",
     "Data_Dictionary_and_Flow.md",
     "00_Project_Map.md",

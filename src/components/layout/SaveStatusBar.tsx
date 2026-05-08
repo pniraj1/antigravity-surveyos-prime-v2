@@ -88,7 +88,7 @@ export function SaveStatusBar() {
   if (!showAnything) return null;
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-2">
+    <div className="fixed bottom-24 md:bottom-5 left-4 md:left-[calc(var(--sidebar-width,240px)+16px)] z-50 flex flex-col items-start gap-2 max-w-[calc(100vw-32px)] md:max-w-sm">
 
       {/* ── Badge 1: Cloud Vault save status ── */}
       {showCloudBadge && (() => {

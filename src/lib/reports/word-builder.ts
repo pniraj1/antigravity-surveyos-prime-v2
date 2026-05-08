@@ -207,7 +207,7 @@ export async function generateSpotWordReport(claim: ClaimData, profile: Surveyor
         createKVRow("Date of Reg.", formatDateDMY(vehicle.dateOfRegistration), "Class of Vehicle", vehicle.classOfVehicle),
         createKVRow("Body Type", vehicle.bodyType, "Colour", vehicle.colour),
         createKVRow("Fuel", vehicle.fuel, "CC", vehicle.cubicCapacity),
-        createKVRow("RLW / GVW / Seating", vehicle.rlw, "Odometer (KM)", vehicle.odometer),
+        createKVRow("RLW / GVW / Seating", vehicle.registeredLoadWeight, "Odometer (KM)", vehicle.odometer),
         createKVRow("Pre-Accid. Cond.", vehicle.preAccidentCondition, isComm ? "Fitness Cert. No." : "", isComm ? vehicle.fitnessNo : ""),
         ...(isComm ? [
           new TableRow({
@@ -218,7 +218,7 @@ export async function generateSpotWordReport(claim: ClaimData, profile: Surveyor
           })
         ] : []),
         createKVRow("Insured", policy.insuredName, "Insurer", policy.insurerName),
-        createKVRow("Insured Mobile", policy.insuredMobile, "HPA / Finance", policy.hpa || "NIL"),
+        createKVRow("Insured Mobile", policy.insuredMobile, "HPA / Finance", policy.hpaWith || "NIL"),
         ...(policy.insuredAddress ? [
           new TableRow({
             children: [
@@ -235,11 +235,11 @@ export async function generateSpotWordReport(claim: ClaimData, profile: Surveyor
       width: { size: 100, type: WidthType.PERCENTAGE },
       rows: [
         createKVRow("Driver Name", `${claim.driver.name || '—'} ${claim.driver.parentName ? (claim.driver.relationType || 'S/o') + ' ' + claim.driver.parentName : ''}`, "MDL No.", claim.driver.licenceNumber),
-        createKVRow("Date of Birth", formatDateDMY(claim.driver.dob), "Issuing Authority", claim.driver.issuingAuthority),
+        createKVRow("Date of Birth", formatDateDMY(claim.driver.dateOfBirth), "Issuing Authority", claim.driver.issuingAuthority),
         new TableRow({
           children: [
             new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Classes / Issue Date", color: "444444", size: 14 })] })] }),
-            new TableCell({ columnSpan: 3, children: [new Paragraph({ children: [new TextRun({ text: `${claim.driver.vehicleClass || '—'} | Issued: ${formatDateDMY(claim.driver.dateOfIssue) || '—'}`, size: 18 })] })] })
+            new TableCell({ columnSpan: 3, children: [new Paragraph({ children: [new TextRun({ text: `${claim.driver.vehicleClasses || '—'} | Issued: ${formatDateDMY(claim.driver.dateOfIssue) || '—'}`, size: 18 })] })] })
           ]
         }),
         createKVRow("Non-Transport Valid", formatDateDMY(claim.driver.validityNonTransport), "Transport Valid", formatDateDMY(claim.driver.validityTransport)),

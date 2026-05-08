@@ -1,0 +1,29 @@
+# Build output — never source of truth
+out/
+.next/
+node_modules/
+
+# One-off scripts and experiments
+scratch/
+tmp_pdf/
+tmp/
+analyze_pdf.py
+check_claim_sizes.js
+test_extraction.py
+test_invoice_gemini.py
+graphify-out/gen_chunks.py
+
+# Raw samples / evidence photos — not code
+photosheetsforreview_extracted/
+total loss report sample.pdf
+diff_report.txt
+diff.txt
+diff_utf8.txt
+head_report.txt
+total_loss_text.txt
+
+# Stale / deleted
+src/components/sandbox/
+
+# Claude internal
+.claude/worktrees/

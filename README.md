@@ -2,7 +2,7 @@
 
 A professional motor insurance survey management platform for IRDAI-licensed surveyors. Built for the Indian insurance market, deployed on Firebase.
 
-**Live:** https://surveyos-v2-antigravity.web.app  
+**Live:** https://motorsurveyos.web.app  
 **GitHub:** https://github.com/pniraj1/antigravity-surveyos-prime-v2
 
 ---
@@ -171,7 +171,7 @@ GitHub Actions at `.github/workflows/deploy.yml`:
 ## Firebase Project
 
 - **Project:** `surveyos-v2-antigravity`
-- **Hosting:** https://surveyos-v2-antigravity.web.app
+- **Hosting:** https://motorsurveyos.web.app
 - **Console:** https://console.firebase.google.com/project/surveyos-v2-antigravity
 
 ---

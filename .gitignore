@@ -53,4 +53,11 @@ tmp_pdf/
 .code-review-graph/
 .agent/
 .graphify_*.json
+.graphify_python
 graphify-out/
+
+# sample/demo documents (large binaries, not needed in repo)
+docs/samples/*.pdf
+docs/samples/*.zip
+docs/samples/*.txt
+docs/archives/

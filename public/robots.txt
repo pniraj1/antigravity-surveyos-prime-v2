@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Keep authenticated app and build artifacts private
+Disallow: /dashboard/
+Disallow: /api/
+Disallow: /_next/
+
+Sitemap: https://motorsurveyos.web.app/sitemap.xml

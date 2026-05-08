@@ -36,7 +36,7 @@ export function buildApprovalEmail(name: string) {
     `Hi ${name},\n\n` +
     `Great news! Your SurveyOS Prime surveyor account has been approved.\n` +
     `You now have full access to the platform.\n\n` +
-    `Log in here: https://surveyos-v2-antigravity.web.app\n\n` +
+    `Log in here: https://motorsurveyos.web.app\n\n` +
     `— SurveyOS Prime Team\nsurveyosprime@gmail.com`;
 
   return { subject, body };

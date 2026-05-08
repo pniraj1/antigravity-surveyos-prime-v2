@@ -31,4 +31,22 @@ In Obsidian, a "Vault" is just their word for a folder. It's not a secret safe o
 This "Brain" is for YOU (the developer/owner). As the code gets bigger and more complex, you can use this to quickly remember how things work without digging through thousands of lines of code.
 
 ---
-*Created with 💡 by Antigravity*
+
+## 6. Session Logging (How the AI Remembers)
+
+At the end of every working session, the AI writes a log to `Sessions/YYYY-MM-DD.md`.
+
+**To catch up in a new session, just say:**
+> "Read my last session log and tell me where we left off."
+
+The AI will read the latest file in `Sessions/` and resume with full context — no re-explaining needed.
+
+**Files to check at the start of any session:**
+1. `Tasks.md` — what's pending and what was last completed
+2. `Sessions/` — detailed log of the last session's decisions and changes
+3. `01_Architecture_and_Status.md` — current feature status
+
+This system works across Claude Code, Claude Desktop, or any AI that can read files — the vault is the persistent memory, not the chat.
+
+---
+*Created with Antigravity*

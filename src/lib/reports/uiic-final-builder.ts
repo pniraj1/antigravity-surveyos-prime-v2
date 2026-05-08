@@ -149,7 +149,7 @@ ${getSurveyorHeader(profile)}
 <table style="${ts}"><tr><td style="${sec}width:50%;">INSURED / CLAIMANT DETAILS</td><td style="${sec}">SPOT SURVEY DETAILS</td></tr>
 <tr><td style="${td}vertical-align:top;"><table style="width:100%;border-collapse:collapse;font-size:7pt;">
 <tr><td style="padding:2px 3px;color:#333;width:40%;">Insured / Claimant Name &amp; Address</td><td style="padding:2px 3px;">${g(p.insuredName)}<br/>${g(p.insuredAddress)}</td></tr>
-<tr><td style="padding:2px 3px;color:#333;">FINANCIER INTEREST</td><td style="padding:2px 3px;">${g(p.hpaWith || p.hpa || v.hypothecation || v.hpa) || 'NIL'}</td></tr>
+<tr><td style="padding:2px 3px;color:#333;">FINANCIER INTEREST</td><td style="padding:2px 3px;">${g(p.hpaWith || v.hypothecation) || 'NIL'}</td></tr>
 <tr><td style="padding:2px 3px;color:#333;">Insured Contact Details</td><td style="padding:2px 3px;">${g(p.insuredMobile)}</td></tr>
 </table></td><td style="${td}vertical-align:top;"><table style="width:100%;border-collapse:collapse;font-size:7pt;">
 <tr><td style="padding:2px 3px;color:#333;width:50%;">Spot Survey Appointment Date</td><td style="padding:2px 3px;">${fd(sd.allotmentDate)}</td></tr>
@@ -212,12 +212,12 @@ ${getSurveyorHeader(profile)}
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Registration valid up to</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${fd(v.registrationValidUpTo)}</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">RC endorsement on financier interest</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(v.rcEndorsement)}</td></tr>
       <tr><td colspan="2" style="background:#e8e8e8;text-align:center;font-weight:700;padding:3px 5px;border-bottom:0.5pt solid #000;">ADDITIONAL DETAILS - PASSENGER CARRYING VEHICLE</td></tr>
-      <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Registered Seating Capacity</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(v.seatingCapacityTotal)}</td></tr>
+      <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Registered Seating Capacity</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(v.seatingCapacity)}</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Number of Passengers carried at the time of accident</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g((v as any).passengersAtAccident)}</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Type of passenger carried (Employee / Hire / Gratuitous)</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g((v as any).passengerType)}</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Whether Passengers carried in contravention of rule?</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g((v as any).passengersContravention)}</td></tr>
       <tr><td colspan="2" style="background:#e8e8e8;text-align:center;font-weight:700;padding:3px 5px;border-bottom:0.5pt solid #000;">ADDITIONAL DETAILS - GOODS CARRYING VEHICLE</td></tr>
-      <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Registered Laden Weight</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(v.registeredLoadWeight || v.rlw || v.grossWeight)}</td></tr>
+      <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Registered Laden Weight</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(v.registeredLoadWeight || v.grossWeight)}</td></tr>
       <tr><td style="padding:3px 5px;border-right:0.5pt solid #000;">Registered Unladen Weight</td><td style="padding:3px 5px;">${g(v.unladenWeight)}</td></tr>
     </table>
   </td>
@@ -228,12 +228,12 @@ ${getSurveyorHeader(profile)}
   <td style="padding:0;margin:0;vertical-align:top;border-bottom:1pt solid #000;">
     <table style="width:100%;border-collapse:collapse;font-size:7pt;">
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;width:55%;">Name of Driving Licence Holder</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(d.name)}</td></tr>
-      <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Driving Licence Number</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(d.licenceNumber || d.licenseNumber)}</td></tr>
+      <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Driving Licence Number</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(d.licenceNumber)}</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Licence Type</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g((d as any).licenceType)}</td></tr>
-      <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Class of vehicles licenced to drive</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(d.vehicleClasses || d.vehicleClass)}</td></tr>
+      <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Class of vehicles licenced to drive</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(d.vehicleClasses)}</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Licence Issuing Authority</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(d.issuingAuthority)}</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Date of Issue of Licence</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${fd(d.dateOfIssue)}</td></tr>
-      <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">License Valid upto</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${fd(d.validityNonTransport || d.validityTransport || d.validTo)}</td></tr>
+      <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">License Valid upto</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${fd(d.validityNonTransport || d.validityTransport)}</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Badge number</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(d.badgeNumber)}</td></tr>
 
       <tr><td style="padding:3px 5px;border-right:0.5pt solid #000;">Date of verification of licence</td><td style="padding:3px 5px;">${fd(d.verificationDate)}</td></tr>

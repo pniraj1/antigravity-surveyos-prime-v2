@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import type { ClaimData } from '@/types/claim';
 import type { SurveyorProfile } from '@/types/vehicle';
 import { generateSpotWordReport } from '@/lib/reports/word-builder';
+import { logger } from '@/lib/utils/logger';
 
 interface SpotActionsProps {
   claim: ClaimData;
@@ -25,7 +26,7 @@ export function SpotActions({ claim, profile, isExportingWord, setIsExportingWor
             await generateSpotWordReport(claim, profile);
             toast.success('Word report generated!');
           } catch (e) {
-            console.error(e);
+            logger.error(e);
             toast.error('Failed to generate Word report');
           } finally {
             setIsExportingWord(false);

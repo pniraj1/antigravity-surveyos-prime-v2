@@ -1,6 +1,7 @@
 'use client';
 
 import { useProfileStore } from '@/stores/profile-store';
+import { useAuthStore } from '@/stores/auth-store';
 import { useUIStore } from '@/stores/ui-store';
 import { linkGoogleDrive } from '@/lib/drive';
 import { useState, useRef } from 'react';
@@ -232,7 +233,11 @@ export function ProfileTab() {
   const [driveLinking, setDriveLinking] = useState(false);
   const [driveError, setDriveError] = useState('');
 
-  const isNameLocked = !profile.isAdmin; // Only admins can rename
+  const user = useAuthStore((s) => s.user);
+  const MASTER_ADMIN_UID = process.env.NEXT_PUBLIC_MASTER_ADMIN_UID;
+  const isAdminUser = profile.isAdmin || (user && MASTER_ADMIN_UID && user.uid === MASTER_ADMIN_UID);
+
+  const isNameLocked = !isAdminUser; // Only admins can rename
 
   const set = (key: string) => (v: string) => updateProfile({ [key]: v } as any);
 
@@ -285,7 +290,7 @@ export function ProfileTab() {
 
           {/* Admin Button & Avatar */}
           <div className="flex flex-col items-center gap-4">
-            {profile.isAdmin && (
+            {isAdminUser && (
               <button
                 onClick={() => useUIStore.getState().setActiveTab('admin')}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all hover:scale-105 active:scale-95 shadow-lg"
@@ -426,61 +431,101 @@ export function ProfileTab() {
               >
                 Groq (Speed)
               </button>
+              <button
+                onClick={() => updateProfile({ aiProvider: 'nvidia' })}
+                className="px-3 py-1 rounded-md text-[10px] font-black uppercase transition-all"
+                style={{
+                  background: profile.aiProvider === 'nvidia' ? '#FFFFFF' : 'transparent',
+                  color: profile.aiProvider === 'nvidia' ? '#76B900' : '#8D99AE',
+                  boxShadow: profile.aiProvider === 'nvidia' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'
+                }}
+              >
+                NVIDIA
+              </button>
             </div>
           </div>
           <div className="p-5 space-y-6">
 
-            {/* Gemini Section */}
-            {profile.aiProvider === 'gemini' && (
-              <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: 'rgba(66,133,244,0.05)', border: '1px solid rgba(66,133,244,0.1)' }}>
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-white shadow-sm">
-                      <Cpu size={18} style={{ color: '#4285F4' }} />
-                    </div>
-                    <div>
+            {/* Gemini Section — always visible */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: 'rgba(66,133,244,0.05)', border: `1px solid ${profile.aiProvider === 'gemini' ? 'rgba(66,133,244,0.5)' : 'rgba(66,133,244,0.1)'}` }}>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-white shadow-sm">
+                    <Cpu size={18} style={{ color: '#4285F4' }} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
                       <div className="text-xs font-black" style={{ color: '#0D1B2A' }}>Google Gemini AI</div>
-                      <div className="text-[10px] font-bold" style={{ color: '#8D99AE' }}>Auto-selects best model · Add up to 3 keys for rate-limit resilience</div>
+                      {profile.aiProvider === 'gemini' && <span className="text-[9px] font-black px-1.5 py-0.5 rounded" style={{ background: '#4285F4', color: '#fff' }}>PRIMARY</span>}
                     </div>
+                    <div className="text-[10px] font-bold" style={{ color: '#8D99AE' }}>Auto-selects best model · Add up to 3 keys for rate-limit resilience</div>
                   </div>
-                  <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all hover:opacity-80" style={{ background: '#4285F4', color: '#FFFFFF' }}>
-                    Get Key <ExternalLink size={10} />
-                  </a>
                 </div>
-                <MultiKeyInput
-                  keys={profile.geminiApiKeys || []}
-                  onChange={keys => updateProfile({ geminiApiKeys: keys })}
-                  placeholder="AIzaSy..."
-                  accentColor="#4285F4"
-                />
+                <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all hover:opacity-80" style={{ background: '#4285F4', color: '#FFFFFF' }}>
+                  Get Key <ExternalLink size={10} />
+                </a>
               </div>
-            )}
+              <MultiKeyInput
+                keys={profile.geminiApiKeys || []}
+                onChange={keys => updateProfile({ geminiApiKeys: keys })}
+                placeholder="AIzaSy..."
+                accentColor="#4285F4"
+              />
+            </div>
 
-            {/* Groq Section */}
-            {profile.aiProvider === 'groq' && (
-              <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: 'rgba(242,102,57,0.05)', border: '1px solid rgba(242,102,57,0.1)' }}>
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-white shadow-sm">
-                      <Cpu size={18} style={{ color: '#F26639' }} />
-                    </div>
-                    <div>
-                      <div className="text-xs font-black" style={{ color: '#0D1B2A' }}>Groq LPQ Intelligence</div>
-                      <div className="text-[10px] font-bold" style={{ color: '#8D99AE' }}>Fastest Inference Engine · Add up to 3 keys for rate-limit resilience</div>
-                    </div>
+            {/* Groq Section — always visible */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: 'rgba(242,102,57,0.05)', border: `1px solid ${profile.aiProvider === 'groq' ? 'rgba(242,102,57,0.5)' : 'rgba(242,102,57,0.1)'}` }}>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-white shadow-sm">
+                    <Cpu size={18} style={{ color: '#F26639' }} />
                   </div>
-                  <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all hover:opacity-80" style={{ background: '#F26639', color: '#FFFFFF' }}>
-                    Get Key <ExternalLink size={10} />
-                  </a>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-xs font-black" style={{ color: '#0D1B2A' }}>Groq LPQ Intelligence</div>
+                      {profile.aiProvider === 'groq' && <span className="text-[9px] font-black px-1.5 py-0.5 rounded" style={{ background: '#F26639', color: '#fff' }}>PRIMARY</span>}
+                    </div>
+                    <div className="text-[10px] font-bold" style={{ color: '#8D99AE' }}>Fastest Inference Engine · Add up to 3 keys for rate-limit resilience</div>
+                  </div>
                 </div>
-                <MultiKeyInput
-                  keys={profile.groqApiKeys || []}
-                  onChange={keys => updateProfile({ groqApiKeys: keys })}
-                  placeholder="gsk_..."
-                  accentColor="#F26639"
-                />
+                <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all hover:opacity-80" style={{ background: '#F26639', color: '#FFFFFF' }}>
+                  Get Key <ExternalLink size={10} />
+                </a>
               </div>
-            )}
+              <MultiKeyInput
+                keys={profile.groqApiKeys || []}
+                onChange={keys => updateProfile({ groqApiKeys: keys })}
+                placeholder="gsk_..."
+                accentColor="#F26639"
+              />
+            </div>
+
+            {/* NVIDIA NIM Section — always visible (also used as last-resort fallback) */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: 'rgba(118,185,0,0.05)', border: `1px solid ${profile.aiProvider === 'nvidia' ? 'rgba(118,185,0,0.5)' : 'rgba(118,185,0,0.15)'}` }}>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-white shadow-sm">
+                    <Cpu size={18} style={{ color: '#76B900' }} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-xs font-black" style={{ color: '#0D1B2A' }}>NVIDIA NIM · Free Tier</div>
+                      {profile.aiProvider === 'nvidia' && <span className="text-[9px] font-black px-1.5 py-0.5 rounded" style={{ background: '#76B900', color: '#fff' }}>PRIMARY</span>}
+                    </div>
+                    <div className="text-[10px] font-bold" style={{ color: '#8D99AE' }}>90B Vision Model · 40 req/min · No monthly cap · Fallback when Gemini &amp; Groq fail</div>
+                  </div>
+                </div>
+                <a href="https://build.nvidia.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all hover:opacity-80" style={{ background: '#76B900', color: '#FFFFFF' }}>
+                  Get Key <ExternalLink size={10} />
+                </a>
+              </div>
+              <MultiKeyInput
+                keys={profile.nvidiaApiKeys || []}
+                onChange={keys => updateProfile({ nvidiaApiKeys: keys })}
+                placeholder="nvapi-..."
+                accentColor="#76B900"
+              />
+            </div>
           </div>
         </div>
 

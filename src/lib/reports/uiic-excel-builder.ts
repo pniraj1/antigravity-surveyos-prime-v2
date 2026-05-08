@@ -1,6 +1,6 @@
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
-import { format } from 'date-fns';
+import { formatDateDMY } from '@/lib/calculations';
 import { ClaimData } from '@/types/claim';
 import { AssessmentSummary, SurveyorProfile, AssessmentRow } from '@/types';
 
@@ -127,7 +127,7 @@ export class UIICExcelBuilder {
     addSectionHeader('I. POLICY & CLAIM DETAILS');
     addFourColumnRow('Insurer', 'UNITED INDIA INSURANCE CO. LTD.', 'Policy No', this.claim.policy?.policyNumber || 'N/A');
     addFourColumnRow('Insured Name', this.claim.policy?.insuredName || 'N/A', 'Claim No', this.claim.reportNo || 'N/A');
-    addFourColumnRow('Insured Address', this.claim.policy?.insuredAddress || 'N/A', 'Date of Loss', this.claim.accident?.dateAndTime || 'N/A');
+    addFourColumnRow('Insured Address', this.claim.policy?.insuredAddress || 'N/A', 'Date of Loss', this.claim.accident?.dateAndTime ? formatDateDMY(this.claim.accident.dateAndTime) : 'N/A');
     addFourColumnRow('Mobile No', this.claim.policy?.insuredMobile || 'N/A', 'Place of Loss', this.claim.accident?.placeOfAccident || 'N/A');
     
     currRow++;
@@ -135,19 +135,19 @@ export class UIICExcelBuilder {
     addFourColumnRow('Registration No', this.claim.vehicle?.registrationNumber || 'N/A', 'Chassis No', this.claim.vehicle?.chassisNumber || 'N/A');
     addFourColumnRow('Engine No', this.claim.vehicle?.engineNumber || 'N/A', 'Make & Model', `${this.claim.vehicle?.make || ''} ${this.claim.vehicle?.model || ''}`);
     addFourColumnRow('Color', this.claim.vehicle?.colour || 'N/A', 'Fuel Type', this.claim.vehicle?.fuel || 'N/A');
-    addFourColumnRow('Odometer', this.claim.vehicle?.odometer || 'N/A', 'Date of Reg', this.claim.vehicle?.dateOfRegistration || 'N/A');
+    addFourColumnRow('Odometer', this.claim.vehicle?.odometer || 'N/A', 'Date of Reg', this.claim.vehicle?.dateOfRegistration ? formatDateDMY(this.claim.vehicle.dateOfRegistration) : 'N/A');
 
     addSectionHeader('III. DRIVER DETAILS');
     addFourColumnRow('Driver Name', this.claim.driver?.name || 'N/A', 'Licence No', this.claim.driver?.licenceNumber || 'N/A');
-    addFourColumnRow('Date of Issue', this.claim.driver?.dateOfIssue || 'N/A', 'Issuing Authority', this.claim.driver?.issuingAuthority || 'N/A');
-    addFourColumnRow('Validity (NT)', this.claim.driver?.validityNonTransport || 'N/A', 'Validity (T)', this.claim.driver?.validityTransport || 'N/A');
-    addFourColumnRow('Class of Vehicle', this.claim.driver?.vehicleClass || 'N/A', 'Date of Birth', this.claim.driver?.dateOfBirth || 'N/A');
+    addFourColumnRow('Date of Issue', this.claim.driver?.dateOfIssue ? formatDateDMY(this.claim.driver.dateOfIssue) : 'N/A', 'Issuing Authority', this.claim.driver?.issuingAuthority || 'N/A');
+    addFourColumnRow('Validity (NT)', this.claim.driver?.validityNonTransport ? formatDateDMY(this.claim.driver.validityNonTransport) : 'N/A', 'Validity (T)', this.claim.driver?.validityTransport ? formatDateDMY(this.claim.driver.validityTransport) : 'N/A');
+    addFourColumnRow('Class of Vehicle', this.claim.driver?.vehicleClasses || 'N/A', 'Date of Birth', this.claim.driver?.dateOfBirth ? formatDateDMY(this.claim.driver.dateOfBirth) : 'N/A');
 
     currRow++;
     addSectionHeader('IV. ACCIDENT DETAILS');
-    addFourColumnRow('Date & Time', this.claim.accident?.dateAndTime || 'N/A', 'Place of Loss', this.claim.accident?.placeOfAccident || 'N/A');
+    addFourColumnRow('Date & Time', this.claim.accident?.dateAndTime ? formatDateDMY(this.claim.accident.dateAndTime) : 'N/A', 'Place of Loss', this.claim.accident?.placeOfAccident || 'N/A');
     addFourColumnRow('Police Station', this.claim.accident?.policeStation || 'N/A', 'FIR / Diary No.', this.claim.accident?.firNumber || 'N/A');
-    addFourColumnRow('FIR Date', this.claim.accident?.firDate || 'N/A', 'Place of Survey', this.claim.accident?.placeOfSurvey || 'N/A');
+    addFourColumnRow('FIR Date', this.claim.accident?.firDate ? formatDateDMY(this.claim.accident.firDate) : 'N/A', 'Place of Survey', this.claim.accident?.placeOfSurvey || 'N/A');
     addFourColumnRow('Cause of Accident', this.claim.accident?.causeOfAccident || 'N/A', '', '');
     
     currRow++;

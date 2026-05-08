@@ -7,7 +7,9 @@ import { useProfileStore } from '@/stores/profile-store';
 import { calculateAssessmentSummary } from '@/lib/calculations';
 import { getVehicleAgeMonths } from '@/lib/calculations/depreciation';
 import { Card, CardContent } from '@/components/ui/card';
-import { AlertCircle, FileText, Loader2 } from 'lucide-react';
+import { AlertCircle, FileText, Loader2, Shield } from 'lucide-react';
+import { InsuredReportReviewDialog } from '@/components/dialogs/InsuredReportReviewDialog';
+import type { InsuredReportDraft, InsuredReportStage } from '@/types/insured-report';
 import { SpotActions } from './report/SpotActions';
 import { SurveyActions } from './report/SurveyActions';
 
@@ -33,6 +35,7 @@ import { SpotPrintReport } from '@/components/print/SpotPrintReport';
 import { UIICPrintReport } from '@/components/print/UIICPrintReport';
 import { buildStandardFinalSurveyHTML } from '@/lib/reports/standard-report-builder';
 import { buildUIICFinalHTML } from '@/lib/reports/uiic-final-builder';
+import { buildValuationReportHTML } from '@/lib/reports/valuation-report-builder';
 import DOMPurify from 'dompurify';
 import { useRef } from 'react';
 
@@ -48,31 +51,43 @@ function PDFLoadingFallback() {
 }
 
 // ─── Report Types ─────────────────────────────────────────────────────────────
-type ReportType = 'spot' | 'survey';
+type ReportType = 'spot' | 'survey' | 'valuation';
 
 const REPORT_TYPES = [
-  { id: 'spot',   label: 'Spot Report',         icon: <FileText size={16} />, color: '#B91C1C' },
-  { id: 'survey', label: 'Final Survey Report', icon: <FileText size={16} />, color: '#0D1B2A' },
+  { id: 'spot',      label: 'Spot Report',              icon: <FileText size={16} />, color: '#B91C1C' },
+  { id: 'survey',    label: 'Final Survey Report',      icon: <FileText size={16} />, color: '#0D1B2A' },
+  { id: 'valuation', label: 'Valuation / Break-in',     icon: <FileText size={16} />, color: '#92400E' },
 ];
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function ReportTab() {
-  const { currentClaim, isDirty } = useClaimStore();
+  const { currentClaim, isDirty, updateClaim } = useClaimStore();
   const { profile } = useProfileStore();
   const [mounted, setMounted] = useState(false);
   
-  const [activeReport, setActiveReport] = useState<ReportType>(currentClaim?.surveyType === 'spot' ? 'spot' : 'survey');
+  const [activeReport, setActiveReport] = useState<ReportType>(
+    currentClaim?.surveyType === 'spot' ? 'spot' :
+    currentClaim?.surveyType === 'valuation' ? 'valuation' : 'survey'
+  );
   const [format, setFormat] = useState<'standard' | 'uiic'>('standard');
   const [isExportingWord, setIsExportingWord] = useState(false);
   const [zoom, setZoom] = useState<number>(0.9); // Default to 90% for better fit
-  const { updateClaim } = useClaimStore();
-  
+  const [insuredDialogStage, setInsuredDialogStage] = useState<InsuredReportStage | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   
   const handlePrint = useReactToPrint({
     contentRef,
     documentTitle: `Spot-Survey-Report-${currentClaim?.vehicle?.registrationNumber || 'Draft'}`,
   });
+
+  function handleInsuredApproved(stage: InsuredReportStage, draft: InsuredReportDraft) {
+    if (stage === 'preliminary') {
+      updateClaim({ insuredReportPreliminary: draft });
+    } else {
+      updateClaim({ insuredReportFinal: draft });
+    }
+    setInsuredDialogStage(null);
+  }
 
   // Ensure valid state based on survey type
   useEffect(() => {
@@ -81,10 +96,12 @@ export function ReportTab() {
 
   useEffect(() => {
     if (currentClaim) {
-      if (currentClaim.surveyType === 'spot' && !['spot'].includes(activeReport)) {
+      if (currentClaim.surveyType === 'spot' && activeReport !== 'spot') {
         setActiveReport('spot');
-      } else if (currentClaim.surveyType === 'final' && !['survey'].includes(activeReport)) {
+      } else if (currentClaim.surveyType === 'final' && activeReport !== 'survey') {
         setActiveReport('survey');
+      } else if (currentClaim.surveyType === 'valuation' && activeReport !== 'valuation') {
+        setActiveReport('valuation');
       }
     }
   }, [currentClaim?.surveyType, activeReport]);
@@ -92,13 +109,9 @@ export function ReportTab() {
   if (!currentClaim || !mounted) return <PDFLoadingFallback />;
 
   const availableReports = REPORT_TYPES.filter(rt => {
-    if (currentClaim.surveyType === 'spot') {
-      return rt.id === 'spot';
-    } else {
-      // For final surveys, we might show both or just final. 
-      // Usually just 'survey' (final).
-      return rt.id === 'survey';
-    }
+    if (currentClaim.surveyType === 'spot') return rt.id === 'spot';
+    if (currentClaim.surveyType === 'valuation') return rt.id === 'valuation';
+    return rt.id === 'survey';
   });
 
   const ageMonths = getVehicleAgeMonths(
@@ -201,6 +214,19 @@ export function ReportTab() {
             setZoom={setZoom}
           />
         )}
+        {activeReport === 'valuation' && (
+          <button
+            onClick={() => {
+              const html = buildValuationReportHTML(currentClaim, profile!);
+              const win = window.open('', '_blank');
+              if (win) { win.document.write(html); win.document.close(); win.print(); }
+            }}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-sm"
+            style={{ background: '#92400E', color: '#fff' }}
+          >
+            <FileText size={14} /> Print / Download PDF
+          </button>
+        )}
         {isDirty && (
           <div className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg" style={{ background: 'rgba(251,191,36,0.1)', color: '#D97706', border: '1px solid rgba(217,119,6,0.2)' }}>
             <AlertCircle size={12} /> Unsaved changes — PDF updates live
@@ -224,7 +250,7 @@ export function ReportTab() {
         style={{ border: '1px solid #E2E6EA' }}
       >
         <CardContent className="p-0 w-full h-[calc(100vh-340px)] min-h-[520px]" style={{ background: '#525659' }}>
-          {(activeReport === 'survey' || activeReport === 'spot') ? (
+          {(activeReport === 'survey' || activeReport === 'spot' || activeReport === 'valuation') ? (
             <div className="w-full h-full overflow-auto flex justify-center py-8">
               <div 
                 className="bg-white shadow-2xl relative"
@@ -269,6 +295,9 @@ export function ReportTab() {
                 {activeReport === 'spot' && (
                   <SpotPrintReport claim={currentClaim} profile={profile!} />
                 )}
+                {activeReport === 'valuation' && (
+                  <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(buildValuationReportHTML(currentClaim, profile!)) }} />
+                )}
               </div>
             </div>
           ) : (
@@ -279,6 +308,68 @@ export function ReportTab() {
           )}
         </CardContent>
       </Card>
+
+      {/* Insured Reports (Premium) */}
+      {profile?.insuredReportSettings?.enabled && (
+        <div className="mt-8 p-5 rounded-2xl border" style={{ borderColor: '#E2E6EA', background: '#F9FAFB' }}>
+          <div className="flex items-center gap-2 mb-4">
+            <Shield size={16} style={{ color: '#D4AF37' }} />
+            <h3 className="text-sm font-black tracking-tight" style={{ color: '#0D1B2A' }}>Insured Reports</h3>
+            <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{ background: '#FEF3C7', color: '#92400E' }}>PREMIUM</span>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {profile.insuredReportSettings.enabledStages.includes('preliminary') && currentClaim.surveyType === 'final' && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setInsuredDialogStage('preliminary')}
+                  className="text-xs font-bold px-4 py-2 rounded-xl border flex items-center gap-2"
+                  style={{ borderColor: '#D4AF37', color: '#0D1B2A' }}
+                >
+                  <FileText size={14} />
+                  {currentClaim.insuredReportPreliminary?.isSurveyorApproved ? 'Download / Edit Preliminary' : 'Generate Insured Report (Preliminary)'}
+                </button>
+                {currentClaim.insuredReportPreliminary?.isSurveyorApproved && (
+                  <span className="text-xs" style={{ color: '#065F46' }}>✓ Approved</span>
+                )}
+              </div>
+            )}
+            {profile.insuredReportSettings.enabledStages.includes('final') && (currentClaim.billCheck?.billTotal ?? 0) > 0 && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setInsuredDialogStage('final')}
+                  className="text-xs font-bold px-4 py-2 rounded-xl border flex items-center gap-2"
+                  style={{ borderColor: '#D4AF37', color: '#0D1B2A' }}
+                >
+                  <FileText size={14} />
+                  {currentClaim.insuredReportFinal?.isSurveyorApproved ? 'Download / Edit Final' : 'Generate Insured Report (Final)'}
+                </button>
+                {currentClaim.insuredReportFinal?.isSurveyorApproved && (
+                  <span className="text-xs" style={{ color: '#065F46' }}>✓ Approved</span>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {insuredDialogStage && (
+        <InsuredReportReviewDialog
+          claim={currentClaim}
+          stage={insuredDialogStage}
+          allowedLanguages={profile?.insuredReportSettings?.allowedLanguages ?? ['english']}
+          defaultLanguage={profile?.insuredReportSettings?.defaultLanguage ?? 'english'}
+          surveyorName={profile?.name ?? ''}
+          surveyorLicence={profile?.licenceNumber ?? ''}
+          surveyorMobile={profile?.mobile ?? ''}
+          existingDraft={
+            insuredDialogStage === 'preliminary'
+              ? currentClaim.insuredReportPreliminary
+              : currentClaim.insuredReportFinal
+          }
+          onApproved={draft => handleInsuredApproved(insuredDialogStage, draft)}
+          onClose={() => setInsuredDialogStage(null)}
+        />
+      )}
     </div>
   );
 }

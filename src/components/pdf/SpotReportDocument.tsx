@@ -155,7 +155,7 @@ export function SpotReportDocument({ claim }: Props) {
           </View>
           <View style={styles.row}>
             <Text style={styles.colLabel}>Condition of Vehicle:</Text>
-            <Text style={styles.colValue}>{claim?.vehicle?.condition || 'Not specified'}</Text>
+            <Text style={styles.colValue}>{claim?.vehicle?.preAccidentCondition || 'Not specified'}</Text>
           </View>
           {claim?.vehicle?.isCommercial && (
             <View style={styles.row}>
@@ -178,11 +178,11 @@ export function SpotReportDocument({ claim }: Props) {
           </View>
           <View style={styles.row}>
             <Text style={styles.colLabel}>DL Issue Date:</Text>
-            <Text style={styles.colValue}>{claim?.driver?.dateOfIssue || 'N/A'}</Text>
+            <Text style={styles.colValue}>{claim?.driver?.dateOfIssue ? formatDateDMY(claim.driver.dateOfIssue) : 'N/A'}</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.colLabel}>Valid Upto (NT/T):</Text>
-            <Text style={styles.colValue}>{claim?.driver?.validityNonTransport || 'N/A'} / {claim?.driver?.validityTransport || 'N/A'}</Text>
+            <Text style={styles.colValue}>{claim?.driver?.validityNonTransport ? formatDateDMY(claim.driver.validityNonTransport) : 'N/A'} / {claim?.driver?.validityTransport ? formatDateDMY(claim.driver.validityTransport) : 'N/A'}</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.colLabel}>Verification Status:</Text>
@@ -195,7 +195,7 @@ export function SpotReportDocument({ claim }: Props) {
           <Text style={styles.sectionTitle}>4. Occurrence & Authorities</Text>
           <View style={styles.row}>
             <Text style={styles.colLabel}>Date & Time:</Text>
-            <Text style={styles.colValue}>{claim?.accident?.dateAndTime || 'N/A'}</Text>
+            <Text style={styles.colValue}>{claim?.accident?.dateAndTime ? formatDateDMY(claim.accident.dateAndTime) : 'N/A'}</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.colLabel}>Cause of Accident:</Text>
@@ -213,7 +213,7 @@ export function SpotReportDocument({ claim }: Props) {
           </View>
           <View style={styles.row}>
             <Text style={styles.colLabel}>FIR Date:</Text>
-            <Text style={styles.colValue}>{claim?.accident?.firDate || 'N/A'}</Text>
+            <Text style={styles.colValue}>{claim?.accident?.firDate ? formatDateDMY(claim.accident.firDate) : 'N/A'}</Text>
           </View>
         </View>
 
@@ -227,11 +227,11 @@ export function SpotReportDocument({ claim }: Props) {
             </View>
             <div style={styles.row}>
               <Text style={styles.colLabel}>Permit Valid Upto:</Text>
-              <Text style={styles.colValue}>{claim?.spotDetails?.permitTo || 'N/A'}</Text>
+              <Text style={styles.colValue}>{claim?.spotDetails?.permitTo ? formatDateDMY(claim.spotDetails.permitTo) : 'N/A'}</Text>
             </div>
             <View style={styles.row}>
               <Text style={styles.colLabel}>Fitness Valid Upto:</Text>
-              <Text style={styles.colValue}>{claim?.vehicle?.fitnessValidUpto || 'N/A'}</Text>
+              <Text style={styles.colValue}>{claim?.vehicle?.fitnessValidUpto ? formatDateDMY(claim.vehicle.fitnessValidUpto) : 'N/A'}</Text>
             </View>
             <View style={styles.row}>
               <Text style={styles.colLabel}>GVW / ULW / Cap:</Text>

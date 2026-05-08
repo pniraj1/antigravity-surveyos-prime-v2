@@ -2,7 +2,7 @@
 import React from 'react';
 import { Page, Text, View, Document, StyleSheet } from '@react-pdf/renderer';
 import type { ClaimData, AssessmentSummary } from '@/types';
-import { formatCurrency } from '@/lib/calculations';
+import { formatCurrency, formatDateDMY } from '@/lib/calculations';
 
 const styles = StyleSheet.create({
   page: {
@@ -139,11 +139,15 @@ export function FeeBillDocument({ claim, summary }: Props) {
           </View>
           <View style={styles.row}>
             <Text style={styles.label}>Bill Date:</Text>
-            <Text style={styles.value}>{fb.billDate || '-'}</Text>
+            <Text style={styles.value}>{fb.billDate ? formatDateDMY(fb.billDate) : '-'}</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.label}>Insurer Name:</Text>
             <Text style={styles.value}>{claim?.policy?.insurerName || '-'}</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>Policy Issuing Office:</Text>
+            <Text style={styles.value}>{claim?.policy?.policyIssuingOffice || '-'}</Text>
           </View>
         </View>
 
@@ -159,7 +163,7 @@ export function FeeBillDocument({ claim, summary }: Props) {
           </View>
           <View style={styles.row}>
             <Text style={styles.label}>Date of Accident:</Text>
-            <Text style={styles.value}>{claim?.accident?.dateAndTime || '-'}</Text>
+            <Text style={styles.value}>{claim?.accident?.dateAndTime ? formatDateDMY(claim.accident.dateAndTime) : '-'}</Text>
           </View>
         </View>
 

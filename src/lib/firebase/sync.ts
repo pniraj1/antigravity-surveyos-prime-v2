@@ -224,12 +224,9 @@ export async function pullClaimsFromCloud(uid: string, sinceTimestamp: string | 
 
 /**
  * Pushes the current profile to Firestore.
- * signatureDataUrl and stampDataUrl are stripped — large base64 blobs are
- * kept locally only (same pattern as claim photos).
- * SECURITY NOTE: geminiApiKeys and groqApiKeys are included in the cloud backup
- * intentionally — they enable multi-device restore. Access is restricted to the
- * owner UID by firestore.rules. If Firebase console access is ever shared with
- * team members, consider encrypting these fields before storage.
+ * Strips locally-only fields before write:
+ * - signatureDataUrl / stampDataUrl — large base64 blobs, kept local only
+ * - geminiApiKeys / groqApiKeys — sensitive credentials, kept local + Drive backup only
  */
 export async function pushProfileToCloud(uid: string, profile: SurveyorProfile) {
   const profileRef = doc(db, `users/${uid}/profile`, 'current');
@@ -237,6 +234,10 @@ export async function pushProfileToCloud(uid: string, profile: SurveyorProfile) 
   const {
     signatureDataUrl: _sig,
     stampDataUrl: _stamp,
+    geminiApiKeys: _gKeys,
+    groqApiKeys: _rKeys,
+    geminiApiKey: _gKey,
+    groqApiKey: _rKey,
     ...cloudProfile
   } = profile;
 
@@ -246,8 +247,9 @@ export async function pushProfileToCloud(uid: string, profile: SurveyorProfile) 
 
 /**
  * Pulls the profile from Firestore and merges into the local store.
- * Local signatureDataUrl and stampDataUrl are preserved (not stored in cloud).
- * API keys pulled from the cloud will overwrite local keys.
+ * Local-only fields are preserved (not stored in cloud):
+ * - signatureDataUrl / stampDataUrl — base64 blobs
+ * - geminiApiKeys / groqApiKeys / geminiApiKey / groqApiKey — credentials
  */
 export async function pullProfileFromCloud(uid: string) {
   const profileRef = doc(db, `users/${uid}/profile`, 'current');
@@ -261,6 +263,10 @@ export async function pullProfileFromCloud(uid: string) {
       ...remoteProfile,
       signatureDataUrl: local.signatureDataUrl,
       stampDataUrl: local.stampDataUrl,
+      geminiApiKeys: local.geminiApiKeys,
+      groqApiKeys: local.groqApiKeys,
+      geminiApiKey: local.geminiApiKey,
+      groqApiKey: local.groqApiKey,
     });
 
     logger.log(`[Sync] Local profile updated from cloud for user ${uid}.`);

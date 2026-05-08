@@ -1,23 +1,21 @@
 /**
  * DocumentEvidenceViewer
  * ──────────────────────
- * Collapsible side panel that shows the source document page image alongside
- * a highlighted text context snippet for any field the surveyor clicks.
+ * Collapsible side panel that shows the source document alongside a highlighted
+ * text context snippet for any field the surveyor clicks.
  *
  * Usage
  * -----
- * 1. Wrap the panel in your tab layout.
- * 2. Call `evidenceStore.openField(docType, fieldKey, contextSnippet)` when
- *    a surveyor clicks a field in the Reconciliation Hub or Assessment panel.
- * 3. Images are read from sessionStorage (keyed by `ev_img_<claimId>_<docType>`).
+ * 1. When a file is uploaded, call `storeBlobUrl(claimId, docType, file)` once.
+ *    This creates an object URL pointing to the original file — no conversion needed.
+ * 2. Call `evidenceStore.openField(claimId, field)` when the surveyor clicks a field.
+ * 3. The viewer renders PDFs in a native <iframe> and images as <img>.
  *
- * Session-storage key format
- * --------------------------
- *   ev_img_<claimId>_<docType>   →  base64 string (data URL) of page 1 image
+ * Blob URLs are in-memory only — they are cleared on tab close or claim archive.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { X, ChevronRight, ChevronLeft, FileSearch, ZoomIn, ZoomOut } from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { X, ChevronRight, FileSearch } from 'lucide-react';
 import { create } from 'zustand';
 
 // ─── Evidence Store ───────────────────────────────────────────────────────────
@@ -34,43 +32,60 @@ interface EvidenceState {
   claimId: string | null;
   openField: (claimId: string, field: EvidenceField) => void;
   close: () => void;
+  // Blob URL map: "claimId_docType" → { url, mimeType }
+  blobUrls: Record<string, { url: string; mimeType: string }>;
+  // Raw File map: "claimId_docType" → File (for downstream processing)
+  rawFiles: Record<string, File>;
+  storeBlobUrl: (claimId: string, docType: string, file: File) => void;
+  revokeBlobUrls: (claimId: string) => void;
 }
 
-export const useEvidenceStore = create<EvidenceState>((set) => ({
+export const useEvidenceStore = create<EvidenceState>((set, get) => ({
   isOpen: false,
   field: null,
   claimId: null,
+  blobUrls: {},
+  rawFiles: {},
   openField: (claimId, field) => set({ isOpen: true, field, claimId }),
   close: () => set({ isOpen: false, field: null }),
+  storeBlobUrl: (claimId, docType, file) => {
+    const key = `${claimId}_${docType}`;
+    // Revoke any existing blob URL for this doc to avoid memory leaks
+    const existing = get().blobUrls[key];
+    if (existing) URL.revokeObjectURL(existing.url);
+    const url = URL.createObjectURL(file);
+    set(s => ({
+      blobUrls: { ...s.blobUrls, [key]: { url, mimeType: file.type } },
+      rawFiles: { ...s.rawFiles, [key]: file },
+    }));
+  },
+  revokeBlobUrls: (claimId) => {
+    const current = get().blobUrls;
+    const rawCurrent = get().rawFiles;
+    const next: Record<string, { url: string; mimeType: string }> = {};
+    const rawNext: Record<string, File> = {};
+    for (const [key, val] of Object.entries(current)) {
+      if (key.startsWith(`${claimId}_`)) {
+        URL.revokeObjectURL(val.url);
+      } else {
+        next[key] = val;
+      }
+    }
+    for (const [key, file] of Object.entries(rawCurrent)) {
+      if (!key.startsWith(`${claimId}_`)) rawNext[key] = file;
+    }
+    set({ blobUrls: next, rawFiles: rawNext });
+  },
 }));
 
-// ─── Helper: load image from session storage ──────────────────────────────────
-
-function getStorageKey(claimId: string, docType: string) {
-  return `evidence_${claimId}_${docType}`;
+/** Convenience: store a blob URL for a file. Call this right after upload. */
+export function storeBlobUrl(claimId: string, docType: string, file: File) {
+  useEvidenceStore.getState().storeBlobUrl(claimId, docType, file);
 }
 
-function loadImage(claimId: string | null, docType: string | null): string | null {
-  if (!claimId || !docType) return null;
-  try {
-    // Images are stored as a JSON array of base64 strings; we show the first page
-    const raw = sessionStorage.getItem(getStorageKey(claimId, docType));
-    if (!raw) return null;
-    const pages: string[] = JSON.parse(raw);
-    return pages[0] ?? null;
-  } catch {
-    return null;
-  }
-}
-
-/** Store a base64 document image for later retrieval by the Evidence Viewer.
- * Accepts the same array format written by useAIExtraction's saveEvidenceImages. */
-export function storeEvidenceImage(claimId: string, docType: string, base64: string) {
-  try {
-    sessionStorage.setItem(getStorageKey(claimId, docType), JSON.stringify([base64]));
-  } catch (e) {
-    console.warn('[EvidenceViewer] sessionStorage quota exceeded, skipping image store', e);
-  }
+/** Retrieve the raw File object for a previously uploaded document. Returns null if not stored. */
+export function getRawFile(claimId: string, docType: string): File | null {
+  return useEvidenceStore.getState().rawFiles[`${claimId}_${docType}`] ?? null;
 }
 
 // ─── Doc type labels ──────────────────────────────────────────────────────────
@@ -93,49 +108,33 @@ const DOC_LABELS: Record<string, string> = {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 interface Props {
-  /** Width of the panel when open, e.g. "420px" */
   panelWidth?: string;
+  embedded?: boolean;
+  defaultDocType?: string;
 }
 
-export function DocumentEvidenceViewer({ panelWidth = '420px' }: Props) {
-  const { isOpen, field, claimId, close } = useEvidenceStore();
-  const [imgSrc, setImgSrc] = useState<string | null>(null);
-  const [zoom, setZoom] = useState(1);
-  const imgRef = useRef<HTMLImageElement>(null);
+export function DocumentEvidenceViewer({ panelWidth = '420px', embedded = false, defaultDocType }: Props) {
+  const { isOpen, field, claimId, close, blobUrls } = useEvidenceStore();
 
-  // Load image whenever the field / claimId changes
-  useEffect(() => {
-    const src = loadImage(claimId, field?.docType ?? null);
-    setImgSrc(src);
-    setZoom(1);
-  }, [claimId, field?.docType]);
+  // Resolve the docType: current field or fallback to default
+  const effectiveDocType = field?.docType || defaultDocType;
 
-  const zoomIn  = useCallback(() => setZoom(z => Math.min(z + 0.25, 4)), []);
-  const zoomOut = useCallback(() => setZoom(z => Math.max(z - 0.25, 0.5)), []);
-  const resetZoom = useCallback(() => setZoom(1), []);
+  // Resolve the blob URL for the current doc
+  const blobEntry = claimId && effectiveDocType
+    ? blobUrls[`${claimId}_${effectiveDocType}`] ?? null
+    : null;
+  const blobUrl  = blobEntry?.url ?? null;
+  const isPdf    = blobEntry?.mimeType === 'application/pdf';
+  const isImage  = blobEntry?.mimeType.startsWith('image/') ?? false;
 
-  // Mouse-wheel zoom on the image area
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-      setZoom(z => {
-        const delta = e.deltaY > 0 ? -0.1 : 0.1;
-        return Math.min(Math.max(z + delta, 0.5), 4);
-      });
-    }
-  }, []);
-
-  const docLabel = field ? (DOC_LABELS[field.docType] ?? field.docType.toUpperCase()) : '';
+  const docLabel = effectiveDocType ? (DOC_LABELS[effectiveDocType] ?? effectiveDocType.toUpperCase()) : '';
 
   return (
     <>
       {/* ── Floating toggle button when panel is closed ── */}
-      {!isOpen && (
+      {(!isOpen && !embedded) && (
         <button
-          onClick={() => {
-            // Re-open with the last field if available
-            useEvidenceStore.setState({ isOpen: true });
-          }}
+          onClick={() => useEvidenceStore.setState({ isOpen: true })}
           title="Open Evidence Viewer"
           style={{
             position: 'fixed',
@@ -157,23 +156,23 @@ export function DocumentEvidenceViewer({ panelWidth = '420px' }: Props) {
           }}
         >
           <FileSearch size={18} />
-          <ChevronLeft size={14} />
+          <ChevronRight size={14} style={{ transform: 'rotate(180deg)' }} />
         </button>
       )}
 
       {/* ── Side panel ── */}
       <div
         style={{
-          position: 'fixed',
+          position: embedded ? 'relative' : 'fixed',
           top: 0,
-          right: isOpen ? 0 : `-${panelWidth}`,
-          width: panelWidth,
-          height: '100vh',
-          zIndex: 1001,
+          right: (isOpen || embedded) ? 0 : `-${panelWidth}`,
+          width: embedded ? '100%' : panelWidth,
+          height: embedded ? '100%' : '100vh',
+          zIndex: embedded ? 1 : 1001,
           display: 'flex',
           flexDirection: 'column',
           background: '#0f172a',
-          boxShadow: '-4px 0 32px rgba(0,0,0,0.5)',
+          boxShadow: embedded ? 'none' : '-4px 0 32px rgba(0,0,0,0.5)',
           transition: 'right 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           borderLeft: '1px solid rgba(255,255,255,0.08)',
         }}
@@ -191,38 +190,11 @@ export function DocumentEvidenceViewer({ panelWidth = '420px' }: Props) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <FileSearch size={18} color="#93c5fd" />
             <div>
-              <div style={{ color: '#e2e8f0', fontWeight: 600, fontSize: 13 }}>
-                Evidence Viewer
-              </div>
-              {docLabel && (
-                <div style={{ color: '#93c5fd', fontSize: 11, marginTop: 1 }}>
-                  {docLabel}
-                </div>
-              )}
+              <div style={{ color: '#e2e8f0', fontWeight: 600, fontSize: 13 }}>Evidence Viewer</div>
+              {docLabel && <div style={{ color: '#93c5fd', fontSize: 11, marginTop: 1 }}>{docLabel}</div>}
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-            <IconBtn onClick={zoomOut} title="Zoom Out"><ZoomOut size={15} /></IconBtn>
-            <button
-              onClick={resetZoom}
-              title="Reset zoom"
-              style={{
-                background: 'rgba(255,255,255,0.1)',
-                border: 'none',
-                borderRadius: 6,
-                padding: '4px 8px',
-                cursor: 'pointer',
-                color: '#93c5fd',
-                fontSize: 11,
-                fontWeight: 600,
-                minWidth: 42,
-              }}
-            >
-              {Math.round(zoom * 100)}%
-            </button>
-            <IconBtn onClick={zoomIn}  title="Zoom In" ><ZoomIn  size={15} /></IconBtn>
-            <IconBtn onClick={close}   title="Close">   <X        size={15} /></IconBtn>
-          </div>
+          {!embedded && <IconBtn onClick={close} title="Close"><X size={15} /></IconBtn>}
         </div>
 
         {/* Context snippet badge */}
@@ -247,37 +219,23 @@ export function DocumentEvidenceViewer({ panelWidth = '420px' }: Props) {
           </div>
         )}
 
-        {/* Document image — scrollable zoom container */}
-        <div
-          onWheel={handleWheel}
-          style={{
-            flex: 1,
-            overflow: 'auto',
-            padding: 12,
-            // Don't use align/justify center — let the inner div expand freely
-          }}
-        >
-          {imgSrc ? (
-            <div
-              style={{
-                display: 'inline-block',
-                minWidth: '100%',
-                transformOrigin: 'top left',
-                transform: `scale(${zoom})`,
-                transition: 'transform 0.15s ease',
-              }}
-            >
+        {/* Document display area */}
+        <div style={{ flex: 1, overflow: 'hidden', padding: isPdf ? 0 : 12, display: 'flex', flexDirection: 'column' }}>
+          {blobUrl && isPdf ? (
+            // Native PDF rendering — browser handles zoom, scroll, text selection
+            <iframe
+              key={blobUrl}
+              src={blobUrl}
+              title={docLabel}
+              style={{ flex: 1, width: '100%', border: 'none', borderRadius: 0, background: '#fff' }}
+            />
+          ) : blobUrl && isImage ? (
+            // Image files — render directly
+            <div style={{ flex: 1, overflow: 'auto' }}>
               <img
-                ref={imgRef}
-                src={imgSrc}
+                src={blobUrl}
                 alt={`${docLabel} source document`}
-                style={{
-                  width: '100%',
-                  display: 'block',
-                  borderRadius: 6,
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
-
-                }}
+                style={{ width: '100%', display: 'block', borderRadius: 6, boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}
               />
             </div>
           ) : (

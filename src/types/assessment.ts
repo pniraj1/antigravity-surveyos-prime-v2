@@ -7,7 +7,15 @@
 export type PartType = 'metal' | 'plastic' | 'glass' | 'fiberglass' | 'labour' | 'paint';
 export type AssessmentSection = 'parts' | 'labour' | 'paint';
 
-export type BillStatus = 'in-bill' | 'not-in-bill' | 'partial' | 'pending';
+export type BillStatus = 'in-bill' | 'not-in-bill' | 'partial' | 'pending' | 'not-allowed';
+
+export interface ExtraBillItem {
+  id: string;
+  description: string;
+  amount: number;
+  category?: 'spare_parts' | 'labour' | 'painting';
+  source: 'final-bill';
+}
 
 
 export interface AssessmentRow {
@@ -25,6 +33,9 @@ export interface AssessmentRow {
   unitPrice?: number;
   estimated: number;
   assessed: number;
+  /** Billed taxable (net) amount — before GST, from workshop's final bill */
+  billedTaxable?: number;
+  /** Billed total (incl GST) from workshop's final bill */
   billedAmount?: number;
   billStatus?: BillStatus;
   billRemarks?: string;
@@ -36,6 +47,17 @@ export interface AssessmentRow {
   action?: 'replace' | 'repair' | 'disallow' | '';
   /** Surveyor remarks for this line item */
   remarks?: string;
+  /**
+   * Disposal / used part flag.
+   * When true: no GST is applied on this row.
+   * Net = assessed × (1 − dep%) × (disposalPercent / 100)
+   */
+  isDisposal?: boolean;
+  /**
+   * Surveyor's allowed percentage of the depreciated value for a disposal item.
+   * Industry norm is 50%. Range 0–100. Only meaningful when isDisposal = true.
+   */
+  disposalPercent?: number;
 }
 
 export interface AssessmentSummary {
@@ -193,11 +215,20 @@ export interface FeeBill {
 
 // ─── PHOTO SHEET ────────────────────────────────────────
 export interface PhotoItem {
+  id: string;
   dataUrl: string;
   name: string;
   /** Original pixel width captured at upload time (used for orientation detection) */
   w?: number;
   /** Original pixel height captured at upload time (used for orientation detection) */
+  h?: number;
+}
+
+/** Metadata only, for storage in the main ClaimData object to save memory */
+export interface PhotoMetadata {
+  id: string;
+  name: string;
+  w?: number;
   h?: number;
 }
 
@@ -237,6 +268,48 @@ export interface BillCheckSummary {
   excess: number;
   netLiability: number;
   netInWords: string;
+}
+
+// ─── Valuation / Break-in Inspection ──────────────────────────────────────────
+
+export interface ValuationConditionRow {
+  id: string;
+  component: string;
+  condition: string;
+}
+
+export interface ValuationDetails {
+  inspectionDate: string;
+  inspectionPlace: string;
+  odometer: string;
+
+  chassis: string;
+  engineTransmission: string;
+  suspension: string;
+  seats: string;
+  electricals: string;
+
+  batteryMake: string;
+  batteryCondition: string;
+
+  tyreCount: string;
+  stepneyCount: string;
+  tyreMake: string;
+  tyreCondition: string;
+
+  glassCondition: string;
+
+  panelRows: ValuationConditionRow[];
+
+  toName: string;
+  toAddress: string;
+
+  isInsurable: boolean;
+  coverRecommendation: string;
+  documentVerificationNote: string;
+
+  enclosures: string;
+  remarks: string;
 }
 
 

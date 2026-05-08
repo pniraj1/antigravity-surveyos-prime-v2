@@ -43,18 +43,34 @@ export function calculateAssessmentSummary(
     if (!r.allowed) return;
     const depRate = getDepreciationRate(r.partType, ageMonths, depType);
     const valueAfterDep = r.assessed * (1 - depRate / 100);
-    const rowGST = valueAfterDep * (r.gst / 100);
 
-    if (r.section === 'parts') {
-      if (r.partType === 'metal') metal += valueAfterDep;
-      else if (r.partType === 'glass') glass += valueAfterDep;
-      else if (r.partType === 'fiberglass') fiberglass += valueAfterDep;
-      else plastic += valueAfterDep;
-      
-      partsGSTAccumulator += rowGST;
+    if (r.isDisposal) {
+      // Disposal (used/salvaged part): no GST; surveyor allows disposalPercent% of depreciated value
+      const disposalFactor = (r.disposalPercent ?? 50) / 100;
+      const disposalValue = valueAfterDep * disposalFactor;
+      if (r.section === 'parts') {
+        if (r.partType === 'metal') metal += disposalValue;
+        else if (r.partType === 'glass') glass += disposalValue;
+        else if (r.partType === 'fiberglass') fiberglass += disposalValue;
+        else plastic += disposalValue;
+        // No GST accumulated for disposal parts
+      } else {
+        labourBase += disposalValue;
+        // No GST accumulated for disposal labour
+      }
     } else {
-      labourBase += valueAfterDep;
-      labourGSTAccumulator += rowGST;
+      // Normal new part: apply GST on depreciated value
+      const rowGST = valueAfterDep * (r.gst / 100);
+      if (r.section === 'parts') {
+        if (r.partType === 'metal') metal += valueAfterDep;
+        else if (r.partType === 'glass') glass += valueAfterDep;
+        else if (r.partType === 'fiberglass') fiberglass += valueAfterDep;
+        else plastic += valueAfterDep;
+        partsGSTAccumulator += rowGST;
+      } else {
+        labourBase += valueAfterDep;
+        labourGSTAccumulator += rowGST;
+      }
     }
   });
 
@@ -75,11 +91,12 @@ export function calculateAssessmentSummary(
     const gstRate = (r.gst || 18) / 100;
     if (r.section === 'parts') {
       estPartsBase += r.estimated;
-      estPartsGST += r.estimated * gstRate;
+      // Disposal parts carry no GST on the estimate either
+      if (!r.isDisposal) estPartsGST += r.estimated * gstRate;
     } else {
       // labour + paint
       estLabourBase += r.estimated;
-      estLabourGST += r.estimated * gstRate;
+      if (!r.isDisposal) estLabourGST += r.estimated * gstRate;
     }
   });
   const totalEstimated = estPartsBase + estPartsGST + estLabourBase + estLabourGST;
@@ -133,20 +150,23 @@ export function calculateBillCheckSummary(
 
   rows.forEach(r => {
     if (!r.allowed) return;
-    
-    // Row math
+
     const depRate = getDepreciationRate(r.partType, ageMonths, depType);
     const amount = (r.billStatus === 'not-in-bill') ? 0 : (r.billedAmount || 0);
     const valueBilledAfterDep = amount * (1 - depRate / 100);
-    const billedGST = valueBilledAfterDep * (r.gst / 100);
 
     assessedBaseSum += r.assessed;
     billedBaseSum += amount;
 
     if (r.billStatus === 'not-in-bill') {
       notInBillTotal += r.assessed;
+    } else if (r.isDisposal) {
+      // Disposal: no GST on billed amount; apply disposal percent
+      const disposalFactor = (r.disposalPercent ?? 50) / 100;
+      billedGrandTotal += valueBilledAfterDep * disposalFactor;
     } else {
-      billedGrandTotal += (valueBilledAfterDep + billedGST);
+      const billedGST = valueBilledAfterDep * (r.gst / 100);
+      billedGrandTotal += valueBilledAfterDep + billedGST;
     }
   });
 
@@ -183,6 +203,8 @@ export function createAssessmentRow(
     gst: 18,
     section,
     allowed: true,
+    isDisposal: false,
+    disposalPercent: 50,
     ...overrides,
   };
 }

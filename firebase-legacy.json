@@ -1,0 +1,11 @@
+{
+  "hosting": {
+    "site": "surveyos-v2-antigravity",
+    "public": "out-redirect",
+    "cleanUrls": true,
+    "ignore": ["firebase-legacy.json", "**/.*"],
+    "redirects": [
+      { "source": "**", "destination": "https://motorsurveyos.web.app", "type": 301 }
+    ]
+  }
+}

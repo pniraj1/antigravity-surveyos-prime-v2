@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import dynamicImport from 'next/dynamic';
 import { useUIStore } from '@/stores/ui-store';
+import { useTabRouting } from '@/hooks/useTabRouting';
 import { useClaimStore } from '@/stores/claim-store';
 import { getClaim, saveClaim } from '@/lib/storage/indexeddb';
 import {
@@ -42,6 +43,8 @@ const ProfileTab    = dynamicImport(() => import('@/components/tabs/ProfileTab')
 const AdminDashboard = dynamicImport(() => import('@/components/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })), { ssr: false });
 const CloudVaultTab    = dynamicImport(() => import('@/components/tabs/CloudVaultTab').then(m    => ({ default: m.CloudVaultTab    })), { ssr: false });
 const ReinspectionTab  = dynamicImport(() => import('@/components/tabs/ReinspectionTab').then(m  => ({ default: m.ReinspectionTab  })), { ssr: false });
+const ValuationTab        = dynamicImport(() => import('@/components/tabs/ValuationTab').then(m        => ({ default: m.ValuationTab        })), { ssr: false });
+const InsuredReportTab    = dynamicImport(() => import('@/components/tabs/InsuredReportTab').then(m    => ({ default: m.InsuredReportTab    })), { ssr: false });
 
 // ─── Dashboard Tab Content ──────────────────────────────
 export function DashboardContent() {
@@ -480,6 +483,8 @@ export function DashboardContent() {
                               ? { background: '#D1FAE5', color: '#065F46', border: '1px solid #A7F3D0' }
                               : claim.stage === 'reinspection'
                               ? { background: '#E0E7FF', color: '#3730A3', border: '1px solid #C7D2FE' }
+                              : claim.stage === 'valuation'
+                              ? { background: '#FFF7ED', color: '#9A3412', border: '1px solid #FDBA74' }
                               : { background: '#F1F5F9', color: '#475569', border: '1px solid #E2E8F0' }
                           }
                         >
@@ -580,13 +585,15 @@ export function TabPlaceholder({ tab }: { tab: string }) {
   if (tab === 'details')     return <DetailsTab />;
   if (tab === 'assessment')  return <AssessmentTab />;
   if (tab === 'photos')      return <PhotosTab />;
-  if (tab === 'reports')     return <ReportTab />;
-  if (tab === 'bill-check')  return <BillCheckTab />;
+  if (tab === 'reports')        return <ReportTab />;
+  if (tab === 'insured-report') return <InsuredReportTab />;
+  if (tab === 'bill-check')     return <BillCheckTab />;
   if (tab === 'fees')        return <FeesTab />;
   if (tab === 'profile')     return <ProfileTab />;
   if (tab === 'admin')       return <AdminDashboard />;
   if (tab === 'cloud-vault')  return <CloudVaultTab />;
   if (tab === 'reinspection') return <ReinspectionTab />;
+  if (tab === 'valuation')   return <ValuationTab />;
 
   // Genuinely unimplemented
   return (
@@ -602,6 +609,7 @@ export function TabPlaceholder({ tab }: { tab: string }) {
 
 export default function Dashboard() {
   const { activeTab } = useUIStore();
+  useTabRouting();
 
   return (
     <div className="flex h-screen overflow-hidden">

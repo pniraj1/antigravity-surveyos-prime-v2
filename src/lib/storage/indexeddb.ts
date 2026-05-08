@@ -44,6 +44,7 @@
 
 import { openDB, type IDBPDatabase } from 'idb';
 import type { ClaimData } from '@/types';
+import { logger } from '@/lib/utils/logger';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -189,7 +190,7 @@ export async function initUserDB(uid: string): Promise<void> {
 
   // Run one-time migration from legacy shared DB (fire-and-forget, non-blocking)
   migrateFromLegacyDB(uid).catch(err =>
-    console.warn('[DB] Legacy migration failed (non-critical):', err)
+    logger.warn('[DB] Legacy migration failed (non-critical):', err)
   );
 }
 
@@ -270,12 +271,12 @@ async function migrateFromLegacyDB(uid: string): Promise<void> {
 
     // Only mark done after the transaction has committed successfully.
     localStorage.setItem(migrationKey, 'done');
-    console.info(
+    logger.info(
       `[DB] Migrated ${owned.length} of ${legacyClaims.length} legacy claim(s) to surveyos-v2-${uid}`
     );
   } catch (err) {
     // Transaction failed — leave flag unset so migration retries next login
-    console.warn('[DB] Legacy migration transaction failed, will retry on next login:', err);
+    logger.warn('[DB] Legacy migration transaction failed, will retry on next login:', err);
   } finally {
     legacyDb?.close();
   }
@@ -432,7 +433,7 @@ export async function addToDriveQueue(
   const existing = await db.getAll('driveQueue');
   const totalBytes = existing.reduce((sum, q) => sum + q.fileData.byteLength, 0);
   if (totalBytes + item.fileData.byteLength > DRIVE_QUEUE_SIZE_LIMIT) {
-    console.warn('[DriveQueue] Queue exceeds 500 MB — Drive may not be syncing. Item rejected:', item.fileName);
+    logger.warn('[DriveQueue] Queue exceeds 500 MB — Drive may not be syncing. Item rejected:', item.fileName);
     throw new Error('DRIVE_QUEUE_FULL');
   }
 

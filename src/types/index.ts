@@ -4,3 +4,4 @@ export * from './assessment';
 export * from './claim';
 export * from './report';
 export * from './telemetry';
+export * from './insured-report';

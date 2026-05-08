@@ -11,11 +11,12 @@
   1. Firebase Console → Project Settings → General → Web API Key → Regenerate
   2. Update `.env.local` and `.env.production` with new key
   3. `npm run build && firebase deploy --only hosting`
+- [ ] **Commit today's changes** — large batch of uncommitted work from 2026-04-26 session (see [[Sessions/2026-04-26]])
 
 ---
 
 ## Current Objective
-✅ IRDAI Annual Summary Export feature complete + deployed. Next: Security hardening backlog.
+✅ Valuation / Break-in Inspection report type shipped and deployed (2026-04-26). Next: end-to-end test of valuation flow + security backlog.
 
 ## 🔐 Security Backlog
 > Full details: [[Security_Audit_2026-04-13]]
@@ -26,15 +27,36 @@
 - [x] C-3: Firestore `ai_config/routing` locked to admin-only
 
 ### 🟠 High Priority (This Week)
-- [ ] H-1: Strip `geminiApiKeys[]` / `groqApiKeys[]` from Firestore profile sync
-- [ ] H-2: Remove hardcoded master UID from sidebar.tsx client bundle
-- [ ] H-4: Replace 30+ `console.log` calls with dev-only logger
+- [x] H-1: ~~Strip `geminiApiKeys[]` / `groqApiKeys[]` from Firestore profile sync~~ — **Won't fix**: keys are free-tier with quota limits, risk is negligible. Encrypt at rest if this changes.
+- [x] H-2: Master UID already reads from `process.env.NEXT_PUBLIC_MASTER_ADMIN_UID` — not hardcoded (verified 2026-04-26)
+- [x] H-4: Only 3 `[AI Extraction]` diagnostic logs remain in `processor.ts` + 1 inside `logger.ts` itself — not leaking UIDs (verified 2026-04-26)
 
 ### 🟡 Medium Priority (Next Sprint)
 - [ ] M-4: Fix profile path — sync.ts writes `profile/main`, AdminDashboard reads `profile/current`
 - [ ] L-2: Add CSP headers to firebase.json
 - [ ] M-3: Firestore field-level validation + doc size limits
 - [ ] H-3: Sanitize claim text before injecting into AI prompts
+
+---
+
+## ✅ Completed (2026-04-26 — Session 2)
+
+- [x] **Valuation / Break-in Inspection report** — new `SurveyType: 'valuation'` with full tab set, condition form, HTML builder, PDF preview, deployed
+- [x] `ValuationDetails` interface + `updateValuationDetails()` store action
+- [x] `ValuationTab.tsx` — panel damage rows, mechanical condition, conclusion + recommendation
+- [x] `valuation-report-builder.ts` — letter-format HTML print builder (matches sample)
+- [x] `ValuationReportDocument.tsx` — React-PDF preview
+- [x] Sidebar tab restrictions per survey type (valuation hides assessment/fees/reinspection/review)
+- [x] NewClaimDialog: Valuation button with break-in hint
+- [x] Deployed: `npm run build && firebase deploy --only hosting` → https://surveyos-v2-antigravity.web.app
+
+## ✅ Completed (2026-04-26 — Session 1)
+- [x] **Sandbox feature removed** — `/sandbox/mapper` was live in production, deleted all 5 source files, fixed leftover refs in layout.tsx and processor.ts
+- [x] **Gemini model list cleaned** — static list trimmed to 3 stable models only (2.5 Pro, 2.5 Flash, 2.5 Flash-Lite); live fetch filter strips TTS/image/live/robotics/experimental models
+- [x] **Text/Vision mode toggle** — `DocModeToggle` (Auto/Text/Vision) wired through profile store → useAIExtraction → extractDocument; persists across sessions
+- [x] **AI controls on Assessment tab** — ProviderToggle + DocModeToggle + ModelSelector + ProviderHealthBadge added; DocumentsTab uses same shared `AIControls.tsx`
+- [x] **60-second extraction timeout removed** — large PDFs were silently failing; queue now waits as long as the API needs
+- [x] **Obsidian session logging established** — Sessions/ folder created, daily logs written by AI at end of each session
 
 ---
 
@@ -55,7 +77,9 @@
 - [x] SpotTab deduplication: removed placeOfSurvey, verificationFlags
 - [x] Admin panel fixed: now accessible via master UID regardless of isAdmin flag
 - [x] Knowledge base vault structured and populated
-- [x] **IRDAI Annual Summary Export** — "Export Annual Summary" button on dashboard (FY selector, live preview, 4-sheet Excel workbook with Claim Register, Insurer-wise, Month-wise Fees, Analytics)
+- [x] **Reinspection Report Polish** — Removed 'Est. Completion Date' and 'Repair Auth.' from UI, HTML Power Print, and UIIC PDF format.
+- [x] **Project ID Research** — Verified `surveyos.web.app` and `surveyosprime.web.app` are taken; recommended custom domain approach.
+
 
 ### Security (2026-04-13)
 - [x] Full security audit performed

@@ -200,16 +200,22 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
             <td style={{ ...parseInline(styles.td) }}>{vehicle.cubicCapacity || '—'}</td>
           </tr>
           <tr>
-            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>RLW / GVW / Seating</td>
-            <td style={{ ...parseInline(styles.td) }}>{vehicle.rlw || '—'} / {vehicle.grossWeight || '—'} / {vehicle.seatingCapacityTotal || '—'}</td>
-            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Odometer (KM)</td>
-            <td style={{ ...parseInline(styles.td) }}>{vehicle.odometer || '—'}</td>
+            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>RLW(GVW) / Seating Capacity</td>
+            <td style={{ ...parseInline(styles.td) }}>{vehicle.registeredLoadWeight || vehicle.grossWeight || '—'} / {vehicle.seatingCapacity || '—'}</td>
+            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>ULW / Tare (kg)</td>
+            <td style={{ ...parseInline(styles.td) }}>{ulwVal || spotDetails.ulw || vehicle.unladenWeight || '—'}</td>
           </tr>
           <tr>
+            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Odometer (KM)</td>
+            <td style={{ ...parseInline(styles.td) }}>{vehicle.odometer || '—'}</td>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Pre-Accident Condition</td>
             <td style={{ ...parseInline(styles.td) }}>{vehicle.preAccidentCondition || '—'}</td>
+          </tr>
+          <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>{isComm ? 'Fitness Cert. No.' : ''}</td>
             <td style={{ ...parseInline(styles.td), fontFamily: 'monospace' }}>{isComm ? vehicle.fitnessNo || '—' : ''}</td>
+            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}></td>
+            <td style={{ ...parseInline(styles.td) }}></td>
           </tr>
           {isComm && (
             <tr>
@@ -227,7 +233,7 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>Insured Mobile</td>
             <td style={{ ...parseInline(styles.td) }}>{policy.insuredMobile || '—'}</td>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: '6.8pt' }}>HPA / Finance With</td>
-            <td style={{ ...parseInline(styles.td) }}>{policy.hpa || 'NIL'}</td>
+            <td style={{ ...parseInline(styles.td) }}>{policy.hpaWith || 'NIL'}</td>
           </tr>
           {policy.insuredAddress && (
             <tr>
