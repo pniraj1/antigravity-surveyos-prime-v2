@@ -36,6 +36,8 @@ const DEFAULT_PROFILE: SurveyorProfile = {
   code: '',
   categories: 'MOTOR',
   mobile: '',
+  city: '',
+  state: '',
   email: '',
   address: '',
   gstNumber: '',

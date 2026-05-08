@@ -130,6 +130,8 @@ export interface SurveyorProfile {
   code: string;
   categories: string;
   mobile: string;
+  city?: string;
+  state?: string;
   email: string;
   address: string;
   gstNumber: string;
