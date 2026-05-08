@@ -96,7 +96,7 @@
 
   /* ── Muted ─────────────────────────────────────────── */
   --muted:              #F0F2F5;
-  --muted-foreground:   #8D99AE;
+  --muted-foreground:   #5A6577;
 
   /* ── Accent = Gold tint ────────────────────────────── */
   --accent:             #FBF7E6;
@@ -145,7 +145,7 @@
     --secondary:          #E8ECF0;
     --secondary-foreground: #4A4E69;
     --muted:              #F0F2F5;
-    --muted-foreground:   #8D99AE;
+    --muted-foreground:   #5A6577;
     --accent:             #FBF7E6;
     --accent-foreground:  #0D1B2A;
     --destructive:        #C0392B;
@@ -260,4 +260,29 @@
 ::selection {
   background: rgba(212, 175, 55, 0.25);
   color: #0D1B2A;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LANDING V2 — Custom animations
+   ═══════════════════════════════════════════════════════════ */
+
+@keyframes gradient-text {
+  0%, 100% { background-position: 0% 50%; }
+  50%       { background-position: 100% 50%; }
+}
+
+@keyframes spotlight {
+  0%   { opacity: 0; transform: translate(-72%, -62%) rotate(30deg) scale(0.9); }
+  100% { opacity: 1; transform: translate(-50%, -40%) rotate(30deg) scale(1); }
+}
+
+@keyframes ping-slow {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50%       { transform: scale(1.4); opacity: 0; }
+}
+
+@theme inline {
+  --animate-gradient-text: gradient-text 4s ease infinite;
+  --animate-spotlight:     spotlight 2s ease forwards;
+  --animate-ping-slow:     ping-slow 2s ease-in-out infinite;
 }
