@@ -3,7 +3,7 @@
 import { useProfileStore } from '@/stores/profile-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { Lock, CreditCard, Mail } from 'lucide-react';
-import { AccessRequestForm, AccessRequestConfirmation } from './AccessRequestForm';
+import { AccessRequestForm } from './AccessRequestForm';
 
 
 const SANDBOX_MODE = process.env.NEXT_PUBLIC_SANDBOX_MODE === 'true';
@@ -34,8 +34,9 @@ export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
     if (!profile.accessRequestSubmitted) {
       return <AccessRequestForm />;
     }
-    // Submitted but not yet approved → confirmation screen
-    return <AccessRequestConfirmation />;
+    // Submitted but not yet approved: render children (read-only dashboard).
+    // PendingApprovalBanner is injected above the layout by AuthGate.
+    return <>{children}</>;
   }
 
 
