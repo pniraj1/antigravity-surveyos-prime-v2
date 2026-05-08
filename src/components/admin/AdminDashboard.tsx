@@ -73,6 +73,8 @@ interface NewSignup {
   name: string;
   irdaiLicence: string;
   mobile: string;
+  city?: string;
+  state?: string;
   signedUpAt: Timestamp;
   updatedAt?: Timestamp;
   status: string;
@@ -244,6 +246,8 @@ export function AdminDashboard() {
           name: data.name || data.displayName || '',
           irdaiLicence: data.irdaiLicence || '',
           mobile: data.mobile || '',
+          city: data.city || '',
+          state: data.state || '',
           signedUpAt: data.signedUpAt,
           updatedAt: data.updatedAt,
           status: data.status || 'pending',
@@ -650,6 +654,11 @@ export function AdminDashboard() {
                           {/* Phone */}
                           <td className="px-6 py-5">
                             <div className="text-sm font-medium text-[#0D1B2A]">{signup.mobile || '—'}</div>
+                            {(signup.city || signup.state) && (
+                              <span className="text-xs text-gray-500">
+                                {[signup.city, signup.state].filter(Boolean).join(', ')}
+                              </span>
+                            )}
                           </td>
                           {/* Submitted date */}
                           <td className="px-6 py-5">
