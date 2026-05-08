@@ -48,8 +48,8 @@ export function ShootingStars({
     function spawn() {
       const angle = Math.random() > 0.5 ? 45 : 135;
       stars.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height * 0.6,
+        x: Math.random() * canvas!.width,
+        y: Math.random() * canvas!.height * 0.6,
         angle,
         speed: minSpeed + Math.random() * (maxSpeed - minSpeed),
         size: 1.5 + Math.random() * 2,
@@ -60,34 +60,34 @@ export function ShootingStars({
     }
 
     function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx!.clearRect(0, 0, canvas!.width, canvas!.height);
       for (let i = stars.length - 1; i >= 0; i--) {
         const s = stars[i];
         const rad = (s.angle * Math.PI) / 180;
         const dx = Math.cos(rad);
         const dy = Math.sin(rad);
-        const grad = ctx.createLinearGradient(
+        const grad = ctx!.createLinearGradient(
           s.x - dx * s.trailLen, s.y - dy * s.trailLen,
           s.x, s.y
         );
         grad.addColorStop(0, 'rgba(0,0,0,0)');
         grad.addColorStop(1, starColor);
 
-        ctx.save();
-        ctx.globalAlpha = s.alpha;
-        ctx.strokeStyle = grad;
-        ctx.lineWidth = s.size * 0.5;
-        ctx.beginPath();
-        ctx.moveTo(s.x - dx * s.trailLen, s.y - dy * s.trailLen);
-        ctx.lineTo(s.x, s.y);
-        ctx.stroke();
-        ctx.restore();
+        ctx!.save();
+        ctx!.globalAlpha = s.alpha;
+        ctx!.strokeStyle = grad;
+        ctx!.lineWidth = s.size * 0.5;
+        ctx!.beginPath();
+        ctx!.moveTo(s.x - dx * s.trailLen, s.y - dy * s.trailLen);
+        ctx!.lineTo(s.x, s.y);
+        ctx!.stroke();
+        ctx!.restore();
 
         s.x += dx * s.speed;
         s.y += dy * s.speed;
         s.alpha -= 0.006;
 
-        if (s.alpha <= 0 || s.x > canvas.width + 100 || s.y > canvas.height + 100) {
+        if (s.alpha <= 0 || s.x > canvas!.width + 100 || s.y > canvas!.height + 100) {
           stars.splice(i, 1);
         }
       }
