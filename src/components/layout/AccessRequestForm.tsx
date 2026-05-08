@@ -7,7 +7,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useProfileStore } from '@/stores/profile-store';
 import {
   Shield, User, Phone, Mail, FileText, Loader2,
-  CheckCircle2, Lock, ArrowRight, AlertCircle,
+  CheckCircle2, Lock, ArrowRight, AlertCircle, MapPin,
 } from 'lucide-react';
 
 // ─── Input Field ─────────────────────────────────────────────────────────────
@@ -58,13 +58,20 @@ export function AccessRequestForm() {
   const [name, setName]         = useState(user?.displayName ?? '');
   const [irdai, setIrdai]       = useState('');
   const [phone, setPhone]       = useState('');
+  const [city, setCity]         = useState('');
+  const [state, setState]       = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError]       = useState('');
 
   const email = user?.email ?? '';
   const dismissReason = useProfileStore.getState().profile.dismissReason;
 
-  const isValid = name.trim().length >= 2 && irdai.trim().length >= 3 && phone.trim().length >= 7;
+  const isValid =
+    name.trim().length >= 2 &&
+    irdai.trim().length >= 3 &&
+    phone.trim().length >= 7 &&
+    city.trim().length >= 2 &&
+    state.trim().length >= 2;
 
   const handleSubmit = async () => {
     if (!user || !isValid) return;
@@ -78,8 +85,11 @@ export function AccessRequestForm() {
         name:                   name.trim(),
         irdaiLicence:           irdai.trim().toUpperCase(),
         mobile:                 phone.trim(),
+        city:                   city.trim(),
+        state:                  state.trim(),
         email,
         accessRequestSubmitted: true,
+        signedUpAt:             Timestamp.now(),
         updatedAt:              Timestamp.now(),
       };
 
@@ -98,6 +108,8 @@ export function AccessRequestForm() {
         name:                   name.trim(),
         irdaiLicence:           irdai.trim().toUpperCase(),
         mobile:                 phone.trim(),
+        city:                   city.trim(),
+        state:                  state.trim(),
         email,
         accessRequestSubmitted: true,
       });
@@ -186,6 +198,24 @@ export function AccessRequestForm() {
             type="tel"
             icon={<Phone size={10} />}
             hint="We will contact you on this number to verify your identity."
+          />
+
+          <Field
+            label="City"
+            value={city}
+            onChange={setCity}
+            placeholder="e.g. Pune"
+            icon={<MapPin size={10} />}
+            hint="The city where you primarily operate."
+          />
+
+          <Field
+            label="State"
+            value={state}
+            onChange={setState}
+            placeholder="e.g. Maharashtra"
+            icon={<MapPin size={10} />}
+            hint="Your state of operation."
           />
 
           <Field
