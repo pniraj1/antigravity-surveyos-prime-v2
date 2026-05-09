@@ -16,6 +16,7 @@ import {
   getClaim,
   saveClaim,
 } from '@/lib/storage/indexeddb';
+import { invalidateClaimFileList } from '@/lib/drive/list-cache';
 
 // ─── Token State ─────────────────────────────────────────────────────────────
 // Stored in localStorage so it survives page refreshes within the 58-min window.
@@ -159,7 +160,7 @@ export function linkGoogleDrive(): Promise<boolean> {
 
 // ─── Drive API helpers ────────────────────────────────────────────────────────
 
-async function driveRequest(url: string, options: RequestInit = {}): Promise<Response> {
+export async function driveRequest(url: string, options: RequestInit = {}): Promise<Response> {
   const token = getDriveToken();
   if (!token) throw new Error('Drive not linked. Please link your Google Drive first.');
 
@@ -284,6 +285,25 @@ export async function saveDriveIndex(index: Record<string, string>): Promise<voi
 // ─── Claim Folder ─────────────────────────────────────────────────────────────
 
 /**
+ * Returns the Drive folder ID for a claim if it has already been created,
+ * without creating a new folder. Returns null if no folder exists yet.
+ */
+export async function getClaimFolderId(claimId: string): Promise<string | null> {
+  try {
+    const cached = localStorage.getItem(`surveyos_drive_folder_${claimId}`);
+    if (cached) return cached;
+    const index = await loadDriveIndex();
+    if (index[claimId]) {
+      localStorage.setItem(`surveyos_drive_folder_${claimId}`, index[claimId]);
+      return index[claimId];
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Get or create a Drive folder for a claim.
  * Returns the folder ID and stores it in the index and localStorage.
  */
@@ -359,6 +379,7 @@ export async function uploadFileToDrive(
       { method: 'POST', body: form }
     );
     toast.success(`"${fileName}" uploaded to Drive.`, { duration: 2500 });
+    invalidateClaimFileList(claimId);
   } catch (e: any) {
     // Network failure — queue to IndexedDB for retry
     const fileData = await blob.arrayBuffer();
@@ -443,6 +464,7 @@ export async function flushDriveQueue(): Promise<number> {
       );
 
       await removeDriveQueueItem(item.id);
+      invalidateClaimFileList(item.claimId);
       successCount++;
     } catch {
       await incrementDriveQueueRetry(item.id);
@@ -522,7 +544,7 @@ export async function restoreProfileFromDrive(): Promise<any | null> {
 
   try {
     const rootId = await getRootFolder();
-    
+
     const q = `name='${PROFILE_FILE_NAME}' and '${rootId}' in parents and trashed=false`;
     const searchRes = await driveRequest(
       `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id)`
@@ -540,5 +562,23 @@ export async function restoreProfileFromDrive(): Promise<any | null> {
     logger.warn('[Drive] Failed to restore profile:', e);
     return null;
   }
+}
+
+/**
+ * Replace the content of an existing Drive file in-place.
+ * Updates the blob cache with the new content.
+ */
+export async function replaceFileInDrive(fileId: string, blob: Blob): Promise<void> {
+  const form = new FormData();
+  form.append('metadata', new Blob([JSON.stringify({})], { type: 'application/json' }));
+  form.append('file', blob);
+  await driveRequest(
+    `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`,
+    { method: 'PATCH', body: form }
+  );
+  // Update the blob cache so next view uses the new version
+  const { setDriveFileCache } = await import('@/lib/storage/indexeddb');
+  const data = await blob.arrayBuffer();
+  await setDriveFileCache({ fileId, mimeType: blob.type, data, cachedAt: Date.now() });
 }
 
