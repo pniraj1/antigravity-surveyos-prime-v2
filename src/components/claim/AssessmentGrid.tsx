@@ -6,7 +6,24 @@ import { getDepreciationRate, getVehicleAgeMonths } from '@/lib/calculations/dep
 import { formatCurrency } from '@/lib/calculations/utils';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Trash2, PlusCircle, Wrench, ShieldAlert, Settings2, Eye, EyeOff, FileSearch, PackageX } from 'lucide-react';
+import { Trash2, PlusCircle, Wrench, ShieldAlert, Settings2, Eye, EyeOff, FileSearch, PackageX, GripVertical } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import type { PartType } from '@/types';
 import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
 
@@ -68,11 +85,34 @@ function saveVisibility(v: Record<OptionalColumn, boolean>) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch { /* ignore */ }
 }
 
+// ─── Sortable row wrapper ─────────────────────────────────────────
+function SortableRow({ id, className, children }: { id: string; className: string; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  return (
+    <tr
+      ref={setNodeRef}
+      className={className}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
+    >
+      <td
+        className="px-1 py-1.5 w-6 text-center cursor-grab active:cursor-grabbing"
+        {...attributes}
+        {...listeners}
+        aria-label="Drag to reorder row"
+      >
+        <GripVertical size={14} className="text-muted-foreground/30 mx-auto" />
+      </td>
+      {children}
+    </tr>
+  );
+}
+
 // ─── Component ───────────────────────────────────────────────────
 export function AssessmentGrid() {
   const {
     currentClaim,
     addAssessmentRow,
+    reorderAssessmentRows,
     updateAssessmentRow,
     deleteAssessmentRow,
     deleteAssessmentRows,
@@ -139,6 +179,11 @@ export function AssessmentGrid() {
 
   const visibleCount = Object.values(visible).filter(Boolean).length;
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
   const handleGridNavigation = (e: React.KeyboardEvent<HTMLTableSectionElement>) => {
     if (!e.shiftKey) return;
     
@@ -200,6 +245,16 @@ export function AssessmentGrid() {
 
   const { assessmentRows, vehicle, accident, depreciationType } = currentClaim;
 
+  const rowIds = assessmentRows.map((r) => r.id);
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = rowIds.indexOf(active.id as string);
+    const newIndex = rowIds.indexOf(over.id as string);
+    reorderAssessmentRows(arrayMove(rowIds, oldIndex, newIndex));
+  }
+
   const ageMonths = getVehicleAgeMonths(
     vehicle.dateOfRegistration,
     vehicle.yearOfManufacture,
@@ -221,8 +276,8 @@ export function AssessmentGrid() {
     }
   });
 
-  // Dynamic column count: 8 always-on (Select, Sr, Allowed, Particulars, Assessed, Dep%, Net, Delete) + visible optionals
-  const totalCols = 8 + visibleCount;
+  // Dynamic column count: 9 always-on (Drag, Select, Sr, Allowed, Particulars, Assessed, Dep%, Net, Delete) + visible optionals
+  const totalCols = 9 + visibleCount;
   const allRowIds = assessmentRows.map(r => r.id);
   const allSelected = allRowIds.length > 0 && allRowIds.every(id => selected.has(id));
   const someSelected = selected.size > 0 && !allSelected;
@@ -326,11 +381,13 @@ export function AssessmentGrid() {
         </div>
       </CardHeader>
       
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <div className="overflow-x-auto">
         <table className="w-full text-sm text-left" style={{ minWidth: visibleCount >= 6 ? '1200px' : '800px' }}>
           <thead className="bg-muted/50 text-muted-foreground text-xs uppercase sticky top-0 z-0 shadow-sm">
             <tr>
               {/* ─── Always-on columns ──────────────────── */}
+              <th className="px-1 py-2 w-6" aria-label="Drag handle column" />
               <th className="px-2 py-2 font-medium w-8 text-center" title="Select all">
                 <input
                   type="checkbox"
@@ -385,7 +442,8 @@ export function AssessmentGrid() {
                 </td>
               </tr>
             ) : (
-              assessmentRows.map((row, idx) => {
+              <SortableContext items={rowIds} strategy={verticalListSortingStrategy}>
+              {assessmentRows.map((row, idx) => {
                 const depRate = getDepreciationRate(row.partType, ageMonths, depreciationType);
                 const depFactor = depRate / 100;
                 const valueAfterDep = row.assessed * (1 - depFactor);
@@ -409,7 +467,11 @@ export function AssessmentGrid() {
                 const isDuplicate = normalizedParticulars ? duplicateParticulars.has(normalizedParticulars) : false;
 
                 return (
-                  <tr key={row.id} className={`hover:bg-accent/30 transition-colors ${selected.has(row.id) ? 'bg-red-500/5' : ''} ${!row.allowed ? 'opacity-40 bg-muted/20' : ''} ${isDuplicate ? 'bg-orange-500/10' : ''} ${row.isDisposal && row.allowed ? 'bg-amber-500/5' : ''}`}>
+                  <SortableRow
+                    key={row.id}
+                    id={row.id}
+                    className={`hover:bg-accent/30 transition-colors ${selected.has(row.id) ? 'bg-red-500/5' : ''} ${!row.allowed ? 'opacity-40 bg-muted/20' : ''} ${isDuplicate ? 'bg-orange-500/10' : ''} ${row.isDisposal && row.allowed ? 'bg-amber-500/5' : ''}`}
+                  >
                     {/* Select checkbox — always on */}
                     <td className={`px-2 py-1.5 text-center ${isDuplicate ? 'border-l-4 border-orange-500' : ''}`}>
                       <input
@@ -645,13 +707,15 @@ export function AssessmentGrid() {
                         <Trash2 size={13} />
                       </button>
                     </td>
-                  </tr>
+                  </SortableRow>
                 );
-              })
+              })}
+              </SortableContext>
             )}
           </tbody>
         </table>
       </div>
+      </DndContext>
     </Card>
   );
 }
