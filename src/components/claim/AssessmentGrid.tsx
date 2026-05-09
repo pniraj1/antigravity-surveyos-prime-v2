@@ -241,9 +241,7 @@ export function AssessmentGrid() {
     }
   };
 
-  if (!currentClaim) return null;
-
-  const { assessmentRows, vehicle, accident, depreciationType } = currentClaim;
+  const assessmentRows = currentClaim?.assessmentRows ?? [];
 
   const rowIds = useMemo(() => assessmentRows.map((r) => r.id), [assessmentRows]);
 
@@ -254,6 +252,10 @@ export function AssessmentGrid() {
     const newIndex = rowIds.indexOf(over.id as string);
     reorderAssessmentRows(arrayMove(rowIds, oldIndex, newIndex));
   }, [rowIds, reorderAssessmentRows]);
+
+  if (!currentClaim) return null;
+
+  const { vehicle, accident, depreciationType } = currentClaim;
 
   const ageMonths = getVehicleAgeMonths(
     vehicle.dateOfRegistration,
