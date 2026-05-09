@@ -26,7 +26,7 @@ const FEATURES = [
   'Offline-first — works without internet',
   'UIIC Excel Bridge export',
   'Smart photo compression engine',
-  'LLM conflict reconciliation',
+  'AI conflict review',
   'Multi-device access',
   'Priority email support',
 ];

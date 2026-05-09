@@ -246,7 +246,7 @@ function WorkflowSimulation({ activeTab, setActiveTab }: { activeTab: number, se
               <div className="flex items-center justify-center gap-3 bg-red-50 border border-red-100 text-red-800 px-5 py-3 rounded-xl mt-4 max-w-md w-full">
                 <Database size={20} className="opacity-50"/>
                 <div className="h-full w-[1px] bg-red-200"/>
-                <span className="text-sm font-semibold">Zero Third-Party Database Storage.<br/>We literally cannot see your files.</span>
+                <span className="text-sm font-semibold">A secured environment.<br/>Your files stay in your Drive.</span>
               </div>
             </motion.div>
           )}
@@ -375,7 +375,7 @@ export default function LandingPage() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
             </span>
-            INTRODUCING SURVEYOS PRIME V2
+            INTRODUCING SURVEYOS PRIME
           </motion.div>
 
           <FadeIn delay={0.1} className="max-w-5xl mx-auto">
@@ -450,10 +450,10 @@ export default function LandingPage() {
 
             <div className="grid md:grid-cols-3 gap-8">
               {[
-                { icon: <FileText size={24}/>, color: "text-amber-600", bg: "bg-amber-100", title: "AI Document Reading", desc: "Instantly reads Registration Certificates, Driving Licences, and Policies. Flawless OCR fills forms automatically." },
+                { icon: <FileText size={24}/>, color: "text-amber-600", bg: "bg-amber-100", title: "AI Document Reading", desc: "Instantly reads Registration Certificates, Driving Licences, and Policies. 99.9% accuracy on clear scans, fills forms automatically." },
                 { icon: <Camera size={24}/>, color: "text-blue-600", bg: "bg-blue-100", title: "Smart Photo Engine", desc: "Upload heavy damage photos directly. SurveyOS compresses them instantly and maps them to a beautiful PDF layout." },
                 { icon: <Cloud size={24}/>, color: "text-emerald-600", bg: "bg-emerald-100", title: "Auto Drive Sync", desc: "As you work, files are silently pushed to your Google Drive in the background. Never manually organize folders again." },
-                { icon: <Cpu size={24}/>, color: "text-purple-600", bg: "bg-purple-100", title: "LLM Reconciliation", desc: "Spots conflicts between driving licences and policies instantly, highlighting exactly where details don't match." },
+                { icon: <Cpu size={24}/>, color: "text-purple-600", bg: "bg-purple-100", title: "AI Cross-Checking", desc: "Spots conflicts between driving licences and policies instantly, highlighting exactly where details don't match." },
                 { icon: <Shield size={24}/>, color: "text-rose-600", bg: "bg-rose-100", title: "Offline First", desc: "Working in a garage with no signal? SurveyOS caches everything securely and syncs exactly when you reconnect." },
                 { icon: <Zap size={24}/>, color: "text-gray-700", bg: "bg-gray-100", title: "Lightning Fast", desc: "Built on ultra-modern web technology. Zero load times, pure native-like performance on any device." }
               ].map((feature, idx) => (
@@ -482,7 +482,7 @@ export default function LandingPage() {
           <div className="absolute inset-0 bg-gradient-to-b from-transparent to-amber-900/20 pointer-events-none" />
           <FadeIn className="relative z-10 max-w-3xl mx-auto">
             <h2 className="text-4xl md:text-6xl font-black tracking-tight mb-8">Ready to revolutionize your workflow?</h2>
-            <p className="text-xl text-gray-400 mb-10">Join thousands of surveyors delivering superior assessments in record time.</p>
+            <p className="text-xl text-gray-400 mb-10">Deliver superior assessments in record time.</p>
             <button 
               onClick={handleAction}
               disabled={signingIn}
@@ -496,9 +496,19 @@ export default function LandingPage() {
       </main>
 
       {/* ── Footer ── */}
-      <footer className="py-12 border-t border-gray-800 text-center text-sm text-gray-500 relative z-10 bg-[#05050A]">
-        <Logo variant="dark" size="sm" className="justify-center mb-4" />
-        © {new Date().getFullYear()} SurveyOS Prime. Engineered for Surveyors.
+      <footer className="py-12 px-6 border-t border-gray-800 relative z-10 bg-[#05050A]">
+        <div className="max-w-6xl mx-auto">
+          <Logo variant="dark" size="sm" className="justify-center mb-6" />
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-gray-400 mb-5">
+            <Link href="/privacy" className="hover:text-amber-400 transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-amber-400 transition-colors">Terms of Service</Link>
+            <Link href="/refund" className="hover:text-amber-400 transition-colors">Refund Policy</Link>
+            <Link href="/contact" className="hover:text-amber-400 transition-colors">Contact</Link>
+          </div>
+          <p className="text-center text-sm text-gray-500">
+            © {new Date().getFullYear()} SurveyOS Prime. Engineered for Surveyors.
+          </p>
+        </div>
       </footer>
     </div>
   );
