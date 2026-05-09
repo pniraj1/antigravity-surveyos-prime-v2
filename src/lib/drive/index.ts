@@ -15,6 +15,7 @@ import {
   getDriveQueueCount,
   getClaim,
   saveClaim,
+  setDriveFileCache,
 } from '@/lib/storage/indexeddb';
 import { invalidateClaimFileList } from '@/lib/drive/list-cache';
 
@@ -576,9 +577,11 @@ export async function replaceFileInDrive(fileId: string, blob: Blob): Promise<vo
     `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`,
     { method: 'PATCH', body: form }
   );
-  // Update the blob cache so next view uses the new version
-  const { setDriveFileCache } = await import('@/lib/storage/indexeddb');
-  const data = await blob.arrayBuffer();
-  await setDriveFileCache({ fileId, mimeType: blob.type, data, cachedAt: Date.now() });
+  try {
+    const data = await blob.arrayBuffer();
+    await setDriveFileCache({ fileId, mimeType: blob.type || 'application/octet-stream', data, cachedAt: Date.now() });
+  } catch {
+    // Cache update is non-critical; Drive file was already replaced successfully.
+  }
 }
 
