@@ -58,7 +58,7 @@ const LEGACY_DB_NAME = 'surveyos-v2';
  * Current database version. Bump this when adding new object stores
  * or indexes. The `upgrade` function handles all version transitions.
  */
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 /**
  * localStorage key prefix for tracking whether a user's legacy data
@@ -131,6 +131,10 @@ interface SurveyOSDB {
     key: string;
     value: { id: string; pushedUpdatedAt: string };
   };
+  driveFileCache: {
+    key: string;
+    value: { fileId: string; mimeType: string; data: ArrayBuffer; cachedAt: number };
+  };
 }
 
 // ─── DB Lifecycle ─────────────────────────────────────────────────────────────
@@ -184,6 +188,10 @@ export async function initUserDB(uid: string): Promise<void> {
       // Push tracking — last successfully-pushed updatedAt per claim (v3)
       if (oldVersion < 3 && !db.objectStoreNames.contains('pushTracking')) {
         db.createObjectStore('pushTracking', { keyPath: 'id' });
+      }
+      // Drive file blob cache — stores downloaded file content keyed by Drive fileId (v4)
+      if (oldVersion < 4 && !db.objectStoreNames.contains('driveFileCache')) {
+        db.createObjectStore('driveFileCache', { keyPath: 'fileId' });
       }
     },
   });
@@ -479,4 +487,23 @@ export async function saveLearningData(key: string, data: unknown): Promise<void
 export async function getLearningData(key: string): Promise<unknown> {
   const db = await getDB();
   return db.get('learning', key);
+}
+
+// ─── Drive File Cache ─────────────────────────────────────────────────────────
+
+export async function getDriveFileCache(
+  fileId: string
+): Promise<{ fileId: string; mimeType: string; data: ArrayBuffer; cachedAt: number } | undefined> {
+  const db = await getDB();
+  return db.get('driveFileCache', fileId);
+}
+
+export async function setDriveFileCache(entry: {
+  fileId: string;
+  mimeType: string;
+  data: ArrayBuffer;
+  cachedAt: number;
+}): Promise<void> {
+  const db = await getDB();
+  await db.put('driveFileCache', entry);
 }
