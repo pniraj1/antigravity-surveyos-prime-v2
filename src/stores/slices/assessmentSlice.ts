@@ -4,6 +4,7 @@ import { createAssessmentRow } from '@/lib/calculations';
 
 export interface AssessmentSlice {
   addAssessmentRow: (section: AssessmentRow['section']) => void;
+  reorderAssessmentRows: (orderedIds: string[]) => void;
   updateAssessmentRow: (id: string, updates: Partial<AssessmentRow>) => void;
   deleteAssessmentRow: (id: string) => void;
   deleteAssessmentRows: (ids: string[]) => void;
@@ -26,6 +27,22 @@ export const createAssessmentSlice: StateCreator<any, any, any, AssessmentSlice>
         currentClaim: {
           ...state.currentClaim,
           assessmentRows: [...state.currentClaim.assessmentRows, newRow],
+          updatedAt: new Date().toISOString(),
+        },
+        isDirty: true,
+      };
+    });
+  },
+
+  reorderAssessmentRows: (orderedIds) => {
+    set((state: WithClaim) => {
+      if (!state.currentClaim) return {};
+      const rowMap = new Map(state.currentClaim.assessmentRows.map((r) => [r.id, r]));
+      const reordered = orderedIds.map((id) => rowMap.get(id)).filter(Boolean) as AssessmentRow[];
+      return {
+        currentClaim: {
+          ...state.currentClaim,
+          assessmentRows: reordered,
           updatedAt: new Date().toISOString(),
         },
         isDirty: true,
