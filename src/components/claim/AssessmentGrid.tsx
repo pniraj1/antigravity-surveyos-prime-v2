@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useClaimStore } from '@/stores/claim-store';
 import { getDepreciationRate, getVehicleAgeMonths } from '@/lib/calculations/depreciation';
 import { formatCurrency } from '@/lib/calculations/utils';
@@ -245,15 +245,15 @@ export function AssessmentGrid() {
 
   const { assessmentRows, vehicle, accident, depreciationType } = currentClaim;
 
-  const rowIds = assessmentRows.map((r) => r.id);
+  const rowIds = useMemo(() => assessmentRows.map((r) => r.id), [assessmentRows]);
 
-  function handleDragEnd(event: DragEndEvent) {
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     const oldIndex = rowIds.indexOf(active.id as string);
     const newIndex = rowIds.indexOf(over.id as string);
     reorderAssessmentRows(arrayMove(rowIds, oldIndex, newIndex));
-  }
+  }, [rowIds, reorderAssessmentRows]);
 
   const ageMonths = getVehicleAgeMonths(
     vehicle.dateOfRegistration,
@@ -278,8 +278,7 @@ export function AssessmentGrid() {
 
   // Dynamic column count: 9 always-on (Drag, Select, Sr, Allowed, Particulars, Assessed, Dep%, Net, Delete) + visible optionals
   const totalCols = 9 + visibleCount;
-  const allRowIds = assessmentRows.map(r => r.id);
-  const allSelected = allRowIds.length > 0 && allRowIds.every(id => selected.has(id));
+  const allSelected = rowIds.length > 0 && rowIds.every(id => selected.has(id));
   const someSelected = selected.size > 0 && !allSelected;
 
   return (
@@ -393,7 +392,7 @@ export function AssessmentGrid() {
                   type="checkbox"
                   checked={allSelected}
                   ref={el => { if (el) el.indeterminate = someSelected; }}
-                  onChange={() => toggleSelectAll(allRowIds)}
+                  onChange={() => toggleSelectAll(rowIds)}
                   className="rounded border-border h-3.5 w-3.5 cursor-pointer accent-red-600"
                 />
               </th>
