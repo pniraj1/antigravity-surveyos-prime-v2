@@ -46,13 +46,14 @@ export async function ensureFileInCache(fileId: string, mimeType: string): Promi
   const blob = await res.blob();
   const data = await blob.arrayBuffer();
 
+  const storedMimeType = mimeType || 'application/octet-stream';
   await setDriveFileCache({
     fileId,
-    mimeType: mimeType || 'application/octet-stream',
+    mimeType: storedMimeType,
     data,
     cachedAt: Date.now(),
   });
-  return new Blob([data], { type: mimeType });
+  return new Blob([data], { type: storedMimeType });
 }
 
 export async function findFileByName(claimId: string, name: string): Promise<DriveFile | null> {
