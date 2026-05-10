@@ -15,8 +15,10 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { X, ChevronRight, FileSearch } from 'lucide-react';
+import { X, ChevronRight, FileSearch, HardDriveUpload } from 'lucide-react';
 import { create } from 'zustand';
+import { useClaimDriveFiles } from '@/hooks/useClaimDriveFiles';
+import { ensureFileInCache } from '@/lib/drive/files';
 
 // ─── Evidence Store ───────────────────────────────────────────────────────────
 
@@ -115,6 +117,8 @@ interface Props {
 
 export function DocumentEvidenceViewer({ panelWidth = '420px', embedded = false, defaultDocType }: Props) {
   const { isOpen, field, claimId, close, blobUrls } = useEvidenceStore();
+
+  const { files: driveFiles, loading: driveLoading } = useClaimDriveFiles(claimId ?? null);
 
   // Resolve the docType: current field or fallback to default
   const effectiveDocType = field?.docType || defaultDocType;
@@ -244,6 +248,66 @@ export function DocumentEvidenceViewer({ panelWidth = '420px', embedded = false,
             </div>
           )}
         </div>
+
+        {/* ── Drive Files Sidebar ── */}
+        {(driveFiles.length > 0 || driveLoading) && (
+          <div
+            className="border-b px-3 py-2"
+            style={{ borderColor: 'rgba(13,27,42,0.1)', flexShrink: 0 }}
+          >
+            <div className="flex items-center gap-1.5 mb-2">
+              <HardDriveUpload size={11} style={{ color: '#4A4E69' }} />
+              <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#4A4E69' }}>
+                Drive Files
+              </span>
+            </div>
+            {driveLoading ? (
+              <p className="text-xs" style={{ color: '#8D99AE' }}>Loading…</p>
+            ) : (
+              <div className="flex flex-col gap-0.5">
+                {driveFiles.map(f => {
+                  const driveKey = `drive_${f.id}`;
+                  const isActive = effectiveDocType === driveKey;
+                  return (
+                    <button
+                      key={f.id}
+                      disabled={f.pending}
+                      onClick={async () => {
+                        if (!claimId || f.pending) return;
+                        try {
+                          const blob = await ensureFileInCache(f.id, f.mimeType);
+                          const file = new File([blob], f.name, { type: f.mimeType });
+                          useEvidenceStore.getState().storeBlobUrl(claimId, driveKey, file);
+                          useEvidenceStore.getState().openField(claimId, {
+                            docType: driveKey,
+                            fieldKey: 'drive',
+                            contextSnippet: '',
+                          });
+                        } catch {
+                          // viewer shows empty state on error
+                        }
+                      }}
+                      className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-left text-xs transition-colors disabled:opacity-40"
+                      style={{
+                        background: isActive ? 'rgba(13,27,42,0.08)' : 'transparent',
+                        color: '#0D1B2A',
+                        fontWeight: isActive ? 600 : 400,
+                      }}
+                    >
+                      <FileSearch size={11} style={{ flexShrink: 0, color: '#4A4E69' }} />
+                      <span className="truncate">{f.name}</span>
+                      {f.pending && (
+                        <span className="ml-auto text-[9px] font-bold uppercase" style={{ color: '#92731c' }}>
+                          Pending
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Footer */}
         <div style={{
