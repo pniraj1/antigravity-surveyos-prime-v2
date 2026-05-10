@@ -1,7 +1,14 @@
 'use client';
 
 import { useAIExtraction } from '@/hooks/useAIExtraction';
-import { storeBlobUrl } from '@/components/evidence/DocumentEvidenceViewer';
+import { storeBlobUrl, useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
+import { useClaimDriveFiles } from '@/hooks/useClaimDriveFiles';
+import { findFileByName, ensureFileInCache } from '@/lib/drive/files';
+import { invalidateClaimFileList } from '@/lib/drive/list-cache';
+import { replaceFileInDrive } from '@/lib/drive/index';
+import { DuplicateUploadDialog } from '@/components/dialogs/DuplicateUploadDialog';
+import { HardDriveUpload, CloudOff } from 'lucide-react';
+import type { DriveFile } from '@/lib/drive/list-cache';
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import { ProcessingProgressOverlay } from '@/components/ui/ProcessingProgressOverlay';
 import { useClaimStore } from '@/stores/claim-store';
@@ -74,6 +81,15 @@ export function DocumentsTab() {
   const [autoFilledFields, setAutoFilledFields] = useState<ReconciliationField[]>([]);
   const prevClaimIdRef = useRef<string | null>(null);
 
+  const { files: driveFiles, loading: driveLoading, error: driveError, refresh: refreshDriveFiles } =
+    useClaimDriveFiles(currentClaimId ?? null);
+
+  const [dupeState, setDupeState] = useState<{
+    existing: DriveFile;
+    incoming: File;
+    docKey: string;
+  } | null>(null);
+
   const conflicts = useMemo(() => {
     if (!currentClaim) return [];
     return getConflictFields(currentClaim);
@@ -114,29 +130,85 @@ export function DocumentsTab() {
   if (!currentClaim) return null;
   const evidenceImages: string[] = [];
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>, key: string) => {
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>, key: string) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    e.target.value = '';
 
-    // Register file in EvidenceStore so the Evidence Viewer can display it
+    // Register in evidence store for the viewer
     if (currentClaim?.id) {
       storeBlobUrl(currentClaim.id, key, file);
     }
 
-    // AI extraction
+    // AI extraction (always runs regardless of Drive state)
     triggerExtraction(key, file);
 
-    // Non-blocking Drive upload
+    // Drive upload — check for duplicate first
     if (currentClaim?.id && profile.autoUploadDrive !== false) {
       const label = currentClaim.vehicle?.registrationNumber || currentClaim.id;
-      const ext   = file.name.split('.').pop() ?? 'bin';
+      const ext = file.name.split('.').pop() ?? 'bin';
       const driveName = `${key}.${ext}`;
-      uploadFileToDrive(currentClaim.id, driveName, file, label).catch(err => {
-        logger.error('[DocumentsTab] Drive upload failed, file may not be synced:', err);
-      });
-    }
 
-    e.target.value = '';
+      const existing = await findFileByName(currentClaim.id, driveName).catch(() => null);
+      if (existing && !existing.pending) {
+        setDupeState({ existing, incoming: file, docKey: key });
+        return;
+      }
+
+      uploadFileToDrive(currentClaim.id, driveName, file, label)
+        .then(() => {
+          invalidateClaimFileList(currentClaim.id);
+          refreshDriveFiles();
+        })
+        .catch(err => {
+          logger.error('[DocumentsTab] Drive upload failed:', err);
+        });
+    }
+  };
+
+  const handleViewExisting = async () => {
+    if (!dupeState || !currentClaim?.id) return;
+    const { existing } = dupeState;
+    setDupeState(null);
+    try {
+      const blob = await ensureFileInCache(existing.id, existing.mimeType);
+      const file = new File([blob], existing.name, { type: existing.mimeType });
+      storeBlobUrl(currentClaim.id, `drive_${existing.id}`, file);
+      useEvidenceStore.getState().openField(currentClaim.id, {
+        docType: `drive_${existing.id}`,
+        fieldKey: 'drive',
+        contextSnippet: '',
+      });
+    } catch {
+      toast.error('Could not open file from Drive.');
+    }
+  };
+
+  const handleUploadAnyway = () => {
+    if (!dupeState || !currentClaim?.id) return;
+    const { incoming, docKey } = dupeState;
+    setDupeState(null);
+    const label = currentClaim.vehicle?.registrationNumber || currentClaim.id;
+    const ext = incoming.name.split('.').pop() ?? 'bin';
+    const suffix = driveFiles.filter(f => f.name.startsWith(docKey)).length + 1;
+    const driveName = suffix > 1 ? `${docKey} (${suffix}).${ext}` : `${docKey}.${ext}`;
+    uploadFileToDrive(currentClaim.id, driveName, incoming, label)
+      .then(() => { invalidateClaimFileList(currentClaim.id); refreshDriveFiles(); })
+      .catch(err => logger.error('[DocumentsTab] Drive upload failed:', err));
+  };
+
+  const handleReplace = async () => {
+    if (!dupeState || !currentClaim?.id) return;
+    const { existing, incoming } = dupeState;
+    setDupeState(null);
+    try {
+      await replaceFileInDrive(existing.id, incoming);
+      invalidateClaimFileList(currentClaim.id);
+      refreshDriveFiles();
+      toast.success(`"${existing.name}" replaced in Drive.`, { duration: 2500 });
+    } catch {
+      toast.error('Could not replace file in Drive.');
+    }
   };
 
   const scannedCount = Object.keys(extractedDocs).length;
@@ -298,6 +370,78 @@ export function DocumentsTab() {
         </div>
       )}
 
+      {/* ── Drive Files List ───────────────────────────── */}
+      {(driveFiles.length > 0 || driveLoading) && (
+        <div className="max-w-5xl mx-auto mb-6 px-6 lg:px-12 pt-6">
+          <div
+            className="rounded-2xl overflow-hidden"
+            style={{ border: '1px solid rgba(13,27,42,0.1)', background: '#FFFFFF' }}
+          >
+            <div
+              className="px-5 py-3 flex items-center gap-2"
+              style={{
+                background: 'rgba(13,27,42,0.04)',
+                borderBottom: '1px solid rgba(13,27,42,0.07)',
+              }}
+            >
+              <HardDriveUpload size={14} style={{ color: '#0D1B2A' }} />
+              <span className="text-xs font-bold uppercase tracking-widest" style={{ color: '#0D1B2A' }}>
+                Already in Drive
+              </span>
+              {driveLoading && (
+                <span className="text-xs ml-2" style={{ color: '#8D99AE' }}>Loading…</span>
+              )}
+            </div>
+            {!driveLoading && (
+              <div className="divide-y" style={{ borderColor: 'rgba(13,27,42,0.06)' }}>
+                {driveFiles.map(f => (
+                  <button
+                    key={f.id}
+                    disabled={f.pending}
+                    onClick={async () => {
+                      if (!currentClaim?.id || f.pending) return;
+                      try {
+                        const blob = await ensureFileInCache(f.id, f.mimeType);
+                        const file = new File([blob], f.name, { type: f.mimeType });
+                        storeBlobUrl(currentClaim.id, `drive_${f.id}`, file);
+                        useEvidenceStore.getState().openField(currentClaim.id, {
+                          docType: `drive_${f.id}`,
+                          fieldKey: 'drive',
+                          contextSnippet: '',
+                        });
+                      } catch {
+                        toast.error(`Could not open "${f.name}" from Drive.`);
+                      }
+                    }}
+                    className="w-full flex items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <FileText size={15} style={{ color: '#4A4E69', flexShrink: 0 }} />
+                    <span className="text-sm font-medium flex-1" style={{ color: '#0D1B2A' }}>
+                      {f.name}
+                    </span>
+                    {f.pending && (
+                      <span
+                        className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full"
+                        style={{ background: 'rgba(212,175,55,0.15)', color: '#92731c' }}
+                      >
+                        Pending sync
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          {driveError && (
+            <p className="text-xs mt-2 px-1" style={{ color: '#b45309' }}>
+              <CloudOff size={12} className="inline mr-1" />
+              {driveError}
+              <button className="underline ml-2" onClick={refreshDriveFiles}>Retry</button>
+            </p>
+          )}
+        </div>
+      )}
+
       {/* ── Document Groups ──────────────────────────────── */}
       <div className="px-6 lg:px-12 py-8 max-w-5xl mx-auto space-y-10">
         {DOC_GROUPS.map((group) => (
@@ -450,6 +594,17 @@ export function DocumentsTab() {
         progress={progress}
         onCancel={cancelReview}
       />
+
+      {dupeState && (
+        <DuplicateUploadDialog
+          existingFile={dupeState.existing}
+          incomingFileName={dupeState.incoming.name}
+          onViewExisting={handleViewExisting}
+          onUploadAnyway={handleUploadAnyway}
+          onReplace={handleReplace}
+          onClose={() => setDupeState(null)}
+        />
+      )}
     </div>
   );
 }
