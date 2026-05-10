@@ -16,6 +16,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { X, ChevronRight, FileSearch, HardDriveUpload } from 'lucide-react';
+import { toast } from 'sonner';
 import { create } from 'zustand';
 import { useClaimDriveFiles } from '@/hooks/useClaimDriveFiles';
 import { ensureFileInCache } from '@/lib/drive/files';
@@ -284,7 +285,7 @@ export function DocumentEvidenceViewer({ panelWidth = '420px', embedded = false,
                             contextSnippet: '',
                           });
                         } catch {
-                          // viewer shows empty state on error
+                          toast.error(`Could not open "${f.name}" from Drive.`);
                         }
                       }}
                       className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-left text-xs transition-colors disabled:opacity-40"
