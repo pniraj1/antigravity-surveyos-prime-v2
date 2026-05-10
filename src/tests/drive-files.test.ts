@@ -7,14 +7,11 @@ vi.mock('@/lib/drive/index', () => ({
   driveRequest: vi.fn(),
 }));
 
-vi.mock('@/lib/drive/list-cache', () => {
-  let cache: DriveFile[] | null = null;
-  return {
-    getCachedFileList: vi.fn(() => cache),
-    setCachedFileList: vi.fn((_id: string, files: DriveFile[]) => { cache = files; }),
-    invalidateClaimFileList: vi.fn(() => { cache = null; }),
-  };
-});
+vi.mock('@/lib/drive/list-cache', () => ({
+  getCachedFileList: vi.fn(() => null),
+  setCachedFileList: vi.fn(),
+  invalidateClaimFileList: vi.fn(),
+}));
 
 vi.mock('@/lib/storage/indexeddb', () => ({
   getDriveFileCache: vi.fn(),

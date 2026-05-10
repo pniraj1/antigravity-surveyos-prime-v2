@@ -1,11 +1,14 @@
 import { getClaimFolderId, driveRequest, listFilesInFolder } from '@/lib/drive/index';
 import { getDriveFileCache, setDriveFileCache, getDriveQueue } from '@/lib/storage/indexeddb';
-import { setCachedFileList } from '@/lib/drive/list-cache';
+import { getCachedFileList, setCachedFileList } from '@/lib/drive/list-cache';
 import type { DriveFile } from '@/lib/drive/list-cache';
 
 export type { DriveFile } from '@/lib/drive/list-cache';
 
 export async function listClaimDriveFiles(claimId: string): Promise<DriveFile[]> {
+  const cached = getCachedFileList(claimId);
+  if (cached) return cached;
+
   const folderId = await getClaimFolderId(claimId);
 
   const driveFiles: DriveFile[] = folderId
