@@ -51,7 +51,7 @@ export function FloatingReportPreview() {
     return DOMPurify.sanitize(html, {
       WHOLE_DOCUMENT: true,
       FORCE_BODY: false,
-      ADD_TAGS: ['style', 'link'],
+      ADD_TAGS: ['style'],
       ADD_ATTR: ['style', 'media', 'type'],
     });
   }, [html]);
@@ -334,6 +334,7 @@ export function FloatingReportPreview() {
               key={format}
               srcDoc={sanitizedHtml}
               title="Report Preview"
+              sandbox="allow-same-origin"
               style={{
                 border: 'none',
                 display: 'block',
