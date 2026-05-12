@@ -7,6 +7,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { signInWithGoogle } from '@/lib/firebase/auth';
 import { useAuthStore } from '@/stores/auth-store';
+import { useProfileStore } from '@/stores/profile-store';
 import { Loader2 } from 'lucide-react';
 import Logo from '@/components/ui/Logo';
 import DemoSection from '@/components/landing/DemoSection';
@@ -309,14 +310,18 @@ function StickySimulation() {
 
 export default function LandingPage() {
   const { isAuthenticated, loading: authLoading } = useAuthStore();
+  const { profile } = useProfileStore();
   const [signingIn, setSigningIn] = useState(false);
   const router = useRouter();
 
+  const isPending = profile?.subscriptionStatus === 'pending';
+
   useEffect(() => {
-    if (isAuthenticated && !authLoading) {
+    // Only automatically redirect if authenticated and NOT pending
+    if (isAuthenticated && !authLoading && !isPending) {
       router.push('/');
     }
-  }, [isAuthenticated, authLoading, router]);
+  }, [isAuthenticated, authLoading, isPending, router]);
 
   const handleAction = async () => {
     if (isAuthenticated) {
@@ -348,14 +353,14 @@ export default function LandingPage() {
             onClick={handleAction}
             className="hidden sm:block text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors"
           >
-            {isAuthenticated ? 'Dashboard' : 'Login'}
+            {isAuthenticated ? (isPending ? 'Complete Registration' : 'Dashboard') : 'Login'}
           </button>
           <button 
             onClick={handleAction}
             disabled={signingIn}
             className="group relative inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-gray-900 rounded-full overflow-hidden transition-all hover:scale-105 active:scale-95 shadow-lg disabled:opacity-50"
           >
-            {signingIn ? <Loader2 size={16} className="animate-spin" /> : <span className="relative z-10">{isAuthenticated ? 'Go to App' : 'Launch App'}</span>}
+            {signingIn ? <Loader2 size={16} className="animate-spin" /> : <span className="relative z-10">{isAuthenticated ? (isPending ? 'Complete Registration' : 'Go to App') : 'Launch App'}</span>}
             {!signingIn && <ArrowRight size={16} className="relative z-10 transition-transform group-hover:translate-x-1" />}
           </button>
         </div>
@@ -374,7 +379,7 @@ export default function LandingPage() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
             </span>
-            INTRODUCING SURVEYOS PRIME V2
+            INTRODUCING MOTOR SURVEYOS PRIME
           </motion.div>
 
           <FadeIn delay={0.1} className="max-w-5xl mx-auto">
@@ -396,7 +401,7 @@ export default function LandingPage() {
               disabled={signingIn}
               className="w-full sm:w-auto group relative inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-bold text-white bg-amber-500 rounded-full overflow-hidden transition-all hover:scale-105 active:scale-95 shadow-xl shadow-amber-500/20 hover:shadow-amber-500/40 disabled:opacity-50"
             >
-              {signingIn ? <Loader2 size={20} className="animate-spin" /> : (isAuthenticated ? "Enter Dashboard" : "Start Free Trial")}
+              {signingIn ? <Loader2 size={20} className="animate-spin" /> : (isAuthenticated ? (isPending ? "Complete Registration" : "Enter Dashboard") : "Start Free Trial")}
               {!signingIn && <ChevronRight size={18} className="transition-transform group-hover:translate-x-1" />}
             </button>
             <button

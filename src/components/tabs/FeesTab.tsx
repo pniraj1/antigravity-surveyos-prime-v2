@@ -49,7 +49,14 @@ export function FeesTab() {
 
   // Calculate sub-totals
   const photoCharges   = (fb.photosCount || 0) * (fb.photoRate || 0);
-  const subTotal       = (fb.professionalFee || 0) + (fb.riFee || 0) + (fb.travelExpenses || 0) +
+  const distanceKm     = fb.distanceKm || 0;
+  const ratePerKm      = fb.ratePerKm || 0;
+  const travellingCharges = distanceKm * ratePerKm;
+  const tollCharges    = fb.tollCharges || 0;
+  const hasNewTravel   = distanceKm > 0 || ratePerKm > 0 || tollCharges > 0;
+  const legacyTravel   = fb.travelExpenses || 0;
+  const travelTotal    = hasNewTravel ? travellingCharges + tollCharges : legacyTravel;
+  const subTotal       = (fb.professionalFee || 0) + (fb.riFee || 0) + travelTotal +
                          photoCharges + (fb.postalCharges || 0) + (fb.haltageCharges || 0);
   const gstAmount      = fb.includeGST ? subTotal * 0.18 : 0;
   const grossTotal     = subTotal + gstAmount;
@@ -213,15 +220,80 @@ export function FeesTab() {
                   </div>
                 ))}
 
+              </div>
+            </div>
+
+            {/* Travel & Toll (itemised) */}
+            <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E2E6EA' }}>
+              <div className="px-6 py-4" style={{ borderBottom: '1px solid #F0F2F5', background: '#FAFAFA' }}>
+                <div className="flex items-center gap-2">
+                  <Car size={14} style={{ color: '#D4AF37' }} />
+                  <span className="text-sm font-black" style={{ color: '#0D1B2A' }}>Travel & Toll</span>
+                  <span className="ml-auto text-[10px] font-semibold" style={{ color: '#8D99AE' }}>
+                    fills these to replace legacy Travel / Conveyance
+                  </span>
+                </div>
+              </div>
+              <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label style={labelStyle}>Travel Note</label>
+                  <label style={labelStyle}>Distance to & fro (KM)</label>
                   <input
-                    value={fb.travelNote}
-                    onChange={e => set('travelNote', e.target.value)}
-                    placeholder="e.g. 80 km × ₹10"
+                    type="number"
+                    min={0}
+                    value={fb.distanceKm || ''}
+                    onChange={e => set('distanceKm', Number(e.target.value))}
                     style={inputStyle}
                   />
                 </div>
+                <div>
+                  <label style={labelStyle}>Rate per KM (₹)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={fb.ratePerKm || ''}
+                    onChange={e => set('ratePerKm', Number(e.target.value))}
+                    style={inputStyle}
+                  />
+                </div>
+                <div className="col-span-1 sm:col-span-2">
+                  <label style={labelStyle}>Travel Route Note</label>
+                  <input
+                    value={fb.travelNote}
+                    onChange={e => set('travelNote', e.target.value)}
+                    placeholder="e.g. From Shirpur to Dhule"
+                    style={inputStyle}
+                  />
+                </div>
+                <div className="col-span-1 sm:col-span-2 flex items-center justify-between px-4 py-3 rounded-xl" style={{ background: '#F0F2F5' }}>
+                  <span className="text-sm font-semibold" style={{ color: '#4A4E69' }}>
+                    Travelling Charges ({distanceKm} km × ₹{ratePerKm})
+                  </span>
+                  <span className="text-sm font-black" style={{ color: '#0D1B2A' }}>{fmt(travellingCharges)}</span>
+                </div>
+                <div>
+                  <label style={labelStyle}>Toll Charges (₹)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={fb.tollCharges || ''}
+                    onChange={e => set('tollCharges', Number(e.target.value))}
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Toll Note</label>
+                  <input
+                    value={fb.tollNote || ''}
+                    onChange={e => set('tollNote', e.target.value)}
+                    placeholder="e.g. Khalapur ₹150, Kon ₹120"
+                    style={inputStyle}
+                  />
+                </div>
+                {!hasNewTravel && legacyTravel > 0 && (
+                  <div className="col-span-1 sm:col-span-2 px-4 py-3 rounded-xl text-xs" style={{ background: 'rgba(212,175,55,0.08)', color: '#8D6708', border: '1px solid rgba(212,175,55,0.3)' }}>
+                    Legacy travel of {fmt(legacyTravel)} carried over — fill the fields above to replace it on the bill.
+                  </div>
+                )}
               </div>
             </div>
 
@@ -277,7 +349,12 @@ export function FeesTab() {
                 {[
                   { label: 'Professional Fee',     val: fb.professionalFee || 0 },
                   { label: 'Re-Inspection Fee',    val: fb.riFee || 0 },
-                  { label: 'Travel / Conveyance',  val: fb.travelExpenses || 0 },
+                  ...(hasNewTravel
+                    ? [
+                        { label: `Travelling (${distanceKm} km × ₹${ratePerKm})`, val: travellingCharges },
+                        { label: 'Toll Charges',  val: tollCharges },
+                      ]
+                    : [{ label: 'Travel / Conveyance', val: legacyTravel }]),
                   { label: `Photos (${fb.photosCount}×${fmt(fb.photoRate)})`, val: photoCharges },
                   { label: 'Postal / Courier',     val: fb.postalCharges || 0 },
                   { label: 'Haltage',              val: fb.haltageCharges || 0 },

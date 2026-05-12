@@ -58,6 +58,12 @@ export interface AssessmentRow {
    * Industry norm is 50%. Range 0–100. Only meaningful when isDisposal = true.
    */
   disposalPercent?: number;
+  /**
+   * Surveyor's manual depreciation override for this row (0–100).
+   * When set, supersedes the IRDAI auto-calculated rate.
+   * Leave undefined to revert to the standard rate.
+   */
+  depOverride?: number;
 }
 
 export interface AssessmentSummary {
@@ -196,8 +202,13 @@ export interface FeeBill {
   billDate: string;
   professionalFee: number;
   riFee: number;
+  /** @deprecated Retained for backward compatibility with older claims; new code should use distanceKm/ratePerKm + tollCharges. */
   travelExpenses: number;
   travelNote: string;
+  distanceKm: number;
+  ratePerKm: number;
+  tollCharges: number;
+  tollNote: string;
   photosCount: number;
   photoRate: number;
   postalCharges: number;

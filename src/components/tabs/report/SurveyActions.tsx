@@ -1,13 +1,14 @@
 'use client';
 
-import { Loader2, FileText, Building2, CheckCircle2 } from 'lucide-react';
+import { Loader2, FileText, Building2, CheckCircle2, Type } from 'lucide-react';
 import { toast } from 'sonner';
-import type { ClaimData } from '@/types/claim';
+import type { ClaimData, FontScale } from '@/types/claim';
 import type { AssessmentSummary } from '@/types';
 import type { SurveyorProfile } from '@/types/vehicle';
 import { generateWordReport } from '@/lib/reports/word-builder';
 import { triggerStandardPrint } from '@/lib/reports/standard-report-builder';
 import { triggerUIICFinalPrint } from '@/lib/reports/uiic-final-builder';
+import { useClaimStore } from '@/stores/claim-store';
 
 const FORMATS = [
   {
@@ -118,6 +119,9 @@ export function SurveyActions({
         </button>
       </div>
 
+      {/* Font Scale Selector */}
+      <FontScalePill currentScale={claim.reportSettings?.fontScale ?? 'compact'} />
+
       {/* Word Export (standard only) */}
       {format === 'standard' && (
         <button
@@ -171,5 +175,46 @@ export function SurveyActions({
         </button>
       )}
     </>
+  );
+}
+
+// ─── Font Scale Segmented Control ────────────────────────────────────────────
+
+const SCALE_OPTIONS: { id: FontScale; label: string; title: string }[] = [
+  { id: 'compact',     label: 'Compact',     title: 'Compact — insurer submission size (default)' },
+  { id: 'standard',   label: 'Standard',    title: 'Standard — comfortable reading on screen' },
+  { id: 'large-print', label: 'Large Print', title: 'Large Print — client-facing / accessibility' },
+];
+
+function FontScalePill({ currentScale }: { currentScale: FontScale }) {
+  const { updateReportSettings } = useClaimStore();
+
+  return (
+    <div
+      className="flex items-center gap-0.5 rounded-lg p-0.5 shadow-inner"
+      style={{ background: '#F0F2F5', border: '1px solid #E2E6EA' }}
+      title="Report font density"
+    >
+      <Type size={11} style={{ color: '#8D99AE', marginLeft: 5, flexShrink: 0 }} />
+      {SCALE_OPTIONS.map(opt => {
+        const active = currentScale === opt.id;
+        return (
+          <button
+            key={opt.id}
+            title={opt.title}
+            onClick={() => updateReportSettings({ fontScale: opt.id })}
+            className="px-2.5 py-1 rounded-md text-[10px] font-bold transition-all"
+            style={{
+              background: active ? '#FFFFFF' : 'transparent',
+              color: active ? '#0D1B2A' : '#8D99AE',
+              boxShadow: active ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+              letterSpacing: '0.02em',
+            }}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }

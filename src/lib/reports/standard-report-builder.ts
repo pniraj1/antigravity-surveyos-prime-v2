@@ -13,6 +13,8 @@ import type { AssessmentSummary } from '@/types';
 import type { SurveyorProfile } from '@/types/vehicle';
 
 import { formatDateDMY, formatDateTimeDMY, fa, numberToWords, getVehicleAgeMonths, getSurveyorHeader, getSigBlock } from './report-utils';
+import { getHtmlScale } from './report-style-utils';
+import { computeRowNet } from '@/lib/calculations/row-net';
 
 // ─── HTML/PDF SYNC CHECKLIST ──────────────────────────────────────────────────
 // Fields that must stay identical between this HTML builder and
@@ -74,16 +76,20 @@ export function buildStandardFinalSurveyHTML(
   const ageLabel = ageMonths > 0 ? `${Math.floor(ageMonths / 12)}yr ${ageMonths % 12}mo` : '';
 
   // ── Calculations ───────────────────────────────────────────────────────────
-  let metal = 0, plastic = 0, glass = 0, fiberglass = 0, labOnlyBase = 0, paintOnlyBase = 0;
+  let metal = 0, plastic = 0, glass = 0, fiberglass = 0, disposalNet = 0, labOnlyBase = 0, paintOnlyBase = 0;
 
   rows.filter(r => r.section === 'parts').forEach(r => {
     if (r.allowed === false) return;
-    const dep = getDepRate(r.partType, depTypeRaw, ageMonths);
-    const ad = r.assessed * (1 - dep / 100);
-    if (r.partType === 'metal') metal += ad;
-    else if (r.partType === 'glass') glass += ad;
-    else if (r.partType === 'fiberglass') fiberglass += ad;
-    else plastic += ad;
+    const dep = r.depOverride !== undefined ? r.depOverride : getDepRate(r.partType, depTypeRaw, ageMonths);
+    const { isDisposal, netBeforeGst } = computeRowNet(r, dep);
+    if (isDisposal) {
+      disposalNet += netBeforeGst;
+    } else {
+      if (r.partType === 'metal') metal += netBeforeGst;
+      else if (r.partType === 'glass') glass += netBeforeGst;
+      else if (r.partType === 'fiberglass') fiberglass += netBeforeGst;
+      else plastic += netBeforeGst;
+    }
   });
 
   rows.filter(r => r.section === 'labour').forEach(r => {
@@ -96,7 +102,7 @@ export function buildStandardFinalSurveyHTML(
   const labBase = labOnlyBase + paintOnlyBase; // combined for grand total
   const pb = metal + plastic + glass + fiberglass;
   const pCGST = pb * 0.09;
-  const pT = pb + pCGST * 2;
+  const pT = pb + pCGST * 2 + disposalNet;
   const labGST = labOnlyBase * 0.18;
   const labT = labOnlyBase + labGST;
   const paintGST = paintOnlyBase * 0.18;
@@ -115,39 +121,45 @@ export function buildStandardFinalSurveyHTML(
   const estPaintOnly = rows.filter(r => r.section === 'paint' && r.allowed !== false).reduce((s, r) => s + r.estimated, 0);
   const estLabBase = estLabOnly + estPaintOnly;
 
+  // ── Font scale (resolved once, used throughout) ────────────────────────────
+  const scale = getHtmlScale(claim.reportSettings?.fontScale);
+
   // ── Table style shorthands ─────────────────────────────────────────────────
-  const ts = 'width:100%;border-collapse:collapse;font-size:7.8pt;margin-bottom:4px;';
-  const th = 'background:#0d1b2a;color:#fff;padding:2px 4px;font-size:6.8pt;';
-  const td = 'padding:2px 4px;border:0.4pt solid #bbb;vertical-align:top;';
-  const tdr = 'padding:2px 4px;border:0.4pt solid #bbb;text-align:right;white-space:nowrap;';
-  const sec = 'padding:2px 4px;font-weight:700;background:#e8e3da;font-size:6.8pt;text-transform:uppercase;border:0.4pt solid #bbb;';
-  const sub = 'padding:2px 4px;font-weight:700;background:#dff0ec;color:#1a5a50;border:0.4pt solid #bbb;';
+  const ts = `width:100%;border-collapse:collapse;font-size:${scale.cellFont};margin-bottom:4px;`;
+  const th = `background:#0d1b2a;color:#fff;padding:${scale.cellPaddingV} ${scale.cellPaddingH};font-size:${scale.labelFont};`;
+  const td = `padding:${scale.cellPaddingV} ${scale.cellPaddingH};border:0.4pt solid #bbb;vertical-align:top;`;
+  const tdr = `padding:${scale.cellPaddingV} ${scale.cellPaddingH};border:0.4pt solid #bbb;text-align:right;white-space:nowrap;`;
+  const sec = `padding:${scale.cellPaddingV} ${scale.cellPaddingH};font-weight:700;background:#e8e3da;font-size:${scale.labelFont};text-transform:uppercase;border:0.4pt solid #bbb;`;
+  const sub = `padding:${scale.cellPaddingV} ${scale.cellPaddingH};font-weight:700;background:#dff0ec;color:#1a5a50;border:0.4pt solid #bbb;`;
 
   // ── Parts rows (11 cols: Sr | Particulars | Type | Est | Assessed | Dep% | Metal | Plastic | Glass | GST% | Price+GST)
   let psn = 1;
   const partsHtml = rows.filter(r => r.section === 'parts').map(r => {
-    const dep = getDepRate(r.partType, depTypeRaw, ageMonths);
+    const dep = r.depOverride !== undefined ? r.depOverride : getDepRate(r.partType, depTypeRaw, ageMonths);
+    const depLabel = r.depOverride !== undefined ? `${dep}%*` : `${dep}%`;
     const disallowed = r.allowed === false;
-    const ad = disallowed ? 0 : r.assessed * (1 - dep / 100);
+    const { isDisposal, afterDep, netBeforeGst } = disallowed ? { isDisposal: false, afterDep: 0, netBeforeGst: 0 } : computeRowNet(r, dep);
     const gstPct = r.gst || 18;
-    const priceGst = disallowed ? 0 : ad * (1 + gstPct / 100);
+    const cellValue = isDisposal ? netBeforeGst : netBeforeGst * (1 + gstPct / 100);
+    const cellLabel = disallowed ? 'NOT ALLOWED' : isDisposal ? `${fa(cellValue)} DISP` : fa(cellValue);
+    const cellStyle = disallowed ? `${tdr}color:#a00;` : isDisposal ? `${tdr}color:#b45309;font-weight:600;` : `${tdr}font-weight:600;`;
     return `<tr>
       <td style="${td}text-align:center;">${psn++}</td>
       <td style="${td}">${r.particulars}</td>
       <td style="${td}text-align:center;">${r.partType === 'plastic' ? 'Pla/Rub' : r.partType === 'fiberglass' ? 'FbrGls' : r.partType.charAt(0).toUpperCase() + r.partType.slice(1)}</td>
       <td style="${tdr}">${fa(r.estimated)}</td>
       <td style="${tdr}${disallowed ? 'color:#a00;font-weight:700;font-size:6.5pt;text-align:center;' : ''}">${disallowed ? 'NOT ALLOWED' : fa(r.assessed)}</td>
-      <td style="${tdr}">${dep}%</td>
-      <td style="${tdr}">${r.partType === 'metal' && !disallowed ? fa(ad) : '—'}</td>
-      <td style="${tdr}">${r.partType === 'plastic' && !disallowed ? fa(ad) : '—'}</td>
-      <td style="${tdr}">${r.partType === 'fiberglass' && !disallowed ? fa(ad) : '—'}</td>
-      <td style="${tdr}">${r.partType === 'glass' && !disallowed ? fa(ad) : '—'}</td>
-      <td style="${tdr}text-align:center;">${gstPct}%</td>
-      <td style="${tdr}${disallowed ? 'color:#a00;' : 'font-weight:600;'}">${fa(priceGst)}</td>
+      <td style="${tdr}${r.depOverride !== undefined ? 'color:#b45309;' : ''}">${depLabel}</td>
+      <td style="${tdr}">${r.partType === 'metal' && !disallowed ? fa(afterDep) : '—'}</td>
+      <td style="${tdr}">${r.partType === 'plastic' && !disallowed ? fa(afterDep) : '—'}</td>
+      <td style="${tdr}">${r.partType === 'fiberglass' && !disallowed ? fa(afterDep) : '—'}</td>
+      <td style="${tdr}">${r.partType === 'glass' && !disallowed ? fa(afterDep) : '—'}</td>
+      <td style="${tdr}text-align:center;">${isDisposal ? '0%' : `${gstPct}%`}</td>
+      <td style="${cellStyle}">${cellLabel}</td>
     </tr>`;
   }).join('');
 
-  // ── Labour-only rows (11 cols: Sr | Particulars | Type | Est | Status | GST% | Amount×4 | Price+GST)
+  // ── Labour-only rows (11 cols: Sr | Particulars | Type | Est | Assessed | GST% | —×4 | Price+GST)
   let lsn = 1;
   const labOnlyHtml = rows.filter(r => r.section === 'labour').map(r => {
     const disallowed = r.allowed === false;
@@ -158,10 +170,10 @@ export function buildStandardFinalSurveyHTML(
       <td style="${td}">${r.particulars}</td>
       <td style="${td}text-align:center;">Labour</td>
       <td style="${tdr}">${fa(r.estimated)}</td>
-      <td style="${tdr}${disallowed ? 'color:#a00;font-weight:700;font-size:6.5pt;text-align:center;' : ''}">${disallowed ? 'NOT ALLOWED' : ''}</td>
+      <td style="${tdr}${disallowed ? 'color:#a00;font-weight:700;font-size:6.5pt;text-align:center;' : ''}">${disallowed ? 'NOT ALLOWED' : fa(r.assessed)}</td>
       <td style="${tdr}text-align:center;">${gstPct}%</td>
-      <td colspan="4" style="${tdr}">${!disallowed ? fa(r.assessed) : '—'}</td>
-      <td style="${tdr}${disallowed ? 'color:#a00;' : 'font-weight:600;'}">${fa(priceGst)}</td>
+      <td colspan="4" style="${tdr}text-align:center;">—</td>
+      <td style="${tdr}${disallowed ? 'color:#a00;' : 'font-weight:600;'}">${disallowed ? '—' : fa(priceGst)}</td>
     </tr>`;
   }).join('');
 
@@ -176,16 +188,17 @@ export function buildStandardFinalSurveyHTML(
       <td style="${td}">${r.particulars}</td>
       <td style="${td}text-align:center;">Paint</td>
       <td style="${tdr}">${fa(r.estimated)}</td>
-      <td style="${tdr}${disallowed ? 'color:#a00;font-weight:700;font-size:6.5pt;text-align:center;' : ''}">${disallowed ? 'NOT ALLOWED' : ''}</td>
+      <td style="${tdr}${disallowed ? 'color:#a00;font-weight:700;font-size:6.5pt;text-align:center;' : ''}">${disallowed ? 'NOT ALLOWED' : fa(r.assessed)}</td>
       <td style="${tdr}text-align:center;">${gstPct}%</td>
-      <td colspan="4" style="${tdr}">${!disallowed ? fa(r.assessed) : '—'}</td>
-      <td style="${tdr}${disallowed ? 'color:#a00;' : 'font-weight:600;'}">${fa(priceGst)}</td>
+      <td colspan="4" style="${tdr}text-align:center;">—</td>
+      <td style="${tdr}${disallowed ? 'color:#a00;' : 'font-weight:600;'}">${disallowed ? '—' : fa(priceGst)}</td>
     </tr>`;
   }).join('');
 
-  // ── DL expiry checks ───────────────────────────────────────────────────────
-  const ntExpired = isExpired(driver.validityNonTransport);
-  const tExpired = isExpired(driver.validityTransport);
+  // ── DL expiry checks — MOVED TO UI (DriverForm warning banner) ────────────
+  // The report no longer auto-injects EXPIRED. Surveyor decides via MDL Status.
+  // const ntExpired = isExpired(driver.validityNonTransport);
+  // const tExpired = isExpired(driver.validityTransport);
 
   // ── Policy / depreciation label ────────────────────────────────────────────
   const depLabel = depTypeRaw === 'nil' ? 'Nil Depreciation' : `Standard IRDAI ${ageLabel}`;
@@ -196,9 +209,9 @@ export function buildStandardFinalSurveyHTML(
       <th style="${th}">Particulars</th>
       <th style="${th};width:30pt;text-align:center;">Type</th>
       <th style="${th};text-align:right;width:38pt;">Est. ₹</th>
-      <th style="${th};text-align:center;">Status</th>
+      <th style="${th};text-align:right;width:42pt;">Assessed ₹</th>
       <th style="${th};text-align:center;width:22pt;">GST%</th>
-      <th colspan="4" style="${th};text-align:right;">Amount ₹</th>
+      <th colspan="4" style="${th};text-align:center;">—</th>
       <th style="${th};text-align:right;width:42pt;">Price+GST ₹</th>
     </tr>`;
 
@@ -211,25 +224,25 @@ export function buildStandardFinalSurveyHTML(
 
 <table style="${ts}">
   <tr>
-    <td style="${td}color:#444;width:18%;font-size:6.8pt;">Report No.</td>
+    <td style="${td}color:#444;width:18%;font-size:${scale.labelFont};">Report No.</td>
     <td style="${td}font-weight:700;width:32%;">${claim.reportNo || '—'}</td>
-    <td style="${td}color:#444;width:18%;font-size:6.8pt;">Date of report</td>
+    <td style="${td}color:#444;width:18%;font-size:${scale.labelFont};">Date of report</td>
     <td style="${td}font-weight:700;">${formatDateDMY(claim.reportDate)}</td>
   </tr>
   <tr>
-    <td style="${td}color:#444;font-size:6.8pt;">Policy No.</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Policy No.</td>
     <td style="${td}font-family:monospace;">${policy.policyNumber || '—'}</td>
-    <td style="${td}color:#444;font-size:6.8pt;">Claim No.</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Claim No.</td>
     <td style="${td}font-family:monospace;">${policy.claimNumber || '—'}</td>
   </tr>
   <tr>
-    <td style="${td}color:#444;font-size:6.8pt;">Policy Period</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Policy Period</td>
     <td style="${td}">${formatDateDMY(policy.periodFrom)} to ${formatDateDMY(policy.periodTo)}</td>
-    <td style="${td}color:#444;font-size:6.8pt;">I.D.V.</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">I.D.V.</td>
     <td style="${td}font-weight:600;">₹ ${fmt2(policy.idv)}</td>
   </tr>
   <tr>
-    <td style="${td}color:#444;font-size:6.8pt;">Policy Type</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Policy Type</td>
     <td style="${td}" colspan="3">${policy.policyType || '—'} — <b>${depLabel}</b></td>
   </tr>
 </table>
@@ -237,21 +250,21 @@ export function buildStandardFinalSurveyHTML(
 <div style="font-weight:700;font-size:7pt;background:#f5f2ee;width:100%;padding:2px 4px;border:0.4pt solid #bbb;border-bottom:none;">1. INSURER &amp; INSURED DETAILS</div>
 <table style="${ts}">
   <tr>
-    <td style="${td}color:#444;width:18%;font-size:6.8pt;">Insurer</td>
+    <td style="${td}color:#444;width:18%;font-size:${scale.labelFont};">Insurer</td>
     <td style="${td}" colspan="3">${policy.insurerName || '—'} | Appointing: ${policy.appointingOffice || '—'}</td>
   </tr>
   <tr>
-    <td style="${td}color:#444;font-size:6.8pt;">Insured Name</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Insured Name</td>
     <td style="${td}font-weight:600;width:32%;">${policy.insuredName || '—'}</td>
-    <td style="${td}color:#444;font-size:6.8pt;">Mobile</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Mobile</td>
     <td style="${td}">${policy.insuredMobile || '—'}</td>
   </tr>
   <tr>
-    <td style="${td}color:#444;font-size:6.8pt;">Address</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Address</td>
     <td style="${td}" colspan="3">${policy.insuredAddress || '—'}</td>
   </tr>
   <tr>
-    <td style="${td}color:#444;font-size:6.8pt;">H.P.A.</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">H.P.A.</td>
     <td style="${td}" colspan="3">${policy.hpaWith || vehicle.hypothecation || 'NIL'}</td>
   </tr>
 </table>
@@ -259,87 +272,89 @@ export function buildStandardFinalSurveyHTML(
 <div style="font-weight:700;font-size:7pt;background:#0d1b2a;color:#fff;padding:2px 4px;margin-bottom:2px;">2. VEHICLE PARTICULARS</div>
 <table style="${ts}">
   <tr>
-    <td style="${td}color:#444;font-size:6.8pt;width:18%;">Reg. No.</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};width:18%;">Reg. No.</td>
     <td style="${td}font-weight:700;width:32%;">${vehicle.registrationNumber || '—'}</td>
-    <td style="${td}color:#444;font-size:6.8pt;">Date of Reg.</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Date of Reg.</td>
     <td style="${td}">${formatDateDMY(vehicle.dateOfRegistration)}</td>
   </tr>
   <tr>
-    <td style="${td}color:#444;font-size:6.8pt;">Registering Authority</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Registering Authority</td>
     <td style="${td}" colspan="3">${vehicle.registeringAuthority || '—'}</td>
   </tr>
   <tr>
-    <td style="${td}color:#444;font-size:6.8pt;">Make / Model / Year</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Make / Model / Year</td>
     <td style="${td}" colspan="3"><b>${vehicle.make || '—'}</b> / ${vehicle.model || '—'} / ${vehicle.yearOfManufacture || '—'}</td>
   </tr>
   <tr>
-    <td style="${td}color:#444;font-size:6.8pt;">Chassis No.</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Chassis No.</td>
     <td style="${td}font-family:monospace;">${vehicle.chassisNumber || '—'}</td>
-    <td style="${td}color:#444;font-size:6.8pt;">Engine No.</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Engine No.</td>
     <td style="${td}font-family:monospace;">${vehicle.engineNumber || '—'}</td>
   </tr>
   <tr>
-    <td style="${td}color:#444;font-size:6.8pt;">Body / Colour / Fuel</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Body / Colour / Fuel</td>
     <td style="${td}" colspan="3">${vehicle.bodyType || '—'} / ${vehicle.colour || '—'} / ${vehicle.fuel || '—'}</td>
   </tr>
   <tr>
-    <td style="${td}color:#444;font-size:6.8pt;">CC / Odometer</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">CC / Odometer</td>
     <td style="${td}">${vehicle.cubicCapacity || '—'} / ${vehicle.odometer || '—'} KM</td>
-    <td style="${td}color:#444;font-size:6.8pt;">Pre-Accident Cond.</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Pre-Accident Cond.</td>
     <td style="${td}" colspan="3">${vehicle.preAccidentCondition || '—'}</td>
   </tr>
   <tr>
-    <td style="${td}color:#444;font-size:6.8pt;">Seating Capacity</td>
-    <td style="${td}" colspan="3">${vehicle.seatingCapacity || '—'}</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">GVW</td>
+    <td style="${td}">${vehicle.registeredLoadWeight || '—'}</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Seating Capacity</td>
+    <td style="${td}">${vehicle.seatingCapacity || '—'}</td>
   </tr>
 </table>
 
 <div style="font-weight:700;font-size:7pt;background:#0d1b2a;color:#fff;padding:2px 4px;margin-bottom:2px;">3. DRIVER'S PARTICULARS</div>
 <table style="${ts}">
   <tr>
-    <td style="${td}color:#444;font-size:6.8pt;width:18%;">Driver Name</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};width:18%;">Driver Name</td>
     <td style="${td}font-weight:600;" colspan="3">${driver.name || '—'}${driver.parentName ? ' ' + (driver.relationType || 'S/o') + ' ' + driver.parentName : ''}</td>
   </tr>
   <tr>
-    <td style="${td}color:#444;font-size:6.8pt;">M.D.L. No.</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">M.D.L. No.</td>
     <td style="${td}font-family:monospace;width:32%;">${driver.licenceNumber || '—'}</td>
-    <td style="${td}color:#444;font-size:6.8pt;">Date of Birth</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Date of Birth</td>
     <td style="${td}">${formatDateDMY(driver.dateOfBirth) || '—'}</td>
   </tr>
   <tr>
-    <td style="${td}color:#444;font-size:6.8pt;">Licence Classes</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Licence Classes</td>
     <td style="${td}" colspan="3">${driver.vehicleClasses || '—'}</td>
   </tr>
   <tr>
-    <td style="${td}color:#444;font-size:6.8pt;">Non-Transport Valid</td>
-    <td style="${td}${ntExpired ? 'color:#c00;font-weight:700;' : ''}">${formatDateDMY(driver.validityNonTransport)}${ntExpired ? ' ⚠ EXPIRED' : ''}</td>
-    <td style="${td}color:#444;font-size:6.8pt;">Transport Valid</td>
-    <td style="${td}${tExpired ? 'color:#c00;font-weight:700;' : ''}">${formatDateDMY(driver.validityTransport)}${tExpired ? ' ⚠ EXPIRED' : ''}</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Non-Transport Valid</td>
+    <td style="${td}">${formatDateDMY(driver.validityNonTransport)}</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Transport Valid</td>
+    <td style="${td}">${formatDateDMY(driver.validityTransport)}</td>
   </tr>
 </table>
 
 <div style="font-weight:700;font-size:7pt;background:#0d1b2a;color:#fff;padding:2px 4px;margin-bottom:2px;">4. ACCIDENT &amp; SURVEY DETAILS</div>
 <table style="${ts}">
   <tr>
-    <td style="${td}color:#444;font-size:6.8pt;width:18%;">Date &amp; Time</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};width:18%;">Date &amp; Time</td>
     <td style="${td}width:32%;">${formatDateTimeDMY(accident.dateAndTime)}</td>
-    <td style="${td}color:#444;font-size:6.8pt;">Place</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Place</td>
     <td style="${td}">${accident.placeOfAccident || '—'}</td>
   </tr>
   <tr>
-    <td style="${td}color:#444;font-size:6.8pt;">Police Station</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Police Station</td>
     <td style="${td}">${accident.policeStation || '—'}</td>
-    <td style="${td}color:#444;font-size:6.8pt;">FIR No. & Date</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">FIR No. & Date</td>
     <td style="${td}">${accident.firNumber || '—'} / ${formatDateDMY(accident.firDate)}</td>
   </tr>
   <tr>
-    <td style="${td}color:#444;font-size:6.8pt;">Date of Survey</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Date of Survey</td>
     <td style="${td}">${formatDateDMY(accident.dateOfSurvey)}</td>
-    <td style="${td}color:#444;font-size:6.8pt;">Place of Survey</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Place of Survey</td>
     <td style="${td}">${accident.placeOfSurvey || '—'}</td>
   </tr>
   <tr>
-    <td style="${td}color:#444;font-size:6.8pt;">Third Party</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Third Party</td>
     <td style="${td}" colspan="3">${accident.thirdPartyDetails || 'NIL'}</td>
   </tr>
 </table>
@@ -464,7 +479,7 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
           </tr>
         </tbody>
       </table>
-      <div style="padding:6px; font-size:6.8pt; color:#333; border-top:0.4pt solid #0d1b2a; background:#f5faff; line-height:1.4;">
+      <div style="padding:6px; font-size:${scale.labelFont}; color:#333; border-top:0.4pt solid #0d1b2a; background:#f5faff; line-height:1.4;">
         <span style="font-weight:700; color:#0d1b2a;">SURVEYOR'S REMARKS:</span> 
         ${claim.totalLossDetails.remarks || `Since the assessed repair cost is substantial relative to the IDV, the settlement comparison is provided above for the insurer's final decision.`}
       </div>
@@ -494,7 +509,7 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
     <tr><td colspan="11" style="${sec}">SPARE PARTS</td></tr>
     ${partsHtml}
     <tr>
-      <td colspan="6" style="${sub}text-align:right;font-size:6.8pt;">Sub-Total Parts (after dep, before GST)</td>
+      <td colspan="6" style="${sub}text-align:right;font-size:${scale.labelFont};">Sub-Total Parts (after dep, before GST)</td>
       <td style="${sub}text-align:right;">${fa(metal)}</td>
       <td style="${sub}text-align:right;">${fa(plastic)}</td>
       <td style="${sub}text-align:right;">${fa(fiberglass)}</td>
@@ -506,7 +521,7 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
     ${labPaintSubHeader}
     ${labOnlyHtml}
     <tr>
-      <td colspan="5" style="${sub}text-align:right;font-size:6.8pt;">Sub-Total Labour (incl. GST)</td>
+      <td colspan="5" style="${sub}text-align:right;font-size:${scale.labelFont};">Sub-Total Labour (incl. GST)</td>
       <td colspan="5" style="${sub}text-align:right;">${fa(labOnlyBase)}</td>
       <td style="${sub}text-align:right;font-weight:700;">${fa(labT)}</td>
     </tr>
@@ -514,7 +529,7 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
     ${labPaintSubHeader}
     ${paintHtml}
     <tr>
-      <td colspan="5" style="${sub}text-align:right;font-size:6.8pt;">Sub-Total Painting (incl. GST)</td>
+      <td colspan="5" style="${sub}text-align:right;font-size:${scale.labelFont};">Sub-Total Painting (incl. GST)</td>
       <td colspan="5" style="${sub}text-align:right;">${fa(paintOnlyBase)}</td>
       <td style="${sub}text-align:right;font-weight:700;">${fa(paintT)}</td>
     </tr>

@@ -40,7 +40,14 @@ export function buildSpotFeeBillHTML(
   // ── Charge calculations ──────────────────────────────────────────────────
   const profFee   = parseFloat(String(fb.professionalFee  || 0)) || 0;
   const riFee     = parseFloat(String(fb.riFee             || 0)) || 0;
-  const travel    = parseFloat(String(fb.travelExpenses    || 0)) || 0;
+  const legacyTravel = parseFloat(String(fb.travelExpenses || 0)) || 0;
+  const distanceKm = parseFloat(String(fb.distanceKm       || 0)) || 0;
+  const ratePerKm  = parseFloat(String(fb.ratePerKm        || 0)) || 0;
+  const tollChg    = parseFloat(String(fb.tollCharges      || 0)) || 0;
+  const tollNote   = fb.tollNote || '';
+  const travellingChg = distanceKm * ratePerKm;
+  const hasNewTravel = distanceKm > 0 || ratePerKm > 0 || tollChg > 0;
+  const travel    = hasNewTravel ? travellingChg + tollChg : legacyTravel;
   const photosCnt = parseFloat(String(fb.photosCount       || 0)) || 0;
   const photoRate = parseFloat(String(fb.photoRate         || 0)) || 0;
   const photos    = photosCnt * photoRate;
@@ -64,10 +71,17 @@ export function buildSpotFeeBillHTML(
     : (claim.reportNo || '—');
 
   // ── Charge rows — only show non-zero items ────────────────────────────────
+  const travelRows: [string, number][] = hasNewTravel
+    ? [
+        [`Travelling Charges (${distanceKm} km × ₹${ratePerKm})${travelNote ? ' — ' + travelNote : ''}`, travellingChg],
+        [`Toll Charges${tollNote ? ' — ' + tollNote : ''}`, tollChg],
+      ]
+    : [[`Travel / Conveyance Expenses${travelNote ? ' — ' + travelNote : ''}`, legacyTravel]];
+
   const chargeRows: [string, number][] = [
     [`Professional Survey Fee — ${vehicle.registrationNumber || 'Vehicle'}`, profFee],
     [`RI / Re-inspection Fee`, riFee],
-    [`Travel / Conveyance Expenses${travelNote ? ' — ' + travelNote : ''}`, travel],
+    ...travelRows,
     [`Photography Charges (${photosCnt} photos × ₹${photoRate})`, photos],
     [`Postal / Courier Charges`, postal],
     [`Haltage &amp; Incidental Charges`, haltage],

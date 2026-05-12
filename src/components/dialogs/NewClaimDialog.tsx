@@ -277,7 +277,7 @@ export function NewClaimDialog() {
 
     setVehicleNo('');
     setNewClaimDialogOpen(false);
-    setActiveTab('details');
+    setActiveTab('documents');
   };
 
   const isCreateDisabled =

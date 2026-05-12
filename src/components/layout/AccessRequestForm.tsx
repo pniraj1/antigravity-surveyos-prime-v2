@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { doc, setDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
+import { signOutUser } from '@/lib/firebase/auth';
 import { useAuthStore } from '@/stores/auth-store';
 import { useProfileStore } from '@/stores/profile-store';
 import {
@@ -119,6 +120,9 @@ export function AccessRequestForm() {
           >
             <Shield size={28} style={{ color: '#D4AF37' }} />
           </div>
+          <div className="inline-flex items-center gap-2 px-3 py-1 mb-4 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 text-xs font-bold">
+            <CheckCircle2 size={14} /> Account created! Just one final step.
+          </div>
           <h1 className="text-2xl font-black tracking-tight text-white mb-1">
             Access Request
           </h1>
@@ -231,9 +235,16 @@ export function AccessRequestForm() {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-[10px] font-semibold mt-4" style={{ color: 'rgba(232,236,240,0.3)' }}>
-          One Google account → One SurveyOS profile. Sharing accounts is not permitted.
-        </p>
+        <div className="mt-6 flex flex-col items-center gap-4">
+          <p className="text-center text-[10px] font-semibold" style={{ color: 'rgba(232,236,240,0.3)' }}>
+            One Google account → One SurveyOS profile. Sharing accounts is not permitted.
+          </p>
+          <div className="flex items-center gap-4 text-xs font-bold">
+            <a href="/" className="text-gray-400 hover:text-white transition-colors">← Back to Website</a>
+            <span className="text-gray-700">|</span>
+            <button onClick={() => signOutUser()} className="text-gray-400 hover:text-white transition-colors">Log Out</button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -285,6 +296,12 @@ export function AccessRequestConfirmation() {
           >
             Already approved? Refresh →
           </button>
+        </div>
+
+        <div className="mt-8 pt-6 border-t border-white/10 flex items-center justify-center gap-4 text-xs font-bold">
+          <a href="/" className="text-gray-400 hover:text-white transition-colors">← Back to Website</a>
+          <span className="text-gray-700">|</span>
+          <button onClick={() => signOutUser()} className="text-gray-400 hover:text-white transition-colors">Log Out</button>
         </div>
       </div>
     </div>

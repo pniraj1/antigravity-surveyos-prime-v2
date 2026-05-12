@@ -332,7 +332,7 @@ export function SpotTab() {
               <CardContent className="p-6 space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">GVW / RLW (KG)<S /></Label>
+                    <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">GVW (KG)<S /></Label>
                     <Input
                       type="number"
                       value={spotDetails.gvw || ''}

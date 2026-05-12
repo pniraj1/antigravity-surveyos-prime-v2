@@ -1,5 +1,5 @@
 import type { StateCreator } from 'zustand';
-import type { ClaimData, SurveyType, VehicleType, DepreciationType } from '@/types';
+import type { ClaimData, SurveyType, VehicleType, DepreciationType, ReportSettings } from '@/types';
 import { createBlankClaim } from '@/types';
 import { saveClaim } from '@/lib/storage/indexeddb';
 import { useUIStore } from '@/stores/ui-store';
@@ -38,12 +38,14 @@ export interface ClaimSlice {
   setDepreciationType: (depType: DepreciationType) => void;
   updateFeeBill: (updates: Partial<ClaimData['feeBill']>) => void;
   updateBillCheck: (updates: Partial<ClaimData['billCheck']>) => void;
+  updateReportSettings: (updates: Partial<ReportSettings>) => void;
   addPhoto: (dataUrl: string, name: string, w?: number, h?: number) => void;
   deletePhoto: (index: number) => void;
   updatePhotoName: (index: number, name: string) => void;
   updatePhotoLayout: (layout: ClaimData['photoLayout']) => void;
   setClaimsList: (claims: ClaimSlice['claimsList']) => void;
   markClean: () => void;
+  closeClaim: () => void;
   /**
    * Wipes all in-memory claim state on logout.
    * Called by resetAllState() in src/lib/auth/resetAllState.ts.
@@ -205,6 +207,22 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
     }));
   },
 
+  updateReportSettings: (updates) => {
+    set((state: ClaimSlice) => ({
+      currentClaim: state.currentClaim
+        ? {
+            ...state.currentClaim,
+            reportSettings: {
+              ...(state.currentClaim.reportSettings ?? { fontScale: 'compact' }),
+              ...updates,
+            },
+            updatedAt: new Date().toISOString(),
+          }
+        : null,
+      isDirty: true,
+    }));
+  },
+
   addPhoto: (dataUrl, name, w, h) => {
     set((state: ClaimSlice) => {
       if (!state.currentClaim) return {};
@@ -266,6 +284,10 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
 
   setClaimsList: (claims) => set({ claimsList: claims }),
   markClean: () => set({ isDirty: false }),
+  closeClaim: () => {
+    useUIStore.getState().setCurrentClaimId(null);
+    set({ currentClaim: null, currentClaimId: null, isDirty: false });
+  },
 
   resetStore: () => set({
     currentClaim: null,

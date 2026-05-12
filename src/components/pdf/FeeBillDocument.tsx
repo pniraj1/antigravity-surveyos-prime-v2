@@ -117,9 +117,17 @@ interface Props {
 }
 
 export function FeeBillDocument({ claim, summary }: Props) {
-  const fb = claim?.feeBill || {};
+  const fb: any = claim?.feeBill || {};
   const photoCharges = (fb.photosCount || 0) * (fb.photoRate || 0);
-  const subTotal = (fb.professionalFee || 0) + (fb.riFee || 0) + (fb.travelExpenses || 0) +
+  const distanceKm = fb.distanceKm || 0;
+  const ratePerKm = fb.ratePerKm || 0;
+  const tollCharges = fb.tollCharges || 0;
+  const tollNote: string = fb.tollNote || '';
+  const travellingCharges = distanceKm * ratePerKm;
+  const hasNewTravel = distanceKm > 0 || ratePerKm > 0 || tollCharges > 0;
+  const legacyTravel = fb.travelExpenses || 0;
+  const travelTotal = hasNewTravel ? travellingCharges + tollCharges : legacyTravel;
+  const subTotal = (fb.professionalFee || 0) + (fb.riFee || 0) + travelTotal +
                    photoCharges + (fb.postalCharges || 0) + (fb.haltageCharges || 0);
   const gstAmount = fb.includeGST ? subTotal * 0.18 : 0;
   const grossTotal = subTotal + gstAmount;
@@ -185,10 +193,29 @@ export function FeeBillDocument({ claim, summary }: Props) {
               <Text style={styles.billAmount}>{formatCurrency(fb.riFee || 0)}</Text>
             </View>
 
-            <View style={styles.billRow}>
-              <Text style={styles.billItem}>Travel / Conveyance Expenses ({fb.travelNote || 'Local'})</Text>
-              <Text style={styles.billAmount}>{formatCurrency(fb.travelExpenses || 0)}</Text>
-            </View>
+            {hasNewTravel ? (
+              <>
+                {travellingCharges > 0 && (
+                  <View style={styles.billRow}>
+                    <Text style={styles.billItem}>Travelling Charges ({distanceKm} km × ₹{ratePerKm}){fb.travelNote ? ` — ${fb.travelNote}` : ''}</Text>
+                    <Text style={styles.billAmount}>{formatCurrency(travellingCharges)}</Text>
+                  </View>
+                )}
+                {tollCharges > 0 && (
+                  <View style={styles.billRow}>
+                    <Text style={styles.billItem}>Toll Charges{tollNote ? ` — ${tollNote}` : ''}</Text>
+                    <Text style={styles.billAmount}>{formatCurrency(tollCharges)}</Text>
+                  </View>
+                )}
+              </>
+            ) : (
+              legacyTravel > 0 && (
+                <View style={styles.billRow}>
+                  <Text style={styles.billItem}>Travel / Conveyance Expenses ({fb.travelNote || 'Local'})</Text>
+                  <Text style={styles.billAmount}>{formatCurrency(legacyTravel)}</Text>
+                </View>
+              )
+            )}
 
             <View style={styles.billRow}>
               <Text style={styles.billItem}>Photography Charges ({fb.photosCount} photos × ₹{fb.photoRate})</Text>

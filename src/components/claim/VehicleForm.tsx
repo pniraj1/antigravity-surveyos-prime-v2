@@ -223,7 +223,7 @@ export function VehicleDetailsForm() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="v-rlw">Registered Load Weight (RLW)<S /><EvidenceDot has={hasEvidence('registeredLoadWeight')} /></Label>
+            <Label htmlFor="v-rlw">GVW (Gross Vehicle Weight)<S /><EvidenceDot has={hasEvidence('registeredLoadWeight')} /></Label>
             <Input
               id="v-rlw"
               value={v?.registeredLoadWeight || ''}

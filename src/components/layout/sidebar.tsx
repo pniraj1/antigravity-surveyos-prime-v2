@@ -100,6 +100,17 @@ export function Sidebar() {
         // Note: No return statement here, so it allows navigation (soft block)
       }
     }
+    
+    if (targetTab === 'dashboard') {
+      // Batch both state updates synchronously so React processes them in a
+      // single render cycle. This minimises the window between closeClaim()
+      // clearing the store and setActiveTab() switching the view, which
+      // previously allowed useRouteSync Effect 1 to race and reload the claim.
+      useClaimStore.getState().closeClaim();
+      setActiveTab('dashboard');
+      return;
+    }
+
     setActiveTab(targetTab);
   };
 

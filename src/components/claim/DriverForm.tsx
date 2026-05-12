@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { DLRelation, DLVerificationStatus } from '@/types';
 import { useFieldEvidence } from '@/hooks/useFieldEvidence';
-import { Eye } from 'lucide-react';
+import { Eye, AlertTriangle } from 'lucide-react';
 
 const S = () => <span className="ml-1 inline-block w-2 h-2 rounded-full bg-green-500 align-middle" title="Used in Spot Report" />;
 
@@ -23,6 +23,18 @@ export function DriverDetailsForm() {
 
   if (!currentClaim) return null;
   const d = currentClaim.driver;
+
+  // ── DL Expiry check for UI warning ──────────────────────────────────────
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const ntExpired = d?.validityNonTransport && new Date(d.validityNonTransport) < today;
+  const tExpired  = d?.validityTransport  && new Date(d.validityTransport)  < today;
+  const anyExpired = ntExpired || tExpired;
+
+  const expiredLabels = [
+    ntExpired ? 'Non-Transport (NT)' : null,
+    tExpired  ? 'Transport (T)'      : null,
+  ].filter(Boolean).join(' & ');
 
   return (
     <Card>
@@ -134,7 +146,7 @@ export function DriverDetailsForm() {
               value={d?.validityNonTransport || ''}
               onChange={(e) => updateDriver({ validityNonTransport: e.target.value })}
               onFocus={() => triggerField('validityNonTransport')}
-              className={r(d?.validityNonTransport)}
+              className={`${r(d?.validityNonTransport)} ${ntExpired ? 'border-red-500' : ''}`}
             />
           </div>
 
@@ -146,7 +158,7 @@ export function DriverDetailsForm() {
               value={d?.validityTransport || ''}
               onChange={(e) => updateDriver({ validityTransport: e.target.value })}
               onFocus={() => triggerField('validityTransport')}
-              className={r(d?.validityTransport)}
+              className={`${r(d?.validityTransport)} ${tExpired ? 'border-red-500' : ''}`}
             />
           </div>
 
@@ -188,6 +200,29 @@ export function DriverDetailsForm() {
             </select>
           </div>
         </div>
+
+        {/* ── DL Expiry Warning Banner ──────────────────────────────────────── */}
+        {anyExpired && (
+          <div
+            className="mt-4 flex items-start gap-3 rounded-lg px-4 py-3"
+            style={{
+              background: 'rgba(220, 38, 38, 0.10)',
+              border: '1px solid rgba(220, 38, 38, 0.40)',
+            }}
+          >
+            <AlertTriangle size={16} className="mt-0.5 flex-shrink-0 text-red-400" />
+            <div>
+              <p className="text-sm font-bold text-red-400">
+                Driving Licence Validity Expired — {expiredLabels}
+              </p>
+              <p className="text-xs text-red-300/80 mt-0.5">
+                This is a notice for the surveyor only. The expiry remark will{' '}
+                <strong>not</strong> appear in the official report unless you change the{' '}
+                <strong>Verification Status</strong> above to reflect this finding.
+              </p>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

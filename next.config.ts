@@ -6,6 +6,9 @@ const pkg = require('./package.json') as { version: string };
 const nextConfig: NextConfig = {
   output: 'export',
   trailingSlash: true,
+  images: {
+    unoptimized: true,
+  },
   serverExternalPackages: ['@react-pdf/renderer', 'docx', 'file-saver', 'pdfjs-dist'],
   env: {
     NEXT_PUBLIC_APP_VERSION: pkg.version,

@@ -2,6 +2,7 @@
 
 import { useProfileStore } from '@/stores/profile-store';
 import { useAuthStore } from '@/stores/auth-store';
+import { usePathname } from 'next/navigation';
 import { Lock, CreditCard, Mail } from 'lucide-react';
 import { AccessRequestForm, AccessRequestConfirmation } from './AccessRequestForm';
 
@@ -13,9 +14,10 @@ export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore();
 
   const user = useAuthStore((s) => s.user);
+  const pathname = usePathname();
   
-  // ── Sandbox bypass: skip subscription check in preview channel builds ──
-  if (SANDBOX_MODE) return <>{children}</>;
+  // ── Sandbox & Public Route bypass: skip subscription check in preview channel builds or public routes ──
+  if (SANDBOX_MODE || pathname === '/' || pathname?.startsWith('/landing')) return <>{children}</>;
 
   const MASTER_ADMIN_UID = process.env.NEXT_PUBLIC_MASTER_ADMIN_UID;
   const isAdminUser = profile.isAdmin || (user && MASTER_ADMIN_UID && user.uid === MASTER_ADMIN_UID);

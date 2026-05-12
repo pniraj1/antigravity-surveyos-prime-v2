@@ -5,6 +5,7 @@ import dynamicImport from 'next/dynamic';
 import { useUIStore } from '@/stores/ui-store';
 import { useClaimStore } from '@/stores/claim-store';
 import { getClaim, saveClaim } from '@/lib/storage/indexeddb';
+import { toast } from 'sonner';
 import {
   LayoutDashboard,
   Plus,
@@ -28,6 +29,7 @@ import { ErrorBoundary } from '@/components/layout/ErrorBoundary';
 import { Sidebar, MobileMenuButton } from '@/components/layout/sidebar';
 import { FloatingReportPreview } from '@/components/layout/FloatingReportPreview';
 import { ClaimHeader } from '@/components/layout/ClaimHeader';
+import { useRouteSync } from '@/hooks/useRouteSync';
 
 // Dynamically import ALL tabs with ssr:false — they all use browser-only APIs:
 const DetailsTab    = dynamicImport(() => import('@/components/tabs/DetailsTab').then(m    => ({ default: m.DetailsTab    })), { ssr: false });
@@ -88,44 +90,27 @@ export function DashboardContent() {
   });
 
   return (
-    <div className="h-full overflow-y-auto" style={{ background: '#F8F9FA' }}>
+    <div className="h-full overflow-y-auto bg-background text-foreground">
       {/* ── Hero Banner ─────────────────────────────────── */}
-      <div
-        className="relative overflow-hidden px-8 py-10 lg:px-14 lg:py-14"
-        style={{
-          background: 'linear-gradient(135deg, #0D1B2A 0%, #1e3a5f 55%, #0D1B2A 100%)',
-        }}
-      >
+      <div className="relative overflow-hidden px-8 py-10 lg:px-14 lg:py-14 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
         {/* Decorative gold orb */}
-        <div
-          className="absolute -top-16 -right-16 w-72 h-72 rounded-full opacity-10 blur-3xl"
-          style={{ background: '#D4AF37' }}
-        />
-        <div
-          className="absolute bottom-0 left-1/3 w-48 h-48 rounded-full opacity-5 blur-2xl"
-          style={{ background: '#D4AF37' }}
-        />
+        <div className="absolute -top-16 -right-16 w-72 h-72 rounded-full opacity-10 blur-3xl bg-amber-500" />
+        <div className="absolute bottom-0 left-1/3 w-48 h-48 rounded-full opacity-5 blur-2xl bg-amber-500" />
 
         <div className="relative max-w-4xl mx-auto">
           {/* Badge */}
-          <div
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] mb-6"
-            style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)' }}
-          >
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] mb-6 bg-amber-500/15 text-amber-500 border border-amber-500/30">
             <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
             AI-Powered · Offline-First · IRDAI Compliant
           </div>
 
-          <h1 className="text-3xl lg:text-5xl font-black tracking-tight mb-3" style={{ color: '#F8F9FA', letterSpacing: '-0.02em' }}>
-            SurveyOS{' '}
-            <span
-              className="px-3 py-1 rounded-lg"
-              style={{ background: 'linear-gradient(135deg, #D4AF37, #f0d870)', color: '#0D1B2A', display: 'inline-block' }}
-            >
-              Prime V2
+          <h1 className="text-3xl lg:text-5xl font-black tracking-tight mb-3 text-slate-50 tracking-[-0.02em]">
+            Motor SurveyOS{' '}
+            <span className="px-3 py-1 rounded-lg bg-gradient-to-br from-amber-500 to-amber-300 text-slate-900 inline-block">
+              Prime
             </span>
           </h1>
-          <p className="text-base lg:text-lg font-medium mb-8" style={{ color: 'rgba(232,236,240,0.7)' }}>
+          <p className="text-base lg:text-lg font-medium mb-8 text-slate-200/70">
             Motor Insurance Survey Platform for Independent Loss Adjusters
           </p>
 
@@ -133,28 +118,14 @@ export function DashboardContent() {
           <div className="flex flex-wrap gap-3">
             <button
               onClick={() => setNewClaimDialogOpen(true)}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all"
-              style={{
-                background: 'linear-gradient(135deg, #D4AF37 0%, #f0d870 100%)',
-                color: '#0D1B2A',
-                boxShadow: '0 4px 20px rgba(212,175,55,0.4)',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 6px 28px rgba(212,175,55,0.6)')}
-              onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 4px 20px rgba(212,175,55,0.4)')}
+              className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all bg-gradient-to-br from-amber-500 to-amber-300 text-slate-900 shadow-[0_4px_20px_rgba(212,175,55,0.4)] hover:shadow-[0_6px_28px_rgba(212,175,55,0.6)]"
             >
               <Plus size={16} />
               New Claim
             </button>
             <button
               onClick={() => setClaimsListOpen(true)}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all"
-              style={{
-                background: 'rgba(255,255,255,0.08)',
-                color: '#F8F9FA',
-                border: '1px solid rgba(255,255,255,0.15)',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+              className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all bg-white/10 text-slate-50 border border-white/15 hover:bg-white/20"
             >
               <FolderOpen size={16} />
               Open Saved
@@ -169,31 +140,23 @@ export function DashboardContent() {
         {/* Stats Row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'Claims Today', value: String(claimsToday), icon: <LayoutDashboard size={16} />, accent: '#D4AF37' },
-            { label: 'This Week', value: String(claimsWeek), icon: <TrendingUp size={16} />, accent: '#22c55e' },
-            { label: 'Pending', value: String(claimsPending), icon: <Clock size={16} />, accent: '#f59e0b' },
-            { label: 'Total Claims', value: String(claimsList.length), icon: <FileCheck size={16} />, accent: '#0D1B2A' },
+            { label: 'Claims Today', value: String(claimsToday), icon: <LayoutDashboard size={16} />, bgClass: 'bg-amber-500', textClass: 'text-amber-500' },
+            { label: 'This Week', value: String(claimsWeek), icon: <TrendingUp size={16} />, bgClass: 'bg-green-500', textClass: 'text-green-500' },
+            { label: 'Pending', value: String(claimsPending), icon: <Clock size={16} />, bgClass: 'bg-amber-500', textClass: 'text-amber-500' },
+            { label: 'Total Claims', value: String(claimsList.length), icon: <FileCheck size={16} />, bgClass: 'bg-slate-900', textClass: 'text-slate-900' },
           ].map((stat) => (
             <div
               key={stat.label}
-              className="p-5 rounded-2xl relative overflow-hidden"
-              style={{
-                background: '#FFFFFF',
-                border: '1px solid #E2E6EA',
-                boxShadow: '0 1px 3px rgba(13,27,42,0.04)',
-              }}
+              className="p-5 rounded-2xl relative overflow-hidden bg-card border border-border shadow-sm"
             >
-              <div
-                className="absolute top-0 left-0 w-full h-[3px] rounded-t-2xl"
-                style={{ background: stat.accent }}
-              />
+              <div className={`absolute top-0 left-0 w-full h-[3px] rounded-t-2xl ${stat.bgClass}`} />
               <div className="flex items-center gap-2 mb-3 mt-1">
-                <span style={{ color: stat.accent }}>{stat.icon}</span>
-                <span className="text-[10px] font-bold uppercase tracking-[0.15em]" style={{ color: '#8D99AE' }}>
+                <span className={stat.textClass}>{stat.icon}</span>
+                <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
                   {stat.label}
                 </span>
               </div>
-              <div className="text-3xl font-black tracking-tight" style={{ color: '#0D1B2A' }}>
+              <div className="text-3xl font-black tracking-tight text-foreground">
                 {stat.value}
               </div>
             </div>
@@ -203,21 +166,19 @@ export function DashboardContent() {
         {/* Fees Overview */}
         <div>
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-xs font-black uppercase tracking-[0.2em]" style={{ color: '#8D99AE' }}>
+            <h2 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">
               Fees Overview
             </h2>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowIRDAI(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
-                style={{ background: 'rgba(34,197,94,0.08)', color: '#16a34a', border: '1px solid rgba(34,197,94,0.25)' }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-green-500/10 text-green-600 border border-green-500/30 hover:bg-green-500/20"
               >
                 Export Annual Summary
               </button>
               <button
                 onClick={() => setShowReconcile(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
-                style={{ background: 'rgba(212,175,55,0.1)', color: '#92400E', border: '1px solid rgba(212,175,55,0.3)' }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-amber-500/10 text-amber-700 border border-amber-500/30 hover:bg-amber-500/20"
               >
                 Reconcile Bank Statement
               </button>
@@ -228,108 +189,39 @@ export function DashboardContent() {
               {
                 label: 'Total Billed',
                 value: feesBilled > 0 ? `₹${feesBilled.toLocaleString('en-IN')}` : '—',
-                accent: '#4A4E69',
+                bgClass: 'bg-slate-600', textClass: 'text-slate-600',
                 desc: 'across active claims',
               },
               {
                 label: 'Fees Received',
                 value: feesReceived > 0 ? `₹${feesReceived.toLocaleString('en-IN')}` : '—',
-                accent: '#10B981',
+                bgClass: 'bg-green-500', textClass: 'text-green-500',
                 desc: `${activeClaims.filter(c => c.feePaid).length} claim(s) paid`,
               },
               {
                 label: 'Outstanding',
                 value: feesOutstanding > 0 ? `₹${feesOutstanding.toLocaleString('en-IN')}` : '—',
-                accent: '#EF4444',
+                bgClass: 'bg-red-500', textClass: 'text-red-500',
                 desc: `${activeClaims.filter(c => !c.feePaid && c.feeTotal > 0).length} claim(s) unpaid`,
               },
             ].map((card) => (
               <div
                 key={card.label}
-                className="p-5 rounded-2xl relative overflow-hidden"
-                style={{ background: '#FFFFFF', border: '1px solid #E2E6EA', boxShadow: '0 1px 3px rgba(13,27,42,0.04)' }}
+                className="p-5 rounded-2xl relative overflow-hidden bg-card border border-border shadow-sm"
               >
-                <div className="absolute top-0 left-0 w-full h-[3px] rounded-t-2xl" style={{ background: card.accent }} />
-                <div className="text-[10px] font-bold uppercase tracking-[0.15em] mb-2 mt-1" style={{ color: '#8D99AE' }}>
+                <div className={`absolute top-0 left-0 w-full h-[3px] rounded-t-2xl ${card.bgClass}`} />
+                <div className="text-[10px] font-bold uppercase tracking-[0.15em] mb-2 mt-1 text-muted-foreground">
                   {card.label}
                 </div>
-                <div className="text-2xl font-black tracking-tight mb-1" style={{ color: card.accent }}>
+                <div className={`text-2xl font-black tracking-tight mb-1 ${card.textClass}`}>
                   {card.value}
                 </div>
-                <div className="text-[10px]" style={{ color: '#8D99AE' }}>{card.desc}</div>
+                <div className="text-[10px] text-muted-foreground">{card.desc}</div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div>
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-xs font-black uppercase tracking-[0.2em]" style={{ color: '#8D99AE' }}>
-              Quick Actions
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {[
-              {
-                label: 'New Claim',
-                desc: 'Start a comprehensive survey',
-                icon: <Plus size={20} />,
-                accent: '#D4AF37',
-                bg: 'rgba(212,175,55,0.08)',
-                onClick: () => setNewClaimDialogOpen(true),
-              },
-              {
-                label: 'Open Claim',
-                desc: `${claimsList.length} saved locally`,
-                icon: <FileCheck size={20} />,
-                accent: '#0D1B2A',
-                bg: 'rgba(13,27,42,0.04)',
-                onClick: () => setClaimsListOpen(true),
-              },
-              {
-                label: 'AI Extract',
-                desc: 'Upload & auto-scan documents',
-                icon: <Zap size={20} />,
-                accent: '#4A4E69',
-                bg: 'rgba(74,78,105,0.06)',
-                onClick: () => setNewClaimDialogOpen(true),
-              },
-            ].map((action) => (
-              <button
-                key={action.label}
-                onClick={action.onClick}
-                className="group flex items-center gap-4 p-5 rounded-2xl text-left transition-all"
-                style={{
-                  background: '#FFFFFF',
-                  border: '1px solid #E2E6EA',
-                  boxShadow: '0 1px 3px rgba(13,27,42,0.04)',
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(13,27,42,0.09)';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.borderColor = action.accent;
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(13,27,42,0.04)';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.borderColor = '#E2E6EA';
-                }}
-              >
-                <div
-                  className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-all"
-                  style={{ background: action.bg, color: action.accent }}
-                >
-                  {action.icon}
-                </div>
-                <div>
-                  <div className="text-sm font-bold" style={{ color: '#0D1B2A' }}>{action.label}</div>
-                  <div className="text-xs mt-0.5" style={{ color: '#8D99AE' }}>{action.desc}</div>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
 
         {/* Recent Claims Table */}
         <div>
@@ -606,6 +498,7 @@ export function TabPlaceholder({ tab }: { tab: string }) {
 
 export default function Dashboard() {
   const { activeTab } = useUIStore();
+  useRouteSync();
 
   return (
     <div className="flex h-screen overflow-hidden">

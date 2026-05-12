@@ -10,6 +10,19 @@ import type { VehicleDetails, DriverDetails, PolicyDetails, AccidentDetails, Veh
 import type { AssessmentRow, SpotDamageRow, SpotSurveyDetails, ReinspectionDetails, FeeBill, PhotoItem, PhotoLayout, BillCheckDetails, ExtraBillItem, ValuationDetails } from './assessment';
 import type { SurveyType } from './report';
 
+// ─── Report Settings ───────────────────────────────────
+/**
+ * Controls font density across all report formats (HTML/PDF/Word).
+ * - compact   : Current default. Matches existing tight layout exactly.
+ * - standard  : Slightly larger — comfortable for screen reading.
+ * - large-print: Maximum readability for client-facing sharing.
+ */
+export type FontScale = 'compact' | 'standard' | 'large-print';
+
+export interface ReportSettings {
+  fontScale: FontScale;
+}
+
 export interface ClaimData {
   /** Unique claim identifier */
   id: string;
@@ -96,6 +109,14 @@ export interface ClaimData {
     workshopRent: number;
     remarks: string;
   };
+
+  // ─── Report Settings ───────────────────────────────
+  /**
+   * Per-claim font scale preference.
+   * Stored here so each claim can have its own density.
+   * Falls back to 'compact' on old claims that predate this field.
+   */
+  reportSettings?: ReportSettings;
 
   // ─── AI Extraction Cache ───────────────────────────
   extractedData: Record<string, unknown>;
@@ -297,6 +318,10 @@ export function createBlankClaim(
       riFee: 0,
       travelExpenses: 0,
       travelNote: '',
+      distanceKm: 0,
+      ratePerKm: 0,
+      tollCharges: 0,
+      tollNote: '',
       photosCount: 0,
       photoRate: 0,
       postalCharges: 0,
@@ -365,6 +390,7 @@ export function createBlankClaim(
       workshopRent: 0,
       remarks: 'NOTE: Since the assessed repair cost is substantial relative to the IDV, the settlement comparison is provided above for the insurer\'s final decision.'
     },
+    reportSettings: { fontScale: 'compact' },
     extractedData: {},
     gDriveFolderId: null,
     telemetrySent: false,

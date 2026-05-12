@@ -112,12 +112,12 @@ export async function generateWordReport(claim: ClaimData, summary: AssessmentSu
                   new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Assessed", bold: true })] })] }),
                 ],
               }),
-              ...claim.assessmentRows.filter(r => r.allowed).map(row => 
+              ...claim.assessmentRows.filter(r => r.allowed).map(row =>
                 new TableRow({
                   children: [
                     new TableCell({ children: [new Paragraph(row.particulars || "—")] }),
                     new TableCell({ children: [new Paragraph(formatCurrency(row.estimated))] }),
-                    new TableCell({ children: [new Paragraph(formatCurrency(row.assessed))] }),
+                    new TableCell({ children: [new Paragraph(row.isDisposal ? `${formatCurrency(row.assessed)} [DISP]` : formatCurrency(row.assessed))] }),
                   ],
                 })
               ),
@@ -207,7 +207,7 @@ export async function generateSpotWordReport(claim: ClaimData, profile: Surveyor
         createKVRow("Date of Reg.", formatDateDMY(vehicle.dateOfRegistration), "Class of Vehicle", vehicle.classOfVehicle),
         createKVRow("Body Type", vehicle.bodyType, "Colour", vehicle.colour),
         createKVRow("Fuel", vehicle.fuel, "CC", vehicle.cubicCapacity),
-        createKVRow("RLW / GVW / Seating", vehicle.registeredLoadWeight, "Odometer (KM)", vehicle.odometer),
+        createKVRow("GVW (kg)", vehicle.registeredLoadWeight, "Odometer (KM)", vehicle.odometer),
         createKVRow("Pre-Accid. Cond.", vehicle.preAccidentCondition, isComm ? "Fitness Cert. No." : "", isComm ? vehicle.fitnessNo : ""),
         ...(isComm ? [
           new TableRow({

@@ -41,7 +41,7 @@ export function calculateAssessmentSummary(
   // ─── Assessment Logic ──────────────────────────────
   rows.forEach((r) => {
     if (!r.allowed) return;
-    const depRate = getDepreciationRate(r.partType, ageMonths, depType);
+    const depRate = r.depOverride !== undefined ? r.depOverride : getDepreciationRate(r.partType, ageMonths, depType);
     const valueAfterDep = r.assessed * (1 - depRate / 100);
 
     if (r.isDisposal) {
@@ -151,7 +151,7 @@ export function calculateBillCheckSummary(
   rows.forEach(r => {
     if (!r.allowed) return;
 
-    const depRate = getDepreciationRate(r.partType, ageMonths, depType);
+    const depRate = r.depOverride !== undefined ? r.depOverride : getDepreciationRate(r.partType, ageMonths, depType);
     const amount = (r.billStatus === 'not-in-bill') ? 0 : (r.billedAmount || 0);
     const valueBilledAfterDep = amount * (1 - depRate / 100);
 

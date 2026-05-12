@@ -18,6 +18,7 @@
 
 import type { ClaimData } from '@/types/claim';
 import type { SurveyorProfile } from '@/types/vehicle';
+import { computeRowNet } from '@/lib/calculations/row-net';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -40,6 +41,7 @@ function g(v: string | number | null | undefined): string {
 }
 
 import { numberToWords, getVehicleAgeMonths, getSurveyorHeader, getSigBlock } from './report-utils';
+import { getHtmlScale } from './report-style-utils';
 
 // ─── HTML/PDF SYNC CHECKLIST ──────────────────────────────────────────────────
 // Fields that must stay identical between this HTML builder and
@@ -89,25 +91,33 @@ export function buildUIICFinalHTML(claim: ClaimData, profile: SurveyorProfile | 
     a.dateAndTime || null
   );
 
-  // ── Table style shorthands (matches benchmark exactly) ──────────────────────
-  const ts = 'width:100%;border-collapse:collapse;font-size:8pt;';
+  // ── Font scale (resolved once, used throughout) ────────────────────────────
+  const scale = getHtmlScale(claim.reportSettings?.fontScale);
+
+  // ── Table style shorthands (matches benchmark exactly for compact scale) ───────
+  const ts = `width:100%;border-collapse:collapse;font-size:${scale.cellFont};`;
   const B = 'border:0.5pt solid #000;';
-  const td = B + 'padding:3px 5px;vertical-align:top;';
-  const tdl = td + 'font-size:7pt;color:#333;';
+  const td = B + `padding:${scale.cellPaddingV} ${scale.cellPaddingH};vertical-align:top;`;
+  const tdl = td + `font-size:${scale.labelFont};color:#333;`;
   const tdb = td + 'font-weight:700;';
-  const th = 'background:#e8e8e8;' + B + 'padding:3px 5px;font-size:7pt;font-weight:700;text-align:center;';
-  const sec = 'background:#ddd;' + B + 'padding:3px 5px;font-weight:700;font-size:7.5pt;text-transform:uppercase;';
+  const th = `background:#e8e8e8;${B}padding:${scale.cellPaddingV} ${scale.cellPaddingH};font-size:${scale.labelFont};font-weight:700;text-align:center;`;
+  const sec = `background:#ddd;${B}padding:${scale.cellPaddingV} ${scale.cellPaddingH};font-weight:700;font-size:${scale.headingFont};text-transform:uppercase;`;
 
   // ── Calculations (ported from benchmark) ────────────────────────────────────
-  let partsDepreciated = 0, rawParts = 0, labOnly = 0, paintOnly = 0;
+  let partsDepreciated = 0, rawParts = 0, labOnly = 0, paintOnly = 0, disposalNet = 0;
   const AP = rows.filter(r => r.section === 'parts');
   const AL = rows.filter(r => r.section === 'labour');
   const APT = rows.filter(r => r.section === 'paint');
 
   AP.forEach(r => {
     if (r.allowed !== false) {
-      const dep = getDepRate(r.partType, ageMonths, depType);
-      partsDepreciated += r.assessed * (1 - dep / 100);
+      const dep = r.depOverride !== undefined ? r.depOverride : getDepRate(r.partType, ageMonths, depType);
+      const { isDisposal, netBeforeGst } = computeRowNet(r, dep);
+      if (isDisposal) {
+        disposalNet += netBeforeGst;
+      } else {
+        partsDepreciated += netBeforeGst;
+      }
       rawParts += r.assessed;
     }
   });
@@ -115,7 +125,7 @@ export function buildUIICFinalHTML(claim: ClaimData, profile: SurveyorProfile | 
   APT.forEach(r => { if (r.allowed !== false) paintOnly += r.assessed; });
 
   const labBase = labOnly + paintOnly;
-  const pC = partsDepreciated * 0.09, pS = partsDepreciated * 0.09, pT = partsDepreciated + pC + pS;
+  const pC = partsDepreciated * 0.09, pS = partsDepreciated * 0.09, pT = partsDepreciated + pC + pS + disposalNet;
   const lC = labBase * 0.09, lS = labBase * 0.09, lT = labBase + lC + lS;
   const tow = parseFloat(String(claim.feeBill?.travelExpenses || 0)) || 0; // towing mapped from travelExpenses or 0
   const gross = pT + lT + tow;
@@ -302,23 +312,26 @@ ${getSurveyorHeader(profile)}
   // ── PAGE 3-4: Assessment Detail (10-column table: Sr|Part Name|Part Type|Job Type|Part List W/o Tax|Dep%|Parts Assess|GST%|With GST|Labour) ───
   let sn = 1;
   const pHtml = AP.map(r => {
-    const dep = getDepRate(r.partType, ageMonths, depType);
-    const dL = dep > 0 ? dep + '%' : 'N.D.';
+    const dep = r.depOverride !== undefined ? r.depOverride : getDepRate(r.partType, ageMonths, depType);
+    const dL = r.depOverride !== undefined ? `${dep}%*` : (dep > 0 ? dep + '%' : 'N.D.');
     const isNA = r.allowed === false;
-    const ass = isNA ? 0 : r.assessed * (1 - dep / 100);
-    const wg = isNA ? 0 : ass * 1.18;
+    const { isDisposal, afterDep, netBeforeGst } = isNA ? { isDisposal: false, afterDep: 0, netBeforeGst: 0 } : computeRowNet(r, dep);
+    const wg = isNA ? 0 : isDisposal ? netBeforeGst : afterDep * 1.18;
+    const wgLabel = isNA ? '' : isDisposal ? `${fa(netBeforeGst)} DISP` : fa(wg);
+    const wgStyle = isDisposal ? `${td}text-align:right;color:#b45309;font-weight:600;` : `${td}text-align:right;`;
+    const gstLabel = isNA ? '' : isDisposal ? '0' : '18';
     const pt = r.partType === 'metal' ? 'Metal' : r.partType === 'glass' ? 'Glass' : r.partType === 'fiberglass' ? 'Fibre Glass' : 'Plastic/Rubber';
-    return `<tr><td style="${td}text-align:center;">${sn++}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">${isNA ? '' : pt}</td><td style="${td}text-align:center;">${isNA ? '' : 'Replace'}</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : dL}</td><td style="${td}text-align:right;">${isNA ? '' : fa(ass)}</td><td style="${td}text-align:center;">${isNA ? '' : '18'}</td><td style="${td}text-align:right;">${isNA ? '' : fa(wg)}</td><td style="${td}text-align:center;">${isNA ? 'Not<br/>Allowed' : ''}</td></tr>`;
+    return `<tr><td style="${td}text-align:center;">${sn++}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">${isNA ? '' : pt}</td><td style="${td}text-align:center;">${isNA ? '' : 'Replace'}</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : dL}</td><td style="${td}text-align:right;">${isNA ? '' : fa(afterDep)}</td><td style="${td}text-align:center;">${gstLabel}</td><td style="${wgStyle}">${wgLabel}</td><td style="${td}text-align:center;">${isNA ? 'Not<br/>Allowed' : ''}</td></tr>`;
   }).join('');
 
   let ln = 1;
   const lHtml = AL.map(r => {
     const isNA = r.allowed === false;
-    return `<tr><td style="${td}text-align:center;">${ln++}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Labour</td><td style="${td}"></td><td style="${td}text-align:center;">N.D.</td><td style="${td}"></td><td style="${td}text-align:center;">18</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? 'Not<br/>Allowed' : ''}</td></tr>`;
+    return `<tr><td style="${td}text-align:center;">${ln++}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">N.D.</td><td style="${td}"></td><td style="${td}text-align:center;">18</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? 'Not<br/>Allowed' : ''}</td></tr>`;
   }).join('');
 
   const ptHtml = APT.filter(r => r.allowed !== false).map((r, i) =>
-    `<tr><td style="${td}text-align:center;">${i + 1}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Paint</td><td style="${td}"></td><td style="${td}text-align:center;">N.D.</td><td style="${td}"></td><td style="${td}text-align:center;">18</td><td style="${td}"></td><td style="${td}text-align:right;">${fa(r.assessed)}</td></tr>`
+    `<tr><td style="${td}text-align:center;">${i + 1}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Paint</td><td style="${td}text-align:right;">${fa(r.assessed)}</td><td style="${td}text-align:center;">N.D.</td><td style="${td}"></td><td style="${td}text-align:center;">18</td><td style="${td}"></td><td style="${td}text-align:right;">${fa(r.assessed)}</td></tr>`
   ).join('');
 
   const p3 = `<div style="page-break-before:always;"></div>
@@ -483,14 +496,19 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   const allowedPaint  = allPaint.filter(r => r.allowed !== false);
 
   // ── Calculations using only allowed rows ────────────────────────────────────
-  let partsDepreciated = 0, rawParts = 0, labOnly = 0, paintOnly = 0;
+  let partsDepreciated = 0, rawParts = 0, labOnly = 0, paintOnly = 0, disposalNet = 0;
   let billedPartsTotal = 0, billedLabourTotal = 0, billedPaintTotal = 0;
 
   allowedParts.forEach(r => {
-    const dep = getDepRate(r.partType, ageMonths, depType);
-    partsDepreciated += r.assessed * (1 - dep / 100);
+    const dep = r.depOverride !== undefined ? r.depOverride : getDepRate(r.partType, ageMonths, depType);
+    const { isDisposal, netBeforeGst, afterDep } = computeRowNet(r, dep);
+    if (isDisposal) {
+      disposalNet += netBeforeGst;
+    } else {
+      partsDepreciated += netBeforeGst;
+    }
     rawParts += r.assessed;
-    billedPartsTotal += r.billedAmount ?? r.assessed * (1 - dep / 100);
+    billedPartsTotal += r.billedAmount ?? afterDep;
   });
   allowedLabour.forEach(r => {
     labOnly += r.assessed;
@@ -501,7 +519,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
     billedPaintTotal += r.billedAmount ?? r.assessed;
   });
 
-  const pC = partsDepreciated * 0.09, pS = partsDepreciated * 0.09, pT = partsDepreciated + pC + pS;
+  const pC = partsDepreciated * 0.09, pS = partsDepreciated * 0.09, pT = partsDepreciated + pC + pS + disposalNet;
   const labBase = labOnly + paintOnly;
   const lC = labBase * 0.09, lS = labBase * 0.09, lT = labBase + lC + lS;
   const tow = parseFloat(String(claim.feeBill?.travelExpenses || 0)) || 0;
@@ -538,20 +556,22 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
 
   // ── PARTS ROWS ───────────────────────────────────────────────────────────────
   const pHtml = allowedParts.map(r => {
-    const dep = getDepRate(r.partType, ageMonths, depType);
-    const dL = dep > 0 ? dep + '%' : 'N.D.';
-    const assessed = r.assessed * (1 - dep / 100);
-    const billed   = r.billedAmount ?? assessed;
-    const srNo     = partsSrNo(r.id);
+    const dep = r.depOverride !== undefined ? r.depOverride : getDepRate(r.partType, ageMonths, depType);
+    const dL = r.depOverride !== undefined ? `${dep}%*` : (dep > 0 ? dep + '%' : 'N.D.');
+    const { isDisposal, afterDep, netBeforeGst } = computeRowNet(r, dep);
+    const billed = r.billedAmount ?? afterDep;
+    const srNo   = partsSrNo(r.id);
     const pt = r.partType === 'metal' ? 'Metal' : r.partType === 'glass' ? 'Glass' : r.partType === 'fiberglass' ? 'Fibre Glass' : 'Plastic/Rubber';
     const stColor = r.billStatus === 'in-bill' ? '#065f46' : r.billStatus === 'not-in-bill' ? '#991b1b' : r.billStatus === 'partial' ? '#92400e' : '#374151';
+    const netLabel = isDisposal ? `${fa(netBeforeGst)} DISP` : fa(afterDep);
+    const netStyle = isDisposal ? `${td}text-align:right;color:#b45309;font-weight:600;` : `${td}text-align:right;`;
     return `<tr>
       <td style="${td}text-align:center;">${srNo}</td>
       <td style="${td}">${r.particulars}</td>
       <td style="${td}text-align:center;">${pt}</td>
       <td style="${td}text-align:right;">${fa(r.assessed)}</td>
       <td style="${td}text-align:center;">${dL}</td>
-      <td style="${td}text-align:right;">${fa(assessed)}</td>
+      <td style="${netStyle}">${netLabel}</td>
       <td style="${td}text-align:right;">${fa(billed)}</td>
       <td style="${td}text-align:center;font-weight:700;color:${stColor};font-size:6.5pt;">${billStatusLabel(r.billStatus)}</td>
       <td style="${td}font-size:6.5pt;color:#555;">${r.billRemarks || ''}</td>

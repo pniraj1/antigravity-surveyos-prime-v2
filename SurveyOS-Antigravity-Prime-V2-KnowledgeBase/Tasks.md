@@ -5,7 +5,42 @@
 
 ---
 
-## ⚠️ Immediate Action Required
+## ✅ Completed (2026-05-12 — Navigation Bug Fix)
+
+- [x] **Dashboard navigation race condition fixed** — Clicking "Dashboard" from inside a claim now reliably returns to the Dashboard view.
+  - Root cause: `useRouteSync` Effect 1 (URL→Store) was firing on stale `?claim=XXX` URL after `closeClaim()` cleared the store, before Effect 2 (Store→URL) could push the clean URL.
+  - Fix 1: Added stale-URL guard in `useRouteSync.ts` Effect 1.
+  - Fix 2: Batched `closeClaim()` + `setActiveTab()` synchronously in `sidebar.tsx`.
+- [x] **State_Management.md updated** — Documented `claim-store` action table, `useRouteSync` two-effect architecture, and the race condition fix.
+- [x] **Session log created** — [[Sessions/2026-05-12]]
+- [x] **Deployed** → `firebase deploy --only hosting` → https://motorsurveyos.web.app
+
+---
+
+## ✅ Completed (2026-05-12 — DL Expiry Reporting Fix)
+
+- [x] **Removed auto-EXPIRED injection from reports** — `SpotPrintReport.tsx`, `standard-report-builder.ts`: DL validity and Fitness Certificate cells now display dates plainly without auto-appending `⚠ EXPIRED`.
+- [x] **Added UI warning banner to `DriverForm.tsx`** — When NT or Transport validity date is past today, a red/amber alert banner appears inside the Driver Details card, visible only to the surveyor in the app.
+  - Both expired date inputs get a `border-red-500` highlight.
+  - Banner clearly states: *"This is a notice for the surveyor only. The expiry remark will **not** appear in the official report unless you change the **Verification Status** above."*
+- [x] **Design principle established**: Report renderers must be data-driven. Expiry state is a UI concern. The surveyor's `verificationStatus` field on the driver object is the authoritative signal for what appears in the official report.
+- [x] **Build clean** — TypeScript passed, no errors.
+- [x] **Deployed** → `firebase deploy --only hosting` → https://motorsurveyos.web.app
+
+---
+
+## ✅ Completed (2026-05-12 — GVW / RLW & Seating Capacity Regression Fix)
+
+- [x] **Root cause identified**: The `SpotPrintReport.tsx` row was rendering `registeredLoadWeight / grossWeight / seatingCapacity` — `grossWeight` is a numeric/null field defaulting to `null`, so it always displayed `—`. This was the regression.
+- [x] **Domain clarification**: RLW (Registered Load Weight) and GVW (Gross Vehicle Weight) are **the same concept** — there is only one field: `registeredLoadWeight`. The `grossWeight` (number) field in SpotTab's load section is a separate numeric-only field for the E. Load Details section and must not be confused with RLW.
+- [x] **SpotPrintReport.tsx fixed** — Vehicle table now shows a clean `GVW / RLW` label mapped to `registeredLoadWeight`, and `Seating Capacity` as a paired cell in the same row.
+- [x] **standard-report-builder.ts fixed** — Added `GVW / RLW` (→ `registeredLoadWeight`) to the vehicle table. Was previously showing only `Seating Capacity` on a full-width row, missing GVW entirely.
+- [x] **VehicleForm.tsx label updated** — Field now labelled `GVW / RLW (Gross Vehicle Weight)` for surveyor clarity.
+- [x] **Build clean** — TypeScript passed, no errors.
+- [x] **Deployed** → `firebase deploy --only hosting` → https://motorsurveyos.web.app
+
+---
+
 
 - [ ] **Rotate Firebase API key** — old key was hardcoded in source, committed to git, now removed from code but key still valid in Firebase
   1. Firebase Console → Project Settings → General → Web API Key → Regenerate
