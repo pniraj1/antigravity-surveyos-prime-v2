@@ -14,6 +14,7 @@ export type AppTab =
   | 'details'
   | 'assessment'
   | 'reports'
+  | 'insured-report'
   | 'bill-check'
   | 'photos'
   | 'fees'
