@@ -1,12 +1,19 @@
 import { useEffect } from 'react';
 import { useClaimStore } from '@/stores/claim-store';
+import { useAuthStore } from '@/stores/auth-store';
 import { getAllClaims } from '@/lib/storage/indexeddb';
 import { calculateFeeSummary } from '@/lib/calculations/fees';
 
 export function useClaimsLoader() {
   const { setClaimsList } = useClaimStore();
+  const user = useAuthStore(s => s.user);
 
   useEffect(() => {
+    // Wait until Firebase auth completes and initUserDB(uid) has been called.
+    // useAuth.ts calls setUser() only AFTER initUserDB resolves, so a non-null
+    // user here guarantees the IndexedDB connection is ready.
+    if (!user) return;
+
     async function load() {
       try {
         const claims = await getAllClaims();
@@ -57,5 +64,5 @@ export function useClaimsLoader() {
     };
     
     return () => channel.close();
-  }, [setClaimsList]);
+  }, [setClaimsList, user]);
 }
