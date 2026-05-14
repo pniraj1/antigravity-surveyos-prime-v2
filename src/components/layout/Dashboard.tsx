@@ -343,10 +343,19 @@ export function DashboardContent() {
                     <div
                       key={claim.id}
                       onClick={async () => {
-                        const fullClaim = await getClaim(claim.id);
-                        if (fullClaim) {
-                          useClaimStore.getState().loadClaim(fullClaim);
-                          useUIStore.getState().setActiveTab('details');
+                        // Set ID synchronously so Effect 2 in useRouteSync sees
+                        // the correct currentClaimId before the async gap below.
+                        useUIStore.getState().setCurrentClaimId(claim.id);
+                        try {
+                          const fullClaim = await getClaim(claim.id);
+                          if (fullClaim) {
+                            useClaimStore.getState().loadClaim(fullClaim);
+                            useUIStore.getState().setActiveTab('details');
+                          } else {
+                            useUIStore.getState().setCurrentClaimId(null);
+                          }
+                        } catch {
+                          useUIStore.getState().setCurrentClaimId(null);
                         }
                       }}
                       className="px-6 py-4 grid grid-cols-[1.5fr_1fr_2fr_100px_100px_120px_60px] gap-4 items-center cursor-pointer transition-all"

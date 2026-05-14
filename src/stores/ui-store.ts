@@ -122,9 +122,10 @@ export const useUIStore = create<UIState>()(
     {
       name: 'surveyos-ui-storage',
       storage: createJSONStorage(() => localStorage),
-      // Persist navigation, workspace metadata, and Drive connection state
+      // Persist layout preferences and Drive connection state only.
+      // activeTab is intentionally excluded — useRouteSync derives it from
+      // the URL on every load, preventing stale tab rehydration loops.
       partialize: (state) => ({
-        activeTab: state.activeTab,
         sidebarCollapsed: state.sidebarCollapsed,
         currentClaimId: state.currentClaimId,
         isDriveConnected: state.isDriveConnected,

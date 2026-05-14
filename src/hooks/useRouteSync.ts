@@ -15,6 +15,8 @@ export function useRouteSync() {
   // Tracks whether a URL→Store sync is in flight so the Store→URL
   // effect doesn't immediately clobber the URL before Zustand settles.
   const syncingFromUrl = useRef(false);
+  // Prevents Effect 2 from firing before Effect 1 completes its first run.
+  const initializedRef = useRef(false);
 
   // ── Effect 1: URL → Store ─────────────────────────────────────────────────
   // Fires only when the URL changes (browser Back/Forward, initial mount).
@@ -26,23 +28,27 @@ export function useRouteSync() {
       syncingFromUrl.current = true;
       try {
         const { setActiveTab, setCurrentClaimId } = useUIStore.getState();
-        const { currentClaimId: storeClaimId }    = useClaimStore.getState();
+        // Read from UIStore — the single source of truth for navigation state.
+        // claimSlice.currentClaimId is a mirror; reading from UIStore ensures
+        // the stale-URL guard and the load check use the same ID.
+        const { currentClaimId: storeClaimId } = useUIStore.getState();
 
         if (urlClaimId) {
           // ── Stale-URL guard ───────────────────────────────────────────────
-          // If the store was already intentionally cleared (closeClaim was
-          // called) but the URL hasn't been cleaned yet (Effect 2 is in
-          // flight), do NOT re-load the claim from this stale URL.
-          // Effect 2 (Store→URL) will push the clean URL and this effect
-          // will re-run with no ?claim param, correctly landing on dashboard.
+          // If the store was intentionally cleared (closeClaim) but Effect 2
+          // hasn't pushed the clean URL yet, do NOT reload from this stale URL.
+          // closeClaim sets UIStore.currentClaimId = null synchronously, so
+          // storeClaimId will be null while the URL still carries ?claim=<id>.
           if (!storeClaimId && urlClaimId) {
             syncingFromUrl.current = false;
             return;
           }
           // ─────────────────────────────────────────────────────────────────
 
-          // Only load from IndexedDB if the claim actually changed.
-          if (urlClaimId !== storeClaimId) {
+          // Load from IndexedDB if the claim changed OR if the claim object is
+          // missing (e.g. page reload: ID is persisted but claim data is not).
+          const claimObjectMissing = !useClaimStore.getState().currentClaim;
+          if (urlClaimId !== storeClaimId || claimObjectMissing) {
             const fullClaim = await getClaim(urlClaimId);
             if (fullClaim) {
               loadClaim(fullClaim);
@@ -63,6 +69,7 @@ export function useRouteSync() {
         }
       } finally {
         syncingFromUrl.current = false;
+        initializedRef.current = true;
       }
     }
 
@@ -72,6 +79,8 @@ export function useRouteSync() {
   // ── Effect 2: Store → URL ─────────────────────────────────────────────────
   // Fires only when Zustand state changes (user navigates inside the app).
   useEffect(() => {
+    // Skip on initial mount — let Effect 1 establish state from the URL first.
+    if (!initializedRef.current) return;
     if (syncingFromUrl.current) return;
 
     const currentUrlClaimId = searchParams.get('claim');
