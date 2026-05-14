@@ -341,3 +341,173 @@ export function getDocPrompt(docType: string, withContext = true): string {
  * Kept for backward compatibility with any legacy callers.
  */
 export const DOC_PROMPTS: Record<string, string> = RAW_PROMPTS;
+
+// ─── Insured Report Prompts ───────────────────────────────────────────────────
+
+const LANGUAGE_INSTRUCTION: Record<string, string> = {
+  english: 'Respond in simple, clear English that a non-expert can understand.',
+  hindi:   'Respond in simple, everyday Hindi (Devanagari script) that a layman can understand.',
+  marathi: 'Respond in simple, everyday Marathi (Devanagari script) that a layman can understand.',
+};
+
+export function buildPolicyAnalysisPrompt(language: string): string {
+  const lang = LANGUAGE_INSTRUCTION[language] ?? LANGUAGE_INSTRUCTION.english;
+  return `You are an Indian motor insurance expert. Analyze this insurance policy document and extract the key clauses that will affect the claim settlement.
+
+${lang}
+
+Focus on: excess/deductible clauses, depreciation clauses, consumables exclusions, any specific exclusions, NCB (no-claim bonus) impact, and salvage terms.
+
+Return ONLY a JSON object:
+{
+  "clauses": [
+    {
+      "clauseType": "excess OR depreciation OR consumables-exclusion OR specific-exclusion OR ncb OR salvage",
+      "clauseTitle": "Short title of the clause (5-8 words)",
+      "policyText": "Verbatim text from the policy — maximum 2 sentences",
+      "plainLanguage": "Simple explanation for the insured — maximum 2 sentences. ${lang}"
+    }
+  ]
+}
+Return between 3 and 6 clauses. Return ONLY the JSON. No explanation, no markdown, no backticks.`;
+}
+
+export interface PolicyContextSummary {
+  policyType?: string;
+  zeroDep: boolean;
+  compulsoryExcess: number;
+  voluntaryExcess: number;
+  consumablesExcluded: boolean;
+  ncbImpact?: string;
+  specificExclusions?: string[];
+}
+
+export function buildLineExplanationPrompt(
+  language: string,
+  rowsJson: string,
+  policy: PolicyContextSummary,
+  accidentContext?: string,
+): string {
+  const lang = LANGUAGE_INSTRUCTION[language] ?? LANGUAGE_INSTRUCTION.english;
+  const contextLine = accidentContext ? `Accident context: ${accidentContext}\n` : '';
+
+  const policyBlock = [
+    `Policy type: ${policy.policyType ?? 'Standard Own Damage'}`,
+    `Zero Depreciation add-on: ${policy.zeroDep ? 'YES — no depreciation deducted on parts' : 'NO — IRDAI depreciation schedule applies'}`,
+    `Compulsory excess: ₹${policy.compulsoryExcess}`,
+    `Voluntary excess: ₹${policy.voluntaryExcess}`,
+    `Consumables (oil, lubricants, nuts, bolts, sealants, grease): ${policy.consumablesExcluded ? 'EXCLUDED — not payable under this policy' : 'COVERED under this policy'}`,
+    policy.ncbImpact ? `NCB impact: ${policy.ncbImpact}` : null,
+    policy.specificExclusions?.length ? `Specific exclusions: ${policy.specificExclusions.join('; ')}` : null,
+  ].filter(Boolean).join('\n');
+
+  return `You are an expert Indian motor insurance claims consultant helping a licensed surveyor explain claim decisions to the vehicle owner in simple language.
+
+${lang}
+
+── ACTIVE POLICY TERMS ─────────────────────────────────────
+${policyBlock}
+────────────────────────────────────────────────────────────
+
+${contextLine}
+For EACH row in the assessment below, follow this exact 3-step chain-of-thought BEFORE writing the explanation:
+
+STEP 1 — Classify the item:
+  - Is it a spare PART (metal/plastic/glass), LABOUR, PAINT, or a CONSUMABLE (oil, grease, sealant, nut, bolt, coolant, brake fluid, etc.)?
+
+STEP 2 — Apply policy rules:
+  - If CONSUMABLE and consumables are excluded → deductionCategory = "consumable".
+  - If PART and zeroDep = false → depreciation applies → deductionCategory = "depreciation".
+  - If action = "disallow" or allowed = false → deductionCategory = "not-covered".
+  - If billedAmount > assessed for LABOUR/PAINT → deductionCategory = "negotiated".
+  - If isDisposal = true → deductionCategory = "salvage".
+  - If previous damage noted in remarks → deductionCategory = "previous-damage".
+  - If correctly approved with no deduction → deductionCategory = "safe".
+  - If remarks indicate repair instead of replacement → deductionCategory = "partial-repair".
+  - If remarks indicate age/use degradation → deductionCategory = "wear-and-tear".
+  - If remarks indicate OEM price reduced to market rate → deductionCategory = "overpricing".
+
+STEP 3 — Write the explanation:
+  - Use simple words. No jargon. Max 2 sentences.
+  - Reference rupee amounts where relevant.
+  - If remarks is empty, infer from numeric signals before flagging.
+  - Only set isFlagged: true if inference is inconclusive.
+
+Assessment rows:
+${rowsJson}
+
+Return ONLY a JSON object:
+{
+  "items": [
+    {
+      "assessmentRowId": "row id from input",
+      "aiExplanation": "Plain language explanation. ${lang}",
+      "deductionCategory": "one of: depreciation | consumable | negotiated | not-covered | previous-damage | safe | salvage | partial-repair | wear-and-tear | overpricing",
+      "isFlagged": false
+    }
+  ]
+}
+Return ONLY the JSON object. No explanation, no markdown, no backticks.`;
+}
+
+export function buildCoveringNarrativePrompt(
+  language: string,
+  claimSummaryJson: string,
+  deductionLines: string[],
+  groupedItems?: Record<string, string[]>,
+): string {
+  const lang = LANGUAGE_INSTRUCTION[language] ?? LANGUAGE_INSTRUCTION.english;
+  const deductionBlock = deductionLines.map((line, i) => `${i + 1}. ${line}`).join('\n');
+
+  const CATEGORY_LABELS: Record<string, string> = {
+    safe:              'Parts found safe / no replacement needed',
+    consumable:        'Consumable items (excluded under standard policy)',
+    salvage:           'Salvage / disposal parts (value deducted)',
+    'not-covered':     'Items not payable under this policy',
+    'previous-damage': 'Pre-existing damage (unrelated to this accident)',
+    depreciation:      'Parts with depreciation applied',
+    negotiated:        'Labour / painting rates negotiated with garage',
+    'partial-repair':  'Parts assessed for repair (not replacement)',
+    'wear-and-tear':   'Wear and tear / mechanical condition (not accident damage)',
+    overpricing:       'Parts assessed at OES / market rate (OEM rate not applicable)',
+    other:             'Other adjustments',
+  };
+
+  let groupedBlock = '';
+  if (groupedItems && Object.keys(groupedItems).length > 0) {
+    const lines: string[] = [];
+    for (const [cat, parts] of Object.entries(groupedItems)) {
+      if (parts.length === 0) continue;
+      const label = CATEGORY_LABELS[cat] ?? cat;
+      lines.push(`${label}:\n  ${parts.join(', ')}`);
+    }
+    if (lines.length > 0) {
+      groupedBlock = `\nAssessment decisions by category:\n${lines.join('\n\n')}\n`;
+    }
+  }
+
+  return `You are a senior Indian motor insurance loss assessor writing a formal, empathetic letter to the vehicle owner explaining their claim settlement.
+
+${lang}
+
+Claim summary:
+${claimSummaryJson}
+
+Key deductions made (already approved by the surveyor):
+${deductionBlock}
+${groupedBlock}
+Write a professional yet empathetic covering narrative in exactly 3 paragraphs:
+
+Paragraph 1 — Context (2-3 sentences): Acknowledge the accident, thank the insured for their co-operation, confirm the survey is complete.
+
+Paragraph 2 — Deductions explained (4-6 sentences): For each deduction category with items, name the group and explain why it was handled that way. Reference rupee amounts. Be empathetic.
+
+Paragraph 3 — Settlement summary (2-3 sentences): State the final insurer payment and the amount the insured pays to the garage. Encourage them to contact the surveyor with questions.
+
+Return ONLY plain text — the narrative itself. No JSON, no markdown, no labels, no heading.`;
+}
+
+export function getPageScopeSuffix(startPage: number, totalPages: number, endPage?: number): string {
+  const pageRef = endPage && endPage > startPage ? `pages ${startPage}–${endPage}` : `page ${startPage}`;
+  return `\n\nIMPORTANT: Extract ONLY line items visible on ${pageRef} of ${totalPages}. Do NOT include items from other pages. Do NOT repeat already-extracted items.`;
+}
