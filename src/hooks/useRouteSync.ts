@@ -56,9 +56,10 @@ export function useRouteSync() {
           // Apply tab from URL, defaulting to 'details' when a claim is present.
           setActiveTab((urlTab ?? 'details') as Parameters<typeof setActiveTab>[0]);
         } else {
-          // No claim in URL – navigate to dashboard.
+          // No claim in URL – apply tab from URL if present (e.g. admin, profile),
+          // otherwise fall back to dashboard.
           if (storeClaimId) setCurrentClaimId(null);
-          setActiveTab('dashboard');
+          setActiveTab((urlTab ?? 'dashboard') as Parameters<typeof setActiveTab>[0]);
         }
       } finally {
         syncingFromUrl.current = false;
