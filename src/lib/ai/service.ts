@@ -299,7 +299,7 @@ function isModelUnavailable(err: any): boolean {
   return err?.status === 404 || msg.includes('not found') || msg.includes('model') && msg.includes('does not exist');
 }
 
-async function callWithKey(provider: AIProvider, key: string, prompt: string, images: string[]): Promise<string> {
+async function callWithKey(provider: AIProvider, key: string, prompt: string, images: string[], responseFormat: 'json' | 'text' = 'json'): Promise<string> {
   if (provider.name === 'gemini') {
     // ── Auth: AIza... = API key (?key= param); anything else = OAuth Bearer token ──
     // Keys from AI Studio start with "AIza".
@@ -326,7 +326,10 @@ async function callWithKey(provider: AIProvider, key: string, prompt: string, im
           topP: 0.95, 
           topK: 40, 
           maxOutputTokens: 65536,  // gemini-2.5-flash supports up to 65K — needed for multi-page invoices
-          responseMimeType: "application/json"
+          // Only force JSON mime when the caller actually expects JSON back.
+          // Pass 3 (covering narrative) expects plain text — forcing JSON mode
+          // causes the model to wrap the letter in a JSON object or refuse.
+          ...(responseFormat === 'json' ? { responseMimeType: 'application/json' } : {}),
         },
         safetySettings: [
           { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
@@ -359,10 +362,13 @@ async function callWithKey(provider: AIProvider, key: string, prompt: string, im
   // Groq / NVIDIA NIM / OpenAI-compatible
   const messages: any[] = [];
 
-  // Groq JSON mode requires the word "JSON" to appear somewhere in the conversation.
-  // Add a system message to guarantee compliance regardless of what the user prompt contains.
-  if (provider.name === 'groq') {
+  // Only inject this system message for JSON responses — for plain-text requests (e.g. the
+  // covering narrative letter in Pass 3), this instruction causes Groq to wrap the prose in
+  // a JSON object or refuse to generate it at all.
+  if (provider.name === 'groq' && responseFormat === 'json') {
     messages.push({ role: 'system', content: 'You are a document extraction assistant. Always respond in valid JSON format.' });
+  } else if (provider.name === 'groq' && responseFormat === 'text') {
+    messages.push({ role: 'system', content: 'You are a professional insurance letter writer. Respond with plain prose only — no JSON, no markdown, no code blocks.' });
   }
 
   if (images.length > 0) {
@@ -386,10 +392,11 @@ async function callWithKey(provider: AIProvider, key: string, prompt: string, im
       model: provider.model,
       messages,
       temperature: 0.1,
-      response_format: { type: 'json_object' },
-      // GPT-OSS 120B supports up to 32K — 4096 silently truncated large estimates.
-      // 8192 is safe for all models in the Groq fallback chain.
-      max_tokens: 8192,
+      // Only request json_object mode for JSON responses.
+      // Pass 3 (covering narrative) returns plain text — json_object mode would
+      // force the model to wrap the letter in JSON or produce a parse error.
+      ...(responseFormat === 'json' ? { response_format: { type: 'json_object' } } : {}),
+      max_tokens: 16384,
     }),
   });
 
@@ -454,7 +461,7 @@ const PROVIDER_LABELS: Record<string, string> = {
  * On Gemini 503 high-demand: retries same key up to 2× with 1.5s wait before moving on.
  * On 429 rate-limit: rotates to next key.
  */
-async function callWithRotation(provider: AIProvider, prompt: string, images: string[]): Promise<string> {
+async function callWithRotation(provider: AIProvider, prompt: string, images: string[], responseFormat: 'json' | 'text' = 'json'): Promise<string> {
   let lastError: Error = new Error('No keys available');
   const providerLabel = PROVIDER_LABELS[provider.name] ?? provider.name;
 
@@ -468,7 +475,7 @@ async function callWithRotation(provider: AIProvider, prompt: string, images: st
     let demandRetries = 0;
     while (demandRetries <= 2) {
       try {
-        return await callWithKey(downgradedProvider, key, prompt, images);
+        return await callWithKey(downgradedProvider, key, prompt, images, responseFormat);
       } catch (err: any) {
         lastError = err;
 
@@ -583,7 +590,7 @@ async function callWithRotation(provider: AIProvider, prompt: string, images: st
  * Main entry point. Calls the configured AI provider with key rotation.
  * Fallback chain: primary → secondary → NVIDIA NIM (if keys configured).
  */
-export async function callAIGateway(prompt: string, images: string[] = []): Promise<string> {
+export async function callAIGateway(prompt: string, images: string[] = [], responseFormat: 'json' | 'text' = 'json'): Promise<string> {
   const profile = getProfileFromStorage();
   const preferred = (profile?.aiProvider ?? 'gemini') as 'gemini' | 'groq' | 'nvidia';
   const secondaryName: 'gemini' | 'groq' = preferred === 'groq' ? 'gemini' : 'groq';
@@ -595,7 +602,7 @@ export async function callAIGateway(prompt: string, images: string[] = []): Prom
   // Try primary provider
   if (primaryProvider) {
     try {
-      return await callWithRotation(primaryProvider, prompt, images);
+      return await callWithRotation(primaryProvider, prompt, images, responseFormat);
     } catch (primaryErr: any) {
       // ── PAYLOAD_TOO_LARGE: re-throw immediately ──────────────────────────
       // Rotating keys or switching providers won't fix an oversized prompt.
@@ -618,7 +625,7 @@ export async function callAIGateway(prompt: string, images: string[] = []): Prom
         { duration: 5000 }
       );
       try {
-        return await callWithRotation(secondaryProvider, prompt, images);
+        return await callWithRotation(secondaryProvider, prompt, images, responseFormat);
       } catch {
         // fall through to NVIDIA
       }
@@ -626,7 +633,7 @@ export async function callAIGateway(prompt: string, images: string[] = []): Prom
     if (nvidiaProvider) {
       toast.warning('Gemini and Groq both failed — trying NVIDIA NIM as last resort.', { duration: 5000 });
       try {
-        return await callWithRotation(nvidiaProvider, prompt, images);
+        return await callWithRotation(nvidiaProvider, prompt, images, responseFormat);
       } catch (nvidiaErr: any) {
         toast.error('All AI providers failed. Check your API keys in Profile → AI & Documents Intelligence.', { duration: 10000 });
         throw nvidiaErr;
@@ -641,12 +648,12 @@ export async function callAIGateway(prompt: string, images: string[] = []): Prom
   }
 
   // No primary keys — go straight to secondary or NVIDIA
-  if (secondaryProvider) return callWithRotation(secondaryProvider, prompt, images);
-  if (nvidiaProvider) return callWithRotation(nvidiaProvider, prompt, images);
+  if (secondaryProvider) return callWithRotation(secondaryProvider, prompt, images, responseFormat);
+  if (nvidiaProvider) return callWithRotation(nvidiaProvider, prompt, images, responseFormat);
 
   // Nothing configured — try Firestore master config
   const masterProvider = await getAIProvider();
-  return callWithRotation(masterProvider, prompt, images);
+  return callWithRotation(masterProvider, prompt, images, responseFormat);
 }
 
 /**

@@ -9,6 +9,7 @@
 import type { VehicleDetails, DriverDetails, PolicyDetails, AccidentDetails, VehicleType, DepreciationType } from './vehicle';
 import type { AssessmentRow, SpotDamageRow, SpotSurveyDetails, ReinspectionDetails, FeeBill, PhotoItem, PhotoLayout, BillCheckDetails, ExtraBillItem, ValuationDetails } from './assessment';
 import type { SurveyType } from './report';
+import type { InsuredReportDraft } from '@/types/insured-report';
 
 // ─── Report Settings ───────────────────────────────────
 /**
@@ -126,6 +127,10 @@ export interface ClaimData {
 
   // ─── Telemetry ─────────────────────────────────────
   telemetrySent: boolean;
+
+  // ─── Insured Reports ───────────────────────────────
+  insuredReportPreliminary?: InsuredReportDraft;
+  insuredReportFinal?: InsuredReportDraft;
 }
 
 // ─── Factory: Create a blank claim ──────────────────────

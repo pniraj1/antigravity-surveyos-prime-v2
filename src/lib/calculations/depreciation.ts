@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import type { PartType, DepreciationType } from '@/types';
+import type { InsuredReportPolicyClause } from '@/types/insured-report';
 
 /**
  * Calculate vehicle age in months from registration/manufacture date to reference date.
@@ -112,4 +113,44 @@ export function getDepPolicyLabel(
     default:
       return `Standard IRDAI ${getAgeLabel(ageMonths)}`;
   }
+}
+
+export function getIRDAIStandardClauses(): InsuredReportPolicyClause[] {
+  return [
+    {
+      clauseType: 'depreciation',
+      clauseTitle: 'Depreciation on Parts',
+      policyText: 'As per IRDAI Motor Insurance guidelines, depreciation is applied on replaced parts based on the age of the vehicle. Plastic and rubber parts attract 50% depreciation; metal parts range from 0% (under 6 months) to 50% (over 10 years).',
+      plainLanguage: 'The insurance company deducts a depreciation amount from the cost of replaced parts based on your vehicle\'s age. Older vehicles attract higher depreciation. Glass and labour charges have zero depreciation.',
+      source: 'irdai-standard',
+    },
+    {
+      clauseType: 'excess',
+      clauseTitle: 'Compulsory Excess',
+      policyText: 'Every motor insurance policy includes a Compulsory Excess (also called deductible) as specified in the policy schedule. This amount is mandated by IRDAI and is borne by the insured for every claim.',
+      plainLanguage: 'Your policy has a fixed amount (called compulsory excess) that you must pay on every claim, no matter how small or large. This is set by the insurance company and cannot be waived.',
+      source: 'irdai-standard',
+    },
+    {
+      clauseType: 'consumables-exclusion',
+      clauseTitle: 'Consumables Not Covered',
+      policyText: 'Standard motor insurance policies exclude consumables such as engine oil, coolant, brake fluid, air filter, AC gas, nuts, bolts, and grease. These items are covered only if a specific consumables add-on cover has been purchased.',
+      plainLanguage: 'Items like engine oil, coolant, AC gas, and filters are not covered under a standard policy. These are considered consumables — things that wear out regularly and need replacement regardless of an accident.',
+      source: 'irdai-standard',
+    },
+    {
+      clauseType: 'salvage',
+      clauseTitle: 'Salvage / Disposal of Parts',
+      policyText: 'When a part is replaced under a claim, the old damaged part becomes the property of the insurance company. The salvage value of such parts is deducted from the claim settlement amount.',
+      plainLanguage: 'When the workshop replaces a damaged part with a new one, the old part belongs to the insurance company. Its estimated scrap value is deducted from your claim payment.',
+      source: 'irdai-standard',
+    },
+    {
+      clauseType: 'specific-exclusion',
+      clauseTitle: 'Pre-existing and Unrelated Damage',
+      policyText: 'Damage that existed prior to the reported accident, or damage that is not directly attributable to the cause of loss described in the claim, is not payable under the policy.',
+      plainLanguage: 'If any part of your vehicle was already damaged before this accident, or if a part is unrelated to the accident cause, the surveyor cannot include it in this claim. Only damage caused by this specific accident is covered.',
+      source: 'irdai-standard',
+    },
+  ];
 }
