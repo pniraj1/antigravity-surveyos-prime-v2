@@ -15,7 +15,9 @@ import {
   buildPolicyAnalysisPrompt,
   buildLineExplanationPrompt,
   buildCoveringNarrativePrompt,
+  buildTaggedRowEnrichmentPrompt,
   type PolicyContextSummary,
+  type TaggedRowInput,
 } from './prompts';
 import { getIRDAIStandardClauses, getVehicleAgeMonths } from '@/lib/calculations/depreciation';
 import { computeInsuredFinancialSummary } from '@/lib/calculations/insured-report';
@@ -219,6 +221,51 @@ export async function runPolicyAnalysis({
   };
 }
 
+// ─── Pass 2.5: Enrich surveyor-tagged rows ────────────────────────────────────
+// Translates surveyor shorthand (e.g. "Rates as per local market") into plain
+// English for the vehicle owner. Single batch API call. Falls back gracefully.
+async function enrichTaggedRows(
+  tagged: InsuredReportLineExplanation[],
+  language: InsuredReportLanguage,
+  onProgress?: (msg: string) => void,
+): Promise<InsuredReportLineExplanation[]> {
+  if (tagged.length === 0) return tagged;
+
+  const inputs: TaggedRowInput[] = tagged.map(row => ({
+    assessmentRowId: row.assessmentRowId,
+    partDescription: row.partDescription,
+    deductionCategory: row.deductionCategory,
+    surveyorRemark: row.surveyorRemarks,
+    billedAmount: row.billedAmount,
+    surveyorAmount: row.surveyorAmount,
+    deductionAmount: Math.max(0, row.billedAmount - row.surveyorAmount),
+  }));
+
+  try {
+    const prompt = buildTaggedRowEnrichmentPrompt(language, inputs);
+    const raw = await callAIGateway(prompt, []);
+    let parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) && Array.isArray(parsed?.items)) parsed = parsed.items;
+    if (!Array.isArray(parsed)) throw new Error(`Unexpected format: ${typeof parsed}`);
+
+    const enrichmentMap = new Map<string, string>(
+      (parsed as Array<{ assessmentRowId: string; aiExplanation: string }>).map(item => [
+        item.assessmentRowId,
+        item.aiExplanation ?? '',
+      ]),
+    );
+
+    return tagged.map(row => ({
+      ...row,
+      aiExplanation: enrichmentMap.get(row.assessmentRowId) || buildHonestFallback(row),
+    }));
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    onProgress?.(`⚠ Pass 2.5 enrichment failed: ${msg} — using fallback explanations.`);
+    return tagged.map(row => ({ ...row, aiExplanation: buildHonestFallback(row) }));
+  }
+}
+
 // ─── Stage 2: Assessment Analysis ────────────────────────────────────────────
 export async function runAssessmentAnalysis({
   claim,
@@ -234,7 +281,8 @@ export async function runAssessmentAnalysis({
   onProgress?.('Processing line items…');
 
   const { policyContext } = policyAnalysis;
-  const preClassified = buildPreClassifiedExplanations(claim, policyContext.zeroDep);
+  const { autoClassified, taggedRows } = buildPreClassifiedExplanations(claim, policyContext.zeroDep);
+  const preClassified = [...autoClassified, ...taggedRows];
   const preClassifiedIds = new Set(preClassified.map(e => e.assessmentRowId));
 
   const relevantRows = (claim.assessmentRows ?? []).filter(
@@ -567,7 +615,8 @@ export async function generateInsuredReport({
 
   // ── Pre-classify deterministic rows (safe, salvage) ─────────────────────
   // These never need AI — category and explanation are 100% certain from data.
-  const preClassified = buildPreClassifiedExplanations(claim, policyContext.zeroDep);
+  const { autoClassified, taggedRows } = buildPreClassifiedExplanations(claim, policyContext.zeroDep);
+  const preClassified = [...autoClassified, ...taggedRows];
   const preClassifiedIds = new Set(preClassified.map(e => e.assessmentRowId));
 
   // ── Surgical selection: only send rows that actually need explaining ───────
