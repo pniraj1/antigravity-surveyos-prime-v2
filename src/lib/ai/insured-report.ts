@@ -282,8 +282,9 @@ export async function runAssessmentAnalysis({
 
   const { policyContext } = policyAnalysis;
   const { autoClassified, taggedRows } = buildPreClassifiedExplanations(claim, policyContext.zeroDep);
-  const preClassified = [...autoClassified, ...taggedRows];
-  const preClassifiedIds = new Set(preClassified.map(e => e.assessmentRowId));
+  const preClassifiedIds = new Set(
+    [...autoClassified, ...taggedRows].map(e => e.assessmentRowId),
+  );
 
   const relevantRows = (claim.assessmentRows ?? []).filter(
     r =>
@@ -310,7 +311,7 @@ export async function runAssessmentAnalysis({
     partType: r.partType,
   }));
 
-  let lineExplanations: InsuredReportLineExplanation[] = [...preClassified];
+  let lineExplanations: InsuredReportLineExplanation[] = [...autoClassified];
 
   if (rowInput.length > 0) {
     try {
@@ -370,6 +371,11 @@ export async function runAssessmentAnalysis({
       ];
     }
   }
+
+  // Pass 2.5 — translate surveyor shorthand into plain English for vehicle owner
+  onProgress?.('Translating surveyor notes…');
+  const enrichedTagged = await enrichTaggedRows(taggedRows, language, onProgress);
+  lineExplanations = [...lineExplanations, ...enrichedTagged];
 
   return {
     completedAt: new Date().toISOString(),
