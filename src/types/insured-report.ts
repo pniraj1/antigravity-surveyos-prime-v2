@@ -7,6 +7,7 @@
 // DeductionCategory is the single source of truth — defined in constants.
 // Imported locally for use inside this file; re-exported for external consumers.
 import type { DeductionCategory } from '@/lib/constants/deduction-categories';
+import type { PolicyContextSummary } from '@/lib/ai/prompts';
 export type { DeductionCategory };
 
 export type InsuredReportStage = 'preliminary' | 'final';
@@ -56,7 +57,51 @@ export interface InsuredReportFinancialSummary {
   salvageTotal: number;
   insurerPays: number;
   insuredPays: number;
+  depreciationBreakdown: Array<{
+    particulars: string;
+    billed: number;
+    assessed: number;
+    deductionAmount: number;
+  }>;
 }
+
+// ─── Staged Pipeline Intermediate Results ──────────────────────────────────
+
+/** Persisted after Stage 1 — Policy Analysis */
+export type PolicyAnalysisResult = {
+  completedAt: string;
+  clauses: InsuredReportPolicyClause[];
+  source: 'policy-pdf' | 'irdai-standard';
+  policyContext: PolicyContextSummary;
+};
+
+/** Persisted after Stage 2 — Assessment Analysis */
+export type AssessmentAnalysisResult = {
+  completedAt: string;
+  lineExplanations: InsuredReportLineExplanation[];
+  hasFlaggedRows: boolean;
+};
+
+/** One surveyor answer for a single flagged row */
+export type SurveyorAnswer = {
+  assessmentRowId: string;
+  approvedExplanation: string;
+  deductionCategory: DeductionCategory;
+  surveyorEdited: boolean;
+};
+
+/** Persisted after Stage 3 — Gap Review */
+export type SurveyorAnswers = {
+  completedAt: string;
+  answers: SurveyorAnswer[];
+};
+
+/** All stage results stored on the claim */
+export type InsuredReportStages = {
+  policyAnalysis?: PolicyAnalysisResult;
+  assessmentAnalysis?: AssessmentAnalysisResult;
+  surveyorAnswers?: SurveyorAnswers;
+};
 
 export interface InsuredReportDraft {
   generatedAt: string;

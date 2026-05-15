@@ -9,7 +9,7 @@
 import type { VehicleDetails, DriverDetails, PolicyDetails, AccidentDetails, VehicleType, DepreciationType } from './vehicle';
 import type { AssessmentRow, SpotDamageRow, SpotSurveyDetails, ReinspectionDetails, FeeBill, PhotoItem, PhotoLayout, BillCheckDetails, ExtraBillItem, ValuationDetails } from './assessment';
 import type { SurveyType } from './report';
-import type { InsuredReportDraft } from '@/types/insured-report';
+import type { InsuredReportDraft, InsuredReportStages } from '@/types/insured-report';
 
 // ─── Report Settings ───────────────────────────────────
 /**
@@ -131,6 +131,7 @@ export interface ClaimData {
   // ─── Insured Reports ───────────────────────────────
   insuredReportPreliminary?: InsuredReportDraft;
   insuredReportFinal?: InsuredReportDraft;
+  insuredReportStages?: InsuredReportStages;
 }
 
 // ─── Factory: Create a blank claim ──────────────────────
