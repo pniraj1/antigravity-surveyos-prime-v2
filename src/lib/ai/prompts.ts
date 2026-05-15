@@ -511,3 +511,54 @@ export function getPageScopeSuffix(startPage: number, totalPages: number, endPag
   const pageRef = endPage && endPage > startPage ? `pages ${startPage}–${endPage}` : `page ${startPage}`;
   return `\n\nIMPORTANT: Extract ONLY line items visible on ${pageRef} of ${totalPages}. Do NOT include items from other pages. Do NOT repeat already-extracted items.`;
 }
+
+// ─── Pass 2.5: Tagged Row Enrichment ─────────────────────────────────────────
+
+export interface TaggedRowInput {
+  assessmentRowId: string;
+  partDescription: string;
+  deductionCategory: string;
+  surveyorRemark: string;
+  billedAmount: number;
+  surveyorAmount: number;
+  deductionAmount: number;
+}
+
+export function buildTaggedRowEnrichmentPrompt(
+  language: string,
+  rows: TaggedRowInput[],
+): string {
+  const langNote =
+    language === 'hindi'
+      ? '\nWrite all explanations in Hindi.'
+      : language === 'marathi'
+        ? '\nWrite all explanations in Marathi.'
+        : '';
+
+  return `You write plain-language insurance claim explanations addressed directly to the vehicle owner. For each row below, write 1–2 sentences that:
+1. State what happened to the amount (reduced / excluded / adjusted)
+2. Give the real reason in language a non-expert understands
+3. Include the actual ₹ figures
+
+Category guide:
+  negotiated      → Workshop rate was above local market price. Surveyor adjusted to fair rate.
+  overpricing     → OEM price quoted but OES/equivalent-quality part is standard for this claim.
+  partial-repair  → Full replacement unnecessary — repair restores pre-accident condition.
+  wear-and-tear   → Damage existed before accident due to normal usage and ageing.
+  not-covered     → Excluded under policy terms.
+  previous-damage → Damage was present before this accident.
+  consumable      → Consumables (oil, coolant, nuts, bolts) not covered under standard motor insurance.
+  salvage         → Second-hand part used — valued at used-part price, GST not applicable.
+
+Rules:
+  - Never say "as per policy" without explaining what that means
+  - Never echo the surveyorRemark verbatim
+  - Always include ₹ figures — never say "adjusted" without stating the amount
+  - Do NOT mention the surveyor's note in the explanation${langNote}
+
+Rows (JSON):
+${JSON.stringify(rows, null, 2)}
+
+Return a JSON array only — no prose, no markdown fences:
+[{"assessmentRowId":"...","aiExplanation":"..."}]`;
+}
