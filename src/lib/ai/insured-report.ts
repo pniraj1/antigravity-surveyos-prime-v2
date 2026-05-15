@@ -52,34 +52,59 @@ export function getBlockingRows(
 // ─── Pre-classifier: deterministic explanations for unambiguous rows ──────────
 // These rows do NOT need the AI — the category and explanation are certain.
 // Returning them here removes them from the AI call, reducing token usage.
+const AUTO_EXPLAINED_CATEGORIES = new Set<DeductionCategory>([
+  'safe',
+  'depreciation',
+  'salvage',
+]);
+
 export function buildPreClassifiedExplanations(
   claim: ClaimData,
   zeroDep: boolean,
-): InsuredReportLineExplanation[] {
-  const results: InsuredReportLineExplanation[] = [];
+): {
+  autoClassified: InsuredReportLineExplanation[];
+  taggedRows: InsuredReportLineExplanation[];
+} {
+  const autoClassified: InsuredReportLineExplanation[] = [];
+  const taggedRows: InsuredReportLineExplanation[] = [];
+
   for (const row of claim.assessmentRows ?? []) {
     const billed = row.billedTaxable ?? row.estimated;
     const delta = Math.abs(billed - row.assessed);
 
-    // Surveyor-tagged row: use tag category verbatim — skip AI entirely
+    // Surveyor-tagged row — split by whether it needs AI enrichment
     if (row.deductionCategory) {
-      results.push({
+      const explanation: InsuredReportLineExplanation = {
         assessmentRowId: row.id,
         partDescription: row.particulars,
         surveyorRemarks: row.remarks ?? '',
-        aiExplanation: row.remarks?.trim()
-          ? row.remarks
-          : `Surveyor classified this item as: ${row.deductionCategory}.`,
+        aiExplanation: '',
         deductionCategory: row.deductionCategory,
         surveyorAmount: row.assessed,
         billedAmount: billed,
         isFlagged: false,
-      });
+      };
+
+      if (AUTO_EXPLAINED_CATEGORIES.has(row.deductionCategory)) {
+        // safe / depreciation / salvage — use canned explanations, no enrichment needed
+        if (row.deductionCategory === 'safe') {
+          explanation.aiExplanation =
+            'This item was inspected and found safe — no replacement or adjustment was required.';
+        } else if (row.deductionCategory === 'salvage') {
+          explanation.aiExplanation =
+            `${row.particulars} was replaced. The salvage / scrap value of the old part ` +
+            `(₹${row.assessed.toLocaleString('en-IN')}) has been deducted from the payable amount.`;
+        }
+        // depreciation: aiExplanation stays '' — financial tab breakdown handles it
+        autoClassified.push(explanation);
+      } else {
+        // Needs Pass 2.5 AI enrichment — aiExplanation intentionally left blank
+        taggedRows.push(explanation);
+      }
       continue;
     }
 
-    // Standard depreciation: allowed parts with a reduction, no manual override, not disposal
-    // Pre-classified deterministically — never sent to AI, never shown in Line Items
+    // Standard depreciation detected from data (no manual tag)
     if (
       row.section === 'parts' &&
       row.allowed &&
@@ -88,11 +113,11 @@ export function buildPreClassifiedExplanations(
       !row.isDisposal &&
       delta > 0
     ) {
-      results.push({
+      autoClassified.push({
         assessmentRowId: row.id,
         partDescription: row.particulars,
         surveyorRemarks: row.remarks ?? '',
-        aiExplanation: '', // blank — Financial tab breakdown handles this, not Line Items
+        aiExplanation: '',
         deductionCategory: 'depreciation' as DeductionCategory,
         surveyorAmount: row.assessed,
         billedAmount: billed,
@@ -103,11 +128,12 @@ export function buildPreClassifiedExplanations(
 
     // Safe: allowed, no meaningful adjustment
     if (row.allowed && delta < 1) {
-      results.push({
+      autoClassified.push({
         assessmentRowId: row.id,
         partDescription: row.particulars,
         surveyorRemarks: row.remarks ?? '',
-        aiExplanation: 'This item was inspected and found safe — no replacement or adjustment was required.',
+        aiExplanation:
+          'This item was inspected and found safe — no replacement or adjustment was required.',
         deductionCategory: 'safe' as DeductionCategory,
         surveyorAmount: row.assessed,
         billedAmount: billed,
@@ -116,9 +142,9 @@ export function buildPreClassifiedExplanations(
       continue;
     }
 
-    // Disposal / salvage: marked explicitly
+    // Disposal / salvage: marked explicitly on the row
     if (row.isDisposal) {
-      results.push({
+      autoClassified.push({
         assessmentRowId: row.id,
         partDescription: row.particulars,
         surveyorRemarks: row.remarks ?? '',
@@ -133,7 +159,8 @@ export function buildPreClassifiedExplanations(
       continue;
     }
   }
-  return results;
+
+  return { autoClassified, taggedRows };
 }
 
 // ─── Honest fallback: for rows the AI still flags ─────────────────────────────
