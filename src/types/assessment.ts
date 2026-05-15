@@ -4,6 +4,8 @@
 // from Surveyor_V6_MASTER.html
 // ═══════════════════════════════════════════════════════════
 
+import type { DeductionCategory } from '@/lib/constants/deduction-categories';
+
 export type PartType = 'metal' | 'plastic' | 'glass' | 'fiberglass' | 'labour' | 'paint';
 export type AssessmentSection = 'parts' | 'labour' | 'paint';
 
@@ -64,6 +66,8 @@ export interface AssessmentRow {
    * Leave undefined to revert to the standard rate.
    */
   depOverride?: number;
+  /** Set by surveyor via tag pills in AssessmentGrid. Skips AI classification when present. */
+  deductionCategory?: DeductionCategory;
 }
 
 export interface AssessmentSummary {
