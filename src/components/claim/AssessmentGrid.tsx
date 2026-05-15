@@ -6,18 +6,33 @@ import { getDepreciationRate, getVehicleAgeMonths } from '@/lib/calculations/dep
 import { formatCurrency } from '@/lib/calculations/utils';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { 
-  Trash2, 
-  PlusCircle, 
-  Wrench, 
-  ShieldAlert, 
-  Settings2, 
-  Eye, 
-  EyeOff, 
-  FileSearch, 
+import {
+  Trash2,
+  PlusCircle,
+  Wrench,
+  ShieldAlert,
+  Settings2,
+  Eye,
+  EyeOff,
+  FileSearch,
   PackageX,
   GripVertical
 } from 'lucide-react';
+import type { DeductionCategory } from '@/lib/constants/deduction-categories';
+import { CATEGORY_BADGE_LABELS, CATEGORY_BADGE_COLOURS } from '@/lib/constants/deduction-categories';
+
+const CATEGORY_TAGS: Array<{ label: string; value: DeductionCategory; color: string }> = [
+  { label: 'Safe',           value: 'safe',             color: 'bg-green-100 text-green-800 border-green-300' },
+  { label: 'Depreciation',   value: 'depreciation',     color: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
+  { label: 'Disposal',       value: 'salvage',          color: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
+  { label: 'Consumable',     value: 'consumable',       color: 'bg-gray-100 text-gray-700 border-gray-300' },
+  { label: 'Not Covered',    value: 'not-covered',      color: 'bg-red-100 text-red-800 border-red-300' },
+  { label: 'Prev. Damage',   value: 'previous-damage',  color: 'bg-red-100 text-red-800 border-red-300' },
+  { label: 'Partial Repair', value: 'partial-repair',   color: 'bg-orange-100 text-orange-800 border-orange-300' },
+  { label: 'Wear & Tear',    value: 'wear-and-tear',    color: 'bg-orange-100 text-orange-800 border-orange-300' },
+  { label: 'Negotiated',     value: 'negotiated',       color: 'bg-amber-100 text-amber-800 border-amber-300' },
+  { label: 'Overpricing',    value: 'overpricing',      color: 'bg-purple-100 text-purple-800 border-purple-300' },
+];
 import {
   DndContext,
   closestCenter,
@@ -49,7 +64,8 @@ type OptionalColumn =
   | 'gst'
   | 'disposal'
   | 'action'
-  | 'remarks';
+  | 'remarks'
+  | 'priceWithGst';
 
 interface ColumnMeta {
   key: OptionalColumn;
@@ -65,8 +81,9 @@ const OPTIONAL_COLUMNS: ColumnMeta[] = [
   { key: 'unitPrice',  label: 'Estimate (taxable)',  description: 'Taxable amount from estimate (net, before GST)' },
   { key: 'gst',        label: 'GST %',               description: 'GST percentage (0 for disposal rows)' },
   { key: 'disposal',   label: 'Disposal',            description: 'Used/salvaged part — no GST; surveyor decides % of depreciated value' },
-  { key: 'action',     label: 'Action',              description: 'Replace / Repair / Disallow' },
+  { key: 'action',      label: 'Action',              description: 'Replace / Repair / Disallow' },
   { key: 'remarks',    label: 'Remarks',             description: 'Surveyor notes' },
+  { key: 'priceWithGst', label: 'Price+GST',         description: 'Net assessed amount inclusive of GST' },
 ];
 
 const DEFAULT_VISIBLE: Record<OptionalColumn, boolean> = {
@@ -79,6 +96,7 @@ const DEFAULT_VISIBLE: Record<OptionalColumn, boolean> = {
   disposal: true,
   action: true,
   remarks: false,
+  priceWithGst: true,
 };
 
 const STORAGE_KEY = 'surveyos-assessment-grid-columns';
@@ -115,6 +133,34 @@ function SortableRow({ id, className, children }: { id: string; className: strin
       </td>
       {children}
     </tr>
+  );
+}
+
+// ─── Category Tag Pills ───────────────────────────────────────────
+function CategoryTagPills({
+  value,
+  onChange,
+}: {
+  value: DeductionCategory | undefined;
+  onChange: (cat: DeductionCategory | undefined) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-1 mt-1">
+      {CATEGORY_TAGS.map(tag => (
+        <button
+          key={tag.value}
+          type="button"
+          onClick={() => onChange(value === tag.value ? undefined : tag.value)}
+          className={`px-2 py-0.5 rounded-full text-xs font-medium border transition-opacity ${
+            value === tag.value
+              ? `${tag.color} opacity-100`
+              : 'bg-gray-100 text-gray-500 border-gray-200 opacity-50 hover:opacity-90'
+          }`}
+        >
+          {tag.label}
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -431,6 +477,7 @@ export function AssessmentGrid() {
               <th className="px-2 py-2 font-medium w-24 text-primary">Assessed</th>
               <th className="px-2 py-2 font-medium w-16 text-danger text-center">Dep%</th>
               <th className="px-2 py-2 font-medium w-24 text-right">Net (₹)</th>
+              {visible.priceWithGst && <th className="px-2 py-2 font-medium w-24 text-right">Price+GST</th>}
 
               {/* ─── Optional trailing columns ─────────── */}
               {visible.action && <th className="px-2 py-2 font-medium w-20">Action</th>}
@@ -463,6 +510,9 @@ export function AssessmentGrid() {
                 const netAssessed = row.isDisposal
                   ? valueAfterDep * ((row.disposalPercent ?? 50) / 100)
                   : valueAfterDep;
+                const priceWithGst = row.allowed
+                  ? netAssessed * (1 + (row.isDisposal ? 0 : row.gst) / 100)
+                  : 0;
 
                 const handleEvidenceClick = () => {
                   if (!currentClaim?.id) return;
@@ -524,6 +574,14 @@ export function AssessmentGrid() {
                         >
                           <FileSearch size={12} />
                         </button>
+                        {row.deductionCategory && (() => {
+                          const tag = CATEGORY_TAGS.find(t => t.value === row.deductionCategory);
+                          return tag ? (
+                            <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold border ${tag.color}`}>
+                              {tag.label}
+                            </span>
+                          ) : null;
+                        })()}
                       </div>
                     </td>
 
@@ -705,6 +763,11 @@ export function AssessmentGrid() {
                         </span>
                       ) : '₹0.00'}
                     </td>
+                    {visible.priceWithGst && (
+                      <td className="px-2 py-1.5 text-right text-xs font-black tabular-nums">
+                        {row.allowed ? formatCurrency(priceWithGst) : '₹0.00'}
+                      </td>
+                    )}
 
                     {/* ─── Optional trailing columns ─────────── */}
                     {visible.action && (
@@ -728,6 +791,10 @@ export function AssessmentGrid() {
                           onChange={(e) => updateAssessmentRow(row.id, { remarks: e.target.value })}
                           className="h-7 text-[11px] bg-transparent border-transparent hover:border-input focus:bg-background px-1"
                           placeholder="—"
+                        />
+                        <CategoryTagPills
+                          value={row.deductionCategory}
+                          onChange={(cat) => updateAssessmentRow(row.id, { deductionCategory: cat })}
                         />
                       </td>
                     )}
