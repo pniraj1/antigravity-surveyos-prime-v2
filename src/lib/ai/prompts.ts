@@ -3,6 +3,9 @@
 // specialized for Motor Insurance Survey (India)
 // ═══════════════════════════════════════════════════════════
 
+import type { InsuredReportLanguage } from '@/types/insured-report';
+import type { DeductionCategory } from '@/lib/constants/deduction-categories';
+
 /**
  * Appended to every prompt so the AI also returns a short text snippet
  * for each extracted field — used by the Evidence Viewer to show WHERE
@@ -517,7 +520,8 @@ export function getPageScopeSuffix(startPage: number, totalPages: number, endPag
 export interface TaggedRowInput {
   assessmentRowId: string;
   partDescription: string;
-  deductionCategory: string;
+  deductionCategory: DeductionCategory;
+  /** Sent as context so the model knows what phrasing NOT to echo. Not directly quoted in the explanation. */
   surveyorRemark: string;
   billedAmount: number;
   surveyorAmount: number;
@@ -525,9 +529,10 @@ export interface TaggedRowInput {
 }
 
 export function buildTaggedRowEnrichmentPrompt(
-  language: string,
+  language: InsuredReportLanguage,
   rows: TaggedRowInput[],
 ): string {
+  if (rows.length === 0) return '';
   const langNote =
     language === 'hindi'
       ? '\nWrite all explanations in Hindi.'
