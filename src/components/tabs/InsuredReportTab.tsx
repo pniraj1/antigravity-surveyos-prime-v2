@@ -22,7 +22,6 @@ import type {
   SurveyorAnswer,
 } from '@/types/insured-report';
 import {
-  generateInsuredReport,
   getBlockingRows,
   runPolicyAnalysis,
   runAssessmentAnalysis,
@@ -153,16 +152,6 @@ export function InsuredReportTab() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
-  // ── Stage persistence helper ─────────────────────────────────────────────────
-  function persistStages(update: Partial<{
-    policyAnalysis: PolicyAnalysisResult;
-    assessmentAnalysis: AssessmentAnalysisResult;
-    surveyorAnswers: SurveyorAnswers;
-  }>) {
-    const existing = claim.insuredReportStages ?? {};
-    updateClaim({ insuredReportStages: { ...existing, ...update } });
-  }
-
   // ── Stage 1: Policy Analysis ─────────────────────────────────────────────────
   async function handleAnalysePolicy() {
     setLoading(true);
@@ -268,35 +257,38 @@ export function InsuredReportTab() {
     }
   }
 
-  async function handleGenerate(lang: InsuredReportLanguage = language) {
-    setLoading(true);
-    setDraft(null);
-    try {
-      const imgs = getResolvedPolicyImages();
-      const generated = await generateInsuredReport({
-        claim,
-        stage,
-        language: lang,
-        policyImages: imgs,
-        onProgress: setLoadingMsg,
-      });
-      setDraft(generated);
-      setNarrativeText(generated.coveringNarrative ?? '');
-      setNarrativeError(generated.narrativeError ?? null);
-      // Auto-open the Narrative tab on error so the surveyor sees the issue immediately
-      setActiveTab(generated.narrativeError ? 'narrative' : 'financial');
-    } catch (err: unknown) {
-      toast.error(`Failed to generate report: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    } finally {
-      setLoading(false);
-      setLoadingMsg('');
-    }
-  }
-
   async function handleLanguageChange(lang: InsuredReportLanguage) {
     if (loading) return;
     setLanguage(lang);
-    if (draft) await handleGenerate(lang);
+    if (draft && policyAnalysis && assessmentAnalysis) {
+      setLoading(true);
+      setDraft(null);
+      try {
+        const generated = await runGenerateNarrative({
+          claim,
+          stage,
+          language: lang,
+          policyAnalysis,
+          assessmentAnalysis,
+          surveyorAnswers: surveyorAnswers ?? undefined,
+          onProgress: setLoadingMsg,
+        });
+        setDraft(generated);
+        setNarrativeText(generated.coveringNarrative ?? '');
+        setNarrativeError(generated.narrativeError ?? null);
+        setActiveTab(generated.narrativeError ? 'narrative' : 'financial');
+        if (stage === 'preliminary') {
+          updateClaim({ insuredReportPreliminary: generated });
+        } else {
+          updateClaim({ insuredReportFinal: generated });
+        }
+      } catch (err: unknown) {
+        toast.error(`Failed to generate report: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      } finally {
+        setLoading(false);
+        setLoadingMsg('');
+      }
+    }
   }
 
   function updateLineExplanation(id: string, field: keyof InsuredReportLineExplanation, value: string) {
@@ -356,9 +348,8 @@ export function InsuredReportTab() {
 
   // ── Gate: derive zeroDep and blocking rows ────────────────────────────────
   const zeroDep = (
-    (claim.depreciationType === 'nil') ||
-    ((claim.policy as any)?.policyType?.toLowerCase().includes('zero dep')) ||
-    false
+    claim.depreciationType === 'nil' ||
+    (claim.policy.policyType?.toLowerCase().includes('zero dep') ?? false)
   );
   const blockingRows = getBlockingRows(claim, zeroDep);
   const isGateBlocked = blockingRows.length > 0;
