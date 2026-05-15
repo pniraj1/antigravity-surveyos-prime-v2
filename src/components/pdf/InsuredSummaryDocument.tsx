@@ -7,43 +7,70 @@ import type { InsuredReportDraft } from '@/types/insured-report';
 const C = {
   navy: '#0D1B2A',
   gold: '#D4AF37',
-  bg: '#F0F2F5',
   muted: '#8D99AE',
   red: '#B91C1C',
-  yellow: '#92400E',
-  green: '#065F46',
+  green: '#166534',
+  greenBg: '#f0fdf4',
+  greenBorder: '#86efac',
+  gray: '#374151',
+  grayBg: '#f9fafb',
+  grayBorder: '#e5e7eb',
+  mutedBg: '#f3f4f6',
 } as const;
 
 const styles = StyleSheet.create({
-  page: { padding: 36, fontFamily: 'Helvetica', fontSize: 10, color: C.navy, backgroundColor: '#FFFFFF' },
-  coverTitle: { fontSize: 20, fontFamily: 'Helvetica-Bold', color: C.navy, marginBottom: 4 },
-  coverSubtitle: { fontSize: 10, color: C.muted, textTransform: 'uppercase', letterSpacing: 1 },
-  watermark: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: C.gold, textTransform: 'uppercase', letterSpacing: 2, marginTop: 6 },
-  coverRow: { flexDirection: 'row', marginTop: 6 },
-  coverLabel: { width: '35%', fontSize: 9, color: C.muted, fontFamily: 'Helvetica-Bold' },
-  coverValue: { width: '65%', fontSize: 9, color: C.navy },
-  divider: { borderBottom: '1.5px solid #D4AF37', marginVertical: 16 },
-  sectionTitle: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: C.navy, textTransform: 'uppercase', borderBottom: '1px solid #F0F2F5', paddingBottom: 4, marginBottom: 10 },
-  tableRow: { flexDirection: 'row', borderBottom: '0.5px solid #F0F2F5', paddingVertical: 5 },
-  tableLabel: { flex: 3, fontSize: 9, color: C.muted },
-  tableValue: { flex: 1, fontSize: 9, textAlign: 'right', color: C.navy },
-  tableLabelBold: { flex: 3, fontSize: 10, fontFamily: 'Helvetica-Bold', color: C.navy },
-  tableValueBold: { flex: 1, fontSize: 10, fontFamily: 'Helvetica-Bold', textAlign: 'right', color: C.navy },
-  highlight: { backgroundColor: '#FFFBEB', borderLeft: '3px solid #D4AF37', padding: 6, marginBottom: 6, borderRadius: 2 },
-  clauseTitle: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: C.navy, marginBottom: 2 },
-  clauseText: { fontSize: 9, color: '#374151', lineHeight: 1.5 },
-  lineItemRow: { flexDirection: 'row', borderBottom: '0.5px solid #F0F2F5', paddingVertical: 5 },
-  liDesc: { flex: 3, fontSize: 9, color: C.navy },
-  liAmt: { flex: 1, fontSize: 9, textAlign: 'right', color: C.muted },
-  liReason: { flex: 3, fontSize: 9, color: '#374151', fontFamily: 'Helvetica-Oblique' },
-  flaggedText: { fontSize: 9, color: C.yellow, fontFamily: 'Helvetica-Oblique' },
-  footer: { marginTop: 24, borderTop: '0.5px solid #F0F2F5', paddingTop: 10 },
-  footerText: { fontSize: 8, color: C.muted, lineHeight: 1.5 },
-  badge: { fontSize: 8, color: C.muted, textTransform: 'uppercase', letterSpacing: 1 },
+  page: { padding: 40, fontSize: 10, fontFamily: 'Helvetica', color: C.navy, lineHeight: 1.4 },
+  // Block 1 — Header
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20, borderBottom: '1.5px solid #D4AF37', paddingBottom: 14 },
+  headerGroup: { flexDirection: 'column', gap: 4 },
+  headerLabel: { fontSize: 7, color: C.muted, fontFamily: 'Helvetica-Bold' },
+  headerValue: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: C.navy },
+  // Block 2 — Settlement Summary
+  summaryBox: { backgroundColor: C.greenBg, borderRadius: 6, padding: 14, marginBottom: 20 },
+  summaryTitle: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: C.green, marginBottom: 8 },
+  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 },
+  summaryLabel: { fontSize: 9, color: C.gray },
+  summaryAmount: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: C.navy },
+  summaryDivider: { borderTop: '1px solid #86efac', marginVertical: 5 },
+  summaryHlLabel: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: C.green },
+  summaryHlAmount: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: C.green },
+  // Sections
+  sectionTitle: { fontSize: 10, fontFamily: 'Helvetica-Bold', marginTop: 14, marginBottom: 6, borderBottom: '0.5px solid #e5e7eb', paddingBottom: 3 },
+  // Block 3 — Deduction paragraphs
+  deductionBlock: { marginBottom: 8, padding: 8, backgroundColor: C.grayBg, borderRadius: 4 },
+  deductionTitle: { fontSize: 9, fontFamily: 'Helvetica-Bold', marginBottom: 2 },
+  deductionText: { fontSize: 8.5, color: C.gray },
+  deductionAmount: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: C.red, marginTop: 3 },
+  // Block 4 — Parts table
+  tableHeader: { flexDirection: 'row', backgroundColor: C.mutedBg, padding: 5 },
+  tableRow: { flexDirection: 'row', padding: 4, borderBottom: '0.5px solid #f3f4f6' },
+  colPart: { width: '38%', fontSize: 7.5 },
+  colBilled: { width: '15%', fontSize: 7.5, textAlign: 'right' },
+  colAssessed: { width: '15%', fontSize: 7.5, textAlign: 'right' },
+  colStatus: { width: '32%', fontSize: 7.5, paddingLeft: 4 },
+  colHeaderText: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: C.muted },
+  // Block 6 — Declaration
+  declaration: { marginTop: 20, paddingTop: 10, borderTop: '0.5px solid #e5e7eb' },
+  declarationText: { fontSize: 7.5, color: C.muted },
+  signatureRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 20 },
+  signatureLine: { borderTop: '0.5px solid #374151', paddingTop: 3, width: 130, fontSize: 7.5, color: C.muted },
 });
 
 function fmt(n: number): string {
   return `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+}
+
+function categoryLabel(cat: string | undefined, allowed: boolean): string {
+  if (!allowed) return 'Not covered';
+  const map: Record<string, string> = {
+    safe: 'Approved in full',
+    depreciation: 'Depreciation applied',
+    salvage: 'Disposal — used part',
+    consumable: 'Consumable — excluded',
+    'not-covered': 'Not covered',
+    'previous-damage': 'Pre-existing damage',
+  };
+  return map[cat ?? ''] ?? 'Approved in full';
 }
 
 interface Props {
@@ -59,176 +86,190 @@ export function InsuredSummaryDocument({
   draft,
   surveyorName = '',
   surveyorLicence = '',
-  surveyorMobile = '',
 }: Props) {
-  const { financialSummary: fs, policyMappings, lineExplanations, stage, language } = draft;
-  const stageLabel = stage === 'preliminary' ? 'PRELIMINARY ESTIMATE' : 'FINAL SETTLEMENT';
-  const usedIRDAI = policyMappings.some(c => c.source === 'irdai-standard');
+  const { financialSummary: fs, policyMappings, lineExplanations } = draft;
+
+  const salvageItems = lineExplanations.filter(e => e.deductionCategory === 'salvage');
+  const notCoveredItems = lineExplanations.filter(
+    e => e.deductionCategory === 'not-covered' || e.deductionCategory === 'previous-damage',
+  );
+  const compulsoryExcess = claim.feeBill.compulsoryExcess;
+  const voluntaryExcess = claim.feeBill.voluntaryExcess;
+
+  const allRows = claim.assessmentRows;
 
   return (
     <Document>
       <Page size="A4" style={styles.page}>
 
-        {/* Cover */}
-        <View style={{ borderBottom: '2px solid #D4AF37', paddingBottom: 16, marginBottom: 16 }}>
-          <Text style={styles.coverTitle}>Claim Summary</Text>
-          <Text style={styles.coverSubtitle}>Prepared for: {claim.policy.insuredName || 'Insured'}</Text>
-          <Text style={styles.watermark}>{stageLabel}</Text>
-          <View style={{ marginTop: 12 }}>
-            <View style={styles.coverRow}>
-              <Text style={styles.coverLabel}>Claim No.</Text>
-              <Text style={styles.coverValue}>{claim.policy.claimNumber || '—'}</Text>
+        {/* Block 1: Header */}
+        <View style={styles.headerRow}>
+          <View style={styles.headerGroup}>
+            <View>
+              <Text style={styles.headerLabel}>CLAIM NO.</Text>
+              <Text style={styles.headerValue}>{claim.policy.claimNumber || '—'}</Text>
             </View>
-            <View style={styles.coverRow}>
-              <Text style={styles.coverLabel}>Vehicle</Text>
-              <Text style={styles.coverValue}>
+            <View style={{ marginTop: 6 }}>
+              <Text style={styles.headerLabel}>VEHICLE</Text>
+              <Text style={styles.headerValue}>
                 {[claim.vehicle.make, claim.vehicle.model, claim.vehicle.registrationNumber]
                   .filter(Boolean)
-                  .join(' · ')}
+                  .join(' · ') || '—'}
               </Text>
             </View>
-            <View style={styles.coverRow}>
-              <Text style={styles.coverLabel}>Insurer</Text>
-              <Text style={styles.coverValue}>{claim.policy.insurerName || '—'}</Text>
+            <View style={{ marginTop: 6 }}>
+              <Text style={styles.headerLabel}>DATE OF ACCIDENT</Text>
+              <Text style={styles.headerValue}>
+                {claim.accident?.dateAndTime
+                  ? new Date(claim.accident.dateAndTime).toLocaleDateString('en-IN')
+                  : '—'}
+              </Text>
             </View>
-            <View style={styles.coverRow}>
-              <Text style={styles.coverLabel}>Report Date</Text>
-              <Text style={styles.coverValue}>
+          </View>
+          <View style={[styles.headerGroup, { alignItems: 'flex-end' }]}>
+            <View>
+              <Text style={styles.headerLabel}>INSURED</Text>
+              <Text style={styles.headerValue}>{claim.policy.insuredName || '—'}</Text>
+            </View>
+            <View style={{ marginTop: 6 }}>
+              <Text style={styles.headerLabel}>POLICY NUMBER</Text>
+              <Text style={styles.headerValue}>{claim.policy.policyNumber || '—'}</Text>
+            </View>
+            <View style={{ marginTop: 6 }}>
+              <Text style={styles.headerLabel}>SURVEY DATE</Text>
+              <Text style={styles.headerValue}>
                 {new Date(draft.generatedAt).toLocaleDateString('en-IN')}
               </Text>
             </View>
-            <View style={styles.coverRow}>
-              <Text style={styles.coverLabel}>Surveyor</Text>
-              <Text style={styles.coverValue}>
-                {surveyorName}{surveyorLicence ? ` · Lic. ${surveyorLicence}` : ''}
-              </Text>
-            </View>
           </View>
         </View>
 
-        {/* Section A: Financial Breakdown */}
-        <View style={{ marginBottom: 20 }}>
-          <Text style={styles.sectionTitle}>A. Your Claim at a Glance</Text>
-          <View style={styles.tableRow}>
-            <Text style={styles.tableLabel}>Garage repair estimate</Text>
-            <Text style={styles.tableValue}>{fmt(fs.garageEstimate)}</Text>
+        {/* Block 2: Settlement Summary */}
+        <View style={styles.summaryBox}>
+          <Text style={styles.summaryTitle}>Claim Settlement Summary</Text>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Your workshop charged</Text>
+            <Text style={styles.summaryAmount}>{fmt(fs.garageEstimate)}</Text>
           </View>
-          {fs.negotiatedSavings > 0 && (
-            <View style={styles.tableRow}>
-              <Text style={styles.tableLabel}>Amount negotiated with garage</Text>
-              <Text style={styles.tableValue}>{'−'}{fmt(fs.negotiatedSavings)}</Text>
-            </View>
-          )}
-          {fs.depreciationTotal > 0 && (
-            <View style={styles.tableRow}>
-              <Text style={styles.tableLabel}>Depreciation on parts (as per policy)</Text>
-              <Text style={styles.tableValue}>{'−'}{fmt(fs.depreciationTotal)}</Text>
-            </View>
-          )}
-          {fs.excessTotal > 0 && (
-            <View style={styles.tableRow}>
-              <Text style={styles.tableLabel}>Compulsory / voluntary excess</Text>
-              <Text style={styles.tableValue}>{'−'}{fmt(fs.excessTotal)}</Text>
-            </View>
-          )}
-          {(fs.consumablesTotal + fs.notCoveredTotal) > 0 && (
-            <View style={styles.tableRow}>
-              <Text style={styles.tableLabel}>Items not covered / consumables</Text>
-              <Text style={styles.tableValue}>{'−'}{fmt(fs.consumablesTotal + fs.notCoveredTotal)}</Text>
-            </View>
-          )}
-          {fs.salvageTotal > 0 && (
-            <View style={styles.tableRow}>
-              <Text style={styles.tableLabel}>Salvage / disposal deduction</Text>
-              <Text style={styles.tableValue}>{'−'}{fmt(fs.salvageTotal)}</Text>
-            </View>
-          )}
-          <View style={[styles.tableRow, { marginTop: 6, borderTop: '1px solid #0D1B2A' }]}>
-            <Text style={styles.tableLabelBold}>Insurance company will pay</Text>
-            <Text style={styles.tableValueBold}>{fmt(fs.insurerPays)}</Text>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Your insurance company will pay</Text>
+            <Text style={styles.summaryAmount}>{fmt(fs.insurerPays)}</Text>
           </View>
-          <View style={[styles.tableRow, { backgroundColor: '#FEF3C7' }]}>
-            <Text style={styles.tableLabelBold}>Your share (payable to garage)</Text>
-            <Text style={[styles.tableValueBold, { color: C.red }]}>{fmt(fs.insuredPays)}</Text>
+          <View style={styles.summaryDivider} />
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryHlLabel}>Amount you pay directly to garage</Text>
+            <Text style={styles.summaryHlAmount}>{fmt(fs.insuredPays)}</Text>
           </View>
         </View>
 
-        {/* Section B: Policy Coverage */}
-        <View style={{ marginBottom: 20 }}>
-          <Text style={styles.sectionTitle}>B. What Your Policy Covers</Text>
-          {usedIRDAI && (
-            <View style={[styles.highlight, { marginBottom: 10 }]}>
-              <Text style={[styles.clauseText, { color: C.yellow }]}>
-                Policy document not uploaded — IRDAI standard rules applied below.
-              </Text>
-            </View>
-          )}
-          {policyMappings.map((clause, i) => (
-            <View key={clause.clauseType} style={{ marginBottom: 8 }}>
-              <Text style={styles.clauseTitle}>{clause.clauseTitle}</Text>
-              <Text style={styles.clauseText}>{clause.plainLanguage}</Text>
-            </View>
-          ))}
-        </View>
+        {/* Block 3: Why is there a difference? */}
+        {(fs.depreciationTotal > 0 || fs.excessTotal > 0 || fs.consumablesTotal > 0 || salvageItems.length > 0 || notCoveredItems.length > 0) && (
+          <Text style={styles.sectionTitle}>Why is there a difference?</Text>
+        )}
 
-        {/* Section C: Line Item Adjustments */}
-        {lineExplanations.length > 0 && (
-          <View style={{ marginBottom: 20 }}>
-            <Text style={styles.sectionTitle}>C. Why Certain Items Were Adjusted</Text>
-            <View style={[styles.lineItemRow, { borderBottom: '1px solid #0D1B2A' }]}>
-              <Text style={[styles.liDesc, { fontFamily: 'Helvetica-Bold', color: C.muted, fontSize: 8 }]}>
-                ITEM
+        {fs.depreciationTotal > 0 && (
+          <View style={styles.deductionBlock}>
+            <Text style={styles.deductionTitle}>Depreciation on Parts</Text>
+            <Text style={styles.deductionText}>
+              As per IRDAI guidelines, depreciation is applied to replaced parts based on your vehicle&apos;s age. This reflects the value the parts had already lost before the accident and is standard for all motor insurance policies of this type.
+            </Text>
+            <Text style={styles.deductionAmount}>Total deducted: {fmt(fs.depreciationTotal)}</Text>
+          </View>
+        )}
+
+        {fs.excessTotal > 0 && (
+          <View style={styles.deductionBlock}>
+            <Text style={styles.deductionTitle}>Policy Excess</Text>
+            <Text style={styles.deductionText}>
+              {compulsoryExcess > 0 ? `Compulsory excess: ${fmt(compulsoryExcess)} — standard for all claims of this type. ` : ''}
+              {voluntaryExcess > 0 ? `Voluntary excess: ${fmt(voluntaryExcess)} — selected by you when purchasing the policy to reduce your premium.` : ''}
+            </Text>
+            <Text style={styles.deductionAmount}>Total deducted: {fmt(fs.excessTotal)}</Text>
+          </View>
+        )}
+
+        {fs.consumablesTotal > 0 && (
+          <View style={styles.deductionBlock}>
+            <Text style={styles.deductionTitle}>Consumables</Text>
+            <Text style={styles.deductionText}>
+              Engine oil, coolant, nuts, bolts and similar materials are not covered under standard motor insurance. These are maintenance items replaced during every repair.
+            </Text>
+            <Text style={styles.deductionAmount}>Total excluded: {fmt(fs.consumablesTotal)}</Text>
+          </View>
+        )}
+
+        {salvageItems.length > 0 && (
+          <View style={styles.deductionBlock}>
+            <Text style={styles.deductionTitle}>Second-Hand Parts (Disposal)</Text>
+            <Text style={styles.deductionText}>
+              For the parts below, the workshop sourced second-hand parts. The value reflects the fair market price of the used part. GST does not apply to used parts.
+            </Text>
+            {salvageItems.map((item, i) => (
+              <Text key={i} style={[styles.deductionText, { marginTop: 2 }]}>
+                {'  • '}{item.partDescription}: {fmt(item.surveyorAmount)}
               </Text>
-              <Text style={[styles.liAmt, { fontFamily: 'Helvetica-Bold', color: C.muted, fontSize: 8 }]}>
-                BILLED
-              </Text>
-              <Text style={[styles.liAmt, { fontFamily: 'Helvetica-Bold', color: C.muted, fontSize: 8 }]}>
-                ASSESSED
-              </Text>
-              <Text style={[styles.liReason, { fontFamily: 'Helvetica-Bold', color: C.muted, fontSize: 8 }]}>
-                REASON
-              </Text>
-            </View>
-            {lineExplanations.map((item, i) => (
-              <View
-                key={item.assessmentRowId}
-                style={[styles.lineItemRow, item.isFlagged ? { backgroundColor: '#FFFBEB' } : {}]}
-              >
-                <Text style={styles.liDesc}>{item.partDescription}</Text>
-                <Text style={styles.liAmt}>{fmt(item.billedAmount)}</Text>
-                <Text style={styles.liAmt}>{fmt(item.surveyorAmount)}</Text>
-                <Text style={item.isFlagged ? styles.flaggedText : styles.liReason}>
-                  {item.isFlagged
-                    ? 'Reviewed under applicable policy terms'
-                    : item.aiExplanation}
-                </Text>
-              </View>
             ))}
           </View>
         )}
 
-        {/* Section D: Salvage / Disposal */}
-        {fs.salvageTotal > 0 && (
-          <View style={{ marginBottom: 20 }}>
-            <Text style={styles.sectionTitle}>D. About Salvage / Disposal</Text>
-            <Text style={styles.clauseText}>
-              When a damaged part is replaced, the old part belongs to the insurance company. Its estimated scrap value ({fmt(fs.salvageTotal)}) has been deducted from your claim settlement.
-            </Text>
+        {notCoveredItems.length > 0 && (
+          <View style={styles.deductionBlock}>
+            <Text style={styles.deductionTitle}>Items Not Covered / Pre-existing Damage</Text>
+            {notCoveredItems.map((item, i) => (
+              <Text key={i} style={[styles.deductionText, { marginTop: 2 }]}>
+                {'  • '}{item.partDescription}: {item.aiExplanation || 'See surveyor remarks.'}
+              </Text>
+            ))}
           </View>
         )}
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            {`Prepared by: ${surveyorName}${surveyorLicence ? ` | IRDAI Licence: ${surveyorLicence}` : ''}${surveyorMobile ? ` | ${surveyorMobile}` : ''}`}
+        {/* Block 4: Part-by-Part Table */}
+        <Text style={styles.sectionTitle}>Part-by-Part Assessment</Text>
+        <View style={styles.tableHeader}>
+          <Text style={[styles.colPart, styles.colHeaderText]}>Part</Text>
+          <Text style={[styles.colBilled, styles.colHeaderText]}>Workshop Bill</Text>
+          <Text style={[styles.colAssessed, styles.colHeaderText]}>Assessed</Text>
+          <Text style={[styles.colStatus, styles.colHeaderText]}>Status</Text>
+        </View>
+        {allRows.map((row, i) => {
+          const explanation = lineExplanations.find(e => e.assessmentRowId === row.id);
+          const billed = row.billedTaxable ?? row.estimated;
+          const cat = explanation?.deductionCategory ?? (row.allowed ? 'safe' : 'not-covered');
+          return (
+            <View key={i} style={styles.tableRow}>
+              <Text style={styles.colPart}>{row.particulars}</Text>
+              <Text style={styles.colBilled}>{fmt(billed)}</Text>
+              <Text style={styles.colAssessed}>{fmt(row.assessed)}</Text>
+              <Text style={styles.colStatus}>{categoryLabel(cat, row.allowed)}</Text>
+            </View>
+          );
+        })}
+
+        {/* Block 5: Policy Clauses Referenced */}
+        {policyMappings.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Policy Clauses Referenced</Text>
+            {policyMappings.map((clause, i) => (
+              <Text key={i} style={[styles.deductionText, { marginBottom: 3 }]}>
+                {'• '}
+                {clause.clauseTitle}: {clause.plainLanguage}
+              </Text>
+            ))}
+          </>
+        )}
+
+        {/* Block 6: Surveyor Declaration */}
+        <View style={styles.declaration}>
+          <Text style={styles.declarationText}>
+            This claim has been surveyed and assessed in accordance with the terms and conditions of the policy and applicable IRDAI guidelines. The settlement figures are based on actual damage observed at time of inspection.
           </Text>
-          <Text style={[styles.footerText, { marginTop: 4 }]}>
-            This report is prepared for informational purposes to help you understand your claim
-            settlement. For disputes, contact your insurance company's grievance cell.
-          </Text>
-          {language !== 'english' && (
-            <Text style={[styles.badge, { marginTop: 4 }]}>Language: {language}</Text>
-          )}
+          <View style={styles.signatureRow}>
+            <Text style={styles.signatureLine}>Surveyor Signature</Text>
+            <Text style={styles.signatureLine}>
+              {surveyorName}{surveyorLicence ? `\nLic: ${surveyorLicence}` : ''}
+            </Text>
+            <Text style={styles.signatureLine}>Date of Inspection</Text>
+          </View>
         </View>
 
       </Page>
