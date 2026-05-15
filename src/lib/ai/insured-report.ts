@@ -5,6 +5,9 @@ import type {
   InsuredReportPolicyClause,
   InsuredReportLineExplanation,
   InsuredReportStage,
+  PolicyAnalysisResult,
+  AssessmentAnalysisResult,
+  SurveyorAnswers,
 } from '@/types/insured-report';
 import type { DeductionCategory } from '@/lib/constants/deduction-categories';
 import { callAIGateway } from './service';
@@ -147,6 +150,284 @@ function buildHonestFallback(row: InsuredReportLineExplanation): string {
     `bill of ₹${billed}. The specific reason for this adjustment was not documented in the ` +
     `survey notes — please contact your surveyor for a detailed explanation.`
   );
+}
+
+// ─── Stage 1: Policy Analysis ─────────────────────────────────────────────────
+export async function runPolicyAnalysis({
+  claim,
+  language,
+  policyImages,
+  onProgress,
+}: {
+  claim: ClaimData;
+  language: InsuredReportLanguage;
+  policyImages: string[];
+  onProgress?: (msg: string) => void;
+}): Promise<PolicyAnalysisResult> {
+  onProgress?.('Analysing policy document…');
+  let policyMappings: InsuredReportPolicyClause[];
+
+  if (policyImages.length > 0) {
+    try {
+      const prompt = buildPolicyAnalysisPrompt(language);
+      const raw = await callAIGateway(prompt, policyImages);
+      const parsed = JSON.parse(raw) as { clauses: Omit<InsuredReportPolicyClause, 'source'>[] };
+      policyMappings = (parsed.clauses ?? []).map(c => ({ ...c, source: 'policy-pdf' as const }));
+      if (policyMappings.length === 0) policyMappings = getIRDAIStandardClauses();
+    } catch {
+      onProgress?.('Policy AI unavailable — using IRDAI standard clauses.');
+      policyMappings = getIRDAIStandardClauses();
+    }
+  } else {
+    policyMappings = getIRDAIStandardClauses();
+  }
+
+  const policyContext = derivePolicyContext(policyMappings, claim);
+
+  return {
+    completedAt: new Date().toISOString(),
+    clauses: policyMappings,
+    source: policyImages.length > 0 ? 'policy-pdf' : 'irdai-standard',
+    policyContext,
+  };
+}
+
+// ─── Stage 2: Assessment Analysis ────────────────────────────────────────────
+export async function runAssessmentAnalysis({
+  claim,
+  language,
+  policyAnalysis,
+  onProgress,
+}: {
+  claim: ClaimData;
+  language: InsuredReportLanguage;
+  policyAnalysis: PolicyAnalysisResult;
+  onProgress?: (msg: string) => void;
+}): Promise<AssessmentAnalysisResult> {
+  onProgress?.('Processing line items…');
+
+  const { policyContext } = policyAnalysis;
+  const preClassified = buildPreClassifiedExplanations(claim, policyContext.zeroDep);
+  const preClassifiedIds = new Set(preClassified.map(e => e.assessmentRowId));
+
+  const relevantRows = (claim.assessmentRows ?? []).filter(
+    r =>
+      !preClassifiedIds.has(r.id) &&
+      (!r.allowed || r.action === 'disallow' || (r.billedTaxable ?? r.estimated) > r.assessed),
+  );
+
+  const accidentContext = [claim.accident?.causeOfAccident, claim.accident?.placeOfAccident]
+    .filter(Boolean)
+    .join(', ');
+
+  const rowInput = relevantRows.map(r => ({
+    id: r.id,
+    particulars: r.particulars,
+    section: r.section,
+    estimated: r.estimated,
+    assessed: r.assessed,
+    billedAmount: r.billedTaxable ?? r.estimated,
+    allowed: r.allowed,
+    action: r.action ?? '',
+    remarks: r.remarks ?? '',
+    billRemarks: r.billRemarks ?? '',
+    isDisposal: r.isDisposal ?? false,
+    partType: r.partType,
+  }));
+
+  let lineExplanations: InsuredReportLineExplanation[] = [...preClassified];
+
+  if (rowInput.length > 0) {
+    try {
+      const prompt = buildLineExplanationPrompt(
+        language,
+        JSON.stringify(rowInput),
+        policyContext,
+        accidentContext || undefined,
+      );
+      const raw = await callAIGateway(prompt, []);
+      let parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed) && Array.isArray(parsed?.items)) parsed = parsed.items;
+      if (!Array.isArray(parsed)) throw new Error(`Unexpected AI format: ${typeof parsed}`);
+
+      const aiExplanations = (
+        parsed as Array<{
+          assessmentRowId: string;
+          aiExplanation: string;
+          deductionCategory: InsuredReportLineExplanation['deductionCategory'];
+          isFlagged: boolean;
+        }>
+      ).map(item => {
+        const sourceRow = (claim.assessmentRows ?? []).find(r => r.id === item.assessmentRowId);
+        const mapped: InsuredReportLineExplanation = {
+          assessmentRowId: item.assessmentRowId,
+          partDescription: sourceRow?.particulars ?? item.assessmentRowId,
+          surveyorRemarks: sourceRow?.remarks ?? sourceRow?.billRemarks ?? '',
+          aiExplanation: item.aiExplanation ?? '',
+          deductionCategory: (item.deductionCategory ?? 'not-covered') as DeductionCategory,
+          surveyorAmount: sourceRow?.assessed ?? 0,
+          billedAmount: sourceRow?.billedTaxable ?? sourceRow?.estimated ?? 0,
+          isFlagged: item.isFlagged ?? false,
+        };
+        if (!mapped.aiExplanation || mapped.isFlagged) mapped.aiExplanation = buildHonestFallback(mapped);
+        return mapped;
+      });
+      lineExplanations = [...lineExplanations, ...aiExplanations];
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      onProgress?.(`⚠ Line explanations AI failed: ${msg}`);
+      lineExplanations = [
+        ...lineExplanations,
+        ...relevantRows.map(r => {
+          const billed = r.billedTaxable ?? r.estimated;
+          const stub: InsuredReportLineExplanation = {
+            assessmentRowId: r.id,
+            partDescription: r.particulars,
+            surveyorRemarks: r.remarks ?? '',
+            aiExplanation: '',
+            deductionCategory: 'not-covered' as DeductionCategory,
+            surveyorAmount: r.assessed,
+            billedAmount: billed,
+            isFlagged: true,
+          };
+          return { ...stub, aiExplanation: buildHonestFallback(stub) };
+        }),
+      ];
+    }
+  }
+
+  return {
+    completedAt: new Date().toISOString(),
+    lineExplanations,
+    hasFlaggedRows: lineExplanations.some(e => e.isFlagged),
+  };
+}
+
+// ─── Stage 4: Generate Narrative ──────────────────────────────────────────────
+export async function runGenerateNarrative({
+  claim,
+  stage,
+  language,
+  policyAnalysis,
+  assessmentAnalysis,
+  surveyorAnswers,
+  onProgress,
+}: {
+  claim: ClaimData;
+  stage: InsuredReportStage;
+  language: InsuredReportLanguage;
+  policyAnalysis: PolicyAnalysisResult;
+  assessmentAnalysis: AssessmentAnalysisResult;
+  surveyorAnswers?: SurveyorAnswers;
+  onProgress?: (msg: string) => void;
+}): Promise<InsuredReportDraft> {
+  const ageMonths = getVehicleAgeMonths(
+    claim.vehicle.dateOfRegistration || null,
+    claim.vehicle.yearOfManufacture ? Number(claim.vehicle.yearOfManufacture) : null,
+    claim.accident.dateAndTime || null,
+  );
+
+  // Merge AI explanations with surveyor-approved answers from Gap Review
+  const mergedExplanations = assessmentAnalysis.lineExplanations.map(e => {
+    const answer = surveyorAnswers?.answers.find(a => a.assessmentRowId === e.assessmentRowId);
+    if (answer) {
+      return {
+        ...e,
+        aiExplanation: answer.approvedExplanation,
+        deductionCategory: answer.deductionCategory,
+        isFlagged: false,
+      };
+    }
+    return e;
+  });
+
+  const financialSummary = computeInsuredFinancialSummary(claim, ageMonths);
+
+  const consumablesFromAI = mergedExplanations
+    .filter(e => e.deductionCategory === 'consumable')
+    .reduce((sum, e) => {
+      return sum + (e.surveyorAmount === 0 ? e.billedAmount : Math.max(0, e.billedAmount - e.surveyorAmount));
+    }, 0);
+  if (consumablesFromAI > 0) {
+    financialSummary.consumablesTotal = consumablesFromAI;
+    financialSummary.notCoveredTotal = Math.max(0, financialSummary.notCoveredTotal - consumablesFromAI);
+  }
+
+  onProgress?.('Writing covering narrative…');
+  let coveringNarrative: string | undefined;
+  let narrativeError: string | undefined;
+
+  try {
+    const claimSummary = {
+      vehicleNumber: claim.vehicle.registrationNumber || '',
+      vehicleMakeModel: [claim.vehicle.make, claim.vehicle.model].filter(Boolean).join(' '),
+      insuredName: claim.policy?.insuredName || '',
+      dateOfAccident: claim.accident?.dateAndTime || '',
+      causeOfAccident: claim.accident?.causeOfAccident || '',
+      garageEstimate: financialSummary.garageEstimate,
+      insurerPays: financialSummary.insurerPays,
+      insuredPays: financialSummary.insuredPays,
+      stage,
+    };
+
+    const { policyContext } = policyAnalysis;
+    const deductionLines: string[] = [];
+    if (financialSummary.depreciationTotal > 0)
+      deductionLines.push(`Depreciation on parts: ₹${financialSummary.depreciationTotal.toLocaleString('en-IN')}`);
+    if (policyContext.compulsoryExcess > 0)
+      deductionLines.push(`Compulsory excess: ₹${policyContext.compulsoryExcess.toLocaleString('en-IN')}`);
+    if (policyContext.voluntaryExcess > 0)
+      deductionLines.push(`Voluntary excess: ₹${policyContext.voluntaryExcess.toLocaleString('en-IN')}`);
+    if (financialSummary.consumablesTotal > 0)
+      deductionLines.push(`Consumables excluded: ₹${financialSummary.consumablesTotal.toLocaleString('en-IN')}`);
+    if (financialSummary.notCoveredTotal > 0)
+      deductionLines.push(`Items not covered: ₹${financialSummary.notCoveredTotal.toLocaleString('en-IN')}`);
+    if (financialSummary.salvageTotal > 0)
+      deductionLines.push(`Disposal/salvage: ₹${financialSummary.salvageTotal.toLocaleString('en-IN')}`);
+
+    const categoryGroups: Record<string, string[]> = {};
+    for (const e of mergedExplanations) {
+      if (e.deductionCategory === 'depreciation' || e.deductionCategory === 'safe') continue;
+      const cat = e.deductionCategory ?? 'other';
+      if (!categoryGroups[cat]) categoryGroups[cat] = [];
+      categoryGroups[cat].push(e.partDescription);
+    }
+
+    const raw = await callAIGateway(
+      buildCoveringNarrativePrompt(language, JSON.stringify(claimSummary), deductionLines, categoryGroups),
+      [],
+      'text',
+    );
+    coveringNarrative = raw.replace(/```[a-z]*/g, '').replace(/```/g, '').trim();
+    if (!coveringNarrative) throw new Error('AI returned empty response for narrative.');
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    const friendlyReason = msg.toLowerCase().includes('safety')
+      ? 'Blocked by safety filter — type manually'
+      : msg.toLowerCase().includes('quota')
+        ? 'Quota exceeded — try again later'
+        : 'AI failed — type manually';
+    onProgress?.(`⚠ Narrative: ${friendlyReason}`);
+    narrativeError = friendlyReason;
+    coveringNarrative = undefined;
+  }
+
+  // Exclude depreciation and safe rows from Line Items — Financial tab handles depreciation
+  const lineItemsForReport = mergedExplanations.filter(
+    e => e.deductionCategory !== 'depreciation' && e.deductionCategory !== 'safe',
+  );
+
+  return {
+    generatedAt: new Date().toISOString(),
+    stage,
+    language,
+    isSurveyorApproved: false,
+    financialSummary,
+    policyMappings: policyAnalysis.clauses,
+    lineExplanations: lineItemsForReport,
+    coveringNarrative,
+    narrativeError,
+  };
 }
 
 interface GenerateInsuredReportParams {
