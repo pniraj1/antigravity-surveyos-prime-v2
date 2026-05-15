@@ -49,7 +49,7 @@ export function getBlockingRows(
 // ─── Pre-classifier: deterministic explanations for unambiguous rows ──────────
 // These rows do NOT need the AI — the category and explanation are certain.
 // Returning them here removes them from the AI call, reducing token usage.
-function buildPreClassifiedExplanations(
+export function buildPreClassifiedExplanations(
   claim: ClaimData,
   zeroDep: boolean,
 ): InsuredReportLineExplanation[] {
@@ -57,6 +57,46 @@ function buildPreClassifiedExplanations(
   for (const row of claim.assessmentRows ?? []) {
     const billed = row.billedTaxable ?? row.estimated;
     const delta = Math.abs(billed - row.assessed);
+
+    // Surveyor-tagged row: use tag category verbatim — skip AI entirely
+    if (row.deductionCategory) {
+      results.push({
+        assessmentRowId: row.id,
+        partDescription: row.particulars,
+        surveyorRemarks: row.remarks ?? '',
+        aiExplanation: row.remarks?.trim()
+          ? row.remarks
+          : `Surveyor classified this item as: ${row.deductionCategory}.`,
+        deductionCategory: row.deductionCategory,
+        surveyorAmount: row.assessed,
+        billedAmount: billed,
+        isFlagged: false,
+      });
+      continue;
+    }
+
+    // Standard depreciation: allowed parts with a reduction, no manual override, not disposal
+    // Pre-classified deterministically — never sent to AI, never shown in Line Items
+    if (
+      row.section === 'parts' &&
+      row.allowed &&
+      row.action !== 'disallow' &&
+      !row.depOverride &&
+      !row.isDisposal &&
+      delta > 0
+    ) {
+      results.push({
+        assessmentRowId: row.id,
+        partDescription: row.particulars,
+        surveyorRemarks: row.remarks ?? '',
+        aiExplanation: '', // blank — Financial tab breakdown handles this, not Line Items
+        deductionCategory: 'depreciation' as DeductionCategory,
+        surveyorAmount: row.assessed,
+        billedAmount: billed,
+        isFlagged: false,
+      });
+      continue;
+    }
 
     // Safe: allowed, no meaningful adjustment
     if (row.allowed && delta < 1) {
