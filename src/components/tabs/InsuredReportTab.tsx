@@ -16,12 +16,23 @@ import type {
   InsuredReportStage,
   InsuredReportLineExplanation,
   InsuredReportPolicyClause,
+  PolicyAnalysisResult,
+  AssessmentAnalysisResult,
+  SurveyorAnswers,
+  SurveyorAnswer,
 } from '@/types/insured-report';
-import { generateInsuredReport, getBlockingRows } from '@/lib/ai/insured-report';
+import {
+  generateInsuredReport,
+  getBlockingRows,
+  runPolicyAnalysis,
+  runAssessmentAnalysis,
+  runGenerateNarrative,
+} from '@/lib/ai/insured-report';
 import { InsuredSummaryDocument } from '@/components/pdf/InsuredSummaryDocument';
 import { fileToImages } from '@/lib/ai/processor';
 import { logger } from '@/lib/utils/logger';
 import { CATEGORY_BADGE_LABELS, CATEGORY_BADGE_COLOURS } from '@/lib/constants/deduction-categories';
+import { GapReviewStep } from '@/components/insured-report/GapReviewStep';
 
 // ─── helpers ──────────────────────────────────────────────
 
@@ -42,7 +53,7 @@ const ALLOWED_LANGUAGES: InsuredReportLanguage[] = ['english', 'hindi', 'marathi
 // ─── component ────────────────────────────────────────────
 
 export function InsuredReportTab() {
-  const { currentClaim } = useClaimStore();
+  const { currentClaim, updateClaim } = useClaimStore();
   const { profile } = useProfileStore();
 
   const [stage, setStage] = useState<InsuredReportStage>('final');
@@ -59,6 +70,17 @@ export function InsuredReportTab() {
   const [policyFileName, setPolicyFileName] = useState('');
   const [policyConverting, setPolicyConverting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Stage pipeline state (persisted across tab closes) ───────────────────────
+  const [policyAnalysis, setPolicyAnalysis] = useState<PolicyAnalysisResult | undefined>(
+    currentClaim?.insuredReportStages?.policyAnalysis,
+  );
+  const [assessmentAnalysis, setAssessmentAnalysis] = useState<AssessmentAnalysisResult | undefined>(
+    currentClaim?.insuredReportStages?.assessmentAnalysis,
+  );
+  const [surveyorAnswers, setSurveyorAnswers] = useState<SurveyorAnswers | undefined>(
+    currentClaim?.insuredReportStages?.surveyorAnswers,
+  );
 
   // ── Auto-detect policy from Documents tab (MUST be before early return) ──────
   // Watch EvidenceStore's rawFiles. When the policy file is uploaded in DocumentsTab,
@@ -129,6 +151,121 @@ export function InsuredReportTab() {
     setPolicyImages([]);
     setPolicyFileName('');
     if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  // ── Stage persistence helper ─────────────────────────────────────────────────
+  function persistStages(update: Partial<{
+    policyAnalysis: PolicyAnalysisResult;
+    assessmentAnalysis: AssessmentAnalysisResult;
+    surveyorAnswers: SurveyorAnswers;
+  }>) {
+    const existing = claim.insuredReportStages ?? {};
+    updateClaim({ insuredReportStages: { ...existing, ...update } });
+  }
+
+  // ── Stage 1: Policy Analysis ─────────────────────────────────────────────────
+  async function handleAnalysePolicy() {
+    setLoading(true);
+    try {
+      const result = await runPolicyAnalysis({
+        claim,
+        language,
+        policyImages: getResolvedPolicyImages(),
+        onProgress: setLoadingMsg,
+      });
+      setPolicyAnalysis(result);
+      // Reset downstream stages when policy is re-analysed
+      setAssessmentAnalysis(undefined);
+      setSurveyorAnswers(undefined);
+      updateClaim({
+        insuredReportStages: {
+          ...(claim.insuredReportStages ?? {}),
+          policyAnalysis: result,
+          assessmentAnalysis: undefined,
+          surveyorAnswers: undefined,
+        },
+      });
+    } catch (err: unknown) {
+      toast.error(`Policy analysis failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setLoading(false);
+      setLoadingMsg('');
+    }
+  }
+
+  // ── Stage 2: Assessment Analysis ─────────────────────────────────────────────
+  async function handleAnalyseAssessment() {
+    if (!policyAnalysis) return;
+    setLoading(true);
+    try {
+      const result = await runAssessmentAnalysis({
+        claim,
+        language,
+        policyAnalysis,
+        onProgress: setLoadingMsg,
+      });
+      setAssessmentAnalysis(result);
+      setSurveyorAnswers(undefined);
+      updateClaim({
+        insuredReportStages: {
+          ...(claim.insuredReportStages ?? {}),
+          assessmentAnalysis: result,
+          surveyorAnswers: undefined,
+        },
+      });
+    } catch (err: unknown) {
+      toast.error(`Assessment analysis failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setLoading(false);
+      setLoadingMsg('');
+    }
+  }
+
+  // ── Stage 3: Gap Review complete ─────────────────────────────────────────────
+  function handleGapReviewComplete(answers: SurveyorAnswer[]) {
+    const result: SurveyorAnswers = {
+      completedAt: new Date().toISOString(),
+      answers,
+    };
+    setSurveyorAnswers(result);
+    updateClaim({
+      insuredReportStages: {
+        ...(claim.insuredReportStages ?? {}),
+        surveyorAnswers: result,
+      },
+    });
+  }
+
+  // ── Stage 4: Generate Report ─────────────────────────────────────────────────
+  async function handleGenerateReport() {
+    if (!policyAnalysis || !assessmentAnalysis) return;
+    setLoading(true);
+    setDraft(null);
+    try {
+      const generated = await runGenerateNarrative({
+        claim,
+        stage,
+        language,
+        policyAnalysis,
+        assessmentAnalysis,
+        surveyorAnswers: surveyorAnswers ?? undefined,
+        onProgress: setLoadingMsg,
+      });
+      setDraft(generated);
+      setNarrativeText(generated.coveringNarrative ?? '');
+      setNarrativeError(generated.narrativeError ?? null);
+      setActiveTab(generated.narrativeError ? 'narrative' : 'financial');
+      if (stage === 'preliminary') {
+        updateClaim({ insuredReportPreliminary: generated });
+      } else {
+        updateClaim({ insuredReportFinal: generated });
+      }
+    } catch (err: unknown) {
+      toast.error(`Failed to generate report: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setLoading(false);
+      setLoadingMsg('');
+    }
   }
 
   async function handleGenerate(lang: InsuredReportLanguage = language) {
@@ -225,6 +362,13 @@ export function InsuredReportTab() {
   );
   const blockingRows = getBlockingRows(claim, zeroDep);
   const isGateBlocked = blockingRows.length > 0;
+
+  // ── Current pipeline stage ────────────────────────────────────────────────
+  const currentStage =
+    !policyAnalysis ? 'policy' :
+    !assessmentAnalysis ? 'assessment' :
+    assessmentAnalysis.hasFlaggedRows && !surveyorAnswers ? 'gap-review' :
+    'generate';
 
   return (
     <div className="h-full overflow-y-auto" style={{ background: '#F8F9FA' }}>
@@ -403,11 +547,11 @@ export function InsuredReportTab() {
           </div>
         )}
 
-        {/* Generate button (pre-generation) */}
-        {!draft && !loading && (
-          <div className="text-center py-10">
+        {/* Stage 1 — Policy Analysis */}
+        {currentStage === 'policy' && !loading && (
+          <div className="text-center py-6 space-y-3">
             <button
-              onClick={() => handleGenerate()}
+              onClick={handleAnalysePolicy}
               disabled={policyConverting || isGateBlocked}
               className="px-8 py-3.5 rounded-2xl font-bold text-sm transition-all shadow-md"
               style={{
@@ -418,30 +562,92 @@ export function InsuredReportTab() {
                 cursor: isGateBlocked ? 'not-allowed' : 'pointer',
                 opacity: policyConverting ? 0.5 : 1,
               }}
-              onMouseEnter={e => {
-                if (!isGateBlocked) e.currentTarget.style.boxShadow = '0 6px 24px rgba(13,27,42,0.25)';
-              }}
-              onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(13,27,42,0.15)')}
             >
               {isGateBlocked
                 ? `Add remarks for ${blockingRows.length} item${blockingRows.length > 1 ? 's' : ''} first`
-                : 'Generate Insured Report'}
+                : 'Analyse Policy'}
             </button>
-            <p className="text-xs mt-3" style={{ color: '#8D99AE' }}>
+            <p className="text-xs" style={{ color: '#8D99AE' }}>
               {isGateBlocked
                 ? 'Fill in surveyor remarks for the highlighted items in the Assessment tab, then return here.'
                 : hasPolicyDoc
-                  ? 'AI will extract clauses from your uploaded policy, then explain each deduction.'
+                  ? 'AI will extract clauses from your uploaded policy.'
                   : 'IRDAI standard clauses will be used. Upload a policy PDF above for specific clause extraction.'}
             </p>
           </div>
+        )}
+
+        {/* Stage 2 — Assessment Analysis */}
+        {currentStage === 'assessment' && !loading && policyAnalysis && (
+          <div className="space-y-3">
+            <div
+              className="rounded-2xl border p-4 flex items-center gap-3"
+              style={{ background: '#ECFDF5', borderColor: '#6EE7B7' }}
+            >
+              <CheckCircle2 size={16} style={{ color: '#065F46' }} />
+              <p className="text-sm" style={{ color: '#065F46' }}>
+                Policy analysed — {policyAnalysis.clauses.length} clause
+                {policyAnalysis.clauses.length !== 1 ? 's' : ''} extracted from{' '}
+                {policyAnalysis.source === 'policy-pdf' ? 'uploaded policy' : 'IRDAI standard clauses'}.
+              </p>
+            </div>
+            <div className="text-center py-4">
+              <button
+                onClick={handleAnalyseAssessment}
+                disabled={isGateBlocked}
+                className="px-8 py-3.5 rounded-2xl font-bold text-sm transition-all shadow-md"
+                style={{
+                  background: isGateBlocked ? '#E2E6EA' : 'linear-gradient(135deg, #0D1B2A, #1e3a5f)',
+                  color: isGateBlocked ? '#8D99AE' : '#F8F9FA',
+                  cursor: isGateBlocked ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {isGateBlocked
+                  ? `Add remarks for ${blockingRows.length} item${blockingRows.length > 1 ? 's' : ''} first`
+                  : 'Analyse Assessment'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Stage 3 — Gap Review (conditional) */}
+        {currentStage === 'gap-review' && assessmentAnalysis && !loading && (
+          <GapReviewStep
+            flaggedItems={assessmentAnalysis.lineExplanations.filter(e => e.isFlagged)}
+            onComplete={handleGapReviewComplete}
+          />
         )}
 
         {/* Loading state */}
         {loading && (
           <div className="text-center py-16">
             <Loader2 className="h-9 w-9 animate-spin mx-auto mb-4" style={{ color: '#D4AF37' }} />
-            <p className="text-sm font-medium" style={{ color: '#8D99AE' }}>{loadingMsg || 'Generating…'}</p>
+            <p className="text-sm font-medium" style={{ color: '#8D99AE' }}>{loadingMsg || 'Processing…'}</p>
+          </div>
+        )}
+
+        {/* Stage 4 — Generate Report button (shown before draft exists) */}
+        {currentStage === 'generate' && !draft && !loading && (
+          <div className="text-center py-10">
+            <button
+              onClick={handleGenerateReport}
+              disabled={isGateBlocked}
+              className="px-8 py-3.5 rounded-2xl font-bold text-sm transition-all shadow-md"
+              style={{
+                background: isGateBlocked ? '#E2E6EA' : 'linear-gradient(135deg, #0D1B2A, #1e3a5f)',
+                color: isGateBlocked ? '#8D99AE' : '#F8F9FA',
+                cursor: isGateBlocked ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {isGateBlocked
+                ? `Add remarks for ${blockingRows.length} item${blockingRows.length > 1 ? 's' : ''} first`
+                : 'Generate Report'}
+            </button>
+            <p className="text-xs mt-3" style={{ color: '#8D99AE' }}>
+              {isGateBlocked
+                ? 'Fill in surveyor remarks for the highlighted items in the Assessment tab, then return here.'
+                : 'All stages complete — ready to generate the insured report.'}
+            </p>
           </div>
         )}
 
@@ -619,8 +825,8 @@ export function InsuredReportTab() {
             {/* Action bar */}
             <div className="flex items-center justify-between pt-2 pb-8">
               <button
-                onClick={() => handleGenerate()}
-                disabled={loading || downloading}
+                onClick={handleGenerateReport}
+                disabled={loading || downloading || !policyAnalysis || !assessmentAnalysis}
                 className="flex items-center gap-2 text-xs font-bold px-4 py-2.5 rounded-xl border transition-all"
                 style={{ borderColor: '#E2E6EA', color: '#8D99AE', background: '#FFFFFF' }}
               >
