@@ -32,6 +32,7 @@ import { fileToImages } from '@/lib/ai/processor';
 import { logger } from '@/lib/utils/logger';
 import { CATEGORY_BADGE_LABELS, CATEGORY_BADGE_COLOURS } from '@/lib/constants/deduction-categories';
 import { GapReviewStep } from '@/components/insured-report/GapReviewStep';
+import { DepreciationBreakdownTable } from '@/components/insured-report/DepreciationBreakdownTable';
 
 // ─── helpers ──────────────────────────────────────────────
 
@@ -684,7 +685,6 @@ export function InsuredReportTab() {
                 {[
                   { label: 'Garage repair estimate', value: draft.financialSummary.garageEstimate, prefix: '' },
                   { label: 'Amount negotiated with garage', value: draft.financialSummary.negotiatedSavings, prefix: '−' },
-                  { label: 'Depreciation on parts', value: draft.financialSummary.depreciationTotal, prefix: '−' },
                   { label: 'Excess (compulsory + voluntary)', value: draft.financialSummary.excessTotal, prefix: '−' },
                   { label: 'Consumables deduction', value: draft.financialSummary.consumablesTotal, prefix: '−' },
                   { label: 'Items not covered by policy', value: draft.financialSummary.notCoveredTotal, prefix: '−' },
@@ -695,6 +695,14 @@ export function InsuredReportTab() {
                     <span className="font-medium">{row.prefix}₹{row.value.toLocaleString('en-IN')}</span>
                   </div>
                 ))}
+                {draft.financialSummary.depreciationTotal > 0 && (
+                  <div className="border-b py-2.5" style={{ borderColor: '#F0F2F5' }}>
+                    <DepreciationBreakdownTable
+                      breakdown={draft.financialSummary.depreciationBreakdown}
+                      total={draft.financialSummary.depreciationTotal}
+                    />
+                  </div>
+                )}
                 <div className="flex justify-between pt-4 pb-2 text-sm font-bold border-t-2" style={{ borderColor: '#0D1B2A' }}>
                   <span>Insurance company will pay</span>
                   <span>₹{draft.financialSummary.insurerPays.toLocaleString('en-IN')}</span>
