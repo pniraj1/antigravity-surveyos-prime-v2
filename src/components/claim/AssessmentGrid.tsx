@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import type { DeductionCategory } from '@/lib/constants/deduction-categories';
 import { CATEGORY_BADGE_LABELS, CATEGORY_BADGE_COLOURS } from '@/lib/constants/deduction-categories';
+import { SmartRemarksCell } from '@/components/claim/SmartRemarksCell';
 
 const CATEGORY_TAGS: Array<{ label: string; value: DeductionCategory; color: string }> = [
   { label: 'Safe',           value: 'safe',             color: 'bg-green-100 text-green-800 border-green-300' },
@@ -82,7 +83,7 @@ const OPTIONAL_COLUMNS: ColumnMeta[] = [
   { key: 'gst',        label: 'GST %',               description: 'GST percentage (0 for disposal rows)' },
   { key: 'disposal',   label: 'Disposal',            description: 'Used/salvaged part — no GST; surveyor decides % of depreciated value' },
   { key: 'action',      label: 'Action',              description: 'Replace / Repair / Disallow' },
-  { key: 'remarks',    label: 'Remarks',             description: 'Surveyor notes' },
+  { key: 'remarks',    label: 'Remarks',             description: 'Smart contextual remarks with category tagging' },
   { key: 'priceWithGst', label: 'Price+GST',         description: 'Net assessed amount inclusive of GST' },
 ];
 
@@ -136,33 +137,7 @@ function SortableRow({ id, className, children }: { id: string; className: strin
   );
 }
 
-// ─── Category Tag Pills ───────────────────────────────────────────
-function CategoryTagPills({
-  value,
-  onChange,
-}: {
-  value: DeductionCategory | undefined;
-  onChange: (cat: DeductionCategory | undefined) => void;
-}) {
-  return (
-    <div className="flex flex-wrap gap-1 mt-1">
-      {CATEGORY_TAGS.map(tag => (
-        <button
-          key={tag.value}
-          type="button"
-          onClick={() => onChange(value === tag.value ? undefined : tag.value)}
-          className={`px-2 py-0.5 rounded-full text-xs font-medium border transition-opacity ${
-            value === tag.value
-              ? `${tag.color} opacity-100`
-              : 'bg-gray-100 text-gray-500 border-gray-200 opacity-50 hover:opacity-90'
-          }`}
-        >
-          {tag.label}
-        </button>
-      ))}
-    </div>
-  );
-}
+// CategoryTagPills removed — replaced by SmartRemarksCell
 
 // ─── Component ───────────────────────────────────────────────────
 export function AssessmentGrid() {
@@ -786,15 +761,10 @@ export function AssessmentGrid() {
                     )}
                     {visible.remarks && (
                       <td className="px-1 py-1.5">
-                        <Input
-                          value={row.remarks || ''}
-                          onChange={(e) => updateAssessmentRow(row.id, { remarks: e.target.value })}
-                          className="h-7 text-[11px] bg-transparent border-transparent hover:border-input focus:bg-background px-1"
-                          placeholder="—"
-                        />
-                        <CategoryTagPills
-                          value={row.deductionCategory}
-                          onChange={(cat) => updateAssessmentRow(row.id, { deductionCategory: cat })}
+                        <SmartRemarksCell
+                          row={row}
+                          autoDepRate={autoDepRate}
+                          onUpdate={(updates) => updateAssessmentRow(row.id, updates)}
                         />
                       </td>
                     )}

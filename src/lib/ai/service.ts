@@ -15,16 +15,14 @@ import { useUIStore } from '@/stores/ui-store';
 import { toast } from 'sonner';
 
 // ─── Developer-controlled model defaults ─────────────────────────────────────
-// Last verified: April 2026 — Free Tier limits:
+// Last verified: May 2026 — Free Tier limits:
 //   gemini-2.5-flash     : 10 RPM · 500 RPD · 250K TPM  ← best stable free model
 //   gemini-2.5-flash-lite : 15 RPM · 1000 RPD
-//   openai/gpt-oss-120b  : Groq Production tier, vision-capable, ~500 tps
+//   llama-4-scout        : Groq free tier, vision-capable
 export const CURRENT_MODELS = {
   gemini: 'gemini-2.5-flash',
-  // GPT-OSS 120B — Production tier on Groq, vision-capable, highest quality
-  // ⚠️  DO NOT use 'meta-llama/llama-4-scout-17b-16e-instruct' as default —
-  //     it is a Preview-only model and can be discontinued without notice.
-  groq:   'openai/gpt-oss-120b',
+  // Llama 4 Scout — vision-capable, free tier on Groq
+  groq:   'meta-llama/llama-4-scout-17b-16e-instruct',
   // NVIDIA NIM free tier: model prefix is "meta/" not "nvidia/"
   nvidia: 'meta/llama-3.2-90b-vision-instruct',
 };
@@ -47,13 +45,11 @@ export const PROVIDER_MODELS: Record<'gemini' | 'groq' | 'nvidia', ModelOption[]
     { id: 'gemini-2.5-flash-lite', label: '2.5 Flash-Lite', note: 'Fastest · cheapest · 15 RPM · 1000/day' },
   ],
   groq: [
-    // Production models (stable, verified April 2026)
-    { id: 'openai/gpt-oss-120b',      label: 'GPT-OSS 120B ✓ (Groq)',   note: 'Best · Groq-hosted · vision + text · ~500 tps' },
-    { id: 'openai/gpt-oss-20b',       label: 'GPT-OSS 20B (Groq)',      note: 'Groq-hosted · faster · vision + text' },
-    { id: 'llama-3.3-70b-versatile',  label: 'Llama 3.3 70B',    note: 'Production · text only · reliable' },
-    { id: 'llama-3.1-8b-instant',     label: 'Llama 3.1 8B',     note: 'Production · fastest · text only' },
-    // Preview (may be discontinued at short notice)
-    { id: 'meta-llama/llama-4-scout-17b-16e-instruct', label: 'Llama 4 Scout ⚠️ Preview', note: 'Preview only · vision capable · not for production' },
+    // Vision-capable (verified May 2026)
+    { id: 'meta-llama/llama-4-scout-17b-16e-instruct', label: 'Llama 4 Scout ✓', note: 'Best · vision + text · free tier · ~400 tps' },
+    // Text-only production models
+    { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B', note: 'Production · text only · reliable' },
+    { id: 'llama-3.1-8b-instant',    label: 'Llama 3.1 8B',  note: 'Production · fastest · text only' },
   ],
   nvidia: [
     { id: 'meta/llama-3.2-90b-vision-instruct', label: 'Llama 3.2 90B', note: 'Default · best vision' },
@@ -68,20 +64,17 @@ const GEMINI_FALLBACK_CHAIN = [
   'gemini-2.5-flash-lite',
 ];
 
-// Groq fallback chain — all Production tier (April 2026).
-// gpt-oss-120b (vision) → gpt-oss-20b (vision, smaller) → llama-3.3-70b (text) → llama-3.1-8b (fastest text)
+// Groq fallback chain (May 2026).
+// llama-4-scout (vision+text) → llama-3.3-70b (text) → llama-3.1-8b (fastest text)
 const GROQ_FALLBACK_CHAIN = [
-  'openai/gpt-oss-120b',                        // Production · vision + text · best
-  'openai/gpt-oss-20b',                         // Production · vision + text · faster
-  'llama-3.3-70b-versatile',                    // Production · text-only
-  'llama-3.1-8b-instant',                       // Production · fastest text-only
+  'meta-llama/llama-4-scout-17b-16e-instruct',  // vision + text · best
+  'llama-3.3-70b-versatile',                    // text-only · reliable
+  'llama-3.1-8b-instant',                       // text-only · fastest
 ];
 
 // Models in the Groq fallback chain that support image/vision inputs.
 // Text-only models are skipped when the extraction includes images (e.g. RC scans).
 const GROQ_VISION_MODELS = new Set([
-  'openai/gpt-oss-120b',
-  'openai/gpt-oss-20b',
   'meta-llama/llama-4-scout-17b-16e-instruct',
 ]);
 
@@ -100,13 +93,14 @@ const DEPRECATED_GEMINI_MODELS: Record<string, string> = {
 };
 
 const DEPRECATED_GROQ_MODELS: Record<string, string> = {
-  // Maverick deprecated March 9, 2026 → migrate to production GPT-OSS 120B
-  'meta-llama/llama-4-maverick-17b-128e-instruct': 'openai/gpt-oss-120b',
-  // Scout is Preview-only (not for production) → migrate saved profiles to production model
-  'meta-llama/llama-4-scout-17b-16e-instruct':     'openai/gpt-oss-120b',
+  // Fake model IDs that never existed on Groq → migrate to real default
+  'openai/gpt-oss-120b': 'meta-llama/llama-4-scout-17b-16e-instruct',
+  'openai/gpt-oss-20b':  'meta-llama/llama-4-scout-17b-16e-instruct',
+  // Maverick deprecated March 9, 2026
+  'meta-llama/llama-4-maverick-17b-128e-instruct': 'meta-llama/llama-4-scout-17b-16e-instruct',
   // Old vision-preview models removed by Groq
-  'llama-3.2-90b-vision-preview':                  'openai/gpt-oss-120b',
-  'llama-3.2-11b-vision-preview':                  'openai/gpt-oss-120b',
+  'llama-3.2-90b-vision-preview': 'meta-llama/llama-4-scout-17b-16e-instruct',
+  'llama-3.2-11b-vision-preview': 'meta-llama/llama-4-scout-17b-16e-instruct',
 };
 
 export interface AIProvider {
@@ -116,6 +110,8 @@ export interface AIProvider {
   keys: string[];
   /** Max images per request. Groq is limited to 5; undefined = unlimited. */
   maxImages?: number;
+  /** Max output tokens. Groq Llama 4 Scout is capped at 8192; undefined = 16384. */
+  maxOutputTokens?: number;
 }
 
 // ─── Read profile from Zustand ────────────────────────────────────────────────
@@ -228,6 +224,7 @@ function buildProvider(
     model,
     keys,
     maxImages: 5,
+    maxOutputTokens: 8192,
   };
 }
 
@@ -396,7 +393,7 @@ async function callWithKey(provider: AIProvider, key: string, prompt: string, im
       // Pass 3 (covering narrative) returns plain text — json_object mode would
       // force the model to wrap the letter in JSON or produce a parse error.
       ...(responseFormat === 'json' ? { response_format: { type: 'json_object' } } : {}),
-      max_tokens: 16384,
+      max_tokens: provider.maxOutputTokens ?? 16384,
     }),
   });
 
