@@ -69,6 +69,10 @@ function categoryLabel(cat: string | undefined, allowed: boolean): string {
     consumable: 'Consumable — excluded',
     'not-covered': 'Not covered',
     'previous-damage': 'Pre-existing damage',
+    negotiated: 'Rate negotiated',
+    overpricing: 'Rate disputed',
+    'partial-repair': 'Partial repair',
+    'wear-and-tear': 'Wear and tear — excluded',
   };
   return map[cat ?? ''] ?? 'Approved in full';
 }
@@ -89,6 +93,11 @@ export function InsuredSummaryDocument({
 }: Props) {
   const { financialSummary: fs, policyMappings, lineExplanations } = draft;
 
+  const negotiatedItems = lineExplanations.filter(e => e.deductionCategory === 'negotiated');
+  const overpricingItems = lineExplanations.filter(e => e.deductionCategory === 'overpricing');
+  const partialRepairItems = lineExplanations.filter(e => e.deductionCategory === 'partial-repair');
+  const wearAndTearItems = lineExplanations.filter(e => e.deductionCategory === 'wear-and-tear');
+  const consumableItems = lineExplanations.filter(e => e.deductionCategory === 'consumable');
   const salvageItems = lineExplanations.filter(e => e.deductionCategory === 'salvage');
   const notCoveredItems = lineExplanations.filter(
     e => e.deductionCategory === 'not-covered' || e.deductionCategory === 'previous-damage',
@@ -163,7 +172,10 @@ export function InsuredSummaryDocument({
         </View>
 
         {/* Block 3: Why is there a difference? */}
-        {(fs.depreciationTotal > 0 || fs.excessTotal > 0 || fs.consumablesTotal > 0 || salvageItems.length > 0 || notCoveredItems.length > 0) && (
+        {(fs.depreciationTotal > 0 || fs.excessTotal > 0 || fs.consumablesTotal > 0 ||
+          negotiatedItems.length > 0 || overpricingItems.length > 0 ||
+          partialRepairItems.length > 0 || wearAndTearItems.length > 0 ||
+          consumableItems.length > 0 || salvageItems.length > 0 || notCoveredItems.length > 0) && (
           <Text style={styles.sectionTitle}>Why is there a difference?</Text>
         )}
 
@@ -173,34 +185,106 @@ export function InsuredSummaryDocument({
             <Text style={styles.deductionText}>
               As per IRDAI guidelines, depreciation is applied to replaced parts based on your vehicle&apos;s age. This reflects the value the parts had already lost before the accident and is standard for all motor insurance policies of this type.
             </Text>
+            {fs.depreciationBreakdown.map((r, i) => (
+              <Text key={i} style={[styles.deductionText, { marginTop: 2 }]}>
+                {'  • '}{r.particulars}: {fmt(r.deductionAmount)}
+              </Text>
+            ))}
             <Text style={styles.deductionAmount}>Total deducted: {fmt(fs.depreciationTotal)}</Text>
           </View>
         )}
 
-        {fs.excessTotal > 0 && (
+        {negotiatedItems.length > 0 && (
           <View style={styles.deductionBlock}>
-            <Text style={styles.deductionTitle}>Policy Excess</Text>
+            <Text style={styles.deductionTitle}>Rates Negotiated to Market Standard</Text>
             <Text style={styles.deductionText}>
-              {compulsoryExcess > 0 ? `Compulsory excess: ${fmt(compulsoryExcess)} — standard for all claims of this type. ` : ''}
-              {voluntaryExcess > 0 ? `Voluntary excess: ${fmt(voluntaryExcess)} — selected by you when purchasing the policy to reduce your premium.` : ''}
+              The workshop charged rates above prevailing local market prices. The surveyor has adjusted these to the fair market rate applicable for this type of repair.
             </Text>
-            <Text style={styles.deductionAmount}>Total deducted: {fmt(fs.excessTotal)}</Text>
+            {negotiatedItems.map((item, i) => (
+              <Text key={i} style={[styles.deductionText, { marginTop: 2 }]}>
+                {'  • '}{item.partDescription}{item.surveyorRemarks ? ` — ${item.surveyorRemarks}` : ''}: {fmt(item.billedAmount - item.surveyorAmount)}
+              </Text>
+            ))}
+            <Text style={styles.deductionAmount}>Total adjusted: {fmt(fs.negotiatedTotal)}</Text>
           </View>
         )}
 
-        {fs.consumablesTotal > 0 && (
+        {overpricingItems.length > 0 && (
           <View style={styles.deductionBlock}>
-            <Text style={styles.deductionTitle}>Consumables</Text>
+            <Text style={styles.deductionTitle}>OES Rate Applied (Not OEM)</Text>
+            <Text style={styles.deductionText}>
+              Original equipment supplier (OES) or aftermarket parts were assessed instead of original manufacturer (OEM) parts. The policy covers replacement at equivalent quality, not necessarily original brand pricing.
+            </Text>
+            {overpricingItems.map((item, i) => (
+              <Text key={i} style={[styles.deductionText, { marginTop: 2 }]}>
+                {'  • '}{item.partDescription}{item.surveyorRemarks ? ` — ${item.surveyorRemarks}` : ''}: {fmt(item.billedAmount - item.surveyorAmount)}
+              </Text>
+            ))}
+            <Text style={styles.deductionAmount}>Total adjusted: {fmt(fs.overpricingTotal)}</Text>
+          </View>
+        )}
+
+        {partialRepairItems.length > 0 && (
+          <View style={styles.deductionBlock}>
+            <Text style={styles.deductionTitle}>Partial Repair Accepted</Text>
+            <Text style={styles.deductionText}>
+              For the items below, the surveyor assessed that partial repair (rather than full replacement) is sufficient to restore the vehicle to its pre-accident condition.
+            </Text>
+            {partialRepairItems.map((item, i) => (
+              <Text key={i} style={[styles.deductionText, { marginTop: 2 }]}>
+                {'  • '}{item.partDescription}{item.surveyorRemarks ? ` — ${item.surveyorRemarks}` : ''}: {fmt(item.billedAmount - item.surveyorAmount)}
+              </Text>
+            ))}
+            <Text style={styles.deductionAmount}>Total adjusted: {fmt(fs.partialRepairTotal)}</Text>
+          </View>
+        )}
+
+        {(fs.consumablesTotal > 0 || consumableItems.length > 0) && (
+          <View style={styles.deductionBlock}>
+            <Text style={styles.deductionTitle}>Consumables — Excluded</Text>
             <Text style={styles.deductionText}>
               Engine oil, coolant, nuts, bolts and similar materials are not covered under standard motor insurance. These are maintenance items replaced during every repair.
             </Text>
-            <Text style={styles.deductionAmount}>Total excluded: {fmt(fs.consumablesTotal)}</Text>
+            {consumableItems.map((item, i) => (
+              <Text key={i} style={[styles.deductionText, { marginTop: 2 }]}>
+                {'  • '}{item.partDescription}: {fmt(item.billedAmount)}
+              </Text>
+            ))}
+            {fs.consumablesTotal > 0 && (
+              <Text style={styles.deductionAmount}>Total excluded: {fmt(fs.consumablesTotal)}</Text>
+            )}
+          </View>
+        )}
+
+        {wearAndTearItems.length > 0 && (
+          <View style={styles.deductionBlock}>
+            <Text style={styles.deductionTitle}>Normal Wear and Tear — Excluded</Text>
+            <Text style={styles.deductionText}>
+              The damage to the items below is consistent with normal usage over time and is not attributable to the accident. Insurance covers accidental damage only, not gradual deterioration.
+            </Text>
+            {wearAndTearItems.map((item, i) => (
+              <Text key={i} style={[styles.deductionText, { marginTop: 2 }]}>
+                {'  • '}{item.partDescription}{item.surveyorRemarks ? ` — ${item.surveyorRemarks}` : ''}: {fmt(item.billedAmount)}
+              </Text>
+            ))}
+            <Text style={styles.deductionAmount}>Total excluded: {fmt(fs.wearAndTearTotal)}</Text>
+          </View>
+        )}
+
+        {notCoveredItems.length > 0 && (
+          <View style={styles.deductionBlock}>
+            <Text style={styles.deductionTitle}>Not Related to This Accident / Pre-existing Damage</Text>
+            {notCoveredItems.map((item, i) => (
+              <Text key={i} style={[styles.deductionText, { marginTop: 2 }]}>
+                {'  • '}{item.partDescription}{item.surveyorRemarks ? ` — ${item.surveyorRemarks}` : (item.aiExplanation ? ` — ${item.aiExplanation}` : '')}
+              </Text>
+            ))}
           </View>
         )}
 
         {salvageItems.length > 0 && (
           <View style={styles.deductionBlock}>
-            <Text style={styles.deductionTitle}>Second-Hand Parts (Disposal)</Text>
+            <Text style={styles.deductionTitle}>Second-Hand Parts Used (Disposal)</Text>
             <Text style={styles.deductionText}>
               For the parts below, the workshop sourced second-hand parts. The value reflects the fair market price of the used part. GST does not apply to used parts.
             </Text>
@@ -212,14 +296,14 @@ export function InsuredSummaryDocument({
           </View>
         )}
 
-        {notCoveredItems.length > 0 && (
+        {fs.excessTotal > 0 && (
           <View style={styles.deductionBlock}>
-            <Text style={styles.deductionTitle}>Items Not Covered / Pre-existing Damage</Text>
-            {notCoveredItems.map((item, i) => (
-              <Text key={i} style={[styles.deductionText, { marginTop: 2 }]}>
-                {'  • '}{item.partDescription}: {item.aiExplanation || 'See surveyor remarks.'}
-              </Text>
-            ))}
+            <Text style={styles.deductionTitle}>Policy Excess</Text>
+            <Text style={styles.deductionText}>
+              {compulsoryExcess > 0 ? `Compulsory excess: ${fmt(compulsoryExcess)} — standard for all claims of this type. ` : ''}
+              {voluntaryExcess > 0 ? `Voluntary excess: ${fmt(voluntaryExcess)} — selected by you when purchasing the policy to reduce your premium.` : ''}
+            </Text>
+            <Text style={styles.deductionAmount}>Total deducted: {fmt(fs.excessTotal)}</Text>
           </View>
         )}
 

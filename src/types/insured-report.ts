@@ -55,6 +55,10 @@ export interface InsuredReportFinancialSummary {
   consumablesTotal: number;
   notCoveredTotal: number;
   salvageTotal: number;
+  negotiatedTotal: number;
+  overpricingTotal: number;
+  partialRepairTotal: number;
+  wearAndTearTotal: number;
   insurerPays: number;
   insuredPays: number;
   depreciationBreakdown: Array<{

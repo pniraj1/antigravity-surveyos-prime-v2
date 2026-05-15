@@ -68,6 +68,23 @@ export function computeInsuredFinancialSummary(
     .filter((r) => !r.allowed || r.action === 'disallow')
     .reduce((sum, r) => sum + r.estimated, 0);
 
+  // ─── Per-Category Totals (from SmartRemarksCell tags) ───
+  const negotiatedTotal = rows
+    .filter((r) => r.allowed && r.deductionCategory === 'negotiated')
+    .reduce((sum, r) => sum + Math.max(0, r.estimated - r.assessed), 0);
+
+  const overpricingTotal = rows
+    .filter((r) => r.allowed && r.deductionCategory === 'overpricing')
+    .reduce((sum, r) => sum + Math.max(0, r.estimated - r.assessed), 0);
+
+  const partialRepairTotal = rows
+    .filter((r) => r.allowed && r.deductionCategory === 'partial-repair')
+    .reduce((sum, r) => sum + Math.max(0, r.estimated - r.assessed), 0);
+
+  const wearAndTearTotal = rows
+    .filter((r) => r.deductionCategory === 'wear-and-tear')
+    .reduce((sum, r) => sum + r.estimated, 0);
+
   // ─── Excess ─────────────────────────────────────────────
   const excessTotal = (fb.compulsoryExcess || 0) + (fb.voluntaryExcess || 0);
 
@@ -102,6 +119,10 @@ export function computeInsuredFinancialSummary(
     consumablesTotal: 0, // refined by AI in Pass 2 — split from notCoveredTotal
     notCoveredTotal,
     salvageTotal,
+    negotiatedTotal,
+    overpricingTotal,
+    partialRepairTotal,
+    wearAndTearTotal,
     insurerPays,
     insuredPays,
   };
