@@ -42,13 +42,25 @@ export function computeInsuredFinancialSummary(
     .reduce((sum, r) => sum + ((r.billedTaxable ?? r.estimated) - r.assessed), 0);
 
   // ─── Depreciation ───────────────────────────────────────
-  // Parts rows that are allowed and not disallowed — gap between
-  // estimated (invoice) and assessed (post-depreciation) value.
-  const depreciationTotal = rows
-    .filter(
-      (r) => r.section === 'parts' && r.allowed && r.action !== 'disallow',
-    )
-    .reduce((sum, r) => sum + Math.max(0, r.estimated - r.assessed), 0);
+  const depreciatedRows = rows.filter(
+    (r) =>
+      r.section === 'parts' &&
+      r.allowed &&
+      r.action !== 'disallow' &&
+      Math.max(0, r.estimated - r.assessed) > 0,
+  );
+
+  const depreciationBreakdown = depreciatedRows.map((r) => ({
+    particulars: r.particulars,
+    billed: r.billedTaxable ?? r.estimated,
+    assessed: r.assessed,
+    deductionAmount: Math.max(0, r.estimated - r.assessed),
+  }));
+
+  const depreciationTotal = depreciationBreakdown.reduce(
+    (sum, r) => sum + r.deductionAmount,
+    0,
+  );
 
   // ─── Not Covered ────────────────────────────────────────
   // Rows that are disallowed by the surveyor.
@@ -85,6 +97,7 @@ export function computeInsuredFinancialSummary(
     garageEstimate,
     negotiatedSavings,
     depreciationTotal,
+    depreciationBreakdown,
     excessTotal,
     consumablesTotal: 0, // refined by AI in Pass 2 — split from notCoveredTotal
     notCoveredTotal,
