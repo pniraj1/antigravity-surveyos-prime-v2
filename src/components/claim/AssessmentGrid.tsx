@@ -252,9 +252,41 @@ export function AssessmentGrid() {
     }
   }, [cellSelection]);
 
-  const handleGridNavigation = (e: React.KeyboardEvent<HTMLTableSectionElement>) => {
+  const handleGridNavigation = useCallback((e: React.KeyboardEvent<HTMLTableSectionElement>) => {
+    // Escape: clear cell selection
+    if (e.key === 'Escape') {
+      setCellSelection(null);
+      return;
+    }
+
+    // Ctrl+V / Cmd+V: paste clipboard value into selected range
+    if ((e.ctrlKey || e.metaKey) && e.key === 'v' && cellSelection) {
+      e.preventDefault();
+      navigator.clipboard.readText().then(text => {
+        const parsedValue = parseClipboardValue(
+          text,
+          cellSelection.columnKey as keyof AssessmentRowType,
+        );
+        const rows = currentClaim?.assessmentRows ?? [];
+        const updates = buildPasteUpdates(
+          rows,
+          cellSelection.anchorRowId,
+          cellSelection.focusRowId,
+          cellSelection.columnKey as keyof AssessmentRowType,
+          parsedValue,
+        );
+        Object.entries(updates).forEach(([rowId, update]) => {
+          updateAssessmentRow(rowId, update);
+        });
+        setCellSelection(null);
+      }).catch(() => {
+        // Clipboard read denied — silently ignore
+      });
+      return;
+    }
+
     if (!e.shiftKey) return;
-    
+
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
       const target = e.target as HTMLElement;
       if (target.tagName !== 'INPUT' && target.tagName !== 'SELECT') return;
@@ -262,9 +294,9 @@ export function AssessmentGrid() {
       const td = target.closest('td');
       const tr = td?.closest('tr');
       const tbody = tr?.closest('tbody');
-      
+
       if (!td || !tr || !tbody) return;
-      
+
       e.preventDefault();
 
       const tds = Array.from(tr.children);
@@ -273,30 +305,29 @@ export function AssessmentGrid() {
       const rowIndex = trs.indexOf(tr);
 
       let nextInput: HTMLElement | null = null;
+      let nextRowId: string | null = null;
 
       if (e.key === 'ArrowRight') {
         for (let i = colIndex + 1; i < tds.length; i++) {
           const input = tds[i].querySelector('input:not([disabled]), select:not([disabled])') as HTMLElement;
-          if (input) {
-            nextInput = input;
-            break;
-          }
+          if (input) { nextInput = input; break; }
         }
       } else if (e.key === 'ArrowLeft') {
         for (let i = colIndex - 1; i >= 0; i--) {
           const input = tds[i].querySelector('input:not([disabled]), select:not([disabled])') as HTMLElement;
-          if (input) {
-            nextInput = input;
-            break;
-          }
+          if (input) { nextInput = input; break; }
         }
       } else if (e.key === 'ArrowDown') {
         if (rowIndex < trs.length - 1) {
-          nextInput = trs[rowIndex + 1].children[colIndex]?.querySelector('input:not([disabled]), select:not([disabled])') as HTMLElement;
+          const nextTr = trs[rowIndex + 1] as HTMLElement;
+          nextInput = nextTr.children[colIndex]?.querySelector('input:not([disabled]), select:not([disabled])') as HTMLElement;
+          nextRowId = nextTr.dataset.rowId ?? null;
         }
       } else if (e.key === 'ArrowUp') {
         if (rowIndex > 0) {
-          nextInput = trs[rowIndex - 1].children[colIndex]?.querySelector('input:not([disabled]), select:not([disabled])') as HTMLElement;
+          const prevTr = trs[rowIndex - 1] as HTMLElement;
+          nextInput = prevTr.children[colIndex]?.querySelector('input:not([disabled]), select:not([disabled])') as HTMLElement;
+          nextRowId = prevTr.dataset.rowId ?? null;
         }
       }
 
@@ -305,9 +336,20 @@ export function AssessmentGrid() {
         if (nextInput instanceof HTMLInputElement && nextInput.type !== 'checkbox') {
           nextInput.select();
         }
+        // Extend cell selection on Shift+Up/Down
+        if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && nextRowId) {
+          const columnKey = (td as HTMLElement).dataset.columnKey;
+          if (columnKey) {
+            setCellSelection(prev =>
+              prev && prev.columnKey === columnKey
+                ? { ...prev, focusRowId: nextRowId! }
+                : { columnKey, anchorRowId: nextRowId!, focusRowId: nextRowId! },
+            );
+          }
+        }
       }
     }
-  };
+  }, [cellSelection, currentClaim?.assessmentRows, updateAssessmentRow]);
 
   if (!currentClaim) return null;
 
@@ -572,7 +614,7 @@ export function AssessmentGrid() {
                       />
                     </td>
                     {/* Particulars — always on — click opens Evidence Viewer */}
-                    <td className="px-2 py-1.5">
+                    <td className={`px-2 py-1.5${isCellSelected(row.id, 'particulars') ? ' ring-2 ring-blue-400 ring-inset' : ''}`} data-column-key="particulars">
                       <div className="relative group flex items-center gap-1">
                         <Input
                           value={row.particulars}
@@ -602,7 +644,7 @@ export function AssessmentGrid() {
 
                     {/* ─── Optional columns ────────────────── */}
                     {visible.partNumber && (
-                      <td className="px-1 py-1.5">
+                      <td className={`px-1 py-1.5${isCellSelected(row.id, 'partNumber') ? ' ring-2 ring-blue-400 ring-inset' : ''}`} data-column-key="partNumber">
                         <Input
                           value={row.partNumber || ''}
                           onChange={(e) => updateAssessmentRow(row.id, { partNumber: e.target.value })}
@@ -612,7 +654,7 @@ export function AssessmentGrid() {
                       </td>
                     )}
                     {visible.hsnSac && (
-                      <td className="px-1 py-1.5">
+                      <td className={`px-1 py-1.5${isCellSelected(row.id, 'hsnSac') ? ' ring-2 ring-blue-400 ring-inset' : ''}`} data-column-key="hsnSac">
                         <Input
                           value={row.hsnSac || ''}
                           onChange={(e) => updateAssessmentRow(row.id, { hsnSac: e.target.value })}
@@ -622,7 +664,7 @@ export function AssessmentGrid() {
                       </td>
                     )}
                     {visible.type && (
-                      <td className="px-1 py-1.5">
+                      <td className={`px-1 py-1.5${isCellSelected(row.id, 'partType') ? ' ring-2 ring-blue-400 ring-inset' : ''}`} data-column-key="partType">
                         <select
                           value={row.partType}
                           onChange={(e) => {
@@ -651,7 +693,7 @@ export function AssessmentGrid() {
                       </td>
                     )}
                     {visible.quantity && (
-                      <td className="px-1 py-1.5">
+                      <td className={`px-1 py-1.5${isCellSelected(row.id, 'quantity') ? ' ring-2 ring-blue-400 ring-inset' : ''}`} data-column-key="quantity">
                         <Input
                           type="number"
                           value={row.quantity || ''}
@@ -663,7 +705,7 @@ export function AssessmentGrid() {
                       </td>
                     )}
                     {visible.unitPrice && (
-                      <td className="px-1 py-1.5">
+                      <td className={`px-1 py-1.5${isCellSelected(row.id, 'estimated') ? ' ring-2 ring-blue-400 ring-inset' : ''}`} data-column-key="estimated">
                         <Input
                           type="number"
                           value={row.estimated || ''}
@@ -682,7 +724,7 @@ export function AssessmentGrid() {
                       </td>
                     )}
                     {visible.gst && (
-                      <td className="px-1 py-1.5">
+                      <td className={`px-1 py-1.5${isCellSelected(row.id, 'gst') ? ' ring-2 ring-blue-400 ring-inset' : ''}`} data-column-key="gst">
                         <Input
                           type="number"
                           value={row.isDisposal ? 0 : row.gst}
@@ -697,7 +739,7 @@ export function AssessmentGrid() {
 
                     {/* ─── Disposal column ─────────────────── */}
                     {visible.disposal && (
-                      <td className="px-2 py-1.5">
+                      <td className={`px-2 py-1.5${isCellSelected(row.id, 'isDisposal') ? ' ring-2 ring-blue-400 ring-inset' : ''}`} data-column-key="isDisposal">
                         <div className="flex items-center justify-center gap-1.5">
                           <input
                             type="checkbox"
@@ -726,7 +768,7 @@ export function AssessmentGrid() {
                     )}
 
                     {/* ─── Always-on assessment columns ────── */}
-                    <td className="px-1 py-1.5">
+                    <td className={`px-1 py-1.5${isCellSelected(row.id, 'assessed') ? ' ring-2 ring-blue-400 ring-inset' : ''}`} data-column-key="assessed">
                       <Input
                         type="number"
                         value={row.assessed || ''}
@@ -736,7 +778,7 @@ export function AssessmentGrid() {
                         min="0"
                       />
                     </td>
-                    <td className="px-1 py-1 text-center">
+                    <td className={`px-1 py-1 text-center${isCellSelected(row.id, 'depOverride') ? ' ring-2 ring-blue-400 ring-inset' : ''}`} data-column-key="depOverride">
                       {row.allowed && row.section === 'parts' ? (
                         <input
                           type="number"
@@ -786,7 +828,7 @@ export function AssessmentGrid() {
 
                     {/* ─── Optional trailing columns ─────────── */}
                     {visible.action && (
-                      <td className="px-1 py-1.5">
+                      <td className={`px-1 py-1.5${isCellSelected(row.id, 'action') ? ' ring-2 ring-blue-400 ring-inset' : ''}`} data-column-key="action">
                         <select
                           value={row.action || ''}
                           onChange={(e) => updateAssessmentRow(row.id, { action: e.target.value as any })}
@@ -800,7 +842,7 @@ export function AssessmentGrid() {
                       </td>
                     )}
                     {visible.remarks && (
-                      <td className="px-1 py-1.5">
+                      <td className="px-1 py-1.5" data-column-key="remarks">
                         <SmartRemarksCell
                           row={row}
                           autoDepRate={autoDepRate}
