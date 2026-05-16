@@ -136,32 +136,16 @@ export function DocumentEvidenceViewer({ panelWidth = '420px', embedded = false,
         <button
           onClick={() => useEvidenceStore.setState({ isOpen: true })}
           title="Open Evidence Viewer"
-          style={{
-            position: 'fixed',
-            right: 0,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            zIndex: 1000,
-            background: 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)',
-            border: 'none',
-            borderRadius: '8px 0 0 8px',
-            padding: '10px 6px',
-            cursor: 'pointer',
-            boxShadow: '-2px 0 12px rgba(0,0,0,0.25)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 6,
-            color: '#fff',
-          }}
+          className="fixed right-0 top-1/2 -translate-y-1/2 z-[1000] border-none rounded-l-lg px-1.5 py-2.5 cursor-pointer shadow-lg flex flex-col items-center gap-1.5 bg-[#0D1B2A] text-[#D4AF37]"
         >
           <FileSearch size={18} />
-          <ChevronRight size={14} style={{ transform: 'rotate(180deg)' }} />
+          <ChevronRight size={14} className="rotate-180" />
         </button>
       )}
 
       {/* ── Side panel ── */}
       <div
+        className="flex flex-col bg-[#FAFBFC] border-l border-[#E2E6EA]"
         style={{
           position: embedded ? 'relative' : 'fixed',
           top: 0,
@@ -169,29 +153,17 @@ export function DocumentEvidenceViewer({ panelWidth = '420px', embedded = false,
           width: embedded ? '100%' : panelWidth,
           height: embedded ? '100%' : '100vh',
           zIndex: embedded ? 1 : 1001,
-          display: 'flex',
-          flexDirection: 'column',
-          background: '#0f172a',
-          boxShadow: embedded ? 'none' : '-4px 0 32px rgba(0,0,0,0.5)',
+          boxShadow: embedded ? 'none' : '-4px 0 24px rgba(13,27,42,0.12)',
           transition: 'right 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          borderLeft: '1px solid rgba(255,255,255,0.08)',
         }}
       >
         {/* Header */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '14px 16px',
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
-          background: 'linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%)',
-          flexShrink: 0,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <FileSearch size={18} color="#93c5fd" />
+        <div className="flex items-center justify-between px-4 py-3.5 shrink-0 bg-[#0D1B2A] border-b border-[#E2E6EA]">
+          <div className="flex items-center gap-2">
+            <FileSearch size={18} className="text-[#D4AF37]" />
             <div>
-              <div style={{ color: '#e2e8f0', fontWeight: 600, fontSize: 13 }}>Evidence Viewer</div>
-              {docLabel && <div style={{ color: '#93c5fd', fontSize: 11, marginTop: 1 }}>{docLabel}</div>}
+              <div className="text-[13px] font-semibold text-white">Evidence Viewer</div>
+              {docLabel && <div className="text-[11px] text-[#D4AF37] mt-0.5">{docLabel}</div>}
             </div>
           </div>
           {!embedded && <IconBtn onClick={close} title="Close"><X size={15} /></IconBtn>}
@@ -199,18 +171,11 @@ export function DocumentEvidenceViewer({ panelWidth = '420px', embedded = false,
 
         {/* Context snippet badge */}
         {field?.contextSnippet && (
-          <div style={{
-            margin: '12px 14px 0',
-            padding: '8px 12px',
-            background: 'rgba(37,99,235,0.18)',
-            border: '1px solid rgba(37,99,235,0.35)',
-            borderRadius: 8,
-            flexShrink: 0,
-          }}>
-            <div style={{ color: '#93c5fd', fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', marginBottom: 4 }}>
+          <div className="mx-3.5 mt-3 px-3 py-2 rounded-lg shrink-0 bg-amber-50 border border-amber-200">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-[#D4AF37] mb-1">
               EXTRACTED FROM DOCUMENT
             </div>
-            <div style={{ color: '#e2e8f0', fontSize: 12, lineHeight: 1.5, fontFamily: 'monospace' }}>
+            <div className="text-xs leading-relaxed font-mono text-[#0D1B2A]">
               <HighlightedSnippet
                 snippet={field.contextSnippet}
                 highlight={field.fieldKey.replace(/_/g, ' ')}
@@ -220,58 +185,43 @@ export function DocumentEvidenceViewer({ panelWidth = '420px', embedded = false,
         )}
 
         {/* Document display area */}
-        <div style={{ flex: 1, overflow: 'hidden', padding: isPdf ? 0 : 12, display: 'flex', flexDirection: 'column' }}>
+        <div className={`flex-1 overflow-hidden flex flex-col ${isPdf ? '' : 'p-3'}`}>
           {blobUrl && isPdf ? (
-            // Native PDF rendering — browser handles zoom, scroll, text selection
             <iframe
               key={blobUrl}
               src={blobUrl}
               title={docLabel}
-              style={{ flex: 1, width: '100%', border: 'none', borderRadius: 0, background: '#fff' }}
+              className="flex-1 w-full border-none bg-white"
             />
           ) : blobUrl && isImage ? (
-            // Image files — render directly
-            <div style={{ flex: 1, overflow: 'auto' }}>
+            <div className="flex-1 overflow-auto">
               <img
                 src={blobUrl}
                 alt={`${docLabel} source document`}
-                style={{ width: '100%', display: 'block', borderRadius: 6, boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}
+                className="w-full block rounded-md shadow-lg"
               />
             </div>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+            <div className="flex items-center justify-center h-full">
               <EmptyState field={field} />
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div style={{
-          padding: '8px 14px',
-          borderTop: '1px solid rgba(255,255,255,0.06)',
-          flexShrink: 0,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-        }}>
-          <ChevronRight size={14} color="#475569" />
-          <span style={{ color: '#475569', fontSize: 11 }}>
+        <div className="px-3.5 py-2 border-t border-[#E2E6EA] shrink-0 flex items-center gap-1.5">
+          <ChevronRight size={14} className="text-[#8D99AE]" />
+          <span className="text-[11px] text-[#8D99AE]">
             Click any field in the Reconciliation Hub to update this view
           </span>
         </div>
       </div>
 
       {/* Backdrop (mobile / narrow screens) */}
-      {isOpen && (
+      {isOpen && !embedded && (
         <div
           onClick={close}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 1000,
-            background: 'rgba(0,0,0,0.4)',
-            // Only show backdrop on smaller screens
-            display: 'none',
-          }}
-          className="evidence-backdrop"
+          className="fixed inset-0 z-[1000] bg-black/40 backdrop-blur-sm lg:hidden"
         />
       )}
     </>
@@ -285,19 +235,7 @@ function IconBtn({ onClick, title, children }: { onClick: () => void; title: str
     <button
       onClick={onClick}
       title={title}
-      style={{
-        background: 'rgba(255,255,255,0.1)',
-        border: 'none',
-        borderRadius: 6,
-        padding: '5px 7px',
-        cursor: 'pointer',
-        color: '#cbd5e1',
-        display: 'flex',
-        alignItems: 'center',
-        transition: 'background 0.15s',
-      }}
-      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.2)')}
-      onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
+      className="flex items-center px-1.5 py-1 rounded-md border-none cursor-pointer text-white/70 bg-white/10 transition-colors hover:bg-white/20 hover:text-white"
     >
       {children}
     </button>
@@ -306,21 +244,12 @@ function IconBtn({ onClick, title, children }: { onClick: () => void; title: str
 
 /** Highlights value-like text within the snippet */
 function HighlightedSnippet({ snippet, highlight }: { snippet: string; highlight: string }) {
-  // Very lightweight highlight — just wraps numbers and capitalised words
   const parts = snippet.split(/(\b[A-Z0-9][A-Za-z0-9\-\/]+\b|\d{2,})/g);
   return (
     <>
       {parts.map((part, i) =>
         /^[A-Z0-9]/.test(part) && part.length > 2 ? (
-          <mark
-            key={i}
-            style={{
-              background: 'rgba(234,179,8,0.25)',
-              color: '#fef08a',
-              borderRadius: 3,
-              padding: '0 2px',
-            }}
-          >
+          <mark key={i} className="bg-amber-200/60 text-[#0D1B2A] rounded px-0.5">
             {part}
           </mark>
         ) : (
@@ -333,9 +262,9 @@ function HighlightedSnippet({ snippet, highlight }: { snippet: string; highlight
 
 function EmptyState({ field }: { field: EvidenceField | null }) {
   return (
-    <div style={{ textAlign: 'center', color: '#475569', padding: 24 }}>
-      <FileSearch size={40} style={{ opacity: 0.3, marginBottom: 12 }} />
-      <p style={{ fontSize: 13, margin: 0 }}>
+    <div className="text-center text-[#8D99AE] p-6">
+      <FileSearch size={40} className="opacity-30 mb-3 mx-auto" />
+      <p className="text-[13px] m-0">
         {field
           ? 'Document image not available.\nRe-scan the document to enable this view.'
           : 'Click any field in the Reconciliation Hub to see its source document.'}
