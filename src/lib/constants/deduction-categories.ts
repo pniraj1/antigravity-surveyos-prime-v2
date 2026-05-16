@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════
 
 export const DEDUCTION_CATEGORIES = [
+  'approved',
   'safe',
   'depreciation',
   'salvage',
@@ -23,7 +24,8 @@ export type DeductionCategory = typeof DEDUCTION_CATEGORIES[number];
 // These categories can be fully inferred from the structured data in the row.
 // No surveyor remark is needed to generate a meaningful explanation.
 export const SELF_EXPLAINING_CATEGORIES: DeductionCategory[] = [
-  'safe',         // assessed ≈ billedAmount, allowed — no adjustment made
+  'approved',     // assessed ≈ billedAmount, allowed, dep=0 — fully approved, no deduction
+  'safe',         // item found undamaged by surveyor — not replaced
   'depreciation', // zeroDep=false, parts section — IRDAI formula applies
   'salvage',      // isDisposal=true — old part scrap value deducted
   'negotiated',   // labour/paint where billed > assessed — rate negotiation
@@ -44,7 +46,8 @@ export const REMARK_REQUIRED_CATEGORIES: DeductionCategory[] = [
 // ─── UI labels ───────────────────────────────────────────────────────────────
 // Used in: InsuredReportTab line-items badge, AssessmentGrid row tag, AI prompt.
 export const CATEGORY_LABELS: Record<DeductionCategory, string> = {
-  safe:             'No damage / no adjustment required',
+  approved:         'Approved in full — assessed at full billed amount, no deduction',
+  safe:             'No damage found — item not required / not replaced',
   depreciation:     'Depreciation applied (IRDAI schedule)',
   salvage:          'Salvage value of replaced part deducted',
   negotiated:       'Labour / paint rate negotiated to market standard',
@@ -58,7 +61,8 @@ export const CATEGORY_LABELS: Record<DeductionCategory, string> = {
 
 // ─── Short badge labels (for compact UI display) ─────────────────────────────
 export const CATEGORY_BADGE_LABELS: Record<DeductionCategory, string> = {
-  safe:             'Safe',
+  approved:         'Approved in Full',
+  safe:             'No Damage',
   depreciation:     'Depreciation',
   salvage:          'Salvage',
   negotiated:       'Negotiated',
@@ -72,7 +76,8 @@ export const CATEGORY_BADGE_LABELS: Record<DeductionCategory, string> = {
 
 // ─── Badge colours ────────────────────────────────────────────────────────────
 export const CATEGORY_BADGE_COLOURS: Record<DeductionCategory, { bg: string; text: string }> = {
-  safe:             { bg: '#DCFCE7', text: '#166534' },
+  approved:         { bg: '#DCFCE7', text: '#166534' },  // green — fully approved
+  safe:             { bg: '#F0FDF4', text: '#15803D' },  // lighter green — no damage found
   depreciation:     { bg: '#FEF9C3', text: '#854D0E' },
   salvage:          { bg: '#E0E7FF', text: '#3730A3' },
   negotiated:       { bg: '#FEF3C7', text: '#92400E' },

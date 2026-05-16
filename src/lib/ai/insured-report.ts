@@ -55,6 +55,7 @@ export function getBlockingRows(
 // These rows do NOT need the AI — the category and explanation are certain.
 // Returning them here removes them from the AI call, reducing token usage.
 const AUTO_EXPLAINED_CATEGORIES = new Set<DeductionCategory>([
+  'approved',
   'safe',
   'depreciation',
   'salvage',
@@ -88,10 +89,13 @@ export function buildPreClassifiedExplanations(
       };
 
       if (AUTO_EXPLAINED_CATEGORIES.has(row.deductionCategory)) {
-        // safe / depreciation / salvage — use canned explanations, no enrichment needed
-        if (row.deductionCategory === 'safe') {
+        // approved / safe / depreciation / salvage — use canned explanations, no enrichment needed
+        if (row.deductionCategory === 'approved') {
           explanation.aiExplanation =
-            'This item was inspected and found safe — no replacement or adjustment was required.';
+            'This item was assessed and approved in full — the workshop\'s price has been accepted and the full amount is included in the settlement.';
+        } else if (row.deductionCategory === 'safe') {
+          explanation.aiExplanation =
+            'This item was inspected and found undamaged — no replacement or adjustment was required.';
         } else if (row.deductionCategory === 'salvage') {
           explanation.aiExplanation =
             `${row.particulars} was replaced. The salvage / scrap value of the old part ` +
@@ -128,15 +132,15 @@ export function buildPreClassifiedExplanations(
       continue;
     }
 
-    // Safe: allowed, no meaningful adjustment
+    // Approved in full: allowed, no meaningful adjustment, no depreciation
     if (row.allowed && delta < 1) {
       autoClassified.push({
         assessmentRowId: row.id,
         partDescription: row.particulars,
         surveyorRemarks: row.remarks ?? '',
         aiExplanation:
-          'This item was inspected and found safe — no replacement or adjustment was required.',
-        deductionCategory: 'safe' as DeductionCategory,
+          'This item was assessed and approved in full — the workshop\'s price has been accepted and the full amount is included in the settlement.',
+        deductionCategory: 'approved' as DeductionCategory,
         surveyorAmount: row.assessed,
         billedAmount: billed,
         isFlagged: false,
@@ -468,7 +472,7 @@ export async function runGenerateNarrative({
 
     const categoryGroups: Record<string, string[]> = {};
     for (const e of mergedExplanations) {
-      if (e.deductionCategory === 'depreciation' || e.deductionCategory === 'safe') continue;
+      if (e.deductionCategory === 'depreciation' || e.deductionCategory === 'safe' || e.deductionCategory === 'approved') continue;
       const cat = e.deductionCategory ?? 'other';
       if (!categoryGroups[cat]) categoryGroups[cat] = [];
       categoryGroups[cat].push(e.partDescription);
@@ -493,9 +497,12 @@ export async function runGenerateNarrative({
     coveringNarrative = undefined;
   }
 
-  // Exclude depreciation and safe rows from Line Items — Financial tab handles depreciation
+  // Exclude approved/depreciation/safe rows from Line Items — no deduction = nothing to explain
   const lineItemsForReport = mergedExplanations.filter(
-    e => e.deductionCategory !== 'depreciation' && e.deductionCategory !== 'safe',
+    e =>
+      e.deductionCategory !== 'depreciation' &&
+      e.deductionCategory !== 'safe' &&
+      e.deductionCategory !== 'approved',
   );
 
   return {

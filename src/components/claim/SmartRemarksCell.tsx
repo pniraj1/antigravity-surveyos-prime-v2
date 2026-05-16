@@ -11,7 +11,7 @@ import {
 
 type RowContext =
   | 'depreciation-only'
-  | 'safe'
+  | 'fully-approved'
   | 'amount-reduced'
   | 'disallowed'
   | 'disposal'
@@ -20,9 +20,10 @@ type RowContext =
 
 const CONTEXT_CATEGORIES: Record<RowContext, DeductionCategory[]> = {
   'depreciation-only': ['depreciation'],
-  safe: ['safe'],
+  'fully-approved': ['approved'],
   'amount-reduced': ['negotiated', 'overpricing', 'partial-repair'],
-  disallowed: ['not-covered', 'previous-damage', 'wear-and-tear', 'consumable'],
+  // 'safe' (no damage found) is a manual surveyor judgment — shown in disallowed context
+  disallowed: ['not-covered', 'previous-damage', 'wear-and-tear', 'consumable', 'safe'],
   disposal: ['salvage'],
   'amount-increased': ['negotiated'],
   default: ['negotiated', 'not-covered', 'overpricing'],
@@ -30,7 +31,7 @@ const CONTEXT_CATEGORIES: Record<RowContext, DeductionCategory[]> = {
 
 const REMARK_PRESETS: Record<RowContext, string[]> = {
   'depreciation-only': [],
-  safe: [],
+  'fully-approved': [],
   'amount-reduced': [
     'Rates as per local market',
     'Quantity / area adjusted',
@@ -62,13 +63,13 @@ function detectRowContext(
   if (row.assessed < row.estimated) return 'amount-reduced';
   if (row.assessed > row.estimated) return 'amount-increased';
   if (row.assessed === row.estimated && autoDepRate > 0) return 'depreciation-only';
-  if (row.assessed === row.estimated && autoDepRate === 0) return 'safe';
+  if (row.assessed === row.estimated && autoDepRate === 0) return 'fully-approved';
   return 'default';
 }
 
 function shouldAutoClassify(ctx: RowContext): DeductionCategory | null {
   if (ctx === 'depreciation-only') return 'depreciation';
-  if (ctx === 'safe') return 'safe';
+  if (ctx === 'fully-approved') return 'approved';
   if (ctx === 'disposal') return 'salvage';
   return null;
 }

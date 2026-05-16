@@ -63,7 +63,8 @@ function fmt(n: number): string {
 function categoryLabel(cat: string | undefined, allowed: boolean): string {
   if (!allowed) return 'Not covered';
   const map: Record<string, string> = {
-    safe: 'Approved in full',
+    approved: 'Approved in full',
+    safe: 'No damage found',
     depreciation: 'Depreciation applied',
     salvage: 'Disposal — used part',
     consumable: 'Consumable — excluded',
@@ -318,7 +319,7 @@ export function InsuredSummaryDocument({
         {allRows.map((row, i) => {
           const explanation = lineExplanations.find(e => e.assessmentRowId === row.id);
           const billed = row.billedTaxable ?? row.estimated;
-          const cat = explanation?.deductionCategory ?? (row.allowed ? 'safe' : 'not-covered');
+          const cat = explanation?.deductionCategory ?? (row.allowed ? 'approved' : 'not-covered');
           return (
             <View key={i} style={styles.tableRow}>
               <Text style={styles.colPart}>{row.particulars}</Text>
