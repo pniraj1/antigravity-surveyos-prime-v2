@@ -53,6 +53,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import type { PartType, AssessmentRow as AssessmentRowType } from '@/types';
 import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
+import { parseClipboardValue, buildPasteUpdates } from '@/lib/utils/grid-paste';
 
 // ─── Column Visibility Configuration ─────────────────────────────
 // Keys for optional columns that the user can show/hide
@@ -122,6 +123,7 @@ function SortableRow({ id, className, children }: { id: string; className: strin
     <tr
       ref={setNodeRef}
       className={className}
+      data-row-id={id}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
     >
       <td
@@ -174,6 +176,11 @@ export function AssessmentGrid() {
     setSelected(new Set());
   };
   const [showSettings, setShowSettings] = useState(false);
+  const [cellSelection, setCellSelection] = useState<{
+    columnKey: string;
+    anchorRowId: string;
+    focusRowId: string;
+  } | null>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
 
   // Load from localStorage on mount
@@ -215,6 +222,35 @@ export function AssessmentGrid() {
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
+
+  const isCellSelected = useCallback((rowId: string, columnKey: string): boolean => {
+    if (!cellSelection || cellSelection.columnKey !== columnKey) return false;
+    const rows = currentClaim?.assessmentRows ?? [];
+    const anchorIdx = rows.findIndex(r => r.id === cellSelection.anchorRowId);
+    const focusIdx = rows.findIndex(r => r.id === cellSelection.focusRowId);
+    const rowIdx = rows.findIndex(r => r.id === rowId);
+    if (anchorIdx === -1 || focusIdx === -1 || rowIdx === -1) return false;
+    const start = Math.min(anchorIdx, focusIdx);
+    const end = Math.max(anchorIdx, focusIdx);
+    return rowIdx >= start && rowIdx <= end;
+  }, [cellSelection, currentClaim?.assessmentRows]);
+
+  const handleCellMouseDown = useCallback((e: React.MouseEvent<HTMLTableSectionElement>) => {
+    const td = (e.target as HTMLElement).closest('td');
+    if (!td) return;
+    const columnKey = (td as HTMLElement & { dataset: DOMStringMap }).dataset.columnKey;
+    const tr = td.closest('tr');
+    const rowId = (tr as HTMLElement & { dataset: DOMStringMap })?.dataset.rowId;
+    if (!rowId || !columnKey) return;
+
+    if (e.shiftKey && cellSelection && cellSelection.columnKey === columnKey) {
+      // Extend existing selection within the same column
+      setCellSelection(prev => prev ? { ...prev, focusRowId: rowId } : null);
+    } else {
+      // New anchor — start fresh selection
+      setCellSelection({ columnKey, anchorRowId: rowId, focusRowId: rowId });
+    }
+  }, [cellSelection]);
 
   const handleGridNavigation = (e: React.KeyboardEvent<HTMLTableSectionElement>) => {
     if (!e.shiftKey) return;
@@ -462,7 +498,11 @@ export function AssessmentGrid() {
               <th className="px-1 py-2 font-medium w-8"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border" onKeyDown={handleGridNavigation}>
+          <tbody
+            className="divide-y divide-border"
+            onKeyDown={handleGridNavigation}
+            onMouseDown={handleCellMouseDown}
+          >
             {assessmentRows.length === 0 ? (
               <tr>
                 <td colSpan={totalCols} className="px-6 py-12 text-center text-muted-foreground">
