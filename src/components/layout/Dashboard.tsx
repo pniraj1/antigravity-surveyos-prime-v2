@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import dynamicImport from 'next/dynamic';
 import { useUIStore } from '@/stores/ui-store';
 import { useClaimStore } from '@/stores/claim-store';
-import { getClaim, saveClaim } from '@/lib/storage/indexeddb';
+import { getClaim, saveClaim, deleteClaim } from '@/lib/storage/indexeddb';
 import { toast } from 'sonner';
 import {
   LayoutDashboard,
@@ -20,6 +20,10 @@ import {
   ArrowUpDown,
   CheckCircle,
   HardDrive,
+  User,
+  Building2,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 
 import { BankReconcileDialog } from '@/components/dialogs/BankReconcileDialog';
@@ -56,6 +60,9 @@ export function DashboardContent() {
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   const [showReconcile, setShowReconcile] = useState(false);
   const [showIRDAI, setShowIRDAI] = useState(false);
+  const [archiveTarget, setArchiveTarget] = useState<{ id: string; vehicleNo: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; vehicleNo: string } | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   const activeClaims = claimsList.filter(c => c.isActive);
   const today = new Date().toDateString();
@@ -394,8 +401,8 @@ export function DashboardContent() {
                       <div className="flex flex-col truncate">
                         <span className="text-sm font-bold uppercase" style={{ color: '#0D1B2A' }}>{claim.vehicleNo || 'Unknown'}</span>
                         <div className="flex gap-2 text-[10px] text-muted-foreground truncate opacity-80 mt-0.5">
-                          {claim.insuredName && <span className="truncate" title={`Insured: ${claim.insuredName}`}>👤 {claim.insuredName}</span>}
-                          {claim.insurerName && <span className="truncate" title={`Insurer: ${claim.insurerName}`}>🏛 {claim.insurerName}</span>}
+                          {claim.insuredName && <span className="inline-flex items-center gap-1 truncate" title={`Insured: ${claim.insuredName}`}><User size={10} /> {claim.insuredName}</span>}
+                          {claim.insurerName && <span className="inline-flex items-center gap-1 truncate" title={`Insurer: ${claim.insurerName}`}><Building2 size={10} /> {claim.insurerName}</span>}
                           {!claim.insuredName && !claim.insurerName && <span>No Party Details</span>}
                         </div>
                       </div>
@@ -423,7 +430,6 @@ export function DashboardContent() {
                             const fullClaim = await getClaim(claim.id);
                             if (fullClaim) {
                               await saveClaim({ ...fullClaim, isCompleted: !fullClaim.isCompleted });
-                              // We simulate an update to trigger useClaimsLoader Broadcast Channel since it's an indexeddb operation.
                               const channel = new BroadcastChannel('surveyos_claims_sync');
                               channel.postMessage('CLAIMS_UPDATED');
                               channel.close();
@@ -435,26 +441,22 @@ export function DashboardContent() {
                           <CheckCircle size={16} />
                         </button>
                         <button
-                          onClick={async (e) => {
+                          onClick={(e) => {
                             e.stopPropagation();
-                            const fullClaim = await getClaim(claim.id);
-                            if (fullClaim) {
-                              const archiving = fullClaim.isActive;
-                              await saveClaim({
-                                ...fullClaim,
-                                isActive: !fullClaim.isActive,
-                                // Free ~6 MB of IndexedDB per claim when archiving.
-                                // Photos are already in Google Drive at this point.
-                                ...(archiving ? { photos: [] } : {}),
-                              });
-                              // Clear sessionStorage evidence entries for this claim
-                              if (archiving) {
-                                const docTypes = ['rc','dl','policy','fitness','permit','fir','claim','estimate','final-bill','photos'];
-                                docTypes.forEach(t => sessionStorage.removeItem(`evidence_${fullClaim.id}_${t}`));
-                              }
-                              const channel = new BroadcastChannel('surveyos_claims_sync');
-                              channel.postMessage('CLAIMS_UPDATED');
-                              channel.close();
+                            if (claim.isActive) {
+                              setArchiveTarget({ id: claim.id, vehicleNo: claim.vehicleNo || 'Unknown' });
+                            } else {
+                              // Restore doesn't need confirmation
+                              (async () => {
+                                const fullClaim = await getClaim(claim.id);
+                                if (fullClaim) {
+                                  await saveClaim({ ...fullClaim, isActive: true });
+                                  const channel = new BroadcastChannel('surveyos_claims_sync');
+                                  channel.postMessage('CLAIMS_UPDATED');
+                                  channel.close();
+                                  toast.success('Claim restored');
+                                }
+                              })();
                             }
                           }}
                           className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-700"
@@ -462,6 +464,20 @@ export function DashboardContent() {
                         >
                           {claim.isActive ? <Archive size={16} /> : <ArchiveRestore size={16} />}
                         </button>
+                        {/* Delete button — only on archived claims */}
+                        {!claim.isActive && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteTarget({ id: claim.id, vehicleNo: claim.vehicleNo || 'Unknown' });
+                              setDeleteConfirmText('');
+                            }}
+                            className="p-1.5 rounded-lg hover:bg-red-50 transition-colors text-gray-400 hover:text-red-600"
+                            title="Delete Permanently"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -474,6 +490,109 @@ export function DashboardContent() {
 
       {showReconcile && <BankReconcileDialog onClose={() => setShowReconcile(false)} />}
       {showIRDAI && <IRDAISummaryDialog onClose={() => setShowIRDAI(false)} />}
+
+      {/* Archive Confirmation Dialog */}
+      {archiveTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setArchiveTarget(null)}>
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
+                <AlertTriangle size={20} className="text-amber-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-[#0D1B2A]">Archive this claim?</h3>
+                <p className="text-xs text-[#8D99AE] mt-0.5">{archiveTarget.vehicleNo}</p>
+              </div>
+            </div>
+            <p className="text-xs text-[#4A4E69] mb-5 leading-relaxed">
+              Photos will be removed from local storage to free space.
+              {useUIStore.getState().isDriveConnected
+                ? ' They are safely backed up on Google Drive.'
+                : ' ⚠️ Google Drive is not connected — photos not backed up.'}
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setArchiveTarget(null)}
+                className="px-4 py-2 rounded-lg text-xs font-bold text-[#4A4E69] hover:bg-[#F0F2F5] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  const fullClaim = await getClaim(archiveTarget.id);
+                  if (fullClaim) {
+                    await saveClaim({ ...fullClaim, isActive: false, photos: [] });
+                    const docTypes = ['rc','dl','policy','fitness','permit','fir','claim','estimate','final-bill','photos'];
+                    docTypes.forEach(t => sessionStorage.removeItem(`evidence_${fullClaim.id}_${t}`));
+                    const channel = new BroadcastChannel('surveyos_claims_sync');
+                    channel.postMessage('CLAIMS_UPDATED');
+                    channel.close();
+                    toast.success('Claim archived');
+                  }
+                  setArchiveTarget(null);
+                }}
+                className="px-4 py-2 rounded-lg text-xs font-bold bg-amber-500 text-white hover:bg-amber-600 transition-colors"
+              >
+                Archive Claim
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog — Double confirmation */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setDeleteTarget(null)}>
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
+                <Trash2 size={20} className="text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-[#0D1B2A]">Permanently delete this claim?</h3>
+                <p className="text-xs text-[#8D99AE] mt-0.5">{deleteTarget.vehicleNo}</p>
+              </div>
+            </div>
+            <p className="text-xs text-[#4A4E69] mb-4 leading-relaxed">
+              This action <strong>cannot be undone</strong>. The claim and all associated data will be permanently removed from local storage and cloud.
+            </p>
+            <div className="mb-5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-[#8D99AE] mb-1.5 block">
+                Type the vehicle number to confirm
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={e => setDeleteConfirmText(e.target.value)}
+                placeholder={deleteTarget.vehicleNo}
+                className="w-full px-3 py-2.5 rounded-lg text-sm font-medium border border-[#E2E6EA] focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400"
+              />
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="px-4 py-2 rounded-lg text-xs font-bold text-[#4A4E69] hover:bg-[#F0F2F5] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={deleteConfirmText.trim().toLowerCase() !== deleteTarget.vehicleNo.trim().toLowerCase()}
+                onClick={async () => {
+                  await deleteClaim(deleteTarget.id);
+                  const channel = new BroadcastChannel('surveyos_claims_sync');
+                  channel.postMessage('CLAIMS_UPDATED');
+                  channel.close();
+                  toast.success('Claim permanently deleted');
+                  setDeleteTarget(null);
+                }}
+                className="px-4 py-2 rounded-lg text-xs font-bold bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Delete Forever
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -499,7 +618,9 @@ export function TabPlaceholder({ tab }: { tab: string }) {
   return (
     <div className="flex flex-col items-center justify-center h-full min-h-[60vh]">
       <div className="text-center">
-        <div className="text-4xl mb-3 opacity-20" style={{ filter: 'grayscale(1)' }}>🔧</div>
+        <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4 mx-auto bg-[#F0F2F5]">
+          <Zap size={24} className="text-[#8D99AE]" />
+        </div>
         <div className="text-base font-bold capitalize" style={{ color: '#0D1B2A' }}>{tab}</div>
         <div className="text-sm mt-1" style={{ color: '#8D99AE' }}>Coming soon</div>
       </div>

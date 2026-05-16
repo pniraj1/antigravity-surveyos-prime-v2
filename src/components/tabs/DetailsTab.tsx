@@ -54,14 +54,14 @@ function InlineEvidencePanel({ claimId }: { claimId: string }) {
   const isPdf = blobEntry?.mimeType === 'application/pdf';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0f172a', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
+    <div className="flex flex-col h-full rounded-xl overflow-hidden border border-[#E2E6EA] bg-[#FAFBFC]">
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: 'linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%)', flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <FileSearch size={16} color="#93c5fd" />
+      <div className="flex items-center justify-between px-4 py-3 shrink-0 bg-[#0D1B2A]">
+        <div className="flex items-center gap-2">
+          <FileSearch size={16} className="text-[#D4AF37]" />
           <div>
-            <div style={{ color: '#e2e8f0', fontWeight: 600, fontSize: 12 }}>Evidence Viewer</div>
-            {docLabel && <div style={{ color: '#93c5fd', fontSize: 10, marginTop: 1 }}>{docLabel}</div>}
+            <div className="text-xs font-semibold text-white">Evidence Viewer</div>
+            {docLabel && <div className="text-[10px] text-[#D4AF37] mt-0.5">{docLabel}</div>}
           </div>
         </div>
         {blobEntry && (
@@ -69,7 +69,7 @@ function InlineEvidencePanel({ claimId }: { claimId: string }) {
             href={blobEntry.url}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: '#93c5fd', fontSize: 10, textDecoration: 'underline' }}
+            className="text-[10px] text-[#D4AF37] underline hover:text-amber-300"
           >
             Open in new tab
           </a>
@@ -78,35 +78,35 @@ function InlineEvidencePanel({ claimId }: { claimId: string }) {
 
       {/* Context snippet */}
       {field?.contextSnippet && (
-        <div style={{ margin: '10px 12px 0', padding: '7px 10px', background: 'rgba(37,99,235,0.18)', border: '1px solid rgba(37,99,235,0.35)', borderRadius: 7, flexShrink: 0 }}>
-          <div style={{ color: '#93c5fd', fontSize: 9, fontWeight: 600, letterSpacing: '0.05em', marginBottom: 3 }}>EXTRACTED FROM DOCUMENT</div>
-          <div style={{ color: '#e2e8f0', fontSize: 11, lineHeight: 1.5, fontFamily: 'monospace' }}>{field.contextSnippet}</div>
+        <div className="mx-3 mt-3 px-3 py-2 rounded-lg shrink-0 bg-amber-50 border border-amber-200">
+          <div className="text-[9px] font-bold uppercase tracking-widest text-[#D4AF37] mb-1">EXTRACTED FROM DOCUMENT</div>
+          <div className="text-[11px] leading-relaxed font-mono text-[#0D1B2A]">{field.contextSnippet}</div>
         </div>
       )}
 
       {/* Document viewer */}
-      <div style={{ flex: 1, overflow: 'hidden', padding: blobEntry ? 0 : 10 }}>
+      <div className={`flex-1 overflow-hidden ${blobEntry ? '' : 'p-3'}`}>
         {blobEntry ? (
           isPdf ? (
             <iframe
               src={blobEntry.url}
-              style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+              className="w-full h-full border-none block"
               title={docLabel}
             />
           ) : (
-            <div style={{ height: '100%', overflow: 'auto', padding: 10 }}>
+            <div className="h-full overflow-auto p-3">
               <img
                 src={blobEntry.url}
                 alt={`${docLabel} source document`}
-                style={{ width: '100%', display: 'block', borderRadius: 6, boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}
+                className="w-full block rounded-md shadow-lg"
               />
             </div>
           )
         ) : (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center', color: '#475569', padding: 20 }}>
+          <div className="flex items-center justify-center h-full text-center text-[#8D99AE] p-5">
             <div>
-              <FileSearch size={36} style={{ opacity: 0.3, marginBottom: 10 }} />
-              <p style={{ fontSize: 12, margin: 0 }}>
+              <FileSearch size={36} className="opacity-30 mb-3 mx-auto" />
+              <p className="text-xs m-0">
                 {field
                   ? 'Upload the document to view it here.'
                   : 'Scan a document (RC / Policy / DL)\nto see the source here.'}
@@ -117,9 +117,9 @@ function InlineEvidencePanel({ claimId }: { claimId: string }) {
       </div>
 
       {/* Footer */}
-      <div style={{ padding: '6px 12px', borderTop: '1px solid rgba(255,255,255,0.06)', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}>
-        <ChevronRight size={12} color="#475569" />
-        <span style={{ color: '#475569', fontSize: 10 }}>Upload a document above to populate this panel</span>
+      <div className="px-3 py-2 border-t border-[#E2E6EA] shrink-0 flex items-center gap-1.5">
+        <ChevronRight size={12} className="text-[#8D99AE]" />
+        <span className="text-[10px] text-[#8D99AE]">Upload a document above to populate this panel</span>
       </div>
     </div>
   );
@@ -130,9 +130,7 @@ function EvidenceIconBtn({ onClick, title, children }: { onClick: () => void; ti
     <button
       onClick={onClick}
       title={title}
-      style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 5, padding: '4px 6px', cursor: 'pointer', color: '#cbd5e1', display: 'flex', alignItems: 'center', transition: 'background 0.15s' }}
-      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.2)')}
-      onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
+      className="flex items-center px-1.5 py-1 rounded border-none cursor-pointer text-[#8D99AE] bg-[#F0F2F5] transition-colors hover:bg-[#E2E6EA] hover:text-[#0D1B2A]"
     >
       {children}
     </button>
