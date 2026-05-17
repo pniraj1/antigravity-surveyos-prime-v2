@@ -21,6 +21,7 @@ import { ModelSelector, DocModeToggle, ProviderHealthBadge, ProviderToggle } fro
 export function AssessmentTab() {
   const { currentClaim, setDepreciationType } = useClaimStore();
   const [showEvidence, setShowEvidence] = useState(false);
+  const [showSummary, setShowSummary] = useState(true);
   const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview, reScanWithFeedback, hasFile, reScanLatest } = useAIExtraction();
   const { profile } = useProfileStore();
 
@@ -115,6 +116,15 @@ export function AssessmentTab() {
             <DocModeToggle />
             <ModelSelector />
             <ProviderHealthBadge />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowSummary(s => !s)}
+              title={showSummary ? 'Hide financial summary' : 'Show financial summary'}
+              className="h-7 w-7 p-0"
+            >
+              {showSummary ? <PanelRightClose size={15} /> : <PanelRightOpen size={15} />}
+            </Button>
           </div>
         </div>
       </div>
@@ -125,12 +135,14 @@ export function AssessmentTab() {
           <Panel defaultSize={showEvidence ? 60 : 100} minSize={30}>
             <div className="h-full overflow-y-auto p-4">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                <div className="lg:col-span-8 xl:col-span-9">
+                <div className={showSummary ? 'lg:col-span-8 xl:col-span-9' : 'lg:col-span-12'}>
                   <AssessmentGrid />
                 </div>
-                <div className="lg:col-span-4 xl:col-span-3">
-                  <AssessmentSummary />
-                </div>
+                {showSummary && (
+                  <div className="lg:col-span-4 xl:col-span-3">
+                    <AssessmentSummary />
+                  </div>
+                )}
               </div>
               <div className="mt-8 pb-8">
                 <TotalLossForm />
