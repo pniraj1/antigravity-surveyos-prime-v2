@@ -104,6 +104,15 @@ export function AssessmentTab() {
               {showEvidence ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
               {showEvidence ? 'Hide Evidence' : 'Show Evidence'}
             </Button>
+
+            <Button
+              variant={showSummary ? 'secondary' : 'outline'}
+              onClick={() => setShowSummary(s => !s)}
+              className={`gap-2 h-12 ${showSummary ? 'bg-primary/20 text-primary border-primary/30 hover:bg-primary/30' : ''}`}
+            >
+              {showSummary ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
+              {showSummary ? 'Hide Summary' : 'Show Summary'}
+            </Button>
           </div>
 
           {/* AI extraction controls */}
@@ -116,15 +125,6 @@ export function AssessmentTab() {
             <DocModeToggle />
             <ModelSelector />
             <ProviderHealthBadge />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowSummary(s => !s)}
-              title={showSummary ? 'Hide financial summary' : 'Show financial summary'}
-              className="h-7 w-7 p-0"
-            >
-              {showSummary ? <PanelRightClose size={15} /> : <PanelRightOpen size={15} />}
-            </Button>
           </div>
         </div>
       </div>
