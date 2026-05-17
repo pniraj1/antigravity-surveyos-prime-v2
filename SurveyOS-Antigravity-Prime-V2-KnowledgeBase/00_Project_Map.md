@@ -16,5 +16,5 @@ Welcome to the SurveyOS Knowledge Base. This Obsidian vault acts as the central 
 * [[State_Management]] - How `Zustand` drives the UI (e.g. `claim-store.ts`).
 
 ## Storage & Architecture
-* [[IndexedDB_Schema]] - Defines how claims are cached and loaded via offline-first mechanics.
+* [[IndexedDB_Schema]] - Defines how claims are cached and loaded via high-performance cloud sync mechanics.
 * [[Sequential_Numbering]] - How Report Numbers (SPO vs FIN) trigger auto-increment tracking dynamically.

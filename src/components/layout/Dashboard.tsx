@@ -109,7 +109,7 @@ export function DashboardContent() {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] mb-6 bg-amber-500/15 text-amber-500 border border-amber-500/30">
             <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
-            AI-Powered · Offline-First · IRDAI Compliant
+            AI-Powered · Cloud-Native · IRDAI Compliant
           </div>
 
           <h1 className="text-3xl lg:text-5xl font-black tracking-tight mb-3 text-slate-50 tracking-[-0.02em]">
@@ -317,7 +317,7 @@ export function DashboardContent() {
                 </div>
                 <div className="text-base font-bold mb-1" style={{ color: '#0D1B2A' }}>No claims yet</div>
                 <div className="text-sm" style={{ color: '#8D99AE' }}>
-                  Click &ldquo;New Claim&rdquo; to start your first offline survey.
+                  Click &ldquo;New Claim&rdquo; to start your first digital survey.
                 </div>
                 <button
                   onClick={() => setNewClaimDialogOpen(true)}

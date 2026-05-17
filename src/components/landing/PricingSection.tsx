@@ -23,7 +23,7 @@ const FEATURES = [
   'Unlimited survey reports',
   'AI document extraction (RC, DL, Policy)',
   'Auto Google Drive backup',
-  'Offline-first — works without internet',
+  'Cloud-native — persistent local caching',
   'UIIC Excel Bridge export',
   'Smart photo compression engine',
   'LLM conflict reconciliation',

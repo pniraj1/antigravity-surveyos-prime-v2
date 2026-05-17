@@ -39,6 +39,11 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    // Collection Group query for payments — admin can read all payments across users
+    match /{path=**}/payments/{paymentId} {
+      allow read: if isAdmin();
+    }
+
     // User-specific data — each user accesses only their own data
     match /users/{userId} {
       // 1. Profile collection gets special protection to prevent users making themselves admin
@@ -58,9 +63,16 @@ service cloud.firestore {
         allow delete: if isAdmin();
       }
       
-      // 2. All other user data (claims, photos, etc) is fully writable by the user
+      // 2. Payments — users can create and read, only admin can update/delete
+      match /payments/{paymentId} {
+        allow read: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
+        allow create: if isSignedIn() && request.auth.uid == userId;
+        allow update, delete: if isAdmin();
+      }
+
+      // 3. All other user data (claims, photos, etc) is fully writable by the user
       match /{collectionId}/{document=**} {
-        allow read, write: if isAdmin() || (isSignedIn() && request.auth.uid == userId && collectionId != 'profile');
+        allow read, write: if isAdmin() || (isSignedIn() && request.auth.uid == userId && collectionId != 'profile' && collectionId != 'payments');
       }
     }
 

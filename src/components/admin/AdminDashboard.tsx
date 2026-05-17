@@ -21,6 +21,10 @@ import {
 } from '@/lib/email/sendEmail';
 import { useAuthStore } from '@/stores/auth-store';
 import { useProfileStore } from '@/stores/profile-store';
+import { getAllPayments, verifyPayment, rejectPayment } from '@/lib/firebase/payments';
+import { getDaysRemaining } from '@/lib/subscription/status';
+import { generateReferralCode, calculateTrialEndDate } from '@/lib/subscription/status';
+import type { PaymentRecord } from '@/types/payment';
 import {
   Users,
   Search,
@@ -42,6 +46,8 @@ import {
   Cpu,
   RefreshCcw,
   BookOpen,
+  CreditCard,
+  Eye,
 } from 'lucide-react';
 
 interface SurveyorAdminProfile {
@@ -50,11 +56,14 @@ interface SurveyorAdminProfile {
   email?: string;
   mobileNumber?: string;
   licenceNumber?: string;
-  subscriptionStatus: 'active' | 'suspended' | 'expired' | 'pending';
+  subscriptionStatus: 'active' | 'suspended' | 'expired' | 'pending' | 'trial' | 'readonly';
   subscriptionExpiry: string;
   surveyorId: string;
   lastSync?: unknown;
   isAdmin?: boolean;
+  trialStartDate?: string;
+  trialEndDate?: string;
+  lastPaymentDate?: string;
 }
 
 interface NewSignup {
@@ -81,11 +90,18 @@ export function AdminDashboard() {
     user && (profile?.isAdmin === true || (MASTER_ADMIN_UID && user.uid === MASTER_ADMIN_UID))
   );
 
-  const [activeTab, setActiveTab] = useState<'surveyors' | 'signups' | 'dev-notes'>('surveyors');
+  const [activeTab, setActiveTab] = useState<'surveyors' | 'signups' | 'payments' | 'dev-notes'>('surveyors');
   const [surveyors, setSurveyors] = useState<SurveyorAdminProfile[]>([]);
   const [signups, setSignups] = useState<NewSignup[]>([]);
+  const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [signupsLoading, setSignupsLoading] = useState(false);
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
+  const [verifyModal, setVerifyModal] = useState<{ payment: PaymentRecord } | null>(null);
+  const [verifyDuration, setVerifyDuration] = useState('30');
+  const [rejectModal, setRejectModal] = useState<{ payment: PaymentRecord } | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [paymentFilter, setPaymentFilter] = useState<'all' | 'pending' | 'verified' | 'rejected'>('pending');
   const [searchQuery, setSearchQuery] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
@@ -129,6 +145,9 @@ export function AdminDashboard() {
           surveyorId: data.surveyorId || '',
           lastSync: data.lastSync,
           isAdmin: data.isAdmin || false,
+          trialStartDate: data.trialStartDate || '',
+          trialEndDate: data.trialEndDate || '',
+          lastPaymentDate: data.lastPaymentDate || '',
         });
       });
       setSurveyors(Array.from(seen.values()));
@@ -169,10 +188,23 @@ export function AdminDashboard() {
     }
   };
 
+  const fetchPayments = async () => {
+    setPaymentsLoading(true);
+    try {
+      const allPayments = await getAllPayments();
+      setPayments(allPayments);
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+    } finally {
+      setPaymentsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!isAuthorized) return;
     fetchAllProfiles();
     fetchSignups();
+    fetchPayments();
   }, [isAuthorized]);
 
   // ─── Approve New Signup ─────────────────────────────────
@@ -180,9 +212,15 @@ export function AdminDashboard() {
     setApprovingId(signup.uid);
     try {
       const profileRef = doc(db, 'users', signup.uid, 'profile', 'current');
+      const trialStart = new Date().toISOString();
+      const trialEnd = calculateTrialEndDate(trialStart);
+      const refCode = generateReferralCode(signup.name || signup.displayName || 'USER');
       await setDoc(profileRef, {
-        subscriptionStatus: 'active',
-        subscriptionExpiry: defaultExpiry,
+        subscriptionStatus: 'trial',
+        subscriptionExpiry: trialEnd,
+        trialStartDate: trialStart,
+        trialEndDate: trialEnd,
+        referralCode: refCode,
         isAdmin: false,
         email: signup.email,
         displayName: signup.displayName,
@@ -393,11 +431,11 @@ export function AdminDashboard() {
               </>
             )}
             <button
-              onClick={() => { fetchAllProfiles(); fetchSignups(); }}
+              onClick={() => { fetchAllProfiles(); fetchSignups(); fetchPayments(); }}
               className="p-2.5 rounded-xl border border-[#E2E6EA] text-[#0D1B2A] hover:bg-[#F8F9FA] transition-all"
               title="Refresh Data"
             >
-              <RefreshCw size={18} className={loading || signupsLoading ? 'animate-spin' : ''} />
+              <RefreshCw size={18} className={loading || signupsLoading || paymentsLoading ? 'animate-spin' : ''} />
             </button>
           </div>
         </div>
@@ -431,6 +469,22 @@ export function AdminDashboard() {
             {signups.length > 0 && (
               <span className="ml-1 px-1.5 py-0.5 rounded-md bg-yellow-100 text-yellow-800 text-[9px] font-black">
                 {signups.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('payments')}
+            className={`flex items-center gap-2 px-5 py-2.5 text-xs font-black uppercase tracking-wider rounded-t-lg transition-all ${
+              activeTab === 'payments'
+                ? 'bg-white border border-b-white border-[#E2E6EA] text-primary -mb-px'
+                : 'text-[#8D99AE] hover:text-[#0D1B2A]'
+            }`}
+          >
+            <CreditCard size={14} />
+            Payments
+            {payments.filter(p => p.status === 'pending').length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[9px] font-black">
+                {payments.filter(p => p.status === 'pending').length}
               </span>
             )}
           </button>
@@ -594,6 +648,7 @@ export function AdminDashboard() {
                         <th className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-[#8D99AE]">Platform ID</th>
                         <th className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-[#8D99AE]">Licence</th>
                         <th className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-[#8D99AE]">Subscription</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-[#8D99AE]">Days Left</th>
                         <th className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-[#8D99AE]">Expiry Date</th>
                         <th className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-[#8D99AE] text-right">Actions</th>
                       </tr>
@@ -639,20 +694,40 @@ export function AdminDashboard() {
                               className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${
                                 surveyor.subscriptionStatus === 'active'
                                   ? 'bg-[#D1FAE5] text-[#065F46] border-[#A7F3D0]'
+                                  : surveyor.subscriptionStatus === 'trial'
+                                  ? 'bg-blue-50 text-blue-800 border-blue-200'
                                   : surveyor.subscriptionStatus === 'suspended'
                                   ? 'bg-[#FEE2E2] text-[#991B1B] border-[#FECACA]'
                                   : surveyor.subscriptionStatus === 'pending'
                                   ? 'bg-yellow-50 text-yellow-800 border-yellow-200'
+                                  : surveyor.subscriptionStatus === 'readonly'
+                                  ? 'bg-orange-50 text-orange-800 border-orange-200'
                                   : 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]'
                               }`}
                             >
                               {surveyor.subscriptionStatus === 'active'
                                 ? <CheckCircle2 size={10} />
+                                : surveyor.subscriptionStatus === 'trial'
+                                ? <Eye size={10} />
                                 : surveyor.subscriptionStatus === 'pending'
                                 ? <Clock size={10} />
                                 : <XCircle size={10} />}
                               {surveyor.subscriptionStatus}
                             </span>
+                          </td>
+                          <td className="px-6 py-5">
+                            {(() => {
+                              const expiry = surveyor.subscriptionStatus === 'trial' ? surveyor.trialEndDate : surveyor.subscriptionExpiry;
+                              const days = getDaysRemaining(expiry || null);
+                              if (!expiry) return <span className="text-[10px] text-[#C3C9D4]">—</span>;
+                              return (
+                                <span className={`text-xs font-black ${
+                                  days <= 0 ? 'text-red-600' : days <= 5 ? 'text-amber-600' : days <= 10 ? 'text-yellow-600' : 'text-emerald-600'
+                                }`}>
+                                  {days <= 0 ? `Expired ${Math.abs(days)}d ago` : `${days}d`}
+                                </span>
+                              );
+                            })()}
                           </td>
                           <td className="px-6 py-5">
                             <div className="flex items-center gap-2 text-sm font-medium text-[#0D1B2A]">
@@ -703,6 +778,116 @@ export function AdminDashboard() {
               )}
             </>
           )}
+          {/* ── Payments Tab ──────────────────────────────── */}
+          {activeTab === 'payments' && (
+            <>
+              <div className="mb-4 flex items-center gap-2">
+                {(['all', 'pending', 'verified', 'rejected'] as const).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setPaymentFilter(f)}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                      paymentFilter === f
+                        ? 'bg-[#0D1B2A] text-white'
+                        : 'bg-white border border-[#E2E6EA] text-[#8D99AE] hover:text-[#0D1B2A]'
+                    }`}
+                  >
+                    {f} {f !== 'all' && `(${payments.filter(p => p.status === f).length})`}
+                  </button>
+                ))}
+              </div>
+
+              {paymentsLoading ? (
+                <div className="flex flex-col items-center justify-center py-20">
+                  <Loader2 size={40} className="animate-spin text-primary opacity-20 mb-4" />
+                  <p className="text-sm font-bold text-[#8D99AE]">Loading Payments...</p>
+                </div>
+              ) : (
+                <div className="bg-white rounded-2xl border border-[#E2E6EA] shadow-sm overflow-hidden">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-[#FAFBFC] border-b border-[#E2E6EA]">
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-[#8D99AE]">User</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-[#8D99AE]">Amount</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-[#8D99AE]">Transaction ID</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-[#8D99AE]">Date</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-[#8D99AE]">Status</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-[#8D99AE] text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#F0F2F5]">
+                      {payments
+                        .filter(p => paymentFilter === 'all' || p.status === paymentFilter)
+                        .map((payment) => {
+                          const matchedUser = surveyors.find(s => s.id === payment.userUid);
+                          return (
+                            <tr key={`${payment.userUid}-${payment.id}`} className="hover:bg-[#FAFBFC] transition-colors group">
+                              <td className="px-6 py-4">
+                                <div className="text-sm font-bold text-[#0D1B2A]">{matchedUser?.name || payment.userName || 'Unknown'}</div>
+                                <div className="text-xs text-[#8D99AE]">{matchedUser?.email || payment.userEmail || ''}</div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className="text-sm font-black text-[#0D1B2A]">₹{payment.amount}</span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <code className="text-xs font-mono bg-[#F0F2F5] px-2 py-1 rounded">{payment.transactionId}</code>
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="text-sm text-[#0D1B2A]">{new Date(payment.submittedAt).toLocaleDateString('en-IN')}</div>
+                                <div className="text-[10px] text-[#8D99AE]">{payment.paymentDate}</div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${
+                                  payment.status === 'verified'
+                                    ? 'bg-[#D1FAE5] text-[#065F46] border-[#A7F3D0]'
+                                    : payment.status === 'rejected'
+                                    ? 'bg-[#FEE2E2] text-[#991B1B] border-[#FECACA]'
+                                    : 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]'
+                                }`}>
+                                  {payment.status === 'verified' ? <CheckCircle2 size={10} /> : payment.status === 'rejected' ? <XCircle size={10} /> : <Clock size={10} />}
+                                  {payment.status}
+                                  {payment.durationGranted && ` (+${payment.durationGranted}d)`}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                {payment.status === 'pending' && (
+                                  <div className="flex items-center justify-end gap-2">
+                                    <button
+                                      onClick={() => { setVerifyModal({ payment }); setVerifyDuration('30'); }}
+                                      className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-[#D1FAE5] text-[#065F46] hover:bg-[#A7F3D0] transition-all"
+                                    >
+                                      <CheckCircle2 size={10} className="inline mr-1" />
+                                      Verify
+                                    </button>
+                                    <button
+                                      onClick={() => { setRejectModal({ payment }); setRejectReason(''); }}
+                                      className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-[#FEE2E2] text-[#991B1B] hover:bg-[#FECACA] transition-all"
+                                    >
+                                      <XCircle size={10} className="inline mr-1" />
+                                      Reject
+                                    </button>
+                                  </div>
+                                )}
+                                {payment.status === 'rejected' && payment.notes && (
+                                  <span className="text-[10px] text-red-500">{payment.notes}</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                  {payments.filter(p => paymentFilter === 'all' || p.status === paymentFilter).length === 0 && (
+                    <div className="py-16 text-center">
+                      <CreditCard size={32} className="text-[#8D99AE] mx-auto mb-3 opacity-30" />
+                      <p className="text-sm font-bold text-[#8D99AE]">No {paymentFilter !== 'all' ? paymentFilter : ''} payments found</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+
           {/* ── Dev Notes Tab ───────────────────────────────── */}
           {activeTab === 'dev-notes' && (
             <div className="space-y-6 max-w-3xl">
@@ -1004,6 +1189,121 @@ export function AdminDashboard() {
               >
                 {sendingEmail ? <Loader2 size={12} className="animate-spin" /> : <Mail size={12} />}
                 Send Email
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Verify Payment Modal ──────────────────────────── */}
+      {verifyModal && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4" style={{ background: 'rgba(13,27,42,0.85)', backdropFilter: 'blur(4px)' }}>
+          <div className="w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E2E6EA' }}>
+            <div className="px-6 py-5 border-b border-[#F0F2F5] flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center">
+                <CheckCircle2 size={18} className="text-emerald-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-[#0D1B2A]">Verify Payment</h3>
+                <p className="text-[11px] text-[#8D99AE] font-semibold">₹{verifyModal.payment.amount} • {verifyModal.payment.transactionId}</p>
+              </div>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-[#8D99AE] mb-2">Duration to Grant (days)</label>
+                <input
+                  type="number"
+                  value={verifyDuration}
+                  onChange={e => setVerifyDuration(e.target.value)}
+                  min="1"
+                  className="w-full px-4 py-3 rounded-xl text-sm font-bold outline-none"
+                  style={{ background: '#F8F9FA', border: '1px solid #E2E6EA', color: '#0D1B2A' }}
+                />
+                <p className="text-[10px] text-[#8D99AE] mt-1.5 font-semibold">
+                  User&apos;s subscription will be extended by this many days from today (or current expiry if still valid).
+                </p>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-[#F0F2F5] flex gap-3 justify-end">
+              <button
+                onClick={() => setVerifyModal(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-[#8D99AE] hover:bg-[#F0F2F5] transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (!verifyModal || !user) return;
+                  const p = verifyModal.payment;
+                  setVerifyModal(null);
+                  try {
+                    await verifyPayment(p.userUid!, p.id!, user.uid, parseInt(verifyDuration) || 30);
+                    await fetchPayments();
+                    await fetchAllProfiles();
+                  } catch (err) {
+                    console.error('Verify failed:', err);
+                    alert('Payment verification failed. Check console.');
+                  }
+                }}
+                className="px-5 py-2 rounded-xl text-xs font-black bg-emerald-600 text-white hover:bg-emerald-700 transition-all"
+              >
+                <CheckCircle2 size={12} className="inline mr-1.5" />
+                Confirm & Extend
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Reject Payment Modal ─────────────────────────── */}
+      {rejectModal && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4" style={{ background: 'rgba(13,27,42,0.85)', backdropFilter: 'blur(4px)' }}>
+          <div className="w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E2E6EA' }}>
+            <div className="px-6 py-5 border-b border-[#F0F2F5] flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center">
+                <XCircle size={18} className="text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-[#0D1B2A]">Reject Payment</h3>
+                <p className="text-[11px] text-[#8D99AE] font-semibold">₹{rejectModal.payment.amount} • {rejectModal.payment.transactionId}</p>
+              </div>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-[#8D99AE] mb-2">Reason</label>
+                <textarea
+                  rows={3}
+                  placeholder="e.g. Transaction ID not found in records"
+                  value={rejectReason}
+                  onChange={e => setRejectReason(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl text-sm font-medium outline-none resize-none"
+                  style={{ background: '#F8F9FA', border: '1px solid #E2E6EA', color: '#0D1B2A' }}
+                />
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-[#F0F2F5] flex gap-3 justify-end">
+              <button
+                onClick={() => setRejectModal(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-[#8D99AE] hover:bg-[#F0F2F5] transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (!rejectModal) return;
+                  const p = rejectModal.payment;
+                  setRejectModal(null);
+                  try {
+                    await rejectPayment(p.userUid!, p.id!, rejectReason.trim() || 'Payment rejected by admin.');
+                    await fetchPayments();
+                  } catch (err) {
+                    console.error('Reject failed:', err);
+                  }
+                }}
+                className="px-5 py-2 rounded-xl text-xs font-black bg-red-600 text-white hover:bg-red-700 transition-all"
+              >
+                <XCircle size={12} className="inline mr-1.5" />
+                Reject Payment
               </button>
             </div>
           </div>

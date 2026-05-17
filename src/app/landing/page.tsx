@@ -34,10 +34,10 @@ function GlassCard({
   return (
     <div
       id={id}
-      className={`relative rounded-2xl border border-white/10 backdrop-blur-xl shadow-2xl ${className}`}
+      className={`relative rounded-2xl border border-black/5 backdrop-blur-xl shadow-xl ${className}`}
       style={{
-        background: 'rgba(10, 10, 18, 0.72)',
-        boxShadow: '0 8px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08)',
+        background: 'rgba(255, 255, 255, 0.65)',
+        boxShadow: '0 8px 30px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.8)',
         ...style,
       }}
     >
@@ -128,14 +128,14 @@ export default function LandingPage() {
   const tint = CHAPTERS[chapter];
 
   return (
-    <div className="min-h-screen bg-[#07070f] text-white font-sans selection:bg-amber-500/20 overflow-x-hidden">
+    <div className="min-h-screen bg-[#F5F5F3] text-slate-900 font-sans selection:bg-amber-500/20 overflow-x-hidden">
 
       {/* ── STICKY NAV ─────────────────────────────────────────────────────── */}
       <nav
-        className="fixed top-0 left-0 z-50 flex items-center justify-between px-6 py-4 border-b border-white/8"
+        className="fixed top-0 left-0 z-50 flex items-center justify-between px-6 py-4 border-b border-black/5"
         style={{
           width: '30%',
-          background: 'rgba(7,7,15,0.75)',
+          background: 'rgba(245,245,243,0.85)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
         }}
@@ -146,7 +146,7 @@ export default function LandingPage() {
           disabled={signingIn}
           className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-gray-900 bg-amber-400 rounded-full hover:scale-105 active:scale-95 transition-transform disabled:opacity-50"
         >
-          {signingIn ? <Loader2 size={12} className="animate-spin" /> : isAuthenticated ? 'Dashboard' : 'Start Free'}
+          {signingIn ? <Loader2 size={12} className="animate-spin" /> : isAuthenticated ? 'Dashboard' : 'Start 60-Day Free Trial'}
           {!signingIn && <ArrowRight size={12} />}
         </button>
       </nav>
@@ -183,14 +183,14 @@ export default function LandingPage() {
               Motor SurveyOS Prime
             </div>
 
-            <h1 className="text-2xl font-black tracking-tight leading-[1.15] text-white">
+            <h1 className="text-2xl font-black tracking-tight leading-[1.15] text-slate-900">
               Motor surveying,{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-500">
                 powered by AI.
               </span>
             </h1>
 
-            <p className="text-sm text-gray-400 leading-relaxed">
+            <p className="text-sm text-slate-600 leading-relaxed">
               Automatically extracts data from RC, DL, and Policies. Drafts final reports in minutes — not hours.
             </p>
 
@@ -200,12 +200,12 @@ export default function LandingPage() {
                 disabled={signingIn}
                 className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-bold text-gray-900 bg-amber-400 rounded-xl hover:scale-[1.02] active:scale-95 transition-transform shadow-lg shadow-amber-500/20 disabled:opacity-50"
               >
-                {signingIn ? <Loader2 size={16} className="animate-spin" /> : isAuthenticated ? 'Enter Dashboard' : 'Start Free Trial'}
+                {signingIn ? <Loader2 size={16} className="animate-spin" /> : isAuthenticated ? 'Enter Dashboard' : 'Start 60-Day Free Trial'}
                 {!signingIn && <ChevronRight size={16} />}
               </button>
               <button
                 onClick={() => document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' })}
-                className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-bold text-gray-300 rounded-xl border border-white/10 hover:bg-white/5 transition-colors"
+                className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-bold text-slate-700 rounded-xl border border-black/5 hover:bg-black/5 bg-white/40 transition-colors"
               >
                 <Play size={14} className="text-amber-400" />
                 Watch Demo
@@ -224,13 +224,13 @@ export default function LandingPage() {
                 <div className={`text-xl font-black ${m.color}`}>
                   {m.val}<span className="text-xs">{m.unit}</span>
                 </div>
-                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mt-0.5">{m.label}</div>
+                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">{m.label}</div>
               </div>
             ))}
           </GlassCard>
 
           {/* ── 3. CHAPTER CARDS (How it Works) ─────────────────────────── */}
-          <div className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] px-1 relative z-10">
+          <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-1 relative z-10">
             How it works
           </div>
 
@@ -257,11 +257,11 @@ export default function LandingPage() {
                 </span>
               </div>
 
-              <h3 className="text-base font-black text-white leading-snug mb-2 whitespace-pre-line">
+              <h3 className="text-base font-black text-slate-900 leading-snug mb-2 whitespace-pre-line">
                 {ch.heading}
               </h3>
 
-              <p className="text-xs text-gray-400 leading-relaxed mb-3">
+              <p className="text-xs text-slate-600 leading-relaxed mb-3">
                 {ch.body}
               </p>
 
@@ -270,43 +270,46 @@ export default function LandingPage() {
                   style={{ color: `rgb(${ch.glow})` }}>
                   {ch.stat}
                 </span>
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{ch.statLabel}</span>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{ch.statLabel}</span>
               </div>
             </GlassCard>
           ))}
 
           {/* ── 4. FEATURES CARD ─────────────────────────────────────────── */}
-          <div className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] px-1 relative z-10" id="features">
+          <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-1 relative z-10" id="features">
             Features
           </div>
 
           <GlassCard className="p-5 relative z-10">
             <div className="grid grid-cols-2 gap-3">
               {FEATURES.map((f, i) => (
-                <div key={i} className="flex flex-col gap-2 p-3 rounded-xl bg-white/[0.03] border border-white/5 hover:bg-white/[0.06] transition-colors">
+                <div key={i} className="flex flex-col gap-2 p-3 rounded-xl bg-black/[0.02] border border-black/5 hover:bg-black/[0.04] transition-colors">
                   <div className={`w-7 h-7 rounded-lg flex items-center justify-center border ${f.bg} ${f.color}`}>
                     {f.icon}
                   </div>
-                  <div className="text-xs font-bold text-white">{f.title}</div>
-                  <div className="text-[11px] text-gray-500 leading-relaxed">{f.desc}</div>
+                  <div className="text-xs font-bold text-slate-900">{f.title}</div>
+                  <div className="text-[11px] text-slate-500 leading-relaxed">{f.desc}</div>
                 </div>
               ))}
             </div>
           </GlassCard>
 
           {/* ── 5. PRICING CARD ──────────────────────────────────────────── */}
-          <div className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] px-1 relative z-10" id="pricing">
+          <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-1 relative z-10" id="pricing">
             Pricing
           </div>
 
           <GlassCard className="p-5 relative z-10">
             <div className="mb-4">
-              <div className="text-white font-black text-lg">SurveyOS Prime</div>
-              <div className="text-gray-400 text-xs mt-1">Everything included. No hidden fees.</div>
+              <div className="flex items-center gap-2">
+                <div className="text-slate-900 font-black text-lg">SurveyOS Prime</div>
+                <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-amber-700 bg-amber-400/20 border border-amber-400/40 rounded-full">60 Days Free</span>
+              </div>
+              <div className="text-slate-500 text-xs mt-1">Everything included. No credit card required.</div>
             </div>
             <div className="flex items-baseline gap-1 mb-5">
-              <span className="text-3xl font-black text-amber-400">₹999</span>
-              <span className="text-gray-500 text-sm">/month</span>
+              <span className="text-3xl font-black text-amber-500">₹999</span>
+              <span className="text-slate-500 text-sm">/month</span>
             </div>
             {[
               'Unlimited claims & reports',
@@ -316,11 +319,11 @@ export default function LandingPage() {
               'Offline-first mobile support',
               'Priority support',
             ].map((item) => (
-              <div key={item} className="flex items-center gap-2 py-1.5 border-b border-white/5 last:border-0">
+              <div key={item} className="flex items-center gap-2 py-1.5 border-b border-black/5 last:border-0">
                 <div className="w-4 h-4 rounded-full bg-amber-400/15 border border-amber-400/30 flex items-center justify-center flex-shrink-0">
                   <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                 </div>
-                <span className="text-xs text-gray-300">{item}</span>
+                <span className="text-xs text-slate-700">{item}</span>
               </div>
             ))}
             <button
@@ -343,10 +346,10 @@ export default function LandingPage() {
               animate={{ background: `radial-gradient(ellipse 80% 60% at 50% 100%, rgba(${tint.glow},0.25) 0%, transparent 70%)` }}
               transition={{ duration: 1 }}
             />
-            <h2 className="text-lg font-black text-white mb-2 relative z-10">
+            <h2 className="text-lg font-black text-slate-900 mb-2 relative z-10">
               Ready to transform your workflow?
             </h2>
-            <p className="text-xs text-gray-400 mb-5 relative z-10">
+            <p className="text-xs text-slate-600 mb-5 relative z-10">
               Join thousands of surveyors delivering superior assessments in record time.
             </p>
             <button
@@ -360,7 +363,7 @@ export default function LandingPage() {
           </GlassCard>
 
           {/* ── FOOTER ───────────────────────────────────────────────────── */}
-          <div className="text-center text-xs text-gray-600 pt-4 pb-2 relative z-10">
+          <div className="text-center text-xs text-slate-500 pt-4 pb-2 relative z-10">
             <Logo variant="dark" size="sm" className="justify-center mb-3" />
             © {new Date().getFullYear()} SurveyOS Prime. Engineered for Surveyors.
           </div>

@@ -1,14 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { doc, setDoc, Timestamp } from 'firebase/firestore';
+import { doc, setDoc, Timestamp, collectionGroup, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { signOutUser } from '@/lib/firebase/auth';
 import { useAuthStore } from '@/stores/auth-store';
 import { useProfileStore } from '@/stores/profile-store';
 import {
   Shield, User, Phone, Mail, FileText, Loader2,
-  CheckCircle2, Lock, ArrowRight, AlertCircle,
+  CheckCircle2, Lock, ArrowRight, AlertCircle, Gift,
 } from 'lucide-react';
 
 // ─── Input Field ─────────────────────────────────────────────────────────────
@@ -59,8 +59,35 @@ export function AccessRequestForm() {
   const [name, setName]         = useState(user?.displayName ?? '');
   const [irdai, setIrdai]       = useState('');
   const [phone, setPhone]       = useState('');
+  const [referralCode, setReferralCode] = useState('');
+  const [referrerUid, setReferrerUid] = useState<string | null>(null);
+  const [referralValid, setReferralValid] = useState<boolean | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError]       = useState('');
+
+  const validateReferralCode = async (code: string) => {
+    if (!code.trim()) {
+      setReferralValid(null);
+      setReferrerUid(null);
+      return;
+    }
+    try {
+      const q = query(collectionGroup(db, 'profile'), where('referralCode', '==', code.trim().toUpperCase()));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const refDoc = snap.docs[0];
+        const uid = refDoc.ref.path.split('/')[1];
+        setReferrerUid(uid);
+        setReferralValid(true);
+      } else {
+        setReferrerUid(null);
+        setReferralValid(false);
+      }
+    } catch {
+      setReferralValid(null);
+      setReferrerUid(null);
+    }
+  };
 
   const email = user?.email ?? '';
   const dismissReason = useProfileStore.getState().profile.dismissReason;
@@ -75,13 +102,14 @@ export function AccessRequestForm() {
       const profileRef = doc(db, 'users', user.uid, 'profile', 'current');
       const signupRef  = doc(db, 'newSignups', user.uid);
 
-      const payload = {
+      const payload: Record<string, unknown> = {
         name:                   name.trim(),
         irdaiLicence:           irdai.trim().toUpperCase(),
         mobile:                 phone.trim(),
         email,
         accessRequestSubmitted: true,
         updatedAt:              Timestamp.now(),
+        ...(referrerUid ? { referredBy: referrerUid } : {}),
       };
 
       // Write to profile and newSignups simultaneously
@@ -191,6 +219,46 @@ export function AccessRequestForm() {
             icon={<Phone size={10} />}
             hint="We will contact you on this number to verify your identity."
           />
+
+          {/* Referral Code (optional) */}
+          <div className="space-y-1.5">
+            <label className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: '#8D99AE' }}>
+              <Gift size={10} />
+              Referral Code
+              <span className="ml-1 text-[8px] font-semibold normal-case tracking-normal" style={{ color: 'rgba(232,236,240,0.4)' }}>(optional)</span>
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={referralCode}
+                onChange={e => {
+                  const val = e.target.value.toUpperCase();
+                  setReferralCode(val);
+                  if (val.length >= 5) validateReferralCode(val);
+                  else { setReferralValid(null); setReferrerUid(null); }
+                }}
+                placeholder="e.g. SUS-NIRAJ-X2K"
+                className="w-full px-4 py-3 rounded-xl text-sm font-bold outline-none transition-all"
+                style={{
+                  background: 'rgba(255,255,255,0.08)',
+                  border: referralValid === true ? '1px solid rgba(34,197,94,0.6)' : referralValid === false ? '1px solid rgba(220,38,38,0.5)' : '1px solid rgba(255,255,255,0.15)',
+                  color: '#F8F9FA',
+                }}
+              />
+              {referralValid === true && (
+                <CheckCircle2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-green-400" />
+              )}
+            </div>
+            {referralValid === false && (
+              <p className="text-[9px] font-semibold text-red-400">Invalid referral code. Please check and try again.</p>
+            )}
+            {referralValid === true && (
+              <p className="text-[9px] font-semibold text-green-400">Valid! You and the referrer will both benefit.</p>
+            )}
+            {!referralCode && (
+              <p className="text-[9px] font-semibold" style={{ color: 'rgba(232,236,240,0.35)' }}>Got a referral code from a fellow surveyor? Enter it here for mutual benefits.</p>
+            )}
+          </div>
 
           <Field
             label="Email ID"

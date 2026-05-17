@@ -1,12 +1,12 @@
 # SurveyOS Prime V2 — Technical Deep Dive & Architecture
 
-SurveyOS Prime V2 is a mission-critical, AI-powered survey management platform designed for IRDAI-licensed independent motor surveyors in India. It transitions the legacy manual workflow into a high-performance, offline-first digital experience.
+SurveyOS Prime V2 is a mission-critical, AI-powered survey management platform designed for IRDAI-licensed independent motor surveyors in India. It transitions the legacy manual workflow into a high-performance, cloud-native digital experience.
 
 ---
 
 ## 🏗 Architecture Overview
 
-SurveyOS is built as a **Static Web App (SWA)** deployed on Firebase Hosting, leveraging a sophisticated 3-layer persistence model to ensure zero data loss in the field.
+SurveyOS is built as a **Static Web App (SWA)** deployed on Firebase Hosting, leveraging a sophisticated 3-layer persistence model to ensure high availability and peak performance.
 
 ### 1. Persistence Layers
 | Layer | Technology | Purpose |
@@ -18,7 +18,7 @@ SurveyOS is built as a **Static Web App (SWA)** deployed on Firebase Hosting, le
 ### 2. Cloud Sync Strategy (Layer 3)
 The sync engine uses a **"Milestone Push"** approach rather than real-time debouncing to minimize Firestore writes and battery drain.
 - **Push Triggers:** Tab switching, claim switching, or manual save.
-- **Queue System:** If offline, edits are queued in IndexedDB and automatically drained when `navigator.onLine` returns true.
+- **Queue System:** If connectivity is temporarily interrupted, edits are queued in IndexedDB and automatically synchronized when the connection is restored.
 - **Conflict Resolution:** "Latest Update Wins" based on a `updatedAt` ISO timestamp.
 - **Exclusion Logic:** Photos are *never* stored in Firestore (due to size/cost). They stay local or sync to the user's private Google Drive.
 
@@ -28,7 +28,7 @@ graph TD
     Z -->|Auto-save| IDB[IndexedDB L2]
     Z -->|Milestone| CS[Sync Service]
     CS -->|Online| FS[Firestore L3]
-    CS -->|Offline| SQ[Sync Queue]
+    CS -->|No Signal| SQ[Sync Queue]
     SQ -->|Reconnect| FS
 ```
 
@@ -59,7 +59,7 @@ The application is structured around 13 integrated tabs that guide a surveyor fr
 1. **SpotTab:** Real-time data entry at the accident site.
 2. **DetailsTab:** Core vehicle and policy data (Auto-filled via AI).
 3. **DocumentsTab:** OCR processing for RC, DL, and Insurance PDFs.
-4. **PhotosTab:** Local-first photo gallery with compression and categorization.
+4. **PhotosTab:** High-performance photo gallery with intelligent caching and categorization.
 5. **AssessmentTab:** Line-item breakdown of parts, labor, and depreciation.
 6. **BillCheckTab:** Verification of repairer bills against survey estimates.
 7. **ValuationTab:** Market research and Pre-accident Value (PAV) calculation.

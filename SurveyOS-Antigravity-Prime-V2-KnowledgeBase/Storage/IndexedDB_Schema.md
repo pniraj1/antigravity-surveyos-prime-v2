@@ -1,6 +1,6 @@
 # IndexedDB Schema
 
-To achieve zero-cost, offline-first execution, SurveyOS relies on `idb` (IndexedDB Wrapper) rather than a live Firebase Firestore synchronization for all core runtime mechanisms.
+To achieve high-performance, low-latency execution, SurveyOS relies on `idb` (IndexedDB Wrapper) as a sophisticated caching layer for real-time cloud synchronization.
 
 ## `surveyos-db`
 

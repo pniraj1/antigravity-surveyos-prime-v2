@@ -1,15 +1,15 @@
 # Architecture, Workflow, and Status
 
 ## 🏗️ Architecture
-SurveyOS Prime V2 is built as a highly robust, offline-first Progressive Web Application (PWA) focused on speed and data safety.
+SurveyOS Prime V2 is built as a highly robust, cloud-native Progressive Web Application (PWA) focused on speed and data safety.
 
 ### 1. The Core Stack
-*   **Framework**: Next.js (React) operating entirely on the client-side (`use client`). This ensures the app can run without an active internet connection.
+*   **Framework**: Next.js (React) operating entirely on the client-side (`use client`). This ensures the app maintains peak performance and responsiveness.
 *   **State Management**: We use `Zustand`. It is split into three main areas:
     *   `claim-store`: Holds the massive data model of whatever claim you are actively editing.
     *   `ui-store`: Handles what dialogs are open and what tab you are looking at.
     *   `profile-store`: Keeps track of your surveyor details and numbering sequences.
-*   **Storage (The "Offline-First" Engine)**: We bypass standard cloud databases for normal operations. Everything saves instantly to your browser's local **IndexedDB** (`surveyos-db`). This means you are immune to crashes or lost Wi-Fi.
+*   **Storage (The Performance Caching Engine)**: We leverage a sophisticated local-first caching strategy. Everything saves instantly to your browser's local **IndexedDB** (`surveyos-db`) before being synchronized to the cloud. This ensures a zero-latency editing experience and immunity to momentary connectivity drops.
 
 ### 2. The Multi-Engine Reporting System
 *   **Power Print (PDF)**: We generate pixel-perfect standard layouts using a hidden HTML-to-PDF technique.
@@ -30,7 +30,7 @@ SurveyOS Prime V2 is built as a highly robust, offline-first Progressive Web App
 ---
 
 ## 🟢 Current Status
-*The project is completely functional as a localized, offline-first reporting engine.*
+*The project is completely functional as a high-performance, cloud-native reporting engine.*
 
 *   ✅ **Monolith to Modular**: Transitioned from a single massive HTML file to an organized React/Next.js codebase.
 *   ✅ **Spot Survey Reporting**: Complete.

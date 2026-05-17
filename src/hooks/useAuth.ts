@@ -24,11 +24,12 @@
 
 import { useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, setDoc, deleteDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/config';
 import { useAuthStore } from '@/stores/auth-store';
 import { initUserDB, closeUserDB } from '@/lib/storage/indexeddb';
 import { resetAllState } from '@/lib/auth/resetAllState';
+import { isExpired } from '@/lib/subscription/status';
 
 export function useAuth() {
   const setUser = useAuthStore(s => s.setUser);
@@ -80,6 +81,18 @@ export function useAuth() {
           profileStatus = 'pending';
         } else {
           profileStatus = currentSnap.data()?.subscriptionStatus ?? 'pending';
+        }
+
+        // ── Auto-transition expired trial/active → readonly ──────
+        if (profileStatus === 'trial' || profileStatus === 'active') {
+          const data = currentSnap.exists() ? currentSnap.data() : null;
+          const expiryField = profileStatus === 'trial' ? data?.trialEndDate : data?.subscriptionExpiry;
+          if (expiryField && isExpired(expiryField)) {
+            try {
+              await updateDoc(currentRef, { subscriptionStatus: 'readonly' });
+              profileStatus = 'readonly';
+            } catch { /* non-fatal — SubscriptionGuard will catch it client-side */ }
+          }
         }
 
         // ── Write to newSignups if user is still pending AND hasn't submitted form yet ──

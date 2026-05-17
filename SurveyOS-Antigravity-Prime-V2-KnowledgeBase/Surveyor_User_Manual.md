@@ -2,7 +2,7 @@
 *Welcome to SurveyOS Prime V2.*
 
 ## 🌟 What is SurveyOS?
-SurveyOS is a lightning-fast, offline-capable application designed specifically for Insurance Surveyors. It allows you to enter claim data, calculate assessments, generate fee bills, and instantly create pixel-perfect PDF or Excel reports (like UIIC format)—all without needing an active internet connection.
+SurveyOS is a lightning-fast, cloud-native application designed specifically for Insurance Surveyors. It allows you to enter claim data, calculate assessments, generate fee bills, and instantly create pixel-perfect PDF or Excel reports (like UIIC format)—all powered by a real-time cloud synchronization engine.
 
 Think of it as your digital clipboard that never loses your data. 
 
@@ -11,10 +11,10 @@ Think of it as your digital clipboard that never loses your data.
 ## 🚀 Getting Started
 
 ### 1. The [[Dashboard]] (Your Mission Control)
-When you open SurveyOS, you are greeted by the **Dashboard**. This is where all your local claims live. 
+When you open SurveyOS, you are greeted by the **Dashboard**. This is where all your synchronized cloud claims live. 
 *   **Active Claims:** Shows all surveys you are currently working on.
 *   **Archived Claims:** Shows old claims you have marked as 'Completed', getting them out of your way.
-You don't need to manually save claims on your computer. They are stored safely inside the browser's local memory automatically!
+You don't need to manually save claims. They are synchronized to the cloud and cached locally for maximum speed!
 
 ### 2. Setting Up Your Profile
 Before creating reports, make sure your surveyor profile is setup (usually under settings/profile tab). Your **Name**, **SLA Number**, and your **License Details** will be automatically injected into every report. This also powers our automatic [[Sequential_Numbering]], so you never have to guess what Report Number comes next.
@@ -45,6 +45,6 @@ SurveyOS gives you two ways to output your hard work. Detailed logic for how thi
 ---
 
 ## 🔒 Safety and Archiving
-Because SurveyOS uses our robust [[IndexedDB_Schema]], everything is saved the millisecond you type it. If your computer crashes, or you lose Wi-Fi, no problem. Just open the app again, go to the [[Dashboard]], and your active claim will be waiting for you.
+Because SurveyOS uses our robust [[IndexedDB_Schema]] as a performance cache, everything is saved the millisecond you type it. If you momentarily lose connectivity, no problem. The system queues your changes and synchronizes them as soon as the connection is restored.
 
 When a claim is totally finalized, click the **Archive** icon (the small box icon on the far right of the claim row). It will hide the claim from your active list to keep your workspace clean!

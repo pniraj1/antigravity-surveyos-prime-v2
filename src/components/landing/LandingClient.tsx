@@ -50,7 +50,7 @@ function WorkflowSimulation({ activeTab, setActiveTab }: { activeTab: number, se
           <div className="ml-4 text-[10px] font-semibold text-gray-400 font-mono tracking-widest uppercase">SurveyOS Sandbox</div>
         </div>
         <div className="flex px-4 gap-4 pt-2">
-          {["AI Document Extraction", "Minutes vs Hours", "Secure & Offline"].map((tab, idx) => (
+          {["AI Document Extraction", "Minutes vs Hours", "Cloud-Native & Secure"].map((tab, idx) => (
             <button 
               key={idx}
               onClick={() => setActiveTab(idx)}
@@ -201,7 +201,7 @@ function WorkflowSimulation({ activeTab, setActiveTab }: { activeTab: number, se
             </motion.div>
           )}
 
-          {/* TAB 2: Secure & Offline */}
+          {/* TAB 2: Cloud-Native & Secure */}
           {activeTab === 2 && (
             <motion.div 
               key="tab2"
@@ -246,7 +246,7 @@ function WorkflowSimulation({ activeTab, setActiveTab }: { activeTab: number, se
               <div className="flex items-center justify-center gap-3 bg-red-50 border border-red-100 text-red-800 px-5 py-3 rounded-xl mt-4 max-w-md w-full">
                 <Database size={20} className="opacity-50"/>
                 <div className="h-full w-[1px] bg-red-200"/>
-                <span className="text-sm font-semibold">A secured environment.<br/>Your files stay in your Drive.</span>
+                <span className="text-sm font-semibold">A cloud-native environment.<br/>Your files stay in your Drive.</span>
               </div>
             </motion.div>
           )}
@@ -454,7 +454,7 @@ export default function LandingClient() {
                 { icon: <Camera size={24}/>, color: "text-blue-600", bg: "bg-blue-100", title: "Smart Photo Engine", desc: "Upload heavy damage photos directly. SurveyOS compresses them instantly and maps them to a beautiful PDF layout." },
                 { icon: <Cloud size={24}/>, color: "text-emerald-600", bg: "bg-emerald-100", title: "Auto Drive Sync", desc: "As you work, files are silently pushed to your Google Drive in the background. Never manually organize folders again." },
                 { icon: <Cpu size={24}/>, color: "text-purple-600", bg: "bg-purple-100", title: "AI Cross-Checking", desc: "Spots conflicts between driving licences and policies instantly, highlighting exactly where details don't match." },
-                { icon: <Shield size={24}/>, color: "text-rose-600", bg: "bg-rose-100", title: "Offline First", desc: "Working in a garage with no signal? SurveyOS caches everything securely and syncs exactly when you reconnect." },
+                { icon: <Shield size={24}/>, color: "text-rose-600", bg: "bg-rose-100", title: "Cloud Native", desc: "Working in a garage with no signal? SurveyOS caches everything securely and syncs to the cloud exactly when you reconnect." },
                 { icon: <Zap size={24}/>, color: "text-gray-700", bg: "bg-gray-100", title: "Lightning Fast", desc: "Built on ultra-modern web technology. Zero load times, pure native-like performance on any device." }
               ].map((feature, idx) => (
                 <FadeIn key={idx} delay={idx * 0.1}>

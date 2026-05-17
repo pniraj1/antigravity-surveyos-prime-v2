@@ -1,6 +1,6 @@
 # Dashboard Module
 
-The Dashboard acts as the central hub for local, offline-first claims in SurveyOS Prime V2.
+The Dashboard acts as the central hub for synchronized cloud claims in SurveyOS Prime V2.
 
 ## Components
 - `page.tsx`: Handles UI rendering of the 6-column grid and top navigation actions.

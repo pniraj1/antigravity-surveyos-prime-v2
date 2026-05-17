@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     'insurance claim survey software',
     'RC book data extraction',
     'motor insurance report generator',
-    'offline survey software India',
+    'real-time cloud survey software',
     'IRDAI surveyor app',
   ],
   authors: [{ name: 'SurveyOS' }],
@@ -31,9 +31,9 @@ export const metadata: Metadata = {
     canonical: 'https://surveyos-v2-antigravity.web.app/',
   },
   openGraph: {
-    title: 'SurveyOS Prime - AI Motor Insurance Survey Software for IRDAI Surveyors',
+    title: 'SurveyOS Prime - Cloud-Native AI Motor Insurance Survey Software',
     description:
-      'Generate motor insurance survey reports in under 10 minutes with AI. Auto-extract data from RC books, driving licences & policies. Works offline, syncs to Google Drive. 60-day free trial!',
+      'Generate motor insurance survey reports in under 10 minutes with AI. Real-time cloud synchronization, zero-latency caching, and instant Google Drive export. 60-day free trial!',
     url: 'https://surveyos-v2-antigravity.web.app/',
     siteName: 'SurveyOS Prime',
     type: 'website',
@@ -43,13 +43,13 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'SurveyOS Prime — AI Motor Insurance Survey Software',
+        alt: 'SurveyOS Prime — Cloud-Native AI Motor Insurance Survey Software',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'SurveyOS Prime - AI Motor Insurance Survey Software',
+    title: 'SurveyOS Prime - Cloud-Native AI Motor Insurance Survey Software',
     description:
       'Generate motor insurance survey reports in under 10 minutes with AI. 60-day free trial for IRDAI-licensed surveyors.',
     images: ['/og-image.png'],
@@ -104,7 +104,7 @@ export default function RootLayout({
               applicationCategory: 'BusinessApplication',
               operatingSystem: 'Web, Android, iOS',
               description:
-                'AI-powered motor insurance survey software for independent IRDAI-licensed surveyors in India. Auto-extracts data from RC books, driving licences, and insurance policies. Generates comprehensive survey reports in under 10 minutes. Works offline and syncs to Google Drive.',
+                'AI-powered cloud-native motor insurance survey software for independent IRDAI-licensed surveyors in India. Real-time data extraction from RC books, driving licences, and insurance policies. High-performance cloud synchronization and instant reporting.',
               offers: {
                 '@type': 'Offer',
                 price: '999',
