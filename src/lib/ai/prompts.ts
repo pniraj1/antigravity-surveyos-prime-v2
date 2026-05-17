@@ -103,6 +103,7 @@ CRITICAL RULES:
    - "cgst_amount": CGST amount for this line (printed on invoice).
    - "sgst_amount": SGST amount for this line (printed on invoice).
    - "total_amount": the FINAL AMOUNT including GST (last column). This is the GROSS amount.
+   - "gst_percent": TOTAL GST rate for this line — add ALL components: CGST rate + SGST rate + IGST rate. Example: CGST 9% + SGST 9% = 18, not 9. Never write just one component's rate.
    If only one amount column exists, put it in "total_amount" and set "taxable_amount" to total_amount / (1 + gst_percent/100).
 5. For "category" on spare_parts: classify as "metal", "plastic", or "glass" based on the part name:
    - glass: windshield, window, mirror glass
@@ -161,6 +162,7 @@ CRITICAL RULES:
    - "cgst_amount": CGST for this line (if printed).
    - "sgst_amount": SGST for this line (if printed).
    - "total_amount": FINAL amount INCLUDING GST (last column, gross).
+   - "gst_percent": TOTAL GST rate for this line — add ALL components: CGST rate + SGST rate + IGST rate. Example: CGST 9% + SGST 9% = 18, not 9. Never write just one component's rate.
    If only one amount column exists, put it in "total_amount" and set "taxable_amount" to total_amount / (1 + gst_percent/100).
 5. "part_number": extract for spare_parts ALWAYS. Also extract for labour/paint if the bill prints a code/SAC-ref in a part-number column (some workshops do this).
 6. "hsn_sac": 4-8 digit HSN/SAC code per line.
