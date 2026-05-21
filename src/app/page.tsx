@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useUIStore } from '@/stores/ui-store';
+import { useProfileStore } from '@/stores/profile-store';
 import { useClaimsLoader } from '@/hooks/useClaimsLoader';
 import LandingPage from './landing/page';
 import Dashboard from '@/components/layout/Dashboard';
@@ -10,12 +11,24 @@ import { DriveGateScreen } from '@/components/auth/DriveGateScreen';
 
 /**
  * SurveyOS Root Router
- * 
- * Decides whether to show the Marketing Landing Page or the 
- * Application Dashboard based on the user's authentication state.
+ *
+ * Routing priority (evaluated top-to-bottom):
+ * 1. Auth still loading  → neutral splash (never flash DriveGateScreen)
+ * 2. Not authenticated   → LandingPage
+ * 3. Subscription not approved (pending/suspended/etc.) → Dashboard (let it handle the paywall)
+ * 4. Drive not connected → DriveGateScreen
+ * 5. All clear           → Dashboard
+ *
+ * DriveGateScreen is ONLY shown when ALL of the following are true:
+ *   - loading === false  (Firebase auth resolved)
+ *   - isAuthenticated === true
+ *   - subscriptionStatus is an approved tier (active | trial | readonly)
+ *   - isDriveConnected === false  (trusted only after auth confirmed)
  */
 export default function Home() {
   const { isAuthenticated, loading } = useAuthStore();
+  const { isDriveConnected } = useUIStore();
+  const subscriptionStatus = useProfileStore((s) => s.profile.subscriptionStatus);
 
   // Inject noindex for authenticated sessions — prevents app dashboard from being indexed.
   // Googlebot never has Firebase auth, so it always sees the landing page with index,follow.
@@ -36,13 +49,11 @@ export default function Home() {
       document.querySelector('meta[name="robots"][data-dynamic]')?.remove();
     };
   }, [isAuthenticated, loading]);
-  const { isDriveConnected } = useUIStore();
-  
+
   // Hydrate claims list and sync across tabs
   useClaimsLoader();
 
-  // If we are still checking firebase auth state, we show nothing (or a splash)
-  // to avoid flickering the landing page before the dashboard.
+  // ── 1. Auth loading: show neutral splash — never flash DriveGateScreen ──
   if (loading) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-white">
@@ -56,16 +67,25 @@ export default function Home() {
     );
   }
 
-  // Guest users see the marketing splash
+  // ── 2. Unauthenticated: always show landing, never DriveGateScreen ──
   if (!isAuthenticated) {
     return <LandingPage />;
   }
 
-  // Drive must be linked before accessing the dashboard
+  // ── 3. Subscription gate: only show DriveGateScreen for approved tiers ──
+  // pending / suspended users go straight to Dashboard which handles paywall UI.
+  const APPROVED_TIERS = new Set(['active', 'trial', 'readonly']);
+  const isApproved = APPROVED_TIERS.has(subscriptionStatus);
+
+  if (!isApproved) {
+    return <Dashboard />;
+  }
+
+  // ── 4. Drive not connected: only trust isDriveConnected AFTER auth confirmed ──
   if (!isDriveConnected) {
     return <DriveGateScreen />;
   }
 
-  // Authenticated + Drive linked — enter the main app
+  // ── 5. Authenticated + approved subscription + Drive linked ──
   return <Dashboard />;
 }
