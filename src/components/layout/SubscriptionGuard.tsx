@@ -110,7 +110,7 @@ export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((s) => s.user);
   const pathname = usePathname();
 
-  if (SANDBOX_MODE || pathname === '/' || pathname?.startsWith('/landing')) return <>{children}</>;
+  if (SANDBOX_MODE || pathname?.startsWith('/landing')) return <>{children}</>;
 
   const MASTER_ADMIN_UID = process.env.NEXT_PUBLIC_MASTER_ADMIN_UID;
   const isAdminUser = profile.isAdmin || (user && MASTER_ADMIN_UID && user.uid === MASTER_ADMIN_UID);
