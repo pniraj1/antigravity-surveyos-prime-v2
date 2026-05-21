@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation';
 import { signInWithGoogle } from '@/lib/firebase/auth';
 import { useAuthStore } from '@/stores/auth-store';
 import { useProfileStore } from '@/stores/profile-store';
-import { Loader2 } from 'lucide-react';
+
 import Logo from '@/components/ui/Logo';
 import CinematicVideo from '@/components/landing/CinematicVideo';
 
@@ -99,7 +99,6 @@ const FEATURES = [
 export default function LandingPage() {
   const { isAuthenticated, loading: authLoading } = useAuthStore();
   const { profile } = useProfileStore();
-  const [signingIn, setSigningIn] = useState(false);
   const [chapter, setChapter] = useState(0);
   const router = useRouter();
   const isPending = profile?.subscriptionStatus === 'pending';
@@ -144,13 +143,10 @@ export default function LandingPage() {
     if (isAuthenticated && !authLoading && !isPending) router.push('/');
   }, [isAuthenticated, authLoading, isPending, router]);
 
-  // Existing users: Sign In via Google OAuth
-  const handleSignIn = async () => {
+  // Existing users: Sign In via Google OAuth (full-page redirect)
+  const handleSignIn = () => {
     if (isAuthenticated) { router.push('/'); return; }
-    setSigningIn(true);
-    try { await signInWithGoogle(); }
-    catch (e) { console.error('Sign in failed', e); }
-    finally { setSigningIn(false); }
+    signInWithGoogle();
   };
 
   // New users / CTAs: route to dedicated signup page
@@ -195,11 +191,10 @@ export default function LandingPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={handleSignIn}
-              disabled={signingIn}
               aria-label="Sign In"
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-700 rounded-full border border-black/15 hover:bg-slate-900 hover:text-white transition-all disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-700 rounded-full border border-black/15 hover:bg-slate-900 hover:text-white active:scale-95 transition-all"
             >
-              {signingIn ? <Loader2 size={12} className="animate-spin" aria-hidden="true" /> : 'Sign In'}
+              Sign In
             </button>
             <button
               onClick={handleAction}
@@ -263,13 +258,12 @@ export default function LandingPage() {
           >
             <button
               onClick={handleAction}
-              disabled={signingIn}
               aria-label={isAuthenticated ? 'Enter Dashboard' : 'Start 30-Day Free Trial'}
-              className="w-full sm:w-auto relative inline-flex items-center justify-center gap-2 px-8 py-4 text-sm font-bold text-white bg-amber-500 rounded-xl hover:bg-amber-600 hover:scale-[1.03] active:scale-95 transition-all shadow-xl shadow-amber-500/20 disabled:opacity-50 overflow-hidden group"
+              className="w-full sm:w-auto relative inline-flex items-center justify-center gap-2 px-8 py-4 text-sm font-bold text-white bg-amber-500 rounded-xl hover:bg-amber-600 hover:scale-[1.03] active:scale-95 transition-all shadow-xl shadow-amber-500/20 overflow-hidden group"
             >
               <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
-              {signingIn ? <Loader2 size={16} className="animate-spin z-10 relative" aria-hidden="true" /> : <span className="z-10 relative">{isAuthenticated ? 'Enter Dashboard' : 'Start 30-Day Free Trial'}</span>}
-              {!signingIn && <ArrowRight size={16} className="z-10 relative" aria-hidden="true" />}
+              <span className="z-10 relative">{isAuthenticated ? 'Enter Dashboard' : 'Start 30-Day Free Trial'}</span>
+              <ArrowRight size={16} className="z-10 relative" aria-hidden="true" />
             </button>
             
             <button
@@ -444,12 +438,10 @@ export default function LandingPage() {
           ))}
           <button
             onClick={handleAction}
-            disabled={signingIn}
             aria-label="Get Started Now"
-            className="w-full mt-5 inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-bold text-gray-900 bg-amber-400 rounded-xl hover:scale-[1.02] active:scale-95 transition-transform disabled:opacity-50"
+            className="w-full mt-5 inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-bold text-gray-900 bg-amber-400 rounded-xl hover:scale-[1.02] active:scale-95 transition-transform"
           >
-            {signingIn ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : 'Get Started Now'}
-            {!signingIn && <ArrowRight size={16} aria-hidden="true" />}
+            Get Started Now <ArrowRight size={16} aria-hidden="true" />
           </button>
         </GlassCard>
 
@@ -471,12 +463,10 @@ export default function LandingPage() {
           </p>
           <button
             onClick={handleAction}
-            disabled={signingIn}
             aria-label="Open Motor SurveyOS"
-            className="inline-flex items-center gap-2 px-6 py-3 text-sm font-bold text-gray-900 bg-amber-400 rounded-full hover:scale-105 active:scale-95 transition-transform shadow-lg disabled:opacity-50 relative z-10"
+            className="inline-flex items-center gap-2 px-6 py-3 text-sm font-bold text-gray-900 bg-amber-400 rounded-full hover:scale-105 active:scale-95 transition-transform shadow-lg relative z-10"
           >
-            {signingIn ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : 'Open Motor SurveyOS'}
-            {!signingIn && <ArrowRight size={16} aria-hidden="true" />}
+            Open Motor SurveyOS <ArrowRight size={16} aria-hidden="true" />
           </button>
         </GlassCard>
 

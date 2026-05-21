@@ -23,7 +23,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { useEffect } from 'react';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { onAuthStateChanged, signOut, getRedirectResult } from 'firebase/auth';
 import { doc, getDoc, setDoc, deleteDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/config';
 import { useAuthStore } from '@/stores/auth-store';
@@ -35,6 +35,18 @@ export function useAuth() {
   const setUser = useAuthStore(s => s.setUser);
 
   useEffect(() => {
+    // Process Google redirect result (fires once after user returns from Google).
+    // Success case is handled by onAuthStateChanged below; this catches errors
+    // like denied consent or mismatched redirect URIs.
+    getRedirectResult(auth).catch((error: unknown) => {
+      if (error && typeof error === 'object' && 'code' in error) {
+        const code = (error as { code: string }).code;
+        if (code !== 'auth/null-user') {
+          console.error('Google redirect sign-in error:', code);
+        }
+      }
+    });
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         // ── INTENTIONAL LOGOUT GUARD ───────────────────────────
