@@ -8,6 +8,7 @@ import { Toaster } from 'sonner';
 import { useEffect } from 'react';
 import { useUIStore } from '@/stores/ui-store';
 import { useClaimStore } from '@/stores/claim-store';
+import { useAuthStore } from '@/stores/auth-store';
 import { getClaim } from '@/lib/storage/indexeddb';
 import { logger } from '@/lib/utils/logger';
 
@@ -21,6 +22,7 @@ export function AuthSyncWrapper({ children }: { children: React.ReactNode }) {
   useCloudSync();
   useAutoSave();
 
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const currentClaimId = useUIStore((state) => state.currentClaimId);
   const currentClaim = useClaimStore((state) => state.currentClaim);
   const loadClaim = useClaimStore((state) => state.loadClaim);
@@ -47,7 +49,7 @@ export function AuthSyncWrapper({ children }: { children: React.ReactNode }) {
   return (
     <>
       <Toaster position="top-right" richColors />
-      <SaveStatusBar />
+      {isAuthenticated && <SaveStatusBar />}
       {children}
     </>
   );
