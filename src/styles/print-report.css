@@ -1,4 +1,4 @@
-/* Print Styles for SurveyOS Prime V2 */
+/* Print Styles for Motor SurveyOS V2 */
 
 @media print {
   body {
@@ -110,3 +110,4 @@
 .bg-green {
   background-color: #006838 !important;
 }
+

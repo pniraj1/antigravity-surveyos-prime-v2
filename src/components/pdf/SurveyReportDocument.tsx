@@ -225,7 +225,7 @@ export function SurveyReportDocument({ claim }: Props) {
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
-          <Text style={styles.companyName}>SURVEYOS PRIME SOLUTIONS</Text>
+          <Text style={styles.companyName}>Motor SurveyOS SOLUTIONS</Text>
           <Text style={styles.reportTitle}>FINAL MOTOR SURVEY REPORT</Text>
         </View>
 
@@ -317,3 +317,4 @@ export function SurveyReportDocument({ claim }: Props) {
     </Document>
   );
 }
+

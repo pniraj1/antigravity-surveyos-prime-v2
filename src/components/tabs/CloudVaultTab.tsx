@@ -213,9 +213,10 @@ export function CloudVaultTab() {
       {/* ── Footer ──────────────────────────────────────── */}
       <div className="px-8 py-4 border-t bg-white border-[#E2E6EA] text-center">
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#8D99AE]">
-          SurveyOS Prime • Multi-Device Cloud Vault Protection • Powered by Google Cloud
+          Motor SurveyOS • Multi-Device Cloud Vault Protection • Powered by Google Cloud
         </p>
       </div>
     </div>
   );
 }
+

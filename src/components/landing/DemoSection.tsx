@@ -409,7 +409,7 @@ export default function DemoSection({ onCta }: DemoSectionProps) {
               className="bg-[#060F1A] border border-white/10 rounded-2xl overflow-hidden"
               style={{ boxShadow: '0 30px 70px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04)' }}
             >
-              <AppWindowHeader title={`SurveyOS Prime · ${STEPS[activeStep].label}`} />
+              <AppWindowHeader title={`Motor SurveyOS · ${STEPS[activeStep].label}`} />
 
               <div style={{ minHeight: 360 }}>
                 <AnimatePresence mode="wait">
@@ -495,3 +495,4 @@ export default function DemoSection({ onCta }: DemoSectionProps) {
     </section>
   );
 }
+

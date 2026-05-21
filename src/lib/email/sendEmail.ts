@@ -34,10 +34,10 @@ export function buildApprovalEmail(name: string) {
   const subject = '✅ Your SurveyOS Access has been Approved!';
   const body = 
     `Hi ${name},\n\n` +
-    `Great news! Your SurveyOS Prime surveyor account has been approved.\n` +
+    `Great news! Your Motor SurveyOS surveyor account has been approved.\n` +
     `You now have full access to the platform.\n\n` +
     `Log in here: https://surveyos-v2-antigravity.web.app\n\n` +
-    `— SurveyOS Prime Team\nsurveyosprime@gmail.com`;
+    `— Motor SurveyOS Team\nsurveyosprime@gmail.com`;
 
   return { subject, body };
 }
@@ -49,12 +49,13 @@ export function buildDismissalEmail(name: string, reason: string) {
     `Your access request has been reviewed. We need some additional information before we can activate your account:\n\n` +
     `"${reason}"\n\n` +
     `Please log back in and resubmit your registration form with the corrected details.\n\n` +
-    `— SurveyOS Prime Team\nsurveyosprime@gmail.com`;
+    `— Motor SurveyOS Team\nsurveyosprime@gmail.com`;
 
   return { subject, body };
 }
 
 export function buildCustomEmail(name: string, subject: string, message: string) {
-  const body = `Hi ${name},\n\n${message}\n\n— SurveyOS Prime Team\nsurveyosprime@gmail.com`;
+  const body = `Hi ${name},\n\n${message}\n\n— Motor SurveyOS Team\nsurveyosprime@gmail.com`;
   return { subject, body };
 }
+

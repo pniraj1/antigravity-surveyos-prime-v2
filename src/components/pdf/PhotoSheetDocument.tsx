@@ -289,7 +289,7 @@ export function PhotoSheetDocument({ claim, surveyorName = '', options = {} }: P
 
             {/* ── Footer ── */}
             <View style={[S.footer, { left: footerLeft, right: footerRight }]} fixed>
-              <Text>SurveyOS Prime</Text>
+              <Text>Motor SurveyOS</Text>
             </View>
           </Page>
         ))
@@ -297,3 +297,4 @@ export function PhotoSheetDocument({ claim, surveyorName = '', options = {} }: P
     </Document>
   );
 }
+

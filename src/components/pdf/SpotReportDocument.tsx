@@ -310,7 +310,7 @@ export function SpotReportDocument({ claim }: Props) {
         </View>
 
         <Text style={styles.footer}>
-          SurveyOS Prime V2 | Professional Field Report | Digitally Generated
+          Motor SurveyOS V2 | Professional Field Report | Digitally Generated
         </Text>
       </Page>
 
@@ -336,3 +336,4 @@ export function SpotReportDocument({ claim }: Props) {
     </Document>
   );
 }
+

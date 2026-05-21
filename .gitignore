@@ -73,3 +73,6 @@ ruvector.db
 
 # functions build artifacts
 functions/node_modules/
+
+# claude-flow plugin data
+.claude-flow/

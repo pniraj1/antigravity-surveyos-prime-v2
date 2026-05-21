@@ -83,7 +83,7 @@ export default function Logo({
       <LogoMark size={mark} />
       {showWordmark && (
         <span className={`font-black tracking-tight leading-none ${text} ${textColor}`}>
-          SurveyOS<span className="text-amber-500">.</span>
+          Motor SurveyOS<span className="text-amber-500">.</span>
         </span>
       )}
     </div>

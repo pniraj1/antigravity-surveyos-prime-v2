@@ -4,12 +4,16 @@ import { useProfileStore } from '@/stores/profile-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { useUIStore } from '@/stores/ui-store';
 import { linkGoogleDrive } from '@/lib/drive';
-import { useState, useRef } from 'react';
+import { getUserPayments } from '@/lib/firebase/payments';
+import { calculateSubscriptionState, getDaysRemaining } from '@/lib/subscription/status';
+import { useState, useRef, useEffect } from 'react';
+import type { PaymentRecord } from '@/types/payment';
 import {
-  User, Shield, Phone, Mail, MapPin, CreditCard, Building2,
-  Landmark, Sparkles, Camera, Stamp, Key, RefreshCw, CheckCircle2,
+  User, Shield, CreditCard,
+  Landmark, Sparkles, Camera, RefreshCw, CheckCircle2,
   AlertCircle, Upload, Trash2, Cpu, ExternalLink, Cloud, CloudOff, Link,
-  LayoutDashboard, ShieldCheck, Plus, Eye, EyeOff, Lock
+  ShieldCheck, Plus, Eye, EyeOff, Lock,
+  Calendar, Copy, Gift, Clock, BadgeCheck, XCircle, Hourglass,
 } from 'lucide-react';
 
 // ─── Section Wrapper ─────────────────────────────────────────────────────────
@@ -221,6 +225,193 @@ function ImageUploader({
           </div>
         </button>
       )}
+    </div>
+  );
+}
+
+// ─── Subscription Section ────────────────────────────────────────────────────
+const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string; icon: React.ReactNode }> = {
+  trial:    { label: 'Free Trial',    bg: 'rgba(59,130,246,0.1)',  color: '#3b82f6', icon: <Clock size={11} /> },
+  active:   { label: 'Active',        bg: 'rgba(34,197,94,0.1)',   color: '#22c55e', icon: <BadgeCheck size={11} /> },
+  pending:  { label: 'Pending',       bg: 'rgba(212,175,55,0.1)',  color: '#D4AF37', icon: <Hourglass size={11} /> },
+  readonly: { label: 'Expired',       bg: 'rgba(239,68,68,0.1)',   color: '#ef4444', icon: <XCircle size={11} /> },
+  suspended:{ label: 'Suspended',     bg: 'rgba(107,114,128,0.1)', color: '#6b7280', icon: <XCircle size={11} /> },
+};
+
+function SubscriptionSection({ uid, profile }: { uid: string; profile: import('@/types').SurveyorProfile }) {
+  const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
+
+  const state = calculateSubscriptionState(profile);
+  const cfg = STATUS_CONFIG[state] ?? STATUS_CONFIG.pending;
+
+  const expiryDate = state === 'trial' ? profile.trialEndDate : profile.subscriptionExpiry;
+  const daysLeft = getDaysRemaining(expiryDate);
+
+  useEffect(() => {
+    if (!uid) { setLoading(false); return; }
+    getUserPayments(uid)
+      .then(setPayments)
+      .catch(() => setPayments([]))
+      .finally(() => setLoading(false));
+  }, [uid]);
+
+  const handleCopyReferral = () => {
+    if (!profile.referralCode) return;
+    navigator.clipboard.writeText(profile.referralCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const formatDate = (iso: string | null) =>
+    iso ? new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+
+  return (
+    <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E2E6EA' }}>
+      {/* Header */}
+      <div className="px-6 py-4 flex items-center gap-2" style={{ borderBottom: '1px solid #F0F2F5', background: '#FAFAFA' }}>
+        <span style={{ color: '#D4AF37' }}><CreditCard size={14} /></span>
+        <span className="text-sm font-black" style={{ color: '#0D1B2A' }}>Subscription & Billing</span>
+        {/* Status badge */}
+        <span
+          className="ml-auto flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide"
+          style={{ background: cfg.bg, color: cfg.color }}
+        >
+          {cfg.icon} {cfg.label}
+        </span>
+      </div>
+
+      <div className="p-5 space-y-5">
+        {/* Expiry row */}
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+          {/* Plan period */}
+          <div className="rounded-xl p-3" style={{ background: '#F8F9FA', border: '1px solid #E2E6EA' }}>
+            <div className="text-[9px] font-black uppercase tracking-[0.18em] mb-1" style={{ color: '#8D99AE' }}>
+              {state === 'trial' ? 'Trial Ends' : 'Subscription Expires'}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Calendar size={12} style={{ color: '#D4AF37' }} />
+              <span className="text-sm font-black" style={{ color: '#0D1B2A' }}>{formatDate(expiryDate)}</span>
+            </div>
+          </div>
+
+          {/* Days remaining */}
+          {(state === 'trial' || state === 'active') && (
+            <div
+              className="rounded-xl p-3"
+              style={{
+                background: daysLeft <= 5 ? 'rgba(239,68,68,0.06)' : daysLeft <= 15 ? 'rgba(234,179,8,0.06)' : 'rgba(34,197,94,0.06)',
+                border: `1px solid ${daysLeft <= 5 ? 'rgba(239,68,68,0.2)' : daysLeft <= 15 ? 'rgba(234,179,8,0.2)' : 'rgba(34,197,94,0.2)'}`,
+              }}
+            >
+              <div className="text-[9px] font-black uppercase tracking-[0.18em] mb-1" style={{ color: '#8D99AE' }}>Days Remaining</div>
+              <div className="text-sm font-black" style={{ color: daysLeft <= 5 ? '#ef4444' : daysLeft <= 15 ? '#ca8a04' : '#22c55e' }}>
+                {daysLeft > 0 ? `${daysLeft} days` : 'Expired'}
+              </div>
+            </div>
+          )}
+
+          {/* Last payment */}
+          {profile.lastPaymentDate && (
+            <div className="rounded-xl p-3" style={{ background: '#F8F9FA', border: '1px solid #E2E6EA' }}>
+              <div className="text-[9px] font-black uppercase tracking-[0.18em] mb-1" style={{ color: '#8D99AE' }}>Last Payment</div>
+              <div className="text-sm font-black" style={{ color: '#0D1B2A' }}>{formatDate(profile.lastPaymentDate)}</div>
+            </div>
+          )}
+        </div>
+
+        {/* Trial start info */}
+        {profile.trialStartDate && (
+          <div className="flex items-center gap-2 text-xs" style={{ color: '#8D99AE' }}>
+            <Clock size={11} />
+            <span>Trial started on <strong style={{ color: '#4A4E69' }}>{formatDate(profile.trialStartDate)}</strong></span>
+          </div>
+        )}
+
+        {/* Referral code */}
+        {profile.referralCode && (
+          <div className="rounded-xl p-4" style={{ background: 'rgba(212,175,55,0.05)', border: '1px solid rgba(212,175,55,0.2)' }}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1.5">
+                <Gift size={13} style={{ color: '#D4AF37' }} />
+                <span className="text-[10px] font-black uppercase tracking-wide" style={{ color: '#D4AF37' }}>Your Referral Code</span>
+              </div>
+              {profile.referralCount > 0 && (
+                <span className="text-[10px] font-black" style={{ color: '#8D99AE' }}>
+                  {profile.referralCount} referral{profile.referralCount !== 1 ? 's' : ''} · +{profile.referralBonusDays} bonus days earned
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <code
+                className="flex-1 px-3 py-2 rounded-lg text-sm font-black tracking-widest"
+                style={{ background: '#FFFFFF', border: '1px solid rgba(212,175,55,0.3)', color: '#0D1B2A', letterSpacing: '0.1em' }}
+              >
+                {profile.referralCode}
+              </code>
+              <button
+                onClick={handleCopyReferral}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-black transition-all"
+                style={{ background: copied ? 'rgba(34,197,94,0.1)' : 'rgba(212,175,55,0.12)', color: copied ? '#22c55e' : '#D4AF37' }}
+              >
+                {copied ? <CheckCircle2 size={12} /> : <Copy size={12} />}
+                {copied ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+            <p className="mt-2 text-[9px] font-bold" style={{ color: '#8D99AE' }}>
+              Share this code with colleagues. When they make their first payment, you earn +30 bonus days.
+            </p>
+          </div>
+        )}
+
+        {/* Payment history */}
+        <div>
+          <div className="text-[10px] font-black uppercase tracking-[0.18em] mb-3" style={{ color: '#8D99AE' }}>Payment History</div>
+          {loading ? (
+            <div className="flex items-center gap-2 text-xs" style={{ color: '#8D99AE' }}>
+              <RefreshCw size={11} className="animate-spin" /> Loading…
+            </div>
+          ) : payments.length === 0 ? (
+            <div className="text-xs font-bold" style={{ color: '#C3C9D4' }}>No payments on record.</div>
+          ) : (
+            <div className="space-y-2">
+              {payments.map((p, idx) => {
+                const statusMap = {
+                  verified: { icon: <CheckCircle2 size={11} />, color: '#22c55e', label: 'Verified' },
+                  pending:  { icon: <Hourglass size={11} />,    color: '#D4AF37', label: 'Pending' },
+                  rejected: { icon: <XCircle size={11} />,      color: '#ef4444', label: 'Rejected' },
+                };
+                const s = statusMap[p.status] ?? statusMap.pending;
+                return (
+                  <div
+                    key={p.id ?? idx}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl"
+                    style={{ background: '#F8F9FA', border: '1px solid #E2E6EA' }}
+                  >
+                    <span style={{ color: s.color, flexShrink: 0 }}>{s.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-black truncate" style={{ color: '#0D1B2A' }}>
+                        ₹{p.amount.toLocaleString('en-IN')}
+                        {p.durationGranted ? <span className="ml-2 text-[10px] font-bold" style={{ color: '#22c55e' }}>+{p.durationGranted} days</span> : null}
+                      </div>
+                      <div className="text-[10px] font-bold truncate" style={{ color: '#8D99AE' }}>
+                        Txn: {p.transactionId || '—'} · {formatDate(p.submittedAt)}
+                      </div>
+                    </div>
+                    <span
+                      className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase flex-shrink-0"
+                      style={{ background: `${s.color}18`, color: s.color }}
+                    >
+                      {s.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -613,6 +804,9 @@ export function ProfileTab() {
             </button>
           </div>
         </div>
+
+        {/* ── Subscription & Billing ────────────────────── */}
+        <SubscriptionSection uid={user?.uid ?? ''} profile={profile} />
 
         {/* ── Save ──────────────────────────────────────── */}
         <div className="flex justify-end pb-8">

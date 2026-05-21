@@ -7,6 +7,7 @@ import { Lock, CreditCard, Mail, Eye } from 'lucide-react';
 import { AccessRequestForm, AccessRequestConfirmation } from './AccessRequestForm';
 import { calculateSubscriptionState, getDaysRemaining, isInWarningPeriod } from '@/lib/subscription/status';
 import { TrialBadge } from '@/components/subscription/TrialBadge';
+import { PaymentSubmissionForm } from '@/components/subscription/PaymentSubmissionForm';
 
 const SANDBOX_MODE = process.env.NEXT_PUBLIC_SANDBOX_MODE === 'true';
 
@@ -20,62 +21,53 @@ function ExpiryWarningBanner({ daysLeft, label }: { daysLeft: number; label: str
 
 function ReadonlyOverlay() {
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#0D1B2A] text-white p-6 text-center">
-      <div className="max-w-md space-y-8 animate-in fade-in zoom-in duration-500">
-        <div className="mx-auto w-20 h-20 bg-amber-500/20 rounded-full flex items-center justify-center">
-          <Eye className="text-amber-500" size={40} />
-        </div>
+    <div className="fixed inset-0 z-[9999] overflow-y-auto bg-[#0D1B2A] text-white">
+      <div className="min-h-full flex flex-col items-center justify-start py-12 px-6">
+        <div className="w-full max-w-lg space-y-8 animate-in fade-in zoom-in duration-500">
 
-        <div className="space-y-4">
-          <h1 className="text-3xl font-black tracking-tight">Subscription Expired</h1>
-          <p className="text-slate-400 font-medium">
-            Your access period has ended. You can still view your existing claims in read-only mode,
-            but creating new claims and AI tools are disabled until payment is made.
-          </p>
-        </div>
-
-        <div className="p-6 bg-slate-800/50 rounded-2xl border border-slate-700/50 space-y-4">
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-400">Account Status:</span>
-            <span className="font-bold text-amber-400 uppercase tracking-wider">Read-Only</span>
+          {/* Header */}
+          <div className="text-center space-y-4">
+            <div className="mx-auto w-20 h-20 bg-amber-500/20 rounded-full flex items-center justify-center">
+              <Eye className="text-amber-500" size={40} />
+            </div>
+            <h1 className="text-3xl font-black tracking-tight">Subscription Expired</h1>
+            <p className="text-slate-400 font-medium">
+              Your access period has ended. Submit your payment below to restore full access.
+              Existing claims remain visible in read-only mode.
+            </p>
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-400">Action Required:</span>
-            <span className="font-bold text-white">Complete Payment</span>
+
+          {/* Status cards */}
+          <div className="p-5 bg-slate-800/50 rounded-2xl border border-slate-700/50 space-y-3">
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-400">Account Status</span>
+              <span className="font-bold text-amber-400 uppercase tracking-wider">Read-Only</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-400">UPI Payment ID</span>
+              <span className="font-mono font-bold text-white">surveyosprime@upi</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-400">Support</span>
+              <a href="mailto:surveyosprime@gmail.com" className="font-bold text-[#D4AF37] hover:underline">
+                surveyosprime@gmail.com
+              </a>
+            </div>
           </div>
-        </div>
 
-        <div className="p-4 bg-emerald-900/30 rounded-xl border border-emerald-700/40 space-y-2">
-          <p className="text-xs text-emerald-300 font-bold uppercase tracking-wider">Payment Details</p>
-          <p className="text-sm text-slate-300">
-            UPI: <span className="font-mono font-bold text-white">surveyosprime@upi</span>
-          </p>
-          <p className="text-xs text-slate-400">
-            After payment, enter your Transaction ID below or email us at surveyosprime@gmail.com
-          </p>
-        </div>
+          {/* Payment submission form */}
+          <PaymentSubmissionForm />
 
-        <div className="grid gap-4">
-          <a
-            href="mailto:surveyosprime@gmail.com?subject=Payment%20for%20SurveyOS%20Prime"
-            className="flex items-center justify-center gap-2 w-full py-4 bg-[#D4AF37] text-[#0D1B2A] font-black rounded-xl hover:scale-105 transition-transform"
-          >
-            <CreditCard size={18} />
-            Contact Admin for Payment
-          </a>
-          <button
-            onClick={() => window.location.reload()}
-            className="text-sm font-bold text-slate-400 hover:text-white transition-colors"
-          >
-            I have paid — Check again
-          </button>
-        </div>
-
-        <div className="pt-8 border-t border-slate-800">
-          <div className="flex items-center justify-center gap-2 text-xs text-slate-500">
-            <Mail size={12} />
-            Contact admin: surveyosprime@gmail.com
+          {/* Footer */}
+          <div className="text-center">
+            <button
+              onClick={() => window.location.reload()}
+              className="text-sm font-bold text-slate-400 hover:text-white transition-colors"
+            >
+              Already submitted? Click to refresh status
+            </button>
           </div>
+
         </div>
       </div>
     </div>

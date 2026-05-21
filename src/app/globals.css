@@ -3,7 +3,7 @@
 @import "shadcn/tailwind.css";
 
 /* ═══════════════════════════════════════════════════════════
-   SurveyOS Prime V2 — "Executive Platinum" Design System
+   Motor SurveyOS V2 — "Executive Platinum" Design System
    Palette: Deep Navy + Platinum White + Racing Gold
    ═══════════════════════════════════════════════════════════ */
 
@@ -260,4 +260,36 @@
 ::selection {
   background: rgba(212, 175, 55, 0.25);
   color: #0D1B2A;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PREMIUM LANDING PAGE UTILITIES
+   ═══════════════════════════════════════════════════════════ */
+
+.bg-mesh-gradient {
+  background-color: #F8F9FA;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(212, 175, 55, 0.12) 0px, transparent 60%),
+    radial-gradient(at 100% 0%, rgba(30, 58, 95, 0.08) 0px, transparent 60%),
+    radial-gradient(at 100% 100%, rgba(74, 78, 105, 0.06) 0px, transparent 60%);
+}
+
+.bg-tech-grid {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(13, 27, 42, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(13, 27, 42, 0.02) 1px, transparent 1px);
+}
+
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.transform-3d-dashboard {
+  transform: rotateX(8deg) rotateY(-12deg) rotateZ(2deg) scale(0.95);
+  transition: transform 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.transform-3d-dashboard:hover {
+  transform: rotateX(2deg) rotateY(-4deg) rotateZ(0deg) scale(1) translateZ(30px);
 }

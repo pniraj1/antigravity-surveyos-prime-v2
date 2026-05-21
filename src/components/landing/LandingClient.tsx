@@ -178,7 +178,7 @@ function WorkflowSimulation({ activeTab, setActiveTab }: { activeTab: number, se
                     </motion.div>
                   )}
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">SurveyOS Prime</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Motor SurveyOS</h3>
                 <p className="text-gray-500 text-sm text-center mb-6 max-w-[220px]">AI verification & Instant beautifully formatted PDFs.</p>
                 
                 <div className="w-full max-w-[200px] h-3 bg-gray-200 rounded-full overflow-hidden mb-3">
@@ -375,7 +375,7 @@ export default function LandingClient() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
             </span>
-            INTRODUCING SURVEYOS PRIME
+            INTRODUCING Motor SurveyOS
           </motion.div>
 
           <FadeIn delay={0.1} className="max-w-5xl mx-auto">
@@ -387,7 +387,7 @@ export default function LandingClient() {
 
           <FadeIn delay={0.2} className="max-w-2xl mx-auto mb-10">
             <p className="text-lg md:text-xl text-gray-500 font-medium leading-relaxed">
-              Why spend hours verifying physical documents manually? SurveyOS Prime automatically extracts data from RC, DL, and Policies, and drafts final reports in minutes.
+              Why spend hours verifying physical documents manually? Motor SurveyOS automatically extracts data from RC, DL, and Policies, and drafts final reports in minutes.
             </p>
           </FadeIn>
 
@@ -488,7 +488,7 @@ export default function LandingClient() {
               disabled={signingIn}
               className="inline-flex items-center justify-center gap-2 px-10 py-5 text-lg font-bold text-gray-900 bg-amber-500 rounded-full hover:scale-105 transition-transform shadow-[0_0_50px_rgba(245,158,11,0.3)] disabled:opacity-50"
             >
-              {signingIn ? <Loader2 size={24} className="animate-spin" /> : "Open SurveyOS Prime"}
+              {signingIn ? <Loader2 size={24} className="animate-spin" /> : "Open Motor SurveyOS"}
               {!signingIn && <ArrowRight size={20} />}
             </button>
           </FadeIn>
@@ -506,10 +506,11 @@ export default function LandingClient() {
             <Link href="/contact" className="hover:text-amber-400 transition-colors">Contact</Link>
           </div>
           <p className="text-center text-sm text-gray-500">
-            © {new Date().getFullYear()} SurveyOS Prime. Engineered for Surveyors.
+            © {new Date().getFullYear()} Motor SurveyOS. Engineered for Surveyors.
           </p>
         </div>
       </footer>
     </div>
   );
 }
+

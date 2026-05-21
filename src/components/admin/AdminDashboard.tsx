@@ -1067,7 +1067,7 @@ export function AdminDashboard() {
       {/* ── Footer ──────────────────────────────────────── */}
       <div className="px-8 py-4 border-t bg-white border-[#E2E6EA] text-center">
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#8D99AE]">
-          SurveyOS Prime • Digital Profile Sync Registry • Administrative Access Only
+          Motor SurveyOS • Digital Profile Sync Registry • Administrative Access Only
         </p>
       </div>
 
@@ -1312,3 +1312,4 @@ export function AdminDashboard() {
     </div>
   );
 }
+
