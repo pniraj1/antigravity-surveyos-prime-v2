@@ -177,12 +177,28 @@ export interface SurveyorProfile {
   feeSequence?: number;
   /** Current year for report numbering (auto-resets usually) */
   reportYear?: number;
-  /** 'active', 'expired', or 'suspended' */
-  subscriptionStatus: 'active' | 'expired' | 'suspended' | 'pending';
+  /** Current subscription lifecycle state */
+  subscriptionStatus: 'active' | 'expired' | 'suspended' | 'pending' | 'trial' | 'readonly';
   /** ISO date string for subscription expiration, null for pending/unset accounts */
   subscriptionExpiry: string | null;
   /** Whether this user can manage other subscriptions */
   isAdmin: boolean;
+  // ─── Trial & Subscription Lifecycle ────────────────────
+  /** ISO date — set when admin approves signup (trial clock starts) */
+  trialStartDate: string | null;
+  /** ISO date — trialStartDate + 60 days */
+  trialEndDate: string | null;
+  /** ISO date — most recent confirmed payment */
+  lastPaymentDate: string | null;
+  // ─── Referral System ──────────────────────────────────
+  /** Auto-generated referral code (e.g. "SUS-PNIRAJ") */
+  referralCode: string;
+  /** UID of the user who referred this surveyor */
+  referredBy: string | null;
+  /** Total number of successful referrals */
+  referralCount: number;
+  /** Total bonus days earned from referrals */
+  referralBonusDays: number;
   // ─── Signature & Stamp ────────────────────────────────
   signatureDataUrl: string | null;
   stampDataUrl: string | null;
