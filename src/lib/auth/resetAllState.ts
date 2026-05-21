@@ -39,6 +39,14 @@ import { useProfileStore } from '@/stores/profile-store';
  *   3. setUser(null)         — clear Firebase auth from Zustand
  */
 export function resetAllState(): void {
+  // ── 0. Intentional logout flag ───────────────────────────
+  // Prevents Firebase from silently re-authenticating via a
+  // persistent Google browser session after explicit logout.
+  // Checked in useAuth.ts → onAuthStateChanged.
+  try {
+    localStorage.setItem('surveyos_intentional_logout', 'true');
+  } catch { /* localStorage unavailable in some test environments */ }
+
   // ── 1. Drive localStorage keys ───────────────────────────
   // The OAuth access token and the root Drive folder ID are
   // device-level cache entries — must be cleared so Surveyor B

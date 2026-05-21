@@ -186,7 +186,7 @@ export interface SurveyorProfile {
   // ─── Trial & Subscription Lifecycle ────────────────────
   /** ISO date — set when admin approves signup (trial clock starts) */
   trialStartDate: string | null;
-  /** ISO date — trialStartDate + 60 days */
+  /** ISO date — trialStartDate + 30 days */
   trialEndDate: string | null;
   /** ISO date — most recent confirmed payment */
   lastPaymentDate: string | null;

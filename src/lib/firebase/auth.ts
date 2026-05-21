@@ -10,6 +10,9 @@ const googleProvider = new GoogleAuthProvider();
 
 export async function signInWithGoogle() {
   try {
+    // Clear any intentional logout flag so the auth guard in
+    // onAuthStateChanged knows this is a deliberate sign-in.
+    try { localStorage.removeItem('surveyos_intentional_logout'); } catch { /* ignore */ }
     const result = await signInWithPopup(auth, googleProvider);
     return result.user;
   } catch (error: any) {

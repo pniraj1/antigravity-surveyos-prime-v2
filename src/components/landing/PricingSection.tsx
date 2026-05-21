@@ -83,7 +83,7 @@ export default function PricingSection({ onCta }: PricingSectionProps) {
           </FadeUp>
           <FadeUp delay={0.14}>
             <p className="text-gray-500 text-lg max-w-xl mx-auto">
-              Full access for 60 days, no credit card required. After your trial, one
+              Full access for 30 days, no credit card required. After your trial, one
               straightforward plan covers everything.
             </p>
           </FadeUp>
@@ -103,14 +103,14 @@ export default function PricingSection({ onCta }: PricingSectionProps) {
                   <div className="text-xs font-bold text-gray-400 uppercase tracking-widest">
                     Get started
                   </div>
-                  <div className="text-lg font-black text-gray-900">60-Day Free Trial</div>
+                  <div className="text-lg font-black text-gray-900">30-Day Free Trial</div>
                 </div>
               </div>
 
               <div className="mb-6">
                 <div className="text-5xl font-black text-gray-900 leading-none">
                   \u20B90
-                  <span className="text-lg text-gray-400 font-medium ml-1">/ 60 days</span>
+                  <span className="text-lg text-gray-400 font-medium ml-1">/ 30 days</span>
                 </div>
                 <p className="text-sm text-gray-400 mt-2">No credit card · No commitment</p>
               </div>

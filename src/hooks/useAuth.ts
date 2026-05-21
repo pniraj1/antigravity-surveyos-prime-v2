@@ -23,7 +23,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { useEffect } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, deleteDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/config';
 import { useAuthStore } from '@/stores/auth-store';
@@ -37,6 +37,19 @@ export function useAuth() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
+        // ── INTENTIONAL LOGOUT GUARD ───────────────────────────
+        // If the user explicitly logged out, block Firebase from
+        // silently re-authenticating via a persistent Google browser
+        // session. Clear the flag and force sign-out again.
+        try {
+          const intentionalLogout = localStorage.getItem('surveyos_intentional_logout') === 'true';
+          if (intentionalLogout) {
+            localStorage.removeItem('surveyos_intentional_logout');
+            await signOut(auth);
+            return; // do NOT proceed with login
+          }
+        } catch { /* localStorage unavailable in some test environments */ }
+
         // ── LOGIN ──────────────────────────────────────────────
         // Open the surveyor's personal IndexedDB BEFORE updating
         // Zustand. This ensures no component reads claims before

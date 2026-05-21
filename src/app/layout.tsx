@@ -10,9 +10,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'AI Motor Insurance Survey Software | SurveyOS Prime',
+  title: 'AI Motor Insurance Survey Software | Motor SurveyOS',
   description:
-    'AI-powered motor insurance survey software for IRDAI-licensed surveyors. Auto-extracts RC, licence & policy data, generates reports in 10 mins. 60-day free trial!',
+    'AI-powered motor insurance survey software for IRDAI-licensed surveyors. Auto-extracts RC, licence & policy data, generates reports in 10 mins. 30-day free trial!',
   keywords: [
     'AI motor insurance survey software',
     'IRDAI licensed surveyor software',
@@ -31,11 +31,11 @@ export const metadata: Metadata = {
     canonical: 'https://surveyos-v2-antigravity.web.app/',
   },
   openGraph: {
-    title: 'SurveyOS Prime - Cloud-Native AI Motor Insurance Survey Software',
+    title: 'Motor SurveyOS - Cloud-Native AI Motor Insurance Survey Software',
     description:
-      'Generate motor insurance survey reports in under 10 minutes with AI. Real-time cloud synchronization, zero-latency caching, and instant Google Drive export. 60-day free trial!',
+      'Generate motor insurance survey reports in under 10 minutes with AI. Real-time cloud synchronization, zero-latency caching, and instant Google Drive export. 30-day free trial!',
     url: 'https://surveyos-v2-antigravity.web.app/',
-    siteName: 'SurveyOS Prime',
+    siteName: 'Motor SurveyOS',
     type: 'website',
     locale: 'en_IN',
     images: [
@@ -43,15 +43,15 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'SurveyOS Prime — Cloud-Native AI Motor Insurance Survey Software',
+        alt: 'Motor SurveyOS — Cloud-Native AI Motor Insurance Survey Software',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'SurveyOS Prime - Cloud-Native AI Motor Insurance Survey Software',
+    title: 'Motor SurveyOS - Cloud-Native AI Motor Insurance Survey Software',
     description:
-      'Generate motor insurance survey reports in under 10 minutes with AI. 60-day free trial for IRDAI-licensed surveyors.',
+      'Generate motor insurance survey reports in under 10 minutes with AI. 30-day free trial for IRDAI-licensed surveyors.',
     images: ['/og-image.png'],
   },
   robots: {
@@ -100,7 +100,7 @@ export default function RootLayout({
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'SoftwareApplication',
-              name: 'SurveyOS Prime',
+              name: 'Motor SurveyOS',
               applicationCategory: 'BusinessApplication',
               operatingSystem: 'Web, Android, iOS',
               description:
@@ -110,7 +110,7 @@ export default function RootLayout({
                 price: '999',
                 priceCurrency: 'INR',
                 priceValidUntil: '2027-12-31',
-                description: '60-day free trial then ₹999/month',
+                description: '30-day free trial then ₹999/month',
               },
               aggregateRating: {
                 '@type': 'AggregateRating',
@@ -144,3 +144,4 @@ export default function RootLayout({
     </html>
   );
 }
+
