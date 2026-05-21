@@ -1,149 +1,74 @@
-# Project Tasks & State
+# Active Tasks
 
-> **AI INSTRUCTION**: This file is our External Chat History and Task List. Update this file instead of letting the chat history grow infinitely.
-> If the chat history gets long and begins to exceed token limits, the AI must summarize current status here, and prompt the user to "clear chat context and start a new session."
-
----
-
-## ✅ Completed (2026-05-12 — Navigation Bug Fix)
-
-- [x] **Dashboard navigation race condition fixed** — Clicking "Dashboard" from inside a claim now reliably returns to the Dashboard view.
-  - Root cause: `useRouteSync` Effect 1 (URL→Store) was firing on stale `?claim=XXX` URL after `closeClaim()` cleared the store, before Effect 2 (Store→URL) could push the clean URL.
-  - Fix 1: Added stale-URL guard in `useRouteSync.ts` Effect 1.
-  - Fix 2: Batched `closeClaim()` + `setActiveTab()` synchronously in `sidebar.tsx`.
-- [x] **State_Management.md updated** — Documented `claim-store` action table, `useRouteSync` two-effect architecture, and the race condition fix.
-- [x] **Session log created** — [[Sessions/2026-05-12]]
-- [x] **Deployed** → `firebase deploy --only hosting` → https://motorsurveyos.web.app
+> Last updated: 2026-05-21 by Claude
+> Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
 
 ---
 
-## ✅ Completed (2026-05-12 — DL Expiry Reporting Fix)
+## In Progress
 
-- [x] **Removed auto-EXPIRED injection from reports** — `SpotPrintReport.tsx`, `standard-report-builder.ts`: DL validity and Fitness Certificate cells now display dates plainly without auto-appending `⚠ EXPIRED`.
-- [x] **Added UI warning banner to `DriverForm.tsx`** — When NT or Transport validity date is past today, a red/amber alert banner appears inside the Driver Details card, visible only to the surveyor in the app.
-  - Both expired date inputs get a `border-red-500` highlight.
-  - Banner clearly states: *"This is a notice for the surveyor only. The expiry remark will **not** appear in the official report unless you change the **Verification Status** above."*
-- [x] **Design principle established**: Report renderers must be data-driven. Expiry state is a UI concern. The surveyor's `verificationStatus` field on the driver object is the authoritative signal for what appears in the official report.
-- [x] **Build clean** — TypeScript passed, no errors.
-- [x] **Deployed** → `firebase deploy --only hosting` → https://motorsurveyos.web.app
+- [ ] **IndexedDB memory optimization** — 40 MB photo storage bloat
+  - **Plan:** Client-side compression + schema splitting + soft archiving (50 claim limit)
+  - **Status:** Planning complete, no code changes yet
+  - **Next step:** Implement compression in `src/stores/claim-store.ts`
+  - **Key files:** `claim-store.ts`, `src/lib/storage/indexeddb.ts`, `src/types/claim.ts`, `PhotosTab.tsx`
 
 ---
 
-## ✅ Completed (2026-05-12 — GVW / RLW & Seating Capacity Regression Fix)
+## Pending — High Priority
 
-- [x] **Root cause identified**: The `SpotPrintReport.tsx` row was rendering `registeredLoadWeight / grossWeight / seatingCapacity` — `grossWeight` is a numeric/null field defaulting to `null`, so it always displayed `—`. This was the regression.
-- [x] **Domain clarification**: RLW (Registered Load Weight) and GVW (Gross Vehicle Weight) are **the same concept** — there is only one field: `registeredLoadWeight`. The `grossWeight` (number) field in SpotTab's load section is a separate numeric-only field for the E. Load Details section and must not be confused with RLW.
-- [x] **SpotPrintReport.tsx fixed** — Vehicle table now shows a clean `GVW / RLW` label mapped to `registeredLoadWeight`, and `Seating Capacity` as a paired cell in the same row.
-- [x] **standard-report-builder.ts fixed** — Added `GVW / RLW` (→ `registeredLoadWeight`) to the vehicle table. Was previously showing only `Seating Capacity` on a full-width row, missing GVW entirely.
-- [x] **VehicleForm.tsx label updated** — Field now labelled `GVW / RLW (Gross Vehicle Weight)` for surveyor clarity.
-- [x] **Build clean** — TypeScript passed, no errors.
-- [x] **Deployed** → `firebase deploy --only hosting` → https://motorsurveyos.web.app
-
----
-
-
-- [ ] **Rotate Firebase API key** — old key was hardcoded in source, committed to git, now removed from code but key still valid in Firebase
-  1. Firebase Console → Project Settings → General → Web API Key → Regenerate
-  2. Update `.env.local` and `.env.production` with new key
+- [ ] Rotate Firebase API key (leaked in git history — see [[Security_Audit]])
+  1. Firebase Console → Project Settings → Regenerate Web API Key
+  2. Update `.env.local` and `.env.production`
   3. `npm run build && firebase deploy --only hosting`
-- [ ] **Commit today's changes** — large batch of uncommitted work from 2026-04-26 session (see [[Sessions/2026-04-26]])
+- [ ] Move Google Drive OAuth token from localStorage to secure storage
+- [ ] Add CSP headers to `firebase.json`
+- [ ] Sanitize claim text before injecting into AI prompts (H-3)
 
----
+## Pending — Medium Priority
 
-## Current Objective
-✅ Valuation / Break-in Inspection report type shipped and deployed (2026-04-26). Next: end-to-end test of valuation flow + security backlog.
+- [ ] Firebase App Check integration
+- [ ] GDPR data deletion endpoint
+- [ ] Unit test coverage to 80% (currently 3 test files)
+- [ ] Client-side rate limiting for AI extraction (free-tier: 10 RPM gemini-2.5-flash)
+- [ ] Session timeout for authentication (currently no expiry)
+- [ ] Role-based access beyond active/pending/dismissed
+- [ ] Fix profile path — sync.ts writes `profile/main`, AdminDashboard reads `profile/current` (M-4)
+- [ ] Firestore field-level validation + doc size limits (M-3)
 
-## 🔐 Security Backlog
-> Full details: [[Security_Audit_2026-04-13]]
+## Pending — Low Priority / Open Questions
 
-### ✅ Fixed & Deployed (2026-04-13)
-- [x] C-1: XSS — DOMPurify added to `dangerouslySetInnerHTML` in ReportTab.tsx
-- [x] C-2: Hardcoded Firebase API key removed from config.ts → .env files
-- [x] C-3: Firestore `ai_config/routing` locked to admin-only
-
-### 🟠 High Priority (This Week)
-- [x] H-1: ~~Strip `geminiApiKeys[]` / `groqApiKeys[]` from Firestore profile sync~~ — **Won't fix**: keys are free-tier with quota limits, risk is negligible. Encrypt at rest if this changes.
-- [x] H-2: Master UID already reads from `process.env.NEXT_PUBLIC_MASTER_ADMIN_UID` — not hardcoded (verified 2026-04-26)
-- [x] H-4: Only 3 `[AI Extraction]` diagnostic logs remain in `processor.ts` + 1 inside `logger.ts` itself — not leaking UIDs (verified 2026-04-26)
-
-### 🟡 Medium Priority (Next Sprint)
-- [ ] M-4: Fix profile path — sync.ts writes `profile/main`, AdminDashboard reads `profile/current`
-- [ ] L-2: Add CSP headers to firebase.json
-- [ ] M-3: Firestore field-level validation + doc size limits
-- [ ] H-3: Sanitize claim text before injecting into AI prompts
-
----
-
-## ✅ Completed (2026-04-26 — Session 2)
-
-- [x] **Valuation / Break-in Inspection report** — new `SurveyType: 'valuation'` with full tab set, condition form, HTML builder, PDF preview, deployed
-- [x] `ValuationDetails` interface + `updateValuationDetails()` store action
-- [x] `ValuationTab.tsx` — panel damage rows, mechanical condition, conclusion + recommendation
-- [x] `valuation-report-builder.ts` — letter-format HTML print builder (matches sample)
-- [x] `ValuationReportDocument.tsx` — React-PDF preview
-- [x] Sidebar tab restrictions per survey type (valuation hides assessment/fees/reinspection/review)
-- [x] NewClaimDialog: Valuation button with break-in hint
-- [x] Deployed: `npm run build && firebase deploy --only hosting` → https://surveyos-v2-antigravity.web.app
-
-## ✅ Completed (2026-04-26 — Session 1)
-- [x] **Sandbox feature removed** — `/sandbox/mapper` was live in production, deleted all 5 source files, fixed leftover refs in layout.tsx and processor.ts
-- [x] **Gemini model list cleaned** — static list trimmed to 3 stable models only (2.5 Pro, 2.5 Flash, 2.5 Flash-Lite); live fetch filter strips TTS/image/live/robotics/experimental models
-- [x] **Text/Vision mode toggle** — `DocModeToggle` (Auto/Text/Vision) wired through profile store → useAIExtraction → extractDocument; persists across sessions
-- [x] **AI controls on Assessment tab** — ProviderToggle + DocModeToggle + ModelSelector + ProviderHealthBadge added; DocumentsTab uses same shared `AIControls.tsx`
-- [x] **60-second extraction timeout removed** — large PDFs were silently failing; queue now waits as long as the API needs
-- [x] **Obsidian session logging established** — Sessions/ folder created, daily logs written by AI at end of each session
-
----
-
-## ✅ Completed This Session (2026-04-12 – 2026-04-13)
-
-### Features
-- [x] Archive tab with count badge
-- [x] Dashboard stats (claimsToday, claimsWeek, claimsPending, archivedCount)
-- [x] Fees Overview: Billed / Received / Outstanding
-- [x] Bank statement reconciliation (PDF/CSV upload → AI extract → auto-match)
-- [x] Fee paid toggle in FeesTab
-- [x] Report number at top of DetailsTab for all survey types
-- [x] Spot/Final sequential report numbers: SPO/YYYY/NNN, FIN/YYYY/NNN
-- [x] Spot report certification text updated in all 3 formats (HTML, Word, PDF)
-- [x] FIR Date + Appointment Date added to all 3 spot report formats
-- [x] Document Verification section (7 docs) added to all 3 spot report formats
-- [x] AccidentForm deduplication: removed pincode, locationCode, remarks
-- [x] SpotTab deduplication: removed placeOfSurvey, verificationFlags
-- [x] Admin panel fixed: now accessible via master UID regardless of isAdmin flag
-- [x] Knowledge base vault structured and populated
-- [x] **Reinspection Report Polish** — Removed 'Est. Completion Date' and 'Repair Auth.' from UI, HTML Power Print, and UIIC PDF format.
-- [x] **Project ID Research** — Verified `surveyos.web.app` and `surveyosprime.web.app` are taken; recommended custom domain approach.
-
-
-### Security (2026-04-13)
-- [x] Full security audit performed
-- [x] XSS vulnerability fixed (DOMPurify)
-- [x] API key removed from source code
-- [x] Firestore AI config rule locked to admin
-
-### Deployments
-- [x] `npm run build && firebase deploy --only hosting,firestore:rules`
-- [x] Live: https://surveyos-v2-antigravity.web.app
-- [x] **Cloud Sync Distinction Documented** — Created `Cloud_Sync_Logic.md` to formalize the difference between high-bandwidth asset pushes (photos/docs) and critical system backups (keys/stamps).
-
----
-
-## Key Decisions Made This Session
-
-1. **All 3 spot report formats must stay identical** — SpotPrintReport.tsx is source of truth
-2. **4 report renderers exist** (UIIC, Standard, Word, PDF) — only spot reports have parity enforcement
-3. **Pincode removed from AccidentForm** — used in UIIC reports but not spot; acceptable trade-off
-4. **Admin access = isAdmin flag OR master UID** — prevents access loss if Firestore profile resets
-5. **Report numbers stay local** — localStorage only, not synced to Firestore, reset yearly
-6. **Dual storage (IndexedDB + Firestore)** — not offline-first, just resilience for photo handling
-7. **Cloud Sync Distinction** — "Auto Push Files" toggle ONLY applies to photos and documents. Critical profile data (API keys, stamps, signatures) is ALWAYS backed up to `surveyos_profile_backup.json` to ensure system state persistence.
-
----
-
-## Blockers / Open Questions
-- [ ] Should pincode be restored for UIIC report support?
-- [ ] Should Standard and UIIC report formats also get parity enforcement?
 - [ ] Should report numbers sync to Firestore for multi-device access?
-- [ ] What is next priority feature after security hardening?
+- [ ] Should Standard and UIIC report formats get parity enforcement?
+- [ ] Update ANTIGRAVITY_BIBLE.md (AI model reference is outdated)
 
+---
+
+## Blocked
+
+- (none)
+
+---
+
+## Recently Completed
+
+- [x] Project reorganization and vault restructure (2026-05-21)
+- [x] Excel-style grid paste for AssessmentGrid (2026-05-16)
+- [x] Pass 2.5 AI enrichment for insured reports (2026-05-15)
+- [x] Subscription lifecycle system (2026-05-17)
+- [x] Hide/Show financial summary toggle (2026-05-17)
+- [x] Dashboard navigation race condition fix (2026-05-12)
+- [x] DL expiry reporting fix (2026-05-12)
+- [x] GVW/RLW & seating capacity regression fix (2026-05-12)
+- [x] Valuation / break-in inspection report (2026-04-26)
+
+---
+
+## Key Decisions (Carry Forward)
+
+1. All 3 spot report formats must stay identical — SpotPrintReport.tsx is source of truth
+2. 4 report renderers exist (UIIC, Standard, Word, PDF) — only spot reports have parity enforcement
+3. Admin access = `isAdmin` flag OR master UID — prevents lockout if Firestore resets
+4. Report numbers are local (localStorage only, not synced, reset yearly)
+5. Cloud sync distinction: "Auto Push Files" = photos/docs only; profile backup always syncs
+6. Photo Sheet Generation feature MUST be kept (not deleted)

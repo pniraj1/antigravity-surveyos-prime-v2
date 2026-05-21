@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SurveyOS Prime V2 — Project Map</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --border: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --blue: #60a5fa;
+    --green: #4ade80;
+    --purple: #c084fc;
+    --orange: #fb923c;
+    --red: #f87171;
+    --teal: #2dd4bf;
+    --yellow: #fbbf24;
+    --gray: #64748b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 2rem;
+    line-height: 1.6;
+  }
+  h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+  .subtitle { color: var(--muted); margin-bottom: 2rem; font-size: 0.95rem; }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem;
+    padding: 1rem; background: var(--card); border-radius: 8px; border: 1px solid var(--border);
+  }
+  .legend-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.5rem; }
+  .section {
+    background: var(--card); border-radius: 12px; padding: 1.25rem;
+    border: 1px solid var(--border); transition: border-color 0.2s;
+  }
+  .section:hover { border-color: var(--blue); }
+  .section-title {
+    font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .section-title .icon { font-size: 1.2rem; }
+  .file-list { list-style: none; }
+  .file-list li {
+    padding: 0.35rem 0.5rem; margin: 0.15rem 0; border-radius: 4px; font-size: 0.85rem;
+    display: flex; align-items: flex-start; gap: 0.5rem; cursor: default;
+    transition: background 0.15s;
+  }
+  .file-list li:hover { background: rgba(255,255,255,0.05); }
+  .file-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; margin-top: 0.4rem; }
+  .file-name { font-family: 'Cascadia Code', 'Fira Code', monospace; color: var(--text); }
+  .file-desc { color: var(--muted); font-size: 0.8rem; margin-left: auto; text-align: right; max-width: 45%; }
+  .folder { font-weight: 600; color: var(--yellow); font-size: 0.8rem; margin-top: 0.75rem; margin-bottom: 0.25rem; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+  .quick-ref {
+    background: var(--card); border-radius: 12px; padding: 1.5rem;
+    border: 1px solid var(--border); margin-top: 2rem;
+  }
+  .quick-ref h2 { font-size: 1.3rem; margin-bottom: 1rem; }
+  .ref-table { width: 100%; border-collapse: collapse; }
+  .ref-table th { text-align: left; padding: 0.5rem; color: var(--muted); font-size: 0.85rem; border-bottom: 1px solid var(--border); }
+  .ref-table td { padding: 0.5rem; font-size: 0.9rem; border-bottom: 1px solid rgba(51,65,85,0.5); }
+  .ref-table td:first-child { font-weight: 500; }
+  .ref-table td:last-child { font-family: 'Cascadia Code', 'Fira Code', monospace; color: var(--teal); font-size: 0.85rem; }
+  .badge {
+    display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px;
+    font-size: 0.75rem; font-weight: 600;
+  }
+  .badge-blue { background: rgba(96,165,250,0.2); color: var(--blue); }
+  .badge-green { background: rgba(74,222,128,0.2); color: var(--green); }
+  .badge-purple { background: rgba(192,132,252,0.2); color: var(--purple); }
+  .badge-orange { background: rgba(251,146,60,0.2); color: var(--orange); }
+  .badge-gray { background: rgba(100,116,139,0.2); color: var(--gray); }
+  .badge-teal { background: rgba(45,212,191,0.2); color: var(--teal); }
+  .badge-red { background: rgba(248,113,113,0.2); color: var(--red); }
+  .timestamp { color: var(--muted); font-size: 0.8rem; margin-top: 2rem; text-align: center; }
+</style>
+</head>
+<body>
+
+<h1>SurveyOS Prime V2 — Project Map</h1>
+<p class="subtitle">Interactive overview of the project structure. Color-coded by type. Generated 2026-05-21.</p>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div> Components</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> Business Logic</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div> Vault / Docs</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div> State / Stores</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--teal)"></div> Hooks</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div> Types</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--gray)"></div> Config</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div> Scripts</div>
+</div>
+
+<div class="grid">
+
+  <!-- src/components -->
+  <div class="section">
+    <div class="section-title"><span class="icon">🧩</span> src/components/ <span class="badge badge-blue">88 files</span></div>
+    <ul class="file-list">
+      <li><div class="file-dot" style="background:var(--blue)"></div><span class="file-name">ui/</span><span class="file-desc">shadcn/ui primitives (15)</span></li>
+      <li><div class="file-dot" style="background:var(--blue)"></div><span class="file-name">tabs/</span><span class="file-desc">13 workflow tabs + sub-components (23)</span></li>
+      <li><div class="file-dot" style="background:var(--blue)"></div><span class="file-name">pdf/</span><span class="file-desc">React-PDF document renderers (10)</span></li>
+      <li><div class="file-dot" style="background:var(--blue)"></div><span class="file-name">claim/</span><span class="file-desc">AssessmentGrid, VehicleForm, etc. (8)</span></li>
+      <li><div class="file-dot" style="background:var(--blue)"></div><span class="file-name">layout/</span><span class="file-desc">Dashboard, sidebar, ErrorBoundary (8)</span></li>
+      <li><div class="file-dot" style="background:var(--blue)"></div><span class="file-name">dialogs/</span><span class="file-desc">AIReviewDialog, NewClaimDialog (5)</span></li>
+      <li><div class="file-dot" style="background:var(--blue)"></div><span class="file-name">landing/</span><span class="file-desc">LandingClient, DemoSection, Pricing (5)</span></li>
+      <li><div class="file-dot" style="background:var(--blue)"></div><span class="file-name">auth/</span><span class="file-desc">AuthGate, DriveGateScreen (2)</span></li>
+      <li><div class="file-dot" style="background:var(--blue)"></div><span class="file-name">print/</span><span class="file-desc">UIICPrintReport, SpotPrintReport (2)</span></li>
+      <li><div class="file-dot" style="background:var(--blue)"></div><span class="file-name">admin/</span><span class="file-desc">AdminDashboard (1)</span></li>
+      <li><div class="file-dot" style="background:var(--blue)"></div><span class="file-name">ai/ chat/ evidence/ subscription/</span><span class="file-desc">(1 each)</span></li>
+    </ul>
+  </div>
+
+  <!-- src/lib -->
+  <div class="section">
+    <div class="section-title"><span class="icon">⚙️</span> src/lib/ <span class="badge badge-green">42 files</span></div>
+    <ul class="file-list">
+      <li><div class="file-dot" style="background:var(--green)"></div><span class="file-name">reports/</span><span class="file-desc">11 report builders (UIIC, Standard, Spot...)</span></li>
+      <li><div class="file-dot" style="background:var(--green)"></div><span class="file-name">calculations/</span><span class="file-desc">IRDAI assessment, depreciation, GST, fees (9)</span></li>
+      <li><div class="file-dot" style="background:var(--green)"></div><span class="file-name">ai/</span><span class="file-desc">AI service, prompts, processor, reconciliation (7)</span></li>
+      <li><div class="file-dot" style="background:var(--green)"></div><span class="file-name">firebase/</span><span class="file-desc">Auth, config, sync, payments (4)</span></li>
+      <li><div class="file-dot" style="background:var(--green)"></div><span class="file-name">utils/</span><span class="file-desc">Logger, vehicle helpers, grid-paste (4)</span></li>
+      <li><div class="file-dot" style="background:var(--green)"></div><span class="file-name">drive/</span><span class="file-desc">Google Drive integration (1)</span></li>
+      <li><div class="file-dot" style="background:var(--green)"></div><span class="file-name">storage/</span><span class="file-desc">IndexedDB abstraction (1)</span></li>
+      <li><div class="file-dot" style="background:var(--green)"></div><span class="file-name">email/ auth/ subscription/ constants/</span><span class="file-desc">(1 each)</span></li>
+    </ul>
+  </div>
+
+  <!-- State Management -->
+  <div class="section">
+    <div class="section-title"><span class="icon">📦</span> src/stores/ <span class="badge badge-orange">8 files</span></div>
+    <ul class="file-list">
+      <li><div class="file-dot" style="background:var(--orange)"></div><span class="file-name">auth-store.ts</span><span class="file-desc">Firebase auth state</span></li>
+      <li><div class="file-dot" style="background:var(--orange)"></div><span class="file-name">claim-store.ts</span><span class="file-desc">Main claim data + auto-save</span></li>
+      <li><div class="file-dot" style="background:var(--orange)"></div><span class="file-name">profile-store.ts</span><span class="file-desc">User profile + API keys</span></li>
+      <li><div class="file-dot" style="background:var(--orange)"></div><span class="file-name">ui-store.ts</span><span class="file-desc">UI state (tabs, dialogs)</span></li>
+      <div class="folder">slices/</div>
+      <li><div class="file-dot" style="background:var(--orange)"></div><span class="file-name">assessmentSlice.ts</span><span class="file-desc">Assessment row CRUD</span></li>
+      <li><div class="file-dot" style="background:var(--orange)"></div><span class="file-name">vehicleSlice.ts</span><span class="file-desc">Vehicle data</span></li>
+      <li><div class="file-dot" style="background:var(--orange)"></div><span class="file-name">claimSlice.ts</span><span class="file-desc">Claim metadata</span></li>
+      <li><div class="file-dot" style="background:var(--orange)"></div><span class="file-name">aiDataSlice.ts</span><span class="file-desc">AI extraction results</span></li>
+    </ul>
+  </div>
+
+  <!-- Hooks + Types -->
+  <div class="section">
+    <div class="section-title"><span class="icon">🪝</span> src/hooks/ <span class="badge badge-teal">7 files</span></div>
+    <ul class="file-list">
+      <li><div class="file-dot" style="background:var(--teal)"></div><span class="file-name">useCloudSync.ts</span><span class="file-desc">Firestore + Drive sync</span></li>
+      <li><div class="file-dot" style="background:var(--teal)"></div><span class="file-name">useAutoSave.ts</span><span class="file-desc">Continuous persistence</span></li>
+      <li><div class="file-dot" style="background:var(--teal)"></div><span class="file-name">useAIExtraction.ts</span><span class="file-desc">AI extraction workflow</span></li>
+      <li><div class="file-dot" style="background:var(--teal)"></div><span class="file-name">useFieldEvidence.ts</span><span class="file-desc">Evidence context per field</span></li>
+      <li><div class="file-dot" style="background:var(--teal)"></div><span class="file-name">useAuth.ts</span><span class="file-desc">Firebase auth hook</span></li>
+      <li><div class="file-dot" style="background:var(--teal)"></div><span class="file-name">useClaimsLoader.ts</span><span class="file-desc">Dashboard claims loader</span></li>
+      <li><div class="file-dot" style="background:var(--teal)"></div><span class="file-name">useRouteSync.ts</span><span class="file-desc">URL ↔ store sync</span></li>
+    </ul>
+    <div class="section-title" style="margin-top:1rem"><span class="icon">📝</span> src/types/ <span class="badge badge-yellow" style="background:rgba(251,191,36,0.2);color:var(--yellow)">8 files</span></div>
+    <ul class="file-list">
+      <li><div class="file-dot" style="background:var(--yellow)"></div><span class="file-name">claim.ts, assessment.ts, vehicle.ts</span><span class="file-desc">Core domain types</span></li>
+      <li><div class="file-dot" style="background:var(--yellow)"></div><span class="file-name">report.ts, payment.ts, telemetry.ts</span><span class="file-desc">Feature types</span></li>
+      <li><div class="file-dot" style="background:var(--yellow)"></div><span class="file-name">insured-report.ts, index.ts</span><span class="file-desc">Insured report + barrel</span></li>
+    </ul>
+  </div>
+
+  <!-- Obsidian Vault -->
+  <div class="section">
+    <div class="section-title"><span class="icon">🧠</span> Obsidian Vault (Shared Brain) <span class="badge badge-purple">30+ docs</span></div>
+    <ul class="file-list">
+      <li><div class="file-dot" style="background:var(--purple)"></div><span class="file-name">AGENT_PROTOCOL.md</span><span class="file-desc">Master rules for all agents</span></li>
+      <li><div class="file-dot" style="background:var(--purple)"></div><span class="file-name">Tasks.md</span><span class="file-desc">Shared task tracker</span></li>
+      <li><div class="file-dot" style="background:var(--purple)"></div><span class="file-name">Changelog.md</span><span class="file-desc">What changed and who</span></li>
+      <div class="folder">Architecture/</div>
+      <li><div class="file-dot" style="background:var(--purple)"></div><span class="file-name">Overview, Data_Dictionary, Claim_Lifecycle, State_Management</span></li>
+      <div class="folder">Features/ (10 living docs)</div>
+      <li><div class="file-dot" style="background:var(--purple)"></div><span class="file-name">Auth, Assessment Grid, AI Extraction, Cloud Sync, PDF Reports...</span></li>
+      <div class="folder">Rules/</div>
+      <li><div class="file-dot" style="background:var(--purple)"></div><span class="file-name">File_Placement, Naming, Documentation_Protocol, Handoff</span></li>
+      <div class="folder">Operations/</div>
+      <li><div class="file-dot" style="background:var(--purple)"></div><span class="file-name">Admin_Guide, Launch_Checklist, Security_Audit</span></li>
+      <div class="folder">Specs/ Sessions/ Reference/ Project_Bramha/ Patterns/</div>
+    </ul>
+  </div>
+
+  <!-- Config & Root -->
+  <div class="section">
+    <div class="section-title"><span class="icon">⚡</span> Root Config <span class="badge badge-gray">15 files</span></div>
+    <ul class="file-list">
+      <div class="folder">Build & Framework</div>
+      <li><div class="file-dot" style="background:var(--gray)"></div><span class="file-name">next.config.ts</span><span class="file-desc">Next.js (static export)</span></li>
+      <li><div class="file-dot" style="background:var(--gray)"></div><span class="file-name">tsconfig.json</span><span class="file-desc">TypeScript strict mode</span></li>
+      <li><div class="file-dot" style="background:var(--gray)"></div><span class="file-name">postcss.config.mjs</span><span class="file-desc">Tailwind CSS 4</span></li>
+      <li><div class="file-dot" style="background:var(--gray)"></div><span class="file-name">eslint.config.mjs</span><span class="file-desc">ESLint rules</span></li>
+      <li><div class="file-dot" style="background:var(--gray)"></div><span class="file-name">vitest.config.ts</span><span class="file-desc">Test runner</span></li>
+      <li><div class="file-dot" style="background:var(--gray)"></div><span class="file-name">components.json</span><span class="file-desc">shadcn/ui CLI config</span></li>
+      <div class="folder">Firebase</div>
+      <li><div class="file-dot" style="background:var(--gray)"></div><span class="file-name">firebase.json</span><span class="file-desc">Hosting config</span></li>
+      <li><div class="file-dot" style="background:var(--gray)"></div><span class="file-name">.firebaserc</span><span class="file-desc">Project ID</span></li>
+      <li><div class="file-dot" style="background:var(--gray)"></div><span class="file-name">firestore.rules</span><span class="file-desc">Security rules</span></li>
+      <li><div class="file-dot" style="background:var(--gray)"></div><span class="file-name">firestore.indexes.json</span><span class="file-desc">Indexes</span></li>
+      <div class="folder">Environment</div>
+      <li><div class="file-dot" style="background:var(--gray)"></div><span class="file-name">.env.example</span><span class="file-desc">Template (committed)</span></li>
+      <li><div class="file-dot" style="background:var(--gray)"></div><span class="file-name">.env.local</span><span class="file-desc">Secrets (gitignored)</span></li>
+      <div class="folder">Agent Instructions</div>
+      <li><div class="file-dot" style="background:var(--gray)"></div><span class="file-name">CLAUDE.md</span><span class="file-desc">Claude → vault pointer</span></li>
+      <li><div class="file-dot" style="background:var(--gray)"></div><span class="file-name">GEMINI.md</span><span class="file-desc">Antigravity → vault pointer</span></li>
+    </ul>
+  </div>
+
+  <!-- Public & Scripts -->
+  <div class="section">
+    <div class="section-title"><span class="icon">📁</span> public/ & scripts/</div>
+    <ul class="file-list">
+      <div class="folder">public/</div>
+      <li><div class="file-dot" style="background:var(--gray)"></div><span class="file-name">logo-teal.png, logo-transparent.png</span><span class="file-desc">Branding</span></li>
+      <li><div class="file-dot" style="background:var(--gray)"></div><span class="file-name">hero-cinematic.mp4</span><span class="file-desc">Landing hero video (6.6 MB)</span></li>
+      <li><div class="file-dot" style="background:var(--gray)"></div><span class="file-name">og-image.png, robots.txt</span><span class="file-desc">SEO metadata</span></li>
+      <li><div class="file-dot" style="background:var(--gray)"></div><span class="file-name">images/</span><span class="file-desc">Dashboard mockup</span></li>
+      <div class="folder">scripts/</div>
+      <li><div class="file-dot" style="background:var(--red)"></div><span class="file-name">tools/</span><span class="file-desc">analyze_pdf, check_claim_sizes, extract</span></li>
+      <li><div class="file-dot" style="background:var(--red)"></div><span class="file-name">tests/</span><span class="file-desc">test_extraction, test_invoice_gemini</span></li>
+      <li><div class="file-dot" style="background:var(--red)"></div><span class="file-name">fix-admin-profile.mjs</span><span class="file-desc">Admin maintenance</span></li>
+    </ul>
+  </div>
+
+  <!-- Data Flow -->
+  <div class="section" style="grid-column: span 2">
+    <div class="section-title"><span class="icon">🔄</span> Data Flow Architecture</div>
+    <pre style="font-family:'Cascadia Code','Fira Code',monospace;font-size:0.85rem;color:var(--muted);padding:1rem;background:var(--bg);border-radius:8px;overflow-x:auto">
+┌─────────────────────────────────────────────────────────────────────┐
+│  React UI (src/components/)  →  Zustand Stores (src/stores/)       │
+│       ↕ auto-save                    ↕ persistence                  │
+│  IndexedDB (src/lib/storage/)  ←→  Firestore (src/lib/firebase/)   │
+│       ↕ file backup                                                 │
+│  Google Drive (src/lib/drive/)                                      │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────┐  ┌──────────────────────────────────────┐
+│  AI Engine              │  │  Report Builders                     │
+│  Gemini / Groq / NVIDIA │  │  PDF / Word / Excel / HTML           │
+│  src/lib/ai/            │  │  src/lib/reports/ + src/components/  │
+└─────────────────────────┘  └──────────────────────────────────────┘</pre>
+  </div>
+
+</div>
+
+<!-- Quick Reference Table -->
+<div class="quick-ref">
+  <h2>Where Does This Go?</h2>
+  <table class="ref-table">
+    <thead><tr><th>Creating...</th><th>Put it in...</th></tr></thead>
+    <tbody>
+      <tr><td>React component</td><td>src/components/{domain}/</td></tr>
+      <tr><td>UI primitive (button, input)</td><td>src/components/ui/</td></tr>
+      <tr><td>Business logic / utility</td><td>src/lib/{domain}/</td></tr>
+      <tr><td>Custom React hook</td><td>src/hooks/</td></tr>
+      <tr><td>TypeScript types</td><td>src/types/</td></tr>
+      <tr><td>Zustand store or slice</td><td>src/stores/ or src/stores/slices/</td></tr>
+      <tr><td>Test file</td><td>src/lib/{domain}/__tests__/</td></tr>
+      <tr><td>PDF/report component</td><td>src/components/pdf/</td></tr>
+      <tr><td>Static asset</td><td>public/ or public/images/</td></tr>
+      <tr><td>Design spec</td><td>vault → Specs/</td></tr>
+      <tr><td>Feature doc</td><td>vault → Features/</td></tr>
+      <tr><td>Architecture doc</td><td>vault → Architecture/</td></tr>
+      <tr><td>Build script</td><td>scripts/</td></tr>
+      <tr><td>Environment variable</td><td>.env.example + .env.local</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<p class="timestamp">Generated 2026-05-21 by Claude Code during project reorganization</p>
+
+</body>
+</html>

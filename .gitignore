@@ -61,3 +61,15 @@ docs/samples/*.pdf
 docs/samples/*.zip
 docs/samples/*.txt
 docs/archives/
+
+# external reference repos (not part of this project)
+open-design/
+
+# vector database (regenerated, not source)
+ruvector.db
+
+# python virtual environment
+.venv/
+
+# functions build artifacts
+functions/node_modules/
