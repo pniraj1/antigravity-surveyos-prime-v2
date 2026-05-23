@@ -3,24 +3,22 @@
 // Handles Google Sign-In and Authentication triggers
 // ═══════════════════════════════════════════════════════════
 
-import { GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
 import { auth } from './config';
 
 const googleProvider = new GoogleAuthProvider();
+// Always show the Google account picker so logout feels real —
+// without this, Google silently re-selects the previously used account.
+googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 /**
- * Initiates Google Sign-In via full-page redirect (not popup).
- * The page navigates to accounts.google.com — no return value.
- * Result is processed by getRedirectResult() in useAuth.ts on return.
+ * Initiates Google Sign-In via a popup window.
+ * onAuthStateChanged in useAuth.ts picks up the result automatically.
  */
-export function signInWithGoogle(): void {
-  // Clear any intentional logout flag so the auth guard in
-  // onAuthStateChanged knows this is a deliberate sign-in.
+export async function signInWithGoogle(): Promise<void> {
   try { localStorage.removeItem('surveyos_intentional_logout'); } catch { /* ignore */ }
-  signInWithRedirect(auth, googleProvider);
+  await signInWithPopup(auth, googleProvider);
 }
-
-export { getRedirectResult };
 
 export async function signOutUser() {
   try {

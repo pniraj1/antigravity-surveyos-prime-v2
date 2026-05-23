@@ -149,7 +149,9 @@ export function linkGoogleDrive(): Promise<boolean> {
         },
       });
 
-      tokenClient.requestAccessToken();
+      // Always show the account picker so the user consciously chooses
+      // which Google account their Drive storage is linked to.
+      tokenClient.requestAccessToken({ prompt: 'select_account' });
     } catch (e: any) {
       reject(e);
     }
