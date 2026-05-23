@@ -19,8 +19,8 @@ interface UseAdminDataReturn {
   loading: boolean;
   signupsLoading: boolean;
   paymentsLoading: boolean;
-  fetchAllProfiles: () => Promise<void>;
-  fetchSignups: () => Promise<void>;
+  fetchAllProfiles: () => Promise<Map<string, SurveyorAdminProfile>>;
+  fetchSignups: (mapOverride?: Map<string, SurveyorAdminProfile>) => Promise<void>;
   fetchPayments: () => Promise<void>;
   refreshAll: () => void;
   setSurveyors: React.Dispatch<React.SetStateAction<SurveyorAdminProfile[]>>;
@@ -38,24 +38,29 @@ export function useAdminData(isAuthorized: boolean): UseAdminDataReturn {
   // Keep a ref to the latest surveyors for enrichment without hook dependency issues
   const [surveyorMap, setSurveyorMap] = useState<Map<string, SurveyorAdminProfile>>(new Map());
 
-  const fetchAllProfiles = useCallback(async () => {
+  const fetchAllProfiles = useCallback(async (): Promise<Map<string, SurveyorAdminProfile>> => {
     setLoading(true);
+    const seen = new Map<string, SurveyorAdminProfile>();
     try {
       const querySnapshot = await getDocs(query(collectionGroup(db, 'profile')));
-      const seen = new Map<string, SurveyorAdminProfile>();
       querySnapshot.forEach((docSnap) => {
         const data = docSnap.data();
         const pathSegments = docSnap.ref.path.split('/');
         if (pathSegments.length !== 4 || pathSegments[0] !== 'users' || pathSegments[2] !== 'profile') return;
         const uid = pathSegments[1];
         if (seen.has(uid) && docSnap.id !== 'current') return;
+
+        // Migration guard: legacy documents may have 'expired' — coerce to 'readonly' at read time.
+        const rawStatus: string = data.subscriptionStatus || 'pending';
+        const subscriptionStatus = (rawStatus === 'expired' ? 'readonly' : rawStatus) as SurveyorAdminProfile['subscriptionStatus'];
+
         seen.set(uid, {
           id: uid,
           name: data.name || 'Unknown',
           email: data.email || 'N/A',
           mobileNumber: data.mobileNumber || data.mobile || 'N/A',
           licenceNumber: data.licenceNumber || data.irdaiLicence || 'N/A',
-          subscriptionStatus: data.subscriptionStatus || 'pending',
+          subscriptionStatus,
           subscriptionExpiry: data.subscriptionExpiry || '',
           surveyorId: data.surveyorId || '',
           lastSync: data.lastSync,
@@ -72,10 +77,16 @@ export function useAdminData(isAuthorized: boolean): UseAdminDataReturn {
     } finally {
       setLoading(false);
     }
+    // Return the freshly-built map so callers can pass it directly to fetchSignups,
+    // avoiding the stale-closure problem with surveyorMap React state.
+    return seen;
   }, []);
 
-  const fetchSignups = useCallback(async () => {
+  const fetchSignups = useCallback(async (mapOverride?: Map<string, SurveyorAdminProfile>) => {
     setSignupsLoading(true);
+    // Use the caller-supplied map if provided (avoids stale React state closure).
+    // Falls back to surveyorMap state for standalone calls (e.g. manual refresh of signups only).
+    const activeMap = mapOverride ?? surveyorMap;
     try {
       const snap = await getDocs(collection(db, 'newSignups'));
       const results: NewSignup[] = [];
@@ -83,7 +94,7 @@ export function useAdminData(isAuthorized: boolean): UseAdminDataReturn {
         const data = docSnap.data();
         const uid = docSnap.id;
         // Enrich with authoritative profile data (already in memory)
-        const profile = surveyorMap.get(uid);
+        const profile = activeMap.get(uid);
         results.push({
           uid,
           email: data.email || '',
@@ -124,8 +135,10 @@ export function useAdminData(isAuthorized: boolean): UseAdminDataReturn {
 
   const refreshAll = useCallback(() => {
     const run = async () => {
-      await fetchAllProfiles();
-      await fetchSignups();
+      // Thread the freshly-built map directly into fetchSignups to avoid
+      // reading stale surveyorMap state from the React closure.
+      const freshMap = await fetchAllProfiles();
+      await fetchSignups(freshMap);
       fetchPayments();
     };
     void run();
@@ -135,8 +148,8 @@ export function useAdminData(isAuthorized: boolean): UseAdminDataReturn {
   useEffect(() => {
     if (!isAuthorized) return;
     const init = async () => {
-      await fetchAllProfiles();
-      await fetchSignups();
+      const freshMap = await fetchAllProfiles();
+      await fetchSignups(freshMap);
       fetchPayments();
     };
     init();

@@ -23,8 +23,8 @@ import { generateReferralCode, addDaysToDate } from '@/lib/subscription/status';
 import type { NewSignup, SurveyorAdminProfile } from '../types';
 
 interface UseAdminActionsParams {
-  fetchAllProfiles: () => Promise<void>;
-  fetchSignups: () => Promise<void>;
+  fetchAllProfiles: () => Promise<Map<string, SurveyorAdminProfile>>;
+  fetchSignups: (mapOverride?: Map<string, SurveyorAdminProfile>) => Promise<void>;
   setSurveyors: React.Dispatch<React.SetStateAction<SurveyorAdminProfile[]>>;
   setSignups: React.Dispatch<React.SetStateAction<NewSignup[]>>;
 }
@@ -198,12 +198,26 @@ export function useAdminActions({
       const currentExpiry = data.subscriptionExpiry || null;
       const currentStatus: string = data.subscriptionStatus || 'readonly';
 
+      // Guard: warn admin that suspended accounts stay suspended after extension.
+      if (currentStatus === 'suspended') {
+        const confirmed = window.confirm(
+          'This surveyor is currently SUSPENDED.\n\n' +
+          'Extending their subscription will update the expiry date but will NOT reactivate their account — ' +
+          'they will remain suspended until you click "Activate".\n\n' +
+          'Continue with extension?',
+        );
+        if (!confirmed) {
+          setProcessingId(null);
+          return;
+        }
+      }
+
       // Extend from current expiry if in future, otherwise from today
       const newExpiry = addDaysToDate(
         currentExpiry && new Date(currentExpiry) > new Date() ? currentExpiry : null,
         days,
       );
-      // Promote readonly/trial to active on extension; keep suspended as-is
+      // Promote readonly/trial to active on extension; keep suspended as-is (admin confirmed above)
       const newStatus = (currentStatus === 'readonly' || currentStatus === 'trial') ? 'active' : currentStatus;
 
       await updateDoc(profileRef, {
