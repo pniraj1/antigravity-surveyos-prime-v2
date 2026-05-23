@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import {
   Loader2, UserX, Mail, IdCard, ShieldCheck,
-  Calendar, CheckCircle2, XCircle, Clock, Eye, Trash2,
+  Calendar, CheckCircle2, XCircle, Clock, Eye, Trash2, Plus,
 } from 'lucide-react';
 import { getDaysRemaining } from '@/lib/subscription/status';
 import type { SurveyorAdminProfile, SurveyorFilter } from '../types';
@@ -17,19 +17,20 @@ const FILTERS: { key: SurveyorFilter; label: string }[] = [
   { key: 'expiring', label: 'Expiring Soon' },
 ];
 
+// Single source of truth: always use subscriptionExpiry
+function getExpiry(surveyor: SurveyorAdminProfile): string | null {
+  return surveyor.subscriptionExpiry || null;
+}
+
 function isExpiringSoon(surveyor: SurveyorAdminProfile): boolean {
-  const expiry = surveyor.subscriptionStatus === 'trial'
-    ? surveyor.trialEndDate
-    : surveyor.subscriptionExpiry;
+  const expiry = getExpiry(surveyor);
   if (!expiry) return false;
   const days = getDaysRemaining(expiry);
   return days > 0 && days <= 7;
 }
 
-function isExpired(surveyor: SurveyorAdminProfile): boolean {
-  const expiry = surveyor.subscriptionStatus === 'trial'
-    ? surveyor.trialEndDate
-    : surveyor.subscriptionExpiry;
+function isExpiredDate(surveyor: SurveyorAdminProfile): boolean {
+  const expiry = getExpiry(surveyor);
   if (!expiry) return false;
   return getDaysRemaining(expiry) <= 0;
 }
@@ -39,11 +40,57 @@ interface SurveyorsTabProps {
   loading: boolean;
   processingId: string | null;
   searchQuery: string;
-  onUpdateStatus: (uid: string, status: 'active' | 'suspended' | 'expired') => void;
+  onUpdateStatus: (uid: string, status: 'active' | 'suspended' | 'readonly') => void;
   onUpdateExpiry: (uid: string, date: string) => void;
   onUpdateId: (uid: string, idStr: string) => void;
   onUpdateName: (uid: string, name: string) => void;
+  onExtend: (uid: string, days: number) => void;
   onDeleteAccount: (surveyor: SurveyorAdminProfile) => void;
+}
+
+function ExtendControl({ uid, onExtend, disabled }: { uid: string; onExtend: (uid: string, days: number) => void; disabled: boolean }) {
+  const [open, setOpen] = useState(false);
+  const [days, setDays] = useState(30);
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        disabled={disabled}
+        title="Extend subscription"
+        className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 transition-all disabled:opacity-40"
+      >
+        <Plus size={10} /> Extend
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1 border border-blue-200 rounded-lg px-2 py-1 bg-blue-50">
+      <input
+        type="number"
+        min={1}
+        max={365}
+        value={days}
+        onChange={e => setDays(Math.max(1, Math.min(365, Number(e.target.value))))}
+        className="w-10 text-xs font-bold text-center border-none focus:ring-0 p-0 bg-transparent text-blue-800"
+        autoFocus
+      />
+      <span className="text-[10px] text-blue-500">d</span>
+      <button
+        onClick={() => { onExtend(uid, days); setOpen(false); }}
+        className="text-[10px] font-black text-blue-700 hover:text-blue-900 ml-1"
+      >
+        ✓
+      </button>
+      <button
+        onClick={() => setOpen(false)}
+        className="text-[10px] text-blue-400 hover:text-blue-600"
+      >
+        ✕
+      </button>
+    </div>
+  );
 }
 
 export function SurveyorsTab({
@@ -55,6 +102,7 @@ export function SurveyorsTab({
   onUpdateExpiry,
   onUpdateId,
   onUpdateName,
+  onExtend,
   onDeleteAccount,
 }: SurveyorsTabProps) {
   const [activeFilter, setActiveFilter] = useState<SurveyorFilter>('all');
@@ -119,9 +167,12 @@ export function SurveyorsTab({
           </thead>
           <tbody className="divide-y divide-[#F0F2F5]">
             {filtered.map((surveyor) => {
+              const expiry = getExpiry(surveyor);
               const expiring = isExpiringSoon(surveyor);
-              const expired = isExpired(surveyor);
+              const expired = isExpiredDate(surveyor);
+              const days = getDaysRemaining(expiry);
               const rowBg = expiring ? 'bg-amber-50' : '';
+              const isProcessing = processingId === surveyor.id;
 
               return (
                 <tr key={surveyor.id} className={`hover:bg-[#FAFBFC] transition-colors group ${rowBg}`}>
@@ -131,14 +182,13 @@ export function SurveyorsTab({
                         {surveyor.name.charAt(0)}
                       </div>
                       <div>
-                        {/* Inline name editing */}
                         <div className="flex items-center gap-2">
                           <input
                             type="text"
                             className="text-sm font-bold text-[#0D1B2A] bg-transparent border-b border-dashed border-transparent hover:border-[#E2E6EA] focus:border-primary focus:ring-0 focus:outline-none p-0 w-40"
                             value={surveyor.name}
                             onChange={e => onUpdateName(surveyor.id, e.target.value)}
-                            disabled={processingId === surveyor.id}
+                            disabled={isProcessing}
                           />
                           {surveyor.isAdmin && <ShieldCheck size={14} className="text-primary flex-shrink-0" />}
                         </div>
@@ -158,7 +208,7 @@ export function SurveyorsTab({
                       className="bg-transparent border-b border-dashed border-[#E2E6EA] focus:border-primary focus:ring-0 text-sm p-0 w-24 font-black uppercase tracking-tight"
                       value={surveyor.surveyorId}
                       onChange={(e) => onUpdateId(surveyor.id, e.target.value.toUpperCase())}
-                      disabled={processingId === surveyor.id}
+                      disabled={isProcessing}
                     />
                   </td>
                   <td className="px-6 py-5">
@@ -166,44 +216,36 @@ export function SurveyorsTab({
                     <div className="text-[10px] text-[#8D99AE]">{surveyor.mobileNumber}</div>
                   </td>
                   <td className="px-6 py-5">
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${
-                        surveyor.subscriptionStatus === 'active'
-                          ? 'bg-[#D1FAE5] text-[#065F46] border-[#A7F3D0]'
-                          : surveyor.subscriptionStatus === 'trial'
-                          ? 'bg-blue-50 text-blue-800 border-blue-200'
-                          : surveyor.subscriptionStatus === 'suspended'
-                          ? 'bg-[#FEE2E2] text-[#991B1B] border-[#FECACA]'
-                          : surveyor.subscriptionStatus === 'pending'
-                          ? 'bg-yellow-50 text-yellow-800 border-yellow-200'
-                          : surveyor.subscriptionStatus === 'readonly'
-                          ? 'bg-orange-50 text-orange-800 border-orange-200'
-                          : 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]'
-                      }`}
-                    >
-                      {surveyor.subscriptionStatus === 'active'
-                        ? <CheckCircle2 size={10} />
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${
+                      surveyor.subscriptionStatus === 'active'
+                        ? 'bg-[#D1FAE5] text-[#065F46] border-[#A7F3D0]'
                         : surveyor.subscriptionStatus === 'trial'
-                        ? <Eye size={10} />
+                        ? 'bg-blue-50 text-blue-800 border-blue-200'
+                        : surveyor.subscriptionStatus === 'suspended'
+                        ? 'bg-[#FEE2E2] text-[#991B1B] border-[#FECACA]'
                         : surveyor.subscriptionStatus === 'pending'
-                        ? <Clock size={10} />
+                        ? 'bg-yellow-50 text-yellow-800 border-yellow-200'
+                        : surveyor.subscriptionStatus === 'readonly'
+                        ? 'bg-orange-50 text-orange-800 border-orange-200'
+                        : 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]'
+                    }`}>
+                      {surveyor.subscriptionStatus === 'active' ? <CheckCircle2 size={10} />
+                        : surveyor.subscriptionStatus === 'trial' ? <Eye size={10} />
+                        : surveyor.subscriptionStatus === 'pending' ? <Clock size={10} />
                         : <XCircle size={10} />}
                       {surveyor.subscriptionStatus}
                     </span>
                   </td>
                   <td className="px-6 py-5">
-                    {(() => {
-                      const expiry = surveyor.subscriptionStatus === 'trial' ? surveyor.trialEndDate : surveyor.subscriptionExpiry;
-                      const days = getDaysRemaining(expiry || null);
-                      if (!expiry) return <span className="text-[10px] text-[#C3C9D4]">—</span>;
-                      return (
-                        <span className={`text-xs font-black ${
-                          expired ? 'text-red-600' : days <= 5 ? 'text-amber-600' : days <= 10 ? 'text-yellow-600' : 'text-emerald-600'
-                        }`}>
-                          {days <= 0 ? `Expired ${Math.abs(days)}d ago` : `${days}d`}
-                        </span>
-                      );
-                    })()}
+                    {!expiry ? (
+                      <span className="text-[10px] text-[#C3C9D4]">—</span>
+                    ) : (
+                      <span className={`text-xs font-black ${
+                        expired ? 'text-red-600' : days <= 5 ? 'text-amber-600' : days <= 10 ? 'text-yellow-600' : 'text-emerald-600'
+                      }`}>
+                        {days <= 0 ? `Expired ${Math.abs(days)}d ago` : `${days}d`}
+                      </span>
+                    )}
                   </td>
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-2 text-sm font-medium text-[#0D1B2A]">
@@ -213,27 +255,45 @@ export function SurveyorsTab({
                         className={`bg-transparent border-none focus:ring-0 text-sm p-0 w-32 cursor-pointer ${expired ? 'text-red-600' : ''}`}
                         value={surveyor.subscriptionExpiry}
                         onChange={(e) => onUpdateExpiry(surveyor.id, e.target.value)}
-                        disabled={processingId === surveyor.id}
+                        disabled={isProcessing}
                       />
                     </div>
                   </td>
                   <td className="px-6 py-5 text-right">
                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {surveyor.subscriptionStatus === 'suspended' || surveyor.subscriptionStatus === 'pending' ? (
+                      {/* Extend */}
+                      <ExtendControl uid={surveyor.id} onExtend={onExtend} disabled={isProcessing} />
+
+                      {/* Context-dependent status actions */}
+                      {(surveyor.subscriptionStatus === 'readonly' || surveyor.subscriptionStatus === 'suspended') && (
                         <button
                           onClick={() => onUpdateStatus(surveyor.id, 'active')}
-                          className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-[#D1FAE5] text-[#065F46] hover:bg-[#A7F3D0] transition-all"
+                          disabled={isProcessing}
+                          className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-[#D1FAE5] text-[#065F46] hover:bg-[#A7F3D0] transition-all disabled:opacity-40"
                         >
                           Activate
                         </button>
-                      ) : (
+                      )}
+                      {(surveyor.subscriptionStatus === 'trial' || surveyor.subscriptionStatus === 'active' || surveyor.subscriptionStatus === 'readonly') && (
                         <button
                           onClick={() => onUpdateStatus(surveyor.id, 'suspended')}
-                          className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-[#FEE2E2] text-[#991B1B] hover:bg-[#FECACA] transition-all"
+                          disabled={isProcessing}
+                          className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-[#FEE2E2] text-[#991B1B] hover:bg-[#FECACA] transition-all disabled:opacity-40"
                         >
                           Suspend
                         </button>
                       )}
+                      {(surveyor.subscriptionStatus === 'trial' || surveyor.subscriptionStatus === 'active' || surveyor.subscriptionStatus === 'suspended') && (
+                        <button
+                          onClick={() => onUpdateStatus(surveyor.id, 'readonly')}
+                          disabled={isProcessing}
+                          className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-orange-50 text-orange-700 hover:bg-orange-100 transition-all disabled:opacity-40"
+                        >
+                          Read-Only
+                        </button>
+                      )}
+
+                      {/* Delete */}
                       <button
                         onClick={() => onDeleteAccount(surveyor)}
                         title="Delete this account permanently"
