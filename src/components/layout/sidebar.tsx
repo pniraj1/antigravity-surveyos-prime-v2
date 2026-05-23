@@ -281,10 +281,7 @@ export function Sidebar() {
                 <div className="space-y-0.5">
                   {items.map((item) => {
                     // Hide admin tab from non-admins
-                    // Master admin UID always gets access regardless of profile flag
-                    const MASTER_ADMIN_UID = process.env.NEXT_PUBLIC_MASTER_ADMIN_UID;
-                    const isAdminUser = profile.isAdmin || user?.uid === MASTER_ADMIN_UID;
-                    if (item.id === 'admin' && !isAdminUser) return null;
+                    if (item.id === 'admin' && !profile.isAdmin) return null;
 
                     const disabled = item.requiresClaim && !hasClaim;
                     const isActive = activeTab === item.id;

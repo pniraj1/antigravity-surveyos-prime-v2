@@ -425,8 +425,7 @@ export function ProfileTab() {
   const [driveError, setDriveError] = useState('');
 
   const user = useAuthStore((s) => s.user);
-  const MASTER_ADMIN_UID = process.env.NEXT_PUBLIC_MASTER_ADMIN_UID;
-  const isAdminUser = profile.isAdmin || (user && MASTER_ADMIN_UID && user.uid === MASTER_ADMIN_UID);
+  const isAdminUser = profile.isAdmin;
 
   const isNameLocked = !isAdminUser; // Only admins can rename
 

@@ -82,13 +82,10 @@ export function AdminDashboard() {
   // ─── Runtime authorization gate ──────────────────────────
   // Client-side sidebar hiding is not enough — a determined user can force
   // the admin route. Block all Firestore queries unless the current user
-  // is an admin (profile.isAdmin === true OR matches the master UID env).
+  // Admin access is determined solely by the isAdmin flag on the Firestore profile.
   const user = useAuthStore((s) => s.user);
   const profile = useProfileStore((s) => s.profile);
-  const MASTER_ADMIN_UID = process.env.NEXT_PUBLIC_MASTER_ADMIN_UID;
-  const isAuthorized = Boolean(
-    user && (profile?.isAdmin === true || (MASTER_ADMIN_UID && user.uid === MASTER_ADMIN_UID))
-  );
+  const isAuthorized = Boolean(user && profile?.isAdmin === true);
 
   const [activeTab, setActiveTab] = useState<'surveyors' | 'signups' | 'payments' | 'dev-notes'>('surveyors');
   const [surveyors, setSurveyors] = useState<SurveyorAdminProfile[]>([]);

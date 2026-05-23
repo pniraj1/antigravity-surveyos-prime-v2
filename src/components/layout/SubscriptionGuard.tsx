@@ -1,10 +1,10 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useProfileStore } from '@/stores/profile-store';
 import { useAuthStore } from '@/stores/auth-store';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Lock, CreditCard, Mail, Eye } from 'lucide-react';
-import { AccessRequestForm, AccessRequestConfirmation } from './AccessRequestForm';
 import { calculateSubscriptionState, getDaysRemaining, isInWarningPeriod } from '@/lib/subscription/status';
 import { TrialBadge } from '@/components/subscription/TrialBadge';
 import { PaymentSubmissionForm } from '@/components/subscription/PaymentSubmissionForm';
@@ -107,24 +107,27 @@ function SuspendedOverlay() {
 export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
   const { profile } = useProfileStore();
   const { isAuthenticated } = useAuthStore();
-  const user = useAuthStore((s) => s.user);
   const pathname = usePathname();
+  const router = useRouter();
 
-  if (SANDBOX_MODE || pathname?.startsWith('/landing')) return <>{children}</>;
+  const isAdminUser = profile.isAdmin;
+  const effectiveState = calculateSubscriptionState(profile);
+  const onAccessRequest = pathname?.startsWith('/access-request');
 
-  const MASTER_ADMIN_UID = process.env.NEXT_PUBLIC_MASTER_ADMIN_UID;
-  const isAdminUser = profile.isAdmin || (user && MASTER_ADMIN_UID && user.uid === MASTER_ADMIN_UID);
+  // Redirect pending users to the split-panel /access-request page
+  useEffect(() => {
+    if (!isAuthenticated || isAdminUser || SANDBOX_MODE) return;
+    if (effectiveState === 'pending' && !onAccessRequest) {
+      router.replace('/access-request');
+    }
+  }, [isAuthenticated, isAdminUser, effectiveState, onAccessRequest, router]);
+
+  if (SANDBOX_MODE || pathname?.startsWith('/landing') || onAccessRequest) return <>{children}</>;
 
   if (!isAuthenticated || isAdminUser) return <>{children}</>;
 
-  const effectiveState = calculateSubscriptionState(profile);
-
-  if (effectiveState === 'pending') {
-    if (!profile.accessRequestSubmitted) {
-      return <AccessRequestForm />;
-    }
-    return <AccessRequestConfirmation />;
-  }
+  // Still pending and redirect in flight — render nothing to avoid flash
+  if (effectiveState === 'pending') return null;
 
   if (effectiveState === 'suspended') {
     return <SuspendedOverlay />;
