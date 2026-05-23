@@ -19,7 +19,7 @@ import {
   buildDismissalEmail,
   buildCustomEmail,
 } from '@/lib/email/sendEmail';
-import { generateReferralCode, calculateTrialEndDate } from '@/lib/subscription/status';
+import { generateReferralCode, addDaysToDate } from '@/lib/subscription/status';
 import type { NewSignup, SurveyorAdminProfile } from '../types';
 
 interface UseAdminActionsParams {
@@ -31,13 +31,14 @@ interface UseAdminActionsParams {
 
 interface UseAdminActionsReturn {
   processingId: string | null;
-  handleApprove: (signup: NewSignup) => Promise<void>;
+  handleApprove: (signup: NewSignup, trialDays: number) => Promise<void>;
   handleDismissConfirm: (uid: string, email: string, name: string, reason: string, sendEmailFlag: boolean) => Promise<void>;
   handleSendCustomEmail: (email: string, name: string, subject: string, body: string) => Promise<void>;
-  handleUpdateStatus: (uid: string, status: 'active' | 'suspended' | 'expired') => Promise<void>;
+  handleUpdateStatus: (uid: string, status: 'active' | 'suspended' | 'readonly') => Promise<void>;
   handleUpdateExpiry: (uid: string, date: string) => Promise<void>;
   handleUpdateId: (uid: string, idStr: string) => Promise<void>;
   handleUpdateName: (uid: string, name: string) => Promise<void>;
+  handleExtendSubscription: (uid: string, days: number) => Promise<void>;
   handleDeleteAccount: (uid: string, onDone: () => void) => Promise<void>;
 }
 
@@ -49,18 +50,19 @@ export function useAdminActions({
 }: UseAdminActionsParams): UseAdminActionsReturn {
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  const handleApprove = useCallback(async (signup: NewSignup) => {
+  const handleApprove = useCallback(async (signup: NewSignup, trialDays: number) => {
     setProcessingId(signup.uid);
     try {
       const profileRef = doc(db, 'users', signup.uid, 'profile', 'current');
       const profileSnap = await getDoc(profileRef);
       const profileData = profileSnap.exists() ? profileSnap.data() : {};
-      const authorName = profileData.name || signup.name || signup.displayName || 'USER';
+      const authorName = profileData.name || signup.profileName || signup.name || signup.displayName || 'USER';
       const authorEmail = profileData.email || signup.email;
 
       const trialStart = new Date().toISOString();
-      const trialEnd = calculateTrialEndDate(trialStart);
+      const trialEnd = addDaysToDate(trialStart, trialDays);
       const refCode = generateReferralCode(authorName);
+
       await setDoc(profileRef, {
         subscriptionStatus: 'trial',
         subscriptionExpiry: trialEnd,
@@ -133,7 +135,7 @@ export function useAdminActions({
     alert('Your email client was opened. Please hit "Send" from surveyosprime@gmail.com.');
   }, []);
 
-  const handleUpdateStatus = useCallback(async (uid: string, status: 'active' | 'suspended' | 'expired') => {
+  const handleUpdateStatus = useCallback(async (uid: string, status: 'active' | 'suspended' | 'readonly') => {
     setProcessingId(uid);
     try {
       const profileRef = doc(db, 'users', uid, 'profile', 'current');
@@ -187,10 +189,44 @@ export function useAdminActions({
     }
   }, [setSurveyors]);
 
+  const handleExtendSubscription = useCallback(async (uid: string, days: number) => {
+    setProcessingId(uid);
+    try {
+      const profileRef = doc(db, 'users', uid, 'profile', 'current');
+      const profileSnap = await getDoc(profileRef);
+      const data = profileSnap.exists() ? profileSnap.data() : {};
+      const currentExpiry = data.subscriptionExpiry || null;
+      const currentStatus: string = data.subscriptionStatus || 'readonly';
+
+      // Extend from current expiry if in future, otherwise from today
+      const newExpiry = addDaysToDate(
+        currentExpiry && new Date(currentExpiry) > new Date() ? currentExpiry : null,
+        days,
+      );
+      // Promote readonly/trial to active on extension; keep suspended as-is
+      const newStatus = (currentStatus === 'readonly' || currentStatus === 'trial') ? 'active' : currentStatus;
+
+      await updateDoc(profileRef, {
+        subscriptionExpiry: newExpiry,
+        subscriptionStatus: newStatus,
+        updatedAt: Timestamp.now(),
+      });
+      setSurveyors(prev => prev.map(s =>
+        s.id === uid
+          ? { ...s, subscriptionExpiry: newExpiry, subscriptionStatus: newStatus as SurveyorAdminProfile['subscriptionStatus'] }
+          : s,
+      ));
+    } catch (error) {
+      console.error('Failed to extend subscription:', error);
+      alert('Extension failed. Check console.');
+    } finally {
+      setProcessingId(null);
+    }
+  }, [setSurveyors]);
+
   const handleDeleteAccount = useCallback(async (uid: string, onDone: () => void) => {
     setProcessingId(uid);
     try {
-      // Delete claims in chunks of 499 to respect writeBatch limit
       const claimsSnap = await getDocs(collection(db, 'users', uid, 'claims'));
       const claimDocs = claimsSnap.docs;
       for (let i = 0; i < claimDocs.length; i += 499) {
@@ -199,7 +235,6 @@ export function useAdminActions({
         await batch.commit();
       }
 
-      // Delete payments in chunks of 499
       const paymentsSnap = await getDocs(collection(db, 'users', uid, 'payments'));
       const paymentDocs = paymentsSnap.docs;
       for (let i = 0; i < paymentDocs.length; i += 499) {
@@ -208,12 +243,10 @@ export function useAdminActions({
         await batch.commit();
       }
 
-      // Delete profile
       const profileBatch = writeBatch(db);
       profileBatch.delete(doc(db, 'users', uid, 'profile', 'current'));
       await profileBatch.commit();
 
-      // Delete newSignups entry if it exists
       try { await deleteDoc(doc(db, 'newSignups', uid)); } catch { /* may not exist */ }
 
       onDone();
@@ -234,6 +267,7 @@ export function useAdminActions({
     handleUpdateExpiry,
     handleUpdateId,
     handleUpdateName,
+    handleExtendSubscription,
     handleDeleteAccount,
   };
 }
