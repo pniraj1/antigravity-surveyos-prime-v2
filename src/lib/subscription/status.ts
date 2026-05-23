@@ -1,7 +1,7 @@
 import type { SurveyorProfile } from '@/types';
 import type { SubscriptionState } from '@/types/payment';
 
-const TRIAL_DURATION_DAYS = 60;
+const TRIAL_DURATION_DAYS = 30;
 const WARNING_DAYS = 5;
 
 export function calculateSubscriptionState(profile: SurveyorProfile): SubscriptionState {
