@@ -35,6 +35,9 @@ export function useAdminData(isAuthorized: boolean): UseAdminDataReturn {
   const [signupsLoading, setSignupsLoading] = useState(false);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
 
+  // Keep a ref to the latest surveyors for enrichment without hook dependency issues
+  const [surveyorMap, setSurveyorMap] = useState<Map<string, SurveyorAdminProfile>>(new Map());
+
   const fetchAllProfiles = useCallback(async () => {
     setLoading(true);
     try {
@@ -50,8 +53,8 @@ export function useAdminData(isAuthorized: boolean): UseAdminDataReturn {
           id: uid,
           name: data.name || 'Unknown',
           email: data.email || 'N/A',
-          mobileNumber: data.mobileNumber || 'N/A',
-          licenceNumber: data.licenceNumber || 'N/A',
+          mobileNumber: data.mobileNumber || data.mobile || 'N/A',
+          licenceNumber: data.licenceNumber || data.irdaiLicence || 'N/A',
           subscriptionStatus: data.subscriptionStatus || 'pending',
           subscriptionExpiry: data.subscriptionExpiry || '',
           surveyorId: data.surveyorId || '',
@@ -62,6 +65,7 @@ export function useAdminData(isAuthorized: boolean): UseAdminDataReturn {
           lastPaymentDate: data.lastPaymentDate || '',
         });
       });
+      setSurveyorMap(seen);
       setSurveyors(Array.from(seen.values()));
     } catch (error) {
       console.error('Error fetching profiles:', error);
@@ -77,8 +81,11 @@ export function useAdminData(isAuthorized: boolean): UseAdminDataReturn {
       const results: NewSignup[] = [];
       snap.forEach((docSnap) => {
         const data = docSnap.data();
+        const uid = docSnap.id;
+        // Enrich with authoritative profile data (already in memory)
+        const profile = surveyorMap.get(uid);
         results.push({
-          uid: docSnap.id,
+          uid,
           email: data.email || '',
           displayName: data.displayName || data.name || '',
           name: data.name || data.displayName || '',
@@ -87,16 +94,21 @@ export function useAdminData(isAuthorized: boolean): UseAdminDataReturn {
           signedUpAt: data.signedUpAt,
           updatedAt: data.updatedAt,
           status: data.status || 'pending',
+          // Enriched from profile/current
+          profileName: profile?.name && profile.name !== 'Unknown' ? profile.name : (data.name || data.displayName || ''),
+          profileIrdai: profile?.licenceNumber && profile.licenceNumber !== 'N/A' ? profile.licenceNumber : '',
+          profileMobile: profile?.mobileNumber && profile.mobileNumber !== 'N/A' ? profile.mobileNumber : '',
+          accessRequestSubmitted: Boolean(profile) && profile?.licenceNumber !== 'N/A',
         });
       });
-      results.sort((a, b) => b.signedUpAt?.seconds - a.signedUpAt?.seconds);
+      results.sort((a, b) => (b.signedUpAt?.seconds ?? 0) - (a.signedUpAt?.seconds ?? 0));
       setSignups(results);
     } catch (error) {
       console.error('Error fetching signups:', error);
     } finally {
       setSignupsLoading(false);
     }
-  }, []);
+  }, [surveyorMap]);
 
   const fetchPayments = useCallback(async () => {
     setPaymentsLoading(true);
@@ -116,12 +128,17 @@ export function useAdminData(isAuthorized: boolean): UseAdminDataReturn {
     fetchPayments();
   }, [fetchAllProfiles, fetchSignups, fetchPayments]);
 
+  // Initial load — profiles first so enrichment has data
   useEffect(() => {
     if (!isAuthorized) return;
-    fetchAllProfiles();
-    fetchSignups();
-    fetchPayments();
-  }, [isAuthorized, fetchAllProfiles, fetchSignups, fetchPayments]);
+    const init = async () => {
+      await fetchAllProfiles();
+      await fetchSignups();
+      fetchPayments();
+    };
+    init();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthorized]);
 
   return {
     surveyors,
