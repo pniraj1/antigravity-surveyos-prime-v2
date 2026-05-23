@@ -399,10 +399,17 @@ export default function AccessRequestPage() {
         updatedAt:              Timestamp.now(),
         ...(referrerUid ? { referredBy: referrerUid } : {}),
       };
-      await Promise.all([
-        setDoc(profileRef, payload, { merge: true }),
-        setDoc(signupRef, { ...payload, displayName: name.trim(), status: 'pending' }, { merge: true }),
-      ]);
+      // PRIMARY: profile is the authoritative source — must succeed
+      await setDoc(profileRef, payload, { merge: true });
+      // SECONDARY: newSignups is a lightweight queue pointer — best-effort
+      try {
+        await setDoc(signupRef, {
+          displayName: name.trim(),
+          email,
+          status: 'pending',
+          updatedAt: Timestamp.now(),
+        }, { merge: true });
+      } catch { /* non-fatal — admin reads real data from profile */ }
       updateProfile({
         name:                   name.trim(),
         irdaiLicence:           irdai.trim().toUpperCase(),

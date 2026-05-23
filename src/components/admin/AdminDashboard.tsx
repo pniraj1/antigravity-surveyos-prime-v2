@@ -5,6 +5,7 @@ import {
   collectionGroup,
   collection,
   getDocs,
+  getDoc,
   query,
   doc,
   updateDoc,
@@ -209,9 +210,16 @@ export function AdminDashboard() {
     setApprovingId(signup.uid);
     try {
       const profileRef = doc(db, 'users', signup.uid, 'profile', 'current');
+
+      // Read the authoritative profile — newSignups may have stale/missing fields
+      const profileSnap = await getDoc(profileRef);
+      const profileData = profileSnap.exists() ? profileSnap.data() : {};
+      const authorName = profileData.name || signup.name || signup.displayName || 'USER';
+      const authorEmail = profileData.email || signup.email;
+
       const trialStart = new Date().toISOString();
       const trialEnd = calculateTrialEndDate(trialStart);
-      const refCode = generateReferralCode(signup.name || signup.displayName || 'USER');
+      const refCode = generateReferralCode(authorName);
       await setDoc(profileRef, {
         subscriptionStatus: 'trial',
         subscriptionExpiry: trialEnd,
@@ -219,8 +227,8 @@ export function AdminDashboard() {
         trialEndDate: trialEnd,
         referralCode: refCode,
         isAdmin: false,
-        email: signup.email,
-        displayName: signup.displayName,
+        email: authorEmail,
+        displayName: signup.displayName || profileData.displayName || '',
         updatedAt: Timestamp.now(),
       }, { merge: true });
       // Remove from newSignups queue
@@ -228,8 +236,8 @@ export function AdminDashboard() {
 
       // ── Open manual email (mailto) ──
       try {
-        const emailContent = buildApprovalEmail(signup.name || signup.displayName);
-        sendEmail({ to: signup.email, ...emailContent });
+        const emailContent = buildApprovalEmail(authorName);
+        sendEmail({ to: authorEmail, ...emailContent });
       } catch { /* non-fatal */ }
 
       setSignups(prev => prev.filter(s => s.uid !== signup.uid));
@@ -600,8 +608,8 @@ export function AdminDashboard() {
                               </button>
                               <button
                                 onClick={() => handleApprove(signup)}
-                                disabled={approvingId === signup.uid || !signup.irdaiLicence}
-                                title={!signup.irdaiLicence ? 'Awaiting registration form submission' : 'Approve this surveyor'}
+                                disabled={approvingId === signup.uid}
+                                title="Approve this surveyor and start their 60-day trial"
                                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold bg-[#D1FAE5] text-[#065F46] hover:bg-[#A7F3D0] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                               >
                                 {approvingId === signup.uid

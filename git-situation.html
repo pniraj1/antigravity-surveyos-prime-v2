@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SurveyOS — Git Situation Explained</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #0a0e17; color: #e0e0e0; line-height: 1.6; padding: 2rem; }
+
+  .container { max-width: 1100px; margin: 0 auto; }
+
+  h1 { font-size: 2rem; color: #fff; margin-bottom: 0.5rem; }
+  h2 { font-size: 1.4rem; color: #d4af37; margin: 2.5rem 0 1rem; border-bottom: 1px solid #d4af3744; padding-bottom: 0.5rem; }
+  h3 { font-size: 1.1rem; color: #8db4e2; margin: 1.5rem 0 0.5rem; }
+
+  .subtitle { color: #8899aa; font-size: 0.95rem; margin-bottom: 2rem; }
+
+  /* Timeline */
+  .timeline { position: relative; padding-left: 3rem; margin: 1.5rem 0; }
+  .timeline::before { content: ''; position: absolute; left: 14px; top: 0; bottom: 0; width: 3px; border-radius: 2px; }
+  .timeline.master::before { background: linear-gradient(to bottom, #22c55e, #22c55e88); }
+  .timeline.orphan::before { background: linear-gradient(to bottom, #f59e0b, #f59e0b88); }
+  .timeline.main::before { background: linear-gradient(to bottom, #3b82f6, #3b82f688); }
+
+  .commit { position: relative; margin-bottom: 0.6rem; padding: 0.6rem 1rem; background: #111827; border-radius: 8px; border: 1px solid #1e293b; }
+  .commit::before { content: ''; position: absolute; left: -2.35rem; top: 50%; transform: translateY(-50%); width: 12px; height: 12px; border-radius: 50%; border: 2px solid; }
+  .commit.green::before { border-color: #22c55e; background: #22c55e33; }
+  .commit.amber::before { border-color: #f59e0b; background: #f59e0b33; }
+  .commit.blue::before { border-color: #3b82f6; background: #3b82f633; }
+  .commit.red::before { border-color: #ef4444; background: #ef444433; }
+
+  .commit-hash { font-family: 'Consolas', 'Fira Code', monospace; font-size: 0.8rem; color: #64748b; }
+  .commit-msg { font-size: 0.9rem; color: #e2e8f0; font-weight: 500; }
+  .commit-date { font-size: 0.75rem; color: #64748b; }
+  .commit-note { font-size: 0.8rem; color: #f59e0b; font-style: italic; margin-top: 0.3rem; }
+
+  .highlight { border-color: #d4af37 !important; background: #d4af3710 !important; box-shadow: 0 0 12px #d4af3722; }
+  .highlight-red { border-color: #ef4444 !important; background: #ef444410 !important; }
+
+  /* Diagram */
+  .diagram { background: #111827; border: 1px solid #1e293b; border-radius: 12px; padding: 2rem; margin: 1.5rem 0; overflow-x: auto; }
+  .diagram pre { font-family: 'Consolas', 'Fira Code', monospace; font-size: 0.85rem; line-height: 1.8; color: #94a3b8; white-space: pre; }
+  .diagram .green { color: #22c55e; }
+  .diagram .amber { color: #f59e0b; }
+  .diagram .blue { color: #3b82f6; }
+  .diagram .red { color: #ef4444; }
+  .diagram .gold { color: #d4af37; font-weight: bold; }
+  .diagram .white { color: #fff; font-weight: bold; }
+
+  /* Info boxes */
+  .box { padding: 1.2rem 1.5rem; border-radius: 10px; margin: 1rem 0; }
+  .box-danger { background: #ef44441a; border: 1px solid #ef444444; }
+  .box-warning { background: #f59e0b1a; border: 1px solid #f59e0b44; }
+  .box-success { background: #22c55e1a; border: 1px solid #22c55e44; }
+  .box-info { background: #3b82f61a; border: 1px solid #3b82f644; }
+  .box strong { color: #fff; }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+  th { text-align: left; padding: 0.7rem 1rem; background: #1e293b; color: #d4af37; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  td { padding: 0.7rem 1rem; border-bottom: 1px solid #1e293b; font-size: 0.9rem; }
+  tr:hover td { background: #1e293b44; }
+
+  .tag { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 999px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+  .tag-green { background: #22c55e22; color: #22c55e; border: 1px solid #22c55e44; }
+  .tag-amber { background: #f59e0b22; color: #f59e0b; border: 1px solid #f59e0b44; }
+  .tag-red { background: #ef444422; color: #ef4444; border: 1px solid #ef444444; }
+  .tag-blue { background: #3b82f622; color: #3b82f6; border: 1px solid #3b82f644; }
+  .tag-gold { background: #d4af3722; color: #d4af37; border: 1px solid #d4af3744; }
+
+  .section-num { display: inline-block; width: 2rem; height: 2rem; border-radius: 50%; background: #d4af37; color: #0a0e17; font-weight: 900; text-align: center; line-height: 2rem; margin-right: 0.5rem; font-size: 0.9rem; }
+
+  .key-finding { font-size: 1.1rem; color: #fff; font-weight: 600; margin: 0.5rem 0; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>🔍 SurveyOS Git Situation — Full Picture</h1>
+<p class="subtitle">Generated on May 23, 2026 — everything you need to understand the current state</p>
+
+<!-- ============================================================ -->
+<h2><span class="section-num">1</span> The Problem in One Sentence</h2>
+<!-- ============================================================ -->
+
+<div class="box box-danger">
+  <p class="key-finding">The code running on production (Firebase #3) does NOT exist on any git branch.</p>
+  <p style="margin-top:0.5rem;">It was built from <strong>9 orphaned commits</strong> that sit on top of <code>master</code> + additional <strong>uncommitted changes</strong> that were never saved to git. Those 9 commits contain all the auth fixes, signup page, and Drive gate logic that make production work.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="section-num">2</span> Visual: Branch Structure</h2>
+<!-- ============================================================ -->
+
+<div class="diagram">
+<pre>
+<span class="white">Apr 6                        May 17              May 21                   May 23</span>
+<span class="white">  │                            │                   │                        │</span>
+
+<span class="green">  ● ─── ● ─── ● ─── ... ──── ● master (41a9fbbd)</span>  <span class="white">YOU ARE HERE</span>
+<span class="green">  │     84c00   b884          │ "Hide/Show Summary"</span>
+<span class="green">  │     (first)               │ (120 total commits)</span>
+                              <span class="amber">│</span>
+                              <span class="amber">├── ● ab9203e2  "redesign auth flow — logout, signup, sign-in, 30-day trial"</span>
+                              <span class="amber">├── ● 8a4afdd3  "prevent DriveGateScreen showing to unauthenticated"</span>
+                              <span class="amber">├── ● b20ae73a  "docs: project reorganization"</span>
+                              <span class="amber">├── ● 1154afe3  "cleanup stale files"</span>
+                              <span class="amber">├── ● 8adaaa64  "hide SaveStatusBar from unauthenticated users"</span>
+                              <span class="amber">├── ● ad7d4c62  "set authDomain to motorsurveyos.web.app"</span>
+                              <span class="amber">├── ● f3731be2  "revert authDomain back to firebaseapp.com"</span>
+                              <span class="amber">├── ● a58d00a4  "switch sign-in from popup to redirect"</span>
+                              <span class="amber">└── ● 82c1ee5d  "new users see AccessRequestForm"</span>
+                                   <span class="amber">│</span>
+                                   <span class="red">│  + UNCOMMITTED CHANGES (never saved to git)</span>
+                                   <span class="red">│</span>
+                                   <span class="gold">▼  ★ FIREBASE #3 DEPLOYED HERE ★</span>
+                                   <span class="gold">   Version: 15ff0ddf4df9a341</span>
+                                   <span class="gold">   Live at: motorsurveyos.web.app</span>
+                                   <span class="gold">   THIS IS THE WORKING PRODUCTION APP</span>
+
+
+<span class="blue">  ● ─── ● ─── ... ──── ● ──── ● main (d6324f9d)</span>
+<span class="blue">  │                     │      "add public assets recovered from Firebase #3"</span>
+<span class="blue">  │                     │      (diverged from master — 93 commits master doesn't have)</span>
+<span class="blue">  │                     │</span>
+<span class="blue">  │                     └──── ● main-staging-work (18d397c9)</span>
+<span class="blue">                               "wip: staging deploy fixes (popup auth, CSP)"</span>
+</pre>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="section-num">3</span> The Three Branches Explained</h2>
+<!-- ============================================================ -->
+
+<table>
+<tr>
+  <th>Branch</th>
+  <th>Tip Commit</th>
+  <th>Date</th>
+  <th>Status</th>
+  <th>What It Has</th>
+</tr>
+<tr>
+  <td><span class="tag tag-green">master</span></td>
+  <td><code>41a9fbbd</code></td>
+  <td>May 17</td>
+  <td><span class="tag tag-green">Current</span></td>
+  <td>Core app features (claims, AI, reports, assessment). Uses <strong>signInWithPopup</strong>. Does NOT have signup page, access-request flow, Drive gate fixes, or redirect auth.</td>
+</tr>
+<tr>
+  <td><span class="tag tag-blue">main</span></td>
+  <td><code>d6324f9d</code></td>
+  <td>May 21</td>
+  <td><span class="tag tag-blue">Diverged</span></td>
+  <td>Diverged from master early. Has 93 extra commits (auth redesign, public assets recovery). Different file structure. 1654 files differ from master.</td>
+</tr>
+<tr>
+  <td><span class="tag tag-blue">main-staging-work</span></td>
+  <td><code>18d397c9</code></td>
+  <td>May 23</td>
+  <td><span class="tag tag-amber">WIP</span></td>
+  <td>Branch off <code>main</code>. One extra commit: staging deploy fixes (popup auth, CSP). Today's work.</td>
+</tr>
+<tr>
+  <td><span class="tag tag-amber">orphaned</span></td>
+  <td><code>82c1ee5d</code></td>
+  <td>May 21</td>
+  <td><span class="tag tag-red">No branch</span></td>
+  <td>9 commits on top of <code>master</code>. Contains auth redesign, signup, Drive gate, redirect auth. Firebase #3 was deployed from here + uncommitted changes.</td>
+</tr>
+</table>
+
+<!-- ============================================================ -->
+<h2><span class="section-num">4</span> The 9 Orphaned Commits (The Missing Pieces)</h2>
+<!-- ============================================================ -->
+
+<p style="margin-bottom:1rem;">These commits sit between <code>master</code>'s tip and <code>82c1ee5d</code>. They were made on May 21 but <strong>were never merged into any branch</strong>. They exist in git's object store but will eventually be garbage-collected.</p>
+
+<div class="timeline orphan">
+  <div class="commit amber">
+    <div class="commit-hash">ab9203e2 · May 21, 10:19</div>
+    <div class="commit-msg">feat: redesign auth flow — logout fix, signup page, sign-in button, 30-day trial</div>
+    <div class="commit-note">⚡ This is the BIG one — added /signup page, changed landing page buttons, 30-day trial text</div>
+  </div>
+  <div class="commit amber">
+    <div class="commit-hash">8a4afdd3 · May 21, 12:09</div>
+    <div class="commit-msg">fix: prevent DriveGateScreen from showing to unauthenticated users and on public routes</div>
+    <div class="commit-note">⚡ Fixed the "Google Drive — Not Linked" appearing on landing page</div>
+  </div>
+  <div class="commit amber">
+    <div class="commit-hash">b20ae73a · May 21, 12:57</div>
+    <div class="commit-msg">docs: full project reorganization — vault restructure, agent protocol, Bible rewrite</div>
+  </div>
+  <div class="commit amber">
+    <div class="commit-hash">1154afe3 · May 21, 13:06</div>
+    <div class="commit-msg">chore: commit pre-existing code changes and cleanup stale files</div>
+  </div>
+  <div class="commit amber">
+    <div class="commit-hash">8adaaa64 · May 21, 13:40</div>
+    <div class="commit-msg">fix: hide SaveStatusBar (Drive not linked banner) from unauthenticated users</div>
+    <div class="commit-note">⚡ AuthSyncWrapper fix — gated SaveStatusBar behind isAuthenticated</div>
+  </div>
+  <div class="commit amber">
+    <div class="commit-hash">ad7d4c62 · May 21, 13:45</div>
+    <div class="commit-msg">fix: set authDomain to motorsurveyos.web.app so OAuth popup shows correct domain</div>
+  </div>
+  <div class="commit amber">
+    <div class="commit-hash">f3731be2 · May 21, 13:59</div>
+    <div class="commit-msg">revert: restore authDomain to firebaseapp.com to fix OAuth redirect_uri_mismatch</div>
+  </div>
+  <div class="commit amber highlight">
+    <div class="commit-hash">a58d00a4 · May 21, 14:23</div>
+    <div class="commit-msg">feat: switch Google sign-in from popup to full-page redirect</div>
+    <div class="commit-note">⚡ CRITICAL — Changed signInWithPopup → signInWithRedirect, added getRedirectResult to useAuth</div>
+  </div>
+  <div class="commit amber highlight">
+    <div class="commit-hash">82c1ee5d · May 21, 15:05</div>
+    <div class="commit-msg">fix: new users now see AccessRequestForm after sign-in</div>
+    <div class="commit-note">⚡ Last committed state before Firebase #3 deploy. Uncommitted changes were added on top.</div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="section-num">5</span> What <code>master</code> Has vs What Production Has</h2>
+<!-- ============================================================ -->
+
+<table>
+<tr>
+  <th>Feature / File</th>
+  <th>master (41a9fbbd)</th>
+  <th>Production (Firebase #3)</th>
+</tr>
+<tr>
+  <td>Sign-in method</td>
+  <td><code>signInWithPopup</code></td>
+  <td><code>signInWithRedirect</code> + <code>getRedirectResult</code></td>
+</tr>
+<tr>
+  <td>useAuth.ts — intentional logout guard</td>
+  <td>❌ Missing</td>
+  <td>✅ Has it</td>
+</tr>
+<tr>
+  <td>useAuth.ts — getRedirectResult handling</td>
+  <td>❌ Missing</td>
+  <td>✅ Has it</td>
+</tr>
+<tr>
+  <td>/signup page</td>
+  <td>❌ Missing</td>
+  <td>✅ Has it</td>
+</tr>
+<tr>
+  <td>/access-request page</td>
+  <td>❌ Missing</td>
+  <td>✅ Has it</td>
+</tr>
+<tr>
+  <td>DriveGateScreen auth guard</td>
+  <td>❌ Missing</td>
+  <td>✅ Fixed</td>
+</tr>
+<tr>
+  <td>SaveStatusBar auth guard</td>
+  <td>❌ Missing</td>
+  <td>✅ Fixed</td>
+</tr>
+<tr>
+  <td>Landing page — 30-day trial text</td>
+  <td>❌ Different</td>
+  <td>✅ Correct</td>
+</tr>
+<tr>
+  <td>Subscription lifecycle (trial, payments)</td>
+  <td>✅ Has it</td>
+  <td>✅ Has it</td>
+</tr>
+<tr>
+  <td>Core claims / AI / reports</td>
+  <td>✅ Has it</td>
+  <td>✅ Has it</td>
+</tr>
+<tr>
+  <td>Assessment grid / paste</td>
+  <td>✅ Has it</td>
+  <td>✅ Has it</td>
+</tr>
+</table>
+
+<!-- ============================================================ -->
+<h2><span class="section-num">6</span> Why This Happened</h2>
+<!-- ============================================================ -->
+
+<div class="box box-warning">
+<h3 style="color:#f59e0b; margin:0 0 0.5rem;">The Timeline of Events</h3>
+<ol style="padding-left:1.5rem; margin-top:0.5rem;">
+  <li style="margin-bottom:0.5rem;"><strong>May 17:</strong> Last commit on <code>master</code> — <code>41a9fbbd</code> (Hide/Show Summary button)</li>
+  <li style="margin-bottom:0.5rem;"><strong>May 21 (morning):</strong> 9 commits were made ON TOP of master — auth redesign, signup, Drive fixes, popup→redirect switch</li>
+  <li style="margin-bottom:0.5rem;"><strong>May 21 (afternoon):</strong> Additional uncommitted changes were made to fine-tune the app</li>
+  <li style="margin-bottom:0.5rem;"><strong>May 21 (afternoon):</strong> <code>firebase deploy</code> was run from this uncommitted state → <strong>Firebase #3 was born</strong></li>
+  <li style="margin-bottom:0.5rem;"><strong>May 21 (evening):</strong> The branch was apparently reset/rebased, orphaning the 9 commits. The <code>main</code> branch received similar but DIFFERENT versions of these changes (<code>a5ca065d</code> "auth flow redesign + access-request split-panel UI")</li>
+  <li style="margin-bottom:0.5rem;"><strong>May 23 (today):</strong> We've been trying to recreate production from <code>master</code>, but master is missing the 9 key commits</li>
+</ol>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="section-num">7</span> The Fix: Two Options</h2>
+<!-- ============================================================ -->
+
+<div class="box box-success">
+<h3 style="color:#22c55e; margin:0 0 0.8rem;">Option A: Cherry-pick the 9 orphaned commits onto master (Recommended)</h3>
+<p>The 9 commits still exist in git. We can cherry-pick them onto <code>master</code>:</p>
+<pre style="background:#0a0e17; padding:1rem; border-radius:6px; margin:0.8rem 0; font-family:monospace; font-size:0.85rem; color:#94a3b8; overflow-x:auto;">
+git cherry-pick ab9203e2 8a4afdd3 b20ae73a 1154afe3 8adaaa64 ad7d4c62 f3731be2 a58d00a4 82c1ee5d
+</pre>
+<p>This brings master up to the exact committed state that Firebase #3 was built from. Then we only need to figure out what the uncommitted changes were.</p>
+<p style="margin-top:0.5rem;"><strong>Risk:</strong> Low — these commits were originally made on top of master, so conflicts should be minimal.</p>
+</div>
+
+<div class="box box-info">
+<h3 style="color:#3b82f6; margin:0 0 0.8rem;">Option B: Create a new branch from 82c1ee5d</h3>
+<p>Create a branch at the exact point Firebase #3 was deployed from:</p>
+<pre style="background:#0a0e17; padding:1rem; border-radius:6px; margin:0.8rem 0; font-family:monospace; font-size:0.85rem; color:#94a3b8; overflow-x:auto;">
+git checkout -b production-baseline 82c1ee5d
+</pre>
+<p>This gives us a clean starting point that's the closest git state to production. We can then diff against the Firebase #3 built output to find the uncommitted changes.</p>
+<p style="margin-top:0.5rem;"><strong>Risk:</strong> None — doesn't touch master at all.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="section-num">8</span> Summary</h2>
+<!-- ============================================================ -->
+
+<div class="box box-danger">
+<table style="border:none;">
+<tr><td style="border:none; padding:0.3rem 1rem 0.3rem 0; color:#64748b;">Production app</td><td style="border:none; padding:0.3rem 0;"><strong>82c1ee5d + uncommitted changes</strong> (not on any branch)</td></tr>
+<tr><td style="border:none; padding:0.3rem 1rem 0.3rem 0; color:#64748b;">Current branch</td><td style="border:none; padding:0.3rem 0;"><strong>master (41a9fbbd)</strong> — missing 9 commits</td></tr>
+<tr><td style="border:none; padding:0.3rem 1rem 0.3rem 0; color:#64748b;">Key missing feature</td><td style="border:none; padding:0.3rem 0;">signInWithRedirect, signup page, Drive gate, access-request</td></tr>
+<tr><td style="border:none; padding:0.3rem 1rem 0.3rem 0; color:#64748b;">Root cause</td><td style="border:none; padding:0.3rem 0;">9 commits were orphaned when branch was reset after Firebase deploy</td></tr>
+<tr><td style="border:none; padding:0.3rem 1rem 0.3rem 0; color:#64748b;">Data safety</td><td style="border:none; padding:0.3rem 0;">Orphaned commits still exist in git (not yet garbage-collected)</td></tr>
+</table>
+</div>
+
+</div>
+</body>
+</html>
