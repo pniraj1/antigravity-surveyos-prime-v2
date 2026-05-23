@@ -41,12 +41,14 @@ function SplitLayout({
             <a href="/landing" className="flex items-center gap-1.5 text-sm font-bold text-slate-400 hover:text-white transition-colors">
               <ChevronLeft size={15} /> Website
             </a>
-            <button
-              onClick={onLogout}
-              className="flex items-center gap-1.5 text-sm font-bold text-slate-400 hover:text-white transition-colors"
-            >
-              <LogOut size={15} /> Log Out
-            </button>
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="flex items-center gap-1.5 text-sm font-bold text-slate-400 hover:text-white transition-colors"
+              >
+                <LogOut size={15} /> Log Out
+              </button>
+            )}
           </div>
         </div>
 
@@ -60,12 +62,14 @@ function SplitLayout({
               <a href="/landing" className="flex items-center gap-1.5 text-sm font-bold text-slate-400 hover:text-white transition-colors">
                 <ChevronLeft size={15} /> Website
               </a>
-              <button
-                onClick={onLogout}
-                className="flex items-center gap-1.5 text-sm font-bold text-slate-400 hover:text-white transition-colors"
-              >
-                <LogOut size={15} /> Log Out
-              </button>
+              {onLogout && (
+                <button
+                  onClick={onLogout}
+                  className="flex items-center gap-1.5 text-sm font-bold text-slate-400 hover:text-white transition-colors"
+                >
+                  <LogOut size={15} /> Log Out
+                </button>
+              )}
             </div>
           </div>
 
@@ -324,7 +328,11 @@ export default function AccessRequestPage() {
   const router = useRouter();
 
   const handleLogout = async () => {
-    await signOutUser();
+    try {
+      await signOutUser();
+    } catch {
+      // signOut rarely fails; navigate away regardless so user is never stuck
+    }
     router.replace('/landing');
   };
 
