@@ -7,7 +7,7 @@ export interface SurveyorAdminProfile {
   email?: string;
   mobileNumber?: string;
   licenceNumber?: string;
-  subscriptionStatus: 'active' | 'suspended' | 'expired' | 'pending' | 'trial' | 'readonly';
+  subscriptionStatus: 'active' | 'suspended' | 'pending' | 'trial' | 'readonly';
   subscriptionExpiry: string;
   surveyorId: string;
   lastSync?: unknown;
@@ -27,6 +27,11 @@ export interface NewSignup {
   signedUpAt: Timestamp;
   updatedAt?: Timestamp;
   status: string;
+  // Enriched from profile/current — authoritative values
+  profileName: string;
+  profileIrdai: string;
+  profileMobile: string;
+  accessRequestSubmitted: boolean;
 }
 
 export type AdminTab = 'surveyors' | 'signups' | 'payments' | 'dev-notes';
