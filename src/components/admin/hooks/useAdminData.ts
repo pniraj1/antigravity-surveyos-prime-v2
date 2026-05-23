@@ -123,9 +123,12 @@ export function useAdminData(isAuthorized: boolean): UseAdminDataReturn {
   }, []);
 
   const refreshAll = useCallback(() => {
-    fetchAllProfiles();
-    fetchSignups();
-    fetchPayments();
+    const run = async () => {
+      await fetchAllProfiles();
+      await fetchSignups();
+      fetchPayments();
+    };
+    void run();
   }, [fetchAllProfiles, fetchSignups, fetchPayments]);
 
   // Initial load — profiles first so enrichment has data
