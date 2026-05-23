@@ -42,11 +42,6 @@ export function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<AdminTab>('surveyors');
   const [searchQuery, setSearchQuery] = useState('');
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('pending');
-  const [defaultExpiry, setDefaultExpiry] = useState(() => {
-    const d = new Date();
-    d.setFullYear(d.getFullYear() + 1);
-    return d.toISOString().split('T')[0];
-  });
 
   // Modal state
   const [dismissModal, setDismissModal] = useState<{ uid: string; email: string; name: string } | null>(null);
@@ -79,12 +74,13 @@ export function AdminDashboard() {
     handleUpdateExpiry,
     handleUpdateId,
     handleUpdateName,
+    handleExtendSubscription,
     handleDeleteAccount,
   } = useAdminActions({ fetchAllProfiles, fetchSignups, setSurveyors, setSignups });
 
-  // Derived badge counts
+  // Badge counts
   const expiringSoonCount = surveyors.filter(s => {
-    const expiry = s.subscriptionStatus === 'trial' ? s.trialEndDate : s.subscriptionExpiry;
+    const expiry = s.subscriptionExpiry;
     if (!expiry) return false;
     const days = getDaysRemaining(expiry);
     return days > 0 && days <= 7;
@@ -236,12 +232,10 @@ export function AdminDashboard() {
             <ApprovalQueueTab
               signups={signups}
               loading={signupsLoading}
-              defaultExpiry={defaultExpiry}
-              setDefaultExpiry={setDefaultExpiry}
               approvingId={processingId}
-              onApprove={handleApprove}
+              onApprove={(signup: NewSignup, trialDays: number) => handleApprove(signup, trialDays)}
               onDismiss={(signup: NewSignup) =>
-                setDismissModal({ uid: signup.uid, email: signup.email, name: signup.name || signup.displayName })
+                setDismissModal({ uid: signup.uid, email: signup.email, name: signup.profileName || signup.name || signup.displayName })
               }
               onEmail={(email, name) => setEmailModal({ email, name })}
             />
@@ -257,6 +251,7 @@ export function AdminDashboard() {
               onUpdateExpiry={handleUpdateExpiry}
               onUpdateId={handleUpdateId}
               onUpdateName={handleUpdateName}
+              onExtend={handleExtendSubscription}
               onDeleteAccount={(surveyor) => setDeleteModal({ surveyor })}
             />
           )}
@@ -315,14 +310,16 @@ export function AdminDashboard() {
           payment={verifyModal.payment}
           onConfirm={async (payment, duration) => {
             if (!user) return;
-            setVerifyModal(null);
             try {
               await verifyPayment(payment.userUid!, payment.id!, user.uid, duration);
+              // Refresh both — order matters: payments first, then profiles
               await fetchPayments();
               await fetchAllProfiles();
             } catch (err) {
               console.error('Verify failed:', err);
               alert('Payment verification failed. Check console.');
+            } finally {
+              setVerifyModal(null);
             }
           }}
           onCancel={() => setVerifyModal(null)}
@@ -333,12 +330,13 @@ export function AdminDashboard() {
         <RejectPaymentModal
           payment={rejectModal.payment}
           onConfirm={async (payment, reason) => {
-            setRejectModal(null);
             try {
               await rejectPayment(payment.userUid!, payment.id!, reason);
               await fetchPayments();
             } catch (err) {
               console.error('Reject failed:', err);
+            } finally {
+              setRejectModal(null);
             }
           }}
           onCancel={() => setRejectModal(null)}
