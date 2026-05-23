@@ -23,30 +23,19 @@
 // ═══════════════════════════════════════════════════════════
 
 import { useEffect } from 'react';
-import { onAuthStateChanged, signOut, getRedirectResult } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, deleteDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/config';
 import { useAuthStore } from '@/stores/auth-store';
 import { initUserDB, closeUserDB } from '@/lib/storage/indexeddb';
 import { resetAllState } from '@/lib/auth/resetAllState';
 import { isExpired } from '@/lib/subscription/status';
+import { pullProfileFromCloud } from '@/lib/firebase/sync';
 
 export function useAuth() {
   const setUser = useAuthStore(s => s.setUser);
 
   useEffect(() => {
-    // Process Google redirect result (fires once after user returns from Google).
-    // Success case is handled by onAuthStateChanged below; this catches errors
-    // like denied consent or mismatched redirect URIs.
-    getRedirectResult(auth).catch((error: unknown) => {
-      if (error && typeof error === 'object' && 'code' in error) {
-        const code = (error as { code: string }).code;
-        if (code !== 'auth/null-user') {
-          console.error('Google redirect sign-in error:', code);
-        }
-      }
-    });
-
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         // ── INTENTIONAL LOGOUT GUARD ───────────────────────────
@@ -141,14 +130,19 @@ export function useAuth() {
           }
         }
 
+        // ── Bootstrap profile store before marking as authenticated ──
+        // pullProfileFromCloud writes isAdmin / subscriptionStatus into
+        // Zustand BEFORE isAuthenticated flips to true, so SubscriptionGuard
+        // sees the real admin flag on its very first render and does NOT
+        // spuriously redirect the admin to /access-request.
+        // The Firestore doc was just read above, so the SDK serves this from
+        // its local cache — no extra network round-trip.
+        await pullProfileFromCloud(user.uid);
+
         setUser(user);
       } else {
         // ── LOGOUT ─────────────────────────────────────────────
-        // Close the database BEFORE clearing auth state so no
-        // in-flight read/write races with the next user's login.
         await closeUserDB();
-        // Wipe all user-specific state: Drive tokens, claim list,
-        // profile. Surveyor B will start with a completely clean slate.
         resetAllState();
         setUser(null);
       }
