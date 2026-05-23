@@ -19,8 +19,10 @@ import {
 
 function SplitLayout({
   right,
+  onLogout,
 }: {
   right: React.ReactNode;
+  onLogout?: () => void;
 }) {
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
@@ -40,7 +42,7 @@ function SplitLayout({
               <ChevronLeft size={15} /> Website
             </a>
             <button
-              onClick={() => signOutUser()}
+              onClick={onLogout}
               className="flex items-center gap-1.5 text-sm font-bold text-slate-400 hover:text-white transition-colors"
             >
               <LogOut size={15} /> Log Out
@@ -59,7 +61,7 @@ function SplitLayout({
                 <ChevronLeft size={15} /> Website
               </a>
               <button
-                onClick={() => signOutUser()}
+                onClick={onLogout}
                 className="flex items-center gap-1.5 text-sm font-bold text-slate-400 hover:text-white transition-colors"
               >
                 <LogOut size={15} /> Log Out
@@ -249,7 +251,7 @@ function Field({
 }
 
 // ─── Confirmation ─────────────────────────────────────────────────────────────
-function ConfirmationPanel() {
+function ConfirmationPanel({ onLogout }: { onLogout?: () => void }) {
   const { profile } = useProfileStore();
 
   return (
@@ -305,13 +307,13 @@ function ConfirmationPanel() {
             <ChevronLeft size={12} /> Back to website
           </a>
           <span className="text-gray-300">|</span>
-          <button onClick={() => signOutUser()} className="hover:text-[#0D1B2A] transition-colors flex items-center gap-1.5">
+          <button onClick={onLogout} className="hover:text-[#0D1B2A] transition-colors flex items-center gap-1.5">
             <LogOut size={12} /> Log Out
           </button>
         </div>
 
       </div>
-    } />
+    } onLogout={onLogout} />
   );
 }
 
@@ -320,6 +322,11 @@ export default function AccessRequestPage() {
   const { user, isAuthenticated } = useAuthStore();
   const { profile, updateProfile } = useProfileStore();
   const router = useRouter();
+
+  const handleLogout = async () => {
+    await signOutUser();
+    router.replace('/landing');
+  };
 
   const [name,          setName]          = useState(user?.displayName ?? '');
   const [irdai,         setIrdai]         = useState('');
@@ -348,7 +355,7 @@ export default function AccessRequestPage() {
   }
 
   // State 3: already submitted — show confirmation split-panel
-  if (profile.accessRequestSubmitted) return <ConfirmationPanel />;
+  if (profile.accessRequestSubmitted) return <ConfirmationPanel onLogout={handleLogout} />;
 
   const validateReferralCode = async (code: string) => {
     if (!code.trim()) { setReferralValid(null); setReferrerUid(null); return; }
@@ -547,7 +554,7 @@ export default function AccessRequestPage() {
           <ChevronLeft size={12} /> Back to website
         </a>
         <span className="text-gray-300">|</span>
-        <button onClick={() => signOutUser()} className="hover:text-[#0D1B2A] transition-colors flex items-center gap-1.5">
+        <button onClick={handleLogout} className="hover:text-[#0D1B2A] transition-colors flex items-center gap-1.5">
           <LogOut size={12} /> Log Out
         </button>
       </div>
@@ -555,5 +562,5 @@ export default function AccessRequestPage() {
     </div>
   );
 
-  return <SplitLayout right={formPanel} />;
+  return <SplitLayout right={formPanel} onLogout={handleLogout} />;
 }
