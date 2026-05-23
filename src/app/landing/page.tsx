@@ -149,10 +149,11 @@ export default function LandingPage() {
     signInWithGoogle();
   };
 
-  // New users / CTAs: route to dedicated signup page
+  // New users / CTAs: open Google popup directly — no page navigation needed.
+  // After auth, onAuthStateChanged fires → profile pending → SubscriptionGuard → /access-request.
   const handleAction = () => {
     if (isAuthenticated) { router.push('/'); return; }
-    router.push('/signup');
+    signInWithGoogle();
   };
 
   const tint = CHAPTERS[chapter];
