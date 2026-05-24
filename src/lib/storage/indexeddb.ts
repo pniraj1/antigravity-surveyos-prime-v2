@@ -57,7 +57,7 @@ const LEGACY_DB_NAME = 'surveyos-v2';
  * Current database version. Bump this when adding new object stores
  * or indexes. The `upgrade` function handles all version transitions.
  */
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 /**
  * localStorage key prefix for tracking whether a user's legacy data
@@ -130,6 +130,14 @@ interface SurveyOSDB {
     key: string;
     value: { id: string; pushedUpdatedAt: string };
   };
+  driveFileCache: {
+    key: string;
+    value: {
+      claimId: string;
+      files: { id: string; name: string; mimeType: string }[];
+      updatedAt: string;
+    };
+  };
 }
 
 // ─── DB Lifecycle ─────────────────────────────────────────────────────────────
@@ -183,6 +191,10 @@ export async function initUserDB(uid: string): Promise<void> {
       // Push tracking — last successfully-pushed updatedAt per claim (v3)
       if (oldVersion < 3 && !db.objectStoreNames.contains('pushTracking')) {
         db.createObjectStore('pushTracking', { keyPath: 'id' });
+      }
+      // Drive file cache — cached file listings per claim folder (v4)
+      if (oldVersion < 4 && !db.objectStoreNames.contains('driveFileCache')) {
+        db.createObjectStore('driveFileCache', { keyPath: 'claimId' });
       }
     },
   });
@@ -478,4 +490,27 @@ export async function saveLearningData(key: string, data: unknown): Promise<void
 export async function getLearningData(key: string): Promise<unknown> {
   const db = await getDB();
   return db.get('learning', key);
+}
+
+// ─── Drive File Cache ────────────────────────────────────────────────────────
+
+export interface DriveFileCacheEntry {
+  id: string;
+  name: string;
+  mimeType: string;
+}
+
+export async function getDriveFileCache(claimId: string): Promise<DriveFileCacheEntry[] | null> {
+  const db = await getDB();
+  const record = await db.get('driveFileCache', claimId);
+  return record?.files ?? null;
+}
+
+export async function setDriveFileCache(claimId: string, files: DriveFileCacheEntry[]): Promise<void> {
+  const db = await getDB();
+  await db.put('driveFileCache', {
+    claimId,
+    files,
+    updatedAt: new Date().toISOString(),
+  });
 }
