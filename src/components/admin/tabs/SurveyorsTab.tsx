@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import {
   Loader2, UserX, Mail, IdCard, ShieldCheck,
   Calendar, CheckCircle2, XCircle, Clock, Eye, Trash2, Plus,
+  Phone, MapPin, Award, ChevronDown, ChevronRight, Link2,
 } from 'lucide-react';
 import { getDaysRemaining } from '@/lib/subscription/status';
 import type { SurveyorAdminProfile, SurveyorFilter } from '../types';
@@ -106,6 +107,7 @@ export function SurveyorsTab({
   onDeleteAccount,
 }: SurveyorsTabProps) {
   const [activeFilter, setActiveFilter] = useState<SurveyorFilter>('all');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const filtered = surveyors
     .filter(s => s.subscriptionStatus !== 'pending')
@@ -175,11 +177,21 @@ export function SurveyorsTab({
               const isProcessing = processingId === surveyor.id;
 
               return (
-                <tr key={surveyor.id} className={`hover:bg-[#FAFBFC] transition-colors group ${rowBg}`}>
+                <React.Fragment key={surveyor.id}>
+                <tr
+                  className={`hover:bg-[#FAFBFC] transition-colors group cursor-pointer ${rowBg}`}
+                  onClick={() => setExpandedId(prev => prev === surveyor.id ? null : surveyor.id)}
+                >
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-[#F0F2F5] flex items-center justify-center font-bold text-[#0D1B2A] text-lg">
-                        {surveyor.name.charAt(0)}
+                      <div className="flex items-center gap-1">
+                        {expandedId === surveyor.id
+                          ? <ChevronDown size={12} className="text-[#8D99AE] flex-shrink-0" />
+                          : <ChevronRight size={12} className="text-[#8D99AE] flex-shrink-0" />
+                        }
+                        <div className="w-10 h-10 rounded-xl bg-[#F0F2F5] flex items-center justify-center font-bold text-[#0D1B2A] text-lg">
+                          {surveyor.name.charAt(0)}
+                        </div>
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
@@ -188,6 +200,7 @@ export function SurveyorsTab({
                             className="text-sm font-bold text-[#0D1B2A] bg-transparent border-b border-dashed border-transparent hover:border-[#E2E6EA] focus:border-primary focus:ring-0 focus:outline-none p-0 w-40"
                             value={surveyor.name}
                             onChange={e => onUpdateName(surveyor.id, e.target.value)}
+                            onClick={e => e.stopPropagation()}
                             disabled={isProcessing}
                           />
                           {surveyor.isAdmin && <ShieldCheck size={14} className="text-primary flex-shrink-0" />}
@@ -208,6 +221,7 @@ export function SurveyorsTab({
                       className="bg-transparent border-b border-dashed border-[#E2E6EA] focus:border-primary focus:ring-0 text-sm p-0 w-24 font-black uppercase tracking-tight"
                       value={surveyor.surveyorId}
                       onChange={(e) => onUpdateId(surveyor.id, e.target.value.toUpperCase())}
+                      onClick={e => e.stopPropagation()}
                       disabled={isProcessing}
                     />
                   </td>
@@ -255,12 +269,13 @@ export function SurveyorsTab({
                         className={`bg-transparent border-none focus:ring-0 text-sm p-0 w-32 cursor-pointer ${expired ? 'text-red-600' : ''}`}
                         value={surveyor.subscriptionExpiry}
                         onChange={(e) => onUpdateExpiry(surveyor.id, e.target.value)}
+                        onClick={e => e.stopPropagation()}
                         disabled={isProcessing}
                       />
                     </div>
                   </td>
                   <td className="px-6 py-5 text-right">
-                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
                       {/* Extend */}
                       <ExtendControl uid={surveyor.id} onExtend={onExtend} disabled={isProcessing} />
 
@@ -304,6 +319,100 @@ export function SurveyorsTab({
                     </div>
                   </td>
                 </tr>
+                {expandedId === surveyor.id && (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-0">
+                      <div
+                        className="py-5 px-6 mb-4 rounded-xl animate-in fade-in slide-in-from-top-2 duration-200"
+                        style={{ background: '#FAFBFC', borderTop: '2px dashed #E2E6EA' }}
+                      >
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-4">
+                          <div>
+                            <div className="text-[10px] font-black uppercase tracking-wider text-[#8D99AE] mb-1">Email</div>
+                            {surveyor.email && surveyor.email !== 'N/A' ? (
+                              <a href={`mailto:${surveyor.email}`} className="text-xs font-medium text-[#D4AF37] hover:underline">
+                                {surveyor.email}
+                              </a>
+                            ) : (
+                              <span className="text-xs text-[#C3C9D4]">&mdash;</span>
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-[10px] font-black uppercase tracking-wider text-[#8D99AE] mb-1">Mobile</div>
+                            {surveyor.mobile ? (
+                              <a href={`tel:${surveyor.mobile}`} className="text-xs font-medium text-[#0D1B2A] hover:underline flex items-center gap-1">
+                                <Phone size={10} className="text-[#8D99AE]" />
+                                {surveyor.mobile}
+                              </a>
+                            ) : (
+                              <span className="text-xs text-[#C3C9D4]">&mdash;</span>
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-[10px] font-black uppercase tracking-wider text-[#8D99AE] mb-1">IRDAI Licence</div>
+                            <span className="text-xs font-medium text-[#0D1B2A]">
+                              {surveyor.irdaiLicence || <span className="text-[#C3C9D4]">&mdash;</span>}
+                            </span>
+                          </div>
+                          <div>
+                            <div className="text-[10px] font-black uppercase tracking-wider text-[#8D99AE] mb-1">City</div>
+                            <span className="text-xs font-medium text-[#0D1B2A] flex items-center gap-1">
+                              {surveyor.city ? (
+                                <><MapPin size={10} className="text-[#8D99AE]" /> {surveyor.city}</>
+                              ) : (
+                                <span className="text-[#C3C9D4]">&mdash;</span>
+                              )}
+                            </span>
+                          </div>
+                          <div>
+                            <div className="text-[10px] font-black uppercase tracking-wider text-[#8D99AE] mb-1">State</div>
+                            <span className="text-xs font-medium text-[#0D1B2A]">
+                              {surveyor.state || <span className="text-[#C3C9D4]">&mdash;</span>}
+                            </span>
+                          </div>
+                          <div>
+                            <div className="text-[10px] font-black uppercase tracking-wider text-[#8D99AE] mb-1">Qualifications</div>
+                            <span className="text-xs font-medium text-[#0D1B2A] flex items-center gap-1">
+                              {surveyor.qualifications ? (
+                                <><Award size={10} className="text-[#8D99AE]" /> {surveyor.qualifications}</>
+                              ) : (
+                                <span className="text-[#C3C9D4]">&mdash;</span>
+                              )}
+                            </span>
+                          </div>
+                          <div>
+                            <div className="text-[10px] font-black uppercase tracking-wider text-[#8D99AE] mb-1">Referral Code</div>
+                            <span className="text-xs font-mono font-medium text-[#0D1B2A] flex items-center gap-1">
+                              {surveyor.referralCode ? (
+                                <><Link2 size={10} className="text-[#8D99AE]" /> {surveyor.referralCode}</>
+                              ) : (
+                                <span className="text-[#C3C9D4]">&mdash;</span>
+                              )}
+                            </span>
+                          </div>
+                          <div>
+                            <div className="text-[10px] font-black uppercase tracking-wider text-[#8D99AE] mb-1">Referred By</div>
+                            <span className="text-xs font-mono font-medium text-[#0D1B2A]">
+                              {surveyor.referredBy || <span className="text-[#C3C9D4]">&mdash;</span>}
+                            </span>
+                          </div>
+                          <div>
+                            <div className="text-[10px] font-black uppercase tracking-wider text-[#8D99AE] mb-1">Join Date</div>
+                            <span className="text-xs font-medium text-[#0D1B2A]">
+                              {surveyor.createdAt && typeof surveyor.createdAt === 'object' && 'toDate' in (surveyor.createdAt as Record<string, unknown>)
+                                ? (surveyor.createdAt as { toDate: () => Date }).toDate().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                                : surveyor.createdAt
+                                ? String(surveyor.createdAt)
+                                : <span className="text-[#C3C9D4]">&mdash;</span>
+                              }
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                </React.Fragment>
               );
             })}
           </tbody>
