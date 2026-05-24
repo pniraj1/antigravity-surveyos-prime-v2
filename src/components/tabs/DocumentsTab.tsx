@@ -8,10 +8,13 @@ import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { uploadWithDuplicateCheck, type DuplicateAction, type ExistingFile } from '@/lib/drive/upload-with-check';
 import { DuplicateUploadDialog } from '@/components/dialogs/DuplicateUploadDialog';
+import { useClaimDriveFiles } from '@/hooks/useClaimDriveFiles';
+import { getDriveToken } from '@/lib/drive';
 import {
   FileText, Sparkles, Loader2, CheckCircle2, Car, CreditCard,
   FileCheck, Camera, ScrollText, Receipt, Shield, AlertTriangle,
-  Upload, Truck, Zap, Database,
+  Upload, Truck, Zap, Database, RefreshCw, ExternalLink,
+  ChevronDown, ChevronRight, HardDrive,
 } from 'lucide-react';
 import { ProviderHealthBadge, ModelSelector, DocModeToggle, ProviderToggle } from '@/components/ai/AIControls';
 import { ReconciliationDialog } from './reconciliation/ReconciliationDialog';
@@ -73,6 +76,8 @@ export function DocumentsTab() {
   const [isReconOpen, setIsReconOpen] = useState(false);
   const [autoFilledFields, setAutoFilledFields] = useState<ReconciliationField[]>([]);
   const prevClaimIdRef = useRef<string | null>(null);
+  const { files: driveFiles, loading: driveFilesLoading, error: driveFilesError, refresh: refreshDriveFiles } = useClaimDriveFiles(currentClaimId);
+  const [driveFilesExpanded, setDriveFilesExpanded] = useState(false);
   const [dupeDialog, setDupeDialog] = useState<{
     existing: ExistingFile;
     suffixedName: string;
@@ -409,6 +414,77 @@ export function DocumentsTab() {
           </div>
         </div>
       </div>
+
+      {/* ── Files on Drive ───────────────────────────────── */}
+        <div
+          className="rounded-2xl overflow-hidden mx-8 mb-6 lg:mx-12"
+          style={{ background: '#FFFFFF', border: '1px solid #E2E6EA', boxShadow: '0 1px 3px rgba(13,27,42,0.04)' }}
+        >
+          {/* Header — click to expand/collapse */}
+          <button
+            onClick={() => setDriveFilesExpanded(prev => !prev)}
+            className="w-full flex items-center justify-between px-5 py-4 hover:bg-[#FAFBFC] transition-colors"
+          >
+            <div className="flex items-center gap-2.5">
+              <HardDrive size={16} style={{ color: '#D4AF37' }} />
+              <span className="text-xs font-black text-[#0D1B2A] uppercase tracking-wider">
+                Files on Drive
+              </span>
+              <span className="px-1.5 py-0.5 rounded-md bg-[#F0F2F5] text-[10px] font-bold text-[#8D99AE]">
+                {driveFiles.length}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              {driveFilesLoading && <Loader2 size={14} className="animate-spin text-[#8D99AE]" />}
+              <button
+                onClick={(e) => { e.stopPropagation(); refreshDriveFiles(); }}
+                className="p-1 rounded-lg hover:bg-[#F0F2F5] transition-colors"
+                title="Refresh file list"
+              >
+                <RefreshCw size={12} className="text-[#8D99AE]" />
+              </button>
+              {driveFilesExpanded ? <ChevronDown size={14} className="text-[#8D99AE]" /> : <ChevronRight size={14} className="text-[#8D99AE]" />}
+            </div>
+          </button>
+
+          {/* Body */}
+          {driveFilesExpanded && (
+            <div className="border-t border-[#F0F2F5] px-5 py-3">
+              {driveFilesError && (
+                <p className="text-xs text-red-500 mb-2">{driveFilesError}</p>
+              )}
+              {driveFiles.length === 0 && !driveFilesLoading ? (
+                <p className="text-xs text-[#8D99AE] py-2">
+                  {getDriveToken() ? 'No files uploaded yet.' : 'Connect Google Drive to see files.'}
+                </p>
+              ) : (
+                <div className="flex flex-col divide-y divide-[#F0F2F5]">
+                  {driveFiles.map((file) => (
+                    <div key={file.id} className="flex items-center justify-between py-2.5">
+                      <div className="flex items-center gap-2.5">
+                        <FileText size={14} className="text-[#8D99AE] flex-shrink-0" />
+                        <span className="text-xs font-medium text-[#0D1B2A] truncate max-w-[200px]">
+                          {file.name}
+                        </span>
+                        <span className="text-[10px] text-[#C3C9D4]">
+                          {file.mimeType.split('/').pop()}
+                        </span>
+                      </div>
+                      <a
+                        href={`https://drive.google.com/file/d/${file.id}/view`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold text-[#D4AF37] hover:bg-[rgba(212,175,55,0.08)] transition-colors"
+                      >
+                        Open <ExternalLink size={10} />
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
       {/* AI Review Dialog */}
       <AIReviewDialog
