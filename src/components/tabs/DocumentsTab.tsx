@@ -6,7 +6,8 @@ import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import { ProcessingProgressOverlay } from '@/components/ui/ProcessingProgressOverlay';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
-import { uploadFileToDrive } from '@/lib/drive';
+import { uploadWithDuplicateCheck, type DuplicateAction, type ExistingFile } from '@/lib/drive/upload-with-check';
+import { DuplicateUploadDialog } from '@/components/dialogs/DuplicateUploadDialog';
 import {
   FileText, Sparkles, Loader2, CheckCircle2, Car, CreditCard,
   FileCheck, Camera, ScrollText, Receipt, Shield, AlertTriangle,
@@ -72,6 +73,11 @@ export function DocumentsTab() {
   const [isReconOpen, setIsReconOpen] = useState(false);
   const [autoFilledFields, setAutoFilledFields] = useState<ReconciliationField[]>([]);
   const prevClaimIdRef = useRef<string | null>(null);
+  const [dupeDialog, setDupeDialog] = useState<{
+    existing: ExistingFile;
+    suffixedName: string;
+    resolve: (action: DuplicateAction) => void;
+  } | null>(null);
 
   const conflicts = useMemo(() => {
     if (!currentClaim) return [];
@@ -125,13 +131,22 @@ export function DocumentsTab() {
     // AI extraction
     triggerExtraction(key, file);
 
-    // Non-blocking Drive upload
+    // Non-blocking Drive upload with duplicate detection
     if (currentClaim?.id && profile.autoUploadDrive !== false) {
       const label = currentClaim.vehicle?.registrationNumber || currentClaim.id;
       const ext   = file.name.split('.').pop() ?? 'bin';
       const driveName = `${key}.${ext}`;
-      uploadFileToDrive(currentClaim.id, driveName, file, label).catch(err => {
-        console.error('[DocumentsTab] Drive upload failed, file may not be synced:', err);
+      uploadWithDuplicateCheck(
+        currentClaim.id,
+        driveName,
+        file,
+        label,
+        (existing, suffixedName) =>
+          new Promise<DuplicateAction>((resolve) => {
+            setDupeDialog({ existing, suffixedName, resolve });
+          }),
+      ).catch(err => {
+        console.error('[DocumentsTab] Drive upload failed:', err);
       });
     }
 
@@ -421,6 +436,26 @@ export function DocumentsTab() {
         progress={progress}
         onCancel={cancelReview}
       />
+
+      {/* Duplicate Upload Dialog */}
+      {dupeDialog && (
+        <DuplicateUploadDialog
+          fileName={dupeDialog.existing.name}
+          suffixedName={dupeDialog.suffixedName}
+          onReplace={() => {
+            dupeDialog.resolve('replace');
+            setDupeDialog(null);
+          }}
+          onKeepBoth={() => {
+            dupeDialog.resolve('keep-both');
+            setDupeDialog(null);
+          }}
+          onCancel={() => {
+            dupeDialog.resolve('cancel');
+            setDupeDialog(null);
+          }}
+        />
+      )}
     </div>
   );
 }
