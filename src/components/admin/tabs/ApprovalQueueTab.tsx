@@ -66,6 +66,13 @@ function SignupRow({
       </td>
       <td className="px-6 py-5">
         <div className="text-sm font-medium text-[#0D1B2A]">
+          {signup.profileCity && signup.profileState
+            ? `${signup.profileCity}, ${signup.profileState}`
+            : signup.profileCity || signup.profileState || '—'}
+        </div>
+      </td>
+      <td className="px-6 py-5">
+        <div className="text-sm font-medium text-[#0D1B2A]">
           {(signup.updatedAt ?? signup.signedUpAt)
             ? (signup.updatedAt ?? signup.signedUpAt).toDate().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
             : '—'}
@@ -155,6 +162,7 @@ export function ApprovalQueueTab({
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-[#8D99AE]">User</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-[#8D99AE]">IRDAI Licence</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-[#8D99AE]">Phone</th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-[#8D99AE]">Location</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-[#8D99AE]">Submitted</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-[#8D99AE] text-right">Actions</th>
               </tr>
