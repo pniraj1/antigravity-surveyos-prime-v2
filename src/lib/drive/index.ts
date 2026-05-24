@@ -400,6 +400,16 @@ export async function downloadFileAsBase64(fileId: string, mimeType: string): Pr
 }
 
 /**
+ * Delete a file from Google Drive by its file ID.
+ * Used by duplicate upload detection to replace an existing file.
+ */
+export async function deleteFile(fileId: string): Promise<void> {
+  await driveRequest(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+    method: 'DELETE',
+  });
+}
+
+/**
  * Drain the persistent Drive upload queue.
  * Called on reconnect or after Drive is linked.
  * Returns number of successfully uploaded files.
