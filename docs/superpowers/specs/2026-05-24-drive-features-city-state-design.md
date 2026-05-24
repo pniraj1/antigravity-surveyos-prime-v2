@@ -261,6 +261,94 @@ city?: string;
 state?: string;
 ```
 
+### Admin Visibility — Expandable Surveyor Row
+
+**Problem:** Once a user moves from the Approval Queue to the Surveyors list, their email, phone, IRDAI licence, and (new) city/state become invisible to the admin. The SurveyorsTab table only shows name + subscription info.
+
+**Solution:** Add an expandable detail card to each surveyor row. Click the row → an inline detail card expands below it showing all collected user information.
+
+**Detail card fields:**
+
+| Field | Source |
+|-------|--------|
+| Email | `profile/current.email` |
+| Mobile | `profile/current.mobile` |
+| IRDAI Licence | `profile/current.irdaiLicence` |
+| City | `profile/current.city` |
+| State | `profile/current.state` |
+| Qualifications | `profile/current.qualifications` |
+| Referral Code | `profile/current.referralCode` |
+| Referred By | `profile/current.referredBy` |
+| Join Date | `profile/current.createdAt` |
+| Firebase UID | `profile id` (already available as `surveyor.id`) |
+
+**UI layout:** A subtle card below the expanded row with a 2-column grid of label/value pairs. Light gray background (`bg-[#FAFBFC]`), border-top dashed. Collapse on second click or when another row is expanded.
+
+### Modified Files for Admin Visibility
+
+**`src/components/admin/types.ts`**
+
+Extend `SurveyorAdminProfile` with the missing fields:
+
+```typescript
+export interface SurveyorAdminProfile {
+  // existing fields...
+  id: string;
+  name: string;
+  email?: string;
+  mobileNumber?: string;
+  licenceNumber?: string;
+  subscriptionStatus: 'active' | 'suspended' | 'pending' | 'trial' | 'readonly';
+  subscriptionExpiry: string;
+  surveyorId: string;
+  lastSync?: unknown;
+  isAdmin?: boolean;
+  trialStartDate?: string;
+  trialEndDate?: string;
+  lastPaymentDate?: string;
+  // NEW — for expandable detail card
+  mobile?: string;
+  irdaiLicence?: string;
+  city?: string;
+  state?: string;
+  qualifications?: string;
+  referralCode?: string;
+  referredBy?: string | null;
+  createdAt?: unknown; // Firestore Timestamp or ISO string
+}
+```
+
+Also extend `NewSignup` to include city/state:
+
+```typescript
+export interface NewSignup {
+  // existing fields...
+  // NEW
+  profileCity: string;
+  profileState: string;
+}
+```
+
+**`src/components/admin/hooks/useAdminData.ts`**
+
+In `fetchAllProfiles`, ensure the Firestore read includes the new fields. The current code likely reads the full `profile/current` document — verify that `mobile`, `irdaiLicence`, `city`, `state`, `qualifications`, `referralCode`, `referredBy`, `createdAt` are mapped into `SurveyorAdminProfile`.
+
+In `fetchSignups` enrichment, also read `city` and `state` from `profile/current` and map to `profileCity` / `profileState`.
+
+**`src/components/admin/tabs/SurveyorsTab.tsx`**
+
+- Add `expandedId` state (string | null) — which row is expanded
+- On row click: toggle `expandedId`
+- When expanded, render a `<tr>` below the surveyor row containing the detail card
+- Detail card: 2-column grid with all fields listed above
+- Empty fields show "—"
+- Email shows as a `mailto:` link
+- Mobile shows as a `tel:` link
+
+**`src/components/admin/tabs/ApprovalQueueTab.tsx`**
+
+Add City and State to the signup row display (below the existing phone field), reading from `profileCity` / `profileState`.
+
 ---
 
 ## Files Summary
@@ -275,6 +363,10 @@ state?: string;
 | `src/lib/storage/indexeddb.ts` | MODIFY — add `driveFileCache` store + helpers | 2 |
 | `src/app/access-request/page.tsx` | MODIFY — add city/state inputs | 3 |
 | `src/stores/profile-store.ts` | MODIFY — add defaults | 3 |
+| `src/components/admin/types.ts` | MODIFY — extend SurveyorAdminProfile + NewSignup | 3 |
+| `src/components/admin/hooks/useAdminData.ts` | MODIFY — fetch new fields from Firestore | 3 |
+| `src/components/admin/tabs/SurveyorsTab.tsx` | MODIFY — add expandable detail row | 3 |
+| `src/components/admin/tabs/ApprovalQueueTab.tsx` | MODIFY — show city/state | 3 |
 
 ## Testing
 
@@ -284,4 +376,4 @@ Each feature can be verified independently:
 
 **Feature 2:** Upload files to a claim → check "Files on Drive" section shows them → disconnect internet → reload → cached list still shows
 
-**Feature 3:** Create a new account → access-request form shows City/State fields → submit → check Firestore profile/current has the values
+**Feature 3:** Create a new account → access-request form shows City/State fields → submit → check Firestore profile/current has the values → admin logs in → clicks the surveyor row → detail card shows email, phone, IRDAI, city, state, qualifications, referral code, join date
