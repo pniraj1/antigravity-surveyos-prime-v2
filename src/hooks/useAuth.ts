@@ -130,6 +130,19 @@ export function useAuth() {
           }
         }
 
+        // ── Auto-grant isAdmin for master admin UID ──────────────
+        // Uses NEXT_PUBLIC_MASTER_ADMIN_UID from .env.local.
+        // Self-heals if the Firestore field was accidentally overwritten.
+        const masterAdminUid = process.env.NEXT_PUBLIC_MASTER_ADMIN_UID;
+        if (masterAdminUid && user.uid === masterAdminUid) {
+          const profileData = currentSnap.exists() ? currentSnap.data() : null;
+          if (profileData?.isAdmin !== true) {
+            try {
+              await updateDoc(currentRef, { isAdmin: true });
+            } catch { /* non-fatal — field will be set on next write */ }
+          }
+        }
+
         // ── Bootstrap profile store before marking as authenticated ──
         // pullProfileFromCloud writes isAdmin / subscriptionStatus into
         // Zustand BEFORE isAuthenticated flips to true, so SubscriptionGuard

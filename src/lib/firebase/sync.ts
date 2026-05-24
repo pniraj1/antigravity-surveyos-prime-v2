@@ -238,6 +238,7 @@ export async function pushProfileToCloud(uid: string, profile: SurveyorProfile) 
     groqApiKeys: _rKeys,
     geminiApiKey: _gKey,
     groqApiKey: _rKey,
+    isAdmin: _isAdmin, // Never overwrite from client — only set by admin actions in Firestore
     ...cloudProfile
   } = profile;
 
