@@ -10,7 +10,7 @@ import { useProfileStore } from '@/stores/profile-store';
 import Logo from '@/components/ui/Logo';
 import {
   Shield, User, Phone, Mail, FileText, Loader2,
-  CheckCircle2, ArrowRight, AlertCircle, Gift, LogOut, ChevronLeft,
+  CheckCircle2, ArrowRight, AlertCircle, Gift, LogOut, ChevronLeft, MapPin,
 } from 'lucide-react';
 
 // ─── Shared: split-panel wrapper ─────────────────────────────────────────────
@@ -339,6 +339,8 @@ export default function AccessRequestPage() {
   const [name,          setName]          = useState(user?.displayName ?? '');
   const [irdai,         setIrdai]         = useState('');
   const [phone,         setPhone]         = useState('');
+  const [city,          setCity]          = useState('');
+  const [state,         setState]         = useState('');
   const [referralCode,  setReferralCode]  = useState('');
   const [referrerUid,   setReferrerUid]   = useState<string | null>(null);
   const [referralValid, setReferralValid] = useState<boolean | null>(null);
@@ -394,6 +396,8 @@ export default function AccessRequestPage() {
         name:                   name.trim(),
         irdaiLicence:           irdai.trim().toUpperCase(),
         mobile:                 phone.trim(),
+        city:                   city.trim(),
+        state:                  state.trim(),
         email,
         accessRequestSubmitted: true,
         updatedAt:              Timestamp.now(),
@@ -493,6 +497,16 @@ export default function AccessRequestPage() {
           label="Phone Number" value={phone} onChange={setPhone}
           placeholder="+91 98765 43210" type="tel" icon={<Phone size={13} />}
           hint="We will contact you on this number to verify your identity."
+        />
+        <Field
+          label="City" value={city} onChange={setCity}
+          placeholder="e.g. Mumbai" icon={<MapPin size={13} />}
+          hint="Optional — helps us assign regional claims."
+        />
+        <Field
+          label="State" value={state} onChange={setState}
+          placeholder="e.g. Maharashtra" icon={<MapPin size={13} />}
+          hint="Optional — helps us assign regional claims."
         />
 
         {/* Referral code */}

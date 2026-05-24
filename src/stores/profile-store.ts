@@ -38,6 +38,8 @@ const DEFAULT_PROFILE: SurveyorProfile = {
   mobile: '',
   email: '',
   address: '',
+  city: '',
+  state: '',
   gstNumber: '',
   bankName: '',
   bankAccount: '',
