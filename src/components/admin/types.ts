@@ -15,6 +15,15 @@ export interface SurveyorAdminProfile {
   trialStartDate?: string;
   trialEndDate?: string;
   lastPaymentDate?: string;
+  // Detail card fields — visible when row is expanded
+  mobile?: string;
+  irdaiLicence?: string;
+  city?: string;
+  state?: string;
+  qualifications?: string;
+  referralCode?: string;
+  referredBy?: string | null;
+  createdAt?: unknown;
 }
 
 export interface NewSignup {
@@ -32,6 +41,8 @@ export interface NewSignup {
   profileIrdai: string;
   profileMobile: string;
   accessRequestSubmitted: boolean;
+  profileCity: string;
+  profileState: string;
 }
 
 export type AdminTab = 'surveyors' | 'signups' | 'payments' | 'dev-notes';

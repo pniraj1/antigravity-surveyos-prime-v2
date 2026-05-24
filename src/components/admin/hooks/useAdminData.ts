@@ -68,6 +68,15 @@ export function useAdminData(isAuthorized: boolean): UseAdminDataReturn {
           trialStartDate: data.trialStartDate || '',
           trialEndDate: data.trialEndDate || '',
           lastPaymentDate: data.lastPaymentDate || '',
+          // Detail card fields
+          mobile: data.mobile || '',
+          irdaiLicence: data.irdaiLicence || '',
+          city: data.city || '',
+          state: data.state || '',
+          qualifications: data.qualifications || '',
+          referralCode: data.referralCode || '',
+          referredBy: data.referredBy ?? null,
+          createdAt: data.createdAt || null,
         });
       });
       setSurveyorMap(seen);
@@ -110,6 +119,9 @@ export function useAdminData(isAuthorized: boolean): UseAdminDataReturn {
           profileIrdai: profile?.licenceNumber && profile.licenceNumber !== 'N/A' ? profile.licenceNumber : '',
           profileMobile: profile?.mobileNumber && profile.mobileNumber !== 'N/A' ? profile.mobileNumber : '',
           accessRequestSubmitted: Boolean(profile) && profile?.licenceNumber !== 'N/A',
+          // Enriched city/state
+          profileCity: profile?.city || '',
+          profileState: profile?.state || '',
         });
       });
       results.sort((a, b) => (b.signedUpAt?.seconds ?? 0) - (a.signedUpAt?.seconds ?? 0));
