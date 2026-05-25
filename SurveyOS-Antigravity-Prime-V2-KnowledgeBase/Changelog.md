@@ -2,6 +2,20 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-05-25 (Claude)
+- feat: duplicate upload detection for Google Drive (DuplicateUploadDialog + upload-with-check.ts)
+- feat: per-claim Drive file listing with IDB cache (useClaimDriveFiles hook, DB_VERSION=4)
+- feat: city/state fields in access-request form + profile store
+- feat: admin SurveyorsTab expandable detail rows (9 fields: email, mobile, IRDAI, city, state, qualifications, referral, join date)
+- feat: admin ApprovalQueueTab Location column
+- feat(bramha): gate archive button behind isCompleted in Dashboard.tsx and NewClaimDialog.tsx
+- feat(bramha): new Cloud Function `onClaimArchived` — archive-triggered Gemini embedding pipeline
+- feat(bramha): `bramha_memories` supports RAG + fraud detection + civic hotspot analysis
+- chore(bramha): deleted old `processCompletedClaim` Cloud Function
+- chore(bramha): added functions config to SurveyOS-Prime/firebase.json
+- deploy: all changes live at motorsurveyos.web.app; functions at us-central1
+- chore: pushed 18 commits to GitHub (pniraj1/antigravity-surveyos-prime-v2)
+
 ## 2026-05-21 (Claude)
 - chore: project reorganization — purged 473+ auto-generated vault files
 - chore: restructured vault into Architecture/, Features/, Rules/, Operations/, Specs/, Reference/

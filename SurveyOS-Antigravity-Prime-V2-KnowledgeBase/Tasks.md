@@ -1,9 +1,21 @@
 # Active Tasks
 
-> Last updated: 2026-05-21 by Claude
+> Last updated: 2026-05-25 by Claude
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
 
 ---
+
+## Bramha — Next Steps (Phase 2)
+
+- [ ] **Admin Simulator UI** — hidden admin page to run test RAG queries against `bramha_memories` and tune prompts
+- [ ] **Fraud detection UI** — query `bramha_memories` by policyNumber/vehicleRegistration to flag repeat claimants
+- [ ] **Hotspot map** — aggregate `placeOfAccident` field from `bramha_memories` and display on map
+- [ ] **Node.js runtime upgrade** — Cloud Functions on Node 20 (deprecated 2026-04-30, decommissioned 2026-10-30). Upgrade to Node 22 in `SurveyOS-Prime/functions/package.json` before October 2026.
+- [ ] **firebase-functions upgrade** — current version outdated; upgrade has breaking changes, do carefully
+
+## Reported Bugs
+
+- [ ] **Sign-in loop** — Google Auth completes but returns to landing page; no Drive connection request shown. Needs investigation in auth flow + Drive token handling.
 
 ## In Progress
 
