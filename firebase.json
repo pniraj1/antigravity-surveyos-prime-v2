@@ -1,4 +1,11 @@
 {
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": ["node_modules", ".git"]
+    }
+  ],
   "hosting": {
     "site": "motorsurveyos",
     "public": "out",
