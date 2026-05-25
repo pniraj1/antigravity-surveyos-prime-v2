@@ -31,6 +31,7 @@ interface ActiveClaimSummary {
   reportNo?: string;
   surveyType?: string;
   updatedAt?: string;
+  isCompleted: boolean;
 }
 
 const ACTIVE_CLAIM_LIMIT = 50;
@@ -104,19 +105,20 @@ function ArchiveFirstScreen({
                 </div>
                 <button
                   onClick={() => handleArchive(c.id)}
-                  disabled={archivingId === c.id}
+                  disabled={archivingId === c.id || !c.isCompleted}
+                  title={!c.isCompleted ? 'Complete this claim before archiving' : undefined}
                   className="ml-3 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold border transition-colors flex-shrink-0"
                   style={{
-                    borderColor: '#D4AF37',
-                    color: archivingId === c.id ? '#8D99AE' : '#0D1B2A',
-                    background: archivingId === c.id ? '#F0F2F5' : 'rgba(212,175,55,0.08)',
-                    cursor: archivingId === c.id ? 'not-allowed' : 'pointer',
+                    borderColor: !c.isCompleted ? '#ccc' : '#D4AF37',
+                    color: (archivingId === c.id || !c.isCompleted) ? '#8D99AE' : '#0D1B2A',
+                    background: (archivingId === c.id || !c.isCompleted) ? '#F0F2F5' : 'rgba(212,175,55,0.08)',
+                    cursor: (archivingId === c.id || !c.isCompleted) ? 'not-allowed' : 'pointer',
                   }}
                 >
                   {archivingId === c.id
                     ? <Loader2 size={12} className="animate-spin" />
                     : <Archive size={12} />}
-                  {archivingId === c.id ? 'Archiving…' : 'Archive'}
+                  {!c.isCompleted ? 'Not Complete' : archivingId === c.id ? 'Archiving…' : 'Archive'}
                 </button>
               </div>
             ))}
@@ -171,6 +173,7 @@ export function NewClaimDialog() {
           reportNo: c.reportNo,
           surveyType: c.surveyType,
           updatedAt: c.updatedAt,
+          isCompleted: c.isCompleted,
         }));
       setActiveClaims(active);
       setLimitReached(active.length >= ACTIVE_CLAIM_LIMIT);
@@ -189,6 +192,7 @@ export function NewClaimDialog() {
           reportNo: c.reportNo,
           surveyType: c.surveyType,
           updatedAt: c.updatedAt,
+          isCompleted: c.isCompleted,
         }));
       setActiveClaims(active);
       setLimitReached(active.length >= ACTIVE_CLAIM_LIMIT);
