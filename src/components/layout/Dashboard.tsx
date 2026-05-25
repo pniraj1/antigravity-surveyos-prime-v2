@@ -444,6 +444,7 @@ export function DashboardContent() {
                           onClick={(e) => {
                             e.stopPropagation();
                             if (claim.isActive) {
+                              if (!claim.isCompleted) return;
                               setArchiveTarget({ id: claim.id, vehicleNo: claim.vehicleNo || 'Unknown' });
                             } else {
                               // Restore doesn't need confirmation
@@ -459,8 +460,18 @@ export function DashboardContent() {
                               })();
                             }
                           }}
-                          className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-700"
-                          title={claim.isActive ? "Archive Claim" : "Restore Claim"}
+                          className={`p-1.5 rounded-lg transition-colors ${
+                            claim.isActive && !claim.isCompleted
+                              ? 'text-gray-300 cursor-not-allowed'
+                              : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700'
+                          }`}
+                          title={
+                            claim.isActive
+                              ? claim.isCompleted
+                                ? "Archive Claim"
+                                : "Complete all sections before archiving"
+                              : "Restore Claim"
+                          }
                         >
                           {claim.isActive ? <Archive size={16} /> : <ArchiveRestore size={16} />}
                         </button>
