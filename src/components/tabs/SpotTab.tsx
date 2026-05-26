@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Trash2, PlusCircle, AlertTriangle, ShieldCheck, Truck, User, MapPin, Gauge, Zap, FileText, ClipboardList, Sparkles } from 'lucide-react';
+import { Trash2, PlusCircle, AlertTriangle, ShieldCheck, Truck, User, MapPin, Gauge, Zap, FileText, ClipboardList } from 'lucide-react';
 
 const S = () => <span className="ml-1 inline-block w-2 h-2 rounded-full bg-green-500 align-middle" title="Used in Spot Report" />;
 
@@ -15,9 +15,8 @@ export function SpotTab() {
     updateSpotDetails, 
     updateDriver, 
     updateAccident, 
-    updateVehicle, 
-    updatePolicy,
-    addSpotDamageRow, 
+    updateVehicle,
+    addSpotDamageRow,
     updateSpotDamageRow, 
     deleteSpotDamageRow 
   } = useClaimStore();
@@ -88,27 +87,6 @@ export function SpotTab() {
         </CardContent>
       </Card>
       
-      {/* ── SECTION: ASSIGNMENT & POLICY ── */}
-      <Card className="border-teal/20 shadow-lg overflow-hidden bg-teal/[0.02]">
-        <CardHeader className="bg-teal/5 pb-4 border-b border-teal/10">
-          <CardTitle className="text-sm font-black flex items-center gap-2 uppercase tracking-widest text-teal">
-            <Sparkles size={16} />
-            Assignment & Policy Details (Manual Entry)
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="space-y-1.5 max-w-md">
-            <Label className="text-[10px] font-black uppercase text-muted-foreground/70 tracking-tighter">Appointing Office</Label>
-            <Input
-              value={currentClaim.policy.appointingOffice || ''}
-              onChange={(e) => updatePolicy({ appointingOffice: e.target.value })}
-              placeholder="e.g. Regional Office, Bangalore"
-              className="h-10 font-bold border-teal/10 focus-visible:ring-teal"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* SECTION 1: SCENE & POLICE */}
         <Card className="border-border shadow-sm overflow-hidden">
