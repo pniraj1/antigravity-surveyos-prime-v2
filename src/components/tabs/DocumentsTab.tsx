@@ -79,7 +79,7 @@ export function DocumentsTab() {
   const prevClaimIdRef = useRef<string | null>(null);
   const { files: driveFiles, loading: driveFilesLoading, error: driveFilesError, refresh: refreshDriveFiles } = useClaimDriveFiles(currentClaimId);
   const [driveFilesExpanded, setDriveFilesExpanded] = useState(false);
-  const [syncPickerOpen, setSyncPickerOpen] = useState(false);
+  const [syncPicker, setSyncPicker] = useState<{ key: string; label: string } | null>(null);
   const syncConnected = !!profile.syncBridgeToken;
   const [dupeDialog, setDupeDialog] = useState<{
     existing: ExistingFile;
@@ -197,16 +197,6 @@ export function DocumentsTab() {
             {/* Provider toggle + model + mode + Sync source */}
             <div className="flex flex-col items-end gap-2 flex-shrink-0">
               <ProviderToggle />
-              {syncConnected && (
-                <button
-                  onClick={() => setSyncPickerOpen(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold"
-                  style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)' }}
-                >
-                  <Plane size={12} />
-                  Add from SurveyOS Sync
-                </button>
-              )}
               <div className="flex items-center gap-2">
                 <DocModeToggle />
                 <ModelSelector />
@@ -373,7 +363,25 @@ export function DocumentsTab() {
                         <Icon size={20} />
                       </div>
 
-                      {isScanned ? (
+                      <div className="flex items-center gap-2">
+                        {syncConnected && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setSyncPicker({ key: doc.id, label: doc.label });
+                            }}
+                            className="flex items-center justify-center w-6 h-6 rounded-lg transition-colors hover:scale-110"
+                            style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)' }}
+                            title={`Pull ${doc.label} from SurveyOS Sync`}
+                            aria-label={`Pull ${doc.label} from SurveyOS Sync`}
+                          >
+                            <Plane size={12} />
+                          </button>
+                        )}
+
+                        {isScanned ? (
                         <div
                           className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold"
                           style={{ background: `${doc.color}15`, color: doc.color }}
@@ -390,6 +398,7 @@ export function DocumentsTab() {
                           Upload
                         </div>
                       )}
+                      </div>
                     </div>
 
                     {/* Label */}
@@ -547,23 +556,13 @@ export function DocumentsTab() {
         />
       )}
 
-      {/* SurveyOS Sync document picker */}
+      {/* SurveyOS Sync document picker — slot-scoped (no filename guessing) */}
       <SyncDrivePicker
-        open={syncPickerOpen}
-        onOpenChange={setSyncPickerOpen}
-        onPick={(file, docType) => {
-          const lower = docType.toLowerCase();
-          const key = lower.includes('rc') || lower.includes('registration') ? 'rc'
-            : lower.includes('licen') || lower.includes('driving') ? 'dl'
-            : lower.includes('policy') ? 'policy'
-            : lower.includes('bill') || lower.includes('invoice') ? 'final-bill'
-            : lower.includes('fir') || lower.includes('police') ? 'fir'
-            : lower.includes('photo') || lower.includes('damage') ? 'photos'
-            : lower.includes('permit') ? 'permit'
-            : lower.includes('fitness') ? 'fitness'
-            : lower.includes('challan') ? 'load-challan'
-            : 'claim';
-          processFile(file, key);
+        open={!!syncPicker}
+        onOpenChange={(o) => { if (!o) setSyncPicker(null); }}
+        targetSlotLabel={syncPicker?.label}
+        onPick={(file) => {
+          if (syncPicker) processFile(file, syncPicker.key);
         }}
       />
     </div>
