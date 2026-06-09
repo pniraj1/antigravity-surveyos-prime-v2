@@ -209,4 +209,9 @@ export interface SurveyorProfile {
   irdaiLicence: string;
   /** Set by admin when dismissing a request, shown to surveyor on re-submit form */
   dismissReason?: string;
+  // ─── SurveyOS Sync Integration ────────────────────────────
+  /** Bridge token stored after connecting SurveyOS Sync as a document drive. */
+  syncBridgeToken?: string;
+  /** ISO timestamp when SurveyOS Sync was connected; null if never. */
+  syncConnectedAt?: string | null;
 }

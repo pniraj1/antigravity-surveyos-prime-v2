@@ -73,6 +73,8 @@ const DEFAULT_PROFILE: SurveyorProfile = {
   finalSequence: 1,
   feeSequence: 1,
   reportYear: new Date().getFullYear(),
+  syncBridgeToken: '',
+  syncConnectedAt: null,
 };
 
 /**

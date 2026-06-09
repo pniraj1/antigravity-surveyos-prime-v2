@@ -13,8 +13,9 @@ import {
   Landmark, Sparkles, Camera, RefreshCw, CheckCircle2,
   AlertCircle, Upload, Trash2, Cpu, ExternalLink, Cloud, CloudOff, Link,
   ShieldCheck, Plus, Eye, EyeOff, Lock,
-  Calendar, Copy, Gift, Clock, BadgeCheck, XCircle, Hourglass,
+  Calendar, Copy, Gift, Clock, BadgeCheck, XCircle, Hourglass, Plane,
 } from 'lucide-react';
+import { ConnectSyncDialog } from '@/components/sync-bridge/ConnectSyncDialog';
 
 // ─── Section Wrapper ─────────────────────────────────────────────────────────
 function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
@@ -423,6 +424,7 @@ export function ProfileTab() {
   const [saved, setSaved] = useState(false);
   const [driveLinking, setDriveLinking] = useState(false);
   const [driveError, setDriveError] = useState('');
+  const [connectSyncOpen, setConnectSyncOpen] = useState(false);
 
   const user = useAuthStore((s) => s.user);
   const isAdminUser = profile.isAdmin;
@@ -803,6 +805,55 @@ export function ProfileTab() {
             </button>
           </div>
         </div>
+
+        {/* ── SurveyOS Sync Integration ─────────────────── */}
+        <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E2E6EA' }}>
+          <div className="px-6 py-4 flex items-center gap-2" style={{ borderBottom: '1px solid #F0F2F5', background: '#FAFAFA' }}>
+            <Plane size={14} style={{ color: '#D4AF37' }} />
+            <span className="text-sm font-black" style={{ color: '#0D1B2A' }}>SurveyOS Sync</span>
+            {profile.syncConnectedAt && (
+              <span className="ml-1 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider" style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e' }}>
+                Connected
+              </span>
+            )}
+          </div>
+          <div className="p-5">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <div className="text-sm font-black" style={{ color: '#0D1B2A' }}>Document Drive</div>
+                <div className="text-[10px] font-bold mt-0.5" style={{ color: '#8D99AE' }}>
+                  {profile.syncConnectedAt
+                    ? `Connected ${new Date(profile.syncConnectedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`
+                    : 'Pull documents collected from insureds and garages via Telegram.'}
+                </div>
+              </div>
+              {profile.syncConnectedAt ? (
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <span className="flex items-center gap-1 text-xs font-black" style={{ color: '#22c55e' }}>
+                    <CheckCircle2 size={14} /> Connected
+                  </span>
+                  <button
+                    onClick={() => updateProfile({ syncBridgeToken: '', syncConnectedAt: null })}
+                    className="text-xs font-black hover:underline"
+                    style={{ color: '#ef4444' }}
+                  >
+                    Disconnect
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConnectSyncOpen(true)}
+                  className="flex-shrink-0 px-4 py-2 rounded-xl text-xs font-black"
+                  style={{ background: '#0D1B2A', color: '#FFFFFF' }}
+                >
+                  Connect
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <ConnectSyncDialog open={connectSyncOpen} onOpenChange={setConnectSyncOpen} />
 
         {/* ── Subscription & Billing ────────────────────── */}
         <SubscriptionSection uid={user?.uid ?? ''} profile={profile} />

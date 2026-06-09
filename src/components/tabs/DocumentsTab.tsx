@@ -14,8 +14,9 @@ import {
   FileText, Sparkles, Loader2, CheckCircle2, Car, CreditCard,
   FileCheck, Camera, ScrollText, Receipt, Shield, AlertTriangle,
   Upload, Truck, Zap, Database, RefreshCw, ExternalLink,
-  ChevronDown, ChevronRight, HardDrive,
+  ChevronDown, ChevronRight, HardDrive, Plane,
 } from 'lucide-react';
+import { SyncDrivePicker } from '@/components/sync-bridge/SyncDrivePicker';
 import { ProviderHealthBadge, ModelSelector, DocModeToggle, ProviderToggle } from '@/components/ai/AIControls';
 import { ReconciliationDialog } from './reconciliation/ReconciliationDialog';
 import { getConflictFields, getUnanimousFields, ReconciliationField } from '@/lib/ai/reconciliation';
@@ -78,6 +79,8 @@ export function DocumentsTab() {
   const prevClaimIdRef = useRef<string | null>(null);
   const { files: driveFiles, loading: driveFilesLoading, error: driveFilesError, refresh: refreshDriveFiles } = useClaimDriveFiles(currentClaimId);
   const [driveFilesExpanded, setDriveFilesExpanded] = useState(false);
+  const [syncPickerOpen, setSyncPickerOpen] = useState(false);
+  const syncConnected = !!profile.syncBridgeToken;
   const [dupeDialog, setDupeDialog] = useState<{
     existing: ExistingFile;
     suffixedName: string;
@@ -124,19 +127,15 @@ export function DocumentsTab() {
   if (!currentClaim) return null;
   const evidenceImages: string[] = [];
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>, key: string) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Register file in EvidenceStore so the Evidence Viewer can display it
+  // Source-agnostic pipeline: register blob + trigger AI + optional Drive upload.
+  // Used by both local file input (handleFile) and the SurveyOS Sync picker.
+  const processFile = (file: File, key: string) => {
     if (currentClaim?.id) {
       storeBlobUrl(currentClaim.id, key, file);
     }
 
-    // AI extraction
     triggerExtraction(key, file);
 
-    // Non-blocking Drive upload with duplicate detection
     if (currentClaim?.id && profile.autoUploadDrive !== false) {
       const label = currentClaim.vehicle?.registrationNumber || currentClaim.id;
       const ext   = file.name.split('.').pop() ?? 'bin';
@@ -154,7 +153,12 @@ export function DocumentsTab() {
         console.error('[DocumentsTab] Drive upload failed:', err);
       });
     }
+  };
 
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>, key: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    processFile(file, key);
     e.target.value = '';
   };
 
@@ -190,9 +194,19 @@ export function DocumentsTab() {
               </p>
             </div>
 
-            {/* Provider toggle + model + mode */}
+            {/* Provider toggle + model + mode + Sync source */}
             <div className="flex flex-col items-end gap-2 flex-shrink-0">
               <ProviderToggle />
+              {syncConnected && (
+                <button
+                  onClick={() => setSyncPickerOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold"
+                  style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)' }}
+                >
+                  <Plane size={12} />
+                  Add from SurveyOS Sync
+                </button>
+              )}
               <div className="flex items-center gap-2">
                 <DocModeToggle />
                 <ModelSelector />
@@ -532,6 +546,26 @@ export function DocumentsTab() {
           }}
         />
       )}
+
+      {/* SurveyOS Sync document picker */}
+      <SyncDrivePicker
+        open={syncPickerOpen}
+        onOpenChange={setSyncPickerOpen}
+        onPick={(file, docType) => {
+          const lower = docType.toLowerCase();
+          const key = lower.includes('rc') || lower.includes('registration') ? 'rc'
+            : lower.includes('licen') || lower.includes('driving') ? 'dl'
+            : lower.includes('policy') ? 'policy'
+            : lower.includes('bill') || lower.includes('invoice') ? 'final-bill'
+            : lower.includes('fir') || lower.includes('police') ? 'fir'
+            : lower.includes('photo') || lower.includes('damage') ? 'photos'
+            : lower.includes('permit') ? 'permit'
+            : lower.includes('fitness') ? 'fitness'
+            : lower.includes('challan') ? 'load-challan'
+            : 'claim';
+          processFile(file, key);
+        }}
+      />
     </div>
   );
 }
