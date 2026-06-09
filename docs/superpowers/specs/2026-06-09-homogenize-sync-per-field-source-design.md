@@ -66,7 +66,8 @@ Rejected alternatives:
 | Component | Change |
 |---|---|
 | `src/components/tabs/DocumentsTab.tsx` | Add a per-card ✈️ badge rendered only when `syncConnected`. Clicking it (with `stopPropagation` + `preventDefault`) opens the picker carrying that card's `key` and `label`. **Remove** the global "Add from SurveyOS Sync" header button. **Remove** the `onPick` keyword heuristic. |
-| `src/components/sync-bridge/SyncDrivePicker.tsx` | Add a `targetSlotLabel?: string` prop, shown in the header so the surveyor sees the destination ("Add to: RC Book"). `onPick` signature drops the routing `docType` argument — the slot is already known by the caller. Soft-highlight name matches for the active slot; never filter. Remember the last-opened claim within the session. |
+| `src/components/sync-bridge/SyncDrivePicker.tsx` | Add a `targetSlotLabel?: string` prop, shown in the header so the surveyor sees the destination ("Add to: RC Book"). `onPick` signature drops the routing `docType` argument — the slot is already known by the caller. Add a live **search box** and **group claims by insurer** in the claim-list pane. Soft-highlight name matches for the active slot; never filter documents. Remember the last-opened claim within the session. |
+| `src/lib/sync-bridge/group-claims.ts` | New pure helper: `filterAndGroupClaims(claims, query)` → returns insurer-grouped, filtered, sorted claim groups. Pure + unit-tested (keeps the filter/group logic out of the component). |
 
 ### DocumentsTab — picker state
 
@@ -118,6 +119,18 @@ Downstream is identical to local upload. No heuristic anywhere in the path.
 
 ## Picker Ergonomics
 
+- **Searchable, grouped claim list (required for usability).** The claim-list pane gets a live
+  search box at the top that filters claims as the surveyor types, matching case-insensitively
+  against `vehicleNumber`, `insuranceCompany`, `modelMake`, and `label`. Without this, a surveyor
+  with many claims has to scroll an undifferentiated list — the friction that makes the feature
+  feel broken. All filtering is client-side over the already-fetched `claims` array; no new
+  network calls.
+- **Grouped by insurance company.** Filtered claims are rendered under collapsible insurer headers
+  (e.g. "HDFC ERGO (3)", "ICICI Lombard (1)"), so the list reads like organized folders rather
+  than a flat dump. Groups are sorted alphabetically by insurer; each header shows its match count
+  and toggles open/closed. While a search term is active, all matching groups are expanded so
+  results are immediately visible; with no search term, groups default to expanded.
+- **Search/grouping applies only to the claim-list view**, not the document-detail view.
 - **Show all documents in the claim** — nothing hidden. Soft-highlight (not filter) documents
   whose name keyword-matches the active slot, as a hint only. Free-form types remain fully visible.
 - **Remember the last-opened claim within the session.** Pulling RC, then DL, then Policy from the
@@ -141,9 +154,15 @@ Downstream is identical to local upload. No heuristic anywhere in the path.
 
 ## Testing
 
-- **Unit (regression):** a document named e.g. `random_scan.jpg` opened from the **DL** card lands
-  in `dl`, not `claim` — proving routing comes from the card `key`, not the filename. Add a test
-  asserting `onPick`/`processFile` is invoked with the exact slot key passed to the picker.
+- **Unit (filter/group):** `filterAndGroupClaims` returns claims grouped by insurer, sorted
+  alphabetically, filtered case-insensitively across vehicle number / insurer / model / label, and
+  drops empty groups. Covered with several cases. This is the only new logic worth automated
+  coverage — routing is now a no-op identity (the card's `key` is passed straight through).
+- **Routing regression (manual):** the project has no React render-test harness (vitest is used
+  for pure modules with mocked fetch; no Testing Library / jsdom component tests). Verify manually
+  that a deliberately mis-named document opened from the **DL** card lands in `dl`, not `claim`.
+  Correctness is structurally guaranteed by deleting the heuristic — there is no longer any
+  filename-based decision to get wrong.
 - **No client changes:** existing `src/lib/sync-bridge/__tests__/client.test.ts` stays green.
 - **Manual:** connect Sync → click ✈️ on the RC card → pull a deliberately mis-named document →
   confirm it extracts into the RC field (not `claim`). Repeat from the DL card with the picker
