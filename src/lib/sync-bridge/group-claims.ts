@@ -31,9 +31,7 @@ export function filterAndGroupClaims(
   const byInsurer = new Map<string, SyncClaimSummary[]>()
   for (const c of matches) {
     const key = c.insuranceCompany || 'Other'
-    const bucket = byInsurer.get(key) ?? []
-    bucket.push(c)
-    byInsurer.set(key, bucket)
+    byInsurer.set(key, [...(byInsurer.get(key) ?? []), c])
   }
 
   return [...byInsurer.entries()]

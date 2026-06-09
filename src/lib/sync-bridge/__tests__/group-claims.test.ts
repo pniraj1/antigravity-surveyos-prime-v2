@@ -56,4 +56,14 @@ describe('filterAndGroupClaims', () => {
     expect(filterAndGroupClaims(claims, '   ')).toHaveLength(1) // one insurer group, both claims
     expect(filterAndGroupClaims(claims, '   ')[0].claims).toHaveLength(2)
   })
+
+  it('returns [] for empty input', () => {
+    expect(filterAndGroupClaims([], '')).toEqual([])
+  })
+
+  it('groups a blank insurer under "Other"', () => {
+    const groups = filterAndGroupClaims([claim({ insuranceCompany: '' })], '')
+    expect(groups).toHaveLength(1)
+    expect(groups[0].insurer).toBe('Other')
+  })
 })
