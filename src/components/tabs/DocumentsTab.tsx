@@ -382,22 +382,22 @@ export function DocumentsTab() {
                         )}
 
                         {isScanned ? (
-                        <div
-                          className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold"
-                          style={{ background: `${doc.color}15`, color: doc.color }}
-                        >
-                          <CheckCircle2 size={11} />
-                          Scanned
-                        </div>
-                      ) : (
-                        <div
-                          className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold"
-                          style={{ background: '#F0F2F5', color: '#8D99AE' }}
-                        >
-                          <Upload size={11} />
-                          Upload
-                        </div>
-                      )}
+                          <div
+                            className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold"
+                            style={{ background: `${doc.color}15`, color: doc.color }}
+                          >
+                            <CheckCircle2 size={11} />
+                            Scanned
+                          </div>
+                        ) : (
+                          <div
+                            className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold"
+                            style={{ background: '#F0F2F5', color: '#8D99AE' }}
+                          >
+                            <Upload size={11} />
+                            Upload
+                          </div>
+                        )}
                       </div>
                     </div>
 

@@ -9,7 +9,7 @@
 // guesses where the file goes.
 // ═══════════════════════════════════════════════════════════
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useProfileStore } from '@/stores/profile-store';
 import { listSyncClaims, getSyncClaim, fetchSyncDocFile } from '@/lib/sync-bridge/client';
@@ -35,8 +35,21 @@ export function SyncDrivePicker({ open, onOpenChange, targetSlotLabel, onPick }:
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  // Remember the last-opened claim across re-opens within the session.
-  const [lastClaimId, setLastClaimId] = useState<string | null>(null);
+  // Remember the last-opened claim across re-opens within the session (read-only inside the effect).
+  const lastClaimIdRef = useRef<string | null>(null);
+
+  const openClaim = useCallback(async (claimId: string) => {
+    setLoading(true);
+    try {
+      const d = await getSyncClaim(token, claimId);
+      setDetail(d);
+      lastClaimIdRef.current = claimId;
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Could not load documents.');
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
 
   // Load the claim list whenever the dialog opens. If we previously opened a
   // claim this session and it still exists, jump straight back into it.
@@ -46,8 +59,9 @@ export function SyncDrivePicker({ open, onOpenChange, targetSlotLabel, onPick }:
     listSyncClaims(token)
       .then((list) => {
         setClaims(list);
-        if (lastClaimId && list.some((c) => c.claimId === lastClaimId)) {
-          void openClaim(lastClaimId);
+        const remembered = lastClaimIdRef.current;
+        if (remembered && list.some((c) => c.claimId === remembered)) {
+          void openClaim(remembered);
         } else {
           setDetail(null);
         }
@@ -56,24 +70,10 @@ export function SyncDrivePicker({ open, onOpenChange, targetSlotLabel, onPick }:
         toast.error(err instanceof Error ? err.message : 'Could not load Sync claims.')
       )
       .finally(() => setLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, token]);
+  }, [open, token, openClaim]);
 
   const groups = useMemo(() => filterAndGroupClaims(claims, query), [claims, query]);
   const searching = query.trim().length > 0;
-
-  const openClaim = async (claimId: string) => {
-    setLoading(true);
-    try {
-      const d = await getSyncClaim(token, claimId);
-      setDetail(d);
-      setLastClaimId(claimId);
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Could not load documents.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const pickDoc = async (docId: string, docType: string) => {
     if (!detail) return;
