@@ -161,6 +161,9 @@ export interface SpotSurveyDetails {
   ulw: number | null;
   loadCapacity: number | null;
   actualLoad: number | null;
+  /** Surveyor's explicit choice to flag overload/overweight in the report.
+   *  Overload is NOT auto-flagged red — the surveyor opts in via the Spot tab. */
+  flagOverload: boolean;
   challanNo: string;
   challanDate: string;
   loadDesc: string;

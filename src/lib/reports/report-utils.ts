@@ -14,11 +14,14 @@ import type { SurveyorProfile } from '@/types/vehicle';
 
 export function formatDateDMY(v: string | null | undefined): string {
   if (!v) return '—';
-  const dStr = String(v).split('T')[0];
-  const parts = dStr.split('-');
-  if (parts.length === 3) {
-    if (parts[0].length === 4) return `${parts[2]}.${parts[1]}.${parts[0]}`;
-    if (parts[2].length === 4) return `${parts[0]}.${parts[1]}.${parts[2]}`;
+  const dStr = String(v).split('T')[0].trim();
+  // Accept -, /, or . as separators
+  const parts = dStr.split(/[-/.]/);
+  if (parts.length === 3 && parts.every((p) => /^\d+$/.test(p))) {
+    if (parts[0].length === 4) return `${parts[2].padStart(2, '0')}.${parts[1].padStart(2, '0')}.${parts[0]}`;
+    // DD-MM-YYYY (Indian). Never hand numeric slash dates to new Date(),
+    // which would misread them as US MM/DD/YYYY.
+    if (parts[2].length === 4) return `${parts[0].padStart(2, '0')}.${parts[1].padStart(2, '0')}.${parts[2]}`;
   }
   const d = new Date(v);
   if (!isNaN(d.getTime())) {

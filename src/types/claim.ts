@@ -291,6 +291,7 @@ export function createBlankClaim(
       ulw: null,
       loadCapacity: null,
       actualLoad: null,
+      flagOverload: false,
       challanNo: '',
       challanDate: '',
       loadDesc: '',

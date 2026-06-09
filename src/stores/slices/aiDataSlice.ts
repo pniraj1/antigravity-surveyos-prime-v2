@@ -17,31 +17,43 @@ type WithClaim = { currentClaim: ClaimData | null };
 
 function parseDate(d: string): string {
   if (!d) return '';
-  const clean = d.trim().replace(/[^\w\s\-/]/g, ' ');
+  const clean = d.trim().replace(/[^\w\s\-/.]/g, ' ');
 
+  // Already ISO (YYYY-MM-DD)
   if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) return clean;
 
-  const parts = clean.split(/[\s\-/]+/);
+  const parts = clean.split(/[\s\-/.]+/).filter(Boolean);
   if (parts.length >= 3) {
-    const dateObj = new Date(clean);
-    if (!isNaN(dateObj.getTime())) {
-      const y = dateObj.getFullYear();
-      const m = String(dateObj.getMonth() + 1).padStart(2, '0');
-      const dayStr = String(dateObj.getDate()).padStart(2, '0');
+    const [a, b, c] = parts;
+    const allNumeric = [a, b, c].every((p) => /^\d+$/.test(p));
+
+    // CRITICAL: numeric day/month/year must be resolved with the Indian
+    // DD-MM-YYYY convention BEFORE ever touching `new Date()`. JavaScript's
+    // Date parser reads slash dates as US MM/DD/YYYY, which silently swaps day
+    // and month whenever both are ≤ 12 (e.g. 03/04/2026 → 04 Mar instead of
+    // 03 Apr). We must never hand a numeric date to `new Date()`.
+    if (allNumeric) {
+      // Year-first: YYYY-MM-DD (or YYYY/MM/DD)
+      if (a.length === 4) {
+        return `${a}-${b.padStart(2, '0')}-${c.padStart(2, '0')}`;
+      }
+      // Year-last: Indian DD-MM-YYYY
+      if (c.length === 4) {
+        return `${c}-${b.padStart(2, '0')}-${a.padStart(2, '0')}`;
+      }
+    }
+
+    // Non-numeric month (e.g. "20-Nov-2019") — safe to let Date resolve the
+    // month name; normalize separators to spaces for reliable parsing.
+    const named = new Date(clean.replace(/[-/.]/g, ' '));
+    if (!isNaN(named.getTime())) {
+      const y = named.getFullYear();
+      const m = String(named.getMonth() + 1).padStart(2, '0');
+      const dayStr = String(named.getDate()).padStart(2, '0');
       return `${y}-${m}-${dayStr}`;
     }
-
-    // Standard Indian DD-MM-YYYY
-    const [day, month, year] = parts;
-    if (year.length === 4 && day.length <= 2) {
-      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-    }
   }
 
-  const fallback = new Date(clean);
-  if (!isNaN(fallback.getTime())) {
-    return fallback.toISOString().split('T')[0];
-  }
   return d;
 }
 

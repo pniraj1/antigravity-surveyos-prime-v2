@@ -13,7 +13,7 @@ const formatDateTimeDMY = (dt: string) => {
   if (!dt) return '—';
   try {
     const d = new Date(dt);
-    return `${d.getDate().toString().padStart(2, '0')}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getFullYear()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+    return `${d.getDate().toString().padStart(2, '0')}.${(d.getMonth() + 1).toString().padStart(2, '0')}.${d.getFullYear()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
   } catch (e) { return dt; }
 };
 
@@ -321,7 +321,7 @@ export async function generateSpotWordReport(claim: ClaimData, profile: Surveyor
       width: { size: 100, type: WidthType.PERCENTAGE },
       rows: [
         createKVRow("GVW (kg)", String(spotDetails.gvw || ""), "ULW / Tare (kg)", String(spotDetails.ulw || ""), ws),
-        createKVRow("Load Capacity", String(spotDetails.loadCapacity || ""), "Actual Load", String(spotDetails.actualLoad || ""), ws),
+        createKVRow("Load Capacity", String(spotDetails.loadCapacity || ""), "Actual Load", `${String(spotDetails.actualLoad || "")}${spotDetails.flagOverload && (spotDetails.actualLoad || 0) > (spotDetails.loadCapacity || 0) ? " (OVERLOADED)" : ""}`, ws),
         createKVRow("CN / Challan No.", spotDetails.challanNo, "Challan Date", spotDetails.challanDate, ws),
         createKVRow("Goods", spotDetails.loadDesc, "", "", ws),
         createKVRow("Origin", spotDetails.loadOrigin, "Destination", spotDetails.loadDest, ws),

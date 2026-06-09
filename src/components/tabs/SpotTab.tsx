@@ -28,7 +28,10 @@ export function SpotTab() {
   const { spotDetails, vehicleType, driver, accident, vehicle } = currentClaim;
   const spotDamageRows = currentClaim.spotDamageRows ?? [];
   const isCommercial = vehicleType !== 'private';
-  const overloaded = (spotDetails.actualLoad || 0) > (spotDetails.loadCapacity || 0);
+  // Numeric overload condition is informational only. The report flags it red
+  // ONLY when the surveyor explicitly opts in via spotDetails.flagOverload.
+  const overWeightNumeric = (spotDetails.actualLoad || 0) > (spotDetails.loadCapacity || 0);
+  const overloadFlagged = !!spotDetails.flagOverload;
 
   const handleUpdate = (updates: Partial<typeof spotDetails>) => {
     updateSpotDetails(updates);
@@ -253,10 +256,20 @@ export function SpotTab() {
                   <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Actual Load (KG)<S /></Label>
                   <Input
                     type="number"
-                    className={`font-mono font-bold ${overloaded ? 'text-red-600 border-red-200 bg-red-50' : 'text-green-600'}`}
+                    className={`font-mono font-bold ${overloadFlagged ? 'text-red-600 border-red-200 bg-red-50' : 'text-foreground'}`}
                     value={spotDetails.actualLoad || ''}
                     onChange={(e) => handleUpdate({ actualLoad: Number(e.target.value) })}
                   />
+                  {overWeightNumeric && (
+                    <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground cursor-pointer mt-1">
+                      <input
+                        type="checkbox"
+                        checked={overloadFlagged}
+                        onChange={(e) => handleUpdate({ flagOverload: e.target.checked })}
+                      />
+                      Flag as overloaded in report
+                    </label>
+                  )}
                 </div>
 
                 {/* Challan Info */}

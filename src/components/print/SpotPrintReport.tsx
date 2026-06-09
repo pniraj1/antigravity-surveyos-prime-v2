@@ -30,13 +30,15 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
   const ulwVal = parseFloat(String(spotDetails.ulw)) || 0;
   const capVal = parseFloat(String(spotDetails.loadCapacity)) || 0;
   const actualLoad = parseFloat(String(spotDetails.actualLoad)) || 0;
-  const overload = isGoods && actualLoad > 0 && capVal > 0 && actualLoad > capVal;
+  // Overload is shown ONLY when the surveyor explicitly opts in (flagOverload).
+  // It is never auto-flagged red just because actualLoad > capacity.
+  const overload = !!spotDetails.flagOverload && isGoods && actualLoad > 0 && capVal > 0 && actualLoad > capVal;
 
   const formatDateTimeDMY = (dt: string) => {
     if (!dt) return '—';
     try {
       const d = new Date(dt);
-      return `${d.getDate().toString().padStart(2, '0')}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getFullYear()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+      return `${d.getDate().toString().padStart(2, '0')}.${(d.getMonth() + 1).toString().padStart(2, '0')}.${d.getFullYear()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
     } catch (e) { return dt; }
   };
 

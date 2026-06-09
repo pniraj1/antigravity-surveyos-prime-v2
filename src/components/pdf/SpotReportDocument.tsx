@@ -237,9 +237,9 @@ export function SpotReportDocument({ claim }: Props) {
               <Text style={styles.colLabel}>GVW / ULW / Cap:</Text>
               <Text style={styles.colValue}>{claim?.spotDetails?.gvw || 0} / {claim?.spotDetails?.ulw || 0} / {claim?.spotDetails?.loadCapacity || 0} KG</Text>
             </View>
-            <View style={{...styles.row, backgroundColor: (claim?.spotDetails?.actualLoad || 0) > (claim?.spotDetails?.loadCapacity || 0) ? '#fee2e2' : '#f0fdf4'}}>
+            <View style={{...styles.row, ...(claim?.spotDetails?.flagOverload && (claim?.spotDetails?.actualLoad || 0) > (claim?.spotDetails?.loadCapacity || 0) ? { backgroundColor: '#fee2e2' } : {})}}>
               <Text style={styles.colLabel}>Actual Load:</Text>
-              <Text style={{...styles.colValue, fontFamily: 'Helvetica-Bold'}}>{claim?.spotDetails?.actualLoad || 0} KG {(claim?.spotDetails?.actualLoad || 0) > (claim?.spotDetails?.loadCapacity || 0) ? '(OVERLOADED)' : ''}</Text>
+              <Text style={{...styles.colValue, fontFamily: 'Helvetica-Bold'}}>{claim?.spotDetails?.actualLoad || 0} KG {claim?.spotDetails?.flagOverload && (claim?.spotDetails?.actualLoad || 0) > (claim?.spotDetails?.loadCapacity || 0) ? '(OVERLOADED)' : ''}</Text>
             </View>
             <View style={styles.row}>
               <Text style={styles.colLabel}>Load Origin-Dest:</Text>

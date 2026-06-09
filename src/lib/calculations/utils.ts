@@ -45,20 +45,23 @@ export function numberToWords(num: number): string {
 export function formatDateDMY(value: string | null | undefined): string {
   if (!value) return '—';
 
-  const dStr = String(value).split('T')[0];
-  const parts = dStr.split('-');
+  const dStr = String(value).split('T')[0].trim();
+  // Accept -, /, or . as separators
+  const parts = dStr.split(/[-/.]/);
 
-  if (parts.length === 3) {
+  if (parts.length === 3 && parts.every((p) => /^\d+$/.test(p))) {
     // ISO format: YYYY-MM-DD
     if (parts[0].length === 4) {
-      return `${parts[2]}.${parts[1]}.${parts[0]}`;
+      return `${parts[2].padStart(2, '0')}.${parts[1].padStart(2, '0')}.${parts[0]}`;
     }
-    // DD-MM-YYYY
+    // DD-MM-YYYY (Indian). Never hand numeric slash dates to new Date(),
+    // which would misread them as US MM/DD/YYYY.
     if (parts[2].length === 4) {
-      return `${parts[0]}.${parts[1]}.${parts[2]}`;
+      return `${parts[0].padStart(2, '0')}.${parts[1].padStart(2, '0')}.${parts[2]}`;
     }
   }
 
+  // Non-numeric (e.g. "20 Nov 2019") — safe to let Date resolve the month name.
   const d = new Date(value);
   if (!isNaN(d.getTime())) {
     return (
