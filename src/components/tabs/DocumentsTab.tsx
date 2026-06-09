@@ -372,7 +372,7 @@ export function DocumentsTab() {
                               e.stopPropagation();
                               setSyncPicker({ key: doc.id, label: doc.label });
                             }}
-                            className="flex items-center justify-center w-6 h-6 rounded-lg transition-colors hover:scale-110"
+                            className="relative z-20 flex items-center justify-center w-6 h-6 rounded-lg transition-colors hover:scale-110"
                             style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)' }}
                             title={`Pull ${doc.label} from SurveyOS Sync`}
                             aria-label={`Pull ${doc.label} from SurveyOS Sync`}
