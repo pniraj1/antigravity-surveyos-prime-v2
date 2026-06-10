@@ -87,9 +87,10 @@ New, focused modules under `src/lib/local-sync/`:
 |---|---|---|
 | `directory-handle.ts` | `showDirectoryPicker()`, persist the `FileSystemDirectoryHandle` in IndexedDB, re-verify `readwrite` permission each session | Manual (browser API) |
 | `nomenclature.ts` | **Pure.** Derive sanitized claim-folder, subfolder, and file names from claim/doc metadata | Unit |
-| `sync-manifest.ts` | Read/write a `_surveyos-sync.json` manifest file inside each claim folder | Unit (pure diff portion) |
-| `sync-engine.ts` | Orchestrate: diff local manifest vs Sync manifest, download only missing/changed files, write them, update the manifest, report progress | Unit (diff logic) |
-| `useLocalSync.ts` | React hook: connected-folder state, per-claim sync status/progress | Manual |
+| `sync-manifest.ts` | Read/write a `_surveyos-sync.json` manifest file inside each claim folder; expose pure `diffManifest()` and `isDocSynced()` helpers | Unit (pure helpers) |
+| `sync-engine.ts` | Orchestrate one claim's sync: diff, download only missing/changed files, write them, update the manifest, report progress. Also `syncAllClaims()` for the bulk action | Unit (diff logic) |
+| `local-source.ts` | **Local-first file resolution.** Given a connected folder + claim/doc/fileIndex, return the on-disk `File` if present, else `null` (caller falls back to the Worker) | Unit (path resolution) + manual |
+| `useLocalSync.ts` | React hook: connected-folder state, per-claim + bulk sync status/progress, and a `claimSyncState` map (which docs are already synced) for the picker indicator | Manual |
 
 ### Directory handle + permission
 - First use: `showDirectoryPicker({ mode: 'readwrite' })` → store the handle in IndexedDB (handles are
@@ -130,13 +131,26 @@ Rules:
      resumable). Report progress (`done / total`).
 - Files already in the manifest and unchanged are **skipped** — re-sync only pulls new/changed files.
 
+### Local-first file resolution (`local-source.ts`)
+Once a claim is synced, Prime should read its files from disk instead of the Worker. `local-source`
+exposes `getLocalFile(claim, docId, fileIndex): Promise<File | null>`:
+- Resolves the expected relative path via `nomenclature.ts`, walks the directory handle, and returns
+  the file as a `File` if it exists; returns `null` otherwise.
+- Wired into the per-field ✈️ picker's pick path: **try local first, fall back to `fetchSyncDocFile`
+  (Worker)**. A synced doc opens instantly with no Worker call; an unsynced one behaves as today.
+- Pure path-resolution is unit-tested; the actual handle read is exercised manually.
+
 ### Trigger / UI
-- A **"Sync to local folder"** button per claim, surfaced in the Sync picker's claim-detail view.
-- First click (no folder yet) → folder picker, then proceeds.
-- Shows progress ("Syncing 3 / 12…") and, when idle, a "Last synced <time>" line derived from the
-  manifest.
-- Optional secondary "Open folder" hint (we cannot open Explorer directly, but we can show the
-  resolved relative path).
+- **Per-claim:** a **"Sync to local folder"** button in the Sync picker's claim-detail view. First
+  click (no folder yet) → folder picker, then proceeds. Shows progress ("Syncing 3 / 12…") and, when
+  idle, "Last synced <time>" from the manifest.
+- **Bulk:** a **"Sync all to local folder"** button at the claim-list level that runs `syncAllClaims`
+  sequentially (one claim at a time, to avoid bursting the Worker), with claim-level progress
+  ("Claim 4 / 30…"). Skips already-synced files per claim via the same diff.
+- **Per-document indicator:** in the claim-detail document list, each document that is fully present
+  in the local manifest shows a subtle "✓ on disk" badge (driven by `isDocSynced()` /
+  `claimSyncState`), so the surveyor sees at a glance what's already local.
+- Optional "Open folder" hint shows the resolved relative path (we cannot launch Explorer directly).
 
 ---
 
@@ -160,17 +174,29 @@ Rules:
 - **Unit — sync diff logic:** given a Sync manifest + a local manifest, returns exactly the
   new/changed files and skips unchanged ones; handles the first-ever sync (empty local manifest) and
   a re-sync after one new photo.
+- **Unit — `isDocSynced()`:** a document counts as synced only when *all* its files are present in
+  the local manifest (partial → not synced), driving the per-document indicator.
+- **Unit — `local-source` path resolution:** the relative path it computes matches what the sync
+  engine wrote (single-file flat path and multi-file subfolder path).
 - **Worker unit:** the new `files[]` manifest shape (incl. legacy single-file docs → one entry) and
   the `:fileIndex` route bounds (valid index streams; out-of-range → 404).
 - **Manual E2E:** pick folder → sync a claim with a multi-photo slot → verify real files appear in
   Explorer with correct names/subfolder → add a photo in Sync → re-sync pulls only the new one →
-  revoke permission and confirm graceful re-prompt.
+  confirm the synced doc shows "✓ on disk" and opens with **no Worker call** (local-first) →
+  run "Sync all" across several claims → revoke permission and confirm graceful re-prompt.
 
 ---
 
-## Follow-ups (not blockers)
+## In scope (previously follow-ups, now included)
 
-1. "Sync all claims" bulk action (current scope is per-claim).
-2. Prime reading evidence straight from the local folder (further speed up in-app viewing) once a
-   claim is synced.
-3. A subtle per-document "synced to local" indicator in the picker.
+1. **"Sync all claims" bulk action** — sequential `syncAllClaims` with claim-level progress.
+2. **Local-first evidence reading** — `local-source.getLocalFile` wired into the ✈️ picker so synced
+   docs open from disk with no Worker call.
+3. **Per-document "synced to local" indicator** — "✓ on disk" badge driven by `isDocSynced()`.
+
+## Follow-ups (genuinely deferred)
+
+- Reading **previously-picked** evidence from local on a fresh session (the Evidence Viewer's
+  in-memory blob store rehydrating from disk) beyond the pick-path local-first resolution above.
+- Automatic background sync / change detection without an explicit click.
+- Surfacing per-file (not just per-doc) sync status in the UI.
