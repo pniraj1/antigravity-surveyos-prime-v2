@@ -16,7 +16,11 @@ import { listSyncClaims, getSyncClaim, fetchSyncDocFile } from '@/lib/sync-bridg
 import { filterAndGroupClaims } from '@/lib/sync-bridge/group-claims';
 import type { SyncClaimSummary, SyncClaimDetail } from '@/lib/sync-bridge/types';
 import { toast } from 'sonner';
-import { Loader2, ChevronLeft, ChevronDown, ChevronRight, FileText, Car, Search } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronDown, ChevronRight, FileText, Car, Search, FolderDown, HardDriveDownload } from 'lucide-react';
+import { useLocalSync } from '@/lib/local-sync/useLocalSync';
+import { getLocalFile } from '@/lib/local-sync/local-source';
+import { isDocSynced, emptyManifest, MANIFEST_FILENAME, type LocalManifest } from '@/lib/local-sync/sync-manifest';
+import { claimFolderName } from '@/lib/local-sync/nomenclature';
 
 interface SyncDrivePickerProps {
   open: boolean;
@@ -37,6 +41,8 @@ export function SyncDrivePicker({ open, onOpenChange, targetSlotLabel, onPick }:
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   // Remember the last-opened claim across re-opens within the session (read-only inside the effect).
   const lastClaimIdRef = useRef<string | null>(null);
+  const localSync = useLocalSync(token);
+  const [claimManifest, setClaimManifest] = useState<LocalManifest | null>(null);
 
   const openClaim = useCallback(async (claimId: string) => {
     setLoading(true);
@@ -72,6 +78,25 @@ export function SyncDrivePicker({ open, onOpenChange, targetSlotLabel, onPick }:
       .finally(() => setLoading(false));
   }, [open, token, openClaim]);
 
+  // Read the opened claim's local manifest so we can show "✓ on disk" per document.
+  useEffect(() => {
+    if (!detail || !localSync.root) { setClaimManifest(null); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const claimDir = await localSync.root!.getDirectoryHandle(
+          claimFolderName({ vehicleNumber: detail.vehicleNumber, insuranceCompany: detail.insuranceCompany }),
+        );
+        const fh = await claimDir.getFileHandle(MANIFEST_FILENAME);
+        const text = await (await fh.getFile()).text();
+        if (!cancelled) setClaimManifest(JSON.parse(text) as LocalManifest);
+      } catch {
+        if (!cancelled) setClaimManifest(emptyManifest(detail.claimId));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [detail, localSync.root, localSync.busy]);
+
   const groups = useMemo(() => filterAndGroupClaims(claims, query), [claims, query]);
   const searching = query.trim().length > 0;
 
@@ -79,7 +104,16 @@ export function SyncDrivePicker({ open, onOpenChange, targetSlotLabel, onPick }:
     if (!detail) return;
     setDownloadingId(docId);
     try {
-      const file = await fetchSyncDocFile(token, detail.claimId, docId, docType);
+      const doc = detail.documents.find((d) => d.docId === docId);
+      const fileCount = doc?.fileCount ?? 1;
+      const mimeType = doc?.mimeType ?? 'image/jpeg';
+      // Local-first: if the newest file of this doc is already on disk, read it (no Worker call).
+      const local = await getLocalFile(
+        localSync.root,
+        { vehicleNumber: detail.vehicleNumber, insuranceCompany: detail.insuranceCompany },
+        { docType, fileIndex: fileCount - 1, fileCount, mimeType, docId },
+      );
+      const file = local ?? await fetchSyncDocFile(token, detail.claimId, docId, docType);
       onPick(file);
       onOpenChange(false);
     } catch (err: unknown) {
@@ -148,6 +182,18 @@ export function SyncDrivePicker({ open, onOpenChange, targetSlotLabel, onPick }:
         {/* Claim list — grouped by insurer */}
         {!loading && !detail && (
           <div className="max-h-80 overflow-y-auto">
+            {localSync.supported && claims.length > 0 && (
+              <button
+                onClick={() => localSync.runSyncAll(claims)}
+                disabled={localSync.busy}
+                className="w-full mb-2 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold disabled:opacity-50"
+                style={{ background: 'rgba(212,175,55,0.12)', color: '#B8860B', border: '1px solid rgba(212,175,55,0.3)' }}
+              >
+                {localSync.busy
+                  ? <><Loader2 size={13} className="animate-spin" /> {localSync.progress?.claimLabel ?? 'Syncing…'}</>
+                  : <><FolderDown size={13} /> Sync all claims to local folder</>}
+              </button>
+            )}
             {groups.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">
                 {searching ? 'No claims match your search.' : 'No claims found in SurveyOS Sync.'}
@@ -196,6 +242,23 @@ export function SyncDrivePicker({ open, onOpenChange, targetSlotLabel, onPick }:
         {/* Document list for one claim */}
         {!loading && detail && (
           <div className="max-h-80 overflow-y-auto divide-y">
+            {localSync.supported && (
+              <button
+                onClick={() => localSync.runSyncClaim({
+                  claimId: detail.claimId,
+                  vehicleNumber: detail.vehicleNumber,
+                  insuranceCompany: detail.insuranceCompany,
+                  label: `${detail.vehicleNumber} - ${detail.insuranceCompany}`,
+                })}
+                disabled={localSync.busy}
+                className="w-full mb-2 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold disabled:opacity-50"
+                style={{ background: 'rgba(212,175,55,0.12)', color: '#B8860B', border: '1px solid rgba(212,175,55,0.3)' }}
+              >
+                {localSync.busy
+                  ? <><Loader2 size={13} className="animate-spin" /> {localSync.progress ? `Syncing ${localSync.progress.done}/${localSync.progress.total}…` : 'Syncing…'}</>
+                  : <><HardDriveDownload size={13} /> Sync to local folder</>}
+              </button>
+            )}
             {detail.documents.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">
                 No received documents in this claim.
@@ -220,6 +283,8 @@ export function SyncDrivePicker({ open, onOpenChange, targetSlotLabel, onPick }:
                     </span>
                     {downloadingId === d.docId ? (
                       <Loader2 size={14} className="animate-spin shrink-0" />
+                    ) : claimManifest && isDocSynced(d.docId, d.fileCount, claimManifest) ? (
+                      <span className="text-[10px] font-bold shrink-0" style={{ color: '#16a34a' }}>✓ on disk</span>
                     ) : (
                       <span className="text-xs text-muted-foreground shrink-0">
                         {d.fileSizeKb} KB
