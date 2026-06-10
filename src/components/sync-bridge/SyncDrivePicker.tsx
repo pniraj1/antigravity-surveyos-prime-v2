@@ -106,7 +106,9 @@ export function SyncDrivePicker({ open, onOpenChange, targetSlotLabel, onPick }:
     try {
       const doc = detail.documents.find((d) => d.docId === docId);
       const fileCount = doc?.fileCount ?? 1;
-      const mimeType = doc?.mimeType ?? 'image/jpeg';
+      // Use the newest file's own mime so the local-first lookup's extension matches what the
+      // sync engine wrote (it derives each file's ext from that file's mimeType, not the slot's).
+      const mimeType = doc?.files?.[fileCount - 1]?.mimeType ?? doc?.mimeType ?? 'image/jpeg';
       // Local-first: if the newest file of this doc is already on disk, read it (no Worker call).
       const local = await getLocalFile(
         localSync.root,
