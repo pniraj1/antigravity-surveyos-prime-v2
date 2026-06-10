@@ -9,6 +9,13 @@ export interface BridgeResponse<T> {
   error?: string;
 }
 
+/** One file inside a document slot (mirrors the Worker's manifest `files[]`). */
+export interface BridgeFileMeta {
+  fileIndex: number;
+  mimeType: string;
+  fileSizeKb: number;
+}
+
 /** A claim shown as a "folder" in the Sync drive picker. */
 export interface SyncClaimSummary {
   claimId: string;
@@ -30,6 +37,8 @@ export interface SyncDocMeta {
   fileSizeKb: number;
   uploadedAt: string;
   fileCount: number;
+  /** Every file in this slot. Present from the multi-file bridge; may be undefined on older payloads. */
+  files?: BridgeFileMeta[];
 }
 
 /** Detail payload for one claim. */

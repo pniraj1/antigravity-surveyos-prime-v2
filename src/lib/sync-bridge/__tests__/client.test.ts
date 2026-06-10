@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { redeemLinkCode, listSyncClaims, getSyncClaim, fetchSyncDocFile, SYNC_WORKER_URL } from '../client'
+import { redeemLinkCode, listSyncClaims, getSyncClaim, fetchSyncDocFile, fetchSyncDocFileAt, SYNC_WORKER_URL } from '../client'
 
 const okJson = (data: unknown) =>
   Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true, data }) } as Response)
@@ -85,5 +85,26 @@ describe('fetchSyncDocFile', () => {
 
     await expect(fetchSyncDocFile('tok', 'c1', 'd1', 'RC Book'))
       .rejects.toThrow('Could not download')
+  })
+})
+
+describe('fetchSyncDocFileAt', () => {
+  it('GETs the per-file route with the bearer token and wraps a numbered File', async () => {
+    const blob = new Blob([new Uint8Array([1, 2, 3])], { type: 'image/jpeg' })
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      blob: () => Promise.resolve(blob),
+      headers: new Headers({ 'Content-Type': 'image/jpeg' }),
+    } as unknown as Response)
+    vi.stubGlobal('fetch', fetchMock)
+
+    const file = await fetchSyncDocFileAt('tok', 'c1', 'd1', 2, 'Damage Photos')
+
+    expect(file).toBeInstanceOf(File)
+    expect(file.type).toBe('image/jpeg')
+    expect(file.name).toMatch(/^Damage Photos 3\.(jpg|jpeg)$/) // index 2 → human #3
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe(`${SYNC_WORKER_URL}/api/bridge/file/c1/d1/2`)
+    expect((init as RequestInit).headers).toMatchObject({ Authorization: 'Bearer tok' })
   })
 })

@@ -49,6 +49,25 @@ export async function getSyncClaim(token: string, claimId: string): Promise<Sync
   return parse<SyncClaimDetail>(resp);
 }
 
+/** Stream one specific file (by index) from a multi-file slot, named "<docType> <n>.<ext>". */
+export async function fetchSyncDocFileAt(
+  token: string,
+  claimId: string,
+  docId: string,
+  fileIndex: number,
+  docType: string,
+): Promise<File> {
+  const resp = await fetch(
+    `${SYNC_WORKER_URL}/api/bridge/file/${encodeURIComponent(claimId)}/${encodeURIComponent(docId)}/${fileIndex}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  if (!resp.ok) throw new Error('Could not download the file from SurveyOS Sync');
+  const blob = await resp.blob();
+  const mime = resp.headers.get('Content-Type') ?? blob.type ?? 'application/octet-stream';
+  const safeType = docType.replace(/[^\w\- ]+/g, '').trim() || 'document';
+  return new File([blob], `${safeType} ${fileIndex + 1}.${extFor(mime)}`, { type: mime });
+}
+
 /** Stream one document's bytes and wrap them as a File for the existing upload flow. */
 export async function fetchSyncDocFile(
   token: string,
