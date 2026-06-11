@@ -11,6 +11,8 @@ import {
 } from './directory-handle'
 import { syncClaim, syncAllClaims, type SyncProgress } from './sync-engine'
 import type { SyncClaimSummary } from '@/lib/sync-bridge/types'
+import { getClaimRecordedDocs } from './local-source'
+import { claimSyncState, type ClaimSyncState } from './sync-manifest'
 
 interface ClaimRef {
   claimId: string; vehicleNumber: string; insuranceCompany: string; label: string
@@ -21,6 +23,7 @@ export function useLocalSync(token: string) {
   const [root, setRoot] = useState<FileSystemDirectoryHandle | null>(null)
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState<SyncProgress | null>(null)
+  const [claimStatus, setClaimStatus] = useState<Record<string, { state: ClaimSyncState; newCount: number }>>({})
 
   useEffect(() => {
     if (!supported) return
@@ -39,6 +42,19 @@ export function useLocalSync(token: string) {
       return null
     }
     return handle
+  }, [root])
+
+  /** Read each claim's local manifest (disk only) and classify it for the list tick. */
+  const loadClaimStatuses = useCallback(async (claims: readonly SyncClaimSummary[]) => {
+    if (!root) { setClaimStatus({}); return }
+    const entries = await Promise.all(claims.map(async (c) => {
+      const recorded = await getClaimRecordedDocs(root, c)
+      return [c.claimId, {
+        state: claimSyncState(recorded, c.receivedDocs),
+        newCount: Math.max(0, c.receivedDocs - recorded),
+      }] as const
+    }))
+    setClaimStatus(Object.fromEntries(entries))
   }, [root])
 
   const runSyncClaim = useCallback(async (claim: ClaimRef) => {
@@ -68,7 +84,11 @@ export function useLocalSync(token: string) {
       const res = await syncAllClaims(token, handle, claims, (i, total, label) =>
         setProgress({ claimLabel: `${label} (${i}/${total})`, done: 0, total: 0, failed: 0 }),
       )
-      toast.success(`Synced ${res.downloaded} files across ${claims.length} claims` + (res.failed ? ` (${res.failed} failed).` : '.'))
+      toast.success(
+        `Synced ${res.downloaded} file${res.downloaded === 1 ? '' : 's'}` +
+        (res.skipped ? `; ${res.skipped} claim${res.skipped === 1 ? '' : 's'} already up to date` : '') +
+        (res.failed ? ` (${res.failed} failed)` : '') + '.',
+      )
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Sync-all failed.')
     } finally {
@@ -76,5 +96,5 @@ export function useLocalSync(token: string) {
     }
   }, [token, ensureRoot])
 
-  return { supported, connected: !!root, busy, progress, root, runSyncClaim, runSyncAll, ensureRoot }
+  return { supported, connected: !!root, busy, progress, root, claimStatus, runSyncClaim, runSyncAll, ensureRoot, loadClaimStatuses }
 }
