@@ -5,6 +5,7 @@
 
 import { claimFolderName, placeFile, type PlaceInput } from './nomenclature'
 import { ensureReadWrite } from './directory-handle'
+import { MANIFEST_FILENAME, type LocalManifest } from './sync-manifest'
 
 /** Full relative path segments of a file under the root: [claimFolder, ...dir, fileName]. */
 export function localRelPath(
@@ -36,5 +37,25 @@ export async function getLocalFile(
     return await fh.getFile()
   } catch {
     return null
+  }
+}
+
+/**
+ * Read a claim's locally-recorded receivedDocsAtSync from its folder manifest.
+ * Returns 0 if no folder / no manifest / unreadable. Never throws (local disk I/O only).
+ */
+export async function getClaimRecordedDocs(
+  root: FileSystemDirectoryHandle | null,
+  claim: { vehicleNumber: string; insuranceCompany: string },
+): Promise<number> {
+  if (!root) return 0
+  try {
+    const claimDir = await root.getDirectoryHandle(claimFolderName(claim))
+    const fh = await claimDir.getFileHandle(MANIFEST_FILENAME)
+    const text = await (await fh.getFile()).text()
+    const parsed = JSON.parse(text) as LocalManifest
+    return typeof parsed.receivedDocsAtSync === 'number' ? parsed.receivedDocsAtSync : 0
+  } catch {
+    return 0
   }
 }
