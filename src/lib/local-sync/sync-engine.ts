@@ -7,9 +7,10 @@ import { getSyncClaim, fetchSyncDocFileAt } from '@/lib/sync-bridge/client'
 import type { SyncClaimSummary } from '@/lib/sync-bridge/types'
 import { claimFolderName, placeFile } from './nomenclature'
 import {
-  MANIFEST_FILENAME, diffManifest, emptyManifest, fileKey,
+  MANIFEST_FILENAME, diffManifest, emptyManifest, fileKey, partitionClaimsForSync,
   type LocalManifest, type RemoteFile,
 } from './sync-manifest'
+import { getClaimRecordedDocs } from './local-source'
 
 export interface SyncProgress {
   claimLabel: string
@@ -37,7 +38,7 @@ async function readManifest(claimDir: FileSystemDirectoryHandle, claimId: string
     const fh = await claimDir.getFileHandle(MANIFEST_FILENAME)
     const text = await (await fh.getFile()).text()
     const parsed = JSON.parse(text) as LocalManifest
-    return parsed.files ? parsed : emptyManifest(claimId)
+    return parsed.files ? { ...emptyManifest(claimId), ...parsed } : emptyManifest(claimId)
   } catch {
     return emptyManifest(claimId)
   }
@@ -78,6 +79,7 @@ export async function syncClaim(
   const remote = toRemoteFiles(detail)
   const claimDir = await ensureDir(root, [claimFolderName(claim)])
   const manifest = await readManifest(claimDir, claim.claimId)
+  manifest.receivedDocsAtSync = detail.documents.length
 
   const todo = diffManifest(remote, manifest)
   let done = 0
@@ -113,27 +115,34 @@ export async function syncClaim(
     }
   }
 
+  if (todo.length === 0) await writeManifest(claimDir, manifest)
+
   onProgress?.({ claimLabel: claim.label, done, total: todo.length, failed })
   return { downloaded: done, failed }
 }
 
-/** Sync many claims sequentially (avoids bursting the Worker). */
+/** Sync many claims sequentially, skipping ones already fully on disk (no Worker call). */
 export async function syncAllClaims(
   token: string,
   root: FileSystemDirectoryHandle,
   claims: readonly SyncClaimSummary[],
   onClaim?: (index: number, total: number, label: string) => void,
-): Promise<{ downloaded: number; failed: number }> {
+): Promise<{ downloaded: number; failed: number; skipped: number }> {
+  // Read each claim's locally-recorded count (disk only — no Worker calls), then decide.
+  const recorded = new Map<string, number>()
+  for (const c of claims) recorded.set(c.claimId, await getClaimRecordedDocs(root, c))
+  const { toSync } = partitionClaimsForSync(claims, recorded)
+
   let downloaded = 0
   let failed = 0
-  for (let i = 0; i < claims.length; i++) {
-    const c = claims[i]
-    onClaim?.(i + 1, claims.length, c.label)
+  for (let i = 0; i < toSync.length; i++) {
+    const c = toSync[i]
+    onClaim?.(i + 1, toSync.length, c.label)
     const res = await syncClaim(token, root, {
       claimId: c.claimId, vehicleNumber: c.vehicleNumber, insuranceCompany: c.insuranceCompany, label: c.label,
     })
     downloaded += res.downloaded
     failed += res.failed
   }
-  return { downloaded, failed }
+  return { downloaded, failed, skipped: claims.length - toSync.length }
 }
