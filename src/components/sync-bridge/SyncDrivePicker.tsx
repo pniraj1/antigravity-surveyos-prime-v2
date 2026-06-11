@@ -97,6 +97,11 @@ export function SyncDrivePicker({ open, onOpenChange, targetSlotLabel, onPick }:
     return () => { cancelled = true; };
   }, [detail, localSync.root, localSync.busy]);
 
+  // Compute per-claim "on disk" status for the list tick (reads local manifests — no Worker calls).
+  useEffect(() => {
+    if (claims.length > 0) void localSync.loadClaimStatuses(claims);
+  }, [claims, localSync.root, localSync.busy, localSync.loadClaimStatuses]);
+
   const groups = useMemo(() => filterAndGroupClaims(claims, query), [claims, query]);
   const searching = query.trim().length > 0;
 
@@ -227,9 +232,19 @@ export function SyncDrivePicker({ open, onOpenChange, targetSlotLabel, onPick }:
                               <Car size={15} className="shrink-0 text-muted-foreground" />
                               <span className="truncate text-sm font-medium">{c.label}</span>
                             </span>
-                            <span className="text-xs text-muted-foreground shrink-0">
-                              {c.receivedDocs} docs
-                            </span>
+                            {(() => {
+                              const st = localSync.claimStatus[c.claimId];
+                              if (st?.state === 'synced') {
+                                return <span className="text-[10px] font-bold shrink-0" style={{ color: '#16a34a' }}>✓ synced</span>;
+                              }
+                              if (st?.state === 'new') {
+                                return <span className="text-[10px] font-bold shrink-0" style={{ color: '#B8860B' }}>{st.newCount} new</span>;
+                              }
+                              if (localSync.connected && st?.state === 'none') {
+                                return <span className="text-[10px] shrink-0 text-muted-foreground">not on this device</span>;
+                              }
+                              return <span className="text-xs text-muted-foreground shrink-0">{c.receivedDocs} docs</span>;
+                            })()}
                           </button>
                         ))}
                       </div>
