@@ -79,6 +79,10 @@ export async function syncClaim(
   const remote = toRemoteFiles(detail)
   const claimDir = await ensureDir(root, [claimFolderName(claim)])
   const manifest = await readManifest(claimDir, claim.claimId)
+  // Records the received-doc count for change detection. The claim-list tick compares this against
+  // the claim summary's `receivedDocs`. Both are server-side counts of "received" docs; the detail
+  // endpoint additionally drops received docs that have no file, so if they ever diverge the count
+  // is <= summary.receivedDocs — i.e. the claim reads "new" (re-syncs), never falsely "synced".
   manifest.receivedDocsAtSync = detail.documents.length
 
   const todo = diffManifest(remote, manifest)
