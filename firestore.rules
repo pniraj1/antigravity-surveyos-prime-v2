@@ -22,6 +22,13 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    // AI model catalog — admin curates, all signed-in surveyors read.
+    // Contains NO secrets (model ids/labels only); keys stay per-user.
+    match /ai_config/models {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
     // New signup notifications — users create their own entry on first login,
     // and can update it when they submit the access-request form (adds name,
     // IRDAI licence, phone). Only admins can read or delete entries.
