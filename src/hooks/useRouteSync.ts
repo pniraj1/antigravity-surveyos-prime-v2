@@ -39,7 +39,12 @@ export function useRouteSync() {
           // hasn't pushed the clean URL yet, do NOT reload from this stale URL.
           // closeClaim sets UIStore.currentClaimId = null synchronously, so
           // storeClaimId will be null while the URL still carries ?claim=<id>.
-          if (!storeClaimId && urlClaimId) {
+          //
+          // This ONLY applies after init. On the very first run (page reload),
+          // storeClaimId may legitimately be null because the persisted UIStore
+          // hasn't hydrated yet — there the URL is authoritative and we must
+          // restore the claim rather than drop the user to the dashboard.
+          if (initializedRef.current && !storeClaimId) {
             syncingFromUrl.current = false;
             return;
           }
@@ -51,6 +56,9 @@ export function useRouteSync() {
           if (urlClaimId !== storeClaimId || claimObjectMissing) {
             const fullClaim = await getClaim(urlClaimId);
             if (fullClaim) {
+              // Make UIStore (the navigation source of truth) match the URL so
+              // Effect 2 doesn't subsequently strip ?claim from a reloaded URL.
+              setCurrentClaimId(urlClaimId);
               loadClaim(fullClaim);
             } else {
               // Invalid / deleted claim in URL – fall back to dashboard.
@@ -87,7 +95,10 @@ export function useRouteSync() {
     const currentUrlTab     = searchParams.get('tab');
 
     const desiredClaim = currentClaimId ?? null;
-    const desiredTab   = activeTab === 'dashboard' ? null : activeTab;
+    // Every tab — including the dashboard — gets an explicit ?tab=<id> in the
+    // URL so a page reload restores the exact view. Without this the dashboard
+    // had no URL identity and any reload landed back on it.
+    const desiredTab   = activeTab;
 
     // Only push when the URL actually needs to change.
     if (desiredClaim === currentUrlClaimId && desiredTab === currentUrlTab) return;
