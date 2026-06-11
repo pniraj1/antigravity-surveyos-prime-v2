@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeEstimateCapacity, PROVIDER_IMAGE_CAPS, FALLBACK_AI_MODELS_CONFIG } from '../models-config';
+import { computeEstimateCapacity, PROVIDER_IMAGE_CAPS, FALLBACK_AI_MODELS_CONFIG, mergeWithFallback } from '../models-config';
 
 describe('computeEstimateCapacity', () => {
   it('flags text-only models as unfit for scanned estimates', () => {
@@ -31,5 +31,22 @@ describe('constants', () => {
     expect(FALLBACK_AI_MODELS_CONFIG.providers.gemini.models.length).toBeGreaterThan(0);
     expect(FALLBACK_AI_MODELS_CONFIG.providers.groq.models.length).toBeGreaterThan(0);
     expect(FALLBACK_AI_MODELS_CONFIG.providers.nvidia.models.length).toBeGreaterThan(0);
+  });
+});
+
+describe('mergeWithFallback', () => {
+  it('returns fallback when raw is null', () => {
+    expect(mergeWithFallback(null)).toEqual(FALLBACK_AI_MODELS_CONFIG);
+  });
+
+  it('fills missing providers from fallback but keeps provided ones', () => {
+    const raw = {
+      updatedAt: 123, updatedBy: 'admin@x.com', defaultProvider: 'nvidia',
+      providers: { nvidia: { enabled: true, defaultModel: 'meta/llama-3.2-90b-vision-instruct', models: [] } },
+    };
+    const merged = mergeWithFallback(raw as never);
+    expect(merged.defaultProvider).toBe('nvidia');
+    expect(merged.providers.gemini.models.length).toBeGreaterThan(0); // backfilled
+    expect(merged.providers.nvidia.models).toEqual([]);               // kept
   });
 });

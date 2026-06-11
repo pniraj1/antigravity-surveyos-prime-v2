@@ -1,3 +1,6 @@
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase/config';
+
 export type ProviderId = 'gemini' | 'groq' | 'nvidia';
 
 export interface ModelEntry {
@@ -93,3 +96,40 @@ export const FALLBACK_AI_MODELS_CONFIG: AIModelsConfig = {
     },
   },
 };
+
+const PROVIDER_IDS: ProviderId[] = ['gemini', 'groq', 'nvidia'];
+
+/** Backfills any missing provider blocks from the fallback so the UI never crashes. */
+export function mergeWithFallback(raw: Partial<AIModelsConfig> | null): AIModelsConfig {
+  if (!raw || !raw.providers) return FALLBACK_AI_MODELS_CONFIG;
+  const providers = { ...FALLBACK_AI_MODELS_CONFIG.providers };
+  for (const p of PROVIDER_IDS) {
+    if (raw.providers[p]) providers[p] = raw.providers[p]!;
+  }
+  return {
+    updatedAt: raw.updatedAt ?? null,
+    updatedBy: raw.updatedBy ?? 'unknown',
+    defaultProvider: raw.defaultProvider ?? FALLBACK_AI_MODELS_CONFIG.defaultProvider,
+    providers,
+  };
+}
+
+/** Loads the admin model config from Firestore; falls back gracefully on any error. */
+export async function loadAIModelsConfig(): Promise<AIModelsConfig> {
+  try {
+    const snap = await getDoc(doc(db, 'ai_config', 'models'));
+    if (!snap.exists()) return FALLBACK_AI_MODELS_CONFIG;
+    return mergeWithFallback(snap.data() as Partial<AIModelsConfig>);
+  } catch {
+    return FALLBACK_AI_MODELS_CONFIG;
+  }
+}
+
+/** Admin-only write. Caller must be admin (enforced by Firestore rules). */
+export async function saveAIModelsConfig(config: AIModelsConfig, updatedBy: string): Promise<void> {
+  await setDoc(doc(db, 'ai_config', 'models'), {
+    ...config,
+    updatedAt: Date.now(),
+    updatedBy,
+  });
+}
