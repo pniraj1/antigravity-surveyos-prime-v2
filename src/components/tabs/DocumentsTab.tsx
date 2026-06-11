@@ -14,9 +14,10 @@ import {
   FileText, Sparkles, Loader2, CheckCircle2, Car, CreditCard,
   FileCheck, Camera, ScrollText, Receipt, Shield, AlertTriangle,
   Upload, Truck, Zap, Database, RefreshCw, ExternalLink,
-  ChevronDown, ChevronRight, HardDrive, Plane,
+  ChevronDown, ChevronRight, HardDrive,
 } from 'lucide-react';
 import { SyncDrivePicker } from '@/components/sync-bridge/SyncDrivePicker';
+import { TelegramIcon } from '@/components/icons/TelegramIcon';
 import { ProviderHealthBadge, ModelSelector, DocModeToggle, ProviderToggle } from '@/components/ai/AIControls';
 import { ReconciliationDialog } from './reconciliation/ReconciliationDialog';
 import { getConflictFields, getUnanimousFields, ReconciliationField } from '@/lib/ai/reconciliation';
@@ -372,12 +373,12 @@ export function DocumentsTab() {
                               e.stopPropagation();
                               setSyncPicker({ key: doc.id, label: doc.label });
                             }}
-                            className="relative z-20 flex items-center justify-center w-6 h-6 rounded-lg transition-colors hover:scale-110"
-                            style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)' }}
+                            className="relative z-20 flex flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 py-1 transition-transform hover:scale-110"
                             title={`Pull ${doc.label} from SurveyOS Sync`}
                             aria-label={`Pull ${doc.label} from SurveyOS Sync`}
                           >
-                            <Plane size={12} />
+                            <TelegramIcon size={16} />
+                            <span className="text-[8px] font-bold leading-none text-[#229ED9]">OS Sync</span>
                           </button>
                         )}
 
