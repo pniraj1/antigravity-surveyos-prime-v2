@@ -12,7 +12,7 @@ import { useClaimDriveFiles } from '@/hooks/useClaimDriveFiles';
 import { getDriveToken } from '@/lib/drive';
 import {
   FileText, Sparkles, Loader2, CheckCircle2, Car, CreditCard,
-  FileCheck, Camera, ScrollText, Receipt, Shield, AlertTriangle,
+  FileCheck, ScrollText, Receipt, Shield, AlertTriangle,
   Upload, Truck, Zap, Database, RefreshCw, ExternalLink,
   ChevronDown, ChevronRight, HardDrive,
 } from 'lucide-react';
@@ -40,11 +40,10 @@ const DOC_GROUPS = [
     ],
   },
   {
-    title: 'Workshop & Damage',
-    description: 'Estimate and damage evidence',
+    title: 'Workshop',
+    description: 'Final garage bill / workshop invoice',
     docs: [
       { id: 'final-bill', label: 'Final Garage Bill', subLabel: 'Final Workshop Invoice',     icon: Receipt,      color: '#0284c7', bg: 'rgba(2,132,199,0.07)',  accept: 'image/*,application/pdf' },
-      { id: 'photos',     label: 'Damage Photos',    subLabel: 'AI damage assessment',        icon: Camera,       color: '#7c3aed', bg: 'rgba(124,58,237,0.07)', accept: 'image/*' },
     ],
   },
   {
