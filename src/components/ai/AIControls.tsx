@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useProfileStore } from '@/stores/profile-store';
 import { useUIStore } from '@/stores/ui-store';
+import { useAIConfigStore } from '@/stores/ai-config-store';
 import { CURRENT_MODELS, PROVIDER_MODELS, fetchAvailableGeminiModels } from '@/lib/ai/service';
-import { Sparkles, ChevronDown, Zap, Eye, FileText, Wand2 } from 'lucide-react';
+import { Sparkles, ChevronDown, Zap, Eye, FileText, Wand2, Cpu } from 'lucide-react';
 
 // ─── Provider Health Badge ────────────────────────────────────────────────────
 export function ProviderHealthBadge() {
@@ -49,17 +50,21 @@ export function ModelSelector() {
   const { availableGeminiModels, setAvailableGeminiModels } = useUIStore();
   const [open, setOpen] = useState(false);
 
+  const config = useAIConfigStore(s => s.config);
   const provider = (profile.aiProvider ?? 'gemini') as 'gemini' | 'groq' | 'nvidia';
+  const providerCfg = config.providers[provider];
 
+  // Admin-curated config is the menu. Gemini may still merge the per-user live
+  // list if the admin hasn't curated any models yet.
   const models = provider === 'gemini'
-    ? (availableGeminiModels ?? PROVIDER_MODELS.gemini)
-    : PROVIDER_MODELS[provider] ?? [];
+    ? (providerCfg.models.length > 0 ? providerCfg.models : (availableGeminiModels ?? PROVIDER_MODELS.gemini))
+    : (providerCfg.models.length > 0 ? providerCfg.models : PROVIDER_MODELS[provider] ?? []);
 
   const activeId = provider === 'gemini'
-    ? (profile.geminiModel?.trim() || CURRENT_MODELS.gemini)
+    ? (profile.geminiModel?.trim() || providerCfg.defaultModel)
     : provider === 'nvidia'
-    ? (profile.nvidiaModel?.trim() || CURRENT_MODELS.nvidia)
-    : (profile.groqModel?.trim() || CURRENT_MODELS.groq);
+    ? (profile.nvidiaModel?.trim() || providerCfg.defaultModel)
+    : (profile.groqModel?.trim() || providerCfg.defaultModel);
 
   useEffect(() => {
     if (provider !== 'gemini' || availableGeminiModels !== null) return;
@@ -185,32 +190,31 @@ export function DocModeToggle() {
 // ─── Provider Toggle ──────────────────────────────────────────────────────────
 export function ProviderToggle() {
   const { profile, updateProfile } = useProfileStore();
+  const config = useAIConfigStore(s => s.config);
   const aiProvider = profile.aiProvider ?? 'gemini';
+
+  const PROVIDERS: { id: 'gemini' | 'groq' | 'nvidia'; label: string; icon: React.ReactNode; activeBg: string; activeColor: string }[] = [
+    { id: 'gemini', label: 'Gemini', icon: <Sparkles size={11} />, activeBg: 'rgba(212,175,55,0.9)', activeColor: '#0D1B2A' },
+    { id: 'groq',   label: 'Groq',   icon: <Zap size={11} />,      activeBg: 'rgba(242,102,57,0.9)', activeColor: '#FFFFFF' },
+    { id: 'nvidia', label: 'NVIDIA', icon: <Cpu size={11} />,      activeBg: 'rgba(118,185,0,0.9)',  activeColor: '#0D1B2A' },
+  ];
+  const enabled = PROVIDERS.filter(p => config.providers[p.id]?.enabled);
 
   return (
     <div className="flex items-center p-1 rounded-xl gap-1" style={{ background: 'rgba(255,255,255,0.08)' }}>
-      <button
-        onClick={() => updateProfile({ aiProvider: 'gemini' })}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black transition-all"
-        style={{
-          background: aiProvider === 'gemini' ? 'rgba(212,175,55,0.9)' : 'transparent',
-          color: aiProvider === 'gemini' ? '#0D1B2A' : 'rgba(232,236,240,0.6)',
-        }}
-      >
-        <Sparkles size={11} />
-        Gemini
-      </button>
-      <button
-        onClick={() => updateProfile({ aiProvider: 'groq' })}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black transition-all"
-        style={{
-          background: aiProvider === 'groq' ? 'rgba(242,102,57,0.9)' : 'transparent',
-          color: aiProvider === 'groq' ? '#FFFFFF' : 'rgba(232,236,240,0.6)',
-        }}
-      >
-        <Zap size={11} />
-        Groq
-      </button>
+      {enabled.map(p => {
+        const active = aiProvider === p.id;
+        return (
+          <button
+            key={p.id}
+            onClick={() => updateProfile({ aiProvider: p.id })}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black transition-all"
+            style={{ background: active ? p.activeBg : 'transparent', color: active ? p.activeColor : 'rgba(232,236,240,0.6)' }}
+          >
+            {p.icon}{p.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
