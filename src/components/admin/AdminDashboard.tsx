@@ -11,6 +11,7 @@ import {
   Bell,
   CreditCard,
   Code2,
+  Cpu,
 } from 'lucide-react';
 import { verifyPayment, rejectPayment } from '@/lib/firebase/payments';
 import { useAuthStore } from '@/stores/auth-store';
@@ -24,6 +25,7 @@ import { ApprovalQueueTab } from './tabs/ApprovalQueueTab';
 import { SurveyorsTab } from './tabs/SurveyorsTab';
 import { PaymentsTab } from './tabs/PaymentsTab';
 import { DevNotesTab } from './tabs/DevNotesTab';
+import { AIModelsTab } from './tabs/AIModelsTab';
 
 import { DismissModal } from './modals/DismissModal';
 import { EmailComposerModal } from './modals/EmailComposerModal';
@@ -222,6 +224,17 @@ export function AdminDashboard() {
             <Code2 size={14} />
             Dev Notes
           </button>
+          <button
+            onClick={() => setActiveTab('ai-models')}
+            className={`flex items-center gap-2 px-5 py-2.5 text-xs font-black uppercase tracking-wider rounded-t-lg transition-all ${
+              activeTab === 'ai-models'
+                ? 'bg-white border border-b-white border-[#E2E6EA] text-primary -mb-px'
+                : 'text-[#8D99AE] hover:text-[#0D1B2A]'
+            }`}
+          >
+            <Cpu size={14} />
+            AI Models
+          </button>
         </div>
       </div>
 
@@ -269,6 +282,8 @@ export function AdminDashboard() {
           )}
 
           {activeTab === 'dev-notes' && <DevNotesTab />}
+
+          {activeTab === 'ai-models' && <AIModelsTab adminEmail={user?.email ?? 'admin'} />}
         </div>
       </div>
 
