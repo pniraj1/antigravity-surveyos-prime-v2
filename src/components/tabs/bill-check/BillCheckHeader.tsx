@@ -2,6 +2,7 @@
 
 import { CheckCircle2, Layout, Columns } from 'lucide-react';
 import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
+import { SaveProgressButton } from '@/components/sync/SaveProgressButton';
 import type { fmt as FmtType } from './config';
 
 interface BcSummary {
@@ -47,19 +48,22 @@ export function BillCheckHeader({ showEvidence, onToggleEvidence, bcSummary, cla
           <h1 className="text-2xl lg:text-3xl font-black mb-2" style={{ color: '#F8F9FA', letterSpacing: '-0.02em' }}>
             Bill Check Report
           </h1>
-          <button
-            onClick={handleToggle}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all shadow-lg"
-            style={{
-              background: showEvidence ? '#D4AF37' : 'rgba(255,255,255,0.1)',
-              color: showEvidence ? '#0D1B2A' : '#F8F9FA',
-              border: '1px solid rgba(255,255,255,0.2)',
-              backdropFilter: 'blur(10px)',
-            }}
-          >
-            {showEvidence ? <Layout size={16} /> : <Columns size={16} />}
-            {showEvidence ? 'Full View' : 'Show Evidence'}
-          </button>
+          <div className="flex items-center gap-3">
+            <SaveProgressButton tone="onDark" className="shadow-lg" />
+            <button
+              onClick={handleToggle}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all shadow-lg"
+              style={{
+                background: showEvidence ? '#D4AF37' : 'rgba(255,255,255,0.1)',
+                color: showEvidence ? '#0D1B2A' : '#F8F9FA',
+                border: '1px solid rgba(255,255,255,0.2)',
+                backdropFilter: 'blur(10px)',
+              }}
+            >
+              {showEvidence ? <Layout size={16} /> : <Columns size={16} />}
+              {showEvidence ? 'Full View' : 'Show Evidence'}
+            </button>
+          </div>
         </div>
         <p className="text-sm" style={{ color: 'rgba(232,236,240,0.65)' }}>
           Verify that items <strong style={{ color: '#D4AF37' }}>allowed</strong> in the Final Survey Report are correctly

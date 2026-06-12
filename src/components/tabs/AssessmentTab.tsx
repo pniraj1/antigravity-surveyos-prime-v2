@@ -17,6 +17,7 @@ import { useProfileStore } from '@/stores/profile-store';
 import { uploadFileToDrive } from '@/lib/drive';
 import { AssessmentChatbot } from '@/components/chat/AssessmentChatbot';
 import { ModelSelector, DocModeToggle, ProviderHealthBadge, ProviderToggle } from '@/components/ai/AIControls';
+import { SaveProgressButton } from '@/components/sync/SaveProgressButton';
 
 export function AssessmentTab() {
   const { currentClaim, setDepreciationType } = useClaimStore();
@@ -113,6 +114,8 @@ export function AssessmentTab() {
               {showSummary ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
               {showSummary ? 'Hide Summary' : 'Show Summary'}
             </Button>
+
+            <SaveProgressButton className="h-12" />
           </div>
 
           {/* AI extraction controls */}

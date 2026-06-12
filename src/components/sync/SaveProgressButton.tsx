@@ -13,11 +13,15 @@ import { saveClaim } from '@/lib/storage/indexeddb';
 
 type BtnState = 'idle' | 'saving' | 'saved' | 'error';
 
+/** 'default' = dark button for light surfaces; 'onDark' = gold button for dark headers. */
+type Tone = 'default' | 'onDark';
+
 interface SaveProgressButtonProps {
   className?: string;
+  tone?: Tone;
 }
 
-export function SaveProgressButton({ className = '' }: SaveProgressButtonProps) {
+export function SaveProgressButton({ className = '', tone = 'default' }: SaveProgressButtonProps) {
   const currentClaim = useClaimStore(s => s.currentClaim);
   const user = useAuthStore(s => s.user);
   const setSaveStatus = useUIStore(s => s.setSaveStatus);
@@ -70,6 +74,13 @@ export function SaveProgressButton({ className = '' }: SaveProgressButtonProps) 
     error:  { icon: <AlertTriangle size={16} />, label: 'Saved locally' },
   };
 
+  const surface =
+    state === 'error'
+      ? { background: '#B45309', color: '#FFF7ED' }
+      : tone === 'onDark'
+        ? { background: '#D4AF37', color: '#0D1B2A' }
+        : { background: '#0D1B2A', color: '#F8F9FA' };
+
   return (
     <button
       type="button"
@@ -77,7 +88,7 @@ export function SaveProgressButton({ className = '' }: SaveProgressButtonProps) 
       disabled={state === 'saving' || !currentClaim}
       title="Save this claim to the cloud so it is available on your other computers"
       className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 disabled:opacity-50 ${className}`}
-      style={{ background: state === 'error' ? '#B45309' : '#0D1B2A', color: '#F8F9FA' }}
+      style={surface}
     >
       {cfg[state].icon}
       <span>{cfg[state].label}</span>
