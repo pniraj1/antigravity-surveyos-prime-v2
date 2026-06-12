@@ -42,47 +42,14 @@ export function DevNotesTab() {
             </ol>
           </div>
 
-          <div>
-            <h3 className="text-xs font-black uppercase tracking-wider text-[#0D1B2A] mb-3">When a Gemini model is retired — update these 4 things</h3>
-            <div className="space-y-3">
-              {[
-                {
-                  label: 'CURRENT_MODELS.gemini',
-                  line: '~line 22',
-                  action: 'Change the default model ID to the new best free-tier model.',
-                  example: "gemini: 'gemini-2.5-flash'  →  'gemini-3-flash'",
-                },
-                {
-                  label: 'DEPRECATED_GEMINI_MODELS',
-                  line: '~line 50',
-                  action: 'Add the retired model ID → new model ID mapping so any surveyor who has the old model saved in their profile gets auto-migrated on next load.',
-                  example: "'gemini-2.5-flash': 'gemini-3-flash'",
-                },
-                {
-                  label: 'GEMINI_FALLBACK_CHAIN',
-                  line: '~line 37',
-                  action: 'Replace the retired model with the new one in the fallback array. Order: best → lighter → preview.',
-                  example: "['gemini-3-flash', 'gemini-2.5-flash', 'gemini-2.5-flash-lite']",
-                },
-                {
-                  label: 'PROVIDER_MODELS.gemini',
-                  line: '~line 75',
-                  action: 'Update the static fallback list (used when live fetch fails). Remove retired model, add new one with correct RPM/RPD note.',
-                  example: "{ id: 'gemini-3-flash', label: '3 Flash', note: '15 RPM · 1000/day' }",
-                },
-              ].map(item => (
-                <div key={item.label} className="rounded-xl border border-[#E2E6EA] overflow-hidden">
-                  <div className="flex items-center justify-between px-4 py-2.5 bg-[#F8F9FA] border-b border-[#E2E6EA]">
-                    <code className="text-xs font-black text-[#0D1B2A]">{item.label}</code>
-                    <span className="text-[10px] font-bold text-[#8D99AE]">{item.line}</span>
-                  </div>
-                  <div className="px-4 py-3 space-y-1.5">
-                    <p className="text-xs text-[#4A4E69]">{item.action}</p>
-                    <code className="block text-[11px] bg-[#F0F2F5] rounded-lg px-3 py-2 text-[#0D1B2A] font-mono">{item.example}</code>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50">
+            <p className="text-xs font-bold text-emerald-800">
+              Model lists are now managed in the <strong>AI Models</strong> tab — no code edit needed.
+              Discovery pulls live models from each provider using your profile keys; check/uncheck to
+              expose them to surveyors, set a default, and use “Test with estimate PDF” to verify
+              multi-page extraction before enabling. The static lists in <code>service.ts</code> remain
+              only as an offline fallback.
+            </p>
           </div>
 
           <div>
