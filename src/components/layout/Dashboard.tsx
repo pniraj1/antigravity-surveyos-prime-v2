@@ -34,6 +34,7 @@ import { Sidebar, MobileMenuButton } from '@/components/layout/sidebar';
 import { FloatingReportPreview } from '@/components/layout/FloatingReportPreview';
 import { ClaimHeader } from '@/components/layout/ClaimHeader';
 import { useRouteSync } from '@/hooks/useRouteSync';
+import { useAIConfig } from '@/hooks/useAIConfig';
 
 // Dynamically import ALL tabs with ssr:false — they all use browser-only APIs:
 const DetailsTab    = dynamicImport(() => import('@/components/tabs/DetailsTab').then(m    => ({ default: m.DetailsTab    })), { ssr: false });
@@ -642,6 +643,7 @@ export function TabPlaceholder({ tab }: { tab: string }) {
 export default function Dashboard() {
   const { activeTab } = useUIStore();
   useRouteSync();
+  useAIConfig();
 
   return (
     <div className="flex h-screen overflow-hidden">
