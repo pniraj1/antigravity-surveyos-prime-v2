@@ -199,6 +199,24 @@ export function useCloudSync() {
     return () => window.removeEventListener('beforeunload', handler);
   }, []);
 
+  // ─── 2d. Milestone: Tab hidden / app backgrounded ───────
+  // visibilitychange fires reliably BEFORE the page is frozen or closed
+  // (unlike beforeunload, which can only queue locally). We attempt a real
+  // cloud push here so a surveyor who just switches tabs or minimises the
+  // window — then walks to another computer — has their latest state in the
+  // vault. milestonePushRef pushes when online and queues when offline.
+  useEffect(() => {
+    const handler = () => {
+      if (document.visibilityState !== 'hidden') return;
+      const claim = currentClaimRef.current;
+      const uid = userRef.current?.uid;
+      if (!claim || !uid || !isAuthRef.current) return;
+      milestonePushRef.current(claim, uid);
+    };
+    document.addEventListener('visibilitychange', handler);
+    return () => document.removeEventListener('visibilitychange', handler);
+  }, []);
+
   // ─── 3. Drain Sync Queue on Reconnect ────────────────────
   useEffect(() => {
     if (!isAuthenticated || !user || !isOnline || isDrainingRef.current) return;
