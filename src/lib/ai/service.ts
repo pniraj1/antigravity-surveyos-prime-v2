@@ -13,7 +13,15 @@ import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { useProfileStore } from '@/stores/profile-store';
 import { useUIStore } from '@/stores/ui-store';
 import { toast } from 'sonner';
-import { ModelEntry, PROVIDER_IMAGE_CAPS, computeEstimateCapacity } from './models-config';
+import { ModelEntry, PROVIDER_IMAGE_CAPS, computeEstimateCapacity, type ProviderConfig } from './models-config';
+import { useAIConfigStore } from '@/stores/ai-config-store';
+
+/** Returns the saved model if still enabled, else the provider's configured default. */
+export function resolveEnabledModel(saved: string | undefined, providerCfg: ProviderConfig): string {
+  const trimmed = saved?.trim();
+  if (trimmed && providerCfg.models.some(m => m.id === trimmed)) return trimmed;
+  return providerCfg.defaultModel;
+}
 
 // ─── Developer-controlled model defaults ─────────────────────────────────────
 // Last verified: May 2026 — Free Tier limits:
@@ -195,7 +203,7 @@ function buildProvider(
   if (name === 'gemini') {
     const keys = resolveGeminiKeys(profile);
     if (keys.length === 0) return null;
-    const model = resolveGeminiModel(profile);
+    const model = resolveEnabledModel(resolveGeminiModel(profile), useAIConfigStore.getState().config.providers.gemini);
     return {
       name: 'gemini',
       endpoint: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
@@ -206,7 +214,7 @@ function buildProvider(
   if (name === 'nvidia') {
     const keys = resolveNvidiaKeys(profile);
     if (keys.length === 0) return null;
-    const model = resolveNvidiaModel(profile);
+    const model = resolveEnabledModel(resolveNvidiaModel(profile), useAIConfigStore.getState().config.providers.nvidia);
     return {
       name: 'nvidia',
       endpoint: 'https://integrate.api.nvidia.com/v1/chat/completions',
@@ -218,7 +226,7 @@ function buildProvider(
   // groq
   const keys = resolveGroqKeys(profile);
   if (keys.length === 0) return null;
-  const model = resolveGroqModel(profile);
+  const model = resolveEnabledModel(resolveGroqModel(profile), useAIConfigStore.getState().config.providers.groq);
   return {
     name: 'groq',
     endpoint: 'https://api.groq.com/openai/v1/chat/completions',
