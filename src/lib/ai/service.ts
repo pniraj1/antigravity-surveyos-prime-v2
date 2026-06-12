@@ -23,6 +23,15 @@ export function resolveEnabledModel(saved: string | undefined, providerCfg: Prov
   return providerCfg.defaultModel;
 }
 
+// ─── Admin test override ──────────────────────────────────────────────────────
+// When set, callAIGateway routes a single extraction to one specific
+// provider+model+key (no profile, no fallback chain). Used by the Admin
+// "Test with estimate PDF" tool. Always cleared in runModelTest's finally.
+export interface AITestOverride { provider: 'gemini' | 'groq' | 'nvidia'; model: string; key: string; }
+let _testOverride: AITestOverride | null = null;
+export function setAITestOverride(o: AITestOverride | null): void { _testOverride = o; }
+export function getAITestOverride(): AITestOverride | null { return _testOverride; }
+
 // ─── Developer-controlled model defaults ─────────────────────────────────────
 // Last verified: May 2026 — Free Tier limits:
 //   gemini-2.5-flash     : 10 RPM · 500 RPD · 250K TPM  ← best stable free model
@@ -121,6 +130,17 @@ export interface AIProvider {
   maxImages?: number;
   /** Max output tokens. Groq Llama 4 Scout is capped at 8192; undefined = 16384. */
   maxOutputTokens?: number;
+}
+
+/** Builds a one-off provider from a test override (no profile, no fallback chain). */
+function buildOverrideProvider(o: AITestOverride): AIProvider {
+  if (o.provider === 'gemini') {
+    return { name: 'gemini', endpoint: `https://generativelanguage.googleapis.com/v1beta/models/${o.model}:generateContent`, model: o.model, keys: [o.key] };
+  }
+  if (o.provider === 'nvidia') {
+    return { name: 'nvidia', endpoint: 'https://integrate.api.nvidia.com/v1/chat/completions', model: o.model, keys: [o.key] };
+  }
+  return { name: 'groq', endpoint: 'https://api.groq.com/openai/v1/chat/completions', model: o.model, keys: [o.key], maxImages: 5, maxOutputTokens: 8192 };
 }
 
 // ─── Read profile from Zustand ────────────────────────────────────────────────
@@ -597,6 +617,11 @@ async function callWithRotation(provider: AIProvider, prompt: string, images: st
  * Fallback chain: primary → secondary → NVIDIA NIM (if keys configured).
  */
 export async function callAIGateway(prompt: string, images: string[] = [], responseFormat: 'json' | 'text' = 'json'): Promise<string> {
+  // Admin test override: route this single call to one explicit provider/model/key.
+  if (_testOverride) {
+    return callWithRotation(buildOverrideProvider(_testOverride), prompt, images, responseFormat);
+  }
+
   const profile = getProfileFromStorage();
   const preferred = (profile?.aiProvider ?? 'gemini') as 'gemini' | 'groq' | 'nvidia';
   const secondaryName: 'gemini' | 'groq' = preferred === 'groq' ? 'gemini' : 'groq';
@@ -738,5 +763,28 @@ export async function fetchGeminiModelEntries(apiKey: string): Promise<ModelEntr
     return rows.length > 0 ? rows : null;
   } catch {
     return null;
+  }
+}
+
+export interface ModelTestResult { ok: boolean; ms: number; data: unknown | null; error?: string; }
+
+/** Runs a sample document through the extraction pipeline forced to one provider+model+key. */
+export async function runModelTest(
+  override: AITestOverride,
+  docKey: string,
+  file: File,
+  onProgress: (msg: string) => void,
+): Promise<ModelTestResult> {
+  const started = Date.now();
+  setAITestOverride(override);
+  try {
+    // Lazy import avoids a circular dependency (processor imports callAIGateway from here).
+    const { extractDocument } = await import('./processor');
+    const { data } = await extractDocument(docKey, file, onProgress);
+    return { ok: true, ms: Date.now() - started, data };
+  } catch (e: unknown) {
+    return { ok: false, ms: Date.now() - started, data: null, error: e instanceof Error ? e.message : 'unknown error' };
+  } finally {
+    setAITestOverride(null);
   }
 }
