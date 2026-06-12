@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
 import { pullClaimsFromCloud, pushClaimToCloud } from '@/lib/firebase/sync';
 import { getAllClaims } from '@/lib/storage/indexeddb';
+import { computeSyncHealth } from '@/lib/sync/sync-health';
 import { ClaimData } from '@/types';
 import { 
   Cloud, 
@@ -61,10 +62,15 @@ export function CloudVaultTab() {
     }
   };
 
-  const filteredClaims = cloudClaims.filter(c => 
+  const filteredClaims = cloudClaims.filter(c =>
     (c.reportNo || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
     (c.vehicle?.registrationNumber || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
     (c.policy?.insuredName || '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const syncHealth = computeSyncHealth(
+    localClaims.map(c => c.id),
+    cloudClaims.map(c => c.id),
   );
 
   if (!isAuthenticated) {
@@ -137,11 +143,14 @@ export function CloudVaultTab() {
                 <Database size={12} /> IndexedDB Status
               </div>
             </div>
-            <div className="p-6 rounded-2xl bg-blue-600 shadow-xl shadow-blue-500/10 text-white">
-              <div className="text-[10px] font-black uppercase tracking-wider text-blue-100 mb-1">Sync Health</div>
-              <div className="text-2xl font-black">100% Synced</div>
-              <div className="text-[10px] text-blue-100 font-bold mt-1 flex items-center gap-1">
-                <Cloud size={12} /> Real-time Protection Active
+            <div className={`p-6 rounded-2xl shadow-xl text-white ${syncHealth.localOnlyCount > 0 ? 'bg-amber-600 shadow-amber-500/10' : 'bg-blue-600 shadow-blue-500/10'}`}>
+              <div className="text-[10px] font-black uppercase tracking-wider text-white/70 mb-1">Sync Health</div>
+              <div className="text-2xl font-black">{syncHealth.syncedPct}% Synced</div>
+              <div className="text-[10px] text-white/80 font-bold mt-1 flex items-center gap-1">
+                <Cloud size={12} />
+                {syncHealth.localOnlyCount > 0
+                  ? `${syncHealth.localOnlyCount} claim${syncHealth.localOnlyCount > 1 ? 's' : ''} not yet backed up`
+                  : 'All claims backed up to cloud'}
               </div>
             </div>
           </div>
