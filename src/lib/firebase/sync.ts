@@ -7,6 +7,7 @@
 
 import { doc, setDoc, getDoc, deleteDoc, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from './config';
+import { applySkewMargin } from './sync-cursor';
 import { ClaimData, SurveyorProfile } from '@/types';
 import {
   getAllClaims,
@@ -151,8 +152,11 @@ export async function syncDeltaToCloud(uid: string, sinceTimestamp: string | nul
  */
 export async function pullClaimsFromCloud(uid: string, sinceTimestamp: string | null) {
   const claimsRef = collection(db, `users/${uid}/claims`);
-  const q = sinceTimestamp
-    ? query(claimsRef, where('updatedAt', '>', sinceTimestamp))
+  // Roll the cursor back by a skew margin so a claim stamped on another
+  // device's slightly-behind clock is never skipped. See sync-cursor.ts.
+  const cursor = applySkewMargin(sinceTimestamp);
+  const q = cursor
+    ? query(claimsRef, where('updatedAt', '>', cursor))
     : query(claimsRef);
   const querySnap = await getDocs(q);
 
