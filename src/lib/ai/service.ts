@@ -13,6 +13,7 @@ import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { useProfileStore } from '@/stores/profile-store';
 import { useUIStore } from '@/stores/ui-store';
 import { toast } from 'sonner';
+import { ModelEntry, PROVIDER_IMAGE_CAPS, computeEstimateCapacity } from './models-config';
 
 // ─── Developer-controlled model defaults ─────────────────────────────────────
 // Last verified: May 2026 — Free Tier limits:
@@ -699,6 +700,34 @@ export async function fetchAvailableGeminiModels(apiKey: string): Promise<ModelO
         note: staticMatch?.note ?? 'Available on your account',
       };
     });
+  } catch {
+    return null;
+  }
+}
+
+/** Like fetchAvailableGeminiModels but returns full ModelEntry rows (ctx, vision, capacity). */
+export async function fetchGeminiModelEntries(apiKey: string): Promise<ModelEntry[] | null> {
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?pageSize=100&key=${apiKey}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const raw: Array<{ name: string; displayName?: string; inputTokenLimit?: number; supportedGenerationMethods?: string[] }> = data.models ?? [];
+    const imageCap = PROVIDER_IMAGE_CAPS.gemini;
+    const rows = raw
+      .filter(m => {
+        const n = m.name;
+        return m.supportedGenerationMethods?.includes('generateContent') &&
+          n.startsWith('models/gemini-') &&
+          !/embedding|aqa|-tts|-image|-live|robotics|computer-use|deep-research|-exp/.test(n);
+      })
+      .map(m => {
+        const id = m.name.replace('models/', '');
+        const ctxWindow = m.inputTokenLimit ?? null;
+        const vision = true; // gemini-* generateContent models are multimodal
+        return { id, label: m.displayName ?? id, note: '', ctxWindow, vision, imageCap,
+          estimateCapacity: computeEstimateCapacity({ vision, ctxWindow, imageCap }) };
+      });
+    return rows.length > 0 ? rows : null;
   } catch {
     return null;
   }
