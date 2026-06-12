@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Cpu, RefreshCw, Check, Star, Power, Save, Loader2 } from 'lucide-react';
+import { Cpu, RefreshCw, Check, Star, Power, Save, Loader2, FlaskConical } from 'lucide-react';
 import { toast } from 'sonner';
 import { useProfileStore } from '@/stores/profile-store';
 import { useAIConfigStore } from '@/stores/ai-config-store';
@@ -9,7 +9,7 @@ import {
   AIModelsConfig, ModelEntry, ProviderId,
   loadAIModelsConfig, saveAIModelsConfig,
 } from '@/lib/ai/models-config';
-import { fetchGeminiModelEntries } from '@/lib/ai/service';
+import { fetchGeminiModelEntries, runModelTest, type ModelTestResult, type AITestOverride } from '@/lib/ai/service';
 import { fetchNvidiaModels, fetchGroqModels } from '@/lib/ai/discovery';
 
 const PROVIDER_META: Record<ProviderId, { label: string; color: string; keyField: 'geminiApiKeys' | 'groqApiKeys' | 'nvidiaApiKeys' }> = {
@@ -25,6 +25,9 @@ export function AIModelsTab({ adminEmail }: { adminEmail: string }) {
   const [discovered, setDiscovered] = useState<Record<ProviderId, ModelEntry[]>>({ gemini: [], groq: [], nvidia: [] });
   const [busy, setBusy] = useState<ProviderId | null>(null);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState<string | null>(null); // `${provider}:${modelId}`
+  const [testResult, setTestResult] = useState<Record<string, ModelTestResult>>({});
+  const [testProgress, setTestProgress] = useState('');
 
   useEffect(() => { loadAIModelsConfig().then(setConfig); }, []);
 
@@ -72,6 +75,20 @@ export function AIModelsTab({ adminEmail }: { adminEmail: string }) {
 
   function toggleProvider(p: ProviderId) {
     setConfig(prev => prev ? { ...prev, providers: { ...prev.providers, [p]: { ...prev.providers[p], enabled: !prev.providers[p].enabled } } } : prev);
+  }
+
+  async function runTest(p: ProviderId, modelId: string, file: File) {
+    const key = adminKey(p);
+    if (!key) { toast.error(`Add a ${PROVIDER_META[p].label} key in your Profile first.`); return; }
+    const tag = `${p}:${modelId}`;
+    setTesting(tag);
+    setTestProgress('Uploading…');
+    const override: AITestOverride = { provider: p, model: modelId, key };
+    const result = await runModelTest(override, 'estimate', file, setTestProgress);
+    setTestResult(prev => ({ ...prev, [tag]: result }));
+    setTesting(null);
+    setTestProgress('');
+    toast[result.ok ? 'success' : 'error'](result.ok ? `Extraction OK in ${(result.ms / 1000).toFixed(1)}s` : `Failed: ${result.error}`);
   }
 
   async function save() {
@@ -143,6 +160,25 @@ export function AIModelsTab({ adminEmail }: { adminEmail: string }) {
                         <input value={note} onChange={e => setNote(p, row.id, e.target.value)}
                           placeholder="Admin note (e.g. great on 6-page estimates)"
                           className="mt-1.5 w-full text-[11px] px-2 py-1 rounded border border-[#E2E6EA] focus:outline-none focus:ring-1 focus:ring-[#D4AF37]" />
+                      )}
+                      {enabled && (
+                        <div className="mt-2">
+                          <label className="inline-flex items-center gap-1.5 text-[10px] font-black px-2 py-1 rounded-lg border border-[#E2E6EA] cursor-pointer hover:bg-[#F8F9FA]">
+                            {testing === `${p}:${row.id}` ? <Loader2 size={11} className="animate-spin" /> : <FlaskConical size={11} />}
+                            Test with estimate PDF
+                            <input type="file" accept="application/pdf,image/*" className="hidden"
+                              disabled={testing !== null}
+                              onChange={e => { const f = e.target.files?.[0]; if (f) runTest(p, row.id, f); e.currentTarget.value = ''; }} />
+                          </label>
+                          {testing === `${p}:${row.id}` && <span className="ml-2 text-[10px] text-[#8D99AE]">{testProgress}</span>}
+                          {testResult[`${p}:${row.id}`] && (
+                            <pre className={`mt-1.5 max-h-48 overflow-auto text-[10px] p-2 rounded-lg border ${testResult[`${p}:${row.id}`].ok ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50'}`}>
+                              {testResult[`${p}:${row.id}`].ok
+                                ? `✅ ${(testResult[`${p}:${row.id}`].ms / 1000).toFixed(1)}s\n` + JSON.stringify(testResult[`${p}:${row.id}`].data, null, 2)
+                                : `❌ ${testResult[`${p}:${row.id}`].error}`}
+                            </pre>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
