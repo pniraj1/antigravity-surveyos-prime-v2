@@ -36,6 +36,7 @@ import { UIICPrintReport } from '@/components/print/UIICPrintReport';
 import { buildStandardFinalSurveyHTML } from '@/lib/reports/standard-report-builder';
 import { buildUIICFinalHTML } from '@/lib/reports/uiic-final-builder';
 import { buildValuationReportHTML } from '@/lib/reports/valuation-report-builder';
+import { preambleFromClaim } from '@/lib/reports/final-survey-preamble';
 import DOMPurify from 'dompurify';
 import { useRef } from 'react';
 
@@ -142,6 +143,15 @@ export function ReportTab() {
     partsSGST: summary?.partsSGST || 0,
   };
 
+  const defaultPreamble = preambleFromClaim(
+    currentClaim,
+    safeSummary.totalEstimated,
+    safeSummary.netAssessedLoss,
+  );
+  const preambleValue = (currentClaim.reportPreamble && currentClaim.reportPreamble.trim())
+    ? currentClaim.reportPreamble
+    : defaultPreamble;
+
   const regNo = currentClaim.vehicle.registrationNumber || 'DRAFT';
   const pdfFilename = activeReport === 'spot'
     ? `${regNo}-Spot-Report.pdf`
@@ -233,6 +243,35 @@ export function ReportTab() {
           </div>
         )}
       </div>
+
+      {/* ── Report Preamble Editor ────────────────────────── */}
+        {activeReport === 'survey' && (
+          <Card className="mb-4">
+            <CardContent className="p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <label htmlFor="report-preamble" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                  Report Preamble (shown above the assessment sheet)
+                </label>
+                <button
+                  type="button"
+                  onClick={() => updateClaim({ reportPreamble: '' })}
+                  className="text-[11px] font-semibold text-primary hover:underline"
+                  title="Discard edits and re-generate from current claim data"
+                >
+                  Reset to auto-generated
+                </button>
+              </div>
+              <textarea
+                id="report-preamble"
+                value={preambleValue}
+                onChange={(e) => updateClaim({ reportPreamble: e.target.value })}
+                rows={6}
+                className="w-full text-xs rounded-md border border-input bg-background p-2 leading-relaxed focus:outline-none focus:ring-1 focus:ring-primary"
+                placeholder="Narrative shown above the assessment sheet…"
+              />
+            </CardContent>
+          </Card>
+        )}
 
       {/* Hidden print component */}
       <div style={{ display: 'none' }}>
