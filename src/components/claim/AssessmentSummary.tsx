@@ -158,7 +158,7 @@ export function AssessmentSummary() {
                   updateFeeBill({ compulsoryExcess: val, lessExcess: val });
                 }}
                 className="text-right font-bold text-red-600 bg-white border-[#e5e5e5] hover:border-red-600 focus:border-red-600 transition-all h-9"
-                placeholder="1000"
+                placeholder="0"
               />
             </div>
             <div className="space-y-2">

@@ -132,7 +132,7 @@ export function buildUIICFinalHTML(claim: ClaimData, profile: SurveyorProfile | 
   const depAmt = rawParts - partsDepreciated;
   const salvage = claim.feeBill?.salvageValue || 0;
   const volExcess = claim.feeBill?.voluntaryExcess || 0;
-  const compExcess = claim.feeBill?.compulsoryExcess || claim.feeBill?.lessExcess || 500;
+  const compExcess = claim.feeBill?.compulsoryExcess ?? claim.feeBill?.lessExcess ?? 0;
   const net = Math.max(0, gross - salvage - volExcess - compExcess);
   const payableByInsured = volExcess + compExcess;
   const payableByInsurer = net;
@@ -527,7 +527,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   const depAmt = rawParts - partsDepreciated;
   const salvage    = claim.feeBill?.salvageValue    || 0;
   const volExcess  = claim.feeBill?.voluntaryExcess || 0;
-  const compExcess = claim.feeBill?.compulsoryExcess || claim.feeBill?.lessExcess || 500;
+  const compExcess = claim.feeBill?.compulsoryExcess ?? claim.feeBill?.lessExcess ?? 0;
   const net = Math.max(0, gross - salvage - volExcess - compExcess);
 
   // Billed totals (what the workshop actually billed)

@@ -25,7 +25,7 @@ export function TotalLossForm() {
     ageMonths,
     currentClaim.depreciationType || 'standard',
     currentClaim.feeBill?.salvageValue || 0,
-    currentClaim.feeBill?.compulsoryExcess || 500,
+    currentClaim.feeBill?.compulsoryExcess ?? 0,
     currentClaim.feeBill?.voluntaryExcess || 0
   );
 

@@ -27,7 +27,7 @@ export function calculateAssessmentSummary(
   ageMonths: number,
   depType: DepreciationType,
   salvage: number = 0,
-  compulsoryExcess: number = 500,
+  compulsoryExcess: number = 0,
   voluntaryExcess: number = 0
 ): AssessmentSummary {
   let metal = 0;
@@ -139,7 +139,7 @@ export function calculateBillCheckSummary(
   ageMonths: number,
   depType: DepreciationType,
   salvage: number = 0,
-  compulsoryExcess: number = 500,
+  compulsoryExcess: number = 0,
   voluntaryExcess: number = 0
 ): BillCheckSummary {
   let assessedBaseSum = 0;

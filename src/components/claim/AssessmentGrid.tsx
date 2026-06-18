@@ -600,9 +600,22 @@ export function AssessmentGrid() {
                         className="rounded border-border h-3.5 w-3.5 cursor-pointer accent-red-600"
                       />
                     </td>
-                    {/* Sr No — always on */}
-                    <td className="px-2 py-1.5 text-xs font-medium text-muted-foreground text-center">
-                      {row.srNo || idx + 1}
+                    {/* Sr No — always on, editable */}
+                    <td className={`px-1 py-1.5${isCellSelected(row.id, 'srNo') ? ' ring-2 ring-blue-400 ring-inset' : ''}`} data-column-key="srNo">
+                      <Input
+                        type="number"
+                        value={row.srNo ?? ''}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          updateAssessmentRow(row.id, {
+                            srNo: raw === '' ? undefined : Math.max(0, parseInt(raw, 10) || 0),
+                          });
+                        }}
+                        className="h-7 w-10 text-[11px] text-center font-medium text-muted-foreground bg-transparent border-transparent hover:border-input focus:bg-background px-0"
+                        placeholder={String(idx + 1)}
+                        min="0"
+                        title="Serial number — editable"
+                      />
                     </td>
                     {/* Allowed — always on */}
                     <td className="px-2 py-1.5 text-center">

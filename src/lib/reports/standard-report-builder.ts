@@ -112,7 +112,7 @@ export function buildStandardFinalSurveyHTML(
 
   const salvage = claim.feeBill?.salvageValue || 0;
   const volExcess = claim.feeBill?.voluntaryExcess || 0;
-  const compExcess = claim.feeBill?.compulsoryExcess || 500;
+  const compExcess = claim.feeBill?.compulsoryExcess ?? 0;
   const excess = volExcess + compExcess;
   const net = Math.max(0, grand - salvage - excess);
 
@@ -420,7 +420,7 @@ export function buildStandardFinalSurveyHTML(
 
 ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
   const idv = parseFloat(String(claim.policy?.idv || '0').replace(/,/g, '')) || 0;
-  const totalExcess = (claim.feeBill?.voluntaryExcess || 0) + (claim.feeBill?.compulsoryExcess || 500);
+  const totalExcess = (claim.feeBill?.voluntaryExcess || 0) + (claim.feeBill?.compulsoryExcess ?? 0);
   const tlLiability = Math.max(0, idv - totalExcess);
   const netWithRC = Math.max(0, tlLiability - (claim.totalLossDetails.salvageWithRC || 0));
   const netWithoutRC = Math.max(0, tlLiability - (claim.totalLossDetails.salvageWithoutRC || 0));
