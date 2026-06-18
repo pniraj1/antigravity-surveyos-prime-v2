@@ -1,6 +1,7 @@
 import React from 'react';
 import { Page, Text, View, Document, StyleSheet } from '@react-pdf/renderer';
 import type { ClaimData, AssessmentSummary } from '@/types';
+import { preambleFromClaim, estimateTotalInclGst } from '@/lib/reports/final-survey-preamble';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -167,7 +168,40 @@ const styles = StyleSheet.create({
     width: 200,
     borderTop: '0.5pt solid #000',
     paddingTop: 5,
-  }
+  },
+  causeTitle: {
+    fontSize: 8.5,
+    fontFamily: 'Helvetica-Bold',
+    backgroundColor: '#eee',
+    padding: '2 4',
+    border: '0.5pt solid #000',
+    marginBottom: 4,
+  },
+  causeText: {
+    fontSize: 8.5,
+    lineHeight: 1.4,
+    padding: '3 4',
+    border: '0.5pt solid #000',
+  },
+  preamble: {
+    fontSize: 8,
+    lineHeight: 1.4,
+    textAlign: 'justify',
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  closingText: {
+    fontSize: 8,
+    lineHeight: 1.4,
+    marginTop: 12,
+    textAlign: 'left',
+  },
+  closingBold: {
+    fontSize: 8,
+    fontFamily: 'Helvetica-Bold',
+    textAlign: 'left',
+    marginTop: 4,
+  },
 });
 
 interface Props {
@@ -220,6 +254,9 @@ export function SurveyReportDocument({ claim }: Props) {
   const comEx = fb.compulsoryExcess || fb.lessExcess || 0;
   const tow = fb.travelExpenses || 0;
   const finalNet = Math.max(0, totalNet + tow - salvage - volEx - comEx);
+  const preambleText = (claim.reportPreamble && claim.reportPreamble.trim())
+    ? claim.reportPreamble
+    : preambleFromClaim(claim, estimateTotalInclGst(claim.assessmentRows || []), finalNet);
 
   return (
     <Document>
@@ -255,6 +292,13 @@ export function SurveyReportDocument({ claim }: Props) {
             <View style={styles.gridItem}><Text style={styles.label}>FIR Date:</Text><Text style={styles.value}>{fd(a.firDate)}</Text></View>
           </View>
         </View>
+
+        <View style={styles.section}>
+          <Text style={styles.causeTitle}>CAUSE &amp; NATURE OF ACCIDENT</Text>
+          <Text style={styles.causeText}>{g(a.causeOfAccident) || '—'}</Text>
+        </View>
+
+        <Text style={styles.preamble}>{preambleText}</Text>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>III. DETAILED LOSS ASSESSMENT</Text>
@@ -308,6 +352,9 @@ export function SurveyReportDocument({ claim }: Props) {
           <View style={[styles.summaryRow, { color: 'red' }]}><Text>G. LESS: VOLUNTARY EXCESS</Text><Text>- {fa(volEx)}</Text></View>
           <View style={[styles.summaryRow, styles.summaryTotal]}><Text>NET PAYABLE LOSS (A+B+C+D - E-F-G)</Text><Text>{fa(finalNet)}</Text></View>
         </View>
+
+        <Text style={styles.closingText}>The damages sustained by the vehicle were concurrent with the cause and nature of the accident.</Text>
+        <Text style={styles.closingBold}>ISSUED WITHOUT PREJUDICE</Text>
 
         <View style={styles.signatureArea}>
           <View style={styles.sigBlock}><Text>Insured Signature</Text></View>
