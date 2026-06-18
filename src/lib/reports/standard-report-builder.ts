@@ -14,6 +14,7 @@ import type { SurveyorProfile } from '@/types/vehicle';
 
 import { formatDateDMY, formatDateTimeDMY, fa, numberToWords, getVehicleAgeMonths, getSurveyorHeader, getSigBlock } from './report-utils';
 import { getHtmlScale } from './report-style-utils';
+import { preambleFromClaim, estimateTotalInclGst } from './final-survey-preamble';
 import { computeRowNet } from '@/lib/calculations/row-net';
 
 // ─── HTML/PDF SYNC CHECKLIST ──────────────────────────────────────────────────
@@ -360,8 +361,9 @@ export function buildStandardFinalSurveyHTML(
 </table>
 
 <div style="font-weight:700;font-size:7pt;background:#0d1b2a;color:#fff;padding:2px 4px;margin-bottom:2px;">7. CAUSE &amp; NATURE OF ACCIDENT</div>
-<div style="font-size:7.2pt;margin-bottom:4px;padding:2px 4px;border:0.4pt solid #bbb;background:#fafaf7;line-height:1.5;">${accident.causeOfAccident || '—'}</div>
+<div style="font-size:${scale.cellFont};margin-bottom:4px;padding:2px 4px;border:0.4pt solid #bbb;background:#fafaf7;line-height:1.5;">${accident.causeOfAccident || '—'}</div>
 
+<p style="font-size:${scale.cellFont};line-height:1.5;text-align:justify;margin:4px 0;color:#000;">${(claim.reportPreamble && claim.reportPreamble.trim()) ? claim.reportPreamble : preambleFromClaim(claim, estimateTotalInclGst(rows), net)}</p>
 <div style="font-weight:700;font-size:7pt;background:#0d1b2a;color:#fff;padding:2px 4px;margin-bottom:2px;">8. ASSESSMENT SUMMARY</div>
 <table style="${ts}">
   <thead>
@@ -536,7 +538,8 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
   </tbody>
 </table>
 
-<p style="font-size:6.5pt;line-height:1.5;margin-bottom:5px;text-align:justify;color:#333;">We have carried out survey of the above motor vehicle in connection with the captioned claim and assessed the loss as per Surveyors and Loss Assessors Regulations 2015 under the Insurance Act 1938. This is a final report without prejudice, subject to terms and conditions of the policy including any applicable policy excess and depreciation as per IRDAI guidelines.</p>
+<p style="font-size:${scale.cellFont};line-height:1.5;margin-bottom:3px;text-align:left;color:#000;">The damages sustained by the vehicle were concurrent with the cause and nature of the accident.</p>
+<p style="font-size:${scale.cellFont};font-weight:700;text-align:left;margin-bottom:5px;color:#000;">ISSUED WITHOUT PREJUDICE</p>
 ${getSigBlock(profile)}
 <div style="font-size:6pt;color:#666;margin-top:4px;border-top:0.4pt solid #ccc;padding-top:2px;">Encl: Repair Estimate / Tax Invoice &amp; Digital Photographs</div>`;
 }
