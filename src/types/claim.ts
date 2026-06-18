@@ -118,6 +118,8 @@ export interface ClaimData {
    * Falls back to 'compact' on old claims that predate this field.
    */
   reportSettings?: ReportSettings;
+  /** Free-text narrative shown above the assessment sheet in the Final Survey report. Empty = auto-composed default. */
+  reportPreamble?: string;
 
   // ─── AI Extraction Cache ───────────────────────────
   extractedData: Record<string, unknown>;
@@ -398,6 +400,7 @@ export function createBlankClaim(
       remarks: 'NOTE: Since the assessed repair cost is substantial relative to the IDV, the settlement comparison is provided above for the insurer\'s final decision.'
     },
     reportSettings: { fontScale: 'compact' },
+    reportPreamble: '',
     extractedData: {},
     gDriveFolderId: null,
     telemetrySent: false,
