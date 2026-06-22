@@ -96,7 +96,7 @@ export function IRDAISummaryDialog({ onClose }: Props) {
               <FileSpreadsheet size={18} style={{ color: 'var(--color-status-success)' }} />
             </div>
             <div>
-              <h2 className="text-sm font-medium uppercase tracking-widest" style={{ color: 'var(--color-neutral-100)' }}>
+              <h2 className="text-sm font-medium uppercase tracking-widest" style={{ color: 'var(--color-neutral-900)' }}>
                 Export Annual Summary
               </h2>
               <p className="text-xs mt-0.5 text-muted-foreground">IRDAI Annual Return — Excel Workbook</p>
@@ -122,10 +122,10 @@ export function IRDAISummaryDialog({ onClose }: Props) {
               value={financialYear}
               onChange={e => setFinancialYear(Number(e.target.value))}
               className="w-full px-3 py-2 rounded-xl text-sm font-medium outline-none"
-              style={{ background: 'var(--color-neutral-50)', color: 'var(--color-neutral-100)', border: '1px solid var(--color-neutral-200)' }}
+              style={{ background: 'var(--color-neutral-50)', color: 'var(--color-neutral-900)', border: '1px solid var(--color-neutral-200)' }}
             >
               {FY_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value} style={{ background: 'var(--color-neutral-900)' }}>
+                <option key={opt.value} value={opt.value} style={{ background: 'var(--color-neutral-50)' }}>
                   {opt.label}
                 </option>
               ))}
@@ -189,7 +189,7 @@ export function IRDAISummaryDialog({ onClose }: Props) {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-xs text-muted-foreground">Claims matched</p>
-                  <p className="text-xl font-medium" style={{ color: 'var(--color-neutral-100)' }}>{filtered.length}</p>
+                  <p className="text-xl font-medium" style={{ color: 'var(--color-neutral-900)' }}>{filtered.length}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Total fees</p>

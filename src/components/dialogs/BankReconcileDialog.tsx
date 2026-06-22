@@ -131,8 +131,7 @@ export function BankReconcileDialog({ onClose }: Props) {
         >
           <div className="flex items-center gap-3">
             <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ background: 'var(--color-status-warning-tint)' }}
+              className="w-9 h-9 rounded-xl flex items-center justify-center bg-primary/15"
             >
               <BanknoteIcon size={18} className="text-primary" />
             </div>
@@ -175,7 +174,7 @@ export function BankReconcileDialog({ onClose }: Props) {
                 onClick={() => fileRef.current?.click()}
                 disabled={status === 'extracting'}
                 className="w-full flex flex-col items-center justify-center gap-3 py-10 rounded-2xl border-2 border-dashed transition-all"
-                style={{ borderColor: 'var(--color-primary)', background: 'var(--color-status-warning-tint)' }}
+                style={{ borderColor: 'var(--color-primary)', background: 'var(--color-neutral-50)' }}
               >
                 {status === 'extracting' ? (
                   <>
