@@ -17,7 +17,7 @@ export function RejectPaymentModal({ payment, onConfirm, onCancel }: RejectPayme
     <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4" style={{ background: 'rgba(13,27,42,0.85)', backdropFilter: 'blur(4px)' }}>
       <div className="w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden bg-card border border-border">
         <div className="px-6 py-5 border-b border-border flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-xl bg-status-danger-tint flex items-center justify-center">
             <XCircle size={18} className="text-status-danger" />
           </div>
           <div>

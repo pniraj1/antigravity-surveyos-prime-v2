@@ -34,7 +34,7 @@ export function VerifyPaymentModal({ payment, onConfirm, onCancel }: VerifyPayme
               onChange={e => setVerifyDuration(e.target.value)}
               min="1"
               className="w-full px-4 py-3 rounded-xl text-sm font-medium outline-none"
-              style={{ background: '#F8F9FA', border: '1px solid #E2E6EA', color: '#0D1B2A' }}
+              style={{ background: 'var(--color-neutral-50)', border: '1px solid var(--color-neutral-200)', color: 'var(--color-neutral-900)' }}
             />
             <p className="text-[10px] text-muted-foreground mt-1.5 font-medium">
               User&apos;s subscription will be extended by this many days from today (or current expiry if still valid).

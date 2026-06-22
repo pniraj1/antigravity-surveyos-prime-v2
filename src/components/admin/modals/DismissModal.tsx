@@ -68,7 +68,7 @@ export function DismissModal({ uid, email, name, onConfirm, onCancel }: DismissM
           </button>
           <button
             onClick={() => onConfirm(uid, email, name, dismissReason, sendEmailOnDismiss)}
-            className="px-5 py-2 rounded-xl text-xs font-medium bg-status-danger-tint text-status-danger hover:bg-red-200 transition-all"
+            className="px-5 py-2 rounded-xl text-xs font-medium bg-status-danger-tint text-status-danger hover:bg-status-danger-tint transition-all"
           >
             <XCircle size={12} className="inline mr-1.5" />
             Dismiss Request
