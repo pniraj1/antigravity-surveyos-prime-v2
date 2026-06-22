@@ -36,6 +36,8 @@ import { useAuthStore } from '@/stores/auth-store';
 import { signInWithGoogle, signOutUser } from '@/lib/firebase/auth';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface NavItem {
   id: AppTab;
@@ -101,7 +103,7 @@ export function Sidebar() {
         // Note: No return statement here, so it allows navigation (soft block)
       }
     }
-    
+
     if (targetTab === 'dashboard') {
       // Batch both state updates synchronously so React processes them in a
       // single render cycle. This minimises the window between closeClaim()
@@ -128,20 +130,18 @@ export function Sidebar() {
         className={`
           fixed top-0 left-0 z-50 h-full flex flex-col
           transition-all duration-300 ease-in-out
+          bg-white border-r border-[var(--color-neutral-200)]
           ${sidebarCollapsed ? 'w-[64px]' : 'w-[258px]'}
           lg:relative
         `}
-        style={{ background: '#FFFFFF', borderRight: '1px solid #E2E6EA' }}
       >
         {/* ─── Brand Header ──────────────────────────────── */}
         <div
-          className="flex items-center gap-3 px-4 py-5"
-          style={{ borderBottom: '1px solid #F0F2F5' }}
+          className="flex items-center gap-3 px-4 py-5 border-b border-[var(--color-neutral-50)]"
         >
           {/* Logo mark */}
           <div
-            className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center font-black text-sm shadow-sm"
-            style={{ background: 'linear-gradient(135deg, #0D1B2A, #1e3a5f)', color: '#D4AF37' }}
+            className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center font-medium text-sm shadow-sm bg-[var(--color-neutral-900)] text-primary"
           >
             {isAuthenticated && user
               ? <img src={user.photoURL || ''} alt="" className="w-full h-full object-cover rounded-lg" />
@@ -151,16 +151,16 @@ export function Sidebar() {
 
           {!sidebarCollapsed && (
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-black tracking-tight" style={{ color: '#0D1B2A', letterSpacing: '-0.01em' }}>
+              <div className="text-sm font-medium tracking-tight text-[var(--color-neutral-900)]" style={{ letterSpacing: '-0.01em' }}>
                 {isAuthenticated && user ? user.displayName : (profile.name || 'SurveyOS')}
               </div>
               <div className="flex items-center gap-2 mt-0.5">
-                <div className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#D4AF37', opacity: 0.9 }}>
+                <div className="text-[10px] font-medium uppercase tracking-widest text-primary" style={{ opacity: 0.9 }}>
                   {isAuthenticated && user ? 'Surveyor' : 'V2 · Executive'}
                 </div>
                 <span
-                  className="text-[8px] font-black font-mono px-1 py-0.5 rounded"
-                  style={{ background: 'rgba(13,27,42,0.06)', color: '#8D99AE', letterSpacing: '0.05em' }}
+                  className="text-[8px] font-medium font-mono px-1 py-0.5 rounded bg-[var(--color-neutral-100)] text-[var(--color-neutral-400)]"
+                  style={{ letterSpacing: '0.05em' }}
                   title="Deployed build version"
                 >
                   v{process.env.NEXT_PUBLIC_APP_VERSION}
@@ -171,10 +171,7 @@ export function Sidebar() {
 
           <button
             onClick={toggleSidebar}
-            className="hidden lg:flex items-center justify-center w-6 h-6 rounded-md transition-all"
-            style={{ color: '#8D99AE' }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#0D1B2A')}
-            onMouseLeave={e => (e.currentTarget.style.color = '#8D99AE')}
+            className="hidden lg:flex items-center justify-center w-6 h-6 rounded-md transition-colors text-[var(--color-neutral-400)] hover:text-[var(--color-neutral-900)]"
           >
             {sidebarCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
           </button>
@@ -182,37 +179,21 @@ export function Sidebar() {
 
         {/* ─── Quick Actions ────────────────────────────── */}
         <div
-          className={`flex gap-2 px-4 py-4 ${sidebarCollapsed ? 'flex-col items-center' : ''}`}
-          style={{ borderBottom: '1px solid #F0F2F5' }}
+          className={`flex gap-2 px-4 py-4 border-b border-[var(--color-neutral-50)] ${sidebarCollapsed ? 'flex-col items-center' : ''}`}
         >
-          <button
+          <Button
             onClick={() => setNewClaimDialogOpen(true)}
-            title="New Claim"
-            className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-bold flex-1 justify-center transition-all shadow-sm"
-            style={{
-              background: 'linear-gradient(135deg, #0D1B2A, #1e3a5f)',
-              color: '#F8F9FA',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-1px)')}
-            onMouseLeave={e => (e.currentTarget.style.transform = 'translateY(0)')}
+            title="New claim"
+            className="flex-1 justify-center gap-2"
           >
-            <Plus size={14} style={{ color: '#D4AF37' }} />
-            {!sidebarCollapsed && 'New Claim'}
-          </button>
+            <Plus size={14} />
+            {!sidebarCollapsed && 'New claim'}
+          </Button>
           {!sidebarCollapsed && (
             <button
               onClick={() => setClaimsListOpen(true)}
-              title="Open Claim"
-              className="flex items-center justify-center w-9 h-9 rounded-lg transition-all"
-              style={{ border: '1px solid #E2E6EA', color: '#8D99AE' }}
-              onMouseEnter={e => {
-                e.currentTarget.style.borderColor = '#0D1B2A';
-                e.currentTarget.style.color = '#0D1B2A';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.borderColor = '#E2E6EA';
-                e.currentTarget.style.color = '#8D99AE';
-              }}
+              title="Open claim"
+              className="flex items-center justify-center w-9 h-9 rounded-lg transition-colors border border-[var(--color-neutral-200)] text-[var(--color-neutral-400)] hover:border-[var(--color-neutral-900)] hover:text-[var(--color-neutral-900)]"
             >
               <FolderOpen size={16} />
             </button>
@@ -222,18 +203,16 @@ export function Sidebar() {
         {/* ─── Active Claim Badge ───────────────────────── */}
         {hasClaim && !sidebarCollapsed && (
           <div
-            className="mx-4 mt-4 px-4 py-3 rounded-lg relative overflow-hidden"
-            style={{ background: 'rgba(13,27,42,0.03)', border: '1px solid #E2E6EA' }}
+            className="mx-4 mt-4 px-4 py-3 rounded-lg relative overflow-hidden bg-[var(--color-neutral-50)] border border-[var(--color-neutral-200)]"
           >
             <div
-              className="absolute top-0 left-0 w-[3px] h-full rounded-r-full"
-              style={{ background: '#D4AF37' }}
+              className="absolute top-0 left-0 w-[3px] h-full rounded-r-full bg-primary"
             />
-            <div className="text-[9px] font-bold uppercase tracking-[0.2em] pl-1" style={{ color: '#8D99AE' }}>
+            <div className="text-[9px] font-medium uppercase tracking-[0.2em] pl-1 text-[var(--color-neutral-400)]">
               {currentClaim.surveyType} Survey
             </div>
-            <div className="text-sm font-extrabold truncate mt-0.5 pl-1" style={{ color: '#0D1B2A' }}>
-              {currentClaim.vehicle.registrationNumber || currentClaim.reportNo || 'New Claim'}
+            <div className="text-sm font-medium truncate mt-0.5 pl-1 text-[var(--color-neutral-900)]">
+              {currentClaim.vehicle.registrationNumber || currentClaim.reportNo || 'New claim'}
             </div>
           </div>
         )}
@@ -243,7 +222,7 @@ export function Sidebar() {
           {groups.map((group) => {
             const items = NAV_ITEMS.filter((item) => {
               if (item.group !== group) return false;
-              
+
               // Workflow Logic: Restrict tabs based on Survey Type
               if (currentClaim?.surveyType === 'spot') {
                 // Spot surveys never see assessment/billing/reinspection tabs
@@ -262,7 +241,7 @@ export function Sidebar() {
               }
 
               if (!currentClaim && item.id === 'valuation') return false;
-              
+
               return true;
             });
 
@@ -272,8 +251,8 @@ export function Sidebar() {
               <div key={group}>
                 {GROUP_LABELS[group] && !sidebarCollapsed && (
                   <div
-                    className="px-3 pb-2 text-[9px] font-bold uppercase tracking-[0.25em]"
-                    style={{ color: '#8D99AE', opacity: 0.6 }}
+                    className="px-3 pb-2 text-[9px] font-medium uppercase tracking-[0.25em] text-[var(--color-neutral-400)]"
+                    style={{ opacity: 0.6 }}
                   >
                     {GROUP_LABELS[group]}
                   </div>
@@ -292,42 +271,19 @@ export function Sidebar() {
                         onClick={() => !disabled && handleTabChange(item.id)}
                         disabled={disabled}
                         title={sidebarCollapsed ? item.label : undefined}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium relative transition-all ${sidebarCollapsed ? 'justify-center' : ''}`}
-                        style={{
-                          color: isActive
-                            ? '#0D1B2A'
+                        className={cn(
+                          'w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm relative transition-colors',
+                          sidebarCollapsed ? 'justify-center' : '',
+                          isActive
+                            ? 'bg-[var(--color-neutral-100)] text-[var(--color-neutral-900)] font-medium'
                             : disabled
-                            ? '#E2E6EA'
-                            : '#4A4E69',
-                          background: isActive ? '#F0F2F5' : 'transparent',
-                          cursor: disabled ? 'not-allowed' : 'pointer',
-                        }}
-                        onMouseEnter={e => {
-                          if (!disabled && !isActive) {
-                            e.currentTarget.style.background = '#F8F9FA';
-                            e.currentTarget.style.color = '#0D1B2A';
-                          }
-                        }}
-                        onMouseLeave={e => {
-                          if (!disabled && !isActive) {
-                            e.currentTarget.style.background = 'transparent';
-                            e.currentTarget.style.color = '#4A4E69';
-                          }
-                        }}
+                              ? 'text-[var(--color-neutral-200)] cursor-not-allowed'
+                              : 'text-[var(--color-neutral-600)] hover:bg-[var(--color-neutral-50)] hover:text-[var(--color-neutral-900)]'
+                        )}
                       >
-                        {/* Gold active bar */}
-                        {isActive && (
-                          <span
-                            className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full"
-                            style={{ height: '55%', background: '#D4AF37' }}
-                          />
-                        )}
-                        <span style={{ color: isActive ? '#D4AF37' : 'inherit' }}>
-                          {item.icon}
-                        </span>
-                        {!sidebarCollapsed && (
-                          <span className="truncate font-semibold">{item.label}</span>
-                        )}
+                        {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 h-[55%] w-[3px] rounded-r-full bg-primary" />}
+                        <span className={isActive ? 'text-primary' : ''}>{item.icon}</span>
+                        {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
                       </button>
                     );
                   })}
@@ -339,30 +295,26 @@ export function Sidebar() {
 
         {/* ─── Footer: Auth + Status ────────────────────── */}
         <div
-          className="p-4 space-y-3"
-          style={{ borderTop: '1px solid #F0F2F5' }}
+          className="p-4 space-y-3 border-t border-[var(--color-neutral-50)]"
         >
           {isAuthenticated ? (
             user?.email === 'pniraj.india@gmail.com' ? (
               <div
-                className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-xs font-bold transition-all opacity-50 cursor-not-allowed ${sidebarCollapsed ? 'justify-center' : ''}`}
-                style={{ color: '#0D1B2A' }}
+                className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors opacity-50 cursor-not-allowed ${sidebarCollapsed ? 'justify-center' : ''}`}
+                style={{ color: 'var(--color-neutral-900)' }}
                 title="Admin session permanently active"
               >
                 <ShieldCheck size={15} className="text-primary" />
-                {!sidebarCollapsed && 'Admin Active'}
+                {!sidebarCollapsed && 'Admin active'}
               </div>
             ) : (
               <button
                 onClick={() => { signOutUser(); toast.success('Signed out'); }}
-                className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-xs font-bold transition-all ${sidebarCollapsed ? 'justify-center' : ''}`}
-                style={{ color: '#EF4444' }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#FEF2F2')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                title="Sign Out"
+                className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors text-[var(--color-status-danger)] hover:bg-[var(--color-status-danger-tint)] ${sidebarCollapsed ? 'justify-center' : ''}`}
+                title="Sign out"
               >
                 <LogOut size={15} />
-                {!sidebarCollapsed && 'Sign Out'}
+                {!sidebarCollapsed && 'Sign out'}
               </button>
             )
           ) : (
@@ -371,37 +323,30 @@ export function Sidebar() {
                 try { await signInWithGoogle(); toast.success('Signed in'); }
                 catch { toast.error('Sign in failed'); }
               }}
-              className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-xs font-bold transition-all ${sidebarCollapsed ? 'justify-center' : ''}`}
-              style={{
-                background: '#F8F9FA',
-                color: '#0D1B2A',
-                border: '1px solid #E2E6EA',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = '#F0F2F5')}
-              onMouseLeave={e => (e.currentTarget.style.background = '#F8F9FA')}
-              title="Sign In"
+              className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors bg-[var(--color-neutral-50)] text-[var(--color-neutral-900)] border border-[var(--color-neutral-200)] hover:bg-[var(--color-neutral-100)] ${sidebarCollapsed ? 'justify-center' : ''}`}
+              title="Sign in"
             >
-              <LogIn size={15} style={{ color: '#D4AF37' }} />
-              {!sidebarCollapsed && 'Sign In with Google'}
+              <LogIn size={15} className="text-primary" />
+              {!sidebarCollapsed && 'Sign in with Google'}
             </button>
           )}
 
           {mounted && !sidebarCollapsed && (
-            <div className="space-y-2 pt-2" style={{ borderTop: '1px solid #F0F2F5' }}>
-              <div className={`flex items-center gap-2 text-[10px] font-black tracking-widest uppercase ${isOnline ? 'text-emerald-600' : 'text-amber-600'}`}>
+            <div className="space-y-2 pt-2 border-t border-[var(--color-neutral-50)]">
+              <div className={`flex items-center gap-2 text-[10px] font-medium uppercase tracking-widest ${isOnline ? 'text-emerald-600' : 'text-amber-600'}`}>
                 {isOnline ? <Wifi size={12} /> : <WifiOff size={12} />}
-                {isOnline ? (isAuthenticated ? 'Cloud Linked' : 'Online · Guest') : 'Offline · Local'}
+                {isOnline ? (isAuthenticated ? 'Cloud linked' : 'Online · Guest') : 'Offline · Local'}
               </div>
-              <div className="flex items-center gap-2 text-[10px] font-bold" style={{ color: isDriveConnected ? '#D4AF37' : '#8D99AE' }}>
+              <div className={`flex items-center gap-2 text-[10px] font-medium ${isDriveConnected ? 'text-primary' : 'text-[var(--color-neutral-400)]'}`}>
                 <Cloud size={12} />
-                {isDriveConnected ? driveEmail : 'Drive Unlinked'}
+                {isDriveConnected ? driveEmail : 'Drive unlinked'}
               </div>
             </div>
           )}
           {mounted && sidebarCollapsed && (
             <div className="flex flex-col items-center gap-3">
               {isOnline ? <Wifi size={13} className="text-emerald-400" /> : <WifiOff size={13} className="text-amber-400" />}
-              <Cloud size={13} style={{ color: isDriveConnected ? '#D4AF37' : 'rgba(255,255,255,0.25)' }} />
+              <Cloud size={13} className={isDriveConnected ? 'text-primary' : 'text-[var(--color-neutral-200)]'} />
             </div>
           )}
         </div>
@@ -413,8 +358,7 @@ export function Sidebar() {
 export function MobileMenuButton() {
   return (
     <button
-      className="lg:hidden fixed top-3 left-3 z-50 p-2.5 rounded-lg shadow-lg"
-      style={{ background: '#0D1B2A', color: '#F8F9FA' }}
+      className="lg:hidden fixed top-3 left-3 z-50 p-2.5 rounded-lg shadow-lg bg-[var(--color-neutral-900)] text-white"
       onClick={() => useUIStore.getState().setSidebarMobileOpen(true)}
     >
       <Menu size={18} />
