@@ -27,6 +27,8 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 
+import { StageBadge } from '@/components/ui/StageBadge';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import { BankReconcileDialog } from '@/components/dialogs/BankReconcileDialog';
 import { IRDAISummaryDialog } from '@/components/dialogs/IRDAISummaryDialog';
 import { NewClaimDialog } from '@/components/dialogs/NewClaimDialog';
@@ -237,29 +239,32 @@ export function DashboardContent() {
         <div>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-5 gap-4">
             <div className="flex items-center space-x-4">
-              <h2 className="text-xs font-black uppercase tracking-[0.2em]" style={{ color: '#8D99AE' }}>
-                {showArchived ? 'Archived Claims' : 'Recent Claims'}
+              <h2 className="text-xs font-medium uppercase tracking-[0.2em] text-[var(--color-neutral-400)]">
+                {showArchived ? 'Archived claims' : 'Recent claims'}
               </h2>
-              <div className="flex space-x-1" style={{ background: '#F0F2F5', padding: '2px', borderRadius: '8px' }}>
+              <div className="flex space-x-1 bg-[var(--color-neutral-100)]" style={{ padding: '2px', borderRadius: '8px' }}>
                 <button
-                  className={`px-3 py-1 text-[11px] font-bold rounded-md transition-all ${
-                    !showArchived ? 'bg-white text-[#0D1B2A] shadow-sm' : 'text-[#8D99AE] hover:text-[#0D1B2A]'
+                  className={`px-3 py-1 text-[11px] font-medium rounded-md transition-all ${
+                    !showArchived ? 'bg-card text-[var(--color-neutral-900)] shadow-sm' : 'text-[var(--color-neutral-400)] hover:text-[var(--color-neutral-900)]'
                   }`}
                   onClick={() => setShowArchived(false)}
                 >
                   Active
                 </button>
                 <button
-                  className={`px-3 py-1 text-[11px] font-bold rounded-md transition-all flex items-center gap-1.5 ${
-                    showArchived ? 'bg-white text-[#0D1B2A] shadow-sm' : 'text-[#8D99AE] hover:text-[#0D1B2A]'
+                  className={`px-3 py-1 text-[11px] font-medium rounded-md transition-all flex items-center gap-1.5 ${
+                    showArchived ? 'bg-card text-[var(--color-neutral-900)] shadow-sm' : 'text-[var(--color-neutral-400)] hover:text-[var(--color-neutral-900)]'
                   }`}
                   onClick={() => setShowArchived(true)}
                 >
                   Archived
                   {archivedCount > 0 && (
                     <span
-                      className="text-[9px] font-black px-1.5 py-0.5 rounded-full"
-                      style={{ background: showArchived ? '#E2E6EA' : 'var(--color-status-danger-tint)', color: showArchived ? '#0D1B2A' : 'var(--color-status-danger)' }}
+                      className={`text-[9px] font-medium px-1.5 py-0.5 rounded-full ${
+                        showArchived
+                          ? 'bg-[var(--color-neutral-200)] text-[var(--color-neutral-900)]'
+                          : 'bg-[var(--color-status-danger-tint)] text-[var(--color-status-danger)]'
+                      }`}
                     >
                       {archivedCount}
                     </span>
@@ -269,76 +274,50 @@ export function DashboardContent() {
             </div>
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <div className="relative flex-1 sm:w-64">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-neutral-400)]" />
                 <input
                   type="text"
                   placeholder="Search by Report No, Vehicle, Insured..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 rounded-xl text-xs font-medium focus:outline-none focus:ring-2"
-                  style={{
-                    background: '#FFFFFF',
-                    border: '1px solid #E2E6EA',
-                    color: '#0D1B2A',
-                  }}
+                  className="w-full pl-9 pr-4 py-2 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 bg-card border border-border text-[var(--color-neutral-900)]"
                 />
               </div>
               <button
                 onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all"
-                style={{
-                  background: '#FFFFFF',
-                  border: '1px solid #E2E6EA',
-                  color: '#4A4E69',
-                }}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all bg-card border border-border text-[var(--color-neutral-600)]"
                 title={`Sort by Date: ${sortOrder === 'desc' ? 'Newest first' : 'Oldest first'}`}
               >
                 <ArrowUpDown size={14} />
                 <span className="hidden sm:inline">Sort {sortOrder === 'desc' ? '(New)' : '(Old)'}</span>
               </button>
-              <span
-                className="text-[11px] font-bold px-2.5 py-1.5 rounded-lg flex-shrink-0"
-                style={{ background: '#0D1B2A', color: '#D4AF37' }}
-              >
+              <span className="text-[11px] font-medium px-2.5 py-1.5 rounded-lg flex-shrink-0 bg-[var(--color-neutral-900)] text-primary">
                 {displayClaims.length} total
               </span>
             </div>
           </div>
 
-          <div
-            className="rounded-2xl overflow-hidden"
-            style={{ background: '#FFFFFF', border: '1px solid #E2E6EA', boxShadow: '0 1px 3px rgba(13,27,42,0.04)' }}
-          >
+          <div className="rounded-2xl overflow-hidden bg-card border border-border shadow-sm">
             {displayClaims.length === 0 ? (
               <div className="p-16 text-center flex flex-col items-center">
-                <div
-                  className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5"
-                  style={{ background: '#F0F2F5' }}
-                >
-                  <FileCheck size={28} style={{ color: '#8D99AE' }} />
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5 bg-[var(--color-neutral-100)]">
+                  <FileCheck size={28} className="text-[var(--color-neutral-400)]" />
                 </div>
-                <div className="text-base font-bold mb-1" style={{ color: '#0D1B2A' }}>No claims yet</div>
-                <div className="text-sm" style={{ color: '#8D99AE' }}>
+                <div className="text-base font-medium mb-1 text-[var(--color-neutral-900)]">No claims yet</div>
+                <div className="text-sm text-[var(--color-neutral-400)]">
                   Click &ldquo;New Claim&rdquo; to start your first digital survey.
                 </div>
                 <button
                   onClick={() => setNewClaimDialogOpen(true)}
-                  className="mt-6 flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold"
-                  style={{
-                    background: '#0D1B2A',
-                    color: '#D4AF37',
-                  }}
+                  className="mt-6 flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium bg-[var(--color-neutral-900)] text-primary"
                 >
                   <Plus size={14} />
-                  New Claim
+                  New claim
                 </button>
               </div>
             ) : (
               <div>
-                <div
-                  className="px-6 py-3 grid grid-cols-[1.5fr_1fr_2fr_100px_100px_120px_60px] gap-4 text-[10px] font-black uppercase tracking-[0.15em] items-center"
-                  style={{ borderBottom: '1px solid #E2E6EA', color: '#8D99AE', background: '#FAFAFA' }}
-                >
+                <div className="px-6 py-3 grid grid-cols-[1.5fr_1fr_2fr_100px_100px_120px_60px] gap-4 text-[10px] font-medium uppercase tracking-[0.15em] items-center border-b border-border text-[var(--color-neutral-400)] bg-[var(--color-neutral-50)]">
                   <span>Report No.</span>
                   <span>Stage</span>
                   <span>Vehicle & Parties</span>
@@ -347,7 +326,7 @@ export function DashboardContent() {
                   <span>Date</span>
                   <span className="text-right">Action</span>
                 </div>
-                <div className="divide-y divide-gray-100">
+                <div className="divide-y divide-[var(--color-neutral-100)]">
                   {displayClaims.slice(0, 50).map((claim) => (
                     <div
                       key={claim.id}
@@ -367,41 +346,23 @@ export function DashboardContent() {
                           useUIStore.getState().setCurrentClaimId(null);
                         }
                       }}
-                      className="px-6 py-4 grid grid-cols-[1.5fr_1fr_2fr_100px_100px_120px_60px] gap-4 items-center cursor-pointer transition-all"
-                      style={{ borderBottom: '1px solid #F0F2F5' }}
-                      onMouseEnter={e => (e.currentTarget.style.background = '#FAFBFC')}
-                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      className="px-6 py-4 grid grid-cols-[1.5fr_1fr_2fr_100px_100px_120px_60px] gap-4 items-center cursor-pointer border-b border-[var(--color-neutral-100)] transition-colors hover:bg-[var(--color-neutral-50)]"
                     >
                       <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="text-sm font-bold truncate" style={{ color: '#0D1B2A' }}>
+                        <span className="text-sm font-medium truncate text-[var(--color-neutral-900)]">
                           {claim.reportNo || 'Draft'}
                         </span>
                         {claim.gDriveFolderId && (
                           <span title="Synced to Google Drive">
-                            <HardDrive size={11} style={{ color: '#16a34a', flexShrink: 0 }} />
+                            <HardDrive size={11} className="text-[var(--color-status-success)] shrink-0" />
                           </span>
                         )}
                       </div>
                       <div>
-                        <span
-                          className="text-[10px] font-bold px-2.5 py-1 rounded-lg uppercase tracking-wider"
-                          style={
-                            claim.stage === 'spot'
-                              ? { background: '#FEF3C7', color: '#92400E', border: '1px solid #FDE68A' }
-                              : claim.stage === 'final'
-                              ? { background: '#D1FAE5', color: '#065F46', border: '1px solid #A7F3D0' }
-                              : claim.stage === 'reinspection'
-                              ? { background: '#E0E7FF', color: '#3730A3', border: '1px solid #C7D2FE' }
-                              : claim.stage === 'valuation'
-                              ? { background: '#FFF7ED', color: '#9A3412', border: '1px solid #FDBA74' }
-                              : { background: '#F1F5F9', color: '#475569', border: '1px solid #E2E8F0' }
-                          }
-                        >
-                          {claim.stage}
-                        </span>
+                        <StageBadge stage={claim.stage} />
                       </div>
                       <div className="flex flex-col truncate">
-                        <span className="text-sm font-bold uppercase" style={{ color: '#0D1B2A' }}>{claim.vehicleNo || 'Unknown'}</span>
+                        <span className="text-sm font-medium uppercase text-[var(--color-neutral-900)]">{claim.vehicleNo || 'Unknown'}</span>
                         <div className="flex gap-2 text-[10px] text-muted-foreground truncate opacity-80 mt-0.5">
                           {claim.insuredName && <span className="inline-flex items-center gap-1 truncate" title={`Insured: ${claim.insuredName}`}><User size={10} /> {claim.insuredName}</span>}
                           {claim.insurerName && <span className="inline-flex items-center gap-1 truncate" title={`Insurer: ${claim.insurerName}`}><Building2 size={10} /> {claim.insurerName}</span>}
@@ -409,9 +370,9 @@ export function DashboardContent() {
                         </div>
                       </div>
                       <div>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded border uppercase" style={claim.isActive ? (claim.isCompleted ? { borderColor: 'var(--color-status-success)', color: 'var(--color-status-success)' } : { borderColor: 'var(--color-status-warning)', color: 'var(--color-status-warning)' }) : { borderColor: 'var(--color-status-danger)', color: 'var(--color-status-danger)' }}>
-                           {!claim.isActive ? 'Archived' : (claim.isCompleted ? 'Done' : 'Active')}
-                        </span>
+                        <StatusBadge tone={!claim.isActive ? 'danger' : claim.isCompleted ? 'success' : 'warning'}>
+                          {!claim.isActive ? 'Archived' : claim.isCompleted ? 'Done' : 'Active'}
+                        </StatusBadge>
                       </div>
                       <div>
                         <button
@@ -435,7 +396,7 @@ export function DashboardContent() {
                           {claim.feePaid ? 'Paid' : 'Unpaid'}
                         </button>
                       </div>
-                      <div className="text-xs font-medium" style={{ color: '#8D99AE' }}>
+                      <div className="text-xs font-medium text-[var(--color-neutral-400)]">
                         {new Date(claim.updatedAt).toLocaleDateString(undefined, {
                           year: 'numeric',
                           month: 'short',
@@ -454,7 +415,7 @@ export function DashboardContent() {
                               channel.close();
                             }
                           }}
-                          className={`p-1.5 rounded-lg transition-colors ${claim.isCompleted ? 'bg-green-100 text-green-600' : 'text-gray-400 hover:bg-gray-100 hover:text-green-600'}`}
+                          className={`p-1.5 rounded-lg transition-colors ${claim.isCompleted ? 'bg-[var(--color-status-success-tint)] text-[var(--color-status-success)]' : 'text-[var(--color-neutral-400)] hover:bg-[var(--color-neutral-100)] hover:text-[var(--color-status-success)]'}`}
                           title={claim.isCompleted ? "Mark Incomplete" : "Mark Completed"}
                         >
                           <CheckCircle size={16} />
@@ -481,8 +442,8 @@ export function DashboardContent() {
                           }}
                           className={`p-1.5 rounded-lg transition-colors ${
                             claim.isActive && !claim.isCompleted
-                              ? 'text-gray-300 cursor-not-allowed'
-                              : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700'
+                              ? 'text-[var(--color-neutral-200)] cursor-not-allowed'
+                              : 'text-[var(--color-neutral-400)] hover:bg-[var(--color-neutral-100)] hover:text-[var(--color-neutral-600)]'
                           }`}
                           title={
                             claim.isActive
@@ -502,7 +463,7 @@ export function DashboardContent() {
                               setDeleteTarget({ id: claim.id, vehicleNo: claim.vehicleNo || 'Unknown' });
                               setDeleteConfirmText('');
                             }}
-                            className="p-1.5 rounded-lg hover:bg-red-50 transition-colors text-gray-400 hover:text-red-600"
+                            className="p-1.5 rounded-lg transition-colors text-[var(--color-neutral-400)] hover:bg-[var(--color-neutral-100)] hover:text-[var(--color-status-danger)]"
                             title="Delete Permanently"
                           >
                             <Trash2 size={16} />
