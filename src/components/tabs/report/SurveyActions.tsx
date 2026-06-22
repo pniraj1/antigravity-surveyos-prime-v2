@@ -158,7 +158,7 @@ export function SurveyActions({
           className="flex items-center gap-2 px-8 py-3 rounded-xl font-medium text-sm transition-all shadow-xl hover:scale-105 active:scale-95"
           style={{ background: 'var(--color-neutral-900)', color: '#FFFFFF', cursor: 'pointer', border: 'none' }}
         >
-          <div className="w-3 h-3 rounded-sm bg-amber-400 animate-pulse" />
+          <div className="w-3 h-3 rounded-sm bg-primary animate-pulse" />
           POWER PRINT — FINAL SURVEY REPORT
         </button>
       )}
@@ -170,7 +170,7 @@ export function SurveyActions({
           className="flex items-center gap-2 px-8 py-3 rounded-xl font-medium text-sm transition-all shadow-xl hover:scale-105 active:scale-95"
           style={{ background: 'var(--color-status-success)', color: '#FFFFFF', cursor: 'pointer', border: 'none' }}
         >
-          <div className="w-3 h-3 rounded-sm bg-amber-400 animate-pulse" />
+          <div className="w-3 h-3 rounded-sm bg-primary animate-pulse" />
           POWER PRINT — UIIC FINAL SURVEY REPORT
         </button>
       )}

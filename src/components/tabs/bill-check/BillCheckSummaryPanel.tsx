@@ -66,16 +66,16 @@ export function BillCheckSummaryPanel({ summary, bcSummary, inBillTotal, notInBi
           </div>
           <div className="space-y-1">
             <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Net Billed (After Dep)</p>
-            <p className="text-lg font-medium text-success">{fmt(bcSummary.grandTotalBilled)}</p>
+            <p className="text-lg font-medium text-status-success">{fmt(bcSummary.grandTotalBilled)}</p>
           </div>
           <div className="space-y-1">
             <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Saving (Not in Bill)</p>
-            <p className="text-lg font-medium text-danger">-{fmt(bcSummary.notInBillTotal)}</p>
+            <p className="text-lg font-medium text-status-danger">-{fmt(bcSummary.notInBillTotal)}</p>
           </div>
-          <div className="p-4 rounded-xl shadow-lg border-2 bg-neutral-900" style={{ borderColor: 'var(--color-primary)/20' }}>
-            <p className="text-[9px] font-medium text-primary-foreground/80 uppercase tracking-[0.2em] mb-1">Final Liability</p>
-            <p className="text-2xl font-medium text-primary-foreground">{fmt(bcSummary.netLiability)}</p>
-            <div className="mt-2 text-[8px] text-primary-foreground/30 uppercase font-medium tracking-widest">Payable to Workshop</div>
+          <div className="p-4 rounded-xl shadow-lg border-2 border-primary/20 bg-neutral-900">
+            <p className="text-[9px] font-medium text-primary uppercase tracking-[0.2em] mb-1">Final Liability</p>
+            <p className="text-2xl font-medium text-white">{fmt(bcSummary.netLiability)}</p>
+            <div className="mt-2 text-[8px] text-white/40 uppercase font-medium tracking-widest">Payable to Workshop</div>
           </div>
         </div>
 

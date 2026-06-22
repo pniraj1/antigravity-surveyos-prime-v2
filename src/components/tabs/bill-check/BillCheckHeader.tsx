@@ -43,7 +43,7 @@ export function BillCheckHeader({ showEvidence, onToggleEvidence, bcSummary, cla
           Final Bill Verification
         </div>
         <div className="flex items-center justify-between gap-4">
-          <h1 className="text-2xl lg:text-3xl font-medium mb-2 text-foreground" style={{ letterSpacing: '-0.02em' }}>
+          <h1 className="text-2xl lg:text-3xl font-medium mb-2 text-white" style={{ letterSpacing: '-0.02em' }}>
             Bill Check Report
           </h1>
           <div className="flex items-center gap-3">
@@ -63,7 +63,7 @@ export function BillCheckHeader({ showEvidence, onToggleEvidence, bcSummary, cla
             </button>
           </div>
         </div>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-white/70">
           Verify that items <strong className="text-primary">allowed</strong> in the Final Survey Report are correctly
           reflected in the workshop&apos;s final bill submitted to the insurer.
         </p>

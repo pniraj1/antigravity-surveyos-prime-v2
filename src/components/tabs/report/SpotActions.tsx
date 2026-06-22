@@ -51,10 +51,10 @@ export function SpotActions({ claim, profile, isExportingWord, setIsExportingWor
       {/* Power Print */}
       <button
         onClick={onPrint}
-        className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium text-sm transition-all shadow-md border-2 border-success text-success hover:bg-success/10"
-        style={{ background: '#FFFFFF', cursor: 'pointer' }}
+        className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium text-sm transition-all shadow-md border-2 border-status-success text-status-success hover:bg-status-success/10"
+        style={{ background: 'var(--color-card)', cursor: 'pointer' }}
       >
-        <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+        <div className="w-2 h-2 rounded-full bg-status-success animate-pulse" />
         POWER PRINT (SPOT)
       </button>
     </>
