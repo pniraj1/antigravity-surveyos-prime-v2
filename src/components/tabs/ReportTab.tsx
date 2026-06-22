@@ -42,9 +42,9 @@ import { useRef } from 'react';
 
 function PDFLoadingFallback() {
   return (
-    <div className="flex flex-col items-center justify-center h-full min-h-[500px] rounded-2xl" style={{ background: '#F0F2F5' }}>
-      <Loader2 className="h-8 w-8 animate-spin mb-4" style={{ color: '#D4AF37', opacity: 0.7 }} />
-      <p className="text-sm font-black uppercase tracking-widest animate-pulse" style={{ color: '#8D99AE' }}>
+    <div className="flex flex-col items-center justify-center h-full min-h-[500px] rounded-2xl bg-neutral-50">
+      <Loader2 className="h-8 w-8 animate-spin mb-4 text-primary" style={{ opacity: 0.7 }} />
+      <p className="text-sm font-medium uppercase tracking-widest animate-pulse text-muted-foreground">
         Compiling PDF Engine…
       </p>
     </div>
@@ -174,22 +174,22 @@ export function ReportTab() {
       {/* ── Header ───────────────────────────────────────────── */}
       <div className="mb-6 flex items-end justify-between">
         <div>
-          <h2 className="text-2xl font-black tracking-tight" style={{ color: '#0D1B2A', letterSpacing: '-0.02em' }}>
+          <h2 className="text-2xl font-medium tracking-tight text-foreground" style={{ letterSpacing: '-0.02em' }}>
             Report Center
           </h2>
-          <p className="text-sm mt-1" style={{ color: '#8D99AE' }}>
+          <p className="text-sm mt-1 text-muted-foreground">
             Select report type and format to generate professional outputs.
           </p>
         </div>
-        <div className="flex gap-1 p-1 rounded-xl" style={{ background: '#F0F2F5' }}>
+        <div className="flex gap-1 p-1 rounded-xl bg-neutral-50">
           {availableReports.map(rt => (
             <button
               key={rt.id}
               onClick={() => setActiveReport(rt.id as ReportType)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all"
               style={{
-                background: activeReport === rt.id ? '#FFFFFF' : 'transparent',
-                color: activeReport === rt.id ? rt.color : '#8D99AE',
+                background: activeReport === rt.id ? 'var(--color-card, #FFFFFF)' : 'transparent',
+                color: activeReport === rt.id ? rt.color : 'var(--color-neutral-400)',
                 boxShadow: activeReport === rt.id ? '0 2px 8px rgba(0,0,0,0.05)' : 'none',
               }}
             >
@@ -231,14 +231,14 @@ export function ReportTab() {
               const win = window.open('', '_blank');
               if (win) { win.document.write(html); win.document.close(); win.print(); }
             }}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-sm"
-            style={{ background: '#92400E', color: '#fff' }}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all shadow-sm"
+            style={{ background: 'var(--color-status-warning)', color: 'var(--color-neutral-50)' }}
           >
             <FileText size={14} /> Print / Download PDF
           </button>
         )}
         {isDirty && (
-          <div className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg" style={{ background: 'rgba(251,191,36,0.1)', color: '#D97706', border: '1px solid rgba(217,119,6,0.2)' }}>
+          <div className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg" style={{ background: 'var(--color-status-warning-tint)', color: 'var(--color-status-warning)', border: '1px solid var(--color-status-warning)' }}>
             <AlertCircle size={12} /> Unsaved changes — PDF updates live
           </div>
         )}
@@ -249,13 +249,13 @@ export function ReportTab() {
           <Card className="mb-4">
             <CardContent className="p-4 space-y-2">
               <div className="flex items-center justify-between">
-                <label htmlFor="report-preamble" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                <label htmlFor="report-preamble" className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
                   Report Preamble (shown above the assessment sheet)
                 </label>
                 <button
                   type="button"
                   onClick={() => updateClaim({ reportPreamble: '' })}
-                  className="text-[11px] font-semibold text-primary hover:underline"
+                  className="text-[11px] font-medium text-primary hover:underline"
                   title="Discard edits and re-generate from current claim data"
                 >
                   Reset to auto-generated
@@ -285,10 +285,9 @@ export function ReportTab() {
 
       {/* ── PDF Viewer / Live HTML Preview ───────────────────────────────────────── */}
       <Card
-        className="flex-1 overflow-hidden shadow-lg"
-        style={{ border: '1px solid #E2E6EA' }}
+        className="flex-1 overflow-hidden shadow-lg border-border"
       >
-        <CardContent className="p-0 w-full h-[calc(100vh-340px)] min-h-[520px]" style={{ background: '#525659' }}>
+        <CardContent className="p-0 w-full h-[calc(100vh-340px)] min-h-[520px]" style={{ background: 'var(--color-neutral-600)' }}>
           {(activeReport === 'survey' || activeReport === 'spot' || activeReport === 'valuation') ? (
             <div className="w-full h-full overflow-auto flex justify-center py-8">
               <div 
@@ -313,7 +312,8 @@ export function ReportTab() {
                       style={{
                         transform: 'rotate(-45deg)',
                         fontSize: '140px',
-                        color: 'rgba(220, 38, 38, 0.06)', // Very faint red
+                        color: 'var(--color-status-danger)',
+                        opacity: 0.06,
                         fontWeight: 900,
                         letterSpacing: '0.1em',
                         whiteSpace: 'nowrap',
@@ -350,25 +350,25 @@ export function ReportTab() {
 
       {/* Insured Reports (Premium) */}
       {profile?.insuredReportSettings?.enabled && (
-        <div className="mt-8 p-5 rounded-2xl border" style={{ borderColor: '#E2E6EA', background: '#F9FAFB' }}>
+        <div className="mt-8 p-5 rounded-2xl border border-border bg-neutral-50">
           <div className="flex items-center gap-2 mb-4">
-            <Shield size={16} style={{ color: '#D4AF37' }} />
-            <h3 className="text-sm font-black tracking-tight" style={{ color: '#0D1B2A' }}>Insured Reports</h3>
-            <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{ background: '#FEF3C7', color: '#92400E' }}>PREMIUM</span>
+            <Shield size={16} className="text-primary" />
+            <h3 className="text-sm font-medium tracking-tight text-foreground">Insured Reports</h3>
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: 'var(--color-status-warning-tint)', color: 'var(--color-status-warning)' }}>PREMIUM</span>
           </div>
           <div className="flex flex-wrap gap-3">
             {profile.insuredReportSettings.enabledStages.includes('preliminary') && currentClaim.surveyType === 'final' && (
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setInsuredDialogStage('preliminary')}
-                  className="text-xs font-bold px-4 py-2 rounded-xl border flex items-center gap-2"
-                  style={{ borderColor: '#D4AF37', color: '#0D1B2A' }}
+                  className="text-xs font-medium px-4 py-2 rounded-xl border flex items-center gap-2"
+                  style={{ borderColor: 'var(--color-primary)', color: 'var(--color-neutral-900)' }}
                 >
                   <FileText size={14} />
                   {currentClaim.insuredReportPreliminary?.isSurveyorApproved ? 'Download / Edit Preliminary' : 'Generate Insured Report (Preliminary)'}
                 </button>
                 {currentClaim.insuredReportPreliminary?.isSurveyorApproved && (
-                  <span className="text-xs" style={{ color: '#065F46' }}>✓ Approved</span>
+                  <span className="text-xs" style={{ color: 'var(--color-status-success)' }}>✓ Approved</span>
                 )}
               </div>
             )}
@@ -376,14 +376,14 @@ export function ReportTab() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setInsuredDialogStage('final')}
-                  className="text-xs font-bold px-4 py-2 rounded-xl border flex items-center gap-2"
-                  style={{ borderColor: '#D4AF37', color: '#0D1B2A' }}
+                  className="text-xs font-medium px-4 py-2 rounded-xl border flex items-center gap-2"
+                  style={{ borderColor: 'var(--color-primary)', color: 'var(--color-neutral-900)' }}
                 >
                   <FileText size={14} />
                   {currentClaim.insuredReportFinal?.isSurveyorApproved ? 'Download / Edit Final' : 'Generate Insured Report (Final)'}
                 </button>
                 {currentClaim.insuredReportFinal?.isSurveyorApproved && (
-                  <span className="text-xs" style={{ color: '#065F46' }}>✓ Approved</span>
+                  <span className="text-xs" style={{ color: 'var(--color-status-success)' }}>✓ Approved</span>
                 )}
               </div>
             )}

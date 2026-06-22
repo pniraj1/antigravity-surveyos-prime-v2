@@ -189,7 +189,7 @@ export function PhotosTab() {
       {/* ── Toolbar ── */}
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Photo Engine</h2>
+          <h2 className="text-2xl font-medium tracking-tight">Photo Engine</h2>
           <p className="text-muted-foreground text-sm mt-1">
             Upload damage photos. The PDF auto-selects portrait or landscape A4 based on photo orientation.
           </p>
@@ -224,7 +224,7 @@ export function PhotosTab() {
           {/* Layout */}
           <Card className="border-border shadow-sm">
             <CardHeader className="bg-card/50 pb-3 border-b border-border">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <LayoutGrid size={15} className="text-primary" />
                 Layout
               </CardTitle>
@@ -263,7 +263,7 @@ export function PhotosTab() {
           {/* PDF options */}
           <Card className="border-border shadow-sm">
             <CardHeader className="bg-card/50 pb-3 border-b border-border">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Sliders size={15} className="text-primary" />
                 PDF Options
               </CardTitle>
@@ -350,7 +350,7 @@ export function PhotosTab() {
           {showPreview && hasPhotos && (
             <Card className="border-border shadow-sm overflow-hidden">
               <CardHeader className="bg-card/50 pb-3 border-b border-border flex flex-row items-center justify-between">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
                   <Eye size={15} className="text-primary" />
                   Live PDF Preview
                 </CardTitle>
@@ -366,12 +366,12 @@ export function PhotosTab() {
 
           {/* Restore from Drive — shown for archived claims with no local photos */}
           {canRestoreFromDrive && (
-            <Card className="border-amber-200 shadow-sm bg-amber-50/40">
+            <Card className="border-status-warning shadow-sm bg-status-warning-tint">
               <CardContent className="p-6 flex flex-col items-center justify-center text-center gap-3">
-                <CloudDownload size={36} className="text-amber-500 opacity-80" />
+                <CloudDownload size={36} className="text-status-warning opacity-80" />
                 <div>
-                  <h3 className="text-sm font-bold text-amber-900">Photos cleared on archive</h3>
-                  <p className="text-xs text-amber-700 mt-1 max-w-xs mx-auto">
+                  <h3 className="text-sm font-medium text-status-warning">Photos cleared on archive</h3>
+                  <p className="text-xs text-status-warning mt-1 max-w-xs mx-auto">
                     Photos were removed from this device when the claim was archived to free up space.
                     They are still saved in your Google Drive.
                   </p>
@@ -379,13 +379,11 @@ export function PhotosTab() {
                 <button
                   onClick={handleRestoreFromDrive}
                   disabled={restoringDrive}
-                  className="flex items-center gap-2 px-5 py-2 rounded-md text-sm font-semibold transition-all"
-                  style={{
-                    background: restoringDrive ? '#E2E6EA' : '#D4AF37',
-                    color: '#0D1B2A',
-                    cursor: restoringDrive ? 'not-allowed' : 'pointer',
-                    opacity: restoringDrive ? 0.7 : 1,
-                  }}
+                  className={`flex items-center gap-2 px-5 py-2 rounded-md text-sm font-medium transition-all ${
+                    restoringDrive
+                      ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-70'
+                      : 'bg-primary text-foreground cursor-pointer'
+                  }`}
                 >
                   {restoringDrive
                     ? <><Loader2 size={14} className="animate-spin" /> Restoring…</>
@@ -399,7 +397,7 @@ export function PhotosTab() {
           <Card className="border-border shadow-sm border-dashed bg-muted/10">
             <CardContent className="p-8 flex flex-col items-center justify-center min-h-[180px]">
               <UploadCloud size={44} className="text-muted-foreground mb-4 opacity-50" />
-              <h3 className="text-base font-semibold mb-1">Upload Photos</h3>
+              <h3 className="text-base font-medium mb-1">Upload Photos</h3>
               <p className="text-sm text-muted-foreground mb-5 text-center max-w-sm">
                 Select collision photos. Compressed locally to save memory.
                 Portrait and landscape photos are handled automatically.
@@ -449,10 +447,10 @@ export function PhotosTab() {
                       </div>
                       {/* Orientation pill */}
                       {photo.w != null && photo.h != null && (
-                        <div className={`absolute top-2 left-2 px-1.5 py-0.5 rounded text-[9px] font-semibold backdrop-blur-sm ${
+                        <div className={`absolute top-2 left-2 px-1.5 py-0.5 rounded text-[9px] font-medium backdrop-blur-sm ${
                           isPortrait
-                            ? 'bg-blue-100/80 text-blue-700'
-                            : 'bg-amber-100/80 text-amber-700'
+                            ? 'bg-status-success-tint text-status-success'
+                            : 'bg-status-warning-tint text-status-warning'
                         }`}>
                           {isPortrait ? '▯' : '▭'}
                         </div>

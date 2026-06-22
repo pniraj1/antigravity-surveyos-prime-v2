@@ -31,9 +31,9 @@ function FeeBillPreview({ claim, profile }: { claim: any; profile: any }) {
 // ─── Fee Bill Section ────────────────────────────────────────────────────────
 function FeeLine({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between py-2" style={{ borderBottom: '1px solid #F0F2F5' }}>
-      <span className="text-sm" style={{ color: '#4A4E69' }}>{label}</span>
-      <span className="text-sm font-bold" style={{ color: '#0D1B2A' }}>{value}</span>
+    <div className="flex items-center justify-between py-2" style={{ borderBottom: '1px solid var(--color-neutral-100)' }}>
+      <span className="text-sm" style={{ color: 'var(--color-neutral-600)' }}>{label}</span>
+      <span className="text-sm font-medium" style={{ color: 'var(--color-neutral-900)' }}>{value}</span>
     </div>
   );
 }
@@ -72,47 +72,46 @@ export function FeesTab() {
     width: '100%',
     padding: '8px 12px',
     borderRadius: 10,
-    border: '1px solid #E2E6EA',
-    background: '#FAFAFA',
-    color: '#0D1B2A',
+    border: '1px solid var(--color-neutral-200)',
+    background: 'var(--color-neutral-50)',
+    color: 'var(--color-neutral-900)',
     fontSize: 14,
-    fontWeight: 600,
+    fontWeight: 500,
     outline: 'none',
   };
   const labelStyle: React.CSSProperties = {
     fontSize: 10,
-    fontWeight: 800,
+    fontWeight: 500,
     textTransform: 'uppercase',
     letterSpacing: '0.15em',
-    color: '#8D99AE',
+    color: 'var(--color-neutral-400)',
     display: 'block',
     marginBottom: 6,
   };
 
   return (
-    <div className="h-full overflow-y-auto" style={{ background: '#F8F9FA' }}>
+    <div className="h-full overflow-y-auto" style={{ background: 'var(--color-neutral-50)' }}>
 
       {/* ── Header ─────────────────────────────────────── */}
       <div
         className="px-8 py-8 lg:px-12"
-        style={{ background: 'linear-gradient(135deg, #0D1B2A 0%, #1e3a5f 100%)' }}
+        style={{ background: 'linear-gradient(135deg, var(--color-neutral-900) 0%, #1e3a5f 100%)' }}
       >
         <div className="max-w-5xl mx-auto">
           <div
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] mb-4"
-            style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)' }}
+            className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-medium uppercase tracking-[0.2em] mb-4 bg-primary/15 border border-primary/30 text-primary"
           >
             <Receipt size={11} />
             Surveyor Fee Statement
           </div>
-          <h1 className="text-2xl lg:text-3xl font-black mb-2" style={{ color: '#F8F9FA', letterSpacing: '-0.02em' }}>
+          <h1 className="text-2xl lg:text-3xl font-medium mb-2" style={{ color: 'var(--color-neutral-50)', letterSpacing: '-0.02em' }}>
             Fee Bill
           </h1>
           <p className="text-sm" style={{ color: 'rgba(232,236,240,0.65)' }}>
             Professional fee statement for {currentClaim.vehicle.registrationNumber || 'this claim'} — auto-calculates GST and totals.
           </p>
           <div className="flex flex-wrap items-center gap-3 mt-5">
-            <div className="px-3 py-1.5 rounded-full text-xs font-bold" style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37' }}>
+            <div className="px-3 py-1.5 rounded-full text-xs font-medium bg-primary/15 text-primary">
               Gross Total: {fmt(grossTotal)}
             </div>
 
@@ -122,9 +121,9 @@ export function FeesTab() {
               onClick={() => {
                 triggerSpotFeeBillPrint(currentClaim, profile!);
               }}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-full font-black text-xs transition-all shadow-lg hover:scale-105 active:scale-95"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-full font-medium text-xs transition-all shadow-lg hover:scale-105 active:scale-95"
               style={{
-                background: 'linear-gradient(135deg, #D4AF37, #b8942a)',
+                background: 'linear-gradient(135deg, var(--color-primary), #b8942a)',
                 color: '#FFFFFF',
                 cursor: 'pointer',
                 border: 'none',
@@ -144,11 +143,11 @@ export function FeesTab() {
           <div className="lg:col-span-2 space-y-5">
 
             {/* Bill Metadata */}
-            <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E2E6EA' }}>
-              <div className="px-6 py-4" style={{ borderBottom: '1px solid #F0F2F5', background: '#FAFAFA' }}>
+            <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid var(--color-neutral-200)' }}>
+              <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--color-neutral-100)', background: 'var(--color-neutral-50)' }}>
                 <div className="flex items-center gap-2">
-                  <FileText size={14} style={{ color: '#D4AF37' }} />
-                  <span className="text-sm font-black" style={{ color: '#0D1B2A' }}>Bill Details</span>
+                  <FileText size={14} className="text-primary" />
+                  <span className="text-sm font-medium" style={{ color: 'var(--color-neutral-900)' }}>Bill Details</span>
                 </div>
               </div>
               <div className="p-5 grid grid-cols-2 gap-4">
@@ -170,18 +169,18 @@ export function FeesTab() {
                     onClick={() => set('feePaid', !fb.feePaid)}
                     className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left"
                     style={{
-                      background: fb.feePaid ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.05)',
-                      border: `1.5px solid ${fb.feePaid ? '#10B981' : '#FECACA'}`,
+                      background: fb.feePaid ? 'var(--color-status-success-tint)' : 'var(--color-status-danger-tint)',
+                      border: `1.5px solid ${fb.feePaid ? 'var(--color-status-success)' : 'var(--color-status-danger-tint)'}`,
                     }}
                   >
                     {fb.feePaid
-                      ? <CheckCircle size={18} style={{ color: '#10B981', flexShrink: 0 }} />
-                      : <XCircle size={18} style={{ color: '#EF4444', flexShrink: 0 }} />
+                      ? <CheckCircle size={18} style={{ color: 'var(--color-status-success)', flexShrink: 0 }} />
+                      : <XCircle size={18} style={{ color: 'var(--color-status-danger)', flexShrink: 0 }} />
                     }
-                    <span className="text-sm font-black" style={{ color: fb.feePaid ? '#10B981' : '#EF4444' }}>
+                    <span className="text-sm font-medium" style={{ color: fb.feePaid ? 'var(--color-status-success)' : 'var(--color-status-danger)' }}>
                       {fb.feePaid ? 'Fee Received' : 'Fee Not Yet Received'}
                     </span>
-                    <span className="ml-auto text-[10px] font-semibold" style={{ color: '#8D99AE' }}>
+                    <span className="ml-auto text-[10px] font-medium" style={{ color: 'var(--color-neutral-400)' }}>
                       tap to toggle
                     </span>
                   </button>
@@ -190,11 +189,11 @@ export function FeesTab() {
             </div>
 
             {/* Fee Items */}
-            <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E2E6EA' }}>
-              <div className="px-6 py-4" style={{ borderBottom: '1px solid #F0F2F5', background: '#FAFAFA' }}>
+            <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid var(--color-neutral-200)' }}>
+              <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--color-neutral-100)', background: 'var(--color-neutral-50)' }}>
                 <div className="flex items-center gap-2">
-                  <Banknote size={14} style={{ color: '#D4AF37' }} />
-                  <span className="text-sm font-black" style={{ color: '#0D1B2A' }}>Fee Components</span>
+                  <Banknote size={14} className="text-primary" />
+                  <span className="text-sm font-medium" style={{ color: 'var(--color-neutral-900)' }}>Fee Components</span>
                 </div>
               </div>
               <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -208,7 +207,7 @@ export function FeesTab() {
                   <div key={key}>
                     <label style={labelStyle}>{label}</label>
                     <div className="relative">
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#8D99AE' }}>{icon}</div>
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--color-neutral-400)' }}>{icon}</div>
                       <input
                         type="number"
                         min={0}
@@ -224,12 +223,12 @@ export function FeesTab() {
             </div>
 
             {/* Travel & Toll (itemised) */}
-            <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E2E6EA' }}>
-              <div className="px-6 py-4" style={{ borderBottom: '1px solid #F0F2F5', background: '#FAFAFA' }}>
+            <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid var(--color-neutral-200)' }}>
+              <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--color-neutral-100)', background: 'var(--color-neutral-50)' }}>
                 <div className="flex items-center gap-2">
-                  <Car size={14} style={{ color: '#D4AF37' }} />
-                  <span className="text-sm font-black" style={{ color: '#0D1B2A' }}>Travel & Toll</span>
-                  <span className="ml-auto text-[10px] font-semibold" style={{ color: '#8D99AE' }}>
+                  <Car size={14} className="text-primary" />
+                  <span className="text-sm font-medium" style={{ color: 'var(--color-neutral-900)' }}>Travel & Toll</span>
+                  <span className="ml-auto text-[10px] font-medium" style={{ color: 'var(--color-neutral-400)' }}>
                     fills these to replace legacy Travel / Conveyance
                   </span>
                 </div>
@@ -264,11 +263,11 @@ export function FeesTab() {
                     style={inputStyle}
                   />
                 </div>
-                <div className="col-span-1 sm:col-span-2 flex items-center justify-between px-4 py-3 rounded-xl" style={{ background: '#F0F2F5' }}>
-                  <span className="text-sm font-semibold" style={{ color: '#4A4E69' }}>
+                <div className="col-span-1 sm:col-span-2 flex items-center justify-between px-4 py-3 rounded-xl" style={{ background: 'var(--color-neutral-100)' }}>
+                  <span className="text-sm font-medium" style={{ color: 'var(--color-neutral-600)' }}>
                     Travelling Charges ({distanceKm} km × ₹{ratePerKm})
                   </span>
-                  <span className="text-sm font-black" style={{ color: '#0D1B2A' }}>{fmt(travellingCharges)}</span>
+                  <span className="text-sm font-medium" style={{ color: 'var(--color-neutral-900)' }}>{fmt(travellingCharges)}</span>
                 </div>
                 <div>
                   <label style={labelStyle}>Toll Charges (₹)</label>
@@ -290,7 +289,7 @@ export function FeesTab() {
                   />
                 </div>
                 {!hasNewTravel && legacyTravel > 0 && (
-                  <div className="col-span-1 sm:col-span-2 px-4 py-3 rounded-xl text-xs" style={{ background: 'rgba(212,175,55,0.08)', color: '#8D6708', border: '1px solid rgba(212,175,55,0.3)' }}>
+                  <div className="col-span-1 sm:col-span-2 px-4 py-3 rounded-xl text-xs" style={{ background: 'var(--color-status-warning-tint)', color: 'var(--color-status-warning)', border: '1px solid var(--color-status-warning-tint)' }}>
                     Legacy travel of {fmt(legacyTravel)} carried over — fill the fields above to replace it on the bill.
                   </div>
                 )}
@@ -298,11 +297,11 @@ export function FeesTab() {
             </div>
 
             {/* Photos */}
-            <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E2E6EA' }}>
-              <div className="px-6 py-4" style={{ borderBottom: '1px solid #F0F2F5', background: '#FAFAFA' }}>
+            <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid var(--color-neutral-200)' }}>
+              <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--color-neutral-100)', background: 'var(--color-neutral-50)' }}>
                 <div className="flex items-center gap-2">
-                  <Camera size={14} style={{ color: '#D4AF37' }} />
-                  <span className="text-sm font-black" style={{ color: '#0D1B2A' }}>Photography Charges</span>
+                  <Camera size={14} className="text-primary" />
+                  <span className="text-sm font-medium" style={{ color: 'var(--color-neutral-900)' }}>Photography Charges</span>
                 </div>
               </div>
               <div className="p-5 grid grid-cols-2 gap-4">
@@ -326,9 +325,9 @@ export function FeesTab() {
                     style={inputStyle}
                   />
                 </div>
-                <div className="col-span-2 flex items-center justify-between px-4 py-3 rounded-xl" style={{ background: '#F0F2F5' }}>
-                  <span className="text-sm font-semibold" style={{ color: '#4A4E69' }}>Photo Total</span>
-                  <span className="text-sm font-black" style={{ color: '#0D1B2A' }}>{fmt(photoCharges)}</span>
+                <div className="col-span-2 flex items-center justify-between px-4 py-3 rounded-xl" style={{ background: 'var(--color-neutral-100)' }}>
+                  <span className="text-sm font-medium" style={{ color: 'var(--color-neutral-600)' }}>Photo Total</span>
+                  <span className="text-sm font-medium" style={{ color: 'var(--color-neutral-900)' }}>{fmt(photoCharges)}</span>
                 </div>
               </div>
             </div>
@@ -338,9 +337,9 @@ export function FeesTab() {
 
           {/* ── RIGHT: Fee Summary ─────────────────────── */}
           <div className="space-y-4">
-            <div className="rounded-2xl overflow-hidden sticky top-6" style={{ background: '#0D1B2A', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div className="rounded-2xl overflow-hidden sticky top-6" style={{ background: 'var(--color-neutral-900)', border: '1px solid rgba(255,255,255,0.08)' }}>
               <div className="px-5 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                <div className="text-xs font-black uppercase tracking-[0.2em]" style={{ color: '#D4AF37' }}>Fee Summary</div>
+                <div className="text-xs font-medium uppercase tracking-[0.2em] text-primary">Fee Summary</div>
                 <div className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
                   {currentClaim.vehicle.registrationNumber || 'Claim'}
                 </div>
@@ -361,26 +360,26 @@ export function FeesTab() {
                 ].map(({ label, val }) => (
                   <div key={label} className="flex items-center justify-between py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                     <span className="text-xs" style={{ color: 'rgba(232,236,240,0.55)' }}>{label}</span>
-                    <span className="text-xs font-bold" style={{ color: '#F8F9FA' }}>{fmt(val)}</span>
+                    <span className="text-xs font-medium" style={{ color: 'var(--color-neutral-50)' }}>{fmt(val)}</span>
                   </div>
                 ))}
 
                 {/* Sub-total */}
                 <div className="flex items-center justify-between py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.15)', marginTop: 4 }}>
-                  <span className="text-sm font-bold" style={{ color: '#F8F9FA' }}>Sub Total</span>
-                  <span className="text-sm font-black" style={{ color: '#F8F9FA' }}>{fmt(subTotal)}</span>
+                  <span className="text-sm font-medium" style={{ color: 'var(--color-neutral-50)' }}>Sub Total</span>
+                  <span className="text-sm font-medium" style={{ color: 'var(--color-neutral-50)' }}>{fmt(subTotal)}</span>
                 </div>
 
                 {/* GST Toggle */}
                 <div className="flex items-center justify-between py-3 px-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.05)' }}>
                   <div className="flex items-center gap-2">
-                    <Percent size={13} style={{ color: '#D4AF37' }} />
-                    <span className="text-xs font-bold" style={{ color: '#F8F9FA' }}>Include GST @ 18%</span>
+                    <Percent size={13} className="text-primary" />
+                    <span className="text-xs font-medium" style={{ color: 'var(--color-neutral-50)' }}>Include GST @ 18%</span>
                   </div>
                   <button
                     onClick={() => set('includeGST', !fb.includeGST)}
                     className="w-10 h-5 rounded-full transition-all relative flex-shrink-0"
-                    style={{ background: fb.includeGST ? '#D4AF37' : 'rgba(255,255,255,0.15)' }}
+                    style={{ background: fb.includeGST ? 'var(--color-primary)' : 'rgba(255,255,255,0.15)' }}
                   >
                     <span
                       className="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all"
@@ -392,17 +391,17 @@ export function FeesTab() {
                 {fb.includeGST && (
                   <div className="flex items-center justify-between py-2">
                     <span className="text-xs" style={{ color: 'rgba(232,236,240,0.55)' }}>GST (18%)</span>
-                    <span className="text-xs font-bold" style={{ color: '#D4AF37' }}>{fmt(gstAmount)}</span>
+                    <span className="text-xs font-medium text-primary">{fmt(gstAmount)}</span>
                   </div>
                 )}
 
                 {/* Gross Total */}
                 <div
                   className="flex items-center justify-between px-4 py-4 rounded-xl mt-2"
-                  style={{ background: 'linear-gradient(135deg, #D4AF37, #f0d870)' }}
+                  style={{ background: 'linear-gradient(135deg, var(--color-primary), #f0d870)' }}
                 >
-                  <span className="text-sm font-black" style={{ color: '#0D1B2A' }}>GROSS TOTAL</span>
-                  <span className="text-lg font-black" style={{ color: '#0D1B2A' }}>{fmt(grossTotal)}</span>
+                  <span className="text-sm font-medium" style={{ color: 'var(--color-neutral-900)' }}>GROSS TOTAL</span>
+                  <span className="text-lg font-medium" style={{ color: 'var(--color-neutral-900)' }}>{fmt(grossTotal)}</span>
                 </div>
               </div>
 

@@ -83,7 +83,7 @@ export function BillCheckTab() {
   };
 
   return (
-    <div className="h-full flex flex-col overflow-hidden" style={{ background: '#F8F9FA' }}>
+    <div className="h-full flex flex-col overflow-hidden bg-card">
       <BillCheckHeader
         showEvidence={showEvidence}
         onToggleEvidence={() => setShowEvidence(v => !v)}
@@ -131,15 +131,15 @@ export function BillCheckTab() {
             />
 
             {/* Power Print */}
-            <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E2E6EA' }}>
-              <div className="px-6 py-4" style={{ borderBottom: '1px solid #F0F2F5', background: '#FAFAFA' }}>
-                <div className="text-sm font-black" style={{ color: '#0D1B2A' }}>Download Bill Check Report</div>
-                <div className="text-xs mt-0.5" style={{ color: '#8D99AE' }}>
+            <div className="rounded-2xl overflow-hidden bg-white border border-border">
+              <div className="px-6 py-4 border-b border-border bg-card">
+                <div className="text-sm font-medium text-foreground">Download Bill Check Report</div>
+                <div className="text-xs mt-0.5 text-muted-foreground">
                   Generates a UIIC-compliant Bill Check Report — only allowed items, original serial numbers
                 </div>
               </div>
               <div className="p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <div className="flex-1 text-xs leading-relaxed" style={{ color: '#4A4E69' }}>
+                <div className="flex-1 text-xs leading-relaxed text-foreground">
                   <strong>How Bill Check works:</strong> The Final Survey logs what was <em>allowed</em>.
                   Once repairs are done, the workshop submits a final bill. This report verifies every
                   allowed item appears in the bill — flagging missing or mismatched amounts. Only allowed
@@ -148,8 +148,8 @@ export function BillCheckTab() {
                 <button
                   id="btn-print-bill-check"
                   onClick={() => currentClaim && triggerUIICBillCheckPrint(currentClaim, profile)}
-                  className="inline-flex items-center gap-2.5 px-6 py-3 rounded-xl text-sm font-bold whitespace-nowrap transition-all duration-200 hover:scale-105 active:scale-95"
-                  style={{ background: 'linear-gradient(135deg, #0D1B2A 0%, #1e3a5f 100%)', color: '#F8F9FA', boxShadow: '0 4px 14px rgba(13,27,42,0.3)' }}
+                  className="inline-flex items-center gap-2.5 px-6 py-3 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 hover:scale-105 active:scale-95 bg-primary text-primary"
+                  style={{ boxShadow: '0 4px 14px rgba(13,27,42,0.3)' }}
                 >
                   <Printer size={16} />
                   Power Print — Bill Check Report
@@ -159,11 +159,10 @@ export function BillCheckTab() {
 
             {/* Info note */}
             <div
-              className="flex items-start gap-3 p-4 rounded-xl"
-              style={{ background: 'rgba(212,175,55,0.07)', border: '1px solid rgba(212,175,55,0.2)' }}
+              className="flex items-start gap-3 p-4 rounded-xl bg-primary/opacity-10 border border-primary/opacity-20"
             >
-              <FileText size={16} style={{ color: '#D4AF37', flexShrink: 0, marginTop: 1 }} />
-              <div className="text-xs" style={{ color: '#4A4E69', lineHeight: 1.6 }}>
+              <FileText size={16} className="text-primary flex-shrink-0 mt-0.5" />
+              <div className="text-xs text-foreground" style={{ lineHeight: 1.6 }}>
                 <strong>Note:</strong> The Bill Check Report will open in a new tab. Use your browser&apos;s print dialog
                 (Ctrl+P / ⌘P) to save as PDF. Ensure &quot;Background graphics&quot; is enabled in print settings for
                 full colour output.
@@ -176,8 +175,8 @@ export function BillCheckTab() {
 
         {showEvidence && (
           <>
-            <PanelResizeHandle className="w-1.5 bg-slate-200 hover:bg-blue-400 transition-colors cursor-col-resize relative">
-              <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px bg-slate-300" />
+            <PanelResizeHandle className="w-1.5 bg-neutral-200 hover:bg-primary transition-colors cursor-col-resize relative">
+              <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px bg-neutral-300" />
             </PanelResizeHandle>
             <Panel defaultSize={40} minSize={25} className="h-full border-l bg-white">
               <DocumentEvidenceViewer embedded={true} />

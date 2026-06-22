@@ -166,13 +166,13 @@ export function DocumentsTab() {
   const totalDocs = DOC_GROUPS.reduce((a, g) => a + g.docs.length, 0);
 
   return (
-    <div className="h-full overflow-y-auto" style={{ background: '#F8F9FA' }}>
+    <div className="h-full overflow-y-auto bg-[var(--color-neutral-50)]">
 
       {/* ── Header ───────────────────────────────────────── */}
       <div
         className="px-8 py-8 lg:px-12"
         style={{
-          background: 'linear-gradient(135deg, #0D1B2A 0%, #1e3a5f 100%)',
+          background: 'var(--color-neutral-900)',
           borderBottom: '1px solid rgba(255,255,255,0.06)',
         }}
       >
@@ -180,16 +180,16 @@ export function DocumentsTab() {
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
               <div
-                className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] mb-4"
-                style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)' }}
+                className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-medium uppercase tracking-[0.2em] mb-4 text-primary"
+                style={{ background: 'var(--color-status-warning-tint)', border: '1px solid var(--color-status-warning)' }}
               >
                 <Sparkles size={11} className="animate-pulse" />
                 AI Vision — Instant Document Reading
               </div>
-              <h1 className="text-2xl lg:text-3xl font-black mb-2" style={{ color: '#F8F9FA', letterSpacing: '-0.02em' }}>
+              <h1 className="text-2xl lg:text-3xl font-medium mb-2 text-[var(--color-neutral-50)]" style={{ letterSpacing: '-0.02em' }}>
                 AI Document Scanner
               </h1>
-              <p className="text-sm font-medium" style={{ color: 'rgba(232,236,240,0.65)' }}>
+              <p className="text-sm font-medium text-muted-foreground">
                 Upload any document — RC, DL, Policy, Estimate. Our AI reads it and auto-fills your claim fields instantly.
               </p>
             </div>
@@ -208,18 +208,16 @@ export function DocumentsTab() {
           {/* Progress bar */}
           <div className="flex items-center gap-4 mt-6">
             <div
-              className="flex-1 h-1.5 rounded-full overflow-hidden"
-              style={{ background: 'rgba(255,255,255,0.1)' }}
+              className="flex-1 h-1.5 rounded-full overflow-hidden bg-white/10"
             >
               <div
-                className="h-full rounded-full transition-all duration-500"
+                className="h-full rounded-full transition-all duration-500 bg-primary"
                 style={{
                   width: `${totalDocs > 0 ? (scannedCount / totalDocs) * 100 : 0}%`,
-                  background: 'linear-gradient(90deg, #D4AF37, #f0d870)',
                 }}
               />
             </div>
-            <span className="text-xs font-bold" style={{ color: '#D4AF37', whiteSpace: 'nowrap' }}>
+            <span className="text-xs font-medium text-primary" style={{ whiteSpace: 'nowrap' }}>
               {scannedCount} / {totalDocs} scanned
             </span>
           </div>
@@ -229,18 +227,17 @@ export function DocumentsTab() {
       {/* ── Processing Banner ────────────────────────────── */}
       {isProcessing && (
         <div
-          className="mx-6 lg:mx-12 mt-6 px-5 py-4 rounded-xl flex items-center gap-3 animate-pulse"
+          className="mx-6 lg:mx-12 mt-6 px-5 py-4 rounded-xl flex items-center gap-3 animate-pulse bg-primary"
           style={{
-            background: 'linear-gradient(135deg, #D4AF37, #f0d870)',
             boxShadow: '0 4px 20px rgba(212,175,55,0.35)',
           }}
         >
-          <Loader2 className="animate-spin flex-shrink-0" size={18} style={{ color: '#0D1B2A' }} />
+          <Loader2 className="animate-spin flex-shrink-0 text-[var(--color-neutral-900)]" size={18} />
           <div>
-            <div className="text-xs font-black uppercase tracking-wider" style={{ color: '#0D1B2A' }}>
+            <div className="text-xs font-medium uppercase tracking-wider text-[var(--color-neutral-900)]">
               AI Processing
             </div>
-            <div className="text-sm font-semibold" style={{ color: 'rgba(13,27,42,0.75)' }}>
+            <div className="text-sm font-medium text-[var(--color-neutral-900)]/75">
               {progress || 'Scanning document...'}
             </div>
           </div>
@@ -250,29 +247,27 @@ export function DocumentsTab() {
       {/* ── Conflict Alert Banner ─────────────────────────── */}
       {conflicts.length > 0 && !isProcessing && (
         <div
-          className="mx-6 lg:mx-12 mt-6 px-6 py-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 border"
+          className="mx-6 lg:mx-12 mt-6 px-6 py-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 border bg-[var(--color-status-warning-tint)] border-[var(--color-status-warning)]"
           style={{
-            background: '#FFF7ED',
-            borderColor: '#FFEDD5',
-            boxShadow: '0 4px 15px rgba(251,146,60,0.1)',
+            boxShadow: '0 4px 15px var(--color-status-warning)/10',
           }}
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
+            <div className="w-10 h-10 rounded-full bg-[var(--color-status-warning-tint)] flex items-center justify-center text-[var(--color-status-warning)]">
               <AlertTriangle size={20} />
             </div>
             <div>
-              <div className="text-sm font-black text-orange-900 uppercase tracking-tight">
+              <div className="text-sm font-medium text-[var(--color-neutral-900)] uppercase tracking-tight">
                 Data Discrepancies Detected
               </div>
-              <div className="text-xs font-medium text-orange-700/80">
+              <div className="text-xs font-medium text-[var(--color-status-warning)]">
                 {conflicts.length} fields have conflicting values across your scanned RC, Policy, or DL.
               </div>
             </div>
           </div>
           <button
             onClick={() => setIsReconOpen(true)}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black bg-orange-600 text-white hover:bg-orange-700 transition-all shadow-lg shadow-orange-200 active:scale-95"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-medium bg-[var(--color-status-warning)] text-white hover:bg-[var(--color-status-warning)]/90 transition-all shadow-lg active:scale-95"
           >
             <Database size={14} />
             OPEN RECONCILIATION HUB
@@ -285,7 +280,7 @@ export function DocumentsTab() {
         <div className="mx-6 lg:mx-12 mt-6 flex justify-end">
            <button
             onClick={() => setIsReconOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-white border border-border text-muted-foreground hover:text-primary hover:border-primary/30 transition-all active:scale-95"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-medium uppercase tracking-widest bg-white border border-border text-muted-foreground hover:text-primary hover:border-primary/30 transition-all active:scale-95"
           >
             <Database size={12} />
             Data Reconciliation Hub
@@ -300,14 +295,13 @@ export function DocumentsTab() {
             {/* Group header */}
             <div className="flex items-center gap-3 mb-5">
               <div>
-                <h2 className="text-sm font-black uppercase tracking-[0.15em]" style={{ color: '#0D1B2A' }}>
+                <h2 className="text-sm font-medium uppercase tracking-[0.15em] text-[var(--color-neutral-900)]">
                   {group.title}
                 </h2>
-                <p className="text-xs mt-0.5" style={{ color: '#8D99AE' }}>{group.description}</p>
+                <p className="text-xs mt-0.5 text-[var(--color-neutral-400)]">{group.description}</p>
               </div>
               <div
-                className="flex-1 h-px"
-                style={{ background: '#E2E6EA' }}
+                className="flex-1 h-px bg-[var(--color-neutral-200)]"
               />
             </div>
 
@@ -321,12 +315,11 @@ export function DocumentsTab() {
                 return (
                   <label
                     key={doc.id}
-                    className="relative flex flex-col p-5 rounded-2xl cursor-pointer transition-all group"
+                    className="relative flex flex-col p-5 rounded-2xl cursor-pointer transition-all group bg-card"
                     style={{
-                      background: '#FFFFFF',
                       border: isScanned
                         ? `1px solid ${doc.color}40`
-                        : '1px solid #E2E6EA',
+                        : '1px solid var(--color-neutral-200)',
                       boxShadow: '0 1px 3px rgba(13,27,42,0.04)',
                       opacity: isActive ? 0.65 : 1,
                       pointerEvents: isActive ? 'none' : 'auto',
@@ -342,7 +335,7 @@ export function DocumentsTab() {
                       if (!isActive) {
                         e.currentTarget.style.boxShadow = '0 1px 3px rgba(13,27,42,0.04)';
                         e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.borderColor = isScanned ? `${doc.color}40` : '#E2E6EA';
+                        e.currentTarget.style.borderColor = isScanned ? `${doc.color}40` : 'var(--color-neutral-200)';
                       }
                     }}
                   >
@@ -377,13 +370,13 @@ export function DocumentsTab() {
                             aria-label={`Pull ${doc.label} from SurveyOS Sync`}
                           >
                             <TelegramIcon size={16} />
-                            <span className="text-[8px] font-bold leading-none text-[#229ED9]">OS Sync</span>
+                            <span className="text-[8px] font-medium leading-none text-[#229ED9]">OS Sync</span>
                           </button>
                         )}
 
                         {isScanned ? (
                           <div
-                            className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold"
+                            className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium"
                             style={{ background: `${doc.color}15`, color: doc.color }}
                           >
                             <CheckCircle2 size={11} />
@@ -391,8 +384,7 @@ export function DocumentsTab() {
                           </div>
                         ) : (
                           <div
-                            className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold"
-                            style={{ background: '#F0F2F5', color: '#8D99AE' }}
+                            className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium bg-[var(--color-neutral-100)] text-[var(--color-neutral-400)]"
                           >
                             <Upload size={11} />
                             Upload
@@ -402,17 +394,17 @@ export function DocumentsTab() {
                     </div>
 
                     {/* Label */}
-                    <div className="text-[13px] font-bold" style={{ color: '#0D1B2A' }}>
+                    <div className="text-[13px] font-medium text-[var(--color-neutral-900)]">
                       {doc.label}
                     </div>
-                    <div className="text-[11px] mt-0.5 mb-3" style={{ color: '#8D99AE' }}>
+                    <div className="text-[11px] mt-0.5 mb-3 text-[var(--color-neutral-400)]">
                       {doc.subLabel}
                     </div>
 
                     {/* CTA */}
                     <div
-                      className="flex items-center gap-2 text-[11px] font-bold mt-auto"
-                      style={{ color: isScanned ? doc.color : '#8D99AE' }}
+                      className="flex items-center gap-2 text-[11px] font-medium mt-auto"
+                      style={{ color: isScanned ? doc.color : 'var(--color-neutral-400)' }}
                     >
                       <Sparkles size={11} />
                       {isScanned ? 'Re-scan to update' : 'Click to scan with AI'}
@@ -426,13 +418,12 @@ export function DocumentsTab() {
 
         {/* ── Help Note ───────────────────────────────────── */}
         <div
-          className="flex items-start gap-3 p-4 rounded-xl"
-          style={{ background: 'rgba(212,175,55,0.07)', border: '1px solid rgba(212,175,55,0.2)' }}
+          className="flex items-start gap-3 p-4 rounded-xl bg-[var(--color-status-warning-tint)] border border-[var(--color-status-warning)]/20"
         >
-          <AlertTriangle size={16} style={{ color: '#D4AF37', flexShrink: 0, marginTop: 1 }} />
-          <div className="text-xs" style={{ color: '#4A4E69', lineHeight: 1.6 }}>
-            <span className="font-bold">After scanning,</span> a preview dialog will appear showing extracted data.
-            Review it and click <span className="font-bold">&ldquo;Apply to Claim&rdquo;</span> to auto-fill the Claim Details tab.
+          <AlertTriangle size={16} className="text-primary flex-shrink-0 mt-0.5" />
+          <div className="text-xs text-[var(--color-neutral-600)]" style={{ lineHeight: 1.6 }}>
+            <span className="font-medium">After scanning,</span> a preview dialog will appear showing extracted data.
+            Review it and click <span className="font-medium">&ldquo;Apply to Claim&rdquo;</span> to auto-fill the Claim Details tab.
             All data stays on your device — nothing is stored in the cloud.
           </div>
         </div>
@@ -440,56 +431,56 @@ export function DocumentsTab() {
 
       {/* ── Files on Drive ───────────────────────────────── */}
         <div
-          className="rounded-2xl overflow-hidden mx-8 mb-6 lg:mx-12"
-          style={{ background: '#FFFFFF', border: '1px solid #E2E6EA', boxShadow: '0 1px 3px rgba(13,27,42,0.04)' }}
+          className="rounded-2xl overflow-hidden mx-8 mb-6 lg:mx-12 bg-card border border-[var(--color-neutral-200)]"
+          style={{ boxShadow: '0 1px 3px rgba(13,27,42,0.04)' }}
         >
           {/* Header — click to expand/collapse */}
           <button
             onClick={() => setDriveFilesExpanded(prev => !prev)}
-            className="w-full flex items-center justify-between px-5 py-4 hover:bg-[#FAFBFC] transition-colors"
+            className="w-full flex items-center justify-between px-5 py-4 hover:bg-[var(--color-neutral-50)] transition-colors"
           >
             <div className="flex items-center gap-2.5">
-              <HardDrive size={16} style={{ color: '#D4AF37' }} />
-              <span className="text-xs font-black text-[#0D1B2A] uppercase tracking-wider">
+              <HardDrive size={16} className="text-primary" />
+              <span className="text-xs font-medium text-[var(--color-neutral-900)] uppercase tracking-wider">
                 Files on Drive
               </span>
-              <span className="px-1.5 py-0.5 rounded-md bg-[#F0F2F5] text-[10px] font-bold text-[#8D99AE]">
+              <span className="px-1.5 py-0.5 rounded-md bg-[var(--color-neutral-100)] text-[10px] font-medium text-[var(--color-neutral-400)]">
                 {driveFiles.length}
               </span>
             </div>
             <div className="flex items-center gap-2">
-              {driveFilesLoading && <Loader2 size={14} className="animate-spin text-[#8D99AE]" />}
+              {driveFilesLoading && <Loader2 size={14} className="animate-spin text-[var(--color-neutral-400)]" />}
               <button
                 onClick={(e) => { e.stopPropagation(); refreshDriveFiles(); }}
-                className="p-1 rounded-lg hover:bg-[#F0F2F5] transition-colors"
+                className="p-1 rounded-lg hover:bg-[var(--color-neutral-100)] transition-colors"
                 title="Refresh file list"
               >
-                <RefreshCw size={12} className="text-[#8D99AE]" />
+                <RefreshCw size={12} className="text-[var(--color-neutral-400)]" />
               </button>
-              {driveFilesExpanded ? <ChevronDown size={14} className="text-[#8D99AE]" /> : <ChevronRight size={14} className="text-[#8D99AE]" />}
+              {driveFilesExpanded ? <ChevronDown size={14} className="text-[var(--color-neutral-400)]" /> : <ChevronRight size={14} className="text-[var(--color-neutral-400)]" />}
             </div>
           </button>
 
           {/* Body */}
           {driveFilesExpanded && (
-            <div className="border-t border-[#F0F2F5] px-5 py-3">
+            <div className="border-t border-[var(--color-neutral-100)] px-5 py-3">
               {driveFilesError && (
-                <p className="text-xs text-red-500 mb-2">{driveFilesError}</p>
+                <p className="text-xs text-[var(--color-status-danger)] mb-2">{driveFilesError}</p>
               )}
               {driveFiles.length === 0 && !driveFilesLoading ? (
-                <p className="text-xs text-[#8D99AE] py-2">
+                <p className="text-xs text-[var(--color-neutral-400)] py-2">
                   {getDriveToken() ? 'No files uploaded yet.' : 'Connect Google Drive to see files.'}
                 </p>
               ) : (
-                <div className="flex flex-col divide-y divide-[#F0F2F5]">
+                <div className="flex flex-col divide-y divide-[var(--color-neutral-100)]">
                   {driveFiles.map((file) => (
                     <div key={file.id} className="flex items-center justify-between py-2.5">
                       <div className="flex items-center gap-2.5">
-                        <FileText size={14} className="text-[#8D99AE] flex-shrink-0" />
-                        <span className="text-xs font-medium text-[#0D1B2A] truncate max-w-[200px]">
+                        <FileText size={14} className="text-[var(--color-neutral-400)] flex-shrink-0" />
+                        <span className="text-xs font-medium text-[var(--color-neutral-900)] truncate max-w-[200px]">
                           {file.name}
                         </span>
-                        <span className="text-[10px] text-[#C3C9D4]">
+                        <span className="text-[10px] text-[var(--color-neutral-200)]">
                           {file.mimeType.split('/').pop()}
                         </span>
                       </div>
@@ -497,7 +488,7 @@ export function DocumentsTab() {
                         href={`https://drive.google.com/file/d/${file.id}/view`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold text-[#D4AF37] hover:bg-[rgba(212,175,55,0.08)] transition-colors"
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium text-primary hover:bg-[var(--color-status-warning-tint)] transition-colors"
                       >
                         Open <ExternalLink size={10} />
                       </a>

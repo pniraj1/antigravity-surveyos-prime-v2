@@ -30,25 +30,24 @@ export function ReinspectionTab() {
   if (!currentClaim) return null;
 
   return (
-    <div className="h-full overflow-y-auto" style={{ background: '#F8F9FA' }}>
+    <div className="h-full overflow-y-auto bg-[var(--color-neutral-50)]">
 
       {/* ── Header ─────────────────────────────────────── */}
       <div
         className="px-8 py-8 lg:px-12"
-        style={{ background: 'linear-gradient(135deg, #0D1B2A 0%, #1e3a5f 100%)' }}
+        style={{ background: 'linear-gradient(135deg, var(--color-neutral-900) 0%, #1e3a5f 100%)' }}
       >
         <div className="max-w-5xl mx-auto">
           <div
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] mb-4"
-            style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)' }}
+            className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-medium uppercase tracking-[0.2em] mb-4 text-primary border border-primary/30 bg-primary/15"
           >
             <RotateCcw size={11} />
             Post-Repair Verification
           </div>
-          <h1 className="text-2xl lg:text-3xl font-black mb-2" style={{ color: '#F8F9FA', letterSpacing: '-0.02em' }}>
+          <h1 className="text-2xl lg:text-3xl font-medium mb-2 text-[var(--color-neutral-50)]" style={{ letterSpacing: '-0.02em' }}>
             Re-inspection Report
           </h1>
-          <p className="text-sm" style={{ color: 'rgba(232,236,240,0.65)' }}>
+          <p className="text-sm text-[var(--color-neutral-200)]/65">
             Confirm that repairs have been carried out as per assessment and old parts have been surrendered.
           </p>
         </div>
@@ -57,43 +56,43 @@ export function ReinspectionTab() {
       <div className="px-6 lg:px-12 py-8 max-w-5xl mx-auto space-y-6">
 
         {/* ── Inspection Details ─────────────────────────── */}
-        <div className="p-6 rounded-2xl bg-white border border-[#E2E6EA] shadow-sm">
-          <h3 className="text-sm font-black mb-4 flex items-center gap-2" style={{ color: '#0D1B2A' }}>
-            <Calendar size={16} style={{ color: '#D4AF37' }} />
+        <div className="p-6 rounded-2xl bg-card border border-border shadow-sm">
+          <h3 className="text-sm font-medium mb-4 flex items-center gap-2 text-foreground">
+            <Calendar size={16} className="text-primary" />
             Inspection Details
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-[#8D99AE] block mb-1.5">Date of Re-inspection</label>
+              <label className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground block mb-1.5">Date of Re-inspection</label>
               <input
                 type="date"
                 value={currentClaim.reinspection.date || ''}
                 onChange={e => updateReinspection({ date: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg border border-[#E2E6EA] outline-none text-sm font-semibold"
+                className="w-full px-3 py-2 rounded-lg border border-border outline-none text-sm font-medium"
               />
             </div>
 
 
             <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-[#8D99AE] block mb-1.5">Actual Completion Date</label>
+              <label className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground block mb-1.5">Actual Completion Date</label>
               <input
                 type="date"
                 value={currentClaim.reinspection.actualCompletionDate || ''}
                 onChange={e => updateReinspection({ actualCompletionDate: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg border border-[#E2E6EA] outline-none text-sm font-semibold"
+                className="w-full px-3 py-2 rounded-lg border border-border outline-none text-sm font-medium"
               />
             </div>
             <div className="sm:col-span-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-[#8D99AE] block mb-1.5">Repairs Done as Assessed?</label>
+              <label className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground block mb-1.5">Repairs Done as Assessed?</label>
               <div className="flex gap-2">
                 {(['YES', 'NO', 'PARTIAL'] as const).map(val => (
                   <button
                     key={val}
                     onClick={() => updateReinspection({ repairsAsAssessed: val })}
-                    className={`flex-1 py-2 px-3 rounded-lg text-xs font-black transition-all ${
+                    className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-all ${
                       currentClaim.reinspection.repairsAsAssessed === val
-                        ? 'bg-[#D4AF37] text-[#0D1B2A]'
-                        : 'bg-[#FAFAFA] border border-[#E2E6EA] text-[#8D99AE]'
+                        ? 'bg-primary text-[var(--color-neutral-900)]'
+                        : 'bg-[var(--color-neutral-50)] border border-border text-muted-foreground'
                     }`}
                   >
                     {val}
@@ -105,49 +104,49 @@ export function ReinspectionTab() {
         </div>
 
         {/* ── Reinspection Findings ─────────────────────── */}
-        <div className="p-6 rounded-2xl bg-white border border-[#E2E6EA] shadow-sm">
-          <h3 className="text-sm font-black mb-4 flex items-center gap-2" style={{ color: '#0D1B2A' }}>
-            <RotateCcw size={16} style={{ color: '#D4AF37' }} />
+        <div className="p-6 rounded-2xl bg-card border border-border shadow-sm">
+          <h3 className="text-sm font-medium mb-4 flex items-center gap-2 text-foreground">
+            <RotateCcw size={16} className="text-primary" />
             Reinspection Findings
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-[#8D99AE] block mb-1.5">Vehicle Condition</label>
+              <label className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground block mb-1.5">Vehicle Condition</label>
               <input
                 type="text"
                 value={currentClaim.reinspection.vehicleCondition || ''}
                 onChange={e => updateReinspection({ vehicleCondition: e.target.value as any })}
                 placeholder="e.g. Road Worthy"
-                className="w-full px-3 py-2 rounded-lg border border-[#E2E6EA] outline-none text-sm font-semibold"
+                className="w-full px-3 py-2 rounded-lg border border-border outline-none text-sm font-medium"
               />
             </div>
             <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-[#8D99AE] block mb-1.5">Salvage Status</label>
+              <label className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground block mb-1.5">Salvage Status</label>
               <input
                 type="text"
                 value={currentClaim.reinspection.salvageStatus || ''}
                 onChange={e => updateReinspection({ salvageStatus: e.target.value as any })}
                 placeholder="e.g. Collected"
-                className="w-full px-3 py-2 rounded-lg border border-[#E2E6EA] outline-none text-sm font-semibold"
+                className="w-full px-3 py-2 rounded-lg border border-border outline-none text-sm font-medium"
               />
             </div>
             <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-[#8D99AE] block mb-1.5">Repair Quality</label>
+              <label className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground block mb-1.5">Repair Quality</label>
               <input
                 type="text"
                 value={currentClaim.reinspection.repairQuality || ''}
                 onChange={e => updateReinspection({ repairQuality: e.target.value as any })}
                 placeholder="e.g. Satisfactory"
-                className="w-full px-3 py-2 rounded-lg border border-[#E2E6EA] outline-none text-sm font-semibold"
+                className="w-full px-3 py-2 rounded-lg border border-border outline-none text-sm font-medium"
               />
             </div>
           </div>
         </div>
 
         {/* ── Conclusion ─────────────────────────────────── */}
-        <div className="p-6 rounded-2xl bg-white border border-[#E2E6EA] shadow-sm">
-          <h3 className="text-sm font-black mb-4 flex items-center gap-2" style={{ color: '#0D1B2A' }}>
-            <FileText size={16} style={{ color: '#D4AF37' }} />
+        <div className="p-6 rounded-2xl bg-card border border-border shadow-sm">
+          <h3 className="text-sm font-medium mb-4 flex items-center gap-2 text-foreground">
+            <FileText size={16} className="text-primary" />
             Surveyor Conclusion / Remarks
           </h3>
           <textarea
@@ -155,7 +154,7 @@ export function ReinspectionTab() {
             value={currentClaim.reinspection.observations || ''}
             onChange={e => updateReinspection({ observations: e.target.value })}
             placeholder="WE HAVE RE-INSPECTED THE CAPTIONED VEHICLE & HAVE FOUND THAT THE REPAIRS / REPLACEMENTS MADE THEREIN WERE STRICTLY FOLLOWED AS PER OUR FINAL SURVEY REPORT..."
-            className="w-full px-4 py-3 rounded-xl border border-[#E2E6EA] outline-none text-sm text-[#4A4E69] bg-[#FAFAFA] focus:bg-white transition-all"
+            className="w-full px-4 py-3 rounded-xl border border-border outline-none text-sm text-muted-foreground bg-[var(--color-neutral-50)] focus:bg-card transition-all"
           />
         </div>
 

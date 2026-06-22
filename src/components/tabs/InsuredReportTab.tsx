@@ -115,9 +115,9 @@ export function InsuredReportTab() {
   if (!currentClaim) {
     return (
       <div className="flex flex-col items-center justify-center h-full min-h-[60vh]">
-        <FileCheck size={40} style={{ color: '#E2E6EA' }} className="mb-4" />
-        <div className="text-base font-bold" style={{ color: '#0D1B2A' }}>No Claim Open</div>
-        <div className="text-sm mt-1" style={{ color: '#8D99AE' }}>
+        <FileCheck size={40} className="mb-4 text-muted-foreground" />
+        <div className="text-base font-medium text-foreground">No Claim Open</div>
+        <div className="text-sm mt-1 text-muted-foreground">
           Open or create a claim to generate an Insured Report.
         </div>
       </div>
@@ -363,34 +363,31 @@ export function InsuredReportTab() {
     'generate';
 
   return (
-    <div className="h-full overflow-y-auto" style={{ background: '#F8F9FA' }}>
+    <div className="h-full overflow-y-auto bg-[var(--color-neutral-50)]">
       {/* ── Header ─────────────────────────────────────── */}
-      <div
-        className="px-8 py-6 border-b"
-        style={{ background: '#FFFFFF', borderColor: '#E2E6EA' }}
-      >
+      <div className="px-8 py-6 border-b bg-card border-border">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-black tracking-tight" style={{ color: '#0D1B2A' }}>
+            <h1 className="text-xl font-medium tracking-tight text-foreground">
               Insured Report
             </h1>
-            <p className="text-xs mt-0.5" style={{ color: '#8D99AE' }}>
+            <p className="text-xs mt-0.5 text-muted-foreground">
               AI-powered plain-language claim summary for the insured party ·{' '}
               {currentClaim.vehicle.registrationNumber || currentClaim.reportNo || 'Current Claim'}
             </p>
           </div>
           <div className="flex items-center gap-3">
             {/* Stage selector */}
-            <div className="flex gap-1 p-1 rounded-xl" style={{ background: '#F0F2F5' }}>
+            <div className="flex gap-1 p-1 rounded-xl bg-[var(--color-neutral-100)]">
               {(['preliminary', 'final'] as InsuredReportStage[]).map(s => (
                 <button
                   key={s}
                   onClick={() => { setStage(s); setDraft(null); }}
                   disabled={loading}
-                  className="px-3 py-1.5 text-xs font-bold rounded-lg capitalize transition-all"
+                  className="px-3 py-1.5 text-xs font-medium rounded-lg capitalize transition-all"
                   style={{
-                    background: stage === s ? '#FFFFFF' : 'transparent',
-                    color: stage === s ? '#0D1B2A' : '#8D99AE',
+                    background: stage === s ? 'var(--color-neutral-50)' : 'transparent',
+                    color: stage === s ? 'var(--color-neutral-900)' : 'var(--color-neutral-400)',
                     boxShadow: stage === s ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
                   }}
                 >
@@ -403,8 +400,7 @@ export function InsuredReportTab() {
               value={language}
               onChange={e => handleLanguageChange(e.target.value as InsuredReportLanguage)}
               disabled={loading}
-              className="text-xs border rounded-lg px-2 py-1.5 font-medium"
-              style={{ borderColor: '#E2E6EA', color: '#0D1B2A', background: '#FFFFFF' }}
+              className="text-xs border rounded-lg px-2 py-1.5 font-medium border-border text-foreground bg-card"
             >
               {ALLOWED_LANGUAGES.map(l => (
                 <option key={l} value={l}>{l.charAt(0).toUpperCase() + l.slice(1)}</option>
@@ -421,19 +417,19 @@ export function InsuredReportTab() {
         <div
           className="rounded-2xl border p-5"
           style={{
-            borderColor: hasPolicyDoc ? '#D4AF37' : '#E2E6EA',
-            background: hasPolicyDoc ? '#FFFBEB' : '#FFFFFF',
+            borderColor: hasPolicyDoc ? 'var(--color-primary)' : 'var(--color-neutral-200)',
+            background: hasPolicyDoc ? 'var(--color-status-warning-tint)' : 'var(--color-neutral-50)',
           }}
         >
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <FileText size={16} style={{ color: hasPolicyDoc ? '#D4AF37' : '#8D99AE' }} />
-              <span className="text-sm font-bold" style={{ color: '#0D1B2A' }}>Policy Document</span>
+              <FileText size={16} style={{ color: hasPolicyDoc ? 'var(--color-primary)' : 'var(--color-neutral-400)' }} />
+              <span className="text-sm font-medium text-foreground">Policy Document</span>
               <span
-                className="text-[10px] px-2 py-0.5 rounded-full font-bold"
+                className="text-[10px] px-2 py-0.5 rounded-full font-medium"
                 style={hasPolicyDoc
-                  ? { background: '#FEF3C7', color: '#92400E' }
-                  : { background: '#F0F2F5', color: '#8D99AE' }}
+                  ? { background: 'var(--color-status-warning-tint)', color: 'var(--color-status-warning)' }
+                  : { background: 'var(--color-neutral-100)', color: 'var(--color-neutral-400)' }}
               >
                 {hasPolicyDoc
                   ? `${resolvedImages.length} page${resolvedImages.length !== 1 ? 's' : ''} · AI will extract clauses`
@@ -443,8 +439,7 @@ export function InsuredReportTab() {
             {hasPolicyDoc && policyFileName && (
               <button
                 onClick={handleClearPolicy}
-                className="flex items-center gap-1 text-[11px] font-bold"
-                style={{ color: '#8D99AE' }}
+                className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground"
                 title="Remove policy — will use IRDAI standard clauses"
               >
                 <X size={11} /> Remove
@@ -453,7 +448,7 @@ export function InsuredReportTab() {
           </div>
 
           {policyFileName && (
-            <p className="text-[11px] mb-3 truncate" style={{ color: '#8D99AE' }}>
+            <p className="text-[11px] mb-3 truncate text-muted-foreground">
               {policyFileName}
             </p>
           )}
@@ -469,12 +464,9 @@ export function InsuredReportTab() {
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={policyConverting || loading}
-              className="flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl border transition-all"
+              className="flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-xl border border-border text-foreground bg-card transition-all"
               style={{
-                borderColor: '#E2E6EA',
-                color: '#0D1B2A',
                 opacity: policyConverting || loading ? 0.5 : 1,
-                background: '#FFFFFF',
               }}
             >
               {policyConverting
@@ -483,10 +475,10 @@ export function InsuredReportTab() {
               {hasPolicyDoc ? 'Re-upload Policy PDF' : 'Upload Policy PDF'}
             </button>
             {loadingMsg && policyConverting && (
-              <span className="text-[11px]" style={{ color: '#8D99AE' }}>{loadingMsg}</span>
+              <span className="text-[11px] text-muted-foreground">{loadingMsg}</span>
             )}
             {!loadingMsg && (
-              <span className="text-[11px]" style={{ color: '#8D99AE' }}>
+              <span className="text-[11px] text-muted-foreground">
                 Upload for real clause extraction — otherwise IRDAI standard clauses are used
               </span>
             )}
@@ -497,15 +489,15 @@ export function InsuredReportTab() {
         {isGateBlocked && !draft && !loading && (
           <div
             className="rounded-2xl border p-5 space-y-3"
-            style={{ background: '#FFF5F5', borderColor: '#FECACA' }}
+            style={{ background: 'var(--color-status-danger-tint)', borderColor: 'var(--color-status-danger)' }}
           >
             <div className="flex items-start gap-3">
-              <AlertCircle size={16} className="mt-0.5 shrink-0" style={{ color: '#DC2626' }} />
+              <AlertCircle size={16} className="mt-0.5 shrink-0" style={{ color: 'var(--color-status-danger)' }} />
               <div>
-                <p className="text-sm font-bold" style={{ color: '#991B1B' }}>
+                <p className="text-sm font-medium" style={{ color: 'var(--color-status-danger)' }}>
                   {blockingRows.length} item{blockingRows.length > 1 ? 's' : ''} need{blockingRows.length === 1 ? 's' : ''} remarks before the report can be generated
                 </p>
-                <p className="text-xs mt-0.5" style={{ color: '#B91C1C' }}>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--color-status-danger)' }}>
                   Add surveyor remarks in the Assessment tab for the items below, then return here to generate.
                 </p>
               </div>
@@ -515,18 +507,18 @@ export function InsuredReportTab() {
                 <div
                   key={row.id}
                   className="flex items-center justify-between px-3 py-2 rounded-xl"
-                  style={{ background: '#FEE2E2', border: '1px solid #FECACA' }}
+                  style={{ background: 'var(--color-status-danger-tint)', border: '1px solid var(--color-status-danger)' }}
                 >
                   <div>
-                    <span className="text-xs font-bold" style={{ color: '#7F1D1D' }}>
+                    <span className="text-xs font-medium" style={{ color: 'var(--color-status-danger)' }}>
                       {row.particulars}
                     </span>
-                    <span className="text-xs ml-2" style={{ color: '#B91C1C' }}>
+                    <span className="text-xs ml-2" style={{ color: 'var(--color-status-danger)' }}>
                       {row.reason}
                     </span>
                   </div>
                   <div className="text-right shrink-0 ml-4">
-                    <span className="text-[11px] font-mono" style={{ color: '#991B1B' }}>
+                    <span className="text-[11px] font-mono" style={{ color: 'var(--color-status-danger)' }}>
                       Billed ₹{row.billed.toLocaleString('en-IN')}
                       {row.assessed !== row.billed && (
                         <> &rarr; Assessed ₹{row.assessed.toLocaleString('en-IN')}</>
@@ -545,12 +537,12 @@ export function InsuredReportTab() {
             <button
               onClick={handleAnalysePolicy}
               disabled={policyConverting || isGateBlocked}
-              className="px-8 py-3.5 rounded-2xl font-bold text-sm transition-all shadow-md"
+              className="px-8 py-3.5 rounded-2xl font-medium text-sm transition-all shadow-md"
               style={{
                 background: isGateBlocked
-                  ? '#E2E6EA'
-                  : 'linear-gradient(135deg, #0D1B2A, #1e3a5f)',
-                color: isGateBlocked ? '#8D99AE' : '#F8F9FA',
+                  ? 'var(--color-neutral-200)'
+                  : 'var(--color-primary)',
+                color: isGateBlocked ? 'var(--color-neutral-400)' : 'var(--color-neutral-50)',
                 cursor: isGateBlocked ? 'not-allowed' : 'pointer',
                 opacity: policyConverting ? 0.5 : 1,
               }}
@@ -559,7 +551,7 @@ export function InsuredReportTab() {
                 ? `Add remarks for ${blockingRows.length} item${blockingRows.length > 1 ? 's' : ''} first`
                 : 'Analyse Policy'}
             </button>
-            <p className="text-xs" style={{ color: '#8D99AE' }}>
+            <p className="text-xs text-muted-foreground">
               {isGateBlocked
                 ? 'Fill in surveyor remarks for the highlighted items in the Assessment tab, then return here.'
                 : hasPolicyDoc
@@ -574,10 +566,10 @@ export function InsuredReportTab() {
           <div className="space-y-3">
             <div
               className="rounded-2xl border p-4 flex items-center gap-3"
-              style={{ background: '#ECFDF5', borderColor: '#6EE7B7' }}
+              style={{ background: 'var(--color-status-success-tint)', borderColor: 'var(--color-status-success)' }}
             >
-              <CheckCircle2 size={16} style={{ color: '#065F46' }} />
-              <p className="text-sm" style={{ color: '#065F46' }}>
+              <CheckCircle2 size={16} style={{ color: 'var(--color-status-success)' }} />
+              <p className="text-sm" style={{ color: 'var(--color-status-success)' }}>
                 Policy analysed — {policyAnalysis.clauses.length} clause
                 {policyAnalysis.clauses.length !== 1 ? 's' : ''} extracted from{' '}
                 {policyAnalysis.source === 'policy-pdf' ? 'uploaded policy' : 'IRDAI standard clauses'}.
@@ -587,10 +579,10 @@ export function InsuredReportTab() {
               <button
                 onClick={handleAnalyseAssessment}
                 disabled={isGateBlocked}
-                className="px-8 py-3.5 rounded-2xl font-bold text-sm transition-all shadow-md"
+                className="px-8 py-3.5 rounded-2xl font-medium text-sm transition-all shadow-md"
                 style={{
-                  background: isGateBlocked ? '#E2E6EA' : 'linear-gradient(135deg, #0D1B2A, #1e3a5f)',
-                  color: isGateBlocked ? '#8D99AE' : '#F8F9FA',
+                  background: isGateBlocked ? 'var(--color-neutral-200)' : 'var(--color-primary)',
+                  color: isGateBlocked ? 'var(--color-neutral-400)' : 'var(--color-neutral-50)',
                   cursor: isGateBlocked ? 'not-allowed' : 'pointer',
                 }}
               >
@@ -613,8 +605,8 @@ export function InsuredReportTab() {
         {/* Loading state */}
         {loading && (
           <div className="text-center py-16">
-            <Loader2 className="h-9 w-9 animate-spin mx-auto mb-4" style={{ color: '#D4AF37' }} />
-            <p className="text-sm font-medium" style={{ color: '#8D99AE' }}>{loadingMsg || 'Processing…'}</p>
+            <Loader2 className="h-9 w-9 animate-spin mx-auto mb-4 text-primary" />
+            <p className="text-sm font-medium text-muted-foreground">{loadingMsg || 'Processing…'}</p>
           </div>
         )}
 
@@ -624,10 +616,10 @@ export function InsuredReportTab() {
             <button
               onClick={handleGenerateReport}
               disabled={isGateBlocked}
-              className="px-8 py-3.5 rounded-2xl font-bold text-sm transition-all shadow-md"
+              className="px-8 py-3.5 rounded-2xl font-medium text-sm transition-all shadow-md"
               style={{
-                background: isGateBlocked ? '#E2E6EA' : 'linear-gradient(135deg, #0D1B2A, #1e3a5f)',
-                color: isGateBlocked ? '#8D99AE' : '#F8F9FA',
+                background: isGateBlocked ? 'var(--color-neutral-200)' : 'var(--color-primary)',
+                color: isGateBlocked ? 'var(--color-neutral-400)' : 'var(--color-neutral-50)',
                 cursor: isGateBlocked ? 'not-allowed' : 'pointer',
               }}
             >
@@ -635,7 +627,7 @@ export function InsuredReportTab() {
                 ? `Add remarks for ${blockingRows.length} item${blockingRows.length > 1 ? 's' : ''} first`
                 : 'Generate Report'}
             </button>
-            <p className="text-xs mt-3" style={{ color: '#8D99AE' }}>
+            <p className="text-xs mt-3 text-muted-foreground">
               {isGateBlocked
                 ? 'Fill in surveyor remarks for the highlighted items in the Assessment tab, then return here.'
                 : 'All stages complete — ready to generate the insured report.'}
@@ -647,24 +639,24 @@ export function InsuredReportTab() {
         {draft && !loading && (
           <>
             {flaggedCount > 0 && (
-              <div className="flex items-start gap-3 p-4 rounded-2xl" style={{ background: '#FFFBEB', border: '1px solid #FCD34D' }}>
-                <AlertTriangle size={16} className="mt-0.5 shrink-0" style={{ color: '#92400E' }} />
-                <p className="text-xs" style={{ color: '#92400E' }}>
+              <div className="flex items-start gap-3 p-4 rounded-2xl" style={{ background: 'var(--color-status-warning-tint)', border: '1px solid var(--color-status-warning)' }}>
+                <AlertTriangle size={16} className="mt-0.5 shrink-0" style={{ color: 'var(--color-status-warning)' }} />
+                <p className="text-xs" style={{ color: 'var(--color-status-warning)' }}>
                   {flaggedCount} item{flaggedCount > 1 ? 's' : ''} had insufficient context for a full explanation. Each has been given a professional fallback note referencing the actual amounts — review in Line Items before approving.
                 </p>
               </div>
             )}
 
             {/* Sub-tabs */}
-            <div className="flex gap-1 p-1 rounded-xl" style={{ background: '#F0F2F5' }}>
+            <div className="flex gap-1 p-1 rounded-xl bg-[var(--color-neutral-100)]">
               {(['financial', 'policy', 'lineitems', 'narrative'] as ReviewTab[]).map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className="flex-1 py-2 text-xs font-bold rounded-lg transition-all"
+                  className="flex-1 py-2 text-xs font-medium rounded-lg transition-all"
                   style={{
-                    background: activeTab === tab ? '#FFFFFF' : 'transparent',
-                    color: activeTab === tab ? '#0D1B2A' : '#8D99AE',
+                    background: activeTab === tab ? 'var(--color-neutral-50)' : 'transparent',
+                    color: activeTab === tab ? 'var(--color-neutral-900)' : 'var(--color-neutral-400)',
                     boxShadow: activeTab === tab ? '0 2px 8px rgba(0,0,0,0.05)' : 'none',
                   }}
                 >
@@ -678,10 +670,7 @@ export function InsuredReportTab() {
 
             {/* Financial Summary */}
             {activeTab === 'financial' && (
-              <div
-                className="rounded-2xl border p-5 space-y-1"
-                style={{ background: '#FFFFFF', borderColor: '#E2E6EA' }}
-              >
+              <div className="rounded-2xl border p-5 space-y-1 bg-card border-border">
                 {[
                   { label: 'Garage repair estimate', value: draft.financialSummary.garageEstimate, prefix: '' },
                   { label: 'Amount negotiated with garage', value: draft.financialSummary.negotiatedSavings, prefix: '−' },
@@ -690,28 +679,28 @@ export function InsuredReportTab() {
                   { label: 'Items not covered by policy', value: draft.financialSummary.notCoveredTotal, prefix: '−' },
                   { label: 'Salvage / disposal deduction', value: draft.financialSummary.salvageTotal, prefix: '−' },
                 ].filter(r => r.value > 0).map((row, i) => (
-                  <div key={i} className="flex justify-between py-2.5 text-sm border-b" style={{ borderColor: '#F0F2F5' }}>
-                    <span style={{ color: '#8D99AE' }}>{row.label}</span>
+                  <div key={i} className="flex justify-between py-2.5 text-sm border-b border-[var(--color-neutral-100)]">
+                    <span className="text-muted-foreground">{row.label}</span>
                     <span className="font-medium">{row.prefix}₹{row.value.toLocaleString('en-IN')}</span>
                   </div>
                 ))}
                 {draft.financialSummary.depreciationTotal > 0 && (
-                  <div className="border-b py-2.5" style={{ borderColor: '#F0F2F5' }}>
+                  <div className="border-b py-2.5 border-[var(--color-neutral-100)]">
                     <DepreciationBreakdownTable
                       breakdown={draft.financialSummary.depreciationBreakdown}
                       total={draft.financialSummary.depreciationTotal}
                     />
                   </div>
                 )}
-                <div className="flex justify-between pt-4 pb-2 text-sm font-bold border-t-2" style={{ borderColor: '#0D1B2A' }}>
+                <div className="flex justify-between pt-4 pb-2 text-sm font-medium border-t-2 border-foreground">
                   <span>Insurance company will pay</span>
                   <span>₹{draft.financialSummary.insurerPays.toLocaleString('en-IN')}</span>
                 </div>
-                <div className="flex justify-between py-3 text-sm font-bold rounded-xl px-3 mt-2" style={{ background: '#FEF3C7' }}>
+                <div className="flex justify-between py-3 text-sm font-medium rounded-xl px-3 mt-2 bg-[var(--color-status-warning-tint)]">
                   <span>Your share (payable to garage)</span>
-                  <span style={{ color: '#B91C1C' }}>₹{draft.financialSummary.insuredPays.toLocaleString('en-IN')}</span>
+                  <span style={{ color: 'var(--color-status-danger)' }}>₹{draft.financialSummary.insuredPays.toLocaleString('en-IN')}</span>
                 </div>
-                <p className="text-xs pt-2" style={{ color: '#8D99AE' }}>Figures are computed from claim assessment data.</p>
+                <p className="text-xs pt-2 text-muted-foreground">Figures are computed from claim assessment data.</p>
               </div>
             )}
 
@@ -719,14 +708,14 @@ export function InsuredReportTab() {
             {activeTab === 'policy' && (
               <div className="space-y-4">
                 {draft.policyMappings.map((clause, i) => (
-                  <div key={clause.clauseType} className="rounded-2xl p-4 border" style={{ borderColor: '#E2E6EA', background: '#FFFFFF' }}>
+                  <div key={clause.clauseType} className="rounded-2xl p-4 border bg-card border-border">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-bold">{clause.clauseTitle}</span>
+                      <span className="text-xs font-medium">{clause.clauseTitle}</span>
                       <span
                         className="text-[10px] px-2 py-0.5 rounded-full"
                         style={clause.source === 'policy-pdf'
-                          ? { background: '#ECFDF5', color: '#065F46' }
-                          : { background: '#FFFBEB', color: '#92400E' }}
+                          ? { background: 'var(--color-status-success-tint)', color: 'var(--color-status-success)' }
+                          : { background: 'var(--color-status-warning-tint)', color: 'var(--color-status-warning)' }}
                       >
                         {clause.source === 'policy-pdf' ? '✓ From Policy PDF' : 'IRDAI Standard'}
                       </span>
@@ -735,8 +724,8 @@ export function InsuredReportTab() {
                       value={clause.plainLanguage}
                       onChange={e => updatePolicyClause(i, 'plainLanguage', e.target.value)}
                       rows={3}
-                      className="w-full text-xs border rounded-lg p-2 resize-none"
-                      style={{ borderColor: '#E2E6EA', color: '#374151' }}
+                      className="w-full text-xs border rounded-lg p-2 resize-none border-border"
+                      style={{ color: 'var(--color-neutral-600)' }}
                     />
                   </div>
                 ))}
@@ -745,21 +734,18 @@ export function InsuredReportTab() {
 
             {/* Narrative */}
             {activeTab === 'narrative' && (
-              <div
-                className="rounded-2xl border p-5"
-                style={{ background: '#FFFFFF', borderColor: '#E2E6EA' }}
-              >
+              <div className="rounded-2xl border p-5 bg-card border-border">
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <p className="text-sm font-bold" style={{ color: '#0D1B2A' }}>Covering Narrative</p>
-                    <p className="text-xs mt-0.5" style={{ color: '#8D99AE' }}>
+                    <p className="text-sm font-medium text-foreground">Covering Narrative</p>
+                    <p className="text-xs mt-0.5 text-muted-foreground">
                       AI-drafted letter for the insured. Review and edit before approving.
                     </p>
                   </div>
                   {!narrativeText && (
                     <span
-                      className="text-[10px] px-2 py-0.5 rounded-full font-bold"
-                      style={{ background: '#FEF3C7', color: '#92400E' }}
+                      className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                      style={{ background: 'var(--color-status-warning-tint)', color: 'var(--color-status-warning)' }}
                       title={narrativeError ?? 'The AI did not return a narrative. You can type it manually.'}
                     >
                       ⚠ {narrativeError ?? 'AI did not generate — type manually'}
@@ -771,15 +757,14 @@ export function InsuredReportTab() {
                   onChange={e => setNarrativeText(e.target.value)}
                   rows={14}
                   placeholder="The AI will generate a professional covering letter here. If it is blank, you can type the narrative manually before approving."
-                  className="w-full text-sm border rounded-xl p-3 resize-none leading-relaxed"
+                  className="w-full text-sm border rounded-xl p-3 resize-none leading-relaxed border-border"
                   style={{
-                    borderColor: '#E2E6EA',
-                    color: '#374151',
+                    color: 'var(--color-neutral-600)',
                     fontFamily: 'Georgia, serif',
                     lineHeight: '1.75',
                   }}
                 />
-                <p className="text-[11px] mt-2" style={{ color: '#8D99AE' }}>
+                <p className="text-[11px] mt-2 text-muted-foreground">
                   This narrative will be included in the PDF sent to the insured. It does not affect the financial figures.
                 </p>
               </div>
@@ -789,24 +774,27 @@ export function InsuredReportTab() {
             {activeTab === 'lineitems' && (
               <div className="space-y-3">
                 {draft.lineExplanations.length === 0 && (
-                  <p className="text-sm text-center py-8" style={{ color: '#8D99AE' }}>No adjusted items to review.</p>
+                  <p className="text-sm text-center py-8 text-muted-foreground">No adjusted items to review.</p>
                 )}
                 {draft.lineExplanations.map(item => (
                   <div
                     key={item.assessmentRowId}
                     className="rounded-2xl p-4 border"
-                    style={{ borderColor: item.isFlagged ? '#FCD34D' : '#E2E6EA', background: item.isFlagged ? '#FFFBEB' : '#FFFFFF' }}
+                    style={{
+                      borderColor: item.isFlagged ? 'var(--color-status-warning)' : 'var(--color-neutral-200)',
+                      background: item.isFlagged ? 'var(--color-status-warning-tint)' : 'var(--color-neutral-50)',
+                    }}
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-bold">{item.partDescription}</span>
-                      <div className="flex items-center gap-3 text-xs" style={{ color: '#8D99AE' }}>
+                      <span className="text-xs font-medium">{item.partDescription}</span>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
                         <span>Billed: ₹{item.billedAmount.toLocaleString('en-IN')}</span>
                         <span>Assessed: ₹{item.surveyorAmount.toLocaleString('en-IN')}</span>
-                        {item.isFlagged && <span style={{ color: '#92400E' }}>⚠ Needs context</span>}
+                        {item.isFlagged && <span style={{ color: 'var(--color-status-warning)' }}>⚠ Needs context</span>}
                       </div>
                     </div>
                     {item.surveyorRemarks && (
-                      <p className="text-xs mb-2 italic" style={{ color: '#8D99AE' }}>Surveyor: &quot;{item.surveyorRemarks}&quot;</p>
+                      <p className="text-xs mb-2 italic text-muted-foreground">Surveyor: &quot;{item.surveyorRemarks}&quot;</p>
                     )}
                     <textarea
                       value={item.aiExplanation}
@@ -814,7 +802,10 @@ export function InsuredReportTab() {
                       rows={2}
                       placeholder={item.isFlagged ? 'Add explanation for insured (optional)…' : ''}
                       className="w-full text-xs border rounded-lg p-2 resize-none"
-                      style={{ borderColor: item.isFlagged ? '#FCD34D' : '#E2E6EA', color: '#374151' }}
+                      style={{
+                        borderColor: item.isFlagged ? 'var(--color-status-warning)' : 'var(--color-neutral-200)',
+                        color: 'var(--color-neutral-600)',
+                      }}
                     />
                   </div>
                 ))}
@@ -826,18 +817,15 @@ export function InsuredReportTab() {
               <button
                 onClick={handleGenerateReport}
                 disabled={loading || downloading || !policyAnalysis || !assessmentAnalysis}
-                className="flex items-center gap-2 text-xs font-bold px-4 py-2.5 rounded-xl border transition-all"
-                style={{ borderColor: '#E2E6EA', color: '#8D99AE', background: '#FFFFFF' }}
+                className="flex items-center gap-2 text-xs font-medium px-4 py-2.5 rounded-xl border transition-all border-border text-muted-foreground bg-card"
               >
                 <RefreshCw size={14} /> Regenerate
               </button>
               <button
                 onClick={handleApprove}
                 disabled={downloading}
-                className="flex items-center gap-2 text-sm font-bold px-6 py-3 rounded-xl transition-all"
+                className="flex items-center gap-2 text-sm font-medium px-6 py-3 rounded-xl transition-all bg-primary text-[var(--color-neutral-50)]"
                 style={{
-                  background: 'linear-gradient(135deg, #0D1B2A, #1e3a5f)',
-                  color: '#F8F9FA',
                   opacity: downloading ? 0.6 : 1,
                 }}
               >

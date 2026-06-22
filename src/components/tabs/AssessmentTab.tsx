@@ -61,7 +61,7 @@ export function AssessmentTab() {
     <div className="flex flex-col h-[calc(100vh-140px)] p-6 lg:p-8 max-w-[1600px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6 shrink-0">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Assessment</h2>
+          <h2 className="text-2xl font-medium tracking-tight">Assessment</h2>
           <p className="text-muted-foreground text-sm mt-1">
             Build the assessment grid. Calculations apply IMT-23 and GST automatically based on part types.
           </p>
@@ -70,12 +70,12 @@ export function AssessmentTab() {
         <div className="flex flex-col items-end gap-2">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-3 bg-card p-3 rounded-xl border border-border">
-              <Label htmlFor="dep-type" className="font-semibold text-sm">Policy Depreciation:</Label>
+              <Label htmlFor="dep-type" className="font-medium text-sm">Policy Depreciation:</Label>
               <select
                 id="dep-type"
                 value={currentClaim.depreciationType}
                 onChange={(e) => setDepreciationType(e.target.value as any)}
-                className="h-8 rounded-md border border-input bg-background px-3 text-sm focus:ring-1 focus:ring-primary font-bold text-primary"
+                className="h-8 rounded-md border border-input bg-background px-3 text-sm focus:ring-1 focus:ring-primary font-medium text-primary"
               >
                 <option value="standard">Standard (Age Based)</option>
                 <option value="nil">Nil Depreciation</option>
@@ -120,10 +120,9 @@ export function AssessmentTab() {
 
           {/* AI extraction controls */}
           <div
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl"
-            style={{ background: '#0D1B2A', border: '1px solid rgba(255,255,255,0.08)' }}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-card border border-border"
           >
-            <span className="text-[10px] font-bold mr-1" style={{ color: 'rgba(232,236,240,0.4)' }}>AI</span>
+            <span className="text-[10px] font-medium mr-1 text-muted-foreground">AI</span>
             <ProviderToggle />
             <DocModeToggle />
             <ModelSelector />
