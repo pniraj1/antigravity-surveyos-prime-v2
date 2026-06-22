@@ -213,7 +213,7 @@ export function SyncDrivePicker({ open, onOpenChange, targetSlotLabel, onPick }:
                       onClick={() => setCollapsed((c) => ({ ...c, [group.insurer]: !c[group.insurer] }))}
                       className="w-full flex items-center justify-between px-2 py-2 text-left hover:bg-muted/40 rounded-md"
                     >
-                      <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                      <span className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                         {isCollapsed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
                         {group.insurer}
                       </span>
@@ -286,8 +286,7 @@ export function SyncDrivePicker({ open, onOpenChange, targetSlotLabel, onPick }:
                     key={d.docId}
                     onClick={() => pickDoc(d.docId, d.docType)}
                     disabled={downloadingId !== null}
-                    className="w-full flex items-center justify-between gap-3 py-3 text-left hover:bg-muted/50 px-2 rounded-md transition-colors disabled:opacity-50"
-                    style={suggested ? { background: 'var(--color-primary-alpha-10)' } : undefined}
+                    className={`w-full flex items-center justify-between gap-3 py-3 text-left hover:bg-muted/50 px-2 rounded-md transition-colors disabled:opacity-50 ${suggested ? 'bg-primary/10' : ''}`}
                   >
                     <span className="flex items-center gap-2 min-w-0">
                       <FileText size={15} className="shrink-0 text-muted-foreground" />

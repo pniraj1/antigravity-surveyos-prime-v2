@@ -162,7 +162,7 @@ export function DocumentEvidenceViewer({ panelWidth = '420px', embedded = false,
           <div className="flex items-center gap-2">
             <FileSearch size={18} className="text-primary" />
             <div>
-              <div className="text-[13px] font-semibold text-primary-foreground">Evidence Viewer</div>
+              <div className="text-[13px] font-medium text-primary-foreground">Evidence Viewer</div>
               {docLabel && <div className="text-[11px] text-primary mt-0.5">{docLabel}</div>}
             </div>
           </div>
@@ -172,7 +172,7 @@ export function DocumentEvidenceViewer({ panelWidth = '420px', embedded = false,
         {/* Context snippet badge */}
         {field?.contextSnippet && (
           <div className="mx-3.5 mt-3 px-3 py-2 rounded-lg shrink-0 bg-status-warning-tint border border-status-warning">
-            <div className="text-[10px] font-semibold uppercase tracking-widest text-primary mb-1">
+            <div className="text-[10px] font-medium uppercase tracking-widest text-primary mb-1">
               EXTRACTED FROM DOCUMENT
             </div>
             <div className="text-xs leading-relaxed font-mono text-foreground">

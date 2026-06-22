@@ -110,13 +110,13 @@ export function ReportPreviewPanel({
       >
         <div className="flex items-center gap-2">
           <FileText size={13} className="text-primary" />
-          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">
+          <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-primary">
             {title}
           </span>
         </div>
         <button
           onClick={onPrint}
-          className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide transition-all hover:opacity-80 active:scale-95 bg-primary text-primary-foreground"
+          className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[10px] font-medium uppercase tracking-wide transition-all hover:opacity-80 active:scale-95 bg-primary text-primary-foreground"
         >
           <Printer size={11} />
           {printLabel}
@@ -148,7 +148,7 @@ export function ReportPreviewPanel({
           />
         ) : (
           <div className="flex items-center justify-center h-full">
-            <p className="text-[11px] font-bold animate-pulse text-muted-foreground">
+            <p className="text-[11px] font-medium animate-pulse text-muted-foreground">
               Generating preview…
             </p>
           </div>
