@@ -810,7 +810,7 @@ export function AssessmentGrid() {
                           }}
                           className={`w-12 text-center text-[11px] font-medium rounded border focus:outline-none focus:ring-1 focus:ring-[var(--color-status-warning)] ${
                             isDepOverridden
-                              ? 'bg-amber-50 border-amber-400 text-amber-700'
+                              ? 'bg-[var(--color-status-warning-tint)] border-[var(--color-status-warning)] text-[var(--color-status-warning)]'
                               : 'bg-transparent border-transparent text-danger hover:border-input'
                           }`}
                           title={isDepOverridden ? `Auto: ${autoDepRate}% — Click to clear override` : `IRDAI rate: ${autoDepRate}%`}

@@ -76,8 +76,8 @@ export function AssessmentSummary() {
             {/* Final Parts Invoice Amount */}
             <div className="grid grid-cols-3 border-b border-[var(--color-neutral-200)] bg-[var(--color-neutral-50)] hover:bg-[var(--color-neutral-100)] transition-colors">
               <div className="p-2.5 font-medium text-foreground">Final parts invoice amt</div>
-              <div className="p-2.5 text-right font-medium text-[var(--color-neutral-600)] border-l border-[var(--color-neutral-200)]">{formatCurrency(summary.estimatePartsTotal)}</div>
-              <div className="p-2.5 text-right font-medium text-[var(--color-neutral-600)] border-l border-[var(--color-neutral-200)]">{formatCurrency(summary.partsTotal)}</div>
+              <div className="p-2.5 text-right font-medium text-[var(--color-neutral-900)] border-l border-[var(--color-neutral-200)]">{formatCurrency(summary.estimatePartsTotal)}</div>
+              <div className="p-2.5 text-right font-medium text-[var(--color-neutral-900)] border-l border-[var(--color-neutral-200)]">{formatCurrency(summary.partsTotal)}</div>
             </div>
 
             {/* Sub Total: Labour (Taxable) */}
@@ -97,8 +97,8 @@ export function AssessmentSummary() {
             {/* Final Labour Invoice Amount */}
             <div className="grid grid-cols-3 border-b border-[var(--color-neutral-200)] bg-[var(--color-neutral-50)] hover:bg-[var(--color-neutral-100)] transition-colors">
               <div className="p-2.5 font-medium text-foreground">Final labour invoice amt</div>
-              <div className="p-2.5 text-right font-medium text-[var(--color-neutral-600)] border-l border-[var(--color-neutral-200)]">{formatCurrency(summary.estimateLabourTotal)}</div>
-              <div className="p-2.5 text-right font-medium text-[var(--color-neutral-600)] border-l border-[var(--color-neutral-200)]">{formatCurrency(summary.labourTotal)}</div>
+              <div className="p-2.5 text-right font-medium text-[var(--color-neutral-900)] border-l border-[var(--color-neutral-200)]">{formatCurrency(summary.estimateLabourTotal)}</div>
+              <div className="p-2.5 text-right font-medium text-[var(--color-neutral-900)] border-l border-[var(--color-neutral-200)]">{formatCurrency(summary.labourTotal)}</div>
             </div>
 
             {/* Total Tax */}

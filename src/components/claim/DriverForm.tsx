@@ -206,8 +206,8 @@ export function DriverDetailsForm() {
           <div
             className="mt-4 flex items-start gap-3 rounded-lg px-4 py-3"
             style={{
-              background: 'rgba(var(--color-status-danger), 0.10)',
-              border: '1px solid rgba(var(--color-status-danger), 0.40)',
+              background: 'var(--color-status-danger-tint)',
+              border: '1px solid var(--color-status-danger)',
             }}
           >
             <AlertTriangle size={16} className="mt-0.5 flex-shrink-0 text-danger" />
