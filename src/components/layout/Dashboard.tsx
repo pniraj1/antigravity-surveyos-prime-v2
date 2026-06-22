@@ -104,25 +104,21 @@ export function DashboardContent() {
   return (
     <div className="h-full overflow-y-auto bg-background text-foreground">
       {/* ── Hero Banner ─────────────────────────────────── */}
-      <div className="relative overflow-hidden px-8 py-10 lg:px-14 lg:py-14 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
-        {/* Decorative gold orb */}
-        <div className="absolute -top-16 -right-16 w-72 h-72 rounded-full opacity-10 blur-3xl bg-amber-500" />
-        <div className="absolute bottom-0 left-1/3 w-48 h-48 rounded-full opacity-5 blur-2xl bg-amber-500" />
-
-        <div className="relative max-w-4xl mx-auto">
+      <div className="px-8 py-10 lg:px-14 lg:py-14 bg-[var(--color-neutral-900)] text-white">
+        <div className="max-w-4xl mx-auto">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] mb-6 bg-amber-500/15 text-amber-500 border border-amber-500/30">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-medium uppercase tracking-[0.2em] mb-6 bg-primary/15 text-primary border border-primary/30">
             <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
-            AI-Powered · Cloud-Native · IRDAI Compliant
+            AI-powered · Cloud-native · IRDAI compliant
           </div>
 
-          <h1 className="text-3xl lg:text-5xl font-black tracking-tight mb-3 text-slate-50 tracking-[-0.02em]">
+          <h1 className="text-3xl lg:text-5xl font-medium tracking-tight mb-3 text-white">
             Motor SurveyOS{' '}
-            <span className="px-3 py-1 rounded-lg bg-gradient-to-br from-amber-500 to-amber-300 text-slate-900 inline-block">
+            <span className="px-3 py-1 rounded-lg bg-primary text-[var(--color-neutral-900)] inline-block">
               Prime
             </span>
           </h1>
-          <p className="text-base lg:text-lg font-medium mb-8 text-slate-200/70">
+          <p className="text-base lg:text-lg font-medium mb-8 text-white/70">
             Motor Insurance Survey Platform for Independent Loss Adjusters
           </p>
 
@@ -130,17 +126,17 @@ export function DashboardContent() {
           <div className="flex flex-wrap gap-3">
             <button
               onClick={() => setNewClaimDialogOpen(true)}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all bg-gradient-to-br from-amber-500 to-amber-300 text-slate-900 shadow-[0_4px_20px_rgba(212,175,55,0.4)] hover:shadow-[0_6px_28px_rgba(212,175,55,0.6)]"
+              className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium transition-all bg-primary text-[var(--color-neutral-900)] hover:bg-primary/90"
             >
               <Plus size={16} />
-              New Claim
+              New claim
             </button>
             <button
               onClick={() => setClaimsListOpen(true)}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all bg-white/10 text-slate-50 border border-white/15 hover:bg-white/20"
+              className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium transition-all bg-white/10 text-white border border-white/15 hover:bg-white/20"
             >
               <FolderOpen size={16} />
-              Open Saved
+              Open saved
             </button>
           </div>
         </div>
@@ -152,23 +148,23 @@ export function DashboardContent() {
         {/* Stats Row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'Claims Today', value: String(claimsToday), icon: <LayoutDashboard size={16} />, bgClass: 'bg-amber-500', textClass: 'text-amber-500' },
-            { label: 'This Week', value: String(claimsWeek), icon: <TrendingUp size={16} />, bgClass: 'bg-green-500', textClass: 'text-green-500' },
-            { label: 'Pending', value: String(claimsPending), icon: <Clock size={16} />, bgClass: 'bg-amber-500', textClass: 'text-amber-500' },
-            { label: 'Total Claims', value: String(claimsList.length), icon: <FileCheck size={16} />, bgClass: 'bg-slate-900', textClass: 'text-slate-900' },
+            { label: 'Claims Today', value: String(claimsToday), icon: <LayoutDashboard size={16} /> },
+            { label: 'This Week', value: String(claimsWeek), icon: <TrendingUp size={16} /> },
+            { label: 'Pending', value: String(claimsPending), icon: <Clock size={16} /> },
+            { label: 'Total Claims', value: String(claimsList.length), icon: <FileCheck size={16} /> },
           ].map((stat) => (
             <div
               key={stat.label}
               className="p-5 rounded-2xl relative overflow-hidden bg-card border border-border shadow-sm"
             >
-              <div className={`absolute top-0 left-0 w-full h-[3px] rounded-t-2xl ${stat.bgClass}`} />
+              <div className="absolute top-0 left-0 w-full h-[3px] rounded-t-2xl bg-primary" />
               <div className="flex items-center gap-2 mb-3 mt-1">
-                <span className={stat.textClass}>{stat.icon}</span>
-                <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
+                <span className="text-[var(--color-neutral-400)]">{stat.icon}</span>
+                <span className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground">
                   {stat.label}
                 </span>
               </div>
-              <div className="text-3xl font-black tracking-tight text-foreground">
+              <div className="text-3xl font-medium tracking-tight text-foreground">
                 {stat.value}
               </div>
             </div>
@@ -178,21 +174,21 @@ export function DashboardContent() {
         {/* Fees Overview */}
         <div>
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">
-              Fees Overview
+            <h2 className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+              Fees overview
             </h2>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowIRDAI(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-green-500/10 text-green-600 border border-green-500/30 hover:bg-green-500/20"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all bg-[var(--color-status-success-tint)] text-[var(--color-status-success)] border border-[var(--color-status-success)]/30 hover:opacity-90"
               >
-                Export Annual Summary
+                Export annual summary
               </button>
               <button
                 onClick={() => setShowReconcile(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-amber-500/10 text-amber-700 border border-amber-500/30 hover:bg-amber-500/20"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all bg-[var(--color-status-warning-tint)] text-[var(--color-status-warning)] border border-[var(--color-status-warning)]/30 hover:opacity-90"
               >
-                Reconcile Bank Statement
+                Reconcile bank statement
               </button>
             </div>
           </div>
@@ -201,19 +197,19 @@ export function DashboardContent() {
               {
                 label: 'Total Billed',
                 value: feesBilled > 0 ? `₹${feesBilled.toLocaleString('en-IN')}` : '—',
-                bgClass: 'bg-slate-600', textClass: 'text-slate-600',
+                bgClass: 'bg-[var(--color-neutral-600)]', textClass: 'text-[var(--color-neutral-900)]',
                 desc: 'across active claims',
               },
               {
                 label: 'Fees Received',
                 value: feesReceived > 0 ? `₹${feesReceived.toLocaleString('en-IN')}` : '—',
-                bgClass: 'bg-green-500', textClass: 'text-green-500',
+                bgClass: 'bg-[var(--color-status-success)]', textClass: 'text-[var(--color-status-success)]',
                 desc: `${activeClaims.filter(c => c.feePaid).length} claim(s) paid`,
               },
               {
                 label: 'Outstanding',
                 value: feesOutstanding > 0 ? `₹${feesOutstanding.toLocaleString('en-IN')}` : '—',
-                bgClass: 'bg-red-500', textClass: 'text-red-500',
+                bgClass: 'bg-[var(--color-status-danger)]', textClass: 'text-[var(--color-status-danger)]',
                 desc: `${activeClaims.filter(c => !c.feePaid && c.feeTotal > 0).length} claim(s) unpaid`,
               },
             ].map((card) => (
@@ -222,10 +218,10 @@ export function DashboardContent() {
                 className="p-5 rounded-2xl relative overflow-hidden bg-card border border-border shadow-sm"
               >
                 <div className={`absolute top-0 left-0 w-full h-[3px] rounded-t-2xl ${card.bgClass}`} />
-                <div className="text-[10px] font-bold uppercase tracking-[0.15em] mb-2 mt-1 text-muted-foreground">
+                <div className="text-[10px] font-medium uppercase tracking-[0.15em] mb-2 mt-1 text-muted-foreground">
                   {card.label}
                 </div>
-                <div className={`text-2xl font-black tracking-tight mb-1 ${card.textClass}`}>
+                <div className={`text-2xl font-medium tracking-tight mb-1 ${card.textClass}`}>
                   {card.value}
                 </div>
                 <div className="text-[10px] text-muted-foreground">{card.desc}</div>
