@@ -33,29 +33,27 @@ export function BillCheckHeader({ showEvidence, onToggleEvidence, bcSummary, cla
 
   return (
     <div
-      className="px-8 py-8 lg:px-12"
-      style={{ background: 'linear-gradient(135deg, #0D1B2A 0%, #1e3a5f 100%)' }}
+      className="px-8 py-8 lg:px-12 bg-neutral-900"
     >
       <div className="max-w-5xl mx-auto">
         <div
-          className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] mb-4"
-          style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)' }}
+          className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-medium uppercase tracking-[0.2em] mb-4 bg-primary/10 text-primary border border-primary/30"
         >
           <CheckCircle2 size={11} />
           Final Bill Verification
         </div>
         <div className="flex items-center justify-between gap-4">
-          <h1 className="text-2xl lg:text-3xl font-black mb-2" style={{ color: '#F8F9FA', letterSpacing: '-0.02em' }}>
+          <h1 className="text-2xl lg:text-3xl font-medium mb-2 text-foreground" style={{ letterSpacing: '-0.02em' }}>
             Bill Check Report
           </h1>
           <div className="flex items-center gap-3">
             <SaveProgressButton tone="onDark" className="shadow-lg" />
             <button
               onClick={handleToggle}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all shadow-lg"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all shadow-lg"
               style={{
-                background: showEvidence ? '#D4AF37' : 'rgba(255,255,255,0.1)',
-                color: showEvidence ? '#0D1B2A' : '#F8F9FA',
+                background: showEvidence ? 'var(--color-primary)' : 'rgba(255,255,255,0.1)',
+                color: showEvidence ? 'var(--color-primary-foreground)' : 'var(--color-neutral-50)',
                 border: '1px solid rgba(255,255,255,0.2)',
                 backdropFilter: 'blur(10px)',
               }}
@@ -65,18 +63,18 @@ export function BillCheckHeader({ showEvidence, onToggleEvidence, bcSummary, cla
             </button>
           </div>
         </div>
-        <p className="text-sm" style={{ color: 'rgba(232,236,240,0.65)' }}>
-          Verify that items <strong style={{ color: '#D4AF37' }}>allowed</strong> in the Final Survey Report are correctly
+        <p className="text-sm text-muted-foreground">
+          Verify that items <strong className="text-primary">allowed</strong> in the Final Survey Report are correctly
           reflected in the workshop&apos;s final bill submitted to the insurer.
         </p>
         <div className="flex flex-wrap gap-3 mt-5">
-          <div className="px-3 py-1.5 rounded-full text-xs font-bold" style={{ background: 'rgba(5,150,105,0.15)', color: '#34d399' }}>
+          <div className="px-3 py-1.5 rounded-full text-xs font-medium bg-status-success/10 text-status-success">
             Total Billed: {fmt(bcSummary.grandTotalBilled)}
           </div>
-          <div className="px-3 py-1.5 rounded-full text-xs font-bold" style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37' }}>
+          <div className="px-3 py-1.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
             Final Liability: {fmt(bcSummary.netLiability)}
           </div>
-          <div className="px-3 py-1.5 rounded-full text-xs font-bold" style={{ background: 'rgba(220,38,38,0.15)', color: '#f87171' }}>
+          <div className="px-3 py-1.5 rounded-full text-xs font-medium bg-status-danger/10 text-status-danger">
             Saving to Insurer: {fmt(bcSummary.notInBillTotal)}
           </div>
         </div>

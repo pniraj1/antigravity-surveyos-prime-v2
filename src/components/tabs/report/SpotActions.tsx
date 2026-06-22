@@ -36,11 +36,11 @@ export function SpotActions({ claim, profile, isExportingWord, setIsExportingWor
           }
         }}
         disabled={isExportingWord}
-        className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all"
+        className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm transition-all"
         style={{
-          background: isExportingWord ? '#F0F2F5' : '#FFFFFF',
-          color: isExportingWord ? '#8D99AE' : '#0D1B2A',
-          border: '1.5px solid #E2E6EA',
+          background: isExportingWord ? 'var(--color-neutral-100)' : '#FFFFFF',
+          color: isExportingWord ? 'var(--color-neutral-400)' : 'var(--color-neutral-900)',
+          border: '1.5px solid var(--color-neutral-200)',
           cursor: isExportingWord ? 'not-allowed' : 'pointer',
         }}
       >
@@ -51,10 +51,10 @@ export function SpotActions({ claim, profile, isExportingWord, setIsExportingWor
       {/* Power Print */}
       <button
         onClick={onPrint}
-        className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-black text-sm transition-all shadow-md border-2 border-green-700 text-green-700 hover:bg-green-50"
+        className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium text-sm transition-all shadow-md border-2 border-success text-success hover:bg-success/10"
         style={{ background: '#FFFFFF', cursor: 'pointer' }}
       >
-        <div className="w-2 h-2 rounded-full bg-green-600 animate-pulse" />
+        <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
         POWER PRINT (SPOT)
       </button>
     </>
@@ -75,10 +75,10 @@ function FontScalePill({ currentScale }: { currentScale: FontScale }) {
   return (
     <div
       className="flex items-center gap-0.5 rounded-lg p-0.5 shadow-inner"
-      style={{ background: '#F0F2F5', border: '1px solid #E2E6EA' }}
+      style={{ background: 'var(--color-neutral-100)', border: '1px solid var(--color-neutral-200)' }}
       title="Report font density"
     >
-      <Type size={11} style={{ color: '#8D99AE', marginLeft: 5, flexShrink: 0 }} />
+      <Type size={11} style={{ color: 'var(--color-neutral-400)', marginLeft: 5, flexShrink: 0 }} />
       {SCALE_OPTIONS.map(opt => {
         const active = currentScale === opt.id;
         return (
@@ -86,10 +86,10 @@ function FontScalePill({ currentScale }: { currentScale: FontScale }) {
             key={opt.id}
             title={opt.title}
             onClick={() => updateReportSettings({ fontScale: opt.id })}
-            className="px-2.5 py-1 rounded-md text-[10px] font-bold transition-all"
+            className="px-2.5 py-1 rounded-md text-[10px] font-medium transition-all"
             style={{
               background: active ? '#FFFFFF' : 'transparent',
-              color: active ? '#0D1B2A' : '#8D99AE',
+              color: active ? 'var(--color-neutral-900)' : 'var(--color-neutral-400)',
               boxShadow: active ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
               letterSpacing: '0.02em',
             }}

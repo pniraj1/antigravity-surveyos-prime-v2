@@ -88,12 +88,11 @@ export function BillCheckGrid({
   if (allRows.length === 0) {
     return (
       <div
-        className="rounded-2xl p-12 flex flex-col items-center text-center"
-        style={{ background: '#FFFFFF', border: '1px solid #E2E6EA' }}
+        className="rounded-2xl p-12 flex flex-col items-center text-center bg-card border border-border"
       >
-        <AlertCircle size={28} style={{ color: '#8D99AE', marginBottom: 12 }} />
-        <div className="text-base font-bold mb-1" style={{ color: '#0D1B2A' }}>No items in assessment</div>
-        <div className="text-sm" style={{ color: '#8D99AE' }}>
+        <AlertCircle size={28} className="text-muted-foreground" style={{ marginBottom: 12 }} />
+        <div className="text-base font-medium mb-1 text-foreground">No items in assessment</div>
+        <div className="text-sm text-muted-foreground">
           Go to Assessment tab and add items to begin bill check.
         </div>
       </div>
@@ -101,14 +100,14 @@ export function BillCheckGrid({
   }
 
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E2E6EA' }}>
+    <div className="rounded-2xl overflow-hidden bg-card border border-border">
       {/* Grid header / toolbar */}
-      <div className="px-6 py-4 flex items-start justify-between gap-4" style={{ borderBottom: '1px solid #F0F2F5', background: '#FAFAFA' }}>
+      <div className="px-6 py-4 flex items-start justify-between gap-4" style={{ borderBottom: '1px solid var(--color-neutral-100)', background: 'var(--color-neutral-50)' }}>
         <div>
-          <div className="text-sm font-black" style={{ color: '#0D1B2A' }}>
+          <div className="text-sm font-medium text-foreground">
             Step 2 — Verify Each Item ({allRows.length} items · {allowedRows.length} allowed)
           </div>
-          <div className="text-xs mt-0.5" style={{ color: '#8D99AE' }}>
+          <div className="text-xs mt-0.5 text-muted-foreground">
             Mark each item as In Bill / Not In Bill / Partial. Disallowed items are shown greyed out — flagged if workshop billed them anyway.
           </div>
         </div>
@@ -121,8 +120,7 @@ export function BillCheckGrid({
                 deleteAssessmentRows(zeros.map(r => r.id));
               }
             }}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-all border hover:bg-red-50"
-            style={{ background: '#fff', color: '#dc2626', borderColor: '#dc2626' }}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all border hover:bg-status-danger-tint text-status-danger border-status-danger bg-card"
             title="Remove all zero amount parts"
           >
             <Trash2 size={14} />
@@ -131,8 +129,7 @@ export function BillCheckGrid({
           {selected.size > 0 && (
             <button
               onClick={handleBulkDelete}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-all hover:opacity-90"
-              style={{ background: '#dc2626', color: '#fff' }}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all hover:opacity-90 bg-status-danger text-white"
             >
               <Trash2 size={14} />
               Delete Selected ({selected.size})
@@ -142,44 +139,52 @@ export function BillCheckGrid({
           <div className="relative" ref={settingsRef}>
             <button
               onClick={() => setShowSettings(!showSettings)}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-all border"
-              style={{ background: showSettings ? '#0D1B2A' : '#fff', color: showSettings ? '#fff' : '#4A4E69', borderColor: '#E2E6EA' }}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all border border-border"
+              style={{
+                background: showSettings ? 'var(--color-neutral-900)' : 'var(--color-neutral-50)',
+                color: showSettings ? 'white' : 'var(--color-neutral-600)',
+              }}
               title="Toggle column visibility"
             >
               <Settings2 size={14} />
               Columns
-              <span className="ml-0.5 text-[10px] px-1.5 rounded-full font-bold" style={{ background: showSettings ? 'rgba(255,255,255,0.2)' : 'rgba(13,27,42,0.08)' }}>
+              <span
+                className={`ml-0.5 text-[10px] px-1.5 rounded-full font-medium ${showSettings ? 'bg-white/20' : 'bg-[var(--color-neutral-100)]'}`}
+              >
                 {visibleCount}/{OPTIONAL_COLUMNS.length}
               </span>
             </button>
             {showSettings && (
-              <div className="absolute right-0 top-full mt-1.5 w-72 rounded-xl shadow-xl z-50 overflow-hidden" style={{ background: '#fff', border: '1px solid #E2E6EA' }}>
-                <div className="px-3 py-2.5" style={{ borderBottom: '1px solid #E2E6EA', background: '#FAFAFA' }}>
-                  <p className="text-xs font-black" style={{ color: '#0D1B2A' }}>Column Visibility</p>
-                  <p className="text-[10px] mt-0.5" style={{ color: '#8D99AE' }}>Toggle columns to keep the grid clean</p>
+              <div className="absolute right-0 top-full mt-1.5 w-72 rounded-xl shadow-xl z-50 overflow-hidden bg-card border border-border">
+                <div className="px-3 py-2.5 border-b border-border" style={{ background: 'var(--color-neutral-50)' }}>
+                  <p className="text-xs font-medium text-foreground">Column Visibility</p>
+                  <p className="text-[10px] mt-0.5 text-muted-foreground">Toggle columns to keep the grid clean</p>
                 </div>
                 <div className="p-2 max-h-[300px] overflow-y-auto">
                   {OPTIONAL_COLUMNS.map((col) => (
                     <button
                       key={col.key}
                       onClick={() => toggleColumn(col.key)}
-                      className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors hover:bg-slate-50"
-                      style={{ background: visible[col.key] ? 'rgba(13,27,42,0.05)' : 'transparent' }}
+                      className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors hover:bg-[var(--color-neutral-100)]"
+                      style={{ background: visible[col.key] ? 'var(--color-neutral-50)' : 'transparent' }}
                     >
-                      <div className="flex-shrink-0 w-7 h-4 rounded-full relative transition-colors" style={{ background: visible[col.key] ? '#0D1B2A' : 'rgba(141,153,174,0.3)' }}>
+                      <div
+                        className="flex-shrink-0 w-7 h-4 rounded-full relative transition-colors"
+                        style={{ background: visible[col.key] ? 'var(--color-neutral-900)' : 'var(--color-neutral-200)' }}
+                      >
                         <div className="absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-all" style={{ left: visible[col.key] ? '14px' : '2px' }} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <span className="text-xs font-bold" style={{ color: '#0D1B2A' }}>{col.label}</span>
-                        <span className="text-[10px] ml-1.5" style={{ color: '#8D99AE' }}>{col.description}</span>
+                        <span className="text-xs font-medium text-foreground">{col.label}</span>
+                        <span className="text-[10px] ml-1.5 text-muted-foreground">{col.description}</span>
                       </div>
-                      {visible[col.key] ? <Eye size={12} style={{ color: '#0D1B2A' }} /> : <EyeOff size={12} style={{ color: '#8D99AE' }} />}
+                      {visible[col.key] ? <Eye size={12} className="text-foreground" /> : <EyeOff size={12} className="text-muted-foreground" />}
                     </button>
                   ))}
                 </div>
-                <div className="px-3 py-2 flex gap-2" style={{ borderTop: '1px solid #E2E6EA', background: '#FAFAFA' }}>
-                  <button onClick={showAllCols} className="flex-1 text-[10px] font-bold rounded-md py-1.5 transition-colors hover:bg-slate-100" style={{ color: '#0D1B2A' }}>Show All</button>
-                  <button onClick={resetDefaults} className="flex-1 text-[10px] font-bold rounded-md py-1.5 transition-colors hover:bg-slate-100" style={{ color: '#0D1B2A' }}>Reset</button>
+                <div className="px-3 py-2 flex gap-2 border-t border-border" style={{ background: 'var(--color-neutral-50)' }}>
+                  <button onClick={showAllCols} className="flex-1 text-[10px] font-medium rounded-md py-1.5 transition-colors hover:bg-[var(--color-neutral-100)] text-foreground">Show All</button>
+                  <button onClick={resetDefaults} className="flex-1 text-[10px] font-medium rounded-md py-1.5 transition-colors hover:bg-[var(--color-neutral-100)] text-foreground">Reset</button>
                 </div>
               </div>
             )}
@@ -191,8 +196,8 @@ export function BillCheckGrid({
         <div style={{ minWidth: `${800 + visibleCount * 90}px` }}>
           {/* Column headers */}
           <div
-            className="px-6 py-3 grid gap-2 text-[9px] font-black uppercase tracking-[0.15em]"
-            style={{ gridTemplateColumns: gridCols, borderBottom: '1px solid #E2E6EA', color: '#8D99AE', background: '#FAFAFA' }}
+            className="px-6 py-3 grid gap-2 text-[9px] font-medium uppercase tracking-[0.15em] text-muted-foreground border-b border-border"
+            style={{ gridTemplateColumns: gridCols, background: 'var(--color-neutral-50)' }}
           >
             <span className="flex items-center justify-center">
               <input
@@ -200,7 +205,7 @@ export function BillCheckGrid({
                 checked={allRows.length > 0 && allRows.every(r => selected.has(r.id))}
                 ref={el => { if (el) el.indeterminate = selected.size > 0 && !allRows.every(r => selected.has(r.id)); }}
                 onChange={() => toggleSelectAll(allRows.map(r => r.id))}
-                className="h-3.5 w-3.5 cursor-pointer accent-red-600"
+                className="h-3.5 w-3.5 cursor-pointer accent-[var(--color-status-danger)]"
                 title="Select all"
               />
             </span>
@@ -231,8 +236,8 @@ export function BillCheckGrid({
                 className="px-6 py-3 grid gap-2 items-center"
                 style={{
                   gridTemplateColumns: gridCols,
-                  borderBottom: '1px solid #F0F2F5',
-                  background: isDisallowed ? '#F5F5F7' : 'transparent',
+                  borderBottom: '1px solid var(--color-neutral-100)',
+                  background: isDisallowed ? 'var(--color-neutral-100)' : 'transparent',
                   opacity: isDisallowed ? 0.75 : 1,
                 }}
               >
@@ -241,13 +246,13 @@ export function BillCheckGrid({
                     type="checkbox"
                     checked={selected.has(row.id)}
                     onChange={() => toggleSelect(row.id)}
-                    className="h-3.5 w-3.5 cursor-pointer accent-red-600"
+                    className="h-3.5 w-3.5 cursor-pointer accent-[var(--color-status-danger)]"
                   />
                 </div>
-                <div className="text-sm font-bold" style={{ color: '#4A4E69' }}>{row.srNo ?? idx + 1}</div>
+                <div className="text-sm font-medium" style={{ color: 'var(--color-neutral-600)' }}>{row.srNo ?? idx + 1}</div>
                 <div
-                  className="group text-sm font-semibold flex items-center gap-1.5 cursor-pointer select-none"
-                  style={{ color: '#0D1B2A', textDecoration: isDisallowed ? 'line-through' : 'none' }}
+                  className="group text-sm font-medium flex items-center gap-1.5 cursor-pointer select-none text-foreground"
+                  style={{ textDecoration: isDisallowed ? 'line-through' : 'none' }}
                   onClick={() => {
                     if (!claimId) return;
                     useEvidenceStore.getState().openField(claimId, {
@@ -261,15 +266,15 @@ export function BillCheckGrid({
                   title="Click to view in Evidence Viewer"
                 >
                   <span>{row.particulars || '—'}</span>
-                  <FileSearch size={12} className="opacity-0 group-hover:opacity-60 transition-opacity shrink-0" style={{ color: '#D4AF37' }} />
+                  <FileSearch size={12} className="opacity-0 group-hover:opacity-60 transition-opacity shrink-0 text-primary" />
                 </div>
-                {visible.partNumber    && <div className="text-xs font-mono" style={{ color: '#4A4E69' }}>{row.partNumber || '—'}</div>}
-                {visible.hsnSac        && <div className="text-xs font-mono" style={{ color: '#4A4E69' }}>{row.hsnSac || '—'}</div>}
-                {visible.section       && <div><span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider" style={{ background: '#F0F2F5', color: '#4A4E69' }}>{row.section}</span></div>}
-                {visible.quantity      && <div className="text-sm font-semibold text-center" style={{ color: '#4A4E69' }}>{row.quantity ?? '—'}</div>}
-                {visible.taxable       && <div className="text-sm font-semibold" style={{ color: '#4A4E69' }}>{fmt(row.estimated || 0)}</div>}
-                {visible.gst           && <div className="text-xs font-semibold text-center" style={{ color: '#4A4E69' }}>{row.gst ?? 18}%</div>}
-                <div className="text-sm font-bold" style={{ color: '#0D1B2A' }}>{fmt(row.assessed)}</div>
+                {visible.partNumber    && <div className="text-xs font-mono" style={{ color: 'var(--color-neutral-600)' }}>{row.partNumber || '—'}</div>}
+                {visible.hsnSac        && <div className="text-xs font-mono" style={{ color: 'var(--color-neutral-600)' }}>{row.hsnSac || '—'}</div>}
+                {visible.section       && <div><span className="text-[9px] font-medium px-2 py-0.5 rounded-full uppercase tracking-wider" style={{ background: 'var(--color-neutral-100)', color: 'var(--color-neutral-600)' }}>{row.section}</span></div>}
+                {visible.quantity      && <div className="text-sm font-medium text-center" style={{ color: 'var(--color-neutral-600)' }}>{row.quantity ?? '—'}</div>}
+                {visible.taxable       && <div className="text-sm font-medium" style={{ color: 'var(--color-neutral-600)' }}>{fmt(row.estimated || 0)}</div>}
+                {visible.gst           && <div className="text-xs font-medium text-center" style={{ color: 'var(--color-neutral-600)' }}>{row.gst ?? 18}%</div>}
+                <div className="text-sm font-medium text-foreground">{fmt(row.assessed)}</div>
                 {visible.billedTaxable && (
                   <input
                     type="number"
@@ -280,8 +285,8 @@ export function BillCheckGrid({
                       updateAssessmentRow(row.id, { billedTaxable: tax, billedAmount: Math.round(tax * (1 + gstPct / 100)) });
                     }}
                     disabled={isDisallowed || row.billStatus === 'not-in-bill'}
-                    className="px-2 py-1 rounded-lg text-sm text-right border outline-none w-full"
-                    style={{ border: '1px solid #E2E6EA', color: '#0D1B2A', background: isDisallowed || row.billStatus === 'not-in-bill' ? '#F0F2F5' : '#FAFAFA' }}
+                    className="px-2 py-1 rounded-lg text-sm text-right border outline-none w-full border-border text-foreground"
+                    style={{ background: isDisallowed || row.billStatus === 'not-in-bill' ? 'var(--color-neutral-100)' : 'var(--color-neutral-50)' }}
                   />
                 )}
                 <input
@@ -289,13 +294,13 @@ export function BillCheckGrid({
                   value={row.billedAmount || ''}
                   onChange={e => updateAssessmentRow(row.id, { billedAmount: Number(e.target.value) })}
                   disabled={isDisallowed || row.billStatus === 'not-in-bill'}
-                  className="px-2 py-1 rounded-lg text-sm text-right border outline-none w-full"
-                  style={{ border: '1px solid #E2E6EA', color: '#0D1B2A', background: isDisallowed || row.billStatus === 'not-in-bill' ? '#F0F2F5' : '#FAFAFA' }}
+                  className="px-2 py-1 rounded-lg text-sm text-right border outline-none w-full border-border text-foreground"
+                  style={{ background: isDisallowed || row.billStatus === 'not-in-bill' ? 'var(--color-neutral-100)' : 'var(--color-neutral-50)' }}
                 />
                 {isDisallowed ? (
                   <div
-                    className="px-2 py-1 rounded-lg text-[10px] font-bold text-center"
-                    style={{ background: st.bg, color: st.color, border: '1px solid #E2E6EA' }}
+                    className="px-2 py-1 rounded-lg text-[10px] font-medium text-center border border-border"
+                    style={{ background: st.bg, color: st.color }}
                     title="This item was marked Not Allowed in Assessment"
                   >
                     {(row.billedAmount ?? 0) > 0 ? '⚠ Billed (Not Allowed)' : 'Not Allowed'}
@@ -310,8 +315,8 @@ export function BillCheckGrid({
                         billedAmount: s === 'not-in-bill' ? 0 : (s === 'in-bill' ? row.assessed : row.billedAmount),
                       });
                     }}
-                    className="px-2 py-1 rounded-lg text-[11px] font-bold border outline-none w-full"
-                    style={{ border: '1px solid #E2E6EA', background: st.bg, color: st.color }}
+                    className="px-2 py-1 rounded-lg text-[11px] font-medium border outline-none w-full border-border"
+                    style={{ background: st.bg, color: st.color }}
                   >
                     <option value="pending">Pending</option>
                     <option value="in-bill">In Bill ✓</option>
@@ -324,14 +329,13 @@ export function BillCheckGrid({
                     value={row.billRemarks || ''}
                     onChange={e => updateAssessmentRow(row.id, { billRemarks: e.target.value })}
                     placeholder="Notes…"
-                    className="px-2 py-1 rounded-lg text-xs border outline-none w-full"
-                    style={{ border: '1px solid #E2E6EA', color: '#4A4E69', background: '#FAFAFA' }}
+                    className="px-2 py-1 rounded-lg text-xs border outline-none w-full border-border"
+                    style={{ color: 'var(--color-neutral-600)', background: 'var(--color-neutral-50)' }}
                   />
                 )}
                 <button
                   onClick={() => handleDeleteRow(row.id)}
-                  className="flex items-center justify-center h-7 w-7 rounded-lg transition-colors hover:bg-red-50"
-                  style={{ color: '#dc2626' }}
+                  className="flex items-center justify-center h-7 w-7 rounded-lg transition-colors hover:bg-status-danger-tint text-status-danger"
                   title="Delete row"
                 >
                   <Trash2 size={14} />
@@ -343,20 +347,20 @@ export function BillCheckGrid({
           {/* Footer totals */}
           <div
             className="px-6 py-4 grid gap-2"
-            style={{ gridTemplateColumns: gridCols, background: '#0D1B2A' }}
+            style={{ gridTemplateColumns: gridCols, background: 'var(--color-neutral-900)' }}
           >
             <div /><div />
-            <div className="text-xs font-black uppercase tracking-widest" style={{ color: '#D4AF37' }}>TOTAL</div>
+            <div className="text-xs font-medium uppercase tracking-widest text-primary">TOTAL</div>
             {visible.partNumber    && <div />}
             {visible.hsnSac        && <div />}
             {visible.section       && <div />}
             {visible.quantity      && <div />}
-            {visible.taxable       && <div className="text-sm font-black" style={{ color: '#F8F9FA' }}>{fmt(allowedRows.reduce((s, r) => s + (r.estimated || 0), 0))}</div>}
+            {visible.taxable       && <div className="text-sm font-medium" style={{ color: 'var(--color-neutral-50)' }}>{fmt(allowedRows.reduce((s, r) => s + (r.estimated || 0), 0))}</div>}
             {visible.gst           && <div />}
-            <div className="text-sm font-black" style={{ color: '#F8F9FA' }}>{fmt(allowedRows.reduce((s, r) => s + r.assessed, 0))}</div>
-            {visible.billedTaxable && <div className="text-sm font-black" style={{ color: '#D4AF37' }}>{fmt(allowedRows.reduce((s, r) => s + (r.billedTaxable || 0), 0))}</div>}
-            <div className="text-sm font-black" style={{ color: '#D4AF37' }}>{fmt(allowedRows.reduce((s, r) => s + (r.billedAmount || 0), 0))}</div>
-            <div className="text-xs font-bold" style={{ color: 'rgba(255,255,255,0.5)' }}>{fmt(notInBillTotal)} not claimed</div>
+            <div className="text-sm font-medium" style={{ color: 'var(--color-neutral-50)' }}>{fmt(allowedRows.reduce((s, r) => s + r.assessed, 0))}</div>
+            {visible.billedTaxable && <div className="text-sm font-medium text-primary">{fmt(allowedRows.reduce((s, r) => s + (r.billedTaxable || 0), 0))}</div>}
+            <div className="text-sm font-medium text-primary">{fmt(allowedRows.reduce((s, r) => s + (r.billedAmount || 0), 0))}</div>
+            <div className="text-xs font-medium text-white/50">{fmt(notInBillTotal)} not claimed</div>
             {visible.remarks && <div />}
             <div />
           </div>
