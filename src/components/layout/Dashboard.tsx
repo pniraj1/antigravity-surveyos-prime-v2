@@ -483,15 +483,15 @@ export function DashboardContent() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setArchiveTarget(null)}>
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
-                <AlertTriangle size={20} className="text-amber-600" />
+              <div className="w-10 h-10 rounded-xl bg-[var(--color-status-warning-tint)] flex items-center justify-center">
+                <AlertTriangle size={20} className="text-[var(--color-status-warning)]" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-[#0D1B2A]">Archive this claim?</h3>
-                <p className="text-xs text-[#8D99AE] mt-0.5">{archiveTarget.vehicleNo}</p>
+                <h3 className="text-sm font-medium text-[var(--color-neutral-900)]">Archive this claim?</h3>
+                <p className="text-xs text-[var(--color-neutral-400)] mt-0.5">{archiveTarget.vehicleNo}</p>
               </div>
             </div>
-            <p className="text-xs text-[#4A4E69] mb-5 leading-relaxed">
+            <p className="text-xs text-[var(--color-neutral-600)] mb-5 leading-relaxed">
               Photos will be removed from local storage to free space.
               {useUIStore.getState().isDriveConnected
                 ? ' They are safely backed up on Google Drive.'
@@ -500,7 +500,7 @@ export function DashboardContent() {
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setArchiveTarget(null)}
-                className="px-4 py-2 rounded-lg text-xs font-bold text-[#4A4E69] hover:bg-[#F0F2F5] transition-colors"
+                className="px-4 py-2 rounded-lg text-xs font-medium text-[var(--color-neutral-600)] hover:bg-[var(--color-neutral-100)] transition-colors"
               >
                 Cancel
               </button>
@@ -518,9 +518,9 @@ export function DashboardContent() {
                   }
                   setArchiveTarget(null);
                 }}
-                className="px-4 py-2 rounded-lg text-xs font-bold bg-amber-500 text-white hover:bg-amber-600 transition-colors"
+                className="px-4 py-2 rounded-lg text-xs font-medium bg-[var(--color-status-warning)] text-white hover:opacity-90 transition-colors"
               >
-                Archive Claim
+                Archive claim
               </button>
             </div>
           </div>
@@ -532,19 +532,19 @@ export function DashboardContent() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setDeleteTarget(null)}>
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
-                <Trash2 size={20} className="text-red-600" />
+              <div className="w-10 h-10 rounded-xl bg-[var(--color-status-danger-tint)] flex items-center justify-center">
+                <Trash2 size={20} className="text-[var(--color-status-danger)]" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-[#0D1B2A]">Permanently delete this claim?</h3>
-                <p className="text-xs text-[#8D99AE] mt-0.5">{deleteTarget.vehicleNo}</p>
+                <h3 className="text-sm font-medium text-[var(--color-neutral-900)]">Permanently delete this claim?</h3>
+                <p className="text-xs text-[var(--color-neutral-400)] mt-0.5">{deleteTarget.vehicleNo}</p>
               </div>
             </div>
-            <p className="text-xs text-[#4A4E69] mb-4 leading-relaxed">
+            <p className="text-xs text-[var(--color-neutral-600)] mb-4 leading-relaxed">
               This action <strong>cannot be undone</strong>. The claim and all associated data will be permanently removed from local storage and cloud.
             </p>
             <div className="mb-5">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-[#8D99AE] mb-1.5 block">
+              <label className="text-[10px] font-medium uppercase tracking-widest text-[var(--color-neutral-400)] mb-1.5 block">
                 Type the vehicle number to confirm
               </label>
               <input
@@ -552,13 +552,13 @@ export function DashboardContent() {
                 value={deleteConfirmText}
                 onChange={e => setDeleteConfirmText(e.target.value)}
                 placeholder={deleteTarget.vehicleNo}
-                className="w-full px-3 py-2.5 rounded-lg text-sm font-medium border border-[#E2E6EA] focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400"
+                className="w-full px-3 py-2.5 rounded-lg text-sm font-medium border border-border focus:outline-none focus:ring-2 focus:ring-[var(--color-status-danger)]/30 focus:border-[var(--color-status-danger)]"
               />
             </div>
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setDeleteTarget(null)}
-                className="px-4 py-2 rounded-lg text-xs font-bold text-[#4A4E69] hover:bg-[#F0F2F5] transition-colors"
+                className="px-4 py-2 rounded-lg text-xs font-medium text-[var(--color-neutral-600)] hover:bg-[var(--color-neutral-100)] transition-colors"
               >
                 Cancel
               </button>
@@ -572,9 +572,9 @@ export function DashboardContent() {
                   toast.success('Claim permanently deleted');
                   setDeleteTarget(null);
                 }}
-                className="px-4 py-2 rounded-lg text-xs font-bold bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-4 py-2 rounded-lg text-xs font-medium bg-[var(--color-status-danger)] text-white hover:opacity-90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Delete Forever
+                Delete forever
               </button>
             </div>
           </div>
@@ -605,11 +605,11 @@ export function TabPlaceholder({ tab }: { tab: string }) {
   return (
     <div className="flex flex-col items-center justify-center h-full min-h-[60vh]">
       <div className="text-center">
-        <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4 mx-auto bg-[#F0F2F5]">
-          <Zap size={24} className="text-[#8D99AE]" />
+        <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4 mx-auto bg-[var(--color-neutral-100)]">
+          <Zap size={24} className="text-[var(--color-neutral-400)]" />
         </div>
-        <div className="text-base font-bold capitalize" style={{ color: '#0D1B2A' }}>{tab}</div>
-        <div className="text-sm mt-1" style={{ color: '#8D99AE' }}>Coming soon</div>
+        <div className="text-base font-medium capitalize text-[var(--color-neutral-900)]">{tab}</div>
+        <div className="text-sm mt-1 text-[var(--color-neutral-400)]">Coming soon</div>
       </div>
     </div>
   );
