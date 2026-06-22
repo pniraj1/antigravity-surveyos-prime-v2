@@ -92,13 +92,13 @@ export function AdminDashboard() {
 
   if (!isAuthorized) {
     return (
-      <div className="h-full flex flex-col items-center justify-center bg-[#F8F9FA] p-8">
-        <div className="max-w-md w-full bg-white border border-[#E2E6EA] rounded-2xl shadow-sm p-8 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
-            <ShieldAlert size={32} className="text-red-600" />
+      <div className="h-full flex flex-col items-center justify-center bg-neutral-50 p-8">
+        <div className="max-w-md w-full bg-white border border-border rounded-2xl shadow-sm p-8 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-status-danger-tint flex items-center justify-center mx-auto mb-4">
+            <ShieldAlert size={32} className="text-status-danger" />
           </div>
-          <h2 className="text-lg font-black text-[#0D1B2A] mb-2">Not Authorized</h2>
-          <p className="text-sm text-[#8D99AE] font-medium">
+          <h2 className="text-lg font-medium text-foreground mb-2">Not Authorized</h2>
+          <p className="text-sm text-muted-foreground font-medium">
             The administrator dashboard is restricted to accounts with admin privileges.
             This attempt has been logged.
           </p>
@@ -108,18 +108,18 @@ export function AdminDashboard() {
   }
 
   return (
-    <div className="h-full flex flex-col bg-[#F8F9FA]">
+    <div className="h-full flex flex-col bg-neutral-50">
       {/* Header */}
-      <div className="px-8 py-8 border-b bg-white border-[#E2E6EA]">
+      <div className="px-8 py-8 border-b bg-white border-border">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 rounded-xl bg-primary/10 text-primary">
                 <ShieldCheck size={24} />
               </div>
-              <h1 className="text-2xl font-black tracking-tight text-[#0D1B2A]">Regulator Dashboard</h1>
+              <h1 className="text-2xl font-medium tracking-tight text-foreground">Regulator Dashboard</h1>
             </div>
-            <p className="text-sm font-medium text-[#8D99AE]">
+            <p className="text-sm font-medium text-muted-foreground">
               Manage all active surveyors and their digital profile vaults.
             </p>
           </div>
@@ -133,17 +133,17 @@ export function AdminDashboard() {
                     navigator.clipboard.writeText(emails);
                     alert(`Copied ${surveyors.length} email addresses to clipboard!`);
                   }}
-                  className="px-4 py-2.5 rounded-xl border border-[#E2E6EA] text-[#0D1B2A] hover:bg-[#F8F9FA] transition-all font-bold text-xs flex items-center gap-2 shadow-sm"
+                  className="px-4 py-2.5 rounded-xl border border-border text-foreground hover:bg-neutral-50 transition-all font-medium text-xs flex items-center gap-2 shadow-sm"
                   title="Copy All Emails"
                 >
                   <Mail size={16} className="text-primary" /> Copy All Emails
                 </button>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8D99AE]" size={16} />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
                   <input
                     type="text"
                     placeholder="Search by name or UID..."
-                    className="pl-10 pr-4 py-2.5 rounded-xl border border-[#E2E6EA] text-sm w-64 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                    className="pl-10 pr-4 py-2.5 rounded-xl border border-border text-sm w-64 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
                   />
@@ -152,7 +152,7 @@ export function AdminDashboard() {
             )}
             <button
               onClick={refreshAll}
-              className="p-2.5 rounded-xl border border-[#E2E6EA] text-[#0D1B2A] hover:bg-[#F8F9FA] transition-all"
+              className="p-2.5 rounded-xl border border-border text-foreground hover:bg-neutral-50 transition-all"
               title="Refresh Data"
             >
               <RefreshCw size={18} className={loading || signupsLoading || paymentsLoading ? 'animate-spin' : ''} />
@@ -161,64 +161,64 @@ export function AdminDashboard() {
         </div>
 
         {/* Tab bar */}
-        <div className="max-w-7xl mx-auto mt-6 flex gap-1 border-b border-[#E2E6EA]">
+        <div className="max-w-7xl mx-auto mt-6 flex gap-1 border-b border-border">
           <button
             onClick={() => setActiveTab('surveyors')}
-            className={`flex items-center gap-2 px-5 py-2.5 text-xs font-black uppercase tracking-wider rounded-t-lg transition-all ${
+            className={`flex items-center gap-2 px-5 py-2.5 text-xs font-medium uppercase tracking-wider rounded-t-lg transition-all ${
               activeTab === 'surveyors'
-                ? 'bg-white border border-b-white border-[#E2E6EA] text-primary -mb-px'
-                : 'text-[#8D99AE] hover:text-[#0D1B2A]'
+                ? 'bg-white border border-b-white border-border text-primary -mb-px'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <Users size={14} />
             All Surveyors
-            <span className="ml-1 px-1.5 py-0.5 rounded-md bg-[#F0F2F5] text-[#0D1B2A] text-[9px]">
+            <span className="ml-1 px-1.5 py-0.5 rounded-md bg-neutral-100 text-foreground text-[9px]">
               {surveyors.length}
             </span>
             {expiringSoonCount > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 rounded-md bg-red-100 text-red-700 text-[9px] font-black">
+              <span className="ml-1 px-1.5 py-0.5 rounded-md bg-status-danger-tint text-status-danger text-[9px] font-medium">
                 {expiringSoonCount}
               </span>
             )}
           </button>
           <button
             onClick={() => setActiveTab('signups')}
-            className={`flex items-center gap-2 px-5 py-2.5 text-xs font-black uppercase tracking-wider rounded-t-lg transition-all ${
+            className={`flex items-center gap-2 px-5 py-2.5 text-xs font-medium uppercase tracking-wider rounded-t-lg transition-all ${
               activeTab === 'signups'
-                ? 'bg-white border border-b-white border-[#E2E6EA] text-primary -mb-px'
-                : 'text-[#8D99AE] hover:text-[#0D1B2A]'
+                ? 'bg-white border border-b-white border-border text-primary -mb-px'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <Bell size={14} />
             New Signups
             {signups.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 rounded-md bg-yellow-100 text-yellow-800 text-[9px] font-black">
+              <span className="ml-1 px-1.5 py-0.5 rounded-md bg-status-warning-tint text-foreground text-[9px] font-medium">
                 {signups.length}
               </span>
             )}
           </button>
           <button
             onClick={() => setActiveTab('payments')}
-            className={`flex items-center gap-2 px-5 py-2.5 text-xs font-black uppercase tracking-wider rounded-t-lg transition-all ${
+            className={`flex items-center gap-2 px-5 py-2.5 text-xs font-medium uppercase tracking-wider rounded-t-lg transition-all ${
               activeTab === 'payments'
-                ? 'bg-white border border-b-white border-[#E2E6EA] text-primary -mb-px'
-                : 'text-[#8D99AE] hover:text-[#0D1B2A]'
+                ? 'bg-white border border-b-white border-border text-primary -mb-px'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <CreditCard size={14} />
             Payments
             {pendingPaymentsCount > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[9px] font-black">
+              <span className="ml-1 px-1.5 py-0.5 rounded-md bg-status-success-tint text-status-success text-[9px] font-medium">
                 {pendingPaymentsCount}
               </span>
             )}
           </button>
           <button
             onClick={() => setActiveTab('dev-notes')}
-            className={`flex items-center gap-2 px-5 py-2.5 text-xs font-black uppercase tracking-wider rounded-t-lg transition-all ${
+            className={`flex items-center gap-2 px-5 py-2.5 text-xs font-medium uppercase tracking-wider rounded-t-lg transition-all ${
               activeTab === 'dev-notes'
-                ? 'bg-white border border-b-white border-[#E2E6EA] text-primary -mb-px'
-                : 'text-[#8D99AE] hover:text-[#0D1B2A]'
+                ? 'bg-white border border-b-white border-border text-primary -mb-px'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <Code2 size={14} />
@@ -226,10 +226,10 @@ export function AdminDashboard() {
           </button>
           <button
             onClick={() => setActiveTab('ai-models')}
-            className={`flex items-center gap-2 px-5 py-2.5 text-xs font-black uppercase tracking-wider rounded-t-lg transition-all ${
+            className={`flex items-center gap-2 px-5 py-2.5 text-xs font-medium uppercase tracking-wider rounded-t-lg transition-all ${
               activeTab === 'ai-models'
-                ? 'bg-white border border-b-white border-[#E2E6EA] text-primary -mb-px'
-                : 'text-[#8D99AE] hover:text-[#0D1B2A]'
+                ? 'bg-white border border-b-white border-border text-primary -mb-px'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <Cpu size={14} />
@@ -288,8 +288,8 @@ export function AdminDashboard() {
       </div>
 
       {/* Footer */}
-      <div className="px-8 py-4 border-t bg-white border-[#E2E6EA] text-center">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#8D99AE]">
+      <div className="px-8 py-4 border-t bg-white border-border text-center">
+        <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
           Motor SurveyOS • Digital Profile Sync Registry • Administrative Access Only
         </p>
       </div>

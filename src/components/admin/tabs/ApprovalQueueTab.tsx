@@ -31,16 +31,16 @@ function SignupRow({
   const isApproving = approvingId === signup.uid;
 
   return (
-    <tr className="hover:bg-[#FAFBFC] transition-colors group">
+    <tr className="hover:bg-neutral-50 transition-colors group">
       <td className="px-6 py-5">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center font-bold text-yellow-700 text-lg">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center font-medium text-primary text-lg">
             {displayName.charAt(0).toUpperCase()}
           </div>
           <div>
-            <div className="text-sm font-bold text-[#0D1B2A]">{displayName}</div>
-            <div className="text-xs text-[#8D99AE] mt-0.5">{signup.email}</div>
-            <div className="text-[10px] text-[#8D99AE] font-mono mt-0.5 flex items-center gap-1">
+            <div className="text-sm font-medium text-foreground">{displayName}</div>
+            <div className="text-xs text-muted-foreground mt-0.5">{signup.email}</div>
+            <div className="text-[10px] text-muted-foreground font-mono mt-0.5 flex items-center gap-1">
               <IdCard size={10} /> {signup.uid}
             </div>
           </div>
@@ -48,36 +48,36 @@ function SignupRow({
       </td>
       <td className="px-6 py-5">
         {!signup.accessRequestSubmitted ? (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold bg-gray-100 text-gray-500 border border-gray-200">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-medium bg-neutral-100 text-neutral-600 border border-neutral-200">
             <AlertCircle size={10} /> Awaiting form submission
           </span>
         ) : signup.profileIrdai ? (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold" style={{ background: 'rgba(212,175,55,0.1)', color: '#856404', border: '1px solid rgba(212,175,55,0.25)' }}>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium" style={{ background: 'var(--color-status-warning-tint)', color: 'var(--color-status-warning)', border: '1px solid var(--color-status-warning)' }}>
             {signup.profileIrdai}
           </span>
         ) : (
-          <span className="text-[10px] font-semibold text-[#C3C9D4] italic">Not provided</span>
+          <span className="text-[10px] font-medium text-muted-foreground italic">Not provided</span>
         )}
       </td>
       <td className="px-6 py-5">
-        <div className="text-sm font-medium text-[#0D1B2A]">
+        <div className="text-sm font-medium text-foreground">
           {signup.profileMobile || '—'}
         </div>
       </td>
       <td className="px-6 py-5">
-        <div className="text-sm font-medium text-[#0D1B2A]">
+        <div className="text-sm font-medium text-foreground">
           {signup.profileCity && signup.profileState
             ? `${signup.profileCity}, ${signup.profileState}`
             : signup.profileCity || signup.profileState || '—'}
         </div>
       </td>
       <td className="px-6 py-5">
-        <div className="text-sm font-medium text-[#0D1B2A]">
+        <div className="text-sm font-medium text-foreground">
           {(signup.updatedAt ?? signup.signedUpAt)
             ? (signup.updatedAt ?? signup.signedUpAt).toDate().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
             : '—'}
         </div>
-        <div className="text-[10px] text-[#8D99AE]">
+        <div className="text-[10px] text-muted-foreground">
           {(signup.updatedAt ?? signup.signedUpAt)
             ? (signup.updatedAt ?? signup.signedUpAt).toDate().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
             : ''}
@@ -88,29 +88,29 @@ function SignupRow({
           <button
             onClick={() => onEmail(signup.email, displayName)}
             title="Send a custom email to this surveyor"
-            className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[10px] font-bold bg-[#EFF6FF] text-[#1D4ED8] hover:bg-[#DBEAFE] transition-all"
+            className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[10px] font-medium bg-neutral-100 text-neutral-600 hover:bg-neutral-200 transition-all"
           >
             <Mail size={10} /> Email
           </button>
           {/* Per-row trial days input */}
-          <div className="flex items-center gap-1 border border-[#E2E6EA] rounded-lg px-2 py-1 bg-white">
-            <Calendar size={10} className="text-[#8D99AE]" />
+          <div className="flex items-center gap-1 border border-border rounded-lg px-2 py-1 bg-card">
+            <Calendar size={10} className="text-muted-foreground" />
             <input
               type="number"
               min={1}
               max={365}
               value={trialDays}
               onChange={e => setTrialDays(Math.max(1, Math.min(365, Number(e.target.value))))}
-              className="w-10 text-xs font-bold text-center border-none focus:ring-0 p-0 text-[#0D1B2A]"
+              className="w-10 text-xs font-medium text-center border-none focus:ring-0 p-0 text-foreground"
               title="Trial duration in days"
             />
-            <span className="text-[10px] text-[#8D99AE]">d</span>
+            <span className="text-[10px] text-muted-foreground">d</span>
           </div>
           <button
             onClick={() => onApprove(signup, trialDays)}
             disabled={isApproving}
             title={`Approve with ${trialDays}-day trial`}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold bg-[#D1FAE5] text-[#065F46] hover:bg-[#A7F3D0] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium bg-[var(--color-status-success-tint)] text-[var(--color-status-success)] hover:opacity-80 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {isApproving
               ? <Loader2 size={10} className="animate-spin" />
@@ -120,7 +120,7 @@ function SignupRow({
           <button
             onClick={() => onDismiss(signup)}
             disabled={isApproving}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold bg-[#FEE2E2] text-[#991B1B] hover:bg-[#FECACA] transition-all disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium bg-[var(--color-status-danger-tint)] text-[var(--color-status-danger)] hover:opacity-80 transition-all disabled:opacity-50"
           >
             <XCircle size={10} />
             Dismiss
@@ -144,30 +144,30 @@ export function ApprovalQueueTab({
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20">
           <Loader2 size={40} className="animate-spin text-primary opacity-20 mb-4" />
-          <p className="text-sm font-bold text-[#8D99AE]">Loading New Signups...</p>
+          <p className="text-sm font-medium text-muted-foreground">Loading New Signups...</p>
         </div>
       ) : signups.length === 0 ? (
-        <div className="py-20 text-center bg-white rounded-2xl border border-[#E2E6EA]">
-          <div className="w-16 h-16 rounded-2xl bg-[#F8F9FA] flex items-center justify-center mx-auto mb-4">
-            <UserPlus size={32} className="text-[#8D99AE]" />
+        <div className="py-20 text-center bg-card rounded-2xl border border-border">
+          <div className="w-16 h-16 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto mb-4">
+            <UserPlus size={32} className="text-muted-foreground" />
           </div>
-          <h3 className="text-base font-bold text-[#0D1B2A]">No pending signups</h3>
-          <p className="text-sm text-[#8D99AE] mt-1">New signups will appear here for approval.</p>
+          <h3 className="text-base font-medium text-foreground">No pending signups</h3>
+          <p className="text-sm text-muted-foreground mt-1">New signups will appear here for approval.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-[#E2E6EA] shadow-sm overflow-hidden">
+        <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-[#FAFBFC] border-b border-[#E2E6EA]">
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-[#8D99AE]">User</th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-[#8D99AE]">IRDAI Licence</th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-[#8D99AE]">Phone</th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-[#8D99AE]">Location</th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-[#8D99AE]">Submitted</th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-[#8D99AE] text-right">Actions</th>
+              <tr className="bg-neutral-50 border-b border-border">
+                <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">User</th>
+                <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">IRDAI Licence</th>
+                <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Phone</th>
+                <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Location</th>
+                <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Submitted</th>
+                <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-wider text-muted-foreground text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#F0F2F5]">
+            <tbody className="divide-y divide-neutral-100">
               {signups.map((signup) => (
                 <SignupRow
                   key={signup.uid}
