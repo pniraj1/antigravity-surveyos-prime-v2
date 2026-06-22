@@ -8,14 +8,14 @@ import type { DLRelation, DLVerificationStatus } from '@/types';
 import { useFieldEvidence } from '@/hooks/useFieldEvidence';
 import { Eye, AlertTriangle } from 'lucide-react';
 
-const S = () => <span className="ml-1 inline-block w-2 h-2 rounded-full bg-green-500 align-middle" title="Used in Spot Report" />;
+const S = () => <span className="ml-1 inline-block w-2 h-2 rounded-full bg-success align-middle" title="Used in Spot Report" />;
 
 function EvidenceDot({ has }: { has: boolean }) {
   if (!has) return null;
-  return <span title="Click field to view source document"><Eye size={10} className="inline ml-1 opacity-50 text-blue-400" /></span>;
+  return <span title="Click field to view source document"><Eye size={10} className="inline ml-1 opacity-50 text-primary" /></span>;
 }
 
-const r = (v: any) => !v ? 'border-red-400' : '';
+const r = (v: any) => !v ? 'border-danger' : '';
 
 export function DriverDetailsForm() {
   const { currentClaim, updateDriver } = useClaimStore();
@@ -146,7 +146,7 @@ export function DriverDetailsForm() {
               value={d?.validityNonTransport || ''}
               onChange={(e) => updateDriver({ validityNonTransport: e.target.value })}
               onFocus={() => triggerField('validityNonTransport')}
-              className={`${r(d?.validityNonTransport)} ${ntExpired ? 'border-red-500' : ''}`}
+              className={`${r(d?.validityNonTransport)} ${ntExpired ? 'border-danger' : ''}`}
             />
           </div>
 
@@ -158,7 +158,7 @@ export function DriverDetailsForm() {
               value={d?.validityTransport || ''}
               onChange={(e) => updateDriver({ validityTransport: e.target.value })}
               onFocus={() => triggerField('validityTransport')}
-              className={`${r(d?.validityTransport)} ${tExpired ? 'border-red-500' : ''}`}
+              className={`${r(d?.validityTransport)} ${tExpired ? 'border-danger' : ''}`}
             />
           </div>
 
@@ -190,7 +190,7 @@ export function DriverDetailsForm() {
               id="d-verif"
               value={d?.verificationStatus || 'photocopy'}
               onChange={(e) => updateDriver({ verificationStatus: e.target.value as DLVerificationStatus })}
-              className={`flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm font-semibold
+              className={`flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm font-medium
                 ${d?.verificationStatus === 'verified' ? 'text-success' : d?.verificationStatus === 'not-available' ? 'text-danger' : 'text-amber'}
               `}
             >
@@ -206,16 +206,16 @@ export function DriverDetailsForm() {
           <div
             className="mt-4 flex items-start gap-3 rounded-lg px-4 py-3"
             style={{
-              background: 'rgba(220, 38, 38, 0.10)',
-              border: '1px solid rgba(220, 38, 38, 0.40)',
+              background: 'rgba(var(--color-status-danger), 0.10)',
+              border: '1px solid rgba(var(--color-status-danger), 0.40)',
             }}
           >
-            <AlertTriangle size={16} className="mt-0.5 flex-shrink-0 text-red-400" />
+            <AlertTriangle size={16} className="mt-0.5 flex-shrink-0 text-danger" />
             <div>
-              <p className="text-sm font-bold text-red-400">
+              <p className="text-sm font-medium text-danger">
                 Driving Licence Validity Expired — {expiredLabels}
               </p>
-              <p className="text-xs text-red-300/80 mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 This is a notice for the surveyor only. The expiry remark will{' '}
                 <strong>not</strong> appear in the official report unless you change the{' '}
                 <strong>Verification Status</strong> above to reflect this finding.

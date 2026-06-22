@@ -69,7 +69,7 @@ export function TotalLossForm() {
           <AlertCircle size={18} />
         </div>
         <div>
-          <h3 className="text-lg font-bold tracking-tight">Total Loss Settlement</h3>
+          <h3 className="text-lg font-medium tracking-tight">Total Loss Settlement</h3>
           <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">CTL Threshold & 4-Way Comparison</p>
         </div>
       </div>
@@ -78,24 +78,24 @@ export function TotalLossForm() {
         {/* CTL Suggestion Banner */}
         {ctlStatus.isCTL && !isTL && (
           <div className="flex items-center justify-between p-5 rounded-2xl animate-in zoom-in-95 duration-300 shadow-sm"
-               style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.15)' }}>
+               style={{ background: 'var(--color-status-danger-tint)', border: '1px solid var(--color-status-danger)' }}>
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-red-600 text-white shadow-lg shadow-red-200">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-status-danger text-white shadow-lg shadow-red-200">
                 <AlertCircle size={24} />
               </div>
               <div>
-                <div className="text-sm font-black text-red-900 leading-tight flex items-center gap-2">
+                <div className="text-sm font-medium text-red-900 leading-tight flex items-center gap-2">
                   CONSTRUCTIVE TOTAL LOSS SUGGESTED
-                  <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-black">{(ctlStatus.ratio * 100).toFixed(1)}%</span>
+                  <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-medium">{(ctlStatus.ratio * 100).toFixed(1)}%</span>
                 </div>
-                <div className="text-[11px] font-bold text-red-700/70 mt-1">
+                <div className="text-[11px] font-medium text-red-700/70 mt-1">
                   Asst. ₹{summary.netAssessedLoss.toLocaleString()} exceeds 75% of IDV ₹{ctlStatus.idv.toLocaleString()}
                 </div>
               </div>
             </div>
             <button
               onClick={handleTLToggle}
-              className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase tracking-widest shadow-lg shadow-red-200 transition-all active:scale-95"
+              className="px-5 py-2.5 rounded-xl bg-status-danger hover:bg-status-danger text-white text-xs font-medium uppercase tracking-widest shadow-lg shadow-red-200 transition-all active:scale-95"
             >
               Enable TL Mode
             </button>
@@ -104,24 +104,24 @@ export function TotalLossForm() {
 
         {/* TL Control Panel */}
         <div className={`p-8 rounded-[2rem] transition-all duration-500 border-2 ${isTL ? 'bg-white shadow-2xl scale-[1.01]' : 'bg-gray-50/50 border-gray-100 opacity-60'}`}
-             style={{ borderColor: isTL ? '#006838' : 'transparent' }}>
+             style={{ borderColor: isTL ? 'var(--color-status-success)' : 'transparent' }}>
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-4">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${isTL ? 'bg-green-700 text-white shadow-lg shadow-green-100' : 'bg-gray-200 text-gray-400'}`}>
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${isTL ? 'bg-status-success text-white shadow-lg shadow-green-100' : 'bg-gray-200 text-gray-400'}`}>
                 {isTL ? <CheckCircle2 size={24} /> : <AlertCircle size={24} />}
               </div>
               <div>
-                <h3 className={`text-base font-black tracking-tight uppercase ${isTL ? 'text-green-900' : 'text-gray-400'}`}>
+                <h3 className={`text-base font-medium tracking-tight uppercase ${isTL ? 'text-green-900' : 'text-gray-400'}`}>
                   {isTL ? 'Total Loss Mode Active' : 'Total Loss Mode Disabled'}
                 </h3>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">
+                <p className="text-[10px] font-medium text-gray-400 uppercase tracking-widest mt-0.5">
                   {isTL ? 'Generating comparison table for report' : 'Report will follow standard repair basis'}
                 </p>
               </div>
             </div>
             <button
               onClick={handleTLToggle}
-              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isTL ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-600 text-white hover:bg-green-700 shadow-md'}`}
+              className={`px-4 py-2 rounded-xl text-[10px] font-medium uppercase tracking-widest transition-all ${isTL ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-status-success text-white hover:bg-status-success shadow-md'}`}
             >
               {isTL ? 'Switch to Repair basis' : 'Force TL Mode'}
             </button>
@@ -139,7 +139,7 @@ export function TotalLossForm() {
                 ].map((field) => (
                   <div key={field.key} className="space-y-2">
                     <div className="flex items-center gap-1.5 ml-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                      <label className="text-[10px] font-medium uppercase tracking-widest text-gray-400">
                         {field.label}
                       </label>
                       <div className="group relative">
@@ -167,7 +167,7 @@ export function TotalLossForm() {
               <div className="space-y-3 pt-4 border-t border-gray-100">
                 <div className="flex items-center gap-2 ml-1">
                   <MessageSquare size={14} className="text-green-600" />
-                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-500">
+                  <label className="text-[10px] font-medium uppercase tracking-widest text-gray-500">
                     Settlement Justification / Special Remarks
                   </label>
                 </div>
@@ -178,7 +178,7 @@ export function TotalLossForm() {
                   rows={3}
                   className="w-full px-6 py-5 rounded-2xl border-2 border-gray-100 focus:border-green-600 focus:ring-0 transition-all font-medium text-sm text-gray-700 leading-relaxed placeholder:text-gray-200"
                 />
-                <p className="text-[9px] font-bold text-gray-400 flex items-center gap-1 ml-1 uppercase tracking-wider">
+                <p className="text-[9px] font-medium text-gray-400 flex items-center gap-1 ml-1 uppercase tracking-wider">
                   <CheckCircle2 size={10} className="text-green-500" />
                   This note will appear at the bottom of the settlement table in the report.
                 </p>

@@ -435,7 +435,7 @@ export function AssessmentGrid() {
             >
               <Settings2 size={14} />
               <span className="hidden sm:inline">Columns</span>
-              <span className="ml-0.5 bg-primary/20 text-primary text-[10px] px-1 rounded-full font-bold leading-tight" style={showSettings ? { background: 'rgba(255,255,255,0.2)', color: 'inherit' } : {}}>
+              <span className="ml-0.5 bg-primary/20 text-primary text-[10px] px-1 rounded-full font-medium leading-tight" style={showSettings ? { background: 'rgba(255,255,255,0.2)', color: 'inherit' } : {}}>
                 {visibleCount}/{OPTIONAL_COLUMNS.length}
               </span>
             </button>
@@ -767,13 +767,13 @@ export function AssessmentGrid() {
                                 type="number"
                                 value={row.disposalPercent ?? 50}
                                 onChange={(e) => updateAssessmentRow(row.id, { disposalPercent: parseFloat(e.target.value) || 0 })}
-                                className="h-6 w-12 text-[11px] text-center px-0 font-bold"
-                                style={{ borderColor: '#f59e0b', background: 'rgba(251,191,36,0.08)', color: '#92400e' }}
+                                className="h-6 w-12 text-[11px] text-center px-0 font-medium"
+                                style={{ borderColor: 'var(--color-status-warning)', background: 'var(--color-status-warning-tint)', color: 'var(--color-status-warning)' }}
                                 min="0"
                                 max="100"
                                 title="Disposal % of depreciated value"
                               />
-                              <span className="text-[10px] font-bold text-amber-600">%</span>
+                              <span className="text-[10px] font-medium text-[var(--color-status-warning)]">%</span>
                             </div>
                           )}
                         </div>
@@ -786,7 +786,7 @@ export function AssessmentGrid() {
                         type="number"
                         value={row.assessed || ''}
                         onChange={(e) => updateAssessmentRow(row.id, { assessed: parseFloat(e.target.value) || 0 })}
-                        className="h-7 text-[11px] text-right font-bold text-primary bg-transparent border-transparent hover:border-input focus:bg-background px-1"
+                        className="h-7 text-[11px] text-right font-medium text-primary bg-transparent border-transparent hover:border-input focus:bg-background px-1"
                         placeholder="0.00"
                         min="0"
                       />
@@ -808,7 +808,7 @@ export function AssessmentGrid() {
                               updateAssessmentRow(row.id, { depOverride: v === autoDepRate ? undefined : v });
                             }
                           }}
-                          className={`w-12 text-center text-[11px] font-bold rounded border focus:outline-none focus:ring-1 focus:ring-amber-400 ${
+                          className={`w-12 text-center text-[11px] font-medium rounded border focus:outline-none focus:ring-1 focus:ring-[var(--color-status-warning)] ${
                             isDepOverridden
                               ? 'bg-amber-50 border-amber-400 text-amber-700'
                               : 'bg-transparent border-transparent text-danger hover:border-input'
@@ -817,14 +817,14 @@ export function AssessmentGrid() {
                         />
                       ) : '-'}
                     </td>
-                    <td className="px-2 py-1.5 text-right text-xs font-black tabular-nums">
+                    <td className="px-2 py-1.5 text-right text-xs font-medium tabular-nums">
                       {row.allowed ? (
                         <span className={row.isDisposal ? 'text-amber-700' : ''}>
                           {formatCurrency(netAssessed)}
                           {row.isDisposal && (
                             <span
-                              className="ml-1 inline-block text-[8px] font-bold uppercase tracking-wide px-1 py-0.5 rounded"
-                              style={{ background: 'rgba(251,191,36,0.2)', color: '#92400e' }}
+                              className="ml-1 inline-block text-[8px] font-medium uppercase tracking-wide px-1 py-0.5 rounded"
+                              style={{ background: 'var(--color-status-warning-tint)', color: 'var(--color-status-warning)' }}
                               title={`Disposal: ${row.disposalPercent ?? 50}% of depreciated value, no GST`}
                             >
                               DISP
@@ -834,7 +834,7 @@ export function AssessmentGrid() {
                       ) : '₹0.00'}
                     </td>
                     {visible.priceWithGst && (
-                      <td className="px-2 py-1.5 text-right text-xs font-black tabular-nums">
+                      <td className="px-2 py-1.5 text-right text-xs font-medium tabular-nums">
                         {row.allowed ? formatCurrency(priceWithGst) : '₹0.00'}
                       </td>
                     )}
