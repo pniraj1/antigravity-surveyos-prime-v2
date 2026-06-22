@@ -230,14 +230,13 @@ export function DetailsTab() {
 
           {/* Report Number */}
           <div
-            className="flex items-center gap-4 px-5 py-4 rounded-2xl"
-            style={{ background: 'linear-gradient(135deg, #0D1B2A, #1e3a5f)', border: '1px solid rgba(212,175,55,0.2)' }}
+            className="flex items-center gap-4 px-5 py-4 rounded-2xl bg-[var(--color-neutral-900)] border border-primary/20"
           >
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(212,175,55,0.15)' }}>
-              <Hash size={16} style={{ color: '#D4AF37' }} />
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-primary/15">
+              <Hash size={16} className="text-primary" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style={{ color: 'rgba(212,175,55,0.7)' }}>
+              <div className="text-[10px] font-medium uppercase tracking-[0.2em] mb-1 text-primary/70">
                 {surveyLabel} Report No.
               </div>
               <input
@@ -249,8 +248,7 @@ export function DetailsTab() {
                   }
                 }}
                 placeholder="Auto-assigned on creation — edit if needed"
-                className="w-full bg-transparent text-lg font-black tracking-wide focus:outline-none placeholder:font-normal placeholder:text-sm"
-                style={{ color: '#F8F9FA', caretColor: '#D4AF37' }}
+                className="w-full bg-transparent text-lg font-medium tracking-wide focus:outline-none placeholder:font-normal placeholder:text-sm text-[var(--color-neutral-50)] caret-primary"
               />
             </div>
             <button
@@ -269,15 +267,13 @@ export function DetailsTab() {
                 }
                 toast.success(`Allocated: ${next}`);
               }}
-              className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all hover:scale-110"
-              style={{ background: 'rgba(212,175,55,0.2)', color: '#D4AF37' }}
+              className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all hover:scale-110 bg-primary/20 text-primary"
               title="Auto-allocate next sequential number"
             >
               <Wand2 size={15} />
             </button>
             <div
-              className="text-[10px] font-bold px-3 py-1 rounded-full flex-shrink-0"
-              style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)' }}
+              className="text-[10px] font-medium px-3 py-1 rounded-full flex-shrink-0 bg-primary/15 text-primary border border-primary/30"
             >
               {currentClaim.reportNo ? 'Assigned' : 'Pending'}
             </div>
@@ -286,7 +282,7 @@ export function DetailsTab() {
           {/* Header row */}
           <div className="flex justify-between items-start">
             <div className="mb-4">
-              <h2 className="text-2xl font-bold tracking-tight">Claim Details</h2>
+              <h2 className="text-2xl font-medium tracking-tight">Claim Details</h2>
               <p className="text-muted-foreground text-sm">
                 Core intake information for the claim. All changes save automatically offline.
               </p>
@@ -326,7 +322,7 @@ export function DetailsTab() {
                   {isProcessing ? <Loader2 className="animate-spin" size={24} /> : <FileText size={24} />}
                 </div>
                 <div className="text-center">
-                  <div className="text-sm font-bold text-primary flex items-center gap-1.5 justify-center">
+                  <div className="text-sm font-medium text-primary flex items-center gap-1.5 justify-center">
                     <Sparkles size={14} className="animate-pulse" />
                     Scan {slot.label}
                   </div>
@@ -339,7 +335,7 @@ export function DetailsTab() {
           {isProcessing && (
             <div className="p-4 rounded-xl bg-primary text-primary-foreground shadow-xl shadow-primary/20 flex items-center gap-3 animate-in zoom-in-95">
               <Loader2 className="animate-spin text-white" size={18} />
-              <span className="text-sm font-bold tracking-tight uppercase">{progress || 'Processing Document...'}</span>
+              <span className="text-sm font-medium tracking-tight uppercase">{progress || 'Processing Document...'}</span>
             </div>
           )}
 
@@ -372,16 +368,7 @@ export function DetailsTab() {
           title="Drag to resize evidence panel"
         >
           {/* Visual handle indicator */}
-          <div style={{
-            width: 3,
-            height: 40,
-            borderRadius: 999,
-            background: 'rgba(148,163,184,0.25)',
-            transition: 'background 0.2s',
-          }}
-            onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(148,163,184,0.6)')}
-            onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(148,163,184,0.25)')}
-          />
+          <div className="w-[3px] h-10 rounded-full bg-[var(--color-neutral-400)]/30 hover:bg-[var(--color-neutral-400)]/60 transition-colors" />
         </div>
       )}
 
