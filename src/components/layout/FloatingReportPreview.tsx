@@ -208,11 +208,11 @@ export function FloatingReportPreview() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-black uppercase tracking-wider transition-all hover:scale-105 active:scale-95"
+        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-medium uppercase tracking-wider transition-all hover:scale-105 active:scale-95"
         style={{
-          background: '#0D1B2A',
-          color: '#D4AF37',
-          boxShadow: '0 8px 32px rgba(13,27,42,0.45)',
+          background: 'var(--color-neutral-900)',
+          color: 'var(--color-primary)',
+          boxShadow: '0 8px 32px color-mix(in srgb, var(--color-neutral-900) 45%, transparent)',
         }}
       >
         <FileText size={13} />
@@ -230,9 +230,9 @@ export function FloatingReportPreview() {
         top: pos.y,
         width: size.width,
         height: minimised ? 48 : size.height,
-        background: '#FFFFFF',
-        border: '1px solid #E2E6EA',
-        boxShadow: '0 20px 60px rgba(13,27,42,0.35)',
+        background: 'var(--color-neutral-50)',
+        border: '1px solid var(--color-neutral-200)',
+        boxShadow: '0 20px 60px color-mix(in srgb, var(--color-neutral-900) 35%, transparent)',
         transition: minimised ? 'height 0.18s ease' : undefined,
         userSelect: 'none',
       }}
@@ -240,16 +240,16 @@ export function FloatingReportPreview() {
       {/* ── Header / drag handle ── */}
       <div
         className="flex items-center gap-2 px-3 flex-shrink-0 cursor-grab active:cursor-grabbing"
-        style={{ background: '#0D1B2A', height: 48 }}
+        style={{ background: 'var(--color-neutral-900)', height: 48 }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
       >
-        <GripHorizontal size={12} style={{ color: '#4A5568', flexShrink: 0 }} />
-        <FileText size={12} style={{ color: '#D4AF37', flexShrink: 0 }} />
+        <GripHorizontal size={12} style={{ color: 'var(--color-neutral-400)', flexShrink: 0 }} />
+        <FileText size={12} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
         <span
-          className="text-[10px] font-black uppercase tracking-widest flex-1 truncate"
-          style={{ color: '#D4AF37' }}
+          className="text-[10px] font-medium uppercase tracking-widest flex-1 truncate"
+          style={{ color: 'var(--color-primary)' }}
         >
           Live Report Preview
         </span>
@@ -257,8 +257,7 @@ export function FloatingReportPreview() {
         {/* Format tabs */}
         {!minimised && (
           <div
-            className="flex items-center gap-0.5 rounded-lg p-0.5 flex-shrink-0"
-            style={{ background: 'rgba(255,255,255,0.08)' }}
+            className="flex items-center gap-0.5 rounded-lg p-0.5 flex-shrink-0 bg-white/[0.08]"
           >
             {(currentClaim?.surveyType === 'spot'
                 ? (['spot', 'fee-bill'] as const)
@@ -269,10 +268,10 @@ export function FloatingReportPreview() {
                 key={f}
                 onPointerDown={e => e.stopPropagation()}
                 onClick={() => setFormat(f)}
-                className="px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-wide transition-all"
+                className="px-2 py-1 rounded-md text-[9px] font-medium uppercase tracking-wide transition-all"
                 style={{
-                  background: format === f ? '#D4AF37' : 'transparent',
-                  color: format === f ? '#0D1B2A' : '#8D99AE',
+                  background: format === f ? 'var(--color-primary)' : 'transparent',
+                  color: format === f ? 'var(--color-neutral-900)' : 'var(--color-neutral-400)',
                 }}
               >
                 {f === 'standard' ? 'Std' :
@@ -290,8 +289,8 @@ export function FloatingReportPreview() {
           <button
             onPointerDown={e => e.stopPropagation()}
             onClick={handlePrint}
-            className="flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wide transition-all hover:opacity-80 flex-shrink-0"
-            style={{ background: '#D4AF37', color: '#0D1B2A' }}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-medium uppercase tracking-wide transition-all hover:opacity-80 flex-shrink-0"
+            style={{ background: 'var(--color-primary)', color: 'var(--color-neutral-900)' }}
           >
             <Printer size={10} />
             Print
@@ -303,7 +302,7 @@ export function FloatingReportPreview() {
           onPointerDown={e => e.stopPropagation()}
           onClick={() => setMinimised(m => !m)}
           className="p-1 rounded transition-colors hover:bg-white/10 flex-shrink-0"
-          style={{ color: '#8D99AE' }}
+          style={{ color: 'var(--color-neutral-400)' }}
         >
           <Minus size={12} />
         </button>
@@ -313,7 +312,7 @@ export function FloatingReportPreview() {
           onPointerDown={e => e.stopPropagation()}
           onClick={() => setOpen(false)}
           className="p-1 rounded transition-colors hover:bg-white/10 flex-shrink-0"
-          style={{ color: '#8D99AE' }}
+          style={{ color: 'var(--color-neutral-400)' }}
         >
           <X size={12} />
         </button>
@@ -323,7 +322,7 @@ export function FloatingReportPreview() {
       {!minimised && (
         <div
           className="flex-1 overflow-auto"
-          style={{ background: '#E8EAED', position: 'relative' }}
+          style={{ background: 'var(--color-neutral-100)', position: 'relative' }}
         >
           {format === 'spot' ? (
             <div style={{ padding: 8, zoom }}>
@@ -344,7 +343,7 @@ export function FloatingReportPreview() {
             />
           ) : (
             <div className="flex items-center justify-center h-full">
-              <span className="text-[11px] font-bold" style={{ color: '#8D99AE' }}>
+              <span className="text-[11px] font-medium text-muted-foreground">
                 Generating preview…
               </span>
             </div>
@@ -373,7 +372,7 @@ export function FloatingReportPreview() {
           }}
         >
           <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-            <path d="M1 9L9 1M1 5L5 1M1 1" stroke="#D4AF37" strokeWidth="1.5" strokeLinecap="round"/>
+            <path d="M1 9L9 1M1 5L5 1M1 1" stroke="var(--color-primary)" strokeWidth="1.5" strokeLinecap="round"/>
           </svg>
         </div>
       )}

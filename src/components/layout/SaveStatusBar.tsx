@@ -96,19 +96,19 @@ export function SaveStatusBar() {
           saving: {
             icon: <Loader2 size={13} className="animate-spin" />,
             label: 'Saving to Cloud Vault…',
-            bg: 'rgba(13,27,42,0.88)', color: '#F8F9FA',
+            bg: 'var(--color-neutral-900)', color: 'var(--color-neutral-50)',
             pulse: false,
           },
           saved: {
             icon: <CheckCircle size={13} />,
             label: 'Cloud Vault — Saved',
-            bg: 'rgba(5,150,105,0.92)', color: '#ECFDF5',
+            bg: 'var(--color-status-success)', color: 'var(--color-neutral-50)',
             pulse: false,
           },
           queued: {
             icon: <WifiOff size={13} />,
             label: 'Cloud Vault — Queued',
-            bg: 'rgba(180,83,9,0.90)', color: '#FFF7ED',
+            bg: 'var(--color-status-warning)', color: 'var(--color-neutral-50)',
             pulse: true,
           },
           idle: null,
@@ -117,7 +117,7 @@ export function SaveStatusBar() {
         if (!cfg) return null;
         return (
           <div
-            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold shadow-xl"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-medium shadow-xl"
             style={{ background: cfg.bg, color: cfg.color, backdropFilter: 'blur(8px)', letterSpacing: '0.02em', animation: 'fadeInUp 0.25s ease-out' }}
           >
             {cfg.pulse && <span className="pulse-dot" style={{ background: cfg.color }} />}
@@ -133,15 +133,15 @@ export function SaveStatusBar() {
       {/* ── Badge 2: Google Drive — Not Linked ── */}
       {showDriveNotLinked && (
         <div
-          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold shadow-xl"
-          style={{ background: 'rgba(51,65,85,0.90)', color: '#E2E8F0', backdropFilter: 'blur(8px)', letterSpacing: '0.02em', animation: 'fadeInUp 0.25s ease-out' }}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-medium shadow-xl"
+          style={{ background: 'var(--color-neutral-900)', color: 'var(--color-neutral-50)', backdropFilter: 'blur(8px)', letterSpacing: '0.02em', animation: 'fadeInUp 0.25s ease-out' }}
         >
           <CloudOff size={13} />
           <span>Google Drive — Not Linked</span>
           <button
             onClick={() => setActiveTab('profile')}
-            className="ml-1 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wide hover:opacity-80 transition-opacity"
-            style={{ background: '#D4AF37', color: '#0D1B2A' }}
+            className="ml-1 px-2 py-0.5 rounded-lg text-[10px] font-medium uppercase tracking-wide hover:opacity-80 transition-opacity"
+            style={{ background: 'var(--color-primary)', color: 'var(--color-primary-foreground)' }}
           >
             → Link Drive
           </button>
@@ -151,16 +151,16 @@ export function SaveStatusBar() {
       {/* ── Badge 2b: Google Drive — Session Expired ── */}
       {showDriveExpired && (
         <div
-          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold shadow-xl"
-          style={{ background: 'rgba(194,65,12,0.90)', color: '#FFF7ED', backdropFilter: 'blur(8px)', letterSpacing: '0.02em', animation: 'fadeInUp 0.25s ease-out' }}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-medium shadow-xl"
+          style={{ background: 'var(--color-status-warning)', color: 'var(--color-neutral-50)', backdropFilter: 'blur(8px)', letterSpacing: '0.02em', animation: 'fadeInUp 0.25s ease-out' }}
         >
           <AlertTriangle size={13} />
           <span>Google Drive — Session Expired</span>
           <button
             onClick={handleRelinkDrive}
             disabled={relinking}
-            className="ml-1 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wide hover:opacity-80 transition-opacity disabled:opacity-50"
-            style={{ background: '#D4AF37', color: '#0D1B2A' }}
+            className="ml-1 px-2 py-0.5 rounded-lg text-[10px] font-medium uppercase tracking-wide hover:opacity-80 transition-opacity disabled:opacity-50"
+            style={{ background: 'var(--color-primary)', color: 'var(--color-primary-foreground)' }}
           >
             {relinking ? <Loader2 size={10} className="animate-spin" /> : <><Link2 size={10} className="inline mr-0.5" />Re-link</>}
           </button>
@@ -170,16 +170,16 @@ export function SaveStatusBar() {
       {/* ── Badge 3: Google Drive — Files Pending ── */}
       {showDrivePending && (
         <div
-          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold shadow-xl"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-medium shadow-xl"
           style={{
-            background: isOnline ? 'rgba(37,99,235,0.90)' : 'rgba(180,83,9,0.90)',
-            color: isOnline ? '#EFF6FF' : '#FFF7ED',
+            background: isOnline ? 'var(--color-neutral-900)' : 'var(--color-status-warning)',
+            color: 'var(--color-neutral-50)',
             backdropFilter: 'blur(8px)',
             letterSpacing: '0.02em',
             animation: 'fadeInUp 0.25s ease-out',
           }}
         >
-          {!isOnline && <span className="pulse-dot" style={{ background: '#FFF7ED' }} />}
+          {!isOnline && <span className="pulse-dot" style={{ background: 'var(--color-neutral-50)' }} />}
           <CloudOff size={13} />
           <span>
             {driveQueueCount} file{driveQueueCount > 1 ? 's' : ''}{' '}
@@ -189,8 +189,8 @@ export function SaveStatusBar() {
             <button
               onClick={handleRetry}
               disabled={retrying}
-              className="ml-1 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wide hover:opacity-80 transition-opacity disabled:opacity-50"
-              style={{ background: '#D4AF37', color: '#0D1B2A' }}
+              className="ml-1 px-2 py-0.5 rounded-lg text-[10px] font-medium uppercase tracking-wide hover:opacity-80 transition-opacity disabled:opacity-50"
+              style={{ background: 'var(--color-primary)', color: 'var(--color-primary-foreground)' }}
             >
               {retrying ? <Loader2 size={10} className="animate-spin" /> : <><RefreshCw size={10} className="inline mr-0.5" />Retry</>}
             </button>

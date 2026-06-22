@@ -193,8 +193,7 @@ export function SyncDrivePicker({ open, onOpenChange, targetSlotLabel, onPick }:
               <button
                 onClick={() => localSync.runSyncAll(claims)}
                 disabled={localSync.busy}
-                className="w-full mb-2 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold disabled:opacity-50"
-                style={{ background: 'rgba(212,175,55,0.12)', color: '#B8860B', border: '1px solid rgba(212,175,55,0.3)' }}
+                className="w-full mb-2 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-medium disabled:opacity-50 bg-primary/10 text-primary border border-primary/30"
               >
                 {localSync.busy
                   ? <><Loader2 size={13} className="animate-spin" /> {localSync.progress?.claimLabel ?? 'Syncing…'}</>
@@ -235,10 +234,10 @@ export function SyncDrivePicker({ open, onOpenChange, targetSlotLabel, onPick }:
                             {(() => {
                               const st = localSync.claimStatus[c.claimId];
                               if (st?.state === 'synced') {
-                                return <span className="text-[10px] font-bold shrink-0" style={{ color: '#16a34a' }}>✓ synced</span>;
+                                return <span className="text-[10px] font-medium shrink-0 text-status-success">✓ synced</span>;
                               }
                               if (st?.state === 'new') {
-                                return <span className="text-[10px] font-bold shrink-0" style={{ color: '#B8860B' }}>{st.newCount} new</span>;
+                                return <span className="text-[10px] font-medium shrink-0 text-primary">{st.newCount} new</span>;
                               }
                               if (localSync.connected && st?.state === 'none') {
                                 return <span className="text-[10px] shrink-0 text-muted-foreground">not on this device</span>;
@@ -268,8 +267,7 @@ export function SyncDrivePicker({ open, onOpenChange, targetSlotLabel, onPick }:
                   label: `${detail.vehicleNumber} - ${detail.insuranceCompany}`,
                 })}
                 disabled={localSync.busy}
-                className="w-full mb-2 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold disabled:opacity-50"
-                style={{ background: 'rgba(212,175,55,0.12)', color: '#B8860B', border: '1px solid rgba(212,175,55,0.3)' }}
+                className="w-full mb-2 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-medium disabled:opacity-50 bg-primary/10 text-primary border border-primary/30"
               >
                 {localSync.busy
                   ? <><Loader2 size={13} className="animate-spin" /> {localSync.progress ? `Syncing ${localSync.progress.done}/${localSync.progress.total}…` : 'Syncing…'}</>
@@ -289,19 +287,19 @@ export function SyncDrivePicker({ open, onOpenChange, targetSlotLabel, onPick }:
                     onClick={() => pickDoc(d.docId, d.docType)}
                     disabled={downloadingId !== null}
                     className="w-full flex items-center justify-between gap-3 py-3 text-left hover:bg-muted/50 px-2 rounded-md transition-colors disabled:opacity-50"
-                    style={suggested ? { background: 'rgba(212,175,55,0.10)' } : undefined}
+                    style={suggested ? { background: 'var(--color-primary-alpha-10)' } : undefined}
                   >
                     <span className="flex items-center gap-2 min-w-0">
                       <FileText size={15} className="shrink-0 text-muted-foreground" />
                       <span className="truncate text-sm font-medium">{d.docType}</span>
                       {suggested && (
-                        <span className="shrink-0 text-[10px] font-bold text-[#D4AF37]">suggested</span>
+                        <span className="shrink-0 text-[10px] font-medium text-primary">suggested</span>
                       )}
                     </span>
                     {downloadingId === d.docId ? (
                       <Loader2 size={14} className="animate-spin shrink-0" />
                     ) : claimManifest && isDocSynced(d.docId, d.fileCount, claimManifest) ? (
-                      <span className="text-[10px] font-bold shrink-0" style={{ color: '#16a34a' }}>✓ on disk</span>
+                      <span className="text-[10px] font-medium shrink-0 text-status-success">✓ on disk</span>
                     ) : (
                       <span className="text-xs text-muted-foreground shrink-0">
                         {d.fileSizeKb} KB

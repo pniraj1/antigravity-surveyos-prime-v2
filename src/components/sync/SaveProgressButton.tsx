@@ -76,10 +76,10 @@ export function SaveProgressButton({ className = '', tone = 'default' }: SavePro
 
   const surface =
     state === 'error'
-      ? { background: '#B45309', color: '#FFF7ED' }
+      ? { background: 'var(--color-status-warning)', color: 'var(--color-primary-foreground)' }
       : tone === 'onDark'
-        ? { background: '#D4AF37', color: '#0D1B2A' }
-        : { background: '#0D1B2A', color: '#F8F9FA' };
+        ? { background: 'var(--color-primary)', color: 'var(--color-foreground)' }
+        : { background: 'var(--color-neutral-900)', color: 'var(--color-neutral-50)' };
 
   return (
     <button
@@ -87,7 +87,7 @@ export function SaveProgressButton({ className = '', tone = 'default' }: SavePro
       onClick={handleClick}
       disabled={state === 'saving' || !currentClaim}
       title="Save this claim to the cloud so it is available on your other computers"
-      className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 disabled:opacity-50 ${className}`}
+      className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all active:scale-95 disabled:opacity-50 ${className}`}
       style={surface}
     >
       {cfg[state].icon}

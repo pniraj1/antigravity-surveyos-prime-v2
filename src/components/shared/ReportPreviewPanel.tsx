@@ -101,27 +101,22 @@ export function ReportPreviewPanel({
   return (
     <div
       ref={containerRef}
-      className="rounded-2xl overflow-hidden"
-      style={{ background: '#FFFFFF', border: '1px solid #E2E6EA' }}
+      className="rounded-2xl overflow-hidden bg-card border border-border"
     >
       {/* ── Panel header ── */}
       <div
         className="flex items-center justify-between px-6 py-3"
-        style={{ background: '#0D1B2A', borderBottom: '1px solid rgba(255,255,255,0.08)' }}
+        style={{ background: 'var(--color-neutral-900)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}
       >
         <div className="flex items-center gap-2">
-          <FileText size={13} style={{ color: '#D4AF37' }} />
-          <span
-            className="text-[10px] font-black uppercase tracking-[0.2em]"
-            style={{ color: '#D4AF37' }}
-          >
+          <FileText size={13} className="text-primary" />
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">
             {title}
           </span>
         </div>
         <button
           onClick={onPrint}
-          className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide transition-all hover:opacity-80 active:scale-95"
-          style={{ background: '#D4AF37', color: '#0D1B2A' }}
+          className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide transition-all hover:opacity-80 active:scale-95 bg-primary text-primary-foreground"
         >
           <Printer size={11} />
           {printLabel}
@@ -131,7 +126,7 @@ export function ReportPreviewPanel({
       {/* ── Preview iframe ── */}
       <div
         style={{
-          background: '#E8EAED',
+          background: 'var(--color-neutral-200)',
           height,
           overflow: 'hidden',
           position: 'relative',
@@ -153,10 +148,7 @@ export function ReportPreviewPanel({
           />
         ) : (
           <div className="flex items-center justify-center h-full">
-            <p
-              className="text-[11px] font-bold animate-pulse"
-              style={{ color: '#8D99AE' }}
-            >
+            <p className="text-[11px] font-bold animate-pulse text-muted-foreground">
               Generating preview…
             </p>
           </div>
@@ -169,7 +161,7 @@ export function ReportPreviewPanel({
         style={{
           height: 14,
           cursor: 'ns-resize',
-          background: '#0D1B2A',
+          background: 'var(--color-neutral-900)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -180,7 +172,7 @@ export function ReportPreviewPanel({
         {[0, 1, 2, 3, 4].map((i) => (
           <div
             key={i}
-            style={{ width: 4, height: 4, borderRadius: '50%', background: '#D4AF37', opacity: 0.5 }}
+            style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--color-primary)', opacity: 0.5 }}
           />
         ))}
       </div>

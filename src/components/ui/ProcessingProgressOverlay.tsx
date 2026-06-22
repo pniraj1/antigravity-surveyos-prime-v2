@@ -71,8 +71,8 @@ export function ProcessingProgressOverlay({
           bottom: '24px',
           right: '24px',
           zIndex: 9999,
-          background: 'linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%)',
-          border: '1px solid rgba(37, 99, 235, 0.3)',
+          background: 'var(--color-neutral-900)',
+          border: '1px solid var(--color-neutral-600)',
           borderRadius: '12px',
           padding: '16px 20px',
           maxWidth: '320px',
@@ -94,8 +94,8 @@ export function ProcessingProgressOverlay({
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              color: '#e2e8f0',
-              fontWeight: 600,
+              color: 'var(--color-neutral-100)',
+              fontWeight: 500,
               fontSize: '14px',
             }}
           >
@@ -103,7 +103,7 @@ export function ProcessingProgressOverlay({
               size={16}
               style={{
                 animation: 'spin 1s linear infinite',
-                color: '#3b82f6',
+                color: 'var(--color-primary)',
               }}
             />
             Processing
@@ -112,23 +112,23 @@ export function ProcessingProgressOverlay({
             <button
               onClick={onCancel}
               style={{
-                background: 'rgba(255, 255, 255, 0.1)',
+                background: 'var(--color-neutral-800)',
                 border: 'none',
                 borderRadius: '6px',
                 padding: '4px 6px',
                 cursor: 'pointer',
-                color: '#cbd5e1',
+                color: 'var(--color-neutral-200)',
                 display: 'flex',
                 alignItems: 'center',
                 transition: 'background 0.2s',
               }}
               onMouseEnter={(e) => {
                 (e.currentTarget as HTMLButtonElement).style.background =
-                  'rgba(255, 255, 255, 0.2)';
+                  'var(--color-neutral-700)';
               }}
               onMouseLeave={(e) => {
                 (e.currentTarget as HTMLButtonElement).style.background =
-                  'rgba(255, 255, 255, 0.1)';
+                  'var(--color-neutral-800)';
               }}
               title="Cancel extraction"
             >
@@ -140,7 +140,7 @@ export function ProcessingProgressOverlay({
         {/* Progress message */}
         <div
           style={{
-            color: '#cbd5e1',
+            color: 'var(--color-neutral-200)',
             fontSize: '13px',
             lineHeight: '1.5',
             marginBottom: '8px',
@@ -153,7 +153,7 @@ export function ProcessingProgressOverlay({
         {/* Elapsed time */}
         <div
           style={{
-            color: '#64748b',
+            color: 'var(--color-neutral-400)',
             fontSize: '12px',
             display: 'flex',
             alignItems: 'center',
@@ -161,7 +161,7 @@ export function ProcessingProgressOverlay({
           }}
         >
           <span>Elapsed time</span>
-          <span style={{ fontWeight: 600, color: '#93c5fd' }}>
+          <span style={{ fontWeight: 500, color: 'var(--color-primary)' }}>
             {formatTime(elapsedSeconds)}
           </span>
         </div>
@@ -171,7 +171,7 @@ export function ProcessingProgressOverlay({
           style={{
             marginTop: '8px',
             height: '3px',
-            background: 'rgba(255, 255, 255, 0.1)',
+            background: 'var(--color-neutral-700)',
             borderRadius: '2px',
             overflow: 'hidden',
           }}
@@ -179,7 +179,7 @@ export function ProcessingProgressOverlay({
           <div
             style={{
               height: '100%',
-              background: 'linear-gradient(90deg, #3b82f6 0%, #2563eb 100%)',
+              background: 'var(--color-primary)',
               animation: 'progress 2s ease-in-out infinite',
               width: '30%',
             }}

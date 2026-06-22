@@ -136,7 +136,7 @@ export function DocumentEvidenceViewer({ panelWidth = '420px', embedded = false,
         <button
           onClick={() => useEvidenceStore.setState({ isOpen: true })}
           title="Open Evidence Viewer"
-          className="fixed right-0 top-1/2 -translate-y-1/2 z-[1000] border-none rounded-l-lg px-1.5 py-2.5 cursor-pointer shadow-lg flex flex-col items-center gap-1.5 bg-[#0D1B2A] text-[#D4AF37]"
+          className="fixed right-0 top-1/2 -translate-y-1/2 z-[1000] border-none rounded-l-lg px-1.5 py-2.5 cursor-pointer shadow-lg flex flex-col items-center gap-1.5 bg-neutral-900 text-primary"
         >
           <FileSearch size={18} />
           <ChevronRight size={14} className="rotate-180" />
@@ -145,7 +145,7 @@ export function DocumentEvidenceViewer({ panelWidth = '420px', embedded = false,
 
       {/* ── Side panel ── */}
       <div
-        className="flex flex-col bg-[#FAFBFC] border-l border-[#E2E6EA]"
+        className="flex flex-col bg-card border-l border-border"
         style={{
           position: embedded ? 'relative' : 'fixed',
           top: 0,
@@ -158,12 +158,12 @@ export function DocumentEvidenceViewer({ panelWidth = '420px', embedded = false,
         }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3.5 shrink-0 bg-[#0D1B2A] border-b border-[#E2E6EA]">
+        <div className="flex items-center justify-between px-4 py-3.5 shrink-0 bg-neutral-900 border-b border-border">
           <div className="flex items-center gap-2">
-            <FileSearch size={18} className="text-[#D4AF37]" />
+            <FileSearch size={18} className="text-primary" />
             <div>
-              <div className="text-[13px] font-semibold text-white">Evidence Viewer</div>
-              {docLabel && <div className="text-[11px] text-[#D4AF37] mt-0.5">{docLabel}</div>}
+              <div className="text-[13px] font-semibold text-primary-foreground">Evidence Viewer</div>
+              {docLabel && <div className="text-[11px] text-primary mt-0.5">{docLabel}</div>}
             </div>
           </div>
           {!embedded && <IconBtn onClick={close} title="Close"><X size={15} /></IconBtn>}
@@ -171,11 +171,11 @@ export function DocumentEvidenceViewer({ panelWidth = '420px', embedded = false,
 
         {/* Context snippet badge */}
         {field?.contextSnippet && (
-          <div className="mx-3.5 mt-3 px-3 py-2 rounded-lg shrink-0 bg-amber-50 border border-amber-200">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-[#D4AF37] mb-1">
+          <div className="mx-3.5 mt-3 px-3 py-2 rounded-lg shrink-0 bg-status-warning-tint border border-status-warning">
+            <div className="text-[10px] font-semibold uppercase tracking-widest text-primary mb-1">
               EXTRACTED FROM DOCUMENT
             </div>
-            <div className="text-xs leading-relaxed font-mono text-[#0D1B2A]">
+            <div className="text-xs leading-relaxed font-mono text-foreground">
               <HighlightedSnippet
                 snippet={field.contextSnippet}
                 highlight={field.fieldKey.replace(/_/g, ' ')}
@@ -209,9 +209,9 @@ export function DocumentEvidenceViewer({ panelWidth = '420px', embedded = false,
         </div>
 
         {/* Footer */}
-        <div className="px-3.5 py-2 border-t border-[#E2E6EA] shrink-0 flex items-center gap-1.5">
-          <ChevronRight size={14} className="text-[#8D99AE]" />
-          <span className="text-[11px] text-[#8D99AE]">
+        <div className="px-3.5 py-2 border-t border-border shrink-0 flex items-center gap-1.5">
+          <ChevronRight size={14} className="text-muted-foreground" />
+          <span className="text-[11px] text-muted-foreground">
             Click any field in the Reconciliation Hub to update this view
           </span>
         </div>
@@ -249,7 +249,7 @@ function HighlightedSnippet({ snippet, highlight }: { snippet: string; highlight
     <>
       {parts.map((part, i) =>
         /^[A-Z0-9]/.test(part) && part.length > 2 ? (
-          <mark key={i} className="bg-amber-200/60 text-[#0D1B2A] rounded px-0.5">
+          <mark key={i} className="bg-status-warning-tint text-foreground rounded px-0.5">
             {part}
           </mark>
         ) : (
@@ -262,7 +262,7 @@ function HighlightedSnippet({ snippet, highlight }: { snippet: string; highlight
 
 function EmptyState({ field }: { field: EvidenceField | null }) {
   return (
-    <div className="text-center text-[#8D99AE] p-6">
+    <div className="text-center text-muted-foreground p-6">
       <FileSearch size={40} className="opacity-30 mb-3 mx-auto" />
       <p className="text-[13px] m-0">
         {field

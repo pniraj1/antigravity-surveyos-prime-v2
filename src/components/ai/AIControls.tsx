@@ -21,10 +21,10 @@ export function ProviderHealthBadge() {
     : (profile.groqModel?.trim() || CURRENT_MODELS.groq);
   const shortModel = model.split('/').pop()?.replace('gemini-', 'Gemini ').replace('-instruct', '') ?? model;
 
-  const dot = health === 'ok'           ? '#22c55e'
-            : health === 'rate-limited' ? '#f59e0b'
-            : health === 'error'        ? '#ef4444'
-            :                            '#8D99AE';
+  const dot = health === 'ok'           ? 'var(--color-status-success)'
+            : health === 'rate-limited' ? 'var(--color-status-warning)'
+            : health === 'error'        ? 'var(--color-status-danger)'
+            :                            'var(--color-neutral-400)';
   const label = health === 'ok'           ? 'Ready'
               : health === 'rate-limited' ? 'Rate Limited'
               : health === 'error'        ? 'Key Error — check Profile'
@@ -32,12 +32,12 @@ export function ProviderHealthBadge() {
 
   return (
     <div
-      className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold"
+      className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-medium"
       style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}
       title={`${provider === 'gemini' ? 'Google Gemini' : 'Groq'} · ${model} · ${label}`}
     >
       <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: dot }} />
-      <span style={{ color: '#F8F9FA' }}>{shortModel}</span>
+      <span style={{ color: 'var(--color-neutral-50)' }}>{shortModel}</span>
       <span style={{ color: 'rgba(232,236,240,0.5)' }}>·</span>
       <span style={{ color: dot }}>{label}</span>
     </div>
@@ -84,13 +84,13 @@ export function ModelSelector() {
     setOpen(false);
   }
 
-  const accentColor = provider === 'groq' ? '#F26639' : provider === 'nvidia' ? '#76B900' : '#D4AF37';
+  const accentColor = provider === 'groq' ? 'var(--color-status-warning)' : provider === 'nvidia' ? 'var(--color-status-success)' : 'var(--color-primary)';
 
   return (
     <div className="relative">
       <button
         onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all"
         style={{
           background: 'rgba(255,255,255,0.08)',
           border: '1px solid rgba(255,255,255,0.12)',
@@ -107,7 +107,7 @@ export function ModelSelector() {
           <div
             className="absolute right-0 top-full mt-1.5 z-20 rounded-xl overflow-hidden py-1"
             style={{
-              background: '#1a2d45',
+              background: 'var(--color-neutral-900)',
               border: '1px solid rgba(255,255,255,0.12)',
               boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
               minWidth: 220,
@@ -126,11 +126,11 @@ export function ModelSelector() {
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-black" style={{ color: isActive ? accentColor : '#F8F9FA' }}>
+                      <span className="text-[11px] font-medium" style={{ color: isActive ? accentColor : 'var(--color-neutral-50)' }}>
                         {m.label}
                       </span>
                       {isActive && (
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: `${accentColor}25`, color: accentColor }}>
+                        <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10" style={{ color: accentColor }}>
                           Active
                         </span>
                       )}
@@ -172,10 +172,10 @@ export function DocModeToggle() {
             key={opt.id}
             onClick={() => updateProfile({ aiDocMode: opt.id })}
             title={opt.tip}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-black transition-all"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-medium transition-all"
             style={{
-              background: isActive ? 'rgba(212,175,55,0.85)' : 'transparent',
-              color: isActive ? '#0D1B2A' : 'rgba(232,236,240,0.55)',
+              background: isActive ? 'var(--color-primary)' : 'transparent',
+              color: isActive ? 'var(--color-neutral-900)' : 'rgba(232,236,240,0.55)',
             }}
           >
             {opt.icon}
@@ -194,9 +194,9 @@ export function ProviderToggle() {
   const aiProvider = profile.aiProvider ?? 'gemini';
 
   const PROVIDERS: { id: 'gemini' | 'groq' | 'nvidia'; label: string; icon: React.ReactNode; activeBg: string; activeColor: string }[] = [
-    { id: 'gemini', label: 'Gemini', icon: <Sparkles size={11} />, activeBg: 'rgba(212,175,55,0.9)', activeColor: '#0D1B2A' },
-    { id: 'groq',   label: 'Groq',   icon: <Zap size={11} />,      activeBg: 'rgba(242,102,57,0.9)', activeColor: '#FFFFFF' },
-    { id: 'nvidia', label: 'NVIDIA', icon: <Cpu size={11} />,      activeBg: 'rgba(118,185,0,0.9)',  activeColor: '#0D1B2A' },
+    { id: 'gemini', label: 'Gemini', icon: <Sparkles size={11} />, activeBg: 'var(--color-primary)',          activeColor: 'var(--color-neutral-900)' },
+    { id: 'groq',   label: 'Groq',   icon: <Zap size={11} />,      activeBg: 'var(--color-status-warning)',   activeColor: 'var(--color-neutral-50)' },
+    { id: 'nvidia', label: 'NVIDIA', icon: <Cpu size={11} />,      activeBg: 'var(--color-status-success)',   activeColor: 'var(--color-neutral-900)' },
   ];
   const enabled = PROVIDERS.filter(p => config.providers[p.id]?.enabled);
 
@@ -208,7 +208,7 @@ export function ProviderToggle() {
           <button
             key={p.id}
             onClick={() => updateProfile({ aiProvider: p.id })}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all"
             style={{ background: active ? p.activeBg : 'transparent', color: active ? p.activeColor : 'rgba(232,236,240,0.6)' }}
           >
             {p.icon}{p.label}
