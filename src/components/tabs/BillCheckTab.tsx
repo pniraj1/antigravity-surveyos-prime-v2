@@ -148,7 +148,7 @@ export function BillCheckTab() {
                 <button
                   id="btn-print-bill-check"
                   onClick={() => currentClaim && triggerUIICBillCheckPrint(currentClaim, profile)}
-                  className="inline-flex items-center gap-2.5 px-6 py-3 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 hover:scale-105 active:scale-95 bg-primary text-primary"
+                  className="inline-flex items-center gap-2.5 px-6 py-3 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 hover:scale-105 active:scale-95 bg-primary text-primary-foreground"
                   style={{ boxShadow: '0 4px 14px rgba(13,27,42,0.3)' }}
                 >
                   <Printer size={16} />
@@ -159,7 +159,7 @@ export function BillCheckTab() {
 
             {/* Info note */}
             <div
-              className="flex items-start gap-3 p-4 rounded-xl bg-primary/opacity-10 border border-primary/opacity-20"
+              className="flex items-start gap-3 p-4 rounded-xl bg-primary/10 border border-primary/20"
             >
               <FileText size={16} className="text-primary flex-shrink-0 mt-0.5" />
               <div className="text-xs text-foreground" style={{ lineHeight: 1.6 }}>

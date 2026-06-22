@@ -95,7 +95,7 @@ export function FeesTab() {
       {/* ── Header ─────────────────────────────────────── */}
       <div
         className="px-8 py-8 lg:px-12"
-        style={{ background: 'linear-gradient(135deg, var(--color-neutral-900) 0%, #1e3a5f 100%)' }}
+        style={{ background: 'var(--color-neutral-900)' }}
       >
         <div className="max-w-5xl mx-auto">
           <div
@@ -123,8 +123,8 @@ export function FeesTab() {
               }}
               className="flex items-center gap-2 px-5 py-2.5 rounded-full font-medium text-xs transition-all shadow-lg hover:scale-105 active:scale-95"
               style={{
-                background: 'linear-gradient(135deg, var(--color-primary), #b8942a)',
-                color: '#FFFFFF',
+                background: 'var(--color-primary)',
+                color: 'var(--color-neutral-50)',
                 cursor: 'pointer',
                 border: 'none',
               }}
@@ -143,7 +143,7 @@ export function FeesTab() {
           <div className="lg:col-span-2 space-y-5">
 
             {/* Bill Metadata */}
-            <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid var(--color-neutral-200)' }}>
+            <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--color-card)', border: '1px solid var(--color-neutral-200)' }}>
               <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--color-neutral-100)', background: 'var(--color-neutral-50)' }}>
                 <div className="flex items-center gap-2">
                   <FileText size={14} className="text-primary" />
@@ -189,7 +189,7 @@ export function FeesTab() {
             </div>
 
             {/* Fee Items */}
-            <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid var(--color-neutral-200)' }}>
+            <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--color-card)', border: '1px solid var(--color-neutral-200)' }}>
               <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--color-neutral-100)', background: 'var(--color-neutral-50)' }}>
                 <div className="flex items-center gap-2">
                   <Banknote size={14} className="text-primary" />
@@ -223,7 +223,7 @@ export function FeesTab() {
             </div>
 
             {/* Travel & Toll (itemised) */}
-            <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid var(--color-neutral-200)' }}>
+            <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--color-card)', border: '1px solid var(--color-neutral-200)' }}>
               <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--color-neutral-100)', background: 'var(--color-neutral-50)' }}>
                 <div className="flex items-center gap-2">
                   <Car size={14} className="text-primary" />
@@ -297,7 +297,7 @@ export function FeesTab() {
             </div>
 
             {/* Photos */}
-            <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid var(--color-neutral-200)' }}>
+            <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--color-card)', border: '1px solid var(--color-neutral-200)' }}>
               <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--color-neutral-100)', background: 'var(--color-neutral-50)' }}>
                 <div className="flex items-center gap-2">
                   <Camera size={14} className="text-primary" />
@@ -398,7 +398,7 @@ export function FeesTab() {
                 {/* Gross Total */}
                 <div
                   className="flex items-center justify-between px-4 py-4 rounded-xl mt-2"
-                  style={{ background: 'linear-gradient(135deg, var(--color-primary), #f0d870)' }}
+                  style={{ background: 'var(--color-primary)' }}
                 >
                   <span className="text-sm font-medium" style={{ color: 'var(--color-neutral-900)' }}>GROSS TOTAL</span>
                   <span className="text-lg font-medium" style={{ color: 'var(--color-neutral-900)' }}>{fmt(grossTotal)}</span>

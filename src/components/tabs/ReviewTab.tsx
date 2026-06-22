@@ -119,7 +119,7 @@ function InlineEvidencePanel({ claimId }: { claimId: string }) {
 
       {/* Context snippet */}
       {field?.contextSnippet && (
-        <div style={{ margin: '10px 12px 0', padding: '7px 10px', background: 'var(--color-status-success-tint)', border: '1px solid var(--color-neutral-600)', borderRadius: 7, flexShrink: 0 }}>
+        <div style={{ margin: '10px 12px 0', padding: '7px 10px', background: 'var(--color-neutral-100)', border: '1px solid var(--color-neutral-200)', borderRadius: 7, flexShrink: 0 }}>
           <div style={{ color: 'var(--color-neutral-400)', fontSize: 9, fontWeight: 500, letterSpacing: '0.05em', marginBottom: 3 }}>EXTRACTED FROM DOCUMENT</div>
           <div style={{ color: 'var(--color-neutral-200)', fontSize: 11, lineHeight: 1.5, fontFamily: 'monospace' }}>{field.contextSnippet}</div>
         </div>

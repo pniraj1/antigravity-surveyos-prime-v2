@@ -35,7 +35,7 @@ export function ReinspectionTab() {
       {/* ── Header ─────────────────────────────────────── */}
       <div
         className="px-8 py-8 lg:px-12"
-        style={{ background: 'linear-gradient(135deg, var(--color-neutral-900) 0%, #1e3a5f 100%)' }}
+        style={{ background: 'var(--color-neutral-900)' }}
       >
         <div className="max-w-5xl mx-auto">
           <div
