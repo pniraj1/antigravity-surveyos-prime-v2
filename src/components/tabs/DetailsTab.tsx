@@ -79,7 +79,7 @@ function InlineEvidencePanel({ claimId }: { claimId: string }) {
       {/* Context snippet */}
       {field?.contextSnippet && (
         <div className="mx-3 mt-3 px-3 py-2 rounded-lg shrink-0 bg-[var(--color-status-warning-tint)] border border-[var(--color-status-warning)]/30">
-          <div className="text-[9px] font-medium uppercase tracking-widest text-[var(--color-status-warning)] mb-1">Extracted from document</div>
+          <div className="text-[10px] font-medium tracking-wide text-[var(--color-status-warning)] mb-1">Extracted from document</div>
           <div className="text-[11px] leading-relaxed font-mono text-[var(--color-neutral-900)]">{field.contextSnippet}</div>
         </div>
       )}
