@@ -21,21 +21,20 @@ export function DuplicateUploadDialog({
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div
-        className="w-full max-w-sm rounded-2xl p-6 flex flex-col gap-5 shadow-2xl animate-in fade-in zoom-in duration-200"
-        style={{ background: '#fff', border: '1px solid rgba(13,27,42,0.08)' }}
+        className="w-full max-w-sm rounded-2xl p-6 flex flex-col gap-5 shadow-2xl animate-in fade-in zoom-in duration-200 bg-card border border-border"
       >
         {/* Header */}
         <div className="flex items-start gap-3">
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{ background: 'rgba(245,158,11,0.1)' }}
+            style={{ background: 'var(--color-status-warning-tint)' }}
           >
-            <AlertTriangle size={20} style={{ color: '#F59E0B' }} />
+            <AlertTriangle size={20} className="text-status-warning" />
           </div>
           <div>
-            <h2 className="text-sm font-black text-[#0D1B2A]">File Already Exists</h2>
-            <p className="text-xs text-[#8D99AE] mt-1 leading-relaxed">
-              A file named <span className="font-bold text-[#0D1B2A]">&ldquo;{fileName}&rdquo;</span> already
+            <h2 className="text-sm font-medium text-foreground">File Already Exists</h2>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              A file named <span className="font-medium text-foreground">&ldquo;{fileName}&rdquo;</span> already
               exists in this claim&apos;s Drive folder.
             </p>
           </div>
@@ -45,25 +44,21 @@ export function DuplicateUploadDialog({
         <div className="flex flex-col gap-2">
           <button
             onClick={onReplace}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black transition-all hover:scale-[1.01]"
-            style={{
-              background: 'linear-gradient(135deg, #D4AF37, #f0d870)',
-              color: '#0D1B2A',
-            }}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-medium bg-primary text-primary-foreground transition-all hover:scale-[1.01]"
           >
             <RefreshCw size={14} />
             Replace existing file
           </button>
           <button
             onClick={onKeepBoth}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold border border-[#E2E6EA] text-[#0D1B2A] hover:bg-[#FAFBFC] transition-all"
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-medium border border-border text-foreground hover:bg-neutral-100 transition-all"
           >
             <Copy size={14} />
             Keep both &mdash; upload as &ldquo;{suffixedName}&rdquo;
           </button>
           <button
             onClick={onCancel}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-[#8D99AE] hover:text-[#0D1B2A] transition-all"
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground transition-all"
           >
             <X size={14} />
             Cancel

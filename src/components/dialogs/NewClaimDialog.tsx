@@ -71,7 +71,7 @@ function ArchiveFirstScreen({
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <Card className="w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-200">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-amber-600">
+          <CardTitle className="flex items-center gap-2 text-status-warning">
             <AlertCircle size={18} />
             Active Claim Limit Reached
           </CardTitle>
@@ -86,11 +86,10 @@ function ArchiveFirstScreen({
             {activeClaims.map(c => (
               <div
                 key={c.id}
-                className="flex items-center justify-between px-3 py-2.5 rounded-lg border"
-                style={{ background: '#FAFAFA' }}
+                className="flex items-center justify-between px-3 py-2.5 rounded-lg border bg-neutral-50"
               >
                 <div className="min-w-0">
-                  <div className="text-sm font-bold truncate">
+                  <div className="text-sm font-medium truncate">
                     {c.registrationNumber || 'No reg. no.'}
                   </div>
                   <div className="text-[11px] text-muted-foreground flex gap-2">
@@ -107,11 +106,11 @@ function ArchiveFirstScreen({
                   onClick={() => handleArchive(c.id)}
                   disabled={archivingId === c.id || !c.isCompleted}
                   title={!c.isCompleted ? 'Complete this claim before archiving' : undefined}
-                  className="ml-3 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold border transition-colors flex-shrink-0"
+                  className="ml-3 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors flex-shrink-0"
                   style={{
-                    borderColor: !c.isCompleted ? '#ccc' : '#D4AF37',
-                    color: (archivingId === c.id || !c.isCompleted) ? '#8D99AE' : '#0D1B2A',
-                    background: (archivingId === c.id || !c.isCompleted) ? '#F0F2F5' : 'rgba(212,175,55,0.08)',
+                    borderColor: !c.isCompleted ? 'var(--color-neutral-200)' : 'var(--color-primary)',
+                    color: (archivingId === c.id || !c.isCompleted) ? 'var(--color-neutral-600)' : 'var(--color-primary)',
+                    background: (archivingId === c.id || !c.isCompleted) ? 'var(--color-neutral-100)' : 'rgb(212 175 55 / 0.08)',
                     cursor: (archivingId === c.id || !c.isCompleted) ? 'not-allowed' : 'pointer',
                   }}
                 >
@@ -320,7 +319,7 @@ export function NewClaimDialog() {
             <div className="relative">
               <Input
                 autoFocus
-                className="uppercase text-lg font-bold pr-10"
+                className="uppercase text-lg font-medium pr-10"
                 placeholder="e.g. MH01AB1234"
                 value={vehicleNo}
                 onChange={(e) => setVehicleNo(e.target.value)}
@@ -330,38 +329,38 @@ export function NewClaimDialog() {
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
                 {dupState === 'checking' && <Loader2 size={15} className="animate-spin text-muted-foreground" />}
-                {dupState === 'clear'    && <CheckCircle2 size={15} className="text-emerald-500" />}
-                {dupState === 'duplicate' && <AlertTriangle size={15} className="text-amber-500" />}
+                {dupState === 'clear'    && <CheckCircle2 size={15} className="text-status-success" />}
+                {dupState === 'duplicate' && <AlertTriangle size={15} className="text-status-warning" />}
               </div>
             </div>
 
             {dupState === 'duplicate' && (
-              <div className="rounded-xl overflow-hidden border border-amber-300" style={{ background: 'rgba(251,191,36,0.08)' }}>
-                <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-400/10 border-b border-amber-300/40">
-                  <AlertTriangle size={14} className="text-amber-500 flex-shrink-0" />
-                  <span className="text-xs font-black text-amber-700 uppercase tracking-wide">Duplicate Vehicle Number</span>
+              <div className="rounded-xl overflow-hidden border" style={{ borderColor: 'var(--color-status-warning)', background: 'var(--color-status-warning-tint)' }}>
+                <div className="flex items-center gap-2 px-4 py-2.5 border-b" style={{ background: 'var(--color-status-warning-tint)', borderBottomColor: 'var(--color-status-warning)' }}>
+                  <AlertTriangle size={14} className="text-status-warning flex-shrink-0" />
+                  <span className="text-xs font-medium text-status-warning uppercase tracking-wide">Duplicate Vehicle Number</span>
                 </div>
                 <div className="px-4 py-2 space-y-1.5">
-                  <p className="text-[11px] text-amber-800/80 mb-2 leading-snug">
+                  <p className="text-[11px] text-status-warning mb-2 leading-snug" style={{ opacity: 0.8 }}>
                     This vehicle number already exists in your records.
                   </p>
                   {dupMatches.map(m => (
-                    <div key={m.id} className="flex items-center justify-between py-1.5 px-3 rounded-lg" style={{ background: 'rgba(251,191,36,0.12)' }}>
+                    <div key={m.id} className="flex items-center justify-between py-1.5 px-3 rounded-lg" style={{ background: 'var(--color-status-warning-tint)' }}>
                       <div>
-                        <span className="text-xs font-black text-amber-900">{m.registrationNumber.toUpperCase()}</span>
-                        {m.reportNo && <span className="ml-2 text-[10px] text-amber-700/70">Report: {m.reportNo}</span>}
+                        <span className="text-xs font-medium text-status-warning">{m.registrationNumber.toUpperCase()}</span>
+                        {m.reportNo && <span className="ml-2 text-[10px] text-status-warning" style={{ opacity: 0.7 }}>Report: {m.reportNo}</span>}
                       </div>
-                      <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full"
-                        style={{ background: m.surveyType === 'spot' ? 'rgba(59,130,246,0.15)' : 'rgba(16,185,129,0.15)', color: m.surveyType === 'spot' ? '#2563eb' : '#059669' }}>
+                      <span className="text-[9px] font-medium uppercase px-2 py-0.5 rounded-full"
+                        style={{ background: m.surveyType === 'spot' ? 'rgb(59 130 246 / 0.15)' : 'rgb(16 185 129 / 0.15)', color: m.surveyType === 'spot' ? 'var(--color-primary)' : 'var(--color-status-success)' }}>
                         {m.surveyType ?? 'claim'}
                       </span>
                     </div>
                   ))}
                 </div>
-                <div className="px-4 py-3 border-t border-amber-300/40">
+                <div className="px-4 py-3 border-t" style={{ borderTopColor: 'var(--color-status-warning)' }}>
                   <label className="flex items-start gap-2.5 cursor-pointer">
-                    <input type="checkbox" className="mt-0.5 w-4 h-4 accent-amber-500 flex-shrink-0" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} />
-                    <span className="text-[11px] text-amber-800 font-semibold leading-snug">
+                    <input type="checkbox" className="mt-0.5 w-4 h-4 flex-shrink-0" style={{ accentColor: 'var(--color-status-warning)' }} checked={confirmed} onChange={e => setConfirmed(e.target.checked)} />
+                    <span className="text-[11px] text-status-warning font-medium leading-snug">
                       I understand this is a duplicate entry and still want to create a new claim.
                     </span>
                   </label>
@@ -370,7 +369,7 @@ export function NewClaimDialog() {
             )}
 
             {dupState === 'clear' && vehicleNo.trim().length >= 4 && (
-              <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 font-semibold px-1">
+              <div className="flex items-center gap-1.5 text-[11px] text-status-success font-medium px-1">
                 <CheckCircle2 size={12} />
                 No existing claim found for this vehicle number.
               </div>
@@ -387,7 +386,7 @@ export function NewClaimDialog() {
               </button>
             </div>
             {surveyType === 'valuation' && (
-              <p className="text-[11px] text-amber-700 font-semibold px-1">
+              <p className="text-[11px] text-status-warning font-medium px-1">
                 Break-in inspection — RC upload auto-fills vehicle details, surveyor fills condition manually.
               </p>
             )}
