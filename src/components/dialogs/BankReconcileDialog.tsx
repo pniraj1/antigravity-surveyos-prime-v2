@@ -123,27 +123,27 @@ export function BankReconcileDialog({ onClose }: Props) {
       style={{ background: 'rgba(13,27,42,0.7)', backdropFilter: 'blur(4px)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div
-        className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl"
-        style={{ background: '#FFFFFF' }}
-      >
+      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl bg-card">
         {/* Header */}
         <div
           className="px-6 py-5 flex items-center justify-between"
-          style={{ background: 'linear-gradient(135deg, #0D1B2A, #1e3a5f)', borderRadius: '16px 16px 0 0' }}
+          style={{ background: 'var(--color-neutral-900)', borderRadius: '16px 16px 0 0' }}
         >
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'rgba(212,175,55,0.2)' }}>
-              <BanknoteIcon size={18} style={{ color: '#D4AF37' }} />
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center"
+              style={{ background: 'var(--color-status-warning-tint)' }}
+            >
+              <BanknoteIcon size={18} className="text-primary" />
             </div>
             <div>
-              <h2 className="text-base font-black" style={{ color: '#F8F9FA' }}>Reconcile Bank Statement</h2>
-              <p className="text-[11px]" style={{ color: 'rgba(232,236,240,0.6)' }}>
+              <h2 className="text-base font-medium" style={{ color: 'var(--color-neutral-50)' }}>Reconcile Bank Statement</h2>
+              <p className="text-[11px]" style={{ color: 'var(--color-neutral-400)' }}>
                 Match incoming payments to outstanding fee bills
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: 'rgba(232,236,240,0.6)' }}>
+          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: 'var(--color-neutral-400)' }}>
             <X size={18} />
           </button>
         </div>
@@ -151,9 +151,12 @@ export function BankReconcileDialog({ onClose }: Props) {
         <div className="p-6 space-y-5">
 
           {/* Unpaid summary */}
-          <div className="flex items-center gap-3 px-4 py-3 rounded-xl" style={{ background: '#FEF3C7', border: '1px solid #FDE68A' }}>
-            <AlertCircle size={15} style={{ color: '#92400E' }} />
-            <span className="text-xs font-semibold" style={{ color: '#92400E' }}>
+          <div
+            className="flex items-center gap-3 px-4 py-3 rounded-xl"
+            style={{ background: 'var(--color-status-warning-tint)', border: '1px solid var(--color-status-warning)' }}
+          >
+            <AlertCircle size={15} style={{ color: 'var(--color-status-warning)' }} />
+            <span className="text-xs font-medium" style={{ color: 'var(--color-status-warning)' }}>
               {unpaidClaims.length} unpaid claim{unpaidClaims.length !== 1 ? 's' : ''} outstanding — upload your bank statement to auto-match payments
             </span>
           </div>
@@ -172,24 +175,24 @@ export function BankReconcileDialog({ onClose }: Props) {
                 onClick={() => fileRef.current?.click()}
                 disabled={status === 'extracting'}
                 className="w-full flex flex-col items-center justify-center gap-3 py-10 rounded-2xl border-2 border-dashed transition-all"
-                style={{ borderColor: '#D4AF37', background: 'rgba(212,175,55,0.04)' }}
+                style={{ borderColor: 'var(--color-primary)', background: 'var(--color-status-warning-tint)' }}
               >
                 {status === 'extracting' ? (
                   <>
-                    <Loader2 size={28} className="animate-spin" style={{ color: '#D4AF37' }} />
-                    <span className="text-sm font-bold" style={{ color: '#4A4E69' }}>Extracting transactions with AI…</span>
-                    <span className="text-xs" style={{ color: '#8D99AE' }}>This may take 10–20 seconds for multi-page PDFs</span>
+                    <Loader2 size={28} className="animate-spin text-primary" />
+                    <span className="text-sm font-medium" style={{ color: 'var(--color-neutral-600)' }}>Extracting transactions with AI…</span>
+                    <span className="text-xs" style={{ color: 'var(--color-neutral-400)' }}>This may take 10–20 seconds for multi-page PDFs</span>
                   </>
                 ) : (
                   <>
-                    <Upload size={28} style={{ color: '#D4AF37' }} />
-                    <span className="text-sm font-bold" style={{ color: '#0D1B2A' }}>Upload Bank Statement</span>
-                    <span className="text-xs" style={{ color: '#8D99AE' }}>PDF or CSV — credit entries will be extracted automatically</span>
+                    <Upload size={28} className="text-primary" />
+                    <span className="text-sm font-medium" style={{ color: 'var(--color-neutral-900)' }}>Upload Bank Statement</span>
+                    <span className="text-xs" style={{ color: 'var(--color-neutral-400)' }}>PDF or CSV — credit entries will be extracted automatically</span>
                   </>
                 )}
               </button>
               {status === 'error' && (
-                <p className="mt-3 text-xs font-semibold text-center" style={{ color: '#EF4444' }}>{errorMsg}</p>
+                <p className="mt-3 text-xs font-medium text-center" style={{ color: 'var(--color-status-danger)' }}>{errorMsg}</p>
               )}
             </div>
           )}
@@ -200,13 +203,13 @@ export function BankReconcileDialog({ onClose }: Props) {
               {matches.length > 0 ? (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-xs font-black uppercase tracking-widest" style={{ color: '#8D99AE' }}>
+                    <h3 className="text-xs font-medium uppercase tracking-widest" style={{ color: 'var(--color-neutral-400)' }}>
                       Matched Payments ({matches.length})
                     </h3>
                     <button
                       onClick={() => { setStatus('idle'); setMatches([]); setUnmatched([]); }}
-                      className="flex items-center gap-1 text-xs font-semibold"
-                      style={{ color: '#4A4E69' }}
+                      className="flex items-center gap-1 text-xs font-medium"
+                      style={{ color: 'var(--color-neutral-600)' }}
                     >
                       <RefreshCw size={12} /> Upload another
                     </button>
@@ -218,31 +221,39 @@ export function BankReconcileDialog({ onClose }: Props) {
                       onClick={() => toggleConfirm(i)}
                       className="flex items-center gap-4 p-4 rounded-xl cursor-pointer transition-all"
                       style={{
-                        border: `1px solid ${m.confirmed ? '#10B981' : '#E2E6EA'}`,
-                        background: m.confirmed ? 'rgba(16,185,129,0.04)' : '#FAFAFA',
+                        border: `1px solid ${m.confirmed ? 'var(--color-status-success)' : 'var(--color-neutral-200)'}`,
+                        background: m.confirmed ? 'var(--color-status-success-tint)' : 'var(--color-neutral-50)',
                       }}
                     >
                       <div
                         className="w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all"
-                        style={{ borderColor: m.confirmed ? '#10B981' : '#D1D5DB', background: m.confirmed ? '#10B981' : 'transparent' }}
+                        style={{
+                          borderColor: m.confirmed ? 'var(--color-status-success)' : 'var(--color-neutral-200)',
+                          background: m.confirmed ? 'var(--color-status-success)' : 'transparent',
+                        }}
                       >
                         {m.confirmed && <CheckCircle size={14} color="white" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-black" style={{ color: '#0D1B2A' }}>{m.vehicleNo}</span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded" style={{ background: '#F0F2F5', color: '#4A4E69' }}>{m.reportNo}</span>
+                          <span className="text-sm font-medium" style={{ color: 'var(--color-neutral-900)' }}>{m.vehicleNo}</span>
+                          <span
+                            className="text-[10px] font-medium px-2 py-0.5 rounded"
+                            style={{ background: 'var(--color-neutral-100)', color: 'var(--color-neutral-600)' }}
+                          >
+                            {m.reportNo}
+                          </span>
                         </div>
-                        <div className="text-[11px] truncate mt-0.5" style={{ color: '#8D99AE' }}>
+                        <div className="text-[11px] truncate mt-0.5" style={{ color: 'var(--color-neutral-400)' }}>
                           {m.tx.narration} · {m.tx.date}
                           {m.tx.reference && ` · Ref: ${m.tx.reference}`}
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <div className="text-sm font-black" style={{ color: '#10B981' }}>
+                        <div className="text-sm font-medium" style={{ color: 'var(--color-status-success)' }}>
                           ₹{m.tx.amount.toLocaleString('en-IN')}
                         </div>
-                        <div className="text-[10px]" style={{ color: '#8D99AE' }}>
+                        <div className="text-[10px]" style={{ color: 'var(--color-neutral-400)' }}>
                           Billed ₹{m.feeTotal.toLocaleString('en-IN')}
                         </div>
                       </div>
@@ -250,9 +261,12 @@ export function BankReconcileDialog({ onClose }: Props) {
                   ))}
 
                   {unmatched.length > 0 && (
-                    <div className="px-4 py-3 rounded-xl" style={{ background: '#F8F9FA', border: '1px solid #E2E6EA' }}>
-                      <p className="text-[11px]" style={{ color: '#8D99AE' }}>
-                        <span className="font-bold">{unmatched.length} transaction{unmatched.length !== 1 ? 's' : ''}</span> could not be matched to any unpaid claim:&nbsp;
+                    <div
+                      className="px-4 py-3 rounded-xl"
+                      style={{ background: 'var(--color-neutral-50)', border: '1px solid var(--color-neutral-200)' }}
+                    >
+                      <p className="text-[11px]" style={{ color: 'var(--color-neutral-400)' }}>
+                        <span className="font-medium">{unmatched.length} transaction{unmatched.length !== 1 ? 's' : ''}</span> could not be matched to any unpaid claim:&nbsp;
                         {unmatched.map(t => `₹${t.amount.toLocaleString('en-IN')} (${t.date})`).join(', ')}
                       </p>
                     </div>
@@ -261,10 +275,10 @@ export function BankReconcileDialog({ onClose }: Props) {
                   <button
                     onClick={applyMatches}
                     disabled={saving || confirmedCount === 0}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-black transition-all"
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium transition-all"
                     style={{
-                      background: confirmedCount > 0 ? 'linear-gradient(135deg, #D4AF37, #f0d870)' : '#E2E6EA',
-                      color: confirmedCount > 0 ? '#0D1B2A' : '#8D99AE',
+                      background: confirmedCount > 0 ? 'var(--color-primary)' : 'var(--color-neutral-200)',
+                      color: confirmedCount > 0 ? 'var(--color-primary-foreground)' : 'var(--color-neutral-400)',
                     }}
                   >
                     {saving ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
@@ -273,16 +287,16 @@ export function BankReconcileDialog({ onClose }: Props) {
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <FileText size={32} className="mx-auto mb-3" style={{ color: '#D1D5DB' }} />
-                  <p className="text-sm font-bold" style={{ color: '#4A4E69' }}>No matches found</p>
-                  <p className="text-xs mt-1" style={{ color: '#8D99AE' }}>
+                  <FileText size={32} className="mx-auto mb-3" style={{ color: 'var(--color-neutral-200)' }} />
+                  <p className="text-sm font-medium" style={{ color: 'var(--color-neutral-600)' }}>No matches found</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--color-neutral-400)' }}>
                     None of the credit amounts matched your outstanding fee bills.
                     {unmatched.length > 0 && ` Found ${unmatched.length} credit transaction(s) but amounts didn't match.`}
                   </p>
                   <button
                     onClick={() => { setStatus('idle'); setMatches([]); setUnmatched([]); }}
-                    className="mt-4 text-xs font-bold underline"
-                    style={{ color: '#4A4E69' }}
+                    className="mt-4 text-xs font-medium underline"
+                    style={{ color: 'var(--color-neutral-600)' }}
                   >
                     Try another file
                   </button>
@@ -294,17 +308,20 @@ export function BankReconcileDialog({ onClose }: Props) {
           {/* Success state */}
           {savedCount > 0 && (
             <div className="text-center py-8">
-              <div className="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center" style={{ background: 'rgba(16,185,129,0.1)' }}>
-                <CheckCircle size={28} style={{ color: '#10B981' }} />
+              <div
+                className="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center"
+                style={{ background: 'var(--color-status-success-tint)' }}
+              >
+                <CheckCircle size={28} style={{ color: 'var(--color-status-success)' }} />
               </div>
-              <p className="text-base font-black" style={{ color: '#0D1B2A' }}>
+              <p className="text-base font-medium" style={{ color: 'var(--color-neutral-900)' }}>
                 {savedCount} claim{savedCount !== 1 ? 's' : ''} marked as Fee Received
               </p>
-              <p className="text-xs mt-1" style={{ color: '#8D99AE' }}>Dashboard totals have been updated</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--color-neutral-400)' }}>Dashboard totals have been updated</p>
               <button
                 onClick={onClose}
-                className="mt-5 px-6 py-2.5 rounded-xl text-sm font-black"
-                style={{ background: 'linear-gradient(135deg, #D4AF37, #f0d870)', color: '#0D1B2A' }}
+                className="mt-5 px-6 py-2.5 rounded-xl text-sm font-medium"
+                style={{ background: 'var(--color-primary)', color: 'var(--color-primary-foreground)' }}
               >
                 Done
               </button>

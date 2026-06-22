@@ -201,13 +201,13 @@ export function InsuredReportReviewDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col" style={{ color: '#0D1B2A' }}>
+      <div className="bg-card rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col text-foreground">
 
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: '#E2E6EA' }}>
+        <div className="flex items-center justify-between p-6 border-b border-border">
           <div>
-            <h2 className="text-lg font-black tracking-tight">Insured Claim Summary</h2>
-            <p className="text-xs mt-0.5" style={{ color: '#8D99AE' }}>
+            <h2 className="text-lg font-medium tracking-tight">Insured Claim Summary</h2>
+            <p className="text-xs mt-0.5 text-muted-foreground">
               {stage === 'preliminary' ? 'Preliminary Estimate' : 'Final Settlement'} · Review before approving
             </p>
           </div>
@@ -216,14 +216,13 @@ export function InsuredReportReviewDialog({
               value={language}
               onChange={e => handleLanguageChange(e.target.value as InsuredReportLanguage)}
               disabled={loading}
-              className="text-xs border rounded-lg px-2 py-1.5 font-medium"
-              style={{ borderColor: '#E2E6EA', color: '#0D1B2A' }}
+              className="text-xs border border-border rounded-lg px-2 py-1.5 font-medium text-foreground bg-card"
             >
               {allowedLanguages.map(l => (
                 <option key={l} value={l}>{l.charAt(0).toUpperCase() + l.slice(1)}</option>
               ))}
             </select>
-            <button onClick={onClose} className="text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-gray-100">✕ Close</button>
+            <button onClick={onClose} className="text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-neutral-100">✕ Close</button>
           </div>
         </div>
 
@@ -231,20 +230,22 @@ export function InsuredReportReviewDialog({
         <div className="flex-1 overflow-y-auto p-6">
 
           {/* ── Policy Document Section ─────────────────────────────────────── */}
-          <div className="mb-5 rounded-xl border p-4" style={{ borderColor: hasPolicyDoc ? '#D4AF37' : '#E2E6EA', background: hasPolicyDoc ? '#FFFBEB' : '#FAFAFA' }}>
+          <div
+            className={`mb-5 rounded-xl border p-4 ${hasPolicyDoc ? 'border-primary bg-status-warning-tint' : 'border-border bg-neutral-50'}`}
+          >
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <FileText size={15} style={{ color: hasPolicyDoc ? '#D4AF37' : '#8D99AE' }} />
-                <span className="text-xs font-bold" style={{ color: '#0D1B2A' }}>
+                <FileText size={15} className={hasPolicyDoc ? 'text-primary' : 'text-muted-foreground'} />
+                <span className="text-xs font-medium text-foreground">
                   Policy Document
                 </span>
                 {hasPolicyDoc && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: '#FEF3C7', color: '#92400E' }}>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-status-warning-tint text-status-warning">
                     {resolvedImages.length} page{resolvedImages.length !== 1 ? 's' : ''} · AI will extract clauses
                   </span>
                 )}
                 {!hasPolicyDoc && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: '#F0F2F5', color: '#8D99AE' }}>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-neutral-100 text-muted-foreground">
                     No policy · IRDAI standard clauses will be used
                   </span>
                 )}
@@ -252,8 +253,7 @@ export function InsuredReportReviewDialog({
               {hasPolicyDoc && policyFileName && (
                 <button
                   onClick={handleClearPolicy}
-                  className="text-[10px] flex items-center gap-1 font-bold"
-                  style={{ color: '#8D99AE' }}
+                  className="text-[10px] flex items-center gap-1 font-medium text-muted-foreground"
                   title="Remove policy — will use IRDAI standard clauses"
                 >
                   <X size={11} /> Remove
@@ -262,7 +262,7 @@ export function InsuredReportReviewDialog({
             </div>
 
             {policyFileName && (
-              <p className="text-[10px] mb-2 truncate" style={{ color: '#8D99AE' }}>
+              <p className="text-[10px] mb-2 truncate text-muted-foreground">
                 {policyFileName}
               </p>
             )}
@@ -282,19 +282,14 @@ export function InsuredReportReviewDialog({
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={policyConverting || loading}
-                className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg border transition-all"
-                style={{
-                  borderColor: '#E2E6EA',
-                  color: '#0D1B2A',
-                  opacity: policyConverting || loading ? 0.5 : 1,
-                }}
+                className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg border border-border text-foreground transition-all disabled:opacity-50"
               >
                 {policyConverting
                   ? <Loader2 size={12} className="animate-spin" />
                   : <Upload size={12} />}
                 {hasPolicyDoc ? 'Re-upload Policy' : 'Upload Policy PDF'}
               </button>
-              <span className="text-[10px]" style={{ color: '#8D99AE' }}>
+              <span className="text-[10px] text-muted-foreground">
                 Upload to get real clause extraction · otherwise IRDAI standard clauses are used
               </span>
             </div>
@@ -305,8 +300,7 @@ export function InsuredReportReviewDialog({
               <button
                 onClick={() => handleGenerate()}
                 disabled={policyConverting}
-                className="px-6 py-3 rounded-xl font-bold text-sm text-white"
-                style={{ background: '#0D1B2A', opacity: policyConverting ? 0.5 : 1 }}
+                className="px-6 py-3 rounded-xl font-medium text-sm bg-neutral-900 text-white disabled:opacity-50"
               >
                 Generate Insured Report
               </button>
@@ -315,35 +309,37 @@ export function InsuredReportReviewDialog({
 
           {loading && (
             <div className="text-center py-16">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" style={{ color: '#D4AF37' }} />
-              <p className="text-sm font-medium" style={{ color: '#8D99AE' }}>{loadingMsg || 'Generating…'}</p>
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+              <p className="text-sm font-medium text-muted-foreground">{loadingMsg || 'Generating…'}</p>
             </div>
           )}
 
           {draft && !loading && (
             <>
               {flaggedCount > 0 && (
-                <div className="flex items-start gap-3 mb-4 p-3 rounded-xl" style={{ background: '#FFFBEB', border: '1px solid #FCD34D' }}>
-                  <AlertTriangle size={16} className="mt-0.5 shrink-0" style={{ color: '#92400E' }} />
-                  <p className="text-xs" style={{ color: '#92400E' }}>
+                <div className="flex items-start gap-3 mb-4 p-3 rounded-xl bg-status-warning-tint border border-status-warning">
+                  <AlertTriangle size={16} className="mt-0.5 shrink-0 text-status-warning" />
+                  <p className="text-xs text-status-warning">
                     {flaggedCount} item{flaggedCount > 1 ? 's' : ''} could not be fully explained (no surveyor remarks). They are highlighted in the Line Items tab. The report can still be approved — flagged items will show a generic note.
                   </p>
                 </div>
               )}
 
-              <div className="flex gap-1 p-1 rounded-xl mb-4" style={{ background: '#F0F2F5' }}>
+              <div className="flex gap-1 p-1 rounded-xl mb-4 bg-neutral-100">
                 {(['financial', 'policy', 'lineitems'] as Tab[]).map(tab => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className="flex-1 py-2 text-xs font-bold rounded-lg transition-all"
+                    className="flex-1 py-2 text-xs font-medium rounded-lg transition-all"
                     style={{
                       background: activeTab === tab ? '#FFFFFF' : 'transparent',
-                      color: activeTab === tab ? '#0D1B2A' : '#8D99AE',
                       boxShadow: activeTab === tab ? '0 2px 8px rgba(0,0,0,0.05)' : 'none',
                     }}
+                    data-active={activeTab === tab}
                   >
-                    {tab === 'financial' ? 'Financial Summary' : tab === 'policy' ? 'Policy Clauses' : `Line Items${flaggedCount > 0 ? ` (${flaggedCount} ⚠)` : ''}`}
+                    <span className={activeTab === tab ? 'text-foreground' : 'text-muted-foreground'}>
+                      {tab === 'financial' ? 'Financial Summary' : tab === 'policy' ? 'Policy Clauses' : `Line Items${flaggedCount > 0 ? ` (${flaggedCount} ⚠)` : ''}`}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -359,30 +355,30 @@ export function InsuredReportReviewDialog({
                     { label: 'Items not covered by policy', value: draft.financialSummary.notCoveredTotal, prefix: '−' },
                     { label: 'Salvage / disposal deduction', value: draft.financialSummary.salvageTotal, prefix: '−' },
                   ].filter(r => r.value > 0).map((row, i) => (
-                    <div key={i} className="flex justify-between py-2.5 text-sm border-b" style={{ borderColor: '#F0F2F5' }}>
-                      <span style={{ color: '#8D99AE' }}>{row.label}</span>
+                    <div key={i} className="flex justify-between py-2.5 text-sm border-b border-neutral-100">
+                      <span className="text-muted-foreground">{row.label}</span>
                       <span>{row.prefix}₹{row.value.toLocaleString('en-IN')}</span>
                     </div>
                   ))}
-                  <div className="flex justify-between py-3 text-sm font-bold border-t-2 mt-2" style={{ borderColor: '#0D1B2A' }}>
+                  <div className="flex justify-between py-3 text-sm font-medium border-t-2 mt-2 border-neutral-900">
                     <span>Insurance company will pay</span>
                     <span>₹{draft.financialSummary.insurerPays.toLocaleString('en-IN')}</span>
                   </div>
-                  <div className="flex justify-between py-3 text-sm font-bold rounded-xl px-3" style={{ background: '#FEF3C7' }}>
+                  <div className="flex justify-between py-3 text-sm font-medium rounded-xl px-3 bg-status-warning-tint">
                     <span>Your share (payable to garage)</span>
-                    <span style={{ color: '#B91C1C' }}>₹{draft.financialSummary.insuredPays.toLocaleString('en-IN')}</span>
+                    <span className="text-status-danger">₹{draft.financialSummary.insuredPays.toLocaleString('en-IN')}</span>
                   </div>
-                  <p className="text-xs mt-3" style={{ color: '#8D99AE' }}>This tab is read-only — figures are computed from claim data.</p>
+                  <p className="text-xs mt-3 text-muted-foreground">This tab is read-only — figures are computed from claim data.</p>
                 </div>
               )}
 
               {activeTab === 'policy' && (
                 <div className="space-y-4">
                   {draft.policyMappings.map((clause, i) => (
-                    <div key={clause.clauseType} className="rounded-xl p-4 border" style={{ borderColor: '#E2E6EA' }}>
+                    <div key={clause.clauseType} className="rounded-xl p-4 border border-border">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-bold">{clause.clauseTitle}</span>
-                        <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: clause.source === 'policy-pdf' ? '#ECFDF5' : '#FFFBEB', color: clause.source === 'policy-pdf' ? '#065F46' : '#92400E' }}>
+                        <span className="text-xs font-medium">{clause.clauseTitle}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${clause.source === 'policy-pdf' ? 'bg-status-success-tint text-status-success' : 'bg-status-warning-tint text-status-warning'}`}>
                           {clause.source === 'policy-pdf' ? '✓ From Policy' : 'IRDAI Standard'}
                         </span>
                       </div>
@@ -390,8 +386,7 @@ export function InsuredReportReviewDialog({
                         value={clause.plainLanguage}
                         onChange={e => updatePolicyClause(i, 'plainLanguage', e.target.value)}
                         rows={3}
-                        className="w-full text-xs border rounded-lg p-2 resize-none"
-                        style={{ borderColor: '#E2E6EA', color: '#374151' }}
+                        className="w-full text-xs border border-border rounded-lg p-2 resize-none text-foreground bg-card"
                       />
                     </div>
                   ))}
@@ -401,28 +396,30 @@ export function InsuredReportReviewDialog({
               {activeTab === 'lineitems' && (
                 <div className="space-y-3">
                   {draft.lineExplanations.length === 0 && (
-                    <p className="text-sm text-center py-8" style={{ color: '#8D99AE' }}>No adjusted items to review.</p>
+                    <p className="text-sm text-center py-8 text-muted-foreground">No adjusted items to review.</p>
                   )}
                   {draft.lineExplanations.map(item => (
-                    <div key={item.assessmentRowId} className="rounded-xl p-4 border" style={{ borderColor: item.isFlagged ? '#FCD34D' : '#E2E6EA', background: item.isFlagged ? '#FFFBEB' : '#FFFFFF' }}>
+                    <div
+                      key={item.assessmentRowId}
+                      className={`rounded-xl p-4 border ${item.isFlagged ? 'border-status-warning bg-status-warning-tint' : 'border-border bg-card'}`}
+                    >
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-bold">{item.partDescription}</span>
-                        <div className="flex items-center gap-3 text-xs" style={{ color: '#8D99AE' }}>
+                        <span className="text-xs font-medium">{item.partDescription}</span>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
                           <span>Billed (taxable): ₹{item.billedAmount.toLocaleString('en-IN')}</span>
                           <span>Assessed: ₹{item.surveyorAmount.toLocaleString('en-IN')}</span>
-                          {item.isFlagged && <span style={{ color: '#92400E' }}>⚠ Needs context</span>}
+                          {item.isFlagged && <span className="text-status-warning">⚠ Needs context</span>}
                         </div>
                       </div>
                       {item.surveyorRemarks && (
-                        <p className="text-xs mb-2 italic" style={{ color: '#8D99AE' }}>Surveyor: &quot;{item.surveyorRemarks}&quot;</p>
+                        <p className="text-xs mb-2 italic text-muted-foreground">Surveyor: &quot;{item.surveyorRemarks}&quot;</p>
                       )}
                       <textarea
                         value={item.aiExplanation}
                         onChange={e => updateLineExplanation(item.assessmentRowId, 'aiExplanation', e.target.value)}
                         rows={2}
                         placeholder={item.isFlagged ? 'Add explanation for insured (optional)…' : ''}
-                        className="w-full text-xs border rounded-lg p-2 resize-none"
-                        style={{ borderColor: item.isFlagged ? '#FCD34D' : '#E2E6EA', color: '#374151' }}
+                        className={`w-full text-xs border rounded-lg p-2 resize-none text-foreground bg-card ${item.isFlagged ? 'border-status-warning' : 'border-border'}`}
                       />
                     </div>
                   ))}
@@ -433,12 +430,11 @@ export function InsuredReportReviewDialog({
         </div>
 
         {draft && !loading && (
-          <div className="flex items-center justify-between p-6 border-t" style={{ borderColor: '#E2E6EA' }}>
+          <div className="flex items-center justify-between p-6 border-t border-border">
             <button
               onClick={() => handleGenerate()}
               disabled={loading || downloading}
-              className="flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-xl border"
-              style={{ borderColor: '#E2E6EA', color: '#8D99AE' }}
+              className="flex items-center gap-2 text-xs font-medium px-4 py-2 rounded-xl border border-border text-muted-foreground"
             >
               <RefreshCw size={14} /> Regenerate
             </button>
@@ -446,8 +442,7 @@ export function InsuredReportReviewDialog({
             <button
               onClick={handleApprove}
               disabled={downloading}
-              className="flex items-center gap-2 text-sm font-bold px-6 py-2.5 rounded-xl text-white"
-              style={{ background: '#0D1B2A', opacity: downloading ? 0.6 : 1 }}
+              className="flex items-center gap-2 text-sm font-medium px-6 py-2.5 rounded-xl bg-neutral-900 text-white disabled:opacity-60"
             >
               {downloading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
               {downloading ? 'Generating PDF…' : 'Approve & Download PDF'}

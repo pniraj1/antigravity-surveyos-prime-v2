@@ -87,26 +87,24 @@ export function IRDAISummaryDialog({ onClose }: Props) {
       style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
     >
       <div
-        className="relative w-full max-w-md rounded-2xl shadow-2xl"
-        style={{ background: '#0D1B2A', border: '1px solid rgba(141,153,174,0.2)' }}
+        className="relative w-full max-w-md rounded-2xl shadow-2xl bg-card border border-border"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 pt-6 pb-4" style={{ borderBottom: '1px solid rgba(141,153,174,0.15)' }}>
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-border">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl" style={{ background: 'rgba(34,197,94,0.1)' }}>
-              <FileSpreadsheet size={18} style={{ color: '#22c55e' }} />
+            <div className="p-2 rounded-xl" style={{ background: 'var(--color-status-success-tint)' }}>
+              <FileSpreadsheet size={18} style={{ color: 'var(--color-status-success)' }} />
             </div>
             <div>
-              <h2 className="text-sm font-black uppercase tracking-widest" style={{ color: '#E0E0E0' }}>
+              <h2 className="text-sm font-medium uppercase tracking-widest" style={{ color: 'var(--color-neutral-100)' }}>
                 Export Annual Summary
               </h2>
-              <p className="text-xs mt-0.5" style={{ color: '#8D99AE' }}>IRDAI Annual Return — Excel Workbook</p>
+              <p className="text-xs mt-0.5 text-muted-foreground">IRDAI Annual Return — Excel Workbook</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg transition-all hover:bg-white/10"
-            style={{ color: '#8D99AE' }}
+            className="p-1.5 rounded-lg transition-all hover:bg-white/10 text-muted-foreground"
           >
             <X size={16} />
           </button>
@@ -117,17 +115,17 @@ export function IRDAISummaryDialog({ onClose }: Props) {
 
           {/* Financial Year */}
           <div>
-            <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest mb-2" style={{ color: '#8D99AE' }}>
+            <label className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest mb-2 text-muted-foreground">
               <Calendar size={12} /> Financial Year
             </label>
             <select
               value={financialYear}
               onChange={e => setFinancialYear(Number(e.target.value))}
-              className="w-full px-3 py-2 rounded-xl text-sm font-semibold outline-none"
-              style={{ background: 'rgba(255,255,255,0.05)', color: '#E0E0E0', border: '1px solid rgba(141,153,174,0.2)' }}
+              className="w-full px-3 py-2 rounded-xl text-sm font-medium outline-none"
+              style={{ background: 'var(--color-neutral-50)', color: 'var(--color-neutral-100)', border: '1px solid var(--color-neutral-200)' }}
             >
               {FY_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value} style={{ background: '#0D1B2A' }}>
+                <option key={opt.value} value={opt.value} style={{ background: 'var(--color-neutral-900)' }}>
                   {opt.label}
                 </option>
               ))}
@@ -136,7 +134,7 @@ export function IRDAISummaryDialog({ onClose }: Props) {
 
           {/* Survey Type Filter */}
           <div>
-            <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest mb-2" style={{ color: '#8D99AE' }}>
+            <label className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest mb-2 text-muted-foreground">
               <Filter size={12} /> Survey Type
             </label>
             <div className="flex gap-2">
@@ -144,11 +142,11 @@ export function IRDAISummaryDialog({ onClose }: Props) {
                 <button
                   key={type}
                   onClick={() => setSurveyTypeFilter(type)}
-                  className="flex-1 py-1.5 rounded-xl text-xs font-bold capitalize transition-all"
+                  className="flex-1 py-1.5 rounded-xl text-xs font-medium capitalize transition-all"
                   style={{
-                    background: surveyTypeFilter === type ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.05)',
-                    color: surveyTypeFilter === type ? '#22c55e' : '#8D99AE',
-                    border: `1px solid ${surveyTypeFilter === type ? 'rgba(34,197,94,0.4)' : 'rgba(141,153,174,0.2)'}`,
+                    background: surveyTypeFilter === type ? 'var(--color-status-success-tint)' : 'var(--color-neutral-50)',
+                    color: surveyTypeFilter === type ? 'var(--color-status-success)' : 'var(--color-neutral-400)',
+                    border: `1px solid ${surveyTypeFilter === type ? 'var(--color-status-success)' : 'var(--color-neutral-200)'}`,
                   }}
                 >
                   {type === 'all' ? 'All' : type === 'spot' ? 'Spot' : 'Final'}
@@ -159,13 +157,13 @@ export function IRDAISummaryDialog({ onClose }: Props) {
 
           {/* Include Archived */}
           <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest" style={{ color: '#8D99AE' }}>
+            <label className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-muted-foreground">
               <Archive size={12} /> Include Archived Claims
             </label>
             <button
               onClick={() => setIncludeArchived(v => !v)}
               className="relative w-10 h-5 rounded-full transition-all"
-              style={{ background: includeArchived ? '#22c55e' : 'rgba(141,153,174,0.3)' }}
+              style={{ background: includeArchived ? 'var(--color-status-success)' : 'var(--color-neutral-400)' }}
             >
               <span
                 className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all shadow"
@@ -177,25 +175,25 @@ export function IRDAISummaryDialog({ onClose }: Props) {
           {/* Preview Stats */}
           <div
             className="rounded-xl p-4 space-y-2"
-            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(141,153,174,0.1)' }}
+            style={{ background: 'var(--color-neutral-50)', border: '1px solid var(--color-neutral-200)' }}
           >
-            <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: '#8D99AE' }}>
+            <p className="text-xs font-medium uppercase tracking-widest mb-3 text-muted-foreground">
               Preview — FY {fyLabel}
             </p>
             {loading ? (
-              <div className="flex items-center gap-2" style={{ color: '#8D99AE' }}>
+              <div className="flex items-center gap-2 text-muted-foreground">
                 <Loader2 size={14} className="animate-spin" />
                 <span className="text-xs">Loading claims…</span>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <p className="text-xs" style={{ color: '#8D99AE' }}>Claims matched</p>
-                  <p className="text-xl font-black" style={{ color: '#E0E0E0' }}>{filtered.length}</p>
+                  <p className="text-xs text-muted-foreground">Claims matched</p>
+                  <p className="text-xl font-medium" style={{ color: 'var(--color-neutral-100)' }}>{filtered.length}</p>
                 </div>
                 <div>
-                  <p className="text-xs" style={{ color: '#8D99AE' }}>Total fees</p>
-                  <p className="text-xl font-black" style={{ color: '#22c55e' }}>
+                  <p className="text-xs text-muted-foreground">Total fees</p>
+                  <p className="text-xl font-medium" style={{ color: 'var(--color-status-success)' }}>
                     ₹{totalFees.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                   </p>
                 </div>
@@ -205,7 +203,7 @@ export function IRDAISummaryDialog({ onClose }: Props) {
 
           {/* Error */}
           {error && (
-            <p className="text-xs px-3 py-2 rounded-xl" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}>
+            <p className="text-xs px-3 py-2 rounded-xl" style={{ background: 'var(--color-status-danger-tint)', color: 'var(--color-status-danger)', border: '1px solid var(--color-status-danger)' }}>
               {error}
             </p>
           )}
@@ -214,8 +212,8 @@ export function IRDAISummaryDialog({ onClose }: Props) {
           <button
             onClick={handleExport}
             disabled={exporting || loading || filtered.length === 0}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-black uppercase tracking-widest transition-all disabled:opacity-40"
-            style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.3)' }}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium uppercase tracking-widest transition-all disabled:opacity-40"
+            style={{ background: 'var(--color-status-success-tint)', color: 'var(--color-status-success)', border: '1px solid var(--color-status-success)' }}
           >
             {exporting ? (
               <>
@@ -230,7 +228,7 @@ export function IRDAISummaryDialog({ onClose }: Props) {
             )}
           </button>
 
-          <p className="text-center text-xs" style={{ color: '#8D99AE' }}>
+          <p className="text-center text-xs text-muted-foreground">
             Downloads a 4-sheet Excel workbook: Claim Register · Insurer-wise · Month-wise · Analytics
           </p>
         </div>
