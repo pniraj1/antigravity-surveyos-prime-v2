@@ -5,6 +5,7 @@ import dynamicImport from 'next/dynamic';
 import { useUIStore } from '@/stores/ui-store';
 import { useClaimStore } from '@/stores/claim-store';
 import { getClaim, saveClaim, deleteClaim } from '@/lib/storage/indexeddb';
+import { toggleFeePaid } from '@/lib/claims/fee-status';
 import { toast } from 'sonner';
 import {
   LayoutDashboard,
@@ -413,9 +414,26 @@ export function DashboardContent() {
                         </span>
                       </div>
                       <div>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded border uppercase" style={claim.feePaid ? { borderColor: '#10B981', color: '#10B981' } : { borderColor: '#EF4444', color: '#EF4444' }}>
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            const fullClaim = await getClaim(claim.id);
+                            if (!fullClaim) return;
+                            await saveClaim(toggleFeePaid(fullClaim));
+                            const channel = new BroadcastChannel('surveyos_claims_sync');
+                            channel.postMessage('CLAIMS_UPDATED');
+                            channel.close();
+                          }}
+                          title={claim.feePaid ? 'Mark fee unpaid' : 'Mark fee paid'}
+                          className="text-xs rounded-md border px-2 py-0.5 transition-colors"
+                          style={
+                            claim.feePaid
+                              ? { borderColor: 'var(--color-status-success)', color: 'var(--color-status-success)' }
+                              : { borderColor: 'var(--color-status-danger)', color: 'var(--color-status-danger)' }
+                          }
+                        >
                           {claim.feePaid ? 'Paid' : 'Unpaid'}
-                        </span>
+                        </button>
                       </div>
                       <div className="text-xs font-medium" style={{ color: '#8D99AE' }}>
                         {new Date(claim.updatedAt).toLocaleDateString(undefined, {
