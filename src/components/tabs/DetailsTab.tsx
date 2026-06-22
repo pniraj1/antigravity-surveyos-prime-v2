@@ -54,14 +54,14 @@ function InlineEvidencePanel({ claimId }: { claimId: string }) {
   const isPdf = blobEntry?.mimeType === 'application/pdf';
 
   return (
-    <div className="flex flex-col h-full rounded-xl overflow-hidden border border-[#E2E6EA] bg-[#FAFBFC]">
+    <div className="flex flex-col h-full rounded-xl overflow-hidden border border-border bg-[var(--color-neutral-50)]">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 shrink-0 bg-[#0D1B2A]">
+      <div className="flex items-center justify-between px-4 py-3 shrink-0 bg-[var(--color-neutral-900)]">
         <div className="flex items-center gap-2">
-          <FileSearch size={16} className="text-[#D4AF37]" />
+          <FileSearch size={16} className="text-primary" />
           <div>
-            <div className="text-xs font-semibold text-white">Evidence Viewer</div>
-            {docLabel && <div className="text-[10px] text-[#D4AF37] mt-0.5">{docLabel}</div>}
+            <div className="text-xs font-medium text-white">Evidence Viewer</div>
+            {docLabel && <div className="text-[10px] text-primary mt-0.5">{docLabel}</div>}
           </div>
         </div>
         {blobEntry && (
@@ -69,7 +69,7 @@ function InlineEvidencePanel({ claimId }: { claimId: string }) {
             href={blobEntry.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[10px] text-[#D4AF37] underline hover:text-amber-300"
+            className="text-[10px] text-primary underline hover:opacity-80"
           >
             Open in new tab
           </a>
@@ -78,9 +78,9 @@ function InlineEvidencePanel({ claimId }: { claimId: string }) {
 
       {/* Context snippet */}
       {field?.contextSnippet && (
-        <div className="mx-3 mt-3 px-3 py-2 rounded-lg shrink-0 bg-amber-50 border border-amber-200">
-          <div className="text-[9px] font-bold uppercase tracking-widest text-[#D4AF37] mb-1">EXTRACTED FROM DOCUMENT</div>
-          <div className="text-[11px] leading-relaxed font-mono text-[#0D1B2A]">{field.contextSnippet}</div>
+        <div className="mx-3 mt-3 px-3 py-2 rounded-lg shrink-0 bg-[var(--color-status-warning-tint)] border border-[var(--color-status-warning)]/30">
+          <div className="text-[9px] font-medium uppercase tracking-widest text-[var(--color-status-warning)] mb-1">Extracted from document</div>
+          <div className="text-[11px] leading-relaxed font-mono text-[var(--color-neutral-900)]">{field.contextSnippet}</div>
         </div>
       )}
 
@@ -103,7 +103,7 @@ function InlineEvidencePanel({ claimId }: { claimId: string }) {
             </div>
           )
         ) : (
-          <div className="flex items-center justify-center h-full text-center text-[#8D99AE] p-5">
+          <div className="flex items-center justify-center h-full text-center text-[var(--color-neutral-400)] p-5">
             <div>
               <FileSearch size={36} className="opacity-30 mb-3 mx-auto" />
               <p className="text-xs m-0">
@@ -117,9 +117,9 @@ function InlineEvidencePanel({ claimId }: { claimId: string }) {
       </div>
 
       {/* Footer */}
-      <div className="px-3 py-2 border-t border-[#E2E6EA] shrink-0 flex items-center gap-1.5">
-        <ChevronRight size={12} className="text-[#8D99AE]" />
-        <span className="text-[10px] text-[#8D99AE]">Upload a document above to populate this panel</span>
+      <div className="px-3 py-2 border-t border-border shrink-0 flex items-center gap-1.5">
+        <ChevronRight size={12} className="text-[var(--color-neutral-400)]" />
+        <span className="text-[10px] text-[var(--color-neutral-400)]">Upload a document above to populate this panel</span>
       </div>
     </div>
   );
@@ -130,7 +130,7 @@ function EvidenceIconBtn({ onClick, title, children }: { onClick: () => void; ti
     <button
       onClick={onClick}
       title={title}
-      className="flex items-center px-1.5 py-1 rounded border-none cursor-pointer text-[#8D99AE] bg-[#F0F2F5] transition-colors hover:bg-[#E2E6EA] hover:text-[#0D1B2A]"
+      className="flex items-center px-1.5 py-1 rounded border-none cursor-pointer text-[var(--color-neutral-400)] bg-[var(--color-neutral-100)] transition-colors hover:bg-[var(--color-neutral-200)] hover:text-[var(--color-neutral-900)]"
     >
       {children}
     </button>
