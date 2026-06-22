@@ -238,7 +238,7 @@ export function DashboardContent() {
               <h2 className="text-xs font-medium uppercase tracking-[0.2em] text-[var(--color-neutral-400)]">
                 {showArchived ? 'Archived claims' : 'Recent claims'}
               </h2>
-              <div className="flex space-x-1 bg-[var(--color-neutral-100)]" style={{ padding: '2px', borderRadius: '8px' }}>
+              <div className="flex space-x-1 p-[2px] rounded-lg bg-[var(--color-neutral-100)]">
                 <button
                   className={`px-3 py-1 text-[11px] font-medium rounded-md transition-all ${
                     !showArchived ? 'bg-card text-[var(--color-neutral-900)] shadow-sm' : 'text-[var(--color-neutral-400)] hover:text-[var(--color-neutral-900)]'
