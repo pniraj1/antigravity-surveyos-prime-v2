@@ -31,7 +31,7 @@ export function AIModelsTab({ adminEmail }: { adminEmail: string }) {
 
   useEffect(() => { loadAIModelsConfig().then(setConfig); }, []);
 
-  if (!config) return <div className="flex items-center gap-2 text-sm text-[#8D99AE]"><Loader2 size={14} className="animate-spin" /> Loading config…</div>;
+  if (!config) return <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 size={14} className="animate-spin" /> Loading config…</div>;
 
   const adminKey = (p: ProviderId): string | undefined =>
     (profile[PROVIDER_META[p].keyField] as string[] | undefined)?.[0]?.trim();
@@ -107,9 +107,9 @@ export function AIModelsTab({ adminEmail }: { adminEmail: string }) {
   return (
     <div className="space-y-6 max-w-4xl">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-[#4A4E69]">Curate which models each provider exposes to surveyors. Discovery uses <strong>your</strong> profile keys.</p>
+        <p className="text-sm text-muted-foreground">Curate which models each provider exposes to surveyors. Discovery uses <strong>your</strong> profile keys.</p>
         <button onClick={save} disabled={saving}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black bg-[#0D1B2A] text-[#D4AF37] disabled:opacity-50">
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium bg-foreground text-primary disabled:opacity-50">
           {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save Config
         </button>
       </div>
@@ -119,21 +119,21 @@ export function AIModelsTab({ adminEmail }: { adminEmail: string }) {
         const block = config.providers[p];
         const rows = discovered[p].length > 0 ? discovered[p] : block.models;
         return (
-          <div key={p} className="bg-white rounded-2xl border border-[#E2E6EA] shadow-sm overflow-hidden">
-            <div className="px-6 py-4 flex items-center gap-3 border-b border-[#F0F2F5] bg-[#FAFAFA]">
+          <div key={p} className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
+            <div className="px-6 py-4 flex items-center gap-3 border-b border-border bg-card">
               <Cpu size={16} style={{ color: meta.color }} />
-              <h2 className="text-sm font-black text-[#0D1B2A]">{meta.label}</h2>
+              <h2 className="text-sm font-medium text-foreground">{meta.label}</h2>
               <button onClick={() => toggleProvider(p)}
-                className={`ml-2 flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black ${block.enabled ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+                className={`ml-2 flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium ${block.enabled ? 'bg-status-success-tint text-status-success' : 'bg-neutral-100 text-neutral-600'}`}>
                 <Power size={11} /> {block.enabled ? 'Enabled' : 'Disabled'}
               </button>
               <button onClick={() => refresh(p)} disabled={busy === p}
-                className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black border border-[#E2E6EA] text-[#0D1B2A] disabled:opacity-50">
+                className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium border border-border text-foreground disabled:opacity-50">
                 {busy === p ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />} Refresh live list
               </button>
             </div>
-            <div className="divide-y divide-[#F0F2F5]">
-              {rows.length === 0 && <div className="px-6 py-4 text-xs text-[#8D99AE]">No models yet — click “Refresh live list”.</div>}
+            <div className="divide-y divide-border">
+              {rows.length === 0 && <div className="px-6 py-4 text-xs text-muted-foreground">No models yet — click "Refresh live list".</div>}
               {rows.map(row => {
                 const enabled = isEnabled(p, row.id);
                 const isDefault = block.defaultModel === row.id;
@@ -141,38 +141,38 @@ export function AIModelsTab({ adminEmail }: { adminEmail: string }) {
                 return (
                   <div key={row.id} className="px-6 py-3 flex items-start gap-3">
                     <button onClick={() => toggleModel(p, row)}
-                      className={`mt-0.5 w-5 h-5 rounded flex items-center justify-center flex-shrink-0 ${enabled ? 'bg-[#0D1B2A] text-white' : 'border border-[#E2E6EA]'}`}>
+                      className={`mt-0.5 w-5 h-5 rounded flex items-center justify-center flex-shrink-0 ${enabled ? 'bg-foreground text-white' : 'border border-border'}`}>
                       {enabled && <Check size={12} />}
                     </button>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <code className="text-xs font-black text-[#0D1B2A]">{row.label}</code>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#F0F2F5] text-[#4A4E69]">{row.estimateCapacity}</span>
+                        <code className="text-xs font-medium text-foreground">{row.label}</code>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-card text-muted-foreground">{row.estimateCapacity}</span>
                         {enabled && (
                           <button onClick={() => setDefault(p, row.id)}
-                            className={`text-[9px] font-black px-1.5 py-0.5 rounded-full flex items-center gap-1 ${isDefault ? 'bg-amber-100 text-amber-700' : 'text-[#8D99AE]'}`}>
+                            className={`text-[9px] font-medium px-1.5 py-0.5 rounded-full flex items-center gap-1 ${isDefault ? 'bg-status-warning-tint text-status-warning' : 'text-muted-foreground'}`}>
                             <Star size={9} /> {isDefault ? 'Default' : 'Set default'}
                           </button>
                         )}
                       </div>
-                      <div className="text-[10px] text-[#8D99AE] mt-0.5 font-mono">{row.id}</div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5 font-mono">{row.id}</div>
                       {enabled && (
                         <input value={note} onChange={e => setNote(p, row.id, e.target.value)}
                           placeholder="Admin note (e.g. great on 6-page estimates)"
-                          className="mt-1.5 w-full text-[11px] px-2 py-1 rounded border border-[#E2E6EA] focus:outline-none focus:ring-1 focus:ring-[#D4AF37]" />
+                          className="mt-1.5 w-full text-[11px] px-2 py-1 rounded border border-border focus:outline-none focus:ring-1 focus:ring-primary" />
                       )}
                       {enabled && (
                         <div className="mt-2">
-                          <label className="inline-flex items-center gap-1.5 text-[10px] font-black px-2 py-1 rounded-lg border border-[#E2E6EA] cursor-pointer hover:bg-[#F8F9FA]">
+                          <label className="inline-flex items-center gap-1.5 text-[10px] font-medium px-2 py-1 rounded-lg border border-border cursor-pointer hover:bg-card">
                             {testing === `${p}:${row.id}` ? <Loader2 size={11} className="animate-spin" /> : <FlaskConical size={11} />}
                             Test with estimate PDF
                             <input type="file" accept="application/pdf,image/*" className="hidden"
                               disabled={testing !== null}
                               onChange={e => { const f = e.target.files?.[0]; if (f) runTest(p, row.id, f); e.currentTarget.value = ''; }} />
                           </label>
-                          {testing === `${p}:${row.id}` && <span className="ml-2 text-[10px] text-[#8D99AE]">{testProgress}</span>}
+                          {testing === `${p}:${row.id}` && <span className="ml-2 text-[10px] text-muted-foreground">{testProgress}</span>}
                           {testResult[`${p}:${row.id}`] && (
-                            <pre className={`mt-1.5 max-h-48 overflow-auto text-[10px] p-2 rounded-lg border ${testResult[`${p}:${row.id}`].ok ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50'}`}>
+                            <pre className={`mt-1.5 max-h-48 overflow-auto text-[10px] p-2 rounded-lg border ${testResult[`${p}:${row.id}`].ok ? 'border-status-success-tint bg-status-success-tint' : 'border-status-danger-tint bg-status-danger-tint'}`}>
                               {testResult[`${p}:${row.id}`].ok
                                 ? `✅ ${(testResult[`${p}:${row.id}`].ms / 1000).toFixed(1)}s\n` + JSON.stringify(testResult[`${p}:${row.id}`].data, null, 2)
                                 : `❌ ${testResult[`${p}:${row.id}`].error}`}
