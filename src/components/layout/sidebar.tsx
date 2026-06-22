@@ -137,7 +137,7 @@ export function Sidebar() {
       >
         {/* ─── Brand Header ──────────────────────────────── */}
         <div
-          className="flex items-center gap-3 px-4 py-5 border-b border-[var(--color-neutral-50)]"
+          className="flex items-center gap-3 px-4 py-5 border-b border-[var(--color-neutral-100)]"
         >
           {/* Logo mark */}
           <div
@@ -179,7 +179,7 @@ export function Sidebar() {
 
         {/* ─── Quick Actions ────────────────────────────── */}
         <div
-          className={`flex gap-2 px-4 py-4 border-b border-[var(--color-neutral-50)] ${sidebarCollapsed ? 'flex-col items-center' : ''}`}
+          className={`flex gap-2 px-4 py-4 border-b border-[var(--color-neutral-100)] ${sidebarCollapsed ? 'flex-col items-center' : ''}`}
         >
           <Button
             onClick={() => setNewClaimDialogOpen(true)}
@@ -295,7 +295,7 @@ export function Sidebar() {
 
         {/* ─── Footer: Auth + Status ────────────────────── */}
         <div
-          className="p-4 space-y-3 border-t border-[var(--color-neutral-50)]"
+          className="p-4 space-y-3 border-t border-[var(--color-neutral-100)]"
         >
           {isAuthenticated ? (
             user?.email === 'pniraj.india@gmail.com' ? (
@@ -332,7 +332,7 @@ export function Sidebar() {
           )}
 
           {mounted && !sidebarCollapsed && (
-            <div className="space-y-2 pt-2 border-t border-[var(--color-neutral-50)]">
+            <div className="space-y-2 pt-2 border-t border-[var(--color-neutral-100)]">
               <div className={`flex items-center gap-2 text-[10px] font-medium uppercase tracking-widest ${isOnline ? 'text-emerald-600' : 'text-amber-600'}`}>
                 {isOnline ? <Wifi size={12} /> : <WifiOff size={12} />}
                 {isOnline ? (isAuthenticated ? 'Cloud linked' : 'Online · Guest') : 'Offline · Local'}

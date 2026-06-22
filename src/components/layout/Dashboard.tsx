@@ -259,7 +259,7 @@ export function DashboardContent() {
                   {archivedCount > 0 && (
                     <span
                       className="text-[9px] font-black px-1.5 py-0.5 rounded-full"
-                      style={{ background: showArchived ? '#E2E6EA' : 'rgba(239,68,68,0.12)', color: showArchived ? '#0D1B2A' : '#EF4444' }}
+                      style={{ background: showArchived ? '#E2E6EA' : 'var(--color-status-danger-tint)', color: showArchived ? '#0D1B2A' : 'var(--color-status-danger)' }}
                     >
                       {archivedCount}
                     </span>
@@ -409,7 +409,7 @@ export function DashboardContent() {
                         </div>
                       </div>
                       <div>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded border uppercase" style={claim.isActive ? (claim.isCompleted ? { borderColor: '#10B981', color: '#10B981' } : { borderColor: '#F59E0B', color: '#F59E0B' }) : { borderColor: '#EF4444', color: '#EF4444' }}>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded border uppercase" style={claim.isActive ? (claim.isCompleted ? { borderColor: 'var(--color-status-success)', color: 'var(--color-status-success)' } : { borderColor: 'var(--color-status-warning)', color: 'var(--color-status-warning)' }) : { borderColor: 'var(--color-status-danger)', color: 'var(--color-status-danger)' }}>
                            {!claim.isActive ? 'Archived' : (claim.isCompleted ? 'Done' : 'Active')}
                         </span>
                       </div>
