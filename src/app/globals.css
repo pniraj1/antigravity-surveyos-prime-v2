@@ -63,6 +63,22 @@
 
   --color-success: oklch(0.55 0.18 145);
   --color-danger:  oklch(0.55 0.22 25);
+
+  /* Neutral ramp — single source of truth (collapses the 6 ad-hoc greys) */
+  --color-neutral-50:  #F8F9FA;
+  --color-neutral-100: #F0F2F5;
+  --color-neutral-200: #E2E6EA;
+  --color-neutral-400: #8D99AE;
+  --color-neutral-600: #4A4E69;
+  --color-neutral-900: #0D1B2A;
+
+  /* Status — one text shade + one tint each (no bg+border+text trios) */
+  --color-status-success:      #0F7A3D;
+  --color-status-success-tint: #E6F4EC;
+  --color-status-warning:      #9A6A00;
+  --color-status-warning-tint: #FBF1DC;
+  --color-status-danger:       #C0392B;
+  --color-status-danger-tint:  #FBE9E7;
 }
 
 /* ═══════════════════════════════════════════════════════════
