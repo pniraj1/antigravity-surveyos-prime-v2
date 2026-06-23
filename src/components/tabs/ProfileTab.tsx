@@ -20,10 +20,10 @@ import { ConnectSyncDialog } from '@/components/sync-bridge/ConnectSyncDialog';
 // ─── Section Wrapper ─────────────────────────────────────────────────────────
 function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E2E6EA' }}>
-      <div className="px-6 py-4 flex items-center gap-2" style={{ borderBottom: '1px solid #F0F2F5', background: '#FAFAFA' }}>
-        <span style={{ color: '#D4AF37' }}>{icon}</span>
-        <span className="text-sm font-black" style={{ color: '#0D1B2A' }}>{title}</span>
+    <div className="rounded-2xl overflow-hidden bg-card border border-border">
+      <div className="px-6 py-4 flex items-center gap-2 border-b border-border" style={{ background: 'var(--color-neutral-100)' }}>
+        <span className="text-primary">{icon}</span>
+        <span className="text-sm font-medium text-foreground">{title}</span>
       </div>
       <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
         {children}
@@ -41,7 +41,7 @@ function Field({
 }) {
   return (
     <div className={fullWidth ? 'sm:col-span-2' : ''}>
-      <label className="block mb-1.5 text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: '#8D99AE' }}>
+      <label className="block mb-1.5 text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground">
         {label}
       </label>
       <input
@@ -52,15 +52,15 @@ function Field({
         placeholder={placeholder}
         className="w-full px-3 py-2 rounded-lg text-sm border outline-none transition-all"
         style={{
-          border: '1px solid #E2E6EA',
-          background: readOnly ? '#F0F2F5' : '#FAFAFA',
-          color: '#0D1B2A',
+          border: '1px solid var(--color-neutral-200)',
+          background: readOnly ? 'var(--color-neutral-100)' : 'var(--color-neutral-50)',
+          color: 'var(--color-neutral-900)',
           fontWeight: 600,
         }}
-        onFocus={e => { if (!readOnly) e.currentTarget.style.borderColor = '#D4AF37'; }}
-        onBlur={e => { e.currentTarget.style.borderColor = '#E2E6EA'; }}
+        onFocus={e => { if (!readOnly) e.currentTarget.style.borderColor = 'var(--color-primary)'; }}
+        onBlur={e => { e.currentTarget.style.borderColor = 'var(--color-neutral-200)'; }}
       />
-      {hint && <p className="mt-1 text-[9px] font-bold" style={{ color: '#8D99AE' }}>{hint}</p>}
+      {hint && <p className="mt-1 text-[9px] font-medium text-muted-foreground">{hint}</p>}
     </div>
   );
 }
@@ -103,22 +103,21 @@ function MultiKeyInput({
     <div className="space-y-2">
       {displayKeys.map((k, i) => (
         <div key={i} className="flex items-center gap-2">
-          <div className="flex-1 flex items-center rounded-lg overflow-hidden" style={{ border: '1px solid #E2E6EA', background: '#FAFAFA' }}>
+          <div className="flex-1 flex items-center rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-neutral-200)', background: 'var(--color-neutral-50)' }}>
             <input
               type={visible[i] ? 'text' : 'password'}
               value={k}
               onChange={e => updateKey(i, e.target.value)}
               placeholder={i === 0 ? placeholder : `Backup key ${i + 1} (optional)`}
               className="flex-1 px-3 py-2 text-sm bg-transparent outline-none"
-              style={{ color: '#0D1B2A', fontWeight: 600 }}
+              style={{ color: 'var(--color-neutral-900)', fontWeight: 600 }}
               onFocus={e => (e.currentTarget.parentElement!.style.borderColor = accentColor)}
-              onBlur={e => (e.currentTarget.parentElement!.style.borderColor = '#E2E6EA')}
+              onBlur={e => (e.currentTarget.parentElement!.style.borderColor = 'var(--color-neutral-200)')}
             />
             <button
               type="button"
               onClick={() => setVisible(prev => ({ ...prev, [i]: !prev[i] }))}
-              className="px-2 py-2 flex-shrink-0"
-              style={{ color: '#8D99AE' }}
+              className="px-2 py-2 flex-shrink-0 text-muted-foreground"
             >
               {visible[i] ? <EyeOff size={13} /> : <Eye size={13} />}
             </button>
@@ -127,8 +126,7 @@ function MultiKeyInput({
             <button
               type="button"
               onClick={() => removeKey(i)}
-              className="flex-shrink-0 p-1.5 rounded-lg transition-colors hover:bg-red-50"
-              style={{ color: '#ef4444' }}
+              className="flex-shrink-0 p-1.5 rounded-lg transition-colors hover:bg-status-danger-tint text-status-danger"
             >
               <Trash2 size={13} />
             </button>
@@ -139,13 +137,13 @@ function MultiKeyInput({
         <button
           type="button"
           onClick={addKey}
-          className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wide transition-opacity hover:opacity-70"
+          className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide transition-opacity hover:opacity-70"
           style={{ color: accentColor }}
         >
           <Plus size={11} /> Add backup key
         </button>
       )}
-      <p className="text-[9px] font-bold" style={{ color: '#8D99AE' }}>
+      <p className="text-[9px] font-medium text-muted-foreground">
         Keys are used in order — if key 1 hits rate limit, key 2 is tried automatically.
       </p>
     </div>
@@ -172,38 +170,36 @@ function ImageUploader({
 
   return (
     <div className="sm:col-span-2">
-      <label className="block mb-1.5 text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: '#8D99AE' }}>
+      <label className="block mb-1.5 text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground">
         {label}
       </label>
       <input ref={ref} type="file" accept="image/*" className="hidden" onChange={handleFile} />
 
       {dataUrl ? (
         <div
-          className="relative flex items-center gap-4 p-3 rounded-xl"
-          style={{ background: '#F8F9FA', border: '1px solid #E2E6EA' }}
+          className="relative flex items-center gap-4 p-3 rounded-xl border border-border"
+          style={{ background: 'var(--color-neutral-50)' }}
         >
           <img
             src={dataUrl}
             alt={label}
             className="h-16 w-auto object-contain rounded-lg"
-            style={{ background: '#FFFFFF', border: '1px solid #E2E6EA', padding: 4 }}
+            style={{ background: 'white', border: '1px solid var(--color-neutral-200)', padding: 4 }}
           />
           <div className="flex-1">
-            <div className="text-sm font-bold" style={{ color: '#0D1B2A' }}>{label} uploaded</div>
-            <div className="text-xs" style={{ color: '#8D99AE' }}>{hint}</div>
+            <div className="text-sm font-medium text-foreground">{label} uploaded</div>
+            <div className="text-xs text-muted-foreground">{hint}</div>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => ref.current?.click()}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold"
-              style={{ background: 'rgba(212,175,55,0.1)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)' }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary/10 text-primary border border-primary/30"
             >
               <RefreshCw size={11} /> Replace
             </button>
             <button
               onClick={onClear}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold"
-              style={{ background: 'rgba(220,38,38,0.08)', color: '#dc2626', border: '1px solid rgba(220,38,38,0.2)' }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-status-danger-tint text-status-danger border border-status-danger/20"
             >
               <Trash2 size={11} /> Remove
             </button>
@@ -213,16 +209,16 @@ function ImageUploader({
         <button
           onClick={() => ref.current?.click()}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all"
-          style={{ background: '#F8F9FA', border: '1.5px dashed #C3C9D4' }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = '#D4AF37'; e.currentTarget.style.background = 'rgba(212,175,55,0.05)'; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = '#C3C9D4'; e.currentTarget.style.background = '#F8F9FA'; }}
+          style={{ background: 'var(--color-neutral-50)', border: '1.5px dashed var(--color-neutral-400)' }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-primary)'; e.currentTarget.style.background = 'rgba(212,175,55,0.05)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-neutral-400)'; e.currentTarget.style.background = 'var(--color-neutral-50)'; }}
         >
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'rgba(212,175,55,0.1)', color: '#D4AF37' }}>
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-primary/10 text-primary">
             <Upload size={15} />
           </div>
           <div className="text-left">
-            <div className="text-sm font-bold" style={{ color: '#0D1B2A' }}>Upload {label}</div>
-            <div className="text-xs" style={{ color: '#8D99AE' }}>{hint}</div>
+            <div className="text-sm font-medium text-foreground">Upload {label}</div>
+            <div className="text-xs text-muted-foreground">{hint}</div>
           </div>
         </button>
       )}
@@ -231,12 +227,12 @@ function ImageUploader({
 }
 
 // ─── Subscription Section ────────────────────────────────────────────────────
-const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string; icon: React.ReactNode }> = {
-  trial:    { label: 'Free Trial',    bg: 'rgba(59,130,246,0.1)',  color: '#3b82f6', icon: <Clock size={11} /> },
-  active:   { label: 'Active',        bg: 'rgba(34,197,94,0.1)',   color: '#22c55e', icon: <BadgeCheck size={11} /> },
-  pending:  { label: 'Pending',       bg: 'rgba(212,175,55,0.1)',  color: '#D4AF37', icon: <Hourglass size={11} /> },
-  readonly: { label: 'Expired',       bg: 'rgba(239,68,68,0.1)',   color: '#ef4444', icon: <XCircle size={11} /> },
-  suspended:{ label: 'Suspended',     bg: 'rgba(107,114,128,0.1)', color: '#6b7280', icon: <XCircle size={11} /> },
+const STATUS_CONFIG: Record<string, { label: string; badgeClass: string; icon: React.ReactNode }> = {
+  trial:    { label: 'Free Trial',  badgeClass: 'bg-status-warning-tint text-status-warning',   icon: <Clock size={11} /> },
+  active:   { label: 'Active',      badgeClass: 'bg-status-success-tint text-status-success',   icon: <BadgeCheck size={11} /> },
+  pending:  { label: 'Pending',     badgeClass: 'bg-status-warning-tint text-status-warning',   icon: <Hourglass size={11} /> },
+  readonly: { label: 'Expired',     badgeClass: 'bg-status-danger-tint text-status-danger',     icon: <XCircle size={11} /> },
+  suspended:{ label: 'Suspended',   badgeClass: 'bg-[var(--color-neutral-200)] text-[var(--color-neutral-600)]', icon: <XCircle size={11} /> },
 };
 
 function SubscriptionSection({ uid, profile }: { uid: string; profile: import('@/types').SurveyorProfile }) {
@@ -269,15 +265,14 @@ function SubscriptionSection({ uid, profile }: { uid: string; profile: import('@
     iso ? new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E2E6EA' }}>
+    <div className="rounded-2xl overflow-hidden bg-card border border-border">
       {/* Header */}
-      <div className="px-6 py-4 flex items-center gap-2" style={{ borderBottom: '1px solid #F0F2F5', background: '#FAFAFA' }}>
-        <span style={{ color: '#D4AF37' }}><CreditCard size={14} /></span>
-        <span className="text-sm font-black" style={{ color: '#0D1B2A' }}>Subscription & Billing</span>
+      <div className="px-6 py-4 flex items-center gap-2 border-b border-border" style={{ background: 'var(--color-neutral-100)' }}>
+        <span className="text-primary"><CreditCard size={14} /></span>
+        <span className="text-sm font-medium text-foreground">Subscription &amp; Billing</span>
         {/* Status badge */}
         <span
-          className="ml-auto flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide"
-          style={{ background: cfg.bg, color: cfg.color }}
+          className={`ml-auto flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium uppercase tracking-wide ${cfg.badgeClass}`}
         >
           {cfg.icon} {cfg.label}
         </span>
@@ -287,27 +282,31 @@ function SubscriptionSection({ uid, profile }: { uid: string; profile: import('@
         {/* Expiry row */}
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           {/* Plan period */}
-          <div className="rounded-xl p-3" style={{ background: '#F8F9FA', border: '1px solid #E2E6EA' }}>
-            <div className="text-[9px] font-black uppercase tracking-[0.18em] mb-1" style={{ color: '#8D99AE' }}>
+          <div className="rounded-xl p-3 border border-border" style={{ background: 'var(--color-neutral-50)' }}>
+            <div className="text-[9px] font-medium uppercase tracking-[0.18em] mb-1 text-muted-foreground">
               {state === 'trial' ? 'Trial Ends' : 'Subscription Expires'}
             </div>
             <div className="flex items-center gap-1.5">
-              <Calendar size={12} style={{ color: '#D4AF37' }} />
-              <span className="text-sm font-black" style={{ color: '#0D1B2A' }}>{formatDate(expiryDate)}</span>
+              <Calendar size={12} className="text-primary" />
+              <span className="text-sm font-medium text-foreground">{formatDate(expiryDate)}</span>
             </div>
           </div>
 
           {/* Days remaining */}
           {(state === 'trial' || state === 'active') && (
             <div
-              className="rounded-xl p-3"
-              style={{
-                background: daysLeft <= 5 ? 'rgba(239,68,68,0.06)' : daysLeft <= 15 ? 'rgba(234,179,8,0.06)' : 'rgba(34,197,94,0.06)',
-                border: `1px solid ${daysLeft <= 5 ? 'rgba(239,68,68,0.2)' : daysLeft <= 15 ? 'rgba(234,179,8,0.2)' : 'rgba(34,197,94,0.2)'}`,
-              }}
+              className={`rounded-xl p-3 ${
+                daysLeft <= 5
+                  ? 'bg-status-danger-tint border border-status-danger/20'
+                  : daysLeft <= 15
+                  ? 'bg-status-warning-tint border border-status-warning/20'
+                  : 'bg-status-success-tint border border-status-success/20'
+              }`}
             >
-              <div className="text-[9px] font-black uppercase tracking-[0.18em] mb-1" style={{ color: '#8D99AE' }}>Days Remaining</div>
-              <div className="text-sm font-black" style={{ color: daysLeft <= 5 ? '#ef4444' : daysLeft <= 15 ? '#ca8a04' : '#22c55e' }}>
+              <div className="text-[9px] font-medium uppercase tracking-[0.18em] mb-1 text-muted-foreground">Days Remaining</div>
+              <div className={`text-sm font-medium ${
+                daysLeft <= 5 ? 'text-status-danger' : daysLeft <= 15 ? 'text-status-warning' : 'text-status-success'
+              }`}>
                 {daysLeft > 0 ? `${daysLeft} days` : 'Expired'}
               </div>
             </div>
@@ -315,52 +314,53 @@ function SubscriptionSection({ uid, profile }: { uid: string; profile: import('@
 
           {/* Last payment */}
           {profile.lastPaymentDate && (
-            <div className="rounded-xl p-3" style={{ background: '#F8F9FA', border: '1px solid #E2E6EA' }}>
-              <div className="text-[9px] font-black uppercase tracking-[0.18em] mb-1" style={{ color: '#8D99AE' }}>Last Payment</div>
-              <div className="text-sm font-black" style={{ color: '#0D1B2A' }}>{formatDate(profile.lastPaymentDate)}</div>
+            <div className="rounded-xl p-3 border border-border" style={{ background: 'var(--color-neutral-50)' }}>
+              <div className="text-[9px] font-medium uppercase tracking-[0.18em] mb-1 text-muted-foreground">Last Payment</div>
+              <div className="text-sm font-medium text-foreground">{formatDate(profile.lastPaymentDate)}</div>
             </div>
           )}
         </div>
 
         {/* Trial start info */}
         {profile.trialStartDate && (
-          <div className="flex items-center gap-2 text-xs" style={{ color: '#8D99AE' }}>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Clock size={11} />
-            <span>Trial started on <strong style={{ color: '#4A4E69' }}>{formatDate(profile.trialStartDate)}</strong></span>
+            <span>Trial started on <strong className="text-[var(--color-neutral-600)]">{formatDate(profile.trialStartDate)}</strong></span>
           </div>
         )}
 
         {/* Referral code */}
         {profile.referralCode && (
-          <div className="rounded-xl p-4" style={{ background: 'rgba(212,175,55,0.05)', border: '1px solid rgba(212,175,55,0.2)' }}>
+          <div className="rounded-xl p-4 bg-primary/5 border border-primary/20">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-1.5">
-                <Gift size={13} style={{ color: '#D4AF37' }} />
-                <span className="text-[10px] font-black uppercase tracking-wide" style={{ color: '#D4AF37' }}>Your Referral Code</span>
+                <Gift size={13} className="text-primary" />
+                <span className="text-[10px] font-medium uppercase tracking-wide text-primary">Your Referral Code</span>
               </div>
               {profile.referralCount > 0 && (
-                <span className="text-[10px] font-black" style={{ color: '#8D99AE' }}>
+                <span className="text-[10px] font-medium text-muted-foreground">
                   {profile.referralCount} referral{profile.referralCount !== 1 ? 's' : ''} · +{profile.referralBonusDays} bonus days earned
                 </span>
               )}
             </div>
             <div className="flex items-center gap-3">
               <code
-                className="flex-1 px-3 py-2 rounded-lg text-sm font-black tracking-widest"
-                style={{ background: '#FFFFFF', border: '1px solid rgba(212,175,55,0.3)', color: '#0D1B2A', letterSpacing: '0.1em' }}
+                className="flex-1 px-3 py-2 rounded-lg text-sm font-medium tracking-widest bg-card border border-primary/30 text-foreground"
+                style={{ letterSpacing: '0.1em' }}
               >
                 {profile.referralCode}
               </code>
               <button
                 onClick={handleCopyReferral}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-black transition-all"
-                style={{ background: copied ? 'rgba(34,197,94,0.1)' : 'rgba(212,175,55,0.12)', color: copied ? '#22c55e' : '#D4AF37' }}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                  copied ? 'bg-status-success-tint text-status-success' : 'bg-primary/12 text-primary'
+                }`}
               >
                 {copied ? <CheckCircle2 size={12} /> : <Copy size={12} />}
                 {copied ? 'Copied!' : 'Copy'}
               </button>
             </div>
-            <p className="mt-2 text-[9px] font-bold" style={{ color: '#8D99AE' }}>
+            <p className="mt-2 text-[9px] font-medium text-muted-foreground">
               Share this code with colleagues. When they make their first payment, you earn +30 bonus days.
             </p>
           </div>
@@ -368,41 +368,40 @@ function SubscriptionSection({ uid, profile }: { uid: string; profile: import('@
 
         {/* Payment history */}
         <div>
-          <div className="text-[10px] font-black uppercase tracking-[0.18em] mb-3" style={{ color: '#8D99AE' }}>Payment History</div>
+          <div className="text-[10px] font-medium uppercase tracking-[0.18em] mb-3 text-muted-foreground">Payment History</div>
           {loading ? (
-            <div className="flex items-center gap-2 text-xs" style={{ color: '#8D99AE' }}>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <RefreshCw size={11} className="animate-spin" /> Loading…
             </div>
           ) : payments.length === 0 ? (
-            <div className="text-xs font-bold" style={{ color: '#C3C9D4' }}>No payments on record.</div>
+            <div className="text-xs font-medium text-[var(--color-neutral-400)]">No payments on record.</div>
           ) : (
             <div className="space-y-2">
               {payments.map((p, idx) => {
                 const statusMap = {
-                  verified: { icon: <CheckCircle2 size={11} />, color: '#22c55e', label: 'Verified' },
-                  pending:  { icon: <Hourglass size={11} />,    color: '#D4AF37', label: 'Pending' },
-                  rejected: { icon: <XCircle size={11} />,      color: '#ef4444', label: 'Rejected' },
+                  verified: { icon: <CheckCircle2 size={11} />, iconClass: 'text-status-success', badgeClass: 'bg-status-success-tint text-status-success', label: 'Verified' },
+                  pending:  { icon: <Hourglass size={11} />,    iconClass: 'text-status-warning',  badgeClass: 'bg-status-warning-tint text-status-warning',  label: 'Pending' },
+                  rejected: { icon: <XCircle size={11} />,      iconClass: 'text-status-danger',   badgeClass: 'bg-status-danger-tint text-status-danger',    label: 'Rejected' },
                 };
                 const s = statusMap[p.status] ?? statusMap.pending;
                 return (
                   <div
                     key={p.id ?? idx}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl"
-                    style={{ background: '#F8F9FA', border: '1px solid #E2E6EA' }}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl border border-border"
+                    style={{ background: 'var(--color-neutral-50)' }}
                   >
-                    <span style={{ color: s.color, flexShrink: 0 }}>{s.icon}</span>
+                    <span className={`${s.iconClass} flex-shrink-0`}>{s.icon}</span>
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs font-black truncate" style={{ color: '#0D1B2A' }}>
+                      <div className="text-xs font-medium truncate text-foreground">
                         ₹{p.amount.toLocaleString('en-IN')}
-                        {p.durationGranted ? <span className="ml-2 text-[10px] font-bold" style={{ color: '#22c55e' }}>+{p.durationGranted} days</span> : null}
+                        {p.durationGranted ? <span className="ml-2 text-[10px] font-medium text-status-success">+{p.durationGranted} days</span> : null}
                       </div>
-                      <div className="text-[10px] font-bold truncate" style={{ color: '#8D99AE' }}>
+                      <div className="text-[10px] font-medium truncate text-muted-foreground">
                         Txn: {p.transactionId || '—'} · {formatDate(p.submittedAt)}
                       </div>
                     </div>
                     <span
-                      className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase flex-shrink-0"
-                      style={{ background: `${s.color}18`, color: s.color }}
+                      className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-medium uppercase flex-shrink-0 ${s.badgeClass}`}
                     >
                       {s.label}
                     </span>
@@ -454,23 +453,22 @@ export function ProfileTab() {
   };
 
   return (
-    <div className="h-full overflow-y-auto" style={{ background: '#F8F9FA' }}>
+    <div className="h-full overflow-y-auto" style={{ background: 'var(--color-neutral-50)' }}>
 
       {/* ── Header ─────────────────────────────────────── */}
       <div
         className="px-8 py-8 lg:px-12"
-        style={{ background: 'linear-gradient(135deg, #0D1B2A 0%, #1e3a5f 100%)' }}
+        style={{ background: 'var(--color-neutral-900)' }}
       >
         <div className="max-w-4xl mx-auto flex items-start justify-between gap-6">
           <div>
             <div
-              className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] mb-4"
-              style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)' }}
+              className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-medium uppercase tracking-[0.2em] mb-4 bg-primary/15 text-primary border border-primary/30"
             >
               <Shield size={11} />
               Surveyor Identity
             </div>
-            <h1 className="text-2xl lg:text-3xl font-black mb-2" style={{ color: '#F8F9FA', letterSpacing: '-0.02em' }}>
+            <h1 className="text-2xl lg:text-3xl font-medium mb-2 text-white" style={{ letterSpacing: '-0.02em' }}>
               {profile.name || 'Your Profile'}
             </h1>
             <p className="text-sm" style={{ color: 'rgba(232,236,240,0.6)' }}>
@@ -485,16 +483,15 @@ export function ProfileTab() {
             {isAdminUser && (
               <button
                 onClick={() => useUIStore.getState().setActiveTab('admin')}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all hover:scale-105 active:scale-95 shadow-lg"
-                style={{ background: 'linear-gradient(135deg, #D4AF37, #f0d870)', color: '#0D1B2A' }}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-medium uppercase tracking-wider transition-all hover:scale-105 active:scale-95 shadow-lg bg-primary text-primary-foreground"
               >
                 <ShieldCheck size={14} />
                 Regulator Dashboard
               </button>
             )}
             <div
-              className="w-16 h-16 rounded-2xl flex-shrink-0 flex items-center justify-center text-2xl font-black"
-              style={{ background: 'rgba(255,255,255,0.1)', color: '#F8F9FA', border: '1px solid rgba(255,255,255,0.2)' }}
+              className="w-16 h-16 rounded-2xl flex-shrink-0 flex items-center justify-center text-2xl font-medium text-white"
+              style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
             >
               {profile.name ? profile.name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() : 'SP'}
             </div>
@@ -507,12 +504,11 @@ export function ProfileTab() {
         {/* ── Personal ──────────────────────────────────── */}
         <Section title="Personal Details" icon={<User size={14} />}>
           <div className={isNameLocked ? '' : ''}>
-            <label className="flex items-center gap-1.5 mb-1.5 text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: '#8D99AE' }}>
+            <label className="flex items-center gap-1.5 mb-1.5 text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground">
               Full Name
               {isNameLocked && (
                 <span
-                  className="flex items-center gap-1 ml-1 px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase"
-                  style={{ background: 'rgba(212,175,55,0.12)', color: '#D4AF37' }}
+                  className="flex items-center gap-1 ml-1 px-1.5 py-0.5 rounded-full text-[8px] font-medium uppercase bg-primary/12 text-primary"
                   title="Name is identity-locked. Contact an admin to change it."
                 >
                   <Lock size={8} /> Identity-Locked
@@ -527,17 +523,17 @@ export function ProfileTab() {
               placeholder="e.g. Niraj P."
               className="w-full px-3 py-2 rounded-lg text-sm border outline-none transition-all"
               style={{
-                border: '1px solid #E2E6EA',
-                background: isNameLocked ? '#F0F2F5' : '#FAFAFA',
-                color: '#0D1B2A',
+                border: '1px solid var(--color-neutral-200)',
+                background: isNameLocked ? 'var(--color-neutral-100)' : 'var(--color-neutral-50)',
+                color: 'var(--color-neutral-900)',
                 fontWeight: 600,
                 cursor: isNameLocked ? 'not-allowed' : 'text',
               }}
-              onFocus={e => { if (!isNameLocked) e.currentTarget.style.borderColor = '#D4AF37'; }}
-              onBlur={e => { e.currentTarget.style.borderColor = '#E2E6EA'; }}
+              onFocus={e => { if (!isNameLocked) e.currentTarget.style.borderColor = 'var(--color-primary)'; }}
+              onBlur={e => { e.currentTarget.style.borderColor = 'var(--color-neutral-200)'; }}
             />
             {isNameLocked && (
-              <p className="mt-1 text-[9px] font-bold" style={{ color: '#8D99AE' }}>
+              <p className="mt-1 text-[9px] font-medium text-muted-foreground">
                 Contact an administrator to update your name.
               </p>
             )}
@@ -567,11 +563,11 @@ export function ProfileTab() {
         </Section>
 
         {/* ── Signature & Stamp ─────────────────────────── */}
-        <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E2E6EA' }}>
-          <div className="px-6 py-4 flex items-center gap-2" style={{ borderBottom: '1px solid #F0F2F5', background: '#FAFAFA' }}>
-            <Camera size={14} style={{ color: '#D4AF37' }} />
-            <span className="text-sm font-black" style={{ color: '#0D1B2A' }}>Signature & Stamp</span>
-            <span className="ml-2 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider" style={{ background: 'rgba(212,175,55,0.12)', color: '#D4AF37' }}>
+        <div className="rounded-2xl overflow-hidden bg-card border border-border">
+          <div className="px-6 py-4 flex items-center gap-2 border-b border-border" style={{ background: 'var(--color-neutral-100)' }}>
+            <Camera size={14} className="text-primary" />
+            <span className="text-sm font-medium text-foreground">Signature &amp; Stamp</span>
+            <span className="ml-2 text-[9px] font-medium px-2 py-0.5 rounded-full uppercase tracking-wider bg-primary/12 text-primary">
               Printed on reports
             </span>
           </div>
@@ -594,19 +590,19 @@ export function ProfileTab() {
         </div>
 
         {/* ── AI Config ─────────────────────────────────── */}
-        <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E2E6EA' }}>
-          <div className="px-6 py-4 flex items-center justify-between gap-2" style={{ borderBottom: '1px solid #F0F2F5', background: '#FAFAFA' }}>
+        <div className="rounded-2xl overflow-hidden bg-card border border-border">
+          <div className="px-6 py-4 flex items-center justify-between gap-2 border-b border-border" style={{ background: 'var(--color-neutral-100)' }}>
             <div className="flex items-center gap-2">
-              <Sparkles size={14} style={{ color: '#D4AF37' }} />
-              <span className="text-sm font-black" style={{ color: '#0D1B2A' }}>AI & Documents Intelligence</span>
+              <Sparkles size={14} className="text-primary" />
+              <span className="text-sm font-medium text-foreground">AI &amp; Documents Intelligence</span>
             </div>
-            <div className="flex items-center gap-1 p-1 rounded-lg" style={{ background: '#F0F2F5' }}>
+            <div className="flex items-center gap-1 p-1 rounded-lg" style={{ background: 'var(--color-neutral-100)' }}>
               <button
                 onClick={() => updateProfile({ aiProvider: 'gemini' })}
-                className="px-3 py-1 rounded-md text-[10px] font-black uppercase transition-all"
+                className="px-3 py-1 rounded-md text-[10px] font-medium uppercase transition-all"
                 style={{
-                  background: profile.aiProvider === 'gemini' ? '#FFFFFF' : 'transparent',
-                  color: profile.aiProvider === 'gemini' ? '#D4AF37' : '#8D99AE',
+                  background: profile.aiProvider === 'gemini' ? 'white' : 'transparent',
+                  color: profile.aiProvider === 'gemini' ? 'var(--color-primary)' : 'var(--color-neutral-400)',
                   boxShadow: profile.aiProvider === 'gemini' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'
                 }}
               >
@@ -614,10 +610,10 @@ export function ProfileTab() {
               </button>
               <button
                 onClick={() => updateProfile({ aiProvider: 'groq' })}
-                className="px-3 py-1 rounded-md text-[10px] font-black uppercase transition-all"
+                className="px-3 py-1 rounded-md text-[10px] font-medium uppercase transition-all"
                 style={{
-                  background: profile.aiProvider === 'groq' ? '#FFFFFF' : 'transparent',
-                  color: profile.aiProvider === 'groq' ? '#D4AF37' : '#8D99AE',
+                  background: profile.aiProvider === 'groq' ? 'white' : 'transparent',
+                  color: profile.aiProvider === 'groq' ? 'var(--color-primary)' : 'var(--color-neutral-400)',
                   boxShadow: profile.aiProvider === 'groq' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'
                 }}
               >
@@ -625,10 +621,10 @@ export function ProfileTab() {
               </button>
               <button
                 onClick={() => updateProfile({ aiProvider: 'nvidia' })}
-                className="px-3 py-1 rounded-md text-[10px] font-black uppercase transition-all"
+                className="px-3 py-1 rounded-md text-[10px] font-medium uppercase transition-all"
                 style={{
-                  background: profile.aiProvider === 'nvidia' ? '#FFFFFF' : 'transparent',
-                  color: profile.aiProvider === 'nvidia' ? '#76B900' : '#8D99AE',
+                  background: profile.aiProvider === 'nvidia' ? 'white' : 'transparent',
+                  color: profile.aiProvider === 'nvidia' ? '#76B900' : 'var(--color-neutral-400)',
                   boxShadow: profile.aiProvider === 'nvidia' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'
                 }}
               >
@@ -647,13 +643,13 @@ export function ProfileTab() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <div className="text-xs font-black" style={{ color: '#0D1B2A' }}>Google Gemini AI</div>
-                      {profile.aiProvider === 'gemini' && <span className="text-[9px] font-black px-1.5 py-0.5 rounded" style={{ background: '#4285F4', color: '#fff' }}>PRIMARY</span>}
+                      <div className="text-xs font-medium text-foreground">Google Gemini AI</div>
+                      {profile.aiProvider === 'gemini' && <span className="text-[9px] font-medium px-1.5 py-0.5 rounded" style={{ background: '#4285F4', color: '#fff' }}>PRIMARY</span>}
                     </div>
-                    <div className="text-[10px] font-bold" style={{ color: '#8D99AE' }}>Auto-selects best model · Add up to 3 keys for rate-limit resilience</div>
+                    <div className="text-[10px] font-medium text-muted-foreground">Auto-selects best model · Add up to 3 keys for rate-limit resilience</div>
                   </div>
                 </div>
-                <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all hover:opacity-80" style={{ background: '#4285F4', color: '#FFFFFF' }}>
+                <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all hover:opacity-80" style={{ background: '#4285F4', color: '#FFFFFF' }}>
                   Get Key <ExternalLink size={10} />
                 </a>
               </div>
@@ -674,13 +670,13 @@ export function ProfileTab() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <div className="text-xs font-black" style={{ color: '#0D1B2A' }}>Groq LPQ Intelligence</div>
-                      {profile.aiProvider === 'groq' && <span className="text-[9px] font-black px-1.5 py-0.5 rounded" style={{ background: '#F26639', color: '#fff' }}>PRIMARY</span>}
+                      <div className="text-xs font-medium text-foreground">Groq LPQ Intelligence</div>
+                      {profile.aiProvider === 'groq' && <span className="text-[9px] font-medium px-1.5 py-0.5 rounded" style={{ background: '#F26639', color: '#fff' }}>PRIMARY</span>}
                     </div>
-                    <div className="text-[10px] font-bold" style={{ color: '#8D99AE' }}>Fastest Inference Engine · Add up to 3 keys for rate-limit resilience</div>
+                    <div className="text-[10px] font-medium text-muted-foreground">Fastest Inference Engine · Add up to 3 keys for rate-limit resilience</div>
                   </div>
                 </div>
-                <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all hover:opacity-80" style={{ background: '#F26639', color: '#FFFFFF' }}>
+                <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all hover:opacity-80" style={{ background: '#F26639', color: '#FFFFFF' }}>
                   Get Key <ExternalLink size={10} />
                 </a>
               </div>
@@ -701,13 +697,13 @@ export function ProfileTab() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <div className="text-xs font-black" style={{ color: '#0D1B2A' }}>NVIDIA NIM · Free Tier</div>
-                      {profile.aiProvider === 'nvidia' && <span className="text-[9px] font-black px-1.5 py-0.5 rounded" style={{ background: '#76B900', color: '#fff' }}>PRIMARY</span>}
+                      <div className="text-xs font-medium text-foreground">NVIDIA NIM · Free Tier</div>
+                      {profile.aiProvider === 'nvidia' && <span className="text-[9px] font-medium px-1.5 py-0.5 rounded" style={{ background: '#76B900', color: '#fff' }}>PRIMARY</span>}
                     </div>
-                    <div className="text-[10px] font-bold" style={{ color: '#8D99AE' }}>90B Vision Model · 40 req/min · No monthly cap · Fallback when Gemini &amp; Groq fail</div>
+                    <div className="text-[10px] font-medium text-muted-foreground">90B Vision Model · 40 req/min · No monthly cap · Fallback when Gemini &amp; Groq fail</div>
                   </div>
                 </div>
-                <a href="https://build.nvidia.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all hover:opacity-80" style={{ background: '#76B900', color: '#FFFFFF' }}>
+                <a href="https://build.nvidia.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all hover:opacity-80" style={{ background: '#76B900', color: '#FFFFFF' }}>
                   Get Key <ExternalLink size={10} />
                 </a>
               </div>
@@ -722,31 +718,31 @@ export function ProfileTab() {
         </div>
 
         {/* ── Google Drive ───────────────────────────────── */}
-        <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E2E6EA' }}>
-          <div className="px-6 py-4 flex items-center gap-2" style={{ borderBottom: '1px solid #F0F2F5', background: '#FAFAFA' }}>
-            <Cloud size={14} style={{ color: isDriveConnected ? '#22c55e' : '#D4AF37' }} />
-            <span className="text-sm font-black" style={{ color: '#0D1B2A' }}>Google Drive Sync</span>
+        <div className="rounded-2xl overflow-hidden bg-card border border-border">
+          <div className="px-6 py-4 flex items-center gap-2 border-b border-border" style={{ background: 'var(--color-neutral-100)' }}>
+            <Cloud size={14} className={isDriveConnected ? 'text-status-success' : 'text-primary'} />
+            <span className="text-sm font-medium text-foreground">Google Drive Sync</span>
             {isDriveConnected && (
-              <span className="ml-1 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider" style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e' }}>Linked</span>
+              <span className="ml-1 text-[9px] font-medium px-2 py-0.5 rounded-full uppercase tracking-wider bg-status-success-tint text-status-success">Linked</span>
             )}
           </div>
           <div className="p-5 space-y-4">
             {/* Status banner */}
             <div
-              className="flex items-center gap-3 p-3 rounded-xl"
-              style={{
-                background: isDriveConnected ? 'rgba(34,197,94,0.07)' : 'rgba(212,175,55,0.07)',
-                border: `1px solid ${isDriveConnected ? 'rgba(34,197,94,0.2)' : 'rgba(212,175,55,0.2)'}`
-              }}
+              className={`flex items-center gap-3 p-3 rounded-xl ${
+                isDriveConnected
+                  ? 'bg-status-success-tint border border-status-success/20'
+                  : 'bg-status-warning-tint border border-status-warning/20'
+              }`}
             >
               {isDriveConnected
-                ? <CheckCircle2 size={16} style={{ color: '#22c55e', flexShrink: 0 }} />
-                : <CloudOff size={16} style={{ color: '#D4AF37', flexShrink: 0 }} />}
+                ? <CheckCircle2 size={16} className="text-status-success flex-shrink-0" />
+                : <CloudOff size={16} className="text-status-warning flex-shrink-0" />}
               <div>
-                <div className="text-xs font-black" style={{ color: '#0D1B2A' }}>
+                <div className="text-xs font-medium text-foreground">
                   {isDriveConnected ? `Linked as ${driveEmail}` : 'Google Drive is not linked'}
                 </div>
-                <div className="text-[10px] font-bold" style={{ color: '#8D99AE' }}>
+                <div className="text-[10px] font-medium text-muted-foreground">
                   {isDriveConnected
                     ? 'Your reports and documents will automatically sync to your Google Drive folder: SurveyOS/'
                     : 'Click the button below to grant SurveyOS permission to upload files to your Google Drive.'}
@@ -755,15 +751,15 @@ export function ProfileTab() {
             </div>
 
             {/* Auto-Upload Toggle */}
-            <div className="flex items-center justify-between p-3 rounded-xl border" style={{ borderColor: '#E2E6EA', background: '#FAFAFA' }}>
+            <div className="flex items-center justify-between p-3 rounded-xl border border-border" style={{ background: 'var(--color-neutral-50)' }}>
               <div>
-                <div className="text-sm font-black" style={{ color: '#0D1B2A' }}>Auto Push Files</div>
-                <div className="text-[10px] font-bold" style={{ color: '#8D99AE' }}>Automatically upload photos and documents to Drive</div>
+                <div className="text-sm font-medium text-foreground">Auto Push Files</div>
+                <div className="text-[10px] font-medium text-muted-foreground">Automatically upload photos and documents to Drive</div>
               </div>
               <button
                 onClick={() => updateProfile({ autoUploadDrive: profile.autoUploadDrive === false ? true : false })}
                 className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                  profile.autoUploadDrive !== false ? 'bg-[#22c55e]' : 'bg-[#C3C9D4]'
+                  profile.autoUploadDrive !== false ? 'bg-status-success' : 'bg-[var(--color-neutral-400)]'
                 }`}
               >
                 <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${
@@ -774,9 +770,9 @@ export function ProfileTab() {
 
             {/* Error */}
             {driveError && (
-              <div className="flex items-center gap-2 p-3 rounded-xl" style={{ background: 'rgba(220,38,38,0.06)', border: '1px solid rgba(220,38,38,0.15)' }}>
-                <AlertCircle size={13} style={{ color: '#dc2626', flexShrink: 0 }} />
-                <span className="text-xs font-bold" style={{ color: '#dc2626' }}>{driveError}</span>
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-status-danger-tint border border-status-danger/15">
+                <AlertCircle size={13} className="text-status-danger flex-shrink-0" />
+                <span className="text-xs font-medium text-status-danger">{driveError}</span>
               </div>
             )}
 
@@ -784,12 +780,9 @@ export function ProfileTab() {
             <button
               onClick={handleLinkDrive}
               disabled={driveLinking}
-              className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-black text-sm transition-all"
+              className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm transition-all text-white"
               style={{
-                background: isDriveConnected
-                  ? 'linear-gradient(135deg, #059669, #34d399)'
-                  : 'linear-gradient(135deg, #4285F4, #1967d2)',
-                color: '#FFFFFF',
+                background: isDriveConnected ? 'var(--color-status-success, #059669)' : '#4285F4',
                 opacity: driveLinking ? 0.7 : 1,
                 cursor: driveLinking ? 'not-allowed' : 'pointer',
               }}
@@ -807,12 +800,12 @@ export function ProfileTab() {
         </div>
 
         {/* ── SurveyOS Sync Integration ─────────────────── */}
-        <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E2E6EA' }}>
-          <div className="px-6 py-4 flex items-center gap-2" style={{ borderBottom: '1px solid #F0F2F5', background: '#FAFAFA' }}>
-            <Plane size={14} style={{ color: '#D4AF37' }} />
-            <span className="text-sm font-black" style={{ color: '#0D1B2A' }}>SurveyOS Sync</span>
+        <div className="rounded-2xl overflow-hidden bg-card border border-border">
+          <div className="px-6 py-4 flex items-center gap-2 border-b border-border" style={{ background: 'var(--color-neutral-100)' }}>
+            <Plane size={14} className="text-primary" />
+            <span className="text-sm font-medium text-foreground">SurveyOS Sync</span>
             {profile.syncConnectedAt && (
-              <span className="ml-1 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider" style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e' }}>
+              <span className="ml-1 text-[9px] font-medium px-2 py-0.5 rounded-full uppercase tracking-wider bg-status-success-tint text-status-success">
                 Connected
               </span>
             )}
@@ -820,8 +813,8 @@ export function ProfileTab() {
           <div className="p-5">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <div className="text-sm font-black" style={{ color: '#0D1B2A' }}>Document Drive</div>
-                <div className="text-[10px] font-bold mt-0.5" style={{ color: '#8D99AE' }}>
+                <div className="text-sm font-medium text-foreground">Document Drive</div>
+                <div className="text-[10px] font-medium mt-0.5 text-muted-foreground">
                   {profile.syncConnectedAt
                     ? `Connected ${new Date(profile.syncConnectedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`
                     : 'Pull documents collected from insureds and garages via Telegram.'}
@@ -829,13 +822,12 @@ export function ProfileTab() {
               </div>
               {profile.syncConnectedAt ? (
                 <div className="flex items-center gap-3 flex-shrink-0">
-                  <span className="flex items-center gap-1 text-xs font-black" style={{ color: '#22c55e' }}>
+                  <span className="flex items-center gap-1 text-xs font-medium text-status-success">
                     <CheckCircle2 size={14} /> Connected
                   </span>
                   <button
                     onClick={() => updateProfile({ syncBridgeToken: '', syncConnectedAt: null })}
-                    className="text-xs font-black hover:underline"
-                    style={{ color: '#ef4444' }}
+                    className="text-xs font-medium hover:underline text-status-danger"
                   >
                     Disconnect
                   </button>
@@ -843,8 +835,8 @@ export function ProfileTab() {
               ) : (
                 <button
                   onClick={() => setConnectSyncOpen(true)}
-                  className="flex-shrink-0 px-4 py-2 rounded-xl text-xs font-black"
-                  style={{ background: '#0D1B2A', color: '#FFFFFF' }}
+                  className="flex-shrink-0 px-4 py-2 rounded-xl text-xs font-medium text-primary-foreground"
+                  style={{ background: 'var(--color-neutral-900)' }}
                 >
                   Connect
                 </button>
@@ -862,11 +854,10 @@ export function ProfileTab() {
         <div className="flex justify-end pb-8">
           <button
             onClick={handleSave}
-            className="flex items-center gap-2 px-8 py-3 rounded-xl font-black text-sm transition-all shadow-lg"
-            style={{
-              background: saved ? 'linear-gradient(135deg, #059669, #34d399)' : 'linear-gradient(135deg, #D4AF37, #f0d870)',
-              color: '#0D1B2A',
-            }}
+            className={`flex items-center gap-2 px-8 py-3 rounded-xl font-medium text-sm transition-all shadow-lg ${
+              saved ? 'text-white' : 'bg-primary text-primary-foreground'
+            }`}
+            style={saved ? { background: 'var(--color-status-success, #059669)' } : {}}
           >
             {saved ? <CheckCircle2 size={15} /> : <CheckCircle2 size={15} />}
             {saved ? 'Saved Successfully!' : 'Update Profile & Settings'}
@@ -875,16 +866,15 @@ export function ProfileTab() {
 
         {/* Info card */}
         <div
-          className="flex items-start gap-3 p-4 rounded-xl mb-4"
-          style={{ background: 'rgba(212,175,55,0.07)', border: '1px solid rgba(212,175,55,0.2)' }}
+          className="flex items-start gap-3 p-4 rounded-xl mb-4 bg-primary/5 border border-primary/20"
         >
-          <AlertCircle size={15} style={{ color: '#D4AF37', flexShrink: 0, marginTop: 1 }} />
-          <div className="text-xs space-y-2" style={{ color: '#4A4E69', lineHeight: 1.6 }}>
+          <AlertCircle size={15} className="text-primary flex-shrink-0" style={{ marginTop: 1 }} />
+          <div className="text-xs space-y-2 text-[var(--color-neutral-600)]" style={{ lineHeight: 1.6 }}>
             <p>
               Profile data and API keys are <strong>saved locally on this device</strong> (localStorage).
               Your identity details and signatures will automatically appear on generated PDFs.
             </p>
-            <p className="font-bold">
+            <p className="font-medium">
               AI Future-Proofing: By using your own API keys, your SurveyOS remains free forever. You can update the Model ID anytime to use the latest AI releases from Google or Groq.
             </p>
           </div>
