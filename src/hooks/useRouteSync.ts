@@ -1,11 +1,10 @@
 import { useEffect, useRef } from 'react';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useSearchParams, usePathname } from 'next/navigation';
 import { useUIStore } from '@/stores/ui-store';
 import { useClaimStore } from '@/stores/claim-store';
 import { getClaim } from '@/lib/storage/indexeddb';
 
 export function useRouteSync() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
 
@@ -118,6 +117,14 @@ export function useRouteSync() {
     }
 
     const newUrl = `${pathname}${params.toString() ? `?${params.toString()}` : ''}`;
-    router.push(newUrl, { scroll: false });
+    // Use the History API directly instead of Next's router.push(). The URL here
+    // is only a mirror of the Zustand navigation state (so reload + Back/Forward
+    // can restore the view). In a static export (`output: 'export'`) router.push
+    // tries to fetch an RSC payload for the navigation; with the catch-all
+    // rewrite serving index.html it receives HTML instead and falls back to a
+    // FULL PAGE RELOAD on every tab change. pushState updates the URL with no
+    // navigation; Back/Forward still works because Next handles popstate and
+    // re-runs Effect 1 (URL → Store).
+    window.history.pushState(null, '', newUrl);
   }, [activeTab, currentClaimId]); // eslint-disable-line react-hooks/exhaustive-deps
 }
