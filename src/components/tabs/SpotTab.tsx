@@ -253,6 +253,14 @@ export function SpotTab() {
                   />
                 </div>
                 <div className="space-y-1.5">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Auth Valid Upto<S /></Label>
+                  <Input
+                    type="date"
+                    value={spotDetails.authValid}
+                    onChange={(e) => handleUpdate({ authValid: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
                   <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Actual Load (KG)<S /></Label>
                   <Input
                     type="number"
