@@ -6,7 +6,7 @@ import { useClaimStore } from '@/stores/claim-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { useUIStore } from '@/stores/ui-store';
 import { pushClaimToCloud } from '@/lib/firebase/sync';
-import { flushDriveQueue } from '@/lib/drive';
+import { flushDriveQueue, backupAllPendingToDrive } from '@/lib/drive';
 import { getDriveQueueCount } from '@/lib/storage/indexeddb';
 import { Cloud, Loader2 } from 'lucide-react';
 
@@ -24,6 +24,10 @@ export function ClaimHeader() {
       // Step 1: Push claim data to Firestore
       await pushClaimToCloud(user.uid, currentClaim);
       setSaveStatus('saved');
+
+      // Also catch up any claims whose Drive backup is missing/stale, so a single
+      // Save & Sync leaves everything backed up. Background + duplicate-safe.
+      void backupAllPendingToDrive();
 
       // Step 2: Flush Drive photo queue if Drive is linked
       if (isDriveConnected) {

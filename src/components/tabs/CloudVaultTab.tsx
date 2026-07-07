@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
 import { pullClaimsFromCloud, pushClaimToCloud } from '@/lib/firebase/sync';
 import { getAllClaims, saveClaim, getAllDriveBackedAt } from '@/lib/storage/indexeddb';
-import { backupClaimToDrive, getDriveToken } from '@/lib/drive';
+import { backupClaimToDrive, backupAllPendingToDrive, getDriveToken } from '@/lib/drive';
 import { computeSyncHealth } from '@/lib/sync/sync-health';
 import { ClaimData } from '@/types';
 import {
@@ -34,6 +34,7 @@ export function CloudVaultTab() {
   const [bulkSyncing, setBulkSyncing] = useState(false);
   const [driveMap, setDriveMap] = useState<Map<string, string>>(new Map());
   const [driveLinked, setDriveLinked] = useState(false);
+  const [bulkDriveSyncing, setBulkDriveSyncing] = useState(false);
   const pendingRef = useRef<HTMLDivElement>(null);
 
   const fetchData = async () => {
@@ -127,6 +128,29 @@ export function CloudVaultTab() {
     );
     fetchData();
     setBulkSyncing(false);
+  };
+
+  // Back up every claim whose Drive replica is missing/stale, in one go.
+  // Duplicate-safe (serialized in the drive layer) and idempotent.
+  const handleBackupAllDrive = async () => {
+    if (!driveLinked || bulkDriveSyncing) return;
+    setBulkDriveSyncing(true);
+    const toastId = toast.loading('Backing up claims to Drive…');
+    try {
+      const { backedUp, failed, total } = await backupAllPendingToDrive();
+      if (total === 0) {
+        toast.success('All claims already backed up to Drive.', { id: toastId });
+      } else if (failed === 0) {
+        toast.success(`${backedUp} claim${backedUp > 1 ? 's' : ''} backed up to Drive.`, { id: toastId });
+      } else {
+        toast.warning(`${backedUp} backed up, ${failed} failed — will retry on next sync.`, { id: toastId });
+      }
+    } catch {
+      toast.error('Drive backup failed. Try again.', { id: toastId });
+    } finally {
+      setBulkDriveSyncing(false);
+      fetchData();
+    }
   };
 
   const filteredClaims = cloudClaims.filter(c =>
@@ -250,6 +274,16 @@ export function CloudVaultTab() {
                   ? `${drivePending} claim${drivePending > 1 ? 's' : ''} not on Drive`
                   : 'All claims mirrored to Drive'}
               </div>
+              {driveLinked && drivePending > 0 && (
+                <button
+                  onClick={handleBackupAllDrive}
+                  disabled={bulkDriveSyncing}
+                  className="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium uppercase tracking-wider bg-primary text-white hover:opacity-90 transition-all active:scale-95 disabled:opacity-50"
+                >
+                  {bulkDriveSyncing ? <RefreshCw size={12} className="animate-spin" /> : <HardDrive size={12} />}
+                  Back up {drivePending} to Drive
+                </button>
+              )}
             </div>
           </div>
 

@@ -8,7 +8,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useUIStore } from '@/stores/ui-store';
 import { syncClaimNow } from '@/lib/sync/syncClaimNow';
 import { pushClaimToCloud } from '@/lib/firebase/sync';
-import { flushDriveQueue } from '@/lib/drive';
+import { flushDriveQueue, backupAllPendingToDrive } from '@/lib/drive';
 import { saveClaim } from '@/lib/storage/indexeddb';
 
 type BtnState = 'idle' | 'saving' | 'saved' | 'error';
@@ -53,6 +53,9 @@ export function SaveProgressButton({ className = '', tone = 'default' }: SavePro
     if (result.ok) {
       setState('saved');
       setSaveStatus('saved');
+      // Catch up any claims still missing/stale on Drive so one save leaves
+      // everything backed up. Background + duplicate-safe.
+      void backupAllPendingToDrive();
       toast.success('Saved to cloud — available on all your devices.', { duration: 3000 });
     } else if (result.error === 'offline') {
       setState('error');

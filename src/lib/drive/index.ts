@@ -15,7 +15,9 @@ import {
   getDriveQueueCount,
   getClaim,
   saveClaim,
+  getAllClaims,
   setDriveBackedAt,
+  getAllDriveBackedAt,
 } from '@/lib/storage/indexeddb';
 
 // ─── Token State ─────────────────────────────────────────────────────────────
@@ -577,9 +579,20 @@ async function findClaimFolderId(claimId: string): Promise<string | null> {
  * Cloud Vault tab can show Drive sync status.
  * Returns 'skipped' (Drive not linked), 'ok' (backed up), or 'error'.
  */
+let driveBackupChain: Promise<unknown> = Promise.resolve();
+
 export async function backupClaimToDrive(claim: ClaimData): Promise<'ok' | 'skipped' | 'error'> {
   if (!getDriveToken()) return 'skipped';
+  // Serialize every Drive backup through one chain. The search-then-upsert below
+  // is the only place a duplicate claim.json (or folder) could appear — and only
+  // if two backups for the same claim ran concurrently. One-at-a-time makes that
+  // impossible, no matter how many buttons or auto-syncs fire it at once.
+  const run = driveBackupChain.then(() => performClaimBackup(claim));
+  driveBackupChain = run.catch(() => undefined);
+  return run;
+}
 
+async function performClaimBackup(claim: ClaimData): Promise<'ok' | 'error'> {
   try {
     const label = claim.reportNo?.trim() || claim.id;
     const folderId = await getOrCreateClaimFolder(claim.id, label);
@@ -617,6 +630,32 @@ export async function backupClaimToDrive(claim: ClaimData): Promise<'ok' | 'skip
     console.warn('[Drive] Failed to backup claim:', e);
     return 'error';
   }
+}
+
+/**
+ * Backs up every local claim whose Drive replica is missing or stale.
+ * Idempotent and duplicate-safe: each claim routes through the serialized
+ * backupClaimToDrive, and claims already current on Drive are skipped up front.
+ * No-op (returns zeros) when Drive isn't linked. Runs claims sequentially to
+ * avoid Drive rate limits. Any failures stay pending and heal on the next call.
+ */
+export async function backupAllPendingToDrive(): Promise<{ total: number; backedUp: number; failed: number }> {
+  if (!getDriveToken()) return { total: 0, backedUp: 0, failed: 0 };
+
+  const [claims, driveMap] = await Promise.all([getAllClaims(), getAllDriveBackedAt()]);
+  const pending = claims.filter(c => {
+    const backedAt = driveMap.get(c.id);
+    return !backedAt || backedAt < c.updatedAt;
+  });
+
+  let backedUp = 0;
+  let failed = 0;
+  for (const claim of pending) {
+    const result = await backupClaimToDrive(claim);
+    if (result === 'ok') backedUp++;
+    else if (result === 'error') failed++;
+  }
+  return { total: pending.length, backedUp, failed };
 }
 
 /**
