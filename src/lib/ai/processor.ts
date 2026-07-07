@@ -176,17 +176,50 @@ export async function fileToImages(
     return { viewImages, apiImages, textLayers };
   }
 
-  // Handle standard images — same data URL used for both view and API
-  return new Promise((resolve, reject) => {
+  // Handle standard images — full-res original for viewing, downscaled JPEG for the API.
+  // Phone camera photos (12MP+, 4000×3000) sent raw add noise and hurt OCR accuracy;
+  // ~1600px on the long edge is plenty for document text and stays well under provider limits.
+  const dataUrl = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
-      const dataUrl = e.target?.result?.toString();
-      if (dataUrl) resolve({ viewImages: [dataUrl], apiImages: [dataUrl] });
+      const url = e.target?.result?.toString();
+      if (url) resolve(url);
       else reject(new Error('Failed to read image'));
     };
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+  return { viewImages: [dataUrl], apiImages: [await downscaleForApi(dataUrl)] };
+}
+
+// Max long-edge dimension for images sent to the AI API.
+const MAX_API_IMAGE_DIM = 1600;
+
+/**
+ * Downscales an image data URL so its longest edge is ≤ MAX_API_IMAGE_DIM,
+ * re-encoding as JPEG 90%. Returns the original if it's already small enough
+ * or if decoding fails (never blocks extraction).
+ */
+async function downscaleForApi(dataUrl: string): Promise<string> {
+  try {
+    const img = new Image();
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error('Image decode failed'));
+      img.src = dataUrl;
+    });
+    const scale = MAX_API_IMAGE_DIM / Math.max(img.width, img.height);
+    if (scale >= 1) return dataUrl;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(img.width * scale);
+    canvas.height = Math.round(img.height * scale);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return dataUrl;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.9);
+  } catch {
+    return dataUrl;
+  }
 }
 
 /**

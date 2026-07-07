@@ -171,6 +171,10 @@ export interface SurveyorProfile {
   surveyorId: string;
   /** Sequential counter for spot reports */
   spotSequence?: number;
+  /** Last spot report number issued or manually edited — next number follows its format */
+  lastSpotReportNo?: string;
+  /** Last final report number issued or manually edited — next number follows its format */
+  lastFinalReportNo?: string;
   /** Sequential counter for final/reinspection/billcheck reports */
   finalSequence?: number;
   /** Sequential counter for fee bills */

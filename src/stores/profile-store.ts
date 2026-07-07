@@ -100,6 +100,25 @@ function migrateProfile(profile: SurveyorProfile): SurveyorProfile {
   return updated;
 }
 
+/**
+ * Infers the next report number from the surveyor's last-used format.
+ * Increments the last numeric token that isn't a 4-digit year (20xx),
+ * preserving zero-padding:
+ *   "spot-257-2026/2027" → "spot-258-2026/2027"
+ *   "SPO/2026/003"       → "SPO/2026/004"
+ *   "Spot/253"           → "Spot/254"
+ * Returns null if no incrementable number is found (caller falls back to
+ * the default SPO/YYYY/NNN scheme).
+ */
+// ponytail: heuristic can't tell a 2-digit fiscal year ("26/27") from a sequence — extend the year filter if a surveyor reports it
+export function incrementReportNo(last: string): string | null {
+  const tokens = [...last.matchAll(/\d+/g)].filter(m => !/^20\d{2}$/.test(m[0]));
+  const target = tokens[tokens.length - 1];
+  if (!target || target.index === undefined) return null;
+  const next = String(parseInt(target[0], 10) + 1).padStart(target[0].length, '0');
+  return last.slice(0, target.index) + next + last.slice(target.index + target[0].length);
+}
+
 export const useProfileStore = create<ProfileState>()(
   persist(
     (set, get) => ({
@@ -125,6 +144,20 @@ export const useProfileStore = create<ProfileState>()(
 
       getNextSpotNumber: () => {
         const { profile } = get();
+
+        // Pattern-following: continue whatever format the surveyor last used
+        // (auto-issued or manually edited on the Details tab).
+        const followed = profile.lastSpotReportNo
+          ? incrementReportNo(profile.lastSpotReportNo)
+          : null;
+        if (followed) {
+          set((state) => ({
+            profile: { ...state.profile, lastSpotReportNo: followed },
+          }));
+          return followed;
+        }
+
+        // Default scheme: SPO/YYYY/NNN
         const currentYear = new Date().getFullYear();
         let seq = profile.spotSequence || 1;
         let year = profile.reportYear || currentYear;
@@ -143,6 +176,7 @@ export const useProfileStore = create<ProfileState>()(
             ...state.profile,
             spotSequence: seq + 1,
             reportYear: year,
+            lastSpotReportNo: reportNo,
           },
         }));
 
@@ -151,6 +185,17 @@ export const useProfileStore = create<ProfileState>()(
 
       getNextFinalNumber: () => {
         const { profile } = get();
+
+        const followed = profile.lastFinalReportNo
+          ? incrementReportNo(profile.lastFinalReportNo)
+          : null;
+        if (followed) {
+          set((state) => ({
+            profile: { ...state.profile, lastFinalReportNo: followed },
+          }));
+          return followed;
+        }
+
         const currentYear = new Date().getFullYear();
         let seq = profile.finalSequence || 1;
         let year = profile.reportYear || currentYear;
@@ -169,6 +214,7 @@ export const useProfileStore = create<ProfileState>()(
             ...state.profile,
             finalSequence: seq + 1,
             reportYear: year,
+            lastFinalReportNo: reportNo,
           },
         }));
 

@@ -56,11 +56,11 @@ function InlineEvidencePanel({ claimId }: { claimId: string }) {
   return (
     <div className="flex flex-col h-full rounded-xl overflow-hidden border border-border bg-[var(--color-neutral-50)]">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 shrink-0 bg-[var(--color-neutral-900)]">
+      <div className="flex items-center justify-between px-4 py-3 shrink-0 bg-[var(--color-neutral-50)] border-b border-border">
         <div className="flex items-center gap-2">
           <FileSearch size={16} className="text-primary" />
           <div>
-            <div className="text-xs font-medium text-white">Evidence Viewer</div>
+            <div className="text-xs font-medium text-foreground">Evidence Viewer</div>
             {docLabel && <div className="text-[10px] text-primary mt-0.5">{docLabel}</div>}
           </div>
         </div>
@@ -230,7 +230,7 @@ export function DetailsTab() {
 
           {/* Report Number */}
           <div
-            className="flex items-center gap-4 px-5 py-4 rounded-2xl bg-[var(--color-neutral-900)] border border-primary/20"
+            className="flex items-center gap-4 px-5 py-4 rounded-2xl bg-[var(--color-neutral-50)] border border-primary/20"
           >
             <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-primary/15">
               <Hash size={16} className="text-primary" />
@@ -247,8 +247,19 @@ export function DetailsTab() {
                     updateSpotDetails({ reportNo: e.target.value });
                   }
                 }}
+                onBlur={e => {
+                  // Remember the edited format so the next report continues the
+                  // surveyor's series (e.g. "spot-257-2026/2027" → "spot-258-…")
+                  const v = e.target.value.trim();
+                  if (!v) return;
+                  useProfileStore.getState().updateProfile(
+                    currentClaim.surveyType === 'spot'
+                      ? { lastSpotReportNo: v }
+                      : { lastFinalReportNo: v }
+                  );
+                }}
                 placeholder="Auto-assigned on creation — edit if needed"
-                className="w-full bg-transparent text-lg font-medium tracking-wide focus:outline-none placeholder:font-normal placeholder:text-sm text-[var(--color-neutral-50)] caret-primary"
+                className="w-full bg-transparent text-lg font-medium tracking-wide focus:outline-none placeholder:font-normal placeholder:text-sm text-foreground caret-primary"
               />
             </div>
             <button
