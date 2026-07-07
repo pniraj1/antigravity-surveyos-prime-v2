@@ -19,6 +19,7 @@ import {
   removeTombstone,
 } from '../storage/indexeddb';
 import { useProfileStore } from '@/stores/profile-store';
+import { backupClaimToDrive } from '../drive';
 import { logger } from '../utils/logger';
 
 const LAST_SYNC_KEY_PREFIX = 'surveyos_last_sync_';
@@ -73,6 +74,9 @@ export async function pushClaimToCloud(uid: string, claim: ClaimData) {
   // detect locally-dirty claims that must not be overwritten by remote.
   await setPushedAt(claim.id, claim.updatedAt);
   logger.log(`[Sync] Pushed claim ${claim.id} to cloud (photos excluded).`);
+  // Mirror to the surveyor's own Google Drive as a raw backup replica (best-effort).
+  // Drive failure must never fail the vault write — fire and forget.
+  backupClaimToDrive(claim).catch(() => {});
   return claim;
 }
 
@@ -90,6 +94,10 @@ export async function syncTombstones(uid: string): Promise<void> {
     try {
       const claimRef = doc(db, `users/${uid}/claims`, t.id);
       await deleteDoc(claimRef);
+      // ponytail: the claim's Drive folder (photos + claim.json backup) is NOT cleaned
+      // up here, so a deleted claim leaves an orphaned copy — incl. claim.json with PII.
+      // Pre-existing gap for photos; backup adds claim.json. Close by trashing the Drive
+      // folder here. Deferred by decision; tracked as F5 in the data-storage audit.
       await removeTombstone(t.id);
       logger.log(`[Sync] Cloud delete for tombstoned claim ${t.id} succeeded.`);
     } catch (err) {

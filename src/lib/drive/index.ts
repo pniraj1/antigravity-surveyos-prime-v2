@@ -5,6 +5,7 @@
 
 import { useUIStore } from '@/stores/ui-store';
 import { useProfileStore } from '@/stores/profile-store';
+import type { ClaimData } from '@/types';
 import { toast } from 'sonner';
 import {
   addToDriveQueue,
@@ -549,6 +550,95 @@ export async function restoreProfileFromDrive(): Promise<any | null> {
     return await res.json();
   } catch (e) {
     console.warn('[Drive] Failed to restore profile:', e);
+    return null;
+  }
+}
+
+// ─── Claim Backup / Restore ──────────────────────────────────────────────────
+// A raw JSON replica of each claim, stored inside that claim's own Drive folder.
+// Firestore remains the live source of truth; this is a passive, overwrite-on-sync
+// backup so a deleted/corrupted vault doc can be recovered from the surveyor's Drive.
+
+const CLAIM_BACKUP_FILE_NAME = 'claim.json';
+
+/** Resolve an existing claim folder id without creating one (cache → Drive index). */
+async function findClaimFolderId(claimId: string): Promise<string | null> {
+  const cached = localStorage.getItem(`surveyos_drive_folder_${claimId}`);
+  if (cached) return cached;
+  const index = await loadDriveIndex();
+  return index[claimId] ?? null;
+}
+
+/**
+ * Backs up a single claim as raw JSON to the surveyor's own Google Drive,
+ * inside the claim's folder. Upserts `claim.json` (PATCH if present, else POST).
+ * Best-effort: silent no-op when Drive isn't linked; never throws.
+ */
+export async function backupClaimToDrive(claim: ClaimData): Promise<void> {
+  if (!getDriveToken()) return;
+
+  try {
+    const label = claim.reportNo?.trim() || claim.id;
+    const folderId = await getOrCreateClaimFolder(claim.id, label);
+
+    const q = `name='${CLAIM_BACKUP_FILE_NAME}' and '${folderId}' in parents and trashed=false`;
+    const searchRes = await driveRequest(
+      `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id)`
+    );
+    const searchData = await searchRes.json();
+    const fileId = searchData.files?.[0]?.id ?? null;
+
+    const content = JSON.stringify(claim, null, 2);
+    const blob = new Blob([content], { type: 'application/json' });
+
+    if (fileId) {
+      const form = new FormData();
+      form.append('metadata', new Blob([JSON.stringify({})], { type: 'application/json' }));
+      form.append('file', blob);
+      await driveRequest(
+        `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`,
+        { method: 'PATCH', body: form }
+      );
+    } else {
+      const form = new FormData();
+      form.append('metadata', new Blob([JSON.stringify({ name: CLAIM_BACKUP_FILE_NAME, parents: [folderId] })], { type: 'application/json' }));
+      form.append('file', blob);
+      await driveRequest(
+        `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`,
+        { method: 'POST', body: form }
+      );
+    }
+  } catch (e) {
+    console.warn('[Drive] Failed to backup claim:', e);
+  }
+}
+
+/**
+ * Restores a single claim's raw JSON from Google Drive.
+ * Reads `claim.json` from the claim's existing folder (does not create one).
+ * Returns the ClaimData object, or null if not linked / not found / on error.
+ */
+export async function restoreClaimFromDrive(claimId: string): Promise<ClaimData | null> {
+  if (!getDriveToken()) return null;
+
+  try {
+    const folderId = await findClaimFolderId(claimId);
+    if (!folderId) return null;
+
+    const q = `name='${CLAIM_BACKUP_FILE_NAME}' and '${folderId}' in parents and trashed=false`;
+    const searchRes = await driveRequest(
+      `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id)`
+    );
+    const searchData = await searchRes.json();
+    const fileId = searchData.files?.[0]?.id ?? null;
+    if (!fileId) return null;
+
+    const res = await driveRequest(
+      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`
+    );
+    return (await res.json()) as ClaimData;
+  } catch (e) {
+    console.warn('[Drive] Failed to restore claim:', e);
     return null;
   }
 }
