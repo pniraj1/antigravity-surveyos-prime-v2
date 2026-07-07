@@ -15,6 +15,7 @@ import {
   getDriveQueueCount,
   getClaim,
   saveClaim,
+  setDriveBackedAt,
 } from '@/lib/storage/indexeddb';
 
 // ─── Token State ─────────────────────────────────────────────────────────────
@@ -572,10 +573,12 @@ async function findClaimFolderId(claimId: string): Promise<string | null> {
 /**
  * Backs up a single claim as raw JSON to the surveyor's own Google Drive,
  * inside the claim's folder. Upserts `claim.json` (PATCH if present, else POST).
- * Best-effort: silent no-op when Drive isn't linked; never throws.
+ * Best-effort: never throws. Records the backed-up updatedAt on success so the
+ * Cloud Vault tab can show Drive sync status.
+ * Returns 'skipped' (Drive not linked), 'ok' (backed up), or 'error'.
  */
-export async function backupClaimToDrive(claim: ClaimData): Promise<void> {
-  if (!getDriveToken()) return;
+export async function backupClaimToDrive(claim: ClaimData): Promise<'ok' | 'skipped' | 'error'> {
+  if (!getDriveToken()) return 'skipped';
 
   try {
     const label = claim.reportNo?.trim() || claim.id;
@@ -608,8 +611,11 @@ export async function backupClaimToDrive(claim: ClaimData): Promise<void> {
         { method: 'POST', body: form }
       );
     }
+    await setDriveBackedAt(claim.id, claim.updatedAt);
+    return 'ok';
   } catch (e) {
     console.warn('[Drive] Failed to backup claim:', e);
+    return 'error';
   }
 }
 

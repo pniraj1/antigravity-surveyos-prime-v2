@@ -57,7 +57,7 @@ const LEGACY_DB_NAME = 'surveyos-v2';
  * Current database version. Bump this when adding new object stores
  * or indexes. The `upgrade` function handles all version transitions.
  */
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 /**
  * localStorage key prefix for tracking whether a user's legacy data
@@ -130,6 +130,10 @@ interface SurveyOSDB {
     key: string;
     value: { id: string; pushedUpdatedAt: string };
   };
+  driveTracking: {
+    key: string;
+    value: { id: string; driveBackedUpAt: string };
+  };
   driveFileCache: {
     key: string;
     value: {
@@ -195,6 +199,10 @@ export async function initUserDB(uid: string): Promise<void> {
       // Drive file cache — cached file listings per claim folder (v4)
       if (oldVersion < 4 && !db.objectStoreNames.contains('driveFileCache')) {
         db.createObjectStore('driveFileCache', { keyPath: 'claimId' });
+      }
+      // Drive tracking — last updatedAt backed up to Google Drive per claim (v5)
+      if (oldVersion < 5 && !db.objectStoreNames.contains('driveTracking')) {
+        db.createObjectStore('driveTracking', { keyPath: 'id' });
       }
     },
   });
@@ -399,6 +407,23 @@ export async function getAllPushedAt(): Promise<Map<string, string>> {
   const db = await getDB();
   const all = await db.getAll('pushTracking');
   return new Map(all.map(r => [r.id, r.pushedUpdatedAt]));
+}
+
+// ─── Drive Backup Tracking ───────────────────────────────────────────────────
+// Records the `updatedAt` value last successfully backed up to Google Drive per
+// claim (this device's knowledge). Used by the Cloud Vault tab to show which
+// claims have a current Drive replica. Device-local, like pushTracking — a claim
+// backed up on another device shows here only after this device backs it up too.
+
+export async function setDriveBackedAt(id: string, driveBackedUpAt: string): Promise<void> {
+  const db = await getDB();
+  await db.put('driveTracking', { id, driveBackedUpAt });
+}
+
+export async function getAllDriveBackedAt(): Promise<Map<string, string>> {
+  const db = await getDB();
+  const all = await db.getAll('driveTracking');
+  return new Map(all.map(r => [r.id, r.driveBackedUpAt]));
 }
 
 // ─── Sync Queue ───────────────────────────────────────────────────────────────

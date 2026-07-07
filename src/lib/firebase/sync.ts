@@ -66,7 +66,7 @@ function stripPhotos(claim: ClaimData): Omit<ClaimData, 'photos'> & { photos: []
  * Used by the 2s debounced auto-save in useCloudSync.
  * No conflict check — debounced saves always win (last write wins).
  */
-export async function pushClaimToCloud(uid: string, claim: ClaimData) {
+export async function pushClaimToCloud(uid: string, claim: ClaimData, opts?: { mirrorToDrive?: boolean }) {
   const claimRef = doc(db, `users/${uid}/claims`, claim.id);
   const payload = stripPhotos(claim);
   await setDoc(claimRef, { ...payload, ownerId: uid });
@@ -76,7 +76,9 @@ export async function pushClaimToCloud(uid: string, claim: ClaimData) {
   logger.log(`[Sync] Pushed claim ${claim.id} to cloud (photos excluded).`);
   // Mirror to the surveyor's own Google Drive as a raw backup replica (best-effort).
   // Drive failure must never fail the vault write — fire and forget.
-  backupClaimToDrive(claim).catch(() => {});
+  // Callers that want to await/report the Drive result (Cloud Vault manual sync)
+  // pass mirrorToDrive:false and call backupClaimToDrive themselves.
+  if (opts?.mirrorToDrive !== false) backupClaimToDrive(claim).catch(() => {});
   return claim;
 }
 
