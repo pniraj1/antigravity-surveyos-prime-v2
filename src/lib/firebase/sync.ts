@@ -5,9 +5,10 @@
 // Uses "Latest Update Wins" (updatedAt) approach
 // ═══════════════════════════════════════════════════════════
 
-import { doc, setDoc, getDoc, deleteDoc, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
+import { doc, setDoc, getDoc, deleteDoc, collection, query, where, getDocs, writeBatch, runTransaction } from 'firebase/firestore';
 import { db } from './config';
 import { applySkewMargin } from './sync-cursor';
+import { canOverwrite, ClaimConflictError } from './sync-guard';
 import { ClaimData, SurveyorProfile } from '@/types';
 import {
   getAllClaims,
@@ -64,22 +65,31 @@ function stripPhotos(claim: ClaimData): Omit<ClaimData, 'photos'> & { photos: []
 /**
  * Pushes a single local claim to Firestore (without photos).
  * Used by the 2s debounced auto-save in useCloudSync.
- * No conflict check — debounced saves always win (last write wins).
+ * Version-guarded: throws ClaimConflictError if cloud is newer.
  */
 export async function pushClaimToCloud(uid: string, claim: ClaimData, opts?: { mirrorToDrive?: boolean }) {
   const claimRef = doc(db, `users/${uid}/claims`, claim.id);
-  const payload = stripPhotos(claim);
-  await setDoc(claimRef, { ...payload, ownerId: uid });
-  // Record the successfully-pushed updatedAt so the pull reconciler can
-  // detect locally-dirty claims that must not be overwritten by remote.
+  const localVersion = claim.version ?? 0;
+
+  // Version-guarded write: refuse if the cloud has moved ahead of us.
+  const newVersion = await runTransaction(db, async (tx) => {
+    const snap = await tx.get(claimRef);
+    const cloudVersion = snap.exists() ? ((snap.data() as ClaimData).version ?? 0) : 0;
+    if (!canOverwrite(localVersion, cloudVersion)) {
+      throw new ClaimConflictError(snap.data() as ClaimData);
+    }
+    const next = cloudVersion + 1;
+    tx.set(claimRef, { ...stripPhotos(claim), version: next, ownerId: uid });
+    return next;
+  });
+
+  // Reflect the new cloud generation locally without marking the claim dirty.
+  const pushed: ClaimData = { ...claim, version: newVersion };
+  await saveClaim(pushed, { preserveUpdatedAt: true });
   await setPushedAt(claim.id, claim.updatedAt);
-  logger.log(`[Sync] Pushed claim ${claim.id} to cloud (photos excluded).`);
-  // Mirror to the surveyor's own Google Drive as a raw backup replica (best-effort).
-  // Drive failure must never fail the vault write — fire and forget.
-  // Callers that want to await/report the Drive result (Cloud Vault manual sync)
-  // pass mirrorToDrive:false and call backupClaimToDrive themselves.
-  if (opts?.mirrorToDrive !== false) backupClaimToDrive(claim).catch(() => {});
-  return claim;
+  logger.log(`[Sync] Pushed claim ${claim.id} to cloud v${newVersion} (photos excluded).`);
+  if (opts?.mirrorToDrive !== false) backupClaimToDrive(pushed).catch(() => {});
+  return pushed;
 }
 
 /**
