@@ -28,3 +28,11 @@ export function selectDirtyClaims(
     return !pushed || c.updatedAt > pushed;
   });
 }
+
+/** Number of claims not yet safely in the cloud. */
+export function countUnsynced(
+  claims: ClaimData[],
+  pushedMap: Map<string, string>,
+): number {
+  return selectDirtyClaims(claims, pushedMap).length;
+}

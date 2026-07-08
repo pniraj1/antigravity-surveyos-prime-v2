@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { canOverwrite, selectDirtyClaims } from '../sync-guard';
+import { canOverwrite, selectDirtyClaims, countUnsynced } from '../sync-guard';
 import type { ClaimData } from '@/types';
 
 describe('canOverwrite', () => {
@@ -26,5 +26,13 @@ describe('selectDirtyClaims', () => {
     const claims = [mk('a', '2026-01-02T00:00:00Z'), mk('b', '2026-01-01T00:00:00Z')];
     const pushed = new Map([['a', '2026-01-01T00:00:00Z'], ['b', '2026-01-01T00:00:00Z']]);
     expect(selectDirtyClaims(claims, pushed).map(c => c.id)).toEqual(['a']);
+  });
+});
+
+describe('countUnsynced', () => {
+  it('counts only dirty claims', () => {
+    const claims = [mk('a', '2026-01-02T00:00:00Z'), mk('b', '2026-01-01T00:00:00Z')];
+    const pushed = new Map([['a', '2026-01-01T00:00:00Z'], ['b', '2026-01-01T00:00:00Z']]);
+    expect(countUnsynced(claims, pushed)).toBe(1);
   });
 });

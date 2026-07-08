@@ -9,6 +9,7 @@ import { pushClaimToCloud } from '@/lib/firebase/sync';
 import { flushDriveQueue, backupAllPendingToDrive } from '@/lib/drive';
 import { getDriveQueueCount } from '@/lib/storage/indexeddb';
 import { Cloud, Loader2 } from 'lucide-react';
+import { SyncStatusBadge } from '@/components/sync/SyncStatusBadge';
 
 export function ClaimHeader() {
   const { currentClaim, isDirty } = useClaimStore();
@@ -88,11 +89,7 @@ export function ClaimHeader() {
 
       <div className="flex-1" />
 
-      {isDirty && (
-        <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-status-warning-tint text-status-warning">
-          • Unsaved
-        </span>
-      )}
+      <SyncStatusBadge />
 
       <button
         onClick={handleSave}
