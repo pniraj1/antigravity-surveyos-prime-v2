@@ -57,7 +57,7 @@ const LEGACY_DB_NAME = 'surveyos-v2';
  * Current database version. Bump this when adding new object stores
  * or indexes. The `upgrade` function handles all version transitions.
  */
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 
 /**
  * localStorage key prefix for tracking whether a user's legacy data
@@ -142,6 +142,17 @@ interface SurveyOSDB {
       updatedAt: string;
     };
   };
+  recoveredClaims: {
+    key: string;
+    value: {
+      id: string;
+      claimId: string;
+      reportNo: string;
+      claim: ClaimData;
+      supersededAt: string;
+      reason: string;
+    };
+  };
 }
 
 // ─── DB Lifecycle ─────────────────────────────────────────────────────────────
@@ -203,6 +214,10 @@ export async function initUserDB(uid: string): Promise<void> {
       // Drive tracking — last updatedAt backed up to Google Drive per claim (v5)
       if (oldVersion < 5 && !db.objectStoreNames.contains('driveTracking')) {
         db.createObjectStore('driveTracking', { keyPath: 'id' });
+      }
+      // Recovered claims — superseded local copies kept as a safety net (v6)
+      if (oldVersion < 6 && !db.objectStoreNames.contains('recoveredClaims')) {
+        db.createObjectStore('recoveredClaims', { keyPath: 'id' });
       }
     },
   });
@@ -538,4 +553,38 @@ export async function setDriveFileCache(claimId: string, files: DriveFileCacheEn
     files,
     updatedAt: new Date().toISOString(),
   });
+}
+
+// ─── Recovered Claims ────────────────────────────────────────────────────────
+// Stores superseded local copies as a safety net (Option B for sync conflicts).
+
+export interface RecoveredClaim {
+  id: string;
+  claimId: string;
+  reportNo: string;
+  claim: ClaimData;
+  supersededAt: string;
+  reason: string;
+}
+
+export async function addRecoveredClaim(claim: ClaimData, reason: string): Promise<void> {
+  const db = await getDB();
+  const id =
+    typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `rec-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  await db.put('recoveredClaims', {
+    id,
+    claimId: claim.id,
+    reportNo: claim.reportNo ?? '',
+    claim,
+    supersededAt: new Date().toISOString(),
+    reason,
+  });
+}
+
+export async function getRecoveredClaims(): Promise<RecoveredClaim[]> {
+  const db = await getDB();
+  const all = await db.getAll('recoveredClaims');
+  return all.sort((a, b) => (a.supersededAt < b.supersededAt ? 1 : -1));
 }
