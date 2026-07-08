@@ -5,7 +5,7 @@
 // Uses "Latest Update Wins" (updatedAt) approach
 // ═══════════════════════════════════════════════════════════
 
-import { doc, setDoc, getDoc, deleteDoc, collection, query, where, getDocs, writeBatch, runTransaction } from 'firebase/firestore';
+import { doc, setDoc, getDoc, deleteDoc, collection, query, where, getDocs, runTransaction } from 'firebase/firestore';
 import { db } from './config';
 import { applySkewMargin } from './sync-cursor';
 import { canOverwrite, ClaimConflictError } from './sync-guard';
@@ -24,7 +24,6 @@ import { backupClaimToDrive } from '../drive';
 import { logger } from '../utils/logger';
 
 const LAST_SYNC_KEY_PREFIX = 'surveyos_last_sync_';
-const BATCH_SIZE = 499;
 
 /**
  * Returns the ISO timestamp of the last successful cloud sync for this user.
@@ -137,31 +136,21 @@ export async function syncDeltaToCloud(uid: string, sinceTimestamp: string | nul
 
   logger.log(`[Sync] Delta push: ${changed.length} claim(s) changed since ${sinceTimestamp ?? 'never'}.`);
 
-  let batchErrors = 0;
-  for (let i = 0; i < changed.length; i += BATCH_SIZE) {
-    const batchNum = Math.floor(i / BATCH_SIZE) + 1;
-    const chunk = changed.slice(i, i + BATCH_SIZE);
-    const batch = writeBatch(db);
-    for (const claim of chunk) {
-      const claimRef = doc(db, `users/${uid}/claims`, claim.id);
-      batch.set(claimRef, { ...stripPhotos(claim), ownerId: uid });
-    }
+  let failures = 0;
+  for (const claim of changed) {
     try {
-      await batch.commit();
-      // Record pushed updatedAt only after successful commit
-      await Promise.all(chunk.map(c => setPushedAt(c.id, c.updatedAt)));
-      logger.log(`[Sync] Delta push: committed batch ${batchNum} (${chunk.length} claims).`);
+      await pushClaimToCloud(uid, claim, { mirrorToDrive: false });
     } catch (err) {
-      batchErrors++;
-      logger.error(`[Sync] Delta push: batch ${batchNum} failed (${chunk.length} claims skipped):`, err);
+      // ClaimConflictError is resolved inside pushClaimToCloud once Task 5
+      // lands; any other error means this claim retries on the next sync.
+      failures++;
+      logger.error(`[Sync] Delta push failed for claim ${claim.id}:`, err);
     }
   }
-
-  if (batchErrors > 0) {
-    logger.error(`[Sync] Delta push completed with ${batchErrors} failed batch(es). Affected claims will retry on next sync.`);
-    throw new Error(`Delta push: ${batchErrors} batch(es) failed`);
+  if (failures > 0) {
+    logger.error(`[Sync] Delta push completed with ${failures} failure(s); they retry next sync.`);
   }
-  logger.log(`[Sync] Delta push complete (${changed.length} claims).`);
+  logger.log(`[Sync] Delta push complete (${changed.length} claims processed).`);
 }
 
 /**
