@@ -33,6 +33,9 @@ export interface ClaimData {
   createdAt: string; // ISO
   /** Last modified timestamp */
   updatedAt: string; // ISO
+  /** Cloud generation this claim is based on. Bumped only by a successful
+   *  cloud write or a pull — never by local edits. Missing/legacy = 0. */
+  version?: number;
 
   // ─── Claim Classification ──────────────────────────
   surveyType: SurveyType;
