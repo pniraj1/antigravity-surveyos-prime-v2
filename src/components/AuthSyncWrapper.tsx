@@ -3,7 +3,9 @@
 import { useAuth } from '@/hooks/useAuth';
 import { useCloudSync } from '@/hooks/useCloudSync';
 import { useAutoSave } from '@/hooks/useAutoSave';
+import { useSessionHeartbeat } from '@/hooks/useSessionHeartbeat';
 import { SaveStatusBar } from '@/components/layout/SaveStatusBar';
+import { SessionConflictDialog } from '@/components/auth/SessionConflictDialog';
 import { Toaster } from 'sonner';
 import { useEffect } from 'react';
 import { useUIStore } from '@/stores/ui-store';
@@ -21,6 +23,7 @@ export function AuthSyncWrapper({ children }: { children: React.ReactNode }) {
   
   useCloudSync();
   useAutoSave();
+  useSessionHeartbeat();
 
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const currentClaimId = useUIStore((state) => state.currentClaimId);
@@ -49,6 +52,7 @@ export function AuthSyncWrapper({ children }: { children: React.ReactNode }) {
   return (
     <>
       <Toaster position="top-right" richColors />
+      <SessionConflictDialog />
       {isAuthenticated && <SaveStatusBar />}
       {children}
     </>
