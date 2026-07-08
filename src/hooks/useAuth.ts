@@ -30,7 +30,17 @@ import { useAuthStore } from '@/stores/auth-store';
 import { initUserDB, closeUserDB } from '@/lib/storage/indexeddb';
 import { resetAllState } from '@/lib/auth/resetAllState';
 import { isExpired } from '@/lib/subscription/status';
-import { pullProfileFromCloud } from '@/lib/firebase/sync';
+import { pullProfileFromCloud, flushAllPendingToCloud } from '@/lib/firebase/sync';
+import {
+  readActiveSession,
+  claimSession,
+  releaseSession,
+  isSessionFresh,
+  isSessionMine,
+} from '@/lib/firebase/session';
+import { logger } from '@/lib/utils/logger';
+
+const FORCE_SESSION_KEY = 'surveyos_force_session';
 
 export function useAuth() {
   const setUser = useAuthStore(s => s.setUser);
@@ -60,6 +70,36 @@ export function useAuth() {
         // shared "surveyos-v2" database on the first login after
         // this update is deployed.
         await initUserDB(user.uid);
+
+        // ── SINGLE-SESSION LOCK ────────────────────────────────
+        // Block login if another device holds a LIVE session (fresh
+        // heartbeat), unless the user explicitly chose "Force Sign In
+        // Anyway" (sets FORCE_SESSION_KEY before re-authenticating).
+        // Fails OPEN on any Firestore/offline error so a field surveyor
+        // is never locked out by lack of signal — the heartbeat hook
+        // claims the session once connectivity returns.
+        try {
+          let forced = false;
+          try { forced = localStorage.getItem(FORCE_SESSION_KEY) === 'true'; } catch { /* ignore */ }
+
+          if (forced) {
+            try { localStorage.removeItem(FORCE_SESSION_KEY); } catch { /* ignore */ }
+          } else {
+            const existing = await readActiveSession(user.uid);
+            if (existing && isSessionFresh(existing) && !isSessionMine(existing)) {
+              useAuthStore.getState().setSessionConflict({
+                deviceHint: existing.deviceHint || 'another device',
+              });
+              await signOut(auth);
+              return; // do NOT proceed with login
+            }
+          }
+
+          await claimSession(user.uid);
+          useAuthStore.getState().setSessionConflict(null);
+        } catch (err) {
+          logger.error('[useAuth] Session lock check failed (fail-open):', err);
+        }
 
         // ── Profile bootstrap & migration ─────────────────────
         // All profiles must live at profile/current (not profile/main).
@@ -155,6 +195,18 @@ export function useAuth() {
         setUser(user);
       } else {
         // ── LOGOUT ─────────────────────────────────────────────
+        // Release the session presence doc first (guarded so it won't
+        // delete a session another device already force-claimed). The
+        // store still holds the outgoing user here, so we can read uid.
+        const uid = useAuthStore.getState().user?.uid;
+        if (uid) {
+          try {
+            await flushAllPendingToCloud(uid);
+          } catch (err) {
+            logger.error('[useAuth] Pre-logout flush failed (non-fatal):', err);
+          }
+          await releaseSession(uid);
+        }
         await closeUserDB();
         resetAllState();
         setUser(null);
