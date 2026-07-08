@@ -31,6 +31,7 @@ import {
   ShieldCheck,
   Zap,
   CarFront,
+  Archive,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { signInWithGoogle, signOutUser } from '@/lib/firebase/auth';
@@ -62,6 +63,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'valuation',   label: 'Valuation',     icon: <CarFront size={17} />,   group: 'output',   requiresClaim: true },
   { id: 'profile', label: 'Profile', icon: <User size={17} />, group: 'settings' },
   { id: 'cloud-vault', label: 'Cloud Vault', icon: <Cloud size={17} />, group: 'settings' },
+  { id: 'recovered-claims', label: 'Recovered', icon: <Archive size={17} />, group: 'settings' },
   { id: 'learning', label: 'Learning', icon: <Brain size={17} />, group: 'settings' },
   { id: 'admin', label: 'Admin Panel', icon: <ShieldCheck size={17} />, group: 'settings' },
   { id: 'landing' as AppTab, label: 'Feature Overview', icon: <Zap size={17} />, group: 'settings' },

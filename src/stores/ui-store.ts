@@ -23,7 +23,8 @@ export type AppTab =
   | 'profile'
   | 'learning'
   | 'admin'
-  | 'cloud-vault';
+  | 'cloud-vault'
+  | 'recovered-claims';
 
 interface UIState {
   // ─── Navigation ─────────────────────────────────────

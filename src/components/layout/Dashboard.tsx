@@ -51,6 +51,7 @@ const FeesTab       = dynamicImport(() => import('@/components/tabs/FeesTab').th
 const ProfileTab    = dynamicImport(() => import('@/components/tabs/ProfileTab').then(m    => ({ default: m.ProfileTab    })), { ssr: false });
 const AdminDashboard = dynamicImport(() => import('@/components/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })), { ssr: false });
 const CloudVaultTab    = dynamicImport(() => import('@/components/tabs/CloudVaultTab').then(m    => ({ default: m.CloudVaultTab    })), { ssr: false });
+const RecoveredClaimsView = dynamicImport(() => import('@/components/tabs/RecoveredClaimsView').then(m => ({ default: m.RecoveredClaimsView })), { ssr: false });
 const ReinspectionTab  = dynamicImport(() => import('@/components/tabs/ReinspectionTab').then(m  => ({ default: m.ReinspectionTab  })), { ssr: false });
 const ValuationTab        = dynamicImport(() => import('@/components/tabs/ValuationTab').then(m        => ({ default: m.ValuationTab        })), { ssr: false });
 const InsuredReportTab    = dynamicImport(() => import('@/components/tabs/InsuredReportTab').then(m    => ({ default: m.InsuredReportTab    })), { ssr: false });
@@ -598,6 +599,7 @@ export function TabPlaceholder({ tab }: { tab: string }) {
   if (tab === 'profile')     return <ProfileTab />;
   if (tab === 'admin')       return <AdminDashboard />;
   if (tab === 'cloud-vault')  return <CloudVaultTab />;
+  if (tab === 'recovered-claims') return <RecoveredClaimsView />;
   if (tab === 'reinspection') return <ReinspectionTab />;
   if (tab === 'valuation')   return <ValuationTab />;
 
