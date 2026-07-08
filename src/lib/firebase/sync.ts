@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { doc, setDoc, getDoc, deleteDoc, collection, query, where, getDocs, runTransaction } from 'firebase/firestore';
+import { toast } from 'sonner';
 import { db } from './config';
 import { applySkewMargin } from './sync-cursor';
 import { canOverwrite, ClaimConflictError } from './sync-guard';
@@ -14,6 +15,7 @@ import {
   getAllClaims,
   saveClaim,
   setPushedAt,
+  addRecoveredClaim,
   getAllPushedAt,
   getTombstones,
   getTombstoneIds,
@@ -64,23 +66,32 @@ function stripPhotos(claim: ClaimData): Omit<ClaimData, 'photos'> & { photos: []
 /**
  * Pushes a single local claim to Firestore (without photos).
  * Used by the 2s debounced auto-save in useCloudSync.
- * Version-guarded: throws ClaimConflictError if cloud is newer.
+ * Version-guarded: on conflict (cloud is newer), adopts the remote copy.
+ * No caller changes needed; conflicts are now harmless.
  */
 export async function pushClaimToCloud(uid: string, claim: ClaimData, opts?: { mirrorToDrive?: boolean }) {
   const claimRef = doc(db, `users/${uid}/claims`, claim.id);
   const localVersion = claim.version ?? 0;
 
   // Version-guarded write: refuse if the cloud has moved ahead of us.
-  const newVersion = await runTransaction(db, async (tx) => {
-    const snap = await tx.get(claimRef);
-    const cloudVersion = snap.exists() ? ((snap.data() as ClaimData).version ?? 0) : 0;
-    if (!canOverwrite(localVersion, cloudVersion)) {
-      throw new ClaimConflictError(snap.data() as ClaimData);
+  let newVersion: number;
+  try {
+    newVersion = await runTransaction(db, async (tx) => {
+      const snap = await tx.get(claimRef);
+      const cloudVersion = snap.exists() ? ((snap.data() as ClaimData).version ?? 0) : 0;
+      if (!canOverwrite(localVersion, cloudVersion)) {
+        throw new ClaimConflictError(snap.data() as ClaimData);
+      }
+      const next = cloudVersion + 1;
+      tx.set(claimRef, { ...stripPhotos(claim), version: next, ownerId: uid });
+      return next;
+    });
+  } catch (err) {
+    if (err instanceof ClaimConflictError) {
+      return recoverFromConflict(claim, err.remote);
     }
-    const next = cloudVersion + 1;
-    tx.set(claimRef, { ...stripPhotos(claim), version: next, ownerId: uid });
-    return next;
-  });
+    throw err;
+  }
 
   // Reflect the new cloud generation locally without marking the claim dirty.
   const pushed: ClaimData = { ...claim, version: newVersion };
@@ -89,6 +100,29 @@ export async function pushClaimToCloud(uid: string, claim: ClaimData, opts?: { m
   logger.log(`[Sync] Pushed claim ${claim.id} to cloud v${newVersion} (photos excluded).`);
   if (opts?.mirrorToDrive !== false) backupClaimToDrive(pushed).catch(() => {});
   return pushed;
+}
+
+/**
+ * Option B recovery: the cloud already has a newer version than this device.
+ * Stash the local (refused) copy, adopt the newer remote copy locally, and
+ * tell the surveyor. Nothing is lost; the newest version becomes live.
+ */
+async function recoverFromConflict(local: ClaimData, remote: ClaimData): Promise<ClaimData> {
+  await addRecoveredClaim(local, 'superseded-by-newer-device');
+  const adopted: ClaimData = { ...remote, photos: (local.photos ?? []) };
+  await saveClaim(adopted, { preserveUpdatedAt: true });
+  await setPushedAt(adopted.id, adopted.updatedAt);
+  toast.warning(
+    `"${local.reportNo || local.id}" was updated on another device. The newer version is now shown; your earlier unsynced changes are saved in Recovered.`,
+    { duration: 8000 },
+  );
+  try {
+    const channel = new BroadcastChannel('surveyos_claims_sync');
+    channel.postMessage('CLAIMS_UPDATED');
+    channel.close();
+  } catch { /* BroadcastChannel unavailable in some environments */ }
+  logger.log(`[Sync] Conflict on ${local.id} resolved — adopted remote v${remote.version ?? 0}, local stashed.`);
+  return adopted;
 }
 
 /**
