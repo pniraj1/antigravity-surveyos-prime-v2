@@ -12,7 +12,7 @@ import { Cloud, Loader2 } from 'lucide-react';
 import { SyncStatusBadge } from '@/components/sync/SyncStatusBadge';
 
 export function ClaimHeader() {
-  const { currentClaim, isDirty } = useClaimStore();
+  const { currentClaim } = useClaimStore();
   const { user } = useAuthStore();
   const { setSaveStatus, isDriveConnected } = useUIStore();
   const [saving, setSaving] = useState(false);
