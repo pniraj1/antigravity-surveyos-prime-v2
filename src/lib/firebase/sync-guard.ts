@@ -16,3 +16,15 @@ export class ClaimConflictError extends Error {
     this.remote = remote;
   }
 }
+
+/** Claims whose current `updatedAt` is newer than the last value pushed to
+ *  the cloud (or never pushed) — i.e. not yet safely in the vault. */
+export function selectDirtyClaims(
+  claims: ClaimData[],
+  pushedMap: Map<string, string>,
+): ClaimData[] {
+  return claims.filter((c) => {
+    const pushed = pushedMap.get(c.id);
+    return !pushed || c.updatedAt > pushed;
+  });
+}

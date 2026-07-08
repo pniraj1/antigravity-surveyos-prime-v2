@@ -9,7 +9,7 @@ import { doc, setDoc, getDoc, deleteDoc, collection, query, where, getDocs, runT
 import { toast } from 'sonner';
 import { db } from './config';
 import { applySkewMargin } from './sync-cursor';
-import { canOverwrite, ClaimConflictError } from './sync-guard';
+import { canOverwrite, ClaimConflictError, selectDirtyClaims } from './sync-guard';
 import { ClaimData, SurveyorProfile } from '@/types';
 import {
   getAllClaims,
@@ -321,4 +321,29 @@ export async function pullProfileFromCloud(uid: string) {
     return remoteProfile;
   }
   return null;
+}
+
+/**
+ * Flushes all pending (dirty) claims to the cloud.
+ * Returns counts of pushed, failed, and whether the flush was skipped (offline).
+ * Called on logout/kick to ensure no claims are left unsync'd.
+ */
+export async function flushAllPendingToCloud(uid: string): Promise<{ pushed: number; failed: number; skipped: boolean }> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return { pushed: 0, failed: 0, skipped: true };
+  }
+  const [claims, pushedMap] = await Promise.all([getAllClaims(), getAllPushedAt()]);
+  const dirty = selectDirtyClaims(claims, pushedMap);
+  let pushed = 0;
+  let failed = 0;
+  for (const claim of dirty) {
+    try {
+      await pushClaimToCloud(uid, claim);
+      pushed++;
+    } catch (err) {
+      failed++;
+      logger.error(`[Sync] flushAllPendingToCloud: ${claim.id} failed:`, err);
+    }
+  }
+  return { pushed, failed, skipped: false };
 }
