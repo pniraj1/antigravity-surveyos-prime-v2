@@ -1,7 +1,7 @@
 'use client';
 
 import { useAIExtraction } from '@/hooks/useAIExtraction';
-import { storeBlobUrl } from '@/components/evidence/DocumentEvidenceViewer';
+import { storeFiles } from '@/components/evidence/DocumentEvidenceViewer';
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import { ProcessingProgressOverlay } from '@/components/ui/ProcessingProgressOverlay';
 import { useClaimStore } from '@/stores/claim-store';
@@ -17,6 +17,7 @@ import {
   ChevronDown, ChevronRight, HardDrive,
 } from 'lucide-react';
 import { SyncDrivePicker } from '@/components/sync-bridge/SyncDrivePicker';
+import { DocumentReviewSheet } from '@/components/documents/DocumentReviewSheet';
 import { TelegramIcon } from '@/components/icons/TelegramIcon';
 import { ProviderHealthBadge, ModelSelector, DocModeToggle, ProviderToggle } from '@/components/ai/AIControls';
 import { ReconciliationDialog } from './reconciliation/ReconciliationDialog';
@@ -80,6 +81,8 @@ export function DocumentsTab() {
   const { files: driveFiles, loading: driveFilesLoading, error: driveFilesError, refresh: refreshDriveFiles } = useClaimDriveFiles(currentClaimId);
   const [driveFilesExpanded, setDriveFilesExpanded] = useState(false);
   const [syncPicker, setSyncPicker] = useState<{ key: string; label: string } | null>(null);
+  // Review-and-crop gate shown between file-select and AI send.
+  const [reviewSheet, setReviewSheet] = useState<{ key: string; label?: string; files: File[] } | null>(null);
   const syncConnected = !!profile.syncBridgeToken;
   const [dupeDialog, setDupeDialog] = useState<{
     existing: ExistingFile;
@@ -127,39 +130,50 @@ export function DocumentsTab() {
   if (!currentClaim) return null;
   const evidenceImages: string[] = [];
 
-  // Source-agnostic pipeline: register blob + trigger AI + optional Drive upload.
+  // Source-agnostic pipeline: register blobs + trigger AI + optional Drive upload.
   // Used by both local file input (handleFile) and the SurveyOS Sync picker.
-  const processFile = (file: File, key: string) => {
+  // Handles multi-file slots (e.g. RC front + back).
+  const processFiles = (files: File[], key: string, aiFiles?: File[]) => {
+    if (files.length === 0) return;
+
     if (currentClaim?.id) {
-      storeBlobUrl(currentClaim.id, key, file);
+      storeFiles(currentClaim.id, key, files);
     }
 
-    triggerExtraction(key, file);
+    // The surveyor picks which files the AI reads (via DocumentReviewSheet);
+    // default to all when no explicit selection is given.
+    const forAI = aiFiles ?? files;
+    if (forAI.length > 0) triggerExtraction(key, forAI);
 
     if (currentClaim?.id && profile.autoUploadDrive !== false) {
       const label = currentClaim.vehicle?.registrationNumber || currentClaim.id;
-      const ext   = file.name.split('.').pop() ?? 'bin';
-      const driveName = `${key}.${ext}`;
-      uploadWithDuplicateCheck(
-        currentClaim.id,
-        driveName,
-        file,
-        label,
-        (existing, suffixedName) =>
-          new Promise<DuplicateAction>((resolve) => {
-            setDupeDialog({ existing, suffixedName, resolve });
-          }),
-      ).catch(err => {
-        console.error('[DocumentsTab] Drive upload failed:', err);
+      files.forEach((file, idx) => {
+        const ext = file.name.split('.').pop() ?? 'bin';
+        // First file keeps the bare slot name; extras get a _2, _3, … suffix so
+        // Drive names never collide within one slot.
+        const driveName = idx === 0 ? `${key}.${ext}` : `${key}_${idx + 1}.${ext}`;
+        uploadWithDuplicateCheck(
+          currentClaim.id,
+          driveName,
+          file,
+          label,
+          (existing, suffixedName) =>
+            new Promise<DuplicateAction>((resolve) => {
+              setDupeDialog({ existing, suffixedName, resolve });
+            }),
+        ).catch(err => {
+          console.error('[DocumentsTab] Drive upload failed:', err);
+        });
       });
     }
   };
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>, key: string) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    processFile(file, key);
+    const files = e.target.files ? Array.from(e.target.files) : [];
     e.target.value = '';
+    if (files.length === 0) return;
+    // Open the review-and-crop gate; processing happens on confirm.
+    setReviewSheet({ key, files });
   };
 
   const scannedCount = Object.keys(extractedDocs).length;
@@ -172,8 +186,8 @@ export function DocumentsTab() {
       <div
         className="px-8 py-8 lg:px-12"
         style={{
-          background: 'var(--color-neutral-900)',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          background: '#EEF2FF',
+          borderBottom: '1px solid #C7D2FE',
         }}
       >
         <div className="max-w-5xl mx-auto">
@@ -186,7 +200,7 @@ export function DocumentsTab() {
                 <Sparkles size={11} className="animate-pulse" />
                 AI Vision — Instant Document Reading
               </div>
-              <h1 className="text-2xl lg:text-3xl font-medium mb-2 text-[var(--color-neutral-50)]" style={{ letterSpacing: '-0.02em' }}>
+              <h1 className="text-2xl lg:text-3xl font-medium mb-2 text-[var(--color-neutral-900)]" style={{ letterSpacing: '-0.02em' }}>
                 AI Document Scanner
               </h1>
               <p className="text-sm font-medium text-muted-foreground">
@@ -208,7 +222,7 @@ export function DocumentsTab() {
           {/* Progress bar */}
           <div className="flex items-center gap-4 mt-6">
             <div
-              className="flex-1 h-1.5 rounded-full overflow-hidden bg-white/10"
+              className="flex-1 h-1.5 rounded-full overflow-hidden bg-neutral-200"
             >
               <div
                 className="h-full rounded-full transition-all duration-500 bg-primary"
@@ -552,10 +566,24 @@ export function DocumentsTab() {
         open={!!syncPicker}
         onOpenChange={(o) => { if (!o) setSyncPicker(null); }}
         targetSlotLabel={syncPicker?.label}
-        onPick={(file) => {
-          if (syncPicker) processFile(file, syncPicker.key);
+        onPick={(files) => {
+          if (syncPicker) setReviewSheet({ key: syncPicker.key, label: syncPicker.label, files });
         }}
       />
+
+      {/* Review + crop gate — surveyor picks which files feed the AI */}
+      {reviewSheet && (
+        <DocumentReviewSheet
+          open={!!reviewSheet}
+          slotLabel={reviewSheet.label}
+          files={reviewSheet.files}
+          onCancel={() => setReviewSheet(null)}
+          onConfirm={(allFiles, filesForAI) => {
+            processFiles(allFiles, reviewSheet.key, filesForAI);
+            setReviewSheet(null);
+          }}
+        />
+      )}
     </div>
   );
 }

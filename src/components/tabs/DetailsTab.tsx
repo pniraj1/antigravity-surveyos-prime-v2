@@ -50,7 +50,7 @@ function InlineEvidencePanel({ claimId }: { claimId: string }) {
   }
 
   const docLabel = effectiveDocType ? (DOC_LABELS[effectiveDocType] ?? effectiveDocType.toUpperCase()) : '';
-  const blobEntry = effectiveDocType ? blobUrls[`${claimId}_${effectiveDocType}`] : undefined;
+  const blobEntry = effectiveDocType ? blobUrls[`${claimId}_${effectiveDocType}`]?.[0] : undefined;
   const isPdf = blobEntry?.mimeType === 'application/pdf';
 
   return (

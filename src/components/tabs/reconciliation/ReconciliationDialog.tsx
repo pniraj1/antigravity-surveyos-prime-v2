@@ -361,7 +361,7 @@ function EvidencePanel({ claimId, activeOrigin }: { claimId: string; activeOrigi
     );
   }
 
-  const entry = blobUrls[`${claimId}_${activeOrigin}`];
+  const entry = blobUrls[`${claimId}_${activeOrigin}`]?.[0];
 
   if (!entry) {
     return (

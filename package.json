@@ -37,6 +37,7 @@
     "pdfjs-dist": "^5.6.205",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-easy-crop": "^6.2.2",
     "react-resizable-panels": "^4.10.0",
     "react-to-print": "^3.3.0",
     "shadcn": "^4.1.2",
@@ -54,6 +55,7 @@
     "@vitest/ui": "^4.1.6",
     "eslint": "^9",
     "eslint-config-next": "16.2.2",
+    "puppeteer": "^25.1.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.6"

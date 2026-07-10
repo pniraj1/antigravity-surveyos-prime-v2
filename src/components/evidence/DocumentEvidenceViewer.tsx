@@ -26,17 +26,23 @@ export interface EvidenceField {
   contextSnippet: string; // text snippet from AI _context key
 }
 
+interface BlobEntry {
+  url: string;
+  mimeType: string;
+}
+
 interface EvidenceState {
   isOpen: boolean;
   field: EvidenceField | null;
   claimId: string | null;
   openField: (claimId: string, field: EvidenceField) => void;
   close: () => void;
-  // Blob URL map: "claimId_docType" → { url, mimeType }
-  blobUrls: Record<string, { url: string; mimeType: string }>;
-  // Raw File map: "claimId_docType" → File (for downstream processing)
-  rawFiles: Record<string, File>;
-  storeBlobUrl: (claimId: string, docType: string, file: File) => void;
+  // Blob URL map: "claimId_docType" → every file in the slot (front, back, …)
+  blobUrls: Record<string, BlobEntry[]>;
+  // Raw File map: "claimId_docType" → every File in the slot (for downstream processing)
+  rawFiles: Record<string, File[]>;
+  // Replace a slot with one or more files (revokes the slot's previous urls).
+  storeFiles: (claimId: string, docType: string, files: File[]) => void;
   revokeBlobUrls: (claimId: string) => void;
 }
 
@@ -48,44 +54,53 @@ export const useEvidenceStore = create<EvidenceState>((set, get) => ({
   rawFiles: {},
   openField: (claimId, field) => set({ isOpen: true, field, claimId }),
   close: () => set({ isOpen: false, field: null }),
-  storeBlobUrl: (claimId, docType, file) => {
+  storeFiles: (claimId, docType, files) => {
     const key = `${claimId}_${docType}`;
-    // Revoke any existing blob URL for this doc to avoid memory leaks
-    const existing = get().blobUrls[key];
-    if (existing) URL.revokeObjectURL(existing.url);
-    const url = URL.createObjectURL(file);
+    // Revoke any existing blob URLs for this slot to avoid memory leaks
+    for (const prev of get().blobUrls[key] ?? []) URL.revokeObjectURL(prev.url);
+    const entries = files.map((f) => ({ url: URL.createObjectURL(f), mimeType: f.type }));
     set(s => ({
-      blobUrls: { ...s.blobUrls, [key]: { url, mimeType: file.type } },
-      rawFiles: { ...s.rawFiles, [key]: file },
+      blobUrls: { ...s.blobUrls, [key]: entries },
+      rawFiles: { ...s.rawFiles, [key]: [...files] },
     }));
   },
   revokeBlobUrls: (claimId) => {
     const current = get().blobUrls;
     const rawCurrent = get().rawFiles;
-    const next: Record<string, { url: string; mimeType: string }> = {};
-    const rawNext: Record<string, File> = {};
-    for (const [key, val] of Object.entries(current)) {
+    const next: Record<string, BlobEntry[]> = {};
+    const rawNext: Record<string, File[]> = {};
+    for (const [key, entries] of Object.entries(current)) {
       if (key.startsWith(`${claimId}_`)) {
-        URL.revokeObjectURL(val.url);
+        for (const e of entries) URL.revokeObjectURL(e.url);
       } else {
-        next[key] = val;
+        next[key] = entries;
       }
     }
-    for (const [key, file] of Object.entries(rawCurrent)) {
-      if (!key.startsWith(`${claimId}_`)) rawNext[key] = file;
+    for (const [key, files] of Object.entries(rawCurrent)) {
+      if (!key.startsWith(`${claimId}_`)) rawNext[key] = files;
     }
     set({ blobUrls: next, rawFiles: rawNext });
   },
 }));
 
-/** Convenience: store a blob URL for a file. Call this right after upload. */
-export function storeBlobUrl(claimId: string, docType: string, file: File) {
-  useEvidenceStore.getState().storeBlobUrl(claimId, docType, file);
+/** Store every file in a slot (front, back, …). Call this right after upload/pick. */
+export function storeFiles(claimId: string, docType: string, files: File[]) {
+  useEvidenceStore.getState().storeFiles(claimId, docType, files);
 }
 
-/** Retrieve the raw File object for a previously uploaded document. Returns null if not stored. */
+/** Back-compat: store a single file as the whole slot. */
+export function storeBlobUrl(claimId: string, docType: string, file: File) {
+  useEvidenceStore.getState().storeFiles(claimId, docType, [file]);
+}
+
+/** Retrieve the first raw File for a document. Returns null if not stored. */
 export function getRawFile(claimId: string, docType: string): File | null {
-  return useEvidenceStore.getState().rawFiles[`${claimId}_${docType}`] ?? null;
+  return useEvidenceStore.getState().rawFiles[`${claimId}_${docType}`]?.[0] ?? null;
+}
+
+/** Retrieve every raw File in a slot. Returns [] if not stored. */
+export function getRawFiles(claimId: string, docType: string): File[] {
+  return useEvidenceStore.getState().rawFiles[`${claimId}_${docType}`] ?? [];
 }
 
 // ─── Doc type labels ──────────────────────────────────────────────────────────
@@ -119,13 +134,10 @@ export function DocumentEvidenceViewer({ panelWidth = '420px', embedded = false,
   // Resolve the docType: current field or fallback to default
   const effectiveDocType = field?.docType || defaultDocType;
 
-  // Resolve the blob URL for the current doc
-  const blobEntry = claimId && effectiveDocType
-    ? blobUrls[`${claimId}_${effectiveDocType}`] ?? null
-    : null;
-  const blobUrl  = blobEntry?.url ?? null;
-  const isPdf    = blobEntry?.mimeType === 'application/pdf';
-  const isImage  = blobEntry?.mimeType.startsWith('image/') ?? false;
+  // Resolve every file in the current slot (RC front + back, etc.)
+  const blobEntries = claimId && effectiveDocType
+    ? blobUrls[`${claimId}_${effectiveDocType}`] ?? []
+    : [];
 
   const docLabel = effectiveDocType ? (DOC_LABELS[effectiveDocType] ?? effectiveDocType.toUpperCase()) : '';
 
@@ -136,7 +148,7 @@ export function DocumentEvidenceViewer({ panelWidth = '420px', embedded = false,
         <button
           onClick={() => useEvidenceStore.setState({ isOpen: true })}
           title="Open Evidence Viewer"
-          className="fixed right-0 top-1/2 -translate-y-1/2 z-[1000] border-none rounded-l-lg px-1.5 py-2.5 cursor-pointer shadow-lg flex flex-col items-center gap-1.5 bg-neutral-900 text-primary"
+          className="fixed right-0 top-1/2 -translate-y-1/2 z-[1000] rounded-l-lg px-1.5 py-2.5 cursor-pointer shadow-lg flex flex-col items-center gap-1.5 bg-card border border-border text-primary"
         >
           <FileSearch size={18} />
           <ChevronRight size={14} className="rotate-180" />
@@ -158,11 +170,11 @@ export function DocumentEvidenceViewer({ panelWidth = '420px', embedded = false,
         }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3.5 shrink-0 bg-neutral-900 border-b border-border">
+        <div className="flex items-center justify-between px-4 py-3.5 shrink-0 bg-neutral-50 border-b border-border">
           <div className="flex items-center gap-2">
             <FileSearch size={18} className="text-primary" />
             <div>
-              <div className="text-[13px] font-medium text-primary-foreground">Evidence Viewer</div>
+              <div className="text-[13px] font-medium text-foreground">Evidence Viewer</div>
               {docLabel && <div className="text-[11px] text-primary mt-0.5">{docLabel}</div>}
             </div>
           </div>
@@ -184,23 +196,35 @@ export function DocumentEvidenceViewer({ panelWidth = '420px', embedded = false,
           </div>
         )}
 
-        {/* Document display area */}
-        <div className={`flex-1 overflow-hidden flex flex-col ${isPdf ? '' : 'p-3'}`}>
-          {blobUrl && isPdf ? (
-            <iframe
-              key={blobUrl}
-              src={blobUrl}
-              title={docLabel}
-              className="flex-1 w-full border-none bg-white"
-            />
-          ) : blobUrl && isImage ? (
-            <div className="flex-1 overflow-auto">
-              <img
-                src={blobUrl}
-                alt={`${docLabel} source document`}
-                className="w-full block rounded-md shadow-lg"
-              />
-            </div>
+        {/* Document display area — every file in the slot, stacked (front, back, …) */}
+        <div className="flex-1 overflow-auto flex flex-col p-3 gap-3">
+          {blobEntries.length > 0 ? (
+            blobEntries.map((entry, idx) => {
+              const isPdf = entry.mimeType === 'application/pdf';
+              const isImage = entry.mimeType.startsWith('image/');
+              return (
+                <div key={entry.url} className="flex flex-col gap-1">
+                  {blobEntries.length > 1 && (
+                    <span className="text-[11px] font-medium text-muted-foreground">
+                      {idx + 1} of {blobEntries.length}
+                    </span>
+                  )}
+                  {isPdf ? (
+                    <iframe
+                      src={entry.url}
+                      title={`${docLabel} ${idx + 1}`}
+                      className="w-full h-[70vh] border-none bg-white rounded-md"
+                    />
+                  ) : isImage ? (
+                    <img
+                      src={entry.url}
+                      alt={`${docLabel} source document ${idx + 1}`}
+                      className="w-full block rounded-md shadow-lg"
+                    />
+                  ) : null}
+                </div>
+              );
+            })
           ) : (
             <div className="flex items-center justify-center h-full">
               <EmptyState field={field} />

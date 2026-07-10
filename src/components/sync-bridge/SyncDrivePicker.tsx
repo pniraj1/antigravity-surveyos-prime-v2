@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useProfileStore } from '@/stores/profile-store';
-import { listSyncClaims, getSyncClaim, fetchSyncDocFile } from '@/lib/sync-bridge/client';
+import { listSyncClaims, getSyncClaim, fetchSyncDocFile, fetchSyncDocFileAt } from '@/lib/sync-bridge/client';
 import { filterAndGroupClaims } from '@/lib/sync-bridge/group-claims';
 import type { SyncClaimSummary, SyncClaimDetail } from '@/lib/sync-bridge/types';
 import { toast } from 'sonner';
@@ -27,9 +27,13 @@ interface SyncDrivePickerProps {
   onOpenChange: (open: boolean) => void;
   /** Destination slot label shown in the header, e.g. "RC Book". */
   targetSlotLabel?: string;
-  /** Returns the picked document as a File. The caller owns the destination slot. */
-  onPick: (file: File) => void;
+  /** Returns every file in the picked document slot (front, back, …). The caller owns the destination slot. */
+  onPick: (files: File[]) => void;
 }
+
+// Guard against a pathological slot spawning unbounded downloads.
+// ponytail: fixed cap, revisit if a slot legitimately needs more.
+const MAX_SLOT_FILES = 8;
 
 export function SyncDrivePicker({ open, onOpenChange, targetSlotLabel, onPick }: SyncDrivePickerProps) {
   const token = useProfileStore((s) => s.profile.syncBridgeToken) ?? '';
@@ -110,18 +114,28 @@ export function SyncDrivePicker({ open, onOpenChange, targetSlotLabel, onPick }:
     setDownloadingId(docId);
     try {
       const doc = detail.documents.find((d) => d.docId === docId);
-      const fileCount = doc?.fileCount ?? 1;
-      // Use the newest file's own mime so the local-first lookup's extension matches what the
-      // sync engine wrote (it derives each file's ext from that file's mimeType, not the slot's).
-      const mimeType = doc?.files?.[fileCount - 1]?.mimeType ?? doc?.mimeType ?? 'image/jpeg';
-      // Local-first: if the newest file of this doc is already on disk, read it (no Worker call).
-      const local = await getLocalFile(
-        localSync.root,
-        { vehicleNumber: detail.vehicleNumber, insuranceCompany: detail.insuranceCompany },
-        { docType, fileIndex: fileCount - 1, fileCount, mimeType, docId },
-      );
-      const file = local ?? await fetchSyncDocFile(token, detail.claimId, docId, docType);
-      onPick(file);
+      const fileCount = Math.min(doc?.fileCount ?? 1, MAX_SLOT_FILES);
+      const home = { vehicleNumber: detail.vehicleNumber, insuranceCompany: detail.insuranceCompany };
+
+      // Fetch every file in the slot (RC front + back, …). Local-first per index:
+      // read from disk if the sync engine already wrote it, else stream from the Worker.
+      const files: File[] = [];
+      for (let i = 0; i < fileCount; i++) {
+        // Each file's own mime so the local-first extension matches what the sync
+        // engine wrote (it derives each file's ext from that file's mimeType).
+        const mimeType = doc?.files?.[i]?.mimeType ?? doc?.mimeType ?? 'image/jpeg';
+        const local = await getLocalFile(localSync.root, home, { docType, fileIndex: i, fileCount, mimeType, docId });
+        if (local) {
+          files.push(local);
+        } else if (fileCount === 1) {
+          // Preserve the original non-indexed filename (`<docType>.<ext>`, no " 1" suffix).
+          files.push(await fetchSyncDocFile(token, detail.claimId, docId, docType));
+        } else {
+          files.push(await fetchSyncDocFileAt(token, detail.claimId, docId, i, docType));
+        }
+      }
+
+      onPick(files);
       onOpenChange(false);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Could not download the document.');

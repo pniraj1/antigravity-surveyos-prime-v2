@@ -110,20 +110,25 @@ export function useAIExtraction() {
   }, [triggerTargetedRescan]);
 
   // ─── Full extraction ─────────────────────────────────────────────────────────
-  const triggerExtraction = useCallback(async (key: string, file: File, feedback?: string, previousData?: any) => {
+  const triggerExtraction = useCallback(async (key: string, file: File | File[], feedback?: string, previousData?: any) => {
+    const files = Array.isArray(file) ? file : [file];
+    if (files.length === 0) return;
+    // Representative single file for reScan / Smart Fix (which target one document's pages).
+    const primary = files[files.length - 1];
+
     setIsProcessing(true);
     setProgress(feedback ? 'Re-scanning with feedback...' : 'Preparing...');
-    setLastFiles(prev => ({ ...prev, [key]: file }));
-    setLastFileNames(prev => ({ ...prev, [key]: file.name }));
+    setLastFiles(prev => ({ ...prev, [key]: primary }));
+    setLastFileNames(prev => ({ ...prev, [key]: primary.name }));
 
     try {
       const forceDocMode = (!aiDocMode || aiDocMode === 'auto') ? undefined : aiDocMode;
-      const { data, images, discrepancies } = await extractDocument(key, file, (msg) => {
+      const { data, images, discrepancies } = await extractDocument(key, files, (msg) => {
         setProgress(msg);
       }, feedback, previousData, forceDocMode);
 
       setExtractedData(key, data);
-      setReviewData({ key, data, file });
+      setReviewData({ key, data, file: primary });
 
       if (discrepancies && discrepancies.length > 0) {
         // Save context for the Smart Fix button

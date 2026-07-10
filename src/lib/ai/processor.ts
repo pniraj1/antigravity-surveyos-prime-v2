@@ -192,6 +192,36 @@ export async function fileToImages(
   return { viewImages: [dataUrl], apiImages: [await downscaleForApi(dataUrl)] };
 }
 
+/**
+ * Multi-file version of {@link fileToImages}: converts every file in a slot
+ * (e.g. RC front + back) and concatenates their pages into one set of images.
+ * Text layers are only kept when *every* file is a digitally-born PDF whose
+ * text spans all pages — a mixed set (photos, or PDF+photo) falls back to
+ * vision, which is the safe default for scanned/photographed documents.
+ */
+export async function filesToImages(
+  files: File[],
+  onProgress?: (page: number, total: number) => void,
+): Promise<{ viewImages: string[]; apiImages: string[]; textLayers?: string[] }> {
+  const viewImages: string[] = [];
+  const apiImages: string[] = [];
+  const textLayers: string[] = [];
+  let allHaveText = files.length > 0;
+
+  for (const file of files) {
+    const r = await fileToImages(file, onProgress);
+    viewImages.push(...r.viewImages);
+    apiImages.push(...r.apiImages);
+    if (r.textLayers && r.textLayers.length === r.apiImages.length) {
+      textLayers.push(...r.textLayers);
+    } else {
+      allHaveText = false;
+    }
+  }
+
+  return { viewImages, apiImages, textLayers: allHaveText ? textLayers : undefined };
+}
+
 // Max long-edge dimension for images sent to the AI API.
 const MAX_API_IMAGE_DIM = 1600;
 
@@ -445,12 +475,13 @@ function validateMath(data: any, docType: string): { isValid: boolean; discrepan
 
 export async function extractDocument(
   key: string,
-  file: File,
+  file: File | File[],
   onProgress?: (msg: string) => void,
   feedback?: string,
   previousData?: any,
   forceDocMode?: 'text' | 'vision'
 ): Promise<ExtractionResult> {
+  const files = Array.isArray(file) ? file : [file];
   const basePrompt = getDocPrompt(key) || "Extract all visible details from this document as JSON.";
   
   let prompt = basePrompt;
@@ -464,7 +495,7 @@ export async function extractDocument(
 
   return aiQueue.add(async () => {
     if (onProgress) onProgress('Scanning document...');
-    const { viewImages, apiImages, textLayers } = await fileToImages(file, (p, t) => {
+    const { viewImages, apiImages, textLayers } = await filesToImages(files, (p, t) => {
       if (onProgress) onProgress(`Processing page ${p} of ${t}...`);
     });
 
