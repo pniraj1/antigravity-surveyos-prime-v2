@@ -44,7 +44,9 @@ interface UIState {
   driveEmail: string;
 
   // ─── Save Status ────────────────────────────────────
-  saveStatus: 'idle' | 'saving' | 'saved' | 'queued';
+  // 'queued' = will retry and succeed. 'error' = the save was REFUSED and will
+  // not retry on its own; the surveyor must act. Never conflate the two.
+  saveStatus: 'idle' | 'saving' | 'saved' | 'queued' | 'error';
 
   // ─── AI Provider Health ──────────────────────────────
   aiProviderHealth: {

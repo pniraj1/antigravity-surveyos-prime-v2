@@ -22,6 +22,7 @@ import {
   removeTombstone,
 } from '../storage/indexeddb';
 import { useProfileStore } from '@/stores/profile-store';
+import { useClaimStore } from '@/stores/claim-store';
 import { backupClaimToDrive } from '../drive';
 import { logger } from '../utils/logger';
 
@@ -63,13 +64,17 @@ function stripPhotos(claim: ClaimData): Omit<ClaimData, 'photos'> & { photos: []
   return sanitize({ ...rest, photos: [] }) as Omit<ClaimData, 'photos'> & { photos: [] };
 }
 
+/** A push result. `conflicted` means the write was REFUSED: the returned claim
+ *  is the remote copy that was adopted, and the caller's data now lives only in
+ *  the recovered store. Callers must not report success when this is set. */
+export type PushResult = ClaimData & { conflicted?: true };
+
 /**
  * Pushes a single local claim to Firestore (without photos).
  * Used by the 2s debounced auto-save in useCloudSync.
  * Version-guarded: on conflict (cloud is newer), adopts the remote copy.
- * No caller changes needed; conflicts are now harmless.
  */
-export async function pushClaimToCloud(uid: string, claim: ClaimData, opts?: { mirrorToDrive?: boolean }) {
+export async function pushClaimToCloud(uid: string, claim: ClaimData, opts?: { mirrorToDrive?: boolean }): Promise<PushResult> {
   const claimRef = doc(db, `users/${uid}/claims`, claim.id);
   const localVersion = claim.version ?? 0;
 
@@ -96,6 +101,10 @@ export async function pushClaimToCloud(uid: string, claim: ClaimData, opts?: { m
   // Reflect the new cloud generation locally without marking the claim dirty.
   const pushed: ClaimData = { ...claim, version: newVersion };
   await saveClaim(pushed, { preserveUpdatedAt: true });
+  // ...and in the open claim the surveyor is editing. Without this the store
+  // keeps its opened version forever, the next push is refused as a false
+  // conflict, and the surveyor's work is stashed into Recovered.
+  useClaimStore.getState().syncVersion(claim.id, newVersion);
   await setPushedAt(claim.id, claim.updatedAt);
   logger.log(`[Sync] Pushed claim ${claim.id} to cloud v${newVersion} (photos excluded).`);
   if (opts?.mirrorToDrive !== false) backupClaimToDrive(pushed).catch(() => {});
@@ -107,14 +116,15 @@ export async function pushClaimToCloud(uid: string, claim: ClaimData, opts?: { m
  * Stash the local (refused) copy, adopt the newer remote copy locally, and
  * tell the surveyor. Nothing is lost; the newest version becomes live.
  */
-async function recoverFromConflict(local: ClaimData, remote: ClaimData): Promise<ClaimData> {
+async function recoverFromConflict(local: ClaimData, remote: ClaimData): Promise<PushResult> {
   await addRecoveredClaim(local, 'superseded-by-newer-device');
   const adopted: ClaimData = { ...remote, photos: (local.photos ?? []) };
   await saveClaim(adopted, { preserveUpdatedAt: true });
+  useClaimStore.getState().syncVersion(adopted.id, adopted.version ?? 0);
   await setPushedAt(adopted.id, adopted.updatedAt);
   toast.warning(
-    `"${local.reportNo || local.id}" was updated on another device. The newer version is now shown; your earlier unsynced changes are saved in Recovered.`,
-    { duration: 8000 },
+    `"${local.reportNo || local.id}" could not be saved to the cloud — a newer version exists. Your changes were NOT saved; they are kept in Recovered.`,
+    { duration: 12000 },
   );
   try {
     const channel = new BroadcastChannel('surveyos_claims_sync');
@@ -122,7 +132,7 @@ async function recoverFromConflict(local: ClaimData, remote: ClaimData): Promise
     channel.close();
   } catch { /* BroadcastChannel unavailable in some environments */ }
   logger.log(`[Sync] Conflict on ${local.id} resolved — adopted remote v${remote.version ?? 0}, local stashed.`);
-  return adopted;
+  return { ...adopted, conflicted: true };
 }
 
 /**

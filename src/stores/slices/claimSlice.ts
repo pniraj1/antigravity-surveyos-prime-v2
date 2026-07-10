@@ -45,6 +45,13 @@ export interface ClaimSlice {
   updatePhotoLayout: (layout: ClaimData['photoLayout']) => void;
   setClaimsList: (claims: ClaimSlice['claimsList']) => void;
   markClean: () => void;
+  /**
+   * Adopts the cloud generation returned by a successful push. Touches only
+   * `version` — never `updatedAt`, never `isDirty` — so it cannot be mistaken
+   * for a surveyor edit. Without this the in-memory claim keeps its opened
+   * version while the cloud moves ahead, and the next push is falsely refused.
+   */
+  syncVersion: (id: string, version: number) => void;
   closeClaim: () => void;
   /**
    * Wipes all in-memory claim state on logout.
@@ -284,6 +291,16 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
 
   setClaimsList: (claims) => set({ claimsList: claims }),
   markClean: () => set({ isDirty: false }),
+
+  syncVersion: (id, version) => {
+    set((state: ClaimSlice) => {
+      const claim = state.currentClaim;
+      // Guard on id: a background flush may push a claim the surveyor is not
+      // looking at. Never move a version backwards.
+      if (!claim || claim.id !== id || version <= (claim.version ?? 0)) return {};
+      return { currentClaim: { ...claim, version } };
+    });
+  },
   closeClaim: () => {
     useUIStore.getState().setCurrentClaimId(null);
     set({ currentClaim: null, currentClaimId: null, isDirty: false });

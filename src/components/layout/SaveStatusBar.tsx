@@ -42,7 +42,7 @@ export function SaveStatusBar() {
   useEffect(() => {
     if (saveStatus === 'saved') {
       setVisible(true);
-    } else if (saveStatus === 'saving' || saveStatus === 'queued') {
+    } else if (saveStatus === 'saving' || saveStatus === 'queued' || saveStatus === 'error') {
       setVisible(true);
     } else {
       setVisible(false);
@@ -109,6 +109,12 @@ export function SaveStatusBar() {
             icon: <WifiOff size={13} />,
             label: 'Cloud Vault — Queued',
             bg: 'var(--color-status-warning)', color: 'var(--color-neutral-50)',
+            pulse: true,
+          },
+          error: {
+            icon: <AlertTriangle size={13} />,
+            label: 'NOT saved — see Recovered',
+            bg: 'var(--color-status-danger)', color: 'var(--color-neutral-50)',
             pulse: true,
           },
           idle: null,

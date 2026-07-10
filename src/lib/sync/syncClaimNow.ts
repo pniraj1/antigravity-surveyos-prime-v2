@@ -11,7 +11,7 @@
 import type { ClaimData } from '@/types';
 
 export interface SyncClaimDeps {
-  pushClaimToCloud: (uid: string, claim: ClaimData) => Promise<unknown>;
+  pushClaimToCloud: (uid: string, claim: ClaimData) => Promise<{ conflicted?: true } | unknown>;
   flushDriveQueue: () => Promise<number>;
   isOnline: () => boolean;
 }
@@ -33,7 +33,12 @@ export async function syncClaimNow(
   }
 
   try {
-    await deps.pushClaimToCloud(uid, claim);
+    const res = await deps.pushClaimToCloud(uid, claim);
+    // A refused (conflicted) push is NOT a save. Reporting ok here is how a
+    // surveyor saw "Saved to cloud" while his work was being stashed away.
+    if (res && typeof res === 'object' && (res as { conflicted?: true }).conflicted) {
+      return { ok: false, pushedToVault: false, driveFilesSynced: 0, error: 'conflict' };
+    }
   } catch (err: unknown) {
     const error = err instanceof Error ? err.message : 'vault push failed';
     return { ok: false, pushedToVault: false, driveFilesSynced: 0, error };

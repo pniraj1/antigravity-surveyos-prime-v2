@@ -23,7 +23,17 @@ export function ClaimHeader() {
     setSaveStatus('saving');
     try {
       // Step 1: Push claim data to Firestore
-      await pushClaimToCloud(user.uid, currentClaim);
+      const res = await pushClaimToCloud(user.uid, currentClaim);
+      if (res.conflicted) {
+        // The cloud refused the write — nothing was saved. Say so plainly, and
+        // skip the Drive backups below, which would imply success.
+        setSaveStatus('error');
+        toast.error(
+          'NOT saved — a newer version of this report exists in the cloud. Your changes are kept in the Recovered tab.',
+          { duration: 12000 },
+        );
+        return;
+      }
       setSaveStatus('saved');
 
       // Also catch up any claims whose Drive backup is missing/stale, so a single

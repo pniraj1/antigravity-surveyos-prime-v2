@@ -61,6 +61,13 @@ export function SaveProgressButton({ className = '', tone = 'default' }: SavePro
       setState('error');
       setSaveStatus('queued');
       toast.warning('Saved on this device. It will sync to the cloud when you are back online.', { duration: 5000 });
+    } else if (result.error === 'conflict') {
+      setState('error');
+      setSaveStatus('error');
+      toast.error(
+        'NOT saved — a newer version of this report exists in the cloud. Your changes are kept in the Recovered tab.',
+        { duration: 12000 },
+      );
     } else {
       setState('error');
       setSaveStatus('queued');
