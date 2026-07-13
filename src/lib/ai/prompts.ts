@@ -119,6 +119,7 @@ CRITICAL RULES:
    - "gross_amount": Final grand total (all items + all tax)
 7. Extract the HSN/SAC code for each line item as "hsn_sac". It is typically a 4-8 digit code in a column.
 8. DO NOT DUPLICATE ITEMS: If an item has only ONE price, place it in ONLY ONE category (spare_parts OR labour_items OR painting_items). ONLY split a line item if it explicitly has TWO separate price columns (e.g. a Part Price column AND a Labour Price column). If you DO split it, you MUST append " (Part)" and " (Labour)" to their descriptions respectively.
+9. Do NOT extract subtotal or carry-forward rows ("Total", "Sub Total", "Total c/f", "Carried Forward", "Brought Forward / b/f", "Grand Total") as line items — those are totals, not items.
 
 Return ONLY a JSON object:
 {
@@ -168,6 +169,7 @@ CRITICAL RULES:
 6. "hsn_sac": 4-8 digit HSN/SAC code per line.
 7. "category" on spare_parts: glass (windshield/window/mirror glass), plastic (bumper/grille/cladding/garnish/cap/air duct/skid plate/fender liner), metal (everything else).
 8. DO NOT DUPLICATE ITEMS: If an item has only ONE price, place it in ONLY ONE category (spare_parts OR labour_items OR painting_items). ONLY split a line item if it explicitly has TWO separate price columns (e.g. a Part Price column AND a Labour Price column). If you DO split it, you MUST append " (Part)" and " (Labour)" to their descriptions respectively.
+9. Do NOT extract subtotal or carry-forward rows ("Total", "Sub Total", "Total c/f", "Carried Forward", "Brought Forward / b/f", "Grand Total") as line items — those are totals, not items.
 
 Return ONLY a JSON object:
 {

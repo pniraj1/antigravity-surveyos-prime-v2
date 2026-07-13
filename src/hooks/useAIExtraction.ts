@@ -81,9 +81,17 @@ export function useAIExtraction() {
         key, file, pageIndices, focusHint, setProgress,
       );
 
-      // Merge corrected partial data into the existing extraction
+      // Merge corrected partial data into the existing extraction.
+      // A partial-page rescan only sees the targeted pages, so its item arrays
+      // are incomplete — replacing the full arrays would wipe items from the
+      // unscanned pages. Keep only scalar/total corrections unless every page
+      // was rescanned.
+      const coveredAllPages = pageIndices.length >= totalPages;
+      const safePartial = coveredAllPages || !partialData
+        ? partialData
+        : Object.fromEntries(Object.entries(partialData).filter(([, v]) => !Array.isArray(v)));
       const existing = (currentClaim?.extractedData as any)?.[key] ?? {};
-      const merged   = applyTargetedUpdate(existing, partialData);
+      const merged   = applyTargetedUpdate(existing, safePartial);
       setExtractedData(key, merged);
 
       if (remaining.length === 0) {

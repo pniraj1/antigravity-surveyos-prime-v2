@@ -536,6 +536,9 @@ export async function extractDocument(
     // Discrepancies are surfaced to the surveyor via a toast; they evaluate manually.
     let finalResult: any = null;
     let discrepancies: string[] = [];
+    // Pages the AI could not (fully) read — surfaced to the surveyor alongside
+    // math discrepancies so missing line items are never silent.
+    const pageIssues: string[] = [];
 
     // Single pass — no retry loop
     {
@@ -574,7 +577,9 @@ export async function extractDocument(
           // Build the page text, but truncate it hard if it exceeds MAX_PAGE_TEXT_CHARS.
           // This prevents 413s even on pathologically dense pages (e.g. 200-line estimates).
           let pageText = pageProfiles[i]?.text ?? '';
+          let pageTruncated = false;
           if (pageText.length > MAX_PAGE_TEXT_CHARS) {
+            pageTruncated = true;
             console.warn(
               `[AI Extraction] ${key}: page ${currentBatchStart} text is very large ` +
               `(${pageText.length} chars) — truncating to ${MAX_PAGE_TEXT_CHARS} chars.`
@@ -601,6 +606,9 @@ export async function extractDocument(
           } else {
             chunkPrompt = candidatePrompt;
             chunkImages = []; // pure text mode — no images
+            if (pageTruncated) {
+              pageIssues.push(`Page ${currentBatchStart} is very dense and was only partially read — verify its line items against the document.`);
+            }
           }
         } else {
           // Vision path: send JPEG images (existing behaviour)
@@ -683,13 +691,18 @@ export async function extractDocument(
             // Single-page doc with no fallback — propagate as before
             throw new Error('AI returned an invalid format. Please try again or enter fields manually.');
           }
-          // Multi-page: continue with whatever we have accumulated so far
+          // Multi-page: continue with whatever we have accumulated so far,
+          // but tell the surveyor which pages are missing.
+          const pageLabel = currentBatchStart === currentBatchEnd
+            ? `Page ${currentBatchStart}`
+            : `Pages ${currentBatchStart}–${currentBatchEnd}`;
+          pageIssues.push(`${pageLabel} could not be read by the AI — line items from ${currentBatchStart === currentBatchEnd ? 'this page' : 'these pages'} may be missing.`);
         }
       }
 
       // Validate math — result surfaced to UI layer, no automatic re-scan.
       const mathCheck = validateMath(finalResult, key);
-      discrepancies = mathCheck.discrepancies;
+      discrepancies = [...pageIssues, ...mathCheck.discrepancies];
     }
 
     // Log extraction summary for estimate/final-bill documents

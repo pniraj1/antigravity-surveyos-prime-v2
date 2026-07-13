@@ -486,7 +486,7 @@ function applyFinalBill(claim: ClaimData, data: any): ClaimData {
   };
 }
 
-function applyEstimate(claim: ClaimData, data: any): ClaimData {
+export function applyEstimate(claim: ClaimData, data: any): ClaimData {
   const newRows: AssessmentRow[] = [];
   let runningSerial = 1;
 
@@ -501,6 +501,7 @@ function applyEstimate(claim: ClaimData, data: any): ClaimData {
     const rounded = Math.round(extractBase(item) * 100) / 100;
     newRows.push(
       createAssessmentRow('parts', {
+        source: 'estimate',
         srNo: item.sr_no || runningSerial++,
         particulars: item.description || 'Unnamed Part',
         partNumber: item.part_number || '',
@@ -519,6 +520,7 @@ function applyEstimate(claim: ClaimData, data: any): ClaimData {
     const rounded = Math.round(extractBase(item) * 100) / 100;
     newRows.push(
       createAssessmentRow('labour', {
+        source: 'estimate',
         srNo: item.sr_no || runningSerial++,
         particulars: item.description || 'Labour Item',
         hsnSac: item.hsn_sac || '',
@@ -536,6 +538,7 @@ function applyEstimate(claim: ClaimData, data: any): ClaimData {
     const rounded = Math.round(extractBase(item) * 100) / 100;
     newRows.push(
       createAssessmentRow('paint', {
+        source: 'estimate',
         srNo: item.sr_no || runningSerial++,
         particulars: item.description || 'Painting Item',
         hsnSac: item.hsn_sac || '',
@@ -549,12 +552,16 @@ function applyEstimate(claim: ClaimData, data: any): ClaimData {
     );
   });
 
-  // Sort by original serial number to preserve invoice order
-  newRows.sort((a, b) => (a.srNo || 0) - (b.srNo || 0));
-
+  // Rows stay grouped parts → labour → paint, each section in document order.
+  // Do NOT sort by srNo: estimates that restart numbering per section
+  // (parts 1..N, labour 1..M) would interleave into 1-part/1-labour/2-part/2-labour,
+  // and multiple estimate PDFs would shuffle across documents.
+  //
+  // Re-applying an estimate (re-scan/re-upload returns the FULL document again)
+  // replaces previous AI-created rows; manually added rows are preserved.
   return {
     ...claim,
-    assessmentRows: [...claim.assessmentRows, ...newRows],
+    assessmentRows: [...claim.assessmentRows.filter((r) => r.source !== 'estimate'), ...newRows],
     ...(data.workshop_name ? { accident: { ...claim.accident, placeOfSurvey: data.workshop_name } } : {}),
   };
 }

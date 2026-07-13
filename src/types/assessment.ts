@@ -68,6 +68,11 @@ export interface AssessmentRow {
   depOverride?: number;
   /** Set by surveyor via tag pills in AssessmentGrid. Skips AI classification when present. */
   deductionCategory?: DeductionCategory;
+  /**
+   * 'estimate' = row auto-created by AI estimate extraction.
+   * Re-applying an estimate replaces these rows; manually added rows (undefined) are kept.
+   */
+  source?: 'estimate';
 }
 
 export interface AssessmentSummary {
