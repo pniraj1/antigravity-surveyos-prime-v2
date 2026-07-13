@@ -411,32 +411,55 @@ async function callWithKey(provider: AIProvider, key: string, prompt: string, im
     messages.push({ role: 'user', content: prompt });
   }
 
-  const res = await fetch(provider.endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-    body: JSON.stringify({
-      model: provider.model,
-      messages,
-      temperature: 0.1,
-      // Only request json_object mode for JSON responses.
-      // Pass 3 (covering narrative) returns plain text — json_object mode would
-      // force the model to wrap the letter in JSON or produce a parse error.
-      ...(responseFormat === 'json' ? { response_format: { type: 'json_object' } } : {}),
-      max_tokens: provider.maxOutputTokens ?? 16384,
-    }),
-  });
+  const requestBody = {
+    model: provider.model,
+    messages,
+    temperature: 0.1,
+    // Only request json_object mode for JSON responses.
+    // Pass 3 (covering narrative) returns plain text — json_object mode would
+    // force the model to wrap the letter in JSON or produce a parse error.
+    ...(responseFormat === 'json' ? { response_format: { type: 'json_object' } } : {}),
+    max_tokens: provider.maxOutputTokens ?? 16384,
+  };
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw Object.assign(
-      new Error(`${provider.name} API Error: ${err.error?.message || res.status}`),
-      { status: res.status }
-    );
+  let data: any;
+  if (provider.name === 'nvidia') {
+    // NVIDIA's API sends no CORS headers → the browser cannot call it directly.
+    // Route through the Cloud Function proxy (server-to-server, no CORS).
+    const { callNvidiaProxy } = await import('@/lib/firebase/functions');
+    const proxied = await callNvidiaProxy('chat/completions', key, requestBody);
+    if (!proxied.ok) {
+      const err = safeJsonParse(proxied.body);
+      throw Object.assign(
+        new Error(`nvidia API Error: ${err?.error?.message || proxied.status}`),
+        { status: proxied.status }
+      );
+    }
+    data = safeJsonParse(proxied.body) ?? {};
+  } else {
+    const res = await fetch(provider.endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw Object.assign(
+        new Error(`${provider.name} API Error: ${err.error?.message || res.status}`),
+        { status: res.status }
+      );
+    }
+
+    data = await res.json();
+    useUIStore.getState().setAIProviderHealth(provider.name as 'groq' | 'gemini', 'ok');
   }
-
-  const data = await res.json();
-  useUIStore.getState().setAIProviderHealth(provider.name as 'groq' | 'gemini', 'ok');
   return (data.choices?.[0]?.message?.content || '').trim();
+}
+
+/** Parses JSON, returning null instead of throwing (upstream errors may return HTML). */
+function safeJsonParse(text: string): any | null {
+  try { return JSON.parse(text); } catch { return null; }
 }
 
 /** Returns true if the error is a billing/free-tier quota exhaustion (not a temporary rate limit). */

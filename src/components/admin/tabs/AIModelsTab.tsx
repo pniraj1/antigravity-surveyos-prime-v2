@@ -44,7 +44,13 @@ export function AIModelsTab({ adminEmail }: { adminEmail: string }) {
       const rows = p === 'gemini' ? await fetchGeminiModelEntries(key)
         : p === 'nvidia' ? await fetchNvidiaModels(key)
         : await fetchGroqModels(key);
-      if (!rows) { toast.error(`Discovery failed for ${PROVIDER_META[p].label} — check the key.`); return; }
+      if (!rows) {
+        const hint = p === 'nvidia'
+          ? 'NVIDIA discovery goes through the Cloud Function proxy — check the key and that the proxy is deployed.'
+          : 'check the key.';
+        toast.error(`Discovery failed for ${PROVIDER_META[p].label} — ${hint}`);
+        return;
+      }
       setDiscovered(prev => ({ ...prev, [p]: rows }));
       toast.success(`Found ${rows.length} live ${PROVIDER_META[p].label} models.`);
     } finally { setBusy(null); }

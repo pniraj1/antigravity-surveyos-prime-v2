@@ -134,6 +134,33 @@ exports.callAI = onCall({ maxInstances: 10, memory: "256MiB" }, async (request) 
   throw new HttpsError("resource-exhausted", "All AI providers and keys are currently exhausted. Try again shortly.");
 });
 
+// ─── NVIDIA NIM Proxy ───
+// NVIDIA's REST API (integrate.api.nvidia.com) sends no CORS headers, so the
+// browser cannot call it directly. This forwards the caller's own (BYOK) key
+// server-to-server. Host + path are allowlisted so it is not an open proxy.
+const NVIDIA_BASE = "https://integrate.api.nvidia.com/v1";
+const NVIDIA_ALLOWED_PATHS = new Set(["models", "chat/completions"]);
+
+exports.nvidiaProxy = onCall({ maxInstances: 10, memory: "512MiB" }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Must be logged in.");
+
+  const { path, key, body } = request.data || {};
+  if (!key) throw new HttpsError("invalid-argument", "NVIDIA key is required.");
+  if (!NVIDIA_ALLOWED_PATHS.has(path)) throw new HttpsError("invalid-argument", `Unsupported path: ${path}`);
+
+  const method = path === "models" ? "GET" : "POST";
+  const fetch = (await import("node-fetch")).default;
+  const res = await fetch(`${NVIDIA_BASE}/${path}`, {
+    method,
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
+    ...(method === "POST" ? { body: JSON.stringify(body || {}) } : {}),
+  });
+
+  // Pass the provider's response through verbatim; the client interprets status.
+  const text = await res.text();
+  return { status: res.status, ok: res.ok, body: text };
+});
+
 // ─── Bramha Intelligence Engine ───
 const bramha = require("./bramha");
 exports.onClaimArchived = bramha.onClaimArchived;
