@@ -17,6 +17,25 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // ── Subscription gate (server-side authorization) ──────────────────
+    // The client (SubscriptionGuard) only DRAWS the locked/expired screens;
+    // it is not a security boundary. This is. A signed-in user may only WRITE
+    // their own claim data while their profile status is 'active' or 'trial'.
+    // 'pending' (unapproved), 'suspended', 'readonly', 'expired' → read-only.
+    //
+    // ponytail: status-only check — an 'active' profile with a PAST subscriptionExpiry
+    // (an ISO string) still passes, because rules can't compare an ISO string to
+    // wall-clock time. In practice useAuth flips expired→'readonly' on next login,
+    // and the expensive path (callAI) re-checks expiry in JS. Upgrade path if this
+    // matters: store subscriptionExpiry as a number/Timestamp and compare to
+    // request.time here, or a scheduled function that flips expired→readonly.
+    function hasActiveAccess() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)/profile/current) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)/profile/current)
+          .data.subscriptionStatus in ['active', 'trial'];
+    }
+
     // AI Configuration — admin-only (contains master API keys)
     match /ai_config/routing {
       allow read, write: if isAdmin();
@@ -49,33 +68,75 @@ service cloud.firestore {
 
     // User-specific data — each user accesses only their own data
     match /users/{userId} {
-      // 1. Profile collection gets special protection to prevent users making themselves admin
+      // 1. Profile — protected so users can't grant themselves admin OR paid access.
+      //    The "money fields" below are writable ONLY by an admin (via the payment
+      //    verification / admin panel, which run in an admin session). A non-admin
+      //    may still edit their own name, keys, bank details, etc.
       match /profile/{docId} {
         allow read: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
-        
+
         allow create: if isAdmin() || (
-          isSignedIn() && request.auth.uid == userId && 
-          (!request.resource.data.keys().hasAny(['isAdmin']) || request.resource.data.isAdmin == false)
+          isSignedIn() && request.auth.uid == userId &&
+          (!request.resource.data.keys().hasAny(['isAdmin']) || request.resource.data.isAdmin == false) &&
+          (
+            // Normal new-user create: cannot self-grant paid access.
+            (
+              request.resource.data.get('subscriptionStatus', 'pending') in ['pending', 'readonly'] &&
+              request.resource.data.get('subscriptionExpiry', null) == null &&
+              request.resource.data.get('trialStartDate', null) == null &&
+              request.resource.data.get('trialEndDate', null) == null
+            )
+            ||
+            // Legacy profile/main → profile/current migration: status must match the
+            // existing admin-controlled main doc (a user can't forge main either).
+            (
+              docId == 'current' &&
+              exists(/databases/$(database)/documents/users/$(userId)/profile/main) &&
+              request.resource.data.subscriptionStatus ==
+                get(/databases/$(database)/documents/users/$(userId)/profile/main).data.subscriptionStatus
+            )
+          )
         );
-        
+
         allow update: if isAdmin() || (
-          isSignedIn() && request.auth.uid == userId && 
-          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin'])
+          isSignedIn() && request.auth.uid == userId &&
+          // A non-admin may never touch admin/grant fields...
+          !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['isAdmin', 'subscriptionExpiry', 'trialStartDate', 'trialEndDate', 'lastPaymentDate']) &&
+          // ...and may only change their own subscriptionStatus DOWN to 'readonly'
+          // (this is the useAuth expired→readonly auto-transition; never an upgrade).
+          (
+            !request.resource.data.diff(resource.data).affectedKeys().hasAny(['subscriptionStatus']) ||
+            request.resource.data.subscriptionStatus == 'readonly'
+          )
         );
-        
+
         allow delete: if isAdmin();
       }
-      
-      // 2. Payments — users can create and read, only admin can update/delete
+
+      // 2. Payments — users can create and read, only admin can verify/update/delete.
       match /payments/{paymentId} {
         allow read: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
         allow create: if isSignedIn() && request.auth.uid == userId;
         allow update, delete: if isAdmin();
       }
 
-      // 3. All other user data (claims, photos, etc) is fully writable by the user
+      // 3. All other user data (claims, photos, session, etc).
+      //    READ: any signed-in owner — so expired/readonly/suspended users can still
+      //          SEE their existing claims (matches the read-only overlay intent).
+      //    WRITE: requires active access, EXCEPT the single-session presence doc,
+      //           which must work regardless of subscription so the one-device lock
+      //           still functions for read-only users.
       match /{collectionId}/{document=**} {
-        allow read, write: if isAdmin() || (isSignedIn() && request.auth.uid == userId && collectionId != 'profile' && collectionId != 'payments');
+        allow read: if isAdmin() || (
+          isSignedIn() && request.auth.uid == userId &&
+          collectionId != 'profile' && collectionId != 'payments'
+        );
+        allow write: if isAdmin() || (
+          isSignedIn() && request.auth.uid == userId &&
+          collectionId != 'profile' && collectionId != 'payments' &&
+          (collectionId == 'session' || hasActiveAccess())
+        );
       }
     }
 

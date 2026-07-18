@@ -12,9 +12,24 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const { isSubscriptionActive } = require("./subscription");
 
 initializeApp();
 const db = getFirestore();
+
+// ─── Subscription gate ───
+// The client SubscriptionGuard is only a UI overlay. Any function that spends
+// AI keys must re-check the caller's subscription server-side, or a rejected /
+// unpaid / expired account uses the app's AI for free.
+async function assertActiveSubscription(uid) {
+  const snap = await db.doc(`users/${uid}/profile/current`).get();
+  if (!isSubscriptionActive(snap.exists ? snap.data() : null)) {
+    throw new HttpsError(
+      "permission-denied",
+      "Your SurveyOS subscription is not active. Please renew to use AI features."
+    );
+  }
+}
 
 // ─── Fetch routing config from Firestore ───
 async function getRoutingConfig() {
@@ -94,6 +109,7 @@ async function callProvider(provider, key, prompt, images, maxTokens) {
 exports.callAI = onCall({ maxInstances: 10, memory: "256MiB" }, async (request) => {
   // Auth check
   if (!request.auth) throw new HttpsError("unauthenticated", "Must be logged in.");
+  await assertActiveSubscription(request.auth.uid);
 
   const { prompt, images, maxTokens } = request.data;
   if (!prompt) throw new HttpsError("invalid-argument", "prompt is required.");
@@ -143,6 +159,7 @@ const NVIDIA_ALLOWED_PATHS = new Set(["models", "chat/completions"]);
 
 exports.nvidiaProxy = onCall({ maxInstances: 10, memory: "512MiB" }, async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Must be logged in.");
+  await assertActiveSubscription(request.auth.uid);
 
   const { path, key, body } = request.data || {};
   if (!key) throw new HttpsError("invalid-argument", "NVIDIA key is required.");
