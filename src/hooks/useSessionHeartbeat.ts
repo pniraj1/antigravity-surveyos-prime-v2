@@ -3,7 +3,12 @@
 //
 // While the surveyor is authenticated this hook:
 //   1. Refreshes users/{uid}/session/active.lastHeartbeat every 5 min so
-//      other devices can tell this session is still live.
+//      other devices can tell this session is still live — but only while
+//      the tab is actually visible. A backgrounded/minimized tab isn't
+//      "in use," so beating on a blind interval there is pure waste; the
+//      interval pauses on visibilitychange and fires one immediate
+//      catch-up beat the moment the tab is visible again, so the lock
+//      never looks stale just from being minimized.
 //   2. Listens to that doc in real time. If the owning deviceId changes
 //      to a DIFFERENT device, this tab was force-kicked — we sign out and
 //      tell the surveyor why.
@@ -36,14 +41,37 @@ export function useSessionHeartbeat() {
     const ref = doc(db, 'users', uid, 'session', 'active');
     kickedRef.current = false;
 
-    // ── 1. Heartbeat ────────────────────────────────────────
+    // ── 1. Heartbeat (paused while the tab is backgrounded) ──
     const beat = () => {
       updateDoc(ref, { lastHeartbeat: serverTimestamp() }).catch(err => {
         // Non-fatal: offline beats fail silently and resume on reconnect.
         logger.error('[useSessionHeartbeat] heartbeat failed:', err);
       });
     };
-    const interval = setInterval(beat, HEARTBEAT_INTERVAL_MS);
+
+    let interval: ReturnType<typeof setInterval> | null = null;
+    const startInterval = () => {
+      if (interval) return;
+      interval = setInterval(beat, HEARTBEAT_INTERVAL_MS);
+    };
+    const stopInterval = () => {
+      if (!interval) return;
+      clearInterval(interval);
+      interval = null;
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        stopInterval();
+      } else {
+        // Catch up immediately so the lock never looks stale just from
+        // having been backgrounded, then resume the normal cadence.
+        beat();
+        startInterval();
+      }
+    };
+
+    if (document.visibilityState === 'visible') startInterval();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // ── 2. Kick detection ───────────────────────────────────
     const unsubscribe = onSnapshot(
@@ -71,7 +99,8 @@ export function useSessionHeartbeat() {
     );
 
     return () => {
-      clearInterval(interval);
+      stopInterval();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       unsubscribe();
     };
   }, [isAuthenticated, user]);

@@ -9,7 +9,7 @@ import { useUIStore } from '@/stores/ui-store';
 import { syncClaimNow } from '@/lib/sync/syncClaimNow';
 import { pushClaimToCloud } from '@/lib/firebase/sync';
 import { flushDriveQueue, backupAllPendingToDrive } from '@/lib/drive';
-import { saveClaim } from '@/lib/storage/indexeddb';
+import { saveClaim, getPushedAt } from '@/lib/storage/indexeddb';
 
 type BtnState = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -30,6 +30,19 @@ export function SaveProgressButton({ className = '', tone = 'default' }: SavePro
   const handleClick = async () => {
     if (!currentClaim || !user) {
       toast.error('No claim open, or you are not signed in.');
+      return;
+    }
+
+    // Dirty-guard: same definition as the milestone push guard (sync-guard.ts).
+    // A clean claim has nothing new to send — skip the Firestore round-trip
+    // entirely so repeat clicks (e.g. from an anxious surveyor double-checking)
+    // are free instead of silently undoing the write-reduction work.
+    const pushedAt = await getPushedAt(currentClaim.id).catch(() => null);
+    const isDirty = !pushedAt || currentClaim.updatedAt > pushedAt;
+    if (!isDirty) {
+      setState('saved');
+      setSaveStatus('saved');
+      setTimeout(() => setState('idle'), 2800);
       return;
     }
 

@@ -4,8 +4,19 @@ import { useEffect, useState, useCallback } from 'react';
 import { useUIStore } from '@/stores/ui-store';
 import { useClaimStore } from '@/stores/claim-store';
 import { CheckCircle, Loader2, WifiOff, CloudOff, RefreshCw, Link2, AlertTriangle, UploadCloud } from 'lucide-react';
-import { getDriveQueueCount } from '@/lib/storage/indexeddb';
+import { getDriveQueueCount, getPushedAt } from '@/lib/storage/indexeddb';
 import { getDriveToken, linkGoogleDrive, flushDriveQueue } from '@/lib/drive';
+
+/** "3m ago" / "1h ago" style readout — pure info, no urgency framing. */
+function formatRelativeTime(iso: string | null): string | null {
+  if (!iso) return null;
+  const diffSec = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (diffSec < 5) return 'just now';
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  return `${Math.floor(diffMin / 60)}h ago`;
+}
 
 export function SaveStatusBar() {
   const { saveStatus, isDriveConnected, driveEmail, setActiveTab } = useUIStore();
@@ -17,6 +28,7 @@ export function SaveStatusBar() {
   const [driveTokenValid, setDriveTokenValid] = useState(false);
   const [relinking, setRelinking] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
 
   // ── Online/offline listener ──────────────────────────────────────────────────
   useEffect(() => {
@@ -60,6 +72,20 @@ export function SaveStatusBar() {
     const interval = setInterval(check, 10_000);
     return () => { cancelled = true; clearInterval(interval); };
   }, []);
+
+  // ── Last-synced readout (re-read on claim change + every 30s to tick) ────────
+  useEffect(() => {
+    if (!currentClaim) { setLastSyncedAt(null); return; }
+    let cancelled = false;
+    const claimId = currentClaim.id;
+    const check = async () => {
+      const pushedAt = await getPushedAt(claimId).catch(() => null);
+      if (!cancelled) setLastSyncedAt(pushedAt);
+    };
+    check();
+    const interval = setInterval(check, 30_000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [currentClaim, saveStatus]);
 
   // ── Action handlers ──────────────────────────────────────────────────────────
   const handleRelinkDrive = useCallback(async () => {
@@ -106,9 +132,12 @@ export function SaveStatusBar() {
             pulse: false,
           },
           unsynced: {
+            // Calm, not a warning: local save already guarantees the data is
+            // safe — this is a normal, expected state between milestones,
+            // not a problem the surveyor needs to act on.
             icon: <UploadCloud size={13} />,
             label: 'Saved on device',
-            bg: 'var(--color-status-warning)', color: 'var(--color-neutral-50)',
+            bg: 'var(--color-neutral-900)', color: 'var(--color-neutral-50)',
             pulse: false,
           },
           queued: {
@@ -127,6 +156,8 @@ export function SaveStatusBar() {
         };
         const cfg = cfgs[saveStatus];
         if (!cfg) return null;
+        const relTime = formatRelativeTime(lastSyncedAt);
+        const showRelTime = relTime && (saveStatus === 'saved' || saveStatus === 'unsynced');
         return (
           <div
             className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-medium shadow-xl"
@@ -136,11 +167,14 @@ export function SaveStatusBar() {
             {cfg.pulse && <span className="pulse-dot" style={{ background: cfg.color }} />}
             <span style={{ opacity: 0.9 }}>{cfg.icon}</span>
             <span>{cfg.label}</span>
+            {showRelTime && (
+              <span style={{ opacity: 0.7, fontSize: 10, fontWeight: 400, marginLeft: 2 }}>— synced {relTime}</span>
+            )}
             {saveStatus === 'queued' && (
               <span style={{ opacity: 0.7, fontSize: 10, fontWeight: 400, marginLeft: 2 }}>— syncs when online</span>
             )}
             {saveStatus === 'unsynced' && (
-              <span style={{ opacity: 0.7, fontSize: 10, fontWeight: 400, marginLeft: 2 }}>— not yet in Cloud Vault</span>
+              <span style={{ opacity: 0.7, fontSize: 10, fontWeight: 400, marginLeft: 2 }}>— syncing shortly</span>
             )}
           </div>
         );
