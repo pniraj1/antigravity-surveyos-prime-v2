@@ -46,7 +46,9 @@ interface UIState {
   // ─── Save Status ────────────────────────────────────
   // 'queued' = will retry and succeed. 'error' = the save was REFUSED and will
   // not retry on its own; the surveyor must act. Never conflate the two.
-  saveStatus: 'idle' | 'saving' | 'saved' | 'queued' | 'error';
+  // 'unsynced' = saved to IndexedDB but not yet pushed to Cloud Vault — set only
+  // by useAutoSave after a prior 'saved', cleared by the next cloud push milestone.
+  saveStatus: 'idle' | 'saving' | 'saved' | 'unsynced' | 'queued' | 'error';
 
   // ─── AI Provider Health ──────────────────────────────
   aiProviderHealth: {

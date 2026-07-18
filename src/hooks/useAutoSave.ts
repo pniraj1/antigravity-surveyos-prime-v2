@@ -7,6 +7,7 @@
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { useClaimStore } from '@/stores/claim-store';
+import { useUIStore } from '@/stores/ui-store';
 import { saveClaim, StorageFullError } from '@/lib/storage/indexeddb';
 import { logger } from '@/lib/utils/logger';
 
@@ -28,6 +29,13 @@ export function useAutoSave() {
       .then(() => {
         lastSavedRef.current = currentClaim.updatedAt;
         markClean();
+        // Cloud push only happens on milestones — flip 'saved' to 'unsynced' so the
+        // status bar doesn't keep claiming the cloud copy is current while the
+        // surveyor keeps editing. Don't stomp 'saving'/'queued'/'error', which the
+        // sync layer owns.
+        if (useUIStore.getState().saveStatus === 'saved') {
+          useUIStore.getState().setSaveStatus('unsynced');
+        }
         logger.log(`[AutoSave] Claim ${currentClaim.id} saved to IndexedDB`);
       })
       .catch(err => {

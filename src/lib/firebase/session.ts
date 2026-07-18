@@ -7,10 +7,11 @@
 //
 // Mechanism: a single Firestore doc at users/{uid}/session/active holds
 // the deviceId that currently "owns" the session plus a lastHeartbeat
-// timestamp refreshed every 60s by the live tab (see useSessionHeartbeat).
+// timestamp refreshed every 5 min by the live tab (see useSessionHeartbeat).
 // A session is considered LIVE only while its heartbeat is fresh
-// (< FRESHNESS_WINDOW_MS). A crashed/closed tab stops beating, so the
-// session goes stale and the next device can claim it without a fight.
+// (< FRESHNESS_WINDOW_MS, 1.5x the heartbeat interval). A crashed/closed
+// tab stops beating, so the session goes stale and the next device can
+// claim it without a fight.
 // ═══════════════════════════════════════════════════════════
 
 import { doc, getDoc, setDoc, deleteDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
@@ -20,7 +21,7 @@ import { logger } from '../utils/logger';
 const DEVICE_ID_KEY = 'surveyos_device_id';
 
 /** A heartbeat older than this (ms) means the owning device is gone. */
-export const FRESHNESS_WINDOW_MS = 90_000;
+export const FRESHNESS_WINDOW_MS = 450_000;
 
 /** Shape of the users/{uid}/session/active document. */
 export interface ActiveSession {

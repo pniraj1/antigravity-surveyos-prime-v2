@@ -26,6 +26,7 @@ import {
   getSyncQueue,
   removeSyncItem,
   getClaim,
+  getPushedAt,
 } from '@/lib/storage/indexeddb';
 import { flushDriveQueue, silentlyRestoreDriveToken, backupProfileToDrive, restoreProfileFromDrive, getDriveToken } from '@/lib/drive';
 
@@ -50,8 +51,19 @@ export function useCloudSync() {
   isAuthRef.current = isAuthenticated;
 
   // Stable ref to the milestone push fn (avoids stale closures in effects)
-  const milestonePushRef = useRef(async (_claim: ClaimData, _uid: string) => {});
-  milestonePushRef.current = async (claim: ClaimData, uid: string) => {
+  // opts.mirrorToDrive lets background callers (staleness timer) skip the
+  // Drive replica write; milestone callers omit it and default to mirroring.
+  const milestonePushRef = useRef(async (_claim: ClaimData, _uid: string, _opts?: { mirrorToDrive?: boolean }) => {});
+  milestonePushRef.current = async (claim: ClaimData, uid: string, opts?: { mirrorToDrive?: boolean }) => {
+    // Root-cause dirty guard: every milestone caller (2a/2b/2d) routes
+    // through here, so one check covers all of them. Same definition as
+    // sync-guard.ts selectDirtyClaims — never pushed, or edited since.
+    const pushedAt = await getPushedAt(claim.id);
+    const isDirty = !pushedAt || claim.updatedAt > pushedAt;
+    if (!isDirty) {
+      logger.log(`[useCloudSync] Skipping push — claim ${claim.id} has no unpushed changes.`);
+      return;
+    }
     if (!navigator.onLine) {
       await addToSyncQueue('claim-backup', { claimId: claim.id, uid });
       setSaveStatus('queued');
@@ -60,7 +72,7 @@ export function useCloudSync() {
     }
     setSaveStatus('saving');
     try {
-      await pushClaimToCloud(uid, claim);
+      await pushClaimToCloud(uid, claim, opts);
       setSaveStatus('saved');
       logger.log(`[useCloudSync] Milestone push: claim ${claim.id}`);
     } catch (err) {
@@ -216,6 +228,26 @@ export function useCloudSync() {
     document.addEventListener('visibilitychange', handler);
     return () => document.removeEventListener('visibilitychange', handler);
   }, []);
+
+  // ─── 2e. Staleness Safety Net: periodic dirty-claim push ─
+  // Milestones (2a/2b/2d) cover tab/claim switches, but a surveyor who
+  // leaves a single claim open and idle for a long stretch never triggers
+  // one. Poll in the background and push if dirty — mirrorToDrive: false
+  // so the Drive replica doesn't churn on every 5-minute tick (same flag
+  // pattern as syncDeltaToCloud in sync.ts). Skips entirely when offline;
+  // milestones already own queueing, so this timer never queues.
+  const STALENESS_PUSH_INTERVAL_MS = 300_000; // 5 minutes
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const interval = setInterval(() => {
+      const claim = currentClaimRef.current;
+      const uid = userRef.current?.uid;
+      if (!claim || !uid || !isAuthRef.current) return;
+      if (!navigator.onLine) return;
+      milestonePushRef.current(claim, uid, { mirrorToDrive: false });
+    }, STALENESS_PUSH_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
 
   // ─── 3. Drain Sync Queue on Reconnect ────────────────────
   useEffect(() => {

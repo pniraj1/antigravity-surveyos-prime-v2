@@ -2,7 +2,7 @@
 // SESSION HEARTBEAT HOOK — keeps the single-session lock alive
 //
 // While the surveyor is authenticated this hook:
-//   1. Refreshes users/{uid}/session/active.lastHeartbeat every 60s so
+//   1. Refreshes users/{uid}/session/active.lastHeartbeat every 5 min so
 //      other devices can tell this session is still live.
 //   2. Listens to that doc in real time. If the owning deviceId changes
 //      to a DIFFERENT device, this tab was force-kicked — we sign out and
@@ -23,7 +23,7 @@ import { getDeviceId } from '@/lib/firebase/session';
 import type { ActiveSession } from '@/lib/firebase/session';
 import { logger } from '@/lib/utils/logger';
 
-const HEARTBEAT_INTERVAL_MS = 60_000;
+const HEARTBEAT_INTERVAL_MS = 300_000;
 
 export function useSessionHeartbeat() {
   const { user, isAuthenticated } = useAuthStore();

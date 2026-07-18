@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useUIStore } from '@/stores/ui-store';
 import { useClaimStore } from '@/stores/claim-store';
-import { CheckCircle, Loader2, WifiOff, CloudOff, RefreshCw, Link2, AlertTriangle } from 'lucide-react';
+import { CheckCircle, Loader2, WifiOff, CloudOff, RefreshCw, Link2, AlertTriangle, UploadCloud } from 'lucide-react';
 import { getDriveQueueCount } from '@/lib/storage/indexeddb';
 import { getDriveToken, linkGoogleDrive, flushDriveQueue } from '@/lib/drive';
 
@@ -40,7 +40,7 @@ export function SaveStatusBar() {
 
   // ── Cloud Vault badge visibility ─────────────────────────────────────────────
   useEffect(() => {
-    if (saveStatus === 'saved') {
+    if (saveStatus === 'saved' || saveStatus === 'unsynced') {
       setVisible(true);
     } else if (saveStatus === 'saving' || saveStatus === 'queued' || saveStatus === 'error') {
       setVisible(true);
@@ -105,6 +105,12 @@ export function SaveStatusBar() {
             bg: 'var(--color-status-success)', color: 'var(--color-neutral-50)',
             pulse: false,
           },
+          unsynced: {
+            icon: <UploadCloud size={13} />,
+            label: 'Saved on device',
+            bg: 'var(--color-status-warning)', color: 'var(--color-neutral-50)',
+            pulse: false,
+          },
           queued: {
             icon: <WifiOff size={13} />,
             label: 'Cloud Vault — Queued',
@@ -125,12 +131,16 @@ export function SaveStatusBar() {
           <div
             className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-medium shadow-xl"
             style={{ background: cfg.bg, color: cfg.color, backdropFilter: 'blur(8px)', letterSpacing: '0.02em', animation: 'fadeInUp 0.25s ease-out' }}
+            title={saveStatus === 'unsynced' ? 'Not yet in Cloud Vault — syncs on tab switch or Save' : undefined}
           >
             {cfg.pulse && <span className="pulse-dot" style={{ background: cfg.color }} />}
             <span style={{ opacity: 0.9 }}>{cfg.icon}</span>
             <span>{cfg.label}</span>
             {saveStatus === 'queued' && (
               <span style={{ opacity: 0.7, fontSize: 10, fontWeight: 400, marginLeft: 2 }}>— syncs when online</span>
+            )}
+            {saveStatus === 'unsynced' && (
+              <span style={{ opacity: 0.7, fontSize: 10, fontWeight: 400, marginLeft: 2 }}>— not yet in Cloud Vault</span>
             )}
           </div>
         );
