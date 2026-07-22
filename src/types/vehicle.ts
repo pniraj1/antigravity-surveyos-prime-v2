@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import type { InsuredReportSettings } from './insured-report';
+import type { FeeSchedule } from '@/lib/config/fee-schedule';
 
 export type FuelType = 'Petrol' | 'Diesel' | 'CNG' | 'LPG' | 'Electric' | 'Hybrid' | 'Petrol+CNG' | 'Petrol+LPG';
 
@@ -166,6 +167,8 @@ export interface SurveyorProfile {
   autoUploadDrive?: boolean;
   /** Override PDF extraction mode. 'auto' = smart detect (default). */
   aiDocMode?: 'auto' | 'text' | 'vision';
+  /** Surveyor's personal IISLA fee-schedule override. Absent = follow the admin global schedule. */
+  feeSchedule?: FeeSchedule;
   // ─── Subscription & Administrative ────────────────────
   /** Unique platform ID (e.g. SUS-1001) */
   surveyorId: string;
