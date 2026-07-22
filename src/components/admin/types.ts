@@ -45,7 +45,7 @@ export interface NewSignup {
   profileState: string;
 }
 
-export type AdminTab = 'surveyors' | 'signups' | 'payments' | 'dev-notes' | 'ai-models';
+export type AdminTab = 'surveyors' | 'signups' | 'payments' | 'dev-notes' | 'ai-models' | 'fee-schedule';
 export type PaymentFilter = 'all' | 'pending' | 'verified' | 'rejected';
 export type SurveyorFilter = 'all' | 'trial' | 'active' | 'readonly' | 'suspended' | 'expiring';
 

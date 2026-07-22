@@ -12,6 +12,7 @@ import {
   CreditCard,
   Code2,
   Cpu,
+  Receipt,
 } from 'lucide-react';
 import { verifyPayment, rejectPayment } from '@/lib/firebase/payments';
 import { useAuthStore } from '@/stores/auth-store';
@@ -26,6 +27,7 @@ import { SurveyorsTab } from './tabs/SurveyorsTab';
 import { PaymentsTab } from './tabs/PaymentsTab';
 import { DevNotesTab } from './tabs/DevNotesTab';
 import { AIModelsTab } from './tabs/AIModelsTab';
+import { FeeScheduleTab } from './tabs/FeeScheduleTab';
 
 import { DismissModal } from './modals/DismissModal';
 import { EmailComposerModal } from './modals/EmailComposerModal';
@@ -235,6 +237,17 @@ export function AdminDashboard() {
             <Cpu size={14} />
             AI Models
           </button>
+          <button
+            onClick={() => setActiveTab('fee-schedule')}
+            className={`flex items-center gap-2 px-5 py-2.5 text-xs font-medium uppercase tracking-wider rounded-t-lg transition-all ${
+              activeTab === 'fee-schedule'
+                ? 'bg-white border border-b-white border-border text-primary -mb-px'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Receipt size={14} />
+            Fee Schedule
+          </button>
         </div>
       </div>
 
@@ -284,6 +297,7 @@ export function AdminDashboard() {
           {activeTab === 'dev-notes' && <DevNotesTab />}
 
           {activeTab === 'ai-models' && <AIModelsTab adminEmail={user?.email ?? 'admin'} />}
+          {activeTab === 'fee-schedule' && <FeeScheduleTab adminName={user?.email ?? 'admin'} />}
         </div>
       </div>
 
