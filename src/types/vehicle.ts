@@ -169,6 +169,10 @@ export interface SurveyorProfile {
   aiDocMode?: 'auto' | 'text' | 'vision';
   /** Surveyor's personal IISLA fee-schedule override. Absent = follow the admin global schedule. */
   feeSchedule?: FeeSchedule;
+  /** Admin global schedule version the surveyor has adopted/acknowledged (drives the adopt/keep prompt). */
+  feeScheduleAckVersion?: string;
+  /** Epoch ms the surveyor last opened the notification bell (unread = announcements newer than this). */
+  notificationsLastSeen?: number;
   // ─── Subscription & Administrative ────────────────────
   /** Unique platform ID (e.g. SUS-1001) */
   surveyorId: string;

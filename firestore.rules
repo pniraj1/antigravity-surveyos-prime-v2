@@ -54,6 +54,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Announcements — admin broadcasts, all signed-in surveyors read.
+    match /announcements/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
     // New signup notifications — users create their own entry on first login,
     // and can update it when they submit the access-request form (adds name,
     // IRDAI licence, phone). Only admins can read or delete entries.
