@@ -9,7 +9,7 @@ import {
   Receipt, Calculator, Percent, Plus, Minus,
   TrendingDown, FileText, Calendar, Banknote, Car, Camera,
   Package, Phone, Truck, CheckCircle, XCircle,
-  RotateCcw, ChevronDown, Sparkles,
+  RotateCcw, Sparkles,
 } from 'lucide-react';
 import { useMemo, useState, useEffect } from 'react';
 import { calculateAssessmentSummary } from '@/lib/calculations';
@@ -17,7 +17,7 @@ import { getVehicleAgeMonths } from '@/lib/calculations/depreciation';
 import { computeProfessionalFee, parseIdv } from '@/lib/calculations/professional-fee';
 import {
   getActiveFeeSchedule, loadFeeSchedule,
-  type FeeSchedule, type FeeSlab,
+  type FeeSchedule,
 } from '@/lib/config/fee-schedule';
 
 // ─── Inline Live Preview ─────────────────────────────────────────────────────
@@ -46,80 +46,16 @@ function FeeLine({ label, value }: { label: string; value: string }) {
   );
 }
 
-// ─── Rate Card (IISLA Fee Schedule) editor ───────────────────────────────────
-function RateCardPanel({
-  schedule, usingPersonal, onEdit, onReset,
-}: {
-  schedule: FeeSchedule;
-  usingPersonal: boolean;
-  onEdit: (slabs: FeeSlab[]) => void;
-  onReset: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const cell: React.CSSProperties = { padding: '4px 6px', border: '1px solid var(--color-neutral-200)', fontSize: 12 };
-
-  const updateSlab = (i: number, key: keyof FeeSlab, raw: string) => {
-    const next = schedule.slabs.map((s, idx) => {
-      if (idx !== i) return s;
-      if (key === 'label') return { ...s, label: raw };
-      if (key === 'upTo' || key === 'maxFee') return { ...s, [key]: raw === '' ? null : Number(raw) };
-      return { ...s, [key]: Number(raw) || 0 };
-    });
-    onEdit(next);
-  };
-
-  return (
-    <div className="rounded-2xl overflow-hidden mt-5" style={{ background: 'var(--color-card)', border: '1px solid var(--color-neutral-200)' }}>
-      <button onClick={() => setOpen(o => !o)} className="w-full px-6 py-4 flex items-center gap-2" style={{ borderBottom: open ? '1px solid var(--color-neutral-100)' : 'none', background: 'var(--color-neutral-50)', cursor: 'pointer', border: 'none' }}>
-        <span className="text-sm font-medium" style={{ color: 'var(--color-neutral-900)' }}>Rate Card (IISLA Fee Schedule)</span>
-        <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: usingPersonal ? 'var(--color-status-warning-tint)' : 'var(--color-neutral-100)', color: usingPersonal ? 'var(--color-status-warning)' : 'var(--color-neutral-400)' }}>
-          {usingPersonal ? 'Custom (your rate card)' : `Org default · ${schedule.version}`}
-        </span>
-        <ChevronDown size={16} className="ml-auto" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
-      </button>
-      {open && (
-        <div className="p-5 overflow-x-auto">
-          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
-            <thead>
-              <tr>{['Slab', 'Up to (₹)', 'Base (₹)', 'Marginal from (₹)', 'Rate %', 'Max fee (₹)'].map(h => (
-                <th key={h} style={{ ...cell, textAlign: 'left', color: 'var(--color-neutral-400)', fontWeight: 500 }}>{h}</th>
-              ))}</tr>
-            </thead>
-            <tbody>
-              {schedule.slabs.map((s, i) => (
-                <tr key={i}>
-                  <td style={cell}><input value={s.label} onChange={e => updateSlab(i, 'label', e.target.value)} style={{ width: 150, border: 'none', background: 'transparent' }} /></td>
-                  <td style={cell}><input type="number" value={s.upTo ?? ''} placeholder="∞" onChange={e => updateSlab(i, 'upTo', e.target.value)} style={{ width: 90, border: 'none', background: 'transparent' }} /></td>
-                  <td style={cell}><input type="number" value={s.base} onChange={e => updateSlab(i, 'base', e.target.value)} style={{ width: 70, border: 'none', background: 'transparent' }} /></td>
-                  <td style={cell}><input type="number" value={s.marginalFrom} onChange={e => updateSlab(i, 'marginalFrom', e.target.value)} style={{ width: 90, border: 'none', background: 'transparent' }} /></td>
-                  <td style={cell}><input type="number" step="0.01" value={s.marginalRatePct} onChange={e => updateSlab(i, 'marginalRatePct', e.target.value)} style={{ width: 60, border: 'none', background: 'transparent' }} /></td>
-                  <td style={cell}><input type="number" value={s.maxFee ?? ''} placeholder="—" onChange={e => updateSlab(i, 'maxFee', e.target.value)} style={{ width: 80, border: 'none', background: 'transparent' }} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {usingPersonal && (
-            <button onClick={onReset} className="mt-4 flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium" style={{ background: 'var(--color-neutral-100)', color: 'var(--color-neutral-600)', border: 'none', cursor: 'pointer' }}>
-              <RotateCcw size={12} /> Reset to org default
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ─── Component ───────────────────────────────────────────────────────────────
 export function FeesTab() {
   const { currentClaim, updateFeeBill } = useClaimStore();
-  const { profile, updateProfile } = useProfileStore();
+  const { profile } = useProfileStore();
 
   // ── Fee-schedule hooks (must run before the early return — rules of hooks) ──
   const [globalSchedule, setGlobalSchedule] = useState<FeeSchedule | null>(null);
   useEffect(() => { loadFeeSchedule().then(setGlobalSchedule); }, []);
 
   const activeSchedule = getActiveFeeSchedule(profile.feeSchedule, globalSchedule);
-  const usingPersonal = !!profile.feeSchedule;
 
   const estimateGross = useMemo(() => {
     if (!currentClaim) return 0;
@@ -535,14 +471,6 @@ export function FeesTab() {
             </div>
           </div>
         </div>
-
-        {/* ── Rate Card (IISLA Fee Schedule) ─────────────────── */}
-        <RateCardPanel
-          schedule={activeSchedule}
-          usingPersonal={usingPersonal}
-          onEdit={(slabs) => updateProfile({ feeSchedule: { ...activeSchedule, slabs, updatedBy: profile.name || 'surveyor', updatedAt: Date.now() } })}
-          onReset={() => updateProfile({ feeSchedule: undefined })}
-        />
 
         {/* ── Live Fee Bill Preview ──────────────────────────── */}
         <FeeBillPreview claim={currentClaim} profile={profile!} />

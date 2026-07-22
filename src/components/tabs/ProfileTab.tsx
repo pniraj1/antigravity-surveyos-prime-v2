@@ -16,6 +16,7 @@ import {
   Calendar, Copy, Gift, Clock, BadgeCheck, XCircle, Hourglass, Plane,
 } from 'lucide-react';
 import { ConnectSyncDialog } from '@/components/sync-bridge/ConnectSyncDialog';
+import { FeeScheduleSection } from '@/components/profile/FeeScheduleSection';
 
 // ─── Section Wrapper ─────────────────────────────────────────────────────────
 function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
@@ -588,6 +589,9 @@ export function ProfileTab() {
             />
           </div>
         </div>
+
+        {/* ── Fee Schedule (IISLA) ──────────────────────── */}
+        <FeeScheduleSection />
 
         {/* ── AI Config ─────────────────────────────────── */}
         <div className="rounded-2xl overflow-hidden bg-card border border-border">
