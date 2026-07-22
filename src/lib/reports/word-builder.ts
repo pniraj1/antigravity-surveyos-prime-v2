@@ -262,7 +262,8 @@ export async function generateSpotWordReport(claim: ClaimData, profile: Surveyor
       width: { size: 100, type: WidthType.PERCENTAGE },
       rows: [
         createKVRow("Date & Time", formatDateTimeDMY(accident.dateAndTime), "Place of Accident", accident.placeOfAccident, ws),
-        createKVRow("Date of Survey", formatDateDMY(accident.dateOfSurvey), "Place of Survey", accident.placeOfSurvey, ws),
+        createKVRow("Final Appt. Date", formatDateDMY(accident.appointmentDate), "Date of Survey", formatDateDMY(accident.dateOfSurvey), ws),
+        createKVRow("Place of Survey", accident.placeOfSurvey, "Police Station", accident.policeStation, ws),
         createKVRow("Third Party", spotDetails.tpInvolved === 'no' ? 'NIL' : spotDetails.tpInvolved.toUpperCase(), "TP Details", accident.thirdPartyDetails || 'NIL', ws),
         createKVRow("Police Reported", spotDetails.policeReported === 'yes' ? `Yes — ${accident.policeStation} | Diary: ${accident.firNumber}` : 'No', "Panchanama", spotDetails.panchanama === 'yes' ? 'Yes' : 'No', ws),
         createKVRow("FIR Date", formatDateDMY(accident.firDate), "", "", ws),

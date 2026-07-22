@@ -121,7 +121,7 @@ export function SpotReportDocument({ claim }: Props) {
         <View style={styles.header}>
           <Text style={styles.title}>SPOT SURVEY REPORT</Text>
           <Text style={styles.subtitle}>
-            Report No: {claim?.reportNo || 'DRAFT'} | Date of Report: {formatDateDMY(claim?.reportDate || claim?.createdAt)}
+            Report No: {claim?.reportNo || 'DRAFT'} | Date of Report: {formatDateDMY(claim?.reportDate || claim?.createdAt)} | Date of Allotment: {formatDateDMY(claim?.spotDetails?.allotmentDate) || 'N/A'}
           </Text>
         </View>
 

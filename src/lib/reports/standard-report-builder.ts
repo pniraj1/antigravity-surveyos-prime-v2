@@ -353,6 +353,12 @@ export function buildStandardFinalSurveyHTML(
     <td style="${td}">${accident.firNumber || '—'} / ${formatDateDMY(accident.firDate)}</td>
   </tr>
   <tr>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Appointment Date</td>
+    <td style="${td}">${formatDateDMY(accident.appointmentDate)}</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};"></td>
+    <td style="${td}"></td>
+  </tr>
+  <tr>
     <td style="${td}color:#444;font-size:${scale.labelFont};">Date of Survey</td>
     <td style="${td}">${formatDateDMY(accident.dateOfSurvey)}</td>
     <td style="${td}color:#444;font-size:${scale.labelFont};">Place of Survey</td>
