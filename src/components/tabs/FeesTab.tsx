@@ -9,8 +9,16 @@ import {
   Receipt, Calculator, Percent, Plus, Minus,
   TrendingDown, FileText, Calendar, Banknote, Car, Camera,
   Package, Phone, Truck, CheckCircle, XCircle,
+  RotateCcw, ChevronDown, Sparkles,
 } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
+import { calculateAssessmentSummary } from '@/lib/calculations';
+import { getVehicleAgeMonths } from '@/lib/calculations/depreciation';
+import { computeProfessionalFee, parseIdv } from '@/lib/calculations/professional-fee';
+import {
+  getActiveFeeSchedule, loadFeeSchedule,
+  type FeeSchedule, type FeeSlab,
+} from '@/lib/config/fee-schedule';
 
 // ─── Inline Live Preview ─────────────────────────────────────────────────────
 function FeeBillPreview({ claim, profile }: { claim: any; profile: any }) {
@@ -38,10 +46,109 @@ function FeeLine({ label, value }: { label: string; value: string }) {
   );
 }
 
+// ─── Rate Card (IISLA Fee Schedule) editor ───────────────────────────────────
+function RateCardPanel({
+  schedule, usingPersonal, onEdit, onReset,
+}: {
+  schedule: FeeSchedule;
+  usingPersonal: boolean;
+  onEdit: (slabs: FeeSlab[]) => void;
+  onReset: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const cell: React.CSSProperties = { padding: '4px 6px', border: '1px solid var(--color-neutral-200)', fontSize: 12 };
+
+  const updateSlab = (i: number, key: keyof FeeSlab, raw: string) => {
+    const next = schedule.slabs.map((s, idx) => {
+      if (idx !== i) return s;
+      if (key === 'label') return { ...s, label: raw };
+      if (key === 'upTo' || key === 'maxFee') return { ...s, [key]: raw === '' ? null : Number(raw) };
+      return { ...s, [key]: Number(raw) || 0 };
+    });
+    onEdit(next);
+  };
+
+  return (
+    <div className="rounded-2xl overflow-hidden mt-5" style={{ background: 'var(--color-card)', border: '1px solid var(--color-neutral-200)' }}>
+      <button onClick={() => setOpen(o => !o)} className="w-full px-6 py-4 flex items-center gap-2" style={{ borderBottom: open ? '1px solid var(--color-neutral-100)' : 'none', background: 'var(--color-neutral-50)', cursor: 'pointer', border: 'none' }}>
+        <span className="text-sm font-medium" style={{ color: 'var(--color-neutral-900)' }}>Rate Card (IISLA Fee Schedule)</span>
+        <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: usingPersonal ? 'var(--color-status-warning-tint)' : 'var(--color-neutral-100)', color: usingPersonal ? 'var(--color-status-warning)' : 'var(--color-neutral-400)' }}>
+          {usingPersonal ? 'Custom (your rate card)' : `Org default · ${schedule.version}`}
+        </span>
+        <ChevronDown size={16} className="ml-auto" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
+      </button>
+      {open && (
+        <div className="p-5 overflow-x-auto">
+          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+            <thead>
+              <tr>{['Slab', 'Up to (₹)', 'Base (₹)', 'Marginal from (₹)', 'Rate %', 'Max fee (₹)'].map(h => (
+                <th key={h} style={{ ...cell, textAlign: 'left', color: 'var(--color-neutral-400)', fontWeight: 500 }}>{h}</th>
+              ))}</tr>
+            </thead>
+            <tbody>
+              {schedule.slabs.map((s, i) => (
+                <tr key={i}>
+                  <td style={cell}><input value={s.label} onChange={e => updateSlab(i, 'label', e.target.value)} style={{ width: 150, border: 'none', background: 'transparent' }} /></td>
+                  <td style={cell}><input type="number" value={s.upTo ?? ''} placeholder="∞" onChange={e => updateSlab(i, 'upTo', e.target.value)} style={{ width: 90, border: 'none', background: 'transparent' }} /></td>
+                  <td style={cell}><input type="number" value={s.base} onChange={e => updateSlab(i, 'base', e.target.value)} style={{ width: 70, border: 'none', background: 'transparent' }} /></td>
+                  <td style={cell}><input type="number" value={s.marginalFrom} onChange={e => updateSlab(i, 'marginalFrom', e.target.value)} style={{ width: 90, border: 'none', background: 'transparent' }} /></td>
+                  <td style={cell}><input type="number" step="0.01" value={s.marginalRatePct} onChange={e => updateSlab(i, 'marginalRatePct', e.target.value)} style={{ width: 60, border: 'none', background: 'transparent' }} /></td>
+                  <td style={cell}><input type="number" value={s.maxFee ?? ''} placeholder="—" onChange={e => updateSlab(i, 'maxFee', e.target.value)} style={{ width: 80, border: 'none', background: 'transparent' }} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {usingPersonal && (
+            <button onClick={onReset} className="mt-4 flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium" style={{ background: 'var(--color-neutral-100)', color: 'var(--color-neutral-600)', border: 'none', cursor: 'pointer' }}>
+              <RotateCcw size={12} /> Reset to org default
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 export function FeesTab() {
   const { currentClaim, updateFeeBill } = useClaimStore();
-  const { profile } = useProfileStore();
+  const { profile, updateProfile } = useProfileStore();
+
+  // ── Fee-schedule hooks (must run before the early return — rules of hooks) ──
+  const [globalSchedule, setGlobalSchedule] = useState<FeeSchedule | null>(null);
+  useEffect(() => { loadFeeSchedule().then(setGlobalSchedule); }, []);
+
+  const activeSchedule = getActiveFeeSchedule(profile.feeSchedule, globalSchedule);
+  const usingPersonal = !!profile.feeSchedule;
+
+  const estimateGross = useMemo(() => {
+    if (!currentClaim) return 0;
+    const ageMonths = getVehicleAgeMonths(
+      currentClaim.vehicle.dateOfRegistration,
+      currentClaim.vehicle.yearOfManufacture,
+      currentClaim.accident.dateAndTime,
+    );
+    return calculateAssessmentSummary(
+      currentClaim.assessmentRows, ageMonths, currentClaim.depreciationType,
+      currentClaim.feeBill?.salvageValue ?? 0,
+      currentClaim.feeBill?.compulsoryExcess ?? 0,
+      currentClaim.feeBill?.voluntaryExcess ?? 0,
+    ).estimateGrossTotal;
+  }, [currentClaim]);
+
+  const idvNum = parseIdv(currentClaim?.policy?.idv);
+  const idvCapped = idvNum > 0 && estimateGross > idvNum;
+  const suggestedFee = computeProfessionalFee(estimateGross, idvNum, activeSchedule);
+
+  // One-time auto-fill: populate the professional fee from the schedule while it is
+  // still 0/untouched. Once the surveyor enters any value, theirs wins and this stops.
+  const currentProFee = currentClaim?.feeBill?.professionalFee ?? 0;
+  useEffect(() => {
+    if (currentClaim && !currentProFee && suggestedFee > 0) {
+      updateFeeBill({ professionalFee: suggestedFee });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suggestedFee, currentProFee, !!currentClaim]);
 
   if (!currentClaim) return null;
 
@@ -95,7 +202,7 @@ export function FeesTab() {
       {/* ── Header ─────────────────────────────────────── */}
       <div
         className="px-8 py-8 lg:px-12"
-        style={{ background: 'var(--color-neutral-900)' }}
+        style={{ background: '#EEF2FF', borderBottom: '1px solid #C7D2FE' }}
       >
         <div className="max-w-5xl mx-auto">
           <div
@@ -104,10 +211,10 @@ export function FeesTab() {
             <Receipt size={11} />
             Surveyor Fee Statement
           </div>
-          <h1 className="text-2xl lg:text-3xl font-medium mb-2" style={{ color: 'var(--color-neutral-50)', letterSpacing: '-0.02em' }}>
+          <h1 className="text-2xl lg:text-3xl font-medium mb-2" style={{ color: 'var(--color-neutral-900)', letterSpacing: '-0.02em' }}>
             Fee Bill
           </h1>
-          <p className="text-sm" style={{ color: 'rgba(232,236,240,0.65)' }}>
+          <p className="text-sm" style={{ color: 'var(--color-neutral-600)' }}>
             Professional fee statement for {currentClaim.vehicle.registrationNumber || 'this claim'} — auto-calculates GST and totals.
           </p>
           <div className="flex flex-wrap items-center gap-3 mt-5">
@@ -218,6 +325,25 @@ export function FeesTab() {
                     </div>
                   </div>
                 ))}
+
+                {suggestedFee > 0 && (
+                  <div className="col-span-1 sm:col-span-2 flex items-center gap-2 px-3 py-2 rounded-lg text-xs" style={{ background: 'var(--color-neutral-50)', color: 'var(--color-neutral-600)' }}>
+                    <Sparkles size={13} className="text-primary" />
+                    <span>
+                      IISLA {activeSchedule.version} suggests <strong>{fmt(suggestedFee)}</strong> from estimate {fmt(estimateGross)}
+                      {idvCapped ? <> — capped by IDV {fmt(idvNum)}</> : null}.
+                    </span>
+                    {fb.professionalFee !== suggestedFee && (
+                      <button
+                        onClick={() => set('professionalFee', suggestedFee)}
+                        className="ml-auto flex items-center gap-1 px-2 py-1 rounded-md font-medium"
+                        style={{ background: 'var(--color-primary)', color: 'var(--color-neutral-50)', border: 'none', cursor: 'pointer' }}
+                      >
+                        <RotateCcw size={11} /> Use {fmt(suggestedFee)}
+                      </button>
+                    )}
+                  </div>
+                )}
 
               </div>
             </div>
@@ -337,10 +463,10 @@ export function FeesTab() {
 
           {/* ── RIGHT: Fee Summary ─────────────────────── */}
           <div className="space-y-4">
-            <div className="rounded-2xl overflow-hidden sticky top-6" style={{ background: 'var(--color-neutral-900)', border: '1px solid rgba(255,255,255,0.08)' }}>
-              <div className="px-5 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+            <div className="rounded-2xl overflow-hidden sticky top-6" style={{ background: '#EEF2FF', border: '1px solid #C7D2FE' }}>
+              <div className="px-5 py-4" style={{ borderBottom: '1px solid #C7D2FE' }}>
                 <div className="text-xs font-medium uppercase tracking-[0.2em] text-primary">Fee Summary</div>
-                <div className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                <div className="text-[10px] mt-0.5" style={{ color: 'var(--color-neutral-400)' }}>
                   {currentClaim.vehicle.registrationNumber || 'Claim'}
                 </div>
               </div>
@@ -358,28 +484,28 @@ export function FeesTab() {
                   { label: 'Postal / Courier',     val: fb.postalCharges || 0 },
                   { label: 'Haltage',              val: fb.haltageCharges || 0 },
                 ].map(({ label, val }) => (
-                  <div key={label} className="flex items-center justify-between py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <span className="text-xs" style={{ color: 'rgba(232,236,240,0.55)' }}>{label}</span>
-                    <span className="text-xs font-medium" style={{ color: 'var(--color-neutral-50)' }}>{fmt(val)}</span>
+                  <div key={label} className="flex items-center justify-between py-2" style={{ borderBottom: '1px solid #C7D2FE' }}>
+                    <span className="text-xs" style={{ color: 'var(--color-neutral-400)' }}>{label}</span>
+                    <span className="text-xs font-medium" style={{ color: 'var(--color-neutral-900)' }}>{fmt(val)}</span>
                   </div>
                 ))}
 
                 {/* Sub-total */}
-                <div className="flex items-center justify-between py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.15)', marginTop: 4 }}>
-                  <span className="text-sm font-medium" style={{ color: 'var(--color-neutral-50)' }}>Sub Total</span>
-                  <span className="text-sm font-medium" style={{ color: 'var(--color-neutral-50)' }}>{fmt(subTotal)}</span>
+                <div className="flex items-center justify-between py-3" style={{ borderTop: '1px solid #C7D2FE', marginTop: 4 }}>
+                  <span className="text-sm font-medium" style={{ color: 'var(--color-neutral-900)' }}>Sub Total</span>
+                  <span className="text-sm font-medium" style={{ color: 'var(--color-neutral-900)' }}>{fmt(subTotal)}</span>
                 </div>
 
                 {/* GST Toggle */}
-                <div className="flex items-center justify-between py-3 px-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                <div className="flex items-center justify-between py-3 px-3 rounded-xl" style={{ background: '#E0E7FF' }}>
                   <div className="flex items-center gap-2">
                     <Percent size={13} className="text-primary" />
-                    <span className="text-xs font-medium" style={{ color: 'var(--color-neutral-50)' }}>Include GST @ 18%</span>
+                    <span className="text-xs font-medium" style={{ color: 'var(--color-neutral-900)' }}>Include GST @ 18%</span>
                   </div>
                   <button
                     onClick={() => set('includeGST', !fb.includeGST)}
                     className="w-10 h-5 rounded-full transition-all relative flex-shrink-0"
-                    style={{ background: fb.includeGST ? 'var(--color-primary)' : 'rgba(255,255,255,0.15)' }}
+                    style={{ background: fb.includeGST ? 'var(--color-primary)' : '#A5B4FC' }}
                   >
                     <span
                       className="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all"
@@ -390,7 +516,7 @@ export function FeesTab() {
 
                 {fb.includeGST && (
                   <div className="flex items-center justify-between py-2">
-                    <span className="text-xs" style={{ color: 'rgba(232,236,240,0.55)' }}>GST (18%)</span>
+                    <span className="text-xs" style={{ color: 'var(--color-neutral-400)' }}>GST (18%)</span>
                     <span className="text-xs font-medium text-primary">{fmt(gstAmount)}</span>
                   </div>
                 )}
@@ -409,6 +535,14 @@ export function FeesTab() {
             </div>
           </div>
         </div>
+
+        {/* ── Rate Card (IISLA Fee Schedule) ─────────────────── */}
+        <RateCardPanel
+          schedule={activeSchedule}
+          usingPersonal={usingPersonal}
+          onEdit={(slabs) => updateProfile({ feeSchedule: { ...activeSchedule, slabs, updatedBy: profile.name || 'surveyor', updatedAt: Date.now() } })}
+          onReset={() => updateProfile({ feeSchedule: undefined })}
+        />
 
         {/* ── Live Fee Bill Preview ──────────────────────────── */}
         <FeeBillPreview claim={currentClaim} profile={profile!} />
