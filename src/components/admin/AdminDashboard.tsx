@@ -13,6 +13,7 @@ import {
   Code2,
   Cpu,
   Receipt,
+  Megaphone,
 } from 'lucide-react';
 import { verifyPayment, rejectPayment } from '@/lib/firebase/payments';
 import { useAuthStore } from '@/stores/auth-store';
@@ -28,6 +29,7 @@ import { PaymentsTab } from './tabs/PaymentsTab';
 import { DevNotesTab } from './tabs/DevNotesTab';
 import { AIModelsTab } from './tabs/AIModelsTab';
 import { FeeScheduleTab } from './tabs/FeeScheduleTab';
+import { AnnouncementsTab } from './tabs/AnnouncementsTab';
 
 import { DismissModal } from './modals/DismissModal';
 import { EmailComposerModal } from './modals/EmailComposerModal';
@@ -248,6 +250,17 @@ export function AdminDashboard() {
             <Receipt size={14} />
             Fee Schedule
           </button>
+          <button
+            onClick={() => setActiveTab('announcements')}
+            className={`flex items-center gap-2 px-5 py-2.5 text-xs font-medium uppercase tracking-wider rounded-t-lg transition-all ${
+              activeTab === 'announcements'
+                ? 'bg-white border border-b-white border-border text-primary -mb-px'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Megaphone size={14} />
+            Announcements
+          </button>
         </div>
       </div>
 
@@ -298,6 +311,7 @@ export function AdminDashboard() {
 
           {activeTab === 'ai-models' && <AIModelsTab adminEmail={user?.email ?? 'admin'} />}
           {activeTab === 'fee-schedule' && <FeeScheduleTab adminName={user?.email ?? 'admin'} />}
+          {activeTab === 'announcements' && <AnnouncementsTab adminName={user?.email ?? 'admin'} />}
         </div>
       </div>
 
