@@ -33,6 +33,7 @@ import {
   CarFront,
   Archive,
 } from 'lucide-react';
+import { NotificationBell } from './NotificationBell';
 import { useAuthStore } from '@/stores/auth-store';
 import { signInWithGoogle, signOutUser } from '@/lib/firebase/auth';
 import { toast } from 'sonner';
@@ -53,6 +54,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'documents', label: 'Documents', icon: <FileText size={17} />, group: 'claim', requiresClaim: true },
   { id: 'review', label: 'AI Review', icon: <ScanSearch size={17} />, group: 'claim', requiresClaim: true },
   { id: 'details', label: 'Claim Details', icon: <ClipboardList size={17} />, group: 'claim', requiresClaim: true },
+  { id: 'valuation',   label: 'Valuation',     icon: <CarFront size={17} />,   group: 'claim',   requiresClaim: true },
   { id: 'assessment', label: 'Assessment', icon: <Calculator size={17} />, group: 'claim', requiresClaim: true },
   { id: 'reports',        label: 'Report Center',  icon: <Printer size={17} />,        group: 'output', requiresClaim: true },
   { id: 'insured-report', label: 'Insured Report', icon: <FileText size={17} />,       group: 'output', requiresClaim: true },
@@ -60,7 +62,6 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'photos',      label: 'Photo Sheet',    icon: <Camera size={17} />,     group: 'output',   requiresClaim: true },
   { id: 'fees',        label: 'Survey Fees Bill', icon: <Receipt size={17} />,    group: 'output',   requiresClaim: true },
   { id: 'reinspection',label: 'Reinspection',  icon: <RotateCcw size={17} />,  group: 'output',   requiresClaim: true },
-  { id: 'valuation',   label: 'Valuation',     icon: <CarFront size={17} />,   group: 'output',   requiresClaim: true },
   { id: 'profile', label: 'Profile', icon: <User size={17} />, group: 'settings' },
   { id: 'cloud-vault', label: 'Cloud Vault', icon: <Cloud size={17} />, group: 'settings' },
   { id: 'recovered-claims', label: 'Recovered', icon: <Archive size={17} />, group: 'settings' },
@@ -170,6 +171,8 @@ export function Sidebar() {
               </div>
             </div>
           )}
+
+          {!sidebarCollapsed && <NotificationBell />}
 
           <button
             onClick={toggleSidebar}
