@@ -142,6 +142,7 @@ export class UIICExcelBuilder {
     addFourColumnRow('Date of Issue', this.claim.driver?.dateOfIssue || 'N/A', 'Issuing Authority', this.claim.driver?.issuingAuthority || 'N/A');
     addFourColumnRow('Validity (NT)', this.claim.driver?.validityNonTransport || 'N/A', 'Validity (T)', this.claim.driver?.validityTransport || 'N/A');
     addFourColumnRow('Class of Vehicle', this.claim.driver?.vehicleClasses || 'N/A', 'Date of Birth', this.claim.driver?.dateOfBirth || 'N/A');
+    addFourColumnRow('Badge No', this.claim.driver?.badgeNumber || 'N/A', 'Authorised to Drive', this.claim.driver?.authorisedToDrive || 'N/A');
 
     currRow++;
     addSectionHeader('IV. ACCIDENT DETAILS');

@@ -247,6 +247,7 @@ export async function generateSpotWordReport(claim: ClaimData, profile: Surveyor
           ]
         }),
         createKVRow("Non-Transport Valid", formatDateDMY(claim.driver.validityNonTransport), "Transport Valid", formatDateDMY(claim.driver.validityTransport), ws),
+        createKVRow("Badge No.", claim.driver.badgeNumber, "Authorised to Drive", claim.driver.authorisedToDrive, ws),
         new TableRow({
           children: [
             new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "MDL Status", color: "444444", size: ws.label })] })] }),

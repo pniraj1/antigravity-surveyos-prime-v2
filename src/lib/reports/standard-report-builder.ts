@@ -118,6 +118,8 @@ export function buildStandardFinalSurveyHTML(
   const net = Math.max(0, grand - salvage - excess);
 
   const estPartsBase = rows.filter(r => r.section === 'parts' && r.allowed !== false).reduce((s, r) => s + r.estimated, 0);
+  const estByType = (t: string) => rows.filter(r => r.section === 'parts' && r.allowed !== false && r.partType === t).reduce((s, r) => s + r.estimated, 0);
+  const estMetal = estByType('metal'), estPlastic = estByType('plastic'), estGlass = estByType('glass'), estFbr = estByType('fiberglass');
   const estLabOnly = rows.filter(r => r.section === 'labour' && r.allowed !== false).reduce((s, r) => s + r.estimated, 0);
   const estPaintOnly = rows.filter(r => r.section === 'paint' && r.allowed !== false).reduce((s, r) => s + r.estimated, 0);
   const estLabBase = estLabOnly + estPaintOnly;
@@ -324,7 +326,9 @@ export function buildStandardFinalSurveyHTML(
   </tr>
   <tr>
     <td style="${td}color:#444;font-size:${scale.labelFont};">Licence Classes</td>
-    <td style="${td}" colspan="3">${driver.vehicleClasses || '—'}</td>
+    <td style="${td}">${driver.vehicleClasses || '—'}</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Badge No.</td>
+    <td style="${td}">${driver.badgeNumber || '—'}</td>
   </tr>
   <tr>
     <td style="${td}color:#444;font-size:${scale.labelFont};">Non-Transport Valid</td>
@@ -381,6 +385,18 @@ export function buildStandardFinalSurveyHTML(
       <td style="${tdr}">${fa(pb)}</td>
       <td style="${tdr}">${fa(pT)}</td>
     </tr>
+    ${[
+      { label: 'Metal', est: estMetal, ass: metal },
+      { label: 'Plastic / Rubber', est: estPlastic, ass: plastic },
+      { label: 'Glass', est: estGlass, ass: glass },
+      { label: 'Fibre Glass', est: estFbr, ass: fiberglass },
+    ].filter(s => s.est > 0 || s.ass > 0).map(s => `
+    <tr>
+      <td style="${td}padding-left:14pt;color:#555;">↳ ${s.label}</td>
+      <td style="${tdr}color:#555;">${fa(s.est)}</td>
+      <td style="${tdr}color:#555;">${fa(s.ass)}</td>
+      <td style="${tdr}color:#555;">—</td>
+    </tr>`).join('')}
     <tr>
       <td style="${td}">Labour</td>
       <td style="${tdr}">${fa(estLabOnly)}</td>
