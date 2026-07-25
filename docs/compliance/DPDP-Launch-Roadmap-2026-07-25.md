@@ -137,8 +137,14 @@ New project: **`surveyos-v2-antigravity-in`** (alias `india` in `.firebaserc`).
 | M1 | Firestore data (193 docs) | ✅ migrated, path-diff verified |
 | M2 | Auth accounts + UIDs | ✅ 8 imported, UIDs preserved |
 | M3 | Functions in wrong region | ✅ pinned to `asia-south1` |
-| M4 | `.env.production.local` silently overrides `.env.production` for every prod build | ⬜ delete at cutover |
-| M5 | `motorsurveyos.web.app` still served by the old US project | ⬜ reclaim after sign-in verified |
+| M4 | `.env.production.local` silently overrides `.env.production` for every prod build | ✅ removed; `.env.production` + `.env.local` now hold India config |
+| M5 | `motorsurveyos.web.app` reclaim | ⚠️ **FAILED — see below** |
+
+**M5 outcome (2026-07-25):** the US Hosting site was deleted, but Firebase holds a **reservation on deleted site names** and `motorsurveyos` is now unclaimable **by either project** (`400 Invalid name: reserved by another project` — the wording is misleading; the old project cannot re-create it either). Net effect: `motorsurveyos.web.app` returns 404 and **`motorsurveyos-in.web.app` is the canonical URL**. Retry `firebase hosting:sites:create motorsurveyos --project surveyos-v2-antigravity-in` periodically; if it ever succeeds, deploy there and flip `authDomain` in `.env.production` + `.env.local` (the domain is already an authorized domain and already registered on the Firebase OAuth client, so no further console work is needed).
+
+**Lesson:** deleting a Firebase Hosting site to move its name between projects is a one-way door — the name does not become immediately available, and there is no supported way to transfer a site between projects. Assume the old URL stays dark indefinitely and plan the rename as "adopt a new URL", not "swap URLs".
+
+**Stale SEO metadata:** `src/app/**/page.tsx` still declares canonical URLs on `https://motorsurveyos.web.app` (e.g. `privacy/page.tsx`), which currently 404s. Left as-is pending the reclaim outcome; update to the canonical domain if the name is abandoned.
 | M6 | Unused `motorsurveyos-legacy` site on old project | ⬜ harmless; delete whenever |
 | M7 | **Old US project still holds a full copy of all insured PII** — residency isn't actually achieved until it's deleted | ⬜ decommission after cutover soak |
 
