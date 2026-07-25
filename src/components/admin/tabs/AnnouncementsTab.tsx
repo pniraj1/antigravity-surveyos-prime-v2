@@ -27,8 +27,9 @@ export function AnnouncementsTab({ adminName }: { adminName: string }) {
       setTitle(''); setBody(''); setLink(''); setType('update');
       toast.success('Announcement posted to all surveyors.');
       await refresh();
-    } catch {
-      toast.error('Post failed. Check your admin permissions.');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Unknown error';
+      toast.error(`Post failed: ${msg}`);
     } finally { setBusy(false); }
   }
 

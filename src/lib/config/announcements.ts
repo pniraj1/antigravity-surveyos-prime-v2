@@ -39,7 +39,17 @@ export async function loadAnnouncements(): Promise<Announcement[]> {
 
 /** Admin-only write (enforced by Firestore rules). */
 export async function saveAnnouncement(a: Omit<Announcement, 'id' | 'createdAt'>): Promise<void> {
-  await addDoc(collection(db, 'announcements'), { ...a, createdAt: Date.now() });
+  // Firestore rejects `undefined` field values (ignoreUndefinedProperties is off),
+  // so only include `link` when it is actually present.
+  const payload: Record<string, unknown> = {
+    title: a.title,
+    body: a.body,
+    type: a.type,
+    createdBy: a.createdBy,
+    createdAt: Date.now(),
+  };
+  if (a.link) payload.link = a.link;
+  await addDoc(collection(db, 'announcements'), payload);
 }
 
 /** Admin-only delete (enforced by Firestore rules). */
