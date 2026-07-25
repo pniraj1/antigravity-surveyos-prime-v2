@@ -10,9 +10,14 @@
  */
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { setGlobalOptions } = require("firebase-functions/v2");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { isSubscriptionActive } = require("./subscription");
+
+// Keep compute co-located with the Firestore database (asia-south1) —
+// data residency, not just latency.
+setGlobalOptions({ region: "asia-south1" });
 
 initializeApp();
 const db = getFirestore();
