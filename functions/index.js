@@ -184,5 +184,7 @@ exports.nvidiaProxy = onCall({ maxInstances: 10, memory: "512MiB" }, async (requ
 });
 
 // ─── Bramha Intelligence Engine ───
+// Admin-triggered batch indexer (replaces the old per-archive Firestore
+// trigger, which fired on every claim write and hid its own failures).
 const bramha = require("./bramha");
-exports.onClaimArchived = bramha.onClaimArchived;
+exports.rebuildBramhaIndex = bramha.rebuildBramhaIndex;

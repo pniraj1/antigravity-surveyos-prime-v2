@@ -1,11 +1,92 @@
 'use client';
 
-import React from 'react';
-import { AlertTriangle, Cpu, RefreshCcw, BookOpen } from 'lucide-react';
+import React, { useState } from 'react';
+import { AlertTriangle, Cpu, RefreshCcw, BookOpen, Database, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { rebuildBramhaIndex, type BramhaIndexResult } from '@/lib/firebase/functions';
+
+function BramhaIndexCard() {
+  const [running, setRunning] = useState(false);
+  const [result, setResult] = useState<BramhaIndexResult | null>(null);
+
+  const run = async (force: boolean) => {
+    setRunning(true);
+    setResult(null);
+    try {
+      const res = await rebuildBramhaIndex(force);
+      setResult(res);
+      toast.success(`Bramha: ${res.embedded} embedded, ${res.skipped} skipped`);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Bramha index rebuild failed');
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  return (
+    <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+      <div className="px-6 py-4 flex items-center gap-3 border-b border-border" style={{ background: 'var(--color-neutral-50)' }}>
+        <Database size={16} className="text-primary" />
+        <h2 className="text-sm font-medium text-foreground">Bramha Index</h2>
+        <span className="ml-auto text-[10px] font-medium px-2 py-0.5 rounded-full border" style={{ background: 'var(--color-neutral-100)', color: 'var(--color-neutral-600)', borderColor: 'var(--color-neutral-200)' }}>functions/bramha.js</span>
+      </div>
+
+      <div className="p-6 space-y-4 text-sm text-muted-foreground leading-relaxed">
+        <p className="text-xs">
+          Embeds every <strong>completed</strong> claim into the search index. Run it when you want —
+          monthly is plenty. Safe to repeat: each claim has one record, so re-runs overwrite instead of
+          duplicating, and records whose claim was deleted are removed in the same pass.
+        </p>
+        <p className="text-xs">
+          The index stores <strong>no insured personal data</strong> — no name, phone, policy number or
+          registration. Only vehicle, damage, costs and a pointer back to the original claim.
+        </p>
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => run(false)}
+            disabled={running}
+            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium rounded-lg bg-primary text-primary-foreground disabled:opacity-50"
+          >
+            {running ? <Loader2 size={13} className="animate-spin" /> : <RefreshCcw size={13} />}
+            {running ? 'Indexing…' : 'Index new claims'}
+          </button>
+          <button
+            onClick={() => run(true)}
+            disabled={running}
+            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium rounded-lg border border-border text-foreground disabled:opacity-50"
+          >
+            Re-embed everything
+          </button>
+        </div>
+
+        {result && (
+          <div className="p-4 rounded-xl border border-border text-xs" style={{ background: 'var(--color-neutral-50)' }}>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-3">
+              <span>Claims scanned: <strong className="text-foreground">{result.scanned}</strong></span>
+              <span>Embedded: <strong className="text-foreground">{result.embedded}</strong></span>
+              <span>Already indexed: <strong className="text-foreground">{result.skipped}</strong></span>
+              <span>Removed (deleted claims): <strong className="text-foreground">{result.pruned}</strong></span>
+              <span>Failed: <strong className="text-foreground">{result.failed}</strong></span>
+              <span>Took: <strong className="text-foreground">{(result.durationMs / 1000).toFixed(1)}s</strong></span>
+            </div>
+            {result.errors.length > 0 && (
+              <ul className="mt-3 pt-3 border-t border-border space-y-1" style={{ color: 'var(--color-status-warning)' }}>
+                {result.errors.map((e) => <li key={e}>{e}</li>)}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export function DevNotesTab() {
   return (
     <div className="space-y-6 max-w-3xl">
+
+      <BramhaIndexCard />
 
       {/* AI Model Management */}
       <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">

@@ -1,35 +1,50 @@
 /**
- * Bramha Intelligence Engine — Firestore Trigger
+ * Bramha Intelligence Engine — admin-triggered batch indexer.
  *
- * Fires when a claim document is updated. If the update is an archive
- * transition (isActive: true → false) AND the claim is completed,
- * generates a Gemini embedding and writes to bramha_memories.
+ * Replaces the previous onDocumentUpdated trigger, which fired on EVERY claim
+ * write (every autosave) just to exit early unless it was an archive
+ * transition, and swallowed all errors so failures were invisible.
+ *
+ * This runs only when an admin asks, embeds in batches, and RETURNS a summary
+ * so a failure is something you see rather than something you don't.
+ *
+ * DPDP: bramha_memories deliberately stores NO personal data — no insured
+ * name, phone, policy number or vehicle registration. Those live in the
+ * surveyor's own claim, which `sourceClaimPath` points at. Cross-claim
+ * identity matching is therefore not possible here by design; rebuild an
+ * enriched index from source if a lawful basis for it ever exists.
  */
 
-const { onDocumentUpdated } = require("firebase-functions/v2/firestore");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { initializeApp, getApps } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 
 if (!getApps().length) initializeApp();
 const db = getFirestore();
 
+// gemini-embedding-001 defaults to 3072 dims (~24KB/claim in Firestore).
+// 768 keeps the corpus ~3x smaller against the 1 GiB free tier and is plenty
+// for similarity over short assessment summaries.
+const EMBED_MODEL = "models/gemini-embedding-001";
+const EMBED_DIMS = 768;
+const EMBED_BATCH = 100;  // Gemini batchEmbedContents ceiling
+const WRITE_BATCH = 400;  // Firestore hard limit is 500
+
 // ─── Build embedding text from claim data ───
+// Deliberately excludes every direct identifier — see the DPDP note above.
 function buildEmbeddingText(claim) {
   const parts = [];
 
-  // Vehicle context
   const v = claim.vehicle || {};
   if (v.make || v.model) {
     parts.push(`Vehicle: ${[v.make, v.model, v.yearOfManufacture, v.fuel].filter(Boolean).join(' ')}`);
   }
   if (v.bodyType) parts.push(`Body type: ${v.bodyType}`);
 
-  // Accident location
   const a = claim.accident || {};
   if (a.placeOfAccident) parts.push(`Accident location: ${a.placeOfAccident}`);
   if (a.causeOfAccident) parts.push(`Cause: ${a.causeOfAccident}`);
 
-  // Assessment rows — damage descriptions
   const rows = claim.assessmentRows || [];
   if (rows.length > 0) {
     const damages = rows.map(r => {
@@ -40,16 +55,13 @@ function buildEmbeddingText(claim) {
     parts.push(`Damage assessment:\n${damages.join('\n')}`);
   }
 
-  // Spot damage rows
   const spotRows = claim.spotDamageRows || [];
   if (spotRows.length > 0) {
-    const spotDamages = spotRows.map(r =>
+    parts.push(`Spot damage:\n${spotRows.map(r =>
       [r.part, r.damage, r.action].filter(Boolean).join(' — ')
-    );
-    parts.push(`Spot damage:\n${spotDamages.join('\n')}`);
+    ).join('\n')}`);
   }
 
-  // Assessment totals
   if (rows.length > 0) {
     const totalAssessed = rows.reduce((sum, r) => sum + (r.assessed || 0), 0);
     const totalDepreciation = rows.reduce((sum, r) => sum + (r.depreciation || 0), 0);
@@ -57,121 +69,167 @@ function buildEmbeddingText(claim) {
     if (totalDepreciation > 0) parts.push(`Total depreciation: ₹${totalDepreciation}`);
   }
 
-  // Survey type
   if (claim.surveyType) parts.push(`Survey type: ${claim.surveyType}`);
 
   return parts.join('\n\n');
 }
 
-// ─── Get Gemini API key from Firestore config ───
+/**
+ * One document per claim, keyed deterministically. Re-running overwrites
+ * instead of duplicating, and deleting a claim's memory is a known doc id
+ * rather than a query.
+ */
+function memoryId(uid, claimId) {
+  return `${uid}__${claimId}`;
+}
+
+/** Unit-length vector — required when reducing gemini-embedding-001 below 3072. */
+function normalize(vec) {
+  const mag = Math.sqrt(vec.reduce((sum, x) => sum + x * x, 0));
+  return mag > 0 ? vec.map(x => x / mag) : vec;
+}
+
 async function getGeminiKey() {
   const doc = await db.collection("ai_config").doc("routing").get();
   if (!doc.exists) throw new Error("ai_config/routing not found");
-  const config = doc.data();
-  const gemini = (config.providers || []).find(p => p.name === "gemini");
+  const gemini = (doc.data().providers || []).find(p => p.name === "gemini");
   if (!gemini || !gemini.keys || !gemini.keys.length) {
     throw new Error("No Gemini API key found in ai_config/routing");
   }
   return gemini.keys[0];
 }
 
-// ─── Generate embedding via Gemini REST API ───
-async function generateEmbedding(text, apiKey) {
+/** Embed up to EMBED_BATCH texts in a single API call. */
+async function embedBatch(texts, apiKey) {
   const fetch = (await import("node-fetch")).default;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${apiKey}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "models/text-embedding-004",
-      content: { parts: [{ text }] },
-    }),
-  });
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/${EMBED_MODEL}:batchEmbedContents?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        requests: texts.map(text => ({
+          model: EMBED_MODEL,
+          content: { parts: [{ text }] },
+          outputDimensionality: EMBED_DIMS,
+        })),
+      }),
+    }
+  );
 
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Gemini embedding failed (${res.status}): ${err}`);
+    throw new Error(`Gemini batch embed failed (${res.status}): ${(await res.text()).slice(0, 300)}`);
   }
-
   const data = await res.json();
-  return data.embedding.values;
+  if (!data.embeddings || data.embeddings.length !== texts.length) {
+    throw new Error(`Expected ${texts.length} embeddings, got ${data.embeddings?.length ?? 0}`);
+  }
+  return data.embeddings.map(e => normalize(e.values));
 }
 
-// ─── Main Trigger ───
-exports.onClaimArchived = onDocumentUpdated(
-  { document: "users/{uid}/claims/{claimId}", memory: "256MiB" },
-  async (event) => {
-    const before = event.data.before.data();
-    const after = event.data.after.data();
+// ─── Admin-triggered rebuild ───
+exports.rebuildBramhaIndex = onCall(
+  { memory: "512MiB", timeoutSeconds: 3600 },
+  async (request) => {
+    if (!request.auth) throw new HttpsError("unauthenticated", "Must be logged in.");
 
-    // Guard: only proceed on archive transition
-    if (!(before.isActive === true && after.isActive === false)) return;
-
-    // Guard: only completed claims
-    if (!after.isCompleted) {
-      console.warn(`[Bramha] Claim ${event.params.claimId} archived but not completed — skipping.`);
-      return;
+    // Mirrors isAdmin() in firestore.rules — the flag on the caller's own profile.
+    const profile = await db.doc(`users/${request.auth.uid}/profile/current`).get();
+    if (!profile.exists || profile.data().isAdmin !== true) {
+      throw new HttpsError("permission-denied", "Admin only.");
     }
 
-    const uid = event.params.uid;
-    const claimId = event.params.claimId;
-    console.log(`[Bramha] Processing archived claim ${claimId} for user ${uid}`);
+    const force = request.data?.force === true;
+    const started = Date.now();
+    const stats = { scanned: 0, embedded: 0, skipped: 0, pruned: 0, failed: 0, errors: [] };
 
-    try {
-      // 1. Build embedding text
-      const text = buildEmbeddingText(after);
-      if (!text || text.length < 20) {
-        console.warn(`[Bramha] Claim ${claimId} — embedding text too short, skipping.`);
-        return;
+    // Completed claims across every surveyor. collectionGroup because claims
+    // live under users/{uid}/claims; the Admin SDK bypasses security rules.
+    const claims = await db.collectionGroup("claims").where("isCompleted", "==", true).get();
+    stats.scanned = claims.size;
+
+    // Existing memories, so a re-run only does new work and orphans are visible.
+    const existing = new Set();
+    const existingSnap = await db.collection("bramha_memories").get();
+    existingSnap.forEach(d => existing.add(d.id));
+
+    const pending = [];
+    const liveIds = new Set();
+
+    for (const doc of claims.docs) {
+      // users/{uid}/claims/{claimId}
+      const segments = doc.ref.path.split("/");
+      const uid = segments[1];
+      const claimId = segments[3];
+      const id = memoryId(uid, claimId);
+      liveIds.add(id);
+
+      if (!force && existing.has(id)) { stats.skipped++; continue; }
+
+      const claim = doc.data();
+      const text = buildEmbeddingText(claim);
+      if (!text || text.length < 20) { stats.skipped++; continue; }
+
+      pending.push({ id, uid, claimId, claim, text });
+    }
+
+    const apiKey = pending.length > 0 ? await getGeminiKey() : null;
+
+    for (let i = 0; i < pending.length; i += EMBED_BATCH) {
+      const chunk = pending.slice(i, i + EMBED_BATCH);
+      let vectors;
+      try {
+        vectors = await embedBatch(chunk.map(c => c.text), apiKey);
+      } catch (err) {
+        // One bad chunk must not abort the run — record it and continue.
+        stats.failed += chunk.length;
+        if (stats.errors.length < 5) stats.errors.push(err.message);
+        continue;
       }
 
-      // 2. Get API key and generate embedding
-      const apiKey = await getGeminiKey();
-      const embedding = await generateEmbedding(text, apiKey);
-      console.log(`[Bramha] Generated ${embedding.length}-dim embedding for claim ${claimId}`);
+      const batch = db.batch();
+      chunk.forEach((c, n) => {
+        const v = c.claim.vehicle || {};
+        const a = c.claim.accident || {};
+        const rows = c.claim.assessmentRows || [];
 
-      // 3. Extract metadata
-      const v = after.vehicle || {};
-      const p = after.policy || {};
-      const a = after.accident || {};
-      const rows = after.assessmentRows || [];
-      const totalAssessed = rows.reduce((sum, r) => sum + (r.assessed || 0), 0);
+        batch.set(db.collection("bramha_memories").doc(c.id), {
+          embedding: FieldValue.vector(vectors[n]),
+          textSummary: c.text,
 
-      // 4. Write to bramha_memories
-      await db.collection("bramha_memories").add({
-        // Vector
-        embedding: FieldValue.vector(embedding),
+          vehicleMake: v.make || '',
+          vehicleModel: v.model || '',
+          vehicleYear: v.yearOfManufacture || '',
+          fuelType: v.fuel || '',
+          assessmentTotal: rows.reduce((sum, r) => sum + (r.assessed || 0), 0),
+          surveyType: c.claim.surveyType || '',
+          placeOfAccident: a.placeOfAccident || '',
 
-        // Embedding source
-        textSummary: text,
-
-        // Vehicle & assessment metadata
-        vehicleMake: v.make || '',
-        vehicleModel: v.model || '',
-        vehicleYear: v.yearOfManufacture || '',
-        fuelType: v.fuel || '',
-        assessmentTotal: totalAssessed,
-        surveyType: after.surveyType || '',
-
-        // Fraud detection metadata
-        policyNumber: p.policyNumber || '',
-        vehicleRegistration: v.registrationNumber || '',
-        customerName: p.insuredName || '',
-        customerPhone: p.insuredMobile || '',
-        insuredEmail: '',
-
-        // Civic / hotspot metadata
-        placeOfAccident: a.placeOfAccident || '',
-
-        // Traceability
-        surveyorUid: uid,
-        sourceClaimPath: `users/${uid}/claims/${claimId}`,
-        createdAt: FieldValue.serverTimestamp(),
+          // Traceability only. Personal details stay in the claim this points at.
+          surveyorUid: c.uid,
+          sourceClaimPath: `users/${c.uid}/claims/${c.claimId}`,
+          indexedAt: FieldValue.serverTimestamp(),
+        });
       });
-
-      console.log(`[Bramha] Successfully wrote memory for claim ${claimId}`);
-    } catch (err) {
-      console.error(`[Bramha] Failed to process claim ${claimId}:`, err);
+      await batch.commit();
+      stats.embedded += chunk.length;
     }
+
+    // Drop memories whose claim no longer exists. Folds cascade-deletion into
+    // the same job, so no separate onDelete trigger is needed.
+    const orphans = [...existing].filter(id => !liveIds.has(id));
+    for (let i = 0; i < orphans.length; i += WRITE_BATCH) {
+      const batch = db.batch();
+      orphans.slice(i, i + WRITE_BATCH).forEach(id =>
+        batch.delete(db.collection("bramha_memories").doc(id))
+      );
+      await batch.commit();
+      stats.pruned += Math.min(WRITE_BATCH, orphans.length - i);
+    }
+
+    return { ...stats, durationMs: Date.now() - started };
   }
 );
+
+// Exported for the self-check in bramha.test.js
+exports._internal = { buildEmbeddingText, memoryId, normalize };
