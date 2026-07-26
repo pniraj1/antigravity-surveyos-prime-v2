@@ -8,6 +8,7 @@ import { signInWithGoogle, signOutUser } from '@/lib/firebase/auth';
 import { useAuthStore } from '@/stores/auth-store';
 import { useProfileStore } from '@/stores/profile-store';
 import Logo from '@/components/ui/Logo';
+import { ATTESTATION_TEXT, buildConsentRecord } from '@/lib/legal/versions';
 import {
   Shield, User, Phone, Mail, FileText, Loader2,
   CheckCircle2, ArrowRight, AlertCircle, Gift, LogOut, ChevronLeft, MapPin,
@@ -357,7 +358,20 @@ export default function AccessRequestPage() {
 
   const email       = user?.email ?? '';
   const dismissReason = profile.dismissReason;
-  const isValid     = name.trim().length >= 2 && irdai.trim().length >= 3 && phone.trim().length >= 7;
+
+  // Kept as two separate ticks, not one bundled "I agree to everything".
+  // They cover different things: one is our contract with the surveyor, the
+  // other is the surveyor's professional declaration that establishes the
+  // lawful basis for handling insured persons' data.
+  const [agreedTerms, setAgreedTerms] = useState(false);
+  const [attested, setAttested] = useState(false);
+
+  const isValid =
+    name.trim().length >= 2 &&
+    irdai.trim().length >= 3 &&
+    phone.trim().length >= 7 &&
+    agreedTerms &&
+    attested;
 
   // State 1: not signed in — show Google sign-in card inside split-panel
   if (!isAuthenticated) {
@@ -401,6 +415,9 @@ export default function AccessRequestPage() {
         email,
         accessRequestSubmitted: true,
         updatedAt:              Timestamp.now(),
+        // Proof of what was agreed and when. Versioned so an old record still
+        // resolves to the wording that was actually on screen.
+        consent:                buildConsentRecord(),
         ...(referrerUid ? { referredBy: referrerUid } : {}),
       };
       // PRIMARY: profile is the authoritative source — must succeed
@@ -546,6 +563,41 @@ export default function AccessRequestPage() {
           label="Email ID" value={email} icon={<Mail size={13} />}
           locked hint="Verified via Google — cannot be changed."
         />
+
+        {/* ── Consent ────────────────────────────────────────────────────
+            Two separate confirmations. The first is the agreement between
+            the surveyor and us. The second is the professional declaration
+            that gives us a lawful basis to handle insured persons' data —
+            those people never use this app and cannot consent here, so the
+            basis flows insurer → appointed surveyor → us as processor. */}
+        <div className="space-y-3 pt-1">
+          <label className="flex items-start gap-3 cursor-pointer group">
+            <input
+              type="checkbox"
+              checked={attested}
+              onChange={e => setAttested(e.target.checked)}
+              className="mt-0.5 h-4 w-4 flex-shrink-0 rounded border-gray-300 accent-[#D4AF37] cursor-pointer"
+            />
+            <span className="text-xs leading-relaxed text-[#4A5568] group-hover:text-[#0D1B2A] transition-colors">
+              {ATTESTATION_TEXT}
+            </span>
+          </label>
+
+          <label className="flex items-start gap-3 cursor-pointer group">
+            <input
+              type="checkbox"
+              checked={agreedTerms}
+              onChange={e => setAgreedTerms(e.target.checked)}
+              className="mt-0.5 h-4 w-4 flex-shrink-0 rounded border-gray-300 accent-[#D4AF37] cursor-pointer"
+            />
+            <span className="text-xs leading-relaxed text-[#4A5568] group-hover:text-[#0D1B2A] transition-colors">
+              I have read and agree to the{' '}
+              <a href="/terms" target="_blank" rel="noopener noreferrer" className="font-bold text-[#D4AF37] hover:underline">Terms of Service</a>
+              {' '}and{' '}
+              <a href="/privacy" target="_blank" rel="noopener noreferrer" className="font-bold text-[#D4AF37] hover:underline">Privacy Policy</a>.
+            </span>
+          </label>
+        </div>
 
         {/* Error */}
         {error && (
