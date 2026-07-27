@@ -177,6 +177,10 @@ export function SpotReportDocument({ claim }: Props) {
             <Text style={styles.colValue}>{claim?.driver?.licenceNumber || 'N/A'}</Text>
           </View>
           <View style={styles.row}>
+            <Text style={styles.colLabel}>Badge Number:</Text>
+            <Text style={styles.colValue}>{claim?.driver?.badgeNumber || 'N/A'}</Text>
+          </View>
+          <View style={styles.row}>
             <Text style={styles.colLabel}>DL Issue Date:</Text>
             <Text style={styles.colValue}>{claim?.driver?.dateOfIssue || 'N/A'}</Text>
           </View>

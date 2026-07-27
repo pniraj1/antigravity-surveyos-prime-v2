@@ -270,6 +270,14 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Licence Classes / Issue Date</td>
             <td style={{ ...parseInline(styles.td) }} colSpan={3}>{driver.vehicleClasses || '—'} &nbsp;|&nbsp; Issued: {formatDateDMY(driver.dateOfIssue) || '—'}</td>
           </tr>
+          {/* Mirrors the Word export's row (word-builder.ts) so all three spot
+              formats — PDF, print and Word — show the same driver fields. */}
+          <tr>
+            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Badge No.</td>
+            <td style={{ ...parseInline(styles.td), fontFamily: 'monospace' }}>{driver.badgeNumber || '—'}</td>
+            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Authorised to Drive</td>
+            <td style={{ ...parseInline(styles.td) }}>{driver.authorisedToDrive || '—'}</td>
+          </tr>
           <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Non-Transport Valid</td>
             <td style={{ ...parseInline(styles.td) }}>
