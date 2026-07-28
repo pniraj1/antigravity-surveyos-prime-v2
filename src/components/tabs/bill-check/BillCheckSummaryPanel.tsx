@@ -72,10 +72,10 @@ export function BillCheckSummaryPanel({ summary, bcSummary, inBillTotal, notInBi
             <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Saving (Not in Bill)</p>
             <p className="text-lg font-medium text-status-danger">-{fmt(bcSummary.notInBillTotal)}</p>
           </div>
-          <div className="p-4 rounded-xl shadow-lg border-2 border-primary/20 bg-neutral-900">
+          <div className="p-4 rounded-xl shadow-lg border-2 border-primary/20 bg-[#EEF2FF]">
             <p className="text-[9px] font-medium text-primary uppercase tracking-[0.2em] mb-1">Final Liability</p>
-            <p className="text-2xl font-medium text-white">{fmt(bcSummary.netLiability)}</p>
-            <div className="mt-2 text-[8px] text-white/40 uppercase font-medium tracking-widest">Payable to Workshop</div>
+            <p className="text-2xl font-medium text-[#1D1D1F]">{fmt(bcSummary.netLiability)}</p>
+            <div className="mt-2 text-[8px] text-[#6B7280] uppercase font-medium tracking-widest">Payable to Workshop</div>
           </div>
         </div>
 

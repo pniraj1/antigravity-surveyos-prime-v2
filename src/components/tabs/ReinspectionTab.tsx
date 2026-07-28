@@ -35,7 +35,7 @@ export function ReinspectionTab() {
       {/* ── Header ─────────────────────────────────────── */}
       <div
         className="px-8 py-8 lg:px-12"
-        style={{ background: 'var(--color-neutral-900)' }}
+        style={{ background: '#EEF2FF', borderBottom: '1px solid #C7D2FE' }}
       >
         <div className="max-w-5xl mx-auto">
           <div
@@ -44,10 +44,10 @@ export function ReinspectionTab() {
             <RotateCcw size={11} />
             Post-Repair Verification
           </div>
-          <h1 className="text-2xl lg:text-3xl font-medium mb-2 text-[var(--color-neutral-50)]" style={{ letterSpacing: '-0.02em' }}>
+          <h1 className="text-2xl lg:text-3xl font-medium mb-2 text-[var(--color-neutral-900)]" style={{ letterSpacing: '-0.02em' }}>
             Re-inspection Report
           </h1>
-          <p className="text-sm text-[var(--color-neutral-200)]/65">
+          <p className="text-sm text-[var(--color-neutral-600)]">
             Confirm that repairs have been carried out as per assessment and old parts have been surrendered.
           </p>
         </div>

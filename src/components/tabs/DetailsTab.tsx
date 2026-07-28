@@ -224,9 +224,9 @@ export function DetailsTab() {
       {/* ── LEFT: Form area ─────────────────────────────────────────────────── */}
       <div
         style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: '24px 32px 40px' }}
-        className="animate-in fade-in slide-in-from-bottom-2 duration-300"
+        className="@container animate-in fade-in slide-in-from-bottom-2 duration-300"
       >
-        <div className="max-w-3xl mx-auto space-y-8">
+        <div className="w-full max-w-[1400px] mx-auto space-y-8">
 
           {/* Report Number */}
           <div
@@ -320,7 +320,7 @@ export function DetailsTab() {
           </div>
 
           {/* AI Extraction Slots */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 @2xl:grid-cols-3 gap-4">
             {docSlots.map(slot => (
               <div key={slot.id} className="relative p-6 rounded-2xl border border-dashed border-primary/20 bg-primary/5 hover:bg-primary/10 transition-all flex flex-col items-center justify-center gap-3 group">
                 <input

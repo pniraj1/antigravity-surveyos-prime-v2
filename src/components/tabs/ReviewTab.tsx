@@ -94,13 +94,13 @@ function InlineEvidencePanel({ claimId }: { claimId: string }) {
   const docLabel = field ? (DOC_LABELS[field.docType] ?? field.docType.toUpperCase()) : '';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--color-neutral-900)', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--color-card)', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--color-neutral-200)' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: 'var(--color-neutral-900)', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: 'var(--color-neutral-50)', borderBottom: '1px solid var(--color-neutral-200)', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <FileSearch size={16} color="var(--color-neutral-200)" />
+          <FileSearch size={16} color="var(--color-primary)" />
           <div>
-            <div style={{ color: 'var(--color-neutral-200)', fontWeight: 500, fontSize: 12 }}>Evidence Viewer</div>
+            <div style={{ color: 'var(--color-neutral-900)', fontWeight: 500, fontSize: 12 }}>Evidence Viewer</div>
             {docLabel && <div style={{ color: 'var(--color-neutral-400)', fontSize: 10, marginTop: 1 }}>{docLabel}</div>}
           </div>
         </div>
@@ -239,8 +239,8 @@ export function ReviewTab() {
         <div
           className="px-8 py-8 lg:px-12"
           style={{
-            background: 'var(--color-neutral-900)',
-            borderBottom: '1px solid rgba(255,255,255,0.06)',
+            background: '#EEF2FF',
+            borderBottom: '1px solid #C7D2FE',
           }}
         >
           <div className="max-w-4xl mx-auto">
@@ -252,10 +252,10 @@ export function ReviewTab() {
             </div>
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h1 className="text-2xl lg:text-3xl font-medium mb-2" style={{ color: 'var(--color-neutral-50)', letterSpacing: '-0.02em' }}>
+                <h1 className="text-2xl lg:text-3xl font-medium mb-2" style={{ color: 'var(--color-neutral-900)', letterSpacing: '-0.02em' }}>
                   Document Review
                 </h1>
-                <p className="text-sm" style={{ color: 'var(--color-neutral-400)' }}>
+                <p className="text-sm" style={{ color: 'var(--color-neutral-600)' }}>
                   Review all AI-extracted data below. <Eye size={12} className="inline" style={{ color: 'var(--color-primary)' }} />{' '}
                   Click any field to view its source in the <strong style={{ color: 'var(--color-primary)' }}>Evidence Panel</strong>.
                 </p>
@@ -268,9 +268,9 @@ export function ReviewTab() {
                 style={{
                   display: 'flex', alignItems: 'center', gap: 6,
                   padding: '7px 14px', borderRadius: 10, cursor: 'pointer', flexShrink: 0,
-                  background: panelOpen ? 'color-mix(in srgb, var(--color-primary) 20%, transparent)' : 'rgba(255,255,255,0.08)',
-                  border: `1px solid ${panelOpen ? 'color-mix(in srgb, var(--color-primary) 40%, transparent)' : 'rgba(255,255,255,0.15)'}`,
-                  color: panelOpen ? 'var(--color-primary)' : 'rgba(255,255,255,0.6)',
+                  background: panelOpen ? 'var(--color-primary)' : '#E0E7FF',
+                  border: `1px solid ${panelOpen ? 'var(--color-primary)' : '#A5B4FC'}`,
+                  color: panelOpen ? 'var(--color-primary-foreground)' : '#3730A3',
                   fontSize: 12, fontWeight: 500, transition: 'all 0.2s',
                 }}
               >
@@ -443,7 +443,7 @@ export function ReviewTab() {
               <button
                 onClick={() => setActiveTab('documents')}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium flex-shrink-0 transition-all"
-                style={{ background: 'var(--color-neutral-900)', color: 'var(--color-primary)' }}
+                style={{ background: 'var(--color-accent)', color: 'var(--color-primary)', border: '1px solid var(--color-primary)/30' }}
               >
                 Scan More <ChevronRight size={13} />
               </button>

@@ -6,8 +6,8 @@ import { motion, MotionValue, useMotionValueEvent } from 'framer-motion';
 /** Chapter colour palettes for Narrative Sync (Approach B) */
 const CHAPTER_TINTS: Record<number, { color: string; glow: string; label: string }> = {
   0: { color: 'rgba(245,158,11,0.15)',  glow: '245,158,11',   label: 'Capture'  }, // amber
-  1: { color: 'rgba(59,130,246,0.15)',  glow: '59,130,246',   label: 'Analyse'  }, // blue
-  2: { color: 'rgba(16,185,129,0.15)',  glow: '16,185,129',   label: 'Deliver'  }, // emerald
+  1: { color: 'rgba(245,158,11,0.12)',  glow: '245,158,11',   label: 'Analyse'  }, // amber (slightly cooler opacity)
+  2: { color: 'rgba(245,158,11,0.18)',  glow: '245,158,11',   label: 'Deliver'  }, // amber (slightly warmer — peak)
 };
 
 interface CinematicVideoProps {

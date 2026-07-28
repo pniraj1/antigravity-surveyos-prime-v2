@@ -33,7 +33,8 @@ export function BillCheckHeader({ showEvidence, onToggleEvidence, bcSummary, cla
 
   return (
     <div
-      className="px-8 py-8 lg:px-12 bg-neutral-900"
+      className="px-8 py-8 lg:px-12"
+      style={{ background: '#EEF2FF', borderBottom: '1px solid #C7D2FE' }}
     >
       <div className="max-w-5xl mx-auto">
         <div
@@ -43,19 +44,18 @@ export function BillCheckHeader({ showEvidence, onToggleEvidence, bcSummary, cla
           Final Bill Verification
         </div>
         <div className="flex items-center justify-between gap-4">
-          <h1 className="text-2xl lg:text-3xl font-medium mb-2 text-white" style={{ letterSpacing: '-0.02em' }}>
+          <h1 className="text-2xl lg:text-3xl font-medium mb-2 text-[#1D1D1F]" style={{ letterSpacing: '-0.02em' }}>
             Bill Check Report
           </h1>
           <div className="flex items-center gap-3">
-            <SaveProgressButton tone="onDark" className="shadow-lg" />
+            <SaveProgressButton className="shadow-lg" />
             <button
               onClick={handleToggle}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all shadow-lg"
               style={{
-                background: showEvidence ? 'var(--color-primary)' : 'rgba(255,255,255,0.1)',
-                color: showEvidence ? 'var(--color-primary-foreground)' : 'var(--color-neutral-50)',
-                border: '1px solid rgba(255,255,255,0.2)',
-                backdropFilter: 'blur(10px)',
+                background: showEvidence ? 'var(--color-primary)' : '#E0E7FF',
+                color: showEvidence ? 'var(--color-primary-foreground)' : '#3730A3',
+                border: `1px solid ${showEvidence ? 'var(--color-primary)' : '#A5B4FC'}`,
               }}
             >
               {showEvidence ? <Layout size={16} /> : <Columns size={16} />}
@@ -63,7 +63,7 @@ export function BillCheckHeader({ showEvidence, onToggleEvidence, bcSummary, cla
             </button>
           </div>
         </div>
-        <p className="text-sm text-white/70">
+        <p className="text-sm text-[#4B5563]">
           Verify that items <strong className="text-primary">allowed</strong> in the Final Survey Report are correctly
           reflected in the workshop&apos;s final bill submitted to the insurer.
         </p>

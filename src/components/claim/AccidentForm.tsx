@@ -19,7 +19,7 @@ export function AccidentDetailsForm() {
         <CardTitle className="text-lg text-danger">Accident & Survey Details</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 @md:grid-cols-2 @2xl:grid-cols-3 @4xl:grid-cols-4 gap-4">
           <div className="space-y-1">
             <Label htmlFor="a-date">Date & Time of Accident</Label>
             <Input
@@ -120,8 +120,8 @@ export function AccidentDetailsForm() {
         {currentClaim.surveyType !== 'spot' && (
           <div className="mt-8 pt-6 border-t">
             <Label className="text-md font-bold mb-4 block">Workshop Details</Label>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="space-y-1 lg:col-span-2">
+            <div className="grid grid-cols-1 @md:grid-cols-2 @2xl:grid-cols-3 gap-4">
+              <div className="space-y-1 @2xl:col-span-2">
                 <Label htmlFor="w-name">Workshop Name</Label>
                 <Input
                   id="w-name"
@@ -171,62 +171,81 @@ export function AccidentDetailsForm() {
           </div>
         )}
 
-        <div className="mt-8 pt-6 border-t">
-          <Label className="text-md font-bold mb-4 block">Document Verification Checklist (Photocopies Obtained?)</Label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
-            {[
-              { id: 'rc', label: 'RC' },
-              { id: 'dl', label: 'DL' },
-              { id: 'permit', label: 'Permit' },
-              { id: 'fitness', label: 'Fitness' },
-              { id: 'loadChallan', label: 'Load Challan' },
-              { id: 'fireReport', label: 'Fire Report' },
-              { id: 'fir', label: 'FIR' },
-            ].map((flag) => {
-              const flags = currentClaim.documentVerification || {};
-              const doc = (flags as any)[flag.id] || { status: 'NO', detail: '' };
+        {(() => {
+          const dvFlags: any = currentClaim.documentVerification || {};
+          const DV_DOCS = [
+            { id: 'rc', label: 'RC' },
+            { id: 'dl', label: 'DL' },
+            { id: 'permit', label: 'Permit' },
+            { id: 'fitness', label: 'Fitness' },
+            { id: 'loadChallan', label: 'Load Challan' },
+            { id: 'fireReport', label: 'Fire Report' },
+            { id: 'fir', label: 'FIR' },
+          ];
+          const STATUSES = [
+            { value: 'YES', color: 'var(--color-status-success)' },
+            { value: 'NO', color: 'var(--color-status-danger)' },
+            { value: 'N.A.', color: 'var(--color-neutral-500)' },
+          ];
+          const obtained = DV_DOCS.filter((d) => dvFlags[d.id]?.status === 'YES').length;
+          const setDoc = (id: string, patch: Record<string, string>) => {
+            const cur = dvFlags[id] || { status: 'NO', detail: '' };
+            useClaimStore.getState().updateClaim({
+              documentVerification: { ...dvFlags, [id]: { ...cur, ...patch } },
+            });
+          };
 
-              return (
-                <div key={flag.id} className="p-3 border rounded-lg bg-muted/30 space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <Label className="text-xs font-bold uppercase">{flag.label}</Label>
-                    <select
-                      className="h-8 w-16 rounded-md border border-input bg-background px-1 text-[10px]"
-                      value={doc.status}
-                      onChange={(e) => {
-                        const newFlags = {
-                          ...flags,
-                          [flag.id]: { ...doc, status: e.target.value }
-                        };
-                        useClaimStore.getState().updateClaim({
-                          documentVerification: newFlags
-                        });
-                      }}
-                    >
-                      <option value="YES">YES</option>
-                      <option value="NO">NO</option>
-                      <option value="N.A.">N.A.</option>
-                    </select>
-                  </div>
-                  <Input
-                    placeholder="e.g. Original"
-                    className="h-7 text-[10px] px-2"
-                    value={doc.detail || ''}
-                    onChange={(e) => {
-                      const newFlags = {
-                        ...flags,
-                        [flag.id]: { ...doc, detail: e.target.value }
-                      };
-                      useClaimStore.getState().updateClaim({
-                        documentVerification: newFlags
-                      });
-                    }}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        </div>
+          return (
+            <div className="mt-8 pt-6 border-t">
+              <div className="flex items-center justify-between mb-1 gap-3">
+                <Label className="text-md font-bold">Document Verification Checklist</Label>
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-muted text-muted-foreground shrink-0">
+                  {obtained} / {DV_DOCS.length} obtained
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mb-4">Mark whether a photocopy of each document was obtained.</p>
+
+              <div className="grid grid-cols-1 @md:grid-cols-2 @4xl:grid-cols-3 gap-3">
+                {DV_DOCS.map((doc) => {
+                  const status: string | undefined = dvFlags[doc.id]?.status;
+                  return (
+                    <div key={doc.id} className="flex items-center gap-3 p-2.5 rounded-lg border bg-muted/20">
+                      <span className="text-xs font-bold uppercase w-20 shrink-0 truncate" title={doc.label}>{doc.label}</span>
+                      <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                        <div className="inline-flex rounded-md border border-input overflow-hidden self-start">
+                          {STATUSES.map((s) => {
+                            const active = status === s.value;
+                            return (
+                              <button
+                                key={s.value}
+                                type="button"
+                                onClick={() => setDoc(doc.id, { status: s.value })}
+                                className="px-2.5 py-1 text-[10px] font-semibold transition-colors border-r border-input last:border-r-0"
+                                style={active
+                                  ? { background: s.color, color: '#fff' }
+                                  : { background: 'transparent', color: 'var(--color-neutral-500)' }}
+                              >
+                                {s.value}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {status === 'YES' && (
+                          <Input
+                            placeholder="e.g. Original seen"
+                            className="h-7 text-[11px] px-2"
+                            value={dvFlags[doc.id]?.detail || ''}
+                            onChange={(e) => setDoc(doc.id, { detail: e.target.value })}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
       </CardContent>
     </Card>
   );

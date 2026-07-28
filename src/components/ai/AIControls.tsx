@@ -33,12 +33,12 @@ export function ProviderHealthBadge() {
   return (
     <div
       className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-medium"
-      style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}
+      style={{ background: 'var(--color-neutral-100)', border: '1px solid var(--color-neutral-200)' }}
       title={`${provider === 'gemini' ? 'Google Gemini' : 'Groq'} · ${model} · ${label}`}
     >
       <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: dot }} />
-      <span style={{ color: 'var(--color-neutral-50)' }}>{shortModel}</span>
-      <span style={{ color: 'rgba(232,236,240,0.5)' }}>·</span>
+      <span style={{ color: 'var(--color-neutral-700)' }}>{shortModel}</span>
+      <span style={{ color: 'var(--color-neutral-400)' }}>·</span>
       <span style={{ color: dot }}>{label}</span>
     </div>
   );
@@ -92,9 +92,9 @@ export function ModelSelector() {
         onClick={() => setOpen(v => !v)}
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all"
         style={{
-          background: 'rgba(255,255,255,0.08)',
-          border: '1px solid rgba(255,255,255,0.12)',
-          color: 'rgba(232,236,240,0.85)',
+          background: 'var(--color-neutral-100)',
+          border: '1px solid var(--color-neutral-200)',
+          color: 'var(--color-neutral-600)',
         }}
       >
         <span style={{ color: accentColor }}>{active?.label ?? activeId.split('/').pop()}</span>
@@ -162,7 +162,7 @@ export function DocModeToggle() {
   return (
     <div
       className="flex items-center gap-1 p-0.5 rounded-lg"
-      style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}
+      style={{ background: 'var(--color-neutral-100)', border: '1px solid var(--color-neutral-200)' }}
       title="PDF extraction mode"
     >
       {options.map(opt => {
@@ -175,7 +175,7 @@ export function DocModeToggle() {
             className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-medium transition-all"
             style={{
               background: isActive ? 'var(--color-primary)' : 'transparent',
-              color: isActive ? 'var(--color-neutral-900)' : 'rgba(232,236,240,0.55)',
+              color: isActive ? 'var(--color-neutral-900)' : 'var(--color-neutral-600)',
             }}
           >
             {opt.icon}
@@ -201,7 +201,7 @@ export function ProviderToggle() {
   const enabled = PROVIDERS.filter(p => config.providers[p.id]?.enabled);
 
   return (
-    <div className="flex items-center p-1 rounded-xl gap-1" style={{ background: 'rgba(255,255,255,0.08)' }}>
+    <div className="flex items-center p-1 rounded-xl gap-1" style={{ background: 'var(--color-neutral-100)', border: '1px solid var(--color-neutral-200)' }}>
       {enabled.map(p => {
         const active = aiProvider === p.id;
         return (
@@ -209,7 +209,7 @@ export function ProviderToggle() {
             key={p.id}
             onClick={() => updateProfile({ aiProvider: p.id })}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all"
-            style={{ background: active ? p.activeBg : 'transparent', color: active ? p.activeColor : 'rgba(232,236,240,0.6)' }}
+            style={{ background: active ? p.activeBg : 'transparent', color: active ? p.activeColor : 'var(--color-neutral-600)' }}
           >
             {p.icon}{p.label}
           </button>

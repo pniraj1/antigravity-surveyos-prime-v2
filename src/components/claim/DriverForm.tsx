@@ -42,7 +42,7 @@ export function DriverDetailsForm() {
         <CardTitle className="text-lg text-amber">Driver &amp; Licence Details</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 @md:grid-cols-2 @2xl:grid-cols-3 @4xl:grid-cols-4 gap-4">
           <div className="space-y-1">
             <Label htmlFor="d-name">Driver Name<S /><EvidenceDot has={hasEvidence('name')} /></Label>
             <Input

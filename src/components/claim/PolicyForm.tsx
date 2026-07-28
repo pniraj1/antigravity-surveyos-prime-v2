@@ -29,7 +29,7 @@ export function PolicyDetailsForm() {
         <CardTitle className="text-lg text-teal">Policy &amp; Insured Details</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 @md:grid-cols-2 @2xl:grid-cols-3 @4xl:grid-cols-4 gap-4">
           <div className="space-y-1">
             <Label htmlFor="p-ins">Insurer Name<S /><EvidenceDot has={hasEvidence('insurerName')} /></Label>
             <Input

@@ -3,11 +3,11 @@
 import { motion, useScroll, useTransform, useMotionValueEvent } from 'framer-motion';
 import {
   ArrowRight, Cloud, Camera, Shield, FileText, ChevronRight, Play,
-  Zap, Cpu, Clock, Lock, ChevronDown
+  Zap, Cpu, Clock, Lock, ChevronDown, Bell
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { signInWithGoogle } from '@/lib/firebase/auth';
 import { useAuthStore } from '@/stores/auth-store';
@@ -17,6 +17,106 @@ import Logo from '@/components/ui/Logo';
 import CinematicVideo from '@/components/landing/CinematicVideo';
 
 /* ─────────────────────────────────────────────────────────────────────────────
+   TELEGRAM LOGO SVG
+───────────────────────────────────────────────────────────────────────────── */
+function TelegramIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="12" fill="#26A5E4" />
+      <path
+        d="M17.707 7.293l-2.12 10.007c-.157.695-.568.867-1.152.54l-3.18-2.344-1.535 1.477c-.17.17-.312.312-.64.312l.228-3.24 5.892-5.323c.256-.228-.056-.354-.397-.126L6.29 13.88l-3.122-.975c-.678-.212-.692-.678.142-.999l12.197-4.703c.565-.205 1.058.126.2 1.09z"
+        fill="white"
+      />
+    </svg>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   PRODUCTS DROPDOWN
+───────────────────────────────────────────────────────────────────────────── */
+function ProductsDropdown() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  return (
+    <div className="relative hidden sm:block" ref={ref}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1 text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors"
+        aria-expanded={open}
+        aria-haspopup="true"
+      >
+        Products
+        <ChevronDown size={12} className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <motion.div
+          initial={{ opacity: 0, y: 6, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.15 }}
+          className="absolute top-full left-0 mt-2 w-56 rounded-2xl border border-black/8 shadow-xl overflow-hidden z-50"
+          style={{ background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(20px)' }}
+        >
+          <div className="p-1.5">
+            <Link
+              href="/products/motor-surveyos"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-amber-400/10 transition-colors group"
+            >
+              <div className="w-7 h-7 rounded-lg bg-amber-400/15 border border-amber-400/25 flex items-center justify-center flex-shrink-0">
+                <Zap size={14} className="text-amber-500" />
+              </div>
+              <div>
+                <div className="text-xs font-black text-slate-900 group-hover:text-amber-600 transition-colors">Motor SurveyOS</div>
+                <div className="text-[10px] text-slate-400">AI survey reporting platform</div>
+              </div>
+            </Link>
+
+            <a
+              href="https://t.me/surveyos_sync_bot"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#26A5E4]/10 transition-colors group"
+            >
+              <div className="w-7 h-7 rounded-lg bg-[#26A5E4]/10 border border-[#26A5E4]/20 flex items-center justify-center flex-shrink-0">
+                <TelegramIcon size={16} />
+              </div>
+              <div>
+                <div className="text-xs font-black text-slate-900 group-hover:text-[#26A5E4] transition-colors flex items-center gap-1">
+                  SurveyOS Sync
+                  <span className="text-[8px] font-black px-1 py-0.5 rounded bg-[#26A5E4]/10 text-[#26A5E4]">TELEGRAM</span>
+                </div>
+                <div className="text-[10px] text-slate-400">Document tracking & reminders</div>
+              </div>
+            </a>
+          </div>
+
+          <div className="border-t border-black/5 px-4 py-2">
+            <Link
+              href="/products"
+              onClick={() => setOpen(false)}
+              className="text-[10px] font-bold text-slate-400 hover:text-amber-500 transition-colors flex items-center gap-1"
+            >
+              Compare all products <ChevronRight size={10} />
+            </Link>
+          </div>
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
    GLASS CARD — reusable glassmorphic container for the left content rail
 ───────────────────────────────────────────────────────────────────────────── */
 function GlassCard({
@@ -24,15 +124,24 @@ function GlassCard({
   className = '',
   id,
   style,
+  onClick,
+  role,
+  'aria-label': ariaLabel,
 }: {
   children: React.ReactNode;
   className?: string;
   id?: string;
   style?: React.CSSProperties;
+  onClick?: () => void;
+  role?: string;
+  'aria-label'?: string;
 }) {
   return (
     <div
       id={id}
+      role={role}
+      aria-label={ariaLabel}
+      onClick={onClick}
       className={`relative rounded-2xl border border-black/5 backdrop-blur-xl shadow-xl ${className}`}
       style={{
         background: 'rgba(255, 255, 255, 0.65)',
@@ -58,39 +167,43 @@ const CHAPTERS = [
     body: 'Our AI engine reads Registration Certificates, Driving Licences, and Policies in seconds — filling every form field with 99.9% accuracy. No more manual transcription.',
     stat: '99.9%',
     statLabel: 'Extraction accuracy',
+    statColor: 'text-amber-400',
     icon: <FileText size={20} className="text-amber-400" />,
   },
   {
     tag: 'Analyse',
-    glow: '59,130,246',
-    bg: 'bg-blue-400/10 border-blue-400/20',
-    tagClass: 'text-blue-400 border-blue-400/30 bg-blue-400/10',
+    glow: '245,158,11',
+    bg: 'bg-amber-400/10 border-amber-400/20',
+    tagClass: 'text-amber-400 border-amber-400/30 bg-amber-400/10',
     heading: 'Draft complete\nreports in 10 minutes.',
     body: 'What used to take a surveyor 2+ hours now completes in under 10 minutes. LLM reconciliation spots conflicts between documents and flags them before you sign off.',
     stat: '10 min',
     statLabel: 'Average report time',
-    icon: <Clock size={20} className="text-blue-400" />,
+    statColor: 'text-amber-400',
+    icon: <Clock size={20} className="text-amber-400" />,
   },
   {
     tag: 'Deliver',
-    glow: '16,185,129',
-    bg: 'bg-emerald-400/10 border-emerald-400/20',
-    tagClass: 'text-emerald-400 border-emerald-400/30 bg-emerald-400/10',
+    glow: '245,158,11',
+    bg: 'bg-amber-400/10 border-amber-400/20',
+    tagClass: 'text-amber-400 border-amber-400/30 bg-amber-400/10',
     heading: 'Secure, private,\nzero third-party storage.',
     body: 'Every file goes directly to your own Google Drive. We store nothing. No third-party databases, no data exposure — your client\'s information belongs only to you.',
     stat: '0',
     statLabel: 'Third-party breaches',
-    icon: <Lock size={20} className="text-emerald-400" />,
+    statColor: 'text-emerald-500', // emerald kept ONLY here — green = safe is a universal data signal
+    icon: <Lock size={20} className="text-amber-400" />,
   },
 ];
 
 const FEATURES = [
   { icon: <FileText size={20} />, color: 'text-amber-400', bg: 'bg-amber-400/10 border-amber-400/20', title: 'AI Document Reading', desc: 'Instantly reads RC, DL, and Policies. Flawless OCR fills forms automatically.' },
-  { icon: <Camera size={20} />, color: 'text-blue-400', bg: 'bg-blue-400/10 border-blue-400/20', title: 'Smart Photo Engine', desc: 'Upload heavy damage photos. SurveyOS compresses them and maps to a beautiful PDF.' },
-  { icon: <Cloud size={20} />, color: 'text-emerald-400', bg: 'bg-emerald-400/10 border-emerald-400/20', title: 'Auto Drive Sync', desc: 'Files silently pushed to your Google Drive in the background. Zero manual filing.' },
-  { icon: <Cpu size={20} />, color: 'text-purple-400', bg: 'bg-purple-400/10 border-purple-400/20', title: 'LLM Reconciliation', desc: 'Spots conflicts between DL and policies instantly, highlights every mismatch.' },
-  { icon: <Shield size={20} />, color: 'text-rose-400', bg: 'bg-rose-400/10 border-rose-400/20', title: 'Offline First', desc: 'No signal at the garage? SurveyOS caches securely and syncs on reconnect.' },
-  { icon: <Zap size={20} />, color: 'text-yellow-400', bg: 'bg-yellow-400/10 border-yellow-400/20', title: 'Lightning Fast', desc: 'Zero load times, native-like performance on any device.' },
+  { icon: <Camera size={20} />, color: 'text-amber-400', bg: 'bg-amber-400/10 border-amber-400/20', title: 'Smart Photo Engine', desc: 'Upload heavy damage photos. SurveyOS compresses them and maps to a beautiful PDF.' },
+  { icon: <Cloud size={20} />, color: 'text-amber-400', bg: 'bg-amber-400/10 border-amber-400/20', title: 'Auto Drive Sync', desc: 'Files silently pushed to your Google Drive in the background. Zero manual filing.' },
+  { icon: <Cpu size={20} />, color: 'text-amber-400', bg: 'bg-amber-400/10 border-amber-400/20', title: 'LLM Reconciliation', desc: 'Spots conflicts between DL and policies instantly, highlights every mismatch.' },
+  { icon: <Shield size={20} />, color: 'text-amber-400', bg: 'bg-amber-400/10 border-amber-400/20', title: 'Offline First', desc: 'No signal at the garage? SurveyOS caches securely and syncs on reconnect.' },
+  { icon: <Zap size={20} />, color: 'text-amber-400', bg: 'bg-amber-400/10 border-amber-400/20', title: 'Lightning Fast', desc: 'Zero load times, native-like performance on any device.' },
+  { icon: <Bell size={20} />, color: 'text-amber-400', bg: 'bg-amber-400/10 border-amber-400/20', title: 'SurveyOS Sync', desc: 'Track every pending document across all claims. Send reminders in one tap via Telegram.', href: '/blog/surveyos-sync' },
 ];
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -179,33 +292,38 @@ export default function LandingPage() {
           WebkitBackdropFilter: 'blur(20px)',
         }}
       >
-        <Logo variant="light" size="sm" />
-        {isAuthenticated ? (
-          <button
-            onClick={() => router.push('/')}
-            aria-label="Dashboard"
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-gray-900 bg-amber-400 rounded-full hover:scale-105 active:scale-95 transition-transform shadow-sm"
-          >
-            Dashboard <ArrowRight size={12} aria-hidden="true" />
-          </button>
-        ) : (
-          <div className="flex items-center gap-2">
+        <Link href="/landing" aria-label="Motor SurveyOS Home">
+          <Logo variant="light" size="sm" />
+        </Link>
+        <div className="flex items-center gap-4">
+          <ProductsDropdown />
+          {isAuthenticated ? (
             <button
-              onClick={handleSignIn}
-              aria-label="Sign In"
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-700 rounded-full border border-black/15 hover:bg-slate-900 hover:text-white active:scale-95 transition-all"
-            >
-              Sign In
-            </button>
-            <button
-              onClick={handleAction}
-              aria-label="Start 30-Day Free Trial"
+              onClick={() => router.push('/')}
+              aria-label="Dashboard"
               className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-gray-900 bg-amber-400 rounded-full hover:scale-105 active:scale-95 transition-transform shadow-sm"
             >
-              Start 30-Day Free Trial <ArrowRight size={12} aria-hidden="true" />
+              Dashboard <ArrowRight size={12} aria-hidden="true" />
             </button>
-          </div>
-        )}
+          ) : (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleSignIn}
+                aria-label="Sign In"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-700 rounded-full border border-black/15 hover:bg-slate-900 hover:text-white active:scale-95 transition-all"
+              >
+                Sign In
+              </button>
+              <button
+                onClick={handleAction}
+                aria-label="Start 30-Day Free Trial"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-gray-900 bg-amber-400 rounded-full hover:scale-105 active:scale-95 transition-transform shadow-sm"
+              >
+                Start 30-Day Free Trial <ArrowRight size={12} aria-hidden="true" />
+              </button>
+            </div>
+          )}
+        </div>
       </motion.nav>
 
       {/* ── FIXED CINEMATIC VIDEO BACKGROUND ───────────────────────────────── */}
@@ -282,18 +400,27 @@ export default function LandingPage() {
         {/* Dashboard Image Mockup */}
         <motion.div
           initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.2, duration: 1 }}
-          className="w-full max-w-5xl mx-auto mt-16 z-20 pointer-events-none hidden md:block"
+          className="w-full max-w-5xl mx-auto mt-16 z-20 hidden md:block"
         >
-          <div className="relative rounded-2xl overflow-hidden border border-white/20 shadow-2xl shadow-amber-500/20 bg-white/10 backdrop-blur-sm">
+          <button
+            onClick={handleAction}
+            aria-label={isAuthenticated ? 'Enter Dashboard' : 'Start Free Trial'}
+            className="w-full group relative rounded-2xl overflow-hidden border border-white/20 shadow-2xl shadow-amber-500/20 bg-white/10 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+          >
             <Image
               src="/images/dashboard-mockup.png"
-              alt="SurveyOS Prime Dashboard"
+              alt="SurveyOS Prime Dashboard — click to get started"
               width={1200}
               height={800}
-              className="w-full h-auto object-cover"
+              className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-[1.01]"
               priority
             />
-          </div>
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 px-6 py-3 bg-amber-400 text-gray-900 text-sm font-bold rounded-full shadow-lg">
+                {isAuthenticated ? 'Enter Dashboard' : 'Start Free Trial'}
+              </span>
+            </div>
+          </button>
         </motion.div>
 
         {/* Scroll Indicator */}
@@ -348,7 +475,10 @@ export default function LandingPage() {
         {CHAPTERS.map((ch, i) => (
           <GlassCard
             key={i}
-            className={`p-5 relative z-10 transition-all duration-500 ${chapter === i ? 'ring-1' : 'opacity-70'}`}
+            role="button"
+            aria-label={`View ${ch.tag} chapter`}
+            onClick={() => setChapter(i)}
+            className={`p-5 relative z-10 transition-all duration-500 cursor-pointer ${chapter === i ? 'ring-1' : 'opacity-70 hover:opacity-90'}`}
           >
             {/* Active indicator */}
             {chapter === i && (
@@ -377,8 +507,7 @@ export default function LandingPage() {
             </p>
 
             <div className="flex items-baseline gap-1.5">
-              <span className={`text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r`}
-                style={{ color: `rgb(${ch.glow})` }}>
+              <span className={`text-2xl font-black ${ch.statColor}`}>
                 {ch.stat}
               </span>
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{ch.statLabel}</span>
@@ -393,15 +522,31 @@ export default function LandingPage() {
 
         <GlassCard className="p-5 relative z-10">
           <div className="grid grid-cols-2 gap-3">
-            {FEATURES.map((f, i) => (
-              <div key={i} className="flex flex-col gap-2 p-3 rounded-xl bg-black/[0.02] border border-black/5 hover:bg-black/[0.04] transition-colors">
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center border ${f.bg} ${f.color}`}>
-                  {f.icon}
+            {FEATURES.map((f, i) => {
+              const tile = (
+                <div className={`flex flex-col gap-2 p-3 rounded-xl border transition-colors h-full ${'href' in f ? 'bg-amber-400/5 border-amber-400/15 hover:bg-amber-400/10 hover:border-amber-400/30' : 'bg-black/[0.02] border-black/5 hover:bg-black/[0.04]'}`}>
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center border ${f.bg} ${f.color}`}>
+                    {f.icon}
+                  </div>
+                  <div className="text-xs font-bold text-slate-900">{f.title}</div>
+                  <div className="text-[11px] text-slate-500 leading-relaxed">{f.desc}</div>
+                  {'href' in f && (
+                    <div className="text-[10px] font-bold text-amber-500 mt-auto pt-1 flex items-center gap-0.5">
+                      Read more <ChevronRight size={10} />
+                    </div>
+                  )}
                 </div>
-                <div className="text-xs font-bold text-slate-900">{f.title}</div>
-                <div className="text-[11px] text-slate-500 leading-relaxed">{f.desc}</div>
-              </div>
-            ))}
+              );
+              return 'href' in f ? (
+                <Link key={i} href={(f as typeof f & { href: string }).href} className="flex">
+                  {tile}
+                </Link>
+              ) : (
+                <button key={i} onClick={handleAction} className="flex text-left w-full">
+                  {tile}
+                </button>
+              );
+            })}
           </div>
         </GlassCard>
 
@@ -471,9 +616,36 @@ export default function LandingPage() {
           </button>
         </GlassCard>
 
+        {/* ── BLOG STRIP ───────────────────────────────────────────────── */}
+        <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-1 relative z-10 mt-4">
+          From the Blog
+        </div>
+
+        <Link href="/blog/surveyos-sync" className="relative z-10 block">
+          <GlassCard className="p-5 hover:shadow-lg transition-shadow group cursor-pointer">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-600">
+                Product
+              </span>
+              <span className="text-[9px] text-slate-400 font-bold">3 min read</span>
+            </div>
+            <h3 className="text-sm font-black text-slate-900 leading-snug mb-2 group-hover:text-amber-600 transition-colors">
+              Never Lose Track of a Document Again
+            </h3>
+            <p className="text-[11px] text-slate-500 leading-relaxed mb-3">
+              How SurveyOS Sync helps surveyors track every pending document across all claims and send reminders in one tap.
+            </p>
+            <div className="flex items-center gap-0.5 text-[10px] font-bold text-amber-500">
+              Read article <ChevronRight size={10} />
+            </div>
+          </GlassCard>
+        </Link>
+
         {/* ── FOOTER ───────────────────────────────────────────────────── */}
         <div className="text-center text-xs text-slate-500 pt-4 pb-2 relative z-10">
-          <Logo variant="light" size="sm" className="justify-center mb-3" />
+          <Link href="/landing" aria-label="Motor SurveyOS Home">
+            <Logo variant="light" size="sm" className="justify-center mb-3" />
+          </Link>
           © {new Date().getFullYear()} Motor SurveyOS. Engineered for Surveyors.
         </div>
 
