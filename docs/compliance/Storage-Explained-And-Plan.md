@@ -1,6 +1,7 @@
 # Where Your Data Lives, and What To Do About It
 
-**Written:** 2026-07-25 · **Status:** awaiting approval — nothing in Part 3 has been built yet
+**Written:** 2026-07-25 · **Updated:** 2026-07-25 end of day
+**Status:** Steps 1–4 built and live. Steps 5–6 remain (housekeeping + deleting the old US copy).
 **Plain-language companion to** `DPDP-Launch-Roadmap-2026-07-25.md`
 
 ---
@@ -84,7 +85,7 @@ There are **8 places**. Here they are, simply.
 
 ### 4. Bramha memory (Firestore `bramha_memories`) — **India**
 - **What:** described above
-- **Status:** ⚠️ **the problem** — currently empty
+- **Status:** ✅ **fixed.** The four personal fields are no longer written at all, and a test fails if they are reintroduced. It now fills only when an admin presses a button, not silently on every claim.
 
 ### 5. Google Drive — **the surveyor's own account**
 - **What:** finished reports, photos, a `claim.json` backup
@@ -109,16 +110,22 @@ There are **8 places**. Here they are, simply.
 | Place | Problem? |
 |---|---|
 | Cloud Vault, profile, Drive | ✅ no |
-| Bramha memory | ❌ **yes** — 4 fields |
+| Bramha memory | ✅ fixed — the 4 fields are no longer written |
 | Old US copy | ❌ **yes** — once you're confident, delete it |
 | Device storage, localStorage | 🔸 hygiene, not launch-blocking |
 | Telegram/Sync | 🔸 already disclosed; tidy up the product framing |
 
 ---
 
-# PART 3 — The plan (nothing here is built yet)
+# PART 3 — The plan
 
-## Step 1 — Fix Bramha ⏱️ ~1 hour
+> **Updated end of 2026-07-25 — Steps 1–4 are DONE and live.** Steps 5 and 6 remain.
+> Step 1 was solved better than planned: Bramha's memory was empty, so instead of
+> stripping personal details out of stored records, the code was changed so those
+> details are **never written in the first place** — and a test now fails loudly if
+> anyone puts them back.
+
+## ✅ Step 1 — Fix Bramha *(done)* ⏱️ ~1 hour
 
 Remove the 4 personal fields from `functions/bramha.js`. Keep `sourceClaimPath`.
 
@@ -128,22 +135,22 @@ Remove the 4 personal fields from `functions/bramha.js`. Keep `sourceClaimPath`.
 **Why this doesn't actually lose you anything permanently:**
 The full details stay in Cloud Vault forever. Bramha only stores a **pointer** to them. So if one day an insurer contracts you for fraud detection, you run a script and rebuild the full index from the original claims in an afternoon — legally, with their contract as the basis. **You keep the option without holding the risk.**
 
-## Step 2 — Delete Bramha records when a claim is deleted ⏱️ ~1 hour
-Today, deleting a claim leaves the Bramha copy behind forever. The pointer needed to fix this already exists; nothing uses it yet.
+## ✅ Step 2 — Delete Bramha records when a claim is deleted *(done)* ⏱️ ~1 hour
+Solved without a second background job: each record is now filed under the claim it came from, so the indexer simply removes any record whose claim no longer exists, every time it runs.
 
-## Step 3 — Signup attestation ⏱️ ~half a day
+## ✅ Step 3 — Signup attestation *(done)* ⏱️ ~half a day
 One checkbox at signup: *"I am an IRDAI-licensed surveyor and I process claim data under the instruction of the appointing insurer."* Save who agreed, to which version, and when.
 This is what properly covers your relationship with the surveyor.
 
-## Step 4 — Small privacy-policy updates ⏱️ ~1 hour
+## ✅ Step 4 — Privacy-policy updates *(done)* ⏱️ ~1 hour
 Telegram and Cloudflare are **already** disclosed — that part is done. Still to add: a grievance contact, a plain retention statement, and describing SurveyOS Sync as a separate optional product.
 
-## Step 5 — Housekeeping ⏱️ ~half a day
+## ⬜ Step 5 — Housekeeping *(still to do)* ⏱️ ~half a day
 - Stop including API keys and signature in the Drive backup
 - Delete the old leftover local database after migration
 - Write a one-page "what to do if there's a breach" note
 
-## Step 6 — Delete the old US project ⏱️ minutes, after you're confident
+## ⬜ Step 6 — Delete the old US project *(still to do)* ⏱️ minutes
 **This is what actually completes data residency.** Suggested: wait until surveyors have used the India system without issues, then delete.
 
 ## Not doing (and why that's fine)

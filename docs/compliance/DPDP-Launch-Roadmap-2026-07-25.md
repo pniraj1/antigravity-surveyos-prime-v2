@@ -1,7 +1,28 @@
 # DPDP / IRDAI Launch Compliance Roadmap
 
 **Date:** 2026-07-25 · **Basis:** code-grounded re-audit of `main` (delta vs. `DPDP-Audit-2026-05-30.html`)
-**Status:** AWAITING APPROVAL — no code changes made yet. Decisions D1–D4 below need a call before Phase 1 starts.
+**Last updated:** 2026-07-25, end of day — Phases 0–2 executed and deployed.
+
+## Status at a glance
+
+| Item | State |
+|---|---|
+| Data residency — Firestore, Auth, Functions in `asia-south1` | ✅ live |
+| Bramha stores no insured PII (T1) | ✅ live, self-checked |
+| Signup attestation + versioned consent record (T2) | ✅ live |
+| Privacy policy — grievance officer, roles, retention, residency (T3) | ✅ live |
+| Legal links reachable inside the app (T4) | ✅ live |
+| Cascade deletion of derived records (T5) | ✅ live |
+| Node 22 runtime (before the 2026-10-30 decommission) | ✅ live |
+| **Old US project deleted** | ❌ **not done — residency is NOT complete until this happens** |
+| Drive backup excludes API keys + signature | ❌ open |
+| Legacy shared IndexedDB deleted after migration | ❌ open |
+| Breach-response runbook | ❌ open |
+| Records of Processing + DPA template | ❌ open |
+| Surveyors told the new URL | ❌ open |
+| GCP **Acceptable Use Policy** warning explained | ❌ open — highest unquantified risk |
+
+**Blunt summary:** the launch-blocking *code* gaps are closed. What remains is paperwork, two hygiene fixes, and one deletion — and until the old US project is deleted, a complete copy of every insured's name, phone and policy number still sits in Iowa, so **data residency is not actually achieved yet**.
 
 ---
 
@@ -77,17 +98,17 @@ AI extraction runs under the **surveyor's own API key**, browser → provider, t
 ## 4. Roadmap (assuming recommended options A/A/A/A)
 
 ### Phase 0 — Decisions & verification (this week, no code)
-- [ ] You approve/override D1–D4.
-- [ ] **Confirm actual Firestore/Storage region in the Firebase console** (repo has no region marker — I can't see this from code).
-- [ ] Confirm whether any launch conversation with an insurer/broker has a residency or security-questionnaire requirement (decides how urgent D2 really is).
-- [ ] Skim `/privacy` + `/terms` copy vs. reality: it must mention Bramha-style internal AI use **or** we ship D1 and it doesn't need to; must mention Telegram/Cloudflare (D4-A).
+- [x] D1–D4 approved (D1 superseded — see T1 below; D2 executed; D3 executed; D4-A executed).
+- [x] **Region confirmed** — old project was `nam5` (US multi-region), verified via `firestore:databases:get`. Migration executed.
+- [ ] Confirm whether any launch conversation with an insurer/broker has a residency or security-questionnaire requirement. *(still unanswered — no longer blocking, since D2 was executed anyway)*
+- [x] `/privacy` + `/terms` reviewed against reality and rewritten (see T3).
 
 ### Phase 1 — Launch blockers (~2–3 days of code, my work)
-- [ ] **T1: De-identify `bramha_memories`** — remove the four PII fields at `functions/bramha.js:157-160` (+ optional HMAC hashes), one-time script to strip existing vectors. *(D1-A)*
-- [ ] **T2: Signup attestation + consent record** — checkbox + versioned consent doc in Firestore. *(D3-A)*
-- [ ] **T3: Privacy/terms deltas** — Telegram/Cloudflare sub-processor section, grievance contact block, simple retention statement ("claim data retained until the surveyor deletes it; account data deleted on account deletion"). *(D4-A)*
-- [ ] **T4: Footer links** — verify `/privacy` `/terms` are reachable from the logged-in app, not just the landing page.
-- [ ] **T5: Cascade deletion** — when a claim is deleted, delete matching `bramha_memories` docs via `sourceClaimPath` (the field already exists; nothing consumes it). Fixes B5's worst half.
+- [x] **T1: Bramha stores no insured PII** — went further than the original plan. `bramha_memories` was **empty** (the old `onDocumentUpdated` trigger fired on every claim write, exited early unless it was an archive transition, and swallowed its own errors), so there was nothing to strip. The trigger was replaced with `rebuildBramhaIndex`, an **admin-triggered batch indexer** that never writes `customerName`, `customerPhone`, `policyNumber` or `vehicleRegistration` at all. A self-check (`functions/bramha.test.js`) asserts a claim containing a name, phone, policy and registration produces embedding text containing none of them, so a regression fails loudly.
+- [x] **T2: Signup attestation + consent record** — two *separate* ticks on the access request (professional attestation vs. accepting the terms; bundling them would make neither meaningful). Stores `consent: {attestationVersion, termsVersion, privacyVersion, acceptedAt}`, with wording versioned in `src/lib/legal/versions.ts` so an old record still resolves to the text that was on screen.
+- [x] **T3: Privacy policy rewritten** — 12 sections. Telegram/Cloudflare were *already* disclosed. Added: the two-role explanation (fiduciary for account data, **processor** for claim data), data location, SurveyOS Sync as a separate opt-in product, per-type retention, grievance redressal with escalation to the Data Protection Board, and change notification. **Removed a false claim to a "Data Protection Officer"** — that role binds only Significant Data Fiduciaries; DPDP requires a *Grievance Officer* of everyone.
+- [x] **T4: Legal links reachable in-app** — `/privacy` and `/terms` were linked only from the landing footer, which a signed-in surveyor never sees again after registering. Added to the sidebar footer (and to the access-request form via T2).
+- [x] **T5: Cascade deletion** — solved structurally rather than with a second trigger. Memories use deterministic ids (`{uid}__{claimId}`), so a re-run overwrites instead of duplicating, and the indexer prunes memories whose source claim no longer exists in the same pass. No `onDelete` trigger needed.
 
 ### Phase 2 — Residency migration — ⏳ IN PROGRESS (started 2026-07-25)
 
@@ -112,8 +133,10 @@ New project: **`surveyos-v2-antigravity-in`** (alias `india` in `.firebaserc`).
 **Migration gotcha worth keeping:** the copy script initially reported only 5 docs because it iterated `collection.get()`, which omits "missing" parent documents — `users/{uid}` holds no fields of its own and exists purely to carry `claims`/`profile` subcollections. Using `listDocuments()` instead surfaced the real 193. Any future Firestore copy must do the same or it will silently drop every claim.
 
 `bramha_memories` **does not exist** in the source database — Bramha has never written a vector. So gap B1 is currently theoretical: fixing `functions/bramha.js:157-160` before Bramha leaves shadow mode prevents the PII from ever being written, rather than requiring a cleanup.
-- [ ] Attempt `motorsurveyos.web.app` reclaim (delete site on old project → immediately create on new); fall back to keeping `motorsurveyos-in.web.app` if the name doesn't release
-- [ ] Once cut over and verified: fold `.env.india` into `.env.production`, delete `.env.production.local`, decommission the old project
+- [x] Attempted `motorsurveyos.web.app` reclaim — **failed**, see M5 below. Canonical URL is `motorsurveyos-in.web.app`.
+- [x] Folded `.env.india` into `.env.production` + `.env.local`, deleted `.env.production.local`
+- [x] Post-migration audit: repointed 20 dead-URL references (canonicals, Open Graph, JSON-LD, sitemap, robots.txt) plus a second dead hostname in `sendEmail.ts`; removed the deleted site from `firebase.json`; repointed `.firebaserc` default (and the CLI's own cached active project) from the old US project to India
+- [ ] **Decommission the old US project** — still holds a full copy of all claims and insured PII in `nam5`
 
 ⚠️ **Active footgun:** `.env.production.local` currently holds the India config and silently overrides `.env.production` for **every** production build. While the old US site is still live, any rebuild-and-deploy to `motorsurveyos` would ship India config to the US URL. Delete it the moment cutover completes.
 

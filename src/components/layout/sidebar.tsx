@@ -346,6 +346,14 @@ export function Sidebar() {
                 <Cloud size={12} />
                 {isDriveConnected ? driveEmail : 'Drive unlinked'}
               </div>
+              {/* The privacy notice has to stay reachable from inside the app,
+                  not only from the marketing footer a signed-in surveyor never
+                  sees again after registering. */}
+              <div className="flex items-center gap-2 text-[10px] font-medium text-[var(--color-neutral-400)] pt-1">
+                <a href="/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">Privacy</a>
+                <span aria-hidden="true">·</span>
+                <a href="/terms" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">Terms</a>
+              </div>
             </div>
           )}
           {mounted && sidebarCollapsed && (
