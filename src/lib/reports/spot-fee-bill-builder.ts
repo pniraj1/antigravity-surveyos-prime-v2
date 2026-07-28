@@ -111,23 +111,23 @@ export function buildSpotFeeBillHTML(
 
   // ── Optional notes ──────────────────────────────────────────────────────
   const advanceReceiptNote = fb.advanceReceipt
-    ? `<div style="font-size:7pt;margin-top:8px;padding:6px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:4px;">
+    ? `<div style="font-size:9pt;margin-top:8px;padding:6px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:4px;">
          <strong>Advance Receipt:</strong> ${fb.advanceReceipt}
        </div>`
     : '';
   const cashReceivedNote = fb.cashReceived
-    ? `<div style="font-size:7pt;margin-top:6px;padding:6px 10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:4px;">
+    ? `<div style="font-size:9pt;margin-top:6px;padding:6px 10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:4px;">
          <strong>Cash Received from Insured:</strong> ${fb.cashReceived}
        </div>`
     : '';
 
   // ── Table style shorthands ────────────────────────────────────────────────
-  const td    = 'padding:3px 6px;border:0.4pt solid #bbb;font-size:7pt;';
+  const td    = 'padding:4px 7px;border:0.4pt solid #bbb;font-size:9pt;';
   const tdKey = `${td}color:#555;width:30%;`;
 
   return `${getSurveyorHeader(profile, '8px')}
 
-<div style="text-align:center;font-weight:700;font-size:9pt;margin-bottom:10px;text-decoration:underline;letter-spacing:0.05em;">
+<div style="text-align:center;font-weight:700;font-size:12pt;margin-bottom:10px;text-decoration:underline;letter-spacing:0.05em;">
   SURVEYOR FEE BILL / INVOICE
 </div>
 
@@ -170,7 +170,7 @@ export function buildSpotFeeBillHTML(
 </table>
 
 <!-- Charges table -->
-<table style="width:100%;border-collapse:collapse;font-size:7pt;margin-bottom:12px;">
+<table style="width:100%;border-collapse:collapse;font-size:9pt;margin-bottom:12px;">
   <thead>
     <tr style="background:#0d1b2a;color:#fff;">
       <th style="padding:6px 9px;text-align:left;">Particulars</th>
@@ -191,7 +191,7 @@ export function buildSpotFeeBillHTML(
   </tbody>
 </table>
 
-<div style="font-style:italic;font-size:7pt;margin-bottom:10px;">
+<div style="font-style:italic;font-size:9pt;margin-bottom:10px;">
   RUPEES ${numberToWords(grand)} ONLY
 </div>
 
@@ -199,7 +199,7 @@ ${advanceReceiptNote}
 ${cashReceivedNote}
 
 <!-- Payment / bank details -->
-<div style="font-size:7pt;margin-top:10px;padding:8px 10px;background:#f5f7fa;border-radius:4px;line-height:1.9;">
+<div style="font-size:9pt;margin-top:10px;padding:8px 10px;background:#f5f7fa;border-radius:4px;line-height:1.9;">
   <strong>Payment Details:</strong><br/>
   Bank: ${bankName} &nbsp;|&nbsp; A/c: ${bankAc} &nbsp;|&nbsp; IFSC: ${bankIfsc}<br/>
   ${gstNo ? 'GST No.: ' + gstNo + ' &nbsp;|&nbsp; ' : ''}PAN: ${pan}
@@ -227,7 +227,7 @@ export function buildSpotFeeBillDocument(
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Barlow', 'Helvetica', Arial, sans-serif;
-      font-size: 7.8pt;
+      font-size: 9.5pt;
       background: #525659;
       color: #000;
     }
