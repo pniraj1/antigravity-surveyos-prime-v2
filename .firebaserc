@@ -1,23 +1,8 @@
 {
   "projects": {
-    "default": "surveyos-v2-antigravity",
-    "india": "surveyos-v2-antigravity-in"
-  },
-  "targets": {
-    "surveyos-v2-antigravity": {
-      "hosting": {
-        "legacy": [
-          "motorsurveyos-legacy"
-        ]
-      }
-    },
-    "surveyos-v2-antigravity-in": {
-      "hosting": {
-        "india-test": [
-          "motorsurveyos-in"
-        ]
-      }
-    }
+    "default": "surveyos-v2-antigravity-in",
+    "india": "surveyos-v2-antigravity-in",
+    "legacy-us": "surveyos-v2-antigravity"
   },
   "etags": {}
 }

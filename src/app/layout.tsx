@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
+import { SITE_URL } from '@/lib/site';
 import './globals.css';
 
 
@@ -26,15 +27,15 @@ export const metadata: Metadata = {
     'IRDAI surveyor app',
   ],
   authors: [{ name: 'SurveyOS' }],
-  metadataBase: new URL('https://surveyos-v2-antigravity.web.app'),
+  metadataBase: new URL(SITE_URL),
   alternates: {
-    canonical: 'https://surveyos-v2-antigravity.web.app/',
+    canonical: 'https://motorsurveyos-in.web.app/',
   },
   openGraph: {
     title: 'Motor SurveyOS - Cloud-Native AI Motor Insurance Survey Software',
     description:
       'Generate motor insurance survey reports in under 10 minutes with AI. Real-time cloud synchronization, zero-latency caching, and instant Google Drive export. 30-day free trial!',
-    url: 'https://surveyos-v2-antigravity.web.app/',
+    url: 'https://motorsurveyos-in.web.app/',
     siteName: 'Motor SurveyOS',
     type: 'website',
     locale: 'en_IN',
@@ -58,6 +59,9 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
     googleBot: { index: true, follow: true },
+  },
+  verification: {
+    google: 'oa7CrzMrDUAiC_DKW1nTp5IuuKxiPHktQIOTZO_fdng',
   },
 };
 
@@ -107,15 +111,10 @@ export default function RootLayout({
                 'AI-powered cloud-native motor insurance survey software for independent IRDAI-licensed surveyors in India. Real-time data extraction from RC books, driving licences, and insurance policies. High-performance cloud synchronization and instant reporting.',
               offers: {
                 '@type': 'Offer',
-                price: '999',
+                price: '799',
                 priceCurrency: 'INR',
                 priceValidUntil: '2027-12-31',
-                description: '30-day free trial then ₹999/month',
-              },
-              aggregateRating: {
-                '@type': 'AggregateRating',
-                ratingValue: '4.8',
-                reviewCount: '47',
+                description: '30-day free trial then ₹799/month',
               },
             }),
           }}
@@ -129,7 +128,7 @@ export default function RootLayout({
               '@context': 'https://schema.org',
               '@type': 'Organization',
               name: 'SurveyOS',
-              url: 'https://surveyos-v2-antigravity.web.app',
+              url: SITE_URL,
               contactPoint: {
                 '@type': 'ContactPoint',
                 email: 'surveyosprime@gmail.com',

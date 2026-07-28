@@ -8,23 +8,6 @@
   ],
   "hosting": [
     {
-      "site": "motorsurveyos",
-      "public": "out",
-      "cleanUrls": true,
-      "ignore": [
-        "firebase.json",
-        "**/.*",
-        "**/node_modules/**"
-      ],
-      "redirects": [],
-      "rewrites": [
-        {
-          "source": "**",
-          "destination": "/index.html"
-        }
-      ]
-    },
-    {
       "site": "motorsurveyos-in",
       "public": "out",
       "cleanUrls": true,

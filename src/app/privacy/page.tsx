@@ -4,7 +4,7 @@ import Link from 'next/link';
 export const metadata: Metadata = {
   title: 'Privacy Policy | Motor SurveyOS',
   description: 'Privacy policy for Motor SurveyOS and SurveyOS Sync. How we handle your data under India\'s DPDP Act 2023.',
-  alternates: { canonical: 'https://motorsurveyos.web.app/privacy' },
+  alternates: { canonical: 'https://motorsurveyos-in.web.app/privacy' },
   robots: { index: true, follow: true },
 };
 

@@ -144,7 +144,11 @@ New project: **`surveyos-v2-antigravity-in`** (alias `india` in `.firebaserc`).
 
 **Lesson:** deleting a Firebase Hosting site to move its name between projects is a one-way door — the name does not become immediately available, and there is no supported way to transfer a site between projects. Assume the old URL stays dark indefinitely and plan the rename as "adopt a new URL", not "swap URLs".
 
-**Stale SEO metadata:** `src/app/**/page.tsx` still declares canonical URLs on `https://motorsurveyos.web.app` (e.g. `privacy/page.tsx`), which currently 404s. Left as-is pending the reclaim outcome; update to the canonical domain if the name is abandoned.
+**Stale SEO metadata — FIXED 2026-07-25.** 20 references across 11 files (canonical tags, Open Graph URLs, JSON-LD blocks, `metadataBase`, `sitemap.ts`, `public/robots.txt`) pointed at the dead `motorsurveyos.web.app` and were repointed to `motorsurveyos-in.web.app`. The origin now lives in one place, `src/lib/site.ts` (`SITE_URL`), consumed by `metadataBase` and the sitemap; `public/robots.txt` is static and must be edited by hand if the origin changes again.
+
+**Two config landmines found and fixed in the same pass:**
+- `firebase.json` still declared `"site": "motorsurveyos"` — a site that no longer exists, so any `firebase deploy --only hosting` would have failed or half-deployed. Removed.
+- `.firebaserc` had `default` pointing at the **old US project**, and the CLI's own active-project cache was also set to it — so a bare `firebase deploy` targeted the dead project. Default is now `surveyos-v2-antigravity-in`; the old project is kept only as the `legacy-us` alias for the eventual decommission. Verified with `firebase deploy --dry-run`.
 | M6 | Unused `motorsurveyos-legacy` site on old project | ⬜ harmless; delete whenever |
 | M7 | **Old US project still holds a full copy of all insured PII** — residency isn't actually achieved until it's deleted | ⬜ decommission after cutover soak |
 
