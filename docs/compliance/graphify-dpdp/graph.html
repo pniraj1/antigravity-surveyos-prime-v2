@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>graphify - graph.html</title>
+<script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0f0f1a; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; display: flex; height: 100vh; overflow: hidden; }
+  #graph { flex: 1; }
+  #sidebar { width: 280px; background: #1a1a2e; border-left: 1px solid #2a2a4e; display: flex; flex-direction: column; overflow: hidden; }
+  #search-wrap { padding: 12px; border-bottom: 1px solid #2a2a4e; }
+  #search { width: 100%; background: #0f0f1a; border: 1px solid #3a3a5e; color: #e0e0e0; padding: 7px 10px; border-radius: 6px; font-size: 13px; outline: none; }
+  #search:focus { border-color: #4E79A7; }
+  #search-results { max-height: 140px; overflow-y: auto; padding: 4px 12px; border-bottom: 1px solid #2a2a4e; display: none; }
+  .search-item { padding: 4px 6px; cursor: pointer; border-radius: 4px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .search-item:hover { background: #2a2a4e; }
+  #info-panel { padding: 14px; border-bottom: 1px solid #2a2a4e; min-height: 140px; }
+  #info-panel h3 { font-size: 13px; color: #aaa; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  #info-content { font-size: 13px; color: #ccc; line-height: 1.6; }
+  #info-content .field { margin-bottom: 5px; }
+  #info-content .field b { color: #e0e0e0; }
+  #info-content .empty { color: #555; font-style: italic; }
+  .neighbor-link { display: block; padding: 2px 6px; margin: 2px 0; border-radius: 3px; cursor: pointer; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid #333; }
+  .neighbor-link:hover { background: #2a2a4e; }
+  #neighbors-list { max-height: 160px; overflow-y: auto; margin-top: 4px; }
+  #legend-wrap { flex: 1; overflow-y: auto; padding: 12px; }
+  #legend-wrap h3 { font-size: 13px; color: #aaa; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .legend-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; border-radius: 4px; font-size: 12px; }
+  .legend-item:hover { background: #2a2a4e; padding-left: 4px; }
+  .legend-item.dimmed { opacity: 0.35; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .legend-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .legend-count { color: #666; font-size: 11px; }
+  #stats { padding: 10px 14px; border-top: 1px solid #2a2a4e; font-size: 11px; color: #555; }
+</style>
+</head>
+<body>
+<div id="graph"></div>
+<div id="sidebar">
+  <div id="search-wrap">
+    <input id="search" type="text" placeholder="Search nodes..." autocomplete="off">
+    <div id="search-results"></div>
+  </div>
+  <div id="info-panel">
+    <h3>Node Info</h3>
+    <div id="info-content"><span class="empty">Click a node to inspect it</span></div>
+  </div>
+  <div id="legend-wrap">
+    <h3>Communities</h3>
+    <div id="legend"></div>
+  </div>
+  <div id="stats">48 nodes &middot; 61 edges &middot; 6 communities</div>
+</div>
+<script>
+const RAW_NODES = [{"id": "motorsurveyos", "label": "MotorSurveyOS", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 22.4, "font": {"size": 12, "color": "#ffffff"}, "title": "MotorSurveyOS", "community": 4, "community_name": "Roles & Governance Gaps", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 7}, {"id": "surveyor", "label": "Surveyor (client)", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 20.6, "font": {"size": 12, "color": "#ffffff"}, "title": "Surveyor (client)", "community": 0, "community_name": "Surveyor Account & Secrets", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 6}, {"id": "insured", "label": "Insured (no consent)", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 15.3, "font": {"size": 12, "color": "#ffffff"}, "title": "Insured (no consent)", "community": 5, "community_name": "Non-consenting Principals", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 3}, {"id": "driver", "label": "Driver third-party", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 15.3, "font": {"size": 12, "color": "#ffffff"}, "title": "Driver third-party", "community": 5, "community_name": "Non-consenting Principals", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 3}, {"id": "accident_tp", "label": "Accident third-party", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "Accident third-party", "community": 3, "community_name": "Claims, Residency & IRDAI", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 1}, {"id": "workshop", "label": "Workshop", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "Workshop", "community": 3, "community_name": "Claims, Residency & IRDAI", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 1}, {"id": "role_processor", "label": "Role: Data Processor", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "Role: Data Processor", "community": 4, "community_name": "Roles & Governance Gaps", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 1}, {"id": "role_fiduciary", "label": "Role: Data Fiduciary", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 15.3, "font": {"size": 12, "color": "#ffffff"}, "title": "Role: Data Fiduciary", "community": 4, "community_name": "Roles & Governance Gaps", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 3}, {"id": "role_sdf", "label": "Significant Data Fiduciary risk", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "Significant Data Fiduciary risk", "community": 4, "community_name": "Roles & Governance Gaps", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 1}, {"id": "col_profile", "label": "users/{uid}/profile", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "users/{uid}/profile", "community": 0, "community_name": "Surveyor Account & Secrets", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 1}, {"id": "col_payments", "label": "users/{uid}/payments", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "users/{uid}/payments", "community": 0, "community_name": "Surveyor Account & Secrets", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 1}, {"id": "col_claims", "label": "users/{uid}/claims", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 40.0, "font": {"size": 12, "color": "#ffffff"}, "title": "users/{uid}/claims", "community": 3, "community_name": "Claims, Residency & IRDAI", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 17}, {"id": "col_newsignups", "label": "newSignups", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "newSignups", "community": 0, "community_name": "Surveyor Account & Secrets", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 1}, {"id": "col_ai_config", "label": "ai_config/routing (plaintext keys)", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 15.3, "font": {"size": 12, "color": "#ffffff"}, "title": "ai_config/routing (plaintext keys)", "community": 0, "community_name": "Surveyor Account & Secrets", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 3}, {"id": "col_ai_usage", "label": "ai_usage (no retention)", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "ai_usage (no retention)", "community": 1, "community_name": "Bramha Reuse & Retention", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 1}, {"id": "col_bramha", "label": "bramha_memories (PII copy)", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 25.9, "font": {"size": 12, "color": "#ffffff"}, "title": "bramha_memories (PII copy)", "community": 1, "community_name": "Bramha Reuse & Retention", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 9}, {"id": "ls_profile", "label": "localStorage profile (PAN/bank/keys)", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 13.5, "font": {"size": 0, "color": "#ffffff"}, "title": "localStorage profile (PAN/bank/keys)", "community": 0, "community_name": "Surveyor Account & Secrets", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 2}, {"id": "idb_claims", "label": "IndexedDB claims (unencrypted)", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 13.5, "font": {"size": 0, "color": "#ffffff"}, "title": "IndexedDB claims (unencrypted)", "community": 0, "community_name": "Surveyor Account & Secrets", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 2}, {"id": "idb_legacy", "label": "Legacy IndexedDB (never deleted)", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "Legacy IndexedDB (never deleted)", "community": 5, "community_name": "Non-consenting Principals", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 1}, {"id": "eg_doc", "label": "AI doc extraction", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 18.8, "font": {"size": 12, "color": "#ffffff"}, "title": "AI doc extraction", "community": 2, "community_name": "Cross-border AI Extraction", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 5}, {"id": "eg_photo", "label": "Damage-photo analysis", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 15.3, "font": {"size": 12, "color": "#ffffff"}, "title": "Damage-photo analysis", "community": 2, "community_name": "Cross-border AI Extraction", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 3}, {"id": "eg_bank", "label": "Bank-statement extraction", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 13.5, "font": {"size": 0, "color": "#ffffff"}, "title": "Bank-statement extraction", "community": 2, "community_name": "Cross-border AI Extraction", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 2}, {"id": "eg_narrative", "label": "Insured-report narrative", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 13.5, "font": {"size": 0, "color": "#ffffff"}, "title": "Insured-report narrative", "community": 2, "community_name": "Cross-border AI Extraction", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 2}, {"id": "eg_drive", "label": "Google Drive upload", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 15.3, "font": {"size": 12, "color": "#ffffff"}, "title": "Google Drive upload", "community": 1, "community_name": "Bramha Reuse & Retention", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 3}, {"id": "eg_bramha", "label": "Bramha embedding", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 15.3, "font": {"size": 12, "color": "#ffffff"}, "title": "Bramha embedding", "community": 1, "community_name": "Bramha Reuse & Retention", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 3}, {"id": "eg_telemetry", "label": "Telemetry (GPS)", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "Telemetry (GPS)", "community": 3, "community_name": "Claims, Residency & IRDAI", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 1}, {"id": "tp_gemini", "label": "Google Gemini (US)", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 20.6, "font": {"size": 12, "color": "#ffffff"}, "title": "Google Gemini (US)", "community": 2, "community_name": "Cross-border AI Extraction", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 6}, {"id": "tp_groq", "label": "Groq (US)", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "Groq (US)", "community": 2, "community_name": "Cross-border AI Extraction", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 1}, {"id": "tp_nvidia", "label": "NVIDIA NIM (US)", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "NVIDIA NIM (US)", "community": 2, "community_name": "Cross-border AI Extraction", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 1}, {"id": "tp_openrouter", "label": "OpenRouter (US, dormant)", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "OpenRouter (US, dormant)", "community": 0, "community_name": "Surveyor Account & Secrets", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 1}, {"id": "tp_drive", "label": "Google Drive (US)", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "Google Drive (US)", "community": 1, "community_name": "Bramha Reuse & Retention", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 1}, {"id": "tp_embed", "label": "text-embedding-004 (US)", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "text-embedding-004 (US)", "community": 1, "community_name": "Bramha Reuse & Retention", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 1}, {"id": "us_region", "label": "US Firebase region", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 17.1, "font": {"size": 12, "color": "#ffffff"}, "title": "US Firebase region", "community": 3, "community_name": "Claims, Residency & IRDAI", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 4}, {"id": "gap_consent", "label": "CRITICAL: no notice/consent", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 13.5, "font": {"size": 0, "color": "#ffffff"}, "title": "CRITICAL: no notice/consent", "community": 5, "community_name": "Non-consenting Principals", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 2}, {"id": "gap_links", "label": "CRITICAL: dead privacy/terms links", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "CRITICAL: dead privacy/terms links", "community": 4, "community_name": "Roles & Governance Gaps", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 1}, {"id": "gap_purpose", "label": "CRITICAL: purpose-limitation breach", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "CRITICAL: purpose-limitation breach", "community": 1, "community_name": "Bramha Reuse & Retention", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 1}, {"id": "gap_erasure", "label": "HIGH: erasure incomplete", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 13.5, "font": {"size": 0, "color": "#ffffff"}, "title": "HIGH: erasure incomplete", "community": 1, "community_name": "Bramha Reuse & Retention", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 2}, {"id": "gap_retention", "label": "HIGH: no retention", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 13.5, "font": {"size": 0, "color": "#ffffff"}, "title": "HIGH: no retention", "community": 1, "community_name": "Bramha Reuse & Retention", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 2}, {"id": "gap_minimization", "label": "HIGH: no redaction", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 13.5, "font": {"size": 0, "color": "#ffffff"}, "title": "HIGH: no redaction", "community": 2, "community_name": "Cross-border AI Extraction", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 2}, {"id": "gap_crossborder", "label": "HIGH: cross-border, no safeguard", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 13.5, "font": {"size": 0, "color": "#ffffff"}, "title": "HIGH: cross-border, no safeguard", "community": 3, "community_name": "Claims, Residency & IRDAI", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 2}, {"id": "gap_security", "label": "HIGH: plaintext secrets", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 15.3, "font": {"size": 12, "color": "#ffffff"}, "title": "HIGH: plaintext secrets", "community": 0, "community_name": "Surveyor Account & Secrets", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 3}, {"id": "gap_children", "label": "MEDIUM: no age-gating", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "MEDIUM: no age-gating", "community": 5, "community_name": "Non-consenting Principals", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 1}, {"id": "gap_breach", "label": "MEDIUM: no breach notification", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "MEDIUM: no breach notification", "community": 4, "community_name": "Roles & Governance Gaps", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 1}, {"id": "gap_dpa", "label": "MEDIUM: no DPA", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "MEDIUM: no DPA", "community": 2, "community_name": "Cross-border AI Extraction", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 1}, {"id": "gap_grievance", "label": "MEDIUM: no grievance/export", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "MEDIUM: no grievance/export", "community": 4, "community_name": "Roles & Governance Gaps", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 1}, {"id": "irdai_flag", "label": "IRDAI India-residency flag", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 13.5, "font": {"size": 0, "color": "#ffffff"}, "title": "IRDAI India-residency flag", "community": 3, "community_name": "Claims, Residency & IRDAI", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 2}, {"id": "ctl_rules", "label": "Control: per-user Firestore isolation", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "Control: per-user Firestore isolation", "community": 3, "community_name": "Claims, Residency & IRDAI", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 1}, {"id": "ctl_admin", "label": "Control: admin gating", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 13.5, "font": {"size": 0, "color": "#ffffff"}, "title": "Control: admin gating", "community": 0, "community_name": "Surveyor Account & Secrets", "source_file": "_graph_src/dpdp-actual-state-source.md", "file_type": "document", "degree": 2}];
+const RAW_EDGES = [{"from": "motorsurveyos", "to": "surveyor", "label": "is_client_of", "title": "is_client_of [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "motorsurveyos", "to": "role_processor", "label": "acts_as", "title": "acts_as [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "motorsurveyos", "to": "role_fiduciary", "label": "acts_as", "title": "acts_as [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "motorsurveyos", "to": "col_bramha", "label": "reuses_data_via", "title": "reuses_data_via [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "motorsurveyos", "to": "gap_links", "label": "fails", "title": "fails [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "motorsurveyos", "to": "gap_breach", "label": "lacks", "title": "lacks [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "motorsurveyos", "to": "gap_grievance", "label": "lacks", "title": "lacks [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "surveyor", "to": "col_claims", "label": "creates", "title": "creates [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "surveyor", "to": "col_profile", "label": "owns", "title": "owns [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "surveyor", "to": "col_payments", "label": "owns", "title": "owns [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "surveyor", "to": "col_newsignups", "label": "owns", "title": "owns [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "surveyor", "to": "ls_profile", "label": "owns", "title": "owns [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "insured", "to": "col_claims", "label": "captured_into", "title": "captured_into [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "insured", "to": "idb_legacy", "label": "retains_pii_of", "title": "retains_pii_of [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "insured", "to": "gap_consent", "label": "unprotected_by", "title": "unprotected_by [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "driver", "to": "col_claims", "label": "captured_into", "title": "captured_into [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "driver", "to": "gap_consent", "label": "unprotected_by", "title": "unprotected_by [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "driver", "to": "gap_children", "label": "relevant_to", "title": "relevant_to [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "accident_tp", "to": "col_claims", "label": "captured_into", "title": "captured_into [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "workshop", "to": "col_claims", "label": "captured_into", "title": "captured_into [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role_fiduciary", "to": "role_sdf", "label": "escalates_to", "title": "escalates_to [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "role_fiduciary", "to": "col_bramha", "label": "triggers", "title": "triggers [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "col_claims", "to": "idb_claims", "label": "cached_in", "title": "cached_in [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "col_claims", "to": "col_bramha", "label": "copied_to", "title": "copied_to [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "col_claims", "to": "eg_doc", "label": "feeds", "title": "feeds [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "col_claims", "to": "eg_photo", "label": "feeds", "title": "feeds [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "col_claims", "to": "eg_bank", "label": "feeds", "title": "feeds [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "col_claims", "to": "eg_narrative", "label": "feeds", "title": "feeds [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "col_claims", "to": "eg_drive", "label": "feeds", "title": "feeds [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "col_claims", "to": "eg_bramha", "label": "feeds", "title": "feeds [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "col_claims", "to": "eg_telemetry", "label": "feeds", "title": "feeds [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "col_claims", "to": "us_region", "label": "stored_in", "title": "stored_in [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "col_claims", "to": "irdai_flag", "label": "subject_to", "title": "subject_to [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "col_claims", "to": "ctl_rules", "label": "protects", "title": "protects [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "col_ai_config", "to": "tp_openrouter", "label": "holds_key_for", "title": "holds_key_for [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "col_ai_config", "to": "gap_security", "label": "exhibits", "title": "exhibits [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "col_ai_config", "to": "ctl_admin", "label": "protects", "title": "protects [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "col_ai_usage", "to": "gap_retention", "label": "exhibits", "title": "exhibits [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "col_bramha", "to": "eg_bramha", "label": "writes", "title": "writes [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "col_bramha", "to": "us_region", "label": "stored_in", "title": "stored_in [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "col_bramha", "to": "gap_purpose", "label": "breaches", "title": "breaches [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "col_bramha", "to": "gap_erasure", "label": "not_covered_by", "title": "not_covered_by [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "col_bramha", "to": "gap_retention", "label": "exhibits", "title": "exhibits [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "col_bramha", "to": "ctl_admin", "label": "protects", "title": "protects [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "ls_profile", "to": "gap_security", "label": "exhibits", "title": "exhibits [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "idb_claims", "to": "gap_security", "label": "exhibits", "title": "exhibits [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "eg_doc", "to": "tp_gemini", "label": "sends_to", "title": "sends_to [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "eg_doc", "to": "tp_groq", "label": "sends_to", "title": "sends_to [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "eg_doc", "to": "tp_nvidia", "label": "sends_to", "title": "sends_to [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "eg_doc", "to": "gap_minimization", "label": "violates", "title": "violates [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "eg_photo", "to": "tp_gemini", "label": "sends_to", "title": "sends_to [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "eg_photo", "to": "gap_minimization", "label": "violates", "title": "violates [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "eg_bank", "to": "tp_gemini", "label": "sends_to", "title": "sends_to [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "eg_narrative", "to": "tp_gemini", "label": "sends_to", "title": "sends_to [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "eg_drive", "to": "tp_drive", "label": "sends_to", "title": "sends_to [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "eg_drive", "to": "gap_erasure", "label": "not_covered_by", "title": "not_covered_by [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "eg_bramha", "to": "tp_embed", "label": "sends_to", "title": "sends_to [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "tp_gemini", "to": "gap_crossborder", "label": "causes", "title": "causes [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "tp_gemini", "to": "gap_dpa", "label": "lacks", "title": "lacks [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "us_region", "to": "gap_crossborder", "label": "causes", "title": "causes [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "us_region", "to": "irdai_flag", "label": "triggers", "title": "triggers [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}];
+const LEGEND = [{"cid": 0, "color": "#4E79A7", "label": "Surveyor Account &amp; Secrets", "count": 10}, {"cid": 1, "color": "#F28E2B", "label": "Bramha Reuse &amp; Retention", "count": 9}, {"cid": 2, "color": "#E15759", "label": "Cross-border AI Extraction", "count": 9}, {"cid": 3, "color": "#76B7B2", "label": "Claims, Residency &amp; IRDAI", "count": 8}, {"cid": 4, "color": "#59A14F", "label": "Roles &amp; Governance Gaps", "count": 7}, {"cid": 5, "color": "#EDC948", "label": "Non-consenting Principals", "count": 5}];
+
+// HTML-escape helper — prevents XSS when injecting graph data into innerHTML
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// Build vis datasets
+const nodesDS = new vis.DataSet(RAW_NODES.map(n => ({
+  id: n.id, label: n.label, color: n.color, size: n.size,
+  font: n.font, title: n.title,
+  _community: n.community, _community_name: n.community_name,
+  _source_file: n.source_file, _file_type: n.file_type, _degree: n.degree,
+})));
+
+const edgesDS = new vis.DataSet(RAW_EDGES.map((e, i) => ({
+  id: i, from: e.from, to: e.to,
+  label: '',
+  title: e.title,
+  dashes: e.dashes,
+  width: e.width,
+  color: e.color,
+  arrows: { to: { enabled: true, scaleFactor: 0.5 } },
+})));
+
+const container = document.getElementById('graph');
+const network = new vis.Network(container, { nodes: nodesDS, edges: edgesDS }, {
+  physics: {
+    enabled: true,
+    solver: 'forceAtlas2Based',
+    forceAtlas2Based: {
+      gravitationalConstant: -60,
+      centralGravity: 0.005,
+      springLength: 120,
+      springConstant: 0.08,
+      damping: 0.4,
+      avoidOverlap: 0.8,
+    },
+    stabilization: { iterations: 200, fit: true },
+  },
+  interaction: {
+    hover: true,
+    tooltipDelay: 100,
+    hideEdgesOnDrag: true,
+    navigationButtons: false,
+    keyboard: false,
+  },
+  nodes: { shape: 'dot', borderWidth: 1.5 },
+  edges: { smooth: { type: 'continuous', roundness: 0.2 }, selectionWidth: 3 },
+});
+
+network.once('stabilizationIterationsDone', () => {
+  network.setOptions({ physics: { enabled: false } });
+});
+
+function showInfo(nodeId) {
+  const n = nodesDS.get(nodeId);
+  if (!n) return;
+  const neighborIds = network.getConnectedNodes(nodeId);
+  const neighborItems = neighborIds.map(nid => {
+    const nb = nodesDS.get(nid);
+    const color = nb ? nb.color.background : '#555';
+    return `<span class="neighbor-link" style="border-left-color:${esc(color)}" onclick="focusNode(${JSON.stringify(nid)})">${esc(nb ? nb.label : nid)}</span>`;
+  }).join('');
+  document.getElementById('info-content').innerHTML = `
+    <div class="field"><b>${esc(n.label)}</b></div>
+    <div class="field">Type: ${esc(n._file_type || 'unknown')}</div>
+    <div class="field">Community: ${esc(n._community_name)}</div>
+    <div class="field">Source: ${esc(n._source_file || '-')}</div>
+    <div class="field">Degree: ${n._degree}</div>
+    ${neighborIds.length ? `<div class="field" style="margin-top:8px;color:#aaa;font-size:11px">Neighbors (${neighborIds.length})</div><div id="neighbors-list">${neighborItems}</div>` : ''}
+  `;
+}
+
+function focusNode(nodeId) {
+  network.focus(nodeId, { scale: 1.4, animation: true });
+  network.selectNodes([nodeId]);
+  showInfo(nodeId);
+}
+
+// Track hovered node — hover detection is more reliable than click params
+let hoveredNodeId = null;
+network.on('hoverNode', params => {
+  hoveredNodeId = params.node;
+  container.style.cursor = 'pointer';
+});
+network.on('blurNode', () => {
+  hoveredNodeId = null;
+  container.style.cursor = 'default';
+});
+container.addEventListener('click', () => {
+  if (hoveredNodeId !== null) {
+    showInfo(hoveredNodeId);
+    network.selectNodes([hoveredNodeId]);
+  }
+});
+network.on('click', params => {
+  if (params.nodes.length > 0) {
+    showInfo(params.nodes[0]);
+  } else if (hoveredNodeId === null) {
+    document.getElementById('info-content').innerHTML = '<span class="empty">Click a node to inspect it</span>';
+  }
+});
+
+const searchInput = document.getElementById('search');
+const searchResults = document.getElementById('search-results');
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.toLowerCase().trim();
+  searchResults.innerHTML = '';
+  if (!q) { searchResults.style.display = 'none'; return; }
+  const matches = RAW_NODES.filter(n => n.label.toLowerCase().includes(q)).slice(0, 20);
+  if (!matches.length) { searchResults.style.display = 'none'; return; }
+  searchResults.style.display = 'block';
+  matches.forEach(n => {
+    const el = document.createElement('div');
+    el.className = 'search-item';
+    el.textContent = n.label;
+    el.style.borderLeft = `3px solid ${n.color.background}`;
+    el.style.paddingLeft = '8px';
+    el.onclick = () => {
+      network.focus(n.id, { scale: 1.5, animation: true });
+      network.selectNodes([n.id]);
+      showInfo(n.id);
+      searchResults.style.display = 'none';
+      searchInput.value = '';
+    };
+    searchResults.appendChild(el);
+  });
+});
+document.addEventListener('click', e => {
+  if (!searchResults.contains(e.target) && e.target !== searchInput)
+    searchResults.style.display = 'none';
+});
+
+const hiddenCommunities = new Set();
+const legendEl = document.getElementById('legend');
+LEGEND.forEach(c => {
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  item.innerHTML = `<div class="legend-dot" style="background:${c.color}"></div>
+    <span class="legend-label">${c.label}</span>
+    <span class="legend-count">${c.count}</span>`;
+  item.onclick = () => {
+    if (hiddenCommunities.has(c.cid)) {
+      hiddenCommunities.delete(c.cid);
+      item.classList.remove('dimmed');
+    } else {
+      hiddenCommunities.add(c.cid);
+      item.classList.add('dimmed');
+    }
+    const updates = RAW_NODES
+      .filter(n => n.community === c.cid)
+      .map(n => ({ id: n.id, hidden: hiddenCommunities.has(c.cid) }));
+    nodesDS.update(updates);
+  };
+  legendEl.appendChild(item);
+});
+</script>
+<script>
+// Render hyperedges as shaded regions
+const hyperedges = [{"id": "non_consenting_principals", "label": "Non-consenting data principals", "nodes": ["insured", "driver", "accident_tp"], "relation": "participate_in", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "_graph_src/dpdp-actual-state-source.md"}, {"id": "crossborder_ai", "label": "Cross-border AI egress", "nodes": ["eg_doc", "eg_photo", "eg_bank", "tp_gemini", "tp_groq"], "relation": "participate_in", "confidence": "EXTRACTED", "confidence_score": 0.9, "source_file": "_graph_src/dpdp-actual-state-source.md"}, {"id": "critical_gaps", "label": "Launch-blocking gaps", "nodes": ["gap_consent", "gap_links", "gap_purpose"], "relation": "form", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "_graph_src/dpdp-actual-state-source.md"}];
+function drawHyperedges() {
+    const canvas = network.canvas.frame.canvas;
+    const ctx = canvas.getContext('2d');
+    hyperedges.forEach(h => {
+        const positions = h.nodes
+            .map(nid => network.getPositions([nid])[nid])
+            .filter(p => p !== undefined);
+        if (positions.length < 2) return;
+        // Draw convex hull as filled polygon
+        ctx.save();
+        ctx.globalAlpha = 0.12;
+        ctx.fillStyle = '#6366f1';
+        ctx.strokeStyle = '#6366f1';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        const scale = network.getScale();
+        const offset = network.getViewPosition();
+        const toCanvas = (p) => ({
+            x: (p.x - offset.x) * scale + canvas.width / 2,
+            y: (p.y - offset.y) * scale + canvas.height / 2
+        });
+        const pts = positions.map(toCanvas);
+        // Expand hull slightly
+        const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
+        const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
+        const expanded = pts.map(p => ({
+            x: cx + (p.x - cx) * 1.15,
+            y: cy + (p.y - cy) * 1.15
+        }));
+        ctx.moveTo(expanded[0].x, expanded[0].y);
+        expanded.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 0.4;
+        ctx.stroke();
+        // Label
+        ctx.globalAlpha = 0.8;
+        ctx.fillStyle = '#4f46e5';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(h.label, cx, cy - 5);
+        ctx.restore();
+    });
+}
+network.on('afterDrawing', drawHyperedges);
+</script>
+</body>
+</html>

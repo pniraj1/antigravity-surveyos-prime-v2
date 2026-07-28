@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SurveyOS Prime V2 — DPDP Compliance Audit (code-grounded)</title>
+<style>
+  :root{
+    --bg:#0f1115; --card:#171a21; --card2:#1d212b; --ink:#e7eaf0; --mut:#9aa3b2;
+    --line:#2a2f3a; --accent:#4f8cff; --crit:#ff4d4f; --high:#ff9f1c; --med:#ffd166; --low:#8bd450; --ok:#39d98a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1060px;margin:0 auto;padding:32px 22px 80px}
+  h1{font-size:30px;margin:0 0 6px} h2{font-size:22px;margin:42px 0 12px;border-bottom:1px solid var(--line);padding-bottom:8px}
+  h3{font-size:17px;margin:26px 0 8px}
+  .sub{color:var(--mut);margin:0 0 18px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:14px 0}
+  .grid{display:grid;gap:14px}
+  .g2{grid-template-columns:1fr 1fr} .g3{grid-template-columns:1fr 1fr 1fr}
+  @media(max-width:760px){.g2,.g3{grid-template-columns:1fr}}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13.5px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--mut);font-weight:600;background:var(--card2)}
+  code{background:#0b0d12;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12.5px;color:#cdd6e4}
+  .badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;color:#0b0d12;letter-spacing:.3px}
+  .b-crit{background:var(--crit);color:#fff} .b-high{background:var(--high)} .b-med{background:var(--med)} .b-low{background:var(--low)} .b-ok{background:var(--ok)}
+  .pill{display:inline-block;font-size:11px;padding:2px 8px;border:1px solid var(--line);border-radius:999px;color:var(--mut);margin:2px 4px 2px 0}
+  .lead{font-size:17px}
+  .kpi{display:flex;gap:14px;flex-wrap:wrap;margin:8px 0}
+  .kpi .box{flex:1;min-width:150px;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:14px}
+  .kpi .n{font-size:26px;font-weight:800} .kpi .l{color:var(--mut);font-size:12.5px}
+  .flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0}
+  .node{background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:13px}
+  .node.warn{border-color:var(--high)} .node.bad{border-color:var(--crit)}
+  .arrow{color:var(--mut)}
+  .legend span{margin-right:14px;font-size:12.5px;color:var(--mut)}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:middle}
+  ul.tight{margin:6px 0;padding-left:20px} ul.tight li{margin:3px 0}
+  .note{background:#1a1410;border:1px solid #4a3a1f;border-radius:10px;padding:12px 16px;color:#f0d9b5}
+  .good{background:#10201a;border:1px solid #1f4a37;border-radius:10px;padding:12px 16px;color:#bdebcf}
+  .muted{color:var(--mut)} .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+  a{color:var(--accent)}
+  .tag-surv{color:#8bd450} .tag-ins{color:#ff9f1c}
+  hr{border:0;border-top:1px solid var(--line);margin:30px 0}
+  .small{font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>SurveyOS Prime V2 — DPDP Compliance Audit</h1>
+  <p class="sub">Evaluation of the actually-deployed website + Firebase backend &nbsp;•&nbsp; <strong>Branch: <code>main</code></strong> &nbsp;•&nbsp; 30 May 2026 &nbsp;•&nbsp; Grounded in source code only (documentation/MD files were deliberately ignored)</p>
+
+  <div class="note small">
+    <strong>How to read this:</strong> Findings come from the real code in <code>src/</code>, <code>functions/</code>, and <code>firestore.rules</code> — i.e. <em>what the app actually does</em>, not what any spec/MD file says it should do. The non-deployed <code>open-design/</code> folder (which contains a privacy-consent modal) was excluded because it is not in <code>firebase.json</code> and provides zero real-world protection.
+  </div>
+
+  <!-- ───────────── EXECUTIVE SUMMARY ───────────── -->
+  <h2>1. Executive summary</h2>
+  <p class="lead">The product works, but as it stands it is <strong>not ready to lawfully process Indian personal data at scale</strong> under the Digital Personal Data Protection Act, 2023 (DPDP). The core problem is structural, not cosmetic.</p>
+
+  <div class="kpi">
+    <div class="box"><div class="n" style="color:var(--crit)">2</div><div class="l">CRITICAL gaps (block launch)</div></div>
+    <div class="box"><div class="n" style="color:var(--high)">6</div><div class="l">HIGH gaps</div></div>
+    <div class="box"><div class="n" style="color:var(--med)">4</div><div class="l">MEDIUM gaps</div></div>
+    <div class="box"><div class="n" style="color:var(--accent)">8</div><div class="l">3rd-party data-egress paths</div></div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:4px">The one thing to understand first</h3>
+    <p>There are <strong>two kinds of people</strong> in your data, and <strong>only one of them ever agreed to anything.</strong></p>
+    <table>
+      <tr><th>Person</th><th>How they enter</th><th>Consent?</th><th>DPDP status</th></tr>
+      <tr>
+        <td><span class="tag-surv">● The Surveyor</span><br><span class="muted small">your paying client</span></td>
+        <td>Signs in with Google, fills the access-request form</td>
+        <td><span class="badge b-ok">YES</span></td>
+        <td>Data Principal who consented (lightly)</td>
+      </tr>
+      <tr>
+        <td><span class="tag-ins">● The Insured / vehicle owner / driver / accident third-party</span><br><span class="muted small">never a user</span></td>
+        <td>Their name, phone, address, <strong>driving-licence no., DOB, policy no., vehicle reg.</strong> are typed/AI-scanned into a claim by the surveyor</td>
+        <td><span class="badge b-crit">NO</span></td>
+        <td><strong>Data Principal with full DPDP rights — currently invisible to the system</strong></td>
+      </tr>
+    </table>
+    <p class="small muted">Every DPDP duty below flows from this asymmetry: the app collects, stores, AI-processes, ships abroad, and permanently re-uses the personal data of people who never consented and are never notified.</p>
+  </div>
+
+  <!-- ───────────── ROLE ───────────── -->
+  <h2>2. Your legal role under DPDP — it's a dual role</h2>
+  <div class="grid g2">
+    <div class="card">
+      <h3 style="margin-top:2px">Processor <span class="muted small">(for report generation)</span></h3>
+      <p class="small">When surveyors use the tool to <em>produce a survey report for an insurer</em>, MotorSurveyOS is processing the insured's data <strong>on the surveyor's/insurer's behalf</strong>. Here the insurer is the Data Fiduciary and you are a <strong>Data Processor</strong> — your duty is security + acting only on instructions, via a written contract (DPDP §8(2)).</p>
+    </div>
+    <div class="card" style="border-color:var(--high)">
+      <h3 style="margin-top:2px">Data Fiduciary <span class="muted small">(for your own AI/fraud product)</span></h3>
+      <p class="small">You told us: <em>"we will be using the insured's data and claim data."</em> The moment you re-use insured data for <strong>your own purposes</strong> — the <code>bramha_memories</code> vector store, fraud detection, hotspot analytics, telemetry — <strong>you decide the purpose and means</strong>. That makes MotorSurveyOS a <strong>Data Fiduciary</strong> for that processing, owing notice, consent, rights, erasure and breach duties <em>directly</em> to the insured.</p>
+    </div>
+  </div>
+  <div class="note small"><strong>Consequence:</strong> You cannot hide behind "we're just a tool for surveyors." The Bramha reuse (<code>functions/bramha.js</code>) and telemetry pipeline pull you into Data-Fiduciary territory. At volume, this can also make you a <strong>Significant Data Fiduciary</strong> (DPDP §10) with extra duties (DPO, audits, DPIA).</p></div>
+
+  <!-- ───────────── ARCHITECTURE ───────────── -->
+  <h2>3. What actually deploys to Firebase</h2>
+  <p class="small muted">One repo, one <code>firebase deploy</code>, three targets sharing one database. (Corrects the assumption that "everything deployed = <code>src/</code>".)</p>
+  <table>
+    <tr><th>Target</th><th>Source in repo</th><th>What it is</th></tr>
+    <tr><td><code>hosting</code></td><td><code>out/</code> ← static export of <code>src/</code></td><td>The customer-facing <strong>website</strong> (Next.js, exported to static HTML/JS, served as a SPA)</td></tr>
+    <tr><td><code>functions</code></td><td><code>functions/</code> (<code>index.js</code>, <code>bramha.js</code>)</td><td><strong>Bramha is NOT inside <code>src/</code></strong> — it is a separate Cloud Functions backend that deploys alongside the site and talks to the site only through Firestore</td></tr>
+    <tr><td><code>firestore</code></td><td><code>firestore.rules</code> + indexes</td><td>The <strong>shared database</strong> security rules — govern all access for both the site and the functions</td></tr>
+  </table>
+  <p class="small"><strong>Hosting site:</strong> <code>motorsurveyos</code> &nbsp;•&nbsp; <strong>Firebase project (in code):</strong> <code>surveyos-prime-ce978</code> &nbsp;•&nbsp; <strong>Auth:</strong> Google Sign-In only (<code>signInWithPopup</code>). &nbsp; The <strong>Firestore/Storage region is a project setting, not in code</strong> — you have confirmed it is a <strong>US multi-region</strong>, which is the cross-border fact this audit assumes.</p>
+
+  <!-- ───────────── DATA FLOW MAP ───────────── -->
+  <h2>4. Where personal data goes (egress map)</h2>
+  <p class="small muted">The active AI path runs <strong>directly from the surveyor's browser</strong> to AI providers (using API keys kept in the surveyor's own profile/localStorage); a Cloud-Function proxy <code>callAI</code> also exists but is currently dormant.</p>
+
+  <div class="card">
+    <div class="flow">
+      <span class="node">Insured / Driver PII<br><span class="muted small">(name, phone, address, DL no., DOB, policy no., reg. no., photos, bank statements)</span></span>
+      <span class="arrow">→</span>
+      <span class="node">Surveyor's browser<br><span class="muted small">manual + AI doc-scan</span></span>
+    </div>
+    <div class="legend" style="margin:10px 0 4px">
+      <span><span class="dot" style="background:var(--crit)"></span>Leaves India (US/global servers)</span>
+      <span><span class="dot" style="background:var(--high)"></span>3rd party / weak control</span>
+      <span><span class="dot" style="background:var(--ok)"></span>On-device</span>
+    </div>
+    <table>
+      <tr><th>#</th><th>Flow</th><th>What is sent</th><th>Destination</th><th>Cross-border</th></tr>
+      <tr><td>1</td><td>AI document extraction (RC / DL / policy / FIR)</td><td>Raw page <strong>images</strong> + extracted PII text incl. DL with <strong>face + DOB</strong></td><td>Google Gemini / Groq / NVIDIA NIM</td><td><span class="badge b-crit">YES</span></td></tr>
+      <tr><td>2</td><td>Damage-photo analysis</td><td><strong>Raw photos</strong> — number plates, faces, scene (no blur/redaction)</td><td>Gemini / Groq / NVIDIA</td><td><span class="badge b-crit">YES</span></td></tr>
+      <tr><td>3</td><td>Bank-statement extraction</td><td>Up to 6 pages of statement as <strong>images</strong> (account holder, transactions)</td><td>Gemini / Groq / NVIDIA</td><td><span class="badge b-crit">YES</span></td></tr>
+      <tr><td>4</td><td>Insured-report narrative</td><td>Claim JSON: insured name, reg. no., financials, place/cause of accident</td><td>Gemini / Groq / NVIDIA</td><td><span class="badge b-crit">YES</span></td></tr>
+      <tr><td>5</td><td>Google Drive upload</td><td>Original RC/DL/policy/FIR docs, damage photos, <strong>+ profile backup incl. API keys & signature in plaintext</strong></td><td>Surveyor's own Google Drive (OAuth)</td><td><span class="badge b-crit">YES</span></td></tr>
+      <tr><td>6</td><td>Bramha embedding (Cloud Function)</td><td>Claim text → embedding; then <strong>stores insured name, phone, policy no., reg. no., location</strong> in <code>bramha_memories</code></td><td>Google text-embedding-004 + Firestore</td><td><span class="badge b-crit">YES</span></td></tr>
+      <tr><td>7</td><td>Telemetry</td><td><strong>GPS lat/lng</strong>, region, cause of loss, vehicle, insurer</td><td>Telemetry endpoint</td><td><span class="badge b-high">CHECK</span></td></tr>
+      <tr><td>8</td><td>On-device cache (IndexedDB)</td><td>Full claim incl. all third-party PII + photo bytes, <strong>unencrypted</strong>; legacy shared DB never deleted</td><td>Surveyor's device</td><td><span class="badge b-ok">LOCAL</span></td></tr>
+    </table>
+    <p class="small note" style="margin-top:12px"><strong>No redaction. No minimization. No consent gate. No region pinning.</strong> Gemini safety filters are explicitly set to <code>BLOCK_NONE</code>, and the code even comments that the "SAFETY" block triggers because the model "detected personal info in the document" — i.e. PII transmission is knowing and deliberate. <span class="muted">(src/lib/ai/service.ts:331-352)</span></p>
+  </div>
+
+  <!-- ───────────── DATA INVENTORY ───────────── -->
+  <h2>5. What data is stored in Firebase (and where)</h2>
+
+  <h3><span class="tag-ins">●</span> Third-party / non-consenting data (the DPDP problem)</h3>
+  <table>
+    <tr><th>Field</th><th>Whose</th><th>Sensitivity</th><th>Stored at</th></tr>
+    <tr><td>insuredName, insuredMobile, insuredAddress</td><td>Insured</td><td>Name / <strong>phone</strong> / address</td><td>IndexedDB + <code>users/{uid}/claims</code> + <code>bramha_memories</code></td></tr>
+    <tr><td>policyNumber, claimNumber, IDV, insurerName</td><td>Insured</td><td>Policy / financial IDs</td><td>claims + <code>bramha_memories</code></td></tr>
+    <tr><td>vehicle registration / chassis / engine no.</td><td>Insured</td><td>Asset identifiers</td><td>claims + <code>bramha_memories</code></td></tr>
+    <tr><td><strong>driver.licenceNumber, parentName, dateOfBirth, address</strong></td><td>Third-party driver</td><td><span class="badge b-crit">HIGH</span> DL no. + <strong>DOB</strong> + address</td><td>IndexedDB + <code>users/{uid}/claims</code></td></tr>
+    <tr><td>accident place / pincode / GPS / police station / FIR no.</td><td>Insured</td><td>Location + legal record</td><td>claims + telemetry + <code>bramha_memories</code></td></tr>
+    <tr><td>photos[] (vehicle, scene, ID docs)</td><td>Mixed</td><td>Images w/ plates, faces, IDs</td><td>IndexedDB + Google Drive + AI providers</td></tr>
+    <tr><td>thirdPartyDetails (injury/death/property)</td><td>Accident TP</td><td>Free-text incident data</td><td>claims</td></tr>
+  </table>
+
+  <h3><span class="tag-surv">●</span> Surveyor data (consenting user)</h3>
+  <table>
+    <tr><th>Field</th><th>Sensitivity</th><th>Stored at</th></tr>
+    <tr><td>name, email, mobile, city, state, address</td><td>Contact PII</td><td><code>users/{uid}/profile/current</code>, <code>newSignups/{uid}</code>, localStorage</td></tr>
+    <tr><td>IRDAI licence, IIISLA no., categories</td><td>Professional ID</td><td>profile + localStorage</td></tr>
+    <tr><td><strong>PAN, GST, bank account / IFSC</strong></td><td><span class="badge b-high">Financial IDs</span></td><td><strong>localStorage</strong> <span class="muted small">(client-side)</span></td></tr>
+    <tr><td>UPI payment record (amount, txn id, date)</td><td>Financial</td><td><code>users/{uid}/payments/{id}</code></td></tr>
+    <tr><td><strong>Gemini / Groq / NVIDIA API keys</strong>, Google clientId</td><td><span class="badge b-crit">Secrets</span></td><td><strong>localStorage</strong> + plaintext Drive backup</td></tr>
+    <tr><td>signature image, stamp image</td><td>Signature (sensitive)</td><td>localStorage</td></tr>
+  </table>
+  <p class="small good">Good news on rules: <code>firestore.rules</code> correctly isolates each user to their own <code>users/{uid}</code> subtree, blocks self-promotion to admin, and gates payments/profile properly. <code>bramha_memories</code> and <code>ai_config</code> are not client-readable. The data-access model itself is sound; the <strong>compliance & lifecycle layer is what's missing</strong>.</p>
+
+  <!-- ───────────── GAP ANALYSIS ───────────── -->
+  <h2>6. DPDP gap analysis</h2>
+  <table>
+    <tr><th>DPDP duty</th><th>Status in code</th><th>Severity</th><th>Evidence</th></tr>
+    <tr>
+      <td><strong>Notice & consent of the Data Principal</strong> (§5–6)</td>
+      <td>The insured/driver is <strong>never notified and never consents</strong>. No consent UI exists anywhere in the shipping app.</td>
+      <td><span class="badge b-crit">CRITICAL</span></td>
+      <td>No consent component in <code>src/</code>; insured notice is only a printed PDF cell label</td>
+    </tr>
+    <tr>
+      <td><strong>Privacy policy / published notice</strong></td>
+      <td>Footer links to <code>/privacy</code> & <code>/terms</code> but <strong>those routes don't exist → 404 dead links</strong>.</td>
+      <td><span class="badge b-crit">CRITICAL</span></td>
+      <td>LandingClient.tsx:503-504; no route in <code>src/app/</code></td>
+    </tr>
+    <tr>
+      <td><strong>Right to erasure</strong> (§12)</td>
+      <td>Deletion is <strong>admin-only</strong>, no self-service, and <strong>incomplete</strong> — leaves Firebase Auth user, Google Drive files, and <code>bramha_memories</code> behind. Insured has no erasure path at all.</td>
+      <td><span class="badge b-high">HIGH</span></td>
+      <td>useAdminActions.ts:241-273; bramha has no delete cascade</td>
+    </tr>
+    <tr>
+      <td><strong>Storage limitation / retention</strong> (§8(7))</td>
+      <td><strong>No retention or auto-delete anywhere.</strong> Claims, <code>ai_usage</code>, <code>bramha_memories</code>, legacy IndexedDB all persist forever.</td>
+      <td><span class="badge b-high">HIGH</span></td>
+      <td>No <code>onSchedule</code>/TTL in functions or client</td>
+    </tr>
+    <tr>
+      <td><strong>Purpose limitation</strong> (§6(1))</td>
+      <td>Insured data captured for a survey report is <strong>silently re-used</strong> for AI training/fraud (<code>bramha_memories</code>) and analytics — a new purpose with no basis.</td>
+      <td><span class="badge b-crit">CRITICAL</span></td>
+      <td>bramha.js:141-170 copies PII into a reusable store</td>
+    </tr>
+    <tr>
+      <td><strong>Data minimization</strong></td>
+      <td>Full-resolution photos & ID scans sent to AI; no redaction/blur of faces, plates, DOB.</td>
+      <td><span class="badge b-high">HIGH</span></td>
+      <td>processor.ts:174,182-184</td>
+    </tr>
+    <tr>
+      <td><strong>Cross-border transfer</strong> (§16)</td>
+      <td>Data routinely sent to US/global servers (Gemini/Groq/NVIDIA/Drive/Firestore-US) with no notice, no contractual safeguard, no region control.</td>
+      <td><span class="badge b-high">HIGH</span></td>
+      <td>service.ts:200-385; firebase US region</td>
+    </tr>
+    <tr>
+      <td><strong>Reasonable security safeguards</strong> (§8(5))</td>
+      <td>AI provider <strong>API keys + surveyor PAN/bank in plaintext localStorage</strong>; profile + keys backed up to Drive in plaintext; master keys plaintext in <code>ai_config/routing</code>; on-device claim cache unencrypted.</td>
+      <td><span class="badge b-high">HIGH</span></td>
+      <td>profile-store.ts:42-47; drive/index.ts:483</td>
+    </tr>
+    <tr>
+      <td><strong>Children's data</strong> (§9)</td>
+      <td>No age handling. A driver/insured could be a minor; DOB is captured but never used for age-gating.</td>
+      <td><span class="badge b-med">MEDIUM</span></td>
+      <td>driver.dateOfBirth captured, unused</td>
+    </tr>
+    <tr>
+      <td><strong>Breach notification</strong> (§8(6))</td>
+      <td>No breach-detection, logging-for-breach, or notification mechanism.</td>
+      <td><span class="badge b-med">MEDIUM</span></td>
+      <td>none in code</td>
+    </tr>
+    <tr>
+      <td><strong>Data-Processor contracts</strong> (§8(2))</td>
+      <td>No DPA/contract enforcement with the AI providers or with surveyors; transfers happen by hardcoded URL.</td>
+      <td><span class="badge b-med">MEDIUM</span></td>
+      <td>hardcoded endpoints, no DPA gate</td>
+    </tr>
+    <tr>
+      <td><strong>Grievance / consent-withdrawal / rights request</strong> (§13)</td>
+      <td>No grievance contact route, no withdrawal mechanism, no data-export ("download my data") UI.</td>
+      <td><span class="badge b-med">MEDIUM</span></td>
+      <td>no route/UI in <code>src/</code></td>
+    </tr>
+  </table>
+
+  <!-- ───────────── IRDAI ───────────── -->
+  <h2>7. IRDAI / insurance-sector flag <span class="muted small">(beyond DPDP)</span></h2>
+  <div class="note">
+    <p style="margin-top:0"><strong>This is a flag, not legal advice — confirm with an insurance-regulatory lawyer.</strong></p>
+    <ul class="tight">
+      <li>Insurance records in India are subject to <strong>IRDAI</strong> regulations that have historically required <strong>records to be held in data centres / servers located in India</strong> (IRDAI (Maintenance of Insurance Records) Regulations). Storing claim/survey data in a <strong>US Firebase region</strong> may independently breach this <em>regardless of DPDP</em>.</li>
+      <li>Motor surveyors are <strong>IRDAI-licensed</strong> (you store their IRDAI licence no.). Survey reports are statutory documents; their data-handling can fall under insurer/IRDAI audit.</li>
+      <li>Sending claim documents/photos to <strong>foreign AI providers</strong> (Gemini/Groq/NVIDIA) may conflict with insurer data-handling mandates and the surveyor's own licence conditions.</li>
+    </ul>
+    <p style="margin-bottom:0"><strong>Action:</strong> Treat India data-residency as potentially <em>mandatory</em> (not optional) for the insurance layer. This pushes toward an <strong>India Firestore region + India-hosted/region-pinned AI</strong>, independent of what DPDP §16 allows.</p>
+  </div>
+
+  <!-- ───────────── REMEDIATION ───────────── -->
+  <h2>8. Prioritized remediation roadmap</h2>
+
+  <h3>🔴 Before any real launch (CRITICAL)</h3>
+  <ul class="tight">
+    <li><strong>Build the consent + notice layer.</strong> A surveyor must affirm they have the insured's consent/authority before a claim is created; record consent metadata on the claim. Publish a real <code>/privacy</code> and <code>/terms</code> page (the links already exist — they just 404).</li>
+    <li><strong>Stop the silent re-use.</strong> Either get a lawful basis for <code>bramha_memories</code> or strip direct identifiers (name, phone, policy, reg.) from it and store only de-identified vectors + a reversible token. Today it copies raw PII into a permanent reusable store — the clearest purpose-limitation breach.</li>
+    <li><strong>Decide data residency.</strong> Given the IRDAI flag, move Firestore/Storage to an <strong>India region</strong> and pin AI to India-resident endpoints (or run on-device/local models for ID docs). US storage of insurance PII is the highest-leverage single fix.</li>
+  </ul>
+
+  <h3>🟠 Pre-scale (HIGH)</h3>
+  <ul class="tight">
+    <li><strong>Redact before egress:</strong> blur faces/plates and mask DOB/DL/account numbers before sending images to any AI provider; or move ID extraction on-device.</li>
+    <li><strong>Lifecycle:</strong> add retention TTLs and a real cascading delete (claim → Firestore → Drive → <code>bramha_memories</code> → Auth → legacy IndexedDB).</li>
+    <li><strong>Secrets:</strong> stop storing API keys & PAN/bank in localStorage and in plaintext Drive backups; route AI through the authenticated <code>callAI</code> function with server-held keys; encrypt the on-device claim cache.</li>
+    <li><strong>Cross-border safeguards:</strong> sign DPAs with AI providers; document transfers in the notice.</li>
+  </ul>
+
+  <h3>🟡 Operational (MEDIUM)</h3>
+  <ul class="tight">
+    <li>Self-service data export + deletion + consent-withdrawal + grievance contact (DPDP §13).</li>
+    <li>Breach-detection logging and a notification runbook.</li>
+    <li>Age-handling for DOB; DPA/SDF readiness (DPO, DPIA) if volumes grow.</li>
+  </ul>
+
+  <hr>
+  <h2>9. Verdict</h2>
+  <div class="card">
+    <p class="lead" style="margin-top:4px">Engineering: solid. <span class="muted">Clean Firestore rules, sensible per-user isolation, working AI pipeline.</span></p>
+    <p class="lead">Compliance: <span style="color:var(--crit)">not launch-ready for India</span>. The app processes large volumes of <strong>non-consenting third-party PII</strong> (including driver DL/DOB), ships it to <strong>foreign AI + storage</strong> with <strong>no consent, no notice, no redaction, no retention limit, and dead privacy links</strong>, and <strong>re-uses</strong> it for its own AI product — which puts MotorSurveyOS in the <strong>Data Fiduciary</strong> seat without any of the Fiduciary machinery.</p>
+    <p>None of this is unfixable, and the data model is in good shape to add the missing layer. The three CRITICAL items (consent/notice, stop silent re-use, data residency) are the gate to a feasible, scalable, lawful launch.</p>
+  </div>
+
+  <!-- ───────────── REFRAME ───────────── -->
+  <h2>10. The key correction: "stored" vs "read"</h2>
+  <p class="lead">The AI runs under the <strong>surveyor's own API key, directly from their browser</strong> — so for the extraction flows the surveyor is the data exporter and <strong>you store nothing from them</strong>. This collapses most "egress" findings into transparency + contracts.</p>
+  <table>
+    <tr><th>Flow</th><th>Whose key / storage</th><th>Retained?</th><th>Your liability</th></tr>
+    <tr>
+      <td>AI extraction (RC / DL / policy / photos / bank stmt)</td>
+      <td><strong>Surveyor's own</strong> API key, browser → provider</td>
+      <td><span class="badge b-ok">NO</span> transient read; paid Gemini/Groq APIs don't train on or retain it</td>
+      <td>Low — surveyor is the exporter, you're the tool</td>
+    </tr>
+    <tr>
+      <td>Google Drive backup</td>
+      <td><strong>Surveyor's own</strong> Google account (OAuth)</td>
+      <td><span class="badge b-med">In their Drive</span></td>
+      <td>Low — except the plaintext key/signature backup (a bug)</td>
+    </tr>
+    <tr>
+      <td><code>users/{uid}/claims</code> + <code>bramha_memories</code></td>
+      <td><strong>Your</strong> Firestore, <strong>your</strong> master key</td>
+      <td><span class="badge b-crit">YES — permanent</span></td>
+      <td><strong>High — this is your actual DPDP exposure</strong></td>
+    </tr>
+  </table>
+  <div class="good small"><strong>Consequence:</strong> ~80% of the scary findings become "publish a notice + sign a processor agreement." Your real engineering work is on just <strong>two collections</strong>. The one flow where you are unambiguously the cross-border Data Fiduciary is <strong>Bramha</strong> (it uses <em>your</em> master key in <code>ai_config/routing</code> and writes to <em>your</em> DB).</div>
+
+  <!-- ───────────── SOLUTIONS ───────────── -->
+  <h2>11. Solution for every issue</h2>
+  <p class="small muted">Status: <span class="badge b-ok">SOLVABLE</span> = clean fix · <span class="badge b-med">PARTIAL</span> = mitigation/tradeoff only · <span class="badge b-crit">HARD</span> = no clean solution (see §12)</p>
+  <table>
+    <tr><th>Issue</th><th>Solution</th><th>Status</th></tr>
+    <tr>
+      <td><strong>Insured/driver never consents</strong></td>
+      <td>Don't collect it yourself — <strong>inherit the insurer's upstream basis</strong> (DPDP §7 legitimate use; surveyor appointed by insurer). Add a one-click <strong>surveyor attestation</strong> ("I am authorised by [insurer] to process this claim") + a <strong>processor agreement</strong> flowing insurer terms down to you.</td>
+      <td><span class="badge b-ok">SOLVABLE</span></td>
+    </tr>
+    <tr>
+      <td><strong>Dead /privacy & /terms (404)</strong></td>
+      <td>Write the two pages, add the routes (links already exist). Disclose: US storage, AI under surveyor's own key, Drive backup to surveyor's own account, Bramha analytics use.</td>
+      <td><span class="badge b-ok">SOLVABLE</span></td>
+    </tr>
+    <tr>
+      <td><strong>Purpose-limitation via <code>bramha_memories</code></strong></td>
+      <td><strong>De-identify the collection.</strong> Bramha only needs the embedding + non-identifying features (vehicle class, damage, amounts, coarse region). <strong>Drop</strong> customerName, customerPhone, policyNumber, vehicleRegistration. Keep only <code>sourceClaimPath</code> (rules-gated) as the link back — a fraud hit returns the claim path, an admin opens the real claim. Collection then falls <strong>out of DPDP scope</strong>.</td>
+      <td><span class="badge b-ok">SOLVABLE</span></td>
+    </tr>
+    <tr>
+      <td><strong>Erasure incomplete</strong></td>
+      <td><code>onClaimDeleted</code> Cloud Function cascades: claim → matching <code>bramha_memories</code> → queue Drive delete (runs on surveyor's next online OAuth) → clear IndexedDB. Add a "delete claim &amp; all derived data" button.</td>
+      <td><span class="badge b-ok">SOLVABLE</span></td>
+    </tr>
+    <tr>
+      <td><strong>No retention</strong></td>
+      <td>Note: insurance needs a retention <em>schedule</em> (IRDAI keeps records for years), not fast delete. Firestore native <strong>TTL</strong> on <code>ai_usage</code> + <code>bramha_memories</code>; scheduled purge of claims past statutory hold.</td>
+      <td><span class="badge b-ok">SOLVABLE</span></td>
+    </tr>
+    <tr>
+      <td><strong>No redaction before AI</strong></td>
+      <td>Damage photos: blur faces/plates client-side. <strong>ID docs: you cannot redact the very fields you're extracting</strong> — only fix is on-device OCR (accuracy tradeoff). Partial.</td>
+      <td><span class="badge b-med">PARTIAL</span></td>
+    </tr>
+    <tr>
+      <td><strong>Cross-border transfer</strong></td>
+      <td>DPDP §16 is a <strong>blacklist</strong> model — US is currently <em>permitted</em>. Binding constraint is IRDAI, not DPDP. Move <strong>your</strong> Firestore/Storage to <code>asia-south1</code>; default AI to India endpoints. Surveyor-key transfer stays their responsibility.</td>
+      <td><span class="badge b-ok">SOLVABLE</span> <span class="muted small">(for your part)</span></td>
+    </tr>
+    <tr>
+      <td><strong>Plaintext secrets</strong></td>
+      <td>Delete the plaintext key/signature Drive backup (bug). Master keys → <strong>Google Secret Manager</strong>, not Firestore. Surveyor keys stay client-side but <strong>encrypted (Web Crypto)</strong>. PAN/bank → server-side or encrypted.</td>
+      <td><span class="badge b-ok">SOLVABLE</span></td>
+    </tr>
+    <tr>
+      <td><strong>Children's data</strong></td>
+      <td>Near-N/A: motor policyholders &amp; <strong>licensed</strong> drivers are adults by definition (no DL &lt;18). Optional DOB&lt;18 flag.</td>
+      <td><span class="badge b-ok">SOLVABLE</span></td>
+    </tr>
+    <tr>
+      <td><strong>No breach notification</strong></td>
+      <td>Enable Cloud Audit Logs + Firebase alerting; write an incident-response runbook; register on the DPDP breach-reporting process.</td>
+      <td><span class="badge b-ok">SOLVABLE</span></td>
+    </tr>
+    <tr>
+      <td><strong>No DPA</strong></td>
+      <td>Extraction DPA is surveyor↔provider (their key). You need: (a) <strong>processor agreement with surveyors</strong>, (b) <strong>DPA with Google</strong> for your own Bramha key.</td>
+      <td><span class="badge b-ok">SOLVABLE</span></td>
+    </tr>
+    <tr>
+      <td><strong>No grievance / export UI</strong></td>
+      <td>Grievance email + in-app contact; "download my data" export (claim → JSON/PDF); self-service delete.</td>
+      <td><span class="badge b-ok">SOLVABLE</span></td>
+    </tr>
+  </table>
+
+  <!-- ───────────── NO SOLUTION ───────────── -->
+  <h2>12. Issues with NO clean solution <span class="muted small">(hard constraints &amp; tradeoffs)</span></h2>
+  <div class="note">
+    <ol class="tight">
+      <li><strong>IRDAI India-residency while staying on US servers.</strong> A head-on conflict. If "data on US servers" is fixed, there is <strong>no compliant path</strong> for insurance-records residency except (a) move Firestore to <code>asia-south1</code>, or (b) obtain a legal exemption/opinion. You cannot satisfy both at once. <strong>This forces a real decision.</strong></li>
+      <li><strong>Redacting the exact ID fields the AI must extract.</strong> You can't blur the DL number/DOB and still ask the AI to read them — redaction and extraction are mutually exclusive. Only alternative is on-device extraction (feasibility/accuracy cost), not a redaction fix. (Damage-photo faces/plates <em>can</em> be blurred; ID documents cannot.)</li>
+      <li><strong>Getting the insured's consent inside your product.</strong> Structurally impossible — they're never users. You can only <strong>inherit</strong> the insurer's basis; if that's missing upstream, you cannot cure it from your side.</li>
+      <li><strong>Controlling where the surveyor's own key sends data.</strong> You can default/recommend India endpoints but cannot guarantee a surveyor's key won't hit a US endpoint. Partial control only — handle by contract + defaults.</li>
+      <li><strong>Device hygiene on shared/office PCs (IndexedDB residue).</strong> Encrypt + auto-clear on logout, but residual third-party PII risk persists if a surveyor stays logged in on a shared machine. Mitigatable, never fully eliminable.</li>
+    </ol>
+  </div>
+
+  <!-- ───────────── TICKETS ───────────── -->
+  <h2>13. Prioritized engineering tickets</h2>
+
+  <h3>🔴 Tier 1 — do first (unblocks launch &amp; kills most exposure)</h3>
+  <table>
+    <tr><th>#</th><th>Ticket</th><th>Why it's first</th></tr>
+    <tr><td>T1</td><td><strong>De-identify <code>bramha_memories</code></strong> — remove the 4 direct identifiers, keep <code>sourceClaimPath</code> + features only. Update <code>functions/bramha.js</code> write + any reader.</td><td>Removes the CRITICAL purpose-limitation breach and most of your fiduciary exposure in one change.</td></tr>
+    <tr><td>T2</td><td><strong>Migrate Firestore + Storage to <code>asia-south1</code></strong> (or new project in India region; data migration plan).</td><td>The only real answer to the IRDAI constraint. Architectural — decide early.</td></tr>
+    <tr><td>T3</td><td><strong>Publish <code>/privacy</code> + <code>/terms</code></strong> pages &amp; routes; add <strong>surveyor attestation</strong> on new-claim; draft <strong>processor agreement</strong>.</td><td>Closes the consent chain cheaply; fixes the dead-link CRITICAL.</td></tr>
+  </table>
+
+  <h3>🟠 Tier 2 — before scale</h3>
+  <table>
+    <tr><th>#</th><th>Ticket</th></tr>
+    <tr><td>T4</td><td><code>onClaimDeleted</code> cascading delete (claim → bramha → Drive queue → IndexedDB) + user-facing delete button.</td></tr>
+    <tr><td>T5</td><td>Remove plaintext key/signature Drive backup; move master keys to Secret Manager; encrypt surveyor keys (Web Crypto); secure PAN/bank.</td></tr>
+    <tr><td>T6</td><td>Retention schedule: Firestore TTL on <code>ai_usage</code> + <code>bramha_memories</code>; scheduled claim purge past statutory hold.</td></tr>
+    <tr><td>T7</td><td>Damage-photo face/plate blur before AI; default AI calls to India-region endpoints.</td></tr>
+    <tr><td>T8</td><td>Encrypt on-device IndexedDB; auto-clear on logout; delete legacy shared DB.</td></tr>
+  </table>
+
+  <h3>🟡 Tier 3 — operational</h3>
+  <table>
+    <tr><th>#</th><th>Ticket</th></tr>
+    <tr><td>T9</td><td>Self-service data export ("download my data") + grievance contact (email + in-app).</td></tr>
+    <tr><td>T10</td><td>Cloud Audit Logs + alerting + breach-response runbook + DPDP breach-reporting registration.</td></tr>
+    <tr><td>T11</td><td>DPA with Google for the Bramha key; document surveyor AI-provider terms.</td></tr>
+    <tr><td>T12</td><td>(Optional) DOB&lt;18 flag; telemetry GPS coarsening / de-identification check.</td></tr>
+  </table>
+
+  <div class="card" style="margin-top:18px">
+    <p class="lead" style="margin-top:4px">The 3 moves that matter most: <strong>de-identify Bramha</strong> (T1) · <strong>move to <code>asia-south1</code></strong> (T2) · <strong>publish notice + attestation</strong> (T3).</p>
+    <p class="small muted">Do those three and you go from "not launch-ready" to "launch-ready with a known, contained backlog." Everything else (T4–T12) is incremental and can ship post-launch.</p>
+  </div>
+
+  <p class="small muted" style="margin-top:30px">Generated from a code-only audit of branch <code>main</code> on 2026-05-30; solutions section added the same day. File references throughout point to the exact source lines. This is an engineering compliance assessment, not formal legal advice — validate the DPDP/IRDAI conclusions with qualified Indian counsel before launch.</p>
+
+</div>
+</body>
+</html>
