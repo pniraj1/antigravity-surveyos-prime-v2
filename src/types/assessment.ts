@@ -103,6 +103,11 @@ export interface AssessmentSummary {
   // ─── Estimated Totals (from Invoice) ────────────────
   totalEstimated: number;
   estimatePartsBase: number;
+  // Per-material estimate subtotals (allowed parts only — pair with metalTotal etc.)
+  estimateMetalBase: number;
+  estimatePlasticBase: number;
+  estimateGlassBase: number;
+  estimateFiberglassBase: number;
   estimatePartsGST: number;
   estimatePartsTotal: number;
   estimateLabourBase: number;

@@ -87,12 +87,20 @@ export function calculateAssessmentSummary(
   let estPartsGST = 0;
   let estLabourBase = 0;
   let estLabourGST = 0;
+  // Per-material estimate (allowed parts only) — pairs with assessed metal/plastic/... totals
+  let estMetal = 0, estPlastic = 0, estGlass = 0, estFiberglass = 0;
   rows.forEach((r) => {
     const gstRate = (r.gst || 18) / 100;
     if (r.section === 'parts') {
       estPartsBase += r.estimated;
       // Disposal parts carry no GST on the estimate either
       if (!r.isDisposal) estPartsGST += r.estimated * gstRate;
+      if (r.allowed) {
+        if (r.partType === 'metal') estMetal += r.estimated;
+        else if (r.partType === 'glass') estGlass += r.estimated;
+        else if (r.partType === 'fiberglass') estFiberglass += r.estimated;
+        else estPlastic += r.estimated;
+      }
     } else {
       // labour + paint
       estLabourBase += r.estimated;
@@ -125,6 +133,10 @@ export function calculateAssessmentSummary(
 
     totalEstimated,
     estimatePartsBase: estPartsBase,
+    estimateMetalBase: estMetal,
+    estimatePlasticBase: estPlastic,
+    estimateGlassBase: estGlass,
+    estimateFiberglassBase: estFiberglass,
     estimatePartsGST: estPartsGST,
     estimatePartsTotal: estPartsBase + estPartsGST,
     estimateLabourBase: estLabourBase,
