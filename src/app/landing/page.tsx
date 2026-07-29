@@ -9,9 +9,11 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { signInWithGoogle } from '@/lib/firebase/auth';
 import { useAuthStore } from '@/stores/auth-store';
 import { useProfileStore } from '@/stores/profile-store';
+import { logger } from '@/lib/utils/logger';
 
 import Logo from '@/components/ui/Logo';
 import CinematicVideo from '@/components/landing/CinematicVideo';
@@ -256,18 +258,26 @@ export default function LandingPage() {
     if (isAuthenticated && !authLoading && !isPending) router.push('/');
   }, [isAuthenticated, authLoading, isPending, router]);
 
-  // Existing users: Sign In via Google OAuth (full-page redirect)
+  // Sign In and every CTA do the same thing: open the Google popup directly —
+  // no page navigation needed. After auth, onAuthStateChanged fires → the
+  // redirect effect above takes over (or SubscriptionGuard sends a pending
+  // profile to /access-request).
   const handleSignIn = () => {
     if (isAuthenticated) { router.push('/'); return; }
-    signInWithGoogle();
+    signInWithGoogle().catch((err: { code?: string }) => {
+      // Previously fire-and-forget: a rejected popup vanished silently and the
+      // button just looked dead. Cancelling is not an error worth shouting about.
+      if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') return;
+      logger.error('[Landing] Google sign-in failed:', err);
+      toast.error(
+        err?.code === 'auth/popup-blocked'
+          ? 'Your browser blocked the sign-in pop-up. Allow pop-ups for this site and try again.'
+          : 'Sign-in failed. Please check your connection and try again.'
+      );
+    });
   };
 
-  // New users / CTAs: open Google popup directly — no page navigation needed.
-  // After auth, onAuthStateChanged fires → profile pending → SubscriptionGuard → /access-request.
-  const handleAction = () => {
-    if (isAuthenticated) { router.push('/'); return; }
-    signInWithGoogle();
-  };
+  const handleAction = handleSignIn;
 
   const tint = CHAPTERS[chapter];
 

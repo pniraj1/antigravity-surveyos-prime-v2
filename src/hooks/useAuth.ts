@@ -62,135 +62,161 @@ export function useAuth() {
         } catch { /* localStorage unavailable in some test environments */ }
 
         // ── LOGIN ──────────────────────────────────────────────
-        // Open the surveyor's personal IndexedDB BEFORE updating
-        // Zustand. This ensures no component reads claims before
-        // the DB connection is ready.
+        // Everything from here to setUser() is BOOTSTRAP: IndexedDB,
+        // the session lock, and the Firestore profile. It is wrapped in
+        // a single try/catch because none of it may gate authentication.
         //
-        // initUserDB also runs a one-time migration from the old
-        // shared "surveyos-v2" database on the first login after
-        // this update is deployed.
-        await initUserDB(user.uid);
-
-        // ── SINGLE-SESSION LOCK ────────────────────────────────
-        // Block login if another device holds a LIVE session (fresh
-        // heartbeat), unless the user explicitly chose "Force Sign In
-        // Anyway" (sets FORCE_SESSION_KEY before re-authenticating).
-        // Fails OPEN on any Firestore/offline error so a field surveyor
-        // is never locked out by lack of signal — the heartbeat hook
-        // claims the session once connectivity returns.
+        // WHY (the bug this fixes):
+        //   setUser() is the ONLY thing that flips isAuthenticated and
+        //   clears `loading` — nothing else calls setLoading. When a
+        //   bootstrap step threw (typically a transient Firestore
+        //   `unavailable` while the connection is still being
+        //   established on the very first request), this async callback
+        //   rejected, Firebase swallowed the rejection, and setUser()
+        //   never ran. The user was signed in to Firebase but the UI
+        //   stayed on the landing page forever with no error — they had
+        //   to click Sign In two or three times until a warm connection
+        //   let the chain complete.
+        //
+        // Bootstrap is best-effort; auth is not.
         try {
-          let forced = false;
-          try { forced = localStorage.getItem(FORCE_SESSION_KEY) === 'true'; } catch { /* ignore */ }
+          // Open the surveyor's personal IndexedDB BEFORE updating
+          // Zustand. This ensures no component reads claims before
+          // the DB connection is ready.
+          //
+          // initUserDB also runs a one-time migration from the old
+          // shared "surveyos-v2" database on the first login after
+          // this update is deployed.
+          await initUserDB(user.uid);
 
-          if (forced) {
-            try { localStorage.removeItem(FORCE_SESSION_KEY); } catch { /* ignore */ }
-          } else {
-            const existing = await readActiveSession(user.uid);
-            if (existing && isSessionFresh(existing) && !isSessionMine(existing)) {
-              useAuthStore.getState().setSessionConflict({
-                deviceHint: existing.deviceHint || 'another device',
-              });
-              await signOut(auth);
-              return; // do NOT proceed with login
-            }
-          }
-
-          await claimSession(user.uid);
-          useAuthStore.getState().setSessionConflict(null);
-        } catch (err) {
-          logger.error('[useAuth] Session lock check failed (fail-open):', err);
-        }
-
-        // ── Profile bootstrap & migration ─────────────────────
-        // All profiles must live at profile/current (not profile/main).
-        // If a legacy profile/main doc exists, migrate it first.
-        const currentRef = doc(db, 'users', user.uid, 'profile', 'current');
-        const mainRef    = doc(db, 'users', user.uid, 'profile', 'main');
-
-        const [currentSnap, mainSnap] = await Promise.all([
-          getDoc(currentRef),
-          getDoc(mainRef),
-        ]);
-
-        let profileStatus: string = 'pending';
-
-        if (!currentSnap.exists() && mainSnap.exists()) {
-          // ── Migrate: copy profile/main → profile/current ──
-          const mainData = mainSnap.data();
-          await setDoc(currentRef, mainData);
-          await deleteDoc(mainRef);
-          profileStatus = mainData?.subscriptionStatus ?? 'pending';
-        } else if (!currentSnap.exists()) {
-          // ── Brand new user: create pending profile ─────────
-          await setDoc(currentRef, {
-            subscriptionStatus: 'pending',
-            subscriptionExpiry: null,
-            isAdmin: false,
-            email: user.email ?? '',
-            displayName: user.displayName ?? '',
-            accessRequestSubmitted: false,
-            irdaiLicence: '',
-            createdAt: Timestamp.now(),
-          });
-          profileStatus = 'pending';
-        } else {
-          profileStatus = currentSnap.data()?.subscriptionStatus ?? 'pending';
-        }
-
-        // ── Auto-transition expired trial/active → readonly ──────
-        if (profileStatus === 'trial' || profileStatus === 'active') {
-          const data = currentSnap.exists() ? currentSnap.data() : null;
-          const expiryField = profileStatus === 'trial' ? data?.trialEndDate : data?.subscriptionExpiry;
-          if (expiryField && isExpired(expiryField)) {
-            try {
-              await updateDoc(currentRef, { subscriptionStatus: 'readonly' });
-              profileStatus = 'readonly';
-            } catch { /* non-fatal — SubscriptionGuard will catch it client-side */ }
-          }
-        }
-
-        // ── Write to newSignups if user is still pending AND hasn't submitted form yet ──
-        // Guard with accessRequestSubmitted so dismissed users don't ghost-resurface
-        // in the admin queue just by logging in again.
-        if (profileStatus === 'pending') {
+          // ── SINGLE-SESSION LOCK ────────────────────────────────
+          // Block login if another device holds a LIVE session (fresh
+          // heartbeat), unless the user explicitly chose "Force Sign In
+          // Anyway" (sets FORCE_SESSION_KEY before re-authenticating).
+          // Fails OPEN on any Firestore/offline error so a field surveyor
+          // is never locked out by lack of signal — the heartbeat hook
+          // claims the session once connectivity returns.
           try {
-            const currentData = currentSnap.exists() ? currentSnap.data() : null;
-            const alreadySubmitted = currentData?.accessRequestSubmitted === true;
-            if (!alreadySubmitted) {
-              const signupRef = doc(db, 'newSignups', user.uid);
-              await setDoc(signupRef, {
-                email: user.email ?? '',
-                displayName: user.displayName ?? '',
-                signedUpAt: Timestamp.now(),
-                status: 'pending',
-              }, { merge: true }); // merge:true so re-logins don't reset timestamp
+            let forced = false;
+            try { forced = localStorage.getItem(FORCE_SESSION_KEY) === 'true'; } catch { /* ignore */ }
+
+            if (forced) {
+              try { localStorage.removeItem(FORCE_SESSION_KEY); } catch { /* ignore */ }
+            } else {
+              const existing = await readActiveSession(user.uid);
+              if (existing && isSessionFresh(existing) && !isSessionMine(existing)) {
+                useAuthStore.getState().setSessionConflict({
+                  deviceHint: existing.deviceHint || 'another device',
+                });
+                await signOut(auth);
+                return; // do NOT proceed with login
+              }
             }
-          } catch {
-            // Non-fatal — admin can still see the user via profile collection
-          }
-        }
 
-        // ── Auto-grant isAdmin for master admin UID ──────────────
-        // Uses NEXT_PUBLIC_MASTER_ADMIN_UID from .env.local.
-        // Self-heals if the Firestore field was accidentally overwritten.
-        const masterAdminUid = process.env.NEXT_PUBLIC_MASTER_ADMIN_UID;
-        if (masterAdminUid && user.uid === masterAdminUid) {
-          const profileData = currentSnap.exists() ? currentSnap.data() : null;
-          if (profileData?.isAdmin !== true) {
+            await claimSession(user.uid);
+            useAuthStore.getState().setSessionConflict(null);
+          } catch (err) {
+            logger.error('[useAuth] Session lock check failed (fail-open):', err);
+          }
+
+          // ── Profile bootstrap & migration ─────────────────────
+          // All profiles must live at profile/current (not profile/main).
+          // If a legacy profile/main doc exists, migrate it first.
+          const currentRef = doc(db, 'users', user.uid, 'profile', 'current');
+          const mainRef    = doc(db, 'users', user.uid, 'profile', 'main');
+
+          const [currentSnap, mainSnap] = await Promise.all([
+            getDoc(currentRef),
+            getDoc(mainRef),
+          ]);
+
+          let profileStatus: string = 'pending';
+
+          if (!currentSnap.exists() && mainSnap.exists()) {
+            // ── Migrate: copy profile/main → profile/current ──
+            const mainData = mainSnap.data();
+            await setDoc(currentRef, mainData);
+            await deleteDoc(mainRef);
+            profileStatus = mainData?.subscriptionStatus ?? 'pending';
+          } else if (!currentSnap.exists()) {
+            // ── Brand new user: create pending profile ─────────
+            await setDoc(currentRef, {
+              subscriptionStatus: 'pending',
+              subscriptionExpiry: null,
+              isAdmin: false,
+              email: user.email ?? '',
+              displayName: user.displayName ?? '',
+              accessRequestSubmitted: false,
+              irdaiLicence: '',
+              createdAt: Timestamp.now(),
+            });
+            profileStatus = 'pending';
+          } else {
+            profileStatus = currentSnap.data()?.subscriptionStatus ?? 'pending';
+          }
+
+          // ── Auto-transition expired trial/active → readonly ──────
+          if (profileStatus === 'trial' || profileStatus === 'active') {
+            const data = currentSnap.exists() ? currentSnap.data() : null;
+            const expiryField = profileStatus === 'trial' ? data?.trialEndDate : data?.subscriptionExpiry;
+            if (expiryField && isExpired(expiryField)) {
+              try {
+                await updateDoc(currentRef, { subscriptionStatus: 'readonly' });
+                profileStatus = 'readonly';
+              } catch { /* non-fatal — SubscriptionGuard will catch it client-side */ }
+            }
+          }
+
+          // ── Write to newSignups if user is still pending AND hasn't submitted form yet ──
+          // Guard with accessRequestSubmitted so dismissed users don't ghost-resurface
+          // in the admin queue just by logging in again.
+          if (profileStatus === 'pending') {
             try {
-              await updateDoc(currentRef, { isAdmin: true });
-            } catch { /* non-fatal — field will be set on next write */ }
+              const currentData = currentSnap.exists() ? currentSnap.data() : null;
+              const alreadySubmitted = currentData?.accessRequestSubmitted === true;
+              if (!alreadySubmitted) {
+                const signupRef = doc(db, 'newSignups', user.uid);
+                await setDoc(signupRef, {
+                  email: user.email ?? '',
+                  displayName: user.displayName ?? '',
+                  signedUpAt: Timestamp.now(),
+                  status: 'pending',
+                }, { merge: true }); // merge:true so re-logins don't reset timestamp
+              }
+            } catch {
+              // Non-fatal — admin can still see the user via profile collection
+            }
           }
-        }
 
-        // ── Bootstrap profile store before marking as authenticated ──
-        // pullProfileFromCloud writes isAdmin / subscriptionStatus into
-        // Zustand BEFORE isAuthenticated flips to true, so SubscriptionGuard
-        // sees the real admin flag on its very first render and does NOT
-        // spuriously redirect the admin to /access-request.
-        // The Firestore doc was just read above, so the SDK serves this from
-        // its local cache — no extra network round-trip.
-        await pullProfileFromCloud(user.uid);
+          // ── Auto-grant isAdmin for master admin UID ──────────────
+          // Uses NEXT_PUBLIC_MASTER_ADMIN_UID from .env.local.
+          // Self-heals if the Firestore field was accidentally overwritten.
+          const masterAdminUid = process.env.NEXT_PUBLIC_MASTER_ADMIN_UID;
+          if (masterAdminUid && user.uid === masterAdminUid) {
+            const profileData = currentSnap.exists() ? currentSnap.data() : null;
+            if (profileData?.isAdmin !== true) {
+              try {
+                await updateDoc(currentRef, { isAdmin: true });
+              } catch { /* non-fatal — field will be set on next write */ }
+            }
+          }
+
+          // ── Bootstrap profile store before marking as authenticated ──
+          // pullProfileFromCloud writes isAdmin / subscriptionStatus into
+          // Zustand BEFORE isAuthenticated flips to true, so SubscriptionGuard
+          // sees the real admin flag on its very first render and does NOT
+          // spuriously redirect the admin to /access-request.
+          // The Firestore doc was just read above, so the SDK serves this from
+          // its local cache — no extra network round-trip.
+          await pullProfileFromCloud(user.uid);
+        } catch (err) {
+          // Bootstrap failed (offline, Firestore cold-start, IndexedDB blocked).
+          // Log it and fall through to setUser anyway — a signed-in user must
+          // never be stranded on the landing page with no way forward. The
+          // profile store keeps its persisted value and SubscriptionGuard
+          // resolves access from that; the next login refreshes it.
+          logger.error('[useAuth] Post-login bootstrap failed (non-fatal):', err);
+        }
 
         setUser(user);
       } else {

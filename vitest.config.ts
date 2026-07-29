@@ -5,6 +5,10 @@ export default defineConfig({
   test: {
     environment: 'node',
     globals: true,
+    // zustand must be transformed rather than externalised, otherwise its
+    // `import React from 'react'` bypasses vi.mock('react') and hook-reading
+    // stores blow up outside a renderer (see hooks/__tests__/useAuth.test.ts).
+    server: { deps: { inline: ['zustand'] } },
     // Dummy Firebase config so modules that import '@/lib/firebase/config'
     // (which validates these at import time) can be unit-tested. No network
     // calls are made in tests — only pure logic is exercised.
