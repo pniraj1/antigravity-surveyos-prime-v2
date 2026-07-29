@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
-import { pullClaimsFromCloud, pushClaimToCloud } from '@/lib/firebase/sync';
+import { pullClaimsFromCloud, pushClaimToCloud, syncTombstones } from '@/lib/firebase/sync';
+import { isTombstone } from '@/lib/sync/tombstone';
 import { getAllClaims, saveClaim, getAllDriveBackedAt } from '@/lib/storage/indexeddb';
 import { backupClaimToDrive, backupAllPendingToDrive, getDriveToken } from '@/lib/drive';
 import { computeSyncHealth } from '@/lib/sync/sync-health';
@@ -41,6 +42,9 @@ export function CloudVaultTab() {
     if (!isAuthenticated || !user) return;
     setLoading(true);
     try {
+      // Honour syncTombstones' contract: flush this device's pending deletions
+      // first, so the vault never lists something the surveyor already deleted.
+      await syncTombstones(user.uid);
       const cloud = await pullClaimsFromCloud(user.uid, null);
       const local = await getAllClaims();
       const drive = await getAllDriveBackedAt();
@@ -69,6 +73,13 @@ export function CloudVaultTab() {
 
   // Cloud → local: actually persist the claim to this device's IndexedDB.
   const handleRestore = async (claim: ClaimData) => {
+    // Defence in depth: pullClaimsFromCloud already returns live claims only,
+    // so this should be unreachable. If a tombstone ever does reach the UI,
+    // restoring it would write a gravestone into IndexedDB as a claim.
+    if (isTombstone(claim)) {
+      toast.error('This claim was deleted and cannot be restored.');
+      return;
+    }
     setSyncingId(claim.id);
     try {
       await saveClaim(claim);
