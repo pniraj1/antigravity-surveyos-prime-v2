@@ -53,9 +53,15 @@ tmp_pdf/
 .cursor/
 .code-review-graph/
 .agent/
-.graphify_*.json
+# graphify: KEEP the graph artefacts tracked (graph.json / graph.html /
+# GRAPH_REPORT.md). They are what the graphify MCP tools read instead of
+# grepping the tree, so a fresh clone that lacks them loses that until someone
+# re-runs /graphify. Ignore only the regenerable chunk cache and scratch.
+.graphify_*
 .graphify_python
-graphify-out/
+graphify-out/cache/
+graphify-out/gen_chunks.py
+graphify-out/cost.json
 
 # sample/demo documents (large binaries, not needed in repo)
 docs/samples/*.pdf
