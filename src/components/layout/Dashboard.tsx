@@ -6,6 +6,7 @@ import { useUIStore } from '@/stores/ui-store';
 import { useClaimStore } from '@/stores/claim-store';
 import { getClaim, saveClaim, deleteClaim } from '@/lib/storage/indexeddb';
 import { toggleFeePaid } from '@/lib/claims/fee-status';
+import { claimLandingTab } from '@/lib/claims/landing-tab';
 import { toast } from 'sonner';
 import {
   LayoutDashboard,
@@ -328,19 +329,32 @@ export function DashboardContent() {
                     <div
                       key={claim.id}
                       onClick={async () => {
-                        // Set ID synchronously so Effect 2 in useRouteSync sees
-                        // the correct currentClaimId before the async gap below.
-                        useUIStore.getState().setCurrentClaimId(claim.id);
+                        // Fetch BEFORE touching navigation state.
+                        //
+                        // This used to set currentClaimId ahead of the await. That
+                        // published an inconsistent state — claim selected, but
+                        // activeTab still 'dashboard' — which useRouteSync Effect 2
+                        // wrote straight to the URL as ?claim=<id>&tab=dashboard.
+                        // Next's patched history.pushState feeds that back into
+                        // useSearchParams, waking Effect 1 (URL→Store), which then
+                        // raced this handler and set activeTab back to 'dashboard'.
+                        // Whichever getClaim() settled last won, so the claim opened
+                        // only some of the time — the rest of the time the surveyor
+                        // stayed on the dashboard with just the sidebar unlocking.
                         try {
                           const fullClaim = await getClaim(claim.id);
-                          if (fullClaim) {
-                            useClaimStore.getState().loadClaim(fullClaim);
-                            useUIStore.getState().setActiveTab('details');
-                          } else {
-                            useUIStore.getState().setCurrentClaimId(null);
+                          if (!fullClaim) {
+                            toast.error('Could not open this claim.');
+                            return;
                           }
+                          // loadClaim sets currentClaimId itself (claimSlice.ts).
+                          // These two run back-to-back in one task, so React batches
+                          // them into a single render and Effect 2 only ever sees
+                          // the final, consistent state.
+                          useClaimStore.getState().loadClaim(fullClaim);
+                          useUIStore.getState().setActiveTab(claimLandingTab(fullClaim.surveyType));
                         } catch {
-                          useUIStore.getState().setCurrentClaimId(null);
+                          toast.error('Could not open this claim.');
                         }
                       }}
                       className="px-6 py-4 grid grid-cols-[1.5fr_1fr_2fr_100px_100px_120px_60px] gap-4 items-center cursor-pointer border-b border-[var(--color-neutral-100)] transition-colors hover:bg-[var(--color-neutral-50)]"
