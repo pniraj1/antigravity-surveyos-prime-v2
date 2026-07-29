@@ -59,9 +59,12 @@ tmp_pdf/
 # re-runs /graphify. Ignore only the regenerable chunk cache and scratch.
 .graphify_*
 .graphify_python
-graphify-out/cache/
-graphify-out/gen_chunks.py
-graphify-out/cost.json
+# `**/` because graphify can be run scoped to a subdirectory, which leaves a
+# cache-only graphify-out/ there too (src/, functions/). A pattern containing a
+# slash is anchored to the repo root, so the unprefixed form missed those.
+**/graphify-out/cache/
+**/graphify-out/gen_chunks.py
+**/graphify-out/cost.json
 
 # sample/demo documents (large binaries, not needed in repo)
 docs/samples/*.pdf
@@ -83,3 +86,8 @@ functions/node_modules/
 
 # claude-flow plugin data
 .claude-flow/
+
+# agent/tooling scratch dirs (never source)
+.od/
+.swarm/
+.tmp-screenshots/
