@@ -283,12 +283,28 @@ export async function pullClaimsFromCloud(uid: string, sinceTimestamp: string | 
     : query(claimsRef);
   const querySnap = await getDocs(q);
 
+  // Partition at ingestion — the ONE place cloud documents enter the app.
+  // Everything downstream then handles live claims only, by construction.
+  // Filtering just the return value would be too late: the merge loop's
+  // "brand-new claim from cloud" branch would write a stub into IndexedDB.
   const remoteClaims: ClaimData[] = [];
+  const remoteTombstones: ClaimTombstone[] = [];
   querySnap.forEach((d) => {
-    remoteClaims.push(d.data() as ClaimData);
+    const data = d.data() as CloudClaimDoc;
+    if (isTombstone(data)) remoteTombstones.push(data);
+    else remoteClaims.push(data);
   });
 
-  if (remoteClaims.length === 0) {
+  // Deletions first: a claim deleted elsewhere must go even if this pull also
+  // carries an older live copy of it.
+  for (const t of remoteTombstones) {
+    const outcome = await applyRemoteDeletion(t.id, t.deletedAt);
+    if (outcome !== 'absent') {
+      logger.log(`[Sync] Remote deletion applied for ${t.id} (${outcome}).`);
+    }
+  }
+
+  if (remoteClaims.length === 0 && remoteTombstones.length === 0) {
     logger.log('[Sync] Pull: no remote changes since last sync.');
     return remoteClaims;
   }
