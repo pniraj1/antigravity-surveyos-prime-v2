@@ -256,6 +256,15 @@ export function useCloudSync() {
     isDrainingRef.current = true;
     (async () => {
       try {
+        // Deletions made offline are queued as local tombstones. Flush them on
+        // reconnect — waiting for the next login leaves a deleted claim alive
+        // in the cloud, and visible in Cloud Vault, for the rest of the day.
+        try {
+          await syncTombstones(user.uid);
+        } catch (err) {
+          logger.error('[useCloudSync] Pending tombstone flush failed:', err);
+        }
+
         const queue = await getSyncQueue();
         const claimItems = queue.filter(item => item.type === 'claim-backup');
 
