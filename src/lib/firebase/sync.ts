@@ -233,6 +233,32 @@ export async function syncTombstones(uid: string): Promise<void> {
 }
 
 /**
+ * THE deletion entry point. Every delete in the app must route through here.
+ *
+ * Removes the claim locally at once (the UI never waits on the network), then
+ * immediately attempts the cloud tombstone. Previously the cloud write was
+ * deferred to the next login, so a deleted claim could sit in Firestore — and
+ * in Cloud Vault — for the rest of the working day.
+ *
+ * @returns 'synced'  — the tombstone is in the cloud
+ *          'pending' — offline or refused; queued and retried on the next sync
+ */
+export async function deleteClaimEverywhere(
+  uid: string,
+  claimId: string,
+): Promise<'synced' | 'pending'> {
+  await deleteClaim(claimId); // local removal + queue the pending tombstone
+  try {
+    await writeTombstoneToCloud(uid, claimId);
+    await removeTombstone(claimId);
+    return 'synced';
+  } catch (err) {
+    logger.error(`[Sync] Cloud tombstone for ${claimId} deferred:`, err);
+    return 'pending';
+  }
+}
+
+/**
  * Delta sync: pushes only claims changed since the last sync.
  * Falls back to full push if sinceTimestamp is null (first login on this device).
  * Batches writes in groups of 499 to stay within Firestore's batch limit.

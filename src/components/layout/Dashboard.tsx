@@ -4,9 +4,11 @@ import React, { useState } from 'react';
 import dynamicImport from 'next/dynamic';
 import { useUIStore } from '@/stores/ui-store';
 import { useClaimStore } from '@/stores/claim-store';
-import { getClaim, saveClaim, deleteClaim } from '@/lib/storage/indexeddb';
+import { getClaim, saveClaim } from '@/lib/storage/indexeddb';
 import { toggleFeePaid } from '@/lib/claims/fee-status';
 import { claimLandingTab } from '@/lib/claims/landing-tab';
+import { deleteClaimEverywhere } from '@/lib/firebase/sync';
+import { useAuthStore } from '@/stores/auth-store';
 import { toast } from 'sonner';
 import {
   LayoutDashboard,
@@ -580,11 +582,21 @@ export function DashboardContent() {
               <button
                 disabled={deleteConfirmText.trim().toLowerCase() !== deleteTarget.vehicleNo.trim().toLowerCase()}
                 onClick={async () => {
-                  await deleteClaim(deleteTarget.id);
+                  const uid = useAuthStore.getState().user?.uid;
+                  const outcome = uid
+                    ? await deleteClaimEverywhere(uid, deleteTarget.id)
+                    : 'pending';
                   const channel = new BroadcastChannel('surveyos_claims_sync');
                   channel.postMessage('CLAIMS_UPDATED');
                   channel.close();
-                  toast.success('Claim permanently deleted');
+                  // Only claim "permanently" once the cloud actually has the
+                  // tombstone — offline, the deletion is real locally but not
+                  // yet everywhere.
+                  if (outcome === 'synced') {
+                    toast.success('Claim permanently deleted');
+                  } else {
+                    toast.success('Claim deleted. It will finish clearing from the cloud when you are back online.');
+                  }
                   setDeleteTarget(null);
                 }}
                 className="px-4 py-2 rounded-lg text-xs font-medium bg-[var(--color-status-danger)] text-white hover:opacity-90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
