@@ -44,6 +44,7 @@
 
 import { openDB, type IDBPDatabase } from 'idb';
 import type { ClaimData } from '@/types';
+import { shouldStashOnRemoteDelete } from '@/lib/sync/tombstone';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -400,6 +401,60 @@ export async function getTombstoneIds(): Promise<Set<string>> {
 export async function removeTombstone(id: string): Promise<void> {
   const db = await getDB();
   await db.delete('tombstones', id);
+}
+
+/** The store operations applyRemoteDeletion performs. Injectable for tests —
+ *  vi.mock cannot intercept a module's calls to itself, and there is no
+ *  fake-indexeddb in this project. */
+export interface RemoteDeletionDeps {
+  getClaim: (id: string) => Promise<ClaimData | undefined>;
+  addRecoveredClaim: (claim: ClaimData, reason: string) => Promise<void>;
+  removeClaimRecord: (id: string) => Promise<void>;
+}
+
+/** Production wiring: remove the claim and its push-tracking row together. */
+const defaultRemoteDeletionDeps: RemoteDeletionDeps = {
+  getClaim: (id) => getClaim(id),
+  addRecoveredClaim: (claim, reason) => addRecoveredClaim(claim, reason),
+  removeClaimRecord: async (id) => {
+    const db = await getDB();
+    const tx = db.transaction(['claims', 'pushTracking'], 'readwrite');
+    await tx.objectStore('claims').delete(id);
+    await tx.objectStore('pushTracking').delete(id);
+    await tx.done;
+  },
+};
+
+/**
+ * Applies a deletion that happened on ANOTHER device.
+ *
+ * Deletion always wins — the claim leaves this device. But if this device
+ * holds work that postdates the deletion, that copy goes to Recovered first,
+ * so field work is never destroyed silently.
+ *
+ * Deliberately does NOT write a local tombstone: the `tombstones` store means
+ * "this device owes the cloud a delete", and a deletion learned FROM the cloud
+ * owes it nothing.
+ *
+ * @returns 'stashed'  — removed, a copy was kept in Recovered
+ *          'dropped'  — removed, it was a stale duplicate
+ *          'absent'   — this device never had it
+ */
+export async function applyRemoteDeletion(
+  claimId: string,
+  deletedAt: string,
+  deps: RemoteDeletionDeps = defaultRemoteDeletionDeps,
+): Promise<'stashed' | 'dropped' | 'absent'> {
+  const existing = await deps.getClaim(claimId);
+  if (!existing) return 'absent';
+
+  const stash = shouldStashOnRemoteDelete(existing.updatedAt, deletedAt);
+  if (stash) {
+    await deps.addRecoveredClaim(existing, 'deleted-on-another-device');
+  }
+
+  await deps.removeClaimRecord(claimId);
+  return stash ? 'stashed' : 'dropped';
 }
 
 // ─── Push Tracking ───────────────────────────────────────────────────────────
