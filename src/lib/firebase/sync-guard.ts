@@ -1,4 +1,5 @@
 import type { ClaimData } from '@/types';
+import type { ClaimTombstone } from '@/lib/sync/tombstone';
 
 /** True if a device based on `localVersion` may overwrite the cloud's
  *  `cloudVersion`. Refuses only when the cloud is strictly newer. */
@@ -14,6 +15,18 @@ export class ClaimConflictError extends Error {
     super('Claim version conflict — cloud copy is newer');
     this.name = 'ClaimConflictError';
     this.remote = remote;
+  }
+}
+
+/** Thrown by a guarded push when the cloud says the claim was DELETED.
+ *  Distinct from ClaimConflictError: "the cloud is newer" and "the cloud says
+ *  this is dead" need opposite responses — adopt versus remove. */
+export class ClaimDeletedError extends Error {
+  tombstone: ClaimTombstone;
+  constructor(tombstone: ClaimTombstone) {
+    super('Claim was deleted on another device');
+    this.name = 'ClaimDeletedError';
+    this.tombstone = tombstone;
   }
 }
 

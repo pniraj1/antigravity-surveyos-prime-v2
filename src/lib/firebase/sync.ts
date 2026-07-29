@@ -9,7 +9,7 @@ import { doc, setDoc, getDoc, deleteDoc, collection, query, where, getDocs, runT
 import { toast } from 'sonner';
 import { db } from './config';
 import { applySkewMargin } from './sync-cursor';
-import { canOverwrite, ClaimConflictError, selectDirtyClaims } from './sync-guard';
+import { canOverwrite, ClaimConflictError, ClaimDeletedError, selectDirtyClaims } from './sync-guard';
 import { ClaimData, SurveyorProfile } from '@/types';
 import {
   getAllClaims,
@@ -91,15 +91,28 @@ export async function pushClaimToCloud(uid: string, claim: ClaimData, opts?: { m
   try {
     newVersion = await runTransaction(db, async (tx) => {
       const snap = await tx.get(claimRef);
-      const cloudVersion = snap.exists() ? ((snap.data() as ClaimData).version ?? 0) : 0;
+      const remote = snap.exists() ? (snap.data() as CloudClaimDoc) : null;
+
+      // MUST precede the version check. The tombstone bumps `version`, so a
+      // stale device would otherwise fail canOverwrite and land in
+      // recoverFromConflict — which adopts the remote copy, replacing the
+      // surveyor's real claim with a tombstone on his own device.
+      if (remote && isTombstone(remote)) {
+        throw new ClaimDeletedError(remote);
+      }
+
+      const cloudVersion = remote ? (remote.version ?? 0) : 0;
       if (!canOverwrite(localVersion, cloudVersion)) {
-        throw new ClaimConflictError(snap.data() as ClaimData);
+        throw new ClaimConflictError(remote as ClaimData);
       }
       const next = cloudVersion + 1;
       tx.set(claimRef, { ...stripPhotos(claim), version: next, ownerId: uid });
       return next;
     });
   } catch (err) {
+    if (err instanceof ClaimDeletedError) {
+      return recoverFromRemoteDeletion(claim, err.tombstone);
+    }
     if (err instanceof ClaimConflictError) {
       return recoverFromConflict(claim, err.remote);
     }
@@ -117,6 +130,31 @@ export async function pushClaimToCloud(uid: string, claim: ClaimData, opts?: { m
   logger.log(`[Sync] Pushed claim ${claim.id} to cloud v${newVersion} (photos excluded).`);
   if (opts?.mirrorToDrive !== false) backupClaimToDrive(pushed).catch(() => {});
   return pushed;
+}
+
+/**
+ * The cloud says this claim was deleted on another device. Deletion wins: the
+ * local copy is removed. If it held work postdating the deletion, that copy is
+ * kept in Recovered and the surveyor is told. A stale duplicate goes quietly —
+ * a restored old laptop must not produce dozens of warnings on first sync.
+ */
+async function recoverFromRemoteDeletion(
+  local: ClaimData,
+  tombstone: ClaimTombstone,
+): Promise<PushResult> {
+  const outcome = await applyRemoteDeletion(local.id, tombstone.deletedAt);
+
+  if (useClaimStore.getState().currentClaim?.id === local.id) {
+    useClaimStore.getState().closeClaim();
+  }
+
+  if (outcome === 'stashed') {
+    toast.warning(
+      `"${local.reportNo || local.id}" was deleted on another device. Your unsaved changes were kept in Recovered.`,
+    );
+  }
+  logger.log(`[Sync] Claim ${local.id} deleted remotely — local copy ${outcome}.`);
+  return { ...local, conflicted: true };
 }
 
 /**
