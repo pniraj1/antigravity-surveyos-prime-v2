@@ -20,7 +20,15 @@ import {
   getTombstones,
   getTombstoneIds,
   removeTombstone,
+  deleteClaim,
+  applyRemoteDeletion,
 } from '../storage/indexeddb';
+import {
+  makeTombstone,
+  isTombstone,
+  type CloudClaimDoc,
+  type ClaimTombstone,
+} from '@/lib/sync/tombstone';
 import { useProfileStore } from '@/stores/profile-store';
 import { useClaimStore } from '@/stores/claim-store';
 import { backupClaimToDrive } from '../drive';
@@ -136,28 +144,52 @@ async function recoverFromConflict(local: ClaimData, remote: ClaimData): Promise
 }
 
 /**
- * Deletes tombstoned claims from Firestore and clears local tombstones.
- * Call this before pullClaimsFromCloud so the pull doesn't resurrect
- * anything the user just deleted.
+ * Overwrites a claim document with its tombstone.
+ *
+ * Runs in a transaction because `version` must be cloudVersion + 1 — writing a
+ * stale version would let a stale device win `canOverwrite` and resurrect the
+ * claim, defeating the whole design. If the document does not exist (the claim
+ * was never uploaded) the tombstone is written at version 1.
+ *
+ * Idempotent: re-writing a tombstone over a tombstone simply restates the
+ * deletion at a higher version.
+ */
+export async function writeTombstoneToCloud(uid: string, claimId: string): Promise<void> {
+  const claimRef = doc(db, `users/${uid}/claims`, claimId);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(claimRef);
+    const cloudVersion = snap.exists() ? ((snap.data() as CloudClaimDoc).version ?? 0) : 0;
+    tx.set(claimRef, makeTombstone(claimId, uid, cloudVersion + 1));
+  });
+}
+
+/**
+ * Flushes this device's pending deletions to the cloud.
+ *
+ * The local `tombstones` store is a queue of "deletes this device still owes
+ * the cloud". Each one is written as a tombstone stub (not a hard delete) so
+ * other devices can see it, then cleared from the queue.
+ *
+ * A failure keeps the entry queued for the next attempt. Expired/read-only
+ * surveyors cannot write to Firestore at all (see firestore.rules
+ * hasActiveAccess), so their deletions stay queued until access is restored —
+ * their local tombstone still blocks resurrection on that device meanwhile.
  */
 export async function syncTombstones(uid: string): Promise<void> {
   const tombstones = await getTombstones();
   if (tombstones.length === 0) return;
 
-  logger.log(`[Sync] Deleting ${tombstones.length} tombstoned claim(s) from cloud.`);
+  logger.log(`[Sync] Flushing ${tombstones.length} pending deletion(s) to cloud.`);
   for (const t of tombstones) {
     try {
-      const claimRef = doc(db, `users/${uid}/claims`, t.id);
-      await deleteDoc(claimRef);
-      // ponytail: the claim's Drive folder (photos + claim.json backup) is NOT cleaned
-      // up here, so a deleted claim leaves an orphaned copy — incl. claim.json with PII.
-      // Pre-existing gap for photos; backup adds claim.json. Close by trashing the Drive
-      // folder here. Deferred by decision; tracked as F5 in the data-storage audit.
+      await writeTombstoneToCloud(uid, t.id);
+      // ponytail: the claim's Drive folder (photos + claim.json backup) is NOT
+      // cleaned up here, so a deleted claim leaves an orphaned copy incl. PII.
+      // Out of scope by decision; tracked as F5 in the data-storage audit.
       await removeTombstone(t.id);
-      logger.log(`[Sync] Cloud delete for tombstoned claim ${t.id} succeeded.`);
+      logger.log(`[Sync] Tombstone for ${t.id} written to cloud.`);
     } catch (err) {
-      // Keep the tombstone for the next sync attempt
-      logger.error(`[Sync] Cloud delete for tombstoned claim ${t.id} failed:`, err);
+      logger.error(`[Sync] Tombstone write for ${t.id} failed (stays queued):`, err);
     }
   }
 }
