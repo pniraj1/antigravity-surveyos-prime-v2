@@ -5,7 +5,7 @@
 // Uses "Latest Update Wins" (updatedAt) approach
 // ═══════════════════════════════════════════════════════════
 
-import { doc, setDoc, getDoc, deleteDoc, collection, query, where, getDocs, runTransaction } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, query, where, getDocs, runTransaction } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { db } from './config';
 import { applySkewMargin } from './sync-cursor';
