@@ -17,7 +17,15 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   // ── Sandbox & Public Route bypass: skip auth entirely ──
-  const publicRoutes = ['/landing', '/blog', '/products', '/privacy', '/terms', '/screenshots'];
+  // Every marketing and legal page must be here. A page missing from this list
+  // still serves its correct static HTML, then React swaps it for the landing
+  // page on hydration — so a logged-out prospect sees the right page flash and
+  // vanish. Add new public routes here at the same time you create them.
+  const publicRoutes = [
+    '/landing', '/blog', '/products', '/screenshots',
+    '/features', '/pricing', '/about', '/faq', '/contact',
+    '/privacy', '/terms', '/refund',
+  ];
   if (SANDBOX_MODE || publicRoutes.some((r) => pathname?.startsWith(r))) return <>{children}</>;
 
   // Firebase is still checking the session — show a silent loader

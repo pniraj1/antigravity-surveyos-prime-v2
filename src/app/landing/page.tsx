@@ -306,6 +306,8 @@ export default function LandingPage() {
           <Logo variant="light" size="sm" />
         </Link>
         <div className="flex items-center gap-4">
+          <Link href="/features" className="hidden md:block text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors">Features</Link>
+          <Link href="/pricing" className="hidden md:block text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors">Pricing</Link>
           <ProductsDropdown />
           {isAuthenticated ? (
             <button
@@ -656,6 +658,26 @@ export default function LandingPage() {
           <Link href="/landing" aria-label="Motor SurveyOS Home">
             <Logo variant="light" size="sm" className="justify-center mb-3" />
           </Link>
+
+          {/* The only route from the landing page to the marketing and legal
+              pages. The privacy notice in particular has to stay reachable. */}
+          <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 mb-4">
+            {[
+              { href: '/features', label: 'Features' },
+              { href: '/pricing', label: 'Pricing' },
+              { href: '/about', label: 'About' },
+              { href: '/faq', label: 'FAQ' },
+              { href: '/contact', label: 'Contact' },
+              { href: '/privacy', label: 'Privacy' },
+              { href: '/terms', label: 'Terms' },
+              { href: '/refund', label: 'Refunds' },
+            ].map((l) => (
+              <Link key={l.href} href={l.href} className="hover:text-slate-900 transition-colors">
+                {l.label}
+              </Link>
+            ))}
+          </div>
+
           © {new Date().getFullYear()} Motor SurveyOS. Engineered for Surveyors.
         </div>
 

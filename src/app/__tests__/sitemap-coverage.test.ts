@@ -13,10 +13,13 @@ describe('sitemap', () => {
 });
 
 describe('landing footer', () => {
-  test('links to the pages that now exist', () => {
-    const text = readFileSync('src/components/landing/LandingClient.tsx', 'utf8');
-    for (const href of ['/privacy', '/terms', '/refund', '/contact', '/about', '/faq', '/pricing']) {
-      expect(text).toContain(`href="${href}"`);
+  // Must assert against src/app/landing/page.tsx — the page actually rendered.
+  // components/landing/LandingClient.tsx is imported by nothing, so asserting
+  // there passes while real users see no links at all.
+  test('the rendered landing page links to every marketing and legal page', () => {
+    const text = readFileSync('src/app/landing/page.tsx', 'utf8');
+    for (const href of ['/privacy', '/terms', '/refund', '/contact', '/about', '/faq', '/pricing', '/features']) {
+      expect(text).toContain(`'${href}'`);
     }
   });
 });
