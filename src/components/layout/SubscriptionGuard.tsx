@@ -45,7 +45,8 @@ function ReadonlyOverlay() {
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-neutral-400">UPI Payment ID</span>
-              <span className="font-mono font-medium text-neutral-50">surveyosprime@upi</span>
+              {/* ponytail: interim personal VPA — swap for the merchant handle once the current account exists */}
+              <span className="font-mono font-medium text-neutral-50">9822312204@upi</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-neutral-400">Support</span>
