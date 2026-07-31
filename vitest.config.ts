@@ -5,6 +5,10 @@ export default defineConfig({
   test: {
     environment: 'node',
     globals: true,
+    // functions/*.test.js are deliberately framework-free node scripts (plain
+    // asserts, run by `npm run test:functions`). Vitest cannot parse them as
+    // suites, so keep them out of this runner rather than rewriting them.
+    exclude: ['**/node_modules/**', '**/dist/**', '**/.next/**', '**/out/**', 'functions/**', 'open-design/**'],
     // zustand must be transformed rather than externalised, otherwise its
     // `import React from 'react'` bypasses vi.mock('react') and hook-reading
     // stores blow up outside a renderer (see hooks/__tests__/useAuth.test.ts).
