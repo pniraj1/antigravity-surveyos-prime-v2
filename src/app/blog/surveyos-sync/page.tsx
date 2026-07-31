@@ -45,7 +45,7 @@ const faqs = [
   },
   {
     q: 'Is SurveyOS Sync free?',
-    a: 'SurveyOS Sync is included with every Motor SurveyOS subscription at ₹799/month. The 30-day free trial covers both tools.',
+    a: 'SurveyOS Sync is included with every Motor SurveyOS subscription at ₹799/month. The 14-day free trial covers both tools.',
   },
 ];
 
@@ -199,13 +199,13 @@ export default function SurveyOSSyncBlog() {
               Stop chasing. Start tracking.
             </h3>
             <p className="text-sm text-slate-600 mb-6">
-              SurveyOS Sync is included in every Motor SurveyOS plan. 30-day free trial, no credit card required.
+              SurveyOS Sync is included in every Motor SurveyOS plan. 14-day free trial, no credit card required.
             </p>
             <Link
               href="/landing"
               className="inline-flex items-center gap-2 px-6 py-3 text-sm font-bold text-gray-900 bg-amber-400 rounded-full hover:scale-105 active:scale-95 transition-transform shadow-lg"
             >
-              Start 30-Day Free Trial
+              Start 14-Day Free Trial
             </Link>
           </div>
 

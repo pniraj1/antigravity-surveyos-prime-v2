@@ -326,10 +326,10 @@ export default function LandingPage() {
               </button>
               <button
                 onClick={handleAction}
-                aria-label="Start 30-Day Free Trial"
+                aria-label="Start 14-Day Free Trial"
                 className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-gray-900 bg-amber-400 rounded-full hover:scale-105 active:scale-95 transition-transform shadow-sm"
               >
-                Start 30-Day Free Trial <ArrowRight size={12} aria-hidden="true" />
+                Start 14-Day Free Trial <ArrowRight size={12} aria-hidden="true" />
               </button>
             </div>
           )}
@@ -387,11 +387,11 @@ export default function LandingPage() {
           >
             <button
               onClick={handleAction}
-              aria-label={isAuthenticated ? 'Enter Dashboard' : 'Start 30-Day Free Trial'}
+              aria-label={isAuthenticated ? 'Enter Dashboard' : 'Start 14-Day Free Trial'}
               className="w-full sm:w-auto relative inline-flex items-center justify-center gap-2 px-8 py-4 text-sm font-bold text-white bg-amber-500 rounded-xl hover:bg-amber-600 hover:scale-[1.03] active:scale-95 transition-all shadow-xl shadow-amber-500/20 overflow-hidden group"
             >
               <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
-              <span className="z-10 relative">{isAuthenticated ? 'Enter Dashboard' : 'Start 30-Day Free Trial'}</span>
+              <span className="z-10 relative">{isAuthenticated ? 'Enter Dashboard' : 'Start 14-Day Free Trial'}</span>
               <ArrowRight size={16} className="z-10 relative" aria-hidden="true" />
             </button>
             

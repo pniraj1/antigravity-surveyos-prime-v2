@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   alternates: { canonical: 'https://motorsurveyos-in.web.app/products/motor-surveyos' },
   openGraph: {
     title: 'Motor SurveyOS — AI Motor Insurance Survey Platform',
-    description: 'Generate complete motor insurance survey reports in under 10 minutes. AI reads your RC, DL, and policy docs automatically. 30-day free trial.',
+    description: 'Generate complete motor insurance survey reports in under 10 minutes. AI reads your RC, DL, and policy docs automatically. 14-day free trial.',
     url: 'https://motorsurveyos-in.web.app/products/motor-surveyos',
     siteName: 'Motor SurveyOS',
     type: 'website',
@@ -62,7 +62,7 @@ const FAQS = [
   { q: 'Where are my reports stored?', a: 'Reports are pushed directly to your own Google Drive account. We do not store your reports or client documents on our servers.' },
   { q: 'Does it work without internet?', a: 'Yes. Motor SurveyOS is offline-first. You can complete a survey without internet and all data syncs automatically when you reconnect.' },
   { q: 'Is it IRDAI compliant?', a: 'Motor SurveyOS is built specifically for IRDAI-licensed motor surveyors and loss assessors. Reports follow standard industry format. You retain full professional responsibility for submitted reports.' },
-  { q: 'What is the pricing?', a: '₹799/month after a 30-day free trial. No credit card required for the trial. The plan includes unlimited claims, reports, AI extraction, and Google Drive sync.' },
+  { q: 'What is the pricing?', a: '₹799/month after a 14-day free trial. No credit card required for the trial. The plan includes unlimited claims, reports, AI extraction, and Google Drive sync.' },
 ];
 
 export default function MotorSurveyOSPage() {
@@ -80,7 +80,7 @@ export default function MotorSurveyOSPage() {
             operatingSystem: 'Web, Android, iOS',
             description: 'AI-powered motor insurance survey platform for IRDAI-licensed surveyors in India. Auto-extracts RC, DL, and policy data. Generates complete survey reports in under 10 minutes.',
             url: 'https://motorsurveyos-in.web.app/products/motor-surveyos',
-            offers: { '@type': 'Offer', price: '799', priceCurrency: 'INR', description: '30-day free trial then ₹799/month' },
+            offers: { '@type': 'Offer', price: '799', priceCurrency: 'INR', description: '14-day free trial then ₹799/month' },
           }),
         }}
       />
@@ -147,7 +147,7 @@ export default function MotorSurveyOSPage() {
 
             <div className="flex flex-wrap gap-3">
               <Link href="/landing" className="inline-flex items-center gap-2 px-6 py-3 text-sm font-bold text-gray-900 bg-amber-400 rounded-xl hover:scale-[1.02] active:scale-95 transition-transform shadow-lg shadow-amber-500/20">
-                Start 30-Day Free Trial →
+                Start 14-Day Free Trial →
               </Link>
               <Link href="/products" className="inline-flex items-center gap-2 px-6 py-3 text-sm font-bold text-slate-700 rounded-xl border border-black/10 hover:bg-slate-900 hover:text-white transition-all">
                 Compare Products
@@ -160,7 +160,7 @@ export default function MotorSurveyOSPage() {
             {[
               { val: '10 min', label: 'Report time', sub: 'down from 2+ hours' },
               { val: '99.9%', label: 'Accuracy', sub: 'on standard documents' },
-              { val: '₹799', label: 'Per month', sub: '30-day free trial' },
+              { val: '₹799', label: 'Per month', sub: '14-day free trial' },
             ].map(({ val, label, sub }) => (
               <div key={label} className="rounded-2xl bg-white border border-black/5 shadow-sm p-5 text-center">
                 <div className="text-2xl font-black text-amber-500 mb-1">{val}</div>

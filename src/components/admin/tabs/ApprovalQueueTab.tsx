@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Calendar, Loader2, UserPlus, IdCard, Mail, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import type { NewSignup } from '../types';
+import { TRIAL_DAYS } from '@/lib/subscription/plans';
 
 interface ApprovalQueueTabProps {
   signups: NewSignup[];
@@ -26,7 +27,7 @@ function SignupRow({
   onDismiss: (signup: NewSignup) => void;
   onEmail: (email: string, name: string) => void;
 }) {
-  const [trialDays, setTrialDays] = useState(30);
+  const [trialDays, setTrialDays] = useState(TRIAL_DAYS);
   const displayName = signup.profileName || signup.name || signup.displayName || '—';
   const isApproving = approvingId === signup.uid;
 

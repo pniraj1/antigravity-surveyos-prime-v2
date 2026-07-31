@@ -52,7 +52,7 @@ export default function ProductsPage() {
             </div>
             <div className="flex items-baseline gap-1 mb-5">
               <span className="text-2xl font-black text-amber-500">₹799</span>
-              <span className="text-slate-400 text-sm">/month · 30-day free trial</span>
+              <span className="text-slate-400 text-sm">/month · 14-day free trial</span>
             </div>
             <Link href="/landing" className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-gray-900 bg-amber-400 rounded-xl hover:scale-[1.02] active:scale-95 transition-transform">
               Start Free Trial →

@@ -83,8 +83,8 @@ export default function PricingSection({ onCta }: PricingSectionProps) {
           </FadeUp>
           <FadeUp delay={0.14}>
             <p className="text-gray-500 text-lg max-w-xl mx-auto">
-              Full access for 30 days, no credit card required. After your trial, one
-              straightforward plan covers everything.
+              Full access for 14 days, no credit card required — 28 days with a referral code.
+              After your trial, simple plans cover everything.
             </p>
           </FadeUp>
         </div>
@@ -103,14 +103,14 @@ export default function PricingSection({ onCta }: PricingSectionProps) {
                   <div className="text-xs font-bold text-gray-400 uppercase tracking-widest">
                     Get started
                   </div>
-                  <div className="text-lg font-black text-gray-900">30-Day Free Trial</div>
+                  <div className="text-lg font-black text-gray-900">14-Day Free Trial</div>
                 </div>
               </div>
 
               <div className="mb-6">
                 <div className="text-5xl font-black text-gray-900 leading-none">
                   \u20B90
-                  <span className="text-lg text-gray-400 font-medium ml-1">/ 30 days</span>
+                  <span className="text-lg text-gray-400 font-medium ml-1">/ 14 days</span>
                 </div>
                 <p className="text-sm text-gray-400 mt-2">No credit card · No commitment</p>
               </div>
@@ -160,10 +160,11 @@ export default function PricingSection({ onCta }: PricingSectionProps) {
 
               <div className="mb-6 relative z-10">
                 <div className="text-5xl font-black text-white leading-none">
-                  \u20B9999
+                  \u20B9799
                   <span className="text-lg text-white/40 font-medium ml-1">/ month</span>
                 </div>
                 <p className="text-sm text-white/40 mt-2">Billed monthly · Cancel anytime</p>
+                <p className="text-xs text-amber-500/80 mt-1.5 font-medium">₹2,199 / 3 months · ₹7,990 / year — 2 months free</p>
               </div>
 
               <ul className="space-y-3 mb-8 flex-1 relative z-10">
@@ -193,11 +194,11 @@ export default function PricingSection({ onCta }: PricingSectionProps) {
             </div>
             <div className="flex-1 text-center sm:text-left">
               <div className="text-sm font-black text-gray-900">
-                Refer a Surveyor → Get 1 Month Free
+                Refer a Surveyor — You Get 1 Month, They Get 14 Extra Days
               </div>
               <div className="text-xs text-gray-500 mt-0.5">
-                Share your unique referral link. Every new surveyor who joins extends your
-                subscription by one month — no cap.
+                Share your referral code. When they subscribe, your subscription extends by a
+                month — and their free trial doubles to 28 days.
               </div>
             </div>
             <div className="flex items-center gap-1.5 text-amber-700 text-xs font-bold shrink-0">

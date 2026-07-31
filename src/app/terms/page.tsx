@@ -21,7 +21,7 @@ export default function TermsPage() {
       <article className="max-w-2xl mx-auto px-5 py-16">
         <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Legal</div>
         <h1 className="text-3xl font-black text-slate-900 mb-2">Terms of Service</h1>
-        <p className="text-slate-400 text-xs mb-10">Last updated: 19 June 2026 · Effective: 19 June 2026</p>
+        <p className="text-slate-400 text-xs mb-10">Last updated: 25 July 2026 · Effective: 25 July 2026 · Version 2026-07-25</p>
 
         <div className="space-y-10 text-sm text-slate-700 leading-relaxed">
 
@@ -37,7 +37,7 @@ export default function TermsPage() {
 
           <section>
             <h2 className="text-base font-black text-slate-900 mb-3">3. Subscription and Payment</h2>
-            <p className="mb-3">Motor SurveyOS is offered at ₹799/month following a 30-day free trial. No credit card is required for the trial. At the end of the trial, continued access requires a paid subscription.</p>
+            <p className="mb-3">Motor SurveyOS is offered on a subscription basis: ₹799 per month, ₹2,199 per quarter, or ₹7,990 per year. Every new account starts with a 14-day free trial (28 days when you sign up with a referral code); no credit card is required for the trial. At the end of the trial, continued access requires a paid subscription. Prices are in Indian Rupees; no additional tax is currently charged.</p>
             <p>SurveyOS Sync is included with your Motor SurveyOS subscription at no additional cost.</p>
           </section>
 

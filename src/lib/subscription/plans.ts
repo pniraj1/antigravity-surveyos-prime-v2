@@ -23,8 +23,16 @@ export interface Plan {
 export const UPI_ID = '9822312204@upi';
 
 export const PLANS: Plan[] = [
-  { id: 'monthly', label: 'Monthly', months: 1, amount: 799 },
-  // ponytail: quarterly/yearly staged pending pricing approval —
-  // { id: 'quarterly', label: '3 Months', months: 3, amount: 2199, note: 'save ₹198' },
-  // { id: 'yearly',    label: '12 Months', months: 12, amount: 7990, note: '2 months free' },
+  { id: 'monthly',   label: 'Monthly',   months: 1,  amount: 799 },
+  { id: 'quarterly', label: '3 Months',  months: 3,  amount: 2199, note: 'save ₹198' },
+  { id: 'yearly',    label: '12 Months', months: 12, amount: 7990, note: '2 months free' },
 ];
+
+/** Base free trial granted on admin approval. */
+export const TRIAL_DAYS = 14;
+
+/** Extra trial days when the signup came in with a valid referral code. */
+export const REFERRAL_TRIAL_BONUS_DAYS = 14;
+
+/** Days credited to the referrer when their referral's first payment verifies. */
+export const REFERRER_REWARD_DAYS = 30;

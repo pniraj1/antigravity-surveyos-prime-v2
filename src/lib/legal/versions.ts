@@ -7,7 +7,7 @@
  */
 
 /** Bump when /terms changes materially. */
-export const TERMS_VERSION = '2026-06-19';
+export const TERMS_VERSION = '2026-07-25';
 
 /** Bump when /privacy changes materially. */
 export const PRIVACY_VERSION = '2026-07-25';

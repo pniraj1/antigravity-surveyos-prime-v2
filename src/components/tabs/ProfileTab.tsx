@@ -355,9 +355,9 @@ function SubscriptionSection({ uid, profile }: { uid: string; profile: import('@
             {/* The mechanic was never stated anywhere in the app — surveyors had
                 a code with no idea what it did. Say it plainly. */}
             <p className="text-xs text-muted-foreground mb-3">
-              Share this code with a fellow surveyor. When they subscribe and their first
-              payment is verified, <strong className="text-foreground">you get 30 days free</strong> —
-              automatically added to your subscription.
+              Share this code with a fellow surveyor. They get <strong className="text-foreground">14 extra trial days</strong>,
+              and when their first payment is verified <strong className="text-foreground">you get 30 days free</strong> —
+              both automatic.
             </p>
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-1.5">
@@ -388,7 +388,7 @@ function SubscriptionSection({ uid, profile }: { uid: string; profile: import('@
               </button>
               <a
                 href={`https://wa.me/?text=${encodeURIComponent(
-                  `I use Motor SurveyOS for my survey reports — AI reads the RC/DL/policy and drafts the report in minutes. 30-day free trial: https://motorsurveyos-in.web.app\n\nUse my referral code at signup: ${profile.referralCode}`
+                  `I use Motor SurveyOS for my survey reports — AI reads the RC/DL/policy and drafts the report in minutes. Use my referral code at signup and your free trial doubles from 14 to 28 days: https://motorsurveyos-in.web.app\n\nCode: ${profile.referralCode}`
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"

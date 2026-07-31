@@ -13,7 +13,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'AI Motor Insurance Survey Software | Motor SurveyOS',
   description:
-    'AI-powered motor insurance survey software for IRDAI-licensed surveyors. Auto-extracts RC, licence & policy data, generates reports in 10 mins. 30-day free trial!',
+    'AI-powered motor insurance survey software for IRDAI-licensed surveyors. Auto-extracts RC, licence & policy data, generates reports in 10 mins. 14-day free trial!',
   keywords: [
     'AI motor insurance survey software',
     'IRDAI licensed surveyor software',
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Motor SurveyOS - Cloud-Native AI Motor Insurance Survey Software',
     description:
-      'Generate motor insurance survey reports in under 10 minutes with AI. Real-time cloud synchronization, zero-latency caching, and instant Google Drive export. 30-day free trial!',
+      'Generate motor insurance survey reports in under 10 minutes with AI. Real-time cloud synchronization, zero-latency caching, and instant Google Drive export. 14-day free trial!',
     url: 'https://motorsurveyos-in.web.app/',
     siteName: 'Motor SurveyOS',
     type: 'website',
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Motor SurveyOS - Cloud-Native AI Motor Insurance Survey Software',
     description:
-      'Generate motor insurance survey reports in under 10 minutes with AI. 30-day free trial for IRDAI-licensed surveyors.',
+      'Generate motor insurance survey reports in under 10 minutes with AI. 14-day free trial for IRDAI-licensed surveyors.',
     images: ['/og-image.png'],
   },
   robots: {
@@ -114,7 +114,7 @@ export default function RootLayout({
                 price: '799',
                 priceCurrency: 'INR',
                 priceValidUntil: '2027-12-31',
-                description: '30-day free trial then ₹799/month',
+                description: '14-day free trial then ₹799/month',
               },
             }),
           }}
