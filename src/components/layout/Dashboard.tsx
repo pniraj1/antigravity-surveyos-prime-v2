@@ -41,6 +41,7 @@ import { FloatingReportPreview } from '@/components/layout/FloatingReportPreview
 import { ClaimHeader } from '@/components/layout/ClaimHeader';
 import { useRouteSync } from '@/hooks/useRouteSync';
 import { useAIConfig } from '@/hooks/useAIConfig';
+import { TermsReacceptGate } from '@/components/legal/TermsReacceptGate';
 
 // Dynamically import ALL tabs with ssr:false — they all use browser-only APIs:
 const DetailsTab    = dynamicImport(() => import('@/components/tabs/DetailsTab').then(m    => ({ default: m.DetailsTab    })), { ssr: false });
@@ -650,6 +651,7 @@ export default function Dashboard() {
 
   return (
     <div className="flex h-screen overflow-hidden">
+      <TermsReacceptGate />
       <Sidebar />
       <MobileMenuButton />
 

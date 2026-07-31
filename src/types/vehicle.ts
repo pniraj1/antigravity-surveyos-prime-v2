@@ -223,6 +223,14 @@ export interface SurveyorProfile {
   // ─── SurveyOS Sync Integration ────────────────────────────
   /** Bridge token stored after connecting SurveyOS Sync as a document drive. */
   syncBridgeToken?: string;
+
+  /** Set when the surveyor accepted the terms; see lib/legal/versions.ts */
+  consent?: {
+    attestationVersion: string;
+    termsVersion: string;
+    privacyVersion: string;
+    acceptedAt: string;
+  };
   /** ISO timestamp when SurveyOS Sync was connected; null if never. */
   syncConnectedAt?: string | null;
 }
