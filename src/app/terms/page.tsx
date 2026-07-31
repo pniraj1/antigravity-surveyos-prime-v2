@@ -21,13 +21,13 @@ export default function TermsPage() {
       <article className="max-w-2xl mx-auto px-5 py-16">
         <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Legal</div>
         <h1 className="text-3xl font-black text-slate-900 mb-2">Terms of Service</h1>
-        <p className="text-slate-400 text-xs mb-10">Last updated: 25 July 2026 · Effective: 25 July 2026 · Version 2026-07-25</p>
+        <p className="text-slate-400 text-xs mb-10">Last updated: 31 July 2026 · Effective: 31 July 2026 · Version 2026-07-31</p>
 
         <div className="space-y-10 text-sm text-slate-700 leading-relaxed">
 
           <section>
             <h2 className="text-base font-black text-slate-900 mb-3">1. Acceptance</h2>
-            <p>By creating an account or using Motor SurveyOS or SurveyOS Sync ("the Services"), you agree to these Terms. If you do not agree, do not use the Services. The Services are intended for IRDAI-licensed motor insurance surveyors and loss assessors in India.</p>
+            <p>By creating an account or using Motor SurveyOS or SurveyOS Sync ("the Services"), you agree to these Terms. If you do not agree, do not use the Services. The Services are intended for IRDAI-licensed motor insurance surveyors and loss assessors in India. These Terms are an agreement between you and <strong>SurveyOS, a sole proprietorship of Niraj Patil, Pune, India</strong>, which operates Motor SurveyOS.</p>
           </section>
 
           <section>
@@ -82,7 +82,7 @@ export default function TermsPage() {
 
           <section>
             <h2 className="text-base font-black text-slate-900 mb-3">9. Governing Law</h2>
-            <p>These Terms are governed by the laws of India. Any disputes shall be subject to the exclusive jurisdiction of courts in India.</p>
+            <p>These Terms are governed by the laws of India. Any dispute arising out of or in connection with them is subject to the exclusive jurisdiction of the courts of Pune, Maharashtra.</p>
           </section>
 
           <section>
