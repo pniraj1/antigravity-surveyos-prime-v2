@@ -500,6 +500,10 @@ export default function LandingClient() {
         <div className="max-w-6xl mx-auto">
           <Logo variant="dark" size="sm" className="justify-center mb-6" />
           <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-gray-400 mb-5">
+            <Link href="/features" className="hover:text-amber-400 transition-colors">Features</Link>
+            <Link href="/pricing" className="hover:text-amber-400 transition-colors">Pricing</Link>
+            <Link href="/about" className="hover:text-amber-400 transition-colors">About</Link>
+            <Link href="/faq" className="hover:text-amber-400 transition-colors">FAQ</Link>
             <Link href="/privacy" className="hover:text-amber-400 transition-colors">Privacy Policy</Link>
             <Link href="/terms" className="hover:text-amber-400 transition-colors">Terms of Service</Link>
             <Link href="/refund" className="hover:text-amber-400 transition-colors">Refund Policy</Link>
