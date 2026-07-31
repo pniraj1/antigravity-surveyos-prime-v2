@@ -555,8 +555,9 @@ export default function AccessRequestPage() {
             )}
           </div>
           {referralValid === false && <p className="text-xs font-medium text-red-500">Invalid referral code. Please check and try again.</p>}
-          {referralValid === true  && <p className="text-xs font-medium text-green-600">Valid! You and the referrer will both benefit.</p>}
-          {!referralCode           && <p className="text-xs font-medium text-gray-400">Got a referral code from a fellow surveyor? Enter it here.</p>}
+          {/* Honest wording: today the reward goes to the referrer only. */}
+          {referralValid === true  && <p className="text-xs font-medium text-green-600">Code applied — the surveyor who referred you earns 30 bonus days when you subscribe.</p>}
+          {!referralCode           && <p className="text-xs font-medium text-gray-400">Got a code from a fellow surveyor? Entering it thanks them with 30 bonus days when you subscribe.</p>}
         </div>
 
         <Field

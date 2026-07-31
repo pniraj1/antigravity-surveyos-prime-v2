@@ -3,14 +3,44 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
 import { submitPayment, getUserPayments } from '@/lib/firebase/payments';
+import { PLANS, type Plan } from '@/lib/subscription/plans';
 import type { PaymentRecord } from '@/types/payment';
-import { CreditCard, CheckCircle, XCircle, Clock, Send } from 'lucide-react';
+import { CreditCard, CheckCircle, XCircle, Clock, Send, Camera, X } from 'lucide-react';
 
-export function PaymentSubmissionForm() {
+/**
+ * Downscale a payment screenshot to a small JPEG data URL.
+ *
+ * Stored inline on the Firestore payment doc (this app deliberately uses no
+ * Firebase Storage), so it must stay well under the 1 MiB document limit —
+ * 1000px @ q0.7 lands a phone screenshot around 80–200 KB.
+ */
+async function screenshotToDataUrl(file: File): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, 1000 / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  canvas.getContext('2d')!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  const url = canvas.toDataURL('image/jpeg', 0.7);
+  if (url.length > 700_000) {
+    throw new Error('Screenshot too large even after compression. Please crop it and try again.');
+  }
+  return url;
+}
+
+interface PaymentSubmissionFormProps {
+  /** Set when the surrounding page already lists payment history (ProfileTab). */
+  hideHistory?: boolean;
+}
+
+export function PaymentSubmissionForm({ hideHistory = false }: PaymentSubmissionFormProps) {
   const user = useAuthStore((s) => s.user);
-  const [amount, setAmount] = useState('');
+  const [plan, setPlan] = useState<Plan>(PLANS[0]);
+  const [amount, setAmount] = useState(String(PLANS[0].amount));
   const [transactionId, setTransactionId] = useState('');
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [screenshot, setScreenshot] = useState<string | null>(null);
+  const [screenshotError, setScreenshotError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
@@ -23,6 +53,21 @@ export function PaymentSubmissionForm() {
       .finally(() => setLoadingHistory(false));
   }, [user?.uid, submitted]);
 
+  const selectPlan = (p: Plan) => {
+    setPlan(p);
+    setAmount(String(p.amount));
+  };
+
+  async function handleScreenshot(file: File | undefined) {
+    setScreenshotError('');
+    if (!file) return;
+    try {
+      setScreenshot(await screenshotToDataUrl(file));
+    } catch (err: unknown) {
+      setScreenshotError(err instanceof Error ? err.message : 'Could not read the screenshot.');
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!user?.uid || !amount || !transactionId) return;
@@ -33,12 +78,12 @@ export function PaymentSubmissionForm() {
         amount: parseFloat(amount),
         transactionId: transactionId.trim(),
         paymentDate,
-        notes: '',
-        screenshotUrl: null,
+        notes: `${plan.label} plan (${plan.months} month${plan.months > 1 ? 's' : ''})`,
+        screenshotUrl: screenshot,
       });
       setSubmitted(true);
-      setAmount('');
       setTransactionId('');
+      setScreenshot(null);
     } finally {
       setSubmitting(false);
     }
@@ -74,17 +119,41 @@ export function PaymentSubmissionForm() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Plan selector — renders whatever plans.ts declares */}
+            {PLANS.length > 1 && (
+              <div className="grid grid-cols-3 gap-2">
+                {PLANS.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => selectPlan(p)}
+                    className={`p-3 rounded-xl border text-left transition-all ${
+                      plan.id === p.id
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border bg-card hover:border-primary/40'
+                    }`}
+                  >
+                    <div className="text-xs font-medium text-foreground">{p.label}</div>
+                    <div className="text-sm font-medium text-primary-foreground">₹{p.amount}</div>
+                    {p.note && <div className="text-[10px] text-status-success">{p.note}</div>}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <div>
               <label className="block text-xs text-muted-foreground mb-1 font-medium">Amount (₹)</label>
               <input
                 type="number"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                placeholder="999"
                 required
                 min="1"
                 className="w-full px-4 py-3 bg-card border border-border rounded-lg text-primary-foreground placeholder-muted-foreground focus:border-primary focus:outline-none"
               />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                {plan.label} plan — pay ₹{plan.amount} to the UPI ID shown above, then submit the details below.
+              </p>
             </div>
 
             <div>
@@ -110,6 +179,39 @@ export function PaymentSubmissionForm() {
               />
             </div>
 
+            {/* Payment screenshot — optional but speeds up verification */}
+            <div>
+              <label className="block text-xs text-muted-foreground mb-1 font-medium">
+                Payment Screenshot <span className="opacity-60">(optional, speeds up verification)</span>
+              </label>
+              {screenshot ? (
+                <div className="relative inline-block">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={screenshot} alt="Payment screenshot" className="h-24 rounded-lg border border-border" />
+                  <button
+                    type="button"
+                    onClick={() => setScreenshot(null)}
+                    className="absolute -top-2 -right-2 p-1 rounded-full bg-status-danger text-white"
+                    aria-label="Remove screenshot"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex items-center gap-2 px-4 py-3 bg-card border border-dashed border-border rounded-lg text-muted-foreground text-sm cursor-pointer hover:border-primary/50 transition-colors">
+                  <Camera size={16} />
+                  Attach UPI success screenshot
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleScreenshot(e.target.files?.[0])}
+                  />
+                </label>
+              )}
+              {screenshotError && <p className="text-xs text-status-danger mt-1">{screenshotError}</p>}
+            </div>
+
             <button
               type="submit"
               disabled={submitting}
@@ -122,42 +224,44 @@ export function PaymentSubmissionForm() {
         )}
       </div>
 
-      <div className="p-6 bg-card rounded-2xl border border-border">
-        <h3 className="text-sm font-medium text-foreground mb-3">Payment History</h3>
-        {loadingHistory ? (
-          <p className="text-xs text-muted-foreground">Loading...</p>
-        ) : payments.length === 0 ? (
-          <p className="text-xs text-muted-foreground">No payments yet.</p>
-        ) : (
-          <div className="space-y-2">
-            {payments.map((p) => (
-              <div
-                key={p.id}
-                className="flex items-center justify-between p-3 bg-card rounded-lg border border-border"
-              >
-                <div className="flex items-center gap-2">
-                  {statusIcon(p.status)}
-                  <div>
-                    <span className="text-sm font-medium text-primary-foreground">₹{p.amount}</span>
-                    <span className="text-xs text-muted-foreground ml-2">{p.transactionId}</span>
+      {!hideHistory && (
+        <div className="p-6 bg-card rounded-2xl border border-border">
+          <h3 className="text-sm font-medium text-foreground mb-3">Payment History</h3>
+          {loadingHistory ? (
+            <p className="text-xs text-muted-foreground">Loading...</p>
+          ) : payments.length === 0 ? (
+            <p className="text-xs text-muted-foreground">No payments yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {payments.map((p) => (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between p-3 bg-card rounded-lg border border-border"
+                >
+                  <div className="flex items-center gap-2">
+                    {statusIcon(p.status)}
+                    <div>
+                      <span className="text-sm font-medium text-primary-foreground">₹{p.amount}</span>
+                      <span className="text-xs text-muted-foreground ml-2">{p.transactionId}</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(p.submittedAt).toLocaleDateString()}
+                    </span>
+                    {p.status === 'verified' && p.durationGranted && (
+                      <p className="text-xs text-status-success">+{p.durationGranted} days</p>
+                    )}
+                    {p.status === 'rejected' && p.notes && (
+                      <p className="text-xs text-status-danger">{p.notes}</p>
+                    )}
                   </div>
                 </div>
-                <div className="text-right">
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(p.submittedAt).toLocaleDateString()}
-                  </span>
-                  {p.status === 'verified' && p.durationGranted && (
-                    <p className="text-xs text-status-success">+{p.durationGranted} days</p>
-                  )}
-                  {p.status === 'rejected' && p.notes && (
-                    <p className="text-xs text-status-danger">{p.notes}</p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

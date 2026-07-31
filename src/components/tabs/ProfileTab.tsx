@@ -6,6 +6,8 @@ import { useUIStore } from '@/stores/ui-store';
 import { linkGoogleDrive } from '@/lib/drive';
 import { getUserPayments } from '@/lib/firebase/payments';
 import { calculateSubscriptionState, getDaysRemaining } from '@/lib/subscription/status';
+import { PaymentSubmissionForm } from '@/components/subscription/PaymentSubmissionForm';
+import { UPI_ID } from '@/lib/subscription/plans';
 import { useState, useRef, useEffect } from 'react';
 import type { PaymentRecord } from '@/types/payment';
 import {
@@ -330,9 +332,33 @@ function SubscriptionSection({ uid, profile }: { uid: string; profile: import('@
           </div>
         )}
 
+        {/* Renew — the only pre-expiry payment path in the app. Without this,
+            every renewal forces the surveyor through the expiry lockout first. */}
+        {!profile.isAdmin && (
+          <details className="rounded-xl border border-border overflow-hidden" open={daysLeft <= 15}>
+            <summary className="cursor-pointer px-4 py-3 flex items-center gap-2 text-sm font-medium text-foreground list-none" style={{ background: 'var(--color-neutral-50)' }}>
+              <CreditCard size={14} className="text-primary" />
+              Renew subscription
+              <span className="ml-auto text-[10px] text-muted-foreground uppercase tracking-wide">
+                Pay to UPI: <span className="font-mono normal-case">{UPI_ID}</span>
+              </span>
+            </summary>
+            <div className="p-4">
+              <PaymentSubmissionForm hideHistory />
+            </div>
+          </details>
+        )}
+
         {/* Referral code */}
         {profile.referralCode && (
           <div className="rounded-xl p-4 bg-primary/5 border border-primary/20">
+            {/* The mechanic was never stated anywhere in the app — surveyors had
+                a code with no idea what it did. Say it plainly. */}
+            <p className="text-xs text-muted-foreground mb-3">
+              Share this code with a fellow surveyor. When they subscribe and their first
+              payment is verified, <strong className="text-foreground">you get 30 days free</strong> —
+              automatically added to your subscription.
+            </p>
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-1.5">
                 <Gift size={13} className="text-primary" />
@@ -360,10 +386,17 @@ function SubscriptionSection({ uid, profile }: { uid: string; profile: import('@
                 {copied ? <CheckCircle2 size={12} /> : <Copy size={12} />}
                 {copied ? 'Copied!' : 'Copy'}
               </button>
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(
+                  `I use Motor SurveyOS for my survey reports — AI reads the RC/DL/policy and drafts the report in minutes. 30-day free trial: https://motorsurveyos-in.web.app\n\nUse my referral code at signup: ${profile.referralCode}`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-status-success-tint text-status-success transition-all hover:opacity-80"
+              >
+                Share on WhatsApp
+              </a>
             </div>
-            <p className="mt-2 text-[9px] font-medium text-muted-foreground">
-              Share this code with colleagues. When they make their first payment, you earn +30 bonus days.
-            </p>
           </div>
         )}
 
