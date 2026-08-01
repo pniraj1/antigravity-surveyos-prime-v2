@@ -1,6 +1,19 @@
 import type { ClaimData } from '@/types/claim';
 import type { SurveyorProfile } from '@/types/vehicle';
 import { formatDateDMY, getSurveyorHeader, getSigBlock } from './report-utils';
+import { buildPrintShell, footerFromProfile } from './print-shell';
+
+/**
+ * Full printable document. Until this existed the Valuation report was written
+ * straight into the print window with no A4 page setup at all.
+ */
+export function buildValuationPrintDocument(claim: ClaimData, profile: SurveyorProfile | null): string {
+  return buildPrintShell(buildValuationReportHTML(claim, profile), {
+    title: `Valuation Report — ${claim.vehicle?.registrationNumber || 'Claim'}`,
+    footerLeft: footerFromProfile(profile),
+    fontSize: '8pt',
+  });
+}
 
 function fd(v: string | null | undefined): string {
   return formatDateDMY(v);

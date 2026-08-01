@@ -13,6 +13,7 @@ import { triggerUIICBillCheckPrint, buildUIICBillCheckHTML } from '@/lib/reports
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import { ProcessingProgressOverlay } from '@/components/ui/ProcessingProgressOverlay';
 import { ReportPreviewPanel } from '@/components/shared/ReportPreviewPanel';
+import { footerFromProfile } from '@/lib/reports/print-shell';
 import { DocumentEvidenceViewer } from '@/components/evidence/DocumentEvidenceViewer';
 
 import { BillCheckHeader } from './bill-check/BillCheckHeader';
@@ -33,6 +34,7 @@ function BillCheckPreview({ claim, profile }: { claim: any; profile: any }) {
       printLabel="Power Print"
       onPrint={() => triggerUIICBillCheckPrint(claim, profile)}
       wordFilename={`${claim?.vehicle?.registrationNumber || 'Claim'}-Bill-Check`}
+      footerLeft={footerFromProfile(profile)}
     />
   );
 }

@@ -17,6 +17,7 @@ import { getHtmlScale } from './report-style-utils';
 import { preambleFromClaim, estimateTotalInclGst } from './final-survey-preamble';
 import { computeRowNet } from '@/lib/calculations/row-net';
 import { getCompulsoryExcess } from '@/lib/calculations/assessment';
+import { buildPrintShell, footerFromProfile } from './print-shell';
 
 // NOTE: SurveyReportDocument.tsx (React-PDF) is no longer a parallel rendering
 // of this report — it is only used by scripts/generate-pdf.ts to produce the
@@ -567,57 +568,11 @@ export function buildStandardPrintDocument(
   summary: AssessmentSummary,
   profile: SurveyorProfile
 ): string {
-  const bodyContent = buildStandardFinalSurveyHTML(claim, summary, profile);
-  const regNo = claim.vehicle?.registrationNumber || 'Claim';
-
-  return `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>Standard Final Survey Report — ${regNo}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Barlow', 'Helvetica', Arial, sans-serif;
-      font-size: 7.8pt;
-      background: #525659;
-      color: #000;
-    }
-    .page {
-      width: 210mm;
-      min-height: 297mm;
-      padding: 10mm 12mm;
-      background: #fff;
-      margin: 10mm auto;
-      box-shadow: 0 0 10px rgba(0,0,0,0.2);
-    }
-    @media print {
-      @page {
-        size: A4 portrait;
-        margin: 10mm 12mm;
-      }
-      body {
-        background: none;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-      }
-      .page {
-        margin: 0 !important;
-        box-shadow: none !important;
-        width: 100% !important;
-        min-height: auto !important;
-        padding: 0 !important;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="page">
-    ${bodyContent}
-  </div>
-</body>
-</html>`;
+  return buildPrintShell(buildStandardFinalSurveyHTML(claim, summary, profile), {
+    title: `Standard Final Survey Report — ${claim.vehicle?.registrationNumber || 'Claim'}`,
+    footerLeft: footerFromProfile(profile),
+    fontSize: '7.8pt',
+  });
 }
 
 // ─── Trigger the print window ─────────────────────────────────────────────────

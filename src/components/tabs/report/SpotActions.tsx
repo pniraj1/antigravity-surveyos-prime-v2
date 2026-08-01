@@ -16,9 +16,11 @@ interface SpotActionsProps {
    * prints, so the Word file and the printout come from the same DOM.
    */
   getPrintHtml: () => string;
+  /** Running-footer text for the Word export — matches the printed footer. */
+  footerLeft: string;
 }
 
-export function SpotActions({ claim, isExportingWord, setIsExportingWord, onPrint, getPrintHtml }: SpotActionsProps) {
+export function SpotActions({ claim, isExportingWord, setIsExportingWord, onPrint, getPrintHtml, footerLeft }: SpotActionsProps) {
   return (
     <>
       {/* Font Scale Selector */}
@@ -29,7 +31,7 @@ export function SpotActions({ claim, isExportingWord, setIsExportingWord, onPrin
         onClick={async () => {
           setIsExportingWord(true);
           try {
-            downloadAsWord(getPrintHtml(), `${claim.vehicle.registrationNumber || 'Claim'}-Spot-Report`);
+            downloadAsWord(getPrintHtml(), `${claim.vehicle.registrationNumber || 'Claim'}-Spot-Report`, footerLeft);
             toast.success('Word report generated!');
           } catch (e) {
             console.error(e);

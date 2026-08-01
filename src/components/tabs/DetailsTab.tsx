@@ -10,6 +10,7 @@ import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { downloadAsWord } from '@/lib/reports/word-export';
+import { footerFromProfile } from '@/lib/reports/print-shell';
 import { buildStandardFinalSurveyHTML } from '@/lib/reports/standard-report-builder';
 import { calculateAssessmentSummary, getCompulsoryExcess } from '@/lib/calculations';
 import { getVehicleAgeMonths } from '@/lib/calculations/depreciation';
@@ -331,6 +332,7 @@ export function DetailsTab() {
                   downloadAsWord(
                     buildStandardFinalSurveyHTML(currentClaim, summary, profile!),
                     `${currentClaim.vehicle.registrationNumber || 'Claim'}-Final-Survey`,
+                    footerFromProfile(profile),
                   );
                 }}
                 className="gap-2 shadow-sm"

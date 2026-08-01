@@ -5,6 +5,7 @@ import { useProfileStore } from '@/stores/profile-store';
 
 import { triggerSpotFeeBillPrint, buildSpotFeeBillHTML } from '@/lib/reports/spot-fee-bill-builder';
 import { ReportPreviewPanel } from '@/components/shared/ReportPreviewPanel';
+import { footerFromProfile } from '@/lib/reports/print-shell';
 import {
   Receipt, Calculator, Percent, Plus, Minus,
   TrendingDown, FileText, Calendar, Banknote, Car, Camera,
@@ -33,6 +34,7 @@ function FeeBillPreview({ claim, profile }: { claim: any; profile: any }) {
       printLabel="Power Print — Fee Bill"
       onPrint={() => triggerSpotFeeBillPrint(claim, profile)}
       wordFilename={`${claim?.vehicle?.registrationNumber || 'Claim'}-Fee-Bill`}
+      footerLeft={footerFromProfile(profile)}
     />
   );
 }

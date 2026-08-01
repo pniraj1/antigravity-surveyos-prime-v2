@@ -4,6 +4,7 @@ import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { buildReinspectionHTML, triggerReinspectionPrint } from '@/lib/reports/reinspection-report-builder';
 import { ReportPreviewPanel } from '@/components/shared/ReportPreviewPanel';
+import { footerFromProfile } from '@/lib/reports/print-shell';
 import { RotateCcw, Calendar, FileText } from 'lucide-react';
 import { useMemo } from 'react';
 
@@ -20,6 +21,7 @@ function RIPreview({ claim, profile }: { claim: any; profile: any }) {
       printLabel="Power Print"
       onPrint={() => triggerReinspectionPrint(claim, profile)}
       wordFilename={`${claim?.vehicle?.registrationNumber || 'Claim'}-Reinspection`}
+      footerLeft={footerFromProfile(profile)}
     />
   );
 }

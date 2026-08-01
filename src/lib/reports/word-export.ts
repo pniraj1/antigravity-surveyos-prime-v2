@@ -18,9 +18,29 @@
 
 import { saveAs } from 'file-saver';
 
-/** Base page styling. Report bodies carry their own inline styles on top. */
+/**
+ * Base page styling, kept deliberately in step with the print document's
+ * shell (see buildStandardPrintDocument) so Word lays the report out on the
+ * same A4 geometry the PDF uses.
+ *
+ * Word ignores a bare `@page` rule. It honours page size and margins only via
+ * a *named* page bound to a wrapper div — the "Section1" idiom below — so
+ * without it Word silently falls back to Letter with 1in margins and squeezes
+ * every table narrower than the PDF.
+ */
 const WORD_SHELL_CSS = `
-  @page { size: A4 portrait; margin: 10mm 12mm; }
+  @page Section1 {
+    size: 210mm 297mm;
+    margin: 10mm 12mm 16mm 12mm;
+    mso-page-orientation: portrait;
+    mso-footer: f1;
+    mso-footer-margin: 8mm;
+  }
+  div.Section1 { page: Section1; }
+  @page { size: 210mm 297mm; margin: 10mm 12mm; }
+  /* Same reset the print document applies — without it Word adds its own
+     default spacing to every paragraph and table. */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: 'Barlow', Helvetica, Arial, sans-serif;
     font-size: 7.8pt;
@@ -34,7 +54,21 @@ const WORD_SHELL_CSS = `
  * The office/word xmlns declarations are what make Word claim the file
  * instead of handing it to a browser.
  */
-export function buildWordDocument(bodyHtml: string, title: string): string {
+export function buildWordDocument(bodyHtml: string, title: string, footerLeft = ''): string {
+  // Word cannot read CSS @page margin boxes — the mechanism the print/PDF path
+  // uses for its footer. It needs an mso-element footer div bound to the named
+  // page, with PAGE as a real field code so the number stays correct after the
+  // surveyor edits the document.
+  const footer = `
+  <div style='mso-element:footer' id="f1">
+    <table style="width:100%;border:none;font-size:7.5pt;">
+      <tr>
+        <td style="border:none;padding:0;text-align:left;font-weight:600;color:#000;">${escapeHtml(footerLeft)}</td>
+        <td style="border:none;padding:0;text-align:right;color:#444;">Page <span style='mso-field-code:PAGE'>1</span></td>
+      </tr>
+    </table>
+  </div>`;
+
   return `<!DOCTYPE html>
 <html xmlns:o="urn:schemas-microsoft-com:office:office"
       xmlns:w="urn:schemas-microsoft-com:office:word"
@@ -44,8 +78,16 @@ export function buildWordDocument(bodyHtml: string, title: string): string {
   <title>${title}</title>
   <style>${WORD_SHELL_CSS}</style>
 </head>
-<body>${bodyHtml}</body>
+<body><div class="Section1">${bodyHtml}${footer}</div></body>
 </html>`;
+}
+
+/** Minimal escaping for text interpolated into the footer markup. */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 /**
@@ -55,13 +97,13 @@ export function buildWordDocument(bodyHtml: string, title: string): string {
  *                 of a rendered print component).
  * @param filename Target filename. `.doc` is appended when missing.
  */
-export function downloadAsWord(bodyHtml: string, filename: string): void {
+export function downloadAsWord(bodyHtml: string, filename: string, footerLeft = ''): void {
   if (!bodyHtml || !bodyHtml.trim()) {
     throw new Error('Cannot export an empty report to Word.');
   }
 
   const name = filename.toLowerCase().endsWith('.doc') ? filename : `${filename}.doc`;
-  const html = buildWordDocument(bodyHtml, name.replace(/\.doc$/i, ''));
+  const html = buildWordDocument(bodyHtml, name.replace(/\.doc$/i, ''), footerLeft);
 
   // Leading BOM so Word detects UTF-8 — without it the ₹ sign renders as mojibake.
   saveAs(new Blob(['﻿', html], { type: 'application/msword' }), name);

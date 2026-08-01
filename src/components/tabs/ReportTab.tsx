@@ -18,8 +18,9 @@ import { useReactToPrint } from 'react-to-print';
 import { SpotPrintReport } from '@/components/print/SpotPrintReport';
 import { buildStandardFinalSurveyHTML } from '@/lib/reports/standard-report-builder';
 import { buildUIICFinalHTML } from '@/lib/reports/uiic-final-builder';
-import { buildValuationReportHTML } from '@/lib/reports/valuation-report-builder';
+import { buildValuationReportHTML, buildValuationPrintDocument } from '@/lib/reports/valuation-report-builder';
 import { downloadAsWord } from '@/lib/reports/word-export';
+import { footerFromProfile } from '@/lib/reports/print-shell';
 import { preambleFromClaim } from '@/lib/reports/final-survey-preamble';
 import DOMPurify from 'dompurify';
 import { useRef } from 'react';
@@ -178,6 +179,7 @@ export function ReportTab() {
             setIsExportingWord={setIsExportingWord}
             onPrint={handlePrint}
             getPrintHtml={() => contentRef.current?.innerHTML ?? ''}
+            footerLeft={footerFromProfile(profile)}
           />
         )}
         {activeReport === 'survey' && (
@@ -197,9 +199,12 @@ export function ReportTab() {
           <>
             <button
               onClick={() => {
-                const html = buildValuationReportHTML(currentClaim, profile!);
                 const win = window.open('', '_blank');
-                if (win) { win.document.write(html); win.document.close(); win.print(); }
+                if (win) {
+                  win.document.write(buildValuationPrintDocument(currentClaim, profile!));
+                  win.document.close();
+                  setTimeout(() => { win.focus(); win.print(); }, 600);
+                }
               }}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all shadow-sm"
               style={{ background: 'var(--color-status-warning)', color: 'var(--color-neutral-50)' }}
@@ -210,6 +215,7 @@ export function ReportTab() {
               onClick={() => downloadAsWord(
                 buildValuationReportHTML(currentClaim, profile!),
                 `${currentClaim.vehicle.registrationNumber || 'Claim'}-Valuation`,
+                footerFromProfile(profile),
               )}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all shadow-sm border border-border text-foreground"
             >

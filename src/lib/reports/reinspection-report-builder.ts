@@ -8,6 +8,7 @@
 import type { ClaimData } from '@/types/claim';
 import type { SurveyorProfile } from '@/types/vehicle';
 import { formatDateDMY, getVehicleAgeMonths, getSurveyorHeader, getSigBlock } from './report-utils';
+import { buildPrintShell, footerFromProfile } from './print-shell';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -155,26 +156,20 @@ ${getSigBlock(profile, '10px')}
 
 // ─── Print Trigger ─────────────────────────────────────────────────────────────
 
+/** Full printable document — shares the A4 shell and running footer. */
+export function buildReinspectionPrintDocument(claim: ClaimData, profile: SurveyorProfile | null): string {
+  return buildPrintShell(buildReinspectionHTML(claim, profile), {
+    title: `Re-inspection Report — ${claim.vehicle?.registrationNumber || 'Claim'}`,
+    footerLeft: footerFromProfile(profile),
+    fontSize: '8pt',
+    fontFamily: 'Arial, Helvetica, sans-serif',
+  });
+}
+
 export function triggerReinspectionPrint(claim: ClaimData, profile: SurveyorProfile | null): void {
-  const html = buildReinspectionHTML(claim, profile);
   const w = window.open('', '_blank', 'width=900,height=1200');
   if (w) {
-    w.document.write(`
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<style>
-body { font-family: Arial, sans-serif; margin: 0.5in; background: white; }
-@media print {
-  body { margin: 0; padding: 0.5in; }
-  .no-print { display: none; }
-}
-</style>
-</head>
-<body>${html}</body>
-</html>
-    `);
+    w.document.write(buildReinspectionPrintDocument(claim, profile));
     w.document.close();
     w.addEventListener('load', () => {
       w.print();

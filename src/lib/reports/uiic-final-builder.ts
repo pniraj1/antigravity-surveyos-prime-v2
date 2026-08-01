@@ -20,6 +20,7 @@ import type { ClaimData } from '@/types/claim';
 import type { SurveyorProfile } from '@/types/vehicle';
 import { computeRowNet } from '@/lib/calculations/row-net';
 import { getCompulsoryExcess } from '@/lib/calculations/assessment';
+import { buildPrintShell, footerFromProfile } from './print-shell';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -375,56 +376,12 @@ ${getSigBlock(profile)}
 // ─── Wrap in a full printable A4 HTML document ────────────────────────────────
 
 export function buildUIICFinalPrintDocument(claim: ClaimData, profile: SurveyorProfile | null): string {
-  const body = buildUIICFinalHTML(claim, profile);
-  const regNo = claim.vehicle?.registrationNumber || 'DRAFT';
-
-  return `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>UIIC Final Survey Report — ${regNo}</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: Arial, Helvetica, sans-serif;
-      font-size: 8pt;
-      background: #525659;
-      color: #000;
-    }
-    .page {
-      width: 210mm;
-      min-height: 297mm;
-      padding: 10mm 12mm;
-      background: #fff;
-      margin: 10mm auto;
-      box-shadow: 0 0 10px rgba(0,0,0,0.2);
-    }
-    @media print {
-      @page {
-        size: A4 portrait;
-        margin: 10mm 12mm;
-      }
-      body {
-        background: none;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-      }
-      .page {
-        margin: 0 !important;
-        box-shadow: none !important;
-        width: 100% !important;
-        min-height: auto !important;
-        padding: 0 !important;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="page">
-    ${body}
-  </div>
-</body>
-</html>`;
+  return buildPrintShell(buildUIICFinalHTML(claim, profile), {
+    title: `UIIC Final Survey Report — ${claim.vehicle?.registrationNumber || 'DRAFT'}`,
+    footerLeft: footerFromProfile(profile),
+    fontSize: '8pt',
+    fontFamily: 'Arial, Helvetica, sans-serif',
+  });
 }
 
 // ─── Trigger the print window ─────────────────────────────────────────────────
@@ -791,56 +748,12 @@ ${getSigBlock(profile)}
 // ─── Wrap Bill Check in a full printable A4 HTML document ─────────────────────
 
 export function buildUIICBillCheckPrintDocument(claim: ClaimData, profile: SurveyorProfile | null): string {
-  const body = buildUIICBillCheckHTML(claim, profile);
-  const regNo = claim.vehicle?.registrationNumber || 'DRAFT';
-
-  return `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>Bill Check Report — ${regNo}</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: Arial, Helvetica, sans-serif;
-      font-size: 8pt;
-      background: #525659;
-      color: #000;
-    }
-    .page {
-      width: 210mm;
-      min-height: 297mm;
-      padding: 10mm 12mm;
-      background: #fff;
-      margin: 10mm auto;
-      box-shadow: 0 0 10px rgba(0,0,0,0.2);
-    }
-    @media print {
-      @page {
-        size: A4 portrait;
-        margin: 10mm 12mm;
-      }
-      body {
-        background: none;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-      }
-      .page {
-        margin: 0 !important;
-        box-shadow: none !important;
-        width: 100% !important;
-        min-height: auto !important;
-        padding: 0 !important;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="page">
-    ${body}
-  </div>
-</body>
-</html>`;
+  return buildPrintShell(buildUIICBillCheckHTML(claim, profile), {
+    title: `Bill Check Report — ${claim.vehicle?.registrationNumber || 'DRAFT'}`,
+    footerLeft: footerFromProfile(profile),
+    fontSize: '8pt',
+    fontFamily: 'Arial, Helvetica, sans-serif',
+  });
 }
 
 // ─── Trigger Bill Check print window ─────────────────────────────────────────

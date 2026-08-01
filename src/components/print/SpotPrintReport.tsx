@@ -4,6 +4,7 @@ import React from 'react';
 import type { ClaimData, SurveyorProfile } from '@/types';
 import { formatDateDMY } from '@/lib/calculations';
 import { getHtmlScale } from '@/lib/reports/report-style-utils';
+import { footerFromProfile, escapeCssString } from '@/lib/reports/print-shell';
 
 interface SpotPrintReportProps {
   claim: ClaimData;
@@ -42,6 +43,9 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
     } catch (e) { return dt; }
   };
 
+  // Running footer text, escaped for use inside a CSS content: "..." string.
+  const footerLeft = escapeCssString(footerFromProfile(profile));
+
   const styles = {
     ts: `width:100%; border-collapse:collapse; font-size:${fs.cellFont}; margin-bottom:4px;`,
     td: `padding:${fs.cellPaddingV} ${fs.cellPaddingH}; border:0.4pt solid #bbb; vertical-align:top;`,
@@ -59,8 +63,23 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
         @import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700&display=swap');
         
         @page {
-          margin: 8mm 10mm;
+          /* Bottom margin houses the running footer (see print-shell.ts). */
+          margin: 8mm 10mm 16mm 10mm;
           size: A4 portrait;
+
+          @bottom-left {
+            content: "${footerLeft}";
+            font-family: 'Barlow', Arial, sans-serif;
+            font-size: 7.5pt;
+            font-weight: 600;
+            color: #000;
+          }
+          @bottom-right {
+            content: "Page " counter(page);
+            font-family: 'Barlow', Arial, sans-serif;
+            font-size: 7.5pt;
+            color: #444;
+          }
         }
         
         .spot-report-print-container {

@@ -6,6 +6,7 @@ import type { ClaimData, FontScale } from '@/types/claim';
 import type { AssessmentSummary } from '@/types';
 import type { SurveyorProfile } from '@/types/vehicle';
 import { downloadAsWord } from '@/lib/reports/word-export';
+import { footerFromProfile } from '@/lib/reports/print-shell';
 import { triggerStandardPrint, buildStandardFinalSurveyHTML } from '@/lib/reports/standard-report-builder';
 import { triggerUIICFinalPrint, buildUIICFinalHTML } from '@/lib/reports/uiic-final-builder';
 import { useClaimStore } from '@/stores/claim-store';
@@ -129,9 +130,9 @@ export function SurveyActions({
             try {
               const regNo = claim.vehicle.registrationNumber || 'Claim';
               if (format === 'uiic') {
-                downloadAsWord(buildUIICFinalHTML(claim, profile), `${regNo}-UIIC-Final-Survey`);
+                downloadAsWord(buildUIICFinalHTML(claim, profile), `${regNo}-UIIC-Final-Survey`, footerFromProfile(profile));
               } else {
-                downloadAsWord(buildStandardFinalSurveyHTML(claim, summary, profile), `${regNo}-Final-Survey`);
+                downloadAsWord(buildStandardFinalSurveyHTML(claim, summary, profile), `${regNo}-Final-Survey`, footerFromProfile(profile));
               }
               toast.success('Word report generated!');
             } catch (e) {
