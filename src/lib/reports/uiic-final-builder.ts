@@ -19,6 +19,7 @@
 import type { ClaimData } from '@/types/claim';
 import type { SurveyorProfile } from '@/types/vehicle';
 import { computeRowNet } from '@/lib/calculations/row-net';
+import { getCompulsoryExcess } from '@/lib/calculations/assessment';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -120,7 +121,7 @@ export function buildUIICFinalHTML(claim: ClaimData, profile: SurveyorProfile | 
   const depAmt = rawParts - partsDepreciated;
   const salvage = claim.feeBill?.salvageValue || 0;
   const volExcess = claim.feeBill?.voluntaryExcess || 0;
-  const compExcess = claim.feeBill?.compulsoryExcess ?? claim.feeBill?.lessExcess ?? 0;
+  const compExcess = getCompulsoryExcess(claim.feeBill);
   const net = Math.max(0, gross - salvage - volExcess - compExcess);
   const payableByInsured = volExcess + compExcess;
   const payableByInsurer = net;
@@ -515,7 +516,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   const depAmt = rawParts - partsDepreciated;
   const salvage    = claim.feeBill?.salvageValue    || 0;
   const volExcess  = claim.feeBill?.voluntaryExcess || 0;
-  const compExcess = claim.feeBill?.compulsoryExcess ?? claim.feeBill?.lessExcess ?? 0;
+  const compExcess = getCompulsoryExcess(claim.feeBill);
   const net = Math.max(0, gross - salvage - volExcess - compExcess);
 
   // Billed totals (what the workshop actually billed)

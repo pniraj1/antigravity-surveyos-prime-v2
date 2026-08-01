@@ -11,7 +11,7 @@ import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { downloadAsWord } from '@/lib/reports/word-export';
 import { buildStandardFinalSurveyHTML } from '@/lib/reports/standard-report-builder';
-import { calculateAssessmentSummary } from '@/lib/calculations';
+import { calculateAssessmentSummary, getCompulsoryExcess } from '@/lib/calculations';
 import { getVehicleAgeMonths } from '@/lib/calculations/depreciation';
 import { FileText, Sparkles, Download, Loader2, Hash, Wand2, FileSearch, PanelRightOpen, PanelRightClose, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -325,7 +325,8 @@ export function DetailsTab() {
                     ),
                     currentClaim.depreciationType || 'Standard',
                     fb?.salvageValue || 0,
-                    fb?.lessExcess || 0,
+                    getCompulsoryExcess(fb),
+                    fb?.voluntaryExcess || 0,
                   );
                   downloadAsWord(
                     buildStandardFinalSurveyHTML(currentClaim, summary, profile!),

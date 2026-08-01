@@ -16,6 +16,7 @@ import { formatDateDMY, formatDateTimeDMY, fa, numberToWords, getVehicleAgeMonth
 import { getHtmlScale } from './report-style-utils';
 import { preambleFromClaim, estimateTotalInclGst } from './final-survey-preamble';
 import { computeRowNet } from '@/lib/calculations/row-net';
+import { getCompulsoryExcess } from '@/lib/calculations/assessment';
 
 // NOTE: SurveyReportDocument.tsx (React-PDF) is no longer a parallel rendering
 // of this report — it is only used by scripts/generate-pdf.ts to produce the
@@ -106,7 +107,7 @@ export function buildStandardFinalSurveyHTML(
 
   const salvage = claim.feeBill?.salvageValue || 0;
   const volExcess = claim.feeBill?.voluntaryExcess || 0;
-  const compExcess = claim.feeBill?.compulsoryExcess ?? 0;
+  const compExcess = getCompulsoryExcess(claim.feeBill);
   const excess = volExcess + compExcess;
   const net = Math.max(0, grand - salvage - excess);
 
@@ -437,7 +438,7 @@ export function buildStandardFinalSurveyHTML(
 
 ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
   const idv = parseFloat(String(claim.policy?.idv || '0').replace(/,/g, '')) || 0;
-  const totalExcess = (claim.feeBill?.voluntaryExcess || 0) + (claim.feeBill?.compulsoryExcess ?? 0);
+  const totalExcess = (claim.feeBill?.voluntaryExcess || 0) + getCompulsoryExcess(claim.feeBill);
   const tlLiability = Math.max(0, idv - totalExcess);
   const netWithRC = Math.max(0, tlLiability - (claim.totalLossDetails.salvageWithRC || 0));
   const netWithoutRC = Math.max(0, tlLiability - (claim.totalLossDetails.salvageWithoutRC || 0));

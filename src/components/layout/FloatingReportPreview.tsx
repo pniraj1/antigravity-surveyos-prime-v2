@@ -9,7 +9,7 @@ import { buildStandardFinalSurveyHTML } from '@/lib/reports/standard-report-buil
 import { buildUIICFinalHTML, buildUIICBillCheckHTML } from '@/lib/reports/uiic-final-builder';
 import { buildSpotFeeBillHTML } from '@/lib/reports/spot-fee-bill-builder';
 import { buildValuationReportHTML } from '@/lib/reports/valuation-report-builder';
-import { calculateAssessmentSummary } from '@/lib/calculations';
+import { calculateAssessmentSummary, getCompulsoryExcess } from '@/lib/calculations';
 import { getVehicleAgeMonths } from '@/lib/calculations/depreciation';
 import { SpotPrintReport } from '@/components/print/SpotPrintReport';
 import { useReactToPrint } from 'react-to-print';
@@ -103,7 +103,7 @@ export function FloatingReportPreview() {
           ageMonths,
           currentClaim.depreciationType || 'Standard',
           fb?.salvageValue || 0,
-          fb?.lessExcess ?? 500,
+          getCompulsoryExcess(fb),
           fb?.voluntaryExcess || 0
         );
         let out = '';

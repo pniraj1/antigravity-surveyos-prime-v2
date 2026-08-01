@@ -9,7 +9,7 @@ import { saveAs } from 'file-saver';
 import { ClaimData } from '@/types/claim';
 import { SurveyorProfile } from '@/types';
 import { calculateFeeSummary } from '@/lib/calculations/fees';
-import { calculateAssessmentSummary } from '@/lib/calculations/assessment';
+import { calculateAssessmentSummary, getCompulsoryExcess } from '@/lib/calculations/assessment';
 import { getVehicleAgeMonths } from '@/lib/calculations/depreciation';
 import { formatDateDMY } from '@/lib/calculations';
 
@@ -107,7 +107,7 @@ function buildClaimRow(claim: ClaimData, index: number): ClaimRow {
         ageMonths,
         'standard',
         claim.feeBill?.salvageValue ?? 0,
-        claim.feeBill?.compulsoryExcess ?? 0
+        getCompulsoryExcess(claim.feeBill)
       );
       netAssessedLoss = summary.netAssessedLoss;
     } catch {

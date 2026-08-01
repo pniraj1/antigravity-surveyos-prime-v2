@@ -2,6 +2,7 @@ import React from 'react';
 import { Page, Text, View, Document, StyleSheet } from '@react-pdf/renderer';
 import type { ClaimData, AssessmentSummary } from '@/types';
 import { preambleFromClaim, estimateTotalInclGst } from '@/lib/reports/final-survey-preamble';
+import { getCompulsoryExcess } from '@/lib/calculations/assessment';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -251,7 +252,7 @@ export function SurveyReportDocument({ claim }: Props) {
   const fb = claim.feeBill || {};
   const salvage = fb.salvageValue || 0;
   const volEx = fb.voluntaryExcess || 0;
-  const comEx = fb.compulsoryExcess || fb.lessExcess || 0;
+  const comEx = getCompulsoryExcess(fb);
   const tow = fb.travelExpenses || 0;
   const finalNet = Math.max(0, totalNet + tow - salvage - volEx - comEx);
   const preambleText = (claim.reportPreamble && claim.reportPreamble.trim())

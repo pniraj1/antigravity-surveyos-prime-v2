@@ -4,10 +4,29 @@
 // lines 1896-1910 — the core financial brain
 // ═══════════════════════════════════════════════════════════
 
-import type { AssessmentRow, AssessmentSummary, BillCheckSummary, DepreciationType } from '@/types';
+import type { AssessmentRow, AssessmentSummary, BillCheckSummary, DepreciationType, FeeBill } from '@/types';
 import { getDepreciationRate } from './depreciation';
 import { calculatePartsGST, calculateLabourGST } from './gst';
 import { numberToWords } from './utils';
+
+/**
+ * Compulsory excess for a claim.
+ *
+ * `feeBill` carries two fields for one number: `compulsoryExcess` and the older
+ * `lessExcess`. The excess input in AssessmentSummary writes BOTH, so they agree
+ * for anything edited in the app — but claims created before that, and the
+ * bundled mock claim, can hold different values in each.
+ *
+ * This resolution order is the one the final-survey PDF builders already used,
+ * which is the behaviour to match: prefer `compulsoryExcess`, fall back to the
+ * legacy field, then zero. `??` (not `||`) so an explicit 0 stays 0.
+ *
+ * ponytail: `lessExcess` stays in the type — dropping it needs a migration of
+ * stored claims. Centralising the read is what stops the two disagreeing.
+ */
+export function getCompulsoryExcess(feeBill?: Partial<FeeBill> | null): number {
+  return feeBill?.compulsoryExcess ?? feeBill?.lessExcess ?? 0;
+}
 
 /**
  * Calculate the full assessment summary from rows.

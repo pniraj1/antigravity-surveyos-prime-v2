@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
-import { calculateAssessmentSummary } from '@/lib/calculations';
+import { calculateAssessmentSummary, getCompulsoryExcess } from '@/lib/calculations';
 import { getVehicleAgeMonths } from '@/lib/calculations/depreciation';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertCircle, FileText, Loader2, Shield } from 'lucide-react';
@@ -110,7 +110,8 @@ export function ReportTab() {
     ageMonths,
     currentClaim?.depreciationType || 'Standard',
     fb?.salvageValue || 0,
-    fb?.lessExcess || 0,
+    getCompulsoryExcess(fb),
+    fb?.voluntaryExcess || 0,
   );
 
   // Safety fallback for summary values
