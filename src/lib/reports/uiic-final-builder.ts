@@ -43,18 +43,6 @@ function g(v: string | number | null | undefined): string {
 import { numberToWords, getVehicleAgeMonths, getSurveyorHeader, getSigBlock } from './report-utils';
 import { getHtmlScale } from './report-style-utils';
 
-// ─── HTML/PDF SYNC CHECKLIST ──────────────────────────────────────────────────
-// Fields that must stay identical between this HTML builder and
-// UIICReportDocument.tsx (React-PDF). Update both when changing these:
-//   • vehicle: registrationNumber, makeModel, colour, fuelType, seatingCapacity,
-//              chassisNumber, engineNumber, dateOfRegistration, yearOfManufacture
-//   • policy: policyNumber, insuredName, sumInsured, coverageType, depreciationType
-//   • accident: dateAndTime, place, natureOfAccident
-//   • assessment table: parts, labour, paint rows + depreciation + GST + net assessed loss
-//   • Document checklist (Page 2): all 3-column doc verification fields
-//   • surveyor header / signature block (shared via report-utils.ts)
-// ─────────────────────────────────────────────────────────────────────────────
-
 // getDepRate has a different param order here (partType, ageMonths, depType) vs standard builder
 function getDepRate(partType: string, ageMonths: number, depType: string): number {
   const dt = (depType || 'standard').toLowerCase();

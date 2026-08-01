@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import dynamic from 'next/dynamic';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { calculateAssessmentSummary } from '@/lib/calculations';
@@ -13,29 +12,14 @@ import type { InsuredReportDraft, InsuredReportStage } from '@/types/insured-rep
 import { SpotActions } from './report/SpotActions';
 import { SurveyActions } from './report/SurveyActions';
 
-// ─── PDF Document Imports ───────────────────────────────────────────────────
-import { SurveyReportDocument } from '@/components/pdf/SurveyReportDocument';
-import { SpotReportDocument } from '@/components/pdf/SpotReportDocument';
-import { UIICReportDocument } from '@/components/pdf/UIICReportDocument';
-import { BillCheckDocument } from '@/components/pdf/BillCheckDocument';
-import { FeeBillDocument } from '@/components/pdf/FeeBillDocument';
-
-// ─── Dynamic PDF imports ─────────────────────────────────────────────────────
-const PDFViewer = dynamic(
-  () => import('@react-pdf/renderer').then(m => m.PDFViewer),
-  { ssr: false, loading: () => <PDFLoadingFallback /> }
-);
-const PDFDownloadLink = dynamic(
-  () => import('@react-pdf/renderer').then(m => m.PDFDownloadLink),
-  { ssr: false }
-);
+// Every report here renders from its HTML builder below. The @react-pdf
+// documents this tab used to host were unreachable and have been removed.
 import { useReactToPrint } from 'react-to-print';
 import { SpotPrintReport } from '@/components/print/SpotPrintReport';
-
-import { UIICPrintReport } from '@/components/print/UIICPrintReport';
 import { buildStandardFinalSurveyHTML } from '@/lib/reports/standard-report-builder';
 import { buildUIICFinalHTML } from '@/lib/reports/uiic-final-builder';
 import { buildValuationReportHTML } from '@/lib/reports/valuation-report-builder';
+import { downloadAsWord } from '@/lib/reports/word-export';
 import { preambleFromClaim } from '@/lib/reports/final-survey-preamble';
 import DOMPurify from 'dompurify';
 import { useRef } from 'react';
@@ -152,22 +136,6 @@ export function ReportTab() {
     ? currentClaim.reportPreamble
     : defaultPreamble;
 
-  const regNo = currentClaim.vehicle.registrationNumber || 'DRAFT';
-  const pdfFilename = activeReport === 'spot'
-    ? `${regNo}-Spot-Report.pdf`
-    : activeReport === 'survey' 
-      ? (format === 'uiic' ? `${regNo}-UIIC-Report.pdf` : `${regNo}-Report.pdf`)
-      : `${regNo}-Bill-Check.pdf`;
-
-  // Determine active document
-  let ActiveDocument = <SurveyReportDocument claim={currentClaim} />;
-  
-  if (activeReport === 'spot') {
-    ActiveDocument = <SpotReportDocument claim={currentClaim} />;
-  } else if (activeReport === 'survey' && format === 'uiic') {
-    ActiveDocument = <UIICReportDocument claim={currentClaim} summary={safeSummary} profile={profile} />;
-  }
-
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300 h-full flex flex-col">
       
@@ -205,10 +173,10 @@ export function ReportTab() {
         {activeReport === 'spot' && (
           <SpotActions
             claim={currentClaim}
-            profile={profile!}
             isExportingWord={isExportingWord}
             setIsExportingWord={setIsExportingWord}
             onPrint={handlePrint}
+            getPrintHtml={() => contentRef.current?.innerHTML ?? ''}
           />
         )}
         {activeReport === 'survey' && (
@@ -225,17 +193,28 @@ export function ReportTab() {
           />
         )}
         {activeReport === 'valuation' && (
-          <button
-            onClick={() => {
-              const html = buildValuationReportHTML(currentClaim, profile!);
-              const win = window.open('', '_blank');
-              if (win) { win.document.write(html); win.document.close(); win.print(); }
-            }}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all shadow-sm"
-            style={{ background: 'var(--color-status-warning)', color: 'var(--color-neutral-50)' }}
-          >
-            <FileText size={14} /> Print / Download PDF
-          </button>
+          <>
+            <button
+              onClick={() => {
+                const html = buildValuationReportHTML(currentClaim, profile!);
+                const win = window.open('', '_blank');
+                if (win) { win.document.write(html); win.document.close(); win.print(); }
+              }}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all shadow-sm"
+              style={{ background: 'var(--color-status-warning)', color: 'var(--color-neutral-50)' }}
+            >
+              <FileText size={14} /> Print / Download PDF
+            </button>
+            <button
+              onClick={() => downloadAsWord(
+                buildValuationReportHTML(currentClaim, profile!),
+                `${currentClaim.vehicle.registrationNumber || 'Claim'}-Valuation`,
+              )}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all shadow-sm border border-border text-foreground"
+            >
+              <FileText size={14} /> Export Word
+            </button>
+          </>
         )}
         {isDirty && (
           <div className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg" style={{ background: 'var(--color-status-warning-tint)', color: 'var(--color-status-warning)', border: '1px solid var(--color-status-warning)' }}>
@@ -273,11 +252,9 @@ export function ReportTab() {
           </Card>
         )}
 
-      {/* Hidden print component */}
+      {/* Hidden print source for POWER PRINT (SPOT) — react-to-print reads this ref.
+          Final-survey printing goes through triggerStandardPrint / triggerUIICFinalPrint. */}
       <div style={{ display: 'none' }}>
-        {activeReport === 'survey' && (
-          <UIICPrintReport ref={contentRef} claim={currentClaim} summary={safeSummary} profile={profile!} />
-        )}
         {activeReport === 'spot' && (
           <SpotPrintReport ref={contentRef} claim={currentClaim} profile={profile!} />
         )}
@@ -288,8 +265,7 @@ export function ReportTab() {
         className="flex-1 overflow-hidden shadow-lg border-border"
       >
         <CardContent className="p-0 w-full h-[calc(100vh-340px)] min-h-[520px]" style={{ background: 'var(--color-neutral-600)' }}>
-          {(activeReport === 'survey' || activeReport === 'spot' || activeReport === 'valuation') ? (
-            <div className="w-full h-full overflow-auto flex justify-center py-8">
+          <div className="w-full h-full overflow-auto flex justify-center py-8">
               <div 
                 className="bg-white shadow-2xl relative"
                 style={{ 
@@ -338,13 +314,7 @@ export function ReportTab() {
                   <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(buildValuationReportHTML(currentClaim, profile!)) }} />
                 )}
               </div>
-            </div>
-          ) : (
-            /* @ts-ignore */
-            <PDFViewer width="100%" height="100%" showToolbar={true}>
-              {ActiveDocument}
-            </PDFViewer>
-          )}
+          </div>
         </CardContent>
       </Card>
 

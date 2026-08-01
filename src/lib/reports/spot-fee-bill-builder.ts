@@ -16,15 +16,6 @@ import type { SurveyorProfile } from '@/types/vehicle';
 
 import { formatDateDMY, fa, numberToWords, getSurveyorHeader, getSigBlock } from './report-utils';
 
-// ─── HTML/PDF SYNC CHECKLIST ──────────────────────────────────────────────────
-// Fields that must stay identical between this HTML builder and
-// FeeBillDocument.tsx (React-PDF). Update both when changing these:
-//   • vehicle: registrationNumber, makeModel
-//   • policy: insuredName, claimNumber
-//   • feeBill: spotFee, finalFee, travelExpenses, miscExpenses, gstRate, total
-//   • surveyor header / signature block (shared via report-utils.ts, margin-bottom:'8px')
-// ─────────────────────────────────────────────────────────────────────────────
-
 // ─── Main Fee Bill HTML Builder ───────────────────────────────────────────────
 
 export function buildSpotFeeBillHTML(

@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  serverExternalPackages: ['@react-pdf/renderer', 'docx', 'file-saver', 'pdfjs-dist'],
+  serverExternalPackages: ['@react-pdf/renderer', 'file-saver', 'pdfjs-dist'],
   env: {
     NEXT_PUBLIC_APP_VERSION: pkg.version,
   },

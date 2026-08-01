@@ -3,19 +3,22 @@
 import { Loader2, FileText, Type } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ClaimData, FontScale } from '@/types/claim';
-import type { SurveyorProfile } from '@/types/vehicle';
-import { generateSpotWordReport } from '@/lib/reports/word-builder';
+import { downloadAsWord } from '@/lib/reports/word-export';
 import { useClaimStore } from '@/stores/claim-store';
 
 interface SpotActionsProps {
   claim: ClaimData;
-  profile: SurveyorProfile;
   isExportingWord: boolean;
   setIsExportingWord: (v: boolean) => void;
   onPrint: () => void;
+  /**
+   * Returns the markup of the hidden SpotPrintReport that react-to-print
+   * prints, so the Word file and the printout come from the same DOM.
+   */
+  getPrintHtml: () => string;
 }
 
-export function SpotActions({ claim, profile, isExportingWord, setIsExportingWord, onPrint }: SpotActionsProps) {
+export function SpotActions({ claim, isExportingWord, setIsExportingWord, onPrint, getPrintHtml }: SpotActionsProps) {
   return (
     <>
       {/* Font Scale Selector */}
@@ -26,7 +29,7 @@ export function SpotActions({ claim, profile, isExportingWord, setIsExportingWor
         onClick={async () => {
           setIsExportingWord(true);
           try {
-            await generateSpotWordReport(claim, profile);
+            downloadAsWord(getPrintHtml(), `${claim.vehicle.registrationNumber || 'Claim'}-Spot-Report`);
             toast.success('Word report generated!');
           } catch (e) {
             console.error(e);
@@ -45,7 +48,7 @@ export function SpotActions({ claim, profile, isExportingWord, setIsExportingWor
         }}
       >
         {isExportingWord ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />}
-        {isExportingWord ? 'Building…' : 'Export Word (.docx)'}
+        {isExportingWord ? 'Building…' : 'Export Word'}
       </button>
 
       {/* Power Print */}

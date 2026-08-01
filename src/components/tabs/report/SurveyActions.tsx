@@ -5,9 +5,9 @@ import { toast } from 'sonner';
 import type { ClaimData, FontScale } from '@/types/claim';
 import type { AssessmentSummary } from '@/types';
 import type { SurveyorProfile } from '@/types/vehicle';
-import { generateWordReport } from '@/lib/reports/word-builder';
-import { triggerStandardPrint } from '@/lib/reports/standard-report-builder';
-import { triggerUIICFinalPrint } from '@/lib/reports/uiic-final-builder';
+import { downloadAsWord } from '@/lib/reports/word-export';
+import { triggerStandardPrint, buildStandardFinalSurveyHTML } from '@/lib/reports/standard-report-builder';
+import { triggerUIICFinalPrint, buildUIICFinalHTML } from '@/lib/reports/uiic-final-builder';
 import { useClaimStore } from '@/stores/claim-store';
 
 const FORMATS = [
@@ -122,13 +122,17 @@ export function SurveyActions({
       {/* Font Scale Selector */}
       <FontScalePill currentScale={claim.reportSettings?.fontScale ?? 'compact'} />
 
-      {/* Word Export (standard only) */}
-      {format === 'standard' && (
-        <button
+      {/* Word Export — same HTML the Power Print button sends to the printer */}
+      <button
           onClick={async () => {
             setIsExportingWord(true);
             try {
-              await generateWordReport(claim, summary);
+              const regNo = claim.vehicle.registrationNumber || 'Claim';
+              if (format === 'uiic') {
+                downloadAsWord(buildUIICFinalHTML(claim, profile), `${regNo}-UIIC-Final-Survey`);
+              } else {
+                downloadAsWord(buildStandardFinalSurveyHTML(claim, summary, profile), `${regNo}-Final-Survey`);
+              }
               toast.success('Word report generated!');
             } catch (e) {
               console.error(e);
@@ -147,9 +151,8 @@ export function SurveyActions({
           }}
         >
           {isExportingWord ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />}
-          {isExportingWord ? 'Building…' : 'Export Word (.docx)'}
+          {isExportingWord ? 'Building…' : 'Export Word'}
         </button>
-      )}
 
       {/* Power Print — Standard */}
       {format === 'standard' && (

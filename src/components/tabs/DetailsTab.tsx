@@ -9,7 +9,10 @@ import { useAIExtraction } from '@/hooks/useAIExtraction';
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
-import { generateWordReport } from '@/lib/reports/word-builder';
+import { downloadAsWord } from '@/lib/reports/word-export';
+import { buildStandardFinalSurveyHTML } from '@/lib/reports/standard-report-builder';
+import { calculateAssessmentSummary } from '@/lib/calculations';
+import { getVehicleAgeMonths } from '@/lib/calculations/depreciation';
 import { FileText, Sparkles, Download, Loader2, Hash, Wand2, FileSearch, PanelRightOpen, PanelRightClose, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -145,6 +148,7 @@ export function DetailsTab() {
   const currentClaim = useClaimStore(s => s.currentClaim);
   const updateClaim = useClaimStore(s => s.updateClaim);
   const updateSpotDetails = useClaimStore(s => s.updateSpotDetails);
+  const profile = useProfileStore(s => s.profile);
   const getNextSpotNumber = useProfileStore(s => s.getNextSpotNumber);
   const getNextFinalNumber = useProfileStore(s => s.getNextFinalNumber);
   const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview } = useAIExtraction();
@@ -310,7 +314,24 @@ export function DetailsTab() {
               </Button>
               <Button
                 variant="outline"
-                onClick={() => generateWordReport(currentClaim, null)}
+                onClick={() => {
+                  const fb = currentClaim.feeBill;
+                  const summary = calculateAssessmentSummary(
+                    currentClaim.assessmentRows || [],
+                    getVehicleAgeMonths(
+                      currentClaim.vehicle?.dateOfRegistration || null,
+                      currentClaim.vehicle?.yearOfManufacture ? Number(currentClaim.vehicle.yearOfManufacture) : null,
+                      currentClaim.accident?.dateAndTime || null,
+                    ),
+                    currentClaim.depreciationType || 'Standard',
+                    fb?.salvageValue || 0,
+                    fb?.lessExcess || 0,
+                  );
+                  downloadAsWord(
+                    buildStandardFinalSurveyHTML(currentClaim, summary, profile!),
+                    `${currentClaim.vehicle.registrationNumber || 'Claim'}-Final-Survey`,
+                  );
+                }}
                 className="gap-2 shadow-sm"
               >
                 <Download size={16} />

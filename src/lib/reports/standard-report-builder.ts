@@ -17,16 +17,9 @@ import { getHtmlScale } from './report-style-utils';
 import { preambleFromClaim, estimateTotalInclGst } from './final-survey-preamble';
 import { computeRowNet } from '@/lib/calculations/row-net';
 
-// ─── HTML/PDF SYNC CHECKLIST ──────────────────────────────────────────────────
-// Fields that must stay identical between this HTML builder and
-// SurveyReportDocument.tsx (React-PDF). Update both when changing these:
-//   • vehicle: registrationNumber, makeModel, yearOfManufacture, dateOfRegistration,
-//              engineNumber, chassisNumber, colour, fuelType, seatingCapacity
-//   • policy: policyNumber, insuredName, sumInsured, dateOfExpiry, depreciationType
-//   • accident: dateAndTime, place, natureOfAccident
-//   • assessment: parts, labour, paint rows + depreciation + GST totals
-//   • surveyor header / signature block (shared via report-utils.ts)
-// ─────────────────────────────────────────────────────────────────────────────
+// NOTE: SurveyReportDocument.tsx (React-PDF) is no longer a parallel rendering
+// of this report — it is only used by scripts/generate-pdf.ts to produce the
+// marketing screenshot. This builder is the single source for the real report.
 
 // ─── Local Helpers ────────────────────────────────────────────────────────────
 

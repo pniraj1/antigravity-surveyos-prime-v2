@@ -16,13 +16,19 @@
 
 import { useMemo, useState, useRef } from 'react';
 import DOMPurify from 'dompurify';
-import { Printer, FileText } from 'lucide-react';
+import { Printer, FileText, Download } from 'lucide-react';
+import { downloadAsWord } from '@/lib/reports/word-export';
 
 interface ReportPreviewPanelProps {
   html: string;
   onPrint: () => void;
   title?: string;
   printLabel?: string;
+  /**
+   * When set, shows a Word export button that saves the very same `html`
+   * shown in the preview and sent to the printer — one source, two outputs.
+   */
+  wordFilename?: string;
 }
 
 /** Wraps an HTML body fragment into a complete A4-ish preview document. */
@@ -66,6 +72,7 @@ export function ReportPreviewPanel({
   onPrint,
   title = 'Live Report Preview',
   printLabel = 'Print / Export',
+  wordFilename,
 }: ReportPreviewPanelProps) {
   const [height, setHeight] = useState(520);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -114,13 +121,26 @@ export function ReportPreviewPanel({
             {title}
           </span>
         </div>
-        <button
-          onClick={onPrint}
-          className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[10px] font-medium uppercase tracking-wide transition-all hover:opacity-80 active:scale-95 bg-primary text-primary-foreground"
-        >
-          <Printer size={11} />
-          {printLabel}
-        </button>
+        <div className="flex items-center gap-2">
+          {wordFilename && (
+            <button
+              onClick={() => downloadAsWord(html, wordFilename)}
+              disabled={!html}
+              title="Download this exact report as an editable Word file"
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[10px] font-medium uppercase tracking-wide transition-all hover:opacity-80 active:scale-95 disabled:opacity-40 border border-white/25 text-white"
+            >
+              <Download size={11} />
+              Word
+            </button>
+          )}
+          <button
+            onClick={onPrint}
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[10px] font-medium uppercase tracking-wide transition-all hover:opacity-80 active:scale-95 bg-primary text-primary-foreground"
+          >
+            <Printer size={11} />
+            {printLabel}
+          </button>
+        </div>
       </div>
 
       {/* ── Preview iframe ── */}

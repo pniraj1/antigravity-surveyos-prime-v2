@@ -19,6 +19,7 @@ function RIPreview({ claim, profile }: { claim: any; profile: any }) {
       title="Re-inspection Report — Live Preview"
       printLabel="Power Print"
       onPrint={() => triggerReinspectionPrint(claim, profile)}
+      wordFilename={`${claim?.vehicle?.registrationNumber || 'Claim'}-Reinspection`}
     />
   );
 }

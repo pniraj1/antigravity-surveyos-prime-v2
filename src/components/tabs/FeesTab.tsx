@@ -32,6 +32,7 @@ function FeeBillPreview({ claim, profile }: { claim: any; profile: any }) {
       title="Surveyor Fee Bill — Live Preview"
       printLabel="Power Print — Fee Bill"
       onPrint={() => triggerSpotFeeBillPrint(claim, profile)}
+      wordFilename={`${claim?.vehicle?.registrationNumber || 'Claim'}-Fee-Bill`}
     />
   );
 }

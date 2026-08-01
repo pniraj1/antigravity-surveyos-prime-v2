@@ -32,6 +32,7 @@ function BillCheckPreview({ claim, profile }: { claim: any; profile: any }) {
       title="Bill Check Report — Live Preview"
       printLabel="Power Print"
       onPrint={() => triggerUIICBillCheckPrint(claim, profile)}
+      wordFilename={`${claim?.vehicle?.registrationNumber || 'Claim'}-Bill-Check`}
     />
   );
 }
