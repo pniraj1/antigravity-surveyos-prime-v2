@@ -44,7 +44,8 @@ signature + stamp) on every page.
 - No OCR, no auto-extraction, no cross-checking extracted fields against claim data. The
   document is printed as captured; the surveyor verifies it by eye, as today.
 - No RC/DL-specific handling. The annexure is document-type agnostic.
-- No image cropping or editing. See Future Considerations.
+- **No cropping.** Explicitly rejected. Rotation plus the page-orientation control cover the
+  need; cropping adds an editing surface and a destructive operation on evidence.
 - No new navigation tab. Adding to `AppTab` / `useRouteSync` is the risky part of this
   codebase and is not justified by an upload zone and a download button.
 
@@ -109,6 +110,37 @@ cases, so the extra width is simply never used.
    is not reliably legible in print. It is appropriate for scanned A4 pages and wide cards.
 3. **The UI states the rule plainly:** *portrait for phone screenshots, landscape for wide
    cards and scanned pages.* This mirrors the guidance the Photo Engine already gives.
+
+### Rotation
+
+Each document in the gallery has a rotate control (90° clockwise per press, cycling back to
+the original after four). Two distinct needs:
+
+1. **Correction.** A photographed document is frequently captured sideways or upside down.
+2. **Optimisation.** Rotating a tall screenshot and printing it on a landscape page gives
+   more page along the direction the text runs, at the cost of the reader turning the page.
+
+The optimisation only pays off at 1-up:
+
+| Document | Page | Rendered | Length along the text |
+|---|---|---|---|
+| 0.450 upright | portrait 1-up | 287 × 637 | **637 pt** |
+| rotated to 2.222 | landscape 1-up | 802 × 361 | **802 pt** — 26% better |
+| 0.450 upright | portrait 2-up | 273 × 608 | **608 pt** |
+| rotated to 2.222 | landscape 2-up | 397 × 179 | 397 pt — worse |
+
+So the guidance is narrow and should be stated as such: **rotating to landscape helps only
+at 1-up.** At 2-up, upright portrait wins and rotation is purely a correction tool.
+
+**Implementation:** rotation re-encodes the image through a canvas and replaces `dataUrl`,
+swapping the stored `w`/`h`. No new persisted field, and no dependence on
+`@react-pdf/renderer`'s transform support — the stored image is already correct in the
+gallery, the PDF, and any future consumer. New store action `rotatePhoto(index: number)`,
+generic over both kinds; only the document gallery wires a button to it for now.
+
+Cost: each rotation is a JPEG re-encode at q0.92, so quality degrades slightly per press.
+Negligible at the two or three rotations a correction needs, and the alternative — retaining
+an untouched original alongside every document — would roughly double the IndexedDB budget.
 
 ### Resolution cap: 1600px, validated
 
@@ -189,6 +221,8 @@ Changes:
   call sites are unaffected.
 - New `updateDocumentAnnexure(updates: Partial<DocumentAnnexureOptions>)`, following the
   existing `updateReportSettings` pattern.
+- New `rotatePhoto(index: number)` — replaces `dataUrl` with a canvas-rotated re-encode and
+  swaps `w`/`h`. Generic over both kinds; only the document gallery wires it up for now.
 - `deletePhoto` and `updatePhotoName` are **unchanged** — see the index-mapping hazard below.
 
 ### Components
@@ -198,7 +232,7 @@ Changes:
 
 | File | Status | Role |
 |---|---|---|
-| `components/tabs/photos/DocumentAnnexureSection.tsx` | new | Section rendered below the photo engine: dropzone, gallery, layout + orientation pickers, verified toggle and field checkboxes, preview/download |
+| `components/tabs/photos/DocumentAnnexureSection.tsx` | new | Section rendered below the photo engine: dropzone, gallery (with per-item rotate and delete), layout + orientation pickers, verified toggle and field checkboxes, preview/download |
 | `components/pdf/DocumentAnnexureDocument.tsx` | new | react-pdf document: header, grid, attestation strip, footer |
 | `components/pdf/DocumentAnnexureDownloadButton.tsx` | new | Mirrors `PhotoSheetDownloadButton`, incl. the single-dynamic-import-boundary constraint |
 | `components/pdf/DocumentAnnexurePreview.tsx` | new | Mirrors `PhotoSheetPreview` |
@@ -293,6 +327,8 @@ Vitest, alongside the existing `src/lib/reports/__tests__/`.
    emits no strip; missing profile assets emit blank boxes rather than nothing.
 5. **Drive round-trip.** A `doc_`-prefixed filename restores as `kind: 'document'`; a
    `photo_`-prefixed one as `kind: 'damage'`.
+6. **Rotation.** One `rotatePhoto` swaps `w`/`h`; four consecutive calls return the item to
+   its original orientation. Rotating a document never touches any other array entry.
 
 ---
 
@@ -300,10 +336,6 @@ Vitest, alongside the existing `src/lib/reports/__tests__/`.
 
 Out of scope, recorded so the reasoning is not lost:
 
-- **Cropping.** A phone screenshot carries a status bar, app chrome and a nav bar — dead
-  space that directly costs legibility, since the cell is height-limited. Cropping to the
-  data region would raise the effective aspect from ~0.45 toward ~0.7 and materially improve
-  printed text size. This is the single highest-value future addition.
 - **Deep link to mParivahan** from the annexure section, to cut the app-switch. Requires
   first confirming whether the app registers a URL scheme.
 - **`compressImage` ignores its `quality` argument** — it is passed `1.0` and then calls
