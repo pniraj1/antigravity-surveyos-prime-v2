@@ -16,7 +16,7 @@ export default function RefundPage() {
       subtitle="Last updated: 31 July 2026 · Effective: 31 July 2026"
     >
       <section>
-        <h2 className="text-base font-black text-slate-900 mb-3">1. Your free trial is the evaluation period</h2>
+        <h2 className="text-h3 font-bold text-slate-900 mb-4">1. Your free trial is the evaluation period</h2>
         <p>
           Every account begins with a {TRIAL_DAYS}-day free trial with full access to all features, and no
           credit card is required. We ask you to satisfy yourself during the trial that Motor SurveyOS suits
@@ -25,7 +25,7 @@ export default function RefundPage() {
       </section>
 
       <section>
-        <h2 className="text-base font-black text-slate-900 mb-3">2. Paid subscriptions are non-refundable</h2>
+        <h2 className="text-h3 font-bold text-slate-900 mb-4">2. Paid subscriptions are non-refundable</h2>
         <p>
           Once a subscription period has been paid for and activated, the amount is non-refundable, whether
           the period is monthly, quarterly or yearly, and whether or not the software is used during it.
@@ -33,7 +33,7 @@ export default function RefundPage() {
       </section>
 
       <section>
-        <h2 className="text-base font-black text-slate-900 mb-3">3. You can cancel at any time</h2>
+        <h2 className="text-h3 font-bold text-slate-900 mb-4">3. You can cancel at any time</h2>
         <p>
           There is no lock-in and no cancellation fee. Simply do not submit a payment for the next period.
           Your access continues to the end of the period you have already paid for, after which the account
@@ -42,7 +42,7 @@ export default function RefundPage() {
       </section>
 
       <section>
-        <h2 className="text-base font-black text-slate-900 mb-3">4. Payment problems</h2>
+        <h2 className="text-h3 font-bold text-slate-900 mb-4">4. Payment problems</h2>
         <p>
           If a payment was made but not credited, if an incorrect amount was transferred, or if a period was
           activated for the wrong duration, write to{' '}
@@ -53,7 +53,7 @@ export default function RefundPage() {
       </section>
 
       <section>
-        <h2 className="text-base font-black text-slate-900 mb-3">5. If we end your access</h2>
+        <h2 className="text-h3 font-bold text-slate-900 mb-4">5. If we end your access</h2>
         <p>
           If we suspend or terminate an account for a reason other than a breach of our Terms of Service,
           we refund the unused portion of the current paid period.

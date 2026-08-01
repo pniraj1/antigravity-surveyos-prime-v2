@@ -58,7 +58,7 @@ export default function FeaturesPage() {
       {FEATURES.map((f, i) => (
         <section key={f.title} className="grid gap-6 sm:grid-cols-2 items-center">
           <div className={i % 2 === 1 ? 'sm:order-2' : ''}>
-            <h2 className="text-base font-black text-slate-900 mb-2">{f.title}</h2>
+            <h2 className="text-h3 font-bold text-slate-900 mb-3">{f.title}</h2>
             <p>{f.body}</p>
           </div>
           {f.image ? (
@@ -70,7 +70,7 @@ export default function FeaturesPage() {
               loading="lazy"
             />
           ) : (
-            <div className="rounded-xl border border-black/5 bg-white/60 p-6 text-xs text-slate-400">
+            <div className="rounded-xl border border-black/5 bg-white/60 p-6 text-caption text-slate-600">
               Included in every plan.
             </div>
           )}
@@ -80,7 +80,7 @@ export default function FeaturesPage() {
       <section className="text-center pt-4">
         <Link
           href="/pricing"
-          className="inline-flex items-center gap-1.5 px-6 py-3 text-sm font-bold text-gray-900 bg-amber-400 rounded-full hover:scale-105 transition-transform"
+          className="inline-flex items-center gap-1.5 px-6 py-3 text-sm font-bold text-slate-900 bg-amber-400 rounded-full hover:scale-105 transition-transform"
         >
           See pricing
         </Link>

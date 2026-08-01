@@ -69,11 +69,11 @@ export default function FaqPage() {
     >
       {GROUPS.map((group) => (
         <section key={group.heading}>
-          <h2 className="text-base font-black text-slate-900 mb-3">{group.heading}</h2>
+          <h2 className="text-h3 font-bold text-slate-900 mb-4">{group.heading}</h2>
           <div className="space-y-4">
             {group.items.map((f) => (
               <div key={f.q}>
-                <p className="font-bold text-slate-900">{f.q}</p>
+                <p className="font-semibold text-slate-900 mb-1">{f.q}</p>
                 <p>{f.a}</p>
               </div>
             ))}

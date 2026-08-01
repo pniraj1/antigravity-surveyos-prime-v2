@@ -35,15 +35,20 @@ export function MarketingShell({ eyebrow, title, subtitle, children, wide = fals
         </div>
       </nav>
 
-      <article className={`${wide ? 'max-w-5xl' : 'max-w-2xl'} mx-auto px-5 py-16`}>
-        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">{eyebrow}</div>
-        <h1 className="text-3xl font-black text-slate-900 mb-2">{title}</h1>
-        {subtitle && <p className="text-slate-500 text-sm mb-10">{subtitle}</p>}
-        <div className="space-y-10 text-sm text-slate-700 leading-relaxed">{children}</div>
+      {/* Narrow column is capped near 65-75 characters — the readable line
+          length. Wide is for grids and screenshots, not for prose. */}
+      <article className={`${wide ? 'max-w-5xl' : 'max-w-[68ch]'} mx-auto px-5 py-20`}>
+        <div className="text-caption font-semibold text-amber-700 uppercase tracking-[0.18em] mb-4">{eyebrow}</div>
+        <h1 className="text-h1 font-bold text-slate-900 mb-4">{title}</h1>
+        {subtitle && <p className="text-lead text-slate-600 mb-14">{subtitle}</p>}
 
-        <div className="mt-12 pt-6 border-t border-black/5 text-xs text-slate-400 flex flex-wrap gap-4">
+        {/* Body copy is regular weight by default. Bold is for emphasis, and
+            emphasis means nothing when everything already has it. */}
+        <div className="space-y-14 text-body font-normal text-slate-700">{children}</div>
+
+        <div className="mt-20 pt-8 border-t border-slate-200 text-caption text-slate-600 flex flex-wrap gap-x-6 gap-y-3">
           {MARKETING_LINKS.map((l) => (
-            <Link key={l.href} href={l.href} className="hover:text-slate-600 transition-colors">{l.label}</Link>
+            <Link key={l.href} href={l.href} className="hover:text-amber-700 transition-colors">{l.label}</Link>
           ))}
         </div>
       </article>

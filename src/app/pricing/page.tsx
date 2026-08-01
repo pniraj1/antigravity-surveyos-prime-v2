@@ -31,15 +31,15 @@ export default function PricingPage() {
             key={plan.id}
             className={`rounded-2xl border p-6 flex flex-col ${i === PLANS.length - 1 ? 'border-amber-400 bg-white shadow-md' : 'border-black/10 bg-white/60'}`}
           >
-            <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">{plan.label}</div>
+            <div className="text-caption font-semibold uppercase tracking-[0.14em] text-slate-500 mb-2">{plan.label}</div>
             <div className="text-3xl font-black text-slate-900">₹{plan.amount.toLocaleString('en-IN')}</div>
-            <div className="text-xs text-slate-500 mt-1">
+            <div className="text-caption text-slate-600 mt-1">
               {plan.months === 1 ? 'per month' : `for ${plan.months} months`}
             </div>
-            {plan.note && <div className="text-xs font-bold text-emerald-600 mt-2">{plan.note}</div>}
+            {plan.note && <div className="text-caption font-semibold text-emerald-700 mt-2">{plan.note}</div>}
             <Link
               href="/signup"
-              className="mt-6 text-center px-4 py-2.5 rounded-full text-xs font-bold bg-amber-400 text-gray-900 hover:scale-105 transition-transform"
+              className="mt-6 text-center px-4 py-2.5 rounded-full text-xs font-bold bg-amber-400 text-slate-900 hover:scale-105 transition-transform"
             >
               Start Free Trial
             </Link>
@@ -48,13 +48,13 @@ export default function PricingPage() {
       </section>
 
       <section>
-        <p className="text-xs text-slate-500">
+        <p className="text-caption text-slate-600">
           Prices are in Indian Rupees. No additional tax is currently charged. No credit card is required for the trial.
         </p>
       </section>
 
       <section className="rounded-2xl border border-amber-200 bg-amber-50/60 p-5">
-        <h2 className="text-base font-black text-slate-900 mb-2">Refer a surveyor, you both gain</h2>
+        <h2 className="text-h3 font-bold text-slate-900 mb-3">Refer a surveyor, you both gain</h2>
         <p>
           Share your referral code from the app. They get {REFERRAL_TRIAL_BONUS_DAYS} extra trial days
           ({TRIAL_DAYS + REFERRAL_TRIAL_BONUS_DAYS} instead of {TRIAL_DAYS}), and when their first payment is
@@ -63,11 +63,11 @@ export default function PricingPage() {
       </section>
 
       <section>
-        <h2 className="text-base font-black text-slate-900 mb-3">Pricing questions</h2>
+        <h2 className="text-h3 font-bold text-slate-900 mb-4">Pricing questions</h2>
         <div className="space-y-4">
           {FAQS.map((f) => (
             <div key={f.q}>
-              <p className="font-bold text-slate-900">{f.q}</p>
+              <p className="font-semibold text-slate-900 mb-1">{f.q}</p>
               <p>{f.a}</p>
             </div>
           ))}

@@ -15,7 +15,7 @@ export default function ContactPage() {
       subtitle="We are a small team and read every message ourselves."
     >
       <section>
-        <h2 className="text-base font-black text-slate-900 mb-3">Support</h2>
+        <h2 className="text-h3 font-bold text-slate-900 mb-4">Support</h2>
         <p>
           For help with the software, your subscription or a payment, email{' '}
           <a href="mailto:surveyosprime@gmail.com" className="text-amber-600 hover:underline">surveyosprime@gmail.com</a>.
@@ -24,15 +24,15 @@ export default function ContactPage() {
       </section>
 
       <section>
-        <h2 className="text-base font-black text-slate-900 mb-3">Who you are dealing with</h2>
+        <h2 className="text-h3 font-bold text-slate-900 mb-4">Who you are dealing with</h2>
         <div className="p-4 rounded-xl border border-black/5 bg-white/60">
-          <p className="font-bold text-slate-900">SurveyOS, a sole proprietorship of Niraj Patil, Pune, India</p>
+          <p className="font-semibold text-slate-900 mb-1">SurveyOS, a sole proprietorship of Niraj Patil, Pune, India</p>
           <p className="mt-1">Motor SurveyOS is operated by SurveyOS. Any agreement you enter into for the use of this software is with the proprietor named above.</p>
         </div>
       </section>
 
       <section>
-        <h2 className="text-base font-black text-slate-900 mb-3">Grievance Redressal</h2>
+        <h2 className="text-h3 font-bold text-slate-900 mb-4">Grievance Redressal</h2>
         <p className="mb-3">
           Under India&apos;s Digital Personal Data Protection Act 2023, you may raise any complaint about how
           your personal data has been handled with our Grievance Officer.
@@ -49,7 +49,7 @@ export default function ContactPage() {
       </section>
 
       <section>
-        <h2 className="text-base font-black text-slate-900 mb-3">If your details appear in a survey</h2>
+        <h2 className="text-h3 font-bold text-slate-900 mb-4">If your details appear in a survey</h2>
         <p>
           If you are an insured person or a third party whose details appear in a motor survey, please
           contact your insurer or the surveyor appointed to your claim. They decide what happens to that

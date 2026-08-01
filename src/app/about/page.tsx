@@ -15,7 +15,7 @@ export default function AboutPage() {
       subtitle="Most insurance software is sold to companies. This one is built for the person doing the survey."
     >
       <section>
-        <h2 className="text-base font-black text-slate-900 mb-3">Why it exists</h2>
+        <h2 className="text-h3 font-bold text-slate-900 mb-4">Why it exists</h2>
         <p>
           An independent motor surveyor spends more time transcribing documents than assessing damage.
           Registration certificates, driving licences and policy schedules all say the same things in
@@ -28,7 +28,7 @@ export default function AboutPage() {
       </section>
 
       <section>
-        <h2 className="text-base font-black text-slate-900 mb-3">The assessment stays yours</h2>
+        <h2 className="text-h3 font-bold text-slate-900 mb-4">The assessment stays yours</h2>
         <p>
           The AI extracts, reconciles and flags. It does not decide. Every figure in a report is reviewed
           and signed off by the licensed surveyor, whose name and IRDAI licence appear on it. We build the
@@ -38,7 +38,7 @@ export default function AboutPage() {
       </section>
 
       <section>
-        <h2 className="text-base font-black text-slate-900 mb-3">How we treat your data</h2>
+        <h2 className="text-h3 font-bold text-slate-900 mb-4">How we treat your data</h2>
         <ul className="space-y-2 pl-4">
           {[
             'Claim records are stored in India, in Google Cloud’s Mumbai region.',
@@ -47,7 +47,7 @@ export default function AboutPage() {
             'Only you can read your claims. Not other surveyors, and not us in the ordinary course of running the service.',
           ].map((item) => (
             <li key={item} className="flex gap-2">
-              <span className="text-amber-400 flex-shrink-0">·</span>
+              <span className="text-slate-400 flex-shrink-0">·</span>
               <span>{item}</span>
             </li>
           ))}
@@ -55,9 +55,9 @@ export default function AboutPage() {
       </section>
 
       <section>
-        <h2 className="text-base font-black text-slate-900 mb-3">Who we are</h2>
+        <h2 className="text-h3 font-bold text-slate-900 mb-4">Who we are</h2>
         <div className="p-4 rounded-xl border border-black/5 bg-white/60">
-          <p className="font-bold text-slate-900">SurveyOS, a sole proprietorship of Niraj Patil, Pune, India</p>
+          <p className="font-semibold text-slate-900 mb-1">SurveyOS, a sole proprietorship of Niraj Patil, Pune, India</p>
           <p className="mt-1">
             Contact: <a href="mailto:surveyosprime@gmail.com" className="text-amber-600 hover:underline">surveyosprime@gmail.com</a>
           </p>
