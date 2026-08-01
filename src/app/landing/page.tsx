@@ -653,15 +653,19 @@ export default function LandingPage() {
           </GlassCard>
         </Link>
 
-        {/* ── FOOTER ───────────────────────────────────────────────────── */}
-        <div className="text-center text-xs text-slate-500 pt-4 pb-2 relative z-10">
+        {/* ── FOOTER ───────────────────────────────────────────────────────
+            Opaque surface at z-20 on purpose. The cinematic video section
+            paints dark scrims (rgba(2,6,23,.95)) at z-10, which were washing
+            these links out at some scroll positions — legal links have to stay
+            legible unconditionally, so the footer owns its own background. */}
+        <div className="relative z-20 mt-6 rounded-2xl bg-[#F5F5F3] border border-black/5 px-5 py-8 text-center">
           <Link href="/landing" aria-label="Motor SurveyOS Home">
-            <Logo variant="light" size="sm" className="justify-center mb-3" />
+            <Logo variant="light" size="sm" className="justify-center mb-4" />
           </Link>
 
           {/* The only route from the landing page to the marketing and legal
               pages. The privacy notice in particular has to stay reachable. */}
-          <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 mb-4">
+          <div className="flex flex-wrap justify-center gap-x-5 gap-y-2.5 mb-5 text-[13px] font-medium text-slate-700">
             {[
               { href: '/features', label: 'Features' },
               { href: '/pricing', label: 'Pricing' },
@@ -672,13 +676,15 @@ export default function LandingPage() {
               { href: '/terms', label: 'Terms' },
               { href: '/refund', label: 'Refunds' },
             ].map((l) => (
-              <Link key={l.href} href={l.href} className="hover:text-slate-900 transition-colors">
+              <Link key={l.href} href={l.href} className="hover:text-amber-600 transition-colors">
                 {l.label}
               </Link>
             ))}
           </div>
 
-          © {new Date().getFullYear()} Motor SurveyOS. Engineered for Surveyors.
+          <p className="text-xs text-slate-500">
+            © {new Date().getFullYear()} Motor SurveyOS. Engineered for Surveyors.
+          </p>
         </div>
 
       </motion.div>
