@@ -18,29 +18,37 @@ export function rotateImage90(
     const img = new Image();
 
     img.onload = () => {
-      const srcW = img.naturalWidth;
-      const srcH = img.naturalHeight;
-      // A 90 degree turn swaps the axes.
-      const w = srcH;
-      const h = srcW;
+      try {
+        const srcW = img.naturalWidth;
+        const srcH = img.naturalHeight;
+        // A 90 degree turn swaps the axes.
+        const w = srcH;
+        const h = srcW;
 
-      const canvas = document.createElement('canvas');
-      canvas.width = w;
-      canvas.height = h;
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
 
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        reject(new Error('Could not get a 2D canvas context'));
-        return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Could not get a 2D canvas context'));
+          return;
+        }
+
+        // Move the origin to the destination centre, turn, then draw the source
+        // centred on that origin.
+        ctx.translate(w / 2, h / 2);
+        ctx.rotate(Math.PI / 2);
+        ctx.drawImage(img, -srcW / 2, -srcH / 2);
+
+        resolve({ dataUrl: canvas.toDataURL('image/jpeg', 0.92), w, h });
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          reject(error);
+        } else {
+          reject(new Error(`Failed to rotate image: ${String(error)}`));
+        }
       }
-
-      // Move the origin to the destination centre, turn, then draw the source
-      // centred on that origin.
-      ctx.translate(w / 2, h / 2);
-      ctx.rotate(Math.PI / 2);
-      ctx.drawImage(img, -srcW / 2, -srcH / 2);
-
-      resolve({ dataUrl: canvas.toDataURL('image/jpeg', 0.92), w, h });
     };
 
     img.onerror = () => reject(new Error('Could not decode image for rotation'));
