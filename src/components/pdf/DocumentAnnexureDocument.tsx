@@ -9,7 +9,7 @@ import {
   resolveAnnexureOptions,
   DOC_FOOTER_H,
   DOC_STRIP_H,
-  type StripProfile,
+  type AnnexureProfile,
 } from '@/lib/photos/document-annexure';
 
 const ACCENT = '#2563EB';
@@ -69,11 +69,6 @@ const SIGNATURE_W = 110;
 const SIGNATURE_H = 46;
 const STAMP_W = 76;
 const STAMP_H = 62;
-
-interface AnnexureProfile extends StripProfile {
-  signatureDataUrl: string | null;
-  stampDataUrl: string | null;
-}
 
 interface Props {
   claim: ClaimData;

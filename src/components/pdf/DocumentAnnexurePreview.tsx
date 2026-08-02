@@ -4,6 +4,7 @@ import { DocumentAnnexureDocument } from './DocumentAnnexureDocument';
 
 import type { ClaimData } from '@/types';
 import { useProfileStore } from '@/stores/profile-store';
+import { buildAnnexureProfile } from '@/lib/photos/document-annexure';
 
 interface Props {
   claim: ClaimData;
@@ -12,18 +13,7 @@ interface Props {
 export function DocumentAnnexurePreview({ claim }: Props) {
   const profile = useProfileStore(s => s.profile);
 
-  const annexureProfile = {
-    name: profile.name,
-    // licenceNumber, NOT irdaiLicence: every other report prints licenceNumber
-    // (report-utils.ts:78, SpotPrintReport.tsx:129, irdai-summary-builder.ts:243).
-    // irdaiLicence is the registration-time field; using it here would put a
-    // different licence number on the annexure than on the survey report filed
-    // alongside it.
-    irdaiLicence: profile.licenceNumber,
-    iiislaNumber: profile.iiislaNumber,
-    signatureDataUrl: profile.signatureDataUrl,
-    stampDataUrl: profile.stampDataUrl,
-  };
+  const annexureProfile = buildAnnexureProfile(profile);
 
   return (
     <PDFViewer
