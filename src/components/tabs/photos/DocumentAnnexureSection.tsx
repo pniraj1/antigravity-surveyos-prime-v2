@@ -13,7 +13,12 @@ import { uploadFileToDrive } from '@/lib/drive';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { partitionPhotos, resolveAnnexureOptions, DOC_FILE_PREFIX } from '@/lib/photos/document-annexure';
+import {
+  partitionPhotos,
+  resolveAnnexureOptions,
+  DOC_FILE_PREFIX,
+  DOC_JPEG_QUALITY,
+} from '@/lib/photos/document-annexure';
 import { rotateImage90 } from '@/lib/photos/rotate-image';
 import { compressImage } from '@/lib/photos/compress-image';
 import type { DocumentLayout } from '@/types/assessment';
@@ -23,7 +28,6 @@ import type { PageOrientation } from '@/types/assessment';
  *  At the 2-up portrait default a document prints 3.8in wide, so 300dpi needs
  *  ~1139px — 1600 leaves headroom without wasting the IndexedDB budget. */
 const DOC_MAX_WIDTH = 1600;
-const DOC_QUALITY = 0.92;
 
 const DocumentAnnexureDownloadButton = dynamic(
   () => import('@/components/pdf/DocumentAnnexureDownloadButton').then(m => m.DocumentAnnexureDownloadButton),
@@ -70,30 +74,33 @@ export function DocumentAnnexureSection() {
       if (!files || files.length === 0 || !currentClaim) return;
       setIsProcessing(true);
 
-      const claimId = currentClaim.id;
-      const label = currentClaim.vehicle?.registrationNumber || claimId;
+      try {
+        const claimId = currentClaim.id;
+        const label = currentClaim.vehicle?.registrationNumber || claimId;
 
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        if (!file.type.startsWith('image/')) {
-          toast.error(`${file.name} is not an image. PDFs must be screenshotted first.`);
-          continue;
-        }
-        try {
-          const { dataUrl, w, h } = await compressImage(file, DOC_MAX_WIDTH, DOC_QUALITY, 'image/jpeg');
-          const name = file.name.split('.')[0].substring(0, 30);
-          addPhoto(dataUrl, name, w, h, 'document');
-          if (profile.autoUploadDrive !== false) {
-            uploadFileToDrive(claimId, `${DOC_FILE_PREFIX}${Date.now()}_${name}.jpg`, file, label).catch(() => {});
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          if (!file.type.startsWith('image/')) {
+            toast.error(`${file.name} is not an image. PDFs must be screenshotted first.`);
+            continue;
           }
-        } catch {
-          // A document is attested evidence — unlike a damage photo, a silent
-          // drop here would leave the surveyor signing an incomplete annexure.
-          toast.error(`Could not read ${file.name}. Try re-taking the screenshot.`);
+          try {
+            const { dataUrl, w, h } = await compressImage(file, DOC_MAX_WIDTH, DOC_JPEG_QUALITY, 'image/jpeg');
+            const name = file.name.split('.')[0].substring(0, 30);
+            addPhoto(dataUrl, name, w, h, 'document');
+            if (profile.autoUploadDrive !== false) {
+              uploadFileToDrive(claimId, `${DOC_FILE_PREFIX}${Date.now()}_${name}.jpg`, file, label).catch(() => {});
+            }
+          } catch {
+            // A document is attested evidence — unlike a damage photo, a silent
+            // drop here would leave the surveyor signing an incomplete annexure.
+            toast.error(`Could not read ${file.name}. Try re-taking the screenshot.`);
+          }
         }
+      } finally {
+        setIsProcessing(false);
+        event.target.value = '';
       }
-      setIsProcessing(false);
-      event.target.value = '';
     },
     [addPhoto, currentClaim, profile.autoUploadDrive],
   );
@@ -328,6 +335,7 @@ export function DocumentAnnexureSection() {
                       </button>
                       <button
                         onClick={() => deletePhoto(index)}
+                        disabled={rotatingIndex !== null}
                         title="Remove"
                         className="bg-background/80 backdrop-blur-sm text-destructive hover:bg-destructive hover:text-white p-1.5 rounded-md"
                       >
