@@ -7,6 +7,7 @@ import { useUIStore } from '@/stores/ui-store';
 import { useProfileStore } from '@/stores/profile-store';
 import type { ClaimData } from '@/types';
 import { toast } from 'sonner';
+import { partitionPhotos } from '@/lib/photos/document-annexure';
 import {
   addToDriveQueue,
   getDriveQueue,
@@ -604,7 +605,14 @@ async function performClaimBackup(claim: ClaimData): Promise<'ok' | 'error'> {
     const searchData = await searchRes.json();
     const fileId = searchData.files?.[0]?.id ?? null;
 
-    const content = JSON.stringify(claim, null, 2);
+    // Documents (RC/DL screenshots, policy schedules — kind:'document') never
+    // leave the device: strip them before the claim is serialized for any
+    // Drive backup. Damage photos are unaffected and still back up as before.
+    const driveSafeClaim: ClaimData = {
+      ...claim,
+      photos: partitionPhotos(claim.photos).damage.map(d => d.item),
+    };
+    const content = JSON.stringify(driveSafeClaim, null, 2);
     const blob = new Blob([content], { type: 'application/json' });
 
     if (fileId) {

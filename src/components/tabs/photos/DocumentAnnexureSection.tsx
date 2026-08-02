@@ -9,14 +9,12 @@ import {
 
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
-import { uploadFileToDrive } from '@/lib/drive';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   partitionPhotos,
   resolveAnnexureOptions,
-  DOC_FILE_PREFIX,
   DOC_JPEG_QUALITY,
 } from '@/lib/photos/document-annexure';
 import { rotateImage90 } from '@/lib/photos/rotate-image';
@@ -75,9 +73,6 @@ export function DocumentAnnexureSection() {
       setIsProcessing(true);
 
       try {
-        const claimId = currentClaim.id;
-        const label = currentClaim.vehicle?.registrationNumber || claimId;
-
         for (let i = 0; i < files.length; i++) {
           const file = files[i];
           if (!file.type.startsWith('image/')) {
@@ -87,10 +82,9 @@ export function DocumentAnnexureSection() {
           try {
             const { dataUrl, w, h } = await compressImage(file, DOC_MAX_WIDTH, DOC_JPEG_QUALITY, 'image/jpeg');
             const name = file.name.split('.')[0].substring(0, 30);
+            // Documents never leave the device: no Drive upload, no queueing,
+            // no claim.json backup (see performClaimBackup's driveSafeClaim).
             addPhoto(dataUrl, name, w, h, 'document');
-            if (profile.autoUploadDrive !== false) {
-              uploadFileToDrive(claimId, `${DOC_FILE_PREFIX}${Date.now()}_${name}.jpg`, file, label).catch(() => {});
-            }
           } catch {
             // A document is attested evidence — unlike a damage photo, a silent
             // drop here would leave the surveyor signing an incomplete annexure.
@@ -102,7 +96,7 @@ export function DocumentAnnexureSection() {
         event.target.value = '';
       }
     },
-    [addPhoto, currentClaim, profile.autoUploadDrive],
+    [addPhoto, currentClaim],
   );
 
   const handleRotate = useCallback(
@@ -219,7 +213,7 @@ export function DocumentAnnexureSection() {
               {opts.verified && (
                 <>
                   <p className="text-[10px] text-muted-foreground leading-snug">
-                    VERIFIED, your name, signature and stamp print on every page.
+                    Verified, your name, signature and stamp print on every page.
                   </p>
                   <label className="flex items-center gap-2 text-xs text-muted-foreground">
                     <input
