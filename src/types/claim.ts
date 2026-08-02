@@ -97,7 +97,9 @@ export interface ClaimData {
   photoLandscape: boolean;
 
   // ─── Document Annexure ─────────────────────────────
-  documentAnnexure: DocumentAnnexureOptions;
+  /** Undefined on claims created before the annexure existed — always read
+   *  through resolveAnnexureOptions(), never directly. */
+  documentAnnexure?: DocumentAnnexureOptions;
 
   // ─── Total Loss Settlement ─────────────────────────
   /**

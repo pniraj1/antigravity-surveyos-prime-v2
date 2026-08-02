@@ -19,3 +19,15 @@ export const DEFAULT_DOCUMENT_ANNEXURE_OPTIONS: DocumentAnnexureOptions = {
   showBorder: true,
   borderColor: '#E5E7EB',
 };
+
+/**
+ * Read a claim's annexure options, filling anything absent from the defaults.
+ * Claims created before this feature have no `documentAnnexure` at all, and
+ * older persisted claims may carry only some of its fields, so every consumer
+ * must go through here rather than reading `claim.documentAnnexure` directly.
+ */
+export function resolveAnnexureOptions(
+  stored: Partial<DocumentAnnexureOptions> | undefined,
+): DocumentAnnexureOptions {
+  return { ...DEFAULT_DOCUMENT_ANNEXURE_OPTIONS, ...stored };
+}
