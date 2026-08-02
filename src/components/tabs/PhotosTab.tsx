@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { uploadFileToDrive, listFilesInFolder, downloadFileAsBase64 } from '@/lib/drive';
-import { DOC_FILE_PREFIX, PHOTO_FILE_PREFIX, isDocumentFileName } from '@/lib/photos/document-annexure';
+import { PHOTO_FILE_PREFIX, isDocumentFileName } from '@/lib/photos/document-annexure';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import type { PhotoLayout, PhotoSheetOptions, PageOrientation } from '@/types/assessment';
 import { DEFAULT_PHOTO_SHEET_OPTIONS } from '@/components/pdf/PhotoSheetDocument';
+import { DocumentAnnexureSection } from '@/components/tabs/photos/DocumentAnnexureSection';
 import dynamic from 'next/dynamic';
 
 // ── Single dynamic boundary per pdf component ────────────────────────────────
@@ -481,6 +482,8 @@ export function PhotosTab() {
           )}
         </div>
       </div>
+
+      <DocumentAnnexureSection />
     </div>
   );
 }
