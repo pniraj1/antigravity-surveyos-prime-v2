@@ -33,7 +33,7 @@ The spec names the store action `rotatePhoto(index)`. This plan uses **`replaceP
 | File | Status | Responsibility |
 |---|---|---|
 | `src/types/assessment.ts` | modify | `PhotoItem.kind`, `DocumentLayout`, `DocumentAnnexureOptions` |
-| `src/types/claim.ts` | modify | `ClaimData.documentAnnexure` + default in `createEmptyClaim` |
+| `src/types/claim.ts` | modify | `ClaimData.documentAnnexure` + default in `createBlankClaim` |
 | `src/lib/photos/document-annexure.ts` | create | Pure: partitioning, layout maths, strip composition, defaults, Drive filename prefix |
 | `src/lib/photos/__tests__/document-annexure.test.ts` | create | Unit tests for all of the above |
 | `src/lib/photos/rotate-image.ts` | create | Canvas 90° rotation (browser-only, no unit test) |
@@ -189,7 +189,7 @@ export const DEFAULT_DOCUMENT_ANNEXURE_OPTIONS: DocumentAnnexureOptions = {
 
 - [ ] **Step 6: Wire the default into new claims**
 
-In `src/types/claim.ts`, import the constant and add the field to `createEmptyClaim` immediately after `photoLandscape: false,` (near line 396):
+In `src/types/claim.ts`, import the constant and add the field to `createBlankClaim` immediately after `photoLandscape: false,` (near line 396):
 
 ```typescript
     photos: [],
@@ -214,7 +214,7 @@ Expected: PASS, 3 tests.
 npx tsc --noEmit
 ```
 
-Expected: no errors. If `createEmptyClaim` is not the only place constructing a `ClaimData`, TypeScript will name the other sites — add `documentAnnexure: { ...DEFAULT_DOCUMENT_ANNEXURE_OPTIONS }` to each.
+Expected: no errors. If `createBlankClaim` is not the only place constructing a `ClaimData`, TypeScript will name the other sites — add `documentAnnexure: { ...DEFAULT_DOCUMENT_ANNEXURE_OPTIONS }` to each.
 
 - [ ] **Step 9: Commit**
 
@@ -866,7 +866,10 @@ Insert after the `updatePhotoLayout` implementation:
       return {
         currentClaim: {
           ...state.currentClaim,
-          documentAnnexure: { ...state.currentClaim.documentAnnexure, ...updates },
+          // Resolve first: a claim persisted before this feature has no
+          // documentAnnexure at all, and spreading undefined would leave a
+          // partial object behind.
+          documentAnnexure: { ...resolveAnnexureOptions(state.currentClaim.documentAnnexure), ...updates },
           updatedAt: new Date().toISOString(),
         },
         isDirty: true,
@@ -1094,7 +1097,7 @@ function Mark({ src, label, w, h }: { src: string | null; label: string; w: numb
 }
 
 export function DocumentAnnexureDocument({ claim, profile }: Props) {
-  const opts = claim.documentAnnexure;
+  const opts = resolveAnnexureOptions(claim.documentAnnexure);
   const documents = partitionPhotos(Array.isArray(claim?.photos) ? claim.photos : [])
     .documents.map(d => d.item);
 
@@ -1586,7 +1589,7 @@ export function DocumentAnnexureSection() {
 
   if (!currentClaim) return null;
 
-  const opts = currentClaim.documentAnnexure;
+  const opts = resolveAnnexureOptions(currentClaim.documentAnnexure);
   const documents = partitionPhotos(currentClaim.photos).documents;
   const hasDocuments = documents.length > 0;
   const missingMarks = opts.verified && (!profile.signatureDataUrl || !profile.stampDataUrl);
