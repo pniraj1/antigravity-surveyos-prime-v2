@@ -1,9 +1,18 @@
 import type { StateCreator } from 'zustand';
-import type { ClaimData, SurveyType, VehicleType, DepreciationType, ReportSettings } from '@/types';
+import type {
+  ClaimData,
+  SurveyType,
+  VehicleType,
+  DepreciationType,
+  ReportSettings,
+  PhotoItem,
+  DocumentAnnexureOptions,
+} from '@/types';
 import { createBlankClaim } from '@/types';
 import { saveClaim } from '@/lib/storage/indexeddb';
 import { useUIStore } from '@/stores/ui-store';
 import { useAuthStore } from '@/stores/auth-store';
+import { resolveAnnexureOptions } from '@/lib/photos/document-annexure';
 
 export interface ClaimSlice {
   currentClaim: ClaimData | null;
@@ -39,10 +48,19 @@ export interface ClaimSlice {
   updateFeeBill: (updates: Partial<ClaimData['feeBill']>) => void;
   updateBillCheck: (updates: Partial<ClaimData['billCheck']>) => void;
   updateReportSettings: (updates: Partial<ReportSettings>) => void;
-  addPhoto: (dataUrl: string, name: string, w?: number, h?: number) => void;
+  addPhoto: (
+    dataUrl: string,
+    name: string,
+    w?: number,
+    h?: number,
+    kind?: PhotoItem['kind'],
+  ) => void;
   deletePhoto: (index: number) => void;
   updatePhotoName: (index: number, name: string) => void;
   updatePhotoLayout: (layout: ClaimData['photoLayout']) => void;
+  /** Swap an image's data and dimensions in place — used by rotation. */
+  replacePhotoImage: (index: number, dataUrl: string, w: number, h: number) => void;
+  updateDocumentAnnexure: (updates: Partial<DocumentAnnexureOptions>) => void;
   setClaimsList: (claims: ClaimSlice['claimsList']) => void;
   markClean: () => void;
   /**
@@ -230,13 +248,13 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
     }));
   },
 
-  addPhoto: (dataUrl, name, w, h) => {
+  addPhoto: (dataUrl, name, w, h, kind = 'damage') => {
     set((state: ClaimSlice) => {
       if (!state.currentClaim) return {};
       return {
         currentClaim: {
           ...state.currentClaim,
-          photos: [...state.currentClaim.photos, { dataUrl, name, w, h }],
+          photos: [...state.currentClaim.photos, { dataUrl, name, w, h, kind }],
           updatedAt: new Date().toISOString(),
         },
         isDirty: true,
@@ -287,6 +305,41 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
         : null,
       isDirty: true,
     }));
+  },
+
+  replacePhotoImage: (index, dataUrl, w, h) => {
+    set((state: ClaimSlice) => {
+      if (!state.currentClaim) return {};
+      const photo = state.currentClaim.photos[index];
+      if (!photo) return {};
+      const newPhotos = [...state.currentClaim.photos];
+      newPhotos[index] = { ...photo, dataUrl, w, h };
+      return {
+        currentClaim: {
+          ...state.currentClaim,
+          photos: newPhotos,
+          updatedAt: new Date().toISOString(),
+        },
+        isDirty: true,
+      };
+    });
+  },
+
+  updateDocumentAnnexure: (updates) => {
+    set((state: ClaimSlice) => {
+      if (!state.currentClaim) return {};
+      return {
+        currentClaim: {
+          ...state.currentClaim,
+          // Resolve first: a claim persisted before this feature has no
+          // documentAnnexure at all, and spreading undefined would leave a
+          // partial object behind.
+          documentAnnexure: { ...resolveAnnexureOptions(state.currentClaim.documentAnnexure), ...updates },
+          updatedAt: new Date().toISOString(),
+        },
+        isDirty: true,
+      };
+    });
   },
 
   setClaimsList: (claims) => set({ claimsList: claims }),
