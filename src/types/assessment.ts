@@ -249,6 +249,12 @@ export interface PhotoItem {
   w?: number;
   /** Original pixel height captured at upload time (used for orientation detection) */
   h?: number;
+  /**
+   * Which output this image belongs to. 'document' items render in the Document
+   * Annexure and never in the damage photo sheet. Undefined is treated as
+   * 'damage', which keeps every claim created before this field existed valid.
+   */
+  kind?: 'damage' | 'document';
 }
 
 /** Number of photos to show per A4 page */
@@ -268,6 +274,32 @@ export interface PhotoSheetOptions {
   borderColor: string;
   /** Manual page orientation override */
   pageOrientation?: PageOrientation;
+}
+
+// ─── DOCUMENT ANNEXURE ──────────────────────────────────
+/** Number of documents per A4 page. */
+export type DocumentLayout = 1 | 2 | 4;
+
+/**
+ * Persisted on the claim (unlike PhotoSheetOptions, which is runtime-only)
+ * because the surveyor customises the attestation strip per claim.
+ */
+export interface DocumentAnnexureOptions {
+  layout: DocumentLayout;
+  pageOrientation: PageOrientation;
+  /** Master toggle. When false no attestation strip is rendered at all. */
+  verified: boolean;
+  /** Include the "IRDAI: … · IIISLA: …" line. */
+  showLicence: boolean;
+  /** Include the "<place> · <date>" line. */
+  showDatePlace: boolean;
+  place: string;
+  /** ISO date (YYYY-MM-DD). */
+  verifiedDate: string;
+  pagePadding: number;
+  cellGap: number;
+  showBorder: boolean;
+  borderColor: string;
 }
 
 export interface BillCheckDetails {

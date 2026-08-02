@@ -1,5 +1,6 @@
 import type { ClaimData } from '@/types/claim';
 import type { SurveyorProfile } from '@/types/vehicle';
+import { DEFAULT_DOCUMENT_ANNEXURE_OPTIONS } from '@/lib/photos/document-annexure';
 
 export const MOCK_PROFILE: SurveyorProfile = {
   name: 'Rajesh Kumar Sharma',
@@ -300,6 +301,7 @@ export const MOCK_CLAIM: ClaimData = {
   photos: [],
   photoLayout: 6,
   photoLandscape: false,
+  documentAnnexure: { ...DEFAULT_DOCUMENT_ANNEXURE_OPTIONS },
 
   extractedData: {},
   gDriveFolderId: null,

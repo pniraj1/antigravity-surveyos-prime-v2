@@ -7,9 +7,10 @@
 // ═══════════════════════════════════════════════════════════
 
 import type { VehicleDetails, DriverDetails, PolicyDetails, AccidentDetails, VehicleType, DepreciationType } from './vehicle';
-import type { AssessmentRow, SpotDamageRow, SpotSurveyDetails, ReinspectionDetails, FeeBill, PhotoItem, PhotoLayout, BillCheckDetails, ExtraBillItem, ValuationDetails } from './assessment';
+import type { AssessmentRow, SpotDamageRow, SpotSurveyDetails, ReinspectionDetails, FeeBill, PhotoItem, PhotoLayout, BillCheckDetails, ExtraBillItem, ValuationDetails, DocumentAnnexureOptions } from './assessment';
 import type { SurveyType } from './report';
 import type { InsuredReportDraft, InsuredReportStages } from '@/types/insured-report';
+import { DEFAULT_DOCUMENT_ANNEXURE_OPTIONS } from '@/lib/photos/document-annexure';
 
 // ─── Report Settings ───────────────────────────────────
 /**
@@ -94,6 +95,9 @@ export interface ClaimData {
   photos: PhotoItem[];
   photoLayout: PhotoLayout;
   photoLandscape: boolean;
+
+  // ─── Document Annexure ─────────────────────────────
+  documentAnnexure: DocumentAnnexureOptions;
 
   // ─── Total Loss Settlement ─────────────────────────
   /**
@@ -394,6 +398,7 @@ export function createBlankClaim(
     photos: [],
     photoLayout: 6,
     photoLandscape: false,
+    documentAnnexure: { ...DEFAULT_DOCUMENT_ANNEXURE_OPTIONS },
     isTotalLoss: false,
     totalLossDetails: {
       salvageWithRC: 0,
