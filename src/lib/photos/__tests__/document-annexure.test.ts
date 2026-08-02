@@ -214,6 +214,14 @@ describe('buildStripContent', () => {
     expect(s.licence).toBe('IRDAI: SLA-12345');
   });
 
+  it('includes only IIISLA when irdaiLicence is empty', () => {
+    const s = buildStripContent(
+      { name: 'A. Surveyor', irdaiLicence: '', iiislaNumber: '6789' },
+      { ...D, verified: true, showLicence: true },
+    );
+    expect(s.licence).toBe('IIISLA: 6789');
+  });
+
   it('formats place and date together', () => {
     const s = buildStripContent(profile, {
       ...D, verified: true, showDatePlace: true, place: 'Nagpur', verifiedDate: '2026-08-01',
@@ -228,8 +236,24 @@ describe('buildStripContent', () => {
     expect(s.placeDate).toBe('2026-08-01');
   });
 
-  it('omits place and date when disabled', () => {
-    const s = buildStripContent(profile, { ...D, verified: true, showDatePlace: false });
+  it('shows the place alone when verifiedDate is empty', () => {
+    const s = buildStripContent(profile, {
+      ...D, verified: true, showDatePlace: true, place: 'Nagpur', verifiedDate: '',
+    });
+    expect(s.placeDate).toBe('Nagpur');
+  });
+
+  it('returns null for place and date when both are empty despite showDatePlace being true', () => {
+    const s = buildStripContent(profile, {
+      ...D, verified: true, showDatePlace: true, place: '', verifiedDate: '',
+    });
+    expect(s.placeDate).toBeNull();
+  });
+
+  it('omits place and date when disabled, even with non-empty values', () => {
+    const s = buildStripContent(profile, {
+      ...D, verified: true, showDatePlace: false, place: 'Nagpur', verifiedDate: '2026-08-01',
+    });
     expect(s.placeDate).toBeNull();
   });
 });
