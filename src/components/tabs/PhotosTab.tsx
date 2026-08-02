@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { uploadFileToDrive, listFilesInFolder, downloadFileAsBase64 } from '@/lib/drive';
-import { PHOTO_FILE_PREFIX, isDocumentFileName } from '@/lib/photos/document-annexure';
+import { PHOTO_FILE_PREFIX, isDocumentFileName, partitionPhotos } from '@/lib/photos/document-annexure';
 import { compressImage } from '@/lib/photos/compress-image';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -75,7 +75,11 @@ export function PhotosTab() {
 
   if (!currentClaim) return null;
 
-
+  // The photo array is shared with the Document Annexure (claim.photos,
+  // discriminated by PhotoItem.kind) — this gallery must only ever show
+  // damage photos. `index` below is always the position in the FULL array;
+  // never pass the filtered map position to deletePhoto / updatePhotoName.
+  const damagePhotos = partitionPhotos(currentClaim.photos).damage;
 
   // ── Upload handler ────────────────────────────────────────────────────────
   const handleFileUpload = useCallback(
@@ -152,7 +156,7 @@ export function PhotosTab() {
     }
   };
 
-  const hasPhotos = currentClaim.photos.length > 0;
+  const hasPhotos = damagePhotos.length > 0;
   const canRestoreFromDrive = !hasPhotos && !currentClaim.isActive && !!currentClaim.gDriveFolderId;
 
   return (
@@ -310,7 +314,7 @@ export function PhotosTab() {
 
           {/* Storage info */}
           <div className="text-xs text-muted-foreground bg-muted p-3 rounded-md space-y-1">
-            <p><strong>{currentClaim.photos.length}</strong> photo(s) loaded</p>
+            <p><strong>{damagePhotos.length}</strong> photo(s) loaded</p>
             <p>Stored as compressed JPEG in browser memory (IndexedDB).</p>
           </div>
         </div>
@@ -395,30 +399,30 @@ export function PhotosTab() {
           {/* Gallery grid */}
           {hasPhotos && (
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-              {currentClaim.photos.map((photo, idx) => {
-                const isPortrait = photo.h != null && photo.w != null && photo.h > photo.w;
+              {damagePhotos.map(({ item, index }, idx) => {
+                const isPortrait = item.h != null && item.w != null && item.h > item.w;
                 return (
-                  <div key={idx} className="group relative rounded-lg border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-all">
+                  <div key={index} className="group relative rounded-lg border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-all">
                     <div className="aspect-[4/3] bg-muted relative">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={photo.dataUrl}
-                        alt={photo.name}
+                        src={item.dataUrl}
+                        alt={item.name}
                         className="absolute inset-0 w-full h-full object-contain bg-muted"
                       />
                       {/* Delete */}
                       <button
-                        onClick={() => deletePhoto(idx)}
+                        onClick={() => deletePhoto(index)}
                         className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm text-destructive hover:bg-destructive hover:text-white p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-all"
                       >
                         <Trash2 size={13} />
                       </button>
-                      {/* Index badge */}
+                      {/* Index badge — counts displayed damage photos 1..N, not the store index */}
                       <div className="absolute bottom-2 left-2 bg-background/80 backdrop-blur-sm px-2 py-0.5 rounded text-[10px] font-mono text-muted-foreground shadow-sm flex items-center gap-1">
                         <ImageIcon size={9} /> {idx + 1}
                       </div>
                       {/* Orientation pill */}
-                      {photo.w != null && photo.h != null && (
+                      {item.w != null && item.h != null && (
                         <div className={`absolute top-2 left-2 px-1.5 py-0.5 rounded text-[9px] font-medium backdrop-blur-sm ${
                           isPortrait
                             ? 'bg-status-success-tint text-status-success'
@@ -430,8 +434,8 @@ export function PhotosTab() {
                     </div>
                     <div className="p-2 border-t border-border">
                       <Input
-                        value={photo.name}
-                        onChange={(e) => updatePhotoName(idx, e.target.value)}
+                        value={item.name}
+                        onChange={(e) => updatePhotoName(index, e.target.value)}
                         placeholder="Caption…"
                         className="h-7 text-xs border-transparent hover:border-input focus:bg-background px-2"
                       />

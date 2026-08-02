@@ -154,6 +154,53 @@ export interface StripProfile {
   iiislaNumber: string;
 }
 
+/** Marks and metadata the annexure strip renders alongside StripProfile. */
+export interface AnnexureProfile extends StripProfile {
+  signatureDataUrl: string | null;
+  stampDataUrl: string | null;
+}
+
+/**
+ * The subset of SurveyorProfile that {@link buildAnnexureProfile} reads.
+ * Named narrowly rather than importing the full SurveyorProfile type — this
+ * module lives under lib/photos and has no other dependency on the profile
+ * domain.
+ */
+export interface AnnexureProfileSource {
+  name: string;
+  licenceNumber: string;
+  iiislaNumber: string;
+  signatureDataUrl: string | null;
+  stampDataUrl: string | null;
+}
+
+/**
+ * Map a surveyor's profile onto the annexure's attestation-strip shape.
+ *
+ * licenceNumber, NOT irdaiLicence: every other report prints licenceNumber
+ * (report-utils.ts:78, SpotPrintReport.tsx:129, irdai-summary-builder.ts:243).
+ * irdaiLicence is the registration-time field; using it here would put a
+ * different licence number on the annexure than on the survey report filed
+ * alongside it. Single source of truth for this mapping so the download
+ * button and the live preview can never drift.
+ */
+export function buildAnnexureProfile(profile: AnnexureProfileSource): AnnexureProfile {
+  return {
+    name: profile.name,
+    irdaiLicence: profile.licenceNumber,
+    iiislaNumber: profile.iiislaNumber,
+    signatureDataUrl: profile.signatureDataUrl,
+    stampDataUrl: profile.stampDataUrl,
+  };
+}
+
+/**
+ * JPEG quality shared by document compression (upload) and rotation
+ * (re-encode), so a rotated document doesn't visibly drop quality relative
+ * to the page around it.
+ */
+export const DOC_JPEG_QUALITY = 0.92;
+
 export interface StripContent {
   name: string;
   /** null when the line should not be rendered. */
