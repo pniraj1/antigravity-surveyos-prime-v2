@@ -3,6 +3,7 @@ import React from 'react';
 import { Page, Text, View, Document, StyleSheet, Image } from '@react-pdf/renderer';
 import type { ClaimData } from '@/types';
 import type { PhotoSheetOptions } from '@/types/assessment';
+import { partitionPhotos } from '@/lib/photos/document-annexure';
 
 // ─── A4 constants (points) ───────────────────────────────────────────────────
 // A4 portrait:  595 × 842 pt   |   A4 landscape: 842 × 595 pt
@@ -201,7 +202,9 @@ interface Props {
 export function PhotoSheetDocument({ claim, surveyorName = '', options = {} }: Props) {
   const opts: PhotoSheetOptions = { ...DEFAULT_PHOTO_SHEET_OPTIONS, ...options };
 
-  const photos      = Array.isArray(claim?.photos) ? claim.photos : [];
+  // Documents belong to the Document Annexure, never to the damage sheet.
+  const photos      = partitionPhotos(Array.isArray(claim?.photos) ? claim.photos : [])
+                        .damage.map(d => d.item);
   const photoLayout = claim?.photoLayout ?? 6;
 
   // Use manual page orientation override

@@ -100,3 +100,15 @@ describe('partitionPhotos', () => {
     expect(partitionPhotos([])).toEqual({ damage: [], documents: [] });
   });
 });
+
+describe('damage sheet exclusion', () => {
+  it('never includes documents among the damage photos', () => {
+    const { damage } = partitionPhotos([
+      photo('rc', 'document'),
+      photo('front', 'damage'),
+      photo('dl', 'document'),
+    ]);
+    expect(damage).toHaveLength(1);
+    expect(damage.every(d => d.item.kind !== 'document')).toBe(true);
+  });
+});
