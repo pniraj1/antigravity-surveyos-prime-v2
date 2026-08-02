@@ -179,7 +179,7 @@ export function DocumentAnnexureDocument({ claim, profile }: Props) {
           {opts.verified && (
             <View style={[S.strip, { left: pad, right: pad, bottom: pad + DOC_FOOTER_H }]} fixed>
               <View>
-                <Text style={S.verified}>Verified</Text>
+                <Text style={S.verified}>Verified with Original</Text>
                 <Text style={S.surveyorName}>{strip.name}</Text>
                 {strip.licence && <Text style={S.stripLine}>{strip.licence}</Text>}
                 {strip.placeDate && <Text style={S.stripLine}>{strip.placeDate}</Text>}

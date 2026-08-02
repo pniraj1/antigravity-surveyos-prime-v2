@@ -213,7 +213,7 @@ export function DocumentAnnexureSection() {
               {opts.verified && (
                 <>
                   <p className="text-[10px] text-muted-foreground leading-snug">
-                    Verified, your name, signature and stamp print on every page.
+                    "Verified with Original", your name, signature and stamp print on every page.
                   </p>
                   <label className="flex items-center gap-2 text-xs text-muted-foreground">
                     <input
