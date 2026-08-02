@@ -1,3 +1,5 @@
+import { DOC_JPEG_QUALITY } from './document-annexure';
+
 /**
  * Rotate an image 90 degrees clockwise, returning a new data URL and the
  * swapped dimensions.
@@ -41,7 +43,7 @@ export function rotateImage90(
         ctx.rotate(Math.PI / 2);
         ctx.drawImage(img, -srcW / 2, -srcH / 2);
 
-        resolve({ dataUrl: canvas.toDataURL('image/jpeg', 0.92), w, h });
+        resolve({ dataUrl: canvas.toDataURL('image/jpeg', DOC_JPEG_QUALITY), w, h });
       } catch (error: unknown) {
         if (error instanceof Error) {
           reject(error);
