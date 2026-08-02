@@ -18,19 +18,27 @@ export function compressImage(
       const img = new Image();
       img.src = event.target?.result as string;
       img.onload = () => {
-        let { width, height } = img;
-        // Preserve original aspect ratio; cap width
-        if (width > maxWidth) {
-          height = Math.round((height * maxWidth) / width);
-          width  = maxWidth;
+        try {
+          let { width, height } = img;
+          // Preserve original aspect ratio; cap width
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width  = maxWidth;
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width  = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) { reject(new Error('No canvas context')); return; }
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve({ dataUrl: canvas.toDataURL(mime, quality), w: width, h: height });
+        } catch (error: unknown) {
+          if (error instanceof Error) {
+            reject(error);
+          } else {
+            reject(new Error(`Failed to compress image: ${String(error)}`));
+          }
         }
-        const canvas = document.createElement('canvas');
-        canvas.width  = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) { reject(new Error('No canvas context')); return; }
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve({ dataUrl: canvas.toDataURL(mime, quality), w: width, h: height });
       };
       img.onerror = reject;
     };
