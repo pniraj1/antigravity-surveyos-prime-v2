@@ -5,6 +5,7 @@ import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { uploadFileToDrive, listFilesInFolder, downloadFileAsBase64 } from '@/lib/drive';
 import { PHOTO_FILE_PREFIX, isDocumentFileName } from '@/lib/photos/document-annexure';
+import { compressImage } from '@/lib/photos/compress-image';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -48,46 +49,6 @@ const PhotoSheetPreview = dynamic(
 );
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-/**
- * Compress an image to a data URL and return its post-compress dimensions.
- *
- * `mime` defaults to PNG to keep the damage-photo path byte-identical to what
- * it produced before the annexure existed. PNG ignores `quality` in every
- * browser; only the JPEG path uses it.
- */
-export function compressImage(
-  file: File,
-  maxWidth: number,
-  quality: number,
-  mime: 'image/png' | 'image/jpeg' = 'image/png',
-): Promise<{ dataUrl: string; w: number; h: number }> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target?.result as string;
-      img.onload = () => {
-        let { width, height } = img;
-        // Preserve original aspect ratio; cap width
-        if (width > maxWidth) {
-          height = Math.round((height * maxWidth) / width);
-          width  = maxWidth;
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width  = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) { reject(new Error('No canvas context')); return; }
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve({ dataUrl: canvas.toDataURL(mime, quality), w: width, h: height });
-      };
-      img.onerror = reject;
-    };
-    reader.onerror = reject;
-  });
-}
 
 const LAYOUT_OPTIONS: { value: PhotoLayout; label: string }[] = [
   { value: 4, label: '4 Photos  –  2 × 2'             },

@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { partitionPhotos, resolveAnnexureOptions, DOC_FILE_PREFIX } from '@/lib/photos/document-annexure';
 import { rotateImage90 } from '@/lib/photos/rotate-image';
-import { compressImage } from '@/components/tabs/PhotosTab';
+import { compressImage } from '@/lib/photos/compress-image';
 import type { DocumentLayout } from '@/types/assessment';
 import type { PageOrientation } from '@/types/assessment';
 
