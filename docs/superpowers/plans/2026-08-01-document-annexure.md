@@ -1425,7 +1425,9 @@ The existing call `compressImage(file, 600, 1.0)` now resolves `mime` to `'image
 Add the import at the top of the file:
 
 ```typescript
-import { DOC_FILE_PREFIX, PHOTO_FILE_PREFIX, isDocumentFileName } from '@/lib/photos/document-annexure';
+// DOC_FILE_PREFIX is NOT imported here — only the annexure section in Task 11
+// uploads documents, and it imports that constant itself.
+import { PHOTO_FILE_PREFIX, isDocumentFileName } from '@/lib/photos/document-annexure';
 ```
 
 In `handleFileUpload`, replace the Drive upload line:
