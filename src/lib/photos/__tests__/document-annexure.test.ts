@@ -3,6 +3,8 @@ import {
   DEFAULT_DOCUMENT_ANNEXURE_OPTIONS,
   resolveAnnexureOptions,
   partitionPhotos,
+  buildDocLayout,
+  DEFAULT_DOCUMENT_ANNEXURE_OPTIONS as D,
 } from '@/lib/photos/document-annexure';
 import type { PhotoItem } from '@/types/assessment';
 
@@ -110,5 +112,63 @@ describe('damage sheet exclusion', () => {
     ]);
     expect(damage).toHaveLength(1);
     expect(damage.every(d => d.item.kind !== 'document')).toBe(true);
+  });
+});
+
+describe('buildDocLayout', () => {
+  const verified = { ...D, verified: true };
+
+  it('portrait 1-up fills the whole grid', () => {
+    const c = buildDocLayout(1, verified, true);
+    expect(c.cols).toBe(1);
+    expect(c.rows).toBe(1);
+    expect(c.cellW).toBeCloseTo(555, 1);
+    expect(c.cellH).toBeCloseTo(637, 1);
+  });
+
+  it('portrait 2-up is two columns of full height', () => {
+    const c = buildDocLayout(2, verified, true);
+    expect(c.cols).toBe(2);
+    expect(c.rows).toBe(1);
+    expect(c.cellW).toBeCloseTo(273.5, 1);
+    expect(c.cellH).toBeCloseTo(637, 1);
+  });
+
+  it('portrait 4-up is a 2x2 grid', () => {
+    const c = buildDocLayout(4, verified, true);
+    expect(c.cols).toBe(2);
+    expect(c.rows).toBe(2);
+    expect(c.cellW).toBeCloseTo(273.5, 1);
+    expect(c.cellH).toBeCloseTo(314.5, 1);
+  });
+
+  it('landscape 2-up widens the cells and shortens them', () => {
+    const c = buildDocLayout(2, verified, false);
+    expect(c.cellW).toBeCloseTo(397, 1);
+    expect(c.cellH).toBeCloseTo(390, 1);
+  });
+
+  it('landscape 4-up halves the cell height', () => {
+    const c = buildDocLayout(4, verified, false);
+    expect(c.cellW).toBeCloseTo(397, 1);
+    expect(c.cellH).toBeCloseTo(191, 1);
+  });
+
+  it('reclaims the strip height when verified is off', () => {
+    const off = { ...D, verified: false };
+    expect(buildDocLayout(1, off, true).cellH).toBeCloseTo(732, 1);
+    expect(buildDocLayout(1, off, false).cellH).toBeCloseTo(485, 1);
+  });
+
+  it('reserves a fixed strip height regardless of optional lines', () => {
+    const bare = { ...D, verified: true, showLicence: false, showDatePlace: false };
+    expect(buildDocLayout(1, bare, true).cellH)
+      .toBeCloseTo(buildDocLayout(1, verified, true).cellH, 1);
+  });
+
+  it('perPage matches the requested layout', () => {
+    expect(buildDocLayout(1, verified, true).perPage).toBe(1);
+    expect(buildDocLayout(2, verified, true).perPage).toBe(2);
+    expect(buildDocLayout(4, verified, true).perPage).toBe(4);
   });
 });

@@ -1,4 +1,8 @@
-import type { DocumentAnnexureOptions, PhotoItem } from '@/types/assessment';
+import type {
+  DocumentAnnexureOptions,
+  PhotoItem,
+  DocumentLayout,
+} from '@/types/assessment';
 
 /**
  * Default is 2-up portrait, not 1-up. Because images are fitted with
@@ -64,4 +68,67 @@ export function partitionPhotos(photos: readonly PhotoItem[]): {
   });
 
   return { damage, documents };
+}
+
+// ─── A4 constants (points) ──────────────────────────────
+// A4 portrait 595 x 842, landscape 842 x 595.
+export const DOC_HEADER_H = 45;
+export const DOC_FOOTER_H = 25;
+/**
+ * The attestation strip reserves a FIXED height whenever `verified` is on,
+ * regardless of which optional lines are enabled. Sizing it to its content
+ * would make every cell dimension depend on the licence and place/date
+ * checkboxes, so ticking a checkbox would silently reflow the annexure.
+ */
+export const DOC_STRIP_H = 95;
+
+export interface DocLayoutConfig {
+  cols: number;
+  rows: number;
+  /** Cell width in points. */
+  cellW: number;
+  /** Cell height in points. */
+  cellH: number;
+  gap: number;
+  perPage: number;
+  pagePortrait: boolean;
+}
+
+type LayoutOpts = Pick<
+  DocumentAnnexureOptions,
+  'pagePadding' | 'cellGap' | 'verified'
+>;
+
+/**
+ * Build the annexure grid. Mirrors buildLayout() in PhotoSheetDocument, but
+ * documents are fitted with objectFit:'contain' rather than 'fill' — a
+ * stretched document under a signed VERIFIED stamp is altered evidence.
+ */
+export function buildDocLayout(
+  layout: DocumentLayout,
+  opts: LayoutOpts,
+  pagePortrait: boolean,
+): DocLayoutConfig {
+  const pad = opts.pagePadding;
+  const g = opts.cellGap;
+
+  const pageW = pagePortrait ? 595 : 842;
+  const pageH = pagePortrait ? 842 : 595;
+
+  const gridW = pageW - pad * 2;
+  const gridH =
+    pageH - pad * 2 - DOC_HEADER_H - DOC_FOOTER_H - (opts.verified ? DOC_STRIP_H : 0);
+
+  const cols = layout === 1 ? 1 : 2;
+  const rows = layout === 4 ? 2 : 1;
+
+  return {
+    cols,
+    rows,
+    cellW: (gridW - g * (cols - 1)) / cols,
+    cellH: (gridH - g * (rows - 1)) / rows,
+    gap: g,
+    perPage: layout,
+    pagePortrait,
+  };
 }
