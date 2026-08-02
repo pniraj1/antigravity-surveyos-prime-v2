@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { uploadFileToDrive, listFilesInFolder, downloadFileAsBase64 } from '@/lib/drive';
+import { DOC_FILE_PREFIX, PHOTO_FILE_PREFIX, isDocumentFileName } from '@/lib/photos/document-annexure';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -47,11 +48,18 @@ const PhotoSheetPreview = dynamic(
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Compress an image to a JPEG data-URL and return its post-compress dimensions. */
-function compressImage(
+/**
+ * Compress an image to a data URL and return its post-compress dimensions.
+ *
+ * `mime` defaults to PNG to keep the damage-photo path byte-identical to what
+ * it produced before the annexure existed. PNG ignores `quality` in every
+ * browser; only the JPEG path uses it.
+ */
+export function compressImage(
   file: File,
   maxWidth: number,
   quality: number,
+  mime: 'image/png' | 'image/jpeg' = 'image/png',
 ): Promise<{ dataUrl: string; w: number; h: number }> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -72,7 +80,7 @@ function compressImage(
         const ctx = canvas.getContext('2d');
         if (!ctx) { reject(new Error('No canvas context')); return; }
         ctx.drawImage(img, 0, 0, width, height);
-        resolve({ dataUrl: canvas.toDataURL('image/png'), w: width, h: height });
+        resolve({ dataUrl: canvas.toDataURL(mime, quality), w: width, h: height });
       };
       img.onerror = reject;
     };
@@ -127,7 +135,7 @@ export function PhotosTab() {
           addPhoto(dataUrl, name, w, h);
           const { profile } = useProfileStore.getState();
           if (profile.autoUploadDrive !== false) {
-            uploadFileToDrive(claimId, `photo_${Date.now()}_${name}.jpg`, file, label).catch(() => {});
+            uploadFileToDrive(claimId, `${PHOTO_FILE_PREFIX}${Date.now()}_${name}.jpg`, file, label).catch(() => {});
           }
         } catch {
           // silently skip failed images
@@ -166,7 +174,9 @@ export function PhotosTab() {
             img.onerror = () => resolve({ w: 800, h: 600 });
             img.src = dataUrl;
           });
-          addPhoto(dataUrl, file.name.replace(/\.[^.]+$/, '').substring(0, 30), dims.w, dims.h);
+          const baseName = file.name.replace(/\.[^.]+$/, '');
+          const kind = isDocumentFileName(file.name) ? 'document' : 'damage';
+          addPhoto(dataUrl, baseName.substring(0, 30), dims.w, dims.h, kind);
           restored++;
         } catch {
           // skip individual failures
