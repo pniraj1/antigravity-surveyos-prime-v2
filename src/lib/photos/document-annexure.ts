@@ -132,3 +132,60 @@ export function buildDocLayout(
     pagePortrait,
   };
 }
+
+/** Prefix for annexure documents uploaded to Google Drive. */
+export const DOC_FILE_PREFIX = 'doc_';
+/** Prefix for damage photos uploaded to Google Drive. */
+export const PHOTO_FILE_PREFIX = 'photo_';
+
+/**
+ * Decide whether a Drive filename should restore as a document. Anything
+ * unrecognised restores as a damage photo, matching the behaviour before the
+ * annexure existed.
+ */
+export function isDocumentFileName(fileName: string): boolean {
+  return fileName.startsWith(DOC_FILE_PREFIX);
+}
+
+/** The subset of SurveyorProfile the attestation strip reads. */
+export interface StripProfile {
+  name: string;
+  irdaiLicence: string;
+  iiislaNumber: string;
+}
+
+export interface StripContent {
+  name: string;
+  /** null when the line should not be rendered. */
+  licence: string | null;
+  /** null when the line should not be rendered. */
+  placeDate: string | null;
+}
+
+/**
+ * Compose the text lines of the attestation strip. Pure, so the composition
+ * rules are testable without rendering a PDF. The VERIFIED badge, signature and
+ * stamp are unconditional when `verified` is on and are handled by the renderer.
+ */
+export function buildStripContent(
+  profile: StripProfile,
+  opts: DocumentAnnexureOptions,
+): StripContent {
+  const licenceParts: string[] = [];
+  if (opts.showLicence) {
+    if (profile.irdaiLicence) licenceParts.push(`IRDAI: ${profile.irdaiLicence}`);
+    if (profile.iiislaNumber) licenceParts.push(`IIISLA: ${profile.iiislaNumber}`);
+  }
+
+  const placeDateParts: string[] = [];
+  if (opts.showDatePlace) {
+    if (opts.place) placeDateParts.push(opts.place);
+    if (opts.verifiedDate) placeDateParts.push(opts.verifiedDate);
+  }
+
+  return {
+    name: profile.name,
+    licence: licenceParts.length > 0 ? licenceParts.join(' · ') : null,
+    placeDate: placeDateParts.length > 0 ? placeDateParts.join(' · ') : null,
+  };
+}

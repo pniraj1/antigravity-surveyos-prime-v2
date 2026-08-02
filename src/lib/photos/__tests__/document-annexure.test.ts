@@ -5,6 +5,9 @@ import {
   partitionPhotos,
   buildDocLayout,
   DEFAULT_DOCUMENT_ANNEXURE_OPTIONS as D,
+  buildStripContent,
+  isDocumentFileName,
+  DOC_FILE_PREFIX,
 } from '@/lib/photos/document-annexure';
 import type { PhotoItem } from '@/types/assessment';
 
@@ -170,5 +173,77 @@ describe('buildDocLayout', () => {
     expect(buildDocLayout(1, verified, true).perPage).toBe(1);
     expect(buildDocLayout(2, verified, true).perPage).toBe(2);
     expect(buildDocLayout(4, verified, true).perPage).toBe(4);
+  });
+});
+
+const profile = {
+  name: 'A. Surveyor',
+  irdaiLicence: 'SLA-12345',
+  iiislaNumber: '6789',
+};
+
+describe('buildStripContent', () => {
+  it('always returns the surveyor name', () => {
+    const s = buildStripContent(profile, { ...D, verified: true });
+    expect(s.name).toBe('A. Surveyor');
+  });
+
+  it('includes the licence line when enabled', () => {
+    const s = buildStripContent(profile, { ...D, verified: true, showLicence: true });
+    expect(s.licence).toBe('IRDAI: SLA-12345 · IIISLA: 6789');
+  });
+
+  it('omits the licence line when disabled', () => {
+    const s = buildStripContent(profile, { ...D, verified: true, showLicence: false });
+    expect(s.licence).toBeNull();
+  });
+
+  it('omits the licence line when both numbers are blank rather than printing a bare label', () => {
+    const s = buildStripContent(
+      { name: 'A. Surveyor', irdaiLicence: '', iiislaNumber: '' },
+      { ...D, verified: true, showLicence: true },
+    );
+    expect(s.licence).toBeNull();
+  });
+
+  it('includes only the number that is present', () => {
+    const s = buildStripContent(
+      { name: 'A. Surveyor', irdaiLicence: 'SLA-12345', iiislaNumber: '' },
+      { ...D, verified: true, showLicence: true },
+    );
+    expect(s.licence).toBe('IRDAI: SLA-12345');
+  });
+
+  it('formats place and date together', () => {
+    const s = buildStripContent(profile, {
+      ...D, verified: true, showDatePlace: true, place: 'Nagpur', verifiedDate: '2026-08-01',
+    });
+    expect(s.placeDate).toBe('Nagpur · 2026-08-01');
+  });
+
+  it('shows the date alone when no place is set', () => {
+    const s = buildStripContent(profile, {
+      ...D, verified: true, showDatePlace: true, place: '', verifiedDate: '2026-08-01',
+    });
+    expect(s.placeDate).toBe('2026-08-01');
+  });
+
+  it('omits place and date when disabled', () => {
+    const s = buildStripContent(profile, { ...D, verified: true, showDatePlace: false });
+    expect(s.placeDate).toBeNull();
+  });
+});
+
+describe('isDocumentFileName', () => {
+  it('recognises the document prefix used for Drive uploads', () => {
+    expect(isDocumentFileName(`${DOC_FILE_PREFIX}1234_rc.jpg`)).toBe(true);
+  });
+
+  it('treats a photo-prefixed file as a damage photo', () => {
+    expect(isDocumentFileName('photo_1234_front.jpg')).toBe(false);
+  });
+
+  it('treats an unrecognised name as a damage photo', () => {
+    expect(isDocumentFileName('IMG_0042.jpg')).toBe(false);
   });
 });
