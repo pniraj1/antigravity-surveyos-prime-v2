@@ -32,8 +32,10 @@ identical in every downstream respect to a photographed screenshot.
   has never read document contents and continues not to.
 - No page reordering, rotation-on-import, or cropping in the picker. Rotation is already
   available per-document after import via the existing gallery control.
-- No support for password-protected PDFs. Rejected with a clear message (see Error
-  handling) rather than prompting for a password.
+- No support for password-protected PDFs. This is expected to be a very unusual case
+  for a surveyor's documents; rather than building password-entry UI for it, it is
+  rejected outright and the surveyor is directed to screenshot the document instead
+  (see Error handling).
 - No change to how images are handled. This is additive to the existing dropzone.
 - No thumbnail virtualization or page-count cap. The user explicitly chose "no cap, let
   me pick" over capping; very large page counts are an accepted, unoptimized edge case
@@ -149,7 +151,7 @@ fits the existing 30-character cap used for every other document caption today.
 | Condition | Behaviour |
 |---|---|
 | PDF fails to parse (corrupt, truncated) | `loadPdf` rejects → `toast.error` naming the file, skip it, continue with the rest of the batch — matches the existing per-file try/catch in `handleUpload`. |
-| Password-protected PDF | pdfjs rejects with a `PasswordException` when no password callback is supplied. **Verified:** that class is not re-exported from `pdfjs-dist`'s public `pdf.d.ts` barrel (only from an internal `shared/util` path), so detection must not rely on `instanceof`. Check `error instanceof Error && error.name === 'PasswordException'` instead — the name is set by the constructor regardless of what the public API re-exports — and surface *"`<file>` is password-protected — remove the password and try again."*, not a generic parse error. |
+| Password-protected PDF | pdfjs rejects with a `PasswordException` when no password callback is supplied (which this design never provides — no unlock UI is built). **Verified:** that class is not re-exported from `pdfjs-dist`'s public `pdf.d.ts` barrel (only from an internal `shared/util` path), so detection must not rely on `instanceof`. Check `error instanceof Error && error.name === 'PasswordException'` instead — the name is set by the constructor regardless of what the public API re-exports. Rejected outright, surfaced as *"`<file>` is password-protected. Take a screenshot of the document and upload that instead."*, not a generic parse error. |
 | Zero-page / malformed PDF | Treated the same as a parse failure. |
 | A page fails to render (thumbnail or full-res) | That single page is skipped with a toast naming the page number; the rest of the batch/selection proceeds. A canvas failure on page 3 of 5 must not lose pages 1, 2, 4, 5. |
 | Surveyor cancels the picker | No pages from that PDF are added. The handle is destroyed and the queue advances — a cancelled PDF does not block the next queued one. |
@@ -183,7 +185,8 @@ generated file, inspected structurally, not a screenshot):
    the dialog opens once for the 3-page one.
 6. Select two multi-page PDFs together → confirming the first dialog opens the second;
    cancelling the first also opens the second.
-7. Upload a password-protected PDF → a specific, actionable toast, not a raw error.
+7. Upload a password-protected PDF → rejected with the screenshot-instead toast, not a
+   raw parse error; zero documents added from that file.
 8. The resulting annexure PDF (Task 8's renderer) treats an imported PDF page exactly
    like a photographed document — same layout options, same rotation control, same
    attestation strip.
