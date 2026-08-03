@@ -20,8 +20,19 @@ import {
 } from '@/lib/photos/document-annexure';
 import { rotateImage90 } from '@/lib/photos/rotate-image';
 import { compressImage } from '@/lib/photos/compress-image';
+import { loadPdf, type LoadedPdf, PdfPasswordProtectedError, PDF_THUMB_WIDTH, PDF_THUMB_QUALITY } from '@/lib/photos/pdf-to-images';
+import { PdfPageSelectorDialog, type PdfPage } from '@/components/tabs/photos/PdfPageSelectorDialog';
 import type { DocumentLayout } from '@/types/assessment';
 import type { PageOrientation } from '@/types/assessment';
+
+/** A multi-page PDF whose pages have been thumbnailed and are awaiting the
+ *  surveyor's page selection. One entry per PDF in an upload batch; only
+ *  the first is shown — see the queue-draining comment in handlePdfConfirm. */
+interface PendingPdf {
+  fileName: string;
+  loaded: LoadedPdf;
+  pages: PdfPage[];
+}
 
 const DocumentAnnexureDownloadButton = dynamic(
   () => import('@/components/pdf/DocumentAnnexureDownloadButton').then(m => m.DocumentAnnexureDownloadButton),
@@ -61,6 +72,7 @@ export function DocumentAnnexureSection() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [rotatingIndex, setRotatingIndex] = useState<number | null>(null);
+  const [pdfQueue, setPdfQueue] = useState<PendingPdf[]>([]);
 
   const handleUpload = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,11 +80,41 @@ export function DocumentAnnexureSection() {
       if (!files || files.length === 0 || !currentClaim) return;
       setIsProcessing(true);
 
+      const newPendingPdfs: PendingPdf[] = [];
+
       try {
         for (let i = 0; i < files.length; i++) {
           const file = files[i];
+
+          if (file.type === 'application/pdf') {
+            try {
+              const loaded = await loadPdf(file);
+              const baseName = file.name.replace(/\.pdf$/i, '');
+
+              if (loaded.numPages === 1) {
+                const { dataUrl, w, h } = await loaded.renderPage(1, DOC_MAX_WIDTH, DOC_JPEG_QUALITY);
+                addPhoto(dataUrl, baseName.substring(0, 30), w, h, 'document');
+                await loaded.destroy();
+              } else {
+                const pages: PdfPage[] = [];
+                for (let p = 1; p <= loaded.numPages; p++) {
+                  const thumb = await loaded.renderPage(p, PDF_THUMB_WIDTH, PDF_THUMB_QUALITY);
+                  pages.push({ pageNumber: p, thumbDataUrl: thumb.dataUrl });
+                }
+                newPendingPdfs.push({ fileName: baseName, loaded, pages });
+              }
+            } catch (error: unknown) {
+              if (error instanceof PdfPasswordProtectedError) {
+                toast.error(`${file.name} is password-protected. Take a screenshot of the document and upload that instead.`);
+              } else {
+                toast.error(`Could not read ${file.name}. Take a screenshot of the document and upload that instead.`);
+              }
+            }
+            continue;
+          }
+
           if (!file.type.startsWith('image/')) {
-            toast.error(`${file.name} is not an image. PDFs must be screenshotted first.`);
+            toast.error(`${file.name} isn't a supported file. Upload an image or a PDF.`);
             continue;
           }
           try {
@@ -90,10 +132,47 @@ export function DocumentAnnexureSection() {
       } finally {
         setIsProcessing(false);
         event.target.value = '';
+        if (newPendingPdfs.length > 0) {
+          setPdfQueue(prev => [...prev, ...newPendingPdfs]);
+        }
       }
     },
     [addPhoto, currentClaim],
   );
+
+  const handlePdfConfirm = useCallback(
+    async (selectedPageNumbers: number[]) => {
+      const current = pdfQueue[0];
+      if (!current) return;
+      setIsProcessing(true);
+      try {
+        for (const pageNumber of selectedPageNumbers) {
+          try {
+            const { dataUrl, w, h } = await current.loaded.renderPage(pageNumber, DOC_MAX_WIDTH, DOC_JPEG_QUALITY);
+            const caption = `${current.fileName} (p${pageNumber}/${current.pages.length})`.substring(0, 30);
+            addPhoto(dataUrl, caption, w, h, 'document');
+          } catch {
+            toast.error(`Could not render page ${pageNumber} of ${current.fileName}.`);
+          }
+        }
+      } finally {
+        await current.loaded.destroy();
+        // The dialog is modal, so nothing else can mutate the queue while it
+        // is open — `current` is always still pdfQueue[0] here, and slice(1)
+        // always removes exactly the PDF just confirmed.
+        setPdfQueue(prev => prev.slice(1));
+        setIsProcessing(false);
+      }
+    },
+    [addPhoto, pdfQueue],
+  );
+
+  const handlePdfCancel = useCallback(() => {
+    const current = pdfQueue[0];
+    if (!current) return;
+    current.loaded.destroy();
+    setPdfQueue(prev => prev.slice(1));
+  }, [pdfQueue]);
 
   const handleRotate = useCallback(
     async (index: number, dataUrl: string) => {
@@ -209,7 +288,7 @@ export function DocumentAnnexureSection() {
               {opts.verified && (
                 <>
                   <p className="text-[10px] text-muted-foreground leading-snug">
-                    "Verified with Original", your name, signature and stamp print on every page.
+                    &ldquo;Verified with Original&rdquo;, your name, signature and stamp print on every page.
                   </p>
                   <label className="flex items-center gap-2 text-xs text-muted-foreground">
                     <input
@@ -280,8 +359,8 @@ export function DocumentAnnexureSection() {
               <UploadCloud size={44} className="text-muted-foreground mb-4 opacity-50" />
               <h3 className="text-base font-medium mb-1">Add Documents</h3>
               <p className="text-sm text-muted-foreground mb-5 text-center max-w-sm">
-                Screenshots of RC, DL, policy schedules and the like. Images only — a PDF
-                has to be screenshotted first.
+                Screenshots of RC, DL, policy schedules and the like — or attach a PDF
+                directly. A multi-page PDF lets you pick which pages to keep.
               </p>
               <Label
                 htmlFor="document-upload"
@@ -293,7 +372,7 @@ export function DocumentAnnexureSection() {
                 id="document-upload"
                 type="file"
                 multiple
-                accept="image/*"
+                accept="image/*,application/pdf"
                 className="hidden"
                 onChange={handleUpload}
                 disabled={isProcessing}
@@ -350,6 +429,14 @@ export function DocumentAnnexureSection() {
           )}
         </div>
       </div>
+
+      <PdfPageSelectorDialog
+        open={pdfQueue.length > 0}
+        fileName={pdfQueue[0]?.fileName ?? ''}
+        pages={pdfQueue[0]?.pages ?? []}
+        onConfirm={handlePdfConfirm}
+        onCancel={handlePdfCancel}
+      />
     </div>
   );
 }
