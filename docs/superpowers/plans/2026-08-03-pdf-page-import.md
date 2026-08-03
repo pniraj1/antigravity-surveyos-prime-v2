@@ -298,7 +298,7 @@ This component has no automated tests. Its selection logic is plain `useState`/`
 ```tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
@@ -332,14 +332,16 @@ export function PdfPageSelectorDialog({
   onConfirm,
   onCancel,
 }: PdfPageSelectorDialogProps) {
-  const [checked, setChecked] = useState<Set<number>>(new Set());
-
-  // Reset to "all checked" every time a new PDF's pages arrive. `pages` is a
-  // fresh array from the caller for each queued PDF, so this fires exactly
-  // once per file, not on every re-render.
-  useEffect(() => {
+  const [checked, setChecked] = useState<Set<number>>(() => new Set(pages.map(p => p.pageNumber)));
+  // Tracks which `pages` array the state above was derived from, so a new
+  // PDF's pages reset the selection to "all checked" without a setState-in-
+  // effect (React's documented pattern for resetting derived state on a
+  // prop change: adjust state during render, not in a useEffect).
+  const [checkedFor, setCheckedFor] = useState(pages);
+  if (pages !== checkedFor) {
+    setCheckedFor(pages);
     setChecked(new Set(pages.map(p => p.pageNumber)));
-  }, [pages]);
+  }
 
   const togglePage = (pageNumber: number) => {
     setChecked(prev => {
