@@ -201,6 +201,16 @@ export function buildAnnexureProfile(profile: AnnexureProfileSource): AnnexurePr
  */
 export const DOC_JPEG_QUALITY = 0.92;
 
+/**
+ * Documents are text, not scenery: 1600px keeps small print legible in print.
+ * At the 2-up portrait default a document prints 3.8in wide, so 300dpi needs
+ * ~1139px — 1600 leaves headroom without wasting the IndexedDB budget.
+ *
+ * Shared by the image-compression path and the PDF-rasterization path, so a
+ * page imported from a PDF prints at the same resolution as a screenshot.
+ */
+export const DOC_MAX_WIDTH = 1600;
+
 export interface StripContent {
   name: string;
   /** null when the line should not be rendered. */

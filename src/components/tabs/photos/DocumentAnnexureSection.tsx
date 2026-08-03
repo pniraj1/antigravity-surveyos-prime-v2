@@ -16,16 +16,12 @@ import {
   partitionPhotos,
   resolveAnnexureOptions,
   DOC_JPEG_QUALITY,
+  DOC_MAX_WIDTH,
 } from '@/lib/photos/document-annexure';
 import { rotateImage90 } from '@/lib/photos/rotate-image';
 import { compressImage } from '@/lib/photos/compress-image';
 import type { DocumentLayout } from '@/types/assessment';
 import type { PageOrientation } from '@/types/assessment';
-
-/** Documents are text, not scenery: 1600px keeps small print legible in print.
- *  At the 2-up portrait default a document prints 3.8in wide, so 300dpi needs
- *  ~1139px — 1600 leaves headroom without wasting the IndexedDB budget. */
-const DOC_MAX_WIDTH = 1600;
 
 const DocumentAnnexureDownloadButton = dynamic(
   () => import('@/components/pdf/DocumentAnnexureDownloadButton').then(m => m.DocumentAnnexureDownloadButton),
