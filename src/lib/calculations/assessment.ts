@@ -7,6 +7,7 @@
 import type { AssessmentRow, AssessmentSummary, BillCheckSummary, DepreciationType, FeeBill } from '@/types';
 import { getDepreciationRate } from './depreciation';
 import { calculatePartsGST, calculateLabourGST } from './gst';
+import { computeRowLiability } from './row-net';
 import { numberToWords } from './utils';
 
 /**
@@ -176,28 +177,25 @@ export function calculateBillCheckSummary(
   let assessedBaseSum = 0;
   let billedBaseSum = 0;
   let notInBillTotal = 0;
-  
   let billedGrandTotal = 0;
 
   rows.forEach(r => {
+    // Disallowed items are not insurer liability, so they are not verified here.
     if (!r.allowed) return;
 
-    const depRate = r.depOverride !== undefined ? r.depOverride : getDepreciationRate(r.partType, ageMonths, depType);
-    const amount = (r.billStatus === 'not-in-bill') ? 0 : (r.billedAmount || 0);
-    const valueBilledAfterDep = amount * (1 - depRate / 100);
+    const depRate = r.depOverride !== undefined
+      ? r.depOverride
+      : getDepreciationRate(r.partType, ageMonths, depType);
+
+    const { liability } = computeRowLiability(r, depRate);
 
     assessedBaseSum += r.assessed;
-    billedBaseSum += amount;
+    billedBaseSum += r.billStatus === 'not-in-bill' ? 0 : (r.billedTaxable ?? r.assessed);
 
     if (r.billStatus === 'not-in-bill') {
       notInBillTotal += r.assessed;
-    } else if (r.isDisposal) {
-      // Disposal: no GST on billed amount; apply disposal percent
-      const disposalFactor = (r.disposalPercent ?? 50) / 100;
-      billedGrandTotal += valueBilledAfterDep * disposalFactor;
     } else {
-      const billedGST = valueBilledAfterDep * (r.gst / 100);
-      billedGrandTotal += valueBilledAfterDep + billedGST;
+      billedGrandTotal += liability;
     }
   });
 
@@ -205,10 +203,10 @@ export function calculateBillCheckSummary(
   const netLiability = Math.max(0, billedGrandTotal - salvage - totalExcess);
 
   return {
-    grandTotalAssessed: assessedBaseSum, 
+    grandTotalAssessed: assessedBaseSum,
     grandTotalBilled: billedGrandTotal,
     notInBillTotal,
-    variance: (assessedBaseSum - billedBaseSum),
+    variance: assessedBaseSum - billedBaseSum,
     salvage,
     compulsoryExcess,
     voluntaryExcess,
