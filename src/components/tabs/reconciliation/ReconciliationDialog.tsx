@@ -2,10 +2,11 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Sparkles, Check, AlertTriangle, Info, ChevronDown, ChevronUp, Zap, FileSearch, Upload } from 'lucide-react';
+import { Sparkles, Check, AlertTriangle, Info, ChevronDown, ChevronUp, Zap } from 'lucide-react';
 import { useClaimStore } from '@/stores/claim-store';
 import { ReconciliationField, getBestSourceValue } from '@/lib/ai/reconciliation';
 import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
+import { InlineEvidencePanel } from '@/components/evidence/InlineEvidencePanel';
 
 interface ReconciliationDialogProps {
   isOpen: boolean;
@@ -27,18 +28,27 @@ export function ReconciliationDialog({
   const [isAutoFilledExpanded, setIsAutoFilledExpanded] = useState(false);
   const [activeOrigin, setActiveOrigin] = useState<string | null>(null);
 
-  const blobUrls = useEvidenceStore((state) => state.blobUrls);
-  const hasAnyEvidence = useMemo(
-    () =>
-      conflictFields.some(f => f.sources.some(s => !!blobUrls[`${claimId}_${s.origin}`])) ||
-      autoFilledFields.some(f => f.sources.some(s => !!blobUrls[`${claimId}_${s.origin}`])),
-    [conflictFields, autoFilledFields, claimId, blobUrls]
-  );
+  const setActiveField = useEvidenceStore((state) => state.setActiveField);
 
   // Reset active doc when modal closes
   useEffect(() => {
     if (!isOpen) setActiveOrigin(null);
   }, [isOpen]);
+
+  /**
+   * Show the clicked source's document and the verbatim text its value came
+   * from. Uses setActiveField, NOT openField: openField sets isOpen and would
+   * stack the full-screen viewer on top of this modal.
+   */
+  const showEvidence = (field: ReconciliationField, origin: string) => {
+    const source = field.sources.find((s) => s.origin === origin);
+    setActiveOrigin(origin);
+    setActiveField(claimId, {
+      docType: origin,
+      fieldKey: field.path,
+      contextSnippet: source?.contextSnippet ?? '',
+    });
+  };
 
   const totalConflicts = conflictFields.length;
 
@@ -177,7 +187,7 @@ export function ReconciliationDialog({
                       key={field.id}
                       field={field}
                       onSelect={(val, origin) => reconcileField(field.path, val, origin)}
-                      onEvidenceClick={setActiveOrigin}
+                      onEvidenceClick={(origin) => showEvidence(field, origin)}
                       activeOrigin={activeOrigin}
                     />
                   ))}
@@ -215,7 +225,7 @@ export function ReconciliationDialog({
                           key={field.id}
                           field={field}
                           onOverride={(val, origin) => reconcileField(field.path, val, origin)}
-                          onEvidenceClick={setActiveOrigin}
+                          onEvidenceClick={(origin) => showEvidence(field, origin)}
                         />
                       ))}
                     </div>
@@ -225,12 +235,12 @@ export function ReconciliationDialog({
             </div>
           </div>
 
-          {/* RIGHT: evidence panel — only if any blob URL exists */}
-          {hasAnyEvidence && (
-            <div className="w-[480px] flex-shrink-0 border-l border-border flex flex-col overflow-hidden">
-              <EvidencePanel claimId={claimId} activeOrigin={activeOrigin} />
-            </div>
-          )}
+          {/* RIGHT: evidence panel — always shown. It renders its own placeholder
+              when no document is loaded, rather than vanishing. Session-only by
+              design: blob URLs die on refresh and are not persisted. */}
+          <div className="w-[480px] flex-shrink-0 border-l border-border flex flex-col overflow-hidden p-3">
+            <InlineEvidencePanel claimId={claimId} />
+          </div>
         </div>
 
         {/* ── Footer ── */}
@@ -342,62 +352,6 @@ function AutoFilledRow({
             <span className="text-xs font-bold truncate w-full text-foreground">{source.value}</span>
           </button>
         ))}
-      </div>
-    </div>
-  );
-}
-
-function EvidencePanel({ claimId, activeOrigin }: { claimId: string; activeOrigin: string | null }) {
-  const blobUrls = useEvidenceStore((state) => state.blobUrls);
-
-  if (!activeOrigin) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-center gap-3 p-6 bg-muted/10">
-        <FileSearch size={32} className="text-muted-foreground/25" />
-        <p className="text-xs text-muted-foreground/60 font-medium">
-          Click any value to view its source document
-        </p>
-      </div>
-    );
-  }
-
-  const entry = blobUrls[`${claimId}_${activeOrigin}`]?.[0];
-
-  if (!entry) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-center gap-3 p-6 bg-muted/10">
-        <Upload size={28} className="text-muted-foreground/25" />
-        <p className="text-xs font-bold text-muted-foreground">{activeOrigin.toUpperCase()} not uploaded</p>
-        <p className="text-[10px] text-muted-foreground/50">Upload in Documents tab to view evidence</p>
-      </div>
-    );
-  }
-
-  const isPdf = entry.mimeType === 'application/pdf';
-
-  return (
-    <div className="flex flex-col h-full">
-      <div className="px-4 py-2.5 border-b border-border bg-muted/30 flex items-center gap-2 flex-shrink-0">
-        <FileSearch size={13} className="text-primary" />
-        <span className="text-xs font-bold text-foreground">{activeOrigin.toUpperCase()}</span>
-        <span className="text-[10px] text-muted-foreground ml-auto">Source document</span>
-      </div>
-      <div className="flex-1 overflow-hidden">
-        {isPdf ? (
-          <iframe
-            src={entry.url}
-            className="w-full h-full border-0"
-            title={`${activeOrigin} document`}
-          />
-        ) : (
-          <div className="w-full h-full overflow-auto p-3 flex items-start justify-center bg-zinc-50">
-            <img
-              src={entry.url}
-              alt={`${activeOrigin} document`}
-              className="max-w-full rounded-lg shadow-md"
-            />
-          </div>
-        )}
       </div>
     </div>
   );
