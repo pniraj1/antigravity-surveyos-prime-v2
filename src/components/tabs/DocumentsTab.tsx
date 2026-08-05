@@ -525,14 +525,18 @@ export function DocumentsTab() {
         evidenceImages={evidenceImages}
       />
 
-      {/* AI Reconciliation Hub */}
-      <ReconciliationDialog
-        isOpen={isReconOpen}
-        onClose={() => setIsReconOpen(false)}
-        conflictFields={conflicts}
-        autoFilledFields={autoFilledFields}
-        claimId={currentClaim.id}
-      />
+      {/* AI Reconciliation Hub — mounted only while open, so its transient UI
+          state (active document, pending bulk confirmation) resets naturally on
+          close instead of needing a reset effect. */}
+      {isReconOpen && (
+        <ReconciliationDialog
+          isOpen={isReconOpen}
+          onClose={() => setIsReconOpen(false)}
+          conflictFields={conflicts}
+          autoFilledFields={autoFilledFields}
+          claimId={currentClaim.id}
+        />
+      )}
 
       {/* Persistent progress overlay during PDF extraction */}
       <ProcessingProgressOverlay

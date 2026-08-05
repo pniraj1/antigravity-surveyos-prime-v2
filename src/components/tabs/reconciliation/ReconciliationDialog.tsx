@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Sparkles, Check, AlertTriangle, Info, ChevronDown, ChevronUp, Zap } from 'lucide-react';
 import { useClaimStore } from '@/stores/claim-store';
@@ -27,13 +27,12 @@ export function ReconciliationDialog({
   const batchReconcile = useClaimStore((state) => state.batchReconcile);
   const [isAutoFilledExpanded, setIsAutoFilledExpanded] = useState(false);
   const [activeOrigin, setActiveOrigin] = useState<string | null>(null);
+  const [confirmingRecommended, setConfirmingRecommended] = useState(false);
 
   const setActiveField = useEvidenceStore((state) => state.setActiveField);
 
-  // Reset active doc when modal closes
-  useEffect(() => {
-    if (!isOpen) setActiveOrigin(null);
-  }, [isOpen]);
+  // No reset effect needed: DocumentsTab mounts this only while open, so all
+  // transient state above starts fresh on every open.
 
   /**
    * Show the clicked source's document and the verbatim text its value came
@@ -76,29 +75,22 @@ export function ReconciliationDialog({
     return { recommendedActions: actions, recommendedSummary: summary };
   }, [conflictFields]);
 
-  // Unique sources present across all conflict fields
-  const availableSources = useMemo(() => {
-    const sourceSet = new Set<string>();
-    conflictFields.forEach(f => f.sources.forEach(s => sourceSet.add(s.origin)));
-    return [...sourceSet];
-  }, [conflictFields]);
+  // NOTE: there is deliberately no "accept all from <source>" action. A blanket
+  // per-document pick contradicts the Hub's purpose — the AI surfaces a
+  // discrepancy precisely because it cannot judge, so each one gets its own
+  // answer.
 
   const handleAcceptRecommended = () => {
     if (recommendedActions.length === 0) return;
-    batchReconcile(recommendedActions.map(a => ({ path: a.path, value: a.value })));
+    if (!confirmingRecommended) {
+      setConfirmingRecommended(true);
+      return;
+    }
+    batchReconcile(
+      recommendedActions.map(a => ({ path: a.path, value: a.value, source: a.source })),
+    );
+    setConfirmingRecommended(false);
     setActiveOrigin(null);
-  };
-
-  const handleAcceptFromSource = (origin: string) => {
-    const updates: { path: string; value: string }[] = [];
-    for (const field of conflictFields) {
-      const source = field.sources.find(s => s.origin === origin);
-      if (source) updates.push({ path: field.path, value: source.value });
-    }
-    if (updates.length > 0) {
-      batchReconcile(updates);
-      setActiveOrigin(null);
-    }
   };
 
   if (!isOpen) return null;
@@ -139,31 +131,19 @@ export function ReconciliationDialog({
                   className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black bg-primary text-primary-foreground hover:bg-primary/90 transition-all active:scale-95 shadow-sm"
                 >
                   <Zap size={13} />
-                  Accept Recommended
+                  {confirmingRecommended ? 'Confirm — apply to all' : 'Accept Recommended'}
                   {recommendedSummary && (
                     <span className="font-normal opacity-80 ml-1">({recommendedSummary})</span>
                   )}
                 </button>
 
-                {availableSources.length > 1 && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">or accept all from</span>
-                    <select
-                      className="text-xs font-bold border border-border rounded-lg px-3 py-1.5 bg-white text-foreground cursor-pointer hover:border-primary/40 transition-colors"
-                      defaultValue=""
-                      onChange={e => {
-                        if (e.target.value) {
-                          handleAcceptFromSource(e.target.value);
-                          e.target.value = '';
-                        }
-                      }}
-                    >
-                      <option value="" disabled>Select source…</option>
-                      {availableSources.map(src => (
-                        <option key={src} value={src}>{src.toUpperCase()}</option>
-                      ))}
-                    </select>
-                  </div>
+                {confirmingRecommended && (
+                  <button
+                    onClick={() => setConfirmingRecommended(false)}
+                    className="px-3 py-2 rounded-xl text-xs font-bold text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Cancel
+                  </button>
                 )}
               </div>
             )}
