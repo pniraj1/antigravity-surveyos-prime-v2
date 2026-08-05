@@ -158,12 +158,44 @@ interface BillItem {
   section: 'parts' | 'labour' | 'paint';
   category?: string;
   raw: any;
-  _ambiguous?: boolean;
+}
+
+/** Significant words of a description, lowercased, order-independent. */
+function descTokens(s: string): Set<string> {
+  return new Set(
+    s.toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter(w => w.length > 2)
+  );
+}
+
+/**
+ * Fraction of the smaller token set that both descriptions share.
+ * "FRONT BUMPER" vs "BUMPER FRONT" scores 1 — substring matching scored 0,
+ * which is how genuinely-assessed items ended up reported as extras.
+ */
+function descOverlap(a: string, b: string): number {
+  const ta = descTokens(a);
+  const tb = descTokens(b);
+  if (ta.size === 0 || tb.size === 0) return 0;
+  let shared = 0;
+  ta.forEach(w => { if (tb.has(w)) shared += 1; });
+  return shared / Math.min(ta.size, tb.size);
+}
+
+const DESC_MATCH_THRESHOLD = 0.6;
+
+export interface BillMatch {
+  bill: BillItem;
+  reason: 'part' | 'amount' | 'desc';
+  /** Returned rather than mutated onto the bill item. */
+  ambiguous: boolean;
 }
 
 // ─── Final-bill helpers ───────────────────────────────────────────────────────
 
-function buildBillItems(data: any): BillItem[] {
+export function buildBillItems(data: any): BillItem[] {
   const items: BillItem[] = [];
 
   const push = (arr: any[], section: BillItem['section']) => {
@@ -192,18 +224,17 @@ function buildBillItems(data: any): BillItem[] {
   return items;
 }
 
-function matchBillItemsToRows(
+export function matchBillItemsToRows(
   rows: AssessmentRow[],
   billItems: BillItem[]
-): Map<string, { bill: BillItem; reason: 'part' | 'amount' | 'desc' }> {
+): Map<string, BillMatch> {
   const AMT_TOL = 1;
   const normPart = (s: string) => s.toLowerCase().replace(/[\s\-_.]/g, '');
-  const normDesc = (s: string) => s.toLowerCase().trim();
 
   const matchedBillIds = new Set<number>();
-  const rowMatches = new Map<string, { bill: BillItem; reason: 'part' | 'amount' | 'desc' }>();
+  const rowMatches = new Map<string, BillMatch>();
 
-  // Step 1: exact part-number match
+  // Step 1: exact part-number match — the strongest signal.
   rows.forEach((row) => {
     if (rowMatches.has(row.id)) return;
     const rowPart = normPart(row.partNumber || '');
@@ -211,66 +242,62 @@ function matchBillItemsToRows(
     const hit = billItems.find((bi) => {
       if (matchedBillIds.has(bi.idx)) return false;
       const biPart = normPart(bi.partNumber);
-      return biPart && biPart === rowPart;
+      return !!biPart && biPart === rowPart;
     });
     if (hit) {
       matchedBillIds.add(hit.idx);
-      rowMatches.set(row.id, { bill: hit, reason: 'part' });
+      rowMatches.set(row.id, { bill: hit, reason: 'part', ambiguous: false });
     }
   });
 
-  // Step 2: taxable-amount + section match (±₹1)
+  // Step 2: taxable amount within tolerance, description breaking ties.
+  // Section is a tie-breaker, not a gate: the AI misfiling a part under
+  // labour used to make the item unmatchable.
   rows.forEach((row) => {
     if (rowMatches.has(row.id)) return;
-    const rowAmt = row.estimated || 0;
+    const rowAmt = row.estimated || row.assessed || 0;
     if (rowAmt <= 0) return;
+
     const candidates = billItems.filter(
-      (bi) =>
-        !matchedBillIds.has(bi.idx) &&
-        bi.section === row.section &&
-        Math.abs(bi.taxableAmount - rowAmt) <= AMT_TOL
+      (bi) => !matchedBillIds.has(bi.idx) && Math.abs(bi.taxableAmount - rowAmt) <= AMT_TOL
     );
     if (candidates.length === 0) return;
-    let pick = candidates[0];
-    let ambiguous = false;
-    if (candidates.length > 1) {
-      const rowDesc = normDesc(row.particulars);
-      const scored = candidates.map((c) => {
-        const cDesc = normDesc(c.description);
-        const overlap =
-          rowDesc && cDesc && (cDesc.includes(rowDesc) || rowDesc.includes(cDesc))
-            ? 2
-            : rowDesc && cDesc && cDesc.split(' ').some((w) => w.length > 3 && rowDesc.includes(w))
-            ? 1
-            : 0;
-        return { c, overlap };
-      });
-      scored.sort((a, b) => b.overlap - a.overlap);
-      pick = scored[0].c;
-      if (scored[0].overlap === 0 || (scored[1] && scored[0].overlap === scored[1].overlap)) {
-        ambiguous = true;
-      }
-    }
-    matchedBillIds.add(pick.idx);
-    rowMatches.set(row.id, { bill: pick, reason: ambiguous ? 'desc' : 'amount' });
-    if (ambiguous) pick._ambiguous = true;
+
+    const scored = candidates
+      .map((c) => ({
+        c,
+        score: descOverlap(row.particulars, c.description) + (c.section === row.section ? 0.25 : 0),
+      }))
+      .sort((a, b) => b.score - a.score);
+
+    const ambiguous =
+      scored[0].score === 0 || (scored[1] !== undefined && scored[0].score === scored[1].score);
+
+    matchedBillIds.add(scored[0].c.idx);
+    rowMatches.set(row.id, { bill: scored[0].c, reason: ambiguous ? 'desc' : 'amount', ambiguous });
   });
 
-  // Step 3: fuzzy description fallback
+  // Step 3: description overlap alone, for rows with no usable amount.
   rows.forEach((row) => {
     if (rowMatches.has(row.id)) return;
-    const rowDesc = normDesc(row.particulars);
-    if (!rowDesc) return;
-    const hit = billItems.find((bi) => {
-      if (matchedBillIds.has(bi.idx)) return false;
-      if (bi.section !== row.section) return false;
-      const biDesc = normDesc(bi.description);
-      return biDesc && (biDesc.includes(rowDesc) || rowDesc.includes(biDesc));
+    if (!row.particulars) return;
+
+    const scored = billItems
+      .filter((bi) => !matchedBillIds.has(bi.idx))
+      .map((bi) => ({
+        bi,
+        score: descOverlap(row.particulars, bi.description) + (bi.section === row.section ? 0.25 : 0),
+      }))
+      .filter((s) => s.score >= DESC_MATCH_THRESHOLD)
+      .sort((a, b) => b.score - a.score);
+
+    if (scored.length === 0) return;
+    matchedBillIds.add(scored[0].bi.idx);
+    rowMatches.set(row.id, {
+      bill: scored[0].bi,
+      reason: 'desc',
+      ambiguous: scored.length > 1 && scored[0].score === scored[1].score,
     });
-    if (hit) {
-      matchedBillIds.add(hit.idx);
-      rowMatches.set(row.id, { bill: hit, reason: 'desc' });
-    }
   });
 
   return rowMatches;
@@ -536,7 +563,7 @@ function applyFinalBill(claim: ClaimData, data: any): ClaimData {
       };
     }
     const status: 'in-bill' | 'partial' = partial ? 'partial' : 'in-bill';
-    const remark = m.bill._ambiguous ? 'Ambiguous amount match — please verify' : row.billRemarks;
+    const remark = m.ambiguous ? 'Ambiguous match — please verify' : row.billRemarks;
     return { ...row, billedTaxable: billedTax, billedAmount: billedAmt, billStatus: status, billRemarks: remark };
   });
 
