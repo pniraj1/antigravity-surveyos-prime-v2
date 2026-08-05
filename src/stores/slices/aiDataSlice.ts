@@ -538,7 +538,7 @@ function applyLokChallan(claim: ClaimData, data: any): ClaimData {
   };
 }
 
-function applyFinalBill(claim: ClaimData, data: any): ClaimData {
+export function applyFinalBill(claim: ClaimData, data: any): ClaimData {
   const billItems = buildBillItems(data);
   const rowMatches = matchBillItemsToRows(claim.assessmentRows, billItems);
   const matchedBillIds = new Set(Array.from(rowMatches.values()).map((m) => m.bill.idx));
@@ -567,16 +567,28 @@ function applyFinalBill(claim: ClaimData, data: any): ClaimData {
     return { ...row, billedTaxable: billedTax, billedAmount: billedAmt, billStatus: status, billRemarks: remark };
   });
 
-  const unmatched: ExtraBillItem[] = billItems
+  const extras: ExtraBillItem[] = billItems
     .filter((bi) => !matchedBillIds.has(bi.idx))
-    .map((bi, i) => ({
-      id: `extra-${Date.now()}-${i}`,
+    .map((bi) => ({
+      // Stable id from content, so a re-upload of the same bill produces the
+      // same id and merging can tell a repeat from a new item.
+      id: `extra-${bi.section}-${bi.partNumber || bi.description}-${bi.totalAmount}`.replace(/\s+/g, '_'),
       description: bi.description || 'Unnamed item',
       amount: bi.totalAmount,
+      taxableAmount: bi.taxableAmount,
+      gstPercent: bi.gstPercent,
+      partNumber: bi.partNumber || undefined,
+      hsnSac: bi.raw?.hsn_sac || bi.raw?.hsn || undefined,
+      section: bi.section,
       category:
         bi.section === 'parts' ? 'spare_parts' : bi.section === 'labour' ? 'labour' : 'painting',
       source: 'final-bill' as const,
     }));
+
+  // Merge, don't overwrite: the surveyor may have deleted or promoted items
+  // from a previous upload of this bill.
+  const seen = new Set((claim.extraBillItems || []).map((e) => e.id));
+  const merged = [...(claim.extraBillItems || []), ...extras.filter((e) => !seen.has(e.id))];
 
   return {
     ...claim,
@@ -586,7 +598,7 @@ function applyFinalBill(claim: ClaimData, data: any): ClaimData {
       billTotal: data.total_amount || 0,
     },
     assessmentRows: updatedRows,
-    extraBillItems: unmatched,
+    extraBillItems: merged,
   };
 }
 

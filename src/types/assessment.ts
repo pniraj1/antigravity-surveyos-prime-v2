@@ -14,7 +14,14 @@ export type BillStatus = 'in-bill' | 'not-in-bill' | 'partial' | 'pending' | 'no
 export interface ExtraBillItem {
   id: string;
   description: string;
+  /** Total incl GST, as billed. */
   amount: number;
+  /** Pre-GST basis — what promotion to an AssessmentRow needs. */
+  taxableAmount: number;
+  gstPercent: number;
+  partNumber?: string;
+  hsnSac?: string;
+  section: AssessmentSection;
   category?: 'spare_parts' | 'labour' | 'painting';
   source: 'final-bill';
 }
