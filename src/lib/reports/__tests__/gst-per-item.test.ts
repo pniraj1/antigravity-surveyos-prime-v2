@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { buildUIICFinalHTML, buildUIICBillCheckHTML } from '../uiic-final-builder';
+import { buildStandardFinalSurveyHTML } from '../standard-report-builder';
+import { calculateAssessmentSummary } from '@/lib/calculations';
 import type { ClaimData } from '@/types';
 import type { AssessmentRow } from '@/types/assessment';
 
@@ -65,5 +67,27 @@ describe('per-item GST in the PDF builders', () => {
       null
     );
     expect(html).toContain('1050.00');
+  });
+});
+
+describe('standard report ASSESSMENT SUMMARY', () => {
+  test('a 28% part is totalled at 28%, not 18%', () => {
+    // pb * 0.09 hardcoded 18% in the block behind section 8, ignoring the
+    // correctly-computed summary the builder is already handed.
+    const rows = [row({ assessed: 10000, estimated: 10000, gst: 28 })];
+    const c = claim(rows);
+    const summary = calculateAssessmentSummary(rows, 0, 'nil', 0, 0, 0);
+    const html = buildStandardFinalSurveyHTML(c, summary, {} as never);
+    // This builder's fa() adds thousands separators, unlike the UIIC one.
+    expect(html).toContain('12,800.00');
+    expect(html).not.toContain('11,800.00');
+  });
+
+  test('labour at a non-standard rate is totalled at that rate', () => {
+    const rows = [row({ section: 'labour', partType: 'labour', assessed: 1000, estimated: 1000, gst: 5 })];
+    const c = claim(rows);
+    const summary = calculateAssessmentSummary(rows, 0, 'nil', 0, 0, 0);
+    const html = buildStandardFinalSurveyHTML(c, summary, {} as never);
+    expect(html).toContain('1,050.00');
   });
 });

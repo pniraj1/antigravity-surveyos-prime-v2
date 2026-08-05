@@ -96,13 +96,13 @@ export function buildStandardFinalSurveyHTML(
   });
 
   const labBase = labOnlyBase + paintOnlyBase; // combined for grand total
-  const pb = metal + plastic + glass + fiberglass;
-  const pCGST = pb * 0.09;
-  const pT = pb + pCGST * 2 + disposalNet;
-  const labGST = labOnlyBase * 0.18;
-  const labT = labOnlyBase + labGST;
-  const paintGST = paintOnlyBase * 0.18;
-  const paintT = paintOnlyBase + paintGST;
+  // GST is per item. The 0.09 / 0.18 literals here ignored row.gst entirely,
+  // so a 28% tyre was totalled at 18% in section 8 — while the correctly
+  // computed summary was being passed in and discarded.
+  const pb = summary.partsBase;
+  const pT = summary.partsTotal;
+  const labT = summary.labourOnlyTotal;
+  const paintT = summary.paintOnlyTotal;
   const lT = labT + paintT;
   const grand = pT + lT;
 
