@@ -13,6 +13,8 @@ interface Props {
   allRows: AssessmentRow[];
   allowedRows: AssessmentRow[];
   notInBillTotal: number;
+  /** Row id → the serial the insurer reads in both PDFs. */
+  serials: Map<string, number>;
   updateAssessmentRow: (id: string, updates: Partial<AssessmentRow>) => void;
   deleteAssessmentRow: (id: string) => void;
   deleteAssessmentRows: (ids: string[]) => void;
@@ -24,6 +26,7 @@ export function BillCheckGrid({
   allRows,
   allowedRows,
   notInBillTotal,
+  serials,
   updateAssessmentRow,
   deleteAssessmentRow,
   deleteAssessmentRows,
@@ -249,7 +252,8 @@ export function BillCheckGrid({
                     className="h-3.5 w-3.5 cursor-pointer accent-[var(--color-status-danger)]"
                   />
                 </div>
-                <div className="text-sm font-medium" style={{ color: 'var(--color-neutral-600)' }}>{row.srNo ?? idx + 1}</div>
+                {/* The number the insurer reads in both PDFs, not the estimate's srNo. */}
+                <div className="text-sm font-medium" style={{ color: 'var(--color-neutral-600)' }}>{serials.get(row.id) ?? idx + 1}</div>
                 <div
                   className="group text-sm font-medium flex items-center gap-1.5 cursor-pointer select-none text-foreground"
                   style={{ textDecoration: isDisallowed ? 'line-through' : 'none' }}
@@ -310,10 +314,20 @@ export function BillCheckGrid({
                     value={row.billStatus || 'pending'}
                     onChange={e => {
                       const s = e.target.value as BillStatus;
-                      updateAssessmentRow(row.id, {
-                        billStatus: s,
-                        billedAmount: s === 'not-in-bill' ? 0 : (s === 'in-bill' ? row.assessed : row.billedAmount),
-                      });
+                      const gstPct = row.gst ?? 18;
+                      if (s === 'in-bill') {
+                        // "Billed as assessed." assessed is pre-GST, so it is the
+                        // taxable basis; billedAmount is the incl-GST display figure.
+                        updateAssessmentRow(row.id, {
+                          billStatus: s,
+                          billedTaxable: row.assessed,
+                          billedAmount: Math.round(row.assessed * (1 + gstPct / 100)),
+                        });
+                      } else if (s === 'not-in-bill') {
+                        updateAssessmentRow(row.id, { billStatus: s, billedTaxable: 0, billedAmount: 0 });
+                      } else {
+                        updateAssessmentRow(row.id, { billStatus: s });
+                      }
                     }}
                     className="px-2 py-1 rounded-lg text-[11px] font-medium border outline-none w-full border-border"
                     style={{ background: st.bg, color: st.color }}

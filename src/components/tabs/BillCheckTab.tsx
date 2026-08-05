@@ -7,7 +7,7 @@ import { Printer, FileText } from 'lucide-react';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { useAIExtraction } from '@/hooks/useAIExtraction';
-import { calculateAssessmentSummary, calculateBillCheckSummary, getVehicleAgeMonths } from '@/lib/calculations';
+import { calculateAssessmentSummary, calculateBillCheckSummary, getVehicleAgeMonths, buildSerialMap } from '@/lib/calculations';
 import { triggerUIICBillCheckPrint, buildUIICBillCheckHTML } from '@/lib/reports/uiic-final-builder';
 
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
@@ -75,6 +75,8 @@ export function BillCheckTab() {
   const allRows = currentClaim.assessmentRows;
   const allowedRows = allRows.filter(r => r.allowed);
   const extraBillItems = currentClaim.extraBillItems || [];
+  // Same numbering the two PDFs use, so what is verified here is what is read there.
+  const serials = buildSerialMap(allRows);
 
   const ageMonths = getVehicleAgeMonths(
     currentClaim.vehicle.dateOfRegistration,
@@ -125,6 +127,7 @@ export function BillCheckTab() {
               allRows={allRows}
               allowedRows={allowedRows}
               notInBillTotal={notInBillTotal}
+              serials={serials}
               updateAssessmentRow={updateAssessmentRow}
               deleteAssessmentRow={deleteAssessmentRow}
               deleteAssessmentRows={deleteAssessmentRows}
