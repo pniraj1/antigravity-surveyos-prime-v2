@@ -31,7 +31,11 @@
 |---|---|---|
 | `src/lib/calculations/gst-bands.ts` | Per-row GST bases, banded by HSN/SAC and rate | **Create** |
 | `src/lib/calculations/index.ts` | Barrel | Export the helper |
-| `src/lib/reports/uiic-final-builder.ts` | Both PDFs | Per-row GST; Bill Check table rewritten; GST SUMMARY added |
+| `src/lib/calculations/assessment.ts` | Summary engine | Split labour from painting (Task 6) |
+| `src/lib/reports/uiic-final-builder.ts` | UIIC PDFs | Per-row GST; Bill Check table rewritten; GST SUMMARY + ASSESSMENT SUMMARY added |
+| `src/lib/reports/standard-report-builder.ts` | Standard PDF | Its "8. ASSESSMENT SUMMARY" reads from the engine instead of hardcoding GST (Task 7) |
+
+**Not touched:** `src/lib/reports/spot-fee-bill-builder.ts:52` — `subTotal * 0.18` there is GST on the surveyor's professional fee, a flat service rate, not a per-item vehicle rate. Correct as written.
 
 ---
 
@@ -676,10 +680,7 @@ In `buildUIICBillCheckHTML`, delete `billStatusLabel` and replace the `pHtml`, `
     r.partType === 'metal' ? 'Metal'
     : r.partType === 'glass' ? 'Glass'
     : r.partType === 'fiberglass' ? 'Fibre Glass'
-    : 'Rubber';
-
-  const jobTypeLabel = (r: AssessmentRow) =>
-    r.action === 'repair' ? 'Repair' : 'Replace';
+    : 'Plastic / Rubber';
 
   const depLabel = (r: AssessmentRow) => {
     const d = rowDepFor(r);
@@ -697,7 +698,6 @@ In `buildUIICBillCheckHTML`, delete `billStatusLabel` and replace the `pHtml`, `
       <td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td>
       <td style="${td}">${r.particulars}</td>
       <td style="${td}text-align:center;">${partTypeLabel(r)}</td>
-      <td style="${td}text-align:center;">${jobTypeLabel(r)}</td>
       <td style="${td}text-align:right;">${fa(r.estimated)}</td>
       <td style="${td}text-align:center;">${depLabel(r)}</td>
       <td style="${td}text-align:right;">${fa(r.assessed)}</td>
@@ -712,7 +712,6 @@ In `buildUIICBillCheckHTML`, delete `billStatusLabel` and replace the `pHtml`, `
       <td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td>
       <td style="${td}">${r.particulars}</td>
       <td style="${td}text-align:center;">Labour</td>
-      <td style="${td}text-align:center;">Labour</td>
       ${blank}
       <td style="${td}text-align:center;">${depLabel(r)}</td>
       ${blank}
@@ -725,7 +724,6 @@ In `buildUIICBillCheckHTML`, delete `billStatusLabel` and replace the `pHtml`, `
   const ptHtml = allowedPaint.map(r => `<tr>
       <td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td>
       <td style="${td}">${r.particulars}</td>
-      <td style="${td}text-align:center;">Labour</td>
       <td style="${td}text-align:center;">Paint</td>
       ${blank}
       <td style="${td}text-align:center;">${depLabel(r)}</td>
@@ -736,11 +734,10 @@ In `buildUIICBillCheckHTML`, delete `billStatusLabel` and replace the `pHtml`, `
     </tr>`).join('');
 
   // One tax line per distinct rate, so a mixed-rate claim reads correctly.
-  const taxLines = (agg: ReturnType<typeof aggregateGst>, label: string, colIndex: 'labour' | 'paint') =>
+  const taxLines = (agg: ReturnType<typeof aggregateGst>, label: string, col: 'labour' | 'paint') =>
     agg.bands.filter(b => b.rate > 0).map(b => `<tr>
       <td colspan="8" style="${td}text-align:right;font-style:italic;">TAX IN ${b.rate} % for ${label}</td>
-      ${blank}
-      ${colIndex === 'labour' ? `<td style="${td}text-align:right;">${fa(b.cgst + b.sgst)}</td>${blank}` : `${blank}<td style="${td}text-align:right;">${fa(b.cgst + b.sgst)}</td>`}
+      ${col === 'labour' ? `<td style="${td}text-align:right;">${fa(b.cgst + b.sgst)}</td>${blank}` : `${blank}<td style="${td}text-align:right;">${fa(b.cgst + b.sgst)}</td>`}
     </tr>`).join('');
 ```
 
@@ -752,23 +749,22 @@ Replace the `<div style="${sec}">DETAILS OF BILL CHECK…` block through `</tabl
 <div style="${sec}">BILLS CHECK REPORT</div>
 <table style="${ts}font-size:7pt;">
 <thead><tr>
-  <th style="${th}width:4%;">SR.<br/>NO.</th>
-  <th style="${th}text-align:left;width:20%;">Description</th>
-  <th style="${th}width:7%;">Part<br/>Type</th>
-  <th style="${th}width:7%;">Job<br/>Type</th>
-  <th style="${th}width:10%;">Part List<br/>Without Tax</th>
-  <th style="${th}width:7%;">Part<br/>Depreciation</th>
-  <th style="${th}width:10%;">Parts<br/>Assessment</th>
+  <th style="${th}width:5%;">SR.<br/>NO.</th>
+  <th style="${th}text-align:left;width:23%;">Description</th>
+  <th style="${th}width:9%;">Part<br/>Type</th>
+  <th style="${th}width:11%;">Part List<br/>Without Tax</th>
+  <th style="${th}width:8%;">Part<br/>Depreciation</th>
+  <th style="${th}width:11%;">Parts<br/>Assessment</th>
   <th style="${th}width:5%;">GST<br/>%</th>
-  <th style="${th}width:10%;">Final amount<br/>With G.S.T</th>
-  <th style="${th}width:10%;">Labour</th>
-  <th style="${th}width:10%;">Paint</th>
+  <th style="${th}width:11%;">Final amount<br/>With G.S.T</th>
+  <th style="${th}width:8.5%;">Labour</th>
+  <th style="${th}width:8.5%;">Paint</th>
 </tr></thead>
 <tbody>
-<tr><td colspan="11" style="${sec}">SPARE PARTS</td></tr>
-${pHtml || `<tr><td colspan="11" style="${td}text-align:center;color:#999;font-style:italic;">No parts in allowed items</td></tr>`}
+<tr><td colspan="10" style="${sec}">SPARE PARTS</td></tr>
+${pHtml || `<tr><td colspan="10" style="${td}text-align:center;color:#999;font-style:italic;">No parts in allowed items</td></tr>`}
 <tr style="font-weight:700;background:#eee;">
-  <td colspan="4" style="${td}">SUB TOTAL</td>
+  <td colspan="3" style="${td}">SUB TOTAL</td>
   <td style="${td}text-align:right;">${fa(allowedParts.reduce((s, r) => s + r.estimated, 0))}</td>
   ${blank}
   <td style="${td}text-align:right;">${fa(allowedParts.reduce((s, r) => s + r.assessed, 0))}</td>
@@ -777,34 +773,34 @@ ${pHtml || `<tr><td colspan="11" style="${td}text-align:center;color:#999;font-s
   ${blank}${blank}
 </tr>
 
-<tr><td colspan="11" style="${sec}">LABOUR</td></tr>
-${lHtml || `<tr><td colspan="11" style="${td}text-align:center;color:#999;font-style:italic;">No labour in allowed items</td></tr>`}
+<tr><td colspan="10" style="${sec}">LABOUR</td></tr>
+${lHtml || `<tr><td colspan="10" style="${td}text-align:center;color:#999;font-style:italic;">No labour in allowed items</td></tr>`}
 <tr style="font-weight:700;background:#f6f6f6;">
-  <td colspan="9" style="${td}">SUB TOTAL</td>
+  <td colspan="8" style="${td}">SUB TOTAL</td>
   <td style="${td}text-align:right;">${fa(allowedLabour.reduce((s, r) => s + r.assessed, 0))}</td>
   ${blank}
 </tr>
 ${taxLines(labourAgg, 'Labour', 'labour')}
 <tr style="font-weight:700;background:#eee;">
-  <td colspan="9" style="${td}">SUB TOTAL</td>
+  <td colspan="8" style="${td}">SUB TOTAL</td>
   <td style="${td}text-align:right;">${fa(labourAgg.amount)}</td>
   ${blank}
 </tr>
 
-<tr><td colspan="11" style="${sec}">PAINTING CHARGES</td></tr>
-${ptHtml || `<tr><td colspan="11" style="${td}text-align:center;color:#999;font-style:italic;">No painting in allowed items</td></tr>`}
+<tr><td colspan="10" style="${sec}">PAINTING CHARGES</td></tr>
+${ptHtml || `<tr><td colspan="10" style="${td}text-align:center;color:#999;font-style:italic;">No painting in allowed items</td></tr>`}
 <tr style="font-weight:700;background:#f6f6f6;">
-  <td colspan="10" style="${td}">SUB TOTAL</td>
+  <td colspan="9" style="${td}">SUB TOTAL</td>
   <td style="${td}text-align:right;">${fa(allowedPaint.reduce((s, r) => s + r.assessed, 0))}</td>
 </tr>
 ${taxLines(paintAgg, 'Paint', 'paint')}
 <tr style="font-weight:700;background:#eee;">
-  <td colspan="10" style="${td}">SUB TOTAL</td>
+  <td colspan="9" style="${td}">SUB TOTAL</td>
   <td style="${td}text-align:right;">${fa(paintAgg.amount)}</td>
 </tr>
 
 <tr style="font-weight:700;background:#ddd;">
-  <td colspan="4" style="${td}">TOTAL</td>
+  <td colspan="3" style="${td}">TOTAL</td>
   <td style="${td}text-align:right;">${fa(allowedParts.reduce((s, r) => s + r.estimated, 0))}</td>
   ${blank}
   <td style="${td}text-align:right;">${fa(allowedParts.reduce((s, r) => s + r.assessed, 0))}</td>
@@ -908,7 +904,16 @@ Expected: FAIL — `GST SUMMARY` absent.
 
 - [ ] **Step 3: Add the GST SUMMARY blocks**
 
-In `buildUIICBillCheckHTML`, immediately after the table's closing `</table>` in page2, insert:
+In `buildUIICBillCheckHTML`, add this helper beside the row builders:
+
+```ts
+  // Specimen prints "(Part) 18.00" / "(Labour) 18.00" when no code is recorded,
+  // and the real HSN/SAC when the row carries one.
+  const codeCell = (b: { hsnSac: string; rate: number }, fallback: 'Part' | 'Labour') =>
+    `${b.hsnSac || `(${fallback})`} ${b.rate.toFixed(2)}`;
+```
+
+Then, immediately after the table's closing `</table>` in page2, insert:
 
 ```ts
 <div style="${sec}">GST SUMMARY</div>
@@ -924,7 +929,7 @@ In `buildUIICBillCheckHTML`, immediately after the table's closing `</table>` in
 <tbody>
 ${partsAgg.bands.map((b, i) => `<tr>
   <td style="${td}text-align:center;">${i + 1}</td>
-  <td style="${td}text-align:center;">${b.hsnSac} ${b.rate ? b.rate.toFixed(2) : ''}</td>
+  <td style="${td}text-align:center;">${codeCell(b, 'Part')}</td>
   <td style="${td}text-align:right;">${fa(b.base)}</td>
   <td style="${td}text-align:right;">${fa(b.cgst)}</td>
   <td style="${td}text-align:right;">${fa(b.sgst)}</td>
@@ -952,7 +957,7 @@ ${partsAgg.bands.map((b, i) => `<tr>
 <tbody>
 ${serviceAgg.bands.map((b, i) => `<tr>
   <td style="${td}text-align:center;">${i + 1}</td>
-  <td style="${td}text-align:center;">${b.hsnSac} ${b.rate ? b.rate.toFixed(2) : ''}</td>
+  <td style="${td}text-align:center;">${codeCell(b, 'Labour')}</td>
   <td style="${td}text-align:right;">${fa(b.base)}</td>
   <td style="${td}text-align:right;">${fa(b.cgst)}</td>
   <td style="${td}text-align:right;">${fa(b.sgst)}</td>
@@ -1015,14 +1020,424 @@ subtotal printed beneath it on a mixed-rate claim."
 
 ---
 
+## Task 6: Split labour from painting in the summary engine
+
+`calculateAssessmentSummary` already computes every figure the ASSESSMENT SUMMARY block needs, correctly, using `row.gst`. Its one gap is that `labourBase` / `labourTotal` merge labour and painting, which the block shows as separate rows. Closing that gap lets both report builders read from the engine instead of doing their own arithmetic.
+
+**Files:**
+- Modify: `src/lib/calculations/assessment.ts`, `src/types/assessment.ts`
+- Test: `src/lib/calculations/__tests__/assessment-summary-split.test.ts` (create)
+
+**Interfaces:**
+- Produces: `AssessmentSummary` gains `labourOnlyBase`, `labourOnlyTotal`, `paintOnlyBase`, `paintOnlyTotal`, `estimateLabourOnlyBase`, `estimatePaintOnlyBase`. Tasks 7 and 8 consume these.
+
+- [ ] **Step 1: Write the failing test**
+
+Create `src/lib/calculations/__tests__/assessment-summary-split.test.ts`:
+
+```ts
+import { describe, expect, test } from 'vitest';
+import { calculateAssessmentSummary } from '../assessment';
+import type { AssessmentRow } from '@/types/assessment';
+
+function row(overrides: Partial<AssessmentRow> = {}): AssessmentRow {
+  return {
+    id: `r${Math.random()}`,
+    particulars: 'Item',
+    estimated: 1000,
+    assessed: 1000,
+    partType: 'metal',
+    gst: 18,
+    section: 'parts',
+    allowed: true,
+    isDisposal: false,
+    disposalPercent: 50,
+    ...overrides,
+  };
+}
+
+describe('calculateAssessmentSummary labour/paint split', () => {
+  test('reports labour and painting separately', () => {
+    const s = calculateAssessmentSummary([
+      row({ section: 'labour', partType: 'labour', estimated: 2000, assessed: 2000 }),
+      row({ section: 'paint', partType: 'paint', estimated: 5000, assessed: 5000 }),
+    ], 0, 'nil');
+
+    expect(s.labourOnlyBase).toBeCloseTo(2000, 2);
+    expect(s.paintOnlyBase).toBeCloseTo(5000, 2);
+    expect(s.labourOnlyTotal).toBeCloseTo(2360, 2);   // 2000 × 1.18
+    expect(s.paintOnlyTotal).toBeCloseTo(5900, 2);    // 5000 × 1.18
+    expect(s.estimateLabourOnlyBase).toBeCloseTo(2000, 2);
+    expect(s.estimatePaintOnlyBase).toBeCloseTo(5000, 2);
+  });
+
+  test('the split still sums to the combined labour figures', () => {
+    const s = calculateAssessmentSummary([
+      row({ section: 'labour', partType: 'labour', assessed: 2000, estimated: 2000 }),
+      row({ section: 'paint', partType: 'paint', assessed: 5000, estimated: 5000 }),
+    ], 0, 'nil');
+
+    expect(s.labourOnlyBase + s.paintOnlyBase).toBeCloseTo(s.labourBase, 2);
+    expect(s.labourOnlyTotal + s.paintOnlyTotal).toBeCloseTo(s.labourTotal, 2);
+  });
+
+  test('honours a per-item rate on labour', () => {
+    const s = calculateAssessmentSummary(
+      [row({ section: 'labour', partType: 'labour', assessed: 1000, estimated: 1000, gst: 5 })],
+      0, 'nil'
+    );
+    expect(s.labourOnlyTotal).toBeCloseTo(1050, 2);
+  });
+});
+```
+
+- [ ] **Step 2: Run the test and confirm it fails**
+
+Run: `npx vitest run src/lib/calculations/__tests__/assessment-summary-split.test.ts`
+Expected: FAIL — `labourOnlyBase` is undefined.
+
+- [ ] **Step 3: Add the fields to the type**
+
+In `src/types/assessment.ts`, add to the `AssessmentSummary` interface:
+
+```ts
+  /** Labour only, excluding painting. */
+  labourOnlyBase: number;
+  labourOnlyTotal: number;
+  /** Painting only, excluding labour. */
+  paintOnlyBase: number;
+  paintOnlyTotal: number;
+  estimateLabourOnlyBase: number;
+  estimatePaintOnlyBase: number;
+```
+
+- [ ] **Step 4: Accumulate the split**
+
+In `calculateAssessmentSummary`, add four accumulators beside the existing ones:
+
+```ts
+  let labourOnlyBase = 0, labourOnlyGST = 0;
+  let paintOnlyBase = 0, paintOnlyGST = 0;
+```
+
+In the main `rows.forEach` loop, inside the `else` branch that currently does `labourBase += ...`, split by section. Replace the disposal branch's `labourBase += disposalValue;` with:
+
+```ts
+        labourBase += disposalValue;
+        if (r.section === 'paint') paintOnlyBase += disposalValue;
+        else labourOnlyBase += disposalValue;
+```
+
+and the normal branch's `labourBase += valueAfterDep; labourGSTAccumulator += rowGST;` with:
+
+```ts
+        labourBase += valueAfterDep;
+        labourGSTAccumulator += rowGST;
+        if (r.section === 'paint') { paintOnlyBase += valueAfterDep; paintOnlyGST += rowGST; }
+        else { labourOnlyBase += valueAfterDep; labourOnlyGST += rowGST; }
+```
+
+In the estimate loop, replace `estLabourBase += r.estimated;` with:
+
+```ts
+      estLabourBase += r.estimated;
+      if (r.section === 'paint') estPaintOnly += r.estimated;
+      else estLabourOnly += r.estimated;
+```
+
+declaring `let estLabourOnly = 0, estPaintOnly = 0;` alongside the other estimate accumulators.
+
+Add to the returned object:
+
+```ts
+    labourOnlyBase,
+    labourOnlyTotal: labourOnlyBase + labourOnlyGST,
+    paintOnlyBase,
+    paintOnlyTotal: paintOnlyBase + paintOnlyGST,
+    estimateLabourOnlyBase: estLabourOnly,
+    estimatePaintOnlyBase: estPaintOnly,
+```
+
+- [ ] **Step 5: Run the tests**
+
+Run: `npx vitest run src/lib/calculations`
+Expected: PASS, all files.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/lib/calculations/assessment.ts src/types/assessment.ts src/lib/calculations/__tests__/assessment-summary-split.test.ts
+git commit -m "feat(calculations): split labour from painting in the summary
+
+The ASSESSMENT SUMMARY block shows Labour and Painting as separate rows, but
+the engine merged them, so both report builders recomputed the split by hand
+with a hardcoded rate. Splitting it here lets them read the engine instead."
+```
+
+---
+
+## Task 7: Standard report's ASSESSMENT SUMMARY uses the engine
+
+**Files:**
+- Modify: `src/lib/reports/standard-report-builder.ts:99-107`
+- Test: `src/lib/reports/__tests__/gst-per-item.test.ts` (extend)
+
+**Interfaces:**
+- Consumes: `calculateAssessmentSummary` with the Task 6 fields
+
+- [ ] **Step 1: Write the failing test**
+
+Append to `src/lib/reports/__tests__/gst-per-item.test.ts`:
+
+```ts
+import { buildStandardReportHTML } from '../standard-report-builder';
+
+describe('standard report ASSESSMENT SUMMARY', () => {
+  test('a 28% part is totalled at 28%, not 18%', () => {
+    // pb * 0.09 hardcoded 18% in the block behind section 8.
+    const html = buildStandardReportHTML(claim([row({ assessed: 10000, estimated: 10000, gst: 28 })]), null);
+    expect(html).toContain('12800.00');
+    expect(html).not.toContain('11800.00');
+  });
+
+  test('labour at a non-standard rate is totalled at that rate', () => {
+    const html = buildStandardReportHTML(
+      claim([row({ section: 'labour', partType: 'labour', assessed: 1000, estimated: 1000, gst: 5 })]),
+      null
+    );
+    expect(html).toContain('1050.00');
+  });
+});
+```
+
+If the exported builder has a different name, run `grep -n "^export function build" src/lib/reports/standard-report-builder.ts` and use that name.
+
+- [ ] **Step 2: Run the test and confirm it fails**
+
+Run: `npx vitest run src/lib/reports/__tests__/gst-per-item.test.ts`
+Expected: FAIL — the 28% part totals 11800.00.
+
+- [ ] **Step 3: Replace the hardcoded block**
+
+In `src/lib/reports/standard-report-builder.ts`, replace lines 99–107:
+
+```ts
+  const pb = metal + plastic + glass + fiberglass;
+  const pCGST = pb * 0.09;
+  const pT = pb + pCGST * 2 + disposalNet;
+  const labGST = labOnlyBase * 0.18;
+  const labT = labOnlyBase + labGST;
+  const paintGST = paintOnlyBase * 0.18;
+  const paintT = paintOnlyBase + paintGST;
+```
+
+with values read from the engine, which already applies each row's own rate:
+
+```ts
+  // GST is per item. The 0.09 / 0.18 literals here ignored row.gst entirely,
+  // so a 28% tyre was totalled at 18% in section 8.
+  const summary = calculateAssessmentSummary(
+    rows, ageMonths, claim.depreciationType || 'standard',
+    claim.feeBill?.salvageValue ?? 0,
+    getCompulsoryExcess(claim.feeBill),
+    claim.feeBill?.voluntaryExcess ?? 0,
+  );
+
+  const pb = summary.partsBase;
+  const pT = summary.partsTotal;
+  const labT = summary.labourOnlyTotal;
+  const paintT = summary.paintOnlyTotal;
+```
+
+Keep the existing `labOnlyBase` / `paintOnlyBase` accumulators — the block prints them in its "Assessed (after Dep.)" column. Add `calculateAssessmentSummary` to the file's imports if absent.
+
+- [ ] **Step 4: Run the tests and typecheck**
+
+Run: `npx tsc --noEmit && npx vitest run src/lib/reports`
+Expected: both clean.
+
+- [ ] **Step 5: Confirm no hardcoded GST remains**
+
+Run: `grep -n "1\.18\|\* 0\.09\|\* 0\.18" src/lib/reports/standard-report-builder.ts`
+Expected: no output.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/lib/reports/standard-report-builder.ts src/lib/reports/__tests__/gst-per-item.test.ts
+git commit -m "fix(reports): standard report section 8 honours per-item GST
+
+pb * 0.09 and the two * 0.18 literals meant the ASSESSMENT SUMMARY block
+totalled every claim at 18% regardless of what the surveyor set. Now reads
+calculateAssessmentSummary, which already applies each row's own rate."
+```
+
+---
+
+## Task 8: Financial summary block in the Bill Check report
+
+**Files:**
+- Modify: `src/lib/reports/uiic-final-builder.ts` — page2, after the GST SUMMARY blocks
+- Test: `src/lib/reports/__tests__/bill-check-format.test.ts` (extend)
+
+**Interfaces:**
+- Consumes: `calculateAssessmentSummary` with the Task 6 fields
+
+- [ ] **Step 1: Write the failing test**
+
+Append to `src/lib/reports/__tests__/bill-check-format.test.ts`:
+
+```ts
+describe('Bill Check financial summary', () => {
+  test('carries the same heads as the standard report block', () => {
+    const html = buildUIICBillCheckHTML(claim([row()]), null);
+    expect(html).toContain('ASSESSMENT SUMMARY');
+    expect(html).toContain('Assessed (after Dep.)');
+    expect(html).toContain('Incl. GST');
+    expect(html).toContain('GRAND TOTAL');
+    expect(html).toContain('NET ASSESSED LOSS');
+  });
+
+  test('breaks spare parts down by material', () => {
+    const html = buildUIICBillCheckHTML(claim([
+      row({ partType: 'metal', assessed: 10000, estimated: 10000 }),
+      row({ partType: 'plastic', assessed: 4000, estimated: 4000 }),
+    ]), null);
+    expect(html).toContain('Metal');
+    expect(html).toContain('Plastic / Rubber');
+  });
+
+  test('prints the net in words', () => {
+    const html = buildUIICBillCheckHTML(claim([row({ assessed: 10000, estimated: 10000 })]), null);
+    expect(html).toContain('RUPEES');
+  });
+
+  test('omits a material with no rows', () => {
+    const html = buildUIICBillCheckHTML(claim([row({ partType: 'metal' })]), null);
+    expect(html).not.toContain('Fibre Glass');
+  });
+});
+```
+
+- [ ] **Step 2: Run the test and confirm it fails**
+
+Run: `npx vitest run src/lib/reports/__tests__/bill-check-format.test.ts`
+Expected: FAIL — `ASSESSMENT SUMMARY` absent.
+
+- [ ] **Step 3: Add the block**
+
+In `buildUIICBillCheckHTML`, compute the summary near the other aggregates:
+
+```ts
+  const asum = calculateAssessmentSummary(
+    rows, ageMonths, depType, salvage, compExcess, volExcess
+  );
+```
+
+Then insert after the second GST SUMMARY table in page2:
+
+```ts
+<div style="${sec}">ASSESSMENT SUMMARY</div>
+<table style="${ts}font-size:7pt;">
+<thead><tr>
+  <th style="${th}text-align:left;width:40%;">Head</th>
+  <th style="${th}text-align:right;">Estimated</th>
+  <th style="${th}text-align:right;">Assessed (after Dep.)</th>
+  <th style="${th}text-align:right;">Incl. GST</th>
+</tr></thead>
+<tbody>
+<tr>
+  <td style="${td}">Spare Parts</td>
+  <td style="${td}text-align:right;">${fa(asum.estimatePartsBase)}</td>
+  <td style="${td}text-align:right;">${fa(asum.partsBase)}</td>
+  <td style="${td}text-align:right;">${fa(asum.partsTotal)}</td>
+</tr>
+${[
+  { label: 'Metal', est: asum.estimateMetalBase, ass: asum.metalTotal },
+  { label: 'Plastic / Rubber', est: asum.estimatePlasticBase, ass: asum.plasticTotal },
+  { label: 'Glass', est: asum.estimateGlassBase, ass: asum.glassTotal },
+  { label: 'Fibre Glass', est: asum.estimateFiberglassBase, ass: asum.fiberglassTotal },
+].filter(s => s.est > 0 || s.ass > 0).map(s => `<tr>
+  <td style="${td}padding-left:14pt;color:#555;">&#8627; ${s.label}</td>
+  <td style="${td}text-align:right;color:#555;">${fa(s.est)}</td>
+  <td style="${td}text-align:right;color:#555;">${fa(s.ass)}</td>
+  <td style="${td}text-align:right;color:#555;">&mdash;</td>
+</tr>`).join('')}
+<tr>
+  <td style="${td}">Labour</td>
+  <td style="${td}text-align:right;">${fa(asum.estimateLabourOnlyBase)}</td>
+  <td style="${td}text-align:right;">${fa(asum.labourOnlyBase)}</td>
+  <td style="${td}text-align:right;">${fa(asum.labourOnlyTotal)}</td>
+</tr>
+<tr>
+  <td style="${td}">Painting</td>
+  <td style="${td}text-align:right;">${fa(asum.estimatePaintOnlyBase)}</td>
+  <td style="${td}text-align:right;">${fa(asum.paintOnlyBase)}</td>
+  <td style="${td}text-align:right;">${fa(asum.paintOnlyTotal)}</td>
+</tr>
+<tr style="font-weight:700;background:#eee;">
+  <td style="${td}">GRAND TOTAL</td>
+  <td style="${td}text-align:right;">${fa(asum.estimatePartsBase + asum.estimateLabourBase)}</td>
+  <td style="${td}text-align:right;">${fa(asum.partsBase + asum.labourBase)}</td>
+  <td style="${td}text-align:right;">${fa(asum.grandTotal)}</td>
+</tr>
+<tr>
+  <td style="${td}">Less: Policy Excess</td>
+  <td colspan="2" style="${td}"></td>
+  <td style="${td}text-align:right;">( ${fa(asum.excess)} )</td>
+</tr>
+<tr>
+  <td style="${td}">Less: Salvage Value</td>
+  <td colspan="2" style="${td}"></td>
+  <td style="${td}text-align:right;">( ${fa(asum.salvage)} )</td>
+</tr>
+<tr style="font-weight:700;background:#0d1b2a;color:#fff;">
+  <td style="padding:3px 4px;">NET ASSESSED LOSS</td>
+  <td colspan="2" style="border:none;"></td>
+  <td style="padding:3px 4px;text-align:right;">${fa(asum.netAssessedLoss)}</td>
+</tr>
+<tr>
+  <td colspan="4" style="${td}font-style:italic;font-size:6.5pt;color:#444;">${asum.netInWords}</td>
+</tr>
+</tbody>
+</table>
+```
+
+- [ ] **Step 4: Run the tests and typecheck**
+
+Run: `npx tsc --noEmit && npm run test`
+Expected: both clean.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/lib/reports/uiic-final-builder.ts src/lib/reports/__tests__/bill-check-format.test.ts
+git commit -m "feat(reports): financial summary block in the Bill Check report
+
+Mirrors section 8 of the standard report - estimated, assessed after
+depreciation, and incl. GST per head, with the spare-parts material
+breakdown - reading the same summary engine so the two agree."
+```
+
+---
+
 ## Self-review notes
 
-**Spec coverage.** §3 calculation model → Tasks 1, 4. §4 table → Task 4. §5 GST SUMMARY → Task 5. §6 removals → Task 4. §7 summary inputs → Task 3, guarded by Task 5 Step 5. §8 hardcoded GST → Tasks 2 and 3, with a `grep` gate in each. §9 testing → distributed across all five.
+**Spec coverage.** §3 calculation model → Tasks 1, 4. §4 table → Task 4. §5 GST SUMMARY → Task 5. §6 removals → Task 4. §7 summary inputs → Task 3, guarded by Task 5 Step 5. §8 hardcoded GST → Tasks 2, 3 and 7, with a `grep` gate in each. §9 testing → distributed across all eight.
+
+**Added after the spec was written**, at the surveyor's request during plan review:
+- Job Type column dropped; ten columns, not eleven (Task 4).
+- `Plastic / Rubber` retained rather than the specimen's `Rubber` (Task 4).
+- GST SUMMARY code cell prints `(Part) 18.00` / `(Labour) 18.00` when the row has no HSN/SAC, and the real code when it does (Task 5).
+- Financial summary block, mirroring section 8 of the standard report (Tasks 6 and 8).
+- `standard-report-builder.ts` hardcodes GST in three places and produces the block being mirrored — folded in (Task 7).
 
 **Not carried out of the spec:** rounding (§10) — the specimen's `70000.30 → 70000.00` sits in the summary block, out of scope, and stays as-is.
 
-**Type consistency.** `aggregateGst(rows, depRateFor)` returns `{ bands, base, cgst, sgst, amount }` in Tasks 1–5. `GstBand` fields `hsnSac / rate / base / cgst / sgst / amount` are used with those exact names in Tasks 4 and 5. `partsAgg`, `labourAgg`, `paintAgg`, `serviceAgg` are declared in Task 3 and consumed unchanged in Tasks 4 and 5. `rowDepFor` is declared in Task 3 and used by Task 4's row builders.
+**Type consistency.** `aggregateGst(rows, depRateFor)` returns `{ bands, base, cgst, sgst, amount }` in Tasks 1–5. `GstBand` fields `hsnSac / rate / base / cgst / sgst / amount` are used with those exact names in Tasks 4 and 5. `partsAgg`, `labourAgg`, `paintAgg`, `serviceAgg` are declared in Task 3 and consumed unchanged in Tasks 4, 5 and 8. `rowDepFor` is declared in Task 3 and used by Task 4's row builders. `codeCell(band, fallback)` is declared in Task 5 and used by both its tables. The six fields Task 6 adds to `AssessmentSummary` — `labourOnlyBase`, `labourOnlyTotal`, `paintOnlyBase`, `paintOnlyTotal`, `estimateLabourOnlyBase`, `estimatePaintOnlyBase` — are consumed with those exact names in Tasks 7 and 8.
 
-**Ordering constraint.** Task 1 first. Task 3 must precede Tasks 4 and 5 — it declares the aggregates they consume. Task 2 is independent of 3–5 and can run any time after Task 1.
+**Ordering constraint.** Task 1 first. Task 3 must precede Tasks 4, 5 and 8 — it declares the aggregates they consume. Task 6 must precede Tasks 7 and 8. Task 2 is independent of 3–5 and can run any time after Task 1.
+
+**Column-count check.** The table is ten columns after Job Type was dropped. Section header rows and empty-state rows use `colspan="10"`; the parts subtotal and TOTAL rows open with `colspan="3"`; labour subtotals use `colspan="8"`; paint subtotals use `colspan="9"`; tax lines use `colspan="8"` plus two trailing cells. Any change to the column set must revisit every one of these.
 
 **Known follow-up.** `bill-check-report.test.ts` from the previous plan asserts on the removed columns. Task 4 Step 6 updates it rather than deleting it — its serial-gap case is still the regression guard for `buildSerialMap`.
