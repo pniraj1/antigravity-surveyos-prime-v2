@@ -488,9 +488,20 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
     billedPaintTotal += computeRowLiability(r, rowDep(r)).liability;
   });
 
-  const pC = partsDepreciated * 0.09, pS = partsDepreciated * 0.09, pT = partsDepreciated + pC + pS + disposalNet;
   const labBase = labOnly + paintOnly;
-  const lC = labBase * 0.09, lS = labBase * 0.09, lT = labBase + lC + lS;
+
+  // Same per-item banding the table below uses, so Cost of Parts agrees with
+  // the SPARE PARTS subtotal on a mixed-rate claim.
+  const rowDepFor = (r: AssessmentRow) =>
+    r.depOverride !== undefined ? r.depOverride : getDepRate(r.partType, ageMonths, depType);
+
+  const partsAgg   = aggregateGst(allowedParts, rowDepFor);
+  const labourAgg  = aggregateGst(allowedLabour, rowDepFor);
+  const paintAgg   = aggregateGst(allowedPaint, rowDepFor);
+  const serviceAgg = aggregateGst([...allowedLabour, ...allowedPaint], rowDepFor);
+
+  const pC = partsAgg.cgst, pS = partsAgg.sgst, pT = partsAgg.amount;
+  const lC = serviceAgg.cgst, lS = serviceAgg.sgst, lT = serviceAgg.amount;
   const tow = parseFloat(String(claim.feeBill?.travelExpenses || 0)) || 0;
   const gross = pT + lT + tow;
   const depAmt = rawParts - partsDepreciated;
@@ -676,8 +687,8 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
 <div style="${sec}">LOSS ASSESSMENT SUMMARY — ALLOWED ITEMS ONLY</div>
 <table style="${ts}margin-bottom:3px;">
 <tr><td style="${tdl}width:16%;">Cost of Parts (Assessed)</td><td style="${td}text-align:right;width:17%;">${fa(pT)}</td><td style="${tdl}width:17%;">Vehicle Type</td><td style="${td}width:16%;">${g(v.classOfVehicle || v.bodyType)}</td><td style="${tdl}width:17%;">Assessed Loss</td><td style="${td}text-align:right;width:17%;">${fa(gross)}</td></tr>
-<tr><td style="${tdl}">Labour Charges (Assessed)</td><td style="${td}text-align:right;">${fa(labOnly * 1.18)}</td><td style="${tdl}"></td><td style="${td}"></td><td style="${tdl}">Depreciation</td><td style="${td}text-align:right;">${fa(depAmt)}</td></tr>
-<tr><td style="${tdl}">Painting Charges (Assessed)</td><td style="${td}text-align:right;">${fa(paintOnly * 1.18)}</td><td style="${tdl}"></td><td style="${td}"></td><td style="${tdl}">Salvage</td><td style="${td}text-align:right;">${fa(salvage)}</td></tr>
+<tr><td style="${tdl}">Labour Charges (Assessed)</td><td style="${td}text-align:right;">${fa(labourAgg.amount)}</td><td style="${tdl}"></td><td style="${td}"></td><td style="${tdl}">Depreciation</td><td style="${td}text-align:right;">${fa(depAmt)}</td></tr>
+<tr><td style="${tdl}">Painting Charges (Assessed)</td><td style="${td}text-align:right;">${fa(paintAgg.amount)}</td><td style="${tdl}"></td><td style="${td}"></td><td style="${tdl}">Salvage</td><td style="${td}text-align:right;">${fa(salvage)}</td></tr>
 <tr><td style="${tdl}">Total Billed by Workshop</td><td style="${td}text-align:right;font-weight:700;">${fa(totalBilled)}</td><td style="${tdl}"></td><td style="${td}"></td><td style="${tdl}">Voluntary / Imposed Excess</td><td style="${td}text-align:right;">${fa(volExcess)}</td></tr>
 <tr><td style="${tdl}">Gross Assessment</td><td style="${td}text-align:right;">${fa(gross)}</td><td style="${tdl}"></td><td style="${td}"></td><td style="${tdl}">Compulsory Excess</td><td style="${td}text-align:right;">${fa(compExcess)}</td></tr>
 <tr><td style="${tdl}">IDV</td><td style="${td}text-align:right;">${fa(p.idv)}</td><td style="${tdl}">Bill Check Done</td><td style="${td}text-align:center;">YES</td><td style="${tdb}">Net Liability (Billed)</td><td style="${tdb}text-align:right;">${fa(netBilledLiability)}</td></tr>
