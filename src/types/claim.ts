@@ -25,6 +25,28 @@ export interface ReportSettings {
   fontScale: FontScale;
 }
 
+/**
+ * A surveyor's answer to one reconciliation conflict.
+ *
+ * The Hub exists because the AI found documents that disagree and cannot judge
+ * which is right. Recording the answer is what lets a resolved conflict stop
+ * being counted — without this, conflicts are derived purely from source
+ * disagreement, which the surveyor cannot change, so the count never drops.
+ */
+export interface ReconciliationDecision {
+  /** The value the surveyor chose. */
+  value: string;
+  /** Document it came from: 'rc' | 'policy' | 'dl' | 'claim' | 'fir' | 'fitness' | … */
+  source: string;
+  decidedAt: string;
+  /**
+   * Fingerprint of the source values at decision time. If a document is
+   * re-scanned and now reads differently — or a new document adds another
+   * opinion — this no longer matches and the field returns to the Hub.
+   */
+  sourcesSeen: string;
+}
+
 export interface ClaimData {
   /** Unique claim identifier */
   id: string;
@@ -132,6 +154,9 @@ export interface ClaimData {
 
   // ─── AI Extraction Cache ───────────────────────────
   extractedData: Record<string, unknown>;
+
+  /** Keyed by field path, e.g. "vehicle.engineNumber". Written only by the Reconciliation Hub. */
+  reconciliationDecisions?: Record<string, ReconciliationDecision>;
 
   // ─── Google Drive ──────────────────────────────────
   gDriveFolderId: string | null;
@@ -412,6 +437,7 @@ export function createBlankClaim(
     reportSettings: { fontScale: 'compact' },
     reportPreamble: '',
     extractedData: {},
+    reconciliationDecisions: {},
     gDriveFolderId: null,
     telemetrySent: false,
   };

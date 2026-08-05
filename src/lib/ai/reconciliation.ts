@@ -11,6 +11,10 @@ export interface ReconciliationField {
     label: string;
   }[];
   hasConflict: boolean;
+  /** True when a decision exists AND its fingerprint still matches these sources. */
+  isDecided: boolean;
+  /** Fingerprint of this field's current sources — store on the decision. */
+  sourcesFingerprint: string;
 }
 
 // ─── Mapping AI Keys to Claim Structure ────────────────────────────────────
@@ -94,9 +98,23 @@ function normalize(val: unknown): string {
   return String(val).replace(/[\s\-\/]/g, '').toLowerCase();
 }
 
+/**
+ * Stable fingerprint of a field's sources — which documents spoke, and what
+ * each said. Sorted so ordering cannot change it, and normalized so formatting
+ * differences the conflict matcher already ignores do not falsely reopen a
+ * decision.
+ */
+export function fingerprintSources(sources: { origin: string; value: string }[]): string {
+  return sources
+    .map((s) => `${s.origin}=${normalize(s.value)}`)
+    .sort()
+    .join('|');
+}
+
 function buildFields(claim: ClaimData): ReconciliationField[] {
   const result: ReconciliationField[] = [];
   const extractedStore = (claim.extractedData ?? {}) as Record<string, Record<string, unknown>>;
+  const decisions = claim.reconciliationDecisions ?? {};
 
   for (const mapping of FIELD_MAPPINGS) {
     const currentValue = getNestedValue(claim as unknown as Record<string, unknown>, mapping.path);
@@ -121,6 +139,10 @@ function buildFields(claim: ClaimData): ReconciliationField[] {
     // A conflict exists only when values genuinely disagree — never flag unset fields as conflicts
     const hasConflict = uniqueNormalized.size > 1;
 
+    const sourcesFingerprint = fingerprintSources(sources);
+    const decision = decisions[mapping.path];
+    const isDecided = !!decision && decision.sourcesSeen === sourcesFingerprint;
+
     result.push({
       id: mapping.path,
       label: mapping.label,
@@ -128,15 +150,17 @@ function buildFields(claim: ClaimData): ReconciliationField[] {
       current: currentValue,
       sources,
       hasConflict,
+      isDecided,
+      sourcesFingerprint,
     });
   }
 
   return result;
 }
 
-/** Returns fields where extracted sources genuinely disagree. */
+/** Fields where extracted sources genuinely disagree and the surveyor has not yet decided. */
 export function getConflictFields(claim: ClaimData): ReconciliationField[] {
-  return buildFields(claim).filter(f => f.hasConflict);
+  return buildFields(claim).filter(f => f.hasConflict && !f.isDecided);
 }
 
 /** Returns fields where the claim value is unset but all sources unanimously agree. */
