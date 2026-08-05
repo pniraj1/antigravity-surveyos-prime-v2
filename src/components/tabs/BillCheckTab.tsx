@@ -61,6 +61,8 @@ export function BillCheckTab() {
   const deleteAssessmentRows = useClaimStore(s => s.deleteAssessmentRows);
   const deleteExtraBillItem = useClaimStore(s => s.deleteExtraBillItem);
   const clearExtraBillItems = useClaimStore(s => s.clearExtraBillItems);
+  const linkExtraBillItem   = useClaimStore(s => s.linkExtraBillItem);
+  const promoteExtraBillItem = useClaimStore(s => s.promoteExtraBillItem);
   const updateBillCheck     = useClaimStore(s => s.updateBillCheck);
   const { profile } = useProfileStore();
 
@@ -137,8 +139,11 @@ export function BillCheckTab() {
 
             <ExtraBillItemsPanel
               extraBillItems={extraBillItems}
+              assessmentRows={allRows}
               onDelete={deleteExtraBillItem}
               onClearAll={clearExtraBillItems}
+              onLink={linkExtraBillItem}
+              onPromote={promoteExtraBillItem}
               fmt={fmt}
             />
 
