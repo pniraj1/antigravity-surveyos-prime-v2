@@ -15,46 +15,119 @@ type WithClaim = { currentClaim: ClaimData | null };
 
 // ─── Date parsing helper ──────────────────────────────────────────────────────
 
-function parseDate(d: string): string {
+export function parseDate(d: string): string {
   if (!d) return '';
-  const clean = d.trim().replace(/[^\w\s\-/.]/g, ' ');
+  const clean = String(d).trim();
 
   // Already ISO (YYYY-MM-DD)
   if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) return clean;
 
-  const parts = clean.split(/[\s\-/.]+/).filter(Boolean);
-  if (parts.length >= 3) {
-    const [a, b, c] = parts;
-    const allNumeric = [a, b, c].every((p) => /^\d+$/.test(p));
+  // Dates are matched ANYWHERE in the string, not just when the whole value is
+  // a date. Real documents wrap them in prose — a policy schedule reads
+  // "from 00.00 Hrs of 22/02/2026 to Midnight of 21/02/2027" and Form 38 reads
+  // "From 17-03-2025 to 16-03-2027" — and an anchored parse rejects all of them.
+  //
+  // CRITICAL: numeric day/month/year must be resolved with the Indian
+  // DD-MM-YYYY convention BEFORE ever touching `new Date()`. JavaScript's
+  // Date parser reads slash dates as US MM/DD/YYYY, which silently swaps day
+  // and month whenever both are ≤ 12 (e.g. 03/04/2026 → 04 Mar instead of
+  // 03 Apr). We must never hand a numeric date to `new Date()`.
 
-    // CRITICAL: numeric day/month/year must be resolved with the Indian
-    // DD-MM-YYYY convention BEFORE ever touching `new Date()`. JavaScript's
-    // Date parser reads slash dates as US MM/DD/YYYY, which silently swaps day
-    // and month whenever both are ≤ 12 (e.g. 03/04/2026 → 04 Mar instead of
-    // 03 Apr). We must never hand a numeric date to `new Date()`.
-    if (allNumeric) {
-      // Year-first: YYYY-MM-DD (or YYYY/MM/DD)
-      if (a.length === 4) {
-        return `${a}-${b.padStart(2, '0')}-${c.padStart(2, '0')}`;
-      }
-      // Year-last: Indian DD-MM-YYYY
-      if (c.length === 4) {
-        return `${c}-${b.padStart(2, '0')}-${a.padStart(2, '0')}`;
-      }
-    }
+  // Year-first: YYYY-MM-DD (or YYYY/MM/DD)
+  const ymd = clean.match(/(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  if (ymd) return `${ymd[1]}-${ymd[2].padStart(2, '0')}-${ymd[3].padStart(2, '0')}`;
 
-    // Non-numeric month (e.g. "20-Nov-2019") — safe to let Date resolve the
-    // month name; normalize separators to spaces for reliable parsing.
-    const named = new Date(clean.replace(/[-/.]/g, ' '));
-    if (!isNaN(named.getTime())) {
-      const y = named.getFullYear();
-      const m = String(named.getMonth() + 1).padStart(2, '0');
-      const dayStr = String(named.getDate()).padStart(2, '0');
+  // Year-last: Indian DD-MM-YYYY
+  const dmy = clean.match(/(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/);
+  if (dmy) return `${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}`;
+
+  // Non-numeric month (e.g. "20-Nov-2019", "16 March 2027") — safe to let Date
+  // resolve the month name, since there is no day/month ambiguity to swap.
+  const named = clean.match(/(\d{1,2})[-\s/.]+([A-Za-z]{3,})[-\s/.]+(\d{4})/);
+  if (named) {
+    const parsed = new Date(`${named[2]} ${named[1]}, ${named[3]}`);
+    if (!isNaN(parsed.getTime())) {
+      const y = parsed.getFullYear();
+      const m = String(parsed.getMonth() + 1).padStart(2, '0');
+      const dayStr = String(parsed.getDate()).padStart(2, '0');
       return `${y}-${m}-${dayStr}`;
     }
   }
 
-  return d;
+  // No usable date. Return '' rather than the raw string: every date field is
+  // bound to <input type="date">, which renders BLANK for anything that is not
+  // exactly YYYY-MM-DD. Storing the raw text makes the field look unread while
+  // the junk silently propagates into reports.
+  return '';
+}
+
+// ─── Amount parsing helper ────────────────────────────────────────────────────
+
+/**
+ * Normalizes a rupee amount ("Rs.20,00,000", "₹ 20,00,000/-") to a plain numeric
+ * string. IDV is bound to <input type="number">, which renders BLANK unless the
+ * stored value parses as a bare number.
+ */
+export function parseAmount(v: string): string {
+  if (!v) return '';
+  const match = String(v).replace(/,/g, '').match(/\d+(?:\.\d+)?/);
+  return match ? match[0] : '';
+}
+
+// ─── Reconciliation coercion ──────────────────────────────────────────────────
+
+/**
+ * Paths written by reconcileField / batchReconcile whose form control accepts
+ * only a strict format.
+ *
+ * The Reconciliation Hub offers RAW extracted values as one-click buttons —
+ * "Rs.20,00,000", "Midnight of 21/02/2027" — so accepting a suggestion has to
+ * run the same normalization the extraction path does. Without it, resolving a
+ * conflict writes the raw string straight through and blanks the very field the
+ * surveyor was trying to fill.
+ *
+ * Keep in sync with FIELD_MAPPINGS in lib/ai/reconciliation.ts; the paths there
+ * are covered by reconciliation-paths.test.ts.
+ */
+const RECONCILE_DATE_PATHS = new Set([
+  'vehicle.dateOfRegistration',
+  'vehicle.fitnessValidUpto',
+  'driver.dateOfBirth',
+  'driver.validityNonTransport',
+  'driver.validityTransport',
+  'accident.firDate',
+]);
+
+/** policy.idv is a numeric string; the vehicle.* entries are `number | null`. */
+const RECONCILE_NUMERIC_PATHS = new Set([
+  'policy.idv',
+  'vehicle.unladenWeight',
+  'vehicle.grossWeight',
+  'vehicle.yearOfManufacture',
+]);
+
+export function coerceForPath(path: string, value: string): unknown {
+  if (RECONCILE_DATE_PATHS.has(path)) return parseDate(value);
+  if (RECONCILE_NUMERIC_PATHS.has(path)) {
+    const digits = parseAmount(value);
+    if (path === 'policy.idv') return digits;
+    return digits ? Number(digits) : null;
+  }
+  return value;
+}
+
+/** Immutable deep-set for "top.sub" paths, normalizing the value on the way in. */
+function setClaimPath(claim: ClaimData, path: string, value: string): ClaimData {
+  const coerced = coerceForPath(path, value);
+  const parts = path.split('.');
+  if (parts.length === 2) {
+    const [top, sub] = parts;
+    return {
+      ...claim,
+      [top]: { ...(claim as unknown as Record<string, unknown>)[top] as object, [sub]: coerced },
+    };
+  }
+  return { ...claim, [path]: coerced };
 }
 
 // ─── Fuel type normalizer ─────────────────────────────────────────────────────
@@ -234,7 +307,10 @@ function applyRC(claim: ClaimData, data: any): ClaimData {
       colour: data.colour || data.color || claim.vehicle.colour,
       fuel: formatFuel(data.fuel) || claim.vehicle.fuel,
       seatingCapacity: data.seating_capacity || data.seats || claim.vehicle.seatingCapacity,
-      unladenWeight: parseFloat(data.unladen_weight || data.ulw) || claim.vehicle.unladenWeight,
+      // parseAmount, not parseFloat: parseFloat('2,500 kg') stops at the comma
+      // and yields 2, which then renders in the ULW number input as a plausible
+      // but wrong weight.
+      unladenWeight: Number(parseAmount(data.unladen_weight || data.ulw)) || claim.vehicle.unladenWeight,
       registeredLoadWeight: rlw || claim.vehicle.registeredLoadWeight,
       classOfVehicle: data.class_of_vehicle || data.vehicle_class || claim.vehicle.classOfVehicle,
       registrationType: data.class_of_vehicle || data.vehicle_class || claim.vehicle.registrationType,
@@ -273,7 +349,7 @@ function applyPolicy(claim: ClaimData, data: any): ClaimData {
         data.insurer_name && data.insurer_address
           ? `${data.insurer_name} ${data.insurer_address}`
           : data.insurer_name || claim.policy.insurerName,
-      idv: data.idv || claim.policy.idv,
+      idv: parseAmount(data.idv) || claim.policy.idv,
       // Write to both hpaWith (primary) and hpa (alias) so all report paths are covered
       hpaWith: data.hpa_with || claim.policy.hpaWith,
       periodFrom: parseDate(data.period_from) || claim.policy.periodFrom,
@@ -578,15 +654,9 @@ export const createAIDataSlice: StateCreator<any, any, any, AIDataSlice> = (set)
   batchReconcile: (updates) => {
     set((state: WithClaim) => {
       if (!state.currentClaim) return {};
-      let newClaim = { ...state.currentClaim };
+      let newClaim = state.currentClaim;
       for (const { path, value } of updates) {
-        const parts = path.split('.');
-        if (parts.length === 2) {
-          const [top, sub] = parts;
-          (newClaim as any)[top] = { ...(newClaim as any)[top], [sub]: value };
-        } else {
-          (newClaim as any)[path] = value;
-        }
+        newClaim = setClaimPath(newClaim, path, value);
       }
       return {
         currentClaim: { ...newClaim, updatedAt: new Date().toISOString() },
@@ -634,16 +704,7 @@ export const createAIDataSlice: StateCreator<any, any, any, AIDataSlice> = (set)
   reconcileField: (path, value) => {
     set((state: WithClaim) => {
       if (!state.currentClaim) return {};
-      const newClaim = { ...state.currentClaim };
-
-      // Simple deep set for "top.sub" paths
-      const parts = path.split('.');
-      if (parts.length === 2) {
-        const [top, sub] = parts;
-        (newClaim as any)[top] = { ...(newClaim as any)[top], [sub]: value };
-      } else {
-        (newClaim as any)[path] = value;
-      }
+      const newClaim = setClaimPath(state.currentClaim, path, value);
 
       return {
         currentClaim: { ...newClaim, updatedAt: new Date().toISOString() },

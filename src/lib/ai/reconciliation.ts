@@ -14,14 +14,18 @@ export interface ReconciliationField {
 }
 
 // ─── Mapping AI Keys to Claim Structure ────────────────────────────────────
-const FIELD_MAPPINGS = [
+// Exported so a test can assert every `path` resolves against a blank claim.
+// A typo here fails silently and expensively: reconcileField writes to the
+// non-existent key, the form keeps reading the real one, and the surveyor sees
+// their reconciliation choice simply not take effect.
+export const FIELD_MAPPINGS = [
   // ─── Vehicle Details ──────────────────────────────────────────────────────
   { label: 'Registration Number', path: 'vehicle.registrationNumber', aiKeys: { rc: 'registration_number', policy: 'registration_number', fitness: 'vehicle_number', claim: 'vehicle_number', fir: 'vehicle_number' } },
   { label: 'Chassis Number',      path: 'vehicle.chassisNumber',      aiKeys: { rc: 'chassis_number', policy: 'chassis_number', fitness: 'chassis_number', estimate: 'chassis_number' } },
   { label: 'Engine Number',       path: 'vehicle.engineNumber',       aiKeys: { rc: 'engine_number', policy: 'engine_number', fitness: 'engine_number', estimate: 'engine_number' } },
   { label: 'Make',                path: 'vehicle.make',              aiKeys: { rc: 'make' } },
   { label: 'Model',               path: 'vehicle.model',             aiKeys: { rc: 'model' } },
-  { label: 'Fuel Type',           path: 'vehicle.fuelType',          aiKeys: { rc: 'fuel', fitness: 'fuel_type' } },
+  { label: 'Fuel Type',           path: 'vehicle.fuel',              aiKeys: { rc: 'fuel', fitness: 'fuel_type' } },
   { label: 'Date of Reg',         path: 'vehicle.dateOfRegistration', aiKeys: { rc: 'date_of_registration' } },
   { label: 'Cubic Capacity',      path: 'vehicle.cubicCapacity',      aiKeys: { rc: 'cubic_capacity' } },
   { label: 'Year of Mfg',         path: 'vehicle.yearOfManufacture', aiKeys: { rc: 'year_of_manufacture' } },
@@ -45,10 +49,10 @@ const FIELD_MAPPINGS = [
 
   // ─── Driver Details ───────────────────────────────────────────────────────
   { label: 'Driver Name',         path: 'driver.name',               aiKeys: { dl: 'holder_name', claim: 'driver_name', fir: 'driver_name' } },
-  { label: 'Father/Husband Name', path: 'driver.fatherHusbandName',  aiKeys: { dl: 'father_or_husband_name' } },
+  { label: 'Father/Husband Name', path: 'driver.parentName',         aiKeys: { dl: 'father_or_husband_name' } },
   { label: 'Relation Type',       path: 'driver.relationType',       aiKeys: { dl: 'relation_type' } },
   { label: 'DL Number',           path: 'driver.licenceNumber',      aiKeys: { dl: 'licence_number', claim: 'driver_licence_no' } },
-  { label: 'Date of Birth',       path: 'driver.dob',                aiKeys: { dl: 'date_of_birth' } },
+  { label: 'Date of Birth',       path: 'driver.dateOfBirth',        aiKeys: { dl: 'date_of_birth' } },
   { label: 'Validity (Non-Tr)',   path: 'driver.validityNonTransport', aiKeys: { dl: 'validity_non_transport' } },
   { label: 'Validity (Transport)', path: 'driver.validityTransport',    aiKeys: { dl: 'validity_transport' } },
   { label: 'Issuing Authority',   path: 'driver.issuingAuthority',   aiKeys: { dl: 'issuing_authority' } },

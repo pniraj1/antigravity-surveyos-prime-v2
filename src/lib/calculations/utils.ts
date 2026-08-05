@@ -109,26 +109,10 @@ export function formatCurrencyShort(value: string | number): string {
   return '₹' + num.toLocaleString('en-IN');
 }
 
-/**
- * Parse a date string from various Indian formats to ISO (YYYY-MM-DD).
- * Handles: DD/MM/YYYY, DD-MM-YYYY, DD.MM.YYYY
- * Legacy: td() helper inside applyExtractedData — lines 1684-1689
- */
-export function parseDateToISO(value: string | null | undefined): string {
-  if (!value) return '';
-  const v = String(value).trim();
-
-  // Already ISO
-  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
-
-  // DD/MM/YYYY or DD-MM-YYYY
-  const m = v.match(/(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/);
-  if (m) {
-    return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
-  }
-
-  return v;
-}
+// parseDateToISO was removed: it had no callers, and it returned its input
+// unchanged when parsing failed — the exact defect that made extracted policy
+// and fitness dates render as blank fields. Use parseDate from
+// stores/slices/aiDataSlice, which scans prose and returns '' on failure.
 
 /**
  * Generate a unique ID.

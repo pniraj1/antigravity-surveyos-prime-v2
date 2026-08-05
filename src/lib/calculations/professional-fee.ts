@@ -1,10 +1,14 @@
 import type { FeeSchedule } from '@/lib/config/fee-schedule';
 
-/** Parses an IDV that may be a formatted string ("₹5,00,000") into a number. */
+/** Parses an IDV that may be a formatted string ("₹5,00,000", "Rs.20,00,000/-") into a number. */
 export function parseIdv(idv: string | number | null | undefined): number {
   if (typeof idv === 'number') return Number.isFinite(idv) ? idv : 0;
   if (!idv) return 0;
-  return Number(String(idv).replace(/[^\d.]/g, '')) || 0;
+  // Drop digit grouping first, then take the first number. Stripping to [\d.]
+  // instead would read the dot in the "Rs." prefix as a decimal point and turn
+  // "Rs.20,00,000" into 0.2.
+  const match = String(idv).replace(/,/g, '').match(/\d+(?:\.\d+)?/);
+  return match ? Number(match[0]) : 0;
 }
 
 /**

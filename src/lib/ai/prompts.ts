@@ -20,6 +20,29 @@ ADDITIONALLY: For EVERY field you extract (where the value is non-empty), also r
 Example: if you extract "registration_number": "MH12AB1234", also return "registration_number_context": "Regn No: MH12AB1234  Regn Date: 20-Nov-2019".
 Do NOT invent or paraphrase. Copy the text exactly as it appears in the document. Only include _context keys for non-empty fields.`;
 
+/**
+ * Appended to every prompt. Normalizes the SHAPE of extracted values.
+ *
+ * Every date field in the claim form is bound to <input type="date"> and every
+ * amount to <input type="number">; both render BLANK for anything that is not
+ * exactly YYYY-MM-DD / a bare number. Indian documents almost never print dates
+ * bare — they wrap them in prose ("from 00.00 Hrs of 22/02/2026", "Midnight of
+ * 21/02/2027", "The certificate will expire on 16-03-2027") and amounts in
+ * currency formatting ("Rs.20,00,000"). Without this instruction the model
+ * copies that phrasing verbatim, the value reaches the store unusable, and the
+ * field looks unread even though extraction succeeded.
+ *
+ * The store still coerces defensively (see parseDate / parseAmount in
+ * aiDataSlice) — this instruction reduces how often that fallback is needed,
+ * it does not replace it.
+ */
+const FORMAT_INSTRUCTION = `
+OUTPUT FORMAT RULES — apply to EVERY field you return:
+1. DATES: return strictly YYYY-MM-DD and nothing else. Documents wrap dates in prose — "from 00.00 Hrs of 22/02/2026", "to Midnight of 21/02/2027", "The certificate will expire on 16-03-2027", "renewed From 17-03-2025 to 16-03-2027". Return ONLY the date. Never include times, "Hrs", "Midnight", "from", "to", or any other word.
+2. INDIAN DATE ORDER: printed dates are DD-MM-YYYY. "03/04/2026" is 3 April 2026 → return "2026-04-03". Never read them as US MM/DD/YYYY.
+3. AMOUNTS AND NUMBERS: return digits only. Strip currency symbols, commas, units and suffixes. "Rs.20,00,000" → "2000000". "₹ 5,00,000/-" → "500000". "2,500 kg" → "2500". "35000 GVW" → "35000".
+4. ABSENT VALUES: return "" — never a guess, never a placeholder, never the field's own label.`;
+
 // ─── Raw prompt bodies (without context instruction) ─────────────────────────
 const RAW_PROMPTS: Record<string, string> = {
   rc: `You are an expert at reading Indian vehicle RC (Registration Certificate) documents. Extract ALL visible fields from this RC book image. Return ONLY a JSON object with these keys (use empty string if not found):
@@ -58,9 +81,9 @@ Return ONLY the JSON. No explanation, no markdown, no backticks.`,
   "father_or_husband_name": "Extract parent/spouse name from document",
   "date_of_birth": "Extract DOB - return as YYYY-MM-DD",
   "address": "",
-  "date_of_issue": "",
-  "validity_non_transport": "expiry date of LMV/Non-Transport licence",
-  "validity_transport": "expiry date of Transport/HMV/TRANS licence (if present)",
+  "date_of_issue": "Look for 'Date of Issue', 'DOI', 'Issued On'",
+  "validity_non_transport": "Expiry of the LMV / Non-Transport licence. Look for 'Valid Till (NT)', 'NT Valid Upto', 'Non-Transport'",
+  "validity_transport": "Expiry of the Transport / HMV / TRANS licence. Look for 'Valid Till (TR)', 'TR Valid Upto', 'Transport'. Return \\"\\" if the licence has no transport authorisation",
   "issuing_authority": "RTO name",
   "rto": "",
   "vehicle_classes": "all classes listed e.g. LMV-NT, MCWG, TRANS, HMV",
@@ -68,24 +91,30 @@ Return ONLY the JSON. No explanation, no markdown, no backticks.`,
 }
 Return ONLY the JSON. No explanation, no markdown, no backticks.`,
 
-  policy: `You are an expert at reading Indian motor insurance policy documents. Extract ALL visible fields. Return ONLY a JSON object:
+  policy: `You are an expert at reading Indian motor insurance policy documents — Certificate cum Policy Schedules from National, New India, Oriental, United India, ICICI Lombard, Bajaj Allianz and similar insurers.
+
+IMPORTANT — two traps in these schedules:
+1. The POLICY PERIOD is written as prose, often highlighted: "Policy Period from 00.00 Hrs of 22/02/2026 to Midnight of 21/02/2027". Return ONLY the dates: period_from = 2026-02-22, period_to = 2027-02-21.
+2. A "Prev Policy" / "Previous Policy" block with its OWN "Expiry Date" usually sits nearby. That date belongs to the EXPIRED policy — never return it as period_from or period_to. The current period is the one labelled "Policy Period" / "Period of Insurance".
+
+Return ONLY a JSON object:
 {
-  "policy_number": "",
-  "insurer_name": "",
-  "insurer_address": "",
-  "insured_name": "",
+  "policy_number": "The CURRENT policy number, not the 'Prev Policy No'",
+  "insurer_name": "The insurance company, e.g. 'National Insurance Company Ltd.'",
+  "insurer_address": "Registered / head office address",
+  "insured_name": "Look for 'Name', 'Insured Name'. Include the title (Mr/Mrs/M/s) as printed",
   "insured_address": "",
   "insured_mobile": "",
-  "registration_number": "",
-  "make_model": "",
+  "registration_number": "Look for 'Reg. No.', 'Registration No'. Often highlighted",
+  "make_model": "Look for 'Make & Model'",
   "chassis_number": "",
   "engine_number": "",
-  "policy_type": "",
-  "period_from": "",
-  "period_to": "",
-  "idv": "",
-  "policy_issuing_office": "",
-  "hpa_with": ""
+  "policy_type": "Look for the policy title, e.g. 'GCV 1 Year Package Policy', 'Private Car Package Policy', 'Liability Only'. Map to one of: Comprehensive, Third Party, Standalone OD, Package, Commercial Comprehensive, Commercial TP",
+  "period_from": "CRITICAL — start of the CURRENT policy period. Look for 'Policy Period', 'Period of Insurance', 'Valid From'. Strip any time prefix such as 'from 00.00 Hrs of'. Return YYYY-MM-DD",
+  "period_to": "CRITICAL — expiry of the CURRENT policy period. Look for 'to Midnight of', 'Valid Upto', 'Valid To'. Strip 'Midnight of'. This is NOT the 'Prev Policy' expiry date. Return YYYY-MM-DD",
+  "idv": "CRITICAL — Insured Declared Value. Look for 'IDV', 'Vehicle IDV', 'Total IDV', 'Insured Declared Value', 'Sum Insured'. If both a vehicle IDV and a total IDV are shown, return the TOTAL. Digits only: 'Rs.20,00,000' → '2000000'",
+  "policy_issuing_office": "Look for 'Issuing Office Name & Address', the branch that issued the policy",
+  "hpa_with": "The financer / hypothecation holder. Look for 'Financer', 'Hypothecation', 'HPA', 'Agreement with'. If it says 'SELF OWNED', 'NIL' or is blank, return \\"\\""
 }
 Return ONLY the JSON. No explanation, no markdown, no backticks.`,
 
@@ -204,8 +233,8 @@ Return ONLY the JSON. No explanation, no markdown, no backticks.`,
   "permit_no": "",
   "permit_type": "",
   "vehicle_number": "",
-  "validity_from": "",
-  "validity_to": "",
+  "validity_from": "Permit start. Look for 'Valid From', 'Permit Valid From', 'w.e.f.', 'From'",
+  "validity_to": "Permit expiry. Look for 'Valid Upto', 'Valid Till', 'Valid To', 'Expiry Date', 'To'",
   "route": "",
   "issuing_authority": "",
   "goods_category": "",
@@ -219,22 +248,30 @@ Return ONLY the JSON. No explanation, no markdown, no backticks.`,
   "auth_no": "",
   "auth_type": "",
   "vehicle_number": "",
-  "validity_from": "",
-  "validity_to": "",
+  "validity_from": "Authorisation start. Look for 'Valid From', 'w.e.f.', 'From'",
+  "validity_to": "Authorisation expiry. Look for 'Valid Upto', 'Valid Till', 'Valid To', 'Expiry Date', 'To'",
   "issuing_authority": "",
   "remarks": ""
 }
 Return ONLY the JSON. No explanation, no markdown, no backticks.`,
 
-  fitness: `You are an expert at reading Indian vehicle fitness certificates. Return ONLY a JSON object:
+  fitness: `You are an expert at reading Indian vehicle fitness certificates, including FORM 38 (Certificate of Fitness, see rule 62(1)) issued by RTOs and Automated Testing Stations.
+
+IMPORTANT — Form 38 does NOT use the words "validity from/to". It states the dates as prose:
+  • "Vehicle No <REG> is certified as complying with the provisions of the Motor Vehicles Act, 1988 ... The certificate will expire on <DATE>."  ← this DATE is validity_to
+  • A renewal table at the bottom: "The certificate of fitness is hereby renewed: From <DATE> to <DATE>"  ← these are validity_from and validity_to
+If BOTH appear, they are the same expiry date — return it once. If several renewal rows are filled, use the LATEST (most recent) row. Ignore blank dotted renewal rows.
+Do NOT return the "Date:-" / "Time:-" of issue or the digital-signature timestamp as validity_from or validity_to.
+
+Return ONLY a JSON object:
 {
-  "fitness_cert_no": "",
-  "vehicle_number": "",
+  "fitness_cert_no": "Look for 'Certificate No', 'Fitness Certificate No', 'CF No', 'Sr No'. Form 38 often prints none — return \\"\\" if genuinely absent",
+  "vehicle_number": "Look for 'Vehicle No', 'Regn No', 'Registration No'",
   "chassis_number": "",
   "engine_number": "",
-  "validity_from": "",
-  "validity_to": "",
-  "issuing_authority": "",
+  "validity_from": "Start of the fitness period. Look for 'hereby renewed: From <DATE>', 'valid from'. Return YYYY-MM-DD",
+  "validity_to": "CRITICAL FIELD — the fitness EXPIRY date. Look for 'The certificate will expire on <DATE>', 'hereby renewed: From ... to <DATE>', 'Valid Upto', 'Fitness Upto', 'Valid Until'. Return YYYY-MM-DD",
+  "issuing_authority": "The RTO, or the Authorised Automated Testing Station / holder of the letter of authority who signed",
   "gross_vehicle_weight_kg": "Look for 'Gross Vehicle Weight', 'GVW', 'RLW', 'Registered Laden Weight', 'Laden Weight', 'G.V.W.' - these all mean the same thing",
   "unladen_weight_kg": "",
   "seating_capacity": "",
@@ -265,8 +302,8 @@ Return ONLY the JSON. No explanation, no markdown, no backticks.`,
   "policy_number": "",
   "insured_name": "",
   "vehicle_number": "",
-  "date_of_accident": "",
-  "time_of_accident": "",
+  "date_of_accident": "Look for 'Date of Accident', 'Date of Loss', 'Date of Incident', 'DOL'",
+  "time_of_accident": "HH:MM (24-hour format)",
   "place_of_accident": "",
   "cause_of_accident": "",
   "driver_name": "",
@@ -338,9 +375,15 @@ const NO_CONTEXT_TYPES = new Set(['estimate', 'final-bill', 'bank-statement']);
  */
 export function getDocPrompt(docType: string, withContext = true): string {
   const base = RAW_PROMPTS[docType] ?? '';
-  // Skip context snippets for high-volume tabular documents
-  if (NO_CONTEXT_TYPES.has(docType)) return base;
-  return withContext ? `${base}\n${CONTEXT_INSTRUCTION}` : base;
+  if (!base) return '';
+  // FORMAT_INSTRUCTION applies to every document type, including the
+  // high-volume tabular ones — those carry amounts, which need the same
+  // digits-only normalization. Only the per-field context snippets are skipped
+  // for them, to keep the output token count down.
+  const wantsContext = withContext && !NO_CONTEXT_TYPES.has(docType);
+  return wantsContext
+    ? `${base}\n${FORMAT_INSTRUCTION}\n${CONTEXT_INSTRUCTION}`
+    : `${base}\n${FORMAT_INSTRUCTION}`;
 }
 
 /**

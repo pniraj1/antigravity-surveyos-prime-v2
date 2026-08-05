@@ -3,7 +3,7 @@ export { getVehicleAgeMonths, getDepreciationRate, applyDepreciation, getAgeLabe
 export { calculatePartsGST, calculateLabourGST, calculateFeeGST } from './gst';
 export { calculateAssessmentSummary, createAssessmentRow, calculateBillCheckSummary, getCompulsoryExcess } from './assessment';
 export { calculateFeeSummary, getFeeLineItems } from './fees';
-export { numberToWords, formatCurrency, formatCurrencyShort, formatDateDMY, formatDateTimeDMY, parseDateToISO, generateId } from './utils';
+export { numberToWords, formatCurrency, formatCurrencyShort, formatDateDMY, formatDateTimeDMY, generateId } from './utils';
 
 export type { GSTBreakdown } from './gst';
 export type { FeeSummary } from './fees';
