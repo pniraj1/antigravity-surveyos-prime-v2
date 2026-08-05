@@ -176,7 +176,7 @@ export function ReconciliationDialog({
                     <FieldRow
                       key={field.id}
                       field={field}
-                      onSelect={val => reconcileField(field.path, val)}
+                      onSelect={(val, origin) => reconcileField(field.path, val, origin)}
                       onEvidenceClick={setActiveOrigin}
                       activeOrigin={activeOrigin}
                     />
@@ -214,7 +214,7 @@ export function ReconciliationDialog({
                         <AutoFilledRow
                           key={field.id}
                           field={field}
-                          onOverride={val => reconcileField(field.path, val)}
+                          onOverride={(val, origin) => reconcileField(field.path, val, origin)}
                           onEvidenceClick={setActiveOrigin}
                         />
                       ))}
@@ -259,7 +259,7 @@ function FieldRow({
   activeOrigin,
 }: {
   field: ReconciliationField;
-  onSelect: (val: string) => void;
+  onSelect: (val: string, origin: string) => void;
   onEvidenceClick: (origin: string) => void;
   activeOrigin: string | null;
 }) {
@@ -284,7 +284,7 @@ function FieldRow({
             <button
               key={`${source.origin}-${i}`}
               onClick={() => {
-                onSelect(source.value);
+                onSelect(source.value, source.origin);
                 onEvidenceClick(source.origin);
               }}
               className={`
@@ -314,7 +314,7 @@ function AutoFilledRow({
   onEvidenceClick,
 }: {
   field: ReconciliationField;
-  onOverride: (val: string) => void;
+  onOverride: (val: string, origin: string) => void;
   onEvidenceClick: (origin: string) => void;
 }) {
   const filledValue = field.sources[0]?.value ?? '';
@@ -333,7 +333,7 @@ function AutoFilledRow({
           <button
             key={`${source.origin}-${i}`}
             onClick={() => {
-              onOverride(source.value);
+              onOverride(source.value, source.origin);
               onEvidenceClick(source.origin);
             }}
             className="flex flex-col items-start px-2.5 py-1 rounded-lg border border-green-200 bg-white text-left hover:border-primary/40 hover:bg-primary/5 transition-all active:scale-95 max-w-[160px]"
