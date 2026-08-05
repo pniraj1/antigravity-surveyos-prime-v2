@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { applyEstimate, parseDate, parseAmount, coerceForPath } from '../aiDataSlice';
+import { buildDecision, getConflictFields } from '@/lib/ai/reconciliation';
+import { createBlankClaim } from '@/types/claim';
 import type { ClaimData } from '@/types';
 
 const baseClaim = { assessmentRows: [], accident: {} } as unknown as ClaimData;
@@ -163,5 +165,34 @@ describe('coerceForPath — Reconciliation Hub writes', () => {
   it('leaves free-text fields untouched', () => {
     expect(coerceForPath('policy.insuredName', 'Mr BALVINDER SINGH')).toBe('Mr BALVINDER SINGH');
     expect(coerceForPath('vehicle.registrationNumber', 'MP-09-HH-8879')).toBe('MP-09-HH-8879');
+  });
+});
+
+describe('buildDecision', () => {
+  const claim = {
+    ...createBlankClaim(),
+    extractedData: {
+      rc: { engine_number: 'ABC123' },
+      policy: { engine_number: 'ABC124' },
+    },
+  } as ClaimData;
+
+  it('captures the choice, its source, and the sources seen', () => {
+    const d = buildDecision(claim, 'vehicle.engineNumber', 'ABC123', 'rc');
+
+    expect(d.value).toBe('ABC123');
+    expect(d.source).toBe('rc');
+    expect(d.sourcesSeen).toContain('rc=abc123');
+    expect(d.sourcesSeen).toContain('policy=abc124');
+    expect(Date.parse(d.decidedAt)).not.toBeNaN();
+  });
+
+  it('produces a fingerprint that matches the field it came from', () => {
+    const d = buildDecision(claim, 'vehicle.engineNumber', 'ABC123', 'rc');
+    const decided = { ...claim, reconciliationDecisions: { 'vehicle.engineNumber': d } };
+
+    // The whole point: a decision built this way removes the field from the Hub.
+    expect(getConflictFields(decided).map((f) => f.path))
+      .not.toContain('vehicle.engineNumber');
   });
 });

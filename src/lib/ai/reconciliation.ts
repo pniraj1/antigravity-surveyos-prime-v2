@@ -1,4 +1,4 @@
-import { ClaimData } from '@/types';
+import { ClaimData, ReconciliationDecision } from '@/types';
 
 export interface ReconciliationField {
   id: string;
@@ -168,6 +168,28 @@ export function getUnanimousFields(claim: ClaimData): ReconciliationField[] {
   return buildFields(claim).filter(
     f => !f.hasConflict && f.current === '' && f.sources.some(s => s.value !== '')
   );
+}
+
+/**
+ * Builds the decision record for one reconciliation choice.
+ *
+ * The fingerprint must come from the same buildFields pass the Hub is showing,
+ * otherwise a decision could be stored against sources that were never on
+ * screen and would immediately look stale.
+ */
+export function buildDecision(
+  claim: ClaimData,
+  path: string,
+  value: string,
+  source: string,
+): ReconciliationDecision {
+  const field = buildFields(claim).find((f) => f.path === path);
+  return {
+    value,
+    source,
+    decidedAt: new Date().toISOString(),
+    sourcesSeen: field?.sourcesFingerprint ?? '',
+  };
 }
 
 /** Returns the highest-priority source value for a field given its claim category. */

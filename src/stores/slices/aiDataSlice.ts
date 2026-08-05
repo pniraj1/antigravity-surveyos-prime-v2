@@ -1,13 +1,14 @@
 import type { StateCreator } from 'zustand';
 import type { ClaimData, AssessmentRow, ExtraBillItem } from '@/types';
 import { createAssessmentRow } from '@/lib/calculations';
+import { buildDecision } from '@/lib/ai/reconciliation';
 
 export interface AIDataSlice {
   reconciliationConflictCount: number;
   setExtractedData: (key: string, data: any) => void;
   applyExtractedData: (key: string, data: any) => void;
-  reconcileField: (path: string, value: any) => void;
-  batchReconcile: (updates: { path: string; value: string }[]) => void;
+  reconcileField: (path: string, value: string, source?: string) => void;
+  batchReconcile: (updates: { path: string; value: string; source?: string }[]) => void;
   setReconciliationConflictCount: (count: number) => void;
 }
 
@@ -655,11 +656,21 @@ export const createAIDataSlice: StateCreator<any, any, any, AIDataSlice> = (set)
     set((state: WithClaim) => {
       if (!state.currentClaim) return {};
       let newClaim = state.currentClaim;
-      for (const { path, value } of updates) {
+      const decisions = { ...(newClaim.reconciliationDecisions ?? {}) };
+
+      for (const { path, value, source } of updates) {
+        // Fingerprint against the claim as it was BEFORE this batch, so every
+        // decision in one "Accept Recommended" click sees the same sources.
+        if (source) decisions[path] = buildDecision(state.currentClaim, path, value, source);
         newClaim = setClaimPath(newClaim, path, value);
       }
+
       return {
-        currentClaim: { ...newClaim, updatedAt: new Date().toISOString() },
+        currentClaim: {
+          ...newClaim,
+          reconciliationDecisions: decisions,
+          updatedAt: new Date().toISOString(),
+        },
         isDirty: true,
       };
     });
@@ -701,13 +712,26 @@ export const createAIDataSlice: StateCreator<any, any, any, AIDataSlice> = (set)
     });
   },
 
-  reconcileField: (path, value) => {
+  reconcileField: (path, value, source) => {
     set((state: WithClaim) => {
       if (!state.currentClaim) return {};
       const newClaim = setClaimPath(state.currentClaim, path, value);
 
+      // `source` is omitted by auto-fill (getUnanimousFields), which is not a
+      // surveyor decision and must not be recorded as one.
+      const reconciliationDecisions = source
+        ? {
+            ...(state.currentClaim.reconciliationDecisions ?? {}),
+            [path]: buildDecision(state.currentClaim, path, value, source),
+          }
+        : state.currentClaim.reconciliationDecisions;
+
       return {
-        currentClaim: { ...newClaim, updatedAt: new Date().toISOString() },
+        currentClaim: {
+          ...newClaim,
+          reconciliationDecisions,
+          updatedAt: new Date().toISOString(),
+        },
         isDirty: true,
       };
     });
