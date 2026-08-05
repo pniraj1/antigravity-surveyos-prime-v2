@@ -18,8 +18,9 @@
 
 import type { ClaimData } from '@/types/claim';
 import type { SurveyorProfile } from '@/types/vehicle';
-import { computeRowNet } from '@/lib/calculations/row-net';
-import { getCompulsoryExcess } from '@/lib/calculations/assessment';
+import { computeRowNet, computeRowLiability } from '@/lib/calculations/row-net';
+import { getCompulsoryExcess, calculateBillCheckSummary } from '@/lib/calculations/assessment';
+import { buildSerialMap } from '@/lib/calculations/serial-numbers';
 import { buildPrintShell, footerFromProfile } from './print-shell';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -300,7 +301,9 @@ ${getSurveyorHeader(profile)}
 </table>`;
 
   // ── PAGE 3-4: Assessment Detail (10-column table: Sr|Part Name|Part Type|Job Type|Part List W/o Tax|Dep%|Parts Assess|GST%|With GST|Labour) ───
-  let sn = 1;
+  // One numbering source, shared with the Bill Check report below. Counts
+  // disallowed rows so the gap survives into that document.
+  const serials = buildSerialMap(rows);
   const pHtml = AP.map(r => {
     const dep = r.depOverride !== undefined ? r.depOverride : getDepRate(r.partType, ageMonths, depType);
     const dL = r.depOverride !== undefined ? `${dep}%*` : (dep > 0 ? dep + '%' : 'N.D.');
@@ -311,18 +314,21 @@ ${getSurveyorHeader(profile)}
     const wgStyle = isDisposal ? `${td}text-align:right;color:#b45309;font-weight:600;` : `${td}text-align:right;`;
     const gstLabel = isNA ? '' : isDisposal ? '0' : '18';
     const pt = r.partType === 'metal' ? 'Metal' : r.partType === 'glass' ? 'Glass' : r.partType === 'fiberglass' ? 'Fibre Glass' : 'Plastic/Rubber';
-    return `<tr><td style="${td}text-align:center;">${sn++}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">${isNA ? '' : pt}</td><td style="${td}text-align:center;">${isNA ? '' : 'Replace'}</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : dL}</td><td style="${td}text-align:right;">${isNA ? '' : fa(afterDep)}</td><td style="${td}text-align:center;">${gstLabel}</td><td style="${wgStyle}">${wgLabel}</td><td style="${td}text-align:center;">${isNA ? 'Not<br/>Allowed' : ''}</td></tr>`;
+    return `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">${isNA ? '' : pt}</td><td style="${td}text-align:center;">${isNA ? '' : 'Replace'}</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : dL}</td><td style="${td}text-align:right;">${isNA ? '' : fa(afterDep)}</td><td style="${td}text-align:center;">${gstLabel}</td><td style="${wgStyle}">${wgLabel}</td><td style="${td}text-align:center;">${isNA ? 'Not<br/>Allowed' : ''}</td></tr>`;
   }).join('');
 
-  let ln = 1;
   const lHtml = AL.map(r => {
     const isNA = r.allowed === false;
-    return `<tr><td style="${td}text-align:center;">${ln++}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">N.D.</td><td style="${td}"></td><td style="${td}text-align:center;">18</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? 'Not<br/>Allowed' : ''}</td></tr>`;
+    return `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">N.D.</td><td style="${td}"></td><td style="${td}text-align:center;">18</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? 'Not<br/>Allowed' : ''}</td></tr>`;
   }).join('');
 
-  const ptHtml = APT.filter(r => r.allowed !== false).map((r, i) =>
-    `<tr><td style="${td}text-align:center;">${i + 1}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Paint</td><td style="${td}text-align:right;">${fa(r.assessed)}</td><td style="${td}text-align:center;">N.D.</td><td style="${td}"></td><td style="${td}text-align:center;">18</td><td style="${td}"></td><td style="${td}text-align:right;">${fa(r.assessed)}</td></tr>`
-  ).join('');
+  // Disallowed paint is listed and tagged, exactly as parts and labour are.
+  // Filtering it out here also renumbered the survivors, which is what made
+  // paint serials disagree with the Bill Check report.
+  const ptHtml = APT.map(r => {
+    const isNA = r.allowed === false;
+    return `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Paint</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">N.D.</td><td style="${td}"></td><td style="${td}text-align:center;">${isNA ? '' : '18'}</td><td style="${td}"></td><td style="${td}text-align:right;">${isNA ? 'Not<br/>Allowed' : fa(r.assessed)}</td></tr>`;
+  }).join('');
 
   const p3 = `<div style="page-break-before:always;"></div>
 <div style="text-align:center; font-family:serif; font-weight:bold; font-size:9pt;">${nm}</div>
@@ -445,24 +451,28 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   let partsDepreciated = 0, rawParts = 0, labOnly = 0, paintOnly = 0, disposalNet = 0;
   let billedPartsTotal = 0, billedLabourTotal = 0, billedPaintTotal = 0;
 
+  // Billed subtotals come from the shared per-row helper, so they add up to the
+  // same grand total the screen shows. They include GST at each row's own rate.
+  const rowDep = (r: typeof rows[number]) =>
+    r.depOverride !== undefined ? r.depOverride : getDepRate(r.partType, ageMonths, depType);
+
   allowedParts.forEach(r => {
-    const dep = r.depOverride !== undefined ? r.depOverride : getDepRate(r.partType, ageMonths, depType);
-    const { isDisposal, netBeforeGst, afterDep } = computeRowNet(r, dep);
+    const { isDisposal, netBeforeGst } = computeRowNet(r, rowDep(r));
     if (isDisposal) {
       disposalNet += netBeforeGst;
     } else {
       partsDepreciated += netBeforeGst;
     }
     rawParts += r.assessed;
-    billedPartsTotal += r.billedAmount ?? afterDep;
+    billedPartsTotal += computeRowLiability(r, rowDep(r)).liability;
   });
   allowedLabour.forEach(r => {
     labOnly += r.assessed;
-    billedLabourTotal += r.billedAmount ?? r.assessed;
+    billedLabourTotal += computeRowLiability(r, rowDep(r)).liability;
   });
   allowedPaint.forEach(r => {
     paintOnly += r.assessed;
-    billedPaintTotal += r.billedAmount ?? r.assessed;
+    billedPaintTotal += computeRowLiability(r, rowDep(r)).liability;
   });
 
   const pC = partsDepreciated * 0.09, pS = partsDepreciated * 0.09, pT = partsDepreciated + pC + pS + disposalNet;
@@ -476,22 +486,16 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   const compExcess = getCompulsoryExcess(claim.feeBill);
   const net = Math.max(0, gross - salvage - volExcess - compExcess);
 
-  // Billed totals (what the workshop actually billed)
-  const billedPartsTotalWithGST = billedPartsTotal * 1.18;
-  const billedLabourTotalWithGST = (billedLabourTotal + billedPaintTotal) * 1.18;
-  const totalBilled = billedPartsTotalWithGST + billedLabourTotalWithGST + tow;
+  // One calculation, shared with the screen. The two documents cannot diverge.
+  // The old arithmetic here multiplied a GST-inclusive figure by 1.18 and
+  // applied no depreciation, printing a liability ~31% above the true one.
+  const bcSummary = calculateBillCheckSummary(rows, ageMonths, depType, salvage, compExcess, volExcess);
+  const totalBilled = bcSummary.grandTotalBilled + tow;
   const netBilledLiability = Math.max(0, totalBilled - salvage - volExcess - compExcess);
 
-  // ── Helper: find original Sr# of row in full parts / labour / paint list ────
-  function partsSrNo(rowId: string): number {
-    return allParts.findIndex(r => r.id === rowId) + 1;
-  }
-  function labourSrNo(rowId: string): number {
-    return allLabour.findIndex(r => r.id === rowId) + 1;
-  }
-  function paintSrNo(rowId: string): number {
-    return allPaint.findIndex(r => r.id === rowId) + 1;
-  }
+  // Serial numbers come from the same map the Final Report uses, so an item
+  // carries one number across both documents.
+  const serials = buildSerialMap(rows);
 
   function billStatusLabel(s: string | undefined): string {
     if (s === 'in-bill')     return 'IN BILL';
@@ -505,8 +509,8 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
     const dep = r.depOverride !== undefined ? r.depOverride : getDepRate(r.partType, ageMonths, depType);
     const dL = r.depOverride !== undefined ? `${dep}%*` : (dep > 0 ? dep + '%' : 'N.D.');
     const { isDisposal, afterDep, netBeforeGst } = computeRowNet(r, dep);
-    const billed = r.billedAmount ?? afterDep;
-    const srNo   = partsSrNo(r.id);
+    const billed = computeRowLiability(r, dep).liability;
+    const srNo   = serials.get(r.id) ?? 0;
     const pt = r.partType === 'metal' ? 'Metal' : r.partType === 'glass' ? 'Glass' : r.partType === 'fiberglass' ? 'Fibre Glass' : 'Plastic/Rubber';
     const stColor = r.billStatus === 'in-bill' ? '#065f46' : r.billStatus === 'not-in-bill' ? '#991b1b' : r.billStatus === 'partial' ? '#92400e' : '#374151';
     const netLabel = isDisposal ? `${fa(netBeforeGst)} DISP` : fa(afterDep);
@@ -526,8 +530,8 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
 
   // ── LABOUR ROWS ──────────────────────────────────────────────────────────────
   const lHtml = allowedLabour.map(r => {
-    const billed = r.billedAmount ?? r.assessed;
-    const srNo   = labourSrNo(r.id);
+    const billed = computeRowLiability(r, rowDep(r)).liability;
+    const srNo   = serials.get(r.id) ?? 0;
     const stColor = r.billStatus === 'in-bill' ? '#065f46' : r.billStatus === 'not-in-bill' ? '#991b1b' : r.billStatus === 'partial' ? '#92400e' : '#374151';
     return `<tr>
       <td style="${td}text-align:center;">${srNo}</td>
@@ -544,8 +548,8 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
 
   // ── PAINT ROWS ───────────────────────────────────────────────────────────────
   const ptHtml = allowedPaint.map(r => {
-    const billed = r.billedAmount ?? r.assessed;
-    const srNo   = paintSrNo(r.id);
+    const billed = computeRowLiability(r, rowDep(r)).liability;
+    const srNo   = serials.get(r.id) ?? 0;
     const stColor = r.billStatus === 'in-bill' ? '#065f46' : r.billStatus === 'not-in-bill' ? '#991b1b' : r.billStatus === 'partial' ? '#92400e' : '#374151';
     return `<tr>
       <td style="${td}text-align:center;">${srNo}</td>

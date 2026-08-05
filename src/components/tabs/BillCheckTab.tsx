@@ -24,9 +24,24 @@ import { BillCheckSummaryPanel } from './bill-check/BillCheckSummaryPanel';
 import { fmt } from './bill-check/config';
 
 function BillCheckPreview({ claim, profile }: { claim: any; profile: any }) {
-  const html = useMemo(() => {
-    try { return buildUIICBillCheckHTML(claim, profile); } catch { return ''; }
+  const { html, error } = useMemo(() => {
+    try {
+      return { html: buildUIICBillCheckHTML(claim, profile), error: null as string | null };
+    } catch (e: unknown) {
+      // A blank preview used to be indistinguishable from an empty claim.
+      return { html: '', error: e instanceof Error ? e.message : 'Report could not be built' };
+    }
   }, [claim, profile]);
+
+  if (error) {
+    return (
+      <div className="rounded-2xl p-6 bg-status-danger/10 border border-status-danger text-sm text-status-danger">
+        <strong>Bill Check preview failed to build.</strong>
+        <div className="text-xs mt-1 font-mono">{error}</div>
+      </div>
+    );
+  }
+
   return (
     <ReportPreviewPanel
       html={html}
