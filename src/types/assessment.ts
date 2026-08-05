@@ -98,6 +98,15 @@ export interface AssessmentSummary {
   labourGST: number; // labourBase * 0.18
   labourTotal: number; // labourBase + labourGST
 
+  /** Labour only, excluding painting. */
+  labourOnlyBase: number;
+  labourOnlyTotal: number;
+  /** Painting only, excluding labour. */
+  paintOnlyBase: number;
+  paintOnlyTotal: number;
+  estimateLabourOnlyBase: number;
+  estimatePaintOnlyBase: number;
+
   // Totals
   grandTotal: number; // partsTotal + labourTotal
   salvage: number;

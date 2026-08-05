@@ -57,6 +57,9 @@ export function calculateAssessmentSummary(
   let labourBase = 0;
   let partsGSTAccumulator = 0;
   let labourGSTAccumulator = 0;
+  // Split out so reports can show Labour and Painting as separate heads.
+  let labourOnlyBase = 0, labourOnlyGST = 0;
+  let paintOnlyBase = 0, paintOnlyGST = 0;
 
   // ─── Assessment Logic ──────────────────────────────
   rows.forEach((r) => {
@@ -76,6 +79,8 @@ export function calculateAssessmentSummary(
         // No GST accumulated for disposal parts
       } else {
         labourBase += disposalValue;
+        if (r.section === 'paint') paintOnlyBase += disposalValue;
+        else labourOnlyBase += disposalValue;
         // No GST accumulated for disposal labour
       }
     } else {
@@ -90,6 +95,8 @@ export function calculateAssessmentSummary(
       } else {
         labourBase += valueAfterDep;
         labourGSTAccumulator += rowGST;
+        if (r.section === 'paint') { paintOnlyBase += valueAfterDep; paintOnlyGST += rowGST; }
+        else { labourOnlyBase += valueAfterDep; labourOnlyGST += rowGST; }
       }
     }
   });
@@ -109,6 +116,7 @@ export function calculateAssessmentSummary(
   let estLabourGST = 0;
   // Per-material estimate (allowed parts only) — pairs with assessed metal/plastic/... totals
   let estMetal = 0, estPlastic = 0, estGlass = 0, estFiberglass = 0;
+  let estLabourOnly = 0, estPaintOnly = 0;
   rows.forEach((r) => {
     const gstRate = (r.gst || 18) / 100;
     if (r.section === 'parts') {
@@ -125,6 +133,8 @@ export function calculateAssessmentSummary(
       // labour + paint
       estLabourBase += r.estimated;
       if (!r.isDisposal) estLabourGST += r.estimated * gstRate;
+      if (r.section === 'paint') estPaintOnly += r.estimated;
+      else estLabourOnly += r.estimated;
     }
   });
   const totalEstimated = estPartsBase + estPartsGST + estLabourBase + estLabourGST;
@@ -142,6 +152,13 @@ export function calculateAssessmentSummary(
     labourBase,
     labourGST: labourGSTAccumulator,
     labourTotal: labourBase + labourGSTAccumulator,
+
+    labourOnlyBase,
+    labourOnlyTotal: labourOnlyBase + labourOnlyGST,
+    paintOnlyBase,
+    paintOnlyTotal: paintOnlyBase + paintOnlyGST,
+    estimateLabourOnlyBase: estLabourOnly,
+    estimatePaintOnlyBase: estPaintOnly,
 
     grandTotal,
     salvage,

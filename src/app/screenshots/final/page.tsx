@@ -30,6 +30,14 @@ const MOCK_SUMMARY: AssessmentSummary & {
   labourBase: 15500,
   labourGST: 2790,
   labourTotal: 18290,
+  // denting 5000 + painting 10500 = the 15500 above, split for the
+  // Labour / Painting heads in the assessment summary block
+  labourOnlyBase: 5000,
+  labourOnlyTotal: 5900,
+  paintOnlyBase: 10500,
+  paintOnlyTotal: 12390,
+  estimateLabourOnlyBase: 7000,
+  estimatePaintOnlyBase: 10500,
   grandTotal: 88382,
   salvage: 0,
   compulsoryExcess: 1000,
