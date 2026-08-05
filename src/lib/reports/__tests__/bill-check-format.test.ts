@@ -118,3 +118,62 @@ describe('Bill Check table format', () => {
     expect(html).toContain('Plastic / Rubber');
   });
 });
+
+describe('GST SUMMARY', () => {
+  test('prints a parts block keyed by HSN code', () => {
+    const html = buildUIICBillCheckHTML(claim([row({ hsnSac: '8708' })]), null);
+    expect(html).toContain('GST SUMMARY');
+    expect(html).toContain('HSN CODE');
+    expect(html).toContain('DEPRECIATED AMOUNT');
+    expect(html).toContain('8708');
+  });
+
+  test('prints a service block keyed by accounting code', () => {
+    const html = buildUIICBillCheckHTML(
+      claim([row({ section: 'labour', partType: 'labour', assessed: 1000, hsnSac: '998729' })]),
+      null
+    );
+    expect(html).toContain('SERVICE ACCOUNTING CODE');
+    expect(html).toContain('998729');
+  });
+
+  test('bands a mixed-rate claim into separate lines', () => {
+    const html = buildUIICBillCheckHTML(claim([
+      row({ assessed: 10000, gst: 18, hsnSac: '8708' }),
+      row({ assessed: 10000, gst: 28, hsnSac: '4011' }),
+    ]), null);
+    expect(html).toContain('4011');
+    expect(html).toContain('8708');
+    expect(html).toContain('1400.00'); // 28% half
+    expect(html).toContain('900.00');  // 18% half
+  });
+
+  test('reproduces the specimen GST figures', () => {
+    const html = buildUIICBillCheckHTML(claim([row({ assessed: 41435.59, gst: 18 })]), null);
+    expect(html).toContain('3729.20');
+    expect(html).toContain('48894.00');
+  });
+
+  test('falls back to (Part) and (Labour) when no code is recorded', () => {
+    const html = buildUIICBillCheckHTML(claim([
+      row({ assessed: 1000 }),
+      row({ section: 'labour', partType: 'labour', assessed: 500 }),
+    ]), null);
+    expect(html).toContain('(Part) 18.00');
+    expect(html).toContain('(Labour) 18.00');
+  });
+});
+
+describe('summary reconciliation', () => {
+  test('Cost of Parts equals the SPARE PARTS subtotal on a mixed-rate claim', () => {
+    // The guard for rewiring the summary block's inputs: one page must not
+    // contradict itself when a 28% item is present.
+    const html = buildUIICBillCheckHTML(claim([
+      row({ assessed: 10000, gst: 18 }),
+      row({ assessed: 10000, gst: 28 }),
+    ]), null);
+    // 11800 + 12800 = 24600
+    const occurrences = html.split('24600.00').length - 1;
+    expect(occurrences).toBeGreaterThanOrEqual(2); // summary + subtotal
+  });
+});

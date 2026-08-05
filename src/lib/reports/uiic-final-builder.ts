@@ -767,6 +767,63 @@ ${taxLines(paintAgg, 'Paint', 'paint')}
 </tbody>
 </table>
 
+<div style="${sec}">GST SUMMARY</div>
+<table style="${ts}font-size:7pt;margin-bottom:6px;">
+<thead><tr>
+  <th style="${th}width:6%;">S.N.</th>
+  <th style="${th}width:20%;">HSN CODE</th>
+  <th style="${th}width:20%;">DEPRECIATED AMOUNT</th>
+  <th style="${th}width:18%;">CGST</th>
+  <th style="${th}width:18%;">SGST</th>
+  <th style="${th}width:18%;">AMOUNT</th>
+</tr></thead>
+<tbody>
+${partsAgg.bands.map((b, i) => `<tr>
+  <td style="${td}text-align:center;">${i + 1}</td>
+  <td style="${td}text-align:center;">${codeCell(b, 'Part')}</td>
+  <td style="${td}text-align:right;">${fa(b.base)}</td>
+  <td style="${td}text-align:right;">${fa(b.cgst)}</td>
+  <td style="${td}text-align:right;">${fa(b.sgst)}</td>
+  <td style="${td}text-align:right;">${fa(b.amount)}</td>
+</tr>`).join('') || `<tr><td colspan="6" style="${td}text-align:center;color:#999;font-style:italic;">No parts</td></tr>`}
+<tr style="font-weight:700;background:#eee;">
+  <td colspan="2" style="${td}">GRAND TOTAL</td>
+  <td style="${td}text-align:right;">${fa(partsAgg.base)}</td>
+  <td style="${td}text-align:right;">${fa(partsAgg.cgst)}</td>
+  <td style="${td}text-align:right;">${fa(partsAgg.sgst)}</td>
+  <td style="${td}text-align:right;">${fa(partsAgg.amount)}</td>
+</tr>
+</tbody>
+</table>
+
+<table style="${ts}font-size:7pt;">
+<thead><tr>
+  <th style="${th}width:6%;">S.N.</th>
+  <th style="${th}width:20%;">SERVICE ACCOUNTING CODE</th>
+  <th style="${th}width:20%;">AMOUNT</th>
+  <th style="${th}width:18%;">CGST</th>
+  <th style="${th}width:18%;">SGST</th>
+  <th style="${th}width:18%;">AMOUNT</th>
+</tr></thead>
+<tbody>
+${serviceAgg.bands.map((b, i) => `<tr>
+  <td style="${td}text-align:center;">${i + 1}</td>
+  <td style="${td}text-align:center;">${codeCell(b, 'Labour')}</td>
+  <td style="${td}text-align:right;">${fa(b.base)}</td>
+  <td style="${td}text-align:right;">${fa(b.cgst)}</td>
+  <td style="${td}text-align:right;">${fa(b.sgst)}</td>
+  <td style="${td}text-align:right;">${fa(b.amount)}</td>
+</tr>`).join('') || `<tr><td colspan="6" style="${td}text-align:center;color:#999;font-style:italic;">No labour or painting</td></tr>`}
+<tr style="font-weight:700;background:#eee;">
+  <td colspan="2" style="${td}">GRAND TOTAL</td>
+  <td style="${td}text-align:right;">${fa(serviceAgg.base)}</td>
+  <td style="${td}text-align:right;">${fa(serviceAgg.cgst)}</td>
+  <td style="${td}text-align:right;">${fa(serviceAgg.sgst)}</td>
+  <td style="${td}text-align:right;">${fa(serviceAgg.amount)}</td>
+</tr>
+</tbody>
+</table>
+
 <div style="display:flex;justify-content:flex-end;margin-top:6px;">
 <table style="border-collapse:collapse;font-size:7.5pt;min-width:280px;">
   <tr><td style="${tdl}">Total Assessed (After Dep + GST)</td><td style="${tdb}text-align:right;">₹ ${fa(gross)}</td></tr>
