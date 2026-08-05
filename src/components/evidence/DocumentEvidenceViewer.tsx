@@ -36,6 +36,12 @@ interface EvidenceState {
   field: EvidenceField | null;
   claimId: string | null;
   openField: (claimId: string, field: EvidenceField) => void;
+  /**
+   * Set the active field WITHOUT opening the full-screen viewer. Used by hosts
+   * that already render their own inline panel — the Reconciliation Hub is a
+   * modal, and openField's `isOpen: true` would stack the overlay on top of it.
+   */
+  setActiveField: (claimId: string, field: EvidenceField) => void;
   close: () => void;
   // Blob URL map: "claimId_docType" → every file in the slot (front, back, …)
   blobUrls: Record<string, BlobEntry[]>;
@@ -53,6 +59,7 @@ export const useEvidenceStore = create<EvidenceState>((set, get) => ({
   blobUrls: {},
   rawFiles: {},
   openField: (claimId, field) => set({ isOpen: true, field, claimId }),
+  setActiveField: (claimId, field) => set({ field, claimId }),
   close: () => set({ isOpen: false, field: null }),
   storeFiles: (claimId, docType, files) => {
     const key = `${claimId}_${docType}`;
