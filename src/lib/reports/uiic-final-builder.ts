@@ -521,72 +521,74 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   // carries one number across both documents.
   const serials = buildSerialMap(rows);
 
-  function billStatusLabel(s: string | undefined): string {
-    if (s === 'in-bill')     return 'IN BILL';
-    if (s === 'not-in-bill') return 'NOT IN BILL';
-    if (s === 'partial')     return 'PARTIAL';
-    return 'PENDING';
-  }
+  const partTypeLabel = (r: AssessmentRow) =>
+    r.partType === 'metal' ? 'Metal'
+    : r.partType === 'glass' ? 'Glass'
+    : r.partType === 'fiberglass' ? 'Fibre Glass'
+    : 'Plastic / Rubber';
 
-  // ── PARTS ROWS ───────────────────────────────────────────────────────────────
+  const depLabel = (r: AssessmentRow) => {
+    const d = rowDepFor(r);
+    if (r.depOverride !== undefined) return `${d}%*`;
+    return d > 0 ? `${d}%` : 'N.D.';
+  };
+
+  const blank = `<td style="${td}"></td>`;
+
+  // Specimen prints "(Part) 18.00" / "(Labour) 18.00" when no code is recorded,
+  // and the real HSN/SAC when the row carries one.
+  const codeCell = (b: { hsnSac: string; rate: number }, fallback: 'Part' | 'Labour') =>
+    `${b.hsnSac || `(${fallback})`} ${b.rate.toFixed(2)}`;
+
+  // SPARE PARTS — parts columns carry the money, Labour and Paint stay empty.
   const pHtml = allowedParts.map(r => {
-    const dep = r.depOverride !== undefined ? r.depOverride : getDepRate(r.partType, ageMonths, depType);
-    const dL = r.depOverride !== undefined ? `${dep}%*` : (dep > 0 ? dep + '%' : 'N.D.');
-    const { isDisposal, afterDep, netBeforeGst } = computeRowNet(r, dep);
-    const billed = computeRowLiability(r, dep).liability;
-    const srNo   = serials.get(r.id) ?? 0;
-    const pt = r.partType === 'metal' ? 'Metal' : r.partType === 'glass' ? 'Glass' : r.partType === 'fiberglass' ? 'Fibre Glass' : 'Plastic/Rubber';
-    const stColor = r.billStatus === 'in-bill' ? '#065f46' : r.billStatus === 'not-in-bill' ? '#991b1b' : r.billStatus === 'partial' ? '#92400e' : '#374151';
-    const netLabel = isDisposal ? `${fa(netBeforeGst)} DISP` : fa(afterDep);
-    const netStyle = isDisposal ? `${td}text-align:right;color:#b45309;font-weight:600;` : `${td}text-align:right;`;
+    const { isDisposal, netBeforeGst } = computeRowNet(r, rowDepFor(r));
+    const finalAmt = isDisposal ? netBeforeGst : netBeforeGst * (1 + (r.gst || 0) / 100);
     return `<tr>
-      <td style="${td}text-align:center;">${srNo}</td>
+      <td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td>
       <td style="${td}">${r.particulars}</td>
-      <td style="${td}text-align:center;">${pt}</td>
+      <td style="${td}text-align:center;">${partTypeLabel(r)}</td>
+      <td style="${td}text-align:right;">${fa(r.estimated)}</td>
+      <td style="${td}text-align:center;">${depLabel(r)}</td>
       <td style="${td}text-align:right;">${fa(r.assessed)}</td>
-      <td style="${td}text-align:center;">${dL}</td>
-      <td style="${netStyle}">${netLabel}</td>
-      <td style="${td}text-align:right;">${fa(billed)}</td>
-      <td style="${td}text-align:center;font-weight:700;color:${stColor};font-size:6.5pt;">${billStatusLabel(r.billStatus)}</td>
-      <td style="${td}font-size:6.5pt;color:#555;">${r.billRemarks || ''}</td>
+      <td style="${td}text-align:center;">${isDisposal ? '0' : String(r.gst ?? 0)}</td>
+      <td style="${td}text-align:right;">${isDisposal ? `${fa(netBeforeGst)} DISP` : fa(finalAmt)}</td>
+      ${blank}${blank}
     </tr>`;
   }).join('');
 
-  // ── LABOUR ROWS ──────────────────────────────────────────────────────────────
-  const lHtml = allowedLabour.map(r => {
-    const billed = computeRowLiability(r, rowDep(r)).liability;
-    const srNo   = serials.get(r.id) ?? 0;
-    const stColor = r.billStatus === 'in-bill' ? '#065f46' : r.billStatus === 'not-in-bill' ? '#991b1b' : r.billStatus === 'partial' ? '#92400e' : '#374151';
-    return `<tr>
-      <td style="${td}text-align:center;">${srNo}</td>
+  // LABOUR — bare amount in the Labour column; tax is added at subtotal level.
+  const lHtml = allowedLabour.map(r => `<tr>
+      <td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td>
       <td style="${td}">${r.particulars}</td>
       <td style="${td}text-align:center;">Labour</td>
+      ${blank}
+      <td style="${td}text-align:center;">${depLabel(r)}</td>
+      ${blank}
+      <td style="${td}text-align:center;">${String(r.gst ?? 0)}</td>
+      ${blank}
       <td style="${td}text-align:right;">${fa(r.assessed)}</td>
-      <td style="${td}text-align:center;">N.D.</td>
-      <td style="${td}text-align:right;">${fa(r.assessed)}</td>
-      <td style="${td}text-align:right;">${fa(billed)}</td>
-      <td style="${td}text-align:center;font-weight:700;color:${stColor};font-size:6.5pt;">${billStatusLabel(r.billStatus)}</td>
-      <td style="${td}font-size:6.5pt;color:#555;">${r.billRemarks || ''}</td>
-    </tr>`;
-  }).join('');
+      ${blank}
+    </tr>`).join('');
 
-  // ── PAINT ROWS ───────────────────────────────────────────────────────────────
-  const ptHtml = allowedPaint.map(r => {
-    const billed = computeRowLiability(r, rowDep(r)).liability;
-    const srNo   = serials.get(r.id) ?? 0;
-    const stColor = r.billStatus === 'in-bill' ? '#065f46' : r.billStatus === 'not-in-bill' ? '#991b1b' : r.billStatus === 'partial' ? '#92400e' : '#374151';
-    return `<tr>
-      <td style="${td}text-align:center;">${srNo}</td>
+  const ptHtml = allowedPaint.map(r => `<tr>
+      <td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td>
       <td style="${td}">${r.particulars}</td>
       <td style="${td}text-align:center;">Paint</td>
+      ${blank}
+      <td style="${td}text-align:center;">${depLabel(r)}</td>
+      ${blank}
+      <td style="${td}text-align:center;">${String(r.gst ?? 0)}</td>
+      ${blank}${blank}
       <td style="${td}text-align:right;">${fa(r.assessed)}</td>
-      <td style="${td}text-align:center;">N.D.</td>
-      <td style="${td}text-align:right;">${fa(r.assessed)}</td>
-      <td style="${td}text-align:right;">${fa(billed)}</td>
-      <td style="${td}text-align:center;font-weight:700;color:${stColor};font-size:6.5pt;">${billStatusLabel(r.billStatus)}</td>
-      <td style="${td}font-size:6.5pt;color:#555;">${r.billRemarks || ''}</td>
-    </tr>`;
-  }).join('');
+    </tr>`).join('');
+
+  // One tax line per distinct rate, so a mixed-rate claim reads correctly.
+  const taxLines = (agg: ReturnType<typeof aggregateGst>, label: string, col: 'labour' | 'paint') =>
+    agg.bands.filter(b => b.rate > 0).map(b => `<tr>
+      <td colspan="8" style="${td}text-align:right;font-style:italic;">TAX IN ${b.rate} % for ${label}</td>
+      ${col === 'labour' ? `<td style="${td}text-align:right;">${fa(b.cgst + b.sgst)}</td>${blank}` : `${blank}<td style="${td}text-align:right;">${fa(b.cgst + b.sgst)}</td>`}
+    </tr>`).join('');
 
   // ── PAGE 1: Header + Assessment Summary ─────────────────────────────────────
   const page1 = `
@@ -699,41 +701,68 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
 <div style="text-align:center;font-family:serif;font-weight:bold;font-size:9pt;">${nm}</div>
 <div style="text-align:center;font-weight:700;font-size:9pt;margin:4px 0;">BILL CHECK REPORT<br/><span style="font-size:7pt;font-style:italic;">/ Report Issued Without Prejudice /</span></div>
 <div style="font-size:7pt;margin-bottom:2px;">Reg No: <b>${g(v.registrationNumber)}</b> &nbsp;|&nbsp; Claim: <b>${g(p.claimNumber)}</b> &nbsp;|&nbsp; Insured: <b>${g(p.insuredName)}</b> &nbsp;|&nbsp; Bill No: <b>${g(bc?.billNo)}</b> &nbsp;|&nbsp; Bill Date: <b>${fd(bc?.billDate)}</b></div>
-<div style="${sec}">DETAILS OF BILL CHECK — ALLOWED ITEMS ONLY (Disallowed items excluded)</div>
+<div style="${sec}">BILLS CHECK REPORT</div>
 <table style="${ts}font-size:7pt;">
 <thead><tr>
-  <th style="${th}width:4%;">SR.</th>
-  <th style="${th}text-align:left;width:24%;">Part / Labour Description</th>
-  <th style="${th}width:9%;">Type</th>
-  <th style="${th}width:10%;">Assessed<br/>Amount (₹)</th>
-  <th style="${th}width:5%;">Dep%</th>
-  <th style="${th}width:10%;">Assessed<br/>After Dep (₹)</th>
-  <th style="${th}width:10%;">Billed<br/>Amount (₹)</th>
-  <th style="${th}width:10%;">Bill Status</th>
-  <th style="${th}width:18%;">Remarks</th>
+  <th style="${th}width:5%;">SR.<br/>NO.</th>
+  <th style="${th}text-align:left;width:23%;">Description</th>
+  <th style="${th}width:9%;">Part<br/>Type</th>
+  <th style="${th}width:11%;">Part List<br/>Without Tax</th>
+  <th style="${th}width:8%;">Part<br/>Depreciation</th>
+  <th style="${th}width:11%;">Parts<br/>Assessment</th>
+  <th style="${th}width:5%;">GST<br/>%</th>
+  <th style="${th}width:11%;">Final amount<br/>With G.S.T</th>
+  <th style="${th}width:8.5%;">Labour</th>
+  <th style="${th}width:8.5%;">Paint</th>
 </tr></thead>
 <tbody>
-<tr><td colspan="9" style="${sec}">SPARE PARTS</td></tr>
-${pHtml || `<tr><td colspan="9" style="${td}text-align:center;color:#999;font-style:italic;">No parts in allowed items</td></tr>`}
+<tr><td colspan="10" style="${sec}">SPARE PARTS</td></tr>
+${pHtml || `<tr><td colspan="10" style="${td}text-align:center;color:#999;font-style:italic;">No parts in allowed items</td></tr>`}
 <tr style="font-weight:700;background:#eee;">
-  <td colspan="3" style="${td}">PARTS SUB TOTAL</td>
-  <td style="${td}text-align:right;">${fa(rawParts)}</td>
-  <td style="${td}"></td>
-  <td style="${td}text-align:right;">${fa(partsDepreciated)}</td>
-  <td style="${td}text-align:right;">${fa(billedPartsTotal)}</td>
-  <td colspan="2" style="${td}"></td>
+  <td colspan="3" style="${td}">SUB TOTAL</td>
+  <td style="${td}text-align:right;">${fa(allowedParts.reduce((s, r) => s + r.estimated, 0))}</td>
+  ${blank}
+  <td style="${td}text-align:right;">${fa(allowedParts.reduce((s, r) => s + r.assessed, 0))}</td>
+  ${blank}
+  <td style="${td}text-align:right;">${fa(partsAgg.amount)}</td>
+  ${blank}${blank}
 </tr>
-<tr><td colspan="9" style="${sec}">LABOUR</td></tr>
-${lHtml || `<tr><td colspan="9" style="${td}text-align:center;color:#999;font-style:italic;">No labour in allowed items</td></tr>`}
-<tr><td colspan="9" style="${sec}">PAINTING CHARGES</td></tr>
-${ptHtml || `<tr><td colspan="9" style="${td}text-align:center;color:#999;font-style:italic;">No painting in allowed items</td></tr>`}
+
+<tr><td colspan="10" style="${sec}">LABOUR</td></tr>
+${lHtml || `<tr><td colspan="10" style="${td}text-align:center;color:#999;font-style:italic;">No labour in allowed items</td></tr>`}
+<tr style="font-weight:700;background:#f6f6f6;">
+  <td colspan="8" style="${td}">SUB TOTAL</td>
+  <td style="${td}text-align:right;">${fa(allowedLabour.reduce((s, r) => s + r.assessed, 0))}</td>
+  ${blank}
+</tr>
+${taxLines(labourAgg, 'Labour', 'labour')}
 <tr style="font-weight:700;background:#eee;">
-  <td colspan="3" style="${td}">LABOUR + PAINTING SUB TOTAL</td>
-  <td style="${td}text-align:right;">${fa(labBase)}</td>
-  <td style="${td}"></td>
-  <td style="${td}text-align:right;">${fa(labBase)}</td>
-  <td style="${td}text-align:right;">${fa(billedLabourTotal + billedPaintTotal)}</td>
-  <td colspan="2" style="${td}"></td>
+  <td colspan="8" style="${td}">SUB TOTAL</td>
+  <td style="${td}text-align:right;">${fa(labourAgg.amount)}</td>
+  ${blank}
+</tr>
+
+<tr><td colspan="10" style="${sec}">PAINTING CHARGES</td></tr>
+${ptHtml || `<tr><td colspan="10" style="${td}text-align:center;color:#999;font-style:italic;">No painting in allowed items</td></tr>`}
+<tr style="font-weight:700;background:#f6f6f6;">
+  <td colspan="9" style="${td}">SUB TOTAL</td>
+  <td style="${td}text-align:right;">${fa(allowedPaint.reduce((s, r) => s + r.assessed, 0))}</td>
+</tr>
+${taxLines(paintAgg, 'Paint', 'paint')}
+<tr style="font-weight:700;background:#eee;">
+  <td colspan="9" style="${td}">SUB TOTAL</td>
+  <td style="${td}text-align:right;">${fa(paintAgg.amount)}</td>
+</tr>
+
+<tr style="font-weight:700;background:#ddd;">
+  <td colspan="3" style="${td}">TOTAL</td>
+  <td style="${td}text-align:right;">${fa(allowedParts.reduce((s, r) => s + r.estimated, 0))}</td>
+  ${blank}
+  <td style="${td}text-align:right;">${fa(allowedParts.reduce((s, r) => s + r.assessed, 0))}</td>
+  ${blank}
+  <td style="${td}text-align:right;">${fa(partsAgg.amount)}</td>
+  <td style="${td}text-align:right;">${fa(labourAgg.amount)}</td>
+  <td style="${td}text-align:right;">${fa(paintAgg.amount)}</td>
 </tr>
 </tbody>
 </table>
