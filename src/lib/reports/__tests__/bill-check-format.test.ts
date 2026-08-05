@@ -164,6 +164,45 @@ describe('GST SUMMARY', () => {
   });
 });
 
+describe('Bill Check financial summary', () => {
+  test('carries the same heads as the standard report block', () => {
+    const html = buildUIICBillCheckHTML(claim([row()]), null);
+    expect(html).toContain('ASSESSMENT SUMMARY');
+    expect(html).toContain('Assessed (after Dep.)');
+    expect(html).toContain('Incl. GST');
+    expect(html).toContain('GRAND TOTAL');
+    expect(html).toContain('NET ASSESSED LOSS');
+  });
+
+  test('breaks spare parts down by material', () => {
+    const html = buildUIICBillCheckHTML(claim([
+      row({ partType: 'metal', assessed: 10000, estimated: 10000 }),
+      row({ partType: 'plastic', assessed: 4000, estimated: 4000 }),
+    ]), null);
+    expect(html).toContain('Metal');
+    expect(html).toContain('Plastic / Rubber');
+  });
+
+  test('prints the net in words', () => {
+    const html = buildUIICBillCheckHTML(claim([row({ assessed: 10000, estimated: 10000 })]), null);
+    expect(html).toContain('RUPEES');
+  });
+
+  test('omits a material with no rows', () => {
+    const html = buildUIICBillCheckHTML(claim([row({ partType: 'metal' })]), null);
+    expect(html).not.toContain('Fibre Glass');
+  });
+
+  test('shows labour and painting as separate heads', () => {
+    const html = buildUIICBillCheckHTML(claim([
+      row({ section: 'labour', partType: 'labour', assessed: 2000, estimated: 2000 }),
+      row({ section: 'paint', partType: 'paint', assessed: 5000, estimated: 5000 }),
+    ]), null);
+    expect(html).toContain('2360.00'); // labour 2000 × 1.18
+    expect(html).toContain('5900.00'); // paint 5000 × 1.18
+  });
+});
+
 describe('summary reconciliation', () => {
   test('Cost of Parts equals the SPARE PARTS subtotal on a mixed-rate claim', () => {
     // The guard for rewiring the summary block's inputs: one page must not

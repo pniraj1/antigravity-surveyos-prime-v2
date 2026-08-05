@@ -21,7 +21,7 @@ import type { SurveyorProfile } from '@/types/vehicle';
 import type { AssessmentRow } from '@/types/assessment';
 import { computeRowNet, computeRowLiability } from '@/lib/calculations/row-net';
 import { aggregateGst } from '@/lib/calculations/gst-bands';
-import { getCompulsoryExcess, calculateBillCheckSummary } from '@/lib/calculations/assessment';
+import { getCompulsoryExcess, calculateBillCheckSummary, calculateAssessmentSummary } from '@/lib/calculations/assessment';
 import { buildSerialMap } from '@/lib/calculations/serial-numbers';
 import { buildPrintShell, footerFromProfile } from './print-shell';
 
@@ -502,6 +502,15 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
 
   const pC = partsAgg.cgst, pS = partsAgg.sgst, pT = partsAgg.amount;
   const lC = serviceAgg.cgst, lS = serviceAgg.sgst, lT = serviceAgg.amount;
+
+  // Financial summary, mirroring section 8 of the standard report. Reads the
+  // same engine so the two documents cannot disagree.
+  const asum = calculateAssessmentSummary(
+    rows, ageMonths, depType,
+    claim.feeBill?.salvageValue ?? 0,
+    getCompulsoryExcess(claim.feeBill),
+    claim.feeBill?.voluntaryExcess ?? 0,
+  );
   const tow = parseFloat(String(claim.feeBill?.travelExpenses || 0)) || 0;
   const gross = pT + lT + tow;
   const depAmt = rawParts - partsDepreciated;
@@ -820,6 +829,71 @@ ${serviceAgg.bands.map((b, i) => `<tr>
   <td style="${td}text-align:right;">${fa(serviceAgg.cgst)}</td>
   <td style="${td}text-align:right;">${fa(serviceAgg.sgst)}</td>
   <td style="${td}text-align:right;">${fa(serviceAgg.amount)}</td>
+</tr>
+</tbody>
+</table>
+
+<div style="${sec}">ASSESSMENT SUMMARY</div>
+<table style="${ts}font-size:7pt;">
+<thead><tr>
+  <th style="${th}text-align:left;width:40%;">Head</th>
+  <th style="${th}text-align:right;">Estimated</th>
+  <th style="${th}text-align:right;">Assessed (after Dep.)</th>
+  <th style="${th}text-align:right;">Incl. GST</th>
+</tr></thead>
+<tbody>
+<tr>
+  <td style="${td}">Spare Parts</td>
+  <td style="${td}text-align:right;">${fa(asum.estimatePartsBase)}</td>
+  <td style="${td}text-align:right;">${fa(asum.partsBase)}</td>
+  <td style="${td}text-align:right;">${fa(asum.partsTotal)}</td>
+</tr>
+${[
+  { label: 'Metal', est: asum.estimateMetalBase, ass: asum.metalTotal },
+  { label: 'Plastic / Rubber', est: asum.estimatePlasticBase, ass: asum.plasticTotal },
+  { label: 'Glass', est: asum.estimateGlassBase, ass: asum.glassTotal },
+  { label: 'Fibre Glass', est: asum.estimateFiberglassBase, ass: asum.fiberglassTotal },
+].filter(s => s.est > 0 || s.ass > 0).map(s => `<tr>
+  <td style="${td}padding-left:14pt;color:#555;">&#8627; ${s.label}</td>
+  <td style="${td}text-align:right;color:#555;">${fa(s.est)}</td>
+  <td style="${td}text-align:right;color:#555;">${fa(s.ass)}</td>
+  <td style="${td}text-align:right;color:#555;">&mdash;</td>
+</tr>`).join('')}
+<tr>
+  <td style="${td}">Labour</td>
+  <td style="${td}text-align:right;">${fa(asum.estimateLabourOnlyBase)}</td>
+  <td style="${td}text-align:right;">${fa(asum.labourOnlyBase)}</td>
+  <td style="${td}text-align:right;">${fa(asum.labourOnlyTotal)}</td>
+</tr>
+<tr>
+  <td style="${td}">Painting</td>
+  <td style="${td}text-align:right;">${fa(asum.estimatePaintOnlyBase)}</td>
+  <td style="${td}text-align:right;">${fa(asum.paintOnlyBase)}</td>
+  <td style="${td}text-align:right;">${fa(asum.paintOnlyTotal)}</td>
+</tr>
+<tr style="font-weight:700;background:#eee;">
+  <td style="${td}">GRAND TOTAL</td>
+  <td style="${td}text-align:right;">${fa(asum.estimatePartsBase + asum.estimateLabourBase)}</td>
+  <td style="${td}text-align:right;">${fa(asum.partsBase + asum.labourBase)}</td>
+  <td style="${td}text-align:right;">${fa(asum.grandTotal)}</td>
+</tr>
+<tr>
+  <td style="${td}">Less: Policy Excess</td>
+  <td colspan="2" style="${td}"></td>
+  <td style="${td}text-align:right;">( ${fa(asum.excess)} )</td>
+</tr>
+<tr>
+  <td style="${td}">Less: Salvage Value</td>
+  <td colspan="2" style="${td}"></td>
+  <td style="${td}text-align:right;">( ${fa(asum.salvage)} )</td>
+</tr>
+<tr style="font-weight:700;background:#0d1b2a;color:#fff;">
+  <td style="padding:3px 4px;">NET ASSESSED LOSS</td>
+  <td colspan="2" style="border:none;"></td>
+  <td style="padding:3px 4px;text-align:right;">${fa(asum.netAssessedLoss)}</td>
+</tr>
+<tr>
+  <td colspan="4" style="${td}font-style:italic;font-size:6.5pt;color:#444;">${asum.netInWords}</td>
 </tr>
 </tbody>
 </table>
