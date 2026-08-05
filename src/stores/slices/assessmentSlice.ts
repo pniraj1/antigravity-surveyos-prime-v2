@@ -10,6 +10,8 @@ export interface AssessmentSlice {
   reorderAssessmentRows: (orderedIds: string[]) => void;
   deleteExtraBillItem: (id: string) => void;
   clearExtraBillItems: () => void;
+  linkExtraBillItem: (extraId: string, rowId: string) => void;
+  promoteExtraBillItem: (extraId: string) => void;
   toggleRowAllowed: (id: string) => void;
   addSpotDamageRow: (component?: string, damage?: string) => void;
   updateSpotDamageRow: (id: string, updates: Partial<SpotDamageRow>) => void;
@@ -131,6 +133,71 @@ export const createAssessmentSlice: StateCreator<any, any, any, AssessmentSlice>
         currentClaim: {
           ...state.currentClaim,
           extraBillItems: [],
+          updatedAt: new Date().toISOString(),
+        },
+        isDirty: true,
+      };
+    });
+  },
+
+  linkExtraBillItem: (extraId, rowId) => {
+    set((state: WithClaim) => {
+      if (!state.currentClaim) return {};
+      const extra = (state.currentClaim.extraBillItems || []).find((i) => i.id === extraId);
+      if (!extra) return {};
+
+      const AMT_TOL = 1;
+      return {
+        currentClaim: {
+          ...state.currentClaim,
+          assessmentRows: state.currentClaim.assessmentRows.map((r) => {
+            if (r.id !== rowId) return r;
+            // Same item, worded differently by the workshop. Partial when the
+            // workshop billed a different figure than was assessed.
+            const partial = Math.abs(extra.taxableAmount - r.assessed) > AMT_TOL;
+            return {
+              ...r,
+              billedTaxable: extra.taxableAmount,
+              billedAmount: extra.amount,
+              billStatus: partial ? ('partial' as const) : ('in-bill' as const),
+              billRemarks: r.billRemarks || `Linked from bill: ${extra.description}`,
+            };
+          }),
+          extraBillItems: (state.currentClaim.extraBillItems || []).filter((i) => i.id !== extraId),
+          updatedAt: new Date().toISOString(),
+        },
+        isDirty: true,
+      };
+    });
+  },
+
+  promoteExtraBillItem: (extraId) => {
+    set((state: WithClaim) => {
+      if (!state.currentClaim) return {};
+      const extra = (state.currentClaim.extraBillItems || []).find((i) => i.id === extraId);
+      if (!extra) return {};
+
+      // Lands Not Allowed at zero assessed. The item is now on the record and
+      // in the Final Report; whether it is allowed is the surveyor's call.
+      const newRow = createAssessmentRow(extra.section, {
+        particulars: extra.description,
+        partNumber: extra.partNumber,
+        hsnSac: extra.hsnSac,
+        gst: extra.gstPercent,
+        estimated: 0,
+        assessed: 0,
+        allowed: false,
+        billedTaxable: extra.taxableAmount,
+        billedAmount: extra.amount,
+        billStatus: 'not-allowed',
+        billRemarks: 'Added from final bill — not in original assessment',
+      });
+
+      return {
+        currentClaim: {
+          ...state.currentClaim,
+          assessmentRows: [...state.currentClaim.assessmentRows, newRow],
+          extraBillItems: (state.currentClaim.extraBillItems || []).filter((i) => i.id !== extraId),
           updatedAt: new Date().toISOString(),
         },
         isDirty: true,
