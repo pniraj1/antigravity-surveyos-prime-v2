@@ -84,6 +84,25 @@ describe('getConflictFields — decided fields drop out', () => {
   });
 });
 
+describe('source context snippets', () => {
+  it('carries the verbatim text each value was read from', () => {
+    const claim = claimWith({
+      rc: {
+        engine_number: '1.5CR08EVXW09578',
+        engine_number_context: 'Engine No: 1.5CR08EVXW09578 Chassis No: MAT4',
+      },
+      policy: { engine_number: '1.SCR08EVXW09578' },
+    });
+
+    const field = getConflictFields(claim).find((f) => f.path === 'vehicle.engineNumber')!;
+    const rc = field.sources.find((s) => s.origin === 'rc')!;
+    const policy = field.sources.find((s) => s.origin === 'policy')!;
+
+    expect(rc.contextSnippet).toBe('Engine No: 1.5CR08EVXW09578 Chassis No: MAT4');
+    expect(policy.contextSnippet).toBe('');
+  });
+});
+
 describe('fingerprintSources', () => {
   it('is stable regardless of source order', () => {
     const a = fingerprintSources([

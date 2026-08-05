@@ -9,6 +9,8 @@ export interface ReconciliationField {
     origin: string;
     value: string;
     label: string;
+    /** Verbatim document text this value was read from; '' when the model returned none. */
+    contextSnippet: string;
   }[];
   hasConflict: boolean;
   /** True when a decision exists AND its fingerprint still matches these sources. */
@@ -123,10 +125,12 @@ function buildFields(claim: ClaimData): ReconciliationField[] {
     Object.entries(mapping.aiKeys).forEach(([docKey, aiKey]) => {
       const docData = extractedStore[docKey];
       if (docData?.[aiKey]) {
+        const snippet = docData[`${aiKey}_context`];
         sources.push({
           origin: docKey,
           label: docKey.toUpperCase(),
           value: String(docData[aiKey]),
+          contextSnippet: snippet ? String(snippet) : '',
         });
       }
     });
