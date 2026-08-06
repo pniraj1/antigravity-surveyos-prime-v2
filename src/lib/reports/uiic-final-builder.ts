@@ -365,7 +365,8 @@ ${getSurveyorHeader(profile)}
 <tr><td colspan="10" style="${sec}">PAINTING CHARGES</td></tr>${ptHtml}
 <tr style="font-weight:700;background:#eee;"><td colspan="4" style="${td}">SUB TOTAL</td><td style="${td}text-align:right;">${fa(rawParts)}</td><td style="${td}"></td><td style="${td}text-align:right;">${fa(partsDepreciated)}</td><td style="${td}"></td><td style="${td}text-align:right;">${fa(pT)}</td><td style="${td}text-align:right;">${fa(labBase)}</td></tr>
 <tr><td colspan="6" style="${td}">TAX IN 18% for Labour</td><td style="${td}" colspan="2"></td><td style="${td}text-align:right;">${fa(labOnly)}</td><td style="${td}text-align:right;">${fa(paintOnly)}</td></tr>
-<tr><td colspan="8" style="${td}font-weight:700;">NET TOTAL</td><td style="${td}text-align:right;font-weight:700;">${fa(labourAgg.amount)}</td><td style="${td}text-align:right;font-weight:700;">${fa(paintAgg.amount)}</td></tr>
+${/* Gross, not Net: these carry GST and nothing has been deducted yet. */ ''}
+<tr><td colspan="8" style="${td}font-weight:700;">GROSS TOTAL</td><td style="${td}text-align:right;font-weight:700;">${fa(labourAgg.amount)}</td><td style="${td}text-align:right;font-weight:700;">${fa(paintAgg.amount)}</td></tr>
 </tbody></table>`;
 
   // ── PAGE 5: GST Summary + Signatures ────────────────────────────────────────
