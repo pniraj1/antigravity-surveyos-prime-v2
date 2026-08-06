@@ -223,7 +223,7 @@ export function DetailsTab() {
                     fb?.voluntaryExcess || 0,
                   );
                   downloadAsWord(
-                    buildStandardFinalSurveyHTML(currentClaim, summary, profile!),
+                    buildStandardFinalSurveyHTML(currentClaim, profile!),
                     `${currentClaim.vehicle.registrationNumber || 'Claim'}-Final-Survey`,
                     footerFromProfile(profile),
                   );

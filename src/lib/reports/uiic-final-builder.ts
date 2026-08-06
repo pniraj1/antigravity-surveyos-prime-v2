@@ -849,15 +849,15 @@ ${serviceAgg.bands.map((b, i) => `<tr>
   <td style="${td}text-align:right;">${fa(asum.partsTotal)}</td>
 </tr>
 ${[
-  { label: 'Metal', est: asum.estimateMetalBase, ass: asum.metalTotal },
-  { label: 'Plastic / Rubber', est: asum.estimatePlasticBase, ass: asum.plasticTotal },
-  { label: 'Glass', est: asum.estimateGlassBase, ass: asum.glassTotal },
-  { label: 'Fibre Glass', est: asum.estimateFiberglassBase, ass: asum.fiberglassTotal },
+  { label: 'Metal', est: asum.estimateMetalBase, ass: asum.metalTotal, incl: asum.metalTotalInclGst },
+  { label: 'Plastic / Rubber', est: asum.estimatePlasticBase, ass: asum.plasticTotal, incl: asum.plasticTotalInclGst },
+  { label: 'Glass', est: asum.estimateGlassBase, ass: asum.glassTotal, incl: asum.glassTotalInclGst },
+  { label: 'Fibre Glass', est: asum.estimateFiberglassBase, ass: asum.fiberglassTotal, incl: asum.fiberglassTotalInclGst },
 ].filter(s => s.est > 0 || s.ass > 0).map(s => `<tr>
   <td style="${td}padding-left:14pt;color:#555;">&#8627; ${s.label}</td>
   <td style="${td}text-align:right;color:#555;">${fa(s.est)}</td>
   <td style="${td}text-align:right;color:#555;">${fa(s.ass)}</td>
-  <td style="${td}text-align:right;color:#555;">&mdash;</td>
+  <td style="${td}text-align:right;color:#555;">${fa(s.incl)}</td>
 </tr>`).join('')}
 <tr>
   <td style="${td}">Labour</td>

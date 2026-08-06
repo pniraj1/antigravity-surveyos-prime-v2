@@ -23,6 +23,11 @@ const MOCK_SUMMARY: AssessmentSummary & {
   plasticTotal: 15100,
   glassTotal: 20200,
   fiberglassTotal: 0,
+  // all 18% in this mock, so each is base × 1.18
+  metalTotalInclGst: 28438,
+  plasticTotalInclGst: 17818,
+  glassTotalInclGst: 23836,
+  fiberglassTotalInclGst: 0,
   partsBase: 59400,
   partsCGST: 5346,
   partsSGST: 5346,

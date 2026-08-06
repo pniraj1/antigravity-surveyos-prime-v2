@@ -98,6 +98,16 @@ export interface AssessmentSummary {
   labourGST: number; // labourBase * 0.18
   labourTotal: number; // labourBase + labourGST
 
+  /**
+   * Per-material totals including GST, accumulated per row at that row's own
+   * rate. Never `base × 1.18` — a claim can hold several rates.
+   * These four sum to `partsTotal`.
+   */
+  metalTotalInclGst: number;
+  plasticTotalInclGst: number;
+  glassTotalInclGst: number;
+  fiberglassTotalInclGst: number;
+
   /** Labour only, excluding painting. */
   labourOnlyBase: number;
   labourOnlyTotal: number;

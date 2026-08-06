@@ -132,7 +132,7 @@ export function SurveyActions({
               if (format === 'uiic') {
                 downloadAsWord(buildUIICFinalHTML(claim, profile), `${regNo}-UIIC-Final-Survey`, footerFromProfile(profile));
               } else {
-                downloadAsWord(buildStandardFinalSurveyHTML(claim, summary, profile), `${regNo}-Final-Survey`, footerFromProfile(profile));
+                downloadAsWord(buildStandardFinalSurveyHTML(claim, profile), `${regNo}-Final-Survey`, footerFromProfile(profile));
               }
               toast.success('Word report generated!');
             } catch (e) {
@@ -158,7 +158,7 @@ export function SurveyActions({
       {/* Power Print — Standard */}
       {format === 'standard' && (
         <button
-          onClick={() => triggerStandardPrint(claim, summary, profile)}
+          onClick={() => triggerStandardPrint(claim, profile)}
           className="flex items-center gap-2 px-8 py-3 rounded-xl font-medium text-sm transition-all shadow-xl hover:scale-105 active:scale-95"
           style={{ background: 'var(--color-neutral-900)', color: '#FFFFFF', cursor: 'pointer', border: 'none' }}
         >

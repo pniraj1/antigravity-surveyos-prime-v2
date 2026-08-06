@@ -60,6 +60,8 @@ export function calculateAssessmentSummary(
   // Split out so reports can show Labour and Painting as separate heads.
   let labourOnlyBase = 0, labourOnlyGST = 0;
   let paintOnlyBase = 0, paintOnlyGST = 0;
+  // Per-material GST, accumulated at each row's own rate.
+  let metalGST = 0, plasticGST = 0, glassGST = 0, fiberglassGST = 0;
 
   // ─── Assessment Logic ──────────────────────────────
   rows.forEach((r) => {
@@ -87,10 +89,10 @@ export function calculateAssessmentSummary(
       // Normal new part: apply GST on depreciated value
       const rowGST = valueAfterDep * (r.gst / 100);
       if (r.section === 'parts') {
-        if (r.partType === 'metal') metal += valueAfterDep;
-        else if (r.partType === 'glass') glass += valueAfterDep;
-        else if (r.partType === 'fiberglass') fiberglass += valueAfterDep;
-        else plastic += valueAfterDep;
+        if (r.partType === 'metal') { metal += valueAfterDep; metalGST += rowGST; }
+        else if (r.partType === 'glass') { glass += valueAfterDep; glassGST += rowGST; }
+        else if (r.partType === 'fiberglass') { fiberglass += valueAfterDep; fiberglassGST += rowGST; }
+        else { plastic += valueAfterDep; plasticGST += rowGST; }
         partsGSTAccumulator += rowGST;
       } else {
         labourBase += valueAfterDep;
@@ -152,6 +154,12 @@ export function calculateAssessmentSummary(
     labourBase,
     labourGST: labourGSTAccumulator,
     labourTotal: labourBase + labourGSTAccumulator,
+
+    // Disposal rows carry no GST, so their value passes through unchanged.
+    metalTotalInclGst: metal + metalGST,
+    plasticTotalInclGst: plastic + plasticGST,
+    glassTotalInclGst: glass + glassGST,
+    fiberglassTotalInclGst: fiberglass + fiberglassGST,
 
     labourOnlyBase,
     labourOnlyTotal: labourOnlyBase + labourOnlyGST,

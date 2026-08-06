@@ -309,7 +309,7 @@ export function ReportTab() {
                 )}
                 
                 {activeReport === 'survey' && format === 'standard' && (
-                  <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(buildStandardFinalSurveyHTML(currentClaim, safeSummary, profile!)) }} />
+                  <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(buildStandardFinalSurveyHTML(currentClaim, profile!)) }} />
                 )}
                 {activeReport === 'survey' && format === 'uiic' && (
                   <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(buildUIICFinalHTML(currentClaim, profile!)) }} />

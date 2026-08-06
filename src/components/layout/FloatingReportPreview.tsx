@@ -91,21 +91,11 @@ export function FloatingReportPreview() {
     }
     const timer = setTimeout(() => {
       try {
-        const yearRaw = currentClaim.vehicle?.yearOfManufacture;
-        const ageMonths = getVehicleAgeMonths(
-          null,
-          yearRaw != null ? Number(yearRaw) : null,
-          currentClaim.accident?.dateAndTime || null
-        );
-        const fb = currentClaim.feeBill;
-        const summary = calculateAssessmentSummary(
-          currentClaim.assessmentRows || [],
-          ageMonths,
-          currentClaim.depreciationType || 'Standard',
-          fb?.salvageValue || 0,
-          getCompulsoryExcess(fb),
-          fb?.voluntaryExcess || 0
-        );
+        // No summary computed here any more. This block passed `null` for the
+        // registration date, so its vehicle age fell in a different
+        // depreciation bracket than the report's own — and the report printed
+        // a Spare Parts line that disagreed with the rows beneath it. Each
+        // builder now computes its own totals from the claim.
         let out = '';
         if (format === 'uiic') {
           out = buildUIICFinalHTML(currentClaim, profile);
@@ -116,7 +106,7 @@ export function FloatingReportPreview() {
         } else if (format === 'valuation') {
           out = buildValuationReportHTML(currentClaim, profile);
         } else {
-          out = buildStandardFinalSurveyHTML(currentClaim, summary, profile);
+          out = buildStandardFinalSurveyHTML(currentClaim, profile);
         }
         setHtml(out);
       } catch {

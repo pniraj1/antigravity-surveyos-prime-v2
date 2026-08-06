@@ -16,7 +16,7 @@ import { formatDateDMY, formatDateTimeDMY, fa, numberToWords, getVehicleAgeMonth
 import { getHtmlScale } from './report-style-utils';
 import { preambleFromClaim, estimateTotalInclGst } from './final-survey-preamble';
 import { computeRowNet } from '@/lib/calculations/row-net';
-import { getCompulsoryExcess } from '@/lib/calculations/assessment';
+import { getCompulsoryExcess, calculateAssessmentSummary } from '@/lib/calculations/assessment';
 import { buildPrintShell, footerFromProfile } from './print-shell';
 
 // NOTE: SurveyReportDocument.tsx (React-PDF) is no longer a parallel rendering
@@ -52,9 +52,18 @@ function isExpired(dateStr: string | null | undefined): boolean {
 
 // ─── Main HTML Builder ────────────────────────────────────────────────────────
 
+/**
+ * The summary is computed here, from this builder's own `ageMonths` and rows —
+ * never accepted from a caller.
+ *
+ * It used to take an `AssessmentSummary` parameter. Callers each computed one
+ * their own way, and one of them (FloatingReportPreview) passed `null` for the
+ * registration date, so its vehicle age landed in a different depreciation
+ * bracket. The result was a summary block whose "Spare Parts" line disagreed
+ * with the Metal / Plastic / Glass lines directly beneath it.
+ */
 export function buildStandardFinalSurveyHTML(
   claim: ClaimData,
-  summary: AssessmentSummary,
   profile: SurveyorProfile
 ): string {
   const vehicle = claim.vehicle;
@@ -96,9 +105,20 @@ export function buildStandardFinalSurveyHTML(
   });
 
   const labBase = labOnlyBase + paintOnlyBase; // combined for grand total
-  // GST is per item. The 0.09 / 0.18 literals here ignored row.gst entirely,
-  // so a 28% tyre was totalled at 18% in section 8 — while the correctly
-  // computed summary was being passed in and discarded.
+  // GST is per item. The 0.09 / 0.18 literals that used to be here ignored
+  // row.gst entirely, so a 28% tyre was totalled at 18%.
+  //
+  // Computed from this builder's own ageMonths so the summary block and the
+  // material rows beneath it can never disagree.
+  const summary = calculateAssessmentSummary(
+    rows,
+    ageMonths,
+    claim.depreciationType || 'standard',
+    claim.feeBill?.salvageValue ?? 0,
+    getCompulsoryExcess(claim.feeBill),
+    claim.feeBill?.voluntaryExcess ?? 0,
+  );
+
   const pb = summary.partsBase;
   const pT = summary.partsTotal;
   const labT = summary.labourOnlyTotal;
@@ -387,16 +407,16 @@ export function buildStandardFinalSurveyHTML(
       <td style="${tdr}">${fa(pT)}</td>
     </tr>
     ${[
-      { label: 'Metal', est: estMetal, ass: metal },
-      { label: 'Plastic / Rubber', est: estPlastic, ass: plastic },
-      { label: 'Glass', est: estGlass, ass: glass },
-      { label: 'Fibre Glass', est: estFbr, ass: fiberglass },
+      { label: 'Metal', est: estMetal, ass: summary.metalTotal, incl: summary.metalTotalInclGst },
+      { label: 'Plastic / Rubber', est: estPlastic, ass: summary.plasticTotal, incl: summary.plasticTotalInclGst },
+      { label: 'Glass', est: estGlass, ass: summary.glassTotal, incl: summary.glassTotalInclGst },
+      { label: 'Fibre Glass', est: estFbr, ass: summary.fiberglassTotal, incl: summary.fiberglassTotalInclGst },
     ].filter(s => s.est > 0 || s.ass > 0).map(s => `
     <tr>
       <td style="${td}padding-left:14pt;color:#555;">↳ ${s.label}</td>
       <td style="${tdr}color:#555;">${fa(s.est)}</td>
       <td style="${tdr}color:#555;">${fa(s.ass)}</td>
-      <td style="${tdr}color:#555;">—</td>
+      <td style="${tdr}color:#555;">${fa(s.incl)}</td>
     </tr>`).join('')}
     <tr>
       <td style="${td}">Labour</td>
@@ -565,10 +585,9 @@ ${getSigBlock(profile)}
 
 export function buildStandardPrintDocument(
   claim: ClaimData,
-  summary: AssessmentSummary,
   profile: SurveyorProfile
 ): string {
-  return buildPrintShell(buildStandardFinalSurveyHTML(claim, summary, profile), {
+  return buildPrintShell(buildStandardFinalSurveyHTML(claim, profile), {
     title: `Standard Final Survey Report — ${claim.vehicle?.registrationNumber || 'Claim'}`,
     footerLeft: footerFromProfile(profile),
     fontSize: '7.8pt',
@@ -579,10 +598,9 @@ export function buildStandardPrintDocument(
 
 export function triggerStandardPrint(
   claim: ClaimData,
-  summary: AssessmentSummary,
   profile: SurveyorProfile
 ): void {
-  const html = buildStandardPrintDocument(claim, summary, profile);
+  const html = buildStandardPrintDocument(claim, profile);
   const w = window.open('', '_blank');
   if (!w) {
     alert('Popup blocked — please allow popups for this site and try again.');
