@@ -266,7 +266,7 @@ export function FloatingReportPreview() {
               >
                 {f === 'standard' ? 'Std' :
                  f === 'uiic' ? 'UIIC' :
-                 f === 'bill-check' ? 'Bill Chk' :
+                 f === 'bill-check' ? 'UIIC Bill Chk' :
                  f === 'fee-bill' ? 'Fees' :
                  f === 'valuation' ? 'Valuation' : 'Spot'}
               </button>

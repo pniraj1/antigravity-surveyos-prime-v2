@@ -117,6 +117,46 @@ describe('Bill Check table format', () => {
     const html = buildUIICBillCheckHTML(claim([row({ partType: 'plastic' })]), null);
     expect(html).toContain('Plastic / Rubber');
   });
+
+  test('classifies each row by job type', () => {
+    const html = buildUIICBillCheckHTML(claim([
+      row({ particulars: 'BumperFront' }),
+      row({ particulars: 'DentPull', action: 'repair' }),
+      row({ particulars: 'FitCharge', section: 'labour', partType: 'labour', assessed: 500 }),
+      row({ particulars: 'SprayPanel', section: 'paint', partType: 'paint', assessed: 900 }),
+    ]), null);
+
+    const cellsOf = (name: string) => html.split(name)[1].split('</tr>')[0];
+    expect(cellsOf('BumperFront')).toContain('>Replace<');
+    expect(cellsOf('DentPull')).toContain('>Repair<');
+    expect(cellsOf('FitCharge')).toContain('>Labour<');
+    expect(cellsOf('SprayPanel')).toContain('>Paint<');
+  });
+
+  test('every row in the table spans exactly eleven columns', () => {
+    // Adding or removing a column means revisiting a dozen colspans by hand.
+    // This catches a miscount instead of leaving it to be spotted on paper.
+    const html = buildUIICBillCheckHTML(claim([
+      row({ particulars: 'PartA' }),
+      row({ particulars: 'LabA', section: 'labour', partType: 'labour', assessed: 500, gst: 18 }),
+      row({ particulars: 'LabB', section: 'labour', partType: 'labour', assessed: 700, gst: 5 }),
+      row({ particulars: 'PaintA', section: 'paint', partType: 'paint', assessed: 900 }),
+    ]), null);
+
+    const table = html.split('BILLS CHECK REPORT')[1].split('</table>')[0];
+    const rows = table.split('<tr').slice(1);
+    expect(rows.length).toBeGreaterThan(8);
+
+    for (const tr of rows) {
+      const cells = [...tr.matchAll(/<t[dh]\b[^>]*>/g)];
+      const spans = cells.reduce((sum, c) => {
+        const m = /colspan="(\d+)"/.exec(c[0]);
+        return sum + (m ? Number(m[1]) : 1);
+      }, 0);
+      const label = tr.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40);
+      expect(spans, `row "${label}" spans ${spans}, not 11`).toBe(11);
+    }
+  });
 });
 
 describe('GST SUMMARY', () => {

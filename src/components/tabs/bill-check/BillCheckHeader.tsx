@@ -45,7 +45,7 @@ export function BillCheckHeader({ showEvidence, onToggleEvidence, bcSummary, cla
         </div>
         <div className="flex items-center justify-between gap-4">
           <h1 className="text-2xl lg:text-3xl font-medium mb-2 text-[#1D1D1F]" style={{ letterSpacing: '-0.02em' }}>
-            Bill Check Report
+            UIIC Bill Check Report
           </h1>
           <div className="flex items-center gap-3">
             <SaveProgressButton className="shadow-lg" />

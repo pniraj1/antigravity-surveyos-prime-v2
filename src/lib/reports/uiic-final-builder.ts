@@ -385,7 +385,7 @@ ${/* Gross, not Net: these carry GST and nothing has been deducted yet. */ ''}
 ${getSigBlock(profile)}
 <div style="text-align:center;font-weight:700;font-size:8pt;border-top:1pt solid #000;padding-top:4px;margin-top:12px;">FOR SERVICE HUB USE</div>
 <div style="font-size:7pt;line-height:1.6;margin-top:3px;">Claim documents are in order. Liability under the policy is confirmed. Bill check and reinspection is carried out. The loss assessment is in order and claim is recommended for Rs. ${fa(net)}</div>
-<div style="font-size:7pt;">NOTE:- BILL CHECK REPORT AS PER ASSESSMENT SHEET.</div>
+<div style="font-size:7pt;">NOTE:- UIIC BILL CHECK REPORT AS PER ASSESSMENT SHEET.</div>
 <div style="display:flex;justify-content:space-between;margin-top:16px;font-size:7pt;"><div>Signature of Claims Personnel<br/>Date</div><div>Signature of Claims Officer<br/>Date:</div><div>Signature of Claims Officer approving claim<br/>Date:</div></div>
 <div style="text-align:center; font-family:serif; font-weight:bold; font-size:9pt; margin-top:14px;">${nm}</div>
 <div style="font-size:6.5pt;color:#666;margin-top:4px;border-top:0.4pt solid #ccc;padding-top:2px;">In words: RUPEES ${numberToWords(net)} ONLY</div>`;
@@ -422,8 +422,8 @@ export function triggerUIICFinalPrint(claim: ClaimData, profile: SurveyorProfile
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// BILL CHECK REPORT BUILDER
-// Produces a UIIC-style Bill Check Report using only *allowed* items.
+// UIIC BILL CHECK REPORT BUILDER
+// Produces the UIIC Bill Check Report using only *allowed* items.
 // Serial numbers are preserved from the original Full Survey assessment table.
 // ══════════════════════════════════════════════════════════════════════════════
 
@@ -543,6 +543,12 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
     return d > 0 ? `${d}%` : 'N.D.';
   };
 
+  const jobTypeLabel = (r: AssessmentRow) =>
+    r.section === 'labour' ? 'Labour'
+    : r.section === 'paint' ? 'Paint'
+    : r.action === 'repair' ? 'Repair'
+    : 'Replace';
+
   const blank = `<td style="${td}"></td>`;
 
   // Specimen prints "(Part) 18.00" / "(Labour) 18.00" when no code is recorded,
@@ -558,6 +564,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
       <td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td>
       <td style="${td}">${r.particulars}</td>
       <td style="${td}text-align:center;">${partTypeLabel(r)}</td>
+      <td style="${td}text-align:center;">${jobTypeLabel(r)}</td>
       <td style="${td}text-align:right;">${fa(r.estimated)}</td>
       <td style="${td}text-align:center;">${depLabel(r)}</td>
       <td style="${td}text-align:right;">${fa(r.assessed)}</td>
@@ -572,6 +579,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
       <td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td>
       <td style="${td}">${r.particulars}</td>
       <td style="${td}text-align:center;">Labour</td>
+      <td style="${td}text-align:center;">${jobTypeLabel(r)}</td>
       ${blank}
       <td style="${td}text-align:center;">${depLabel(r)}</td>
       ${blank}
@@ -585,6 +593,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
       <td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td>
       <td style="${td}">${r.particulars}</td>
       <td style="${td}text-align:center;">Paint</td>
+      <td style="${td}text-align:center;">${jobTypeLabel(r)}</td>
       ${blank}
       <td style="${td}text-align:center;">${depLabel(r)}</td>
       ${blank}
@@ -596,7 +605,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   // One tax line per distinct rate, so a mixed-rate claim reads correctly.
   const taxLines = (agg: ReturnType<typeof aggregateGst>, label: string, col: 'labour' | 'paint') =>
     agg.bands.filter(b => b.rate > 0).map(b => `<tr>
-      <td colspan="8" style="${td}text-align:right;font-style:italic;">TAX IN ${b.rate} % for ${label}</td>
+      <td colspan="9" style="${td}text-align:right;font-style:italic;">TAX IN ${b.rate} % for ${label}</td>
       ${col === 'labour' ? `<td style="${td}text-align:right;">${fa(b.cgst + b.sgst)}</td>${blank}` : `${blank}<td style="${td}text-align:right;">${fa(b.cgst + b.sgst)}</td>`}
     </tr>`).join('');
 
@@ -604,7 +613,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   const page1 = `
 ${getSurveyorHeader(profile)}
 <div style="font-weight:700;font-size:9pt;text-align:right;margin-bottom:2px;">${nm}</div>
-<div style="text-align:center;font-weight:700;font-size:9.5pt;border:1pt solid #000;padding:4px;margin-bottom:4px;background:#f0f0f0;">BILL CHECK REPORT — MOTOR SURVEY (FINAL)</div>
+<div style="text-align:center;font-weight:700;font-size:9.5pt;border:1pt solid #000;padding:4px;margin-bottom:4px;background:#f0f0f0;">UIIC BILL CHECK REPORT — MOTOR SURVEY (FINAL)</div>
 
 ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
   const idv = parseFloat(String(claim.policy?.idv || '0').replace(/,/g, '')) || 0;
@@ -709,27 +718,28 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
   // ── PAGE 2: Bill Check Item Table ───────────────────────────────────────────
   const page2 = `<div style="page-break-before:always;"></div>
 <div style="text-align:center;font-family:serif;font-weight:bold;font-size:9pt;">${nm}</div>
-<div style="text-align:center;font-weight:700;font-size:9pt;margin:4px 0;">BILL CHECK REPORT<br/><span style="font-size:7pt;font-style:italic;">/ Report Issued Without Prejudice /</span></div>
+<div style="text-align:center;font-weight:700;font-size:9pt;margin:4px 0;">UIIC BILL CHECK REPORT<br/><span style="font-size:7pt;font-style:italic;">/ Report Issued Without Prejudice /</span></div>
 <div style="font-size:7pt;margin-bottom:2px;">Reg No: <b>${g(v.registrationNumber)}</b> &nbsp;|&nbsp; Claim: <b>${g(p.claimNumber)}</b> &nbsp;|&nbsp; Insured: <b>${g(p.insuredName)}</b> &nbsp;|&nbsp; Bill No: <b>${g(bc?.billNo)}</b> &nbsp;|&nbsp; Bill Date: <b>${fd(bc?.billDate)}</b></div>
 <div style="${sec}">BILLS CHECK REPORT</div>
 <table style="${ts}font-size:7pt;">
 <thead><tr>
-  <th style="${th}width:5%;">SR.<br/>NO.</th>
-  <th style="${th}text-align:left;width:23%;">Description</th>
-  <th style="${th}width:9%;">Part<br/>Type</th>
-  <th style="${th}width:11%;">Part List<br/>Without Tax</th>
+  <th style="${th}width:4%;">SR.<br/>NO.</th>
+  <th style="${th}text-align:left;width:20%;">Description</th>
+  <th style="${th}width:8%;">Part<br/>Type</th>
+  <th style="${th}width:8%;">Job<br/>Type</th>
+  <th style="${th}width:10%;">Part List<br/>Without Tax</th>
   <th style="${th}width:8%;">Part<br/>Depreciation</th>
-  <th style="${th}width:11%;">Parts<br/>Assessment</th>
+  <th style="${th}width:10%;">Parts<br/>Assessment</th>
   <th style="${th}width:5%;">GST<br/>%</th>
   <th style="${th}width:11%;">Final amount<br/>With G.S.T</th>
-  <th style="${th}width:8.5%;">Labour</th>
-  <th style="${th}width:8.5%;">Paint</th>
+  <th style="${th}width:8%;">Labour</th>
+  <th style="${th}width:8%;">Paint</th>
 </tr></thead>
 <tbody>
-<tr><td colspan="10" style="${sec}">SPARE PARTS</td></tr>
-${pHtml || `<tr><td colspan="10" style="${td}text-align:center;color:#999;font-style:italic;">No parts in allowed items</td></tr>`}
+<tr><td colspan="11" style="${sec}">SPARE PARTS</td></tr>
+${pHtml || `<tr><td colspan="11" style="${td}text-align:center;color:#999;font-style:italic;">No parts in allowed items</td></tr>`}
 <tr style="font-weight:700;background:#eee;">
-  <td colspan="3" style="${td}">SUB TOTAL</td>
+  <td colspan="4" style="${td}">SUB TOTAL</td>
   <td style="${td}text-align:right;">${fa(allowedParts.reduce((s, r) => s + r.estimated, 0))}</td>
   ${blank}
   <td style="${td}text-align:right;">${fa(allowedParts.reduce((s, r) => s + r.assessed, 0))}</td>
@@ -738,34 +748,34 @@ ${pHtml || `<tr><td colspan="10" style="${td}text-align:center;color:#999;font-s
   ${blank}${blank}
 </tr>
 
-<tr><td colspan="10" style="${sec}">LABOUR</td></tr>
-${lHtml || `<tr><td colspan="10" style="${td}text-align:center;color:#999;font-style:italic;">No labour in allowed items</td></tr>`}
+<tr><td colspan="11" style="${sec}">LABOUR</td></tr>
+${lHtml || `<tr><td colspan="11" style="${td}text-align:center;color:#999;font-style:italic;">No labour in allowed items</td></tr>`}
 <tr style="font-weight:700;background:#f6f6f6;">
-  <td colspan="8" style="${td}">SUB TOTAL</td>
+  <td colspan="9" style="${td}">SUB TOTAL</td>
   <td style="${td}text-align:right;">${fa(allowedLabour.reduce((s, r) => s + r.assessed, 0))}</td>
   ${blank}
 </tr>
 ${taxLines(labourAgg, 'Labour', 'labour')}
 <tr style="font-weight:700;background:#eee;">
-  <td colspan="8" style="${td}">SUB TOTAL</td>
+  <td colspan="9" style="${td}">SUB TOTAL</td>
   <td style="${td}text-align:right;">${fa(labourAgg.amount)}</td>
   ${blank}
 </tr>
 
-<tr><td colspan="10" style="${sec}">PAINTING CHARGES</td></tr>
-${ptHtml || `<tr><td colspan="10" style="${td}text-align:center;color:#999;font-style:italic;">No painting in allowed items</td></tr>`}
+<tr><td colspan="11" style="${sec}">PAINTING CHARGES</td></tr>
+${ptHtml || `<tr><td colspan="11" style="${td}text-align:center;color:#999;font-style:italic;">No painting in allowed items</td></tr>`}
 <tr style="font-weight:700;background:#f6f6f6;">
-  <td colspan="9" style="${td}">SUB TOTAL</td>
+  <td colspan="10" style="${td}">SUB TOTAL</td>
   <td style="${td}text-align:right;">${fa(allowedPaint.reduce((s, r) => s + r.assessed, 0))}</td>
 </tr>
 ${taxLines(paintAgg, 'Paint', 'paint')}
 <tr style="font-weight:700;background:#eee;">
-  <td colspan="9" style="${td}">SUB TOTAL</td>
+  <td colspan="10" style="${td}">SUB TOTAL</td>
   <td style="${td}text-align:right;">${fa(paintAgg.amount)}</td>
 </tr>
 
 <tr style="font-weight:700;background:#ddd;">
-  <td colspan="3" style="${td}">TOTAL</td>
+  <td colspan="4" style="${td}">TOTAL</td>
   <td style="${td}text-align:right;">${fa(allowedParts.reduce((s, r) => s + r.estimated, 0))}</td>
   ${blank}
   <td style="${td}text-align:right;">${fa(allowedParts.reduce((s, r) => s + r.assessed, 0))}</td>
@@ -923,7 +933,7 @@ ${getSigBlock(profile)}
 <div style="font-size:7pt;line-height:1.6;margin-top:3px;">
   Bill check is carried out. All disallowed items have been excluded. Only allowed items as per Final Survey Report are reflected. Net liability confirmed at Rs. ${fa(netBilledLiability)}.
 </div>
-<div style="font-size:7pt;">NOTE:- BILL CHECK REPORT AS PER ASSESSMENT SHEET — DISALLOWED ITEMS NOT INCLUDED.</div>
+<div style="font-size:7pt;">NOTE:- UIIC BILL CHECK REPORT AS PER ASSESSMENT SHEET — DISALLOWED ITEMS NOT INCLUDED.</div>
 <div style="display:flex;justify-content:space-between;margin-top:16px;font-size:7pt;">
   <div>Signature of Claims Personnel<br/>Date</div>
   <div>Signature of Claims Officer<br/>Date:</div>
@@ -938,7 +948,7 @@ ${getSigBlock(profile)}
 
 export function buildUIICBillCheckPrintDocument(claim: ClaimData, profile: SurveyorProfile | null): string {
   return buildPrintShell(buildUIICBillCheckHTML(claim, profile), {
-    title: `Bill Check Report — ${claim.vehicle?.registrationNumber || 'DRAFT'}`,
+    title: `UIIC Bill Check Report — ${claim.vehicle?.registrationNumber || 'DRAFT'}`,
     footerLeft: footerFromProfile(profile),
     fontSize: '8pt',
     fontFamily: 'Arial, Helvetica, sans-serif',

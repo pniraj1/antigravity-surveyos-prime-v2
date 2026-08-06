@@ -45,10 +45,10 @@ function BillCheckPreview({ claim, profile }: { claim: any; profile: any }) {
   return (
     <ReportPreviewPanel
       html={html}
-      title="Bill Check Report — Live Preview"
+      title="UIIC Bill Check Report — Live Preview"
       printLabel="Power Print"
       onPrint={() => triggerUIICBillCheckPrint(claim, profile)}
-      wordFilename={`${claim?.vehicle?.registrationNumber || 'Claim'}-Bill-Check`}
+      wordFilename={`${claim?.vehicle?.registrationNumber || 'Claim'}-UIIC-Bill-Check`}
       footerLeft={footerFromProfile(profile)}
     />
   );
@@ -159,9 +159,9 @@ export function BillCheckTab() {
             {/* Power Print */}
             <div className="rounded-2xl overflow-hidden bg-white border border-border">
               <div className="px-6 py-4 border-b border-border bg-card">
-                <div className="text-sm font-medium text-foreground">Download Bill Check Report</div>
+                <div className="text-sm font-medium text-foreground">Download UIIC Bill Check Report</div>
                 <div className="text-xs mt-0.5 text-muted-foreground">
-                  Generates a UIIC-compliant Bill Check Report — only allowed items, original serial numbers
+                  Generates the UIIC Bill Check Report — only allowed items, original serial numbers
                 </div>
               </div>
               <div className="p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
@@ -178,7 +178,7 @@ export function BillCheckTab() {
                   style={{ boxShadow: '0 4px 14px rgba(13,27,42,0.3)' }}
                 >
                   <Printer size={16} />
-                  Power Print — Bill Check Report
+                  Power Print — UIIC Bill Check Report
                 </button>
               </div>
             </div>
@@ -189,7 +189,7 @@ export function BillCheckTab() {
             >
               <FileText size={16} className="text-primary flex-shrink-0 mt-0.5" />
               <div className="text-xs text-foreground" style={{ lineHeight: 1.6 }}>
-                <strong>Note:</strong> The Bill Check Report will open in a new tab. Use your browser&apos;s print dialog
+                <strong>Note:</strong> The UIIC Bill Check Report will open in a new tab. Use your browser&apos;s print dialog
                 (Ctrl+P / ⌘P) to save as PDF. Ensure &quot;Background graphics&quot; is enabled in print settings for
                 full colour output.
               </div>
