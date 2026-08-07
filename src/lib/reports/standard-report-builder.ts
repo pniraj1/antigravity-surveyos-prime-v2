@@ -150,7 +150,62 @@ export function buildStandardFinalSurveyHTML(
   const sec = `padding:${scale.cellPaddingV} ${scale.cellPaddingH};font-weight:700;background:#e8e3da;font-size:${scale.labelFont};text-transform:uppercase;border:0.4pt solid #bbb;`;
   const sub = `padding:${scale.cellPaddingV} ${scale.cellPaddingH};font-weight:700;background:#dff0ec;color:#1a5a50;border:0.4pt solid #bbb;`;
 
-  // ── Parts rows (11 cols: Sr | Particulars | Type | Est | Assessed | Dep% | Metal | Plastic | Glass | GST% | Price+GST)
+  // ── Section 9 geometry ─────────────────────────────────────────────────────
+  // The printable width is 186mm (A4 less the shell's 12mm side margins). The
+  // old `pt` widths were only hints — the table used the default `auto` layout,
+  // so `white-space:nowrap` on every numeric cell let a long figure widen its
+  // column and push the table off the page. Adding the FbrGls column made a
+  // tight table overflow.
+  //
+  // Fixed layout + percentage widths makes the declared widths binding, and the
+  // description column wraps instead of shoving its neighbours.
+  //
+  // ponytail: FbrGls is the only conditional column. Metal / Plastic / Glass
+  // always print — they are the three heads the surveyor reads for, and hiding
+  // one because a claim happens not to use it changes a familiar document.
+  const hasFiberglass = rows.some(
+    r => r.section === 'parts' && r.allowed !== false && r.partType === 'fiberglass'
+  );
+  /** Material columns present: Metal, Plastic, [FbrGls], Glass. */
+  const NMAT = hasFiberglass ? 4 : 3;
+  /** Sr, Particulars, Type, Est, Assessed, Dep%, <materials>, GST%, Price+GST. */
+  const NCOLS = 8 + NMAT;
+
+  // Percentages sum to 100 in both layouts; the FbrGls share goes to Particulars.
+  // Sr / Dep% / GST% are trimmed to what their content actually needs, and the
+  // money columns are sized to hold a six-figure amount *with paise* on one
+  // line — "1,32,500.00" is an ordinary headlamp, and a figure that breaks
+  // across two lines is the one thing that must not happen in this table.
+  // The description column absorbs the difference; it wraps by design.
+  //
+  // Paise are not dropped to buy width: the item column has to tie back to
+  // section 8 exactly, and a display-only rounding would leave the subtotals
+  // looking a rupee or two out to anyone auditing the document.
+  const W = {
+    sr: 2.5,
+    particulars: hasFiberglass ? 19.5 : 28,
+    type: 7,
+    est: 9.5,
+    assessed: 9.5,
+    dep: 4.5,
+    material: 8.5,
+    gst: 4.5,
+    price: 9,
+  };
+
+  const ts9 = `width:100%;table-layout:fixed;border-collapse:collapse;font-size:${scale.cellFont};margin-bottom:4px;`;
+  // No `nowrap` here: under a fixed layout an unwrappable figure overflows its
+  // cell instead of widening it, which is worse than a two-line number.
+  // `overflow-wrap` is the backstop for an unusually large amount.
+  const tdr9 = `padding:${scale.cellPaddingV} ${scale.cellPaddingH};border:0.4pt solid #bbb;text-align:right;overflow-wrap:anywhere;`;
+  // Long part descriptions must break rather than force the column wider.
+  const td9 = `${td}overflow-wrap:anywhere;word-break:break-word;`;
+  // Every section 9 heading already carries "₹", so the cells drop the symbol.
+  // Repeating it cost two characters in each of eight money columns, which is
+  // what forced figures like 1,32,500.00 to break across two lines.
+  const m9 = (v: number) => fmt2(v);
+
+  // ── Parts rows (Sr | Particulars | Type | Est | Assessed | Dep% | Metal | Plastic | [FbrGls] | Glass | GST% | Price+GST)
   let psn = 1;
   const partsHtml = rows.filter(r => r.section === 'parts').map(r => {
     const dep = r.depOverride !== undefined ? r.depOverride : getDepRate(r.partType, depTypeRaw, ageMonths);
@@ -159,59 +214,53 @@ export function buildStandardFinalSurveyHTML(
     const { isDisposal, afterDep, netBeforeGst } = disallowed ? { isDisposal: false, afterDep: 0, netBeforeGst: 0 } : computeRowNet(r, dep);
     const gstPct = r.gst || 18;
     const cellValue = isDisposal ? netBeforeGst : netBeforeGst * (1 + gstPct / 100);
-    const cellLabel = disallowed ? 'NOT ALLOWED' : isDisposal ? `${fa(cellValue)} DISP` : fa(cellValue);
-    const cellStyle = disallowed ? `${tdr}color:#a00;` : isDisposal ? `${tdr}color:#b45309;font-weight:600;` : `${tdr}font-weight:600;`;
+    const cellLabel = disallowed ? 'NOT ALLOWED' : isDisposal ? `${m9(cellValue)} DISP` : m9(cellValue);
+    const cellStyle = disallowed ? `${tdr9}color:#a00;` : isDisposal ? `${tdr9}color:#b45309;font-weight:600;` : `${tdr9}font-weight:600;`;
+    const matCell = (type: string) =>
+      `<td style="${tdr9}">${r.partType === type && !disallowed ? m9(afterDep) : '—'}</td>`;
     return `<tr>
-      <td style="${td}text-align:center;">${psn++}</td>
-      <td style="${td}">${r.particulars}</td>
-      <td style="${td}text-align:center;">${r.partType === 'plastic' ? 'Pla/Rub' : r.partType === 'fiberglass' ? 'FbrGls' : r.partType.charAt(0).toUpperCase() + r.partType.slice(1)}</td>
-      <td style="${tdr}">${fa(r.estimated)}</td>
-      <td style="${tdr}${disallowed ? 'color:#a00;font-weight:700;font-size:6.5pt;text-align:center;' : ''}">${disallowed ? 'NOT ALLOWED' : fa(r.assessed)}</td>
-      <td style="${tdr}${r.depOverride !== undefined ? 'color:#b45309;' : ''}">${depLabel}</td>
-      <td style="${tdr}">${r.partType === 'metal' && !disallowed ? fa(afterDep) : '—'}</td>
-      <td style="${tdr}">${r.partType === 'plastic' && !disallowed ? fa(afterDep) : '—'}</td>
-      <td style="${tdr}">${r.partType === 'fiberglass' && !disallowed ? fa(afterDep) : '—'}</td>
-      <td style="${tdr}">${r.partType === 'glass' && !disallowed ? fa(afterDep) : '—'}</td>
-      <td style="${tdr}text-align:center;">${isDisposal ? '0%' : `${gstPct}%`}</td>
+      <td style="${td9}text-align:center;">${psn++}</td>
+      <td style="${td9}">${r.particulars}</td>
+      <td style="${td9}text-align:center;">${r.partType === 'plastic' ? 'Pla/Rub' : r.partType === 'fiberglass' ? 'FbrGls' : r.partType.charAt(0).toUpperCase() + r.partType.slice(1)}</td>
+      <td style="${tdr9}">${m9(r.estimated)}</td>
+      <td style="${tdr9}${disallowed ? 'color:#a00;font-weight:700;font-size:6.5pt;text-align:center;' : ''}">${disallowed ? 'NOT ALLOWED' : m9(r.assessed)}</td>
+      <td style="${tdr9}${r.depOverride !== undefined ? 'color:#b45309;' : ''}">${depLabel}</td>
+      ${matCell('metal')}
+      ${matCell('plastic')}
+      ${hasFiberglass ? matCell('fiberglass') : ''}
+      ${matCell('glass')}
+      <td style="${tdr9}text-align:center;">${isDisposal ? '0%' : `${gstPct}%`}</td>
       <td style="${cellStyle}">${cellLabel}</td>
     </tr>`;
   }).join('');
 
-  // ── Labour-only rows (11 cols: Sr | Particulars | Type | Est | Assessed | GST% | —×4 | Price+GST)
-  let lsn = 1;
-  const labOnlyHtml = rows.filter(r => r.section === 'labour').map(r => {
-    const disallowed = r.allowed === false;
-    const gstPct = r.gst || 18;
-    const priceGst = disallowed ? 0 : r.assessed * (1 + gstPct / 100);
-    return `<tr>
-      <td style="${td}text-align:center;">${lsn++}</td>
-      <td style="${td}">${r.particulars}</td>
-      <td style="${td}text-align:center;">Labour</td>
-      <td style="${tdr}">${fa(r.estimated)}</td>
-      <td style="${tdr}${disallowed ? 'color:#a00;font-weight:700;font-size:6.5pt;text-align:center;' : ''}">${disallowed ? 'NOT ALLOWED' : fa(r.assessed)}</td>
-      <td style="${tdr}text-align:center;">${gstPct}%</td>
-      <td colspan="4" style="${tdr}text-align:center;">—</td>
-      <td style="${tdr}${disallowed ? 'color:#a00;' : 'font-weight:600;'}">${disallowed ? '—' : fa(priceGst)}</td>
+  // ── Labour / Painting rows ────────────────────────────────────────────────
+  // These used to emit 10 cells spanning 11 columns, with their 6th cell
+  // labelled GST% while the header's 6th column is Dep% — so every figure from
+  // there rightwards sat under the wrong heading. They now follow the same
+  // column order as the parts rows: Dep% and the material columns read "—".
+  const serviceRowHtml = (section: 'labour' | 'paint', typeLabel: string) => {
+    let sn = 1;
+    return rows.filter(r => r.section === section).map(r => {
+      const disallowed = r.allowed === false;
+      const gstPct = r.gst || 18;
+      const priceGst = disallowed ? 0 : r.assessed * (1 + gstPct / 100);
+      return `<tr>
+      <td style="${td9}text-align:center;">${sn++}</td>
+      <td style="${td9}">${r.particulars}</td>
+      <td style="${td9}text-align:center;">${typeLabel}</td>
+      <td style="${tdr9}">${m9(r.estimated)}</td>
+      <td style="${tdr9}${disallowed ? 'color:#a00;font-weight:700;font-size:6.5pt;text-align:center;' : ''}">${disallowed ? 'NOT ALLOWED' : m9(r.assessed)}</td>
+      <td style="${tdr9}text-align:center;">—</td>
+      <td colspan="${NMAT}" style="${tdr9}text-align:center;">—</td>
+      <td style="${tdr9}text-align:center;">${gstPct}%</td>
+      <td style="${tdr9}${disallowed ? 'color:#a00;' : 'font-weight:600;'}">${disallowed ? '—' : m9(priceGst)}</td>
     </tr>`;
-  }).join('');
+    }).join('');
+  };
 
-  // ── Painting-only rows
-  let ptsn = 1;
-  const paintHtml = rows.filter(r => r.section === 'paint').map(r => {
-    const disallowed = r.allowed === false;
-    const gstPct = r.gst || 18;
-    const priceGst = disallowed ? 0 : r.assessed * (1 + gstPct / 100);
-    return `<tr>
-      <td style="${td}text-align:center;">${ptsn++}</td>
-      <td style="${td}">${r.particulars}</td>
-      <td style="${td}text-align:center;">Paint</td>
-      <td style="${tdr}">${fa(r.estimated)}</td>
-      <td style="${tdr}${disallowed ? 'color:#a00;font-weight:700;font-size:6.5pt;text-align:center;' : ''}">${disallowed ? 'NOT ALLOWED' : fa(r.assessed)}</td>
-      <td style="${tdr}text-align:center;">${gstPct}%</td>
-      <td colspan="4" style="${tdr}text-align:center;">—</td>
-      <td style="${tdr}${disallowed ? 'color:#a00;' : 'font-weight:600;'}">${disallowed ? '—' : fa(priceGst)}</td>
-    </tr>`;
-  }).join('');
+  const labOnlyHtml = serviceRowHtml('labour', 'Labour');
+  const paintHtml = serviceRowHtml('paint', 'Paint');
 
   // ── DL expiry checks — MOVED TO UI (DriverForm warning banner) ────────────
   // The report no longer auto-injects EXPIRED. Surveyor decides via MDL Status.
@@ -222,15 +271,18 @@ export function buildStandardFinalSurveyHTML(
   const depLabel = depTypeRaw === 'nil' ? 'Nil Depreciation' : `Standard IRDAI ${ageLabel}`;
 
   // ── Sub-header row reused for Labour and Painting sections ────────────────
+  // Under a fixed layout the column widths come from the table's first row, so
+  // this repeats no widths — it only has to match the main header cell-for-cell.
   const labPaintSubHeader = `<tr>
-      <th style="${th};width:14pt;text-align:center;">Sr.</th>
+      <th style="${th}text-align:center;">Sr.</th>
       <th style="${th}">Particulars</th>
-      <th style="${th};width:30pt;text-align:center;">Type</th>
-      <th style="${th};text-align:right;width:38pt;">Est. ₹</th>
-      <th style="${th};text-align:right;width:42pt;">Assessed ₹</th>
-      <th style="${th};text-align:center;width:22pt;">GST%</th>
-      <th colspan="4" style="${th};text-align:center;">—</th>
-      <th style="${th};text-align:right;width:42pt;">Price+GST ₹</th>
+      <th style="${th}text-align:center;">Type</th>
+      <th style="${th}text-align:right;">Est. ₹</th>
+      <th style="${th}text-align:right;">Assessed ₹</th>
+      <th style="${th}text-align:center;">Dep%</th>
+      <th colspan="${NMAT}" style="${th}text-align:center;">—</th>
+      <th style="${th}text-align:center;">GST%</th>
+      <th style="${th}text-align:right;">Price+GST ₹</th>
     </tr>`;
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -527,50 +579,50 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
 })() : ''}
 
 <div style="font-weight:700;font-size:7pt;background:#0d1b2a;color:#fff;padding:2px 4px;margin-bottom:2px;">9. DETAILS OF ASSESSMENT</div>
-<table style="${ts}">
+<table style="${ts9}">
   <thead>
     <tr>
-      <th style="${th};width:14pt;text-align:center;">Sr.</th>
-      <th style="${th}">Particulars</th>
-      <th style="${th};width:30pt;text-align:center;">Type</th>
-      <th style="${th};text-align:right;width:38pt;">Est. ₹</th>
-      <th style="${th};text-align:right;width:42pt;">Assessed ₹</th>
-      <th style="${th};text-align:center;width:22pt;">Dep%</th>
-      <th style="${th};text-align:right;width:38pt;">Metal ₹</th>
-      <th style="${th};text-align:right;width:38pt;">Pla/Rub ₹</th>
-      <th style="${th};text-align:right;width:38pt;">FbrGls ₹</th>
-      <th style="${th};text-align:right;width:38pt;">Glass ₹</th>
-      <th style="${th};text-align:center;width:22pt;">GST%</th>
-      <th style="${th};text-align:right;width:42pt;">Price+GST ₹</th>
+      <th style="${th}width:${W.sr}%;text-align:center;">Sr.</th>
+      <th style="${th}width:${W.particulars}%;">Particulars</th>
+      <th style="${th}width:${W.type}%;text-align:center;">Type</th>
+      <th style="${th}width:${W.est}%;text-align:right;">Est. ₹</th>
+      <th style="${th}width:${W.assessed}%;text-align:right;">Assessed ₹</th>
+      <th style="${th}width:${W.dep}%;text-align:center;">Dep%</th>
+      <th style="${th}width:${W.material}%;text-align:right;">Metal ₹</th>
+      <th style="${th}width:${W.material}%;text-align:right;">Pla/Rub ₹</th>
+      ${hasFiberglass ? `<th style="${th}width:${W.material}%;text-align:right;">FbrGls ₹</th>` : ''}
+      <th style="${th}width:${W.material}%;text-align:right;">Glass ₹</th>
+      <th style="${th}width:${W.gst}%;text-align:center;">GST%</th>
+      <th style="${th}width:${W.price}%;text-align:right;">Price+GST ₹</th>
     </tr>
   </thead>
   <tbody>
-    <tr><td colspan="11" style="${sec}">SPARE PARTS</td></tr>
+    <tr><td colspan="${NCOLS}" style="${sec}">SPARE PARTS</td></tr>
     ${partsHtml}
     <tr>
       <td colspan="6" style="${sub}text-align:right;font-size:${scale.labelFont};">Sub-Total Parts (after dep, before GST)</td>
-      <td style="${sub}text-align:right;">${fa(metal)}</td>
-      <td style="${sub}text-align:right;">${fa(plastic)}</td>
-      <td style="${sub}text-align:right;">${fa(fiberglass)}</td>
-      <td style="${sub}text-align:right;">${fa(glass)}</td>
-      <td style="${sub}text-align:center;">18%</td>
-      <td style="${sub}text-align:right;font-weight:700;">${fa(pT)}</td>
+      <td style="${sub}text-align:right;">${m9(metal)}</td>
+      <td style="${sub}text-align:right;">${m9(plastic)}</td>
+      ${hasFiberglass ? `<td style="${sub}text-align:right;">${m9(fiberglass)}</td>` : ''}
+      <td style="${sub}text-align:right;">${m9(glass)}</td>
+      <td style="${sub}text-align:center;">—</td>
+      <td style="${sub}text-align:right;font-weight:700;">${m9(pT)}</td>
     </tr>
-    <tr><td colspan="11" style="${sec}">LABOUR</td></tr>
+    <tr><td colspan="${NCOLS}" style="${sec}">LABOUR</td></tr>
     ${labPaintSubHeader}
     ${labOnlyHtml}
     <tr>
-      <td colspan="5" style="${sub}text-align:right;font-size:${scale.labelFont};">Sub-Total Labour (incl. GST)</td>
-      <td colspan="5" style="${sub}text-align:right;">${fa(labOnlyBase)}</td>
-      <td style="${sub}text-align:right;font-weight:700;">${fa(labT)}</td>
+      <td colspan="6" style="${sub}text-align:right;font-size:${scale.labelFont};">Sub-Total Labour (incl. GST)</td>
+      <td colspan="${NMAT + 1}" style="${sub}text-align:right;">${m9(labOnlyBase)}</td>
+      <td style="${sub}text-align:right;font-weight:700;">${m9(labT)}</td>
     </tr>
-    <tr><td colspan="11" style="${sec}">PAINTING</td></tr>
+    <tr><td colspan="${NCOLS}" style="${sec}">PAINTING</td></tr>
     ${labPaintSubHeader}
     ${paintHtml}
     <tr>
-      <td colspan="5" style="${sub}text-align:right;font-size:${scale.labelFont};">Sub-Total Painting (incl. GST)</td>
-      <td colspan="5" style="${sub}text-align:right;">${fa(paintOnlyBase)}</td>
-      <td style="${sub}text-align:right;font-weight:700;">${fa(paintT)}</td>
+      <td colspan="6" style="${sub}text-align:right;font-size:${scale.labelFont};">Sub-Total Painting (incl. GST)</td>
+      <td colspan="${NMAT + 1}" style="${sub}text-align:right;">${m9(paintOnlyBase)}</td>
+      <td style="${sub}text-align:right;font-weight:700;">${m9(paintT)}</td>
     </tr>
   </tbody>
 </table>
