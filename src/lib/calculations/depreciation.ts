@@ -78,6 +78,19 @@ export function getDepreciationRate(
 }
 
 /**
+ * Narrows a stored depreciation-type string to the union `getDepreciationRate`
+ * expects.
+ *
+ * Report builders read `claim.depreciationType` straight from persisted claims,
+ * which predate the tightened type and can hold 'Nil Depreciation' or odd
+ * casing. Each builder used to normalise this its own way, inside its own copy
+ * of the rate table; this is the one place that does it now.
+ */
+export function toDepreciationType(value: string | null | undefined): DepreciationType {
+  return String(value ?? '').trim().toLowerCase().startsWith('nil') ? 'nil' : 'standard';
+}
+
+/**
  * Calculate the after-depreciation value for a single part.
  */
 export function applyDepreciation(

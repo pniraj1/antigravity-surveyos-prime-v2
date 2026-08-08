@@ -16,6 +16,7 @@ import { formatDateDMY, formatDateTimeDMY, fa, numberToWords, getVehicleAgeMonth
 import { getHtmlScale } from './report-style-utils';
 import { preambleFromClaim, estimateTotalInclGst } from './final-survey-preamble';
 import { computeRowNet } from '@/lib/calculations/row-net';
+import { getDepreciationRate, toDepreciationType } from '@/lib/calculations/depreciation';
 import { getCompulsoryExcess, calculateAssessmentSummary } from '@/lib/calculations/assessment';
 import { buildPrintShell, footerFromProfile } from './print-shell';
 
@@ -30,20 +31,11 @@ function fmt2(v: string | number | null | undefined): string {
   return isNaN(n) ? '0.00' : n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
-function getDepRate(partType: string, depType: string, ageMonths: number): number {
-  if (depType === 'nil') return 0;
-  if (partType === 'glass') return 0;
-  if (partType === 'plastic') return 50;
-  if (partType === 'labour' || partType === 'paint') return 0;
-  if (ageMonths <= 6) return 0;
-  if (ageMonths <= 12) return 5;
-  if (ageMonths <= 24) return 10;
-  if (ageMonths <= 36) return 15;
-  if (ageMonths <= 48) return 25;
-  if (ageMonths <= 60) return 35;
-  if (ageMonths <= 120) return 40;
-  return 50;
-}
+// The private getDepRate that used to sit here omitted the tariff's fibre glass
+// line (30% flat), so a fibre glass part was depreciated on the metal age scale
+// instead — and this report printed the engine's figure in section 8 against
+// the copy's figure in section 9, on the same page. The rate table now has one
+// home: getDepreciationRate in lib/calculations/depreciation.
 
 function isExpired(dateStr: string | null | undefined): boolean {
   if (!dateStr) return false;
@@ -72,7 +64,7 @@ export function buildStandardFinalSurveyHTML(
   const accident = claim.accident;
   const rows = claim.assessmentRows || [];
 
-  const depTypeRaw = (claim.depreciationType || 'standard').toLowerCase();
+  const depType = toDepreciationType(claim.depreciationType);
   const ageMonths = getVehicleAgeMonths(
     vehicle.dateOfRegistration || null,
     vehicle.yearOfManufacture ? Number(vehicle.yearOfManufacture) : null,
@@ -85,7 +77,7 @@ export function buildStandardFinalSurveyHTML(
 
   rows.filter(r => r.section === 'parts').forEach(r => {
     if (r.allowed === false) return;
-    const dep = r.depOverride !== undefined ? r.depOverride : getDepRate(r.partType, depTypeRaw, ageMonths);
+    const dep = r.depOverride !== undefined ? r.depOverride : getDepreciationRate(r.partType, ageMonths, depType);
     const { isDisposal, netBeforeGst } = computeRowNet(r, dep);
     if (isDisposal) {
       disposalNet += netBeforeGst;
@@ -113,7 +105,7 @@ export function buildStandardFinalSurveyHTML(
   const summary = calculateAssessmentSummary(
     rows,
     ageMonths,
-    claim.depreciationType || 'standard',
+    depType,
     claim.feeBill?.salvageValue ?? 0,
     getCompulsoryExcess(claim.feeBill),
     claim.feeBill?.voluntaryExcess ?? 0,
@@ -208,7 +200,7 @@ export function buildStandardFinalSurveyHTML(
   // ── Parts rows (Sr | Particulars | Type | Est | Assessed | Dep% | Metal | Plastic | [FbrGls] | Glass | GST% | Price+GST)
   let psn = 1;
   const partsHtml = rows.filter(r => r.section === 'parts').map(r => {
-    const dep = r.depOverride !== undefined ? r.depOverride : getDepRate(r.partType, depTypeRaw, ageMonths);
+    const dep = r.depOverride !== undefined ? r.depOverride : getDepreciationRate(r.partType, ageMonths, depType);
     const depLabel = r.depOverride !== undefined ? `${dep}%*` : `${dep}%`;
     const disallowed = r.allowed === false;
     const { isDisposal, afterDep, netBeforeGst } = disallowed ? { isDisposal: false, afterDep: 0, netBeforeGst: 0 } : computeRowNet(r, dep);
@@ -268,7 +260,7 @@ export function buildStandardFinalSurveyHTML(
   // const tExpired = isExpired(driver.validityTransport);
 
   // ── Policy / depreciation label ────────────────────────────────────────────
-  const depLabel = depTypeRaw === 'nil' ? 'Nil Depreciation' : `Standard IRDAI ${ageLabel}`;
+  const depLabel = depType === 'nil' ? 'Nil Depreciation' : `Standard IRDAI ${ageLabel}`;
 
   // ── Sub-header row reused for Labour and Painting sections ────────────────
   // Under a fixed layout the column widths come from the table's first row, so

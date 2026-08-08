@@ -3,6 +3,8 @@ import { Page, Text, View, Document, StyleSheet } from '@react-pdf/renderer';
 import type { ClaimData, AssessmentSummary } from '@/types';
 import { preambleFromClaim, estimateTotalInclGst } from '@/lib/reports/final-survey-preamble';
 import { getCompulsoryExcess } from '@/lib/calculations/assessment';
+import { getDepreciationRate, toDepreciationType } from '@/lib/calculations/depreciation';
+import type { PartType } from '@/types/assessment';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -21,20 +23,11 @@ function g(v: string | number | null | undefined): string {
   return v !== null && v !== undefined ? String(v) : '';
 }
 
-function getDepRate(partType: string, ageMonths: number, depType: string): number {
-  const dt = (depType || 'standard').toLowerCase();
-  if (dt === 'nil' || dt === 'nil depreciation') return 0;
-  if (partType === 'glass') return 0;
-  if (partType === 'plastic') return 50;
-  if (ageMonths <= 6) return 0;
-  if (ageMonths <= 12) return 5;
-  if (ageMonths <= 24) return 10;
-  if (ageMonths <= 36) return 15;
-  if (ageMonths <= 48) return 25;
-  if (ageMonths <= 60) return 35;
-  if (ageMonths <= 120) return 40;
-  return 50;
-}
+// This copy of the rate table had drifted furthest: no fibre glass line (30%
+// flat) and no labour/paint guard either, so a labour line was depreciated like
+// a metal panel. One home now: getDepreciationRate.
+const getDepRate = (partType: string, ageMonths: number, depType: string): number =>
+  getDepreciationRate(partType as PartType, ageMonths, toDepreciationType(depType));
 
 function getVehicleAgeMonths(regDate: string | null, year: number | null, doa: string | null): number {
   const start: Date | null = regDate ? new Date(regDate) : (year ? new Date(year, 0, 1) : null);

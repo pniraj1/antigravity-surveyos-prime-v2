@@ -18,8 +18,9 @@
 
 import type { ClaimData } from '@/types/claim';
 import type { SurveyorProfile } from '@/types/vehicle';
-import type { AssessmentRow } from '@/types/assessment';
+import type { AssessmentRow, PartType } from '@/types/assessment';
 import { computeRowNet, computeRowLiability } from '@/lib/calculations/row-net';
+import { getDepreciationRate, toDepreciationType } from '@/lib/calculations/depreciation';
 import { aggregateGst } from '@/lib/calculations/gst-bands';
 import { getCompulsoryExcess, calculateBillCheckSummary, calculateAssessmentSummary } from '@/lib/calculations/assessment';
 import { buildSerialMap } from '@/lib/calculations/serial-numbers';
@@ -48,22 +49,13 @@ function g(v: string | number | null | undefined): string {
 import { numberToWords, getVehicleAgeMonths, getSurveyorHeader, getSigBlock } from './report-utils';
 import { getHtmlScale } from './report-style-utils';
 
-// getDepRate has a different param order here (partType, ageMonths, depType) vs standard builder
-function getDepRate(partType: string, ageMonths: number, depType: string): number {
-  const dt = (depType || 'standard').toLowerCase();
-  if (dt === 'nil' || dt === 'nil depreciation') return 0;
-  if (partType === 'glass') return 0;
-  if (partType === 'plastic') return 50;
-  if (partType === 'labour' || partType === 'paint') return 0;
-  if (ageMonths <= 6) return 0;
-  if (ageMonths <= 12) return 5;
-  if (ageMonths <= 24) return 10;
-  if (ageMonths <= 36) return 15;
-  if (ageMonths <= 48) return 25;
-  if (ageMonths <= 60) return 35;
-  if (ageMonths <= 120) return 40;
-  return 50;
-}
+// The private rate table that used to sit here omitted the tariff's fibre glass
+// line (30% flat), so a fibre glass part fell through to the metal age scale.
+// It also took its arguments in a different order from the standard builder's
+// copy, which is the kind of thing that keeps two copies disagreeing.
+// One home now: getDepreciationRate in lib/calculations/depreciation.
+const getDepRate = (partType: string, ageMonths: number, depType: string): number =>
+  getDepreciationRate(partType as PartType, ageMonths, toDepreciationType(depType));
 
 // ─── Main UIIC Final HTML builder ─────────────────────────────────────────────
 
