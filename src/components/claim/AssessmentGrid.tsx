@@ -6,6 +6,7 @@ import { getDepreciationRate, getVehicleAgeMonths } from '@/lib/calculations/dep
 import { formatCurrency } from '@/lib/calculations/utils';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Trash2,
   PlusCircle,
@@ -628,11 +629,28 @@ export function AssessmentGrid() {
                     </td>
                     {/* Particulars — always on — click opens Evidence Viewer */}
                     <td className={`px-2 py-1.5${isCellSelected(row.id, 'particulars') ? ' ring-2 ring-blue-400 ring-inset' : ''}`} data-column-key="particulars">
-                      <div className="relative group flex items-center gap-1">
-                        <Input
+                      <div className="relative group flex items-start gap-1">
+                        {/*
+                          A textarea, not an Input: an <input> cannot wrap, so a
+                          long description scrolled out of sight and the only way
+                          to read it was the tooltip. `field-sizing-content` (on
+                          the shared Textarea) grows the box to fit its text, so
+                          the row is one line tall until it needs to be more.
+                        */}
+                        <Textarea
                           value={row.particulars}
                           onChange={(e) => updateAssessmentRow(row.id, { particulars: e.target.value })}
-                          className="h-7 text-xs font-semibold bg-transparent border-transparent hover:border-input focus:bg-background"
+                          onKeyDown={(e) => {
+                            // Enter would insert a newline that follows the item
+                            // into every report, where it has nowhere to go.
+                            // Commit and leave the cell instead, as the Input did.
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              e.currentTarget.blur();
+                            }
+                          }}
+                          rows={1}
+                          className="min-h-7 py-1 px-2 text-xs font-semibold leading-snug bg-transparent border-transparent hover:border-input focus:bg-background resize-none"
                           placeholder="Item Description"
                           title={row.particulars}
                         />
