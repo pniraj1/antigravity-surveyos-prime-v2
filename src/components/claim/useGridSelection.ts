@@ -12,39 +12,49 @@ export interface CellSelection {
 export type SectionTickState = 'none' | 'some' | 'all';
 
 /**
- * Row-index range for a column selection, clamped to the anchor's section.
+ * The row ids covered by a column range selection, confined to the anchor's
+ * section.
  *
- * Ranges used to resolve straight into the flat row array, so a selection
- * anchored in parts and extended downward swept up labour rows too. Three
- * tables make that visually impossible — the highlight would jump between
- * them — so a range now stops at its own section's boundary.
+ * Resolved against the anchor's section rows — the order the user actually
+ * sees — not the flat claim array.
+ *
+ * The flat array is interleaved: AI extraction writes rows in estimate order,
+ * so `[part, labour, part, paint]` is the normal shape, and the three tables
+ * are produced by filtering at render time. An earlier version walked outward
+ * from the anchor through the flat array and stopped at the first row of
+ * another section. On `[p1, l1, p2]` that meant shift-clicking p2 — the row
+ * directly beneath p1 in the Parts table — selected p1 alone, because `l1` sat
+ * between them in the array while being invisible in that table.
+ *
+ * A focus row in a different section clamps to the far end of the anchor's own
+ * section, in the direction of the drag.
  */
 export function clampRangeToSection(
   rows: AssessmentRow[],
   anchorId: string,
   focusId: string
-): { startIdx: number; endIdx: number } | null {
-  const anchorIdx = rows.findIndex(r => r.id === anchorId);
-  const focusIdx = rows.findIndex(r => r.id === focusId);
-  if (anchorIdx === -1 || focusIdx === -1) return null;
+): Set<string> {
+  const anchor = rows.find(r => r.id === anchorId);
+  if (!anchor) return new Set();
 
-  const section = rows[anchorIdx].section;
-  const start = Math.min(anchorIdx, focusIdx);
-  const end = Math.max(anchorIdx, focusIdx);
+  const sectionRows = rows.filter(r => r.section === anchor.section);
+  const anchorPos = sectionRows.findIndex(r => r.id === anchorId);
+  const focusPos = sectionRows.findIndex(r => r.id === focusId);
 
-  // Walk outward from the anchor and stop at the first row of another section.
-  let startIdx = anchorIdx;
-  for (let i = anchorIdx; i >= start; i--) {
-    if (rows[i].section !== section) break;
-    startIdx = i;
+  let endPos: number;
+  if (focusPos !== -1) {
+    endPos = focusPos;
+  } else {
+    // Focus is in another section (or gone). Extend to this section's edge on
+    // the side the drag went, using flat position only to read the direction.
+    const anchorFlat = rows.findIndex(r => r.id === anchorId);
+    const focusFlat = rows.findIndex(r => r.id === focusId);
+    if (focusFlat === -1) return new Set([anchorId]);
+    endPos = focusFlat > anchorFlat ? sectionRows.length - 1 : 0;
   }
-  let endIdx = anchorIdx;
-  for (let i = anchorIdx; i <= end; i++) {
-    if (rows[i].section !== section) break;
-    endIdx = i;
-  }
 
-  return { startIdx, endIdx };
+  const [from, to] = anchorPos <= endPos ? [anchorPos, endPos] : [endPos, anchorPos];
+  return new Set(sectionRows.slice(from, to + 1).map(r => r.id));
 }
 
 /** Tri-state for a section's header tick box. An empty section is never 'all'. */
@@ -86,10 +96,7 @@ export function useGridSelection(rows: AssessmentRow[]) {
 
   const isCellSelected = useCallback((rowId: string, columnKey: string): boolean => {
     if (!cellSelection || cellSelection.columnKey !== columnKey) return false;
-    const range = clampRangeToSection(rows, cellSelection.anchorRowId, cellSelection.focusRowId);
-    if (!range) return false;
-    const rowIdx = rows.findIndex(r => r.id === rowId);
-    return rowIdx >= range.startIdx && rowIdx <= range.endIdx;
+    return clampRangeToSection(rows, cellSelection.anchorRowId, cellSelection.focusRowId).has(rowId);
   }, [cellSelection, rows]);
 
   const handleCellMouseDown = useCallback((e: React.MouseEvent<HTMLTableSectionElement>) => {
