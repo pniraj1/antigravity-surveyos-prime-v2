@@ -13,7 +13,7 @@
 - Spec: `SurveyOS-Antigravity-Prime-V2-KnowledgeBase/Specs/2026-08-09-assessment-grid-sections-design.md`
 - Prerequisite already landed: `reorderAssessmentRows` partial-list fix, commit `3b71f0df`. Do not re-do it.
 - **No report builder may be modified.** Files under `src/lib/reports/` are out of scope entirely.
-- **No change to `src/lib/calculations/`.** Subtotals read from `calculateAssessmentSummary`; never recompute totals locally.
+- **Do not change existing behaviour in `src/lib/calculations/`.** Tasks 1 and 4 add two NEW files there (`section-move.ts`, `section-subtotals.ts`); no existing file in that directory may be modified. Subtotals read from `calculateAssessmentSummary`; never recompute totals locally.
 - Section order is fixed everywhere: `parts`, `labour`, `paint`.
 - Files stay under 800 lines (`.claude/rules/common/coding-style.md`).
 - No `console.log` in committed code.
@@ -148,7 +148,12 @@ describe('resolveSectionMove', () => {
       ['labour', 'paint'],
     ] as const) {
       const r = row({ section: from, partType: from === 'parts' ? 'metal' : from, depOverride: 40 });
-      expect(resolveSectionMove(r, to).depOverride).toBeUndefined();
+      const changes = resolveSectionMove(r, to);
+      expect(changes.depOverride).toBeUndefined();
+      // The key must be PRESENT and undefined, not absent. Callers spread this
+      // over the row, and an absent key leaves the old 40 in place — which
+      // toBeUndefined() alone would not catch.
+      expect('depOverride' in changes).toBe(true);
     }
   });
 
