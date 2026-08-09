@@ -96,11 +96,47 @@ export const createAssessmentSlice: StateCreator<any, any, any, AssessmentSlice>
     });
   },
 
+  /**
+   * Reorders the rows named in `orderedIds`, leaving every other row alone.
+   *
+   * Rows absent from the list keep their current index. The named rows are
+   * redistributed, in the order given, into the index positions those named
+   * rows already occupied — so a full-list call reorders everything, and a
+   * partial call rearranges only its own subset.
+   *
+   * This used to rebuild the array from `orderedIds` alone, which deleted every
+   * row the caller did not name: a subset call dropped the rest, and an empty
+   * list wiped the grid. Harmless while the only caller passed all rows, fatal
+   * the moment a per-section reorder passed one section's ids.
+   */
   reorderAssessmentRows: (orderedIds) => {
     set((state: WithClaim) => {
       if (!state.currentClaim) return {};
-      const rowMap = new Map(state.currentClaim.assessmentRows.map((r) => [r.id, r]));
-      const reordered = orderedIds.map((id) => rowMap.get(id)).filter(Boolean) as typeof state.currentClaim.assessmentRows;
+      const rows = state.currentClaim.assessmentRows;
+      const rowMap = new Map(rows.map((r) => [r.id, r]));
+
+      // Ignore ids that name no row, and keep only the first mention of each —
+      // either would otherwise shift the rest of the sequence out of step with
+      // the slots it is being written into.
+      const named: string[] = [];
+      const namedSet = new Set<string>();
+      for (const id of orderedIds) {
+        if (!rowMap.has(id) || namedSet.has(id)) continue;
+        namedSet.add(id);
+        named.push(id);
+      }
+      if (named.length === 0) return {};
+
+      const slots = rows.reduce<number[]>((acc, r, i) => {
+        if (namedSet.has(r.id)) acc.push(i);
+        return acc;
+      }, []);
+
+      const reordered = [...rows];
+      slots.forEach((slot, i) => {
+        reordered[slot] = rowMap.get(named[i])!;
+      });
+
       return {
         currentClaim: {
           ...state.currentClaim,
