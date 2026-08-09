@@ -5,6 +5,7 @@ import { resolveSectionMove } from '@/lib/calculations/section-move';
 
 export interface AssessmentSlice {
   addAssessmentRow: (section: AssessmentRow['section']) => void;
+  addAssessmentRowToSection: (section: AssessmentRow['section']) => void;
   updateAssessmentRow: (id: string, updates: Partial<AssessmentRow>) => void;
   deleteAssessmentRow: (id: string) => void;
   deleteAssessmentRows: (ids: string[]) => void;
@@ -31,6 +32,33 @@ export const createAssessmentSlice: StateCreator<any, any, any, AssessmentSlice>
         currentClaim: {
           ...state.currentClaim,
           assessmentRows: [...state.currentClaim.assessmentRows, newRow],
+          updatedAt: new Date().toISOString(),
+        },
+        isDirty: true,
+      };
+    });
+  },
+
+  /**
+   * Adds a blank row directly after the last row of its own section.
+   *
+   * addAssessmentRow appends to the end of the flat array, which in a sectioned
+   * view drops a new parts row below the painting rows.
+   */
+  addAssessmentRowToSection: (section) => {
+    set((state: WithClaim) => {
+      if (!state.currentClaim) return {};
+      const rows = state.currentClaim.assessmentRows;
+      const newRow = createAssessmentRow(section);
+
+      let lastOfSection = -1;
+      rows.forEach((r, i) => { if (r.section === section) lastOfSection = i; });
+      const at = lastOfSection === -1 ? rows.length : lastOfSection + 1;
+
+      return {
+        currentClaim: {
+          ...state.currentClaim,
+          assessmentRows: [...rows.slice(0, at), newRow, ...rows.slice(at)],
           updatedAt: new Date().toISOString(),
         },
         isDirty: true,
