@@ -49,6 +49,12 @@ export interface AssessmentRow {
   billStatus?: BillStatus;
   billRemarks?: string;
   partType: PartType;
+  /**
+   * The partType this row carried before it was last moved out of the `parts`
+   * section. Restores the original type when the row is moved back, so a round
+   * trip through Labour cannot silently re-price the item.
+   */
+  previousPartType?: PartType;
   gst: number; // percentage, default 18
   section: AssessmentSection;
   allowed: boolean;
