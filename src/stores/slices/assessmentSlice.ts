@@ -1,6 +1,7 @@
 import type { StateCreator } from 'zustand';
 import type { ClaimData, AssessmentRow, SpotDamageRow } from '@/types';
 import { createAssessmentRow } from '@/lib/calculations';
+import { resolveSectionMove } from '@/lib/calculations/section-move';
 
 export interface AssessmentSlice {
   addAssessmentRow: (section: AssessmentRow['section']) => void;
@@ -8,6 +9,7 @@ export interface AssessmentSlice {
   deleteAssessmentRow: (id: string) => void;
   deleteAssessmentRows: (ids: string[]) => void;
   reorderAssessmentRows: (orderedIds: string[]) => void;
+  moveRowToSection: (rowId: string, section: AssessmentRow['section'], targetIndex: number) => void;
   deleteExtraBillItem: (id: string) => void;
   clearExtraBillItems: () => void;
   linkExtraBillItem: (extraId: string, rowId: string) => void;
@@ -141,6 +143,42 @@ export const createAssessmentSlice: StateCreator<any, any, any, AssessmentSlice>
         currentClaim: {
           ...state.currentClaim,
           assessmentRows: reordered,
+          updatedAt: new Date().toISOString(),
+        },
+        isDirty: true,
+      };
+    });
+  },
+
+  /**
+   * Moves a row into another section and repositions it, in one action.
+   *
+   * `targetIndex` is an index into the flat assessmentRows array, resolved by
+   * the caller from the drop position — not a position within the destination
+   * section.
+   *
+   * Both the drag handler and the type dropdown call this. Two code paths for
+   * one operation is how three copies of the depreciation table came to
+   * disagree; see the fibre glass fix of 2026-08-09.
+   */
+  moveRowToSection: (rowId, section, targetIndex) => {
+    set((state: WithClaim) => {
+      if (!state.currentClaim) return {};
+      const rows = state.currentClaim.assessmentRows;
+      const from = rows.findIndex((r) => r.id === rowId);
+      if (from === -1) return {};
+
+      const changes = resolveSectionMove(rows[from], section);
+      const moved = { ...rows[from], ...changes };
+
+      const without = rows.filter((_, i) => i !== from);
+      const to = Math.max(0, Math.min(targetIndex, without.length));
+      const next = [...without.slice(0, to), moved, ...without.slice(to)];
+
+      return {
+        currentClaim: {
+          ...state.currentClaim,
+          assessmentRows: next,
           updatedAt: new Date().toISOString(),
         },
         isDirty: true,
