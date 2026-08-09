@@ -61,7 +61,10 @@ describe('moveRowToSection', () => {
 
   test('leaves every other row untouched', () => {
     const h = harness([row('p1', 'parts'), row('l1', 'labour'), row('t1', 'paint')]);
-    const before = h.byId('l1');
+    // Deep copy, not a live reference: the row object in state is never
+    // replaced, so comparing it to a captured reference would be comparing it
+    // to itself and could not fail even if the action mutated it in place.
+    const before = structuredClone(h.byId('l1'));
     h.slice.moveRowToSection('p1', 'paint', 2);
     expect(h.rows()).toHaveLength(3);
     expect(h.byId('l1')).toEqual(before);
