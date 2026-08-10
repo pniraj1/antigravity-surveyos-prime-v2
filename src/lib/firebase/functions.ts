@@ -31,6 +31,11 @@ export async function callNvidiaProxy(
   const fn = httpsCallable<{ path: string; key: string; body?: unknown }, ProxyResult>(
     functions,
     'nvidiaProxy',
+    // The callable SDK defaults to 70s. NVIDIA vision inference runs 27-200s per
+    // page, and a client-side deadline surfaces as a FirebaseError with no HTTP
+    // status — which the gateway's error classifier reports as a bad API key.
+    // Must stay >= the function's own timeoutSeconds (300) in functions/index.js.
+    { timeout: 300_000 },
   );
   const res = await fn({ path, key, body });
   return res.data;

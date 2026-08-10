@@ -162,7 +162,11 @@ exports.callAI = onCall({ maxInstances: 10, memory: "256MiB" }, async (request) 
 const NVIDIA_BASE = "https://integrate.api.nvidia.com/v1";
 const NVIDIA_ALLOWED_PATHS = new Set(["models", "chat/completions"]);
 
-exports.nvidiaProxy = onCall({ maxInstances: 10, memory: "512MiB" }, async (request) => {
+// timeoutSeconds: NVIDIA vision inference measured at 27-200s per page (llama-3.2-90b
+// at 131s, nemotron-super-49b at 200s). The v2 default of 60s kills every call before
+// NVIDIA answers, and the client reports it as an invalid API key. 300s covers the
+// slowest measured model with headroom.
+exports.nvidiaProxy = onCall({ maxInstances: 10, memory: "512MiB", timeoutSeconds: 300 }, async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Must be logged in.");
   await assertActiveSubscription(request.auth.uid);
 

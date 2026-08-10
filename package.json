@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run && npm run test:functions",
-    "test:functions": "node functions/subscription.test.js && node functions/bramha.test.js",
+    "test:functions": "node functions/subscription.test.js && node functions/bramha.test.js && node functions/nvidia-proxy.test.js",
     "test:watch": "vitest",
     "graph:build": "uvx code-review-graph build .",
     "graph:rebuild": "uvx code-review-graph build . --force",
