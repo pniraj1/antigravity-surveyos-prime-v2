@@ -122,9 +122,34 @@ Three calls per survivor:
 
 All three calls share one fixture, `public/ai-probe-page.jpg`: a synthetic one-page estimate with invented parts and amounts, carrying a printed reference code (`PROBE7X`) for the vision check, sized like a real rendered page (~200KB) so the latency measurement is representative. It is a payload, not ground truth — no extracted value is scored against it. It must be synthetic: probing with a real estimate would ship a named insured's GSTIN, chassis and registration number to every model on every run.
 
-A model that trips the 90s cutoff records `msPerPage: null, slow: true`. It is shown and remains selectable — the admin may accept it — but is ranked last and badged. The 90s cutoff is a probe budget that keeps a full run to a few minutes, not the runtime limit; the request path allows 300s, so a `slow` model can still work in production. `meta/llama-3.2-90b-vision-instruct` at 131s/page is exactly this case.
+A model that trips the 90s cutoff records `msPerPage: null, slow: true`. It is shown and remains selectable — the admin may accept it — but is ranked last and badged. The 90s cutoff is a probe budget, not the runtime limit; the request path allows 300s, so a `slow` model can still work in production. `meta/llama-3.2-90b-vision-instruct` at 131s/page is exactly this case.
 
-Four models probed concurrently via a simple promise pool. Full three-provider run: roughly **3–8 minutes**, with live progress.
+### Durable versus transient failure
+
+A probe result must distinguish what a model *is* from what happened to it *this minute*. Measured over one full NVIDIA catalogue run: 5 models read-timed out at 95s and one returned HTTP 500 — including `meta/llama-3.2-1b-instruct`, which is plainly alive. Cold starts and queues look exactly like death if you only check whether the call succeeded.
+
+- **Durable** — `unreachable` (404), `no-text-input`, `ctx-too-small`. These describe the model. They accrue a strike.
+- **Transient** — timeouts, 429, any 5xx. These describe the moment. They never accrue a strike and never remove anything.
+
+Pass 1 retries once after a transient failure before recording it. Auto-disable requires **two consecutive durable failures**, so a single bad afternoon at a provider cannot strip a surveyor's working models. Without this rule, one probe run against a rate-limited Gemini would have auto-disabled the provider that currently works.
+
+### Pacing
+
+Concurrency is per-provider, because free-tier limits are:
+
+| provider | concurrency | min gap | why |
+|---|---|---|---|
+| NVIDIA | 4 | 0 | measured: 100 pings in 222s, no rate limiting |
+| Groq | 2 | 2.5s | per-minute free-tier cap |
+| Gemini | 1 | 6.5s | 10 requests/minute free tier — 4-wide would 429-storm |
+
+The catalogue is also filtered against an **exclusion** list (embedding, rerank, guard, safety, tts, imagen, veo) before probing. This is not the capability guess that was deleted: it never claims a model *can* do something, it only skips families that cannot serve a chat extraction at all. On Gemini, where the budget is ~9 requests per minute, that filter roughly halves the run.
+
+### Expected runtime
+
+Measured pass 1 on NVIDIA: **222s for 100 models** at concurrency 4, of which **60 returned 404** and only **28 survived**. Pass 2 then runs three calls against those 28. With Gemini paced at ~9 rpm, a full three-provider run is roughly **20–30 minutes**.
+
+Because that is long enough for a browser tab to be closed, results are **persisted as each provider completes** rather than once at the end. A run abandoned after NVIDIA keeps NVIDIA's results.
 
 ### Data model
 
@@ -182,7 +207,7 @@ Models with `status !== 'ok'` never appear as candidates.
 Enabling is the admin's; disabling on death is automatic.
 
 - The admin ticks models and hits **Save Config**, which writes `ai_config/models` exactly as today. Nothing reaches surveyors without that.
-- When a probe finds a currently-enabled model is no longer `ok`, the panel removes it from `ai_config/models` immediately, without waiting for Save, and reports what it removed. Leaving a dead model enabled produces failed extractions for surveyors, and requiring an admin click to stop that is a worse default.
+- When a probe finds a currently-enabled model has failed **durably twice in a row**, the panel removes it from `ai_config/models` immediately, without waiting for Save, and reports what it removed. Leaving a dead model enabled produces failed extractions for surveyors, and requiring an admin click to stop that is a worse default. A transient failure, however severe, removes nothing.
 - Auto-removal never enables anything and never changes `defaultModel` except to fall back to the first surviving enabled model when the default itself dies.
 
 ### The three request-path defects
@@ -206,9 +231,9 @@ Timeouts and permission errors do not rotate keys — rotation cannot help eithe
 
 ### Error handling
 
-- A provider whose probe aborts (auth error, network failure) records `providers[p].error` and leaves its previous results intact rather than wiping them. A failed probe must never empty the working config.
-- The probe is idempotent. Re-running overwrites `ai_config/model_probes` wholesale; there is no partial-merge state to corrupt.
-- Probe progress is client-side only. Closing the panel mid-probe abandons it and leaves the previous document untouched — the write happens once, at the end.
+- A provider whose probe aborts (auth error, network failure) records `providers[p].error` and leaves its previous results intact rather than wiping them. A failed probe must never empty the working config. The same applies when no admin key is configured for a provider — that is not evidence its models died.
+- The probe is idempotent. Re-running a provider overwrites that provider's block; strike counts carry forward so repeated durable failures accumulate.
+- Closing the panel mid-probe keeps every provider that already finished and leaves the rest untouched.
 
 ### Testing
 

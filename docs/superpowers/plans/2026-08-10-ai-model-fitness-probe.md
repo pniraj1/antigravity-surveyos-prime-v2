@@ -14,7 +14,8 @@
 - Client tests: Vitest, colocated in `src/lib/ai/__tests__/`. Run with `npx vitest run <path>`.
 - Functions tests: no framework, plain `node` + `assert`, registered in the `test:functions` npm script.
 - Extraction output budget is **16384** tokens (`src/lib/ai/service.ts:422`). The probe ping must use this exact value.
-- Latency probe cutoff: **90000** ms. Probe concurrency: **4**.
+- Latency probe cutoff: **90000** ms. Concurrency is per-provider: NVIDIA **4** (no gap), Groq **2** (2.5s gap), Gemini **1** (6.5s gap, for its 10 rpm free tier).
+- Auto-disable requires **two consecutive DURABLE failures**. Transient failures (timeout, 429, 5xx) never remove a model. This rule is load-bearing: one measured NVIDIA run produced 5 read timeouts and an HTTP 500 on models that are alive.
 - NVIDIA proxy timeout: **300** seconds server-side, **300000** ms client-side.
 - No `console.log` in production code (project rule); `console.warn` / `console.error` are used elsewhere in these files and are acceptable.
 - Immutable updates only — spread, never mutate (project rule).
@@ -554,18 +555,33 @@ In `src/lib/ai/service.ts`, add after the `buildProvider` function (after line 2
  * the test override if one is active, otherwise the surveyor's primary
  * provider. The processor uses this to size vision chunks so no page is ever
  * dropped by the cap guard in callWithKey.
+ *
+ * Deliberately does NOT call getAIProvider(). That function toasts when the
+ * preferred provider has no keys and falls through to a Firestore read of
+ * ai_config/routing — calling it here would double every such toast and add a
+ * second, independent provider resolution per extraction that could disagree
+ * with the one callAIGateway performs. This reads the same inputs with no
+ * side effects and no network.
  */
-export async function getActiveImageCap(): Promise<number | null> {
+export function getActiveImageCap(): number | null {
   const override = getAITestOverride();
   if (override) return buildOverrideProvider(override).maxImages ?? null;
-  try {
-    const provider = await getAIProvider();
-    return provider.maxImages ?? null;
-  } catch {
-    // No provider configured yet — extraction will fail later with its own
-    // message. Assume uncapped so chunk sizing is not the thing that breaks.
-    return null;
-  }
+
+  const profile = getProfileFromStorage();
+  if (!profile) return null;
+
+  const preferred = (profile.aiProvider ?? 'gemini') as 'gemini' | 'groq' | 'nvidia';
+  // Mirror getAIProvider's choice: preferred if it has keys, else the fallback.
+  const hasKeys: Record<'gemini' | 'groq' | 'nvidia', boolean> = {
+    gemini: resolveGeminiKeys(profile).length > 0,
+    groq: resolveGroqKeys(profile).length > 0,
+    nvidia: resolveNvidiaKeys(profile).length > 0,
+  };
+  const fallback: 'gemini' | 'groq' = preferred === 'groq' ? 'gemini' : 'groq';
+  const active = hasKeys[preferred] ? preferred : hasKeys[fallback] ? fallback : null;
+  if (!active) return null;
+
+  return PROVIDER_IMAGE_CAPS[active];
 }
 ```
 
@@ -591,8 +607,7 @@ Then replace lines 522-525:
     // The preference is then clamped to the active provider's image cap — NVIDIA
     // accepts exactly 1, and exceeding it 400s the whole request.
     const PREFERRED_VISION_CHUNK = (key === 'estimate' || key === 'final-bill') ? 2 : 1;
-    const activeImageCap = await getActiveImageCap();
-    const VISION_CHUNK_SIZE = resolveVisionChunkSize(PREFERRED_VISION_CHUNK, activeImageCap);
+    const VISION_CHUNK_SIZE = resolveVisionChunkSize(PREFERRED_VISION_CHUNK, getActiveImageCap());
     const CHUNK_SIZE = useTextMode ? 1 : VISION_CHUNK_SIZE;
 ```
 
@@ -690,13 +705,25 @@ import type { ProviderId } from './models-config';
  * the panel (to rank) and by the request path (to size vision chunks).
  */
 
+/**
+ * DURABLE statuses describe the model itself and justify auto-disabling it.
+ * TRANSIENT ones describe this moment — a queue, a cold start, a rate limit —
+ * and must never remove a model from the surveyor config. A single measured
+ * run of the NVIDIA catalogue produced 5 read timeouts and one HTTP 500 on
+ * models that are demonstrably alive, so this distinction is load-bearing.
+ */
 export type ProbeStatus =
   | 'ok'
-  | 'unreachable'     // 404 — listed by the provider but not served to this account
-  | 'no-text-input'   // rejects a text prompt (e.g. nvidia/nemotron-parse)
-  | 'ctx-too-small'   // context cannot hold the 16384-token extraction budget
-  | 'auth-error'      // 401/403 — a key problem, not a model problem
-  | 'error';
+  | 'unreachable'     // DURABLE: 404 — listed by the provider, not served to this account
+  | 'no-text-input'   // DURABLE: rejects a text prompt (e.g. nvidia/nemotron-parse)
+  | 'ctx-too-small'   // DURABLE: context cannot hold the 16384-token extraction budget
+  | 'auth-error'      // TRANSIENT: 401/403 — a key problem, not a model problem
+  | 'transient'       // TRANSIENT: timeout, 429, or 5xx — tells us nothing about the model
+  | 'error';          // TRANSIENT: unrecognised failure — treated as unknown, not dead
+
+/** Statuses that justify removing an enabled model from the surveyor config. */
+export const DURABLE_FAILURES: ReadonlySet<ProbeStatus> =
+  new Set<ProbeStatus>(['unreachable', 'no-text-input', 'ctx-too-small']);
 
 export type ProbeSource = 'probe' | 'provider-metadata';
 
@@ -714,6 +741,11 @@ export interface ProbeResult {
   slow: boolean;
   source: Record<'vision' | 'imageCap' | 'ctxWindow', ProbeSource>;
   probedAt: number;
+  /**
+   * Consecutive probes in which this model failed durably. Auto-disable needs
+   * two, so one bad run never strips a working model. Reset to 0 on any 'ok'.
+   */
+  consecutiveFailures: number;
 }
 
 export interface ProviderProbe {
@@ -847,6 +879,13 @@ describe('parseContextWindow', () => {
     )).toBe(16384);
   });
 
+  it('extracts the ceiling from the TRT-LLM shape of the same rejection', () => {
+    expect(parseContextWindow(
+      '{"error":{"message":"max_tokens=16384 cannot be greater than ' +
+      'max_model_len=max_total_tokens=8192. Please request fewer output tokens."}}'
+    )).toBe(8192);
+  });
+
   it('returns null when the body says nothing about context', () => {
     expect(parseContextWindow('{"object":"error","message":"Bad request"}')).toBeNull();
     expect(parseContextWindow('')).toBeNull();
@@ -908,10 +947,34 @@ describe('classifyPing', () => {
     expect(classifyPing({ status: 403, body: '{}' }).status).toBe('auth-error');
   });
 
-  it('falls back to a generic error for anything else', () => {
-    const v = classifyPing({ status: 500, body: 'upstream exploded' });
+  it('treats a 5xx as transient, not as a dead model', () => {
+    expect(classifyPing({ status: 500, body: 'upstream exploded' }).status).toBe('transient');
+    expect(classifyPing({ status: 503, body: '' }).status).toBe('transient');
+  });
+
+  it('treats a rate limit as transient', () => {
+    expect(classifyPing({ status: 429, body: '{"message":"rate limit"}' }).status).toBe('transient');
+  });
+
+  it('treats our own timeout or transport failure as transient', () => {
+    // A measured NVIDIA run read-timed out on 5 models that are demonstrably
+    // alive, including meta/llama-3.2-1b-instruct. Cold start, not death.
+    expect(classifyPing({ status: 0, body: 'ReadTimeout' }).status).toBe('transient');
+  });
+
+  it('catches the TRT-LLM context rejection as ctx-too-small, not a generic error', () => {
+    const v = classifyPing({
+      status: 400,
+      body: '{"error":{"message":"max_tokens=16384 cannot be greater than max_model_len=max_total_tokens=8192."}}',
+    });
+    expect(v.status).toBe('ctx-too-small');
+    expect(v.ctxWindow).toBe(8192);
+  });
+
+  it('falls back to a generic error for an unrecognised 4xx', () => {
+    const v = classifyPing({ status: 422, body: 'nope' });
     expect(v.status).toBe('error');
-    expect(v.reason).toContain('500');
+    expect(v.reason).toContain('422');
   });
 
   it('never throws on an unparseable body', () => {
@@ -964,10 +1027,18 @@ export interface PingVerdict {
   ctxWindow: number | null;
 }
 
-/** "This model's maximum context length is 16384 tokens" → 16384 */
+/**
+ * Extracts a model's real context ceiling from a rejection. NVIDIA emits two
+ * different shapes for the same condition, both measured against live models:
+ *   "This model's maximum context length is 16384 tokens"        (vLLM)
+ *   "max_tokens=16384 cannot be greater than max_model_len=8192" (TRT-LLM)
+ */
 export function parseContextWindow(body: string): number | null {
-  const m = /maximum context length is (\d+) tokens/i.exec(body);
-  return m ? Number(m[1]) : null;
+  const vllm = /maximum context length is (\d+) tokens/i.exec(body);
+  if (vllm) return Number(vllm[1]);
+  const trt = /max_model_len=(?:max_total_tokens=)?(\d+)/i.exec(body);
+  if (trt) return Number(trt[1]);
+  return null;
 }
 
 /** "At most 1 image(s) may be provided in one request" → 1 */
@@ -993,6 +1064,21 @@ export function classifyPing(res: RawResponse): PingVerdict {
 
   if (status === 200) {
     return { status: 'ok', reason: '', ctxWindow: null };
+  }
+
+  // ── Transient first — these say nothing about the model ─────────────────
+  // status 0 is our own transport failure or probe cutoff. In one measured run
+  // of the NVIDIA catalogue, 5 alive models (including meta/llama-3.2-1b-instruct)
+  // read-timed out on a cold start, and one returned 500. Treating those as
+  // death would strip working models from the surveyor config.
+  if (status === 0 || status === 429 || status >= 500) {
+    return {
+      status: 'transient',
+      reason: status === 429
+        ? 'Rate limited during the probe — not a model fault.'
+        : `Temporary failure (${status || 'timeout'}) — not a model fault.`,
+      ctxWindow: null,
+    };
   }
 
   if (status === 404) {
@@ -1298,12 +1384,13 @@ function config(nvidiaModels: string[], defaultModel: string): AIModelsConfig {
   };
 }
 
-function probeResult(id: string, status: ProbeStatus, reason = ''): ProbeResult {
+function probeResult(id: string, status: ProbeStatus, reason = '', consecutiveFailures = 2): ProbeResult {
   return {
     id, status, reason, vision: true, imageCap: 1, ctxWindow: 128000,
     msPerPage: 30000, slow: false,
     source: { vision: 'probe', imageCap: 'probe', ctxWindow: 'probe' },
     probedAt: 1,
+    consecutiveFailures: status === 'ok' ? 0 : consecutiveFailures,
   };
 }
 
@@ -1328,13 +1415,50 @@ describe('reconcileEnabledModels', () => {
     expect(removed).toEqual([{ provider: 'nvidia', id: 'b', reason: 'Not found for account' }]);
   });
 
-  it('removes an enabled model that vanished from the catalogue', () => {
+  it('removes an enabled model the runner marked as no longer listed', () => {
+    // The runner synthesises an 'unreachable' result for a previously-working
+    // model that vanished from the catalogue, so the reconciler sees it here.
     const { config: next, removed } = reconcileEnabledModels(
       config(['a', 'b'], 'a'),
-      probes([probeResult('a', 'ok')]),
+      probes([probeResult('a', 'ok'), probeResult('b', 'unreachable', 'No longer listed by the provider.')]),
     );
     expect(next.providers.nvidia.models.map(m => m.id)).toEqual(['a']);
     expect(removed[0].reason).toBe('No longer listed by the provider.');
+  });
+
+  it('keeps a model that failed transiently, however badly', () => {
+    // A measured NVIDIA run produced 5 read timeouts and one 500 on live
+    // models. Removing on those would strip working models from surveyors.
+    const { config: next, removed } = reconcileEnabledModels(
+      config(['a', 'b'], 'a'),
+      probes([probeResult('a', 'ok'), probeResult('b', 'transient', 'timeout', 9)]),
+    );
+    expect(next.providers.nvidia.models.map(m => m.id)).toEqual(['a', 'b']);
+    expect(removed).toEqual([]);
+  });
+
+  it('keeps a model on its FIRST durable failure and removes it on the second', () => {
+    const once = reconcileEnabledModels(
+      config(['a'], 'a'),
+      probes([probeResult('a', 'unreachable', 'gone', 1)]),
+    );
+    expect(once.removed).toEqual([]);
+    expect(once.config.providers.nvidia.models.map(m => m.id)).toEqual(['a']);
+
+    const twice = reconcileEnabledModels(
+      config(['a'], 'a'),
+      probes([probeResult('a', 'unreachable', 'gone', 2)]),
+    );
+    expect(twice.removed.map(r => r.id)).toEqual(['a']);
+  });
+
+  it('keeps a model that was never probed at all', () => {
+    const { config: next, removed } = reconcileEnabledModels(
+      config(['a', 'never-probed'], 'a'),
+      probes([probeResult('a', 'ok')]),
+    );
+    expect(next.providers.nvidia.models.map(m => m.id)).toEqual(['a', 'never-probed']);
+    expect(removed).toEqual([]);
   });
 
   it('keeps a model that is merely slow', () => {
@@ -1408,7 +1532,7 @@ Create `src/lib/ai/probe-reconcile.ts`:
 
 ```typescript
 import type { AIModelsConfig, ProviderId } from './models-config';
-import type { ModelProbes } from './probe-types';
+import { DURABLE_FAILURES, type ModelProbes, type ProbeResult } from './probe-types';
 
 /**
  * Removes enabled models that stopped working, and nothing else.
@@ -1427,6 +1551,29 @@ export interface Removal {
 
 const PROVIDER_IDS: ProviderId[] = ['gemini', 'groq', 'nvidia'];
 
+/** Two consecutive durable failures before a model is pulled. */
+export const REMOVAL_STRIKES = 2;
+
+/**
+ * A model is removed only when the probe is confident it is actually dead:
+ *
+ *  - It must have failed DURABLY (404, no text input, context too small).
+ *    A timeout, a 429, or a 5xx says nothing about the model — one measured
+ *    NVIDIA run produced 5 read timeouts and a 500 on models that are alive.
+ *  - It must have failed that way twice in a row, so a bad afternoon at the
+ *    provider cannot strip a surveyor's working models.
+ *
+ * Absent from the probe entirely means the provider stopped listing it, which
+ * is durable on its own — but still needs the strike count, carried on the
+ * previous result.
+ */
+function shouldRemove(result: ProbeResult | undefined): boolean {
+  if (!result) return false;                       // never probed — leave alone
+  if (result.status === 'ok') return false;
+  if (!DURABLE_FAILURES.has(result.status)) return false;
+  return result.consecutiveFailures >= REMOVAL_STRIKES;
+}
+
 export function reconcileEnabledModels(
   config: AIModelsConfig,
   probes: ModelProbes,
@@ -1442,15 +1589,16 @@ export function reconcileEnabledModels(
     // about its models. Leave the working config exactly as it was.
     if (!probe || probe.error !== null || Object.keys(probe.models).length === 0) continue;
 
-    const survivors = block.models.filter(m => probe.models[m.id]?.status === 'ok');
+    const survivors = block.models.filter(m => !shouldRemove(probe.models[m.id]));
     if (survivors.length === block.models.length) continue;
 
     for (const m of block.models) {
-      if (probe.models[m.id]?.status === 'ok') continue;
+      const result = probe.models[m.id];
+      if (!shouldRemove(result)) continue;
       removed.push({
         provider: p,
         id: m.id,
-        reason: probe.models[m.id]?.reason || 'No longer listed by the provider.',
+        reason: result?.reason || 'No longer listed by the provider.',
       });
     }
 
@@ -1497,11 +1645,11 @@ The orchestrator: fetch each catalogue, ping everything, capability-probe the su
 **Interfaces:**
 - Consumes: `classifyPing`, `parseImageCap`, `PROBE_MAX_TOKENS`, `RawResponse` (Task 5); `ProbeResult`, `ProviderProbe`, `ModelProbes`, `emptyProviderProbe` (Task 4); `PROVIDER_IMAGE_CAPS` (Task 3); `callNvidiaProxy` from `@/lib/firebase/functions`.
 - Produces:
-  - `LATENCY_CUTOFF_MS: 90000`, `PROBE_CONCURRENCY: 4`, `PROBE_VISION_CODE: 'PROBE7X'`
+  - `LATENCY_CUTOFF_MS: 90000`, `PROVIDER_CONCURRENCY`, `PROVIDER_MIN_GAP_MS`, `PROBE_VISION_CODE: 'PROBE7X'`
   - `mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]>`
   - `buildProbeResult(input: BuildProbeResultInput): ProbeResult`
-  - `runProviderProbe(provider: ProviderId, key: string, onProgress: (done: number, total: number) => void): Promise<ProviderProbe>`
-  - `runFullProbe(keys: Partial<Record<ProviderId, string>>, onProgress: (provider: ProviderId, done: number, total: number) => void): Promise<ModelProbes>`
+  - `runProviderProbe(provider: ProviderId, key: string, previous: ProviderProbe, onProgress: (done: number, total: number) => void): Promise<ProviderProbe>`
+  - `runFullProbe(keys: Partial<Record<ProviderId, string>>, previous: ModelProbes, onProgress: (provider: ProviderId, done: number, total: number) => void, onProviderComplete: (provider: ProviderId, result: ProviderProbe) => Promise<void>): Promise<ModelProbes>`
 
 - [ ] **Step 1: Create the probe fixture**
 
@@ -1512,7 +1660,7 @@ Requirements:
 - A table of **invented** parts and amounts. No real registration number, chassis number, GSTIN, name, or address — this image is transmitted to every probed model on every run.
 - The literal text `REF: PROBE7X` printed in the header, large enough to be legible at this resolution. The vision probe asks for this code; a text-only model handed the image cannot produce it.
 
-Generate it with any tool. Verify:
+Any tool that can render text and a table to a JPEG at that resolution works — an HTML page screenshotted at 1275×1650, or a generated image. Verify:
 
 ```bash
 ls -l public/ai-probe-page.jpg
@@ -1526,7 +1674,10 @@ Create `src/lib/ai/__tests__/probe-runner.test.ts`:
 
 ```typescript
 import { describe, it, expect } from 'vitest';
-import { mapWithConcurrency, buildProbeResult, PROBE_VISION_CODE, LATENCY_CUTOFF_MS } from '../probe-runner';
+import {
+  mapWithConcurrency, buildProbeResult, PROBE_VISION_CODE,
+  LATENCY_CUTOFF_MS, PROVIDER_CONCURRENCY, PROVIDER_MIN_GAP_MS,
+} from '../probe-runner';
 
 describe('mapWithConcurrency', () => {
   it('returns results in input order regardless of completion order', async () => {
@@ -1563,6 +1714,7 @@ describe('buildProbeResult', () => {
     providerCap: 1 as number | null,
     providerCtx: null as number | null,
     now: 1000,
+    previousFailures: 0,
   };
 
   it('records a working vision model with its measured latency', () => {
@@ -1622,12 +1774,61 @@ describe('buildProbeResult', () => {
   });
 });
 
+describe('strike counting', () => {
+  const base = {
+    id: 'x', providerCap: null as number | null, providerCtx: null as number | null,
+    visionOk: false, probedCap: null, latencyMs: null, now: 1,
+  };
+
+  it('increments the strike count on a durable failure', () => {
+    const r = buildProbeResult({
+      ...base,
+      ping: { status: 'unreachable', reason: 'gone', ctxWindow: null },
+      previousFailures: 1,
+    });
+    expect(r.consecutiveFailures).toBe(2);
+  });
+
+  it('leaves the strike count untouched on a transient failure', () => {
+    const r = buildProbeResult({
+      ...base,
+      ping: { status: 'transient', reason: 'timeout', ctxWindow: null },
+      previousFailures: 1,
+    });
+    expect(r.consecutiveFailures).toBe(1);
+  });
+
+  it('resets the strike count when the model works again', () => {
+    const r = buildProbeResult({
+      ...base,
+      ping: { status: 'ok', reason: '', ctxWindow: null },
+      latencyMs: 1000,
+      previousFailures: 5,
+    });
+    expect(r.consecutiveFailures).toBe(0);
+  });
+});
+
 describe('constants', () => {
   it('cuts latency probes off at 90s', () => {
     expect(LATENCY_CUTOFF_MS).toBe(90_000);
   });
+
   it('uses a reference code the fixture image carries', () => {
     expect(PROBE_VISION_CODE).toBe('PROBE7X');
+  });
+
+  it('paces Gemini under its 10 rpm free-tier cap', () => {
+    // 1 in flight with a 6.5s gap is ~9 requests/minute. Probing Gemini
+    // 4-wide would 429-storm and record failures against healthy models.
+    expect(PROVIDER_CONCURRENCY.gemini).toBe(1);
+    expect(PROVIDER_MIN_GAP_MS.gemini).toBeGreaterThanOrEqual(6_000);
+  });
+
+  it('lets NVIDIA run 4-wide with no gap', () => {
+    // Measured: 100 pings in 222s at concurrency 4, no rate limiting.
+    expect(PROVIDER_CONCURRENCY.nvidia).toBe(4);
+    expect(PROVIDER_MIN_GAP_MS.nvidia).toBe(0);
   });
 });
 ```
@@ -1649,7 +1850,7 @@ import {
   type PingVerdict, type RawResponse,
 } from './probe-classify';
 import {
-  emptyProviderProbe,
+  DURABLE_FAILURES, emptyProviderProbe,
   type ModelProbes, type ProbeResult, type ProbeSource, type ProviderProbe,
 } from './probe-types';
 
@@ -1664,7 +1865,36 @@ import {
 
 /** A model slower than this per page is flagged, not hidden — the request path allows 300s. */
 export const LATENCY_CUTOFF_MS = 90_000;
-export const PROBE_CONCURRENCY = 4;
+
+/**
+ * Per-provider concurrency. NVIDIA tolerates 4 (measured: 100 pings in 222s).
+ * Gemini's free tier is 10 requests per minute — probing it 4-wide would
+ * 429-storm, and every 429 would be recorded against a model that is fine.
+ * Groq's free tier is likewise per-minute limited.
+ */
+export const PROVIDER_CONCURRENCY: Record<ProviderId, number> = {
+  gemini: 1,
+  groq: 2,
+  nvidia: 4,
+};
+
+/** Minimum gap between requests, to stay under per-minute free-tier caps. */
+export const PROVIDER_MIN_GAP_MS: Record<ProviderId, number> = {
+  gemini: 6_500,   // ~9 rpm, just under the 10 rpm free-tier cap
+  groq: 2_500,
+  nvidia: 0,
+};
+
+/**
+ * Model families that cannot serve a chat extraction under any circumstances.
+ * This is an EXCLUSION list, not the capability guess that was deleted — it
+ * never claims a model *can* do something, it only skips families that would
+ * waste a probe call. On Gemini, where the budget is ~9 requests per minute,
+ * skipping embedding/imagen/veo/tts entries is the difference between a
+ * 10-minute probe and a 40-minute one.
+ */
+const NON_CHAT_PATTERN =
+  /embed|embedqa|rerank|retriev|nemoretriever|guard|safety|reward|tts|stt|whisper|imagen|veo|image-generation|aqa/i;
 
 /** Printed on public/ai-probe-page.jpg. A text-only model cannot produce it. */
 export const PROBE_VISION_CODE = 'PROBE7X';
@@ -1710,10 +1940,12 @@ export interface BuildProbeResultInput {
   /** Measured milliseconds, or null when the cutoff was hit. */
   latencyMs: number | null;
   now: number;
+  /** Strike count carried from the previous probe; 0 when there was none. */
+  previousFailures: number;
 }
 
 export function buildProbeResult(input: BuildProbeResultInput): ProbeResult {
-  const { id, ping, providerCap, providerCtx, visionOk, probedCap, latencyMs, now } = input;
+  const { id, ping, providerCap, providerCtx, visionOk, probedCap, latencyMs, now, previousFailures } = input;
   const failed = ping.status !== 'ok';
 
   const imageCap = probedCap !== null ? probedCap : providerCap;
@@ -1733,6 +1965,12 @@ export function buildProbeResult(input: BuildProbeResultInput): ProbeResult {
     slow: !failed && latencyMs === null,
     source: { vision: 'probe', imageCap: capSource, ctxWindow: ctxSource },
     probedAt: now,
+    // Only DURABLE failures accumulate strikes. A timeout or 429 leaves the
+    // count exactly where it was — it is not evidence either way.
+    consecutiveFailures:
+      ping.status === 'ok' ? 0
+      : DURABLE_FAILURES.has(ping.status) ? previousFailures + 1
+      : previousFailures,
   };
 }
 
@@ -1827,14 +2065,20 @@ interface CatalogueEntry {
   ctxWindow: number | null;
 }
 
+/** Drops model families that cannot serve a chat extraction, to save probe budget. */
+function dropNonChat(entries: CatalogueEntry[]): CatalogueEntry[] {
+  return entries.filter(e => !NON_CHAT_PATTERN.test(e.id));
+}
+
 async function fetchCatalogue(provider: ProviderId, key: string): Promise<CatalogueEntry[]> {
   if (provider === 'nvidia') {
     const { callNvidiaProxy } = await import('@/lib/firebase/functions');
     const res = await callNvidiaProxy('models', key);
     if (!res.ok) throw new Error(`NVIDIA catalogue failed: HTTP ${res.status}`);
     const data = JSON.parse(res.body);
-    // NVIDIA reports only {id, object, created, owned_by} — no context window.
-    return (data.data ?? []).map((m: { id: string }) => ({ id: m.id, ctxWindow: null }));
+    // NVIDIA reports only {id, object, created, owned_by} — no context window,
+    // no availability. Measured: 60 of its 100 listed models 404 on call.
+    return dropNonChat((data.data ?? []).map((m: { id: string }) => ({ id: m.id, ctxWindow: null })));
   }
 
   if (provider === 'groq') {
@@ -1844,25 +2088,25 @@ async function fetchCatalogue(provider: ProviderId, key: string): Promise<Catalo
     if (!res.ok) throw new Error(`Groq catalogue failed: HTTP ${res.status}`);
     const data = await res.json();
     // Groq reports context_window and an active flag — trust both.
-    return (data.data ?? [])
+    return dropNonChat((data.data ?? [])
       .filter((m: { active?: boolean }) => m.active !== false)
       .map((m: { id: string; context_window?: number }) => ({
         id: m.id,
         ctxWindow: m.context_window ?? null,
-      }));
+      })));
   }
 
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
   if (!res.ok) throw new Error(`Gemini catalogue failed: HTTP ${res.status}`);
   const data = await res.json();
   // Gemini reports supportedGenerationMethods — skip models that cannot generate.
-  return (data.models ?? [])
+  return dropNonChat((data.models ?? [])
     .filter((m: { supportedGenerationMethods?: string[] }) =>
       m.supportedGenerationMethods?.includes('generateContent'))
     .map((m: { name: string; inputTokenLimit?: number }) => ({
       id: m.name.replace(/^models\//, ''),
       ctxWindow: m.inputTokenLimit ?? null,
-    }));
+    })));
 }
 
 // ─── Passes ──────────────────────────────────────────────────────────────────
@@ -1882,9 +2126,18 @@ async function loadFixture(): Promise<string> {
 /** Thrown to abort a whole provider — a rejected key tells us nothing about its models. */
 class ProbeAbort extends Error {}
 
+/** Paces a worker so a provider's per-minute free-tier cap is not exceeded. */
+async function pace(gapMs: number, lastAt: { t: number }): Promise<void> {
+  if (gapMs <= 0) return;
+  const wait = gapMs - (Date.now() - lastAt.t);
+  if (wait > 0) await new Promise(r => setTimeout(r, wait));
+  lastAt.t = Date.now();
+}
+
 export async function runProviderProbe(
   provider: ProviderId,
   key: string,
+  previous: ProviderProbe,
   onProgress: (done: number, total: number) => void,
 ): Promise<ProviderProbe> {
   const now = Date.now();
@@ -1892,18 +2145,38 @@ export async function runProviderProbe(
     const catalogue = await fetchCatalogue(provider, key);
     const fixture = await loadFixture();
     const providerCap = PROVIDER_IMAGE_CAPS[provider];
+    const gap = PROVIDER_MIN_GAP_MS[provider];
+    const lastAt = { t: 0 };
     let done = 0;
     const total = catalogue.length;
 
-    const results = await mapWithConcurrency(catalogue, PROBE_CONCURRENCY, async (entry) => {
+    const results = await mapWithConcurrency(catalogue, PROVIDER_CONCURRENCY[provider], async (entry) => {
+      const previousFailures = previous.models[entry.id]?.consecutiveFailures ?? 0;
+
       // ── Pass 1: reachability, with the real extraction token budget ──
-      const pingRes = await chat(provider, entry.id, key, {
+      // Retried once on a transient failure. A measured NVIDIA run produced 5
+      // read timeouts and one 500 on models that are alive; without the retry
+      // those would be recorded as failures against working models.
+      await pace(gap, lastAt);
+      let pingRes = await chat(provider, entry.id, key, {
         prompt: 'Reply with OK.',
         images: [],
         maxTokens: PROBE_MAX_TOKENS,
         timeoutMs: LATENCY_CUTOFF_MS,
       });
-      const ping = classifyPing(pingRes);
+      let ping = classifyPing(pingRes);
+
+      if (ping.status === 'transient') {
+        await new Promise(r => setTimeout(r, 2_000));
+        await pace(gap, lastAt);
+        pingRes = await chat(provider, entry.id, key, {
+          prompt: 'Reply with OK.',
+          images: [],
+          maxTokens: PROBE_MAX_TOKENS,
+          timeoutMs: LATENCY_CUTOFF_MS,
+        });
+        ping = classifyPing(pingRes);
+      }
 
       if (ping.status === 'auth-error') {
         throw new ProbeAbort(ping.reason);
@@ -1913,11 +2186,12 @@ export async function runProviderProbe(
         done++; onProgress(done, total);
         return buildProbeResult({
           id: entry.id, ping, providerCap, providerCtx: entry.ctxWindow,
-          visionOk: false, probedCap: null, latencyMs: null, now,
+          visionOk: false, probedCap: null, latencyMs: null, now, previousFailures,
         });
       }
 
       // ── Pass 2a: vision — the model must read a code only visible in pixels ──
+      await pace(gap, lastAt);
       const visionRes = await chat(provider, entry.id, key, {
         prompt: `What reference code is printed on this document? Reply with the code only.`,
         images: [fixture],
@@ -1929,6 +2203,7 @@ export async function runProviderProbe(
       // ── Pass 2b: image cap ──
       let probedCap: number | null = null;
       if (visionOk) {
+        await pace(gap, lastAt);
         const capRes = await chat(provider, entry.id, key, {
           prompt: 'Reply with OK.',
           images: [fixture, fixture],
@@ -1939,6 +2214,7 @@ export async function runProviderProbe(
       }
 
       // ── Pass 2c: latency on a realistic payload ──
+      await pace(gap, lastAt);
       const started = Date.now();
       const latencyRes = await chat(provider, entry.id, key, {
         prompt: EXTRACTION_PROMPT,
@@ -1951,15 +2227,29 @@ export async function runProviderProbe(
       done++; onProgress(done, total);
       return buildProbeResult({
         id: entry.id, ping, providerCap, providerCtx: entry.ctxWindow,
-        visionOk, probedCap, latencyMs, now,
+        visionOk, probedCap, latencyMs, now, previousFailures,
       });
     });
 
-    return {
-      probedAt: now,
-      error: null,
-      models: Object.fromEntries(results.map(r => [r.id, r])),
-    };
+    const models: Record<string, ProbeResult> = Object.fromEntries(results.map(r => [r.id, r]));
+
+    // A model that was working and is no longer in the catalogue has been
+    // retired by the provider. Synthesise a durable result so it appears in
+    // the Gone group and accrues a strike, rather than vanishing silently.
+    for (const [id, prev] of Object.entries(previous.models)) {
+      if (models[id] || prev.status !== 'ok') continue;
+      models[id] = {
+        ...prev,
+        status: 'unreachable',
+        reason: 'No longer listed by the provider.',
+        msPerPage: null,
+        slow: false,
+        probedAt: now,
+        consecutiveFailures: prev.consecutiveFailures + 1,
+      };
+    }
+
+    return { probedAt: now, error: null, models };
   } catch (err: unknown) {
     const message = err instanceof ProbeAbort
       ? `Key rejected — probe aborted. ${err.message}`
@@ -1972,12 +2262,19 @@ export async function runProviderProbe(
 
 export async function runFullProbe(
   keys: Partial<Record<ProviderId, string>>,
+  previous: ModelProbes,
   onProgress: (provider: ProviderId, done: number, total: number) => void,
+  /**
+   * Called as each provider finishes so the caller can persist partial
+   * results. A full run takes 20+ minutes; without this, closing the tab
+   * two providers in would throw away everything.
+   */
+  onProviderComplete: (provider: ProviderId, result: ProviderProbe) => Promise<void>,
 ): Promise<ModelProbes> {
   const providers: Record<ProviderId, ProviderProbe> = {
-    gemini: emptyProviderProbe(),
-    groq: emptyProviderProbe(),
-    nvidia: emptyProviderProbe(),
+    gemini: { ...previous.providers.gemini },
+    groq: { ...previous.providers.groq },
+    nvidia: { ...previous.providers.nvidia },
   };
 
   // Sequential across providers so progress reads clearly and free-tier rate
@@ -1985,10 +2282,14 @@ export async function runFullProbe(
   for (const p of PROVIDER_IDS) {
     const key = keys[p]?.trim();
     if (!key) {
-      providers[p] = { probedAt: Date.now(), error: 'No admin key for this provider.', models: {} };
+      // No key means we learned nothing — keep the previous results rather
+      // than replacing them with an empty block the reconciler might act on.
+      providers[p] = { ...previous.providers[p], error: 'No admin key for this provider.' };
       continue;
     }
-    providers[p] = await runProviderProbe(p, key, (done, total) => onProgress(p, done, total));
+    providers[p] = await runProviderProbe(p, key, previous.providers[p], (done, total) =>
+      onProgress(p, done, total));
+    await onProviderComplete(p, providers[p]);
   }
 
   return { probedAt: Date.now(), probedBy: '', providers };
@@ -2160,11 +2461,24 @@ and in the Groq branch replace `maxImages: 5,` with:
     maxImages: resolveModelImageCap('groq', model, useAIConfigStore.getState().config.providers.groq) ?? undefined,
 ```
 
+Finally, make `getActiveImageCap` probe-driven too — replace its last line (`return PROVIDER_IMAGE_CAPS[active];`) with:
+
+```typescript
+  const block = useAIConfigStore.getState().config.providers[active];
+  const model = resolveEnabledModel(
+    active === 'gemini' ? resolveGeminiModel(profile)
+      : active === 'nvidia' ? resolveNvidiaModel(profile)
+      : resolveGroqModel(profile),
+    block,
+  );
+  return resolveModelImageCap(active, model, block);
+```
+
 - [ ] **Step 7: Fix any remaining compile errors**
 
 Run: `npx tsc --noEmit`
 
-Expected: any error referencing `estimateCapacity` points at `AIModelsTab.tsx:156`, which Task 10 rewrites. If that is the only remaining error, note it and continue; if others appear, fix them.
+Expected: exactly one class of error remains — references to `estimateCapacity` in `AIModelsTab.tsx`, which Task 10 rewrites. Any other error is a real break and must be fixed before committing. Do not commit if `npx vitest run` fails.
 
 - [ ] **Step 8: Run the suite**
 
@@ -2246,12 +2560,22 @@ Delete the `refresh` function (lines 39-57) and add:
     }
 
     setProbing(true);
-    setProbeStatus('Starting…');
+    setProbeStatus('Starting… a full probe takes roughly 20-30 minutes. Leave this tab open.');
     try {
       const previous = probes;
-      const next = await runFullProbe(keys, (p, done, total) => {
-        setProbeStatus(`${PROVIDER_META[p].label}: ${done} of ${total}`);
-      });
+      // Persisted after each provider so closing the tab part-way through
+      // keeps the providers that already finished.
+      let running: ModelProbes = { ...previous };
+      const next = await runFullProbe(
+        keys,
+        previous,
+        (p, done, total) => setProbeStatus(`${PROVIDER_META[p].label}: ${done} of ${total}`),
+        async (p, result) => {
+          running = { ...running, providers: { ...running.providers, [p]: result } };
+          await saveModelProbes(running, adminEmail);
+          setProbes(running);
+        },
+      );
 
       await saveModelProbes(next, adminEmail);
       setPrevProbes(previous);
@@ -2386,7 +2710,7 @@ Replace the provider body — the `<div className="divide-y divide-border">` blo
                                 {testing === `${p}:${row.id}` ? <Loader2 size={11} className="animate-spin" /> : <FlaskConical size={11} />}
                                 Test with estimate PDF
                                 <input type="file" accept="application/pdf,image/*" className="hidden"
-                                  disabled={testing !== null}
+                                  disabled={testing !== null || probing}
                                   onChange={e => { const f = e.target.files?.[0]; if (f) runTest(p, row.id, f); e.currentTarget.value = ''; }} />
                               </label>
                               {testing === `${p}:${row.id}` && <span className="ml-2 text-[10px] text-muted-foreground">{testProgress}</span>}
@@ -2485,3 +2809,6 @@ automatic removal of models that stopped working."
 - [ ] NVIDIA selected as primary extracts `DTC Proforma Invoice-1.PDF` successfully
 - [ ] A deliberately wrong NVIDIA key produces "key is invalid", not a timeout message
 - [ ] A model with `imageCap: 1` chunks a scanned estimate one page at a time
+- [ ] Running a probe twice in a row does not remove any model that worked in the first run
+- [ ] Killing the browser tab after NVIDIA finishes leaves NVIDIA's results persisted
+- [ ] Extracting with no NVIDIA key configured produces exactly ONE "falling back" toast, not two
