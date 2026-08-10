@@ -10,6 +10,7 @@
 
 import { getFirebaseApp } from '../firebase/config';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
+import { classifyGatewayError, gatewayErrorMessage } from './gateway-errors';
 import { useProfileStore } from '@/stores/profile-store';
 import { useUIStore } from '@/stores/ui-store';
 import { toast } from 'sonner';
@@ -557,7 +558,18 @@ async function callWithRotation(provider: AIProvider, prompt: string, images: st
     }
 
     const err = lastError as any;
-    const isAuthError = err.status === 401 || err.status === 403;
+    const errorKind = classifyGatewayError(err);
+    const isAuthError = errorKind === 'auth';
+
+    // ── Callable-transport failures (NVIDIA only) ──────────────────────────
+    // A timeout, a lapsed subscription, and an expired session are all
+    // unfixable by rotating to another key — stop immediately and say what
+    // actually went wrong instead of blaming the surveyor's API key.
+    if (errorKind === 'timeout' || errorKind === 'subscription' || errorKind === 'unauthenticated') {
+      const message = gatewayErrorMessage(errorKind, providerLabel);
+      if (message) toast.error(message, { duration: 10000 });
+      break;
+    }
 
     // ── Payload too large: no point rotating keys — the prompt must shrink ──
     if (isPayloadTooLarge(err)) {
