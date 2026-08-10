@@ -440,7 +440,7 @@ export function AssessmentSectionTable({
                       />
                     </td>
                     <td className={`px-1 py-1 text-center${selection.isCellSelected(row.id, 'depOverride') ? ' ring-2 ring-blue-400 ring-inset' : ''}`} data-column-key="depOverride">
-                      {row.allowed && row.section === 'parts' ? (
+                      {row.allowed ? (
                         <input
                           type="number"
                           min={0}

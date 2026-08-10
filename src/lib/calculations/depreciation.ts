@@ -39,7 +39,7 @@ export function getVehicleAgeMonths(
  * Rules (Standard IRDAI):
  * - Glass: always 0%
  * - Plastic/Rubber: always 50%
- * - Labour/Paint: always 0%
+ * - Labour/Paint: 0% by default — the surveyor may override per row
  * - Metal: age-based scale below
  *
  * Metal depreciation scale:
@@ -64,6 +64,8 @@ export function getDepreciationRate(
   if (partType === 'glass') return 0;
   if (partType === 'plastic') return 50;
   if (partType === 'fiberglass') return 30;
+  // Labour and paint attract no automatic depreciation. A surveyor who needs
+  // one sets depOverride on the row; callers read that first.
   if (partType === 'labour' || partType === 'paint') return 0;
 
   // Metal — age-based scale

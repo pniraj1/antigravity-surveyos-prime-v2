@@ -17,8 +17,10 @@ import type { AssessmentRow, AssessmentSection, PartType } from '@/types/assessm
  * screen reporting it.
  *
  * A manual `depOverride` is cleared on every section change. Labour and paint
- * are Nil depreciation under the tariff, so an override riding along from the
- * parts section would silently reduce the line.
+ * carry no automatic depreciation, but the surveyor may set one by hand — so
+ * the reason is no longer "the tariff says Nil". It is that an override set
+ * against a plastic bumper must not silently follow the row into Labour and
+ * re-price it with nothing on screen reporting the change.
  */
 export function resolveSectionMove(
   row: AssessmentRow,

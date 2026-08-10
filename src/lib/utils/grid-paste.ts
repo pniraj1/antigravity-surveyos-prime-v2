@@ -61,7 +61,9 @@ export function buildPasteUpdates(
 
     // Skip rules
     if (columnKey === 'gst' && row.isDisposal) continue;
-    if (columnKey === 'depOverride' && (!row.allowed || row.section !== 'parts')) continue;
+    // Labour and paint have no automatic depreciation, but the surveyor may
+    // set one. Only the allowed-row guard remains.
+    if (columnKey === 'depOverride' && !row.allowed) continue;
 
     updates[row.id] = { [columnKey]: parsedValue } as Partial<AssessmentRow>;
   }

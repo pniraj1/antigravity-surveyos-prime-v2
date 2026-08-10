@@ -85,7 +85,7 @@ describe('buildPasteUpdates', () => {
     expect(Object.keys(updates)).toHaveLength(3);
   });
 
-  test('skips non-parts rows for depOverride', () => {
+  test('depOverride pastes onto labour rows too — only the allowed guard remains', () => {
     const mixed = [
       row({ id: 'r1', section: 'parts', allowed: true }),
       row({ id: 'r2', section: 'labour' as any, allowed: true }),
@@ -93,7 +93,7 @@ describe('buildPasteUpdates', () => {
     ];
     const updates = buildPasteUpdates(mixed, 'r1', 'r3', 'depOverride', 10);
     expect(updates['r1']).toEqual({ depOverride: 10 });
-    expect(updates['r2']).toBeUndefined();
+    expect(updates['r2']).toEqual({ depOverride: 10 });
     expect(updates['r3']).toBeUndefined();
   });
 
@@ -111,5 +111,31 @@ describe('buildPasteUpdates', () => {
     const updates = buildPasteUpdates(rows, 'r2', 'r2', 'gst', 28);
     expect(Object.keys(updates)).toHaveLength(1);
     expect(updates['r2']).toEqual({ gst: 28 });
+  });
+});
+
+describe('Dep% paste target', () => {
+  function labourRow(id: string, allowed: boolean): AssessmentRow {
+    return {
+      id, particulars: 'Fitting', estimated: 0, assessed: 4000, partType: 'labour',
+      gst: 18, section: 'labour', allowed,
+    } as AssessmentRow;
+  }
+
+  test('applies a pasted Dep% to a labour row', () => {
+    const rows = [labourRow('l1', true)];
+    expect(buildPasteUpdates(rows, 'l1', 'l1', 'depOverride', 30))
+      .toEqual({ l1: { depOverride: 30 } });
+  });
+
+  test('applies a pasted Dep% to a paint row', () => {
+    const rows = [{ ...labourRow('p1', true), section: 'paint', partType: 'paint' } as AssessmentRow];
+    expect(buildPasteUpdates(rows, 'p1', 'p1', 'depOverride', 30))
+      .toEqual({ p1: { depOverride: 30 } });
+  });
+
+  test('still refuses to paste a Dep% onto a disallowed row', () => {
+    const rows = [labourRow('l2', false)];
+    expect(buildPasteUpdates(rows, 'l2', 'l2', 'depOverride', 30)).toEqual({});
   });
 });

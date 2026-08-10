@@ -96,3 +96,21 @@ describe('resolveSectionMove', () => {
     expect(resolveSectionMove(r, 'parts')).toEqual({});
   });
 });
+
+describe('depOverride across section moves', () => {
+  test('clears a manual override when a part moves into labour', () => {
+    // Carrying 50% onto a labour line would re-price it with nothing on screen
+    // reporting the change. The surveyor re-enters it after the move.
+    const r = row({ partType: 'plastic', section: 'parts', depOverride: 50 });
+    expect(resolveSectionMove(r, 'labour')).toMatchObject({
+      section: 'labour', partType: 'labour', depOverride: undefined,
+    });
+  });
+
+  test('clears a manual override set on a labour row moving to paint', () => {
+    const r = row({ partType: 'labour', section: 'labour', depOverride: 30 });
+    expect(resolveSectionMove(r, 'paint')).toMatchObject({
+      section: 'paint', partType: 'paint', depOverride: undefined,
+    });
+  });
+});
