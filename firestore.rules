@@ -48,6 +48,15 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // AI model probe results — admin writes, all signed-in surveyors read.
+    // Contains NO secrets (model ids and measured capabilities only). Surveyors
+    // read it so the request path can size vision chunks to a model's real
+    // image cap rather than a hardcoded guess.
+    match /ai_config/model_probes {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
     // Survey fee schedule — admin sets the org default, all signed-in surveyors read.
     match /fee_config/schedule {
       allow read: if isSignedIn();
