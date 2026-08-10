@@ -3,7 +3,9 @@ import {
   mapWithConcurrency, buildProbeResult, PROBE_VISION_CODE,
   LATENCY_CUTOFF_MS, PROBE_CAPABILITY_MAX_TOKENS,
   PROVIDER_CONCURRENCY, PROVIDER_MIN_GAP_MS,
+  orderCatalogue,
 } from '../probe-runner';
+import type { ProbeResult, ProviderProbe } from '../probe-types';
 
 describe('mapWithConcurrency', () => {
   it('returns results in input order regardless of completion order', async () => {
@@ -164,5 +166,50 @@ describe('constants', () => {
     // Measured: 100 pings in 222s at concurrency 4, no rate limiting.
     expect(PROVIDER_CONCURRENCY.nvidia).toBe(4);
     expect(PROVIDER_MIN_GAP_MS.nvidia).toBe(0);
+  });
+});
+
+function prev(statuses: Record<string, ProbeResult['status']>): ProviderProbe {
+  return {
+    probedAt: 1, error: null, accuracy: {},
+    models: Object.fromEntries(Object.entries(statuses).map(([id, status]) => [id, {
+      id, status, reason: '', vision: true, imageCap: 1, ctxWindow: 1,
+      msPerPage: 1, slow: false,
+      source: { vision: 'probe', imageCap: 'probe', ctxWindow: 'probe' },
+      probedAt: 1, consecutiveFailures: 0,
+    } as ProbeResult])),
+  };
+}
+
+describe('orderCatalogue', () => {
+  const entries = [{ id: 'dead1' }, { id: 'ok1' }, { id: 'new1' }, { id: 'dead2' }, { id: 'ok2' }];
+
+  it('working models first, never-probed next, dead last', () => {
+    const ordered = orderCatalogue(entries, prev({
+      dead1: 'unreachable', ok1: 'ok', dead2: 'unreachable', ok2: 'ok',
+    }));
+    expect(ordered.map(e => e.id)).toEqual(['ok1', 'ok2', 'new1', 'dead1', 'dead2']);
+  });
+
+  it('order is stable within each group', () => {
+    const ordered = orderCatalogue(entries, prev({ ok1: 'ok', ok2: 'ok' }));
+    // new1, dead1, dead2 were all never probed — original relative order kept.
+    expect(ordered.map(e => e.id)).toEqual(['ok1', 'ok2', 'dead1', 'new1', 'dead2']);
+  });
+
+  it('an empty previous probe leaves the order untouched', () => {
+    const ordered = orderCatalogue(entries, prev({}));
+    expect(ordered.map(e => e.id)).toEqual(['dead1', 'ok1', 'new1', 'dead2', 'ok2']);
+  });
+
+  it('does not mutate the input array', () => {
+    const input = [...entries];
+    orderCatalogue(input, prev({ ok2: 'ok' }));
+    expect(input.map(e => e.id)).toEqual(['dead1', 'ok1', 'new1', 'dead2', 'ok2']);
+  });
+
+  it('every entry survives — nothing is dropped', () => {
+    const ordered = orderCatalogue(entries, prev({ dead1: 'unreachable', ok1: 'ok' }));
+    expect(ordered).toHaveLength(entries.length);
   });
 });

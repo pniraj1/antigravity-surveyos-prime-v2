@@ -309,6 +309,30 @@ async function pace(gapMs: number, lastAt: { t: number }): Promise<void> {
   lastAt.t = Date.now();
 }
 
+/**
+ * Sorts a catalogue so previously-working models are probed first and
+ * previously-failed ones last.
+ *
+ * Everything is still probed — a provider can restore a model, and the
+ * two-strike removal rule in probe-reconcile depends on re-testing. This only
+ * changes the order, so the admin sees useful results while the graveyard is
+ * still being checked. On NVIDIA that moves 60 known-404s behind the 28 that
+ * work.
+ */
+export function orderCatalogue<T extends { id: string }>(
+  entries: T[],
+  previous: ProviderProbe,
+): T[] {
+  const rank = (id: string): number => {
+    const prior = previous.models[id];
+    if (!prior) return 1;                    // never probed
+    return prior.status === 'ok' ? 0 : 2;    // working : failed
+  };
+  // Array.prototype.sort is stable in every engine this app targets, so
+  // entries of equal rank keep their provider-supplied order.
+  return [...entries].sort((a, b) => rank(a.id) - rank(b.id));
+}
+
 export async function runProviderProbe(
   provider: ProviderId,
   key: string,
@@ -317,7 +341,7 @@ export async function runProviderProbe(
 ): Promise<ProviderProbe> {
   const now = Date.now();
   try {
-    const catalogue = await fetchCatalogue(provider, key);
+    const catalogue = orderCatalogue(await fetchCatalogue(provider, key), previous);
     const fixture = await loadFixture();
     const providerCap = PROVIDER_IMAGE_CAPS[provider];
     const gap = PROVIDER_MIN_GAP_MS[provider];
