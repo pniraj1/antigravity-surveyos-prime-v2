@@ -7,6 +7,8 @@ import {
   DURABLE_FAILURES, emptyProviderProbe,
   type ModelProbes, type ProbeResult, type ProbeSource, type ProviderProbe,
 } from './probe-types';
+import { scoreAccuracy, type AccuracyResult } from './probe-accuracy';
+import type { BenchmarkDoc } from './benchmark-doc';
 
 /**
  * Runs the two-pass model probe.
@@ -461,6 +463,24 @@ export async function runProviderProbe(
   }
 }
 
+/**
+ * Folds one provider's finished probe into the running state.
+ *
+ * Needed because providers now finish concurrently and therefore in
+ * unpredictable order. Merging into a snapshot captured before the run would
+ * let two providers finishing close together overwrite one another.
+ */
+export function mergeProviderResult(
+  current: ModelProbes,
+  provider: ProviderId,
+  result: ProviderProbe,
+): ModelProbes {
+  return {
+    ...current,
+    providers: { ...current.providers, [provider]: result },
+  };
+}
+
 export async function runFullProbe(
   keys: Partial<Record<ProviderId, string>>,
   previous: ModelProbes,
@@ -472,26 +492,99 @@ export async function runFullProbe(
    */
   onProviderComplete: (provider: ProviderId, result: ProviderProbe) => Promise<void>,
 ): Promise<ModelProbes> {
-  const providers: Record<ProviderId, ProviderProbe> = {
-    gemini: { ...(previous.providers.gemini ?? emptyProviderProbe()) },
-    groq: { ...(previous.providers.groq ?? emptyProviderProbe()) },
-    nvidia: { ...(previous.providers.nvidia ?? emptyProviderProbe()) },
-  };
+  // Concurrent across providers. Gemini, Groq and NVIDIA are independent
+  // rate-limit domains with their own keys, and pacing is already enforced
+  // per provider (PROVIDER_CONCURRENCY / PROVIDER_MIN_GAP_MS), so running them
+  // together adds no pressure to any one of them. Sequentially, Gemini's
+  // ~9 req/min pacing left the other two idle for most of the run.
+  let running: ModelProbes = { ...previous };
 
-  // Sequential across providers so progress reads clearly and free-tier rate
-  // limits are not hit from three directions at once.
-  for (const p of PROVIDER_IDS) {
+  await Promise.all(PROVIDER_IDS.map(async (p) => {
     const key = keys[p]?.trim();
     if (!key) {
       // No key means we learned nothing — keep the previous results rather
       // than replacing them with an empty block the reconciler might act on.
-      providers[p] = { ...providers[p], error: 'No admin key for this provider.' };
-      continue;
+      const skipped: ProviderProbe = {
+        ...(previous.providers[p] ?? emptyProviderProbe()),
+        error: 'No admin key for this provider.',
+      };
+      running = mergeProviderResult(running, p, skipped);
+      await onProviderComplete(p, skipped);
+      return;
     }
-    providers[p] = await runProviderProbe(p, key, previous.providers[p] ?? emptyProviderProbe(),
-      (done, total) => onProgress(p, done, total));
-    await onProviderComplete(p, providers[p]);
+
+    // One provider failing must not reject the outer Promise.all and abort
+    // the others. runProviderProbe already catches its own errors, but a
+    // throw from onProviderComplete would escape.
+    try {
+      const result = await runProviderProbe(
+        p, key, previous.providers[p] ?? emptyProviderProbe(),
+        (done, total) => onProgress(p, done, total),
+      );
+      running = mergeProviderResult(running, p, result);
+      await onProviderComplete(p, result);
+    } catch (err: unknown) {
+      const failed: ProviderProbe = {
+        ...(previous.providers[p] ?? emptyProviderProbe()),
+        error: err instanceof Error ? err.message : 'Probe failed',
+      };
+      running = mergeProviderResult(running, p, failed);
+    }
+  }));
+
+  return { probedAt: Date.now(), probedBy: '', providers: running.providers };
+}
+
+/**
+ * Tier 2 — runs the admin's benchmark document through the real extraction
+ * path for each shortlisted model and scores the result.
+ *
+ * Uses runModelTest, the same override mechanism the "Test with estimate PDF"
+ * button uses, so this exercises the real chunking, the real prompts and the
+ * real per-provider image caps rather than a parallel implementation.
+ *
+ * Sequential within a provider: each run is a full multi-page extraction, and
+ * running several at once against one provider's rate limit would produce
+ * timeouts that look like model faults.
+ */
+export async function runAccuracyProbe(
+  provider: ProviderId,
+  key: string,
+  modelIds: string[],
+  benchmark: BenchmarkDoc,
+  onProgress: (modelId: string, done: number, total: number) => void,
+): Promise<Record<string, AccuracyResult>> {
+  const { runModelTest } = await import('./service');
+  const results: Record<string, AccuracyResult> = {};
+  const file = new File([benchmark.blob], benchmark.fileName, { type: benchmark.mimeType });
+
+  let done = 0;
+  for (const modelId of modelIds) {
+    onProgress(modelId, done, modelIds.length);
+    const started = Date.now();
+
+    const outcome = await runModelTest(
+      { provider, model: modelId, key },
+      'estimate',
+      file,
+      () => { /* per-page progress is too noisy for this view */ },
+    );
+
+    results[modelId] = scoreAccuracy({
+      modelId,
+      data: outcome.data,
+      expectedTotal: benchmark.expectedTotal,
+      expectedItemCount: benchmark.expectedItemCount,
+      ms: Date.now() - started,
+      pages: benchmark.pageCount,
+      benchmarkFileName: benchmark.fileName,
+      now: Date.now(),
+      error: outcome.ok ? null : (outcome.error ?? 'Extraction failed'),
+    });
+
+    done++;
+    onProgress(modelId, done, modelIds.length);
   }
 
-  return { probedAt: Date.now(), probedBy: '', providers };
+  return results;
 }

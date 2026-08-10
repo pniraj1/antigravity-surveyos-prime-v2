@@ -213,3 +213,53 @@ describe('orderCatalogue', () => {
     expect(ordered).toHaveLength(entries.length);
   });
 });
+
+import { mergeProviderResult } from '../probe-runner';
+import type { ModelProbes } from '../probe-types';
+
+function probesDoc(): ModelProbes {
+  return {
+    probedAt: 0, probedBy: '',
+    providers: {
+      gemini: { probedAt: 0, error: null, models: {}, accuracy: {} },
+      groq: { probedAt: 0, error: null, models: {}, accuracy: {} },
+      nvidia: { probedAt: 0, error: null, models: {}, accuracy: {} },
+    },
+  };
+}
+
+function providerProbe(tag: string): ProviderProbe {
+  return {
+    probedAt: 1, error: null, accuracy: {},
+    models: { [tag]: { id: tag, status: 'ok', reason: '', vision: true, imageCap: 1,
+      ctxWindow: 1, msPerPage: 1, slow: false,
+      source: { vision: 'probe', imageCap: 'probe', ctxWindow: 'probe' },
+      probedAt: 1, consecutiveFailures: 0 } as ProbeResult },
+  };
+}
+
+describe('mergeProviderResult', () => {
+  it('two providers completing out of order both survive', () => {
+    // Under Promise.all, completion order is not the loop order. Merging into
+    // a captured snapshot instead of the latest state loses one of them.
+    let state = probesDoc();
+    state = mergeProviderResult(state, 'nvidia', providerProbe('nv'));
+    state = mergeProviderResult(state, 'gemini', providerProbe('gem'));
+
+    expect(Object.keys(state.providers.nvidia.models)).toEqual(['nv']);
+    expect(Object.keys(state.providers.gemini.models)).toEqual(['gem']);
+  });
+
+  it('merging one provider leaves the others untouched', () => {
+    const before = probesDoc();
+    const after = mergeProviderResult(before, 'groq', providerProbe('gq'));
+    expect(after.providers.gemini).toBe(before.providers.gemini);
+    expect(after.providers.nvidia).toBe(before.providers.nvidia);
+  });
+
+  it('does not mutate the input', () => {
+    const before = probesDoc();
+    mergeProviderResult(before, 'groq', providerProbe('gq'));
+    expect(Object.keys(before.providers.groq.models)).toEqual([]);
+  });
+});
