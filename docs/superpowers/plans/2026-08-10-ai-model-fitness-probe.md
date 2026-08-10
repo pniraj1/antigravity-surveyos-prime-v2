@@ -373,7 +373,7 @@ NVIDIA rejects any request carrying more than one image, but the processor sends
 - Produces:
   - `PROVIDER_IMAGE_CAPS: Record<ProviderId, number | null>` — `nvidia` becomes `1`
   - `resolveVisionChunkSize(preferred: number, imageCap: number | null): number` (exported from `src/lib/ai/image-cap.ts`)
-  - `getActiveImageCap(): Promise<number | null>` (exported from `src/lib/ai/service.ts`)
+  - `getActiveImageCap(): number | null` (exported from `src/lib/ai/service.ts`) — synchronous and side-effect-free by design; see the comment in its implementation
 
 - [ ] **Step 1: Write the failing test**
 
