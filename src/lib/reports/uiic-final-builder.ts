@@ -601,7 +601,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
       <td style="${td}">${r.particulars}</td>
       <td style="${td}text-align:center;">Labour</td>
       <td style="${td}text-align:center;">${jobTypeLabel(r)}</td>
-      ${blank}
+      <td style="${td}text-align:right;">${fa(r.estimated)}</td>
       <td style="${td}text-align:center;">${depLabel(r)}</td>
       ${blank}
       <td style="${td}text-align:center;">${String(r.gst ?? 0)}</td>
@@ -615,7 +615,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
       <td style="${td}">${r.particulars}</td>
       <td style="${td}text-align:center;">Paint</td>
       <td style="${td}text-align:center;">${jobTypeLabel(r)}</td>
-      ${blank}
+      <td style="${td}text-align:right;">${fa(r.estimated)}</td>
       <td style="${td}text-align:center;">${depLabel(r)}</td>
       ${blank}
       <td style="${td}text-align:center;">${String(r.gst ?? 0)}</td>
@@ -772,7 +772,9 @@ ${pHtml || `<tr><td colspan="11" style="${td}text-align:center;color:#999;font-s
 <tr><td colspan="11" style="${sec}">LABOUR</td></tr>
 ${lHtml || `<tr><td colspan="11" style="${td}text-align:center;color:#999;font-style:italic;">No labour in allowed items</td></tr>`}
 <tr style="font-weight:700;background:#f6f6f6;">
-  <td colspan="9" style="${td}">SUB TOTAL</td>
+  <td colspan="4" style="${td}">SUB TOTAL</td>
+  <td style="${td}text-align:right;">${fa(allowedLabour.reduce((s, r) => s + r.estimated, 0))}</td>
+  <td colspan="4" style="${td}"></td>
   <td style="${td}text-align:right;">${fa(labourAgg.base)}</td>
   ${blank}
 </tr>
@@ -786,7 +788,9 @@ ${taxLines(labourAgg, 'Labour', 'labour')}
 <tr><td colspan="11" style="${sec}">PAINTING CHARGES</td></tr>
 ${ptHtml || `<tr><td colspan="11" style="${td}text-align:center;color:#999;font-style:italic;">No painting in allowed items</td></tr>`}
 <tr style="font-weight:700;background:#f6f6f6;">
-  <td colspan="10" style="${td}">SUB TOTAL</td>
+  <td colspan="4" style="${td}">SUB TOTAL</td>
+  <td style="${td}text-align:right;">${fa(allowedPaint.reduce((s, r) => s + r.estimated, 0))}</td>
+  <td colspan="5" style="${td}"></td>
   <td style="${td}text-align:right;">${fa(paintAgg.base)}</td>
 </tr>
 ${taxLines(paintAgg, 'Paint', 'paint')}
@@ -797,7 +801,9 @@ ${taxLines(paintAgg, 'Paint', 'paint')}
 
 <tr style="font-weight:700;background:#ddd;">
   <td colspan="4" style="${td}">TOTAL</td>
-  <td style="${td}text-align:right;">${fa(allowedParts.reduce((s, r) => s + r.estimated, 0))}</td>
+  <td style="${td}text-align:right;">${fa(
+    [...allowedParts, ...allowedLabour, ...allowedPaint].reduce((s, r) => s + r.estimated, 0)
+  )}</td>
   ${blank}
   <td style="${td}text-align:right;">${fa(allowedParts.reduce((s, r) => s + r.assessed, 0))}</td>
   ${blank}

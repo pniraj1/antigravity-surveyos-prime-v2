@@ -114,6 +114,48 @@ describe('Labour and Paint honour a manual depreciation override', () => {
   });
 });
 
+/**
+ * The allowed-items table is not the only place `calculateAssessmentSummary`'s
+ * estimate figures get printed — a separate Financial Summary block on the
+ * same document already prints `asum.estimateLabourOnlyBase` /
+ * `estimatePaintOnlyBase`. A whole-document `toContain` would pass from that
+ * block alone without the allowed-items table being fixed at all, so these
+ * assertions are scoped to the LABOUR / PAINTING CHARGES section of the table.
+ */
+function section(html: string, startMarker: string, endMarker: string): string {
+  const start = html.indexOf(startMarker);
+  const end = html.indexOf(endMarker, start);
+  if (start === -1 || end === -1) throw new Error(`markers not found: ${startMarker} / ${endMarker}`);
+  return html.slice(start, end);
+}
+
+describe('UIIC bill check prints labour and paint estimates', () => {
+  const rows = [
+    row({ particulars: 'Bumper', partType: 'plastic', estimated: 11000, assessed: 10000 }),
+    row({ particulars: 'Fitting', section: 'labour', partType: 'labour', estimated: 4400, assessed: 4000 }),
+    row({ particulars: 'Painting', section: 'paint', partType: 'paint', estimated: 6600, assessed: 6000 }),
+  ];
+
+  test('the labour row shows its own estimate inside the LABOUR table section', () => {
+    const html = money(buildUIICBillCheckHTML(claim(rows), null));
+    const labourSection = section(html, '>LABOUR<', '>PAINTING CHARGES<');
+    expect(labourSection).toContain('4400.00');
+  });
+
+  test('the paint row shows its own estimate inside the PAINTING CHARGES table section', () => {
+    const html = money(buildUIICBillCheckHTML(claim(rows), null));
+    const paintSection = section(html, '>PAINTING CHARGES<', '>TOTAL<');
+    expect(paintSection).toContain('6600.00');
+  });
+
+  test('the allowed-items grand total estimate covers parts, labour and paint', () => {
+    const html = money(buildUIICBillCheckHTML(claim(rows), null));
+    const totalSection = section(html, '>TOTAL<', '</tbody>');
+    // 11000 + 4400 + 6600 = 22000. Previously this row printed 11000 — parts only.
+    expect(totalSection).toContain('22000.00');
+  });
+});
+
 describe('regression floor: no override changes nothing', () => {
   const rows = [
     row({ particulars: 'Bumper', partType: 'plastic' }),
