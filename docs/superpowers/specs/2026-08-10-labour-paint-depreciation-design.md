@@ -24,9 +24,16 @@ The auto rate is also fixed at zero (`src/lib/calculations/depreciation.ts:67`).
 
 This was deliberate — `section-move.ts` documents the reason as "Labour and paint are Nil depreciation under the tariff." That default is correct, but it is being enforced as a prohibition rather than a default, and the surveyor signing the assessment has no way to depart from it.
 
-### 2. The UIIC report never prints Labour or Paint estimates
+### 2. The UIIC Bill Check report never prints Labour or Paint estimates
 
-In `src/lib/reports/uiic-final-builder.ts`, the estimate figure is omitted at all three levels of the allowed-items table:
+`src/lib/reports/uiic-final-builder.ts` exports two documents, and the defect is in the second:
+
+| function | lines | has an Estimate column? |
+|---|---|---|
+| `buildUIICFinalHTML` | 62–388 | No. Its column 5 is "Part List W/o Tax" and shows `assessed` for every section, so there is nothing to fix here. |
+| `buildUIICBillCheckHTML` | 422–940 | Yes — and Labour and Paint are blank in it. |
+
+In `buildUIICBillCheckHTML`, the estimate figure is omitted at all three levels of the allowed-items table:
 
 - **Per row** — labour rows emit `${blank}` in the Estimate column (`:575`); paint rows likewise (`:589`).
 - **Subtotals** — the labour subtotal spans `colspan="9"` (`:746`) and paint `colspan="10"` (`:760`), swallowing the Estimate column.
@@ -46,11 +53,16 @@ The raw accumulators around it would not:
 
 | location | reads |
 |---|---|
-| `uiic-final-builder.ts:476`, `:480` | `labOnly += r.assessed` / `paintOnly += r.assessed` |
-| `uiic-final-builder.ts:109`, `:110` | the same accumulation, duplicated in a second document builder in the same file |
-| `uiic-final-builder.ts:580`, `:594` | per-row `fa(r.assessed)` |
-| `uiic-final-builder.ts:747`, `:761` | subtotal `allowedLabour.reduce((s, r) => s + r.assessed, 0)` |
-| `standard-report-builder.ts:239` | `priceGst = r.assessed * (1 + gstPct / 100)`, and Dep% hardcoded to `—` at `:246` |
+| location | document | reads |
+|---|---|---|
+| `uiic-final-builder.ts:109`, `:110` | Final | `labOnly += r.assessed` / `paintOnly += r.assessed` |
+| `uiic-final-builder.ts:327`, `:335` | Final | per-row `fa(r.assessed * (1 + gst/100))`, **and Dep% hardcoded to the literal `N.D.`** so an override would not even be displayed |
+| `uiic-final-builder.ts:476`, `:480` | Bill Check | the same raw accumulation, duplicated |
+| `uiic-final-builder.ts:580`, `:594` | Bill Check | per-row `fa(r.assessed)` |
+| `uiic-final-builder.ts:747`, `:761` | Bill Check | subtotal `allowedLabour.reduce((s, r) => s + r.assessed, 0)` |
+| `standard-report-builder.ts:239` | standard | `priceGst = r.assessed * (1 + gstPct / 100)`, and Dep% hardcoded to `—` at `:246` |
+
+Note the Bill Check rows already call `depLabel(r)` (`:576`, `:590`), which is override-aware — so that document would *print* a depreciation percentage next to an amount that ignores it.
 
 `labBase` (`= labOnly + paintOnly`) feeds the taxable-base cells at `:372` and `:373`, while the CGST/SGST/total cells beside them (`lC`, `lS`, `lT`) come from the dep-aware `serviceAgg`. With an override set, those cells would contradict each other **inside the same row of the same table**.
 
@@ -88,11 +100,17 @@ The rule: **a cell showing a post-depreciation figure must route through `comput
 
 This is narrower than "never read `r.assessed`". The UIIC table has a legitimate **Assessed** column that shows the pre-depreciation figure — `rawParts` at `:472` and the parts subtotal at `:737` are correct as they stand and must not change. What is wrong is Labour and Paint using the raw figure in the *amount* column, where the Parts rows show a depreciated net. The two columns exist side by side at `:358`: `fa(rawParts)` (assessed) next to `fa(partsDepreciated)` (after depreciation).
 
-In `uiic-final-builder.ts`:
+In `buildUIICFinalHTML`:
+
+- `:327`, `:335` — Labour and Paint rows compute their amount from `computeRowNet`, and print the row's real depreciation label instead of the hardcoded `N.D.`. Reuse the existing `dL` expression from the parts branch at `:314`.
+- `:109`, `:110` — the `labOnly` / `paintOnly` accumulators use the depreciated net.
+- `labBase` (`:112`) — replaced by the dep-aware aggregate base, so the taxable-base cells at `:358`, `:372` and `:373` agree with the CGST/SGST cells beside them.
+
+In `buildUIICBillCheckHTML`:
 
 - `:580`, `:594` — per-row Labour and Paint amounts use the depreciated net.
-- `:476`, `:480` and the duplicate at `:109`, `:110` — the `labOnly` / `paintOnly` accumulators use the depreciated net.
-- `labBase` — replaced by `serviceAgg.base`, which is the same quantity already computed dep-aware. This removes the duplicate accumulation rather than fixing it twice, and guarantees the taxable-base cell agrees with the CGST/SGST cells beside it.
+- `:476`, `:480` — the same accumulators, second copy.
+- `labBase` (`:484`) — same replacement.
 - `:747`, `:761` — subtotals use the depreciated net.
 
 In `standard-report-builder.ts`:
@@ -102,7 +120,7 @@ In `standard-report-builder.ts`:
 
 ### Part 4 — Print the missing estimates
 
-In `uiic-final-builder.ts`:
+In `buildUIICBillCheckHTML` only — `buildUIICFinalHTML` has no Estimate column:
 
 - `:575`, `:589` — replace the `${blank}` in the Estimate column with `fa(r.estimated)`.
 - `:746`, `:760` — narrow each subtotal's `colspan` by one and emit an Estimate subtotal cell for that section.
@@ -114,7 +132,7 @@ Extend the existing parity tests (`src/lib/reports/__tests__/depreciation-parity
 
 - **Parity under a Labour override.** A claim with a Labour row at a 30% override produces the same labour figure from `calculateAssessmentSummary`, the standard report, and the UIIC report. The same test for a Paint row.
 - **Internal consistency.** With an override set, the UIIC taxable-base cell equals `serviceAgg.base`, so the base and its CGST/SGST no longer contradict.
-- **Estimate totals.** The UIIC grand-total Estimate equals the sum of allowed Parts + Labour + Paint estimates, and a claim with Labour and Paint rows prints a non-empty Estimate cell for each.
+- **Estimate totals.** The UIIC Bill Check grand-total Estimate equals the sum of allowed Parts + Labour + Paint estimates, and a claim with Labour and Paint rows prints a non-empty Estimate cell for each.
 - **Section move clears the override.** A Parts row with a 50% override moved to Labour comes back with `depOverride: undefined` — locking in the decision above so it is not quietly reversed.
 - **Paste guard.** A Dep% pasted onto a Labour row is applied; one pasted onto a disallowed row is still skipped.
 - **Regression floor.** With no override anywhere, every existing report figure is unchanged — the whole change must be a no-op on current claims.
