@@ -97,7 +97,9 @@ This keeps the expensive work concentrated where the gap is, which is NVIDIA.
 
 ### Pass 1 — reachability ping
 
-One call per catalogue entry: two-word text prompt, `max_tokens: 4`. Classifies in roughly one second per model.
+One call per catalogue entry: the prompt `Reply with OK.` and `max_tokens` set to the **real extraction budget** (16,384), not a small number.
+
+`max_tokens` is a ceiling, not a target — a healthy model answers "OK" in two tokens and returns immediately, so the ping stays fast. But a model whose context window cannot accommodate a 16,384-token completion rejects the request outright, which is the only way to discover that ceiling. Pinging with a small `max_tokens` would let `nvidia/llama-3.1-nemotron-nano-vl-8b-v1` pass, and it would then fail on every real extraction.
 
 | response | status | effect |
 |---|---|---|
@@ -114,11 +116,11 @@ Parsing the context window out of the 400 message is best-effort; on no match, `
 
 Three calls per survivor:
 
-1. **Vision** — one small image (a 32×32 JPEG constant, no fixture needed). `200` → `vision: true`.
-2. **Image cap** — the same image twice. `400 "At most N image(s)"` records the real cap; `200` means the cap is at least 2. NVIDIA answers 1 here, which is what drives the chunking fix.
-3. **Latency** — one realistic page image with the real estimate prompt and `max_tokens: 512`, aborted at **90s**.
+1. **Vision** — the fixture image, asking for a reference code printed on it. A `200` alone proves nothing: a text-only model handed an image may ignore it and answer anyway. The model must return the code, which it can only read from the pixels.
+2. **Image cap** — the same image twice. `400 "At most N image(s)"` records the real cap. A `200` proves only that the cap is at least 2, so rather than binary-searching for an exact number, the recorded value falls back to the provider's documented cap with `source: 'provider-metadata'`. This preserves Groq's known 5 and Gemini's uncapped behaviour while letting NVIDIA's probe overrule to 1 — the value the chunking fix depends on.
+3. **Latency** — the same fixture with the real estimate prompt and `max_tokens: 512`, aborted at **90s**.
 
-The latency payload is `public/ai-probe-page.jpg`: a synthetic one-page estimate, invented parts and amounts, sized like a real rendered page (~200KB) so the measurement is representative. It is a payload, not ground truth — nothing is scored against it. It must be synthetic: probing with a real estimate would ship a named insured's GSTIN, chassis and registration number to every model on every run.
+All three calls share one fixture, `public/ai-probe-page.jpg`: a synthetic one-page estimate with invented parts and amounts, carrying a printed reference code (`PROBE7X`) for the vision check, sized like a real rendered page (~200KB) so the latency measurement is representative. It is a payload, not ground truth — no extracted value is scored against it. It must be synthetic: probing with a real estimate would ship a named insured's GSTIN, chassis and registration number to every model on every run.
 
 A model that trips the 90s cutoff records `msPerPage: null, slow: true`. It is shown and remains selectable — the admin may accept it — but is ranked last and badged. The 90s cutoff is a probe budget that keeps a full run to a few minutes, not the runtime limit; the request path allows 300s, so a `slow` model can still work in production. `meta/llama-3.2-90b-vision-instruct` at 131s/page is exactly this case.
 
