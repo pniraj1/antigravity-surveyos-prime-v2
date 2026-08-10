@@ -6,8 +6,8 @@ const cfg: ProviderConfig = {
   enabled: true,
   defaultModel: 'gemini-2.5-flash',
   models: [
-    { id: 'gemini-2.5-flash', label: 'x', note: '', ctxWindow: null, vision: true, imageCap: null, estimateCapacity: '' },
-    { id: 'gemini-3.5-flash', label: 'y', note: '', ctxWindow: null, vision: true, imageCap: null, estimateCapacity: '' },
+    { id: 'gemini-2.5-flash', label: 'x', note: '', ctxWindow: null, vision: true, imageCap: null },
+    { id: 'gemini-3.5-flash', label: 'y', note: '', ctxWindow: null, vision: true, imageCap: null },
   ],
 };
 

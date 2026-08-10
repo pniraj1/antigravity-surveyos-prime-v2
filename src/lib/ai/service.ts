@@ -15,7 +15,7 @@ import { assertWithinImageCap } from './image-cap';
 import { useProfileStore } from '@/stores/profile-store';
 import { useUIStore } from '@/stores/ui-store';
 import { toast } from 'sonner';
-import { ModelEntry, PROVIDER_IMAGE_CAPS, computeEstimateCapacity, type ProviderConfig } from './models-config';
+import { ModelEntry, PROVIDER_IMAGE_CAPS, resolveModelImageCap, type ProviderConfig } from './models-config';
 import { useAIConfigStore } from '@/stores/ai-config-store';
 
 /** Returns the saved model if still enabled, else the provider's configured default. */
@@ -256,9 +256,10 @@ function buildProvider(
       endpoint: 'https://integrate.api.nvidia.com/v1/chat/completions',
       model,
       keys,
-      // NVIDIA NIM 400s on more than one image per request. Verified against
-      // llama-3.2-90b/11b-vision-instruct and nemotron-nano-12b-v2-vl.
-      maxImages: PROVIDER_IMAGE_CAPS.nvidia ?? undefined,
+      // The cap is per-model, not per-provider: meta/llama-3.2-90b-vision-instruct
+      // 400s on a second image while nvidia/nemotron-nano-12b-v2-vl accepts it.
+      // Uses the probed value when there is one, else the safe provider default.
+      maxImages: resolveModelImageCap('nvidia', model, useAIConfigStore.getState().config.providers.nvidia) ?? undefined,
     };
   }
   // groq
@@ -270,7 +271,7 @@ function buildProvider(
     endpoint: 'https://api.groq.com/openai/v1/chat/completions',
     model,
     keys,
-    maxImages: 5,
+    maxImages: resolveModelImageCap('groq', model, useAIConfigStore.getState().config.providers.groq) ?? undefined,
     maxOutputTokens: 8192,
   };
 }
@@ -306,7 +307,14 @@ export function getActiveImageCap(): number | null {
   const active = hasKeys[preferred] ? preferred : hasKeys[fallback] ? fallback : null;
   if (!active) return null;
 
-  return PROVIDER_IMAGE_CAPS[active];
+  const block = useAIConfigStore.getState().config.providers[active];
+  const model = resolveEnabledModel(
+    active === 'gemini' ? resolveGeminiModel(profile)
+      : active === 'nvidia' ? resolveNvidiaModel(profile)
+      : resolveGroqModel(profile),
+    block,
+  );
+  return resolveModelImageCap(active, model, block);
 }
 
 /**
@@ -843,9 +851,10 @@ export async function fetchGeminiModelEntries(apiKey: string): Promise<ModelEntr
       .map(m => {
         const id = m.name.replace('models/', '');
         const ctxWindow = m.inputTokenLimit ?? null;
-        const vision = true; // gemini-* generateContent models are multimodal
-        return { id, label: m.displayName ?? id, note: '', ctxWindow, vision, imageCap,
-          estimateCapacity: computeEstimateCapacity({ vision, ctxWindow, imageCap }) };
+        // Vision is left false here — the probe measures it. Assuming every
+        // gemini-* model is multimodal is the same class of guess that
+        // computeEstimateCapacity used to make.
+        return { id, label: m.displayName ?? id, note: '', ctxWindow, vision: false, imageCap };
       });
     return rows.length > 0 ? rows : null;
   } catch {

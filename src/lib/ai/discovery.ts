@@ -1,33 +1,27 @@
-import { ModelEntry, PROVIDER_IMAGE_CAPS, computeEstimateCapacity } from './models-config';
+import { ModelEntry, PROVIDER_IMAGE_CAPS } from './models-config';
 
 /**
- * Heuristic for NVIDIA/Groq, whose /models endpoints return only an id.
- * Matches known multimodal families; excludes embedding/safety/guard/text-only.
+ * Maps a provider's raw catalogue into entries. Capability fields are left
+ * unknown — vision, image cap and context window come from the probe
+ * (src/lib/ai/probe-runner.ts), not from pattern-matching the model name.
+ *
+ * The previous version guessed vision support from the id and stamped every
+ * match with "handles 6+ page scanned estimates". Measured against NVIDIA:
+ * 60 of its 100 listed models 404 on call, and the vision models that do work
+ * reject a second image outright.
  */
-export function isLikelyVisionModel(id: string): boolean {
-  const s = id.toLowerCase();
-  if (/embed|guard|safety|reward|retriev|nemoretriever|parse|reranking|tts|whisper/.test(s)) return false;
-  return /vision|-vl\b|vl-|maverick|gemma-3|gemma-4|phi-3-vision|phi-4|llama-4|nemotron-nano-\d+b-v\d+-vl|pixtral|qwen.*vl/.test(s);
-}
-
 function mapList(provider: 'nvidia' | 'groq', ids: string[]): ModelEntry[] {
-  const imageCap = PROVIDER_IMAGE_CAPS[provider];
-  const ctxWindow = provider === 'groq' ? 131_072 : 128_000; // provider default; endpoints don't report it
   return ids
     .filter(id => !!id)
     .sort()
-    .map(id => {
-      const vision = isLikelyVisionModel(id);
-      return {
-        id,
-        label: id.split('/').pop() ?? id,
-        note: '',
-        ctxWindow,
-        vision,
-        imageCap,
-        estimateCapacity: computeEstimateCapacity({ vision, ctxWindow, imageCap }),
-      };
-    });
+    .map(id => ({
+      id,
+      label: id.split('/').pop() ?? id,
+      note: '',
+      ctxWindow: null,
+      vision: false,
+      imageCap: PROVIDER_IMAGE_CAPS[provider],
+    }));
 }
 
 async function fetchOpenAIStyleModels(url: string, key: string): Promise<string[] | null> {

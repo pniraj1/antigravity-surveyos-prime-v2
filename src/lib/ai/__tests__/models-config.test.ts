@@ -1,25 +1,30 @@
 import { describe, it, expect } from 'vitest';
-import { computeEstimateCapacity, PROVIDER_IMAGE_CAPS, FALLBACK_AI_MODELS_CONFIG, mergeWithFallback } from '../models-config';
+import { PROVIDER_IMAGE_CAPS, FALLBACK_AI_MODELS_CONFIG, mergeWithFallback, resolveModelImageCap } from '../models-config';
 
-describe('computeEstimateCapacity', () => {
-  it('flags text-only models as unfit for scanned estimates', () => {
-    expect(computeEstimateCapacity({ vision: false, ctxWindow: 128000, imageCap: null }))
-      .toBe('text only · not for scanned estimates');
+describe('resolveModelImageCap', () => {
+  const block = {
+    enabled: true,
+    defaultModel: 'probed',
+    models: [
+      { id: 'probed', label: 'p', note: '', ctxWindow: 128000, vision: true, imageCap: 1 },
+      { id: 'unprobed', label: 'u', note: '', ctxWindow: 128000, vision: true, imageCap: null },
+    ],
+  };
+
+  it('uses the probed cap recorded on the enabled model', () => {
+    expect(resolveModelImageCap('nvidia', 'probed', block)).toBe(1);
   });
 
-  it('warns when image cap is 5 or fewer (Groq)', () => {
-    expect(computeEstimateCapacity({ vision: true, ctxWindow: 131072, imageCap: 5 }))
-      .toBe('vision · max 5 images · not ideal for 6-page scans');
+  it('falls back to the provider default when the model records no cap', () => {
+    expect(resolveModelImageCap('groq', 'unprobed', block)).toBe(5);
   });
 
-  it('approves uncapped vision models with a context badge', () => {
-    expect(computeEstimateCapacity({ vision: true, ctxWindow: 1_000_000, imageCap: null }))
-      .toBe('vision · ~1M ctx · handles 6+ page scanned estimates');
+  it('falls back to the provider default for a model not in the block', () => {
+    expect(resolveModelImageCap('nvidia', 'missing', block)).toBe(1);
   });
 
-  it('omits the context badge when ctxWindow is unknown', () => {
-    expect(computeEstimateCapacity({ vision: true, ctxWindow: null, imageCap: null }))
-      .toBe('vision · handles 6+ page scanned estimates');
+  it('returns null for an uncapped provider', () => {
+    expect(resolveModelImageCap('gemini', 'missing', block)).toBeNull();
   });
 });
 

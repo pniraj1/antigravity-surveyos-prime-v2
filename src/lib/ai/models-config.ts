@@ -10,7 +10,6 @@ export interface ModelEntry {
   ctxWindow: number | null;
   vision: boolean;
   imageCap: number | null;
-  estimateCapacity: string;
 }
 
 export interface ProviderConfig {
@@ -48,24 +47,25 @@ export function formatCtx(n: number): string {
   return String(n);
 }
 
-/** Honest, use-case-framed verdict for handling multi-page estimate PDFs. */
-export function computeEstimateCapacity(input: {
-  vision: boolean;
-  ctxWindow: number | null;
-  imageCap: number | null;
-}): string {
-  const { vision, ctxWindow, imageCap } = input;
-  if (!vision) return 'text only · not for scanned estimates';
-  if (imageCap !== null && imageCap <= 5) {
-    return `vision · max ${imageCap} images · not ideal for 6-page scans`;
-  }
-  const ctx = ctxWindow ? `~${formatCtx(ctxWindow)} ctx · ` : '';
-  return `vision · ${ctx}handles 6+ page scanned estimates`;
+/**
+ * The image cap that applies to a specific enabled model: the probed value
+ * recorded on its ModelEntry, falling back to the provider default when the
+ * model has not been probed.
+ *
+ * The cap is genuinely per-model, not per-provider: nvidia/nemotron-nano-12b-v2-vl
+ * accepts 2 images while meta/llama-3.2-90b-vision-instruct rejects them.
+ */
+export function resolveModelImageCap(
+  providerId: ProviderId,
+  modelId: string,
+  block: ProviderConfig,
+): number | null {
+  const probed = block.models.find(m => m.id === modelId)?.imageCap;
+  return probed ?? PROVIDER_IMAGE_CAPS[providerId];
 }
 
 function entry(p: ProviderId, id: string, label: string, note: string, ctxWindow: number | null, vision: boolean): ModelEntry {
-  const imageCap = PROVIDER_IMAGE_CAPS[p];
-  return { id, label, note, ctxWindow, vision, imageCap, estimateCapacity: computeEstimateCapacity({ vision, ctxWindow, imageCap }) };
+  return { id, label, note, ctxWindow, vision, imageCap: PROVIDER_IMAGE_CAPS[p] };
 }
 
 /** Offline fallback used when Firestore is unreachable or the doc is absent. */

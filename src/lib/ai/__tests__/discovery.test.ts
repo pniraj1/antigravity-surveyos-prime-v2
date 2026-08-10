@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { isLikelyVisionModel, fetchNvidiaModels, fetchGroqModels } from '../discovery';
+import { fetchNvidiaModels, fetchGroqModels } from '../discovery';
 import { callNvidiaProxy } from '@/lib/firebase/functions';
 
 // NVIDIA's API has no CORS support, so fetchNvidiaModels goes through the
@@ -8,20 +8,6 @@ import { callNvidiaProxy } from '@/lib/firebase/functions';
 vi.mock('@/lib/firebase/functions', () => ({
   callNvidiaProxy: vi.fn(),
 }));
-
-describe('isLikelyVisionModel', () => {
-  it('matches known vision families', () => {
-    ['meta/llama-3.2-90b-vision-instruct', 'meta/llama-4-maverick-17b-128e-instruct',
-     'google/gemma-3-12b-it', 'microsoft/phi-3-vision-128k-instruct',
-     'nvidia/nemotron-nano-12b-v2-vl'].forEach(id =>
-      expect(isLikelyVisionModel(id)).toBe(true));
-  });
-  it('rejects text-only / embedding / safety models', () => {
-    ['meta/llama-3.2-3b-instruct', 'nvidia/llama-3.2-nv-embedqa-1b-v1',
-     'nvidia/nemotron-content-safety-reasoning-4b'].forEach(id =>
-      expect(isLikelyVisionModel(id)).toBe(false));
-  });
-});
 
 describe('fetchNvidiaModels', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -33,13 +19,21 @@ describe('fetchNvidiaModels', () => {
     });
     const rows = await fetchNvidiaModels('nvapi-test');
     expect(rows).not.toBeNull();
-    const vision = rows!.find(r => r.id === 'meta/llama-3.2-90b-vision-instruct');
-    expect(vision!.vision).toBe(true);
-    // NVIDIA NIM 400s on a second image ("At most 1 image(s) may be provided in
-    // one request"). This asserted null — "uncapped" — which is what made the
-    // processor send 2-page chunks that NVIDIA rejected outright.
-    expect(vision!.imageCap).toBe(1);
-    expect(rows!.find(r => r.id === 'meta/llama-3.2-3b-instruct')!.vision).toBe(false);
+    expect(rows!.map(r => r.id)).toEqual([
+      'meta/llama-3.2-3b-instruct',
+      'meta/llama-3.2-90b-vision-instruct',
+    ]);
+
+    const row = rows!.find(r => r.id === 'meta/llama-3.2-90b-vision-instruct')!;
+    // Vision is NOT inferred from the id containing "vision" — that guess is
+    // what stamped unusable NVIDIA models as fit for scanned estimates. The
+    // probe measures it; discovery reports unknown.
+    expect(row.vision).toBe(false);
+    expect(row.ctxWindow).toBeNull();
+    // NVIDIA NIM 400s on a second image for this model ("At most 1 image(s)
+    // may be provided in one request"). This asserted null — "uncapped" —
+    // which is what made the processor send 2-page chunks it rejected.
+    expect(row.imageCap).toBe(1);
   });
   it('returns null on HTTP error', async () => {
     vi.mocked(callNvidiaProxy).mockResolvedValue({ status: 401, ok: false, body: '' });

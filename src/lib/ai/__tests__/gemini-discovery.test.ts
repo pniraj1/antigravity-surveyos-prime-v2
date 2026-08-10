@@ -3,7 +3,7 @@ import { fetchGeminiModelEntries } from '../service';
 
 describe('fetchGeminiModelEntries', () => {
   afterEach(() => vi.restoreAllMocks());
-  it('maps ListModels into ModelEntry with ctxWindow + vision + uncapped images', async () => {
+  it('maps ListModels into ModelEntry, leaving vision for the probe to measure', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({ models: [
@@ -14,6 +14,10 @@ describe('fetchGeminiModelEntries', () => {
     const rows = await fetchGeminiModelEntries('AIza-test');
     expect(rows).not.toBeNull();
     expect(rows!.length).toBe(1);
-    expect(rows![0]).toMatchObject({ id: 'gemini-3.5-flash', vision: true, imageCap: null, ctxWindow: 1048576 });
+    // ctxWindow and imageCap come from provider metadata, which is reliable.
+    // vision does not — discovery no longer asserts that every gemini-* model
+    // is multimodal, because that was a guess. The probe measures it by making
+    // the model read a code that is only present in the fixture's pixels.
+    expect(rows![0]).toMatchObject({ id: 'gemini-3.5-flash', vision: false, imageCap: null, ctxWindow: 1048576 });
   });
 });

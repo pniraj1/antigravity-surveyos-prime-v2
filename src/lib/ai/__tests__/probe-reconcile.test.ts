@@ -5,7 +5,7 @@ import type { ModelProbes, ProbeResult, ProbeStatus } from '../probe-types';
 import { emptyProviderProbe } from '../probe-types';
 
 function entry(id: string): ModelEntry {
-  return { id, label: id, note: '', ctxWindow: 128000, vision: true, imageCap: 1, estimateCapacity: '' };
+  return { id, label: id, note: '', ctxWindow: 128000, vision: true, imageCap: 1 };
 }
 
 function config(nvidiaModels: string[], defaultModel: string): AIModelsConfig {
