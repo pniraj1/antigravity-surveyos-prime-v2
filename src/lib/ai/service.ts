@@ -39,8 +39,10 @@ export function getAITestOverride(): AITestOverride | null { return _testOverrid
 //   llama-4-scout        : Groq free tier, vision-capable
 export const CURRENT_MODELS = {
   gemini: 'gemini-2.5-flash',
-  // Llama 4 Scout — vision-capable, free tier on Groq
-  groq:   'meta-llama/llama-4-scout-17b-16e-instruct',
+  // Llama 3.3 70B — the fastest correct extraction measured on Groq (2.3s/page).
+  // Text-only: Groq's only vision model is qwen/qwen3.6-27b, whose 8000 TPM
+  // free-tier ceiling is below a single rendered estimate page (~10600 tokens).
+  groq:   'llama-3.3-70b-versatile',
   // NVIDIA NIM free tier: model prefix is "meta/" not "nvidia/"
   nvidia: 'meta/llama-3.2-90b-vision-instruct',
 };
@@ -58,16 +60,16 @@ export interface ModelOption {
  */
 export const PROVIDER_MODELS: Record<'gemini' | 'groq' | 'nvidia', ModelOption[]> = {
   gemini: [
-    { id: 'gemini-2.5-pro',        label: '2.5 Pro',        note: 'Most capable · deep reasoning · complex docs' },
-    { id: 'gemini-2.5-flash',      label: '2.5 Flash ✓',    note: 'Best value · 10 RPM · 500/day' },
-    { id: 'gemini-2.5-flash-lite', label: '2.5 Flash-Lite', note: 'Fastest · cheapest · 15 RPM · 1000/day' },
+    { id: 'gemini-2.5-flash',        label: '2.5 Flash ✓',  note: 'Best value · ~10s/page · vision + text' },
+    { id: 'gemini-flash-lite-latest', label: 'Flash-Lite',   note: 'Fastest · ~3s/page' },
+    { id: 'gemini-3.5-flash',        label: '3.5 Flash',     note: 'Newer · ~15s/page · vision + text' },
+    // gemini-2.5-pro is deliberately absent: it 429s on the free tier.
   ],
   groq: [
-    // Vision-capable (verified May 2026)
-    { id: 'meta-llama/llama-4-scout-17b-16e-instruct', label: 'Llama 4 Scout ✓', note: 'Best · vision + text · free tier · ~400 tps' },
-    // Text-only production models
-    { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B', note: 'Production · text only · reliable' },
-    { id: 'llama-3.1-8b-instant',    label: 'Llama 3.1 8B',  note: 'Production · fastest · text only' },
+    { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B ✓', note: 'Fastest correct · ~2.3s/page · text only' },
+    { id: 'qwen/qwen3.6-27b',        label: 'Qwen 3.6 27B',    note: 'Only vision model · 8K TPM limits scans' },
+    { id: 'openai/gpt-oss-120b',     label: 'GPT-OSS 120B',    note: 'Text only · 131K ctx' },
+    { id: 'llama-3.1-8b-instant',    label: 'Llama 3.1 8B',    note: 'Fastest · text only · 6K TPM' },
   ],
   nvidia: [
     { id: 'meta/llama-3.2-90b-vision-instruct', label: 'Llama 3.2 90B', note: 'Default · best vision' },
@@ -76,49 +78,61 @@ export const PROVIDER_MODELS: Record<'gemini' | 'groq' | 'nvidia', ModelOption[]
 };
 
 // ─── Fallback chain when a model is unavailable on this account tier ──────────
-// Tried in order. All are currently free-tier functional (April 2026).
-const GEMINI_FALLBACK_CHAIN = [
-  'gemini-2.5-flash',
-  'gemini-2.5-flash-lite',
+// Tried in order. Every id below was verified by live API call on 2026-08-10;
+// see src/lib/ai/__tests__/shipped-defaults.test.ts for the regression guard.
+export const GEMINI_FALLBACK_CHAIN = [
+  'gemini-2.5-flash',          // 10.5s/page text, 15.4s/page vision · correct
+  // gemini-2.5-flash-lite was here and returns 404 "no longer available to new
+  // users". The floating -latest alias is both alive and the fastest measured
+  // Gemini model on an estimate page (3.3s).
+  'gemini-flash-lite-latest',  // 3.3s/page text · fastest
 ];
 
-// Groq fallback chain (May 2026).
-// llama-4-scout (vision+text) → llama-3.3-70b (text) → llama-3.1-8b (fastest text)
-const GROQ_FALLBACK_CHAIN = [
-  'meta-llama/llama-4-scout-17b-16e-instruct',  // vision + text · best
-  'llama-3.3-70b-versatile',                    // text-only · reliable
-  'llama-3.1-8b-instant',                       // text-only · fastest
+// Groq fallback chain (August 2026).
+// llama-3.3-70b (text) → qwen3.6 (vision) → llama-3.1-8b (fastest text)
+export const GROQ_FALLBACK_CHAIN = [
+  'llama-3.3-70b-versatile',  // text · 2.3s/page, the fastest correct extraction measured
+  'qwen/qwen3.6-27b',         // vision + text · Groq's ONLY remaining vision model
+  'llama-3.1-8b-instant',     // text · fastest, lowest TPM ceiling
 ];
 
 // Models in the Groq fallback chain that support image/vision inputs.
 // Text-only models are skipped when the extraction includes images (e.g. RC scans).
-const GROQ_VISION_MODELS = new Set([
-  'meta-llama/llama-4-scout-17b-16e-instruct',
+//
+// Groq retired every llama-4 vision model; qwen3.6-27b is the only entry left
+// whose input_modalities include "image". Note its free-tier ceiling is 8000
+// TPM while one rendered estimate page is ~10600 tokens, so vision extraction
+// on Groq's free tier 413s — callWithRotation surfaces that and points the
+// surveyor at Gemini. Keeping it here means the chain can still *try*.
+export const GROQ_VISION_MODELS = new Set([
+  'qwen/qwen3.6-27b',
 ]);
 
 // Old model names stored in user profiles → auto-migrated to current default
-const DEPRECATED_GEMINI_MODELS: Record<string, string> = {
+export const DEPRECATED_GEMINI_MODELS: Record<string, string> = {
   'gemini-pro':               'gemini-2.5-flash',
   'gemini-pro-vision':        'gemini-2.5-flash',
   'gemini-1.0-pro':           'gemini-2.5-flash',
   'gemini-1.5-flash':         'gemini-2.5-flash',
   'gemini-1.5-flash-latest':  'gemini-2.5-flash',
   'gemini-1.5-pro':           'gemini-2.5-flash',
-  'gemini-2.0-flash':         'gemini-2.5-flash',       // deprecated, being shut down
-  'gemini-2.0-flash-lite':    'gemini-2.5-flash-lite',  // deprecated, being shut down
+  'gemini-2.0-flash':         'gemini-2.5-flash',          // 429 on the free tier
+  'gemini-2.0-flash-lite':    'gemini-flash-lite-latest',  // was → 2.5-flash-lite, now 404
   'gemini-2.0-flash-exp':     'gemini-2.5-flash',
-  'gemini-3-pro-preview':     'gemini-3.1-pro-preview', // shut down March 9, 2026
+  'gemini-2.5-flash-lite':    'gemini-flash-lite-latest',  // 404 "no longer available to new users"
+  'gemini-3-pro-preview':     'gemini-3.1-pro-preview',    // shut down March 9, 2026
 };
 
-const DEPRECATED_GROQ_MODELS: Record<string, string> = {
-  // Fake model IDs that never existed on Groq → migrate to real default
-  'openai/gpt-oss-120b': 'meta-llama/llama-4-scout-17b-16e-instruct',
-  'openai/gpt-oss-20b':  'meta-llama/llama-4-scout-17b-16e-instruct',
-  // Maverick deprecated March 9, 2026
-  'meta-llama/llama-4-maverick-17b-128e-instruct': 'meta-llama/llama-4-scout-17b-16e-instruct',
+export const DEPRECATED_GROQ_MODELS: Record<string, string> = {
+  // Every llama-4 model was retired by Groq — all 404 "does not exist".
+  'meta-llama/llama-4-scout-17b-16e-instruct':    'llama-3.3-70b-versatile',
+  'meta-llama/llama-4-maverick-17b-128e-instruct': 'llama-3.3-70b-versatile',
   // Old vision-preview models removed by Groq
-  'llama-3.2-90b-vision-preview': 'meta-llama/llama-4-scout-17b-16e-instruct',
-  'llama-3.2-11b-vision-preview': 'meta-llama/llama-4-scout-17b-16e-instruct',
+  'llama-3.2-90b-vision-preview': 'qwen/qwen3.6-27b',
+  'llama-3.2-11b-vision-preview': 'qwen/qwen3.6-27b',
+  // NOTE: openai/gpt-oss-120b and -20b were listed here as "fake model IDs that
+  // never existed on Groq". They are live (verified 2026-08-10), so migrating
+  // them away was rewriting a working model into one that 404s. Do not re-add.
 };
 
 export interface AIProvider {

@@ -69,21 +69,23 @@ export const FALLBACK_AI_MODELS_CONFIG: AIModelsConfig = {
   updatedBy: 'fallback',
   defaultProvider: 'gemini',
   providers: {
+    // Every id below was verified by live API call on 2026-08-10 and is guarded
+    // by src/lib/ai/__tests__/shipped-defaults.test.ts.
     gemini: {
       enabled: true,
       defaultModel: 'gemini-2.5-flash',
       models: [
-        entry('gemini', 'gemini-2.5-pro', '2.5 Pro', 'Most capable · deep reasoning', 1_000_000, true),
-        entry('gemini', 'gemini-2.5-flash', '2.5 Flash', 'Best value · 10 RPM · 500/day', 1_000_000, true),
-        entry('gemini', 'gemini-2.5-flash-lite', '2.5 Flash-Lite', 'Fastest · 15 RPM · 1000/day', 1_000_000, true),
+        entry('gemini', 'gemini-2.5-flash', '2.5 Flash', 'Best value · ~10s/page', 1_048_576, true),
+        entry('gemini', 'gemini-flash-lite-latest', 'Flash-Lite', 'Fastest · ~3s/page', 1_048_576, true),
+        entry('gemini', 'gemini-3.5-flash', '3.5 Flash', 'Newer · ~15s/page', 1_048_576, true),
       ],
     },
     groq: {
       enabled: true,
-      defaultModel: 'meta-llama/llama-4-scout-17b-16e-instruct',
+      defaultModel: 'llama-3.3-70b-versatile',
       models: [
-        entry('groq', 'meta-llama/llama-4-scout-17b-16e-instruct', 'Llama 4 Scout', 'Vision + text · free tier', 131_072, true),
-        entry('groq', 'llama-3.3-70b-versatile', 'Llama 3.3 70B', 'Text only · reliable', 131_072, false),
+        entry('groq', 'llama-3.3-70b-versatile', 'Llama 3.3 70B', 'Fastest correct · ~2.3s/page · text only', 131_072, false),
+        entry('groq', 'qwen/qwen3.6-27b', 'Qwen 3.6 27B', 'Only vision model · 8K TPM limits scans', 131_072, true),
       ],
     },
     nvidia: {
