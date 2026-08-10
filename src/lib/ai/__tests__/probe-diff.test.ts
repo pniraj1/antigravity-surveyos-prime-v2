@@ -24,6 +24,7 @@ function probe(...results: ProbeResult[]): ProviderProbe {
     probedAt: 1,
     error: null,
     models: Object.fromEntries(results.map(r => [r.id, r])),
+    accuracy: {},
   };
 }
 

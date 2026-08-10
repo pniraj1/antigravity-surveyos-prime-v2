@@ -35,7 +35,7 @@ function probes(nvidia: ProbeResult[], error: string | null = null): ModelProbes
     providers: {
       gemini: emptyProviderProbe(),
       groq: emptyProviderProbe(),
-      nvidia: { probedAt: 1, error, models: Object.fromEntries(nvidia.map(r => [r.id, r])) },
+      nvidia: { probedAt: 1, error, models: Object.fromEntries(nvidia.map(r => [r.id, r])), accuracy: {} },
     },
   };
 }

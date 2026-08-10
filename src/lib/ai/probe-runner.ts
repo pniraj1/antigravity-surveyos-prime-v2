@@ -423,14 +423,17 @@ export async function runProviderProbe(
       };
     }
 
-    return { probedAt: now, error: null, models };
+    // Accuracy carries over: this is a tier 1 capability probe, and it must
+    // never destroy tier 2 results. That separation is the whole point of
+    // keeping them in different maps.
+    return { probedAt: now, error: null, models, accuracy: previous.accuracy ?? {} };
   } catch (err: unknown) {
     const message = err instanceof ProbeAbort
       ? `Key rejected — probe aborted. ${err.message}`
       : err instanceof Error ? err.message : 'Probe failed';
     // No models: the reconciler treats this as "we learned nothing" and
     // leaves the working config untouched.
-    return { probedAt: now, error: message, models: {} };
+    return { probedAt: now, error: message, models: {}, accuracy: previous.accuracy ?? {} };
   }
 }
 

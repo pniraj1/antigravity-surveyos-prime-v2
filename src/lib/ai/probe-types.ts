@@ -1,6 +1,7 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import type { ProviderId } from './models-config';
+import type { AccuracyResult } from './probe-accuracy';
 
 /**
  * Measured model fitness, replacing the name-based guessing that used to
@@ -56,6 +57,11 @@ export interface ProviderProbe {
   /** Set when the provider's probe aborted; previous results are kept. */
   error: string | null;
   models: Record<string, ProbeResult>;
+  /**
+   * Tier 2 results, keyed by model id. A separate map from `models` so a
+   * capability re-probe never destroys accuracy data, and vice versa.
+   */
+  accuracy: Record<string, AccuracyResult>;
 }
 
 export interface ModelProbes {
@@ -65,7 +71,7 @@ export interface ModelProbes {
 }
 
 export function emptyProviderProbe(): ProviderProbe {
-  return { probedAt: 0, error: null, models: {} };
+  return { probedAt: 0, error: null, models: {}, accuracy: {} };
 }
 
 export const EMPTY_PROBES: ModelProbes = {
@@ -88,7 +94,11 @@ export async function loadModelProbes(): Promise<ModelProbes> {
     const raw = snap.data() as Partial<ModelProbes>;
     const providers = { ...EMPTY_PROBES.providers };
     for (const p of PROVIDER_IDS) {
-      if (raw.providers?.[p]) providers[p] = raw.providers[p]!;
+      const stored = raw.providers?.[p];
+      if (stored) {
+        // Documents written before accuracy scoring existed have no map.
+        providers[p] = { ...stored, accuracy: stored.accuracy ?? {} };
+      }
     }
     return {
       probedAt: raw.probedAt ?? 0,
@@ -107,4 +117,17 @@ export async function saveModelProbes(probes: ModelProbes, probedBy: string): Pr
     probedAt: Date.now(),
     probedBy,
   });
+}
+
+/**
+ * True when an accuracy result was produced against a different benchmark
+ * document than the one currently loaded. Stale results are shown and marked
+ * rather than deleted, so the admin can see what changed and re-run knowingly.
+ */
+export function isAccuracyStale(
+  result: AccuracyResult,
+  currentBenchmarkFileName: string | null,
+): boolean {
+  if (currentBenchmarkFileName === null) return true;
+  return result.benchmarkFileName !== currentBenchmarkFileName;
 }
