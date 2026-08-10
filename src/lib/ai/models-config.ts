@@ -26,11 +26,16 @@ export interface AIModelsConfig {
   providers: Record<ProviderId, ProviderConfig>;
 }
 
-/** Per-provider image cap. Groq accepts max 5 images; others are uncapped. */
+/**
+ * Per-provider image cap — the maximum images accepted in ONE request.
+ * Groq accepts 5. NVIDIA NIM accepts exactly 1 and 400s on more
+ * ("At most 1 image(s) may be provided in one request"). Gemini is uncapped.
+ * These are defaults; a probe result overrides them per model.
+ */
 export const PROVIDER_IMAGE_CAPS: Record<ProviderId, number | null> = {
   gemini: null,
   groq: 5,
-  nvidia: null,
+  nvidia: 1,
 };
 
 /** Formats a context window token count into a short badge string (1M, 131K). */

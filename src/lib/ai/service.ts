@@ -11,6 +11,7 @@
 import { getFirebaseApp } from '../firebase/config';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { classifyGatewayError, gatewayErrorMessage } from './gateway-errors';
+import { assertWithinImageCap } from './image-cap';
 import { useProfileStore } from '@/stores/profile-store';
 import { useUIStore } from '@/stores/ui-store';
 import { toast } from 'sonner';
@@ -153,7 +154,7 @@ function buildOverrideProvider(o: AITestOverride): AIProvider {
     return { name: 'gemini', endpoint: `https://generativelanguage.googleapis.com/v1beta/models/${o.model}:generateContent`, model: o.model, keys: [o.key] };
   }
   if (o.provider === 'nvidia') {
-    return { name: 'nvidia', endpoint: 'https://integrate.api.nvidia.com/v1/chat/completions', model: o.model, keys: [o.key] };
+    return { name: 'nvidia', endpoint: 'https://integrate.api.nvidia.com/v1/chat/completions', model: o.model, keys: [o.key], maxImages: PROVIDER_IMAGE_CAPS.nvidia ?? undefined };
   }
   return { name: 'groq', endpoint: 'https://api.groq.com/openai/v1/chat/completions', model: o.model, keys: [o.key], maxImages: 5, maxOutputTokens: 8192 };
 }
@@ -255,7 +256,9 @@ function buildProvider(
       endpoint: 'https://integrate.api.nvidia.com/v1/chat/completions',
       model,
       keys,
-      // No maxImages cap — NVIDIA NIM handles full documents
+      // NVIDIA NIM 400s on more than one image per request. Verified against
+      // llama-3.2-90b/11b-vision-instruct and nemotron-nano-12b-v2-vl.
+      maxImages: PROVIDER_IMAGE_CAPS.nvidia ?? undefined,
     };
   }
   // groq
@@ -270,6 +273,40 @@ function buildProvider(
     maxImages: 5,
     maxOutputTokens: 8192,
   };
+}
+
+/**
+ * The image cap of the provider that will actually serve the next request —
+ * the test override if one is active, otherwise the surveyor's primary
+ * provider. The processor uses this to size vision chunks so no page is ever
+ * dropped by the cap guard in callWithKey.
+ *
+ * Deliberately does NOT call getAIProvider(). That function toasts when the
+ * preferred provider has no keys and falls through to a Firestore read of
+ * ai_config/routing — calling it here would double every such toast and add a
+ * second, independent provider resolution per extraction that could disagree
+ * with the one callAIGateway performs. This reads the same inputs with no
+ * side effects and no network.
+ */
+export function getActiveImageCap(): number | null {
+  const override = getAITestOverride();
+  if (override) return buildOverrideProvider(override).maxImages ?? null;
+
+  const profile = getProfileFromStorage();
+  if (!profile) return null;
+
+  const preferred = (profile.aiProvider ?? 'gemini') as 'gemini' | 'groq' | 'nvidia';
+  // Mirror getAIProvider's choice: preferred if it has keys, else the fallback.
+  const hasKeys: Record<'gemini' | 'groq' | 'nvidia', boolean> = {
+    gemini: resolveGeminiKeys(profile).length > 0,
+    groq: resolveGroqKeys(profile).length > 0,
+    nvidia: resolveNvidiaKeys(profile).length > 0,
+  };
+  const fallback: 'gemini' | 'groq' = preferred === 'groq' ? 'gemini' : 'groq';
+  const active = hasKeys[preferred] ? preferred : hasKeys[fallback] ? fallback : null;
+  if (!active) return null;
+
+  return PROVIDER_IMAGE_CAPS[active];
 }
 
 /**
@@ -413,10 +450,11 @@ async function callWithKey(provider: AIProvider, key: string, prompt: string, im
   }
 
   if (images.length > 0) {
-    // Apply per-provider image cap (Groq = 5, NVIDIA/others = unlimited)
-    const cap = provider.maxImages ?? images.length;
-    const safeImages = images.slice(0, cap);
-    const content: any[] = safeImages.map(img => ({
+    // The chunk must already fit the provider's cap — the processor sizes it
+    // from getActiveImageCap(). Truncating here would drop pages from an
+    // estimate without telling anyone, so this throws instead.
+    assertWithinImageCap(images.length, provider.maxImages ?? null, provider.name);
+    const content: any[] = images.map(img => ({
       type: 'image_url',
       image_url: { url: img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}` },
     }));

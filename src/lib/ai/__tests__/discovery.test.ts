@@ -35,7 +35,10 @@ describe('fetchNvidiaModels', () => {
     expect(rows).not.toBeNull();
     const vision = rows!.find(r => r.id === 'meta/llama-3.2-90b-vision-instruct');
     expect(vision!.vision).toBe(true);
-    expect(vision!.imageCap).toBeNull();
+    // NVIDIA NIM 400s on a second image ("At most 1 image(s) may be provided in
+    // one request"). This asserted null — "uncapped" — which is what made the
+    // processor send 2-page chunks that NVIDIA rejected outright.
+    expect(vision!.imageCap).toBe(1);
     expect(rows!.find(r => r.id === 'meta/llama-3.2-3b-instruct')!.vision).toBe(false);
   });
   it('returns null on HTTP error', async () => {

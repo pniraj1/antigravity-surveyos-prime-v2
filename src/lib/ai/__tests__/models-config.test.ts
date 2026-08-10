@@ -24,8 +24,8 @@ describe('computeEstimateCapacity', () => {
 });
 
 describe('constants', () => {
-  it('caps Groq at 5 images, others uncapped', () => {
-    expect(PROVIDER_IMAGE_CAPS).toEqual({ gemini: null, groq: 5, nvidia: null });
+  it('caps NVIDIA at 1 image and Groq at 5, Gemini uncapped', () => {
+    expect(PROVIDER_IMAGE_CAPS).toEqual({ gemini: null, groq: 5, nvidia: 1 });
   });
   it('ships a non-empty fallback config for all three providers', () => {
     expect(FALLBACK_AI_MODELS_CONFIG.providers.gemini.models.length).toBeGreaterThan(0);

@@ -4,7 +4,8 @@
 // ═══════════════════════════════════════════════════════════
 
 // import * as pdfjsLib from 'pdfjs-dist'; // DO NOT STACTIC IMPORT THIS
-import { callAIGateway } from './service';
+import { callAIGateway, getActiveImageCap } from './service';
+import { resolveVisionChunkSize } from './image-cap';
 import { getDocPrompt } from './prompts';
 import { toast } from 'sonner';
 
@@ -520,8 +521,11 @@ export async function extractDocument(
     }
 
     // Chunk size: always 1 page per call in text-mode (avoids 413 on dense documents).
-    // In vision-mode: estimates get 2 pages per call for efficiency; others get 1.
-    const VISION_CHUNK_SIZE = (key === 'estimate' || key === 'final-bill') ? 2 : 1;
+    // In vision-mode: estimates prefer 2 pages per call for efficiency; others get 1.
+    // The preference is then clamped to the active provider's image cap — NVIDIA
+    // accepts exactly 1, and exceeding it 400s the whole request.
+    const PREFERRED_VISION_CHUNK = (key === 'estimate' || key === 'final-bill') ? 2 : 1;
+    const VISION_CHUNK_SIZE = resolveVisionChunkSize(PREFERRED_VISION_CHUNK, getActiveImageCap());
     const CHUNK_SIZE = useTextMode ? 1 : VISION_CHUNK_SIZE;
 
     // Build the base prompt — for vision mode on digitally-born docs we still
