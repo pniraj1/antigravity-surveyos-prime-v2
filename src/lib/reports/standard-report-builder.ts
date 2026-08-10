@@ -230,20 +230,28 @@ export function buildStandardFinalSurveyHTML(
   // These used to emit 10 cells spanning 11 columns, with their 6th cell
   // labelled GST% while the header's 6th column is Dep% — so every figure from
   // there rightwards sat under the wrong heading. They now follow the same
-  // column order as the parts rows: Dep% and the material columns read "—".
+  // column order as the parts rows: Dep% shows the row's real rate (the
+  // material columns still read "—", parts-only).
+  //
+  // Labour and paint carry no automatic depreciation, but a surveyor may set a
+  // manual depOverride. This row used to price straight off `r.assessed` and
+  // hardcode Dep% to "—", so an override was both invisible and uncharged.
   const serviceRowHtml = (section: 'labour' | 'paint', typeLabel: string) => {
     let sn = 1;
     return rows.filter(r => r.section === section).map(r => {
       const disallowed = r.allowed === false;
+      const dep = r.depOverride !== undefined ? r.depOverride : getDepreciationRate(r.partType, ageMonths, depType);
+      const depLabel = r.depOverride !== undefined ? `${dep}%*` : `${dep}%`;
       const gstPct = r.gst || 18;
-      const priceGst = disallowed ? 0 : r.assessed * (1 + gstPct / 100);
+      const { netBeforeGst } = disallowed ? { netBeforeGst: 0 } : computeRowNet(r, dep);
+      const priceGst = disallowed ? 0 : netBeforeGst * (1 + gstPct / 100);
       return `<tr>
       <td style="${td9}text-align:center;">${sn++}</td>
       <td style="${td9}">${r.particulars}</td>
       <td style="${td9}text-align:center;">${typeLabel}</td>
       <td style="${tdr9}">${m9(r.estimated)}</td>
       <td style="${tdr9}${disallowed ? 'color:#a00;font-weight:700;font-size:6.5pt;text-align:center;' : ''}">${disallowed ? 'NOT ALLOWED' : m9(r.assessed)}</td>
-      <td style="${tdr9}text-align:center;">—</td>
+      <td style="${tdr9}text-align:center;${r.depOverride !== undefined ? 'color:#b45309;' : ''}">${depLabel}</td>
       <td colspan="${NMAT}" style="${tdr9}text-align:center;">—</td>
       <td style="${tdr9}text-align:center;">${gstPct}%</td>
       <td style="${tdr9}${disallowed ? 'color:#a00;' : 'font-weight:600;'}">${disallowed ? '—' : m9(priceGst)}</td>

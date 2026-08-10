@@ -94,10 +94,19 @@ export function buildUIICFinalHTML(claim: ClaimData, profile: SurveyorProfile | 
   const AL = rows.filter(r => r.section === 'labour');
   const APT = rows.filter(r => r.section === 'paint');
 
+  // Per-item GST. The old 0.09 pair hardcoded 18% and silently understated
+  // every 28% part. Declared before the accumulators below so Labour and
+  // Paint can depreciate the same way Parts always has.
+  const depFor = (r: AssessmentRow) =>
+    r.depOverride !== undefined ? r.depOverride : getDepRate(r.partType, ageMonths, depType);
+
+  const partsAgg  = aggregateGst(AP.filter(r => r.allowed !== false), depFor);
+  const labourAgg = aggregateGst(AL.filter(r => r.allowed !== false), depFor);
+  const paintAgg  = aggregateGst(APT.filter(r => r.allowed !== false), depFor);
+
   AP.forEach(r => {
     if (r.allowed !== false) {
-      const dep = r.depOverride !== undefined ? r.depOverride : getDepRate(r.partType, ageMonths, depType);
-      const { isDisposal, netBeforeGst } = computeRowNet(r, dep);
+      const { isDisposal, netBeforeGst } = computeRowNet(r, depFor(r));
       if (isDisposal) {
         disposalNet += netBeforeGst;
       } else {
@@ -106,19 +115,18 @@ export function buildUIICFinalHTML(claim: ClaimData, profile: SurveyorProfile | 
       rawParts += r.assessed;
     }
   });
-  AL.forEach(r => { if (r.allowed !== false) labOnly += r.assessed; });
-  APT.forEach(r => { if (r.allowed !== false) paintOnly += r.assessed; });
+  // Labour and paint carry no automatic depreciation, but a surveyor may set
+  // depOverride per row — these used to accumulate the raw assessed figure,
+  // which was invisible while the rate was always 0 and wrong the moment an
+  // override exists.
+  AL.forEach(r => { if (r.allowed !== false) labOnly += computeRowNet(r, depFor(r)).netBeforeGst; });
+  APT.forEach(r => { if (r.allowed !== false) paintOnly += computeRowNet(r, depFor(r)).netBeforeGst; });
 
-  const labBase = labOnly + paintOnly;
-
-  // Per-item GST. The old 0.09 pair hardcoded 18% and silently understated
-  // every 28% part.
-  const depFor = (r: AssessmentRow) =>
-    r.depOverride !== undefined ? r.depOverride : getDepRate(r.partType, ageMonths, depType);
-
-  const partsAgg  = aggregateGst(AP.filter(r => r.allowed !== false), depFor);
-  const labourAgg = aggregateGst(AL.filter(r => r.allowed !== false), depFor);
-  const paintAgg  = aggregateGst(APT.filter(r => r.allowed !== false), depFor);
+  // Was `labOnly + paintOnly` accumulated raw. serviceAgg computes the same
+  // quantity depreciation-aware, so the taxable base printed below agrees
+  // with the CGST/SGST cells printed beside it.
+  const serviceAgg = aggregateGst([...AL, ...APT].filter(r => r.allowed !== false), depFor);
+  const labBase = serviceAgg.base;
 
   const pC = partsAgg.cgst, pS = partsAgg.sgst, pT = partsAgg.amount;
   const lC = labourAgg.cgst + paintAgg.cgst, lS = labourAgg.sgst + paintAgg.sgst;
@@ -322,9 +330,18 @@ ${getSurveyorHeader(profile)}
     return `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">${isNA ? '' : pt}</td><td style="${td}text-align:center;">${isNA ? '' : 'Replace'}</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : dL}</td><td style="${td}text-align:right;">${isNA ? '' : fa(afterDep)}</td><td style="${td}text-align:center;">${gstLabel}</td><td style="${wgStyle}">${wgLabel}</td><td style="${td}text-align:center;">${isNA ? 'Not<br/>Allowed' : ''}</td></tr>`;
   }).join('');
 
+  // Labour and Paint carry no automatic depreciation, but a surveyor may set
+  // a manual override. These rows used to print `r.assessed` with a
+  // hardcoded "N.D." label — so an override was both invisible and uncharged.
+  const serviceDepLabel = (r: AssessmentRow, dep: number) =>
+    r.depOverride !== undefined ? `${dep}%*` : (dep > 0 ? dep + '%' : 'N.D.');
+
   const lHtml = AL.map(r => {
     const isNA = r.allowed === false;
-    return `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">N.D.</td><td style="${td}"></td><td style="${td}text-align:center;">${isNA ? '' : String(r.gst ?? 0)}</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed * (1 + (r.gst || 0) / 100))}</td><td style="${td}text-align:center;">${isNA ? 'Not<br/>Allowed' : ''}</td></tr>`;
+    const dep = depFor(r);
+    const { afterDep } = computeRowNet(r, dep);
+    const withGst = afterDep * (1 + (r.gst || 0) / 100);
+    return `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : serviceDepLabel(r, dep)}</td><td style="${td}"></td><td style="${td}text-align:center;">${isNA ? '' : String(r.gst ?? 0)}</td><td style="${td}text-align:right;">${isNA ? '' : fa(withGst)}</td><td style="${td}text-align:center;">${isNA ? 'Not<br/>Allowed' : ''}</td></tr>`;
   }).join('');
 
   // Disallowed paint is listed and tagged, exactly as parts and labour are.
@@ -332,7 +349,10 @@ ${getSurveyorHeader(profile)}
   // paint serials disagree with the Bill Check report.
   const ptHtml = APT.map(r => {
     const isNA = r.allowed === false;
-    return `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Paint</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">N.D.</td><td style="${td}"></td><td style="${td}text-align:center;">${isNA ? '' : String(r.gst ?? 0)}</td><td style="${td}"></td><td style="${td}text-align:right;">${isNA ? 'Not<br/>Allowed' : fa(r.assessed * (1 + (r.gst || 0) / 100))}</td></tr>`;
+    const dep = depFor(r);
+    const { afterDep } = computeRowNet(r, dep);
+    const withGst = afterDep * (1 + (r.gst || 0) / 100);
+    return `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Paint</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : serviceDepLabel(r, dep)}</td><td style="${td}"></td><td style="${td}text-align:center;">${isNA ? '' : String(r.gst ?? 0)}</td><td style="${td}"></td><td style="${td}text-align:right;">${isNA ? 'Not<br/>Allowed' : fa(withGst)}</td></tr>`;
   }).join('');
 
   const p3 = `<div style="page-break-before:always;"></div>
@@ -472,16 +492,18 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
     rawParts += r.assessed;
     billedPartsTotal += computeRowLiability(r, rowDep(r)).liability;
   });
+  // Labour and paint carry no automatic depreciation, but a surveyor may set
+  // depOverride per row — these used to accumulate the raw assessed figure,
+  // which was invisible while the rate was always 0 and wrong the moment an
+  // override exists.
   allowedLabour.forEach(r => {
-    labOnly += r.assessed;
+    labOnly += computeRowNet(r, rowDep(r)).netBeforeGst;
     billedLabourTotal += computeRowLiability(r, rowDep(r)).liability;
   });
   allowedPaint.forEach(r => {
-    paintOnly += r.assessed;
+    paintOnly += computeRowNet(r, rowDep(r)).netBeforeGst;
     billedPaintTotal += computeRowLiability(r, rowDep(r)).liability;
   });
-
-  const labBase = labOnly + paintOnly;
 
   // Same per-item banding the table below uses, so Cost of Parts agrees with
   // the SPARE PARTS subtotal on a mixed-rate claim.
@@ -492,6 +514,11 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   const labourAgg  = aggregateGst(allowedLabour, rowDepFor);
   const paintAgg   = aggregateGst(allowedPaint, rowDepFor);
   const serviceAgg = aggregateGst([...allowedLabour, ...allowedPaint], rowDepFor);
+
+  // Was `labOnly + paintOnly` accumulated raw. serviceAgg computes the same
+  // quantity depreciation-aware, so the taxable base printed below agrees
+  // with the CGST/SGST cells printed beside it.
+  const labBase = serviceAgg.base;
 
   const pC = partsAgg.cgst, pS = partsAgg.sgst, pT = partsAgg.amount;
   const lC = serviceAgg.cgst, lS = serviceAgg.sgst, lT = serviceAgg.amount;
@@ -566,7 +593,9 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
     </tr>`;
   }).join('');
 
-  // LABOUR — bare amount in the Labour column; tax is added at subtotal level.
+  // LABOUR — bare depreciated amount in the Labour column; tax is added at
+  // subtotal level. depLabel(r) already reads rowDepFor(r), so this used to
+  // print an override's percentage next to an amount that ignored it.
   const lHtml = allowedLabour.map(r => `<tr>
       <td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td>
       <td style="${td}">${r.particulars}</td>
@@ -577,7 +606,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
       ${blank}
       <td style="${td}text-align:center;">${String(r.gst ?? 0)}</td>
       ${blank}
-      <td style="${td}text-align:right;">${fa(r.assessed)}</td>
+      <td style="${td}text-align:right;">${fa(computeRowNet(r, rowDepFor(r)).netBeforeGst)}</td>
       ${blank}
     </tr>`).join('');
 
@@ -591,7 +620,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
       ${blank}
       <td style="${td}text-align:center;">${String(r.gst ?? 0)}</td>
       ${blank}${blank}
-      <td style="${td}text-align:right;">${fa(r.assessed)}</td>
+      <td style="${td}text-align:right;">${fa(computeRowNet(r, rowDepFor(r)).netBeforeGst)}</td>
     </tr>`).join('');
 
   // One tax line per distinct rate, so a mixed-rate claim reads correctly.
@@ -744,7 +773,7 @@ ${pHtml || `<tr><td colspan="11" style="${td}text-align:center;color:#999;font-s
 ${lHtml || `<tr><td colspan="11" style="${td}text-align:center;color:#999;font-style:italic;">No labour in allowed items</td></tr>`}
 <tr style="font-weight:700;background:#f6f6f6;">
   <td colspan="9" style="${td}">SUB TOTAL</td>
-  <td style="${td}text-align:right;">${fa(allowedLabour.reduce((s, r) => s + r.assessed, 0))}</td>
+  <td style="${td}text-align:right;">${fa(labourAgg.base)}</td>
   ${blank}
 </tr>
 ${taxLines(labourAgg, 'Labour', 'labour')}
@@ -758,7 +787,7 @@ ${taxLines(labourAgg, 'Labour', 'labour')}
 ${ptHtml || `<tr><td colspan="11" style="${td}text-align:center;color:#999;font-style:italic;">No painting in allowed items</td></tr>`}
 <tr style="font-weight:700;background:#f6f6f6;">
   <td colspan="10" style="${td}">SUB TOTAL</td>
-  <td style="${td}text-align:right;">${fa(allowedPaint.reduce((s, r) => s + r.assessed, 0))}</td>
+  <td style="${td}text-align:right;">${fa(paintAgg.base)}</td>
 </tr>
 ${taxLines(paintAgg, 'Paint', 'paint')}
 <tr style="font-weight:700;background:#eee;">
