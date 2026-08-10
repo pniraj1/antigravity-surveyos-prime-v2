@@ -51,17 +51,19 @@ There is a single **Refresh & probe** button (`src/components/admin/tabs/AIModel
 
 - **Background / server-side execution.** The probe is client-side `fetch()` from the admin's tab. Making it survive tab closure needs a server-side job runner — a separate architecture change, specced on its own.
 - **Automatic model selection.** The probe reports; the admin still ticks and saves. Unchanged from the previous spec.
+- **Automatic per-document-type routing.** The classification groups models in the admin panel. It does *not* make the extraction path pick a different model for a licence than for an estimate — that is a routing change touching `buildProvider` and the surveyor's Profile choice, and belongs in its own spec. This one produces the data such a change would need.
 - **Changing the automatic depreciation, extraction, or chunking logic.** This spec touches the probe and its panel only.
 
 ## Data protection
 
-The benchmark document is a **real estimate supplied by the admin**, containing real insured PII. This is a knowing departure from the previous spec's synthetic-only position. Three constraints follow, and all three are requirements, not suggestions:
+The benchmark document carries **fake PII** — the admin supplies a specimen estimate with invented vehicle, customer and tax data. That is the intended use and the UI says so.
 
-1. **The PDF never reaches operator infrastructure.** It is stored in the admin's own browser (IndexedDB), not Firebase Storage, not Firestore. Firebase Storage is currently unused by this app — no `storage.rules` exists and nothing imports `getStorage` — so using it would create a new PII-at-rest location on the operator's systems and a new deploy surface. IndexedDB keeps the document device-local and under the admin's control, consistent with how the app already caches claims.
-2. **The upload control states the exposure plainly**, in the UI, at the point of upload: this document will be transmitted in full to every shortlisted model across the enabled providers, each time an accuracy run is performed. Plus a one-click **Remove** control.
-3. **`docs/compliance/dpdp-actual-state-source.md` is updated** in the same change to record the new egress path. That audit is a live compliance artifact; adding a PII flow without recording it makes the document wrong.
+Two things still hold, both cheap:
 
-A redacted document remains the better choice and the UI copy should say so, but the admin decides.
+1. **The PDF is stored device-local, in IndexedDB.** This is an engineering choice independent of PII: Firebase Storage is currently unused by this app — no `storage.rules` exists and nothing imports `getStorage` — so using it would mean new rules, a new deploy surface, and a new persistence layer to maintain, for no benefit over the IndexedDB layer that already exists.
+2. **The upload control states where the document goes**: transmitted in full to every shortlisted model across the enabled providers, on each accuracy run. Plus a one-click **Remove** control. One sentence of UI copy, so that an admin who later reaches for a real estimate does so knowingly.
+
+No compliance-document update is required, because no new real-PII egress path is being created.
 
 ## Design
 
@@ -160,6 +162,36 @@ interface AccuracyResult {
 
 `ProviderProbe` gains `accuracy: Record<string, AccuracyResult>`. When the admin replaces the benchmark document, existing results are **kept but marked stale** in the UI (their `benchmarkFileName` no longer matches), rather than silently deleted — the admin can see what changed and re-run deliberately.
 
+### Model classification — the clutter fix
+
+A flat list ranked by speed asks the admin to hold the whole trade-off in their head. But the app extracts two genuinely different kinds of document, with different demands:
+
+| | Small documents | Large documents |
+|---|---|---|
+| Examples | Driving licence, RC, policy, claim form | Repair estimate, final bill |
+| Shape | One page, a handful of fields | Multi-page, dense tables |
+| Usually | A photo or scan → **needs vision** | Digital PDF (text layer) *or* scan |
+| What matters | Speed — a surveyor is waiting | Table accuracy over many pages |
+
+So every working model is classified into these two capabilities, derived from what the probe already measures:
+
+```ts
+smallDocs = status === 'ok' && vision && msPerPage !== null && msPerPage <= SMALL_DOC_MAX_MS
+largeDocs = status === 'ok' && accuracy?.verdict === 'exact' | 'close'
+```
+
+`SMALL_DOC_MAX_MS = 20_000`. A model taking longer than 20s to read a driving licence is not usable for that job however accurate it is, because the surveyor is sitting there.
+
+The two are **not nested** and a model can be in both, one, or neither:
+
+- A text-only model fails `smallDocs` (a scanned licence needs vision) but can pass `largeDocs` on a digitally-born estimate via the text layer.
+- `nvidia/nemotron-nano-12b-v2-vl` — 27s/page, dropped GST on the amount column — fails both: too slow for a licence, wrong on an estimate.
+- A fast accurate vision model passes both.
+
+`largeDocs` requires Tier 2 to have run. Until it has, a model is reported **untested for large documents** rather than assumed good — the honest default, and the thing that makes the shortlist worth running.
+
+Classification is **derived at render time**, not stored. It is a pure function of the probe and accuracy results already persisted, so there is no schema change, nothing to migrate, and no possibility of a stored category drifting out of date with the measurements it came from.
+
 ### Throughput
 
 **Providers run concurrently.** `runFullProbe` replaces its sequential `for … await` with `Promise.all` across providers. Per-provider concurrency and pacing are untouched, so no provider sees more pressure than today. Progress reporting becomes per-provider rather than a single line — each provider block shows its own `12 / 39` while running.
@@ -177,7 +209,11 @@ interface AccuracyResult {
 - A **Benchmark document** area: the current file name, page count, expected total, a **Replace** and a **Remove** control, and the plain-language exposure warning. Empty state explains what it is for and recommends a redacted document.
 - Each enabled model row gains an accuracy badge once Tier 2 has run: `exact · 62,392.50 · 4m 10s`, or `wrong · 53,120.00 (−14.9%)`, or `not tested`.
 - A **Run accuracy test** button per provider block, enabled only when a benchmark document exists and at least one model is ticked. Disabled with an explanatory tooltip otherwise.
-- Working models keep sorting fastest-first, but a `wrong` accuracy verdict sorts below every untested model — a model known to extract incorrectly should never sit at the top of the list.
+- **Working models are grouped by capability**, not listed flat:
+  - **Good for small documents** — licence, RC, policy
+  - **Good for estimates & multi-page bills**
+  - **Limited** — passed Tier 1 but too slow for small documents and untested or `wrong` on large ones
+  A model qualifying for both appears under both headings; the grouping is a lens on one list, not a partition of it. Within each group, sorting stays fastest-first, except that a `wrong` accuracy verdict sorts below every untested model — a model known to extract incorrectly should never sit at the top.
 
 ## Error handling
 
@@ -197,6 +233,7 @@ Pure-logic units get unit tests; the network layer does not.
 - **Merge-on-complete**: two providers completing out of order both survive in the persisted document — the regression that ordered sequential completion used to hide.
 - **Staleness**: an `AccuracyResult` whose `benchmarkFileName` differs from the stored benchmark is reported stale.
 - **Shortlist selection**: Tier 2 targets exactly the ticked models for that provider, and no others.
+- **Classification** (`classifyModel`): a fast vision model with no accuracy result is `smallDocs` only; a text-only model with an `exact` verdict is `largeDocs` only; a 27s/page model with a `wrong` verdict is neither; a fast accurate vision model is both; a model at exactly `SMALL_DOC_MAX_MS` still qualifies; a model with `msPerPage: null` (cutoff exceeded) is not `smallDocs`.
 - **Existing suites must stay green** — `probe-classify`, `probe-diff`, `probe-reconcile`, `probe-runner`, `probe-types`. Tier 1 behaviour is unchanged and its tests must not need editing; if one does, the change was larger than intended.
 
 Manual verification: upload a real multi-page estimate, run Tier 1 on NVIDIA alone, tick two models, run accuracy, confirm the verdicts match a hand check of the same PDF through the existing "Test with estimate PDF" control.
@@ -209,7 +246,8 @@ Additive and backward-compatible. Existing `ai_config/model_probes` documents la
 
 None. Resolved during design:
 
-- Benchmark document is admin-supplied and real, stored device-local in IndexedDB, never on operator infrastructure.
+- Benchmark document is admin-supplied with fake PII, stored device-local in IndexedDB.
 - Ground truth is an admin-entered expected grand total, not a heuristic or a reference model.
 - Tier 2 shortlist is the admin's ticked models.
-- Background execution is out of scope.
+- Models are classified into small-document and large-document capability, derived at render time rather than stored.
+- Background execution and automatic per-document-type routing are out of scope.
