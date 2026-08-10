@@ -58,7 +58,7 @@ const LEGACY_DB_NAME = 'surveyos-v2';
  * Current database version. Bump this when adding new object stores
  * or indexes. The `upgrade` function handles all version transitions.
  */
-const DB_VERSION = 6;
+const DB_VERSION = 7;
 
 /**
  * localStorage key prefix for tracking whether a user's legacy data
@@ -154,6 +154,20 @@ interface SurveyOSDB {
       reason: string;
     };
   };
+  benchmarkDoc: {
+    key: string;
+    value: {
+      id: 'current';
+      fileName: string;
+      mimeType: string;
+      blob: Blob;
+      pageCount: number;
+      expectedTotal: number;
+      expectedItemCount: number | null;
+      addedAt: number;
+      addedBy: string;
+    };
+  };
 }
 
 // ─── DB Lifecycle ─────────────────────────────────────────────────────────────
@@ -219,6 +233,11 @@ export async function initUserDB(uid: string): Promise<void> {
       // Recovered claims — superseded local copies kept as a safety net (v6)
       if (oldVersion < 6 && !db.objectStoreNames.contains('recoveredClaims')) {
         db.createObjectStore('recoveredClaims', { keyPath: 'id' });
+      }
+      // Benchmark document — the admin's specimen estimate for probe accuracy
+      // testing. Single slot, device-local (v7)
+      if (oldVersion < 7 && !db.objectStoreNames.contains('benchmarkDoc')) {
+        db.createObjectStore('benchmarkDoc', { keyPath: 'id' });
       }
     },
   });
@@ -494,6 +513,38 @@ export async function getAllDriveBackedAt(): Promise<Map<string, string>> {
   const db = await getDB();
   const all = await db.getAll('driveTracking');
   return new Map(all.map(r => [r.id, r.driveBackedUpAt]));
+}
+
+// ─── Benchmark Document ──────────────────────────────────────────────────────
+// The admin's specimen estimate, used by the AI Models panel to score how
+// accurately each model extracts a real multi-page document. Single slot,
+// device-local — it never goes to Firestore or Firebase Storage.
+
+export interface BenchmarkDocRecord {
+  id: 'current';
+  fileName: string;
+  mimeType: string;
+  blob: Blob;
+  pageCount: number;
+  expectedTotal: number;
+  expectedItemCount: number | null;
+  addedAt: number;
+  addedBy: string;
+}
+
+export async function putBenchmarkDoc(doc: BenchmarkDocRecord): Promise<void> {
+  const db = await getDB();
+  await db.put('benchmarkDoc', doc);
+}
+
+export async function readBenchmarkDoc(): Promise<BenchmarkDocRecord | null> {
+  const db = await getDB();
+  return (await db.get('benchmarkDoc', 'current')) ?? null;
+}
+
+export async function removeBenchmarkDoc(): Promise<void> {
+  const db = await getDB();
+  await db.delete('benchmarkDoc', 'current');
 }
 
 // ─── Sync Queue ───────────────────────────────────────────────────────────────
