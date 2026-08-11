@@ -84,6 +84,13 @@ interface ExtractionState {
 
 **`AbortController`s live in a module-level `Map<string, AbortController>`, not in the store.** They are not render-relevant and not serialisable; keeping them out of state avoids putting non-serialisable objects in a store others may later try to persist.
 
+> **Correction applied during implementation (steps 1–2, commit `446ada4b`).**
+> This spec originally said `lastFiles` should move to the module-level map "for the same reason". That was wrong: `hasFile()` drives UI — it enables the re-scan control in `AssessmentTab` — so it must trigger a re-render when it changes, which a module-level map cannot do. Files therefore live **in** the store; only the controllers are module-level. The non-serialisable concern does not apply, because the store is deliberately never persisted.
+>
+> Two smaller corrections from the same pass:
+> - `JobStatus` drops `'cancelled'`. Cancel removes the job from the map entirely, so the state was unreachable — the spec contradicted itself between the type and the cancel semantics.
+> - `triggerTargetedRescan` now takes a document key. It previously read one shared discrepancy context, so with two documents reporting mismatches the Smart Fix button rescanned whichever finished last rather than the document its own toast belonged to. Latent bug, found while rewiring; safe to change because no component consumes it (it is used only via the toast ref).
+
 **The store is in-memory and must NOT be wrapped in `persist()`.** `File` objects cannot be serialised, and a page reload kills the fetch regardless. This is a deliberate boundary: **tab switching is fixed; a page refresh is not.** Stating it here so it is a known limit rather than a later surprise.
 
 ### `useAIExtraction` becomes a thin wrapper
