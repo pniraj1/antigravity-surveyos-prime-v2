@@ -1,4 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <polygon points="50,0 100,25 100,75 50,100 0,75 0,25" fill="#D4AF37" />
-  <text x="50" y="70" font-family="Arial, sans-serif" font-size="60" font-weight="bold" fill="#FFFFFF" text-anchor="middle">S</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Motor SurveyOS">
+  <!-- MOTOR SURVEYOS — FAVICON / APP ICON
+       Not the primary mark scaled down. At 16px the primary's 3.6px strokes
+       render sub-pixel and grey out, and the bracket gap closes. This variant
+       is redrawn for small sizes: strokes thickened ~40%, brackets pulled in
+       and shortened to widen the gap, monogram simplified.
+
+       Ships on a solid ink tile because a stroked mark on a browser tab's
+       unknown background is a coin flip. The tile also gives the mark the
+       silhouette it needs to be findable among twenty other tabs. -->
+  <rect width="64" height="64" fill="#0E1620"/>
+  <g fill="none" stroke="#EDEDE7" stroke-width="5"
+     stroke-linecap="square" stroke-linejoin="miter">
+    <path d="M22 14 H13 V50 H22"/>
+    <path d="M42 14 H51 V50 H42"/>
+    <path d="M23.5 37 V24 L32 32.2 L40.5 24 V37" stroke-width="5.4"/>
+  </g>
+  <rect x="23.5" y="41.5" width="17" height="4" fill="#E2705A"/>
 </svg>
