@@ -35,14 +35,17 @@ While extraction is running, `reviewData` is already `null`. The button is dead 
 
 - Tab switching never costs the surveyor their extraction.
 - Cancel actually cancels, and stops burning BYOK free-tier quota.
+- A slow extraction offers an obvious way out rather than an open-ended wait.
 - Progress is honest and bounded.
 - Wait time is turned into verification priming rather than dead time.
+- The surveyor is prompted to confirm what the AI read, at the moment the numbers exist.
 
 ## Non-goals
 
 - **No server-side extraction.** Evaluated and rejected: BYOK keys are deliberately device-local (`src/lib/firebase/sync.ts:394-416` strips them before cloud sync), so server-side calls would either put surveyor API keys on our infrastructure or require the browser to stay in the loop anyway. It also introduces Cloud Function cost against a product that must stay practically free, and none of the required infrastructure (API route, job queue, status polling) exists today. The bug is client state ownership, not durability.
-- **No blocking of tab navigation.** The surveyor keeps full freedom to move.
+- **No *hard* blocking of tab navigation.** The surveyor is never trapped. A soft, dismissible nudge is in scope — see Soft tab-switch nudge.
 - **No AI-generated commentary.** See Commentary below.
+- **The surveyor is not asked to judge repudiation.** Tips say *record / note / confirm*, never *reject*. Indian courts have repeatedly held that insurers cannot repudiate on technicality alone without proving material breach; the surveyor's job is to document facts accurately, and the insurer decides consequences. Tip wording must not drift into adjudication.
 
 ---
 
@@ -124,6 +127,22 @@ Cancel therefore: aborts the controller → `cancelJob(key)` → job removed fro
 
 **The overlay's Cancel button must be rewired.** It currently calls `cancelReview` (`DocumentsTab.tsx:552`), which is why it is dead during processing. It must instead call the new `cancelExtraction(key)`. `cancelReview` keeps its existing, separate job: dismissing the post-extraction review dialog. Conflating the two is the original bug and must not be reintroduced.
 
+### Long-running escalation
+
+Cancel exists from the first second, but it is a small icon button — easy to miss when a surveyor is wondering whether to give up. Once a job passes its expected duration the overlay escalates it into an explicit choice.
+
+**Threshold:** `max(60s, pagesTotal × 20s)`. A one-page RC that has run 60 seconds is stuck; a five-page estimate legitimately takes longer, and escalating at a flat 60s would cry wolf on every large document. `pagesTotal` is known once the first progress callback lands; before that the 60s floor applies.
+
+**On crossing the threshold** the card changes state:
+
+- Copy becomes *"This is taking longer than usual — page 3 of 5, 1m 40s elapsed."* Naming the actual page and elapsed time keeps it factual rather than alarming.
+- A full-width **Cancel extraction** button appears beneath the progress text, replacing the icon-only affordance as the primary action.
+- **Keep waiting** dismisses the escalation for that job; it does not fire again for the same job.
+
+No auto-cancel, ever. A timeout that silently kills a nearly-finished extraction is worse than a slow one — the surveyor loses work they were about to receive, and they did not choose it. The decision stays theirs.
+
+The escalation is presentation only: it reuses `cancelExtraction(key)` and adds no new cancel path.
+
 An `AbortError` must be distinguished from a genuine failure in the `catch` in `triggerExtraction` (`useAIExtraction.ts:160-162`): aborts are silent, real failures toast as they do today.
 
 ---
@@ -162,6 +181,37 @@ No modal is ever thrown in front of someone typing on a different tab.
 
 ---
 
+## Soft tab-switch nudge
+
+When the surveyor clicks another tab while a job is `processing`, navigation pauses on a small inline confirm anchored near the tab bar — not a centred modal, not a full-screen block.
+
+### It must tell the truth
+
+This is the design constraint that shapes everything else. Once the store lift lands, **switching tabs is safe** — the extraction continues and the result comes back. A nudge that implies otherwise would be manufacturing urgency the system no longer has, and surveyors would learn within a day that it lies.
+
+So the copy states the real situation:
+
+> **Still reading RC — page 2 of 4, about 20s left.**
+> You can switch tabs; the result will come back to you.
+> **[ Stay here ]  [ Switch anyway ]**
+> ☐ Don't remind me again
+
+`Switch anyway` navigates immediately. `Stay here` dismisses and keeps them where they are. Neither cancels the extraction — leaving and cancelling are different intentions and must never be collapsed into one control.
+
+The value is not protection, which is no longer needed. It is (a) making the invisible work visible at the exact moment the surveyor is about to walk away from it, which is the original complaint, and (b) offering a beat to reconsider when the remaining wait is trivially short — task-switching has a real cost, and "20s left" is often enough to make staying the obvious choice.
+
+### Volume
+
+A surveyor processes many claims a day; an unconditional interruption becomes a nag by the second one. The "Don't remind me again" checkbox persists to `profile.warnOnTabSwitchDuringExtraction` (default `true`, stored in the existing `profile-store`, so it follows the existing persistence behaviour). Once off, tab switching is silent and the persistent shell badge remains the only indicator — which is sufficient, because by then the surveyor has learned the system.
+
+The nudge never fires when no job is processing.
+
+### Remaining-time estimate
+
+"About 20s left" is derived from elapsed time per completed page × pages remaining. It is a rough figure and must be rendered as such ("about", rounded to 5s). If fewer than one page has completed there is no basis for an estimate, and the line is omitted rather than guessed — a wrong countdown is worse than none.
+
+---
+
 ## Verification commentary
 
 A static map, `src/lib/ai/verification-tips.ts`:
@@ -182,47 +232,155 @@ The obvious version of this feature narrates the AI's cleverness. That is wrong 
 
 Inverted, the same screen-time occupies the wait, demonstrates the work (the labor-illusion effect, Buell & Norton), bounds the uncertainty, primes verification, and teaches junior surveyors what an experienced eye looks for.
 
+### Two unifying principles
+
+Every tip below derives from one of two things the surveyor can do that the AI structurally cannot.
+
+**1. Validity is judged on the accident date, not today.** For a commercial vehicle the fitness certificate, permit, driving licence, registration and policy must all be valid *simultaneously on the date of loss*; a lapse in any one is a documented repudiation ground ([NCDRC, via LiveLaw](https://www.livelaw.in/consumer-cases/ncdrc-fitness-certificate-vehicle-insurance-claim-repudiation-260300)). The AI reads a date off a page. Only the surveyor holds the accident date in mind while reading it. Note that `DriverForm.tsx` currently highlights DL expiry against *today* (`ntExpired` / `tExpired`), which is the wrong reference date for a claim — worth revisiting separately.
+
+**2. The surveyor is standing at the vehicle; the AI is reading paper.** Chassis and engine numbers, damage patterns, and pre-existing wear can only be reconciled against physical metal by the person present.
+
+Tips say **record / note / confirm** — never *reject*. See Non-goals.
+
+### Where the tips come from
+
+Three grounded sources, not invention:
+
+- **`FIELD_MAPPINGS` in `reconciliation.ts:27-77`** — any field listed under two or more `aiKeys` is a field the app already knows can disagree across documents. Those overlaps are the highest-value cross-checks, and several encode real claim consequences (e.g. `Insured Name` maps to both `policy.insured_name` *and* `rc.owner_name` — a genuine mismatch there means ownership transferred without the policy following, which is material).
+- **Documented AI traps in `prompts.ts`** — every "CRITICAL", "IMPORTANT" and "do NOT" in a prompt marks a failure the model is known to make. Those are exactly what a human should re-check.
+- **Case law**, for the validity-date principle above.
+
 ### Initial tip set
 
+```ts
+// src/lib/ai/verification-tips.ts
+
+rc: [
+  'Match chassis and engine numbers against the vehicle itself, not just the RC.',
+  'Check the RC owner name against the policy insured name — if they differ, ownership may have transferred without the policy.',
+  'Note the date of registration; it drives the depreciation slab.',
+  'Year of manufacture and year of registration are often different — record both.',
+  'Look for a hypothecation / financier entry; it affects who is paid.',
+  'Confirm the class of vehicle matches how it was actually being used.',
+]
+// Grounding: chassis/engine/reg-number all appear in 4-5 documents in FIELD_MAPPINGS —
+// the most cross-referenced fields in the app. owner_name→policy.insuredName is the
+// mapping that surfaces the ownership-transfer case.
+
+dl: [
+  'Check both validity dates against the accident date, not today.',
+  'Transport and non-transport validity expire separately — a licence can be valid for one and not the other.',
+  'Confirm the licence class actually covers this vehicle category.',
+  'Check the badge number yourself; it is often faint or rubbed out on older licences.',
+  'Compare the DL holder name with the driver named in the FIR and the claim form.',
+  'If this vehicle carries hazardous goods, confirm the endorsement is present and current.',
+]
+// Grounding: prompts.ts:85-86 extracts NT and TR validity separately and warns they differ.
+// Driver Name maps across dl/claim/fir in FIELD_MAPPINGS — a mismatch means someone else drove.
+// Badge tip retained because badge_no was silently dropped until the 2026-08-11 mapping fix.
+
+policy: [
+  'Confirm the policy period covers the accident date AND time — same-day expiry turns on the hour.',
+  'Check you have the CURRENT policy period, not the previous policy’s expiry date sitting next to it.',
+  'Note the policy type — a liability-only policy carries no own-damage cover at all.',
+  'Check IDV against the vehicle’s age; it caps a total-loss settlement.',
+  'Record compulsory and voluntary excess, and whether zero-depreciation applies.',
+  'Note the financer / HPA entry if present.',
+]
+// Grounding: prompts.ts:96-98 documents the "Prev Policy" trap explicitly — the model is
+// warned about it, which means it is a known failure. The 00.00 Hrs / Midnight parsing at
+// :97 is why the time of a same-day expiry matters, and why time-of-survey was added.
+
+claim: [
+  'Cross-check the accident date and time against the FIR.',
+  'Confirm the insured name matches the policy and the RC.',
+  'Check the driver named here against the DL holder.',
+  'Note any third-party involvement; it opens a separate liability head.',
+]
+
+fir: [
+  'Compare the FIR date with the accident date — a long gap is worth recording.',
+  'Check the driver named in the FIR against the DL holder.',
+  'Compare the stated cause with the damage you can actually see.',
+  'Confirm the place of accident matches the claim form.',
+]
+// Grounding: accident date/place/cause and driver name all map across claim+fir in
+// FIELD_MAPPINGS — these are the app's designed conflict surfaces.
+
+fitness: [
+  'The fitness certificate must be valid ON the accident date, not merely present.',
+  'Form 38 states expiry in prose and may carry several renewal rows — use the latest.',
+  'Check GVW and seating capacity against the RC.',
+]
+// Grounding: prompts.ts:258-264 devotes a whole block to Form 38 prose dates and renewal
+// rows, and warns against reading the signature timestamp as validity. High error rate.
+
+permit: [
+  'Check permit validity against the accident date.',
+  'Confirm the vehicle was on a route the permit covers.',
+  'Match the goods category against what was actually being carried.',
+  'Compare GVW here with the RC and the fitness certificate.',
+]
+
+auth: [
+  'Confirm the authorisation matches the vehicle class and the permit.',
+  'Check validity against the accident date.',
+]
+
+'load-challan': [
+  'Match the goods described against the permit category — and against any hazardous endorsement.',
+  'Compare the load weight with the registered laden weight; overloading is material.',
+  'Check the challan date against the accident date.',
+]
+
+estimate: [
+  'Count the line items on the last page and compare with what was read — items on later pages are the usual miss.',
+  'Confirm the gross total against the figure printed on the bill.',
+  'Check the GST rate is the TOTAL (CGST + SGST), not one half of it.',
+  'Watch for "Total c/f" or "b/f" carry-forward rows being counted as items.',
+  'Check each part is classified metal / plastic / glass correctly — depreciation differs by material.',
+  'Confirm parts, labour and painting are split correctly; only parts depreciate.',
+  'Note any part already replaced under a prior claim.',
+]
+// Grounding: prompts.ts:124 ("50-80+ items across 3-5 pages, do NOT stop at page 1"),
+// :135 (GST component vs total — "never write just one component's rate"),
+// :151 (carry-forward rows), :137-140 (material category), :150 (duplicate splitting).
+// Every one of these is a failure the prompt itself is written to defend against,
+// which makes it exactly what a human should re-check.
+
+'final-bill': [
+  'Compare the bill line-by-line against the approved estimate.',
+  'Query any part on the bill that was not on the estimate.',
+  'Confirm the item count and gross total against the last page.',
+  'Check the GST rate is the total, not one component.',
+]
 ```
-rc:           Verify engine and chassis numbers against the vehicle, not just the RC.
-              Registration date drives the depreciation slab — check it.
-              Look for a hypothecation / financier endorsement.
 
-dl:           Check the badge number yourself; it is often faint on older licences.
-              Transport and non-transport validity expire separately.
-              Confirm the licence class actually covers this vehicle category.
-              If this vehicle carries hazardous goods, confirm the endorsement is present and current.
+Document keys come from `DOC_GROUPS` (`DocumentsTab.tsx:31-66`) plus `estimate` (`AssessmentTab.tsx:46`). A key with no entry shows progress text only — no filler.
 
-policy:       Confirm the policy period covers the accident date and time.
-              Check IDV against the vehicle's age.
-              Note any endorsements or exclusions on the schedule.
+### Review-time numeric confirmation (estimate and final-bill)
 
-claim:        Cross-check the intimation date against the accident date.
-              Confirm the insured's name matches the policy and the RC.
+Static tips run *during* the wait, when no numbers exist yet. The higher-value moment is *after*: at review, the app knows exactly what it read, and can ask the surveyor to confirm those specific figures against the paper.
 
-fir:          Compare the FIR accident date and time with the claim intimation.
-              Check the driver named in the FIR against the DL holder.
+For `estimate` and `final-bill`, the review dialog gains a confirmation block above the field list:
 
-permit:       Confirm the permit covers the route and the goods actually carried.
-              Check the permit validity against the accident date.
+```
+Read from this document:
+  Spare parts     28 items    ₹  84,200 taxable
+  Labour          14 items    ₹  19,500 taxable
+  Painting         5 items    ₹  12,300 taxable
+  ─────────────────────────────────────────────
+  Gross total                 ₹ 1,36,466
 
-fitness:      Fitness certificate must be valid on the accident date, not merely present.
-
-auth:         Confirm the authorisation matches the vehicle class and the permit.
-
-load-challan: Match the goods described against the permit and any hazardous endorsement.
-              Check the load weight against the registered laden weight.
-
-estimate:     Parts and labour attract different GST treatment — check the split.
-              Watch for parts already replaced under a prior claim.
-              Painting units should reconcile against the panels claimed.
-
-final-bill:   Compare the final bill line-by-line against the approved estimate.
-              Query any part that appears on the bill but not the estimate.
+  Confirm these against the last page of the bill.
+  [ Totals match ]   [ Something is off — rescan ]
 ```
 
-Document keys are taken from `DOC_GROUPS` in `DocumentsTab.tsx:31-66`, plus `estimate` (`AssessmentTab.tsx:46`). A key with no entry shows no commentary — progress text only.
+This exists because the known failure mode is **silent under-reading**: the model stops early on a multi-page bill and returns a smaller, internally-consistent set of items. Nothing looks wrong — the arithmetic adds up, just over fewer items. The only reliable detector is a human comparing the printed grand total and item count against what was read.
+
+The app already has adjacent machinery: `extractDocument` returns `discrepancies`, and Smart Fix (`useAIExtraction.ts:64-113`) rescans summary pages when the internal arithmetic disagrees. This block covers the case Smart Fix cannot — where the arithmetic is *consistent* but *incomplete*. "Something is off" routes into the existing targeted-rescan path rather than adding a new one.
+
+Shown only for the two line-item document types. Every other document goes straight to the normal field review.
 
 ---
 
@@ -257,7 +415,12 @@ The Documents, Photos, and Assessment tabs are auth-gated and need a real logged
 3. Move `ProcessingProgressOverlay` into the Dashboard shell; delete per-tab instances.
 4. Thread `AbortSignal`; make Cancel real.
 5. Widen `onProgress`; wire the determinate mark fill.
-6. Commentary map + rotation + 3s threshold.
-7. Completion toast + `originTab` handoff.
+6. Long-running escalation (presentation over step 4's cancel path).
+7. Commentary map + rotation + 3s threshold.
+8. Completion toast + `originTab` handoff.
+9. Soft tab-switch nudge + `profile.warnOnTabSwitchDuringExtraction`.
+10. Review-time numeric confirmation for `estimate` / `final-bill`.
 
 Steps 1–2 alone fix the reported bug. Everything after is the experience around it, and each step is independently shippable.
+
+Steps 9 and 10 depend on earlier ones and should not be pulled forward: the nudge's copy claims switching is safe, which is only true once 1–2 have landed, and the confirmation block reuses the rescan path touched in step 4.
