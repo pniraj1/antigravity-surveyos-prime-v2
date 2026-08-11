@@ -236,7 +236,9 @@ Inverted, the same screen-time occupies the wait, demonstrates the work (the lab
 
 Every tip below derives from one of two things the surveyor can do that the AI structurally cannot.
 
-**1. Validity is judged on the accident date, not today.** For a commercial vehicle the fitness certificate, permit, driving licence, registration and policy must all be valid *simultaneously on the date of loss*; a lapse in any one is a documented repudiation ground ([NCDRC, via LiveLaw](https://www.livelaw.in/consumer-cases/ncdrc-fitness-certificate-vehicle-insurance-claim-repudiation-260300)). The AI reads a date off a page. Only the surveyor holds the accident date in mind while reading it. Note that `DriverForm.tsx` currently highlights DL expiry against *today* (`ntExpired` / `tExpired`), which is the wrong reference date for a claim — worth revisiting separately.
+**1. Validity is judged on the accident date, not today.** For a commercial vehicle the fitness certificate, permit, driving licence, registration and policy must all be valid *simultaneously on the date of loss*; a lapse in any one is a documented repudiation ground ([NCDRC, via LiveLaw](https://www.livelaw.in/consumer-cases/ncdrc-fitness-certificate-vehicle-insurance-claim-repudiation-260300)). The AI reads a date off a page. Only the surveyor holds the accident date in mind while reading it.
+
+`DriverForm.tsx` currently compares DL expiry against *today* (`ntExpired` / `tExpired`), which is the wrong reference for a claim — a licence that had expired on the date of the accident but has since been renewed reads as valid. This is corrected as an **advisory**, not a verdict: see Validity advisories below.
 
 **2. The surveyor is standing at the vehicle; the AI is reading paper.** Chassis and engine numbers, damage patterns, and pre-existing wear can only be reconciled against physical metal by the person present.
 
@@ -384,6 +386,64 @@ Shown only for the two line-item document types. Every other document goes strai
 
 ---
 
+## Validity advisories
+
+The tips tell the surveyor *what* to check. Where the app can already compute the answer — it holds both the expiry date and the accident date — it should say so. But it says it as **advice, and the decision to flag is the surveyor's**.
+
+This is the same rule the product already applies to assessment values: the app computes and proposes; the surveyor judges and commits. It applies identically to compliance observations, and for the same reason. Repudiation is the insurer's call, not the surveyor's and certainly not the software's — and Indian courts have held insurers cannot repudiate on technicality alone without proving material breach. An app that renders a lapse as a verdict oversteps twice over.
+
+### Behaviour
+
+When a validity date precedes `accident.dateAndTime`, a dismissible inline advisory appears beneath that field:
+
+> ⓘ **This licence had expired on the date of the accident.**
+> Transport validity ended 12 Mar 2026; the accident was 04 Jun 2026.
+> **[ Record this ]  [ Dismiss ]**
+
+- **Record this** writes a suggested, fully editable sentence into the existing `driver.invalidRemarks` field. The surveyor can rewrite or delete it. Nothing is written until this is clicked.
+- **Dismiss** hides the advisory for this claim and does not nag.
+- Neither action blocks anything, and nothing reaches the report unless the surveyor put it there.
+
+**Tone is neutral, not alarm.** The current `border-danger` styling on expired DL inputs (`DriverForm.tsx:149,161`) is replaced by neutral field styling plus the advisory, because a red field reads as a verdict the software is not entitled to deliver. The advisory carries the attention; the field just holds data.
+
+**The comparison is re-based.** `ntExpired` / `tExpired` currently compare against `today`, which is wrong for a claim — a licence that had lapsed on the accident date but has since been renewed currently reads as fine. Both move to comparing against `accident.dateAndTime`. If the accident date is not yet entered, no advisory can be computed and none is shown.
+
+### Reusable, because there are five of these
+
+The same shape recurs: DL non-transport validity, DL transport validity, fitness `validityTo`, permit `validityTo`, and policy `periodFrom`/`periodTo` — every one of them a "was this valid on the date of loss" question, and every one a repudiation ground in the case law cited above.
+
+So this is **one component with a stable contract**, not five bespoke warnings:
+
+```tsx
+<ValidityAdvisory
+  id="dl-transport"              // for dismissal persistence
+  label="Transport validity"
+  expiryDate={d.validityTransport}
+  accidentDate={claim.accident.dateAndTime}
+  onRecord={(text) => updateDriver({ invalidRemarks: appendNote(text) })}
+/>
+```
+
+**This spec builds the two DL call sites only** — they are the ones with existing incorrect behaviour. Fitness, permit and policy are follow-on call sites of the same component, deliberately not built here to keep this change reviewable.
+
+### Dismissal persistence
+
+One new optional field on the claim: `dismissedAdvisories?: string[]`, holding advisory ids. Chosen over a boolean per advisory so that adding the remaining three call sites later needs no further schema change.
+
+`driver.invalidRemarks` already exists on `DriverDetails` (`vehicle.ts:81`), so recording needs no schema change at all. Note that `verificationStatus` (`'verified' | 'photocopy' | 'not-available'`) describes the *document* — original, photocopy, or missing — and is **not** the right home for a validity judgement; it must not be repurposed.
+
+### Testing
+
+Pure date comparison, so it is worth a unit test alongside the store tests:
+
+1. Expiry before accident date → advisory offered.
+2. Expiry after accident date → no advisory.
+3. Accident date empty → no advisory (never guess against `today`).
+4. Advisory id in `dismissedAdvisories` → not shown.
+5. `onRecord` never fires without an explicit call — nothing auto-writes.
+
+---
+
 ## Error handling
 
 - **Abort** → silent. Job removed. No toast.
@@ -420,6 +480,7 @@ The Documents, Photos, and Assessment tabs are auth-gated and need a real logged
 8. Completion toast + `originTab` handoff.
 9. Soft tab-switch nudge + `profile.warnOnTabSwitchDuringExtraction`.
 10. Review-time numeric confirmation for `estimate` / `final-bill`.
+11. `ValidityAdvisory` component + the two DL call sites; re-base `ntExpired` / `tExpired` onto the accident date; `dismissedAdvisories` field.
 
 Steps 1–2 alone fix the reported bug. Everything after is the experience around it, and each step is independently shippable.
 
