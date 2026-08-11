@@ -17,6 +17,7 @@ import {
 import type { PhotoLayout, PhotoSheetOptions, PageOrientation } from '@/types/assessment';
 import { DEFAULT_PHOTO_SHEET_OPTIONS } from '@/components/pdf/PhotoSheetDocument';
 import { DocumentAnnexureSection } from '@/components/tabs/photos/DocumentAnnexureSection';
+import { useSaveToCloudPrompt } from '@/hooks/useSaveToCloudPrompt';
 import dynamic from 'next/dynamic';
 
 // ── Single dynamic boundary per pdf component ────────────────────────────────
@@ -72,6 +73,7 @@ export function PhotosTab() {
   const [showPreview,  setShowPreview]  = useState(false);
   const [options, setOptions] = useState<PhotoSheetOptions>({ ...DEFAULT_PHOTO_SHEET_OPTIONS });
   const [restoringDrive, setRestoringDrive] = useState(false);
+  const { confirmSaveToCloud, saveToCloudDialog } = useSaveToCloudPrompt();
 
   if (!currentClaim) return null;
 
@@ -91,6 +93,11 @@ export function PhotosTab() {
       const claimId = currentClaim.id;
       const label   = currentClaim.vehicle?.registrationNumber || claimId;
 
+      const { profile } = useProfileStore.getState();
+      const saveToDrive = profile.autoUploadDrive !== false
+        ? await confirmSaveToCloud(files.length > 1 ? `${files.length} photos` : files[0].name)
+        : false;
+
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         if (!file.type.startsWith('image/')) continue;
@@ -99,8 +106,7 @@ export function PhotosTab() {
           const name = file.name.split('.')[0].substring(0, 30);
           // Store dimensions for orientation detection
           addPhoto(dataUrl, name, w, h);
-          const { profile } = useProfileStore.getState();
-          if (profile.autoUploadDrive !== false) {
+          if (saveToDrive) {
             uploadFileToDrive(claimId, `${PHOTO_FILE_PREFIX}${Date.now()}_${name}.jpg`, file, label).catch(() => {});
           }
         } catch {
@@ -110,7 +116,7 @@ export function PhotosTab() {
       setIsProcessing(false);
       event.target.value = '';
     },
-    [addPhoto, currentClaim],
+    [addPhoto, currentClaim, confirmSaveToCloud],
   );
 
   // ── Options helpers ───────────────────────────────────────────────────────
@@ -161,6 +167,7 @@ export function PhotosTab() {
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
+      {saveToCloudDialog}
 
       {/* ── Toolbar ── */}
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">

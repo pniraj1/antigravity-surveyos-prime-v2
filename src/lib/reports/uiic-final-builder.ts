@@ -249,6 +249,7 @@ ${getSurveyorHeader(profile)}
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Date of Issue of Licence</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${fd(d.dateOfIssue)}</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">License Valid upto</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${fd(d.validityNonTransport || d.validityTransport)}</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Badge number</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(d.badgeNumber)}</td></tr>
+      <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Hazardous Goods Endorsement</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${(d as any).hazardousEndorsement === 'yes' ? `Yes${(d as any).hazardousEndorsementNote ? ' — ' + g((d as any).hazardousEndorsementNote) : ''}` : (d as any).hazardousEndorsement === 'no' ? 'No' : '—'}</td></tr>
 
       <tr><td style="padding:3px 5px;border-right:0.5pt solid #000;">Date of verification of licence</td><td style="padding:3px 5px;">${fd(d.verificationDate)}</td></tr>
     </table>

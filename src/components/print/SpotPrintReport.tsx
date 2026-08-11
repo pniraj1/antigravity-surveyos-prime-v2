@@ -298,6 +298,14 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
             <td style={{ ...parseInline(styles.td) }}>{driver.authorisedToDrive || '—'}</td>
           </tr>
           <tr>
+            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Hazardous Goods Endorsement</td>
+            <td style={{ ...parseInline(styles.td) }} colSpan={3}>
+              {driver.hazardousEndorsement === 'yes'
+                ? `Yes${driver.hazardousEndorsementNote ? ' — ' + driver.hazardousEndorsementNote : ''}`
+                : driver.hazardousEndorsement === 'no' ? 'No' : '—'}
+            </td>
+          </tr>
+          <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Non-Transport Valid</td>
             <td style={{ ...parseInline(styles.td) }}>
               {formatDateDMY(driver.validityNonTransport) || '—'}

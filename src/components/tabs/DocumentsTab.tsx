@@ -9,6 +9,7 @@ import { useProfileStore } from '@/stores/profile-store';
 import { uploadWithDuplicateCheck, type DuplicateAction, type ExistingFile } from '@/lib/drive/upload-with-check';
 import { DuplicateUploadDialog } from '@/components/dialogs/DuplicateUploadDialog';
 import { useClaimDriveFiles } from '@/hooks/useClaimDriveFiles';
+import { useSaveToCloudPrompt } from '@/hooks/useSaveToCloudPrompt';
 import { getDriveToken } from '@/lib/drive';
 import {
   FileText, Sparkles, Loader2, CheckCircle2, Car, CreditCard,
@@ -84,6 +85,7 @@ export function DocumentsTab() {
   // Review-and-crop gate shown between file-select and AI send.
   const [reviewSheet, setReviewSheet] = useState<{ key: string; label?: string; files: File[] } | null>(null);
   const syncConnected = !!profile.syncBridgeToken;
+  const { confirmSaveToCloud, saveToCloudDialog } = useSaveToCloudPrompt();
   const [dupeDialog, setDupeDialog] = useState<{
     existing: ExistingFile;
     suffixedName: string;
@@ -146,23 +148,27 @@ export function DocumentsTab() {
     if (forAI.length > 0) triggerExtraction(key, forAI);
 
     if (currentClaim?.id && profile.autoUploadDrive !== false) {
-      const label = currentClaim.vehicle?.registrationNumber || currentClaim.id;
-      files.forEach((file, idx) => {
-        const ext = file.name.split('.').pop() ?? 'bin';
-        // First file keeps the bare slot name; extras get a _2, _3, … suffix so
-        // Drive names never collide within one slot.
-        const driveName = idx === 0 ? `${key}.${ext}` : `${key}_${idx + 1}.${ext}`;
-        uploadWithDuplicateCheck(
-          currentClaim.id,
-          driveName,
-          file,
-          label,
-          (existing, suffixedName) =>
-            new Promise<DuplicateAction>((resolve) => {
-              setDupeDialog({ existing, suffixedName, resolve });
-            }),
-        ).catch(err => {
-          console.error('[DocumentsTab] Drive upload failed:', err);
+      const claimId = currentClaim.id;
+      const label = currentClaim.vehicle?.registrationNumber || claimId;
+      confirmSaveToCloud(files.length > 1 ? `${files.length} files` : files[0].name).then(ok => {
+        if (!ok) return;
+        files.forEach((file, idx) => {
+          const ext = file.name.split('.').pop() ?? 'bin';
+          // First file keeps the bare slot name; extras get a _2, _3, … suffix so
+          // Drive names never collide within one slot.
+          const driveName = idx === 0 ? `${key}.${ext}` : `${key}_${idx + 1}.${ext}`;
+          uploadWithDuplicateCheck(
+            claimId,
+            driveName,
+            file,
+            label,
+            (existing, suffixedName) =>
+              new Promise<DuplicateAction>((resolve) => {
+                setDupeDialog({ existing, suffixedName, resolve });
+              }),
+          ).catch(err => {
+            console.error('[DocumentsTab] Drive upload failed:', err);
+          });
         });
       });
     }
@@ -181,6 +187,7 @@ export function DocumentsTab() {
 
   return (
     <div className="h-full overflow-y-auto bg-[var(--color-neutral-50)]">
+      {saveToCloudDialog}
 
       {/* ── Header ───────────────────────────────────────── */}
       <div

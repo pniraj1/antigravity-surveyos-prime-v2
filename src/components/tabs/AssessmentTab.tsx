@@ -15,6 +15,7 @@ import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import { ProcessingProgressOverlay } from '@/components/ui/ProcessingProgressOverlay';
 import { useProfileStore } from '@/stores/profile-store';
 import { uploadFileToDrive } from '@/lib/drive';
+import { useSaveToCloudPrompt } from '@/hooks/useSaveToCloudPrompt';
 import { AssessmentChatbot } from '@/components/chat/AssessmentChatbot';
 import { ModelSelector, DocModeToggle, ProviderHealthBadge, ProviderToggle } from '@/components/ai/AIControls';
 import { SaveProgressButton } from '@/components/sync/SaveProgressButton';
@@ -25,8 +26,9 @@ export function AssessmentTab() {
   const [showSummary, setShowSummary] = useState(true);
   const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview, reScanWithFeedback, hasFile, reScanLatest } = useAIExtraction();
   const { profile } = useProfileStore();
+  const { confirmSaveToCloud, saveToCloudDialog } = useSaveToCloudPrompt();
 
-  const handleEstimateUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEstimateUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -46,9 +48,12 @@ export function AssessmentTab() {
     triggerExtraction('estimate', file);
 
     if (currentClaim?.id && profile.autoUploadDrive !== false) {
-      const label = currentClaim.vehicle?.registrationNumber || currentClaim.id;
+      const claimId = currentClaim.id;
+      const label = currentClaim.vehicle?.registrationNumber || claimId;
       const ext = file.name.split('.').pop() ?? 'bin';
-      uploadFileToDrive(currentClaim.id, `estimate.${ext}`, file, label).catch(console.error);
+      if (await confirmSaveToCloud(file.name)) {
+        uploadFileToDrive(claimId, `estimate.${ext}`, file, label).catch(console.error);
+      }
     }
     e.target.value = '';
   };
@@ -59,6 +64,7 @@ export function AssessmentTab() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-140px)] p-6 lg:p-8 max-w-[1600px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
+      {saveToCloudDialog}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6 shrink-0">
         <div>
           <h2 className="text-2xl font-medium tracking-tight">Assessment</h2>

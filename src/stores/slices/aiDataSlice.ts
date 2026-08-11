@@ -415,6 +415,7 @@ function applyDL(claim: ClaimData, data: any): ClaimData {
       dateOfIssue: parseDate(data.date_of_issue || data.issue_date) || claim.driver.dateOfIssue,
       issuingAuthority: data.issuing_authority || data.rto || claim.driver.issuingAuthority,
       vehicleClasses: data.vehicle_classes || data.classes || data.authorized_classes || claim.driver.vehicleClasses,
+      badgeNumber: data.badge_no || claim.driver.badgeNumber,
       validityNonTransport: parseDate(data.validity_non_transport || data.valid_nt) || claim.driver.validityNonTransport,
       validityTransport: parseDate(data.validity_transport || data.valid_t) || claim.driver.validityTransport,
     },

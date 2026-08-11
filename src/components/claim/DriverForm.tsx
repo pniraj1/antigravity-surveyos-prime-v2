@@ -174,6 +174,33 @@ export function DriverDetailsForm() {
           </div>
 
           <div className="space-y-1">
+            <Label htmlFor="d-hazard">Hazardous Goods Endorsement</Label>
+            <select
+              id="d-hazard"
+              value={d?.hazardousEndorsement || ''}
+              onChange={(e) => updateDriver({ hazardousEndorsement: e.target.value as 'yes' | 'no' | '' })}
+              className={`w-full h-9 rounded-md border px-3 text-sm ${r(d?.hazardousEndorsement)}`}
+            >
+              <option value="">Not applicable</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </div>
+
+          {d?.hazardousEndorsement === 'yes' && (
+            <div className="space-y-1">
+              <Label htmlFor="d-hazard-note">Hazardous Endorsement Note</Label>
+              <Input
+                id="d-hazard-note"
+                value={d?.hazardousEndorsementNote || ''}
+                onChange={(e) => updateDriver({ hazardousEndorsementNote: e.target.value })}
+                placeholder="e.g. valid up to 2027, endorsement code visible"
+                className={r(d?.hazardousEndorsementNote)}
+              />
+            </div>
+          )}
+
+          <div className="space-y-1">
             <Label htmlFor="d-verifdate">Verification Date</Label>
             <Input
               id="d-verifdate"

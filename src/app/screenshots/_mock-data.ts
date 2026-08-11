@@ -115,6 +115,8 @@ export const MOCK_CLAIM: ClaimData = {
     badgeNumber: '',
     authorisedToDrive: 'Yes – LMV',
     verificationDate: '2026-06-10',
+    hazardousEndorsement: '',
+    hazardousEndorsementNote: '',
   },
 
   policy: {

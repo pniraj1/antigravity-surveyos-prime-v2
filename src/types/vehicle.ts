@@ -82,6 +82,8 @@ export interface DriverDetails {
   badgeNumber: string;
   authorisedToDrive: string;
   verificationDate: string; // ISO date
+  hazardousEndorsement: 'yes' | 'no' | ''; // surveyor-only, never AI-set
+  hazardousEndorsementNote: string; // validity / free-text note, surveyor-only
 }
 
 export interface PolicyDetails {

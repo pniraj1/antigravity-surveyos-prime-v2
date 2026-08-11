@@ -398,10 +398,16 @@ export function buildStandardFinalSurveyHTML(
     <td style="${td}">${driver.badgeNumber || '—'}</td>
   </tr>
   <tr>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Date of Issue</td>
+    <td style="${td}">${formatDateDMY(driver.dateOfIssue) || '—'}</td>
     <td style="${td}color:#444;font-size:${scale.labelFont};">Non-Transport Valid</td>
     <td style="${td}">${formatDateDMY(driver.validityNonTransport)}</td>
+  </tr>
+  <tr>
     <td style="${td}color:#444;font-size:${scale.labelFont};">Transport Valid</td>
     <td style="${td}">${formatDateDMY(driver.validityTransport)}</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Hazardous Goods Endorsement</td>
+    <td style="${td}">${driver.hazardousEndorsement === 'yes' ? 'Yes' + (driver.hazardousEndorsementNote ? ' — ' + driver.hazardousEndorsementNote : '') : driver.hazardousEndorsement === 'no' ? 'No' : '—'}</td>
   </tr>
 </table>
 

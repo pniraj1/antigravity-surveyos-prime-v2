@@ -249,6 +249,8 @@ export function createBlankClaim(
       badgeNumber: '',
       authorisedToDrive: '',
       verificationDate: '',
+      hazardousEndorsement: '',
+      hazardousEndorsementNote: '',
     },
 
     policy: {
