@@ -14,7 +14,7 @@
 import type { ClaimData } from '@/types/claim';
 import type { SurveyorProfile } from '@/types/vehicle';
 
-import { formatDateDMY, fa, numberToWords, getSurveyorHeader, getSigBlock } from './report-utils';
+import { formatDateDMY, formatSurveyDateTime, fa, numberToWords, getSurveyorHeader, getSigBlock } from './report-utils';
 import { buildPrintShell, footerFromProfile } from './print-shell';
 
 // ─── Main Fee Bill HTML Builder ───────────────────────────────────────────────
@@ -56,7 +56,9 @@ export function buildSpotFeeBillHTML(
   // For spot surveys, use spot-specific dates; fall back to accident/report dates
   const billDate    = formatDateDMY(fb.billDate   || claim.reportDate);
   const doaDisplay  = formatDateDMY(accident.dateAndTime || spot.surveyDatetime || '');
-  const surveyDate  = formatDateDMY(accident.dateOfSurvey || spot.surveyDatetime || '');
+  const surveyDate  = accident.dateOfSurvey
+    ? formatSurveyDateTime(accident.dateOfSurvey, accident.timeOfSurvey)
+    : formatDateDMY(spot.surveyDatetime || '');
   const surveyPlace = accident.placeOfSurvey || spot.repairWorkshop || '—';
   const reportNo    = claim.surveyType === 'spot'
     ? (spot.reportNo || claim.reportNo || '—')

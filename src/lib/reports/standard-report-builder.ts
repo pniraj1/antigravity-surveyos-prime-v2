@@ -12,7 +12,7 @@ import type { ClaimData } from '@/types/claim';
 import type { AssessmentSummary } from '@/types';
 import type { SurveyorProfile } from '@/types/vehicle';
 
-import { formatDateDMY, formatDateTimeDMY, fa, numberToWords, getVehicleAgeMonths, getSurveyorHeader, getSigBlock } from './report-utils';
+import { formatDateDMY, formatDateTimeDMY, formatSurveyDateTime, fa, numberToWords, getVehicleAgeMonths, getSurveyorHeader, getSigBlock } from './report-utils';
 import { getHtmlScale } from './report-style-utils';
 import { preambleFromClaim, estimateTotalInclGst } from './final-survey-preamble';
 import { computeRowNet } from '@/lib/calculations/row-net';
@@ -414,7 +414,7 @@ export function buildStandardFinalSurveyHTML(
 <div style="font-weight:700;font-size:7pt;background:#0d1b2a;color:#fff;padding:2px 4px;margin-bottom:2px;">4. ACCIDENT &amp; SURVEY DETAILS</div>
 <table style="${ts}">
   <tr>
-    <td style="${td}color:#444;font-size:${scale.labelFont};width:18%;">Date &amp; Time</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};width:18%;">Accident Date &amp; Time</td>
     <td style="${td}width:32%;">${formatDateTimeDMY(accident.dateAndTime)}</td>
     <td style="${td}color:#444;font-size:${scale.labelFont};">Place</td>
     <td style="${td}">${accident.placeOfAccident || '—'}</td>
@@ -432,8 +432,8 @@ export function buildStandardFinalSurveyHTML(
     <td style="${td}"></td>
   </tr>
   <tr>
-    <td style="${td}color:#444;font-size:${scale.labelFont};">Date of Survey</td>
-    <td style="${td}">${formatDateDMY(accident.dateOfSurvey)}</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Date &amp; Time of Survey</td>
+    <td style="${td}">${formatSurveyDateTime(accident.dateOfSurvey, accident.timeOfSurvey)}</td>
     <td style="${td}color:#444;font-size:${scale.labelFont};">Place of Survey</td>
     <td style="${td}">${accident.placeOfSurvey || '—'}</td>
   </tr>

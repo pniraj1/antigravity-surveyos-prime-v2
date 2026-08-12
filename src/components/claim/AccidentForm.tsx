@@ -62,6 +62,16 @@ export function AccidentDetailsForm() {
             />
           </div>
 
+          <div className="space-y-1">
+            <Label htmlFor="a-stime">Time of Survey</Label>
+            <Input
+              id="a-stime"
+              type="time"
+              value={a?.timeOfSurvey || ''}
+              onChange={(e) => updateAccident({ timeOfSurvey: e.target.value })}
+            />
+          </div>
+
           <div className="space-y-1 lg:col-span-2 xl:col-span-3">
             <Label htmlFor="a-splace">Place of Survey (Workshop Name)</Label>
             <Input

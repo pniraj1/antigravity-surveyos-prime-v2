@@ -107,6 +107,10 @@ export interface AccidentDetails {
   placeOfAccident: string;
   causeOfAccident: string;
   dateOfSurvey: string; // ISO date
+  /** HH:MM, 24-hour. Sibling of dateOfSurvey rather than a combined datetime,
+   *  so existing stored dates and every formatDateDMY(dateOfSurvey) call site
+   *  keep working unchanged. */
+  timeOfSurvey: string;
   placeOfSurvey: string;
   policeStation: string;
   firNumber: string;

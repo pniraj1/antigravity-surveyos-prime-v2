@@ -38,6 +38,23 @@ export function formatDateTimeDMY(v: string | null | undefined): string {
   return timePart && timePart !== '00:00' ? `${datePart} at ${timePart} hrs` : datePart;
 }
 
+/**
+ * Survey date with its optional time, e.g. "10.06.2026 at 11:30 hrs".
+ *
+ * Survey date and time are stored as two fields, not one datetime, so this
+ * joins them for display. Falls back to the date alone when no time was
+ * recorded — an absent time must never render as 00:00, which would assert a
+ * midnight survey that did not happen.
+ */
+export function formatSurveyDateTime(
+  date: string | null | undefined,
+  time: string | null | undefined,
+): string {
+  const datePart = formatDateDMY(date);
+  if (!time || datePart === '—') return datePart;
+  return `${datePart} at ${time} hrs`;
+}
+
 /** ₹-formatted currency string. Not for use in uiic-final-builder (uses its own fa). */
 export function fa(v: number): string {
   return '₹ ' + v.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');

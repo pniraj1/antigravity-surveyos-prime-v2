@@ -3,6 +3,7 @@
 import React from 'react';
 import { ClaimData, AssessmentSummary, SurveyorProfile } from '@/types';
 import { formatDateDMY, formatCurrency, numberToWords, getVehicleAgeMonths, getDepreciationRate } from '@/lib/calculations';
+import { formatSurveyDateTime } from '@/lib/reports/report-utils';
 
 interface UIICPrintReportProps {
   claim: ClaimData;
@@ -151,7 +152,7 @@ export const UIICPrintReport = React.forwardRef<HTMLDivElement, UIICPrintReportP
             <div className="row"><div className="label">Make/Model</div><div className="value">{claim.vehicle.make} / {claim.vehicle.model}</div></div>
           </div>
           <div style={{ flex: 1 }}>
-            <div className="row"><div className="label">Survey Date</div><div className="value">{claim.accident.dateOfSurvey}</div></div>
+            <div className="row"><div className="label">Survey Date &amp; Time</div><div className="value">{formatSurveyDateTime(claim.accident.dateOfSurvey, claim.accident.timeOfSurvey)}</div></div>
             <div className="row"><div className="label">Survey Place</div><div className="value">{claim.accident.placeOfSurvey}</div></div>
           </div>
         </div>

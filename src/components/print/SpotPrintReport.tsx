@@ -3,6 +3,7 @@
 import React from 'react';
 import type { ClaimData, SurveyorProfile } from '@/types';
 import { formatDateDMY } from '@/lib/calculations';
+import { formatSurveyDateTime } from '@/lib/reports/report-utils';
 import { getHtmlScale } from '@/lib/reports/report-style-utils';
 import { footerFromProfile, escapeCssString } from '@/lib/reports/print-shell';
 
@@ -344,8 +345,8 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
             <td style={{ ...parseInline(styles.td) }}>{accident.firNumber || '—'} / {formatDateDMY(accident.firDate)}</td>
           </tr>
           <tr>
-            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Date of Survey</td>
-            <td style={{ ...parseInline(styles.td) }}>{formatDateDMY(accident.dateOfSurvey) || '—'}</td>
+            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Date &amp; Time of Survey</td>
+            <td style={{ ...parseInline(styles.td) }}>{formatSurveyDateTime(accident.dateOfSurvey, accident.timeOfSurvey)}</td>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Place of Survey</td>
             <td style={{ ...parseInline(styles.td) }}>{accident.placeOfSurvey || accident.workshopName || '—'}</td>
           </tr>

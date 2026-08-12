@@ -25,6 +25,7 @@ import { aggregateGst } from '@/lib/calculations/gst-bands';
 import { getCompulsoryExcess, calculateBillCheckSummary, calculateAssessmentSummary } from '@/lib/calculations/assessment';
 import { buildSerialMap } from '@/lib/calculations/serial-numbers';
 import { buildPrintShell, footerFromProfile } from './print-shell';
+import { formatSurveyDateTime } from './report-utils';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -187,7 +188,7 @@ ${getSurveyorHeader(profile)}
 <tr><td style="padding:2px 3px;color:#333;">Odometer Reading</td><td style="padding:2px 3px;">${g(v.odometer)} km</td></tr>
 </table></td><td style="${td}vertical-align:top;"><table style="width:100%;border-collapse:collapse;font-size:7pt;">
 <tr><td style="padding:2px 3px;color:#333;width:50%;">Final Survey Appointment Date</td><td style="padding:2px 3px;">${fd(a.appointmentDate)}</td></tr>
-<tr><td style="padding:2px 3px;color:#333;">Date of visits</td><td style="padding:2px 3px;">${fd(a.dateOfSurvey)}</td></tr>
+<tr><td style="padding:2px 3px;color:#333;">Date of visits</td><td style="padding:2px 3px;">${formatSurveyDateTime(a.dateOfSurvey, a.timeOfSurvey)}</td></tr>
 <tr><td style="padding:2px 3px;color:#333;">Place of Survey</td><td style="padding:2px 3px;">${g(a.placeOfSurvey)}</td></tr>
 <tr><td style="padding:2px 3px;color:#333;">Workshop Name</td><td style="padding:2px 3px;">${g(a.workshopName || sd.repairWorkshop)}</td></tr>
 <tr><td style="padding:2px 3px;color:#333;">Workshop Address</td><td style="padding:2px 3px;">${g(a.workshopAddress)}</td></tr>
@@ -722,7 +723,7 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
 <div style="${sec}">BILL CHECK REFERENCE</div>
 <table style="${ts}">
 <tr><td style="${tdl}width:25%;">Final Survey Appt. Date</td><td style="${td}width:25%;">${fd(a.appointmentDate)}</td><td style="${tdl}width:25%;">Repair Auth. Date</td><td style="${td}">${fd(ri?.repairAuthDate)}</td></tr>
-<tr><td style="${tdl}">Date of Final Survey</td><td style="${td}">${fd(a.dateOfSurvey)}</td><td style="${tdl}">Actual Repair Completion</td><td style="${td}">${fd(ri?.actualCompletionDate)}</td></tr>
+<tr><td style="${tdl}">Date of Final Survey</td><td style="${td}">${formatSurveyDateTime(a.dateOfSurvey, a.timeOfSurvey)}</td><td style="${tdl}">Actual Repair Completion</td><td style="${td}">${fd(ri?.actualCompletionDate)}</td></tr>
 <tr><td style="${tdl}">Workshop Name</td><td style="${td}">${g(a.workshopName)}</td><td style="${tdl}">Bill Check Date</td><td style="${tdb}">${fd(bc?.billDate)}</td></tr>
 <tr><td style="${tdl}">Workshop Invoice Total (₹)</td><td style="${tdb}">${fa(bc?.billTotal || 0)}</td><td style="${tdl}">Repairs As Per Assessment</td><td style="${tdb}">${g(ri?.repairsAsAssessed) || 'YES'}</td></tr>
 </table>

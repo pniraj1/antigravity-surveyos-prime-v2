@@ -281,6 +281,7 @@ export function createBlankClaim(
       placeOfAccident: '',
       causeOfAccident: '',
       dateOfSurvey: '',
+      timeOfSurvey: '',
       placeOfSurvey: '',
       policeStation: '',
       firNumber: '',

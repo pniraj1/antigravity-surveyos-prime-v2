@@ -140,6 +140,7 @@ export const MOCK_CLAIM: ClaimData = {
     placeOfAccident: 'Baner Road, Near Balewadi, Pune – 411045',
     causeOfAccident: 'Dashed against divider / loss of control on a slippery road surface',
     dateOfSurvey: '2026-06-10',
+    timeOfSurvey: '11:30',
     placeOfSurvey: 'Shree Motors Workshop, Baner, Pune',
     policeStation: 'Chatushrungi Police Station',
     firNumber: 'FIR/CHT/2026/0447',
