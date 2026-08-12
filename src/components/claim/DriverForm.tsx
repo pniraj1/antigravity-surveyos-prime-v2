@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { DLRelation, DLVerificationStatus } from '@/types';
 import { useFieldEvidence } from '@/hooks/useFieldEvidence';
+import { ValidityAdvisory } from '@/components/claim/ValidityAdvisory';
+import { checkValidityOnAccidentDate } from '@/lib/claims/validity-advisory';
 import { Eye, AlertTriangle } from 'lucide-react';
 
 const S = () => <span className="ml-1 inline-block w-2 h-2 rounded-full bg-success align-middle" title="Used in Spot Report" />;
@@ -24,11 +26,14 @@ export function DriverDetailsForm() {
   if (!currentClaim) return null;
   const d = currentClaim.driver;
 
-  // ── DL Expiry check for UI warning ──────────────────────────────────────
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const ntExpired = d?.validityNonTransport && new Date(d.validityNonTransport) < today;
-  const tExpired  = d?.validityTransport  && new Date(d.validityTransport)  < today;
+  // ── DL expiry, judged on the ACCIDENT DATE ──────────────────────────────
+  // This used to compare against `today`, which is the wrong reference for a
+  // claim: a licence that had lapsed at the time of the accident but has since
+  // been renewed read as perfectly valid. Surfaced as advice, never a verdict
+  // — see ValidityAdvisory.
+  const accidentDate = currentClaim.accident?.dateAndTime;
+  const ntExpired = !!checkValidityOnAccidentDate(d?.validityNonTransport, accidentDate);
+  const tExpired  = !!checkValidityOnAccidentDate(d?.validityTransport, accidentDate);
   const anyExpired = ntExpired || tExpired;
 
   const expiredLabels = [
@@ -146,7 +151,14 @@ export function DriverDetailsForm() {
               value={d?.validityNonTransport || ''}
               onChange={(e) => updateDriver({ validityNonTransport: e.target.value })}
               onFocus={() => triggerField('validityNonTransport')}
-              className={`${r(d?.validityNonTransport)} ${ntExpired ? 'border-danger' : ''}`}
+              className={r(d?.validityNonTransport)}
+            />
+            <ValidityAdvisory
+              id="dl-non-transport"
+              label="Non-transport validity"
+              expiryDate={d?.validityNonTransport}
+              existingRemarks={d?.invalidRemarks ?? ''}
+              onRecord={(merged) => updateDriver({ invalidRemarks: merged })}
             />
           </div>
 
@@ -158,7 +170,14 @@ export function DriverDetailsForm() {
               value={d?.validityTransport || ''}
               onChange={(e) => updateDriver({ validityTransport: e.target.value })}
               onFocus={() => triggerField('validityTransport')}
-              className={`${r(d?.validityTransport)} ${tExpired ? 'border-danger' : ''}`}
+              className={r(d?.validityTransport)}
+            />
+            <ValidityAdvisory
+              id="dl-transport"
+              label="Transport validity"
+              expiryDate={d?.validityTransport}
+              existingRemarks={d?.invalidRemarks ?? ''}
+              onRecord={(merged) => updateDriver({ invalidRemarks: merged })}
             />
           </div>
 

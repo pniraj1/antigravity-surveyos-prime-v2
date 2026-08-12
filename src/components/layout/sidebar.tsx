@@ -3,6 +3,7 @@
 import { useUIStore, type AppTab } from '@/stores/ui-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { useClaimStore } from '@/stores/claim-store';
+import { useExtractionStore } from '@/stores/extraction-store';
 import { getConflictFields } from '@/lib/ai/reconciliation';
 import {
   LayoutDashboard,
@@ -77,6 +78,10 @@ const GROUP_LABELS: Record<string, string> = {
   settings: 'SETTINGS',
 };
 
+/** Extractions the surveyor has already been nudged about, so the prompt
+ *  fires once per document rather than on every navigation attempt. */
+const nudgedJobs = new Set<string>();
+
 export function Sidebar() {
   const [mounted, setMounted] = useState(false);
   const { activeTab, setActiveTab, sidebarCollapsed, toggleSidebar, isOnline, isDriveConnected, driveEmail } = useUIStore();
@@ -105,6 +110,37 @@ export function Sidebar() {
         toast.warning(`You have ${conflicts.length} unresolved AI data discrepancies that need attention.`);
         // Note: No return statement here, so it allows navigation (soft block)
       }
+    }
+
+    // ── Soft nudge while a document is being read ─────────────────────────
+    // Leaving is SAFE — extraction state lives in a store outside the tab
+    // subtree, so the result comes back regardless. The copy says so rather
+    // than manufacturing urgency the system no longer has; a nudge that lied
+    // would be discovered within a day.
+    //
+    // Its value is making the invisible work visible at the moment the
+    // surveyor walks away from it, plus a beat to reconsider when the
+    // remaining wait is trivially short.
+    //
+    // Fires at most ONCE per extraction, which caps the nagging without
+    // needing a preference toggle — a surveyor doing twenty claims a day is
+    // told once per document, then left alone.
+    const running = Object.entries(useExtractionStore.getState().jobs)
+      .find(([, j]) => j.status === 'processing');
+    if (running && !nudgedJobs.has(`${running[0]}:${running[1].startedAt}`)) {
+      const [docKey, job] = running;
+      nudgedJobs.add(`${docKey}:${job.startedAt}`);
+      useUIStore.getState().setSidebarMobileOpen(false);
+      const where = job.pagesTotal > 0
+        ? ` — page ${job.pagesDone} of ${job.pagesTotal}`
+        : '';
+      toast(`Still reading ${docKey.toUpperCase()}${where}`, {
+        description: 'You can switch tabs; the result will come back to you.',
+        duration: 8000,
+        action: { label: 'Switch anyway', onClick: () => setActiveTab(targetTab) },
+        cancel: { label: 'Stay here', onClick: () => {} },
+      });
+      return; // hold navigation until they choose
     }
 
     if (targetTab === 'dashboard') {

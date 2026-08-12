@@ -158,6 +158,13 @@ export interface ClaimData {
   /** Keyed by field path, e.g. "vehicle.engineNumber". Written only by the Reconciliation Hub. */
   reconciliationDecisions?: Record<string, ReconciliationDecision>;
 
+  /**
+   * Ids of validity advisories the surveyor has dismissed, e.g. "dl-transport".
+   * A list rather than a boolean per advisory so the remaining call sites
+   * (fitness, permit, policy period) need no further schema change.
+   */
+  dismissedAdvisories?: string[];
+
   // ─── Google Drive ──────────────────────────────────
   gDriveFolderId: string | null;
 

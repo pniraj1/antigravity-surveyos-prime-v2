@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Check, X, Sparkles, RefreshCw } from 'lucide-react';
+import { summariseExtraction, hasLineItems } from '@/lib/ai/extraction-summary';
 
 interface AIReviewDialogProps {
   isOpen: boolean;
@@ -15,10 +16,16 @@ interface AIReviewDialogProps {
   discrepancies?: string[];
 }
 
+const INR = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 });
+
 export function AIReviewDialog({ isOpen, onClose, onConfirm, onReScan, title, data, evidenceImages = [], discrepancies = [] }: AIReviewDialogProps) {
   const [feedback, setFeedback] = useState('');
 
   if (!isOpen) return null;
+
+  // Line-item documents get a totals block to check against the printed last
+  // page. See extraction-summary.ts for why counts matter as much as amounts.
+  const summary = hasLineItems(title) ? summariseExtraction(data) : null;
 
   // Flatten sample data for display
   const displayFields = Object.entries(data || {})
@@ -64,6 +71,58 @@ export function AIReviewDialog({ isOpen, onClose, onConfirm, onReScan, title, da
           )}
 
           <div className={`w-full ${evidenceImages.length > 0 ? 'md:w-1/2' : ''} h-full max-h-[50vh] md:max-h-[60vh] p-6 overflow-y-auto`}>
+            {summary && (
+              <div className="mb-5 rounded-lg border border-border/60 bg-muted/30 p-3">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2">
+                  Read from this document
+                </div>
+                <table className="w-full text-xs">
+                  <tbody>
+                    {[
+                      ['Spare parts', summary.parts],
+                      ['Labour', summary.labour],
+                      ['Painting', summary.painting],
+                    ].map(([label, group]) => {
+                      const g = group as { count: number; taxable: number };
+                      return (
+                        <tr key={label as string}>
+                          <td className="py-0.5 text-muted-foreground">{label as string}</td>
+                          <td className="py-0.5 text-right tabular-nums">{g.count} items</td>
+                          <td className="py-0.5 text-right tabular-nums font-medium">₹{INR.format(g.taxable)}</td>
+                        </tr>
+                      );
+                    })}
+                    <tr className="border-t border-border/60">
+                      <td className="pt-1.5 font-medium">Gross total</td>
+                      <td className="pt-1.5 text-right tabular-nums text-muted-foreground">
+                        {summary.totalItems} items
+                      </td>
+                      <td className="pt-1.5 text-right tabular-nums font-semibold">
+                        {summary.gross == null ? '—' : `₹${INR.format(summary.gross)}`}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <p className="mt-2.5 text-[11px] leading-relaxed text-muted-foreground">
+                  Confirm the item count and gross total against the last page of the bill.
+                  Items on later pages are the usual miss.
+                </p>
+
+                {onReScan && (
+                  <button
+                    type="button"
+                    onClick={() => onReScan(
+                      'The item count or totals do not match the printed bill. Re-read every page, including the last, and return ALL line items.'
+                    )}
+                    className="mt-2 text-[11px] font-medium underline underline-offset-2 text-primary"
+                  >
+                    Something is off — rescan
+                  </button>
+                )}
+              </div>
+            )}
+
             <div className="space-y-4">
               {displayFields.length > 0 ? (
                 displayFields.map((field, i) => (
