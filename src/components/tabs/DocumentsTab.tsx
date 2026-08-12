@@ -3,7 +3,6 @@
 import { useAIExtraction } from '@/hooks/useAIExtraction';
 import { storeFiles } from '@/components/evidence/DocumentEvidenceViewer';
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
-import { ProcessingProgressOverlay } from '@/components/ui/ProcessingProgressOverlay';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { uploadWithDuplicateCheck, type DuplicateAction, type ExistingFile } from '@/lib/drive/upload-with-check';
@@ -545,12 +544,6 @@ export function DocumentsTab() {
         />
       )}
 
-      {/* Persistent progress overlay during PDF extraction */}
-      <ProcessingProgressOverlay
-        isVisible={isProcessing}
-        progress={progress}
-        onCancel={cancelReview}
-      />
 
       {/* Duplicate Upload Dialog */}
       {dupeDialog && (

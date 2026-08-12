@@ -11,7 +11,6 @@ import { calculateAssessmentSummary, calculateBillCheckSummary, getVehicleAgeMon
 import { triggerUIICBillCheckPrint, buildUIICBillCheckHTML } from '@/lib/reports/uiic-final-builder';
 
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
-import { ProcessingProgressOverlay } from '@/components/ui/ProcessingProgressOverlay';
 import { ReportPreviewPanel } from '@/components/shared/ReportPreviewPanel';
 import { footerFromProfile } from '@/lib/reports/print-shell';
 import { DocumentEvidenceViewer } from '@/components/evidence/DocumentEvidenceViewer';
@@ -218,7 +217,6 @@ export function BillCheckTab() {
         title={reviewData?.key || ''}
         data={reviewData?.data}
       />
-      <ProcessingProgressOverlay isVisible={isProcessing} progress={progress} onCancel={cancelReview} />
     </div>
   );
 }

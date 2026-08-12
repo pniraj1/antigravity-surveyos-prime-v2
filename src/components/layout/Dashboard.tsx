@@ -41,6 +41,8 @@ import { FloatingReportPreview } from '@/components/layout/FloatingReportPreview
 import { ClaimHeader } from '@/components/layout/ClaimHeader';
 import { useRouteSync } from '@/hooks/useRouteSync';
 import { useAIConfig } from '@/hooks/useAIConfig';
+import { useExtractionCompletionToast } from '@/hooks/useExtractionCompletionToast';
+import { ProcessingProgressOverlay } from '@/components/ui/ProcessingProgressOverlay';
 import { TermsReacceptGate } from '@/components/legal/TermsReacceptGate';
 
 // Dynamically import ALL tabs with ssr:false — they all use browser-only APIs:
@@ -648,6 +650,7 @@ export default function Dashboard() {
   const { activeTab } = useUIStore();
   useRouteSync();
   useAIConfig();
+  useExtractionCompletionToast();
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -667,6 +670,11 @@ export default function Dashboard() {
 
       {/* Floating live report preview — visible on all tabs except Reports */}
       <FloatingReportPreview />
+
+      {/* Extraction progress. Deliberately a SIBLING of the keyed ErrorBoundary
+          above: inside it, a tab switch would unmount the overlay mid-run,
+          which is the bug this whole change exists to fix. */}
+      <ProcessingProgressOverlay />
     </div>
   );
 }

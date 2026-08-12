@@ -4,6 +4,8 @@ import { useProfileStore } from '@/stores/profile-store';
 import { useUIStore } from '@/stores/ui-store';
 import {
   useExtractionStore,
+  registerAbort,
+  clearAbort,
   selectIsProcessing,
   selectActiveProgress,
   selectLatestReview,
@@ -156,11 +158,22 @@ export function useAIExtraction() {
     rememberFile(key, primary);
     setLastFileNames(prev => ({ ...prev, [key]: primary.name }));
 
+    const controller = new AbortController();
+    registerAbort(key, controller);
+
     try {
       const forceDocMode = (!aiDocMode || aiDocMode === 'auto') ? undefined : aiDocMode;
-      const { data, images, discrepancies } = await extractDocument(key, fileList, (msg: string) => {
-        setJobProgress(key, msg);
-      }, feedback, previousData, forceDocMode);
+      const { data, images, discrepancies } = await extractDocument(
+        key,
+        fileList,
+        (msg: string, pagesDone?: number, pagesTotal?: number) => {
+          setJobProgress(key, msg, pagesDone, pagesTotal);
+        },
+        feedback,
+        previousData,
+        forceDocMode,
+        controller.signal,
+      );
 
       // A cancelled job is removed from the store, and the store's updaters
       // ignore unknown keys — so if the surveyor cancelled while this was in
@@ -194,6 +207,8 @@ export function useAIExtraction() {
       if (err?.name === 'AbortError') return;
       toast.error(`Extraction failed: ${err.message}`);
       failJob(key, err?.message ?? 'Extraction failed');
+    } finally {
+      clearAbort(key);
     }
   }, [aiDocMode, setExtractedData, startJob, setJobProgress, finishJob, failJob, rememberFile, setDiscrepancyContext]);
 

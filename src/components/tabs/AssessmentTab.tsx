@@ -12,7 +12,6 @@ import { PanelRightOpen, PanelRightClose, Upload } from 'lucide-react';
 import { DocumentEvidenceViewer, storeBlobUrl, useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
 import { useAIExtraction } from '@/hooks/useAIExtraction';
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
-import { ProcessingProgressOverlay } from '@/components/ui/ProcessingProgressOverlay';
 import { useProfileStore } from '@/stores/profile-store';
 import { uploadFileToDrive } from '@/lib/drive';
 import { useSaveToCloudPrompt } from '@/hooks/useSaveToCloudPrompt';
@@ -187,12 +186,6 @@ export function AssessmentTab() {
         evidenceImages={evidenceImages}
       />
 
-      {/* Persistent progress overlay during PDF extraction */}
-      <ProcessingProgressOverlay
-        isVisible={isProcessing}
-        progress={progress}
-        onCancel={cancelReview}
-      />
 
       {/* Floating Chatbot for fixing extraction */}
       <AssessmentChatbot 

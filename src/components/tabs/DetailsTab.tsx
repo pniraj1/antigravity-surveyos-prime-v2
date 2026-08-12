@@ -20,7 +20,6 @@ import { toast } from 'sonner';
 import { SpotTab } from '@/components/tabs/SpotTab';
 import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
 import { InlineEvidencePanel } from '@/components/evidence/InlineEvidencePanel';
-import { ProcessingProgressOverlay } from '@/components/ui/ProcessingProgressOverlay';
 
 function EvidenceIconBtn({ onClick, title, children }: { onClick: () => void; title: string; children: React.ReactNode }) {
   return (
@@ -324,11 +323,6 @@ export function DetailsTab() {
         data={reviewData?.data}
       />
 
-      <ProcessingProgressOverlay
-        isVisible={isProcessing}
-        progress={progress}
-        onCancel={cancelReview}
-      />
     </div>
   );
 }

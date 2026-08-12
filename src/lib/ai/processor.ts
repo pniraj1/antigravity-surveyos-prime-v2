@@ -474,13 +474,28 @@ function validateMath(data: any, docType: string): { isValid: boolean; discrepan
   };
 }
 
+/** Thrown when the surveyor cancels. Named so callers can stay silent on it. */
+function abortError(): Error {
+  const e = new Error('Extraction cancelled');
+  e.name = 'AbortError';
+  return e;
+}
+
 export async function extractDocument(
   key: string,
   file: File | File[],
-  onProgress?: (msg: string) => void,
+  onProgress?: (msg: string, pagesDone?: number, pagesTotal?: number) => void,
   feedback?: string,
   previousData?: any,
-  forceDocMode?: 'text' | 'vision'
+  forceDocMode?: 'text' | 'vision',
+  // ponytail: abort is checked between page chunks, not threaded into fetch.
+  // That stops every remaining call — which is where the quota goes on a slow
+  // multi-page document — without rewiring callAIGateway/callWithRotation/
+  // callWithKey and their seven call sites. The one already-dispatched request
+  // is billed the moment it leaves, so threading deeper would save nothing but
+  // its response. Upgrade path: add `signal` to those three signatures and pass
+  // it to the two fetch() calls in service.ts (405, 501).
+  signal?: AbortSignal,
 ): Promise<ExtractionResult> {
   const files = Array.isArray(file) ? file : [file];
   const basePrompt = getDocPrompt(key) || "Extract all visible details from this document as JSON.";
@@ -549,6 +564,9 @@ export async function extractDocument(
       finalResult = null;
 
       for (let i = 0; i < totalPages; i += CHUNK_SIZE) {
+        // Cancelled between pages — stop before spending another call.
+        if (signal?.aborted) throw abortError();
+
         const currentBatchStart = i + 1;
         const currentBatchEnd = Math.min(i + CHUNK_SIZE, totalPages);
 
@@ -557,7 +575,9 @@ export async function extractDocument(
             ? `Analyzing page ${currentBatchStart}–${currentBatchEnd} of ${totalPages}...`
             : 'Analyzing document...';
           // Single pass — no retry prefix needed
-          onProgress(msg);
+          // Page counts drive the determinate progress fill; the message alone
+          // cannot be parsed reliably for them.
+          onProgress(msg, currentBatchEnd, totalPages);
         }
 
         // Small throttle delay between chunks to avoid rate limiting
