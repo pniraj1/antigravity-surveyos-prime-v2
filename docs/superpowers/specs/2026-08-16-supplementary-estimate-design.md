@@ -208,11 +208,22 @@ Unit, against `applyEstimate` directly:
 5. default mode is `'replace'` when the argument is omitted
 6. two successive `append` calls accumulate, confirming D5 (no dedupe)
 
-Component, against the dialog:
+The decision of *whether* to ask, and with what numbers, is a pure function
+(`buildEstimateModePrompt`) rather than logic inside the dialog. This repo has no
+component-testing stack — no `@testing-library`, no jsdom, `environment: 'node'`,
+and zero `.tsx` test files — and adding one for a single dialog is a large
+unrequested change. Extracting the decision keeps it testable in the environment
+that already exists, and leaves the dialog as thin wiring:
 
-7. no mode question on a claim with no estimate rows
-8. mode question appears when estimate rows exist
-9. each button routes the matching mode into `applyExtractedData`
+7. no prompt on a claim with no estimate rows
+8. no prompt when the sheet holds only manual rows
+9. prompt appears when estimate **or** supplementary rows exist
+10. no prompt when the extraction found no line items
+11. the claim-side count includes manual rows
+12. the document-side total comes from `summariseExtraction`
+13. a missing `estimated` counts as zero, not `NaN`
+
+No new dependencies are added.
 
 ---
 
