@@ -184,7 +184,81 @@ store exactly as Cancel does today.
 
 ---
 
-## 8. Error handling
+## 8. The supplementary band
+
+Supplementary items must be visually distinct from the original estimate's
+items wherever rows are listed.
+
+**Grouping is already correct and needs no reordering.** The claim holds one
+flat row array; sections are a rendering concern only
+([AssessmentSectionTable.tsx:64](../../../src/components/claim/AssessmentSectionTable.tsx)),
+and every render site — screen and PDF — obtains its rows by filtering that
+array on `section`. Because `append` adds supplementary rows after the existing
+ones, a supplementary part already lands inside the Parts group, after the
+estimate parts. Only the visual divider is missing.
+
+**A band row, not a separate table.** Within each section the rows stay in one
+table, with a full-width band reading **Supplementary Estimate** at the point
+where the origin changes:
+
+```
+PARTS
+  1  Front Bumper            8,000.00
+  2  Bonnet                 18,000.00
+  ── Supplementary Estimate ──────────
+  3  Radiator Support        4,200.00
+  Sub-Total Parts           30,200.00
+```
+
+Rejected: a separate on-screen table for supplementary rows. Range selection and
+drag-reorder are scoped by section — `clampRangeToSection`, and
+[AssessmentGrid.tsx:258](../../../src/components/claim/AssessmentGrid.tsx) builds
+its reorder list from `filter(r => r.section === activeRow.section)` — so
+splitting Parts into two tables creates two selection scopes and breaks dragging
+a row from one to the other. Making `supplementary` a real *section* would be
+worse: `buildSerialMap` counts per section, so serials would restart and both
+PDFs would renumber.
+
+It also keeps the screen and the printed report identical, which matters because
+the surveyor checks one against the other.
+
+**Where it appears** (D8, below): every place rows are listed —
+
+| Site | File |
+|---|---|
+| Assessment grid | `src/components/claim/AssessmentSectionTable.tsx` |
+| Final Survey Report §9 | `src/lib/reports/standard-report-builder.ts` |
+| Bill Check tab | `src/components/tabs/bill-check/BillCheckGrid.tsx` |
+| UIIC Bill Check report | `src/lib/reports/uiic-final-builder.ts` |
+
+**Sub-totals are unchanged** (D9). Each section keeps its single sub-total
+covering estimate and supplementary together. The band is a divider, not a
+grouping with its own arithmetic.
+
+**The band is not a row.** It is rendered between rows and carries no serial
+number, so `buildSerialMap` and every total are untouched. Serial numbering runs
+straight through the band, which is correct — the insurer reads one numbered
+list per section.
+
+**Multiple supplementaries merge.** Two supplementary uploads both tag
+`'supplementary'`, so they appear under one band. That follows from D5 (no batch
+ids) and is accepted.
+
+**In the Bill Check report** rows are filtered to allowed items only, so the band
+appears only when that filtered list actually contains supplementary rows. This
+falls out of the helper operating on the already-filtered list.
+
+### Additional decisions
+
+| # | Decision |
+|---|---|
+| D8 | The band appears **everywhere rows are listed** — Assessment grid, Final Report, Bill Check tab, Bill Check PDF. |
+| D9 | **Band only, no supplementary sub-total.** Section sub-totals stay exactly as they are. |
+| D10 | One shared helper decides where the band goes, so the four sites cannot drift apart. |
+
+---
+
+## 9. Error handling
 
 - **No claim loaded** — unreachable; the dialog only renders inside a loaded claim.
 - **Extraction returned zero rows** — the mode question is pointless, so it is
@@ -197,7 +271,7 @@ store exactly as Cancel does today.
 
 ---
 
-## 9. Testing
+## 10. Testing
 
 Unit, against `applyEstimate` directly:
 
@@ -223,11 +297,24 @@ that already exists, and leaves the dialog as thin wiring:
 12. the document-side total comes from `summariseExtraction`
 13. a missing `estimated` counts as zero, not `NaN`
 
+Band placement, against `shouldStartSupplementaryBand`:
+
+14. no band when a section holds only estimate rows
+15. band at the first supplementary row and nowhere else
+16. band at the top when a section holds *only* supplementary rows — a supplementary can add a paint item to a claim whose estimate had none, and those items must not read as original estimate items
+17. a manual row after supplementary rows does not start a second band
+
+Report rendering:
+
+18. Final Report §9 emits the band once in a section that mixes origins
+19. the band spans the full table width and carries no serial number
+20. section sub-totals are unchanged by the band's presence
+
 No new dependencies are added.
 
 ---
 
-## 10. What this does not do
+## 11. What this does not do
 
 Per D5, a surveyor who uploads the same supplementary twice gets duplicate rows
 with no warning, and the assessment total silently inflates. The surveyor is the

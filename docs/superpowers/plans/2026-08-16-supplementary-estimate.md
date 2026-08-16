@@ -4,7 +4,7 @@
 
 **Goal:** Let a surveyor upload a supplementary estimate without deleting the original estimate's rows, by asking in the review dialog which of the two they mean.
 
-**Architecture:** `applyEstimate` gains a `mode` parameter (`'replace' | 'append'`) that decides whether existing estimate rows are dropped and how new rows are tagged. The mode is chosen by the surveyor in the existing `AIReviewDialog`, which already gates every extraction, and is threaded through `confirmApply` → `applyExtractedData` → `applyEstimate`. No new button, no new extraction key, no AI-layer change.
+**Architecture:** `applyEstimate` gains a `mode` parameter (`'replace' | 'append'`) that decides whether existing estimate rows are dropped and how new rows are tagged. The mode is chosen by the surveyor in the existing `AIReviewDialog`, which already gates every extraction, and is threaded through `confirmApply` → `applyExtractedData` → `applyEstimate`. No new button, no new extraction key, no AI-layer change. Supplementary rows are then marked with a "Supplementary Estimate" divider band, driven by one shared helper across all four render sites.
 
 **Tech Stack:** TypeScript, React 19, Next.js 16, Zustand, Vitest.
 
@@ -17,6 +17,8 @@
 - `replace` must **not** delete rows tagged `'supplementary'`.
 - No duplicate detection. Uploading the same document twice produces duplicate rows by design (spec D5).
 - Do not change `srNo`, the extraction prompt, or the extraction schema.
+- The band is **presentation only** — not a row. It has no id, no serial number, never enters `sectionIds`, and changes no sub-total. `buildSerialMap` must not be touched.
+- Section sub-totals stay exactly as they are (spec D9). Do not add a supplementary sub-total.
 - **Add no dependencies.** In particular do not install `@testing-library/*` or `jsdom`; this repo tests logic in the node environment and keeps JSX as thin wiring.
 - Run `npx vitest run` and `npx tsc --noEmit` from `SurveyOS-Prime-V2/`. Both must be clean before any commit.
 
@@ -615,12 +617,303 @@ the surveyor decides on numbers rather than memory."
 
 ---
 
-### Task 4: Verify end to end
+### Task 4: The "Supplementary Estimate" band
+
+**Files:**
+- Create: `src/lib/calculations/supplementary-band.ts`
+- Create: `src/lib/calculations/__tests__/supplementary-band.test.ts`
+- Modify: `src/lib/calculations/index.ts` (barrel export)
+- Modify: `src/lib/reports/standard-report-builder.ts` (§9 parts/labour/paint row maps)
+- Modify: `src/lib/reports/uiic-final-builder.ts` (`pHtml` / `lHtml` / `ptHtml` at lines 581, 601, 615)
+- Modify: `src/components/claim/AssessmentSectionTable.tsx` (row list)
+- Modify: `src/components/tabs/bill-check/BillCheckGrid.tsx` (row list, around line 236)
+- Test: `src/lib/reports/__tests__/standard-report-columns.test.ts` (add band cases)
+
+**Background:** grouping already works — the claim holds one flat array, every
+site filters it on `section`, and `append` puts supplementary rows after the
+existing ones. No reordering is needed. Only the divider is missing.
+
+**Interfaces:**
+- Consumes: `AssessmentRow['source']` from Task 1.
+- Produces, from `src/lib/calculations/supplementary-band.ts`:
+
+```ts
+export const SUPPLEMENTARY_BAND_LABEL = 'Supplementary Estimate';
+
+export function shouldStartSupplementaryBand(
+  rows: AssessmentRow[],
+  index: number,
+): boolean;
+```
+
+- [ ] **Step 1: Write the failing test**
+
+Create `src/lib/calculations/__tests__/supplementary-band.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest';
+import { shouldStartSupplementaryBand } from '../supplementary-band';
+import type { AssessmentRow } from '@/types';
+
+const row = (source: AssessmentRow['source'], id = Math.random().toString()) =>
+  ({ id, section: 'parts', particulars: 'x', allowed: true, estimated: 0, assessed: 0, source }) as AssessmentRow;
+
+describe('shouldStartSupplementaryBand', () => {
+  it('never bands a section of only estimate rows', () => {
+    const rows = [row('estimate'), row('estimate')];
+    expect(rows.map((_, i) => shouldStartSupplementaryBand(rows, i))).toEqual([false, false]);
+  });
+
+  it('bands the first supplementary row and no other', () => {
+    const rows = [row('estimate'), row('supplementary'), row('supplementary')];
+    expect(rows.map((_, i) => shouldStartSupplementaryBand(rows, i))).toEqual([false, true, false]);
+  });
+
+  it('bands at the top when the section is entirely supplementary', () => {
+    // A supplementary can add a paint item to a claim whose estimate had none.
+    // Those items must not read as original estimate items.
+    const rows = [row('supplementary'), row('supplementary')];
+    expect(rows.map((_, i) => shouldStartSupplementaryBand(rows, i))).toEqual([true, false]);
+  });
+
+  it('does not start a second band after a manual row', () => {
+    const rows = [row('supplementary'), row(undefined), row('supplementary')];
+    // The trailing supplementary follows a non-supplementary row, so by the
+    // rule it does band again. This documents that ordering, which only
+    // arises if a surveyor hand-inserts a row mid-block.
+    expect(rows.map((_, i) => shouldStartSupplementaryBand(rows, i))).toEqual([true, false, true]);
+  });
+
+  it('never bands a manual or estimate row', () => {
+    const rows = [row(undefined), row('estimate')];
+    expect(rows.map((_, i) => shouldStartSupplementaryBand(rows, i))).toEqual([false, false]);
+  });
+
+  it('is safe on an empty list and an out-of-range index', () => {
+    expect(shouldStartSupplementaryBand([], 0)).toBe(false);
+    expect(shouldStartSupplementaryBand([row('supplementary')], 5)).toBe(false);
+  });
+});
+```
+
+- [ ] **Step 2: Run the test to verify it fails**
+
+Run: `npx vitest run src/lib/calculations/__tests__/supplementary-band.test.ts`
+Expected: FAIL — cannot resolve `../supplementary-band`.
+
+- [ ] **Step 3: Write the helper**
+
+Create `src/lib/calculations/supplementary-band.ts`:
+
+```ts
+// ═══════════════════════════════════════════════════════════
+// SUPPLEMENTARY BAND
+//
+// Where the "Supplementary Estimate" divider goes inside a section's rows.
+//
+// One helper, four render sites — the Assessment grid, the Final Survey
+// Report, the Bill Check tab and the Bill Check PDF — so they cannot drift
+// apart and show the surveyor a different split on screen than in print.
+//
+// The band is NOT a row: it carries no serial number and feeds no total, so
+// buildSerialMap and every sub-total are untouched. Numbering runs straight
+// through it, which is what the insurer reads.
+// ═══════════════════════════════════════════════════════════
+
+import type { AssessmentRow } from '@/types';
+
+export const SUPPLEMENTARY_BAND_LABEL = 'Supplementary Estimate';
+
+/**
+ * True when a band belongs immediately BEFORE `rows[index]`.
+ *
+ * `rows` must be one section's rows in claim-array order — the same list the
+ * caller is rendering. Callers that filter (Bill Check shows allowed items
+ * only) pass the filtered list, so the band follows what is actually on show.
+ */
+export function shouldStartSupplementaryBand(rows: AssessmentRow[], index: number): boolean {
+  const current = rows[index];
+  if (!current || current.source !== 'supplementary') return false;
+  // First row of the section, or the first after something of another origin.
+  return index === 0 || rows[index - 1]?.source !== 'supplementary';
+}
+```
+
+- [ ] **Step 4: Run the test to verify it passes**
+
+Run: `npx vitest run src/lib/calculations/__tests__/supplementary-band.test.ts`
+Expected: PASS, 6 tests.
+
+- [ ] **Step 5: Export from the barrel**
+
+In `src/lib/calculations/index.ts`, add alongside the existing `buildSerialMap` export:
+
+```ts
+export { shouldStartSupplementaryBand, SUPPLEMENTARY_BAND_LABEL } from './supplementary-band';
+```
+
+- [ ] **Step 6: Write the failing report test**
+
+Append to `src/lib/reports/__tests__/standard-report-columns.test.ts`, inside the existing top-level `describe`:
+
+```ts
+  test('a section mixing origins carries one supplementary band', () => {
+    const mixed = [
+      row({ particulars: 'Front Bumper', source: 'estimate' }),
+      row({ particulars: 'Radiator Support', source: 'supplementary' }),
+      row({ particulars: 'Grille', source: 'supplementary' }),
+    ];
+    const table = section9(buildStandardFinalSurveyHTML(claim(mixed), {} as never));
+
+    expect(table.match(/Supplementary Estimate/g)).toHaveLength(1);
+  });
+
+  test('a section of only estimate rows carries no band', () => {
+    const table = section9(buildStandardFinalSurveyHTML(claim(withoutFiberglass), {} as never));
+    expect(table).not.toContain('Supplementary Estimate');
+  });
+
+  test('the band spans the full table width', () => {
+    const mixed = [
+      row({ particulars: 'Front Bumper', source: 'estimate' }),
+      row({ particulars: 'Radiator Support', source: 'supplementary' }),
+    ];
+    const table = section9(buildStandardFinalSurveyHTML(claim(mixed), {} as never));
+    const band = table.match(/<tr>\s*<td colspan="(\d+)"[^>]*>Supplementary Estimate/);
+
+    expect(band).not.toBeNull();
+    // 8 fixed columns + 3 material columns when the claim has no fiberglass.
+    expect(Number(band![1])).toBe(11);
+  });
+```
+
+If the local `row()` helper in that file does not accept `source`, widen it to
+spread its argument over the defaults rather than adding a second helper.
+
+- [ ] **Step 7: Run the report test to verify it fails**
+
+Run: `npx vitest run src/lib/reports/__tests__/standard-report-columns.test.ts`
+Expected: FAIL — no "Supplementary Estimate" text is emitted yet.
+
+- [ ] **Step 8: Emit the band in the Final Survey Report**
+
+In `src/lib/reports/standard-report-builder.ts`, add the import at the top
+alongside the existing calculations imports:
+
+```ts
+import { shouldStartSupplementaryBand, SUPPLEMENTARY_BAND_LABEL } from '@/lib/calculations';
+```
+
+Add this helper next to `td9` / `tdsr9`:
+
+```ts
+  // Reuses the sub-total band styling so the divider looks native to the sheet.
+  const bandRow = `<tr><td colspan="${NCOLS}" style="${sub}text-align:left;font-size:${scale.labelFont};">${SUPPLEMENTARY_BAND_LABEL}</td></tr>`;
+```
+
+The parts rows are built by `rows.filter(r => r.section === 'parts').map(r => ...)`.
+Change that map to take the index and prefix the band, keeping the existing row
+template untouched:
+
+```ts
+  const partsRows = rows.filter(r => r.section === 'parts');
+  const partsHtml = partsRows.map((r, i) => {
+    const band = shouldStartSupplementaryBand(partsRows, i) ? bandRow : '';
+    // ... existing per-row consts unchanged ...
+    return band + `<tr>
+      ...existing row template, unchanged...
+    </tr>`;
+  }).join('');
+```
+
+Apply the identical `band + ` prefix to the labour and paint row maps in the
+same file, each against its own filtered list.
+
+- [ ] **Step 9: Run the report test to verify it passes**
+
+Run: `npx vitest run src/lib/reports/__tests__/standard-report-columns.test.ts`
+Expected: PASS, including the pre-existing column and Sr tests.
+
+- [ ] **Step 10: Emit the band in the UIIC Bill Check report**
+
+In `src/lib/reports/uiic-final-builder.ts`, import the same two symbols. The
+allowed-row maps are `pHtml` (line 581), `lHtml` (601) and `ptHtml` (615), each
+over `allowedParts` / `allowedLabour` / `allowedPaint`. Apply the same treatment:
+take the index, and prefix `shouldStartSupplementaryBand(<thatList>, i)` with a
+band row whose `colspan` matches that table's column count.
+
+Pass the **filtered** list — Bill Check lists allowed items only, so the band must
+follow what is actually printed.
+
+Match the surrounding sub-total row's style in that file rather than copying the
+Final Report's `sub` constant; the two documents style their bands separately.
+
+- [ ] **Step 11: Show the band in the Assessment grid**
+
+In `src/components/claim/AssessmentSectionTable.tsx`, import the helper and label
+from `@/lib/calculations`. In the row list, wrap each rendered row so the band
+precedes it when the helper says so. Use a React fragment keyed on the row id:
+
+```tsx
+{rows.map((row, i) => (
+  <Fragment key={row.id}>
+    {shouldStartSupplementaryBand(rows, i) && (
+      <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide bg-[#dff0ec] text-[#1a5a50] border-y border-border">
+        {SUPPLEMENTARY_BAND_LABEL}
+      </div>
+    )}
+    {/* existing row element, unchanged */}
+  </Fragment>
+))}
+```
+
+The colours match the report's `sub` band (`#dff0ec` on `#1a5a50`) so screen and
+print read the same. If the section renders rows as `<tr>` elements, use a
+`<tr><td colSpan={...}>` band instead of a `<div>`; do not nest a `div` inside a
+table body.
+
+**Do not change** the drag-reorder or selection wiring. The band is presentation
+only — it is not a row, has no id, and must not enter `sectionIds`.
+
+- [ ] **Step 12: Show the band in the Bill Check tab**
+
+In `src/components/tabs/bill-check/BillCheckGrid.tsx`, the row list renders a
+`<div>` per row keyed on `row.id` (around line 236). Apply the same `Fragment` +
+band treatment, passing the same list that is being mapped.
+
+- [ ] **Step 13: Verify the whole suite, types and build**
+
+Run: `npx vitest run`
+Expected: all files pass.
+
+Run: `npx tsc --noEmit`
+Expected: no output.
+
+Run: `npm run build`
+Expected: completes, no errors.
+
+- [ ] **Step 14: Commit**
+
+```bash
+git add src/lib/calculations/supplementary-band.ts src/lib/calculations/__tests__/supplementary-band.test.ts src/lib/calculations/index.ts src/lib/reports/standard-report-builder.ts src/lib/reports/uiic-final-builder.ts src/lib/reports/__tests__/standard-report-columns.test.ts src/components/claim/AssessmentSectionTable.tsx src/components/tabs/bill-check/BillCheckGrid.tsx
+git commit -m "feat(assessment): mark supplementary items with a divider band
+
+Supplementary rows already sort into their section after the estimate rows,
+so only the divider was missing. One shared helper drives all four render
+sites — Assessment grid, Final Report, Bill Check tab and Bill Check PDF —
+so screen and print cannot drift apart.
+
+The band is not a row: no serial number, no effect on any sub-total."
+```
+
+---
+
+### Task 5: Verify end to end
 
 **Files:** none modified.
 
 **Interfaces:**
-- Consumes: everything from Tasks 1-3.
+- Consumes: everything from Tasks 1-4.
 - Produces: nothing.
 
 - [ ] **Step 1: Full suite**
@@ -646,6 +939,9 @@ The dialog path needs a real login and a claim with an existing estimate, so it 
 - "Add as supplementary" leaves the original rows in place
 - "Replace the existing estimate" drops only the primary rows and spares supplementary ones
 - the row counts and totals shown match the assessment grid
+- the band appears in all four places, in the same position in each
+- the band does not disturb serial numbering or any sub-total
+- drag-reorder and range selection still work in a section that contains a band
 
 - [ ] **Step 5: Do not deploy**
 
