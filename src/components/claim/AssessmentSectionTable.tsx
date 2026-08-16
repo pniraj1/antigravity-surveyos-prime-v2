@@ -3,7 +3,7 @@
 import React from 'react';
 import { useClaimStore } from '@/stores/claim-store';
 import { getDepreciationRate } from '@/lib/calculations/depreciation';
-import { formatCurrency } from '@/lib/calculations/utils';
+import { formatCurrency, shouldStartSupplementaryBand } from '@/lib/calculations/utils';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Trash2, PlusCircle, PackageX, FileSearch, GripVertical, Wrench, ShieldAlert } from 'lucide-react';
@@ -197,7 +197,16 @@ export function AssessmentSectionTable({
                 const normalizedParticulars = row.particulars?.replace(/\s+/g, ' ').trim().toLowerCase();
                 const isDuplicate = normalizedParticulars ? duplicateParticulars.has(normalizedParticulars) : false;
 
-                return (
+                return [
+                  // Supplementary divider band (appears before the first supplementary row)
+                  shouldStartSupplementaryBand(rows, idx) && (
+                    <tr key={`band-${idx}`} className="h-6 bg-gradient-to-r from-muted via-muted to-transparent">
+                      <td colSpan={totalCols} className="px-4 py-1.5 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                        Supplementary Estimate
+                      </td>
+                    </tr>
+                  ),
+                  // Row itself
                   <SortableRow
                     key={row.id}
                     id={row.id}
@@ -523,8 +532,8 @@ export function AssessmentSectionTable({
                       </button>
                     </td>
                   </SortableRow>
-                );
-              })}
+                ];
+              }).flat()}
               </SortableContext>
             )}
           </tbody>

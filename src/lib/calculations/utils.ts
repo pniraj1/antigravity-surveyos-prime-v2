@@ -120,3 +120,35 @@ export function formatCurrencyShort(value: string | number): string {
 export function generateId(prefix: string = 'id'): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
+
+/**
+ * Determines whether a supplementary estimate divider band should start
+ * before the row at the given index in the rows array.
+ *
+ * Returns true only when:
+ * - The current row is supplementary, AND
+ * - Either the previous row was estimate, OR this is the first estimate/supplementary
+ *   row in the array (a section that starts with supplementary)
+ *
+ * Does not start a band if the previous row is also supplementary (only one band per run).
+ */
+export function shouldStartSupplementaryBand(
+  rows: Array<{ source?: 'estimate' | 'supplementary' }>,
+  index: number,
+): boolean {
+  if (index < 0 || index >= rows.length) return false;
+
+  const current = rows[index];
+  if (current.source !== 'supplementary') return false;
+
+  // No band if the previous row is also supplementary
+  if (index > 0 && rows[index - 1].source === 'supplementary') return false;
+
+  // Band at the top if this is the first estimate/supplementary row
+  if (index === 0) return true;
+
+  // Band if the previous row is estimate
+  if (index > 0 && rows[index - 1].source === 'estimate') return true;
+
+  return false;
+}
