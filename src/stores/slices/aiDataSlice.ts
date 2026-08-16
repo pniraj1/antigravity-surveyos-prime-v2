@@ -606,6 +606,47 @@ export function applyFinalBill(claim: ClaimData, data: any): ClaimData {
 }
 
 /**
+ * Builds the prompt for choosing replace vs append, if the claim already has
+ * estimate rows. Returns null if no prompt should be shown.
+ */
+export function buildEstimateModePrompt(
+  key: string,
+  claim: ClaimData | null,
+  extractedRows: any[],
+): {
+  claimTotal: number;
+  claimRowCount: number;
+  documentTotal: number;
+  documentRowCount: number;
+} | null {
+  // Only prompt for estimate, and only when claim already has estimate/supplementary rows
+  if (key !== 'estimate' || !claim) return null;
+
+  const hasEstimateRows = claim.assessmentRows.some(
+    (r) => r.source === 'estimate' || r.source === 'supplementary',
+  );
+
+  if (!hasEstimateRows) return null;
+  if (extractedRows.length === 0) return null;
+
+  // Sum estimated field across all claim rows (includes manual rows)
+  const claimTotal = claim.assessmentRows.reduce((sum, r) => sum + (r.estimated || 0), 0);
+
+  // Sum taxable_amount across extracted rows (what this document brought)
+  const documentTotal = extractedRows.reduce(
+    (sum, item) => sum + (item.taxable_amount || 0),
+    0,
+  );
+
+  return {
+    claimTotal,
+    claimRowCount: claim.assessmentRows.length,
+    documentTotal,
+    documentRowCount: extractedRows.length,
+  };
+}
+
+/**
  * How an incoming estimate meets the rows already on the sheet.
  *   'replace' — a re-scan of the primary estimate. Drops rows tagged
  *               'estimate'; keeps supplementary and manual rows.

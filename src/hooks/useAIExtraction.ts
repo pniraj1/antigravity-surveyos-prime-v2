@@ -11,6 +11,7 @@ import {
   selectLatestReview,
 } from '@/stores/extraction-store';
 import type { EstimateApplyMode } from '@/stores/slices/aiDataSlice';
+import { buildEstimateModePrompt } from '@/stores/slices/aiDataSlice';
 import { extractDocument, rescanTargetPages, applyTargetedUpdate } from '@/lib/ai/processor';
 import { toast } from 'sonner';
 
@@ -258,6 +259,19 @@ export function useAIExtraction() {
     }
   }, [lastFileNames, currentClaim?.extractedData, triggerExtraction]);
 
+  // Calculate mode prompt for estimate uploads when claim already has estimate rows
+  const modePrompt = reviewData
+    ? buildEstimateModePrompt(
+        reviewData.key,
+        currentClaim,
+        [
+          ...((reviewData.data as any)?.spare_parts || []),
+          ...((reviewData.data as any)?.labour_items || []),
+          ...((reviewData.data as any)?.painting_items || []),
+        ],
+      )
+    : null;
+
   return {
     isProcessing,
     progress,
@@ -269,6 +283,7 @@ export function useAIExtraction() {
     cancelExtraction,
     reScanWithFeedback,
     reScanLatest,
+    modePrompt,
     hasFile: (key: string) => !!files[key] || !!lastFileNames[key],
   };
 }
