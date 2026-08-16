@@ -18,6 +18,7 @@ import { preambleFromClaim, estimateTotalInclGst } from './final-survey-preamble
 import { computeRowNet } from '@/lib/calculations/row-net';
 import { getDepreciationRate, toDepreciationType } from '@/lib/calculations/depreciation';
 import { getCompulsoryExcess, calculateAssessmentSummary } from '@/lib/calculations/assessment';
+import { shouldStartSupplementaryBand } from '@/lib/calculations/utils';
 import { buildPrintShell, footerFromProfile } from './print-shell';
 
 // NOTE: SurveyReportDocument.tsx (React-PDF) is no longer a parallel rendering
@@ -205,7 +206,8 @@ export function buildStandardFinalSurveyHTML(
 
   // ── Parts rows (Sr | Particulars | Type | Est | Assessed | Dep% | Metal | Plastic | [FbrGls] | Glass | GST% | Price+GST)
   let psn = 1;
-  const partsHtml = rows.filter(r => r.section === 'parts').map(r => {
+  const partRows = rows.filter(r => r.section === 'parts');
+  const partsHtml = partRows.map((r, idx) => {
     const dep = r.depOverride !== undefined ? r.depOverride : getDepreciationRate(r.partType, ageMonths, depType);
     const depLabel = r.depOverride !== undefined ? `${dep}%*` : `${dep}%`;
     const disallowed = r.allowed === false;
@@ -218,7 +220,12 @@ export function buildStandardFinalSurveyHTML(
     const cellStyle = disallowed ? `${tdr9}color:#a00;text-align:center;` : isDisposal ? `${tdr9}color:#b45309;font-weight:600;` : `${tdr9}font-weight:600;`;
     const matCell = (type: string) =>
       `<td style="${tdr9}">${r.partType === type && !disallowed ? m9(afterDep) : '—'}</td>`;
-    return `<tr>
+
+    const bandHtml = shouldStartSupplementaryBand(partRows, idx)
+      ? `<tr><td colspan="12" style="padding:4px 8px;text-align:center;font-size:10pt;font-weight:600;color:#666;background:linear-gradient(to right,#f5f5f5,#fafafa,#f5f5f5);">Supplementary Estimate</td></tr>`
+      : '';
+
+    return bandHtml + `<tr>
       <td style="${tdsr9}">${psn++}</td>
       <td style="${td9}">${r.particulars}</td>
       <td style="${td9}text-align:center;">${r.partType === 'plastic' ? 'Pla/Rub' : r.partType === 'fiberglass' ? 'FbrGls' : r.partType.charAt(0).toUpperCase() + r.partType.slice(1)}</td>
@@ -246,14 +253,20 @@ export function buildStandardFinalSurveyHTML(
   // hardcode Dep% to "—", so an override was both invisible and uncharged.
   const serviceRowHtml = (section: 'labour' | 'paint', typeLabel: string) => {
     let sn = 1;
-    return rows.filter(r => r.section === section).map(r => {
+    const sectionRows = rows.filter(r => r.section === section);
+    return sectionRows.map((r, idx) => {
       const disallowed = r.allowed === false;
       const dep = r.depOverride !== undefined ? r.depOverride : getDepreciationRate(r.partType, ageMonths, depType);
       const depLabel = r.depOverride !== undefined ? `${dep}%*` : `${dep}%`;
       const gstPct = r.gst || 18;
       const { netBeforeGst } = disallowed ? { netBeforeGst: 0 } : computeRowNet(r, dep);
       const priceGst = disallowed ? 0 : netBeforeGst * (1 + gstPct / 100);
-      return `<tr>
+
+      const bandHtml = shouldStartSupplementaryBand(sectionRows, idx)
+        ? `<tr><td colspan="9" style="padding:4px 8px;text-align:center;font-size:10pt;font-weight:600;color:#666;background:linear-gradient(to right,#f5f5f5,#fafafa,#f5f5f5);">Supplementary Estimate</td></tr>`
+        : '';
+
+      return bandHtml + `<tr>
       <td style="${tdsr9}">${sn++}</td>
       <td style="${td9}">${r.particulars}</td>
       <td style="${td9}text-align:center;">${typeLabel}</td>

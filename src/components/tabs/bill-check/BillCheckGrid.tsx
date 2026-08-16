@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { AlertCircle, Trash2, Settings2, Eye, EyeOff, FileSearch } from 'lucide-react';
 import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
 import type { AssessmentRow } from '@/types';
+import { shouldStartSupplementaryBand } from '@/lib/calculations/utils';
 import {
   OptionalColumn, OPTIONAL_COLUMNS, DEFAULT_VISIBLE, COL_WIDTHS,
   loadVisibility, saveVisibility, statusLabel, type BillStatus,
@@ -233,7 +234,15 @@ export function BillCheckGrid({
             const isDisallowed = !row.allowed;
             const effectiveStatus: BillStatus = isDisallowed ? 'not-allowed' : (row.billStatus || 'pending');
             const st = statusLabel(effectiveStatus);
-            return (
+            return [
+              shouldStartSupplementaryBand(allRows, idx) && (
+                <div
+                  key={`band-${idx}`}
+                  className="px-6 py-2 col-span-full text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide bg-gradient-to-r from-muted via-muted to-transparent"
+                >
+                  Supplementary Estimate
+                </div>
+              ),
               <div
                 key={row.id}
                 className="px-6 py-3 grid gap-2 items-center"
@@ -355,8 +364,8 @@ export function BillCheckGrid({
                   <Trash2 size={14} />
                 </button>
               </div>
-            );
-          })}
+            ];
+          }).flat()}
 
           {/* Footer totals */}
           <div
