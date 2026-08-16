@@ -74,10 +74,13 @@ export function classifyPing(res: RawResponse): PingVerdict {
   // of the NVIDIA catalogue, 5 alive models (including meta/llama-3.2-1b-instruct)
   // read-timed out on a cold start, and one returned 500. Treating those as
   // death would strip working models from the surveyor config.
-  if (status === 0 || status === 429 || status >= 500) {
+  // Groq signals its tokens-per-minute cap with 413, not 429 — a genuinely
+  // free-tier response, not evidence the model is broken.
+  const rateLimited = status === 429 || (status === 413 && /rate_limit_exceeded/i.test(body));
+  if (status === 0 || rateLimited || status >= 500) {
     return {
       status: 'transient',
-      reason: status === 429
+      reason: rateLimited
         ? 'Rate limited during the probe — not a model fault.'
         : `Temporary failure (${status || 'timeout'}) — not a model fault.`,
       ctxWindow: null,

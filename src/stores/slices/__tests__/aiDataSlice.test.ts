@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { applyEstimate, parseDate, parseAmount, coerceForPath } from '../aiDataSlice';
+import { applyEstimate, parseDate, parseAmount, coerceForPath, buildEstimateModePrompt } from '../aiDataSlice';
 import { buildDecision, getConflictFields } from '@/lib/ai/reconciliation';
 import { createBlankClaim } from '@/types/claim';
 import type { ClaimData } from '@/types';
+import type { AssessmentRow } from '@/types/assessment';
 
 const baseClaim = { assessmentRows: [], accident: {} } as unknown as ClaimData;
 
@@ -96,6 +97,67 @@ describe('applyEstimate', () => {
     const thrice = applyEstimate(twice, estimate, 'append');
 
     expect(thrice.assessmentRows).toHaveLength(15);
+  });
+});
+
+/**
+ * Whether to ask the surveyor "re-scan or supplementary?" is decided BEFORE the
+ * document is read, so the question is a pure function of what is already on
+ * the assessment sheet. Asking first means a surveyor who picks the wrong file
+ * cancels without paying for an extraction.
+ */
+function sheet(rows: Partial<AssessmentRow>[]): ClaimData {
+  return {
+    ...createBlankClaim(),
+    assessmentRows: rows.map((r, i) => ({
+      id: `r${i}`,
+      particulars: 'Item',
+      estimated: 0,
+      assessed: 0,
+      partType: 'metal',
+      gst: 18,
+      section: 'parts',
+      allowed: true,
+      ...r,
+    })),
+  } as unknown as ClaimData;
+}
+
+describe('buildEstimateModePrompt', () => {
+  it('does not prompt when the assessment sheet is empty', () => {
+    expect(buildEstimateModePrompt(sheet([]))).toBeNull();
+  });
+
+  it('does not prompt when no claim is loaded', () => {
+    expect(buildEstimateModePrompt(null)).toBeNull();
+  });
+
+  // The defect this replaces: the gate required a row tagged by a previous AI
+  // apply, so a sheet the surveyor had typed in by hand skipped the question
+  // entirely and the upload silently replaced their work.
+  it('prompts when the sheet holds only hand-added rows', () => {
+    const p = buildEstimateModePrompt(sheet([{ source: undefined }, { source: undefined }]));
+    expect(p).not.toBeNull();
+    expect(p!.rowCount).toBe(2);
+  });
+
+  it('prompts when the sheet holds rows from a previous estimate', () => {
+    expect(buildEstimateModePrompt(sheet([{ source: 'estimate' }]))).not.toBeNull();
+  });
+
+  it('counts every row on the sheet, hand-added ones included', () => {
+    const p = buildEstimateModePrompt(sheet([
+      { source: 'estimate', estimated: 5000 },
+      { source: 'supplementary', estimated: 2000 },
+      { source: undefined, estimated: 1000 },
+    ]));
+    expect(p!.rowCount).toBe(3);
+    expect(p!.total).toBe(8000);
+  });
+
+  it('treats a missing estimated as zero, never NaN', () => {
+    const p = buildEstimateModePrompt(sheet([{ estimated: undefined as never }, { estimated: 500 }]));
+    expect(p!.total).toBe(500);
   });
 });
 

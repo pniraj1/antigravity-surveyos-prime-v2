@@ -1,33 +1,24 @@
 'use client';
 
 import { useState } from 'react';
-import type { EstimateApplyMode } from '@/stores/slices/aiDataSlice';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Check, X, Sparkles, RefreshCw } from 'lucide-react';
 import { summariseExtraction, hasLineItems } from '@/lib/ai/extraction-summary';
 
-interface ModePrompt {
-  claimTotal: number;
-  claimRowCount: number;
-  documentTotal: number;
-  documentRowCount: number;
-}
-
 interface AIReviewDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (mode?: EstimateApplyMode) => void;
+  onConfirm: () => void;
   onReScan?: (feedback: string) => void;
   title: string;
   data: any;
   evidenceImages?: string[];
   discrepancies?: string[];
-  modePrompt?: ModePrompt | null;
 }
 
 const INR = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 });
 
-export function AIReviewDialog({ isOpen, onClose, onConfirm, onReScan, title, data, evidenceImages = [], discrepancies = [], modePrompt }: AIReviewDialogProps) {
+export function AIReviewDialog({ isOpen, onClose, onConfirm, onReScan, title, data, evidenceImages = [], discrepancies = [] }: AIReviewDialogProps) {
   const [feedback, setFeedback] = useState('');
 
   if (!isOpen) return null;
@@ -213,73 +204,26 @@ export function AIReviewDialog({ isOpen, onClose, onConfirm, onReScan, title, da
           </div>
         </CardContent>
 
-        <CardFooter className="flex flex-col gap-4 bg-muted/30 p-4 border-t border-border">
-          {modePrompt ? (
-            <>
-              <div className="w-full">
-                <p className="text-sm font-semibold text-foreground mb-2">This claim already has an estimate.</p>
-                <div className="grid grid-cols-2 gap-4 mb-4 p-3 bg-white rounded-lg border border-border/40">
-                  <div>
-                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
-                      On this sheet
-                    </div>
-                    <div className="text-lg font-bold text-foreground">{modePrompt.claimRowCount} rows</div>
-                    <div className="text-xs text-muted-foreground">₹{(modePrompt.claimTotal || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
-                  </div>
-                  <div>
-                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
-                      In this document
-                    </div>
-                    <div className="text-lg font-bold text-foreground">{modePrompt.documentRowCount} rows</div>
-                    <div className="text-xs text-muted-foreground">₹{(modePrompt.documentTotal || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-2 w-full">
-                <button
-                  onClick={onClose}
-                  className="flex-1 px-4 py-2 rounded-xl text-sm font-bold text-muted-foreground hover:bg-muted transition-all active:scale-95"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => onConfirm('replace')}
-                  className="flex-1 px-4 py-2 rounded-xl text-sm font-bold bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200 transition-all active:scale-95"
-                >
-                  Replace the existing
-                </button>
-                <button
-                  onClick={() => onConfirm('append')}
-                  className="flex-1 px-6 py-2 rounded-xl text-sm font-bold bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:brightness-110 transition-all active:scale-95"
-                >
-                  <Check size={16} className="inline mr-1" />
-                  Add as supplementary
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="text-[10px] text-muted-foreground bg-white px-2 py-1 rounded border border-border w-fit">
-                ONE-BY-ONE PROCESSING ENABLED
-              </div>
-              <div className="flex gap-2 ml-auto">
-                <button
-                  onClick={onClose}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-muted-foreground hover:bg-muted transition-all active:scale-95"
-                >
-                  <X size={16} />
-                  Discard
-                </button>
-                <button
-                  onClick={() => onConfirm()}
-                  className="flex items-center gap-1.5 px-6 py-2 rounded-xl text-sm font-bold bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:brightness-110 transition-all active:scale-95"
-                >
-                  <Check size={16} />
-                  Apply Fields
-                </button>
-              </div>
-            </>
-          )}
+        <CardFooter className="flex justify-between items-center gap-3 bg-muted/30 p-4 border-t border-border">
+          <div className="text-[10px] text-muted-foreground bg-white px-2 py-1 rounded border border-border">
+            ONE-BY-ONE PROCESSING ENABLED
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={onClose}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-muted-foreground hover:bg-muted transition-all active:scale-95"
+            >
+              <X size={16} />
+              Discard
+            </button>
+            <button
+              onClick={onConfirm}
+              className="flex items-center gap-1.5 px-6 py-2 rounded-xl text-sm font-bold bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:brightness-110 transition-all active:scale-95"
+            >
+              <Check size={16} />
+              Apply Fields
+            </button>
+          </div>
         </CardFooter>
       </Card>
     </div>

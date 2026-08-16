@@ -606,43 +606,27 @@ export function applyFinalBill(claim: ClaimData, data: any): ClaimData {
 }
 
 /**
- * Builds the prompt for choosing replace vs append, if the claim already has
- * estimate rows. Returns null if no prompt should be shown.
+ * Summarises the assessment sheet for the "re-scan or supplementary?" question,
+ * or returns null when there is nothing to lose and the question is pointless.
+ *
+ * The gate is ANY row on the sheet, not just rows a previous AI apply tagged.
+ * Gating on `source` meant a sheet the surveyor had typed in by hand looked
+ * empty to this check, so the question was skipped and the upload replaced
+ * their work without asking — the whole defect this feature exists to prevent.
+ *
+ * Called BEFORE the document is read, so it can only describe the claim side.
+ * That is the deliberate trade for not billing an extraction the surveyor may
+ * cancel.
  */
 export function buildEstimateModePrompt(
-  key: string,
   claim: ClaimData | null,
-  extractedRows: any[],
-): {
-  claimTotal: number;
-  claimRowCount: number;
-  documentTotal: number;
-  documentRowCount: number;
-} | null {
-  // Only prompt for estimate, and only when claim already has estimate/supplementary rows
-  if (key !== 'estimate' || !claim) return null;
-
-  const hasEstimateRows = claim.assessmentRows.some(
-    (r) => r.source === 'estimate' || r.source === 'supplementary',
-  );
-
-  if (!hasEstimateRows) return null;
-  if (extractedRows.length === 0) return null;
-
-  // Sum estimated field across all claim rows (includes manual rows)
-  const claimTotal = claim.assessmentRows.reduce((sum, r) => sum + (r.estimated || 0), 0);
-
-  // Sum taxable_amount across extracted rows (what this document brought)
-  const documentTotal = extractedRows.reduce(
-    (sum, item) => sum + (item.taxable_amount || 0),
-    0,
-  );
+): { rowCount: number; total: number } | null {
+  const rows = claim?.assessmentRows;
+  if (!rows || rows.length === 0) return null;
 
   return {
-    claimTotal,
-    claimRowCount: claim.assessmentRows.length,
-    documentTotal,
-    documentRowCount: extractedRows.length,
+    rowCount: rows.length,
+    total: rows.reduce((sum, r) => sum + (r.estimated || 0), 0),
   };
 }
 

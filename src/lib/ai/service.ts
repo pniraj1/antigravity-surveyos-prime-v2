@@ -382,7 +382,18 @@ function getMimeType(img: string): string {
 /** Returns true when the error indicates the model is unavailable/not-found on this account tier. */
 function isModelUnavailable(err: any): boolean {
   const msg: string = (err?.message ?? '').toLowerCase();
-  return err?.status === 404 || msg.includes('not found') || msg.includes('model') && msg.includes('does not exist');
+  return (
+    err?.status === 404 ||
+    msg.includes('not found') ||
+    (msg.includes('model') && msg.includes('does not exist')) ||
+    // Groq doesn't say "not vision capable" — a text-only model sent
+    // multimodal content 400s with "messages[1].content must be a string".
+    // That's the only signal this model can't take the image we sent it, so
+    // it has to count as "unavailable for this call" to reach the Groq
+    // vision-fallback walk below instead of burning every key on a request
+    // that can never succeed.
+    msg.includes('content must be a string')
+  );
 }
 
 async function callWithKey(provider: AIProvider, key: string, prompt: string, images: string[], responseFormat: 'json' | 'text' = 'json'): Promise<string> {

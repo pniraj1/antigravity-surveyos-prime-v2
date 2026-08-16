@@ -11,7 +11,6 @@ import {
   selectLatestReview,
 } from '@/stores/extraction-store';
 import type { EstimateApplyMode } from '@/stores/slices/aiDataSlice';
-import { buildEstimateModePrompt } from '@/stores/slices/aiDataSlice';
 import { extractDocument, rescanTargetPages, applyTargetedUpdate } from '@/lib/ai/processor';
 import { toast } from 'sonner';
 
@@ -148,14 +147,14 @@ export function useAIExtraction() {
   }, [triggerTargetedRescan]);
 
   // ─── Full extraction ─────────────────────────────────────────────────────────
-  const triggerExtraction = useCallback(async (key: string, file: File | File[], feedback?: string, previousData?: any) => {
+  const triggerExtraction = useCallback(async (key: string, file: File | File[], feedback?: string, previousData?: any, estimateMode?: EstimateApplyMode) => {
     const fileList = Array.isArray(file) ? file : [file];
     if (fileList.length === 0) return;
     // Representative single file for reScan / Smart Fix (which target one document's pages).
     const primary = fileList[fileList.length - 1];
 
     const originTab = useUIStore.getState().activeTab;
-    startJob(key, originTab);
+    startJob(key, originTab, estimateMode);
     setJobProgress(key, feedback ? 'Re-scanning with feedback...' : 'Preparing...');
     rememberFile(key, primary);
     setLastFileNames(prev => ({ ...prev, [key]: primary.name }));
@@ -215,8 +214,10 @@ export function useAIExtraction() {
   }, [aiDocMode, setExtractedData, startJob, setJobProgress, finishJob, failJob, rememberFile, setDiscrepancyContext]);
 
   // ─── Review dialog helpers ───────────────────────────────────────────────────
-  const confirmApply = useCallback((mode?: EstimateApplyMode) => {
+  const confirmApply = useCallback(() => {
     if (reviewData) {
+      // Read before clearJob — clearing drops the job and the mode with it.
+      const mode = useExtractionStore.getState().jobs[reviewData.key]?.estimateMode;
       applyExtractedData(reviewData.key, reviewData.data, mode);
       clearJob(reviewData.key);
       toast.success('Fields auto-filled!');
@@ -242,35 +243,26 @@ export function useAIExtraction() {
   const reScanWithFeedback = useCallback((feedback: string) => {
     if (reviewData) {
       const { key, data, file } = reviewData;
+      // Re-reading the SAME document, so the surveyor's supplementary/re-scan
+      // answer still holds. Captured before clearJob, which drops it.
+      const mode = useExtractionStore.getState().jobs[key]?.estimateMode;
       clearJob(key);
-      triggerExtraction(key, file, feedback, data);
+      triggerExtraction(key, file, feedback, data, mode);
     }
   }, [reviewData, clearJob, triggerExtraction]);
 
   const reScanLatest = useCallback((key: string, feedback: string) => {
     const file = useExtractionStore.getState().files[key];
     const prevData = currentClaim?.extractedData?.[key];
+    const mode = useExtractionStore.getState().jobs[key]?.estimateMode;
     if (file) {
-      triggerExtraction(key, file, feedback, prevData);
+      triggerExtraction(key, file, feedback, prevData, mode);
     } else if (lastFileNames[key]) {
       toast.error(`Please re-upload the ${key} document — the previous file is no longer available after the page was refreshed.`);
     } else {
       toast.error(`No previous ${key} document found to re-scan. Please upload it again.`);
     }
   }, [lastFileNames, currentClaim?.extractedData, triggerExtraction]);
-
-  // Calculate mode prompt for estimate uploads when claim already has estimate rows
-  const modePrompt = reviewData
-    ? buildEstimateModePrompt(
-        reviewData.key,
-        currentClaim,
-        [
-          ...((reviewData.data as any)?.spare_parts || []),
-          ...((reviewData.data as any)?.labour_items || []),
-          ...((reviewData.data as any)?.painting_items || []),
-        ],
-      )
-    : null;
 
   return {
     isProcessing,
@@ -283,7 +275,6 @@ export function useAIExtraction() {
     cancelExtraction,
     reScanWithFeedback,
     reScanLatest,
-    modePrompt,
     hasFile: (key: string) => !!files[key] || !!lastFileNames[key],
   };
 }

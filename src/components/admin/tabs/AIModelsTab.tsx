@@ -498,12 +498,17 @@ export function AIModelsTab({ adminEmail }: { adminEmail: string }) {
               <div className="px-6 py-4 text-xs text-status-danger">
                 Probe did not run: {providerProbe.error} — previous results kept.
               </div>
-            ) : d.working.length === 0 ? (
+            ) : d.working.length === 0 && unusable.length === 0 ? (
               <div className="px-6 py-4 text-xs text-muted-foreground">
                 No probe results yet — click &quot;Refresh &amp; probe&quot;.
               </div>
             ) : (
               <div className="divide-y divide-border">
+                {d.working.length === 0 && (
+                  <div className="px-6 py-4 text-xs text-status-danger">
+                    Probed — every model failed. See the reasons below.
+                  </div>
+                )}
                 {groups.map(g => (
                   <div key={g.key}>
                     <div className="px-6 py-2 bg-card text-[10px] font-medium uppercase tracking-wide text-muted-foreground">

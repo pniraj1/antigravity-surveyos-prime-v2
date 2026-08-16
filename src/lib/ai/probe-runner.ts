@@ -354,12 +354,35 @@ export async function runProviderProbe(
     const results = await mapWithConcurrency(catalogue, PROVIDER_CONCURRENCY[provider], async (entry) => {
       const previousFailures = previous.models[entry.id]?.consecutiveFailures ?? 0;
 
+      // Groq reports each model's real context_window in its catalogue — unlike
+      // NVIDIA, which reports nothing, so pass 1 has to throw a 16K-token ping
+      // at it just to learn the ceiling from a rejection. Doing that to Groq
+      // too re-derives a number it already gave us, and its free-tier
+      // tokens-per-minute cap (well under 16384 on most models) turns that
+      // ping into a guaranteed 413 on every single model. Trust the reported
+      // number instead: skip the call when it already proves too small, and
+      // otherwise ping with a token budget the TPM cap can actually serve.
+      const knownCtx = provider === 'groq' ? entry.ctxWindow : null;
+      if (knownCtx !== null && knownCtx < PROBE_MAX_TOKENS) {
+        done++; onProgress(done, total);
+        return buildProbeResult({
+          id: entry.id,
+          ping: {
+            status: 'ctx-too-small',
+            reason: `Context window is ${knownCtx} tokens — too small for the ${PROBE_MAX_TOKENS}-token extraction budget.`,
+            ctxWindow: knownCtx,
+          },
+          providerCap, providerCtx: entry.ctxWindow,
+          visionOk: false, probedCap: null, latencyMs: null, now, previousFailures,
+        });
+      }
+
       const ping = async (): Promise<PingVerdict> => {
         await pace(gap, lastAt);
         return classifyPing(await chat(provider, entry.id, key, {
           prompt: 'Reply with OK.',
           images: [],
-          maxTokens: PROBE_MAX_TOKENS,
+          maxTokens: knownCtx !== null ? PROBE_CAPABILITY_MAX_TOKENS : PROBE_MAX_TOKENS,
           timeoutMs: LATENCY_CUTOFF_MS,
         }));
       };

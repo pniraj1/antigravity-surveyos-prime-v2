@@ -21,6 +21,7 @@
 
 import { create } from 'zustand';
 import type { AppTab } from './ui-store';
+import type { EstimateApplyMode } from './slices/aiDataSlice';
 
 export type JobStatus = 'processing' | 'done' | 'error';
 
@@ -42,6 +43,16 @@ export interface ExtractionJob {
   startedAt: number;
   /** Tab the job was started from, so completion can route back to it. */
   originTab: AppTab | null;
+  /**
+   * For the `estimate` key: whether the surveyor answered "supplementary" or
+   * "re-scan" before this job started.
+   *
+   * It lives on the job rather than in the uploading component because
+   * switching tabs unmounts that component — the same reason this whole store
+   * exists. Losing the answer mid-extraction would silently fall back to
+   * replace and wipe the sheet.
+   */
+  estimateMode?: EstimateApplyMode;
 }
 
 /** Context saved after an extraction that reported amount discrepancies. */
@@ -63,7 +74,7 @@ interface ExtractionState {
   files: Record<string, File>;
   discrepancies: Record<string, DiscrepancyContext>;
 
-  startJob: (key: string, originTab: AppTab | null) => void;
+  startJob: (key: string, originTab: AppTab | null, estimateMode?: EstimateApplyMode) => void;
   setProgress: (key: string, message: string, pagesDone?: number, pagesTotal?: number) => void;
   finishJob: (key: string, result: ExtractionResult) => void;
   failJob: (key: string, error: string) => void;
@@ -106,7 +117,7 @@ export const useExtractionStore = create<ExtractionState>()((set) => ({
   files: {},
   discrepancies: {},
 
-  startJob: (key, originTab) =>
+  startJob: (key, originTab, estimateMode) =>
     set((state) => ({
       jobs: {
         ...state.jobs,
@@ -119,6 +130,7 @@ export const useExtractionStore = create<ExtractionState>()((set) => ({
           error: null,
           startedAt: Date.now(),
           originTab,
+          estimateMode,
         },
       },
     })),

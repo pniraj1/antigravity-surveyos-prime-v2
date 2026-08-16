@@ -11,6 +11,7 @@ import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'reac
 import { PanelRightOpen, PanelRightClose, Upload } from 'lucide-react';
 import { DocumentEvidenceViewer, storeBlobUrl, useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
 import { useAIExtraction } from '@/hooks/useAIExtraction';
+import { useEstimateModePrompt } from '@/hooks/useEstimateModePrompt';
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import { useProfileStore } from '@/stores/profile-store';
 import { uploadFileToDrive } from '@/lib/drive';
@@ -23,13 +24,23 @@ export function AssessmentTab() {
   const { currentClaim, setDepreciationType } = useClaimStore();
   const [showEvidence, setShowEvidence] = useState(false);
   const [showSummary, setShowSummary] = useState(true);
-  const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview, reScanWithFeedback, hasFile, reScanLatest, modePrompt } = useAIExtraction();
+  const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview, reScanWithFeedback, hasFile, reScanLatest } = useAIExtraction();
+  const { confirmEstimateMode, estimateModeDialog } = useEstimateModePrompt();
   const { profile } = useProfileStore();
   const { confirmSaveToCloud, saveToCloudDialog } = useSaveToCloudPrompt();
 
   const handleEstimateUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Asked BEFORE extraction: a wrong file, or a surveyor who changes their
+    // mind, then costs nothing. Resolves straight to 'replace' on an empty
+    // sheet — nothing to lose, so nothing to ask.
+    const mode = await confirmEstimateMode(file.name);
+    if (mode === null) {
+      e.target.value = '';
+      return;
+    }
 
     // Store blob URL for the Evidence Viewer to display the file natively
     if (currentClaim?.id) {
@@ -44,7 +55,7 @@ export function AssessmentTab() {
       });
     }
 
-    triggerExtraction('estimate', file);
+    triggerExtraction('estimate', file, undefined, undefined, mode);
 
     if (currentClaim?.id && profile.autoUploadDrive !== false) {
       const claimId = currentClaim.id;
@@ -64,6 +75,7 @@ export function AssessmentTab() {
   return (
     <div className="flex flex-col h-[calc(100vh-140px)] p-6 lg:p-8 max-w-[1600px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
       {saveToCloudDialog}
+      {estimateModeDialog}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6 shrink-0">
         <div>
           <h2 className="text-2xl font-medium tracking-tight">Assessment</h2>
@@ -184,7 +196,6 @@ export function AssessmentTab() {
         title={reviewData?.key || ''}
         data={reviewData?.data}
         evidenceImages={evidenceImages}
-        modePrompt={modePrompt}
       />
 
 
