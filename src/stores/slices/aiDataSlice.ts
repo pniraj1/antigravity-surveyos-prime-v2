@@ -603,7 +603,20 @@ export function applyFinalBill(claim: ClaimData, data: any): ClaimData {
   };
 }
 
-export function applyEstimate(claim: ClaimData, data: any): ClaimData {
+/**
+ * How an incoming estimate meets the rows already on the sheet.
+ *   'replace' — a re-scan of the primary estimate. Drops rows tagged
+ *               'estimate'; keeps supplementary and manual rows.
+ *   'append'  — a supplementary estimate. Drops nothing.
+ */
+export type EstimateApplyMode = 'replace' | 'append';
+
+export function applyEstimate(
+  claim: ClaimData,
+  data: any,
+  mode: EstimateApplyMode = 'replace',
+): ClaimData {
+  const rowSource: AssessmentRow['source'] = mode === 'append' ? 'supplementary' : 'estimate';
   const newRows: AssessmentRow[] = [];
   let runningSerial = 1;
 
@@ -618,7 +631,7 @@ export function applyEstimate(claim: ClaimData, data: any): ClaimData {
     const rounded = Math.round(extractBase(item) * 100) / 100;
     newRows.push(
       createAssessmentRow('parts', {
-        source: 'estimate',
+        source: rowSource,
         srNo: item.sr_no || runningSerial++,
         particulars: item.description || 'Unnamed Part',
         partNumber: item.part_number || '',
@@ -637,7 +650,7 @@ export function applyEstimate(claim: ClaimData, data: any): ClaimData {
     const rounded = Math.round(extractBase(item) * 100) / 100;
     newRows.push(
       createAssessmentRow('labour', {
-        source: 'estimate',
+        source: rowSource,
         srNo: item.sr_no || runningSerial++,
         particulars: item.description || 'Labour Item',
         hsnSac: item.hsn_sac || '',
@@ -655,7 +668,7 @@ export function applyEstimate(claim: ClaimData, data: any): ClaimData {
     const rounded = Math.round(extractBase(item) * 100) / 100;
     newRows.push(
       createAssessmentRow('paint', {
-        source: 'estimate',
+        source: rowSource,
         srNo: item.sr_no || runningSerial++,
         particulars: item.description || 'Painting Item',
         hsnSac: item.hsn_sac || '',
@@ -669,16 +682,18 @@ export function applyEstimate(claim: ClaimData, data: any): ClaimData {
     );
   });
 
-  // Rows stay grouped parts → labour → paint, each section in document order.
-  // Do NOT sort by srNo: estimates that restart numbering per section
-  // (parts 1..N, labour 1..M) would interleave into 1-part/1-labour/2-part/2-labour,
-  // and multiple estimate PDFs would shuffle across documents.
-  //
-  // Re-applying an estimate (re-scan/re-upload returns the FULL document again)
-  // replaces previous AI-created rows; manually added rows are preserved.
+  // A re-scan of the primary estimate returns the FULL document, so its old
+  // rows go. A supplementary is a DIFFERENT document holding only the extra
+  // items — dropping anything there would delete the original assessment,
+  // which is exactly the bug this replaces.
+  const kept =
+    mode === 'append'
+      ? claim.assessmentRows
+      : claim.assessmentRows.filter((r) => r.source !== 'estimate');
+
   return {
     ...claim,
-    assessmentRows: [...claim.assessmentRows.filter((r) => r.source !== 'estimate'), ...newRows],
+    assessmentRows: [...kept, ...newRows],
     ...(data.workshop_name ? { accident: { ...claim.accident, placeOfSurvey: data.workshop_name } } : {}),
   };
 }

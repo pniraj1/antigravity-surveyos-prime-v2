@@ -53,6 +53,50 @@ describe('applyEstimate', () => {
     expect(twice.assessmentRows.filter((r) => r.particulars === 'Front Bumper')).toHaveLength(1);
     expect(twice.assessmentRows.some((r) => r.particulars === 'Towing charges (manual)')).toBe(true);
   });
+
+  it('append adds rows without removing existing estimate rows', () => {
+    const once = applyEstimate(baseClaim, estimate);
+    const twice = applyEstimate(once, estimate, 'append');
+
+    // 5 original + 5 supplementary — nothing dropped.
+    expect(twice.assessmentRows).toHaveLength(10);
+  });
+
+  it('append tags its new rows as supplementary', () => {
+    const once = applyEstimate(baseClaim, estimate);
+    const twice = applyEstimate(once, estimate, 'append');
+
+    expect(twice.assessmentRows.filter((r) => r.source === 'estimate')).toHaveLength(5);
+    expect(twice.assessmentRows.filter((r) => r.source === 'supplementary')).toHaveLength(5);
+  });
+
+  it('replace drops estimate rows but keeps supplementary rows', () => {
+    const once = applyEstimate(baseClaim, estimate);
+    const withSupp = applyEstimate(once, estimate, 'append');
+
+    // Re-scanning the primary estimate must not discard a supplementary the
+    // surveyor has already reviewed.
+    const rescanned = applyEstimate(withSupp, estimate, 'replace');
+
+    expect(rescanned.assessmentRows.filter((r) => r.source === 'supplementary')).toHaveLength(5);
+    expect(rescanned.assessmentRows.filter((r) => r.source === 'estimate')).toHaveLength(5);
+    expect(rescanned.assessmentRows).toHaveLength(10);
+  });
+
+  it('defaults to replace when no mode is given', () => {
+    const once = applyEstimate(baseClaim, estimate);
+    const twice = applyEstimate(once, estimate);
+
+    expect(twice.assessmentRows).toHaveLength(5);
+  });
+
+  it('two appends accumulate — no duplicate detection by design', () => {
+    const once = applyEstimate(baseClaim, estimate);
+    const twice = applyEstimate(once, estimate, 'append');
+    const thrice = applyEstimate(twice, estimate, 'append');
+
+    expect(thrice.assessmentRows).toHaveLength(15);
+  });
 });
 
 /**

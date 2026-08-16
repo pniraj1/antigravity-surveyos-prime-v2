@@ -82,10 +82,14 @@ export interface AssessmentRow {
   /** Set by surveyor via tag pills in AssessmentGrid. Skips AI classification when present. */
   deductionCategory?: DeductionCategory;
   /**
-   * 'estimate' = row auto-created by AI estimate extraction.
-   * Re-applying an estimate replaces these rows; manually added rows (undefined) are kept.
+   * Row origin.
+   *   undefined       = added by hand by the surveyor. Never touched by an upload.
+   *   'estimate'      = created from the primary estimate. Replaced when that
+   *                     estimate is re-scanned.
+   *   'supplementary' = created from a supplementary estimate. Only ever appended;
+   *                     re-scanning the primary leaves these alone.
    */
-  source?: 'estimate';
+  source?: 'estimate' | 'supplementary';
 }
 
 export interface AssessmentSummary {
