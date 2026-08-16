@@ -10,6 +10,7 @@ import {
   selectActiveProgress,
   selectLatestReview,
 } from '@/stores/extraction-store';
+import type { EstimateApplyMode } from '@/stores/slices/aiDataSlice';
 import { extractDocument, rescanTargetPages, applyTargetedUpdate } from '@/lib/ai/processor';
 import { toast } from 'sonner';
 
@@ -213,9 +214,9 @@ export function useAIExtraction() {
   }, [aiDocMode, setExtractedData, startJob, setJobProgress, finishJob, failJob, rememberFile, setDiscrepancyContext]);
 
   // ─── Review dialog helpers ───────────────────────────────────────────────────
-  const confirmApply = useCallback(() => {
+  const confirmApply = useCallback((mode?: EstimateApplyMode) => {
     if (reviewData) {
-      applyExtractedData(reviewData.key, reviewData.data);
+      applyExtractedData(reviewData.key, reviewData.data, mode);
       clearJob(reviewData.key);
       toast.success('Fields auto-filled!');
     }

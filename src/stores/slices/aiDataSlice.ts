@@ -3,10 +3,12 @@ import type { ClaimData, AssessmentRow, ExtraBillItem } from '@/types';
 import { createAssessmentRow } from '@/lib/calculations';
 import { buildDecision } from '@/lib/ai/reconciliation';
 
+export type EstimateApplyMode = 'replace' | 'append';
+
 export interface AIDataSlice {
   reconciliationConflictCount: number;
   setExtractedData: (key: string, data: any) => void;
-  applyExtractedData: (key: string, data: any) => void;
+  applyExtractedData: (key: string, data: any, mode?: EstimateApplyMode) => void;
   reconcileField: (path: string, value: string, source?: string) => void;
   batchReconcile: (updates: { path: string; value: string; source?: string }[]) => void;
   setReconciliationConflictCount: (count: number) => void;
@@ -609,8 +611,6 @@ export function applyFinalBill(claim: ClaimData, data: any): ClaimData {
  *               'estimate'; keeps supplementary and manual rows.
  *   'append'  — a supplementary estimate. Drops nothing.
  */
-export type EstimateApplyMode = 'replace' | 'append';
-
 export function applyEstimate(
   claim: ClaimData,
   data: any,
@@ -744,7 +744,7 @@ export const createAIDataSlice: StateCreator<any, any, any, AIDataSlice> = (set)
     }));
   },
 
-  applyExtractedData: (key, data) => {
+  applyExtractedData: (key: string, data: any, mode?: EstimateApplyMode) => {
     set((state: WithClaim) => {
       if (!state.currentClaim) return {};
 
@@ -758,7 +758,7 @@ export const createAIDataSlice: StateCreator<any, any, any, AIDataSlice> = (set)
       else if (key === 'fitness') newClaim = applyFitness(newClaim, data);
       else if (key === 'lok-challan') newClaim = applyLokChallan(newClaim, data);
       else if (key === 'final-bill') newClaim = applyFinalBill(newClaim, data);
-      else if (key === 'estimate') newClaim = applyEstimate(newClaim, data);
+      else if (key === 'estimate') newClaim = applyEstimate(newClaim, data, mode ?? 'replace');
 
       return {
         currentClaim: { ...newClaim, updatedAt: new Date().toISOString() },
