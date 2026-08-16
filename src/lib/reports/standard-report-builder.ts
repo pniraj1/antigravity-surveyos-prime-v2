@@ -173,9 +173,12 @@ export function buildStandardFinalSurveyHTML(
   // Paise are not dropped to buy width: the item column has to tie back to
   // section 8 exactly, and a display-only rounding would leave the subtotals
   // looking a rupee or two out to anyone auditing the document.
+  // Sr holds two digits without breaking at the largest font scale: 4.5% of
+  // 186mm is 23.7pt, less 10.8pt of padding/border, leaves 12.9pt for a
+  // two-digit number that measures ~11.7pt at 10.5pt type.
   const W = {
-    sr: 2.5,
-    particulars: hasFiberglass ? 19.5 : 28,
+    sr: 4.5,
+    particulars: hasFiberglass ? 17.5 : 26,
     type: 7,
     est: 9.5,
     assessed: 9.5,
@@ -192,6 +195,9 @@ export function buildStandardFinalSurveyHTML(
   const tdr9 = `padding:${scale.cellPaddingV} ${scale.cellPaddingH};border:0.4pt solid #bbb;text-align:right;overflow-wrap:anywhere;`;
   // Long part descriptions must break rather than force the column wider.
   const td9 = `${td}overflow-wrap:anywhere;word-break:break-word;`;
+  // Sr must NOT inherit td9's break rules — they split a two-digit number
+  // across two lines rather than wrapping it as a word.
+  const tdsr9 = `${td}text-align:center;white-space:nowrap;`;
   // Every section 9 heading already carries "₹", so the cells drop the symbol.
   // Repeating it cost two characters in each of eight money columns, which is
   // what forced figures like 1,32,500.00 to break across two lines.
@@ -206,12 +212,14 @@ export function buildStandardFinalSurveyHTML(
     const { isDisposal, afterDep, netBeforeGst } = disallowed ? { isDisposal: false, afterDep: 0, netBeforeGst: 0 } : computeRowNet(r, dep);
     const gstPct = r.gst || 18;
     const cellValue = isDisposal ? netBeforeGst : netBeforeGst * (1 + gstPct / 100);
-    const cellLabel = disallowed ? 'NOT ALLOWED' : isDisposal ? `${m9(cellValue)} DISP` : m9(cellValue);
-    const cellStyle = disallowed ? `${tdr9}color:#a00;` : isDisposal ? `${tdr9}color:#b45309;font-weight:600;` : `${tdr9}font-weight:600;`;
+    // The Assessed column already carries the NOT ALLOWED flag; repeating it
+    // here only wrapped it across two lines. Labour rows already print "—".
+    const cellLabel = disallowed ? '—' : isDisposal ? `${m9(cellValue)} DISP` : m9(cellValue);
+    const cellStyle = disallowed ? `${tdr9}color:#a00;text-align:center;` : isDisposal ? `${tdr9}color:#b45309;font-weight:600;` : `${tdr9}font-weight:600;`;
     const matCell = (type: string) =>
       `<td style="${tdr9}">${r.partType === type && !disallowed ? m9(afterDep) : '—'}</td>`;
     return `<tr>
-      <td style="${td9}text-align:center;">${psn++}</td>
+      <td style="${tdsr9}">${psn++}</td>
       <td style="${td9}">${r.particulars}</td>
       <td style="${td9}text-align:center;">${r.partType === 'plastic' ? 'Pla/Rub' : r.partType === 'fiberglass' ? 'FbrGls' : r.partType.charAt(0).toUpperCase() + r.partType.slice(1)}</td>
       <td style="${tdr9}">${m9(r.estimated)}</td>
@@ -246,7 +254,7 @@ export function buildStandardFinalSurveyHTML(
       const { netBeforeGst } = disallowed ? { netBeforeGst: 0 } : computeRowNet(r, dep);
       const priceGst = disallowed ? 0 : netBeforeGst * (1 + gstPct / 100);
       return `<tr>
-      <td style="${td9}text-align:center;">${sn++}</td>
+      <td style="${tdsr9}">${sn++}</td>
       <td style="${td9}">${r.particulars}</td>
       <td style="${td9}text-align:center;">${typeLabel}</td>
       <td style="${tdr9}">${m9(r.estimated)}</td>

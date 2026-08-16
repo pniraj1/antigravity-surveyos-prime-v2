@@ -13,6 +13,7 @@ import { saveClaim } from '@/lib/storage/indexeddb';
 import { useUIStore } from '@/stores/ui-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { resolveAnnexureOptions } from '@/lib/photos/document-annexure';
+import { repairAssessmentRow } from '@/lib/calculations/assessment';
 
 export interface ClaimSlice {
   currentClaim: ClaimData | null;
@@ -98,8 +99,16 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
   },
 
   loadClaim: (claim) => {
+    // Every persisted claim enters the app here, so this is the one place a
+    // row with a missing/NaN money field can be repaired before the tabs read
+    // it. Without this, Bill Check throws on `toLocaleString` and the Final
+    // Report quietly prints 0.00 for the same row.
+    const rows = claim.assessmentRows;
     set({
-      currentClaim: { ...claim },
+      currentClaim: {
+        ...claim,
+        assessmentRows: Array.isArray(rows) ? rows.map(repairAssessmentRow) : [],
+      },
       currentClaimId: claim.id,
       isDirty: false,
     });

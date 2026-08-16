@@ -248,6 +248,13 @@ export function createAssessmentRow(
   section: AssessmentRow['section'],
   overrides?: Partial<AssessmentRow>
 ): AssessmentRow {
+  // A key that is *present but undefined* still wins the spread and wipes the
+  // default below — `{ assessed: 0, ...{ assessed: undefined } }` is undefined,
+  // not 0. That is how rows reach Firestore with no `assessed`, which then
+  // crashes every `toLocaleString` that reads it. Drop undefined overrides.
+  const defined = Object.fromEntries(
+    Object.entries(overrides ?? {}).filter(([, v]) => v !== undefined)
+  ) as Partial<AssessmentRow>;
   return {
     id: `row-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     particulars: '',
@@ -259,7 +266,33 @@ export function createAssessmentRow(
     allowed: true,
     isDisposal: false,
     disposalPercent: 50,
-    ...overrides,
+    ...defined,
+  };
+}
+
+/**
+ * Repair a persisted row whose money fields are missing or non-finite.
+ *
+ * The UI and both report builders read `estimated` / `assessed` / `gst` as
+ * guaranteed numbers, so an `undefined` (from an older claim, or from the
+ * spread trap fixed above) throws on `toLocaleString` and takes the whole tab
+ * down behind the error boundary. `NaN` is caught too — it renders as "₹NaN"
+ * and poisons every subtotal it feeds.
+ *
+ * The `assessed` fallback mirrors what the app already does when a row is
+ * allowed (assessmentSlice sets `assessed = estimated`) and when an extra bill
+ * item is promoted (not allowed lands at zero). It invents no new policy.
+ */
+export function repairAssessmentRow(row: AssessmentRow): AssessmentRow {
+  const num = (v: unknown, fallback: number) =>
+    typeof v === 'number' && Number.isFinite(v) ? v : fallback;
+
+  const estimated = num(row.estimated, 0);
+  return {
+    ...row,
+    estimated,
+    assessed: num(row.assessed, row.allowed === false ? 0 : estimated),
+    gst: num(row.gst, 18),
   };
 }
 

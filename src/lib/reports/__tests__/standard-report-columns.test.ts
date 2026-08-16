@@ -114,8 +114,28 @@ describe('standard report — section 9 fits the page', () => {
     const table = section9(buildStandardFinalSurveyHTML(claim(withFiberglass), {} as never));
     expect(table).toContain('table-layout:fixed');
     expect(table).toContain('overflow-wrap:anywhere');
-    // `nowrap` under a fixed layout overflows the cell instead of widening it.
-    expect(table).not.toContain('white-space:nowrap');
+    // `nowrap` under a fixed layout overflows the cell instead of widening it,
+    // so no money cell may carry it — a six-figure amount has to wrap rather
+    // than run off the sheet. Sr is the deliberate exception (see below): it
+    // is two digits wide, and breaking those across two lines is worse than a
+    // fractional overflow.
+    const moneyCells = [...table.matchAll(/style="([^"]*text-align:right[^"]*)"/g)];
+    expect(moneyCells.length).toBeGreaterThan(0);
+    for (const [, style] of moneyCells) {
+      expect(style).not.toContain('white-space:nowrap');
+    }
+  });
+
+  test('the Sr column never breaks a two-digit serial across two lines', () => {
+    // A 2.5%-wide Sr column left ~2pt of content space at the largest font
+    // scale, and td9's `word-break:break-word` split "10" into "1" over "0".
+    const table = section9(buildStandardFinalSurveyHTML(claim(withFiberglass), {} as never));
+    const srCell = table.match(/<td style="([^"]*)"[^>]*>\s*1\s*<\/td>/);
+    expect(srCell?.[1]).toContain('white-space:nowrap');
+    expect(srCell?.[1]).not.toContain('word-break:break-word');
+
+    const srWidth = headerWidths(table)[0];
+    expect(srWidth).toBeGreaterThanOrEqual(4);
   });
 
   test('a long part description does not get its own column widened', () => {
