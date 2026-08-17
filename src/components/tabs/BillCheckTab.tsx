@@ -127,7 +127,7 @@ export function BillCheckTab() {
             <BillCheckGrid
               allRows={allRows}
               allowedRows={allowedRows}
-              notInBillTotal={notInBillTotal}
+              summary={summary}
               serials={serials}
               updateAssessmentRow={updateAssessmentRow}
               deleteAssessmentRow={deleteAssessmentRow}

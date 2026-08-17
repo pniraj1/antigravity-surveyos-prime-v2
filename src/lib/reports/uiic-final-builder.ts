@@ -593,11 +593,19 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   const codeCell = (b: { hsnSac: string; rate: number }, fallback: 'Part' | 'Labour') =>
     `${b.hsnSac || `(${fallback})`} ${b.rate.toFixed(2)}`;
 
+  // The same divider the Final Report prints. Computed over the FILTERED array
+  // actually being rendered, not the section's full row list — this table drops
+  // disallowed rows, so banding the unfiltered list would place it a row off.
+  const band = (sectionRows: AssessmentRow[], idx: number) =>
+    shouldStartSupplementaryBand(sectionRows, idx)
+      ? `<tr><td colspan="11" style="padding:4px 8px;text-align:center;font-size:9pt;font-weight:600;color:#666;background:linear-gradient(to right,#f5f5f5,#fafafa,#f5f5f5);">Supplementary Estimate</td></tr>`
+      : '';
+
   // SPARE PARTS — parts columns carry the money, Labour and Paint stay empty.
-  const pHtml = allowedParts.map(r => {
+  const pHtml = allowedParts.map((r, idx) => {
     const { isDisposal, netBeforeGst } = computeRowNet(r, rowDepFor(r));
     const finalAmt = isDisposal ? netBeforeGst : netBeforeGst * (1 + (r.gst || 0) / 100);
-    return `<tr>
+    return band(allowedParts, idx) + `<tr>
       <td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td>
       <td style="${td}">${r.particulars}</td>
       <td style="${td}text-align:center;">${partTypeLabel(r)}</td>
@@ -614,7 +622,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   // LABOUR — bare depreciated amount in the Labour column; tax is added at
   // subtotal level. depLabel(r) already reads rowDepFor(r), so this used to
   // print an override's percentage next to an amount that ignored it.
-  const lHtml = allowedLabour.map(r => `<tr>
+  const lHtml = allowedLabour.map((r, idx) => band(allowedLabour, idx) + `<tr>
       <td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td>
       <td style="${td}">${r.particulars}</td>
       <td style="${td}text-align:center;">Labour</td>
@@ -628,7 +636,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
       ${blank}
     </tr>`).join('');
 
-  const ptHtml = allowedPaint.map(r => `<tr>
+  const ptHtml = allowedPaint.map((r, idx) => band(allowedPaint, idx) + `<tr>
       <td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td>
       <td style="${td}">${r.particulars}</td>
       <td style="${td}text-align:center;">Paint</td>

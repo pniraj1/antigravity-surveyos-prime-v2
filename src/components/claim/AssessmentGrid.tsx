@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useClaimStore } from '@/stores/claim-store';
 import { getVehicleAgeMonths } from '@/lib/calculations/depreciation';
 import { calculateAssessmentSummary } from '@/lib/calculations/assessment';
-import { sectionSubtotals } from '@/lib/calculations/section-subtotals';
+import { sectionSubtotals, SECTION_ORDER } from '@/lib/calculations/section-subtotals';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trash2, PlusCircle, Wrench, Settings2, Eye, EyeOff } from 'lucide-react';
 import {
@@ -28,13 +28,6 @@ import {
   saveVisibility,
   type OptionalColumn,
 } from './assessment-grid-config';
-
-/** Fixed order, matching sections 8 and 9 of the printed report. */
-const SECTION_ORDER: { section: AssessmentSection; title: string }[] = [
-  { section: 'parts', title: 'Spare Parts' },
-  { section: 'labour', title: 'Labour' },
-  { section: 'paint', title: 'Painting' },
-];
 
 // ─── Component ───────────────────────────────────────────────────
 export function AssessmentGrid() {

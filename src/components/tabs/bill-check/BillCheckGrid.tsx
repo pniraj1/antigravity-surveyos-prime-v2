@@ -3,8 +3,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { AlertCircle, Trash2, Settings2, Eye, EyeOff, FileSearch } from 'lucide-react';
 import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
-import type { AssessmentRow } from '@/types';
+import type { AssessmentRow, AssessmentSummary } from '@/types';
 import { shouldStartSupplementaryBand } from '@/lib/calculations/utils';
+import {
+  sectionSubtotals, billedTotals, SECTION_ORDER, type BilledTotals,
+} from '@/lib/calculations/section-subtotals';
+import { sectionTickState } from '@/components/claim/useGridSelection';
 import {
   OptionalColumn, OPTIONAL_COLUMNS, DEFAULT_VISIBLE, COL_WIDTHS,
   loadVisibility, saveVisibility, statusLabel, type BillStatus,
@@ -13,7 +17,8 @@ import {
 interface Props {
   allRows: AssessmentRow[];
   allowedRows: AssessmentRow[];
-  notInBillTotal: number;
+  /** Engine summary — the source of the per-section assessed subtotals. */
+  summary: AssessmentSummary;
   /** Row id → the serial the insurer reads in both PDFs. */
   serials: Map<string, number>;
   updateAssessmentRow: (id: string, updates: Partial<AssessmentRow>) => void;
@@ -26,7 +31,7 @@ interface Props {
 export function BillCheckGrid({
   allRows,
   allowedRows,
-  notInBillTotal,
+  summary,
   serials,
   updateAssessmentRow,
   deleteAssessmentRow,
@@ -71,10 +76,22 @@ export function BillCheckGrid({
   const toggleSelect = (id: string) => {
     setSelected(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   };
+  /**
+   * Ticks or clears one section without disturbing the others.
+   *
+   * This used to return `new Set(ids)`, replacing the whole selection. That was
+   * harmless while the only caller passed every row, but with a tick box per
+   * section it would silently drop a Parts selection the moment Labour was
+   * ticked — and the next Delete Selected would act on the wrong rows.
+   */
   const toggleSelectAll = (ids: string[]) => {
     setSelected(prev => {
-      const all = ids.length > 0 && ids.every(id => prev.has(id));
-      return all ? new Set() : new Set(ids);
+      const next = new Set(prev);
+      const allOn = ids.length > 0 && ids.every(id => next.has(id));
+      for (const id of ids) {
+        if (allOn) next.delete(id); else next.add(id);
+      }
+      return next;
     });
   };
   const handleBulkDelete = () => {
@@ -87,6 +104,87 @@ export function BillCheckGrid({
     if (!confirm('Delete this row? This cannot be undone.')) return;
     deleteAssessmentRow(id);
     setSelected(prev => { const n = new Set(prev); n.delete(id); return n; });
+  };
+
+  const subtotals = sectionSubtotals(summary);
+
+  /**
+   * One column-header row, repeated above every section so a section scrolled
+   * into view still says what its columns mean — the Assessment tab does the
+   * same by rendering one table per section.
+   */
+  const headerRow = (sectionIds: string[]) => {
+    const tick = sectionTickState(sectionIds, selected);
+    return (
+      <div
+        className="px-6 py-3 grid gap-2 text-[9px] font-medium uppercase tracking-[0.15em] text-muted-foreground border-b border-border"
+        style={{ gridTemplateColumns: gridCols, background: 'var(--color-neutral-50)' }}
+      >
+        <span className="flex items-center justify-center">
+          <input
+            type="checkbox"
+            checked={tick === 'all'}
+            ref={el => { if (el) el.indeterminate = tick === 'some'; }}
+            onChange={() => toggleSelectAll(sectionIds)}
+            className="h-3.5 w-3.5 cursor-pointer accent-[var(--color-status-danger)]"
+            title="Select every row in this section"
+          />
+        </span>
+        <span>Sr.</span>
+        <span>Particulars</span>
+        {visible.partNumber    && <span>Part No.</span>}
+        {visible.hsnSac        && <span>HSN/SAC</span>}
+        {visible.section       && <span>Section</span>}
+        {visible.quantity      && <span>Qty</span>}
+        {visible.taxable       && <span>Assessed Tax (₹)</span>}
+        {visible.gst           && <span>GST%</span>}
+        <span>Assessed (₹)</span>
+        {visible.billedTaxable && <span>Billed Tax (₹)</span>}
+        <span>Billed Incl GST (₹)</span>
+        <span>Status</span>
+        {visible.remarks       && <span>Remarks</span>}
+        <span></span>
+      </div>
+    );
+  };
+
+  /**
+   * A totals row aligned to the columns above it.
+   *
+   * Emits the same cells in the same order under the same visibility guards as
+   * headerRow. One mismatch shifts every figure a column to the right, which is
+   * why both live here rather than being written out per section.
+   */
+  const totalsRow = (label: string, t: BilledTotals, onDark: boolean) => {
+    const money = onDark ? { color: 'var(--color-neutral-50)' } : undefined;
+    return (
+      <div
+        className="px-6 py-3 grid gap-2"
+        style={{
+          gridTemplateColumns: gridCols,
+          background: onDark ? 'var(--color-neutral-900)' : 'var(--color-neutral-100)',
+        }}
+      >
+        <div /><div />
+        <div className={`text-xs font-medium uppercase tracking-widest ${onDark ? 'text-primary' : 'text-muted-foreground'}`}>
+          {label}
+        </div>
+        {visible.partNumber    && <div />}
+        {visible.hsnSac        && <div />}
+        {visible.section       && <div />}
+        {visible.quantity      && <div />}
+        {visible.taxable       && <div className="text-sm font-medium" style={money}>{fmt(t.estimated)}</div>}
+        {visible.gst           && <div />}
+        <div className="text-sm font-medium" style={money}>{fmt(t.assessed)}</div>
+        {visible.billedTaxable && <div className="text-sm font-medium text-primary">{fmt(t.billedTaxable)}</div>}
+        <div className="text-sm font-medium text-primary">{fmt(t.billedAmount)}</div>
+        <div className={`text-xs font-medium ${onDark ? 'text-white/50' : 'text-muted-foreground'}`}>
+          {fmt(t.notInBill)} not claimed
+        </div>
+        {visible.remarks && <div />}
+        <div />
+      </div>
+    );
   };
 
   if (allRows.length === 0) {
@@ -198,47 +296,45 @@ export function BillCheckGrid({
 
       <div style={{ overflowX: 'auto' }}>
         <div style={{ minWidth: `${800 + visibleCount * 90}px` }}>
-          {/* Column headers */}
-          <div
-            className="px-6 py-3 grid gap-2 text-[9px] font-medium uppercase tracking-[0.15em] text-muted-foreground border-b border-border"
-            style={{ gridTemplateColumns: gridCols, background: 'var(--color-neutral-50)' }}
-          >
-            <span className="flex items-center justify-center">
-              <input
-                type="checkbox"
-                checked={allRows.length > 0 && allRows.every(r => selected.has(r.id))}
-                ref={el => { if (el) el.indeterminate = selected.size > 0 && !allRows.every(r => selected.has(r.id)); }}
-                onChange={() => toggleSelectAll(allRows.map(r => r.id))}
-                className="h-3.5 w-3.5 cursor-pointer accent-[var(--color-status-danger)]"
-                title="Select all"
-              />
-            </span>
-            <span>Sr.</span>
-            <span>Particulars</span>
-            {visible.partNumber    && <span>Part No.</span>}
-            {visible.hsnSac        && <span>HSN/SAC</span>}
-            {visible.section       && <span>Section</span>}
-            {visible.quantity      && <span>Qty</span>}
-            {visible.taxable       && <span>Assessed Tax (₹)</span>}
-            {visible.gst           && <span>GST%</span>}
-            <span>Assessed (₹)</span>
-            {visible.billedTaxable && <span>Billed Tax (₹)</span>}
-            <span>Billed Incl GST (₹)</span>
-            <span>Status</span>
-            {visible.remarks       && <span>Remarks</span>}
-            <span></span>
+          {/*
+            Grouped Parts / Labour / Painting, mirroring the Assessment tab and
+            the printed Bill Check, which the surveyor reads side by side.
+
+            Grouping also straightens two things the flat list got wrong:
+            buildSerialMap numbers per section, so Sr. now runs 1..n instead of
+            restarting mid-list; and the supplementary band is computed over the
+            section's own rows rather than the interleaved claim array.
+          */}
+          {SECTION_ORDER.map(({ section, title }) => {
+          const sectionRows = allRows.filter(r => r.section === section);
+          // An empty section is not rendered at all, as in AssessmentGrid.
+          if (sectionRows.length === 0) return null;
+          const sectionIds = sectionRows.map(r => r.id);
+          const sub = subtotals[section];
+          // Allowed only: sectionSubtotals reads a summary the engine built from
+          // allowed rows, and the two footer lines must describe one population.
+          const billed = billedTotals(sectionRows.filter(r => r.allowed));
+
+          return (
+          <div key={section}>
+          {/* Section title — full width, deliberately not a grid row */}
+          <div className="px-6 pt-5 pb-2">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {title} <span className="ml-2 opacity-60">({sectionRows.length})</span>
+            </h3>
           </div>
 
-          {/* Rows */}
-          {allRows.map((row, idx) => {
+          {headerRow(sectionIds)}
+
+          {sectionRows.map((row, idx) => {
             const isDisallowed = !row.allowed;
             const effectiveStatus: BillStatus = isDisallowed ? 'not-allowed' : (row.billStatus || 'pending');
             const st = statusLabel(effectiveStatus);
             return [
-              shouldStartSupplementaryBand(allRows, idx) && (
+              shouldStartSupplementaryBand(sectionRows, idx) && (
                 <div
-                  key={`band-${idx}`}
-                  className="px-6 py-2 col-span-full text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide bg-gradient-to-r from-muted via-muted to-transparent"
+                  key={`band-${section}-${idx}`}
+                  className="px-6 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide bg-gradient-to-r from-muted via-muted to-transparent"
                 >
                   Supplementary Estimate
                 </div>
@@ -367,26 +463,30 @@ export function BillCheckGrid({
             ];
           }).flat()}
 
-          {/* Footer totals */}
+          {/*
+            Assessed subtotal. Full width rather than column-aligned because
+            these are post-depreciation figures and this grid has no column that
+            means any of them — "Assessed Tax" and "Assessed" both show the
+            pre-depreciation amounts, and GST% is a rate, not an amount. Printing
+            sub.base under "Assessed Tax" would put a depreciated number under a
+            heading that promises an undepreciated one.
+          */}
           <div
-            className="px-6 py-4 grid gap-2"
-            style={{ gridTemplateColumns: gridCols, background: 'var(--color-neutral-900)' }}
+            className="px-6 py-1.5 text-right text-[11px] text-muted-foreground border-b border-border"
+            style={{ background: 'var(--color-neutral-50)' }}
           >
-            <div /><div />
-            <div className="text-xs font-medium uppercase tracking-widest text-primary">TOTAL</div>
-            {visible.partNumber    && <div />}
-            {visible.hsnSac        && <div />}
-            {visible.section       && <div />}
-            {visible.quantity      && <div />}
-            {visible.taxable       && <div className="text-sm font-medium" style={{ color: 'var(--color-neutral-50)' }}>{fmt(allowedRows.reduce((s, r) => s + (r.estimated || 0), 0))}</div>}
-            {visible.gst           && <div />}
-            <div className="text-sm font-medium" style={{ color: 'var(--color-neutral-50)' }}>{fmt(allowedRows.reduce((s, r) => s + r.assessed, 0))}</div>
-            {visible.billedTaxable && <div className="text-sm font-medium text-primary">{fmt(allowedRows.reduce((s, r) => s + (r.billedTaxable || 0), 0))}</div>}
-            <div className="text-sm font-medium text-primary">{fmt(allowedRows.reduce((s, r) => s + (r.billedAmount || 0), 0))}</div>
-            <div className="text-xs font-medium text-white/50">{fmt(notInBillTotal)} not claimed</div>
-            {visible.remarks && <div />}
-            <div />
+            {title} assessed —{' '}
+            taxable <span className="font-medium text-foreground">{fmt(sub.base)}</span>
+            {' · '}GST <span className="font-medium text-foreground">{fmt(sub.gst)}</span>
+            {' · '}total <span className="font-medium text-foreground">{fmt(sub.total)}</span>
           </div>
+
+          {totalsRow(`${title} billed`, billed, false)}
+          </div>
+          );
+          })}
+
+          {totalsRow('TOTAL', billedTotals(allowedRows), true)}
         </div>
       </div>
     </div>
