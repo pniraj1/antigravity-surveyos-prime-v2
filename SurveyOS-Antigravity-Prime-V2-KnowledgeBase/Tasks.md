@@ -65,6 +65,8 @@
 
 ## Recently Completed
 
+- [x] Standard Bill Check report + grid alignment (2026-08-18) — new `mode: 'bill-check'` on the Standard Final Survey builder (row projection, no new calculations); Standard | UIIC toggle on the Bill Check tab; `billAllowed` field + AllowanceScopeDialog so a bill-check allowance can't silently rewrite an issued Final Survey Report; PendingRowsDialog blocks printing on unchecked items; MissingRemarkDialog warns (non-blocking) on undocumented rows; Bill Check grid gained Dep%/Net/Price+GST and corrected column labels via a shared `grid-columns.ts`. Spec: `Specs/2026-08-18-standard-bill-check-design.md`; plan: `docs/superpowers/plans/2026-08-18-standard-bill-check.md`. 742 tests passing.
+- [x] Fixed UIIC "Repairs As Per Assessment" defaulting to YES with no reinspection on record (2026-08-18)
 - [x] Project reorganization and vault restructure (2026-05-21)
 - [x] Excel-style grid paste for AssessmentGrid (2026-05-16)
 - [x] Pass 2.5 AI enrichment for insured reports (2026-05-15)
