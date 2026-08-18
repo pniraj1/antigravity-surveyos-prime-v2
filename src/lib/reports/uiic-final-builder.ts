@@ -133,6 +133,11 @@ export function buildUIICFinalHTML(claim: ClaimData, profile: SurveyorProfile | 
   const pC = partsAgg.cgst, pS = partsAgg.sgst, pT = partsAgg.amount;
   const lC = labourAgg.cgst + paintAgg.cgst, lS = labourAgg.sgst + paintAgg.sgst;
   const lT = labourAgg.amount + paintAgg.amount;
+
+  // Prints the row's own HSN/SAC and its own rate. Falls back to the
+  // specimen's "(Part)" / "(Labour)" placeholder only when no code is recorded.
+  const codeCell = (b: { hsnSac: string; rate: number }, fallback: 'Part' | 'Labour') =>
+    `${b.hsnSac || `(${fallback})`} ${b.rate.toFixed(2)}`;
   const tow = parseFloat(String(claim.feeBill?.travelExpenses || 0)) || 0; // towing mapped from travelExpenses or 0
   const gross = pT + lT + tow;
   const depAmt = rawParts - partsDepreciated;
@@ -421,11 +426,17 @@ ${/* Gross, not Net: these carry GST and nothing has been deducted yet. */ ''}
   const p5 = `<div style="page-break-before:always;"></div>
 <div style="text-align:center; font-family:serif; font-weight:bold; font-size:9pt;">${nm}</div>
 <div style="font-weight:700;font-size:8.5pt;margin:6px 0 3px;">GST SUMMARY</div>
+${/* One line per distinct rate, from the same per-item bands the money
+     columns are built from. This used to print a single line hardcoded to
+     "(Part) 18.00" whatever the claim held, so a 28% tyre was reported at
+     18% and its own HSN code never appeared. The base column also read
+     partsDepreciated, which excludes disposal rows, against an amount
+     column that includes them — the two disagreed on the same line. */ ''}
 <table style="${ts}"><tr><th style="${th}">S.N.</th><th style="${th}">HSN CODE</th><th style="${th}">DEPRECIATED AMOUNT</th><th style="${th}">CGST</th><th style="${th}">SGST</th><th style="${th}">AMOUNT</th></tr>
-<tr><td style="${td}"></td><td style="${td}">(Part) 18.00</td><td style="${td}text-align:right;">${fa(partsDepreciated)}</td><td style="${td}text-align:right;">${fa(pC)}</td><td style="${td}text-align:right;">${fa(pS)}</td><td style="${td}text-align:right;font-weight:700;">${fa(pT)}</td></tr>
-<tr style="font-weight:700;"><td style="${td}" colspan="2">GRAND TOTAL</td><td style="${td}text-align:right;">${fa(partsDepreciated)}</td><td style="${td}text-align:right;">${fa(pC)}</td><td style="${td}text-align:right;">${fa(pS)}</td><td style="${td}text-align:right;">${fa(pT)}</td></tr></table>
+${partsAgg.bands.map((b, i) => `<tr><td style="${td}text-align:center;">${i + 1}</td><td style="${td}">${codeCell(b, 'Part')}</td><td style="${td}text-align:right;">${fa(b.base)}</td><td style="${td}text-align:right;">${fa(b.cgst)}</td><td style="${td}text-align:right;">${fa(b.sgst)}</td><td style="${td}text-align:right;font-weight:700;">${fa(b.amount)}</td></tr>`).join('') || `<tr><td style="${td}" colspan="6">No parts</td></tr>`}
+<tr style="font-weight:700;"><td style="${td}" colspan="2">GRAND TOTAL</td><td style="${td}text-align:right;">${fa(partsAgg.base)}</td><td style="${td}text-align:right;">${fa(pC)}</td><td style="${td}text-align:right;">${fa(pS)}</td><td style="${td}text-align:right;">${fa(pT)}</td></tr></table>
 <table style="${ts}margin-top:4px;"><tr><th style="${th}">S.N.</th><th style="${th}">SERVICE ACCOUNTING CODE</th><th style="${th}">AMOUNT</th><th style="${th}">CGST</th><th style="${th}">SGST</th><th style="${th}">AMOUNT</th></tr>
-<tr><td style="${td}"></td><td style="${td}">(Labour) 18.00</td><td style="${td}text-align:right;">${fa(labBase)}</td><td style="${td}text-align:right;">${fa(lC)}</td><td style="${td}text-align:right;">${fa(lS)}</td><td style="${td}text-align:right;font-weight:700;">${fa(lT)}</td></tr>
+${serviceAgg.bands.map((b, i) => `<tr><td style="${td}text-align:center;">${i + 1}</td><td style="${td}">${codeCell(b, 'Labour')}</td><td style="${td}text-align:right;">${fa(b.base)}</td><td style="${td}text-align:right;">${fa(b.cgst)}</td><td style="${td}text-align:right;">${fa(b.sgst)}</td><td style="${td}text-align:right;font-weight:700;">${fa(b.amount)}</td></tr>`).join('') || `<tr><td style="${td}" colspan="6">No labour or painting</td></tr>`}
 <tr style="font-weight:700;"><td style="${td}" colspan="2">GRAND TOTAL</td><td style="${td}text-align:right;">${fa(labBase)}</td><td style="${td}text-align:right;">${fa(lC)}</td><td style="${td}text-align:right;">${fa(lS)}</td><td style="${td}text-align:right;">${fa(lT)}</td></tr></table>
 <div style="display:flex;justify-content:space-between;margin-top:14px;font-size:7.5pt;">
 <div style="width:45%;"><div>I / We hereby authorize repairs for Rs. <b>${Math.round(net)}</b></div><div style="margin-top:30px;">Date:</div><div style="margin-top:40px;border-top:0.5pt solid #000;padding-top:3px;">Signature (...Surveyor &amp; Loss Assessor)</div></div>
