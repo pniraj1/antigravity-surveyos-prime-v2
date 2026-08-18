@@ -12,6 +12,7 @@ import { triggerUIICBillCheckPrint, buildUIICBillCheckHTML } from '@/lib/reports
 import { buildStandardFinalSurveyHTML, triggerStandardPrint } from '@/lib/reports/standard-report-builder';
 
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
+import { PendingRowsDialog } from '@/components/dialogs/PendingRowsDialog';
 import { ReportPreviewPanel } from '@/components/shared/ReportPreviewPanel';
 import { footerFromProfile } from '@/lib/reports/print-shell';
 import { DocumentEvidenceViewer } from '@/components/evidence/DocumentEvidenceViewer';
@@ -23,7 +24,7 @@ import { ExtraBillItemsPanel } from './bill-check/ExtraBillItemsPanel';
 import { BillCheckSummaryPanel } from './bill-check/BillCheckSummaryPanel';
 import { fmt } from './bill-check/config';
 
-function BillCheckPreview({ claim, profile, format }: { claim: any; profile: any; format: 'standard' | 'uiic' }) {
+function BillCheckPreview({ claim, profile, format, onPrint }: { claim: any; profile: any; format: 'standard' | 'uiic'; onPrint: () => void }) {
   const { html, error } = useMemo(() => {
     try {
       return {
@@ -52,11 +53,7 @@ function BillCheckPreview({ claim, profile, format }: { claim: any; profile: any
       html={html}
       title={`${format === 'uiic' ? 'UIIC' : 'Standard'} Bill Check Report — Live Preview`}
       printLabel="Power Print"
-      onPrint={() =>
-        format === 'uiic'
-          ? triggerUIICBillCheckPrint(claim, profile)
-          : triggerStandardPrint(claim, profile, 'bill-check')
-      }
+      onPrint={onPrint}
       wordFilename={`${claim?.vehicle?.registrationNumber || 'Claim'}-${format === 'uiic' ? 'UIIC' : 'Standard'}-Bill-Check`}
       footerLeft={footerFromProfile(profile)}
     />
@@ -77,6 +74,7 @@ export function BillCheckTab() {
 
   const [showEvidence, setShowEvidence] = useState(false);
   const [format, setFormat] = useState<'standard' | 'uiic'>('standard');
+  const [pendingGate, setPendingGate] = useState(false);
 
   const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview } = useAIExtraction();
 
@@ -112,6 +110,23 @@ export function BillCheckTab() {
     const file = e.target.files?.[0];
     if (file) triggerExtraction('final-bill', file);
     e.target.value = '';
+  };
+
+  // A bill check is not issued while the bill is pending — pending means the
+  // workshop gave no figure for that item, so PENDING must never reach the PDF.
+  const pendingRows = allowedRows.filter(r => !r.billStatus || r.billStatus === 'pending');
+
+  const handlePrint = () => {
+    if (pendingRows.length > 0) { setPendingGate(true); return; }
+    if (format === 'uiic') triggerUIICBillCheckPrint(currentClaim, profile);
+    else triggerStandardPrint(currentClaim, profile, 'bill-check');
+  };
+
+  const resolveAllPending = () => {
+    pendingRows.forEach(r =>
+      updateAssessmentRow(r.id, { billStatus: 'not-in-bill', billedTaxable: 0, billedAmount: 0 }),
+    );
+    setPendingGate(false);
   };
 
   return (
@@ -203,11 +218,7 @@ export function BillCheckTab() {
                 </div>
                 <button
                   id="btn-print-bill-check"
-                  onClick={() =>
-                    currentClaim && (format === 'uiic'
-                      ? triggerUIICBillCheckPrint(currentClaim, profile)
-                      : triggerStandardPrint(currentClaim, profile, 'bill-check'))
-                  }
+                  onClick={handlePrint}
                   className="inline-flex items-center gap-2.5 px-6 py-3 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 hover:scale-105 active:scale-95 bg-primary text-primary-foreground"
                   style={{ boxShadow: '0 4px 14px rgba(13,27,42,0.3)' }}
                 >
@@ -229,7 +240,7 @@ export function BillCheckTab() {
               </div>
             </div>
 
-            <BillCheckPreview claim={currentClaim} profile={profile} format={format} />
+            <BillCheckPreview claim={currentClaim} profile={profile} format={format} onPrint={handlePrint} />
           </div>
         </Panel>
 
@@ -252,6 +263,14 @@ export function BillCheckTab() {
         title={reviewData?.key || ''}
         data={reviewData?.data}
       />
+
+      {pendingGate && (
+        <PendingRowsDialog
+          rows={pendingRows}
+          onResolveAll={resolveAllPending}
+          onCancel={() => setPendingGate(false)}
+        />
+      )}
     </div>
   );
 }
