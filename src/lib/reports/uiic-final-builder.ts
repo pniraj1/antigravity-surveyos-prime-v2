@@ -583,7 +583,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   const depLabel = (r: AssessmentRow) => {
     const d = rowDepFor(r);
     if (r.depOverride !== undefined) return `${d}%*`;
-    return d > 0 ? `${d}%` : 'N.D.';
+    return d > 0 ? `${d}%` : '0%';
   };
 
   const jobTypeLabel = (r: AssessmentRow) =>
@@ -604,12 +604,12 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   // disallowed rows, so banding the unfiltered list would place it a row off.
   const band = (sectionRows: AssessmentRow[], idx: number) =>
     shouldStartSupplementaryBand(sectionRows, idx)
-      ? `<tr><td colspan="11" style="padding:4px 8px;text-align:center;font-size:9pt;font-weight:600;color:#666;background:linear-gradient(to right,#f5f5f5,#fafafa,#f5f5f5);">Supplementary Estimate</td></tr>`
+      ? `<tr><td colspan="12" style="padding:4px 8px;text-align:center;font-size:9pt;font-weight:600;color:#666;background:linear-gradient(to right,#f5f5f5,#fafafa,#f5f5f5);">Supplementary Estimate</td></tr>`
       : '';
 
   // SPARE PARTS — parts columns carry the money, Labour and Paint stay empty.
   const pHtml = allowedParts.map((r, idx) => {
-    const { isDisposal, netBeforeGst } = computeRowNet(r, rowDepFor(r));
+    const { isDisposal, afterDep, netBeforeGst } = computeRowNet(r, rowDepFor(r));
     const finalAmt = isDisposal ? netBeforeGst : netBeforeGst * (1 + (r.gst || 0) / 100);
     return band(allowedParts, idx) + `<tr>
       <td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td>
@@ -618,6 +618,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
       <td style="${td}text-align:center;">${jobTypeLabel(r)}</td>
       <td style="${td}text-align:right;">${fa(r.estimated)}</td>
       <td style="${td}text-align:center;">${depLabel(r)}</td>
+      <td style="${td}text-align:right;">${fa(r.assessed - afterDep)}</td>
       <td style="${td}text-align:right;">${fa(r.assessed)}</td>
       <td style="${td}text-align:center;">${isDisposal ? '0' : String(r.gst ?? 0)}</td>
       <td style="${td}text-align:right;">${isDisposal ? `${fa(netBeforeGst)} DISP` : fa(finalAmt)}</td>
@@ -628,37 +629,45 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   // LABOUR — bare depreciated amount in the Labour column; tax is added at
   // subtotal level. depLabel(r) already reads rowDepFor(r), so this used to
   // print an override's percentage next to an amount that ignored it.
-  const lHtml = allowedLabour.map((r, idx) => band(allowedLabour, idx) + `<tr>
+  const lHtml = allowedLabour.map((r, idx) => {
+    const { afterDep, netBeforeGst } = computeRowNet(r, rowDepFor(r));
+    return band(allowedLabour, idx) + `<tr>
       <td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td>
       <td style="${td}">${r.particulars}</td>
       <td style="${td}text-align:center;">Labour</td>
       <td style="${td}text-align:center;">${jobTypeLabel(r)}</td>
       <td style="${td}text-align:right;">${fa(r.estimated)}</td>
       <td style="${td}text-align:center;">${depLabel(r)}</td>
+      <td style="${td}text-align:right;">${fa(r.assessed - afterDep)}</td>
       ${blank}
       <td style="${td}text-align:center;">${String(r.gst ?? 0)}</td>
       ${blank}
-      <td style="${td}text-align:right;">${fa(computeRowNet(r, rowDepFor(r)).netBeforeGst)}</td>
+      <td style="${td}text-align:right;">${fa(netBeforeGst)}</td>
       ${blank}
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 
-  const ptHtml = allowedPaint.map((r, idx) => band(allowedPaint, idx) + `<tr>
+  const ptHtml = allowedPaint.map((r, idx) => {
+    const { afterDep, netBeforeGst } = computeRowNet(r, rowDepFor(r));
+    return band(allowedPaint, idx) + `<tr>
       <td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td>
       <td style="${td}">${r.particulars}</td>
       <td style="${td}text-align:center;">Paint</td>
       <td style="${td}text-align:center;">${jobTypeLabel(r)}</td>
       <td style="${td}text-align:right;">${fa(r.estimated)}</td>
       <td style="${td}text-align:center;">${depLabel(r)}</td>
+      <td style="${td}text-align:right;">${fa(r.assessed - afterDep)}</td>
       ${blank}
       <td style="${td}text-align:center;">${String(r.gst ?? 0)}</td>
       ${blank}${blank}
-      <td style="${td}text-align:right;">${fa(computeRowNet(r, rowDepFor(r)).netBeforeGst)}</td>
-    </tr>`).join('');
+      <td style="${td}text-align:right;">${fa(netBeforeGst)}</td>
+    </tr>`;
+  }).join('');
 
   // One tax line per distinct rate, so a mixed-rate claim reads correctly.
   const taxLines = (agg: ReturnType<typeof aggregateGst>, label: string, col: 'labour' | 'paint') =>
     agg.bands.filter(b => b.rate > 0).map(b => `<tr>
-      <td colspan="9" style="${td}text-align:right;font-style:italic;">TAX IN ${b.rate} % for ${label}</td>
+      <td colspan="10" style="${td}text-align:right;font-style:italic;">TAX IN ${b.rate} % for ${label}</td>
       ${col === 'labour' ? `<td style="${td}text-align:right;">${fa(b.cgst + b.sgst)}</td>${blank}` : `${blank}<td style="${td}text-align:right;">${fa(b.cgst + b.sgst)}</td>`}
     </tr>`).join('');
 
@@ -777,57 +786,59 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
 <table style="${ts}font-size:7pt;">
 <thead><tr>
   <th style="${th}width:4%;">SR.<br/>NO.</th>
-  <th style="${th}text-align:left;width:20%;">Description</th>
+  <th style="${th}text-align:left;width:18%;">Description</th>
   <th style="${th}width:8%;">Part<br/>Type</th>
   <th style="${th}width:8%;">Job<br/>Type</th>
-  <th style="${th}width:10%;">Part List<br/>Without Tax</th>
+  <th style="${th}width:9%;">Part List<br/>Without Tax</th>
   <th style="${th}width:8%;">Part<br/>Depreciation</th>
-  <th style="${th}width:10%;">Parts<br/>Assessment</th>
+  <th style="${th}width:7%;">Dep.<br/>Amount</th>
+  <th style="${th}width:9%;">Parts<br/>Assessment</th>
   <th style="${th}width:5%;">GST<br/>%</th>
-  <th style="${th}width:11%;">Final amount<br/>With G.S.T</th>
+  <th style="${th}width:9%;">Final amount<br/>With G.S.T</th>
   <th style="${th}width:8%;">Labour</th>
-  <th style="${th}width:8%;">Paint</th>
+  <th style="${th}width:7%;">Paint</th>
 </tr></thead>
 <tbody>
-<tr><td colspan="11" style="${sec}">SPARE PARTS</td></tr>
-${pHtml || `<tr><td colspan="11" style="${td}text-align:center;color:#999;font-style:italic;">No parts in allowed items</td></tr>`}
+<tr><td colspan="12" style="${sec}">SPARE PARTS</td></tr>
+${pHtml || `<tr><td colspan="12" style="${td}text-align:center;color:#999;font-style:italic;">No parts in allowed items</td></tr>`}
 <tr style="font-weight:700;background:#eee;">
   <td colspan="4" style="${td}">SUB TOTAL</td>
   <td style="${td}text-align:right;">${fa(allowedParts.reduce((s, r) => s + r.estimated, 0))}</td>
   ${blank}
+  <td style="${td}text-align:right;">${fa(allowedParts.reduce((s, r) => s + r.assessed - computeRowNet(r, rowDepFor(r)).afterDep, 0))}</td>
   <td style="${td}text-align:right;">${fa(allowedParts.reduce((s, r) => s + r.assessed, 0))}</td>
   ${blank}
   <td style="${td}text-align:right;">${fa(partsAgg.amount)}</td>
   ${blank}${blank}
 </tr>
 
-<tr><td colspan="11" style="${sec}">LABOUR</td></tr>
-${lHtml || `<tr><td colspan="11" style="${td}text-align:center;color:#999;font-style:italic;">No labour in allowed items</td></tr>`}
+<tr><td colspan="12" style="${sec}">LABOUR</td></tr>
+${lHtml || `<tr><td colspan="12" style="${td}text-align:center;color:#999;font-style:italic;">No labour in allowed items</td></tr>`}
 <tr style="font-weight:700;background:#f6f6f6;">
   <td colspan="4" style="${td}">SUB TOTAL</td>
   <td style="${td}text-align:right;">${fa(allowedLabour.reduce((s, r) => s + r.estimated, 0))}</td>
-  <td colspan="4" style="${td}"></td>
+  <td colspan="5" style="${td}"></td>
   <td style="${td}text-align:right;">${fa(labourAgg.base)}</td>
   ${blank}
 </tr>
 ${taxLines(labourAgg, 'Labour', 'labour')}
 <tr style="font-weight:700;background:#eee;">
-  <td colspan="9" style="${td}">SUB TOTAL</td>
+  <td colspan="10" style="${td}">SUB TOTAL</td>
   <td style="${td}text-align:right;">${fa(labourAgg.amount)}</td>
   ${blank}
 </tr>
 
-<tr><td colspan="11" style="${sec}">PAINTING CHARGES</td></tr>
-${ptHtml || `<tr><td colspan="11" style="${td}text-align:center;color:#999;font-style:italic;">No painting in allowed items</td></tr>`}
+<tr><td colspan="12" style="${sec}">PAINTING CHARGES</td></tr>
+${ptHtml || `<tr><td colspan="12" style="${td}text-align:center;color:#999;font-style:italic;">No painting in allowed items</td></tr>`}
 <tr style="font-weight:700;background:#f6f6f6;">
   <td colspan="4" style="${td}">SUB TOTAL</td>
   <td style="${td}text-align:right;">${fa(allowedPaint.reduce((s, r) => s + r.estimated, 0))}</td>
-  <td colspan="5" style="${td}"></td>
+  <td colspan="6" style="${td}"></td>
   <td style="${td}text-align:right;">${fa(paintAgg.base)}</td>
 </tr>
 ${taxLines(paintAgg, 'Paint', 'paint')}
 <tr style="font-weight:700;background:#eee;">
-  <td colspan="10" style="${td}">SUB TOTAL</td>
+  <td colspan="11" style="${td}">SUB TOTAL</td>
   <td style="${td}text-align:right;">${fa(paintAgg.amount)}</td>
 </tr>
 
@@ -837,6 +848,9 @@ ${taxLines(paintAgg, 'Paint', 'paint')}
     [...allowedParts, ...allowedLabour, ...allowedPaint].reduce((s, r) => s + r.estimated, 0)
   )}</td>
   ${blank}
+  <td style="${td}text-align:right;">${fa(
+    [...allowedParts, ...allowedLabour, ...allowedPaint].reduce((s, r) => s + r.assessed - computeRowNet(r, rowDepFor(r)).afterDep, 0)
+  )}</td>
   <td style="${td}text-align:right;">${fa(allowedParts.reduce((s, r) => s + r.assessed, 0))}</td>
   ${blank}
   <td style="${td}text-align:right;">${fa(partsAgg.amount)}</td>

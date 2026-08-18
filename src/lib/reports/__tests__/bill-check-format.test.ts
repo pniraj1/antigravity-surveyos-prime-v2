@@ -78,9 +78,12 @@ describe('Bill Check table format', () => {
     expect(html).toContain('10126.00');
   });
 
-  test('prints N.D. when depreciation is nil', () => {
+  test('prints 0% when depreciation is nil, not N.D.', () => {
+    // A zero rate and no rate on record used to print identically. The
+    // Depreciation Amount column needs a real number beside every Dep% cell.
     const html = buildUIICBillCheckHTML(claim([row()]), null);
-    expect(html).toContain('N.D.');
+    expect(html).not.toContain('N.D.');
+    expect(html).toContain('0%');
   });
 
   test('shows estimated and assessed as separate columns', () => {
@@ -133,9 +136,10 @@ describe('Bill Check table format', () => {
     expect(cellsOf('SprayPanel')).toContain('>Paint<');
   });
 
-  test('every row in the table spans exactly eleven columns', () => {
+  test('every row in the table spans exactly twelve columns', () => {
     // Adding or removing a column means revisiting a dozen colspans by hand.
     // This catches a miscount instead of leaving it to be spotted on paper.
+    // Twelve, not eleven, since the Depreciation Amount column was added.
     const html = buildUIICBillCheckHTML(claim([
       row({ particulars: 'PartA' }),
       row({ particulars: 'LabA', section: 'labour', partType: 'labour', assessed: 500, gst: 18 }),
@@ -154,7 +158,7 @@ describe('Bill Check table format', () => {
         return sum + (m ? Number(m[1]) : 1);
       }, 0);
       const label = tr.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40);
-      expect(spans, `row "${label}" spans ${spans}, not 11`).toBe(11);
+      expect(spans, `row "${label}" spans ${spans}, not 12`).toBe(12);
     }
   });
 });
