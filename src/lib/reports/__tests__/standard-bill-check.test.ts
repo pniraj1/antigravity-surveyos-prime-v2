@@ -81,6 +81,32 @@ describe('Standard Bill Check report', () => {
     expect(html).toContain('11,500');
   });
 
+  test('a disallowed row is absent from the bill check item table entirely', () => {
+    const html = buildStandardFinalSurveyHTML(
+      claim([row(), row({ id: 'r-disallowed', particulars: 'UNIQUE_DISALLOWED_PART', allowed: false })]),
+      profile, 'bill-check',
+    );
+    expect(html).not.toContain('UNIQUE_DISALLOWED_PART');
+    expect(html).not.toContain('NOT ALLOWED');
+  });
+
+  test('a disallowed row still prints in the final report, marked NOT ALLOWED', () => {
+    const html = buildStandardFinalSurveyHTML(
+      claim([row(), row({ id: 'r-disallowed', particulars: 'UNIQUE_DISALLOWED_PART', allowed: false })]),
+      profile, 'final',
+    );
+    expect(html).toContain('UNIQUE_DISALLOWED_PART');
+    expect(html).toContain('NOT ALLOWED');
+  });
+
+  test('a disallowed labour row is absent from bill check', () => {
+    const html = buildStandardFinalSurveyHTML(
+      claim([row({ section: 'labour', particulars: 'UNIQUE_DISALLOWED_LABOUR', allowed: false })]),
+      profile, 'bill-check',
+    );
+    expect(html).not.toContain('UNIQUE_DISALLOWED_LABOUR');
+  });
+
   test('a not-in-bill row carries no liability', () => {
     const kept = buildStandardFinalSurveyHTML(claim([row(), row({ id: 'r2', assessed: 5000, estimated: 5000 })]), profile, 'bill-check');
     const dropped = buildStandardFinalSurveyHTML(

@@ -217,7 +217,11 @@ export function buildStandardFinalSurveyHTML(
 
   // ── Parts rows (Sr | Particulars | Type | Est | Assessed | Dep% | Metal | Plastic | [FbrGls] | Glass | GST% | Price+GST)
   let psn = 1;
-  const partRows = rows.filter(r => r.section === 'parts');
+  // Bill check verifies what was allowed — a disallowed item was never the
+  // insurer's liability, so it does not appear here at all. The final report
+  // keeps disallowed rows visible, marked NOT ALLOWED, for the surveyor's own
+  // record of what was considered and rejected.
+  const partRows = rows.filter(r => r.section === 'parts' && (!isBillCheck || r.allowed !== false));
   const partsHtml = partRows.map((r, idx) => {
     const dep = r.depOverride !== undefined ? r.depOverride : getDepreciationRate(r.partType, ageMonths, depType);
     const depLabel = r.depOverride !== undefined ? `${dep}%*` : `${dep}%`;
@@ -264,7 +268,7 @@ export function buildStandardFinalSurveyHTML(
   // hardcode Dep% to "—", so an override was both invisible and uncharged.
   const serviceRowHtml = (section: 'labour' | 'paint', typeLabel: string) => {
     let sn = 1;
-    const sectionRows = rows.filter(r => r.section === section);
+    const sectionRows = rows.filter(r => r.section === section && (!isBillCheck || r.allowed !== false));
     return sectionRows.map((r, idx) => {
       const disallowed = r.allowed === false;
       const dep = r.depOverride !== undefined ? r.depOverride : getDepreciationRate(r.partType, ageMonths, depType);
