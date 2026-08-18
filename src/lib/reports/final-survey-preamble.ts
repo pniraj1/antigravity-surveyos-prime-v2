@@ -60,3 +60,38 @@ export function preambleFromClaim(
     assessedTotal,
   });
 }
+
+export interface BillCheckPreambleInputs {
+  appointingOffice?: string;
+  insurerName?: string;
+  /** Workshop's invoice total, inclusive of GST. */
+  billTotal: number;
+  /** Net liability this report allows. */
+  allowedTotal: number;
+}
+
+/** Build the default Bill Check narrative paragraph from explicit inputs. */
+export function composeBillCheckPreamble(i: BillCheckPreambleInputs): string {
+  const instructedBy = (i.appointingOffice || i.insurerName || 'the insurer').trim();
+  return (
+    `As per instructions received from ${instructedBy}, the undersigned has verified the ` +
+    `final invoice submitted by the Insured/Repairer against the assessment recorded in our ` +
+    `Final Survey Report. The Insured/Repairer has billed ${rs(i.billTotal)}. On verification ` +
+    `of the invoice against the assessed items, the liability has been finally assessed for ` +
+    `${rs(i.allowedTotal)}, which is subject to the Policy Terms and Conditions. ` +
+    `The verification has been worked out in detail as follows.`
+  );
+}
+
+/** Convenience wrapper: derive the Bill Check narrative from a claim. */
+export function billCheckPreambleFromClaim(
+  claim: ClaimData,
+  allowedTotal: number,
+): string {
+  return composeBillCheckPreamble({
+    appointingOffice: claim.policy?.appointingOffice,
+    insurerName: claim.policy?.insurerName,
+    billTotal: claim.billCheck?.billTotal || 0,
+    allowedTotal,
+  });
+}
