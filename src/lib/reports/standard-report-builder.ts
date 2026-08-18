@@ -14,7 +14,8 @@ import type { SurveyorProfile } from '@/types/vehicle';
 
 import { formatDateDMY, formatDateTimeDMY, formatSurveyDateTime, fa, numberToWords, getVehicleAgeMonths, getSurveyorHeader, getSigBlock } from './report-utils';
 import { getHtmlScale } from './report-style-utils';
-import { preambleFromClaim, estimateTotalInclGst } from './final-survey-preamble';
+import { preambleFromClaim, estimateTotalInclGst, billCheckPreambleFromClaim } from './final-survey-preamble';
+import { projectForBillCheck } from './bill-check-projection';
 import { computeRowNet } from '@/lib/calculations/row-net';
 import { getDepreciationRate, toDepreciationType } from '@/lib/calculations/depreciation';
 import { getCompulsoryExcess, calculateAssessmentSummary } from '@/lib/calculations/assessment';
@@ -55,15 +56,25 @@ function isExpired(dateStr: string | null | undefined): boolean {
  * bracket. The result was a summary block whose "Spare Parts" line disagreed
  * with the Metal / Plastic / Glass lines directly beneath it.
  */
+/** Which document this builder is rendering. */
+export type ReportMode = 'final' | 'bill-check';
+
 export function buildStandardFinalSurveyHTML(
   claim: ClaimData,
-  profile: SurveyorProfile
+  profile: SurveyorProfile,
+  mode: ReportMode = 'final'
 ): string {
+  const isBillCheck = mode === 'bill-check';
   const vehicle = claim.vehicle;
   const driver = claim.driver;
   const policy = claim.policy;
   const accident = claim.accident;
-  const rows = claim.assessmentRows || [];
+  const bc = claim.billCheck;
+  // Bill check renders the same report over projected rows. Everything below
+  // this line — every total, every GST band — is untouched by the mode.
+  const rows = isBillCheck
+    ? projectForBillCheck(claim.assessmentRows || [])
+    : (claim.assessmentRows || []);
 
   const depType = toDepreciationType(claim.depreciationType);
   const ageMonths = getVehicleAgeMonths(
@@ -298,7 +309,7 @@ export function buildStandardFinalSurveyHTML(
       <th style="${th}text-align:center;">Sr.</th>
       <th style="${th}">Particulars</th>
       <th style="${th}text-align:center;">Type</th>
-      <th style="${th}text-align:right;">Est. ₹</th>
+      <th style="${th}text-align:right;">${isBillCheck ? 'Bill ₹' : 'Est. ₹'}</th>
       <th style="${th}text-align:right;">Assessed ₹</th>
       <th style="${th}text-align:center;">Dep%</th>
       <th colspan="${NMAT}" style="${th}text-align:center;">—</th>
@@ -306,11 +317,110 @@ export function buildStandardFinalSurveyHTML(
       <th style="${th}text-align:right;">Price+GST ₹</th>
     </tr>`;
 
+  // ── Sections that differ by mode ────────────────────────────────────────────
+  // Bill check reads as the final report with its narrative sections removed.
+  // Sections 1, 2, 8, 9 and the GST tables are identical either way; only these
+  // three change, and the original section numbers are kept so a reader moving
+  // between the two documents finds the same content under the same number.
+  const driverSectionHtml = `<div style="font-weight:700;font-size:7pt;background:#0d1b2a;color:#fff;padding:2px 4px;margin-bottom:2px;">3. DRIVER'S PARTICULARS</div>
+<table style="${ts}">
+  <tr>
+    <td style="${td}color:#444;font-size:${scale.labelFont};width:18%;">Driver Name</td>
+    <td style="${td}font-weight:600;" colspan="3">${driver.name || '—'}${driver.parentName ? ' ' + (driver.relationType || 'S/o') + ' ' + driver.parentName : ''}</td>
+  </tr>
+  <tr>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">M.D.L. No.</td>
+    <td style="${td}font-family:monospace;width:32%;">${driver.licenceNumber || '—'}</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Date of Birth</td>
+    <td style="${td}">${formatDateDMY(driver.dateOfBirth) || '—'}</td>
+  </tr>
+  <tr>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Licence Classes</td>
+    <td style="${td}">${driver.vehicleClasses || '—'}</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Badge No.</td>
+    <td style="${td}">${driver.badgeNumber || '—'}</td>
+  </tr>
+  <tr>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Date of Issue</td>
+    <td style="${td}">${formatDateDMY(driver.dateOfIssue) || '—'}</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Non-Transport Valid</td>
+    <td style="${td}">${formatDateDMY(driver.validityNonTransport)}</td>
+  </tr>
+  <tr>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Transport Valid</td>
+    <td style="${td}">${formatDateDMY(driver.validityTransport)}</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Hazardous Goods Endorsement</td>
+    <td style="${td}">${driver.hazardousEndorsement === 'yes' ? 'Yes' + (driver.hazardousEndorsementNote ? ' — ' + driver.hazardousEndorsementNote : '') : driver.hazardousEndorsement === 'no' ? 'No' : '—'}</td>
+  </tr>
+</table>`;
+
+  const accidentSectionHtml = `<div style="font-weight:700;font-size:7pt;background:#0d1b2a;color:#fff;padding:2px 4px;margin-bottom:2px;">4. ACCIDENT &amp; SURVEY DETAILS</div>
+<table style="${ts}">
+  <tr>
+    <td style="${td}color:#444;font-size:${scale.labelFont};width:18%;">Accident Date &amp; Time</td>
+    <td style="${td}width:32%;">${formatDateTimeDMY(accident.dateAndTime)}</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Place</td>
+    <td style="${td}">${accident.placeOfAccident || '—'}</td>
+  </tr>
+  <tr>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Police Station</td>
+    <td style="${td}">${accident.policeStation || '—'}</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">FIR No. & Date</td>
+    <td style="${td}">${accident.firNumber || '—'} / ${formatDateDMY(accident.firDate)}</td>
+  </tr>
+  <tr>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Appointment Date</td>
+    <td style="${td}">${formatDateDMY(accident.appointmentDate)}</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};"></td>
+    <td style="${td}"></td>
+  </tr>
+  <tr>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Date &amp; Time of Survey</td>
+    <td style="${td}">${formatSurveyDateTime(accident.dateOfSurvey, accident.timeOfSurvey)}</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Place of Survey</td>
+    <td style="${td}">${accident.placeOfSurvey || '—'}</td>
+  </tr>
+  <tr>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Third Party</td>
+    <td style="${td}" colspan="3">${accident.thirdPartyDetails || 'NIL'}</td>
+  </tr>
+</table>`;
+
+  const causeSectionHtml = `<div style="font-weight:700;font-size:7pt;background:#0d1b2a;color:#fff;padding:2px 4px;margin-bottom:2px;">7. CAUSE &amp; NATURE OF ACCIDENT</div>
+<div style="font-size:${scale.cellFont};margin-bottom:4px;padding:2px 4px;border:0.4pt solid #bbb;background:#fafaf7;line-height:1.5;">${accident.causeOfAccident || '—'}</div>`;
+
+  // Section 4 in bill check mode: the workshop invoice this document verifies.
+  // Every field here has a real writer — workshopName and dateOfSurvey from
+  // AccidentForm, billNo/billDate/billTotal from the Bill Check tab. Repair
+  // Authorised and Est. Repair Completion are deliberately excluded: no screen
+  // in this codebase writes either field, so they would always print blank.
+  const billRefSectionHtml = `<div style="font-weight:700;font-size:7pt;background:#0d1b2a;color:#fff;padding:2px 4px;margin-bottom:2px;">4. WORKSHOP INVOICE &amp; BILL REFERENCE</div>
+<table style="${ts}">
+  <tr>
+    <td style="${td}color:#444;font-size:${scale.labelFont};width:18%;">Workshop</td>
+    <td style="${td}width:32%;">${accident.workshopName || '—'}</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};width:18%;">Date of Final Survey</td>
+    <td style="${td}">${formatDateDMY(accident.dateOfSurvey)}</td>
+  </tr>
+  <tr>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Bill / Invoice No.</td>
+    <td style="${td}font-weight:700;">${bc?.billNo || '—'}</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Bill / Invoice Date</td>
+    <td style="${td}font-weight:700;">${formatDateDMY(bc?.billDate)}</td>
+  </tr>
+  <tr>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Total Bill Amount (incl. GST)</td>
+    <td style="${td}font-weight:700;">₹ ${fmt2(bc?.billTotal || 0)}</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Allowed by this Report (incl. GST)</td>
+    <td style="${td}font-weight:700;">₹ ${fmt2(grand)}</td>
+  </tr>
+</table>`;
+
   // ─────────────────────────────────────────────────────────────────────────
   // REPORT HTML
   // ─────────────────────────────────────────────────────────────────────────
   return `${getSurveyorHeader(profile)}
-<div style="text-align:center;font-weight:700;font-size:8.5pt;margin-bottom:3px;text-decoration:underline;letter-spacing:0.05em;">PRIVATE AND CONFIDENTIAL — MOTOR (FINAL) SURVEY REPORT</div>
+<div style="text-align:center;font-weight:700;font-size:8.5pt;margin-bottom:3px;text-decoration:underline;letter-spacing:0.05em;">PRIVATE AND CONFIDENTIAL — MOTOR ${isBillCheck ? 'BILL CHECK REPORT' : '(FINAL) SURVEY REPORT'}</div>
 <p style="font-size:6.5pt;font-style:italic;margin-bottom:4px;text-align:justify;color:#444;">This report is issued by us as Licenced Surveyors without prejudice, in respect of cause, nature &amp; extent of loss/damage, subject to the terms &amp; conditions of the Insurance policy.</p>
 
 <table style="${ts}">
@@ -400,80 +510,18 @@ export function buildStandardFinalSurveyHTML(
   </tr>
 </table>
 
-<div style="font-weight:700;font-size:7pt;background:#0d1b2a;color:#fff;padding:2px 4px;margin-bottom:2px;">3. DRIVER'S PARTICULARS</div>
-<table style="${ts}">
-  <tr>
-    <td style="${td}color:#444;font-size:${scale.labelFont};width:18%;">Driver Name</td>
-    <td style="${td}font-weight:600;" colspan="3">${driver.name || '—'}${driver.parentName ? ' ' + (driver.relationType || 'S/o') + ' ' + driver.parentName : ''}</td>
-  </tr>
-  <tr>
-    <td style="${td}color:#444;font-size:${scale.labelFont};">M.D.L. No.</td>
-    <td style="${td}font-family:monospace;width:32%;">${driver.licenceNumber || '—'}</td>
-    <td style="${td}color:#444;font-size:${scale.labelFont};">Date of Birth</td>
-    <td style="${td}">${formatDateDMY(driver.dateOfBirth) || '—'}</td>
-  </tr>
-  <tr>
-    <td style="${td}color:#444;font-size:${scale.labelFont};">Licence Classes</td>
-    <td style="${td}">${driver.vehicleClasses || '—'}</td>
-    <td style="${td}color:#444;font-size:${scale.labelFont};">Badge No.</td>
-    <td style="${td}">${driver.badgeNumber || '—'}</td>
-  </tr>
-  <tr>
-    <td style="${td}color:#444;font-size:${scale.labelFont};">Date of Issue</td>
-    <td style="${td}">${formatDateDMY(driver.dateOfIssue) || '—'}</td>
-    <td style="${td}color:#444;font-size:${scale.labelFont};">Non-Transport Valid</td>
-    <td style="${td}">${formatDateDMY(driver.validityNonTransport)}</td>
-  </tr>
-  <tr>
-    <td style="${td}color:#444;font-size:${scale.labelFont};">Transport Valid</td>
-    <td style="${td}">${formatDateDMY(driver.validityTransport)}</td>
-    <td style="${td}color:#444;font-size:${scale.labelFont};">Hazardous Goods Endorsement</td>
-    <td style="${td}">${driver.hazardousEndorsement === 'yes' ? 'Yes' + (driver.hazardousEndorsementNote ? ' — ' + driver.hazardousEndorsementNote : '') : driver.hazardousEndorsement === 'no' ? 'No' : '—'}</td>
-  </tr>
-</table>
+${isBillCheck ? billRefSectionHtml : driverSectionHtml + '\n\n' + accidentSectionHtml}
+${isBillCheck ? '' : '\n' + causeSectionHtml}
 
-<div style="font-weight:700;font-size:7pt;background:#0d1b2a;color:#fff;padding:2px 4px;margin-bottom:2px;">4. ACCIDENT &amp; SURVEY DETAILS</div>
-<table style="${ts}">
-  <tr>
-    <td style="${td}color:#444;font-size:${scale.labelFont};width:18%;">Accident Date &amp; Time</td>
-    <td style="${td}width:32%;">${formatDateTimeDMY(accident.dateAndTime)}</td>
-    <td style="${td}color:#444;font-size:${scale.labelFont};">Place</td>
-    <td style="${td}">${accident.placeOfAccident || '—'}</td>
-  </tr>
-  <tr>
-    <td style="${td}color:#444;font-size:${scale.labelFont};">Police Station</td>
-    <td style="${td}">${accident.policeStation || '—'}</td>
-    <td style="${td}color:#444;font-size:${scale.labelFont};">FIR No. & Date</td>
-    <td style="${td}">${accident.firNumber || '—'} / ${formatDateDMY(accident.firDate)}</td>
-  </tr>
-  <tr>
-    <td style="${td}color:#444;font-size:${scale.labelFont};">Appointment Date</td>
-    <td style="${td}">${formatDateDMY(accident.appointmentDate)}</td>
-    <td style="${td}color:#444;font-size:${scale.labelFont};"></td>
-    <td style="${td}"></td>
-  </tr>
-  <tr>
-    <td style="${td}color:#444;font-size:${scale.labelFont};">Date &amp; Time of Survey</td>
-    <td style="${td}">${formatSurveyDateTime(accident.dateOfSurvey, accident.timeOfSurvey)}</td>
-    <td style="${td}color:#444;font-size:${scale.labelFont};">Place of Survey</td>
-    <td style="${td}">${accident.placeOfSurvey || '—'}</td>
-  </tr>
-  <tr>
-    <td style="${td}color:#444;font-size:${scale.labelFont};">Third Party</td>
-    <td style="${td}" colspan="3">${accident.thirdPartyDetails || 'NIL'}</td>
-  </tr>
-</table>
-
-<div style="font-weight:700;font-size:7pt;background:#0d1b2a;color:#fff;padding:2px 4px;margin-bottom:2px;">7. CAUSE &amp; NATURE OF ACCIDENT</div>
-<div style="font-size:${scale.cellFont};margin-bottom:4px;padding:2px 4px;border:0.4pt solid #bbb;background:#fafaf7;line-height:1.5;">${accident.causeOfAccident || '—'}</div>
-
-<p style="font-size:${scale.cellFont};line-height:1.5;text-align:justify;margin:4px 0;color:#000;">${(claim.reportPreamble && claim.reportPreamble.trim()) ? claim.reportPreamble : preambleFromClaim(claim, estimateTotalInclGst(rows), net)}</p>
+<p style="font-size:${scale.cellFont};line-height:1.5;text-align:justify;margin:4px 0;color:#000;">${isBillCheck
+  ? billCheckPreambleFromClaim(claim, net)
+  : ((claim.reportPreamble && claim.reportPreamble.trim()) ? claim.reportPreamble : preambleFromClaim(claim, estimateTotalInclGst(rows), net))}</p>
 <div style="font-weight:700;font-size:7pt;background:#0d1b2a;color:#fff;padding:2px 4px;margin-bottom:2px;">8. ASSESSMENT SUMMARY</div>
 <table style="${ts}">
   <thead>
     <tr>
       <th style="${th};width:40%;text-align:left;">Head</th>
-      <th style="${th};text-align:right;">Estimated</th>
+      <th style="${th};text-align:right;">${isBillCheck ? 'Billed' : 'Estimated'}</th>
       <th style="${th};text-align:right;">Assessed (after Dep.)</th>
       <th style="${th};text-align:right;">Incl. GST</th>
     </tr>
@@ -605,14 +653,14 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
   `;
 })() : ''}
 
-<div style="font-weight:700;font-size:7pt;background:#0d1b2a;color:#fff;padding:2px 4px;margin-bottom:2px;">9. DETAILS OF ASSESSMENT</div>
+<div style="font-weight:700;font-size:7pt;background:#0d1b2a;color:#fff;padding:2px 4px;margin-bottom:2px;">9. DETAILS OF ${isBillCheck ? 'BILL CHECK' : 'ASSESSMENT'}</div>
 <table style="${ts9}">
   <thead>
     <tr>
       <th style="${th}width:${W.sr}%;text-align:center;">Sr.</th>
       <th style="${th}width:${W.particulars}%;">Particulars</th>
       <th style="${th}width:${W.type}%;text-align:center;">Type</th>
-      <th style="${th}width:${W.est}%;text-align:right;">Est. ₹</th>
+      <th style="${th}width:${W.est}%;text-align:right;">${isBillCheck ? 'Bill ₹' : 'Est. ₹'}</th>
       <th style="${th}width:${W.assessed}%;text-align:right;">Assessed ₹</th>
       <th style="${th}width:${W.dep}%;text-align:center;">Dep%</th>
       <th style="${th}width:${W.material}%;text-align:right;">Metal ₹</th>
@@ -664,10 +712,14 @@ ${getSigBlock(profile)}
 
 export function buildStandardPrintDocument(
   claim: ClaimData,
-  profile: SurveyorProfile
+  profile: SurveyorProfile,
+  mode: ReportMode = 'final'
 ): string {
-  return buildPrintShell(buildStandardFinalSurveyHTML(claim, profile), {
-    title: `Standard Final Survey Report — ${claim.vehicle?.registrationNumber || 'Claim'}`,
+  const reg = claim.vehicle?.registrationNumber || 'Claim';
+  return buildPrintShell(buildStandardFinalSurveyHTML(claim, profile, mode), {
+    title: mode === 'bill-check'
+      ? `Standard Bill Check Report — ${reg}`
+      : `Standard Final Survey Report — ${reg}`,
     footerLeft: footerFromProfile(profile),
     fontSize: '7.8pt',
   });
@@ -677,9 +729,10 @@ export function buildStandardPrintDocument(
 
 export function triggerStandardPrint(
   claim: ClaimData,
-  profile: SurveyorProfile
+  profile: SurveyorProfile,
+  mode: ReportMode = 'final'
 ): void {
-  const html = buildStandardPrintDocument(claim, profile);
+  const html = buildStandardPrintDocument(claim, profile, mode);
   const w = window.open('', '_blank');
   if (!w) {
     alert('Popup blocked — please allow popups for this site and try again.');
