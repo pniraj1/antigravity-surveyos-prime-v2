@@ -9,6 +9,7 @@ import { useProfileStore } from '@/stores/profile-store';
 import { useAIExtraction } from '@/hooks/useAIExtraction';
 import { calculateAssessmentSummary, calculateBillCheckSummary, getVehicleAgeMonths, buildSerialMap } from '@/lib/calculations';
 import { triggerUIICBillCheckPrint, buildUIICBillCheckHTML } from '@/lib/reports/uiic-final-builder';
+import { buildStandardFinalSurveyHTML, triggerStandardPrint } from '@/lib/reports/standard-report-builder';
 
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import { ReportPreviewPanel } from '@/components/shared/ReportPreviewPanel';
@@ -22,15 +23,20 @@ import { ExtraBillItemsPanel } from './bill-check/ExtraBillItemsPanel';
 import { BillCheckSummaryPanel } from './bill-check/BillCheckSummaryPanel';
 import { fmt } from './bill-check/config';
 
-function BillCheckPreview({ claim, profile }: { claim: any; profile: any }) {
+function BillCheckPreview({ claim, profile, format }: { claim: any; profile: any; format: 'standard' | 'uiic' }) {
   const { html, error } = useMemo(() => {
     try {
-      return { html: buildUIICBillCheckHTML(claim, profile), error: null as string | null };
+      return {
+        html: format === 'uiic'
+          ? buildUIICBillCheckHTML(claim, profile)
+          : buildStandardFinalSurveyHTML(claim, profile, 'bill-check'),
+        error: null as string | null,
+      };
     } catch (e: unknown) {
       // A blank preview used to be indistinguishable from an empty claim.
       return { html: '', error: e instanceof Error ? e.message : 'Report could not be built' };
     }
-  }, [claim, profile]);
+  }, [claim, profile, format]);
 
   if (error) {
     return (
@@ -44,10 +50,14 @@ function BillCheckPreview({ claim, profile }: { claim: any; profile: any }) {
   return (
     <ReportPreviewPanel
       html={html}
-      title="UIIC Bill Check Report — Live Preview"
+      title={`${format === 'uiic' ? 'UIIC' : 'Standard'} Bill Check Report — Live Preview`}
       printLabel="Power Print"
-      onPrint={() => triggerUIICBillCheckPrint(claim, profile)}
-      wordFilename={`${claim?.vehicle?.registrationNumber || 'Claim'}-UIIC-Bill-Check`}
+      onPrint={() =>
+        format === 'uiic'
+          ? triggerUIICBillCheckPrint(claim, profile)
+          : triggerStandardPrint(claim, profile, 'bill-check')
+      }
+      wordFilename={`${claim?.vehicle?.registrationNumber || 'Claim'}-${format === 'uiic' ? 'UIIC' : 'Standard'}-Bill-Check`}
       footerLeft={footerFromProfile(profile)}
     />
   );
@@ -66,6 +76,7 @@ export function BillCheckTab() {
   const { profile } = useProfileStore();
 
   const [showEvidence, setShowEvidence] = useState(false);
+  const [format, setFormat] = useState<'standard' | 'uiic'>('standard');
 
   const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview } = useAIExtraction();
 
@@ -157,10 +168,28 @@ export function BillCheckTab() {
 
             {/* Power Print */}
             <div className="rounded-2xl overflow-hidden bg-white border border-border">
-              <div className="px-6 py-4 border-b border-border bg-card">
-                <div className="text-sm font-medium text-foreground">Download UIIC Bill Check Report</div>
-                <div className="text-xs mt-0.5 text-muted-foreground">
-                  Generates the UIIC Bill Check Report — only allowed items, original serial numbers
+              <div className="px-6 py-4 border-b border-border bg-card flex items-center justify-between gap-4">
+                <div>
+                  <div className="text-sm font-medium text-foreground">Download Bill Check Report</div>
+                  <div className="text-xs mt-0.5 text-muted-foreground">
+                    Only allowed items, original serial numbers
+                  </div>
+                </div>
+                <div className="flex gap-1 p-1 rounded-xl bg-neutral-50">
+                  {(['standard', 'uiic'] as const).map(f => (
+                    <button
+                      key={f}
+                      onClick={() => setFormat(f)}
+                      className="px-4 py-2 rounded-lg text-xs font-medium transition-all"
+                      style={{
+                        background: format === f ? 'var(--color-card, #FFFFFF)' : 'transparent',
+                        color: format === f ? 'var(--color-primary)' : 'var(--color-neutral-400)',
+                        boxShadow: format === f ? '0 2px 8px rgba(0,0,0,0.05)' : 'none',
+                      }}
+                    >
+                      {f === 'uiic' ? 'UIIC' : 'Standard'}
+                    </button>
+                  ))}
                 </div>
               </div>
               <div className="p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
@@ -172,12 +201,16 @@ export function BillCheckTab() {
                 </div>
                 <button
                   id="btn-print-bill-check"
-                  onClick={() => currentClaim && triggerUIICBillCheckPrint(currentClaim, profile)}
+                  onClick={() =>
+                    currentClaim && (format === 'uiic'
+                      ? triggerUIICBillCheckPrint(currentClaim, profile)
+                      : triggerStandardPrint(currentClaim, profile, 'bill-check'))
+                  }
                   className="inline-flex items-center gap-2.5 px-6 py-3 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 hover:scale-105 active:scale-95 bg-primary text-primary-foreground"
                   style={{ boxShadow: '0 4px 14px rgba(13,27,42,0.3)' }}
                 >
                   <Printer size={16} />
-                  Power Print — UIIC Bill Check Report
+                  Power Print — {format === 'uiic' ? 'UIIC' : 'Standard'} Bill Check
                 </button>
               </div>
             </div>
@@ -188,13 +221,13 @@ export function BillCheckTab() {
             >
               <FileText size={16} className="text-primary flex-shrink-0 mt-0.5" />
               <div className="text-xs text-foreground" style={{ lineHeight: 1.6 }}>
-                <strong>Note:</strong> The UIIC Bill Check Report will open in a new tab. Use your browser&apos;s print dialog
+                <strong>Note:</strong> The Bill Check Report will open in a new tab. Use your browser&apos;s print dialog
                 (Ctrl+P / ⌘P) to save as PDF. Ensure &quot;Background graphics&quot; is enabled in print settings for
                 full colour output.
               </div>
             </div>
 
-            <BillCheckPreview claim={currentClaim} profile={profile} />
+            <BillCheckPreview claim={currentClaim} profile={profile} format={format} />
           </div>
         </Panel>
 
