@@ -89,7 +89,10 @@ Only labels and one cell. It does not thread through the calculations.
 
 | Location | `final` | `bill-check` |
 |---|---|---|
-| Document title | `MOTOR (FINAL) SURVEY REPORT` | `MOTOR BILL CHECK REPORT (FINAL)` |
+| Document title | `MOTOR (FINAL) SURVEY REPORT` | `MOTOR BILL CHECK REPORT` |
+| §3, §7 | rendered | omitted |
+| §4 | `ACCIDENT & SURVEY DETAILS` | `WORKSHOP INVOICE & BILL REFERENCE` |
+| §9 heading | `DETAILS OF ASSESSMENT` | `DETAILS OF BILL CHECK` |
 | §9 main header ([:615](../../src/lib/reports/standard-report-builder.ts)) | `Est. ₹` | `Bill ₹` |
 | §9 labour/paint sub-header ([:301](../../src/lib/reports/standard-report-builder.ts)) | `Est. ₹` | `Bill ₹` |
 | §8 summary column | `Estimated` | `Billed` |
@@ -97,6 +100,45 @@ Only labels and one cell. It does not thread through the calculations.
 | Preamble ([:470](../../src/lib/reports/standard-report-builder.ts)) | estimate wording | bill wording |
 
 The §8 columns at [:128-132](../../src/lib/reports/standard-report-builder.ts) sum `r.estimated` and therefore pick up the bill figures for free once the rows are projected.
+
+### Report structure — the Final Survey Report's format, minus the narrative
+
+The document must read as the Standard Final Survey Report, not as a new form. It keeps that report's header, section numbering, section styling and signature block; only the narrative sections the final report already establishes are dropped.
+
+| Element | Source | In bill check |
+|---|---|---|
+| Surveyor header | `getSurveyorHeader()` ([report-utils.ts:91](../../src/lib/reports/report-utils.ts)) | **Verbatim** — centred name at 13pt, qualifications, `INSURANCE SURVEYOR, LOSS ASSESSOR & VALUER`, then the licence / expiry / IIISLA / e-mail / cell row |
+| Title | — | `PRIVATE AND CONFIDENTIAL — MOTOR BILL CHECK REPORT` |
+| Top policy table | [:314-338](../../src/lib/reports/standard-report-builder.ts) | **Kept**, plus a Final Survey Report No. / date row tying the two documents |
+| §1 Insurer & Insured | [:341](../../src/lib/reports/standard-report-builder.ts) | **Verbatim** — insurer name, appointing office, insured name/mobile/address, H.P.A. |
+| §2 Vehicle Particulars | [:363](../../src/lib/reports/standard-report-builder.ts) | **Verbatim** |
+| §3 Driver's Particulars | [:403](../../src/lib/reports/standard-report-builder.ts) | Omitted |
+| §4 Accident & Survey | [:435](../../src/lib/reports/standard-report-builder.ts) | **Replaced** by `4. WORKSHOP INVOICE & BILL REFERENCE` |
+| §7 Cause & Nature | [:467](../../src/lib/reports/standard-report-builder.ts) | Omitted |
+| §8 Assessment Summary | [:471](../../src/lib/reports/standard-report-builder.ts) | Kept, `Estimated` → `Billed` |
+| §9 Details of Assessment | [:608](../../src/lib/reports/standard-report-builder.ts) | Kept as `DETAILS OF BILL CHECK`, `Est. ₹` → `Bill ₹` |
+| GST summaries (HSN, SAC) | [:406-409](../../src/lib/reports/standard-report-builder.ts) | Kept |
+| Signature block | `getSigBlock()` ([report-utils.ts:117](../../src/lib/reports/report-utils.ts)) | **Verbatim** |
+
+Original section numbers are preserved rather than renumbered, so a reader moving between the two documents finds the same content under the same number. The gaps at 3 and 7 follow the house style, which already skips 5 and 6.
+
+**§4 WORKSHOP INVOICE & BILL REFERENCE** is what identifies the document as a bill check: workshop name, then **Bill / Invoice No., Bill / Invoice Date and Total Bill Amount (incl. GST)** — all three entered on the Bill Check tab — set against the figure this report allows.
+
+### Field provenance — nothing prints without an input
+
+Every field on the page must have a screen that writes it. Audited:
+
+| Field | Input | Verdict |
+|---|---|---|
+| `billCheck.billNo` / `billDate` / `billTotal` | [BillCheckUploadPanel:37/49/60](../../src/components/tabs/bill-check/BillCheckUploadPanel.tsx) | Include — critical |
+| `accident.workshopName` | [AccidentForm:138](../../src/components/claim/AccidentForm.tsx) | Include |
+| `reportNo`, `reportDate`, `policy.*` | claim record | Include |
+| `reinspection.actualCompletionDate` | Reinspection tab only | **Exclude** — blank without a reinspection |
+| `reinspection.repairsAsAssessed` | Reinspection tab only | **Exclude** — same |
+| `reinspection.repairAuthDate` | **none — no screen writes it** | **Exclude** |
+| `reinspection.estCompletionDate` | **none** | **Exclude** |
+
+`repairAuthDate` and `estCompletionDate` exist in `ReinspectionDetails` and default to `''` ([claim.ts:362](../../src/types/claim.ts)), but no component writes either. They are printed today by the UIIC reports and are always blank there.
 
 ### §9 columns
 
@@ -257,6 +299,14 @@ One vitest file, `standard-bill-check.test.ts`:
 Plus one grid test, `grid-columns.test.ts`:
 
 8. Every column key rendered by either grid resolves to a label in the shared config — so a column can never again carry two names, which is the defect this alignment exists to fix
+
+---
+
+## Found in passing — not fixed here
+
+**The UIIC Bill Check Report certifies something nobody said.** [uiic-final-builder.ts:752](../../src/lib/reports/uiic-final-builder.ts) prints `Repairs As Per Assessment` as `g(ri?.repairsAsAssessed) || 'YES'`. `repairsAsAssessed` is written only by the Reinspection tab, so on any claim without a reinspection the report tells the insurer **YES** — a certification the surveyor never made. A blank cell would be honest; a defaulted "YES" is a statement of fact in a document an insurer relies on.
+
+Out of scope for this spec, which does not touch the UIIC builder. Worth its own fix.
 
 ---
 
