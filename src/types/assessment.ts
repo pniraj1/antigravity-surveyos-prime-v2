@@ -48,6 +48,12 @@ export interface AssessmentRow {
   billedAmount?: number;
   billStatus?: BillStatus;
   billRemarks?: string;
+  /**
+   * Bill-check allowance, pre-GST. When set, the Bill Check report uses this
+   * in place of `assessed`. The Final Survey Report never reads it, so allowing
+   * a workshop's higher figure cannot rewrite a report already filed.
+   */
+  billAllowed?: number;
   partType: PartType;
   /**
    * The partType this row carried before it was last moved out of the `parts`
