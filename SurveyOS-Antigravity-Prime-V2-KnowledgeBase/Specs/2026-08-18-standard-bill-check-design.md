@@ -36,9 +36,11 @@ Produce a Standard Bill Check Report that is the Standard Final Survey Report wi
 **In scope — report:**
 - `mode: 'final' | 'bill-check'` on the existing Standard builder
 - A pure row projection that moves the bill figure into the estimate slot and zeroes unreplaced parts
-- `PENDING` rendering for rows with no bill figure recorded
 - Format toggle (Standard | UIIC) on the Bill Check tab, mirroring [ReportTab.tsx:58](../../src/components/tabs/ReportTab.tsx)
 - Bill-check variant of the report preamble
+- `billAllowed?: number` on `AssessmentRow`, so a bill-check allowance cannot rewrite an issued Final Survey Report
+- Scope dialog when an Assessed edit in Bill Check diverges from the assessed figure
+- Print gate resolving `pending` rows, plus a missing-remark disclaimer
 
 **In scope — screen:**
 - Align the Bill Check grid's columns, labels and order with the Assessment grid
@@ -47,8 +49,8 @@ Produce a Standard Bill Check Report that is the Standard Final Survey Report wi
 - Correct `Assessed Tax (₹)`, which renders `row.estimated`
 
 **Out of scope:**
-- Any new field on `AssessmentRow` — none is required
 - Any change to `calculateAssessmentSummary`, `aggregateGst`, `computeRowNet` or `computeRowLiability`
+- Snapshotting the Final Survey Report at issue. `billAllowed` solves the case at hand; a general snapshot is the broader fix and its own piece of work
 - Any change to the UIIC Bill Check Report, including its known not-in-bill total mismatch (tracked separately)
 - A second Bill Check tab — the existing grid already collects every input this report needs
 - Merging `BillCheckGrid` into `AssessmentSectionTable` — considered and declined; see *Screen* below
@@ -65,18 +67,21 @@ The report is the Standard Final Survey Report rendered over projected rows. Not
 
 ```ts
 // ponytail: bill check IS the final report over projected rows. The estimate
-// slot carries the bill figure, and a part that was never replaced carries no
-// money. Every existing calculation then works untouched.
+// slot carries the bill figure, billAllowed overrides the assessed figure for
+// this document only, and a part that was never replaced carries no money.
+// Every existing calculation then works untouched.
 export function projectForBillCheck(rows: AssessmentRow[]): AssessmentRow[] {
   return rows.map(r =>
     r.billStatus === 'not-in-bill'
       ? { ...r, estimated: 0, assessed: 0 }
-      : { ...r, estimated: r.billedTaxable ?? 0 }
+      : { ...r, estimated: r.billedTaxable ?? 0, assessed: r.billAllowed ?? r.assessed }
   );
 }
 ```
 
 Immutable, per the project's immutability rule. Because `assessed` is what every money path already reads, zeroing it is sufficient to remove an unreplaced part from §8, the GST tables and the net liability — with no arithmetic changes anywhere.
+
+`billAllowed` is the one new field, and it exists so that a bill-check decision cannot rewrite an already-issued Final Survey Report. See *Allowing a figure above the assessed value* below.
 
 ### What `mode` actually controls
 
@@ -107,7 +112,7 @@ No Variance column and no Remarks column: with Bill sitting beside Assessed, the
 |---|---|---|---|
 | `allowed === false` | — | — | **No** — excluded, as today |
 | `billStatus === 'not-in-bill'` | `0` | zeroed | Yes — visible, carries no money |
-| `billedTaxable` undefined | `PENDING` | assessed stands | Yes |
+| `billStatus === 'pending'` | `PENDING` | — | **No** — printing is blocked until resolved; see *Print gate* |
 | otherwise | `billedTaxable` | assessed stands | Yes |
 
 `not-in-bill` covers both real cases — *"should have been billed and wasn't"* and *"the part was never put"*. The row printing with zeros lets the insurer see that a part was assessed and not replaced, and the saving is self-evident from the assessed column beside it.
@@ -123,9 +128,22 @@ On final-bill extraction, items matching no assessment row trigger the existing 
 
 ### Allowing a figure above the assessed value
 
-There is no override field. Because the bill check's money column *is* `assessed`, allowing more means editing `assessed` in the grid — normally on the strength of a supplementary estimate.
+The common case: estimate ₹1,000, assessed ₹1,000 at final survey, workshop bills ₹1,200 for a standard part, and the surveyor decides to allow ₹1,200.
 
-**This is a deliberate trade with a consequence:** both reports read the same field, so raising a figure retroactively changes the Final Survey Report that was already submitted. That is defensible when a supplementary estimate exists (a supplementary *is* a revised assessment) and wrong when one does not. The design does not enforce the distinction; the surveyor does.
+**The problem this solves.** There is one `assessmentRows` array on the claim and one `updateAssessmentRow` action ([assessmentSlice.ts:69](../../src/stores/slices/assessmentSlice.ts)), which both grids call. No snapshot of an issued report exists anywhere in `ClaimData` — the `version` field ([claim.ts:61](../../src/types/claim.ts)) is a cloud-sync counter, never bumped by local edits. So editing `assessed` during bill check silently rewrites the Final Survey Report that was already filed: same report number, different figure, no history. On a routine claim, not an edge case.
+
+**The design.** A new optional field, `billAllowed?: number` (pre-GST basis). The surveyor types 1,200 into the same Assessed cell in the Bill Check grid; on committing a value that differs from `assessed`, a dialog asks how far the change should reach:
+
+| Choice | Writes | Final Survey Report |
+|---|---|---|
+| **Bill Check only** | `billAllowed = 1200`, `assessed` stays 1000 | Unchanged — still prints 1,000 |
+| **Both** | `assessed = 1200`, `billAllowed` cleared | Reprints as 1,200 |
+
+"Both" is the right answer when a supplementary estimate revised the assessment; "Bill Check only" is right when the surveyor is simply allowing the bill. The dialog states plainly that "Both" changes a report that may already be with the insurer.
+
+Asked once per row, on the first divergent edit. Later adjustments to the same row keep the scope already chosen, so tuning a figure does not re-prompt.
+
+The Final Survey Report never reads `billAllowed`, so it cannot be affected by a bill-check decision — by construction, not by discipline.
 
 ---
 
@@ -176,13 +194,20 @@ Assessment fields stay **editable** in the Bill Check grid, exactly as in the As
 
 ---
 
-## Open decision — confirm at review
+## Print gate: no bill check on an incomplete bill
 
-**Do PENDING rows carry their assessed money into the totals?**
+A bill check is not issued while the bill is still pending. `pending` is not a state the report should ever have to render — it means the workshop has not given a figure for that item, and the surveyor must say what that means before the document exists.
 
-This spec assumes **yes**: an unchecked row keeps its assessed value, and the report carries a visible banner stating how many items are unverified. Rationale: nothing has been decided that would reduce the figure, so the assessment stands until checked.
+**On Power Print, if any allowed row is still `pending`**, printing is blocked and a dialog lists those rows, offering to resolve each one:
 
-The risk is a bill check issued mid-check whose net liability includes unverified items. The banner is the mitigation, not a guarantee. The alternative — zeroing pending rows — understates liability just as wrongly. If the preference is that an incomplete bill check must not print at all, say so and it becomes a gate on the print button instead.
+- **Not in Bill** — the part was not replaced, or was not billed. Sets `billStatus: 'not-in-bill'`, `billedTaxable: 0`; the row prints at zero and carries no liability.
+- **Go back and edit** — returns to the grid to enter the billed figure.
+
+Bulk-resolve for the common case where several items are simply absent from the bill.
+
+**Disclaimer before printing.** If rows carry no `billRemarks` where one is expected — any `not-in-bill` row, or any row where billed differs from allowed — a disclaimer is shown before the print proceeds. It does not block: a missing remark is a documentation gap, not a wrong number.
+
+Consequence for the report: `PENDING` cannot reach the PDF, so §8 needs no pending banner. The `PENDING` cell rendering is kept as a cheap fallback only — a blank cell is a worse failure than a labelled one — but no reachable path produces it.
 
 ---
 
@@ -193,7 +218,8 @@ The risk is a bill check issued mid-check whose net liability includes unverifie
 | File | Change |
 |---|---|
 | `src/lib/reports/bill-check-projection.ts` | **New** — `projectForBillCheck`, ~10 lines |
-| `src/lib/reports/standard-report-builder.ts` | `mode` param; 2 header labels; §8 label; PENDING cell; title; preamble branch |
+| `src/types/assessment.ts` | `billAllowed?: number` on `AssessmentRow` |
+| `src/lib/reports/standard-report-builder.ts` | `mode` param; 2 header labels; §8 label; PENDING fallback cell; title; preamble branch |
 | `src/lib/reports/final-survey-preamble.ts` | Bill-check preamble variant |
 | `src/components/tabs/BillCheckTab.tsx` | Standard \| UIIC toggle; route preview and Power Print through it |
 | `src/lib/reports/__tests__/standard-bill-check.test.ts` | **New** |
@@ -207,6 +233,8 @@ The risk is a bill check issued mid-check whose net liability includes unverifie
 | `src/components/tabs/bill-check/config.ts` | Re-point at the shared module |
 | `src/components/tabs/bill-check/BillCheckGrid.tsx` | Adopt Assessment's column set, labels and order; add `Dep%`, `Net`, `Price+GST`, `Disposal`, `Action`, Allowed toggle; rename `Billed Tax` → `Billed Taxable`; remove `Billed Incl GST` |
 | `src/components/claim/AssessmentSectionTable.tsx` | Consume the shared config; `Section` optional, default off |
+| `src/components/dialogs/AllowanceScopeDialog.tsx` | **New** — Bill Check only / Both, on a divergent Assessed edit |
+| `src/components/dialogs/PendingRowsDialog.tsx` | **New** — resolve `pending` rows before printing |
 
 `buildStandardPrintDocument` ([:665](../../src/lib/reports/standard-report-builder.ts)) and `triggerStandardPrint` ([:678](../../src/lib/reports/standard-report-builder.ts)) take a `mode` passthrough.
 
@@ -218,9 +246,9 @@ The builder grows to roughly 710 lines, within the 800 limit. Extending it rathe
 
 One vitest file, `standard-bill-check.test.ts`:
 
-1. `projectForBillCheck` moves `billedTaxable` into `estimated` and leaves `assessed` alone
+1. `projectForBillCheck` moves `billedTaxable` into `estimated`, and uses `billAllowed` for `assessed` when set
 2. A `not-in-bill` row projects to `estimated: 0, assessed: 0`
-3. A row with undefined `billedTaxable` projects to `estimated: 0` and renders `PENDING`
+3. **`billAllowed` never reaches the Final Survey Report** — `buildStandardFinalSurveyHTML` over rows carrying `billAllowed: 1200, assessed: 1000` prints 1,000. This is the regression guard for the whole design
 4. `allowed: false` rows stay out of the rendered HTML
 5. §8 totals over projected rows equal `calculateAssessmentSummary` over the same projected rows — i.e. the summary and the table cannot disagree
 6. Projection is immutable: the input array and its rows are unmodified
@@ -234,7 +262,8 @@ Plus one grid test, `grid-columns.test.ts`:
 
 ## Risks
 
-- **Retroactive edits to `assessed`** rewrite an already-issued Final Survey Report. Documented above; not enforced in code.
+- **"Both" still rewrites an issued report.** `billAllowed` removes the *silent* case, not the deliberate one. Choosing "Both" changes a filed document, which is correct when a supplementary estimate exists and wrong otherwise. The dialog states the consequence; it does not verify the supplementary exists.
+- **Rows edited before this ships** carry no `billAllowed`, so existing claims behave exactly as today. No migration.
 - **`billedTaxable` vs `billedAmount`.** The projection must use `billedTaxable` (pre-GST). Using `billedAmount` would feed a GST-inclusive figure into a column the builder then taxes again — the same class of error that produced a ~31% overstatement in the UIIC builder ([:560-563](../../src/lib/reports/uiic-final-builder.ts)).
 - **The two grids can drift again.** Keeping both components is a deliberate trade for a smaller blast radius. The shared config module and test 8 are the structural guards; neither prevents a future column being added to one grid and not the other.
 - **Verification limits.** This is an auth-gated screen needing real claim data; correctness will be established by the unit tests above, not by running the dev server.
