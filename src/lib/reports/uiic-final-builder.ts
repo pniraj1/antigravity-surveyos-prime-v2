@@ -358,7 +358,7 @@ ${getSurveyorHeader(profile)}
 
     const depAmt = isNA ? '' : fa(r.assessed - afterDep);
 
-    return bandHtml + `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : serviceDepLabel(r, dep)}</td><td style="${td}text-align:right;">${depAmt}</td><td style="${td}"></td><td style="${td}text-align:center;">${isNA ? '' : String(r.gst ?? 0)}</td><td style="${td}text-align:right;">${isNA ? '' : fa(withGst)}</td><td style="${td}text-align:center;">${isNA ? 'Not<br/>Allowed' : ''}</td></tr>`;
+    return bandHtml + `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : serviceDepLabel(r, dep)}</td><td style="${td}text-align:right;">${depAmt}</td><td style="${td}"></td><td style="${td}text-align:center;">${isNA ? '' : String(r.gst ?? 0)}</td><td style="${td}"></td><td style="${td}text-align:right;">${isNA ? 'Not<br/>Allowed' : fa(withGst)}</td></tr>`;
   }).join('');
 
   // Disallowed paint is listed and tagged, exactly as parts and labour are.
@@ -395,7 +395,7 @@ ${getSurveyorHeader(profile)}
 </table>
 <div style="${sec}">DETAILS OF ASSESSMENT</div>
 <table style="${ts}font-size:7pt;">
-<thead><tr><th style="${th}">SR.</th><th style="${th}text-align:left;">Part Name</th><th style="${th}">Part<br/>Type</th><th style="${th}">Job<br/>Type</th><th style="${th}">Part List<br/>W/o Tax</th><th style="${th}">Dep%</th><th style="${th}">Dep<br/>Amt</th><th style="${th}">Parts<br/>Assess</th><th style="${th}">GST%</th><th style="${th}">With GST</th><th style="${th}">Labour</th></tr></thead><tbody>
+<thead><tr><th style="${th}">SR.</th><th style="${th}text-align:left;">Part Name</th><th style="${th}">Part<br/>Type</th><th style="${th}">Job<br/>Type</th><th style="${th}">Part List<br/>W/o Tax</th><th style="${th}">Dep%</th><th style="${th}">Dep<br/>Amt</th><th style="${th}">Parts<br/>Assess</th><th style="${th}">GST%</th><th style="${th}">Part with<br/>GST</th><th style="${th}">Labour with<br/>GST</th></tr></thead><tbody>
 <tr><td colspan="11" style="${sec}">SPARE PARTS</td></tr>${pHtml}
 <tr><td colspan="11" style="${sec}">LABOUR</td></tr>${lHtml}
 <tr><td colspan="11" style="${sec}">PAINTING CHARGES</td></tr>${ptHtml}
