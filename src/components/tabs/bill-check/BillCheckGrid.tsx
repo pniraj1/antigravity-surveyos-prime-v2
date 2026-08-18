@@ -16,6 +16,7 @@ import {
   loadVisibility, saveVisibility, statusLabel, type BillStatus,
 } from './config';
 import { GRID_COLUMNS } from '@/components/claim/grid-columns';
+import { AllowanceScopeDialog } from '@/components/dialogs/AllowanceScopeDialog';
 
 interface Props {
   allRows: AssessmentRow[];
@@ -53,7 +54,26 @@ export function BillCheckGrid({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [visible, setVisible] = useState<Record<OptionalColumn, boolean>>(DEFAULT_VISIBLE);
   const [showSettings, setShowSettings] = useState(false);
+  const [pendingAllowance, setPendingAllowance] = useState<{ id: string; assessed: number; proposed: number } | null>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * Allowing above the assessed figure means editing `assessed` — the field
+   * both this grid and the Final Survey Report read, with no snapshot of an
+   * issued report anywhere. Writing it directly would silently reprint a
+   * report already filed. `billAllowed` is bill-check-only; the surveyor
+   * chooses to also touch `assessed` via AllowanceScopeDialog.
+   *
+   * A row that already carries billAllowed, or a value equal to assessed,
+   * does not re-prompt — only the first divergent edit asks.
+   */
+  const commitAllowance = (row: AssessmentRow, value: number) => {
+    if (value === row.assessed || row.billAllowed !== undefined) {
+      updateAssessmentRow(row.id, { billAllowed: value });
+      return;
+    }
+    setPendingAllowance({ id: row.id, assessed: row.assessed, proposed: value });
+  };
 
   useEffect(() => { setVisible(loadVisibility()); }, []);
   useEffect(() => {
@@ -218,6 +238,7 @@ export function BillCheckGrid({
   }
 
   return (
+    <>
     <div className="rounded-2xl overflow-hidden bg-card border border-border">
       {/* Grid header / toolbar */}
       <div className="px-6 py-4 flex items-start justify-between gap-4" style={{ borderBottom: '1px solid var(--color-neutral-100)', background: 'var(--color-neutral-50)' }}>
@@ -399,7 +420,18 @@ export function BillCheckGrid({
                 {visible.quantity      && <div className="text-sm font-medium text-center" style={{ color: 'var(--color-neutral-600)' }}>{row.quantity ?? '—'}</div>}
                 {visible.unitPrice     && <div className="text-sm font-medium" style={{ color: 'var(--color-neutral-600)' }}>{fmt(row.estimated || 0)}</div>}
                 {visible.gst           && <div className="text-xs font-medium text-center" style={{ color: 'var(--color-neutral-600)' }}>{row.gst ?? 18}%</div>}
-                <div className="text-sm font-medium text-foreground">{fmt(row.assessed)}</div>
+                <input
+                  type="number"
+                  value={row.billAllowed ?? row.assessed ?? ''}
+                  onChange={e => commitAllowance(row, Number(e.target.value) || 0)}
+                  disabled={isDisallowed}
+                  title={row.billAllowed !== undefined ? `Allowed above the assessed value of ₹${row.assessed}` : undefined}
+                  className="px-2 py-1 rounded-lg text-sm text-right border outline-none w-full border-border font-medium"
+                  style={{
+                    background: isDisallowed ? 'var(--color-neutral-100)' : 'var(--color-neutral-50)',
+                    color: row.billAllowed !== undefined ? 'var(--color-status-warning)' : 'var(--color-foreground)',
+                  }}
+                />
                 <div className="text-xs font-medium text-center" style={{ color: row.depOverride !== undefined ? 'var(--color-status-warning)' : 'var(--color-status-danger)' }}>
                   {row.depOverride !== undefined ? `${row.depOverride}%*` : `${depRateFor(row)}%`}
                 </div>
@@ -512,5 +544,23 @@ export function BillCheckGrid({
         </div>
       </div>
     </div>
+
+    {pendingAllowance && (
+      <AllowanceScopeDialog
+        assessed={pendingAllowance.assessed}
+        proposed={pendingAllowance.proposed}
+        onCancel={() => setPendingAllowance(null)}
+        onChoose={scope => {
+          updateAssessmentRow(
+            pendingAllowance.id,
+            scope === 'both'
+              ? { assessed: pendingAllowance.proposed, billAllowed: undefined }
+              : { billAllowed: pendingAllowance.proposed },
+          );
+          setPendingAllowance(null);
+        }}
+      />
+    )}
+    </>
   );
 }
