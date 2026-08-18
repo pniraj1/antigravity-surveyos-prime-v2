@@ -13,6 +13,7 @@ import {
   OptionalColumn, OPTIONAL_COLUMNS, DEFAULT_VISIBLE, COL_WIDTHS,
   loadVisibility, saveVisibility, statusLabel, type BillStatus,
 } from './config';
+import { GRID_COLUMNS } from '@/components/claim/grid-columns';
 
 interface Props {
   allRows: AssessmentRow[];
@@ -65,11 +66,11 @@ export function BillCheckGrid({
   const visibleCount = Object.values(visible).filter(Boolean).length;
 
   const buildCols = () => {
-    const detailCols = (['partNumber', 'hsnSac', 'section', 'quantity', 'taxable', 'gst'] as OptionalColumn[])
+    const detailCols = (['partNumber', 'hsnSac', 'section', 'quantity', 'unitPrice', 'gst'] as OptionalColumn[])
       .filter(k => visible[k]).map(k => COL_WIDTHS[k]);
     const billedTaxCol = visible.billedTaxable ? [COL_WIDTHS.billedTaxable] : [];
     const remarksCol = visible.remarks ? [COL_WIDTHS.remarks] : [];
-    return ['32px', '50px', '2fr', ...detailCols, '100px', ...billedTaxCol, '110px', '120px', ...remarksCol, '40px'].join(' ');
+    return ['32px', '50px', '2fr', ...detailCols, '100px', ...billedTaxCol, '120px', ...remarksCol, '40px'].join(' ');
   };
   const gridCols = buildCols();
 
@@ -136,11 +137,10 @@ export function BillCheckGrid({
         {visible.hsnSac        && <span>HSN/SAC</span>}
         {visible.section       && <span>Section</span>}
         {visible.quantity      && <span>Qty</span>}
-        {visible.taxable       && <span>Assessed Tax (₹)</span>}
-        {visible.gst           && <span>GST%</span>}
+        {visible.unitPrice     && <span>{GRID_COLUMNS.unitPrice.label}</span>}
+        {visible.gst           && <span>{GRID_COLUMNS.gst.label}</span>}
         <span>Assessed (₹)</span>
-        {visible.billedTaxable && <span>Billed Tax (₹)</span>}
-        <span>Billed Incl GST (₹)</span>
+        {visible.billedTaxable && <span>{GRID_COLUMNS.billedTaxable.label} (₹)</span>}
         <span>Status</span>
         {visible.remarks       && <span>Remarks</span>}
         <span></span>
@@ -173,11 +173,10 @@ export function BillCheckGrid({
         {visible.hsnSac        && <div />}
         {visible.section       && <div />}
         {visible.quantity      && <div />}
-        {visible.taxable       && <div className="text-sm font-medium" style={money}>{fmt(t.estimated)}</div>}
+        {visible.unitPrice     && <div className="text-sm font-medium" style={money}>{fmt(t.estimated)}</div>}
         {visible.gst           && <div />}
         <div className="text-sm font-medium" style={money}>{fmt(t.assessed)}</div>
         {visible.billedTaxable && <div className="text-sm font-medium text-primary">{fmt(t.billedTaxable)}</div>}
-        <div className="text-sm font-medium text-primary">{fmt(t.billedAmount)}</div>
         <div className={`text-xs font-medium ${onDark ? 'text-white/50' : 'text-muted-foreground'}`}>
           {fmt(t.notInBill)} not claimed
         </div>
@@ -381,7 +380,7 @@ export function BillCheckGrid({
                 {visible.hsnSac        && <div className="text-xs font-mono" style={{ color: 'var(--color-neutral-600)' }}>{row.hsnSac || '—'}</div>}
                 {visible.section       && <div><span className="text-[9px] font-medium px-2 py-0.5 rounded-full uppercase tracking-wider" style={{ background: 'var(--color-neutral-100)', color: 'var(--color-neutral-600)' }}>{row.section}</span></div>}
                 {visible.quantity      && <div className="text-sm font-medium text-center" style={{ color: 'var(--color-neutral-600)' }}>{row.quantity ?? '—'}</div>}
-                {visible.taxable       && <div className="text-sm font-medium" style={{ color: 'var(--color-neutral-600)' }}>{fmt(row.estimated || 0)}</div>}
+                {visible.unitPrice     && <div className="text-sm font-medium" style={{ color: 'var(--color-neutral-600)' }}>{fmt(row.estimated || 0)}</div>}
                 {visible.gst           && <div className="text-xs font-medium text-center" style={{ color: 'var(--color-neutral-600)' }}>{row.gst ?? 18}%</div>}
                 <div className="text-sm font-medium text-foreground">{fmt(row.assessed)}</div>
                 {visible.billedTaxable && (
@@ -398,14 +397,6 @@ export function BillCheckGrid({
                     style={{ background: isDisallowed || row.billStatus === 'not-in-bill' ? 'var(--color-neutral-100)' : 'var(--color-neutral-50)' }}
                   />
                 )}
-                <input
-                  type="number"
-                  value={row.billedAmount || ''}
-                  onChange={e => updateAssessmentRow(row.id, { billedAmount: Number(e.target.value) })}
-                  disabled={isDisallowed || row.billStatus === 'not-in-bill'}
-                  className="px-2 py-1 rounded-lg text-sm text-right border outline-none w-full border-border text-foreground"
-                  style={{ background: isDisallowed || row.billStatus === 'not-in-bill' ? 'var(--color-neutral-100)' : 'var(--color-neutral-50)' }}
-                />
                 {isDisallowed ? (
                   <div
                     className="px-2 py-1 rounded-lg text-[10px] font-medium text-center border border-border"

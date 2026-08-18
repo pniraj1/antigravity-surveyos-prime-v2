@@ -1,12 +1,24 @@
+import { GRID_COLUMNS } from '@/components/claim/grid-columns';
+
+// Labels and widths are sourced from the shared grid-columns module, so this
+// grid cannot re-name a column the Assessment grid already named differently.
+// The set of columns that are actually optional here — and their order in the
+// column-visibility picker — stays local, since not every shared column has a
+// renderer in this grid yet.
+
 export type OptionalColumn =
   | 'partNumber'
   | 'hsnSac'
   | 'section'
   | 'quantity'
-  | 'taxable'
+  | 'unitPrice'
   | 'gst'
   | 'billedTaxable'
   | 'remarks';
+
+const OPTIONAL_COLUMN_ORDER: OptionalColumn[] = [
+  'partNumber', 'hsnSac', 'section', 'quantity', 'unitPrice', 'gst', 'billedTaxable', 'remarks',
+];
 
 export interface ColumnMeta {
   key: OptionalColumn;
@@ -14,38 +26,26 @@ export interface ColumnMeta {
   description: string;
 }
 
-export const OPTIONAL_COLUMNS: ColumnMeta[] = [
-  { key: 'partNumber',    label: 'Part No.',         description: 'OEM part number' },
-  { key: 'hsnSac',        label: 'HSN/SAC',          description: 'Tax classification code' },
-  { key: 'section',       label: 'Section',          description: 'Parts / Labour / Paint' },
-  { key: 'quantity',      label: 'Qty',              description: 'Quantity' },
-  { key: 'taxable',       label: 'Assessed Taxable', description: 'Assessed taxable (net) amount before GST' },
-  { key: 'gst',           label: 'GST %',            description: 'GST percentage' },
-  { key: 'billedTaxable', label: 'Billed Taxable',   description: 'Billed taxable (net) amount before GST' },
-  { key: 'remarks',       label: 'Remarks',          description: 'Surveyor notes' },
-];
+export const OPTIONAL_COLUMNS: ColumnMeta[] = OPTIONAL_COLUMN_ORDER.map(key => ({
+  key,
+  label: GRID_COLUMNS[key].label,
+  description: GRID_COLUMNS[key].description,
+}));
 
 export const DEFAULT_VISIBLE: Record<OptionalColumn, boolean> = {
   partNumber: false,
   hsnSac: false,
-  section: true,
+  section: false, // both grids already group by section — the column repeats its own heading
   quantity: false,
-  taxable: true,
+  unitPrice: true,
   gst: true,
   billedTaxable: true,
   remarks: true,
 };
 
-export const COL_WIDTHS: Record<OptionalColumn, string> = {
-  partNumber: '110px',
-  hsnSac: '80px',
-  section: '70px',
-  quantity: '50px',
-  taxable: '100px',
-  gst: '60px',
-  billedTaxable: '110px',
-  remarks: '1fr',
-};
+export const COL_WIDTHS: Record<OptionalColumn, string> = Object.fromEntries(
+  OPTIONAL_COLUMN_ORDER.map(key => [key, GRID_COLUMNS[key].width]),
+) as Record<OptionalColumn, string>;
 
 export const STORAGE_KEY = 'surveyos-billcheck-grid-columns';
 
