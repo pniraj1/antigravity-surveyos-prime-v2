@@ -10,9 +10,11 @@ import { useAIExtraction } from '@/hooks/useAIExtraction';
 import { calculateAssessmentSummary, calculateBillCheckSummary, getVehicleAgeMonths, buildSerialMap } from '@/lib/calculations';
 import { triggerUIICBillCheckPrint, buildUIICBillCheckHTML } from '@/lib/reports/uiic-final-builder';
 import { buildStandardFinalSurveyHTML, triggerStandardPrint } from '@/lib/reports/standard-report-builder';
+import { rowsNeedingRemark } from '@/lib/reports/bill-check-projection';
 
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import { PendingRowsDialog } from '@/components/dialogs/PendingRowsDialog';
+import { MissingRemarkDialog } from '@/components/dialogs/MissingRemarkDialog';
 import { ReportPreviewPanel } from '@/components/shared/ReportPreviewPanel';
 import { footerFromProfile } from '@/lib/reports/print-shell';
 import { DocumentEvidenceViewer } from '@/components/evidence/DocumentEvidenceViewer';
@@ -75,6 +77,7 @@ export function BillCheckTab() {
   const [showEvidence, setShowEvidence] = useState(false);
   const [format, setFormat] = useState<'standard' | 'uiic'>('standard');
   const [pendingGate, setPendingGate] = useState(false);
+  const [remarkWarning, setRemarkWarning] = useState(false);
 
   const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview } = useAIExtraction();
 
@@ -115,11 +118,18 @@ export function BillCheckTab() {
   // A bill check is not issued while the bill is pending — pending means the
   // workshop gave no figure for that item, so PENDING must never reach the PDF.
   const pendingRows = allowedRows.filter(r => !r.billStatus || r.billStatus === 'pending');
+  // A missing remark never changes a number, so it warns rather than blocks.
+  const remarkRows = rowsNeedingRemark(allowedRows);
+
+  const doPrint = () => {
+    if (format === 'uiic') triggerUIICBillCheckPrint(currentClaim, profile);
+    else triggerStandardPrint(currentClaim, profile, 'bill-check');
+  };
 
   const handlePrint = () => {
     if (pendingRows.length > 0) { setPendingGate(true); return; }
-    if (format === 'uiic') triggerUIICBillCheckPrint(currentClaim, profile);
-    else triggerStandardPrint(currentClaim, profile, 'bill-check');
+    if (remarkRows.length > 0) { setRemarkWarning(true); return; }
+    doPrint();
   };
 
   const resolveAllPending = () => {
@@ -269,6 +279,14 @@ export function BillCheckTab() {
           rows={pendingRows}
           onResolveAll={resolveAllPending}
           onCancel={() => setPendingGate(false)}
+        />
+      )}
+
+      {remarkWarning && (
+        <MissingRemarkDialog
+          rows={remarkRows}
+          onPrintAnyway={() => { setRemarkWarning(false); doPrint(); }}
+          onCancel={() => setRemarkWarning(false)}
         />
       )}
     </div>

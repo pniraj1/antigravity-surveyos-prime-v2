@@ -18,3 +18,27 @@ export function projectForBillCheck(rows: AssessmentRow[]): AssessmentRow[] {
       : { ...r, estimated: r.billedTaxable ?? 0, assessed: r.billAllowed ?? r.assessed },
   );
 }
+
+/**
+ * Rows whose bill-check outcome has no explanation on record.
+ *
+ * A missing remark never changes a number — the report prints correctly
+ * either way — so this is a documentation gap, not something to gate
+ * printing on. Two cases: a row dropped as not-in-bill, or a row whose
+ * billed figure was not simply accepted (it differs from the effective
+ * allowance), with nothing said about why.
+ *
+ * A row still `pending` is deliberately excluded: that is the print gate's
+ * job (projectForBillCheck's caller), not this one's.
+ */
+export function rowsNeedingRemark(rows: AssessmentRow[]): AssessmentRow[] {
+  return rows.filter(r => {
+    if (r.billRemarks && r.billRemarks.trim()) return false;
+    if (r.billStatus === 'not-in-bill') return true;
+    if (r.billedTaxable !== undefined) {
+      const allowed = r.billAllowed ?? r.assessed;
+      return r.billedTaxable !== allowed;
+    }
+    return false;
+  });
+}
