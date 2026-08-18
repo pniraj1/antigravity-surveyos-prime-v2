@@ -326,18 +326,22 @@ ${getSurveyorHeader(profile)}
     const isNA = r.allowed === false;
     const { isDisposal, afterDep, netBeforeGst } = isNA ? { isDisposal: false, afterDep: 0, netBeforeGst: 0 } : computeRowNet(r, dep);
     const wg = isNA ? 0 : isDisposal ? netBeforeGst : afterDep * (1 + (r.gst || 0) / 100);
-    const wgLabel = isNA ? '' : isDisposal ? `${fa(netBeforeGst)} DISP` : fa(wg);
-    const wgStyle = isDisposal ? `${td}text-align:right;color:#b45309;font-weight:600;` : `${td}text-align:right;`;
+    // The flag lives in the row's own money column, as it does for labour and
+    // paint — each section books to one column and flags in the same one.
+    const wgLabel = isNA ? 'Not<br/>Allowed' : isDisposal ? `${fa(netBeforeGst)} DISP` : fa(wg);
+    const wgStyle = isNA
+      ? `${td}text-align:center;color:#a00;font-weight:700;font-size:6.5pt;`
+      : isDisposal ? `${td}text-align:right;color:#b45309;font-weight:600;` : `${td}text-align:right;`;
     const gstLabel = isNA ? '' : isDisposal ? '0' : String(r.gst ?? 0);
     const pt = r.partType === 'metal' ? 'Metal' : r.partType === 'glass' ? 'Glass' : r.partType === 'fiberglass' ? 'Fibre Glass' : 'Plastic/Rubber';
 
     const bandHtml = shouldStartSupplementaryBand(AP, idx)
-      ? `<tr><td colspan="11" style="padding:4px 8px;text-align:center;font-size:9pt;font-weight:600;color:#666;background:linear-gradient(to right,#f5f5f5,#fafafa,#f5f5f5);">Supplementary Estimate</td></tr>`
+      ? `<tr><td colspan="12" style="padding:4px 8px;text-align:center;font-size:9pt;font-weight:600;color:#666;background:linear-gradient(to right,#f5f5f5,#fafafa,#f5f5f5);">Supplementary Estimate</td></tr>`
       : '';
 
     const depAmt = isNA ? '' : fa(r.assessed - afterDep);
 
-    return bandHtml + `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">${isNA ? '' : pt}</td><td style="${td}text-align:center;">${isNA ? '' : 'Replace'}</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : dL}</td><td style="${td}text-align:right;">${depAmt}</td><td style="${td}text-align:right;">${isNA ? '' : fa(afterDep)}</td><td style="${td}text-align:center;">${gstLabel}</td><td style="${wgStyle}">${wgLabel}</td><td style="${td}text-align:center;">${isNA ? 'Not<br/>Allowed' : ''}</td></tr>`;
+    return bandHtml + `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">${isNA ? '' : pt}</td><td style="${td}text-align:center;">${isNA ? '' : 'Replace'}</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : dL}</td><td style="${td}text-align:right;">${depAmt}</td><td style="${td}text-align:right;">${isNA ? '' : fa(afterDep)}</td><td style="${td}text-align:center;">${gstLabel}</td><td style="${wgStyle}">${wgLabel}</td><td style="${td}"></td><td style="${td}"></td></tr>`;
   }).join('');
 
   // Labour and Paint carry no automatic depreciation, but a surveyor may set
@@ -353,12 +357,12 @@ ${getSurveyorHeader(profile)}
     const withGst = afterDep * (1 + (r.gst || 0) / 100);
 
     const bandHtml = shouldStartSupplementaryBand(AL, idx)
-      ? `<tr><td colspan="11" style="padding:4px 8px;text-align:center;font-size:9pt;font-weight:600;color:#666;background:linear-gradient(to right,#f5f5f5,#fafafa,#f5f5f5);">Supplementary Estimate</td></tr>`
+      ? `<tr><td colspan="12" style="padding:4px 8px;text-align:center;font-size:9pt;font-weight:600;color:#666;background:linear-gradient(to right,#f5f5f5,#fafafa,#f5f5f5);">Supplementary Estimate</td></tr>`
       : '';
 
     const depAmt = isNA ? '' : fa(r.assessed - afterDep);
 
-    return bandHtml + `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : serviceDepLabel(r, dep)}</td><td style="${td}text-align:right;">${depAmt}</td><td style="${td}"></td><td style="${td}text-align:center;">${isNA ? '' : String(r.gst ?? 0)}</td><td style="${td}"></td><td style="${td}text-align:right;">${isNA ? 'Not<br/>Allowed' : fa(withGst)}</td></tr>`;
+    return bandHtml + `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : serviceDepLabel(r, dep)}</td><td style="${td}text-align:right;">${depAmt}</td><td style="${td}"></td><td style="${td}text-align:center;">${isNA ? '' : String(r.gst ?? 0)}</td><td style="${td}"></td><td style="${td}text-align:right;">${isNA ? 'Not<br/>Allowed' : fa(withGst)}</td><td style="${td}"></td></tr>`;
   }).join('');
 
   // Disallowed paint is listed and tagged, exactly as parts and labour are.
@@ -371,12 +375,12 @@ ${getSurveyorHeader(profile)}
     const withGst = afterDep * (1 + (r.gst || 0) / 100);
 
     const bandHtml = shouldStartSupplementaryBand(APT, idx)
-      ? `<tr><td colspan="11" style="padding:4px 8px;text-align:center;font-size:9pt;font-weight:600;color:#666;background:linear-gradient(to right,#f5f5f5,#fafafa,#f5f5f5);">Supplementary Estimate</td></tr>`
+      ? `<tr><td colspan="12" style="padding:4px 8px;text-align:center;font-size:9pt;font-weight:600;color:#666;background:linear-gradient(to right,#f5f5f5,#fafafa,#f5f5f5);">Supplementary Estimate</td></tr>`
       : '';
 
     const depAmt = isNA ? '' : fa(r.assessed - afterDep);
 
-    return bandHtml + `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Paint</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : serviceDepLabel(r, dep)}</td><td style="${td}text-align:right;">${depAmt}</td><td style="${td}"></td><td style="${td}text-align:center;">${isNA ? '' : String(r.gst ?? 0)}</td><td style="${td}"></td><td style="${td}text-align:right;">${isNA ? 'Not<br/>Allowed' : fa(withGst)}</td></tr>`;
+    return bandHtml + `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Paint</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : serviceDepLabel(r, dep)}</td><td style="${td}text-align:right;">${depAmt}</td><td style="${td}"></td><td style="${td}text-align:center;">${isNA ? '' : String(r.gst ?? 0)}</td><td style="${td}"></td><td style="${td}"></td><td style="${td}text-align:right;">${isNA ? 'Not<br/>Allowed' : fa(withGst)}</td></tr>`;
   }).join('');
 
   const p3 = `<div style="page-break-before:always;"></div>
@@ -394,15 +398,23 @@ ${getSurveyorHeader(profile)}
 <tr><td style="${td}" colspan="4"></td><td style="${tdl}">Amount Payable by Insurer</td><td style="${td}text-align:right;">${fa(payableByInsurer)}</td></tr>
 </table>
 <div style="${sec}">DETAILS OF ASSESSMENT</div>
-<table style="${ts}font-size:7pt;">
-<thead><tr><th style="${th}">SR.</th><th style="${th}text-align:left;">Part Name</th><th style="${th}">Part<br/>Type</th><th style="${th}">Job<br/>Type</th><th style="${th}">Part List<br/>W/o Tax</th><th style="${th}">Dep%</th><th style="${th}">Dep<br/>Amt</th><th style="${th}">Parts<br/>Assess</th><th style="${th}">GST%</th><th style="${th}">Part with<br/>GST</th><th style="${th}">Labour with<br/>GST</th></tr></thead><tbody>
-<tr><td colspan="11" style="${sec}">SPARE PARTS</td></tr>${pHtml}
-<tr><td colspan="11" style="${sec}">LABOUR</td></tr>${lHtml}
-<tr><td colspan="11" style="${sec}">PAINTING CHARGES</td></tr>${ptHtml}
-<tr style="font-weight:700;background:#eee;"><td colspan="4" style="${td}">SUB TOTAL</td><td style="${td}text-align:right;">${fa(rawParts)}</td><td style="${td}"></td><td style="${td}text-align:right;">${fa(rawParts - partsDepreciated)}</td><td style="${td}text-align:right;">${fa(partsDepreciated)}</td><td style="${td}"></td><td style="${td}text-align:right;">${fa(pT)}</td><td style="${td}text-align:right;">${fa(labBase)}</td></tr>
-<tr><td colspan="7" style="${td}">TAX IN 18% for Labour</td><td style="${td}" colspan="2"></td><td style="${td}text-align:right;">${fa(labOnly)}</td><td style="${td}text-align:right;">${fa(paintOnly)}</td></tr>
+${/* Fixed layout makes the declared widths binding. Under the default auto
+     layout a long figure widens its own column and pushes the twelfth off
+     the 186mm printable width of A4 — the same overflow the Standard
+     report's section 9 hit when its fibre-glass column went in. */ ''}
+<table style="${ts}table-layout:fixed;overflow-wrap:anywhere;font-size:7pt;">
+<thead><tr><th style="${th}width:4%;">SR.</th><th style="${th}text-align:left;width:18%;">Part Name</th><th style="${th}width:8%;">Part<br/>Type</th><th style="${th}width:7%;">Job<br/>Type</th><th style="${th}width:9%;">Part List<br/>W/o Tax</th><th style="${th}width:5%;">Dep%</th><th style="${th}width:8%;">Dep<br/>Amt</th><th style="${th}width:9%;">Parts<br/>Assess</th><th style="${th}width:5%;">GST%</th><th style="${th}width:9%;">Part<br/>with GST</th><th style="${th}width:9%;">Labour<br/>with GST</th><th style="${th}width:9%;">Paint<br/>with GST</th></tr></thead><tbody>
+<tr><td colspan="12" style="${sec}">SPARE PARTS</td></tr>${pHtml}
+<tr><td colspan="12" style="${sec}">LABOUR</td></tr>${lHtml}
+<tr><td colspan="12" style="${sec}">PAINTING CHARGES</td></tr>${ptHtml}
+${/* The parts line: its money column foots the SPARE PARTS rows above. The
+     labour and paint columns are settled by the two rows beneath, so they
+     stay empty here rather than repeating a combined figure that matches
+     neither column. */ ''}
+<tr style="font-weight:700;background:#eee;"><td colspan="4" style="${td}">SUB TOTAL</td><td style="${td}text-align:right;">${fa(rawParts)}</td><td style="${td}"></td><td style="${td}text-align:right;">${fa(rawParts - partsDepreciated)}</td><td style="${td}text-align:right;">${fa(partsDepreciated)}</td><td style="${td}"></td><td style="${td}text-align:right;">${fa(pT)}</td><td style="${td}"></td><td style="${td}"></td></tr>
+<tr><td colspan="8" style="${td}">SERVICES BEFORE TAX</td><td style="${td}" colspan="2"></td><td style="${td}text-align:right;">${fa(labOnly)}</td><td style="${td}text-align:right;">${fa(paintOnly)}</td></tr>
 ${/* Gross, not Net: these carry GST and nothing has been deducted yet. */ ''}
-<tr><td colspan="9" style="${td}font-weight:700;">GROSS TOTAL</td><td style="${td}text-align:right;font-weight:700;">${fa(labourAgg.amount)}</td><td style="${td}text-align:right;font-weight:700;">${fa(paintAgg.amount)}</td></tr>
+<tr><td colspan="10" style="${td}font-weight:700;">GROSS TOTAL</td><td style="${td}text-align:right;font-weight:700;">${fa(labourAgg.amount)}</td><td style="${td}text-align:right;font-weight:700;">${fa(paintAgg.amount)}</td></tr>
 </tbody></table>`;
 
   // ── PAGE 5: GST Summary + Signatures ────────────────────────────────────────

@@ -45,57 +45,108 @@ function cellsOfRow(html: string, needle: string): string[] {
   return [...tr.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map(m => m[1]);
 }
 
-// Column positions in the eleven-column Final Report item table:
+// Column positions in the twelve-column Final Report item table:
 //   1 SR | 2 Part Name | 3 Part Type | 4 Job Type | 5 Part List W/o Tax
 //   6 Dep% | 7 Dep Amt | 8 Parts Assess | 9 GST% | 10 Part with GST
-//   11 Labour with GST
-const PART_WITH_GST = 9;   // zero-based index of column 10
+//   11 Labour with GST | 12 Paint with GST
+const COLS = 12;
+const PART_WITH_GST = 9;    // zero-based index of column 10
 const LABOUR_WITH_GST = 10; // zero-based index of column 11
+const PAINT_WITH_GST = 11;  // zero-based index of column 12
 
-describe('UIIC Final Report — services money belongs in the Labour column', () => {
-  test('a labour row puts its money in the Labour column, not the parts column', () => {
+/** Total spans of a row, counting colspan — must equal COLS for every row. */
+function spansOf(tr: string): number {
+  return [...tr.matchAll(/<t[dh]\b[^>]*>/g)].reduce((sum, c) => {
+    const m = /colspan="(\d+)"/.exec(c[0]);
+    return sum + (m ? Number(m[1]) : 1);
+  }, 0);
+}
+
+describe('UIIC Final Report — each section books money to its own column', () => {
+  test('a parts row uses the parts column only', () => {
+    // 10000 metal at 24 months → 10% dep → 9000 × 1.18 = 10620.00
+    const html = buildUIICFinalHTML(claim([row({ particulars: 'BonnetPanel', assessed: 10000 })]), null);
+    const cells = cellsOfRow(html, 'BonnetPanel');
+    expect(cells).toHaveLength(COLS);
+    expect(cells[PART_WITH_GST]).toContain('10620.00');
+    expect(cells[LABOUR_WITH_GST]).toBe('');
+    expect(cells[PAINT_WITH_GST]).toBe('');
+  });
+
+  test('a labour row uses the labour column only', () => {
     // 1000 assessed, labour attracts no automatic depreciation → 1000 × 1.18 = 1180.00
     const html = buildUIICFinalHTML(
       claim([row({ particulars: 'FitCharge', section: 'labour', partType: 'labour', assessed: 1000, gst: 18 })]),
       null,
     );
     const cells = cellsOfRow(html, 'FitCharge');
-    expect(cells).toHaveLength(11);
+    expect(cells).toHaveLength(COLS);
     expect(cells[PART_WITH_GST]).toBe('');
     expect(cells[LABOUR_WITH_GST]).toContain('1180.00');
+    expect(cells[PAINT_WITH_GST]).toBe('');
   });
 
-  test('a paint row already puts its money there, and still does', () => {
+  test('a paint row uses the paint column only', () => {
     const html = buildUIICFinalHTML(
       claim([row({ particulars: 'SprayPanel', section: 'paint', partType: 'paint', assessed: 2000, gst: 18 })]),
       null,
     );
     const cells = cellsOfRow(html, 'SprayPanel');
-    expect(cells).toHaveLength(11);
+    expect(cells).toHaveLength(COLS);
     expect(cells[PART_WITH_GST]).toBe('');
-    expect(cells[LABOUR_WITH_GST]).toContain('2360.00'); // 2000 × 1.18
+    expect(cells[LABOUR_WITH_GST]).toBe('');
+    expect(cells[PAINT_WITH_GST]).toContain('2360.00'); // 2000 × 1.18
   });
 
-  test('a parts row keeps its money in the parts column', () => {
-    // 10000 metal at 24 months → 10% dep → 9000 × 1.18 = 10620.00
-    const html = buildUIICFinalHTML(claim([row({ particulars: 'BonnetPanel', assessed: 10000 })]), null);
-    const cells = cellsOfRow(html, 'BonnetPanel');
-    expect(cells).toHaveLength(11);
-    expect(cells[PART_WITH_GST]).toContain('10620.00');
-  });
-
-  test('a disallowed labour row is still flagged Not Allowed', () => {
+  test('a disallowed row is flagged in its own section column', () => {
     const html = buildUIICFinalHTML(
       claim([row({ particulars: 'RejectedFit', section: 'labour', partType: 'labour', assessed: 1000, allowed: false })]),
       null,
     );
-    const cells = cellsOfRow(html, 'RejectedFit');
-    expect(cells[LABOUR_WITH_GST]).toContain('Not');
+    expect(cellsOfRow(html, 'RejectedFit')[LABOUR_WITH_GST]).toContain('Not');
   });
 
-  test('the two money column headers say what they hold', () => {
+  test('all three money column headers say what they hold', () => {
     const html = buildUIICFinalHTML(claim([row()]), null);
-    expect(html).toContain('Part with<br/>GST');
-    expect(html).toContain('Labour with<br/>GST');
+    expect(html).toContain('Part<br/>with GST');
+    expect(html).toContain('Labour<br/>with GST');
+    expect(html).toContain('Paint<br/>with GST');
+  });
+
+  test('GROSS TOTAL books labour and paint to their own columns', () => {
+    const html = buildUIICFinalHTML(claim([
+      row({ particulars: 'BonnetPanel', assessed: 10000 }),
+      row({ particulars: 'FitCharge', section: 'labour', partType: 'labour', assessed: 1000, gst: 18 }),
+      row({ particulars: 'SprayPanel', section: 'paint', partType: 'paint', assessed: 2000, gst: 18 }),
+    ]), null);
+    const cells = cellsOfRow(html, 'GROSS TOTAL');
+    // colspan(10) label + labour + paint
+    expect(cells[cells.length - 2]).toContain('1180.00');
+    expect(cells[cells.length - 1]).toContain('2360.00');
+  });
+
+  test('every row in the item table spans exactly twelve columns', () => {
+    // Adding a column means revisiting a dozen colspans by hand. This catches
+    // a miscount instead of leaving it to be spotted on paper.
+    const html = buildUIICFinalHTML(claim([
+      row({ particulars: 'PartA', assessed: 10000 }),
+      row({ particulars: 'LabA', section: 'labour', partType: 'labour', assessed: 500, gst: 18 }),
+      row({ particulars: 'PaintA', section: 'paint', partType: 'paint', assessed: 900, gst: 18 }),
+      row({ particulars: 'RejectedPart', assessed: 400, allowed: false }),
+    ]), null);
+    const table = html.split('DETAILS OF ASSESSMENT')[1].split('</table>')[0];
+    const rows = table.split('<tr').slice(1);
+    expect(rows.length).toBeGreaterThan(6);
+    for (const tr of rows) {
+      const label = tr.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40);
+      expect(spansOf(tr), `row "${label}" spans ${spansOf(tr)}, not ${COLS}`).toBe(COLS);
+    }
+  });
+
+  test('the item table uses a fixed layout so a long figure cannot widen a column off the A4 page', () => {
+    const html = buildUIICFinalHTML(claim([row()]), null);
+    const table = html.split('DETAILS OF ASSESSMENT')[1].split('>')[1];
+    expect(html.split('DETAILS OF ASSESSMENT')[1].slice(0, 400)).toContain('table-layout:fixed');
+    expect(table).toBeDefined();
   });
 });

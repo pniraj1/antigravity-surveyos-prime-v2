@@ -105,7 +105,8 @@ describe('UIIC Final Report — Depreciation Amount column', () => {
       row({ section: 'paint', partType: 'paint', assessed: 1500 }),
     ]);
     const html = buildUIICFinalHTML(c, null);
-    assertColumnCountsMatch(html, 'Part List<br/>W/o Tax', 11);
+    // Twelve since the Paint column went in alongside Labour.
+    assertColumnCountsMatch(html, 'Part List<br/>W/o Tax', 12);
   });
 
   test('the sum of per-row depreciation amounts equals the top-summary Depreciation figure', () => {
