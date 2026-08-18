@@ -358,7 +358,8 @@ export function createBlankClaim(
       salvageStatus: 'na',
       observations: '',
       riAppointmentDate: '',
-      repairsAsAssessed: 'YES',
+      // Left unset on purpose. This is a certification the surveyor makes in
+      // the Reinspection tab, so seeding it here asserted it on every claim.
       repairAuthDate: '',
       estCompletionDate: '',
       actualCompletionDate: '',
