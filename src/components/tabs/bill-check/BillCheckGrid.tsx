@@ -4,7 +4,9 @@ import { useState, useEffect, useRef } from 'react';
 import { AlertCircle, Trash2, Settings2, Eye, EyeOff, FileSearch } from 'lucide-react';
 import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
 import type { AssessmentRow, AssessmentSummary } from '@/types';
+import type { DepreciationType } from '@/types/vehicle';
 import { shouldStartSupplementaryBand } from '@/lib/calculations/utils';
+import { computeRowNet, getDepreciationRate } from '@/lib/calculations';
 import {
   sectionSubtotals, billedTotals, SECTION_ORDER, type BilledTotals,
 } from '@/lib/calculations/section-subtotals';
@@ -27,6 +29,9 @@ interface Props {
   deleteAssessmentRows: (ids: string[]) => void;
   claimId: string | null;
   fmt: (n: number) => string;
+  /** Vehicle age at the date of loss — feeds the same rate table the report reads. */
+  ageMonths: number;
+  depreciationType: DepreciationType;
 }
 
 export function BillCheckGrid({
@@ -39,7 +44,12 @@ export function BillCheckGrid({
   deleteAssessmentRows,
   claimId,
   fmt,
+  ageMonths,
+  depreciationType,
 }: Props) {
+  // Same rate the report computes, so the grid and the PDF cannot disagree.
+  const depRateFor = (row: AssessmentRow) =>
+    row.depOverride !== undefined ? row.depOverride : getDepreciationRate(row.partType, ageMonths, depreciationType);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [visible, setVisible] = useState<Record<OptionalColumn, boolean>>(DEFAULT_VISIBLE);
   const [showSettings, setShowSettings] = useState(false);
@@ -68,9 +78,10 @@ export function BillCheckGrid({
   const buildCols = () => {
     const detailCols = (['partNumber', 'hsnSac', 'section', 'quantity', 'unitPrice', 'gst'] as OptionalColumn[])
       .filter(k => visible[k]).map(k => COL_WIDTHS[k]);
+    const priceWithGstCol = visible.priceWithGst ? [COL_WIDTHS.priceWithGst] : [];
     const billedTaxCol = visible.billedTaxable ? [COL_WIDTHS.billedTaxable] : [];
     const remarksCol = visible.remarks ? [COL_WIDTHS.remarks] : [];
-    return ['32px', '50px', '2fr', ...detailCols, '100px', ...billedTaxCol, '120px', ...remarksCol, '40px'].join(' ');
+    return ['32px', '50px', '2fr', ...detailCols, '100px', '70px', '100px', ...priceWithGstCol, ...billedTaxCol, '120px', ...remarksCol, '40px'].join(' ');
   };
   const gridCols = buildCols();
 
@@ -140,6 +151,9 @@ export function BillCheckGrid({
         {visible.unitPrice     && <span>{GRID_COLUMNS.unitPrice.label}</span>}
         {visible.gst           && <span>{GRID_COLUMNS.gst.label}</span>}
         <span>Assessed (₹)</span>
+        <span>Dep%</span>
+        <span>Net (₹)</span>
+        {visible.priceWithGst  && <span>{GRID_COLUMNS.priceWithGst.label}</span>}
         {visible.billedTaxable && <span>{GRID_COLUMNS.billedTaxable.label} (₹)</span>}
         <span>Status</span>
         {visible.remarks       && <span>Remarks</span>}
@@ -176,6 +190,9 @@ export function BillCheckGrid({
         {visible.unitPrice     && <div className="text-sm font-medium" style={money}>{fmt(t.estimated)}</div>}
         {visible.gst           && <div />}
         <div className="text-sm font-medium" style={money}>{fmt(t.assessed)}</div>
+        <div />
+        <div />
+        {visible.priceWithGst  && <div />}
         {visible.billedTaxable && <div className="text-sm font-medium text-primary">{fmt(t.billedTaxable)}</div>}
         <div className={`text-xs font-medium ${onDark ? 'text-white/50' : 'text-muted-foreground'}`}>
           {fmt(t.notInBill)} not claimed
@@ -383,6 +400,20 @@ export function BillCheckGrid({
                 {visible.unitPrice     && <div className="text-sm font-medium" style={{ color: 'var(--color-neutral-600)' }}>{fmt(row.estimated || 0)}</div>}
                 {visible.gst           && <div className="text-xs font-medium text-center" style={{ color: 'var(--color-neutral-600)' }}>{row.gst ?? 18}%</div>}
                 <div className="text-sm font-medium text-foreground">{fmt(row.assessed)}</div>
+                <div className="text-xs font-medium text-center" style={{ color: row.depOverride !== undefined ? 'var(--color-status-warning)' : 'var(--color-status-danger)' }}>
+                  {row.depOverride !== undefined ? `${row.depOverride}%*` : `${depRateFor(row)}%`}
+                </div>
+                <div className="text-sm font-medium text-right" style={{ color: 'var(--color-neutral-600)' }}>
+                  {fmt(computeRowNet(row, depRateFor(row)).netBeforeGst)}
+                </div>
+                {visible.priceWithGst && (
+                  <div className="text-sm font-medium text-right" style={{ color: 'var(--color-neutral-600)' }}>
+                    {(() => {
+                      const { isDisposal, netBeforeGst } = computeRowNet(row, depRateFor(row));
+                      return fmt(isDisposal ? netBeforeGst : netBeforeGst * (1 + (row.gst ?? 18) / 100));
+                    })()}
+                  </div>
+                )}
                 {visible.billedTaxable && (
                   <input
                     type="number"

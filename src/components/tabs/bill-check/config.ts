@@ -13,11 +13,12 @@ export type OptionalColumn =
   | 'quantity'
   | 'unitPrice'
   | 'gst'
+  | 'priceWithGst'
   | 'billedTaxable'
   | 'remarks';
 
 const OPTIONAL_COLUMN_ORDER: OptionalColumn[] = [
-  'partNumber', 'hsnSac', 'section', 'quantity', 'unitPrice', 'gst', 'billedTaxable', 'remarks',
+  'partNumber', 'hsnSac', 'section', 'quantity', 'unitPrice', 'gst', 'priceWithGst', 'billedTaxable', 'remarks',
 ];
 
 export interface ColumnMeta {
@@ -39,6 +40,7 @@ export const DEFAULT_VISIBLE: Record<OptionalColumn, boolean> = {
   quantity: false,
   unitPrice: true,
   gst: true,
+  priceWithGst: true,
   billedTaxable: true,
   remarks: true,
 };

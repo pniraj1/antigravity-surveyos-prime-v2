@@ -145,6 +145,8 @@ export function BillCheckTab() {
               deleteAssessmentRows={deleteAssessmentRows}
               claimId={currentClaim.id}
               fmt={fmt}
+              ageMonths={ageMonths}
+              depreciationType={currentClaim.depreciationType}
             />
 
             <ExtraBillItemsPanel
