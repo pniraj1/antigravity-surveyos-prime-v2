@@ -33,18 +33,25 @@ Produce a Standard Bill Check Report that is the Standard Final Survey Report wi
 
 ## Scope
 
-**In scope:**
+**In scope — report:**
 - `mode: 'final' | 'bill-check'` on the existing Standard builder
 - A pure row projection that moves the bill figure into the estimate slot and zeroes unreplaced parts
 - `PENDING` rendering for rows with no bill figure recorded
 - Format toggle (Standard | UIIC) on the Bill Check tab, mirroring [ReportTab.tsx:58](../../src/components/tabs/ReportTab.tsx)
 - Bill-check variant of the report preamble
 
+**In scope — screen:**
+- Align the Bill Check grid's columns, labels and order with the Assessment grid
+- One shared column-config module consumed by both grids
+- Rename `Billed Tax (₹)` → `Billed Taxable (₹)`; remove `Billed Incl GST (₹)`
+- Correct `Assessed Tax (₹)`, which renders `row.estimated`
+
 **Out of scope:**
 - Any new field on `AssessmentRow` — none is required
 - Any change to `calculateAssessmentSummary`, `aggregateGst`, `computeRowNet` or `computeRowLiability`
 - Any change to the UIIC Bill Check Report, including its known not-in-bill total mismatch (tracked separately)
 - A second Bill Check tab — the existing grid already collects every input this report needs
+- Merging `BillCheckGrid` into `AssessmentSectionTable` — considered and declined; see *Screen* below
 - Variance columns, remarks columns, or a deduction summary section
 - Auto-selecting the format from `policy.insurerName` — it is free text and drives nothing today
 
@@ -122,6 +129,53 @@ There is no override field. Because the bill check's money column *is* `assessed
 
 ---
 
+## Screen: the Bill Check grid
+
+Bill check is an upgrade of the assessment sheet, and the screen should say so. Today it does not.
+
+### The divergence
+
+`BillCheckGrid` ([:128-146](../../src/components/tabs/bill-check/BillCheckGrid.tsx)) and `AssessmentSectionTable` ([:120-152](../../src/components/claim/AssessmentSectionTable.tsx)) render overlapping data under different names:
+
+| Assessment grid | Bill Check grid | Problem |
+|---|---|---|
+| `Estimate(taxable amount)` → `row.estimated` | `Assessed Tax (₹)` → `row.estimated` | Same field, two names. The Bill Check header says "Assessed" over the estimate, directly beside the real `Assessed (₹)` column |
+| `Type` (Metal / Plastic / Glass) | `Section` (Parts / Labour / Paint) | Different data; both are useful |
+| `Dep%`, `Net (₹)` — always on | absent | Bill Check cannot show depreciation |
+| `Price+GST`, `Disposal`, `Action`, Allowed toggle | absent | |
+| — | `Billed Taxable`, `Status` | Bill-only, correct |
+| — | `Billed Incl GST (₹)` | Always-on; to be removed |
+
+`Dep%` and `Price+GST` are printed by the bill check PDF, so the surveyor cannot see on screen what will appear on paper — the same defect [2026-08-09-assessment-grid-sections-design.md](2026-08-09-assessment-grid-sections-design.md) was written to fix.
+
+### Approach: align, keep both components
+
+Merging the two into one component with a mode was considered. It would delete roughly 430 lines and make drift impossible, but it rewrites a screen in daily use. **Decision: keep both components and align them**, accepting the higher drift risk for the lower blast radius.
+
+Drift is mitigated structurally rather than by discipline: both grids import **one shared column-config module** — key, label, width and order defined once. Two components may render the columns, but only one file names them. This is the direct fix for how `Estimate(taxable amount)` and `Assessed Tax (₹)` came to describe the same field.
+
+### Target columns
+
+Assessment's column set and order, with the bill columns appended as a block:
+
+```
+☐ | Sr | 🛡 | Particulars | [Part No.] | [HSN/SAC] | [Type] | [Qty]
+  | [Estimate (taxable amount)] | [GST%] | [Disposal]
+  | Assessed | Dep% | Net (₹) | [Price+GST]
+  | Billed Taxable | Status
+  | [Action] | [Remarks] | ⌫
+```
+
+`[…]` = optional, per-grid defaults. The bill block is appended rather than interleaved so the always-on assessment trio (`Assessed`, `Dep%`, `Net`) stays contiguous and the screen reads as *assessment, then bill*.
+
+`Section` becomes optional and defaults off in both grids: both already group rows by section, so the column repeats its own heading.
+
+### Editability
+
+Assessment fields stay **editable** in the Bill Check grid, exactly as in the Assessment grid. This is required by the design: the bill check's money derives from `assessed`, so allowing a figure above assessment means editing `assessed`. The consequence — that this retroactively changes an already-issued Final Survey Report — is documented above and left to the surveyor's judgement, not enforced in code.
+
+---
+
 ## Open decision — confirm at review
 
 **Do PENDING rows carry their assessed money into the totals?**
@@ -134,6 +188,8 @@ The risk is a bill check issued mid-check whose net liability includes unverifie
 
 ## Files touched
 
+**Report**
+
 | File | Change |
 |---|---|
 | `src/lib/reports/bill-check-projection.ts` | **New** — `projectForBillCheck`, ~10 lines |
@@ -141,6 +197,16 @@ The risk is a bill check issued mid-check whose net liability includes unverifie
 | `src/lib/reports/final-survey-preamble.ts` | Bill-check preamble variant |
 | `src/components/tabs/BillCheckTab.tsx` | Standard \| UIIC toggle; route preview and Power Print through it |
 | `src/lib/reports/__tests__/standard-bill-check.test.ts` | **New** |
+
+**Screen**
+
+| File | Change |
+|---|---|
+| `src/components/claim/grid-columns.ts` | **New** — the shared column config both grids consume |
+| `src/components/claim/assessment-grid-config.ts` | Re-point at the shared module |
+| `src/components/tabs/bill-check/config.ts` | Re-point at the shared module |
+| `src/components/tabs/bill-check/BillCheckGrid.tsx` | Adopt Assessment's column set, labels and order; add `Dep%`, `Net`, `Price+GST`, `Disposal`, `Action`, Allowed toggle; rename `Billed Tax` → `Billed Taxable`; remove `Billed Incl GST` |
+| `src/components/claim/AssessmentSectionTable.tsx` | Consume the shared config; `Section` optional, default off |
 
 `buildStandardPrintDocument` ([:665](../../src/lib/reports/standard-report-builder.ts)) and `triggerStandardPrint` ([:678](../../src/lib/reports/standard-report-builder.ts)) take a `mode` passthrough.
 
@@ -160,10 +226,15 @@ One vitest file, `standard-bill-check.test.ts`:
 6. Projection is immutable: the input array and its rows are unmodified
 7. Net liability over projected rows containing one `not-in-bill` row equals net liability over the same rows with that row removed
 
+Plus one grid test, `grid-columns.test.ts`:
+
+8. Every column key rendered by either grid resolves to a label in the shared config — so a column can never again carry two names, which is the defect this alignment exists to fix
+
 ---
 
 ## Risks
 
 - **Retroactive edits to `assessed`** rewrite an already-issued Final Survey Report. Documented above; not enforced in code.
 - **`billedTaxable` vs `billedAmount`.** The projection must use `billedTaxable` (pre-GST). Using `billedAmount` would feed a GST-inclusive figure into a column the builder then taxes again — the same class of error that produced a ~31% overstatement in the UIIC builder ([:560-563](../../src/lib/reports/uiic-final-builder.ts)).
+- **The two grids can drift again.** Keeping both components is a deliberate trade for a smaller blast radius. The shared config module and test 8 are the structural guards; neither prevents a future column being added to one grid and not the other.
 - **Verification limits.** This is an auth-gated screen needing real claim data; correctness will be established by the unit tests above, not by running the dev server.
