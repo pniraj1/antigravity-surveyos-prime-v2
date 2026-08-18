@@ -39,6 +39,7 @@
 
 ## Pending — Medium Priority
 
+- [ ] **UIIC report — Depreciation Amount column** — add a rupee-value column beside the existing `Part Depreciation` percentage column, in both the UIIC final report and the UIIC bill check item table (`uiic-final-builder.ts`, headers at ~:778 and the `pHtml` row builder). The amount is already computed per row as `r.assessed − computeRowNet(r, dep).netBeforeGst`; this only surfaces it. Small change, deferred by the surveyor on 2026-08-18.
 - [ ] Firebase App Check integration
 - [ ] GDPR data deletion endpoint
 - [ ] Unit test coverage to 80% (currently 3 test files)
