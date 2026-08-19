@@ -29,7 +29,16 @@ export function getVehicleAgeMonths(
   const ref = referenceDate ? new Date(referenceDate) : new Date();
   if (isNaN(ref.getTime()) || ref < start) return 0;
 
-  return (ref.getFullYear() - start.getFullYear()) * 12 + ref.getMonth() - start.getMonth();
+  const months =
+    (ref.getFullYear() - start.getFullYear()) * 12 + ref.getMonth() - start.getMonth();
+
+  // The bare calendar-month difference rounds the age UP whenever the accident
+  // falls earlier in the month than the registration date, and the IRDAI scale
+  // steps at 6 / 12 / 24 / 36 / 48 / 60 / 120 months. Registered 25-Jan,
+  // accident 02-Jul is 5 months 8 days, but the month difference reads 6 —
+  // enough to cross a band on a vehicle that has not aged into it. Count only
+  // completed months.
+  return ref.getDate() < start.getDate() ? Math.max(0, months - 1) : months;
 }
 
 /**

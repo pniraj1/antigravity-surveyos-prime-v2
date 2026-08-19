@@ -439,7 +439,7 @@ ${partsAgg.bands.map((b, i) => `<tr><td style="${td}text-align:center;">${i + 1}
 ${serviceAgg.bands.map((b, i) => `<tr><td style="${td}text-align:center;">${i + 1}</td><td style="${td}">${codeCell(b, 'Labour')}</td><td style="${td}text-align:right;">${fa(b.base)}</td><td style="${td}text-align:right;">${fa(b.cgst)}</td><td style="${td}text-align:right;">${fa(b.sgst)}</td><td style="${td}text-align:right;font-weight:700;">${fa(b.amount)}</td></tr>`).join('') || `<tr><td style="${td}" colspan="6">No labour or painting</td></tr>`}
 <tr style="font-weight:700;"><td style="${td}" colspan="2">GRAND TOTAL</td><td style="${td}text-align:right;">${fa(labBase)}</td><td style="${td}text-align:right;">${fa(lC)}</td><td style="${td}text-align:right;">${fa(lS)}</td><td style="${td}text-align:right;">${fa(lT)}</td></tr></table>
 <div style="display:flex;justify-content:space-between;margin-top:14px;font-size:7.5pt;">
-<div style="width:45%;"><div>I / We hereby authorize repairs for Rs. <b>${Math.round(net)}</b></div><div style="margin-top:30px;">Date:</div><div style="margin-top:40px;border-top:0.5pt solid #000;padding-top:3px;">Signature (...Surveyor &amp; Loss Assessor)</div></div>
+<div style="width:45%;"><div>I / We hereby authorize repairs for Rs. <b>${fa(net)}</b></div><div style="margin-top:30px;">Date:</div><div style="margin-top:40px;border-top:0.5pt solid #000;padding-top:3px;">Signature (...Surveyor &amp; Loss Assessor)</div></div>
 <div style="width:45%;text-align:right;"><div>I agree with the assessment of the surveyor. Repair will be complete by _______ (date).</div><div style="margin-top:30px;">Date:</div><div style="margin-top:40px;border-top:0.5pt solid #000;padding-top:3px;">Signature of authorised official of workshop</div></div></div>
 ${getSigBlock(profile)}
 <div style="text-align:center;font-weight:700;font-size:8pt;border-top:1pt solid #000;padding-top:4px;margin-top:12px;">FOR SERVICE HUB USE</div>
@@ -1020,7 +1020,7 @@ ${[
 </div>
 
 <div style="font-size:6.5pt;color:#555;margin-top:4px;border-top:0.4pt solid #ccc;padding-top:2px;">
-  In words: RUPEES ${numberToWords(Math.round(netBilledLiability))} ONLY
+  In words: RUPEES ${numberToWords(netBilledLiability)} ONLY
 </div>
 
 ${getSigBlock(profile)}

@@ -3,7 +3,7 @@ import { Page, Text, View, Document, StyleSheet } from '@react-pdf/renderer';
 import type { ClaimData, AssessmentSummary } from '@/types';
 import { preambleFromClaim, estimateTotalInclGst } from '@/lib/reports/final-survey-preamble';
 import { getCompulsoryExcess } from '@/lib/calculations/assessment';
-import { getDepreciationRate, toDepreciationType } from '@/lib/calculations/depreciation';
+import { getDepreciationRate, toDepreciationType, getVehicleAgeMonths } from '@/lib/calculations/depreciation';
 import type { PartType } from '@/types/assessment';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -29,13 +29,9 @@ function g(v: string | number | null | undefined): string {
 const getDepRate = (partType: string, ageMonths: number, depType: string): number =>
   getDepreciationRate(partType as PartType, ageMonths, toDepreciationType(depType));
 
-function getVehicleAgeMonths(regDate: string | null, year: number | null, doa: string | null): number {
-  const start: Date | null = regDate ? new Date(regDate) : (year ? new Date(year, 0, 1) : null);
-  if (!start) return 0;
-  const ref = doa ? new Date(doa) : new Date();
-  if (isNaN(start.getTime()) || isNaN(ref.getTime()) || ref < start) return 0;
-  return (ref.getFullYear() - start.getFullYear()) * 12 + ref.getMonth() - start.getMonth();
-}
+// getVehicleAgeMonths was a third private copy of the engine's function. It
+// missed the completed-months fix and so could put this PDF a depreciation band
+// away from the HTML report built from the same claim.
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 

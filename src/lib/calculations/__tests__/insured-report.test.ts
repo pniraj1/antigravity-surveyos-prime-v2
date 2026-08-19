@@ -35,20 +35,38 @@ describe('computeInsuredFinancialSummary', () => {
     expect(summary.depreciationBreakdown.map(r => r.particulars)).toEqual(['Bonnet', 'Headlamp RH']);
   });
 
-  test('depreciationBreakdown entries have correct amounts', () => {
+  test('deduction is the policy depreciation, not the assessment reduction', () => {
+    // 36 months on metal is the 15% IRDAI band, applied to the ASSESSED figure.
+    // Bonnet   5600 × 15% = 840   (not 8000 − 5600 = 2400)
+    // Headlamp 2100 × 15% = 315   (not 3000 − 2100 = 900)
+    // The estimated−assessed gap is what the surveyor negotiated off the
+    // garage's price; the policy never deducted it, and this report is what the
+    // insured reads to understand their settlement.
     const summary = computeInsuredFinancialSummary(mockClaim, 36);
     expect(summary.depreciationBreakdown[0]).toEqual({
       particulars: 'Bonnet',
       billed: 8000,
       assessed: 5600,
-      deductionAmount: 2400,
+      depRate: 15,
+      deductionAmount: 840,
     });
     expect(summary.depreciationBreakdown[1]).toEqual({
       particulars: 'Headlamp RH',
       billed: 3000,
       assessed: 2100,
-      deductionAmount: 900,
+      depRate: 15,
+      deductionAmount: 315,
     });
+  });
+
+  test('a nil-depreciation policy reports no depreciation at all', () => {
+    // Under Nil Dep the insured is deducted nothing for age. The old
+    // estimated−assessed formula still reported a "depreciation" figure here,
+    // which is the clearest form of the same defect.
+    const nilDep = { ...mockClaim, depreciationType: 'nil' } as unknown as ClaimData;
+    const summary = computeInsuredFinancialSummary(nilDep, 36);
+    expect(summary.depreciationBreakdown).toHaveLength(0);
+    expect(summary.depreciationTotal).toBe(0);
   });
 
   test('depreciationTotal equals sum of depreciationBreakdown deductionAmounts', () => {

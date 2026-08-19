@@ -13,7 +13,7 @@ import { saveClaim } from '@/lib/storage/indexeddb';
 import { useUIStore } from '@/stores/ui-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { resolveAnnexureOptions } from '@/lib/photos/document-annexure';
-import { repairAssessmentRow } from '@/lib/calculations/assessment';
+import { repairAssessmentRow, resolveExcessFields } from '@/lib/calculations/assessment';
 
 export interface ClaimSlice {
   currentClaim: ClaimData | null;
@@ -107,6 +107,16 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
     set({
       currentClaim: {
         ...claim,
+        // The compulsory excess lives in two fields — `compulsoryExcess` and
+        // the older `lessExcess` — and a claim persisted before the rename
+        // holds it in only one. The report builders resolve that through
+        // getCompulsoryExcess(); the Bill Check, Fees, Assessment and Insured
+        // Summary screens read `feeBill.compulsoryExcess` raw and so deducted
+        // nothing, printing a different net for the same claim. Reconciling
+        // both fields once here is what makes every reader agree.
+        feeBill: claim.feeBill
+          ? { ...claim.feeBill, ...resolveExcessFields(claim.feeBill) }
+          : claim.feeBill,
         assessmentRows: Array.isArray(rows) ? rows.map(repairAssessmentRow) : [],
       },
       currentClaimId: claim.id,

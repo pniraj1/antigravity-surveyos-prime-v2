@@ -65,6 +65,9 @@ export interface InsuredReportFinancialSummary {
     particulars: string;
     billed: number;
     assessed: number;
+    /** IRDAI depreciation percentage applied to this part. */
+    depRate: number;
+    /** assessed × depRate% — the policy deduction, not the assessment reduction. */
     deductionAmount: number;
   }>;
 }

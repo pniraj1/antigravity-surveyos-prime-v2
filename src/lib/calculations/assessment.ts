@@ -6,7 +6,6 @@
 
 import type { AssessmentRow, AssessmentSummary, BillCheckSummary, DepreciationType, FeeBill } from '@/types';
 import { getDepreciationRate } from './depreciation';
-import { calculatePartsGST, calculateLabourGST } from './gst';
 import { computeRowLiability } from './row-net';
 import { numberToWords } from './utils';
 
@@ -27,6 +26,25 @@ import { numberToWords } from './utils';
  */
 export function getCompulsoryExcess(feeBill?: Partial<FeeBill> | null): number {
   return feeBill?.compulsoryExcess ?? feeBill?.lessExcess ?? 0;
+}
+
+/**
+ * Both excess fields set to the one resolved value, for writing back onto a
+ * loaded claim.
+ *
+ * getCompulsoryExcess() only helps the callers that remember to use it. Eight
+ * screens read `feeBill.compulsoryExcess` directly, so a claim holding the
+ * excess only in the legacy `lessExcess` had it deducted by the Final Report
+ * and ignored by Bill Check, Fees, the Assessment summary and the Insured
+ * Summary — the same claim settling at two different nets. claimSlice.loadClaim
+ * applies this once, on the single path every persisted claim takes into the
+ * app, so a raw read can no longer disagree with the resolved one.
+ */
+export function resolveExcessFields(
+  feeBill: Partial<FeeBill>,
+): { compulsoryExcess: number; lessExcess: number } {
+  const excess = getCompulsoryExcess(feeBill);
+  return { compulsoryExcess: excess, lessExcess: excess };
 }
 
 /**
@@ -104,7 +122,6 @@ export function calculateAssessmentSummary(
   });
 
   const partsBase = metal + plastic + glass + fiberglass;
-  const totalGST = partsGSTAccumulator + labourGSTAccumulator;
   const grandTotal = partsBase + partsGSTAccumulator + labourBase + labourGSTAccumulator;
   
   const totalExcess = compulsoryExcess + voluntaryExcess;

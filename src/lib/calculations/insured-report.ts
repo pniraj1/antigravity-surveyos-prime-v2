@@ -6,7 +6,7 @@
 
 import type { ClaimData } from '@/types/claim';
 import type { InsuredReportFinancialSummary } from '@/types/insured-report';
-import { calculateAssessmentSummary } from '@/lib/calculations';
+import { calculateAssessmentSummary, getDepreciationRate, computeRowNet } from '@/lib/calculations';
 
 /**
  * Computes the financial breakdown for the Insured Claim Summary.
@@ -42,20 +42,32 @@ export function computeInsuredFinancialSummary(
     .reduce((sum, r) => sum + ((r.billedTaxable ?? r.estimated) - r.assessed), 0);
 
   // ─── Depreciation ───────────────────────────────────────
-  const depreciatedRows = rows.filter(
-    (r) =>
-      r.section === 'parts' &&
-      r.allowed &&
-      r.action !== 'disallow' &&
-      Math.max(0, r.estimated - r.assessed) > 0,
-  );
+  // Depreciation is `assessed − afterDep`, exactly as the Final Report's
+  // Depreciation Amount column computes it. It is NOT `estimated − assessed`:
+  // that gap is the surveyor's assessment reduction — negotiation, overpricing,
+  // partial repair — which this same function already reports separately as
+  // negotiatedTotal / overpricingTotal / partialRepairTotal. Printing it under
+  // "Depreciation on Parts" told the insured the policy had deducted rupees the
+  // policy never touched, and counted those rupees twice on one page.
+  const depRateFor = (r: (typeof rows)[number]) =>
+    r.depOverride !== undefined
+      ? r.depOverride
+      : getDepreciationRate(r.partType, ageMonths, claim.depreciationType);
 
-  const depreciationBreakdown = depreciatedRows.map((r) => ({
-    particulars: r.particulars,
-    billed: r.billedTaxable ?? r.estimated,
-    assessed: r.assessed,
-    deductionAmount: Math.max(0, r.estimated - r.assessed),
-  }));
+  const depreciationBreakdown = rows
+    .filter((r) => r.section === 'parts' && r.allowed && r.action !== 'disallow')
+    .map((r) => {
+      const depRate = depRateFor(r);
+      const { afterDep } = computeRowNet(r, depRate);
+      return {
+        particulars: r.particulars,
+        billed: r.billedTaxable ?? r.estimated,
+        assessed: r.assessed,
+        depRate,
+        deductionAmount: Math.max(0, r.assessed - afterDep),
+      };
+    })
+    .filter((r) => r.deductionAmount > 0);
 
   const depreciationTotal = depreciationBreakdown.reduce(
     (sum, r) => sum + r.deductionAmount,

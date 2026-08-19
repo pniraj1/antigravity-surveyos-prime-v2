@@ -12,31 +12,20 @@
 
 import type { SurveyorProfile } from '@/types/vehicle';
 
-export function formatDateDMY(v: string | null | undefined): string {
-  if (!v) return '—';
-  const dStr = String(v).split('T')[0].trim();
-  // Accept -, /, or . as separators
-  const parts = dStr.split(/[-/.]/);
-  if (parts.length === 3 && parts.every((p) => /^\d+$/.test(p))) {
-    if (parts[0].length === 4) return `${parts[2].padStart(2, '0')}.${parts[1].padStart(2, '0')}.${parts[0]}`;
-    // DD-MM-YYYY (Indian). Never hand numeric slash dates to new Date(),
-    // which would misread them as US MM/DD/YYYY.
-    if (parts[2].length === 4) return `${parts[0].padStart(2, '0')}.${parts[1].padStart(2, '0')}.${parts[2]}`;
-  }
-  const d = new Date(v);
-  if (!isNaN(d.getTime())) {
-    return String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear();
-  }
-  return v;
-}
+// These five were re-implemented here, byte-for-byte identical to
+// src/lib/calculations/. Two copies of the money-and-age helpers is how the
+// printed report and the screen drift apart: the day-of-month fix in
+// getVehicleAgeMonths landed in the engine and would have missed every builder
+// importing from this file. Re-exported, not re-written, so the builders keep
+// their existing imports and there is one implementation to fix.
+// Imported, not just re-exported: `export … from` creates no local binding,
+// and formatSurveyDateTime below calls formatDateDMY.
+import { formatDateDMY, formatDateTimeDMY, numberToWords, formatCurrency } from '@/lib/calculations';
+import { getVehicleAgeMonths } from '@/lib/calculations/depreciation';
 
-export function formatDateTimeDMY(v: string | null | undefined): string {
-  if (!v) return '—';
-  const s = String(v);
-  const datePart = formatDateDMY(s.split('T')[0]);
-  const timePart = s.includes('T') ? s.split('T')[1].substring(0, 5) : '';
-  return timePart && timePart !== '00:00' ? `${datePart} at ${timePart} hrs` : datePart;
-}
+export { formatDateDMY, formatDateTimeDMY, numberToWords, getVehicleAgeMonths };
+/** ₹-formatted currency string. Alias kept so the builders' `fa(...)` calls stand. */
+export const fa = formatCurrency;
 
 /**
  * Survey date with its optional time, e.g. "10.06.2026 at 11:30 hrs".
@@ -53,35 +42,6 @@ export function formatSurveyDateTime(
   const datePart = formatDateDMY(date);
   if (!time || datePart === '—') return datePart;
   return `${datePart} at ${time} hrs`;
-}
-
-/** ₹-formatted currency string. Not for use in uiic-final-builder (uses its own fa). */
-export function fa(v: number): string {
-  return '₹ ' + v.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-}
-
-export function numberToWords(num: number): string {
-  if (!num || isNaN(num)) return 'ZERO';
-  const ones = ['', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE',
-    'TEN', 'ELEVEN', 'TWELVE', 'THIRTEEN', 'FOURTEEN', 'FIFTEEN', 'SIXTEEN', 'SEVENTEEN', 'EIGHTEEN', 'NINETEEN'];
-  const tens = ['', '', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY', 'EIGHTY', 'NINETY'];
-  function c(n: number): string {
-    if (n < 20) return ones[n];
-    if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 ? ' ' + ones[n % 10] : '');
-    if (n < 1000) return ones[Math.floor(n / 100)] + ' HUNDRED' + (n % 100 ? ' ' + c(n % 100) : '');
-    if (n < 100000) return c(Math.floor(n / 1000)) + ' THOUSAND' + (n % 1000 ? ' ' + c(n % 1000) : '');
-    if (n < 10000000) return c(Math.floor(n / 100000)) + ' LAKH' + (n % 100000 ? ' ' + c(n % 100000) : '');
-    return c(Math.floor(n / 10000000)) + ' CRORE' + (n % 10000000 ? ' ' + c(n % 10000000) : '');
-  }
-  return c(Math.floor(num));
-}
-
-export function getVehicleAgeMonths(regDate: string | null, year: number | null, doa: string | null): number {
-  const start: Date | null = regDate ? new Date(regDate) : (year ? new Date(year, 0, 1) : null);
-  if (!start) return 0;
-  const ref = doa ? new Date(doa) : new Date();
-  if (isNaN(start.getTime()) || isNaN(ref.getTime()) || ref < start) return 0;
-  return (ref.getFullYear() - start.getFullYear()) * 12 + ref.getMonth() - start.getMonth();
 }
 
 /**
