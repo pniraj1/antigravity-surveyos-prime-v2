@@ -520,6 +520,16 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   const allowedLabour = allLabour.filter(r => r.allowed !== false);
   const allowedPaint  = allPaint.filter(r => r.allowed !== false);
 
+  // Rendered and counted are not the same set. A not-in-bill row still prints —
+  // the insurer should see the item was assessed and no bill came — but it
+  // carries no liability, which is what calculateBillCheckSummary has always
+  // said. The aggregates below used to disagree with it, so the item table
+  // claimed money page 1 excluded, with nothing explaining the gap.
+  const inBill = (rs: AssessmentRow[]) => rs.filter(r => r.billStatus !== 'not-in-bill');
+  const billedParts  = inBill(allowedParts);
+  const billedLabour = inBill(allowedLabour);
+  const billedPaint  = inBill(allowedPaint);
+
   // ── Calculations using only allowed rows ────────────────────────────────────
   let partsDepreciated = 0, rawParts = 0, labOnly = 0, paintOnly = 0, disposalNet = 0;
   let billedPartsTotal = 0, billedLabourTotal = 0, billedPaintTotal = 0;
@@ -529,7 +539,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   const rowDep = (r: typeof rows[number]) =>
     r.depOverride !== undefined ? r.depOverride : getDepRate(r.partType, ageMonths, depType);
 
-  allowedParts.forEach(r => {
+  billedParts.forEach(r => {
     const { isDisposal, netBeforeGst } = computeRowNet(r, rowDep(r));
     if (isDisposal) {
       disposalNet += netBeforeGst;
@@ -543,11 +553,11 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   // depOverride per row — these used to accumulate the raw assessed figure,
   // which was invisible while the rate was always 0 and wrong the moment an
   // override exists.
-  allowedLabour.forEach(r => {
+  billedLabour.forEach(r => {
     labOnly += computeRowNet(r, rowDep(r)).netBeforeGst;
     billedLabourTotal += computeRowLiability(r, rowDep(r)).liability;
   });
-  allowedPaint.forEach(r => {
+  billedPaint.forEach(r => {
     paintOnly += computeRowNet(r, rowDep(r)).netBeforeGst;
     billedPaintTotal += computeRowLiability(r, rowDep(r)).liability;
   });
@@ -557,10 +567,10 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   const rowDepFor = (r: AssessmentRow) =>
     r.depOverride !== undefined ? r.depOverride : getDepRate(r.partType, ageMonths, depType);
 
-  const partsAgg   = aggregateGst(allowedParts, rowDepFor);
-  const labourAgg  = aggregateGst(allowedLabour, rowDepFor);
-  const paintAgg   = aggregateGst(allowedPaint, rowDepFor);
-  const serviceAgg = aggregateGst([...allowedLabour, ...allowedPaint], rowDepFor);
+  const partsAgg   = aggregateGst(billedParts, rowDepFor);
+  const labourAgg  = aggregateGst(billedLabour, rowDepFor);
+  const paintAgg   = aggregateGst(billedPaint, rowDepFor);
+  const serviceAgg = aggregateGst([...billedLabour, ...billedPaint], rowDepFor);
 
   // Was `labOnly + paintOnly` accumulated raw. serviceAgg computes the same
   // quantity depreciation-aware, so the taxable base printed below agrees
@@ -634,17 +644,18 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   const pHtml = allowedParts.map((r, idx) => {
     const { isDisposal, afterDep, netBeforeGst } = computeRowNet(r, rowDepFor(r));
     const finalAmt = isDisposal ? netBeforeGst : netBeforeGst * (1 + (r.gst || 0) / 100);
+    const noBill = r.billStatus === 'not-in-bill';
     return band(allowedParts, idx) + `<tr>
       <td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td>
       <td style="${td}">${r.particulars}</td>
       <td style="${td}text-align:center;">${partTypeLabel(r)}</td>
       <td style="${td}text-align:center;">${jobTypeLabel(r)}</td>
-      <td style="${td}text-align:right;">${fa(r.estimated)}</td>
+      <td style="${td}text-align:right;">${noBill ? 'No Bill' : fa(r.estimated)}</td>
       <td style="${td}text-align:center;">${depLabel(r)}</td>
-      <td style="${td}text-align:right;">${fa(r.assessed - afterDep)}</td>
-      <td style="${td}text-align:right;">${fa(r.assessed)}</td>
+      <td style="${td}text-align:right;">${noBill ? '—' : fa(r.assessed - afterDep)}</td>
+      <td style="${td}text-align:right;">${noBill ? '—' : fa(r.assessed)}</td>
       <td style="${td}text-align:center;">${isDisposal ? '0' : String(r.gst ?? 0)}</td>
-      <td style="${td}text-align:right;">${isDisposal ? `${fa(netBeforeGst)} DISP` : fa(finalAmt)}</td>
+      <td style="${td}text-align:right;">${noBill ? '—' : (isDisposal ? `${fa(netBeforeGst)} DISP` : fa(finalAmt))}</td>
       ${blank}${blank}
     </tr>`;
   }).join('');
@@ -654,36 +665,38 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   // print an override's percentage next to an amount that ignored it.
   const lHtml = allowedLabour.map((r, idx) => {
     const { afterDep, netBeforeGst } = computeRowNet(r, rowDepFor(r));
+    const noBill = r.billStatus === 'not-in-bill';
     return band(allowedLabour, idx) + `<tr>
       <td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td>
       <td style="${td}">${r.particulars}</td>
       <td style="${td}text-align:center;">Labour</td>
       <td style="${td}text-align:center;">${jobTypeLabel(r)}</td>
-      <td style="${td}text-align:right;">${fa(r.estimated)}</td>
+      <td style="${td}text-align:right;">${noBill ? 'No Bill' : fa(r.estimated)}</td>
       <td style="${td}text-align:center;">${depLabel(r)}</td>
-      <td style="${td}text-align:right;">${fa(r.assessed - afterDep)}</td>
+      <td style="${td}text-align:right;">${noBill ? '—' : fa(r.assessed - afterDep)}</td>
       ${blank}
       <td style="${td}text-align:center;">${String(r.gst ?? 0)}</td>
       ${blank}
-      <td style="${td}text-align:right;">${fa(netBeforeGst)}</td>
+      <td style="${td}text-align:right;">${noBill ? '—' : fa(netBeforeGst)}</td>
       ${blank}
     </tr>`;
   }).join('');
 
   const ptHtml = allowedPaint.map((r, idx) => {
     const { afterDep, netBeforeGst } = computeRowNet(r, rowDepFor(r));
+    const noBill = r.billStatus === 'not-in-bill';
     return band(allowedPaint, idx) + `<tr>
       <td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td>
       <td style="${td}">${r.particulars}</td>
       <td style="${td}text-align:center;">Paint</td>
       <td style="${td}text-align:center;">${jobTypeLabel(r)}</td>
-      <td style="${td}text-align:right;">${fa(r.estimated)}</td>
+      <td style="${td}text-align:right;">${noBill ? 'No Bill' : fa(r.estimated)}</td>
       <td style="${td}text-align:center;">${depLabel(r)}</td>
-      <td style="${td}text-align:right;">${fa(r.assessed - afterDep)}</td>
+      <td style="${td}text-align:right;">${noBill ? '—' : fa(r.assessed - afterDep)}</td>
       ${blank}
       <td style="${td}text-align:center;">${String(r.gst ?? 0)}</td>
       ${blank}${blank}
-      <td style="${td}text-align:right;">${fa(netBeforeGst)}</td>
+      <td style="${td}text-align:right;">${noBill ? '—' : fa(netBeforeGst)}</td>
     </tr>`;
   }).join('');
 
@@ -826,10 +839,10 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
 ${pHtml || `<tr><td colspan="12" style="${td}text-align:center;color:#999;font-style:italic;">No parts in allowed items</td></tr>`}
 <tr style="font-weight:700;background:#eee;">
   <td colspan="4" style="${td}">SUB TOTAL</td>
-  <td style="${td}text-align:right;">${fa(allowedParts.reduce((s, r) => s + r.estimated, 0))}</td>
+  <td style="${td}text-align:right;">${fa(billedParts.reduce((s, r) => s + r.estimated, 0))}</td>
   ${blank}
-  <td style="${td}text-align:right;">${fa(allowedParts.reduce((s, r) => s + r.assessed - computeRowNet(r, rowDepFor(r)).afterDep, 0))}</td>
-  <td style="${td}text-align:right;">${fa(allowedParts.reduce((s, r) => s + r.assessed, 0))}</td>
+  <td style="${td}text-align:right;">${fa(billedParts.reduce((s, r) => s + r.assessed - computeRowNet(r, rowDepFor(r)).afterDep, 0))}</td>
+  <td style="${td}text-align:right;">${fa(billedParts.reduce((s, r) => s + r.assessed, 0))}</td>
   ${blank}
   <td style="${td}text-align:right;">${fa(partsAgg.amount)}</td>
   ${blank}${blank}
@@ -839,7 +852,7 @@ ${pHtml || `<tr><td colspan="12" style="${td}text-align:center;color:#999;font-s
 ${lHtml || `<tr><td colspan="12" style="${td}text-align:center;color:#999;font-style:italic;">No labour in allowed items</td></tr>`}
 <tr style="font-weight:700;background:#f6f6f6;">
   <td colspan="4" style="${td}">SUB TOTAL</td>
-  <td style="${td}text-align:right;">${fa(allowedLabour.reduce((s, r) => s + r.estimated, 0))}</td>
+  <td style="${td}text-align:right;">${fa(billedLabour.reduce((s, r) => s + r.estimated, 0))}</td>
   <td colspan="5" style="${td}"></td>
   <td style="${td}text-align:right;">${fa(labourAgg.base)}</td>
   ${blank}
@@ -855,7 +868,7 @@ ${taxLines(labourAgg, 'Labour', 'labour')}
 ${ptHtml || `<tr><td colspan="12" style="${td}text-align:center;color:#999;font-style:italic;">No painting in allowed items</td></tr>`}
 <tr style="font-weight:700;background:#f6f6f6;">
   <td colspan="4" style="${td}">SUB TOTAL</td>
-  <td style="${td}text-align:right;">${fa(allowedPaint.reduce((s, r) => s + r.estimated, 0))}</td>
+  <td style="${td}text-align:right;">${fa(billedPaint.reduce((s, r) => s + r.estimated, 0))}</td>
   <td colspan="6" style="${td}"></td>
   <td style="${td}text-align:right;">${fa(paintAgg.base)}</td>
 </tr>
@@ -868,13 +881,13 @@ ${taxLines(paintAgg, 'Paint', 'paint')}
 <tr style="font-weight:700;background:#ddd;">
   <td colspan="4" style="${td}">TOTAL</td>
   <td style="${td}text-align:right;">${fa(
-    [...allowedParts, ...allowedLabour, ...allowedPaint].reduce((s, r) => s + r.estimated, 0)
+    [...billedParts, ...billedLabour, ...billedPaint].reduce((s, r) => s + r.estimated, 0)
   )}</td>
   ${blank}
   <td style="${td}text-align:right;">${fa(
-    [...allowedParts, ...allowedLabour, ...allowedPaint].reduce((s, r) => s + r.assessed - computeRowNet(r, rowDepFor(r)).afterDep, 0)
+    [...billedParts, ...billedLabour, ...billedPaint].reduce((s, r) => s + r.assessed - computeRowNet(r, rowDepFor(r)).afterDep, 0)
   )}</td>
-  <td style="${td}text-align:right;">${fa(allowedParts.reduce((s, r) => s + r.assessed, 0))}</td>
+  <td style="${td}text-align:right;">${fa(billedParts.reduce((s, r) => s + r.assessed, 0))}</td>
   ${blank}
   <td style="${td}text-align:right;">${fa(partsAgg.amount)}</td>
   <td style="${td}text-align:right;">${fa(labourAgg.amount)}</td>
