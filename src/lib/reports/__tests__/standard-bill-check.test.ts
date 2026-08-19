@@ -143,3 +143,36 @@ describe('Bill check print document', () => {
     expect(buildStandardPrintDocument(claim([row()]), profile)).toContain('Standard Final Survey Report');
   });
 });
+
+describe('Standard Bill Check — serial numbering', () => {
+  test('serials keep the assessment sheet numbering, so the gap shows a rejection', () => {
+    const html = buildStandardFinalSurveyHTML(claim([
+      row({ id: 'a', particulars: 'FIRST_PART', assessed: 10000 }),
+      row({ id: 'b', particulars: 'REJECTED_PART', assessed: 5000, allowed: false }),
+      row({ id: 'c', particulars: 'THIRD_PART', assessed: 3000 }),
+    ]), profile, 'bill-check');
+
+    const srOf = (name: string) => {
+      const at = html.indexOf(name);
+      const tr = html.slice(html.lastIndexOf('<tr>', at), at);
+      return (tr.match(/>(\d+)</) || [])[1];
+    };
+    expect(srOf('FIRST_PART')).toBe('1');
+    // 2 is the rejected row, absent from this report — the gap is the information
+    expect(srOf('THIRD_PART')).toBe('3');
+  });
+
+  test('final mode numbering is unchanged by the switch', () => {
+    const rows = [
+      row({ id: 'a', particulars: 'P1', assessed: 10000 }),
+      row({ id: 'b', particulars: 'P2', assessed: 5000, allowed: false }),
+      row({ id: 'c', particulars: 'P3', assessed: 3000 }),
+    ];
+    const html = buildStandardFinalSurveyHTML(claim(rows), profile, 'final');
+    for (const [name, sr] of [['P1', '1'], ['P2', '2'], ['P3', '3']] as const) {
+      const at = html.indexOf(`>${name}<`);
+      const tr = html.slice(html.lastIndexOf('<tr>', at), at);
+      expect((tr.match(/>(\d+)</) || [])[1], `${name} should be Sr ${sr}`).toBe(sr);
+    }
+  });
+});

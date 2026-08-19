@@ -20,6 +20,7 @@ import { computeRowNet } from '@/lib/calculations/row-net';
 import { getDepreciationRate, toDepreciationType } from '@/lib/calculations/depreciation';
 import { getCompulsoryExcess, calculateAssessmentSummary } from '@/lib/calculations/assessment';
 import { shouldStartSupplementaryBand } from '@/lib/calculations/utils';
+import { buildSerialMap } from '@/lib/calculations/serial-numbers';
 import { buildPrintShell, footerFromProfile } from './print-shell';
 
 // NOTE: SurveyReportDocument.tsx (React-PDF) is no longer a parallel rendering
@@ -216,7 +217,10 @@ export function buildStandardFinalSurveyHTML(
   const m9 = (v: number) => fmt2(v);
 
   // ── Parts rows (Sr | Particulars | Type | Est | Assessed | Dep% | Metal | Plastic | [FbrGls] | Glass | GST% | Price+GST)
-  let psn = 1;
+  // Numbered across every row, rejected included, so a gap in the Bill Check
+  // tells the insurer an item was refused without cross-referencing. `rows` is
+  // unfiltered here even in bill-check mode — the filter happens below.
+  const serials = buildSerialMap(rows);
   // Bill check verifies what was allowed — a disallowed item was never the
   // insurer's liability, so it does not appear here at all. The final report
   // keeps disallowed rows visible, marked NOT ALLOWED, for the surveyor's own
@@ -241,7 +245,7 @@ export function buildStandardFinalSurveyHTML(
       : '';
 
     return bandHtml + `<tr>
-      <td style="${tdsr9}">${psn++}</td>
+      <td style="${tdsr9}">${serials.get(r.id) ?? 0}</td>
       <td style="${td9}">${r.particulars}</td>
       <td style="${td9}text-align:center;">${r.partType === 'plastic' ? 'Pla/Rub' : r.partType === 'fiberglass' ? 'FbrGls' : r.partType.charAt(0).toUpperCase() + r.partType.slice(1)}</td>
       <td style="${tdr9}">${m9(r.estimated)}</td>
@@ -267,7 +271,6 @@ export function buildStandardFinalSurveyHTML(
   // manual depOverride. This row used to price straight off `r.assessed` and
   // hardcode Dep% to "—", so an override was both invisible and uncharged.
   const serviceRowHtml = (section: 'labour' | 'paint', typeLabel: string) => {
-    let sn = 1;
     const sectionRows = rows.filter(r => r.section === section && (!isBillCheck || r.allowed !== false));
     return sectionRows.map((r, idx) => {
       const disallowed = r.allowed === false;
@@ -282,7 +285,7 @@ export function buildStandardFinalSurveyHTML(
         : '';
 
       return bandHtml + `<tr>
-      <td style="${tdsr9}">${sn++}</td>
+      <td style="${tdsr9}">${serials.get(r.id) ?? 0}</td>
       <td style="${td9}">${r.particulars}</td>
       <td style="${td9}text-align:center;">${typeLabel}</td>
       <td style="${tdr9}">${m9(r.estimated)}</td>
