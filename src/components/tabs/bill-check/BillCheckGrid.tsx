@@ -18,6 +18,7 @@ import {
 } from './config';
 import { GRID_COLUMNS } from '@/components/claim/grid-columns';
 import { AllowanceScopeDialog } from '@/components/dialogs/AllowanceScopeDialog';
+import { AllowanceInput } from './AllowanceInput';
 
 interface Props {
   allRows: AssessmentRow[];
@@ -438,17 +439,12 @@ export function BillCheckGrid({
                 {visible.quantity      && <div className="text-sm font-medium text-center" style={{ color: 'var(--color-neutral-600)' }}>{row.quantity ?? '—'}</div>}
                 {visible.unitPrice     && <div className="text-sm font-medium" style={{ color: 'var(--color-neutral-600)' }}>{fmt(row.estimated || 0)}</div>}
                 {visible.gst           && <div className="text-xs font-medium text-center" style={{ color: 'var(--color-neutral-600)' }}>{row.gst ?? 18}%</div>}
-                <input
-                  type="number"
-                  value={row.billAllowed ?? row.assessed ?? ''}
-                  onChange={e => commitAllowance(row, Number(e.target.value) || 0)}
+                <AllowanceInput
+                  value={row.billAllowed ?? row.assessed ?? 0}
                   disabled={isDisallowed}
-                  title={row.billAllowed !== undefined ? `Allowed above the assessed value of ₹${row.assessed}` : undefined}
-                  className="px-2 py-1 rounded-lg text-sm text-right border outline-none w-full border-border font-medium"
-                  style={{
-                    background: isDisallowed ? 'var(--color-neutral-100)' : 'var(--color-neutral-50)',
-                    color: row.billAllowed !== undefined ? 'var(--color-status-warning)' : 'var(--color-foreground)',
-                  }}
+                  highlighted={row.billAllowed !== undefined}
+                  title={row.billAllowed !== undefined ? `Allowed against an assessed value of ₹${row.assessed}` : undefined}
+                  onCommit={next => commitAllowance(row, next)}
                 />
                 <div className="text-xs font-medium text-center" style={{ color: row.depOverride !== undefined ? 'var(--color-status-warning)' : 'var(--color-status-danger)' }}>
                   {row.depOverride !== undefined ? `${row.depOverride}%*` : `${depRateFor(row)}%`}
@@ -469,8 +465,16 @@ export function BillCheckGrid({
                     type="number"
                     value={row.billedTaxable ?? ''}
                     onChange={e => {
-                      const tax = Number(e.target.value);
+                      const raw = e.target.value.trim();
                       const gstPct = row.gst ?? 18;
+                      // Cleared means not checked yet, which is what the print
+                      // gate reads. Zero would mean the workshop billed nothing.
+                      if (raw === '') {
+                        updateAssessmentRow(row.id, { billedTaxable: undefined, billedAmount: undefined });
+                        return;
+                      }
+                      const tax = Number(raw);
+                      if (!Number.isFinite(tax)) return;
                       updateAssessmentRow(row.id, { billedTaxable: tax, billedAmount: Math.round(tax * (1 + gstPct / 100)) });
                     }}
                     disabled={isDisallowed || row.billStatus === 'not-in-bill'}
@@ -568,12 +572,12 @@ export function BillCheckGrid({
         assessed={pendingAllowance.assessed}
         proposed={pendingAllowance.proposed}
         onCancel={() => setPendingAllowance(null)}
-        onChoose={scope => {
+        onChoose={(scope, amount) => {
           updateAssessmentRow(
             pendingAllowance.id,
             scope === 'both'
-              ? { assessed: pendingAllowance.proposed, billAllowed: undefined }
-              : { billAllowed: pendingAllowance.proposed },
+              ? { assessed: amount, billAllowed: undefined }
+              : { billAllowed: amount },
           );
           setPendingAllowance(null);
         }}
