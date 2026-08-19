@@ -29,6 +29,9 @@ export interface EvidenceField {
 interface BlobEntry {
   url: string;
   mimeType: string;
+  /** Named so a file the viewer cannot render can still be identified. */
+  name: string;
+  size: number;
 }
 
 interface EvidenceState {
@@ -65,7 +68,12 @@ export const useEvidenceStore = create<EvidenceState>((set, get) => ({
     const key = `${claimId}_${docType}`;
     // Revoke any existing blob URLs for this slot to avoid memory leaks
     for (const prev of get().blobUrls[key] ?? []) URL.revokeObjectURL(prev.url);
-    const entries = files.map((f) => ({ url: URL.createObjectURL(f), mimeType: f.type }));
+    const entries = files.map((f) => ({
+      url: URL.createObjectURL(f),
+      mimeType: f.type,
+      name: f.name,
+      size: f.size,
+    }));
     set(s => ({
       blobUrls: { ...s.blobUrls, [key]: entries },
       rawFiles: { ...s.rawFiles, [key]: [...files] },
@@ -228,7 +236,27 @@ export function DocumentEvidenceViewer({ panelWidth = '420px', embedded = false,
                       alt={`${docLabel} source document ${idx + 1}`}
                       className="w-full block rounded-md shadow-lg"
                     />
-                  ) : null}
+                  ) : (
+                    // Anything else used to fall through to null, so a file the
+                    // surveyor had uploaded showed as blank space.
+                    <div className="rounded-md border border-border bg-card p-4 flex flex-col gap-2">
+                      <div className="text-sm font-medium text-foreground break-all">{entry.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {entry.mimeType || 'Type not recognised'} · {(entry.size / 1024).toFixed(0)} KB
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        This file cannot be shown here. Open it to check the figures against it.
+                      </p>
+                      <a
+                        href={entry.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="self-start px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground"
+                      >
+                        Open in new tab
+                      </a>
+                    </div>
+                  )}
                 </div>
               );
             })
