@@ -351,7 +351,17 @@ export function BillCheckGrid({
             section's own rows rather than the interleaved claim array.
           */}
           {SECTION_ORDER.map(({ section, title }) => {
-          const sectionRows = allRows.filter(r => r.section === section);
+          // Rejected at final survey — already absent from every Bill Check
+          // report, and nothing here can give them liability. The header count
+          // states how many, and the serial gaps show where they sat.
+          //
+          // One exception, and it is the whole reason this is not a plain
+          // `r.allowed`: a rejected row the workshop billed anyway still needs
+          // the surveyor's eye. That is a claim for refused work, and hiding it
+          // would hide the one thing on this screen worth acting on.
+          const sectionRows = allRows.filter(
+            r => r.section === section && (r.allowed || (r.billedAmount ?? 0) > 0),
+          );
           // An empty section is not rendered at all, as in AssessmentGrid.
           if (sectionRows.length === 0) return null;
           const sectionIds = sectionRows.map(r => r.id);
