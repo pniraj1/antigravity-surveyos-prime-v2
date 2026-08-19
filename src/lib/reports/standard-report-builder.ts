@@ -248,7 +248,7 @@ export function buildStandardFinalSurveyHTML(
       <td style="${tdsr9}">${serials.get(r.id) ?? 0}</td>
       <td style="${td9}">${r.particulars}</td>
       <td style="${td9}text-align:center;">${r.partType === 'plastic' ? 'Pla/Rub' : r.partType === 'fiberglass' ? 'FbrGls' : r.partType.charAt(0).toUpperCase() + r.partType.slice(1)}</td>
-      <td style="${tdr9}">${m9(r.estimated)}</td>
+      <td style="${tdr9}">${isBillCheck && r.billStatus === 'not-in-bill' ? 'No Bill' : m9(r.estimated)}</td>
       <td style="${tdr9}${disallowed ? 'color:#a00;font-weight:700;font-size:6.5pt;text-align:center;' : ''}">${disallowed ? 'NOT ALLOWED' : m9(r.assessed)}</td>
       <td style="${tdr9}${r.depOverride !== undefined ? 'color:#b45309;' : ''}">${depLabel}</td>
       ${matCell('metal')}
@@ -288,7 +288,7 @@ export function buildStandardFinalSurveyHTML(
       <td style="${tdsr9}">${serials.get(r.id) ?? 0}</td>
       <td style="${td9}">${r.particulars}</td>
       <td style="${td9}text-align:center;">${typeLabel}</td>
-      <td style="${tdr9}">${m9(r.estimated)}</td>
+      <td style="${tdr9}">${isBillCheck && r.billStatus === 'not-in-bill' ? 'No Bill' : m9(r.estimated)}</td>
       <td style="${tdr9}${disallowed ? 'color:#a00;font-weight:700;font-size:6.5pt;text-align:center;' : ''}">${disallowed ? 'NOT ALLOWED' : m9(r.assessed)}</td>
       <td style="${tdr9}text-align:center;${r.depOverride !== undefined ? 'color:#b45309;' : ''}">${depLabel}</td>
       <td colspan="${NMAT}" style="${tdr9}text-align:center;">—</td>

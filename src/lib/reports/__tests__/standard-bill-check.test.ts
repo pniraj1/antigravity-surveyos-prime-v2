@@ -176,3 +176,21 @@ describe('Standard Bill Check — serial numbering', () => {
     }
   });
 });
+
+describe('Standard Bill Check — No Bill', () => {
+  test('a not-in-bill row says No Bill rather than 0.00', () => {
+    const html = buildStandardFinalSurveyHTML(claim([
+      row({ particulars: 'GRILLE', assessed: 3400, billStatus: 'not-in-bill' }),
+    ]), profile, 'bill-check');
+    const at = html.indexOf('GRILLE');
+    const tr = html.slice(html.lastIndexOf('<tr>', at), html.indexOf('</tr>', at));
+    expect(tr).toContain('No Bill');
+  });
+
+  test('No Bill never appears in the final report', () => {
+    const html = buildStandardFinalSurveyHTML(claim([
+      row({ particulars: 'GRILLE', assessed: 3400, billStatus: 'not-in-bill' }),
+    ]), profile, 'final');
+    expect(html).not.toContain('No Bill');
+  });
+});
