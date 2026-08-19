@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { projectForBillCheck } from '../bill-check-projection';
+import { projectForBillCheck, billCheckAssessed } from '../bill-check-projection';
 import type { AssessmentRow } from '@/types/assessment';
 
 function row(overrides: Partial<AssessmentRow> = {}): AssessmentRow {
@@ -51,5 +51,29 @@ describe('projectForBillCheck', () => {
     const snapshot = JSON.parse(JSON.stringify(input));
     projectForBillCheck(input);
     expect(input).toEqual(snapshot);
+  });
+});
+
+describe('billCheckAssessed', () => {
+  test('uses the final-survey figure when no allowance was recorded', () => {
+    expect(billCheckAssessed(row({ assessed: 1000 }))).toBe(1000);
+  });
+
+  test('uses the bill-check allowance when one was recorded', () => {
+    expect(billCheckAssessed(row({ assessed: 1000, billAllowed: 700 }))).toBe(700);
+  });
+
+  test('an allowance of zero is a decision, not an absence', () => {
+    expect(billCheckAssessed(row({ assessed: 1000, billAllowed: 0 }))).toBe(0);
+  });
+
+  test('a not-in-bill row carries nothing, whatever was allowed', () => {
+    expect(billCheckAssessed(row({ assessed: 1000, billAllowed: 700, billStatus: 'not-in-bill' }))).toBe(0);
+  });
+
+  // The guard against screen and report drifting apart again.
+  test('the projection routes through it', () => {
+    const r = row({ assessed: 1000, billAllowed: 700, billedTaxable: 700 });
+    expect(projectForBillCheck([r])[0].assessed).toBe(billCheckAssessed(r));
   });
 });

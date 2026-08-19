@@ -7,6 +7,7 @@ import type { AssessmentRow, AssessmentSummary } from '@/types';
 import type { DepreciationType } from '@/types/vehicle';
 import { shouldStartSupplementaryBand } from '@/lib/calculations/utils';
 import { computeRowNet, getDepreciationRate } from '@/lib/calculations';
+import { billCheckAssessed } from '@/lib/reports/bill-check-projection';
 import {
   sectionSubtotals, billedTotals, SECTION_ORDER, type BilledTotals,
 } from '@/lib/calculations/section-subtotals';
@@ -51,6 +52,13 @@ export function BillCheckGrid({
   // Same rate the report computes, so the grid and the PDF cannot disagree.
   const depRateFor = (row: AssessmentRow) =>
     row.depOverride !== undefined ? row.depOverride : getDepreciationRate(row.partType, ageMonths, depreciationType);
+
+  /**
+   * The row as this document values it. computeRowNet reads `assessed`, so a
+   * raw row makes the screen ignore an allowance the report already applied.
+   */
+  const asBilled = (row: AssessmentRow): AssessmentRow =>
+    ({ ...row, assessed: billCheckAssessed(row) });
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [visible, setVisible] = useState<Record<OptionalColumn, boolean>>(DEFAULT_VISIBLE);
   const [showSettings, setShowSettings] = useState(false);
@@ -436,12 +444,12 @@ export function BillCheckGrid({
                   {row.depOverride !== undefined ? `${row.depOverride}%*` : `${depRateFor(row)}%`}
                 </div>
                 <div className="text-sm font-medium text-right" style={{ color: 'var(--color-neutral-600)' }}>
-                  {fmt(computeRowNet(row, depRateFor(row)).netBeforeGst)}
+                  {fmt(computeRowNet(asBilled(row), depRateFor(row)).netBeforeGst)}
                 </div>
                 {visible.priceWithGst && (
                   <div className="text-sm font-medium text-right" style={{ color: 'var(--color-neutral-600)' }}>
                     {(() => {
-                      const { isDisposal, netBeforeGst } = computeRowNet(row, depRateFor(row));
+                      const { isDisposal, netBeforeGst } = computeRowNet(asBilled(row), depRateFor(row));
                       return fmt(isDisposal ? netBeforeGst : netBeforeGst * (1 + (row.gst ?? 18) / 100));
                     })()}
                   </div>
