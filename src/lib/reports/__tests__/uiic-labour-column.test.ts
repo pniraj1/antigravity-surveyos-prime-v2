@@ -150,3 +150,16 @@ describe('UIIC Final Report — each section books money to its own column', () 
     expect(table).toBeDefined();
   });
 });
+
+describe('UIIC Final Report — item table geometry', () => {
+  test('Dep% is wide enough for an overridden 12.5%, and widths still sum to 100', () => {
+    const html = buildUIICFinalHTML(claim([row()]), null);
+    const head = html.split('DETAILS OF ASSESSMENT')[1].split('</thead>')[0];
+    // <th only — the table element carries its own width:100%
+    const widths = [...head.matchAll(/<th[^>]*width:(\d+)%/g)].map(m => Number(m[1]));
+    expect(widths).toHaveLength(12);
+    expect(widths.reduce((a, b) => a + b, 0)).toBe(100);
+    // Dep% is the sixth column; 12.5%* needs 21.8pt and 5% gives only 19.4pt
+    expect(widths[5]).toBeGreaterThanOrEqual(7);
+  });
+});

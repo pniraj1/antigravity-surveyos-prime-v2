@@ -408,7 +408,7 @@ ${/* Fixed layout makes the declared widths binding. Under the default auto
      the 186mm printable width of A4 — the same overflow the Standard
      report's section 9 hit when its fibre-glass column went in. */ ''}
 <table style="${ts}table-layout:fixed;overflow-wrap:anywhere;font-size:7pt;">
-<thead><tr><th style="${th}width:4%;">SR.</th><th style="${th}text-align:left;width:18%;">Part Name</th><th style="${th}width:8%;">Part<br/>Type</th><th style="${th}width:7%;">Job<br/>Type</th><th style="${th}width:9%;">Part List<br/>W/o Tax</th><th style="${th}width:5%;">Dep%</th><th style="${th}width:8%;">Dep<br/>Amt</th><th style="${th}width:9%;">Parts<br/>Assess</th><th style="${th}width:5%;">GST%</th><th style="${th}width:9%;">Part<br/>with GST</th><th style="${th}width:9%;">Labour<br/>with GST</th><th style="${th}width:9%;">Paint<br/>with GST</th></tr></thead><tbody>
+<thead><tr><th style="${th}width:4%;">SR.</th><th style="${th}text-align:left;width:16%;">Part Name</th><th style="${th}width:8%;">Part<br/>Type</th><th style="${th}width:7%;">Job<br/>Type</th><th style="${th}width:9%;">Part List<br/>W/o Tax</th><th style="${th}width:7%;">Dep%</th><th style="${th}width:8%;">Dep<br/>Amt</th><th style="${th}width:9%;">Parts<br/>Assess</th><th style="${th}width:5%;">GST%</th><th style="${th}width:9%;">Part<br/>with GST</th><th style="${th}width:9%;">Labour<br/>with GST</th><th style="${th}width:9%;">Paint<br/>with GST</th></tr></thead><tbody>
 <tr><td colspan="12" style="${sec}">SPARE PARTS</td></tr>${pHtml}
 <tr><td colspan="12" style="${sec}">LABOUR</td></tr>${lHtml}
 <tr><td colspan="12" style="${sec}">PAINTING CHARGES</td></tr>${ptHtml}
