@@ -89,7 +89,7 @@ Rows rejected at final survey are already excluded from every Bill Check report.
 
 Serial numbers are unaffected: `buildSerialMap` counts across all rows, so the gaps stay visible on screen exactly as they print — the surveyor sees 1, 4, 5 and knows 2 and 3 were rejected.
 
-A one-line footer per section states the count: *"2 items disallowed at final survey — not shown here, and not in the report."* The grid header already reads `12 items · 10 allowed`, so this is the second statement of the same fact; drop it if it reads as clutter.
+No per-section footer. The grid header already reads `12 items · 10 allowed`, which states the count once; the serial gaps show where the missing rows sat. A second line repeating it was drafted and cut as clutter.
 
 ---
 
