@@ -33,7 +33,7 @@ describe('computeRowLiability', () => {
   });
 
   test('under-billing takes the lower billed figure', () => {
-    const r = row({ billedTaxable: 7000, billStatus: 'partial' });
+    const r = row({ billedTaxable: 7000, billStatus: 'in-bill' });
     const { liability } = computeRowLiability(r, 10);
     expect(Math.round(liability)).toBe(7434); // 7000 × 0.90 × 1.18
   });

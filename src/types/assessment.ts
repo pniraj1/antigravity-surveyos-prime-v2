@@ -9,7 +9,7 @@ import type { DeductionCategory } from '@/lib/constants/deduction-categories';
 export type PartType = 'metal' | 'plastic' | 'glass' | 'fiberglass' | 'labour' | 'paint';
 export type AssessmentSection = 'parts' | 'labour' | 'paint';
 
-export type BillStatus = 'in-bill' | 'not-in-bill' | 'partial' | 'pending' | 'not-allowed';
+export type BillStatus = 'in-bill' | 'not-in-bill' | 'pending' | 'not-allowed';
 
 export interface ExtraBillItem {
   id: string;
@@ -54,6 +54,14 @@ export interface AssessmentRow {
    * a workshop's higher figure cannot rewrite a report already filed.
    */
   billAllowed?: number;
+  /**
+   * The surveyor has looked at this row's billed figure against the bill.
+   *
+   * Set by either button on a divergence flag. Nothing else derives from it —
+   * the flag itself is computed, not stored — but printing is gated on every
+   * divergent row carrying it.
+   */
+  billVerified?: boolean;
   partType: PartType;
   /**
    * The partType this row carried before it was last moved out of the `parts`
@@ -145,7 +153,8 @@ export interface AssessmentSummary {
   // ─── Estimated Totals (from Invoice) ────────────────
   totalEstimated: number;
   estimatePartsBase: number;
-  // Per-material estimate subtotals (allowed parts only — pair with metalTotal etc.)
+  // Per-material estimate subtotals, every row — an estimate is a fact about
+  // the garage's document, unlike metalTotal etc. which are allowed-only.
   estimateMetalBase: number;
   estimatePlasticBase: number;
   estimateGlassBase: number;

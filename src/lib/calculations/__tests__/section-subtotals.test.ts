@@ -101,7 +101,7 @@ describe('billedTotals', () => {
     const t = billedTotals([
       row({ assessed: 1000, billStatus: 'not-in-bill' }),
       row({ assessed: 2000, billStatus: 'in-bill' }),
-      row({ assessed: 4000, billStatus: 'partial' }),
+      row({ assessed: 4000, billStatus: 'in-bill' }),
       row({ assessed: 8000, billStatus: 'pending' }),
       row({ assessed: 16000 }),
     ]);

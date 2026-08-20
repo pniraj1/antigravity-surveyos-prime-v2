@@ -254,14 +254,14 @@ export const createAssessmentSlice: StateCreator<any, any, any, AssessmentSlice>
           ...state.currentClaim,
           assessmentRows: state.currentClaim.assessmentRows.map((r) => {
             if (r.id !== rowId) return r;
-            // Same item, worded differently by the workshop. Partial when the
-            // workshop billed a different figure than was assessed.
-            const partial = Math.abs(extra.taxableAmount - r.assessed) > AMT_TOL;
+            // Same item, worded differently by the workshop. A figure differing
+            // from the assessment is surfaced as a divergence flag, which is
+            // what drives the cap — it is not a status.
             return {
               ...r,
               billedTaxable: extra.taxableAmount,
               billedAmount: extra.amount,
-              billStatus: partial ? ('partial' as const) : ('in-bill' as const),
+              billStatus: 'in-bill' as const,
               billRemarks: r.billRemarks || `Linked from bill: ${extra.description}`,
             };
           }),

@@ -546,16 +546,11 @@ export function applyFinalBill(claim: ClaimData, data: any): ClaimData {
   const rowMatches = matchBillItemsToRows(claim.assessmentRows, billItems);
   const matchedBillIds = new Set(Array.from(rowMatches.values()).map((m) => m.bill.idx));
 
-  const AMT_TOL = 1;
   const updatedRows = claim.assessmentRows.map((row) => {
     const m = rowMatches.get(row.id);
     if (!m) return row;
     const billedAmt = m.bill.totalAmount || 0;
     const billedTax = m.bill.taxableAmount || 0;
-    const partial =
-      m.reason === 'part' &&
-      row.estimated > 0 &&
-      Math.abs(m.bill.taxableAmount - row.estimated) > AMT_TOL;
     if (!row.allowed) {
       return {
         ...row,
@@ -565,9 +560,12 @@ export function applyFinalBill(claim: ClaimData, data: any): ClaimData {
         billRemarks: row.billRemarks || 'Workshop billed for a disallowed item',
       };
     }
-    const status: 'in-bill' | 'partial' = partial ? 'partial' : 'in-bill';
+    // The bill differing from the estimate is exactly the surveyor's "wrong
+    // pricings during estimates which are later corrected". It is surfaced as
+    // a divergence flag against the ASSESSMENT, which is what drives the cap,
+    // rather than as a status against the estimate that changed no arithmetic.
     const remark = m.ambiguous ? 'Ambiguous match — please verify' : row.billRemarks;
-    return { ...row, billedTaxable: billedTax, billedAmount: billedAmt, billStatus: status, billRemarks: remark };
+    return { ...row, billedTaxable: billedTax, billedAmount: billedAmt, billStatus: 'in-bill' as const, billRemarks: remark };
   });
 
   const extras: ExtraBillItem[] = billItems

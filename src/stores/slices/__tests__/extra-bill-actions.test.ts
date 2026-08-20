@@ -51,7 +51,10 @@ describe('linkExtraBillItem', () => {
     const r = get().currentClaim!.assessmentRows[0];
     expect(r.billedTaxable).toBe(6000);
     expect(r.billedAmount).toBe(7080);
-    expect(r.billStatus).toBe('partial'); // 6000 billed vs 10000 assessed
+    // 6000 billed against 10000 assessed is a divergence, and a divergence is
+    // now a derived flag driving the cap, not a stored status. The row is in
+    // the bill; billCheckFlags is what says something needs looking at.
+    expect(r.billStatus).toBe('in-bill');
     expect(get().currentClaim!.extraBillItems).toHaveLength(0);
   });
 

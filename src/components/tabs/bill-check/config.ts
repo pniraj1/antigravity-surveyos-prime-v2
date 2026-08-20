@@ -64,13 +64,12 @@ export function saveVisibility(v: Record<OptionalColumn, boolean>) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch { /* ignore */ }
 }
 
-export type BillStatus = 'in-bill' | 'not-in-bill' | 'partial' | 'pending' | 'not-allowed';
+export type BillStatus = 'in-bill' | 'not-in-bill' | 'pending' | 'not-allowed';
 
 export function statusLabel(s: BillStatus) {
   switch (s) {
     case 'in-bill':     return { label: 'In Bill',        color: '#059669', bg: 'rgba(5,150,105,0.1)' };
     case 'not-in-bill': return { label: 'Not in Bill',    color: '#dc2626', bg: 'rgba(220,38,38,0.1)' };
-    case 'partial':     return { label: 'Partial',        color: '#d97706', bg: 'rgba(217,119,6,0.1)' };
     case 'not-allowed': return { label: 'Not Allowed',    color: '#6b7280', bg: 'rgba(107,114,128,0.12)' };
     default:            return { label: 'Pending Review', color: '#8D99AE', bg: 'rgba(141,153,174,0.1)' };
   }

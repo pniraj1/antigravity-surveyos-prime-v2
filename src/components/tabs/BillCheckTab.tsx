@@ -10,7 +10,7 @@ import { useAIExtraction } from '@/hooks/useAIExtraction';
 import { calculateAssessmentSummary, calculateBillCheckSummary, getVehicleAgeMonths, buildSerialMap } from '@/lib/calculations';
 import { triggerUIICBillCheckPrint, buildUIICBillCheckHTML } from '@/lib/reports/uiic-final-builder';
 import { buildStandardFinalSurveyHTML, triggerStandardPrint } from '@/lib/reports/standard-report-builder';
-import { rowsNeedingRemark } from '@/lib/reports/bill-check-projection';
+import { rowsNeedingRemark, billCheckAssessed } from '@/lib/reports/bill-check-projection';
 
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import { PendingRowsDialog } from '@/components/dialogs/PendingRowsDialog';
@@ -107,7 +107,10 @@ export function BillCheckTab() {
 
   const inBillTotal    = allowedRows.filter(r => r.billStatus === 'in-bill').reduce((s, r) => s + (r.billedAmount || 0), 0);
   const notInBillTotal = allowedRows.filter(r => r.billStatus === 'not-in-bill').reduce((s, r) => s + r.assessed, 0);
-  const partialTotal   = allowedRows.filter(r => r.billStatus === 'partial').reduce((s, r) => s + r.assessed - (r.billedAmount || 0), 0);
+  // What the cap took off: the gap between what was assessed and what this
+  // document actually claims. Used to read a `partial` status that changed no
+  // arithmetic anywhere, so the tile sat at zero on claims with real variance.
+  const partialTotal   = allowedRows.reduce((s, r) => s + Math.max(0, r.assessed - billCheckAssessed(r)), 0);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
