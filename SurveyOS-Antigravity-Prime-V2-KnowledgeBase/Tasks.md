@@ -1,6 +1,6 @@
 # Active Tasks
 
-> Last updated: 2026-05-25 by Claude
+> Last updated: 2026-08-20 by Claude
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
 
 ---
@@ -39,7 +39,6 @@
 
 ## Pending — Medium Priority
 
-- [ ] **UIIC report — Depreciation Amount column** — add a rupee-value column beside the existing `Part Depreciation` percentage column, in both the UIIC final report and the UIIC bill check item table (`uiic-final-builder.ts`, headers at ~:778 and the `pHtml` row builder). The amount is already computed per row as `r.assessed − computeRowNet(r, dep).netBeforeGst`; this only surfaces it. Small change, deferred by the surveyor on 2026-08-18.
 - [ ] Firebase App Check integration
 - [ ] GDPR data deletion endpoint
 - [ ] Unit test coverage to 80% (currently 3 test files)
@@ -65,6 +64,8 @@
 
 ## Recently Completed
 
+- [x] Bill Check — the cap, the flags and the estimate figures (2026-08-20) — three parts, ten tasks, deployed. **Estimates:** `calculateAssessmentSummary` summed `estimatePartsBase` over every row but split it by material over allowed rows only, so every summary table printing both showed a heading its own breakdown did not add up to; the `allowed` guard is gone from the split and the Standard builder's private duplicate of that maths is deleted in favour of the engine's. §8 column now reads `Estimated (before GST)`; §9 gained Estimate and Assessed subtotals (its label used to span six columns and swallow them); §8's Billed total ties to the invoice, deducting rejected-but-billed items on one aggregate line. **Cap:** `billCheckAssessed` returns `min(assessed, billedTaxable)` — the bill caps the claim per item, bill-check only, never touching the Final Survey Report. **Flags:** new `bill-check-flags.ts` derives one rule in both directions (billed under over-claims against the insurer, billed over leaves the insured paying), diagnosed by the estimate as the third number; a mark per row opens an in-place explanation, a two-tier banner carries bulk actions, and blocking flags gate printing. `partial` status retired (it changed no arithmetic and compared against the wrong number); `billVerified` added. Spec: `Specs/2026-08-18-bill-check-cap-and-flags-design.md`; plan: `docs/superpowers/plans/2026-08-18-bill-check-cap-and-flags.md`. 836 tests passing. Screen behaviour not verifiable without a real login — needs exercising on a live claim.
+- [x] UIIC report — Depreciation Amount column (2026-08-18) — rupee value beside `Part Depreciation` %, in both the UIIC final report and the UIIC bill check item table. Shipped alongside the labour/paint column split ("Part with GST" / "Labour with GST" / Paint) and per-line tax and depreciation throughout.
 - [x] Standard Bill Check report + grid alignment (2026-08-18) — new `mode: 'bill-check'` on the Standard Final Survey builder (row projection, no new calculations); Standard | UIIC toggle on the Bill Check tab; `billAllowed` field + AllowanceScopeDialog so a bill-check allowance can't silently rewrite an issued Final Survey Report; PendingRowsDialog blocks printing on unchecked items; MissingRemarkDialog warns (non-blocking) on undocumented rows; Bill Check grid gained Dep%/Net/Price+GST and corrected column labels via a shared `grid-columns.ts`. Spec: `Specs/2026-08-18-standard-bill-check-design.md`; plan: `docs/superpowers/plans/2026-08-18-standard-bill-check.md`. 742 tests passing.
 - [x] Fixed UIIC "Repairs As Per Assessment" defaulting to YES with no reinspection on record (2026-08-18)
 - [x] Project reorganization and vault restructure (2026-05-21)

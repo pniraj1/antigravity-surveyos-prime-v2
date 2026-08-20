@@ -2,6 +2,17 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-08-20 (Claude)
+- fix(calc): stop filtering the per-material estimate split — `estimatePartsBase` summed every row while Metal/Plastic/Glass/Fibre summed allowed rows only, so every summary table printing both disagreed with itself
+- fix(report): Standard builder reads the engine's estimate figures instead of its own filtered duplicate; §8 column relabelled `Estimated (before GST)`
+- feat(report): §9 subtotals the Estimate and Assessed columns — the label used to span six columns and swallow them
+- feat(bill-check): §8's Billed total ties to the invoice, deducting rejected-but-billed items on one aggregate line
+- feat(bill-check): the billed amount caps the assessment per item (`billCheckAssessed`), bill-check only — the Final Survey Report is never touched
+- refactor(bill-check): `billVerified` in, `partial` status out — it changed no arithmetic and compared against the estimate rather than the assessment
+- feat(bill-check): `bill-check-flags.ts` — one divergence rule in both directions, diagnosed by the estimate; plus invoice reconciliation, a rejected-item-billed advisory and a low-confidence-match advisory that the screen already detected and never showed
+- feat(bill-check): per-row flag mark with an in-place explanation, a two-tier attention banner with bulk actions, and a print gate on blocking flags
+- deploy: live at motorsurveyos-in.web.app (project surveyos-v2-antigravity-in); 836 tests passing
+
 ## 2026-05-25 (Claude)
 - feat: duplicate upload detection for Google Drive (DuplicateUploadDialog + upload-with-check.ts)
 - feat: per-claim Drive file listing with IDB cache (useClaimDriveFiles hook, DB_VERSION=4)
