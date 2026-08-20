@@ -137,11 +137,17 @@ export function buildStandardFinalSurveyHTML(
   const excess = volExcess + compExcess;
   const net = Math.max(0, grand - salvage - excess);
 
-  const estPartsBase = rows.filter(r => r.section === 'parts' && r.allowed !== false).reduce((s, r) => s + r.estimated, 0);
-  const estByType = (t: string) => rows.filter(r => r.section === 'parts' && r.allowed !== false && r.partType === t).reduce((s, r) => s + r.estimated, 0);
-  const estMetal = estByType('metal'), estPlastic = estByType('plastic'), estGlass = estByType('glass'), estFbr = estByType('fiberglass');
-  const estLabOnly = rows.filter(r => r.section === 'labour' && r.allowed !== false).reduce((s, r) => s + r.estimated, 0);
-  const estPaintOnly = rows.filter(r => r.section === 'paint' && r.allowed !== false).reduce((s, r) => s + r.estimated, 0);
+  // The engine already derives every one of these. This file used to compute
+  // its own, filtered by `allowed`, and the two drifted — the builder printed
+  // an estimate that excluded whatever the surveyor rejected, which is the one
+  // thing the Estimated column exists to show.
+  const estPartsBase = summary.estimatePartsBase;
+  const estMetal = summary.estimateMetalBase;
+  const estPlastic = summary.estimatePlasticBase;
+  const estGlass = summary.estimateGlassBase;
+  const estFbr = summary.estimateFiberglassBase;
+  const estLabOnly = summary.estimateLabourOnlyBase;
+  const estPaintOnly = summary.estimatePaintOnlyBase;
   const estLabBase = estLabOnly + estPaintOnly;
 
   // ── Font scale (resolved once, used throughout) ────────────────────────────
@@ -528,7 +534,7 @@ ${isBillCheck ? '' : '\n' + causeSectionHtml}
   <thead>
     <tr>
       <th style="${th};width:40%;text-align:left;">Head</th>
-      <th style="${th};text-align:right;">${isBillCheck ? 'Billed' : 'Estimated'}</th>
+      <th style="${th};text-align:right;">${isBillCheck ? 'Billed' : 'Estimated (before GST)'}</th>
       <th style="${th};text-align:right;">Assessed (after Dep.)</th>
       <th style="${th};text-align:right;">Incl. GST</th>
     </tr>

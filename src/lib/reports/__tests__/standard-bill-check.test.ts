@@ -194,3 +194,33 @@ describe('Standard Bill Check — No Bill', () => {
     expect(html).not.toContain('No Bill');
   });
 });
+
+describe('Standard report — the Estimated column states the garage estimate', () => {
+  test('a rejected item still counts, and the column says its basis', () => {
+    const html = buildStandardFinalSurveyHTML(claim([
+      row({ particulars: 'KEPT', estimated: 10000, assessed: 10000 }),
+      row({ particulars: 'REJECTED', estimated: 2000, assessed: 0, allowed: false }),
+      row({ particulars: 'LAB', section: 'labour', partType: 'labour', estimated: 1000, assessed: 1000 }),
+    ]), profile, 'final');
+
+    expect(html).toContain('Estimated (before GST)');
+    const sec8 = html.split('8. ASSESSMENT SUMMARY')[1].split('</table>')[0];
+    // Parts estimate is 12,000 — the garage's figure, not the 10,000 allowed
+    expect(sec8).toContain('12,000.00');
+    // Grand total estimate is 13,000
+    expect(sec8).toContain('13,000.00');
+  });
+
+  test('section 8 reconciles with the narrative paragraph', () => {
+    const c = claim([
+      row({ particulars: 'KEPT', estimated: 10000, assessed: 10000 }),
+      row({ particulars: 'REJECTED', estimated: 2000, assessed: 0, allowed: false }),
+      row({ particulars: 'LAB', section: 'labour', partType: 'labour', estimated: 1000, assessed: 1000 }),
+    ]);
+    const html = buildStandardFinalSurveyHTML(c, profile, 'final');
+    // Narrative quotes the GST-inclusive estimate: 13,000 x 1.18 = 15,340
+    expect(html).toContain('15,340.00');
+    // Section 8 quotes the same figure before GST
+    expect(html.split('8. ASSESSMENT SUMMARY')[1].split('</table>')[0]).toContain('13,000.00');
+  });
+});
