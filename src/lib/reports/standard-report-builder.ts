@@ -159,6 +159,15 @@ export function buildStandardFinalSurveyHTML(
   const assessedLabourRaw = rawAssessed('labour');
   const assessedPaintRaw = rawAssessed('paint');
 
+  // Money on the workshop's invoice for items rejected at final survey. Section
+  // 9 excludes those rows, so without this the summary and the table below it
+  // would differ with nothing on the page saying why. One line however many
+  // items — the Final Survey Report lists each of them as NOT ALLOWED, and the
+  // serial gaps point at them, so the detail already exists elsewhere.
+  const rejectedBilledTotal = isBillCheck
+    ? rows.filter(r => r.allowed === false).reduce((s, r) => s + (r.billedTaxable ?? 0), 0)
+    : 0;
+
   // ── Font scale (resolved once, used throughout) ────────────────────────────
   const scale = getHtmlScale(claim.reportSettings?.fontScale);
 
@@ -585,6 +594,17 @@ ${isBillCheck ? '' : '\n' + causeSectionHtml}
       <td style="${tdr}font-weight:700;background:#e8f5f3;">${fa(pb + labBase)}</td>
       <td style="${tdr}font-weight:700;background:#e8f5f3;">${fa(grand)}</td>
     </tr>
+    ${rejectedBilledTotal > 0 ? `
+    <tr>
+      <td style="${td}">Less: billed for items rejected at survey</td>
+      <td style="${tdr}">( ${fa(rejectedBilledTotal)} )</td>
+      <td colspan="2" style="border:0.4pt solid #bbb;"></td>
+    </tr>
+    <tr>
+      <td style="${td}font-weight:700;">Billed against allowed items</td>
+      <td style="${tdr}font-weight:700;">${fa(estPartsBase + estLabBase - rejectedBilledTotal)}</td>
+      <td colspan="2" style="border:0.4pt solid #bbb;"></td>
+    </tr>` : ''}
     <tr>
       <td style="${td}">Less: Policy Excess</td>
       <td colspan="2" style="border:0.4pt solid #bbb;"></td>

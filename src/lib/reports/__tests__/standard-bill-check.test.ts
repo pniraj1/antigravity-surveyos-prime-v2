@@ -257,3 +257,47 @@ describe('Standard report — section 9 subtotals', () => {
     expect(counts.size, `rows span differing column counts: ${[...counts].join(', ')}`).toBe(1);
   });
 });
+
+describe('Standard Bill Check — billed but rejected', () => {
+  test('the Billed total ties to the invoice, with one line explaining the gap', () => {
+    const html = buildStandardFinalSurveyHTML(claim([
+      row({ particulars: 'KEPT', estimated: 12000, assessed: 12000, billedTaxable: 12000 }),
+      row({ particulars: 'SEATCOVERS', estimated: 2400, assessed: 0, allowed: false, billedTaxable: 2400 }),
+    ]), profile, 'bill-check');
+
+    const sec8 = html.split('8. ASSESSMENT SUMMARY')[1].split('</table>')[0];
+    expect(sec8).toContain('14,400.00');
+    expect(sec8).toContain('billed for items rejected at survey');
+    expect(sec8).toContain('2,400.00');
+    expect(sec8).toContain('12,000.00');
+  });
+
+  test('three rejected items still produce one line', () => {
+    const html = buildStandardFinalSurveyHTML(claim([
+      row({ particulars: 'KEPT', estimated: 12000, assessed: 12000, billedTaxable: 12000 }),
+      row({ particulars: 'R1', estimated: 800, assessed: 0, allowed: false, billedTaxable: 800 }),
+      row({ particulars: 'R2', estimated: 800, assessed: 0, allowed: false, billedTaxable: 800 }),
+      row({ particulars: 'R3', estimated: 800, assessed: 0, allowed: false, billedTaxable: 800 }),
+    ]), profile, 'bill-check');
+    const sec8 = html.split('8. ASSESSMENT SUMMARY')[1].split('</table>')[0];
+    const occurrences = sec8.split('billed for items rejected at survey').length - 1;
+    expect(occurrences).toBe(1);
+    expect(sec8).toContain('2,400.00');
+  });
+
+  test('nothing appears when no rejected item was billed', () => {
+    const html = buildStandardFinalSurveyHTML(claim([
+      row({ particulars: 'KEPT', estimated: 12000, assessed: 12000, billedTaxable: 12000 }),
+      row({ particulars: 'REJECTED', estimated: 900, assessed: 0, allowed: false }),
+    ]), profile, 'bill-check');
+    expect(html).not.toContain('billed for items rejected at survey');
+  });
+
+  test('never appears in the final report', () => {
+    const html = buildStandardFinalSurveyHTML(claim([
+      row({ particulars: 'KEPT', estimated: 12000, assessed: 12000, billedTaxable: 12000 }),
+      row({ particulars: 'SEATCOVERS', estimated: 2400, assessed: 0, allowed: false, billedTaxable: 2400 }),
+    ]), profile, 'final');
+    expect(html).not.toContain('billed for items rejected at survey');
+  });
+});
