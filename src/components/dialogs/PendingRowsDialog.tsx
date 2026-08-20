@@ -10,6 +10,10 @@ interface PendingRowsDialogProps {
   /** Marks every listed row Not in Bill. */
   onResolveAll: () => void;
   onCancel: () => void;
+  /** Wording, so the same dialog serves the divergence gate too. */
+  title?: string;
+  body?: string;
+  resolveLabel?: string;
 }
 
 /**
@@ -17,7 +21,12 @@ interface PendingRowsDialogProps {
  * the workshop gave no figure for that item, and the surveyor must say what
  * that means before the document exists — so PENDING never reaches the PDF.
  */
-export function PendingRowsDialog({ rows, onResolveAll, onCancel }: PendingRowsDialogProps) {
+export function PendingRowsDialog({
+  rows, onResolveAll, onCancel,
+  title,
+  body = 'A bill check cannot be issued while items are pending. Enter the billed figure, or record that they were not billed.',
+  resolveLabel = 'Mark all Not in Bill',
+}: PendingRowsDialogProps) {
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="w-full max-w-md rounded-2xl p-6 flex flex-col gap-5 shadow-2xl animate-in fade-in zoom-in duration-200 bg-card border border-border">
@@ -26,11 +35,10 @@ export function PendingRowsDialog({ rows, onResolveAll, onCancel }: PendingRowsD
             <AlertTriangle size={20} className="text-status-warning flex-shrink-0 mt-0.5" />
             <div>
               <h2 className="text-sm font-medium text-foreground">
-                {rows.length} item{rows.length === 1 ? '' : 's'} not yet checked
+                {title ?? `${rows.length} item${rows.length === 1 ? '' : 's'} not yet checked`}
               </h2>
               <p className="text-xs mt-1 text-muted-foreground">
-                A bill check cannot be issued while items are pending. Enter the billed figure,
-                or record that they were not billed.
+                {body}
               </p>
             </div>
           </div>
@@ -61,7 +69,7 @@ export function PendingRowsDialog({ rows, onResolveAll, onCancel }: PendingRowsD
             onClick={onResolveAll}
             className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium bg-primary text-primary-foreground"
           >
-            Mark all Not in Bill
+            {resolveLabel}
           </button>
         </div>
       </div>

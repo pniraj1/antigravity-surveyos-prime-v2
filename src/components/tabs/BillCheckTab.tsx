@@ -80,6 +80,7 @@ export function BillCheckTab() {
   const [format, setFormat] = useState<'standard' | 'uiic'>('standard');
   const [pendingGate, setPendingGate] = useState(false);
   const [remarkWarning, setRemarkWarning] = useState(false);
+  const [flagGate, setFlagGate] = useState(false);
 
   const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview } = useAIExtraction();
 
@@ -127,6 +128,7 @@ export function BillCheckTab() {
     flags.filter(f => f.kind === 'billed-above')
       .forEach(f => updateAssessmentRow(f.rowId, { billVerified: true }));
   };
+  const blockingFlags = flags.filter(f => f.blocking);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -147,6 +149,10 @@ export function BillCheckTab() {
 
   const handlePrint = () => {
     if (pendingRows.length > 0) { setPendingGate(true); return; }
+    // A row whose bill and assessment disagree has not been looked at. The cap
+    // has already moved the money on the billed-below rows, so printing here
+    // would issue figures nobody verified.
+    if (blockingFlags.length > 0) { setFlagGate(true); return; }
     if (remarkRows.length > 0) { setRemarkWarning(true); return; }
     doPrint();
   };
@@ -305,6 +311,20 @@ export function BillCheckTab() {
           rows={pendingRows}
           onResolveAll={resolveAllPending}
           onCancel={() => setPendingGate(false)}
+        />
+      )}
+
+      {flagGate && (
+        <PendingRowsDialog
+          rows={allRows.filter(r => blockingFlags.some(f => f.rowId === r.id))}
+          title={`${blockingFlags.length} item${blockingFlags.length === 1 ? '' : 's'} not yet checked against the bill`}
+          body="The bill and your assessment disagree on these. Look at each before issuing — the claim has already been capped where the workshop billed less."
+          resolveLabel="Confirm all"
+          onResolveAll={() => {
+            blockingFlags.forEach(f => updateAssessmentRow(f.rowId, { billVerified: true }));
+            setFlagGate(false);
+          }}
+          onCancel={() => setFlagGate(false)}
         />
       )}
 
