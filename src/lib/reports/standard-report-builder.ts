@@ -150,6 +150,15 @@ export function buildStandardFinalSurveyHTML(
   const estPaintOnly = summary.estimatePaintOnlyBase;
   const estLabBase = estLabOnly + estPaintOnly;
 
+  // Section 9's Assessed column prints the pre-depreciation figure, so its
+  // subtotal must too. The engine only exposes post-depreciation totals, which
+  // is a different number and belongs in a different column.
+  const rawAssessed = (section: 'parts' | 'labour' | 'paint') =>
+    rows.filter(r => r.section === section && r.allowed !== false).reduce((s, r) => s + r.assessed, 0);
+  const assessedPartsRaw = rawAssessed('parts');
+  const assessedLabourRaw = rawAssessed('labour');
+  const assessedPaintRaw = rawAssessed('paint');
+
   // ── Font scale (resolved once, used throughout) ────────────────────────────
   const scale = getHtmlScale(claim.reportSettings?.fontScale);
 
@@ -688,7 +697,10 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
     <tr><td colspan="${NCOLS}" style="${sec}">SPARE PARTS</td></tr>
     ${partsHtml}
     <tr>
-      <td colspan="6" style="${sub}text-align:right;font-size:${scale.labelFont};">Sub-Total Parts (after dep, before GST)</td>
+      <td colspan="3" style="${sub}text-align:right;font-size:${scale.labelFont};">Sub-Total Parts (after dep, before GST)</td>
+      <td style="${sub}text-align:right;">${m9(estPartsBase)}</td>
+      <td style="${sub}text-align:right;">${m9(assessedPartsRaw)}</td>
+      <td style="${sub}text-align:center;">—</td>
       <td style="${sub}text-align:right;">${m9(metal)}</td>
       <td style="${sub}text-align:right;">${m9(plastic)}</td>
       ${hasFiberglass ? `<td style="${sub}text-align:right;">${m9(fiberglass)}</td>` : ''}
@@ -700,7 +712,10 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
     ${labPaintSubHeader}
     ${labOnlyHtml}
     <tr>
-      <td colspan="6" style="${sub}text-align:right;font-size:${scale.labelFont};">Sub-Total Labour (incl. GST)</td>
+      <td colspan="3" style="${sub}text-align:right;font-size:${scale.labelFont};">Sub-Total Labour (incl. GST)</td>
+      <td style="${sub}text-align:right;">${m9(estLabOnly)}</td>
+      <td style="${sub}text-align:right;">${m9(assessedLabourRaw)}</td>
+      <td style="${sub}text-align:center;">—</td>
       <td colspan="${NMAT + 1}" style="${sub}text-align:right;">${m9(labOnlyBase)}</td>
       <td style="${sub}text-align:right;font-weight:700;">${m9(labT)}</td>
     </tr>
@@ -708,7 +723,10 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
     ${labPaintSubHeader}
     ${paintHtml}
     <tr>
-      <td colspan="6" style="${sub}text-align:right;font-size:${scale.labelFont};">Sub-Total Painting (incl. GST)</td>
+      <td colspan="3" style="${sub}text-align:right;font-size:${scale.labelFont};">Sub-Total Painting (incl. GST)</td>
+      <td style="${sub}text-align:right;">${m9(estPaintOnly)}</td>
+      <td style="${sub}text-align:right;">${m9(assessedPaintRaw)}</td>
+      <td style="${sub}text-align:center;">—</td>
       <td colspan="${NMAT + 1}" style="${sub}text-align:right;">${m9(paintOnlyBase)}</td>
       <td style="${sub}text-align:right;font-weight:700;">${m9(paintT)}</td>
     </tr>

@@ -224,3 +224,36 @@ describe('Standard report — the Estimated column states the garage estimate', 
     expect(html.split('8. ASSESSMENT SUMMARY')[1].split('</table>')[0]).toContain('13,000.00');
   });
 });
+
+describe('Standard report — section 9 subtotals', () => {
+  test('each section subtotals its Estimate and Assessed columns', () => {
+    const html = buildStandardFinalSurveyHTML(claim([
+      row({ particulars: 'P1', estimated: 10000, assessed: 9000 }),
+      row({ particulars: 'P2', estimated: 2000, assessed: 1500 }),
+      row({ particulars: 'L1', section: 'labour', partType: 'labour', estimated: 800, assessed: 700 }),
+    ]), profile, 'final');
+
+    const sec9 = html.split('9. DETAILS OF ASSESSMENT')[1].split('</table>')[0];
+    const partsSub = sec9.slice(sec9.indexOf('Sub-Total Parts'), sec9.indexOf('LABOUR'));
+    expect(partsSub).toContain('12,000.00'); // estimate 10,000 + 2,000
+    expect(partsSub).toContain('10,500.00'); // assessed 9,000 + 1,500
+
+    const labSub = sec9.slice(sec9.indexOf('Sub-Total Labour'));
+    expect(labSub).toContain('800.00');
+    expect(labSub).toContain('700.00');
+  });
+
+  test('every row still spans the full column count', () => {
+    const html = buildStandardFinalSurveyHTML(claim([
+      row({ particulars: 'P1', estimated: 10000, assessed: 9000 }),
+      row({ particulars: 'L1', section: 'labour', partType: 'labour', estimated: 800, assessed: 700 }),
+      row({ particulars: 'T1', section: 'paint', partType: 'paint', estimated: 900, assessed: 900 }),
+    ]), profile, 'final');
+    const sec9 = html.split('9. DETAILS OF ASSESSMENT')[1].split('</table>')[0];
+    const spans = (tr: string) => [...tr.matchAll(/<t[dh]\b[^>]*>/g)]
+      .reduce((n, c) => n + (Number((/colspan="(\d+)"/.exec(c[0]) || [])[1]) || 1), 0);
+    const rows_ = sec9.split('<tr').slice(1);
+    const counts = new Set(rows_.map(spans));
+    expect(counts.size, `rows span differing column counts: ${[...counts].join(', ')}`).toBe(1);
+  });
+});
