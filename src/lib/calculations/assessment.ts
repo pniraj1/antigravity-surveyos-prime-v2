@@ -133,7 +133,9 @@ export function calculateAssessmentSummary(
   let estPartsGST = 0;
   let estLabourBase = 0;
   let estLabourGST = 0;
-  // Per-material estimate (allowed parts only) — pairs with assessed metal/plastic/... totals
+  // Per-material estimate, every row — pairs with the assessed material totals,
+  // which ARE allowed-only, because an estimate and an assessment answer
+  // different questions.
   let estMetal = 0, estPlastic = 0, estGlass = 0, estFiberglass = 0;
   let estLabourOnly = 0, estPaintOnly = 0;
   rows.forEach((r) => {
@@ -142,12 +144,13 @@ export function calculateAssessmentSummary(
       estPartsBase += r.estimated;
       // Disposal parts carry no GST on the estimate either
       if (!r.isDisposal) estPartsGST += r.estimated * gstRate;
-      if (r.allowed) {
-        if (r.partType === 'metal') estMetal += r.estimated;
-        else if (r.partType === 'glass') estGlass += r.estimated;
-        else if (r.partType === 'fiberglass') estFiberglass += r.estimated;
-        else estPlastic += r.estimated;
-      }
+      // No `allowed` guard. An estimate is a fact about the garage's document;
+      // nothing the surveyor decides changes what was estimated. The guard used
+      // to sit here made this split disagree with estPartsBase directly above.
+      if (r.partType === 'metal') estMetal += r.estimated;
+      else if (r.partType === 'glass') estGlass += r.estimated;
+      else if (r.partType === 'fiberglass') estFiberglass += r.estimated;
+      else estPlastic += r.estimated;
     } else {
       // labour + paint
       estLabourBase += r.estimated;
