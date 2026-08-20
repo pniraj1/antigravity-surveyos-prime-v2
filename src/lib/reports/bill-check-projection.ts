@@ -12,16 +12,24 @@ import type { AssessmentRow } from '@/types/assessment';
  * and the builder taxes this column again.
  */
 /**
- * The assessed figure this document works from — the surveyor's bill-check
- * allowance where one was recorded, otherwise the final-survey figure.
+ * The assessed figure this document works from.
+ *
+ * What is billed is the cap per item: the insurer pays no more than the
+ * workshop charged. A bill above the assessment does not raise it — the
+ * assessment is already the lower figure and the cap does not bite.
+ *
+ * `billAllowed` overrides the cap in either direction; it is the surveyor
+ * deliberately allowing something other than min(assessed, billed), and the
+ * flag that offers it demands a remark.
  *
  * One definition, three callers: the report's projection, the grid's derived
- * cells, and the missing-remark check. The grid used to inline `row.assessed`
- * instead, so the screen showed Net and Price+GST that ignored an allowance
- * the report had already applied.
+ * cells, and the missing-remark check.
  */
 export function billCheckAssessed(r: AssessmentRow): number {
-  return r.billStatus === 'not-in-bill' ? 0 : (r.billAllowed ?? r.assessed);
+  if (r.billStatus === 'not-in-bill') return 0;
+  if (r.billAllowed !== undefined) return r.billAllowed;
+  if (r.billedTaxable === undefined) return r.assessed;
+  return Math.min(r.assessed, r.billedTaxable);
 }
 
 export function projectForBillCheck(rows: AssessmentRow[]): AssessmentRow[] {

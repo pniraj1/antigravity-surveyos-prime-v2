@@ -77,3 +77,33 @@ describe('billCheckAssessed', () => {
     expect(projectForBillCheck([r])[0].assessed).toBe(billCheckAssessed(r));
   });
 });
+
+describe('billed is the cap per item', () => {
+  test('a bill below the assessment caps the claim', () => {
+    expect(billCheckAssessed(row({ assessed: 1000, billedTaxable: 700 }))).toBe(700);
+  });
+
+  test('a bill above the assessment does not raise it', () => {
+    expect(billCheckAssessed(row({ assessed: 1000, billedTaxable: 1200 }))).toBe(1000);
+  });
+
+  test('no billed figure means nothing to cap against', () => {
+    expect(billCheckAssessed(row({ assessed: 1000 }))).toBe(1000);
+  });
+
+  test('a billed figure of zero caps to zero', () => {
+    expect(billCheckAssessed(row({ assessed: 1000, billedTaxable: 0 }))).toBe(0);
+  });
+
+  test('an explicit allowance overrides the cap downward', () => {
+    expect(billCheckAssessed(row({ assessed: 1000, billedTaxable: 700, billAllowed: 500 }))).toBe(500);
+  });
+
+  test('an explicit allowance overrides the cap upward', () => {
+    expect(billCheckAssessed(row({ assessed: 1000, billedTaxable: 1200, billAllowed: 1200 }))).toBe(1200);
+  });
+
+  test('not-in-bill still wins over everything', () => {
+    expect(billCheckAssessed(row({ assessed: 1000, billedTaxable: 700, billStatus: 'not-in-bill' }))).toBe(0);
+  });
+});

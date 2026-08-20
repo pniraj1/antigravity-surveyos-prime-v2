@@ -301,3 +301,12 @@ describe('Standard Bill Check — billed but rejected', () => {
     expect(html).not.toContain('billed for items rejected at survey');
   });
 });
+
+describe('the cap and the Final Survey Report', () => {
+  test('the cap NEVER reaches the Final Survey Report', () => {
+    const c = claim([row({ particulars: 'BONNET', estimated: 1000, assessed: 1000, billedTaxable: 700 })]);
+    const final = buildStandardFinalSurveyHTML(c, profile, 'final');
+    expect(final).toContain('1,000');
+    expect(final).not.toContain('700.00');
+  });
+});
