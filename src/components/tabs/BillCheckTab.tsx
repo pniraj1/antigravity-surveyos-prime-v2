@@ -11,6 +11,7 @@ import { calculateAssessmentSummary, calculateBillCheckSummary, getVehicleAgeMon
 import { triggerUIICBillCheckPrint, buildUIICBillCheckHTML } from '@/lib/reports/uiic-final-builder';
 import { buildStandardFinalSurveyHTML, triggerStandardPrint } from '@/lib/reports/standard-report-builder';
 import { rowsNeedingRemark, billCheckAssessed } from '@/lib/reports/bill-check-projection';
+import { billCheckFlags, reconcileInvoice } from '@/lib/reports/bill-check-flags';
 
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import { PendingRowsDialog } from '@/components/dialogs/PendingRowsDialog';
@@ -24,6 +25,7 @@ import { BillCheckUploadPanel } from './bill-check/BillCheckUploadPanel';
 import { BillCheckGrid } from './bill-check/BillCheckGrid';
 import { ExtraBillItemsPanel } from './bill-check/ExtraBillItemsPanel';
 import { BillCheckSummaryPanel } from './bill-check/BillCheckSummaryPanel';
+import { BillCheckAttentionBanner } from './bill-check/BillCheckAttentionBanner';
 import { fmt } from './bill-check/config';
 
 function BillCheckPreview({ claim, profile, format, onPrint }: { claim: any; profile: any; format: 'standard' | 'uiic'; onPrint: () => void }) {
@@ -112,6 +114,20 @@ export function BillCheckTab() {
   // arithmetic anywhere, so the tile sat at zero on claims with real variance.
   const partialTotal   = allowedRows.reduce((s, r) => s + Math.max(0, r.assessed - billCheckAssessed(r)), 0);
 
+  const flags = billCheckFlags(allRows);
+  const reconciliation = reconcileInvoice(allRows, bc.billTotal ?? 0);
+
+  const confirmAllBelow = () => {
+    flags.filter(f => f.kind === 'billed-below')
+      .forEach(f => updateAssessmentRow(f.rowId, { billVerified: true }));
+  };
+  // Keeps the assessment: verified, with no allowance written, so the claim
+  // stays where the surveyor put it at final survey.
+  const keepAllAbove = () => {
+    flags.filter(f => f.kind === 'billed-above')
+      .forEach(f => updateAssessmentRow(f.rowId, { billVerified: true }));
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) triggerExtraction('final-bill', file);
@@ -161,6 +177,13 @@ export function BillCheckTab() {
               isProcessing={isProcessing}
               progress={progress}
               onFileUpload={handleFileUpload}
+            />
+
+            <BillCheckAttentionBanner
+              flags={flags}
+              reconciliation={reconciliation}
+              onConfirmAllBelow={confirmAllBelow}
+              onKeepAllAbove={keepAllAbove}
             />
 
             <BillCheckGrid
