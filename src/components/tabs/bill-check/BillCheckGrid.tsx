@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { AlertCircle, Trash2, Settings2, Eye, EyeOff, FileSearch } from 'lucide-react';
 import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
 import type { AssessmentRow, AssessmentSummary } from '@/types';
@@ -19,6 +19,8 @@ import {
 import { GRID_COLUMNS } from '@/components/claim/grid-columns';
 import { AllowanceScopeDialog } from '@/components/dialogs/AllowanceScopeDialog';
 import { AllowanceInput } from './AllowanceInput';
+import { billCheckFlags, type BillFlag } from '@/lib/reports/bill-check-flags';
+import { BillCheckFlagMark, BillCheckFlagDetail } from './BillCheckFlagRow';
 
 interface Props {
   allRows: AssessmentRow[];
@@ -64,7 +66,14 @@ export function BillCheckGrid({
   const [visible, setVisible] = useState<Record<OptionalColumn, boolean>>(DEFAULT_VISIBLE);
   const [showSettings, setShowSettings] = useState(false);
   const [pendingAllowance, setPendingAllowance] = useState<{ id: string; assessed: number; proposed: number } | null>(null);
+  const [openFlag, setOpenFlag] = useState<string | null>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
+
+  const flagsByRow = useMemo(() => {
+    const m = new Map<string, BillFlag>();
+    for (const f of billCheckFlags(allRows)) m.set(f.rowId, f);
+    return m;
+  }, [allRows]);
 
   /**
    * Allowing above the assessed figure means editing `assessed` — the field
@@ -110,7 +119,7 @@ export function BillCheckGrid({
     const priceWithGstCol = visible.priceWithGst ? [COL_WIDTHS.priceWithGst] : [];
     const billedTaxCol = visible.billedTaxable ? [COL_WIDTHS.billedTaxable] : [];
     const remarksCol = visible.remarks ? [COL_WIDTHS.remarks] : [];
-    return ['32px', '50px', '2fr', ...detailCols, '100px', '70px', '100px', ...priceWithGstCol, ...billedTaxCol, '120px', ...remarksCol, '40px'].join(' ');
+    return ['32px', '28px', '50px', '2fr', ...detailCols, '100px', '70px', '100px', ...priceWithGstCol, ...billedTaxCol, '120px', ...remarksCol, '40px'].join(' ');
   };
   const gridCols = buildCols();
 
@@ -171,6 +180,7 @@ export function BillCheckGrid({
             title="Select every row in this section"
           />
         </span>
+        <span></span>
         <span>Sr.</span>
         <span>Particulars</span>
         {visible.partNumber    && <span>Part No.</span>}
@@ -208,7 +218,7 @@ export function BillCheckGrid({
           background: onDark ? 'var(--color-neutral-900)' : 'var(--color-neutral-100)',
         }}
       >
-        <div /><div />
+        <div /><div /><div />
         <div className={`text-xs font-medium uppercase tracking-widest ${onDark ? 'text-primary' : 'text-muted-foreground'}`}>
           {label}
         </div>
@@ -413,6 +423,15 @@ export function BillCheckGrid({
                     className="h-3.5 w-3.5 cursor-pointer accent-[var(--color-status-danger)]"
                   />
                 </div>
+                <div className="flex items-center justify-center">
+                  {flagsByRow.get(row.id) && (
+                    <BillCheckFlagMark
+                      flag={flagsByRow.get(row.id)!}
+                      open={openFlag === row.id}
+                      onToggle={() => setOpenFlag(openFlag === row.id ? null : row.id)}
+                    />
+                  )}
+                </div>
                 {/* The number the insurer reads in both PDFs, not the estimate's srNo. */}
                 <div className="text-sm font-medium" style={{ color: 'var(--color-neutral-600)' }}>{serials.get(row.id) ?? idx + 1}</div>
                 <div
@@ -516,7 +535,6 @@ export function BillCheckGrid({
                     <option value="pending">Pending</option>
                     <option value="in-bill">In Bill ✓</option>
                     <option value="not-in-bill">Not in Bill ✗</option>
-                    <option value="partial">Partial</option>
                   </select>
                 )}
                 {visible.remarks && (
@@ -535,7 +553,23 @@ export function BillCheckGrid({
                 >
                   <Trash2 size={14} />
                 </button>
-              </div>
+              </div>,
+              openFlag === row.id && flagsByRow.get(row.id) && (
+                <BillCheckFlagDetail
+                  key={`flag-${row.id}`}
+                  flag={flagsByRow.get(row.id)!}
+                  colSpan={gridCols.split(' ').length}
+                  onConfirm={() => {
+                    updateAssessmentRow(row.id, { billVerified: true });
+                    setOpenFlag(null);
+                  }}
+                  onRaise={amount => {
+                    updateAssessmentRow(row.id, { billVerified: true });
+                    commitAllowance(row, amount);
+                    setOpenFlag(null);
+                  }}
+                />
+              )
             ];
           }).flat()}
 
