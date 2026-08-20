@@ -1,15 +1,15 @@
 'use client';
 
 import { FileSearch, ChevronRight } from 'lucide-react';
-import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
+import { useEvidenceStore, EvidenceUpload } from '@/components/evidence/DocumentEvidenceViewer';
 
 // ─── Inline Evidence Panel ────────────────────────────────────────────────────
 // Uses blob URLs stored in the evidence store — no PNG conversion needed.
 //
-// Blob URLs are session-only by design: they die on refresh, and this panel
-// shows a placeholder rather than hiding itself. Do NOT add persistence —
-// a survey is done in one sitting, and a surveyor who needs a document later
-// re-uploads it.
+// Blob URLs are session-only by design: they die on refresh. Do NOT add
+// persistence — a survey is done in one sitting. What a surveyor who lost the
+// document after a refresh gets instead is the EvidenceUpload control below,
+// which re-attaches the file for viewing WITHOUT re-running extraction.
 
 export const DOC_LABELS: Record<string, string> = {
   rc: 'Registration Certificate',
@@ -26,7 +26,14 @@ export const DOC_LABELS: Record<string, string> = {
   photos: 'Damage Photos',
 };
 
-export function InlineEvidencePanel({ claimId }: { claimId: string }) {
+export function InlineEvidencePanel({
+  claimId,
+  defaultDocType = 'rc',
+}: {
+  claimId: string;
+  /** Slot the upload control targets before any field has been clicked. */
+  defaultDocType?: string;
+}) {
   const { field, blobUrls } = useEvidenceStore();
 
   // Determine which document to show: active field's doc or first available
@@ -39,6 +46,9 @@ export function InlineEvidencePanel({ claimId }: { claimId: string }) {
       }
     }
   }
+  // Nothing loaded and nothing clicked — the post-refresh state. Name a slot
+  // anyway so the upload control has somewhere to put the file.
+  const uploadDocType = effectiveDocType ?? defaultDocType;
 
   const docLabel = effectiveDocType ? (DOC_LABELS[effectiveDocType] ?? effectiveDocType.toUpperCase()) : '';
   const blobEntry = effectiveDocType ? blobUrls[`${claimId}_${effectiveDocType}`]?.[0] : undefined;
@@ -56,14 +66,22 @@ export function InlineEvidencePanel({ claimId }: { claimId: string }) {
           </div>
         </div>
         {blobEntry && (
-          <a
-            href={blobEntry.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[10px] text-primary underline hover:opacity-80"
-          >
-            Open in new tab
-          </a>
+          <div className="flex items-center gap-2">
+            <a
+              href={blobEntry.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] text-primary underline hover:opacity-80"
+            >
+              Open in new tab
+            </a>
+            <EvidenceUpload
+              claimId={claimId}
+              docType={uploadDocType}
+              docLabel={docLabel}
+              variant="compact"
+            />
+          </div>
         )}
       </div>
 
@@ -94,15 +112,16 @@ export function InlineEvidencePanel({ claimId }: { claimId: string }) {
             </div>
           )
         ) : (
-          <div className="flex items-center justify-center h-full text-center text-[var(--color-neutral-400)] p-5">
-            <div>
-              <FileSearch size={36} className="opacity-30 mb-3 mx-auto" />
-              <p className="text-xs m-0">
-                {field
-                  ? 'Upload the document to view it here.'
-                  : 'Scan a document (RC / Policy / DL)\nto see the source here.'}
-              </p>
-            </div>
+          <div className="flex flex-col items-center justify-center h-full gap-3 text-center text-[var(--color-neutral-400)] p-5">
+            <FileSearch size={36} className="opacity-30 mx-auto" />
+            <p className="text-xs m-0 whitespace-pre-line">
+              This document is not loaded in this session.
+            </p>
+            <EvidenceUpload
+              claimId={claimId}
+              docType={uploadDocType}
+              docLabel={docLabel || DOC_LABELS[uploadDocType]}
+            />
           </div>
         )}
       </div>
@@ -110,7 +129,7 @@ export function InlineEvidencePanel({ claimId }: { claimId: string }) {
       {/* Footer */}
       <div className="px-3 py-2 border-t border-border shrink-0 flex items-center gap-1.5">
         <ChevronRight size={12} className="text-[var(--color-neutral-400)]" />
-        <span className="text-[10px] text-[var(--color-neutral-400)]">Upload a document above to populate this panel</span>
+        <span className="text-[10px] text-[var(--color-neutral-400)]">Click a field to switch document · attaching here does not re-run the AI</span>
       </div>
     </div>
   );

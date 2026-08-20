@@ -12,11 +12,16 @@
  * 3. The viewer renders PDFs in a native <iframe> and images as <img>.
  *
  * Blob URLs are in-memory only — they are cleared on tab close or claim archive.
+ *
+ * The panel can also take a file itself, via `EvidenceUpload` below. That path
+ * stores the blob and stops there — no extraction — so a surveyor who refreshes
+ * mid-claim can put the document back without paying for a second AI read.
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
-import { X, ChevronRight, FileSearch } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { X, ChevronRight, FileSearch, Upload } from 'lucide-react';
 import { create } from 'zustand';
+import { useClaimStore } from '@/stores/claim-store';
 
 // ─── Evidence Store ───────────────────────────────────────────────────────────
 
@@ -118,6 +123,92 @@ export function getRawFiles(claimId: string, docType: string): File[] {
   return useEvidenceStore.getState().rawFiles[`${claimId}_${docType}`] ?? [];
 }
 
+// ─── Viewing-only upload ──────────────────────────────────────────────────────
+
+/**
+ * Attaches a file to an evidence slot for VIEWING ONLY. Calls `storeFiles` and
+ * nothing else — `triggerExtraction` is never involved, so the AI does not read
+ * the document a second time.
+ *
+ * Deliberately avoids the gold Sparkles treatment used by the Documents and
+ * Assessment upload tiles: that visual means "AI is reading this" everywhere
+ * else in the app, and this path never does.
+ */
+export function EvidenceUpload({
+  claimId,
+  docType,
+  docLabel,
+  variant = 'zone',
+}: {
+  claimId: string;
+  docType: string;
+  docLabel?: string;
+  /** 'zone' = dashed drop area for the empty state. 'compact' = header pill. */
+  variant?: 'zone' | 'compact';
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dragOver, setDragOver] = useState(false);
+
+  const accept = (fileList: FileList | null) => {
+    const files = Array.from(fileList ?? []);
+    if (files.length > 0) storeFiles(claimId, docType, files);
+    // Clear so re-picking the same file still fires onChange.
+    if (inputRef.current) inputRef.current.value = '';
+  };
+
+  const input = (
+    <input
+      ref={inputRef}
+      type="file"
+      multiple
+      accept="image/*,application/pdf"
+      onChange={(e) => accept(e.target.files)}
+      className="absolute inset-0 opacity-0 cursor-pointer"
+    />
+  );
+
+  if (variant === 'compact') {
+    return (
+      <label
+        title="Attach a file to view here — the AI will not read it"
+        className="relative flex items-center gap-1.5 px-2.5 py-1 rounded-lg cursor-pointer text-[10px] font-medium border border-border text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary"
+      >
+        {input}
+        <Upload size={11} />
+        Replace
+      </label>
+    );
+  }
+
+  return (
+    <label
+      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={(e) => { e.preventDefault(); setDragOver(false); accept(e.dataTransfer.files); }}
+      className={`relative flex flex-col items-center justify-center gap-2.5 w-full px-5 py-6 rounded-2xl cursor-pointer text-center border border-dashed transition-all ${
+        dragOver
+          ? 'border-primary bg-primary/10'
+          : 'border-border bg-neutral-950/[0.03] hover:border-primary/50 hover:bg-primary/5'
+      }`}
+    >
+      {input}
+      <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10 text-primary">
+        <Upload size={17} />
+      </div>
+      <div>
+        <div className="text-sm font-medium text-foreground">
+          {docLabel ? `Attach ${docLabel}` : 'Attach document'}
+        </div>
+        <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
+          Click or drop a file to view it here.
+          <br />
+          Viewing only — not sent to the AI.
+        </p>
+      </div>
+    </label>
+  );
+}
+
 // ─── Doc type labels ──────────────────────────────────────────────────────────
 
 const DOC_LABELS: Record<string, string> = {
@@ -144,7 +235,14 @@ interface Props {
 }
 
 export function DocumentEvidenceViewer({ panelWidth = '420px', embedded = false, defaultDocType }: Props) {
-  const { isOpen, field, claimId, close, blobUrls } = useEvidenceStore();
+  const { isOpen, field, close, blobUrls } = useEvidenceStore();
+
+  // The store's claimId is only set once a field is clicked. Fall back to the
+  // open claim so the upload control works before any field has been touched —
+  // which is exactly the state the panel is in right after a refresh.
+  const storeClaimId = useEvidenceStore(s => s.claimId);
+  const openClaimId = useClaimStore(s => s.currentClaim?.id);
+  const claimId = storeClaimId ?? openClaimId ?? null;
 
   // Resolve the docType: current field or fallback to default
   const effectiveDocType = field?.docType || defaultDocType;
@@ -153,6 +251,8 @@ export function DocumentEvidenceViewer({ panelWidth = '420px', embedded = false,
   const blobEntries = claimId && effectiveDocType
     ? blobUrls[`${claimId}_${effectiveDocType}`] ?? []
     : [];
+
+  const canUpload = Boolean(claimId && effectiveDocType);
 
   const docLabel = effectiveDocType ? (DOC_LABELS[effectiveDocType] ?? effectiveDocType.toUpperCase()) : '';
 
@@ -193,7 +293,19 @@ export function DocumentEvidenceViewer({ panelWidth = '420px', embedded = false,
               {docLabel && <div className="text-[11px] text-primary mt-0.5">{docLabel}</div>}
             </div>
           </div>
-          {!embedded && <IconBtn onClick={close} title="Close"><X size={15} /></IconBtn>}
+          <div className="flex items-center gap-2">
+            {/* Only offered once something is on screen — the empty state has
+                its own, larger control. */}
+            {canUpload && blobEntries.length > 0 && (
+              <EvidenceUpload
+                claimId={claimId!}
+                docType={effectiveDocType!}
+                docLabel={docLabel}
+                variant="compact"
+              />
+            )}
+            {!embedded && <IconBtn onClick={close} title="Close"><X size={15} /></IconBtn>}
+          </div>
         </div>
 
         {/* Context snippet badge */}
@@ -261,8 +373,15 @@ export function DocumentEvidenceViewer({ panelWidth = '420px', embedded = false,
               );
             })
           ) : (
-            <div className="flex items-center justify-center h-full">
-              <EmptyState field={field} />
+            <div className="flex flex-col items-center justify-center h-full gap-4">
+              <EmptyState field={field} canUpload={canUpload} />
+              {canUpload && (
+                <EvidenceUpload
+                  claimId={claimId!}
+                  docType={effectiveDocType!}
+                  docLabel={docLabel}
+                />
+              )}
             </div>
           )}
         </div>
@@ -289,12 +408,14 @@ export function DocumentEvidenceViewer({ panelWidth = '420px', embedded = false,
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
+// The header sits on bg-neutral-50, so the previous white-on-white/10 styling
+// rendered this control invisible.
 function IconBtn({ onClick, title, children }: { onClick: () => void; title: string; children: React.ReactNode }) {
   return (
     <button
       onClick={onClick}
       title={title}
-      className="flex items-center px-1.5 py-1 rounded-md border-none cursor-pointer text-white/70 bg-white/10 transition-colors hover:bg-white/20 hover:text-white"
+      className="flex items-center px-1.5 py-1 rounded-md border-none cursor-pointer text-muted-foreground bg-transparent transition-colors hover:bg-neutral-950/5 hover:text-foreground"
     >
       {children}
     </button>
@@ -319,15 +440,19 @@ function HighlightedSnippet({ snippet, highlight }: { snippet: string; highlight
   );
 }
 
-function EmptyState({ field }: { field: EvidenceField | null }) {
+function EmptyState({ field, canUpload }: { field: EvidenceField | null; canUpload?: boolean }) {
+  // With the upload control right below, telling the surveyor to re-scan would
+  // send them off to pay for an extraction they do not need.
+  const message = canUpload
+    ? 'This document is not loaded in this session.'
+    : field
+      ? 'Document image not available.\nRe-scan the document to enable this view.'
+      : 'Click any field in the Reconciliation Hub to see its source document.';
+
   return (
-    <div className="text-center text-muted-foreground p-6">
+    <div className="text-center text-muted-foreground px-6 pt-6">
       <FileSearch size={40} className="opacity-30 mb-3 mx-auto" />
-      <p className="text-[13px] m-0">
-        {field
-          ? 'Document image not available.\nRe-scan the document to enable this view.'
-          : 'Click any field in the Reconciliation Hub to see its source document.'}
-      </p>
+      <p className="text-[13px] m-0 whitespace-pre-line">{message}</p>
     </div>
   );
 }

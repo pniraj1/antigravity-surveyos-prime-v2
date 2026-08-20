@@ -292,7 +292,10 @@ export function BillCheckTab() {
               <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px bg-neutral-300" />
             </PanelResizeHandle>
             <Panel defaultSize={40} minSize={25} className="h-full border-l bg-white">
-              <DocumentEvidenceViewer embedded={true} />
+              {/* Every openField call from Bill Check targets 'final-bill'; naming
+                  it here means the upload control also works before the surveyor
+                  has clicked a row. */}
+              <DocumentEvidenceViewer embedded={true} defaultDocType="final-bill" />
             </Panel>
           </>
         )}
