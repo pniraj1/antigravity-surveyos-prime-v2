@@ -1,6 +1,7 @@
 'use client';
 
 import { DollarSign, CheckCircle2, XCircle, Minus, Calculator } from 'lucide-react';
+import { SalvageInput } from '@/components/claim/SalvageInput';
 
 interface AssessmentSummary {
   grandTotal: number;
@@ -21,9 +22,18 @@ interface Props {
   notInBillTotal: number;
   partialTotal: number;
   fmt: (n: number) => string;
+  /** Bill-check salvage: the typed figure, or the rescaled one. */
+  salvageValue: number;
+  /** Allowed metal through the bill-check lens — what the band is struck on. */
+  salvageBasis: number;
+  salvageNote?: string;
+  onSalvageChange: (value: number | undefined) => void;
 }
 
-export function BillCheckSummaryPanel({ summary, bcSummary, inBillTotal, notInBillTotal, partialTotal, fmt }: Props) {
+export function BillCheckSummaryPanel({
+  summary, bcSummary, inBillTotal, notInBillTotal, partialTotal, fmt,
+  salvageValue, salvageBasis, salvageNote, onSalvageChange,
+}: Props) {
   const cards = [
     { label: 'Assessed (Allowed)', value: fmt(summary.grandTotal),  accent: 'var(--color-neutral-900)', icon: <DollarSign size={15} /> },
     { label: 'In Bill',            value: fmt(inBillTotal),          accent: 'var(--color-status-success)', icon: <CheckCircle2 size={15} /> },
@@ -57,6 +67,19 @@ export function BillCheckSummaryPanel({ summary, bcSummary, inBillTotal, notInBi
             <h3 className="text-sm font-medium text-foreground">Final Liability Summary</h3>
             <p className="text-[10px] text-muted-foreground">Consolidated verification results including GST and Depreciation</p>
           </div>
+        </div>
+
+        {/* Salvage feeds Final Liability directly, so it is edited beside it
+            rather than back on the Assessment tab — where typing would rewrite
+            a Final Survey Report already sent. */}
+        <div className="mb-6 pb-6 border-b border-border max-w-sm">
+          <SalvageInput
+            id="bc-salvage-value"
+            value={salvageValue}
+            onChange={onSalvageChange}
+            basis={salvageBasis}
+            note={salvageNote}
+          />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

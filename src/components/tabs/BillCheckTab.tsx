@@ -10,8 +10,9 @@ import { useAIExtraction } from '@/hooks/useAIExtraction';
 import { calculateAssessmentSummary, calculateBillCheckSummary, getVehicleAgeMonths, buildSerialMap } from '@/lib/calculations';
 import { triggerUIICBillCheckPrint, buildUIICBillCheckHTML } from '@/lib/reports/uiic-final-builder';
 import { buildStandardFinalSurveyHTML, triggerStandardPrint } from '@/lib/reports/standard-report-builder';
-import { rowsNeedingRemark, billCheckAssessed } from '@/lib/reports/bill-check-projection';
+import { rowsNeedingRemark, billCheckAssessed, resolveBillSalvage } from '@/lib/reports/bill-check-projection';
 import { billCheckFlags, reconcileInvoice } from '@/lib/reports/bill-check-flags';
+import { salvageBasis } from '@/lib/calculations/salvage';
 
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import { PendingRowsDialog } from '@/components/dialogs/PendingRowsDialog';
@@ -74,6 +75,7 @@ export function BillCheckTab() {
   const linkExtraBillItem   = useClaimStore(s => s.linkExtraBillItem);
   const promoteExtraBillItem = useClaimStore(s => s.promoteExtraBillItem);
   const updateBillCheck     = useClaimStore(s => s.updateBillCheck);
+  const updateFeeBill       = useClaimStore(s => s.updateFeeBill);
   const { profile } = useProfileStore();
 
   const [showEvidence, setShowEvidence] = useState(false);
@@ -99,13 +101,19 @@ export function BillCheckTab() {
     currentClaim.vehicle.yearOfManufacture,
     currentClaim.accident.dateAndTime,
   );
+  // Both summaries on this tab describe the bill check, so both get the
+  // bill-check salvage. feeBill.salvageValue is never written from here.
+  const finalSalvageBasis = salvageBasis(allRows);
+  const bcSalvageBasis = salvageBasis(allRows, billCheckAssessed);
+  const bcSalvage = resolveBillSalvage(fb, allRows);
+
   const summary = calculateAssessmentSummary(
     allRows, ageMonths, currentClaim.depreciationType,
-    fb?.salvageValue ?? 0, fb?.compulsoryExcess ?? 0, fb?.voluntaryExcess ?? 0,
+    bcSalvage, fb?.compulsoryExcess ?? 0, fb?.voluntaryExcess ?? 0,
   );
   const bcSummary = calculateBillCheckSummary(
     allRows, ageMonths, currentClaim.depreciationType,
-    fb?.salvageValue ?? 0, fb?.compulsoryExcess ?? 0, fb?.voluntaryExcess ?? 0,
+    bcSalvage, fb?.compulsoryExcess ?? 0, fb?.voluntaryExcess ?? 0,
   );
 
   const inBillTotal    = allowedRows.filter(r => r.billStatus === 'in-bill').reduce((s, r) => s + (r.billedAmount || 0), 0);
@@ -223,6 +231,14 @@ export function BillCheckTab() {
               notInBillTotal={notInBillTotal}
               partialTotal={partialTotal}
               fmt={fmt}
+              salvageValue={bcSalvage}
+              salvageBasis={bcSalvageBasis}
+              salvageNote={
+                fb?.billSalvage === undefined && finalSalvageBasis !== bcSalvageBasis
+                  ? `Carried from the final report and rescaled — metal allowed went ${fmt(finalSalvageBasis)} → ${fmt(bcSalvageBasis)}. Type a figure to set your own.`
+                  : undefined
+              }
+              onSalvageChange={v => updateFeeBill({ billSalvage: v })}
             />
 
             {/* Power Print */}
