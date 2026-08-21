@@ -4,10 +4,12 @@ import { useClaimStore } from '@/stores/claim-store';
 import { calculateAssessmentSummary } from '@/lib/calculations/assessment';
 import { formatCurrency } from '@/lib/calculations/utils';
 import { getVehicleAgeMonths } from '@/lib/calculations/depreciation';
+import { salvageBasis } from '@/lib/calculations/salvage';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { SalvageInput } from './SalvageInput';
 
 export function AssessmentSummary() {
   const { currentClaim, updateFeeBill } = useClaimStore();
@@ -38,10 +40,6 @@ export function AssessmentSummary() {
     { label: 'Glass', est: summary.estimateGlassBase, assessed: summary.glassTotal },
     { label: 'Fibreglass', est: summary.estimateFiberglassBase, assessed: summary.fiberglassTotal },
   ].filter((s) => s.est > 0 || s.assessed > 0);
-
-  // Suggested salvage: 5–10% of allowed metal-parts estimate. Surveyor edits/rounds.
-  const salvageLow = Math.round(summary.estimateMetalBase * 0.05);
-  const salvageHigh = Math.round(summary.estimateMetalBase * 0.10);
 
   return (
     <Card className="border border-border shadow-sm sticky top-6 bg-white overflow-hidden">
@@ -152,45 +150,11 @@ export function AssessmentSummary() {
         <Separator className="bg-[var(--color-neutral-200)]" />
 
         <div className="bg-[var(--color-neutral-50)] p-5 border-y border-[var(--color-neutral-200)] space-y-5">
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <Label htmlFor="salvage-value" className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest">Salvage value (₹)</Label>
-            </div>
-            <Input
-              id="salvage-value"
-              type="number"
-              value={fb.salvageValue || ''}
-              onChange={(e) => updateFeeBill({ salvageValue: parseFloat(e.target.value) || 0 })}
-              className="text-right font-medium text-[var(--color-status-danger)] bg-white border-[var(--color-neutral-200)] hover:border-[var(--color-status-danger)] focus:border-[var(--color-status-danger)] focus:ring-1 focus:ring-[var(--color-status-danger-tint)] shadow-sm transition-all h-9"
-              placeholder="0.00"
-              min="0"
-            />
-            {summary.estimateMetalBase > 0 && (
-              <div className="flex items-center justify-between gap-2 pt-0.5">
-                <span className="text-[10px] text-muted-foreground">
-                  Metal est {formatCurrency(summary.estimateMetalBase)} · suggest {formatCurrency(salvageLow)}–{formatCurrency(salvageHigh)}
-                </span>
-                <div className="flex gap-1">
-                  <button
-                    type="button"
-                    onClick={() => updateFeeBill({ salvageValue: salvageLow })}
-                    className="px-1.5 py-0.5 text-[10px] font-medium rounded border border-[var(--color-neutral-300)] bg-white text-muted-foreground hover:border-[var(--color-status-danger)] hover:text-[var(--color-status-danger)] transition-colors"
-                    title={`Apply 5% of metal estimate (${formatCurrency(salvageLow)})`}
-                  >
-                    5%
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => updateFeeBill({ salvageValue: salvageHigh })}
-                    className="px-1.5 py-0.5 text-[10px] font-medium rounded border border-[var(--color-neutral-300)] bg-white text-muted-foreground hover:border-[var(--color-status-danger)] hover:text-[var(--color-status-danger)] transition-colors"
-                    title={`Apply 10% of metal estimate (${formatCurrency(salvageHigh)})`}
-                  >
-                    10%
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          <SalvageInput
+            value={fb.salvageValue}
+            onChange={v => updateFeeBill({ salvageValue: v ?? 0 })}
+            basis={salvageBasis(currentClaim.assessmentRows)}
+          />
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
