@@ -15,7 +15,7 @@ import type { SurveyorProfile } from '@/types/vehicle';
 import { formatDateDMY, formatDateTimeDMY, formatSurveyDateTime, fa, numberToWords, getVehicleAgeMonths, getSurveyorHeader, getSigBlock } from './report-utils';
 import { getHtmlScale } from './report-style-utils';
 import { preambleFromClaim, estimateTotalInclGst, billCheckPreambleFromClaim } from './final-survey-preamble';
-import { projectForBillCheck } from './bill-check-projection';
+import { projectForBillCheck, resolveBillSalvage } from './bill-check-projection';
 import { computeRowNet } from '@/lib/calculations/row-net';
 import { getDepreciationRate, toDepreciationType } from '@/lib/calculations/depreciation';
 import { getCompulsoryExcess, calculateAssessmentSummary } from '@/lib/calculations/assessment';
@@ -113,13 +113,24 @@ export function buildStandardFinalSurveyHTML(
   // GST is per item. The 0.09 / 0.18 literals that used to be here ignored
   // row.gst entirely, so a 28% tyre was totalled at 18%.
   //
+  // The Bill Check rescales salvage by how far the allowed-metal basis moved,
+  // or uses the figure typed on its own tab. The Final Survey Report must keep
+  // the number it was filed with — this builder serves both, so the branch is
+  // load-bearing. Reads claim.assessmentRows rather than the local `rows`:
+  // in bill-check mode `rows` has already been through projectForBillCheck,
+  // and the resolver needs both the projected and unprojected figures to form
+  // its ratio.
+  const salvageFigure = isBillCheck
+    ? resolveBillSalvage(claim.feeBill, claim.assessmentRows || [])
+    : (claim.feeBill?.salvageValue ?? 0);
+
   // Computed from this builder's own ageMonths so the summary block and the
   // material rows beneath it can never disagree.
   const summary = calculateAssessmentSummary(
     rows,
     ageMonths,
     depType,
-    claim.feeBill?.salvageValue ?? 0,
+    salvageFigure,
     getCompulsoryExcess(claim.feeBill),
     claim.feeBill?.voluntaryExcess ?? 0,
   );
@@ -131,7 +142,7 @@ export function buildStandardFinalSurveyHTML(
   const lT = labT + paintT;
   const grand = pT + lT;
 
-  const salvage = claim.feeBill?.salvageValue || 0;
+  const salvage = salvageFigure;
   const volExcess = claim.feeBill?.voluntaryExcess || 0;
   const compExcess = getCompulsoryExcess(claim.feeBill);
   const excess = volExcess + compExcess;

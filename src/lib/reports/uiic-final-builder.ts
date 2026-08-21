@@ -27,6 +27,7 @@ import { buildSerialMap } from '@/lib/calculations/serial-numbers';
 import { shouldStartSupplementaryBand } from '@/lib/calculations/utils';
 import { buildPrintShell, footerFromProfile } from './print-shell';
 import { formatSurveyDateTime } from './report-utils';
+import { resolveBillSalvage } from './bill-check-projection';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -580,18 +581,23 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   const pC = partsAgg.cgst, pS = partsAgg.sgst, pT = partsAgg.amount;
   const lC = serviceAgg.cgst, lS = serviceAgg.sgst, lT = serviceAgg.amount;
 
+  // The Bill Check rescales salvage by how far the allowed-metal basis moved,
+  // or uses the figure typed on its own tab — never the figure the Final
+  // Survey Report was filed with.
+  const salvageFigure = resolveBillSalvage(claim.feeBill, rows);
+
   // Financial summary, mirroring section 8 of the standard report. Reads the
   // same engine so the two documents cannot disagree.
   const asum = calculateAssessmentSummary(
     rows, ageMonths, depType,
-    claim.feeBill?.salvageValue ?? 0,
+    salvageFigure,
     getCompulsoryExcess(claim.feeBill),
     claim.feeBill?.voluntaryExcess ?? 0,
   );
   const tow = parseFloat(String(claim.feeBill?.travelExpenses || 0)) || 0;
   const gross = pT + lT + tow;
   const depAmt = rawParts - partsDepreciated;
-  const salvage    = claim.feeBill?.salvageValue    || 0;
+  const salvage    = salvageFigure;
   const volExcess  = claim.feeBill?.voluntaryExcess || 0;
   const compExcess = getCompulsoryExcess(claim.feeBill);
   const net = Math.max(0, gross - salvage - volExcess - compExcess);
