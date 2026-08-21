@@ -1,4 +1,5 @@
-import type { AssessmentRow } from '@/types/assessment';
+import type { AssessmentRow, FeeBill } from '@/types/assessment';
+import { salvageBasis } from '@/lib/calculations/salvage';
 
 /**
  * Projects assessment rows into the shape the Bill Check report renders.
@@ -62,4 +63,26 @@ export function rowsNeedingRemark(rows: AssessmentRow[]): AssessmentRow[] {
     }
     return false;
   });
+}
+
+/**
+ * The salvage figure the Bill Check reports and screen use.
+ *
+ * A figure typed on the Bill Check tab wins and is used exactly as typed —
+ * salvage is the surveyor's decision, and nothing here second-guesses it.
+ * Otherwise the final report's salvage is rescaled by how far the metal basis
+ * has moved: the same percentage of a smaller, or larger, pile of allowed
+ * metal. A part that was never billed was never replaced, so no old part came
+ * off it and it stops earning salvage.
+ *
+ * Both directions, with no special case for a rising basis.
+ *
+ * Bill-check only. `feeBill.salvageValue` is never written here; the Final
+ * Survey Report keeps the figure it was filed with.
+ */
+export function resolveBillSalvage(fb: FeeBill | undefined, rows: AssessmentRow[]): number {
+  if (fb?.billSalvage !== undefined) return fb.billSalvage;
+  const final = salvageBasis(rows);
+  if (!final) return fb?.salvageValue ?? 0;
+  return Math.round((fb?.salvageValue ?? 0) * salvageBasis(rows, billCheckAssessed) / final);
 }

@@ -285,6 +285,13 @@ export interface FeeBill {
   advanceReceipt: string;
   cashReceived: string;
   salvageValue: number;
+  /**
+   * Bill-check-only salvage. `undefined` means "rescale salvageValue by how
+   * far the metal basis has moved"; a number is the surveyor's decision and
+   * is used as typed. Zero is a decision, which is why this is optional with
+   * no default rather than defaulting to 0.
+   */
+  billSalvage?: number;
   lessExcess: number; // Compulsory Excess
   voluntaryExcess: number;
   compulsoryExcess: number;
