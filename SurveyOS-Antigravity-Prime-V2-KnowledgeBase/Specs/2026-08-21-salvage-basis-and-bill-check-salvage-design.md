@@ -201,4 +201,5 @@ Reports:
 
 - **The standard builder serves two reports from one salvage read.** Covered by an explicit test; noted here because a careless later edit could undo it.
 - **Not verifiable without a live claim.** The Bill Check tab is auth-gated and needs real bill data. Correctness rests on unit tests plus the surveyor exercising the box.
-- **A stale `billSalvage` outlives its reason.** Once the surveyor types a figure it is pinned, and later bill edits will not move it. That is what pinning means, and clearing the field restores automatic behaviour — but nothing warns that a pinned figure has drifted from its band.
+
+A typed figure staying put as the bill changes is not a risk; it is the point. The band is a suggestion, the surveyor decides the number, and nothing in this design nags about, warns on, or overrides a figure the surveyor has entered. Clearing the field returns it to automatic.
