@@ -237,6 +237,16 @@ export function SpotTab() {
                     <option value="Contract">Contract Carriage</option>
                   </select>
                 </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Nature of Permit<S /></Label>
+                  <Input
+                    value={spotDetails.natureOfPermit}
+                    onChange={(e) => handleUpdate({ natureOfPermit: e.target.value })}
+                    placeholder="e.g. Goods Carriage, Stage Carriage"
+                    disabled={isCompleted}
+                  />
+                </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Permit Valid Upto<S /></Label>
                   <Input
@@ -260,46 +270,6 @@ export function SpotTab() {
                     onChange={(e) => handleUpdate({ authValid: e.target.value })}
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Actual Load (KG)<S /></Label>
-                  <Input
-                    type="number"
-                    className={`font-mono font-bold ${overloadFlagged ? 'text-red-600 border-red-200 bg-red-50' : 'text-foreground'}`}
-                    value={spotDetails.actualLoad || ''}
-                    onChange={(e) => handleUpdate({ actualLoad: Number(e.target.value) })}
-                  />
-                  {overWeightNumeric && (
-                    <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground cursor-pointer mt-1">
-                      <input
-                        type="checkbox"
-                        checked={overloadFlagged}
-                        onChange={(e) => handleUpdate({ flagOverload: e.target.checked })}
-                      />
-                      Flag as overloaded in report
-                    </label>
-                  )}
-                </div>
-
-                {/* Challan Info */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Challan No.<S /></Label>
-                  <Input
-                    value={spotDetails.challanNo}
-                    placeholder="CN Number"
-                    onChange={(e) => handleUpdate({ challanNo: e.target.value.toUpperCase() })}
-                    disabled={isCompleted}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Challan Date<S /></Label>
-                  <Input
-                    type="date"
-                    value={spotDetails.challanDate}
-                    onChange={(e) => handleUpdate({ challanDate: e.target.value })}
-                    disabled={isCompleted}
-                  />
-                </div>
-
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Log Book / Tax Paid<S /></Label>
                   <Input
@@ -368,6 +338,47 @@ export function SpotTab() {
                       value={spotDetails.loadCapacity || ''}
                       disabled={true}
                       className="bg-muted font-bold text-primary"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Actual Load (KG)<S /></Label>
+                    <Input
+                      type="number"
+                      className={`font-mono font-bold ${overloadFlagged ? 'text-red-600 border-red-200 bg-red-50' : 'text-foreground'}`}
+                      value={spotDetails.actualLoad || ''}
+                      onChange={(e) => handleUpdate({ actualLoad: Number(e.target.value) })}
+                      disabled={isCompleted}
+                    />
+                    {overWeightNumeric && (
+                      <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground cursor-pointer mt-1">
+                        <input
+                          type="checkbox"
+                          checked={overloadFlagged}
+                          onChange={(e) => handleUpdate({ flagOverload: e.target.checked })}
+                        />
+                        Flag as overloaded in report
+                      </label>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Load Challan No.<S /></Label>
+                    <Input
+                      value={spotDetails.challanNo}
+                      placeholder="CN Number"
+                      onChange={(e) => handleUpdate({ challanNo: e.target.value.toUpperCase() })}
+                      disabled={isCompleted}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Load Challan Date<S /></Label>
+                    <Input
+                      type="date"
+                      value={spotDetails.challanDate}
+                      onChange={(e) => handleUpdate({ challanDate: e.target.value })}
+                      disabled={isCompleted}
                     />
                   </div>
                 </div>

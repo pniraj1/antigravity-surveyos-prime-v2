@@ -12,7 +12,7 @@ import type { ClaimData } from '@/types/claim';
 import type { AssessmentSummary } from '@/types';
 import type { SurveyorProfile } from '@/types/vehicle';
 
-import { formatDateDMY, formatDateTimeDMY, formatSurveyDateTime, fa, numberToWords, getVehicleAgeMonths, getSurveyorHeader, getSigBlock } from './report-utils';
+import { formatDateDMY, formatDateTimeDMY, formatSurveyDateTime, fa, numberToWords, getVehicleAgeMonths, getSurveyorHeader, getSigBlock, tpInvolvementLabel } from './report-utils';
 import { getHtmlScale } from './report-style-utils';
 import { preambleFromClaim, estimateTotalInclGst, billCheckPreambleFromClaim } from './final-survey-preamble';
 import { projectForBillCheck, resolveBillSalvage } from './bill-check-projection';
@@ -28,6 +28,15 @@ import { buildPrintShell, footerFromProfile } from './print-shell';
 // marketing screenshot. This builder is the single source for the real report.
 
 // ─── Local Helpers ────────────────────────────────────────────────────────────
+
+/**
+ * A spot yes/no as it should read on a final report. An unanswered field prints
+ * an em dash rather than "No" — a final survey raised without a spot survey
+ * never asked the question, and printing "No" would assert an answer nobody gave.
+ */
+function yesNoDash(v: string | null | undefined): string {
+  return v === 'yes' ? 'Yes' : v === 'no' ? 'No' : '—';
+}
 
 function fmt2(v: string | number | null | undefined): string {
   const n = parseFloat(String(v || 0));
@@ -70,6 +79,10 @@ export function buildStandardFinalSurveyHTML(
   const driver = claim.driver;
   const policy = claim.policy;
   const accident = claim.accident;
+  const sd = claim.spotDetails;
+  // Load challan and goods only exist for goods/commercial vehicles, matching
+  // the same gate the Spot tab uses to show or hide those inputs.
+  const isCommercial = claim.vehicleType !== 'private';
   const bc = claim.billCheck;
   // Bill check renders the same report over projected rows. Everything below
   // this line — every total, every GST band — is untouched by the mode.
@@ -423,8 +436,54 @@ export function buildStandardFinalSurveyHTML(
     <td style="${td}">${accident.placeOfSurvey || '—'}</td>
   </tr>
   <tr>
-    <td style="${td}color:#444;font-size:${scale.labelFont};">Third Party</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Third Party Involvement</td>
+    <td style="${td}font-weight:700;">${tpInvolvementLabel(sd?.tpInvolved)}</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Panchanama</td>
+    <td style="${td}">${yesNoDash(sd?.panchanama)}</td>
+  </tr>
+  <tr>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Police Reported</td>
+    <td style="${td}" colspan="3">${sd?.policeReported === 'yes'
+      ? `Yes — ${accident.policeStation || '—'} | Diary / FIR: ${accident.firNumber || '—'}`
+      : yesNoDash(sd?.policeReported)}</td>
+  </tr>
+  <tr>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Third Party Details</td>
     <td style="${td}" colspan="3">${accident.thirdPartyDetails || 'NIL'}</td>
+  </tr>
+</table>`;
+
+  // Section 5 — goods vehicles only. Every field here is written by the Spot
+  // tab's "Load Logistics & Challan" card, so the report mirrors that card
+  // one-for-one. Overload prints red only when the surveyor opted in via
+  // flagOverload; a numeric excess alone never colours the row.
+  const loadSectionHtml = !isCommercial ? '' : `<div style="font-weight:700;font-size:7pt;background:#0d1b2a;color:#fff;padding:2px 4px;margin-bottom:2px;">5. LOAD CHALLAN &amp; GOODS CARRIED</div>
+<table style="${ts}">
+  <tr>
+    <td style="${td}color:#444;font-size:${scale.labelFont};width:18%;">Load Challan No.</td>
+    <td style="${td}font-family:monospace;width:32%;">${sd?.challanNo || '—'}</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Load Challan Date</td>
+    <td style="${td}">${formatDateDMY(sd?.challanDate)}</td>
+  </tr>
+  <tr>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">G.V.W. (KG)</td>
+    <td style="${td}">${sd?.gvw || '—'}</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">U.L.W. (KG)</td>
+    <td style="${td}">${sd?.ulw || '—'}</td>
+  </tr>
+  <tr>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Payload Capacity (KG)</td>
+    <td style="${td}">${sd?.loadCapacity || '—'}</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Load at Accident (KG)</td>
+    <td style="${td}${sd?.flagOverload ? 'color:#b00020;font-weight:700;' : ''}">${sd?.actualLoad || '—'}${sd?.flagOverload ? ' — OVERLOADED' : ''}</td>
+  </tr>
+  <tr>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Description of Goods</td>
+    <td style="${td}" colspan="3">${sd?.loadDesc || '—'}</td>
+  </tr>
+  <tr>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Route</td>
+    <td style="${td}" colspan="3">${(sd?.loadOrigin || sd?.loadDest) ? `${sd?.loadOrigin || '—'} &rarr; ${sd?.loadDest || '—'}` : '—'}</td>
   </tr>
 </table>`;
 
@@ -552,7 +611,7 @@ export function buildStandardFinalSurveyHTML(
   </tr>
 </table>
 
-${isBillCheck ? billRefSectionHtml : driverSectionHtml + '\n\n' + accidentSectionHtml}
+${isBillCheck ? billRefSectionHtml : driverSectionHtml + '\n\n' + accidentSectionHtml + (loadSectionHtml ? '\n\n' + loadSectionHtml : '')}
 ${isBillCheck ? '' : '\n' + causeSectionHtml}
 
 <p style="font-size:${scale.cellFont};line-height:1.5;text-align:justify;margin:4px 0;color:#000;">${isBillCheck

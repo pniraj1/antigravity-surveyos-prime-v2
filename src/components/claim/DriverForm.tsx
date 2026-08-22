@@ -97,6 +97,17 @@ export function DriverDetailsForm() {
           </div>
 
           <div className="space-y-1">
+            <Label htmlFor="d-dltype">Licence Type</Label>
+            <Input
+              id="d-dltype"
+              value={d?.licenceType || ''}
+              onChange={(e) => updateDriver({ licenceType: e.target.value.toUpperCase() })}
+              placeholder="e.g. MCWG, LMV-TR"
+              className="uppercase"
+            />
+          </div>
+
+          <div className="space-y-1">
             <Label htmlFor="d-dob">Date of Birth<S /><EvidenceDot has={hasEvidence('dateOfBirth')} /></Label>
             <Input
               id="d-dob"
@@ -141,6 +152,20 @@ export function DriverDetailsForm() {
               placeholder="e.g. LMV-NT, MCWG"
               className={r(d?.vehicleClasses)}
             />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="d-authorised">Authorised to Drive This Vehicle?</Label>
+            <select
+              id="d-authorised"
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+              value={d?.authorisedToDrive || ''}
+              onChange={(e) => updateDriver({ authorisedToDrive: e.target.value })}
+            >
+              <option value="">—</option>
+              <option value="YES">Yes</option>
+              <option value="NO">No</option>
+            </select>
           </div>
 
           <div className="space-y-1">

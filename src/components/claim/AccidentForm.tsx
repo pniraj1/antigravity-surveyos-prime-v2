@@ -41,6 +41,18 @@ export function AccidentDetailsForm() {
             />
           </div>
 
+          <div className="space-y-1">
+            <Label htmlFor="a-pincode">Accident Pincode</Label>
+            <Input
+              id="a-pincode"
+              inputMode="numeric"
+              maxLength={6}
+              value={a?.pincode || ''}
+              onChange={(e) => updateAccident({ pincode: e.target.value.replace(/\D/g, '') })}
+              className={r(a?.pincode)}
+            />
+          </div>
+
           <div className="space-y-1 lg:col-span-2 xl:col-span-4">
             <Label htmlFor="a-cause">Cause and Nature of Accident</Label>
             <Input
@@ -110,6 +122,19 @@ export function AccidentDetailsForm() {
               value={a?.firDate || ''}
               onChange={(e) => updateAccident({ firDate: e.target.value })}
               className={r(a?.firDate)}
+            />
+          </div>
+
+          {/* Fire losses only carry this, but the field is always offered — the
+              surveyor fills it when a brigade report exists and leaves it blank
+              otherwise. The UIIC final report has always printed it. */}
+          <div className="space-y-1">
+            <Label htmlFor="a-fire-report">Fire Brigade Report No.</Label>
+            <Input
+              id="a-fire-report"
+              value={a?.fireBrigadeReportNo || ''}
+              onChange={(e) => updateAccident({ fireBrigadeReportNo: e.target.value })}
+              className={r(a?.fireBrigadeReportNo)}
             />
           </div>
 

@@ -211,6 +211,18 @@ export function VehicleDetailsForm() {
           </div>
 
           <div className="space-y-1">
+            <Label htmlFor="v-hpa">Hypothecation (H.P.A.)<EvidenceDot has={hasEvidence('hypothecation')} /></Label>
+            <Input
+              id="v-hpa"
+              value={v?.hypothecation || ''}
+              onChange={(e) => updateVehicle({ hypothecation: e.target.value.toUpperCase() })}
+              onFocus={() => triggerField('hypothecation')}
+              placeholder="Financier name, or NIL"
+              className={`uppercase ${r(v?.hypothecation)}`}
+            />
+          </div>
+
+          <div className="space-y-1">
             <Label htmlFor="v-regdate">Date of Registration<S /><EvidenceDot has={hasEvidence('dateOfRegistration')} /></Label>
             <Input
               id="v-regdate"
@@ -276,6 +288,20 @@ export function VehicleDetailsForm() {
               onChange={(e) => updateVehicle({ passengerType: e.target.value.toUpperCase() })}
               placeholder="e.g. OWNER / PAID"
             />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="v-pass-contra">Passengers in Contravention?</Label>
+            <select
+              id="v-pass-contra"
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+              value={(v as any)?.passengersContravention || ''}
+              onChange={(e) => updateVehicle({ passengersContravention: e.target.value })}
+            >
+              <option value="">—</option>
+              <option value="NO">No</option>
+              <option value="YES">Yes</option>
+            </select>
           </div>
 
           <div className="space-y-1">
