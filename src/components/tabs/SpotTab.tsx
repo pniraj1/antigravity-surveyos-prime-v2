@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Trash2, PlusCircle, AlertTriangle, ShieldCheck, Truck, User, MapPin, Gauge, Zap, FileText, ClipboardList } from 'lucide-react';
+import { Trash2, PlusCircle, AlertTriangle, ShieldCheck, Truck, User, Gauge, Zap, FileText, ClipboardList } from 'lucide-react';
 
 const S = () => <span className="ml-1 inline-block w-2 h-2 rounded-full bg-green-500 align-middle" title="Used in Spot Report" />;
 
@@ -91,48 +91,6 @@ export function SpotTab() {
       </Card>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* SECTION 1: SCENE & POLICE */}
-        <Card className="border-border shadow-sm overflow-hidden">
-          <CardHeader className="bg-muted/50 pb-4 border-b border-border">
-            <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <MapPin size={16} className="text-primary" />
-              Scene & Authorities
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Police Reported?<S /></Label>
-              <select
-                value={spotDetails.policeReported}
-                onChange={(e) => handleUpdate({ policeReported: e.target.value })}
-                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm font-semibold focus:ring-2 focus:ring-primary/20"
-              >
-                <option value="no">No</option>
-                <option value="yes">Yes</option>
-              </select>
-            </div>
-
-            {spotDetails.policeReported === 'yes' && (
-              <>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Panchanama?<S /></Label>
-                  <select
-                    value={spotDetails.panchanama}
-                    onChange={(e) => handleUpdate({ panchanama: e.target.value })}
-                    className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-                  >
-                    <option value="no">No</option>
-                    <option value="yes">Yes</option>
-                  </select>
-                </div>
-              </>
-            )}
-
-          </CardContent>
-        </Card>
-
-
-
         {/* SECTION 3: VEHICLE STATUS */}
         <Card className="border-border shadow-sm overflow-hidden">
           <CardHeader className="bg-muted/50 pb-4 border-b border-border">

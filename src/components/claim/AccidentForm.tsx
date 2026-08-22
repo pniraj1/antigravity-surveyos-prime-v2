@@ -9,10 +9,11 @@ import { Textarea } from '@/components/ui/textarea';
 const r = (v: any) => !v ? 'border-red-400' : '';
 
 export function AccidentDetailsForm() {
-  const { currentClaim, updateAccident } = useClaimStore();
+  const { currentClaim, updateAccident, updateSpotDetails } = useClaimStore();
 
   if (!currentClaim) return null;
   const a = currentClaim?.accident || {} as any;
+  const sd = currentClaim?.spotDetails || {} as any;
 
   return (
     <Card>
@@ -137,6 +138,36 @@ export function AccidentDetailsForm() {
               onChange={(e) => updateAccident({ fireBrigadeReportNo: e.target.value })}
               className={r(a?.fireBrigadeReportNo)}
             />
+          </div>
+
+          {/* Stored on spotDetails but asked here, because AccidentForm renders
+              for every survey type and SpotTab renders only for spot claims. */}
+          <div className="space-y-1">
+            <Label htmlFor="a-police-reported">Police Reported?</Label>
+            <select
+              id="a-police-reported"
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+              value={sd?.policeReported || ''}
+              onChange={(e) => updateSpotDetails({ policeReported: e.target.value })}
+            >
+              <option value="">—</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="a-panchanama">Panchanama?</Label>
+            <select
+              id="a-panchanama"
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+              value={sd?.panchanama || ''}
+              onChange={(e) => updateSpotDetails({ panchanama: e.target.value })}
+            >
+              <option value="">—</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
           </div>
 
           {/* Third party is free text, not a classification. The information is
