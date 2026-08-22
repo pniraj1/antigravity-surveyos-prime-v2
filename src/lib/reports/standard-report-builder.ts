@@ -466,16 +466,8 @@ export function buildStandardFinalSurveyHTML(
     <td style="${td}">${formatDateDMY(sd?.challanDate)}</td>
   </tr>
   <tr>
-    <td style="${td}color:#444;font-size:${scale.labelFont};">G.V.W. (KG)</td>
-    <td style="${td}">${sd?.gvw || '—'}</td>
-    <td style="${td}color:#444;font-size:${scale.labelFont};">U.L.W. (KG)</td>
-    <td style="${td}">${sd?.ulw || '—'}</td>
-  </tr>
-  <tr>
-    <td style="${td}color:#444;font-size:${scale.labelFont};">Payload Capacity (KG)</td>
-    <td style="${td}">${sd?.loadCapacity || '—'}</td>
     <td style="${td}color:#444;font-size:${scale.labelFont};">Load at Accident (KG)</td>
-    <td style="${td}${sd?.flagOverload ? 'color:#b00020;font-weight:700;' : ''}">${sd?.actualLoad || '—'}${sd?.flagOverload ? ' — OVERLOADED' : ''}</td>
+    <td style="${td}${sd?.flagOverload ? 'color:#b00020;font-weight:700;' : ''}" colspan="3">${sd?.actualLoad || '—'}${sd?.flagOverload ? ' — OVERLOADED' : ''}</td>
   </tr>
   <tr>
     <td style="${td}color:#444;font-size:${scale.labelFont};">Description of Goods</td>

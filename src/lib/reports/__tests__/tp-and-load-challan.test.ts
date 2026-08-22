@@ -81,7 +81,7 @@ describe('Load challan section on the standard final report', () => {
     expect(t).toContain('LOAD CHALLAN &amp; GOODS CARRIED');
     expect(t).toContain('CN/8891');
     expect(t).toContain('24.06.2026');
-    expect(t).toContain('16200');
+    expect(t).toContain('12400');
     expect(t).toContain('Cement bags');
     expect(t).toContain('Pune');
     expect(t).toContain('Solapur');
@@ -97,6 +97,14 @@ describe('Load challan section on the standard final report', () => {
     const t = text(buildStandardFinalSurveyHTML(claim({}, 'private'), profile));
     expect(t).not.toContain('LOAD CHALLAN &amp; GOODS CARRIED');
     expect(t).not.toContain('CN/8891');
+  });
+
+  test('does not repeat GVW and ULW that section 2 already prints', () => {
+    const t = text(buildStandardFinalSurveyHTML(claim(), profile));
+    expect(t).not.toContain('G.V.W. (KG)');
+    expect(t).not.toContain('U.L.W. (KG)');
+    // Section 2 still carries the vehicle record's GVW.
+    expect(t).toContain('GVW');
   });
 
   test('does not appear in bill check mode', () => {
