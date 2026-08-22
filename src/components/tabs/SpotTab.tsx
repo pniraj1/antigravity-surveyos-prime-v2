@@ -128,30 +128,6 @@ export function SpotTab() {
               </>
             )}
 
-            <div className="sm:col-span-2 space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Third Party Involvement<S /></Label>
-              <select
-                value={spotDetails.tpInvolved}
-                onChange={(e) => handleUpdate({ tpInvolved: e.target.value })}
-                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm font-semibold"
-              >
-                <option value="no">NIL — No Third Party</option>
-                <option value="tppd">TPPD — Property Damage Only</option>
-                <option value="tppi">TPPI — Personal Injury / Death</option>
-                <option value="both">Both — Property Damage & Injury</option>
-              </select>
-            </div>
-            
-            {(spotDetails.tpInvolved !== 'no') && (
-              <div className="sm:col-span-2 space-y-1.5">
-                <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">TP Details<S /></Label>
-                <Input
-                  value={accident.thirdPartyDetails}
-                  onChange={(e) => updateAccident({ thirdPartyDetails: e.target.value })}
-                  placeholder="Details of TP victim/property"
-                />
-              </div>
-            )}
           </CardContent>
         </Card>
 

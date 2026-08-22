@@ -44,34 +44,40 @@ function claim(over: Record<string, unknown> = {}, vehicleType = 'goods'): Claim
 
 const profile = { name: 'SURVEYOR' } as SurveyorProfile;
 
-describe('Third-party involvement on the final reports', () => {
-  test('standard final names the TPPD/TPPI type, not just the free text', () => {
+describe('Third party as free text', () => {
+  test('standard final prints the free text', () => {
     const t = text(buildStandardFinalSurveyHTML(claim(), profile));
-    expect(t).toContain('Third Party Involvement');
-    expect(t).toContain('TPPD & TPPI');
-    expect(t).toContain('One pedestrian injured');
+    expect(t).toContain('Third Party Details');
+    expect(t).toContain('One pedestrian injured, admitted at Sassoon');
   });
 
-  test('standard final carries the police station and FIR into the TP row', () => {
+  test('standard final no longer prints a TPPD/TPPI classification', () => {
     const t = text(buildStandardFinalSurveyHTML(claim(), profile));
-    expect(t).toContain('Hadapsar');
-    expect(t).toContain('FIR/442/2026');
+    expect(t).not.toContain('Third Party Involvement');
+    expect(t).not.toContain('Property Damage and Injury');
   });
 
-  test('property-damage-only reads as TPPD', () => {
-    const t = text(buildStandardFinalSurveyHTML(claim({ spotDetails: { tpInvolved: 'tppd' } }), profile));
-    expect(t).toContain('TPPD');
-    expect(t).not.toContain('TPPI');
-  });
-
-  test('no third party reads as NIL', () => {
-    const t = text(buildStandardFinalSurveyHTML(claim({ spotDetails: { tpInvolved: 'no' } }), profile));
-    expect(t).toMatch(/Third Party Involvement\s+NIL/);
-  });
-
-  test('UIIC final fills its Type of TP Liability row', () => {
+  test('UIIC final prints the free text under a TPPI / TPPD label', () => {
     const t = text(buildUIICFinalHTML(claim(), null));
-    expect(t).toMatch(/Type of TP Liability\s+TPPD & TPPI/);
+    expect(t).toMatch(/TPPI \/ TPPD\s+One pedestrian injured/);
+  });
+
+  test('UIIC final prints the third-party text once, not twice', () => {
+    const t = text(buildUIICFinalHTML(claim(), null));
+    const hits = t.split('One pedestrian injured').length - 1;
+    expect(hits).toBe(1);
+  });
+
+  test('empty third party prints NIL', () => {
+    const c = claim({
+      accident: {
+        dateAndTime: '2026-06-24T10:00',
+        policeStation: 'Hadapsar',
+        firNumber: 'FIR/442/2026',
+        thirdPartyDetails: '',
+      },
+    });
+    expect(text(buildUIICFinalHTML(c, null))).toMatch(/TPPI \/ TPPD\s+NIL/);
   });
 });
 

@@ -26,7 +26,7 @@ import { getCompulsoryExcess, calculateBillCheckSummary, calculateAssessmentSumm
 import { buildSerialMap } from '@/lib/calculations/serial-numbers';
 import { shouldStartSupplementaryBand } from '@/lib/calculations/utils';
 import { buildPrintShell, footerFromProfile } from './print-shell';
-import { formatSurveyDateTime, tpInvolvementLabel } from './report-utils';
+import { formatSurveyDateTime } from './report-utils';
 import { resolveBillSalvage } from './bill-check-projection';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -177,8 +177,7 @@ ${getSurveyorHeader(profile)}
 <tr><td style="padding:2px 3px;color:#333;width:50%;">Spot Survey Appointment Date</td><td style="padding:2px 3px;">${fd(sd.allotmentDate)}</td></tr>
 <tr><td style="padding:2px 3px;color:#333;">Spot Survey Date</td><td style="padding:2px 3px;">${fd(sd.surveyDatetime)}</td></tr>
 <tr><td style="padding:2px 3px;color:#333;">Spot Survey Report Date</td><td style="padding:2px 3px;">${fd(sd.reportDate)}</td></tr>
-<tr><td style="padding:2px 3px;color:#333;">Third Party Involved</td><td style="padding:2px 3px;">${g(a.thirdPartyDetails) || 'NIL'}</td></tr>
-<tr><td style="padding:2px 3px;color:#333;">Type of TP Liability</td><td style="padding:2px 3px;">${tpInvolvementLabel(sd.tpInvolved)}</td></tr>
+<tr><td style="padding:2px 3px;color:#333;">TPPI / TPPD</td><td style="padding:2px 3px;">${g(a.thirdPartyDetails) || 'NIL'}</td></tr>
 </table></td></tr>
 <tr><td style="${td}" colspan="2"><b>CAUSE OF ACCIDENT/ DETAILS OF DAMAGES</b><br/><span style="font-size:7pt;">${g(a.causeOfAccident) || '—'}</span></td></tr></table>
 <table style="${ts}"><tr><td style="${sec}width:50%;">VEHICLE DETAILS</td><td style="${sec}">FINAL SURVEY DETAILS</td></tr>

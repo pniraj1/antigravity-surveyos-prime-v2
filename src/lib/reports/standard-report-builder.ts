@@ -12,7 +12,7 @@ import type { ClaimData } from '@/types/claim';
 import type { AssessmentSummary } from '@/types';
 import type { SurveyorProfile } from '@/types/vehicle';
 
-import { formatDateDMY, formatDateTimeDMY, formatSurveyDateTime, fa, numberToWords, getVehicleAgeMonths, getSurveyorHeader, getSigBlock, tpInvolvementLabel } from './report-utils';
+import { formatDateDMY, formatDateTimeDMY, formatSurveyDateTime, fa, numberToWords, getVehicleAgeMonths, getSurveyorHeader, getSigBlock } from './report-utils';
 import { getHtmlScale } from './report-style-utils';
 import { preambleFromClaim, estimateTotalInclGst, billCheckPreambleFromClaim } from './final-survey-preamble';
 import { projectForBillCheck, resolveBillSalvage } from './bill-check-projection';
@@ -436,10 +436,8 @@ export function buildStandardFinalSurveyHTML(
     <td style="${td}">${accident.placeOfSurvey || '—'}</td>
   </tr>
   <tr>
-    <td style="${td}color:#444;font-size:${scale.labelFont};">Third Party Involvement</td>
-    <td style="${td}font-weight:700;">${tpInvolvementLabel(sd?.tpInvolved)}</td>
     <td style="${td}color:#444;font-size:${scale.labelFont};">Panchanama</td>
-    <td style="${td}">${yesNoDash(sd?.panchanama)}</td>
+    <td style="${td}" colspan="3">${yesNoDash(sd?.panchanama)}</td>
   </tr>
   <tr>
     <td style="${td}color:#444;font-size:${scale.labelFont};">Police Reported</td>

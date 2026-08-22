@@ -4,6 +4,7 @@ import { useClaimStore } from '@/stores/claim-store';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 const r = (v: any) => !v ? 'border-red-400' : '';
 
@@ -135,6 +136,20 @@ export function AccidentDetailsForm() {
               value={a?.fireBrigadeReportNo || ''}
               onChange={(e) => updateAccident({ fireBrigadeReportNo: e.target.value })}
               className={r(a?.fireBrigadeReportNo)}
+            />
+          </div>
+
+          {/* Third party is free text, not a classification. The information is
+              extensive — property damage, injuries, deaths, TP vehicle, hospital
+              — and the surveyor writes as much as the claim needs. */}
+          <div className="space-y-1 lg:col-span-2 xl:col-span-4">
+            <Label htmlFor="a-tp">Third Party Details (TPPI / TPPD)</Label>
+            <Textarea
+              id="a-tp"
+              rows={3}
+              value={a?.thirdPartyDetails || ''}
+              onChange={(e) => updateAccident({ thirdPartyDetails: e.target.value })}
+              placeholder="Property damage, injuries, deaths, TP vehicle, hospital — as much detail as available"
             />
           </div>
 

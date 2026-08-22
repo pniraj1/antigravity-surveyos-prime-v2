@@ -92,23 +92,3 @@ export function getSigBlock(profile: SurveyorProfile | null, marginTop = '14px')
     </div>
   </div>`;
 }
-
-/**
- * `spotDetails.tpInvolved` as it should read on a report.
- *
- * The stored value is the enriched enum `no | tppd | tppi | both`. Every report
- * that shows third-party involvement renders it through here so the Spot, the
- * Standard Final and the UIIC Final never disagree on the wording.
- *
- * ponytail: label only — the enum stays the single source of TP classification.
- * Split into injured/deceased counts only if an insurer asks for the breakdown;
- * today the surveyor types whatever they have into `accident.thirdPartyDetails`.
- */
-export function tpInvolvementLabel(tpInvolved: string | null | undefined): string {
-  switch (tpInvolved) {
-    case 'tppd': return 'TPPD — Property Damage';
-    case 'tppi': return 'TPPI — Injury / Death';
-    case 'both': return 'TPPD & TPPI — Property Damage and Injury / Death';
-    default: return 'NIL';
-  }
-}

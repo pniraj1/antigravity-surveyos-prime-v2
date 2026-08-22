@@ -3,7 +3,7 @@
 import React from 'react';
 import type { ClaimData, SurveyorProfile } from '@/types';
 import { formatDateDMY } from '@/lib/calculations';
-import { formatSurveyDateTime, tpInvolvementLabel } from '@/lib/reports/report-utils';
+import { formatSurveyDateTime } from '@/lib/reports/report-utils';
 import { getHtmlScale } from '@/lib/reports/report-style-utils';
 import { footerFromProfile, escapeCssString } from '@/lib/reports/print-shell';
 
@@ -352,9 +352,7 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
           </tr>
           <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Third Party</td>
-            <td style={{ ...parseInline(styles.td) }}>{tpInvolvementLabel(spotDetails.tpInvolved)}</td>
-            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>TP Details</td>
-            <td style={{ ...parseInline(styles.td) }}>{accident.thirdPartyDetails || 'NIL'}</td>
+            <td style={{ ...parseInline(styles.td) }} colSpan={3}>{accident.thirdPartyDetails || 'NIL'}</td>
           </tr>
           <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Police Reported</td>
