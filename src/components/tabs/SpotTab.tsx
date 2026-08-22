@@ -145,80 +145,16 @@ export function SpotTab() {
               <CardHeader className="bg-muted/50 pb-4 border-b border-border">
                 <CardTitle className="text-sm font-bold flex items-center gap-2">
                   <FileText size={16} className="text-blue-600" />
-                  Commercial Compliance (Permit/Fitness)
+                  Log Book / Tax
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Permit No.<S /></Label>
-                  <Input
-                    value={spotDetails.permitNo}
-                    onChange={(e) => handleUpdate({ permitNo: e.target.value.toUpperCase() })}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Permit Type<S /></Label>
-                  <select
-                    className="w-full bg-background border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary h-10"
-                    value={spotDetails.permitType}
-                    onChange={(e) => handleUpdate({ permitType: e.target.value })}
-                  >
-                    <option value="">Select Type</option>
-                    <option value="National">National Permit</option>
-                    <option value="State">State Permit</option>
-                    <option value="Zonal">Zonal Permit</option>
-                    <option value="Service">Service Permit</option>
-                    <option value="Contract">Contract Carriage</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Nature of Permit<S /></Label>
-                  <Input
-                    value={spotDetails.natureOfPermit}
-                    onChange={(e) => handleUpdate({ natureOfPermit: e.target.value })}
-                    placeholder="e.g. Goods Carriage, Stage Carriage"
-                    disabled={isCompleted}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Permit Valid Upto<S /></Label>
-                  <Input
-                    type="date"
-                    value={spotDetails.permitTo}
-                    onChange={(e) => handleUpdate({ permitTo: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Auth No.<S /></Label>
-                  <Input
-                    value={spotDetails.authNo}
-                    onChange={(e) => handleUpdate({ authNo: e.target.value.toUpperCase() })}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Auth Valid Upto<S /></Label>
-                  <Input
-                    type="date"
-                    value={spotDetails.authValid}
-                    onChange={(e) => handleUpdate({ authValid: e.target.value })}
-                  />
-                </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Log Book / Tax Paid<S /></Label>
                   <Input
                     value={spotDetails.fitnessType}
                     onChange={(e) => handleUpdate({ fitnessType: e.target.value })}
                     placeholder="e.g. Paid Upto 2026"
-                    disabled={isCompleted}
-                  />
-                </div>
-                <div className="sm:col-span-2 space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Area of Operation<S /></Label>
-                  <Input
-                    value={spotDetails.areaOfOperation}
-                    onChange={(e) => handleUpdate({ areaOfOperation: e.target.value })}
-                    placeholder="e.g. All India, State-wide"
                     disabled={isCompleted}
                   />
                 </div>
@@ -229,7 +165,7 @@ export function SpotTab() {
               <CardHeader className="bg-muted/50 pb-4 border-b border-border">
                 <CardTitle className="text-sm font-bold flex items-center gap-2">
                   <Truck size={16} className="text-emerald-600" />
-                  Load Logistics & Challan
+                  Load Capacity
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6 space-y-6">
@@ -274,78 +210,8 @@ export function SpotTab() {
                       className="bg-muted font-bold text-primary"
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Actual Load (KG)<S /></Label>
-                    <Input
-                      type="number"
-                      className={`font-mono font-bold ${overloadFlagged ? 'text-red-600 border-red-200 bg-red-50' : 'text-foreground'}`}
-                      value={spotDetails.actualLoad || ''}
-                      onChange={(e) => handleUpdate({ actualLoad: Number(e.target.value) })}
-                      disabled={isCompleted}
-                    />
-                    {overWeightNumeric && (
-                      <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground cursor-pointer mt-1">
-                        <input
-                          type="checkbox"
-                          checked={overloadFlagged}
-                          onChange={(e) => handleUpdate({ flagOverload: e.target.checked })}
-                        />
-                        Flag as overloaded in report
-                      </label>
-                    )}
-                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Load Challan No.<S /></Label>
-                    <Input
-                      value={spotDetails.challanNo}
-                      placeholder="CN Number"
-                      onChange={(e) => handleUpdate({ challanNo: e.target.value.toUpperCase() })}
-                      disabled={isCompleted}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Load Challan Date<S /></Label>
-                    <Input
-                      type="date"
-                      value={spotDetails.challanDate}
-                      onChange={(e) => handleUpdate({ challanDate: e.target.value })}
-                      disabled={isCompleted}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-4 border-t border-border/50">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Goods Description<S /></Label>
-                    <Input
-                      value={spotDetails.loadDesc}
-                      onChange={(e) => handleUpdate({ loadDesc: e.target.value })}
-                      placeholder="Type of goods being carried..."
-                      disabled={isCompleted}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Route From<S /></Label>
-                      <Input
-                        value={spotDetails.loadOrigin}
-                        onChange={(e) => handleUpdate({ loadOrigin: e.target.value })}
-                        disabled={isCompleted}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Route To<S /></Label>
-                      <Input
-                        value={spotDetails.loadDest}
-                        onChange={(e) => handleUpdate({ loadDest: e.target.value })}
-                        disabled={isCompleted}
-                      />
-                    </div>
-                  </div>
-                </div>
               </CardContent>
             </Card>
           </div>

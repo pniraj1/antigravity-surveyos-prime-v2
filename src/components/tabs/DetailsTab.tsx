@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { VehicleDetailsForm } from '@/components/claim/VehicleForm';
+import { CommercialLoadForm } from '@/components/claim/CommercialLoadForm';
 import { DriverDetailsForm } from '@/components/claim/DriverForm';
 import { PolicyDetailsForm } from '@/components/claim/PolicyForm';
 import { AccidentDetailsForm } from '@/components/claim/AccidentForm';
@@ -268,6 +269,7 @@ export function DetailsTab() {
 
           <div className="space-y-6">
             <VehicleDetailsForm />
+            <CommercialLoadForm />
             <PolicyDetailsForm />
             {currentClaim.surveyType !== 'valuation' && <DriverDetailsForm />}
             {currentClaim.surveyType !== 'valuation' && <AccidentDetailsForm />}

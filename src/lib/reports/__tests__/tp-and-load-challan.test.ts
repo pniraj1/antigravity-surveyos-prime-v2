@@ -105,6 +105,14 @@ describe('Load challan section on the standard final report', () => {
     expect(t).not.toContain('CN/8891');
   });
 
+  test('prints the load block on a final claim built without a spot survey', () => {
+    const c = claim({ surveyType: 'final' });
+    const t = text(buildStandardFinalSurveyHTML(c, profile));
+    expect(t).toContain('LOAD CHALLAN &amp; GOODS CARRIED');
+    expect(t).toContain('CN/8891');
+    expect(t).toContain('Cement bags');
+  });
+
   test('does not repeat GVW and ULW that section 2 already prints', () => {
     const t = text(buildStandardFinalSurveyHTML(claim(), profile));
     expect(t).not.toContain('G.V.W. (KG)');
