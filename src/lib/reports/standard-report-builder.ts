@@ -455,11 +455,33 @@ export function buildStandardFinalSurveyHTML(
   // tab's "Load Logistics & Challan" card, so the report mirrors that card
   // one-for-one. Overload prints red only when the surveyor opted in via
   // flagOverload; a numeric excess alone never colours the row.
-  const loadSectionHtml = !isCommercial ? '' : `<div style="font-weight:700;font-size:7pt;background:#0d1b2a;color:#fff;padding:2px 4px;margin-bottom:2px;">5. LOAD CHALLAN &amp; GOODS CARRIED</div>
+  const loadSectionHtml = !isCommercial ? '' : `<div style="font-weight:700;font-size:7pt;background:#0d1b2a;color:#fff;padding:2px 4px;margin-bottom:2px;">5. PERMIT, LOAD &amp; CHALLAN</div>
 <table style="${ts}">
   <tr>
-    <td style="${td}color:#444;font-size:${scale.labelFont};width:18%;">Load Challan No.</td>
-    <td style="${td}font-family:monospace;width:32%;">${sd?.challanNo || '—'}</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};width:18%;">Permit No.</td>
+    <td style="${td}font-family:monospace;width:32%;">${sd?.permitNo || '—'}</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Permit Type</td>
+    <td style="${td}">${sd?.permitType || '—'}</td>
+  </tr>
+  <tr>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Nature of Permit</td>
+    <td style="${td}">${sd?.natureOfPermit || '—'}</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Permit Valid Upto</td>
+    <td style="${td}">${formatDateDMY(sd?.permitTo)}</td>
+  </tr>
+  <tr>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Auth. No.</td>
+    <td style="${td}font-family:monospace;">${sd?.authNo || '—'}</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Auth Valid Upto</td>
+    <td style="${td}">${formatDateDMY(sd?.authValid)}</td>
+  </tr>
+  <tr>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Area of Operation</td>
+    <td style="${td}" colspan="3">${sd?.areaOfOperation || '—'}</td>
+  </tr>
+  <tr>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Load Challan No.</td>
+    <td style="${td}font-family:monospace;">${sd?.challanNo || '—'}</td>
     <td style="${td}color:#444;font-size:${scale.labelFont};">Load Challan Date</td>
     <td style="${td}">${formatDateDMY(sd?.challanDate)}</td>
   </tr>

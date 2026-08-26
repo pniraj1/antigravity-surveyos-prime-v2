@@ -84,7 +84,7 @@ describe('Third party as free text', () => {
 describe('Load challan section on the standard final report', () => {
   test('prints challan, load and route for a goods vehicle', () => {
     const t = text(buildStandardFinalSurveyHTML(claim(), profile));
-    expect(t).toContain('LOAD CHALLAN &amp; GOODS CARRIED');
+    expect(t).toContain('PERMIT, LOAD &amp; CHALLAN');
     expect(t).toContain('CN/8891');
     expect(t).toContain('24.06.2026');
     expect(t).toContain('12400');
@@ -101,14 +101,14 @@ describe('Load challan section on the standard final report', () => {
 
   test('is omitted entirely for a private vehicle', () => {
     const t = text(buildStandardFinalSurveyHTML(claim({}, 'private'), profile));
-    expect(t).not.toContain('LOAD CHALLAN &amp; GOODS CARRIED');
+    expect(t).not.toContain('PERMIT, LOAD &amp; CHALLAN');
     expect(t).not.toContain('CN/8891');
   });
 
   test('prints the load block on a final claim built without a spot survey', () => {
     const c = claim({ surveyType: 'final' });
     const t = text(buildStandardFinalSurveyHTML(c, profile));
-    expect(t).toContain('LOAD CHALLAN &amp; GOODS CARRIED');
+    expect(t).toContain('PERMIT, LOAD &amp; CHALLAN');
     expect(t).toContain('CN/8891');
     expect(t).toContain('Cement bags');
   });
@@ -123,7 +123,7 @@ describe('Load challan section on the standard final report', () => {
 
   test('does not appear in bill check mode', () => {
     const t = text(buildStandardFinalSurveyHTML(claim(), profile, 'bill-check'));
-    expect(t).not.toContain('LOAD CHALLAN &amp; GOODS CARRIED');
+    expect(t).not.toContain('PERMIT, LOAD &amp; CHALLAN');
   });
 });
 
