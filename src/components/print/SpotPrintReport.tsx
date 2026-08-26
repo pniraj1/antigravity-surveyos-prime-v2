@@ -18,7 +18,16 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
 
   // Helpers for logic in the template
   const isComm = claim.vehicleType !== 'private';
-  const isGoods = claim.vehicleType === 'comm-goods';
+
+  /**
+   * Section letters are counted as the report renders, never hardcoded.
+   * Two sections are conditional, so a fixed letter is wrong for at least one
+   * vehicle type: private and passenger claims used to jump D to F, and the
+   * commercial section repeated D. Anything that renders a heading must call
+   * this, in document order.
+   */
+  let sectionIndex = 0;
+  const sec = () => `${String.fromCharCode(65 + sectionIndex++)}.`;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -34,7 +43,7 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
   const actualLoad = parseFloat(String(spotDetails.actualLoad)) || 0;
   // Overload is shown ONLY when the surveyor explicitly opts in (flagOverload).
   // It is never auto-flagged red just because actualLoad > capacity.
-  const overload = !!spotDetails.flagOverload && isGoods && actualLoad > 0 && capVal > 0 && actualLoad > capVal;
+  const overload = !!spotDetails.flagOverload && actualLoad > 0 && capVal > 0 && actualLoad > capVal;
 
   const formatDateTimeDMY = (dt: string) => {
     if (!dt) return '—';
@@ -167,7 +176,7 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
 
       {/* A. VEHICLE PARTICULARS */}
       <div style={{ fontWeight: 700, fontSize: fs.labelFont, background: '#0d1b2a', color: '#fff', padding: `${fs.cellPaddingV} ${fs.cellPaddingH}`, marginBottom: '2px' }}>
-        A. VEHICLE PARTICULARS
+        {sec()} VEHICLE PARTICULARS
       </div>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: fs.cellFont, marginBottom: '4px' }}>
         <tbody>
@@ -268,7 +277,7 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
 
       {/* B. DRIVER'S PARTICULARS */}
       <div style={{ fontWeight: 700, fontSize: fs.labelFont, background: '#0d1b2a', color: '#fff', padding: `${fs.cellPaddingV} ${fs.cellPaddingH}`, marginBottom: '2px' }}>
-        B. DRIVER'S PARTICULARS & DL VERIFICATION
+        {sec()} DRIVER'S PARTICULARS & DL VERIFICATION
       </div>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: fs.cellFont, marginBottom: '4px' }}>
         <tbody>
@@ -328,7 +337,7 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
 
       {/* C. ACCIDENT DETAILS */}
       <div style={{ fontWeight: 700, fontSize: fs.labelFont, background: '#0d1b2a', color: '#fff', padding: `${fs.cellPaddingV} ${fs.cellPaddingH}`, marginBottom: '2px' }}>
-        C. ACCIDENT DETAILS
+        {sec()} ACCIDENT DETAILS
       </div>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: fs.cellFont, marginBottom: '4px' }}>
         <tbody>
@@ -367,7 +376,7 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
 
       {/* D. DOCUMENT VERIFICATION */}
       <div style={{ fontWeight: 700, fontSize: fs.labelFont, background: '#0d1b2a', color: '#fff', padding: `${fs.cellPaddingV} ${fs.cellPaddingH}`, marginBottom: '2px' }}>
-        D. DOCUMENT VERIFICATION
+        {sec()} DOCUMENT VERIFICATION
       </div>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: fs.cellFont, marginBottom: '4px' }}>
         <thead>
@@ -424,7 +433,7 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
       {isComm && (
         <>
           <div style={{ fontWeight: 700, fontSize: fs.labelFont, background: '#0d1b2a', color: '#fff', padding: `${fs.cellPaddingV} ${fs.cellPaddingH}`, marginBottom: '2px' }}>
-            D. COMMERCIAL VEHICLE DOCUMENTS
+            {sec()} COMMERCIAL VEHICLE DOCUMENTS
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: fs.cellFont, marginBottom: '4px' }}>
             <tbody>
@@ -433,6 +442,12 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
                 <td style={{ ...parseInline(styles.td), fontFamily: 'monospace', width: '32%' }}>{spotDetails.permitNo || '—'}</td>
                 <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Permit Type</td>
                 <td style={{ ...parseInline(styles.td) }}>{spotDetails.permitType || '—'}</td>
+              </tr>
+              <tr>
+                <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Nature of Permit</td>
+                <td style={{ ...parseInline(styles.td) }}>{spotDetails.natureOfPermit || '—'}</td>
+                <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Area of Operation</td>
+                <td style={{ ...parseInline(styles.td) }}>{spotDetails.areaOfOperation || '—'}</td>
               </tr>
               <tr>
                 <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Permit Valid From</td>
@@ -456,20 +471,18 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
               </tr>
               <tr>
                 <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Fitness Type</td>
-                <td style={{ ...parseInline(styles.td) }}>{spotDetails.fitnessType || vehicle.fitnessType || '—'}</td>
-                <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Area of Operation</td>
-                <td style={{ ...parseInline(styles.td) }}>{spotDetails.areaOfOperation || '—'}</td>
+                <td style={{ ...parseInline(styles.td) }} colSpan={3}>{spotDetails.fitnessType || vehicle.fitnessType || '—'}</td>
               </tr>
             </tbody>
           </table>
         </>
       )}
 
-      {/* E. LOAD DETAILS */}
-      {isGoods && (
+      {/* LOAD DETAILS */}
+      {isComm && (
         <>
           <div style={{ fontWeight: 700, fontSize: fs.labelFont, background: '#0d1b2a', color: '#fff', padding: `${fs.cellPaddingV} ${fs.cellPaddingH}`, marginBottom: '2px' }}>
-            E. LOAD DETAILS
+            {sec()} LOAD DETAILS
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: fs.cellFont, marginBottom: '4px' }}>
             <tbody>
@@ -512,7 +525,7 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
 
       {/* F. CAUSE OF ACCIDENT */}
       <div style={{ fontWeight: 700, fontSize: fs.labelFont, background: '#0d1b2a', color: '#fff', padding: `${fs.cellPaddingV} ${fs.cellPaddingH}`, marginBottom: '2px' }}>
-        F. CAUSE AND NATURE OF ACCIDENT
+        {sec()} CAUSE AND NATURE OF ACCIDENT
       </div>
       <div style={{ fontSize: fs.bodyFont, marginBottom: '4px', padding: '2px 4px', border: '0.4pt solid #bbb', lineHeight: 1.5 }}>
         {claim.accident.causeOfAccident || '—'}
@@ -520,7 +533,7 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
 
       {/* G. SPOT OBSERVATIONS / COMMENTS */}
       <div style={{ fontWeight: 700, fontSize: fs.labelFont, background: '#0d1b2a', color: '#fff', padding: `${fs.cellPaddingV} ${fs.cellPaddingH}`, marginBottom: '2px' }}>
-        G. SPOT OBSERVATIONS / COMMENTS / REMARKS
+        {sec()} SPOT OBSERVATIONS / COMMENTS / REMARKS
       </div>
       <div style={{ fontSize: fs.bodyFont, marginBottom: '4px', padding: '2px 4px', border: '0.4pt solid #bbb', lineHeight: 1.5, minHeight: '30px' }}>
         {spotDetails.comments || 'NIL'}
@@ -528,7 +541,7 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
 
       {/* H. DAMAGE PARTICULARS AT SPOT */}
       <div style={{ fontWeight: 700, fontSize: fs.labelFont, background: '#0d1b2a', color: '#fff', padding: `${fs.cellPaddingV} ${fs.cellPaddingH}`, marginBottom: '2px' }}>
-        H. DAMAGE PARTICULARS AT SPOT
+        {sec()} DAMAGE PARTICULARS AT SPOT
       </div>
       <div style={{ fontSize: fs.labelFont, marginBottom: '3px', padding: '2px 4px' }}>
         Severity: <b>{spotDetails.damageSeverity?.toUpperCase()}</b> &nbsp;|&nbsp; 
