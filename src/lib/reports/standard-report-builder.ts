@@ -414,8 +414,16 @@ export function buildStandardFinalSurveyHTML(
   <tr>
     <td style="${td}color:#444;font-size:${scale.labelFont};width:18%;">Accident Date &amp; Time</td>
     <td style="${td}width:32%;">${formatDateTimeDMY(accident.dateAndTime)}</td>
-    <td style="${td}color:#444;font-size:${scale.labelFont};">Place</td>
-    <td style="${td}">${accident.placeOfAccident || '—'}</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Date &amp; Time of Survey</td>
+    <td style="${td}">${formatSurveyDateTime(accident.dateOfSurvey, accident.timeOfSurvey)}</td>
+  </tr>
+  <tr>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Place of Accident</td>
+    <td style="${td}" colspan="3">${accident.placeOfAccident || '—'}</td>
+  </tr>
+  <tr>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Place of Survey</td>
+    <td style="${td}" colspan="3">${accident.placeOfSurvey || '—'}</td>
   </tr>
   <tr>
     <td style="${td}color:#444;font-size:${scale.labelFont};">Police Station</td>
@@ -426,18 +434,8 @@ export function buildStandardFinalSurveyHTML(
   <tr>
     <td style="${td}color:#444;font-size:${scale.labelFont};">Appointment Date</td>
     <td style="${td}">${formatDateDMY(accident.appointmentDate)}</td>
-    <td style="${td}color:#444;font-size:${scale.labelFont};"></td>
-    <td style="${td}"></td>
-  </tr>
-  <tr>
-    <td style="${td}color:#444;font-size:${scale.labelFont};">Date &amp; Time of Survey</td>
-    <td style="${td}">${formatSurveyDateTime(accident.dateOfSurvey, accident.timeOfSurvey)}</td>
-    <td style="${td}color:#444;font-size:${scale.labelFont};">Place of Survey</td>
-    <td style="${td}">${accident.placeOfSurvey || '—'}</td>
-  </tr>
-  <tr>
     <td style="${td}color:#444;font-size:${scale.labelFont};">Panchanama</td>
-    <td style="${td}" colspan="3">${yesNoDash(sd?.panchanama)}</td>
+    <td style="${td}">${yesNoDash(sd?.panchanama)}</td>
   </tr>
   <tr>
     <td style="${td}color:#444;font-size:${scale.labelFont};">Police Reported</td>
@@ -465,15 +463,17 @@ export function buildStandardFinalSurveyHTML(
   </tr>
   <tr>
     <td style="${td}color:#444;font-size:${scale.labelFont};">Nature of Permit</td>
-    <td style="${td}">${sd?.natureOfPermit || '—'}</td>
-    <td style="${td}color:#444;font-size:${scale.labelFont};">Permit Valid Upto</td>
-    <td style="${td}">${formatDateDMY(sd?.permitTo)}</td>
+    <td style="${td}" colspan="3">${sd?.natureOfPermit || '—'}</td>
   </tr>
   <tr>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Permit Valid Upto</td>
+    <td style="${td}">${formatDateDMY(sd?.permitTo)}</td>
     <td style="${td}color:#444;font-size:${scale.labelFont};">Auth. No.</td>
     <td style="${td}font-family:monospace;">${sd?.authNo || '—'}</td>
+  </tr>
+  <tr>
     <td style="${td}color:#444;font-size:${scale.labelFont};">Auth Valid Upto</td>
-    <td style="${td}">${formatDateDMY(sd?.authValid)}</td>
+    <td style="${td}" colspan="3">${formatDateDMY(sd?.authValid)}</td>
   </tr>
   <tr>
     <td style="${td}color:#444;font-size:${scale.labelFont};">Area of Operation</td>
@@ -490,7 +490,7 @@ export function buildStandardFinalSurveyHTML(
     <td style="${td}${sd?.flagOverload ? 'color:#b00020;font-weight:700;' : ''}" colspan="3">${sd?.actualLoad || '—'}${sd?.flagOverload ? ' — OVERLOADED' : ''}</td>
   </tr>
   <tr>
-    <td style="${td}color:#444;font-size:${scale.labelFont};">Description of Goods</td>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Description of Goods / Passengers</td>
     <td style="${td}" colspan="3">${sd?.loadDesc || '—'}</td>
   </tr>
   <tr>

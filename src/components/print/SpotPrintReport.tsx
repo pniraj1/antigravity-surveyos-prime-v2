@@ -200,9 +200,7 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
           </tr>
           <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Appointing Office</td>
-            <td style={{ ...parseInline(styles.td) }}>{policy.appointingOffice || '—'}</td>
-            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}></td>
-            <td style={{ ...parseInline(styles.td) }}></td>
+            <td style={{ ...parseInline(styles.td) }} colSpan={3}>{policy.appointingOffice || '—'}</td>
           </tr>
           <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Reg. No.</td>
@@ -344,20 +342,22 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
           <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', width: '18%', fontSize: fs.labelFont }}>Date & Time</td>
             <td style={{ ...parseInline(styles.td), width: '32%' }}>{formatDateTimeDMY(accident.dateAndTime)}</td>
+            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Date &amp; Time of Survey</td>
+            <td style={{ ...parseInline(styles.td) }}>{formatSurveyDateTime(accident.dateOfSurvey, accident.timeOfSurvey)}</td>
+          </tr>
+          <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Place of Accident</td>
-            <td style={{ ...parseInline(styles.td) }}>{accident.placeOfAccident}</td>
+            <td style={{ ...parseInline(styles.td) }} colSpan={3}>{accident.placeOfAccident || '—'}</td>
+          </tr>
+          <tr>
+            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Place of Survey</td>
+            <td style={{ ...parseInline(styles.td) }} colSpan={3}>{accident.placeOfSurvey || accident.workshopName || '—'}</td>
           </tr>
           <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Police Station</td>
             <td style={{ ...parseInline(styles.td) }}>{accident.policeStation || '—'}</td>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>FIR No. & Date</td>
             <td style={{ ...parseInline(styles.td) }}>{accident.firNumber || '—'} / {formatDateDMY(accident.firDate)}</td>
-          </tr>
-          <tr>
-            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Date &amp; Time of Survey</td>
-            <td style={{ ...parseInline(styles.td) }}>{formatSurveyDateTime(accident.dateOfSurvey, accident.timeOfSurvey)}</td>
-            <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Place of Survey</td>
-            <td style={{ ...parseInline(styles.td) }}>{accident.placeOfSurvey || accident.workshopName || '—'}</td>
           </tr>
           <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Third Party</td>
@@ -419,7 +419,7 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
                       <td style={{ ...parseInline(styles.td), fontSize: fs.labelFont }}>{db.detail || '—'}</td>
                     </>
                   ) : (
-                    <><td style={parseInline(styles.td)} /><td style={parseInline(styles.td)} /><td style={parseInline(styles.td)} /></>
+                    <td style={parseInline(styles.td)} colSpan={3} />
                   )}
                 </tr>
               );
@@ -445,9 +445,11 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
               </tr>
               <tr>
                 <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Nature of Permit</td>
-                <td style={{ ...parseInline(styles.td) }}>{spotDetails.natureOfPermit || '—'}</td>
+                <td style={{ ...parseInline(styles.td) }} colSpan={3}>{spotDetails.natureOfPermit || '—'}</td>
+              </tr>
+              <tr>
                 <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Area of Operation</td>
-                <td style={{ ...parseInline(styles.td) }}>{spotDetails.areaOfOperation || '—'}</td>
+                <td style={{ ...parseInline(styles.td) }} colSpan={3}>{spotDetails.areaOfOperation || '—'}</td>
               </tr>
               <tr>
                 <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Permit Valid From</td>
@@ -507,10 +509,8 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
                 <td style={{ ...parseInline(styles.td) }}>{spotDetails.challanDate || '—'}</td>
               </tr>
               <tr>
-                <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Goods</td>
-                <td style={{ ...parseInline(styles.td) }}>{spotDetails.loadDesc || '—'}</td>
-                <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}></td>
-                <td style={{ ...parseInline(styles.td) }}></td>
+                <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Goods / Passengers Carried</td>
+                <td style={{ ...parseInline(styles.td) }} colSpan={3}>{spotDetails.loadDesc || '—'}</td>
               </tr>
               <tr>
                 <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Origin</td>
