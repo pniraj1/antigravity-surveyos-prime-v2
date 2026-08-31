@@ -93,7 +93,7 @@ export interface UiicPortalSummary {
     totalLabour: number;     // portal: labourCharge
   };
   labourGst: UiicGstSlab[];  // portal: gst18AmountL, gst0AmountL
-  tieOut: { bucketTotal: number; reportTotal: number; delta: number };
+  tieOut: { rounded: number; exact: number; delta: number };
 }
 
 export function uiicPortalSummary(
@@ -134,8 +134,16 @@ aggregated separately, matching the portal's `*P` / `*L` field split.
 - `totalLabour` = `labour + paintNet`
 
 **Rounding** (R6): every output is rounded to the rupee on the way out.
-`tieOut` reports the rounded bucket total against the report's own parts total,
-so the surveyor sees the delta rather than discovering it later.
+
+`tieOut` compares the sum of the four **rounded** buckets against the same sum
+**unrounded**, and reports the difference. The two are in the same basis — both
+pre-depreciation — so the delta is purely the rounding loss, typically a rupee
+or two. It is surfaced because the surveyor absorbs it in excess or salvage, and
+should see the number rather than discover it after submitting.
+
+It is deliberately *not* a comparison against the report's parts total: the
+report totals are post-depreciation and the buckets are pre-depreciation, so
+that difference would be large, meaningless, and alarming.
 
 ### 3.2 `src/lib/calculations/__tests__/uiic-portal-summary.test.ts`
 
