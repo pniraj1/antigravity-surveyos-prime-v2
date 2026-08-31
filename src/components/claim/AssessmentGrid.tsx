@@ -6,7 +6,8 @@ import { getVehicleAgeMonths } from '@/lib/calculations/depreciation';
 import { calculateAssessmentSummary } from '@/lib/calculations/assessment';
 import { sectionSubtotals, SECTION_ORDER } from '@/lib/calculations/section-subtotals';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trash2, PlusCircle, Wrench, Settings2, Eye, EyeOff } from 'lucide-react';
+import { Trash2, PlusCircle, Wrench, Settings2, Eye, EyeOff, ClipboardList } from 'lucide-react';
+import { UIICSummaryDialog } from '@/components/dialogs/UIICSummaryDialog';
 import {
   DndContext,
   closestCenter,
@@ -207,6 +208,7 @@ export function AssessmentGrid() {
   }, [cellSelection, currentClaim?.assessmentRows, updateAssessmentRow]);
 
   const assessmentRows = allRows;
+  const [showUiicSummary, setShowUiicSummary] = useState(false);
   const depreciationType = currentClaim?.depreciationType ?? 'standard';
 
   const ageMonths = getVehicleAgeMonths(
@@ -277,6 +279,13 @@ export function AssessmentGrid() {
           Parts Assessment Grid
         </CardTitle>
         <div className="flex gap-2 items-center">
+          <button
+            onClick={() => setShowUiicSummary(true)}
+            title="Figures for the United India portal"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 transition-colors border border-amber-500/20 text-xs font-semibold"
+          >
+            <ClipboardList size={14} /> UIIC Portal
+          </button>
           <button
             onClick={() => addAssessmentRowToSection('paint')}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 transition-colors border border-purple-500/20 text-xs font-semibold"
@@ -411,6 +420,15 @@ export function AssessmentGrid() {
           )}
         </div>
       </DndContext>
+
+      {showUiicSummary && (
+        <UIICSummaryDialog
+          rows={assessmentRows}
+          ageMonths={ageMonths}
+          depType={depreciationType}
+          onClose={() => setShowUiicSummary(false)}
+        />
+      )}
     </Card>
   );
 }
