@@ -105,12 +105,18 @@ export function uiicPortalSummary(
 
 **Bucket assignment**, in order — first match wins:
 
-1. `depType === 'nil'` → every allowed parts row lands in `nilDep` (R5)
-2. row is disposal **and** `section === 'parts'` → `nilDep`, at
+1. row is disposal **and** `section === 'parts'` → `nilDep`, at
    `computeRowNet().netBeforeGst`, which already includes the disposal
    percentage (R2)
+2. `depType === 'nil'` → the row lands in `nilDep` at raw `assessed` (R5)
 3. otherwise by `partType`: `metal → ageBasedDep`, `plastic → dep50`,
    `fiberglass → dep30`, `glass → nilDep`, at raw `row.assessed` (R1)
+
+Disposal is tested **before** the nil-depreciation policy, not after. Both send
+the row to the same bucket, so the order only affects the amount — but a
+disposal part on a Nil Dep policy must still be reduced by its disposal
+percentage. Testing the policy first would enter the full price and overstate
+the claim.
 
 Rows with `allowed === false` are excluded throughout.
 
