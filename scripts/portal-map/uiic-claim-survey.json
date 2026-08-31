@@ -1,0 +1,915 @@
+{
+ "file": "C:/Users/Manasi/AppData/Local/Temp/claude/C--Users-Manasi-OneDrive-Desktop-Antigravity-Surveyor-V6-fixed-SurveyOS-Prime-V2/0cea0f1f-453c-4cc9-9b06-07681552d7d5/scratchpad/uiic/uiic-02- basic claim details.html",
+ "total": 114,
+ "groups": {
+  "surveyorClaimSurvey.ClaimEntry.quickUpdate": [
+   {
+    "name": "claimNumber",
+    "type": "hidden",
+    "model": "surveyorClaimSurvey.ClaimEntry.quickUpdate.claimNumber"
+   },
+   {
+    "name": "policyNumber",
+    "type": "hidden",
+    "model": "surveyorClaimSurvey.ClaimEntry.quickUpdate.policyNumber"
+   },
+   {
+    "name": "settlementType",
+    "id": "settlementType",
+    "type": "select",
+    "model": "surveyorClaimSurvey.ClaimEntry.quickUpdate.settlementType",
+    "disabled_when": "surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation'"
+   },
+   {
+    "name": "surveyDate",
+    "id": "surveyDate",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyDate",
+    "readonly": true,
+    "datepicker": true,
+    "required": "required"
+   },
+   {
+    "name": "surveyTimeHours",
+    "id": "surveyTimeHours",
+    "type": "select",
+    "model": "surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyTimeHours",
+    "required": "required"
+   },
+   {
+    "name": "surveyTimeMinutes",
+    "id": "surveyTimeMinutes",
+    "type": "select",
+    "model": "surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyTimeMinutes",
+    "required": "required"
+   },
+   {
+    "name": "numOdoMeterReading",
+    "id": "numOdoMeterReading",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.quickUpdate.numOdoMeterReading",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+/",
+    "required": "required",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation')|| (surveyorClaimSurvey.basicDetails.BasicDetails.ynPayDCoverTaken=='N' ||surveyorClaimSurvey.basicDetails.BasicDetails.ynPayDCoverTaken=='false') "
+   },
+   {
+    "name": "surveyPlace",
+    "id": "surveyPlace",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyPlace",
+    "pattern": "/^[a-zA-Z0-9. ]{1,500}$/",
+    "required": "required"
+   },
+   {
+    "name": "initialLossAssAmt",
+    "id": "initialLossAssAmt",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.quickUpdate.initialLossAssAmt",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "required": "required",
+    "disabled_when": "surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey'||surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation'"
+   },
+   {
+    "name": "claimantMobileNo",
+    "id": "claimantMobileNo",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.quickUpdate.claimantMobileNo",
+    "placeholder": "Mobile No",
+    "maxlength": "10",
+    "required": "required",
+    "disabled_when": "surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation'"
+   },
+   {
+    "name": "claimantEmailId",
+    "id": "claimantEmailId",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.quickUpdate.claimantEmailId",
+    "placeholder": "Email Id",
+    "pattern": "/^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$/",
+    "required": "required",
+    "disabled_when": "surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation'"
+   },
+   {
+    "name": "repairCompleteDate",
+    "id": "repairCompleteDate",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.quickUpdate.repairCompleteDate",
+    "readonly": true,
+    "datepicker": true,
+    "required": "required",
+    "disabled_when": "surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation'"
+   },
+   {
+    "name": "recommendation",
+    "id": "recommendation",
+    "type": "textarea",
+    "model": "surveyorClaimSurvey.ClaimEntry.quickUpdate.recommendation",
+    "maxlength": "500",
+    "pattern": "/^[a-zA-Z0-9. ]{1,500}$/",
+    "required": "required",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation') || (surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)"
+   },
+   {
+    "name": "paymentoption",
+    "type": "radio",
+    "model": "surveyorClaimSurvey.ClaimEntry.quickUpdate.paymentOption",
+    "value": "CASHLESS",
+    "required": "required",
+    "disabled_when": "surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation'"
+   },
+   {
+    "name": "paymentoption",
+    "type": "radio",
+    "model": "surveyorClaimSurvey.ClaimEntry.quickUpdate.paymentOption",
+    "value": "REIMBURSEMENT",
+    "required": "required",
+    "disabled_when": "surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation'"
+   },
+   {
+    "name": "reportNo",
+    "id": "reportNo",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.quickUpdate.reportNo",
+    "maxlength": "10",
+    "pattern": "/^[a-zA-Z0-9#/\\\\(),.:\\-_ ]{1,10}$/",
+    "required": "required"
+   },
+   {
+    "name": "reportDate",
+    "id": "reportDate",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.quickUpdate.reportDate",
+    "readonly": true,
+    "required": "required"
+   }
+  ],
+  "surveyorClaimSurvey.basicDetails.BasicDetails": [
+   {
+    "name": "PAYD",
+    "id": "PAYD",
+    "type": "checkbox",
+    "model": "surveyorClaimSurvey.basicDetails.BasicDetails.ynPayDCoverTaken",
+    "bool_values": [
+     "'Y'",
+     "'N'"
+    ],
+    "hidden": true
+   }
+  ],
+  "surveyorClaimSurvey.ClaimEntry.documentVerified": [
+   {
+    "name": "ynVehicleInspected",
+    "id": "ynVehicleInspected",
+    "type": "radio",
+    "model": "surveyorClaimSurvey.ClaimEntry.documentVerified.ynVehicleInspected",
+    "value": "Y",
+    "disabled_when": "surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation'"
+   },
+   {
+    "name": "ynVehicleInspected",
+    "id": "ynVehicleInspected",
+    "type": "radio",
+    "model": "surveyorClaimSurvey.ClaimEntry.documentVerified.ynVehicleInspected",
+    "value": "N",
+    "disabled_when": "surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation'"
+   },
+   {
+    "name": "ynSurveyCompleted",
+    "id": "ynSurveyCompleted",
+    "type": "radio",
+    "model": "surveyorClaimSurvey.ClaimEntry.documentVerified.ynSurveyCompleted",
+    "value": "Y",
+    "disabled_when": "surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation'"
+   },
+   {
+    "name": "ynSurveyCompleted",
+    "id": "ynSurveyCompleted",
+    "type": "radio",
+    "model": "surveyorClaimSurvey.ClaimEntry.documentVerified.ynSurveyCompleted",
+    "value": "N",
+    "disabled_when": "surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation'"
+   },
+   {
+    "name": "ynDLApplicable",
+    "id": "ynDLApplicable",
+    "type": "radio",
+    "model": "surveyorClaimSurvey.ClaimEntry.documentVerified.ynDLApplicable",
+    "value": "Y",
+    "disabled_when": "surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation'"
+   },
+   {
+    "name": "ynDLApplicable",
+    "id": "ynDLApplicable",
+    "type": "radio",
+    "model": "surveyorClaimSurvey.ClaimEntry.documentVerified.ynDLApplicable",
+    "value": "N",
+    "disabled_when": "surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation'"
+   },
+   {
+    "name": "ynDLVerified",
+    "id": "ynDLVerified",
+    "type": "radio",
+    "model": "surveyorClaimSurvey.ClaimEntry.documentVerified.ynDLVerified",
+    "value": "Y",
+    "disabled_when": " surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation'"
+   },
+   {
+    "name": "ynDLVerified",
+    "id": "ynDLVerified",
+    "type": "radio",
+    "model": "surveyorClaimSurvey.ClaimEntry.documentVerified.ynDLVerified",
+    "value": "N",
+    "disabled_when": "surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation'"
+   },
+   {
+    "name": "ynRCBookVerified",
+    "id": "ynRCBookVerified",
+    "type": "radio",
+    "model": "surveyorClaimSurvey.ClaimEntry.documentVerified.ynRCBookVerified",
+    "value": "Y",
+    "disabled_when": "surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation'"
+   },
+   {
+    "name": "ynRCBookVerified",
+    "id": "ynRCBookVerified",
+    "type": "radio",
+    "model": "surveyorClaimSurvey.ClaimEntry.documentVerified.ynRCBookVerified",
+    "value": "N",
+    "disabled_when": "surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation'"
+   },
+   {
+    "name": "rcBookVerified",
+    "id": "rcBookVerified",
+    "type": "radio",
+    "model": "surveyorClaimSurvey.ClaimEntry.documentVerified.rcBookVerified",
+    "value": "Y"
+   },
+   {
+    "name": "rcBookVerified",
+    "id": "rcBookVerified",
+    "type": "radio",
+    "model": "surveyorClaimSurvey.ClaimEntry.documentVerified.rcBookVerified",
+    "value": "N"
+   },
+   {
+    "name": "relevantDamage",
+    "id": "relevantDamage",
+    "type": "radio",
+    "model": "surveyorClaimSurvey.ClaimEntry.documentVerified.relevantDamage",
+    "value": "Y"
+   },
+   {
+    "name": "relevantDamage",
+    "id": "relevantDamage",
+    "type": "radio",
+    "model": "surveyorClaimSurvey.ClaimEntry.documentVerified.relevantDamage",
+    "value": "N"
+   },
+   {
+    "name": "drivingLicense",
+    "id": "drivingLicense",
+    "type": "radio",
+    "model": "surveyorClaimSurvey.ClaimEntry.documentVerified.drivingLicense",
+    "value": "Y"
+   },
+   {
+    "name": "drivingLicense",
+    "id": "drivingLicense",
+    "type": "radio",
+    "model": "surveyorClaimSurvey.ClaimEntry.documentVerified.drivingLicense",
+    "value": "N"
+   },
+   {
+    "name": "billOrder",
+    "id": "billOrder",
+    "type": "radio",
+    "model": "surveyorClaimSurvey.ClaimEntry.documentVerified.billOrder",
+    "value": "Y"
+   },
+   {
+    "name": "billOrder",
+    "id": "billOrder",
+    "type": "radio",
+    "model": "surveyorClaimSurvey.ClaimEntry.documentVerified.billOrder",
+    "value": "N"
+   }
+  ],
+  "input": [
+   {
+    "name": "docType0",
+    "id": "docType",
+    "type": "select",
+    "model": "input.docType"
+   },
+   {
+    "name": "nonManDoc0",
+    "id": "nonManDoc0",
+    "type": "hidden",
+    "model": "input.nonManDoc"
+   },
+   {
+    "name": "fileToUpload0",
+    "id": "fileToUpload",
+    "type": "file",
+    "model": "input.fileToUpload"
+   }
+  ],
+  "surveyorClaimSurvey.ClaimEntry.claimAssessment": [
+   {
+    "type": "checkbox",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.chkNilDep",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation') || (surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)"
+   },
+   {
+    "name": "ageBasedDep",
+    "id": "ageBasedDep",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.ageBasedDep",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation') || (surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)"
+   },
+   {
+    "name": "ageBasedDep",
+    "id": "ageBasedDep",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.ageBasedAfterDep",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "readonly": true
+   },
+   {
+    "name": "Dep50",
+    "id": "Dep50",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.dep50",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation') || (surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)"
+   },
+   {
+    "name": "ageBasedDep",
+    "id": "ageBasedDep",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.dep50AfterDep",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "readonly": true
+   },
+   {
+    "name": "dep30",
+    "id": "dep30",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.dep30",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation') ||(surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)"
+   },
+   {
+    "name": "ageBasedDep",
+    "id": "ageBasedDep",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.dep30AfterDep",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "readonly": true
+   },
+   {
+    "name": "nilDep",
+    "id": "nilDep",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.nilDep",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation') ||(surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)"
+   },
+   {
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gst28AmountP",
+    "placeholder": "Amount",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation') || (surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)"
+   },
+   {
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gst28TaxP",
+    "placeholder": "Tax",
+    "readonly": true
+   },
+   {
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gst18AmountP",
+    "placeholder": "Amount",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation') || (surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)"
+   },
+   {
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gst18TaxP",
+    "placeholder": "Tax",
+    "readonly": true
+   },
+   {
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gst12AmountP",
+    "placeholder": "Amount",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation')||(surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)"
+   },
+   {
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gst12TaxP",
+    "placeholder": "Tax",
+    "readonly": true
+   },
+   {
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gst5AmountP",
+    "placeholder": "Amount",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation') || (surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)"
+   },
+   {
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gst5TaxP",
+    "placeholder": "Tax",
+    "readonly": true
+   },
+   {
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gst0AmountP",
+    "placeholder": "Amount",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation') || (surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)"
+   },
+   {
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gst0TaxP",
+    "placeholder": "Tax",
+    "readonly": true
+   },
+   {
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gstAmountTotalP",
+    "placeholder": "Amount",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation') || (surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)"
+   },
+   {
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gstParts",
+    "placeholder": "Tax",
+    "readonly": true
+   },
+   {
+    "name": "nilDep",
+    "id": "nilDep",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gstParts",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "readonly": true
+   },
+   {
+    "name": "labourCharge",
+    "id": "labourCharge",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.labourCharge",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation') || (surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)"
+   },
+   {
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gst28AmountL",
+    "placeholder": "Amount",
+    "readonly": true
+   },
+   {
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gst28TaxL",
+    "placeholder": "Tax",
+    "readonly": true
+   },
+   {
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gst18AmountL",
+    "placeholder": "Amount",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation') || (surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)"
+   },
+   {
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gst18TaxL",
+    "placeholder": "Tax",
+    "readonly": true
+   },
+   {
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gst12AmountL",
+    "placeholder": "Amount",
+    "readonly": true
+   },
+   {
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gst12TaxL",
+    "placeholder": "Tax",
+    "readonly": true
+   },
+   {
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gst5AmountL",
+    "placeholder": "Amount",
+    "readonly": true
+   },
+   {
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gst5TaxL",
+    "placeholder": "Tax",
+    "readonly": true
+   },
+   {
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gst0AmountL",
+    "placeholder": "Amount",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation') || (surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)"
+   },
+   {
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gst0TaxL",
+    "placeholder": "Tax",
+    "readonly": true
+   },
+   {
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gstAmountTotalL",
+    "placeholder": "Amount",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation') || (surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)"
+   },
+   {
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gstLabourCharge",
+    "placeholder": "Tax",
+    "readonly": true
+   },
+   {
+    "name": "labourCharge",
+    "id": "labourCharge",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gstLabourCharge",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "readonly": true
+   },
+   {
+    "name": "WorkshopInvoiceNo",
+    "id": "WorkshopInvoiceNo",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.workshopInvoiceNo",
+    "placeholder": "max 16 digits",
+    "maxlength": "16",
+    "required": "required",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation') || (surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)"
+   },
+   {
+    "name": "labourInvoiceDate",
+    "id": "labourInvoiceDate",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.labourInvoiceDate",
+    "placeholder": "Invoice Date",
+    "readonly": true,
+    "datepicker": true,
+    "required": "required",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation') || (surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)"
+   },
+   {
+    "name": "towingCharge",
+    "id": "towingCharge",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.towingCharge",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation') || (surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)"
+   },
+   {
+    "name": "spotRepair",
+    "id": "spotRepair",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.spotRepair",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation') || (surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)"
+   },
+   {
+    "name": "voluntaryExcess",
+    "id": "voluntaryExcess",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.voluntaryExcess",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation')||(surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)"
+   },
+   {
+    "name": "compulsoryExcess",
+    "id": "compulsoryExcess",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.compulsoryExcess",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation') ||(surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)"
+   },
+   {
+    "name": "Personal Belonging Excess",
+    "id": "personalBelongingExcess",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.personalBelongingExcess",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "readonly": true
+   },
+   {
+    "name": "imposedExcess",
+    "id": "imposedExcess",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.imposedExcess",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation')|| (surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)"
+   },
+   {
+    "name": "salvageValue",
+    "id": "salvageValue",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.salvageValue",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation')||(surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)"
+   },
+   {
+    "name": "medicalExpanse",
+    "id": "medicalExpanse",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.medicalExpanse",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation')||(surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)",
+    "hidden": true
+   },
+   {
+    "name": "personalBelongings",
+    "id": "personalBelongings",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.personalBelongings",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation') || (surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)",
+    "hidden": true
+   },
+   {
+    "name": "personalEffect",
+    "id": "personalEffect",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.personalEffect",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation')||(surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)",
+    "hidden": true
+   },
+   {
+    "name": "courtsyCar",
+    "id": "courtsyCar",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.courtsyCar",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation')||(surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)",
+    "hidden": true
+   },
+   {
+    "name": "lossOfKey",
+    "id": "lossOfKey",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.lossOfKey",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation') ||(surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)",
+    "hidden": true
+   },
+   {
+    "name": "tyreAndRim",
+    "id": "tyreAndRim",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.tyreAndRim",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation')||(surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)",
+    "hidden": true
+   },
+   {
+    "name": "gearboxCover",
+    "id": "gearboxCover",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gearboxCover",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation') ||(surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)",
+    "hidden": true
+   },
+   {
+    "name": "evCover",
+    "id": "evCover",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.evCover",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation')||(surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)",
+    "hidden": true
+   },
+   {
+    "name": "imt23",
+    "id": "imt23",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.imt23Cover",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation') ||(surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)",
+    "hidden": true
+   },
+   {
+    "name": "consumableLossMotorOd",
+    "id": "consumableLossMotorOd",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.consumableLossMotorOd",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation') || (surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)",
+    "hidden": true
+   },
+   {
+    "name": "registrationCharges",
+    "id": "registrationCharges",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.registrationCharges",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation')||(surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)",
+    "hidden": true
+   },
+   {
+    "name": "reimbursementOfExpenses",
+    "id": "registrationCharges",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.reimbursementOfExpenses",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation') || (surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)",
+    "hidden": true
+   },
+   {
+    "name": "roadTax",
+    "id": "roadTax",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.roadTax",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation') || (surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)",
+    "hidden": true
+   },
+   {
+    "name": "vat",
+    "id": "vat",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.vat",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation') || (surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)",
+    "hidden": true
+   },
+   {
+    "name": "invoiceNo",
+    "id": "invoiceNo",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.invoiceNo",
+    "placeholder": "max 16 digits",
+    "maxlength": "16",
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation') ||(surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)"
+   },
+   {
+    "name": "invoiceDate",
+    "id": "invoiceDate",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.invoiceDate",
+    "readonly": true,
+    "datepicker": true,
+    "disabled_when": "(surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey' || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation') || (surveyorClaimSurvey.excelUploadedDisableFlag && surveyorClaimSurvey.disableSurveyFields)"
+   },
+   {
+    "name": "travelExpense",
+    "id": "travelExpense",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.travelExpense",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/"
+   },
+   {
+    "name": "profFeeAmount",
+    "id": "profFeeAmount",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.profFeeAmount",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/"
+   },
+   {
+    "name": "dailyAllowance",
+    "id": "dailyAllowance",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.dailyAllowance",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/"
+   },
+   {
+    "name": "photoCharge",
+    "id": "photoCharge",
+    "type": "text",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.photoCharge",
+    "placeholder": "Amount",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/"
+   },
+   {
+    "name": "SurveyorRemarksOffice",
+    "type": "textarea",
+    "model": "surveyorClaimSurvey.ClaimEntry.claimAssessment.SurveyorRemarksOffice",
+    "maxlength": "500",
+    "pattern": "/^[a-zA-Z0-9. ]{1,500}$/",
+    "required": "required"
+   }
+  ],
+  "impDoc": [
+   {
+    "name": "ManDoc0",
+    "id": "ManDoc0",
+    "type": "hidden",
+    "model": "impDoc.ManDoc",
+    "required": "surveyorClaimSurvey.ClaimEntry.status === '0' && impDoc.docType !== 'Re-Inspection Report'"
+   },
+   {
+    "name": "fileToUpload0",
+    "id": "fileToUploadMan",
+    "type": "file",
+    "model": "impDoc.fileToUpload",
+    "disabled_when": "((impDoc.docType==='Survey Report' || impDoc.docType==='Estimate') && ( surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Re-Inspection')) || (impDoc.docType!=='Survey Report' && (surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey') || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation')"
+   },
+   {
+    "name": "ManDoc1",
+    "id": "ManDoc1",
+    "type": "hidden",
+    "model": "impDoc.ManDoc",
+    "required": "surveyorClaimSurvey.ClaimEntry.status === '0' && impDoc.docType !== 'Re-Inspection Report'"
+   },
+   {
+    "name": "fileToUpload1",
+    "id": "fileToUploadMan",
+    "type": "file",
+    "model": "impDoc.fileToUpload",
+    "disabled_when": "((impDoc.docType==='Survey Report' || impDoc.docType==='Estimate') && ( surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Re-Inspection')) || (impDoc.docType!=='Survey Report' && (surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey') || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation')"
+   },
+   {
+    "name": "ManDoc2",
+    "id": "ManDoc2",
+    "type": "hidden",
+    "model": "impDoc.ManDoc",
+    "required": "surveyorClaimSurvey.ClaimEntry.status === '0' && impDoc.docType !== 'Re-Inspection Report'"
+   },
+   {
+    "name": "fileToUpload2",
+    "id": "fileToUploadMan",
+    "type": "file",
+    "model": "impDoc.fileToUpload",
+    "disabled_when": "((impDoc.docType==='Survey Report' || impDoc.docType==='Estimate') && ( surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Re-Inspection')) || (impDoc.docType!=='Survey Report' && (surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey') || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation')"
+   },
+   {
+    "name": "ManDoc3",
+    "id": "ManDoc3",
+    "type": "hidden",
+    "model": "impDoc.ManDoc",
+    "required": "surveyorClaimSurvey.ClaimEntry.status === '0' && impDoc.docType !== 'Re-Inspection Report'"
+   },
+   {
+    "name": "fileToUpload3",
+    "id": "fileToUploadMan",
+    "type": "file",
+    "model": "impDoc.fileToUpload",
+    "disabled_when": "((impDoc.docType==='Survey Report' || impDoc.docType==='Estimate') && ( surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Re-Inspection')) || (impDoc.docType!=='Survey Report' && (surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey') || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation')"
+   },
+   {
+    "name": "ManDoc4",
+    "id": "ManDoc4",
+    "type": "hidden",
+    "model": "impDoc.ManDoc",
+    "required": "surveyorClaimSurvey.ClaimEntry.status === '0' && impDoc.docType !== 'Re-Inspection Report'"
+   },
+   {
+    "name": "fileToUpload4",
+    "id": "fileToUploadMan",
+    "type": "file",
+    "model": "impDoc.fileToUpload",
+    "disabled_when": "((impDoc.docType==='Survey Report' || impDoc.docType==='Estimate') && ( surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Re-Inspection')) || (impDoc.docType!=='Survey Report' && (surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Spot Survey') || surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyCategory == 'Investigation')"
+   }
+  ]
+ }
+}
