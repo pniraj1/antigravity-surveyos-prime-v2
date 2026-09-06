@@ -78,14 +78,16 @@ export const createAssessmentSlice: StateCreator<any, any, any, AssessmentSlice>
 
             // Auto-calculate estimated if unitPrice or quantity changes
             if ('unitPrice' in updates || 'quantity' in updates) {
-              updatedRow.estimated = (updatedRow.unitPrice || 0) * (updatedRow.quantity || 1);
+              updatedRow.estimated = (updatedRow.unitPrice ?? 0) * (updatedRow.quantity ?? 1);
             }
 
-            // If allowed changed, or if it's currently allowed and we just changed unitPrice/quantity, update assessed
-            if ('allowed' in updates || (updatedRow.allowed && ('unitPrice' in updates || 'quantity' in updates))) {
-              if (updatedRow.allowed) {
-                updatedRow.assessed = updatedRow.estimated;
-              }
+            // Re-allowing a row starts it again from the estimate: unticking
+            // took the row out of the claim, so its old assessed figure has no
+            // meaning. Nothing else may write `assessed` — the assessment is
+            // the surveyor's own, and a correction to the estimate, quantity or
+            // unit price used to silently restore the garage's number over it.
+            if ('allowed' in updates && updatedRow.allowed) {
+              updatedRow.assessed = updatedRow.estimated;
             }
 
             return updatedRow;

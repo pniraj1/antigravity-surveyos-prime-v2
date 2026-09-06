@@ -202,7 +202,7 @@ export function buildBillItems(data: any): BillItem[] {
 
   const push = (arr: any[], section: BillItem['section']) => {
     (arr || []).forEach((i: any) => {
-      const gstPct = i.gst_percent || 18;
+      const gstPct = i.gst_percent ?? 18;
       let taxable = i.taxable_amount;
       const total = i.total_amount || i.amount || 0;
       if (!taxable || taxable <= 0) taxable = total / (1 + gstPct / 100);
@@ -644,7 +644,7 @@ export function applyEstimate(
   let runningSerial = 1;
 
   const extractBase = (item: any): number => {
-    const gstPct = item.gst_percent || 18;
+    const gstPct = item.gst_percent ?? 18;
     if (item.taxable_amount && item.taxable_amount > 0) return item.taxable_amount;
     const gross = item.total_amount || item.amount || 0;
     return gross / (1 + gstPct / 100);
@@ -659,12 +659,12 @@ export function applyEstimate(
         particulars: item.description || 'Unnamed Part',
         partNumber: item.part_number || '',
         hsnSac: item.hsn_sac || '',
-        quantity: item.quantity || 1,
+        quantity: item.quantity ?? 1,
         unitPrice: item.unit_price || 0,
         estimated: rounded,
         assessed: rounded,
         partType: (item.category as any) || 'metal',
-        gst: item.gst_percent || 18,
+        gst: item.gst_percent ?? 18,
       })
     );
   });
@@ -677,12 +677,12 @@ export function applyEstimate(
         srNo: item.sr_no || runningSerial++,
         particulars: item.description || 'Labour Item',
         hsnSac: item.hsn_sac || '',
-        quantity: item.quantity || 1,
+        quantity: item.quantity ?? 1,
         unitPrice: item.unit_price || 0,
         estimated: rounded,
         assessed: rounded,
         partType: 'labour',
-        gst: item.gst_percent || 18,
+        gst: item.gst_percent ?? 18,
       })
     );
   });
@@ -695,12 +695,12 @@ export function applyEstimate(
         srNo: item.sr_no || runningSerial++,
         particulars: item.description || 'Painting Item',
         hsnSac: item.hsn_sac || '',
-        quantity: item.quantity || 1,
+        quantity: item.quantity ?? 1,
         unitPrice: item.unit_price || 0,
         estimated: rounded,
         assessed: rounded,
         partType: 'paint',
-        gst: item.gst_percent || 18,
+        gst: item.gst_percent ?? 18,
       })
     );
   });

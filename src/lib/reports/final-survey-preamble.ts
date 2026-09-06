@@ -26,7 +26,7 @@ function rs(n: number): string {
  */
 export function estimateTotalInclGst(rows: AssessmentRow[]): number {
   return rows.reduce((sum, r) => {
-    const gstFactor = r.isDisposal ? 1 : 1 + ((r.gst || 18) / 100);
+    const gstFactor = r.isDisposal ? 1 : 1 + ((r.gst ?? 18) / 100);
     return sum + (r.estimated || 0) * gstFactor;
   }, 0);
 }

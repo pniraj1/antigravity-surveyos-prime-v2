@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'vitest';
 import { buildUIICFinalHTML, buildUIICBillCheckHTML } from '../uiic-final-builder';
 import { buildStandardFinalSurveyHTML } from '../standard-report-builder';
+import { estimateTotalInclGst } from '../final-survey-preamble';
+import { calculateAssessmentSummary } from '@/lib/calculations/assessment';
 import type { ClaimData } from '@/types';
 import type { AssessmentRow } from '@/types/assessment';
 
@@ -82,5 +84,32 @@ describe('standard report ASSESSMENT SUMMARY', () => {
   test('labour at a non-standard rate is totalled at that rate', () => {
     const html = buildStandardFinalSurveyHTML(claim([row({ section: 'labour', partType: 'labour', assessed: 1000, estimated: 1000, gst: 5 })]), {} as never);
     expect(html).toContain('1,050.00');
+  });
+});
+
+describe('a surveyor-set 0% GST is honoured, not replaced by 18%', () => {
+  // `r.gst || 18` treats a deliberate 0 as "missing" and charges 18% anyway.
+  const zeroLabour = row({ particulars: 'FitCharge', section: 'labour', partType: 'labour', assessed: 1000, estimated: 1000, gst: 0 });
+
+  test('standard report prices a 0% labour row at 1,000.00', () => {
+    const html = buildStandardFinalSurveyHTML(claim([zeroLabour]), {} as never);
+    expect(html).toContain('1,000.00');
+    expect(html).not.toContain('1,180.00');
+  });
+
+  test('standard report prints 0% in the GST% column', () => {
+    const html = buildStandardFinalSurveyHTML(claim([zeroLabour]), {} as never);
+    const cell = html.split('FitCharge')[1].split('</tr>')[0];
+    expect(cell).toContain('>0%<');
+    expect(cell).not.toContain('>18%<');
+  });
+
+  test('assessment summary estimate carries no GST on a 0% row', () => {
+    const s = calculateAssessmentSummary([zeroLabour], 0, 'nil');
+    expect(s.totalEstimated).toBeCloseTo(1000, 2);
+  });
+
+  test('preamble estimate total carries no GST on a 0% row', () => {
+    expect(estimateTotalInclGst([zeroLabour])).toBeCloseTo(1000, 2);
   });
 });

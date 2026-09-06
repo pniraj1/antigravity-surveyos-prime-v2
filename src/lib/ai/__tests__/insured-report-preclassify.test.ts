@@ -41,6 +41,14 @@ describe('buildPreClassifiedExplanations', () => {
     expect(entry).toBeUndefined();
   });
 
+  test('a depOverride of 0 is a real override, not an absent one', () => {
+    // `!row.depOverride` read a deliberate nil-depreciation override as
+    // "no override set" and auto-classified the row as depreciation.
+    const claim = { assessmentRows: [{ ...baseRow, depOverride: 0 }] } as any;
+    const entry = allRows(claim).find(e => e.assessmentRowId === 'r1');
+    expect(entry).toBeUndefined();
+  });
+
   test('disposal row is pre-classified as salvage (existing behaviour preserved)', () => {
     const claim = { assessmentRows: [{ ...baseRow, isDisposal: true }] } as any;
     const entry = allRows(claim).find(e => e.assessmentRowId === 'r1');

@@ -366,11 +366,14 @@ export function AssessmentSectionTable({
                       <td className={`px-1 py-1.5${selection.isCellSelected(row.id, 'quantity') ? ' ring-2 ring-blue-400 ring-inset' : ''}`} data-column-key="quantity">
                         <Input
                           type="number"
-                          value={row.quantity || ''}
-                          onChange={(e) => updateAssessmentRow(row.id, { quantity: parseInt(e.target.value) || 1 })}
+                          value={row.quantity ?? ''}
+                          onChange={(e) => {
+                            const n = parseInt(e.target.value);
+                            updateAssessmentRow(row.id, { quantity: Number.isNaN(n) ? 1 : n });
+                          }}
                           className="h-7 text-[11px] text-center border-transparent hover:border-input focus:bg-background px-0"
                           placeholder="1"
-                          min="1"
+                          min="0"
                         />
                       </td>
                     )}
@@ -378,14 +381,12 @@ export function AssessmentSectionTable({
                       <td className={`px-1 py-1.5${selection.isCellSelected(row.id, 'estimated') ? ' ring-2 ring-blue-400 ring-inset' : ''}`} data-column-key="estimated">
                         <Input
                           type="number"
-                          value={row.estimated || ''}
+                          value={row.estimated ?? ''}
                           onChange={(e) => {
                             const val = parseFloat(e.target.value) || 0;
-                            updateAssessmentRow(row.id, {
-                              estimated: val,
-                              // if this row is already marked allowed, keep assessed in sync
-                              ...(row.allowed && { assessed: val }),
-                            });
+                            // Estimate only. Assessed is the surveyor's figure
+                            // and is never derived from it.
+                            updateAssessmentRow(row.id, { estimated: val });
                           }}
                           className="h-7 text-[11px] text-right bg-transparent border-transparent hover:border-input focus:bg-background px-1"
                           placeholder="0.00"
@@ -441,7 +442,7 @@ export function AssessmentSectionTable({
                     <td className={`px-1 py-1.5${selection.isCellSelected(row.id, 'assessed') ? ' ring-2 ring-blue-400 ring-inset' : ''}`} data-column-key="assessed">
                       <Input
                         type="number"
-                        value={row.assessed || ''}
+                        value={row.assessed ?? ''}
                         onChange={(e) => updateAssessmentRow(row.id, { assessed: parseFloat(e.target.value) || 0 })}
                         className="h-7 text-[11px] text-right font-medium text-primary bg-transparent border-transparent hover:border-input focus:bg-background px-1"
                         placeholder="0.00"

@@ -279,7 +279,7 @@ export function buildStandardFinalSurveyHTML(
     const depLabel = r.depOverride !== undefined ? `${dep}%*` : `${dep}%`;
     const disallowed = r.allowed === false;
     const { isDisposal, afterDep, netBeforeGst } = disallowed ? { isDisposal: false, afterDep: 0, netBeforeGst: 0 } : computeRowNet(r, dep);
-    const gstPct = r.gst || 18;
+    const gstPct = r.gst ?? 18;
     const cellValue = isDisposal ? netBeforeGst : netBeforeGst * (1 + gstPct / 100);
     // The Assessed column already carries the NOT ALLOWED flag; repeating it
     // here only wrapped it across two lines. Labour rows already print "—".
@@ -324,7 +324,7 @@ export function buildStandardFinalSurveyHTML(
       const disallowed = r.allowed === false;
       const dep = r.depOverride !== undefined ? r.depOverride : getDepreciationRate(r.partType, ageMonths, depType);
       const depLabel = r.depOverride !== undefined ? `${dep}%*` : `${dep}%`;
-      const gstPct = r.gst || 18;
+      const gstPct = r.gst ?? 18;
       const { netBeforeGst } = disallowed ? { netBeforeGst: 0 } : computeRowNet(r, dep);
       const priceGst = disallowed ? 0 : netBeforeGst * (1 + gstPct / 100);
 

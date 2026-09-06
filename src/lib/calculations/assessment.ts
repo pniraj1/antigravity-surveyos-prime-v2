@@ -139,7 +139,7 @@ export function calculateAssessmentSummary(
   let estMetal = 0, estPlastic = 0, estGlass = 0, estFiberglass = 0;
   let estLabourOnly = 0, estPaintOnly = 0;
   rows.forEach((r) => {
-    const gstRate = (r.gst || 18) / 100;
+    const gstRate = (r.gst ?? 18) / 100;
     if (r.section === 'parts') {
       estPartsBase += r.estimated;
       // Disposal parts carry no GST on the estimate either

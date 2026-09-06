@@ -227,7 +227,7 @@ export function SurveyReportDocument({ claim }: Props) {
       else if (r.partType === 'plastic') totalPla += val;
       else if (r.partType === 'glass') totalGla += val;
       
-      const gst = val * ((r.gst || 18) / 100);
+      const gst = val * ((r.gst ?? 18) / 100);
       totalNet += val + gst;
     } else if (r.section === 'labour' && r.allowed !== false) {
       labBase += r.assessed;
@@ -311,7 +311,7 @@ export function SurveyReportDocument({ claim }: Props) {
             {rows.filter(r => r.section === 'parts').map((r, i) => {
               const dr = getDepRate(r.partType, ageMonths, depType);
               const val = r.assessed * (1 - dr/100);
-              const gst = val * ((r.gst || 18) / 100);
+              const gst = val * ((r.gst ?? 18) / 100);
               return (
                 <View key={r.id} style={styles.tableRow}>
                   <Text style={styles.colSr}>{i+1}</Text>
@@ -324,7 +324,7 @@ export function SurveyReportDocument({ claim }: Props) {
                   <Text style={styles.colPla}>{r.partType === 'plastic' ? fa(val) : ''}</Text>
                   <Text style={styles.colFib}>{r.partType === 'fiberglass' ? fa(val) : ''}</Text>
                   <Text style={styles.colGla}>{r.partType === 'glass' ? fa(val) : ''}</Text>
-                  <Text style={styles.colGSTP}>{r.gst || 18}%</Text>
+                  <Text style={styles.colGSTP}>{r.gst ?? 18}%</Text>
                   <Text style={styles.colNet}>{fa(val + gst)}</Text>
                 </View>
               );
