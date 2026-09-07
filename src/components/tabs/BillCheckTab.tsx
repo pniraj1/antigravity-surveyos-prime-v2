@@ -214,6 +214,7 @@ export function BillCheckTab() {
               fmt={fmt}
               ageMonths={ageMonths}
               depreciationType={currentClaim.depreciationType}
+              claim={currentClaim}
             />
 
             <ExtraBillItemsPanel

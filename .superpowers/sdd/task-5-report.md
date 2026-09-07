@@ -1,126 +1,106 @@
-# Task 5 Report — Sidebar pilot migration
+# Task 5 Report: one `rowDepRate` for every depreciation-rate call site
 
-**Status:** DONE
+## Status: DONE
+Commit: `c74ed3e161e03e6d9c278c8ce00638241fda45bd`
 
-## Commit
-`cc968c2b` — `refactor(ui): migrate sidebar to design tokens (pilot screen)`
+## Files touched
 
-## Build result
-`✓ Compiled successfully` — all 18 static pages generated, no TypeScript errors.
+### Created
+- `src/lib/calculations/row-dep-rate.ts` — `rowDepRate(row, ageMonths, claim)` + `PaintDepClaim` interface, verbatim from the brief.
+- `src/lib/calculations/__tests__/row-dep-rate.test.ts` — 6 tests, verbatim from the brief.
 
-## Test result
-Pre-existing failures only (`jsdom` missing for `open-design/apps/web/tests/`) — unrelated to sidebar changes. 197 test files passed, 2262 individual tests passed. No sidebar test files exist.
+### `src/lib/calculations/assessment.ts`
+- Dropped `getDepreciationRate` import, added `rowDepRate, type PaintDepClaim`.
+- `calculateAssessmentSummary` and `calculateBillCheckSummary` each gained an optional
+  7th param `paintDep: PaintDepClaim = { depreciationType: depType }`.
+- Both inner `depRate` expressions now `rowDepRate(r, ageMonths, { ...paintDep, depreciationType: depType })`.
 
-## Changes made (`src/components/layout/sidebar.tsx`)
+### `src/lib/reports/standard-report-builder.ts`
+- Swapped `getDepreciationRate` import for `rowDepRate`.
+- All 3 `const dep = … getDepreciationRate(…)` sites (`:106/:278/:325`) → `rowDepRate(r, ageMonths, claim)`.
+- `calculateAssessmentSummary` call gained final arg `claim`.
+- The label-only `r.depOverride !== undefined ? …%* …` expressions left untouched.
 
-### Added imports
-- `Button` from `@/components/ui/button`
-- `cn` from `@/lib/utils`
+### `src/lib/reports/uiic-final-builder.ts`
+- Removed the dead local `getDepRate` helper and its now-unused `getDepreciationRate`,
+  `toDepreciationType`, `PartType` imports; added `rowDepRate` import.
+- All 4 rate expressions (`depFor`, the inline `const dep` in the parts map, `rowDep`,
+  `rowDepFor`) → `rowDepRate(r, ageMonths, claim)`.
+- `calculateAssessmentSummary` and `calculateBillCheckSummary` calls gained final arg `claim`.
 
-### Step 2 — Nav button: inline hex → tokens, JS mouse handlers removed
-- Replaced `style` + `onMouseEnter`/`onMouseLeave` block with `cn(...)` className logic
-- Active: `bg-[var(--color-neutral-100)] text-[var(--color-neutral-900)] font-medium`
-- Disabled: `text-[var(--color-neutral-200)] cursor-not-allowed`
-- Default: `text-[var(--color-neutral-600)] hover:bg-[var(--color-neutral-50)] hover:text-[var(--color-neutral-900)]`
-- Active bar: `bg-primary` (was `style={{ background: '#D4AF37' }}`)
-- Active icon: `text-primary` (was `style={{ color: '#D4AF37' }}`)
-- Removed `font-semibold` from label span (now inherits weight from button)
+### `src/components/claim/AssessmentSectionTable.tsx`
+- Added `rowDepRate` import; local `depRate` → `rowDepRate(row, ageMonths, currentClaim ?? { depreciationType })`.
+- `autoDepRate` kept (still used by the override input / tooltip at `:459/:474/:519`).
 
-### Step 3 — "New Claim" button → `Button` primitive
-- Replaced inline-styled `<button>` with `<Button>` from `@/components/ui/button`
-- Title and label sentence-cased: "New claim"
-- "Open claim" secondary button: JS mouse handlers removed, replaced with Tailwind hover tokens
+### Step 7 summary callers — final `currentClaim` arg added
+`AssessmentGrid.tsx` (was a 3-arg call — filled `0, 0, 0` positionally then `currentClaim`,
+added `currentClaim` to the `useMemo` deps), `AssessmentSummary.tsx`, `BillCheckTab.tsx`
+(both calls), `DetailsTab.tsx`, `ReportTab.tsx`.
 
-### Step 4 — Remaining hex replaced throughout
-| Location | Before | After |
-|---|---|---|
-| `<aside>` border | `style={{ background, borderRight }}` | `bg-white border-r border-[var(--color-neutral-200)]` |
-| Brand header border | `style={{ borderBottom: '#F0F2F5' }}` | `border-b border-[var(--color-neutral-50)]` |
-| Logo mark | `style={{ background: 'linear-gradient(...)', color: '#D4AF37' }}` | `bg-[var(--color-neutral-900)] text-primary` |
-| User display name | `style={{ color: '#0D1B2A' }}` | `text-[var(--color-neutral-900)]` |
-| Role badge | `style={{ color: '#D4AF37' }}` + `font-black` | `text-primary font-medium` |
-| Version chip | `style={{ background: 'rgba(...)', color: '#8D99AE' }}` | `bg-[var(--color-neutral-100)] text-[var(--color-neutral-400)]` |
-| Collapse toggle | `style={{ color: '#8D99AE' }}` + JS handlers | `text-[var(--color-neutral-400)] hover:text-[var(--color-neutral-900)]` |
-| Quick actions border | `style={{ borderBottom: '#F0F2F5' }}` | `border-b border-[var(--color-neutral-50)]` |
-| Active claim badge | `style={{ background: 'rgba()', border: '#E2E6EA' }}` | `bg-[var(--color-neutral-50)] border-[var(--color-neutral-200)]` |
-| Active claim accent bar | `style={{ background: '#D4AF37' }}` | `bg-primary` |
-| Group labels | `style={{ color: '#8D99AE' }}` | `text-[var(--color-neutral-400)]` |
-| Footer border | `style={{ borderTop: '#F0F2F5' }}` | `border-t border-[var(--color-neutral-50)]` |
-| Admin active label | `style={{ color: '#0D1B2A' }}` | CSS var via `style` → inline token string |
-| Sign out button | `style={{ color: '#EF4444' }}` + JS handlers | `text-[var(--color-status-danger)] hover:bg-[var(--color-status-danger-tint)]` |
-| Sign in button | `style={{ background, color, border }}` + JS handlers | Tailwind token classes, no JS handlers |
-| Sign in icon | `style={{ color: '#D4AF37' }}` | `text-primary` |
-| Drive status | `style={{ color: isDriveConnected ? '#D4AF37' : '#8D99AE' }}` | conditional `text-primary` / `text-[var(--color-neutral-400)]` |
-| Collapsed Cloud icon | `style={{ color: isDriveConnected ? '#D4AF37' : 'rgba(...)' }}` | conditional `text-primary` / `text-[var(--color-neutral-200)]` |
-| Mobile menu button | `style={{ background: '#0D1B2A', color: '#F8F9FA' }}` | `bg-[var(--color-neutral-900)] text-white` |
+## Test commands & output
 
-### Step 5 — Sentence case + font weight
-- "New Claim" → "New claim"
-- "Open Claim" → "Open claim"  
-- "Sign In with Google" → "Sign in with Google"
-- "Sign Out" → "Sign out"
-- "Admin Active" → "Admin active"
-- "Drive Unlinked" → "Drive unlinked"
-- "Cloud Linked" → "Cloud linked"
-- `font-black`, `font-extrabold`, `font-bold`, `font-semibold` → `font-medium` throughout
-- GROUP_LABELS kept in uppercase (short group labels, as per spec)
+```
+$ npx vitest run src/lib/calculations/__tests__/row-dep-rate.test.ts
+ Test Files  1 passed (1)      Tests  6 passed (6)
 
-## Logic preserved
-- `NAV_ITEMS` array: unchanged
-- `AppTab` IDs: unchanged
-- `handleTabChange`: unchanged
-- Survey-type filtering (spot/final/valuation): unchanged
-- `requiresClaim` gating: unchanged
-- `SubscriptionGuard`: N/A (not in this file)
-- `'use client'` directive: kept
-- Collapse/expand state: unchanged
-- Drive/auth status UI: still renders
-- `disabled` prop on nav buttons: kept
+$ npx tsc --noEmit
+(clean)
+
+$ npx vitest run
+ Test Files  120 passed (120)      Tests  953 passed (953)
+```
+
+947 → 953 (the 6 new). No existing test changed value; the IMT-23 real-claims pin
+(`imt23-real-claims.test.ts`) stayed green — stored fixtures carry no
+`applyPaintMaterialDep`, so `paintMaterialRate` resolves to 0 and paint behaviour is
+byte-identical to before.
+
+## Deviations / notes on the brief
+
+1. **uiic-final-builder had 4 rate expressions, not "both `rowDepFor` definitions"** as
+   the brief phrased it: `depFor` (final HTML), an inline `const dep` in the parts-row
+   map, `rowDep` and `rowDepFor` (bill-check HTML). All 4 were routed through `rowDepRate`.
+   The display-only override-asterisk expressions were left alone.
+2. **`standard-report-builder.ts:325` is indented 6 spaces**, not 4 like `:106/:278` —
+   noted only because a naive exact-match replace misses it. All three were replaced.
+3. **Other copies of the pattern exist but are out of scope** and were left untouched
+   per the brief: `src/components/tabs/bill-check/BillCheckGrid.tsx:57`,
+   `src/lib/calculations/insured-report.ts:53`,
+   `src/lib/calculations/uiic-portal-summary.ts:80`. These keep their own inline
+   expression; paint dep does not reach them yet.
+4. **`calculateAssessmentSummary` callers not in the Step 7 list**, left compiling via
+   the default param (identical behaviour): `src/components/claim/TotalLossForm.tsx:23`,
+   `src/lib/calculations/insured-report.ts:110`. Deliberately-excluded
+   `irdai-summary-builder.ts` and `FeesTab.tsx` untouched as instructed.
+5. Removed dead code in uiic-final-builder (the `getDepRate` shim) rather than leaving it
+   unused — tsconfig has no `noUnusedLocals` so it would not have failed tsc, but it was
+   genuinely dead after the refactor.
 
 ## Concerns
-None. No raw hex remains in the file. All JS mouse handlers removed. Two font weights only (400 default, 500 via `font-medium`). Gold (`text-primary`/`bg-primary`) used only on: active accent bar, New Claim button (via Button primitive which uses `bg-primary`), active nav icon, Drive-connected indicator, sign-in icon, logo mark text.
+None affecting figures. The grid and both report builders now apply the paint GR-9 rate
+the moment a claim sets `applyPaintMaterialDep` — which is the intended reach of this
+task — while every stored claim (no such field) is unchanged.
 
 ---
 
-## Fix Pass — Code Review Corrections (2026-06-22)
+## Fix report — review findings (5)
 
-**Commit:** `fix(ui): correct sidebar divider token + migrate dashboard status hex to tokens`
+**FIX 1 (Critical) — `src/components/claim/AssessmentSectionTable.tsx`**
+`autoDepRate` now routes through `rowDepRate({ ...row, depOverride: undefined }, ageMonths, claimForDep)` where `claimForDep = currentClaim ?? { depreciationType }` (same expression the `depRate` line uses). Paint rows now show 12.5% in the Dep% column, and a surveyor can set an explicit 0% override. Removed the now-unused `getDepreciationRate` import.
 
-### Fix 1 — sidebar.tsx: invisible dividers
+**FIX 2 (Important) — `src/components/tabs/bill-check/BillCheckGrid.tsx`**
+`depRateFor` is now `rowDepRate(row, ageMonths, claim)`. Added a `claim: ClaimData` prop; `BillCheckTab.tsx` passes `claim={currentClaim}`. Dropped the `getDepreciationRate` import.
 
-**Problem:** All four divider/separator borders used `border-[var(--color-neutral-50)]` = `#F8F9FA`, identical to the sidebar background colour, making them invisible.
+**FIX 3 (Important) — `src/lib/calculations/insured-report.ts`**
+`calculateAssessmentSummary(...)` now passes `claim` as the 7th argument, so `insurerPays` includes paint depreciation and matches the standard/UIIC reports. `depRateFor` at ~line 53 left untouched (parts-only filter).
 
-**Locations fixed (4 occurrences, `replace_all`):**
-- Brand header separator (`border-b`)
-- Quick actions separator (`border-b`)
-- Footer separator (`border-t`)
-- Status sub-divider inside footer (`border-t`)
+**FIX 4 (Important) — `src/components/claim/TotalLossForm.tsx`**
+`calculateAssessmentSummary(...)` now passes `currentClaim` as the 7th argument, so `detectCTL` sees the same net as the filed report.
 
-**Change:** `border-[var(--color-neutral-50)]` → `border-[var(--color-neutral-100)]`
+**FIX 5 (Minor) — `src/lib/calculations/__tests__/paint-material-dep.test.ts`**
+Added a test: for rows including a paint row, `calculateAssessmentSummary(rows, 24, 'standard', 0, 0, 0)` === same call with 7th arg `{}`, and `{ applyPaintMaterialDep: true }` lowers `netAssessedLoss`.
 
-`--color-neutral-100` = `#F0F2F5` — the correct visible separator colour.
-
-### Fix 2 — Dashboard.tsx: raw hex in status badges
-
-**Problem:** Two inline `style` props used raw hex for claim status colours.
-
-**Line 262 — archived count badge:**
-| Before | After |
-|---|---|
-| `background: 'rgba(239,68,68,0.12)'` | `background: 'var(--color-status-danger-tint)'` |
-| `color: '#EF4444'` | `color: 'var(--color-status-danger)'` |
-
-Uses `--color-status-danger-tint` (= `#FBE9E7`) which already exists as a token and is the correct semantic tint, consistent with how the sidebar sign-out button uses it.
-
-**Line 412 — claim status badge (active/done/archived):**
-| Hex | Token | Semantic |
-|---|---|---|
-| `#10B981` (green) | `var(--color-status-success)` | Done / completed |
-| `#F59E0B` (amber) | `var(--color-status-warning)` | Active / in progress |
-| `#EF4444` (red) | `var(--color-status-danger)` | Archived / closed |
-
-Applied to both `borderColor` and `color` properties.
-
-### Build + Test
-- `npm run build`: ✓ Compiled successfully, all 18 static pages generated, no TypeScript errors.
-- `npm run test`: Pre-existing failures only — 192 files in `open-design/` fail due to missing `jsdom` package (unrelated infrastructure issue, pre-dates these changes). 197 SurveyOS test files passed, 2262 individual tests passed. No failures in sidebar or Dashboard tests.
+### Verification
+- `npx tsc --noEmit` — clean.
+- `npx vitest run src/lib/calculations/__tests__/` — 23 files, 152 tests passed (imt23-real-claims unchanged).
+- `npx vitest run` — 120 files, 954 tests passed (was 953 + 1 new).

@@ -26,7 +26,8 @@ export function TotalLossForm() {
     currentClaim.depreciationType || 'standard',
     currentClaim.feeBill?.salvageValue || 0,
     currentClaim.feeBill?.compulsoryExcess ?? 0,
-    currentClaim.feeBill?.voluntaryExcess || 0
+    currentClaim.feeBill?.voluntaryExcess || 0,
+    currentClaim
   );
 
   const ctlStatus = detectCTL(summary.netAssessedLoss, currentClaim.policy?.idv);

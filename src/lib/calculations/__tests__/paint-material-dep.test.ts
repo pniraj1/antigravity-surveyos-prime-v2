@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { paintMaterialRate } from '../depreciation';
+import { calculateAssessmentSummary } from '../assessment';
+import type { AssessmentRow } from '@/types/assessment';
 
 const claim = (o: Record<string, unknown> = {}) => ({
   depreciationType: 'standard' as const,
@@ -36,6 +38,35 @@ describe('paintMaterialRate', () => {
     expect(net).toBeCloseTo(8750, 2);
     expect(net * 1.18).toBeCloseTo(10325, 2);
     expect(net * 1.18).not.toBeCloseTo(10550, 2);
+  });
+
+  it('the optional 7th parameter of calculateAssessmentSummary is inert by default', () => {
+    const mkRow = (o: Partial<AssessmentRow>): AssessmentRow => ({
+      id: `r${Math.random()}`,
+      particulars: 'Item',
+      estimated: 10000,
+      assessed: 10000,
+      partType: 'metal',
+      gst: 18,
+      section: 'parts',
+      allowed: true,
+      isDisposal: false,
+      disposalPercent: 50,
+      ...o,
+    });
+    const rows = [
+      mkRow({}),
+      mkRow({ section: 'paint', partType: 'paint', particulars: 'Painting' }),
+    ];
+
+    const base = calculateAssessmentSummary(rows, 24, 'standard', 0, 0, 0).netAssessedLoss;
+    const withEmpty = calculateAssessmentSummary(rows, 24, 'standard', 0, 0, 0, {}).netAssessedLoss;
+    const withPaintDep = calculateAssessmentSummary(
+      rows, 24, 'standard', 0, 0, 0, { applyPaintMaterialDep: true },
+    ).netAssessedLoss;
+
+    expect(withEmpty).toBe(base);
+    expect(withPaintDep).toBeLessThan(base);
   });
 
   it("matches Claim C's printed paint chain", () => {

@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { useClaimStore } from '@/stores/claim-store';
-import { getDepreciationRate } from '@/lib/calculations/depreciation';
 import { rowDepRate } from '@/lib/calculations/row-dep-rate';
 import { formatCurrency, shouldStartSupplementaryBand } from '@/lib/calculations/utils';
 import { Input } from '@/components/ui/input';
@@ -171,8 +170,9 @@ export function AssessmentSectionTable({
             ) : (
               <SortableContext items={sectionRowIds} strategy={verticalListSortingStrategy}>
               {rows.map((row, idx) => {
-                const autoDepRate = getDepreciationRate(row.partType, ageMonths, depreciationType);
-                const depRate = rowDepRate(row, ageMonths, currentClaim ?? { depreciationType });
+                const claimForDep = currentClaim ?? { depreciationType };
+                const autoDepRate = rowDepRate({ ...row, depOverride: undefined }, ageMonths, claimForDep);
+                const depRate = rowDepRate(row, ageMonths, claimForDep);
                 const isDepOverridden = row.depOverride !== undefined;
                 const depFactor = depRate / 100;
                 const valueAfterDep = row.assessed * (1 - depFactor);

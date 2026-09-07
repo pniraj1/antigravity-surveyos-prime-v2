@@ -114,6 +114,7 @@ export function computeInsuredFinancialSummary(
     fb.salvageValue || 0,
     fb.compulsoryExcess || 0,
     fb.voluntaryExcess || 0,
+    claim,
   );
   const insurerPays = summary.netAssessedLoss;
 
