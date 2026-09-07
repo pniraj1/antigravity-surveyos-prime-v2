@@ -101,6 +101,7 @@ function buildClaimRow(claim: ClaimData, index: number): ClaimRow {
       const ageMonths = getVehicleAgeMonths(
         claim.vehicle?.dateOfRegistration ?? null,
         claim.vehicle?.yearOfManufacture ?? null,
+        claim.accident?.dateAndTime ?? null,
       );
       const summary = calculateAssessmentSummary(
         claim.assessmentRows,

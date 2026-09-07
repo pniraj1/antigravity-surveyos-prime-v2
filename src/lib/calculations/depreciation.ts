@@ -10,11 +10,23 @@ import type { InsuredReportPolicyClause } from '@/types/insured-report';
 /**
  * Calculate vehicle age in months from registration/manufacture date to reference date.
  * Legacy: getVehicleAgeMonths() — lines 1846-1853
+ *
+ * `referenceDate` is REQUIRED, and for every depreciation caller it is the
+ * **date of loss** — depreciation is fixed at the accident, not at the date the
+ * report happens to be printed. It used to be optional and fell back to
+ * `new Date()`; two callers omitted it and one passed the survey date, so their
+ * depreciation rate drifted upward every month a claim sat unsettled and
+ * disagreed with the same claim's own final report. Making it required puts
+ * that class of bug in front of the compiler.
+ *
+ * Passing `null` still falls back to today. That is only for the descriptive
+ * "vehicle age" cell on a report, where there is no loss to date from — never
+ * for a depreciation rate.
  */
 export function getVehicleAgeMonths(
   registrationDate: string | null,
   yearOfManufacture: number | null,
-  referenceDate?: string | null
+  referenceDate: string | null
 ): number {
   let start: Date | null = null;
 

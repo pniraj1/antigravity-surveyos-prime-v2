@@ -22,7 +22,7 @@ export const UIICPrintReport = React.forwardRef<HTMLDivElement, UIICPrintReportP
   const ageMonths = getVehicleAgeMonths(
     claim?.vehicle?.dateOfRegistration || null,
     claim?.vehicle?.yearOfManufacture ? Number(claim.vehicle.yearOfManufacture) : null,
-    claim?.accident?.dateOfSurvey || null
+    claim?.accident?.dateAndTime || null
   );
 
   return (
