@@ -353,7 +353,7 @@ export function buildStandardFinalSurveyHTML(
       `<td style="${tdr9}">${r.partType === type && !disallowed ? m9(afterDep) : '—'}</td>`;
 
     const bandHtml = shouldStartSupplementaryBand(partRows, idx)
-      ? `<tr><td colspan="12" style="padding:4px 8px;text-align:center;font-size:10pt;font-weight:600;color:#666;background:linear-gradient(to right,#f5f5f5,#fafafa,#f5f5f5);">Supplementary Estimate</td></tr>`
+      ? `<tr><td colspan="${NCOLS}" style="padding:4px 8px;text-align:center;font-size:10pt;font-weight:600;color:#666;background:linear-gradient(to right,#f5f5f5,#fafafa,#f5f5f5);">Supplementary Estimate</td></tr>`
       : '';
 
     return bandHtml + `<tr>
@@ -398,7 +398,7 @@ export function buildStandardFinalSurveyHTML(
       const priceGst = disallowed ? 0 : netBeforeGst * (1 + gstPct / 100);
 
       const bandHtml = shouldStartSupplementaryBand(sectionRows, idx)
-        ? `<tr><td colspan="9" style="padding:4px 8px;text-align:center;font-size:10pt;font-weight:600;color:#666;background:linear-gradient(to right,#f5f5f5,#fafafa,#f5f5f5);">Supplementary Estimate</td></tr>`
+        ? `<tr><td colspan="${NCOLS}" style="padding:4px 8px;text-align:center;font-size:10pt;font-weight:600;color:#666;background:linear-gradient(to right,#f5f5f5,#fafafa,#f5f5f5);">Supplementary Estimate</td></tr>`
         : '';
 
       return bandHtml + `<tr>
