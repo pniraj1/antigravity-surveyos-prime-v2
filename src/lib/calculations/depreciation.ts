@@ -190,3 +190,32 @@ export function getIRDAIStandardClauses(): InsuredReportPolicyClause[] {
     },
   ];
 }
+
+/**
+ * Effective per-row depreciation rate for a painting line.
+ *
+ * IRDAI modified GR-9 with effect from 01 Feb 2013: depreciation of 50% applies
+ * only to the MATERIAL cost of painting charges, and where the bill is
+ * consolidated the material component is taken as 25% of the total. That is
+ * 12.5% of the line.
+ *
+ * It is expressed as a rate, not as a deduction from the section subtotal, for
+ * two reasons. A subtotal subtraction would leave the per-row GST attached to a
+ * base that no longer exists, and paint rows can carry different GST rates,
+ * which a single section figure cannot reverse out. The rate is never printed
+ * as "12.5%" by the standard report — that report states the 50%-on-material
+ * rule and shows the split. The UIIC report does print it, because that is its
+ * own convention.
+ */
+export function paintMaterialRate(claim: {
+  depreciationType?: string | null;
+  applyPaintMaterialDep?: boolean;
+  paintMaterialPercent?: number;
+  paintMaterialDepPercent?: number;
+}): number {
+  if (!claim.applyPaintMaterialDep) return 0;
+  if (toDepreciationType(claim.depreciationType) === 'nil') return 0;
+  const material = claim.paintMaterialPercent ?? 25;
+  const dep = claim.paintMaterialDepPercent ?? 50;
+  return (material / 100) * (dep / 100) * 100;
+}

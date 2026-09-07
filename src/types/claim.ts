@@ -64,6 +64,18 @@ export interface ClaimData {
   surveyType: SurveyType;
   vehicleType: VehicleType;
   depreciationType: DepreciationType;
+  /**
+   * Apply IRDAI GR-9 paint material depreciation on this claim.
+   *
+   * Absent means off, so no claim already stored changes. `createClaim` sets it
+   * true, and `paintMaterialRate` additionally requires a standard-depreciation
+   * policy — under nil dep there is no material deduction at all.
+   */
+  applyPaintMaterialDep?: boolean;
+  /** Material share of a consolidated painting charge. GR-9 default: 25. */
+  paintMaterialPercent?: number;
+  /** Depreciation on that material. GR-9 default: 50. */
+  paintMaterialDepPercent?: number;
   /** Whether the spot survey phase is finalized */
   isSpotCompleted: boolean;
   /** Whether the final survey report is fully completed */
@@ -192,6 +204,7 @@ export function createBlankClaim(
     surveyType,
     vehicleType,
     depreciationType: 'standard',
+    applyPaintMaterialDep: true,
     isSpotCompleted: false,
     isCompleted: false,
     isActive: true,
