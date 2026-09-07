@@ -17,11 +17,15 @@ import type { AssessmentRow } from '@/types/assessment';
  * old figure sitting there.
  *
  * Disposal rows carry no GST, matching the engine everywhere else.
+ *
+ * IMT-23 is deliberately ignored here. Salvage is the scrap value of the
+ * physical part that came off; the endorsement changes who pays for the new
+ * one, not what the old one is worth. Reads r.assessed, never effectiveAssessed.
  */
 export const salvageBasis = (
   rows: AssessmentRow[],
   amount: (r: AssessmentRow) => number = r => r.assessed,
 ) => rows.reduce((s, r) =>
   r.allowed && r.section === 'parts' && r.partType === 'metal'
-    ? s + amount(r) * (r.isDisposal ? 1 : 1 + (r.gst ?? 18) / 100)
+    ? s + amount(r)
     : s, 0);

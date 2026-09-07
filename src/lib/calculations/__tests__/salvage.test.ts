@@ -24,16 +24,17 @@ describe('salvageBasis', () => {
     expect(salvageBasis([])).toBe(0);
   });
 
-  test('an allowed metal part counts at its assessed amount plus its own GST', () => {
-    expect(salvageBasis([row({ assessed: 10000, gst: 18 })])).toBe(11800);
+  test('an allowed metal part counts at its assessed amount (scrap value, no GST)', () => {
+    expect(salvageBasis([row({ assessed: 10000, gst: 18 })])).toBe(10000);
   });
 
-  test('each row is taxed at its own rate', () => {
-    // 10,000 at 18% = 11,800 and 5,000 at 28% = 6,400 → 18,200
+  test('salvage is scrap value, independent of GST rates', () => {
+    // Salvage is just assessed amounts: 10,000 + 5,000 = 15,000
+    // (GST is not part of scrap value — it varies by geography, not by the part)
     expect(salvageBasis([
       row({ assessed: 10000, gst: 18 }),
       row({ assessed: 5000, gst: 28 }),
-    ])).toBe(18200);
+    ])).toBe(15000);
   });
 
   test('only metal parts count', () => {
@@ -42,7 +43,7 @@ describe('salvageBasis', () => {
       row({ assessed: 9000, partType: 'plastic' }),
       row({ assessed: 9000, partType: 'glass' }),
       row({ assessed: 9000, partType: 'fiberglass' }),
-    ])).toBe(11800);
+    ])).toBe(10000);
   });
 
   test('labour and paint never count, whatever their partType says', () => {
@@ -62,8 +63,8 @@ describe('salvageBasis', () => {
     expect(salvageBasis([row({ assessed: 4000, isDisposal: true, gst: 18 })])).toBe(4000);
   });
 
-  test('a missing GST rate falls back to 18%', () => {
-    expect(salvageBasis([row({ assessed: 10000, gst: undefined })])).toBe(11800);
+  test('salvage is just the assessed amount, regardless of GST', () => {
+    expect(salvageBasis([row({ assessed: 10000, gst: undefined })])).toBe(10000);
   });
 });
 
@@ -72,7 +73,7 @@ describe('salvageBasis, through the bill-check lens', () => {
     expect(salvageBasis(
       [row({ assessed: 10000, billedTaxable: 5000, gst: 18 })],
       billCheckAssessed,
-    )).toBe(5900);
+    )).toBe(5000);
   });
 
   test('a not-in-bill row counts nothing — no old part came off', () => {
@@ -86,10 +87,10 @@ describe('salvageBasis, through the bill-check lens', () => {
     expect(salvageBasis(
       [row({ assessed: 10000, billedTaxable: 15000, billAllowed: 20000, gst: 18 })],
       billCheckAssessed,
-    )).toBe(23600);
+    )).toBe(20000);
   });
 
   test('a row with no bill yet counts its assessed amount', () => {
-    expect(salvageBasis([row({ assessed: 10000, gst: 18 })], billCheckAssessed)).toBe(11800);
+    expect(salvageBasis([row({ assessed: 10000, gst: 18 })], billCheckAssessed)).toBe(10000);
   });
 });

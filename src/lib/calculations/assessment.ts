@@ -6,7 +6,7 @@
 
 import type { AssessmentRow, AssessmentSummary, BillCheckSummary, DepreciationType, FeeBill } from '@/types';
 import { getDepreciationRate } from './depreciation';
-import { computeRowLiability } from './row-net';
+import { computeRowLiability, effectiveAssessed } from './row-net';
 import { numberToWords } from './utils';
 
 /**
@@ -85,7 +85,12 @@ export function calculateAssessmentSummary(
   rows.forEach((r) => {
     if (!r.allowed) return;
     const depRate = r.depOverride !== undefined ? r.depOverride : getDepreciationRate(r.partType, ageMonths, depType);
-    const valueAfterDep = r.assessed * (1 - depRate / 100);
+    // effectiveAssessed, not r.assessed: an IMT-23 row is halved before
+    // depreciation, so the bucket and its GST both carry the reduced figure.
+    // The estimate accumulators further down deliberately keep reading
+    // r.estimated — an estimate is a fact about the garage's document and
+    // nothing the surveyor ticks changes it.
+    const valueAfterDep = effectiveAssessed(r) * (1 - depRate / 100);
 
     if (r.isDisposal) {
       // Disposal (used/salvaged part): no GST; surveyor allows disposalPercent% of depreciated value
