@@ -29,6 +29,7 @@ export type OptionalColumn =
   | 'unitPrice'
   | 'gst'
   | 'disposal'
+  | 'imt23'
   | 'action'
   | 'remarks'
   | 'priceWithGst';
@@ -47,6 +48,7 @@ export const OPTIONAL_COLUMNS: ColumnMeta[] = [
   { key: 'unitPrice',  label: 'Estimate (taxable)',  description: 'Taxable amount from estimate (net, before GST)' },
   { key: 'gst',        label: 'GST %',               description: 'GST percentage (0 for disposal rows)' },
   { key: 'disposal',   label: 'Disposal',            description: 'Used/salvaged part — no GST; surveyor decides % of depreciated value' },
+  { key: 'imt23',      label: 'IMT 23',              description: 'Endorsement IMT-23 part — insurer bears 50% of the assessed loss' },
   { key: 'action',      label: 'Action',              description: 'Replace / Repair / Disallow' },
   { key: 'remarks',    label: 'Remarks',             description: 'Smart contextual remarks with category tagging' },
   { key: 'priceWithGst', label: 'Price+GST',         description: 'Net assessed amount inclusive of GST' },
@@ -60,6 +62,7 @@ export const DEFAULT_VISIBLE: Record<OptionalColumn, boolean> = {
   unitPrice: true,
   gst: true,
   disposal: true,
+  imt23: true,
   action: true,
   remarks: false,
   priceWithGst: true,

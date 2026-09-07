@@ -138,6 +138,12 @@ export function AssessmentSectionTable({
                 </th>
               )}
 
+              {visible.imt23 && (
+                <th className="px-2 py-2 font-medium w-20 text-center" title="Endorsement IMT-23 — insurer bears 50% of the assessed loss">
+                  IMT 23
+                </th>
+              )}
+
               {/* ─── Always-on assessment columns ──────── */}
               <th className="px-2 py-2 font-medium w-24 text-primary">Assessed</th>
               <th className="px-2 py-2 font-medium w-16 text-danger text-center">Dep%</th>
@@ -211,7 +217,7 @@ export function AssessmentSectionTable({
                   <SortableRow
                     key={row.id}
                     id={row.id}
-                    className={`hover:bg-accent/30 transition-colors ${selection.selected.has(row.id) ? 'bg-red-500/5' : ''} ${!row.allowed ? 'opacity-40 bg-muted/20' : ''} ${isDuplicate ? 'bg-orange-500/10' : ''} ${row.isDisposal && row.allowed ? 'bg-amber-500/5' : ''}`}
+                    className={`hover:bg-accent/30 transition-colors ${selection.selected.has(row.id) ? 'bg-red-500/5' : ''} ${!row.allowed ? 'opacity-40 bg-muted/20' : ''} ${isDuplicate ? 'bg-orange-500/10' : ''} ${row.isDisposal && row.allowed ? 'bg-amber-500/5' : ''} ${row.imt23 && row.allowed ? 'bg-primary/5' : ''}`}
                   >
                     {/* Select checkbox — always on */}
                     <td className={`px-2 py-1.5 text-center ${isDuplicate ? 'border-l-4 border-orange-500' : ''}`}>
@@ -436,6 +442,18 @@ export function AssessmentSectionTable({
                             </div>
                           )}
                         </div>
+                      </td>
+                    )}
+
+                    {visible.imt23 && (
+                      <td className="px-2 py-1.5 text-center" data-column-key="imt23">
+                        <input
+                          type="checkbox"
+                          checked={!!row.imt23}
+                          onChange={() => updateAssessmentRow(row.id, { imt23: !row.imt23 })}
+                          className="h-3.5 w-3.5 cursor-pointer rounded border-border accent-primary"
+                          aria-label="IMT-23 part"
+                        />
                       </td>
                     )}
 
