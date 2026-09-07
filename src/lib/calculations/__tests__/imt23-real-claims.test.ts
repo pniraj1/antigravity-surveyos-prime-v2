@@ -31,7 +31,11 @@ describe('Claim A — TATA SIGNA 4825 (standard dep)', () => {
     - computeRowNet(row, 0).netBeforeGst;
 
   it('deducts the endorsement share per bucket', () => {
-    expect(share(rows[2])).toBeCloseTo(8216.95, 2);  // metal
+    // 16,433.91 / 2 is exactly 8,216.955; the report prints it rounded to
+    // 8,216.95. Asserting the rounded figure at precision 2 sits exactly on
+    // the 0.005 tolerance boundary and passes only by float luck, so assert
+    // the true half instead.
+    expect(share(rows[2])).toBeCloseTo(8216.955, 3);  // metal
     expect(share(rows[4])).toBeCloseTo(5221.61, 2);  // plas/rub
     expect(share(rows[6])).toBeCloseTo(10000.00, 2); // paint
   });
