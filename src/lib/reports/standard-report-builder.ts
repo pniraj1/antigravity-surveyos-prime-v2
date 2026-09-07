@@ -10,6 +10,7 @@
 
 import type { ClaimData } from '@/types/claim';
 import type { AssessmentSummary } from '@/types';
+import type { AssessmentRow } from '@/types/assessment';
 import type { SurveyorProfile } from '@/types/vehicle';
 
 import { formatDateDMY, formatDateTimeDMY, formatSurveyDateTime, fa, numberToWords, getVehicleAgeMonths, getSurveyorHeader, getSigBlock } from './report-utils';
@@ -17,8 +18,9 @@ import { getHtmlScale } from './report-style-utils';
 import { preambleFromClaim, estimateTotalInclGst, billCheckPreambleFromClaim } from './final-survey-preamble';
 import { projectForBillCheck, resolveBillSalvage } from './bill-check-projection';
 import { computeRowNet } from '@/lib/calculations/row-net';
-import { toDepreciationType } from '@/lib/calculations/depreciation';
+import { toDepreciationType, paintMaterialRate } from '@/lib/calculations/depreciation';
 import { rowDepRate } from '@/lib/calculations/row-dep-rate';
+import { imt23Totals } from '@/lib/calculations/imt23-totals';
 import { getCompulsoryExcess, calculateAssessmentSummary } from '@/lib/calculations/assessment';
 import { shouldStartSupplementaryBand } from '@/lib/calculations/utils';
 import { buildSerialMap } from '@/lib/calculations/serial-numbers';
@@ -185,6 +187,22 @@ export function buildStandardFinalSurveyHTML(
   const assessedLabourRaw = rawAssessed('labour');
   const assessedPaintRaw = rawAssessed('paint');
 
+  // ── IMT-23 (endorsement 23) ────────────────────────────────────────────────
+  // This report prints rows GROSS and takes the insured's 50% share once, as a
+  // visible line beneath each section subtotal — exactly as the market format
+  // does. imt23Totals gives that per-section deduction on the pre-depreciation
+  // assessed figure; the line renders only when the amount is > 0.
+  const imt23 = imt23Totals(rows.filter(r => !isBillCheck || r.allowed !== false));
+
+  // Paint-material note figures. The standard report states the tariff's own
+  // rule ("Less 50% dep. on paint material", 75/25 split) and never the derived
+  // 12.5% — that figure belongs only to the UIIC format.
+  const mPct = claim.paintMaterialPercent ?? 25;
+  const mDepPct = claim.paintMaterialDepPercent ?? 50;
+  const paintBaseAfterImt23 = assessedPaintRaw - imt23.paint.amount;
+  const paintMaterialBase = paintBaseAfterImt23 * (mPct / 100);
+  const paintMaterialDed = paintMaterialBase * (mDepPct / 100);
+
   // Money on the workshop's invoice for items rejected at final survey. Section
   // 9 excludes those rows, so without this the summary and the table below it
   // would differ with nothing on the page saying why. One line however many
@@ -276,11 +294,33 @@ export function buildStandardFinalSurveyHTML(
   // keeps disallowed rows visible, marked NOT ALLOWED, for the surveyor's own
   // record of what was considered and rejected.
   const partRows = rows.filter(r => r.section === 'parts' && (!isBillCheck || r.allowed !== false));
+
+  // The " - IMT 23" tag is derived from the checkbox at print time and is never
+  // written to r.particulars — the surveyor types the part name, the report
+  // adds the endorsement marker. Tagged rows print bold so they read across a
+  // long report and survive a monochrome printer. The tag belongs to the part,
+  // so not-in-bill and disallowed rows carry it too.
+  const partLabel = (r: AssessmentRow) =>
+    r.imt23 ? `<b>${r.particulars} - IMT 23</b>` : r.particulars;
+
+  // One "Less endorsement 23" line beneath a section subtotal. Rendered only
+  // when the insured's share is > 0, never merely because a ticked row exists.
+  // Cells: colspan 4 + 1 + (NCOLS - 5) = NCOLS, matching every other row.
+  const imt23Row = (t: { amount: number; count: number }) =>
+    t.amount <= 0 ? '' : `<tr>
+      <td colspan="4" style="${sub}text-align:right;font-size:${scale.labelFont};">Less endorsement 23 (50% insured's share, ${t.count} item${t.count === 1 ? '' : 's'})</td>
+      <td style="${sub}text-align:right;font-weight:700;">${m9(t.amount)}</td>
+      <td colspan="${NCOLS - 5}" style="${sub}"></td>
+    </tr>`;
+
   const partsHtml = partRows.map((r, idx) => {
     const dep = rowDepRate(r, ageMonths, claim);
     const depLabel = r.depOverride !== undefined ? `${dep}%*` : `${dep}%`;
     const disallowed = r.allowed === false;
-    const { isDisposal, afterDep, netBeforeGst } = disallowed ? { isDisposal: false, afterDep: 0, netBeforeGst: 0 } : computeRowNet(r, dep);
+    // grossOfImt23: this report's rows must sum to the pre-deduction subtotal,
+    // with one "Less endorsement 23" line beneath. The halving is taken at the
+    // subtotal, not on the row — halving here would double-count it.
+    const { isDisposal, afterDep, netBeforeGst } = disallowed ? { isDisposal: false, afterDep: 0, netBeforeGst: 0 } : computeRowNet(r, dep, { grossOfImt23: true });
     const gstPct = r.gst ?? 18;
     const cellValue = isDisposal ? netBeforeGst : netBeforeGst * (1 + gstPct / 100);
     // The Assessed column already carries the NOT ALLOWED flag; repeating it
@@ -296,7 +336,7 @@ export function buildStandardFinalSurveyHTML(
 
     return bandHtml + `<tr>
       <td style="${tdsr9}">${serials.get(r.id) ?? 0}</td>
-      <td style="${td9}">${r.particulars}</td>
+      <td style="${td9}">${partLabel(r)}</td>
       <td style="${td9}text-align:center;">${r.partType === 'plastic' ? 'Pla/Rub' : r.partType === 'fiberglass' ? 'FbrGls' : r.partType.charAt(0).toUpperCase() + r.partType.slice(1)}</td>
       <td style="${tdr9}">${isBillCheck && r.billStatus === 'not-in-bill' ? 'No Bill' : m9(r.estimated)}</td>
       <td style="${tdr9}${disallowed ? 'color:#a00;font-weight:700;font-size:6.5pt;text-align:center;' : ''}">${disallowed ? 'NOT ALLOWED' : m9(r.assessed)}</td>
@@ -324,10 +364,14 @@ export function buildStandardFinalSurveyHTML(
     const sectionRows = rows.filter(r => r.section === section && (!isBillCheck || r.allowed !== false));
     return sectionRows.map((r, idx) => {
       const disallowed = r.allowed === false;
-      const dep = rowDepRate(r, ageMonths, claim);
+      // Labour and paint carry no per-row depreciation on this report — only a
+      // surveyor's explicit override. Paint's material depreciation is the
+      // tariff's 50%-on-material rule, taken once in the note beneath the
+      // Painting subtotal, and this report must never print the derived 12.5%.
+      const dep = r.depOverride ?? 0;
       const depLabel = r.depOverride !== undefined ? `${dep}%*` : `${dep}%`;
       const gstPct = r.gst ?? 18;
-      const { netBeforeGst } = disallowed ? { netBeforeGst: 0 } : computeRowNet(r, dep);
+      const { netBeforeGst } = disallowed ? { netBeforeGst: 0 } : computeRowNet(r, dep, { grossOfImt23: true });
       const priceGst = disallowed ? 0 : netBeforeGst * (1 + gstPct / 100);
 
       const bandHtml = shouldStartSupplementaryBand(sectionRows, idx)
@@ -336,7 +380,7 @@ export function buildStandardFinalSurveyHTML(
 
       return bandHtml + `<tr>
       <td style="${tdsr9}">${serials.get(r.id) ?? 0}</td>
-      <td style="${td9}">${r.particulars}</td>
+      <td style="${td9}">${partLabel(r)}</td>
       <td style="${td9}text-align:center;">${typeLabel}</td>
       <td style="${tdr9}">${isBillCheck && r.billStatus === 'not-in-bill' ? 'No Bill' : m9(r.estimated)}</td>
       <td style="${tdr9}${disallowed ? 'color:#a00;font-weight:700;font-size:6.5pt;text-align:center;' : ''}">${disallowed ? 'NOT ALLOWED' : m9(r.assessed)}</td>
@@ -689,6 +733,12 @@ ${isBillCheck ? '' : '\n' + causeSectionHtml}
       <td style="${tdr}font-weight:700;">${fa(estPartsBase + estLabBase - rejectedBilledTotal)}</td>
       <td colspan="2" style="border:0.4pt solid #bbb;"></td>
     </tr>` : ''}
+    ${imt23.parts.amount + imt23.labour.amount + imt23.paint.amount > 0 ? `
+    <tr>
+      <td style="${td}">Contribution of insured under IMT-23 (already deducted above)</td>
+      <td colspan="2" style="border:0.4pt solid #bbb;"></td>
+      <td style="${tdr}">${fa(imt23.parts.amount + imt23.labour.amount + imt23.paint.amount)}</td>
+    </tr>` : ''}
     <tr>
       <td style="${td}">Less: Policy Excess</td>
       <td colspan="2" style="border:0.4pt solid #bbb;"></td>
@@ -812,6 +862,7 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
       <td style="${sub}text-align:center;">—</td>
       <td style="${sub}text-align:right;font-weight:700;">${m9(pT)}</td>
     </tr>
+    ${imt23Row(imt23.parts)}
     <tr><td colspan="${NCOLS}" style="${sec}">LABOUR</td></tr>
     ${labPaintSubHeader}
     ${labOnlyHtml}
@@ -823,6 +874,7 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
       <td colspan="${NMAT + 1}" style="${sub}text-align:right;">${m9(labOnlyBase)}</td>
       <td style="${sub}text-align:right;font-weight:700;">${m9(labT)}</td>
     </tr>
+    ${imt23Row(imt23.labour)}
     <tr><td colspan="${NCOLS}" style="${sec}">PAINTING</td></tr>
     ${labPaintSubHeader}
     ${paintHtml}
@@ -834,6 +886,13 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
       <td colspan="${NMAT + 1}" style="${sub}text-align:right;">${m9(paintOnlyBase)}</td>
       <td style="${sub}text-align:right;font-weight:700;">${m9(paintT)}</td>
     </tr>
+    ${imt23Row(imt23.paint)}
+    ${paintMaterialRate(claim) > 0 && paintBaseAfterImt23 > 0 ? `<tr>
+      <td colspan="${NCOLS}" style="${td9}font-size:${scale.labelFont};color:#444;">
+        Less ${mDepPct}% dep. on paint material (${m9(paintMaterialBase)} of ${m9(paintBaseAfterImt23)} @ ${mPct}%) &nbsp;=&nbsp; ${m9(paintMaterialDed)}
+        &nbsp;&middot;&nbsp; Painting labour @ ${100 - mPct}% &nbsp;&middot;&nbsp; Painting material @ ${mPct}%
+      </td>
+    </tr>` : ''}
   </tbody>
 </table>
 
