@@ -67,7 +67,7 @@ export interface ClaimData {
   /**
    * Apply IRDAI GR-9 paint material depreciation on this claim.
    *
-   * Absent means off, so no claim already stored changes. `createClaim` sets it
+   * Absent means off, so no claim already stored changes. `createBlankClaim` sets it
    * true, and `paintMaterialRate` additionally requires a standard-depreciation
    * policy — under nil dep there is no material deduction at all.
    */
