@@ -233,8 +233,11 @@ export function AssessmentGrid() {
   });
 
   const summary = useMemo(
-    () => calculateAssessmentSummary(assessmentRows, ageMonths, depreciationType),
-    [assessmentRows, ageMonths, depreciationType],
+    () => calculateAssessmentSummary(
+      assessmentRows, ageMonths, depreciationType, 0, 0, 0,
+      currentClaim ?? { depreciationType },
+    ),
+    [assessmentRows, ageMonths, depreciationType, currentClaim],
   );
   const subtotals = useMemo(() => sectionSubtotals(summary), [summary]);
 

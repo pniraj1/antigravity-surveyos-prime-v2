@@ -110,10 +110,12 @@ export function BillCheckTab() {
   const summary = calculateAssessmentSummary(
     allRows, ageMonths, currentClaim.depreciationType,
     bcSalvage, fb?.compulsoryExcess ?? 0, fb?.voluntaryExcess ?? 0,
+    currentClaim,
   );
   const bcSummary = calculateBillCheckSummary(
     allRows, ageMonths, currentClaim.depreciationType,
     bcSalvage, fb?.compulsoryExcess ?? 0, fb?.voluntaryExcess ?? 0,
+    currentClaim,
   );
 
   const inBillTotal    = allowedRows.filter(r => r.billStatus === 'in-bill').reduce((s, r) => s + (r.billedAmount || 0), 0);

@@ -221,6 +221,7 @@ export function DetailsTab() {
                     fb?.salvageValue || 0,
                     getCompulsoryExcess(fb),
                     fb?.voluntaryExcess || 0,
+                    currentClaim,
                   );
                   downloadAsWord(
                     buildStandardFinalSurveyHTML(currentClaim, profile!),

@@ -17,7 +17,8 @@ import { getHtmlScale } from './report-style-utils';
 import { preambleFromClaim, estimateTotalInclGst, billCheckPreambleFromClaim } from './final-survey-preamble';
 import { projectForBillCheck, resolveBillSalvage } from './bill-check-projection';
 import { computeRowNet } from '@/lib/calculations/row-net';
-import { getDepreciationRate, toDepreciationType } from '@/lib/calculations/depreciation';
+import { toDepreciationType } from '@/lib/calculations/depreciation';
+import { rowDepRate } from '@/lib/calculations/row-dep-rate';
 import { getCompulsoryExcess, calculateAssessmentSummary } from '@/lib/calculations/assessment';
 import { shouldStartSupplementaryBand } from '@/lib/calculations/utils';
 import { buildSerialMap } from '@/lib/calculations/serial-numbers';
@@ -103,7 +104,7 @@ export function buildStandardFinalSurveyHTML(
 
   rows.filter(r => r.section === 'parts').forEach(r => {
     if (r.allowed === false) return;
-    const dep = r.depOverride !== undefined ? r.depOverride : getDepreciationRate(r.partType, ageMonths, depType);
+    const dep = rowDepRate(r, ageMonths, claim);
     const { isDisposal, netBeforeGst } = computeRowNet(r, dep);
     if (isDisposal) {
       disposalNet += netBeforeGst;
@@ -146,6 +147,7 @@ export function buildStandardFinalSurveyHTML(
     salvageFigure,
     getCompulsoryExcess(claim.feeBill),
     claim.feeBill?.voluntaryExcess ?? 0,
+    claim,
   );
 
   const pb = summary.partsBase;
@@ -275,7 +277,7 @@ export function buildStandardFinalSurveyHTML(
   // record of what was considered and rejected.
   const partRows = rows.filter(r => r.section === 'parts' && (!isBillCheck || r.allowed !== false));
   const partsHtml = partRows.map((r, idx) => {
-    const dep = r.depOverride !== undefined ? r.depOverride : getDepreciationRate(r.partType, ageMonths, depType);
+    const dep = rowDepRate(r, ageMonths, claim);
     const depLabel = r.depOverride !== undefined ? `${dep}%*` : `${dep}%`;
     const disallowed = r.allowed === false;
     const { isDisposal, afterDep, netBeforeGst } = disallowed ? { isDisposal: false, afterDep: 0, netBeforeGst: 0 } : computeRowNet(r, dep);
@@ -322,7 +324,7 @@ export function buildStandardFinalSurveyHTML(
     const sectionRows = rows.filter(r => r.section === section && (!isBillCheck || r.allowed !== false));
     return sectionRows.map((r, idx) => {
       const disallowed = r.allowed === false;
-      const dep = r.depOverride !== undefined ? r.depOverride : getDepreciationRate(r.partType, ageMonths, depType);
+      const dep = rowDepRate(r, ageMonths, claim);
       const depLabel = r.depOverride !== undefined ? `${dep}%*` : `${dep}%`;
       const gstPct = r.gst ?? 18;
       const { netBeforeGst } = disallowed ? { netBeforeGst: 0 } : computeRowNet(r, dep);

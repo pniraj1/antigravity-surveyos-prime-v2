@@ -30,7 +30,8 @@ export function AssessmentSummary() {
     currentClaim.depreciationType, 
     fb.salvageValue, 
     fb.compulsoryExcess,
-    fb.voluntaryExcess
+    fb.voluntaryExcess,
+    currentClaim
   );
 
   // Per-material Parts breakdown (hide materials with nothing on either side)

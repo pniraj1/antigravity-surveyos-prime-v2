@@ -18,9 +18,9 @@
 
 import type { ClaimData } from '@/types/claim';
 import type { SurveyorProfile } from '@/types/vehicle';
-import type { AssessmentRow, PartType } from '@/types/assessment';
+import type { AssessmentRow } from '@/types/assessment';
 import { computeRowNet, computeRowLiability } from '@/lib/calculations/row-net';
-import { getDepreciationRate, toDepreciationType } from '@/lib/calculations/depreciation';
+import { rowDepRate } from '@/lib/calculations/row-dep-rate';
 import { aggregateGst } from '@/lib/calculations/gst-bands';
 import { getCompulsoryExcess, calculateBillCheckSummary, calculateAssessmentSummary } from '@/lib/calculations/assessment';
 import { buildSerialMap } from '@/lib/calculations/serial-numbers';
@@ -51,14 +51,6 @@ function g(v: string | number | null | undefined): string {
 
 import { numberToWords, getVehicleAgeMonths, getSurveyorHeader, getSigBlock } from './report-utils';
 import { getHtmlScale } from './report-style-utils';
-
-// The private rate table that used to sit here omitted the tariff's fibre glass
-// line (30% flat), so a fibre glass part fell through to the metal age scale.
-// It also took its arguments in a different order from the standard builder's
-// copy, which is the kind of thing that keeps two copies disagreeing.
-// One home now: getDepreciationRate in lib/calculations/depreciation.
-const getDepRate = (partType: string, ageMonths: number, depType: string): number =>
-  getDepreciationRate(partType as PartType, ageMonths, toDepreciationType(depType));
 
 // ─── Main UIIC Final HTML builder ─────────────────────────────────────────────
 
@@ -101,7 +93,7 @@ export function buildUIICFinalHTML(claim: ClaimData, profile: SurveyorProfile | 
   // every 28% part. Declared before the accumulators below so Labour and
   // Paint can depreciate the same way Parts always has.
   const depFor = (r: AssessmentRow) =>
-    r.depOverride !== undefined ? r.depOverride : getDepRate(r.partType, ageMonths, depType);
+    rowDepRate(r, ageMonths, claim);
 
   const partsAgg  = aggregateGst(AP.filter(r => r.allowed !== false), depFor);
   const labourAgg = aggregateGst(AL.filter(r => r.allowed !== false), depFor);
@@ -326,7 +318,7 @@ ${getSurveyorHeader(profile)}
   // disallowed rows so the gap survives into that document.
   const serials = buildSerialMap(rows);
   const pHtml = AP.map((r, idx) => {
-    const dep = r.depOverride !== undefined ? r.depOverride : getDepRate(r.partType, ageMonths, depType);
+    const dep = rowDepRate(r, ageMonths, claim);
     const dL = r.depOverride !== undefined ? `${dep}%*` : (dep > 0 ? dep + '%' : '0%');
     const isNA = r.allowed === false;
     const { isDisposal, afterDep, netBeforeGst } = isNA ? { isDisposal: false, afterDep: 0, netBeforeGst: 0 } : computeRowNet(r, dep);
@@ -537,7 +529,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   // Billed subtotals come from the shared per-row helper, so they add up to the
   // same grand total the screen shows. They include GST at each row's own rate.
   const rowDep = (r: typeof rows[number]) =>
-    r.depOverride !== undefined ? r.depOverride : getDepRate(r.partType, ageMonths, depType);
+    rowDepRate(r, ageMonths, claim);
 
   billedParts.forEach(r => {
     const { isDisposal, netBeforeGst } = computeRowNet(r, rowDep(r));
@@ -565,7 +557,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   // Same per-item banding the table below uses, so Cost of Parts agrees with
   // the SPARE PARTS subtotal on a mixed-rate claim.
   const rowDepFor = (r: AssessmentRow) =>
-    r.depOverride !== undefined ? r.depOverride : getDepRate(r.partType, ageMonths, depType);
+    rowDepRate(r, ageMonths, claim);
 
   const partsAgg   = aggregateGst(billedParts, rowDepFor);
   const labourAgg  = aggregateGst(billedLabour, rowDepFor);
@@ -592,6 +584,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
     salvageFigure,
     getCompulsoryExcess(claim.feeBill),
     claim.feeBill?.voluntaryExcess ?? 0,
+    claim,
   );
   const tow = parseFloat(String(claim.feeBill?.travelExpenses || 0)) || 0;
   const gross = pT + lT + tow;
@@ -604,7 +597,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   // One calculation, shared with the screen. The two documents cannot diverge.
   // The old arithmetic here multiplied a GST-inclusive figure by 1.18 and
   // applied no depreciation, printing a liability ~31% above the true one.
-  const bcSummary = calculateBillCheckSummary(rows, ageMonths, depType, salvage, compExcess, volExcess);
+  const bcSummary = calculateBillCheckSummary(rows, ageMonths, depType, salvage, compExcess, volExcess, claim);
   const totalBilled = bcSummary.grandTotalBilled + tow;
   const netBilledLiability = Math.max(0, totalBilled - salvage - volExcess - compExcess);
 

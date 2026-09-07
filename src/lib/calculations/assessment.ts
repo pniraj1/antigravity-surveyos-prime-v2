@@ -5,8 +5,8 @@
 // ═══════════════════════════════════════════════════════════
 
 import type { AssessmentRow, AssessmentSummary, BillCheckSummary, DepreciationType, FeeBill } from '@/types';
-import { getDepreciationRate } from './depreciation';
 import { computeRowLiability, effectiveAssessed } from './row-net';
+import { rowDepRate, type PaintDepClaim } from './row-dep-rate';
 import { numberToWords } from './utils';
 
 /**
@@ -66,7 +66,11 @@ export function calculateAssessmentSummary(
   depType: DepreciationType,
   salvage: number = 0,
   compulsoryExcess: number = 0,
-  voluntaryExcess: number = 0
+  voluntaryExcess: number = 0,
+  // Paint's GR-9 rate is a claim-level setting, so the engine needs the claim's
+  // three paint fields. Optional: omitted means no paint material depreciation,
+  // which is exactly how every stored claim behaved before this existed.
+  paintDep: PaintDepClaim = { depreciationType: depType }
 ): AssessmentSummary {
   let metal = 0;
   let plastic = 0;
@@ -84,7 +88,7 @@ export function calculateAssessmentSummary(
   // ─── Assessment Logic ──────────────────────────────
   rows.forEach((r) => {
     if (!r.allowed) return;
-    const depRate = r.depOverride !== undefined ? r.depOverride : getDepreciationRate(r.partType, ageMonths, depType);
+    const depRate = rowDepRate(r, ageMonths, { ...paintDep, depreciationType: depType });
     // effectiveAssessed, not r.assessed: an IMT-23 row is halved before
     // depreciation, so the bucket and its GST both carry the reduced figure.
     // The estimate accumulators further down deliberately keep reading
@@ -222,7 +226,8 @@ export function calculateBillCheckSummary(
   depType: DepreciationType,
   salvage: number = 0,
   compulsoryExcess: number = 0,
-  voluntaryExcess: number = 0
+  voluntaryExcess: number = 0,
+  paintDep: PaintDepClaim = { depreciationType: depType }
 ): BillCheckSummary {
   let assessedBaseSum = 0;
   let billedBaseSum = 0;
@@ -233,9 +238,7 @@ export function calculateBillCheckSummary(
     // Disallowed items are not insurer liability, so they are not verified here.
     if (!r.allowed) return;
 
-    const depRate = r.depOverride !== undefined
-      ? r.depOverride
-      : getDepreciationRate(r.partType, ageMonths, depType);
+    const depRate = rowDepRate(r, ageMonths, { ...paintDep, depreciationType: depType });
 
     const { liability } = computeRowLiability(r, depRate);
 

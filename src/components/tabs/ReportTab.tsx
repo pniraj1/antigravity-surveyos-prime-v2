@@ -113,6 +113,7 @@ export function ReportTab() {
     fb?.salvageValue || 0,
     getCompulsoryExcess(fb),
     fb?.voluntaryExcess || 0,
+    currentClaim,
   );
 
   // Safety fallback for summary values
