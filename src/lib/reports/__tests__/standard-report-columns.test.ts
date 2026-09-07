@@ -19,7 +19,7 @@ function row(overrides: Partial<AssessmentRow> = {}): AssessmentRow {
   };
 }
 
-function claim(rows: AssessmentRow[]): ClaimData {
+function claim(rows: AssessmentRow[], extra: Partial<ClaimData> = {}): ClaimData {
   return {
     id: 'c1',
     assessmentRows: rows,
@@ -32,12 +32,13 @@ function claim(rows: AssessmentRow[]): ClaimData {
     reinspection: {},
     feeBill: { salvageValue: 0, compulsoryExcess: 0, voluntaryExcess: 0, travelExpenses: 0 },
     billCheck: { billNo: 'B1', billDate: '2026-08-01', billTotal: 0 },
+    ...extra,
   } as unknown as ClaimData;
 }
 
 /** The "9. DETAILS OF ASSESSMENT" table only. */
-function section9(html: string): string {
-  const start = html.indexOf('9. DETAILS OF ASSESSMENT');
+function section9(html: string, heading = '9. DETAILS OF ASSESSMENT'): string {
+  const start = html.indexOf(heading);
   expect(start).toBeGreaterThan(-1);
   const end = html.indexOf('</table>', start);
   return html.slice(start, end);
@@ -136,6 +137,39 @@ describe('standard report — section 9 fits the page', () => {
 
     const srWidth = headerWidths(table)[0];
     expect(srWidth).toBeGreaterThanOrEqual(4);
+  });
+
+  // A tagged row in every section plus paint-material depreciation on: this is
+  // the only configuration that emits the "Less endorsement 23" rows and the
+  // paint-material note. Their colspan arithmetic (4 + 1 + NCOLS-5, and NCOLS)
+  // must still total the same as every other row in the table.
+  const taggedFbr = [
+    row({ partType: 'metal', imt23: true }),
+    row({ partType: 'plastic' }),
+    row({ partType: 'glass' }),
+    row({ partType: 'fiberglass' }),
+    row({ section: 'labour', partType: 'labour', assessed: 2000, estimated: 2000, imt23: true }),
+    row({ section: 'paint', partType: 'paint', assessed: 5000, estimated: 5000, imt23: true }),
+  ];
+  const taggedNoFbr = taggedFbr.filter(r => r.partType !== 'fiberglass');
+
+  test.each([
+    ['final, with fiberglass', taggedFbr, 12, '9. DETAILS OF ASSESSMENT', 'final' as const],
+    ['final, without fiberglass', taggedNoFbr, 11, '9. DETAILS OF ASSESSMENT', 'final' as const],
+    ['bill check, with fiberglass', taggedFbr, 12, '9. DETAILS OF BILL CHECK', 'bill-check' as const],
+    ['bill check, without fiberglass', taggedNoFbr, 11, '9. DETAILS OF BILL CHECK', 'bill-check' as const],
+  ])('endorsement-23 rows and paint note span the same as the subtotal — %s', (_l, rows, expected, heading, mode) => {
+    const html = buildStandardFinalSurveyHTML(
+      claim(rows, { applyPaintMaterialDep: true } as Partial<ClaimData>),
+      {} as never,
+      mode,
+    );
+    const table = section9(html, heading);
+    // The rows under test are actually present.
+    expect(table).toContain('Less endorsement 23');
+    expect(table).toContain('Less 50% dep. on paint material');
+    // Every row — data, subtotal, endorsement-23, paint note — spans the same.
+    expect([...new Set(rowSpans(table))]).toEqual([expected]);
   });
 
   test('a long part description does not get its own column widened', () => {

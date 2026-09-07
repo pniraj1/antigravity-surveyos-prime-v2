@@ -121,6 +121,34 @@ describe('standard report — IMT-23', () => {
     expect(cell?.[1]).toBe('7,000.00');
   });
 
+  it('omits the paint-material note when every allowed paint row carries a depOverride', () => {
+    // An overridden paint row never took the automatic 25%/50% material rule,
+    // so it must not feed the note. Note + subtotal would otherwise print two
+    // contradictory figures on the same signed page.
+    const c = claimWith(
+      [row({ section: 'paint', partType: 'paint', assessed: 10000, estimated: 10000, depOverride: 30 })],
+      { depreciationType: 'standard', applyPaintMaterialDep: true } as Partial<ClaimData>,
+    );
+    const html = build(c);
+    const sub = html.slice(html.indexOf('Sub-Total Painting'), html.indexOf('Sub-Total Painting') + 900);
+    expect(/colspan="4"[^>]*>([\d,]+\.\d\d)</.exec(sub)?.[1]).toBe('7,000.00');
+    expect(html).not.toContain('Less 50% dep. on paint material');
+  });
+
+  it('bases the paint-material note only on paint rows that took the automatic rate', () => {
+    const c = claimWith(
+      [
+        row({ section: 'paint', partType: 'paint', assessed: 8000, estimated: 8000 }),
+        row({ section: 'paint', partType: 'paint', assessed: 10000, estimated: 10000, depOverride: 30 }),
+      ],
+      { depreciationType: 'standard', applyPaintMaterialDep: true } as Partial<ClaimData>,
+    );
+    const html = build(c);
+    // Only the 8,000 auto row feeds the note: 8,000 @ 25% = 2,000, less 50% = 1,000.
+    expect(html).toContain('(2,000.00 of 8,000.00 @ 25%)');
+    expect(html).toContain('=&nbsp; 1,000.00');
+  });
+
   it('states the paint rule, never the derived percentage', () => {
     const c = claimWith(
       [row({ section: 'paint', partType: 'paint', assessed: 10000, estimated: 10000 })],

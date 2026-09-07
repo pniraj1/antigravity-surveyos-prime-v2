@@ -17,7 +17,7 @@ import { formatDateDMY, formatDateTimeDMY, formatSurveyDateTime, fa, numberToWor
 import { getHtmlScale } from './report-style-utils';
 import { preambleFromClaim, estimateTotalInclGst, billCheckPreambleFromClaim } from './final-survey-preamble';
 import { projectForBillCheck, resolveBillSalvage } from './bill-check-projection';
-import { computeRowNet } from '@/lib/calculations/row-net';
+import { computeRowNet, effectiveAssessed } from '@/lib/calculations/row-net';
 import { toDepreciationType, paintMaterialRate } from '@/lib/calculations/depreciation';
 import { rowDepRate } from '@/lib/calculations/row-dep-rate';
 import { imt23Totals } from '@/lib/calculations/imt23-totals';
@@ -202,8 +202,15 @@ export function buildStandardFinalSurveyHTML(
   // 12.5% — that figure belongs only to the UIIC format.
   const mPct = claim.paintMaterialPercent ?? 25;
   const mDepPct = claim.paintMaterialDepPercent ?? 50;
-  const paintBaseAfterImt23 = assessedPaintRaw - imt23.paint.amount;
-  const paintMaterialBase = paintBaseAfterImt23 * (mPct / 100);
+  // Only paint rows that actually took the automatic GR-9 rate feed this note.
+  // A surveyor's depOverride replaces that rate (rowDepRate), so an overridden
+  // row never had paint-material depreciation to report — yet it still renders
+  // gross in the subtotal. Basis is the IMT-23-halved assessed figure those
+  // auto rows contributed, so the note's "of X" ties back to the subtotal.
+  const autoPaintBasis = rows
+    .filter(r => r.section === 'paint' && r.allowed !== false && r.depOverride === undefined)
+    .reduce((sum, r) => sum + effectiveAssessed(r), 0);
+  const paintMaterialBase = autoPaintBasis * (mPct / 100);
   const paintMaterialDed = paintMaterialBase * (mDepPct / 100);
 
   // Money on the workshop's invoice for items rejected at final survey. Section
@@ -738,7 +745,7 @@ ${isBillCheck ? '' : '\n' + causeSectionHtml}
     </tr>` : ''}
     ${imt23.parts.amount + imt23.labour.amount + imt23.paint.amount > 0 ? `
     <tr>
-      <td style="${td}">Contribution of insured under IMT-23 (already deducted above)</td>
+      <td style="${td}">Contribution of insured under IMT-23 (before dep. &amp; GST, already deducted above)</td>
       <td colspan="2" style="border:0.4pt solid #bbb;"></td>
       <td style="${tdr}">${fa(imt23.parts.amount + imt23.labour.amount + imt23.paint.amount)}</td>
     </tr>` : ''}
@@ -890,9 +897,9 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
       <td style="${sub}text-align:right;font-weight:700;">${m9(paintT)}</td>
     </tr>
     ${imt23Row(imt23.paint)}
-    ${paintMaterialRate(claim) > 0 && paintBaseAfterImt23 > 0 ? `<tr>
+    ${paintMaterialRate(claim) > 0 && paintMaterialDed > 0 ? `<tr>
       <td colspan="${NCOLS}" style="${td9}font-size:${scale.labelFont};color:#444;">
-        Less ${mDepPct}% dep. on paint material (${m9(paintMaterialBase)} of ${m9(paintBaseAfterImt23)} @ ${mPct}%) &nbsp;=&nbsp; ${m9(paintMaterialDed)}
+        Less ${mDepPct}% dep. on paint material (${m9(paintMaterialBase)} of ${m9(autoPaintBasis)} @ ${mPct}%) &nbsp;=&nbsp; ${m9(paintMaterialDed)}
         &nbsp;&middot;&nbsp; Painting labour @ ${100 - mPct}% &nbsp;&middot;&nbsp; Painting material @ ${mPct}%
       </td>
     </tr>` : ''}
