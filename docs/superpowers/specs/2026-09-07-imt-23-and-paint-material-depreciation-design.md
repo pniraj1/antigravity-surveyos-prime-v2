@@ -55,6 +55,25 @@ Claim B's bill check *is* a valid fixture: billed equals assessed on every bille
 
 This divergence is worth surfacing to the surveyor in the UI, since someone moving from SWAR will see our figure come out lower and assume a defect. Out of scope here; recorded as a follow-up.
 
+### Claim C — TATA LPT 3118, UIIC format (MOTOR-867/2026)
+
+A third claim in the **UIIC report format**, which presents IMT-23 differently and independently confirms the ordering. Verified by rendering the pages, not by text extraction.
+
+| Row | Part list | Less Imt 23 | Dep | Assessment | GST | Final |
+|---|---:|---:|---:|---:|---:|---:|
+| 36 Indicator Fr. RH | 300.00 | **150.00** | 50% → 75.00 | 75.00 | 0 | 75.00 |
+| 45 Front Bumper Assy | 4,500.00 | **2,250.00** | 0% | 2,250.00 | 0 | 2,250.00 |
+| 46 Tyre MRF Fr.RH & Rear RH | 42,372.00 | **21,186.00** | 50% → 10,593.00 | 10,593.00 | 18 | 12,499.74 |
+
+- Parts: `287,621.70 − 23,586.00 (IMT-23) − 73,867.00 (dep) = 190,168.70` → incl GST **₹2,06,270.37**
+- Paint: `24,000 → less Imt 23 12,000 → 12,000 → LESS PAINT DEP: 12.5% 1,500 → 10,500`
+- Gross assessment `2,06,270.37 + 3,38,250.00 + 10,500.00 = ₹5,55,020.37`
+- Net assessment `5,55,020.37 − 8,520.00 salvage − 1,500.00 excess = ₹5,45,000.37`
+
+**Not verified:** the summary box's `Depreciation 86,499.76` could not be reconciled from the rendered pages and is deliberately excluded from the fixtures.
+
+**A caveat on the earlier extractions.** Claims A and B were read with `pdftotext -layout`. Their figures are trustworthy because ~30 of them reconcile exactly to the printed nets, which a mis-read could not do. But layout, labels and row tagging were re-checked by rendering the pages, and that check corrected the marker design (see Part 8).
+
 ## Goals
 
 - The surveyor ticks a box on any row to mark it an IMT-23 item; the insurer's liability for that row halves.
@@ -67,7 +86,7 @@ This divergence is worth surfacing to the surveyor in the UI, since someone movi
 - **No automatic IMT-23 detection, suggestion, or nudge, ever.** Which items fall under the endorsement is entirely the surveyor's judgment. The software offers a checkbox and nothing else.
 - **No knob for the 50%.** That figure is fixed by the endorsement wording; a knob there would only be a way to print a number the policy does not support.
 - **No `IMT 23 ITEMS SUMMARY` cross-tab.** SWAR dropped it themselves between December and February, keeping only the one-line contribution figure. Revisit if it is ever asked for.
-- **No change to the UIIC portal summary or UIIC report presentation.** See "Deliberate exclusions".
+- **No change to the UIIC portal summary.** See "Deliberate exclusions". (UIIC *report* presentation IS in scope — see Part 8b.)
 - **No change to how depreciation is presented** (per-bucket `Less Depreciation` lines). Noted as a separate future item.
 
 ## Design
@@ -195,7 +214,10 @@ paintMaterialDep: number;
 
 ### Part 8 — Standard report (final and bill check)
 
-- Narrow `*` column on ticked rows, including rows marked `not-in-bill` — the tag belongs to the part, not to the money. A dedicated column rather than appending to the particulars text, which also avoids colliding with the existing `%*` depreciation-override marker.
+- **Ticked rows print in bold, with ` - IMT 23` appended to the particulars at print time.** This is what the sample final report does, and rendering the pages showed it is far more findable than an asterisk: bold is visible at a glance down 123 rows and survives a monochrome printer, where counting asterisks does not.
+  The suffix is **derived from the checkbox and never written to `row.particulars`** — the surveyor types the part name, the software adds the tag. In the sample the surveyor typed it by hand on every row; the checkbox removes that work.
+  The bill check additionally carries a narrow `*` column, matching the sample bill check. That is the one place an asterisk appears, and it does not collide with the `%*` depreciation-override marker because it is its own column.
+- Marking applies to rows that are `not-in-bill` or disallowed too — the tag belongs to the part, not to the money.
 - The IMT-23 block is inserted **above** the existing section subtotal, as three new lines, using the new pre-depreciation figures:
   ```
   Assessed before depreciation            877,801.79    ← new
@@ -217,6 +239,37 @@ paintMaterialDep: number;
   > `*` IMT-23 part. Lamps, tyres/tubes, mudguards, bonnet/side parts, bumpers, headlights and paintwork are excluded under the standard commercial vehicle policy and are covered only by virtue of Endorsement IMT-23, under which the insured bears 50% of the assessed loss. Cover applies only where the vehicle is also damaged in the same incident. Theft of these items is excluded.
 - **Policy-type banner** in the header, adopted from SWAR's `Note : ( 0% Dep. Policy)`. The label already exists at `standard-report-builder.ts:358`; it is simply not printed prominently. This tells the reader why depreciation lines are absent instead of leaving them to wonder whether they were forgotten.
 
+### Part 8b — UIIC report
+
+The UIIC format states the same rule a different way, and must match its own convention rather than the standard report's. Same data, different presentation — the calculation layer is shared and unchanged.
+
+**IMT-23 is per row, in place.** Under the part's `Part List Without Tax` figure, a bold `Less Imt 23` line carries the halved amount in the same column. Depreciation then applies to the halved figure. There is **no** section subtotal deduction for Parts or Labour.
+
+```
+36  Indicator Fr. RH - IMT.23    300.00     .50%    75.00    75.00   0     75.00
+    Less Imt 23                  150.00
+```
+
+**Painting is the exception** — it does take a section block, and it prints the effective rate rather than the material rule:
+
+```
+SUB TOTAL                              24000.00
+Less Imt 23                            12000.00
+SUB TOTAL                              12000.00
+LESS PAINT DEP: 12.5%                   1500.00
+```
+
+So the two formats express one rule two ways:
+
+| | Standard report | UIIC report |
+|---|---|---|
+| IMT-23 on parts/labour | section subtotal line | per-row `Less Imt 23` |
+| Paint depreciation | `Less Paint material 50% Depreciation` + 75/25 note | `LESS PAINT DEP: 12.5%` |
+
+Both are driven by the same `imt23` flag and the same internal 12.5% paint rate. This is the payoff from implementing paint as a rate rather than a subtraction: the number is available in whichever form a format wants to state it.
+
+**`Amount Payable by Insured` keeps its current meaning** — depreciation + salvage + excess, matching the sample exactly (₹86,499.76 + ₹8,520.00 + ₹1,500.00 = ₹96,519.76). The IMT-23 share is **not** folded into it; it appears as its own `Contribution of insured under IMT-23` line, as the standard format already does. Changing that box would make our figure disagree with every other surveyor's on the same claim.
+
 ### Part 9 — Insured report
 
 One new clause in `getIRDAIStandardClauses()`, surfaced only when the claim has ticked rows, framed as the buy-back it is:
@@ -230,7 +283,7 @@ Line items show the full assessed value with IMT-23 as its own named deduction.
 ## Deliberate exclusions
 
 - **UIIC portal summary** (`uiic-portal-summary.ts`) is untouched and continues to read raw `assessed`. IMT-23 claims are not filed through that portal in practice, and the portal has no IMT-23 field. Guarding it costs one comment; guessing at it would produce figures nobody asked for.
-- **UIIC report presentation** gains no `*` column and no deduction line this cycle. Its *totals* will move, because the calculation is global — if a row is IMT-23 the liability genuinely is half, and a UIIC report printing the full figure would be wrong. Presentation follows in a later cycle.
+- ~~UIIC report presentation deferred.~~ **Now in scope — see Part 8b.** Deferring it would have shipped a UIIC report whose totals had moved with nothing on the page explaining the reduction, which is worse than either end state.
 - **Constructive total loss** continues to work off `netAssessedLoss`, so IMT-23 reduces the ratio. This is consistent with how depreciation is already treated. Whether the warning should use repair cost rather than the net figure is a real question about existing behaviour, and is recorded as a separate item rather than half-fixed here.
 - **No colour-coding of IMT-23 rows** in the grid beyond the checkbox and the accent on the deduction line. Row tinting would compete with the existing disallowed and disposal states on an already dense grid.
 
@@ -244,6 +297,8 @@ All expectations below were modelled against the proposed engine and verified to
 - **Claim A bill check — assert the cap, not SWAR's net.** Assert that a row billed above its assessed figure contributes `assessed`, not `billed`, and that its IMT-23 deduction follows the capped figure. Do **not** assert ₹11,02,000.68.
 - **Claim B final, nil dep.** Contribution ₹12,700.00; parts ₹20,700.00; labour ₹94,600.00; **net ₹1,12,000.00**. No paint material deduction anywhere.
 - **Claim B bill check.** Spare total ₹19,500.00; **net liability ₹1,11,000.00**. The unbilled headlamp contributes zero, so the rubber deduction is ₹0 and **no line is rendered for that bucket**.
+- **Claim C, UIIC format.** Row-level: `300 → 150 → 50% dep → 75`; `42,372 → 21,186 → 50% dep → 10,593 → ×1.18 → 12,499.74`; `4,500 → 2,250 → 0% dep → 2,250`. Parts `287,621.70 − 23,586.00 − 73,867.00 = 190,168.70`. Paint `24,000 → 12,000 → less 12.5% → 10,500`. Gross `₹5,55,020.37`; **net `₹5,45,000.37`**. Do **not** assert the summary box's `Depreciation 86,499.76` — it was not reconciled.
+- **Both formats, one flag.** The same claim renders a section subtotal line in the standard report and a per-row `Less Imt 23` line in the UIIC report, and both reach the identical net.
 - **Reconciliation.** For every claim, `preDepSubtotal − imt23Deduction == preDepSubtotalAfter`, exactly — including with a `depOverride` on one row of a bucket and a non-18% GST rate on another. This is the property the pre-depreciation placement buys, and the test that proves it.
 - **Commutativity.** `halve → dep → GST` equals `halve → GST → dep` to the paisa, and `min(a,b)/2 == min(a/2, b/2)`. Also with a disposal row and a `not-in-bill` row.
 - **The five exclusions.** Ticking a row does not move `salvageBasis`, any estimate total, `billedTotals`, `negotiatedSavings`, or the professional fee.
@@ -287,4 +342,10 @@ Recorded as follow-ups, not addressed here:
 
 - Surfacing the bill-check cap in the UI, so a surveyor moving from SWAR understands why our figure is lower.
 - Whether the constructive-total-loss warning should use repair cost rather than the net figure. It already has this issue with depreciation, independently of IMT-23.
-- IMT-23 presentation in the UIIC reports (their totals move with this change; their layout does not).
+Added after reviewing the UIIC-format sample (Claim C), by rendering pages rather than extracting text:
+
+- **UIIC report presentation moved into scope.** It needs a per-row `Less Imt 23` line, not a section subtotal — a different shape from the standard report.
+- **The UIIC format prints `LESS PAINT DEP: 12.5%`.** The effective rate is stated openly there, while the standard format states the 50%-on-material rule. Each format keeps its own convention; one internal rate serves both.
+- **The marker is bold text plus a derived ` - IMT 23` suffix**, not an asterisk column, in the final report. Rendering the page showed bold is the affordance that actually works across 123 rows.
+- **IMT-23 on Labour rows is real** — the sample carries `Front Bumper Rem/Ref.-IMT.23` in its Labour section, confirming the all-three-sections decision from evidence rather than inference.
+- `Amount Payable by Insured` continues to exclude the IMT-23 share, matching the sample.
