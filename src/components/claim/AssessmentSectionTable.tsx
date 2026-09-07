@@ -3,6 +3,7 @@
 import React from 'react';
 import { useClaimStore } from '@/stores/claim-store';
 import { rowDepRate } from '@/lib/calculations/row-dep-rate';
+import { imt23Totals } from '@/lib/calculations/imt23-totals';
 import { formatCurrency, shouldStartSupplementaryBand } from '@/lib/calculations/utils';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -85,10 +86,12 @@ export function AssessmentSectionTable({
     toggleRowAllowed,
     moveRowToSection,
     addAssessmentRowToSection,
+    updateClaim,
   } = useClaimStore();
 
   const sectionRowIds = rows.map(r => r.id);
   const totalCols = 9 + visibleCount;
+  const sectionImt23 = imt23Totals(rows)[section];
 
   return (
     <div className="mb-6">
@@ -96,6 +99,36 @@ export function AssessmentSectionTable({
         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           {title} <span className="ml-2 opacity-60">({rows.length})</span>
         </h3>
+        {section === 'paint' && depreciationType === 'standard' && (
+          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={!!currentClaim?.applyPaintMaterialDep}
+                onChange={() => updateClaim({ applyPaintMaterialDep: !currentClaim?.applyPaintMaterialDep })}
+                className="rounded border-border h-3.5 w-3.5 cursor-pointer accent-primary"
+              />
+              Paint material dep
+            </label>
+            <span>
+              material
+              <input
+                type="number" min={0} max={100}
+                value={currentClaim?.paintMaterialPercent ?? 25}
+                onChange={(e) => updateClaim({ paintMaterialPercent: Number(e.target.value) })}
+                className="w-12 mx-1 px-1 border border-border rounded text-right"
+              />
+              % @
+              <input
+                type="number" min={0} max={100}
+                value={currentClaim?.paintMaterialDepPercent ?? 50}
+                onChange={(e) => updateClaim({ paintMaterialDepPercent: Number(e.target.value) })}
+                className="w-12 mx-1 px-1 border border-border rounded text-right"
+              />
+              % dep
+            </span>
+          </div>
+        )}
         <button
           onClick={() => addAssessmentRowToSection(section)}
           className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-secondary hover:bg-secondary/80 text-secondary-foreground text-[11px] font-semibold transition-colors"
@@ -558,6 +591,17 @@ export function AssessmentSectionTable({
             )}
           </tbody>
           <tfoot>
+            {sectionImt23.amount > 0 && (
+              <tr className="bg-primary/5 text-primary">
+                <td colSpan={totalCols - 3} className="px-2 py-1 text-right text-[11px]">
+                  Less endorsement 23 (50% insured&apos;s share, {sectionImt23.count} item{sectionImt23.count === 1 ? '' : 's'})
+                </td>
+                <td className="px-2 py-1 text-right text-[11px] tabular-nums">
+                  {sectionImt23.amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+                <td colSpan={2} />
+              </tr>
+            )}
             <tr className="bg-muted/40 text-xs font-semibold">
               <td colSpan={totalCols - 3} className="px-2 py-2 text-right text-muted-foreground">
                 {title} subtotal
