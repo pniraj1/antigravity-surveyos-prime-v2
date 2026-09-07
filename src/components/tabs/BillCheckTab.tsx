@@ -213,7 +213,6 @@ export function BillCheckTab() {
               claimId={currentClaim.id}
               fmt={fmt}
               ageMonths={ageMonths}
-              depreciationType={currentClaim.depreciationType}
               claim={currentClaim}
             />
 

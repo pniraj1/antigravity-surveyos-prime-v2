@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { AlertCircle, Trash2, Settings2, Eye, EyeOff, FileSearch } from 'lucide-react';
 import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
 import type { AssessmentRow, AssessmentSummary, ClaimData } from '@/types';
-import type { DepreciationType } from '@/types/vehicle';
 import { shouldStartSupplementaryBand } from '@/lib/calculations/utils';
 import { computeRowNet } from '@/lib/calculations';
 import { rowDepRate } from '@/lib/calculations/row-dep-rate';
@@ -37,7 +36,6 @@ interface Props {
   fmt: (n: number) => string;
   /** Vehicle age at the date of loss — feeds the same rate table the report reads. */
   ageMonths: number;
-  depreciationType: DepreciationType;
   /** The claim in scope — carries the paint-material-depreciation settings. */
   claim: ClaimData;
 }
@@ -53,7 +51,6 @@ export function BillCheckGrid({
   claimId,
   fmt,
   ageMonths,
-  depreciationType,
   claim,
 }: Props) {
   // Same rate the report computes, so the grid and the PDF cannot disagree.
