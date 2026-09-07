@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { buildStandardFinalSurveyHTML } from '../standard-report-builder';
+import { calculateAssessmentSummary, getCompulsoryExcess } from '@/lib/calculations/assessment';
+import { toDepreciationType } from '@/lib/calculations/depreciation';
+import { getVehicleAgeMonths } from '../report-utils';
 import type { ClaimData } from '@/types';
 import type { AssessmentRow } from '@/types/assessment';
 
@@ -66,6 +69,56 @@ describe('standard report — IMT-23', () => {
     expect(partRow).toContain('4,838.00');       // 4,100 × 1.18, gross Price+GST
     expect(partRow).not.toContain('2,050.00');   // never the halved figure on the row
     expect(partRow).not.toContain('2,419.00');   // nor the halved Price+GST
+  });
+
+  it('paint subtotal is net of GR-9 paint-material depreciation, matching the engine', () => {
+    const c = claimWith(
+      [row({ section: 'paint', partType: 'paint', assessed: 10000, estimated: 10000, gst: 18 })],
+      { depreciationType: 'standard', applyPaintMaterialDep: true } as Partial<ClaimData>,
+    );
+    const ageMonths = getVehicleAgeMonths(
+      c.vehicle.dateOfRegistration || null,
+      c.vehicle.yearOfManufacture ? Number(c.vehicle.yearOfManufacture) : null,
+      c.accident.dateAndTime || null,
+    );
+    const summary = calculateAssessmentSummary(
+      c.assessmentRows!, ageMonths, toDepreciationType(c.depreciationType),
+      0, getCompulsoryExcess(c.feeBill), c.feeBill?.voluntaryExcess ?? 0, c,
+    );
+    expect(summary.paintOnlyBase).toBe(8750);
+
+    const html = build(c);
+    // The "after dep, before GST" subtotal cell spans the material columns (colspan="4").
+    const sub = html.slice(html.indexOf('Sub-Total Painting'), html.indexOf('Sub-Total Painting') + 900);
+    const cell = /colspan="4"[^>]*>([\d,]+\.\d\d)</.exec(sub);
+    expect(cell?.[1]).toBe('8,750.00');
+
+    // Section 8 GRAND TOTAL, "Assessed (after Dep.)" column must reconcile too.
+    const grandRow = html.slice(html.indexOf('GRAND TOTAL'), html.indexOf('GRAND TOTAL') + 600);
+    const engineGrandBase = summary.partsBase + summary.labourOnlyBase + summary.paintOnlyBase;
+    expect(engineGrandBase).toBe(8750);
+    expect(grandRow).toContain('8,750.00');
+  });
+
+  it('labour subtotal reflects a surveyor depOverride, matching the engine', () => {
+    const c = claimWith(
+      [row({ section: 'labour', partType: 'labour', assessed: 10000, estimated: 10000, gst: 18, depOverride: 30 })],
+    );
+    const ageMonths = getVehicleAgeMonths(
+      c.vehicle.dateOfRegistration || null,
+      c.vehicle.yearOfManufacture ? Number(c.vehicle.yearOfManufacture) : null,
+      c.accident.dateAndTime || null,
+    );
+    const summary = calculateAssessmentSummary(
+      c.assessmentRows!, ageMonths, toDepreciationType(c.depreciationType),
+      0, getCompulsoryExcess(c.feeBill), c.feeBill?.voluntaryExcess ?? 0, c,
+    );
+    expect(summary.labourOnlyBase).toBe(7000);
+
+    const html = build(c);
+    const sub = html.slice(html.indexOf('Sub-Total Labour'), html.indexOf('Sub-Total Labour') + 900);
+    const cell = /colspan="4"[^>]*>([\d,]+\.\d\d)</.exec(sub);
+    expect(cell?.[1]).toBe('7,000.00');
   });
 
   it('states the paint rule, never the derived percentage', () => {

@@ -118,11 +118,14 @@ export function buildStandardFinalSurveyHTML(
     }
   });
 
+  // Dep-aware: labour/paint carry a surveyor's depOverride and paint carries the
+  // automatic GR-9 rate. Net of the endorsement — the "Less endorsement 23" line
+  // beneath the subtotal explains the step down from the gross rows.
   rows.filter(r => r.section === 'labour').forEach(r => {
-    if (r.allowed !== false) labOnlyBase += r.assessed;
+    if (r.allowed !== false) labOnlyBase += computeRowNet(r, rowDepRate(r, ageMonths, claim)).netBeforeGst;
   });
   rows.filter(r => r.section === 'paint').forEach(r => {
-    if (r.allowed !== false) paintOnlyBase += r.assessed;
+    if (r.allowed !== false) paintOnlyBase += computeRowNet(r, rowDepRate(r, ageMonths, claim)).netBeforeGst;
   });
 
   const labBase = labOnlyBase + paintOnlyBase; // combined for grand total
