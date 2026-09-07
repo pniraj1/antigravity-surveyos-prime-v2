@@ -1,7 +1,7 @@
 import type { AssessmentRow } from '@/types/assessment';
 
 export interface RowNetResult {
-  /** assessed × (1 − depRate/100) */
+  /** effectiveAssessed × (1 − depRate/100) */
   afterDep: number;
   isDisposal: boolean;
   /** afterDep × disposalFactor for disposal rows; afterDep for normal rows. GST is NOT included. */
@@ -9,12 +9,40 @@ export interface RowNetResult {
 }
 
 /**
+ * The assessed figure the insurer's liability is computed from.
+ *
+ * IMT-23 restores cover for parts the commercial vehicle policy otherwise
+ * excludes, on the condition that the insured bears 50% of the assessed loss.
+ * The halving lands here — at the assessed level, before depreciation — which
+ * is what the market format does and what makes the printed
+ * subtotal / less-endorsement / subtotal block reconcile exactly even when the
+ * bucket holds rows at different depreciation rates or GST rates.
+ *
+ * Every later step is a pure multiplier, so this position is arithmetically
+ * identical to halving at the end.
+ */
+export function effectiveAssessed(row: AssessmentRow): number {
+  return row.imt23 ? row.assessed / 2 : row.assessed;
+}
+
+/**
  * Computes the per-row net amount before GST.
  * For disposal rows: net = assessed × (1 − dep%) × (disposalPercent / 100), no GST applies.
  * For normal rows: net = assessed × (1 − dep%), caller adds GST.
+ *
+ * `grossOfImt23` ignores the endorsement and returns the row's own full
+ * figures. Only the standard report's per-row cells want this: there the rows
+ * must sum to the pre-deduction subtotal, with one visible
+ * "Less endorsement 23" line beneath. Every other caller wants the default,
+ * which is the insurer's actual liability.
  */
-export function computeRowNet(row: AssessmentRow, depRate: number): RowNetResult {
-  const afterDep = row.assessed * (1 - depRate / 100);
+export function computeRowNet(
+  row: AssessmentRow,
+  depRate: number,
+  opts?: { grossOfImt23?: boolean },
+): RowNetResult {
+  const basis = opts?.grossOfImt23 ? row.assessed : effectiveAssessed(row);
+  const afterDep = basis * (1 - depRate / 100);
   const isDisposal = !!row.isDisposal;
   const disposalFactor = (row.disposalPercent ?? 50) / 100;
   const netBeforeGst = isDisposal ? afterDep * disposalFactor : afterDep;

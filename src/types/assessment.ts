@@ -93,6 +93,14 @@ export interface AssessmentRow {
    * Leave undefined to revert to the standard rate.
    */
   depOverride?: number;
+  /**
+   * Surveyor has marked this row an IMT-23 item: the endorsement restores
+   * cover for it but the insured bears 50% of the assessed loss.
+   *
+   * Never inferred. Which items fall under the endorsement is entirely the
+   * surveyor's judgment — see the spec's non-goals.
+   */
+  imt23?: boolean;
   /** Set by surveyor via tag pills in AssessmentGrid. Skips AI classification when present. */
   deductionCategory?: DeductionCategory;
   /**
