@@ -41,9 +41,19 @@ Both claims reconcile to the rupee and become test fixtures.
 | IMT-23 paint | ₹20,000.00 → less ₹10,000.00 | ₹18,000.00 → less ₹9,000.00 |
 | Contribution of insured | **₹23,438.56** | **₹12,700.00** |
 | Net assessed loss | **₹11,09,000.41** | **₹1,12,000.00** |
-| Bill check net | ₹11,02,000.68 | ₹1,11,000.00 |
+| Bill check net | ₹11,02,000.68 — *not reproducible, see below* | **₹1,11,000.00** |
 
 Claim B settles two questions empirically: paint material depreciation does **not** apply under a nil-dep policy, and IMT-23 applies in full regardless of depreciation type.
+
+### Known divergence from SWAR — the bill-check cap
+
+**SWAR's bill check pays the billed amount even when it exceeds the assessed.** In Claim A the workshop billed roughly 3% above assessment on most rows — headlamp assessed ₹5,076.27, billed ₹5,260.17, paid ₹5,260.17 — and SWAR's endorsement-23 deduction is computed on those billed figures (₹16,925.05 × 50% = ₹8,462.53).
+
+Our `computeRowLiability` caps at `min(assessedNet, billedNet)`, a deliberate decision from the 2026-08-18 bill-check-cap design. Our net for Claim A's bill check is therefore **lower** than ₹11,02,000.68, and that figure must **not** be written as a test expectation — it would fail in a way that looks like a calculation bug.
+
+Claim B's bill check *is* a valid fixture: billed equals assessed on every billed row there, so the cap never bites, and ₹1,11,000.00 is reproducible exactly.
+
+This divergence is worth surfacing to the surveyor in the UI, since someone moving from SWAR will see our figure come out lower and assume a defect. Out of scope here; recorded as a follow-up.
 
 ## Goals
 
@@ -116,17 +126,37 @@ Each site gets a one-line comment naming the reason, so the exclusion is not "ti
 
 ### Part 4 — Paint material depreciation
 
-A **section-level derived deduction**, never a row rate. Paint rows keep a blank Dep% cell.
+**Internally an effective per-row depreciation rate. Externally a section line stating the 50%-on-material rule. The internal rate is never displayed.**
+
+```ts
+// engine — a rate, like any other, fed to computeRowNet
+paintEffectiveRate = (materialPercent/100) × (materialDepPercent/100) × 100   // 25, 50 → 12.5
+
+// report — the printed figure, derived for display only
+paintMaterialDep = Σ(paint rows without depOverride).effectiveAssessed × paintEffectiveRate/100
+```
+
+It **must** be a per-row rate, not a subtraction from the section subtotal. Two reasons:
+
+1. **It would break the base/GST pairing.** `paintOnlyGST` is accumulated per row on the full base. Subtracting the material deduction from `paintOnlyBase` afterwards leaves GST attached to a base that no longer exists.
+2. **Paint rows can carry different GST rates.** A section-level subtraction has no single rate to reverse out.
+
+The two formulations are arithmetically identical — `Σ(b × 0.875) ≡ Σb − 0.125 × Σb` — so the displayed section line is exact.
+
+**The deduction reduces the taxable base, then GST applies to what remains.** This is not optional:
 
 ```
-paintMaterialDep = paintBaseAfterImt23 × (materialPercent/100) × (materialDepPercent/100)
+correct   (10,000 − 1,250) × 1.18 = 10,325
+wrong      10,000 × 1.18 − 1,250  = 10,550     ← 18% of the deduction, in error
 ```
 
-Applied to the **post-IMT-23** paint figure, matching SWAR's label *"Painting Material (After less endorsment 23)"*.
+SWAR reaches ₹10,325 by both routes because its final report subtracts the **GST-inclusive** material figure (₹1,475 = 2,950 × 50%) from a GST-inclusive total, while its bill check subtracts the **pre-GST** figure (₹1,250) from a pre-GST base. We use the pre-GST form throughout, in both documents, and print ₹1,250.
+
+Because the halving happens at `effectiveAssessed`, the rate lands on the **post-IMT-23** paint figure automatically, matching SWAR's label *"Painting Material (After less endorsment 23)"*.
 
 Active only when `applyPaintMaterialDep === true` **and** the policy is standard depreciation. Under nil depreciation there is no material deduction at all — confirmed by Claim B.
 
-Rows carrying an explicit `depOverride` keep their own rate and are excluded from the section deduction, so nothing the surveyor set deliberately is touched or double-deducted.
+Rows carrying an explicit `depOverride` keep their own rate and are excluded from both the effective rate and the displayed section line, so nothing the surveyor set deliberately is touched or double-deducted.
 
 ### Part 5 — Data model
 
@@ -166,9 +196,16 @@ paintMaterialDep: number;
 ### Part 8 — Standard report (final and bill check)
 
 - Narrow `*` column on ticked rows, including rows marked `not-in-bill` — the tag belongs to the part, not to the money. A dedicated column rather than appending to the particulars text, which also avoids colliding with the existing `%*` depreciation-override marker.
-- Under each affected section subtotal:
-  `Less endorsement 23 (50% insured's share, N items)`
-  The item count is the print affordance: on a 123-row report, a reader needs to know how many asterisks to find, and colour does not survive a monochrome printer.
+- The IMT-23 block is inserted **above** the existing section subtotal, as three new lines, using the new pre-depreciation figures:
+  ```
+  Assessed before depreciation            877,801.79    ← new
+  Less endorsement 23 (50% share, 13 items)  8,216.95    ← new
+                                          869,584.83    ← new
+  SUB TOTAL SPARE PARTS                   652,188.62    ← existing line, meaning unchanged
+  ```
+  The existing subtotal keeps its current meaning (after depreciation, before GST). Its *value* moves only because the rows themselves are reduced. Nothing existing is relabelled, which is what lets the regression floor hold.
+- **The block renders when the deduction amount is greater than zero — not when the section merely contains a ticked row.** In Claim B's bill check the rubber bucket contains a ticked headlamp that was never billed, so the deduction is zero and SWAR prints no line. Rendering on ticked-row presence would print `Less endorsement 23 (1 item) — ₹0.00`.
+- `N items` counts the rows actually contributing to that deduction. The count is the print affordance: on a 123-row report a reader needs to know how many asterisks to find, and colour does not survive a monochrome printer.
 - `Contribution of insured under IMT-23` in the insurer-information block.
 - Under the painting subtotal, the deduction and its working:
   ```
@@ -201,12 +238,17 @@ Line items show the full assessed value with IMT-23 as its own named deduction.
 
 Both settled claims become fixtures — they are the best regression suite available, because the correct answer is already signed by a surveyor and accepted by an insurer.
 
-- **Claim A, standard dep.** Metal IMT-23 ₹16,433.91 → ₹8,216.95; plas/rub ₹10,443.22 → ₹5,221.61; paint ₹20,000 → ₹10,000; contribution ₹23,438.56; net assessed loss ₹11,09,000.41.
-- **Claim B, nil dep.** Contribution ₹12,700.00; net ₹1,12,000.00. No paint material deduction anywhere. Bill check: the unbilled headlamp contributes zero IMT-23 deduction and the rubber column shows no deduction line.
-- **Reconciliation.** For every claim, `subtotal − imt23Deduction == subtotalAfter`, exactly, including with a `depOverride` set on one row of a bucket and a non-18% GST rate on another.
-- **Commutativity.** Halving at assessed equals halving after depreciation and GST, to the paisa. Also with a disposal row and with a `not-in-bill` row.
+All expectations below were modelled against the proposed engine and verified to reconcile before this spec was finalised. Compare money with a ±₹0.05 tolerance: SWAR rounds its printed net to whole rupees, and the bucket-collapsed model carries sub-paisa drift.
+
+- **Claim A final, standard dep.** Metal IMT-23 ₹16,433.91 → ₹8,216.95; plas/rub ₹10,443.22 → ₹5,221.61; paint ₹20,000 → ₹10,000; contribution ₹23,438.56; parts after dep incl GST ₹10,27,052.61; labour incl paint ₹1,27,097.80; total assessed ₹11,54,150.41; **net assessed loss ₹11,09,000.41**.
+- **Claim A bill check — assert the cap, not SWAR's net.** Assert that a row billed above its assessed figure contributes `assessed`, not `billed`, and that its IMT-23 deduction follows the capped figure. Do **not** assert ₹11,02,000.68.
+- **Claim B final, nil dep.** Contribution ₹12,700.00; parts ₹20,700.00; labour ₹94,600.00; **net ₹1,12,000.00**. No paint material deduction anywhere.
+- **Claim B bill check.** Spare total ₹19,500.00; **net liability ₹1,11,000.00**. The unbilled headlamp contributes zero, so the rubber deduction is ₹0 and **no line is rendered for that bucket**.
+- **Reconciliation.** For every claim, `preDepSubtotal − imt23Deduction == preDepSubtotalAfter`, exactly — including with a `depOverride` on one row of a bucket and a non-18% GST rate on another. This is the property the pre-depreciation placement buys, and the test that proves it.
+- **Commutativity.** `halve → dep → GST` equals `halve → GST → dep` to the paisa, and `min(a,b)/2 == min(a/2, b/2)`. Also with a disposal row and a `not-in-bill` row.
 - **The five exclusions.** Ticking a row does not move `salvageBasis`, any estimate total, `billedTotals`, `negotiatedSavings`, or the professional fee.
-- **Paint.** Material deduction computed on the post-IMT-23 figure; absent under nil dep; absent when the claim toggle is off; a paint row with a `depOverride` keeps its own rate and is excluded from the section deduction.
+- **Paint, base-vs-GST ordering.** A ₹10,000 paint line with the toggle on yields ₹10,325 incl GST, **not** ₹10,550. This single assertion catches the whole class of "subtract from the wrong side of GST" error.
+- **Paint, other cases.** Deduction computed on the post-IMT-23 figure; absent under nil dep; absent when the claim toggle is off; a paint row with a `depOverride` keeps its own rate and is excluded from both the effective rate and the displayed line; paint rows at two different GST rates still reconcile.
 - **Regression floor.** With no row ticked and the paint toggle off, **every existing report figure is byte-identical.** This is the gate on the whole change.
 
 ## Rollout
@@ -232,3 +274,17 @@ None. Resolved during design:
 - Depreciation presentation (per-bucket `Less Depreciation` lines) deferred to a separate cycle.
 - UIIC portal left untouched.
 - Constructive total loss follows the net figure, as it already does.
+
+Corrected after modelling the design against both claims:
+
+- Paint material depreciation is an **internal per-row rate**, not a section-level subtraction — a subtraction would break the base/GST pairing and cannot handle mixed GST rates.
+- The paint deduction reduces the **taxable base**; GST applies to what remains.
+- The IMT-23 block renders on **deduction amount > 0**, not on the presence of a ticked row.
+- The block sits **above** the existing subtotal as new pre-depreciation lines; no existing line is relabelled.
+- Claim A's bill-check net is **not** a valid fixture, because our cap at `min(assessed, billed)` diverges from SWAR.
+
+Recorded as follow-ups, not addressed here:
+
+- Surfacing the bill-check cap in the UI, so a surveyor moving from SWAR understands why our figure is lower.
+- Whether the constructive-total-loss warning should use repair cost rather than the net figure. It already has this issue with depreciation, independently of IMT-23.
+- IMT-23 presentation in the UIIC reports (their totals move with this change; their layout does not).
