@@ -153,11 +153,13 @@ describe('standard report — section 9 fits the page', () => {
   ];
   const taggedNoFbr = taggedFbr.filter(r => r.partType !== 'fiberglass');
 
+  // Bill check adds one column — the narrow trailing "23" asterisk marker — so
+  // its expected span is one greater than the matching final-report layout.
   test.each([
     ['final, with fiberglass', taggedFbr, 12, '9. DETAILS OF ASSESSMENT', 'final' as const],
     ['final, without fiberglass', taggedNoFbr, 11, '9. DETAILS OF ASSESSMENT', 'final' as const],
-    ['bill check, with fiberglass', taggedFbr, 12, '9. DETAILS OF BILL CHECK', 'bill-check' as const],
-    ['bill check, without fiberglass', taggedNoFbr, 11, '9. DETAILS OF BILL CHECK', 'bill-check' as const],
+    ['bill check, with fiberglass', taggedFbr, 13, '9. DETAILS OF BILL CHECK', 'bill-check' as const],
+    ['bill check, without fiberglass', taggedNoFbr, 12, '9. DETAILS OF BILL CHECK', 'bill-check' as const],
   ])('endorsement-23 rows and paint note span the same as the subtotal — %s', (_l, rows, expected, heading, mode) => {
     const html = buildStandardFinalSurveyHTML(
       claim(rows, { applyPaintMaterialDep: true } as Partial<ClaimData>),
@@ -170,6 +172,31 @@ describe('standard report — section 9 fits the page', () => {
     expect(table).toContain('Less 50% dep. on paint material');
     // Every row — data, subtotal, endorsement-23, paint note — spans the same.
     expect([...new Set(rowSpans(table))]).toEqual([expected]);
+  });
+
+  test('bill check adds a "23" marker column that the final report does not', () => {
+    const rows = [
+      row({ particulars: 'HEAD LAMP', partType: 'plastic', imt23: true, billStatus: 'in-bill' }),
+      row({ particulars: 'BONNET', partType: 'metal', imt23: true, billStatus: 'not-in-bill' }),
+      row({ particulars: 'DOOR', partType: 'metal' }),
+    ];
+    const bill = section9(
+      buildStandardFinalSurveyHTML(claim(rows), {} as never, 'bill-check'),
+      '9. DETAILS OF BILL CHECK',
+    );
+    const final = section9(buildStandardFinalSurveyHTML(claim(rows), {} as never));
+
+    // Header cell present in bill check, absent in the final report.
+    expect(bill).toMatch(/>23<\/th>/);
+    expect(final).not.toMatch(/>23<\/th>/);
+
+    // One asterisk per tagged row — the tag follows the part, so a not-in-bill
+    // row carries it too. (Disallowed rows are filtered out of the bill check.)
+    expect((bill.match(/>\*<\/td>/g) ?? []).length).toBe(2);
+    expect(final).not.toContain('>*</td>');
+
+    // The extra column keeps every row aligned.
+    expect([...new Set(rowSpans(bill))]).toEqual([12]);
   });
 
   test('a long part description does not get its own column widened', () => {

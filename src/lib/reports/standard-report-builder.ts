@@ -251,8 +251,11 @@ export function buildStandardFinalSurveyHTML(
   );
   /** Material columns present: Metal, Plastic, [FbrGls], Glass. */
   const NMAT = hasFiberglass ? 4 : 3;
-  /** Sr, Particulars, Type, Est, Assessed, Dep%, <materials>, GST%, Price+GST. */
-  const NCOLS = 8 + NMAT;
+  /**
+   * Sr, Particulars, Type, Est, Assessed, Dep%, <materials>, GST%, Price+GST,
+   * plus a narrow trailing "23" marker column in bill-check mode only.
+   */
+  const NCOLS = 8 + NMAT + (isBillCheck ? 1 : 0);
 
   // Percentages sum to 100 in both layouts; the FbrGls share goes to Particulars.
   // Sr / Dep% / GST% are trimmed to what their content actually needs, and the
@@ -293,6 +296,15 @@ export function buildStandardFinalSurveyHTML(
   // Repeating it cost two characters in each of eight money columns, which is
   // what forced figures like 1,32,500.00 to break across two lines.
   const m9 = (v: number) => fmt2(v);
+
+  // ── IMT-23 marker column (bill check only) ───────────────────────────────
+  // The settled bill check marks endorsement-23 rows with an asterisk in its
+  // own narrow trailing column, not by bolding them like the final report.
+  // The marker follows the part, so not-in-bill and disallowed rows carry it.
+  const mark23Th = isBillCheck ? `<th style="${th}width:2%;text-align:center;">23</th>` : '';
+  const mark23Td = (r: AssessmentRow) =>
+    isBillCheck ? `<td style="${tdr9}text-align:center;font-weight:700;">${r.imt23 ? '*' : ''}</td>` : '';
+  const mark23Sub = isBillCheck ? `<td style="${sub}"></td>` : '';
 
   // ── Parts rows (Sr | Particulars | Type | Est | Assessed | Dep% | Metal | Plastic | [FbrGls] | Glass | GST% | Price+GST)
   // Numbered across every row, rejected included, so a gap in the Bill Check
@@ -357,6 +369,7 @@ export function buildStandardFinalSurveyHTML(
       ${matCell('glass')}
       <td style="${tdr9}text-align:center;">${isDisposal ? '0%' : `${gstPct}%`}</td>
       <td style="${cellStyle}">${cellLabel}</td>
+      ${mark23Td(r)}
     </tr>`;
   }).join('');
 
@@ -398,6 +411,7 @@ export function buildStandardFinalSurveyHTML(
       <td colspan="${NMAT}" style="${tdr9}text-align:center;">—</td>
       <td style="${tdr9}text-align:center;">${gstPct}%</td>
       <td style="${tdr9}${disallowed ? 'color:#a00;' : 'font-weight:600;'}">${disallowed ? '—' : m9(priceGst)}</td>
+      ${mark23Td(r)}
     </tr>`;
     }).join('');
   };
@@ -426,6 +440,7 @@ export function buildStandardFinalSurveyHTML(
       <th colspan="${NMAT}" style="${th}text-align:center;">—</th>
       <th style="${th}text-align:center;">GST%</th>
       <th style="${th}text-align:right;">Price+GST ₹</th>
+      ${mark23Th}
     </tr>`;
 
   // ── Sections that differ by mode ────────────────────────────────────────────
@@ -855,6 +870,7 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
       <th style="${th}width:${W.material}%;text-align:right;">Glass ₹</th>
       <th style="${th}width:${W.gst}%;text-align:center;">GST%</th>
       <th style="${th}width:${W.price}%;text-align:right;">Price+GST ₹</th>
+      ${mark23Th}
     </tr>
   </thead>
   <tbody>
@@ -871,6 +887,7 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
       <td style="${sub}text-align:right;">${m9(glass)}</td>
       <td style="${sub}text-align:center;">—</td>
       <td style="${sub}text-align:right;font-weight:700;">${m9(pT)}</td>
+      ${mark23Sub}
     </tr>
     ${imt23Row(imt23.parts)}
     <tr><td colspan="${NCOLS}" style="${sec}">LABOUR</td></tr>
@@ -883,6 +900,7 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
       <td style="${sub}text-align:center;">—</td>
       <td colspan="${NMAT + 1}" style="${sub}text-align:right;">${m9(labOnlyBase)}</td>
       <td style="${sub}text-align:right;font-weight:700;">${m9(labT)}</td>
+      ${mark23Sub}
     </tr>
     ${imt23Row(imt23.labour)}
     <tr><td colspan="${NCOLS}" style="${sec}">PAINTING</td></tr>
@@ -895,6 +913,7 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
       <td style="${sub}text-align:center;">—</td>
       <td colspan="${NMAT + 1}" style="${sub}text-align:right;">${m9(paintOnlyBase)}</td>
       <td style="${sub}text-align:right;font-weight:700;">${m9(paintT)}</td>
+      ${mark23Sub}
     </tr>
     ${imt23Row(imt23.paint)}
     ${paintMaterialRate(claim) > 0 && paintMaterialDed > 0 ? `<tr>
