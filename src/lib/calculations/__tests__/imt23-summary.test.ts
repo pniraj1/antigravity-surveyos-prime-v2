@@ -26,8 +26,13 @@ describe('IMT-23 in the assessment summary', () => {
   });
 
   it('does not move the salvage basis — salvage is the scrap value of the part', () => {
-    const rows = [row({ imt23: true })];
-    expect(salvageBasis(rows)).toBe(10000);
+    // salvageBasis is deliberately GST-inclusive (see its doc comment): the
+    // basis is what the claim will actually carry for that part. IMT-23 must
+    // not shift it, so a tagged row still contributes 10,000 x 1.18.
+    const tagged = [row({ imt23: true })];
+    const untagged = [row()];
+    expect(salvageBasis(tagged)).toBe(11800);
+    expect(salvageBasis(tagged)).toBe(salvageBasis(untagged));
   });
 
   it('halves labour and paint rows too', () => {

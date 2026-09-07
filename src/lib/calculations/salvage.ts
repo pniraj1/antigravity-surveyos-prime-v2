@@ -27,5 +27,5 @@ export const salvageBasis = (
   amount: (r: AssessmentRow) => number = r => r.assessed,
 ) => rows.reduce((s, r) =>
   r.allowed && r.section === 'parts' && r.partType === 'metal'
-    ? s + amount(r)
+    ? s + amount(r) * (r.isDisposal ? 1 : 1 + (r.gst ?? 18) / 100)
     : s, 0);
