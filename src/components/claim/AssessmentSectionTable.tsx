@@ -115,14 +115,14 @@ export function AssessmentSectionTable({
               <input
                 type="number" min={0} max={100}
                 value={currentClaim?.paintMaterialPercent ?? 25}
-                onChange={(e) => updateClaim({ paintMaterialPercent: Number(e.target.value) })}
+                onChange={(e) => updateClaim({ paintMaterialPercent: e.target.value === '' ? undefined : Number(e.target.value) })}
                 className="w-12 mx-1 px-1 border border-border rounded text-right"
               />
               % @
               <input
                 type="number" min={0} max={100}
                 value={currentClaim?.paintMaterialDepPercent ?? 50}
-                onChange={(e) => updateClaim({ paintMaterialDepPercent: Number(e.target.value) })}
+                onChange={(e) => updateClaim({ paintMaterialDepPercent: e.target.value === '' ? undefined : Number(e.target.value) })}
                 className="w-12 mx-1 px-1 border border-border rounded text-right"
               />
               % dep

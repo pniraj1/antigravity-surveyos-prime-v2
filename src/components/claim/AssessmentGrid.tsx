@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useClaimStore } from '@/stores/claim-store';
-import { getVehicleAgeMonths } from '@/lib/calculations/depreciation';
+import { getVehicleAgeMonths, toDepreciationType } from '@/lib/calculations/depreciation';
 import { calculateAssessmentSummary } from '@/lib/calculations/assessment';
 import { sectionSubtotals, SECTION_ORDER } from '@/lib/calculations/section-subtotals';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
@@ -209,7 +209,11 @@ export function AssessmentGrid() {
 
   const assessmentRows = allRows;
   const [showUiicSummary, setShowUiicSummary] = useState(false);
-  const depreciationType = currentClaim?.depreciationType ?? 'standard';
+  // Normalised, not raw: persisted claims can hold 'Nil Depreciation' or odd
+  // casing, and the engine already routes through toDepreciationType. A raw
+  // 'Standard' would make the engine depreciate paint while the grid's strict
+  // equality check hid the control that governs it.
+  const depreciationType = toDepreciationType(currentClaim?.depreciationType);
 
   const ageMonths = getVehicleAgeMonths(
     currentClaim?.vehicle.dateOfRegistration ?? null,
