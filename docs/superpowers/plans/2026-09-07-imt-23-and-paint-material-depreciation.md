@@ -357,14 +357,21 @@ describe('Claim A — TATA SIGNA 4825 (standard dep)', () => {
   ];
   const s = calculateAssessmentSummary(rows, 46, 'standard', 43650, 1500, 0);
 
+  // Every assertion must run product code. `expect(16433.91 / 2).toBe(...)`
+  // tests arithmetic on literals and would pass with the engine deleted.
+  const share = (row: AssessmentRow) =>
+    computeRowNet(row, 0, { grossOfImt23: true }).netBeforeGst
+    - computeRowNet(row, 0).netBeforeGst;
+
   it('deducts the endorsement share per bucket', () => {
-    expect(16433.91 / 2).toBeCloseTo(8216.95, 2);
-    expect(10443.22 / 2).toBeCloseTo(5221.61, 2);
-    expect(20000.00 / 2).toBeCloseTo(10000.00, 2);
+    expect(share(rows[2])).toBeCloseTo(8216.95, 2);  // metal
+    expect(share(rows[4])).toBeCloseTo(5221.61, 2);  // plas/rub
+    expect(share(rows[6])).toBeCloseTo(10000.00, 2); // paint
   });
 
   it("totals the insured's contribution", () => {
-    expect(16433.91 / 2 + 10443.22 / 2 + 20000 / 2).toBeCloseTo(23438.56, 2);
+    const total = rows.reduce((s, r) => s + share(r), 0);
+    expect(total).toBeCloseTo(23438.56, 2);
   });
 
   it('reaches each bucket after depreciation and GST', () => {
@@ -400,7 +407,10 @@ describe('Claim B — TATA LPT 4825 (nil dep)', () => {
   const s = calculateAssessmentSummary(rows, 41, 'nil', 1800, 1500, 0);
 
   it("totals the insured's contribution", () => {
-    expect(5000 / 2 + 2400 / 2 + 18000 / 2).toBeCloseTo(12700.00, 2);
+    const total = rows.reduce((s, r) =>
+      s + computeRowNet(r, 0, { grossOfImt23: true }).netBeforeGst
+        - computeRowNet(r, 0).netBeforeGst, 0);
+    expect(total).toBeCloseTo(12700.00, 2);
   });
 
   it('applies no paint material depreciation under a nil-dep policy', () => {
@@ -432,17 +442,20 @@ describe('Claim C — TATA LPT 3118 (UIIC format)', () => {
     expect(net * 1.18).toBeCloseTo(12499.74, 2);
   });
 
-  it('reconciles the parts column', () => {
-    // part list 287,621.70 less IMT-23 23,586.00 less dep 73,867.00
-    expect(287621.70 - 23586.00 - 73867.00).toBeCloseTo(190168.70, 2);
-  });
-
-  it('reconciles the paint chain and the gross', () => {
-    const paintAfterImt23 = 24000 - 12000;
-    expect(paintAfterImt23 * 0.125).toBeCloseTo(1500.00, 2);
-    expect(paintAfterImt23 - 1500).toBeCloseTo(10500.00, 2);
-    expect(206270.37 + 338250.00 + 10500.00).toBeCloseTo(555020.37, 2);
-    expect(555020.37 - 8520.00 - 1500.00).toBeCloseTo(545000.37, 2);
+  it('reconciles the three tagged rows against the printed deduction', () => {
+    // The report's parts column reads
+    //   287,621.70 list − 23,586.00 IMT-23 − 73,867.00 dep = 190,168.70.
+    // Only the middle term is ours to prove; assert it from the rows, not
+    // from the subtraction.
+    const tagged = [
+      r({ assessed: 300.00, partType: 'plastic', gst: 0, imt23: true }),
+      r({ assessed: 4500.00, partType: 'glass', gst: 0, imt23: true }),
+      r({ assessed: 42372.00, partType: 'plastic', gst: 18, imt23: true }),
+    ];
+    const deduction = tagged.reduce((s, row) =>
+      s + computeRowNet(row, 0, { grossOfImt23: true }).netBeforeGst
+        - computeRowNet(row, 0).netBeforeGst, 0);
+    expect(deduction).toBeCloseTo(23586.00, 2);
   });
 });
 ```
@@ -519,6 +532,15 @@ describe('paintMaterialRate', () => {
     expect(net).toBeCloseTo(8750, 2);
     expect(net * 1.18).toBeCloseTo(10325, 2);
     expect(net * 1.18).not.toBeCloseTo(10550, 2);
+  });
+
+  it("matches Claim C's printed paint chain", () => {
+    // UIIC sample MOTOR-867/2026: 24,000 painting, IMT-23 tagged.
+    // 24,000 -> less Imt 23 12,000 -> LESS PAINT DEP: 12.5% 1,500 -> 10,500
+    const afterImt23 = 24000 / 2;
+    const rate = paintMaterialRate(claim());
+    expect(afterImt23 * (rate / 100)).toBeCloseTo(1500.00, 2);
+    expect(afterImt23 * (1 - rate / 100)).toBeCloseTo(10500.00, 2);
   });
 });
 ```
@@ -1228,26 +1250,28 @@ Insert `${imt23Row(imt23.parts, NCOLS - 5)}` immediately **after** the Sub-Total
 
 - [ ] **Step 5: Add the paint material note**
 
-Immediately after the painting deduction row, add:
+Compute the three figures once, beside the other calculations near `assessedPaintRaw`:
 
 ```ts
-${paintMaterialRate(claim) > 0 && paintOnlyBase > 0 ? `<tr>
+const mPct = claim.paintMaterialPercent ?? 25;
+const mDepPct = claim.paintMaterialDepPercent ?? 50;
+const paintBaseAfterImt23 = assessedPaintRaw - imt23.paint.amount;
+const paintMaterialBase = paintBaseAfterImt23 * (mPct / 100);
+const paintMaterialDed = paintMaterialBase * (mDepPct / 100);
+```
+
+Then emit this row immediately after the painting deduction row:
+
+```ts
+${paintMaterialRate(claim) > 0 && paintBaseAfterImt23 > 0 ? `<tr>
   <td colspan="${NCOLS}" style="${td9}font-size:${scale.labelFont};color:#444;">
-    Less 50% dep. on paint material (${m9(paintOnlyBase * (paintMaterialRate(claim) / 100) * (100 / (100 - paintMaterialRate(claim))) * (25 / 25))} of ${m9(assessedPaintRaw - imt23.paint.amount)} @ ${claim.paintMaterialPercent ?? 25}%)
-    &nbsp;·&nbsp; Painting labour @ ${100 - (claim.paintMaterialPercent ?? 25)}% &nbsp;·&nbsp; Painting material @ ${claim.paintMaterialPercent ?? 25}%
+    Less ${mDepPct}% dep. on paint material (${m9(paintMaterialBase)} of ${m9(paintBaseAfterImt23)} @ ${mPct}%) &nbsp;=&nbsp; ${m9(paintMaterialDed)}
+    &nbsp;·&nbsp; Painting labour @ ${100 - mPct}% &nbsp;·&nbsp; Painting material @ ${mPct}%
   </td>
 </tr>` : ''}
 ```
 
-Simplify the arithmetic by computing it once above instead:
-
-```ts
-const paintBaseAfterImt23 = assessedPaintRaw - imt23.paint.amount;
-const paintMaterialBase = paintBaseAfterImt23 * ((claim.paintMaterialPercent ?? 25) / 100);
-const paintMaterialDed = paintMaterialBase * ((claim.paintMaterialDepPercent ?? 50) / 100);
-```
-
-and use `${m9(paintMaterialDed)}` and `${m9(paintMaterialBase)}` in the note.
+The note states the tariff's own rule — 50% on the material — and shows the split. It must never print the derived 12.5%; that form belongs to the UIIC report only (Task 10).
 
 - [ ] **Step 6: Add the contribution line and the policy banner**
 
