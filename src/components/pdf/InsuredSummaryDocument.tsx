@@ -173,7 +173,7 @@ export function InsuredSummaryDocument({
         </View>
 
         {/* Block 3: Why is there a difference? */}
-        {(fs.depreciationTotal > 0 || fs.excessTotal > 0 || fs.consumablesTotal > 0 ||
+        {(fs.depreciationTotal > 0 || fs.imt23Total > 0 || fs.excessTotal > 0 || fs.consumablesTotal > 0 ||
           negotiatedItems.length > 0 || overpricingItems.length > 0 ||
           partialRepairItems.length > 0 || wearAndTearItems.length > 0 ||
           consumableItems.length > 0 || salvageItems.length > 0 || notCoveredItems.length > 0) && (
@@ -294,6 +294,16 @@ export function InsuredSummaryDocument({
                 {'  • '}{item.partDescription}: {fmt(item.surveyorAmount)}
               </Text>
             ))}
+          </View>
+        )}
+
+        {fs.imt23Total > 0 && (
+          <View style={styles.deductionBlock}>
+            <Text style={styles.deductionTitle}>Your share under Endorsement IMT-23</Text>
+            <Text style={styles.deductionText}>
+              Your commercial-vehicle policy would ordinarily not cover items such as bumpers, headlamps, tyres and paintwork. Endorsement IMT-23 restores that cover, on the condition that you bear 50% of the assessed loss on those items. The amount below is your half of that assessed loss — not a penalty, but the cost of the cover the endorsement adds back.
+            </Text>
+            <Text style={styles.deductionAmount}>Your 50% share: {fmt(fs.imt23Total)}</Text>
           </View>
         )}
 

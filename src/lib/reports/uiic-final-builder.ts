@@ -161,6 +161,14 @@ export function buildUIICFinalHTML(claim: ClaimData, profile: SurveyorProfile | 
   const imt23Total = imt23.parts.amount + imt23.labour.amount + imt23.paint.amount;
   const pmRate = paintMaterialRate(claim);
   const paintRaw = APT.filter(r => r.allowed !== false).reduce((s, r) => s + r.assessed, 0);
+  // LESS PAINT DEP is the GR-9 12.5% on paint that actually took the automatic
+  // rate. A surveyor's depOverride replaces that rate (rowDepRate), so an
+  // overridden row never had paint-material depreciation — yet still feeds
+  // paintRaw. Mirror the standard report: basis is the post-endorsement assessed
+  // of the auto-rate rows only, and the line renders only when that basis > 0.
+  const autoPaintBasis = APT
+    .filter(r => r.allowed !== false && r.depOverride === undefined)
+    .reduce((s, r) => s + effectiveAssessed(r), 0);
   const payableByInsurer = net;
 
   // ── PAGE 1: Policy / Claim / Vehicle / Survey / Reinspection details ────────
@@ -345,7 +353,7 @@ ${getSurveyorHeader(profile)}
   // Part List column. Every downstream figure on the row already comes from
   // computeRowNet's default, which halves — so this line is purely visible.
   const imt23RowLine = (r: AssessmentRow, isNA: boolean) =>
-    r.imt23 && !isNA
+    r.imt23 && !isNA && r.assessed
       ? `<tr><td colspan="4" style="${td}font-weight:700;">Less Imt 23</td><td style="${td}text-align:right;font-weight:700;">${fa(r.assessed / 2)}</td><td colspan="7" style="${td}"></td></tr>`
       : '';
 
@@ -440,7 +448,7 @@ ${/* Fixed layout makes the declared widths binding. Under the default auto
 ${paintRaw > 0 ? `<tr style="background:#eee;"><td colspan="11" style="${td}text-align:right;">SUB TOTAL</td><td style="${td}text-align:right;">${fc(paintRaw)}</td></tr>
 ${imt23.paint.amount > 0 ? `<tr style="background:#eee;"><td colspan="11" style="${td}text-align:right;font-weight:700;">Less Imt 23</td><td style="${td}text-align:right;font-weight:700;">${fc(imt23.paint.amount)}</td></tr>
 <tr style="background:#eee;"><td colspan="11" style="${td}text-align:right;">SUB TOTAL</td><td style="${td}text-align:right;">${fc(paintRaw - imt23.paint.amount)}</td></tr>` : ''}
-${pmRate > 0 ? `<tr style="background:#eee;"><td colspan="11" style="${td}text-align:right;font-weight:700;">LESS PAINT DEP: ${pmRate}%</td><td style="${td}text-align:right;">${fc((paintRaw - imt23.paint.amount) * pmRate / 100)}</td></tr>` : ''}` : ''}
+${pmRate > 0 && autoPaintBasis > 0 ? `<tr style="background:#eee;"><td colspan="11" style="${td}text-align:right;font-weight:700;">LESS PAINT DEP: ${pmRate}%</td><td style="${td}text-align:right;">${fc(autoPaintBasis * pmRate / 100)}</td></tr>` : ''}` : ''}
 ${/* The parts line: its money column foots the SPARE PARTS rows above. The
      labour and paint columns are settled by the two rows beneath, so they
      stay empty here rather than repeating a combined figure that matches

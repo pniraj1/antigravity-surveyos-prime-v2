@@ -13,8 +13,6 @@ import { useProfileStore } from '@/stores/profile-store';
 import { downloadAsWord } from '@/lib/reports/word-export';
 import { footerFromProfile } from '@/lib/reports/print-shell';
 import { buildStandardFinalSurveyHTML } from '@/lib/reports/standard-report-builder';
-import { calculateAssessmentSummary, getCompulsoryExcess } from '@/lib/calculations';
-import { getVehicleAgeMonths } from '@/lib/calculations/depreciation';
 import { FileText, Sparkles, Download, Loader2, Hash, Wand2, PanelRightOpen, PanelRightClose } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -209,20 +207,6 @@ export function DetailsTab() {
               <Button
                 variant="outline"
                 onClick={() => {
-                  const fb = currentClaim.feeBill;
-                  const summary = calculateAssessmentSummary(
-                    currentClaim.assessmentRows || [],
-                    getVehicleAgeMonths(
-                      currentClaim.vehicle?.dateOfRegistration || null,
-                      currentClaim.vehicle?.yearOfManufacture ? Number(currentClaim.vehicle.yearOfManufacture) : null,
-                      currentClaim.accident?.dateAndTime || null,
-                    ),
-                    currentClaim.depreciationType || 'Standard',
-                    fb?.salvageValue || 0,
-                    getCompulsoryExcess(fb),
-                    fb?.voluntaryExcess || 0,
-                    currentClaim,
-                  );
                   downloadAsWord(
                     buildStandardFinalSurveyHTML(currentClaim, profile!),
                     `${currentClaim.vehicle.registrationNumber || 'Claim'}-Final-Survey`,

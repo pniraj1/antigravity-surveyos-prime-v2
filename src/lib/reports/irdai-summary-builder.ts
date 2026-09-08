@@ -10,7 +10,7 @@ import { ClaimData } from '@/types/claim';
 import { SurveyorProfile } from '@/types';
 import { calculateFeeSummary } from '@/lib/calculations/fees';
 import { calculateAssessmentSummary, getCompulsoryExcess } from '@/lib/calculations/assessment';
-import { getVehicleAgeMonths } from '@/lib/calculations/depreciation';
+import { getVehicleAgeMonths, toDepreciationType } from '@/lib/calculations/depreciation';
 import { formatDateDMY } from '@/lib/calculations';
 
 // ─── Types ──────────────────────────────────────────────────
@@ -89,7 +89,7 @@ export function filterClaimsForExport(
 
 // ─── Build flat row for each claim ──────────────────────────
 
-function buildClaimRow(claim: ClaimData, index: number): ClaimRow {
+export function buildClaimRow(claim: ClaimData, index: number): ClaimRow {
   const feeSummary = claim.feeBill
     ? calculateFeeSummary(claim.feeBill)
     : { professionalFee: 0, riFee: 0, travelExpenses: 0, photographyCharges: 0, postalCharges: 0, haltageCharges: 0, gstAmount: 0, grandTotal: 0, subTotal: 0 };
@@ -106,9 +106,11 @@ function buildClaimRow(claim: ClaimData, index: number): ClaimRow {
       const summary = calculateAssessmentSummary(
         claim.assessmentRows,
         ageMonths,
-        'standard',
+        toDepreciationType(claim.depreciationType),
         claim.feeBill?.salvageValue ?? 0,
-        getCompulsoryExcess(claim.feeBill)
+        getCompulsoryExcess(claim.feeBill),
+        claim.feeBill?.voluntaryExcess ?? 0,
+        claim,
       );
       netAssessedLoss = summary.netAssessedLoss;
     } catch {

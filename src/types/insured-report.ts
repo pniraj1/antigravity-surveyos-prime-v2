@@ -52,6 +52,8 @@ export interface InsuredReportFinancialSummary {
   garageEstimate: number;
   negotiatedSavings: number;
   depreciationTotal: number;
+  /** Insured's 50% share of assessed loss under Endorsement IMT-23, pre-depreciation. Shown only when > 0. */
+  imt23Total: number;
   excessTotal: number;
   consumablesTotal: number;
   notCoveredTotal: number;

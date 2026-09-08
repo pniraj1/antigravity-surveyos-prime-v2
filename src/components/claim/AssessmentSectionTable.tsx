@@ -4,6 +4,7 @@ import React from 'react';
 import { useClaimStore } from '@/stores/claim-store';
 import { rowDepRate } from '@/lib/calculations/row-dep-rate';
 import { imt23Totals } from '@/lib/calculations/imt23-totals';
+import { computeRowNet } from '@/lib/calculations/row-net';
 import { formatCurrency, shouldStartSupplementaryBand } from '@/lib/calculations/utils';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -92,6 +93,22 @@ export function AssessmentSectionTable({
   const sectionRowIds = rows.map(r => r.id);
   const totalCols = 9 + visibleCount;
   const sectionImt23 = imt23Totals(rows)[section];
+  // The deduction line sits in the same column as `subtotal.base`, which is
+  // post-depreciation and post-endorsement from the engine. imt23Totals gives
+  // the pre-depreciation share, which never reconciles once dep is non-zero.
+  // Express the deduction on the same post-depreciation basis: the endorsement
+  // half of each tagged row's net, after its own depreciation. Then
+  // Σ Net (shown per row, gross of endorsement) − this line = subtotal.base.
+  const claimForDepFooter = currentClaim ?? { depreciationType };
+  const sectionEndorsementDeduction = rows.reduce((s, r) => {
+    if (r.allowed === false || !r.imt23 || !r.assessed) return s;
+    const dep = rowDepRate(r, ageMonths, claimForDepFooter);
+    return (
+      s +
+      computeRowNet(r, dep, { grossOfImt23: true }).netBeforeGst -
+      computeRowNet(r, dep).netBeforeGst
+    );
+  }, 0);
 
   return (
     <div className="mb-6">
@@ -591,13 +608,13 @@ export function AssessmentSectionTable({
             )}
           </tbody>
           <tfoot>
-            {sectionImt23.amount > 0 && (
+            {sectionEndorsementDeduction > 0 && (
               <tr className="bg-primary/5 text-primary">
                 <td colSpan={totalCols - 3} className="px-2 py-1 text-right text-[11px]">
                   Less endorsement 23 (50% insured&apos;s share, {sectionImt23.count} item{sectionImt23.count === 1 ? '' : 's'})
                 </td>
                 <td className="px-2 py-1 text-right text-[11px] tabular-nums">
-                  {sectionImt23.amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {sectionEndorsementDeduction.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
                 <td colSpan={2} />
               </tr>

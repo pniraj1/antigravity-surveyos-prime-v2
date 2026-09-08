@@ -6,7 +6,10 @@
 
 import type { ClaimData } from '@/types/claim';
 import type { InsuredReportFinancialSummary } from '@/types/insured-report';
-import { calculateAssessmentSummary, getDepreciationRate, computeRowNet } from '@/lib/calculations';
+import { calculateAssessmentSummary, computeRowNet } from '@/lib/calculations';
+import { effectiveAssessed } from '@/lib/calculations/row-net';
+import { rowDepRate } from '@/lib/calculations/row-dep-rate';
+import { imt23Totals } from '@/lib/calculations/imt23-totals';
 
 /**
  * Computes the financial breakdown for the Insured Claim Summary.
@@ -52,10 +55,7 @@ export function computeInsuredFinancialSummary(
   // negotiatedTotal / overpricingTotal / partialRepairTotal. Printing it under
   // "Depreciation on Parts" told the insured the policy had deducted rupees the
   // policy never touched, and counted those rupees twice on one page.
-  const depRateFor = (r: (typeof rows)[number]) =>
-    r.depOverride !== undefined
-      ? r.depOverride
-      : getDepreciationRate(r.partType, ageMonths, claim.depreciationType);
+  const depRateFor = (r: (typeof rows)[number]) => rowDepRate(r, ageMonths, claim);
 
   const depreciationBreakdown = rows
     .filter((r) => r.section === 'parts' && r.allowed && r.action !== 'disallow')
@@ -70,7 +70,11 @@ export function computeInsuredFinancialSummary(
         // undervaluing their part.
         assessed: r.assessed,
         depRate,
-        deductionAmount: Math.max(0, r.assessed - afterDep),
+        // afterDep is computed on effectiveAssessed (halved for IMT-23), so the
+        // deduction must subtract from the same basis — otherwise the endorsement
+        // share is billed to the insured as "depreciation" and described again as
+        // a prose clause. The share is its own named line (imt23Total).
+        deductionAmount: Math.max(0, effectiveAssessed(r) - afterDep),
       };
     })
     .filter((r) => r.deductionAmount > 0);
@@ -79,6 +83,14 @@ export function computeInsuredFinancialSummary(
     (sum, r) => sum + r.deductionAmount,
     0,
   );
+
+  // ─── IMT-23 endorsement share ───────────────────────────
+  // Endorsement 23 RESTORED cover the commercial-vehicle policy would otherwise
+  // exclude entirely; the insured bears half the assessed loss. Its own named
+  // money line, on the pre-depreciation assessed figure, reusing the same
+  // reducer the reports print from.
+  const it = imt23Totals(rows);
+  const imt23Total = it.parts.amount + it.labour.amount + it.paint.amount;
 
   // ─── Not Covered ────────────────────────────────────────
   // Rows that are disallowed by the surveyor.
@@ -140,6 +152,7 @@ export function computeInsuredFinancialSummary(
     negotiatedSavings,
     depreciationTotal,
     depreciationBreakdown,
+    imt23Total,
     excessTotal,
     consumablesTotal: 0, // refined by AI in Pass 2 — split from notCoveredTotal
     notCoveredTotal,

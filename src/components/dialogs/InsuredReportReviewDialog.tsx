@@ -350,6 +350,7 @@ export function InsuredReportReviewDialog({
                     { label: 'Garage repair estimate', value: draft.financialSummary.garageEstimate, prefix: '' },
                     { label: 'Amount negotiated with garage', value: draft.financialSummary.negotiatedSavings, prefix: '−' },
                     { label: 'Depreciation on parts', value: draft.financialSummary.depreciationTotal, prefix: '−' },
+                    { label: 'Your share under Endorsement IMT-23', value: draft.financialSummary.imt23Total, prefix: '−' },
                     { label: 'Excess (compulsory + voluntary)', value: draft.financialSummary.excessTotal, prefix: '−' },
                     { label: 'Consumables deduction', value: draft.financialSummary.consumablesTotal, prefix: '−' },
                     { label: 'Items not covered by policy', value: draft.financialSummary.notCoveredTotal, prefix: '−' },
