@@ -94,7 +94,10 @@ describe('UIIC Final Report — Depreciation Amount column', () => {
       row({ particulars: 'UNIQUE_DISALLOWED', assessed: 10000, allowed: false }),
     ]);
     const html = buildUIICFinalHTML(c, null);
-    const marker = html.includes('NOT ALLOWED') || html.includes('Not<br/>Allowed');
+    // 'Not Allowed' used to carry a hardcoded <br/>, which forced it onto two
+    // lines in a column that fits it on one at 6.5pt. The marker's presence is
+    // what this test is about; the line break was never part of the intent.
+    const marker = html.includes('NOT ALLOWED') || html.includes('Not Allowed');
     expect(marker).toBe(true);
   });
 

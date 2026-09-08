@@ -365,9 +365,9 @@ ${getSurveyorHeader(profile)}
     const wg = isNA ? 0 : isDisposal ? netBeforeGst : afterDep * (1 + (r.gst || 0) / 100);
     // The flag lives in the row's own money column, as it does for labour and
     // paint — each section books to one column and flags in the same one.
-    const wgLabel = isNA ? 'Not<br/>Allowed' : isDisposal ? `${fa(netBeforeGst)} DISP` : fa(wg);
+    const wgLabel = isNA ? 'Not Allowed' : isDisposal ? `${fa(netBeforeGst)} DISP` : fa(wg);
     const wgStyle = isNA
-      ? `${td}text-align:center;color:#a00;font-weight:700;font-size:6.5pt;`
+      ? `${td}text-align:center;color:#a00;font-weight:700;font-size:6.5pt;white-space:nowrap;`
       : isDisposal ? `${td}text-align:right;color:#b45309;font-weight:600;` : `${td}text-align:right;`;
     const gstLabel = isNA ? '' : isDisposal ? '0' : String(r.gst ?? 0);
     const pt = r.partType === 'metal' ? 'Metal' : r.partType === 'glass' ? 'Glass' : r.partType === 'fiberglass' ? 'Fibre Glass' : 'Plastic/Rubber';
@@ -399,7 +399,7 @@ ${getSurveyorHeader(profile)}
 
     const depAmt = isNA ? '' : fa(effectiveAssessed(r) - afterDep);
 
-    return bandHtml + `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : serviceDepLabel(r, dep)}</td><td style="${td}text-align:right;">${depAmt}</td><td style="${td}"></td><td style="${td}text-align:center;">${isNA ? '' : String(r.gst ?? 0)}</td><td style="${td}"></td><td style="${td}text-align:right;">${isNA ? 'Not<br/>Allowed' : fa(withGst)}</td><td style="${td}"></td></tr>` + imt23RowLine(r, isNA);
+    return bandHtml + `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : serviceDepLabel(r, dep)}</td><td style="${td}text-align:right;">${depAmt}</td><td style="${td}"></td><td style="${td}text-align:center;">${isNA ? '' : String(r.gst ?? 0)}</td><td style="${td}"></td><td style="${td}text-align:right;">${isNA ? 'Not Allowed' : fa(withGst)}</td><td style="${td}"></td></tr>` + imt23RowLine(r, isNA);
   }).join('');
 
   // Disallowed paint is listed and tagged, exactly as parts and labour are.
@@ -415,9 +415,17 @@ ${getSurveyorHeader(profile)}
       ? `<tr><td colspan="12" style="padding:4px 8px;text-align:center;font-size:9pt;font-weight:600;color:#666;background:linear-gradient(to right,#f5f5f5,#fafafa,#f5f5f5);">Supplementary Estimate</td></tr>`
       : '';
 
-    const depAmt = isNA ? '' : fa(effectiveAssessed(r) - afterDep);
+    // A paint row that took the automatic GR-9 rate leaves its Dep% and
+    // Depreciation cells EMPTY: the LESS PAINT DEP block beneath states that
+    // deduction once, as the settled UIIC report does. Printing it here as well
+    // put the same figure on the page twice with nothing saying they were one
+    // deduction. A row carrying the surveyor's own depOverride still shows it —
+    // that rate is the surveyor's, and no block accounts for it.
+    const tookAutoRate = r.depOverride === undefined && paintMaterialRate(claim) > 0;
+    const depAmt = isNA || tookAutoRate ? '' : fa(effectiveAssessed(r) - afterDep);
+    const depCell = isNA || tookAutoRate ? '' : serviceDepLabel(r, dep);
 
-    return bandHtml + `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Paint</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : serviceDepLabel(r, dep)}</td><td style="${td}text-align:right;">${depAmt}</td><td style="${td}"></td><td style="${td}text-align:center;">${isNA ? '' : String(r.gst ?? 0)}</td><td style="${td}"></td><td style="${td}"></td><td style="${td}text-align:right;">${isNA ? 'Not<br/>Allowed' : fa(withGst)}</td></tr>`;
+    return bandHtml + `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Paint</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${depCell}</td><td style="${td}text-align:right;">${depAmt}</td><td style="${td}"></td><td style="${td}text-align:center;">${isNA ? '' : String(r.gst ?? 0)}</td><td style="${td}"></td><td style="${td}"></td><td style="${td}text-align:right;">${isNA ? 'Not Allowed' : fa(withGst)}</td></tr>`;
   }).join('');
 
   const p3 = `<div style="page-break-before:always;"></div>
@@ -448,7 +456,8 @@ ${/* Fixed layout makes the declared widths binding. Under the default auto
 ${paintRaw > 0 ? `<tr style="background:#eee;"><td colspan="11" style="${td}text-align:right;">SUB TOTAL</td><td style="${td}text-align:right;">${fc(paintRaw)}</td></tr>
 ${imt23.paint.amount > 0 ? `<tr style="background:#eee;"><td colspan="11" style="${td}text-align:right;font-weight:700;">Less Imt 23</td><td style="${td}text-align:right;font-weight:700;">${fc(imt23.paint.amount)}</td></tr>
 <tr style="background:#eee;"><td colspan="11" style="${td}text-align:right;">SUB TOTAL</td><td style="${td}text-align:right;">${fc(paintRaw - imt23.paint.amount)}</td></tr>` : ''}
-${pmRate > 0 && autoPaintBasis > 0 ? `<tr style="background:#eee;"><td colspan="11" style="${td}text-align:right;font-weight:700;">LESS PAINT DEP: ${pmRate}%</td><td style="${td}text-align:right;">${fc(autoPaintBasis * pmRate / 100)}</td></tr>` : ''}` : ''}
+${pmRate > 0 && autoPaintBasis > 0 ? `<tr style="background:#eee;"><td colspan="11" style="${td}text-align:right;font-weight:700;">LESS PAINT DEP: ${pmRate}%</td><td style="${td}text-align:right;">${fc(autoPaintBasis * pmRate / 100)}</td></tr>
+<tr><td colspan="12" style="${td}font-size:6.5pt;color:#444;">Painting material @ ${claim.paintMaterialPercent ?? 25}% of ${fc(autoPaintBasis)} = ${fc(autoPaintBasis * ((claim.paintMaterialPercent ?? 25) / 100))}, less ${claim.paintMaterialDepPercent ?? 50}% = ${fc(autoPaintBasis * pmRate / 100)} &nbsp;&middot;&nbsp; Painting labour @ ${100 - (claim.paintMaterialPercent ?? 25)}% attracts no depreciation.</td></tr>` : ''}` : ''}
 ${/* The parts line: its money column foots the SPARE PARTS rows above. The
      labour and paint columns are settled by the two rows beneath, so they
      stay empty here rather than repeating a combined figure that matches
@@ -612,6 +621,13 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   const labourAgg  = aggregateGst(billedLabour, rowDepFor);
   const paintAgg   = aggregateGst(billedPaint, rowDepFor);
   const serviceAgg = aggregateGst([...billedLabour, ...billedPaint], rowDepFor);
+  // Paint material depreciation is applied to these figures by rowDepFor but was
+  // never explained on this document. Basis is the paint that actually took the
+  // automatic GR-9 rate — a row carrying the surveyor's own depOverride did not.
+  const bcPmRate = paintMaterialRate(claim);
+  const bcAutoPaintBasis = billedPaint
+    .filter(r => r.depOverride === undefined)
+    .reduce((sum, r) => sum + effectiveAssessed(r), 0);
 
   // Was `labOnly + paintOnly` accumulated raw. serviceAgg computes the same
   // quantity depreciation-aware, so the taxable base printed below agrees
@@ -930,6 +946,7 @@ ${ptHtml || `<tr><td colspan="12" style="${td}text-align:center;color:#999;font-
   <td colspan="6" style="${td}"></td>
   <td style="${td}text-align:right;">${fa(paintAgg.base)}</td>
 </tr>
+${bcPmRate > 0 && bcAutoPaintBasis > 0 ? `<tr><td colspan="12" style="${td}font-size:6.5pt;color:#444;">Less ${claim.paintMaterialDepPercent ?? 50}% dep. on paint material: material @ ${claim.paintMaterialPercent ?? 25}% of ${fa(bcAutoPaintBasis)} = ${fa(bcAutoPaintBasis * ((claim.paintMaterialPercent ?? 25) / 100))}, less ${claim.paintMaterialDepPercent ?? 50}% = ${fa(bcAutoPaintBasis * bcPmRate / 100)} &nbsp;&middot;&nbsp; Painting labour @ ${100 - (claim.paintMaterialPercent ?? 25)}% attracts no depreciation.</td></tr>` : ''}
 ${taxLines(paintAgg, 'Paint', 'paint')}
 <tr style="font-weight:700;background:#eee;">
   <td colspan="11" style="${td}">SUB TOTAL</td>
