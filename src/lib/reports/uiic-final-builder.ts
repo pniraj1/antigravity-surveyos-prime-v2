@@ -91,7 +91,10 @@ export function buildUIICFinalHTML(claim: ClaimData, profile: SurveyorProfile | 
   const sec = `background:#ddd;${B}padding:${scale.cellPaddingV} ${scale.cellPaddingH};font-weight:700;font-size:${scale.headingFont};text-transform:uppercase;`;
 
   // ── Calculations (ported from benchmark) ────────────────────────────────────
-  let partsDepreciated = 0, rawParts = 0, labOnly = 0, paintOnly = 0, disposalNet = 0;
+  // `rawParts` foots the "Part List W/o Tax" column (full list price, IMT-23
+  // halving shown on its own line). `effParts` is the post-endorsement basis
+  // depreciation is actually taken on — for untagged rows the two are equal.
+  let partsDepreciated = 0, rawParts = 0, effParts = 0, labOnly = 0, paintOnly = 0, disposalNet = 0;
   const AP = rows.filter(r => r.section === 'parts');
   const AL = rows.filter(r => r.section === 'labour');
   const APT = rows.filter(r => r.section === 'paint');
@@ -115,6 +118,7 @@ export function buildUIICFinalHTML(claim: ClaimData, profile: SurveyorProfile | 
         partsDepreciated += netBeforeGst;
       }
       rawParts += r.assessed;
+      effParts += effectiveAssessed(r);
     }
   });
   // Labour and paint carry no automatic depreciation, but a surveyor may set
@@ -140,7 +144,7 @@ export function buildUIICFinalHTML(claim: ClaimData, profile: SurveyorProfile | 
     `${b.hsnSac || `(${fallback})`} ${b.rate.toFixed(2)}`;
   const tow = parseFloat(String(claim.feeBill?.travelExpenses || 0)) || 0; // towing mapped from travelExpenses or 0
   const gross = pT + lT + tow;
-  const depAmt = rawParts - partsDepreciated;
+  const depAmt = effParts - partsDepreciated;
   const salvage = claim.feeBill?.salvageValue || 0;
   const volExcess = claim.feeBill?.voluntaryExcess || 0;
   const compExcess = getCompulsoryExcess(claim.feeBill);
@@ -441,7 +445,7 @@ ${/* The parts line: its money column foots the SPARE PARTS rows above. The
      labour and paint columns are settled by the two rows beneath, so they
      stay empty here rather than repeating a combined figure that matches
      neither column. */ ''}
-<tr style="font-weight:700;background:#eee;"><td colspan="4" style="${td}">SUB TOTAL</td><td style="${td}text-align:right;">${fa(rawParts)}</td><td style="${td}"></td><td style="${td}text-align:right;">${fa(rawParts - partsDepreciated)}</td><td style="${td}text-align:right;">${fa(partsDepreciated)}</td><td style="${td}"></td><td style="${td}text-align:right;">${fa(pT)}</td><td style="${td}"></td><td style="${td}"></td></tr>
+<tr style="font-weight:700;background:#eee;"><td colspan="4" style="${td}">SUB TOTAL</td><td style="${td}text-align:right;">${fa(rawParts)}</td><td style="${td}"></td><td style="${td}text-align:right;">${fa(effParts - partsDepreciated)}</td><td style="${td}text-align:right;">${fa(partsDepreciated)}</td><td style="${td}"></td><td style="${td}text-align:right;">${fa(pT)}</td><td style="${td}"></td><td style="${td}"></td></tr>
 <tr><td colspan="8" style="${td}">SERVICES BEFORE TAX</td><td style="${td}" colspan="2"></td><td style="${td}text-align:right;">${fa(labOnly)}</td><td style="${td}text-align:right;">${fa(paintOnly)}</td></tr>
 ${/* Gross, not Net: these carry GST and nothing has been deducted yet. */ ''}
 <tr><td colspan="10" style="${td}font-weight:700;">GROSS TOTAL</td><td style="${td}text-align:right;font-weight:700;">${fa(labourAgg.amount)}</td><td style="${td}text-align:right;font-weight:700;">${fa(paintAgg.amount)}</td></tr>
@@ -556,7 +560,9 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   const billedPaint  = inBill(allowedPaint);
 
   // ── Calculations using only allowed rows ────────────────────────────────────
-  let partsDepreciated = 0, rawParts = 0, labOnly = 0, paintOnly = 0, disposalNet = 0;
+  // `rawParts` is the full billed list price; `effParts` is the post-IMT-23
+  // basis depreciation is taken on (equal for untagged rows).
+  let partsDepreciated = 0, rawParts = 0, effParts = 0, labOnly = 0, paintOnly = 0, disposalNet = 0;
   let billedPartsTotal = 0, billedLabourTotal = 0, billedPaintTotal = 0;
 
   // Billed subtotals come from the shared per-row helper, so they add up to the
@@ -572,6 +578,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
       partsDepreciated += netBeforeGst;
     }
     rawParts += r.assessed;
+    effParts += effectiveAssessed(r);
     billedPartsTotal += computeRowLiability(r, rowDep(r)).liability;
   });
   // Labour and paint carry no automatic depreciation, but a surveyor may set
@@ -621,7 +628,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   );
   const tow = parseFloat(String(claim.feeBill?.travelExpenses || 0)) || 0;
   const gross = pT + lT + tow;
-  const depAmt = rawParts - partsDepreciated;
+  const depAmt = effParts - partsDepreciated;
   const salvage    = salvageFigure;
   const volExcess  = claim.feeBill?.voluntaryExcess || 0;
   const compExcess = getCompulsoryExcess(claim.feeBill);

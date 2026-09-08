@@ -90,3 +90,50 @@ describe('UIIC report — IMT-23 depreciation column (basis-consistent)', () => 
     expect(depAmtCell(billHtml)).toBe('150.00');
   });
 });
+
+describe('UIIC report — IMT-23 headline Depreciation figures (basis-consistent)', () => {
+  // One tagged 300 part at 50% depreciation: basis 150, dep 75, assessment 75.
+  // Every headline "Depreciation" figure and the SPARE PARTS sub-total dep cell
+  // must be 75.00. The broken form (rawParts − partsDepreciated) prints 225.00.
+  const page1Dep = (html: string) =>
+    html.match(/Depreciation<\/td>\s*<td[^>]*text-align:right;">([\d,.]+)</)?.[1];
+
+  const taggedClaim = () => claimWith([row({ imt23: true, depOverride: 50 })]);
+
+  it('final report page-1 "Depreciation" summary is 75.00, not 225.00', () => {
+    const html = build(taggedClaim());
+    expect(page1Dep(html)).toBe('75.00');
+    expect(html).not.toContain('225.00');
+  });
+
+  it('final report SPARE PARTS sub-total depreciation cell is 75.00, not 225.00', () => {
+    const html = build(taggedClaim());
+    const section = html.slice(
+      html.indexOf('DETAILS OF ASSESSMENT'),
+      html.indexOf('SERVICES BEFORE TAX'),
+    );
+    expect(section).toContain('SUB TOTAL');
+    expect(section).not.toContain('225.00');
+    expect(section).toContain('75.00');
+  });
+
+  it('bill-check page-1 "Depreciation" summary is 75.00, not 225.00', () => {
+    const html = buildUIICBillCheckHTML(taggedClaim(), null);
+    expect(page1Dep(html)).toBe('75.00');
+    expect(html).not.toContain('225.00');
+  });
+
+  it('no tagged rows: headline Depreciation figures are unchanged (150.00)', () => {
+    const c = () => claimWith([row({ depOverride: 50 })]);
+    const finalHtml = build(c());
+    const billHtml = buildUIICBillCheckHTML(c(), null);
+    expect(page1Dep(finalHtml)).toBe('150.00');
+    expect(page1Dep(billHtml)).toBe('150.00');
+    const section = finalHtml.slice(
+      finalHtml.indexOf('DETAILS OF ASSESSMENT'),
+      finalHtml.indexOf('SERVICES BEFORE TAX'),
+    );
+    // 300 list − 150 dep = 150.00 assessment; no 225 anywhere.
+    expect(section).not.toContain('225.00');
+  });
+});
