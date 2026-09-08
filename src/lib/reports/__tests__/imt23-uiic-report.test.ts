@@ -150,3 +150,42 @@ describe('UIIC report — IMT-23 headline Depreciation figures (basis-consistent
     expect(section).not.toContain('225.00');
   });
 });
+
+describe('UIIC bill check — IMT-23 explanation on the page', () => {
+  const FOOTNOTE_PHRASE = 'Theft of these items is excluded under all circumstances';
+
+  // The bill-check item table shows the row's full pre-depreciation basis in
+  // the "Parts Assessment" cell (fa(r.assessed)); "Part List Without Tax" shows
+  // the workshop estimate. The Less Imt 23 line must be exactly half the
+  // Parts Assessment figure directly above it, never half the estimate.
+  it('renders a Less Imt 23 line that is half the Parts Assessment figure above it', () => {
+    const html = buildUIICBillCheckHTML(
+      claimWith([row({ imt23: true, estimated: 400, assessed: 300 })]),
+      null,
+    );
+    const rowBlock = html.slice(html.indexOf('SPARE PARTS'), html.indexOf('GST SUMMARY'));
+    expect(rowBlock).toContain('Less Imt 23');
+    expect(rowBlock).toContain('150.00'); // 300 / 2
+    expect(rowBlock).not.toContain('200.00'); // NOT 400 (estimate) / 2
+  });
+
+  it('renders no Less Imt 23 line for a tagged but not-in-bill row', () => {
+    const html = buildUIICBillCheckHTML(
+      claimWith([row({ imt23: true, billStatus: 'not-in-bill' })]),
+      null,
+    );
+    expect(html).not.toContain('Less Imt 23</td>'); // the per-row line; footnote may still cite it
+  });
+
+  it('an untagged claim renders neither the line nor the footnote', () => {
+    const html = buildUIICBillCheckHTML(claimWith([row()]), null);
+    expect(html).not.toContain('Less Imt 23');
+    expect(html).not.toContain(FOOTNOTE_PHRASE);
+  });
+
+  it('renders the footnote when a tagged row is present', () => {
+    const html = buildUIICBillCheckHTML(claimWith([row({ imt23: true })]), null);
+    expect(html).toContain(FOOTNOTE_PHRASE);
+    expect(html).toContain('Rows carrying a "Less Imt 23" line are covered under Endorsement IMT-23.');
+  });
+});

@@ -674,6 +674,17 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
 
   const blank = `<td style="${td}"></td>`;
 
+  // Mirrors buildUIICFinalHTML's imt23RowLine. A tagged row prints its full
+  // pre-depreciation basis in the "Parts Assessment" cell (col 8, fa(r.assessed));
+  // every other cell on the row already halves via effectiveAssessed. This bold
+  // line beneath, in that same column, carries the insured's 50% share so the
+  // reduction is not silent. A not-in-bill row has no basis here (its cells
+  // print "—"), so it prints nothing — exactly as imt23Totals skips it.
+  const imt23RowLine = (r: AssessmentRow) =>
+    r.imt23 && r.assessed && r.billStatus !== 'not-in-bill'
+      ? `<tr><td colspan="7" style="${td}font-weight:700;">Less Imt 23</td><td style="${td}text-align:right;font-weight:700;">${fa(r.assessed / 2)}</td><td colspan="4" style="${td}"></td></tr>`
+      : '';
+
   // Specimen prints "(Part) 18.00" / "(Labour) 18.00" when no code is recorded,
   // and the real HSN/SAC when the row carries one.
   const codeCell = (b: { hsnSac: string; rate: number }, fallback: 'Part' | 'Labour') =>
@@ -704,7 +715,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
       <td style="${td}text-align:center;">${isDisposal ? '0' : String(r.gst ?? 0)}</td>
       <td style="${td}text-align:right;">${noBill ? '—' : (isDisposal ? `${fa(netBeforeGst)} DISP` : fa(finalAmt))}</td>
       ${blank}${blank}
-    </tr>`;
+    </tr>` + imt23RowLine(r);
   }).join('');
 
   // LABOUR — bare depreciated amount in the Labour column; tax is added at
@@ -726,7 +737,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
       ${blank}
       <td style="${td}text-align:right;">${noBill ? '—' : fa(netBeforeGst)}</td>
       ${blank}
-    </tr>`;
+    </tr>` + imt23RowLine(r);
   }).join('');
 
   const ptHtml = allowedPaint.map((r, idx) => {
@@ -942,6 +953,7 @@ ${taxLines(paintAgg, 'Paint', 'paint')}
 </tr>
 </tbody>
 </table>
+${rows.some(r => r.imt23) ? `<div style="font-size:6.5pt;color:#555;line-height:1.5;margin-top:4px;text-align:justify;">${imt23FootnoteText('Rows carrying a "Less Imt 23" line are covered under Endorsement IMT-23.')}</div>` : ''}
 
 <div style="${sec}">GST SUMMARY</div>
 <table style="${ts}font-size:7pt;margin-bottom:6px;">
