@@ -356,6 +356,22 @@ export function buildStandardFinalSurveyHTML(
       <td colspan="${NCOLS - 5}" style="${td9}"></td>
     </tr>`;
 
+  // Spells out the GR-9 material deduction on a paint row, so the row derives
+  // from its own cells: Assessed - this = Net. Same shape as imt23SubRow.
+  // Only for a row that actually took the automatic rate; a row carrying the
+  // surveyor's own depOverride already shows its rate in the Dep% column.
+  const paintDepSubRow = (r: AssessmentRow) => `<tr>
+      <td style="${tdsr9}"></td>
+      <td style="${td9}">Less ${mDepPct}% dep. on paint material</td>
+      <td colspan="2" style="${td9}"></td>
+      <td style="${tdr9}">${m9(effectiveAssessed(r) * (paintMaterialRate(claim) / 100))}</td>
+      <td colspan="${NCOLS - 5}" style="${td9}"></td>
+    </tr>`;
+
+  const tookAutoPaintRate = (r: AssessmentRow) =>
+    r.section === 'paint' && r.depOverride === undefined
+    && paintMaterialRate(claim) > 0 && r.assessed > 0;
+
   const partsHtml = partRows.map((r, idx) => {
     const dep = rowDepRate(r, ageMonths, claim);
     const depLabel = r.depOverride !== undefined ? `${dep}%*` : `${dep}%`;
@@ -413,8 +429,14 @@ export function buildStandardFinalSurveyHTML(
       // surveyor's explicit override. Paint's material depreciation is the
       // tariff's 50%-on-material rule, taken once in the note beneath the
       // Painting subtotal, and this report must never print the derived 12.5%.
-      const dep = r.depOverride ?? 0;
-      const depLabel = r.depOverride !== undefined ? `${dep}%*` : `${dep}%`;
+      // Money uses the real rate — a paint row carries the tariff's GR-9
+      // material rate, and pricing it at 0 made the row disagree with its own
+      // subtotal. The Dep% CELL still shows only the surveyor's own rate: the
+      // derived 12.5% belongs to the UIIC format, not this one, so the
+      // reduction is spelled out on a sub-line beneath instead.
+      const dep = rowDepRate(r, ageMonths, claim);
+      const shownDep = r.depOverride ?? 0;
+      const depLabel = r.depOverride !== undefined ? `${shownDep}%*` : `${shownDep}%`;
       const gstPct = r.gst ?? 18;
       const { netBeforeGst } = disallowed ? { netBeforeGst: 0 } : computeRowNet(r, dep);
       const priceGst = disallowed ? 0 : netBeforeGst * (1 + gstPct / 100);
@@ -430,11 +452,13 @@ export function buildStandardFinalSurveyHTML(
       <td style="${tdr9}">${isBillCheck && r.billStatus === 'not-in-bill' ? 'No Bill' : m9(r.estimated)}</td>
       <td style="${tdr9}${disallowed ? 'color:#a00;font-weight:700;font-size:6.5pt;text-align:center;' : ''}">${disallowed ? 'NOT ALLOWED' : m9(r.assessed)}</td>
       <td style="${tdr9}text-align:center;${r.depOverride !== undefined ? 'color:#b45309;' : ''}">${depLabel}</td>
-      <td colspan="${NMAT}" style="${tdr9}text-align:center;">—</td>
+      <td colspan="${NMAT}" style="${tdr9}">${disallowed ? '—' : m9(netBeforeGst)}</td>
       <td style="${tdr9}text-align:center;">${gstPct}%</td>
       <td style="${tdr9}${disallowed ? 'color:#a00;' : 'font-weight:600;'}">${disallowed ? '—' : m9(priceGst)}</td>
       ${mark23Td(r)}
-    </tr>` + (r.imt23 && r.assessed && !disallowed ? imt23SubRow(r) : '');
+    </tr>`
+      + (r.imt23 && r.assessed && !disallowed ? imt23SubRow(r) : '')
+      + (tookAutoPaintRate(r) && !disallowed ? paintDepSubRow(r) : '');
     }).join('');
   };
 
@@ -459,7 +483,7 @@ export function buildStandardFinalSurveyHTML(
       <th style="${th}text-align:right;">${isBillCheck ? 'Bill ₹' : 'Est. ₹'}</th>
       <th style="${th}text-align:right;">Assessed ₹</th>
       <th style="${th}text-align:center;">Dep%</th>
-      <th colspan="${NMAT}" style="${th}text-align:center;">—</th>
+      <th colspan="${NMAT}" style="${th}text-align:right;">Net ₹</th>
       <th style="${th}text-align:center;">GST%</th>
       <th style="${th}text-align:right;">Price+GST ₹</th>
       ${mark23Th}

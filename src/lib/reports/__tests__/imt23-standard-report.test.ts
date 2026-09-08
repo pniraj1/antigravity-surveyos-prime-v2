@@ -226,3 +226,70 @@ describe('standard report — IMT-23', () => {
     expect(html).not.toContain('12.5%');
   });
 });
+
+// ── Paint material depreciation on the row itself ───────────────────────────
+// The surveyor found a paint row printing 14,300.00 while its own subtotal
+// printed 12,512.50: the row's money used dep = 0 while the engine applied the
+// GR-9 12.5%. Real figures from that report.
+//
+// Every assertion below is scoped to the ROW. Asserting against the whole
+// document passes on the subtotal and the footnote, which already carry these
+// figures, and proves nothing about the row.
+function rowHtml(html: string, particulars: string): string {
+  const at = html.indexOf(particulars);
+  if (at < 0) throw new Error(`row not found: ${particulars}`);
+  const open = html.lastIndexOf('<tr', at);
+  const close = html.indexOf('</tr>', at);
+  return html.slice(open, close + 5);
+}
+/** The row plus whatever sub-rows follow it, up to the next numbered row. */
+function rowBlock(html: string, particulars: string): string {
+  const at = html.indexOf(particulars);
+  if (at < 0) throw new Error(`row not found: ${particulars}`);
+  const open = html.lastIndexOf('<tr', at);
+  const firstClose = html.indexOf('</tr>', at) + 5;
+  const nextClose = html.indexOf('</tr>', firstClose) + 5;
+  return html.slice(open, nextClose > firstClose ? nextClose : firstClose);
+}
+
+describe('paint material depreciation reaches the row', () => {
+  const paintClaim = (extra: Partial<AssessmentRow> = {}) =>
+    claimWith(
+      [row({ section: 'paint', partType: 'paint', particulars: 'PAINTING CHARGES', estimated: 17500, assessed: 14300, gst: 0, ...extra })],
+      { depreciationType: 'standard', applyPaintMaterialDep: true },
+    );
+
+  it('prints the row net after the material deduction, not the gross', () => {
+    const r = rowHtml(buildStandardFinalSurveyHTML(paintClaim(), {} as never), 'PAINTING CHARGES');
+    expect(r).toContain('12,512.50');
+    expect(r).toContain('14,300.00');   // Assessed stays gross
+    expect(r).not.toContain('17,500.00 </td><td');  // sanity: estimate untouched
+  });
+
+  it('spells out the deduction on a sub-line so the row derives from its own cells', () => {
+    const b = rowBlock(buildStandardFinalSurveyHTML(paintClaim(), {} as never), 'PAINTING CHARGES');
+    expect(b).toContain('Less 50% dep. on paint material');
+    expect(b).toContain('1,787.50');
+  });
+
+  it('never prints the derived 12.5% rate in this format', () => {
+    expect(buildStandardFinalSurveyHTML(paintClaim(), {} as never)).not.toContain('12.5%');
+  });
+
+  it('prints no material sub-line for a row carrying the surveyor own rate', () => {
+    const b = rowBlock(buildStandardFinalSurveyHTML(paintClaim({ depOverride: 30 }), {} as never), 'PAINTING CHARGES');
+    expect(b).not.toContain('Less 50% dep. on paint material');
+  });
+
+  it('labour and paint rows carry a Net column instead of a dash', () => {
+    const html = buildStandardFinalSurveyHTML(
+      claimWith(
+        [row({ section: 'labour', partType: 'labour', particulars: 'REM REFIT CHARGES', estimated: 4200, assessed: 2500, gst: 0 })],
+        { depreciationType: 'standard' },
+      ),
+      {} as never,
+    );
+    expect(html).toContain('Net ₹');
+    expect(rowHtml(html, 'REM REFIT CHARGES')).toContain('2,500.00');
+  });
+});
