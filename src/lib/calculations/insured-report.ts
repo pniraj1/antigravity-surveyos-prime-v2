@@ -33,6 +33,9 @@ export function computeInsuredFinancialSummary(
 
   // Use billedTaxable (pre-GST) — billedAmount includes GST and would always
   // appear higher than assessed (pre-GST), distorting the negotiated savings.
+  // Raw r.assessed, never effectiveAssessed. These compare the garage's figure
+  // against the surveyor's; halving the surveyor's side would invent negotiated
+  // savings equal to half the part's value and report them to the insured.
   const negotiatedSavings = rows
     .filter(
       (r) =>
@@ -62,6 +65,9 @@ export function computeInsuredFinancialSummary(
       return {
         particulars: r.particulars,
         billed: r.billedTaxable ?? r.estimated,
+        // The insured sees the part at its true assessed value. The IMT-23 share is a
+        // separate named line, not a silently halved figure that reads as
+        // undervaluing their part.
         assessed: r.assessed,
         depRate,
         deductionAmount: Math.max(0, r.assessed - afterDep),
@@ -85,10 +91,16 @@ export function computeInsuredFinancialSummary(
     .filter((r) => r.allowed && r.deductionCategory === 'negotiated')
     .reduce((sum, r) => sum + Math.max(0, r.estimated - r.assessed), 0);
 
+  // Raw r.assessed, never effectiveAssessed. These compare the garage's figure
+  // against the surveyor's; halving the surveyor's side would invent negotiated
+  // savings equal to half the part's value and report them to the insured.
   const overpricingTotal = rows
     .filter((r) => r.allowed && r.deductionCategory === 'overpricing')
     .reduce((sum, r) => sum + Math.max(0, r.estimated - r.assessed), 0);
 
+  // Raw r.assessed, never effectiveAssessed. These compare the garage's figure
+  // against the surveyor's; halving the surveyor's side would invent negotiated
+  // savings equal to half the part's value and report them to the insured.
   const partialRepairTotal = rows
     .filter((r) => r.allowed && r.deductionCategory === 'partial-repair')
     .reduce((sum, r) => sum + Math.max(0, r.estimated - r.assessed), 0);

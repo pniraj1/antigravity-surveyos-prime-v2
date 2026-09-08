@@ -19,7 +19,21 @@ import {
   type PolicyContextSummary,
   type TaggedRowInput,
 } from './prompts';
-import { getIRDAIStandardClauses, getVehicleAgeMonths } from '@/lib/calculations/depreciation';
+import { getIRDAIStandardClauses, getIMT23Clause, getVehicleAgeMonths } from '@/lib/calculations/depreciation';
+
+/**
+ * Append the IMT-23 clause only when the claim actually has IMT-23 rows.
+ * A private-car claim (no imt23-flagged rows) never sees it.
+ */
+function withIMT23Clause(
+  clauses: InsuredReportPolicyClause[],
+  claim: ClaimData,
+): InsuredReportPolicyClause[] {
+  const hasIMT23 = (claim.assessmentRows ?? []).some((r) => r.imt23);
+  if (!hasIMT23) return clauses;
+  if (clauses.some((c) => c.clauseType === 'imt-23')) return clauses;
+  return [...clauses, getIMT23Clause()];
+}
 import { computeInsuredFinancialSummary } from '@/lib/calculations/insured-report';
 
 // ─── Gate: returns rows that block report generation ─────────────────────────
@@ -214,6 +228,8 @@ export async function runPolicyAnalysis({
   } else {
     policyMappings = getIRDAIStandardClauses();
   }
+
+  policyMappings = withIMT23Clause(policyMappings, claim);
 
   const policyContext = derivePolicyContext(policyMappings, claim);
 
@@ -619,6 +635,8 @@ export async function generateInsuredReport({
   } else {
     policyMappings = getIRDAIStandardClauses();
   }
+
+  policyMappings = withIMT23Clause(policyMappings, claim);
 
   // Derive structured policy context for Pass 2 CoT reasoning
   const policyContext = derivePolicyContext(policyMappings, claim);

@@ -19,7 +19,8 @@ export type PolicyClauseType =
   | 'consumables-exclusion'
   | 'specific-exclusion'
   | 'ncb'
-  | 'salvage';
+  | 'salvage'
+  | 'imt-23';
 
 export interface InsuredReportSettings {
   enabled: boolean;

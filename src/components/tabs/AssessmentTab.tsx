@@ -80,7 +80,7 @@ export function AssessmentTab() {
         <div>
           <h2 className="text-2xl font-medium tracking-tight">Assessment</h2>
           <p className="text-muted-foreground text-sm mt-1">
-            Build the assessment grid. Calculations apply IMT-23 and GST automatically based on part types.
+            Build the assessment grid. GST and depreciation apply automatically by part type; tick IMT 23 on a row to apply the endorsement.
           </p>
         </div>
         

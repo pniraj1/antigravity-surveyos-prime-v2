@@ -192,6 +192,28 @@ export function getIRDAIStandardClauses(): InsuredReportPolicyClause[] {
 }
 
 /**
+ * IMT-23 is a benefit, not a penalty.
+ *
+ * Under a standard commercial vehicle policy these parts carry NO cover (the
+ * IMT-21 exclusion). The endorsement buys back half. An insured who reads this
+ * as a deduction has been told the opposite of what happened, so the plain
+ * language leads with the cover restored.
+ *
+ * Surfaced only when the claim actually has IMT-23 rows.
+ */
+export function getIMT23Clause(): InsuredReportPolicyClause {
+  return {
+    clauseType: 'imt-23',
+    clauseTitle: 'Endorsement IMT-23 — cover restored on specified parts',
+    policyText:
+      'Under a standard commercial vehicle package policy, loss of or damage to lamps, tyres/tubes, mudguards, bonnet/side parts, bumpers, headlights and paintwork is excluded. Endorsement IMT-23 restores cover for these items, subject to the insured bearing 50% of the assessed loss on each such item, and provided the vehicle is also damaged in the same incident. Theft of these items is excluded under all circumstances.',
+    plainLanguage:
+      'Parts such as your bumper, headlamps, mudguards and paintwork are normally not covered at all under a commercial vehicle policy. Your policy carries Endorsement IMT-23, which brings them back into cover: the insurer pays half of their assessed cost and you bear the other half. Without this endorsement you would have had to pay for these parts in full.',
+    source: 'irdai-standard',
+  };
+}
+
+/**
  * Effective per-row depreciation rate for a painting line.
  *
  * IRDAI modified GR-9 with effect from 01 Feb 2013: depreciation of 50% applies
