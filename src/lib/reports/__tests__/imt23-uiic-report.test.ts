@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildUIICFinalHTML } from '../uiic-final-builder';
+import { buildUIICFinalHTML, buildUIICBillCheckHTML } from '../uiic-final-builder';
 import type { ClaimData } from '@/types';
 import type { AssessmentRow } from '@/types/assessment';
 
@@ -55,5 +55,38 @@ describe('UIIC report — IMT-23', () => {
     ));
     expect(html).toContain('LESS PAINT DEP: 12.5%');
     expect(html).toContain('12,000.00');
+  });
+});
+
+describe('UIIC report — IMT-23 depreciation column (basis-consistent)', () => {
+  // Row 36 of the real settled report: list 300, IMT-23 tagged, 50% depreciation.
+  // Basis 150, depreciation 75, assessment 75. The Depreciation column is the
+  // dep actually taken on the basis the row was assessed on (150 - 75 = 75),
+  // NOT full assessed minus afterDep (300 - 75 = 225).
+  // The Dep Amt cell sits immediately after the Dep% cell in the item row.
+  const depAmtCell = (html: string) =>
+    html.match(/>50%\*?<\/td>\s*<td[^>]*text-align:right;">([\d.]+)</)?.[1];
+
+  it('final builder: tagged row Dep Amt cell is 75.00, not 225.00', () => {
+    const html = build(claimWith([row({ imt23: true, depOverride: 50 })]));
+    expect(depAmtCell(html)).toBe('75.00');
+  });
+
+  it('bill-check builder: tagged row cell and item-table depreciation totals are 75.00, not 225.00', () => {
+    const html = buildUIICBillCheckHTML(claimWith([row({ imt23: true, depOverride: 50 })]), null);
+    expect(depAmtCell(html)).toBe('75.00');
+    // Item table spans SPARE PARTS .. GST SUMMARY: rows + the SUB TOTAL and
+    // TOTAL depreciation reducers. None may show the overstated 225.00.
+    const itemTable = html.slice(html.indexOf('SPARE PARTS'), html.indexOf('GST SUMMARY'));
+    expect(itemTable).not.toContain('225.00');
+    expect(itemTable).toContain('75.00');
+  });
+
+  it('no-IMT-23 case is unchanged: untagged row at 50% dep still prints 150.00', () => {
+    const finalHtml = build(claimWith([row({ depOverride: 50 })]));
+    const billHtml = buildUIICBillCheckHTML(claimWith([row({ depOverride: 50 })]), null);
+    // untagged: effectiveAssessed === assessed, so 300 - 150 = 150.00, unchanged.
+    expect(depAmtCell(finalHtml)).toBe('150.00');
+    expect(depAmtCell(billHtml)).toBe('150.00');
   });
 });

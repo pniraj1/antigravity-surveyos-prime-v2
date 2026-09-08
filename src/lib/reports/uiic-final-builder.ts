@@ -19,7 +19,7 @@
 import type { ClaimData } from '@/types/claim';
 import type { SurveyorProfile } from '@/types/vehicle';
 import type { AssessmentRow } from '@/types/assessment';
-import { computeRowNet, computeRowLiability } from '@/lib/calculations/row-net';
+import { computeRowNet, computeRowLiability, effectiveAssessed } from '@/lib/calculations/row-net';
 import { rowDepRate } from '@/lib/calculations/row-dep-rate';
 import { paintMaterialRate } from '@/lib/calculations/depreciation';
 import { imt23Totals } from '@/lib/calculations/imt23-totals';
@@ -364,7 +364,7 @@ ${getSurveyorHeader(profile)}
       ? `<tr><td colspan="12" style="padding:4px 8px;text-align:center;font-size:9pt;font-weight:600;color:#666;background:linear-gradient(to right,#f5f5f5,#fafafa,#f5f5f5);">Supplementary Estimate</td></tr>`
       : '';
 
-    const depAmt = isNA ? '' : fa(r.assessed - afterDep);
+    const depAmt = isNA ? '' : fa(effectiveAssessed(r) - afterDep);
 
     return bandHtml + `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">${isNA ? '' : pt}</td><td style="${td}text-align:center;">${isNA ? '' : 'Replace'}</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : dL}</td><td style="${td}text-align:right;">${depAmt}</td><td style="${td}text-align:right;">${isNA ? '' : fa(afterDep)}</td><td style="${td}text-align:center;">${gstLabel}</td><td style="${wgStyle}">${wgLabel}</td><td style="${td}"></td><td style="${td}"></td></tr>` + imt23RowLine(r, isNA);
   }).join('');
@@ -385,7 +385,7 @@ ${getSurveyorHeader(profile)}
       ? `<tr><td colspan="12" style="padding:4px 8px;text-align:center;font-size:9pt;font-weight:600;color:#666;background:linear-gradient(to right,#f5f5f5,#fafafa,#f5f5f5);">Supplementary Estimate</td></tr>`
       : '';
 
-    const depAmt = isNA ? '' : fa(r.assessed - afterDep);
+    const depAmt = isNA ? '' : fa(effectiveAssessed(r) - afterDep);
 
     return bandHtml + `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : serviceDepLabel(r, dep)}</td><td style="${td}text-align:right;">${depAmt}</td><td style="${td}"></td><td style="${td}text-align:center;">${isNA ? '' : String(r.gst ?? 0)}</td><td style="${td}"></td><td style="${td}text-align:right;">${isNA ? 'Not<br/>Allowed' : fa(withGst)}</td><td style="${td}"></td></tr>` + imt23RowLine(r, isNA);
   }).join('');
@@ -403,7 +403,7 @@ ${getSurveyorHeader(profile)}
       ? `<tr><td colspan="12" style="padding:4px 8px;text-align:center;font-size:9pt;font-weight:600;color:#666;background:linear-gradient(to right,#f5f5f5,#fafafa,#f5f5f5);">Supplementary Estimate</td></tr>`
       : '';
 
-    const depAmt = isNA ? '' : fa(r.assessed - afterDep);
+    const depAmt = isNA ? '' : fa(effectiveAssessed(r) - afterDep);
 
     return bandHtml + `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Paint</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : serviceDepLabel(r, dep)}</td><td style="${td}text-align:right;">${depAmt}</td><td style="${td}"></td><td style="${td}text-align:center;">${isNA ? '' : String(r.gst ?? 0)}</td><td style="${td}"></td><td style="${td}"></td><td style="${td}text-align:right;">${isNA ? 'Not<br/>Allowed' : fa(withGst)}</td></tr>`;
   }).join('');
@@ -683,7 +683,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
       <td style="${td}text-align:center;">${jobTypeLabel(r)}</td>
       <td style="${td}text-align:right;">${noBill ? 'No Bill' : fa(r.estimated)}</td>
       <td style="${td}text-align:center;">${depLabel(r)}</td>
-      <td style="${td}text-align:right;">${noBill ? '—' : fa(r.assessed - afterDep)}</td>
+      <td style="${td}text-align:right;">${noBill ? '—' : fa(effectiveAssessed(r) - afterDep)}</td>
       <td style="${td}text-align:right;">${noBill ? '—' : fa(r.assessed)}</td>
       <td style="${td}text-align:center;">${isDisposal ? '0' : String(r.gst ?? 0)}</td>
       <td style="${td}text-align:right;">${noBill ? '—' : (isDisposal ? `${fa(netBeforeGst)} DISP` : fa(finalAmt))}</td>
@@ -704,7 +704,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
       <td style="${td}text-align:center;">${jobTypeLabel(r)}</td>
       <td style="${td}text-align:right;">${noBill ? 'No Bill' : fa(r.estimated)}</td>
       <td style="${td}text-align:center;">${depLabel(r)}</td>
-      <td style="${td}text-align:right;">${noBill ? '—' : fa(r.assessed - afterDep)}</td>
+      <td style="${td}text-align:right;">${noBill ? '—' : fa(effectiveAssessed(r) - afterDep)}</td>
       ${blank}
       <td style="${td}text-align:center;">${String(r.gst ?? 0)}</td>
       ${blank}
@@ -723,7 +723,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
       <td style="${td}text-align:center;">${jobTypeLabel(r)}</td>
       <td style="${td}text-align:right;">${noBill ? 'No Bill' : fa(r.estimated)}</td>
       <td style="${td}text-align:center;">${depLabel(r)}</td>
-      <td style="${td}text-align:right;">${noBill ? '—' : fa(r.assessed - afterDep)}</td>
+      <td style="${td}text-align:right;">${noBill ? '—' : fa(effectiveAssessed(r) - afterDep)}</td>
       ${blank}
       <td style="${td}text-align:center;">${String(r.gst ?? 0)}</td>
       ${blank}${blank}
@@ -872,7 +872,7 @@ ${pHtml || `<tr><td colspan="12" style="${td}text-align:center;color:#999;font-s
   <td colspan="4" style="${td}">SUB TOTAL</td>
   <td style="${td}text-align:right;">${fa(billedParts.reduce((s, r) => s + r.estimated, 0))}</td>
   ${blank}
-  <td style="${td}text-align:right;">${fa(billedParts.reduce((s, r) => s + r.assessed - computeRowNet(r, rowDepFor(r)).afterDep, 0))}</td>
+  <td style="${td}text-align:right;">${fa(billedParts.reduce((s, r) => s + effectiveAssessed(r) - computeRowNet(r, rowDepFor(r)).afterDep, 0))}</td>
   <td style="${td}text-align:right;">${fa(billedParts.reduce((s, r) => s + r.assessed, 0))}</td>
   ${blank}
   <td style="${td}text-align:right;">${fa(partsAgg.amount)}</td>
@@ -916,7 +916,7 @@ ${taxLines(paintAgg, 'Paint', 'paint')}
   )}</td>
   ${blank}
   <td style="${td}text-align:right;">${fa(
-    [...billedParts, ...billedLabour, ...billedPaint].reduce((s, r) => s + r.assessed - computeRowNet(r, rowDepFor(r)).afterDep, 0)
+    [...billedParts, ...billedLabour, ...billedPaint].reduce((s, r) => s + effectiveAssessed(r) - computeRowNet(r, rowDepFor(r)).afterDep, 0)
   )}</td>
   <td style="${td}text-align:right;">${fa(billedParts.reduce((s, r) => s + r.assessed, 0))}</td>
   ${blank}
