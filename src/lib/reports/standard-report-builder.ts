@@ -191,10 +191,13 @@ export function buildStandardFinalSurveyHTML(
   const assessedPaintRaw = rawAssessed('paint');
 
   // ── IMT-23 (endorsement 23) ────────────────────────────────────────────────
-  // This report prints rows GROSS and takes the insured's 50% share once, as a
-  // visible line beneath each section subtotal — exactly as the market format
-  // does. imt23Totals gives that per-section deduction on the pre-depreciation
-  // assessed figure; the line renders only when the amount is > 0.
+  // A tagged row's net columns (material cells + Price+GST) are halved, and a
+  // "Less Imt 23" sub-line beneath spells out the halved basis (assessed / 2).
+  // The Assessed column and its section subtotal stay gross — that column is
+  // the roll-up of the surveyor's figures. imt23Totals gives the per-section
+  // insured share on the pre-depreciation assessed figure; a "Less endorsement
+  // 23" line under each section subtotal reconciles the gross Assessed column
+  // with the halved money columns. Both lines render only when amount > 0.
   const imt23 = imt23Totals(rows.filter(r => !isBillCheck || r.allowed !== false));
 
   // Paint-material note figures. The standard report states the tariff's own

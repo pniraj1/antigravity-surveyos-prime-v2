@@ -74,6 +74,21 @@ describe('standard report — IMT-23', () => {
     expect(partRow).not.toContain('4,838.00');   // never the gross Price+GST now
   });
 
+  it('a tagged row with non-zero depreciation: material cell and sub-line differ', () => {
+    // The case the format exists for. Halved basis 2,050; after 25% dep the
+    // metal cell is 1,537.50 and Price+GST 1,814.25, while the sub-line still
+    // shows the un-depreciated halved basis 2,050 and Assessed stays gross.
+    const html = build(claimWith([row({ imt23: true, partType: 'metal', depOverride: 25 })]));
+    const partRow = html.slice(
+      html.indexOf('SPARE PARTS'),
+      html.indexOf('Sub-Total Parts'),
+    );
+    expect(partRow).toContain('4,100.00');   // Assessed cell stays gross
+    expect(partRow).toContain('2,050.00');   // sub-line: halved basis, no dep
+    expect(partRow).toContain('1,537.50');   // metal material cell: 2,050 × 0.75
+    expect(partRow).toContain('1,814.25');   // Price+GST: 1,537.50 × 1.18
+  });
+
   it("a tagged row's Price+GST is half what an untagged one shows", () => {
     const tagged = build(claimWith([row({ imt23: true })]));
     const plain = build(claimWith([row()]));

@@ -31,10 +31,10 @@ export function effectiveAssessed(row: AssessmentRow): number {
  * For normal rows: net = assessed × (1 − dep%), caller adds GST.
  *
  * `grossOfImt23` ignores the endorsement and returns the row's own full
- * figures. Only the standard report's per-row cells want this: there the rows
- * must sum to the pre-deduction subtotal, with one visible
- * "Less endorsement 23" line beneath. Every other caller wants the default,
- * which is the insurer's actual liability.
+ * figures. Retained for tests only: they use it to derive the endorsement
+ * share as `gross - net` through product code rather than hardcoded
+ * arithmetic. No production code renders gross-of-IMT-23 figures any more —
+ * every report and the grid show the halved post-endorsement basis directly.
  */
 export function computeRowNet(
   row: AssessmentRow,

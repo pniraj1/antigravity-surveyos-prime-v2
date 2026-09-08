@@ -1,4 +1,5 @@
 import type { AssessmentRow, AssessmentSection } from '@/types/assessment';
+import { formatCurrency } from './utils';
 
 export interface Imt23SectionTotal {
   /** The insured's 50% share for this section, on the pre-depreciation assessed figure. */
@@ -45,10 +46,7 @@ export function imt23Totals(
  * for the reader's information, and must never begin with "Less".
  */
 export function imt23ShareMemo(amount: number, count: number): string {
-  const figure = amount.toLocaleString('en-IN', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  const figure = formatCurrency(amount);
   return `IMT-23 — insured's 50% share: ${figure} (${count} item${count === 1 ? '' : 's'})`;
 }
 

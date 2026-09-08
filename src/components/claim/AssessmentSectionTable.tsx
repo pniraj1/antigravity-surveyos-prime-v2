@@ -595,7 +595,7 @@ export function AssessmentSectionTable({
                   // IMT-23 sub-row: "Less Imt 23" under Particulars, the halved
                   // basis under Assessed, mirroring the printed report. The row's
                   // own Net / Price+GST cells above are already halved.
-                  row.imt23 && row.assessed && row.allowed && (
+                  row.imt23 && row.assessed > 0 && row.allowed ? (
                     <tr key={`imt23-${row.id}`} className="bg-primary/5 text-primary text-xs">
                       <td
                         colSpan={totalCols - 4 - (visible.priceWithGst ? 1 : 0) - (visible.action ? 1 : 0) - (visible.remarks ? 1 : 0)}
@@ -606,7 +606,7 @@ export function AssessmentSectionTable({
                       <td className="px-2 py-1 text-right tabular-nums">{formatCurrency(row.assessed / 2)}</td>
                       <td colSpan={3 + (visible.priceWithGst ? 1 : 0) + (visible.action ? 1 : 0) + (visible.remarks ? 1 : 0)} />
                     </tr>
-                  ),
+                  ) : null,
                 ];
               }).flat()}
               </SortableContext>
