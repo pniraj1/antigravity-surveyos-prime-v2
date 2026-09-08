@@ -328,12 +328,16 @@ export function buildStandardFinalSurveyHTML(
   const partLabel = (r: AssessmentRow) =>
     r.imt23 ? `<b>${r.particulars} - IMT 23</b>` : r.particulars;
 
-  // One "Less endorsement 23" line beneath a section subtotal. Rendered only
+  // One "Less endorsement 23" line beneath a section subtotal. It is a ROLL-UP
+  // of the per-row "Less Imt 23" sub-lines, not a second deduction, and the
+  // label says so: both land in the Assessed column, so an insurer scanning
+  // that column would otherwise read the same figure twice as two deductions.
+  // Rendered only
   // when the insured's share is > 0, never merely because a ticked row exists.
   // Cells: colspan 4 + 1 + (NCOLS - 5) = NCOLS, matching every other row.
   const imt23Row = (t: { amount: number; count: number }) =>
     t.amount <= 0 ? '' : `<tr>
-      <td colspan="4" style="${sub}text-align:right;font-size:${scale.labelFont};">Less endorsement 23 (50% insured's share, ${t.count} item${t.count === 1 ? '' : 's'})</td>
+      <td colspan="4" style="${sub}text-align:right;font-size:${scale.labelFont};">Less endorsement 23 &mdash; total of items above (${t.count} item${t.count === 1 ? '' : 's'})</td>
       <td style="${sub}text-align:right;font-weight:700;">${m9(t.amount)}</td>
       <td colspan="${NCOLS - 5}" style="${sub}"></td>
     </tr>`;
