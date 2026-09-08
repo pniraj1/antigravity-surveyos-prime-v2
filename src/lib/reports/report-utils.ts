@@ -24,6 +24,25 @@ import { formatDateDMY, formatDateTimeDMY, numberToWords, formatCurrency } from 
 import { getVehicleAgeMonths } from '@/lib/calculations/depreciation';
 
 export { formatDateDMY, formatDateTimeDMY, numberToWords, getVehicleAgeMonths };
+/**
+ * Escapes text that reaches report HTML from outside the code.
+ *
+ * Part names were interpolated raw. An ampersand renders fine — that is how
+ * this was found — but a "<" in a name is read as the start of a tag: the
+ * browser swallows text until the next ">" and the table can collapse from
+ * that row down. It cannot make a figure wrong; it can visibly corrupt a
+ * document the surveyor signs.
+ *
+ * Names are not always hand-typed: AI extraction lifts them from the
+ * workshop's estimate PDF, which is someone else's document.
+ */
+export function escapeHtml(value: string | null | undefined): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 /** ₹-formatted currency string. Alias kept so the builders' `fa(...)` calls stand. */
 export const fa = formatCurrency;
 

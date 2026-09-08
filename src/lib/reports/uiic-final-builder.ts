@@ -56,7 +56,7 @@ function g(v: string | number | null | undefined): string {
   return v !== null && v !== undefined ? String(v) : '';
 }
 
-import { numberToWords, getVehicleAgeMonths, getSurveyorHeader, getSigBlock } from './report-utils';
+import { numberToWords, getVehicleAgeMonths, getSurveyorHeader, getSigBlock, escapeHtml } from './report-utils';
 import { getHtmlScale } from './report-style-utils';
 
 // ─── Main UIIC Final HTML builder ─────────────────────────────────────────────
@@ -378,7 +378,7 @@ ${getSurveyorHeader(profile)}
 
     const depAmt = isNA ? '' : fa(effectiveAssessed(r) - afterDep);
 
-    return bandHtml + `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">${isNA ? '' : pt}</td><td style="${td}text-align:center;">${isNA ? '' : 'Replace'}</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : dL}</td><td style="${td}text-align:right;">${depAmt}</td><td style="${td}text-align:right;">${isNA ? '' : fa(afterDep)}</td><td style="${td}text-align:center;">${gstLabel}</td><td style="${wgStyle}">${wgLabel}</td><td style="${td}"></td><td style="${td}"></td></tr>` + imt23RowLine(r, isNA);
+    return bandHtml + `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${escapeHtml(r.particulars)}</td><td style="${td}text-align:center;">${isNA ? '' : pt}</td><td style="${td}text-align:center;">${isNA ? '' : 'Replace'}</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : dL}</td><td style="${td}text-align:right;">${depAmt}</td><td style="${td}text-align:right;">${isNA ? '' : fa(afterDep)}</td><td style="${td}text-align:center;">${gstLabel}</td><td style="${wgStyle}">${wgLabel}</td><td style="${td}"></td><td style="${td}"></td></tr>` + imt23RowLine(r, isNA);
   }).join('');
 
   // Labour and Paint carry no automatic depreciation, but a surveyor may set
@@ -399,7 +399,7 @@ ${getSurveyorHeader(profile)}
 
     const depAmt = isNA ? '' : fa(effectiveAssessed(r) - afterDep);
 
-    return bandHtml + `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : serviceDepLabel(r, dep)}</td><td style="${td}text-align:right;">${depAmt}</td><td style="${td}"></td><td style="${td}text-align:center;">${isNA ? '' : String(r.gst ?? 0)}</td><td style="${td}"></td><td style="${td}text-align:right;">${isNA ? 'Not Allowed' : fa(withGst)}</td><td style="${td}"></td></tr>` + imt23RowLine(r, isNA);
+    return bandHtml + `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${escapeHtml(r.particulars)}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : serviceDepLabel(r, dep)}</td><td style="${td}text-align:right;">${depAmt}</td><td style="${td}"></td><td style="${td}text-align:center;">${isNA ? '' : String(r.gst ?? 0)}</td><td style="${td}"></td><td style="${td}text-align:right;">${isNA ? 'Not Allowed' : fa(withGst)}</td><td style="${td}"></td></tr>` + imt23RowLine(r, isNA);
   }).join('');
 
   // Disallowed paint is listed and tagged, exactly as parts and labour are.
@@ -425,7 +425,7 @@ ${getSurveyorHeader(profile)}
     const depAmt = isNA || tookAutoRate ? '' : fa(effectiveAssessed(r) - afterDep);
     const depCell = isNA || tookAutoRate ? '' : serviceDepLabel(r, dep);
 
-    return bandHtml + `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Paint</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${depCell}</td><td style="${td}text-align:right;">${depAmt}</td><td style="${td}"></td><td style="${td}text-align:center;">${isNA ? '' : String(r.gst ?? 0)}</td><td style="${td}"></td><td style="${td}"></td><td style="${td}text-align:right;">${isNA ? 'Not Allowed' : fa(withGst)}</td></tr>`;
+    return bandHtml + `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${escapeHtml(r.particulars)}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Paint</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${depCell}</td><td style="${td}text-align:right;">${depAmt}</td><td style="${td}"></td><td style="${td}text-align:center;">${isNA ? '' : String(r.gst ?? 0)}</td><td style="${td}"></td><td style="${td}"></td><td style="${td}text-align:right;">${isNA ? 'Not Allowed' : fa(withGst)}</td></tr>`;
   }).join('');
 
   const p3 = `<div style="page-break-before:always;"></div>
@@ -721,7 +721,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
     const noBill = r.billStatus === 'not-in-bill';
     return band(allowedParts, idx) + `<tr>
       <td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td>
-      <td style="${td}">${r.particulars}</td>
+      <td style="${td}">${escapeHtml(r.particulars)}</td>
       <td style="${td}text-align:center;">${partTypeLabel(r)}</td>
       <td style="${td}text-align:center;">${jobTypeLabel(r)}</td>
       <td style="${td}text-align:right;">${noBill ? 'No Bill' : fa(r.estimated)}</td>
@@ -742,7 +742,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
     const noBill = r.billStatus === 'not-in-bill';
     return band(allowedLabour, idx) + `<tr>
       <td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td>
-      <td style="${td}">${r.particulars}</td>
+      <td style="${td}">${escapeHtml(r.particulars)}</td>
       <td style="${td}text-align:center;">Labour</td>
       <td style="${td}text-align:center;">${jobTypeLabel(r)}</td>
       <td style="${td}text-align:right;">${noBill ? 'No Bill' : fa(r.estimated)}</td>
@@ -761,7 +761,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
     const noBill = r.billStatus === 'not-in-bill';
     return band(allowedPaint, idx) + `<tr>
       <td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td>
-      <td style="${td}">${r.particulars}</td>
+      <td style="${td}">${escapeHtml(r.particulars)}</td>
       <td style="${td}text-align:center;">Paint</td>
       <td style="${td}text-align:center;">${jobTypeLabel(r)}</td>
       <td style="${td}text-align:right;">${noBill ? 'No Bill' : fa(r.estimated)}</td>

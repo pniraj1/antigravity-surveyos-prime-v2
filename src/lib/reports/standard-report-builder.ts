@@ -13,7 +13,7 @@ import type { AssessmentSummary } from '@/types';
 import type { AssessmentRow } from '@/types/assessment';
 import type { SurveyorProfile } from '@/types/vehicle';
 
-import { formatDateDMY, formatDateTimeDMY, formatSurveyDateTime, fa, numberToWords, getVehicleAgeMonths, getSurveyorHeader, getSigBlock } from './report-utils';
+import { formatDateDMY, formatDateTimeDMY, formatSurveyDateTime, fa, numberToWords, getVehicleAgeMonths, getSurveyorHeader, getSigBlock, escapeHtml } from './report-utils';
 import { getHtmlScale } from './report-style-utils';
 import { preambleFromClaim, estimateTotalInclGst, billCheckPreambleFromClaim } from './final-survey-preamble';
 import { projectForBillCheck, resolveBillSalvage } from './bill-check-projection';
@@ -326,7 +326,7 @@ export function buildStandardFinalSurveyHTML(
   // long report and survive a monochrome printer. The tag belongs to the part,
   // so not-in-bill and disallowed rows carry it too.
   const partLabel = (r: AssessmentRow) =>
-    r.imt23 ? `<b>${r.particulars} - IMT 23</b>` : r.particulars;
+    r.imt23 ? `<b>${escapeHtml(r.particulars)} - IMT 23</b>` : escapeHtml(r.particulars);
 
   // One "Less endorsement 23" line beneath a section subtotal. It is a ROLL-UP
   // of the per-row "Less Imt 23" sub-lines, not a second deduction, and the

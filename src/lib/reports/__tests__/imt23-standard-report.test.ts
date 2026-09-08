@@ -293,3 +293,23 @@ describe('paint material depreciation reaches the row', () => {
     expect(rowHtml(html, 'REM REFIT CHARGES')).toContain('2,500.00');
   });
 });
+
+// ── Part names reach the HTML from outside the code ─────────────────────────
+// Names are not always hand-typed: AI extraction lifts them from the workshop's
+// estimate PDF. A "<" was read as the start of a tag, swallowing text until the
+// next ">" and collapsing the table from that row down.
+describe('part names are escaped before they reach the report', () => {
+  const nasty = 'HOSE <25MM> & CLAMP';
+
+  it('escapes the angle brackets rather than emitting them as markup', () => {
+    const html = buildStandardFinalSurveyHTML(claimWith([row({ particulars: nasty })]), {} as never);
+    expect(html).toContain('HOSE &lt;25MM&gt; &amp; CLAMP');
+    expect(html).not.toContain('HOSE <25MM>');
+  });
+
+  it('escapes it on an IMT-23 tagged row too', () => {
+    const html = buildStandardFinalSurveyHTML(claimWith([row({ particulars: nasty, imt23: true })]), {} as never);
+    expect(html).toContain('HOSE &lt;25MM&gt; &amp; CLAMP');
+    expect(html).not.toContain('HOSE <25MM>');
+  });
+});
