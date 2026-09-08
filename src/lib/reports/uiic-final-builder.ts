@@ -21,6 +21,8 @@ import type { SurveyorProfile } from '@/types/vehicle';
 import type { AssessmentRow } from '@/types/assessment';
 import { computeRowNet, computeRowLiability } from '@/lib/calculations/row-net';
 import { rowDepRate } from '@/lib/calculations/row-dep-rate';
+import { paintMaterialRate } from '@/lib/calculations/depreciation';
+import { imt23Totals } from '@/lib/calculations/imt23-totals';
 import { aggregateGst } from '@/lib/calculations/gst-bands';
 import { getCompulsoryExcess, calculateBillCheckSummary, calculateAssessmentSummary } from '@/lib/calculations/assessment';
 import { buildSerialMap } from '@/lib/calculations/serial-numbers';
@@ -43,6 +45,11 @@ function fd(v: string | null | undefined): string {
 
 function fa(v: number | string | null | undefined): string {
   return parseFloat(String(v || 0)).toFixed(2);
+}
+
+/** Same as `fa`, with a thousands separator — the UIIC paint block prints grouped. */
+function fc(v: number | string | null | undefined): string {
+  return fa(v).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
 function g(v: string | number | null | undefined): string {
@@ -138,7 +145,18 @@ export function buildUIICFinalHTML(claim: ClaimData, profile: SurveyorProfile | 
   const volExcess = claim.feeBill?.voluntaryExcess || 0;
   const compExcess = getCompulsoryExcess(claim.feeBill);
   const net = Math.max(0, gross - salvage - volExcess - compExcess);
+  // Deliberate: the settled UIIC sample sets Amount Payable by Insured to
+  // excess only and excludes the IMT-23 share, which is reported on its own
+  // line below. Do not "correct" this to add depreciation/salvage/IMT-23.
   const payableByInsured = volExcess + compExcess;
+
+  // IMT-23 (endorsement 23): the insured's 50% share, per section, on the
+  // pre-depreciation assessed figure. Rendered as a per-row `Less Imt 23`
+  // line, a paint section block, and a contribution line in the summary.
+  const imt23 = imt23Totals(rows.filter(r => r.allowed !== false));
+  const imt23Total = imt23.parts.amount + imt23.labour.amount + imt23.paint.amount;
+  const pmRate = paintMaterialRate(claim);
+  const paintRaw = APT.filter(r => r.allowed !== false).reduce((s, r) => s + r.assessed, 0);
   const payableByInsurer = net;
 
   // ── PAGE 1: Policy / Claim / Vehicle / Survey / Reinspection details ────────
@@ -317,6 +335,16 @@ ${getSurveyorHeader(profile)}
   // One numbering source, shared with the Bill Check report below. Counts
   // disallowed rows so the gap survives into that document.
   const serials = buildSerialMap(rows);
+
+  // UIIC format: a tagged row prints its full list price, then a bold
+  // `Less Imt 23` line beneath carrying the insured's halved share in the
+  // Part List column. Every downstream figure on the row already comes from
+  // computeRowNet's default, which halves — so this line is purely visible.
+  const imt23RowLine = (r: AssessmentRow, isNA: boolean) =>
+    r.imt23 && !isNA
+      ? `<tr><td colspan="4" style="${td}font-weight:700;">Less Imt 23</td><td style="${td}text-align:right;font-weight:700;">${fa(r.assessed / 2)}</td><td colspan="7" style="${td}"></td></tr>`
+      : '';
+
   const pHtml = AP.map((r, idx) => {
     const dep = rowDepRate(r, ageMonths, claim);
     const dL = r.depOverride !== undefined ? `${dep}%*` : (dep > 0 ? dep + '%' : '0%');
@@ -338,7 +366,7 @@ ${getSurveyorHeader(profile)}
 
     const depAmt = isNA ? '' : fa(r.assessed - afterDep);
 
-    return bandHtml + `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">${isNA ? '' : pt}</td><td style="${td}text-align:center;">${isNA ? '' : 'Replace'}</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : dL}</td><td style="${td}text-align:right;">${depAmt}</td><td style="${td}text-align:right;">${isNA ? '' : fa(afterDep)}</td><td style="${td}text-align:center;">${gstLabel}</td><td style="${wgStyle}">${wgLabel}</td><td style="${td}"></td><td style="${td}"></td></tr>`;
+    return bandHtml + `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">${isNA ? '' : pt}</td><td style="${td}text-align:center;">${isNA ? '' : 'Replace'}</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : dL}</td><td style="${td}text-align:right;">${depAmt}</td><td style="${td}text-align:right;">${isNA ? '' : fa(afterDep)}</td><td style="${td}text-align:center;">${gstLabel}</td><td style="${wgStyle}">${wgLabel}</td><td style="${td}"></td><td style="${td}"></td></tr>` + imt23RowLine(r, isNA);
   }).join('');
 
   // Labour and Paint carry no automatic depreciation, but a surveyor may set
@@ -359,7 +387,7 @@ ${getSurveyorHeader(profile)}
 
     const depAmt = isNA ? '' : fa(r.assessed - afterDep);
 
-    return bandHtml + `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : serviceDepLabel(r, dep)}</td><td style="${td}text-align:right;">${depAmt}</td><td style="${td}"></td><td style="${td}text-align:center;">${isNA ? '' : String(r.gst ?? 0)}</td><td style="${td}"></td><td style="${td}text-align:right;">${isNA ? 'Not<br/>Allowed' : fa(withGst)}</td><td style="${td}"></td></tr>`;
+    return bandHtml + `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${r.particulars}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : serviceDepLabel(r, dep)}</td><td style="${td}text-align:right;">${depAmt}</td><td style="${td}"></td><td style="${td}text-align:center;">${isNA ? '' : String(r.gst ?? 0)}</td><td style="${td}"></td><td style="${td}text-align:right;">${isNA ? 'Not<br/>Allowed' : fa(withGst)}</td><td style="${td}"></td></tr>` + imt23RowLine(r, isNA);
   }).join('');
 
   // Disallowed paint is listed and tagged, exactly as parts and labour are.
@@ -393,6 +421,7 @@ ${getSurveyorHeader(profile)}
 <tr><td style="${tdl}">IDV</td><td style="${td}text-align:right;">${fa(p.idv)}</td><td style="${tdl}"></td><td style="${td}"></td><td style="${tdb}">Net Assessment</td><td style="${tdb}text-align:right;">${fa(net)}</td></tr>
 <tr><td style="${tdl}">Odometer Reading</td><td style="${td}text-align:right;">${g(v.odometer)} km</td><td style="${tdl}">Reinspection Done</td><td style="${td}text-align:center;">YES</td><td style="${tdl}">Amount Payable by Insured</td><td style="${td}text-align:right;">${fa(payableByInsured)}</td></tr>
 <tr><td style="${td}" colspan="4"></td><td style="${tdl}">Amount Payable by Insurer</td><td style="${td}text-align:right;">${fa(payableByInsurer)}</td></tr>
+${imt23Total > 0 ? `<tr><td style="${td}" colspan="4"></td><td style="${tdl}">Contribution of insured under IMT-23</td><td style="${td}text-align:right;">${fa(imt23Total)}</td></tr>` : ''}
 </table>
 <div style="${sec}">DETAILS OF ASSESSMENT</div>
 ${/* Fixed layout makes the declared widths binding. Under the default auto
@@ -404,6 +433,10 @@ ${/* Fixed layout makes the declared widths binding. Under the default auto
 <tr><td colspan="12" style="${sec}">SPARE PARTS</td></tr>${pHtml}
 <tr><td colspan="12" style="${sec}">LABOUR</td></tr>${lHtml}
 <tr><td colspan="12" style="${sec}">PAINTING CHARGES</td></tr>${ptHtml}
+${paintRaw > 0 ? `<tr style="background:#eee;"><td colspan="11" style="${td}text-align:right;">SUB TOTAL</td><td style="${td}text-align:right;">${fc(paintRaw)}</td></tr>
+${imt23.paint.amount > 0 ? `<tr style="background:#eee;"><td colspan="11" style="${td}text-align:right;font-weight:700;">Less Imt 23</td><td style="${td}text-align:right;font-weight:700;">${fc(imt23.paint.amount)}</td></tr>
+<tr style="background:#eee;"><td colspan="11" style="${td}text-align:right;">SUB TOTAL</td><td style="${td}text-align:right;">${fc(paintRaw - imt23.paint.amount)}</td></tr>` : ''}
+${pmRate > 0 ? `<tr style="background:#eee;"><td colspan="11" style="${td}text-align:right;font-weight:700;">LESS PAINT DEP: ${pmRate}%</td><td style="${td}text-align:right;">${fc((paintRaw - imt23.paint.amount) * pmRate / 100)}</td></tr>` : ''}` : ''}
 ${/* The parts line: its money column foots the SPARE PARTS rows above. The
      labour and paint columns are settled by the two rows beneath, so they
      stay empty here rather than repeating a combined figure that matches
