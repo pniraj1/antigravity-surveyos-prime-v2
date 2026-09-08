@@ -611,7 +611,7 @@ export function AssessmentSectionTable({
             {sectionEndorsementDeduction > 0 && (
               <tr className="bg-primary/5 text-primary">
                 <td colSpan={totalCols - 3} className="px-2 py-1 text-right text-[11px]">
-                  Less endorsement 23 (50% insured&apos;s share, {sectionImt23.count} item{sectionImt23.count === 1 ? '' : 's'})
+                  Less endorsement 23 &mdash; insured&apos;s 50% share after dep. ({sectionImt23.count} item{sectionImt23.count === 1 ? '' : 's'})
                 </td>
                 <td className="px-2 py-1 text-right text-[11px] tabular-nums">
                   {sectionEndorsementDeduction.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
