@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { imt23Totals } from '../imt23-totals';
+import { imt23Totals, imt23ShareMemo } from '../imt23-totals';
 import type { AssessmentRow } from '@/types/assessment';
 
 const row = (o: Partial<AssessmentRow>): AssessmentRow => ({
@@ -34,5 +34,18 @@ describe('imt23Totals', () => {
     const t = imt23Totals([row({ assessed: 0, imt23: true, billStatus: 'not-in-bill' })]);
     expect(t.parts.amount).toBe(0);
     expect(t.parts.count).toBe(0);
+  });
+});
+
+describe('imt23ShareMemo', () => {
+  it('states the share without reading as a further deduction', () => {
+    const memo = imt23ShareMemo(8216.95, 13);
+    expect(memo).not.toMatch(/^Less/);
+    expect(memo).toContain('8,216.95');
+    expect(memo).toContain('(13 items)');
+  });
+
+  it('singularises a one-item share', () => {
+    expect(imt23ShareMemo(2050, 1)).toContain('(1 item)');
   });
 });

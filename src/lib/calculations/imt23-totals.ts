@@ -37,6 +37,22 @@ export function imt23Totals(
 }
 
 /**
+ * The on-screen memo for a section's IMT-23 share in the assessment grid.
+ *
+ * Deliberately NOT a deduction line: the grid's tagged rows already show their
+ * halved (post-endorsement) net, so the section sums to its own subtotal with
+ * nothing further to subtract. This line only states the insured's total share
+ * for the reader's information, and must never begin with "Less".
+ */
+export function imt23ShareMemo(amount: number, count: number): string {
+  const figure = amount.toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return `IMT-23 — insured's 50% share: ${figure} (${count} item${count === 1 ? '' : 's'})`;
+}
+
+/**
  * The explanatory footnote printed beneath the assessment sheet whenever a claim
  * carries an IMT-23-tagged row. An insurer seeing a 50% deduction needs the
  * authority cited on the same page.

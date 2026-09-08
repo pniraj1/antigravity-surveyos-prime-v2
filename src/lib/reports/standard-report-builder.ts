@@ -335,14 +335,29 @@ export function buildStandardFinalSurveyHTML(
       <td colspan="${NCOLS - 5}" style="${sub}"></td>
     </tr>`;
 
+  // A labelled sub-line beneath each tagged row, in the same shape the UIIC
+  // builder uses (imt23RowLine): "Less Imt 23" in Particulars, the halved basis
+  // (r.assessed / 2) in Assessed, every other cell empty. The row's own net
+  // columns are already halved by computeRowNet's default, so this line only
+  // spells out the halving. Rendered only for a tagged row that carries money.
+  // Cells: 1 + 1 + 2 + 1 + (NCOLS - 5) = NCOLS, matching every other row.
+  const imt23SubRow = (r: AssessmentRow) => `<tr>
+      <td style="${tdsr9}"></td>
+      <td style="${td9}">Less Imt 23</td>
+      <td colspan="2" style="${td9}"></td>
+      <td style="${tdr9}">${m9(r.assessed / 2)}</td>
+      <td colspan="${NCOLS - 5}" style="${td9}"></td>
+    </tr>`;
+
   const partsHtml = partRows.map((r, idx) => {
     const dep = rowDepRate(r, ageMonths, claim);
     const depLabel = r.depOverride !== undefined ? `${dep}%*` : `${dep}%`;
     const disallowed = r.allowed === false;
-    // grossOfImt23: this report's rows must sum to the pre-deduction subtotal,
-    // with one "Less endorsement 23" line beneath. The halving is taken at the
-    // subtotal, not on the row — halving here would double-count it.
-    const { isDisposal, afterDep, netBeforeGst } = disallowed ? { isDisposal: false, afterDep: 0, netBeforeGst: 0 } : computeRowNet(r, dep, { grossOfImt23: true });
+    // A tagged row's net columns (material cells + Price+GST) show the halved
+    // post-endorsement basis; a "Less Imt 23" sub-line beneath spells out the
+    // halving. computeRowNet's default halves. The Assessed column below stays
+    // gross, and the subtotal's "Less endorsement 23" line bridges the two.
+    const { isDisposal, afterDep, netBeforeGst } = disallowed ? { isDisposal: false, afterDep: 0, netBeforeGst: 0 } : computeRowNet(r, dep);
     const gstPct = r.gst ?? 18;
     const cellValue = isDisposal ? netBeforeGst : netBeforeGst * (1 + gstPct / 100);
     // The Assessed column already carries the NOT ALLOWED flag; repeating it
@@ -370,7 +385,7 @@ export function buildStandardFinalSurveyHTML(
       <td style="${tdr9}text-align:center;">${isDisposal ? '0%' : `${gstPct}%`}</td>
       <td style="${cellStyle}">${cellLabel}</td>
       ${mark23Td(r)}
-    </tr>`;
+    </tr>` + (r.imt23 && r.assessed && !disallowed ? imt23SubRow(r) : '');
   }).join('');
 
   // ── Labour / Painting rows ────────────────────────────────────────────────
@@ -394,7 +409,7 @@ export function buildStandardFinalSurveyHTML(
       const dep = r.depOverride ?? 0;
       const depLabel = r.depOverride !== undefined ? `${dep}%*` : `${dep}%`;
       const gstPct = r.gst ?? 18;
-      const { netBeforeGst } = disallowed ? { netBeforeGst: 0 } : computeRowNet(r, dep, { grossOfImt23: true });
+      const { netBeforeGst } = disallowed ? { netBeforeGst: 0 } : computeRowNet(r, dep);
       const priceGst = disallowed ? 0 : netBeforeGst * (1 + gstPct / 100);
 
       const bandHtml = shouldStartSupplementaryBand(sectionRows, idx)
@@ -412,7 +427,7 @@ export function buildStandardFinalSurveyHTML(
       <td style="${tdr9}text-align:center;">${gstPct}%</td>
       <td style="${tdr9}${disallowed ? 'color:#a00;' : 'font-weight:600;'}">${disallowed ? '—' : m9(priceGst)}</td>
       ${mark23Td(r)}
-    </tr>`;
+    </tr>` + (r.imt23 && r.assessed && !disallowed ? imt23SubRow(r) : '');
     }).join('');
   };
 

@@ -3,8 +3,8 @@
 import React from 'react';
 import { useClaimStore } from '@/stores/claim-store';
 import { rowDepRate } from '@/lib/calculations/row-dep-rate';
-import { imt23Totals } from '@/lib/calculations/imt23-totals';
-import { computeRowNet } from '@/lib/calculations/row-net';
+import { imt23Totals, imt23ShareMemo } from '@/lib/calculations/imt23-totals';
+import { effectiveAssessed } from '@/lib/calculations/row-net';
 import { formatCurrency, shouldStartSupplementaryBand } from '@/lib/calculations/utils';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -92,23 +92,10 @@ export function AssessmentSectionTable({
 
   const sectionRowIds = rows.map(r => r.id);
   const totalCols = 9 + visibleCount;
+  // Tagged rows now show their halved (post-endorsement) net, so the section
+  // already sums to its own subtotal — there is nothing left to subtract. This
+  // is a memo of the insured's total 50% share, not a further deduction.
   const sectionImt23 = imt23Totals(rows)[section];
-  // The deduction line sits in the same column as `subtotal.base`, which is
-  // post-depreciation and post-endorsement from the engine. imt23Totals gives
-  // the pre-depreciation share, which never reconciles once dep is non-zero.
-  // Express the deduction on the same post-depreciation basis: the endorsement
-  // half of each tagged row's net, after its own depreciation. Then
-  // Σ Net (shown per row, gross of endorsement) − this line = subtotal.base.
-  const claimForDepFooter = currentClaim ?? { depreciationType };
-  const sectionEndorsementDeduction = rows.reduce((s, r) => {
-    if (r.allowed === false || !r.imt23 || !r.assessed) return s;
-    const dep = rowDepRate(r, ageMonths, claimForDepFooter);
-    return (
-      s +
-      computeRowNet(r, dep, { grossOfImt23: true }).netBeforeGst -
-      computeRowNet(r, dep).netBeforeGst
-    );
-  }, 0);
 
   return (
     <div className="mb-6">
@@ -231,7 +218,10 @@ export function AssessmentSectionTable({
                 const depRate = rowDepRate(row, ageMonths, claimForDep);
                 const isDepOverridden = row.depOverride !== undefined;
                 const depFactor = depRate / 100;
-                const valueAfterDep = row.assessed * (1 - depFactor);
+                // IMT-23: the Net and Price+GST cells show the halved
+                // (post-endorsement) basis the engine uses; the Assessed cell
+                // below stays gross. A "Less Imt 23" sub-row spells out the half.
+                const valueAfterDep = effectiveAssessed(row) * (1 - depFactor);
                 // Disposal: no GST; surveyor allows disposalPercent% of the depreciated value
                 const netAssessed = row.isDisposal
                   ? valueAfterDep * ((row.disposalPercent ?? 50) / 100)
@@ -601,22 +591,33 @@ export function AssessmentSectionTable({
                         <Trash2 size={13} />
                       </button>
                     </td>
-                  </SortableRow>
+                  </SortableRow>,
+                  // IMT-23 sub-row: "Less Imt 23" under Particulars, the halved
+                  // basis under Assessed, mirroring the printed report. The row's
+                  // own Net / Price+GST cells above are already halved.
+                  row.imt23 && row.assessed && row.allowed && (
+                    <tr key={`imt23-${row.id}`} className="bg-primary/5 text-primary text-xs">
+                      <td
+                        colSpan={totalCols - 4 - (visible.priceWithGst ? 1 : 0) - (visible.action ? 1 : 0) - (visible.remarks ? 1 : 0)}
+                        className="px-2 py-1 text-right"
+                      >
+                        Less Imt 23
+                      </td>
+                      <td className="px-2 py-1 text-right tabular-nums">{formatCurrency(row.assessed / 2)}</td>
+                      <td colSpan={3 + (visible.priceWithGst ? 1 : 0) + (visible.action ? 1 : 0) + (visible.remarks ? 1 : 0)} />
+                    </tr>
+                  ),
                 ];
               }).flat()}
               </SortableContext>
             )}
           </tbody>
           <tfoot>
-            {sectionEndorsementDeduction > 0 && (
+            {sectionImt23.amount > 0 && (
               <tr className="bg-primary/5 text-primary">
-                <td colSpan={totalCols - 3} className="px-2 py-1 text-right text-[11px]">
-                  Less endorsement 23 &mdash; insured&apos;s 50% share after dep. ({sectionImt23.count} item{sectionImt23.count === 1 ? '' : 's'})
+                <td colSpan={totalCols} className="px-2 py-1 text-right text-[11px]">
+                  {imt23ShareMemo(sectionImt23.amount, sectionImt23.count)}
                 </td>
-                <td className="px-2 py-1 text-right text-[11px] tabular-nums">
-                  {sectionEndorsementDeduction.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </td>
-                <td colSpan={2} />
               </tr>
             )}
             <tr className="bg-muted/40 text-xs font-semibold">

@@ -58,17 +58,40 @@ describe('standard report — IMT-23', () => {
     expect(rows[0].particulars).toBe('BUMPER');
   });
 
-  it('shows the row at its full figure, not halved', () => {
+  it('halves the row net columns and prints a Less Imt 23 sub-line', () => {
+    // Design changed (surveyor rejected the gross-row shape): a tagged row's
+    // net columns now show the halved post-endorsement basis, with a labelled
+    // sub-line beneath. Assessed stays gross.
     const html = build(claimWith([row({ imt23: true })]));
-    // The part's own data row — between the SPARE PARTS heading and its subtotal.
     const partRow = html.slice(
       html.indexOf('SPARE PARTS'),
       html.indexOf('Sub-Total Parts'),
     );
-    expect(partRow).toContain('4,100.00');       // assessed + gross material cell
-    expect(partRow).toContain('4,838.00');       // 4,100 × 1.18, gross Price+GST
-    expect(partRow).not.toContain('2,050.00');   // never the halved figure on the row
-    expect(partRow).not.toContain('2,419.00');   // nor the halved Price+GST
+    expect(partRow).toContain('4,100.00');       // Assessed cell stays gross
+    expect(partRow).toContain('Less Imt 23');    // the sub-line label
+    expect(partRow).toContain('2,050.00');       // halved basis (material cell + sub-line)
+    expect(partRow).toContain('2,419.00');       // 2,050 × 1.18, halved Price+GST
+    expect(partRow).not.toContain('4,838.00');   // never the gross Price+GST now
+  });
+
+  it("a tagged row's Price+GST is half what an untagged one shows", () => {
+    const tagged = build(claimWith([row({ imt23: true })]));
+    const plain = build(claimWith([row()]));
+    expect(plain.slice(plain.indexOf('SPARE PARTS'), plain.indexOf('Sub-Total Parts'))).toContain('4,838.00');
+    expect(tagged.slice(tagged.indexOf('SPARE PARTS'), tagged.indexOf('Sub-Total Parts'))).toContain('2,419.00');
+  });
+
+  it('prints no sub-line for a tagged row with a zero basis', () => {
+    const html = build(claimWith([row({ imt23: true, assessed: 0 })]));
+    expect(html).not.toContain('Less Imt 23');
+  });
+
+  it('an untagged claim renders no Less Imt 23 sub-line and is unchanged', () => {
+    const html = build(claimWith([row()]));
+    expect(html).not.toContain('Less Imt 23');
+    const partRow = html.slice(html.indexOf('SPARE PARTS'), html.indexOf('Sub-Total Parts'));
+    expect(partRow).toContain('4,100.00');
+    expect(partRow).toContain('4,838.00');
   });
 
   it('paint subtotal is net of GR-9 paint-material depreciation, matching the engine', () => {
