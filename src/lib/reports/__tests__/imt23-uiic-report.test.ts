@@ -48,6 +48,19 @@ describe('UIIC report — IMT-23', () => {
     expect(html).not.toContain('Less Imt 23');
   });
 
+  const FOOTNOTE_PHRASE = 'Theft of these items is excluded under all circumstances';
+
+  it('prints the explanatory footnote when a row is tagged', () => {
+    const html = build(claimWith([row({ imt23: true })]));
+    expect(html).toContain(FOOTNOTE_PHRASE);
+    expect(html).toContain('Rows carrying a "Less Imt 23" line are covered under Endorsement IMT-23.');
+  });
+
+  it('no footnote when nothing is tagged', () => {
+    const html = build(claimWith([row()]));
+    expect(html).not.toContain(FOOTNOTE_PHRASE);
+  });
+
   it('prints the paint block with the effective rate, as this format does', () => {
     const html = build(claimWith(
       [row({ section: 'paint', partType: 'paint', assessed: 24000, imt23: true })],

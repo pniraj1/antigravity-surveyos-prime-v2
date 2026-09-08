@@ -22,7 +22,7 @@ import type { AssessmentRow } from '@/types/assessment';
 import { computeRowNet, computeRowLiability, effectiveAssessed } from '@/lib/calculations/row-net';
 import { rowDepRate } from '@/lib/calculations/row-dep-rate';
 import { paintMaterialRate } from '@/lib/calculations/depreciation';
-import { imt23Totals } from '@/lib/calculations/imt23-totals';
+import { imt23Totals, imt23FootnoteText } from '@/lib/calculations/imt23-totals';
 import { aggregateGst } from '@/lib/calculations/gst-bands';
 import { getCompulsoryExcess, calculateBillCheckSummary, calculateAssessmentSummary } from '@/lib/calculations/assessment';
 import { buildSerialMap } from '@/lib/calculations/serial-numbers';
@@ -457,7 +457,8 @@ ${/* The parts line: its money column foots the SPARE PARTS rows above. The
 <tr><td colspan="8" style="${td}">SERVICES BEFORE TAX</td><td style="${td}" colspan="2"></td><td style="${td}text-align:right;">${fa(labOnly)}</td><td style="${td}text-align:right;">${fa(paintOnly)}</td></tr>
 ${/* Gross, not Net: these carry GST and nothing has been deducted yet. */ ''}
 <tr><td colspan="10" style="${td}font-weight:700;">GROSS TOTAL</td><td style="${td}text-align:right;font-weight:700;">${fa(labourAgg.amount)}</td><td style="${td}text-align:right;font-weight:700;">${fa(paintAgg.amount)}</td></tr>
-</tbody></table>`;
+</tbody></table>
+${rows.some(r => r.imt23) ? `<div style="font-size:6.5pt;color:#555;line-height:1.5;margin-top:4px;text-align:justify;">${imt23FootnoteText('Rows carrying a "Less Imt 23" line are covered under Endorsement IMT-23.')}</div>` : ''}`;
 
   // ── PAGE 5: GST Summary + Signatures ────────────────────────────────────────
   const p5 = `<div style="page-break-before:always;"></div>

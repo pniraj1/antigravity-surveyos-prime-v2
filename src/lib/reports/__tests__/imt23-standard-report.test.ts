@@ -149,6 +149,34 @@ describe('standard report — IMT-23', () => {
     expect(html).toContain('=&nbsp; 1,000.00');
   });
 
+  const FOOTNOTE_PHRASE = 'Theft of these items is excluded under all circumstances';
+
+  it('final: prints the explanatory footnote when a row is tagged', () => {
+    const html = build(claimWith([row({ imt23: true })]));
+    expect(html).toContain(FOOTNOTE_PHRASE);
+    expect(html).toContain('Rows marked "- IMT 23" are covered under Endorsement IMT-23.');
+  });
+
+  it('final: no footnote when nothing is tagged', () => {
+    const html = build(claimWith([row()]));
+    expect(html).not.toContain(FOOTNOTE_PHRASE);
+  });
+
+  it('bill check: prints the footnote with the asterisk opening clause', () => {
+    const html = buildStandardFinalSurveyHTML(
+      claimWith([row({ imt23: true })]), {} as never, 'bill-check',
+    );
+    expect(html).toContain(FOOTNOTE_PHRASE);
+    expect(html).toContain('* IMT-23 part.');
+  });
+
+  it('bill check: no footnote when nothing is tagged', () => {
+    const html = buildStandardFinalSurveyHTML(
+      claimWith([row()]), {} as never, 'bill-check',
+    );
+    expect(html).not.toContain(FOOTNOTE_PHRASE);
+  });
+
   it('states the paint rule, never the derived percentage', () => {
     const c = claimWith(
       [row({ section: 'paint', partType: 'paint', assessed: 10000, estimated: 10000 })],

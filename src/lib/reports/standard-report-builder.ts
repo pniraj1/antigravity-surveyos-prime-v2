@@ -20,7 +20,7 @@ import { projectForBillCheck, resolveBillSalvage } from './bill-check-projection
 import { computeRowNet, effectiveAssessed } from '@/lib/calculations/row-net';
 import { toDepreciationType, paintMaterialRate } from '@/lib/calculations/depreciation';
 import { rowDepRate } from '@/lib/calculations/row-dep-rate';
-import { imt23Totals } from '@/lib/calculations/imt23-totals';
+import { imt23Totals, imt23FootnoteText } from '@/lib/calculations/imt23-totals';
 import { getCompulsoryExcess, calculateAssessmentSummary } from '@/lib/calculations/assessment';
 import { shouldStartSupplementaryBand } from '@/lib/calculations/utils';
 import { buildSerialMap } from '@/lib/calculations/serial-numbers';
@@ -924,7 +924,7 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
     </tr>` : ''}
   </tbody>
 </table>
-
+${rows.some(r => r.imt23 && (!isBillCheck || r.allowed !== false)) ? `<p style="font-size:${scale.labelFont};line-height:1.4;color:#444;margin:3px 0;text-align:justify;">${imt23FootnoteText(isBillCheck ? '* IMT-23 part.' : 'Rows marked "- IMT 23" are covered under Endorsement IMT-23.')}</p>` : ''}
 <p style="font-size:${scale.cellFont};line-height:1.5;margin-bottom:3px;text-align:left;color:#000;">The damages sustained by the vehicle were concurrent with the cause and nature of the accident.</p>
 <p style="font-size:${scale.cellFont};font-weight:700;text-align:left;margin-bottom:5px;color:#000;">ISSUED WITHOUT PREJUDICE</p>
 ${getSigBlock(profile)}

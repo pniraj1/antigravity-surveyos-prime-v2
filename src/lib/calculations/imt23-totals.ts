@@ -35,3 +35,17 @@ export function imt23Totals(
   }
   return out;
 }
+
+/**
+ * The explanatory footnote printed beneath the assessment sheet whenever a claim
+ * carries an IMT-23-tagged row. An insurer seeing a 50% deduction needs the
+ * authority cited on the same page.
+ *
+ * Legal wording — the substance is reproduced exactly and must not be reworded.
+ * `opening` names the marker the specific document format uses (bold suffix,
+ * asterisk column, per-row line), since the three formats mark tagged rows
+ * differently.
+ */
+export function imt23FootnoteText(opening: string): string {
+  return `${opening} Lamps, tyres/tubes, mudguards, bonnet/side parts, bumpers, headlights and paintwork are excluded under a standard commercial vehicle package policy and are covered only by virtue of Endorsement IMT-23, under which the insured bears 50% of the assessed loss on each such item. Cover applies only where the vehicle is also damaged in the same incident. Theft of these items is excluded under all circumstances.`;
+}
