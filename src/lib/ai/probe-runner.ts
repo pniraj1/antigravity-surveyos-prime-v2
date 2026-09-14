@@ -1,4 +1,5 @@
 import { PROVIDER_IMAGE_CAPS, type ProviderId } from './models-config';
+import { geminiAuthHeaders } from './service';
 import {
   classifyPing, parseImageCap, PROBE_MAX_TOKENS,
   type PingVerdict, type RawResponse,
@@ -170,10 +171,10 @@ async function chat(
       }));
       parts.push({ text: req.prompt });
       const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...geminiAuthHeaders(key) },
           body: JSON.stringify({
             contents: [{ parts }],
             generationConfig: { maxOutputTokens: req.maxTokens, temperature: 0.1 },
@@ -272,7 +273,7 @@ async function fetchCatalogue(provider: ProviderId, key: string): Promise<Catalo
       })));
   }
 
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}&pageSize=200`);
+  const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: geminiAuthHeaders(key) });
   if (!res.ok) throw new Error(`Gemini catalogue failed: HTTP ${res.status}`);
   const data = await res.json();
   // Gemini reports supportedGenerationMethods — skip models that cannot generate.

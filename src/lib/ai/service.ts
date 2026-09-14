@@ -396,17 +396,23 @@ function isModelUnavailable(err: any): boolean {
   );
 }
 
+/**
+ * Gemini auth. AI Studio keys used to start with "AIza"; since mid-2026 new
+ * ones start with "AQ." and legacy AIza keys are being rejected. Both are
+ * plain API keys and belong in the x-goog-api-key header (Google's documented
+ * method) — never in ?key= or a Bearer header. Only ya29. OAuth access tokens
+ * use Authorization: Bearer.
+ */
+export function geminiAuthHeaders(key: string): Record<string, string> {
+  return key.startsWith('ya29.')
+    ? { Authorization: `Bearer ${key}` }
+    : { 'x-goog-api-key': key };
+}
+
 async function callWithKey(provider: AIProvider, key: string, prompt: string, images: string[], responseFormat: 'json' | 'text' = 'json'): Promise<string> {
   if (provider.name === 'gemini') {
-    // ── Auth: AIza... = API key (?key= param); anything else = OAuth Bearer token ──
-    // Keys from AI Studio start with "AIza".
-    // OAuth access tokens (ya29., AQ., etc.) must go in the Authorization header.
-    const isApiKey = key.startsWith('AIza');
-    const url = isApiKey
-      ? `${provider.endpoint}?key=${key}`
-      : provider.endpoint;  // OAuth: no key in URL
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (!isApiKey) headers['Authorization'] = `Bearer ${key}`;
+    const url = provider.endpoint;
+    const headers = { 'Content-Type': 'application/json', ...geminiAuthHeaders(key) };
 
     const parts: any[] = images.map(img => ({
       inlineData: { mimeType: getMimeType(img), data: toRawBase64(img) },
@@ -801,7 +807,8 @@ export async function callAIGateway(prompt: string, images: string[] = [], respo
 export async function fetchAvailableGeminiModels(apiKey: string): Promise<ModelOption[] | null> {
   try {
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models?pageSize=100&key=${apiKey}`
+      'https://generativelanguage.googleapis.com/v1beta/models?pageSize=100',
+      { headers: geminiAuthHeaders(apiKey) }
     );
     if (!res.ok) return null;
 
@@ -847,7 +854,7 @@ export async function fetchAvailableGeminiModels(apiKey: string): Promise<ModelO
 /** Like fetchAvailableGeminiModels but returns full ModelEntry rows (ctx, vision, capacity). */
 export async function fetchGeminiModelEntries(apiKey: string): Promise<ModelEntry[] | null> {
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?pageSize=100&key=${apiKey}`);
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=100', { headers: geminiAuthHeaders(apiKey) });
     if (!res.ok) return null;
     const data = await res.json();
     const raw: Array<{ name: string; displayName?: string; inputTokenLimit?: number; supportedGenerationMethods?: string[] }> = data.models ?? [];

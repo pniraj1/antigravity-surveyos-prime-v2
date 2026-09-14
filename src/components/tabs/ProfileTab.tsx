@@ -693,7 +693,7 @@ export function ProfileTab() {
               <MultiKeyInput
                 keys={profile.geminiApiKeys || []}
                 onChange={keys => updateProfile({ geminiApiKeys: keys })}
-                placeholder="AIzaSy..."
+                placeholder="AQ.Ab... (or older AIzaSy...)"
                 accentColor="#4285F4"
               />
             </div>
