@@ -86,4 +86,14 @@ describe('helpers', () => {
   it('localDayKey formats the local date', () => {
     expect(localDayKey(new Date(2026, 8, 15, 12).getTime())).toBe('2026-09-15');
   });
+  it('handles the spring-forward day (23-hour day)', () => {
+    expect(nextPacificMidnight(Date.UTC(2026, 2, 8, 9, 0))).toBe(Date.UTC(2026, 2, 9, 7, 0));   // 01:00 PST Mar 8 → 00:00 PDT Mar 9
+  });
+  it('handles the fall-back day (25-hour day)', () => {
+    expect(nextPacificMidnight(Date.UTC(2026, 10, 1, 8, 30))).toBe(Date.UTC(2026, 10, 2, 8, 0)); // 01:30 PDT Nov 1 → 00:00 PST Nov 2
+  });
+  it('deadUntilLabel renders the Pacific-midnight instant in IST', () => {
+    const h = createHealth(memStore(), () => Date.UTC(2026, 8, 15, 10, 0)); // Sep: PDT → next midnight = Sep 16 07:00Z = 12:30 pm IST
+    expect(h.deadUntilLabel()).toBe('12:30 pm IST');
+  });
 });

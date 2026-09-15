@@ -41,16 +41,34 @@ export function localDayKey(now: number): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
-/** Next 00:00 America/Los_Angeles after `now`, as a UTC timestamp. */
+const PACIFIC_WALL_CLOCK_FMT = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/Los_Angeles', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit',
+});
+
+/** The Pacific wall-clock time-of-day for a UTC instant (date-independent). */
+function pacificWallClock(ts: number): { hour: number; minute: number; second: number; ms: number } {
+  const parts = Object.fromEntries(PACIFIC_WALL_CLOCK_FMT.formatToParts(new Date(ts)).map(p => [p.type, p.value]));
+  return { hour: Number(parts.hour) % 24, minute: Number(parts.minute), second: Number(parts.second), ms: ((ts % 1000) + 1000) % 1000 };
+}
+
+function msSinceMidnight(wc: { hour: number; minute: number; second: number; ms: number }): number {
+  return ((wc.hour * 60 + wc.minute) * 60 + wc.second) * 1000 + wc.ms;
+}
+
+/**
+ * Next 00:00 America/Los_Angeles after `now`, as a UTC timestamp.
+ *
+ * A flat +86_400_000 lands on the wrong instant on the two US DST-transition
+ * days (23h/25h long), so a second pass reads the candidate's Pacific
+ * wall-clock and nudges it onto the nearest midnight — DST only ever shifts
+ * the offset by one hour, so one correction pass is always enough.
+ */
 export function nextPacificMidnight(now: number): number {
-  const fmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', hour12: false,
-    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  const parts = Object.fromEntries(fmt.formatToParts(new Date(now)).map(p => [p.type, p.value]));
-  const hour = Number(parts.hour) % 24;
-  const minute = Number(parts.minute);
-  const second = Number(parts.second);
-  const msSinceMidnightPacific = ((hour * 60 + minute) * 60 + second) * 1000 + (now % 1000);
-  return now - msSinceMidnightPacific + 86_400_000;
+  const todayMidnight = now - msSinceMidnight(pacificWallClock(now));
+  const candidate = todayMidnight + 86_400_000;
+  let drift = msSinceMidnight(pacificWallClock(candidate));
+  if (drift > 12 * 3_600_000) drift -= 86_400_000; // e.g. 23:00 the day before == -1h, not +23h
+  return candidate - drift;
 }
 
 /** djb2 over the key, base36, first 10 chars. Not reversible, not secret — an identifier. */
@@ -111,8 +129,9 @@ export function createHealth(rawStore: HealthStore | null, now: () => number = D
       return (load().notFound[model] ?? 0) > now();
     },
     deadUntilLabel() {
-      return new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', hour: 'numeric', minute: '2-digit', hour12: true })
-        .format(new Date(nextPacificMidnight(now()))).replace(/\s?(am|pm)/i, ' $1') + ' IST';
+      const formatted = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', hour: 'numeric', minute: '2-digit', hour12: true })
+        .format(new Date(nextPacificMidnight(now())));
+      return formatted.replace(/\s?(am|pm)/i, (_m, p1: string) => ' ' + p1.toLowerCase()) + ' IST';
     },
   };
 }
