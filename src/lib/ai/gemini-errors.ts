@@ -58,9 +58,8 @@ export function classifyGemini429(info: GeminiErrorInfo): Quota429 {
   const hasDay = ids.some(id => id.includes('PerDay'));
   const hasMinute = ids.some(id => id.includes('PerMinute'));
   if (hasDay && hasMinute) return 'zero';
-  const first = ids[0];
   return {
-    scope: first.includes('PerModel') ? 'model' : 'project',
+    scope: ids.some(id => id.includes('PerModel')) ? 'model' : 'project',
     period: hasDay ? 'day' : 'minute',
   };
 }

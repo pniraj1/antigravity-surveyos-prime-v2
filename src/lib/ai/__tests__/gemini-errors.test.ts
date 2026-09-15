@@ -56,6 +56,10 @@ describe('classifyGemini429', () => {
   it('non-429 → null', () => {
     expect(classifyGemini429(parseGeminiError(503, body429(['GenerateRequestsPerDayPerProject'])))).toBeNull();
   });
+  it('scope aggregates over all violations, not just the first', () => {
+    expect(classifyGemini429(parseGeminiError(429, body429(['GenerateRequestsPerDayPerProject', 'GenerateRequestsPerDayPerProjectPerModel-FreeTier']))))
+      .toEqual({ scope: 'model', period: 'day' });
+  });
 });
 
 describe('isThinkingRejected', () => {
