@@ -5,7 +5,7 @@ import { useProfileStore } from '@/stores/profile-store';
 import { buildReinspectionHTML, triggerReinspectionPrint } from '@/lib/reports/reinspection-report-builder';
 import { ReportPreviewPanel } from '@/components/shared/ReportPreviewPanel';
 import { footerFromProfile } from '@/lib/reports/print-shell';
-import { RotateCcw, Calendar, FileText } from 'lucide-react';
+import { RotateCcw, Calendar, FileText, Link2 } from 'lucide-react';
 import { useMemo } from 'react';
 
 // ─── Inline Live Preview ─────────────────────────────────────────────────────
@@ -26,8 +26,21 @@ function RIPreview({ claim, profile }: { claim: any; profile: any }) {
   );
 }
 
+const INPUT = 'w-full px-3 py-2 rounded-lg border border-border outline-none text-sm font-medium';
+const LABEL = 'text-[10px] font-medium uppercase tracking-widest text-muted-foreground block mb-1.5';
+
+/** Label with a hint that the value is shared with another tab (two-way). */
+function SharedLabel({ text, tab }: { text: string; tab: string }) {
+  return (
+    <label className={LABEL}>
+      {text}
+      <span className="ml-1.5 normal-case tracking-normal text-[9px] text-muted-foreground/70">· shared with {tab} tab</span>
+    </label>
+  );
+}
+
 export function ReinspectionTab() {
-  const { currentClaim, updateReinspection } = useClaimStore();
+  const { currentClaim, updateClaim, updatePolicy, updateAccident, updateReinspection } = useClaimStore();
   const { profile } = useProfileStore();
 
   if (!currentClaim) return null;
@@ -58,6 +71,52 @@ export function ReinspectionTab() {
 
       <div className="px-6 lg:px-12 py-8 max-w-5xl mx-auto space-y-6">
 
+        {/* ── Claim Reference (two-way with Policy / Vehicle tabs) ── */}
+        <div className="p-6 rounded-2xl bg-card border border-border shadow-sm">
+          <h3 className="text-sm font-medium mb-4 flex items-center gap-2 text-foreground">
+            <Link2 size={16} className="text-primary" />
+            Claim Reference
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <SharedLabel text="Report Number" tab="Vehicle" />
+              <input type="text" className={INPUT}
+                value={currentClaim.reportNo || ''}
+                onChange={e => updateClaim({ reportNo: e.target.value })} />
+            </div>
+            <div>
+              <SharedLabel text="Insurance Company" tab="Policy" />
+              <input type="text" className={INPUT}
+                value={currentClaim.policy.insurerName || ''}
+                onChange={e => updatePolicy({ insurerName: e.target.value })} />
+            </div>
+            <div>
+              <SharedLabel text="Policy Issuing Office" tab="Policy" />
+              <input type="text" className={INPUT}
+                value={currentClaim.policy.policyIssuingOffice || ''}
+                onChange={e => updatePolicy({ policyIssuingOffice: e.target.value })} />
+            </div>
+            <div>
+              <SharedLabel text="Claim Appointing Office" tab="Policy" />
+              <input type="text" className={INPUT}
+                value={currentClaim.policy.appointingOffice || ''}
+                onChange={e => updatePolicy({ appointingOffice: e.target.value })} />
+            </div>
+            <div>
+              <SharedLabel text="Date of Accident" tab="Vehicle" />
+              <input type="datetime-local" className={INPUT}
+                value={currentClaim.accident.dateAndTime || ''}
+                onChange={e => updateAccident({ dateAndTime: e.target.value })} />
+            </div>
+            <div>
+              <SharedLabel text="Date of Survey" tab="Vehicle" />
+              <input type="date" className={INPUT}
+                value={currentClaim.accident.dateOfSurvey || ''}
+                onChange={e => updateAccident({ dateOfSurvey: e.target.value })} />
+            </div>
+          </div>
+        </div>
+
         {/* ── Inspection Details ─────────────────────────── */}
         <div className="p-6 rounded-2xl bg-card border border-border shadow-sm">
           <h3 className="text-sm font-medium mb-4 flex items-center gap-2 text-foreground">
@@ -65,6 +124,18 @@ export function ReinspectionTab() {
             Inspection Details
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={LABEL}>RI Ref Number</label>
+              <input type="text" className={INPUT} placeholder="e.g. RI/2026/007"
+                value={currentClaim.reinspection.refNo || ''}
+                onChange={e => updateReinspection({ refNo: e.target.value })} />
+            </div>
+            <div>
+              <label className={LABEL}>RI Appointment Date</label>
+              <input type="date" className={INPUT}
+                value={currentClaim.reinspection.riAppointmentDate || ''}
+                onChange={e => updateReinspection({ riAppointmentDate: e.target.value })} />
+            </div>
             <div>
               <label className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground block mb-1.5">Date of Re-inspection</label>
               <input
@@ -75,7 +146,27 @@ export function ReinspectionTab() {
               />
             </div>
 
-
+            <div className="sm:col-span-2">
+              <label className={LABEL}>
+                Place of Re-inspection
+                <span className="ml-1.5 normal-case tracking-normal text-[9px] text-muted-foreground/70">· defaults to original survey place</span>
+              </label>
+              <input type="text" className={INPUT}
+                value={currentClaim.reinspection.placeOfSurvey || currentClaim.accident.placeOfSurvey || ''}
+                onChange={e => updateReinspection({ placeOfSurvey: e.target.value })} />
+            </div>
+            <div>
+              <label className={LABEL}>Repair Authorisation Date</label>
+              <input type="date" className={INPUT}
+                value={currentClaim.reinspection.repairAuthDate || ''}
+                onChange={e => updateReinspection({ repairAuthDate: e.target.value })} />
+            </div>
+            <div>
+              <label className={LABEL}>Est. Completion Date</label>
+              <input type="date" className={INPUT}
+                value={currentClaim.reinspection.estCompletionDate || ''}
+                onChange={e => updateReinspection({ estCompletionDate: e.target.value })} />
+            </div>
             <div>
               <label className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground block mb-1.5">Actual Completion Date</label>
               <input
