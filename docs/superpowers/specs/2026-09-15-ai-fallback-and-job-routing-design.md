@@ -1,6 +1,6 @@
 # AI fallback and job-aware model routing — design
 
-Date: 2026-09-15
+Date: 2026-09-15 (rev 2 — failure-case review folded in)
 Status: draft for review
 
 ## Problem
@@ -31,6 +31,12 @@ Neither Gemini nor Ollama send rate-limit headers. Ollama Cloud's free tier
 serves exactly one vision model (gemma4:31b); every other multimodal model
 returns 402. Ollama Cloud and Cloudflare send no CORS headers and must be
 proxied; Gemini, Z.ai and OpenRouter can be called from the browser.
+models.dev (`https://models.dev/api.json`, 4.6 MB, CORS open) lists every
+Gemini id exactly, with `deprecated`, output limit and modalities, and has
+an `ollama-cloud` provider entry.
+
+Not measured: Gemini 3.6/3.7/3.8 Flash (3.5 was 503 all session), a real
+PerDay 429 body, Ollama's daily ceiling.
 
 ## Design
 
@@ -39,96 +45,151 @@ proxied; Gemini, Z.ai and OpenRouter can be called from the browser.
 Every AI call declares a **job**. The job decides which models are eligible
 and in what order. Nobody picks a model by name.
 
-| Job | Document types (prompt keys) | Needs | Ranked by |
+| Job | Document types (prompt keys) | Hard requirements | Ranked by |
 |---|---|---|---|
-| `heavy` | estimate, final-bill, bank-statement | vision, output ≥ 16 K tokens | accuracy verdict → busy rate → whole-doc time |
-| `light` | rc, dl, policy, claim, permit, auth, fitness, lok-challan, fir, photos | vision, ≤ 20 s/page | seconds/page → busy rate |
+| `heavy` | estimate, final-bill, bank-statement | vision · output ≥ 16 K tokens (or unknown) · imageCap ≥ images in this call | accuracy verdict → busy rate → whole-doc time |
+| `light` | rc, dl, policy, claim, permit, auth, fitness, lok-challan, fir, photos | vision · imageCap ≥ images in this call | seconds/page (≤ 20 s preferred, slower ones after, never dropped) → busy rate |
 | `text` | covering narrative, insured-report passes, line explanations | none | seconds/page |
 
 Direct-call providers rank before proxied ones at equal standing (proxy adds
-latency and consumes Cloud Functions egress). `light` never uses proxied
-providers except as the last entry — a 1-page photo should not cross a proxy
-when a direct model exists.
+latency and consumes Cloud Functions egress). For `light`, proxied models are
+always last — a 1-page photo should not cross a proxy when a direct model
+exists.
 
-`callAIGateway(prompt, images, responseFormat, job)` — `job` is a new fourth
-argument. `extractDocument` derives it from the doc type; the seven other call
-sites pass `text` or `light` explicitly.
+`callAIGateway(prompt, images, responseFormat, job, session?)` — `job` is a
+new fourth argument; `session` (a per-document id) is optional and makes the
+loop start from the model that last succeeded for that document, so one bill
+is never extracted by two different models. `extractDocument` derives the job
+from the doc type and passes its own id as the session; the seven other call
+sites pass `text` or `light` with no session.
 
 ### 2. The preferred loop per job (as of the 2026-09-15 measurements)
 
 ```
 heavy:  gemini/flash-lite → gemini/2.5-flash → gemini/3.x-flash → ollama/gemma4 (proxy)
-light:  gemini/flash-lite → gemini/2.5-flash → ollama/gemma4 (proxy)
+light:  gemini/flash-lite → gemini/2.5-flash → gemini/3.x-flash → ollama/gemma4 (proxy)
 text:   groq/llama-3.3-70b → gemini/flash-lite → gemini/2.5-flash
 ```
 
 These are outputs of the ranker, not constants. They change when the probe
-measures something different.
+measures something different, and per surveyor as their own health data
+accumulates.
 
 ### 3. The ranker
 
 ```
-rank(job, pool, probes, health):
+rank(job, images, pool, probes, health):
   eligible = pool
-    .filter(alive, not excluded by admin, not deprecated)
+    .filter(status ok — not excluded, deprecated, paid, or notFound for this surveyor)
     .filter(job.needsVision ? vision : true)
-    .filter(job === 'heavy' ? outputTokens ≥ 16K || unknown : true)
-    .filter(job === 'light' ? msPerPage ≤ 20_000 : true)
-    .filter(not deadToday for this surveyor)
-  sort by job's key, then direct-before-proxied, then provider catalogue order
+    .filter(imageCap === null || imageCap ≥ images.length)
+    .filter(job === 'heavy' ? outputTokens ≥ 16K || outputTokens unknown : true)
+    .filter(not deadToday for this surveyor's key)
+  sort by:
+    heavy: verdict (exact > close > untested; wrong/failed excluded)
+           → busyRate asc → wholeDocMs asc → direct before proxied
+    light: (msPerPage ≤ 20 s first, then the rest) → msPerPage asc
+           → busyRate asc → direct before proxied (proxied always last)
+    text:  msPerPage asc → busyRate asc → direct before proxied
+  if eligible is empty and job needs vision and images.length > 1:
+    throw PAYLOAD_TOO_LARGE   // processor re-chunks smaller (existing path)
 ```
 
 Inputs:
 
 - `pool` — every model the probe found working, across all providers the
-  surveyor has a key for, minus the admin's exclusions.
+  surveyor has a key for, minus the admin's exclusions. When no probes doc
+  exists yet (fresh install, Firestore read pending), the pool is a built-in
+  default of `gemini-flash-lite-latest` and `gemini-2.5-flash`, vision, output
+  65 536, unknown speed — enough to work on day one.
 - `probes` — status, vision, imageCap, ctxWindow, **outputTokens** (new, from
-  Google's `outputTokenLimit`), msPerPage, accuracy verdict.
-- `health` — per-surveyor, per-model, rolling today: `{calls, busy}` where
-  `busy` counts 503 and PerMinute-429 responses. Stored in localStorage,
-  reset at local midnight. `busyRate = busy / calls` when `calls ≥ 3`, else 0.
-- `deadToday` — per-surveyor set of models that returned a PerDay 429, with
-  expiry at the next midnight Pacific. localStorage.
+  Google's `outputTokenLimit` or models.dev), msPerPage, accuracy verdict,
+  probe-time busy count.
+- `health` — per surveyor, in localStorage, wrapped in try/catch so private
+  mode degrades to "no history":
+  - `today[model] = {calls, busy}` — busy counts 503, PerMinute 429, and
+    per-call timeouts. Resets at local midnight. `busyRate = busy / calls`
+    when `calls ≥ 3`, else 0. The surveyor's own rate outweighs the probe's.
+  - `deadToday[keyHash:model] = untilTs` — set on a PerModel PerDay 429;
+    `untilTs` is the next midnight Pacific (toast says "resets 1:30 pm IST").
+  - `deadToday[keyHash:*]` — set on a PerProject PerDay 429; the whole
+    provider is skipped for that key until reset.
+  - `notFound[model] = untilTs` — set on 404 for this surveyor's key, 7-day
+    expiry, so a model the admin's key sees but the surveyor's doesn't is not
+    re-tried on every call.
+
+Two clocks are deliberate: busy counts are a local-day habit signal; quota
+resets are Google's Pacific-midnight fact.
 
 Derived, never stored, like `model-classify.ts` today.
 
 ### 4. The fallback loop
 
 ```
-chain = rank(job, …)
+chain = rank(job, images, …)
+if session?.lastGood in chain: rotate chain so it starts there
+busyOnly = []
+
 for (provider, model) in chain:
+  if signal?.aborted: throw Cancelled
   for key in surveyor.keys[provider]:
-    res = call(provider, model, key)
+    res = call(provider, model, key, timeout = job.timeout)
     record health(model, res)
     match res:
-      200                         → return
-      503 / 500 overloaded        → NEXT MODEL            (no in-place retry)
-      429 quotaId ~ PerModel+PerMinute → NEXT MODEL
-      429 quotaId ~ PerModel+PerDay    → deadToday.add(model); NEXT MODEL
-      429 quotaId ~ PerProject    → NEXT KEY, else NEXT PROVIDER
-      429 unparseable             → NEXT KEY, else NEXT PROVIDER
-      404 model not found         → mark for probe; NEXT MODEL
-      401 / 403                   → NEXT KEY, else NEXT PROVIDER
-      413 / payload too large     → throw PAYLOAD_TOO_LARGE (caller shrinks chunk)
-      other 4xx                   → throw
-      proxy transport failure     → NEXT PROVIDER
+      200, finishReason STOP          → session.lastGood = model; return
+      200, finishReason MAX_TOKENS    → NEXT MODEL
+      200, finishReason SAFETY        → NEXT PROVIDER
+      503 / 500 overloaded / timeout  → busyOnly.push(model); NEXT MODEL   (no in-place retry)
+      429 per-model, minute           → busyOnly.push(model); NEXT MODEL
+      429 per-model, day              → deadToday[key:model]; NEXT MODEL
+      429 per-project, minute         → NEXT KEY, else NEXT PROVIDER
+      429 per-project, day            → deadToday[key:*]; NEXT KEY, else NEXT PROVIDER
+      429 unclassifiable (Groq, Ollama, NVIDIA, or no details) → NEXT KEY, else NEXT PROVIDER
+      404 model not found             → notFound[model]; NEXT MODEL
+      402 model needs credits         → mark for probe; NEXT MODEL
+      400 mentioning thinking         → retry same model once without thinkingConfig
+      400 mentioning image / vision / modality → mark for probe; NEXT MODEL
+      401 / 403                       → NEXT KEY, else NEXT PROVIDER
+      413 / payload too large         → throw PAYLOAD_TOO_LARGE
+      proxy: subscription lapsed      → toast once (existing message); NEXT PROVIDER
+      proxy: other transport failure  → NEXT PROVIDER
+      network error (fetch TypeError) → NEXT PROVIDER
+      other 4xx                       → throw
+
+if every failure was a network error, or navigator.onLine === false:
+  throw Offline
+if busyOnly not empty:                     // one bounded second chance for a blip
+  wait 5 s; re-walk busyOnly once with the same rules, no further second pass
 throw AllProvidersBusy(job, tried)
 ```
 
 NEXT MODEL = next chain entry. NEXT PROVIDER = skip remaining entries of this
 provider. Model hop happens **before** key rotation: Gemini quotas are per
-project and per model, and a surveyor's second key is usually in the same
-project.
+project and per model, Groq quotas are per organisation, and a surveyor's
+second key is usually in the same project or org — rotating keys rarely helps.
 
-`callWithKey` attaches the parsed `error.details[]` to the thrown error so the
-loop can read `quotaId`. A new `classifyGemini429(err)` returns
-`'per-model-minute' | 'per-model-day' | 'per-project' | 'unknown'`.
+**Per-call timeouts** (`AbortController`, threaded into the two `fetch`
+calls): heavy 120 s, light 30 s, text 30 s. Measured 503s took up to 194 s to
+return; without a timeout four busy models could take 13 minutes to fail.
 
-Surveyor-facing messages, one toast per hop at most:
+**Gemini 429 classification** (`classifyGemini429`): read `error.details[]`;
+if absent, try `JSON.parse(error.message).error.details` (Google sometimes
+double-encodes). Find the `QuotaFailure` violation's `quotaId`:
+
+- contains `PerModel` → per-model, else per-project
+  (note `GenerateRequestsPerMinutePerProjectPerModel` contains both words —
+  the presence of `PerModel` decides)
+- contains `PerDay` → day, else minute
+
+Returns `{scope: 'model' | 'project', period: 'minute' | 'day'} | null`.
+
+Surveyor-facing messages, at most one toast per distinct hop per document
+(session stickiness makes chunk 2..n reuse chunk 1's model):
 
 - hop: "Flash-Lite busy — trying 2.5 Flash"
-- deadToday: "2.5 Flash has hit today's free limit (resets 1:30 pm) — using
-  Flash-Lite"
+- deadToday: "2.5 Flash has hit today's free limit (resets 1:30 pm IST) —
+  using Flash-Lite"
+- Offline: "You're offline — AI extraction needs a connection."
 - AllProvidersBusy: "All AI models are busy. Try again in a minute, or add a
   backup key in Profile → AI." with a link.
 
@@ -137,8 +198,12 @@ Surveyor-facing messages, one toast per hop at most:
 - `thinkingConfig: { thinkingBudget: 0 }` on every JSON-format Gemini call.
   Measured: 2.5 Flash hit MAX_TOKENS after 2,612 output tokens with a 65 K
   budget because thinking consumed it. Flash-Lite, which does not think, was
-  exact twice. Ships first as its own commit.
+  exact twice. Gemini 3.x uses `thinkingLevel` and some models cannot disable
+  thinking — hence the 400-retry-without-thinkingConfig row above. Verified
+  against 3.5/3.6 Flash before Phase 0 ships. Ships first as its own commit.
 - Remove the 2× 1.5 s in-place 503 retry.
+- `callWithKey` attaches `finishReason` and parsed `details` to its result /
+  thrown error so the loop can branch on them.
 
 ### 6. Proxy generalisation
 
@@ -153,10 +218,13 @@ must be authenticated with an active subscription, path allowlisted. Client
 `callNvidiaProxy` becomes `callAiProxy(provider, path, key, body)`.
 
 Cost ceiling: Cloud Functions free egress is 5 GB/month across all surveyors.
-A 5-page estimate is ~1.3 MB, so roughly 3,800 proxied heavy documents/month
-free, then ~₹0.02 each. Proxied models rank last so this is reached only
-when Gemini is genuinely unavailable. `// ponytail:` comment at the proxy
-names the ceiling.
+The processor already sends ≤ 2 pages per call for estimates (~0.5 MB), so
+roughly 10,000 proxied heavy calls/month are free, then ~₹0.01 each. Proxied
+models rank last so this is reached only when Gemini is genuinely
+unavailable. `// ponytail:` comment at the proxy names the ceiling. A $1
+billing alert on the Firebase project is a one-time console setting. Cold
+start adds 2–5 s to the first proxied call — acceptable for heavy, and light
+only reaches the proxy last.
 
 ### 7. Catalogue and metadata
 
@@ -164,14 +232,20 @@ names the ceiling.
   Models that return 402 on the ping are recorded `status: 'paid'` (new
   durable status) and hidden.
 - Gemini catalogue records `outputTokenLimit` → `ProbeResult.outputTokens`.
-- The probe fetches `https://models.dev/api.json` once and marks any model it
-  lists as deprecated with `status: 'deprecated'` (durable, hidden, never
-  shown). If the fetch fails the probe proceeds without it.
+- The **admin probe only** (never surveyor devices) fetches models.dev once,
+  matches on exact `provider/id`, and marks listed-as-deprecated models
+  `status: 'deprecated'` (durable, hidden). No prefix or fuzzy matching. If
+  the fetch fails the probe proceeds without it. It also fills `outputTokens`
+  for providers whose list API doesn't report it.
 - Tier 2 (benchmark accuracy) runs automatically for any model that is
   working now and has no accuracy result for the current benchmark. One
-  extraction per new model per probe.
-- Probe records `busy503` per model during pass 1 and 2 (503s seen / calls
-  made) so the admin sees demand before surveyors do.
+  extraction per new model per probe. A 503 / 429 / timeout during Tier 2
+  leaves the verdict `untested` — only a content failure (no total, wrong
+  total) becomes `wrong`. One bad afternoon must not exclude a model from
+  heavy until the next manual probe.
+- Probe records `busy` per model during passes 1 and 2 (503s seen / calls
+  made). Small sample; shown to the admin, weighted below the surveyor's own
+  health by the ranker.
 
 ### 8. Admin AI Models tab
 
@@ -181,47 +255,74 @@ Keeps: Probe button, benchmark upload + expected total/items, per-model
 
 Removes: per-model checkbox, ★ default, the small/large/limited buckets.
 
-Adds: three ranked lists — Estimates & bills / Licence, RC, policy / Letters
-& text — each row showing rank, model, one-line reason (verdict, time, busy
-%), and an **Exclude** toggle. Excluded models are stored as
-`providers[p].excluded: string[]` and skipped by the ranker for every job.
+Adds:
+
+- **Discovery summary** per provider, written by the probe and shown at the
+  top of the provider card: "Found 39 models · 6 usable · 3 NEW since last
+  probe · 12 deprecated (hidden) · 4 paid (hidden) · 14 not chat/vision".
+  Hidden groups expand on click; nothing is silently dropped.
+- **Three ranked lists** — Estimates & bills / Licence, RC, policy / Letters
+  & text — each row showing rank, model, NEW badge when applicable, and a
+  one-line reason: verdict, whole-doc or per-page time, output limit, busy %
+  from the probe, and "via proxy" where relevant. Rows are the ranker's
+  output for an admin with keys for every enabled provider, so what the
+  admin sees is what a fully-configured surveyor gets.
+- **Exclude** toggle per row. Excluded models are stored as
+  `providers[p].excluded: string[]` and skipped by the ranker for every job.
+  The UI refuses to exclude the last eligible model for any job and says so.
 
 Schema change: `ProviderConfig.models` and `defaultModel` are removed;
-`excluded` is added. A one-time migration on first load treats a stored
-`models` list as "everything else excluded" so existing admin choices carry
-over, then rewrites the doc.
+`excluded` is added. One-time migration on first load: a stored non-empty
+`models` list becomes `excluded = working − models` so existing choices carry
+over; an empty or missing `models` list becomes `excluded = []`. The doc is
+rewritten once.
 
 ### 9. Surveyor Profile
 
 - Remove the Gemini and Groq model pickers.
 - Add an Ollama Cloud key row.
 - Each provider row: name, "Get a free key" link, key input(s), **Test**
-  button (one cheap call; shows ✓ / ✗ with the reason), and a one-line role:
+  button (one cheap call — `models` list for Gemini/Groq, `/api/tags` via
+  proxy for Ollama — shows ✓ / ✗ with the reason), and a one-line role:
   "Required" (Gemini) or "Optional — backup when Google is busy" (others).
 - Keys stay local + Drive backup, unchanged.
 
 ### 10. Testing
 
 Unit (vitest, fetch mocked with the real Google error bodies captured in
-this session):
+this session plus the documented PerDay shape):
 
-- `classifyGemini429` — PerMinute, PerDay, PerProject, missing details.
-- `rank` — heavy excludes text-only and low-output models; light excludes
-  >20 s/page; proxied sorts after direct; deadToday and excluded skipped;
+- `classifyGemini429` — PerMinutePerProjectPerModel → model/minute;
+  PerDayPerProjectPerModel → model/day; PerDayPerProject → project/day;
+  double-encoded message; missing details → null.
+- `rank` — heavy excludes text-only, low-output, and imageCap-too-small
+  models; light keeps slow models after fast ones (never empty while a
+  vision model exists); proxied sorts last for light; deadToday, notFound,
+  excluded, deprecated, paid all skipped; empty vision pool with >1 image
+  throws PAYLOAD_TOO_LARGE; no probes doc → built-in default pool;
   admin pool `[3.6, 2.5, lite]` with lite fastest+exact → lite first.
-- Loop — 503 hops without retry; PerDay marks deadToday and hops;
-  PerProject rotates key then provider; 401 rotates key; 413 throws;
-  exhausted chain throws AllProvidersBusy.
-- Migration — old `models` list becomes `excluded` complement.
+- Loop — 503 hops without retry; timeout counts as busy; MAX_TOKENS hops;
+  SAFETY skips provider; PerModel-day marks deadToday and hops;
+  PerProject-day marks provider dead; 402 and vision-400 hop; thinking-400
+  retries once without thinkingConfig; 401 rotates key; 413 throws; abort
+  between hops stops; all-network-errors throws Offline; busy-only chain
+  gets exactly one 5 s second pass; exhausted chain throws
+  AllProvidersBusy; session makes chunk 2 start on chunk 1's model.
+- Migration — non-empty old list → complement; empty → no exclusions.
+- Tier 2 — transient failure leaves `untested`.
 
-Live (manual, one dev-only `?ai-fault=503|429-minute|429-day` URL param
-that makes the first call throw a canned body):
+Live (manual, one dev-only `?ai-fault=503|429-minute|429-day|max-tokens`
+URL param that makes the first call return a canned body):
 
-- L1 real 5-page estimate through the app with the AQ. key — exact result.
-- L2–L4 induced 503 / PerMinute / PerDay — observe the hop toasts and the
-  `[ai-fallback]` console line per hop.
-- L5 Ollama key added, Gemini provider disabled in admin → estimate goes via
+- L0 Phase 0: 3.5/3.6 Flash accept `thinkingBudget: 0` or the retry path
+  handles the 400.
+- L1 real 5-page estimate through the app with the AQ. key — exact result,
+  one model for all chunks.
+- L2–L5 induced faults — observe the hop toasts and the `[ai-fallback]`
+  console line per hop.
+- L6 Ollama key added, Gemini provider disabled in admin → estimate goes via
   proxy, result within 0.1 %.
+- L7 Airplane mode → Offline message, no hops.
 
 ### 11. Out of scope
 
@@ -235,10 +336,11 @@ that makes the first call throw a canned body):
 
 Each phase ships and deploys on its own.
 
-- **Phase 0** — `thinkingBudget: 0` on Gemini JSON calls. One line, one test.
-- **Phase 1** — loop + jobs: sections 3, 4, 5, 6 and the `ollama` adapter.
-  Ranker reads today's `providers[p].models` as the pool so the admin tab
-  keeps working unchanged. Surveyor sees the new hops immediately.
+- **Phase 0** — `thinkingBudget: 0` with the 400-retry guard. One function,
+  one test, verified live on 3.x Flash first.
+- **Phase 1** — loop + jobs + health: sections 3, 4, 5, 6 and the `ollama`
+  adapter. Ranker reads today's `providers[p].models` as the pool so the
+  admin tab keeps working unchanged. Surveyor sees the new hops immediately.
 - **Phase 2** — catalogue + admin + profile: sections 7, 8, 9 and the
   schema migration.
 
@@ -247,12 +349,14 @@ Each phase ships and deploys on its own.
 New: `src/lib/ai/rank.ts`, `src/lib/ai/health.ts`,
 `src/lib/ai/gemini-errors.ts`, tests beside them.
 
-Changed: `service.ts` (job arg, loop, thinkingBudget, details on error),
-`processor.ts` + 7 call sites (job), `probe-runner.ts` (ollama catalogue,
-outputTokens, models.dev, auto tier 2, busy count), `probe-types.ts` (new
-statuses, fields), `models-config.ts` (excluded, migration),
-`AIModelsTab.tsx` (ranked lists), `ProfileTab.tsx` (rows, no pickers),
-`functions/index.js` (aiProxy), `src/lib/firebase/functions.ts`.
+Changed: `service.ts` (job/session args, loop, timeouts, thinkingBudget,
+details + finishReason on results), `processor.ts` + 7 call sites (job,
+session), `probe-runner.ts` (ollama catalogue, outputTokens, models.dev,
+auto tier 2, busy count, discovery summary), `probe-types.ts` (new statuses,
+fields), `models-config.ts` (excluded, migration), `AIModelsTab.tsx`
+(discovery summary, ranked lists, exclude), `ProfileTab.tsx` (rows, test
+buttons, no pickers), `functions/index.js` (aiProxy),
+`src/lib/firebase/functions.ts`.
 
 Deleted: `GEMINI_FALLBACK_CHAIN`, `GROQ_FALLBACK_CHAIN`, `resolveGeminiModel`,
 `resolveGroqModel`, `resolveNvidiaModel`, `resolveEnabledModel`,
