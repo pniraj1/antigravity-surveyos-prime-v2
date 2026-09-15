@@ -190,8 +190,9 @@ Surveyor-facing messages, at most one toast per distinct hop per document
 - deadToday: "2.5 Flash has hit today's free limit (resets 1:30 pm IST) —
   using Flash-Lite"
 - Offline: "You're offline — AI extraction needs a connection."
-- AllProvidersBusy: "All AI models are busy. Try again in a minute, or add a
-  backup key in Profile → AI." with a link.
+- AllProvidersBusy: "All AI models are busy. Try again in a minute." When the
+  surveyor has only a Gemini key, the message adds "— or add a free Ollama
+  backup key in Profile → AI" with a link, at most once per day.
 
 ### 5. Gemini request fixes
 
@@ -314,8 +315,8 @@ this session plus the documented PerDay shape):
 Live (manual, one dev-only `?ai-fault=503|429-minute|429-day|max-tokens`
 URL param that makes the first call return a canned body):
 
-- L0 Phase 0: 3.5/3.6 Flash accept `thinkingBudget: 0` or the retry path
-  handles the 400.
+- L0 3.5/3.6 Flash accept `thinkingBudget: 0` or the retry path handles
+  the 400.
 - L1 real 5-page estimate through the app with the AQ. key — exact result,
   one model for all chunks.
 - L2–L5 induced faults — observe the hop toasts and the `[ai-fallback]`
@@ -334,12 +335,12 @@ URL param that makes the first call return a canned body):
 
 ## Phases
 
-Each phase ships and deploys on its own.
+Each phase ships and deploys on its own. Decisions 2026-09-15: bank-statement
+is heavy; heavy per-call timeout 120 s; thinking fix bundled into Phase 1.
 
-- **Phase 0** — `thinkingBudget: 0` with the 400-retry guard. One function,
-  one test, verified live on 3.x Flash first.
-- **Phase 1** — loop + jobs + health: sections 3, 4, 5, 6 and the `ollama`
-  adapter. Ranker reads today's `providers[p].models` as the pool so the
+- **Phase 1** — `thinkingBudget: 0` with the 400-retry guard (verified live
+  on 3.x Flash first), plus loop + jobs + health: sections 3, 4, 5, 6 and the
+  `ollama` adapter. Ranker reads today's `providers[p].models` as the pool so the
   admin tab keeps working unchanged. Surveyor sees the new hops immediately.
 - **Phase 2** — catalogue + admin + profile: sections 7, 8, 9 and the
   schema migration.
