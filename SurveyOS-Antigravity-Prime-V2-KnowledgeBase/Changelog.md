@@ -2,6 +2,9 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-09-15 (Claude)
+- feat(ri): Reinspection tab now holds every field the RI report prints (RI ref, place, RI/auth/est dates, plus two-way Report No / insurer / offices / accident & survey dates). RI report drops Date of Report, Survey Ref No, Survey Date. Photo sheet Report No editable with "Use RI Ref".
+
 ## 2026-08-21 (Claude)
 - feat(salvage): `salvageBasis(rows, lens)` in `src/lib/calculations/salvage.ts` — allowed metal parts only, assessed before depreciation, each row's own GST, replacing a basis struck on the unfiltered estimate
 - feat(salvage): the Assessment tab's suggested band reads the new basis instead of `estimateMetalBase`
