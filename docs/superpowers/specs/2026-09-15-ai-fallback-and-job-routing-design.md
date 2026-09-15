@@ -1,6 +1,6 @@
 # AI fallback and job-aware model routing — design
 
-Date: 2026-09-15 (rev 2 — failure-case review folded in)
+Date: 2026-09-15 (rev 3 — heavy-doc accuracy safeguards, Pro/zero-quota handling)
 Status: draft for review
 
 ## Problem
@@ -35,8 +35,21 @@ models.dev (`https://models.dev/api.json`, 4.6 MB, CORS open) lists every
 Gemini id exactly, with `deprecated`, output limit and modalities, and has
 an `ollama-cloud` provider entry.
 
-Not measured: Gemini 3.6/3.7/3.8 Flash (3.5 was 503 all session), a real
-PerDay 429 body, Ollama's daily ceiling.
+Pro models on a free key: `gemini-2.5-pro` 404 ("no longer available to
+new users"); `gemini-3.1-pro-preview` and `gemini-pro-latest` 429 listing
+four violations at once (`GenerateRequestsPerDayPerProjectPerModel-FreeTier`,
+`GenerateRequestsPerMinutePerProjectPerModel-FreeTier`,
+`GenerateContentInputTokensPerModelPerMinute-FreeTier`,
+`GenerateContentInputTokensPerModelPerDay-FreeTier`), `quotaValue` absent,
+`retryDelay` 34–41 s. That shape means "zero quota on this tier", not "used
+up". Pro is paid-only; a surveyor who enables billing on their own project
+will see Pro ranked by the same machinery with no code change.
+
+Evidence limits: heavy verdicts so far come from one clean, digitally-born
+PDF with a text layer — the easiest case. Lite's exact result there does not
+prove it on scanned or hand-annotated estimates. Sections 3 and 12 exist
+because of this. Not measured: Gemini 3.6/3.7/3.8 Flash (3.5 was 503 all
+session), Ollama's daily ceiling.
 
 ## Design
 
@@ -66,12 +79,16 @@ sites pass `text` or `light` with no session.
 ### 2. The preferred loop per job (as of the 2026-09-15 measurements)
 
 ```
-heavy:  gemini/flash-lite → gemini/2.5-flash → gemini/3.x-flash → ollama/gemma4 (proxy)
+heavy:  gemini/2.5-flash → gemini/flash-lite → gemini/3.x-flash → ollama/gemma4 (proxy)
+        (2.5 Flash and Lite both exact on the one benchmark; the stronger
+         model leads on a tie — until its busy rate demotes it, or a scanned
+         benchmark separates them)
 light:  gemini/flash-lite → gemini/2.5-flash → gemini/3.x-flash → ollama/gemma4 (proxy)
 text:   groq/llama-3.3-70b → gemini/flash-lite → gemini/2.5-flash
 ```
 
-These are outputs of the ranker, not constants. They change when the probe
+Pro models appear in none of these on a free key (zero quota). These are
+outputs of the ranker, not constants. They change when the probe
 measures something different, and per surveyor as their own health data
 accumulates.
 
@@ -86,8 +103,12 @@ rank(job, images, pool, probes, health):
     .filter(job === 'heavy' ? outputTokens ≥ 16K || outputTokens unknown : true)
     .filter(not deadToday for this surveyor's key)
   sort by:
-    heavy: verdict (exact > close > untested; wrong/failed excluded)
+    heavy: verdict = WORST result across the benchmark set
+           (exact > close > untested; wrong/failed excluded)
+           → stronger model first (newer generation, then larger tier:
+             pro > flash > flash-lite; gemma4:31b sits with flash)
            → busyRate asc → wholeDocMs asc → direct before proxied
+           Speed decides only when accuracy and strength are tied.
     light: (msPerPage ≤ 20 s first, then the rest) → msPerPage asc
            → busyRate asc → direct before proxied (proxied always last)
     text:  msPerPage asc → busyRate asc → direct before proxied
@@ -114,9 +135,9 @@ Inputs:
     `untilTs` is the next midnight Pacific (toast says "resets 1:30 pm IST").
   - `deadToday[keyHash:*]` — set on a PerProject PerDay 429; the whole
     provider is skipped for that key until reset.
-  - `notFound[model] = untilTs` — set on 404 for this surveyor's key, 7-day
-    expiry, so a model the admin's key sees but the surveyor's doesn't is not
-    re-tried on every call.
+  - `notFound[model] = untilTs` — set on 404 for this surveyor's key, and on
+    a zero-quota 429 (see classification below), 7-day expiry, so a model the
+    admin's key sees but the surveyor's doesn't is not re-tried on every call.
 
 Two clocks are deliberate: busy counts are a local-day habit signal; quota
 resets are Google's Pacific-midnight fact.
@@ -140,6 +161,7 @@ for (provider, model) in chain:
       200, finishReason MAX_TOKENS    → NEXT MODEL
       200, finishReason SAFETY        → NEXT PROVIDER
       503 / 500 overloaded / timeout  → busyOnly.push(model); NEXT MODEL   (no in-place retry)
+      429 zero-quota (not on tier)    → notFound[model]; NEXT MODEL
       429 per-model, minute           → busyOnly.push(model); NEXT MODEL
       429 per-model, day              → deadToday[key:model]; NEXT MODEL
       429 per-project, minute         → NEXT KEY, else NEXT PROVIDER
@@ -180,8 +202,12 @@ double-encodes). Find the `QuotaFailure` violation's `quotaId`:
   (note `GenerateRequestsPerMinutePerProjectPerModel` contains both words —
   the presence of `PerModel` decides)
 - contains `PerDay` → day, else minute
+- **zero-quota**: the violations list contains both a `PerDay` and a
+  `PerMinute` entry (measured: Pro on a free key lists all four at once).
+  One call cannot exhaust a daily and a per-minute limit simultaneously
+  unless the limit is zero — the model is not on this tier.
 
-Returns `{scope: 'model' | 'project', period: 'minute' | 'day'} | null`.
+Returns `{scope: 'model' | 'project', period: 'minute' | 'day'} | 'zero' | null`.
 
 Surveyor-facing messages, at most one toast per distinct hop per document
 (session stickiness makes chunk 2..n reuse chunk 1's model):
@@ -309,7 +335,13 @@ this session plus the documented PerDay shape):
   between hops stops; all-network-errors throws Offline; busy-only chain
   gets exactly one 5 s second pass; exhausted chain throws
   AllProvidersBusy; session makes chunk 2 start on chunk 1's model.
-- Migration — non-empty old list → complement; empty → no exclusions.
+- Migration — non-empty old list → complement; empty → no exclusions;
+  single benchmark → array of one.
+- `classifyGemini429` — captured Pro body (four violations) → 'zero'.
+- rank — worst-across-benchmarks verdict; exact-tied models order by
+  strength before speed.
+- Math second opinion — failing chunk re-runs once on the next heavy model;
+  passing result wins; both failing keeps the first with discrepancies.
 - Tier 2 — transient failure leaves `untested`.
 
 Live (manual, one dev-only `?ai-fault=503|429-minute|429-day|max-tokens`
@@ -325,7 +357,30 @@ URL param that makes the first call return a canned body):
   proxy, result within 0.1 %.
 - L7 Airplane mode → Offline message, no hops.
 
-### 11. Out of scope
+### 11. Heavy-document accuracy safeguards
+
+Ranking cannot be trusted from one clean benchmark, and no ranking prevents
+a model from dropping a row on a bad scan. Two safeguards:
+
+**Benchmark set.** The admin uploads up to three benchmark documents, each
+with its expected total and item count: a clean digital PDF, a scanned or
+photographed estimate, a long (10+ page) final bill. Tier 2 runs every model
+against every benchmark; the heavy verdict is the worst result across the
+set. With fewer than three, the admin tab says "benchmarked on 1 of 3
+document types" next to the heavy list so the evidence gap is visible.
+`BenchmarkDoc` becomes an array; existing single-benchmark data migrates as
+element 0.
+
+**Math check as second opinion.** `validateMath` already detects when
+extracted rows do not add up to the document's own totals — a dropped or
+misread row makes the arithmetic fail regardless of which model dropped it.
+Today it only shows a toast. Change: when the math fails for a chunk, re-run
+that chunk once on the next heavy model in the chain and keep whichever
+result satisfies the math; if neither does, keep the first and show the
+discrepancy as today. Cost: one extra call, only when the result is already
+wrong. This is the safeguard that does not depend on the ranking being right.
+
+### 12. Out of scope
 
 - Z.ai, Cloudflare, OpenRouter adapters (data-residency decision pending for
   Z.ai; Cloudflare/OpenRouter add when Gemini + Gemma prove insufficient).
@@ -342,8 +397,10 @@ is heavy; heavy per-call timeout 120 s; thinking fix bundled into Phase 1.
   on 3.x Flash first), plus loop + jobs + health: sections 3, 4, 5, 6 and the
   `ollama` adapter. Ranker reads today's `providers[p].models` as the pool so the
   admin tab keeps working unchanged. Surveyor sees the new hops immediately.
-- **Phase 2** — catalogue + admin + profile: sections 7, 8, 9 and the
-  schema migration.
+  Includes the math-check second opinion (section 11) since it rides on the
+  loop.
+- **Phase 2** — catalogue + admin + profile: sections 7, 8, 9, the benchmark
+  set (section 11) and the schema migrations.
 
 ## Files
 
@@ -352,7 +409,7 @@ New: `src/lib/ai/rank.ts`, `src/lib/ai/health.ts`,
 
 Changed: `service.ts` (job/session args, loop, timeouts, thinkingBudget,
 details + finishReason on results), `processor.ts` + 7 call sites (job,
-session), `probe-runner.ts` (ollama catalogue, outputTokens, models.dev,
+session, math second opinion), `benchmark-doc.ts` (array), `probe-runner.ts` (ollama catalogue, outputTokens, models.dev,
 auto tier 2, busy count, discovery summary), `probe-types.ts` (new statuses,
 fields), `models-config.ts` (excluded, migration), `AIModelsTab.tsx`
 (discovery summary, ranked lists, exclude), `ProfileTab.tsx` (rows, test
