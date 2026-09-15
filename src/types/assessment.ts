@@ -342,6 +342,8 @@ export interface PhotoSheetOptions {
   borderColor: string;
   /** Manual page orientation override */
   pageOrientation?: PageOrientation;
+  /** Report No printed in the sheet header. Undefined = claim.reportNo. */
+  reportNo?: string;
 }
 
 // ─── DOCUMENT ANNEXURE ──────────────────────────────────

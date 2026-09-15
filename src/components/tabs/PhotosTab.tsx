@@ -240,6 +240,28 @@ export function PhotosTab() {
                   <option value="landscape">Landscape A4</option>
                 </select>
               </div>
+
+              {/* Report No on sheet — RI photo sheets carry the RI ref instead */}
+              <div className="space-y-1.5 mt-4">
+                <div className="flex justify-between items-center">
+                  <Label className="text-xs text-muted-foreground">Report No on sheet</Label>
+                  {currentClaim.reinspection?.refNo && (
+                    <button
+                      type="button"
+                      onClick={() => setOpt('reportNo', currentClaim.reinspection.refNo)}
+                      className="text-[11px] px-2 py-0.5 rounded-full border border-primary/40 text-primary hover:bg-primary/10"
+                    >
+                      Use RI Ref
+                    </button>
+                  )}
+                </div>
+                <Input
+                  value={options.reportNo ?? currentClaim.reportNo ?? ''}
+                  onChange={e => setOpt('reportNo', e.target.value)}
+                  placeholder="Final survey report no."
+                  className="h-9 text-sm"
+                />
+              </div>
             </CardContent>
           </Card>
 

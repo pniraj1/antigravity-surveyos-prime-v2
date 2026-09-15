@@ -220,7 +220,7 @@ export function PhotoSheetDocument({ claim, surveyorName = '', options = {} }: P
 
   const regNum    = claim?.vehicle?.registrationNumber || 'DRAFT';
   const insurer   = claim?.policy?.insurerName        || '';
-  const reportNo  = claim?.reportNo                   || '';
+  const reportNo  = opts.reportNo ?? (claim?.reportNo || '');
   const claimNum  = claim?.policy?.claimNumber        || 'N/A';
 
   const pageSize      = config.pagePortrait ? 'A4' : ([842, 595] as [number, number]);
