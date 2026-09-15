@@ -83,7 +83,7 @@ export async function extractBankStatement(file: File): Promise<BankTransaction[
 
   for (const page of pages) {
     try {
-      raw = await callAIGateway(prompt, [page]);
+      raw = await callAIGateway(prompt, [page], 'json', 'heavy');
       const clean = raw.replace(/```json|```/g, '').trim();
       const parsed = JSON.parse(clean);
       const txs: BankTransaction[] = (parsed.transactions || []).map((t: any) => ({

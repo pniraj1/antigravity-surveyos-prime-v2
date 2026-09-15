@@ -217,7 +217,7 @@ export async function runPolicyAnalysis({
   if (policyImages.length > 0) {
     try {
       const prompt = buildPolicyAnalysisPrompt(language);
-      const raw = await callAIGateway(prompt, policyImages);
+      const raw = await callAIGateway(prompt, policyImages, 'json', 'light');
       const parsed = JSON.parse(raw) as { clauses: Omit<InsuredReportPolicyClause, 'source'>[] };
       policyMappings = (parsed.clauses ?? []).map(c => ({ ...c, source: 'policy-pdf' as const }));
       if (policyMappings.length === 0) policyMappings = getIRDAIStandardClauses();
@@ -263,7 +263,7 @@ async function enrichTaggedRows(
 
   try {
     const prompt = buildTaggedRowEnrichmentPrompt(language, inputs);
-    const raw = await callAIGateway(prompt, []);
+    const raw = await callAIGateway(prompt, [], 'json', 'text');
     let parsed = JSON.parse(raw);
     if (!Array.isArray(parsed) && Array.isArray(parsed?.items)) parsed = parsed.items;
     if (!Array.isArray(parsed)) throw new Error(`Unexpected format: ${typeof parsed}`);
@@ -341,7 +341,7 @@ export async function runAssessmentAnalysis({
         policyContext,
         accidentContext || undefined,
       );
-      const raw = await callAIGateway(prompt, []);
+      const raw = await callAIGateway(prompt, [], 'json', 'text');
       let parsed = JSON.parse(raw);
       if (!Array.isArray(parsed) && Array.isArray(parsed?.items)) parsed = parsed.items;
       if (!Array.isArray(parsed)) throw new Error(`Unexpected AI format: ${typeof parsed}`);
@@ -498,6 +498,7 @@ export async function runGenerateNarrative({
       buildCoveringNarrativePrompt(language, JSON.stringify(claimSummary), deductionLines, categoryGroups),
       [],
       'text',
+      'text',
     );
     coveringNarrative = raw.replace(/```[a-z]*/g, '').replace(/```/g, '').trim();
     if (!coveringNarrative) throw new Error('AI returned empty response for narrative.');
@@ -622,7 +623,7 @@ export async function generateInsuredReport({
   if (policyImages.length > 0) {
     try {
       const prompt = buildPolicyAnalysisPrompt(language);
-      const raw = await callAIGateway(prompt, policyImages);
+      const raw = await callAIGateway(prompt, policyImages, 'json', 'light');
       const parsed = JSON.parse(raw) as { clauses: Omit<InsuredReportPolicyClause, 'source'>[] };
       policyMappings = (parsed.clauses ?? []).map(c => ({ ...c, source: 'policy-pdf' as const }));
       if (policyMappings.length === 0) {
@@ -692,7 +693,7 @@ export async function generateInsuredReport({
         policyContext,
         accidentContext || undefined,
       );
-      const raw = await callAIGateway(prompt, []);
+      const raw = await callAIGateway(prompt, [], 'json', 'text');
 
       let parsed = JSON.parse(raw);
       if (!Array.isArray(parsed) && Array.isArray(parsed?.items)) {
@@ -848,7 +849,7 @@ export async function generateInsuredReport({
 
     // Pass 3 expects plain prose — use 'text' to bypass json_object mode on Groq/NVIDIA
     // and responseMimeType: application/json on Gemini, which would wrap the letter in JSON.
-    const raw = await callAIGateway(narrativePrompt, [], 'text');
+    const raw = await callAIGateway(narrativePrompt, [], 'text', 'text');
     coveringNarrative = raw.replace(/```[a-z]*/g, '').replace(/```/g, '').trim();
     if (!coveringNarrative) {
       throw new Error('AI returned an empty response for the narrative.');

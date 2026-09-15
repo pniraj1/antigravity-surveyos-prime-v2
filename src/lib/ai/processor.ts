@@ -4,9 +4,10 @@
 // ═══════════════════════════════════════════════════════════
 
 // import * as pdfjsLib from 'pdfjs-dist'; // DO NOT STACTIC IMPORT THIS
-import { callAIGateway, getActiveImageCap } from './service';
+import { callAIGateway, getActiveImageCap, newSession } from './service';
 import { resolveVisionChunkSize } from './image-cap';
 import { getDocPrompt } from './prompts';
+import { jobForDocType } from './jobs';
 import { toast } from 'sonner';
 
 /**
@@ -398,7 +399,7 @@ export async function rescanTargetPages(
     let partialData: any = null;
     for (const idx of valid) {
       try {
-        const raw = await callAIGateway(targetedPrompt, [apiImages[idx]]);
+        const raw = await callAIGateway(targetedPrompt, [apiImages[idx]], 'json', 'heavy');
         const fragment = JSON.parse(raw);
         partialData = mergeAIResults(partialData, fragment);
       } catch {
@@ -490,7 +491,7 @@ export async function extractDocument(
   forceDocMode?: 'text' | 'vision',
   // ponytail: abort is checked between page chunks, not threaded into fetch.
   // That stops every remaining call — which is where the quota goes on a slow
-  // multi-page document — without rewiring callAIGateway/callWithRotation/
+  // multi-page document — without rewiring callAIGateway/callWithFallback/
   // callWithKey and their seven call sites. The one already-dispatched request
   // is billed the moment it leaves, so threading deeper would save nothing but
   // its response. Upgrade path: add `signal` to those three signatures and pass
@@ -498,6 +499,8 @@ export async function extractDocument(
   signal?: AbortSignal,
 ): Promise<ExtractionResult> {
   const files = Array.isArray(file) ? file : [file];
+  const job = jobForDocType(key);
+  const session = newSession(`${key}-${Date.now()}`);
   const basePrompt = getDocPrompt(key) || "Extract all visible details from this document as JSON.";
   
   let prompt = basePrompt;
@@ -540,7 +543,7 @@ export async function extractDocument(
     // The preference is then clamped to the active provider's image cap — NVIDIA
     // accepts exactly 1, and exceeding it 400s the whole request.
     const PREFERRED_VISION_CHUNK = (key === 'estimate' || key === 'final-bill') ? 2 : 1;
-    const VISION_CHUNK_SIZE = resolveVisionChunkSize(PREFERRED_VISION_CHUNK, getActiveImageCap());
+    const VISION_CHUNK_SIZE = resolveVisionChunkSize(PREFERRED_VISION_CHUNK, getActiveImageCap(job));
     const CHUNK_SIZE = useTextMode ? 1 : VISION_CHUNK_SIZE;
 
     // Build the base prompt — for vision mode on digitally-born docs we still
@@ -642,7 +645,7 @@ export async function extractDocument(
 
         let rawResponse: string;
         try {
-          rawResponse = await callAIGateway(chunkPrompt, chunkImages);
+          rawResponse = await callAIGateway(chunkPrompt, chunkImages, 'json', job, session, signal);
         } catch (firstErr: any) {
           // ── Payload too large → auto-fallback to vision for this chunk ──────
           // The gateway signals PAYLOAD_TOO_LARGE when even the shortest text-mode
@@ -660,7 +663,7 @@ export async function extractDocument(
             );
             const visionImages = apiImages.slice(i, i + 1); // 1 page vision fallback
             try {
-              rawResponse = await callAIGateway(enhancedPrompt, visionImages);
+              rawResponse = await callAIGateway(enhancedPrompt, visionImages, 'json', job, session, signal);
             } catch (visionErr: any) {
               // Both text-mode and vision-mode failed (provider token limit too restrictive).
               // This typically means Groq's 8K TPM is too small for this document.
@@ -692,7 +695,7 @@ export async function extractDocument(
             // Generic transient error — retry once after 500ms
             await new Promise(r => setTimeout(r, 500));
             try {
-              rawResponse = await callAIGateway(chunkPrompt, chunkImages);
+              rawResponse = await callAIGateway(chunkPrompt, chunkImages, 'json', job, session, signal);
             } catch (err: any) {
               const msg = err instanceof Error ? err.message : 'Unknown error';
               toast.error(`AI extraction failed — ${msg}. Please enter fields manually.`);
