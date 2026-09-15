@@ -504,6 +504,11 @@ function toProvider(e: PoolEntry): AIProvider {
   };
 }
 
+/** A browser fetch that never reached the server (not any TypeError from our own code). */
+function isNetworkError(err: unknown): boolean {
+  return err instanceof TypeError && /fetch|network|load failed/i.test(err.message);
+}
+
 type Step = 'next-model' | 'next-key' | 'next-provider' | 'retry-no-thinking';
 
 /** Decides what the loop does after one failed call. Pure; the loop applies side effects. */
@@ -511,10 +516,10 @@ function stepFor(err: any, provider: ProviderId): { step: Step; busy?: boolean; 
   const kind = classifyGatewayError(err);
   if (kind === 'subscription' || kind === 'unauthenticated') return { step: 'next-provider' };
   if (kind === 'timeout' || err?.name === 'TimeoutError') return { step: 'next-model', busy: true };
-  if (err instanceof TypeError) return { step: 'next-provider' };            // network
+  if (isNetworkError(err)) return { step: 'next-provider' };
   if (isPayloadTooLarge(err)) return { throw: Object.assign(new Error(`PAYLOAD_TOO_LARGE: ${err.message}`), { status: 413 }) };
   const status: number = err?.status ?? 0;
-  if (status === 503 || status === 500) return { step: 'next-model', busy: true };
+  if (status === 503 || status === 500 || status === 502 || status === 504) return { step: 'next-model', busy: true };
   if (status === 429) {
     const q = provider === 'gemini' ? classifyGemini429({ status, message: err.message, details: err.details ?? [] }) : null;
     if (q === 'zero') return { step: 'next-model', notFound: true };
@@ -547,15 +552,15 @@ async function callWithFallback(
 
   const walk = async (chain: PoolEntry[], allowSecondPass: boolean): Promise<string> => {
     const busyOnly: PoolEntry[] = [];
-    let skipProvider: ProviderId | null = null;
+    const skipped = new Set<ProviderId>();
 
     for (const entry of chain) {
       if (signal?.aborted) throw Object.assign(new Error('Extraction cancelled'), { name: 'AbortError' });
-      if (entry.provider === skipProvider) continue;
+      if (skipped.has(entry.provider)) continue;
       const provider = toProvider(entry);
       const label = `${PROVIDER_LABELS[entry.provider] ?? entry.provider} ${entry.model.label || entry.model.id}`;
       if (!tried.includes(entry.model.id)) tried.push(entry.model.id);
-      let thinkingOff = true;
+      let thinkingOff = true, lastBusy = false;
 
       keys: for (let i = 0; i < entry.keys.length; i++) {
         const key = entry.keys[i];
@@ -568,18 +573,19 @@ async function callWithFallback(
             return res.text;
           }
           health.recordCall(entry.model.id, 'other');
-          if (res.finish === 'SAFETY') { skipProvider = entry.provider; break keys; }
+          if (res.finish === 'SAFETY') { skipped.add(entry.provider); break keys; }
           break keys;                                   // MAX_TOKENS → next model
         } catch (err: any) {
           if (err?.name === 'AbortError' && signal?.aborted) throw err;
           const d = stepFor(err, entry.provider);
           if ('throw' in d) throw d.throw;
           health.recordCall(entry.model.id, d.busy ? 'busy' : 'other');
-          if (err instanceof TypeError) networkErrors++;
+          if (isNetworkError(err)) networkErrors++;
           if (d.deadModel) { health.markDeadToday(keyHash(key), entry.model.id); announce(session, `dead:${entry.model.id}`, `${label} has hit today's free limit (resets ${health.deadUntilLabel()}) — trying the next model.`); }
           if (d.deadProvider) health.markDeadToday(keyHash(key), '*');
           if (d.notFound) health.markNotFound(entry.model.id);
           if (d.reprobe) console.warn(`[ai-fallback] ${entry.model.id} rejected the request (${err.status}) — admin should re-probe.`);
+          lastBusy = !!d.busy;
           if (d.busy) busyOnly.push(entry);
           console.info(`[ai-fallback] ${entry.provider}/${entry.model.id} key#${i + 1} → ${err.status ?? err.name}: ${d.step}`);
 
@@ -589,18 +595,18 @@ async function callWithFallback(
             if (i + 1 < entry.keys.length) continue;
             const kind = classifyGatewayError(err);
             if (kind === 'auth') announce(session, `auth:${entry.provider}`, `${PROVIDER_LABELS[entry.provider]} key is invalid — check Profile → AI & Documents Intelligence.`, 'error');
-            skipProvider = entry.provider; break keys;
+            skipped.add(entry.provider); break keys;
           }
           if (d.step === 'next-provider') {
             const msg = gatewayErrorMessage(classifyGatewayError(err), PROVIDER_LABELS[entry.provider] ?? entry.provider);
             if (msg) announce(session, `provider:${entry.provider}`, msg, 'error');
-            skipProvider = entry.provider; break keys;
+            skipped.add(entry.provider); break keys;
           }
           break keys;                                   // next-model
         }
       }
       const next = chain[chain.indexOf(entry) + 1];
-      if (next && next.provider !== skipProvider) announce(session, `hop:${entry.model.id}`, `${label} busy — trying ${next.model.label || next.model.id}.`);
+      if (lastBusy && next && !skipped.has(next.provider)) announce(session, `hop:${entry.model.id}`, `${label} busy — trying ${next.model.label || next.model.id}.`);
     }
 
     if (allowSecondPass && busyOnly.length > 0) {
@@ -614,6 +620,11 @@ async function callWithFallback(
   if (session?.lastGood) {
     const i = chain.findIndex(e => e.model.id === session.lastGood!.model);
     if (i > 0) chain = [...chain.slice(i), ...chain.slice(0, i)];
+  }
+  if (chain.length === 0 && pool.some(e => e.keys.some(k => health.isDeadToday(keyHash(k), e.model.id)))) {
+    // Nothing left to walk today — say so instead of "busy, try again in a minute".
+    toast.error(`Today's free limit is used up on every model (resets ${health.deadUntilLabel()}). Add a backup key in Profile → AI & Documents Intelligence.`, { duration: 10000 });
+    throw new AllProvidersBusyError(job, []);
   }
 
   try {

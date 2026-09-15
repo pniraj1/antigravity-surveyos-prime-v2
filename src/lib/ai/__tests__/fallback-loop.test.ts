@@ -2,7 +2,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 const toast = vi.hoisted(() => ({ warning: vi.fn(), success: vi.fn(), error: vi.fn(), info: vi.fn() }));
 vi.mock('sonner', () => ({ toast }));
-vi.mock('@/lib/firebase/functions', () => ({ callAiProxy: vi.fn() }));
+const callAiProxy = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/firebase/functions', () => ({ callAiProxy }));
 vi.mock('@/lib/firebase/config', () => ({ getFirebaseApp: () => ({}), db: {} }));
 
 import { callAIGateway, newSession, AllProvidersBusyError, OfflineError } from '../service';
@@ -71,6 +72,13 @@ describe('hop before key rotation', () => {
     expect(health.isNotFound(modelOf(spy.mock.calls[0]))).toBe(true);
   });
 
+  it('502 hops to the next model like a 503', async () => {
+    const spy = vi.spyOn(global, 'fetch').mockResolvedValueOnce(fail(502, 'bad gateway')).mockResolvedValueOnce(ok());
+    expect(await callAIGateway('p', ['img'], 'json', 'heavy')).toBe('{"x":1}');
+    expect(spy).toHaveBeenCalledTimes(2);
+    expect(modelOf(spy.mock.calls[0])).not.toBe(modelOf(spy.mock.calls[1]));
+  });
+
   it('404 → not-found for 7 days and hop', async () => {
     const spy = vi.spyOn(global, 'fetch').mockResolvedValueOnce(fail(404, 'not found')).mockResolvedValueOnce(ok());
     await callAIGateway('p', ['img'], 'json', 'heavy');
@@ -127,6 +135,24 @@ describe('terminal cases', () => {
     await assertion;
     expect(spy).toHaveBeenCalledTimes(6);   // 3 gemini models × 2 passes
     vi.useRealTimers();
+  });
+  it('a skipped provider stays skipped after another provider is also skipped', async () => {
+    useProfileStore.getState().updateProfile({ ollamaApiKeys: ['o1'] } as never);
+    // Three busy calls push gemini-3.5-flash behind gemma4 in the ranking, so a Gemini model follows the Ollama one.
+    for (let i = 0; i < 3; i++) health.recordCall('gemini-3.5-flash', 'busy');
+    callAiProxy.mockRejectedValue(Object.assign(new Error('denied'), { code: 'functions/permission-denied' }));
+    vi.spyOn(global, 'fetch').mockResolvedValue(fail(401, 'bad key'));
+    await expect(callAIGateway('p', ['img'], 'json', 'heavy')).rejects.toBeInstanceOf(AllProvidersBusyError);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(toast.error.mock.calls.filter(c => /key is invalid/.test(String(c[0])))).toHaveLength(1);
+  });
+  it('every model dead today → day-limit message, no calls', async () => {
+    health.markDeadToday(keyHash('g1'), '*');
+    const spy = vi.spyOn(global, 'fetch').mockResolvedValue(ok());
+    await expect(callAIGateway('p', ['img'], 'json', 'heavy')).rejects.toBeInstanceOf(AllProvidersBusyError);
+    expect(spy).not.toHaveBeenCalled();
+    const msg = toast.error.mock.calls.map(c => String(c[0])).find(m => /free limit is used up/.test(m));
+    expect(msg).toMatch(/IST/);
   });
   it('abort signal stops hopping', async () => {
     const ctrl = new AbortController();
