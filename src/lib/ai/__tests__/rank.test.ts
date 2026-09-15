@@ -61,6 +61,10 @@ describe('eligibility', () => {
   it('returns [] (not throw) when the pool is simply empty', () => {
     expect(rankModels('heavy', ['a'], [], { health: health() })).toEqual([]);
   });
+  it('returns [] (no throw) when no model in the pool has vision at all', () => {
+    const pool = [entry('groq', 'llama-3.3-70b-versatile', { vision: false })];
+    expect(rankModels('heavy', ['a', 'b'], pool, { health: health() })).toEqual([]);
+  });
 });
 
 describe('ordering', () => {

@@ -49,6 +49,7 @@ const VERDICT_RANK: Record<NonNullable<PoolEntry['verdict']>, number> = { exact:
 
 function verdictRank(e: PoolEntry): number { return VERDICT_RANK[e.verdict ?? 'untested']; }
 /** Untested speed gets the benefit of the doubt: treated as borderline-fast, not worst-case. */
+// Unknown speed sits at the fast/slow boundary — benefit of the doubt, but never ahead of a measured fast model.
 function speed(e: PoolEntry): number { return e.msPerPage ?? LIGHT_FAST_MS_PER_PAGE; }
 
 export function rankModels(job: AIJob, images: readonly string[], pool: readonly PoolEntry[], opts: RankOptions): PoolEntry[] {
@@ -68,6 +69,9 @@ export function rankModels(job: AIJob, images: readonly string[], pool: readonly
     eligible.push({ ...e, keys });
   }
 
+  // Throw only when some model could have taken images but none fits this many.
+  // With no vision model at all, re-chunking (the caller's response to 413)
+  // cannot help — return [] so the loop reports "no provider" instead.
   if (eligible.length === 0 && needsVision && images.length > 1 && pool.some(e => e.model.vision)) {
     throw new PayloadTooLargeError();
   }
