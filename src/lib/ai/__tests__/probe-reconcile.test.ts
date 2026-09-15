@@ -15,6 +15,7 @@ function config(nvidiaModels: string[], defaultModel: string): AIModelsConfig {
       gemini: { enabled: true, defaultModel: '', models: [] },
       groq: { enabled: true, defaultModel: '', models: [] },
       nvidia: { enabled: true, defaultModel, models: nvidiaModels.map(entry) },
+      ollama: { enabled: true, defaultModel: '', models: [] },
     },
   };
 }
@@ -36,6 +37,7 @@ function probes(nvidia: ProbeResult[], error: string | null = null): ModelProbes
       gemini: emptyProviderProbe(),
       groq: emptyProviderProbe(),
       nvidia: { probedAt: 1, error, models: Object.fromEntries(nvidia.map(r => [r.id, r])), accuracy: {} },
+      ollama: emptyProviderProbe(),
     },
   };
 }

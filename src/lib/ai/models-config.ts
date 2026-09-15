@@ -1,7 +1,7 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 
-export type ProviderId = 'gemini' | 'groq' | 'nvidia';
+export type ProviderId = 'gemini' | 'groq' | 'nvidia' | 'ollama';
 
 export interface ModelEntry {
   id: string;
@@ -35,6 +35,7 @@ export const PROVIDER_IMAGE_CAPS: Record<ProviderId, number | null> = {
   gemini: null,
   groq: 5,
   nvidia: 1,
+  ollama: null,   // measured 2026-09-15: gemma4:31b accepted 5 pages in one call
 };
 
 /** Formats a context window token count into a short badge string (1M, 131K). */
@@ -101,10 +102,19 @@ export const FALLBACK_AI_MODELS_CONFIG: AIModelsConfig = {
         entry('nvidia', 'meta/llama-3.2-11b-vision-instruct', 'Llama 3.2 11B', 'Smaller · faster', 128_000, true),
       ],
     },
+    ollama: {
+      enabled: true,
+      defaultModel: 'gemma4:31b',
+      models: [
+        // The only vision model on Ollama Cloud's free tier (every other
+        // multimodal model returned 402 on 2026-09-15). Reached via aiProxy.
+        entry('ollama', 'gemma4:31b', 'Gemma 4 31B', 'Free on Ollama Cloud · vision · ~55s/5 pages · via proxy', 131_072, true),
+      ],
+    },
   },
 };
 
-const PROVIDER_IDS: ProviderId[] = ['gemini', 'groq', 'nvidia'];
+const PROVIDER_IDS: ProviderId[] = ['gemini', 'groq', 'nvidia', 'ollama'];
 
 /** Backfills any missing provider blocks from the fallback so the UI never crashes. */
 export function mergeWithFallback(raw: Partial<AIModelsConfig> | null): AIModelsConfig {

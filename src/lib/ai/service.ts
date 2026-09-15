@@ -29,7 +29,7 @@ export function resolveEnabledModel(saved: string | undefined, providerCfg: Prov
 // When set, callAIGateway routes a single extraction to one specific
 // provider+model+key (no profile, no fallback chain). Used by the Admin
 // "Test with estimate PDF" tool. Always cleared in runModelTest's finally.
-export interface AITestOverride { provider: 'gemini' | 'groq' | 'nvidia'; model: string; key: string; }
+export interface AITestOverride { provider: 'gemini' | 'groq' | 'nvidia' | 'ollama'; model: string; key: string; }
 let _testOverride: AITestOverride | null = null;
 export function setAITestOverride(o: AITestOverride | null): void { _testOverride = o; }
 export function getAITestOverride(): AITestOverride | null { return _testOverride; }
@@ -60,7 +60,7 @@ export interface ModelOption {
  * Only lists models confirmed functional on the free tier (April 2026).
  * The app auto-fetches the live list from the Gemini API when a key is available.
  */
-export const PROVIDER_MODELS: Record<'gemini' | 'groq' | 'nvidia', ModelOption[]> = {
+export const PROVIDER_MODELS: Record<'gemini' | 'groq' | 'nvidia' | 'ollama', ModelOption[]> = {
   gemini: [
     { id: 'gemini-2.5-flash',        label: '2.5 Flash ✓',  note: 'Best value · ~10s/page · vision + text' },
     { id: 'gemini-flash-lite-latest', label: 'Flash-Lite',   note: 'Fastest · ~3s/page' },
@@ -76,6 +76,9 @@ export const PROVIDER_MODELS: Record<'gemini' | 'groq' | 'nvidia', ModelOption[]
   nvidia: [
     { id: 'meta/llama-3.2-90b-vision-instruct', label: 'Llama 3.2 90B', note: 'Default · best vision' },
     { id: 'meta/llama-3.2-11b-vision-instruct', label: 'Llama 3.2 11B', note: 'Smaller · faster' },
+  ],
+  ollama: [
+    { id: 'gemma4:31b', label: 'Gemma 4 31B', note: 'Free · vision · via proxy' },
   ],
 };
 
@@ -138,7 +141,7 @@ export const DEPRECATED_GROQ_MODELS: Record<string, string> = {
 };
 
 export interface AIProvider {
-  name: 'groq' | 'gemini' | 'openai' | 'nvidia';
+  name: 'groq' | 'gemini' | 'openai' | 'nvidia' | 'ollama';
   endpoint: string;
   model: string;
   keys: string[];
@@ -581,6 +584,7 @@ const PROVIDER_LABELS: Record<string, string> = {
   gemini: 'Gemini',
   groq: 'Groq',
   nvidia: 'NVIDIA NIM',
+  ollama: 'Ollama Cloud',
 };
 
 /**

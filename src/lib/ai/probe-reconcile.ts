@@ -16,7 +16,7 @@ export interface Removal {
   reason: string;
 }
 
-const PROVIDER_IDS: ProviderId[] = ['gemini', 'groq', 'nvidia'];
+const PROVIDER_IDS: ProviderId[] = ['gemini', 'groq', 'nvidia', 'ollama'];
 
 /** Two consecutive durable failures before a model is pulled. */
 export const REMOVAL_STRIKES = 2;

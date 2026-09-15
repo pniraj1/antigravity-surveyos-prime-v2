@@ -81,10 +81,11 @@ export const EMPTY_PROBES: ModelProbes = {
     gemini: emptyProviderProbe(),
     groq: emptyProviderProbe(),
     nvidia: emptyProviderProbe(),
+    ollama: emptyProviderProbe(),
   },
 };
 
-const PROVIDER_IDS: ProviderId[] = ['gemini', 'groq', 'nvidia'];
+const PROVIDER_IDS: ProviderId[] = ['gemini', 'groq', 'nvidia', 'ollama'];
 
 /** Loads probe results; returns EMPTY_PROBES on any failure so callers never crash. */
 export async function loadModelProbes(): Promise<ModelProbes> {

@@ -24,13 +24,16 @@ import {
 } from '@/lib/ai/benchmark-doc';
 import { loadPdf } from '@/lib/photos/pdf-to-images';
 
-const PROVIDER_META: Record<ProviderId, { label: string; color: string; keyField: 'geminiApiKeys' | 'groqApiKeys' | 'nvidiaApiKeys' }> = {
+const PROVIDER_META: Record<ProviderId, { label: string; color: string; keyField?: 'geminiApiKeys' | 'groqApiKeys' | 'nvidiaApiKeys' }> = {
   gemini: { label: 'Google Gemini', color: '#D4AF37', keyField: 'geminiApiKeys' },
   groq:   { label: 'Groq',          color: '#F26639', keyField: 'groqApiKeys' },
   nvidia: { label: 'NVIDIA NIM',    color: '#76B900', keyField: 'nvidiaApiKeys' },
+  // No admin key field yet — Ollama Cloud is reached through a server-side
+  // proxy (added in a later task) rather than a per-surveyor API key.
+  ollama: { label: 'Ollama Cloud',  color: '#000000' },
 };
 
-const PROVIDERS: ProviderId[] = ['gemini', 'groq', 'nvidia'];
+const PROVIDERS: ProviderId[] = ['gemini', 'groq', 'nvidia', 'ollama'];
 
 /** Only measured facts — nothing inferred from the model name. */
 function badge(r: ProbeResult): string {
@@ -51,7 +54,7 @@ export function AIModelsTab({ adminEmail }: { adminEmail: string }) {
   const [prevProbes, setPrevProbes] = useState<ModelProbes>(EMPTY_PROBES);
   const [probing, setProbing] = useState(false);
   const [probeStatus, setProbeStatus] = useState('');
-  const [showUnusable, setShowUnusable] = useState<Record<ProviderId, boolean>>({ gemini: false, groq: false, nvidia: false });
+  const [showUnusable, setShowUnusable] = useState<Record<ProviderId, boolean>>({ gemini: false, groq: false, nvidia: false, ollama: false });
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState<string | null>(null); // `${provider}:${modelId}`
   const [testResult, setTestResult] = useState<Record<string, ModelTestResult>>({});
@@ -69,8 +72,11 @@ export function AIModelsTab({ adminEmail }: { adminEmail: string }) {
 
   if (!config) return <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 size={14} className="animate-spin" /> Loading config…</div>;
 
-  const adminKey = (p: ProviderId): string | undefined =>
-    (profile[PROVIDER_META[p].keyField] as string[] | undefined)?.[0]?.trim();
+  const adminKey = (p: ProviderId): string | undefined => {
+    const field = PROVIDER_META[p].keyField;
+    if (!field) return undefined;
+    return (profile[field] as string[] | undefined)?.[0]?.trim();
+  };
 
   async function probeAll() {
     const keys = {

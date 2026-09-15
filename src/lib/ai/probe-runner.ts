@@ -43,6 +43,7 @@ export const PROVIDER_CONCURRENCY: Record<ProviderId, number> = {
   gemini: 1,
   groq: 2,
   nvidia: 4,
+  ollama: 1,
 };
 
 /** Minimum gap between requests, to stay under per-minute free-tier caps. */
@@ -50,13 +51,14 @@ export const PROVIDER_MIN_GAP_MS: Record<ProviderId, number> = {
   gemini: 6_500,   // ~9 rpm, just under the 10 rpm free-tier cap
   groq: 2_500,
   nvidia: 0,
+  ollama: 3_000,
 };
 
 /** Printed on public/ai-probe-page.jpg. A text-only model cannot produce it. */
 export const PROBE_VISION_CODE = 'PROBE7X';
 
 const PROBE_FIXTURE_URL = '/ai-probe-page.jpg';
-const PROVIDER_IDS: ProviderId[] = ['gemini', 'groq', 'nvidia'];
+const PROVIDER_IDS: ProviderId[] = ['gemini', 'groq', 'nvidia', 'ollama'];
 
 const EXTRACTION_PROMPT =
   'Extract every line item from this repair estimate as JSON: ' +

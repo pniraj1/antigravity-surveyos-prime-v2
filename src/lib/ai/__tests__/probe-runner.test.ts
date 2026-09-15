@@ -224,6 +224,7 @@ function probesDoc(): ModelProbes {
       gemini: { probedAt: 0, error: null, models: {}, accuracy: {} },
       groq: { probedAt: 0, error: null, models: {}, accuracy: {} },
       nvidia: { probedAt: 0, error: null, models: {}, accuracy: {} },
+      ollama: { probedAt: 0, error: null, models: {}, accuracy: {} },
     },
   };
 }

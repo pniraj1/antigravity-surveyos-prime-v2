@@ -4,7 +4,7 @@ import type { AccuracyResult } from '../probe-accuracy';
 
 describe('EMPTY_PROBES', () => {
   it('carries a block for every provider so the panel never reads undefined', () => {
-    expect(Object.keys(EMPTY_PROBES.providers).sort()).toEqual(['gemini', 'groq', 'nvidia']);
+    expect(Object.keys(EMPTY_PROBES.providers).sort()).toEqual(['gemini', 'groq', 'nvidia', 'ollama'].sort());
   });
 
   it('starts with no models and no error', () => {
