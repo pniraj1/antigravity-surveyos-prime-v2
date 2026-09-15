@@ -12,6 +12,7 @@ import { getFirebaseApp } from '../firebase/config';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { classifyGatewayError, gatewayErrorMessage } from './gateway-errors';
 import { assertWithinImageCap } from './image-cap';
+import { parseGeminiError } from './gemini-errors';
 import { useProfileStore } from '@/stores/profile-store';
 import { useUIStore } from '@/stores/ui-store';
 import { toast } from 'sonner';
@@ -412,57 +413,116 @@ export function geminiAuthHeaders(key: string): Record<string, string> {
     : { 'x-goog-api-key': key };
 }
 
-async function callWithKey(provider: AIProvider, key: string, prompt: string, images: string[], responseFormat: 'json' | 'text' = 'json'): Promise<string> {
-  if (provider.name === 'gemini') {
-    const url = provider.endpoint;
-    const headers = { 'Content-Type': 'application/json', ...geminiAuthHeaders(key) };
+export type Finish = 'STOP' | 'MAX_TOKENS' | 'SAFETY' | 'OTHER';
+export interface CallResult { text: string; finish: Finish }
+export interface CallOptions { timeoutMs: number; thinkingOff: boolean }
 
-    const parts: any[] = images.map(img => ({
-      inlineData: { mimeType: getMimeType(img), data: toRawBase64(img) },
-    }));
+/** One provider's HTTP failure, with enough attached for the loop to classify it. */
+export class ProviderError extends Error {
+  status: number;
+  details: unknown[];
+  provider: string;
+  constructor(provider: string, status: number, message: string, details: unknown[] = []) {
+    super(`${provider} API Error: ${message}`);
+    this.provider = provider; this.status = status; this.details = details;
+  }
+}
+
+function timeoutError(provider: string, ms: number): ProviderError {
+  const e = new ProviderError(provider, 0, `no response within ${Math.round(ms / 1000)}s`);
+  e.name = 'TimeoutError';
+  return e;
+}
+
+/** fetch with an AbortController deadline; a timeout rejects with ProviderError name 'TimeoutError'. */
+async function fetchWithTimeout(provider: string, url: string, init: RequestInit, ms: number): Promise<Response> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { ...init, signal: ctrl.signal });
+  } catch (e: any) {
+    if (e?.name === 'AbortError') throw timeoutError(provider, ms);
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function geminiFinish(reason: unknown): Finish {
+  return reason === 'STOP' ? 'STOP' : reason === 'MAX_TOKENS' ? 'MAX_TOKENS' : reason === 'SAFETY' ? 'SAFETY' : 'OTHER';
+}
+
+/** Calls one provider with one specific key. Throws ProviderError on error. */
+export async function callWithKey(
+  provider: AIProvider, key: string, prompt: string, images: string[],
+  responseFormat: 'json' | 'text', opts: CallOptions,
+): Promise<CallResult> {
+  if (provider.name === 'gemini') {
+    const parts: any[] = images.map(img => ({ inlineData: { mimeType: getMimeType(img), data: toRawBase64(img) } }));
     parts.push({ text: prompt });
 
-    const res = await fetch(url, {
+    const res = await fetchWithTimeout('gemini', provider.endpoint, {
       method: 'POST',
-      headers,
+      headers: { 'Content-Type': 'application/json', ...geminiAuthHeaders(key) },
       body: JSON.stringify({
         contents: [{ parts }],
-        generationConfig: { 
-          temperature: 0.1, 
-          topP: 0.95, 
-          topK: 40, 
+        generationConfig: {
+          temperature: 0.1, topP: 0.95, topK: 40,
           maxOutputTokens: 65536,  // gemini-2.5-flash supports up to 65K — needed for multi-page invoices
           // Only force JSON mime when the caller actually expects JSON back.
           // Pass 3 (covering narrative) expects plain text — forcing JSON mode
           // causes the model to wrap the letter in a JSON object or refuse.
           ...(responseFormat === 'json' ? { responseMimeType: 'application/json' } : {}),
+          // Measured 2026-09-15: 2.5 Flash spent its output budget thinking and
+          // returned MAX_TOKENS after 2,612 tokens. Extraction is OCR, not
+          // reasoning — thinking off. The loop retries once without this when a
+          // model rejects it (Gemini 3.x uses thinkingLevel).
+          ...(opts.thinkingOff && responseFormat === 'json' ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
         },
         safetySettings: [
-          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-        ]
+          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+        ],
       }),
-    });
+    }, opts.timeoutMs);
 
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      const status = res.status;
-      throw Object.assign(
-        new Error(`Gemini API Error: ${err.error?.message || status}`),
-        { status }
-      );
+      const info = parseGeminiError(res.status, await res.json().catch(() => ({})));
+      throw new ProviderError('gemini', res.status, info.message, info.details);
     }
-
     const data = await res.json();
-    
-    if (data.candidates?.[0]?.finishReason === 'SAFETY') {
-      throw new Error("Gemini blocked the extraction due to safety filters (it likely detected personal info in the document).");
-    }
-
+    const cand = data.candidates?.[0];
     useUIStore.getState().setAIProviderHealth('gemini', 'ok');
-    return (data.candidates?.[0]?.content?.parts?.[0]?.text || '').replace(/```json|```/g, '').trim();
+    return {
+      text: (cand?.content?.parts?.[0]?.text || '').replace(/```json|```/g, '').trim(),
+      finish: geminiFinish(cand?.finishReason),
+    };
+  }
+
+  if (provider.name === 'ollama') {
+    // Ollama Cloud has no CORS — always via aiProxy. Native /api/chat takes
+    // raw base64 images on the message and `format: 'json'` for JSON mode.
+    // The proxy's callable has its own 300s server-side timeout — opts.timeoutMs
+    // cannot be applied mid-flight (a callable cannot be aborted once sent).
+    const { callAiProxy } = await import('@/lib/firebase/functions');
+    const body = {
+      model: provider.model, stream: false,
+      ...(responseFormat === 'json' ? { format: 'json' } : {}),
+      options: { temperature: 0.1, num_predict: provider.maxOutputTokens ?? 16384 },
+      messages: [{ role: 'user', content: prompt, ...(images.length ? { images: images.map(toRawBase64) } : {}) }],
+    };
+    const proxied = await callAiProxy('ollama', 'api/chat', key, body);
+    if (!proxied.ok) {
+      const err = safeJsonParse(proxied.body);
+      throw new ProviderError('ollama', proxied.status, typeof err?.error === 'string' ? err.error : err?.error?.message || String(proxied.status));
+    }
+    const data = safeJsonParse(proxied.body) ?? {};
+    return {
+      text: (data.message?.content || '').trim(),
+      finish: data.done_reason === 'length' ? 'MAX_TOKENS' : 'STOP',
+    };
   }
 
   // Groq / NVIDIA NIM / OpenAI-compatible
@@ -506,36 +566,35 @@ async function callWithKey(provider: AIProvider, key: string, prompt: string, im
   let data: any;
   if (provider.name === 'nvidia') {
     // NVIDIA's API sends no CORS headers → the browser cannot call it directly.
-    // Route through the Cloud Function proxy (server-to-server, no CORS).
+    // Route through the Cloud Function proxy (server-to-server, no CORS). Its
+    // callable has its own 300s server-side timeout — opts.timeoutMs cannot be
+    // applied mid-flight (a callable cannot be aborted once sent).
     const { callAiProxy } = await import('@/lib/firebase/functions');
     const proxied = await callAiProxy('nvidia', 'chat/completions', key, requestBody);
     if (!proxied.ok) {
       const err = safeJsonParse(proxied.body);
-      throw Object.assign(
-        new Error(`nvidia API Error: ${err?.error?.message || proxied.status}`),
-        { status: proxied.status }
-      );
+      throw new ProviderError('nvidia', proxied.status, err?.error?.message || String(proxied.status));
     }
     data = safeJsonParse(proxied.body) ?? {};
   } else {
-    const res = await fetch(provider.endpoint, {
+    const res = await fetchWithTimeout(provider.name, provider.endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
       body: JSON.stringify(requestBody),
-    });
+    }, opts.timeoutMs);
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw Object.assign(
-        new Error(`${provider.name} API Error: ${err.error?.message || res.status}`),
-        { status: res.status }
-      );
+      throw new ProviderError(provider.name, res.status, err.error?.message || String(res.status));
     }
 
     data = await res.json();
     useUIStore.getState().setAIProviderHealth(provider.name as 'groq' | 'gemini', 'ok');
   }
-  return (data.choices?.[0]?.message?.content || '').trim();
+  return {
+    text: (data.choices?.[0]?.message?.content || '').trim(),
+    finish: data.choices?.[0]?.finish_reason === 'length' ? 'MAX_TOKENS' : 'STOP',
+  };
 }
 
 /** Parses JSON, returning null instead of throwing (upstream errors may return HTML). */
