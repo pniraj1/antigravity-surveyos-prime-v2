@@ -257,7 +257,7 @@ export function PhotosTab() {
                 </div>
                 <Input
                   value={options.reportNo ?? currentClaim.reportNo ?? ''}
-                  onChange={e => setOpt('reportNo', e.target.value)}
+                  onChange={e => setOpt('reportNo', e.target.value || undefined)}
                   placeholder="Final survey report no."
                   className="h-9 text-sm"
                 />
