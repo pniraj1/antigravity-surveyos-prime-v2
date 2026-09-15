@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
   CURRENT_MODELS, PROVIDER_MODELS,
-  GEMINI_FALLBACK_CHAIN, GROQ_FALLBACK_CHAIN, GROQ_VISION_MODELS,
   DEPRECATED_GEMINI_MODELS, DEPRECATED_GROQ_MODELS,
 } from '../service';
 import { FALLBACK_AI_MODELS_CONFIG } from '../models-config';
@@ -35,9 +34,6 @@ const KNOWN_DEAD = new Set([
   'gemini-pro',
 ]);
 
-/** Free tier returns 429 for these — never ship them as a default or fallback. */
-const NOT_ON_FREE_TIER = new Set(['gemini-2.5-pro']);
-
 function assertLive(ids: string[], where: string) {
   for (const id of ids) {
     expect(KNOWN_DEAD.has(id), `${where} ships dead model "${id}"`).toBe(false);
@@ -47,28 +43,6 @@ function assertLive(ids: string[], where: string) {
 describe('shipped default models are alive', () => {
   it('CURRENT_MODELS points at live models', () => {
     assertLive(Object.values(CURRENT_MODELS), 'CURRENT_MODELS');
-  });
-
-  it('fallback chains contain no dead models', () => {
-    assertLive(GEMINI_FALLBACK_CHAIN, 'GEMINI_FALLBACK_CHAIN');
-    assertLive(GROQ_FALLBACK_CHAIN, 'GROQ_FALLBACK_CHAIN');
-  });
-
-  it('fallback chains contain nothing that 429s on the free tier', () => {
-    for (const id of [...GEMINI_FALLBACK_CHAIN, ...GROQ_FALLBACK_CHAIN]) {
-      expect(NOT_ON_FREE_TIER.has(id), `chain ships free-tier-unavailable "${id}"`).toBe(false);
-    }
-  });
-
-  it('every Groq vision model is actually in the Groq chain', () => {
-    assertLive([...GROQ_VISION_MODELS], 'GROQ_VISION_MODELS');
-    for (const id of GROQ_VISION_MODELS) {
-      expect(GROQ_FALLBACK_CHAIN, `vision model "${id}" missing from the chain`).toContain(id);
-    }
-  });
-
-  it('Groq has at least one vision model, or scans silently fail', () => {
-    expect(GROQ_VISION_MODELS.size).toBeGreaterThan(0);
   });
 
   it('migration maps never point at a dead model', () => {

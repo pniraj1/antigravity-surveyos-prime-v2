@@ -1,23 +1,28 @@
 // ═══════════════════════════════════════════════════════════
-// AI GATEWAY SERVICE — Multi-Provider with Key Rotation
+// AI GATEWAY SERVICE — job-aware fallback across every reachable model
 //
 // DEVELOPER NOTES:
+//   - Every call declares a job (jobs.ts); rank.ts orders the admin pool
+//     for it; callWithFallback walks that order: hop models before keys,
+//     never retry a 503 in place, one 5 s second pass over busy-only models.
 //   - Update CURRENT_MODELS when providers release better models.
 //     Surveyors never need to touch model names.
-//   - Key rotation: tries each key in order on 429/401 errors.
-//   - Auto-fallback: if all Gemini keys fail, tries Groq and vice versa.
 // ═══════════════════════════════════════════════════════════
 
 import { getFirebaseApp } from '../firebase/config';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { classifyGatewayError, gatewayErrorMessage } from './gateway-errors';
 import { assertWithinImageCap } from './image-cap';
-import { parseGeminiError } from './gemini-errors';
+import { parseGeminiError, classifyGemini429, isThinkingRejected, isModalityRejected } from './gemini-errors';
+import { rankModels, type PoolEntry } from './rank';
+import { getHealth, keyHash } from './health';
+import { type AIJob, JOB_TIMEOUT_MS } from './jobs';
 import { useProfileStore } from '@/stores/profile-store';
 import { useUIStore } from '@/stores/ui-store';
 import { toast } from 'sonner';
-import { ModelEntry, PROVIDER_IMAGE_CAPS, resolveModelImageCap, type ProviderConfig } from './models-config';
+import { ModelEntry, PROVIDER_IMAGE_CAPS, type ProviderConfig, type ProviderId } from './models-config';
 import { useAIConfigStore } from '@/stores/ai-config-store';
+
 
 /** Returns the saved model if still enabled, else the provider's configured default. */
 export function resolveEnabledModel(saved: string | undefined, providerCfg: ProviderConfig): string {
@@ -83,37 +88,6 @@ export const PROVIDER_MODELS: Record<'gemini' | 'groq' | 'nvidia' | 'ollama', Mo
   ],
 };
 
-// ─── Fallback chain when a model is unavailable on this account tier ──────────
-// Tried in order. Every id below was verified by live API call on 2026-08-10;
-// see src/lib/ai/__tests__/shipped-defaults.test.ts for the regression guard.
-export const GEMINI_FALLBACK_CHAIN = [
-  'gemini-2.5-flash',          // 10.5s/page text, 15.4s/page vision · correct
-  // gemini-2.5-flash-lite was here and returns 404 "no longer available to new
-  // users". The floating -latest alias is both alive and the fastest measured
-  // Gemini model on an estimate page (3.3s).
-  'gemini-flash-lite-latest',  // 3.3s/page text · fastest
-];
-
-// Groq fallback chain (August 2026).
-// llama-3.3-70b (text) → qwen3.6 (vision) → llama-3.1-8b (fastest text)
-export const GROQ_FALLBACK_CHAIN = [
-  'llama-3.3-70b-versatile',  // text · 2.3s/page, the fastest correct extraction measured
-  'qwen/qwen3.6-27b',         // vision + text · Groq's ONLY remaining vision model
-  'llama-3.1-8b-instant',     // text · fastest, lowest TPM ceiling
-];
-
-// Models in the Groq fallback chain that support image/vision inputs.
-// Text-only models are skipped when the extraction includes images (e.g. RC scans).
-//
-// Groq retired every llama-4 vision model; qwen3.6-27b is the only entry left
-// whose input_modalities include "image". Note its free-tier ceiling is 8000
-// TPM while one rendered estimate page is ~10600 tokens, so vision extraction
-// on Groq's free tier 413s — callWithRotation surfaces that and points the
-// surveyor at Gemini. Keeping it here means the chain can still *try*.
-export const GROQ_VISION_MODELS = new Set([
-  'qwen/qwen3.6-27b',
-]);
-
 // Old model names stored in user profiles → auto-migrated to current default
 export const DEPRECATED_GEMINI_MODELS: Record<string, string> = {
   'gemini-pro':               'gemini-2.5-flash',
@@ -165,38 +139,11 @@ function buildOverrideProvider(o: AITestOverride): AIProvider {
 
 // ─── Read profile from Zustand ────────────────────────────────────────────────
 function getProfileFromStorage() {
-  if (typeof window === 'undefined') return null;
   try {
     return useProfileStore.getState().profile ?? null;
   } catch {
     return null;
   }
-}
-
-/** Resolves effective Gemini model — migrates deprecated names, uses developer default if blank. */
-function resolveGeminiModel(profile: ReturnType<typeof getProfileFromStorage>): string {
-  const stored = profile?.geminiModel?.trim();
-  if (!stored) return CURRENT_MODELS.gemini;
-  if (DEPRECATED_GEMINI_MODELS[stored]) {
-    const migrated = DEPRECATED_GEMINI_MODELS[stored];
-    useProfileStore.getState().updateProfile({ geminiModel: migrated });
-    toast.info(`Gemini model updated: ${stored} → ${migrated} (old model retired by Google).`, { duration: 6000 });
-    return migrated;
-  }
-  return stored;
-}
-
-/** Resolves effective Groq model — migrates deprecated names, uses developer default if blank. */
-function resolveGroqModel(profile: ReturnType<typeof getProfileFromStorage>): string {
-  const stored = profile?.groqModel?.trim();
-  if (!stored) return CURRENT_MODELS.groq;
-  if (DEPRECATED_GROQ_MODELS[stored]) {
-    const migrated = DEPRECATED_GROQ_MODELS[stored];
-    useProfileStore.getState().updateProfile({ groqModel: migrated });
-    toast.info(`Groq model updated: ${stored} → ${migrated} (old model unavailable).`, { duration: 6000 });
-    return migrated;
-  }
-  return stored;
 }
 
 /** Collect all non-empty keys for a provider (new array + legacy single key). */
@@ -228,126 +175,22 @@ function resolveNvidiaKeys(profile: ReturnType<typeof getProfileFromStorage>): s
   return profile.nvidiaApiKeys.filter(k => k?.trim());
 }
 
-function resolveNvidiaModel(profile: ReturnType<typeof getProfileFromStorage>): string {
-  return profile?.nvidiaModel?.trim() || CURRENT_MODELS.nvidia;
-}
-
-/**
- * Resolves provider config for a given provider name.
- * Returns null if no keys are configured.
- */
-function buildProvider(
-  name: 'gemini' | 'groq' | 'nvidia',
-  profile: ReturnType<typeof getProfileFromStorage>
-): AIProvider | null {
-  if (name === 'gemini') {
-    const keys = resolveGeminiKeys(profile);
-    if (keys.length === 0) return null;
-    const model = resolveEnabledModel(resolveGeminiModel(profile), useAIConfigStore.getState().config.providers.gemini);
-    return {
-      name: 'gemini',
-      endpoint: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-      model,
-      keys,
-    };
-  }
-  if (name === 'nvidia') {
-    const keys = resolveNvidiaKeys(profile);
-    if (keys.length === 0) return null;
-    const model = resolveEnabledModel(resolveNvidiaModel(profile), useAIConfigStore.getState().config.providers.nvidia);
-    return {
-      name: 'nvidia',
-      endpoint: 'https://integrate.api.nvidia.com/v1/chat/completions',
-      model,
-      keys,
-      // The cap is per-model, not per-provider: meta/llama-3.2-90b-vision-instruct
-      // 400s on a second image while nvidia/nemotron-nano-12b-v2-vl accepts it.
-      // Uses the probed value when there is one, else the safe provider default.
-      maxImages: resolveModelImageCap('nvidia', model, useAIConfigStore.getState().config.providers.nvidia) ?? undefined,
-    };
-  }
-  // groq
-  const keys = resolveGroqKeys(profile);
-  if (keys.length === 0) return null;
-  const model = resolveEnabledModel(resolveGroqModel(profile), useAIConfigStore.getState().config.providers.groq);
-  return {
-    name: 'groq',
-    endpoint: 'https://api.groq.com/openai/v1/chat/completions',
-    model,
-    keys,
-    maxImages: resolveModelImageCap('groq', model, useAIConfigStore.getState().config.providers.groq) ?? undefined,
-    maxOutputTokens: 8192,
-  };
-}
-
-/**
- * The image cap of the provider that will actually serve the next request —
- * the test override if one is active, otherwise the surveyor's primary
- * provider. The processor uses this to size vision chunks so no page is ever
- * dropped by the cap guard in callWithKey.
- *
- * Deliberately does NOT call getAIProvider(). That function toasts when the
- * preferred provider has no keys and falls through to a Firestore read of
- * ai_config/routing — calling it here would double every such toast and add a
- * second, independent provider resolution per extraction that could disagree
- * with the one callAIGateway performs. This reads the same inputs with no
- * side effects and no network.
- */
-export function getActiveImageCap(): number | null {
+/** Image cap of the model the ranker would try first for this job — the processor sizes chunks from it. */
+export function getActiveImageCap(job: AIJob = 'heavy'): number | null {
   const override = getAITestOverride();
   if (override) return buildOverrideProvider(override).maxImages ?? null;
-
-  const profile = getProfileFromStorage();
-  if (!profile) return null;
-
-  const preferred = (profile.aiProvider ?? 'gemini') as 'gemini' | 'groq' | 'nvidia';
-  // Mirror getAIProvider's choice: preferred if it has keys, else the fallback.
-  const hasKeys: Record<'gemini' | 'groq' | 'nvidia', boolean> = {
-    gemini: resolveGeminiKeys(profile).length > 0,
-    groq: resolveGroqKeys(profile).length > 0,
-    nvidia: resolveNvidiaKeys(profile).length > 0,
-  };
-  const fallback: 'gemini' | 'groq' = preferred === 'groq' ? 'gemini' : 'groq';
-  const active = hasKeys[preferred] ? preferred : hasKeys[fallback] ? fallback : null;
-  if (!active) return null;
-
-  const block = useAIConfigStore.getState().config.providers[active];
-  const model = resolveEnabledModel(
-    active === 'gemini' ? resolveGeminiModel(profile)
-      : active === 'nvidia' ? resolveNvidiaModel(profile)
-      : resolveGroqModel(profile),
-    block,
-  );
-  return resolveModelImageCap(active, model, block);
+  const pool = buildPool(getProfileFromStorage());
+  try {
+    const [first] = rankModels(job, ['x'], pool, { health: getHealth(), preferredModel: getProfileFromStorage()?.geminiModel?.trim() || undefined });
+    return first?.model.imageCap ?? null;
+  } catch { return null; }
 }
 
 /**
- * Resolves the primary + fallback provider configs from profile.
- * Returns [primary, fallback] — fallback may be null.
+ * Firestore master config (admin-managed keys) — the "nothing configured"
+ * path. callAIGateway consults it last, only when the surveyor has no keys.
  */
 export async function getAIProvider(): Promise<AIProvider> {
-  const profile = getProfileFromStorage();
-
-  if (profile) {
-    const preferred = (profile.aiProvider ?? 'gemini') as 'gemini' | 'groq' | 'nvidia';
-    const fallback: 'gemini' | 'groq' = preferred === 'groq' ? 'gemini' : 'groq';
-
-    const primary = buildProvider(preferred, profile);
-    if (primary) return primary;
-
-    // Preferred has no keys — try fallback with a visible warning
-    const fallbackProvider = buildProvider(fallback, profile);
-    if (fallbackProvider) {
-      const names: Record<string, string> = { gemini: 'Google Gemini', groq: 'Groq', nvidia: 'NVIDIA NIM' };
-      toast.warning(
-        `No ${names[preferred]} API key — falling back to ${names[fallback]} for this extraction.`,
-        { duration: 5000 }
-      );
-      return fallbackProvider;
-    }
-  }
-
-  // ── Firestore master config (admin-managed) ───────────────────────────────
   try {
     const db = getFirestore(getFirebaseApp());
     const configDoc = await getDoc(doc(db, 'ai_config', 'routing'));
@@ -370,7 +213,6 @@ export async function getAIProvider(): Promise<AIProvider> {
   );
 }
 
-/** Calls one provider with one specific key. Throws on error. */
 /** Strip data URL prefix if present — APIs need raw base64 only */
 function toRawBase64(img: string): string {
   const idx = img.indexOf(',');
@@ -384,22 +226,6 @@ function getMimeType(img: string): string {
 }
 
 /** Returns true when the error indicates the model is unavailable/not-found on this account tier. */
-function isModelUnavailable(err: any): boolean {
-  const msg: string = (err?.message ?? '').toLowerCase();
-  return (
-    err?.status === 404 ||
-    msg.includes('not found') ||
-    (msg.includes('model') && msg.includes('does not exist')) ||
-    // Groq doesn't say "not vision capable" — a text-only model sent
-    // multimodal content 400s with "messages[1].content must be a string".
-    // That's the only signal this model can't take the image we sent it, so
-    // it has to count as "unavailable for this call" to reach the Groq
-    // vision-fallback walk below instead of burning every key on a request
-    // that can never succeed.
-    msg.includes('content must be a string')
-  );
-}
-
 /**
  * Gemini auth. AI Studio keys used to start with "AIza"; since mid-2026 new
  * ones start with "AQ." and legacy AIza keys are being rejected. Both are
@@ -602,27 +428,6 @@ function safeJsonParse(text: string): any | null {
   try { return JSON.parse(text); } catch { return null; }
 }
 
-/** Returns true if the error is a billing/free-tier quota exhaustion (not a temporary rate limit). */
-function isQuotaExhausted(err: any): boolean {
-  const msg: string = (err?.message ?? '').toLowerCase();
-  return err?.status === 429 && (
-    msg.includes('quota exceeded') ||
-    msg.includes('free_tier') ||
-    msg.includes('limit: 0')
-  );
-}
-
-/** Returns true when Gemini is temporarily overloaded (not a quota or auth issue). */
-function isHighDemandError(err: any): boolean {
-  const msg: string = (err?.message ?? '').toLowerCase();
-  return (err?.status === 503 || err?.status === 500) && (
-    msg.includes('high demand') ||
-    msg.includes('overloaded') ||
-    msg.includes('service unavailable') ||
-    msg.includes('try again')
-  );
-}
-
 /**
  * Returns true when the request was rejected because the prompt is too large
  * (HTTP 413 or Groq's "tokens per minute" / "Request too large" messages).
@@ -646,221 +451,216 @@ const PROVIDER_LABELS: Record<string, string> = {
   ollama: 'Ollama Cloud',
 };
 
-/**
- * Calls a provider with key rotation.
- * On Gemini 503 high-demand: retries same key up to 2× with 1.5s wait before moving on.
- * On 429 rate-limit: rotates to next key.
- */
-async function callWithRotation(provider: AIProvider, prompt: string, images: string[], responseFormat: 'json' | 'text' = 'json'): Promise<string> {
-  let lastError: Error = new Error('No keys available');
-  const providerLabel = PROVIDER_LABELS[provider.name] ?? provider.name;
+// ─── Fallback loop ────────────────────────────────────────────────────────────
 
-  let downgradedProvider = provider;
-  const triedModels = new Set<string>([provider.model]);
+export interface GatewaySession {
+  id: string;
+  lastGood?: { provider: ProviderId; model: string };
+  /** Models this document must not use again (math second opinion). */
+  avoid: Set<string>;
+  /** Hops already announced for this document — one toast per distinct hop. */
+  announced: Set<string>;
+}
+export function newSession(id: string): GatewaySession { return { id, avoid: new Set(), announced: new Set() }; }
 
-  for (let i = 0; i < downgradedProvider.keys.length; i++) {
-    const key = downgradedProvider.keys[i];
+export class AllProvidersBusyError extends Error {
+  tried: string[];
+  constructor(job: AIJob, tried: string[]) { super(`All AI models are busy (${job}: tried ${tried.join(', ') || 'none'})`); this.tried = tried; }
+}
+export class OfflineError extends Error { constructor() { super("You're offline — AI extraction needs a connection."); } }
 
-    // ── High-demand retry: up to 2 retries with 1.5s gap before rotating key ──
-    let demandRetries = 0;
-    while (demandRetries <= 2) {
-      try {
-        return await callWithKey(downgradedProvider, key, prompt, images, responseFormat);
-      } catch (err: any) {
-        lastError = err;
+const PROXIED: ReadonlySet<ProviderId> = new Set(['nvidia', 'ollama']);
+const ENDPOINTS: Record<ProviderId, (model: string) => string> = {
+  gemini: m => `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`,
+  groq: () => 'https://api.groq.com/openai/v1/chat/completions',
+  nvidia: () => 'https://integrate.api.nvidia.com/v1/chat/completions',
+  ollama: () => 'https://ollama.com/api/chat',
+};
+const KEY_FIELDS: Record<ProviderId, (p: NonNullable<ReturnType<typeof getProfileFromStorage>>) => string[]> = {
+  gemini: resolveGeminiKeys, groq: resolveGroqKeys, nvidia: resolveNvidiaKeys,
+  ollama: p => (Array.isArray(p.ollamaApiKeys) ? p.ollamaApiKeys.filter(k => k?.trim()) : []),
+};
 
-        if (isHighDemandError(err) && demandRetries < 2) {
-          demandRetries++;
-          if (demandRetries === 1) {
-            toast.info(`${providerLabel} is under high demand — retrying in 1.5s…`, { duration: 3000 });
+/** Every admin-enabled model on every provider the surveyor has a key for. */
+export function buildPool(profile: ReturnType<typeof getProfileFromStorage>): PoolEntry[] {
+  if (!profile) return [];
+  const cfg = useAIConfigStore.getState().config;
+  const pool: PoolEntry[] = [];
+  for (const provider of ['gemini', 'groq', 'nvidia', 'ollama'] as ProviderId[]) {
+    const block = cfg.providers[provider];
+    if (!block?.enabled) continue;
+    const keys = KEY_FIELDS[provider](profile);
+    if (keys.length === 0) continue;
+    for (const model of block.models) pool.push({ provider, model, proxied: PROXIED.has(provider), keys });
+  }
+  return pool;
+}
+
+function toProvider(e: PoolEntry): AIProvider {
+  return {
+    name: e.provider, model: e.model.id, keys: e.keys, endpoint: ENDPOINTS[e.provider](e.model.id),
+    maxImages: e.model.imageCap ?? undefined,
+    maxOutputTokens: e.provider === 'groq' ? 8192 : undefined,
+  };
+}
+
+type Step = 'next-model' | 'next-key' | 'next-provider' | 'retry-no-thinking';
+
+/** Decides what the loop does after one failed call. Pure; the loop applies side effects. */
+function stepFor(err: any, provider: ProviderId): { step: Step; busy?: boolean; deadModel?: boolean; deadProvider?: boolean; notFound?: boolean; reprobe?: boolean } | { throw: Error } {
+  const kind = classifyGatewayError(err);
+  if (kind === 'subscription' || kind === 'unauthenticated') return { step: 'next-provider' };
+  if (kind === 'timeout' || err?.name === 'TimeoutError') return { step: 'next-model', busy: true };
+  if (err instanceof TypeError) return { step: 'next-provider' };            // network
+  if (isPayloadTooLarge(err)) return { throw: Object.assign(new Error(`PAYLOAD_TOO_LARGE: ${err.message}`), { status: 413 }) };
+  const status: number = err?.status ?? 0;
+  if (status === 503 || status === 500) return { step: 'next-model', busy: true };
+  if (status === 429) {
+    const q = provider === 'gemini' ? classifyGemini429({ status, message: err.message, details: err.details ?? [] }) : null;
+    if (q === 'zero') return { step: 'next-model', notFound: true };
+    if (q?.scope === 'model') return q.period === 'day' ? { step: 'next-model', deadModel: true } : { step: 'next-model', busy: true };
+    if (q?.scope === 'project' && q.period === 'day') return { step: 'next-key', deadProvider: true };
+    return { step: 'next-key' };
+  }
+  if (status === 404) return { step: 'next-model', notFound: true };
+  if (status === 402) return { step: 'next-model', reprobe: true };
+  if (status === 400 && provider === 'gemini' && isThinkingRejected({ status, message: err.message, details: [] })) return { step: 'retry-no-thinking' };
+  if (status === 400 && isModalityRejected(err.message ?? '')) return { step: 'next-model', reprobe: true };
+  if (status === 401 || status === 403) return { step: 'next-key' };
+  if (status === 0 && kind === 'other') return { step: 'next-provider' };   // proxy transport
+  return { throw: err };
+}
+
+function announce(session: GatewaySession | undefined, key: string, text: string, kind: 'info' | 'error' = 'info'): void {
+  if (session) { if (session.announced.has(key)) return; session.announced.add(key); }
+  toast[kind](text, { duration: kind === 'info' ? 4000 : 10000 });
+}
+
+async function callWithFallback(
+  job: AIJob, prompt: string, images: string[], responseFormat: 'json' | 'text',
+  session: GatewaySession | undefined, signal: AbortSignal | undefined, pool: PoolEntry[], preferredModel?: string,
+): Promise<string> {
+  const health = getHealth();
+  const timeoutMs = JOB_TIMEOUT_MS[job];
+  const tried: string[] = [];
+  let networkErrors = 0, calls = 0;
+
+  const walk = async (chain: PoolEntry[], allowSecondPass: boolean): Promise<string> => {
+    const busyOnly: PoolEntry[] = [];
+    let skipProvider: ProviderId | null = null;
+
+    for (const entry of chain) {
+      if (signal?.aborted) throw Object.assign(new Error('Extraction cancelled'), { name: 'AbortError' });
+      if (entry.provider === skipProvider) continue;
+      const provider = toProvider(entry);
+      const label = `${PROVIDER_LABELS[entry.provider] ?? entry.provider} ${entry.model.label || entry.model.id}`;
+      if (!tried.includes(entry.model.id)) tried.push(entry.model.id);
+      let thinkingOff = true;
+
+      keys: for (let i = 0; i < entry.keys.length; i++) {
+        const key = entry.keys[i];
+        try {
+          calls++;
+          const res = await callWithKey(provider, key, prompt, images, responseFormat, { timeoutMs, thinkingOff });
+          if (res.finish === 'STOP' || res.finish === 'OTHER') {
+            health.recordCall(entry.model.id, 'ok');
+            if (session) session.lastGood = { provider: entry.provider, model: entry.model.id };
+            return res.text;
           }
-          await new Promise(r => setTimeout(r, 1500));
-          continue;
+          health.recordCall(entry.model.id, 'other');
+          if (res.finish === 'SAFETY') { skipProvider = entry.provider; break keys; }
+          break keys;                                   // MAX_TOKENS → next model
+        } catch (err: any) {
+          if (err?.name === 'AbortError' && signal?.aborted) throw err;
+          const d = stepFor(err, entry.provider);
+          if ('throw' in d) throw d.throw;
+          health.recordCall(entry.model.id, d.busy ? 'busy' : 'other');
+          if (err instanceof TypeError) networkErrors++;
+          if (d.deadModel) { health.markDeadToday(keyHash(key), entry.model.id); announce(session, `dead:${entry.model.id}`, `${label} has hit today's free limit (resets ${health.deadUntilLabel()}) — trying the next model.`); }
+          if (d.deadProvider) health.markDeadToday(keyHash(key), '*');
+          if (d.notFound) health.markNotFound(entry.model.id);
+          if (d.reprobe) console.warn(`[ai-fallback] ${entry.model.id} rejected the request (${err.status}) — admin should re-probe.`);
+          if (d.busy) busyOnly.push(entry);
+          console.info(`[ai-fallback] ${entry.provider}/${entry.model.id} key#${i + 1} → ${err.status ?? err.name}: ${d.step}`);
+
+          // Same key once more with thinking left on; a second 400 is not a thinking problem → next model.
+          if (d.step === 'retry-no-thinking' && thinkingOff) { thinkingOff = false; i--; continue; }
+          if (d.step === 'next-key') {
+            if (i + 1 < entry.keys.length) continue;
+            const kind = classifyGatewayError(err);
+            if (kind === 'auth') announce(session, `auth:${entry.provider}`, `${PROVIDER_LABELS[entry.provider]} key is invalid — check Profile → AI & Documents Intelligence.`, 'error');
+            skipProvider = entry.provider; break keys;
+          }
+          if (d.step === 'next-provider') {
+            const msg = gatewayErrorMessage(classifyGatewayError(err), PROVIDER_LABELS[entry.provider] ?? entry.provider);
+            if (msg) announce(session, `provider:${entry.provider}`, msg, 'error');
+            skipProvider = entry.provider; break keys;
+          }
+          break keys;                                   // next-model
         }
-
-        // Not a high-demand error, or retries exhausted — break to key rotation logic
-        break;
       }
+      const next = chain[chain.indexOf(entry) + 1];
+      if (next && next.provider !== skipProvider) announce(session, `hop:${entry.model.id}`, `${label} busy — trying ${next.model.label || next.model.id}.`);
     }
 
-    const err = lastError as any;
-    const errorKind = classifyGatewayError(err);
-    const isAuthError = errorKind === 'auth';
-
-    // ── Callable-transport failures (NVIDIA only) ──────────────────────────
-    // A timeout, a lapsed subscription, and an expired session are all
-    // unfixable by rotating to another key — stop immediately and say what
-    // actually went wrong instead of blaming the surveyor's API key.
-    if (errorKind === 'timeout' || errorKind === 'subscription' || errorKind === 'unauthenticated') {
-      const message = gatewayErrorMessage(errorKind, providerLabel);
-      if (message) toast.error(message, { duration: 10000 });
-      break;
+    if (allowSecondPass && busyOnly.length > 0) {
+      await new Promise(r => setTimeout(r, 5_000));
+      return walk(busyOnly, false);
     }
+    throw new AllProvidersBusyError(job, tried);
+  };
 
-    // ── Payload too large: no point rotating keys — the prompt must shrink ──
-    if (isPayloadTooLarge(err)) {
-      const healthKey = provider.name === 'gemini' || provider.name === 'groq' ? provider.name : 'groq';
-      useUIStore.getState().setAIProviderHealth(healthKey, 'error');
-      // Re-throw immediately with a clear signal so the processor can adapt
-      throw Object.assign(
-        new Error(`PAYLOAD_TOO_LARGE: ${err.message}`),
-        { status: 413 }
-      );
-    }
-
-    // ── Model not found on this account → walk Gemini fallback chain ──
-    if (provider.name === 'gemini' && isModelUnavailable(err)) {
-      const nextModel = GEMINI_FALLBACK_CHAIN.find(m => !triedModels.has(m));
-      if (nextModel) {
-        triedModels.add(nextModel);
-        toast.info(`${downgradedProvider.model} unavailable — trying ${nextModel} automatically.`, { duration: 4000 });
-        downgradedProvider = {
-          ...provider,
-          model: nextModel,
-          endpoint: `https://generativelanguage.googleapis.com/v1beta/models/${nextModel}:generateContent`,
-        };
-        i = -1;
-        continue;
-      }
-      break;
-    }
-
-    // ── Model not found on this account → walk Groq fallback chain ──
-    if (provider.name === 'groq' && isModelUnavailable(err)) {
-      const needsVision = images.length > 0;
-      const nextModel = GROQ_FALLBACK_CHAIN.find(m => {
-        if (triedModels.has(m)) return false;
-        // When processing images, skip text-only models — they will silently
-        // ignore the images and return a useless response for visual docs like RCs.
-        if (needsVision && !GROQ_VISION_MODELS.has(m)) return false;
-        return true;
-      });
-      if (nextModel) {
-        triedModels.add(nextModel);
-        const isVision = GROQ_VISION_MODELS.has(nextModel);
-        toast.info(
-          `Groq: ${downgradedProvider.model} unavailable — trying ${nextModel}${ isVision ? '' : ' (text-only)' } automatically.`,
-          { duration: 4000 }
-        );
-        downgradedProvider = { ...provider, model: nextModel };
-        i = -1;
-        continue;
-      }
-      // No suitable fallback for this input type — surface a helpful error
-      if (needsVision) {
-        toast.error(
-          'No Groq vision model is available on your plan. Switch to Gemini in Profile → AI & Documents Intelligence.',
-          { duration: 8000 }
-        );
-      }
-      break;
-    }
-
-    if (isQuotaExhausted(err)) {
-      const healthKey = provider.name === 'gemini' || provider.name === 'groq' ? provider.name : 'groq';
-      useUIStore.getState().setAIProviderHealth(healthKey, 'error');
-      toast.error(
-        `${providerLabel} free-tier quota exhausted. Switch provider in Profile → AI & Documents Intelligence, or wait for quota reset.`,
-        { duration: 10000 }
-      );
-      break;
-    } else if (err.status === 429) {
-      const healthKey = provider.name === 'gemini' || provider.name === 'groq' ? provider.name : 'groq';
-      useUIStore.getState().setAIProviderHealth(healthKey, 'rate-limited');
-      if (i + 1 < downgradedProvider.keys.length) {
-        toast.warning(`${providerLabel} key ${i + 1} rate limited — switching to backup key ${i + 2}.`, { duration: 4000 });
-        await new Promise(r => setTimeout(r, 300));
-        continue;
-      }
-    } else if (isAuthError) {
-      const healthKey = provider.name === 'gemini' || provider.name === 'groq' ? provider.name : 'groq';
-      useUIStore.getState().setAIProviderHealth(healthKey, 'error');
-      toast.error(`${providerLabel} key ${i + 1} is invalid — check your API key in Profile → AI & Documents Intelligence.`, { duration: 6000 });
-      break;
-    } else {
-      if (i + 1 < downgradedProvider.keys.length) continue;
-    }
+  let chain = rankModels(job, images, pool, { health, preferredModel, avoid: session?.avoid });
+  if (session?.lastGood) {
+    const i = chain.findIndex(e => e.model.id === session.lastGood!.model);
+    if (i > 0) chain = [...chain.slice(i), ...chain.slice(0, i)];
   }
 
-  const healthKey = provider.name === 'gemini' || provider.name === 'groq' ? provider.name : 'groq';
-  useUIStore.getState().setAIProviderHealth(healthKey, 'error');
-  throw lastError;
+  try {
+    return await walk(chain, true);
+  } catch (err) {
+    if (err instanceof AllProvidersBusyError) {
+      if (calls > 0 && networkErrors === calls) throw new OfflineError();
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) throw new OfflineError();
+      const onlyGemini = pool.every(e => e.provider === 'gemini');
+      const nudgeKey = 'surveyos.ai.nudge.ollama';
+      let nudge = '';
+      try {
+        const last = Number(localStorage.getItem(nudgeKey) ?? 0);
+        if (onlyGemini && Date.now() - last > 86_400_000) { nudge = ' — or add a free Ollama backup key in Profile → AI & Documents Intelligence'; localStorage.setItem(nudgeKey, String(Date.now())); }
+      } catch { /* no nudge memory */ }
+      toast.error(`All AI models are busy. Try again in a minute${nudge}.`, { duration: 10000 });
+    }
+    throw err;
+  }
 }
 
 /**
- * Main entry point. Calls the configured AI provider with key rotation.
- * Fallback chain: primary → secondary → NVIDIA NIM (if keys configured).
+ * Main entry point. Ranks every reachable model for the job and walks the
+ * chain: hop models before keys, never retry a 503 in place.
  */
-export async function callAIGateway(prompt: string, images: string[] = [], responseFormat: 'json' | 'text' = 'json'): Promise<string> {
-  // Admin test override: route this single call to one explicit provider/model/key.
+export async function callAIGateway(
+  prompt: string, images: string[] = [], responseFormat: 'json' | 'text' = 'json',
+  job: AIJob = 'light', session?: GatewaySession, signal?: AbortSignal,
+): Promise<string> {
+  // Admin test override: one explicit provider/model/key, no ranking, no fallback.
   if (_testOverride) {
-    return callWithRotation(buildOverrideProvider(_testOverride), prompt, images, responseFormat);
+    const p = buildOverrideProvider(_testOverride);
+    const res = await callWithKey(p, p.keys[0], prompt, images, responseFormat, { timeoutMs: JOB_TIMEOUT_MS[job], thinkingOff: true });
+    return res.text;
   }
-
   const profile = getProfileFromStorage();
-  const preferred = (profile?.aiProvider ?? 'gemini') as 'gemini' | 'groq' | 'nvidia';
-  const secondaryName: 'gemini' | 'groq' = preferred === 'groq' ? 'gemini' : 'groq';
-
-  const primaryProvider  = profile ? buildProvider(preferred, profile) : null;
-  const secondaryProvider = profile ? buildProvider(secondaryName, profile) : null;
-  const nvidiaProvider   = profile ? buildProvider('nvidia', profile) : null;
-
-  // Try primary provider
-  if (primaryProvider) {
-    try {
-      return await callWithRotation(primaryProvider, prompt, images, responseFormat);
-    } catch (primaryErr: any) {
-      // ── PAYLOAD_TOO_LARGE: re-throw immediately ──────────────────────────
-      // Rotating keys or switching providers won't fix an oversized prompt.
-      // processor.ts catches this specific signal and retries in vision-mode.
-      if (isPayloadTooLarge(primaryErr)) {
-        throw Object.assign(
-          new Error(`PAYLOAD_TOO_LARGE: ${primaryErr.message}`),
-          { status: 413 }
-        );
-      }
-      // Log the real error so it's traceable in production devtools
-      console.warn(
-        `[AI Gateway] Primary provider (${PROVIDER_LABELS[preferred]}) failed — falling back to secondary.`,
-        primaryErr?.message ?? primaryErr
-      );
-    }
-    if (secondaryProvider) {
-      toast.warning(
-        `${PROVIDER_LABELS[preferred]} unavailable — switching to ${PROVIDER_LABELS[secondaryName]}.`,
-        { duration: 5000 }
-      );
-      try {
-        return await callWithRotation(secondaryProvider, prompt, images, responseFormat);
-      } catch {
-        // fall through to NVIDIA
-      }
-    }
-    if (nvidiaProvider) {
-      toast.warning('Gemini and Groq both failed — trying NVIDIA NIM as last resort.', { duration: 5000 });
-      try {
-        return await callWithRotation(nvidiaProvider, prompt, images, responseFormat);
-      } catch (nvidiaErr: any) {
-        toast.error('All AI providers failed. Check your API keys in Profile → AI & Documents Intelligence.', { duration: 10000 });
-        throw nvidiaErr;
-      }
-    }
-    // No secondary or nvidia configured
-    toast.error(
-      `${PROVIDER_LABELS[preferred]} failed. Add a backup key in Profile → AI & Documents Intelligence.`,
-      { duration: 10000 }
-    );
-    throw new Error(`${PROVIDER_LABELS[preferred]} failed and no fallback provider is configured.`);
+  let pool = buildPool(profile);
+  if (pool.length === 0) {
+    // Nothing configured — Firestore master config (admin-provided keys), as before.
+    const master = await getAIProvider();
+    pool = [{ provider: master.name as ProviderId, proxied: PROXIED.has(master.name as ProviderId), keys: master.keys,
+      model: { id: master.model, label: master.model, note: '', ctxWindow: null, vision: true, imageCap: master.maxImages ?? null } }];
   }
-
-  // No primary keys — go straight to secondary or NVIDIA
-  if (secondaryProvider) return callWithRotation(secondaryProvider, prompt, images, responseFormat);
-  if (nvidiaProvider) return callWithRotation(nvidiaProvider, prompt, images, responseFormat);
-
-  // Nothing configured — try Firestore master config
-  const masterProvider = await getAIProvider();
-  return callWithRotation(masterProvider, prompt, images, responseFormat);
+  const preferred = profile?.geminiModel?.trim() || undefined;
+  return callWithFallback(job, prompt, images, responseFormat, session, signal, pool, preferred);
 }
+
 
 /**
  * Fetches available Gemini models live from the API using the first configured key.
