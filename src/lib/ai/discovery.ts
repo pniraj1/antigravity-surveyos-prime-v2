@@ -39,8 +39,8 @@ async function fetchOpenAIStyleModels(url: string, key: string): Promise<string[
 export async function fetchNvidiaModels(key: string): Promise<ModelEntry[] | null> {
   // NVIDIA's API has no CORS support — must go through the Cloud Function proxy.
   try {
-    const { callNvidiaProxy } = await import('@/lib/firebase/functions');
-    const res = await callNvidiaProxy('models', key);
+    const { callAiProxy } = await import('@/lib/firebase/functions');
+    const res = await callAiProxy('nvidia', 'models', key);
     if (!res.ok) return null;
     const data = JSON.parse(res.body);
     const ids: string[] = (data.data ?? []).map((m: { id: string }) => m.id).filter(Boolean);

@@ -11,13 +11,11 @@ const assert = require("assert");
 process.env.GCLOUD_PROJECT = process.env.GCLOUD_PROJECT || "surveyos-test";
 process.env.FIREBASE_CONFIG = process.env.FIREBASE_CONFIG || "{}";
 
-const { nvidiaProxy } = require("./index");
+const { aiProxy, nvidiaProxy } = require("./index");
 
-assert.ok(nvidiaProxy.__endpoint, "nvidiaProxy should expose v2 endpoint metadata");
-assert.strictEqual(
-  nvidiaProxy.__endpoint.timeoutSeconds,
-  300,
-  "nvidiaProxy must allow 300s — NVIDIA vision models take up to 200s per page"
-);
+assert.ok(aiProxy.__endpoint, "aiProxy should expose v2 endpoint metadata");
+assert.strictEqual(aiProxy.__endpoint.timeoutSeconds, 300, "aiProxy must allow 300s — NVIDIA vision models take up to 200s per page");
+assert.ok(nvidiaProxy.__endpoint, "nvidiaProxy alias must still be exported for clients built before the rename");
+assert.strictEqual(nvidiaProxy.__endpoint.timeoutSeconds, 300);
 
 console.log("nvidia-proxy.test.js: all assertions passed");

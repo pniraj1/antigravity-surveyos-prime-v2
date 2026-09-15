@@ -19,25 +19,29 @@ export interface ProxyResult {
   body: string;
 }
 
+export type ProxiedProvider = 'nvidia' | 'ollama';
+
 /**
- * Calls the nvidiaProxy Cloud Function, which forwards to NVIDIA NIM
- * server-to-server (NVIDIA's API has no CORS support for browsers).
+ * Calls the aiProxy Cloud Function, which forwards to a provider whose API has
+ * no CORS support (NVIDIA NIM, Ollama Cloud) server-to-server with the
+ * surveyor's own key.
  */
-export async function callNvidiaProxy(
-  path: 'models' | 'chat/completions',
+export async function callAiProxy(
+  provider: ProxiedProvider,
+  path: string,
   key: string,
   body?: unknown,
 ): Promise<ProxyResult> {
-  const fn = httpsCallable<{ path: string; key: string; body?: unknown }, ProxyResult>(
+  const fn = httpsCallable<{ provider: ProxiedProvider; path: string; key: string; body?: unknown }, ProxyResult>(
     functions,
-    'nvidiaProxy',
+    'aiProxy',
     // The callable SDK defaults to 70s. NVIDIA vision inference runs 27-200s per
     // page, and a client-side deadline surfaces as a FirebaseError with no HTTP
     // status — which the gateway's error classifier reports as a bad API key.
     // Must stay >= the function's own timeoutSeconds (300) in functions/index.js.
     { timeout: 300_000 },
   );
-  const res = await fn({ path, key, body });
+  const res = await fn({ provider, path, key, body });
   return res.data;
 }
 

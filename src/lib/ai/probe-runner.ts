@@ -203,8 +203,8 @@ async function chat(
       // The callable ignores AbortSignal and carries its own 300s deadline, so
       // without this race an NVIDIA latency probe would run well past the
       // cutoff and blow the estimated probe duration.
-      const { callNvidiaProxy } = await import('@/lib/firebase/functions');
-      const call = callNvidiaProxy('chat/completions', key, body)
+      const { callAiProxy } = await import('@/lib/firebase/functions');
+      const call = callAiProxy('nvidia', 'chat/completions', key, body)
         .then(p => ({ status: p.status, body: p.body }));
       if (!req.timeoutMs) return await call;
       const cutoff = new Promise<RawResponse>(resolve =>
@@ -245,8 +245,8 @@ function dropNonChat(entries: CatalogueEntry[]): CatalogueEntry[] {
 
 async function fetchCatalogue(provider: ProviderId, key: string): Promise<CatalogueEntry[]> {
   if (provider === 'nvidia') {
-    const { callNvidiaProxy } = await import('@/lib/firebase/functions');
-    const res = await callNvidiaProxy('models', key);
+    const { callAiProxy } = await import('@/lib/firebase/functions');
+    const res = await callAiProxy('nvidia', 'models', key);
     if (!res.ok) throw new Error(`NVIDIA catalogue failed: HTTP ${res.status}`);
     const data = JSON.parse(res.body);
     // NVIDIA reports only {id, object, created, owned_by} — no context window,

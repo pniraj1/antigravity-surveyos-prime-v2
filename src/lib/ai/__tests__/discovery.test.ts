@@ -1,18 +1,18 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { fetchNvidiaModels, fetchGroqModels } from '../discovery';
-import { callNvidiaProxy } from '@/lib/firebase/functions';
+import { callAiProxy } from '@/lib/firebase/functions';
 
 // NVIDIA's API has no CORS support, so fetchNvidiaModels goes through the
 // callable Cloud Function rather than fetch(). Mocking global.fetch here would
 // mock something the code never calls.
 vi.mock('@/lib/firebase/functions', () => ({
-  callNvidiaProxy: vi.fn(),
+  callAiProxy: vi.fn(),
 }));
 
 describe('fetchNvidiaModels', () => {
   afterEach(() => vi.restoreAllMocks());
   it('maps the OpenAI-style list response to ModelEntry rows', async () => {
-    vi.mocked(callNvidiaProxy).mockResolvedValue({
+    vi.mocked(callAiProxy).mockResolvedValue({
       status: 200,
       ok: true,
       body: JSON.stringify({ data: [{ id: 'meta/llama-3.2-90b-vision-instruct' }, { id: 'meta/llama-3.2-3b-instruct' }] }),
@@ -36,7 +36,7 @@ describe('fetchNvidiaModels', () => {
     expect(row.imageCap).toBe(1);
   });
   it('returns null on HTTP error', async () => {
-    vi.mocked(callNvidiaProxy).mockResolvedValue({ status: 401, ok: false, body: '' });
+    vi.mocked(callAiProxy).mockResolvedValue({ status: 401, ok: false, body: '' });
     expect(await fetchNvidiaModels('bad')).toBeNull();
   });
 });

@@ -507,8 +507,8 @@ async function callWithKey(provider: AIProvider, key: string, prompt: string, im
   if (provider.name === 'nvidia') {
     // NVIDIA's API sends no CORS headers → the browser cannot call it directly.
     // Route through the Cloud Function proxy (server-to-server, no CORS).
-    const { callNvidiaProxy } = await import('@/lib/firebase/functions');
-    const proxied = await callNvidiaProxy('chat/completions', key, requestBody);
+    const { callAiProxy } = await import('@/lib/firebase/functions');
+    const proxied = await callAiProxy('nvidia', 'chat/completions', key, requestBody);
     if (!proxied.ok) {
       const err = safeJsonParse(proxied.body);
       throw Object.assign(

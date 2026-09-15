@@ -155,37 +155,52 @@ exports.callAI = onCall({ maxInstances: 10, memory: "256MiB" }, async (request) 
   throw new HttpsError("resource-exhausted", "All AI providers and keys are currently exhausted. Try again shortly.");
 });
 
-// ─── NVIDIA NIM Proxy ───
-// NVIDIA's REST API (integrate.api.nvidia.com) sends no CORS headers, so the
-// browser cannot call it directly. This forwards the caller's own (BYOK) key
-// server-to-server. Host + path are allowlisted so it is not an open proxy.
-const NVIDIA_BASE = "https://integrate.api.nvidia.com/v1";
-const NVIDIA_ALLOWED_PATHS = new Set(["models", "chat/completions"]);
+// ─── AI provider proxy ───
+// NVIDIA (integrate.api.nvidia.com) and Ollama Cloud (ollama.com) send no CORS
+// headers, so the browser cannot call them. This forwards the caller's own
+// (BYOK) key server-to-server. Host and path are allowlisted so it is not an
+// open proxy. The key is used for one request and never logged or stored.
+//
+// ponytail: every proxied request spends Cloud Functions egress (free tier
+// 5 GB/month across all surveyors ≈ 10,000 two-page estimate calls). Proxied
+// models rank last in the client so this is reached only when Gemini is
+// unavailable. Upgrade path if the ceiling is hit: per-provider daily cap in
+// Firestore, checked here.
+const PROXY_TARGETS = {
+  nvidia: { base: "https://integrate.api.nvidia.com/v1", paths: { models: "GET", "chat/completions": "POST" }, auth: (k) => ({ Authorization: `Bearer ${k}` }) },
+  ollama: { base: "https://ollama.com", paths: { "api/tags": "GET", "api/chat": "POST" }, auth: (k) => ({ Authorization: `Bearer ${k}` }) },
+};
 
-// timeoutSeconds: NVIDIA vision inference measured at 27-200s per page (llama-3.2-90b
-// at 131s, nemotron-super-49b at 200s). The v2 default of 60s kills every call before
-// NVIDIA answers, and the client reports it as an invalid API key. 300s covers the
-// slowest measured model with headroom.
-exports.nvidiaProxy = onCall({ maxInstances: 10, memory: "512MiB", timeoutSeconds: 300 }, async (request) => {
+// timeoutSeconds: NVIDIA vision inference measured at 27-200s per page; Ollama
+// gemma4:31b at 55-63s for five pages. The v2 default of 60s kills every call
+// before the provider answers, and the client reports it as an invalid key.
+async function proxyToProvider(request) {
   if (!request.auth) throw new HttpsError("unauthenticated", "Must be logged in.");
   await assertActiveSubscription(request.auth.uid);
 
-  const { path, key, body } = request.data || {};
-  if (!key) throw new HttpsError("invalid-argument", "NVIDIA key is required.");
-  if (!NVIDIA_ALLOWED_PATHS.has(path)) throw new HttpsError("invalid-argument", `Unsupported path: ${path}`);
+  const { provider = "nvidia", path, key, body } = request.data || {};
+  const target = PROXY_TARGETS[provider];
+  if (!target) throw new HttpsError("invalid-argument", `Unsupported provider: ${provider}`);
+  if (!key) throw new HttpsError("invalid-argument", `${provider} key is required.`);
+  const method = target.paths[path];
+  if (!method) throw new HttpsError("invalid-argument", `Unsupported path: ${path}`);
 
-  const method = path === "models" ? "GET" : "POST";
   const fetch = (await import("node-fetch")).default;
-  const res = await fetch(`${NVIDIA_BASE}/${path}`, {
+  const res = await fetch(`${target.base}/${path}`, {
     method,
-    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
+    headers: { "Content-Type": "application/json", ...target.auth(key) },
     ...(method === "POST" ? { body: JSON.stringify(body || {}) } : {}),
   });
 
   // Pass the provider's response through verbatim; the client interprets status.
   const text = await res.text();
   return { status: res.status, ok: res.ok, body: text };
-});
+}
+
+const PROXY_OPTS = { maxInstances: 10, memory: "512MiB", timeoutSeconds: 300 };
+exports.aiProxy = onCall(PROXY_OPTS, proxyToProvider);
+// Alias for clients built before the rename. Remove one release after aiProxy ships.
+exports.nvidiaProxy = onCall(PROXY_OPTS, (request) => proxyToProvider({ ...request, data: { ...(request.data || {}), provider: "nvidia" } }));
 
 // ─── Bramha Intelligence Engine ───
 // Admin-triggered batch indexer (replaces the old per-archive Firestore
