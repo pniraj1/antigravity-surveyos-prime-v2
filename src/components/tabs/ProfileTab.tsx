@@ -751,6 +751,30 @@ export function ProfileTab() {
                 accentColor="#76B900"
               />
             </div>
+
+            {/* Ollama Cloud — free Gemma 4 vision fallback, used when Google is busy */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.1)' }}>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-white shadow-sm">
+                    <Cpu size={18} style={{ color: '#000000' }} />
+                  </div>
+                  <div>
+                    <div className="text-xs font-medium text-foreground">Ollama Cloud</div>
+                    <div className="text-[10px] font-medium text-muted-foreground">Optional · free backup (Gemma 4) used automatically when Google is busy</div>
+                  </div>
+                </div>
+                <a href="https://ollama.com/settings/keys" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all hover:opacity-80" style={{ background: '#000000', color: '#FFFFFF' }}>
+                  Get Key <ExternalLink size={10} />
+                </a>
+              </div>
+              <MultiKeyInput
+                keys={profile.ollamaApiKeys || []}
+                onChange={keys => updateProfile({ ollamaApiKeys: keys })}
+                placeholder="Ollama API key"
+                accentColor="#000000"
+              />
+            </div>
           </div>
         </div>
 

@@ -155,6 +155,8 @@ export interface SurveyorProfile {
   groqApiKeys: string[];
   /** Up to 3 NVIDIA NIM API keys — used as automatic 3rd-provider fallback */
   nvidiaApiKeys: string[];
+  /** Up to 3 Ollama Cloud API keys — free vision fallback (Gemma 4), reached via proxy */
+  ollamaApiKeys: string[];
   /** @deprecated — use geminiApiKeys[0]. Kept for backward-compat migration. */
   geminiApiKey: string;
   /** @deprecated — use groqApiKeys[0]. Kept for backward-compat migration. */

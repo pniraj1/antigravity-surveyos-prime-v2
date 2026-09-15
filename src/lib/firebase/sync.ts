@@ -395,7 +395,7 @@ export async function pullClaimsFromCloud(uid: string, sinceTimestamp: string | 
  * Pushes the current profile to Firestore.
  * Strips locally-only fields before write:
  * - signatureDataUrl / stampDataUrl — large base64 blobs, kept local only
- * - geminiApiKeys / groqApiKeys — sensitive credentials, kept local + Drive backup only
+ * - geminiApiKeys / groqApiKeys / nvidiaApiKeys / ollamaApiKeys — sensitive credentials, kept local + Drive backup only
  */
 export async function pushProfileToCloud(uid: string, profile: SurveyorProfile) {
   const profileRef = doc(db, `users/${uid}/profile`, 'current');
@@ -405,6 +405,8 @@ export async function pushProfileToCloud(uid: string, profile: SurveyorProfile) 
     stampDataUrl: _stamp,
     geminiApiKeys: _gKeys,
     groqApiKeys: _rKeys,
+    nvidiaApiKeys: _nKeys,
+    ollamaApiKeys: _oKeys,
     geminiApiKey: _gKey,
     groqApiKey: _rKey,
     isAdmin: _isAdmin, // Never overwrite from client — only set by admin actions in Firestore
@@ -419,7 +421,7 @@ export async function pushProfileToCloud(uid: string, profile: SurveyorProfile) 
  * Pulls the profile from Firestore and merges into the local store.
  * Local-only fields are preserved (not stored in cloud):
  * - signatureDataUrl / stampDataUrl — base64 blobs
- * - geminiApiKeys / groqApiKeys / geminiApiKey / groqApiKey — credentials
+ * - geminiApiKeys / groqApiKeys / nvidiaApiKeys / ollamaApiKeys / geminiApiKey / groqApiKey — credentials
  */
 export async function pullProfileFromCloud(uid: string) {
   const profileRef = doc(db, `users/${uid}/profile`, 'current');
@@ -435,6 +437,8 @@ export async function pullProfileFromCloud(uid: string) {
       stampDataUrl: local.stampDataUrl,
       geminiApiKeys: local.geminiApiKeys,
       groqApiKeys: local.groqApiKeys,
+      nvidiaApiKeys: local.nvidiaApiKeys,
+      ollamaApiKeys: local.ollamaApiKeys,
       geminiApiKey: local.geminiApiKey,
       groqApiKey: local.groqApiKey,
     });

@@ -24,6 +24,7 @@ export const MOCK_PROFILE: SurveyorProfile = {
   geminiApiKeys: [],
   groqApiKeys: [],
   nvidiaApiKeys: [],
+  ollamaApiKeys: [],
   geminiApiKey: '',
   groqApiKey: '',
   googleClientId: '',

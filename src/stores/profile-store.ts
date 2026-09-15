@@ -50,6 +50,7 @@ const DEFAULT_PROFILE: SurveyorProfile = {
   geminiApiKeys: [],
   groqApiKeys: [],
   nvidiaApiKeys: [],
+  ollamaApiKeys: [],
   // Deprecated single-key fields (kept for migration)
   geminiApiKey: '',
   groqApiKey: '',
