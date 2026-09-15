@@ -366,6 +366,7 @@ export function createBlankClaim(
       date: '',
       surveyRef: '',
       surveyDate: '',
+      placeOfSurvey: '',
       repairQuality: 'satisfactory',
       vehicleCondition: 'roadworthy',
       salvageStatus: 'na',

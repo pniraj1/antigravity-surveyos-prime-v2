@@ -261,6 +261,8 @@ export interface ReinspectionDetails {
   date: string;
   surveyRef: string;
   surveyDate: string;
+  /** Where the re-inspection was done. Blank = same as accident.placeOfSurvey. */
+  placeOfSurvey?: string;
   riAppointmentDate?: string;
   repairsAsAssessed?: 'YES' | 'NO' | 'PARTIAL';
   repairAuthDate?: string;
