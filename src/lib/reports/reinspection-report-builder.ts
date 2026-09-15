@@ -31,6 +31,7 @@ function fa(v: number | string | null | undefined): string {
 export function buildReinspectionHTML(claim: ClaimData, profile: SurveyorProfile | null): string {
   const v = claim.vehicle;
   const p = claim.policy;
+  const a = claim.accident;
   const ri = claim.reinspection;
   const ageMonths = getVehicleAgeMonths(
     v.dateOfRegistration || null,
@@ -57,24 +58,30 @@ ${getSurveyorHeader(profile)}
 <tr>
   <td style="${tdl}width:25%;">Report Number</td>
   <td style="${tdb}width:25%;">${g(claim.reportNo)}</td>
-  <td style="${tdl}width:25%;">Date of Report</td>
-  <td style="${tdb}">${fd(claim.reportDate)}</td>
+  <td style="${tdl}width:25%;">RI Ref Number</td>
+  <td style="${tdb}">${g(ri.refNo)}</td>
 </tr>
 <tr>
-  <td style="${tdl}">RI Ref Number</td>
-  <td style="${tdb}">${g(ri.refNo)}</td>
+  <td style="${tdl}">Date of Accident</td>
+  <td style="${tdb}">${fd(a.dateAndTime)}</td>
+  <td style="${tdl}">Date of Survey</td>
+  <td style="${tdb}">${fd(a.dateOfSurvey)}</td>
+</tr>
+<tr>
+  <td style="${tdl}">RI Appointment Date</td>
+  <td style="${tdb}">${fd(ri.riAppointmentDate)}</td>
   <td style="${tdl}">Date of RI</td>
   <td style="${tdb}">${fd(ri.date)}</td>
 </tr>
-</table>
-
-<div style="${sec}">ORIGINAL SURVEY DETAILS</div>
-<table style="${ts}">
 <tr>
-  <td style="${tdl}width:25%;">Survey Ref No</td>
-  <td style="${tdb}width:25%;">${g(ri.surveyRef)}</td>
-  <td style="${tdl}width:25%;">Survey Date</td>
-  <td style="${tdb}">${fd(ri.surveyDate)}</td>
+  <td style="${tdl}">Place of Re-inspection</td>
+  <td style="${tdb}" colspan="3">${g(ri.placeOfSurvey || a.placeOfSurvey)}</td>
+</tr>
+<tr>
+  <td style="${tdl}">Repair Auth. Date</td>
+  <td style="${tdb}">${fd(ri.repairAuthDate)}</td>
+  <td style="${tdl}">Est. Completion Date</td>
+  <td style="${tdb}">${fd(ri.estCompletionDate)}</td>
 </tr>
 <tr>
   <td style="${tdl}">Actual Completion Date</td>
@@ -105,9 +112,19 @@ ${getSurveyorHeader(profile)}
 <div style="${sec}">POLICY & CLAIM DETAILS</div>
 <table style="${ts}">
 <tr>
-  <td style="${tdl}width:25%;">Policy Number</td>
-  <td style="${tdb}width:25%;">${g(p.policyNumber)}</td>
-  <td style="${tdl}width:25%;">Insured Name</td>
+  <td style="${tdl}width:25%;">Insurance Company</td>
+  <td style="${tdb}width:25%;">${g(p.insurerName)}</td>
+  <td style="${tdl}width:25%;">Policy Issuing Office</td>
+  <td style="${tdb}">${g(p.policyIssuingOffice)}</td>
+</tr>
+<tr>
+  <td style="${tdl}">Claim Appointing Office</td>
+  <td style="${tdb}" colspan="3">${g(p.appointingOffice)}</td>
+</tr>
+<tr>
+  <td style="${tdl}">Policy Number</td>
+  <td style="${tdb}">${g(p.policyNumber)}</td>
+  <td style="${tdl}">Insured Name</td>
   <td style="${tdb}">${g(p.insuredName)}</td>
 </tr>
 <tr>
