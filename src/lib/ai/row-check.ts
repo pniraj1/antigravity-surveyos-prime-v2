@@ -108,6 +108,10 @@ export function rowCheck(data: unknown, pageTexts?: string[]): RowCheck {
       }
       gaps = SECTIONS.flatMap(s => gapsIn(rowsOf(data, s)));
       duplicates = [...new Set(SECTIONS.flatMap(s => duplicatesIn(rowsOf(data, s))))].sort((a, b) => a - b);
+      // ponytail: ratio heuristic — a 2-page unnumbered bill of 1..40 + 1..4 is
+      // 4/44 <= 0.1 and gets its 4 rows dropped; the gross check then flags it.
+      // Upgrade path: treat "every section restarts at 1 on a page boundary"
+      // as unnumbered.
       duplicatesDroppable = sectionDuplicates / Math.max(1, sectionNumbered) <= ONE_RUN_MAX_DUP_RATIO;
     } else {
       duplicates = duplicatesIn(all);

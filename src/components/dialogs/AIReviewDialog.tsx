@@ -38,7 +38,7 @@ function CheckCard({ findings, onSmartFix, progress, fixed, rows }: {
     if (!fixed) return null;
     return (
       <div className="mb-4 p-3 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-900 flex items-center gap-2 text-sm font-medium">
-        <CheckCircle2 size={16} className="shrink-0" /> No remaining findings — {rows} rows
+        <CheckCircle2 size={16} className="shrink-0" /> No remaining findings — {rows} {rows === 1 ? 'row' : 'rows'}
       </div>
     );
   }
@@ -213,7 +213,7 @@ export function AIReviewDialog({ isOpen, onClose, onConfirm, onReScan, title, da
                     value={feedback}
                     onChange={(e) => setFeedback(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey && feedback.trim() && onReScan) {
+                      if (e.key === 'Enter' && !e.shiftKey && feedback.trim() && onReScan && !smartFixProgress) {
                         e.preventDefault();
                         onReScan(feedback);
                         setFeedback('');

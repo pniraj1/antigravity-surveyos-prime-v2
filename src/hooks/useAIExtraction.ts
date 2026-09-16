@@ -184,10 +184,12 @@ export function useAIExtraction() {
       // Re-reading the SAME document, so the surveyor's supplementary/re-scan
       // answer still holds. Captured before clearJob, which drops it.
       const mode = useExtractionStore.getState().jobs[key]?.estimateMode;
-      clearJob(key);
+      // cancelJob (not clearJob): aborts a Smart Fix's controller still
+      // registered for this key, so the Enter-key re-scan can't orphan it.
+      cancelJob(key);
       triggerExtraction(key, file, feedback, stripPageTags(data), mode);
     }
-  }, [reviewData, clearJob, triggerExtraction]);
+  }, [reviewData, cancelJob, triggerExtraction]);
 
   const reScanLatest = useCallback((key: string, feedback: string) => {
     const file = useExtractionStore.getState().files[key];
