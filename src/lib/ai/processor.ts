@@ -752,9 +752,12 @@ export async function extractDocument(
           finalResult = second.result; pageIssues = second.issues;
         }
       } catch (e) {
+        // A cancel is not a "second opinion unavailable" — let it propagate.
+        if (signal?.aborted || (e as { name?: string })?.name === 'AbortError') throw e;
         console.warn('[ai-fallback] second opinion unavailable — keeping first result', e);
+      } finally {
+        session.avoid.delete(firstModel);
       }
-      session.avoid.delete(firstModel);
     }
 
     // Validate math — result surfaced to UI layer; the surveyor evaluates manually.
