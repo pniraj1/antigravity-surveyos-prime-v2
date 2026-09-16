@@ -10,6 +10,7 @@ vi.mock('firebase/firestore', () => ({
   where: () => ({}),
   getDocs: vi.fn(),
   runTransaction: vi.fn(),
+  deleteField: () => '__DELETE__',
 }));
 vi.mock('@/lib/firebase/config', () => ({ db: {} }));
 vi.mock('@/lib/firebase/sync-cursor', () => ({ applySkewMargin: (t: string | null) => t }));
@@ -38,9 +39,11 @@ describe('pushProfileToCloud', () => {
       geminiApiKey: 'g0', groqApiKey: 'q0',
     } as never);
     const written = setDoc.mock.calls[0][1] as Record<string, unknown>;
-    for (const k of ['geminiApiKeys', 'groqApiKeys', 'nvidiaApiKeys', 'ollamaApiKeys', 'geminiApiKey', 'groqApiKey']) {
+    for (const k of ['geminiApiKeys', 'groqApiKeys', 'ollamaApiKeys', 'geminiApiKey', 'groqApiKey']) {
       expect(written).not.toHaveProperty(k);
     }
+    // nvidiaApiKeys leaked to Firestore before it was stripped — the push purges it.
+    expect(written.nvidiaApiKeys).toBe('__DELETE__');
     expect(written.name).toBe('S');
   });
 });

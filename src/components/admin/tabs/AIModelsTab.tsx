@@ -24,13 +24,11 @@ import {
 } from '@/lib/ai/benchmark-doc';
 import { loadPdf } from '@/lib/photos/pdf-to-images';
 
-const PROVIDER_META: Record<ProviderId, { label: string; color: string; keyField?: 'geminiApiKeys' | 'groqApiKeys' | 'nvidiaApiKeys' }> = {
+const PROVIDER_META: Record<ProviderId, { label: string; color: string; keyField: 'geminiApiKeys' | 'groqApiKeys' | 'nvidiaApiKeys' | 'ollamaApiKeys' }> = {
   gemini: { label: 'Google Gemini', color: '#D4AF37', keyField: 'geminiApiKeys' },
   groq:   { label: 'Groq',          color: '#F26639', keyField: 'groqApiKeys' },
   nvidia: { label: 'NVIDIA NIM',    color: '#76B900', keyField: 'nvidiaApiKeys' },
-  // No admin key field yet — Ollama Cloud is reached through a server-side
-  // proxy (added in a later task) rather than a per-surveyor API key.
-  ollama: { label: 'Ollama Cloud',  color: '#000000' },
+  ollama: { label: 'Ollama Cloud',  color: '#000000', keyField: 'ollamaApiKeys' },
 };
 
 const PROVIDERS: ProviderId[] = ['gemini', 'groq', 'nvidia', 'ollama'];
@@ -72,19 +70,17 @@ export function AIModelsTab({ adminEmail }: { adminEmail: string }) {
 
   if (!config) return <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 size={14} className="animate-spin" /> Loading config…</div>;
 
-  const adminKey = (p: ProviderId): string | undefined => {
-    const field = PROVIDER_META[p].keyField;
-    if (!field) return undefined;
-    return (profile[field] as string[] | undefined)?.[0]?.trim();
-  };
+  const adminKey = (p: ProviderId): string | undefined =>
+    (profile[PROVIDER_META[p].keyField] as string[] | undefined)?.[0]?.trim();
 
   async function probeAll() {
     const keys = {
       gemini: adminKey('gemini'),
       groq: adminKey('groq'),
       nvidia: adminKey('nvidia'),
+      ollama: adminKey('ollama'),
     };
-    if (!keys.gemini && !keys.groq && !keys.nvidia) {
+    if (!Object.values(keys).some(Boolean)) {
       toast.error('Add at least one provider key in your Profile to run a probe.');
       return;
     }

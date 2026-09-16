@@ -6,7 +6,7 @@ const callAiProxy = vi.hoisted(() => vi.fn());
 vi.mock('@/lib/firebase/functions', () => ({ callAiProxy }));
 vi.mock('@/lib/firebase/config', () => ({ getFirebaseApp: () => ({}), db: {} }));
 
-import { callAIGateway, newSession, AllProvidersBusyError, OfflineError } from '../service';
+import { callAIGateway, newSession, AllProvidersBusyError, OfflineError, CURRENT_MODELS } from '../service';
 import { useProfileStore } from '@/stores/profile-store';
 import { useAIConfigStore } from '@/stores/ai-config-store';
 import { FALLBACK_AI_MODELS_CONFIG } from '../models-config';
@@ -27,6 +27,14 @@ beforeEach(() => {
   Object.values(toast).forEach(f => f.mockReset());
 });
 afterEach(() => vi.restoreAllMocks());
+
+describe('preferred model', () => {
+  it('no surveyor pick → the measured model (CURRENT_MODELS.gemini) is tried first, not the strongest untested one', async () => {
+    const spy = vi.spyOn(global, 'fetch').mockResolvedValue(ok());
+    await callAIGateway('p', ['img'], 'json', 'heavy');
+    expect(modelOf(spy.mock.calls[0])).toBe(CURRENT_MODELS.gemini);
+  });
+});
 
 describe('hop before key rotation', () => {
   it('503 → next Gemini model with the same key, no in-place retry', async () => {

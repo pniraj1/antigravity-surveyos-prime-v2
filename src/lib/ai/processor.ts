@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════════════════
 
 // import * as pdfjsLib from 'pdfjs-dist'; // DO NOT STACTIC IMPORT THIS
-import { callAIGateway, getActiveImageCap, newSession } from './service';
+import { callAIGateway, getActiveImageCap, newSession, AllProvidersBusyError, OfflineError } from './service';
 import { resolveVisionChunkSize } from './image-cap';
 import { getDocPrompt } from './prompts';
 import { jobForDocType } from './jobs';
@@ -562,7 +562,14 @@ export async function extractDocument(
 
     // One pass over every chunk. Runs a second time (on the next model) only
     // when the first pass fails the math check — see needsSecondOpinion below.
-    async function runAllChunks(): Promise<{ result: any; issues: string[] }> {
+    // quiet: a second pass whose result may be discarded — no hard-failure toast;
+    // the error still throws and the second-opinion catch keeps the first result.
+    async function runAllChunks(quiet = false): Promise<{ result: any; issues: string[] }> {
+      const failToast = (e: unknown) => {
+        if (quiet) return;
+        const msg = e instanceof Error ? e.message : 'Unknown error';
+        toast.error(`AI extraction failed — ${msg}. Please enter fields manually.`);
+      };
       let result: any = null;
       // Pages the AI could not (fully) read — surfaced to the surveyor alongside
       // math discrepancies so missing line items are never silent.
@@ -645,10 +652,40 @@ export async function extractDocument(
           chunkPrompt = enhancedPrompt;
         }
 
+        // Parse one gateway reply and fold it into `result`; an unparseable page is
+        // logged as an issue (multi-page) or thrown (single-page). Shared by the
+        // normal path and the page-at-a-time 413 fallback below.
+        const mergeResponse = (rawResponse: string, first: number, last: number) => {
+          try {
+            const fragment = JSON.parse(rawResponse);
+            result = mergeAIResults(result, fragment);
+          } catch (err) {
+            // For multi-page docs: one bad page should not abort the whole extraction.
+            // Log the failure and continue accumulating results from other pages.
+            console.warn(
+              `[AI Extraction] ${key}: page chunk ${first}–${last} returned unparseable JSON — skipping this chunk.`,
+              '\nRaw response (first 500 chars):', rawResponse?.slice(0, 500)
+            );
+            if (totalPages === 1) {
+              // Single-page doc with no fallback — propagate as before
+              throw new Error('AI returned an invalid format. Please try again or enter fields manually.');
+            }
+            // Multi-page: continue with whatever we have accumulated so far,
+            // but tell the surveyor which pages are missing.
+            const pageLabel = first === last ? `Page ${first}` : `Pages ${first}–${last}`;
+            issues.push(`${pageLabel} could not be read by the AI — line items from ${first === last ? 'this page' : 'these pages'} may be missing.`);
+          }
+        };
+
         let rawResponse: string;
         try {
           rawResponse = await callAIGateway(chunkPrompt, chunkImages, 'json', job, session, signal);
         } catch (firstErr: any) {
+          // The gateway already walked every model/key/provider and, on cancel,
+          // threw on purpose — re-calling it would repeat the whole walk and
+          // double every toast.
+          if (firstErr?.name === 'AbortError' || firstErr instanceof AllProvidersBusyError || firstErr instanceof OfflineError) throw firstErr;
+
           // ── Payload too large → auto-fallback to vision for this chunk ──────
           // The gateway signals PAYLOAD_TOO_LARGE when even the shortest text-mode
           // prompt exceeds the provider's token cap. Retrying with the same prompt
@@ -680,13 +717,23 @@ export async function extractDocument(
                   { duration: 12000 }
                 );
               } else {
-                const msg = visionErr instanceof Error ? visionErr.message : 'Unknown error';
-                toast.error(`AI extraction failed — ${msg}. Please enter fields manually.`);
+                failToast(visionErr);
               }
               throw visionErr;
             }
+          } else if (isTooBig && chunkImages.length > 1) {
+            // Vision chunk too large for every model that fits it — re-run this
+            // chunk one page at a time. ponytail: one page is the floor; if a
+            // single page 413s the document is beyond every configured model.
+            console.warn(`[AI Extraction] ${key}: PAYLOAD_TOO_LARGE on vision chunk ${currentBatchStart}–${currentBatchEnd} — re-running one page at a time.`);
+            for (let p = 0; p < chunkImages.length; p++) {
+              if (signal?.aborted) throw abortError();
+              const r = await callAIGateway(enhancedPrompt, [chunkImages[p]], 'json', job, session, signal);
+              mergeResponse(r, currentBatchStart + p, currentBatchStart + p);
+            }
+            continue;
           } else if (isTooBig) {
-            // Vision-mode was already in use, but prompt is still too large.
+            // A single page is still too large — beyond every configured model.
             toast.error(
               'This document is too large for your current AI provider\'s token limit. ' +
               'Add a Google Gemini API key in Profile → AI & Documents Intelligence — it supports documents up to 250K tokens.',
@@ -699,34 +746,13 @@ export async function extractDocument(
             try {
               rawResponse = await callAIGateway(chunkPrompt, chunkImages, 'json', job, session, signal);
             } catch (err: any) {
-              const msg = err instanceof Error ? err.message : 'Unknown error';
-              toast.error(`AI extraction failed — ${msg}. Please enter fields manually.`);
+              failToast(err);
               throw err;
             }
           }
         }
 
-        try {
-          const fragment = JSON.parse(rawResponse);
-          result = mergeAIResults(result, fragment);
-        } catch (err) {
-          // For multi-page docs: one bad page should not abort the whole extraction.
-          // Log the failure and continue accumulating results from other pages.
-          console.warn(
-            `[AI Extraction] ${key}: page chunk ${currentBatchStart}–${currentBatchEnd} returned unparseable JSON — skipping this chunk.`,
-            '\nRaw response (first 500 chars):', rawResponse?.slice(0, 500)
-          );
-          if (totalPages === 1) {
-            // Single-page doc with no fallback — propagate as before
-            throw new Error('AI returned an invalid format. Please try again or enter fields manually.');
-          }
-          // Multi-page: continue with whatever we have accumulated so far,
-          // but tell the surveyor which pages are missing.
-          const pageLabel = currentBatchStart === currentBatchEnd
-            ? `Page ${currentBatchStart}`
-            : `Pages ${currentBatchStart}–${currentBatchEnd}`;
-          issues.push(`${pageLabel} could not be read by the AI — line items from ${currentBatchStart === currentBatchEnd ? 'this page' : 'these pages'} may be missing.`);
-        }
+        mergeResponse(rawResponse, currentBatchStart, currentBatchEnd);
       }
 
       return { result, issues };
@@ -744,7 +770,7 @@ export async function extractDocument(
       session.avoid.add(firstModel);
       session.lastGood = undefined;
       try {
-        const second = await runAllChunks();
+        const second = await runAllChunks(true);
         if (!needsSecondOpinion(key, second.result)) {
           // runAllChunks re-sets lastGood; TS narrowed it to undefined above.
           const secondModel = (session as typeof session).lastGood?.model;

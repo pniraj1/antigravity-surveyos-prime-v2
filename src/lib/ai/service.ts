@@ -181,7 +181,8 @@ export function getActiveImageCap(job: AIJob = 'heavy'): number | null {
   if (override) return buildOverrideProvider(override).maxImages ?? null;
   const pool = buildPool(getProfileFromStorage());
   try {
-    const [first] = rankModels(job, ['x'], pool, { health: getHealth(), preferredModel: getProfileFromStorage()?.geminiModel?.trim() || undefined });
+    // ponytail: until Phase 2 puts probe verdicts in the pool, the measured-exact model leads; the surveyor's pick still overrides.
+    const [first] = rankModels(job, ['x'], pool, { health: getHealth(), preferredModel: getProfileFromStorage()?.geminiModel?.trim() || CURRENT_MODELS.gemini });
     return first?.model.imageCap ?? null;
   } catch { return null; }
 }
@@ -672,7 +673,8 @@ export async function callAIGateway(
     pool = [{ provider: master.name as ProviderId, proxied: PROXIED.has(master.name as ProviderId), keys: master.keys,
       model: { id: master.model, label: master.model, note: '', ctxWindow: null, vision: true, imageCap: master.maxImages ?? null } }];
   }
-  const preferred = profile?.geminiModel?.trim() || undefined;
+  // ponytail: until Phase 2 puts probe verdicts in the pool, the measured-exact model leads; the surveyor's pick still overrides.
+  const preferred = profile?.geminiModel?.trim() || CURRENT_MODELS.gemini;
   return callWithFallback(job, prompt, images, responseFormat, session, signal, pool, preferred);
 }
 

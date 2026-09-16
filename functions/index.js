@@ -179,10 +179,11 @@ async function proxyToProvider(request) {
   await assertActiveSubscription(request.auth.uid);
 
   const { provider = "nvidia", path, key, body } = request.data || {};
-  const target = PROXY_TARGETS[provider];
+  // Object.hasOwn: a plain bracket lookup would resolve __proto__/constructor.
+  const target = Object.hasOwn(PROXY_TARGETS, provider) ? PROXY_TARGETS[provider] : undefined;
   if (!target) throw new HttpsError("invalid-argument", `Unsupported provider: ${provider}`);
   if (!key) throw new HttpsError("invalid-argument", `${provider} key is required.`);
-  const method = target.paths[path];
+  const method = Object.hasOwn(target.paths, path) ? target.paths[path] : undefined;
   if (!method) throw new HttpsError("invalid-argument", `Unsupported path: ${path}`);
 
   const fetch = (await import("node-fetch")).default;

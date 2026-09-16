@@ -5,7 +5,7 @@
 // Uses "Latest Update Wins" (updatedAt) approach
 // ═══════════════════════════════════════════════════════════
 
-import { doc, setDoc, getDoc, collection, query, where, getDocs, runTransaction } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, query, where, getDocs, runTransaction, deleteField } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { db } from './config';
 import { applySkewMargin } from './sync-cursor';
@@ -413,7 +413,12 @@ export async function pushProfileToCloud(uid: string, profile: SurveyorProfile) 
     ...cloudProfile
   } = profile;
 
-  await setDoc(profileRef, { ...cloudProfile, ownerId: uid }, { merge: true });
+  await setDoc(profileRef, {
+    ...cloudProfile,
+    ownerId: uid,
+    // Purges the key that reached Firestore before it was stripped (pre-2026-09-16). Remove after one release.
+    nvidiaApiKeys: deleteField(),
+  }, { merge: true });
   logger.log(`[Sync] Profile pushed to cloud for user ${uid}.`);
 }
 
