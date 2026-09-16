@@ -95,14 +95,18 @@ export function rankModels(job: AIJob, images: readonly string[], pool: readonly
   const busy = (e: PoolEntry) => health.busyRate(e.model.id);
   const proxied = (e: PoolEntry) => (e.proxied ? 1 : 0);
   const cmp = (a: number, b: number) => (a < b ? -1 : a > b ? 1 : 0);
-  // An unlimited budget (Infinity) ties with the fullest known budget instead
-  // of always winning — an untested unlimited model should not outrank an
-  // exact-verdict model on budget alone.
-  const budgetCmp = (a: number, b: number) => (a === Infinity || b === Infinity ? 0 : cmp(b, a));
+  // An unlimited budget (Infinity) ties with the fullest known finite budget
+  // instead of always winning — an untested unlimited model should not
+  // outrank an exact-verdict model on budget alone. Capping every budget at
+  // that ceiling before comparing keeps the relation transitive (raw
+  // Infinity-ties-everything was not: Infinity ties 500 and ties 100, but
+  // 500 > 100, so sort order depended on input order).
+  const cap = Math.max(0, ...[...best.values()].filter(Number.isFinite));
+  const budget = (e: PoolEntry) => Math.min(best.get(e.model.id)!, cap);
   const tier = (e: PoolEntry, t: Record<Tier, number>) => t[tierOf(e.provider, e.model.id)];
 
   const byJob: (a: PoolEntry, b: PoolEntry) => number = job === 'heavy'
-    ? (a, b) => cmp(tier(a, HEAVY_TIER), tier(b, HEAVY_TIER)) || budgetCmp(best.get(a.model.id)!, best.get(b.model.id)!)
+    ? (a, b) => cmp(tier(a, HEAVY_TIER), tier(b, HEAVY_TIER)) || cmp(budget(b), budget(a))
         || cmp(verdictRank(a), verdictRank(b)) || cmp(busy(a), busy(b)) || cmp(proxied(a), proxied(b))
         || cmp(modelStrength(b.model.id), modelStrength(a.model.id)) || cmp(speed(a), speed(b))
     : job === 'light'

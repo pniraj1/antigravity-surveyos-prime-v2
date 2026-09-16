@@ -181,4 +181,17 @@ describe('quota-aware ordering', () => {
       'gemini-3.5-flash-lite', 'llama-3.2-90b-vision-preview',
     ]);
   });
+  it('budget ordering is transitive: unlimited ties the fullest finite, not every finite one', () => {
+    const h = createHealth(mem(), () => T0);
+    spent(h, 'k', 'gemini-3.1-flash-lite', 400); // 500 - 400 = 100 left
+    const p = () => [
+      { ...entry('groq', 'llama-3.2-90b-vision-preview'), verdict: 'untested' as const },       // Infinity
+      { ...entry('gemini', 'gemini-3.5-flash-lite'), verdict: 'untested' as const },             // 500 left
+      { ...entry('gemini', 'gemini-3.1-flash-lite'), verdict: 'untested' as const },             // 100 left
+    ];
+    const forward = ids(rankModels('heavy', ['i'], p(), { health: h }));
+    const reversed = ids(rankModels('heavy', ['i'], [...p()].reverse(), { health: h }));
+    expect(forward.indexOf('gemini-3.5-flash-lite')).toBeLessThan(forward.indexOf('gemini-3.1-flash-lite'));
+    expect(reversed).toEqual(forward);
+  });
 });

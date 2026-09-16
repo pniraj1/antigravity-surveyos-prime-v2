@@ -108,8 +108,9 @@ number`, set by `extractDocument` after rasterising; `callAIGateway`
 passes `job === 'heavy' ? session?.pagesTotal ?? 1 : 1`. The gap fill
 needs one page: `fillGaps` sets `session.pagesTotal = 1` for its calls
 and restores the previous value in `finally` (the session is already
-mutable — `avoid`, `lastGood`). The second opinion re-runs the whole
-document with the original `pagesTotal`.
+mutable — `avoid`, `lastGood`). `pagesTotal` is re-computed before every
+chunk as the calls still needed (including the current one); the second
+opinion's re-run restarts that countdown.
 
 Inside a tier an unlimited budget ties with the fullest, so the existing
 tiebreaks (verdict, busy, direct-before-proxied) decide.
