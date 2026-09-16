@@ -69,6 +69,7 @@ describe('extractDocument — image path (estimate)', () => {
     const { data, findings } = await extractDocument('estimate', threeFiles());
 
     expect(gw).toHaveBeenCalledTimes(3);
+    expect(gw.mock.calls[0][4]?.pagesTotal).toBe(3);
     const parts = data.spare_parts;
     expect(parts.every((r: any) => typeof r._page === 'number')).toBe(true);
     expect(parts.find((r: any) => r.sr_no === 1)._page).toBe(0);

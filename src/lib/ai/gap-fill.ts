@@ -43,26 +43,33 @@ export async function fillGaps(input: GapFillInput): Promise<unknown> {
   if (pages.length === 0 || pages.length > MAX_GAP_PAGES) return input.data;
 
   let data = input.data;
-  for (const p of pages) {
-    if (input.signal?.aborted) { const e = new Error('Extraction cancelled'); e.name = 'AbortError'; throw e; }
-    const label = input.srNos.length ? `Rows ${input.srNos.join(', ')} missing` : 'Some rows missing';
-    input.onProgress?.(`${label} — re-reading page ${p + 1}…`);
-    // ponytail: always vision for a gap page — a second look at the same text
-    // layer tends to repeat the same miss.
-    const prompt = gapPrompt(input.basePrompt, p + 1, input.srNos, serialsIn(data));
-    let raw: string;
-    try {
-      raw = await callAIGateway(prompt, [input.apiImages[p]], 'json', 'heavy', input.session, input.signal);
-    } catch (e) {
-      if (shouldPropagate(e)) throw e;
-      console.warn(`[Smart Fix] page ${p + 1} re-read failed — keeping first result`, e);
-      continue;
+  const s = input.session as { pagesTotal?: number } | undefined;
+  const prevPages = s?.pagesTotal;
+  if (s) s.pagesTotal = 1;             // one page per gap call — a nearly-spent Flash key may still take it
+  try {
+    for (const p of pages) {
+      if (input.signal?.aborted) { const e = new Error('Extraction cancelled'); e.name = 'AbortError'; throw e; }
+      const label = input.srNos.length ? `Rows ${input.srNos.join(', ')} missing` : 'Some rows missing';
+      input.onProgress?.(`${label} — re-reading page ${p + 1}…`);
+      // ponytail: always vision for a gap page — a second look at the same text
+      // layer tends to repeat the same miss.
+      const prompt = gapPrompt(input.basePrompt, p + 1, input.srNos, serialsIn(data));
+      let raw: string;
+      try {
+        raw = await callAIGateway(prompt, [input.apiImages[p]], 'json', 'heavy', input.session, input.signal);
+      } catch (e) {
+        if (shouldPropagate(e)) throw e;
+        console.warn(`[Smart Fix] page ${p + 1} re-read failed — keeping first result`, e);
+        continue;
+      }
+      try {
+        data = mergeBySerial(data, tagRows(JSON.parse(raw), p, p));
+      } catch {
+        console.warn(`[Smart Fix] page ${p + 1} returned unparseable JSON — skipping.`);
+      }
     }
-    try {
-      data = mergeBySerial(data, tagRows(JSON.parse(raw), p, p));
-    } catch {
-      console.warn(`[Smart Fix] page ${p + 1} returned unparseable JSON — skipping.`);
-    }
+  } finally {
+    if (s) s.pagesTotal = prevPages;
   }
   return data;
 }

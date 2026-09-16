@@ -407,6 +407,7 @@ export async function extractDocument(
     });
 
     const totalPages = apiImages.length;
+    session.pagesTotal = totalPages;   // heavy ranking skips keys that cannot cover the whole document
 
     // ── Smart PDF Mode Detection ─────────────────────────────────────────────
     // Classify each page as text-native or vision-only.

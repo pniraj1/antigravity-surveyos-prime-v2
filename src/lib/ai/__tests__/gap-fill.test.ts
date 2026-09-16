@@ -46,6 +46,15 @@ describe('fillGaps', () => {
     expect(gw).not.toHaveBeenCalled();
     expect(out).toBe(base);
   });
+  it('sets session.pagesTotal to 1 for its calls and restores it afterwards', async () => {
+    gw.mockImplementation(async () => JSON.stringify({ spare_parts: [row(2)] }));
+    const session: any = { avoid: new Set(), announced: new Set(), pagesTotal: 5 };
+    let seen: number | undefined;
+    gw.mockImplementationOnce(async (_p: string, _i: string[], _f: string, _j: string, s: any) => { seen = s.pagesTotal; return JSON.stringify({ spare_parts: [row(2)] }); });
+    await fillGaps({ basePrompt: 'P', apiImages: images, data: base, srNos: [2], pages: [1], session });
+    expect(seen).toBe(1);
+    expect(session.pagesTotal).toBe(5);
+  });
 });
 
 describe('gapPrompt', () => {
