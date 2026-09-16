@@ -19,7 +19,7 @@
 
 ## In Progress
 
-- [ ] **Deploy Smart Fix + post-live-check fixes** (2026-09-16) — hosting only (`npm run build` → `firebase deploy --only hosting:motorsurveyos-in --project surveyos-v2-antigravity-in`); commits 50c2e994..71e942e8 are on `main` but not live. Then live check L9 (`npm run dev`, open with `?ai-drop=38`, upload DTC Proforma Invoice-1.PDF as estimate — expect one extra single-page call and a clean dialog).
+- [ ] **Live check L9** (2026-09-16) — Smart Fix deployed (hosting, 56b44714). Run L9 (`npm run dev`, open with `?ai-drop=38`, upload DTC Proforma Invoice-1.PDF as estimate — expect one extra single-page call and a clean dialog).
 - [ ] **AI fallback — Phase 1 live checks** (2026-09-16) — code deployed; L0–L8 from `docs/superpowers/plans/2026-09-15-ai-fallback-phase-1.md` Task 14 still to run in the live app with the owner's AQ. + Ollama keys (`?ai-fault=503|429-minute|429-day|429-zero` for induced failures).
 - [ ] **AI fallback — Phase 2** — probe verdicts into the request path, models.dev deprecation filter, auto Tier 2, benchmark set, admin ranked lists + Exclude + discovery summary, Profile provider rows, `models`→`excluded` migration. Spec sections 7–9, 11. Carried minors listed in `Sessions/2026-09-16-ai-fallback-phase-1.md`.
 

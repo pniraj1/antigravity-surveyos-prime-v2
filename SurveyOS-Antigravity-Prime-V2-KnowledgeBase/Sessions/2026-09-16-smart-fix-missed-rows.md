@@ -12,8 +12,10 @@ matters — were never detected.
 Spec: `docs/superpowers/specs/2026-09-16-smart-fix-missed-rows-design.md`
 Plan: `docs/superpowers/plans/2026-09-16-smart-fix-missed-rows.md`
 Ledger: `.superpowers/sdd/progress.md` § Smart Fix missed rows
-Commits: 405b967b..71e942e8 (10) on `main`. **Not deployed.** Also not yet
-deployed: 50c2e994, fd732a06, 2b20fde9 (post-L1 fixes).
+Commits: 405b967b..56b44714 on `main`. Deployed (hosting only) 2026-09-16
+together with 50c2e994, fd732a06, 2b20fde9 after a surveyor reported
+`gemini-3.5-flash-lite` 400 "Request contains an invalid argument" on
+auth/fitness/rc uploads (thinkingBudget rejected; old loop had no hop on 400).
 
 ### New modules
 - `src/lib/ai/row-check.ts` — pure. `rowCheck(data, pageTexts?)` → gaps

@@ -9,7 +9,7 @@
 - fix(ai): unnumbered bills (model numbers each page 1..n itself) keep every row — duplicates are dropped only when ≤ 10 % of serials
 - fix(ai): retry any Gemini 400 once without thinking and remember it per model; retired Gemini ids dropped from the chain; page-level subtotal noise no longer triggers a second read (50c2e994, fd732a06, 2b20fde9)
 - chore(ai): dev-only `?ai-drop=<sr_no>` simulates a missed row for live check L9
-- tests: 1150 passing (processor flow now driven end-to-end in node via a FileReader stub). Spec `docs/superpowers/specs/2026-09-16-smart-fix-missed-rows-design.md`, plan `docs/superpowers/plans/2026-09-16-smart-fix-missed-rows.md`, session log `Sessions/2026-09-16-smart-fix-missed-rows.md`. NOT deployed yet.
+- tests: 1150 passing (processor flow now driven end-to-end in node via a FileReader stub). Spec `docs/superpowers/specs/2026-09-16-smart-fix-missed-rows-design.md`, plan `docs/superpowers/plans/2026-09-16-smart-fix-missed-rows.md`, session log `Sessions/2026-09-16-smart-fix-missed-rows.md`. deployed to motorsurveyos-in.web.app (hosting only) after a surveyor hit the 3.5-flash-lite 400 on auth/fitness docs.
 
 ## 2026-09-16 (Claude)
 - feat(ai): job-aware fallback loop — every AI call declares heavy/light/text; the ranker orders every reachable model; on 503/429 the app hops to the next Gemini model before rotating keys or leaving Gemini; no in-place 503 retry; per-call timeouts (heavy 120 s)
