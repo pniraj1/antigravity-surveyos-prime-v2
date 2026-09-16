@@ -287,6 +287,10 @@ export async function callWithKey(
     const parts: any[] = images.map(img => ({ inlineData: { mimeType: getMimeType(img), data: toRawBase64(img) } }));
     parts.push({ text: prompt });
 
+    // Dev-only ?ai-fault= injection (see fault.ts); null in production and after the first call.
+    const fault = (await import('./fault')).takeFault();
+    if (fault) throw fault;
+
     const res = await fetchWithTimeout('gemini', provider.endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...geminiAuthHeaders(key) },
