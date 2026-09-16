@@ -28,7 +28,7 @@ describe('emptyProviderProbe', () => {
 
 describe('DURABLE_FAILURES', () => {
   it('contains only statuses that describe the model itself', () => {
-    expect([...DURABLE_FAILURES].sort()).toEqual(['ctx-too-small', 'no-text-input', 'unreachable']);
+    expect([...DURABLE_FAILURES].sort()).toEqual(['ctx-too-small', 'no-text-input', 'paid', 'unreachable']);
   });
 
   it('excludes transient statuses — a timeout must never disable a model', () => {

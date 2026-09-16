@@ -21,13 +21,14 @@ export type ProbeStatus =
   | 'unreachable'     // DURABLE: 404 — listed by the provider, not served to this account
   | 'no-text-input'   // DURABLE: rejects a text prompt (e.g. nvidia/nemotron-parse)
   | 'ctx-too-small'   // DURABLE: context cannot hold the 16384-token extraction budget
+  | 'paid'            // DURABLE: 402 — listed by the provider, not on this account's free tier
   | 'auth-error'      // TRANSIENT: 401/403 — a key problem, not a model problem
   | 'transient'       // TRANSIENT: timeout, 429, or 5xx — tells us nothing about the model
   | 'error';          // TRANSIENT: unrecognised failure — treated as unknown, not dead
 
 /** Statuses that justify removing an enabled model from the surveyor config. */
 export const DURABLE_FAILURES: ReadonlySet<ProbeStatus> =
-  new Set<ProbeStatus>(['unreachable', 'no-text-input', 'ctx-too-small']);
+  new Set<ProbeStatus>(['unreachable', 'no-text-input', 'ctx-too-small', 'paid']);
 
 export type ProbeSource = 'probe' | 'provider-metadata';
 

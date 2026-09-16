@@ -1,11 +1,15 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   mapWithConcurrency, buildProbeResult, PROBE_VISION_CODE,
   LATENCY_CUTOFF_MS, PROBE_CAPABILITY_MAX_TOKENS,
   PROVIDER_CONCURRENCY, PROVIDER_MIN_GAP_MS,
-  orderCatalogue,
+  orderCatalogue, fetchCatalogue,
 } from '../probe-runner';
+import { DURABLE_FAILURES } from '../probe-types';
 import type { ProbeResult, ProviderProbe } from '../probe-types';
+
+const callAiProxy = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/firebase/functions', () => ({ callAiProxy }));
 
 describe('mapWithConcurrency', () => {
   it('returns results in input order regardless of completion order', async () => {
@@ -262,5 +266,20 @@ describe('mergeProviderResult', () => {
     const before = probesDoc();
     mergeProviderResult(before, 'groq', providerProbe('gq'));
     expect(Object.keys(before.providers.groq.models)).toEqual([]);
+  });
+});
+
+describe('ollama catalogue', () => {
+  it('lists /api/tags models via the proxy', async () => {
+    callAiProxy.mockResolvedValueOnce({ ok: true, status: 200, body: JSON.stringify({ models: [{ name: 'gemma4:31b' }, { name: 'gpt-oss:120b' }] }) });
+    const rows = await fetchCatalogue('ollama', 'key');
+    expect(rows.map(r => r.id)).toEqual(['gemma4:31b', 'gpt-oss:120b']);
+    expect(callAiProxy).toHaveBeenCalledWith('ollama', 'api/tags', 'key');
+  });
+});
+
+describe('paid status', () => {
+  it('is durable', () => {
+    expect(DURABLE_FAILURES.has('paid')).toBe(true);
   });
 });

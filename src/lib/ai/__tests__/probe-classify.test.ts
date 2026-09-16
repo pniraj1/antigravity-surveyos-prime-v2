@@ -97,6 +97,12 @@ describe('classifyPing', () => {
     expect(classifyPing({ status: 429, body: '{"message":"rate limit"}' }).status).toBe('transient');
   });
 
+  it('marks 402 as a durable paid status', () => {
+    const v = classifyPing({ status: 402, body: '{}' });
+    expect(v.status).toBe('paid');
+    expect(v.reason).toContain('credits');
+  });
+
   it('treats our own timeout or transport failure as transient', () => {
     // A measured NVIDIA run read-timed out on 5 models that are demonstrably
     // alive, including meta/llama-3.2-1b-instruct. Cold start, not death.

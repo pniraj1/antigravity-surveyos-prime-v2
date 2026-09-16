@@ -187,6 +187,27 @@ async function chat(
       return { status: res.status, body: await res.text() };
     }
 
+    if (provider === 'ollama') {
+      // Same cutoff race as NVIDIA below — the callable ignores AbortSignal.
+      const { callAiProxy } = await import('@/lib/firebase/functions');
+      const body = {
+        model,
+        stream: false,
+        options: { temperature: 0.1, num_predict: req.maxTokens },
+        messages: [{
+          role: 'user',
+          content: req.prompt,
+          ...(req.images.length ? { images: req.images.map(i => i.replace(/^data:image\/\w+;base64,/, '')) } : {}),
+        }],
+      };
+      const call = callAiProxy('ollama', 'api/chat', key, body)
+        .then(p => ({ status: p.status, body: p.body }));
+      if (!req.timeoutMs) return await call;
+      const cutoff = new Promise<RawResponse>(resolve =>
+        setTimeout(() => resolve({ status: 0, body: 'probe cutoff reached' }), req.timeoutMs));
+      return await Promise.race([call, cutoff]);
+    }
+
     const content: unknown[] = req.images.map(img => ({
       type: 'image_url',
       image_url: { url: img },
@@ -243,7 +264,18 @@ function dropNonChat(entries: CatalogueEntry[]): CatalogueEntry[] {
   return entries.filter(e => !NON_CHAT_PATTERN.test(e.id));
 }
 
-async function fetchCatalogue(provider: ProviderId, key: string): Promise<CatalogueEntry[]> {
+export async function fetchCatalogue(provider: ProviderId, key: string): Promise<CatalogueEntry[]> {
+  if (provider === 'ollama') {
+    const { callAiProxy } = await import('@/lib/firebase/functions');
+    const res = await callAiProxy('ollama', 'api/tags', key);
+    if (!res.ok) throw new Error(`Ollama catalogue failed: HTTP ${res.status}`);
+    const data = JSON.parse(res.body);
+    // /api/tags reports name + size only; vision is measured by the probe.
+    return dropNonChat((data.models ?? []).map((m: { name: string }) => ({
+      id: m.name, ctxWindow: null, reportedVision: null,
+    })));
+  }
+
   if (provider === 'nvidia') {
     const { callAiProxy } = await import('@/lib/firebase/functions');
     const res = await callAiProxy('nvidia', 'models', key);

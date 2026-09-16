@@ -95,6 +95,14 @@ export function classifyPing(res: RawResponse): PingVerdict {
     };
   }
 
+  if (status === 402) {
+    return {
+      status: 'paid',
+      reason: extractReason(body, 'Requires credits on this provider.'),
+      ctxWindow: null,
+    };
+  }
+
   if (status === 401 || status === 403) {
     return {
       status: 'auth-error',
