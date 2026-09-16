@@ -529,6 +529,11 @@ function isNetworkError(err: unknown): boolean {
 
 type Step = 'next-model' | 'next-key' | 'next-provider' | 'retry-no-thinking';
 
+/** Models that rejected thinkingBudget:0 this page-load — never pay that 400 twice (measured: once per chunk, 5× per estimate). */
+const noThinking = new Set<string>();
+/** Tests only. */
+export function _resetNoThinkingForTests(): void { noThinking.clear(); }
+
 /** Decides what the loop does after one failed call. Pure; the loop applies side effects. */
 function stepFor(err: any, provider: ProviderId): { step: Step; busy?: boolean; deadModel?: boolean; deadProvider?: boolean; notFound?: boolean; reprobe?: boolean } | { throw: Error } {
   const kind = classifyGatewayError(err);
@@ -578,7 +583,7 @@ async function callWithFallback(
       const provider = toProvider(entry);
       const label = `${PROVIDER_LABELS[entry.provider] ?? entry.provider} ${entry.model.label || entry.model.id}`;
       if (!tried.includes(entry.model.id)) tried.push(entry.model.id);
-      let thinkingOff = true, lastBusy = false;
+      let thinkingOff = !noThinking.has(entry.model.id), lastBusy = false;
 
       keys: for (let i = 0; i < entry.keys.length; i++) {
         const key = entry.keys[i];
@@ -600,7 +605,7 @@ async function callWithFallback(
           // so any Gemini 400 gets one retry with thinking on before it is judged.
           if (err?.status === 400 && entry.provider === 'gemini' && thinkingOff) {
             console.info(`[ai-fallback] ${entry.provider}/${entry.model.id} key#${i + 1} → 400: retry-no-thinking`);
-            thinkingOff = false; i--; continue;
+            noThinking.add(entry.model.id); thinkingOff = false; i--; continue;
           }
           const d = stepFor(err, entry.provider);
           if ('throw' in d) throw d.throw;
@@ -615,7 +620,7 @@ async function callWithFallback(
           console.info(`[ai-fallback] ${entry.provider}/${entry.model.id} key#${i + 1} → ${err.status ?? err.name}: ${d.step} — ${String(err?.message ?? '').slice(0, 160)}`);
 
           // Same key once more with thinking left on; a second 400 is not a thinking problem → next model.
-          if (d.step === 'retry-no-thinking' && thinkingOff) { thinkingOff = false; i--; continue; }
+          if (d.step === 'retry-no-thinking' && thinkingOff) { noThinking.add(entry.model.id); thinkingOff = false; i--; continue; }
           if (d.step === 'next-key') {
             if (i + 1 < entry.keys.length) continue;
             const kind = classifyGatewayError(err);

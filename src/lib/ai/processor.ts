@@ -466,6 +466,13 @@ function validateMath(data: any, docType: string): { isValid: boolean; discrepan
     
     if (sumGross > 0 && Math.abs(sumGross - expectedGross) > tolerance(expectedGross)) {
       discrepancies.push(`Sum of all items (₹${sumGross.toFixed(2)}) doesn't match document gross total (₹${expectedGross.toFixed(2)})`);
+    } else if (sumGross > 0) {
+      // Live 2026-09-16: a 5-page DTC invoice read one page per call reports
+      // each page's own section subtotal; the merge keeps the largest page, not
+      // the document. The items still summed to the gross to the paisa. When
+      // the gross reconciles, section-subtotal mismatches are page noise, not
+      // missing rows — the only thing a re-read could fix.
+      return { isValid: true, discrepancies: [] };
     }
   }
 

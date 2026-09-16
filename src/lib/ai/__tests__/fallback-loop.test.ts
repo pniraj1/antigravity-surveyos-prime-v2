@@ -6,7 +6,7 @@ const callAiProxy = vi.hoisted(() => vi.fn());
 vi.mock('@/lib/firebase/functions', () => ({ callAiProxy }));
 vi.mock('@/lib/firebase/config', () => ({ getFirebaseApp: () => ({}), db: {} }));
 
-import { callAIGateway, newSession, AllProvidersBusyError, OfflineError, CURRENT_MODELS } from '../service';
+import { callAIGateway, newSession, AllProvidersBusyError, OfflineError, CURRENT_MODELS, _resetNoThinkingForTests } from '../service';
 import { useProfileStore } from '@/stores/profile-store';
 import { useAIConfigStore } from '@/stores/ai-config-store';
 import { FALLBACK_AI_MODELS_CONFIG } from '../models-config';
@@ -25,6 +25,7 @@ beforeEach(() => {
   useAIConfigStore.getState().setConfig(FALLBACK_AI_MODELS_CONFIG);   // gemini: 2.5-flash, lite, 3.5-flash; ollama: gemma4
   useProfileStore.getState().updateProfile({ geminiApiKeys: ['g1'], groqApiKeys: [], nvidiaApiKeys: [], ollamaApiKeys: [], geminiModel: '' } as never);
   Object.values(toast).forEach(f => f.mockReset());
+  _resetNoThinkingForTests();
 });
 afterEach(() => vi.restoreAllMocks());
 
@@ -124,6 +125,20 @@ describe('thinking guard', () => {
     expect(spy).toHaveBeenCalledTimes(2);   // same model twice (with, then without thinking), then the 400 is judged: other 4xx → throw
     expect(modelOf(spy.mock.calls[0])).toBe(modelOf(spy.mock.calls[1]));
     expect(JSON.parse(spy.mock.calls[1][1]!.body as string).generationConfig.thinkingConfig).toBeUndefined();
+  });
+});
+
+describe('no-thinking memory', () => {
+  it('a model that rejected thinking is called without it on the next chunk — no second 400', async () => {
+    const s = newSession('doc-nt');
+    const spy = vi.spyOn(global, 'fetch')
+      .mockResolvedValueOnce(fail(400, 'Request contains an invalid argument.'))
+      .mockResolvedValue(ok());
+    await callAIGateway('p1', ['img'], 'json', 'heavy', s);   // 400 → retry without thinking → ok
+    await callAIGateway('p2', ['img'], 'json', 'heavy', s);   // must go straight to no-thinking
+    expect(spy).toHaveBeenCalledTimes(3);
+    expect(modelOf(spy.mock.calls[2])).toBe(modelOf(spy.mock.calls[1]));
+    expect(JSON.parse(spy.mock.calls[2][1]!.body as string).generationConfig.thinkingConfig).toBeUndefined();
   });
 });
 
