@@ -9,6 +9,9 @@ import { resolveVisionChunkSize } from './image-cap';
 import { getDocPrompt } from './prompts';
 import { jobForDocType } from './jobs';
 import { toast } from 'sonner';
+import { rowCheck, tagRows, dropDuplicates, mergeBySerial, stripPageTags, toFindings, countRows, type Finding } from './row-check';
+import { fillGaps } from './gap-fill';
+import { takeDrop } from './fault';
 
 /**
  * Extracts text content from a PDF page (if it has a text layer).
@@ -341,151 +344,23 @@ export interface ExtractionResult {
   data: any;
   /** High-res PNG pages for Evidence Viewer display (stored in sessionStorage) */
   images: string[];
-  /** Math validation issues */
-  discrepancies?: string[];
+  /** Unresolved row/gross findings for the review dialog (empty on a clean read). */
+  findings: Finding[];
+  /** Pages the AI could not (fully) read. */
+  issues: string[];
 }
 
 /**
- * Merge strategy for targeted rescan results.
- * Unlike mergeAIResults (which appends arrays), this REPLACES non-empty arrays
- * and always updates scalar fields — so corrected totals overwrite stale ones.
+ * A whole-document re-read on the next model is worth its cost only when the
+ * gross does not reconcile AND no serial gap explains it — a row without a
+ * serial is gone and no page can be pinned. Every other case is handled by
+ * the cheaper gap fill or needs no call at all.
  */
-function applyTargetedUpdate(existing: any, partial: any): any {
-  if (!partial) return existing;
-  const result = { ...existing };
-  for (const k in partial) {
-    const v = partial[k];
-    if (Array.isArray(v) && v.length > 0) {
-      result[k] = v; // replace, not append
-    } else if (!Array.isArray(v) && v !== null && v !== undefined && v !== '') {
-      result[k] = v;
-    }
-  }
-  return result;
-}
-
-/**
- * Rescans only specific pages of a document — used when math discrepancies
- * are detected after initial extraction. Typically targets the last 1-2 pages
- * where the summary / totals section lives.
- *
- * Much cheaper than a full rescan: only the specified pages are sent to the AI.
- */
-export async function rescanTargetPages(
-  key: string,
-  file: File,
-  pageIndices: number[],
-  focusHint: string,
-  onProgress?: (msg: string) => void,
-): Promise<{ partialData: any; discrepancies: string[] }> {
-  const basePrompt = getDocPrompt(key) ?? 'Extract all visible details from this document as JSON.';
-  const targetedPrompt =
-    `${basePrompt}\n\n` +
-    `TARGETED RESCAN — fix specific fields only.\n` +
-    `Pay special attention to: ${focusHint}\n` +
-    `Return the COMPLETE corrected JSON for the affected section(s), including ALL line items.`;
-
-  return aiQueue.add(async () => {
-    if (onProgress) onProgress('Smart Fix: loading document...');
-    const { apiImages } = await fileToImages(file);
-
-    const total = apiImages.length;
-    const valid = pageIndices.filter(i => i >= 0 && i < total);
-    if (valid.length === 0) throw new Error('No valid pages for targeted rescan.');
-
-    const label = valid.map(i => i + 1).join(', ');
-    if (onProgress) onProgress(`Smart Fix: rescanning page${valid.length > 1 ? 's' : ''} ${label} of ${total}...`);
-
-    let partialData: any = null;
-    for (const idx of valid) {
-      try {
-        const raw = await callAIGateway(targetedPrompt, [apiImages[idx]], 'json', 'heavy');
-        const fragment = JSON.parse(raw);
-        partialData = mergeAIResults(partialData, fragment);
-      } catch {
-        console.warn(`[Smart Fix] Page ${idx + 1} returned unparseable response — skipping.`);
-      }
-    }
-
-    const mathCheck = validateMath(partialData, key);
-    return { partialData, discrepancies: mathCheck.discrepancies };
-  });
-}
-
-export { applyTargetedUpdate };
-
-/**
- * Validates math logic for estimates and bills.
- * Checks if sum of individual items roughly matches the extracted subtotals/totals.
- */
-/**
- * Returns a tolerance amount that scales with the expected value.
- * Small amounts use a flat ₹5 floor; large amounts use 0.1% of the expected
- * value so a ₹500,000 estimate doesn't falsely flag on normal rounding.
- */
-function tolerance(expected: number): number {
-  return Math.max(5, expected * 0.001);
-}
-
-function validateMath(data: any, docType: string): { isValid: boolean; discrepancies: string[] } {
-  const discrepancies: string[] = [];
-  if (docType !== 'estimate' && docType !== 'final-bill') return { isValid: true, discrepancies };
-
-  const parts = Array.isArray(data.spare_parts) ? data.spare_parts : [];
-  const labour = Array.isArray(data.labour_items) ? data.labour_items : [];
-  const paint = Array.isArray(data.painting_items) ? data.painting_items : [];
-
-  const expectedPartsTotal = Number(data.subtotal_parts_taxable) || 0;
-  const actualPartsTotal = parts.reduce((sum: number, item: any) => sum + (Number(item.taxable_amount) || 0), 0);
-
-  const expectedLabourTotal = Number(data.subtotal_labour_taxable) || 0;
-  const actualLabourTotal = labour.reduce((sum: number, item: any) => sum + (Number(item.taxable_amount) || 0), 0);
-
-  const expectedPaintTotal = Number(data.subtotal_painting_taxable) || 0;
-  const actualPaintTotal = paint.reduce((sum: number, item: any) => sum + (Number(item.taxable_amount) || 0), 0);
-
-  if (expectedPartsTotal > 0 && Math.abs(actualPartsTotal - expectedPartsTotal) > tolerance(expectedPartsTotal)) {
-    discrepancies.push(`Parts sum (₹${actualPartsTotal.toFixed(2)}) doesn't match document parts total (₹${expectedPartsTotal.toFixed(2)})`);
-  }
-  
-  if (expectedLabourTotal > 0 && Math.abs(actualLabourTotal - expectedLabourTotal) > tolerance(expectedLabourTotal)) {
-    discrepancies.push(`Labour sum (₹${actualLabourTotal.toFixed(2)}) doesn't match document labour total (₹${expectedLabourTotal.toFixed(2)})`);
-  }
-  
-  if (expectedPaintTotal > 0 && Math.abs(actualPaintTotal - expectedPaintTotal) > tolerance(expectedPaintTotal)) {
-    discrepancies.push(`Painting sum (₹${actualPaintTotal.toFixed(2)}) doesn't match document painting total (₹${expectedPaintTotal.toFixed(2)})`);
-  }
-
-  // Overall gross total check
-  const expectedGross = Number(data.gross_amount) || Number(data.total_amount) || 0;
-  if (expectedGross > 0) {
-    const totalPartsGross = parts.reduce((sum: number, item: any) => sum + (Number(item.total_amount) || 0), 0);
-    const totalLabourGross = labour.reduce((sum: number, item: any) => sum + (Number(item.total_amount) || 0), 0);
-    const totalPaintGross = paint.reduce((sum: number, item: any) => sum + (Number(item.total_amount) || 0), 0);
-    const sumGross = totalPartsGross + totalLabourGross + totalPaintGross;
-    
-    if (sumGross > 0 && Math.abs(sumGross - expectedGross) > tolerance(expectedGross)) {
-      discrepancies.push(`Sum of all items (₹${sumGross.toFixed(2)}) doesn't match document gross total (₹${expectedGross.toFixed(2)})`);
-    } else if (sumGross > 0) {
-      // Live 2026-09-16: a 5-page DTC invoice read one page per call reports
-      // each page's own section subtotal; the merge keeps the largest page, not
-      // the document. The items still summed to the gross to the paisa. When
-      // the gross reconciles, section-subtotal mismatches are page noise, not
-      // missing rows — the only thing a re-read could fix.
-      return { isValid: true, discrepancies: [] };
-    }
-  }
-
-  return {
-    isValid: discrepancies.length === 0,
-    discrepancies
-  };
-}
-
-/** True when the extraction's own arithmetic fails — the trigger for one re-run on the next model. */
-export function needsSecondOpinion(docType: string, data: unknown): boolean {
+export function needsSecondOpinion(docType: string, data: unknown, pageTexts?: string[]): boolean {
+  if (docType !== 'estimate' && docType !== 'final-bill') return false;
   if (!data || typeof data !== 'object') return false;
-  return !validateMath(data, docType).isValid;
+  const c = rowCheck(data, pageTexts);
+  return !!c.grossMismatch && c.gaps.length === 0;
 }
 
 /** Thrown when the surveyor cancels. Named so callers can stay silent on it. */
@@ -665,7 +540,7 @@ export async function extractDocument(
         const mergeResponse = (rawResponse: string, first: number, last: number) => {
           try {
             const fragment = JSON.parse(rawResponse);
-            result = mergeAIResults(result, fragment);
+            result = mergeAIResults(result, tagRows(fragment, first - 1, last - 1));   // 1-based chunk → 0-based page tags
           } catch (err) {
             // For multi-page docs: one bad page should not abort the whole extraction.
             // Log the failure and continue accumulating results from other pages.
@@ -767,36 +642,61 @@ export async function extractDocument(
 
     let { result: finalResult, issues: pageIssues } = await runAllChunks();
 
-    // ponytail: second opinion re-runs the WHOLE document, not the failing
-    // chunk — totals live on the last page, so a per-chunk check is not
-    // possible. Costs one extra pass only when the arithmetic already failed.
-    // Upgrade path: diff the two results per section and keep the better one.
-    if (needsSecondOpinion(key, finalResult) && session.lastGood) {
-      console.info('[ai-fallback] math check failed on first pass:', validateMath(finalResult, key).discrepancies);
-      const firstModel = session.lastGood.model;
-      onProgress?.('Totals don\'t add up — asking a second AI model to re-read the document…');
-      session.avoid.add(firstModel);
-      session.lastGood = undefined;
-      try {
-        const second = await runAllChunks(true);
-        if (!needsSecondOpinion(key, second.result)) {
-          // runAllChunks re-sets lastGood; TS narrowed it to undefined above.
-          const secondModel = (session as typeof session).lastGood?.model;
-          console.info(`[ai-fallback] second opinion from ${secondModel} passed the math check; first (${firstModel}) did not.`);
-          finalResult = second.result; pageIssues = second.issues;
+    const money = key === 'estimate' || key === 'final-bill';
+    // Text-mode pages give us something to verify the printed gross against;
+    // vision pages do not, so the model's figure is trusted there.
+    const pageTexts = money && useTextMode && textLayers ? textLayers : undefined;
+
+    if (money && finalResult) {
+      const drop = takeDrop();                                   // dev-only ?ai-drop=38
+      if (drop) {
+        finalResult = Object.fromEntries(Object.entries(finalResult).map(([k, v]) =>
+          [k, Array.isArray(v) ? v.filter((r: any) => Number(r?.sr_no) !== drop) : v]));
+        console.info(`[ai-fault] dropped serial ${drop} from the first pass`);
+      }
+
+      finalResult = dropDuplicates(finalResult);
+      let check = rowCheck(finalResult, pageTexts);
+      if (check.duplicates.length) console.info('[Smart Fix] dropped duplicate serials', check.duplicates);
+
+      if (check.gaps.length) {
+        console.info('[Smart Fix] serial gaps after first pass:', check.gaps);
+        finalResult = await fillGaps({
+          basePrompt: enhancedPrompt, apiImages, data: finalResult,
+          srNos: check.gaps.map(g => g.srNo),
+          pages: [...new Set(check.gaps.flatMap(g => g.pages))],
+          session, signal, onProgress: msg => onProgress?.(msg),
+        });
+        check = rowCheck(finalResult, pageTexts);
+      }
+
+      // ponytail: the second opinion re-runs the WHOLE document on the next
+      // model. Only when the gross is off and no serial gap can be blamed —
+      // an unserialled row is gone and no page can be pinned.
+      if (check.grossMismatch && check.gaps.length === 0 && session.lastGood) {
+        console.info('[ai-fallback] gross does not reconcile and no serial gap explains it:', check.grossMismatch);
+        const firstModel = session.lastGood.model;
+        onProgress?.('Totals don\'t add up — asking a second AI model to re-read the document…');
+        session.avoid.add(firstModel);
+        session.lastGood = undefined;
+        try {
+          const second = await runAllChunks(true);
+          const secondData = dropDuplicates(second.result);
+          if (!needsSecondOpinion(key, secondData, pageTexts)) {
+            const secondModel = (session as typeof session).lastGood?.model;
+            console.info(`[ai-fallback] second opinion from ${secondModel} reconciles; first (${firstModel}) did not.`);
+            finalResult = secondData; pageIssues = second.issues;
+          }
+        } catch (e) {
+          if (signal?.aborted || (e as { name?: string })?.name === 'AbortError') throw e;
+          console.warn('[ai-fallback] second opinion unavailable — keeping first result', e);
+        } finally {
+          session.avoid.delete(firstModel);
         }
-      } catch (e) {
-        // A cancel is not a "second opinion unavailable" — let it propagate.
-        if (signal?.aborted || (e as { name?: string })?.name === 'AbortError') throw e;
-        console.warn('[ai-fallback] second opinion unavailable — keeping first result', e);
-      } finally {
-        session.avoid.delete(firstModel);
       }
     }
 
-    // Validate math — result surfaced to UI layer; the surveyor evaluates manually.
-    const mathCheck = validateMath(finalResult, key);
-    const discrepancies: string[] = [...pageIssues, ...mathCheck.discrepancies];
+    const findings: Finding[] = money && finalResult ? toFindings(rowCheck(finalResult, pageTexts)) : [];
 
     // Log extraction summary for estimate/final-bill documents
     if ((key === 'estimate' || key === 'final-bill') && finalResult) {
@@ -811,6 +711,36 @@ export async function extractDocument(
     }
 
     // Return high-res view images to caller so they can be stored in sessionStorage
-    return { data: finalResult, images: viewImages, discrepancies };
+    return { data: finalResult, images: viewImages, findings, issues: pageIssues };
+  });
+}
+
+/**
+ * Smart Fix button: the same gap engine, run on the pending review result.
+ * Gap findings re-read their pages for their serials; a gross-only finding
+ * re-reads the last page (where the gross lives) for rows not yet listed.
+ */
+export async function smartFixRescan(
+  key: string,
+  file: File,
+  data: unknown,
+  findings: Finding[],
+  onProgress?: (msg: string) => void,
+  signal?: AbortSignal,
+): Promise<{ data: unknown; findings: Finding[] }> {
+  const basePrompt = getDocPrompt(key) ?? 'Extract all visible details from this document as JSON.';
+  return aiQueue.add(async () => {
+    onProgress?.('Smart Fix: loading document…');
+    const { apiImages, textLayers } = await fileToImages(file);
+    const pageTexts = textLayers && profilePages(textLayers).docMode === 'text' ? textLayers : undefined;
+    const session = newSession(`${key}-fix-${Date.now()}`);
+
+    const gap = findings.find((f): f is Extract<Finding, { kind: 'gap' }> => f.kind === 'gap');
+    const srNos = gap?.srNos ?? [];
+    const pages = gap ? gap.pages : [apiImages.length - 1];
+
+    let next = await fillGaps({ basePrompt, apiImages, data, srNos, pages, session, signal, onProgress });
+    next = dropDuplicates(next);
+    return { data: next, findings: toFindings(rowCheck(next, pageTexts)) };
   });
 }

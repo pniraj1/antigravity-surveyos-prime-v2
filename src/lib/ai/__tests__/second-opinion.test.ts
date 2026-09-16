@@ -2,22 +2,22 @@
 import { describe, it, expect } from 'vitest';
 import { needsSecondOpinion } from '../processor';
 
-const good = { gross_amount: 300, subtotal_parts_taxable: 200, subtotal_labour_taxable: 100,
-  spare_parts: [{ taxable_amount: 200, total_amount: 200 }], labour_items: [{ taxable_amount: 100, total_amount: 100 }], painting_items: [] };
+const row = (sr_no: number, total_amount: number) => ({ sr_no, total_amount, taxable_amount: total_amount });
+const good = { gross_amount: 300, spare_parts: [row(1, 200)], labour_items: [row(2, 100)], painting_items: [] };
 
-describe('needsSecondOpinion', () => {
+describe('needsSecondOpinion — only a gross mismatch with no serial gap', () => {
   it('false when rows add up', () => { expect(needsSecondOpinion('estimate', good)).toBe(false); });
-  it('true when a row is missing (sum ≠ gross)', () => {
-    expect(needsSecondOpinion('estimate', { ...good, spare_parts: [] })).toBe(true);
+  it('false when page-level section subtotals disagree (they are never checked)', () => {
+    expect(needsSecondOpinion('estimate', { ...good, subtotal_parts_taxable: 53, subtotal_labour_taxable: 17 })).toBe(false);
   });
-  it('false when items reconcile to the gross even though page-level section subtotals do not (5-page DTC, live 2026-09-16)', () => {
-    const pageNoise = { ...good, subtotal_parts_taxable: 53, subtotal_labour_taxable: 17 };   // one page's figures, not the document's
-    expect(needsSecondOpinion('estimate', pageNoise)).toBe(false);
-  });
-  it('true when the gross itself does not reconcile', () => {
+  it('true when the gross does not reconcile and no serial is missing (an unserialled row is gone)', () => {
     expect(needsSecondOpinion('estimate', { ...good, gross_amount: 999 })).toBe(true);
   });
-  it('never for non-money documents', () => {
-    expect(needsSecondOpinion('rc', { anything: 1 })).toBe(false);
+  it('false when a serial gap explains the mismatch — the gap fill handles that, not a re-read', () => {
+    expect(needsSecondOpinion('estimate', { ...good, labour_items: [row(3, 100)] })).toBe(false);   // serial 2 missing
   });
+  it('false in text mode when the gross is not printed anywhere', () => {
+    expect(needsSecondOpinion('estimate', { ...good, gross_amount: 999 }, ['no such number'])).toBe(false);
+  });
+  it('never for non-money documents', () => { expect(needsSecondOpinion('rc', { anything: 1 })).toBe(false); });
 });
