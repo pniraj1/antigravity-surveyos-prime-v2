@@ -19,7 +19,7 @@
 
 ## In Progress
 
-- [ ] **Deploy Phase 2-A + live check L10** (2026-09-16) — hosting only; commits be766f12..0f054cbc on `main` not live. L10 in `Sessions/2026-09-16-quota-aware-ranking.md`.
+- [ ] **Live check L10** (2026-09-16) — Phase 2-A deployed (hosting, e7c1a997). L10 in `Sessions/2026-09-16-quota-aware-ranking.md`.
 - [ ] **Live check L9** (2026-09-16) — Smart Fix deployed (hosting, 56b44714). Run L9 (`npm run dev`, open with `?ai-drop=38`, upload DTC Proforma Invoice-1.PDF as estimate — expect one extra single-page call and a clean dialog).
 - [ ] **AI fallback — Phase 1 live checks** (2026-09-16) — code deployed; L0–L8 from `docs/superpowers/plans/2026-09-15-ai-fallback-phase-1.md` Task 14 still to run in the live app with the owner's AQ. + Ollama keys (`?ai-fault=503|429-minute|429-day|429-zero` for induced failures).
 - [ ] **AI fallback — Phase 2-B/C/D** — 2-B discovery + models.dev deprecation filter + NEW models auto-enter at the bottom (no accuracy benchmark — owner rejected, quota cost); 2-C admin ranked lists per job with budget column + Exclude + discovery summary, `models`→`excluded` migration; 2-D Profile provider rows with Test buttons, remove model pickers. Carried minors in the 2026-09-16 session logs.

@@ -7,7 +7,7 @@
 - feat(ai): heavy (estimate/bill) runs on the strongest tier whose key can still finish the whole document (budget re-checked per chunk, never a half-read); light (RC/DL/policy) never spends Flash while Flash-Lite or gemma is available
 - feat(ai): non-Gemini 429 (Ollama usage window) rests that key:model one hour; day-limit toast also fires when the ledger has spent every key; once-a-day "Flash quota used up" nudge
 - chore(ai): surveyor's saved Gemini model pick no longer steers ranking (picker inert until 2-D); status badge shows "Gemini · auto"
-- tests: 1184 passing. Spec `docs/superpowers/specs/2026-09-16-quota-aware-ranking-design.md`, plan `docs/superpowers/plans/2026-09-16-quota-aware-ranking.md`, session log `Sessions/2026-09-16-quota-aware-ranking.md`. NOT deployed yet.
+- tests: 1184 passing. Spec `docs/superpowers/specs/2026-09-16-quota-aware-ranking-design.md`, plan `docs/superpowers/plans/2026-09-16-quota-aware-ranking.md`, session log `Sessions/2026-09-16-quota-aware-ranking.md`. Deployed to motorsurveyos-in.web.app (hosting only).
 
 ## 2026-09-16 (Claude) — Smart Fix
 - feat(ai): missed-row detection replaces the subtotal math check — rows carry their page; serial (`sr_no`) gaps and duplicates are found after the merge; the gross is checked against row sums only (text mode: only when its digits are printed); section subtotals are never checked (they cried wolf on a perfect 80-row DTC read)

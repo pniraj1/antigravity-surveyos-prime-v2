@@ -13,8 +13,7 @@ quota died by lunchtime. Ollama Cloud has unpublished hourly/daily caps
 Spec: `docs/superpowers/specs/2026-09-16-quota-aware-ranking-design.md`
 Plan: `docs/superpowers/plans/2026-09-16-quota-aware-ranking.md`
 Ledger: `.superpowers/sdd/progress.md` § Quota-aware ranking
-Commits: be766f12..0f054cbc on `main`. **Not deployed** (hosting only when
-the owner says go; no functions change).
+Commits: be766f12..e7c1a997 on `main`. Deployed (hosting only) 2026-09-16.
 
 ## Rules now in force
 
