@@ -612,7 +612,7 @@ async function callWithFallback(
           if (d.reprobe) console.warn(`[ai-fallback] ${entry.model.id} rejected the request (${err.status}) — admin should re-probe.`);
           lastBusy = !!d.busy;
           if (d.busy) busyOnly.push(entry);
-          console.info(`[ai-fallback] ${entry.provider}/${entry.model.id} key#${i + 1} → ${err.status ?? err.name}: ${d.step}`);
+          console.info(`[ai-fallback] ${entry.provider}/${entry.model.id} key#${i + 1} → ${err.status ?? err.name}: ${d.step} — ${String(err?.message ?? '').slice(0, 160)}`);
 
           // Same key once more with thinking left on; a second 400 is not a thinking problem → next model.
           if (d.step === 'retry-no-thinking' && thinkingOff) { thinkingOff = false; i--; continue; }

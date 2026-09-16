@@ -765,6 +765,7 @@ export async function extractDocument(
     // possible. Costs one extra pass only when the arithmetic already failed.
     // Upgrade path: diff the two results per section and keep the better one.
     if (needsSecondOpinion(key, finalResult) && session.lastGood) {
+      console.info('[ai-fallback] math check failed on first pass:', validateMath(finalResult, key).discrepancies);
       const firstModel = session.lastGood.model;
       onProgress?.('Totals don\'t add up — asking a second AI model to re-read the document…');
       session.avoid.add(firstModel);
