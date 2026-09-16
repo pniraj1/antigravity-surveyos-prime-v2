@@ -19,9 +19,10 @@
 
 ## In Progress
 
+- [ ] **Deploy Phase 2-A + live check L10** (2026-09-16) — hosting only; commits be766f12..0f054cbc on `main` not live. L10 in `Sessions/2026-09-16-quota-aware-ranking.md`.
 - [ ] **Live check L9** (2026-09-16) — Smart Fix deployed (hosting, 56b44714). Run L9 (`npm run dev`, open with `?ai-drop=38`, upload DTC Proforma Invoice-1.PDF as estimate — expect one extra single-page call and a clean dialog).
 - [ ] **AI fallback — Phase 1 live checks** (2026-09-16) — code deployed; L0–L8 from `docs/superpowers/plans/2026-09-15-ai-fallback-phase-1.md` Task 14 still to run in the live app with the owner's AQ. + Ollama keys (`?ai-fault=503|429-minute|429-day|429-zero` for induced failures).
-- [ ] **AI fallback — Phase 2** — probe verdicts into the request path, models.dev deprecation filter, auto Tier 2, benchmark set, admin ranked lists + Exclude + discovery summary, Profile provider rows, `models`→`excluded` migration. Spec sections 7–9, 11. Carried minors listed in `Sessions/2026-09-16-ai-fallback-phase-1.md`.
+- [ ] **AI fallback — Phase 2-B/C/D** — 2-B discovery + models.dev deprecation filter + NEW models auto-enter at the bottom (no accuracy benchmark — owner rejected, quota cost); 2-C admin ranked lists per job with budget column + Exclude + discovery summary, `models`→`excluded` migration; 2-D Profile provider rows with Test buttons, remove model pickers. Carried minors in the 2026-09-16 session logs.
 
 - [ ] **IndexedDB memory optimization** — 40 MB photo storage bloat
   - **Plan:** Client-side compression + schema splitting + soft archiving (50 claim limit)
@@ -68,6 +69,7 @@
 
 ## Recently Completed
 
+- [x] AI fallback — Phase 2-A quota-aware ranking (2026-09-16) — tier + per-key daily budget ordering, Pacific-day ledger, Ollama 1 h rest, Flash reserved for estimates. 1184 tests. Session log: `Sessions/2026-09-16-quota-aware-ranking.md`.
 - [x] Smart Fix — missed-row detection (2026-09-16) — serial-gap + printed-gross check, page-targeted gap fill, gross-only second opinion, review-dialog card. Spec/plan `2026-09-16-smart-fix-missed-rows*`. 1150 tests. Session log: `Sessions/2026-09-16-smart-fix-missed-rows.md`.
 - [x] AI fallback — Phase 1 (2026-09-16) — Google's AQ. keys broke extraction (fixed 2026-09-15, 7b1ff921); the follow-up redesign makes model choice automatic: every call declares a job (heavy/light/text), a pure ranker orders every reachable model, the loop hops models before keys and never retries a 503 in place (measured: a 503 takes up to 194 s to return). Gemini 429s are classified by `quotaId`; Ollama Cloud's free Gemma 4 is a proxied fallback (measured Δ0.01 % on a 5-page estimate); thinking is off for extraction (2.5 Flash was truncating); a document whose rows don't add up is re-run once on the next model. NVIDIA keys had been leaking to Firestore — stripped and purged. Spec: `docs/superpowers/specs/2026-09-15-ai-fallback-and-job-routing-design.md`; plan: `docs/superpowers/plans/2026-09-15-ai-fallback-phase-1.md`. 1105 tests. Session log: `Sessions/2026-09-16-ai-fallback-phase-1.md`.
 - [x] Reinspection fields — sync all RI/print data to Reinspection tab (2026-09-15) — Reinspection tab now captures every field the RI report prints: RI ref, place of survey, RI/authority/estimate dates. Two-way sync with Report No, insurer, offices, accident and survey dates. Photo sheet Report No is session-local (never persisted). RI report drops Date of Report, Survey Ref No, Survey Date. Place of survey fallback: `ri.placeOfSurvey || accident.placeOfSurvey`. Dead fields `ri.surveyRef` and `ri.surveyDate` remain on type for old data but nothing reads them. Session log: `Sessions/2026-09-15-reinspection-fields.md`.
