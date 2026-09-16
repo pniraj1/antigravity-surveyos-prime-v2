@@ -172,4 +172,13 @@ describe('quota-aware ordering', () => {
   it('text job: lite before flash too', () => {
     expect(ids(rankModels('text', [], pool(), { health: health() }))[0]).toBe('gemini-3.5-flash-lite');
   });
+  it('F2: an unlimited budget ties with the fullest inside a tier — verdict decides', () => {
+    const p = [
+      { ...entry('groq', 'llama-3.2-90b-vision-preview'), verdict: 'untested' as const },
+      { ...entry('gemini', 'gemini-3.5-flash-lite'), verdict: 'exact' as const },
+    ];
+    expect(ids(rankModels('heavy', ['i'], p, { health: health() }))).toEqual([
+      'gemini-3.5-flash-lite', 'llama-3.2-90b-vision-preview',
+    ]);
+  });
 });

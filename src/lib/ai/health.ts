@@ -96,6 +96,12 @@ function safeStore(store: HealthStore | null): HealthStore | null {
 export function createHealth(rawStore: HealthStore | null, now: () => number = Date.now): Health {
   const store = safeStore(rawStore);
 
+  function isDead(hash: string, model: string): boolean {
+    const d = load().deadToday;
+    const t = now();
+    return (d[`${hash}:${model}`] ?? 0) > t || (d[`${hash}:*`] ?? 0) > t;
+  }
+
   function load(): HealthDoc {
     const empty: HealthDoc = { day: localDayKey(now()), today: {}, deadToday: {}, notFound: {}, spent: {}, quotaResetAt: nextPacificMidnight(now()) };
     if (!store) return empty;
@@ -130,9 +136,7 @@ export function createHealth(rawStore: HealthStore | null, now: () => number = D
       save({ ...doc, deadToday: { ...doc.deadToday, [`${hash}:${model}`]: nextPacificMidnight(now()) } });
     },
     isDeadToday(hash, model) {
-      const d = load().deadToday;
-      const t = now();
-      return (d[`${hash}:${model}`] ?? 0) > t || (d[`${hash}:*`] ?? 0) > t;
+      return isDead(hash, model);
     },
     markNotFound(model) {
       const doc = load();
@@ -160,12 +164,6 @@ export function createHealth(rawStore: HealthStore | null, now: () => number = D
       save({ ...doc, deadToday: { ...doc.deadToday, [`${hash}:${model}`]: now() + forMs } });
     },
   };
-
-  function isDead(hash: string, model: string): boolean {
-    const d = load().deadToday;
-    const t = now();
-    return (d[`${hash}:${model}`] ?? 0) > t || (d[`${hash}:*`] ?? 0) > t;
-  }
 }
 
 /** The app's health record, bound to window.localStorage when present. */

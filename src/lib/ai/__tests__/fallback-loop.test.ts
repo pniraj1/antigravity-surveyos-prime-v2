@@ -49,7 +49,9 @@ describe('quota-aware order', () => {
   });
   it('heavy: when every Flash key is below the page count, Flash-Lite leads and the surveyor is told once', async () => {
     const spy = vi.spyOn(global, 'fetch').mockResolvedValue(ok());
-    for (const m of ['gemini-2.5-flash', 'gemini-3.5-flash']) for (let i = 0; i < 18; i++) health.recordSpend(keyHash('g1'), m);
+    // F3: the nudge fires on a truly spent (remaining === 0) key, not merely
+    // "can't cover this document" — spend every call, not just 18 of 20.
+    for (const m of ['gemini-2.5-flash', 'gemini-3.5-flash']) for (let i = 0; i < 20; i++) health.recordSpend(keyHash('g1'), m);
     const s = newSession('t'); s.pagesTotal = 5;
     await callAIGateway('p', ['img'], 'json', 'heavy', s);
     expect(modelOf(spy.mock.calls[0])).toMatch(/lite/);
@@ -89,6 +91,38 @@ describe('quota-aware order', () => {
     await expect(callAIGateway('p', ['img'], 'json', 'light')).rejects.toBeInstanceOf(AllProvidersBusyError);
     expect(toast.error.mock.calls.some(c => /free limit is used up/.test(String(c[0])))).toBe(true);
     expect(spy).not.toHaveBeenCalled();
+  });
+  it('F1: budget is calls still needed, not the whole document fixed once — no mid-document switch', async () => {
+    // g1 has exactly 2 Flash calls left on gemini-3.5-flash, 0 left on gemini-2.5-flash.
+    for (let i = 0; i < 18; i++) health.recordSpend(keyHash('g1'), 'gemini-3.5-flash');
+    for (let i = 0; i < 20; i++) health.recordSpend(keyHash('g1'), 'gemini-2.5-flash');
+    const spy = vi.spyOn(global, 'fetch').mockResolvedValue(ok());
+    const s = newSession('t'); s.pagesTotal = 2;
+    await callAIGateway('p', ['img'], 'json', 'heavy', s);
+    s.pagesTotal = 1;   // second chunk: caller updates the budget per chunk, as processor.ts now does
+    await callAIGateway('p', ['img'], 'json', 'heavy', s);
+    expect(spy).toHaveBeenCalledTimes(2);
+    expect(modelOf(spy.mock.calls[0])).toBe('gemini-3.5-flash');
+    expect(modelOf(spy.mock.calls[1])).toBe('gemini-3.5-flash');
+    expect((spy.mock.calls[0][1]!.headers as any)['x-goog-api-key']).toBe('g1');
+    expect((spy.mock.calls[1][1]!.headers as any)['x-goog-api-key']).toBe('g1');
+  });
+  it('F3: a 25-page doc on a fresh 20/day key is not "spent out" — no quota toasts', async () => {
+    useAIConfigStore.getState().setConfig({
+      ...FALLBACK_AI_MODELS_CONFIG,
+      providers: {
+        ...FALLBACK_AI_MODELS_CONFIG.providers,
+        gemini: {
+          enabled: true,
+          defaultModel: 'gemini-2.5-flash',
+          models: FALLBACK_AI_MODELS_CONFIG.providers.gemini.models.filter(m => !/lite/.test(m.id)),
+        },
+      },
+    });
+    const s = newSession('t'); s.pagesTotal = 25;
+    await expect(callAIGateway('p', ['img'], 'json', 'heavy', s)).rejects.toBeInstanceOf(AllProvidersBusyError);
+    expect(toast.error.mock.calls.some(c => /free limit is used up/.test(String(c[0])))).toBe(false);
+    expect(toast.info.mock.calls.some(c => /Flash quota/.test(String(c[0])))).toBe(false);
   });
   it('nudge is silent when the Flash model is merely avoided, not spent', async () => {
     const s = newSession('t'); s.pagesTotal = 5;

@@ -43,7 +43,7 @@ export async function fillGaps(input: GapFillInput): Promise<unknown> {
   if (pages.length === 0 || pages.length > MAX_GAP_PAGES) return input.data;
 
   let data = input.data;
-  const s = input.session as { pagesTotal?: number } | undefined;
+  const s = input.session;
   const prevPages = s?.pagesTotal;
   if (s) s.pagesTotal = 1;             // one page per gap call — a nearly-spent Flash key may still take it
   try {

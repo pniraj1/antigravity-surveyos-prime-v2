@@ -111,10 +111,8 @@ and restores the previous value in `finally` (the session is already
 mutable — `avoid`, `lastGood`). The second opinion re-runs the whole
 document with the original `pagesTotal`.
 
-Ollama gemma is proxied; the "direct before proxied" tiebreak still
-applies inside the gemma tier only, so Ollama gemma4 ranks after Google
-gemma only when both are eligible — and Google gemma is text-only per
-the probe, so in practice Ollama leads the gemma tier for vision.
+Inside a tier an unlimited budget ties with the fullest, so the existing
+tiebreaks (verdict, busy, direct-before-proxied) decide.
 
 ### 4. Loop — `src/lib/ai/service.ts`
 

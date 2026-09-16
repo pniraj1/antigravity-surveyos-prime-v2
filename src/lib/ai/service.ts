@@ -465,7 +465,7 @@ export interface GatewaySession {
   avoid: Set<string>;
   /** Hops already announced for this document — one toast per distinct hop. */
   announced: Set<string>;
-  /** Calls this document still needs on a heavy job — a key that cannot cover them is skipped. */
+  /** Calls this document still needs (updated per chunk) — a key that cannot cover them is skipped. */
   pagesTotal?: number;
 }
 export function newSession(id: string): GatewaySession { return { id, avoid: new Set(), announced: new Set() }; }
@@ -651,8 +651,12 @@ async function callWithFallback(
     const i = chain.findIndex(e => e.model.id === session.lastGood!.model);
     if (i > 0) chain = [...chain.slice(i), ...chain.slice(0, i)];
   }
+  // "Spent out" (truly at zero) is a stronger claim than "can't cover this
+  // document" — a fresh 20/day key with 5 pages left is not spent, so the
+  // day-limit / Flash-nudge toasts must not fire on it. The ranker still uses
+  // pagesNeeded to decide eligibility; only the messaging predicate differs.
   const spentOut = (e: PoolEntry, k: string) =>
-    health.remaining(keyHash(k), e.model.id, dailyLimit(e.provider, e.model.id)) < pagesNeeded;
+    health.remaining(keyHash(k), e.model.id, dailyLimit(e.provider, e.model.id)) === 0;
 
   if (chain.length === 0 && pool.some(e => e.keys.some(k =>
       health.isDeadToday(keyHash(k), e.model.id) || spentOut(e, k)))) {

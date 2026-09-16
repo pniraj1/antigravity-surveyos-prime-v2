@@ -478,6 +478,10 @@ export async function extractDocument(
         // Small throttle delay between chunks to avoid rate limiting
         if (i > 0) await new Promise(r => setTimeout(r, 600));
 
+        // Budget is "calls still needed from here on", not the whole document —
+        // a key with just enough left for the rest must not be dropped mid-read.
+        session.pagesTotal = Math.ceil((totalPages - i) / CHUNK_SIZE);
+
         // ── Choose text-mode or vision-mode payload ──────────────────────────
         let chunkImages: string[];
         let chunkPrompt: string;
@@ -611,6 +615,8 @@ export async function extractDocument(
             console.warn(`[AI Extraction] ${key}: PAYLOAD_TOO_LARGE on vision chunk ${currentBatchStart}–${currentBatchEnd} — re-running one page at a time.`);
             for (let p = 0; p < chunkImages.length; p++) {
               if (signal?.aborted) throw abortError();
+              // One page left in this fallback call — plus every chunk after it.
+              session.pagesTotal = (chunkImages.length - p) + Math.ceil((totalPages - currentBatchEnd) / CHUNK_SIZE);
               const r = await callAIGateway(enhancedPrompt, [chunkImages[p]], 'json', job, session, signal);
               mergeResponse(r, currentBatchStart + p, currentBatchStart + p);
             }

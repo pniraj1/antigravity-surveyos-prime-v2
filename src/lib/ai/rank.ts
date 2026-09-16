@@ -95,10 +95,14 @@ export function rankModels(job: AIJob, images: readonly string[], pool: readonly
   const busy = (e: PoolEntry) => health.busyRate(e.model.id);
   const proxied = (e: PoolEntry) => (e.proxied ? 1 : 0);
   const cmp = (a: number, b: number) => (a < b ? -1 : a > b ? 1 : 0);
+  // An unlimited budget (Infinity) ties with the fullest known budget instead
+  // of always winning — an untested unlimited model should not outrank an
+  // exact-verdict model on budget alone.
+  const budgetCmp = (a: number, b: number) => (a === Infinity || b === Infinity ? 0 : cmp(b, a));
   const tier = (e: PoolEntry, t: Record<Tier, number>) => t[tierOf(e.provider, e.model.id)];
 
   const byJob: (a: PoolEntry, b: PoolEntry) => number = job === 'heavy'
-    ? (a, b) => cmp(tier(a, HEAVY_TIER), tier(b, HEAVY_TIER)) || cmp(best.get(b.model.id)!, best.get(a.model.id)!)
+    ? (a, b) => cmp(tier(a, HEAVY_TIER), tier(b, HEAVY_TIER)) || budgetCmp(best.get(a.model.id)!, best.get(b.model.id)!)
         || cmp(verdictRank(a), verdictRank(b)) || cmp(busy(a), busy(b)) || cmp(proxied(a), proxied(b))
         || cmp(modelStrength(b.model.id), modelStrength(a.model.id)) || cmp(speed(a), speed(b))
     : job === 'light'

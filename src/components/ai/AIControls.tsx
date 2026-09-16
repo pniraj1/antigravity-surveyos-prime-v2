@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useProfileStore } from '@/stores/profile-store';
 import { useUIStore } from '@/stores/ui-store';
 import { useAIConfigStore } from '@/stores/ai-config-store';
-import { CURRENT_MODELS, PROVIDER_MODELS, fetchAvailableGeminiModels } from '@/lib/ai/service';
+import { PROVIDER_MODELS, fetchAvailableGeminiModels } from '@/lib/ai/service';
 import { Sparkles, ChevronDown, Zap, Eye, FileText, Wand2, Cpu } from 'lucide-react';
 
 // ─── Provider Health Badge ────────────────────────────────────────────────────
@@ -14,12 +14,10 @@ export function ProviderHealthBadge() {
   const provider = profile.aiProvider ?? 'gemini';
   const healthKey = provider === 'groq' ? 'groq' : 'gemini';
   const health = aiProviderHealth[healthKey];
-  const model = provider === 'gemini'
-    ? (profile.geminiModel?.trim() || CURRENT_MODELS.gemini)
-    : provider === 'nvidia'
-    ? (profile.nvidiaModel?.trim() || CURRENT_MODELS.nvidia)
-    : (profile.groqModel?.trim() || CURRENT_MODELS.groq);
-  const shortModel = model.split('/').pop()?.replace('gemini-', 'Gemini ').replace('-instruct', '') ?? model;
+  // The ranker — not the surveyor's saved model — decides which model actually
+  // runs each call, so the badge names the provider, not a specific model.
+  const providerLabel = provider === 'gemini' ? 'Gemini' : provider === 'nvidia' ? 'NVIDIA' : provider === 'groq' ? 'Groq' : provider;
+  const shortModel = `${providerLabel} · auto`;
 
   const dot = health === 'ok'           ? 'var(--color-status-success)'
             : health === 'rate-limited' ? 'var(--color-status-warning)'
@@ -34,7 +32,7 @@ export function ProviderHealthBadge() {
     <div
       className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-medium"
       style={{ background: 'var(--color-neutral-100)', border: '1px solid var(--color-neutral-200)' }}
-      title={`${provider === 'gemini' ? 'Google Gemini' : 'Groq'} · ${model} · ${label}`}
+      title={`${shortModel} · ${label}`}
     >
       <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: dot }} />
       <span style={{ color: 'var(--color-neutral-700)' }}>{shortModel}</span>

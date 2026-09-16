@@ -41,10 +41,16 @@ const gw = callAIGateway as unknown as ReturnType<typeof vi.fn>;
 // branch in processor.ts is gated on session.lastGood being set.
 let queued: string[] = [];
 function queue(...responses: string[]) { queued.push(...responses); }
+// `session` is a mutable object shared across calls, so reading pagesTotal
+// off gw.mock.calls after the fact would only ever show its final value —
+// snapshot it at call time instead.
+let pagesTotalAtCall: (number | undefined)[] = [];
 beforeEach(() => {
   queued = [];
+  pagesTotalAtCall = [];
   gw.mockReset();
-  gw.mockImplementation(async (_prompt: string, _images: string[], _jobType: string, _job: string, session?: { lastGood?: unknown }) => {
+  gw.mockImplementation(async (_prompt: string, _images: string[], _jobType: string, _job: string, session?: { lastGood?: unknown; pagesTotal?: number }) => {
+    pagesTotalAtCall.push(session?.pagesTotal);
     if (session) session.lastGood = { provider: 'test', model: 'test-model' };
     const next = queued.shift();
     if (next === undefined) throw new Error('unexpected extra callAIGateway call in test');
@@ -69,7 +75,9 @@ describe('extractDocument — image path (estimate)', () => {
     const { data, findings } = await extractDocument('estimate', threeFiles());
 
     expect(gw).toHaveBeenCalledTimes(3);
-    expect(gw.mock.calls[0][4]?.pagesTotal).toBe(3);
+    // Budget is calls still needed from that chunk on, not the whole document
+    // fixed at the start — must count down per chunk.
+    expect(pagesTotalAtCall).toEqual([3, 2, 1]);
     const parts = data.spare_parts;
     expect(parts.every((r: any) => typeof r._page === 'number')).toBe(true);
     expect(parts.find((r: any) => r.sr_no === 1)._page).toBe(0);
