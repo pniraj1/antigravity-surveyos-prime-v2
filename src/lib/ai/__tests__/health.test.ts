@@ -97,3 +97,48 @@ describe('helpers', () => {
     expect(h.deadUntilLabel()).toBe('12:30 pm IST');
   });
 });
+
+describe('spend ledger — per key, resets at Pacific midnight', () => {
+  const T0 = Date.UTC(2026, 8, 15, 10, 0);            // 03:00 Pacific, 15 Sep
+  it('counts per key:model and reports remaining against a limit', () => {
+    const h = createHealth(memStore(), () => T0);
+    h.recordSpend('k1', 'gemini-3.5-flash');
+    h.recordSpend('k1', 'gemini-3.5-flash');
+    h.recordSpend('k2', 'gemini-3.5-flash');
+    expect(h.remaining('k1', 'gemini-3.5-flash', 20)).toBe(18);
+    expect(h.remaining('k2', 'gemini-3.5-flash', 20)).toBe(19);
+    expect(h.remaining('k1', 'gemini-3.5-flash-lite', 500)).toBe(500);
+  });
+  it('never goes below zero; Infinity limit stays Infinity', () => {
+    const h = createHealth(memStore(), () => T0);
+    for (let i = 0; i < 25; i++) h.recordSpend('k1', 'm');
+    expect(h.remaining('k1', 'm', 20)).toBe(0);
+    expect(h.remaining('k1', 'm', Infinity)).toBe(Infinity);
+  });
+  it('dead today or rested → 0', () => {
+    let now = T0;
+    const h = createHealth(memStore(), () => now);
+    h.markDeadToday('k1', 'a');
+    expect(h.remaining('k1', 'a', 20)).toBe(0);
+    h.rest('k1', 'b', 3_600_000);
+    expect(h.remaining('k1', 'b', Infinity)).toBe(0);
+    now = T0 + 3_600_001;
+    expect(h.remaining('k1', 'b', Infinity)).toBe(Infinity);
+  });
+  it('resets when the Pacific day changes, independently of the local-day busy reset', () => {
+    let now = T0;
+    const store = memStore();
+    const h = createHealth(store, () => now);
+    h.recordSpend('k1', 'm');
+    h.recordCall('m', 'busy'); h.recordCall('m', 'busy'); h.recordCall('m', 'busy');
+    now = Date.UTC(2026, 8, 16, 6, 59);                  // 23:59 Pacific, 15 Sep — same Pacific day
+    expect(h.remaining('k1', 'm', 20)).toBe(19);
+    now = Date.UTC(2026, 8, 16, 7, 1);                   // 00:01 Pacific, 16 Sep
+    expect(h.remaining('k1', 'm', 20)).toBe(20);
+  });
+  it('a store that throws → full limit (no history)', () => {
+    const h = createHealth({ getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); } }, () => T0);
+    h.recordSpend('k1', 'm');
+    expect(h.remaining('k1', 'm', 20)).toBe(20);
+  });
+});

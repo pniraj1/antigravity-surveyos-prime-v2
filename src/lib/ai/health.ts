@@ -19,6 +19,10 @@ interface HealthDoc {
   today: Record<string, { calls: number; busy: number }>;
   deadToday: Record<string, number>;   // `${keyHash}:${model|*}` → untilTs
   notFound: Record<string, number>;    // model → untilTs
+  /** Calls made this Pacific day, `${keyHash}:${model}` → count. Quota is Google's clock. */
+  spent: Record<string, number>;
+  /** UTC ts of the next Pacific midnight — when `spent` resets. */
+  quotaResetAt: number;
 }
 
 const STORAGE_KEY = 'surveyos.ai.health.v1';
@@ -33,6 +37,12 @@ export interface Health {
   markNotFound(model: string): void;
   isNotFound(model: string): boolean;
   deadUntilLabel(): string;
+  /** Every call that reached the provider, any outcome. */
+  recordSpend(keyHash: string, model: string): void;
+  /** Calls this key may still make to this model; 0 when dead or rested. */
+  remaining(keyHash: string, model: string, limit: number): number;
+  /** Park a key:model for `forMs` — a non-Gemini 429 whose window is unknown. */
+  rest(keyHash: string, model: string, forMs: number): void;
 }
 
 export function localDayKey(now: number): string {
@@ -87,13 +97,16 @@ export function createHealth(rawStore: HealthStore | null, now: () => number = D
   const store = safeStore(rawStore);
 
   function load(): HealthDoc {
-    const empty: HealthDoc = { day: localDayKey(now()), today: {}, deadToday: {}, notFound: {} };
+    const empty: HealthDoc = { day: localDayKey(now()), today: {}, deadToday: {}, notFound: {}, spent: {}, quotaResetAt: nextPacificMidnight(now()) };
     if (!store) return empty;
     try {
       const raw = store.getItem(STORAGE_KEY);
       if (!raw) return empty;
-      const doc = JSON.parse(raw) as HealthDoc;
-      return doc.day === empty.day ? doc : { ...doc, day: empty.day, today: {} };
+      const parsed = JSON.parse(raw) as Partial<HealthDoc>;
+      let doc: HealthDoc = { ...empty, ...parsed, spent: parsed.spent ?? {}, quotaResetAt: parsed.quotaResetAt ?? empty.quotaResetAt };
+      if (doc.day !== empty.day) doc = { ...doc, day: empty.day, today: {} };
+      if (now() >= doc.quotaResetAt) doc = { ...doc, spent: {}, quotaResetAt: nextPacificMidnight(now()) };
+      return doc;
     } catch { return empty; }
   }
   function save(doc: HealthDoc): void {
@@ -133,7 +146,26 @@ export function createHealth(rawStore: HealthStore | null, now: () => number = D
         .format(new Date(nextPacificMidnight(now())));
       return formatted.replace(/\s?(am|pm)/i, (_m, p1: string) => ' ' + p1.toLowerCase()) + ' IST';
     },
+    recordSpend(hash, model) {
+      const doc = load();
+      const k = `${hash}:${model}`;
+      save({ ...doc, spent: { ...doc.spent, [k]: (doc.spent[k] ?? 0) + 1 } });
+    },
+    remaining(hash, model, limit) {
+      if (isDead(hash, model)) return 0;
+      return Math.max(0, limit - (load().spent[`${hash}:${model}`] ?? 0));
+    },
+    rest(hash, model, forMs) {
+      const doc = load();
+      save({ ...doc, deadToday: { ...doc.deadToday, [`${hash}:${model}`]: now() + forMs } });
+    },
   };
+
+  function isDead(hash: string, model: string): boolean {
+    const d = load().deadToday;
+    const t = now();
+    return (d[`${hash}:${model}`] ?? 0) > t || (d[`${hash}:*`] ?? 0) > t;
+  }
 }
 
 /** The app's health record, bound to window.localStorage when present. */
