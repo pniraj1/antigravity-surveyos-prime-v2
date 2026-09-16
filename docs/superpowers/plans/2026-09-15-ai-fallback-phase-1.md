@@ -2338,6 +2338,7 @@ Expected: a non-zero count for each file.
 | L6 | Re-enable Gemini. Open a licence (DL) photo. | Completes in < 20 s; no proxy call. |
 | L7 | Airplane mode, open any document. | "You're offline" toast; exactly one `[ai-fallback]` line. |
 | L8 | Admin → Probe all. | Ollama card shows `gemma4:31b` working; other Ollama models listed as `paid` under "unusable". |
+| L9 | `npm run dev`, open with `?ai-drop=38`, upload DTC Proforma Invoice-1.PDF as estimate (Smart Fix feature, 2026-09-16). | Console: `[ai-fault] dropped serial 38`, `[Smart Fix] serial gaps after first pass: [{srNo:38,…}]`, exactly one extra single-page gateway call; toast "Estimate read — 80 rows"; no card in the review dialog. Then without the param: 5 calls total, no second opinion. |
 
 Record the console output of L1 and L5 in `SurveyOS-Antigravity-Prime-V2-KnowledgeBase/Sessions/` per the agent protocol, and update `Tasks.md` / `Changelog.md`.
 
