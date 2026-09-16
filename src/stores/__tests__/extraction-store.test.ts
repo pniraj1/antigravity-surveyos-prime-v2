@@ -12,7 +12,7 @@ import {
 const fakeFile = {} as File;
 
 function reset() {
-  useExtractionStore.setState({ jobs: {}, files: {}, discrepancies: {} });
+  useExtractionStore.setState({ jobs: {}, files: {} });
 }
 
 const s = () => useExtractionStore.getState();
@@ -23,7 +23,7 @@ describe('extraction store', () => {
   it('carries a job from start through progress to a finished result', () => {
     s().startJob('rc', 'documents');
     s().setProgress('rc', 'Reading page 2…', 2, 4);
-    s().finishJob('rc', { key: 'rc', data: { registration_number: 'MH12AB1234' }, file: fakeFile });
+    s().finishJob('rc', { key: 'rc', data: { registration_number: 'MH12AB1234' }, file: fakeFile, findings: [] });
 
     const job = s().jobs.rc;
     expect(job.status).toBe('done');
@@ -33,20 +33,7 @@ describe('extraction store', () => {
     expect(selectLatestReview(s())).toEqual(job.result);
   });
 
-  it('leaves no residual data when a job is cancelled', () => {
-    s().startJob('rc', 'documents');
-    s().setProgress('rc', 'Reading page 2…', 2, 4);
-    s().setDiscrepancyContext('rc', { totalPages: 4, discrepancies: ['Parts mismatch'] });
-
-    s().cancelJob('rc');
-
-    expect(s().jobs.rc).toBeUndefined();
-    expect(s().discrepancies.rc).toBeUndefined();
-    expect(selectIsProcessing(s())).toBe(false);
-    expect(selectLatestReview(s())).toBeNull();
-  });
-
-  it('aborts the registered controller on cancel', () => {
+it('aborts the registered controller on cancel', () => {
     const controller = new AbortController();
     s().startJob('estimate', 'assessment');
     registerAbort('estimate', controller);
@@ -66,7 +53,7 @@ describe('extraction store', () => {
     s().cancelJob('estimate');
 
     s().setProgress('estimate', 'Reading page 4…', 4, 5);
-    s().finishJob('estimate', { key: 'estimate', data: { gross_amount: 999 }, file: fakeFile });
+    s().finishJob('estimate', { key: 'estimate', data: { gross_amount: 999 }, file: fakeFile, findings: [] });
 
     expect(s().jobs.estimate).toBeUndefined();
     expect(selectLatestReview(s())).toBeNull();
@@ -98,7 +85,7 @@ describe('extraction store', () => {
 
   it('surfaces the most recently started finished job for review', () => {
     s().startJob('rc', 'documents');
-    s().finishJob('rc', { key: 'rc', data: { a: 1 }, file: fakeFile });
+    s().finishJob('rc', { key: 'rc', data: { a: 1 }, file: fakeFile, findings: [] });
 
     // startedAt comes from Date.now(); force a later start so ordering is
     // deterministic rather than dependent on clock resolution.
@@ -106,7 +93,7 @@ describe('extraction store', () => {
     useExtractionStore.setState((state) => ({
       jobs: { ...state.jobs, dl: { ...state.jobs.dl, startedAt: state.jobs.rc.startedAt + 1000 } },
     }));
-    s().finishJob('dl', { key: 'dl', data: { b: 2 }, file: fakeFile });
+    s().finishJob('dl', { key: 'dl', data: { b: 2 }, file: fakeFile, findings: [] });
 
     expect(selectLatestReview(s())?.key).toBe('dl');
 

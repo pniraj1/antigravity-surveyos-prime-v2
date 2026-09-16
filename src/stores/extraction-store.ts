@@ -22,6 +22,7 @@
 import { create } from 'zustand';
 import type { AppTab } from './ui-store';
 import type { EstimateApplyMode } from './slices/aiDataSlice';
+import type { Finding } from '@/lib/ai/row-check';
 
 export type JobStatus = 'processing' | 'done' | 'error';
 
@@ -29,6 +30,10 @@ export interface ExtractionResult {
   key: string;
   data: unknown;
   file: File;
+  /** Unresolved row/gross findings shown in the review dialog. */
+  findings: Finding[];
+  /** Smart Fix has run at least once on this result. */
+  smartFixed?: boolean;
 }
 
 export interface ExtractionJob {
@@ -55,12 +60,6 @@ export interface ExtractionJob {
   estimateMode?: EstimateApplyMode;
 }
 
-/** Context saved after an extraction that reported amount discrepancies. */
-export interface DiscrepancyContext {
-  totalPages: number;
-  discrepancies: string[];
-}
-
 interface ExtractionState {
   jobs: Record<string, ExtractionJob>;
   /**
@@ -72,7 +71,6 @@ interface ExtractionState {
    * render-relevant and stay in the module map below.
    */
   files: Record<string, File>;
-  discrepancies: Record<string, DiscrepancyContext>;
 
   startJob: (key: string, originTab: AppTab | null, estimateMode?: EstimateApplyMode) => void;
   setProgress: (key: string, message: string, pagesDone?: number, pagesTotal?: number) => void;
@@ -81,7 +79,6 @@ interface ExtractionState {
   cancelJob: (key: string) => void;
   clearJob: (key: string) => void;
   rememberFile: (key: string, file: File) => void;
-  setDiscrepancyContext: (key: string, ctx: DiscrepancyContext | null) => void;
 }
 
 // ─── Abort controllers ───────────────────────────────────────────────────────
@@ -115,7 +112,6 @@ function omit<T>(record: Record<string, T>, key: string): Record<string, T> {
 export const useExtractionStore = create<ExtractionState>()((set) => ({
   jobs: {},
   files: {},
-  discrepancies: {},
 
   startJob: (key, originTab, estimateMode) =>
     set((state) => ({
@@ -185,7 +181,6 @@ export const useExtractionStore = create<ExtractionState>()((set) => ({
     controllers.delete(key);
     set((state) => ({
       jobs: omit(state.jobs, key),
-      discrepancies: omit(state.discrepancies, key),
     }));
   },
 
@@ -196,13 +191,6 @@ export const useExtractionStore = create<ExtractionState>()((set) => ({
 
   rememberFile: (key, file) =>
     set((state) => ({ files: { ...state.files, [key]: file } })),
-
-  setDiscrepancyContext: (key, ctx) =>
-    set((state) => ({
-      discrepancies: ctx
-        ? { ...state.discrepancies, [key]: ctx }
-        : omit(state.discrepancies, key),
-    })),
 }));
 
 // ─── Selectors ───────────────────────────────────────────────────────────────
