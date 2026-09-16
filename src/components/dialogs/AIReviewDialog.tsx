@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
-import { Check, X, Sparkles, RefreshCw } from 'lucide-react';
+import { Check, X, Sparkles, RefreshCw, Zap, Loader2, CheckCircle2 } from 'lucide-react';
 import { summariseExtraction, hasLineItems } from '@/lib/ai/extraction-summary';
+import { describeFinding, countRows, type Finding } from '@/lib/ai/row-check';
 
 interface AIReviewDialogProps {
   isOpen: boolean;
@@ -13,12 +14,58 @@ interface AIReviewDialogProps {
   title: string;
   data: any;
   evidenceImages?: string[];
-  discrepancies?: string[];
+  /** Unresolved row/gross findings — renders the "Check before applying" card. */
+  findings?: Finding[];
+  onSmartFix?: () => void;
+  /** Non-empty while Smart Fix is running; shown inline in the card. */
+  smartFixProgress?: string;
+  smartFixed?: boolean;
 }
 
 const INR = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 });
 
-export function AIReviewDialog({ isOpen, onClose, onConfirm, onReScan, title, data, evidenceImages = [], discrepancies = [] }: AIReviewDialogProps) {
+function CheckCard({ findings, onSmartFix, progress, fixed, rows }: {
+  findings: Finding[]; onSmartFix?: () => void; progress: string; fixed: boolean; rows: number;
+}) {
+  if (progress) {
+    return (
+      <div className="mb-4 p-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 flex items-center gap-2 text-sm font-medium">
+        <Loader2 size={16} className="animate-spin shrink-0" /> {progress}
+      </div>
+    );
+  }
+  if (findings.length === 0) {
+    if (!fixed) return null;
+    return (
+      <div className="mb-4 p-3 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-900 flex items-center gap-2 text-sm font-medium">
+        <CheckCircle2 size={16} className="shrink-0" /> All {rows} rows found, totals match
+      </div>
+    );
+  }
+  return (
+    <div className="mb-4 p-3 rounded-lg border border-amber-200 bg-amber-50">
+      <div className="text-[10px] font-bold text-amber-800 uppercase tracking-wider mb-2">Check before applying</div>
+      <ul className="text-sm text-amber-950 font-medium space-y-1 list-disc pl-4">
+        {findings.map((f, i) => <li key={i}>{describeFinding(f)}</li>)}
+      </ul>
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <span className="text-xs text-amber-800">
+          {fixed ? 'Check the page in the Evidence Viewer or describe the fix below' : 'Smart Fix re-reads only the pages above'}
+        </span>
+        {onSmartFix && (
+          <button
+            onClick={onSmartFix}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600 text-white hover:bg-amber-700 transition-all active:scale-95 shrink-0"
+          >
+            <Zap size={14} />Smart Fix
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function AIReviewDialog({ isOpen, onClose, onConfirm, onReScan, title, data, evidenceImages = [], findings = [], onSmartFix, smartFixProgress = '', smartFixed = false }: AIReviewDialogProps) {
   const [feedback, setFeedback] = useState('');
 
   if (!isOpen) return null;
@@ -124,6 +171,8 @@ export function AIReviewDialog({ isOpen, onClose, onConfirm, onReScan, title, da
             )}
 
             <div className="space-y-4">
+              <CheckCard findings={findings} onSmartFix={onSmartFix} progress={smartFixProgress} fixed={smartFixed} rows={countRows(data)} />
+
               {displayFields.length > 0 ? (
                 displayFields.map((field, i) => (
                   <div key={i} className="flex flex-col gap-1 border-b border-border/40 pb-3 last:border-0">
@@ -141,20 +190,6 @@ export function AIReviewDialog({ isOpen, onClose, onConfirm, onReScan, title, da
                 </div>
               )}
               
-              {discrepancies.length > 0 && (
-                <div className="mt-4 p-3 bg-red-50/50 rounded-lg border border-red-200">
-                   <div className="text-[10px] font-bold text-red-700 uppercase mb-2">Math Validation Warnings</div>
-                   <ul className="text-xs text-red-900 font-medium list-disc pl-4 space-y-1">
-                     {discrepancies.map((d, idx) => (
-                       <li key={idx}>{d}</li>
-                     ))}
-                   </ul>
-                   <div className="text-xs text-red-800 mt-2 font-semibold">
-                     Please carefully review the extracted items before applying, or provide feedback below to auto-correct.
-                   </div>
-                </div>
-              )}
-
               {(data?.spare_parts?.length > 0 || data?.labour_items?.length > 0 || data?.painting_items?.length > 0) && (
                 <div className="mt-4 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
                    <div className="text-[10px] font-bold text-blue-700 uppercase mb-2">Extracted Items Summary</div>

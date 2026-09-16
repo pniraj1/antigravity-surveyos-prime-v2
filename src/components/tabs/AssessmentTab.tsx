@@ -24,7 +24,7 @@ export function AssessmentTab() {
   const { currentClaim, setDepreciationType } = useClaimStore();
   const [showEvidence, setShowEvidence] = useState(false);
   const [showSummary, setShowSummary] = useState(true);
-  const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview, reScanWithFeedback, hasFile, reScanLatest } = useAIExtraction();
+  const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview, reScanWithFeedback, hasFile, reScanLatest, smartFix, reviewProgress } = useAIExtraction();
   const { confirmEstimateMode, estimateModeDialog } = useEstimateModePrompt();
   const { profile } = useProfileStore();
   const { confirmSaveToCloud, saveToCloudDialog } = useSaveToCloudPrompt();
@@ -196,6 +196,10 @@ export function AssessmentTab() {
         title={reviewData?.key || ''}
         data={reviewData?.data}
         evidenceImages={evidenceImages}
+        findings={reviewData?.findings ?? []}
+        onSmartFix={reviewData ? () => smartFix(reviewData.key) : undefined}
+        smartFixProgress={reviewProgress}
+        smartFixed={reviewData?.smartFixed}
       />
 
 

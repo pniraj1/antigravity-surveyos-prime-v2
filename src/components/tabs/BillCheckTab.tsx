@@ -84,7 +84,7 @@ export function BillCheckTab() {
   const [remarkWarning, setRemarkWarning] = useState(false);
   const [flagGate, setFlagGate] = useState(false);
 
-  const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview } = useAIExtraction();
+  const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview, smartFix, reviewProgress } = useAIExtraction();
 
   if (!currentClaim) return null;
 
@@ -325,6 +325,10 @@ export function BillCheckTab() {
         onConfirm={confirmApply}
         title={reviewData?.key || ''}
         data={reviewData?.data}
+        findings={reviewData?.findings ?? []}
+        onSmartFix={reviewData ? () => smartFix(reviewData.key) : undefined}
+        smartFixProgress={reviewProgress}
+        smartFixed={reviewData?.smartFixed}
       />
 
       {pendingGate && (
