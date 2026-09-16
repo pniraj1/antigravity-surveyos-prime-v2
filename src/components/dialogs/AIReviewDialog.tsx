@@ -38,7 +38,7 @@ function CheckCard({ findings, onSmartFix, progress, fixed, rows }: {
     if (!fixed) return null;
     return (
       <div className="mb-4 p-3 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-900 flex items-center gap-2 text-sm font-medium">
-        <CheckCircle2 size={16} className="shrink-0" /> All {rows} rows found, totals match
+        <CheckCircle2 size={16} className="shrink-0" /> No remaining findings — {rows} rows
       </div>
     );
   }
@@ -220,14 +220,14 @@ export function AIReviewDialog({ isOpen, onClose, onConfirm, onReScan, title, da
                       }
                     }}
                   />
-                  <button 
+                  <button
                     onClick={() => {
                       if (onReScan && feedback.trim()) {
                         onReScan(feedback);
                         setFeedback('');
                       }
                     }}
-                    disabled={!feedback.trim()}
+                    disabled={!feedback.trim() || !!smartFixProgress}
                     className="absolute bottom-2 right-2 flex justify-center items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-1.5 rounded text-[10px] font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <RefreshCw size={12} />
@@ -253,7 +253,8 @@ export function AIReviewDialog({ isOpen, onClose, onConfirm, onReScan, title, da
             </button>
             <button
               onClick={onConfirm}
-              className="flex items-center gap-1.5 px-6 py-2 rounded-xl text-sm font-bold bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:brightness-110 transition-all active:scale-95"
+              disabled={!!smartFixProgress}
+              className="flex items-center gap-1.5 px-6 py-2 rounded-xl text-sm font-bold bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:brightness-110 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Check size={16} />
               Apply Fields

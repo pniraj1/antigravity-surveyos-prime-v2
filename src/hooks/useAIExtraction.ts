@@ -76,7 +76,11 @@ export function useAIExtraction() {
     registerAbort(key, controller);
     setJobProgress(key, 'Smart Fix: loading document…');
     try {
-      const fixed = await smartFixRescan(key, file, result.data, result.findings, msg => setJobProgress(key, msg), controller.signal);
+      const forceDocMode = (!aiDocMode || aiDocMode === 'auto') ? undefined : aiDocMode;
+      const fixed = await smartFixRescan(key, file, result.data, result.findings, msg => setJobProgress(key, msg), controller.signal, forceDocMode);
+      // The job may have been replaced (re-scanned, cancelled, re-run) while
+      // this Smart Fix was in flight — only land the result on the same job.
+      if (useExtractionStore.getState().jobs[key]?.result !== result) return;
       finishJob(key, { ...result, data: fixed.data, findings: fixed.findings, smartFixed: true });   // finishJob also clears progress
     } catch (err: any) {
       if (err?.name === 'AbortError') return;
@@ -85,7 +89,7 @@ export function useAIExtraction() {
     } finally {
       clearAbort(key);
     }
-  }, [setJobProgress, finishJob]);
+  }, [aiDocMode, setJobProgress, finishJob]);
 
   // ─── Full extraction ─────────────────────────────────────────────────────────
   const triggerExtraction = useCallback(async (key: string, file: File | File[], feedback?: string, previousData?: any, estimateMode?: EstimateApplyMode) => {
@@ -159,8 +163,11 @@ export function useAIExtraction() {
    *  work in flight — conflating the two is what left the overlay's Cancel
    *  button dead during processing. */
   const cancelReview = useCallback(() => {
-    if (reviewData) clearJob(reviewData.key);
-  }, [reviewData, clearJob]);
+    // cancelJob (not clearJob): aborts the registered controller so a
+    // Smart Fix still running when the dialog closes is actually cancelled.
+    // For a plain finished job it removes it, same as clearJob did.
+    if (reviewData) cancelJob(reviewData.key);
+  }, [reviewData, cancelJob]);
 
   /** Aborts an in-flight extraction and discards everything it produced. */
   const cancelExtraction = useCallback((key?: string) => {

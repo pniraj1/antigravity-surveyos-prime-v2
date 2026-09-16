@@ -24,7 +24,7 @@ describe('AIReviewDialog — Check before applying card', () => {
   });
   it('turns green when Smart Fix resolved everything', () => {
     const html = renderToStaticMarkup(<AIReviewDialog {...base} findings={[]} smartFixed />);
-    expect(html).toContain('All 1 rows found, totals match');
+    expect(html).toContain('No remaining findings — 1 rows');
   });
   it('keeps the manual hint when something remains after Smart Fix', () => {
     const html = renderToStaticMarkup(<AIReviewDialog {...base} findings={[{ kind: 'gross', rows: 1, printed: 2 }]} smartFixed onSmartFix={() => {}} />);

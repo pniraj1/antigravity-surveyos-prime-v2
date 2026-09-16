@@ -656,10 +656,16 @@ export async function extractDocument(
         console.info(`[ai-fault] dropped serial ${drop} from the first pass`);
       }
 
-      const dupes = rowCheck(finalResult, pageTexts).duplicates;
-      if (dupes.length) console.info('[Smart Fix] dropped duplicate serials', dupes);
-      finalResult = dropDuplicates(finalResult);
       let check = rowCheck(finalResult, pageTexts);
+      if (check.duplicates.length) {
+        if (check.duplicatesDroppable) {
+          console.info('[Smart Fix] dropped duplicate serials', check.duplicates);
+          finalResult = dropDuplicates(finalResult);
+          check = rowCheck(finalResult, pageTexts);
+        } else {
+          console.info('[Smart Fix] duplicate ratio too high — unnumbered document, keeping every row', check.duplicates.length);
+        }
+      }
 
       if (check.gaps.length) {
         console.info('[Smart Fix] serial gaps after first pass:', check.gaps);
@@ -687,8 +693,10 @@ export async function extractDocument(
         session.lastGood = undefined;
         try {
           const second = await runAllChunks(true);
-          const secondData = dropDuplicates(second.result);
-          if (!needsSecondOpinion(key, secondData, pageTexts)) {
+          const secondCheck = rowCheck(second.result, pageTexts);
+          const secondData = secondCheck.duplicatesDroppable ? dropDuplicates(second.result) : second.result;
+          const secondFinal = rowCheck(secondData, pageTexts);
+          if (!secondFinal.grossMismatch && secondFinal.gaps.length === 0) {
             const secondModel = (session as typeof session).lastGood?.model;
             console.info(`[ai-fallback] second opinion from ${secondModel} reconciles; first (${firstPassModel}) did not.`);
             finalResult = secondData; pageIssues = second.issues;
@@ -733,12 +741,14 @@ export async function smartFixRescan(
   findings: Finding[],
   onProgress?: (msg: string) => void,
   signal?: AbortSignal,
+  forceDocMode?: 'text' | 'vision',
 ): Promise<{ data: unknown; findings: Finding[] }> {
   const basePrompt = getDocPrompt(key) ?? 'Extract all visible details from this document as JSON.';
   return aiQueue.add(async () => {
     onProgress?.('Smart Fix: loading document…');
     const { apiImages, textLayers } = await fileToImages(file);
-    const pageTexts = textLayers && profilePages(textLayers).docMode === 'text' ? textLayers : undefined;
+    const detected = textLayers ? profilePages(textLayers).docMode : 'vision';
+    const pageTexts = (forceDocMode ?? detected) === 'text' && textLayers ? textLayers : undefined;
     const session = newSession(`${key}-fix-${Date.now()}`);
 
     const gap = findings.find((f): f is Extract<Finding, { kind: 'gap' }> => f.kind === 'gap');
@@ -746,7 +756,8 @@ export async function smartFixRescan(
     const pages = gap ? gap.pages : [apiImages.length - 1];
 
     let next = await fillGaps({ basePrompt, apiImages, data, srNos, pages, session, signal, onProgress });
-    next = dropDuplicates(next);
+    const check = rowCheck(next, pageTexts);
+    if (check.duplicatesDroppable) next = dropDuplicates(next);
     return { data: next, findings: toFindings(rowCheck(next, pageTexts)) };
   });
 }

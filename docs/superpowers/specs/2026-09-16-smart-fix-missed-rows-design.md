@@ -77,7 +77,9 @@ side; if they agree, one page; otherwise both.
 After `runAllChunks`:
 
 1. `rowCheck(result)`.
-2. Duplicates: drop the later copy.
+2. Duplicates: drop the later copy only when duplicates are ≤ 10 % of
+   serials; a higher ratio means the model numbered rows itself per page —
+   keep every row and rely on the gross check.
 3. Gaps: for each candidate page (deduplicated), one `callAIGateway` on
    that page only with the estimate prompt plus
    `Return ONLY the rows with serial numbers 38, 52 (they were missed).`
@@ -88,7 +90,10 @@ After `runAllChunks`:
 4. Second opinion (existing whole-document re-run on the next model) is
    triggered **only** when `grossMismatch` remains **and** `gaps` is empty
    — a row without a serial is missing and no page can be pinned. Every
-   other case: no second pass. `needsSecondOpinion` becomes this rule.
+   other case: no second pass. `needsSecondOpinion` becomes this rule. The
+   second read is then **accepted** only when it reconciles — its own
+   `rowCheck` has neither a `grossMismatch` nor `gaps` — otherwise the
+   first-pass result is kept even though a second opinion ran.
 5. Whatever is still unresolved is returned as structured `discrepancies`
    (not prose) for the dialog:
    `{ kind: 'gap', srNos, pages } | { kind: 'gross', rows, printed }`.

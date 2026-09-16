@@ -17,6 +17,13 @@ export interface RowCheck {
   grossMismatch?: { rows: number; printed: number };
   /** ≥ 80 % of rows carry an integer sr_no — otherwise the gap check is skipped. */
   serialsUsable: boolean;
+  /**
+   * True only when the duplicate ratio is low enough that a duplicate really
+   * is a repeated row, not the model numbering 1,2,3… itself per page (an
+   * unnumbered document read one page per call). Dropping duplicates when
+   * this is false would delete every row after the first page.
+   */
+  duplicatesDroppable: boolean;
 }
 
 export const SECTIONS = ['spare_parts', 'labour_items', 'painting_items'] as const;
@@ -25,7 +32,7 @@ type Section = typeof SECTIONS[number];
 interface Row { sr_no?: unknown; total_amount?: unknown; _page?: number; _pageEnd?: number; [k: string]: unknown }
 
 const SERIAL_COVERAGE = 0.8;
-const ONE_RUN_MAX_DUP_RATIO = 0.1;
+export const ONE_RUN_MAX_DUP_RATIO = 0.1;
 const INR = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 });
 
 function rowsOf(data: unknown, s: Section): Row[] {
@@ -90,23 +97,32 @@ export function rowCheck(data: unknown, pageTexts?: string[]): RowCheck {
   const numbered = all.filter(r => serial(r) !== null).length;
   const serialsUsable = all.length > 0 && numbered / all.length >= SERIAL_COVERAGE;
 
-  let gaps: Gap[] = [], duplicates: number[] = [];
+  let gaps: Gap[] = [], duplicates: number[] = [], duplicatesDroppable = false;
   if (serialsUsable) {
     if (perSectionMode(data)) {
+      let sectionNumbered = 0, sectionDuplicates = 0;
+      for (const s of SECTIONS) {
+        const rows = rowsOf(data, s);
+        sectionNumbered += rows.filter(r => serial(r) !== null).length;
+        sectionDuplicates += duplicatesIn(rows).length;
+      }
       gaps = SECTIONS.flatMap(s => gapsIn(rowsOf(data, s)));
       duplicates = [...new Set(SECTIONS.flatMap(s => duplicatesIn(rowsOf(data, s))))].sort((a, b) => a - b);
+      duplicatesDroppable = sectionDuplicates / Math.max(1, sectionNumbered) <= ONE_RUN_MAX_DUP_RATIO;
     } else {
       duplicates = duplicatesIn(all);
       // ponytail: a heavily duplicated union that does not start at 1 per section
-      // is an unknown numbering scheme — report duplicates, skip gaps.
-      gaps = duplicates.length / Math.max(1, numbered) <= ONE_RUN_MAX_DUP_RATIO ? gapsIn(all) : [];
+      // is an unknown numbering scheme — the model numbered rows itself per
+      // page. Report duplicates, skip gaps, and don't drop them either.
+      duplicatesDroppable = duplicates.length / Math.max(1, numbered) <= ONE_RUN_MAX_DUP_RATIO;
+      gaps = duplicatesDroppable ? gapsIn(all) : [];
     }
   }
 
   const d = data as Record<string, unknown> | null;
   const printed = Number(d?.gross_amount) || Number(d?.total_amount) || 0;
   const rows = all.reduce((sum, r) => sum + (Number(r.total_amount) || 0), 0);
-  const check: RowCheck = { gaps, duplicates, serialsUsable };
+  const check: RowCheck = { gaps, duplicates, serialsUsable, duplicatesDroppable };
   if (printed > 0 && rows > 0 && Math.abs(rows - printed) > tolerance(printed) && grossPrinted(printed, pageTexts)) {
     check.grossMismatch = { rows, printed };
   }

@@ -16,7 +16,7 @@ function dtc() {
 describe('rowCheck — one serial run (DTC)', () => {
   it('clean 80-row read has no findings', () => {
     const c = rowCheck(dtc());
-    expect(c).toEqual({ gaps: [], duplicates: [], serialsUsable: true });
+    expect(c).toEqual({ gaps: [], duplicates: [], serialsUsable: true, duplicatesDroppable: true });
   });
   it('a missing serial is a gap pinned to its page when neighbours agree', () => {
     const d = dtc();
@@ -42,6 +42,19 @@ describe('rowCheck — one serial run (DTC)', () => {
     d.spare_parts.push(row(12, 100, 0));
     d.gross_amount += 0;   // sum now off by 100 — that is a real mismatch, but duplicates are reported regardless
     expect(rowCheck(d).duplicates).toEqual([12]);
+    expect(rowCheck(d).duplicatesDroppable).toBe(true);
+  });
+  it('an unnumbered 3-page bill (model numbers 1..n itself per page) is not droppable and has no gaps', () => {
+    // Pages 0, 1, 2 each independently numbered 1..25/1..25/1..20 — a heavily
+    // duplicated union that is not a real duplicate, it is unknown numbering.
+    const p1 = Array.from({ length: 25 }, (_, i) => row(i + 1, 10, 0));
+    const p2 = Array.from({ length: 25 }, (_, i) => row(i + 1, 10, 1));
+    const p3 = Array.from({ length: 20 }, (_, i) => row(i + 1, 10, 2));
+    const gross = (25 + 25 + 20) * 10;
+    const d = { spare_parts: [...p1, ...p2, ...p3], labour_items: [], painting_items: [], gross_amount: gross };
+    const c = rowCheck(d);
+    expect(c.duplicatesDroppable).toBe(false);
+    expect(c.gaps).toEqual([]);
   });
 });
 
@@ -55,13 +68,14 @@ describe('rowCheck — per-section serials', () => {
     };
     expect(rowCheck(d).gaps).toEqual([{ srNo: 3, pages: [0] }]);
     expect(rowCheck(d).duplicates).toEqual([]);     // 1 and 2 repeating across sections is not a duplicate here
+    expect(rowCheck(d).duplicatesDroppable).toBe(true);
   });
 });
 
 describe('rowCheck — serials unusable', () => {
   it('skips the gap check when fewer than 80 % of rows have a serial', () => {
     const d = { spare_parts: [row(1, 10), { total_amount: 10 }, { total_amount: 10 }], labour_items: [], painting_items: [], gross_amount: 30 };
-    expect(rowCheck(d)).toEqual({ gaps: [], duplicates: [], serialsUsable: false });
+    expect(rowCheck(d)).toEqual({ gaps: [], duplicates: [], serialsUsable: false, duplicatesDroppable: false });
   });
 });
 
@@ -112,7 +126,7 @@ describe('helpers', () => {
     expect(stripPageTags(d)).toEqual({ spare_parts: [{ sr_no: 1, total_amount: 10 }], labour_items: [], painting_items: [], gross_amount: 10 });
   });
   it('toFindings groups all gaps into one finding and adds gross', () => {
-    const f = toFindings({ gaps: [{ srNo: 38, pages: [2] }, { srNo: 52, pages: [2, 3] }], duplicates: [], serialsUsable: true, grossMismatch: { rows: 1, printed: 2 } });
+    const f = toFindings({ gaps: [{ srNo: 38, pages: [2] }, { srNo: 52, pages: [2, 3] }], duplicates: [], serialsUsable: true, duplicatesDroppable: true, grossMismatch: { rows: 1, printed: 2 } });
     expect(f).toEqual([{ kind: 'gap', srNos: [38, 52], pages: [2, 3] }, { kind: 'gross', rows: 1, printed: 2 }]);
   });
   it('describeFinding speaks plain surveyor language with 1-based pages', () => {
