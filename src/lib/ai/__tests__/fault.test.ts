@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { takeFault, _setFaultForTests } from '../fault';
+import { takeFault, _setFaultForTests, takeDrop, _setDropForTests } from '../fault';
 
 describe('takeFault', () => {
   beforeEach(() => _setFaultForTests(null));
@@ -24,4 +24,14 @@ describe('takeFault', () => {
     _setFaultForTests('banana');
     expect(takeFault()).toBeNull();
   });
+});
+
+describe('takeDrop', () => {
+  beforeEach(() => _setDropForTests(null));
+  it('returns the serial once, then null', () => {
+    _setDropForTests('38');
+    expect(takeDrop()).toBe(38);
+    expect(takeDrop()).toBeNull();
+  });
+  it('non-numeric → null', () => { _setDropForTests('x'); expect(takeDrop()).toBeNull(); });
 });

@@ -36,3 +36,23 @@ export function takeFault(): ProviderError | null {
 
 /** Tests only. */
 export function _setFaultForTests(v: string | null): void { pending = v; }
+
+// ── ?ai-drop=38 — remove serial 38 from the first-pass result once, so the gap
+// fill can be watched on a real document. Dev only, like ?ai-fault.
+let pendingDrop: string | null | undefined;
+
+function readDropFromUrl(): string | null {
+  if (process.env.NODE_ENV === 'production' || typeof location === 'undefined') return null;
+  return new URLSearchParams(location.search).get('ai-drop');
+}
+
+/** The serial to drop from this page load's first extraction, once; null after. */
+export function takeDrop(): number | null {
+  if (pendingDrop === undefined) pendingDrop = readDropFromUrl();
+  const n = Number(pendingDrop);
+  pendingDrop = null;
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+/** Tests only. */
+export function _setDropForTests(v: string | null): void { pendingDrop = v; }
