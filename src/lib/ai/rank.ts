@@ -1,11 +1,14 @@
 import type { ModelEntry, ProviderId } from './models-config';
 import { type AIJob, JOB_NEEDS_VISION, HEAVY_MIN_OUTPUT_TOKENS, LIGHT_FAST_MS_PER_PAGE } from './jobs';
 import { type Health, keyHash } from './health';
+import { tierOf, dailyLimit, type Tier } from './quota';
 
 /**
  * Turns "every model the surveyor can reach" into "the order to try them for
  * this job". Derived on every call, never stored — the inputs (admin pool,
- * probe data, today's health) are the source of truth.
+ * probe data, today's health) are the source of truth. Ranks by free-tier
+ * budget first: cheapest tier for the job, then most remaining daily quota
+ * per key; a key that cannot cover the whole document is dropped.
  */
 
 export interface PoolEntry {
@@ -20,10 +23,10 @@ export interface PoolEntry {
 
 export interface RankOptions {
   health: Health;
-  /** Surveyor's saved pick — first if eligible. Removed in Phase 2. */
-  preferredModel?: string;
   /** Models to skip for this call (math second opinion). */
   avoid?: ReadonlySet<string>;
+  /** Calls this document still needs — a key that cannot cover them is not used. Default 1. */
+  pagesNeeded?: number;
 }
 
 export class PayloadTooLargeError extends Error {
@@ -45,6 +48,9 @@ export function modelStrength(id: string): number {
   return gen * 10 + tier;
 }
 
+const HEAVY_TIER: Record<Tier, number> = { flash: 0, lite: 1, gemma: 2 };
+const CHEAP_TIER: Record<Tier, number> = { lite: 0, gemma: 1, flash: 2 };   // light/text: Flash is the last resort
+
 const VERDICT_RANK: Record<NonNullable<PoolEntry['verdict']>, number> = { exact: 0, close: 1, untested: 2, wrong: 9, failed: 9 };
 
 function verdictRank(e: PoolEntry): number { return VERDICT_RANK[e.verdict ?? 'untested']; }
@@ -53,8 +59,9 @@ function verdictRank(e: PoolEntry): number { return VERDICT_RANK[e.verdict ?? 'u
 function speed(e: PoolEntry): number { return e.msPerPage ?? LIGHT_FAST_MS_PER_PAGE; }
 
 export function rankModels(job: AIJob, images: readonly string[], pool: readonly PoolEntry[], opts: RankOptions): PoolEntry[] {
-  const { health, preferredModel, avoid } = opts;
+  const { health, avoid, pagesNeeded = 1 } = opts;
   const needsVision = JOB_NEEDS_VISION[job] && images.length > 0;
+  const best = new Map<string, number>();
 
   const eligible: PoolEntry[] = [];
   for (const e of pool) {
@@ -64,9 +71,18 @@ export function rankModels(job: AIJob, images: readonly string[], pool: readonly
     if (needsVision && e.model.imageCap !== null && e.model.imageCap < images.length) continue;
     if (job === 'heavy' && typeof e.outputTokens === 'number' && e.outputTokens < HEAVY_MIN_OUTPUT_TOKENS) continue;
     if (job === 'heavy' && verdictRank(e) >= 9) continue;
-    const keys = e.keys.filter(k => !health.isDeadToday(keyHash(k), id));
-    if (keys.length === 0) continue;
-    eligible.push({ ...e, keys });
+    const limit = dailyLimit(e.provider, id);
+    if (limit === 0) continue;                                              // Pro: not on the free tier
+    // Per key: what it can still spend today. Dead/rested keys read 0. A key that
+    // cannot cover the whole document is dropped — never start a 5-page read
+    // on a key with 3 calls left.
+    const keyed = e.keys
+      .map(k => ({ k, left: health.remaining(keyHash(k), id, limit) }))
+      .filter(x => x.left >= pagesNeeded)
+      .sort((a, b) => b.left - a.left);
+    if (keyed.length === 0) continue;
+    best.set(id, keyed[0].left);
+    eligible.push({ ...e, keys: keyed.map(x => x.k) });
   }
 
   // Throw only when some model could have taken images but none fits this many.
@@ -79,19 +95,16 @@ export function rankModels(job: AIJob, images: readonly string[], pool: readonly
   const busy = (e: PoolEntry) => health.busyRate(e.model.id);
   const proxied = (e: PoolEntry) => (e.proxied ? 1 : 0);
   const cmp = (a: number, b: number) => (a < b ? -1 : a > b ? 1 : 0);
+  const tier = (e: PoolEntry, t: Record<Tier, number>) => t[tierOf(e.provider, e.model.id)];
 
   const byJob: (a: PoolEntry, b: PoolEntry) => number = job === 'heavy'
-    ? (a, b) => cmp(verdictRank(a), verdictRank(b)) || cmp(busy(a), busy(b)) || cmp(proxied(a), proxied(b))
+    ? (a, b) => cmp(tier(a, HEAVY_TIER), tier(b, HEAVY_TIER)) || cmp(best.get(b.model.id)!, best.get(a.model.id)!)
+        || cmp(verdictRank(a), verdictRank(b)) || cmp(busy(a), busy(b)) || cmp(proxied(a), proxied(b))
         || cmp(modelStrength(b.model.id), modelStrength(a.model.id)) || cmp(speed(a), speed(b))
     : job === 'light'
-    ? (a, b) => cmp(proxied(a), proxied(b)) || cmp(+(speed(a) > LIGHT_FAST_MS_PER_PAGE), +(speed(b) > LIGHT_FAST_MS_PER_PAGE))
-        || cmp(speed(a), speed(b)) || cmp(busy(a), busy(b))
-    : (a, b) => cmp(speed(a), speed(b)) || cmp(busy(a), busy(b)) || cmp(proxied(a), proxied(b));
+    ? (a, b) => cmp(tier(a, CHEAP_TIER), tier(b, CHEAP_TIER)) || cmp(proxied(a), proxied(b))
+        || cmp(+(speed(a) > LIGHT_FAST_MS_PER_PAGE), +(speed(b) > LIGHT_FAST_MS_PER_PAGE)) || cmp(speed(a), speed(b)) || cmp(busy(a), busy(b))
+    : (a, b) => cmp(tier(a, CHEAP_TIER), tier(b, CHEAP_TIER)) || cmp(speed(a), speed(b)) || cmp(busy(a), busy(b)) || cmp(proxied(a), proxied(b));
 
-  const sorted = [...eligible].sort(byJob);
-  if (preferredModel) {
-    const i = sorted.findIndex(e => e.model.id === preferredModel);
-    if (i > 0) { const [p] = sorted.splice(i, 1); sorted.unshift(p); }
-  }
-  return sorted;
+  return [...eligible].sort(byJob);
 }

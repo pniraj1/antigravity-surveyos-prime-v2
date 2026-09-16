@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { rankModels, modelStrength, PayloadTooLargeError, type PoolEntry } from '../rank';
 import { createHealth, keyHash } from '../health';
+import { tierOf } from '../quota';
 
 function mem() { const m = new Map<string, string>(); return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, v); } }; }
 const health = () => createHealth(mem(), () => 1_000);
@@ -68,10 +69,6 @@ describe('eligibility', () => {
 });
 
 describe('ordering', () => {
-  it('preferred model goes first when eligible', () => {
-    const pool = [entry('gemini', 'gemini-2.5-flash'), entry('gemini', 'gemini-flash-lite-latest')];
-    expect(ids(rankModels('heavy', ['i'], pool, { health: health(), preferredModel: 'gemini-flash-lite-latest' }))[0]).toBe('gemini-flash-lite-latest');
-  });
   it('heavy: verdict, then strength, then busy rate, then time; proxied after direct', () => {
     const h = health();
     for (let i = 0; i < 3; i++) h.recordCall('gemini-3.5-flash', 'busy');
@@ -83,12 +80,14 @@ describe('ordering', () => {
       entry('gemini', 'gemini-close', { verdict: 'close' }),
       entry('gemini', 'gemini-wrong', { verdict: 'wrong' }),
     ];
+    // ponytail: tier now sorts first (this task), so flash-tier models group before
+    // lite/gemma regardless of verdict/strength/busy — updated from the pre-tier order.
     expect(ids(rankModels('heavy', ['i'], pool, { health: h }))).toEqual([
-      'gemini-2.5-flash',          // exact, strength 2.5-flash, not busy
-      'gemini-flash-lite-latest',  // exact, lite
-      'gemma4:31b',                // exact, same strength as 2.5-flash but proxied → after all direct exact
-      'gemini-3.5-flash',          // exact, strongest, but busy 100%
-      'gemini-close',
+      'gemini-2.5-flash',          // flash tier, exact, not busy
+      'gemini-3.5-flash',          // flash tier, exact, but busy 100%
+      'gemini-close',              // flash tier, close
+      'gemini-flash-lite-latest',  // lite tier
+      'gemma4:31b',                // gemma tier
     ]);
   });
   it('heavy: untested ranks below exact/close, above nothing; wrong/failed excluded', () => {
@@ -102,10 +101,67 @@ describe('ordering', () => {
       entry('gemini', 'fast', { msPerPage: 9_000 }),
       entry('gemini', 'unknown-speed'),
     ];
-    expect(ids(rankModels('light', ['i'], pool, { health: health() }))).toEqual(['fast', 'unknown-speed', 'slow', 'gemma4:31b']);
+    // ponytail: tier sorts first (this task) — gemma tier beats flash tier regardless of speed.
+    expect(ids(rankModels('light', ['i'], pool, { health: health() }))).toEqual(['gemma4:31b', 'fast', 'unknown-speed', 'slow']);
   });
   it('text: speed then busy, no vision filter', () => {
     const pool = [entry('gemini', 'gemini-flash-lite-latest', { msPerPage: 4_000 }), entry('groq', 'llama-3.3-70b-versatile', { vision: false, msPerPage: 2_300 })];
     expect(ids(rankModels('text', [], pool, { health: health() }))).toEqual(['llama-3.3-70b-versatile', 'gemini-flash-lite-latest']);
+  });
+});
+
+describe('quota-aware ordering', () => {
+  const T0 = 1_000;
+  const spent = (h: ReturnType<typeof createHealth>, key: string, id: string, n: number) => { for (let i = 0; i < n; i++) h.recordSpend(keyHash(key), id); };
+  const pool = () => [
+    entry('gemini', 'gemini-3.5-flash'),
+    entry('gemini', 'gemini-2.5-flash'),
+    entry('gemini', 'gemini-3.5-flash-lite'),
+    entry('ollama', 'gemma4:31b'),
+  ];
+
+  it('heavy: flash tier first, then lite, then gemma', () => {
+    const r = ids(rankModels('heavy', ['i'], pool(), { health: health(), pagesNeeded: 5 }));
+    expect(r.map(id => tierOf(id.startsWith('gemma4') ? 'ollama' : 'gemini', id))).toEqual(['flash', 'flash', 'lite', 'gemma']);
+  });
+  it('heavy: inside the flash tier the model with more remaining budget goes first', () => {
+    const h = createHealth(mem(), () => T0);
+    spent(h, 'k', 'gemini-3.5-flash', 15);                       // 5 left
+    const r = ids(rankModels('heavy', ['i'], pool(), { health: h, pagesNeeded: 5 }));
+    expect(r[0]).toBe('gemini-2.5-flash');                        // 20 left beats 5 left
+  });
+  it('heavy: a flash model whose budget cannot cover the document is skipped — never a half-read', () => {
+    const h = createHealth(mem(), () => T0);
+    spent(h, 'k', 'gemini-3.5-flash', 17); spent(h, 'k', 'gemini-2.5-flash', 18);   // 3 and 2 left
+    const r = ids(rankModels('heavy', ['i'], pool(), { health: h, pagesNeeded: 5 }));
+    expect(r[0]).toBe('gemini-3.5-flash-lite');
+    expect(r).not.toContain('gemini-3.5-flash');
+  });
+  it('heavy: two keys — the fuller key comes first and an empty key is dropped', () => {
+    const h = createHealth(mem(), () => T0);
+    spent(h, 'k1', 'gemini-3.5-flash', 18); spent(h, 'k2', 'gemini-3.5-flash', 5);
+    const e = { ...entry('gemini', 'gemini-3.5-flash'), keys: ['k1', 'k2'] };
+    const [first] = rankModels('heavy', ['i'], [e], { health: h, pagesNeeded: 5 });
+    expect(first.keys).toEqual(['k2']);
+  });
+  it('heavy: dead-today key counts as zero budget', () => {
+    const h = createHealth(mem(), () => T0);
+    h.markDeadToday(keyHash('k'), 'gemini-3.5-flash');
+    expect(ids(rankModels('heavy', ['i'], pool(), { health: h, pagesNeeded: 1 }))).not.toContain('gemini-3.5-flash');
+  });
+  it('light: lite first, gemma next, flash only as last resort', () => {
+    expect(ids(rankModels('light', ['i'], pool(), { health: health() }))).toEqual(['gemini-3.5-flash-lite', 'gemma4:31b', 'gemini-3.5-flash', 'gemini-2.5-flash']);
+  });
+  it('light: falls to flash when nothing cheaper is eligible', () => {
+    const h = createHealth(mem(), () => T0);
+    h.markDeadToday(keyHash('k'), 'gemini-3.5-flash-lite');
+    const r = ids(rankModels('light', ['i'], [entry('gemini', 'gemini-3.5-flash-lite'), entry('gemini', 'gemini-2.5-flash')], { health: h }));
+    expect(r).toEqual(['gemini-2.5-flash']);
+  });
+  it('pro is never eligible on the free tier', () => {
+    expect(ids(rankModels('heavy', ['i'], [entry('gemini', 'gemini-3.1-pro'), entry('gemini', 'gemini-2.5-flash')], { health: health() }))).toEqual(['gemini-2.5-flash']);
+  });
+  it('text job: lite before flash too', () => {
+    expect(ids(rankModels('text', [], pool(), { health: health() }))[0]).toBe('gemini-3.5-flash-lite');
   });
 });
