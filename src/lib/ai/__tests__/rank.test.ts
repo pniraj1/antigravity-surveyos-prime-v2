@@ -94,15 +94,23 @@ describe('ordering', () => {
     const pool = [entry('gemini', 'a', { verdict: 'failed' }), entry('gemini', 'b'), entry('gemini', 'c', { verdict: 'close' })];
     expect(ids(rankModels('heavy', ['i'], pool, { health: health() }))).toEqual(['c', 'b']);
   });
-  it('light: fast models first, slow ones kept after, proxied always last', () => {
+  it('light: tier order (lite → gemma → flash), then speed within tier', () => {
     const pool = [
       entry('ollama', 'gemma4:31b', { msPerPage: 5_000 }),
       entry('gemini', 'slow', { msPerPage: 40_000 }),
       entry('gemini', 'fast', { msPerPage: 9_000 }),
       entry('gemini', 'unknown-speed'),
     ];
-    // ponytail: tier sorts first (this task) — gemma tier beats flash tier regardless of speed.
+    // ponytail: tier sorts first — gemma tier beats flash tier regardless of speed.
     expect(ids(rankModels('light', ['i'], pool, { health: health() }))).toEqual(['gemma4:31b', 'fast', 'unknown-speed', 'slow']);
+  });
+  it('light: within a tier, direct models rank before proxied even if proxied is faster', () => {
+    // ponytail: tests the intra-tier proxied tiebreak; ensures direct always beats proxied at same tier
+    const pool = [
+      entry('gemini', 'gemini-2.5-flash', { msPerPage: 20_000 }),
+      { ...entry('gemini', 'gemini-3.5-flash'), proxied: true, msPerPage: 5_000 },
+    ];
+    expect(ids(rankModels('light', ['i'], pool, { health: health() }))).toEqual(['gemini-2.5-flash', 'gemini-3.5-flash']);
   });
   it('text: speed then busy, no vision filter', () => {
     const pool = [entry('gemini', 'gemini-flash-lite-latest', { msPerPage: 4_000 }), entry('groq', 'llama-3.3-70b-versatile', { vision: false, msPerPage: 2_300 })];
