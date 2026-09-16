@@ -82,6 +82,21 @@ describe('quota-aware order', () => {
     await expect(callAIGateway('p', ['img'], 'json', 'light')).rejects.toBeInstanceOf(AllProvidersBusyError);
     expect(health.remaining(keyHash('o1'), 'gemma4:31b', Infinity)).toBe(0);
   });
+  it('every model spent by the ledger → "free limit is used up" toast and AllProvidersBusyError, zero fetches', async () => {
+    const spy = vi.spyOn(global, 'fetch').mockResolvedValue(ok());
+    for (const m of ['gemini-2.5-flash', 'gemini-3.5-flash']) for (let i = 0; i < 20; i++) health.recordSpend(keyHash('g1'), m);
+    for (let i = 0; i < 500; i++) health.recordSpend(keyHash('g1'), 'gemini-flash-lite-latest');
+    await expect(callAIGateway('p', ['img'], 'json', 'light')).rejects.toBeInstanceOf(AllProvidersBusyError);
+    expect(toast.error.mock.calls.some(c => /free limit is used up/.test(String(c[0])))).toBe(true);
+    expect(spy).not.toHaveBeenCalled();
+  });
+  it('nudge is silent when the Flash model is merely avoided, not spent', async () => {
+    const s = newSession('t'); s.pagesTotal = 5;
+    s.avoid.add('gemini-2.5-flash'); s.avoid.add('gemini-3.5-flash');
+    vi.spyOn(global, 'fetch').mockResolvedValue(ok());
+    await callAIGateway('p', ['img'], 'json', 'heavy', s);
+    expect(toast.info.mock.calls.some(c => /Flash quota/.test(String(c[0])))).toBe(false);
+  });
 });
 
 describe('hop before key rotation', () => {

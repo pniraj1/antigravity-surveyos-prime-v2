@@ -17,7 +17,7 @@ import { parseGeminiError, classifyGemini429, isThinkingRejected, isModalityReje
 import { rankModels, type PoolEntry } from './rank';
 import { getHealth, keyHash } from './health';
 import { type AIJob, JOB_TIMEOUT_MS } from './jobs';
-import { tierOf, OLLAMA_REST_MS } from './quota';
+import { tierOf, dailyLimit, OLLAMA_REST_MS } from './quota';
 import { useProfileStore } from '@/stores/profile-store';
 import { useUIStore } from '@/stores/ui-store';
 import { toast } from 'sonner';
@@ -651,7 +651,11 @@ async function callWithFallback(
     const i = chain.findIndex(e => e.model.id === session.lastGood!.model);
     if (i > 0) chain = [...chain.slice(i), ...chain.slice(0, i)];
   }
-  if (chain.length === 0 && pool.some(e => e.keys.some(k => health.isDeadToday(keyHash(k), e.model.id)))) {
+  const spentOut = (e: PoolEntry, k: string) =>
+    health.remaining(keyHash(k), e.model.id, dailyLimit(e.provider, e.model.id)) < pagesNeeded;
+
+  if (chain.length === 0 && pool.some(e => e.keys.some(k =>
+      health.isDeadToday(keyHash(k), e.model.id) || spentOut(e, k)))) {
     // Nothing left to walk today — say so instead of "busy, try again in a minute".
     toast.error(`Today's free limit is used up on every model (resets ${health.deadUntilLabel()}). Add a backup key in Profile → AI & Documents Intelligence.`, { duration: 10000 });
     throw new AllProvidersBusyError(job, []);
@@ -659,7 +663,8 @@ async function callWithFallback(
   // Heavy fell off the Flash tier because no Flash key can cover this document.
   // Tell the surveyor once a day — unless Ollama is there, which handles it fine.
   if (job === 'heavy' && chain[0] && tierOf(chain[0].provider, chain[0].model.id) !== 'flash'
-      && pool.some(e => tierOf(e.provider, e.model.id) === 'flash' && e.keys.length > 0)
+      && pool.some(e => tierOf(e.provider, e.model.id) === 'flash' && dailyLimit(e.provider, e.model.id) > 0
+          && e.keys.some(k => spentOut(e, k)))
       && !pool.some(e => e.provider === 'ollama')) {
     try {
       const k = 'surveyos.ai.nudge.flash';
