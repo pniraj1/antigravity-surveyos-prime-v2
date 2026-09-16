@@ -2,6 +2,17 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-09-16 (Claude)
+- feat(ai): job-aware fallback loop — every AI call declares heavy/light/text; the ranker orders every reachable model; on 503/429 the app hops to the next Gemini model before rotating keys or leaving Gemini; no in-place 503 retry; per-call timeouts (heavy 120 s)
+- feat(ai): Gemini 429s classified by `quotaId` — per-model/minute hops, per-model/day marks the model dead till Pacific midnight, per-project/day marks the key, day+minute together = zero quota (Pro on a free key)
+- feat(ai): Ollama Cloud (Gemma 4 31B, free vision) as a proxied fallback; `nvidiaProxy` generalised to `aiProxy` with a host allowlist; Ollama key row in Profile
+- feat(ai): Gemini extraction runs with thinking off (2.5 Flash was truncating at MAX_TOKENS); 400-on-thinking retries once without it
+- feat(ai): a document whose extracted rows don't add up is re-run once on the next model; whichever passes the math wins
+- feat(probe): Ollama catalogue and ping; 402 recorded as a durable `paid` status
+- fix(sync): `nvidiaApiKeys` was reaching Firestore — now stripped and purged (`deleteField`) for one release
+- chore(ai): dev-only `?ai-fault=` injection for live fallback tests
+- deploy: live at motorsurveyos-in.web.app (project surveyos-v2-antigravity-in); 1105 tests passing. Live checks L0–L8 pending. Session log: `Sessions/2026-09-16-ai-fallback-phase-1.md`
+
 ## 2026-09-15 (Claude)
 - feat(ri): Reinspection tab now holds every field the RI report prints (RI ref, place, RI/auth/est dates, plus two-way Report No / insurer / offices / accident & survey dates). RI report drops Date of Report, Survey Ref No, Survey Date. Photo sheet Report No editable with "Use RI Ref".
 
