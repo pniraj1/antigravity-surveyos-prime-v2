@@ -115,6 +115,33 @@ describe('thinking guard', () => {
     expect(JSON.parse(spy.mock.calls[0][1]!.body as string).generationConfig.thinkingConfig).toBeDefined();
     expect(JSON.parse(spy.mock.calls[1][1]!.body as string).generationConfig.thinkingConfig).toBeUndefined();
   });
+  it('a bare "invalid argument" 400 (gemini-3.5-flash-lite, live 2026-09-16) also retries once without thinking, then judges', async () => {
+    const spy = vi.spyOn(global, 'fetch')
+      .mockResolvedValueOnce(fail(400, 'Request contains an invalid argument.'))
+      .mockResolvedValueOnce(fail(400, 'Request contains an invalid argument.'))
+      .mockResolvedValueOnce(ok());
+    await expect(callAIGateway('p', ['img'], 'json', 'heavy')).rejects.toMatchObject({ status: 400 });
+    expect(spy).toHaveBeenCalledTimes(2);   // same model twice (with, then without thinking), then the 400 is judged: other 4xx → throw
+    expect(modelOf(spy.mock.calls[0])).toBe(modelOf(spy.mock.calls[1]));
+    expect(JSON.parse(spy.mock.calls[1][1]!.body as string).generationConfig.thinkingConfig).toBeUndefined();
+  });
+});
+
+describe('retired models', () => {
+  it('a retired id in the admin pool is never called', async () => {
+    const cfg = FALLBACK_AI_MODELS_CONFIG;
+    useAIConfigStore.getState().setConfig({ ...cfg, providers: { ...cfg.providers, gemini: { ...cfg.providers.gemini,
+      models: [{ id: 'gemini-1.5-flash', label: '1.5', note: '', ctxWindow: null, vision: true, imageCap: null }, ...cfg.providers.gemini.models] } } });
+    const spy = vi.spyOn(global, 'fetch').mockResolvedValue(ok());
+    await callAIGateway('p', ['img'], 'json', 'heavy');
+    expect(modelOf(spy.mock.calls[0])).not.toBe('gemini-1.5-flash');
+  });
+  it("a retired profile pick is mapped forward, not sent", async () => {
+    useProfileStore.getState().updateProfile({ geminiModel: 'gemini-1.5-flash' } as never);
+    const spy = vi.spyOn(global, 'fetch').mockResolvedValue(ok());
+    await callAIGateway('p', ['img'], 'json', 'heavy');
+    expect(modelOf(spy.mock.calls[0])).toBe('gemini-2.5-flash');
+  });
 });
 
 describe('terminal cases', () => {

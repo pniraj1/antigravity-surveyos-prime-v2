@@ -146,6 +146,13 @@ function getProfileFromStorage() {
   }
 }
 
+/** The surveyor's saved Gemini pick, with retired ids mapped forward; blank → the measured default. */
+function preferredGeminiModel(profile: ReturnType<typeof getProfileFromStorage>): string {
+  const saved = profile?.geminiModel?.trim();
+  if (!saved) return CURRENT_MODELS.gemini;
+  return DEPRECATED_GEMINI_MODELS[saved] ?? saved;
+}
+
 /** Collect all non-empty keys for a provider (new array + legacy single key). */
 function resolveGeminiKeys(profile: ReturnType<typeof getProfileFromStorage>): string[] {
   const keys: string[] = [];
@@ -182,7 +189,7 @@ export function getActiveImageCap(job: AIJob = 'heavy'): number | null {
   const pool = buildPool(getProfileFromStorage());
   try {
     // ponytail: until Phase 2 puts probe verdicts in the pool, the measured-exact model leads; the surveyor's pick still overrides.
-    const [first] = rankModels(job, ['x'], pool, { health: getHealth(), preferredModel: getProfileFromStorage()?.geminiModel?.trim() || CURRENT_MODELS.gemini });
+    const [first] = rankModels(job, ['x'], pool, { health: getHealth(), preferredModel: preferredGeminiModel(getProfileFromStorage()) });
     return first?.model.imageCap ?? null;
   } catch { return null; }
 }
@@ -496,7 +503,13 @@ export function buildPool(profile: ReturnType<typeof getProfileFromStorage>): Po
     if (!block?.enabled) continue;
     const keys = KEY_FIELDS[provider](profile);
     if (keys.length === 0) continue;
-    for (const model of block.models) pool.push({ provider, model, proxied: PROXIED.has(provider), keys });
+    // Live 2026-09-16: an admin pool still listing gemini-1.5-flash (404) sent
+    // every estimate there first. Retired ids never enter the chain.
+    const retired = provider === 'gemini' ? DEPRECATED_GEMINI_MODELS : provider === 'groq' ? DEPRECATED_GROQ_MODELS : {};
+    for (const model of block.models) {
+      if (model.id in retired) continue;
+      pool.push({ provider, model, proxied: PROXIED.has(provider), keys });
+    }
   }
   return pool;
 }
@@ -582,6 +595,13 @@ async function callWithFallback(
           break keys;                                   // MAX_TOKENS → next model
         } catch (err: any) {
           if (err?.name === 'AbortError' && signal?.aborted) throw err;
+          // Live 2026-09-16: gemini-3.5-flash-lite answers thinkingBudget:0 with a
+          // bare "Request contains an invalid argument" — no word "thinking" —
+          // so any Gemini 400 gets one retry with thinking on before it is judged.
+          if (err?.status === 400 && entry.provider === 'gemini' && thinkingOff) {
+            console.info(`[ai-fallback] ${entry.provider}/${entry.model.id} key#${i + 1} → 400: retry-no-thinking`);
+            thinkingOff = false; i--; continue;
+          }
           const d = stepFor(err, entry.provider);
           if ('throw' in d) throw d.throw;
           health.recordCall(entry.model.id, d.busy ? 'busy' : 'other');
@@ -674,7 +694,7 @@ export async function callAIGateway(
       model: { id: master.model, label: master.model, note: '', ctxWindow: null, vision: true, imageCap: master.maxImages ?? null } }];
   }
   // ponytail: until Phase 2 puts probe verdicts in the pool, the measured-exact model leads; the surveyor's pick still overrides.
-  const preferred = profile?.geminiModel?.trim() || CURRENT_MODELS.gemini;
+  const preferred = preferredGeminiModel(profile);
   return callWithFallback(job, prompt, images, responseFormat, session, signal, pool, preferred);
 }
 
