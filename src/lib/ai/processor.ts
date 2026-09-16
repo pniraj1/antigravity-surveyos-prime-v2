@@ -9,7 +9,7 @@ import { resolveVisionChunkSize } from './image-cap';
 import { getDocPrompt } from './prompts';
 import { jobForDocType } from './jobs';
 import { toast } from 'sonner';
-import { rowCheck, tagRows, dropDuplicates, mergeBySerial, stripPageTags, toFindings, countRows, type Finding } from './row-check';
+import { rowCheck, tagRows, dropDuplicates, toFindings, type Finding } from './row-check';
 import { fillGaps } from './gap-fill';
 import { takeDrop } from './fault';
 
@@ -641,6 +641,7 @@ export async function extractDocument(
     }
 
     let { result: finalResult, issues: pageIssues } = await runAllChunks();
+    const firstPassModel = session.lastGood?.model;
 
     const money = key === 'estimate' || key === 'final-bill';
     // Text-mode pages give us something to verify the printed gross against;
@@ -655,19 +656,25 @@ export async function extractDocument(
         console.info(`[ai-fault] dropped serial ${drop} from the first pass`);
       }
 
+      const dupes = rowCheck(finalResult, pageTexts).duplicates;
+      if (dupes.length) console.info('[Smart Fix] dropped duplicate serials', dupes);
       finalResult = dropDuplicates(finalResult);
       let check = rowCheck(finalResult, pageTexts);
-      if (check.duplicates.length) console.info('[Smart Fix] dropped duplicate serials', check.duplicates);
 
       if (check.gaps.length) {
         console.info('[Smart Fix] serial gaps after first pass:', check.gaps);
-        finalResult = await fillGaps({
-          basePrompt: enhancedPrompt, apiImages, data: finalResult,
-          srNos: check.gaps.map(g => g.srNo),
-          pages: [...new Set(check.gaps.flatMap(g => g.pages))],
-          session, signal, onProgress: msg => onProgress?.(msg),
-        });
-        check = rowCheck(finalResult, pageTexts);
+        try {
+          finalResult = await fillGaps({
+            basePrompt: enhancedPrompt, apiImages, data: finalResult,
+            srNos: check.gaps.map(g => g.srNo),
+            pages: [...new Set(check.gaps.flatMap(g => g.pages))],
+            session, signal, onProgress: msg => onProgress?.(msg),
+          });
+          check = rowCheck(finalResult, pageTexts);
+        } catch (e) {
+          if (signal?.aborted || (e as { name?: string })?.name === 'AbortError') throw e;
+          console.warn('[Smart Fix] gap fill unavailable — keeping first result', e);
+        }
       }
 
       // ponytail: the second opinion re-runs the WHOLE document on the next
@@ -675,23 +682,22 @@ export async function extractDocument(
       // an unserialled row is gone and no page can be pinned.
       if (check.grossMismatch && check.gaps.length === 0 && session.lastGood) {
         console.info('[ai-fallback] gross does not reconcile and no serial gap explains it:', check.grossMismatch);
-        const firstModel = session.lastGood.model;
         onProgress?.('Totals don\'t add up — asking a second AI model to re-read the document…');
-        session.avoid.add(firstModel);
+        if (firstPassModel) session.avoid.add(firstPassModel);
         session.lastGood = undefined;
         try {
           const second = await runAllChunks(true);
           const secondData = dropDuplicates(second.result);
           if (!needsSecondOpinion(key, secondData, pageTexts)) {
             const secondModel = (session as typeof session).lastGood?.model;
-            console.info(`[ai-fallback] second opinion from ${secondModel} reconciles; first (${firstModel}) did not.`);
+            console.info(`[ai-fallback] second opinion from ${secondModel} reconciles; first (${firstPassModel}) did not.`);
             finalResult = secondData; pageIssues = second.issues;
           }
         } catch (e) {
           if (signal?.aborted || (e as { name?: string })?.name === 'AbortError') throw e;
           console.warn('[ai-fallback] second opinion unavailable — keeping first result', e);
         } finally {
-          session.avoid.delete(firstModel);
+          if (firstPassModel) session.avoid.delete(firstPassModel);
         }
       }
     }
