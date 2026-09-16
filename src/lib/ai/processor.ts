@@ -475,6 +475,12 @@ function validateMath(data: any, docType: string): { isValid: boolean; discrepan
   };
 }
 
+/** True when the extraction's own arithmetic fails — the trigger for one re-run on the next model. */
+export function needsSecondOpinion(docType: string, data: unknown): boolean {
+  if (!data || typeof data !== 'object') return false;
+  return !validateMath(data, docType).isValid;
+}
+
 /** Thrown when the surveyor cancels. Named so callers can stay silent on it. */
 function abortError(): Error {
   const e = new Error('Extraction cancelled');
@@ -554,17 +560,13 @@ export async function extractDocument(
       enhancedPrompt = `${prompt}\n\nNOTE: This appears to be a digitally-created document (not scanned). The extracted text layer is provided below for reference to guide your extraction:\n\n${textPreview}\n\nUse this text as a reference to ensure accuracy, but validate against the visual document.`;
     }
 
-    // Single-pass extraction — no automatic re-scan on math discrepancies.
-    // Discrepancies are surfaced to the surveyor via a toast; they evaluate manually.
-    let finalResult: any = null;
-    let discrepancies: string[] = [];
-    // Pages the AI could not (fully) read — surfaced to the surveyor alongside
-    // math discrepancies so missing line items are never silent.
-    const pageIssues: string[] = [];
-
-    // Single pass — no retry loop
-    {
-      finalResult = null;
+    // One pass over every chunk. Runs a second time (on the next model) only
+    // when the first pass fails the math check — see needsSecondOpinion below.
+    async function runAllChunks(): Promise<{ result: any; issues: string[] }> {
+      let result: any = null;
+      // Pages the AI could not (fully) read — surfaced to the surveyor alongside
+      // math discrepancies so missing line items are never silent.
+      const issues: string[] = [];
 
       for (let i = 0; i < totalPages; i += CHUNK_SIZE) {
         // Cancelled between pages — stop before spending another call.
@@ -634,7 +636,7 @@ export async function extractDocument(
             chunkPrompt = candidatePrompt;
             chunkImages = []; // pure text mode — no images
             if (pageTruncated) {
-              pageIssues.push(`Page ${currentBatchStart} is very dense and was only partially read — verify its line items against the document.`);
+              issues.push(`Page ${currentBatchStart} is very dense and was only partially read — verify its line items against the document.`);
             }
           }
         } else {
@@ -706,7 +708,7 @@ export async function extractDocument(
 
         try {
           const fragment = JSON.parse(rawResponse);
-          finalResult = mergeAIResults(finalResult, fragment);
+          result = mergeAIResults(result, fragment);
         } catch (err) {
           // For multi-page docs: one bad page should not abort the whole extraction.
           // Log the failure and continue accumulating results from other pages.
@@ -723,14 +725,41 @@ export async function extractDocument(
           const pageLabel = currentBatchStart === currentBatchEnd
             ? `Page ${currentBatchStart}`
             : `Pages ${currentBatchStart}–${currentBatchEnd}`;
-          pageIssues.push(`${pageLabel} could not be read by the AI — line items from ${currentBatchStart === currentBatchEnd ? 'this page' : 'these pages'} may be missing.`);
+          issues.push(`${pageLabel} could not be read by the AI — line items from ${currentBatchStart === currentBatchEnd ? 'this page' : 'these pages'} may be missing.`);
         }
       }
 
-      // Validate math — result surfaced to UI layer, no automatic re-scan.
-      const mathCheck = validateMath(finalResult, key);
-      discrepancies = [...pageIssues, ...mathCheck.discrepancies];
+      return { result, issues };
     }
+
+    let { result: finalResult, issues: pageIssues } = await runAllChunks();
+
+    // ponytail: second opinion re-runs the WHOLE document, not the failing
+    // chunk — totals live on the last page, so a per-chunk check is not
+    // possible. Costs one extra pass only when the arithmetic already failed.
+    // Upgrade path: diff the two results per section and keep the better one.
+    if (needsSecondOpinion(key, finalResult) && session.lastGood) {
+      const firstModel = session.lastGood.model;
+      onProgress?.('Totals don\'t add up — asking a second AI model to re-read the document…');
+      session.avoid.add(firstModel);
+      session.lastGood = undefined;
+      try {
+        const second = await runAllChunks();
+        if (!needsSecondOpinion(key, second.result)) {
+          // runAllChunks re-sets lastGood; TS narrowed it to undefined above.
+          const secondModel = (session as typeof session).lastGood?.model;
+          console.info(`[ai-fallback] second opinion from ${secondModel} passed the math check; first (${firstModel}) did not.`);
+          finalResult = second.result; pageIssues = second.issues;
+        }
+      } catch (e) {
+        console.warn('[ai-fallback] second opinion unavailable — keeping first result', e);
+      }
+      session.avoid.delete(firstModel);
+    }
+
+    // Validate math — result surfaced to UI layer; the surveyor evaluates manually.
+    const mathCheck = validateMath(finalResult, key);
+    const discrepancies: string[] = [...pageIssues, ...mathCheck.discrepancies];
 
     // Log extraction summary for estimate/final-bill documents
     if ((key === 'estimate' || key === 'final-bill') && finalResult) {
