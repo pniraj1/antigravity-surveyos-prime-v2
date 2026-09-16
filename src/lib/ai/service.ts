@@ -17,6 +17,7 @@ import { parseGeminiError, classifyGemini429, isThinkingRejected, isModalityReje
 import { rankModels, type PoolEntry } from './rank';
 import { getHealth, keyHash } from './health';
 import { type AIJob, JOB_TIMEOUT_MS } from './jobs';
+import { tierOf, OLLAMA_REST_MS } from './quota';
 import { useProfileStore } from '@/stores/profile-store';
 import { useUIStore } from '@/stores/ui-store';
 import { toast } from 'sonner';
@@ -146,13 +147,6 @@ function getProfileFromStorage() {
   }
 }
 
-/** The surveyor's saved Gemini pick, with retired ids mapped forward; blank → the measured default. */
-function preferredGeminiModel(profile: ReturnType<typeof getProfileFromStorage>): string {
-  const saved = profile?.geminiModel?.trim();
-  if (!saved) return CURRENT_MODELS.gemini;
-  return DEPRECATED_GEMINI_MODELS[saved] ?? saved;
-}
-
 /** Collect all non-empty keys for a provider (new array + legacy single key). */
 function resolveGeminiKeys(profile: ReturnType<typeof getProfileFromStorage>): string[] {
   const keys: string[] = [];
@@ -188,8 +182,7 @@ export function getActiveImageCap(job: AIJob = 'heavy'): number | null {
   if (override) return buildOverrideProvider(override).maxImages ?? null;
   const pool = buildPool(getProfileFromStorage());
   try {
-    // ponytail: until Phase 2 puts probe verdicts in the pool, the measured-exact model leads; the surveyor's pick still overrides.
-    const [first] = rankModels(job, ['x'], pool, { health: getHealth(), preferredModel: preferredGeminiModel(getProfileFromStorage()) });
+    const [first] = rankModels(job, ['x'], pool, { health: getHealth() });
     return first?.model.imageCap ?? null;
   } catch { return null; }
 }
@@ -472,6 +465,8 @@ export interface GatewaySession {
   avoid: Set<string>;
   /** Hops already announced for this document — one toast per distinct hop. */
   announced: Set<string>;
+  /** Calls this document still needs on a heavy job — a key that cannot cover them is skipped. */
+  pagesTotal?: number;
 }
 export function newSession(id: string): GatewaySession { return { id, avoid: new Set(), announced: new Set() }; }
 
@@ -535,7 +530,7 @@ const noThinking = new Set<string>();
 export function _resetNoThinkingForTests(): void { noThinking.clear(); }
 
 /** Decides what the loop does after one failed call. Pure; the loop applies side effects. */
-function stepFor(err: any, provider: ProviderId): { step: Step; busy?: boolean; deadModel?: boolean; deadProvider?: boolean; notFound?: boolean; reprobe?: boolean } | { throw: Error } {
+function stepFor(err: any, provider: ProviderId): { step: Step; busy?: boolean; deadModel?: boolean; deadProvider?: boolean; notFound?: boolean; reprobe?: boolean; rest?: boolean } | { throw: Error } {
   const kind = classifyGatewayError(err);
   if (kind === 'subscription' || kind === 'unauthenticated') return { step: 'next-provider' };
   if (kind === 'timeout' || err?.name === 'TimeoutError') return { step: 'next-model', busy: true };
@@ -548,7 +543,9 @@ function stepFor(err: any, provider: ProviderId): { step: Step; busy?: boolean; 
     if (q === 'zero') return { step: 'next-model', notFound: true };
     if (q?.scope === 'model') return q.period === 'day' ? { step: 'next-model', deadModel: true } : { step: 'next-model', busy: true };
     if (q?.scope === 'project' && q.period === 'day') return { step: 'next-key', deadProvider: true };
-    return { step: 'next-key' };
+    // Gemini minute/project limits rotate keys; any other provider's 429 is an
+    // unpublished usage window — park this key:model for one window and move on.
+    return provider === 'gemini' ? { step: 'next-key' } : { step: 'next-model', rest: true };
   }
   if (status === 404) return { step: 'next-model', notFound: true };
   if (status === 402) return { step: 'next-model', reprobe: true };
@@ -566,7 +563,7 @@ function announce(session: GatewaySession | undefined, key: string, text: string
 
 async function callWithFallback(
   job: AIJob, prompt: string, images: string[], responseFormat: 'json' | 'text',
-  session: GatewaySession | undefined, signal: AbortSignal | undefined, pool: PoolEntry[], preferredModel?: string,
+  session: GatewaySession | undefined, signal: AbortSignal | undefined, pool: PoolEntry[],
 ): Promise<string> {
   const health = getHealth();
   const timeoutMs = JOB_TIMEOUT_MS[job];
@@ -589,6 +586,7 @@ async function callWithFallback(
         const key = entry.keys[i];
         try {
           calls++;
+          health.recordSpend(keyHash(key), entry.model.id);
           const res = await callWithKey(provider, key, prompt, images, responseFormat, { timeoutMs, thinkingOff });
           if (res.finish === 'STOP' || res.finish === 'OTHER') {
             health.recordCall(entry.model.id, 'ok');
@@ -613,6 +611,7 @@ async function callWithFallback(
           if (isNetworkError(err)) networkErrors++;
           if (d.deadModel) { health.markDeadToday(keyHash(key), entry.model.id); announce(session, `dead:${entry.model.id}`, `${label} has hit today's free limit (resets ${health.deadUntilLabel()}) — trying the next model.`); }
           if (d.deadProvider) health.markDeadToday(keyHash(key), '*');
+          if (d.rest) health.rest(keyHash(key), entry.model.id, OLLAMA_REST_MS);
           if (d.notFound) health.markNotFound(entry.model.id);
           if (d.reprobe) console.warn(`[ai-fallback] ${entry.model.id} rejected the request (${err.status}) — admin should re-probe.`);
           lastBusy = !!d.busy;
@@ -646,7 +645,8 @@ async function callWithFallback(
     throw new AllProvidersBusyError(job, tried);
   };
 
-  let chain = rankModels(job, images, pool, { health, preferredModel, avoid: session?.avoid });
+  const pagesNeeded = job === 'heavy' ? session?.pagesTotal ?? 1 : 1;
+  let chain = rankModels(job, images, pool, { health, avoid: session?.avoid, pagesNeeded });
   if (session?.lastGood) {
     const i = chain.findIndex(e => e.model.id === session.lastGood!.model);
     if (i > 0) chain = [...chain.slice(i), ...chain.slice(0, i)];
@@ -655,6 +655,19 @@ async function callWithFallback(
     // Nothing left to walk today — say so instead of "busy, try again in a minute".
     toast.error(`Today's free limit is used up on every model (resets ${health.deadUntilLabel()}). Add a backup key in Profile → AI & Documents Intelligence.`, { duration: 10000 });
     throw new AllProvidersBusyError(job, []);
+  }
+  // Heavy fell off the Flash tier because no Flash key can cover this document.
+  // Tell the surveyor once a day — unless Ollama is there, which handles it fine.
+  if (job === 'heavy' && chain[0] && tierOf(chain[0].provider, chain[0].model.id) !== 'flash'
+      && pool.some(e => tierOf(e.provider, e.model.id) === 'flash' && e.keys.length > 0)
+      && !pool.some(e => e.provider === 'ollama')) {
+    try {
+      const k = 'surveyos.ai.nudge.flash';
+      if (Date.now() - Number(localStorage.getItem(k) ?? 0) > 86_400_000) {
+        toast.info("Today's Flash quota is used up — reading with Flash-Lite", { duration: 8000 });
+        localStorage.setItem(k, String(Date.now()));
+      }
+    } catch { /* no nudge memory */ }
   }
 
   try {
@@ -698,9 +711,7 @@ export async function callAIGateway(
     pool = [{ provider: master.name as ProviderId, proxied: PROXIED.has(master.name as ProviderId), keys: master.keys,
       model: { id: master.model, label: master.model, note: '', ctxWindow: null, vision: true, imageCap: master.maxImages ?? null } }];
   }
-  // ponytail: until Phase 2 puts probe verdicts in the pool, the measured-exact model leads; the surveyor's pick still overrides.
-  const preferred = preferredGeminiModel(profile);
-  return callWithFallback(job, prompt, images, responseFormat, session, signal, pool, preferred);
+  return callWithFallback(job, prompt, images, responseFormat, session, signal, pool);
 }
 
 

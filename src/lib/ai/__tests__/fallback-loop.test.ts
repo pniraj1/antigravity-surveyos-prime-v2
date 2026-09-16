@@ -29,11 +29,58 @@ beforeEach(() => {
 });
 afterEach(() => vi.restoreAllMocks());
 
-describe('preferred model', () => {
-  it('no surveyor pick → the measured model (CURRENT_MODELS.gemini) is tried first, not the strongest untested one', async () => {
+describe('quota-aware order', () => {
+  it('heavy: a Flash-tier model is tried first when its budget covers the document', async () => {
     const spy = vi.spyOn(global, 'fetch').mockResolvedValue(ok());
-    await callAIGateway('p', ['img'], 'json', 'heavy');
-    expect(modelOf(spy.mock.calls[0])).toBe(CURRENT_MODELS.gemini);
+    const s = newSession('t'); s.pagesTotal = 5;
+    await callAIGateway('p', ['img'], 'json', 'heavy', s);
+    expect(modelOf(spy.mock.calls[0])).toMatch(/flash$/);          // 2.5-flash or 3.5-flash, not -lite
+  });
+  it('light: Flash-Lite is tried first — Flash quota is reserved for estimates', async () => {
+    const spy = vi.spyOn(global, 'fetch').mockResolvedValue(ok());
+    await callAIGateway('p', ['img'], 'json', 'light');
+    expect(modelOf(spy.mock.calls[0])).toMatch(/lite/);
+  });
+  it('every call spends one unit on that key:model, including the no-thinking retry', async () => {
+    const spy = vi.spyOn(global, 'fetch').mockResolvedValueOnce(fail(400, 'Request contains an invalid argument.')).mockResolvedValueOnce(ok());
+    await callAIGateway('p', ['img'], 'json', 'light');
+    const m = modelOf(spy.mock.calls[0]);
+    expect(health.remaining(keyHash('g1'), m, 500)).toBe(498);
+  });
+  it('heavy: when every Flash key is below the page count, Flash-Lite leads and the surveyor is told once', async () => {
+    const spy = vi.spyOn(global, 'fetch').mockResolvedValue(ok());
+    for (const m of ['gemini-2.5-flash', 'gemini-3.5-flash']) for (let i = 0; i < 18; i++) health.recordSpend(keyHash('g1'), m);
+    const s = newSession('t'); s.pagesTotal = 5;
+    await callAIGateway('p', ['img'], 'json', 'heavy', s);
+    expect(modelOf(spy.mock.calls[0])).toMatch(/lite/);
+    expect(toast.info.mock.calls.some(c => /Flash quota is used up/.test(String(c[0])))).toBe(true);
+    toast.info.mockClear();
+    await callAIGateway('p', ['img'], 'json', 'heavy', newSession('t2'));
+    expect(toast.info.mock.calls.some(c => /Flash quota is used up/.test(String(c[0])))).toBe(false);   // once a day
+  });
+  it('heavy: with an Ollama key the Flash-exhausted toast is silent', async () => {
+    useProfileStore.getState().updateProfile({ ollamaApiKeys: ['o1'] } as never);
+    callAiProxy.mockResolvedValue({ ok: true, status: 200, body: JSON.stringify({ message: { content: '{"x":1}' }, done_reason: 'stop' }) });
+    vi.spyOn(global, 'fetch').mockResolvedValue(ok());
+    for (const m of ['gemini-2.5-flash', 'gemini-3.5-flash']) for (let i = 0; i < 20; i++) health.recordSpend(keyHash('g1'), m);
+    const s = newSession('t'); s.pagesTotal = 5;
+    await callAIGateway('p', ['img'], 'json', 'heavy', s);
+    expect(toast.info.mock.calls.some(c => /Flash quota/.test(String(c[0])))).toBe(false);
+  });
+  it('second key is used when the first cannot cover the document', async () => {
+    useProfileStore.getState().updateProfile({ geminiApiKeys: ['g1', 'g2'] } as never);
+    for (const m of ['gemini-2.5-flash', 'gemini-3.5-flash']) for (let i = 0; i < 18; i++) health.recordSpend(keyHash('g1'), m);
+    const spy = vi.spyOn(global, 'fetch').mockResolvedValue(ok());
+    const s = newSession('t'); s.pagesTotal = 5;
+    await callAIGateway('p', ['img'], 'json', 'heavy', s);
+    expect(modelOf(spy.mock.calls[0])).toMatch(/flash$/);
+    expect((spy.mock.calls[0][1]!.headers as any)['x-goog-api-key']).toBe('g2');
+  });
+  it('Ollama 429 → rest that model one hour and hop', async () => {
+    useProfileStore.getState().updateProfile({ geminiApiKeys: [], ollamaApiKeys: ['o1'] } as never);
+    callAiProxy.mockResolvedValueOnce({ ok: false, status: 429, body: 'usage limit' });
+    await expect(callAIGateway('p', ['img'], 'json', 'light')).rejects.toBeInstanceOf(AllProvidersBusyError);
+    expect(health.remaining(keyHash('o1'), 'gemma4:31b', Infinity)).toBe(0);
   });
 });
 
@@ -150,12 +197,6 @@ describe('retired models', () => {
     const spy = vi.spyOn(global, 'fetch').mockResolvedValue(ok());
     await callAIGateway('p', ['img'], 'json', 'heavy');
     expect(modelOf(spy.mock.calls[0])).not.toBe('gemini-1.5-flash');
-  });
-  it("a retired profile pick is mapped forward, not sent", async () => {
-    useProfileStore.getState().updateProfile({ geminiModel: 'gemini-1.5-flash' } as never);
-    const spy = vi.spyOn(global, 'fetch').mockResolvedValue(ok());
-    await callAIGateway('p', ['img'], 'json', 'heavy');
-    expect(modelOf(spy.mock.calls[0])).toBe('gemini-2.5-flash');
   });
 });
 
