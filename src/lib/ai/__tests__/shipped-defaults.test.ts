@@ -66,14 +66,14 @@ describe('shipped default models are alive', () => {
 
   it('the offline fallback config offers nothing dead', () => {
     for (const [provider, block] of Object.entries(FALLBACK_AI_MODELS_CONFIG.providers)) {
-      assertLive(block.models.map(m => m.id), `FALLBACK_AI_MODELS_CONFIG.${provider}`);
-      assertLive([block.defaultModel], `FALLBACK_AI_MODELS_CONFIG.${provider}.defaultModel`);
+      assertLive((block.models ?? []).map(m => m.id), `FALLBACK_AI_MODELS_CONFIG.${provider}`);
+      assertLive([block.defaultModel ?? ''], `FALLBACK_AI_MODELS_CONFIG.${provider}.defaultModel`);
     }
   });
 
   it('every provider default appears in its own model list', () => {
     for (const [provider, block] of Object.entries(FALLBACK_AI_MODELS_CONFIG.providers)) {
-      expect(block.models.map(m => m.id), `${provider} default is not in its list`)
+      expect((block.models ?? []).map(m => m.id), `${provider} default is not in its list`)
         .toContain(block.defaultModel);
     }
   });

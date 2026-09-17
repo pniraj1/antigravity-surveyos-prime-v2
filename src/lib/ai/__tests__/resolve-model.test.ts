@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { resolveEnabledModel } from '../service';
 import type { ProviderConfig } from '../models-config';
+import { emptyProviderConfig } from '../models-config';
 
 const cfg: ProviderConfig = {
-  enabled: true,
+  ...emptyProviderConfig(),
   defaultModel: 'gemini-2.5-flash',
   models: [
     { id: 'gemini-2.5-flash', label: 'x', note: '', ctxWindow: null, vision: true, imageCap: null },

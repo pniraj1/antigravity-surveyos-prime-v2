@@ -28,8 +28,8 @@ import { useAIConfigStore } from '@/stores/ai-config-store';
 /** Returns the saved model if still enabled, else the provider's configured default. */
 export function resolveEnabledModel(saved: string | undefined, providerCfg: ProviderConfig): string {
   const trimmed = saved?.trim();
-  if (trimmed && providerCfg.models.some(m => m.id === trimmed)) return trimmed;
-  return providerCfg.defaultModel;
+  if (trimmed && (providerCfg.models ?? []).some(m => m.id === trimmed)) return trimmed;
+  return providerCfg.defaultModel ?? '';
 }
 
 // ─── Admin test override ──────────────────────────────────────────────────────
@@ -501,7 +501,7 @@ export function buildPool(profile: ReturnType<typeof getProfileFromStorage>): Po
     // Live 2026-09-16: an admin pool still listing gemini-1.5-flash (404) sent
     // every estimate there first. Retired ids never enter the chain.
     const retired = provider === 'gemini' ? DEPRECATED_GEMINI_MODELS : provider === 'groq' ? DEPRECATED_GROQ_MODELS : {};
-    for (const model of block.models) {
+    for (const model of block.models ?? []) {
       if (model.id in retired) continue;
       pool.push({ provider, model, proxied: PROXIED.has(provider), keys });
     }

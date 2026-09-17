@@ -9,7 +9,7 @@ vi.mock('@/lib/firebase/config', () => ({ getFirebaseApp: () => ({}), db: {} }))
 import { callAIGateway, newSession, AllProvidersBusyError, OfflineError, CURRENT_MODELS, _resetNoThinkingForTests } from '../service';
 import { useProfileStore } from '@/stores/profile-store';
 import { useAIConfigStore } from '@/stores/ai-config-store';
-import { FALLBACK_AI_MODELS_CONFIG } from '../models-config';
+import { FALLBACK_AI_MODELS_CONFIG, emptyProviderConfig } from '../models-config';
 import { resetHealthForTests, keyHash } from '../health';
 
 function mem() { const m = new Map<string, string>(); return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, v); } }; }
@@ -113,9 +113,9 @@ describe('quota-aware order', () => {
       providers: {
         ...FALLBACK_AI_MODELS_CONFIG.providers,
         gemini: {
-          enabled: true,
+          ...emptyProviderConfig(),
           defaultModel: 'gemini-2.5-flash',
-          models: FALLBACK_AI_MODELS_CONFIG.providers.gemini.models.filter(m => !/lite/.test(m.id)),
+          models: (FALLBACK_AI_MODELS_CONFIG.providers.gemini.models ?? []).filter(m => !/lite/.test(m.id)),
         },
       },
     });
@@ -242,7 +242,7 @@ describe('retired models', () => {
   it('a retired id in the admin pool is never called', async () => {
     const cfg = FALLBACK_AI_MODELS_CONFIG;
     useAIConfigStore.getState().setConfig({ ...cfg, providers: { ...cfg.providers, gemini: { ...cfg.providers.gemini,
-      models: [{ id: 'gemini-1.5-flash', label: '1.5', note: '', ctxWindow: null, vision: true, imageCap: null }, ...cfg.providers.gemini.models] } } });
+      models: [{ id: 'gemini-1.5-flash', label: '1.5', note: '', ctxWindow: null, vision: true, imageCap: null }, ...(cfg.providers.gemini.models ?? [])] } } });
     const spy = vi.spyOn(global, 'fetch').mockResolvedValue(ok());
     await callAIGateway('p', ['img'], 'json', 'heavy');
     expect(modelOf(spy.mock.calls[0])).not.toBe('gemini-1.5-flash');

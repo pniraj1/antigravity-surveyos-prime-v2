@@ -56,10 +56,11 @@ export function reconcileEnabledModels(
     // about its models. Leave the working config exactly as it was.
     if (!probe || probe.error !== null || Object.keys(probe.models).length === 0) continue;
 
-    const survivors = block.models.filter(m => !shouldRemove(probe.models[m.id]));
-    if (survivors.length === block.models.length) continue;
+    const models = block.models ?? [];
+    const survivors = models.filter(m => !shouldRemove(probe.models[m.id]));
+    if (survivors.length === models.length) continue;
 
-    for (const m of block.models) {
+    for (const m of models) {
       const result = probe.models[m.id];
       if (!shouldRemove(result)) continue;
       removed.push({

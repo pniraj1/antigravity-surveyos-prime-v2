@@ -55,14 +55,14 @@ export function ModelSelector() {
   // Admin-curated config is the menu. Gemini may still merge the per-user live
   // list if the admin hasn't curated any models yet.
   const models = provider === 'gemini'
-    ? (providerCfg.models.length > 0 ? providerCfg.models : (availableGeminiModels ?? PROVIDER_MODELS.gemini))
-    : (providerCfg.models.length > 0 ? providerCfg.models : PROVIDER_MODELS[provider] ?? []);
+    ? ((providerCfg.models ?? []).length > 0 ? providerCfg.models! : (availableGeminiModels ?? PROVIDER_MODELS.gemini))
+    : ((providerCfg.models ?? []).length > 0 ? providerCfg.models! : PROVIDER_MODELS[provider] ?? []);
 
   const activeId = provider === 'gemini'
-    ? (profile.geminiModel?.trim() || providerCfg.defaultModel)
+    ? (profile.geminiModel?.trim() || (providerCfg.defaultModel ?? ''))
     : provider === 'nvidia'
-    ? (profile.nvidiaModel?.trim() || providerCfg.defaultModel)
-    : (profile.groqModel?.trim() || providerCfg.defaultModel);
+    ? (profile.nvidiaModel?.trim() || (providerCfg.defaultModel ?? ''))
+    : (profile.groqModel?.trim() || (providerCfg.defaultModel ?? ''));
 
   useEffect(() => {
     if (provider !== 'gemini' || availableGeminiModels !== null) return;

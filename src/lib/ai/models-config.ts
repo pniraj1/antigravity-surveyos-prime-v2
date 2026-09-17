@@ -1,5 +1,6 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
+import type { ModelProbes } from './probe-types';
 
 export type ProviderId = 'gemini' | 'groq' | 'nvidia' | 'ollama';
 
@@ -12,13 +13,23 @@ export interface ModelEntry {
   imageCap: number | null;
 }
 
+export interface FallbackModel { id: string; label: string; vision: boolean; imageCap: number | null; ctxWindow: number | null }
+
 export interface ProviderConfig {
   enabled: boolean;
-  defaultModel: string;
-  models: ModelEntry[];
+  excluded: string[];
+  excludedReason: Record<string, string>;
+  keep: string[];
+  limits: Record<string, number>;
+  notes: Record<string, string>;
+  /** @deprecated legacy tick-list; read by migrateConfig, written empty; removed in 2-D */
+  models?: ModelEntry[];
+  /** @deprecated */
+  defaultModel?: string;
 }
 
 export interface AIModelsConfig {
+  schema?: 1 | 2;
   updatedAt: number | null;
   updatedBy: string;
   defaultProvider: ProviderId;
@@ -48,69 +59,33 @@ export function formatCtx(n: number): string {
   return String(n);
 }
 
-/**
- * The image cap that applies to a specific enabled model: the probed value
- * recorded on its ModelEntry, falling back to the provider default when the
- * model has not been probed.
- *
- * The cap is genuinely per-model, not per-provider: nvidia/nemotron-nano-12b-v2-vl
- * accepts 2 images while meta/llama-3.2-90b-vision-instruct rejects them.
- */
-export function resolveModelImageCap(
-  providerId: ProviderId,
-  modelId: string,
-  block: ProviderConfig,
-): number | null {
-  const probed = block.models.find(m => m.id === modelId)?.imageCap;
-  return probed ?? PROVIDER_IMAGE_CAPS[providerId];
-}
+/** Used only when the probes doc has never been written. Ids verified live 2026-09-16. */
+export const FALLBACK_MODELS: Record<ProviderId, FallbackModel[]> = {
+  gemini: [
+    { id: 'gemini-2.5-flash', label: '2.5 Flash', vision: true, imageCap: null, ctxWindow: 1_048_576 },
+    { id: 'gemini-flash-lite-latest', label: 'Flash-Lite', vision: true, imageCap: null, ctxWindow: 1_048_576 },
+    { id: 'gemini-3.5-flash', label: '3.5 Flash', vision: true, imageCap: null, ctxWindow: 1_048_576 },
+  ],
+  groq: [{ id: 'qwen/qwen3.6-27b', label: 'Qwen 3.6 27B', vision: true, imageCap: 5, ctxWindow: 131_072 }],
+  nvidia: [{ id: 'meta/llama-3.2-90b-vision-instruct', label: 'Llama 3.2 90B', vision: true, imageCap: 1, ctxWindow: 128_000 }],
+  ollama: [{ id: 'gemma4:31b', label: 'Gemma 4 31B', vision: true, imageCap: null, ctxWindow: 131_072 }],
+};
 
-function entry(p: ProviderId, id: string, label: string, note: string, ctxWindow: number | null, vision: boolean): ModelEntry {
-  return { id, label, note, ctxWindow, vision, imageCap: PROVIDER_IMAGE_CAPS[p] };
+export function emptyProviderConfig(enabled = true): ProviderConfig {
+  return { enabled, excluded: [], excludedReason: {}, keep: [], limits: {}, notes: {}, models: [], defaultModel: '' };
 }
 
 /** Offline fallback used when Firestore is unreachable or the doc is absent. */
 export const FALLBACK_AI_MODELS_CONFIG: AIModelsConfig = {
+  schema: 2,
   updatedAt: null,
   updatedBy: 'fallback',
   defaultProvider: 'gemini',
   providers: {
-    // Every id below was verified by live API call on 2026-08-10 and is guarded
-    // by src/lib/ai/__tests__/shipped-defaults.test.ts.
-    gemini: {
-      enabled: true,
-      defaultModel: 'gemini-2.5-flash',
-      models: [
-        entry('gemini', 'gemini-2.5-flash', '2.5 Flash', 'Best value · ~10s/page', 1_048_576, true),
-        entry('gemini', 'gemini-flash-lite-latest', 'Flash-Lite', 'Fastest · ~3s/page', 1_048_576, true),
-        entry('gemini', 'gemini-3.5-flash', '3.5 Flash', 'Newer · ~15s/page', 1_048_576, true),
-      ],
-    },
-    groq: {
-      enabled: true,
-      defaultModel: 'llama-3.3-70b-versatile',
-      models: [
-        entry('groq', 'llama-3.3-70b-versatile', 'Llama 3.3 70B', 'Fastest correct · ~2.3s/page · text only', 131_072, false),
-        entry('groq', 'qwen/qwen3.6-27b', 'Qwen 3.6 27B', 'Only vision model · 8K TPM limits scans', 131_072, true),
-      ],
-    },
-    nvidia: {
-      enabled: true,
-      defaultModel: 'meta/llama-3.2-90b-vision-instruct',
-      models: [
-        entry('nvidia', 'meta/llama-3.2-90b-vision-instruct', 'Llama 3.2 90B', 'Best vision', 128_000, true),
-        entry('nvidia', 'meta/llama-3.2-11b-vision-instruct', 'Llama 3.2 11B', 'Smaller · faster', 128_000, true),
-      ],
-    },
-    ollama: {
-      enabled: true,
-      defaultModel: 'gemma4:31b',
-      models: [
-        // The only vision model on Ollama Cloud's free tier (every other
-        // multimodal model returned 402 on 2026-09-15). Reached via aiProxy.
-        entry('ollama', 'gemma4:31b', 'Gemma 4 31B', 'Free on Ollama Cloud · vision · ~55s/5 pages · via proxy', 131_072, true),
-      ],
-    },
+    gemini: { ...emptyProviderConfig(), models: FALLBACK_MODELS.gemini.map(m => ({ ...m, note: '' })), defaultModel: FALLBACK_MODELS.gemini[0].id },
+    groq: { ...emptyProviderConfig(), models: FALLBACK_MODELS.groq.map(m => ({ ...m, note: '' })), defaultModel: FALLBACK_MODELS.groq[0].id },
+    nvidia: { ...emptyProviderConfig(), models: FALLBACK_MODELS.nvidia.map(m => ({ ...m, note: '' })), defaultModel: FALLBACK_MODELS.nvidia[0].id },
+    ollama: { ...emptyProviderConfig(), models: FALLBACK_MODELS.ollama.map(m => ({ ...m, note: '' })), defaultModel: FALLBACK_MODELS.ollama[0].id },
   },
 };
 
@@ -121,14 +96,35 @@ export function mergeWithFallback(raw: Partial<AIModelsConfig> | null): AIModels
   if (!raw || !raw.providers) return FALLBACK_AI_MODELS_CONFIG;
   const providers = { ...FALLBACK_AI_MODELS_CONFIG.providers };
   for (const p of PROVIDER_IDS) {
-    if (raw.providers[p]) providers[p] = raw.providers[p]!;
+    if (raw.providers[p]) providers[p] = { ...emptyProviderConfig(), ...raw.providers[p]! };
   }
   return {
+    schema: raw.schema,
     updatedAt: raw.updatedAt ?? null,
     updatedBy: raw.updatedBy ?? 'unknown',
     defaultProvider: raw.defaultProvider ?? FALLBACK_AI_MODELS_CONFIG.defaultProvider,
     providers,
   };
+}
+
+/**
+ * Old docs are a tick-list (`models`). The veto model needs the complement:
+ * everything the probe found working that the admin had NOT ticked. Without
+ * probes the complement is unknowable, so nothing is excluded — the admin
+ * sees the full chain after the next probe and vetoes from there.
+ */
+export function migrateConfig(raw: AIModelsConfig, probes: ModelProbes | null): AIModelsConfig {
+  if (raw.schema === 2) return raw;
+  const providers = { ...raw.providers };
+  for (const p of PROVIDER_IDS) {
+    const block: ProviderConfig = { ...emptyProviderConfig(), ...(raw.providers[p] ?? {}) };
+    const ticked = block.models ?? [];
+    const okIds = Object.values(probes?.providers[p]?.models ?? {}).filter(m => m.status === 'ok').map(m => m.id);
+    const excluded = ticked.length && okIds.length ? okIds.filter(id => !ticked.some(m => m.id === id)) : [];
+    const notes = Object.fromEntries(ticked.filter(m => m.note).map(m => [m.id, m.note]));
+    providers[p] = { ...block, excluded, excludedReason: {}, keep: [], limits: {}, notes, models: [], defaultModel: '' };
+  }
+  return { ...raw, schema: 2, providers };
 }
 
 /** Loads the admin model config from Firestore; falls back gracefully on any error. */
@@ -146,6 +142,7 @@ export async function loadAIModelsConfig(): Promise<AIModelsConfig> {
 export async function saveAIModelsConfig(config: AIModelsConfig, updatedBy: string): Promise<void> {
   await setDoc(doc(db, 'ai_config', 'models'), {
     ...config,
+    schema: 2,
     updatedAt: Date.now(),
     updatedBy,
   });

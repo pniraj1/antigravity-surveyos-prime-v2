@@ -201,7 +201,7 @@ export function AIModelsTab({ adminEmail }: { adminEmail: string }) {
   async function runAccuracy(p: ProviderId) {
     const key = adminKey(p);
     if (!key || !benchmark) return;
-    const modelIds = config!.providers[p].models.map(m => m.id);
+    const modelIds = (config!.providers[p].models ?? []).map(m => m.id);
     if (modelIds.length === 0) { toast.error('Tick at least one model first.'); return; }
 
     setAccuracyRunning(p);
@@ -245,16 +245,17 @@ export function AIModelsTab({ adminEmail }: { adminEmail: string }) {
     return { text: `${r.verdict}${r.verdict === 'exact' ? '' : delta} · ${mins}m${stale ? ' · stale' : ''}`, tone };
   }
 
-  function isEnabled(p: ProviderId, id: string) { return config!.providers[p].models.some(m => m.id === id); }
+  function isEnabled(p: ProviderId, id: string) { return (config!.providers[p].models ?? []).some(m => m.id === id); }
 
   function toggleModel(p: ProviderId, row: ProbeResult) {
     setConfig(prev => {
       if (!prev) return prev;
       const block = prev.providers[p];
-      const exists = block.models.some(m => m.id === row.id);
+      const blockModels = block.models ?? [];
+      const exists = blockModels.some(m => m.id === row.id);
       const models = exists
-        ? block.models.filter(m => m.id !== row.id)
-        : [...block.models, {
+        ? blockModels.filter(m => m.id !== row.id)
+        : [...blockModels, {
             id: row.id,
             label: row.id.split('/').pop() ?? row.id,
             note: '',
@@ -273,7 +274,7 @@ export function AIModelsTab({ adminEmail }: { adminEmail: string }) {
 
   function setNote(p: ProviderId, id: string, note: string) {
     setConfig(prev => prev ? { ...prev, providers: { ...prev.providers, [p]: {
-      ...prev.providers[p], models: prev.providers[p].models.map(m => m.id === id ? { ...m, note } : m),
+      ...prev.providers[p], models: (prev.providers[p].models ?? []).map(m => m.id === id ? { ...m, note } : m),
     } } } : prev);
   }
 
@@ -376,7 +377,7 @@ export function AIModelsTab({ adminEmail }: { adminEmail: string }) {
         const renderRow = (row: ProbeResult, groupKey: string) => {
           const enabled = isEnabled(p, row.id);
           const isDefault = block.defaultModel === row.id;
-          const note = block.models.find(m => m.id === row.id)?.note ?? '';
+          const note = (block.models ?? []).find(m => m.id === row.id)?.note ?? '';
           const tag = `${p}:${row.id}`;
           const acc = accuracyBadge(p, row.id);
           return (
@@ -478,10 +479,10 @@ export function AIModelsTab({ adminEmail }: { adminEmail: string }) {
                 </button>
                 <button
                   onClick={() => runAccuracy(p)}
-                  disabled={probing || saving || accuracyRunning !== null || !benchmark || block.models.length === 0}
+                  disabled={probing || saving || accuracyRunning !== null || !benchmark || (block.models ?? []).length === 0}
                   title={
                     !benchmark ? 'Set a benchmark document first'
-                    : block.models.length === 0 ? 'Tick at least one model first'
+                    : (block.models ?? []).length === 0 ? 'Tick at least one model first'
                     : 'Run the benchmark document through every ticked model'
                   }
                   className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-medium border border-border disabled:opacity-50">

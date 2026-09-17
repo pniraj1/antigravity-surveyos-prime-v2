@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { reconcileEnabledModels } from '../probe-reconcile';
 import type { AIModelsConfig, ModelEntry } from '../models-config';
+import { emptyProviderConfig } from '../models-config';
 import type { ModelProbes, ProbeResult, ProbeStatus } from '../probe-types';
 import { emptyProviderProbe } from '../probe-types';
 
@@ -12,10 +13,10 @@ function config(nvidiaModels: string[], defaultModel: string): AIModelsConfig {
   return {
     updatedAt: 1, updatedBy: 'test', defaultProvider: 'nvidia',
     providers: {
-      gemini: { enabled: true, defaultModel: '', models: [] },
-      groq: { enabled: true, defaultModel: '', models: [] },
-      nvidia: { enabled: true, defaultModel, models: nvidiaModels.map(entry) },
-      ollama: { enabled: true, defaultModel: '', models: [] },
+      gemini: { ...emptyProviderConfig(), defaultModel: '', models: [] },
+      groq: { ...emptyProviderConfig(), defaultModel: '', models: [] },
+      nvidia: { ...emptyProviderConfig(), defaultModel, models: nvidiaModels.map(entry) },
+      ollama: { ...emptyProviderConfig(), defaultModel: '', models: [] },
     },
   };
 }
@@ -48,7 +49,7 @@ describe('reconcileEnabledModels', () => {
       config(['a', 'b'], 'a'),
       probes([probeResult('a', 'ok'), probeResult('b', 'unreachable', 'Not found for account')]),
     );
-    expect(next.providers.nvidia.models.map(m => m.id)).toEqual(['a']);
+    expect(next.providers.nvidia.models!.map(m => m.id)).toEqual(['a']);
     expect(removed).toEqual([{ provider: 'nvidia', id: 'b', reason: 'Not found for account' }]);
   });
 
@@ -59,7 +60,7 @@ describe('reconcileEnabledModels', () => {
       config(['a', 'b'], 'a'),
       probes([probeResult('a', 'ok'), probeResult('b', 'unreachable', 'No longer listed by the provider.')]),
     );
-    expect(next.providers.nvidia.models.map(m => m.id)).toEqual(['a']);
+    expect(next.providers.nvidia.models!.map(m => m.id)).toEqual(['a']);
     expect(removed[0].reason).toBe('No longer listed by the provider.');
   });
 
@@ -70,7 +71,7 @@ describe('reconcileEnabledModels', () => {
       config(['a', 'b'], 'a'),
       probes([probeResult('a', 'ok'), probeResult('b', 'transient', 'timeout', 9)]),
     );
-    expect(next.providers.nvidia.models.map(m => m.id)).toEqual(['a', 'b']);
+    expect(next.providers.nvidia.models!.map(m => m.id)).toEqual(['a', 'b']);
     expect(removed).toEqual([]);
   });
 
@@ -80,7 +81,7 @@ describe('reconcileEnabledModels', () => {
       probes([probeResult('a', 'unreachable', 'gone', 1)]),
     );
     expect(once.removed).toEqual([]);
-    expect(once.config.providers.nvidia.models.map(m => m.id)).toEqual(['a']);
+    expect(once.config.providers.nvidia.models!.map(m => m.id)).toEqual(['a']);
 
     const twice = reconcileEnabledModels(
       config(['a'], 'a'),
@@ -94,7 +95,7 @@ describe('reconcileEnabledModels', () => {
       config(['a', 'never-probed'], 'a'),
       probes([probeResult('a', 'ok')]),
     );
-    expect(next.providers.nvidia.models.map(m => m.id)).toEqual(['a', 'never-probed']);
+    expect(next.providers.nvidia.models!.map(m => m.id)).toEqual(['a', 'never-probed']);
     expect(removed).toEqual([]);
   });
 
@@ -104,7 +105,7 @@ describe('reconcileEnabledModels', () => {
       config(['a', 'b'], 'a'),
       probes([probeResult('a', 'ok'), { ...slow, msPerPage: null, slow: true }]),
     );
-    expect(next.providers.nvidia.models.map(m => m.id)).toEqual(['a', 'b']);
+    expect(next.providers.nvidia.models!.map(m => m.id)).toEqual(['a', 'b']);
     expect(removed).toEqual([]);
   });
 
@@ -121,7 +122,7 @@ describe('reconcileEnabledModels', () => {
       config(['dead'], 'dead'),
       probes([probeResult('dead', 'unreachable', 'gone')]),
     );
-    expect(next.providers.nvidia.models).toEqual([]);
+    expect(next.providers.nvidia.models!).toEqual([]);
     expect(next.providers.nvidia.defaultModel).toBe('');
   });
 
@@ -130,13 +131,13 @@ describe('reconcileEnabledModels', () => {
       config(['a', 'b'], 'a'),
       probes([], 'Key rejected — probe aborted'),
     );
-    expect(next.providers.nvidia.models.map(m => m.id)).toEqual(['a', 'b']);
+    expect(next.providers.nvidia.models!.map(m => m.id)).toEqual(['a', 'b']);
     expect(removed).toEqual([]);
   });
 
   it('removes nothing when the provider probe returned no models at all', () => {
     const { config: next, removed } = reconcileEnabledModels(config(['a'], 'a'), probes([]));
-    expect(next.providers.nvidia.models.map(m => m.id)).toEqual(['a']);
+    expect(next.providers.nvidia.models!.map(m => m.id)).toEqual(['a']);
     expect(removed).toEqual([]);
   });
 
@@ -145,7 +146,7 @@ describe('reconcileEnabledModels', () => {
       config(['a'], 'a'),
       probes([probeResult('a', 'ok'), probeResult('brand-new', 'ok')]),
     );
-    expect(next.providers.nvidia.models.map(m => m.id)).toEqual(['a']);
+    expect(next.providers.nvidia.models!.map(m => m.id)).toEqual(['a']);
   });
 
   it('returns the original object identity when nothing changed', () => {
