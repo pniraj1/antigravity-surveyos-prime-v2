@@ -19,10 +19,11 @@
 
 ## In Progress
 
+- [ ] **Deploy Phase 2-C + live check L11** (2026-09-17) — hosting only; ROLLOUT ORDER: deploy → surveyors refresh → Admin Save → Admin Probe all (see `Sessions/2026-09-17-admin-ranked-lists.md`). Commits e181d862..b9201187 not live.
 - [ ] **Live check L10** (2026-09-16) — Phase 2-A deployed (hosting, e7c1a997). L10 in `Sessions/2026-09-16-quota-aware-ranking.md`.
 - [ ] **Live check L9** (2026-09-16) — Smart Fix deployed (hosting, 56b44714). Run L9 (`npm run dev`, open with `?ai-drop=38`, upload DTC Proforma Invoice-1.PDF as estimate — expect one extra single-page call and a clean dialog).
 - [ ] **AI fallback — Phase 1 live checks** (2026-09-16) — code deployed; L0–L8 from `docs/superpowers/plans/2026-09-15-ai-fallback-phase-1.md` Task 14 still to run in the live app with the owner's AQ. + Ollama keys (`?ai-fault=503|429-minute|429-day|429-zero` for induced failures).
-- [ ] **AI fallback — Phase 2-B/C/D** — 2-B discovery + models.dev deprecation filter + NEW models auto-enter at the bottom (no accuracy benchmark — owner rejected, quota cost); 2-C admin ranked lists per job with budget column + Exclude + discovery summary, `models`→`excluded` migration; 2-D Profile provider rows with Test buttons, remove model pickers. Carried minors in the 2026-09-16 session logs.
+- [ ] **AI fallback — Phase 2-B/D** — 2-B discovery + models.dev deprecation filter + persistent NEW detection (no accuracy benchmark — owner rejected); 2-D Profile provider rows with Test buttons, remove surveyor model pickers + legacy `models`/`defaultModel`/`resolveEnabledModel`/`AIControls` picker; consider a fourth `other` tier for non-Gemini non-gemma models. Carried minors in the 2026-09-16 session logs.
 
 - [ ] **IndexedDB memory optimization** — 40 MB photo storage bloat
   - **Plan:** Client-side compression + schema splitting + soft archiving (50 claim limit)
@@ -69,6 +70,7 @@
 
 ## Recently Completed
 
+- [x] AI fallback — Phase 2-C admin ranked lists + veto (2026-09-17) — schema 2, guard rails, shared `poolFromProbes`, editable limits, tab split. 1222 tests. Session log: `Sessions/2026-09-17-admin-ranked-lists.md`.
 - [x] AI fallback — Phase 2-A quota-aware ranking (2026-09-16) — tier + per-key daily budget ordering, Pacific-day ledger, Ollama 1 h rest, Flash reserved for estimates. 1184 tests. Session log: `Sessions/2026-09-16-quota-aware-ranking.md`.
 - [x] Smart Fix — missed-row detection (2026-09-16) — serial-gap + printed-gross check, page-targeted gap fill, gross-only second opinion, review-dialog card. Spec/plan `2026-09-16-smart-fix-missed-rows*`. 1150 tests. Session log: `Sessions/2026-09-16-smart-fix-missed-rows.md`.
 - [x] AI fallback — Phase 1 (2026-09-16) — Google's AQ. keys broke extraction (fixed 2026-09-15, 7b1ff921); the follow-up redesign makes model choice automatic: every call declares a job (heavy/light/text), a pure ranker orders every reachable model, the loop hops models before keys and never retries a 503 in place (measured: a 503 takes up to 194 s to return). Gemini 429s are classified by `quotaId`; Ollama Cloud's free Gemma 4 is a proxied fallback (measured Δ0.01 % on a 5-page estimate); thinking is off for extraction (2.5 Flash was truncating); a document whose rows don't add up is re-run once on the next model. NVIDIA keys had been leaking to Firestore — stripped and purged. Spec: `docs/superpowers/specs/2026-09-15-ai-fallback-and-job-routing-design.md`; plan: `docs/superpowers/plans/2026-09-15-ai-fallback-phase-1.md`. 1105 tests. Session log: `Sessions/2026-09-16-ai-fallback-phase-1.md`.

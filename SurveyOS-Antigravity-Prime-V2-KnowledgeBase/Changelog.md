@@ -2,6 +2,13 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-09-17 (Claude) — Admin ranked lists (Phase 2-C)
+- feat(admin): AI Models tab is veto-based — every probe-ok model is in the surveyor chain unless excluded; guard rails auto-exclude slow / preview / transcribe / robotics / tts / image / embedding / audio / live / omni ids with a visible reason and an Include button
+- feat(admin): three ranked lists (Estimates & bills / Licence · RC · policy / Letters & text) computed by the loop's own ranker; per-row editable calls/day (overrides the quota table; 0 = off); Exclude refused on the last eligible model; discovery line per provider
+- feat(ai): config schema 2 (`excluded`, `excludedReason`, `keep`, `limits`, `notes`) with pure migration from the tick list; `poolFromProbes` shared by request path and admin; surveyors load `ai_config/model_probes`; legacy `models` field kept as a mirror of the chain for stale tabs (delete in 2-D)
+- chore(admin): removed per-model checkbox, ★ default, size buckets, accuracy test, benchmark card, `probe-reconcile.ts`
+- tests: 1222 passing. Spec `docs/superpowers/specs/2026-09-17-admin-ranked-lists-design.md`, plan `docs/superpowers/plans/2026-09-17-admin-ranked-lists.md`, session log `Sessions/2026-09-17-admin-ranked-lists.md`. NOT deployed yet — rollout order in the session log.
+
 ## 2026-09-16 (Claude) — Quota-aware ranking (Phase 2-A)
 - feat(ai): free-tier budgets drive the model order — Google gives every Flash model 20 calls/day per key, Flash-Lite 500, Pro 0 (`quota.ts`); a per-key spend ledger resets at Pacific midnight (`health.ts`)
 - feat(ai): heavy (estimate/bill) runs on the strongest tier whose key can still finish the whole document (budget re-checked per chunk, never a half-read); light (RC/DL/policy) never spends Flash while Flash-Lite or gemma is available

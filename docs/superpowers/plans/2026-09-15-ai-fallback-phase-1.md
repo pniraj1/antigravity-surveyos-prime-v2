@@ -2340,6 +2340,7 @@ Expected: a non-zero count for each file.
 | L8 | Admin → Probe all. | Ollama card shows `gemma4:31b` working; other Ollama models listed as `paid` under "unusable". |
 | L9 | `npm run dev`, open with `?ai-drop=38`, upload DTC Proforma Invoice-1.PDF as estimate (Smart Fix feature, 2026-09-16). | Console: `[ai-fault] dropped serial 38`, `[Smart Fix] serial gaps after first pass: [{srNo:38,…}]`, exactly one extra single-page gateway call; toast "Estimate read — 80 rows"; no card in the review dialog. Then without the param: 5 calls total, no second opinion. |
 | L10 | Local Storage `surveyos.ai.health.v1`: set `spent["<keyHash>:<flash model>"] = 20` for every Flash model; reload; upload the DTC estimate (Phase 2-A, 2026-09-16). | First call on a Flash-Lite model; toast "Today's Flash quota is used up — reading with Flash-Lite" (no Ollama key); no half-read. RC photo afterwards: Flash-Lite first. |
+| L11 | Admin → Probe all (Phase 2-C, 2026-09-17). | Excluded group lists gemini-flash-latest, gemma-4-31b-it (slow), 3.5-transcribe, robotics-er-2-preview, 3-flash-preview, 3.1-flash-lite-preview with reasons; Estimates list starts with a Flash, Licence list with a Flash-Lite; surveyor RC upload → first call = Licence list row 1. |
 
 Record the console output of L1 and L5 in `SurveyOS-Antigravity-Prime-V2-KnowledgeBase/Sessions/` per the agent protocol, and update `Tasks.md` / `Changelog.md`.
 
