@@ -2,6 +2,13 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-09-17 (Claude) — AI upload PDF page selection
+- feat(ai): multi-page PDFs dropped into any AI upload (estimate, final bill, RC/DL/policy, Documents tab, Sync picker) get a page picker — the surveyor unticks pages before the document is sent; unticked pages are never rasterized, so they cost zero tokens
+- feat(ai): `ai-pages.ts` — `setAIPages`/`getAIPages` WeakMap carrier tags the selection onto the `File` object itself, four calls deep into the rasterize chain, with no signature change; Re-scan, Smart Fix and the bank-statement extractor inherit it for free. Pure `resolveAIPages` clamps out-of-range picks
+- feat(documents): `needsReview` gate now opens the review sheet for a single multi-page PDF too (previously multi-file only); `PdfPageGrid` extracted from the photos annexure picker into a shared component; `DocumentReviewSheet` shows a per-PDF grid, page-aware counts/warnings, survives crop edits, zero-ticked PDF excluded from Send, unreadable PDF falls back to sending whole
+- chore(ai): `AssessmentTab`, `BillCheckTab`, `DetailsTab` now route their uploads through the review sheet when the gate says so
+- tests: 1239 passing. Spec `docs/superpowers/specs/2026-09-17-ai-pdf-page-selection-design.md`, session log `Sessions/2026-09-17-ai-pdf-page-selection.md`. Not deployed. Manual E2E (spec §5) not run — no credentials in session.
+
 ## 2026-09-17 (Claude) — Admin ranked lists (Phase 2-C)
 - fix(ai): non-Google models (Groq/NVIDIA/Ollama non-gemma) now rank in an `other` tier after gemma for every job — L11 showed Groq qwen #1 for licences and NVIDIA above gemma4 for estimates; a 429/5xx/timeout in the vision probe keeps the previous verdict (3.6-flash had been recorded text-only). Deployed.
 - feat(admin): AI Models tab is veto-based — every probe-ok model is in the surveyor chain unless excluded; guard rails auto-exclude slow / preview / transcribe / robotics / tts / image / embedding / audio / live / omni ids with a visible reason and an Include button
