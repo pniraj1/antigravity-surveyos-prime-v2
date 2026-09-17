@@ -23,3 +23,18 @@
 ## Concerns
 - `commitProbe` uses the `config` captured at the render when the probe started; edits the admin makes during a 20–30 min full probe (without saving) are overwritten by the railed config. Same behaviour as the old reconcile block — flagged, not fixed (a ref would fix it if it matters).
 - Header copy changed from "Only models verified to work are shown" to "Every working model is in the chain unless you exclude it" to match the veto model.
+
+## Fix report
+
+Commands run:
+- `npx tsc --noEmit` — clean, no errors.
+- `npx vitest run src/lib/ai src/components/admin` — 38 files, 405 tests passed.
+- `npm run build` — succeeded (Next.js 16.2.2 Turbopack production build).
+
+Summary:
+- `AIModelsTab.tsx`: added `configRef` (useRef, synced every render) so `commitProbe` applies guard rails and saves against the latest config instead of the stale render-time closure, fixing lost Exclude/Include/limit/note edits made during a 20-30 min probe.
+- `ProviderCard.tsx`: `retired` is now derived live from `block.excluded.filter(id => !probe.models[id])` instead of `diff.gone` (which is always empty on fresh page load), so retired exclusions stay visible after reload. Reason text is now static ("No longer listed by the provider.").
+- `admin-rank.ts`: `discoveryCounts.hidden` now includes retired ids `(all.length - ok.length) + retired`, keeping the discovery line and hidden-group count consistent. Updated `admin-rank.test.ts` accordingly (hidden 2 → 3, with a `zz` retired id in the fixture).
+- `probe-runner.ts`: removed the stale comment referencing the deleted probe-reconcile "two-strike removal rule".
+
+Commit: 24ea23aa
