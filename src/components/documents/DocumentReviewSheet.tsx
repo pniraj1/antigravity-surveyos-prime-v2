@@ -44,9 +44,12 @@ export function DocumentReviewSheet({ open, slotLabel, files, onConfirm, onCance
   // Per-file PDF info, keyed by index into `workingFiles`. Only multi-page
   // PDFs get an entry with pages; a 1-page PDF or an unreadable PDF has no
   // entry and behaves exactly as before (sent whole).
-  type PdfInfo = { numPages: number; pages: PdfPage[]; ticked: Set<number>; loaded: LoadedPdf };
+  type PdfInfo = { numPages: number; pages: PdfPage[]; ticked: Set<number> };
   const [pdfInfo, setPdfInfo] = useState<Record<number, PdfInfo>>({});
   const [pdfProbing, setPdfProbing] = useState(false);
+  // Indexes into workingFiles whose PDF couldn't be probed (password-protected /
+  // corrupt). No page grid for these; the file is still sent whole.
+  const [pdfUnreadable, setPdfUnreadable] = useState<Set<number>>(new Set());
 
   // ponytail: re-probe on crop; key by File identity if it ever matters
   useEffect(() => {
@@ -58,6 +61,7 @@ export function DocumentReviewSheet({ open, slotLabel, files, onConfirm, onCance
     (async () => {
       setPdfProbing(true);
       for (const i of pdfIndexes) {
+        if (cancelled) return;
         try {
           const loaded = await loadPdf(workingFiles[i]);
           if (cancelled) { await loaded.destroy(); return; }
@@ -66,7 +70,7 @@ export function DocumentReviewSheet({ open, slotLabel, files, onConfirm, onCance
           const pageNumbers = Array.from({ length: loaded.numPages }, (_, k) => k + 1);
           setPdfInfo(prev => ({
             ...prev,
-            [i]: { numPages: loaded.numPages, pages: [], ticked: new Set(pageNumbers), loaded },
+            [i]: { numPages: loaded.numPages, pages: [], ticked: prev[i]?.ticked ?? new Set(pageNumbers) },
           }));
           // Thumbnails stream in one by one so a long PDF shows progress.
           for (const p of pageNumbers) {
@@ -79,8 +83,10 @@ export function DocumentReviewSheet({ open, slotLabel, files, onConfirm, onCance
             });
           }
         } catch {
-          // Password-protected / corrupt: no page grid; the file can still be
-          // sent whole. The card says so (see render).
+          // Password-protected / corrupt: pages can't be previewed. No entry
+          // is created, so the card falls back to sending the file whole —
+          // flag it so the card can say so (see render).
+          setPdfUnreadable(prev => new Set(prev).add(i));
         }
       }
     })().finally(() => { if (!cancelled) setPdfProbing(false); });
@@ -188,6 +194,7 @@ export function DocumentReviewSheet({ open, slotLabel, files, onConfirm, onCance
                     <p className="text-[11px] text-muted-foreground">
                       {isImage(file) ? 'Image' : 'PDF'} · {Math.max(1, Math.round(file.size / 1024))} KB
                       {info && <> · {info.ticked.size} of {info.numPages} pages</>}
+                      {pdfUnreadable.has(i) && <> · Can&apos;t preview pages — will be sent whole</>}
                     </p>
                   </div>
 
