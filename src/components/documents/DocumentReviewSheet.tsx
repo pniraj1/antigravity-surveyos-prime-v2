@@ -90,15 +90,20 @@ export function DocumentReviewSheet({ open, slotLabel, files, onConfirm, onCance
 
       // Pass 2: stream thumbnails in one by one so a long PDF shows progress.
       for (const { i, loaded, pageNumbers } of toStream) {
-        for (const p of pageNumbers) {
+        try {
+          for (const p of pageNumbers) {
+            if (cancelled) return;
+            const thumb = await loaded.renderPage(p, PDF_THUMB_WIDTH, PDF_THUMB_QUALITY);
+            if (cancelled) return;
+            setPdfInfo(prev => {
+              const cur = prev[i];
+              if (!cur) return prev;
+              return { ...prev, [i]: { ...cur, pages: [...cur.pages, { pageNumber: p, thumbDataUrl: thumb.dataUrl }] } };
+            });
+          }
+        } catch {
           if (cancelled) return;
-          const thumb = await loaded.renderPage(p, PDF_THUMB_WIDTH, PDF_THUMB_QUALITY);
-          if (cancelled) return;
-          setPdfInfo(prev => {
-            const cur = prev[i];
-            if (!cur) return prev;
-            return { ...prev, [i]: { ...cur, pages: [...cur.pages, { pageNumber: p, thumbDataUrl: thumb.dataUrl }] } };
-          });
+          setPdfUnreadable(prev => new Set(prev).add(i));
         }
       }
     })();
