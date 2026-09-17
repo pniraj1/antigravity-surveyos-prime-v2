@@ -18,6 +18,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Check, Crop as CropIcon, FileText, Loader2, Send, X } from 'lucide-react';
 import { cropFileToFile } from '@/lib/image/crop';
 import { toast } from 'sonner';
+import { loadPdf, type LoadedPdf, PDF_THUMB_WIDTH, PDF_THUMB_QUALITY } from '@/lib/photos/pdf-to-images';
+import { PdfPageGrid, type PdfPage } from '@/components/documents/PdfPageGrid';
+import { setAIPages } from '@/lib/ai/ai-pages';
 
 // Soft cap: Groq's vision model accepts at most 5 images per request. Gemini
 // (the primary provider) is more generous, so this is a warning, not a block.
@@ -38,14 +41,80 @@ export function DocumentReviewSheet({ open, slotLabel, files, onConfirm, onCance
   const [selected, setSelected] = useState<boolean[]>(() => files.map(() => true));
   const [cropIndex, setCropIndex] = useState<number | null>(null);
 
+  // Per-file PDF info, keyed by index into `workingFiles`. Only multi-page
+  // PDFs get an entry with pages; a 1-page PDF or an unreadable PDF has no
+  // entry and behaves exactly as before (sent whole).
+  type PdfInfo = { numPages: number; pages: PdfPage[]; ticked: Set<number>; loaded: LoadedPdf };
+  const [pdfInfo, setPdfInfo] = useState<Record<number, PdfInfo>>({});
+  const [pdfProbing, setPdfProbing] = useState(false);
+
+  // ponytail: re-probe on crop; key by File identity if it ever matters
+  useEffect(() => {
+    let cancelled = false;
+    const loadedRefs: LoadedPdf[] = [];
+    const pdfIndexes = workingFiles.map((f, i) => (f.type === 'application/pdf' ? i : -1)).filter(i => i >= 0);
+    if (pdfIndexes.length === 0) return;
+
+    (async () => {
+      setPdfProbing(true);
+      for (const i of pdfIndexes) {
+        try {
+          const loaded = await loadPdf(workingFiles[i]);
+          if (cancelled) { await loaded.destroy(); return; }
+          if (loaded.numPages < 2) { await loaded.destroy(); continue; }
+          loadedRefs.push(loaded);
+          const pageNumbers = Array.from({ length: loaded.numPages }, (_, k) => k + 1);
+          setPdfInfo(prev => ({
+            ...prev,
+            [i]: { numPages: loaded.numPages, pages: [], ticked: new Set(pageNumbers), loaded },
+          }));
+          // Thumbnails stream in one by one so a long PDF shows progress.
+          for (const p of pageNumbers) {
+            const thumb = await loaded.renderPage(p, PDF_THUMB_WIDTH, PDF_THUMB_QUALITY);
+            if (cancelled) return;
+            setPdfInfo(prev => {
+              const cur = prev[i];
+              if (!cur) return prev;
+              return { ...prev, [i]: { ...cur, pages: [...cur.pages, { pageNumber: p, thumbDataUrl: thumb.dataUrl }] } };
+            });
+          }
+        } catch {
+          // Password-protected / corrupt: no page grid; the file can still be
+          // sent whole. The card says so (see render).
+        }
+      }
+    })().finally(() => { if (!cancelled) setPdfProbing(false); });
+
+    return () => {
+      cancelled = true;
+      for (const l of loadedRefs) void l.destroy();
+    };
+  }, [workingFiles]);
+
+  const togglePage = (fileIndex: number, pageNumber: number) =>
+    setPdfInfo(prev => {
+      const cur = prev[fileIndex];
+      if (!cur) return prev;
+      const ticked = new Set(cur.ticked);
+      if (ticked.has(pageNumber)) ticked.delete(pageNumber); else ticked.add(pageNumber);
+      return { ...prev, [fileIndex]: { ...cur, ticked } };
+    });
+
   // Object URLs for thumbnails/crop — regenerated whenever the files change,
   // revoked on cleanup to avoid leaks.
   const urls = useMemo(() => workingFiles.map((f) => URL.createObjectURL(f)), [workingFiles]);
   useEffect(() => () => { for (const u of urls) URL.revokeObjectURL(u); }, [urls]);
 
   const isImage = (f: File) => f.type.startsWith('image/');
-  const selectedImageCount = workingFiles.filter((f, i) => selected[i] && isImage(f)).length;
-  const selectedCount = selected.filter(Boolean).length;
+  // A multi-page PDF with every page unticked is not sent at all.
+  const isSent = (i: number) => selected[i] && (pdfInfo[i] ? pdfInfo[i].ticked.size > 0 : true);
+  const selectedCount = workingFiles.filter((_, i) => isSent(i)).length;
+  // What actually reaches the provider: one image per photo, one per ticked PDF page.
+  const selectedImageCount = workingFiles.reduce((n, f, i) => {
+    if (!isSent(i)) return n;
+    if (isImage(f)) return n + 1;
+    return n + (pdfInfo[i]?.ticked.size ?? 1);
+  }, 0);
 
   const toggle = (i: number) =>
     setSelected((prev) => prev.map((v, idx) => (idx === i ? !v : v)));
@@ -56,8 +125,14 @@ export function DocumentReviewSheet({ open, slotLabel, files, onConfirm, onCance
   }, []);
 
   const handleSend = () => {
-    const filesForAI = workingFiles.filter((_, i) => selected[i]);
+    const filesForAI = workingFiles.filter((_, i) => isSent(i));
     if (filesForAI.length === 0) return;
+    workingFiles.forEach((f, i) => {
+      const info = pdfInfo[i];
+      if (isSent(i) && info && info.ticked.size < info.numPages) {
+        setAIPages(f, [...info.ticked].sort((a, b) => a - b));
+      }
+    });
     onConfirm(workingFiles, filesForAI);
   };
 
@@ -73,56 +148,81 @@ export function DocumentReviewSheet({ open, slotLabel, files, onConfirm, onCance
         </DialogHeader>
 
         <div className="max-h-[55vh] overflow-y-auto flex flex-col gap-2 py-1">
-          {workingFiles.map((file, i) => (
-            <div
-              key={`${file.name}-${i}`}
-              className={`flex items-center gap-3 rounded-lg border p-2 transition-colors ${
-                selected[i] ? 'border-primary/40 bg-primary/5' : 'border-border bg-muted/20'
-              }`}
-            >
-              {/* Select toggle */}
-              <button
-                onClick={() => toggle(i)}
-                aria-label={selected[i] ? 'Exclude from AI' : 'Include in AI'}
-                className={`shrink-0 w-6 h-6 rounded-md border flex items-center justify-center ${
-                  selected[i] ? 'bg-primary border-primary text-white' : 'border-muted-foreground/40 text-transparent'
+          {workingFiles.map((file, i) => {
+            const info = pdfInfo[i];
+            return (
+              <div
+                key={`${file.name}-${i}`}
+                className={`rounded-lg border p-2 transition-colors ${
+                  selected[i] ? 'border-primary/40 bg-primary/5' : 'border-border bg-muted/20'
                 }`}
               >
-                <Check size={14} strokeWidth={3} />
-              </button>
+                <div className="flex items-center gap-3">
+                  {/* Select toggle */}
+                  <button
+                    onClick={() => toggle(i)}
+                    aria-label={selected[i] ? 'Exclude from AI' : 'Include in AI'}
+                    className={`shrink-0 w-6 h-6 rounded-md border flex items-center justify-center ${
+                      selected[i] ? 'bg-primary border-primary text-white' : 'border-muted-foreground/40 text-transparent'
+                    }`}
+                  >
+                    <Check size={14} strokeWidth={3} />
+                  </button>
 
-              {/* Thumbnail / PDF card */}
-              {isImage(file) ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={urls[i]}
-                  alt={file.name}
-                  className="w-14 h-14 object-cover rounded-md border border-border shrink-0"
-                />
-              ) : (
-                <div className="w-14 h-14 rounded-md border border-border shrink-0 flex items-center justify-center bg-muted/40">
-                  <FileText size={20} className="text-muted-foreground" />
+                  {/* Thumbnail / PDF card */}
+                  {isImage(file) ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={urls[i]}
+                      alt={file.name}
+                      className="w-14 h-14 object-cover rounded-md border border-border shrink-0"
+                    />
+                  ) : (
+                    <div className="w-14 h-14 rounded-md border border-border shrink-0 flex items-center justify-center bg-muted/40">
+                      <FileText size={20} className="text-muted-foreground" />
+                    </div>
+                  )}
+
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{file.name}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {isImage(file) ? 'Image' : 'PDF'} · {Math.max(1, Math.round(file.size / 1024))} KB
+                      {info && <> · {info.ticked.size} of {info.numPages} pages</>}
+                    </p>
+                  </div>
+
+                  {/* Crop (images only) */}
+                  {isImage(file) && (
+                    <button
+                      onClick={() => setCropIndex(i)}
+                      className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border border-border hover:bg-muted/50"
+                    >
+                      <CropIcon size={13} /> Crop
+                    </button>
+                  )}
                 </div>
-              )}
 
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium truncate">{file.name}</p>
-                <p className="text-[11px] text-muted-foreground">
-                  {isImage(file) ? 'Image' : 'PDF'} · {Math.max(1, Math.round(file.size / 1024))} KB
-                </p>
+                {/* Page picker — multi-page PDFs only */}
+                {info && selected[i] && (
+                  <div className="mt-2 pl-9">
+                    <p className="text-[11px] text-muted-foreground mb-1.5">
+                      Untick pages the AI should skip — cover letters, terms, blank scans.
+                    </p>
+                    <PdfPageGrid
+                      pages={info.pages}
+                      checked={info.ticked}
+                      onToggle={p => togglePage(i, p)}
+                    />
+                    {info.pages.length < info.numPages && (
+                      <p className="text-[11px] text-muted-foreground mt-1.5 flex items-center gap-1">
+                        <Loader2 size={11} className="animate-spin" /> Loading page {info.pages.length + 1} of {info.numPages}…
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
-
-              {/* Crop (images only) */}
-              {isImage(file) && (
-                <button
-                  onClick={() => setCropIndex(i)}
-                  className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border border-border hover:bg-muted/50"
-                >
-                  <CropIcon size={13} /> Crop
-                </button>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Footer */}
@@ -131,7 +231,7 @@ export function DocumentReviewSheet({ open, slotLabel, files, onConfirm, onCance
             {selectedCount} of {workingFiles.length} selected
             {selectedImageCount > AI_IMAGE_WARN && (
               <span className="block text-status-warning">
-                {selectedImageCount} images — some free models accept only {AI_IMAGE_WARN}.
+                {selectedImageCount} images/pages — some free models accept only {AI_IMAGE_WARN}.
               </span>
             )}
           </div>
@@ -144,7 +244,7 @@ export function DocumentReviewSheet({ open, slotLabel, files, onConfirm, onCance
             </button>
             <button
               onClick={handleSend}
-              disabled={selectedCount === 0}
+              disabled={selectedCount === 0 || pdfProbing}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold bg-primary text-white disabled:opacity-40"
             >
               <Send size={14} /> Send to AI
