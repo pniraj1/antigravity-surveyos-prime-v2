@@ -49,6 +49,24 @@ them, so they're never turned into an image and never sent to the model —
 zero tokens for pages the surveyor rejects. This is the entire mechanism;
 there's no separate cost-accounting step.
 
+### Side effect: Insured Report inherits the policy page selection
+`DocumentsTab` stores the same `File` in the evidence store's `rawFiles`.
+`InsuredReportTab` later reads it back via `getRawFile(claimId, 'policy')`
+and runs `fileToImages` on it — since the page tag rides the `File` object
+(see `ai-pages.ts`), pages the surveyor unticked for the policy upload are
+also excluded when the insured report rasterizes the policy. Treated as
+intended: the surveyor said the AI shouldn't read those pages, full stop.
+
+### Multiple parses of a large PDF (estimate path)
+A large estimate PDF is parsed up to three times: once to probe whether
+the review sheet should open (`needsReview`'s page-count check), once by
+the sheet itself to build the page grid, and once more to rasterize the
+ticked pages. Accepted for surveyor-sized files (a handful of pages, not
+hundreds). Do not "fix" by threading a loaded PDF handle through
+`triggerExtraction` without first reading the ponytail note at the top of
+`ai-pages.ts` — the whole design rides the tag on the `File` object
+specifically so no call signature has to change.
+
 ## Manual E2E (spec §5) — NOT RUN
 
 No credentials in this session; the app is auth-gated and these checks
@@ -60,7 +78,11 @@ next:
       both process the same 3 pages.
 - [ ] Estimate tab: drop a JPEG → no sheet, extraction starts immediately.
 - [ ] Documents tab: RC front + back JPEGs → sheet as today, no page grid.
-- [ ] Password-protected PDF → "Can't preview" card, still sends whole.
+- [ ] Password-protected PDF, sent alone → sheet never opens
+      (`needsReview` returns false for a single unreadable PDF); it fails
+      in `fileToImages` as it did before this feature. The "Can't preview
+      — will be sent whole" card only appears when that same locked PDF is
+      one file among several in a multi-file sheet.
 
 ## Deferred follow-ups (spec Non-Goals)
 

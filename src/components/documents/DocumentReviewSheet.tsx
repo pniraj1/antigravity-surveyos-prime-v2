@@ -60,6 +60,10 @@ export function DocumentReviewSheet({ open, slotLabel, files, onConfirm, onCance
 
     (async () => {
       setPdfProbing(true);
+      // Pass 1: load every PDF and learn its page count first, so the "Send"
+      // button unlocks as soon as page counts are known — thumbnails then
+      // stream in the background without blocking it.
+      const toStream: Array<{ i: number; loaded: LoadedPdf; pageNumbers: number[] }> = [];
       for (const i of pdfIndexes) {
         if (cancelled) return;
         try {
@@ -72,24 +76,32 @@ export function DocumentReviewSheet({ open, slotLabel, files, onConfirm, onCance
             ...prev,
             [i]: { numPages: loaded.numPages, pages: [], ticked: prev[i]?.ticked ?? new Set(pageNumbers) },
           }));
-          // Thumbnails stream in one by one so a long PDF shows progress.
-          for (const p of pageNumbers) {
-            const thumb = await loaded.renderPage(p, PDF_THUMB_WIDTH, PDF_THUMB_QUALITY);
-            if (cancelled) return;
-            setPdfInfo(prev => {
-              const cur = prev[i];
-              if (!cur) return prev;
-              return { ...prev, [i]: { ...cur, pages: [...cur.pages, { pageNumber: p, thumbDataUrl: thumb.dataUrl }] } };
-            });
-          }
+          toStream.push({ i, loaded, pageNumbers });
         } catch {
+          if (cancelled) return;
           // Password-protected / corrupt: pages can't be previewed. No entry
           // is created, so the card falls back to sending the file whole —
           // flag it so the card can say so (see render).
           setPdfUnreadable(prev => new Set(prev).add(i));
         }
       }
-    })().finally(() => { if (!cancelled) setPdfProbing(false); });
+      if (cancelled) return;
+      setPdfProbing(false);
+
+      // Pass 2: stream thumbnails in one by one so a long PDF shows progress.
+      for (const { i, loaded, pageNumbers } of toStream) {
+        for (const p of pageNumbers) {
+          if (cancelled) return;
+          const thumb = await loaded.renderPage(p, PDF_THUMB_WIDTH, PDF_THUMB_QUALITY);
+          if (cancelled) return;
+          setPdfInfo(prev => {
+            const cur = prev[i];
+            if (!cur) return prev;
+            return { ...prev, [i]: { ...cur, pages: [...cur.pages, { pageNumber: p, thumbDataUrl: thumb.dataUrl }] } };
+          });
+        }
+      }
+    })();
 
     return () => {
       cancelled = true;
@@ -135,7 +147,7 @@ export function DocumentReviewSheet({ open, slotLabel, files, onConfirm, onCance
     if (filesForAI.length === 0) return;
     workingFiles.forEach((f, i) => {
       const info = pdfInfo[i];
-      if (isSent(i) && info && info.ticked.size < info.numPages) {
+      if (isSent(i) && info) {
         setAIPages(f, [...info.ticked].sort((a, b) => a - b));
       }
     });
