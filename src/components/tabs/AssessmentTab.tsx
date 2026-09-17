@@ -19,33 +19,28 @@ import { useSaveToCloudPrompt } from '@/hooks/useSaveToCloudPrompt';
 import { AssessmentChatbot } from '@/components/chat/AssessmentChatbot';
 import { ModelSelector, DocModeToggle, ProviderHealthBadge, ProviderToggle } from '@/components/ai/AIControls';
 import { SaveProgressButton } from '@/components/sync/SaveProgressButton';
+import { needsReview } from '@/lib/ai/needs-review';
+import { DocumentReviewSheet } from '@/components/documents/DocumentReviewSheet';
+import type { EstimateApplyMode } from '@/stores/slices/aiDataSlice';
 
 export function AssessmentTab() {
   const { currentClaim, setDepreciationType } = useClaimStore();
   const [showEvidence, setShowEvidence] = useState(false);
   const [showSummary, setShowSummary] = useState(true);
+  // Open only when there is something to decide (multi-page PDF); see needsReview.
+  const [reviewSheet, setReviewSheet] = useState<{ file: File; mode: EstimateApplyMode } | null>(null);
   const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview, reScanWithFeedback, hasFile, reScanLatest, smartFix, reviewProgress } = useAIExtraction();
   const { confirmEstimateMode, estimateModeDialog } = useEstimateModePrompt();
   const { profile } = useProfileStore();
   const { confirmSaveToCloud, saveToCloudDialog } = useSaveToCloudPrompt();
 
-  const handleEstimateUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Asked BEFORE extraction: a wrong file, or a surveyor who changes their
-    // mind, then costs nothing. Resolves straight to 'replace' on an empty
-    // sheet — nothing to lose, so nothing to ask.
-    const mode = await confirmEstimateMode(file.name);
-    if (mode === null) {
-      e.target.value = '';
-      return;
-    }
-
+  // Everything that happens once the surveyor has decided which file/pages go
+  // to the AI: evidence blob, extraction, optional Drive upload.
+  const startEstimate = async (file: File, mode: EstimateApplyMode) => {
     // Store blob URL for the Evidence Viewer to display the file natively
     if (currentClaim?.id) {
       storeBlobUrl(currentClaim.id, 'estimate', file);
-      
+
       // Auto-open evidence panel and focus on estimate
       setShowEvidence(true);
       useEvidenceStore.getState().openField(currentClaim.id, {
@@ -65,7 +60,24 @@ export function AssessmentTab() {
         uploadFileToDrive(claimId, `estimate.${ext}`, file, label).catch(console.error);
       }
     }
+  };
+
+  const handleEstimateUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     e.target.value = '';
+    if (!file) return;
+
+    // Asked BEFORE extraction: a wrong file, or a surveyor who changes their
+    // mind, then costs nothing. Resolves straight to 'replace' on an empty
+    // sheet — nothing to lose, so nothing to ask.
+    const mode = await confirmEstimateMode(file.name);
+    if (mode === null) return;
+
+    if (await needsReview([file])) {
+      setReviewSheet({ file, mode });
+      return;
+    }
+    await startEstimate(file, mode);
   };
 
   const evidenceImages: string[] = [];
@@ -76,6 +88,19 @@ export function AssessmentTab() {
     <div className="flex flex-col h-[calc(100vh-140px)] p-6 lg:p-8 max-w-[1600px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
       {saveToCloudDialog}
       {estimateModeDialog}
+      {reviewSheet && (
+        <DocumentReviewSheet
+          open
+          slotLabel="Estimate"
+          files={[reviewSheet.file]}
+          onCancel={() => setReviewSheet(null)}
+          onConfirm={(_all, forAI) => {
+            const { mode } = reviewSheet;
+            setReviewSheet(null);
+            if (forAI[0]) void startEstimate(forAI[0], mode);
+          }}
+        />
+      )}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6 shrink-0">
         <div>
           <h2 className="text-2xl font-medium tracking-tight">Assessment</h2>
