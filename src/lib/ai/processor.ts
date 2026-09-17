@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { rowCheck, tagRows, dropDuplicates, toFindings, type Finding } from './row-check';
 import { fillGaps } from './gap-fill';
 import { takeDrop } from './fault';
+import { getAIPages, resolveAIPages } from './ai-pages';
 
 /**
  * Extracts text content from a PDF page (if it has a text layer).
@@ -147,9 +148,12 @@ export async function fileToImages(
     const apiImages: string[] = [];
     const textLayers: string[] = [];
 
-    for (let i = 1; i <= pdf.numPages; i++) {
-      if (onProgress) onProgress(i, pdf.numPages);
-      const page = await pdf.getPage(i);
+    // Only the pages the surveyor ticked in the review sheet are rendered —
+    // unticked pages never become images and never reach the provider.
+    const pageNumbers = resolveAIPages(pdf.numPages, getAIPages(file));
+    for (let idx = 0; idx < pageNumbers.length; idx++) {
+      if (onProgress) onProgress(idx + 1, pageNumbers.length);
+      const page = await pdf.getPage(pageNumbers[idx]);
 
       // Try to extract text (for digitally-born PDFs)
       const pageText = await extractPageText(page);
