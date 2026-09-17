@@ -13,6 +13,7 @@ import { buildStandardFinalSurveyHTML, triggerStandardPrint } from '@/lib/report
 import { rowsNeedingRemark, billCheckAssessed, resolveBillSalvage } from '@/lib/reports/bill-check-projection';
 import { billCheckFlags, reconcileInvoice } from '@/lib/reports/bill-check-flags';
 import { salvageBasis } from '@/lib/calculations/salvage';
+import { needsReview } from '@/lib/ai/needs-review';
 
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import { PendingRowsDialog } from '@/components/dialogs/PendingRowsDialog';
@@ -20,6 +21,7 @@ import { MissingRemarkDialog } from '@/components/dialogs/MissingRemarkDialog';
 import { ReportPreviewPanel } from '@/components/shared/ReportPreviewPanel';
 import { footerFromProfile } from '@/lib/reports/print-shell';
 import { DocumentEvidenceViewer } from '@/components/evidence/DocumentEvidenceViewer';
+import { DocumentReviewSheet } from '@/components/documents/DocumentReviewSheet';
 
 import { BillCheckHeader } from './bill-check/BillCheckHeader';
 import { BillCheckUploadPanel } from './bill-check/BillCheckUploadPanel';
@@ -83,6 +85,7 @@ export function BillCheckTab() {
   const [pendingGate, setPendingGate] = useState(false);
   const [remarkWarning, setRemarkWarning] = useState(false);
   const [flagGate, setFlagGate] = useState(false);
+  const [reviewFile, setReviewFile] = useState<File | null>(null);
 
   const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview, smartFix, reviewProgress } = useAIExtraction();
 
@@ -140,10 +143,12 @@ export function BillCheckTab() {
   };
   const blockingFlags = flags.filter(f => f.blocking);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) triggerExtraction('final-bill', file);
     e.target.value = '';
+    if (!file) return;
+    if (await needsReview([file])) setReviewFile(file);
+    else triggerExtraction('final-bill', file);
   };
 
   // A bill check is not issued while the bill is pending — pending means the
@@ -318,6 +323,19 @@ export function BillCheckTab() {
           </>
         )}
       </PanelGroup>
+
+      {reviewFile && (
+        <DocumentReviewSheet
+          open
+          slotLabel="Final Bill"
+          files={[reviewFile]}
+          onCancel={() => setReviewFile(null)}
+          onConfirm={(_all, forAI) => {
+            setReviewFile(null);
+            if (forAI[0]) triggerExtraction('final-bill', forAI[0]);
+          }}
+        />
+      )}
 
       <AIReviewDialog
         isOpen={!!reviewData}
