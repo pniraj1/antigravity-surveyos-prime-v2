@@ -29,6 +29,10 @@ describe('poolFromProbes', () => {
   it('no probes → fallback models', () => {
     expect(ids(poolFromProbes(cfg(), null, { gemini: ['g1'] }))).toEqual(['gemini/gemini-2.5-flash', 'gemini/gemini-3.5-flash', 'gemini/gemini-flash-lite-latest']);
   });
+  it('an errored probe with no models → fallback models', () => {
+    const erroredProbes = { ...probes(), providers: { ...probes().providers, gemini: { probedAt: 5, error: 'key rejected', accuracy: {}, models: {} } } };
+    expect(ids(poolFromProbes(cfg(), erroredProbes, { gemini: ['g1'] }))).toEqual(['gemini/gemini-2.5-flash', 'gemini/gemini-3.5-flash', 'gemini/gemini-flash-lite-latest']);
+  });
   it('a legacy (schema 1) config is migrated on the fly', () => {
     const legacy = { ...cfg(), schema: undefined, providers: { ...cfg().providers, gemini: { enabled: true, defaultModel: 'gemini-3.5-flash', models: [{ id: 'gemini-3.5-flash', label: '', note: '', ctxWindow: null, vision: true, imageCap: null }] } as any } };
     expect(ids(poolFromProbes(legacy, probes(), { gemini: ['g1'] }))).toEqual(['gemini/gemini-3.5-flash']);

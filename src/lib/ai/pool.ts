@@ -24,7 +24,8 @@ export function poolFromProbes(rawConfig: AIModelsConfig, probes: ModelProbes | 
     if (!block?.enabled || keys.length === 0) continue;
     const dead = retired(provider);
     const probed = probes?.providers[provider];
-    if (!probed || probed.probedAt === 0) {
+    if (!probed || probed.probedAt === 0 || (probed.error && Object.keys(probed.models).length === 0)) {
+      // An errored probe (error set, no models) learned nothing — treat as never probed.
       for (const m of FALLBACK_MODELS[provider]) {
         if (m.id in dead || block.excluded.includes(m.id)) continue;
         pool.push({ provider, proxied: PROXIED.has(provider), keys, model: { id: m.id, label: m.label, note: '', ctxWindow: m.ctxWindow, vision: m.vision, imageCap: m.imageCap } });

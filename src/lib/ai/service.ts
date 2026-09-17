@@ -17,7 +17,7 @@ import { parseGeminiError, classifyGemini429, isThinkingRejected, isModalityReje
 import { rankModels, type PoolEntry } from './rank';
 import { getHealth, keyHash } from './health';
 import { type AIJob, JOB_TIMEOUT_MS } from './jobs';
-import { tierOf, dailyLimit, OLLAMA_REST_MS } from './quota';
+import { tierOf, OLLAMA_REST_MS } from './quota';
 import { useProfileStore } from '@/stores/profile-store';
 import { useUIStore } from '@/stores/ui-store';
 import { toast } from 'sonner';
