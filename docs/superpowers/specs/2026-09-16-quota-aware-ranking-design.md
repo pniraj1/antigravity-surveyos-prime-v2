@@ -51,7 +51,7 @@ discovery / deprecation (2-B); Profile rows (2-D); cross-device ledgers.
 ### 1. Budget table — `src/lib/ai/quota.ts` (new, pure)
 
 ```ts
-export type Tier = 'flash' | 'lite' | 'gemma';
+export type Tier = 'flash' | 'lite' | 'gemma' | 'other';   // other = non-Google, non-gemma (2026-09-17)
 export function tierOf(provider: ProviderId, id: string): Tier;
 export function dailyLimit(provider: ProviderId, id: string): number;   // calls/day per key; Infinity = unknown
 export const OLLAMA_REST_MS = 60 * 60_000;                               // one usage window
@@ -61,8 +61,9 @@ export const OLLAMA_REST_MS = 60 * 60_000;                               // one 
 `/lite/` → 500, `/gemma/` → 14 400, anything else → 20. ollama, groq,
 nvidia → `Infinity`. `tierOf` — gemini: `/gemma/` → gemma, `/lite/` →
 lite, else flash (Pro counts as flash — never eligible anyway); ollama
-`gemma*` → gemma; other providers → lite (they are cheap fallbacks, not
-reserves). A shipped constant; admin editing comes with 2-C.
+`gemma*` → gemma; every other non-Google model → `other`, ranked after
+gemma for every job (live 2026-09-17: untested Groq/NVIDIA models sat above
+the owner's trusted gemma4 when they shared the lite tier). A shipped constant; admin editing comes with 2-C.
 
 ### 2. Ledger — `src/lib/ai/health.ts` (extend)
 

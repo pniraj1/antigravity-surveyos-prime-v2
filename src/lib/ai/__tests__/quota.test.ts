@@ -27,10 +27,11 @@ describe('tierOf', () => {
     expect(tierOf('gemini', 'gemini-3.5-flash')).toBe('flash');
     expect(tierOf('gemini', 'gemini-3.1-pro')).toBe('flash');
   });
-  it('ollama gemma is gemma; everything else is lite (cheap fallback, not a reserve)', () => {
+  it('ollama gemma is gemma; every other non-Google model is the other tier (untested fallback, after gemma)', () => {
     expect(tierOf('ollama', 'gemma4:31b')).toBe('gemma');
-    expect(tierOf('ollama', 'gpt-oss:120b')).toBe('lite');
-    expect(tierOf('groq', 'llama-3.2-90b-vision-preview')).toBe('lite');
+    expect(tierOf('ollama', 'gpt-oss:120b')).toBe('other');
+    expect(tierOf('groq', 'llama-3.2-90b-vision-preview')).toBe('other');
+    expect(tierOf('nvidia', 'meta/llama-3.2-11b-vision-instruct')).toBe('other');
   });
   it('rest window is one hour', () => { expect(OLLAMA_REST_MS).toBe(3_600_000); });
 });

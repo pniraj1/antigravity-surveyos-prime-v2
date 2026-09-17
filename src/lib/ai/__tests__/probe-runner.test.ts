@@ -283,3 +283,16 @@ describe('paid status', () => {
     expect(DURABLE_FAILURES.has('paid')).toBe(true);
   });
 });
+
+describe('buildProbeResult — vision unknown keeps the previous verdict', () => {
+  const base = { id: 'm', ping: { status: 'ok' as const, reason: '', ctxWindow: null }, providerCap: null, providerCtx: null, probedCap: null, latencyMs: 3000, now: 1, previousFailures: 0 };
+  it('429 during the vision test does not turn a vision model into text-only', () => {
+    expect(buildProbeResult({ ...base, visionOk: false, visionUnknown: true, previousVision: true }).vision).toBe(true);
+  });
+  it('unknown with no history stays false', () => {
+    expect(buildProbeResult({ ...base, visionOk: false, visionUnknown: true }).vision).toBe(false);
+  });
+  it('a real negative (400) still wins over history', () => {
+    expect(buildProbeResult({ ...base, visionOk: false, visionUnknown: false, previousVision: true }).vision).toBe(false);
+  });
+});

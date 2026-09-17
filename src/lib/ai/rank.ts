@@ -50,8 +50,8 @@ export function modelStrength(id: string): number {
   return gen * 10 + tier;
 }
 
-const HEAVY_TIER: Record<Tier, number> = { flash: 0, lite: 1, gemma: 2 };
-const CHEAP_TIER: Record<Tier, number> = { lite: 0, gemma: 1, flash: 2 };   // light/text: Flash is the last resort
+const HEAVY_TIER: Record<Tier, number> = { flash: 0, lite: 1, gemma: 2, other: 3 };
+const CHEAP_TIER: Record<Tier, number> = { lite: 0, gemma: 1, flash: 2, other: 3 };   // light/text: Flash is the last resort before untested providers
 
 const VERDICT_RANK: Record<NonNullable<PoolEntry['verdict']>, number> = { exact: 0, close: 1, untested: 2, wrong: 9, failed: 9 };
 

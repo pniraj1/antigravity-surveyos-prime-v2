@@ -112,9 +112,13 @@ describe('ordering', () => {
     ];
     expect(ids(rankModels('light', ['i'], pool, { health: health() }))).toEqual(['gemini-2.5-flash', 'gemini-3.5-flash']);
   });
-  it('text: speed then busy, no vision filter', () => {
+  it('text: no vision filter; Gemini lite before a faster Groq model (other tier last)', () => {
     const pool = [entry('gemini', 'gemini-flash-lite-latest', { msPerPage: 4_000 }), entry('groq', 'llama-3.3-70b-versatile', { vision: false, msPerPage: 2_300 })];
-    expect(ids(rankModels('text', [], pool, { health: health() }))).toEqual(['llama-3.3-70b-versatile', 'gemini-flash-lite-latest']);
+    expect(ids(rankModels('text', [], pool, { health: health() }))).toEqual(['gemini-flash-lite-latest', 'llama-3.3-70b-versatile']);
+  });
+  it('other tier ranks after gemma for every job (live 2026-09-17: NVIDIA sat above gemma4)', () => {
+    const pool = [entry('nvidia', 'meta/llama-3.2-11b-vision-instruct', { msPerPage: 13_000 }), entry('ollama', 'gemma4:31b', { msPerPage: 4_000 }), entry('groq', 'qwen/qwen3.6-27b', { msPerPage: 2_000 })];
+    for (const job of ['heavy', 'light'] as const) expect(ids(rankModels(job, ['i'], pool, { health: health() }))[0]).toBe('gemma4:31b');
   });
 });
 

@@ -13,7 +13,7 @@ export const ADMIN_JOBS: { job: AIJob; label: string; pagesNeeded: number }[] = 
   { job: 'text', label: 'Letters & text', pagesNeeded: 1 },
 ];
 const ALL_KEYS: Record<ProviderId, string[]> = { gemini: ['admin'], groq: ['admin'], nvidia: ['admin'], ollama: ['admin'] };
-const TIER_LABEL: Record<Tier, string> = { flash: 'Flash tier', lite: 'Flash-Lite tier', gemma: 'Gemma tier' };
+const TIER_LABEL: Record<Tier, string> = { flash: 'Flash tier', lite: 'Flash-Lite tier', gemma: 'Gemma tier', other: 'Other provider' };
 
 export interface RankedRow { provider: ProviderId; id: string; tier: Tier; limit: number; msPerPage: number | null; proxied: boolean; reason: string; isNew: boolean }
 

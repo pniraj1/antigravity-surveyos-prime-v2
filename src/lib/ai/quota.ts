@@ -6,7 +6,7 @@
 // ponytail: shipped constant; admin-editable limits arrive with Phase 2-C.
 import type { ProviderId } from './models-config';
 
-export type Tier = 'flash' | 'lite' | 'gemma';
+export type Tier = 'flash' | 'lite' | 'gemma' | 'other';
 
 /** One Ollama Cloud usage window — a 429 there rests the model this long. */
 export const OLLAMA_REST_MS = 3_600_000;
@@ -14,7 +14,10 @@ export const OLLAMA_REST_MS = 3_600_000;
 export function tierOf(provider: ProviderId, id: string): Tier {
   if (provider === 'gemini') return /gemma/.test(id) ? 'gemma' : /lite/.test(id) ? 'lite' : 'flash';
   if (provider === 'ollama' && /^gemma/.test(id)) return 'gemma';
-  return 'lite';
+  // Live 2026-09-17: Groq/NVIDIA models were ranking above the owner's trusted
+  // gemma4 because they sat in the lite tier with no daily cap. They are
+  // untested fallbacks — after every Google tier and gemma, never before.
+  return 'other';
 }
 
 /** Calls per day this key may make to this model; Infinity when unknown. */

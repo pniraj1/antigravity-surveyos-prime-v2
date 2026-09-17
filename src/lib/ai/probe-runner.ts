@@ -106,6 +106,14 @@ export interface BuildProbeResultInput {
   /** Context window the provider reports, used when the probe learned nothing. */
   providerCtx: number | null;
   visionOk: boolean;
+  /**
+   * The vision call failed transiently (429/5xx/timeout) — it said nothing
+   * about the model. Live 2026-09-17: gemini-3.6-flash was at its 20/day
+   * limit during the probe and got recorded as text-only for a day.
+   */
+  visionUnknown?: boolean;
+  /** Last probe's vision verdict, reused when this one is unknown. */
+  previousVision?: boolean;
   /** Cap parsed from a 2-image rejection, or null if 2 images were accepted. */
   probedCap: number | null;
   /** Measured milliseconds, or null when the cutoff was hit. */
@@ -116,7 +124,8 @@ export interface BuildProbeResultInput {
 }
 
 export function buildProbeResult(input: BuildProbeResultInput): ProbeResult {
-  const { id, ping, providerCap, providerCtx, visionOk, probedCap, latencyMs, now, previousFailures } = input;
+  const { id, ping, providerCap, providerCtx, probedCap, latencyMs, now, previousFailures, visionUnknown, previousVision } = input;
+  const visionOk = visionUnknown ? (previousVision ?? false) : input.visionOk;
   const failed = ping.status !== 'ok';
 
   const imageCap = probedCap !== null ? probedCap : providerCap;
@@ -387,6 +396,7 @@ export async function runProviderProbe(
 
     const results = await mapWithConcurrency(catalogue, PROVIDER_CONCURRENCY[provider], async (entry) => {
       const previousFailures = previous.models[entry.id]?.consecutiveFailures ?? 0;
+      const previousVision = previous.models[entry.id]?.vision;
 
       // Groq reports each model's real context_window in its catalogue — unlike
       // NVIDIA, which reports nothing, so pass 1 has to throw a 16K-token ping
@@ -444,6 +454,7 @@ export async function runProviderProbe(
       // ── Pass 2a: vision — the model must read a code only visible in pixels ──
       // Trusts the provider when it reports input_modalities (Groq does).
       let visionOk: boolean;
+      let visionUnknown = false;
       if (entry.reportedVision === false) {
         visionOk = false;
       } else {
@@ -455,6 +466,9 @@ export async function runProviderProbe(
           timeoutMs: LATENCY_CUTOFF_MS,
         });
         visionOk = visionRes.status === 200 && visionRes.body.includes(PROBE_VISION_CODE);
+        // 429 / 5xx / timeout (status 0) is not a verdict — keep last probe's answer.
+        visionUnknown = !visionOk && visionRes.status !== 200 && visionRes.status !== 400;
+        if (visionUnknown) visionOk = previousVision ?? false;
       }
 
       // ── Pass 2b: image cap ──
@@ -484,7 +498,7 @@ export async function runProviderProbe(
       done++; onProgress(done, total);
       return buildProbeResult({
         id: entry.id, ping: verdict, providerCap, providerCtx: entry.ctxWindow,
-        visionOk, probedCap, latencyMs, now, previousFailures,
+        visionOk, visionUnknown, previousVision, probedCap, latencyMs, now, previousFailures,
       });
     });
 
