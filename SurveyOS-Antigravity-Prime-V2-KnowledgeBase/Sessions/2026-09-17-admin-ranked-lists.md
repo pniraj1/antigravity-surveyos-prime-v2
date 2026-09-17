@@ -60,9 +60,9 @@ with a Flash model, "Licence · RC · policy" with a Flash-Lite. Upload an
 RC as a surveyor → first call = the Licence list's first row.
 
 ## Carried minors / follow-ups
-- Non-Gemini non-gemma models (gpt-oss, nemotron) are classed `lite` tier
-  with unlimited budget → for heavy they can rank above Gemini Flash-Lite
-  if vision. Consider a fourth `other` tier (2-B/2-D).
+- (fixed same day) `other` tier for non-Google non-gemma models, after gemma.
+- Migration labels old un-ticked models "excluded by you" — owner Included
+  2.5-flash, 3.8-flash, flash-lite-latest, 3.1-flash-lite by hand.
 - `AIControls.tsx` surveyor pickers still render the legacy mirror list and
   do nothing — remove in 2-D with `resolveEnabledModel`, `models`,
   `defaultModel`.
