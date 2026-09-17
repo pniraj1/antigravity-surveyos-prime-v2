@@ -11,7 +11,7 @@ export function useAIConfig(): void {
   useEffect(() => {
     let cancelled = false;
     loadAIModelsConfig().then(cfg => { if (!cancelled) setConfig(cfg); });
-    loadModelProbes().then(p => { if (!cancelled) setProbes(p.probedAt > 0 ? p : null); }).catch(() => { if (!cancelled) setProbes(null); });
+    loadModelProbes().then(p => { if (!cancelled) setProbes(p.probedAt > 0 ? p : null); });
     return () => { cancelled = true; };
   }, [setConfig, setProbes]);
 }

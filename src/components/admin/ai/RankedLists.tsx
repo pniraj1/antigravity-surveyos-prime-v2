@@ -27,6 +27,15 @@ export function RankedLists({ config, probes, newIds, onExclude, onInclude, onLi
     onExclude(row.provider, row.id);
   };
 
+  // A limit of 0 drops the model from every job's chain, same as Exclude — same last-model guard.
+  const setLimit = (provider: ProviderId, id: string, value: number | null) => {
+    if (value === 0) {
+      const empty = lastEligibleFor(config, probes, provider, id);
+      if (empty) { toast.error(`${empty} would have no model left.`); return; }
+    }
+    onLimit(provider, id, value);
+  };
+
   return (
     <div className="space-y-4">
       {ADMIN_JOBS.map(({ job, label }) => (
@@ -46,10 +55,11 @@ export function RankedLists({ config, probes, newIds, onExclude, onInclude, onLi
                     <span className="text-muted-foreground truncate flex-1">{row.reason}</span>
                     <label className="flex items-center gap-1 text-[10px] text-muted-foreground">
                       /day
-                      <input type="number" min={0} className="w-16 px-1.5 py-0.5 rounded border border-border text-xs text-right"
+                      <input type="number" min={0}
+                        className={`w-16 px-1.5 py-0.5 rounded border text-xs text-right ${typeof custom === 'number' && custom < 0 ? 'border-status-danger' : 'border-border'}`}
                         value={typeof custom === 'number' ? custom : ''}
                         placeholder={String(dailyLimit(row.provider, row.id) === Infinity ? '∞' : dailyLimit(row.provider, row.id))}
-                        onChange={e => onLimit(row.provider, row.id, e.target.value === '' ? null : Number(e.target.value))} />
+                        onChange={e => setLimit(row.provider, row.id, e.target.value === '' ? null : Number(e.target.value))} />
                     </label>
                     <button onClick={() => exclude(row)} title="Exclude from every job"
                       className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium border border-border text-muted-foreground hover:text-status-danger">

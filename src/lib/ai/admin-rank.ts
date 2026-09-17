@@ -2,10 +2,10 @@
 import { type AIModelsConfig, type ProviderId, type ProviderConfig } from './models-config';
 import type { ModelProbes, ProviderProbe } from './probe-types';
 import type { AIJob } from './jobs';
-import { rankModels, type PoolEntry } from './rank';
+import { rankModels, PayloadTooLargeError, type PoolEntry, type RankOptions } from './rank';
 import { createHealth } from './health';
 import { poolFromProbes, limitOfFor } from './pool';
-import { tierOf, type Tier } from './quota';
+import { tierOf, dailyLimit, type Tier } from './quota';
 
 export const ADMIN_JOBS: { job: AIJob; label: string; pagesNeeded: number }[] = [
   { job: 'heavy', label: 'Estimates & bills', pagesNeeded: 5 },
@@ -24,21 +24,45 @@ function reasonFor(e: PoolEntry, tier: Tier, limit: number): string {
   return parts.join(' · ');
 }
 
-function rankFor(job: AIJob, pagesNeeded: number, config: AIModelsConfig, probes: ModelProbes | null): PoolEntry[] {
+/** Same words, but always ends in "off" — used for the limit-0 rows appended at the end of each list. */
+function offReasonFor(e: PoolEntry, tier: Tier): string {
+  const parts = [TIER_LABEL[tier], e.msPerPage == null ? 'speed untested' : `${Math.round(e.msPerPage / 1000)} s/page`];
+  if (e.proxied) parts.push('via proxy');
+  parts.push('off');
+  return parts.join(' · ');
+}
+
+function rankFor(job: AIJob, pagesNeeded: number, config: AIModelsConfig, probes: ModelProbes | null, limitOf?: RankOptions['limitOf']): PoolEntry[] {
   const pool = poolFromProbes(config, probes, ALL_KEYS);
   try {
-    return rankModels(job, job === 'text' ? [] : ['x'], pool, { health: createHealth(null), pagesNeeded, limitOf: limitOfFor(config) });
-  } catch { return []; }   // PayloadTooLargeError cannot happen with one image, but never let the admin tab crash
+    return rankModels(job, job === 'text' ? [] : ['x'], pool, { health: createHealth(null), pagesNeeded, limitOf: limitOf ?? limitOfFor(config) });
+  } catch (e) {
+    if (e instanceof PayloadTooLargeError) return [];   // cannot happen with one image, but never let the admin tab crash
+    throw e;
+  }
 }
 
 export function rankedLists(config: AIModelsConfig, probes: ModelProbes | null, newIds: ReadonlySet<string>): Record<AIJob, RankedRow[]> {
   const limitOf = limitOfFor(config);
+  // A model limited to 0 is dropped by rankModels entirely (0 = "never eligible"), so on its own
+  // it would vanish from every list and from the Excluded group (it lives in `limits`, not `excluded`).
+  // Rank again with 0 relaxed to the table default, then keep only the ids whose real limit is 0 and
+  // append them at the end so the row — and its limit input — stays visible.
+  const relaxedLimitOf: RankOptions['limitOf'] = (p, id) => { const v = limitOf(p, id); return v === 0 ? dailyLimit(p, id) : v; };
   const out = {} as Record<AIJob, RankedRow[]>;
   for (const { job, pagesNeeded } of ADMIN_JOBS) {
-    out[job] = rankFor(job, pagesNeeded, config, probes).map(e => {
+    const main = rankFor(job, pagesNeeded, config, probes).map(e => {
       const tier = tierOf(e.provider, e.model.id), limit = limitOf(e.provider, e.model.id);
       return { provider: e.provider, id: e.model.id, tier, limit, msPerPage: e.msPerPage ?? null, proxied: e.proxied, reason: reasonFor(e, tier, limit), isNew: newIds.has(e.model.id) };
     });
+    const seen = new Set(main.map(r => `${r.provider}/${r.id}`));
+    const off = rankFor(job, pagesNeeded, config, probes, relaxedLimitOf)
+      .filter(e => limitOf(e.provider, e.model.id) === 0 && !seen.has(`${e.provider}/${e.model.id}`))
+      .map(e => {
+        const tier = tierOf(e.provider, e.model.id);
+        return { provider: e.provider, id: e.model.id, tier, limit: 0, msPerPage: e.msPerPage ?? null, proxied: e.proxied, reason: offReasonFor(e, tier), isNew: newIds.has(e.model.id) };
+      });
+    out[job] = [...main, ...off];
   }
   return out;
 }

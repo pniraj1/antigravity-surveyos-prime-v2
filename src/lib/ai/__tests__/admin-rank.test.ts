@@ -32,6 +32,14 @@ describe('rankedLists', () => {
     expect(lists.heavy.map(x => x.id)).not.toContain('gemini-3.5-flash');
     expect(lists.light[0]).toMatchObject({ id: 'gemini-3.5-flash-lite', limit: 300 });
   });
+  it('a model limited to 0 still appears — last — instead of vanishing', () => {
+    const c = { ...cfg, providers: { ...cfg.providers, gemini: { ...emptyProviderConfig(), limits: { 'gemini-3.5-flash': 0 } } } };
+    const lists = rankedLists(c, probes(), new Set());
+    const row = lists.heavy.at(-1)!;
+    expect(row).toMatchObject({ id: 'gemini-3.5-flash', limit: 0 });
+    expect(row.reason).toContain('off');
+    expect(row.reason.endsWith('off')).toBe(true);
+  });
 });
 
 describe('lastEligibleFor', () => {

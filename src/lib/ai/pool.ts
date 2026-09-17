@@ -10,12 +10,18 @@ import { dailyLimit } from './quota';
 
 const PROVIDERS: ProviderId[] = ['gemini', 'groq', 'nvidia', 'ollama'];
 const PROXIED: ReadonlySet<ProviderId> = new Set(['nvidia', 'ollama']);
+// ponytail: module-level flag so the "no probes" warning logs once per page load, not once per pool build.
+let warnedNoProbes = false;
 
 function retired(p: ProviderId): Record<string, string> {
   return p === 'gemini' ? DEPRECATED_GEMINI_MODELS : p === 'groq' ? DEPRECATED_GROQ_MODELS : {};
 }
 
 export function poolFromProbes(rawConfig: AIModelsConfig, probes: ModelProbes | null, keysByProvider: Partial<Record<ProviderId, string[]>>): PoolEntry[] {
+  if (probes === null && !warnedNoProbes) {
+    warnedNoProbes = true;
+    console.warn('[ai] model probes unavailable — using the shipped fallback list');
+  }
   const config = migrateConfig(rawConfig, probes);
   const pool: PoolEntry[] = [];
   for (const provider of PROVIDERS) {

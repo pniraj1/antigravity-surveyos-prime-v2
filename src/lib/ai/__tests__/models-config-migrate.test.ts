@@ -1,11 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { migrateConfig, emptyProviderConfig, FALLBACK_AI_MODELS_CONFIG, type AIModelsConfig } from '../models-config';
+import { migrateConfig, legacyModelsFor, emptyProviderConfig, FALLBACK_AI_MODELS_CONFIG, type AIModelsConfig } from '../models-config';
 import { EMPTY_PROBES, type ModelProbes } from '../probe-types';
 
 const ok = (id: string) => ({ id, status: 'ok' as const, reason: '', vision: true, imageCap: null, ctxWindow: 1_000_000, msPerPage: 3000, slow: false,
   source: { vision: 'probe' as const, imageCap: 'probe' as const, ctxWindow: 'probe' as const }, probedAt: 1, consecutiveFailures: 0 });
 const probes = (): ModelProbes => ({ ...EMPTY_PROBES, providers: { ...EMPTY_PROBES.providers,
   gemini: { probedAt: 1, error: null, accuracy: {}, models: { 'gemini-2.5-flash': ok('gemini-2.5-flash'), 'gemini-3.5-flash': ok('gemini-3.5-flash'), 'gemini-3.5-flash-lite': ok('gemini-3.5-flash-lite') } } } });
+const probesWithPreview = (): ModelProbes => ({ ...EMPTY_PROBES, providers: { ...EMPTY_PROBES.providers,
+  gemini: { probedAt: 1, error: null, accuracy: {}, models: { 'gemini-2.5-flash': ok('gemini-2.5-flash'), 'gemini-3-flash-preview': ok('gemini-3-flash-preview') } } } });
 const legacy = (models: { id: string; note?: string }[]): AIModelsConfig => ({
   ...FALLBACK_AI_MODELS_CONFIG, schema: undefined,
   providers: { ...FALLBACK_AI_MODELS_CONFIG.providers,
@@ -44,5 +46,27 @@ describe('migrateConfig', () => {
     for (const p of ['gemini', 'groq', 'nvidia', 'ollama'] as const) {
       expect(out.providers[p]).toMatchObject({ excluded: expect.any(Array), excludedReason: {}, keep: [], limits: {}, notes: expect.any(Object) });
     }
+  });
+  it('empty tick list + probes still applies guard rails — a preview id is excluded, not left open', () => {
+    const out = migrateConfig(legacy([]), probesWithPreview());
+    expect(out.providers.gemini.excluded).toContain('gemini-3-flash-preview');
+    expect(out.providers.gemini.excludedReason['gemini-3-flash-preview']).toBe('not a document model');
+    expect(out.providers.gemini.excluded).not.toContain('gemini-2.5-flash');
+  });
+});
+
+describe('legacyModelsFor', () => {
+  it('probe ok minus excluded, mapped to ModelEntry with the admin note', () => {
+    const block = { ...emptyProviderConfig(), excluded: ['gemini-3.5-flash-lite'], notes: { 'gemini-2.5-flash': 'primary' } };
+    const probe = probes().providers.gemini;
+    const out = legacyModelsFor(block, probe, 'gemini');
+    expect(out.map(m => m.id).sort()).toEqual(['gemini-2.5-flash', 'gemini-3.5-flash']);
+    expect(out.find(m => m.id === 'gemini-2.5-flash')?.note).toBe('primary');
+  });
+  it('no probe → falls back to the shipped fallback list, still minus excluded', () => {
+    const block = { ...emptyProviderConfig(), excluded: ['gemini-2.5-flash'] };
+    const out = legacyModelsFor(block, null, 'gemini');
+    expect(out.map(m => m.id)).not.toContain('gemini-2.5-flash');
+    expect(out.length).toBeGreaterThan(0);
   });
 });

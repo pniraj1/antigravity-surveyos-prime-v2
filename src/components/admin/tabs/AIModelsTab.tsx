@@ -8,7 +8,7 @@ import { useAIConfigStore } from '@/stores/ai-config-store';
 import { useProbesStore } from '@/stores/probes-store';
 import {
   type AIModelsConfig, type ProviderId, type ProviderConfig,
-  loadAIModelsConfig, saveAIModelsConfig, migrateConfig,
+  loadAIModelsConfig, saveAIModelsConfig, migrateConfig, legacyModelsFor,
 } from '@/lib/ai/models-config';
 import { applyGuardRails } from '@/lib/ai/guard-rails';
 import { runModelTest, type ModelTestResult, type AITestOverride } from '@/lib/ai/service';
@@ -27,6 +27,21 @@ const PROVIDER_META: Record<ProviderId, { label: string; color: string; keyField
 };
 
 const PROVIDERS: ProviderId[] = ['gemini', 'groq', 'nvidia', 'ollama'];
+
+/**
+ * Populates the deprecated `models`/`defaultModel` fields from the current chain so a
+ * surveyor on cached pre-2-C JS (which still reads `block.models`) keeps a chain.
+ * ponytail: legacy mirror so surveyors on cached pre-2-C code keep a chain; delete in 2-D.
+ */
+function withLegacyMirror(config: AIModelsConfig, probes: ModelProbes): AIModelsConfig {
+  const providers = { ...config.providers };
+  for (const p of PROVIDERS) {
+    const probe = probes.providers[p]?.probedAt > 0 ? probes.providers[p] : null;
+    const models = legacyModelsFor(providers[p], probe, p);
+    providers[p] = { ...providers[p], models, defaultModel: models[0]?.id ?? '' };
+  }
+  return { ...config, providers };
+}
 
 /** Totals for the post-probe toast. */
 function chainCounts(config: AIModelsConfig, probes: ModelProbes): { inChain: number; auto: number } {
@@ -63,6 +78,9 @@ export function AIModelsTab({ adminEmail }: { adminEmail: string }) {
 
   if (!config) return <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 size={14} className="animate-spin" /> Loading config…</div>;
 
+  // Firestore read failed and this is the built-in fallback — never let it get written back as if it were real.
+  const isFallback = config.updatedBy === 'fallback';
+
   const adminKey = (p: ProviderId): string | undefined =>
     (profile[PROVIDER_META[p].keyField] as string[] | undefined)?.[0]?.trim();
 
@@ -82,15 +100,20 @@ export function AIModelsTab({ adminEmail }: { adminEmail: string }) {
 
   /** Guard rails run on every probe; the result is live immediately (a slow model must not wait for Save). */
   async function commitProbe(previous: ModelProbes, next: ModelProbes) {
+    if (configRef.current?.updatedBy === 'fallback') {
+      toast.error('AI config didn\'t load from Firestore — reload the page before probing.');
+      return;
+    }
     await saveModelProbes(next, adminEmail);
     setPrevProbes(previous);
     setProbes(next);
     const railed = applyGuardRails(configRef.current!, next);
-    setConfig(railed);
-    await saveAIModelsConfig(railed, adminEmail);
-    setStoreConfig(railed);
+    const withMirror = withLegacyMirror(railed, next);
+    setConfig(withMirror);
+    await saveAIModelsConfig(withMirror, adminEmail);
+    setStoreConfig(withMirror);
     useProbesStore.getState().setProbes(next);
-    const { inChain, auto } = chainCounts(railed, next);
+    const { inChain, auto } = chainCounts(withMirror, next);
     toast.success(`Probe complete — ${inChain} in chain, ${auto} auto-excluded (see Excluded).`);
   }
 
@@ -148,9 +171,10 @@ export function AIModelsTab({ adminEmail }: { adminEmail: string }) {
   }
 
   async function save() {
+    if (isFallback) { toast.error('AI config didn\'t load from Firestore — reload the page before saving.'); return; }
     setSaving(true);
     try {
-      const next: AIModelsConfig = { ...config!, schema: 2 };
+      const next: AIModelsConfig = withLegacyMirror({ ...config!, schema: 2 }, probes);
       await saveAIModelsConfig(next, adminEmail);
       setStoreConfig(next);
       toast.success('AI model config saved — live for all surveyors.');
@@ -170,13 +194,16 @@ export function AIModelsTab({ adminEmail }: { adminEmail: string }) {
           {probes.probedAt > 0 && (
             <p className="text-[10px] text-muted-foreground mt-0.5">Last probed {new Date(probes.probedAt).toLocaleString()} by {probes.probedBy || 'unknown'}</p>
           )}
+          {isFallback && (
+            <p className="text-xs text-status-danger mt-1">AI config didn&apos;t load from Firestore — reload the page before probing or saving.</p>
+          )}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <button onClick={probeAll} disabled={probing || saving}
+          <button onClick={probeAll} disabled={probing || saving || isFallback}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium border border-border text-foreground disabled:opacity-50">
             {probing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} Refresh &amp; probe
           </button>
-          <button onClick={save} disabled={saving || probing}
+          <button onClick={save} disabled={saving || probing || isFallback}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium bg-foreground text-primary disabled:opacity-50">
             {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save Config
           </button>
@@ -194,7 +221,7 @@ export function AIModelsTab({ adminEmail }: { adminEmail: string }) {
 
       {PROVIDERS.map(p => (
         <ProviderCard key={p} provider={p} meta={PROVIDER_META[p]} block={config.providers[p]} probe={probes.providers[p]} diff={diffs[p]}
-          hasKey={Boolean(adminKey(p))} probing={probing || saving}
+          hasKey={Boolean(adminKey(p))} probing={probing || saving || isFallback}
           onToggleProvider={() => toggleProvider(p)} onProbe={() => probeOne(p)}
           onTest={(id, f) => runTest(p, id, f)} testing={testing} testResult={testResult} testProgress={testProgress}
           onNote={(id, note) => onNote(p, id, note)} />

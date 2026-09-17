@@ -1,6 +1,7 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
-import type { ModelProbes } from './probe-types';
+import type { ModelProbes, ProviderProbe } from './probe-types';
+import { applyGuardRails } from './guard-rails';
 
 export type ProviderId = 'gemini' | 'groq' | 'nvidia' | 'ollama';
 
@@ -151,7 +152,28 @@ export function migrateConfig(raw: AIModelsConfig, probes: ModelProbes | null): 
     const notes = Object.fromEntries(ticked.filter(m => m.note).map(m => [m.id, m.note]));
     providers[p] = { ...block, excluded, excludedReason: {}, keep: [], limits: {}, notes, models: [], defaultModel: '' };
   }
-  return { ...raw, schema: 2, providers };
+  const migrated: AIModelsConfig = { ...raw, schema: 2, providers };
+  // A freshly migrated doc with no ticks has nothing excluded — apply the guard rails
+  // immediately so slow/preview ids don't enter chains until the admin's first probe.
+  return probes ? applyGuardRails(migrated, probes) : migrated;
+}
+
+/**
+ * The old per-provider shape (`models`/`defaultModel`) that surveyors on cached
+ * pre-2-C JS still read. Populated from the current chain so a stale tab keeps
+ * working until it reloads.
+ * ponytail: legacy mirror so surveyors on cached pre-2-C code keep a chain; delete in 2-D.
+ */
+export function legacyModelsFor(block: ProviderConfig, probe: ProviderProbe | null, provider: ProviderId): ModelEntry[] {
+  const dead = provider === 'gemini' ? DEPRECATED_GEMINI_MODELS : provider === 'groq' ? DEPRECATED_GROQ_MODELS : {};
+  if (!probe || probe.probedAt === 0) {
+    return FALLBACK_MODELS[provider]
+      .filter(m => !(m.id in dead) && !block.excluded.includes(m.id))
+      .map(m => ({ id: m.id, label: m.id, note: block.notes[m.id] ?? '', ctxWindow: m.ctxWindow, vision: m.vision, imageCap: m.imageCap }));
+  }
+  return Object.values(probe.models)
+    .filter(r => r.status === 'ok' && !(r.id in dead) && !block.excluded.includes(r.id))
+    .map(r => ({ id: r.id, label: r.id, note: block.notes[r.id] ?? '', ctxWindow: r.ctxWindow, vision: r.vision, imageCap: r.imageCap }));
 }
 
 /** Loads the admin model config from Firestore; falls back gracefully on any error. */
