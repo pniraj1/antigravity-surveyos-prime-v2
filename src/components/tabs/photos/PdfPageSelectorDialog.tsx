@@ -4,11 +4,8 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
-/** One page of a PDF, already thumbnailed. */
-export interface PdfPage {
-  pageNumber: number;
-  thumbDataUrl: string;
-}
+import { PdfPageGrid, type PdfPage } from '@/components/documents/PdfPageGrid';
+export type { PdfPage };
 
 interface PdfPageSelectorDialogProps {
   open: boolean;
@@ -71,30 +68,12 @@ export function PdfPageSelectorDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-3 gap-3 max-h-[50vh] overflow-y-auto py-1">
-          {pages.map(page => (
-            <label
-              key={page.pageNumber}
-              className="flex flex-col gap-1.5 rounded-md border border-border p-2 cursor-pointer hover:border-primary"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={page.thumbDataUrl}
-                alt={`Page ${page.pageNumber}`}
-                className="w-full aspect-[3/4] object-contain bg-muted rounded"
-              />
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <input
-                  type="checkbox"
-                  checked={checked.has(page.pageNumber)}
-                  onChange={() => togglePage(page.pageNumber)}
-                  className="accent-primary"
-                />
-                Page {page.pageNumber}
-              </div>
-            </label>
-          ))}
-        </div>
+        <PdfPageGrid
+          pages={pages}
+          checked={checked}
+          onToggle={togglePage}
+          className="max-h-[50vh] overflow-y-auto py-1"
+        />
 
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="outline" onClick={onCancel}>
