@@ -19,7 +19,7 @@
 
 ## In Progress
 
-- [ ] **Deploy Phase 2-C + live check L11** (2026-09-17) — hosting only; ROLLOUT ORDER: deploy → surveyors refresh → Admin Save → Admin Probe all (see `Sessions/2026-09-17-admin-ranked-lists.md`). Commits e181d862..b9201187 not live.
+- [ ] **Phase 2-C admin steps + L11** (2026-09-17) — deployed (hosting, 96098c6f). Owner: Admin → Save, then Probe all, review Excluded (L11).
 - [ ] **Live check L10** (2026-09-16) — Phase 2-A deployed (hosting, e7c1a997). L10 in `Sessions/2026-09-16-quota-aware-ranking.md`.
 - [ ] **Live check L9** (2026-09-16) — Smart Fix deployed (hosting, 56b44714). Run L9 (`npm run dev`, open with `?ai-drop=38`, upload DTC Proforma Invoice-1.PDF as estimate — expect one extra single-page call and a clean dialog).
 - [ ] **AI fallback — Phase 1 live checks** (2026-09-16) — code deployed; L0–L8 from `docs/superpowers/plans/2026-09-15-ai-fallback-phase-1.md` Task 14 still to run in the live app with the owner's AQ. + Ollama keys (`?ai-fault=503|429-minute|429-day|429-zero` for induced failures).

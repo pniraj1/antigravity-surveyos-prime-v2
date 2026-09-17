@@ -10,7 +10,7 @@ limits; and the tab shows the three ranked lists the loop actually uses.
 Spec: `docs/superpowers/specs/2026-09-17-admin-ranked-lists-design.md`
 Plan: `docs/superpowers/plans/2026-09-17-admin-ranked-lists.md`
 Ledger: `.superpowers/sdd/progress.md` § Admin ranked lists
-Commits: e181d862..b9201187 on `main`. **Not deployed.**
+Commits: e181d862..96098c6f on `main`. Deployed (hosting only) 2026-09-17.
 
 ### Modules
 - `src/lib/ai/models-config.ts` — schema 2: `ProviderConfig { enabled,
