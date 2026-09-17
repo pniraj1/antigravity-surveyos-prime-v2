@@ -180,7 +180,9 @@ export function legacyModelsFor(block: ProviderConfig, probe: ProviderProbe | nu
 export async function loadAIModelsConfig(): Promise<AIModelsConfig> {
   try {
     const snap = await getDoc(doc(db, 'ai_config', 'models'));
-    if (!snap.exists()) return FALLBACK_AI_MODELS_CONFIG;
+    // A missing doc is a fresh project, not a failed read — the admin tab must
+    // still be allowed to write the first config ('fallback' locks probe/save).
+    if (!snap.exists()) return { ...FALLBACK_AI_MODELS_CONFIG, updatedBy: 'none' };
     return mergeWithFallback(snap.data() as Partial<AIModelsConfig>);
   } catch {
     return FALLBACK_AI_MODELS_CONFIG;
