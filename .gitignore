@@ -91,3 +91,6 @@ functions/node_modules/
 .od/
 .swarm/
 .tmp-screenshots/
+
+# SDD scratch (task briefs/reports/review packages)
+.superpowers/
