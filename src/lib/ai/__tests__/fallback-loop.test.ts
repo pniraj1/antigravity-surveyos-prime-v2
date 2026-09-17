@@ -9,6 +9,7 @@ vi.mock('@/lib/firebase/config', () => ({ getFirebaseApp: () => ({}), db: {} }))
 import { callAIGateway, newSession, AllProvidersBusyError, OfflineError, CURRENT_MODELS, _resetNoThinkingForTests } from '../service';
 import { useProfileStore } from '@/stores/profile-store';
 import { useAIConfigStore } from '@/stores/ai-config-store';
+import { useProbesStore } from '@/stores/probes-store';
 import { FALLBACK_AI_MODELS_CONFIG, emptyProviderConfig } from '../models-config';
 import { resetHealthForTests, keyHash } from '../health';
 
@@ -23,6 +24,7 @@ beforeEach(() => {
   health = resetHealthForTests(mem(), () => Date.UTC(2026, 8, 15, 10, 0));
   vi.stubGlobal('localStorage', mem());   // node has no localStorage; the Ollama nudge remembers itself there
   useAIConfigStore.getState().setConfig(FALLBACK_AI_MODELS_CONFIG);   // gemini: 2.5-flash, lite, 3.5-flash; ollama: gemma4
+  useProbesStore.getState().setProbes(null);
   useProfileStore.getState().updateProfile({ geminiApiKeys: ['g1'], groqApiKeys: [], nvidiaApiKeys: [], ollamaApiKeys: [], geminiModel: '' } as never);
   Object.values(toast).forEach(f => f.mockReset());
   _resetNoThinkingForTests();
@@ -115,7 +117,7 @@ describe('quota-aware order', () => {
         gemini: {
           ...emptyProviderConfig(),
           defaultModel: 'gemini-2.5-flash',
-          models: (FALLBACK_AI_MODELS_CONFIG.providers.gemini.models ?? []).filter(m => !/lite/.test(m.id)),
+          excluded: ['gemini-flash-lite-latest'],
         },
       },
     });
@@ -319,6 +321,16 @@ describe('session stickiness', () => {
     s.avoid.add(first); s.lastGood = undefined;
     await callAIGateway('p', ['img'], 'json', 'heavy', s);
     expect(modelOf(spy.mock.calls[1])).not.toBe(first);
+  });
+});
+
+describe('admin limits', () => {
+  it('admin limit override reaches the loop', async () => {
+    useAIConfigStore.getState().setConfig({ ...FALLBACK_AI_MODELS_CONFIG, providers: { ...FALLBACK_AI_MODELS_CONFIG.providers, gemini: { ...FALLBACK_AI_MODELS_CONFIG.providers.gemini, limits: { 'gemini-3.5-flash': 0, 'gemini-2.5-flash': 0 } } } });
+    const spy = vi.spyOn(global, 'fetch').mockResolvedValue(ok());
+    const s = newSession('t'); s.pagesTotal = 2;
+    await callAIGateway('p', ['img'], 'json', 'heavy', s);
+    expect(modelOf(spy.mock.calls[0])).toMatch(/lite/);
   });
 });
 

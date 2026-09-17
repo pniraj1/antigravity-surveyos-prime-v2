@@ -21,8 +21,12 @@ import { tierOf, dailyLimit, OLLAMA_REST_MS } from './quota';
 import { useProfileStore } from '@/stores/profile-store';
 import { useUIStore } from '@/stores/ui-store';
 import { toast } from 'sonner';
-import { ModelEntry, PROVIDER_IMAGE_CAPS, type ProviderConfig, type ProviderId } from './models-config';
+import { ModelEntry, PROVIDER_IMAGE_CAPS, type ProviderConfig, type ProviderId, DEPRECATED_GEMINI_MODELS, DEPRECATED_GROQ_MODELS } from './models-config';
 import { useAIConfigStore } from '@/stores/ai-config-store';
+import { useProbesStore } from '@/stores/probes-store';
+import { poolFromProbes, limitOfFor } from './pool';
+
+export { DEPRECATED_GEMINI_MODELS, DEPRECATED_GROQ_MODELS };
 
 
 /** Returns the saved model if still enabled, else the provider's configured default. */
@@ -87,33 +91,6 @@ export const PROVIDER_MODELS: Record<'gemini' | 'groq' | 'nvidia' | 'ollama', Mo
   ollama: [
     { id: 'gemma4:31b', label: 'Gemma 4 31B', note: 'Free · vision · via proxy' },
   ],
-};
-
-// Old model names stored in user profiles → auto-migrated to current default
-export const DEPRECATED_GEMINI_MODELS: Record<string, string> = {
-  'gemini-pro':               'gemini-2.5-flash',
-  'gemini-pro-vision':        'gemini-2.5-flash',
-  'gemini-1.0-pro':           'gemini-2.5-flash',
-  'gemini-1.5-flash':         'gemini-2.5-flash',
-  'gemini-1.5-flash-latest':  'gemini-2.5-flash',
-  'gemini-1.5-pro':           'gemini-2.5-flash',
-  'gemini-2.0-flash':         'gemini-2.5-flash',          // 429 on the free tier
-  'gemini-2.0-flash-lite':    'gemini-flash-lite-latest',  // was → 2.5-flash-lite, now 404
-  'gemini-2.0-flash-exp':     'gemini-2.5-flash',
-  'gemini-2.5-flash-lite':    'gemini-flash-lite-latest',  // 404 "no longer available to new users"
-  'gemini-3-pro-preview':     'gemini-3.1-pro-preview',    // shut down March 9, 2026
-};
-
-export const DEPRECATED_GROQ_MODELS: Record<string, string> = {
-  // Every llama-4 model was retired by Groq — all 404 "does not exist".
-  'meta-llama/llama-4-scout-17b-16e-instruct':    'llama-3.3-70b-versatile',
-  'meta-llama/llama-4-maverick-17b-128e-instruct': 'llama-3.3-70b-versatile',
-  // Old vision-preview models removed by Groq
-  'llama-3.2-90b-vision-preview': 'qwen/qwen3.6-27b',
-  'llama-3.2-11b-vision-preview': 'qwen/qwen3.6-27b',
-  // NOTE: openai/gpt-oss-120b and -20b were listed here as "fake model IDs that
-  // never existed on Groq". They are live (verified 2026-08-10), so migrating
-  // them away was rewriting a working model into one that 404s. Do not re-add.
 };
 
 export interface AIProvider {
@@ -181,8 +158,9 @@ export function getActiveImageCap(job: AIJob = 'heavy'): number | null {
   const override = getAITestOverride();
   if (override) return buildOverrideProvider(override).maxImages ?? null;
   const pool = buildPool(getProfileFromStorage());
+  const limitOf = limitOfFor(useAIConfigStore.getState().config);
   try {
-    const [first] = rankModels(job, ['x'], pool, { health: getHealth() });
+    const [first] = rankModels(job, ['x'], pool, { health: getHealth(), limitOf });
     return first?.model.imageCap ?? null;
   } catch { return null; }
 }
@@ -491,22 +469,8 @@ const KEY_FIELDS: Record<ProviderId, (p: NonNullable<ReturnType<typeof getProfil
 /** Every admin-enabled model on every provider the surveyor has a key for. */
 export function buildPool(profile: ReturnType<typeof getProfileFromStorage>): PoolEntry[] {
   if (!profile) return [];
-  const cfg = useAIConfigStore.getState().config;
-  const pool: PoolEntry[] = [];
-  for (const provider of ['gemini', 'groq', 'nvidia', 'ollama'] as ProviderId[]) {
-    const block = cfg.providers[provider];
-    if (!block?.enabled) continue;
-    const keys = KEY_FIELDS[provider](profile);
-    if (keys.length === 0) continue;
-    // Live 2026-09-16: an admin pool still listing gemini-1.5-flash (404) sent
-    // every estimate there first. Retired ids never enter the chain.
-    const retired = provider === 'gemini' ? DEPRECATED_GEMINI_MODELS : provider === 'groq' ? DEPRECATED_GROQ_MODELS : {};
-    for (const model of block.models ?? []) {
-      if (model.id in retired) continue;
-      pool.push({ provider, model, proxied: PROXIED.has(provider), keys });
-    }
-  }
-  return pool;
+  const keys = Object.fromEntries((['gemini', 'groq', 'nvidia', 'ollama'] as ProviderId[]).map(p => [p, KEY_FIELDS[p](profile)]));
+  return poolFromProbes(useAIConfigStore.getState().config, useProbesStore.getState().probes, keys);
 }
 
 function toProvider(e: PoolEntry): AIProvider {
@@ -646,7 +610,8 @@ async function callWithFallback(
   };
 
   const pagesNeeded = job === 'heavy' ? session?.pagesTotal ?? 1 : 1;
-  let chain = rankModels(job, images, pool, { health, avoid: session?.avoid, pagesNeeded });
+  const limitOf = limitOfFor(useAIConfigStore.getState().config);
+  let chain = rankModels(job, images, pool, { health, avoid: session?.avoid, pagesNeeded, limitOf });
   if (session?.lastGood) {
     const i = chain.findIndex(e => e.model.id === session.lastGood!.model);
     if (i > 0) chain = [...chain.slice(i), ...chain.slice(0, i)];
@@ -656,7 +621,7 @@ async function callWithFallback(
   // day-limit / Flash-nudge toasts must not fire on it. The ranker still uses
   // pagesNeeded to decide eligibility; only the messaging predicate differs.
   const spentOut = (e: PoolEntry, k: string) =>
-    health.remaining(keyHash(k), e.model.id, dailyLimit(e.provider, e.model.id)) === 0;
+    health.remaining(keyHash(k), e.model.id, limitOf(e.provider, e.model.id)) === 0;
 
   if (chain.length === 0 && pool.some(e => e.keys.some(k =>
       health.isDeadToday(keyHash(k), e.model.id) || spentOut(e, k)))) {
@@ -667,7 +632,7 @@ async function callWithFallback(
   // Heavy fell off the Flash tier because no Flash key can cover this document.
   // Tell the surveyor once a day — unless Ollama is there, which handles it fine.
   if (job === 'heavy' && chain[0] && tierOf(chain[0].provider, chain[0].model.id) !== 'flash'
-      && pool.some(e => tierOf(e.provider, e.model.id) === 'flash' && dailyLimit(e.provider, e.model.id) > 0
+      && pool.some(e => tierOf(e.provider, e.model.id) === 'flash' && limitOf(e.provider, e.model.id) > 0
           && e.keys.some(k => spentOut(e, k)))
       && !pool.some(e => e.provider === 'ollama')) {
     try {

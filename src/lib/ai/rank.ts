@@ -27,6 +27,8 @@ export interface RankOptions {
   avoid?: ReadonlySet<string>;
   /** Calls this document still needs — a key that cannot cover them is not used. Default 1. */
   pagesNeeded?: number;
+  /** Per-model daily limit override (admin config); default dailyLimit. */
+  limitOf?: (provider: ProviderId, id: string) => number;
 }
 
 export class PayloadTooLargeError extends Error {
@@ -59,7 +61,7 @@ function verdictRank(e: PoolEntry): number { return VERDICT_RANK[e.verdict ?? 'u
 function speed(e: PoolEntry): number { return e.msPerPage ?? LIGHT_FAST_MS_PER_PAGE; }
 
 export function rankModels(job: AIJob, images: readonly string[], pool: readonly PoolEntry[], opts: RankOptions): PoolEntry[] {
-  const { health, avoid, pagesNeeded = 1 } = opts;
+  const { health, avoid, pagesNeeded = 1, limitOf = dailyLimit } = opts;
   const needsVision = JOB_NEEDS_VISION[job] && images.length > 0;
   const best = new Map<string, number>();
 
@@ -71,7 +73,7 @@ export function rankModels(job: AIJob, images: readonly string[], pool: readonly
     if (needsVision && e.model.imageCap !== null && e.model.imageCap < images.length) continue;
     if (job === 'heavy' && typeof e.outputTokens === 'number' && e.outputTokens < HEAVY_MIN_OUTPUT_TOKENS) continue;
     if (job === 'heavy' && verdictRank(e) >= 9) continue;
-    const limit = dailyLimit(e.provider, id);
+    const limit = limitOf(e.provider, id);
     if (limit === 0) continue;                                              // Pro: not on the free tier
     // Per key: what it can still spend today. Dead/rested keys read 0. A key that
     // cannot cover the whole document is dropped — never start a 5-page read

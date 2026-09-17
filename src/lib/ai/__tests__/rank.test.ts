@@ -194,4 +194,9 @@ describe('quota-aware ordering', () => {
     expect(forward.indexOf('gemini-3.5-flash-lite')).toBeLessThan(forward.indexOf('gemini-3.1-flash-lite'));
     expect(reversed).toEqual(forward);
   });
+  it('limitOf override: 0 drops the model, a bigger limit reorders inside the tier', () => {
+    const limitOf = (_p: string, id: string) => id === 'gemini-3.5-flash' ? 0 : id === 'gemini-2.5-flash' ? 100 : 20;
+    const r = ids(rankModels('heavy', ['i'], [entry('gemini', 'gemini-3.5-flash'), entry('gemini', 'gemini-2.5-flash'), entry('gemini', 'gemini-3.8-flash')], { health: health(), pagesNeeded: 5, limitOf }));
+    expect(r).toEqual(['gemini-2.5-flash', 'gemini-3.8-flash']);
+  });
 });

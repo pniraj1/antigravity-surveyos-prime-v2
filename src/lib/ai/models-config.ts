@@ -71,6 +71,33 @@ export const FALLBACK_MODELS: Record<ProviderId, FallbackModel[]> = {
   ollama: [{ id: 'gemma4:31b', label: 'Gemma 4 31B', vision: true, imageCap: null, ctxWindow: 131_072 }],
 };
 
+// Old model names stored in user profiles → auto-migrated to current default
+export const DEPRECATED_GEMINI_MODELS: Record<string, string> = {
+  'gemini-pro':               'gemini-2.5-flash',
+  'gemini-pro-vision':        'gemini-2.5-flash',
+  'gemini-1.0-pro':           'gemini-2.5-flash',
+  'gemini-1.5-flash':         'gemini-2.5-flash',
+  'gemini-1.5-flash-latest':  'gemini-2.5-flash',
+  'gemini-1.5-pro':           'gemini-2.5-flash',
+  'gemini-2.0-flash':         'gemini-2.5-flash',          // 429 on the free tier
+  'gemini-2.0-flash-lite':    'gemini-flash-lite-latest',  // was → 2.5-flash-lite, now 404
+  'gemini-2.0-flash-exp':     'gemini-2.5-flash',
+  'gemini-2.5-flash-lite':    'gemini-flash-lite-latest',  // 404 "no longer available to new users"
+  'gemini-3-pro-preview':     'gemini-3.1-pro-preview',    // shut down March 9, 2026
+};
+
+export const DEPRECATED_GROQ_MODELS: Record<string, string> = {
+  // Every llama-4 model was retired by Groq — all 404 "does not exist".
+  'meta-llama/llama-4-scout-17b-16e-instruct':    'llama-3.3-70b-versatile',
+  'meta-llama/llama-4-maverick-17b-128e-instruct': 'llama-3.3-70b-versatile',
+  // Old vision-preview models removed by Groq
+  'llama-3.2-90b-vision-preview': 'qwen/qwen3.6-27b',
+  'llama-3.2-11b-vision-preview': 'qwen/qwen3.6-27b',
+  // NOTE: openai/gpt-oss-120b and -20b were listed here as "fake model IDs that
+  // never existed on Groq". They are live (verified 2026-08-10), so migrating
+  // them away was rewriting a working model into one that 404s. Do not re-add.
+};
+
 export function emptyProviderConfig(enabled = true): ProviderConfig {
   return { enabled, excluded: [], excludedReason: {}, keep: [], limits: {}, notes: {}, models: [], defaultModel: '' };
 }
