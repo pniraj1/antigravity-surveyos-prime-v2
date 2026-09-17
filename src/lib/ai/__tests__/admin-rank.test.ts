@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { rankedLists, lastEligibleFor, ADMIN_JOBS } from '../admin-rank';
+import { rankedLists, lastEligibleFor, discoveryCounts, ADMIN_JOBS } from '../admin-rank';
 import { FALLBACK_AI_MODELS_CONFIG, emptyProviderConfig } from '../models-config';
 import { EMPTY_PROBES, type ProbeResult, type ModelProbes } from '../probe-types';
 
@@ -43,4 +43,13 @@ describe('lastEligibleFor', () => {
     expect(lastEligibleFor(c, probes(), 'gemini', 'gemini-text')).toBe('Letters & text');
   });
   it('null when other models remain', () => { expect(lastEligibleFor(cfg, probes(), 'gemini', 'gemini-3.5-flash')).toBeNull(); });
+});
+
+describe('discoveryCounts', () => {
+  it('splits found into in-chain, auto-excluded, excluded-by-you and hidden', () => {
+    const probe = { probedAt: 1, error: null, accuracy: {}, models: {
+      a: r('a'), b: r('b'), c: r('c'), d: r('d', { status: 'paid' }), e: r('e', { status: 'unreachable' }) } };
+    const block = { ...emptyProviderConfig(), excluded: ['b', 'c', 'zz'], excludedReason: { b: 'too slow' } };
+    expect(discoveryCounts(block, probe)).toEqual({ found: 5, inChain: 1, autoExcluded: 1, byAdmin: 1, hidden: 2 });
+  });
 });

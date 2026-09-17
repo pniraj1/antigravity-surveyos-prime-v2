@@ -1,6 +1,6 @@
 // The admin sees exactly what a fully-keyed surveyor's loop would try, in order.
-import { type AIModelsConfig, type ProviderId } from './models-config';
-import type { ModelProbes } from './probe-types';
+import { type AIModelsConfig, type ProviderId, type ProviderConfig } from './models-config';
+import type { ModelProbes, ProviderProbe } from './probe-types';
 import type { AIJob } from './jobs';
 import { rankModels, type PoolEntry } from './rank';
 import { createHealth } from './health';
@@ -52,4 +52,15 @@ export function lastEligibleFor(config: AIModelsConfig, probes: ModelProbes | nu
     if (before.some(e => e.provider === provider && e.model.id === id) && rankFor(job, pagesNeeded, after, probes).length === 0) return label;
   }
   return null;
+}
+
+export interface DiscoveryCounts { found: number; inChain: number; autoExcluded: number; byAdmin: number; hidden: number }
+
+/** The provider card's discovery line: what the probe found and where each id went. */
+export function discoveryCounts(block: ProviderConfig, probe: ProviderProbe): DiscoveryCounts {
+  const all = Object.values(probe.models);
+  const ok = all.filter(m => m.status === 'ok').map(m => m.id);
+  const excluded = ok.filter(id => block.excluded.includes(id));
+  const autoExcluded = excluded.filter(id => block.excludedReason[id]).length;
+  return { found: all.length, inChain: ok.length - excluded.length, autoExcluded, byAdmin: excluded.length - autoExcluded, hidden: all.length - ok.length };
 }
