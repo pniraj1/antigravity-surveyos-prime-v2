@@ -108,3 +108,6 @@ next:
 
 `npx tsc --noEmit` clean. `npx vitest run` 1239 passing (152 files).
 `npm run build` OK (static export compiles, 24 pages).
+
+## Deploy
+Deployed to https://motorsurveyos-in.web.app on 2026-09-17 (hosting only, build at d13d28fc). Live bundle verified via curl grep for "will be sent whole".

@@ -58,7 +58,7 @@
 
 - [ ] AI PDF page selection — auto-suggest junk pages from the local text layer (heuristic pre-ticking). Follow-up from `docs/superpowers/specs/2026-09-17-ai-pdf-page-selection-design.md` Non-Goals.
 - [ ] AI PDF page selection — text-instead-of-image optimisation for digital PDFs (skip rasterizing pages with a clean text layer). Separate investigation, same spec's Non-Goals.
-- [ ] AI upload PDF page selection — manual E2E (spec §5) not run this session; needs a real sign-in.
+- [ ] AI upload PDF page selection — deployed to motorsurveyos-in 2026-09-17 (d13d28fc). Manual E2E (spec §5) still pending on live site.
 - [ ] Should report numbers sync to Firestore for multi-device access?
 - [ ] Should Standard and UIIC report formats get parity enforcement?
 - [ ] Update ANTIGRAVITY_BIBLE.md (AI model reference is outdated)
@@ -73,7 +73,7 @@
 
 ## Recently Completed
 
-- [x] AI upload PDF page selection (2026-09-17) — multi-page PDFs into any AI upload (estimate, final bill, RC/DL/policy, Documents, Sync) get a page picker; unticked pages are never rasterized (zero tokens). `ai-pages.ts` WeakMap carrier, shared `PdfPageGrid`, `needsReview` gate extended. 1239 tests. Not deployed. Manual E2E (spec §5) not run — no credentials in session. Session log: `Sessions/2026-09-17-ai-pdf-page-selection.md`.
+- [x] AI upload PDF page selection (2026-09-17) — multi-page PDFs into any AI upload (estimate, final bill, RC/DL/policy, Documents, Sync) get a page picker; unticked pages are never rasterized (zero tokens). `ai-pages.ts` WeakMap carrier, shared `PdfPageGrid`, `needsReview` gate extended. 1239 tests. deployed to motorsurveyos-in 2026-09-17. Manual E2E (spec §5) not run — no credentials in session. Session log: `Sessions/2026-09-17-ai-pdf-page-selection.md`.
 - [x] AI fallback — Phase 2-C admin ranked lists + veto (2026-09-17) — schema 2, guard rails, shared `poolFromProbes`, editable limits, tab split. 1222 tests. Session log: `Sessions/2026-09-17-admin-ranked-lists.md`.
 - [x] AI fallback — Phase 2-A quota-aware ranking (2026-09-16) — tier + per-key daily budget ordering, Pacific-day ledger, Ollama 1 h rest, Flash reserved for estimates. 1184 tests. Session log: `Sessions/2026-09-16-quota-aware-ranking.md`.
 - [x] Smart Fix — missed-row detection (2026-09-16) — serial-gap + printed-gross check, page-targeted gap fill, gross-only second opinion, review-dialog card. Spec/plan `2026-09-16-smart-fix-missed-rows*`. 1150 tests. Session log: `Sessions/2026-09-16-smart-fix-missed-rows.md`.
