@@ -8,6 +8,8 @@ import { PolicyDetailsForm } from '@/components/claim/PolicyForm';
 import { AccidentDetailsForm } from '@/components/claim/AccidentForm';
 import { useAIExtraction } from '@/hooks/useAIExtraction';
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
+import { needsReview } from '@/lib/ai/needs-review';
+import { DocumentReviewSheet } from '@/components/documents/DocumentReviewSheet';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { downloadAsWord } from '@/lib/reports/word-export';
@@ -52,6 +54,7 @@ export function DetailsTab() {
   const [panelWidth, setPanelWidth] = useState(() => {
     try { return parseInt(localStorage.getItem(STORAGE_KEY_PANEL + '-width') || '380', 10); } catch { return 380; }
   });
+  const [reviewSheet, setReviewSheet] = useState<{ key: string; label: string; file: File } | null>(null);
 
   const isDragging = useRef(false);
   const dragStartX = useRef(0);
@@ -99,16 +102,23 @@ export function DetailsTab() {
 
   if (!currentClaim) return null;
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, key: string) => {
-    const file = e.target.files?.[0];
-    if (file) triggerExtraction(key, file);
-  };
-
   const docSlots = [
     { id: 'rc', label: 'RC Copy' },
     { id: 'dl', label: 'Driving Licence' },
     { id: 'policy', label: 'Policy Schedule' }
   ];
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, key: string) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (await needsReview([file])) {
+      const label = docSlots.find(s => s.id === key)?.label ?? key.toUpperCase();
+      setReviewSheet({ key, label, file });
+      return;
+    }
+    triggerExtraction(key, file);
+  };
 
   const surveyLabel = currentClaim.surveyType === 'spot' ? 'Spot Survey' :
                       currentClaim.surveyType === 'final' ? 'Final Survey' :
@@ -300,6 +310,20 @@ export function DetailsTab() {
         >
           <InlineEvidencePanel claimId={currentClaim.id} />
         </div>
+      )}
+
+      {reviewSheet && (
+        <DocumentReviewSheet
+          open
+          slotLabel={reviewSheet.label}
+          files={[reviewSheet.file]}
+          onCancel={() => setReviewSheet(null)}
+          onConfirm={(_all, forAI) => {
+            const { key } = reviewSheet;
+            setReviewSheet(null);
+            if (forAI[0]) triggerExtraction(key, forAI[0]);
+          }}
+        />
       )}
 
       <AIReviewDialog
