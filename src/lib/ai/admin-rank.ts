@@ -62,5 +62,7 @@ export function discoveryCounts(block: ProviderConfig, probe: ProviderProbe): Di
   const ok = all.filter(m => m.status === 'ok').map(m => m.id);
   const excluded = ok.filter(id => block.excluded.includes(id));
   const autoExcluded = excluded.filter(id => block.excludedReason[id]).length;
-  return { found: all.length, inChain: ok.length - excluded.length, autoExcluded, byAdmin: excluded.length - autoExcluded, hidden: all.length - ok.length };
+  // Retired: previously excluded ids the provider no longer lists at all — kept visible in the hidden group, so counted here too.
+  const retired = block.excluded.filter(id => !probe.models[id]).length;
+  return { found: all.length, inChain: ok.length - excluded.length, autoExcluded, byAdmin: excluded.length - autoExcluded, hidden: (all.length - ok.length) + retired };
 }

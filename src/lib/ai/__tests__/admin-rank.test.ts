@@ -49,7 +49,8 @@ describe('discoveryCounts', () => {
   it('splits found into in-chain, auto-excluded, excluded-by-you and hidden', () => {
     const probe = { probedAt: 1, error: null, accuracy: {}, models: {
       a: r('a'), b: r('b'), c: r('c'), d: r('d', { status: 'paid' }), e: r('e', { status: 'unreachable' }) } };
+    // 'zz' is excluded but no longer in the probe results at all — retired, folded into hidden.
     const block = { ...emptyProviderConfig(), excluded: ['b', 'c', 'zz'], excludedReason: { b: 'too slow' } };
-    expect(discoveryCounts(block, probe)).toEqual({ found: 5, inChain: 1, autoExcluded: 1, byAdmin: 1, hidden: 2 });
+    expect(discoveryCounts(block, probe)).toEqual({ found: 5, inChain: 1, autoExcluded: 1, byAdmin: 1, hidden: 3 });
   });
 });

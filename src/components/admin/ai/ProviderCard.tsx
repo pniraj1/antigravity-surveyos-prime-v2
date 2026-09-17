@@ -40,7 +40,8 @@ export function ProviderCard({ provider, meta, block, probe, diff, hasKey, probi
   const counts = discoveryCounts(block, probe);
   const inChain = diff.working.filter(r => !block.excluded.includes(r.id));
   const unusable = Object.values(probe.models).filter(m => m.status !== 'ok');
-  const retired = diff.gone.filter(g => !probe.models[g.id]);
+  // Previously excluded ids the provider no longer lists — diff.gone is empty on a fresh load (prevProbes starts empty), so derive from current probe instead.
+  const retired = block.excluded.filter(id => !probe.models[id]);
   const hiddenCount = unusable.length + retired.length;
 
   return (
@@ -113,9 +114,9 @@ export function ProviderCard({ provider, meta, block, probe, diff, hasKey, probi
                       <span className="font-mono">{m.id}</span> — <span className="font-medium">{m.status}</span>{m.reason ? `: ${m.reason}` : ''}
                     </div>
                   ))}
-                  {retired.map(g => (
-                    <div key={g.id} className="text-[10px] text-muted-foreground">
-                      <span className="font-mono">{g.id}</span> — <span className="font-medium">retired</span>: {g.reason}
+                  {retired.map(id => (
+                    <div key={id} className="text-[10px] text-muted-foreground">
+                      <span className="font-mono">{id}</span> — <span className="font-medium">retired</span>: No longer listed by the provider.
                     </div>
                   ))}
                 </div>

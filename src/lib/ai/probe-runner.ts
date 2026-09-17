@@ -350,11 +350,10 @@ async function pace(gapMs: number, lastAt: { t: number }): Promise<void> {
  * Sorts a catalogue so previously-working models are probed first and
  * previously-failed ones last.
  *
- * Everything is still probed — a provider can restore a model, and the
- * two-strike removal rule in probe-reconcile depends on re-testing. This only
- * changes the order, so the admin sees useful results while the graveyard is
- * still being checked. On NVIDIA that moves 60 known-404s behind the 28 that
- * work.
+ * Everything is still probed — a provider can restore a model, so re-testing
+ * matters. This only changes the order, so the admin sees useful results
+ * while the graveyard is still being checked. On NVIDIA that moves 60
+ * known-404s behind the 28 that work.
  */
 export function orderCatalogue<T extends { id: string }>(
   entries: T[],

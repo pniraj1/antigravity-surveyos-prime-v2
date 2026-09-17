@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { RefreshCw, Save, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useProfileStore } from '@/stores/profile-store';
@@ -57,6 +57,10 @@ export function AIModelsTab({ adminEmail }: { adminEmail: string }) {
     });
   }, []);
 
+  // Tracks the latest config so a long-running probe's commit doesn't overwrite clicks (Exclude/Include/limit/note) made while it was in flight.
+  const configRef = useRef(config);
+  configRef.current = config;
+
   if (!config) return <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 size={14} className="animate-spin" /> Loading config…</div>;
 
   const adminKey = (p: ProviderId): string | undefined =>
@@ -81,7 +85,7 @@ export function AIModelsTab({ adminEmail }: { adminEmail: string }) {
     await saveModelProbes(next, adminEmail);
     setPrevProbes(previous);
     setProbes(next);
-    const railed = applyGuardRails(config!, next);
+    const railed = applyGuardRails(configRef.current!, next);
     setConfig(railed);
     await saveAIModelsConfig(railed, adminEmail);
     setStoreConfig(railed);
