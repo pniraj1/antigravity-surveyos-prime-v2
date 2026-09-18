@@ -99,6 +99,33 @@ describe('niaAssessmentRows — parts', () => {
     // 5000 effective, 40% dep, 100% disposal factor => 3000
     expect(rows[1].assessedAmount).toBe('3000.00');
   });
+
+  test('on a nil-depreciation policy every part goes out as Agewise with rate 0', () => {
+    // The portal locks 50%/30% from the class descriptions; only Agewise reads our rate.
+    const rows = niaAssessmentRows(
+      [row({ partType: 'plastic' }), row({ partType: 'fiberglass' }), row({ partType: 'metal' })],
+      AGE,
+      'nil',
+    );
+    expect(rows.map((r) => r.description)).toEqual([
+      'Parts at Agewise Depreciation',
+      'Parts at Agewise Depreciation',
+      'Parts at Agewise Depreciation',
+    ]);
+    expect(rows.map((r) => r.depreciationPercentage)).toEqual(['0', '0', '0']);
+  });
+
+  test('a depreciation override on a plastic part goes out as Agewise carrying the override', () => {
+    const [r] = niaAssessmentRows([row({ partType: 'plastic', depOverride: 25 })], AGE, 'standard');
+    expect(r.description).toBe('Parts at Agewise Depreciation');
+    expect(r.depreciationPercentage).toBe('25');
+  });
+
+  test('a GST rate the portal does not accept throws, naming the row', () => {
+    expect(() => niaAssessmentRows([row({ gst: 12, particulars: 'Odd Part' })], AGE, 'standard')).toThrow(
+      /"Odd Part" has GST 12%/,
+    );
+  });
 });
 
 describe('niaAssessmentRows — labour and paint', () => {
@@ -157,11 +184,16 @@ describe('niaAssessmentRows — shape', () => {
     expect(r.partName).toHaveLength(100);
     expect(r.partName.startsWith('x')).toBe(true);
   });
+
+  test('partName drops the characters the portal rejects and collapses the gaps', () => {
+    const [r] = niaAssessmentRows([row({ particulars: 'Bumper Assy & Grill | L/R <RH>' })], AGE, 'standard');
+    expect(r.partName).toBe('Bumper Assy Grill L/R RH');
+  });
 });
 
 describe('niaPainting', () => {
   test('sums estimate over all paint rows and assessed over allowed ones, pre-dep', () => {
-    // R7. The Tigor figures: estimate 28003.76, assessed 23732.
+    // R7. The Tigor figures. Estimate sums every paint row, disallowed included: 20000 + 8003.76 + 1000.
     const p = niaPainting([
       row({ section: 'paint', partType: 'paint', estimated: 20000, assessed: 17000, depOverride: 12.5 }),
       row({ section: 'paint', partType: 'paint', estimated: 8003.76, assessed: 6732 }),

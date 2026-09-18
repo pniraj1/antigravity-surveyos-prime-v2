@@ -68,7 +68,13 @@ export function NIAExportDialog({ claimNo, rows, ageMonths, depType, onClose }: 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  const sheetRows = useMemo(() => niaAssessmentRows(rows, ageMonths, depType), [rows, ageMonths, depType]);
+  const { sheetRows, rowError } = useMemo(() => {
+    try {
+      return { sheetRows: niaAssessmentRows(rows, ageMonths, depType), rowError: '' };
+    } catch (e) {
+      return { sheetRows: [], rowError: e instanceof Error ? e.message : 'Rows could not be prepared.' };
+    }
+  }, [rows, ageMonths, depType]);
   const painting = useMemo(() => niaPainting(rows), [rows]);
 
   const download = async () => {
@@ -114,9 +120,10 @@ export function NIAExportDialog({ claimNo, rows, ageMonths, depType, onClose }: 
             <div className="px-3 text-xs text-muted-foreground">
               {sheetRows.length} rows: parts and labour. Paint is entered separately below.
             </div>
+            {rowError && <div className="px-3 text-xs text-destructive">{rowError}</div>}
             <button
               onClick={download}
-              disabled={busy || sheetRows.length === 0}
+              disabled={busy || sheetRows.length === 0 || !!rowError}
               className="mt-2 mx-3 flex items-center gap-2 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-50"
             >
               {busy ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}

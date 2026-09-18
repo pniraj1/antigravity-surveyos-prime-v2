@@ -63,19 +63,29 @@ const whole = (n: number) => String(Math.round(Number.isFinite(n) ? n : 0));
  * it, so the code must be one known to be on that table. Motor rows carry only
  * these three rates.
  */
-function hsnForRate(gst: number): string {
+function hsnForRate(gst: number, partName: string): string {
   if (gst === 28) return '8708';
   if (gst === 0) return '72041000';
-  return '8512';
+  if (gst === 18) return '8512';
+  throw new Error(`"${partName}" has GST ${gst}%; the New India portal accepts only 0, 18 or 28.`);
 }
+
+/** The portal's free-text inputs reject these characters; part names carry them often. */
+const cleanName = (s: string) =>
+  s.replace(/[<>^&\\|]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 100) || 'Item';
 
 /**
  * The portal sets and locks the depreciation rate from this string for every
  * value except "Parts at Agewise Depreciation", which reads our number.
  */
-function descriptionFor(r: AssessmentRow): NiaDescription {
+function descriptionFor(r: AssessmentRow, depType: DepreciationType): NiaDescription {
   if (r.section === 'labour') return 'Labor charges for Removing and Refitting';
   if (r.isDisposal) return 'Parts at Cost';
+  // The portal locks 50%/30%/0% from the class descriptions and reads our
+  // rate only for Agewise. When our rate is not the class default — a nil
+  // depreciation policy, or a surveyor override — Agewise is the only
+  // description that carries the truth.
+  if (depType === 'nil' || r.depOverride !== undefined) return 'Parts at Agewise Depreciation';
   switch (r.partType) {
     case 'plastic':
       return 'Parts at 50% Depreciation';
@@ -123,14 +133,14 @@ export function niaAssessmentRows(
       return {
         SlNo: i + 1,
         category: isLabour ? 'Labor Charges' : 'Spare Parts',
-        description: descriptionFor(r),
-        partName: (r.particulars ?? '').trim().slice(0, 100) || 'Item',
+        description: descriptionFor(r, depType),
+        partName: cleanName(r.particulars ?? ''),
         serviceType: !r.allowed ? 'NOT ALLOWED' : isLabour ? 'ALLOW' : 'REPLACE',
         estimatedAmount: money(r.estimated),
         billedAmount: money(r.billedTaxable ?? 0),
         assessedAmount: money(assessed),
         depreciationPercentage: whole(dep),
-        hsnCode: disposal ? '72041000' : hsnForRate(gst),
+        hsnCode: disposal ? '72041000' : hsnForRate(gst, cleanName(r.particulars ?? '')),
         gstPercentage: whole(gst),
       };
     });
