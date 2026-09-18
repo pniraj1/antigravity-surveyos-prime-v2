@@ -1,7 +1,7 @@
 # NIA Assessment Excel — Design
 
 **Date:** 2026-09-18
-**Status:** Shipped 2026-09-18 (R1–R10); R11–R12 amendment approved, awaiting implementation
+**Status:** Shipped 2026-09-18 (R1–R12)
 **Scope:** `nia-assessment-excel` builder + `NIAExportDialog` + one button on
 the Assessment tab. No existing module is modified.
 
@@ -44,7 +44,7 @@ Getting the file right once, in code, is the point.
 | R5 | Disposal parts: `Parts at Cost`, `assessedAmount` = the allowed disposal value, GST 0, HSN `72041000`. Used parts carry no depreciation and no GST. | Surveyor |
 | R6 | `serviceType` is never read by the portal. Emit SWAR's proven values only: `REPLACE`, `ALLOW`, `NOT ALLOWED`. | 0 comparisons in controller |
 | R7 | **Standard policy:** paint rows are **not** in the file. Painting is typed separately as estimate + assessed with work details = Consolidated; the portal splits 75/25 and takes 50% off material itself — a net 12.5%, matching the report's paint depreciation. | `getLabourAmountNew`; surveyor |
-| R11 | **Nil-depreciation policy:** the portal's 50%-on-material is hardcoded in every painting mode and cannot be switched off, so painting must never reach the Painting section. It goes into the file as **one labour row** — `Labor Charges` / `Other Labor Charges` / `Painting Charges` / `ALLOW`, dep 0, HSN `8512`, GST 18 — where the portal applies no depreciation. The Painting section is left alone. Which branch applies is decided by the claim's **Policy Depreciation** selector on the Assessment tab (`depType`). | Portal code; surveyor practice |
+| R11 | **Nil-depreciation policy:** the portal's 50%-on-material is hardcoded in every painting mode and cannot be switched off, so painting must never reach the Painting section. It goes into the file as **one labour row** — `Labor Charges` / `Other Labor Charges` / `Painting Charges` / `ALLOW` (or `NOT ALLOWED` when nothing is allowed), dep 0, HSN and GST from the paint rows' own rate per R4 (mixed rates throw) — where the portal applies no depreciation. The Painting section is left alone. Which branch applies is decided by the claim's **Policy Depreciation** selector on the Assessment tab (`depType`). | Portal code; surveyor practice |
 | R8 | Disallowed rows are included with `assessedAmount` 0, so the insurer sees what was claimed. | SWAR practice |
 | R9 | Amount cells are written as **text**. Every cell is non-empty. Sheet is named exactly `Primary_Assessment_Template`. | Import code |
 | R10 | The upload happens only after the bill check, so every row has a billed figure. `billedAmount` is `billedTaxable`, with 0 only as a guard. | Surveyor |
@@ -115,7 +115,7 @@ one paint row, `niaAssessmentRows` appends one final row built from
 | `serviceType` | `ALLOW` |
 | `estimatedAmount` / `billedAmount` / `assessedAmount` | the three painting sums |
 | `depreciationPercentage` | `0` |
-| `hsnCode` / `gstPercentage` | `8512` / `18` |
+| `hsnCode` / `gstPercentage` | from the paint rows' shared GST rate via the R4 mapping; mixed rates throw |
 
 On a standard policy no such row is added. `niaPainting` is exported either
 way so the dialog can show the figures on a standard policy.
