@@ -1,8 +1,8 @@
 # NIA Assessment Excel — Design
 
 **Date:** 2026-09-18
-**Status:** Approved, awaiting implementation
-**Scope:** new `nia-assessment-excel` builder + `NIAExportDialog` + one button on
+**Status:** Shipped 2026-09-18 (R1–R10); R11–R12 amendment approved, awaiting implementation
+**Scope:** `nia-assessment-excel` builder + `NIAExportDialog` + one button on
 the Assessment tab. No existing module is modified.
 
 New India's surveyor portal takes the assessment for a non-tieup claim as an
@@ -43,10 +43,12 @@ Getting the file right once, in code, is the point.
 | R4 | HSN by row GST rate: 18% → `8512`, 28% → `8708`, 0% → `72041000`. Motor rows carry no other rate — and because the grid does not enforce that, any other rate is an **error that stops the export**, never silently mapped to 18%. | Surveyor, confirmed against SWAR |
 | R5 | Disposal parts: `Parts at Cost`, `assessedAmount` = the allowed disposal value, GST 0, HSN `72041000`. Used parts carry no depreciation and no GST. | Surveyor |
 | R6 | `serviceType` is never read by the portal. Emit SWAR's proven values only: `REPLACE`, `ALLOW`, `NOT ALLOWED`. | 0 comparisons in controller |
-| R7 | Paint rows are **not** in the file. Painting is typed separately as estimate + assessed with work details = Consolidated; the portal splits 75/25 and takes 50% dep on material itself. | `getLabourAmountNew`; surveyor |
+| R7 | **Standard policy:** paint rows are **not** in the file. Painting is typed separately as estimate + assessed with work details = Consolidated; the portal splits 75/25 and takes 50% off material itself — a net 12.5%, matching the report's paint depreciation. | `getLabourAmountNew`; surveyor |
+| R11 | **Nil-depreciation policy:** the portal's 50%-on-material is hardcoded in every painting mode and cannot be switched off, so painting must never reach the Painting section. It goes into the file as **one labour row** — `Labor Charges` / `Other Labor Charges` / `Painting Charges` / `ALLOW`, dep 0, HSN `8512`, GST 18 — where the portal applies no depreciation. The Painting section is left alone. Which branch applies is decided by the claim's **Policy Depreciation** selector on the Assessment tab (`depType`). | Portal code; surveyor practice |
 | R8 | Disallowed rows are included with `assessedAmount` 0, so the insurer sees what was claimed. | SWAR practice |
 | R9 | Amount cells are written as **text**. Every cell is non-empty. Sheet is named exactly `Primary_Assessment_Template`. | Import code |
 | R10 | The upload happens only after the bill check, so every row has a billed figure. `billedAmount` is `billedTaxable`, with 0 only as a guard. | Surveyor |
+| R12 | Because of R10, the dialog **opens on a confirmation gate**: the surveyor must tick "Bill amounts verified and bill check complete" before any figure or the Download button appears. Unticked on every open; nothing is remembered. A file produced before the bill check carries billed = 0 on every row and would go to the insurer wrong. | Surveyor |
 
 ---
 
@@ -71,7 +73,7 @@ export interface NiaAssessmentRow {
   gstPercentage: string;
 }
 
-export interface NiaPainting { estimate: number; assessed: number }
+export interface NiaPainting { estimate: number; assessed: number; billed: number }
 
 export function niaAssessmentRows(rows, ageMonths, depType): NiaAssessmentRow[];
 export function niaPainting(rows): NiaPainting;
@@ -97,8 +99,26 @@ are skipped (R7). Both allowed and disallowed rows are emitted (R8).
 | `hsnCode` | disposal → `72041000`; else by `gst`: 28 → `8708`, 0 → `72041000`, 18 → `8512`; **any other rate throws** and the dialog shows which row |
 | `gstPercentage` | disposal → 0; else `gst` |
 
-**Painting:** `estimate` = Σ `estimated` over paint rows; `assessed` = Σ
-`assessed` over allowed paint rows, pre-dep (R7).
+**Painting** (`niaPainting`): `estimate` = Σ `estimated` over paint rows;
+`assessed` = Σ `effectiveAssessed` over allowed paint rows, pre-dep; `billed`
+= Σ `billedTaxable` over allowed paint rows.
+
+**Nil-dep painting row** (R11): when `depType === 'nil'` and there is at least
+one paint row, `niaAssessmentRows` appends one final row built from
+`niaPainting`:
+
+| Column | Value |
+|---|---|
+| `category` | `Labor Charges` |
+| `description` | `Other Labor Charges` |
+| `partName` | `Painting Charges` |
+| `serviceType` | `ALLOW` |
+| `estimatedAmount` / `billedAmount` / `assessedAmount` | the three painting sums |
+| `depreciationPercentage` | `0` |
+| `hsnCode` / `gstPercentage` | `8512` / `18` |
+
+On a standard policy no such row is added. `niaPainting` is exported either
+way so the dialog can show the figures on a standard policy.
 
 **Number formatting:** every amount is `toFixed(2)` as a string; percentages
 are integer strings (R9).
@@ -120,17 +140,53 @@ Fixtures on `niaAssessmentRows` and `niaPainting`:
 5a. **Nil-dep policy, plastic part** → `Parts at Agewise Depreciation`, dep `'0'`
 5b. **`depOverride` 25 on a plastic part** → `Parts at Agewise Depreciation`, dep `'25'`
 5c. **`partName` with `&` and `|`** → those characters gone, single spaces
-6. **Paint rows excluded** from rows, and summed correctly by `niaPainting`
+6. **Paint rows excluded** from rows on a standard policy, and summed correctly
+   by `niaPainting` (estimate over all paint rows, assessed and billed over
+   allowed ones)
+6a. **Nil-dep policy with paint rows** → one extra final row: `Labor Charges` /
+   `Other Labor Charges` / `Painting Charges` / `ALLOW`, the three painting
+   sums as strings, dep `'0'`, HSN `8512`, GST `'18'`
+6b. **Nil-dep policy with no paint rows** → no extra row
+6c. **Standard policy** → no `Painting Charges` row, whatever the paint rows
 7. **Header/key order** — `Object.keys(row)` equals the 11 columns in order; every value non-empty
 
 ### 3.3 `src/components/dialogs/NIAExportDialog.tsx`
 
-Small. Follows `UIICSummaryDialog`.
+Small. Follows `UIICSummaryDialog`. Three states, top to bottom.
 
-- Painting **Estimate** and **Assessed**, large, with tick + copy (paste is not
-  blocked on NIA, so copy is useful here)
-- Row count being exported
-- **Download Excel** button → `exportNiaAssessmentExcel`
+**Gate** (R12) — shown first, alone:
+
+> ☐ Bill amounts verified and bill check complete for this claim
+
+Until ticked, nothing else renders except the header and the tip below. The
+tick is local state, reset every time the dialog opens.
+
+**After the gate**, branching on `depType`:
+
+- **Standard policy**
+  - "1 · Upload — Primary Assessment Template", row count, **Download Excel**
+  - "2 · Painting — work details *Consolidated*": **Estimated** and
+    **Assessed**, large, with tick + copy (paste is not blocked on NIA)
+- **Nil-depreciation policy**
+  - "1 · Upload — Primary Assessment Template", row count *(includes the
+    painting row)*, **Download Excel**
+  - "2 · Painting": a notice, not figures — *"Painting Charges ₹X is inside the
+    file as a labour row. Leave the Painting section empty."*
+
+**Tip**, always visible, wording per branch:
+
+- Standard: *"Choose Consolidated in the Painting section. The portal takes 25%
+  as material and depreciates that half — the same 12.5% as your report. Do
+  not reduce the assessed figure yourself or it will be depreciated twice."*
+- Nil-dep: *"Do not enter painting in the Painting section. The portal
+  depreciates painting material on every policy, including nil-dep; the labour
+  row in the file is how it goes through untouched."*
+
+The branch follows the claim's **Policy Depreciation** selector on the
+Assessment tab. The dialog names which policy it detected in its header
+("Standard policy" / "Nil Depreciation policy") so a wrong selector is caught
+before upload.
+
 - One line reminding: upload → Validate
 
 ### 3.4 Button in `AssessmentGrid`
