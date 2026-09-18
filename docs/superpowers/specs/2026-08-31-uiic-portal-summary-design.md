@@ -46,7 +46,7 @@ a copy button.
 ## 2. Rules
 
 Confirmed with a practising surveyor on 2026-08-31. Sources are the portal's own
-markup (captured DOM — see `docs/uiic-portal-integration.md`) and the surveyor's
+markup (captured DOM — see `docs/portal-integration.md`) and the surveyor's
 answers where the markup is ambiguous.
 
 | # | Rule | Source |
@@ -189,7 +189,7 @@ Deliberately excluded:
   radio pairs), salvage, excesses, towing, add-on covers. The panel matches
   SWAR; these get added when asked for.
 - The portal's Assessment Excel import. Researched and halted — see
-  `docs/uiic-portal-integration.md` §4.
+  `docs/portal-integration.md` §4.
 - Any automation against the portal: no autofill, no RPA, no stored credentials.
 - OIC and NIA. Their field shapes are unseen; abstracting for them now would be
   guessing.

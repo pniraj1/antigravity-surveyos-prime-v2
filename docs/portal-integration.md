@@ -1,7 +1,7 @@
-# UIIC Surveyor Portal — Integration Research
+# Insurer Surveyor Portals — Integration Research
 
-**Last updated:** 2026-08-31
-**Status:** research complete for the assessment section; Excel import halted
+**Last updated:** 2026-09-18
+**Status:** UIIC assessment section mapped, UIIC Excel halted; NIA non-tieup fully mapped from controller source, tie-ups partially
 
 Reference notes behind
 `docs/superpowers/specs/2026-08-31-uiic-portal-summary-design.md`. Everything
@@ -278,7 +278,174 @@ check column B for a dropdown, click B8 for a formula, try typing past row 151.
 
 ---
 
-## 5. Progress
+## 5. New India Assurance (NIA)
+
+Portal: `web.newindia.co.in/NIABancsPortal/Surveyor.html`. Same TCS BaNCS
+AngularJS stack as UIIC — same extractor works. Unlike UIIC, the controller
+source was captured (`surveyorHome.js`, 2 MB, unminified, via "Webpage,
+Complete"), so the behaviour below is read from code, not inferred.
+
+Captured 2026-09-18 — maps in `scripts/portal-map/nia-*.json`:
+
+| Route | Flow | Controls |
+|---|---|---|
+| `#/Worklist` | worklist | 5 |
+| `#/WorklistSurveyNew` | **non-tieup** claim survey | 165 |
+| `#/WorklistSurvey` | Maruti tie-up | 202 |
+| `#/WorklistSurveyKIA` | KIA tie-up | 693 |
+
+### 5.1 How NIA differs from UIIC
+
+| | UIIC | NIA |
+|---|---|---|
+| Assessment entry | type 4 bucket totals + GST slabs | **upload Excel line items**; portal computes |
+| Paste | blocked on 45 fields | **not blocked anywhere** |
+| Invoices | one | up to 3, each with own Excel, bill, painting |
+| Fee bill | typed into assessment + PDF as "Other" | **dedicated section** with its own fields and file |
+| Garage bill | attachment | **OCR** — "Upload the Bill → Populate Data" fills rows |
+| Tie-ups | — | dealer feeds lines; surveyor approves per row |
+
+### 5.2 Non-tieup — page structure
+
+Five tabs: Quick Update → Additional Details → Claim Assessment → Document
+Upload → Connect with Claim Office. Payload root `surveyorData.worklist.*`.
+
+**Per invoice** (`multiInvoice[$index]`): in-name-of-NIA, GST applicable,
+vendor invoice no/date; `Upload XLS or XLSX Template` → **Validate**
+(`checkFields('PrimaryAssessment')`); or `Upload the Bill` → **Populate Data**
+(OCR); or `Number of Rows To be Added` → manual grid; supplementary estimate
+Y/N with its own upload (`readExcelSup`); the painting block.
+
+**Grid row** (`obj`): category, partName (100), estimatedAmount (10),
+billedAmount (8), assessedAmount (8), depreciationPercentage (3),
+depreciationAmount, hsnCode, gstPercentage (3), amountAllowed,
+amountAllowedIncluded. The last three are computed.
+
+**Claim Assessment totals** (`claimAssessment`): noOfInvoices, netSalvage,
+lessCompulsoryExcess, lessVoluntaryExpress, lessOtherDeductions,
+imposedExcess, towingCharges, additionalTowingCharges,
+whetherReinspectionRequired, nilDepreciationCover, engineProtectCover,
+consumableItemsCover, keyProtectCover, returnToInvoiceCover.
+
+**Quick Update**: survey date (radio of last 3 days + Others), time `HH:MM`,
+place, survey completed, DL applicable, RC verified, DL and RC verified via
+Parivahan, close-proximity/break-in, `surveyorAccessedAmount` (Provision),
+remarks (240), claimant mobile/email, expected repair date.
+
+**Survey Fee Bill** (`surveyFeeBill`): isInvoiceInNameOfNIA, invoice no (20)
+and date, professionalFee, photosAmount, conveyanceAmount, others,
+isGSTApplicable, hsnCode, gstPercent, totalGSTAmount, total, plus a file.
+
+**Declarations**: 12 checkboxes (a–l) — engine/chassis, damage relevance,
+supplementary, repairs relevance, reinspected, NCB via IIB, DL/RC original,
+DL/RC/permit/fitness via Parivahan. Also work-approval and delivery-order
+documents with date + time.
+
+**Documents**: mandatory list — Driving License, Registration Certificate,
+Claim Form, Claim Related Documents, Chassis Number Photograph, Odometer
+Reading Photograph. Non-mandatory — Estimate, PUC, Spot Photograph and Spot
+Survey Report, Others, Permit-Fitness, FIR and Police Records, Cancelled Cheque,
+Front/Rear/Side Photograph, Re-inspection, Invoice.
+
+Validation patterns are ordinary: money `^[0-9]+(\.[0-9]{1,2})?$`, percent
+0–100 to 2 dp, mobile `^[56789]\d{9}$`, time `HH:MM`, free text bans only
+`< > ^ & \ |`.
+
+### 5.3 The Excel import — read from `surveyorHome.js`
+
+Parsing is **client-side** with SheetJS (`readExcel`, line ~6609).
+
+- `.xls` and `.xlsx` both accepted; sheet must be named
+  `Primary_Assessment_Template`; first row is headers
+- **Exactly 11 keys on row 1** or it rejects with *"Template Format is
+  incorrect. Please fill all the columns to proceed"*. SheetJS drops blank
+  cells, so every cell must be non-empty
+- Columns: `SlNo, category, description, partName, serviceType,
+  estimatedAmount, billedAmount, assessedAmount, depreciationPercentage,
+  hsnCode, gstPercentage`
+- After import each row runs `getDepreciationPercent`, `getDepreciationAmount`,
+  `validateHsnCode`
+- `assessedAmount` is read with `.includes('.')` — a string method. Numeric
+  cells are a risk; write amounts as text
+
+**`getDepreciationPercent`** — `description` sets and locks the rate:
+
+| description | dep% |
+|---|---|
+| `Parts at 50% Depreciation` | 50, locked |
+| `Parts at 30% Depreciation` | 30, locked |
+| `Parts at Cost` | 0, locked |
+| `Labor charges for Removing and Refitting` | 0, locked |
+| `Labor charges for Repairing and Alignment` | 0, locked |
+| `Other Labor Charges` | 0, locked |
+| `Parts at Agewise Depreciation` | from the file, editable |
+
+**`getDepreciationAmount`**:
+
+```
+depreciationAmount   = assessedAmount × depreciationPercentage / 100
+amountAllowed        = assessedAmount − depreciationAmount
+amountAllowedIncl    = amountAllowed × (1 + gstPercentage/100)
+```
+
+So `assessedAmount` is **pre-depreciation**.
+
+**`validateHsnCode`** — each code is checked against a per-claim list from
+`getHSNCode(claimNumber)`. Unknown → the cell is blanked, and Validate then
+flags it as mandatory. Known → **`gstPercentage` is overwritten** from that
+code's rate. The file's GST column is advisory.
+
+Codes confirmed on the list (surveyor, via SWAR): `8512` → 18%, `8708` → 28%,
+`72041000` → 0%. Disposal parts carry `72041000`.
+
+**`serviceType`** — zero comparisons in the controller. Stored, sent, never
+read client-side. SWAR's `REPLACE | ALLOW | NOT ALLOWED` are known to pass.
+
+### 5.4 Painting
+
+Not in the Excel. Typed per invoice. `paintingWorkDetails`:
+
+- **Consolidated** — surveyor types estimate + assessed. Portal locks
+  labour 75% / material 25% and computes (`getLabourAmountNew`):
+  ```
+  labour   = assessed × 75%
+  material = assessed × 25%
+  dep      = material × 50%
+  total    = labour + (material − dep)     GST on each
+  ```
+- **Break-up** — percentages unlock, amounts typed per line.
+
+### 5.5 Tie-ups
+
+No Excel. Lines come from the dealer; the surveyor sets per row an allowed
+service type, approval amount and depreciation.
+
+- **Maruti** (`item4`): vItem, vAllowedServiceType, vApprovalAmount,
+  vDepriciation, vHsnCode, vGstPercent
+- **KIA**: separate parts (`primPPD*`: MRP, list price, dep%, dep price,
+  qty, type…) and labour (`primPLD*`: rate, qty, SAC…) grids, plus advance
+  payment (`advPay`), final inspection scheduling (`finalInsp`), dealer
+  remarks, `clmAsmtKIA.salvageSurveyorAmt`
+
+`getDepreciationAmount` switches on `sessionStorage.claimTypeNM` in
+`['Kia','Maruti']`, and `Hero MotoCorp` appears as a further type. Not yet
+mapped in detail.
+
+### 5.6 Not captured
+
+Worklist search, ClaimSearch, SurveyorFee, the post-Validate grid with values,
+a submitted claim's locked state, upload size limits, a Hero MotoCorp claim.
+
+### 5.7 SWAR's NIA output, for reference
+
+`NIC_Up_Load_Excel.xls` — the file SWAR hands surveyors, named for National
+Insurance but used on NIA (shared stack). One sheet, the 11 columns above,
+parts + labour only. `72041000` on every NOT ALLOWED row is a habit, not a
+requirement, but the code is on the portal's list at 0%.
+
+---
+
+## 6. Progress
 
 **Done**
 
@@ -291,15 +458,21 @@ check column B for a dropdown, click B8 for a formula, try typing past row 151.
   surveyor
 - Design approved for the summary panel — see the spec
 
+- **UIIC summary panel built and deployed** (2026-08-31), spec
+  `2026-08-31-uiic-portal-summary-design.md`
+- NIA non-tieup fully mapped from controller source; Maruti and KIA captured
+- NIA Excel generator designed — spec `2026-09-18-nia-assessment-excel-design.md`
+
 **Next**
 
-- Implement the summary panel per the spec
-- Capture the screens in §3 when portal access allows
-- Revisit the Excel import once §4.3 is answered
+- Implement the NIA Excel generator per its spec
+- NIA read-off panel for the typed fields
+- Map tie-ups (Maruti, KIA) from `surveyorHome.js`
+- Capture the UIIC screens in §3 when portal access allows
+- Revisit the UIIC Excel import once §4.3 is answered
 
 **Not started**
 
-- OIC and NIA. Both are closed portals with no public API. NIA runs TCS BaNCS
-  (`web.newindia.co.in/NIABancsPortal/Surveyor.html`) plus an Android app, and
-  National Insurance uses the same "Maruti" stack — so NIA work would likely
-  port to NIC. Neither has been captured.
+- OIC. Closed portal, no public API, not captured.
+- National Insurance — same TCS "Maruti" stack as NIA, so NIA work should
+  port. Not captured.

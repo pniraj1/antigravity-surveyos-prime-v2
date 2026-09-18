@@ -16,7 +16,7 @@ regress.
 lucide-react.
 
 **Spec:** `docs/superpowers/specs/2026-08-31-uiic-portal-summary-design.md`
-**Portal reference:** `docs/uiic-portal-integration.md`
+**Portal reference:** `docs/portal-integration.md`
 
 ## Global Constraints
 
