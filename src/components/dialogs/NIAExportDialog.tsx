@@ -68,6 +68,11 @@ export function NIAExportDialog({ claimNo, rows, ageMonths, depType, onClose }: 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
+  // Reset on every open: a file built before the bill check carries billed = 0
+  // on every row, and nothing here should make that easy.
+  const [billCheckDone, setBillCheckDone] = useState(false);
+  const isNilDep = depType === 'nil';
+
   const { sheetRows, rowError } = useMemo(() => {
     try {
       return { sheetRows: niaAssessmentRows(rows, ageMonths, depType), rowError: '' };
@@ -101,7 +106,12 @@ export function NIAExportDialog({ claimNo, rows, ageMonths, depType, onClose }: 
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <div className="flex items-center gap-2">
             <FileSpreadsheet size={16} className="text-primary" />
-            <span className="text-sm font-semibold">New India — Assessment Upload</span>
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold">New India — Assessment Upload</span>
+              <span className="text-[11px] text-muted-foreground">
+                {isNilDep ? 'Nil Depreciation policy' : 'Standard policy'} — from the Assessment tab
+              </span>
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -113,36 +123,69 @@ export function NIAExportDialog({ claimNo, rows, ageMonths, depType, onClose }: 
         </div>
 
         <div className="p-4 space-y-4">
-          <div>
-            <div className="text-[11px] font-semibold text-muted-foreground px-3 pb-1">
-              1 · UPLOAD — Primary Assessment Template
-            </div>
-            <div className="px-3 text-xs text-muted-foreground">
-              {sheetRows.length} rows: parts and labour. Paint is entered separately below.
-            </div>
-            {rowError && <div className="px-3 text-xs text-destructive">{rowError}</div>}
-            <button
-              onClick={download}
-              disabled={busy || sheetRows.length === 0 || !!rowError}
-              className="mt-2 mx-3 flex items-center gap-2 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-50"
-            >
-              {busy ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-              Download Excel
-            </button>
-            {error && <div className="mt-2 px-3 text-xs text-destructive">{error}</div>}
-          </div>
+          <label className="mx-3 flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={billCheckDone}
+              onChange={(e) => setBillCheckDone(e.target.checked)}
+              className="mt-0.5 w-4 h-4 rounded border-border"
+            />
+            <span className="text-xs">
+              <span className="font-semibold">Bill amounts verified and bill check complete</span>{' '}
+              <span className="text-muted-foreground">
+                for this claim. The file carries every row&apos;s billed figure; before the bill check
+                those are all zero.
+              </span>
+            </span>
+          </label>
 
-          <div>
-            <div className="text-[11px] font-semibold text-muted-foreground px-3 pb-1">
-              2 · PAINTING — work details &quot;Consolidated&quot;
-            </div>
-            <Field label="Painting Charges — Estimated" value={painting.estimate} />
-            <Field label="Painting Charges — Assessed" value={painting.assessed} />
-          </div>
+          {billCheckDone && (
+            <>
+              <div>
+                <div className="text-[11px] font-semibold text-muted-foreground px-3 pb-1">
+                  1 · UPLOAD — Primary Assessment Template
+                </div>
+                <div className="px-3 text-xs text-muted-foreground">
+                  {sheetRows.length} rows: parts and labour
+                  {isNilDep ? ', including the painting row' : '. Paint is entered separately below'}.
+                </div>
+                {rowError && <div className="px-3 text-xs text-destructive">{rowError}</div>}
+                <button
+                  onClick={download}
+                  disabled={busy || sheetRows.length === 0 || !!rowError}
+                  className="mt-2 mx-3 flex items-center gap-2 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-50"
+                >
+                  {busy ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                  Download Excel
+                </button>
+                {error && <div className="mt-2 px-3 text-xs text-destructive">{error}</div>}
+              </div>
+
+              <div>
+                <div className="text-[11px] font-semibold text-muted-foreground px-3 pb-1">
+                  {isNilDep ? '2 · PAINTING' : '2 · PAINTING — work details "Consolidated"'}
+                </div>
+                {isNilDep ? (
+                  <div className="px-3 text-xs">
+                    Painting Charges{' '}
+                    <span className="font-mono font-semibold">{money(painting.assessed)}</span> is inside
+                    the file as a labour row. Leave the Painting section empty.
+                  </div>
+                ) : (
+                  <>
+                    <Field label="Painting Charges — Estimated" value={painting.estimate} />
+                    <Field label="Painting Charges — Assessed" value={painting.assessed} />
+                  </>
+                )}
+              </div>
+            </>
+          )}
 
           <div className="mx-3 px-3 py-2 rounded-lg bg-muted/50 text-[11px] text-muted-foreground">
-            On the portal: upload the file, click <span className="font-semibold">Validate</span>,
-            then type the two painting figures. The portal fills depreciation and GST itself.
+            {isNilDep
+              ? 'Do not enter painting in the Painting section. The portal depreciates painting material on every policy, including nil-dep; the labour row in the file is how it goes through untouched.'
+              : 'Choose Consolidated in the Painting section. The portal takes 25% as material and depreciates that half — the same 12.5% as your report. Do not reduce the assessed figure yourself or it will be depreciated twice.'}
+            {' '}On the portal: upload the file, then click <span className="font-semibold">Validate</span>.
           </div>
         </div>
       </div>
