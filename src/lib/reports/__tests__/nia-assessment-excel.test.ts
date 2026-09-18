@@ -266,4 +266,37 @@ describe('niaAssessmentRows — nil-dep painting row', () => {
     const p = niaPainting(paintRows);
     expect(p.billed).toBeCloseTo(23232, 2);
   });
+
+  test('the painting row takes its HSN and GST from the paint rows, not a constant', () => {
+    const rows = niaAssessmentRows(
+      [row({ section: 'paint', partType: 'paint', estimated: 1000, assessed: 1000, gst: 0 })],
+      AGE,
+      'nil',
+    );
+    expect(rows[0].hsnCode).toBe('72041000');
+    expect(rows[0].gstPercentage).toBe('0');
+  });
+
+  test('paint rows with mixed GST rates throw rather than pick one', () => {
+    expect(() =>
+      niaAssessmentRows(
+        [
+          row({ section: 'paint', partType: 'paint', gst: 18 }),
+          row({ section: 'paint', partType: 'paint', gst: 28 }),
+        ],
+        AGE,
+        'nil',
+      ),
+    ).toThrow(/mixed GST/);
+  });
+
+  test('when every paint row is disallowed the painting row goes out as NOT ALLOWED at zero', () => {
+    const rows = niaAssessmentRows(
+      [row({ section: 'paint', partType: 'paint', assessed: 5000, allowed: false })],
+      AGE,
+      'nil',
+    );
+    expect(rows[0].serviceType).toBe('NOT ALLOWED');
+    expect(rows[0].assessedAmount).toBe('0.00');
+  });
 });

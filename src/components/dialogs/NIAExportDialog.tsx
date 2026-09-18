@@ -81,6 +81,7 @@ export function NIAExportDialog({ claimNo, rows, ageMonths, depType, onClose }: 
     }
   }, [rows, ageMonths, depType]);
   const painting = useMemo(() => niaPainting(rows), [rows]);
+  const hasPaintingRow = sheetRows.some((r) => r.partName === 'Painting Charges');
 
   const download = async () => {
     setBusy(true);
@@ -147,7 +148,7 @@ export function NIAExportDialog({ claimNo, rows, ageMonths, depType, onClose }: 
                 </div>
                 <div className="px-3 text-xs text-muted-foreground">
                   {sheetRows.length} rows: parts and labour
-                  {isNilDep ? ', including the painting row' : '. Paint is entered separately below'}.
+                  {hasPaintingRow ? ', including the painting row' : '. Paint is entered separately below'}.
                 </div>
                 {rowError && <div className="px-3 text-xs text-destructive">{rowError}</div>}
                 <button
@@ -166,11 +167,15 @@ export function NIAExportDialog({ claimNo, rows, ageMonths, depType, onClose }: 
                   {isNilDep ? '2 · PAINTING' : '2 · PAINTING — work details "Consolidated"'}
                 </div>
                 {isNilDep ? (
-                  <div className="px-3 text-xs">
-                    Painting Charges{' '}
-                    <span className="font-mono font-semibold">{money(painting.assessed)}</span> is inside
-                    the file as a labour row. Leave the Painting section empty.
-                  </div>
+                  hasPaintingRow ? (
+                    <div className="px-3 text-xs">
+                      Painting Charges{' '}
+                      <span className="font-mono font-semibold">{money(painting.assessed)}</span> is inside
+                      the file as a labour row. Leave the Painting section empty.
+                    </div>
+                  ) : (
+                    <div className="px-3 text-xs text-muted-foreground">No paint rows on this claim.</div>
+                  )
                 ) : (
                   <>
                     <Field label="Painting Charges — Estimated" value={painting.estimate} />
@@ -184,7 +189,7 @@ export function NIAExportDialog({ claimNo, rows, ageMonths, depType, onClose }: 
           <div className="mx-3 px-3 py-2 rounded-lg bg-muted/50 text-[11px] text-muted-foreground">
             {isNilDep
               ? 'Do not enter painting in the Painting section. The portal depreciates painting material on every policy, including nil-dep; the labour row in the file is how it goes through untouched.'
-              : 'Choose Consolidated in the Painting section. The portal takes 25% as material and depreciates that half — the same 12.5% as your report. Do not reduce the assessed figure yourself or it will be depreciated twice.'}
+              : "Choose Consolidated in the Painting section. The portal takes 25% as material and depreciates that half — the same 12.5% as the report's paint-material depreciation. Do not reduce the assessed figure yourself or it will be depreciated twice."}
             {' '}On the portal: upload the file, then click <span className="font-semibold">Validate</span>.
           </div>
         </div>

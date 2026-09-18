@@ -152,18 +152,27 @@ export function niaAssessmentRows(
   // through the labour column, where no depreciation applies; do it for them.
   if (depType === 'nil' && rows.some((r) => r.section === 'paint')) {
     const p = niaPainting(rows);
+    // One labour row carries all painting, so the paint rows must agree on a
+    // rate. hsnForRate keeps the R4 promise: no rate is ever silently 18%.
+    const paintRates = new Set(
+      rows.filter((r) => r.section === 'paint' && r.allowed).map((r) => r.gst),
+    );
+    if (paintRates.size > 1) {
+      throw new Error('Painting rows carry mixed GST rates; the New India labour row needs one.');
+    }
+    const paintGst = paintRates.values().next().value ?? 18;
     sheet.push({
       SlNo: sheet.length + 1,
       category: 'Labor Charges',
       description: 'Other Labor Charges',
       partName: 'Painting Charges',
-      serviceType: 'ALLOW',
+      serviceType: p.assessed > 0 ? 'ALLOW' : 'NOT ALLOWED',
       estimatedAmount: money(p.estimate),
       billedAmount: money(p.billed),
       assessedAmount: money(p.assessed),
       depreciationPercentage: '0',
-      hsnCode: '8512',
-      gstPercentage: '18',
+      hsnCode: hsnForRate(paintGst, 'Painting Charges'),
+      gstPercentage: whole(paintGst),
     });
   }
 
