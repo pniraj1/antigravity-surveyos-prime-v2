@@ -8,6 +8,7 @@ import { sectionSubtotals, SECTION_ORDER } from '@/lib/calculations/section-subt
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trash2, PlusCircle, Wrench, Settings2, Eye, EyeOff, ClipboardList } from 'lucide-react';
 import { UIICSummaryDialog } from '@/components/dialogs/UIICSummaryDialog';
+import { NIAExportDialog } from '@/components/dialogs/NIAExportDialog';
 import {
   DndContext,
   closestCenter,
@@ -209,6 +210,7 @@ export function AssessmentGrid() {
 
   const assessmentRows = allRows;
   const [showUiicSummary, setShowUiicSummary] = useState(false);
+  const [showNiaExport, setShowNiaExport] = useState(false);
   // Normalised, not raw: persisted claims can hold 'Nil Depreciation' or odd
   // casing, and the engine already routes through toDepreciationType. A raw
   // 'Standard' would make the engine depreciate paint while the grid's strict
@@ -292,6 +294,13 @@ export function AssessmentGrid() {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 transition-colors border border-amber-500/20 text-xs font-semibold"
           >
             <ClipboardList size={14} /> UIIC Portal
+          </button>
+          <button
+            onClick={() => setShowNiaExport(true)}
+            title="Excel for the New India portal"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 transition-colors border border-emerald-500/20 text-xs font-semibold"
+          >
+            <ClipboardList size={14} /> NIA Excel
           </button>
           <button
             onClick={() => addAssessmentRowToSection('paint')}
@@ -434,6 +443,16 @@ export function AssessmentGrid() {
           ageMonths={ageMonths}
           depType={depreciationType}
           onClose={() => setShowUiicSummary(false)}
+        />
+      )}
+
+      {showNiaExport && (
+        <NIAExportDialog
+          claimNo={currentClaim?.policy?.claimNumber ?? ''}
+          rows={assessmentRows}
+          ageMonths={ageMonths}
+          depType={depreciationType}
+          onClose={() => setShowNiaExport(false)}
         />
       )}
     </Card>
