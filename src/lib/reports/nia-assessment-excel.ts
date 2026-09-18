@@ -8,7 +8,7 @@
 import type { AssessmentRow } from '@/types/assessment';
 import type { DepreciationType } from '@/types';
 import { getDepreciationRate } from '@/lib/calculations/depreciation';
-import { computeRowNet } from '@/lib/calculations/row-net';
+import { computeRowNet, effectiveAssessed } from '@/lib/calculations/row-net';
 
 /** The portal's header row, in the order it expects. It counts these keys. */
 export const NIA_COLUMNS = [
@@ -109,11 +109,12 @@ export function niaAssessmentRows(
 
       // A used part's allowed value is already what the surveyor is paying —
       // it must not be depreciated again, and it carries no GST.
+      // effectiveAssessed halves IMT-23 rows; computeRowNet applies the same, so disposal and normal rows share one basis.
       const assessed = !r.allowed
         ? 0
         : disposal
           ? computeRowNet(r, depRateFor(r)).netBeforeGst
-          : r.assessed;
+          : effectiveAssessed(r);
       const gst = disposal ? 0 : r.gst;
       const dep = isLabour || disposal ? 0 : depRateFor(r);
 
@@ -142,6 +143,6 @@ export function niaPainting(rows: AssessmentRow[]): NiaPainting {
   const paint = rows.filter((r) => r.section === 'paint');
   return {
     estimate: paint.reduce((s, r) => s + (r.estimated || 0), 0),
-    assessed: paint.filter((r) => r.allowed).reduce((s, r) => s + (r.assessed || 0), 0),
+    assessed: paint.filter((r) => r.allowed).reduce((s, r) => s + effectiveAssessed(r), 0),
   };
 }

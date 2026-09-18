@@ -85,6 +85,20 @@ describe('niaAssessmentRows — parts', () => {
     const [r] = niaAssessmentRows([row({ partType: 'metal', depOverride: 25 })], AGE, 'standard');
     expect(r.depreciationPercentage).toBe('25');
   });
+
+  test('an IMT-23 row goes in at its halved effective assessed, disposal or not', () => {
+    const rows = niaAssessmentRows(
+      [
+        row({ assessed: 10000, imt23: true }),
+        row({ assessed: 10000, imt23: true, isDisposal: true, disposalPercent: 100 }),
+      ],
+      AGE,
+      'standard',
+    );
+    expect(rows[0].assessedAmount).toBe('5000.00');
+    // 5000 effective, 40% dep, 100% disposal factor => 3000
+    expect(rows[1].assessedAmount).toBe('3000.00');
+  });
 });
 
 describe('niaAssessmentRows — labour and paint', () => {
