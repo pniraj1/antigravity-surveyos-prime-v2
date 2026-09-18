@@ -1,0 +1,46 @@
+{
+ "file": "nia-worklist.html",
+ "total": 5,
+ "groups": {
+  "surveyorWorklist": [
+   {
+    "name": "searchType",
+    "id": "searchType",
+    "type": "select",
+    "model": "surveyorWorklist.searchType"
+   },
+   {
+    "name": "claimType",
+    "id": "claimType",
+    "type": "select",
+    "model": "surveyorWorklist.claimType"
+   },
+   {
+    "type": "select",
+    "model": "surveyorWorklist.itemsPerPage"
+   }
+  ],
+  "pendingClaim": [
+   {
+    "name": "priority0",
+    "id": "priority0",
+    "type": "checkbox",
+    "model": "pendingClaim.priority",
+    "bool_values": [
+     "'Y'",
+     "'N'"
+    ]
+   },
+   {
+    "name": "priority1",
+    "id": "priority1",
+    "type": "checkbox",
+    "model": "pendingClaim.priority",
+    "bool_values": [
+     "'Y'",
+     "'N'"
+    ]
+   }
+  ]
+ }
+}

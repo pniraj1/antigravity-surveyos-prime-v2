@@ -1,0 +1,1689 @@
+{
+ "file": "nia-maruti-survey.html",
+ "total": 202,
+ "groups": {
+  "surveyorData.worklist.quickUpdate": [
+   {
+    "name": "Date of Survey",
+    "id": "dateOfSurveyRadio1",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.surveyDateRadio",
+    "value": "17/09/2026",
+    "hidden": true
+   },
+   {
+    "name": "dateOfSurveyRadio",
+    "id": "dateOfSurveyRadio2",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.surveyDateRadio",
+    "value": "18/09/2026",
+    "hidden": true
+   },
+   {
+    "name": "dateOfSurveyRadio",
+    "id": "dateOfSurveyRadio3",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.surveyDateRadio",
+    "value": "19/09/2026",
+    "hidden": true
+   },
+   {
+    "name": "dateOfSurveyRadio",
+    "id": "dateOfSurveyRadio4",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.surveyDateRadio",
+    "value": "Others",
+    "hidden": true
+   },
+   {
+    "name": "dateOfSurvey",
+    "type": "text",
+    "model": "surveyorData.worklist.quickUpdate.surveyDate",
+    "placeholder": "dd/mm/yyyy",
+    "hidden": true
+   },
+   {
+    "name": "timeOfSurvey",
+    "id": "timeOfSurvey",
+    "type": "text",
+    "model": "surveyorData.worklist.quickUpdate.timeOfSurvey",
+    "placeholder": "hh:mm:ss",
+    "maxlength": "8",
+    "hidden": true
+   },
+   {
+    "name": "Survey Completed",
+    "id": "radioDataCompleted0",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.surveyCompleted",
+    "value": "Y",
+    "hidden": true
+   },
+   {
+    "name": "Survey Completed",
+    "id": "radioDataCompleted1",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.surveyCompleted",
+    "value": "N",
+    "hidden": true
+   },
+   {
+    "name": "Reason",
+    "id": "reason",
+    "type": "select",
+    "model": "surveyorData.worklist.quickUpdate.dpReasonForSurveyNotCompleted",
+    "hidden": true
+   },
+   {
+    "name": "Driving License verified with original",
+    "id": "radioDrivingLicense0",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.drivingLicenseVerified",
+    "value": "Y",
+    "hidden": true
+   },
+   {
+    "name": "Driving License verified with original",
+    "id": "radioDrivingLicense1",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.drivingLicenseVerified",
+    "value": "N",
+    "hidden": true
+   },
+   {
+    "name": "RC Book verified with original",
+    "id": "radioRCbook0",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.rcBookVerified",
+    "value": "Y",
+    "hidden": true
+   },
+   {
+    "name": "RC Book verified with original",
+    "id": "radioRCbook1",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.rcBookVerified",
+    "value": "N",
+    "hidden": true
+   },
+   {
+    "name": "Driving License verified through Parivahan",
+    "id": "radioDrivingLicensePar0",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.drivingLicenseVerifiedParivahan",
+    "value": "Y",
+    "hidden": true
+   },
+   {
+    "name": "Driving License verified through Parivahan",
+    "id": "radioDrivingLicensePar1",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.drivingLicenseVerifiedParivahan",
+    "value": "N",
+    "hidden": true
+   },
+   {
+    "name": "RC Book verified through Parivahan",
+    "id": "radioRCbookPar0",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.rcBookVerifiedParivahan",
+    "value": "Y",
+    "hidden": true
+   },
+   {
+    "name": "RC Book verified through Parivahan",
+    "id": "radioRCbookPar1",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.rcBookVerifiedParivahan",
+    "value": "N",
+    "hidden": true
+   },
+   {
+    "name": "Is the case of close proximity & Break-In Insurance",
+    "id": "isCloseProximityBreakIn0",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.isCloseProximityBreakIn",
+    "value": "Y",
+    "hidden": true
+   },
+   {
+    "name": "Is the case of close proximity & Break-In Insurance",
+    "id": "isCloseProximityBreakIn1",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.isCloseProximityBreakIn",
+    "value": "N",
+    "hidden": true
+   },
+   {
+    "name": "radioAllowCashless",
+    "id": "radioAllowCashless0",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.allowCashlessClaim",
+    "value": "Y",
+    "hidden": true
+   },
+   {
+    "name": "radioAllowCashless",
+    "id": "radioAllowCashless1",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.allowCashlessClaim",
+    "value": "N",
+    "hidden": true
+   },
+   {
+    "name": "surveyorAccessedAmount",
+    "id": "surveyorAccessedAmount",
+    "type": "text",
+    "model": "surveyorData.worklist.quickUpdate.surveyorAccessedAmount",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "surveyorWorklistSurvey.natureOfLoss != 'THEF-EV' && surveyorWorklistSurvey.whetherTotalLossClm != 'Yes'",
+    "hidden": true
+   },
+   {
+    "name": "remarks",
+    "id": "remarks",
+    "type": "textarea",
+    "model": "surveyorData.worklist.quickUpdate.remarks",
+    "maxlength": "240",
+    "pattern": "/^[^\\s]+(\\s.*)?$/",
+    "hidden": true
+   },
+   {
+    "name": "Mobile No of the Claimant",
+    "id": "claimantMobileNo",
+    "type": "tel",
+    "model": "surveyorData.worklist.quickUpdate.claimantMobileNo",
+    "maxlength": "10",
+    "pattern": "/^([56789])(?!\\1+$)\\d{9}$/",
+    "disabled_when": "quickRenewalObj.disMobileNo",
+    "hidden": true
+   },
+   {
+    "name": "emailId",
+    "id": "claimantEmailId",
+    "type": "text",
+    "model": "surveyorData.worklist.quickUpdate.claimantEmailId",
+    "pattern": "/\\b^[a-zA-Z0-9][a-zA-Z0-9._-]*@[a-zA-Z0-9-]+(\\.[a-zA-Z]{2,4}){1,3}\\b$/",
+    "hidden": true
+   },
+   {
+    "name": "Expected date of completion of repair",
+    "id": "expectedDateOfRepair",
+    "type": "text",
+    "model": "surveyorData.worklist.quickUpdate.expectedDateOfRepair",
+    "placeholder": "dd/mm/yyyy",
+    "hidden": true
+   }
+  ],
+  "surveyorData.worklist.additionalDetails": [
+   {
+    "name": "Reference No",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.refernceNo",
+    "placeholder": "Reference Number",
+    "maxlength": "30",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "Registered Owner Name",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.registeredOwnerName",
+    "maxlength": "50",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "registrationNo1",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.registrationNo1",
+    "maxlength": "3",
+    "pattern": "/^[a-zA-Z0-9]+$/"
+   },
+   {
+    "name": "registrationNo2",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.registrationNo2",
+    "maxlength": "3",
+    "pattern": "/^[a-zA-Z0-9]+$/",
+    "disabled_when": "(surveyorData.worklist.additionalDetails.registrationNo1).length == '3'||(surveyorData.worklist.additionalDetails.registrationNo2 == 'BH' && surveyorData.reg34BHFlag)"
+   },
+   {
+    "name": "registrationNo3",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.registrationNo3",
+    "maxlength": "3",
+    "pattern": "/^[a-zA-Z0-9]+$/"
+   },
+   {
+    "name": "registrationNo4",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.registrationNo4",
+    "maxlength": "4",
+    "pattern": "/^[\\d]+$/"
+   },
+   {
+    "name": "Type of Vehicle",
+    "id": "typeOfVehicle",
+    "type": "select",
+    "model": "surveyorData.worklist.additionalDetails.typeOfVehicle"
+   },
+   {
+    "name": "registrationDate",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.dateOfReg",
+    "placeholder": "dd/mm/yyyy"
+   },
+   {
+    "name": "Engine no",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.engineNo",
+    "maxlength": "25",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&|\\\\|\\|))[\\s\\S])*$/"
+   },
+   {
+    "name": "Chassis no",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.chasisNo",
+    "maxlength": "25",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&|\\\\|\\|))[\\s\\S])*$/"
+   },
+   {
+    "name": "Physically Verified -checkBox",
+    "id": "checkBox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.additionalDetails.physicallyVerified"
+   },
+   {
+    "name": "Vehicle Make",
+    "type": "textarea",
+    "model": "surveyorData.worklist.additionalDetails.vehicleMake"
+   },
+   {
+    "name": "Model",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.vehicleModel",
+    "placeholder": "Model"
+   },
+   {
+    "name": "Type of Body",
+    "id": "typeOfBody",
+    "type": "select",
+    "model": "surveyorData.worklist.additionalDetails.typeOfBody"
+   },
+   {
+    "name": "Class of Vehicle",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.classOfVehicle",
+    "maxlength": "120",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "Pre-Accident Condition",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.preAccCondition",
+    "maxlength": "120",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.routeOfOprtn",
+    "maxlength": "25",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "taxPaidUpto",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.taxPaidUpto",
+    "placeholder": "dd/mm/yyyy"
+   },
+   {
+    "name": "RTO Name",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.rtoName",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "transferDate",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.transferDate",
+    "placeholder": "dd/mm/yyyy"
+   },
+   {
+    "name": "Odometer Reading",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.odometerReading",
+    "maxlength": "23",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/"
+   },
+   {
+    "name": "Vehicle Color",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.vehicleColor",
+    "maxlength": "10",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "Vehicle Color Type",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.vehicleColorType",
+    "maxlength": "20",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "Type of fuel",
+    "id": "Type of fuel",
+    "type": "select",
+    "model": "surveyorData.worklist.additionalDetails.typeOfFuel"
+   },
+   {
+    "name": "Was the vehicle parked during accident ?",
+    "id": "vehicleParked",
+    "type": "select",
+    "model": "surveyorData.worklist.additionalDetails.vehicleParked"
+   },
+   {
+    "name": "Is there any TP claim?",
+    "id": "Is there any TP claim?",
+    "type": "select",
+    "model": "surveyorData.worklist.additionalDetails.anyTpClaim"
+   },
+   {
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.firNo",
+    "maxlength": "20",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "firDate",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.firDate",
+    "placeholder": "dd/mm/yyyy"
+   },
+   {
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.policeStation",
+    "maxlength": "150",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.chargedUSMotorVehAct",
+    "maxlength": "150",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.chargedUSIPC",
+    "maxlength": "150",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "Whether driver without license ?",
+    "type": "select",
+    "model": "surveyorData.worklist.additionalDetails.withoutLicense"
+   },
+   {
+    "type": "select",
+    "model": "surveyorData.worklist.additionalDetails.prevPoliceRecords"
+   },
+   {
+    "name": "Is there any Kept Open part ?",
+    "id": "keptOpen",
+    "type": "select",
+    "model": "surveyorData.worklist.additionalDetails.keptOpen"
+   },
+   {
+    "name": "Whether Vehicle Details are matching with policy ?",
+    "type": "select",
+    "model": "surveyorData.worklist.additionalDetails.whtherVehDetMatch"
+   },
+   {
+    "name": "Cause and Nature of Accident",
+    "type": "textarea",
+    "model": "surveyorData.worklist.additionalDetails.causeNatureOfAcc",
+    "maxlength": "240"
+   },
+   {
+    "name": "Disclaimer -CheckBox",
+    "id": "checkBox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.additionalDetails.disclaimer"
+   }
+  ],
+  "surveyorData.worklist.claimAssessment": [
+   {
+    "name": "Whether Payment invoice is in the name of NIA",
+    "id": "PaymentInvoiceName",
+    "type": "select",
+    "model": "surveyorData.worklist.claimAssessment.isPaymentInvoice",
+    "hidden": true
+   },
+   {
+    "name": "Is GST Applicable?",
+    "id": "IsGSTApplicable?",
+    "type": "select",
+    "model": "surveyorData.worklist.claimAssessment.isGstApplicable",
+    "hidden": true
+   },
+   {
+    "name": "Vendor/Tax Invoice Date",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.vendorTaxInvoiceDate",
+    "placeholder": "dd/mm/yyyy",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   },
+   {
+    "name": "Vendor/Tax Invoice Number",
+    "id": "Vendor/TaxInvoiceNumber",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.vendorTaxInvoiceNumber",
+    "maxlength": "30",
+    "pattern": "/^[a-zA-Z0-9]((?!(\\'|\\\"|\\^|\\~|\\`))[\\s\\S])*$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   },
+   {
+    "name": "Net Salvage",
+    "id": "netSlavage",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.netSlavage",
+    "maxlength": "13",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "hidden": true
+   },
+   {
+    "name": "Less Compulsory Excess",
+    "id": "lessCompulsoryExcess",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.lessCompulsoryExcess",
+    "hidden": true
+   },
+   {
+    "name": "imposedExcess",
+    "id": "imposedExcess",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.imposedExcess",
+    "hidden": true
+   },
+   {
+    "name": "Less Voluntary Express",
+    "id": "lessVoluntaryExpress",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.lessVoluntaryExpress",
+    "hidden": true
+   },
+   {
+    "name": "Towing Charges",
+    "id": "towingCharges",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.towingCharges",
+    "maxlength": "13",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "hidden": true
+   },
+   {
+    "name": "Additional Towing Charges",
+    "id": "additionalTowingCharges",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.additionalTowingCharges",
+    "maxlength": "13",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "hidden": true
+   },
+   {
+    "name": "Re-Inspection Remarks 2",
+    "id": "recommendations",
+    "type": "textarea",
+    "model": "surveyorData.worklist.claimAssessment.recommendations",
+    "maxlength": "240",
+    "hidden": true
+   },
+   {
+    "name": "Whether Re-Inspection Required",
+    "id": "whetherReinspectionRequired",
+    "type": "select",
+    "model": "surveyorData.worklist.claimAssessment.whetherReinspectionRequired",
+    "hidden": true
+   },
+   {
+    "name": "Nil Depreciation Cover Amount",
+    "id": "nilDepreciationCover",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.nilDepreciationCover",
+    "maxlength": "19",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "hidden": true
+   },
+   {
+    "name": "Engine Protect Extension Amount",
+    "id": "engineProtectCover",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.engineProtectCover",
+    "maxlength": "19",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/",
+    "hidden": true
+   }
+  ],
+  "(no-model)": [
+   {
+    "type": "hidden",
+    "hidden": true
+   }
+  ],
+  "item4": [
+   {
+    "name": "Maruti Assessment DepreciationPercentage0",
+    "id": "deprePercent",
+    "type": "text",
+    "model": "item4.vDepriciation",
+    "maxlength": "3",
+    "pattern": "/^(100|[0-9]{1,2})$/",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'||item4.vItem=='Labour'||item4.vItem=='Denting'",
+    "hidden": true
+   },
+   {
+    "name": "sel1",
+    "id": "sel1",
+    "type": "select",
+    "model": "item4.vAllowedServiceType",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'",
+    "hidden": true
+   },
+   {
+    "name": "approvalAmount",
+    "type": "textarea",
+    "model": "item4.vApprovalAmount",
+    "maxlength": "7",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Hsn Code0",
+    "id": "hsnCode",
+    "type": "text",
+    "model": "item4.vHsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Gst Percentage0",
+    "id": "gstPercetage",
+    "type": "text",
+    "model": "item4.vGstPercent",
+    "maxlength": "3",
+    "pattern": "/^[0-9]$|^[1-9][0-9]$|^(100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   },
+   {
+    "name": "Maruti Assessment DepreciationPercentage1",
+    "id": "deprePercent",
+    "type": "text",
+    "model": "item4.vDepriciation",
+    "maxlength": "3",
+    "pattern": "/^(100|[0-9]{1,2})$/",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'||item4.vItem=='Labour'||item4.vItem=='Denting'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Hsn Code1",
+    "id": "hsnCode",
+    "type": "text",
+    "model": "item4.vHsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Gst Percentage1",
+    "id": "gstPercetage",
+    "type": "text",
+    "model": "item4.vGstPercent",
+    "maxlength": "3",
+    "pattern": "/^[0-9]$|^[1-9][0-9]$|^(100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   },
+   {
+    "name": "Maruti Assessment DepreciationPercentage2",
+    "id": "deprePercent",
+    "type": "text",
+    "model": "item4.vDepriciation",
+    "maxlength": "3",
+    "pattern": "/^(100|[0-9]{1,2})$/",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'||item4.vItem=='Labour'||item4.vItem=='Denting'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Hsn Code2",
+    "id": "hsnCode",
+    "type": "text",
+    "model": "item4.vHsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Gst Percentage2",
+    "id": "gstPercetage",
+    "type": "text",
+    "model": "item4.vGstPercent",
+    "maxlength": "3",
+    "pattern": "/^[0-9]$|^[1-9][0-9]$|^(100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   },
+   {
+    "name": "Maruti Assessment DepreciationPercentage3",
+    "id": "deprePercent",
+    "type": "text",
+    "model": "item4.vDepriciation",
+    "maxlength": "3",
+    "pattern": "/^(100|[0-9]{1,2})$/",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'||item4.vItem=='Labour'||item4.vItem=='Denting'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Hsn Code3",
+    "id": "hsnCode",
+    "type": "text",
+    "model": "item4.vHsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Gst Percentage3",
+    "id": "gstPercetage",
+    "type": "text",
+    "model": "item4.vGstPercent",
+    "maxlength": "3",
+    "pattern": "/^[0-9]$|^[1-9][0-9]$|^(100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   },
+   {
+    "name": "Maruti Assessment DepreciationPercentage4",
+    "id": "deprePercent",
+    "type": "text",
+    "model": "item4.vDepriciation",
+    "maxlength": "3",
+    "pattern": "/^(100|[0-9]{1,2})$/",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'||item4.vItem=='Labour'||item4.vItem=='Denting'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Hsn Code4",
+    "id": "hsnCode",
+    "type": "text",
+    "model": "item4.vHsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Gst Percentage4",
+    "id": "gstPercetage",
+    "type": "text",
+    "model": "item4.vGstPercent",
+    "maxlength": "3",
+    "pattern": "/^[0-9]$|^[1-9][0-9]$|^(100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   },
+   {
+    "name": "Maruti Assessment DepreciationPercentage5",
+    "id": "deprePercent",
+    "type": "text",
+    "model": "item4.vDepriciation",
+    "maxlength": "3",
+    "pattern": "/^(100|[0-9]{1,2})$/",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'||item4.vItem=='Labour'||item4.vItem=='Denting'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Hsn Code5",
+    "id": "hsnCode",
+    "type": "text",
+    "model": "item4.vHsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Gst Percentage5",
+    "id": "gstPercetage",
+    "type": "text",
+    "model": "item4.vGstPercent",
+    "maxlength": "3",
+    "pattern": "/^[0-9]$|^[1-9][0-9]$|^(100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   },
+   {
+    "name": "Maruti Assessment DepreciationPercentage6",
+    "id": "deprePercent",
+    "type": "text",
+    "model": "item4.vDepriciation",
+    "maxlength": "3",
+    "pattern": "/^(100|[0-9]{1,2})$/",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'||item4.vItem=='Labour'||item4.vItem=='Denting'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Hsn Code6",
+    "id": "hsnCode",
+    "type": "text",
+    "model": "item4.vHsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Gst Percentage6",
+    "id": "gstPercetage",
+    "type": "text",
+    "model": "item4.vGstPercent",
+    "maxlength": "3",
+    "pattern": "/^[0-9]$|^[1-9][0-9]$|^(100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   },
+   {
+    "name": "vItem",
+    "id": "vItem",
+    "type": "select",
+    "model": "item4.vItem",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'",
+    "hidden": true
+   },
+   {
+    "name": "Maruti Assessment DepreciationPercentage7",
+    "id": "deprePercent",
+    "type": "text",
+    "model": "item4.vDepriciation",
+    "maxlength": "3",
+    "pattern": "/^(100|[0-9]{1,2})$/",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'||item4.vItem=='Labour'||item4.vItem=='Denting'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Hsn Code7",
+    "id": "hsnCode",
+    "type": "text",
+    "model": "item4.vHsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Gst Percentage7",
+    "id": "gstPercetage",
+    "type": "text",
+    "model": "item4.vGstPercent",
+    "maxlength": "3",
+    "pattern": "/^[0-9]$|^[1-9][0-9]$|^(100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   },
+   {
+    "name": "Maruti Assessment DepreciationPercentage8",
+    "id": "deprePercent",
+    "type": "text",
+    "model": "item4.vDepriciation",
+    "maxlength": "3",
+    "pattern": "/^(100|[0-9]{1,2})$/",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'||item4.vItem=='Labour'||item4.vItem=='Denting'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Hsn Code8",
+    "id": "hsnCode",
+    "type": "text",
+    "model": "item4.vHsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Gst Percentage8",
+    "id": "gstPercetage",
+    "type": "text",
+    "model": "item4.vGstPercent",
+    "maxlength": "3",
+    "pattern": "/^[0-9]$|^[1-9][0-9]$|^(100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   },
+   {
+    "name": "Maruti Assessment DepreciationPercentage9",
+    "id": "deprePercent",
+    "type": "text",
+    "model": "item4.vDepriciation",
+    "maxlength": "3",
+    "pattern": "/^(100|[0-9]{1,2})$/",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'||item4.vItem=='Labour'||item4.vItem=='Denting'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Hsn Code9",
+    "id": "hsnCode",
+    "type": "text",
+    "model": "item4.vHsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Gst Percentage9",
+    "id": "gstPercetage",
+    "type": "text",
+    "model": "item4.vGstPercent",
+    "maxlength": "3",
+    "pattern": "/^[0-9]$|^[1-9][0-9]$|^(100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   },
+   {
+    "name": "Maruti Assessment DepreciationPercentage10",
+    "id": "deprePercent",
+    "type": "text",
+    "model": "item4.vDepriciation",
+    "maxlength": "3",
+    "pattern": "/^(100|[0-9]{1,2})$/",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'||item4.vItem=='Labour'||item4.vItem=='Denting'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Hsn Code10",
+    "id": "hsnCode",
+    "type": "text",
+    "model": "item4.vHsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Gst Percentage10",
+    "id": "gstPercetage",
+    "type": "text",
+    "model": "item4.vGstPercent",
+    "maxlength": "3",
+    "pattern": "/^[0-9]$|^[1-9][0-9]$|^(100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   },
+   {
+    "name": "Maruti Assessment DepreciationPercentage11",
+    "id": "deprePercent",
+    "type": "text",
+    "model": "item4.vDepriciation",
+    "maxlength": "3",
+    "pattern": "/^(100|[0-9]{1,2})$/",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'||item4.vItem=='Labour'||item4.vItem=='Denting'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Hsn Code11",
+    "id": "hsnCode",
+    "type": "text",
+    "model": "item4.vHsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Gst Percentage11",
+    "id": "gstPercetage",
+    "type": "text",
+    "model": "item4.vGstPercent",
+    "maxlength": "3",
+    "pattern": "/^[0-9]$|^[1-9][0-9]$|^(100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   },
+   {
+    "name": "Maruti Assessment DepreciationPercentage12",
+    "id": "deprePercent",
+    "type": "text",
+    "model": "item4.vDepriciation",
+    "maxlength": "3",
+    "pattern": "/^(100|[0-9]{1,2})$/",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'||item4.vItem=='Labour'||item4.vItem=='Denting'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Hsn Code12",
+    "id": "hsnCode",
+    "type": "text",
+    "model": "item4.vHsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Gst Percentage12",
+    "id": "gstPercetage",
+    "type": "text",
+    "model": "item4.vGstPercent",
+    "maxlength": "3",
+    "pattern": "/^[0-9]$|^[1-9][0-9]$|^(100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   },
+   {
+    "name": "Maruti Assessment DepreciationPercentage13",
+    "id": "deprePercent",
+    "type": "text",
+    "model": "item4.vDepriciation",
+    "maxlength": "3",
+    "pattern": "/^(100|[0-9]{1,2})$/",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'||item4.vItem=='Labour'||item4.vItem=='Denting'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Hsn Code13",
+    "id": "hsnCode",
+    "type": "text",
+    "model": "item4.vHsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Gst Percentage13",
+    "id": "gstPercetage",
+    "type": "text",
+    "model": "item4.vGstPercent",
+    "maxlength": "3",
+    "pattern": "/^[0-9]$|^[1-9][0-9]$|^(100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   },
+   {
+    "name": "Maruti Assessment DepreciationPercentage14",
+    "id": "deprePercent",
+    "type": "text",
+    "model": "item4.vDepriciation",
+    "maxlength": "3",
+    "pattern": "/^(100|[0-9]{1,2})$/",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'||item4.vItem=='Labour'||item4.vItem=='Denting'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Hsn Code14",
+    "id": "hsnCode",
+    "type": "text",
+    "model": "item4.vHsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Gst Percentage14",
+    "id": "gstPercetage",
+    "type": "text",
+    "model": "item4.vGstPercent",
+    "maxlength": "3",
+    "pattern": "/^[0-9]$|^[1-9][0-9]$|^(100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   },
+   {
+    "name": "Maruti Assessment DepreciationPercentage15",
+    "id": "deprePercent",
+    "type": "text",
+    "model": "item4.vDepriciation",
+    "maxlength": "3",
+    "pattern": "/^(100|[0-9]{1,2})$/",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'||item4.vItem=='Labour'||item4.vItem=='Denting'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Hsn Code15",
+    "id": "hsnCode",
+    "type": "text",
+    "model": "item4.vHsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Gst Percentage15",
+    "id": "gstPercetage",
+    "type": "text",
+    "model": "item4.vGstPercent",
+    "maxlength": "3",
+    "pattern": "/^[0-9]$|^[1-9][0-9]$|^(100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   },
+   {
+    "name": "Maruti Assessment DepreciationPercentage16",
+    "id": "deprePercent",
+    "type": "text",
+    "model": "item4.vDepriciation",
+    "maxlength": "3",
+    "pattern": "/^(100|[0-9]{1,2})$/",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'||item4.vItem=='Labour'||item4.vItem=='Denting'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Hsn Code16",
+    "id": "hsnCode",
+    "type": "text",
+    "model": "item4.vHsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Gst Percentage16",
+    "id": "gstPercetage",
+    "type": "text",
+    "model": "item4.vGstPercent",
+    "maxlength": "3",
+    "pattern": "/^[0-9]$|^[1-9][0-9]$|^(100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   },
+   {
+    "name": "Maruti Assessment DepreciationPercentage17",
+    "id": "deprePercent",
+    "type": "text",
+    "model": "item4.vDepriciation",
+    "maxlength": "3",
+    "pattern": "/^(100|[0-9]{1,2})$/",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'||item4.vItem=='Labour'||item4.vItem=='Denting'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Hsn Code17",
+    "id": "hsnCode",
+    "type": "text",
+    "model": "item4.vHsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Gst Percentage17",
+    "id": "gstPercetage",
+    "type": "text",
+    "model": "item4.vGstPercent",
+    "maxlength": "3",
+    "pattern": "/^[0-9]$|^[1-9][0-9]$|^(100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   },
+   {
+    "name": "Maruti Assessment DepreciationPercentage18",
+    "id": "deprePercent",
+    "type": "text",
+    "model": "item4.vDepriciation",
+    "maxlength": "3",
+    "pattern": "/^(100|[0-9]{1,2})$/",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'||item4.vItem=='Labour'||item4.vItem=='Denting'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Hsn Code18",
+    "id": "hsnCode",
+    "type": "text",
+    "model": "item4.vHsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Gst Percentage18",
+    "id": "gstPercetage",
+    "type": "text",
+    "model": "item4.vGstPercent",
+    "maxlength": "3",
+    "pattern": "/^[0-9]$|^[1-9][0-9]$|^(100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   },
+   {
+    "name": "Maruti Assessment DepreciationPercentage19",
+    "id": "deprePercent",
+    "type": "text",
+    "model": "item4.vDepriciation",
+    "maxlength": "3",
+    "pattern": "/^(100|[0-9]{1,2})$/",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'||item4.vItem=='Labour'||item4.vItem=='Denting'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Hsn Code19",
+    "id": "hsnCode",
+    "type": "text",
+    "model": "item4.vHsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Gst Percentage19",
+    "id": "gstPercetage",
+    "type": "text",
+    "model": "item4.vGstPercent",
+    "maxlength": "3",
+    "pattern": "/^[0-9]$|^[1-9][0-9]$|^(100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   },
+   {
+    "name": "Maruti Assessment DepreciationPercentage20",
+    "id": "deprePercent",
+    "type": "text",
+    "model": "item4.vDepriciation",
+    "maxlength": "3",
+    "pattern": "/^(100|[0-9]{1,2})$/",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'||item4.vItem=='Labour'||item4.vItem=='Denting'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Hsn Code20",
+    "id": "hsnCode",
+    "type": "text",
+    "model": "item4.vHsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Gst Percentage20",
+    "id": "gstPercetage",
+    "type": "text",
+    "model": "item4.vGstPercent",
+    "maxlength": "3",
+    "pattern": "/^[0-9]$|^[1-9][0-9]$|^(100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   },
+   {
+    "name": "Maruti Assessment DepreciationPercentage21",
+    "id": "deprePercent",
+    "type": "text",
+    "model": "item4.vDepriciation",
+    "maxlength": "3",
+    "pattern": "/^(100|[0-9]{1,2})$/",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'||item4.vItem=='Labour'||item4.vItem=='Denting'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Hsn Code21",
+    "id": "hsnCode",
+    "type": "text",
+    "model": "item4.vHsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Gst Percentage21",
+    "id": "gstPercetage",
+    "type": "text",
+    "model": "item4.vGstPercent",
+    "maxlength": "3",
+    "pattern": "/^[0-9]$|^[1-9][0-9]$|^(100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   },
+   {
+    "name": "Maruti Assessment DepreciationPercentage22",
+    "id": "deprePercent",
+    "type": "text",
+    "model": "item4.vDepriciation",
+    "maxlength": "3",
+    "pattern": "/^(100|[0-9]{1,2})$/",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'||item4.vItem=='Labour'||item4.vItem=='Denting'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Hsn Code22",
+    "id": "hsnCode",
+    "type": "text",
+    "model": "item4.vHsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Gst Percentage22",
+    "id": "gstPercetage",
+    "type": "text",
+    "model": "item4.vGstPercent",
+    "maxlength": "3",
+    "pattern": "/^[0-9]$|^[1-9][0-9]$|^(100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   },
+   {
+    "name": "Maruti Assessment DepreciationPercentage23",
+    "id": "deprePercent",
+    "type": "text",
+    "model": "item4.vDepriciation",
+    "maxlength": "3",
+    "pattern": "/^(100|[0-9]{1,2})$/",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'||item4.vItem=='Labour'||item4.vItem=='Denting'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Hsn Code23",
+    "id": "hsnCode",
+    "type": "text",
+    "model": "item4.vHsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Gst Percentage23",
+    "id": "gstPercetage",
+    "type": "text",
+    "model": "item4.vGstPercent",
+    "maxlength": "3",
+    "pattern": "/^[0-9]$|^[1-9][0-9]$|^(100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   },
+   {
+    "name": "Maruti Assessment DepreciationPercentage24",
+    "id": "deprePercent",
+    "type": "text",
+    "model": "item4.vDepriciation",
+    "maxlength": "3",
+    "pattern": "/^(100|[0-9]{1,2})$/",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'||item4.vItem=='Labour'||item4.vItem=='Denting'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Hsn Code24",
+    "id": "hsnCode",
+    "type": "text",
+    "model": "item4.vHsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Gst Percentage24",
+    "id": "gstPercetage",
+    "type": "text",
+    "model": "item4.vGstPercent",
+    "maxlength": "3",
+    "pattern": "/^[0-9]$|^[1-9][0-9]$|^(100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   },
+   {
+    "name": "Maruti Assessment DepreciationPercentage25",
+    "id": "deprePercent",
+    "type": "text",
+    "model": "item4.vDepriciation",
+    "maxlength": "3",
+    "pattern": "/^(100|[0-9]{1,2})$/",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'||item4.vItem=='Labour'||item4.vItem=='Denting'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Hsn Code25",
+    "id": "hsnCode",
+    "type": "text",
+    "model": "item4.vHsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Gst Percentage25",
+    "id": "gstPercetage",
+    "type": "text",
+    "model": "item4.vGstPercent",
+    "maxlength": "3",
+    "pattern": "/^[0-9]$|^[1-9][0-9]$|^(100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   },
+   {
+    "name": "Maruti Assessment DepreciationPercentage26",
+    "id": "deprePercent",
+    "type": "text",
+    "model": "item4.vDepriciation",
+    "maxlength": "3",
+    "pattern": "/^(100|[0-9]{1,2})$/",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'||item4.vItem=='Labour'||item4.vItem=='Denting'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Hsn Code26",
+    "id": "hsnCode",
+    "type": "text",
+    "model": "item4.vHsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "disabled_when": "item3[0].vFlag=='SUBMIT'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Gst Percentage26",
+    "id": "gstPercetage",
+    "type": "text",
+    "model": "item4.vGstPercent",
+    "maxlength": "3",
+    "pattern": "/^[0-9]$|^[1-9][0-9]$|^(100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   }
+  ],
+  "surveyorData.worklist": [
+   {
+    "name": "Delivery Order Document",
+    "type": "text",
+    "model": "surveyorData.worklist.deliveryOrderDocName",
+    "hidden": true
+   },
+   {
+    "name": "Delivery Order File",
+    "id": "deliveryOrderFile",
+    "type": "file",
+    "model": "surveyorData.worklist.deliveryOrderFile",
+    "hidden": true
+   },
+   {
+    "name": "Delivery Order Date",
+    "type": "text",
+    "model": "surveyorData.worklist.deliveryOrderDate",
+    "placeholder": "DD/MM/YYYY",
+    "required": "required",
+    "hidden": true
+   },
+   {
+    "name": "Delivery Order Time",
+    "type": "text",
+    "model": "surveyorData.worklist.deliveryOrderTime",
+    "placeholder": "HH:MM",
+    "maxlength": "5",
+    "pattern": "/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/",
+    "required": "required",
+    "hidden": true
+   },
+   {
+    "name": "engChaVerified",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.EngChaVerified"
+   },
+   {
+    "name": "damage",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.Damage"
+   },
+   {
+    "name": "supEstimate",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.SupEstimate"
+   },
+   {
+    "name": "repaisReplace",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.RepaisReplace"
+   },
+   {
+    "name": "reinspected",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.Reinspected"
+   },
+   {
+    "name": "ncbVerified",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.NcbVerified"
+   },
+   {
+    "name": "dlVerified",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.DlVerifiedOriginal"
+   },
+   {
+    "name": "rcVerified",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.RcVerifiedOriginal"
+   },
+   {
+    "name": "dlVerifiedPar",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.DlVerifiedParivahan"
+   },
+   {
+    "name": "rcVerifiedPar",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.RcVerifiedParivahan"
+   },
+   {
+    "name": "permitVerifiedPar",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.PermitVerifiedParivahan"
+   },
+   {
+    "name": "fitnessCertVerifiedPar",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.FitnessCertVerifiedParivahan"
+   }
+  ],
+  "manDoc": [
+   {
+    "name": "docType0",
+    "id": "docType0",
+    "type": "select",
+    "model": "manDoc.docType",
+    "disabled_when": "manDoc.uploadDocSucess == 0",
+    "hidden": true
+   },
+   {
+    "name": "uploadedFileTxt0",
+    "id": "uploadedFileTxt0",
+    "type": "text",
+    "model": "manDoc.uploadedFileName",
+    "hidden": true
+   },
+   {
+    "name": "mandatoryFiles0",
+    "id": "mandatoryFiles0",
+    "type": "file",
+    "model": "manDoc.myFiles",
+    "hidden": true
+   },
+   {
+    "name": "uploadedFileTxt0",
+    "type": "text",
+    "model": "manDoc.uploadedFileName",
+    "hidden": true
+   },
+   {
+    "name": "mandatoryFiles0",
+    "id": "uploadDigSig",
+    "type": "file",
+    "model": "manDoc.myFiles",
+    "hidden": true
+   }
+  ],
+  "nonmanDoc": [
+   {
+    "name": "docTypeNonMan0",
+    "id": "docTypeNonMan0",
+    "type": "select",
+    "model": "nonmanDoc.docType",
+    "disabled_when": "nonmanDoc.uploadDocSucess == 0",
+    "hidden": true
+   },
+   {
+    "name": "uploadedFileTxtNon0",
+    "id": "uploadedFileTxtNon0",
+    "type": "text",
+    "model": "nonmanDoc.uploadedFileName",
+    "hidden": true
+   },
+   {
+    "name": "nonMandatoryFiles0",
+    "id": "nonMandatoryFiles0",
+    "type": "file",
+    "model": "nonmanDoc.myFiles",
+    "hidden": true
+   }
+  ],
+  "surveyorData.worklist.surveyFeeBill": [
+   {
+    "name": "isInvoiceInNameOfNIA",
+    "id": "isInvoiceInNameOfNIA",
+    "type": "select",
+    "model": "surveyorData.worklist.surveyFeeBill.isInvoiceInNameOfNIA",
+    "hidden": true
+   },
+   {
+    "name": "surveyorFeeInvoiceNumber",
+    "id": "surveyorFeeInvoiceNumber",
+    "type": "text",
+    "model": "surveyorData.worklist.surveyFeeBill.surveyorFeeInvoiceNumber",
+    "maxlength": "20",
+    "pattern": "/^[a-zA-Z0-9\\-\\/]+$/",
+    "hidden": true
+   },
+   {
+    "name": "surveyorFeeInvoiceDate",
+    "type": "text",
+    "model": "surveyorData.worklist.surveyFeeBill.surveyorFeeInvoiceDate",
+    "placeholder": "dd/mm/yyyy",
+    "hidden": true
+   },
+   {
+    "name": "professionalFee",
+    "id": "professionalFee",
+    "type": "text",
+    "model": "surveyorData.worklist.surveyFeeBill.professionalFee",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "hidden": true
+   },
+   {
+    "name": "photosAmount",
+    "id": "photosAmount",
+    "type": "text",
+    "model": "surveyorData.worklist.surveyFeeBill.photosAmount",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "hidden": true
+   },
+   {
+    "name": "conveyanceAmount",
+    "id": "conveyanceAmount",
+    "type": "text",
+    "model": "surveyorData.worklist.surveyFeeBill.conveyanceAmount",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "hidden": true
+   },
+   {
+    "name": "others",
+    "id": "others",
+    "type": "text",
+    "model": "surveyorData.worklist.surveyFeeBill.others",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "hidden": true
+   },
+   {
+    "name": "isGSTApplicable",
+    "id": "isGSTApplicable",
+    "type": "select",
+    "model": "surveyorData.worklist.surveyFeeBill.isGSTApplicable",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Hsn Code3",
+    "id": "hSNCode",
+    "type": "text",
+    "model": "surveyorData.worklist.surveyFeeBill.hsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   },
+   {
+    "name": "Primary Assessment Gst Percentage3",
+    "id": "gstPercent",
+    "type": "text",
+    "model": "surveyorData.worklist.surveyFeeBill.gstPercent",
+    "maxlength": "19",
+    "pattern": "/^([0-9]|[1-9][0-9]|100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'",
+    "hidden": true
+   },
+   {
+    "name": "totalGSTAmount",
+    "id": "totalGSTAmount",
+    "type": "text",
+    "model": "surveyorData.worklist.surveyFeeBill.totalGSTAmount",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "hidden": true
+   },
+   {
+    "name": "total",
+    "id": "total",
+    "type": "text",
+    "model": "surveyorData.worklist.surveyFeeBill.total",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "hidden": true
+   }
+  ],
+  "totalList": [
+   {
+    "name": "allMakeList_3",
+    "type": "select",
+    "model": "totalList",
+    "hidden": true
+   }
+  ],
+  "selectedValue": [
+   {
+    "name": "selMakeList_3",
+    "type": "select",
+    "model": "selectedValue",
+    "hidden": true
+   }
+  ],
+  "surveyor": [
+   {
+    "id": "smsarea",
+    "type": "textarea",
+    "model": "surveyor.content",
+    "hidden": true
+   }
+  ],
+  "surveyorData.worklist.connectwithclaimofc": [
+   {
+    "name": "remarks",
+    "id": "remarks",
+    "type": "textarea",
+    "model": "surveyorData.worklist.connectwithclaimofc.remarks",
+    "maxlength": "240",
+    "pattern": "/^[^\\s]+(\\s.*)?$/",
+    "hidden": true
+   }
+  ]
+ }
+}

@@ -1,0 +1,3989 @@
+{
+ "file": "nia-kia-survey.html",
+ "total": 693,
+ "groups": {
+  "surveyorData.worklist.quickUpdate": [
+   {
+    "name": "Date of Survey",
+    "id": "dateOfSurveyRadio1",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.surveyDateRadio",
+    "value": "04/08/2026"
+   },
+   {
+    "name": "dateOfSurveyRadio",
+    "id": "dateOfSurveyRadio2",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.surveyDateRadio",
+    "value": "05/08/2026"
+   },
+   {
+    "name": "dateOfSurveyRadio",
+    "id": "dateOfSurveyRadio3",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.surveyDateRadio",
+    "value": "06/08/2026"
+   },
+   {
+    "name": "dateOfSurveyRadio",
+    "id": "dateOfSurveyRadio4",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.surveyDateRadio",
+    "value": "Others"
+   },
+   {
+    "name": "dateOfSurvey",
+    "type": "text",
+    "model": "surveyorData.worklist.quickUpdate.surveyDate",
+    "placeholder": "dd/mm/yyyy"
+   },
+   {
+    "name": "timeOfSurvey",
+    "id": "timeOfSurvey",
+    "type": "text",
+    "model": "surveyorData.worklist.quickUpdate.timeOfSurvey",
+    "placeholder": "hh:mm:ss",
+    "maxlength": "8"
+   },
+   {
+    "name": "Survey Completed",
+    "id": "radioDataCompleted0",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.surveyCompleted",
+    "value": "Y"
+   },
+   {
+    "name": "Survey Completed",
+    "id": "radioDataCompleted1",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.surveyCompleted",
+    "value": "N"
+   },
+   {
+    "name": "Reason",
+    "id": "reason",
+    "type": "select",
+    "model": "surveyorData.worklist.quickUpdate.dpReasonForSurveyNotCompleted"
+   },
+   {
+    "name": "Driving License verified with original",
+    "id": "radioDrivingLicense0",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.drivingLicenseVerified",
+    "value": "Y"
+   },
+   {
+    "name": "Driving License verified with original",
+    "id": "radioDrivingLicense1",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.drivingLicenseVerified",
+    "value": "N"
+   },
+   {
+    "name": "RC Book verified with original",
+    "id": "radioRCbook0",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.rcBookVerified",
+    "value": "Y"
+   },
+   {
+    "name": "RC Book verified with original",
+    "id": "radioRCbook1",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.rcBookVerified",
+    "value": "N"
+   },
+   {
+    "name": "Driving License verified through Parivahan",
+    "id": "radioDrivingLicensePar0",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.drivingLicenseVerifiedParivahan",
+    "value": "Y"
+   },
+   {
+    "name": "Driving License verified through Parivahan",
+    "id": "radioDrivingLicensePar1",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.drivingLicenseVerifiedParivahan",
+    "value": "N"
+   },
+   {
+    "name": "RC Book verified through Parivahan",
+    "id": "radioRCbookPar0",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.rcBookVerifiedParivahan",
+    "value": "Y"
+   },
+   {
+    "name": "RC Book verified through Parivahan",
+    "id": "radioRCbookPar1",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.rcBookVerifiedParivahan",
+    "value": "N"
+   },
+   {
+    "name": "Is the case of close proximity & Break-In Insurance",
+    "id": "isCloseProximityBreakIn0",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.isCloseProximityBreakIn",
+    "value": "Y"
+   },
+   {
+    "name": "Is the case of close proximity & Break-In Insurance",
+    "id": "isCloseProximityBreakIn1",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.isCloseProximityBreakIn",
+    "value": "N"
+   },
+   {
+    "name": "surveyorAccessedAmount",
+    "id": "surveyorAccessedAmount",
+    "type": "text",
+    "model": "surveyorData.worklist.quickUpdate.surveyorAccessedAmount",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "surveyorWorklistSurvey.natureOfLoss != 'THEF-EV' && surveyorWorklistSurvey.whetherTotalLossClm != 'Yes'"
+   },
+   {
+    "name": "remarks",
+    "id": "remarks",
+    "type": "textarea",
+    "model": "surveyorData.worklist.quickUpdate.remarks",
+    "maxlength": "240",
+    "pattern": "/^[^\\s]+(\\s.*)?$/"
+   },
+   {
+    "name": "mobileNo",
+    "id": "claimantMobileNo",
+    "type": "tel",
+    "model": "surveyorData.worklist.quickUpdate.claimantMobileNo",
+    "maxlength": "10",
+    "pattern": "/^([56789])(?!\\1+$)\\d{9}$/",
+    "disabled_when": "quickRenewalObj.disMobileNo"
+   },
+   {
+    "name": "emailId",
+    "id": "claimantEmailId",
+    "type": "text",
+    "model": "surveyorData.worklist.quickUpdate.claimantEmailId",
+    "pattern": "/\\b^[a-zA-Z0-9][a-zA-Z0-9._-]*@[a-zA-Z0-9-]+(\\.[a-zA-Z]{2,4}){1,3}\\b$/"
+   },
+   {
+    "name": "Expected date of completion of repair",
+    "id": "expectedDateOfRepair",
+    "type": "text",
+    "model": "surveyorData.worklist.quickUpdate.expectedDateOfRepair",
+    "placeholder": "dd/mm/yyyy"
+   }
+  ],
+  "surveyorData.worklist.additionalDetails": [
+   {
+    "name": "Reference No",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.refernceNo",
+    "placeholder": "Reference Number",
+    "maxlength": "30",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "Registered Owner Name",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.registeredOwnerName",
+    "maxlength": "50",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "registrationNo1",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.registrationNo1",
+    "maxlength": "3",
+    "pattern": "/^[a-zA-Z0-9]+$/"
+   },
+   {
+    "name": "registrationNo2",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.registrationNo2",
+    "maxlength": "3",
+    "pattern": "/^[a-zA-Z0-9]+$/",
+    "disabled_when": "(surveyorData.worklist.additionalDetails.registrationNo1).length == '3'||(surveyorData.worklist.additionalDetails.registrationNo2 == 'BH' && surveyorData.reg34BHFlag)"
+   },
+   {
+    "name": "registrationNo3",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.registrationNo3",
+    "maxlength": "3",
+    "pattern": "/^[a-zA-Z0-9]+$/"
+   },
+   {
+    "name": "registrationNo4",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.registrationNo4",
+    "maxlength": "4",
+    "pattern": "/^[\\d]+$/"
+   },
+   {
+    "name": "registrationDate",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.dateOfReg",
+    "placeholder": "dd/mm/yyyy"
+   },
+   {
+    "name": "Engine no",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.engineNo",
+    "maxlength": "25",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&|\\\\|\\|))[\\s\\S])*$/"
+   },
+   {
+    "name": "Chassis no",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.chasisNo",
+    "maxlength": "25",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&|\\\\|\\|))[\\s\\S])*$/"
+   },
+   {
+    "name": "Physically Verified -checkBox",
+    "id": "checkBox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.additionalDetails.physicallyVerified"
+   },
+   {
+    "name": "Vehicle Make",
+    "type": "textarea",
+    "model": "surveyorData.worklist.additionalDetails.vehicleMake"
+   },
+   {
+    "name": "Model",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.vehicleModel",
+    "placeholder": "Model"
+   },
+   {
+    "name": "Class of Vehicle",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.classOfVehicle",
+    "maxlength": "120",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "Pre-Accident Condition",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.preAccCondition",
+    "maxlength": "120",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.regLadenWt",
+    "maxlength": "10",
+    "pattern": "/^[\\d]+$/"
+   },
+   {
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.unLadenWt",
+    "maxlength": "10",
+    "pattern": "/^[\\d]+$/"
+   },
+   {
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.fitnessCertNo",
+    "maxlength": "20",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "fitnessCertNo",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.fitnessCertValidUpto",
+    "placeholder": "dd/mm/yyyy"
+   },
+   {
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.permitNo",
+    "maxlength": "20",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "permitValidUpto",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.permitValidUpto",
+    "placeholder": "dd/mm/yyyy"
+   },
+   {
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.routeOfOprtn",
+    "maxlength": "25",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "taxPaidUpto",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.taxPaidUpto",
+    "placeholder": "dd/mm/yyyy"
+   },
+   {
+    "name": "RTO Name",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.rtoName",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "transferDate",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.transferDate",
+    "placeholder": "dd/mm/yyyy"
+   },
+   {
+    "name": "Odometer Reading",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.odometerReading",
+    "maxlength": "23",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/"
+   },
+   {
+    "name": "Vehicle Color",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.vehicleColor",
+    "maxlength": "10",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "Vehicle Color Type",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.vehicleColorType",
+    "maxlength": "20",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "Type of Vehicle",
+    "id": "typeOfVehicle",
+    "type": "select",
+    "model": "surveyorData.worklist.additionalDetails.typeOfVehicle"
+   },
+   {
+    "name": "Type of fuel",
+    "id": "Type of fuel",
+    "type": "select",
+    "model": "surveyorData.worklist.additionalDetails.typeOfFuel"
+   },
+   {
+    "name": "Was the vehicle parked during accident ?",
+    "id": "vehicleParked",
+    "type": "select",
+    "model": "surveyorData.worklist.additionalDetails.vehicleParked"
+   },
+   {
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.firNo",
+    "maxlength": "20",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "firDate",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.firDate",
+    "placeholder": "dd/mm/yyyy"
+   },
+   {
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.policeStation",
+    "maxlength": "150",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.chargedUSMotorVehAct",
+    "maxlength": "150",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.chargedUSIPC",
+    "maxlength": "150",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "Whether driver without license ?",
+    "type": "select",
+    "model": "surveyorData.worklist.additionalDetails.withoutLicense"
+   },
+   {
+    "type": "select",
+    "model": "surveyorData.worklist.additionalDetails.prevPoliceRecords"
+   },
+   {
+    "name": "Is there any TP claim?",
+    "id": "Is there any TP claim?",
+    "type": "select",
+    "model": "surveyorData.worklist.additionalDetails.anyTpClaim"
+   },
+   {
+    "name": "Is there any Kept Open part ?",
+    "id": "keptOpen",
+    "type": "select",
+    "model": "surveyorData.worklist.additionalDetails.keptOpen"
+   },
+   {
+    "name": "Whether Vehicle Details are matching with policy ?",
+    "type": "select",
+    "model": "surveyorData.worklist.additionalDetails.whtherVehDetMatch"
+   },
+   {
+    "name": "Vehicle Details Mismatch Remarks",
+    "type": "textarea",
+    "model": "surveyorData.worklist.additionalDetails.misMatchremarks",
+    "maxlength": "240"
+   },
+   {
+    "name": "Cause and Nature of Accident",
+    "type": "textarea",
+    "model": "surveyorData.worklist.additionalDetails.causeNatureOfAcc",
+    "maxlength": "240"
+   },
+   {
+    "name": "Disclaimer -CheckBox",
+    "id": "checkBox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.additionalDetails.disclaimer"
+   }
+  ],
+  "document.yesNo": [
+   {
+    "name": "radioHyundai0",
+    "id": "radioisDlValidForType0",
+    "type": "radio",
+    "model": "document.yesNo.abc",
+    "value": "Approve",
+    "disabled_when": "dealerDocArrayKIA[$parent.$index].docFlag == true"
+   },
+   {
+    "name": "radioHyundai0",
+    "id": "radioisDlValidForType0",
+    "type": "radio",
+    "model": "document.yesNo.abc",
+    "value": "Reject",
+    "disabled_when": "dealerDocArrayKIA[$parent.$index].docFlag == true"
+   },
+   {
+    "name": "radioHyundai0",
+    "id": "radioisDlValidForType0",
+    "type": "radio",
+    "model": "document.yesNo.abc",
+    "value": "Review",
+    "disabled_when": "dealerDocArrayKIA[$parent.$index].docFlag == true"
+   },
+   {
+    "name": "radioHyundai1",
+    "id": "radioisDlValidForType1",
+    "type": "radio",
+    "model": "document.yesNo.abc",
+    "value": "Approve",
+    "disabled_when": "dealerDocArrayKIA[$parent.$index].docFlag == true"
+   },
+   {
+    "name": "radioHyundai1",
+    "id": "radioisDlValidForType1",
+    "type": "radio",
+    "model": "document.yesNo.abc",
+    "value": "Reject",
+    "disabled_when": "dealerDocArrayKIA[$parent.$index].docFlag == true"
+   },
+   {
+    "name": "radioHyundai1",
+    "id": "radioisDlValidForType1",
+    "type": "radio",
+    "model": "document.yesNo.abc",
+    "value": "Review",
+    "disabled_when": "dealerDocArrayKIA[$parent.$index].docFlag == true"
+   }
+  ],
+  "document": [
+   {
+    "type": "text",
+    "model": "document.remarks",
+    "maxlength": "240",
+    "required": "document.yesNo.abc == 'Reject' || document.yesNo.abc == 'Review'",
+    "disabled_when": "dealerDocArrayKIA[$index].docFlag == true || !document.yesNo.abc"
+   }
+  ],
+  "surveyorData.worklist.advPay": [
+   {
+    "name": "Engine no",
+    "type": "text",
+    "model": "surveyorData.worklist.advPay.advPayReqDate",
+    "maxlength": "25"
+   },
+   {
+    "name": "Chassis no",
+    "type": "text",
+    "model": "surveyorData.worklist.advPay.advPayAmtReqByDealer",
+    "maxlength": "25",
+    "pattern": "/^[a-zA-Z0-9]+$/"
+   },
+   {
+    "name": "advApprovedAmt",
+    "type": "text",
+    "model": "surveyorData.worklist.advPay.advApprovedAmt",
+    "maxlength": "25",
+    "pattern": "/^[a-zA-Z0-9]+$/"
+   },
+   {
+    "name": "Approve or Reject",
+    "type": "select",
+    "model": "surveyorData.worklist.advPay.advPayAction"
+   },
+   {
+    "name": "comment",
+    "id": "keptOpenRemarks",
+    "type": "textarea",
+    "model": "surveyorData.worklist.advPay.advPayRemarks",
+    "maxlength": "100",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   }
+  ],
+  "surveyorData.worklist.clmAsmtKIA": [
+   {
+    "name": "Salvage Amount Total",
+    "type": "text",
+    "model": "surveyorData.worklist.clmAsmtKIA.salvageSurveyorAmt",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   }
+  ],
+  "surveyorData.worklist.claimAssessment": [
+   {
+    "name": "Invoice Available For",
+    "id": "invoiceAvailableFor",
+    "type": "select",
+    "model": "surveyorData.worklist.claimAssessment.invoiceAvailableFor"
+   },
+   {
+    "name": "Whether Payment invoice is in the name of NIA",
+    "id": "PaymentInvoiceName",
+    "type": "select",
+    "model": "surveyorData.worklist.claimAssessment.isPaymentInvoice"
+   },
+   {
+    "name": "Is GST Applicable?",
+    "id": "IsGSTApplicable?",
+    "type": "select",
+    "model": "surveyorData.worklist.claimAssessment.isGstApplicable"
+   },
+   {
+    "name": "Vendor/Tax Invoice Date",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.vendorTaxInvoiceDate",
+    "placeholder": "dd/mm/yyyy",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'"
+   },
+   {
+    "name": "Vendor/Tax Invoice Number",
+    "id": "Vendor/TaxInvoiceNumber",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.vendorTaxInvoiceNumber",
+    "maxlength": "30",
+    "pattern": "/^[a-zA-Z0-9]((?!(\\'|\\\"|\\^|\\~|\\`))[\\s\\S])*$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'"
+   },
+   {
+    "name": "Net Salvage",
+    "id": "netSlavage",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.netSlavage",
+    "maxlength": "13",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/"
+   },
+   {
+    "name": "Less Compulsory Excess",
+    "id": "lessCompulsoryExcess",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.lessCompulsoryExcess"
+   },
+   {
+    "name": "Less Voluntary Express",
+    "id": "lessVoluntaryExpress",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.lessVoluntaryExpress"
+   },
+   {
+    "name": "imposedExcess",
+    "id": "imposedExcess",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.imposedExcess"
+   },
+   {
+    "name": "Additional Towing Charges",
+    "id": "additionalTowingCharges",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.additionalTowingCharges",
+    "maxlength": "13",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/"
+   },
+   {
+    "name": "recommendations",
+    "id": "recommendations",
+    "type": "textarea",
+    "model": "surveyorData.worklist.claimAssessment.recommendations",
+    "maxlength": "240"
+   },
+   {
+    "name": "Whether Re-Inspection Required",
+    "id": "whetherReinspectionRequired",
+    "type": "select",
+    "model": "surveyorData.worklist.claimAssessment.whetherReinspectionRequired"
+   },
+   {
+    "name": "Nil Depreciation Cover Amount",
+    "id": "nilDepreciationCover",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.nilDepreciationCover",
+    "maxlength": "19",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/"
+   },
+   {
+    "name": "Consumable Items Amount",
+    "id": "consumableItemsCover",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.consumableItemsCover",
+    "maxlength": "19",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/"
+   }
+  ],
+  "obj": [
+   {
+    "name": "Pending Labour Details Description0",
+    "type": "text",
+    "model": "obj.primPLDDescription"
+   },
+   {
+    "name": "Pending Labour Details Type0",
+    "type": "text",
+    "model": "obj.primPLDLabourType"
+   },
+   {
+    "name": "Pending Labour Details Rate0",
+    "type": "text",
+    "model": "obj.primPLDRate"
+   },
+   {
+    "name": "Pending Labour Details Quantity0",
+    "type": "text",
+    "model": "obj.primPLDQuantity"
+   },
+   {
+    "name": "Pending Labour Details SACCode0",
+    "type": "text",
+    "model": "obj.primPLDSACCode"
+   },
+   {
+    "name": "Pending Labour Details Labour Amount0",
+    "type": "text",
+    "model": "obj.primPLDLabourAmt",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "Pending Labour Details Tax0",
+    "type": "text",
+    "model": "obj.primPLDTax"
+   },
+   {
+    "name": "Pending Labour Details Total0",
+    "type": "text",
+    "model": "obj.primPLDTotal"
+   },
+   {
+    "name": "Pending Labour Details GST0",
+    "type": "text",
+    "model": "obj.primPLDGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Liability Without GST0",
+    "type": "text",
+    "model": "obj.primPLDInsurerLiabWOGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Depreciation Percent0",
+    "type": "text",
+    "model": "obj.primPLDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category0",
+    "type": "select",
+    "model": "obj.primPLDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Remarks0",
+    "type": "text",
+    "model": "obj.primPLDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Approval Amount0",
+    "type": "text",
+    "model": "obj.primPLDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.primPLDStatus != 'MODIFIED'"
+   },
+   {
+    "name": "Pending Labour Details Description1",
+    "type": "text",
+    "model": "obj.primPLDDescription"
+   },
+   {
+    "name": "Pending Labour Details Type1",
+    "type": "text",
+    "model": "obj.primPLDLabourType"
+   },
+   {
+    "name": "Pending Labour Details Rate1",
+    "type": "text",
+    "model": "obj.primPLDRate"
+   },
+   {
+    "name": "Pending Labour Details Quantity1",
+    "type": "text",
+    "model": "obj.primPLDQuantity"
+   },
+   {
+    "name": "Pending Labour Details SACCode1",
+    "type": "text",
+    "model": "obj.primPLDSACCode"
+   },
+   {
+    "name": "Pending Labour Details Labour Amount1",
+    "type": "text",
+    "model": "obj.primPLDLabourAmt",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "Pending Labour Details Tax1",
+    "type": "text",
+    "model": "obj.primPLDTax"
+   },
+   {
+    "name": "Pending Labour Details Total1",
+    "type": "text",
+    "model": "obj.primPLDTotal"
+   },
+   {
+    "name": "Pending Labour Details GST1",
+    "type": "text",
+    "model": "obj.primPLDGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Liability Without GST1",
+    "type": "text",
+    "model": "obj.primPLDInsurerLiabWOGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Depreciation Percent1",
+    "type": "text",
+    "model": "obj.primPLDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category1",
+    "type": "select",
+    "model": "obj.primPLDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Remarks1",
+    "type": "text",
+    "model": "obj.primPLDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Approval Amount1",
+    "type": "text",
+    "model": "obj.primPLDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.primPLDStatus != 'MODIFIED'"
+   },
+   {
+    "name": "Pending Labour Details Description2",
+    "type": "text",
+    "model": "obj.primPLDDescription"
+   },
+   {
+    "name": "Pending Labour Details Type2",
+    "type": "text",
+    "model": "obj.primPLDLabourType"
+   },
+   {
+    "name": "Pending Labour Details Rate2",
+    "type": "text",
+    "model": "obj.primPLDRate"
+   },
+   {
+    "name": "Pending Labour Details Quantity2",
+    "type": "text",
+    "model": "obj.primPLDQuantity"
+   },
+   {
+    "name": "Pending Labour Details SACCode2",
+    "type": "text",
+    "model": "obj.primPLDSACCode"
+   },
+   {
+    "name": "Pending Labour Details Labour Amount2",
+    "type": "text",
+    "model": "obj.primPLDLabourAmt",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "Pending Labour Details Tax2",
+    "type": "text",
+    "model": "obj.primPLDTax"
+   },
+   {
+    "name": "Pending Labour Details Total2",
+    "type": "text",
+    "model": "obj.primPLDTotal"
+   },
+   {
+    "name": "Pending Labour Details GST2",
+    "type": "text",
+    "model": "obj.primPLDGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Liability Without GST2",
+    "type": "text",
+    "model": "obj.primPLDInsurerLiabWOGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Depreciation Percent2",
+    "type": "text",
+    "model": "obj.primPLDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category2",
+    "type": "select",
+    "model": "obj.primPLDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Remarks2",
+    "type": "text",
+    "model": "obj.primPLDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Approval Amount2",
+    "type": "text",
+    "model": "obj.primPLDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.primPLDStatus != 'MODIFIED'"
+   },
+   {
+    "name": "Pending Labour Details Description3",
+    "type": "text",
+    "model": "obj.primPLDDescription"
+   },
+   {
+    "name": "Pending Labour Details Type3",
+    "type": "text",
+    "model": "obj.primPLDLabourType"
+   },
+   {
+    "name": "Pending Labour Details Rate3",
+    "type": "text",
+    "model": "obj.primPLDRate"
+   },
+   {
+    "name": "Pending Labour Details Quantity3",
+    "type": "text",
+    "model": "obj.primPLDQuantity"
+   },
+   {
+    "name": "Pending Labour Details SACCode3",
+    "type": "text",
+    "model": "obj.primPLDSACCode"
+   },
+   {
+    "name": "Pending Labour Details Labour Amount3",
+    "type": "text",
+    "model": "obj.primPLDLabourAmt",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "Pending Labour Details Tax3",
+    "type": "text",
+    "model": "obj.primPLDTax"
+   },
+   {
+    "name": "Pending Labour Details Total3",
+    "type": "text",
+    "model": "obj.primPLDTotal"
+   },
+   {
+    "name": "Pending Labour Details GST3",
+    "type": "text",
+    "model": "obj.primPLDGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Liability Without GST3",
+    "type": "text",
+    "model": "obj.primPLDInsurerLiabWOGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Depreciation Percent3",
+    "type": "text",
+    "model": "obj.primPLDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category3",
+    "type": "select",
+    "model": "obj.primPLDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Remarks3",
+    "type": "text",
+    "model": "obj.primPLDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Approval Amount3",
+    "type": "text",
+    "model": "obj.primPLDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.primPLDStatus != 'MODIFIED'"
+   },
+   {
+    "name": "Pending Labour Details Description4",
+    "type": "text",
+    "model": "obj.primPLDDescription"
+   },
+   {
+    "name": "Pending Labour Details Type4",
+    "type": "text",
+    "model": "obj.primPLDLabourType"
+   },
+   {
+    "name": "Pending Labour Details Rate4",
+    "type": "text",
+    "model": "obj.primPLDRate"
+   },
+   {
+    "name": "Pending Labour Details Quantity4",
+    "type": "text",
+    "model": "obj.primPLDQuantity"
+   },
+   {
+    "name": "Pending Labour Details SACCode4",
+    "type": "text",
+    "model": "obj.primPLDSACCode"
+   },
+   {
+    "name": "Pending Labour Details Labour Amount4",
+    "type": "text",
+    "model": "obj.primPLDLabourAmt",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "Pending Labour Details Tax4",
+    "type": "text",
+    "model": "obj.primPLDTax"
+   },
+   {
+    "name": "Pending Labour Details Total4",
+    "type": "text",
+    "model": "obj.primPLDTotal"
+   },
+   {
+    "name": "Pending Labour Details GST4",
+    "type": "text",
+    "model": "obj.primPLDGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Liability Without GST4",
+    "type": "text",
+    "model": "obj.primPLDInsurerLiabWOGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Depreciation Percent4",
+    "type": "text",
+    "model": "obj.primPLDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category4",
+    "type": "select",
+    "model": "obj.primPLDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Remarks4",
+    "type": "text",
+    "model": "obj.primPLDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Approval Amount4",
+    "type": "text",
+    "model": "obj.primPLDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.primPLDStatus != 'MODIFIED'"
+   },
+   {
+    "name": "Pending Labour Details Description5",
+    "type": "text",
+    "model": "obj.primPLDDescription"
+   },
+   {
+    "name": "Pending Labour Details Type5",
+    "type": "text",
+    "model": "obj.primPLDLabourType"
+   },
+   {
+    "name": "Pending Labour Details Rate5",
+    "type": "text",
+    "model": "obj.primPLDRate"
+   },
+   {
+    "name": "Pending Labour Details Quantity5",
+    "type": "text",
+    "model": "obj.primPLDQuantity"
+   },
+   {
+    "name": "Pending Labour Details SACCode5",
+    "type": "text",
+    "model": "obj.primPLDSACCode"
+   },
+   {
+    "name": "Pending Labour Details Labour Amount5",
+    "type": "text",
+    "model": "obj.primPLDLabourAmt",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "Pending Labour Details Tax5",
+    "type": "text",
+    "model": "obj.primPLDTax"
+   },
+   {
+    "name": "Pending Labour Details Total5",
+    "type": "text",
+    "model": "obj.primPLDTotal"
+   },
+   {
+    "name": "Pending Labour Details GST5",
+    "type": "text",
+    "model": "obj.primPLDGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Liability Without GST5",
+    "type": "text",
+    "model": "obj.primPLDInsurerLiabWOGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Depreciation Percent5",
+    "type": "text",
+    "model": "obj.primPLDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category5",
+    "type": "select",
+    "model": "obj.primPLDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Remarks5",
+    "type": "text",
+    "model": "obj.primPLDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Approval Amount5",
+    "type": "text",
+    "model": "obj.primPLDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.primPLDStatus != 'MODIFIED'"
+   },
+   {
+    "name": "Pending Labour Details Description6",
+    "type": "text",
+    "model": "obj.primPLDDescription"
+   },
+   {
+    "name": "Pending Labour Details Type6",
+    "type": "text",
+    "model": "obj.primPLDLabourType"
+   },
+   {
+    "name": "Pending Labour Details Rate6",
+    "type": "text",
+    "model": "obj.primPLDRate"
+   },
+   {
+    "name": "Pending Labour Details Quantity6",
+    "type": "text",
+    "model": "obj.primPLDQuantity"
+   },
+   {
+    "name": "Pending Labour Details SACCode6",
+    "type": "text",
+    "model": "obj.primPLDSACCode"
+   },
+   {
+    "name": "Pending Labour Details Labour Amount6",
+    "type": "text",
+    "model": "obj.primPLDLabourAmt",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "Pending Labour Details Tax6",
+    "type": "text",
+    "model": "obj.primPLDTax"
+   },
+   {
+    "name": "Pending Labour Details Total6",
+    "type": "text",
+    "model": "obj.primPLDTotal"
+   },
+   {
+    "name": "Pending Labour Details GST6",
+    "type": "text",
+    "model": "obj.primPLDGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Liability Without GST6",
+    "type": "text",
+    "model": "obj.primPLDInsurerLiabWOGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Depreciation Percent6",
+    "type": "text",
+    "model": "obj.primPLDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category6",
+    "type": "select",
+    "model": "obj.primPLDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Remarks6",
+    "type": "text",
+    "model": "obj.primPLDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Approval Amount6",
+    "type": "text",
+    "model": "obj.primPLDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.primPLDStatus != 'MODIFIED'"
+   },
+   {
+    "name": "Pending Labour Details Description7",
+    "type": "text",
+    "model": "obj.primPLDDescription"
+   },
+   {
+    "name": "Pending Labour Details Type7",
+    "type": "text",
+    "model": "obj.primPLDLabourType"
+   },
+   {
+    "name": "Pending Labour Details Rate7",
+    "type": "text",
+    "model": "obj.primPLDRate"
+   },
+   {
+    "name": "Pending Labour Details Quantity7",
+    "type": "text",
+    "model": "obj.primPLDQuantity"
+   },
+   {
+    "name": "Pending Labour Details SACCode7",
+    "type": "text",
+    "model": "obj.primPLDSACCode"
+   },
+   {
+    "name": "Pending Labour Details Labour Amount7",
+    "type": "text",
+    "model": "obj.primPLDLabourAmt",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "Pending Labour Details Tax7",
+    "type": "text",
+    "model": "obj.primPLDTax"
+   },
+   {
+    "name": "Pending Labour Details Total7",
+    "type": "text",
+    "model": "obj.primPLDTotal"
+   },
+   {
+    "name": "Pending Labour Details GST7",
+    "type": "text",
+    "model": "obj.primPLDGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Liability Without GST7",
+    "type": "text",
+    "model": "obj.primPLDInsurerLiabWOGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Depreciation Percent7",
+    "type": "text",
+    "model": "obj.primPLDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category7",
+    "type": "select",
+    "model": "obj.primPLDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Remarks7",
+    "type": "text",
+    "model": "obj.primPLDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Approval Amount7",
+    "type": "text",
+    "model": "obj.primPLDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.primPLDStatus != 'MODIFIED'"
+   },
+   {
+    "name": "Pending Labour Details Description8",
+    "type": "text",
+    "model": "obj.primPLDDescription"
+   },
+   {
+    "name": "Pending Labour Details Type8",
+    "type": "text",
+    "model": "obj.primPLDLabourType"
+   },
+   {
+    "name": "Pending Labour Details Rate8",
+    "type": "text",
+    "model": "obj.primPLDRate"
+   },
+   {
+    "name": "Pending Labour Details Quantity8",
+    "type": "text",
+    "model": "obj.primPLDQuantity"
+   },
+   {
+    "name": "Pending Labour Details SACCode8",
+    "type": "text",
+    "model": "obj.primPLDSACCode"
+   },
+   {
+    "name": "Pending Labour Details Labour Amount8",
+    "type": "text",
+    "model": "obj.primPLDLabourAmt",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "Pending Labour Details Tax8",
+    "type": "text",
+    "model": "obj.primPLDTax"
+   },
+   {
+    "name": "Pending Labour Details Total8",
+    "type": "text",
+    "model": "obj.primPLDTotal"
+   },
+   {
+    "name": "Pending Labour Details GST8",
+    "type": "text",
+    "model": "obj.primPLDGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Liability Without GST8",
+    "type": "text",
+    "model": "obj.primPLDInsurerLiabWOGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Depreciation Percent8",
+    "type": "text",
+    "model": "obj.primPLDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category8",
+    "type": "select",
+    "model": "obj.primPLDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Remarks8",
+    "type": "text",
+    "model": "obj.primPLDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Approval Amount8",
+    "type": "text",
+    "model": "obj.primPLDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.primPLDStatus != 'MODIFIED'"
+   },
+   {
+    "name": "Pending Labour Details Description9",
+    "type": "text",
+    "model": "obj.primPLDDescription"
+   },
+   {
+    "name": "Pending Labour Details Type9",
+    "type": "text",
+    "model": "obj.primPLDLabourType"
+   },
+   {
+    "name": "Pending Labour Details Rate9",
+    "type": "text",
+    "model": "obj.primPLDRate"
+   },
+   {
+    "name": "Pending Labour Details Quantity9",
+    "type": "text",
+    "model": "obj.primPLDQuantity"
+   },
+   {
+    "name": "Pending Labour Details SACCode9",
+    "type": "text",
+    "model": "obj.primPLDSACCode"
+   },
+   {
+    "name": "Pending Labour Details Labour Amount9",
+    "type": "text",
+    "model": "obj.primPLDLabourAmt",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "Pending Labour Details Tax9",
+    "type": "text",
+    "model": "obj.primPLDTax"
+   },
+   {
+    "name": "Pending Labour Details Total9",
+    "type": "text",
+    "model": "obj.primPLDTotal"
+   },
+   {
+    "name": "Pending Labour Details GST9",
+    "type": "text",
+    "model": "obj.primPLDGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Liability Without GST9",
+    "type": "text",
+    "model": "obj.primPLDInsurerLiabWOGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Depreciation Percent9",
+    "type": "text",
+    "model": "obj.primPLDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category9",
+    "type": "select",
+    "model": "obj.primPLDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Remarks9",
+    "type": "text",
+    "model": "obj.primPLDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Approval Amount9",
+    "type": "text",
+    "model": "obj.primPLDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.primPLDStatus != 'MODIFIED'"
+   },
+   {
+    "name": "Pending Labour Details Description10",
+    "type": "text",
+    "model": "obj.primPLDDescription"
+   },
+   {
+    "name": "Pending Labour Details Type10",
+    "type": "text",
+    "model": "obj.primPLDLabourType"
+   },
+   {
+    "name": "Pending Labour Details Rate10",
+    "type": "text",
+    "model": "obj.primPLDRate"
+   },
+   {
+    "name": "Pending Labour Details Quantity10",
+    "type": "text",
+    "model": "obj.primPLDQuantity"
+   },
+   {
+    "name": "Pending Labour Details SACCode10",
+    "type": "text",
+    "model": "obj.primPLDSACCode"
+   },
+   {
+    "name": "Pending Labour Details Labour Amount10",
+    "type": "text",
+    "model": "obj.primPLDLabourAmt",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "Pending Labour Details Tax10",
+    "type": "text",
+    "model": "obj.primPLDTax"
+   },
+   {
+    "name": "Pending Labour Details Total10",
+    "type": "text",
+    "model": "obj.primPLDTotal"
+   },
+   {
+    "name": "Pending Labour Details GST10",
+    "type": "text",
+    "model": "obj.primPLDGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Liability Without GST10",
+    "type": "text",
+    "model": "obj.primPLDInsurerLiabWOGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Depreciation Percent10",
+    "type": "text",
+    "model": "obj.primPLDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category10",
+    "type": "select",
+    "model": "obj.primPLDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Remarks10",
+    "type": "text",
+    "model": "obj.primPLDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Approval Amount10",
+    "type": "text",
+    "model": "obj.primPLDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.primPLDStatus != 'MODIFIED'"
+   },
+   {
+    "name": "Pending Labour Details Description11",
+    "type": "text",
+    "model": "obj.primPLDDescription"
+   },
+   {
+    "name": "Pending Labour Details Type11",
+    "type": "text",
+    "model": "obj.primPLDLabourType"
+   },
+   {
+    "name": "Pending Labour Details Rate11",
+    "type": "text",
+    "model": "obj.primPLDRate"
+   },
+   {
+    "name": "Pending Labour Details Quantity11",
+    "type": "text",
+    "model": "obj.primPLDQuantity"
+   },
+   {
+    "name": "Pending Labour Details SACCode11",
+    "type": "text",
+    "model": "obj.primPLDSACCode"
+   },
+   {
+    "name": "Pending Labour Details Labour Amount11",
+    "type": "text",
+    "model": "obj.primPLDLabourAmt",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "Pending Labour Details Tax11",
+    "type": "text",
+    "model": "obj.primPLDTax"
+   },
+   {
+    "name": "Pending Labour Details Total11",
+    "type": "text",
+    "model": "obj.primPLDTotal"
+   },
+   {
+    "name": "Pending Labour Details GST11",
+    "type": "text",
+    "model": "obj.primPLDGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Liability Without GST11",
+    "type": "text",
+    "model": "obj.primPLDInsurerLiabWOGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Depreciation Percent11",
+    "type": "text",
+    "model": "obj.primPLDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category11",
+    "type": "select",
+    "model": "obj.primPLDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Remarks11",
+    "type": "text",
+    "model": "obj.primPLDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Approval Amount11",
+    "type": "text",
+    "model": "obj.primPLDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.primPLDStatus != 'MODIFIED'"
+   },
+   {
+    "name": "Pending Labour Details Description12",
+    "type": "text",
+    "model": "obj.primPLDDescription"
+   },
+   {
+    "name": "Pending Labour Details Type12",
+    "type": "text",
+    "model": "obj.primPLDLabourType"
+   },
+   {
+    "name": "Pending Labour Details Rate12",
+    "type": "text",
+    "model": "obj.primPLDRate"
+   },
+   {
+    "name": "Pending Labour Details Quantity12",
+    "type": "text",
+    "model": "obj.primPLDQuantity"
+   },
+   {
+    "name": "Pending Labour Details SACCode12",
+    "type": "text",
+    "model": "obj.primPLDSACCode"
+   },
+   {
+    "name": "Pending Labour Details Labour Amount12",
+    "type": "text",
+    "model": "obj.primPLDLabourAmt",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "Pending Labour Details Tax12",
+    "type": "text",
+    "model": "obj.primPLDTax"
+   },
+   {
+    "name": "Pending Labour Details Total12",
+    "type": "text",
+    "model": "obj.primPLDTotal"
+   },
+   {
+    "name": "Pending Labour Details GST12",
+    "type": "text",
+    "model": "obj.primPLDGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Liability Without GST12",
+    "type": "text",
+    "model": "obj.primPLDInsurerLiabWOGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Depreciation Percent12",
+    "type": "text",
+    "model": "obj.primPLDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category12",
+    "type": "select",
+    "model": "obj.primPLDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Remarks12",
+    "type": "text",
+    "model": "obj.primPLDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Approval Amount12",
+    "type": "text",
+    "model": "obj.primPLDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.primPLDStatus != 'MODIFIED'"
+   },
+   {
+    "name": "Pending Labour Details Description13",
+    "type": "text",
+    "model": "obj.primPLDDescription"
+   },
+   {
+    "name": "Pending Labour Details Type13",
+    "type": "text",
+    "model": "obj.primPLDLabourType"
+   },
+   {
+    "name": "Pending Labour Details Rate13",
+    "type": "text",
+    "model": "obj.primPLDRate"
+   },
+   {
+    "name": "Pending Labour Details Quantity13",
+    "type": "text",
+    "model": "obj.primPLDQuantity"
+   },
+   {
+    "name": "Pending Labour Details SACCode13",
+    "type": "text",
+    "model": "obj.primPLDSACCode"
+   },
+   {
+    "name": "Pending Labour Details Labour Amount13",
+    "type": "text",
+    "model": "obj.primPLDLabourAmt",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "Pending Labour Details Tax13",
+    "type": "text",
+    "model": "obj.primPLDTax"
+   },
+   {
+    "name": "Pending Labour Details Total13",
+    "type": "text",
+    "model": "obj.primPLDTotal"
+   },
+   {
+    "name": "Pending Labour Details GST13",
+    "type": "text",
+    "model": "obj.primPLDGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Liability Without GST13",
+    "type": "text",
+    "model": "obj.primPLDInsurerLiabWOGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Depreciation Percent13",
+    "type": "text",
+    "model": "obj.primPLDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category13",
+    "type": "select",
+    "model": "obj.primPLDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Remarks13",
+    "type": "text",
+    "model": "obj.primPLDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Approval Amount13",
+    "type": "text",
+    "model": "obj.primPLDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.primPLDStatus != 'MODIFIED'"
+   },
+   {
+    "name": "Pending Labour Details Description14",
+    "type": "text",
+    "model": "obj.primPLDDescription"
+   },
+   {
+    "name": "Pending Labour Details Type14",
+    "type": "text",
+    "model": "obj.primPLDLabourType"
+   },
+   {
+    "name": "Pending Labour Details Rate14",
+    "type": "text",
+    "model": "obj.primPLDRate"
+   },
+   {
+    "name": "Pending Labour Details Quantity14",
+    "type": "text",
+    "model": "obj.primPLDQuantity"
+   },
+   {
+    "name": "Pending Labour Details SACCode14",
+    "type": "text",
+    "model": "obj.primPLDSACCode"
+   },
+   {
+    "name": "Pending Labour Details Labour Amount14",
+    "type": "text",
+    "model": "obj.primPLDLabourAmt",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "Pending Labour Details Tax14",
+    "type": "text",
+    "model": "obj.primPLDTax"
+   },
+   {
+    "name": "Pending Labour Details Total14",
+    "type": "text",
+    "model": "obj.primPLDTotal"
+   },
+   {
+    "name": "Pending Labour Details GST14",
+    "type": "text",
+    "model": "obj.primPLDGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Liability Without GST14",
+    "type": "text",
+    "model": "obj.primPLDInsurerLiabWOGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Depreciation Percent14",
+    "type": "text",
+    "model": "obj.primPLDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category14",
+    "type": "select",
+    "model": "obj.primPLDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Remarks14",
+    "type": "text",
+    "model": "obj.primPLDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Approval Amount14",
+    "type": "text",
+    "model": "obj.primPLDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.primPLDStatus != 'MODIFIED'"
+   },
+   {
+    "name": "Pending Labour Details Description15",
+    "type": "text",
+    "model": "obj.primPLDDescription"
+   },
+   {
+    "name": "Pending Labour Details Type15",
+    "type": "text",
+    "model": "obj.primPLDLabourType"
+   },
+   {
+    "name": "Pending Labour Details Rate15",
+    "type": "text",
+    "model": "obj.primPLDRate"
+   },
+   {
+    "name": "Pending Labour Details Quantity15",
+    "type": "text",
+    "model": "obj.primPLDQuantity"
+   },
+   {
+    "name": "Pending Labour Details SACCode15",
+    "type": "text",
+    "model": "obj.primPLDSACCode"
+   },
+   {
+    "name": "Pending Labour Details Labour Amount15",
+    "type": "text",
+    "model": "obj.primPLDLabourAmt",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "Pending Labour Details Tax15",
+    "type": "text",
+    "model": "obj.primPLDTax"
+   },
+   {
+    "name": "Pending Labour Details Total15",
+    "type": "text",
+    "model": "obj.primPLDTotal"
+   },
+   {
+    "name": "Pending Labour Details GST15",
+    "type": "text",
+    "model": "obj.primPLDGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Liability Without GST15",
+    "type": "text",
+    "model": "obj.primPLDInsurerLiabWOGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Depreciation Percent15",
+    "type": "text",
+    "model": "obj.primPLDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category15",
+    "type": "select",
+    "model": "obj.primPLDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Remarks15",
+    "type": "text",
+    "model": "obj.primPLDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Approval Amount15",
+    "type": "text",
+    "model": "obj.primPLDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.primPLDStatus != 'MODIFIED'"
+   },
+   {
+    "name": "Pending Labour Details Description16",
+    "type": "text",
+    "model": "obj.primPLDDescription"
+   },
+   {
+    "name": "Pending Labour Details Type16",
+    "type": "text",
+    "model": "obj.primPLDLabourType"
+   },
+   {
+    "name": "Pending Labour Details Rate16",
+    "type": "text",
+    "model": "obj.primPLDRate"
+   },
+   {
+    "name": "Pending Labour Details Quantity16",
+    "type": "text",
+    "model": "obj.primPLDQuantity"
+   },
+   {
+    "name": "Pending Labour Details SACCode16",
+    "type": "text",
+    "model": "obj.primPLDSACCode"
+   },
+   {
+    "name": "Pending Labour Details Labour Amount16",
+    "type": "text",
+    "model": "obj.primPLDLabourAmt",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "Pending Labour Details Tax16",
+    "type": "text",
+    "model": "obj.primPLDTax"
+   },
+   {
+    "name": "Pending Labour Details Total16",
+    "type": "text",
+    "model": "obj.primPLDTotal"
+   },
+   {
+    "name": "Pending Labour Details GST16",
+    "type": "text",
+    "model": "obj.primPLDGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Liability Without GST16",
+    "type": "text",
+    "model": "obj.primPLDInsurerLiabWOGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Depreciation Percent16",
+    "type": "text",
+    "model": "obj.primPLDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category16",
+    "type": "select",
+    "model": "obj.primPLDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Remarks16",
+    "type": "text",
+    "model": "obj.primPLDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Approval Amount16",
+    "type": "text",
+    "model": "obj.primPLDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.primPLDStatus != 'MODIFIED'"
+   },
+   {
+    "name": "Pending Labour Details Description17",
+    "type": "text",
+    "model": "obj.primPLDDescription"
+   },
+   {
+    "name": "Pending Labour Details Type17",
+    "type": "text",
+    "model": "obj.primPLDLabourType"
+   },
+   {
+    "name": "Pending Labour Details Rate17",
+    "type": "text",
+    "model": "obj.primPLDRate"
+   },
+   {
+    "name": "Pending Labour Details Quantity17",
+    "type": "text",
+    "model": "obj.primPLDQuantity"
+   },
+   {
+    "name": "Pending Labour Details SACCode17",
+    "type": "text",
+    "model": "obj.primPLDSACCode"
+   },
+   {
+    "name": "Pending Labour Details Labour Amount17",
+    "type": "text",
+    "model": "obj.primPLDLabourAmt",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "Pending Labour Details Tax17",
+    "type": "text",
+    "model": "obj.primPLDTax"
+   },
+   {
+    "name": "Pending Labour Details Total17",
+    "type": "text",
+    "model": "obj.primPLDTotal"
+   },
+   {
+    "name": "Pending Labour Details GST17",
+    "type": "text",
+    "model": "obj.primPLDGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Liability Without GST17",
+    "type": "text",
+    "model": "obj.primPLDInsurerLiabWOGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Depreciation Percent17",
+    "type": "text",
+    "model": "obj.primPLDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category17",
+    "type": "select",
+    "model": "obj.primPLDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Remarks17",
+    "type": "text",
+    "model": "obj.primPLDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Approval Amount17",
+    "type": "text",
+    "model": "obj.primPLDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.primPLDStatus != 'MODIFIED'"
+   },
+   {
+    "name": "Pending Labour Details Description18",
+    "type": "text",
+    "model": "obj.primPLDDescription"
+   },
+   {
+    "name": "Pending Labour Details Type18",
+    "type": "text",
+    "model": "obj.primPLDLabourType"
+   },
+   {
+    "name": "Pending Labour Details Rate18",
+    "type": "text",
+    "model": "obj.primPLDRate"
+   },
+   {
+    "name": "Pending Labour Details Quantity18",
+    "type": "text",
+    "model": "obj.primPLDQuantity"
+   },
+   {
+    "name": "Pending Labour Details SACCode18",
+    "type": "text",
+    "model": "obj.primPLDSACCode"
+   },
+   {
+    "name": "Pending Labour Details Labour Amount18",
+    "type": "text",
+    "model": "obj.primPLDLabourAmt",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "Pending Labour Details Tax18",
+    "type": "text",
+    "model": "obj.primPLDTax"
+   },
+   {
+    "name": "Pending Labour Details Total18",
+    "type": "text",
+    "model": "obj.primPLDTotal"
+   },
+   {
+    "name": "Pending Labour Details GST18",
+    "type": "text",
+    "model": "obj.primPLDGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Liability Without GST18",
+    "type": "text",
+    "model": "obj.primPLDInsurerLiabWOGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Depreciation Percent18",
+    "type": "text",
+    "model": "obj.primPLDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category18",
+    "type": "select",
+    "model": "obj.primPLDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Remarks18",
+    "type": "text",
+    "model": "obj.primPLDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Approval Amount18",
+    "type": "text",
+    "model": "obj.primPLDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.primPLDStatus != 'MODIFIED'"
+   },
+   {
+    "name": "Pending Labour Details Description19",
+    "type": "text",
+    "model": "obj.primPLDDescription"
+   },
+   {
+    "name": "Pending Labour Details Type19",
+    "type": "text",
+    "model": "obj.primPLDLabourType"
+   },
+   {
+    "name": "Pending Labour Details Rate19",
+    "type": "text",
+    "model": "obj.primPLDRate"
+   },
+   {
+    "name": "Pending Labour Details Quantity19",
+    "type": "text",
+    "model": "obj.primPLDQuantity"
+   },
+   {
+    "name": "Pending Labour Details SACCode19",
+    "type": "text",
+    "model": "obj.primPLDSACCode"
+   },
+   {
+    "name": "Pending Labour Details Labour Amount19",
+    "type": "text",
+    "model": "obj.primPLDLabourAmt",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "Pending Labour Details Tax19",
+    "type": "text",
+    "model": "obj.primPLDTax"
+   },
+   {
+    "name": "Pending Labour Details Total19",
+    "type": "text",
+    "model": "obj.primPLDTotal"
+   },
+   {
+    "name": "Pending Labour Details GST19",
+    "type": "text",
+    "model": "obj.primPLDGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Liability Without GST19",
+    "type": "text",
+    "model": "obj.primPLDInsurerLiabWOGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Depreciation Percent19",
+    "type": "text",
+    "model": "obj.primPLDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category19",
+    "type": "select",
+    "model": "obj.primPLDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Remarks19",
+    "type": "text",
+    "model": "obj.primPLDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Approval Amount19",
+    "type": "text",
+    "model": "obj.primPLDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.primPLDStatus != 'MODIFIED'"
+   },
+   {
+    "name": "Pending Labour Details Description20",
+    "type": "text",
+    "model": "obj.primPLDDescription"
+   },
+   {
+    "name": "Pending Labour Details Type20",
+    "type": "text",
+    "model": "obj.primPLDLabourType"
+   },
+   {
+    "name": "Pending Labour Details Rate20",
+    "type": "text",
+    "model": "obj.primPLDRate"
+   },
+   {
+    "name": "Pending Labour Details Quantity20",
+    "type": "text",
+    "model": "obj.primPLDQuantity"
+   },
+   {
+    "name": "Pending Labour Details SACCode20",
+    "type": "text",
+    "model": "obj.primPLDSACCode"
+   },
+   {
+    "name": "Pending Labour Details Labour Amount20",
+    "type": "text",
+    "model": "obj.primPLDLabourAmt",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "Pending Labour Details Tax20",
+    "type": "text",
+    "model": "obj.primPLDTax"
+   },
+   {
+    "name": "Pending Labour Details Total20",
+    "type": "text",
+    "model": "obj.primPLDTotal"
+   },
+   {
+    "name": "Pending Labour Details GST20",
+    "type": "text",
+    "model": "obj.primPLDGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Liability Without GST20",
+    "type": "text",
+    "model": "obj.primPLDInsurerLiabWOGST"
+   },
+   {
+    "name": "Pending Labour Details Insurer Depreciation Percent20",
+    "type": "text",
+    "model": "obj.primPLDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category20",
+    "type": "select",
+    "model": "obj.primPLDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Remarks20",
+    "type": "text",
+    "model": "obj.primPLDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPLDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Labour Details Approval Amount20",
+    "type": "text",
+    "model": "obj.primPLDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.primPLDStatus != 'MODIFIED'"
+   },
+   {
+    "name": "Pending Part Details Name0",
+    "type": "text",
+    "model": "obj.primPPDName"
+   },
+   {
+    "name": "Pending Part Details Type0",
+    "type": "text",
+    "model": "obj.primPPDPartType"
+   },
+   {
+    "name": "Pending Part Details Depreciation0",
+    "type": "text",
+    "model": "obj.primPPDDepreciation"
+   },
+   {
+    "name": "Pending Part Details MRP0",
+    "type": "text",
+    "model": "obj.primPPDMRP"
+   },
+   {
+    "name": "Pending Part Details Depreciated Price0",
+    "type": "text",
+    "model": "obj.primPPDDepPrice"
+   },
+   {
+    "name": "Pending Part Details Part Quantity0",
+    "type": "text",
+    "model": "obj.primPPDPartQuantity"
+   },
+   {
+    "name": "Pending Part Details Tax0",
+    "type": "text",
+    "model": "obj.primPPDTax"
+   },
+   {
+    "name": "Pending Part Details HSN0",
+    "type": "text",
+    "model": "obj.primPPDHSNno"
+   },
+   {
+    "name": "Pending Part Details Total0",
+    "type": "text",
+    "model": "obj.primPPDTotal"
+   },
+   {
+    "name": "Pending Part Details Part GST0",
+    "type": "text",
+    "model": "obj.primPPDPartGST"
+   },
+   {
+    "name": "Pending Part Details Insurer List Price0",
+    "type": "text",
+    "model": "obj.primPPDInsurerListPrice"
+   },
+   {
+    "name": "Pending Part Details Insurer Dep Percent0",
+    "type": "text",
+    "model": "obj.primPPDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category0",
+    "type": "select",
+    "model": "obj.primPPDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Remarks0",
+    "type": "text",
+    "model": "obj.primPPDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Approval Amount0",
+    "type": "text",
+    "model": "obj.primPPDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.disableApprovalAmt"
+   },
+   {
+    "name": "Pending Part Details Name1",
+    "type": "text",
+    "model": "obj.primPPDName"
+   },
+   {
+    "name": "Pending Part Details Type1",
+    "type": "text",
+    "model": "obj.primPPDPartType"
+   },
+   {
+    "name": "Pending Part Details Depreciation1",
+    "type": "text",
+    "model": "obj.primPPDDepreciation"
+   },
+   {
+    "name": "Pending Part Details MRP1",
+    "type": "text",
+    "model": "obj.primPPDMRP"
+   },
+   {
+    "name": "Pending Part Details Depreciated Price1",
+    "type": "text",
+    "model": "obj.primPPDDepPrice"
+   },
+   {
+    "name": "Pending Part Details Part Quantity1",
+    "type": "text",
+    "model": "obj.primPPDPartQuantity"
+   },
+   {
+    "name": "Pending Part Details Tax1",
+    "type": "text",
+    "model": "obj.primPPDTax"
+   },
+   {
+    "name": "Pending Part Details HSN1",
+    "type": "text",
+    "model": "obj.primPPDHSNno"
+   },
+   {
+    "name": "Pending Part Details Total1",
+    "type": "text",
+    "model": "obj.primPPDTotal"
+   },
+   {
+    "name": "Pending Part Details Part GST1",
+    "type": "text",
+    "model": "obj.primPPDPartGST"
+   },
+   {
+    "name": "Pending Part Details Insurer List Price1",
+    "type": "text",
+    "model": "obj.primPPDInsurerListPrice"
+   },
+   {
+    "name": "Pending Part Details Insurer Dep Percent1",
+    "type": "text",
+    "model": "obj.primPPDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category1",
+    "type": "select",
+    "model": "obj.primPPDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Remarks1",
+    "type": "text",
+    "model": "obj.primPPDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Approval Amount1",
+    "type": "text",
+    "model": "obj.primPPDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.disableApprovalAmt"
+   },
+   {
+    "name": "Pending Part Details Name2",
+    "type": "text",
+    "model": "obj.primPPDName"
+   },
+   {
+    "name": "Pending Part Details Type2",
+    "type": "text",
+    "model": "obj.primPPDPartType"
+   },
+   {
+    "name": "Pending Part Details Depreciation2",
+    "type": "text",
+    "model": "obj.primPPDDepreciation"
+   },
+   {
+    "name": "Pending Part Details MRP2",
+    "type": "text",
+    "model": "obj.primPPDMRP"
+   },
+   {
+    "name": "Pending Part Details Depreciated Price2",
+    "type": "text",
+    "model": "obj.primPPDDepPrice"
+   },
+   {
+    "name": "Pending Part Details Part Quantity2",
+    "type": "text",
+    "model": "obj.primPPDPartQuantity"
+   },
+   {
+    "name": "Pending Part Details Tax2",
+    "type": "text",
+    "model": "obj.primPPDTax"
+   },
+   {
+    "name": "Pending Part Details HSN2",
+    "type": "text",
+    "model": "obj.primPPDHSNno"
+   },
+   {
+    "name": "Pending Part Details Total2",
+    "type": "text",
+    "model": "obj.primPPDTotal"
+   },
+   {
+    "name": "Pending Part Details Part GST2",
+    "type": "text",
+    "model": "obj.primPPDPartGST"
+   },
+   {
+    "name": "Pending Part Details Insurer List Price2",
+    "type": "text",
+    "model": "obj.primPPDInsurerListPrice"
+   },
+   {
+    "name": "Pending Part Details Insurer Dep Percent2",
+    "type": "text",
+    "model": "obj.primPPDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category2",
+    "type": "select",
+    "model": "obj.primPPDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Remarks2",
+    "type": "text",
+    "model": "obj.primPPDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Approval Amount2",
+    "type": "text",
+    "model": "obj.primPPDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.disableApprovalAmt"
+   },
+   {
+    "name": "Pending Part Details Name3",
+    "type": "text",
+    "model": "obj.primPPDName"
+   },
+   {
+    "name": "Pending Part Details Type3",
+    "type": "text",
+    "model": "obj.primPPDPartType"
+   },
+   {
+    "name": "Pending Part Details Depreciation3",
+    "type": "text",
+    "model": "obj.primPPDDepreciation"
+   },
+   {
+    "name": "Pending Part Details MRP3",
+    "type": "text",
+    "model": "obj.primPPDMRP"
+   },
+   {
+    "name": "Pending Part Details Depreciated Price3",
+    "type": "text",
+    "model": "obj.primPPDDepPrice"
+   },
+   {
+    "name": "Pending Part Details Part Quantity3",
+    "type": "text",
+    "model": "obj.primPPDPartQuantity"
+   },
+   {
+    "name": "Pending Part Details Tax3",
+    "type": "text",
+    "model": "obj.primPPDTax"
+   },
+   {
+    "name": "Pending Part Details HSN3",
+    "type": "text",
+    "model": "obj.primPPDHSNno"
+   },
+   {
+    "name": "Pending Part Details Total3",
+    "type": "text",
+    "model": "obj.primPPDTotal"
+   },
+   {
+    "name": "Pending Part Details Part GST3",
+    "type": "text",
+    "model": "obj.primPPDPartGST"
+   },
+   {
+    "name": "Pending Part Details Insurer List Price3",
+    "type": "text",
+    "model": "obj.primPPDInsurerListPrice"
+   },
+   {
+    "name": "Pending Part Details Insurer Dep Percent3",
+    "type": "text",
+    "model": "obj.primPPDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category3",
+    "type": "select",
+    "model": "obj.primPPDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Remarks3",
+    "type": "text",
+    "model": "obj.primPPDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Approval Amount3",
+    "type": "text",
+    "model": "obj.primPPDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.disableApprovalAmt"
+   },
+   {
+    "name": "Pending Part Details Name4",
+    "type": "text",
+    "model": "obj.primPPDName"
+   },
+   {
+    "name": "Pending Part Details Type4",
+    "type": "text",
+    "model": "obj.primPPDPartType"
+   },
+   {
+    "name": "Pending Part Details Depreciation4",
+    "type": "text",
+    "model": "obj.primPPDDepreciation"
+   },
+   {
+    "name": "Pending Part Details MRP4",
+    "type": "text",
+    "model": "obj.primPPDMRP"
+   },
+   {
+    "name": "Pending Part Details Depreciated Price4",
+    "type": "text",
+    "model": "obj.primPPDDepPrice"
+   },
+   {
+    "name": "Pending Part Details Part Quantity4",
+    "type": "text",
+    "model": "obj.primPPDPartQuantity"
+   },
+   {
+    "name": "Pending Part Details Tax4",
+    "type": "text",
+    "model": "obj.primPPDTax"
+   },
+   {
+    "name": "Pending Part Details HSN4",
+    "type": "text",
+    "model": "obj.primPPDHSNno"
+   },
+   {
+    "name": "Pending Part Details Total4",
+    "type": "text",
+    "model": "obj.primPPDTotal"
+   },
+   {
+    "name": "Pending Part Details Part GST4",
+    "type": "text",
+    "model": "obj.primPPDPartGST"
+   },
+   {
+    "name": "Pending Part Details Insurer List Price4",
+    "type": "text",
+    "model": "obj.primPPDInsurerListPrice"
+   },
+   {
+    "name": "Pending Part Details Insurer Dep Percent4",
+    "type": "text",
+    "model": "obj.primPPDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category4",
+    "type": "select",
+    "model": "obj.primPPDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Remarks4",
+    "type": "text",
+    "model": "obj.primPPDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Approval Amount4",
+    "type": "text",
+    "model": "obj.primPPDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.disableApprovalAmt"
+   },
+   {
+    "name": "Pending Part Details Name5",
+    "type": "text",
+    "model": "obj.primPPDName"
+   },
+   {
+    "name": "Pending Part Details Type5",
+    "type": "text",
+    "model": "obj.primPPDPartType"
+   },
+   {
+    "name": "Pending Part Details Depreciation5",
+    "type": "text",
+    "model": "obj.primPPDDepreciation"
+   },
+   {
+    "name": "Pending Part Details MRP5",
+    "type": "text",
+    "model": "obj.primPPDMRP"
+   },
+   {
+    "name": "Pending Part Details Depreciated Price5",
+    "type": "text",
+    "model": "obj.primPPDDepPrice"
+   },
+   {
+    "name": "Pending Part Details Part Quantity5",
+    "type": "text",
+    "model": "obj.primPPDPartQuantity"
+   },
+   {
+    "name": "Pending Part Details Tax5",
+    "type": "text",
+    "model": "obj.primPPDTax"
+   },
+   {
+    "name": "Pending Part Details HSN5",
+    "type": "text",
+    "model": "obj.primPPDHSNno"
+   },
+   {
+    "name": "Pending Part Details Total5",
+    "type": "text",
+    "model": "obj.primPPDTotal"
+   },
+   {
+    "name": "Pending Part Details Part GST5",
+    "type": "text",
+    "model": "obj.primPPDPartGST"
+   },
+   {
+    "name": "Pending Part Details Insurer List Price5",
+    "type": "text",
+    "model": "obj.primPPDInsurerListPrice"
+   },
+   {
+    "name": "Pending Part Details Insurer Dep Percent5",
+    "type": "text",
+    "model": "obj.primPPDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category5",
+    "type": "select",
+    "model": "obj.primPPDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Remarks5",
+    "type": "text",
+    "model": "obj.primPPDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Approval Amount5",
+    "type": "text",
+    "model": "obj.primPPDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.disableApprovalAmt"
+   },
+   {
+    "name": "Pending Part Details Name6",
+    "type": "text",
+    "model": "obj.primPPDName"
+   },
+   {
+    "name": "Pending Part Details Type6",
+    "type": "text",
+    "model": "obj.primPPDPartType"
+   },
+   {
+    "name": "Pending Part Details Depreciation6",
+    "type": "text",
+    "model": "obj.primPPDDepreciation"
+   },
+   {
+    "name": "Pending Part Details MRP6",
+    "type": "text",
+    "model": "obj.primPPDMRP"
+   },
+   {
+    "name": "Pending Part Details Depreciated Price6",
+    "type": "text",
+    "model": "obj.primPPDDepPrice"
+   },
+   {
+    "name": "Pending Part Details Part Quantity6",
+    "type": "text",
+    "model": "obj.primPPDPartQuantity"
+   },
+   {
+    "name": "Pending Part Details Tax6",
+    "type": "text",
+    "model": "obj.primPPDTax"
+   },
+   {
+    "name": "Pending Part Details HSN6",
+    "type": "text",
+    "model": "obj.primPPDHSNno"
+   },
+   {
+    "name": "Pending Part Details Total6",
+    "type": "text",
+    "model": "obj.primPPDTotal"
+   },
+   {
+    "name": "Pending Part Details Part GST6",
+    "type": "text",
+    "model": "obj.primPPDPartGST"
+   },
+   {
+    "name": "Pending Part Details Insurer List Price6",
+    "type": "text",
+    "model": "obj.primPPDInsurerListPrice"
+   },
+   {
+    "name": "Pending Part Details Insurer Dep Percent6",
+    "type": "text",
+    "model": "obj.primPPDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category6",
+    "type": "select",
+    "model": "obj.primPPDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Remarks6",
+    "type": "text",
+    "model": "obj.primPPDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Approval Amount6",
+    "type": "text",
+    "model": "obj.primPPDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.disableApprovalAmt"
+   },
+   {
+    "name": "Pending Part Details Name7",
+    "type": "text",
+    "model": "obj.primPPDName"
+   },
+   {
+    "name": "Pending Part Details Type7",
+    "type": "text",
+    "model": "obj.primPPDPartType"
+   },
+   {
+    "name": "Pending Part Details Depreciation7",
+    "type": "text",
+    "model": "obj.primPPDDepreciation"
+   },
+   {
+    "name": "Pending Part Details MRP7",
+    "type": "text",
+    "model": "obj.primPPDMRP"
+   },
+   {
+    "name": "Pending Part Details Depreciated Price7",
+    "type": "text",
+    "model": "obj.primPPDDepPrice"
+   },
+   {
+    "name": "Pending Part Details Part Quantity7",
+    "type": "text",
+    "model": "obj.primPPDPartQuantity"
+   },
+   {
+    "name": "Pending Part Details Tax7",
+    "type": "text",
+    "model": "obj.primPPDTax"
+   },
+   {
+    "name": "Pending Part Details HSN7",
+    "type": "text",
+    "model": "obj.primPPDHSNno"
+   },
+   {
+    "name": "Pending Part Details Total7",
+    "type": "text",
+    "model": "obj.primPPDTotal"
+   },
+   {
+    "name": "Pending Part Details Part GST7",
+    "type": "text",
+    "model": "obj.primPPDPartGST"
+   },
+   {
+    "name": "Pending Part Details Insurer List Price7",
+    "type": "text",
+    "model": "obj.primPPDInsurerListPrice"
+   },
+   {
+    "name": "Pending Part Details Insurer Dep Percent7",
+    "type": "text",
+    "model": "obj.primPPDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category7",
+    "type": "select",
+    "model": "obj.primPPDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Remarks7",
+    "type": "text",
+    "model": "obj.primPPDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Approval Amount7",
+    "type": "text",
+    "model": "obj.primPPDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.disableApprovalAmt"
+   },
+   {
+    "name": "Pending Part Details Name8",
+    "type": "text",
+    "model": "obj.primPPDName"
+   },
+   {
+    "name": "Pending Part Details Type8",
+    "type": "text",
+    "model": "obj.primPPDPartType"
+   },
+   {
+    "name": "Pending Part Details Depreciation8",
+    "type": "text",
+    "model": "obj.primPPDDepreciation"
+   },
+   {
+    "name": "Pending Part Details MRP8",
+    "type": "text",
+    "model": "obj.primPPDMRP"
+   },
+   {
+    "name": "Pending Part Details Depreciated Price8",
+    "type": "text",
+    "model": "obj.primPPDDepPrice"
+   },
+   {
+    "name": "Pending Part Details Part Quantity8",
+    "type": "text",
+    "model": "obj.primPPDPartQuantity"
+   },
+   {
+    "name": "Pending Part Details Tax8",
+    "type": "text",
+    "model": "obj.primPPDTax"
+   },
+   {
+    "name": "Pending Part Details HSN8",
+    "type": "text",
+    "model": "obj.primPPDHSNno"
+   },
+   {
+    "name": "Pending Part Details Total8",
+    "type": "text",
+    "model": "obj.primPPDTotal"
+   },
+   {
+    "name": "Pending Part Details Part GST8",
+    "type": "text",
+    "model": "obj.primPPDPartGST"
+   },
+   {
+    "name": "Pending Part Details Insurer List Price8",
+    "type": "text",
+    "model": "obj.primPPDInsurerListPrice"
+   },
+   {
+    "name": "Pending Part Details Insurer Dep Percent8",
+    "type": "text",
+    "model": "obj.primPPDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category8",
+    "type": "select",
+    "model": "obj.primPPDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Remarks8",
+    "type": "text",
+    "model": "obj.primPPDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Approval Amount8",
+    "type": "text",
+    "model": "obj.primPPDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.disableApprovalAmt"
+   },
+   {
+    "name": "Pending Part Details Name9",
+    "type": "text",
+    "model": "obj.primPPDName"
+   },
+   {
+    "name": "Pending Part Details Type9",
+    "type": "text",
+    "model": "obj.primPPDPartType"
+   },
+   {
+    "name": "Pending Part Details Depreciation9",
+    "type": "text",
+    "model": "obj.primPPDDepreciation"
+   },
+   {
+    "name": "Pending Part Details MRP9",
+    "type": "text",
+    "model": "obj.primPPDMRP"
+   },
+   {
+    "name": "Pending Part Details Depreciated Price9",
+    "type": "text",
+    "model": "obj.primPPDDepPrice"
+   },
+   {
+    "name": "Pending Part Details Part Quantity9",
+    "type": "text",
+    "model": "obj.primPPDPartQuantity"
+   },
+   {
+    "name": "Pending Part Details Tax9",
+    "type": "text",
+    "model": "obj.primPPDTax"
+   },
+   {
+    "name": "Pending Part Details HSN9",
+    "type": "text",
+    "model": "obj.primPPDHSNno"
+   },
+   {
+    "name": "Pending Part Details Total9",
+    "type": "text",
+    "model": "obj.primPPDTotal"
+   },
+   {
+    "name": "Pending Part Details Part GST9",
+    "type": "text",
+    "model": "obj.primPPDPartGST"
+   },
+   {
+    "name": "Pending Part Details Insurer List Price9",
+    "type": "text",
+    "model": "obj.primPPDInsurerListPrice"
+   },
+   {
+    "name": "Pending Part Details Insurer Dep Percent9",
+    "type": "text",
+    "model": "obj.primPPDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category9",
+    "type": "select",
+    "model": "obj.primPPDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Remarks9",
+    "type": "text",
+    "model": "obj.primPPDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Approval Amount9",
+    "type": "text",
+    "model": "obj.primPPDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.disableApprovalAmt"
+   },
+   {
+    "name": "Pending Part Details Name10",
+    "type": "text",
+    "model": "obj.primPPDName"
+   },
+   {
+    "name": "Pending Part Details Type10",
+    "type": "text",
+    "model": "obj.primPPDPartType"
+   },
+   {
+    "name": "Pending Part Details Depreciation10",
+    "type": "text",
+    "model": "obj.primPPDDepreciation"
+   },
+   {
+    "name": "Pending Part Details MRP10",
+    "type": "text",
+    "model": "obj.primPPDMRP"
+   },
+   {
+    "name": "Pending Part Details Depreciated Price10",
+    "type": "text",
+    "model": "obj.primPPDDepPrice"
+   },
+   {
+    "name": "Pending Part Details Part Quantity10",
+    "type": "text",
+    "model": "obj.primPPDPartQuantity"
+   },
+   {
+    "name": "Pending Part Details Tax10",
+    "type": "text",
+    "model": "obj.primPPDTax"
+   },
+   {
+    "name": "Pending Part Details HSN10",
+    "type": "text",
+    "model": "obj.primPPDHSNno"
+   },
+   {
+    "name": "Pending Part Details Total10",
+    "type": "text",
+    "model": "obj.primPPDTotal"
+   },
+   {
+    "name": "Pending Part Details Part GST10",
+    "type": "text",
+    "model": "obj.primPPDPartGST"
+   },
+   {
+    "name": "Pending Part Details Insurer List Price10",
+    "type": "text",
+    "model": "obj.primPPDInsurerListPrice"
+   },
+   {
+    "name": "Pending Part Details Insurer Dep Percent10",
+    "type": "text",
+    "model": "obj.primPPDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category10",
+    "type": "select",
+    "model": "obj.primPPDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Remarks10",
+    "type": "text",
+    "model": "obj.primPPDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Approval Amount10",
+    "type": "text",
+    "model": "obj.primPPDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.disableApprovalAmt"
+   },
+   {
+    "name": "Pending Part Details Name11",
+    "type": "text",
+    "model": "obj.primPPDName"
+   },
+   {
+    "name": "Pending Part Details Type11",
+    "type": "text",
+    "model": "obj.primPPDPartType"
+   },
+   {
+    "name": "Pending Part Details Depreciation11",
+    "type": "text",
+    "model": "obj.primPPDDepreciation"
+   },
+   {
+    "name": "Pending Part Details MRP11",
+    "type": "text",
+    "model": "obj.primPPDMRP"
+   },
+   {
+    "name": "Pending Part Details Depreciated Price11",
+    "type": "text",
+    "model": "obj.primPPDDepPrice"
+   },
+   {
+    "name": "Pending Part Details Part Quantity11",
+    "type": "text",
+    "model": "obj.primPPDPartQuantity"
+   },
+   {
+    "name": "Pending Part Details Tax11",
+    "type": "text",
+    "model": "obj.primPPDTax"
+   },
+   {
+    "name": "Pending Part Details HSN11",
+    "type": "text",
+    "model": "obj.primPPDHSNno"
+   },
+   {
+    "name": "Pending Part Details Total11",
+    "type": "text",
+    "model": "obj.primPPDTotal"
+   },
+   {
+    "name": "Pending Part Details Part GST11",
+    "type": "text",
+    "model": "obj.primPPDPartGST"
+   },
+   {
+    "name": "Pending Part Details Insurer List Price11",
+    "type": "text",
+    "model": "obj.primPPDInsurerListPrice"
+   },
+   {
+    "name": "Pending Part Details Insurer Dep Percent11",
+    "type": "text",
+    "model": "obj.primPPDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category11",
+    "type": "select",
+    "model": "obj.primPPDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Remarks11",
+    "type": "text",
+    "model": "obj.primPPDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Approval Amount11",
+    "type": "text",
+    "model": "obj.primPPDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.disableApprovalAmt"
+   },
+   {
+    "name": "Pending Part Details Name12",
+    "type": "text",
+    "model": "obj.primPPDName"
+   },
+   {
+    "name": "Pending Part Details Type12",
+    "type": "text",
+    "model": "obj.primPPDPartType"
+   },
+   {
+    "name": "Pending Part Details Depreciation12",
+    "type": "text",
+    "model": "obj.primPPDDepreciation"
+   },
+   {
+    "name": "Pending Part Details MRP12",
+    "type": "text",
+    "model": "obj.primPPDMRP"
+   },
+   {
+    "name": "Pending Part Details Depreciated Price12",
+    "type": "text",
+    "model": "obj.primPPDDepPrice"
+   },
+   {
+    "name": "Pending Part Details Part Quantity12",
+    "type": "text",
+    "model": "obj.primPPDPartQuantity"
+   },
+   {
+    "name": "Pending Part Details Tax12",
+    "type": "text",
+    "model": "obj.primPPDTax"
+   },
+   {
+    "name": "Pending Part Details HSN12",
+    "type": "text",
+    "model": "obj.primPPDHSNno"
+   },
+   {
+    "name": "Pending Part Details Total12",
+    "type": "text",
+    "model": "obj.primPPDTotal"
+   },
+   {
+    "name": "Pending Part Details Part GST12",
+    "type": "text",
+    "model": "obj.primPPDPartGST"
+   },
+   {
+    "name": "Pending Part Details Insurer List Price12",
+    "type": "text",
+    "model": "obj.primPPDInsurerListPrice"
+   },
+   {
+    "name": "Pending Part Details Insurer Dep Percent12",
+    "type": "text",
+    "model": "obj.primPPDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category12",
+    "type": "select",
+    "model": "obj.primPPDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Remarks12",
+    "type": "text",
+    "model": "obj.primPPDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Approval Amount12",
+    "type": "text",
+    "model": "obj.primPPDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.disableApprovalAmt"
+   },
+   {
+    "name": "Pending Part Details Name13",
+    "type": "text",
+    "model": "obj.primPPDName"
+   },
+   {
+    "name": "Pending Part Details Type13",
+    "type": "text",
+    "model": "obj.primPPDPartType"
+   },
+   {
+    "name": "Pending Part Details Depreciation13",
+    "type": "text",
+    "model": "obj.primPPDDepreciation"
+   },
+   {
+    "name": "Pending Part Details MRP13",
+    "type": "text",
+    "model": "obj.primPPDMRP"
+   },
+   {
+    "name": "Pending Part Details Depreciated Price13",
+    "type": "text",
+    "model": "obj.primPPDDepPrice"
+   },
+   {
+    "name": "Pending Part Details Part Quantity13",
+    "type": "text",
+    "model": "obj.primPPDPartQuantity"
+   },
+   {
+    "name": "Pending Part Details Tax13",
+    "type": "text",
+    "model": "obj.primPPDTax"
+   },
+   {
+    "name": "Pending Part Details HSN13",
+    "type": "text",
+    "model": "obj.primPPDHSNno"
+   },
+   {
+    "name": "Pending Part Details Total13",
+    "type": "text",
+    "model": "obj.primPPDTotal"
+   },
+   {
+    "name": "Pending Part Details Part GST13",
+    "type": "text",
+    "model": "obj.primPPDPartGST"
+   },
+   {
+    "name": "Pending Part Details Insurer List Price13",
+    "type": "text",
+    "model": "obj.primPPDInsurerListPrice"
+   },
+   {
+    "name": "Pending Part Details Insurer Dep Percent13",
+    "type": "text",
+    "model": "obj.primPPDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category13",
+    "type": "select",
+    "model": "obj.primPPDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Remarks13",
+    "type": "text",
+    "model": "obj.primPPDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Approval Amount13",
+    "type": "text",
+    "model": "obj.primPPDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.disableApprovalAmt"
+   },
+   {
+    "name": "Pending Part Details Name14",
+    "type": "text",
+    "model": "obj.primPPDName"
+   },
+   {
+    "name": "Pending Part Details Type14",
+    "type": "text",
+    "model": "obj.primPPDPartType"
+   },
+   {
+    "name": "Pending Part Details Depreciation14",
+    "type": "text",
+    "model": "obj.primPPDDepreciation"
+   },
+   {
+    "name": "Pending Part Details MRP14",
+    "type": "text",
+    "model": "obj.primPPDMRP"
+   },
+   {
+    "name": "Pending Part Details Depreciated Price14",
+    "type": "text",
+    "model": "obj.primPPDDepPrice"
+   },
+   {
+    "name": "Pending Part Details Part Quantity14",
+    "type": "text",
+    "model": "obj.primPPDPartQuantity"
+   },
+   {
+    "name": "Pending Part Details Tax14",
+    "type": "text",
+    "model": "obj.primPPDTax"
+   },
+   {
+    "name": "Pending Part Details HSN14",
+    "type": "text",
+    "model": "obj.primPPDHSNno"
+   },
+   {
+    "name": "Pending Part Details Total14",
+    "type": "text",
+    "model": "obj.primPPDTotal"
+   },
+   {
+    "name": "Pending Part Details Part GST14",
+    "type": "text",
+    "model": "obj.primPPDPartGST"
+   },
+   {
+    "name": "Pending Part Details Insurer List Price14",
+    "type": "text",
+    "model": "obj.primPPDInsurerListPrice"
+   },
+   {
+    "name": "Pending Part Details Insurer Dep Percent14",
+    "type": "text",
+    "model": "obj.primPPDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category14",
+    "type": "select",
+    "model": "obj.primPPDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Remarks14",
+    "type": "text",
+    "model": "obj.primPPDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Approval Amount14",
+    "type": "text",
+    "model": "obj.primPPDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.disableApprovalAmt"
+   },
+   {
+    "name": "Pending Part Details Name15",
+    "type": "text",
+    "model": "obj.primPPDName"
+   },
+   {
+    "name": "Pending Part Details Type15",
+    "type": "text",
+    "model": "obj.primPPDPartType"
+   },
+   {
+    "name": "Pending Part Details Depreciation15",
+    "type": "text",
+    "model": "obj.primPPDDepreciation"
+   },
+   {
+    "name": "Pending Part Details MRP15",
+    "type": "text",
+    "model": "obj.primPPDMRP"
+   },
+   {
+    "name": "Pending Part Details Depreciated Price15",
+    "type": "text",
+    "model": "obj.primPPDDepPrice"
+   },
+   {
+    "name": "Pending Part Details Part Quantity15",
+    "type": "text",
+    "model": "obj.primPPDPartQuantity"
+   },
+   {
+    "name": "Pending Part Details Tax15",
+    "type": "text",
+    "model": "obj.primPPDTax"
+   },
+   {
+    "name": "Pending Part Details HSN15",
+    "type": "text",
+    "model": "obj.primPPDHSNno"
+   },
+   {
+    "name": "Pending Part Details Total15",
+    "type": "text",
+    "model": "obj.primPPDTotal"
+   },
+   {
+    "name": "Pending Part Details Part GST15",
+    "type": "text",
+    "model": "obj.primPPDPartGST"
+   },
+   {
+    "name": "Pending Part Details Insurer List Price15",
+    "type": "text",
+    "model": "obj.primPPDInsurerListPrice"
+   },
+   {
+    "name": "Pending Part Details Insurer Dep Percent15",
+    "type": "text",
+    "model": "obj.primPPDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category15",
+    "type": "select",
+    "model": "obj.primPPDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Remarks15",
+    "type": "text",
+    "model": "obj.primPPDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Approval Amount15",
+    "type": "text",
+    "model": "obj.primPPDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.disableApprovalAmt"
+   },
+   {
+    "name": "Pending Part Details Name16",
+    "type": "text",
+    "model": "obj.primPPDName"
+   },
+   {
+    "name": "Pending Part Details Type16",
+    "type": "text",
+    "model": "obj.primPPDPartType"
+   },
+   {
+    "name": "Pending Part Details Depreciation16",
+    "type": "text",
+    "model": "obj.primPPDDepreciation"
+   },
+   {
+    "name": "Pending Part Details MRP16",
+    "type": "text",
+    "model": "obj.primPPDMRP"
+   },
+   {
+    "name": "Pending Part Details Depreciated Price16",
+    "type": "text",
+    "model": "obj.primPPDDepPrice"
+   },
+   {
+    "name": "Pending Part Details Part Quantity16",
+    "type": "text",
+    "model": "obj.primPPDPartQuantity"
+   },
+   {
+    "name": "Pending Part Details Tax16",
+    "type": "text",
+    "model": "obj.primPPDTax"
+   },
+   {
+    "name": "Pending Part Details HSN16",
+    "type": "text",
+    "model": "obj.primPPDHSNno"
+   },
+   {
+    "name": "Pending Part Details Total16",
+    "type": "text",
+    "model": "obj.primPPDTotal"
+   },
+   {
+    "name": "Pending Part Details Part GST16",
+    "type": "text",
+    "model": "obj.primPPDPartGST"
+   },
+   {
+    "name": "Pending Part Details Insurer List Price16",
+    "type": "text",
+    "model": "obj.primPPDInsurerListPrice"
+   },
+   {
+    "name": "Pending Part Details Insurer Dep Percent16",
+    "type": "text",
+    "model": "obj.primPPDInsurerDepPercent"
+   },
+   {
+    "name": "Primary Assessment Category16",
+    "type": "select",
+    "model": "obj.primPPDAllowedServiceType",
+    "disabled_when": "obj.disableServiceType || obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Remarks16",
+    "type": "text",
+    "model": "obj.primPPDRemarks",
+    "maxlength": "100",
+    "required": "obj.primPPDStatus == 'REJECTED'"
+   },
+   {
+    "name": "Pending Part Details Approval Amount16",
+    "type": "text",
+    "model": "obj.primPPDApprovalAmt",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "obj.disableApprovalAmt"
+   }
+  ],
+  "manDoc": [
+   {
+    "name": "uploadedFileTxt0",
+    "type": "text",
+    "model": "manDoc.uploadedFileName"
+   },
+   {
+    "name": "mandatoryFiles0",
+    "id": "mandatoryFiles",
+    "type": "file",
+    "model": "manDoc.myFiles"
+   },
+   {
+    "name": "docType0",
+    "id": "docType0",
+    "type": "select",
+    "model": "manDoc.docType",
+    "disabled_when": "manDoc.uploadDocSucess == 0"
+   },
+   {
+    "name": "uploadedFileTxt0",
+    "id": "uploadedFileTxt0",
+    "type": "text",
+    "model": "manDoc.uploadedFileName"
+   },
+   {
+    "name": "mandatoryFiles0",
+    "id": "mandatoryFiles0",
+    "type": "file",
+    "model": "manDoc.myFiles"
+   },
+   {
+    "name": "mandatoryFiles0",
+    "id": "uploadDigSig",
+    "type": "file",
+    "model": "manDoc.myFiles"
+   }
+  ],
+  "surveyorData.worklist.dealerObj": [
+   {
+    "name": "category0",
+    "type": "select",
+    "model": "surveyorData.worklist.dealerObj.category"
+   },
+   {
+    "name": "comment",
+    "id": "Remarks",
+    "type": "textarea",
+    "model": "surveyorData.worklist.dealerObj.remarks",
+    "maxlength": "240",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   }
+  ],
+  "surveyorData.worklist": [
+   {
+    "name": "approvalDate",
+    "id": "approvalDate",
+    "type": "text",
+    "model": "surveyorData.worklist.approvalDate",
+    "placeholder": "dd/mm/yyyy"
+   },
+   {
+    "name": "approvalTiming",
+    "id": "approvalTiming",
+    "type": "text",
+    "model": "surveyorData.worklist.approvalTiming",
+    "placeholder": "HH:MM:SS",
+    "maxlength": "8"
+   },
+   {
+    "name": "approvalTime",
+    "type": "text",
+    "model": "surveyorData.worklist.workApprovalDateTimeKIA"
+   },
+   {
+    "name": "Delivery Order Document",
+    "type": "text",
+    "model": "surveyorData.worklist.deliveryOrderDocName",
+    "required": "surveyorData.worklist.isCashlessApprovedFlag && !surveyorData.worklist.deliveryOrderhasDocumentFlag"
+   },
+   {
+    "name": "Delivery Order File",
+    "id": "deliveryOrderFile",
+    "type": "file",
+    "model": "surveyorData.worklist.deliveryOrderFile"
+   },
+   {
+    "name": "Delivery Order Date",
+    "type": "text",
+    "model": "surveyorData.worklist.deliveryOrderDate",
+    "placeholder": "DD/MM/YYYY",
+    "required": "surveyorData.worklist.isCashlessApprovedFlag && !surveyorData.worklist.deliveryOrderhasDocumentFlag"
+   },
+   {
+    "name": "Delivery Order Time",
+    "type": "text",
+    "model": "surveyorData.worklist.deliveryOrderTime",
+    "placeholder": "HH:MM",
+    "maxlength": "5",
+    "pattern": "/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/",
+    "required": "surveyorData.worklist.isCashlessApprovedFlag && !surveyorData.worklist.deliveryOrderhasDocumentFlag"
+   },
+   {
+    "name": "engChaVerified",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.EngChaVerified"
+   },
+   {
+    "name": "damage",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.Damage"
+   },
+   {
+    "name": "supEstimate",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.SupEstimate"
+   },
+   {
+    "name": "repaisReplace",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.RepaisReplace"
+   },
+   {
+    "name": "reinspected",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.Reinspected"
+   },
+   {
+    "name": "ncbVerified",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.NcbVerified"
+   },
+   {
+    "name": "dlVerified",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.DlVerifiedOriginal"
+   },
+   {
+    "name": "rcVerified",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.RcVerifiedOriginal"
+   },
+   {
+    "name": "dlVerifiedPar",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.DlVerifiedParivahan"
+   },
+   {
+    "name": "rcVerifiedPar",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.RcVerifiedParivahan"
+   },
+   {
+    "name": "permitVerifiedPar",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.PermitVerifiedParivahan"
+   },
+   {
+    "name": "fitnessCertVerifiedPar",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.FitnessCertVerifiedParivahan"
+   }
+  ],
+  "surveyorData.worklist.finalInsp": [
+   {
+    "name": "plan",
+    "id": "plan",
+    "type": "select",
+    "model": "surveyorData.worklist.finalInsp.estimateNo"
+   },
+   {
+    "name": "Type of Body",
+    "id": "typeOfBody",
+    "type": "select",
+    "model": "surveyorData.worklist.finalInsp.approvalStatus"
+   },
+   {
+    "name": "comment",
+    "id": "keptOpenRemarks",
+    "type": "textarea",
+    "model": "surveyorData.worklist.finalInsp.remarks",
+    "maxlength": "240",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "Engine no",
+    "type": "text",
+    "model": "surveyorData.worklist.finalInsp.finalInspReqDate",
+    "maxlength": "25"
+   },
+   {
+    "name": "Chassis no",
+    "type": "text",
+    "model": "surveyorData.worklist.finalInsp.finalInspReqTime",
+    "maxlength": "25"
+   },
+   {
+    "name": "finalInspReqTime",
+    "type": "text",
+    "model": "surveyorData.worklist.finalInsp.finalInspDate"
+   },
+   {
+    "name": "timeOfSurvey",
+    "type": "text",
+    "model": "surveyorData.worklist.finalInsp.finalInspTime"
+   }
+  ],
+  "nonmanDoc": [
+   {
+    "name": "docTypeNonMan0",
+    "id": "docTypeNonMan0",
+    "type": "select",
+    "model": "nonmanDoc.docType",
+    "disabled_when": "nonmanDoc.uploadDocSucess == 0"
+   },
+   {
+    "name": "uploadedFileTxtNon0",
+    "id": "uploadedFileTxtNon0",
+    "type": "text",
+    "model": "nonmanDoc.uploadedFileName"
+   },
+   {
+    "name": "nonMandatoryFiles0",
+    "id": "nonMandatoryFiles0",
+    "type": "file",
+    "model": "nonmanDoc.myFiles"
+   }
+  ],
+  "surveyorData.worklist.surveyFeeBill": [
+   {
+    "name": "isInvoiceInNameOfNIA",
+    "id": "isInvoiceInNameOfNIA",
+    "type": "select",
+    "model": "surveyorData.worklist.surveyFeeBill.isInvoiceInNameOfNIA"
+   },
+   {
+    "name": "surveyorFeeInvoiceNumber",
+    "id": "surveyorFeeInvoiceNumber",
+    "type": "text",
+    "model": "surveyorData.worklist.surveyFeeBill.surveyorFeeInvoiceNumber",
+    "maxlength": "20",
+    "pattern": "/^[a-zA-Z0-9\\-\\/]+$/"
+   },
+   {
+    "name": "surveyorFeeInvoiceDate",
+    "type": "text",
+    "model": "surveyorData.worklist.surveyFeeBill.surveyorFeeInvoiceDate",
+    "placeholder": "dd/mm/yyyy"
+   },
+   {
+    "name": "professionalFee",
+    "id": "professionalFee",
+    "type": "text",
+    "model": "surveyorData.worklist.surveyFeeBill.professionalFee",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "photosAmount",
+    "id": "photosAmount",
+    "type": "text",
+    "model": "surveyorData.worklist.surveyFeeBill.photosAmount",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "conveyanceAmount",
+    "id": "conveyanceAmount",
+    "type": "text",
+    "model": "surveyorData.worklist.surveyFeeBill.conveyanceAmount",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "others",
+    "id": "others",
+    "type": "text",
+    "model": "surveyorData.worklist.surveyFeeBill.others",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "isGSTApplicable",
+    "id": "isGSTApplicable",
+    "type": "select",
+    "model": "surveyorData.worklist.surveyFeeBill.isGSTApplicable"
+   },
+   {
+    "name": "Primary Assessment Hsn Code7",
+    "id": "hSNCode",
+    "type": "text",
+    "model": "surveyorData.worklist.surveyFeeBill.hsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'"
+   },
+   {
+    "name": "Primary Assessment Gst Percentage7",
+    "id": "gstPercent",
+    "type": "text",
+    "model": "surveyorData.worklist.surveyFeeBill.gstPercent",
+    "maxlength": "19",
+    "pattern": "/^([0-9]|[1-9][0-9]|100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'"
+   },
+   {
+    "name": "totalGSTAmount",
+    "id": "totalGSTAmount",
+    "type": "text",
+    "model": "surveyorData.worklist.surveyFeeBill.totalGSTAmount",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "total",
+    "id": "total",
+    "type": "text",
+    "model": "surveyorData.worklist.surveyFeeBill.total",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   }
+  ],
+  "surveyorData.worklist.connectwithclaimofc": [
+   {
+    "name": "remarks",
+    "id": "remarks",
+    "type": "textarea",
+    "model": "surveyorData.worklist.connectwithclaimofc.remarks",
+    "maxlength": "240",
+    "pattern": "/^[^\\s]+(\\s.*)?$/"
+   }
+  ]
+ }
+}

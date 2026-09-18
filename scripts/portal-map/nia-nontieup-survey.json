@@ -1,0 +1,1137 @@
+{
+ "file": "nia-nontieup-survey.html",
+ "total": 165,
+ "groups": {
+  "surveyorData.worklist.quickUpdate": [
+   {
+    "name": "dateOfSurveyRadio",
+    "id": "dateOfSurveyRadio1",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.surveyDateRadio",
+    "value": "03/08/2026"
+   },
+   {
+    "name": "dateOfSurveyRadio",
+    "id": "dateOfSurveyRadio2",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.surveyDateRadio",
+    "value": "04/08/2026"
+   },
+   {
+    "name": "dateOfSurveyRadio",
+    "id": "dateOfSurveyRadio3",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.surveyDateRadio",
+    "value": "05/08/2026"
+   },
+   {
+    "name": "dateOfSurveyRadio",
+    "id": "dateOfSurveyRadio4",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.surveyDateRadio",
+    "value": "Others"
+   },
+   {
+    "name": "dateOfSurvey",
+    "type": "text",
+    "model": "surveyorData.worklist.quickUpdate.surveyDate",
+    "placeholder": "dd/mm/yyyy"
+   },
+   {
+    "name": "timeOfSurvey",
+    "type": "text",
+    "model": "surveyorData.worklist.quickUpdate.timeOfSurvey",
+    "placeholder": "hh:mm",
+    "maxlength": "5"
+   },
+   {
+    "name": "placeOfSurvey",
+    "type": "textarea",
+    "model": "surveyorData.worklist.quickUpdate.placeOfSurvey"
+   },
+   {
+    "name": "radioDataCompleted",
+    "id": "radioDataCompleted0",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.surveyCompleted",
+    "value": "Y"
+   },
+   {
+    "name": "radioDataCompleted",
+    "id": "radioDataCompleted1",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.surveyCompleted",
+    "value": "N"
+   },
+   {
+    "name": "radioDrivingLicenseApplicable",
+    "id": "radioDrivingLicenseApplicable0",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.drivingLicenseApplicable",
+    "value": "Y"
+   },
+   {
+    "name": "radioDrivingLicenseApplicable",
+    "id": "radioDrivingLicenseApplicable1",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.drivingLicenseApplicable",
+    "value": "N"
+   },
+   {
+    "name": "radioRCbook",
+    "id": "radioRCbook0",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.rcBookVerified",
+    "value": "Y"
+   },
+   {
+    "name": "radioRCbook",
+    "id": "radioRCbook1",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.rcBookVerified",
+    "value": "N"
+   },
+   {
+    "name": "radioDrivingLicensePar",
+    "id": "radioDrivingLicensePar0",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.drivingLicenseVerifiedParivahan",
+    "value": "Y"
+   },
+   {
+    "name": "radioDrivingLicensePar",
+    "id": "radioDrivingLicensePar1",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.drivingLicenseVerifiedParivahan",
+    "value": "N"
+   },
+   {
+    "name": "radioRCbookPar",
+    "id": "radioRCbookPar0",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.rcBookVerifiedParivahan",
+    "value": "Y"
+   },
+   {
+    "name": "radioRCbookPar",
+    "id": "radioRCbookPar1",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.rcBookVerifiedParivahan",
+    "value": "N"
+   },
+   {
+    "name": "isCloseProximityBreakIn",
+    "id": "isCloseProximityBreakIn0",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.isCloseProximityBreakIn",
+    "value": "Y"
+   },
+   {
+    "name": "isCloseProximityBreakIn",
+    "id": "isCloseProximityBreakIn1",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.isCloseProximityBreakIn",
+    "value": "N"
+   },
+   {
+    "name": "surveyorAccessedAmount",
+    "type": "text",
+    "model": "surveyorData.worklist.quickUpdate.surveyorAccessedAmount",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "disabled_when": "surveyorWorklistSurvey.natureOfLoss != 'THEF-EV' && surveyorWorklistSurvey.whetherTotalLossClm != 'Yes'"
+   },
+   {
+    "name": "remarks",
+    "type": "textarea",
+    "model": "surveyorData.worklist.quickUpdate.remarks",
+    "maxlength": "240",
+    "pattern": "/^[^\\s]+(\\s.*)?$/"
+   },
+   {
+    "name": "mobileNo",
+    "type": "tel",
+    "model": "surveyorData.worklist.quickUpdate.claimantMobileNo",
+    "maxlength": "10",
+    "pattern": "/^([56789])(?!\\1+$)\\d{9}$/",
+    "disabled_when": "quickRenewalObj.disMobileNo"
+   },
+   {
+    "name": "emailId",
+    "type": "text",
+    "model": "surveyorData.worklist.quickUpdate.claimantEmailId",
+    "pattern": "/\\b^[a-zA-Z0-9][a-zA-Z0-9._-]*@[a-zA-Z0-9-]+(\\.[a-zA-Z]{2,4}){1,3}\\b$/"
+   },
+   {
+    "name": "expectedDateOfRepair",
+    "type": "text",
+    "model": "surveyorData.worklist.quickUpdate.expectedDateOfRepair",
+    "placeholder": "dd/mm/yyyy"
+   }
+  ],
+  "manDoc": [
+   {
+    "name": "docType0",
+    "type": "select",
+    "model": "manDoc.docType"
+   },
+   {
+    "name": "uploadedFileTxt0",
+    "type": "text",
+    "model": "manDoc.uploadedFileName"
+   },
+   {
+    "name": "mandatoryFiles0",
+    "id": "mandatoryFiles",
+    "type": "file",
+    "model": "manDoc.myFiles"
+   },
+   {
+    "name": "docType0",
+    "id": "docType0",
+    "type": "select",
+    "model": "manDoc.docType",
+    "disabled_when": "manDoc.uploadDocSucess == 0"
+   },
+   {
+    "name": "uploadedFileTxt0",
+    "id": "uploadedFileTxt0",
+    "type": "text",
+    "model": "manDoc.uploadedFileName"
+   },
+   {
+    "name": "mandatoryFiles0",
+    "id": "mandatoryFiles0",
+    "type": "file",
+    "model": "manDoc.myFiles"
+   },
+   {
+    "name": "mandatoryFiles0",
+    "id": "uploadDigSig",
+    "type": "file",
+    "model": "manDoc.myFiles"
+   }
+  ],
+  "surveyorData.worklist.additionalDetails": [
+   {
+    "name": "Reference No",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.refernceNo",
+    "placeholder": "Reference Number",
+    "maxlength": "30",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "Registered Owner Name",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.registeredOwnerName",
+    "maxlength": "50",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "registrationNo1",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.registrationNo1",
+    "maxlength": "3",
+    "pattern": "/^[a-zA-Z0-9]+$/"
+   },
+   {
+    "name": "registrationNo2",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.registrationNo2",
+    "maxlength": "3",
+    "pattern": "/^[a-zA-Z0-9]+$/",
+    "disabled_when": "(surveyorData.worklist.additionalDetails.registrationNo1).length == '3'||(surveyorData.worklist.additionalDetails.registrationNo2 == 'BH' && surveyorData.reg34BHFlag)"
+   },
+   {
+    "name": "registrationNo3",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.registrationNo3",
+    "maxlength": "3",
+    "pattern": "/^[a-zA-Z0-9]+$/"
+   },
+   {
+    "name": "registrationNo4",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.registrationNo4",
+    "maxlength": "4",
+    "pattern": "/^[\\d]+$/"
+   },
+   {
+    "name": "registrationDate",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.dateOfReg",
+    "placeholder": "dd/mm/yyyy"
+   },
+   {
+    "name": "Engine no",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.engineNo",
+    "maxlength": "25",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&|\\\\|\\|))[\\s\\S])*$/"
+   },
+   {
+    "name": "Chassis no",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.chasisNo",
+    "maxlength": "25",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&|\\\\|\\|))[\\s\\S])*$/"
+   },
+   {
+    "name": "Physically Verified -checkBox",
+    "id": "checkBox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.additionalDetails.physicallyVerified"
+   },
+   {
+    "name": "Vehicle Make",
+    "type": "textarea",
+    "model": "surveyorData.worklist.additionalDetails.vehicleMake"
+   },
+   {
+    "name": "Model",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.vehicleModel",
+    "placeholder": "Model"
+   },
+   {
+    "name": "Type of Body",
+    "id": "typeOfBody",
+    "type": "select",
+    "model": "surveyorData.worklist.additionalDetails.typeOfBody"
+   },
+   {
+    "name": "Class of Vehicle",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.classOfVehicle",
+    "maxlength": "120",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "Pre-Accident Condition",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.preAccCondition",
+    "maxlength": "120",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.routeOfOprtn",
+    "maxlength": "25",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "taxPaidUpto",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.taxPaidUpto",
+    "placeholder": "dd/mm/yyyy"
+   },
+   {
+    "name": "RTO Name",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.rtoName",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "transferDate",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.transferDate",
+    "placeholder": "dd/mm/yyyy"
+   },
+   {
+    "name": "Odometer Reading",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.odometerReading",
+    "maxlength": "23",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/"
+   },
+   {
+    "name": "Vehicle Color",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.vehicleColor",
+    "maxlength": "10",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "Vehicle Color Type",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.vehicleColorType",
+    "maxlength": "20",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "Type of Vehicle",
+    "id": "typeOfVehicle",
+    "type": "select",
+    "model": "surveyorData.worklist.additionalDetails.typeOfVehicle"
+   },
+   {
+    "name": "Type of fuel",
+    "id": "Type of fuel",
+    "type": "select",
+    "model": "surveyorData.worklist.additionalDetails.typeOfFuel"
+   },
+   {
+    "name": "Was the vehicle parked during accident ?",
+    "id": "vehicleParked",
+    "type": "select",
+    "model": "surveyorData.worklist.additionalDetails.vehicleParked"
+   },
+   {
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.firNo",
+    "maxlength": "20",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "firDate",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.firDate",
+    "placeholder": "dd/mm/yyyy"
+   },
+   {
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.policeStation",
+    "maxlength": "150",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.chargedUSMotorVehAct",
+    "maxlength": "150",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.chargedUSIPC",
+    "maxlength": "150",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "Whether driver without license ?",
+    "type": "select",
+    "model": "surveyorData.worklist.additionalDetails.withoutLicense"
+   },
+   {
+    "type": "select",
+    "model": "surveyorData.worklist.additionalDetails.prevPoliceRecords"
+   },
+   {
+    "name": "Is there any TP claim?",
+    "id": "Is there any TP claim?",
+    "type": "select",
+    "model": "surveyorData.worklist.additionalDetails.anyTpClaim"
+   },
+   {
+    "type": "select",
+    "model": "surveyorData.worklist.additionalDetails.paymentTo"
+   },
+   {
+    "name": "Is there any Kept Open part ?",
+    "id": "keptOpen",
+    "type": "select",
+    "model": "surveyorData.worklist.additionalDetails.keptOpen"
+   },
+   {
+    "name": "Whether Vehicle Details are matching with policy ?",
+    "type": "select",
+    "model": "surveyorData.worklist.additionalDetails.whtherVehDetMatch"
+   },
+   {
+    "name": "Vehicle Details Mismatch Remarks",
+    "type": "textarea",
+    "model": "surveyorData.worklist.additionalDetails.misMatchremarks",
+    "maxlength": "240"
+   },
+   {
+    "name": "Cause and Nature of Accident",
+    "type": "textarea",
+    "model": "surveyorData.worklist.additionalDetails.causeNatureOfAcc",
+    "maxlength": "240"
+   },
+   {
+    "name": "Disclaimer -CheckBox",
+    "id": "checkBox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.additionalDetails.disclaimer"
+   }
+  ],
+  "surveyorData.worklist": [
+   {
+    "name": "Approval Type",
+    "type": "select",
+    "model": "surveyorData.worklist.workApprovalType",
+    "required": "required"
+   },
+   {
+    "name": "Work Approval Document",
+    "type": "text",
+    "model": "surveyorData.worklist.workApprovalDocName",
+    "required": "surveyorData.worklist.workApprovalType=='Non-cashless approved' || surveyorData.worklist.workApprovalType=='Cashless approved'"
+   },
+   {
+    "name": "Work Approval File",
+    "id": "workApprovalFile",
+    "type": "file",
+    "model": "surveyorData.worklist.workApprovalFile"
+   },
+   {
+    "name": "Work Approval Date",
+    "type": "text",
+    "model": "surveyorData.worklist.approvalDate",
+    "placeholder": "DD/MM/YYYY",
+    "required": "required",
+    "disabled_when": "surveyorData.worklist.workApprovalType=='Rejected'"
+   },
+   {
+    "name": "Work Approval Time",
+    "type": "text",
+    "model": "surveyorData.worklist.approvalTiming",
+    "placeholder": "HH:MM",
+    "maxlength": "5",
+    "pattern": "/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/",
+    "required": "required",
+    "disabled_when": "surveyorData.worklist.workApprovalType=='Rejected'"
+   },
+   {
+    "name": "Delivery Order Document",
+    "type": "text",
+    "model": "surveyorData.worklist.deliveryOrderDocName",
+    "required": "surveyorData.worklist.isCashlessApprovedFlag && !surveyorData.worklist.deliveryOrderhasDocumentFlag"
+   },
+   {
+    "name": "Delivery Order File",
+    "id": "deliveryOrderFile",
+    "type": "file",
+    "model": "surveyorData.worklist.deliveryOrderFile"
+   },
+   {
+    "name": "Delivery Order Date",
+    "type": "text",
+    "model": "surveyorData.worklist.deliveryOrderDate",
+    "placeholder": "DD/MM/YYYY",
+    "required": "surveyorData.worklist.isCashlessApprovedFlag && !surveyorData.worklist.deliveryOrderhasDocumentFlag"
+   },
+   {
+    "name": "Delivery Order Time",
+    "type": "text",
+    "model": "surveyorData.worklist.deliveryOrderTime",
+    "placeholder": "HH:MM",
+    "maxlength": "5",
+    "pattern": "/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/",
+    "required": "surveyorData.worklist.isCashlessApprovedFlag && !surveyorData.worklist.deliveryOrderhasDocumentFlag"
+   },
+   {
+    "name": "engChaVerified",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.EngChaVerified"
+   },
+   {
+    "name": "damage",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.Damage"
+   },
+   {
+    "name": "supEstimate",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.SupEstimate"
+   },
+   {
+    "name": "repaisReplace",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.RepaisReplace"
+   },
+   {
+    "name": "reinspected",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.Reinspected"
+   },
+   {
+    "name": "ncbVerified",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.NcbVerified"
+   },
+   {
+    "name": "dlVerified",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.DlVerifiedOriginal"
+   },
+   {
+    "name": "rcVerified",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.RcVerifiedOriginal"
+   },
+   {
+    "name": "dlVerifiedPar",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.DlVerifiedParivahan"
+   },
+   {
+    "name": "rcVerifiedPar",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.RcVerifiedParivahan"
+   },
+   {
+    "name": "permitVerifiedPar",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.PermitVerifiedParivahan"
+   },
+   {
+    "name": "fitnessCertVerifiedPar",
+    "id": "checkbox",
+    "type": "checkbox",
+    "model": "surveyorData.worklist.FitnessCertVerifiedParivahan"
+   }
+  ],
+  "surveyorData.worklist.claimAssessment": [
+   {
+    "name": "No of invoices available",
+    "type": "select",
+    "model": "surveyorData.worklist.claimAssessment.noOfInvoices"
+   },
+   {
+    "name": "pDocTypeOCR",
+    "id": "pDocTypeOCR",
+    "type": "select",
+    "model": "surveyorData.worklist.claimAssessment.docTypeP"
+   },
+   {
+    "name": "Net Salvage",
+    "id": "netSlavage",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.netSlavage",
+    "maxlength": "13",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/"
+   },
+   {
+    "name": "Less Compulsory Excess",
+    "id": "lessCompulsoryExcess",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.lessCompulsoryExcess"
+   },
+   {
+    "name": "Less Voluntary Express",
+    "id": "lessVoluntaryExpress",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.lessVoluntaryExpress"
+   },
+   {
+    "name": "lessOtherDeductions",
+    "id": "lessOtherDeductions",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.lessOtherDeductions",
+    "maxlength": "13",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/"
+   },
+   {
+    "name": "imposedExcess",
+    "id": "imposedExcess",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.imposedExcess"
+   },
+   {
+    "name": "Towing Charges",
+    "id": "towingCharges",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.towingCharges",
+    "maxlength": "13",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/"
+   },
+   {
+    "name": "Additional Towing Charges",
+    "id": "additionalTowingCharges",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.additionalTowingCharges",
+    "maxlength": "13",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/"
+   },
+   {
+    "name": "Whether Re-Inspection Required",
+    "id": "whetherReinspectionRequired",
+    "type": "select",
+    "model": "surveyorData.worklist.claimAssessment.whetherReinspectionRequired"
+   },
+   {
+    "name": "Nil Depreciation Cover Amount",
+    "id": "nilDepreciationCover",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.nilDepreciationCover",
+    "maxlength": "19",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/"
+   },
+   {
+    "name": "Engine Protect Extension Amount",
+    "id": "engineProtectCover",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.engineProtectCover",
+    "maxlength": "19",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/"
+   },
+   {
+    "name": "Consumable Items Amount",
+    "id": "consumableItemsCover",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.consumableItemsCover",
+    "maxlength": "19",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/"
+   },
+   {
+    "name": "Key Protect Amount",
+    "id": "keyProtectCover",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.keyProtectCover",
+    "maxlength": "19",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/"
+   },
+   {
+    "name": "Additional Amount for Return to Invoice",
+    "id": "returnToInvoiceCover",
+    "type": "text",
+    "model": "surveyorData.worklist.claimAssessment.returnToInvoiceCover",
+    "maxlength": "19",
+    "pattern": "/^[0-9]+(\\.[0-9]{1,2})?$/"
+   }
+  ],
+  "surveyorData.worklist.multiInvoice[$index]": [
+   {
+    "name": "Whether Payment invoice is in the name of NIA0",
+    "type": "select",
+    "model": "surveyorData.worklist.multiInvoice[$index].isPaymentInvoice"
+   },
+   {
+    "name": "Is GST Applicable?0",
+    "type": "select",
+    "model": "surveyorData.worklist.multiInvoice[$index].isGstApplicable"
+   },
+   {
+    "name": "Vendor/Tax Invoice Date0",
+    "type": "text",
+    "model": "surveyorData.worklist.multiInvoice[$index].vendorTaxInvoiceDate",
+    "placeholder": "dd/mm/yyyy",
+    "required": "surveyorData.worklist.multiInvoice[$index].isPaymentInvoice == 'Y'"
+   },
+   {
+    "name": "Vendor/Tax Invoice Number0",
+    "type": "text",
+    "model": "surveyorData.worklist.multiInvoice[$index].vendorTaxInvoiceNumber",
+    "maxlength": "30",
+    "pattern": "/^[a-zA-Z0-9.][a-zA-Z0-9 \\s\\-\\/]*$/",
+    "required": "surveyorData.worklist.multiInvoice[$index].isPaymentInvoice == 'Y'"
+   },
+   {
+    "name": "uploadedFileTxtProp",
+    "id": "uploadedFileTxtProp",
+    "type": "text",
+    "model": "surveyorData.worklist.multiInvoice[$index].uploadedFileNamePrim",
+    "placeholder": "File Name"
+   },
+   {
+    "name": "chooseFilePrim0",
+    "id": "chooseFilePrim",
+    "type": "file",
+    "model": "surveyorData.worklist.multiInvoice[$index].myFiles"
+   },
+   {
+    "name": "uploadedFileTxtOcrPri",
+    "id": "uploadedFileTxtOcrPri",
+    "type": "text",
+    "model": "surveyorData.worklist.multiInvoice[$index].uploadedFileNameOcrPri",
+    "placeholder": "File Name"
+   },
+   {
+    "name": "priOcr",
+    "id": "priOcr",
+    "type": "file",
+    "model": "surveyorData.worklist.multiInvoice[$index].myFilesOcrPri"
+   },
+   {
+    "name": "Number of Rows To be Added",
+    "id": "rowsForPrim",
+    "type": "text",
+    "model": "surveyorData.worklist.multiInvoice[$index].rowsForPrim"
+   },
+   {
+    "name": "Is there any supplementary estimate0",
+    "type": "select",
+    "model": "surveyorData.worklist.multiInvoice[$index].isSupplementaryEstimate"
+   },
+   {
+    "name": "Labour Charges0",
+    "id": "labourCharges",
+    "type": "text",
+    "model": "surveyorData.worklist.multiInvoice[$index].labourCharges"
+   },
+   {
+    "name": "Paint Material Charges0",
+    "id": "paintMaterialCharges",
+    "type": "text",
+    "model": "surveyorData.worklist.multiInvoice[$index].paintMaterialCharges",
+    "disabled_when": "surveyorWorklistSurvey.disablePaintLabourCharges"
+   },
+   {
+    "name": "Painting work details0",
+    "type": "select",
+    "model": "surveyorData.worklist.multiInvoice[$index].paintingWorkDetails"
+   },
+   {
+    "name": "category0",
+    "type": "select",
+    "model": "surveyorData.worklist.multiInvoice[$index].category"
+   },
+   {
+    "name": "Painting Charges Description0",
+    "type": "select",
+    "model": "surveyorData.worklist.multiInvoice[$index].description"
+   },
+   {
+    "name": "Painting Charges Estimated Amount0",
+    "id": "estmdamtPaintingC",
+    "type": "text",
+    "model": "surveyorData.worklist.multiInvoice[$index].estimatedAmount",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "Painting Charges Assessed Amount0",
+    "id": "assessedamtPaintingC",
+    "type": "text",
+    "model": "surveyorData.worklist.multiInvoice[$index].assessedAmount",
+    "maxlength": "8",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "Painting Charges Labour Amount0",
+    "id": "labouramtPaintingC",
+    "type": "text",
+    "model": "surveyorData.worklist.multiInvoice[$index].labourAmount",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "Painting Charges Material Amount0",
+    "id": "matamtPaintingC",
+    "type": "text",
+    "model": "surveyorData.worklist.multiInvoice[$index].materialAmount",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "Painting Charges Depreciation On Paint Material0",
+    "id": "depreonmatPaintingC",
+    "type": "text",
+    "model": "surveyorData.worklist.multiInvoice[$index].depreciationOnPaintMaterial",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "Painting Charges Depreciated Cost Of Material0",
+    "id": "deprecostonmatPaintingC",
+    "type": "text",
+    "model": "surveyorData.worklist.multiInvoice[$index].depreciatedCostOfMaterial",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "Painting Charges Hsn Code Labour00",
+    "id": "hsnlabourPaintingC",
+    "type": "text",
+    "model": "surveyorData.worklist.multiInvoice[$index].hsnCodeLabour"
+   },
+   {
+    "name": "Painting Charges Cosnolidated GST0",
+    "id": "gstPaintingC",
+    "type": "text",
+    "model": "surveyorData.worklist.multiInvoice[$index].gstPercentageConsolidated",
+    "maxlength": "6",
+    "pattern": "/^(\\d{0,2}(\\.\\d{1,2})?|100(\\.00?)?)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'"
+   },
+   {
+    "name": "Painting Charges Total Amount0",
+    "id": "totalamtPaintingC",
+    "type": "text",
+    "model": "surveyorData.worklist.multiInvoice[$index].totalAmount"
+   },
+   {
+    "name": "Painting Charges Total AmountIncluded with GST",
+    "id": "totalAmountGstIncluded",
+    "type": "text",
+    "model": "surveyorData.worklist.multiInvoice[$index].totalAmountGstIncluded"
+   }
+  ],
+  "surveyorData.worklist.multiInvoice[invoiceIndex]": [
+   {
+    "name": "Is there any primary estimate",
+    "type": "select",
+    "model": "surveyorData.worklist.multiInvoice[invoiceIndex].isPrimaryAssessment"
+   }
+  ],
+  "obj": [
+   {
+    "name": "Primary Assessment Category00",
+    "type": "select",
+    "model": "obj.category"
+   },
+   {
+    "name": "Primary Assessment PartName00",
+    "id": "abc1234",
+    "type": "text",
+    "model": "obj.partName",
+    "maxlength": "100",
+    "pattern": "/^(?!\\s*$|\\s)[A-Za-z0-9 ]+$/"
+   },
+   {
+    "name": "Primary Assessment EstimatedAmount00",
+    "id": "estmdAmtPrimary00",
+    "type": "text",
+    "model": "obj.estimatedAmount",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'"
+   },
+   {
+    "name": "Primary Assessment BilledAmount00",
+    "id": "billedAmtPrimary00",
+    "type": "text",
+    "model": "obj.billedAmount",
+    "maxlength": "8",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "Primary Assessment AssessedAmount00",
+    "id": "assessebAmtPrimary00",
+    "type": "text",
+    "model": "obj.assessedAmount",
+    "maxlength": "8",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'"
+   },
+   {
+    "name": "Primary Assessment DepreciationPercentage00",
+    "id": "deprePercent00",
+    "type": "text",
+    "model": "obj.depreciationPercentage",
+    "maxlength": "3",
+    "pattern": "/^([0-9]|[1-9][0-9]|100)$/",
+    "disabled_when": "obj.disDepreciationPercent"
+   },
+   {
+    "name": "Primary Assessment DepreciationAmount00",
+    "id": "depreAmt00",
+    "type": "text",
+    "model": "obj.depreciationAmount",
+    "maxlength": "10",
+    "disabled_when": "surveyorWorklistSurvey.disDepreciationAmount"
+   },
+   {
+    "name": "Primary Assessment Hsn Code00",
+    "id": "hsnCode00",
+    "type": "text",
+    "model": "obj.hsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'"
+   },
+   {
+    "name": "Primary Assessment Gst Percentage00",
+    "id": "gstPercetage00",
+    "type": "text",
+    "model": "obj.gstPercentage",
+    "maxlength": "3",
+    "pattern": "/^([0-9]|[1-9][0-9]|100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'"
+   },
+   {
+    "name": "Primary Assessment AmountAllowed00",
+    "id": "amtAllowed00",
+    "type": "text",
+    "model": "obj.amountAllowed",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'"
+   },
+   {
+    "name": "Primary Assessment AmountAllowedIncluded0",
+    "id": "amtAllowedIncluded",
+    "type": "text",
+    "model": "obj.amountAllowedIncluded",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'"
+   }
+  ],
+  "(no-model)": [
+   {
+    "name": "description00",
+    "type": "select",
+    "disabled_when": "true"
+   },
+   {
+    "name": "serviceType00",
+    "type": "select",
+    "disabled_when": "true"
+   }
+  ],
+  "surveyorDomainsList.SURVEYOR_INVOICE_MAP_1[0]": [
+   {
+    "name": "Net Salvage to map with which Invoice?",
+    "id": "netSalvageMapInvoice",
+    "type": "text",
+    "model": "surveyorDomainsList.SURVEYOR_INVOICE_MAP_1[0].mnemonic"
+   }
+  ],
+  "nonmanDoc": [
+   {
+    "name": "docTypeNonMan0",
+    "id": "docTypeNonMan0",
+    "type": "select",
+    "model": "nonmanDoc.docType",
+    "disabled_when": "nonmanDoc.uploadDocSucess == 0"
+   },
+   {
+    "name": "uploadedFileTxtNon0",
+    "id": "uploadedFileTxtNon0",
+    "type": "text",
+    "model": "nonmanDoc.uploadedFileName"
+   },
+   {
+    "name": "nonMandatoryFiles0",
+    "id": "nonMandatoryFiles0",
+    "type": "file",
+    "model": "nonmanDoc.myFiles"
+   }
+  ],
+  "surveyorData.worklist.surveyFeeBill": [
+   {
+    "name": "isInvoiceInNameOfNIA",
+    "id": "isInvoiceInNameOfNIA",
+    "type": "select",
+    "model": "surveyorData.worklist.surveyFeeBill.isInvoiceInNameOfNIA"
+   },
+   {
+    "name": "surveyorFeeInvoiceNumber",
+    "id": "surveyorFeeInvoiceNumber",
+    "type": "text",
+    "model": "surveyorData.worklist.surveyFeeBill.surveyorFeeInvoiceNumber",
+    "maxlength": "20",
+    "pattern": "/^[a-zA-Z0-9\\-\\/]+$/"
+   },
+   {
+    "name": "surveyorFeeInvoiceDate",
+    "type": "text",
+    "model": "surveyorData.worklist.surveyFeeBill.surveyorFeeInvoiceDate",
+    "placeholder": "dd/mm/yyyy"
+   },
+   {
+    "name": "professionalFee",
+    "id": "professionalFee",
+    "type": "text",
+    "model": "surveyorData.worklist.surveyFeeBill.professionalFee",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "photosAmount",
+    "id": "photosAmount",
+    "type": "text",
+    "model": "surveyorData.worklist.surveyFeeBill.photosAmount",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "conveyanceAmount",
+    "id": "conveyanceAmount",
+    "type": "text",
+    "model": "surveyorData.worklist.surveyFeeBill.conveyanceAmount",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "others",
+    "id": "others",
+    "type": "text",
+    "model": "surveyorData.worklist.surveyFeeBill.others",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "isGSTApplicable",
+    "id": "isGSTApplicable",
+    "type": "select",
+    "model": "surveyorData.worklist.surveyFeeBill.isGSTApplicable"
+   },
+   {
+    "name": "Primary Assessment Hsn Code3",
+    "id": "hSNCode",
+    "type": "text",
+    "model": "surveyorData.worklist.surveyFeeBill.hsnCode",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'"
+   },
+   {
+    "name": "Primary Assessment Gst Percentage3",
+    "id": "gstPercent",
+    "type": "text",
+    "model": "surveyorData.worklist.surveyFeeBill.gstPercent",
+    "maxlength": "19",
+    "pattern": "/^([0-9]|[1-9][0-9]|100)$/",
+    "required": "surveyorData.worklist.claimAssessment.isPaymentInvoice == 'Y'"
+   },
+   {
+    "name": "totalGSTAmount",
+    "id": "totalGSTAmount",
+    "type": "text",
+    "model": "surveyorData.worklist.surveyFeeBill.totalGSTAmount",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   },
+   {
+    "name": "total",
+    "id": "total",
+    "type": "text",
+    "model": "surveyorData.worklist.surveyFeeBill.total",
+    "maxlength": "10",
+    "pattern": "/^\\d+(\\.\\d{1,2})?$/"
+   }
+  ],
+  "totalList": [
+   {
+    "name": "allMakeList_3",
+    "type": "select",
+    "model": "totalList"
+   }
+  ],
+  "selectedValue": [
+   {
+    "name": "selMakeList_3",
+    "type": "select",
+    "model": "selectedValue"
+   }
+  ],
+  "surveyor": [
+   {
+    "id": "smsarea",
+    "type": "textarea",
+    "model": "surveyor.content"
+   }
+  ],
+  "surveyorData.worklist.connectwithclaimofc": [
+   {
+    "name": "remarks",
+    "id": "remarks",
+    "type": "textarea",
+    "model": "surveyorData.worklist.connectwithclaimofc.remarks",
+    "maxlength": "240",
+    "pattern": "/^[^\\s]+(\\s.*)?$/"
+   }
+  ]
+ }
+}
