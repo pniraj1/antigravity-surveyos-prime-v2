@@ -223,3 +223,47 @@ describe('buildNiaWorkbook', () => {
     expect(ws.rowCount).toBe(2);
   });
 });
+
+describe('niaAssessmentRows — nil-dep painting row', () => {
+  const paintRows = [
+    row({ section: 'paint', partType: 'paint', estimated: 20000, assessed: 17000, billedTaxable: 16500 }),
+    row({ section: 'paint', partType: 'paint', estimated: 8003.76, assessed: 6732, billedTaxable: 6732 }),
+    row({ section: 'paint', partType: 'paint', estimated: 1000, assessed: 900, billedTaxable: 900, allowed: false }),
+  ];
+
+  test('on a nil-dep policy painting goes in as one final labour row the portal cannot depreciate', () => {
+    // R11. The portal's 50% on paint material is hardcoded; a labour row is
+    // the only place painting passes through untouched.
+    const rows = niaAssessmentRows([row({ partType: 'metal' }), ...paintRows], AGE, 'nil');
+    expect(rows).toHaveLength(2);
+    const p = rows[1];
+    expect(p.SlNo).toBe(2);
+    expect(p.category).toBe('Labor Charges');
+    expect(p.description).toBe('Other Labor Charges');
+    expect(p.partName).toBe('Painting Charges');
+    expect(p.serviceType).toBe('ALLOW');
+    expect(p.estimatedAmount).toBe('29003.76');
+    expect(p.billedAmount).toBe('23232.00');
+    expect(p.assessedAmount).toBe('23732.00');
+    expect(p.depreciationPercentage).toBe('0');
+    expect(p.hsnCode).toBe('8512');
+    expect(p.gstPercentage).toBe('18');
+  });
+
+  test('on a nil-dep policy with no paint rows, no painting row is added', () => {
+    const rows = niaAssessmentRows([row({ partType: 'metal' })], AGE, 'nil');
+    expect(rows).toHaveLength(1);
+  });
+
+  test('on a standard policy no painting row is added, whatever the paint rows', () => {
+    // R7. Standard-policy painting is typed into the Painting section.
+    const rows = niaAssessmentRows([row({ partType: 'metal' }), ...paintRows], AGE, 'standard');
+    expect(rows).toHaveLength(1);
+    expect(rows.some((r) => r.partName === 'Painting Charges')).toBe(false);
+  });
+
+  test('niaPainting also sums the billed figure over allowed paint rows', () => {
+    const p = niaPainting(paintRows);
+    expect(p.billed).toBeCloseTo(23232, 2);
+  });
+});

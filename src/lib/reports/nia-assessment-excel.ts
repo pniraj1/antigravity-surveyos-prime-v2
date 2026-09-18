@@ -32,7 +32,8 @@ export type NiaDescription =
   | 'Parts at 50% Depreciation'
   | 'Parts at 30% Depreciation'
   | 'Parts at Cost'
-  | 'Labor charges for Removing and Refitting';
+  | 'Labor charges for Removing and Refitting'
+  | 'Other Labor Charges';
 
 export interface NiaAssessmentRow {
   SlNo: number;
@@ -53,6 +54,7 @@ export interface NiaAssessmentRow {
 export interface NiaPainting {
   estimate: number;
   assessed: number;
+  billed: number;
 }
 
 const money = (n: number) => (Number.isFinite(n) ? n : 0).toFixed(2);
@@ -113,7 +115,7 @@ export function niaAssessmentRows(
       ? r.depOverride
       : getDepreciationRate(r.partType, ageMonths, depType);
 
-  return rows
+  const sheet = rows
     .filter((r) => r.section === 'parts' || r.section === 'labour')
     .map((r, i): NiaAssessmentRow => {
       const isLabour = r.section === 'labour';
@@ -144,18 +146,43 @@ export function niaAssessmentRows(
         gstPercentage: whole(gst),
       };
     });
+
+  // The portal takes 50% off paint material in every painting mode, with no
+  // policy check. On a nil-depreciation policy surveyors route painting
+  // through the labour column, where no depreciation applies; do it for them.
+  if (depType === 'nil' && rows.some((r) => r.section === 'paint')) {
+    const p = niaPainting(rows);
+    sheet.push({
+      SlNo: sheet.length + 1,
+      category: 'Labor Charges',
+      description: 'Other Labor Charges',
+      partName: 'Painting Charges',
+      serviceType: 'ALLOW',
+      estimatedAmount: money(p.estimate),
+      billedAmount: money(p.billed),
+      assessedAmount: money(p.assessed),
+      depreciationPercentage: '0',
+      hsnCode: '8512',
+      gstPercentage: '18',
+    });
+  }
+
+  return sheet;
 }
 
 /**
- * The two painting figures typed into the portal under "Consolidated". The
- * portal splits them 75/25 and depreciates the material half itself, so both
- * are pre-depreciation sums.
+ * The painting figures. On a standard policy the surveyor types estimate and
+ * assessed into the portal's Painting section under "Consolidated" and the
+ * portal depreciates the material half itself, so both are pre-depreciation
+ * sums. On a nil-dep policy they feed the labour row below instead.
  */
 export function niaPainting(rows: AssessmentRow[]): NiaPainting {
   const paint = rows.filter((r) => r.section === 'paint');
+  const allowed = paint.filter((r) => r.allowed);
   return {
     estimate: paint.reduce((s, r) => s + (r.estimated || 0), 0),
-    assessed: paint.filter((r) => r.allowed).reduce((s, r) => s + effectiveAssessed(r), 0),
+    assessed: allowed.reduce((s, r) => s + effectiveAssessed(r), 0),
+    billed: allowed.reduce((s, r) => s + (r.billedTaxable ?? 0), 0),
   };
 }
 
