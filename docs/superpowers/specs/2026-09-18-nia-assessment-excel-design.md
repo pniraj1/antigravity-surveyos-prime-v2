@@ -38,9 +38,9 @@ Getting the file right once, in code, is the point.
 | # | Rule | Source |
 |---|------|--------|
 | R1 | `assessedAmount` is **pre-depreciation**. The portal computes `amountAllowed = assessed − assessed × dep%`. | `getDepreciationAmount` |
-| R2 | `description` sets the depreciation rate and locks it: 50% / 30% / Cost = 0 / all labour = 0. Only `Parts at Agewise Depreciation` reads the file's `depreciationPercentage`. | `getDepreciationPercent` |
+| R2 | `description` sets the depreciation rate and locks it: 50% / 30% / Cost = 0 / all labour = 0. Only `Parts at Agewise Depreciation` reads the file's `depreciationPercentage`. **So whenever our rate differs from the class default — a nil-depreciation policy, or a surveyor's `depOverride` — the row must go out as `Parts at Agewise Depreciation`, the one description whose rate the portal reads from the file.** | `getDepreciationPercent` |
 | R3 | `hsnCode` sets the GST rate from the portal's own table. The file's `gstPercentage` is used only if the code is unknown — and an unknown code is blanked, which then fails Validate. So every row carries a code proven to be on the table. | `validateHsnCode`, `checkFields` |
-| R4 | HSN by row GST rate: 18% → `8512`, 28% → `8708`, 0% → `72041000`. Motor rows carry no other rate. | Surveyor, confirmed against SWAR |
+| R4 | HSN by row GST rate: 18% → `8512`, 28% → `8708`, 0% → `72041000`. Motor rows carry no other rate — and because the grid does not enforce that, any other rate is an **error that stops the export**, never silently mapped to 18%. | Surveyor, confirmed against SWAR |
 | R5 | Disposal parts: `Parts at Cost`, `assessedAmount` = the allowed disposal value, GST 0, HSN `72041000`. Used parts carry no depreciation and no GST. | Surveyor |
 | R6 | `serviceType` is never read by the portal. Emit SWAR's proven values only: `REPLACE`, `ALLOW`, `NOT ALLOWED`. | 0 comparisons in controller |
 | R7 | Paint rows are **not** in the file. Painting is typed separately as estimate + assessed with work details = Consolidated; the portal splits 75/25 and takes 50% dep on material itself. | `getLabourAmountNew`; surveyor |
@@ -87,14 +87,14 @@ are skipped (R7). Both allowed and disallowed rows are emitted (R8).
 |---|---|
 | `SlNo` | 1…n in emitted order |
 | `category` | parts → `Spare Parts`; labour → `Labor Charges` |
-| `description` | disposal → `Parts at Cost`; else by `partType`: metal → `Parts at Agewise Depreciation`, plastic → `Parts at 50% Depreciation`, fiberglass → `Parts at 30% Depreciation`, glass → `Parts at Cost`; labour → `Labor charges for Removing and Refitting` |
-| `partName` | `particulars` trimmed, cut at 100 |
+| `description` | labour → `Labor charges for Removing and Refitting`; disposal → `Parts at Cost`; **`depType === 'nil'` or `depOverride` set → `Parts at Agewise Depreciation`** (the portal must read our rate, not lock its own); else by `partType`: metal → `Parts at Agewise Depreciation`, plastic → `Parts at 50% Depreciation`, fiberglass → `Parts at 30% Depreciation`, glass → `Parts at Cost` |
+| `partName` | `particulars` with the portal's banned characters `< > ^ & \ \|` replaced by spaces, whitespace collapsed, trimmed, cut at 100 |
 | `serviceType` | not allowed → `NOT ALLOWED`; parts → `REPLACE`; labour → `ALLOW` |
 | `estimatedAmount` | `estimated` |
 | `billedAmount` | `billedTaxable ?? 0` (R10 — the bill always exists by upload time) |
 | `assessedAmount` | not allowed → 0; disposal → `computeRowNet().netBeforeGst`; else `assessed` |
 | `depreciationPercentage` | disposal → 0; else the row's rate via `depOverride ?? getDepreciationRate(...)` |
-| `hsnCode` | disposal → `72041000`; else by `gst`: 28 → `8708`, 0 → `72041000`, 18 → `8512` |
+| `hsnCode` | disposal → `72041000`; else by `gst`: 28 → `8708`, 0 → `72041000`, 18 → `8512`; **any other rate throws** and the dialog shows which row |
 | `gstPercentage` | disposal → 0; else `gst` |
 
 **Painting:** `estimate` = Σ `estimated` over paint rows; `assessed` = Σ
@@ -116,7 +116,10 @@ Fixtures on `niaAssessmentRows` and `niaPainting`:
 2. **Disposal metal** at 50% disposal → `Parts at Cost`, assessed = net, dep `'0'`, HSN `72041000`, GST `'0'`
 3. **Disallowed part** → `NOT ALLOWED`, assessed `'0.00'`, still present
 4. **Labour** → `Labor Charges` / `Labor charges for Removing and Refitting` / `ALLOW`, dep `'0'`
-5. **28% part** → HSN `8708`
+5. **28% part** → HSN `8708`; a 12% part **throws** naming the row
+5a. **Nil-dep policy, plastic part** → `Parts at Agewise Depreciation`, dep `'0'`
+5b. **`depOverride` 25 on a plastic part** → `Parts at Agewise Depreciation`, dep `'25'`
+5c. **`partName` with `&` and `|`** → those characters gone, single spaces
 6. **Paint rows excluded** from rows, and summed correctly by `niaPainting`
 7. **Header/key order** — `Object.keys(row)` equals the 11 columns in order; every value non-empty
 
