@@ -9,6 +9,8 @@ import type { AssessmentRow } from '@/types/assessment';
 import type { DepreciationType } from '@/types';
 import { getDepreciationRate } from '@/lib/calculations/depreciation';
 import { computeRowNet, effectiveAssessed } from '@/lib/calculations/row-net';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
 /** The portal's header row, in the order it expects. It counts these keys. */
 export const NIA_COLUMNS = [
@@ -145,4 +147,26 @@ export function niaPainting(rows: AssessmentRow[]): NiaPainting {
     estimate: paint.reduce((s, r) => s + (r.estimated || 0), 0),
     assessed: paint.filter((r) => r.allowed).reduce((s, r) => s + effectiveAssessed(r), 0),
   };
+}
+
+/** Pure: the workbook the portal expects. Kept separate so it can be tested. */
+export function buildNiaWorkbook(rows: NiaAssessmentRow[]): ExcelJS.Workbook {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Primary_Assessment_Template');
+  ws.addRow([...NIA_COLUMNS]);
+  for (const r of rows) ws.addRow(NIA_COLUMNS.map((c) => r[c]));
+  return wb;
+}
+
+/** Browser only. Builds and downloads `<claimNo>_Primary_Assessment_Template.xlsx`. */
+export async function exportNiaAssessmentExcel(
+  claimNo: string,
+  rows: AssessmentRow[],
+  ageMonths: number,
+  depType: DepreciationType,
+): Promise<void> {
+  const wb = buildNiaWorkbook(niaAssessmentRows(rows, ageMonths, depType));
+  const buffer = await wb.xlsx.writeBuffer();
+  const safe = (claimNo || 'claim').replace(/[^A-Za-z0-9_-]+/g, '_');
+  saveAs(new Blob([buffer]), `${safe}_Primary_Assessment_Template.xlsx`);
 }

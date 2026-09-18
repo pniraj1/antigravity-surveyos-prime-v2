@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { NIA_COLUMNS, niaAssessmentRows, niaPainting } from '../nia-assessment-excel';
+import { NIA_COLUMNS, buildNiaWorkbook, niaAssessmentRows, niaPainting } from '../nia-assessment-excel';
 import type { AssessmentRow } from '@/types/assessment';
 
 function row(overrides: Partial<AssessmentRow> = {}): AssessmentRow {
@@ -170,5 +170,24 @@ describe('niaPainting', () => {
     ]);
     expect(p.estimate).toBeCloseTo(29003.76, 2);
     expect(p.assessed).toBeCloseTo(23732, 2);
+  });
+});
+
+describe('buildNiaWorkbook', () => {
+  test('one sheet named Primary_Assessment_Template, header row is the portal columns, amounts are text', () => {
+    const rows = niaAssessmentRows([row({ assessed: 1234.5 })], AGE, 'standard');
+    const wb = buildNiaWorkbook(rows);
+
+    expect(wb.worksheets.map((w) => w.name)).toEqual(['Primary_Assessment_Template']);
+    const ws = wb.getWorksheet('Primary_Assessment_Template')!;
+
+    const header = ws.getRow(1).values as unknown[];
+    expect(header.slice(1)).toEqual([...NIA_COLUMNS]); // ExcelJS row values are 1-based
+
+    const first = ws.getRow(2);
+    expect(first.getCell(1).value).toBe(1); // SlNo stays numeric
+    expect(first.getCell(8).value).toBe('1234.50'); // assessedAmount, a string
+    expect(typeof first.getCell(8).value).toBe('string');
+    expect(ws.rowCount).toBe(2);
   });
 });
