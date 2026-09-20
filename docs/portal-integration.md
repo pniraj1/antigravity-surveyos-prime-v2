@@ -463,10 +463,16 @@ requirement, but the code is on the portal's list at 0%.
 - NIA non-tieup fully mapped from controller source; Maruti and KIA captured
 - NIA Excel generator designed — spec `2026-09-18-nia-assessment-excel-design.md`
 
+- **NIA Excel generator shipped** (2026-09-18), spec
+  `2026-09-18-nia-assessment-excel-design.md`
+- Extension v1 designed — spec `2026-09-20-portal-fill-extension-design.md`
+- Claim Documents designed — spec `2026-09-20-claim-documents-design.md`
+
 **Next**
 
-- Implement the NIA Excel generator per its spec
-- NIA read-off panel for the typed fields
+- Review both 2026-09-20 specs, then plan and build (extension first)
+- One real NIA upload on a closed claim: Validate → save page
+- NIA read-off panel for the typed fields (superseded by the extension if it lands first)
 - Map tie-ups (Maruti, KIA) from `surveyorHome.js`
 - Capture the UIIC screens in §3 when portal access allows
 - Revisit the UIIC Excel import once §4.3 is answered
