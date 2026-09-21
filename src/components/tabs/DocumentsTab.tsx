@@ -4,6 +4,8 @@ import { useAIExtraction } from '@/hooks/useAIExtraction';
 import { storeFiles } from '@/components/evidence/DocumentEvidenceViewer';
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import { useClaimStore } from '@/stores/claim-store';
+import { saveDocuments } from '@/lib/documents/sink';
+import { FIELD_KEY_TO_DOC_TYPE } from '@/types/documents';
 import { useProfileStore } from '@/stores/profile-store';
 import { uploadWithDuplicateCheck, type DuplicateAction, type ExistingFile } from '@/lib/drive/upload-with-check';
 import { DuplicateUploadDialog } from '@/components/dialogs/DuplicateUploadDialog';
@@ -136,6 +138,9 @@ export function DocumentsTab() {
   // Handles multi-file slots (e.g. RC front + back).
   const processFiles = (files: File[], key: string, aiFiles?: File[]) => {
     if (files.length === 0) return;
+
+    const docType = FIELD_KEY_TO_DOC_TYPE[key] ?? 'other';
+    void saveDocuments(docType, files.map((f) => ({ blob: f, name: f.name })), 'upload');
 
     if (currentClaim?.id) {
       storeFiles(currentClaim.id, key, files);

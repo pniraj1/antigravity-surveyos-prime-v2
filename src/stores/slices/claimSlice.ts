@@ -14,6 +14,7 @@ import { useUIStore } from '@/stores/ui-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { resolveAnnexureOptions } from '@/lib/photos/document-annexure';
 import { repairAssessmentRow, resolveExcessFields } from '@/lib/calculations/assessment';
+import type { PhotoTag } from '@/types/documents';
 
 export interface ClaimSlice {
   currentClaim: ClaimData | null;
@@ -55,7 +56,9 @@ export interface ClaimSlice {
     w?: number,
     h?: number,
     kind?: PhotoItem['kind'],
+    tag?: PhotoTag,
   ) => void;
+  setPhotoTag: (index: number, tag: PhotoTag | undefined) => void;
   deletePhoto: (index: number) => void;
   updatePhotoName: (index: number, name: string) => void;
   updatePhotoLayout: (layout: ClaimData['photoLayout']) => void;
@@ -267,17 +270,25 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
     }));
   },
 
-  addPhoto: (dataUrl, name, w, h, kind = 'damage') => {
+  addPhoto: (dataUrl, name, w, h, kind = 'damage', tag) => {
     set((state: ClaimSlice) => {
       if (!state.currentClaim) return {};
       return {
         currentClaim: {
           ...state.currentClaim,
-          photos: [...state.currentClaim.photos, { dataUrl, name, w, h, kind }],
+          photos: [...state.currentClaim.photos, { dataUrl, name, w, h, kind, ...(tag ? { tag } : {}) }],
           updatedAt: new Date().toISOString(),
         },
         isDirty: true,
       };
+    });
+  },
+
+  setPhotoTag: (index, tag) => {
+    set((state: ClaimSlice) => {
+      if (!state.currentClaim) return {};
+      const photos = state.currentClaim.photos.map((p, i) => (i === index ? { ...p, tag } : p));
+      return { currentClaim: { ...state.currentClaim, photos, updatedAt: new Date().toISOString() }, isDirty: true };
     });
   },
 

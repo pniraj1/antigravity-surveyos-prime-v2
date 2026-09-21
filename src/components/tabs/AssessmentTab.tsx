@@ -22,6 +22,7 @@ import { SaveProgressButton } from '@/components/sync/SaveProgressButton';
 import { needsReview } from '@/lib/ai/needs-review';
 import { DocumentReviewSheet } from '@/components/documents/DocumentReviewSheet';
 import type { EstimateApplyMode } from '@/stores/slices/aiDataSlice';
+import { saveDocuments } from '@/lib/documents/sink';
 
 export function AssessmentTab() {
   const { currentClaim, setDepreciationType } = useClaimStore();
@@ -51,6 +52,7 @@ export function AssessmentTab() {
     }
 
     triggerExtraction('estimate', file, undefined, undefined, mode);
+    void saveDocuments('estimate', [{ blob: file, name: file.name }], 'upload');
 
     if (currentClaim?.id && profile.autoUploadDrive !== false) {
       const claimId = currentClaim.id;

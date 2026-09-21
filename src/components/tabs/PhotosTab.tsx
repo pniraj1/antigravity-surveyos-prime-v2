@@ -18,6 +18,8 @@ import type { PhotoLayout, PhotoSheetOptions, PageOrientation } from '@/types/as
 import { DEFAULT_PHOTO_SHEET_OPTIONS } from '@/components/pdf/PhotoSheetDocument';
 import { DocumentAnnexureSection } from '@/components/tabs/photos/DocumentAnnexureSection';
 import { useSaveToCloudPrompt } from '@/hooks/useSaveToCloudPrompt';
+import { saveDocuments } from '@/lib/documents/sink';
+import type { PhotoTag } from '@/types/documents';
 import dynamic from 'next/dynamic';
 
 // ── Single dynamic boundary per pdf component ────────────────────────────────
@@ -64,6 +66,7 @@ export function PhotosTab() {
   const {
     currentClaim,
     addPhoto,
+    setPhotoTag,
     deletePhoto,
     updatePhotoName,
     updatePhotoLayout,
@@ -106,6 +109,7 @@ export function PhotosTab() {
           const name = file.name.split('.')[0].substring(0, 30);
           // Store dimensions for orientation detection
           addPhoto(dataUrl, name, w, h);
+          void saveDocuments('damagePhotos', [{ blob: file, name: file.name }], 'photo');
           if (saveToDrive) {
             uploadFileToDrive(claimId, `${PHOTO_FILE_PREFIX}${Date.now()}_${name}.jpg`, file, label).catch(() => {});
           }
@@ -468,6 +472,22 @@ export function PhotosTab() {
                         placeholder="Caption…"
                         className="h-7 text-xs border-transparent hover:border-input focus:bg-background px-2"
                       />
+                      {/* ponytail: tag is a label on the photo; the folder entry keeps its original type. Link them when the photos move out of the record. */}
+                      <select
+                        value={item.tag ?? ''}
+                        onChange={(e) => setPhotoTag(index, (e.target.value || undefined) as PhotoTag | undefined)}
+                        className="mt-1 w-full text-[10px] rounded border border-border bg-background px-1 py-0.5"
+                        title="Which portal slot this shot is for"
+                      >
+                        <option value="">Damage</option>
+                        <option value="front">Front</option>
+                        <option value="rear">Rear</option>
+                        <option value="left">Left side</option>
+                        <option value="right">Right side</option>
+                        <option value="chassis">Chassis number</option>
+                        <option value="odometer">Odometer</option>
+                        <option value="spot">Spot</option>
+                      </select>
                     </div>
                   </div>
                 );
