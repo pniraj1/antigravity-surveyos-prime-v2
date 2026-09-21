@@ -10,34 +10,43 @@ import { claimDocuments, removeDocument, onThisDevice } from './index-ops';
 import { openDocument, claimFolderPath, NotOnThisDeviceError, PermissionDeniedError } from './folder';
 import { saveDocuments } from './sink';
 
+type FolderInfo = { rootName: string; device: string; claimPath: string | null };
+
 export function useClaimDocuments() {
   const claim = useClaimStore((s) => s.currentClaim);
   const updateClaim = useClaimStore((s) => s.updateClaim);
   const supported = isLocalSyncSupported();
-  const [folder, setFolder] = useState<{ rootName: string; device: string; claimPath: string | null } | null>(null);
+  const [folder, setFolder] = useState<FolderInfo | null>(null);
   const [device, setDevice] = useState('This PC');
 
-  const refreshFolder = useCallback(async () => {
+  const loadFolder = useCallback(async (): Promise<{ device: string; folder: FolderInfo | null }> => {
     const handle = await getStoredRootHandle().catch(() => null);
     const label = await getDeviceLabel();
-    setDevice(label);
-    if (!handle || !claim) { setFolder(null); return; }
-    setFolder({ rootName: handle.name, device: label, claimPath: await claimFolderPath(claim) });
-  }, [claim?.id, claim?.documentsFolder]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!handle || !claim) return { device: label, folder: null };
+    return { device: label, folder: { rootName: handle.name, device: label, claimPath: await claimFolderPath(claim) } };
+  }, [claim]);
 
-  useEffect(() => { if (supported) void refreshFolder(); }, [supported, refreshFolder]);
+  const applyFolder = (r: { device: string; folder: FolderInfo | null }) => {
+    setDevice(r.device);
+    setFolder(r.folder);
+  };
+
+  useEffect(() => {
+    if (!supported) return;
+    loadFolder().then(applyFolder).catch(() => setFolder(null));
+  }, [supported, loadFolder]);
 
   const connect = useCallback(async (deviceLabel: string) => {
     try {
       const handle = await pickRootFolder();            // user gesture: inside the button click
       if (!(await ensureReadWrite(handle))) { toast.error('Folder access was not granted.'); return; }
       await setDeviceLabel(deviceLabel);
-      await refreshFolder();
+      applyFolder(await loadFolder());
       toast.success(`Claim folder connected: ${handle.name}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not open a folder.');
     }
-  }, [refreshFolder]);
+  }, [loadFolder]);
 
   const addFiles = useCallback(async (type: DocType, files: File[]) => {
     await saveDocuments(type, files.map((f) => ({ blob: f, name: f.name })), 'upload');
