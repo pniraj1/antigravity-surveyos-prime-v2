@@ -467,10 +467,11 @@ requirement, but the code is on the portal's list at 0%.
   `2026-09-18-nia-assessment-excel-design.md`
 - Extension v1 designed — spec `2026-09-20-portal-fill-extension-design.md`
 - Claim Documents designed — spec `2026-09-20-claim-documents-design.md`
+- Portal-fill extension v1 built (2026-09-21) — extension/, Stage 0 pending
 
 **Next**
 
-- Review both 2026-09-20 specs, then plan and build (extension first)
+- Stage 0 on a closed NIA claim (README checklist)
 - One real NIA upload on a closed claim: Validate → save page
 - NIA read-off panel for the typed fields (superseded by the extension if it lands first)
 - Map tie-ups (Maruti, KIA) from `surveyorHome.js`

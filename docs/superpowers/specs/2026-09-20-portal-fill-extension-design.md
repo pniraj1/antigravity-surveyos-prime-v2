@@ -1,7 +1,7 @@
 # Portal Fill Extension v1 — Design
 
 **Date:** 2026-09-20
-**Status:** Draft — awaiting review
+**Status:** Implemented — Stage 0 pending
 **Scope:** A Chrome extension that fills the New India non-tieup survey page
 from a finished SurveyOS claim, plus one small hand-off in SurveyOS. No
 portal credentials touched, nothing submitted.
@@ -34,12 +34,12 @@ an extension can run there without being pasted in by hand every time.
 | E2 | **Never clicks Validate, Submit, Save, or any upload-confirm.** The surveyor does every commit. The extension writes field values and attaches files; that is all. |
 | E3 | **Claim number must match** between the packet and the open page or nothing fills. Compared after normalising both (uppercase, non-alphanumerics stripped). The refusal shows both numbers — a mismatch is also how a wrong claim number typed into SurveyOS gets caught. |
 | E4 | **Existing portal values are kept**, listed in the panel, and highlighted amber on the page. The surveyor decides. "Existing" means *set by a person*: the map declares each field's `empty` value (the portal's default — `N` on radios, `0` or `""` on amounts, `null`) and only a value that differs from it counts as existing. Without this every pre-filled default would be kept and nothing would fill. |
-| E5 | **Nothing leaves the machine.** The packet moves SurveyOS tab → `chrome.storage.local` → portal tab. The only network call the extension makes is fetching its field map from our own hosting. No page content is read beyond the claim number and the target fields. (DPDP: the packet holds insured PII — mobile, email.) |
+| E5 | **Nothing leaves the machine.** The packet moves SurveyOS tab → `chrome.storage.local` → portal tab. The only network call the extension makes is fetching its field map from our own hosting. No page content is read beyond the claim number and the target fields. (DPDP: the packet holds insured PII — mobile.) |
 | E6 | **Packet expires.** Cleared after a successful fill or after 24 h, whichever first. |
 | E7 | **No AI in the extension.** Field maps are written by us from captured portal HTML. |
 | E8 | The extension **fails per field, not per page.** A field whose model path no longer exists is reported and skipped; the rest still fill. |
 | E9 | **The map is generated, never typed.** `scripts/portal-map/build-ext-map.py` derives `nia-nontieup.json` from `nia-nontieup-survey.json` plus a small canonical-name overlay; a hand-edited model path is a bug. The overlay is the only file we write. |
-| E10 | **Writes go through Angular's own input path.** `ngModelController.$setViewValue(value)` + `$render()`, inside `$evalAsync`, so `ng-change`, validators and the portal's computed totals run exactly as if typed. Never a bare scope assignment. |
+| E10 | **Writes go through Angular's own input path.** `ngModelController.$setViewValue(value)` + `$render()`, inside `scope.$apply` (or `$evalAsync` only when a digest is already running), so a throwing write surfaces as an `error` step and `ng-change`, validators and the portal's computed totals run exactly as if typed. Never a bare scope assignment. |
 
 ---
 
@@ -77,15 +77,19 @@ export interface PortalPacket {
 | Canonical field | Source | Portal section |
 |---|---|---|
 | `surveyDate`, `surveyTime`, `surveyPlace` | `surveyDatetime` / `placeOfSurvey` | Quick Update |
-| `claimantMobile`, `claimantEmail` | insured contact | Quick Update |
-| `provisionAmount` | net assessed | Quick Update (`surveyorAccessedAmount`) |
-| `expectedRepairDate` | if recorded, else omitted | Quick Update |
+| `claimantMobile` | insured contact | Quick Update |
+| ~~`claimantEmail`~~ | in `CANONICAL_FIELDS` but SurveyOS's policy record has no email — not sent; would send if a future field supplies it | — |
+| ~~`provisionAmount`~~ | `surveyorAccessedAmount` is **disabled** on ordinary claims (enabled only for theft / total loss) — not sent | — |
+| ~~`expectedRepairDate`~~ | SurveyOS holds no such field — not sent | — |
 | `invoiceInNameOfNIA`, `gstApplicable`, `vendorInvoiceNo`, `vendorInvoiceDate` | bill check details | Invoice 1 |
 | `paintingEstimate`, `paintingAssessed` | `niaPainting()` — **standard policy only**; omitted on nil-dep (R11) | Invoice 1 painting |
 | `noOfInvoices` | `1` | Claim Assessment |
-| `netSalvage`, `compulsoryExcess`, `voluntaryExcess`, `otherDeductions`, `towingCharges` | assessment summary | Claim Assessment |
-| `nilDepCover`, `engineProtectCover`, `consumableCover`, `keyProtectCover`, `returnToInvoiceCover` | add-on flags | Claim Assessment |
+| `netSalvage`, `compulsoryExcess`, `voluntaryExcess` | assessment summary | Claim Assessment |
+| ~~`otherDeductions`~~, ~~`towingCharges`~~ | **not sent in v1** — SurveyOS has towing only for total-loss claims | — |
+| ~~add-on covers~~ | the five cover fields are **amounts**, not flags; SurveyOS holds none — surveyor types them | — |
 | `feeInvoiceNo`, `feeInvoiceDate`, `professionalFee`, `photosAmount`, `conveyanceAmount`, `feeOthers`, `feeGstApplicable`, `feeHsn`, `feeGstPercent` | `feeBill` | Survey Fee Bill |
+| *(derived)* `surveyDateRadio` | from `surveyDate`: one of the three portal dates, else `Others` | Quick Update |
+| *(derived)* `paintingWork` = `Consolidated` | only when `paintingAssessed` is sent (standard policy) | Invoice 1 painting |
 
 Exact `ClaimData` paths are resolved at plan time; the table fixes the
 canonical names. Files: the NIA Excel from `buildNiaWorkbook`, base64
@@ -115,22 +119,27 @@ Without the extension, nothing changes.
 One repo, one map, one dev. `extension/` has its own `package.json` and
 Vitest config; `npm run build:ext` produces the unpacked folder and the zip.
 The map is published to hosting by copying `extension/maps/` into
-`public/portal-maps/` at build time.
+`public/portal-maps/` at build time. Shared libs (packet validator, fill-core,
+map resolver) carry a UMD shim so Vitest can import them directly without a
+bundler.
 
 ```
 extension/
 manifest.json
-src/relay.ts        content script @ https://motorsurveyos-in.web.app/*
-src/panel.ts        content script @ https://web.newindia.co.in/NIABancsPortal/*
-src/filler.ts       main-world script, injected by panel via chrome.scripting
-src/background.ts   map fetch + cache, packet expiry
-src/map.ts          types + resolveMap()
+src/relay.js         content script @ https://motorsurveyos-in.web.app/*
+src/panel.js         content script @ https://web.newindia.co.in/NIABancsPortal/*
+src/filler.js        main-world script, declared in the manifest
+src/background.js    map fetch + cache, packet expiry
+src/lib/             packet-validate, fill-core, map (UMD, shared with Vitest)
 maps/nia-nontieup.json   (generated — see E9; also published to our hosting)
 fixture/nia-nontieup.html (captured portal page + AngularJS 1.x, for local tests)
 ```
 
-Permissions: `storage`, `scripting`, `alarms`; host permissions for exactly
-the two origins above. No `tabs`, no `<all_urls>`, no `webRequest`.
+The Filler is declared in the manifest's `content_scripts` with
+`"world": "MAIN"` (Chrome 111+, `minimum_chrome_version` in the manifest) —
+not injected at runtime via `chrome.scripting`. Permissions: `storage`,
+`alarms`; host permissions for exactly the two origins above. No `tabs`,
+no `scripting`, no `<all_urls>`, no `webRequest`.
 
 **Relay.** Listens for `message` events where `event.origin === location.origin`
 and `data.type === 'surveyos:portal-packet'`. Validates the packet shape
@@ -139,18 +148,22 @@ and `data.type === 'surveyos:portal-packet'`. Validates the packet shape
 on load.
 
 **Panel.** A fixed, small card injected at the bottom-right of the portal
-page, only on `#/WorklistSurveyNew`. States:
+page, only on `#/WorklistSurveyNew`. The SPA changes route without a reload,
+so the panel listens for `hashchange`: it removes itself when the route
+leaves `#/WorklistSurveyNew` and re-boots on return. States:
 
 - *No packet* — "Send a claim from SurveyOS first."
 - *Packet ready* — claim no, built time, field count, file count, **Fill** button.
 - *Filling / done* — per-field result list: filled ✓, kept (existing value) ⚠,
-  not found ✗. "Clear packet" link.
+  not found ✗. "Clear packet" link. The packet stays in storage on a partial
+  fill, so **Fill** re-enables and the surveyor can retry.
 
 The Panel never reads the page itself; it asks the Filler.
 
-**Filler** (main world — the only place `angular` is reachable). Injected
-with `chrome.scripting.executeScript({ world: 'MAIN' })`; talks to the Panel
-via `window.postMessage` with a per-injection nonce. Protocol:
+**Filler** (main world — the only place `angular` is reachable). Declared in
+the manifest with `"world": "MAIN"` (§3.3), so it runs on every load rather
+than being injected on demand; talks to the Panel via `window.postMessage`.
+Protocol:
 
 1. `probe` → returns `{ claimNo, controllerFound }`, reading the claim
    number from the map's `claimNoPath`.
@@ -160,9 +173,10 @@ via `window.postMessage` with a per-injection nonce. Protocol:
    - read current scope value via `$parse(modelPath)(scope)`; differs from
      the map's `empty` and ≠ ours → `kept`, add amber outline (E4)
    - else `angular.element(input).controller('ngModel')` →
-     `$setViewValue(value)`, `$render()`, inside `scope.$evalAsync` (E10);
-     radios/selects match on the map's `options`; a field with no
-     ngModelController (a jQuery widget) → `manual`, listed for the surveyor
+     `$setViewValue(value)`, `$render()`, inside `scope.$apply` (or
+     `$evalAsync` if a digest is already running) (E10); radios/selects match
+     on the map's `options`; a field with no ngModelController (a jQuery
+     widget) → `manual`, listed for the surveyor; a throwing write → `error`
    - files: `new File([bytes], name, { type })` → `DataTransfer` →
      `input.files = dt.files` → `dispatchEvent(new Event('change', { bubbles: true }))`.
      NIA's `readExcel` runs on `change`, so the portal parses the sheet
@@ -203,9 +217,12 @@ Shape (paths illustrative — the real ones come out of the generator, E9):
 extractor's model path, plus `empty`/`transform`/`options`), and fails if an
 overlay path is not in the capture. Where the claim number lives is the
 first thing Stage 0 checks; the generator has a `claimNoPath` override for
-that. Transforms are a closed set of *names* implemented in `filler.ts`
-(`hhmm`, `ddmmyyyy`, `money2dp`, `yn`) — the map never carries code, which
-keeps it "data" for the Web Store's remote-code rule.
+that — confirmed from the capture as
+`surveyorData.worklist.viewClaimDetails.claimDetails.claimNumber`, with
+`sessionStorage:claimNoForWorklist` as the fallback. Transforms are a closed
+set of *names* implemented in `filler.js` (`hhmm`, `ddmmyyyy`, `money2dp`,
+`yn`) — the map never carries code, which keeps it "data" for the Web
+Store's remote-code rule.
 
 **Delivery.** Bundled copy in the extension; the background fetches
 `https://motorsurveyos-in.web.app/portal-maps/nia-nontieup.json` on install
@@ -230,7 +247,7 @@ page with `extract-fields.py` and diff against the map.
 
 | Stage | Who | How |
 |---|---|---|
-| 0 | Niraj + brother, a closed claim | unpacked, dev mode; Fill → Validate → save page |
+| 0 | Niraj + brother, a closed claim | Fixture walk-through in `extension/README.md` first (no portal needed); then unpacked, dev mode; Fill → Validate → save page |
 | 1 | 3–5 surveyors | zipped CRX + install note; map v-bumps as needed |
 | 2 | all subscribers | Chrome Web Store, unlisted link from the dialog |
 | 3 | — | listed, after a month without a `notFound` report |
@@ -243,22 +260,26 @@ nothing recurring; hosting the map JSON is static.
 
 ## 5. Tests
 
-**SurveyOS** (Vitest): `buildPortalPacket` — canonical key set, omits
-painting on nil-dep, claimNo trimmed, throws when claimNo empty, file present
-and base64.
+**What shipped:** pure-logic Vitest suites, no browser, no Playwright —
+packet, validator, fill-core and map (21 + 8 tests).
 
-**Extension** (Vitest, no browser): packet validator accepts/rejects; map
-resolver; each transform; the `fill` decision function
+**SurveyOS** (`src/lib/portal/__tests__/`, 8 tests): `buildPortalPacket` —
+canonical key set, omits painting on nil-dep, claimNo trimmed, throws when
+claimNo empty, file present and base64 (`packet.test.ts`); the SurveyOS-side
+hand-off (`extension-bridge.test.ts`).
+
+**Extension** (`extension/__tests__/`, 21 tests): packet validator
+accepts/rejects; map resolver; each transform; the `fill` decision function
 `decide(current, incoming) → 'fill' | 'kept'` (pure, extracted from the
 Filler).
 
-**Fixture** (Vitest + jsdom, or Playwright against `extension/fixture/`):
-the captured page markup with AngularJS 1.x loaded and a stub controller
-that mirrors the real model paths. Filler runs against it: fills, `kept` on
-a human-set value, `empty` defaults filled, `notFound` on a renamed path,
-`ng-change` observed to fire, Excel `change` event dispatched. This is
-where the fill engine is proven — live checks through the geo-block are
-slow and go through a screen-share, so they confirm, not discover.
+**Fixture** (`extension/fixture/nia-nontieup.html`, manual, not an automated
+suite — see `extension/README.md`): the captured page markup with AngularJS
+1.x loaded and a stub controller that mirrors the real model paths. Filler
+runs against it: fills, `kept` on a human-set value, `notFound` on a renamed
+path, the ng-change log observed, Excel `change` event dispatched. This is
+where the fill engine is exercised — live checks through the geo-block are
+slow and go through a screen-share, so Stage 0 confirms, not discovers.
 
 **Manual** (Stage 0): claim number location confirmed; wrong claim open →
 refuses and shows both numbers; pre-filled place → kept + amber; date
