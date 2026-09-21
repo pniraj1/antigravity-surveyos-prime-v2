@@ -45,3 +45,17 @@ export async function ensureReadWrite(handle: FileSystemDirectoryHandle): Promis
   if ((await handle.queryPermission(opts)) === 'granted') return true
   return (await handle.requestPermission(opts)) === 'granted'
 }
+
+const DEVICE_KEY = 'device'
+
+/** The name the surveyor gave this machine when connecting the folder (spec D5). */
+export async function getDeviceLabel(): Promise<string> {
+  const database = await db()
+  const label = (await database.get(STORE, DEVICE_KEY)) as string | undefined
+  return label?.trim() || 'This PC'
+}
+
+export async function setDeviceLabel(label: string): Promise<void> {
+  const database = await db()
+  await database.put(STORE, label.trim().slice(0, 40) || 'This PC', DEVICE_KEY)
+}
