@@ -11,16 +11,33 @@ import { getStoredRootHandle } from '@/lib/local-sync/directory-handle';
 import { writeDocuments, PermissionDeniedError, type FolderInput } from './folder';
 import { DOC_TYPE_LABEL } from '@/types/documents';
 
-export async function saveDocuments(
+// Saves run one at a time so two callers never race on the same index snapshot.
+let queue: Promise<unknown> = Promise.resolve();
+
+export function saveDocuments(
   type: DocType,
   files: FolderInput[],
   source: ClaimDocument['source'],
 ): Promise<ClaimDocument[]> {
-  const claim = useClaimStore.getState().currentClaim;
+  const run = queue.then(() => doSave(type, files, source));
+  queue = run.catch(() => undefined);
+  return run;
+}
+
+async function doSave(
+  type: DocType,
+  files: FolderInput[],
+  source: ClaimDocument['source'],
+): Promise<ClaimDocument[]> {
+  const claim = useClaimStore.getState().currentClaim; // read after our turn in the queue
   if (!claim || files.length === 0) return [];
   if (!(await getStoredRootHandle())) return [];
   try {
     const { claim: next, written } = await writeDocuments(claim, type, files, source);
+    if (useClaimStore.getState().currentClaim?.id !== claim.id) {
+      toast.warning('Saved to the folder, but the claim changed meanwhile — the list was not updated.');
+      return written;
+    }
     useClaimStore.getState().updateClaim({ documents: next.documents, documentsFolder: next.documentsFolder });
     toast.success(`${DOC_TYPE_LABEL[type]} saved to the claim folder`, { duration: 2500 });
     return written;

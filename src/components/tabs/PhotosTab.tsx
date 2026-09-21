@@ -101,6 +101,7 @@ export function PhotosTab() {
         ? await confirmSaveToCloud(files.length > 1 ? `${files.length} photos` : files[0].name)
         : false;
 
+      const savedFiles: File[] = [];
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         if (!file.type.startsWith('image/')) continue;
@@ -109,7 +110,7 @@ export function PhotosTab() {
           const name = file.name.split('.')[0].substring(0, 30);
           // Store dimensions for orientation detection
           addPhoto(dataUrl, name, w, h);
-          void saveDocuments('damagePhotos', [{ blob: file, name: file.name }], 'photo');
+          savedFiles.push(file);
           if (saveToDrive) {
             uploadFileToDrive(claimId, `${PHOTO_FILE_PREFIX}${Date.now()}_${name}.jpg`, file, label).catch(() => {});
           }
@@ -117,6 +118,7 @@ export function PhotosTab() {
           // silently skip failed images
         }
       }
+      if (savedFiles.length) void saveDocuments('damagePhotos', savedFiles.map((f) => ({ blob: f, name: f.name })), 'photo');
       setIsProcessing(false);
       event.target.value = '';
     },
