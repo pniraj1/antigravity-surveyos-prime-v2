@@ -8,9 +8,13 @@ import {
 } from '@/lib/reports/nia-assessment-excel';
 import type { AssessmentRow } from '@/types/assessment';
 import type { DepreciationType } from '@/types';
-import { X, Check, Copy, FileSpreadsheet, Download, Loader2 } from 'lucide-react';
+import type { ClaimData } from '@/types/claim';
+import { buildPortalPacket } from '@/lib/portal/packet';
+import { isExtensionPresent, sendPacketToExtension } from '@/lib/portal/extension-bridge';
+import { X, Check, Copy, FileSpreadsheet, Download, Loader2, Send } from 'lucide-react';
 
 interface Props {
+  claim: ClaimData;
   claimNo: string;
   rows: AssessmentRow[];
   ageMonths: number;
@@ -64,7 +68,7 @@ function Field({ label, value }: { label: string; value: number }) {
   );
 }
 
-export function NIAExportDialog({ claimNo, rows, ageMonths, depType, onClose }: Props) {
+export function NIAExportDialog({ claim, claimNo, rows, ageMonths, depType, onClose }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -72,6 +76,21 @@ export function NIAExportDialog({ claimNo, rows, ageMonths, depType, onClose }: 
   // on every row, and nothing here should make that easy.
   const [billCheckDone, setBillCheckDone] = useState(false);
   const isNilDep = depType === 'nil';
+
+  const [extPresent] = useState(() => isExtensionPresent());
+  const [sendState, setSendState] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle');
+  const [sendError, setSendError] = useState('');
+
+  const sendToExtension = async () => {
+    setSendState('sending'); setSendError('');
+    try {
+      const packet = await buildPortalPacket(claim, { ageMonths });
+      const r = await sendPacketToExtension(packet);
+      if (r.ok) setSendState('sent'); else { setSendState('failed'); setSendError(r.reason); }
+    } catch (e) {
+      setSendState('failed'); setSendError(e instanceof Error ? e.message : String(e));
+    }
+  };
 
   const { sheetRows, rowError } = useMemo(() => {
     try {
@@ -183,6 +202,29 @@ export function NIAExportDialog({ claimNo, rows, ageMonths, depType, onClose }: 
                   </>
                 )}
               </div>
+
+              {extPresent && (
+                <div>
+                  <div className="text-[11px] font-semibold text-muted-foreground px-3 pb-1">
+                    3 · SEND TO PORTAL
+                  </div>
+                  <div className="px-3 text-xs text-muted-foreground">
+                    Hands the figures and the Excel to the SurveyOS extension. On the New India portal, open this claim and click <span className="font-semibold">Fill</span>. Nothing is submitted for you.
+                  </div>
+                  <button
+                    onClick={sendToExtension}
+                    disabled={sendState === 'sending' || !!rowError}
+                    className="mt-2 mx-3 flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-600 text-white text-xs font-semibold disabled:opacity-50"
+                  >
+                    {sendState === 'sending' ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                    Send to extension
+                  </button>
+                  {sendState === 'sent' && (
+                    <div className="mt-2 px-3 text-xs text-emerald-700">Ready — open the claim on the New India portal and click Fill.</div>
+                  )}
+                  {sendState === 'failed' && <div className="mt-2 px-3 text-xs text-destructive">{sendError}</div>}
+                </div>
+              )}
             </>
           )}
 

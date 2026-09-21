@@ -448,6 +448,7 @@ export function AssessmentGrid() {
 
       {showNiaExport && (
         <NIAExportDialog
+          claim={currentClaim}
           claimNo={currentClaim?.policy?.claimNumber ?? ''}
           rows={assessmentRows}
           ageMonths={ageMonths}
