@@ -44,7 +44,7 @@ Telegram.
 | D6 | **Generated outputs that exist as a `Blob` save themselves** into the claim folder when it is connected. The browser download still happens, unchanged. |
 | D7 | **Existing behaviour is not removed.** Photos stay in the record for now (see §6); Drive uploads stay; the Sync picker stays. |
 | D8 | Deleting an index entry never deletes bytes silently — the file is left on disk and the surveyor is told the path. |
-| D9 | **Permission is asked inside the click.** Chrome re-grants folder access only in a user gesture, so every flow that ends in a write calls `ensureReadWrite` first, before any async work (upload → extraction → write must ask up front). A write that finds itself without permission fails with a clear toast, never silently. |
+| D9 | **Permission is asked on the Documents tab.** Chrome re-grants folder access only inside a click. The Documents tab shows the permission state and an *Allow access* button; producers (print, upload, export) never prompt — if access is missing they save nothing and say which button to press. |
 | D10 | **The index is a map, not an array** — `documents: Record<id, ClaimDocument>` — so two devices adding entries at once merge by key under the per-field multidevice sync instead of one overwriting the other. |
 
 **Decided at implementation**

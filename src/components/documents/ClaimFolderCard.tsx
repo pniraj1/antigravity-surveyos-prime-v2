@@ -1,14 +1,15 @@
 'use client';
 import React, { useState } from 'react';
-import { FolderOpen, Laptop } from 'lucide-react';
+import { FolderOpen, Laptop, AlertTriangle } from 'lucide-react';
 
 interface Props {
   supported: boolean;
-  folder: { rootName: string; device: string; claimPath: string | null } | null;
+  folder: { rootName: string; device: string; claimPath: string | null; permission: PermissionState } | null;
   onConnect: (deviceLabel: string) => void;
+  onReconnect: () => void;
 }
 
-export function ClaimFolderCard({ supported, folder, onConnect }: Props) {
+export function ClaimFolderCard({ supported, folder, onConnect, onReconnect }: Props) {
   const [label, setLabel] = useState('');
   if (!supported) {
     return (
@@ -47,7 +48,16 @@ export function ClaimFolderCard({ supported, folder, onConnect }: Props) {
       <FolderOpen size={16} className="text-primary" />
       <span className="font-mono text-xs">{folder.claimPath ?? folder.rootName}</span>
       <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><Laptop size={12} /> {folder.device}</span>
-      <button onClick={() => onConnect(folder.device)} className="ml-auto text-xs text-muted-foreground underline">Change</button>
+      {folder.permission === 'granted' ? (
+        <button onClick={() => onConnect(folder.device)} className="ml-auto text-xs text-muted-foreground underline">Change</button>
+      ) : (
+        <span className="ml-auto inline-flex items-center gap-2 text-xs text-amber-600">
+          <AlertTriangle size={12} /> Folder access needed for this session
+          <button onClick={onReconnect} className="font-semibold px-3 py-1.5 rounded-lg bg-primary text-primary-foreground">
+            Allow access
+          </button>
+        </span>
+      )}
     </div>
   );
 }

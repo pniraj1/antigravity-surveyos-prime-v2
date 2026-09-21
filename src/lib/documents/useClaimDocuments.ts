@@ -10,7 +10,7 @@ import { claimDocuments, removeDocument, onThisDevice } from './index-ops';
 import { openDocument, claimFolderPath, NotOnThisDeviceError, PermissionDeniedError } from './folder';
 import { saveDocuments } from './sink';
 
-type FolderInfo = { rootName: string; device: string; claimPath: string | null };
+type FolderInfo = { rootName: string; device: string; claimPath: string | null; permission: PermissionState };
 
 export function useClaimDocuments() {
   const claim = useClaimStore((s) => s.currentClaim);
@@ -26,7 +26,9 @@ export function useClaimDocuments() {
     const label = await getDeviceLabel();
     const current = useClaimStore.getState().currentClaim;
     if (!handle || !current) return { device: label, folder: null };
-    return { device: label, folder: { rootName: handle.name, device: label, claimPath: await claimFolderPath(current) } };
+    // Only query here — requestPermission needs a click (see reconnect).
+    const permission = handle.queryPermission ? await handle.queryPermission({ mode: 'readwrite' }) : 'granted';
+    return { device: label, folder: { rootName: handle.name, device: label, claimPath: await claimFolderPath(current), permission } };
   }, [claimId, folderName]);
 
   const applyFolder = (r: { device: string; folder: FolderInfo | null }) => {
@@ -53,6 +55,13 @@ export function useClaimDocuments() {
     }
   }, [loadFolder]);
 
+  const reconnect = useCallback(async () => {
+    const handle = await getStoredRootHandle();
+    if (!handle) return;
+    if (await ensureReadWrite(handle)) applyFolder(await loadFolder());
+    else toast.error('Folder access was not granted.');
+  }, [loadFolder]);
+
   const addFiles = useCallback(async (type: DocType, files: File[]) => {
     await saveDocuments(type, files.map((f) => ({ blob: f, name: f.name })), 'upload');
   }, []);
@@ -74,5 +83,5 @@ export function useClaimDocuments() {
   }, [claim, updateClaim]);
 
   const documents = claim ? claimDocuments(claim).map((d) => ({ ...d, here: onThisDevice(d, device) })) : [];
-  return { supported, folder, documents, connect, addFiles, open, remove };
+  return { supported, folder, documents, connect, reconnect, addFiles, open, remove };
 }

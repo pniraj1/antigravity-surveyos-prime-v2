@@ -42,9 +42,10 @@ async function doSave(
     toast.success(`${DOC_TYPE_LABEL[type]} saved to the claim folder`, { duration: 2500 });
     return written;
   } catch (err) {
-    const msg = err instanceof PermissionDeniedError
-      ? 'Claim folder: access not granted — reconnect it on the Documents tab.'
-      : `Claim folder: could not save ${DOC_TYPE_LABEL[type]} (${err instanceof Error ? err.message : String(err)})`;
+    const text = err instanceof Error ? err.message : String(err);
+    const msg = err instanceof PermissionDeniedError || /user gesture|user activation|SecurityError/i.test(`${err instanceof Error ? err.name : ''} ${text}`)
+      ? 'Claim folder: click "Allow access" on the Documents tab once this session, then try again.'
+      : `Claim folder: could not save ${DOC_TYPE_LABEL[type]} (${text})`;
     toast.error(msg, { duration: 5000 });
     return [];
   }
