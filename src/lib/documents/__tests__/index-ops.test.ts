@@ -1,0 +1,42 @@
+import { describe, it, expect } from 'vitest';
+import { createBlankClaim } from '@/types/claim';
+import type { ClaimDocument } from '@/types/documents';
+import { claimDocuments, addDocuments, replaceByType, removeDocument, onThisDevice, newDocId } from '../index-ops';
+
+const doc = (p: Partial<ClaimDocument>): ClaimDocument => ({
+  id: p.id ?? newDocId(), type: 'rc', relPath: 'RC Book.pdf', mime: 'application/pdf', size: 10,
+  addedAt: '2026-09-21T10:00:00Z', source: 'upload', devices: ['Office PC'], ...p,
+});
+
+describe('index-ops', () => {
+  it('claimDocuments is [] on old claims and sorted by addedAt', () => {
+    const c = createBlankClaim();
+    expect(claimDocuments(c)).toEqual([]);
+    const c2 = addDocuments(c, [doc({ id: 'b', addedAt: '2026-09-21T11:00:00Z' }), doc({ id: 'a', addedAt: '2026-09-21T09:00:00Z' })]);
+    expect(claimDocuments(c2).map((d) => d.id)).toEqual(['a', 'b']);
+  });
+  it('addDocuments does not mutate and keys by id', () => {
+    const c = createBlankClaim();
+    const c2 = addDocuments(c, [doc({ id: 'x' })]);
+    expect(c.documents).toBeUndefined();
+    expect(c2.documents?.x.type).toBe('rc');
+  });
+  it('replaceByType swaps all entries of that type and reports the replaced ones', () => {
+    const c = addDocuments(createBlankClaim(), [doc({ id: 'old1' }), doc({ id: 'old2', relPath: 'RC Book 2.pdf' }), doc({ id: 'dl', type: 'dl', relPath: 'Driving Licence.jpg' })]);
+    const { claim, replaced } = replaceByType(c, 'rc', [doc({ id: 'new' })]);
+    expect(Object.keys(claim.documents!).sort()).toEqual(['dl', 'new']);
+    expect(replaced.map((d) => d.id).sort()).toEqual(['old1', 'old2']);
+  });
+  it('removeDocument drops one id', () => {
+    const c = addDocuments(createBlankClaim(), [doc({ id: 'a' }), doc({ id: 'b' })]);
+    expect(Object.keys(removeDocument(c, 'a').documents!)).toEqual(['b']);
+  });
+  it('onThisDevice', () => {
+    expect(onThisDevice(doc({}), 'Office PC')).toBe(true);
+    expect(onThisDevice(doc({}), 'Laptop')).toBe(false);
+  });
+  it('newDocId is unique-ish and prefixed', () => {
+    expect(newDocId()).toMatch(/^doc-\d+-[a-z0-9]{6}$/);
+    expect(newDocId()).not.toBe(newDocId());
+  });
+});
