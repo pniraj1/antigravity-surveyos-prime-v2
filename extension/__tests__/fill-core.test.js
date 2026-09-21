@@ -1,0 +1,105 @@
+import { describe, it, expect } from 'vitest';
+import { normaliseClaimNo, transforms, isEmptyValue, decide, planFill } from '../src/lib/fill-core.js';
+import map from '../maps/nia-nontieup.json';
+
+describe('normaliseClaimNo', () => {
+  it('uppercases and strips everything but letters and digits', () => {
+    expect(normaliseClaimNo(' 3101/00312/24-c ')).toBe('31010031224C');
+    expect(normaliseClaimNo('3101 00312 24C')).toBe('31010031224C');
+  });
+});
+
+describe('transforms', () => {
+  it('ddmmyyyy accepts ISO, ISO datetime and already-dmy', () => {
+    expect(transforms.ddmmyyyy('2026-09-18')).toBe('18/09/2026');
+    expect(transforms.ddmmyyyy('2026-09-18T14:30:00Z')).toBe('18/09/2026');
+    expect(transforms.ddmmyyyy('18/09/2026')).toBe('18/09/2026');
+  });
+  it('hhmm pads and strips seconds', () => {
+    expect(transforms.hhmm('9:05')).toBe('09:05');
+    expect(transforms.hhmm('14:30:00')).toBe('14:30');
+  });
+  it('money2dp', () => {
+    expect(transforms.money2dp(1234.5)).toBe('1234.50');
+    expect(transforms.money2dp('0')).toBe('0.00');
+  });
+  it('yn maps truthy strings', () => {
+    expect(transforms.yn('Y')).toBe('Y');
+    expect(transforms.yn(true)).toBe('Y');
+    expect(transforms.yn('N')).toBe('N');
+  });
+});
+
+describe('isEmptyValue / decide (E4)', () => {
+  it('portal defaults count as empty', () => {
+    expect(isEmptyValue('', '')).toBe(true);
+    expect(isEmptyValue(null, '')).toBe(true);
+    expect(isEmptyValue(undefined, null)).toBe(true);
+    expect(isEmptyValue('N', 'N')).toBe(true);
+    expect(isEmptyValue(0, '')).toBe(true);
+    expect(isEmptyValue('0', '')).toBe(true);
+  });
+  it('a human-set value is not empty', () => {
+    expect(isEmptyValue('Pune', '')).toBe(false);
+    expect(isEmptyValue('Y', 'N')).toBe(false);
+    expect(isEmptyValue(1500, '')).toBe(false);
+  });
+  it('decide', () => {
+    expect(decide('', '', 'Pune')).toBe('fill');
+    expect(decide('Nashik', '', 'Pune')).toBe('kept');
+    expect(decide('Pune', '', 'Pune')).toBe('same');
+    expect(decide(new Date('2026-09-18'), null, '18/09/2026')).toBe('kept');
+  });
+});
+
+describe('planFill', () => {
+  const packet = {
+    v: 1, portal: 'nia', flow: 'nontieup', claimNo: '1', builtAt: '',
+    fields: { surveyDate: '2026-09-18', surveyPlace: 'Pune', netSalvage: 300, paintingAssessed: 2000, paintingEstimate: 2000, feeGstApplicable: 'Y' },
+    files: [],
+  };
+  const read = (current = {}, radios = {}) => ({
+    current: (p) => current[p],
+    radioValues: (p) => radios[p] ?? [],
+  });
+
+  it('fills empty fields with transformed values, in map order', () => {
+    const steps = planFill(map, packet, read({}, { [map.fields.surveyDateRadio.modelPath]: ['16/09/2026', '17/09/2026', '18/09/2026', 'Others'] }));
+    const by = Object.fromEntries(steps.map((s) => [s.name, s]));
+    expect(by.surveyPlace).toMatchObject({ action: 'fill', value: 'Pune' });
+    expect(by.netSalvage).toMatchObject({ action: 'fill', value: '300.00' });
+    expect(by.surveyDate).toMatchObject({ action: 'fill', value: '18/09/2026' });
+    expect(by.feeGstApplicable).toMatchObject({ action: 'fill', value: 'Y' });
+    expect(steps.findIndex((s) => s.name === 'surveyDateRadio')).toBeLessThan(steps.findIndex((s) => s.name === 'surveyDate'));
+  });
+
+  it('dateRadioOrOthers picks the matching radio, else Others', () => {
+    const radios = { [map.fields.surveyDateRadio.modelPath]: ['16/09/2026', '17/09/2026', '18/09/2026', 'Others'] };
+    const a = planFill(map, packet, read({}, radios)).find((s) => s.name === 'surveyDateRadio');
+    expect(a).toMatchObject({ action: 'fill', value: '18/09/2026' });
+    const old = { ...packet, fields: { ...packet.fields, surveyDate: '2026-01-01' } };
+    const b = planFill(map, old, read({}, radios)).find((s) => s.name === 'surveyDateRadio');
+    expect(b).toMatchObject({ action: 'fill', value: 'Others' });
+  });
+
+  it('constant fields fire only when onlyIf is present', () => {
+    const withPaint = planFill(map, packet, read()).find((s) => s.name === 'paintingWork');
+    expect(withPaint).toMatchObject({ action: 'fill', value: 'Consolidated' });
+    const noPaint = { ...packet, fields: { surveyPlace: 'Pune' } };
+    const without = planFill(map, noPaint, read()).find((s) => s.name === 'paintingWork');
+    expect(without).toMatchObject({ action: 'skip' });
+  });
+
+  it('keeps human-set values and marks same', () => {
+    const cur = { [map.fields.surveyPlace.modelPath]: 'Nashik', [map.fields.netSalvage.modelPath]: '300' };
+    const steps = planFill(map, packet, read(cur));
+    expect(steps.find((s) => s.name === 'surveyPlace')).toMatchObject({ action: 'kept', current: 'Nashik' });
+    expect(steps.find((s) => s.name === 'netSalvage')).toMatchObject({ action: 'same' });
+  });
+
+  it('skips fields absent from the packet and truncates to maxLen', () => {
+    const steps = planFill(map, { ...packet, fields: { surveyPlace: 'x'.repeat(150) } }, read());
+    expect(steps.find((s) => s.name === 'surveyPlace').value).toHaveLength(100);
+    expect(steps.find((s) => s.name === 'claimantMobile')).toMatchObject({ action: 'skip' });
+  });
+});
