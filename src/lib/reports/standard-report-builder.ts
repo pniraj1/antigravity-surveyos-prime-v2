@@ -24,7 +24,8 @@ import { imt23Totals, imt23FootnoteText } from '@/lib/calculations/imt23-totals'
 import { getCompulsoryExcess, calculateAssessmentSummary } from '@/lib/calculations/assessment';
 import { shouldStartSupplementaryBand } from '@/lib/calculations/utils';
 import { buildSerialMap } from '@/lib/calculations/serial-numbers';
-import { buildPrintShell, footerFromProfile } from './print-shell';
+import { buildPrintShell, footerFromProfile, openPrintWindow } from './print-shell';
+import { saveDocuments } from '@/lib/documents/sink';
 
 // NOTE: SurveyReportDocument.tsx (React-PDF) is no longer a parallel rendering
 // of this report — it is only used by scripts/generate-pdf.ts to produce the
@@ -1002,18 +1003,8 @@ export function triggerStandardPrint(
   mode: ReportMode = 'final'
 ): void {
   const html = buildStandardPrintDocument(claim, profile, mode);
-  const w = window.open('', '_blank');
-  if (!w) {
-    alert('Popup blocked — please allow popups for this site and try again.');
-    return;
-  }
-  w.document.write(html);
-  w.document.close();
-  setTimeout(() => {
-    w.focus();
-    w.print();
-  }, 600);
+  const type = mode === 'bill-check' ? 'billCheckReport' : 'surveyReport';
+  const name = mode === 'bill-check' ? 'Bill Check Report.html' : 'Final Survey Report.html';
+  void saveDocuments(type, [{ blob: new Blob([html], { type: 'text/html' }), name }], 'generated');
+  openPrintWindow(html);
 }
-
-// ─── Legacy alias (keeps any future imports from uiic-html-builder stub working)
-export { triggerStandardPrint as triggerUIICPrint };

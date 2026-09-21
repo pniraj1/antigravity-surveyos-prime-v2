@@ -27,7 +27,8 @@ import { aggregateGst } from '@/lib/calculations/gst-bands';
 import { getCompulsoryExcess, calculateBillCheckSummary, calculateAssessmentSummary } from '@/lib/calculations/assessment';
 import { buildSerialMap } from '@/lib/calculations/serial-numbers';
 import { shouldStartSupplementaryBand } from '@/lib/calculations/utils';
-import { buildPrintShell, footerFromProfile } from './print-shell';
+import { buildPrintShell, footerFromProfile, openPrintWindow } from './print-shell';
+import { saveDocuments } from '@/lib/documents/sink';
 import { formatSurveyDateTime } from './report-utils';
 import { resolveBillSalvage } from './bill-check-projection';
 
@@ -514,17 +515,8 @@ export function buildUIICFinalPrintDocument(claim: ClaimData, profile: SurveyorP
 
 export function triggerUIICFinalPrint(claim: ClaimData, profile: SurveyorProfile | null): void {
   const html = buildUIICFinalPrintDocument(claim, profile);
-  const w = window.open('', '_blank');
-  if (!w) {
-    alert('Popup blocked — please allow popups for this site and try again.');
-    return;
-  }
-  w.document.write(html);
-  w.document.close();
-  setTimeout(() => {
-    w.focus();
-    w.print();
-  }, 600);
+  void saveDocuments('surveyReport', [{ blob: new Blob([html], { type: 'text/html' }), name: 'Final Survey Report.html' }], 'generated');
+  openPrintWindow(html);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1144,15 +1136,6 @@ export function buildUIICBillCheckPrintDocument(claim: ClaimData, profile: Surve
 
 export function triggerUIICBillCheckPrint(claim: ClaimData, profile: SurveyorProfile | null): void {
   const html = buildUIICBillCheckPrintDocument(claim, profile);
-  const w = window.open('', '_blank');
-  if (!w) {
-    alert('Popup blocked — please allow popups for this site and try again.');
-    return;
-  }
-  w.document.write(html);
-  w.document.close();
-  setTimeout(() => {
-    w.focus();
-    w.print();
-  }, 600);
+  void saveDocuments('billCheckReport', [{ blob: new Blob([html], { type: 'text/html' }), name: 'Bill Check Report.html' }], 'generated');
+  openPrintWindow(html);
 }

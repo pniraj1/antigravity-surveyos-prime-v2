@@ -142,3 +142,24 @@ export function buildPrintShell(body: string, opts: PrintShellOptions): string {
 </body>
 </html>`;
 }
+
+/**
+ * Open the report in a new window and print it. One body for every report —
+ * before this each trigger pasted the same twelve lines.
+ * `closeAfter` closes the window once the print dialog has been dismissed
+ * (the reinspection report's old behaviour).
+ */
+export function openPrintWindow(html: string, opts: { features?: string; closeAfter?: boolean } = {}): void {
+  const w = window.open('', '_blank', opts.features);
+  if (!w) {
+    alert('Popup blocked — please allow popups for this site and try again.');
+    return;
+  }
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => {
+    w.focus();
+    w.print();
+    if (opts.closeAfter) setTimeout(() => w.close(), 1500);
+  }, 600);
+}

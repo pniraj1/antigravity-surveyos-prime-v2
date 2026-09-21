@@ -8,7 +8,8 @@
 import type { ClaimData } from '@/types/claim';
 import type { SurveyorProfile } from '@/types/vehicle';
 import { formatDateDMY, getVehicleAgeMonths, getSurveyorHeader, getSigBlock } from './report-utils';
-import { buildPrintShell, footerFromProfile } from './print-shell';
+import { buildPrintShell, footerFromProfile, openPrintWindow } from './print-shell';
+import { saveDocuments } from '@/lib/documents/sink';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -184,13 +185,7 @@ export function buildReinspectionPrintDocument(claim: ClaimData, profile: Survey
 }
 
 export function triggerReinspectionPrint(claim: ClaimData, profile: SurveyorProfile | null): void {
-  const w = window.open('', '_blank', 'width=900,height=1200');
-  if (w) {
-    w.document.write(buildReinspectionPrintDocument(claim, profile));
-    w.document.close();
-    w.addEventListener('load', () => {
-      w.print();
-      setTimeout(() => w.close(), 1500);
-    });
-  }
+  const html = buildReinspectionPrintDocument(claim, profile);
+  void saveDocuments('reinspectionReport', [{ blob: new Blob([html], { type: 'text/html' }), name: 'Reinspection Report.html' }], 'generated');
+  openPrintWindow(html, { features: 'width=900,height=1200', closeAfter: true });
 }
