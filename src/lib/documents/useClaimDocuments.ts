@@ -19,12 +19,15 @@ export function useClaimDocuments() {
   const [folder, setFolder] = useState<FolderInfo | null>(null);
   const [device, setDevice] = useState('This PC');
 
+  const claimId = claim?.id;
+  const folderName = claim?.documentsFolder;
   const loadFolder = useCallback(async (): Promise<{ device: string; folder: FolderInfo | null }> => {
     const handle = await getStoredRootHandle().catch(() => null);
     const label = await getDeviceLabel();
-    if (!handle || !claim) return { device: label, folder: null };
-    return { device: label, folder: { rootName: handle.name, device: label, claimPath: await claimFolderPath(claim) } };
-  }, [claim]);
+    const current = useClaimStore.getState().currentClaim;
+    if (!handle || !current) return { device: label, folder: null };
+    return { device: label, folder: { rootName: handle.name, device: label, claimPath: await claimFolderPath(current) } };
+  }, [claimId, folderName]);
 
   const applyFolder = (r: { device: string; folder: FolderInfo | null }) => {
     setDevice(r.device);
@@ -33,7 +36,9 @@ export function useClaimDocuments() {
 
   useEffect(() => {
     if (!supported) return;
-    loadFolder().then(applyFolder).catch(() => setFolder(null));
+    let cancelled = false;
+    loadFolder().then((r) => { if (!cancelled) applyFolder(r); }).catch(() => { if (!cancelled) setFolder(null); });
+    return () => { cancelled = true; };
   }, [supported, loadFolder]);
 
   const connect = useCallback(async (deviceLabel: string) => {

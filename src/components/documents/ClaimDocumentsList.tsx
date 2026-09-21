@@ -25,14 +25,14 @@ export function ClaimDocumentsList({ documents, connected, onAdd, onOpen, onRemo
         <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Documents · {documents.length}</div>
         {connected && (
           <div className="flex items-center gap-2">
-            <select value={type} onChange={(e) => setType(e.target.value as DocType)} className="text-xs rounded border border-border bg-background px-2 py-1">
+            <select value={type} onChange={(e) => setType(e.target.value as DocType)} aria-label="Document type" className="text-xs rounded border border-border bg-background px-2 py-1">
               {(Object.keys(DOC_TYPE_LABEL) as DocType[]).map((t) => <option key={t} value={t}>{DOC_TYPE_LABEL[t]}</option>)}
             </select>
             <button onClick={() => fileRef.current?.click()} className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg bg-primary text-primary-foreground">
               <Plus size={12} /> Add file
             </button>
             <input
-              ref={fileRef} type="file" multiple className="hidden"
+              ref={fileRef} type="file" multiple className="hidden" aria-label="Add file"
               onChange={(e) => { const fs = Array.from(e.target.files ?? []); e.target.value = ''; if (fs.length) onAdd(type, fs); }}
             />
           </div>

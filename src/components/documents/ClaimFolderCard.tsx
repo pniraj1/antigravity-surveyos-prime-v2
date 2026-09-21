@@ -29,6 +29,7 @@ export function ClaimFolderCard({ supported, folder, onConnect }: Props) {
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           placeholder="Name this PC (e.g. Office PC)"
+          aria-label="Name for this PC"
           className="text-xs rounded border border-border bg-background px-2 py-1 w-44"
           maxLength={40}
         />
