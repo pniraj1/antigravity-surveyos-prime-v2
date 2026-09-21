@@ -11,6 +11,7 @@ import { getDepreciationRate } from '@/lib/calculations/depreciation';
 import { computeRowNet, effectiveAssessed } from '@/lib/calculations/row-net';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
+import { saveDocuments } from '@/lib/documents/sink';
 
 /** The portal's header row, in the order it expects. It counts these keys. */
 export const NIA_COLUMNS = [
@@ -214,5 +215,8 @@ export async function exportNiaAssessmentExcel(
   const wb = buildNiaWorkbook(niaAssessmentRows(rows, ageMonths, depType));
   const buffer = await wb.xlsx.writeBuffer();
   const safe = (claimNo || 'claim').replace(/[^A-Za-z0-9_-]+/g, '_');
-  saveAs(new Blob([buffer]), `${safe}_Primary_Assessment_Template.xlsx`);
+  const name = `${safe}_Primary_Assessment_Template.xlsx`;
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  await saveDocuments('niaAssessmentExcel', [{ blob, name }], 'generated');
+  saveAs(blob, name);
 }

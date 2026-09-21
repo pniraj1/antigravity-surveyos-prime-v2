@@ -33,6 +33,7 @@ import { logger } from '@/lib/utils/logger';
 import { CATEGORY_BADGE_LABELS, CATEGORY_BADGE_COLOURS } from '@/lib/constants/deduction-categories';
 import { GapReviewStep } from '@/components/insured-report/GapReviewStep';
 import { DepreciationBreakdownTable } from '@/components/insured-report/DepreciationBreakdownTable';
+import { saveDocuments } from '@/lib/documents/sink';
 
 // ─── helpers ──────────────────────────────────────────────
 
@@ -327,6 +328,7 @@ export function InsuredReportTab() {
           surveyorMobile={profile.mobile || ''}
         />
       ).toBlob();
+      await saveDocuments('insuredSummary', [{ blob, name: 'Insured Summary.pdf' }], 'generated');
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
