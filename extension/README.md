@@ -8,8 +8,10 @@ Fills New India's non-tieup survey page from a SurveyOS claim. Spec:
 2. chrome://extensions → Developer mode → Load unpacked → this folder
 3. For the fixture only: on the extension's Details page enable **Allow access
    to file URLs**, and temporarily add `"file:///*"` to both portal `matches`
-   arrays in `manifest.json`. Revert before zipping — `npm run build:ext` refuses
-   a manifest containing `file://` or `localhost`.
+   arrays in `manifest.json`. No need to revert before zipping — the build strips
+   `localhost` and `file://` matches from the zipped manifest.
+4. To make a remote map win over the bundled one, bump `version` in
+   `scripts/portal-map/nia-nontieup.overlay.json`, regenerate, deploy hosting.
 
 ## Fixture walk-through (no portal needed)
 1. Open `extension/fixture/nia-nontieup.html` in Chrome.

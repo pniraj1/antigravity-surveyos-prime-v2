@@ -37,7 +37,7 @@ an extension can run there without being pasted in by hand every time.
 | E5 | **Nothing leaves the machine.** The packet moves SurveyOS tab → `chrome.storage.local` → portal tab. The only network call the extension makes is fetching its field map from our own hosting. No page content is read beyond the claim number and the target fields. (DPDP: the packet holds insured PII — mobile.) |
 | E6 | **Packet expires.** Cleared after a successful fill or after 24 h, whichever first. |
 | E7 | **No AI in the extension.** Field maps are written by us from captured portal HTML. |
-| E8 | The extension **fails per field, not per page.** A field whose model path no longer exists is reported and skipped; the rest still fill. |
+| E8 | The extension **fails per field, not per page.** A field whose model path no longer exists is reported and skipped; the rest still fill. Per-field result: `filled \| kept \| same \| skip \| notFound \| manual \| invalid \| error`; a write the portal's own validator rejects is reported `invalid` with the validator names, never `filled`. |
 | E9 | **The map is generated, never typed.** `scripts/portal-map/build-ext-map.py` derives `nia-nontieup.json` from `nia-nontieup-survey.json` plus a small canonical-name overlay; a hand-edited model path is a bug. The overlay is the only file we write. |
 | E10 | **Writes go through Angular's own input path.** `ngModelController.$setViewValue(value)` + `$render()`, inside `scope.$apply` (or `$evalAsync` only when a digest is already running), so a throwing write surfaces as an `error` step and `ng-change`, validators and the portal's computed totals run exactly as if typed. Never a bare scope assignment. |
 
@@ -81,13 +81,13 @@ export interface PortalPacket {
 | ~~`claimantEmail`~~ | in `CANONICAL_FIELDS` but SurveyOS's policy record has no email — not sent; would send if a future field supplies it | — |
 | ~~`provisionAmount`~~ | `surveyorAccessedAmount` is **disabled** on ordinary claims (enabled only for theft / total loss) — not sent | — |
 | ~~`expectedRepairDate`~~ | SurveyOS holds no such field — not sent | — |
-| `invoiceInNameOfNIA`, `gstApplicable`, `vendorInvoiceNo`, `vendorInvoiceDate` | bill check details | Invoice 1 |
+| ~~`invoiceInNameOfNIA`~~ (SurveyOS holds none), `gstApplicable`, `vendorInvoiceNo`, `vendorInvoiceDate` | bill check details | Invoice 1 |
 | `paintingEstimate`, `paintingAssessed` | `niaPainting()` — **standard policy only**; omitted on nil-dep (R11) | Invoice 1 painting |
 | `noOfInvoices` | `1` | Claim Assessment |
 | `netSalvage`, `compulsoryExcess`, `voluntaryExcess` | assessment summary | Claim Assessment |
 | ~~`otherDeductions`~~, ~~`towingCharges`~~ | **not sent in v1** — SurveyOS has towing only for total-loss claims | — |
 | ~~add-on covers~~ | the five cover fields are **amounts**, not flags; SurveyOS holds none — surveyor types them | — |
-| `feeInvoiceNo`, `feeInvoiceDate`, `professionalFee`, `photosAmount`, `conveyanceAmount`, `feeOthers`, `feeGstApplicable`, `feeHsn`, `feeGstPercent` | `feeBill` | Survey Fee Bill |
+| ~~`feeInvoiceNo`~~, `feeInvoiceDate`, `professionalFee`, `photosAmount`, `conveyanceAmount`, `feeOthers`, `feeGstApplicable`, ~~`feeHsn`~~, `feeGstPercent` (struck: SurveyOS holds none of them) | `feeBill` | Survey Fee Bill |
 | *(derived)* `surveyDateRadio` | from `surveyDate`: one of the three portal dates, else `Others` | Quick Update |
 | *(derived)* `paintingWork` = `Consolidated` | only when `paintingAssessed` is sent (standard policy) | Invoice 1 painting |
 
@@ -176,7 +176,10 @@ Protocol:
      `$setViewValue(value)`, `$render()`, inside `scope.$apply` (or
      `$evalAsync` if a digest is already running) (E10); radios/selects match
      on the map's `options`; a field with no ngModelController (a jQuery
-     widget) → `manual`, listed for the surveyor; a throwing write → `error`
+     widget) → `manual`, listed for the surveyor; a throwing write → `error`;
+     a write the portal's own validator rejects (`ctrl.$invalid`) → `invalid`
+     with the validator names, never `filled`. Per-field vocabulary:
+     `filled | kept | same | skip | notFound | manual | invalid | error`
    - files: `new File([bytes], name, { type })` → `DataTransfer` →
      `input.files = dt.files` → `dispatchEvent(new Event('change', { bubbles: true }))`.
      NIA's `readExcel` runs on `change`, so the portal parses the sheet
