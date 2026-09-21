@@ -6,8 +6,9 @@
   const { normaliseClaimNo, planFill } = globalThis.SxFill;
   const ng = () => /** @type {any} */ (globalThis).angular;
 
+  const esc = (/** @type {string} */ s) => s.replace(/[\\"]/g, '\\$&');
   const q = (/** @type {string} */ p) =>
-    /** @type {HTMLElement[]} */ (Array.from(document.querySelectorAll(`[ng-model="${p}"], [data-ng-model="${p}"]`)));
+    /** @type {HTMLElement[]} */ (Array.from(document.querySelectorAll(`[ng-model="${esc(p)}"], [data-ng-model="${esc(p)}"]`)));
 
   function ctrlScope(/** @type {any} */ map) {
     const el = document.querySelector(`[ng-controller="${map.controller}"], [data-ng-controller="${map.controller}"]`);
@@ -25,12 +26,13 @@
     if (!ng()) return { ok: false, reason: 'AngularJS not found on this page' };
     const scope = ctrlScope(map);
     if (!scope) return { ok: false, reason: `controller ${map.controller} not found — portal changed?` };
-    const claimNo = readPath(scope, map.claimNoPath) ?? readPath(scope, map.claimNoFallback);
+    const claimNo = readPath(scope, map.claimNoPath) || readPath(scope, map.claimNoFallback);
     const invoices = readPath(scope, map.invoiceCountPath);
     return { ok: true, claimNo: claimNo ? String(claimNo) : '', invoices: Array.isArray(invoices) ? invoices.length : 1 };
   }
 
-  /** E10: write like a keystroke, through the ngModelController. Returns 'filled' | 'manual'.
+  /** E10: write like a keystroke, through the ngModelController.
+   *  Returns 'filled' | 'manual' | 'invalid:<validator names>' (the portal's own validator rejected the value).
    *  Synchronous via $apply when no digest is running so a throwing $setViewValue/$render
    *  surfaces to the caller as an 'error' step instead of vanishing into $exceptionHandler. */
   function write(/** @type {HTMLElement} */ el, /** @type {string} */ value, /** @type {string} */ kind) {
@@ -41,10 +43,10 @@
       ctrl.$setViewValue(value);
       ctrl.$render();
       if (kind !== 'select') el.dispatchEvent(new Event('input', { bubbles: true }));
+      return ctrl.$invalid ? 'invalid:' + Object.keys(ctrl.$error || {}).join(',') : 'filled';
     };
-    if (scope.$root.$$phase) scope.$evalAsync(doWrite); // mid-digest: cannot $apply; runs next tick
-    else scope.$apply(doWrite);                          // synchronous; throws propagate to fill()
-    return 'filled';
+    if (scope.$root.$$phase) { scope.$evalAsync(doWrite); return 'filled'; } // mid-digest: runs next tick, validity unknown yet
+    return scope.$apply(doWrite);                                            // synchronous; throws propagate to fill()
   }
 
   function attachFile(/** @type {HTMLElement} */ el, /** @type {{name:string,mime:string,base64:string}} */ f) {
@@ -84,6 +86,7 @@
       try {
         const r = write(el, /** @type {string} */ (s.value), s.kind);
         if (r === 'filled') { el.style.outline = '2px solid #16a34a'; return { ...s, action: 'filled' }; }
+        if (typeof r === 'string' && r.startsWith('invalid:')) { el.style.outline = '2px solid #b91c1c'; return { ...s, action: 'invalid', why: r.slice(8) }; }
         return { ...s, action: 'manual', why: 'not Angular-bound' };
       } catch (e) {
         return { ...s, action: 'error', why: String(e) };
@@ -105,7 +108,11 @@
     if (ev.source !== window) return;
     const d = ev.data;
     if (!d || !d.sx || !d.type) return;
-    if (d.type === 'probe') window.postMessage({ sx: d.sx, type: 'probe:result', ...probe(d.map) }, '*');
-    if (d.type === 'fill') window.postMessage({ sx: d.sx, type: 'fill:result', ...fill(d.map, d.packet) }, '*');
+    try {
+      if (d.type === 'probe') window.postMessage({ sx: d.sx, type: 'probe:result', ...probe(d.map) }, '*');
+      if (d.type === 'fill') window.postMessage({ sx: d.sx, type: 'fill:result', ...fill(d.map, d.packet) }, '*');
+    } catch (e) {
+      window.postMessage({ sx: d.sx, type: `${d.type}:result`, ok: false, reason: String(e), steps: [], files: [] }, '*');
+    }
   });
 })();
