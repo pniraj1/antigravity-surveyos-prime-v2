@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "graph:build": "uvx code-review-graph build .",
     "graph:rebuild": "uvx code-review-graph build . --force",
-    "graph:stats": "uvx code-review-graph stats ."
+    "graph:stats": "uvx code-review-graph stats .",
+    "build:ext": "python scripts/build-ext.py"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",
