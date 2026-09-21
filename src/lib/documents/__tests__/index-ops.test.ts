@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createBlankClaim } from '@/types/claim';
 import type { ClaimDocument } from '@/types/documents';
-import { claimDocuments, addDocuments, replaceByType, removeDocument, onThisDevice, newDocId } from '../index-ops';
+import { claimDocuments, addDocuments, removeDocument, onThisDevice, newDocId } from '../index-ops';
 
 const doc = (p: Partial<ClaimDocument>): ClaimDocument => ({
   id: p.id ?? newDocId(), type: 'rc', relPath: 'RC Book.pdf', mime: 'application/pdf', size: 10,
@@ -20,12 +20,6 @@ describe('index-ops', () => {
     const c2 = addDocuments(c, [doc({ id: 'x' })]);
     expect(c.documents).toBeUndefined();
     expect(c2.documents?.x.type).toBe('rc');
-  });
-  it('replaceByType swaps all entries of that type and reports the replaced ones', () => {
-    const c = addDocuments(createBlankClaim(), [doc({ id: 'old1' }), doc({ id: 'old2', relPath: 'RC Book 2.pdf' }), doc({ id: 'dl', type: 'dl', relPath: 'Driving Licence.jpg' })]);
-    const { claim, replaced } = replaceByType(c, 'rc', [doc({ id: 'new' })]);
-    expect(Object.keys(claim.documents!).sort()).toEqual(['dl', 'new']);
-    expect(replaced.map((d) => d.id).sort()).toEqual(['old1', 'old2']);
   });
   it('removeDocument drops one id', () => {
     const c = addDocuments(createBlankClaim(), [doc({ id: 'a' }), doc({ id: 'b' })]);

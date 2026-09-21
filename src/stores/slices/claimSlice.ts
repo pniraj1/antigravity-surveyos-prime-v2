@@ -56,7 +56,6 @@ export interface ClaimSlice {
     w?: number,
     h?: number,
     kind?: PhotoItem['kind'],
-    tag?: PhotoTag,
   ) => void;
   setPhotoTag: (index: number, tag: PhotoTag | undefined) => void;
   deletePhoto: (index: number) => void;
@@ -270,13 +269,13 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
     }));
   },
 
-  addPhoto: (dataUrl, name, w, h, kind = 'damage', tag) => {
+  addPhoto: (dataUrl, name, w, h, kind = 'damage') => {
     set((state: ClaimSlice) => {
       if (!state.currentClaim) return {};
       return {
         currentClaim: {
           ...state.currentClaim,
-          photos: [...state.currentClaim.photos, { dataUrl, name, w, h, kind, ...(tag ? { tag } : {}) }],
+          photos: [...state.currentClaim.photos, { dataUrl, name, w, h, kind }],
           updatedAt: new Date().toISOString(),
         },
         isDirty: true,

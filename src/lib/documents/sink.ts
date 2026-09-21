@@ -50,6 +50,3 @@ async function doSave(
     return [];
   }
 }
-
-/** Spec D9: call this first thing in a click handler that will end in a write. */
-export { ensureReadWrite } from '@/lib/local-sync/directory-handle';
