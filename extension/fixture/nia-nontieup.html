@@ -1,0 +1,44 @@
+<!doctype html>
+<html ng-app="fixture"><head><meta charset="utf-8"><title>NIA nia-nontieup fixture</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.4.3/angular.min.js"></script>
+<style>label{display:block;margin:4px 0;font:13px system-ui}input,select,textarea{margin-left:6px}</style>
+</head><body ng-controller="surveyorWorklistSurveyCtrl">
+<h3>Fixture — nia-nontieup. Claim <span id="claimNo">{{surveyorData.worklist.viewClaimDetails.claimDetails.claimNumber}}</span></h3>
+<p>Set a claim number: <input data-ng-model="surveyorData.worklist.viewClaimDetails.claimDetails.claimNumber"> · ng-change log: <code>{{changes.join(', ')}}</code></p>
+<div ng-repeat="inv in surveyorData.worklist.multiInvoice track by $index"><h4>Invoice {{$index+1}}</h4>
+<label>dateOfSurveyRadio 03/08/2026 <input type="radio" name="dateOfSurveyRadio" value="03/08/2026" data-ng-model="surveyorData.worklist.quickUpdate.surveyDateRadio"></label>
+<label>dateOfSurveyRadio 04/08/2026 <input type="radio" name="dateOfSurveyRadio" value="04/08/2026" data-ng-model="surveyorData.worklist.quickUpdate.surveyDateRadio"></label>
+<label>dateOfSurveyRadio 05/08/2026 <input type="radio" name="dateOfSurveyRadio" value="05/08/2026" data-ng-model="surveyorData.worklist.quickUpdate.surveyDateRadio"></label>
+<label>dateOfSurveyRadio Others <input type="radio" name="dateOfSurveyRadio" value="Others" data-ng-model="surveyorData.worklist.quickUpdate.surveyDateRadio"></label>
+<label>dateOfSurvey <input type="text" name="dateOfSurvey" data-ng-model="surveyorData.worklist.quickUpdate.surveyDate" data-ng-change="log('surveyDate')"></label>
+<label>timeOfSurvey <input type="text" name="timeOfSurvey" data-ng-model="surveyorData.worklist.quickUpdate.timeOfSurvey" data-ng-change="log('surveyTime')"></label>
+<label>placeOfSurvey <textarea name="placeOfSurvey" data-ng-model="surveyorData.worklist.quickUpdate.placeOfSurvey" data-ng-change="log('surveyPlace')"></textarea></label>
+<label>mobileNo <input type="tel" name="mobileNo" data-ng-model="surveyorData.worklist.quickUpdate.claimantMobileNo" data-ng-change="log('claimantMobile')"></label>
+<label>emailId <input type="text" name="emailId" data-ng-model="surveyorData.worklist.quickUpdate.claimantEmailId" data-ng-change="log('claimantEmail')"></label>
+<label>Is GST Applicable?0 <select name="Is GST Applicable?0" data-ng-model="surveyorData.worklist.multiInvoice[$index].isGstApplicable" data-ng-change="log('gstApplicable')"><option value="">--Select--</option><option value="Y">Y</option><option value="N">N</option></select></label>
+<label>Vendor/Tax Invoice Number0 <input type="text" name="Vendor/Tax Invoice Number0" data-ng-model="surveyorData.worklist.multiInvoice[$index].vendorTaxInvoiceNumber" data-ng-change="log('vendorInvoiceNo')"></label>
+<label>Vendor/Tax Invoice Date0 <input type="text" name="Vendor/Tax Invoice Date0" data-ng-model="surveyorData.worklist.multiInvoice[$index].vendorTaxInvoiceDate" data-ng-change="log('vendorInvoiceDate')"></label>
+<label>Painting work details0 <select name="Painting work details0" data-ng-model="surveyorData.worklist.multiInvoice[$index].paintingWorkDetails" data-ng-change="log('paintingWork')"><option value="">--Select--</option><option value="Consolidated">Consolidated</option><option value="Breakup">Breakup</option></select></label>
+<label>Painting Charges Estimated Amount0 <input type="text" name="Painting Charges Estimated Amount0" data-ng-model="surveyorData.worklist.multiInvoice[$index].estimatedAmount" data-ng-change="log('paintingEstimate')"></label>
+<label>Painting Charges Assessed Amount0 <input type="text" name="Painting Charges Assessed Amount0" data-ng-model="surveyorData.worklist.multiInvoice[$index].assessedAmount" data-ng-change="log('paintingAssessed')"></label>
+<label>No of invoices available <select name="No of invoices available" data-ng-model="surveyorData.worklist.claimAssessment.noOfInvoices" data-ng-change="log('noOfInvoices')"><option value="">--Select--</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label>
+<label>Net Salvage <input type="text" name="Net Salvage" data-ng-model="surveyorData.worklist.claimAssessment.netSlavage" data-ng-change="log('netSalvage')"></label>
+<label>Less Compulsory Excess <input type="text" name="Less Compulsory Excess" data-ng-model="surveyorData.worklist.claimAssessment.lessCompulsoryExcess" data-ng-change="log('compulsoryExcess')"></label>
+<label>Less Voluntary Express <input type="text" name="Less Voluntary Express" data-ng-model="surveyorData.worklist.claimAssessment.lessVoluntaryExpress" data-ng-change="log('voluntaryExcess')"></label>
+<label>surveyorFeeInvoiceDate <input type="text" name="surveyorFeeInvoiceDate" data-ng-model="surveyorData.worklist.surveyFeeBill.surveyorFeeInvoiceDate" data-ng-change="log('feeInvoiceDate')"></label>
+<label>professionalFee <input type="text" name="professionalFee" data-ng-model="surveyorData.worklist.surveyFeeBill.professionalFee" data-ng-change="log('professionalFee')"></label>
+<label>photosAmount <input type="text" name="photosAmount" data-ng-model="surveyorData.worklist.surveyFeeBill.photosAmount" data-ng-change="log('photosAmount')"></label>
+<label>conveyanceAmount <input type="text" name="conveyanceAmount" data-ng-model="surveyorData.worklist.surveyFeeBill.conveyanceAmount" data-ng-change="log('conveyanceAmount')"></label>
+<label>others <input type="text" name="others" data-ng-model="surveyorData.worklist.surveyFeeBill.others" data-ng-change="log('feeOthers')"></label>
+<label>isGSTApplicable <select name="isGSTApplicable" data-ng-model="surveyorData.worklist.surveyFeeBill.isGSTApplicable" data-ng-change="log('feeGstApplicable')"><option value="">--Select--</option><option value="Y">Y</option><option value="N">N</option></select></label>
+<label>Primary Assessment Gst Percentage3 <input type="text" name="Primary Assessment Gst Percentage3" data-ng-model="surveyorData.worklist.surveyFeeBill.gstPercent" data-ng-change="log('feeGstPercent')"></label>
+<label>chooseFilePrim0 <input type="file" name="chooseFilePrim0" accept=".xls,.xlsx" data-ng-model="surveyorData.worklist.multiInvoice[$index].myFiles" onchange="window.__fileChanged=(this.files[0]||{}).name"></label>
+</div>
+<script>
+angular.module('fixture', []).controller('surveyorWorklistSurveyCtrl', ['$scope', function($scope) {
+  $scope.surveyorData = { worklist: { quickUpdate: {}, claimAssessment: {}, surveyFeeBill: {},
+    multiInvoice: [{}], viewClaimDetails: { claimDetails: { claimNumber: '' } } } };
+  $scope.changes = [];
+  $scope.log = function(k) { $scope.changes.push(k); };
+}]);
+</script></body></html>

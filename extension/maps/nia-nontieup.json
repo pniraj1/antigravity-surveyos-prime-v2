@@ -1,0 +1,149 @@
+{
+  "portal": "nia",
+  "flow": "nontieup",
+  "version": 1,
+  "route": "#/WorklistSurveyNew",
+  "controller": "surveyorWorklistSurveyCtrl",
+  "claimNoPath": "surveyorData.worklist.viewClaimDetails.claimDetails.claimNumber",
+  "claimNoFallback": "sessionStorage:claimNoForWorklist",
+  "invoiceCountPath": "surveyorData.worklist.multiInvoice",
+  "fields": {
+    "surveyDateRadio": {
+      "modelPath": "surveyorData.worklist.quickUpdate.surveyDateRadio",
+      "kind": "dateRadioOrOthers",
+      "empty": null,
+      "from": "surveyDate"
+    },
+    "surveyDate": {
+      "modelPath": "surveyorData.worklist.quickUpdate.surveyDate",
+      "kind": "text",
+      "empty": null,
+      "transform": "ddmmyyyy"
+    },
+    "surveyTime": {
+      "modelPath": "surveyorData.worklist.quickUpdate.timeOfSurvey",
+      "kind": "text",
+      "empty": "",
+      "transform": "hhmm"
+    },
+    "surveyPlace": {
+      "modelPath": "surveyorData.worklist.quickUpdate.placeOfSurvey",
+      "kind": "text",
+      "empty": "",
+      "maxLen": 100
+    },
+    "claimantMobile": {
+      "modelPath": "surveyorData.worklist.quickUpdate.claimantMobileNo",
+      "kind": "text",
+      "empty": ""
+    },
+    "claimantEmail": {
+      "modelPath": "surveyorData.worklist.quickUpdate.claimantEmailId",
+      "kind": "text",
+      "empty": ""
+    },
+    "gstApplicable": {
+      "modelPath": "surveyorData.worklist.multiInvoice[$index].isGstApplicable",
+      "kind": "select",
+      "empty": "",
+      "options": {
+        "Y": "Y",
+        "N": "N"
+      }
+    },
+    "vendorInvoiceNo": {
+      "modelPath": "surveyorData.worklist.multiInvoice[$index].vendorTaxInvoiceNumber",
+      "kind": "text",
+      "empty": "",
+      "maxLen": 30
+    },
+    "vendorInvoiceDate": {
+      "modelPath": "surveyorData.worklist.multiInvoice[$index].vendorTaxInvoiceDate",
+      "kind": "text",
+      "empty": null,
+      "transform": "ddmmyyyy"
+    },
+    "paintingWork": {
+      "modelPath": "surveyorData.worklist.multiInvoice[$index].paintingWorkDetails",
+      "kind": "select",
+      "empty": "",
+      "constant": "Consolidated",
+      "onlyIf": "paintingAssessed"
+    },
+    "paintingEstimate": {
+      "modelPath": "surveyorData.worklist.multiInvoice[$index].estimatedAmount",
+      "kind": "money",
+      "empty": ""
+    },
+    "paintingAssessed": {
+      "modelPath": "surveyorData.worklist.multiInvoice[$index].assessedAmount",
+      "kind": "money",
+      "empty": ""
+    },
+    "noOfInvoices": {
+      "modelPath": "surveyorData.worklist.claimAssessment.noOfInvoices",
+      "kind": "select",
+      "empty": ""
+    },
+    "netSalvage": {
+      "modelPath": "surveyorData.worklist.claimAssessment.netSlavage",
+      "kind": "money",
+      "empty": ""
+    },
+    "compulsoryExcess": {
+      "modelPath": "surveyorData.worklist.claimAssessment.lessCompulsoryExcess",
+      "kind": "money",
+      "empty": ""
+    },
+    "voluntaryExcess": {
+      "modelPath": "surveyorData.worklist.claimAssessment.lessVoluntaryExpress",
+      "kind": "money",
+      "empty": ""
+    },
+    "feeInvoiceDate": {
+      "modelPath": "surveyorData.worklist.surveyFeeBill.surveyorFeeInvoiceDate",
+      "kind": "text",
+      "empty": null,
+      "transform": "ddmmyyyy"
+    },
+    "professionalFee": {
+      "modelPath": "surveyorData.worklist.surveyFeeBill.professionalFee",
+      "kind": "money",
+      "empty": ""
+    },
+    "photosAmount": {
+      "modelPath": "surveyorData.worklist.surveyFeeBill.photosAmount",
+      "kind": "money",
+      "empty": ""
+    },
+    "conveyanceAmount": {
+      "modelPath": "surveyorData.worklist.surveyFeeBill.conveyanceAmount",
+      "kind": "money",
+      "empty": ""
+    },
+    "feeOthers": {
+      "modelPath": "surveyorData.worklist.surveyFeeBill.others",
+      "kind": "money",
+      "empty": ""
+    },
+    "feeGstApplicable": {
+      "modelPath": "surveyorData.worklist.surveyFeeBill.isGSTApplicable",
+      "kind": "select",
+      "empty": "",
+      "options": {
+        "Y": "Y",
+        "N": "N"
+      }
+    },
+    "feeGstPercent": {
+      "modelPath": "surveyorData.worklist.surveyFeeBill.gstPercent",
+      "kind": "money",
+      "empty": ""
+    }
+  },
+  "files": {
+    "assessmentExcel": {
+      "modelPath": "surveyorData.worklist.multiInvoice[$index].myFiles"
+    }
+  }
+}
