@@ -6,12 +6,14 @@
 import type { ClaimData } from '@/types/claim';
 import { getCompulsoryExcess } from '@/lib/calculations/assessment';
 import { calculateFeeSummary } from '@/lib/calculations/fees';
+import { calculateFeeGST } from '@/lib/calculations/gst';
 import { toDepreciationType } from '@/lib/calculations/depreciation';
 import {
   buildNiaWorkbook,
   niaAssessmentRows,
   niaPainting,
 } from '@/lib/reports/nia-assessment-excel';
+import { resolveBillSalvage } from '@/lib/reports/bill-check-projection';
 
 export const CANONICAL_FIELDS = [
   'surveyDate', 'surveyTime', 'surveyPlace',
@@ -33,6 +35,9 @@ export interface PortalPacket {
   fields: Partial<Record<CanonicalField, string | number>>;
   files: Array<{ slot: 'assessmentExcel'; name: string; mime: string; base64: string }>;
 }
+
+/** The fee-bill GST rate the engine applies, as a whole percent. */
+const FEE_GST_PERCENT = Math.round(calculateFeeGST(100).totalGST);
 
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
@@ -84,7 +89,7 @@ export async function buildPortalPacket(
       surveyDate: claim.accident?.dateOfSurvey,
       surveyTime: claim.accident?.timeOfSurvey,
       surveyPlace: claim.accident?.placeOfSurvey,
-      claimantMobile: claim.policy?.insuredMobile,
+      claimantMobile: claim.policy?.insuredMobile?.replace(/\D/g, '').slice(-10) || undefined,
       vendorInvoiceNo: claim.billCheck?.billNo,
       vendorInvoiceDate: claim.billCheck?.billDate,
       gstApplicable: rows.some((r) => (r.gst ?? 0) > 0) ? 'Y' : 'N',
@@ -93,7 +98,7 @@ export async function buildPortalPacket(
       paintingEstimate: isNilDep ? undefined : painting.estimate,
       paintingAssessed: isNilDep ? undefined : painting.assessed,
       noOfInvoices: '1',
-      netSalvage: fee?.billSalvage ?? fee?.salvageValue ?? 0,
+      netSalvage: resolveBillSalvage(fee, rows),
       compulsoryExcess: getCompulsoryExcess(fee),
       voluntaryExcess: fee?.voluntaryExcess ?? 0,
       feeInvoiceDate: fee?.billDate,
@@ -102,7 +107,7 @@ export async function buildPortalPacket(
       conveyanceAmount: feeSummary.travelExpenses,
       feeOthers: (fee?.postalCharges ?? 0) + (fee?.haltageCharges ?? 0),
       feeGstApplicable: fee?.includeGST ? 'Y' : 'N',
-      feeGstPercent: fee?.includeGST ? 18 : undefined,
+      feeGstPercent: fee?.includeGST ? FEE_GST_PERCENT : undefined,
     }),
     files: [
       {

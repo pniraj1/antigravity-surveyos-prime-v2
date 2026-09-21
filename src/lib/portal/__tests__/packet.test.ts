@@ -69,6 +69,18 @@ describe('buildPortalPacket', () => {
     expect(p.fields.feeGstPercent).toBe(18);
   });
 
+  it('salvage follows the bill-check rule: a typed billSalvage wins', async () => {
+    const c = claim(); c.feeBill.billSalvage = 250;
+    const p = await buildPortalPacket(c, { ageMonths: 24 });
+    expect(p.fields.netSalvage).toBe(250);
+  });
+
+  it('normalises the mobile to its last ten digits', async () => {
+    const c = claim(); c.policy.insuredMobile = '+91 98765 43210';
+    const p = await buildPortalPacket(c, { ageMonths: 24 });
+    expect(p.fields.claimantMobile).toBe('9876543210');
+  });
+
   it('sends painting on a standard policy and omits it on nil-dep', async () => {
     const std = await buildPortalPacket(claim(), { ageMonths: 24 });
     expect(std.fields.paintingEstimate).toBe(2000);
