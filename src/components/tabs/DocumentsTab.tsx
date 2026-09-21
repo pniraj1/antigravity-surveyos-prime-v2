@@ -20,6 +20,9 @@ import {
 } from 'lucide-react';
 import { SyncDrivePicker } from '@/components/sync-bridge/SyncDrivePicker';
 import { DocumentReviewSheet } from '@/components/documents/DocumentReviewSheet';
+import { useClaimDocuments } from '@/lib/documents/useClaimDocuments';
+import { ClaimFolderCard } from '@/components/documents/ClaimFolderCard';
+import { ClaimDocumentsList } from '@/components/documents/ClaimDocumentsList';
 import { TelegramIcon } from '@/components/icons/TelegramIcon';
 import { ProviderHealthBadge, ModelSelector, DocModeToggle, ProviderToggle } from '@/components/ai/AIControls';
 import { ReconciliationDialog } from './reconciliation/ReconciliationDialog';
@@ -129,6 +132,7 @@ export function DocumentsTab() {
     }
   }, [conflicts.length, isReconOpen]);
 
+  const docs = useClaimDocuments();
 
   if (!currentClaim) return null;
   const evidenceImages: string[] = [];
@@ -315,6 +319,10 @@ export function DocumentsTab() {
 
       {/* ── Document Groups ──────────────────────────────── */}
       <div className="px-6 lg:px-12 py-8 max-w-5xl mx-auto space-y-10">
+        <div className="space-y-3">
+          <ClaimFolderCard supported={docs.supported} folder={docs.folder} onConnect={docs.connect} />
+          <ClaimDocumentsList documents={docs.documents} connected={!!docs.folder} onAdd={docs.addFiles} onOpen={docs.open} onRemove={docs.remove} />
+        </div>
         {DOC_GROUPS.map((group) => (
           <div key={group.title}>
             {/* Group header */}
