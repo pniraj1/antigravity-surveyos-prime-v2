@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import type { DeductionCategory } from '@/lib/constants/deduction-categories';
+import type { PhotoTag } from './documents';
 
 export type PartType = 'metal' | 'plastic' | 'glass' | 'fiberglass' | 'labour' | 'paint';
 export type AssessmentSection = 'parts' | 'labour' | 'paint';
@@ -323,6 +324,8 @@ export interface PhotoItem {
    * 'damage', which keeps every claim created before this field existed valid.
    */
   kind?: 'damage' | 'document';
+  /** Which portal slot the shot is for. Undefined = an ordinary damage photo. */
+  tag?: PhotoTag;
 }
 
 /** Number of photos to show per A4 page */
