@@ -2,12 +2,13 @@
 // @ts-check
 // Isolated world on the portal. Card UI + storage + messaging to the Filler.
 (() => {
-  if (!location.hash.startsWith('#/WorklistSurveyNew')) {
-    // The SPA changes route without reload; re-check on hashchange.
-    window.addEventListener('hashchange', () => location.hash.startsWith('#/WorklistSurveyNew') && boot(), { once: true });
-    return;
-  }
-  boot();
+  // The SPA changes route without reload; re-check on every hashchange.
+  const onRoute = () => {
+    if (location.hash.startsWith('#/WorklistSurveyNew')) boot();
+    else document.getElementById('sx-panel')?.remove();
+  };
+  window.addEventListener('hashchange', onRoute);
+  onRoute();
 
   function boot() {
     if (document.getElementById('sx-panel')) return;
@@ -54,6 +55,8 @@
           r.files.map((f) => `<li class="sx-${f.status}">${f.status === 'attached' ? '✓' : '✗'} ${esc(f.slot)} ${esc(f.why || '')}</li>`).join('') + '</ul>';
         if (r.files.every((f) => f.status === 'attached') && !r.steps.some((s) => s.action === 'error')) {
           chrome.storage.local.remove(['packet', 'storedAt']); // E6
+        } else {
+          fillBtn.disabled = false; // packet stays in storage on a partial fill — let the surveyor retry
         }
       };
     }

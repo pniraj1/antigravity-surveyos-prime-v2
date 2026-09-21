@@ -30,16 +30,20 @@
     return { ok: true, claimNo: claimNo ? String(claimNo) : '', invoices: Array.isArray(invoices) ? invoices.length : 1 };
   }
 
-  /** E10: write like a keystroke. Returns 'filled' | 'manual'. */
+  /** E10: write like a keystroke, through the ngModelController. Returns 'filled' | 'manual'.
+   *  Synchronous via $apply when no digest is running so a throwing $setViewValue/$render
+   *  surfaces to the caller as an 'error' step instead of vanishing into $exceptionHandler. */
   function write(/** @type {HTMLElement} */ el, /** @type {string} */ value, /** @type {string} */ kind) {
     const ctrl = ng().element(el).controller('ngModel');
     if (!ctrl) return 'manual';
     const scope = ng().element(el).scope();
-    scope.$evalAsync(() => {
+    const doWrite = () => {
       ctrl.$setViewValue(value);
       ctrl.$render();
       if (kind !== 'select') el.dispatchEvent(new Event('input', { bubbles: true }));
-    });
+    };
+    if (scope.$root.$$phase) scope.$evalAsync(doWrite); // mid-digest: cannot $apply; runs next tick
+    else scope.$apply(doWrite);                          // synchronous; throws propagate to fill()
     return 'filled';
   }
 
