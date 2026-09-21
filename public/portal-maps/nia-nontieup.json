@@ -42,6 +42,11 @@
       "kind": "text",
       "empty": ""
     },
+    "noOfInvoices": {
+      "modelPath": "surveyorData.worklist.claimAssessment.noOfInvoices",
+      "kind": "select",
+      "empty": ""
+    },
     "gstApplicable": {
       "modelPath": "surveyorData.worklist.multiInvoice[$index].isGstApplicable",
       "kind": "select",
@@ -78,11 +83,6 @@
     "paintingAssessed": {
       "modelPath": "surveyorData.worklist.multiInvoice[$index].assessedAmount",
       "kind": "money",
-      "empty": ""
-    },
-    "noOfInvoices": {
-      "modelPath": "surveyorData.worklist.claimAssessment.noOfInvoices",
-      "kind": "select",
       "empty": ""
     },
     "netSalvage": {
@@ -137,7 +137,7 @@
     },
     "feeGstPercent": {
       "modelPath": "surveyorData.worklist.surveyFeeBill.gstPercent",
-      "kind": "money",
+      "kind": "text",
       "empty": ""
     }
   },

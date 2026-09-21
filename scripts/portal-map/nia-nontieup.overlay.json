@@ -14,13 +14,13 @@
     "surveyPlace":      { "model": "surveyorData.worklist.quickUpdate.placeOfSurvey", "kind": "text", "empty": "", "maxLen": 100 },
     "claimantMobile":   { "model": "surveyorData.worklist.quickUpdate.claimantMobileNo", "kind": "text", "empty": "" },
     "claimantEmail":    { "model": "surveyorData.worklist.quickUpdate.claimantEmailId", "kind": "text", "empty": "" },
+    "noOfInvoices":     { "model": "surveyorData.worklist.claimAssessment.noOfInvoices", "kind": "select", "empty": "" },
     "gstApplicable":    { "model": "surveyorData.worklist.multiInvoice[$index].isGstApplicable", "kind": "select", "empty": "", "options": { "Y": "Y", "N": "N" } },
     "vendorInvoiceNo":  { "model": "surveyorData.worklist.multiInvoice[$index].vendorTaxInvoiceNumber", "kind": "text", "empty": "", "maxLen": 30 },
     "vendorInvoiceDate":{ "model": "surveyorData.worklist.multiInvoice[$index].vendorTaxInvoiceDate", "kind": "text", "transform": "ddmmyyyy", "empty": null },
     "paintingWork":     { "model": "surveyorData.worklist.multiInvoice[$index].paintingWorkDetails", "kind": "select", "constant": "Consolidated", "onlyIf": "paintingAssessed", "empty": "" },
     "paintingEstimate": { "model": "surveyorData.worklist.multiInvoice[$index].estimatedAmount", "kind": "money", "empty": "" },
     "paintingAssessed": { "model": "surveyorData.worklist.multiInvoice[$index].assessedAmount", "kind": "money", "empty": "" },
-    "noOfInvoices":     { "model": "surveyorData.worklist.claimAssessment.noOfInvoices", "kind": "select", "empty": "" },
     "netSalvage":       { "model": "surveyorData.worklist.claimAssessment.netSlavage", "kind": "money", "empty": "" },
     "compulsoryExcess": { "model": "surveyorData.worklist.claimAssessment.lessCompulsoryExcess", "kind": "money", "empty": "" },
     "voluntaryExcess":  { "model": "surveyorData.worklist.claimAssessment.lessVoluntaryExpress", "kind": "money", "empty": "" },
@@ -30,7 +30,7 @@
     "conveyanceAmount": { "model": "surveyorData.worklist.surveyFeeBill.conveyanceAmount", "kind": "money", "empty": "" },
     "feeOthers":        { "model": "surveyorData.worklist.surveyFeeBill.others", "kind": "money", "empty": "" },
     "feeGstApplicable": { "model": "surveyorData.worklist.surveyFeeBill.isGSTApplicable", "kind": "select", "empty": "", "options": { "Y": "Y", "N": "N" } },
-    "feeGstPercent":    { "model": "surveyorData.worklist.surveyFeeBill.gstPercent", "kind": "money", "empty": "" }
+    "feeGstPercent":    { "model": "surveyorData.worklist.surveyFeeBill.gstPercent", "kind": "text", "empty": "" }
   },
   "files": {
     "assessmentExcel":  { "model": "surveyorData.worklist.multiInvoice[$index].myFiles" }

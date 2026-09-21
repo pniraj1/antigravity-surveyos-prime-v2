@@ -55,7 +55,7 @@ describe('isEmptyValue / decide (E4)', () => {
 describe('planFill', () => {
   const packet = {
     v: 1, portal: 'nia', flow: 'nontieup', claimNo: '1', builtAt: '',
-    fields: { surveyDate: '2026-09-18', surveyPlace: 'Pune', netSalvage: 300, paintingAssessed: 2000, paintingEstimate: 2000, feeGstApplicable: 'Y' },
+    fields: { surveyDate: '2026-09-18', surveyPlace: 'Pune', netSalvage: 300, paintingAssessed: 2000, paintingEstimate: 2000, feeGstApplicable: 'Y', noOfInvoices: '1' },
     files: [],
   };
   const read = (current = {}, radios = {}) => ({
@@ -71,6 +71,14 @@ describe('planFill', () => {
     expect(by.surveyDate).toMatchObject({ action: 'fill', value: '18/09/2026' });
     expect(by.feeGstApplicable).toMatchObject({ action: 'fill', value: 'Y' });
     expect(steps.findIndex((s) => s.name === 'surveyDateRadio')).toBeLessThan(steps.findIndex((s) => s.name === 'surveyDate'));
+  });
+
+  it('fills the invoice count before any invoice field', () => {
+    const steps = planFill(map, packet, read());
+    const i = steps.findIndex((s) => s.name === 'noOfInvoices');
+    const j = steps.findIndex((s) => s.modelPath.includes('multiInvoice['));
+    expect(i).toBeGreaterThanOrEqual(0);
+    expect(i).toBeLessThan(j);
   });
 
   it('dateRadioOrOthers picks the matching radio, else Others', () => {
