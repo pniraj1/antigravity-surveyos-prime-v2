@@ -7,7 +7,7 @@ import type { ClaimData } from '@/types/claim';
 import type { ClaimDocument, DocType } from '@/types/documents';
 import { MULTI_FILE_TYPES } from '@/types/documents';
 import { getStoredRootHandle, ensureReadWrite, getDeviceLabel } from '@/lib/local-sync/directory-handle';
-import { addDocuments, claimDocuments, newDocId, replaceByType, onThisDevice } from './index-ops';
+import { addDocuments, claimDocuments, newDocId, removeDocument, onThisDevice } from './index-ops';
 import { folderNameFor, oldNameFor, relPathsFor } from './naming';
 
 export class NoFolderError extends Error { constructor() { super('No claim folder is connected.'); } }
@@ -47,6 +47,15 @@ async function renameFile(claimDir: FileSystemDirectoryHandle, from: string, to:
   await dir.removeEntry(fromParts[fromParts.length - 1]);
 }
 
+/** Best-effort cleanup of a partial/orphaned file — never throws. */
+async function removeQuiet(claimDir: FileSystemDirectoryHandle, relPath: string) {
+  try {
+    const parts = relPath.split('/');
+    const dir = await dirFor(claimDir, parts.slice(0, -1), false);
+    await dir.removeEntry(parts[parts.length - 1]);
+  } catch { /* nothing to clean up */ }
+}
+
 export async function writeDocuments(
   claim: ClaimData,
   type: DocType,
@@ -59,26 +68,40 @@ export async function writeDocuments(
   const claimDir = await rootHandle.getDirectoryHandle(folder, { create: true });
   const device = await getDeviceLabel();
   const existing = claimDocuments(claim);
+  const relPaths = relPathsFor(type, files.map((f) => ({ mime: f.blob.type, name: f.name })), existing);
 
-  // Single-file types: the new batch replaces; old files step aside as "(old)".
+  // 1. Write every new file to a `.part` sibling. Nothing on disk or in the index
+  //    changes until all of these land — a failing write orphans nothing.
+  const partPaths = relPaths.map((p) => `${p}.part`);
+  const partsWritten: string[] = [];
+  try {
+    for (let i = 0; i < files.length; i++) {
+      await writeFile(claimDir, partPaths[i], files[i].blob);
+      partsWritten.push(partPaths[i]);
+    }
+  } catch (err) {
+    for (const p of partsWritten) await removeQuiet(claimDir, p);
+    throw err;
+  }
+
+  // 2. Single-file types: only entries on this device can be replaced (their files
+  //    can be renamed here). Entries on other devices stay in the index untouched.
   let next: ClaimData = { ...claim, documentsFolder: folder };
-  let replaced: ClaimDocument[] = [];
   if (!MULTI_FILE_TYPES.has(type)) {
-    const r = replaceByType(next, type, []);
-    next = r.claim; replaced = r.replaced;
-    const taken = new Set(claimDocuments(claim).map((d) => d.relPath));
+    const replaced = existing.filter((d) => d.type === type && onThisDevice(d, device));
+    next = replaced.reduce((c, d) => removeDocument(c, d.id), next);
+    const taken = new Set(existing.map((d) => d.relPath));
     for (const old of replaced) {
-      if (!onThisDevice(old, device)) continue;
       const to = oldNameFor(old.relPath, taken);
       taken.add(to);
       try { await renameFile(claimDir, old.relPath, to); } catch { /* already gone — nothing to keep */ }
     }
   }
 
-  const relPaths = relPathsFor(type, files.map((f) => ({ mime: f.blob.type, name: f.name })), existing);
+  // 3. Promote the new files into place.
   const written: ClaimDocument[] = [];
   for (let i = 0; i < files.length; i++) {
-    await writeFile(claimDir, relPaths[i], files[i].blob);
+    await renameFile(claimDir, partPaths[i], relPaths[i]);
     written.push({
       id: newDocId(), type, relPath: relPaths[i], mime: files[i].blob.type || 'application/octet-stream',
       size: files[i].blob.size, addedAt: new Date().toISOString(), source, devices: [device],
@@ -100,7 +123,11 @@ export async function readDocument(claim: ClaimData, doc: ClaimDocument): Promis
 export async function openDocument(claim: ClaimData, doc: ClaimDocument): Promise<void> {
   const file = await readDocument(claim, doc);
   const url = URL.createObjectURL(file);
-  window.open(url, '_blank');
+  const win = window.open(url, '_blank');
+  if (!win) {
+    URL.revokeObjectURL(url);
+    throw new Error('Popup blocked — allow popups for this site.');
+  }
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
