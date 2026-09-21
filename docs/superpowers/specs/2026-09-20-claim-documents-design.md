@@ -142,7 +142,7 @@ Multi-file types (`damagePhotos`, `spotPhotos`, `other`) → subfolder, numbered
 |---|---|---|
 | `index-ops.ts` | **pure**: `addDocuments(claim, docs)`, `removeDocument(claim, id)`, `replaceByType(claim, type, docs)` (single-file types), `onThisDevice(doc, label)`, `claimDocuments(claim)`, `newDocId()`. All return a new claim. | unit |
 | `naming.ts` | **pure**: `folderNameFor(claim)`, `relPathsFor(type, files, existing)` — label + ext, subfolder + next number for multi types, `oldNameFor(relPath, taken)` — `(old)` rename plan for replacements | unit |
-| `folder.ts` | `writeDocuments(claim, type, files, source) → { claim, written }` (batch); `readDocument(claim, doc) → File`; `openDocument(claim, doc)` (object URL in new tab); `claimFolderPath(claim)`. Wraps handle walking; throws typed errors (`NoFolderError`, `PermissionDeniedError`, `NotOnThisDeviceError`) | manual |
+| `folder.ts` | `writeDocuments(claim, type, files, source) → { claim, written }` (batch); `readDocument(claim, doc) → File`; `openDocument(claim, doc)` (PDF/image → object URL in new tab; anything else downloads); `claimFolderPath(claim)`. Wraps handle walking; throws typed errors (`NoFolderError`, `PermissionDeniedError`, `NotOnThisDeviceError`) | manual |
 | `sink.ts` | `saveDocuments(type, files, source)` — the one call every "a file was born" site makes: no folder connected is a quiet no-op (existing download/Drive flow untouched), a write failure toasts and returns `[]` | manual |
 | `useClaimDocuments.ts` | hook: folder state (unsupported / not connected / connected + label), `documents` list with `onThisDevice` resolved, `connect(label)`, `addFiles(type, files)`, `open(doc)`, `remove(doc)` | manual |
 
@@ -176,7 +176,9 @@ refreshes the card, nothing else re-triggers it.
 with `window.print()`; there is no PDF `Blob`. v1 saves the report's **HTML
 string** itself (`Final Survey Report.html`, `source: 'generated'`) at the
 moment the print window opens — it opens in any browser and prints
-identically, and the index knows the report exists. A PDF the surveyor
+identically, and the index knows the report exists — though *Open* on the
+Documents tab downloads it rather than rendering it inline (only PDFs and
+images open in a tab; a blob URL must never run as a page). A PDF the surveyor
 prints can be added over it with **Add file** → same type (`replaceByType`
 replaces, HTML goes to `(old)`). A real PDF pipeline stays out of scope.
 

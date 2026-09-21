@@ -16,6 +16,10 @@ describe('folderNameFor', () => {
     expect(folderNameFor(c)).toBe('3101 00312 24-C');
     c.policy.claimNumber = ''; c.vehicle.registrationNumber = 'MH12AB1234'; c.policy.insurerName = 'New India';
     expect(folderNameFor(c)).toBe('MH12AB1234 - New India');
+    c.policy.insurerName = '';
+    expect(folderNameFor(c)).toBe('MH12AB1234');
+    c.vehicle.registrationNumber = ''; c.policy.insurerName = 'New India';
+    expect(folderNameFor(c)).toBe('New India');
     c.vehicle.registrationNumber = ''; c.policy.insurerName = '';
     expect(folderNameFor(c)).toBe('claim');
   });

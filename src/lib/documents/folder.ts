@@ -47,6 +47,16 @@ async function renameFile(claimDir: FileSystemDirectoryHandle, from: string, to:
   await dir.removeEntry(fromParts[fromParts.length - 1]);
 }
 
+/** True when a file is already on disk at relPath (never creates anything). */
+async function exists(claimDir: FileSystemDirectoryHandle, relPath: string): Promise<boolean> {
+  try {
+    const parts = relPath.split('/');
+    const dir = await dirFor(claimDir, parts.slice(0, -1), false);
+    await dir.getFileHandle(parts[parts.length - 1]);
+    return true;
+  } catch { return false; }
+}
+
 /** Best-effort cleanup of a partial/orphaned file — never throws. */
 async function removeQuiet(claimDir: FileSystemDirectoryHandle, relPath: string) {
   try {
@@ -68,7 +78,32 @@ export async function writeDocuments(
   const claimDir = await rootHandle.getDirectoryHandle(folder, { create: true });
   const device = await getDeviceLabel();
   const existing = claimDocuments(claim);
-  const relPaths = relPathsFor(type, files.map((f) => ({ mime: f.blob.type, name: f.name })), existing);
+  const inputs = files.map((f) => ({ mime: f.blob.type, name: f.name }));
+  let relPaths = relPathsFor(type, inputs, existing);
+  const taken = new Set(existing.map((d) => d.relPath));
+
+  // 0. Files on disk the index does not know about (another device's copy, or
+  //    dropped in by hand) are never overwritten.
+  //    ponytail: probes only the target names, not a directory listing.
+  if (MULTI_FILE_TYPES.has(type)) {
+    // Numbered types skip past whatever is already there.
+    const seen = [...existing];
+    for (let guard = 0; guard < 1000; guard++) {
+      const clashes = await Promise.all(relPaths.map((p) => exists(claimDir, p)));
+      if (!clashes.some(Boolean)) break;
+      relPaths.forEach((relPath, i) => { if (clashes[i]) seen.push({ id: '', type, relPath, mime: '', size: 0, addedAt: '', source, devices: [] }); });
+      relPaths = relPathsFor(type, inputs, seen);
+    }
+  } else {
+    // Single-file types keep the stranger as "(old)"; indexed entries on this device are renamed in step 2.
+    for (const p of relPaths) {
+      if (existing.some((d) => d.relPath === p && onThisDevice(d, device))) continue; // step 2 renames it
+      if (!(await exists(claimDir, p))) continue;
+      const to = oldNameFor(p, taken);
+      taken.add(to);
+      try { await renameFile(claimDir, p, to); } catch { /* leave it; the .part promotion will overwrite */ }
+    }
+  }
 
   // 1. Write every new file to a `.part` sibling. Nothing on disk or in the index
   //    changes until all of these land — a failing write orphans nothing.
@@ -90,7 +125,6 @@ export async function writeDocuments(
   if (!MULTI_FILE_TYPES.has(type)) {
     const replaced = existing.filter((d) => d.type === type && onThisDevice(d, device));
     next = replaced.reduce((c, d) => removeDocument(c, d.id), next);
-    const taken = new Set(existing.map((d) => d.relPath));
     for (const old of replaced) {
       const to = oldNameFor(old.relPath, taken);
       taken.add(to);
@@ -120,9 +154,20 @@ export async function readDocument(claim: ClaimData, doc: ClaimDocument): Promis
   return (await dir.getFileHandle(parts[parts.length - 1])).getFile();
 }
 
+const INLINE_MIME = /^(application\/pdf|image\/(png|jpeg|gif|webp))$/;
+
+/** PDFs and images open in a tab; everything else (HTML included) downloads — a blob URL must never run as a page. */
 export async function openDocument(claim: ClaimData, doc: ClaimDocument): Promise<void> {
   const file = await readDocument(claim, doc);
   const url = URL.createObjectURL(file);
+  if (!INLINE_MIME.test(file.type || doc.mime)) {
+    const a = Object.assign(document.createElement('a'), { href: url, download: doc.relPath.split('/').pop() ?? doc.relPath });
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    return;
+  }
   const win = window.open(url, '_blank');
   if (!win) {
     URL.revokeObjectURL(url);
