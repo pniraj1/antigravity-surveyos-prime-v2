@@ -32,12 +32,14 @@ an extension can run there without being pasted in by hand every time.
 |---|------|
 | E1 | **Never touches credentials.** No login page permission, no reading of password fields, no storage of anything but the packet and the map. |
 | E2 | **Never clicks Validate, Submit, Save, or any upload-confirm.** The surveyor does every commit. The extension writes field values and attaches files; that is all. |
-| E3 | **Claim number must match** between the packet and the open page or nothing fills. |
-| E4 | **Existing non-empty portal values are kept**, listed in the panel, and highlighted amber on the page. The surveyor decides. |
+| E3 | **Claim number must match** between the packet and the open page or nothing fills. Compared after normalising both (uppercase, non-alphanumerics stripped). The refusal shows both numbers — a mismatch is also how a wrong claim number typed into SurveyOS gets caught. |
+| E4 | **Existing portal values are kept**, listed in the panel, and highlighted amber on the page. The surveyor decides. "Existing" means *set by a person*: the map declares each field's `empty` value (the portal's default — `N` on radios, `0` or `""` on amounts, `null`) and only a value that differs from it counts as existing. Without this every pre-filled default would be kept and nothing would fill. |
 | E5 | **Nothing leaves the machine.** The packet moves SurveyOS tab → `chrome.storage.local` → portal tab. The only network call the extension makes is fetching its field map from our own hosting. No page content is read beyond the claim number and the target fields. (DPDP: the packet holds insured PII — mobile, email.) |
 | E6 | **Packet expires.** Cleared after a successful fill or after 24 h, whichever first. |
 | E7 | **No AI in the extension.** Field maps are written by us from captured portal HTML. |
 | E8 | The extension **fails per field, not per page.** A field whose model path no longer exists is reported and skipped; the rest still fill. |
+| E9 | **The map is generated, never typed.** `scripts/portal-map/build-ext-map.py` derives `nia-nontieup.json` from `nia-nontieup-survey.json` plus a small canonical-name overlay; a hand-edited model path is a bug. The overlay is the only file we write. |
+| E10 | **Writes go through Angular's own input path.** `ngModelController.$setViewValue(value)` + `$render()`, inside `$evalAsync`, so `ng-change`, validators and the portal's computed totals run exactly as if typed. Never a bare scope assignment. |
 
 ---
 
@@ -108,16 +110,23 @@ figures.
 
 Without the extension, nothing changes.
 
-### 3.3 The extension — new repo `surveyos-portal-fill`, MV3
+### 3.3 The extension — `extension/` in this repo, MV3
+
+One repo, one map, one dev. `extension/` has its own `package.json` and
+Vitest config; `npm run build:ext` produces the unpacked folder and the zip.
+The map is published to hosting by copying `extension/maps/` into
+`public/portal-maps/` at build time.
 
 ```
+extension/
 manifest.json
 src/relay.ts        content script @ https://motorsurveyos-in.web.app/*
 src/panel.ts        content script @ https://web.newindia.co.in/NIABancsPortal/*
 src/filler.ts       main-world script, injected by panel via chrome.scripting
 src/background.ts   map fetch + cache, packet expiry
 src/map.ts          types + resolveMap()
-maps/nia-nontieup.json   (source of truth; also published to our hosting)
+maps/nia-nontieup.json   (generated — see E9; also published to our hosting)
+fixture/nia-nontieup.html (captured portal page + AngularJS 1.x, for local tests)
 ```
 
 Permissions: `storage`, `scripting`, `alarms`; host permissions for exactly
@@ -148,41 +157,55 @@ via `window.postMessage` with a per-injection nonce. Protocol:
 2. `fill(packet, map)` → for each canonical field in the packet:
    - resolve `map.fields[name]` → `{ modelPath, kind, transform?, options? }`
    - find the input: `[ng-model="<modelPath>"]`; missing → `notFound`
-   - read current scope value via `$parse(modelPath)(scope)`; non-empty and
-     ≠ ours → `kept`, add amber outline
-   - else assign via `$parse(modelPath).assign(scope, value)` inside
-     `scope.$apply()`; for radios/selects match on the map's `options`
+   - read current scope value via `$parse(modelPath)(scope)`; differs from
+     the map's `empty` and ≠ ours → `kept`, add amber outline (E4)
+   - else `angular.element(input).controller('ngModel')` →
+     `$setViewValue(value)`, `$render()`, inside `scope.$evalAsync` (E10);
+     radios/selects match on the map's `options`; a field with no
+     ngModelController (a jQuery widget) → `manual`, listed for the surveyor
    - files: `new File([bytes], name, { type })` → `DataTransfer` →
      `input.files = dt.files` → `dispatchEvent(new Event('change', { bubbles: true }))`.
      NIA's `readExcel` runs on `change`, so the portal parses the sheet
      itself; the surveyor then clicks **Validate**.
 3. Returns the result list. Nothing else is touched.
 
-Guard order in `fill`: controller present → claim number equal (trimmed,
-case-insensitive) → then fields. Any guard failure returns before the first
-write.
+Guard order in `fill`: controller present → claim number equal after
+`normaliseClaimNo` (E3) → then fields. Any guard failure returns before the
+first write. The panel shows "Invoice 1 of N" when the page holds more than
+one invoice; only invoice 1 is filled.
+
+**Known-weak field:** the Quick Update survey date is a radio of the last
+three days plus "Others" with a date picker. A survey older than three days
+needs "Others" and the picker; if the picker is not Angular-bound it comes
+back `manual`. Stage 0 decides whether we drive it or leave it.
 
 ### 3.4 The field map — `maps/nia-nontieup.json`
+
+Shape (paths illustrative — the real ones come out of the generator, E9):
 
 ```json
 {
   "portal": "nia", "flow": "nontieup", "version": 3,
   "route": "#/WorklistSurveyNew",
-  "controller": "surveyorWorklistSurveyCtrl",
-  "claimNoPath": "surveyorData.worklist.claimNumber",
+  "controller": "<from capture>",
+  "claimNoPath": "<from capture — or 'sessionStorage:<key>' if the number is not in scope>",
   "fields": {
-    "surveyPlace": { "modelPath": "surveyorData.worklist.quickUpdate.placeOfSurvey", "kind": "text", "maxLen": 100 },
-    "surveyTime":  { "modelPath": "...surveyTime", "kind": "text", "transform": "hhmm" },
-    "nilDepCover": { "modelPath": "...claimAssessment.nilDepreciationCover", "kind": "radio", "options": { "true": "Y", "false": "N" } },
-    "assessmentExcel": { "kind": "file", "selector": "input[type=file][ng-model*='xlsTemplate']" }
+    "surveyPlace": { "modelPath": "<…>", "kind": "text", "empty": "", "maxLen": 100 },
+    "surveyTime":  { "modelPath": "<…>", "kind": "text", "empty": "", "transform": "hhmm" },
+    "nilDepCover": { "modelPath": "<…>", "kind": "radio", "empty": "N", "options": { "true": "Y", "false": "N" } },
+    "assessmentExcel": { "kind": "file", "selector": "<…>" }
   }
 }
 ```
 
-Model paths are taken from `scripts/portal-map/nia-nontieup-survey.json`;
-the map is derived from it by hand and checked into both repos. Transforms
-are a closed set implemented in `filler.ts` (`hhmm`, `ddmmyyyy`, `money2dp`,
-`yn`).
+`build-ext-map.py` reads the extractor's JSON, joins it with
+`scripts/portal-map/nia-nontieup.overlay.json` (canonical name → the
+extractor's model path, plus `empty`/`transform`/`options`), and fails if an
+overlay path is not in the capture. Where the claim number lives is the
+first thing Stage 0 checks; the generator has a `claimNoPath` override for
+that. Transforms are a closed set of *names* implemented in `filler.ts`
+(`hhmm`, `ddmmyyyy`, `money2dp`, `yn`) — the map never carries code, which
+keeps it "data" for the Web Store's remote-code rule.
 
 **Delivery.** Bundled copy in the extension; the background fetches
 `https://motorsurveyos-in.web.app/portal-maps/nia-nontieup.json` on install
@@ -229,9 +252,17 @@ resolver; each transform; the `fill` decision function
 `decide(current, incoming) → 'fill' | 'kept'` (pure, extracted from the
 Filler).
 
-**Manual**: Stage 0 above, plus: wrong claim open → refuses; pre-filled
-place → kept + amber; map with one bad path → one `notFound`, others fill;
-portal tab without a packet → idle state.
+**Fixture** (Vitest + jsdom, or Playwright against `extension/fixture/`):
+the captured page markup with AngularJS 1.x loaded and a stub controller
+that mirrors the real model paths. Filler runs against it: fills, `kept` on
+a human-set value, `empty` defaults filled, `notFound` on a renamed path,
+`ng-change` observed to fire, Excel `change` event dispatched. This is
+where the fill engine is proven — live checks through the geo-block are
+slow and go through a screen-share, so they confirm, not discover.
+
+**Manual** (Stage 0): claim number location confirmed; wrong claim open →
+refuses and shows both numbers; pre-filled place → kept + amber; date
+picker behaviour; Validate passes on the attached Excel; save page.
 
 ---
 
