@@ -1,7 +1,7 @@
 # Claim Documents — Design
 
 **Date:** 2026-09-20
-**Status:** Draft — awaiting review
+**Status:** Implemented 2026-09-21
 **Scope:** A typed document index on the claim record, with the bytes in a
 real folder on the surveyor's PC. Builds on the existing local-sync module
 (`src/lib/local-sync/`, spec `2026-06-10-sync-claim-to-local-folder-design.md`).
@@ -47,6 +47,25 @@ Telegram.
 | D9 | **Permission is asked inside the click.** Chrome re-grants folder access only in a user gesture, so every flow that ends in a write calls `ensureReadWrite` first, before any async work (upload → extraction → write must ask up front). A write that finds itself without permission fails with a clear toast, never silently. |
 | D10 | **The index is a map, not an array** — `documents: Record<id, ClaimDocument>` — so two devices adding entries at once merge by key under the per-field multidevice sync instead of one overwriting the other. |
 
+**Decided at implementation**
+
+- (a) No `copies` field. Drive's upload flow returns no file id to record; the
+  Documents tab's own Drive list is the cross-machine fallback instead. A
+  Sync-picked file is saved as an ordinary upload (`source: 'upload'`), not a
+  separate copy kind.
+- (b) Multidevice sync is whole-claim, version-guarded — there is no
+  field-level merge to design for. The map index is for O(1) lookup by id,
+  not a merge strategy.
+- (c) Word export is not hooked up to `saveDocuments` — six untyped callers
+  across the codebase, left for a follow-up.
+- (d) `insuredSummary` was added to the `DocType` vocabulary (the Insured
+  Report Tab's PDF).
+- (e) Single-file types accept a batch too: two files of a single-file type
+  save as `<Label> 1`, `<Label> 2` rather than one replacing the other.
+- (f) A photo's tag is a label on the photo item (`PhotoItem.tag`); the
+  folder/index entry keeps the type it was written under. Retagging a photo
+  after the fact does not move or rewrite the file.
+
 ---
 
 ## 3. Design
@@ -70,10 +89,9 @@ export interface ClaimDocument {
   mime: string;
   size: number;
   addedAt: string;            // ISO
-  source: 'upload' | 'generated' | 'photo' | 'sync' | 'drive';
+  source: 'upload' | 'generated' | 'photo';
   /** Device labels that hold the bytes. A device is the name given when the folder was connected. */
   devices: string[];
-  copies?: { driveFileId?: string; syncRef?: string /* `${docId}:${fileIndex}` */ };
 }
 ```
 
@@ -122,35 +140,49 @@ Multi-file types (`damagePhotos`, `spotPhotos`, `other`) → subfolder, numbered
 
 | File | What | Tests |
 |---|---|---|
-| `index-ops.ts` | **pure**: `addDocument(claim, doc)`, `removeDocument(claim, id)`, `upsertByType(claim, doc)` (single-file types), `markCopy(claim, id, copies)`, `onThisDevice(doc, label)`. All return a new claim. | unit |
-| `naming.ts` | **pure**: `relPathFor(type, mime, existing)` — label + ext, subfolder + next number for multi types, `(old)` rename plan for replacements | unit |
-| `folder.ts` | `writeDocument(claim, type, blob, source) → ClaimDocument`; `readDocument(claim, doc) → File \| null`; `openDocument(doc)` (object URL in new tab). Wraps handle walking; throws typed errors (`NoFolder`, `PermissionDenied`, `NotOnThisDevice`) | manual |
-| `useClaimDocuments.ts` | hook: folder state (unsupported / not connected / connected + label), `documents` list with `onThisDevice` resolved, `add(type, file)`, `remove(id)`, `open(doc)` | manual |
+| `index-ops.ts` | **pure**: `addDocuments(claim, docs)`, `removeDocument(claim, id)`, `replaceByType(claim, type, docs)` (single-file types), `onThisDevice(doc, label)`, `claimDocuments(claim)`, `newDocId()`. All return a new claim. | unit |
+| `naming.ts` | **pure**: `folderNameFor(claim)`, `relPathsFor(type, files, existing)` — label + ext, subfolder + next number for multi types, `oldNameFor(relPath, taken)` — `(old)` rename plan for replacements | unit |
+| `folder.ts` | `writeDocuments(claim, type, files, source) → { claim, written }` (batch); `readDocument(claim, doc) → File`; `openDocument(claim, doc)` (object URL in new tab); `claimFolderPath(claim)`. Wraps handle walking; throws typed errors (`NoFolderError`, `PermissionDeniedError`, `NotOnThisDeviceError`) | manual |
+| `sink.ts` | `saveDocuments(type, files, source)` — the one call every "a file was born" site makes: no folder connected is a quiet no-op (existing download/Drive flow untouched), a write failure toasts and returns `[]` | manual |
+| `useClaimDocuments.ts` | hook: folder state (unsupported / not connected / connected + label), `documents` list with `onThisDevice` resolved, `connect(label)`, `addFiles(type, files)`, `open(doc)`, `remove(doc)` | manual |
 
-`writeDocument` = `ensureReadWrite` → `relPathFor` → create dirs → write
-bytes → return the entry; the caller does `updateClaim(upsertByType(...))`.
-Writing bytes and updating the record are two steps; a failed write never
-touches the record.
+`writeDocuments` writes every new file to a `<relPath>.part` sibling first;
+only once all parts have landed does it rename replaced single-file entries
+to `<Label> (old).<ext>` and promote the `.part` files to their final names.
+A failed write cleans up its own `.part` files and never touches the index —
+nothing is orphaned on disk or in the record. Single-file replacement only
+renames-and-removes entries whose `devices` includes **this** device; a
+same-type entry written on another device stays in the index untouched and
+keeps showing "on &lt;device&gt;".
+
+The hook's folder-state effect reloads only when the claim id or
+`documentsFolder` changes — not on every render — so switching claims or a
+fresh `writeDocuments` (which sets `documentsFolder` on first write) is what
+refreshes the card, nothing else re-triggers it.
 
 ### 3.4 Writers — where entries come from
 
 | Caller | Today | Adds |
 |---|---|---|
-| `DocumentsTab` per-field upload (RC, DL, policy, permit, fitness, FIR…) | file → extraction → Drive | `writeDocument(type)` if folder connected; type from a fixed `fieldKey → DocType` table |
-| `AssessmentTab` estimate upload | Drive as `estimate.<ext>` | `writeDocument('estimate')` |
-| `PhotosTab` add photo | data URL in record + Drive | `writeDocument('damagePhotos' \| 'chassisPhoto' \| …)` per the photo's tag (§3.6) |
-| `exportNiaAssessmentExcel` | download | `writeDocument('niaAssessmentExcel')` |
-| Word export, insured report PDF | download | `writeDocument(type)` |
-| Sync ✈️ picker — surveyor picks a Sync file into a claim field | fetches file (local-first) | `writeDocument(type from field key)` + `copies.syncRef`. Bulk sync does **not** touch the index: a Sync claim is not linked to a Prime claim, only a picked file is |
-| `uploadFileToDrive` success | — | `markCopy(id, { driveFileId })` when the caller passed an index id |
+| `DocumentsTab` per-field upload (RC, DL, policy, permit, fitness, FIR…) | file → extraction → Drive | `saveDocuments(type, ..., 'upload')` if folder connected; type from `FIELD_KEY_TO_DOC_TYPE` |
+| `AssessmentTab` estimate upload | Drive as `estimate.<ext>` | `saveDocuments('estimate', ..., 'upload')` — always `estimate`, whether the estimate is uploaded in replace or append mode |
+| `PhotosTab` add photo | data URL in record + Drive | `saveDocuments('damagePhotos', ..., 'photo')` — the original `File` saves as `damagePhotos` at add time, regardless of the photo's tag; tagging it later (§3.6) does not move or rewrite the file |
+| `exportNiaAssessmentExcel` | download | `saveDocuments('niaAssessmentExcel', ..., 'generated')` |
+| `InsuredReportTab` PDF | download | `saveDocuments('insuredSummary', ..., 'generated')` |
+| Word export | download | not hooked up — six untyped callers, left for a follow-up |
+| Sync ✈️ picker — surveyor picks a Sync file into a claim field | fetches file (local-first) | via `processFiles`, `source: 'upload'`, type from field key. Bulk sync does **not** touch the index: a Sync claim is not linked to a Prime claim, only a picked file is |
 
 **Survey report, bill check, fee bill, reinspection report** are HTML opened
 with `window.print()`; there is no PDF `Blob`. v1 saves the report's **HTML
 string** itself (`Final Survey Report.html`, `source: 'generated'`) at the
 moment the print window opens — it opens in any browser and prints
 identically, and the index knows the report exists. A PDF the surveyor
-prints can be added over it with **Add file** → same type (`upsertByType`
+prints can be added over it with **Add file** → same type (`replaceByType`
 replaces, HTML goes to `(old)`). A real PDF pipeline stays out of scope.
+
+All four print-based reports open through one shared `openPrintWindow` in
+`print-shell.ts`; the reinspection report's print now uses the same 600 ms
+timing as the other three, instead of its own.
 
 ### 3.5 UI — Documents tab, one new card
 
@@ -160,12 +192,11 @@ replaces, HTML goes to `(old)`). A real PDF pipeline stays out of scope.
 - not connected → **Connect folder** (asks for the device label)
 - connected → `D:\SurveyOS Claims` · *Office PC* · "Change"
 
-Below it, the **documents list**: one row per entry — type label, file
-name, size, date, source icon, and where it is:
-`✓ here` / `on Office PC` / `Drive ✓` / `✈️`. Row actions: **Open** (from
-disk; from Drive copy when not here and Drive is linked), **Remove** (D8).
-Toolbar: **Add file** → type picker + file input, multi-select for photo
-types.
+Below it, the **documents list**: one row per entry — source icon, type
+label, relative path, size, and where it is: `here` / `on Office PC`. Row
+actions: **Open** (disabled unless the file is on this device), **Remove**
+(D8, toasts the path). Toolbar: **Add file** → type picker + a `multiple`
+file input (any type can add a batch, per decision (e) above).
 
 Everything else on the tab is unchanged.
 
@@ -176,8 +207,10 @@ Everything else on the tab is unchanged.
 Undefined = `damage`. `PhotosTab` gets a small tag select per thumbnail; nobody tags forty
 photos — the default is `damage` and only the handful of special shots
 (front/rear/sides, chassis, odometer, spot) get a tag.
-`tagToDocType` maps to the vocabulary above. Tags are what let v2 of the
-extension put the odometer photo in the odometer slot.
+`tagToDocType` maps to the vocabulary above but is not wired into the write
+path yet — every photo still saves as `damagePhotos` (§3.4); it exists for
+v2 of the extension to put the odometer photo in the odometer slot once the
+folder entry is linked to the tag (§6).
 
 ---
 
@@ -185,10 +218,10 @@ extension put the odometer photo in the odometer slot.
 
 Surveyor connects a folder on the office PC (label "Office PC") and on the
 laptop ("Laptop"). Each entry lists the devices holding it. Opening a claim
-on the laptop: entries written on the office PC show *on Office PC*; if the
-same file also went to Drive, **Open** fetches it from Drive. If not, the
-row says where to go. That is the whole cross-machine feature — no byte
-sync, as agreed.
+on the laptop: entries written on the office PC show *on Office PC* and
+**Open** is disabled — no byte sync, as agreed. The Documents tab's own
+Drive list (unchanged, outside the index) is the fallback for fetching a
+copy from another machine.
 
 Root folder on OneDrive/Google Drive desktop sync is the surveyor's own
 choice and works without us knowing.
@@ -197,17 +230,23 @@ choice and works without us knowing.
 
 ## 5. Tests
 
-Unit (Vitest): every function in `index-ops.ts` and `naming.ts` —
-immutability, map-keyed add/remove/upsert, `upsertByType` replaces only
-single-file types, numbering continues after gaps, `(old)` rename plan,
-sanitised labels, `folderNameFor(claim)` (claim number first, vehicle −
-insurer fallback, sticky once set), `onThisDevice`, `tagToDocType`,
-field-key → `DocType` table covers every Documents-tab key.
+Unit (Vitest), what shipped:
 
-Manual: connect folder → upload RC → file appears in Explorer, row shows
-`✓ here` → NIA Excel download → appears in folder and list → revoke
-permission → clear re-prompt → open the claim on a second machine → rows
-show *on Office PC*, Drive-backed one opens.
+- `src/types/__tests__/documents.test.ts` (4) — `DOC_TYPE_LABEL`,
+  `MULTI_FILE_TYPES`, `FIELD_KEY_TO_DOC_TYPE`, `tagToDocType`.
+- `src/lib/documents/__tests__/index-ops.test.ts` (6) — immutability,
+  map-keyed `addDocuments`/`removeDocument`, `replaceByType` replaces only
+  the given type, `onThisDevice`.
+- `src/lib/documents/__tests__/naming.test.ts` (8) — `folderNameFor` (claim
+  number first, vehicle − insurer fallback, sticky once set), `relPathsFor`
+  numbering (continues after gaps, sanitised labels), `oldNameFor` rename
+  plan.
+
+Manual: `folder.ts`, `sink.ts`, the hook, and the components. Connect folder
+→ upload RC → file appears in Explorer, row shows `here` → NIA Excel
+download → appears in folder and list → revoke permission → clear
+re-prompt → open the claim on a second machine → rows show *on Office PC*,
+Open disabled.
 
 ---
 
@@ -217,7 +256,9 @@ show *on Office PC*, Drive-backed one opens.
   `claim.photos`. With the folder in place the record could keep a
   thumbnail and the index entry, bytes on disk — the "don't stress
   IndexedDB" change. Separate spec; needs a migration and a fallback for
-  claims opened on a machine without the bytes.
+  claims opened on a machine without the bytes. Also: link a photo's tag to
+  its folder entry, so a retag moves the type (and the extension can read
+  it) instead of the entry staying `damagePhotos` forever.
 - **Phone app** — removes the camera → PC step. Separate product task.
 - **Scan an existing folder** into the index for claims made before this.
 - **Stale index** when a file is renamed or moved in Explorer — the row

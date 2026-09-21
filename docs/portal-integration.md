@@ -468,6 +468,7 @@ requirement, but the code is on the portal's list at 0%.
 - Extension v1 designed — spec `2026-09-20-portal-fill-extension-design.md`
 - Claim Documents designed — spec `2026-09-20-claim-documents-design.md`
 - Portal-fill extension v1 built (2026-09-21) — extension/, Stage 0 pending
+- Claim Documents shipped (2026-09-21) — typed index + disk folder; extension v2 can attach by type
 
 **Next**
 
