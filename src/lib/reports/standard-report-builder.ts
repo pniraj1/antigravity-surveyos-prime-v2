@@ -26,6 +26,7 @@ import { shouldStartSupplementaryBand } from '@/lib/calculations/utils';
 import { buildSerialMap } from '@/lib/calculations/serial-numbers';
 import { buildPrintShell, footerFromProfile, openPrintWindow } from './print-shell';
 import { saveDocuments } from '@/lib/documents/sink';
+import { promptForPrintedPdf } from '@/lib/documents/print-followup';
 
 // NOTE: SurveyReportDocument.tsx (React-PDF) is no longer a parallel rendering
 // of this report — it is only used by scripts/generate-pdf.ts to produce the
@@ -1007,4 +1008,5 @@ export function triggerStandardPrint(
   const name = mode === 'bill-check' ? 'Bill Check Report.html' : 'Final Survey Report.html';
   void saveDocuments(type, [{ blob: new Blob([html], { type: 'text/html' }), name }], 'generated');
   openPrintWindow(html);
+  void promptForPrintedPdf(type);
 }

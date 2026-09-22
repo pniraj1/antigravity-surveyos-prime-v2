@@ -29,6 +29,7 @@ import { buildSerialMap } from '@/lib/calculations/serial-numbers';
 import { shouldStartSupplementaryBand } from '@/lib/calculations/utils';
 import { buildPrintShell, footerFromProfile, openPrintWindow } from './print-shell';
 import { saveDocuments } from '@/lib/documents/sink';
+import { promptForPrintedPdf } from '@/lib/documents/print-followup';
 import { formatSurveyDateTime } from './report-utils';
 import { resolveBillSalvage } from './bill-check-projection';
 
@@ -517,6 +518,7 @@ export function triggerUIICFinalPrint(claim: ClaimData, profile: SurveyorProfile
   const html = buildUIICFinalPrintDocument(claim, profile);
   void saveDocuments('surveyReport', [{ blob: new Blob([html], { type: 'text/html' }), name: 'Final Survey Report.html' }], 'generated');
   openPrintWindow(html);
+  void promptForPrintedPdf('surveyReport');
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1138,4 +1140,5 @@ export function triggerUIICBillCheckPrint(claim: ClaimData, profile: SurveyorPro
   const html = buildUIICBillCheckPrintDocument(claim, profile);
   void saveDocuments('billCheckReport', [{ blob: new Blob([html], { type: 'text/html' }), name: 'Bill Check Report.html' }], 'generated');
   openPrintWindow(html);
+  void promptForPrintedPdf('billCheckReport');
 }

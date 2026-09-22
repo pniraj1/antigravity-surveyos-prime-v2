@@ -15,4 +15,9 @@ interface FileSystemDirectoryHandle {
 
 interface Window {
   showDirectoryPicker?(opts?: { mode?: 'read' | 'readwrite' }): Promise<FileSystemDirectoryHandle>
+  showOpenFilePicker?(opts?: {
+    multiple?: boolean
+    excludeAcceptAllOption?: boolean
+    types?: Array<{ description?: string; accept: Record<string, string[]> }>
+  }): Promise<FileSystemFileHandle[]>
 }
