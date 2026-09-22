@@ -122,13 +122,14 @@ export async function writeDocuments(
   // 2. Single-file types: only entries on this device can be replaced (their files
   //    can be renamed here). Entries on other devices stay in the index untouched.
   let next: ClaimData = { ...claim, documentsFolder: folder };
+  const discard: string[] = [];
   if (!MULTI_FILE_TYPES.has(type)) {
     const incomingMime = files[0]?.blob.type ?? '';
     const replaced = existing.filter((d) => d.type === type && onThisDevice(d, device));
     next = replaced.reduce((c, d) => removeDocument(c, d.id), next);
     for (const old of replaced) {
       if (isDiscardablePlaceholder(old, incomingMime)) {
-        await removeQuiet(claimDir, old.relPath); // our own print-time HTML; the real document replaces it
+        discard.push(old.relPath); // our own print-time HTML; deleted only once the real document is safely in place
         continue;
       }
       const to = oldNameFor(old.relPath, taken);
@@ -146,6 +147,8 @@ export async function writeDocuments(
       size: files[i].blob.size, addedAt: new Date().toISOString(), source, devices: [device],
     });
   }
+  // The placeholder goes only once its replacement is safely in place.
+  for (const p of discard) await removeQuiet(claimDir, p);
   return { claim: addDocuments(next, written), written };
 }
 

@@ -36,5 +36,6 @@ export function isDiscardablePlaceholder(old: ClaimDocument, incomingMime: strin
   return old.source === 'generated'
     && old.mime === 'text/html'
     && incomingMime !== ''
+    // Substring, not equality: tolerates 'text/html; charset=utf-8' from a picked file.
     && !incomingMime.includes('text/html');
 }

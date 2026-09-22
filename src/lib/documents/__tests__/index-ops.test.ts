@@ -55,4 +55,7 @@ describe('isDiscardablePlaceholder', () => {
   it('an empty incoming mime does not discard anything', () => {
     expect(isDiscardablePlaceholder(html(), '')).toBe(false);
   });
+  it('a re-print with a charset param is still not discardable', () => {
+    expect(isDiscardablePlaceholder(html(), 'text/html; charset=utf-8')).toBe(false);
+  });
 });
