@@ -29,20 +29,22 @@ export async function promptForPrintedPdf(type: DocType): Promise<void> {
   if (!(await getStoredRootHandle())) return;
 
   const label = DOC_TYPE_LABEL[type];
+  const id = `print-pdf-${type}`;
   toast(`Saved the ${label} as a PDF?`, {
     description: 'File it into the claim folder so the list holds the copy you sent.',
     duration: Infinity,
+    id,
     action: {
       label: 'File the PDF',
       onClick: () => {
         // The click is the user gesture the picker needs; failures are the
         // surveyor cancelling, which is not an error worth a toast.
         void pickPdf(label)
-          .then((file) => {
-            if (file) return saveDocuments(type, [{ blob: file, name: file.name }], 'generated');
-          })
+          .then((file) => (file ? saveDocuments(type, [{ blob: file, name: file.name }], 'generated') : null))
+          .then((saved) => { if (saved) toast.dismiss(id); })
           .catch(() => undefined);
       },
     },
+    cancel: { label: 'Not now', onClick: () => toast.dismiss(id) },
   });
 }
