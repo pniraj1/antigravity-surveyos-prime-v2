@@ -25,3 +25,16 @@ export function removeDocument(claim: ClaimData, id: string): ClaimData {
 export function onThisDevice(doc: ClaimDocument, label: string): boolean {
   return doc.devices.includes(label);
 }
+
+/**
+ * True when `old` is a stand-in this app wrote unprompted — the report HTML
+ * saved at print time — and a real document of the same type is replacing it.
+ * Only then may its file be deleted rather than kept as `(old)` (spec D8).
+ * A surveyor's own file, and our own non-HTML outputs, are never discardable.
+ */
+export function isDiscardablePlaceholder(old: ClaimDocument, incomingMime: string): boolean {
+  return old.source === 'generated'
+    && old.mime === 'text/html'
+    && incomingMime !== ''
+    && !incomingMime.includes('text/html');
+}

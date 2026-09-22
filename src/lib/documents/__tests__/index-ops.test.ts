@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createBlankClaim } from '@/types/claim';
 import type { ClaimDocument } from '@/types/documents';
-import { claimDocuments, addDocuments, removeDocument, onThisDevice, newDocId } from '../index-ops';
+import { claimDocuments, addDocuments, removeDocument, onThisDevice, newDocId, isDiscardablePlaceholder } from '../index-ops';
 
 const doc = (p: Partial<ClaimDocument>): ClaimDocument => ({
   id: p.id ?? newDocId(), type: 'rc', relPath: 'RC Book.pdf', mime: 'application/pdf', size: 10,
@@ -32,5 +32,27 @@ describe('index-ops', () => {
   it('newDocId is unique-ish and prefixed', () => {
     expect(newDocId()).toMatch(/^doc-\d+-[a-z0-9]{6}$/);
     expect(newDocId()).not.toBe(newDocId());
+  });
+});
+
+describe('isDiscardablePlaceholder', () => {
+  const html = (over: Partial<ClaimDocument> = {}) =>
+    doc({ type: 'surveyReport', relPath: 'Final Survey Report.html', mime: 'text/html', source: 'generated', ...over });
+
+  it('a generated HTML report replaced by a PDF is discardable', () => {
+    expect(isDiscardablePlaceholder(html(), 'application/pdf')).toBe(true);
+  });
+  it('a re-print (HTML replaced by HTML) is not discardable', () => {
+    expect(isDiscardablePlaceholder(html(), 'text/html')).toBe(false);
+  });
+  it('an uploaded HTML file is never discardable', () => {
+    expect(isDiscardablePlaceholder(html({ source: 'upload' }), 'application/pdf')).toBe(false);
+  });
+  it('a generated non-HTML file (the NIA Excel) is never discardable', () => {
+    const xlsx = html({ type: 'niaAssessmentExcel', relPath: 'Primary Assessment Template.xlsx', mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    expect(isDiscardablePlaceholder(xlsx, 'application/pdf')).toBe(false);
+  });
+  it('an empty incoming mime does not discard anything', () => {
+    expect(isDiscardablePlaceholder(html(), '')).toBe(false);
   });
 });

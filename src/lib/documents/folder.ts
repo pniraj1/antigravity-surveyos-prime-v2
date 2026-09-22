@@ -7,7 +7,7 @@ import type { ClaimData } from '@/types/claim';
 import type { ClaimDocument, DocType } from '@/types/documents';
 import { MULTI_FILE_TYPES } from '@/types/documents';
 import { getStoredRootHandle, ensureReadWrite, getDeviceLabel } from '@/lib/local-sync/directory-handle';
-import { addDocuments, claimDocuments, newDocId, removeDocument, onThisDevice } from './index-ops';
+import { addDocuments, claimDocuments, newDocId, removeDocument, onThisDevice, isDiscardablePlaceholder } from './index-ops';
 import { folderNameFor, oldNameFor, relPathsFor } from './naming';
 
 export class NoFolderError extends Error { constructor() { super('No claim folder is connected.'); } }
@@ -123,9 +123,14 @@ export async function writeDocuments(
   //    can be renamed here). Entries on other devices stay in the index untouched.
   let next: ClaimData = { ...claim, documentsFolder: folder };
   if (!MULTI_FILE_TYPES.has(type)) {
+    const incomingMime = files[0]?.blob.type ?? '';
     const replaced = existing.filter((d) => d.type === type && onThisDevice(d, device));
     next = replaced.reduce((c, d) => removeDocument(c, d.id), next);
     for (const old of replaced) {
+      if (isDiscardablePlaceholder(old, incomingMime)) {
+        await removeQuiet(claimDir, old.relPath); // our own print-time HTML; the real document replaces it
+        continue;
+      }
       const to = oldNameFor(old.relPath, taken);
       taken.add(to);
       try { await renameFile(claimDir, old.relPath, to); } catch { /* already gone — nothing to keep */ }
