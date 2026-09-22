@@ -43,7 +43,7 @@ Telegram.
 | D5 | **Bytes live where they were written.** The index records which machine holds them. On another machine the entry shows "on *Office PC*" and offers the Drive/Telegram copy if one exists. No cross-machine byte sync. |
 | D6 | **Generated outputs that exist as a `Blob` save themselves** into the claim folder when it is connected. The browser download still happens, unchanged. |
 | D7 | **Existing behaviour is not removed.** Photos stay in the record for now (see §6); Drive uploads stay; the Sync picker stays. |
-| D8 | Deleting an index entry never deletes bytes silently — the file is left on disk and the surveyor is told the path. |
+| D8 | Deleting an index entry never deletes bytes silently — the file is left on disk and the surveyor is told the path. **One exception:** the report HTML this app writes at print time is a placeholder, not the surveyor's file; when the real PDF of the same type is filed, that HTML is deleted so the folder holds one file per report. Nothing a surveyor put in the folder is ever deleted. |
 | D9 | **Permission is asked on the Documents tab.** Chrome re-grants folder access only inside a click. The Documents tab shows the permission state and an *Allow access* button; producers (print, upload, export) never prompt — if access is missing they save nothing and say which button to press. |
 | D10 | **The index is a map, not an array** — `documents: Record<id, ClaimDocument>` — so two devices adding entries at once merge by key under the per-field multidevice sync instead of one overwriting the other. |
 
@@ -144,6 +144,7 @@ Multi-file types (`damagePhotos`, `spotPhotos`, `other`) → subfolder, numbered
 | `naming.ts` | **pure**: `folderNameFor(claim)`, `relPathsFor(type, files, existing)` — label + ext, subfolder + next number for multi types, `oldNameFor(relPath, taken)` — `(old)` rename plan for replacements | unit |
 | `folder.ts` | `writeDocuments(claim, type, files, source) → { claim, written }` (batch); `readDocument(claim, doc) → File`; `openDocument(claim, doc)` (PDF/image → object URL in new tab; anything else downloads); `claimFolderPath(claim)`. Wraps handle walking; throws typed errors (`NoFolderError`, `PermissionDeniedError`, `NotOnThisDeviceError`) | manual |
 | `sink.ts` | `saveDocuments(type, files, source)` — the one call every "a file was born" site makes: no folder connected is a quiet no-op (existing download/Drive flow untouched), a write failure toasts and returns `[]` | manual |
+| `print-followup.ts` | `promptForPrintedPdf(type)` — the toast + file picker that hands the printed PDF back | manual |
 | `useClaimDocuments.ts` | hook: folder state (unsupported / not connected / connected + label), `documents` list with `onThisDevice` resolved, `connect(label)`, `addFiles(type, files)`, `open(doc)`, `remove(doc)` | manual |
 
 `writeDocuments` writes every new file to a `<relPath>.part` sibling first;
@@ -173,14 +174,19 @@ refreshes the card, nothing else re-triggers it.
 | Sync ✈️ picker — surveyor picks a Sync file into a claim field | fetches file (local-first) | via `processFiles`, `source: 'upload'`, type from field key. Bulk sync does **not** touch the index: a Sync claim is not linked to a Prime claim, only a picked file is |
 
 **Survey report, bill check, fee bill, reinspection report** are HTML opened
-with `window.print()`; there is no PDF `Blob`. v1 saves the report's **HTML
-string** itself (`Final Survey Report.html`, `source: 'generated'`) at the
-moment the print window opens — it opens in any browser and prints
-identically, and the index knows the report exists — though *Open* on the
-Documents tab downloads it rather than rendering it inline (only PDFs and
-images open in a tab; a blob URL must never run as a page). A PDF the surveyor
-prints can be added over it with **Add file** → same type (a single-file type
-replaces, HTML goes to `(old)`). A real PDF pipeline stays out of scope.
+with `window.print()`; the PDF is produced by Chrome's own print dialog and
+never passes through the app. Two things happen on print:
+
+1. The report **HTML** is saved immediately (`Final Survey Report.html`,
+   `source: 'generated'`) — so the folder records that the report was issued
+   even if the surveyor goes no further.
+2. A prompt offers **File the PDF**. One click opens a file picker; the
+   chosen PDF is saved under the same type, and the HTML placeholder is
+   deleted (D8's exception). The folder ends with one file per report — the
+   PDF that was actually sent.
+
+Re-printing later regenerates from the claim as it stands then, which is why
+the filed PDF matters: it is the snapshot of what the insurer received.
 
 All four print-based reports open through one shared `openPrintWindow` in
 `print-shell.ts`; the reinspection report's print now uses the same 600 ms
@@ -265,5 +271,5 @@ Open disabled.
 - **Scan an existing folder** into the index for claims made before this.
 - **Stale index** when a file is renamed or moved in Explorer — the row
   shows *missing here*; no repair tooling.
-- **PDF pipeline** for the print-based reports so they save themselves.
+- **PDF pipeline** for the print-based reports so they save themselves. The print-followup prompt covers the gap for now — a real generated PDF would remove the prompt entirely.
 - **Extension v2** — attaching by type. Depends on this spec.
