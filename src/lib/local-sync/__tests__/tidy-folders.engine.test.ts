@@ -68,10 +68,17 @@ function makeRoot(tree: Tree, opts: { truncate?: string; stealDuringCopy?: strin
       }
       return fileHandle(node, name)
     },
-    async removeEntry(name: string) {
-      removed.push(`${path}${name}`)
-      if (node[name] === undefined) throw notFound(name)
+    // Faithful to the real API: without { recursive: true } a non-empty
+    // directory refuses. Ignoring the options would keep these tests green
+    // while every real rename failed silently.
+    async removeEntry(name: string, o?: { recursive?: boolean }) {
+      const entry = node[name]
+      if (entry === undefined) throw notFound(name)
+      if (!o?.recursive && typeof entry !== 'string' && Object.keys(entry).length > 0) {
+        throw Object.assign(new Error(`"${name}" is not empty`), { name: 'InvalidModificationError' })
+      }
       delete node[name]
+      removed.push(`${path}${name}`)
     },
   } as unknown as FileSystemDirectoryHandle)
 
