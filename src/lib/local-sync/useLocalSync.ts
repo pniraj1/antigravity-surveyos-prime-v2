@@ -13,6 +13,7 @@ import { syncClaim, syncAllClaims, type SyncProgress } from './sync-engine'
 import type { SyncClaimSummary } from '@/lib/sync-bridge/types'
 import { getClaimRecordedDocs } from './local-source'
 import { claimSyncState, type ClaimSyncState } from './sync-manifest'
+import { planTidy, listRootFolders, runTidy, type TidyPlan } from './tidy-folders'
 
 interface ClaimRef {
   claimId: string; vehicleNumber: string; insuranceCompany: string; label: string
@@ -96,5 +97,37 @@ export function useLocalSync(token: string) {
     }
   }, [token, ensureRoot])
 
-  return { supported, connected: !!root, busy, progress, root, claimStatus, runSyncClaim, runSyncAll, ensureRoot, loadClaimStatuses }
+  const [tidyPlan, setTidyPlan] = useState<TidyPlan | null>(null)
+
+  /** Look for folders still under the pre-2026-09-23 name. Cheap: one directory listing. */
+  const checkTidy = useCallback(async (claims: readonly SyncClaimSummary[]) => {
+    if (!root || claims.length === 0) { setTidyPlan(null); return }
+    try {
+      setTidyPlan(planTidy(claims, await listRootFolders(root)))
+    } catch {
+      setTidyPlan(null)
+    }
+  }, [root])
+
+  const runTidyUp = useCallback(async () => {
+    if (!tidyPlan || tidyPlan.rename.length === 0) return
+    const handle = await ensureRoot()
+    if (!handle) return
+    setBusy(true)
+    try {
+      const res = await runTidy(handle, tidyPlan, (p) => setProgress({ claimLabel: p.label, done: p.done, total: p.total, failed: 0 }))
+      if (res.failed.length === 0) {
+        toast.success(`Renamed ${res.renamed} folder${res.renamed === 1 ? '' : 's'} to the new naming.`)
+      } else {
+        toast.warning(`Renamed ${res.renamed}; ${res.failed.length} left alone — ${res.failed[0].message}`, { duration: 8000 })
+      }
+      setTidyPlan(null)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not rename the folders.')
+    } finally {
+      setBusy(false); setProgress(null)
+    }
+  }, [tidyPlan, ensureRoot])
+
+  return { supported, connected: !!root, busy, progress, root, claimStatus, runSyncClaim, runSyncAll, ensureRoot, loadClaimStatuses, tidyPlan, checkTidy, runTidyUp }
 }

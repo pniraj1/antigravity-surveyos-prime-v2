@@ -103,8 +103,11 @@ export function SyncDrivePicker({ open, onOpenChange, targetSlotLabel, onPick }:
 
   // Compute per-claim "on disk" status for the list tick (reads local manifests — no Worker calls).
   useEffect(() => {
-    if (claims.length > 0) void localSync.loadClaimStatuses(claims);
-  }, [claims, localSync.root, localSync.busy, localSync.loadClaimStatuses]);
+    if (claims.length > 0) {
+      void localSync.loadClaimStatuses(claims);
+      void localSync.checkTidy(claims);
+    }
+  }, [claims, localSync.root, localSync.busy, localSync.loadClaimStatuses, localSync.checkTidy]);
 
   const groups = useMemo(() => filterAndGroupClaims(claims, query), [claims, query]);
   const searching = query.trim().length > 0;
@@ -203,6 +206,24 @@ export function SyncDrivePicker({ open, onOpenChange, targetSlotLabel, onPick }:
         {/* Claim list — grouped by insurer */}
         {!loading && !detail && (
           <div className="max-h-80 overflow-y-auto">
+            {localSync.supported && (localSync.tidyPlan?.rename.length ?? 0) > 0 && (
+              <div className="mb-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs">
+                <div className="font-medium text-amber-900">
+                  {localSync.tidyPlan!.rename.length} folder{localSync.tidyPlan!.rename.length === 1 ? '' : 's'} still use the old naming
+                </div>
+                <div className="mt-0.5 text-amber-800">
+                  e.g. <span className="font-mono">{localSync.tidyPlan!.rename[0].from}</span> → <span className="font-mono">{localSync.tidyPlan!.rename[0].to}</span>.
+                  Files are copied across and the old folder removed only once every file has landed.
+                </div>
+                <button
+                  onClick={() => localSync.runTidyUp()}
+                  disabled={localSync.busy}
+                  className="mt-1.5 inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-600 text-white font-semibold disabled:opacity-50"
+                >
+                  {localSync.busy ? <><Loader2 size={12} className="animate-spin" /> Renaming…</> : <>Tidy up folder names</>}
+                </button>
+              </div>
+            )}
             {localSync.supported && claims.length > 0 && (
               <button
                 onClick={() => localSync.runSyncAll(claims)}
