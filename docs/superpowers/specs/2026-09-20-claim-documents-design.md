@@ -129,8 +129,11 @@ Layout:
       Damage Photos 1.jpg
 ```
 
-Sync's own folders (`MH12AB1234 - HDFC ERGO/`, with `_surveyos-sync.json`)
-sit beside these under the same root and are not touched.
+Sync now names its folders the same way — `<vehicle> - <INSURER SHORT>`
+(e.g. `MH12AB1234 - HDFC/`, with `_surveyos-sync.json`) — so both features
+write one folder per vehicle under the same root. A folder created before
+this change keeps its long-form name (`MH12AB1234 - HDFC ERGO/`) and is
+still read from there; nothing is renamed or re-downloaded.
 
 Single-file types → `<Label>.<ext>` (a second file of the same type
 replaces it: newer report wins; the old one is renamed `<Label> (old).<ext>`).

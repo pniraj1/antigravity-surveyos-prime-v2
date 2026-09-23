@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { sanitizeSegment, claimFolderName, extFor, placeFile } from '../nomenclature'
+import { sanitizeSegment, claimFolderName, legacyClaimFolderName, extFor, placeFile } from '../nomenclature'
 
 describe('sanitizeSegment', () => {
   it('removes Windows-illegal characters and trims dots/spaces', () => {
@@ -13,8 +13,22 @@ describe('sanitizeSegment', () => {
 })
 
 describe('claimFolderName', () => {
-  it('joins vehicle and insurer, sanitized', () => {
+  it('joins vehicle and the insurer short form', () => {
     expect(claimFolderName({ vehicleNumber: 'MH12AB1234', insuranceCompany: 'HDFC ERGO' }))
+      .toBe('MH12AB1234 - HDFC')
+    expect(claimFolderName({ vehicleNumber: 'MH12AB1234', insuranceCompany: 'The New India Assurance Company Limited' }))
+      .toBe('MH12AB1234 - NIA')
+  })
+  it('drops a part it does not have', () => {
+    expect(claimFolderName({ vehicleNumber: 'MH12AB1234', insuranceCompany: '' })).toBe('MH12AB1234')
+    expect(claimFolderName({ vehicleNumber: '', insuranceCompany: 'United India Insurance' })).toBe('UIIC')
+    expect(claimFolderName({ vehicleNumber: '', insuranceCompany: '' })).toBe('claim')
+  })
+})
+
+describe('legacyClaimFolderName', () => {
+  it('is the pre-2026-09 name, insurer spelled out', () => {
+    expect(legacyClaimFolderName({ vehicleNumber: 'MH12AB1234', insuranceCompany: 'HDFC ERGO' }))
       .toBe('MH12AB1234 - HDFC ERGO')
   })
 })

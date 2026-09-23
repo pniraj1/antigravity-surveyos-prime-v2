@@ -5,12 +5,12 @@
 
 import { getSyncClaim, fetchSyncDocFileAt } from '@/lib/sync-bridge/client'
 import type { SyncClaimSummary } from '@/lib/sync-bridge/types'
-import { claimFolderName, placeFile } from './nomenclature'
+import { placeFile } from './nomenclature'
 import {
   MANIFEST_FILENAME, diffManifest, emptyManifest, fileKey, partitionClaimsForSync,
   type LocalManifest, type RemoteFile,
 } from './sync-manifest'
-import { getClaimRecordedDocs } from './local-source'
+import { getClaimRecordedDocs, resolveSyncFolderName } from './local-source'
 
 export interface SyncProgress {
   claimLabel: string
@@ -77,7 +77,7 @@ export async function syncClaim(
 ): Promise<{ downloaded: number; failed: number }> {
   const detail = await getSyncClaim(token, claim.claimId)
   const remote = toRemoteFiles(detail)
-  const claimDir = await ensureDir(root, [claimFolderName(claim)])
+  const claimDir = await ensureDir(root, [await resolveSyncFolderName(root, claim)])
   const manifest = await readManifest(claimDir, claim.claimId)
   // Records the received-doc count for change detection. The claim-list tick compares this against
   // the claim summary's `receivedDocs`. Both are server-side counts of "received" docs; the detail

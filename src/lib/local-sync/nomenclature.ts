@@ -3,6 +3,8 @@
 // Sync stores no per-file original name, so names derive from docType.
 // ═══════════════════════════════════════════════════════════
 
+import { insurerShortForm } from '@/lib/documents/insurers'
+
 const ILLEGAL = /[\\/:*?"<>|]+/g // Windows-illegal path characters
 
 /** Make a string safe as a single Windows folder/file segment. */
@@ -18,8 +20,19 @@ export function extFor(mimeType: string): string {
   return 'jpg'
 }
 
-/** Folder name for a claim: "<VehicleNumber> - <Insurer>", sanitized. */
+/** Folder name for a claim: "<VehicleNumber> - <INSURER>", sanitized. */
 export function claimFolderName(claim: { vehicleNumber: string; insuranceCompany: string }): string {
+  const vehicle = sanitizeSegment(claim.vehicleNumber ?? '', '')
+  const insurer = insurerShortForm(claim.insuranceCompany)
+  return sanitizeSegment([vehicle, insurer].filter(Boolean).join(' - '), 'claim')
+}
+
+/**
+ * How folders were named before 2026-09: the insurer exactly as the bridge
+ * spells it ("MH12AB1234 - HDFC ERGO"). Still read so a surveyor who synced
+ * before the change keeps their files instead of re-downloading them.
+ */
+export function legacyClaimFolderName(claim: { vehicleNumber: string; insuranceCompany: string }): string {
   return sanitizeSegment(`${claim.vehicleNumber} - ${claim.insuranceCompany}`, 'claim')
 }
 

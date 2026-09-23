@@ -18,9 +18,8 @@ import type { SyncClaimSummary, SyncClaimDetail } from '@/lib/sync-bridge/types'
 import { toast } from 'sonner';
 import { Loader2, ChevronLeft, ChevronDown, ChevronRight, FileText, Car, Search, FolderDown, HardDriveDownload } from 'lucide-react';
 import { useLocalSync } from '@/lib/local-sync/useLocalSync';
-import { getLocalFile } from '@/lib/local-sync/local-source';
+import { getLocalFile, resolveSyncFolderName } from '@/lib/local-sync/local-source';
 import { isDocSynced, emptyManifest, MANIFEST_FILENAME, type LocalManifest } from '@/lib/local-sync/sync-manifest';
-import { claimFolderName } from '@/lib/local-sync/nomenclature';
 
 interface SyncDrivePickerProps {
   open: boolean;
@@ -88,9 +87,10 @@ export function SyncDrivePicker({ open, onOpenChange, targetSlotLabel, onPick }:
     let cancelled = false;
     (async () => {
       try {
-        const claimDir = await localSync.root!.getDirectoryHandle(
-          claimFolderName({ vehicleNumber: detail.vehicleNumber, insuranceCompany: detail.insuranceCompany }),
-        );
+        const folderName = await resolveSyncFolderName(localSync.root!, {
+          vehicleNumber: detail.vehicleNumber, insuranceCompany: detail.insuranceCompany,
+        });
+        const claimDir = await localSync.root!.getDirectoryHandle(folderName);
         const fh = await claimDir.getFileHandle(MANIFEST_FILENAME);
         const text = await (await fh.getFile()).text();
         if (!cancelled) setClaimManifest(JSON.parse(text) as LocalManifest);

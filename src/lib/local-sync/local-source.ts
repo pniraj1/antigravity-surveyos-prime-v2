@@ -3,17 +3,36 @@
 // so Prime can open it without calling the Worker.
 // ═══════════════════════════════════════════════════════════
 
-import { claimFolderName, placeFile, type PlaceInput } from './nomenclature'
+import { claimFolderName, legacyClaimFolderName, placeFile, type PlaceInput } from './nomenclature'
 import { ensureReadWrite } from './directory-handle'
 import { MANIFEST_FILENAME, type LocalManifest } from './sync-manifest'
+
+/**
+ * The folder this claim's synced files are actually in: the short-form name,
+ * or the pre-2026-09 long-form one when that is what exists on disk. New
+ * claims get the short form (the name returned when neither exists).
+ */
+export async function resolveSyncFolderName(
+  root: FileSystemDirectoryHandle,
+  claim: { vehicleNumber: string; insuranceCompany: string },
+): Promise<string> {
+  const short = claimFolderName(claim)
+  try { await root.getDirectoryHandle(short); return short } catch { /* not there yet */ }
+  const legacy = legacyClaimFolderName(claim)
+  if (legacy !== short) {
+    try { await root.getDirectoryHandle(legacy); return legacy } catch { /* nor there */ }
+  }
+  return short
+}
 
 /** Full relative path segments of a file under the root: [claimFolder, ...dir, fileName]. */
 export function localRelPath(
   claim: { vehicleNumber: string; insuranceCompany: string },
   place: PlaceInput,
+  folderName: string = claimFolderName(claim),
 ): string[] {
   const placement = placeFile(place)
-  return [claimFolderName(claim), ...placement.dir, placement.fileName]
+  return [folderName, ...placement.dir, placement.fileName]
 }
 
 /**
@@ -28,7 +47,8 @@ export async function getLocalFile(
   if (!root) return null
   try {
     if (!(await ensureReadWrite(root))) return null
-    const segments = localRelPath(claim, place)
+    const folderName = await resolveSyncFolderName(root, claim)
+    const segments = localRelPath(claim, place, folderName)
     const fileName = segments[segments.length - 1]
     const dirs = segments.slice(0, -1)
     let dir = root
@@ -50,7 +70,7 @@ export async function getClaimRecordedDocs(
 ): Promise<number> {
   if (!root) return 0
   try {
-    const claimDir = await root.getDirectoryHandle(claimFolderName(claim))
+    const claimDir = await root.getDirectoryHandle(await resolveSyncFolderName(root, claim))
     const fh = await claimDir.getFileHandle(MANIFEST_FILENAME)
     const text = await (await fh.getFile()).text()
     const parsed = JSON.parse(text) as LocalManifest
