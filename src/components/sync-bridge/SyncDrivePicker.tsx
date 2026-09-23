@@ -46,6 +46,8 @@ export function SyncDrivePicker({ open, onOpenChange, targetSlotLabel, onPick }:
   const lastClaimIdRef = useRef<string | null>(null);
   const localSync = useLocalSync(token);
   const [claimManifest, setClaimManifest] = useState<LocalManifest | null>(null);
+  // Stage 2 of the tidy-up prompt: every from → to pair, before anything is deleted.
+  const [tidyReview, setTidyReview] = useState(false);
 
   const openClaim = useCallback(async (claimId: string) => {
     setLoading(true);
@@ -206,22 +208,66 @@ export function SyncDrivePicker({ open, onOpenChange, targetSlotLabel, onPick }:
         {/* Claim list — grouped by insurer */}
         {!loading && !detail && (
           <div className="max-h-80 overflow-y-auto">
-            {localSync.supported && (localSync.tidyPlan?.rename.length ?? 0) > 0 && (
+            {localSync.supported && ((localSync.tidyPlan?.rename.length ?? 0) + (localSync.tidyPlan?.skipped.length ?? 0)) > 0 && (
               <div className="mb-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs">
-                <div className="font-medium text-amber-900">
+                {localSync.tidyPlan!.rename.length > 0 && <div className="font-medium text-amber-900">
                   {localSync.tidyPlan!.rename.length} folder{localSync.tidyPlan!.rename.length === 1 ? '' : 's'} still use the old naming
-                </div>
-                <div className="mt-0.5 text-amber-800">
-                  e.g. <span className="font-mono">{localSync.tidyPlan!.rename[0].from}</span> → <span className="font-mono">{localSync.tidyPlan!.rename[0].to}</span>.
-                  Files are copied across and the old folder removed only once every file has landed.
-                </div>
-                <button
-                  onClick={() => localSync.runTidyUp()}
-                  disabled={localSync.busy}
-                  className="mt-1.5 inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-600 text-white font-semibold disabled:opacity-50"
-                >
-                  {localSync.busy ? <><Loader2 size={12} className="animate-spin" /> Renaming…</> : <>Tidy up folder names</>}
-                </button>
+                </div>}
+                {localSync.tidyPlan!.rename.length === 0 ? null : !tidyReview ? (
+                  <>
+                    <div className="mt-0.5 text-amber-800">
+                      e.g. <span className="font-mono">{localSync.tidyPlan!.rename[0].from}</span> → <span className="font-mono">{localSync.tidyPlan!.rename[0].to}</span>.
+                    </div>
+                    <button
+                      onClick={() => setTidyReview(true)}
+                      className="mt-1.5 inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-600 text-white font-semibold"
+                    >
+                      Review
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="mt-1 max-h-32 overflow-y-auto rounded-md border border-amber-200 bg-white/60 p-1.5">
+                      {localSync.tidyPlan!.rename.map((r) => (
+                        <div key={r.from} className="truncate text-amber-900">
+                          <span className="font-mono">{r.from}</span> → <span className="font-mono">{r.to}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-1.5 text-amber-800">
+                      The files are copied to the new name first. The old folder is <strong>deleted</strong> only after every file is verified.
+                    </div>
+                    <div className="mt-0.5 text-amber-800">
+                      Or rename them yourself in Windows Explorer — SurveyOS finds either name.
+                    </div>
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <button
+                        onClick={() => localSync.runTidyUp(claims)}
+                        disabled={localSync.tidying}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-600 text-white font-semibold disabled:opacity-50"
+                      >
+                        {localSync.tidying
+                          ? <><Loader2 size={12} className="animate-spin" /> {localSync.tidyProgress ? `Renaming ${localSync.tidyProgress.done}/${localSync.tidyProgress.total}…` : 'Renaming…'}</>
+                          : <>Rename {localSync.tidyPlan!.rename.length} folder{localSync.tidyPlan!.rename.length === 1 ? '' : 's'}</>}
+                      </button>
+                      <button
+                        onClick={() => setTidyReview(false)}
+                        disabled={localSync.tidying}
+                        className="px-2.5 py-1 rounded-md border border-amber-300 text-amber-900 disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </>
+                )}
+                {(localSync.tidyPlan?.skipped.length ?? 0) > 0 && (
+                  <div className="mt-2 border-t border-amber-200 pt-1.5 text-amber-800">
+                    {localSync.tidyPlan!.skipped.length} claim{localSync.tidyPlan!.skipped.length === 1 ? '' : 's'} have both the old and new folder on disk — nothing was touched; merge them yourself in Explorer.
+                    {localSync.tidyPlan!.skipped.map((s) => (
+                      <div key={s.from} className="truncate font-mono">{s.from}</div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             {localSync.supported && claims.length > 0 && (

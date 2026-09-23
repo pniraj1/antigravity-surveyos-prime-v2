@@ -4,7 +4,7 @@
 // useLocalSync — folder connection + sync actions for the UI.
 // ═══════════════════════════════════════════════════════════
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
   isLocalSyncSupported, getStoredRootHandle, pickRootFolder, ensureReadWrite,
@@ -13,7 +13,7 @@ import { syncClaim, syncAllClaims, type SyncProgress } from './sync-engine'
 import type { SyncClaimSummary } from '@/lib/sync-bridge/types'
 import { getClaimRecordedDocs } from './local-source'
 import { claimSyncState, type ClaimSyncState } from './sync-manifest'
-import { planTidy, listRootFolders, runTidy, type TidyPlan } from './tidy-folders'
+import { planTidy, listRootFolders, runTidy, type TidyPlan, type TidyProgress } from './tidy-folders'
 
 interface ClaimRef {
   claimId: string; vehicleNumber: string; insuranceCompany: string; label: string
@@ -109,25 +109,38 @@ export function useLocalSync(token: string) {
     }
   }, [root])
 
-  const runTidyUp = useCallback(async () => {
+  const [tidyProgress, setTidyProgress] = useState<TidyProgress | null>(null)
+  const [tidying, setTidying] = useState(false)
+  // A ref, not the state: two clicks in one tick both read a stale `tidying`,
+  // and two runs over the same folders is exactly how a copy meets a delete.
+  const tidyRunning = useRef(false)
+
+  const runTidyUp = useCallback(async (claims: readonly SyncClaimSummary[]) => {
+    if (tidyRunning.current || busy) return
     if (!tidyPlan || tidyPlan.rename.length === 0) return
-    const handle = await ensureRoot()
-    if (!handle) return
-    setBusy(true)
+    tidyRunning.current = true
+    setTidying(true)
     try {
-      const res = await runTidy(handle, tidyPlan, (p) => setProgress({ claimLabel: p.label, done: p.done, total: p.total, failed: 0 }))
+      const handle = await ensureRoot()
+      if (!handle) return
+      const res = await runTidy(handle, tidyPlan, setTidyProgress)
       if (res.failed.length === 0) {
         toast.success(`Renamed ${res.renamed} folder${res.renamed === 1 ? '' : 's'} to the new naming.`)
       } else {
-        toast.warning(`Renamed ${res.renamed}; ${res.failed.length} left alone — ${res.failed[0].message}`, { duration: 8000 })
+        const shown = res.failed.slice(0, 3).map((f) => f.message).join(' ')
+        const more = res.failed.length > 3 ? ` …and ${res.failed.length - 3} more.` : ''
+        toast.warning(`Renamed ${res.renamed}; ${res.failed.length} left alone — ${shown}${more}`, { duration: 8000 })
       }
-      setTidyPlan(null)
+      // Re-plan rather than blank it: what failed stays on screen and retryable.
+      setTidyPlan(planTidy(claims, await listRootFolders(handle)))
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not rename the folders.')
     } finally {
-      setBusy(false); setProgress(null)
+      tidyRunning.current = false
+      setTidying(false)
+      setTidyProgress(null)
     }
-  }, [tidyPlan, ensureRoot])
+  }, [tidyPlan, busy, ensureRoot])
 
-  return { supported, connected: !!root, busy, progress, root, claimStatus, runSyncClaim, runSyncAll, ensureRoot, loadClaimStatuses, tidyPlan, checkTidy, runTidyUp }
+  return { supported, connected: !!root, busy, progress, root, claimStatus, runSyncClaim, runSyncAll, ensureRoot, loadClaimStatuses, tidyPlan, checkTidy, runTidyUp, tidying, tidyProgress }
 }
