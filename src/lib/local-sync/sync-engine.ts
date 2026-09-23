@@ -68,6 +68,31 @@ function toRemoteFiles(detail: Awaited<ReturnType<typeof getSyncClaim>>): Remote
   return out
 }
 
+/** True when `relPath` (segments + name) already exists under `dir`. */
+async function fileExists(dir: FileSystemDirectoryHandle, segments: string[], name: string): Promise<boolean> {
+  try {
+    let d = dir
+    for (const seg of segments) d = await d.getDirectoryHandle(seg)
+    await d.getFileHandle(name)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** `RC Book.pdf` → `RC Book (2).pdf` → `(3)` … until nothing is there. */
+async function freeFileName(dir: FileSystemDirectoryHandle, segments: string[], name: string): Promise<string> {
+  if (!(await fileExists(dir, segments, name))) return name
+  const dot = name.lastIndexOf('.')
+  const stem = dot > 0 ? name.slice(0, dot) : name
+  const ext = dot > 0 ? name.slice(dot) : ''
+  for (let n = 2; n < 100; n++) {
+    const candidate = `${stem} (${n})${ext}`
+    if (!(await fileExists(dir, segments, candidate))) return candidate
+  }
+  return `${stem} (${Date.now()})${ext}`
+}
+
 /** Sync one claim's new files into <root>/<claim folder>/. Returns counts. */
 export async function syncClaim(
   token: string,
@@ -100,14 +125,23 @@ export async function syncClaim(
         fileCount: fileCountByDoc.get(r.docId) ?? 1, mimeType: r.mimeType, docId: r.docId,
       })
       const targetDir = await ensureDir(claimDir, placement.dir)
-      const fh = await targetDir.getFileHandle(placement.fileName, { create: true })
+      const key = fileKey(r.docId, r.fileIndex)
+      // A file this manifest already recorded is ours to rewrite (the remote
+      // copy changed). Anything else on disk belongs to someone — Prime writes
+      // into this same folder now — so take the next free name instead of
+      // truncating it.
+      const owned = manifest.files[key]
+      const fileName = owned
+        ? owned.fileName
+        : await freeFileName(claimDir, placement.dir, placement.fileName)
+      const fh = await targetDir.getFileHandle(fileName, { create: true })
       const w = await fh.createWritable()
       await w.write(file)
       await w.close()
 
-      manifest.files[fileKey(r.docId, r.fileIndex)] = {
-        fileName: placement.fileName,
-        relPath: [...placement.dir, placement.fileName].join('/'),
+      manifest.files[key] = {
+        fileName,
+        relPath: [...placement.dir, fileName].join('/'),
         fileSizeKb: r.fileSizeKb,
         uploadedAt: r.uploadedAt,
       }
