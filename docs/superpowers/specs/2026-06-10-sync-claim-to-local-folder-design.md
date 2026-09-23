@@ -110,6 +110,11 @@ New, focused modules under `src/lib/local-sync/`:
       Damage Photos 2.jpg
     _surveyos-sync.json              ← incremental manifest (hidden-ish, leading underscore)
 ```
+> Superseded 2026-09-23: the claim folder now uses the insurer short form
+> (`MH12AB1234 - HDFC/`), shared with Prime's claim documents — see
+> `2026-09-20-claim-documents-design.md` §3.2. Pre-existing folders keep their
+> long-form name and are still read from there.
+
 Rules:
 - Sanitize names for Windows: strip/replace `\ / : * ? " < > |` and trailing dots/spaces; collapse
   whitespace; fall back to `document` / `claim` when empty.

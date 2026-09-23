@@ -135,6 +135,15 @@ write one folder per vehicle under the same root. A folder created before
 this change keeps its long-form name (`MH12AB1234 - HDFC ERGO/`) and is
 still read from there; nothing is renamed or re-downloaded.
 
+Because the two features share one folder and one naming scheme, they also
+produce the same file names (`RC Book.pdf`, `Damage Photos/Damage Photos 1.jpg`).
+A Sync download therefore never overwrites a file its manifest does not
+already own: a file the manifest records is Sync's own to rewrite when the
+remote copy changed, anything else on disk is someone's work and the download
+takes the next free name (`RC Book (2).pdf`). The consequence is that a folder
+scan adopts Sync's downloaded files into the claim's document index — that is
+intended: one list of everything in the folder.
+
 Single-file types → `<Label>.<ext>` (a second file of the same type
 replaces it: newer report wins; the old one is renamed `<Label> (old).<ext>`).
 Multi-file types (`damagePhotos`, `spotPhotos`, `other`) → subfolder, numbered.
