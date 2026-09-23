@@ -3,15 +3,21 @@ import type { ClaimData } from '@/types/claim';
 import type { ClaimDocument, DocType } from '@/types/documents';
 import { DOC_TYPE_LABEL, MULTI_FILE_TYPES } from '@/types/documents';
 import { sanitizeSegment } from '@/lib/local-sync/nomenclature';
+import { insurerShortForm } from './insurers';
 
-/** Spec D2: fixed at the first write. Claim number first; vehicle − insurer as the fallback. */
+/**
+ * Spec D2: fixed at the first write. A surveyor looks for a claim by the
+ * vehicle it was on and who insured it — `MH12AB1234 - NIA` — which is also
+ * how SurveyOS Sync names its own folders.
+ */
 export function folderNameFor(claim: ClaimData): string {
   if (claim.documentsFolder) return claim.documentsFolder;
+  const reg = sanitizeSegment(claim.vehicle?.registrationNumber?.trim() ?? '', '');
+  const insurer = insurerShortForm(claim.policy?.insurerName);
+  const name = [reg, insurer].filter(Boolean).join(' - ');
+  if (name) return name;
   const claimNo = claim.policy?.claimNumber?.trim();
-  if (claimNo) return sanitizeSegment(claimNo, 'claim');
-  const reg = claim.vehicle?.registrationNumber?.trim() ?? '';
-  const insurer = claim.policy?.insurerName?.trim() ?? '';
-  return reg || insurer ? sanitizeSegment(`${reg} - ${insurer}`.replace(/^ - | - $/g, ''), 'claim') : 'claim';
+  return claimNo ? sanitizeSegment(claimNo, 'claim') : 'claim';
 }
 
 const MIME_EXT: Array<[RegExp, string]> = [

@@ -8,20 +8,34 @@ const existing = (relPaths: string[], type: ClaimDocument['type'] = 'damagePhoto
 
 describe('folderNameFor', () => {
   it('is sticky once set', () => {
-    const c = createBlankClaim(); c.documentsFolder = 'KEEP-ME'; c.policy.claimNumber = '3101/1';
+    const c = createBlankClaim(); c.documentsFolder = 'KEEP-ME';
+    c.vehicle.registrationNumber = 'MH12AB1234'; c.policy.insurerName = 'New India Assurance';
     expect(folderNameFor(c)).toBe('KEEP-ME');
   });
-  it('uses the sanitised claim number, else registration - insurer, else claim', () => {
-    const c = createBlankClaim(); c.policy.claimNumber = '3101/00312/24-C';
-    expect(folderNameFor(c)).toBe('3101 00312 24-C');
-    c.policy.claimNumber = ''; c.vehicle.registrationNumber = 'MH12AB1234'; c.policy.insurerName = 'New India';
-    expect(folderNameFor(c)).toBe('MH12AB1234 - New India');
-    c.policy.insurerName = '';
+  it('is registration + insurer short form', () => {
+    const c = createBlankClaim();
+    c.vehicle.registrationNumber = 'MH12AB1234';
+    c.policy.insurerName = 'The New India Assurance Company Limited';
+    expect(folderNameFor(c)).toBe('MH12AB1234 - NIA');
+  });
+  it('drops the part it does not have', () => {
+    const c = createBlankClaim();
+    c.vehicle.registrationNumber = 'MH12AB1234';
     expect(folderNameFor(c)).toBe('MH12AB1234');
-    c.vehicle.registrationNumber = ''; c.policy.insurerName = 'New India';
-    expect(folderNameFor(c)).toBe('New India');
-    c.vehicle.registrationNumber = ''; c.policy.insurerName = '';
+    c.vehicle.registrationNumber = ''; c.policy.insurerName = 'United India Insurance Co. Ltd.';
+    expect(folderNameFor(c)).toBe('UIIC');
+  });
+  it('falls back to the claim number, then to claim', () => {
+    const c = createBlankClaim();
+    c.policy.claimNumber = '3101/00312/24-C';
+    expect(folderNameFor(c)).toBe('3101 00312 24-C');
+    c.policy.claimNumber = '';
     expect(folderNameFor(c)).toBe('claim');
+  });
+  it('sanitises a registration with stray characters', () => {
+    const c = createBlankClaim();
+    c.vehicle.registrationNumber = 'MH/12 AB*1234'; c.policy.insurerName = 'National Insurance';
+    expect(folderNameFor(c)).toBe('MH 12 AB 1234 - NIC');
   });
 });
 
