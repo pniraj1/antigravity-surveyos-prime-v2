@@ -241,13 +241,23 @@ export async function getClaimDirHandle(
   }
 }
 
-/** Every file in the claim folder, one level of subfolders deep, as relative paths. Unreadable files (cloud placeholder not hydrated, locked, AV scan) are skipped and counted, not thrown on. */
+/** How many levels of subfolders a scan walks. ponytail: a flat number, not a setting — raise it if real claim folders nest deeper. */
+const MAX_SCAN_DEPTH = 3;
+
+/**
+ * Every file in the claim folder, up to MAX_SCAN_DEPTH levels of subfolders deep,
+ * as relative paths. Unreadable files (cloud placeholder not hydrated, locked, AV
+ * scan) are skipped and counted, not thrown on; so is any folder below the depth
+ * limit, so the scan never reports "nothing found" when it simply did not look.
+ */
 async function listFiles(
   dir: FileSystemDirectoryHandle,
   prefix = '',
-): Promise<{ files: Array<{ relPath: string; file: File }>; unreadable: number }> {
+  depth = 0,
+): Promise<{ files: Array<{ relPath: string; file: File }>; unreadable: number; skippedDirs: number }> {
   const files: Array<{ relPath: string; file: File }> = [];
   let unreadable = 0;
+  let skippedDirs = 0;
   for await (const [name, handle] of (dir.entries as () => AsyncIterableIterator<[string, FileSystemHandle]>)()) {
     if (handle.kind === 'file') {
       try {
@@ -255,13 +265,16 @@ async function listFiles(
       } catch {
         unreadable++; // reported, never guessed at
       }
-    } else if (!prefix) {
-      const sub = await listFiles(handle as FileSystemDirectoryHandle, `${name}/`);
+    } else if (depth + 1 < MAX_SCAN_DEPTH) {
+      const sub = await listFiles(handle as FileSystemDirectoryHandle, `${prefix}${name}/`, depth + 1);
       files.push(...sub.files);
       unreadable += sub.unreadable;
+      skippedDirs += sub.skippedDirs;
+    } else {
+      skippedDirs++; // too deep to walk — said out loud, not silently dropped
     }
   }
-  return { files, unreadable };
+  return { files, unreadable, skippedDirs };
 }
 
 /**
@@ -276,14 +289,16 @@ async function listFiles(
  */
 export async function scanClaimFolder(
   claim: ClaimData,
-): Promise<{ claim: ClaimData; added: number; adopted: number; unreadable: number }> {
+): Promise<{ claim: ClaimData; added: number; adopted: number; unreadable: number; skippedDirs: number }> {
   const dir = await getClaimDirHandle(claim);
   if (!dir) throw new NoFolderError();
   const folder = dir.name; // the folder we actually walked — never a name resolved a second time
   const device = await getDeviceLabel();
-  const { files: found, unreadable } = await listFiles(dir);
+  const { files: found, unreadable, skippedDirs } = await listFiles(dir);
 
-  const byPath = new Map(claimDocuments(claim).map((d) => [d.relPath, d]));
+  // One path can hold several entries (two devices each wrote "RC Book.pdf") — adopt them all.
+  const byPath = new Map<string, ClaimDocument[]>();
+  for (const d of claimDocuments(claim)) byPath.set(d.relPath, [...(byPath.get(d.relPath) ?? []), d]);
   // In-memory field update only — resolveFolderName's on-disk folder is untouched; this stays read-only on disk.
   let next: ClaimData = { ...claim, documentsFolder: folder };
   const fresh: ClaimDocument[] = [];
@@ -293,7 +308,9 @@ export async function scanClaimFolder(
     if (isScanSkippable(relPath)) continue;
     const known = byPath.get(relPath);
     if (known) {
-      if (!onThisDevice(known, device)) { next = addDeviceTo(next, known.id, device); adopted++; }
+      for (const k of known) {
+        if (!onThisDevice(k, device)) { next = addDeviceTo(next, k.id, device); adopted++; }
+      }
       continue;
     }
     fresh.push({
@@ -302,11 +319,11 @@ export async function scanClaimFolder(
       relPath,
       mime: file.type || 'application/octet-stream',
       size: file.size,
-      addedAt: new Date(file.lastModified).toISOString(),
+      addedAt: new Date().toISOString(), // added to the list now — file.lastModified would bury it under old dates
       source: 'upload', // found on disk — never treated as a placeholder we may delete
       devices: [device],
     });
   }
 
-  return { claim: addDocuments(next, fresh), added: fresh.length, adopted, unreadable };
+  return { claim: addDocuments(next, fresh), added: fresh.length, adopted, unreadable, skippedDirs };
 }

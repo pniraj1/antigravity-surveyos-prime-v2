@@ -93,6 +93,6 @@ export function docTypeFromRelPath(relPath: string): DocType {
 export function isScanSkippable(relPath: string): boolean {
   const name = relPath.split('/').pop() ?? '';
   return name.endsWith('.part')
-    || name.startsWith('_')
+    || name.startsWith('_surveyos') // our own working files; a surveyor's _estimate.pdf is a document
     || / \(old(?: \d+)?\)\.[^.]+$/.test(name);
 }

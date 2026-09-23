@@ -107,6 +107,7 @@ describe('isScanSkippable', () => {
   });
   it('keeps ordinary files', () => {
     expect(isScanSkippable('RC Book.pdf')).toBe(false);
+    expect(isScanSkippable('_estimate.pdf')).toBe(false);
     expect(isScanSkippable('Damage Photos/Damage Photos 1.jpg')).toBe(false);
   });
 });
