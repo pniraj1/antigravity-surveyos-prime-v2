@@ -9,6 +9,7 @@ import { MULTI_FILE_TYPES } from '@/types/documents';
 import { getStoredRootHandle, ensureReadWrite, getDeviceLabel } from '@/lib/local-sync/directory-handle';
 import { addDocuments, claimDocuments, newDocId, removeDocument, onThisDevice, isDiscardablePlaceholder } from './index-ops';
 import { folderNameFor, oldNameFor, relPathsFor } from './naming';
+import { getAllClaims } from '@/lib/storage/indexeddb';
 
 export class NoFolderError extends Error { constructor() { super('No claim folder is connected.'); } }
 export class PermissionDeniedError extends Error { constructor() { super('Folder access was not granted.'); } }
@@ -66,6 +67,30 @@ async function removeQuiet(claimDir: FileSystemDirectoryHandle, relPath: string)
   } catch { /* nothing to clean up */ }
 }
 
+/**
+ * The folder name a claim should use, with collisions resolved. Two accidents
+ * on the same truck with the same insurer produce the same base name; the
+ * second claim gets ` - 2` so their files never mix. Runs once per claim —
+ * `documentsFolder` is sticky after the first write.
+ */
+export async function resolveFolderName(claim: ClaimData): Promise<string> {
+  if (claim.documentsFolder) return claim.documentsFolder;
+  const base = folderNameFor(claim);
+  let taken = new Set<string>();
+  try {
+    const all = await getAllClaims();
+    taken = new Set(all.filter((c) => c.id !== claim.id && c.documentsFolder).map((c) => c.documentsFolder as string));
+  } catch {
+    return base; // no claim store available — the base name is still better than nothing
+  }
+  if (!taken.has(base)) return base;
+  for (let n = 2; n < 100; n++) {
+    const candidate = `${base} - ${n}`;
+    if (!taken.has(candidate)) return candidate;
+  }
+  return `${base} - ${claim.id.slice(-6)}`;
+}
+
 export async function writeDocuments(
   claim: ClaimData,
   type: DocType,
@@ -74,7 +99,7 @@ export async function writeDocuments(
 ): Promise<{ claim: ClaimData; written: ClaimDocument[] }> {
   if (files.length === 0) return { claim, written: [] };
   const rootHandle = await root();
-  const folder = folderNameFor(claim);
+  const folder = await resolveFolderName(claim);
   const claimDir = await rootHandle.getDirectoryHandle(folder, { create: true });
   const device = await getDeviceLabel();
   const existing = claimDocuments(claim);
