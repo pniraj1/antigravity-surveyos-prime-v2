@@ -37,7 +37,7 @@ Telegram.
 | # | Rule |
 |---|------|
 | D1 | **Index on the record, bytes on disk.** `claim.documents[]` is small metadata and syncs with the claim like any other field. File bytes never enter the claim record or IndexedDB. |
-| D2 | **One root folder, picked once**, via the File System Access API (desktop Chrome/Edge). Same root and handle store as local-sync. The claim's folder name is decided at the **first write and stored on the claim** (`documentsFolder`), from the claim number when there is one, else vehicle − insurer. A later edit to the vehicle number never moves the folder; two claims on one vehicle never share one. |
+| D2 | **One root folder, picked once**, via the File System Access API (desktop Chrome/Edge). Same root and handle store as local-sync. A claim's folder is named `<registration> - <INSURER SHORT>` (`MH12AB1234 - NIA`) — how a surveyor searches, and consistent with Sync's own folders — falling back to whichever part exists, then the claim number. It is decided at the **first write and stored on the claim** (`documentsFolder`), so later edits to the vehicle or insurer never move it. Two claims that would produce the same name get ` - 2`, ` - 3`. |
 | D3 | **Every document has a type** from a closed vocabulary. Untyped files are `other`. |
 | D4 | **Drive and Telegram are copies**, recorded on the index entry. Nothing new is uploaded; existing uploads are noted where they already happen. |
 | D5 | **Bytes live where they were written.** The index records which machine holds them. On another machine the entry shows "on *Office PC*" and offers the Drive/Telegram copy if one exists. No cross-machine byte sync. |
@@ -142,7 +142,8 @@ Multi-file types (`damagePhotos`, `spotPhotos`, `other`) → subfolder, numbered
 |---|---|---|
 | `index-ops.ts` | **pure**: `addDocuments(claim, docs)`, `removeDocument(claim, id)`, `onThisDevice(doc, label)`, `claimDocuments(claim)`, `newDocId()`. All return a new claim. | unit |
 | `naming.ts` | **pure**: `folderNameFor(claim)`, `relPathsFor(type, files, existing)` — label + ext, subfolder + next number for multi types, `oldNameFor(relPath, taken)` — `(old)` rename plan for replacements | unit |
-| `folder.ts` | `writeDocuments(claim, type, files, source) → { claim, written }` (batch); `readDocument(claim, doc) → File`; `openDocument(claim, doc)` (PDF/image → object URL in new tab; anything else downloads); `claimFolderPath(claim)`. Wraps handle walking; throws typed errors (`NoFolderError`, `PermissionDeniedError`, `NotOnThisDeviceError`) | manual |
+| `insurers.ts` | **pure**: `insurerShortForm(name)` — the free-text insurer on a policy → `NIA`/`UIIC`/`ICICI`/… , first meaningful word when unknown | unit |
+| `folder.ts` | `writeDocuments(claim, type, files, source) → { claim, written }` (batch); `readDocument(claim, doc) → File`; `openDocument(claim, doc)` (PDF/image → object URL in new tab; anything else downloads); `claimFolderPath(claim)`; `scanClaimFolder(claim)` — read-only walk that indexes files already in the folder and adopts entries written on another device. Wraps handle walking; throws typed errors (`NoFolderError`, `PermissionDeniedError`, `NotOnThisDeviceError`) | manual |
 | `sink.ts` | `saveDocuments(type, files, source)` — the one call every "a file was born" site makes: no folder connected is a quiet no-op (existing download/Drive flow untouched), a write failure toasts and returns `[]` | manual |
 | `print-followup.ts` | `promptForPrintedPdf(type)` — the toast + file picker that hands the printed PDF back | manual |
 | `useClaimDocuments.ts` | hook: folder state (unsupported / not connected / connected + label), `documents` list with `onThisDevice` resolved, `connect(label)`, `addFiles(type, files)`, `open(doc)`, `remove(doc)` | manual |
@@ -204,7 +205,11 @@ Below it, the **documents list**: one row per entry — source icon, type
 label, relative path, size, and where it is: `here` / `on Office PC`. Row
 actions: **Open** (disabled unless the file is on this device), **Remove**
 (D8, toasts the path). Toolbar: **Add file** → type picker + a `multiple`
-file input (any type can add a batch, per decision (e) above).
+file input (any type can add a batch, per decision (e) above); **Scan folder** reads the claim folder and adds anything not already listed —
+a PDF saved straight from Chrome, a Word export, files copied in by hand, or
+a whole folder carried to a second PC, whose rows then change from
+"on Office PC" to "here". It never writes, renames or deletes; a file it
+cannot name is filed as *Other* and the surveyor can retype it.
 
 Everything else on the tab is unchanged.
 
@@ -268,7 +273,6 @@ Open disabled.
   its folder entry, so a retag moves the type (and the extension can read
   it) instead of the entry staying `damagePhotos` forever.
 - **Phone app** — removes the camera → PC step. Separate product task.
-- **Scan an existing folder** into the index for claims made before this.
 - **Stale index** when a file is renamed or moved in Explorer — the row
   shows *missing here*; no repair tooling.
 - **PDF pipeline** for the print-based reports so they save themselves. The print-followup prompt covers the gap for now — a real generated PDF would remove the prompt entirely.
