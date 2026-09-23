@@ -42,5 +42,5 @@ export function insurerShortForm(name: string | undefined): string {
   if (!clean) return '';
   for (const [re, short] of SHORT_FORMS) if (re.test(clean)) return short;
   const word = clean.split(' ').find((w) => !NOISE.test(w));
-  return word ? word.toUpperCase().slice(0, 12) : '';
+  return word ? word.toUpperCase() : ''; // one word already — slicing it would cut a folder name mid-word, forever
 }
