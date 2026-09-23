@@ -20,6 +20,7 @@ export function useClaimDocuments() {
   const supported = isLocalSyncSupported();
   const [folder, setFolder] = useState<FolderInfo | null>(null);
   const [device, setDevice] = useState('This PC');
+  const [scanning, setScanning] = useState(false);
 
   const claimId = claim?.id;
   const folderName = claim?.documentsFolder;
@@ -65,7 +66,8 @@ export function useClaimDocuments() {
   }, [loadFolder]);
 
   const scan = useCallback(async () => {
-    if (!claim) return;
+    if (!claim || scanning) return; // the slowest button on the tab, so also the most double-clicked
+    setScanning(true);
     try {
       const handle = await getStoredRootHandle();
       if (handle && !(await ensureReadWrite(handle))) { toast.error('Folder access was not granted.'); return; }
@@ -88,9 +90,13 @@ export function useClaimDocuments() {
     } catch (err) {
       toast.error(err instanceof NoFolderError
         ? 'This claim has no folder on this PC yet.'
-        : `Could not scan the folder (${err instanceof Error ? err.message : String(err)})`);
+        : err instanceof PermissionDeniedError
+          ? 'Click "Allow access" on the folder card above, then scan again.'
+          : `Could not scan the folder (${err instanceof Error ? err.message : String(err)})`);
+    } finally {
+      setScanning(false);
     }
-  }, [claim, updateClaim]);
+  }, [claim, scanning, updateClaim]);
 
   const addFiles = useCallback(async (type: DocType, files: File[]) => {
     await saveDocuments(type, files.map((f) => ({ blob: f, name: f.name })), 'upload');
@@ -113,5 +119,5 @@ export function useClaimDocuments() {
   }, [claim, updateClaim]);
 
   const documents = claim ? claimDocuments(claim).map((d) => ({ ...d, here: onThisDevice(d, device) })) : [];
-  return { supported, folder, documents, connect, reconnect, addFiles, scan, open, remove };
+  return { supported, folder, documents, connect, reconnect, addFiles, scan, scanning, open, remove };
 }

@@ -9,6 +9,7 @@ interface Props {
   connected: boolean;
   onAdd: (type: DocType, files: File[]) => void;
   onScan: () => void;
+  scanning: boolean;
   onOpen: (doc: ClaimDocument) => void;
   onRemove: (doc: ClaimDocument) => void;
 }
@@ -16,7 +17,7 @@ interface Props {
 const kb = (n: number) => (n >= 1_048_576 ? `${(n / 1_048_576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 const SOURCE_ICON: Record<ClaimDocument['source'], string> = { upload: '⬆', generated: '⚙', photo: '📷' };
 
-export function ClaimDocumentsList({ documents, connected, onAdd, onScan, onOpen, onRemove }: Props) {
+export function ClaimDocumentsList({ documents, connected, onAdd, onScan, scanning, onOpen, onRemove }: Props) {
   const [type, setType] = useState<DocType>('other');
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -31,10 +32,11 @@ export function ClaimDocumentsList({ documents, connected, onAdd, onScan, onOpen
             </select>
             <button
               onClick={onScan}
+              disabled={scanning}
               title="Look in the claim folder and add anything that is there but not listed"
-              className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg border border-border"
+              className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg border border-border disabled:opacity-60"
             >
-              <RefreshCw size={12} /> Scan folder
+              <RefreshCw size={12} className={scanning ? 'animate-spin' : ''} /> {scanning ? 'Scanning…' : 'Scan folder'}
             </button>
             <button onClick={() => fileRef.current?.click()} className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg bg-primary text-primary-foreground">
               <Plus size={12} /> Add file
