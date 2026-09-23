@@ -16,9 +16,12 @@ const notFound = (name: string) =>
  * handles would, and records every removeEntry call on `removed`.
  * `truncate` names one file whose write lands one byte short — a cloud
  * placeholder that read short, or a full disk.
+ * `stealDuringCopy` names a file under `A` that vanishes the first time the
+ * copy reads a source file — Prime writing to the same folder mid-tidy.
  */
-function makeRoot(tree: Tree, opts: { truncate?: string } = {}) {
+function makeRoot(tree: Tree, opts: { truncate?: string; stealDuringCopy?: string } = {}) {
   const removed: string[] = []
+  let stolen = false
 
   const fileHandle = (parent: Tree, name: string) => ({
     kind: 'file' as const,
@@ -55,6 +58,10 @@ function makeRoot(tree: Tree, opts: { truncate?: string } = {}) {
       return dirHandle(value, `${path}${name}/`)
     },
     async getFileHandle(name: string, o?: { create?: boolean }) {
+      if (opts.stealDuringCopy && path === 'A/' && !stolen) {
+        stolen = true
+        delete node[opts.stealDuringCopy]
+      }
       if (node[name] === undefined) {
         if (!o?.create) throw notFound(name)
         node[name] = ''
@@ -101,11 +108,13 @@ describe('renameFolder', () => {
     expect(removed).toEqual(['A'])
   })
 
-  it('refuses a tree deeper than it copies, and removes nothing', async () => {
+  // The only entry a failure may remove is the half-copy this call created;
+  // `A` — the surveyor's only copy — must survive every one of these.
+  it('refuses a tree deeper than it copies, and takes its half-copy with it', async () => {
     const { root, removed, tree } = makeRoot(deepTree(12))
 
     await expect(renameFolder(root, 'A', 'B')).rejects.toThrow('nests deeper')
-    expect(removed).toEqual([])
+    expect(removed).toEqual(['B'])
     expect(tree.A).toBeDefined()
     expect(tree.B).toBeUndefined()
   })
@@ -122,15 +131,28 @@ describe('renameFolder', () => {
     expect(tree.B).toEqual({ 'RC Book.pdf': 'other-claims-bytes' })
   })
 
-  it('refuses a short write, and removes nothing', async () => {
+  it('refuses a short write, and takes its half-copy with it', async () => {
     const { root, removed, tree } = makeRoot(
       { A: { 'RC Book.pdf': 'rc-bytes', 'Photo.jpg': 'photo-bytes' } },
       { truncate: 'Photo.jpg' },
     )
 
     await expect(renameFolder(root, 'A', 'B')).rejects.toThrow('bytes copied')
-    expect(removed).toEqual([])
+    expect(removed).toEqual(['B'])
     expect(tree.A).toEqual({ 'RC Book.pdf': 'rc-bytes', 'Photo.jpg': 'photo-bytes' })
+    // Left behind, the half-copy would shadow `A` for every later read.
+    expect(tree.B).toBeUndefined()
+  })
+
+  it('refuses when a file vanishes mid-copy, and takes its half-copy with it', async () => {
+    const { root, removed, tree } = makeRoot(
+      { A: { 'RC Book.pdf': 'rc-bytes', 'Photo.jpg': 'photo-bytes' } },
+      { stealDuringCopy: 'Photo.jpg' },
+    )
+
+    await expect(renameFolder(root, 'A', 'B')).rejects.toThrow('not found')
+    expect(removed).toEqual(['B'])
+    expect(tree.B).toBeUndefined()
   })
 })
 

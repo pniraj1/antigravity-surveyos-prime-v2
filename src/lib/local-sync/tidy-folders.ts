@@ -103,7 +103,7 @@ async function listFilesDeep(
  * Copy `from` to `to`, then delete `from` — the browser has no directory
  * rename. The delete is reached only when every source file, at any depth,
  * has a same-size twin in a destination this call created. Any doubt at all
- * throws with both folders still on disk.
+ * throws with the source untouched and the half-copy removed again.
  */
 export async function renameFolder(
   root: FileSystemDirectoryHandle,
@@ -117,37 +117,52 @@ export async function renameFolder(
   }
 
   const src = await root.getDirectoryHandle(from)
-  const files = await listFilesDeep(src)           // throws on anything too deep
   const dest = await root.getDirectoryHandle(to, { create: true })
 
-  for (const f of files) {
-    let sDir = src
-    let dDir = dest
-    for (const seg of f.dir) {
-      sDir = await sDir.getDirectoryHandle(seg)
-      dDir = await dDir.getDirectoryHandle(seg, { create: true })
-    }
-    const source = await (await sDir.getFileHandle(f.name)).getFile()
-    const w = await (await dDir.getFileHandle(f.name, { create: true })).createWritable()
-    await w.write(source)
-    await w.close()
-    // A name in a listing is not evidence the bytes arrived: a cloud placeholder
-    // that read short, or a full disk, both leave a file of the wrong size.
-    const written = await (await dDir.getFileHandle(f.name)).getFile()
-    if (written.size !== source.size) {
-      throw new Error(`"${from}/${[...f.dir, f.name].join('/')}": ${written.size} of ${source.size} bytes copied — the old folder was left alone.`)
-    }
-  }
+  let files: CopiedFile[] = []
+  try {
+    files = await listFilesDeep(src)                 // throws on anything too deep
 
-  // Every source file, by path and size, must be present in the destination.
-  const landed = new Map((await listFilesDeep(dest)).map((f) => [[...f.dir, f.name].join('/'), f]))
-  if (landed.size < files.length) {
-    throw new Error(`"${from}": ${landed.size} of ${files.length} files verified — the old folder was left alone.`)
-  }
-  for (const f of files) {
-    if (!landed.has([...f.dir, f.name].join('/'))) {
-      throw new Error(`"${from}/${[...f.dir, f.name].join('/')}" is missing from the copy — the old folder was left alone.`)
+    for (const f of files) {
+      let sDir = src
+      let dDir = dest
+      for (const seg of f.dir) {
+        sDir = await sDir.getDirectoryHandle(seg)
+        dDir = await dDir.getDirectoryHandle(seg, { create: true })
+      }
+      const source = await (await sDir.getFileHandle(f.name)).getFile()
+      const w = await (await dDir.getFileHandle(f.name, { create: true })).createWritable()
+      await w.write(source)
+      await w.close()
+      // A name in a listing is not evidence the bytes arrived: a cloud placeholder
+      // that read short, or a full disk, both leave a file of the wrong size.
+      const written = await (await dDir.getFileHandle(f.name)).getFile()
+      if (written.size !== source.size) {
+        throw new Error(`"${from}/${[...f.dir, f.name].join('/')}": ${written.size} of ${source.size} bytes copied — the old folder was left alone.`)
+      }
     }
+
+    // Every source file, by path and size, must be present in the destination.
+    const landed = new Map((await listFilesDeep(dest)).map((f) => [[...f.dir, f.name].join('/'), f]))
+    if (landed.size < files.length) {
+      throw new Error(`"${from}": ${landed.size} of ${files.length} files verified — the old folder was left alone.`)
+    }
+    for (const f of files) {
+      if (!landed.has([...f.dir, f.name].join('/'))) {
+        throw new Error(`"${from}/${[...f.dir, f.name].join('/')}" is missing from the copy — the old folder was left alone.`)
+      }
+    }
+  } catch (err) {
+    // We created `to` a moment ago and the probe above proved it was not there
+    // before, so removing it destroys nothing of the surveyor's. Leaving it
+    // would be worse: resolveSyncFolderName prefers the short name, so a
+    // half-copy would shadow the intact original for every later read.
+    try {
+      await root.removeEntry(to, { recursive: true })
+    } catch {
+      throw new Error(`${err instanceof Error ? err.message : String(err)} The half-copied "${to}" could not be removed — delete it in Explorer before retrying.`)
+    }
+    throw err
   }
 
   await root.removeEntry(from, { recursive: true })
