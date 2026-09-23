@@ -136,11 +136,19 @@ this change keeps its long-form name (`MH12AB1234 - HDFC ERGO/`) and is
 still read from there; nothing is renamed or re-downloaded.
 
 When the Sync picker finds folders still under the old name, it offers a
-one-time **Tidy up folder names**. The browser has no directory rename, so
-each folder is copied to the new name and the old one is removed only after
-every file has landed and the counts match — any failure leaves both folders
-and says so. A claim whose new-name folder already exists is left alone for
-the surveyor to merge by hand, never merged automatically.
+one-time **Tidy up folder names**, after showing every `from → to` pair and
+asking. The browser has no directory rename, so each folder is copied to the
+new name and then removed — and `removeEntry` runs only when every file under
+the source, at any depth, has a same-size twin in a destination that run
+created. A count is not evidence that bytes arrived, so each file's written
+size is checked against the source's. Anything that nests deeper than the
+copy walks, or that lands short, is a hard failure that leaves both folders
+on disk and says so; nothing is ever silently skipped. Because the insurer
+short form is many-to-one, two legacy folders that shorten to one new name
+are never both renamed — the second is skipped, not overwritten. A claim
+whose new-name folder already exists is likewise left alone for the surveyor
+to merge by hand, never merged automatically. Renaming the folders by hand in
+Explorer is equally supported: the resolver reads either name.
 
 Because the two features share one folder and one naming scheme, they also
 produce the same file names (`RC Book.pdf`, `Damage Photos/Damage Photos 1.jpg`).
