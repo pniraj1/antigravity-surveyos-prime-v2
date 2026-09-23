@@ -7,6 +7,17 @@ import { claimFolderName, legacyClaimFolderName, placeFile, type PlaceInput } fr
 import { ensureReadWrite } from './directory-handle'
 import { MANIFEST_FILENAME, type LocalManifest } from './sync-manifest'
 
+/** Only NotFoundError means "absent" — a lock or a permission lapse must not read as one. */
+async function dirExists(root: FileSystemDirectoryHandle, name: string): Promise<boolean> {
+  try {
+    await root.getDirectoryHandle(name)
+    return true
+  } catch (e) {
+    if ((e as DOMException)?.name === 'NotFoundError') return false
+    throw e // a lock, a permission lapse — never silently fork the folder
+  }
+}
+
 /**
  * The folder this claim's synced files are actually in: the short-form name,
  * or the pre-2026-09 long-form one when that is what exists on disk. New
@@ -17,11 +28,9 @@ export async function resolveSyncFolderName(
   claim: { vehicleNumber: string; insuranceCompany: string },
 ): Promise<string> {
   const short = claimFolderName(claim)
-  try { await root.getDirectoryHandle(short); return short } catch { /* not there yet */ }
+  if (await dirExists(root, short)) return short
   const legacy = legacyClaimFolderName(claim)
-  if (legacy !== short) {
-    try { await root.getDirectoryHandle(legacy); return legacy } catch { /* nor there */ }
-  }
+  if (legacy !== short && (await dirExists(root, legacy))) return legacy
   return short
 }
 
@@ -29,7 +38,7 @@ export async function resolveSyncFolderName(
 export function localRelPath(
   claim: { vehicleNumber: string; insuranceCompany: string },
   place: PlaceInput,
-  folderName: string = claimFolderName(claim),
+  folderName: string,
 ): string[] {
   const placement = placeFile(place)
   return [folderName, ...placement.dir, placement.fileName]
