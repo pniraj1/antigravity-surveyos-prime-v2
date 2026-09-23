@@ -73,9 +73,18 @@ async function removeQuiet(claimDir: FileSystemDirectoryHandle, relPath: string)
  * second claim gets ` - 2` so their files never mix. Runs once per claim —
  * `documentsFolder` is sticky after the first write.
  */
-export async function resolveFolderName(claim: ClaimData): Promise<string> {
+export async function resolveFolderName(
+  claim: ClaimData,
+  rootHandle?: FileSystemDirectoryHandle,
+): Promise<string> {
   if (claim.documentsFolder) return claim.documentsFolder;
   const base = folderNameFor(claim);
+  // No folder on disk under this name means nobody to collide with — and saves
+  // reading every claim (and its photo data URLs) out of IndexedDB.
+  const handle = rootHandle ?? (await getStoredRootHandle().catch(() => null));
+  if (handle) {
+    try { await handle.getDirectoryHandle(base); } catch { return base; }
+  }
   let taken = new Set<string>();
   try {
     const all = await getAllClaims();
@@ -99,7 +108,7 @@ export async function writeDocuments(
 ): Promise<{ claim: ClaimData; written: ClaimDocument[] }> {
   if (files.length === 0) return { claim, written: [] };
   const rootHandle = await root();
-  const folder = await resolveFolderName(claim);
+  const folder = await resolveFolderName(claim, rootHandle);
   const claimDir = await rootHandle.getDirectoryHandle(folder, { create: true });
   const device = await getDeviceLabel();
   const existing = claimDocuments(claim);
@@ -181,7 +190,7 @@ export async function readDocument(claim: ClaimData, doc: ClaimDocument): Promis
   const device = await getDeviceLabel();
   if (!onThisDevice(doc, device)) throw new NotOnThisDeviceError(doc.devices);
   const rootHandle = await root();
-  const claimDir = await rootHandle.getDirectoryHandle(folderNameFor(claim));
+  const claimDir = await rootHandle.getDirectoryHandle(await resolveFolderName(claim, rootHandle));
   const parts = doc.relPath.split('/');
   const dir = await dirFor(claimDir, parts.slice(0, -1), false);
   return (await dir.getFileHandle(parts[parts.length - 1])).getFile();
@@ -211,7 +220,7 @@ export async function openDocument(claim: ClaimData, doc: ClaimDocument): Promis
 
 export async function claimFolderPath(claim: ClaimData): Promise<string | null> {
   const handle = await getStoredRootHandle();
-  return handle ? `${handle.name}\\${folderNameFor(claim)}` : null;
+  return handle ? `${handle.name}\\${await resolveFolderName(claim, handle)}` : null;
 }
 
 /**
@@ -226,7 +235,7 @@ export async function getClaimDirHandle(
 ): Promise<FileSystemDirectoryHandle | null> {
   const rootHandle = await root();
   try {
-    return await rootHandle.getDirectoryHandle(folderNameFor(claim), { create });
+    return await rootHandle.getDirectoryHandle(await resolveFolderName(claim, rootHandle), { create });
   } catch {
     return null;
   }
@@ -270,12 +279,13 @@ export async function scanClaimFolder(
 ): Promise<{ claim: ClaimData; added: number; adopted: number; unreadable: number }> {
   const dir = await getClaimDirHandle(claim);
   if (!dir) throw new NoFolderError();
+  const folder = dir.name; // the folder we actually walked — never a name resolved a second time
   const device = await getDeviceLabel();
   const { files: found, unreadable } = await listFiles(dir);
 
   const byPath = new Map(claimDocuments(claim).map((d) => [d.relPath, d]));
   // In-memory field update only — resolveFolderName's on-disk folder is untouched; this stays read-only on disk.
-  let next: ClaimData = { ...claim, documentsFolder: folderNameFor(claim) };
+  let next: ClaimData = { ...claim, documentsFolder: folder };
   const fresh: ClaimDocument[] = [];
   let adopted = 0;
 
