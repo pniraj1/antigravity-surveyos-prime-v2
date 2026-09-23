@@ -142,8 +142,12 @@ new name and then removed — and `removeEntry` runs only when every file under
 the source, at any depth, has a same-size twin in a destination that run
 created. A count is not evidence that bytes arrived, so each file's written
 size is checked against the source's. Anything that nests deeper than the
-copy walks, or that lands short, is a hard failure that leaves both folders
-on disk and says so; nothing is ever silently skipped. Because the insurer
+copy walks, or that lands short, is a hard failure: the original is left
+untouched, the half-copy that run created is removed again — left behind it
+would shadow the intact original, since the resolver prefers the new name —
+and the surveyor is told; nothing is ever silently skipped. No sync can run
+while a tidy is in progress, so nothing arrives in a folder between the walk
+that verified it and the delete that follows. Because the insurer
 short form is many-to-one, two legacy folders that shorten to one new name
 are never both renamed — the second is skipped, not overwritten. A claim
 whose new-name folder already exists is likewise left alone for the surveyor

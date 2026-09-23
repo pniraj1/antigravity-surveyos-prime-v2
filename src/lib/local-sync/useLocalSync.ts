@@ -141,7 +141,10 @@ export function useLocalSync(token: string) {
       }
       const res = await runTidy(handle, tidyPlan, setTidyProgress)
       if (res.failed.length === 0) {
-        toast.success(`Renamed ${res.renamed} folder${res.renamed === 1 ? '' : 's'} to the new naming.`)
+        toast.success(
+          `Renamed ${res.renamed} folder${res.renamed === 1 ? '' : 's'} ` +
+          `(${res.files} file${res.files === 1 ? '' : 's'}) to the new naming.`,
+        )
       } else {
         const shown = res.failed.slice(0, 3).map((f) => f.message).join(' ')
         const more = res.failed.length > 3 ? ` …and ${res.failed.length - 3} more.` : ''

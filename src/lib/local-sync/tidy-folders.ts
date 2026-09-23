@@ -7,7 +7,8 @@
 // when every file under the source — at any depth — has a
 // same-size twin in a destination this call created. Anything
 // unwalkable, unreadable, short or already present is a hard
-// failure that leaves both folders alone. Nothing is skipped.
+// failure: the original is left untouched and the half-copy is
+// removed again. Nothing is skipped.
 // ═══════════════════════════════════════════════════════════
 
 import { claimFolderName, legacyClaimFolderName } from './nomenclature'
@@ -82,6 +83,9 @@ interface CopiedFile { dir: string[]; name: string }
 /** Deeper than a claim folder ever nests. Beyond it we refuse rather than guess. */
 const MAX_COPY_DEPTH = 8
 
+// ponytail: files only. An empty directory in the source is never recreated
+// in the copy and goes with the recursive delete — no file is lost, and the
+// surveyor's folder is one the app fills anyway.
 /** Every file under `dir`, at any depth. Nothing is skipped — too deep throws. */
 async function listFilesDeep(
   dir: FileSystemDirectoryHandle,
@@ -142,11 +146,9 @@ export async function renameFolder(
       }
     }
 
-    // Every source file, by path and size, must be present in the destination.
+    // Every source path must exist in the copy (each file's size was checked
+    // as it was written).
     const landed = new Map((await listFilesDeep(dest)).map((f) => [[...f.dir, f.name].join('/'), f]))
-    if (landed.size < files.length) {
-      throw new Error(`"${from}": ${landed.size} of ${files.length} files verified — the old folder was left alone.`)
-    }
     for (const f of files) {
       if (!landed.has([...f.dir, f.name].join('/'))) {
         throw new Error(`"${from}/${[...f.dir, f.name].join('/')}" is missing from the copy — the old folder was left alone.`)
