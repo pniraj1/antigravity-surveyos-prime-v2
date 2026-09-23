@@ -23,7 +23,7 @@ export interface TidyCandidate {
 export interface TidySkip {
   label: string
   from: string
-  why: 'target exists' | 'already named'
+  why: 'target exists'
 }
 
 export interface TidyPlan {
@@ -43,17 +43,22 @@ export function planTidy(
   const rename: TidyCandidate[] = []
   const skipped: TidySkip[] = []
   const seen = new Set<string>()
+  // Names already claimed by an earlier rename in this same plan: the short
+  // form is deliberately many-to-one, so "HDFC ERGO" and "HDFC ERGO GENERAL
+  // INSURANCE CO. LTD." are two folders on disk that both want one new name.
+  const targets = new Set<string>()
   for (const c of claims) {
     const to = claimFolderName(c)
     const from = legacyClaimFolderName(c)
     if (from === to || !onDisk.has(from) || seen.has(from)) continue
     seen.add(from)
-    if (onDisk.has(to)) {
+    if (onDisk.has(to) || targets.has(to)) {
       // Both names exist — the surveyor synced before and after the change.
       // Merging two manifests is not worth the risk; leave it for them.
       skipped.push({ label: c.label, from, why: 'target exists' })
       continue
     }
+    targets.add(to)
     rename.push({ claimId: c.claimId, label: c.label, from, to })
   }
   return { rename, skipped }

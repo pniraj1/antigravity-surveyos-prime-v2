@@ -27,4 +27,14 @@ describe('planTidy', () => {
     const plan = planTidy([claim(), claim({ claimId: 'c2' })], new Set(['MH12AB1234 - HDFC ERGO']))
     expect(plan.rename).toHaveLength(1)
   })
+  it('plans only the first of two legacy folders that want the same new name', () => {
+    const plan = planTidy(
+      [claim({ claimId: 'c1', insuranceCompany: 'HDFC ERGO' }),
+       claim({ claimId: 'c2', insuranceCompany: 'HDFC ERGO GENERAL INSURANCE CO. LTD.' })],
+      // sanitizeSegment strips the trailing dot, so that is the name on disk
+      new Set(['MH12AB1234 - HDFC ERGO', 'MH12AB1234 - HDFC ERGO GENERAL INSURANCE CO. LTD']),
+    )
+    expect(plan.rename).toHaveLength(1)
+    expect(plan.skipped).toHaveLength(1)
+  })
 })
