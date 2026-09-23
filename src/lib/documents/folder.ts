@@ -214,30 +214,45 @@ export async function claimFolderPath(claim: ClaimData): Promise<string | null> 
   return handle ? `${handle.name}\\${folderNameFor(claim)}` : null;
 }
 
-/** The claim's directory handle, or null when there is no folder or it was never created. */
+/**
+ * The claim's directory handle, or null when this claim has no folder yet.
+ * A missing/unauthorized root folder is a different problem — that throws
+ * NoFolderError / PermissionDeniedError from root() instead of being reported
+ * as "no folder" here.
+ */
 export async function getClaimDirHandle(
   claim: ClaimData,
   create = false,
 ): Promise<FileSystemDirectoryHandle | null> {
+  const rootHandle = await root();
   try {
-    const rootHandle = await root();
     return await rootHandle.getDirectoryHandle(folderNameFor(claim), { create });
   } catch {
     return null;
   }
 }
 
-/** Every file in the claim folder, one level of subfolders deep, as relative paths. */
-async function listFiles(dir: FileSystemDirectoryHandle, prefix = ''): Promise<Array<{ relPath: string; file: File }>> {
-  const out: Array<{ relPath: string; file: File }> = [];
+/** Every file in the claim folder, one level of subfolders deep, as relative paths. Unreadable files (cloud placeholder not hydrated, locked, AV scan) are skipped and counted, not thrown on. */
+async function listFiles(
+  dir: FileSystemDirectoryHandle,
+  prefix = '',
+): Promise<{ files: Array<{ relPath: string; file: File }>; unreadable: number }> {
+  const files: Array<{ relPath: string; file: File }> = [];
+  let unreadable = 0;
   for await (const [name, handle] of (dir.entries as () => AsyncIterableIterator<[string, FileSystemHandle]>)()) {
     if (handle.kind === 'file') {
-      out.push({ relPath: `${prefix}${name}`, file: await (handle as FileSystemFileHandle).getFile() });
+      try {
+        files.push({ relPath: `${prefix}${name}`, file: await (handle as FileSystemFileHandle).getFile() });
+      } catch {
+        unreadable++; // reported, never guessed at
+      }
     } else if (!prefix) {
-      out.push(...(await listFiles(handle as FileSystemDirectoryHandle, `${name}/`)));
+      const sub = await listFiles(handle as FileSystemDirectoryHandle, `${name}/`);
+      files.push(...sub.files);
+      unreadable += sub.unreadable;
     }
   }
-  return out;
+  return { files, unreadable };
 }
 
 /**
@@ -245,18 +260,21 @@ async function listFiles(dir: FileSystemDirectoryHandle, prefix = ''): Promise<A
  * PDF saved straight from Chrome, a Word export, or — on a second PC whose
  * root folder was copied or cloud-synced — the files an entry already
  * describes, which stop reading "on Office PC" and start reading "here".
+ * A file that cannot be read (cloud placeholder, lock, AV scan) is skipped
+ * and reported in `unreadable`, never guessed at.
  *
  * Reads only. Nothing on disk is written, renamed or deleted.
  */
 export async function scanClaimFolder(
   claim: ClaimData,
-): Promise<{ claim: ClaimData; added: number; adopted: number }> {
+): Promise<{ claim: ClaimData; added: number; adopted: number; unreadable: number }> {
   const dir = await getClaimDirHandle(claim);
   if (!dir) throw new NoFolderError();
   const device = await getDeviceLabel();
-  const found = await listFiles(dir);
+  const { files: found, unreadable } = await listFiles(dir);
 
   const byPath = new Map(claimDocuments(claim).map((d) => [d.relPath, d]));
+  // In-memory field update only — resolveFolderName's on-disk folder is untouched; this stays read-only on disk.
   let next: ClaimData = { ...claim, documentsFolder: folderNameFor(claim) };
   const fresh: ClaimDocument[] = [];
   let adopted = 0;
@@ -280,5 +298,5 @@ export async function scanClaimFolder(
     });
   }
 
-  return { claim: addDocuments(next, fresh), added: fresh.length, adopted };
+  return { claim: addDocuments(next, fresh), added: fresh.length, adopted, unreadable };
 }
