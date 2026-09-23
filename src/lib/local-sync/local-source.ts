@@ -8,7 +8,7 @@ import { ensureReadWrite } from './directory-handle'
 import { MANIFEST_FILENAME, type LocalManifest } from './sync-manifest'
 
 /** Only NotFoundError means "absent" — a lock or a permission lapse must not read as one. */
-async function dirExists(root: FileSystemDirectoryHandle, name: string): Promise<boolean> {
+export async function dirExists(root: FileSystemDirectoryHandle, name: string): Promise<boolean> {
   try {
     await root.getDirectoryHandle(name)
     return true
