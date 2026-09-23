@@ -19,6 +19,7 @@ interface Window {
   showOpenFilePicker?(opts?: {
     multiple?: boolean
     excludeAcceptAllOption?: boolean
+    startIn?: FileSystemDirectoryHandle | 'desktop' | 'documents' | 'downloads'
     types?: Array<{ description?: string; accept: Record<string, string[]> }>
   }): Promise<FileSystemFileHandle[]>
 }

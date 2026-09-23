@@ -7,7 +7,9 @@ import {
   isLocalSyncSupported, getStoredRootHandle, pickRootFolder, ensureReadWrite, getDeviceLabel, setDeviceLabel,
 } from '@/lib/local-sync/directory-handle';
 import { claimDocuments, removeDocument, onThisDevice } from './index-ops';
-import { openDocument, claimFolderPath, NotOnThisDeviceError, PermissionDeniedError } from './folder';
+import {
+  openDocument, claimFolderPath, scanClaimFolder, NotOnThisDeviceError, NoFolderError, PermissionDeniedError,
+} from './folder';
 import { saveDocuments } from './sink';
 
 type FolderInfo = { rootName: string; device: string; claimPath: string | null; permission: PermissionState };
@@ -62,6 +64,28 @@ export function useClaimDocuments() {
     else toast.error('Folder access was not granted.');
   }, [loadFolder]);
 
+  const scan = useCallback(async () => {
+    if (!claim) return;
+    try {
+      const handle = await getStoredRootHandle();
+      if (handle && !(await ensureReadWrite(handle))) { toast.error('Folder access was not granted.'); return; }
+      const { claim: next, added, adopted, unreadable } = await scanClaimFolder(claim);
+      if (added === 0 && adopted === 0 && unreadable === 0) { toast.info('Nothing new in the claim folder.'); return; }
+      updateClaim({ documents: next.documents, documentsFolder: next.documentsFolder });
+      const parts = [
+        added ? `${added} file${added === 1 ? '' : 's'} added` : '',
+        adopted ? `${adopted} now on this PC` : '',
+        unreadable ? `${unreadable} could not be read` : '',
+      ].filter(Boolean).join(', ');
+      if (unreadable > 0) toast.warning(`Scanned the claim folder — ${parts}.`);
+      else toast.success(`Scanned the claim folder — ${parts}.`);
+    } catch (err) {
+      toast.error(err instanceof NoFolderError
+        ? 'This claim has no folder on this PC yet.'
+        : `Could not scan the folder (${err instanceof Error ? err.message : String(err)})`);
+    }
+  }, [claim, updateClaim]);
+
   const addFiles = useCallback(async (type: DocType, files: File[]) => {
     await saveDocuments(type, files.map((f) => ({ blob: f, name: f.name })), 'upload');
   }, []);
@@ -83,5 +107,5 @@ export function useClaimDocuments() {
   }, [claim, updateClaim]);
 
   const documents = claim ? claimDocuments(claim).map((d) => ({ ...d, here: onThisDevice(d, device) })) : [];
-  return { supported, folder, documents, connect, reconnect, addFiles, open, remove };
+  return { supported, folder, documents, connect, reconnect, addFiles, scan, open, remove };
 }

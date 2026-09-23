@@ -1,6 +1,6 @@
 'use client';
 import React, { useRef, useState } from 'react';
-import { ExternalLink, Trash2, Plus, HardDrive } from 'lucide-react';
+import { ExternalLink, Trash2, Plus, HardDrive, RefreshCw } from 'lucide-react';
 import type { ClaimDocument, DocType } from '@/types/documents';
 import { DOC_TYPE_LABEL } from '@/types/documents';
 
@@ -8,6 +8,7 @@ interface Props {
   documents: Array<ClaimDocument & { here: boolean }>;
   connected: boolean;
   onAdd: (type: DocType, files: File[]) => void;
+  onScan: () => void;
   onOpen: (doc: ClaimDocument) => void;
   onRemove: (doc: ClaimDocument) => void;
 }
@@ -15,7 +16,7 @@ interface Props {
 const kb = (n: number) => (n >= 1_048_576 ? `${(n / 1_048_576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 const SOURCE_ICON: Record<ClaimDocument['source'], string> = { upload: '⬆', generated: '⚙', photo: '📷' };
 
-export function ClaimDocumentsList({ documents, connected, onAdd, onOpen, onRemove }: Props) {
+export function ClaimDocumentsList({ documents, connected, onAdd, onScan, onOpen, onRemove }: Props) {
   const [type, setType] = useState<DocType>('other');
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -28,6 +29,13 @@ export function ClaimDocumentsList({ documents, connected, onAdd, onOpen, onRemo
             <select value={type} onChange={(e) => setType(e.target.value as DocType)} aria-label="Document type" className="text-xs rounded border border-border bg-background px-2 py-1">
               {(Object.keys(DOC_TYPE_LABEL) as DocType[]).map((t) => <option key={t} value={t}>{DOC_TYPE_LABEL[t]}</option>)}
             </select>
+            <button
+              onClick={onScan}
+              title="Look in the claim folder and add anything that is there but not listed"
+              className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg border border-border"
+            >
+              <RefreshCw size={12} /> Scan folder
+            </button>
             <button onClick={() => fileRef.current?.click()} className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg bg-primary text-primary-foreground">
               <Plus size={12} /> Add file
             </button>
@@ -40,7 +48,7 @@ export function ClaimDocumentsList({ documents, connected, onAdd, onOpen, onRemo
       </div>
       {documents.length === 0 ? (
         <div className="px-4 py-6 text-xs text-muted-foreground text-center">
-          {connected ? 'Nothing yet. Uploads, photos and printed reports will appear here.' : 'Connect a claim folder to keep files here.'}
+          {connected ? 'Nothing yet. Uploads, photos and printed reports appear here — or press Scan folder to pull in files already in the folder.' : 'Connect a claim folder to keep files here.'}
         </div>
       ) : (
         <ul className="divide-y divide-border">

@@ -321,7 +321,7 @@ export function DocumentsTab() {
       <div className="px-6 lg:px-12 py-8 max-w-5xl mx-auto space-y-10">
         <div className="space-y-3">
           <ClaimFolderCard supported={docs.supported} folder={docs.folder} onConnect={docs.connect} onReconnect={docs.reconnect} />
-          <ClaimDocumentsList documents={docs.documents} connected={!!docs.folder} onAdd={docs.addFiles} onOpen={docs.open} onRemove={docs.remove} />
+          <ClaimDocumentsList documents={docs.documents} connected={!!docs.folder} onAdd={docs.addFiles} onScan={docs.scan} onOpen={docs.open} onRemove={docs.remove} />
         </div>
         {DOC_GROUPS.map((group) => (
           <div key={group.title}>

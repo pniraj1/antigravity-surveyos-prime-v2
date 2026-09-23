@@ -11,12 +11,14 @@ import { DOC_TYPE_LABEL } from '@/types/documents';
 import { getStoredRootHandle } from '@/lib/local-sync/directory-handle';
 import { useClaimStore } from '@/stores/claim-store';
 import { saveDocuments } from './sink';
+import { getClaimDirHandle } from './folder';
 
-async function pickPdf(label: string): Promise<File | null> {
+async function pickPdf(label: string, startIn: FileSystemDirectoryHandle | null): Promise<File | null> {
   if (typeof window === 'undefined' || !window.showOpenFilePicker) return null;
   const [handle] = await window.showOpenFilePicker({
     multiple: false,
     excludeAcceptAllOption: true,
+    ...(startIn ? { startIn } : {}),
     types: [{ description: `${label} (PDF)`, accept: { 'application/pdf': ['.pdf'] } }],
   });
   return handle ? handle.getFile() : null;
@@ -37,7 +39,7 @@ export async function promptForPrintedPdf(type: DocType): Promise<void> {
   const label = DOC_TYPE_LABEL[type];
   const id = `print-pdf-${type}-${claimId}`;
   toast(`Saved the ${label} as a PDF?`, {
-    description: 'File it into the claim folder so the list holds the copy you sent.',
+    description: 'Save it into the claim folder, then file it here so the list holds the copy you sent.',
     duration: Infinity,
     id,
     action: {
@@ -50,7 +52,11 @@ export async function promptForPrintedPdf(type: DocType): Promise<void> {
         }
         // The click is the user gesture the picker needs; a cancel throws
         // AbortError, which is the surveyor changing their mind, not an error.
-        void pickPdf(label)
+        // getClaimDirHandle can throw (no folder / permission denied) — that
+        // degrades to opening the picker without startIn, not losing it.
+        void getClaimDirHandle(useClaimStore.getState().currentClaim!)
+          .catch(() => null)
+          .then((dir) => pickPdf(label, dir))
           // A surveyor-picked file is still recorded as 'generated': it is the
           // report we generated, only carried back to us through Chrome's print
           // dialog, so it is filed exactly as the report it replaces would be.
