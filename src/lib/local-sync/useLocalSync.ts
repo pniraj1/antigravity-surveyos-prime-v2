@@ -58,7 +58,14 @@ export function useLocalSync(token: string) {
     setClaimStatus(Object.fromEntries(entries))
   }, [root])
 
+  // A ref, not the state: two clicks in one tick both read a stale `tidying`,
+  // and two runs over the same folders is exactly how a copy meets a delete.
+  // It gates sync too — a download into a folder the tidy is about to delete
+  // lands after the walk, so verification passes on a snapshot without it.
+  const tidyRunning = useRef(false)
+
   const runSyncClaim = useCallback(async (claim: ClaimRef) => {
+    if (tidyRunning.current) return
     if (!token) return
     const handle = await ensureRoot()
     if (!handle) return
@@ -77,6 +84,7 @@ export function useLocalSync(token: string) {
   }, [token, ensureRoot])
 
   const runSyncAll = useCallback(async (claims: readonly SyncClaimSummary[]) => {
+    if (tidyRunning.current) return
     if (!token) return
     const handle = await ensureRoot()
     if (!handle) return
@@ -98,22 +106,26 @@ export function useLocalSync(token: string) {
   }, [token, ensureRoot])
 
   const [tidyPlan, setTidyPlan] = useState<TidyPlan | null>(null)
+  // The folder the plan was made against. ensureRoot() may re-prompt and hand
+  // back a different one; renaming there would act on names never listed.
+  const tidyRoot = useRef<FileSystemDirectoryHandle | null>(null)
 
   /** Look for folders still under the pre-2026-09-23 name. Cheap: one directory listing. */
   const checkTidy = useCallback(async (claims: readonly SyncClaimSummary[]) => {
     if (!root || claims.length === 0) { setTidyPlan(null); return }
     try {
-      setTidyPlan(planTidy(claims, await listRootFolders(root)))
-    } catch {
-      setTidyPlan(null)
+      const onDisk = await listRootFolders(root)
+      tidyRoot.current = root
+      setTidyPlan(planTidy(claims, onDisk))
+    } catch (err) {
+      // A permission lapse is not "nothing to tidy" — nulling the plan would
+      // make the two look identical. Keep the last one and say so.
+      console.warn('Could not list the sync folder to check for tidy-up:', err)
     }
   }, [root])
 
   const [tidyProgress, setTidyProgress] = useState<TidyProgress | null>(null)
   const [tidying, setTidying] = useState(false)
-  // A ref, not the state: two clicks in one tick both read a stale `tidying`,
-  // and two runs over the same folders is exactly how a copy meets a delete.
-  const tidyRunning = useRef(false)
 
   const runTidyUp = useCallback(async (claims: readonly SyncClaimSummary[]) => {
     if (tidyRunning.current || busy) return
@@ -123,6 +135,10 @@ export function useLocalSync(token: string) {
     try {
       const handle = await ensureRoot()
       if (!handle) return
+      if (handle !== tidyRoot.current) {
+        toast.error('The folder changed — reopen this dialog and try again.')
+        return
+      }
       const res = await runTidy(handle, tidyPlan, setTidyProgress)
       if (res.failed.length === 0) {
         toast.success(`Renamed ${res.renamed} folder${res.renamed === 1 ? '' : 's'} to the new naming.`)

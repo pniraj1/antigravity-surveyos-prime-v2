@@ -273,7 +273,7 @@ export function SyncDrivePicker({ open, onOpenChange, targetSlotLabel, onPick }:
             {localSync.supported && claims.length > 0 && (
               <button
                 onClick={() => localSync.runSyncAll(claims)}
-                disabled={localSync.busy}
+                disabled={localSync.busy || localSync.tidying}
                 className="w-full mb-2 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-medium disabled:opacity-50 bg-primary/10 text-primary border border-primary/30"
               >
                 {localSync.busy
@@ -347,7 +347,7 @@ export function SyncDrivePicker({ open, onOpenChange, targetSlotLabel, onPick }:
                   insuranceCompany: detail.insuranceCompany,
                   label: `${detail.vehicleNumber} - ${detail.insuranceCompany}`,
                 })}
-                disabled={localSync.busy}
+                disabled={localSync.busy || localSync.tidying}
                 className="w-full mb-2 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-medium disabled:opacity-50 bg-primary/10 text-primary border border-primary/30"
               >
                 {localSync.busy
