@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createBlankClaim } from '@/types/claim';
 import type { ClaimDocument } from '@/types/documents';
-import { folderNameFor, extForFile, relPathsFor, oldNameFor } from '../naming';
+import { folderNameFor, extForFile, relPathsFor, oldNameFor, docTypeFromRelPath, isScanSkippable } from '../naming';
 
 const existing = (relPaths: string[], type: ClaimDocument['type'] = 'damagePhotos'): ClaimDocument[] =>
   relPaths.map((relPath, i) => ({ id: `d${i}`, type, relPath, mime: 'image/jpeg', size: 1, addedAt: '', source: 'photo', devices: [] }));
@@ -75,5 +75,38 @@ describe('oldNameFor', () => {
     expect(oldNameFor('RC Book.pdf', new Set())).toBe('RC Book (old).pdf');
     expect(oldNameFor('RC Book.pdf', new Set(['RC Book (old).pdf']))).toBe('RC Book (old 2).pdf');
     expect(oldNameFor('Final Survey Report.html', new Set(['Final Survey Report (old).html', 'Final Survey Report (old 2).html']))).toBe('Final Survey Report (old 3).html');
+  });
+});
+
+describe('docTypeFromRelPath', () => {
+  it('reads a top-level file from its own name', () => {
+    expect(docTypeFromRelPath('RC Book.pdf')).toBe('rc');
+    expect(docTypeFromRelPath('Final Survey Report.pdf')).toBe('surveyReport');
+    expect(docTypeFromRelPath('Primary Assessment Template.xlsx')).toBe('niaAssessmentExcel');
+  });
+  it('ignores case and a numbered suffix', () => {
+    expect(docTypeFromRelPath('rc book 2.jpg')).toBe('rc');
+    expect(docTypeFromRelPath('Driving Licence 10.jpg')).toBe('dl');
+  });
+  it('reads a file in a subfolder from the subfolder', () => {
+    expect(docTypeFromRelPath('Damage Photos/Damage Photos 3.jpg')).toBe('damagePhotos');
+    expect(docTypeFromRelPath('Spot Photos/whatever the camera called it.jpg')).toBe('spotPhotos');
+  });
+  it('falls back to other', () => {
+    expect(docTypeFromRelPath('scan0001.pdf')).toBe('other');
+    expect(docTypeFromRelPath('Random Folder/thing.pdf')).toBe('other');
+  });
+});
+
+describe('isScanSkippable', () => {
+  it('skips our own working files and superseded copies', () => {
+    expect(isScanSkippable('RC Book.pdf.part')).toBe(true);
+    expect(isScanSkippable('_surveyos-sync.json')).toBe(true);
+    expect(isScanSkippable('RC Book (old).pdf')).toBe(true);
+    expect(isScanSkippable('Final Survey Report (old 3).html')).toBe(true);
+  });
+  it('keeps ordinary files', () => {
+    expect(isScanSkippable('RC Book.pdf')).toBe(false);
+    expect(isScanSkippable('Damage Photos/Damage Photos 1.jpg')).toBe(false);
   });
 });

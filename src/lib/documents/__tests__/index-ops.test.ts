@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createBlankClaim } from '@/types/claim';
 import type { ClaimDocument } from '@/types/documents';
-import { claimDocuments, addDocuments, removeDocument, onThisDevice, newDocId, isDiscardablePlaceholder } from '../index-ops';
+import { claimDocuments, addDocuments, removeDocument, onThisDevice, newDocId, isDiscardablePlaceholder, addDeviceTo } from '../index-ops';
 
 const doc = (p: Partial<ClaimDocument>): ClaimDocument => ({
   id: p.id ?? newDocId(), type: 'rc', relPath: 'RC Book.pdf', mime: 'application/pdf', size: 10,
@@ -57,5 +57,18 @@ describe('isDiscardablePlaceholder', () => {
   });
   it('a re-print with a charset param is still not discardable', () => {
     expect(isDiscardablePlaceholder(html(), 'text/html; charset=utf-8')).toBe(false);
+  });
+});
+
+describe('addDeviceTo', () => {
+  it('adds this device to an entry written elsewhere', () => {
+    const c = addDocuments(createBlankClaim(), [doc({ id: 'a', devices: ['Office PC'] })]);
+    const next = addDeviceTo(c, 'a', 'Laptop');
+    expect(next.documents!.a.devices).toEqual(['Office PC', 'Laptop']);
+  });
+  it('is a no-op when the device is already listed or the id is unknown', () => {
+    const c = addDocuments(createBlankClaim(), [doc({ id: 'a', devices: ['Office PC'] })]);
+    expect(addDeviceTo(c, 'a', 'Office PC').documents!.a.devices).toEqual(['Office PC']);
+    expect(addDeviceTo(c, 'nope', 'Laptop')).toEqual(c);
   });
 });

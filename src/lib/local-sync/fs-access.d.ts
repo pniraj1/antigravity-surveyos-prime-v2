@@ -11,6 +11,7 @@ interface FileSystemHandlePermissionDescriptor {
 interface FileSystemDirectoryHandle {
   queryPermission?(desc?: FileSystemHandlePermissionDescriptor): Promise<PermissionState>
   requestPermission?(desc?: FileSystemHandlePermissionDescriptor): Promise<PermissionState>
+  entries?(): AsyncIterableIterator<[string, FileSystemHandle]>
 }
 
 interface Window {

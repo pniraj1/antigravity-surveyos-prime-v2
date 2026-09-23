@@ -7,8 +7,8 @@ import type { ClaimData } from '@/types/claim';
 import type { ClaimDocument, DocType } from '@/types/documents';
 import { MULTI_FILE_TYPES } from '@/types/documents';
 import { getStoredRootHandle, ensureReadWrite, getDeviceLabel } from '@/lib/local-sync/directory-handle';
-import { addDocuments, claimDocuments, newDocId, removeDocument, onThisDevice, isDiscardablePlaceholder } from './index-ops';
-import { folderNameFor, oldNameFor, relPathsFor } from './naming';
+import { addDocuments, claimDocuments, newDocId, removeDocument, onThisDevice, isDiscardablePlaceholder, addDeviceTo } from './index-ops';
+import { folderNameFor, oldNameFor, relPathsFor, docTypeFromRelPath, isScanSkippable } from './naming';
 import { getAllClaims } from '@/lib/storage/indexeddb';
 
 export class NoFolderError extends Error { constructor() { super('No claim folder is connected.'); } }
@@ -212,4 +212,73 @@ export async function openDocument(claim: ClaimData, doc: ClaimDocument): Promis
 export async function claimFolderPath(claim: ClaimData): Promise<string | null> {
   const handle = await getStoredRootHandle();
   return handle ? `${handle.name}\\${folderNameFor(claim)}` : null;
+}
+
+/** The claim's directory handle, or null when there is no folder or it was never created. */
+export async function getClaimDirHandle(
+  claim: ClaimData,
+  create = false,
+): Promise<FileSystemDirectoryHandle | null> {
+  try {
+    const rootHandle = await root();
+    return await rootHandle.getDirectoryHandle(folderNameFor(claim), { create });
+  } catch {
+    return null;
+  }
+}
+
+/** Every file in the claim folder, one level of subfolders deep, as relative paths. */
+async function listFiles(dir: FileSystemDirectoryHandle, prefix = ''): Promise<Array<{ relPath: string; file: File }>> {
+  const out: Array<{ relPath: string; file: File }> = [];
+  for await (const [name, handle] of (dir.entries as () => AsyncIterableIterator<[string, FileSystemHandle]>)()) {
+    if (handle.kind === 'file') {
+      out.push({ relPath: `${prefix}${name}`, file: await (handle as FileSystemFileHandle).getFile() });
+    } else if (!prefix) {
+      out.push(...(await listFiles(handle as FileSystemDirectoryHandle, `${name}/`)));
+    }
+  }
+  return out;
+}
+
+/**
+ * Adopt whatever is already in the claim folder: files put there by hand, a
+ * PDF saved straight from Chrome, a Word export, or — on a second PC whose
+ * root folder was copied or cloud-synced — the files an entry already
+ * describes, which stop reading "on Office PC" and start reading "here".
+ *
+ * Reads only. Nothing on disk is written, renamed or deleted.
+ */
+export async function scanClaimFolder(
+  claim: ClaimData,
+): Promise<{ claim: ClaimData; added: number; adopted: number }> {
+  const dir = await getClaimDirHandle(claim);
+  if (!dir) throw new NoFolderError();
+  const device = await getDeviceLabel();
+  const found = await listFiles(dir);
+
+  const byPath = new Map(claimDocuments(claim).map((d) => [d.relPath, d]));
+  let next: ClaimData = { ...claim, documentsFolder: folderNameFor(claim) };
+  const fresh: ClaimDocument[] = [];
+  let adopted = 0;
+
+  for (const { relPath, file } of found) {
+    if (isScanSkippable(relPath)) continue;
+    const known = byPath.get(relPath);
+    if (known) {
+      if (!onThisDevice(known, device)) { next = addDeviceTo(next, known.id, device); adopted++; }
+      continue;
+    }
+    fresh.push({
+      id: newDocId(),
+      type: docTypeFromRelPath(relPath),
+      relPath,
+      mime: file.type || 'application/octet-stream',
+      size: file.size,
+      addedAt: new Date(file.lastModified).toISOString(),
+      source: 'upload', // found on disk — never treated as a placeholder we may delete
+      devices: [device],
+    });
+  }
+
+  return { claim: addDocuments(next, fresh), added: fresh.length, adopted };
 }

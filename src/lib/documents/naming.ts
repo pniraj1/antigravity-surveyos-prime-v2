@@ -70,3 +70,29 @@ export function oldNameFor(relPath: string, taken: ReadonlySet<string>): string 
     n += 1;
   }
 }
+
+/** Label → type, built once. Labels are unique by construction. */
+const TYPE_BY_LABEL = new Map<string, DocType>(
+  (Object.entries(DOC_TYPE_LABEL) as Array<[DocType, string]>).map(([type, label]) => [label.toLowerCase(), type]),
+);
+
+/**
+ * What a file found on disk is, judged only by its own name: a file inside a
+ * subfolder takes the subfolder's type, a top-level file takes its stem with
+ * any trailing number dropped. Anything we cannot place is `other` — the
+ * surveyor can retype it in the list.
+ */
+export function docTypeFromRelPath(relPath: string): DocType {
+  const parts = relPath.split('/');
+  if (parts.length > 1) return TYPE_BY_LABEL.get(parts[0].toLowerCase().trim()) ?? 'other';
+  const stem = parts[0].replace(/\.[^.]+$/, '').replace(/\s+\d+$/, '').toLowerCase().trim();
+  return TYPE_BY_LABEL.get(stem) ?? 'other';
+}
+
+/** Our own working files and superseded copies are not documents. */
+export function isScanSkippable(relPath: string): boolean {
+  const name = relPath.split('/').pop() ?? '';
+  return name.endsWith('.part')
+    || name.startsWith('_')
+    || / \(old(?: \d+)?\)\.[^.]+$/.test(name);
+}

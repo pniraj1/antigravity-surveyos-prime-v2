@@ -39,3 +39,13 @@ export function isDiscardablePlaceholder(old: ClaimDocument, incomingMime: strin
     // Substring, not equality: tolerates 'text/html; charset=utf-8' from a picked file.
     && !incomingMime.includes('text/html');
 }
+
+/** Record that this device also holds an entry's bytes (after a folder scan). */
+export function addDeviceTo(claim: ClaimData, id: string, label: string): ClaimData {
+  const doc = claim.documents?.[id];
+  if (!doc || doc.devices.includes(label)) return claim;
+  return {
+    ...claim,
+    documents: { ...claim.documents, [id]: { ...doc, devices: [...doc.devices, label] } },
+  };
+}
