@@ -330,3 +330,21 @@ one text call (~2K tokens) on the surveyor's own free-tier key per use.
   existing multi-device sync rules (2026-07-08 spec); not changed here.
 - **Nav drift** between sidebar and bottom bar — prevented by the single
   `visibleNavItems` source and its test.
+
+## Revisions after reading the code (2026-10-02, implementation plan)
+
+Recorded in `docs/superpowers/plans/2026-10-02-phone-site-capture.md`:
+
+1. Share covers the Photo Sheet and Document Annexure PDFs. Main survey reports
+   are printed through the browser, so no PDF file exists to share; the Insured
+   Report keeps its approve-and-download flow.
+2. "Download today's claims" is dropped: `pullClaimsFromCloud` already stores
+   every claim's full data in IndexedDB on each sync.
+3. Site notes review uses a small dedicated dialog; `AIReviewDialog`'s findings
+   card is typed for estimate rows.
+4. The Site screen's Document button opens the Documents tab (which gains
+   per-card camera buttons) instead of a slot picker on the Site screen.
+5. "Document present" = `extractedData[slot]`; photo tags are vehicle angles.
+6. Tap-to-call is on the Site screen; Details gets it in P4.
+7. The bottom bar skips the sidebar's soft navigation nudges.
+8. P4 (form-tab restyle) gets its own plan after P1–P3 ship.
