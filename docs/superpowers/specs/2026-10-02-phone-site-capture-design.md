@@ -3,7 +3,8 @@
 Date: 2026-10-02
 Status: draft for review
 Scope: option B from the 2026-10-02 brainstorm — site capture (level 1) plus
-phone-usable form tabs (level 2). Money screens stay desktop/tablet.
+phone-usable form tabs (level 2), Site notes → fields, and four small phone
+conveniences. Money screens stay desktop/tablet.
 
 ## Problem
 
@@ -40,7 +41,12 @@ phone, but:
 - Assessment grid, Bill Check, Reconciliation, Admin, report preview on phones.
   They remain reachable (drawer / "More") with their current layout. Tablet
   landscape already works.
-- Voice notes → fields (separate spec).
+- In-app audio recording or transcription. Speech-to-text is the phone
+  keyboard's job (Gboard voice typing on Android, on-device and offline with a
+  language pack; Apple dictation on iOS). The app only handles text.
+- MCP connector for Claude / other AI apps (separate spec, later).
+- Photo blur/darkness checks, date/location stamping (camera apps already do
+  it), odometer-photo extraction.
 - Telegram Sync changes (retention, slot buttons) — separate spec.
 - Share target, Play Store listing, push notifications.
 - AI extraction offline. OCR still needs network; it can run later on any device.
@@ -140,8 +146,9 @@ Offline behaviour after this section:
 - Rendered as the Site screen from the brainstorm mockup:
   - header: registration, survey type, insurer, upload chip from section 2;
   - three large buttons: Damage photo (camera), Document (camera, then pick the
-    slot), From gallery (multi-select). No voice placeholder — the voice spec
-    adds its button when it ships;
+    slot), From gallery (multi-select);
+  - the Site notes box from section 9;
+  - workshop row with Navigate and Call, insured row with Call (section 10);
   - "Still missing" list from section 6; each row jumps to the field or opens
     the right camera input;
   - "Confirm before you leave" list from section 6.
@@ -197,6 +204,73 @@ Rules:
   `src/lib/reports/*` (UI_Refactor_Guardrails §1).
 - One tab per commit, so any regression is one revert.
 
+### 9. Site notes → fields
+
+The surveyor dictates freely with the keyboard mic into one box; one text AI call
+turns it into field values; the surveyor reviews before anything is applied.
+
+- New optional claim field `siteNotes?: string` (free text, kept with the claim
+  and synced like any other field; absent on old claims = empty).
+- Site screen: a large textarea "Site notes", saved on change like other fields.
+  Works offline; it is just text.
+- Button "Fill fields from notes" (disabled offline with the hint "Needs
+  signal — your notes are saved"):
+  1. `buildSiteNotesPrompt(surveyType, notes, currentValues)` in
+     `src/lib/ai/prompts.ts` asks for JSON limited to the allowed fields below,
+     each with the exact words from the notes as evidence (same convention as
+     the document prompts).
+  2. `callAIGateway(prompt, [], 'json', 'text')` — the existing gateway and
+     fallback chain, the surveyor's own key, ~2K tokens.
+  3. Pure `planSiteNotes(claim, extracted)` in `src/lib/site/site-notes.ts`
+     returns `{ fills, conflicts, unmapped }`:
+     - `fills`: allowed fields that are empty on the claim (or still at their
+       `createBlankClaim` default for the confirm toggles) → will be applied;
+     - `conflicts`: allowed fields that already hold a different value → shown,
+       never applied; the surveyor edits them by hand if the note is right;
+     - `unmapped`: note phrases the model could not place.
+  4. `AIReviewDialog` shows `fills` as data and `conflicts` + `unmapped` through
+     its existing `findings` card. Confirm applies `fills` only, through the
+     normal store setters.
+- Allowed fields (anything else in the model output is dropped):
+  - all types: `vehicle.registrationNumber`, `vehicle.odometer`,
+    `vehicle.preAccidentCondition`, `accident.dateAndTime`,
+    `accident.placeOfAccident`, `accident.causeOfAccident`,
+    `accident.placeOfSurvey`, `accident.workshopName`, `accident.remarks`;
+  - spot: `spotDetails.drivable`, `airbags`, `policeReported`, `tpInvolved`,
+    `panchanama`, `damageSeverity`, `comments`, `repairs`; and
+    `spotDamageRows` — appended as `{ component, damage }`, never replacing
+    existing rows;
+  - valuation: `valuationDetails.inspectionPlace`, `odometer`, `tyreCondition`,
+    `batteryCondition`, `glassCondition`, `electricals`, `remarks`;
+  - reinspection: `reinspection.observations`, `repairQuality`,
+    `vehicleCondition`, `salvageStatus`.
+- Never touched: `assessmentRows` and every amount (assessment is surveyor-made
+  only), and insured / policy / driver identity fields (those come from
+  documents, and keeping them out of free speech keeps the notes PII-light).
+- Enum fields are accepted only if the value is one the type allows; otherwise
+  the item goes to `unmapped`.
+
+### 10. Small phone conveniences
+
+- **Share report.** Where a report PDF is generated (`ReportTab`, `PhotosTab`,
+  `InsuredReportTab`), add a Share button when
+  `navigator.canShare({ files: [pdfFile] })` is true. It opens the phone's share
+  sheet (WhatsApp, Gmail, …) with the PDF attached. Hidden where unsupported;
+  the download button stays. Sharing is the surveyor's action — nothing is sent
+  by the app.
+- **Navigate.** If `accident.workshopAddress` (or `workshopName`) is filled,
+  show Navigate →
+  `https://www.google.com/maps/dir/?api=1&destination=<encoded address>`.
+  Opens the Maps app on phones.
+- **Call.** `policy.insuredMobile` and `accident.workshopPhone`, when filled,
+  render as `tel:` links on the Site screen and in Details on `< md`.
+- **Download today's claims.** Dashboard button "Make available offline": pulls
+  the full claim data for active claims whose appointment or survey date is
+  today or tomorrow (falls back to the 10 most recently updated active claims if
+  none have dates) into IndexedDB through the existing claim pull, and reports
+  "6 claims ready offline". Photos are not downloaded (they live on Drive; see
+  section 3).
+
 ## Error handling
 
 - Camera input cancelled → no-op (same as today's file input).
@@ -206,12 +280,19 @@ Rules:
   open.
 - Service worker registration fails → app behaves exactly as today.
 - `storage.persist()` denied → nothing; the waiting chip remains the warning.
+- Fill-from-notes AI call fails → the existing gateway fallback runs; if all
+  fail, a toast "Couldn't read the notes — try again" and the notes are kept.
+- Model returns invalid JSON or no allowed fields → "Nothing to fill from these
+  notes", no dialog.
+- `navigator.share` rejected or cancelled → no-op.
 
 ## Testing
 
 - Unit (vitest): `siteChecklist` per survey type; `visibleNavItems` parity with
   current sidebar behaviour; `findNewDrivePhotos` (driveName match, legacy name
-  match, iOS-style duplicate `image` names, empty inputs).
+  match, iOS-style duplicate `image` names, empty inputs); `planSiteNotes`
+  (fills vs conflicts vs unmapped, disallowed fields dropped, invalid enum →
+  unmapped, damage rows appended not replaced, assessment untouched).
 - Guardrail: generate a Final and a Spot report (PDF + print preview) before and
   after section 8; outputs must be identical.
 - Manual on a real Android phone (auth-gated, needs the surveyor's login and
@@ -228,15 +309,16 @@ Each phase ships on its own.
 
 | Phase | Sections | Approx. size | Unlocks |
 |---|---|---|---|
-| P1 | 1, 2, 3 | ~250 lines | No more WhatsApp/cable transfer |
-| P2 | 4 | ~120 lines + icons | Installable, opens without signal |
-| P3 | 5, 6, 7 | ~450 lines | Phone site flow, nothing forgotten |
+| P1 | 1, 2, 3, 10 (share) | ~280 lines | No more WhatsApp/cable transfer; report straight to WhatsApp |
+| P2 | 4, 10 (download today's) | ~160 lines + icons | Installable, opens without signal |
+| P3 | 5, 6, 7, 9, 10 (navigate, call) | ~650 lines | Phone site flow, dictated notes fill fields, nothing forgotten |
 | P4 | 8 | per tab, ~1–2 weeks total | Form tabs comfortable on a phone |
 
 ## Cost
 
 ₹0 running cost: browser features (camera input, service worker, IndexedDB),
-the surveyor's own Drive, no new services, no new dependencies.
+the surveyor's own Drive, no new services, no new dependencies. Site notes cost
+one text call (~2K tokens) on the surveyor's own free-tier key per use.
 
 ## Risks
 
