@@ -7,6 +7,7 @@ import { useClaimStore } from '@/stores/claim-store';
 import { getClaim, saveClaim } from '@/lib/storage/indexeddb';
 import { toggleFeePaid } from '@/lib/claims/fee-status';
 import { claimLandingTab } from '@/lib/claims/landing-tab';
+import { isNarrowViewport } from '@/lib/navigation/viewport';
 import { deleteClaimEverywhere } from '@/lib/firebase/sync';
 import { useAuthStore } from '@/stores/auth-store';
 import { toast } from 'sonner';
@@ -47,6 +48,7 @@ import { ProcessingProgressOverlay } from '@/components/ui/ProcessingProgressOve
 import { TermsReacceptGate } from '@/components/legal/TermsReacceptGate';
 
 // Dynamically import ALL tabs with ssr:false — they all use browser-only APIs:
+const SiteTab = dynamicImport(() => import('@/components/tabs/SiteTab').then(m => ({ default: m.SiteTab })), { ssr: false });
 const DetailsTab    = dynamicImport(() => import('@/components/tabs/DetailsTab').then(m    => ({ default: m.DetailsTab    })), { ssr: false });
 const AssessmentTab = dynamicImport(() => import('@/components/tabs/AssessmentTab').then(m => ({ default: m.AssessmentTab })), { ssr: false });
 const PhotosTab     = dynamicImport(() => import('@/components/tabs/PhotosTab').then(m     => ({ default: m.PhotosTab     })), { ssr: false });
@@ -358,7 +360,7 @@ export function DashboardContent() {
                           // them into a single render and Effect 2 only ever sees
                           // the final, consistent state.
                           useClaimStore.getState().loadClaim(fullClaim);
-                          useUIStore.getState().setActiveTab(claimLandingTab(fullClaim.surveyType));
+                          useUIStore.getState().setActiveTab(claimLandingTab(fullClaim.surveyType, isNarrowViewport()));
                         } catch {
                           toast.error('Could not open this claim.');
                         }
@@ -618,6 +620,7 @@ export function DashboardContent() {
 // ─── Tab Router ──────────────────────────────────────────
 export function TabPlaceholder({ tab }: { tab: string }) {
   if (tab === 'documents')   return <DocumentsTab />;
+  if (tab === 'site')        return <SiteTab />;
   if (tab === 'review')      return <ReviewTab />;
   if (tab === 'details')     return <DetailsTab />;
   if (tab === 'assessment')  return <AssessmentTab />;

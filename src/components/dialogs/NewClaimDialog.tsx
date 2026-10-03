@@ -7,6 +7,7 @@ import { getOrCreateClaimFolder } from '@/lib/drive';
 import { getAllClaims, getClaim, saveClaim } from '@/lib/storage/indexeddb';
 import { normalizeVehicleNumber } from '@/lib/utils/vehicle';
 import { claimLandingTab } from '@/lib/claims/landing-tab';
+import { isNarrowViewport } from '@/lib/navigation/viewport';
 import { useState, useEffect, useRef } from 'react';
 import type { VehicleType } from '@/types';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
@@ -282,7 +283,7 @@ export function NewClaimDialog() {
     setVehicleNo('');
     setNewClaimDialogOpen(false);
     // Valuation surveys don't get a Documents tab — see claimLandingTab.
-    setActiveTab(claimLandingTab(surveyType));
+    setActiveTab(claimLandingTab(surveyType, isNarrowViewport()));
   };
 
   const isCreateDisabled =

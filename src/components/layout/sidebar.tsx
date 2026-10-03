@@ -34,6 +34,7 @@ import {
   Zap,
   CarFront,
   Archive,
+  MapPin,
 } from 'lucide-react';
 import { NotificationBell } from './NotificationBell';
 import { useAuthStore } from '@/stores/auth-store';
@@ -53,6 +54,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={17} />, group: 'main' },
+  { id: 'site', label: 'Site', icon: <MapPin size={17} />, group: 'claim', requiresClaim: true },
   { id: 'documents', label: 'Documents', icon: <FileText size={17} />, group: 'claim', requiresClaim: true },
   { id: 'review', label: 'AI Review', icon: <ScanSearch size={17} />, group: 'claim', requiresClaim: true },
   { id: 'details', label: 'Claim Details', icon: <ClipboardList size={17} />, group: 'claim', requiresClaim: true },

@@ -16,6 +16,8 @@ import type { SurveyType } from '@/types/report';
  * Keep this in step with the survey-type filter in `sidebar.tsx` — if
  * `documents` is ever unrestricted for valuation, this special case goes away.
  */
-export function claimLandingTab(surveyType: SurveyType | undefined): AppTab {
+export function claimLandingTab(surveyType: SurveyType | undefined, narrow = false): AppTab {
+  // On a phone the Site screen is the start of the workflow for every survey type.
+  if (narrow) return 'site';
   return surveyType === 'valuation' ? 'details' : 'documents';
 }
