@@ -9,6 +9,7 @@ import { pushClaimToCloud } from '@/lib/firebase/sync';
 import { flushDriveQueue, backupAllPendingToDrive } from '@/lib/drive';
 import { getDriveQueueCount } from '@/lib/storage/indexeddb';
 import { Cloud, Loader2 } from 'lucide-react';
+import { DriveQueueChip } from '@/components/sync/DriveQueueChip';
 import { SyncStatusBadge } from '@/components/sync/SyncStatusBadge';
 
 export function ClaimHeader() {
@@ -98,6 +99,8 @@ export function ClaimHeader() {
       )}
 
       <div className="flex-1" />
+
+      <DriveQueueChip />
 
       <SyncStatusBadge />
 

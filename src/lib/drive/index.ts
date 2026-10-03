@@ -8,6 +8,7 @@ import { useProfileStore } from '@/stores/profile-store';
 import type { ClaimData } from '@/types';
 import { toast } from 'sonner';
 import { partitionPhotos } from '@/lib/photos/document-annexure';
+import { notifyDriveQueueChanged } from './queue-events';
 import {
   addToDriveQueue,
   getDriveQueue,
@@ -348,6 +349,7 @@ export async function uploadFileToDrive(
     // Drive not linked — queue persistently
     const fileData = await blob.arrayBuffer();
     await addToDriveQueue({ claimId, claimLabel, fileName, fileData, mimeType: blob.type || 'application/octet-stream' });
+    notifyDriveQueueChanged();
     const count = await getDriveQueueCount();
     toast.warning(`Drive not linked — "${fileName}" queued (${count} pending). Link Drive in Profile to sync.`, { duration: 5000 });
     return;
@@ -369,6 +371,7 @@ export async function uploadFileToDrive(
     // Network failure — queue to IndexedDB for retry
     const fileData = await blob.arrayBuffer();
     await addToDriveQueue({ claimId, claimLabel, fileName, fileData, mimeType: blob.type || 'application/octet-stream' });
+    notifyDriveQueueChanged();
     const count = await getDriveQueueCount();
     toast.error(`Upload failed for "${fileName}" — queued for retry when online (${count} pending).`, { duration: 6000 });
   }
@@ -474,6 +477,7 @@ export async function flushDriveQueue(): Promise<number> {
     toast.warning(`${remaining} file(s) still pending — will retry when online.`, { duration: 5000 });
   }
 
+  notifyDriveQueueChanged();
   return successCount;
 }
 
