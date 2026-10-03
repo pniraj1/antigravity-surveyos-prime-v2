@@ -41,6 +41,7 @@ import { Sidebar, MobileMenuButton } from '@/components/layout/sidebar';
 import { FloatingReportPreview } from '@/components/layout/FloatingReportPreview';
 import { ClaimHeader } from '@/components/layout/ClaimHeader';
 import { NewDrivePhotosBanner } from '@/components/layout/NewDrivePhotosBanner';
+import { MobileBottomBar } from '@/components/layout/MobileBottomBar';
 import { useRouteSync } from '@/hooks/useRouteSync';
 import { useAIConfig } from '@/hooks/useAIConfig';
 import { useExtractionCompletionToast } from '@/hooks/useExtractionCompletionToast';
@@ -652,6 +653,7 @@ export function TabPlaceholder({ tab }: { tab: string }) {
 
 export default function Dashboard() {
   const { activeTab } = useUIStore();
+  const hasClaim = useClaimStore((s) => !!s.currentClaim);
   useRouteSync();
   useAIConfig();
   useExtractionCompletionToast();
@@ -662,13 +664,15 @@ export default function Dashboard() {
       <Sidebar />
       <MobileMenuButton />
 
-      <main className="flex-1 overflow-y-auto bg-background">
+      <main className={`flex-1 overflow-y-auto bg-background ${hasClaim ? 'pb-16 md:pb-0' : ''}`}>
         <ClaimHeader />
         <NewDrivePhotosBanner />
         <ErrorBoundary key={activeTab}>
           {activeTab === 'dashboard' ? <DashboardContent /> : <TabPlaceholder tab={activeTab} />}
         </ErrorBoundary>
       </main>
+
+      <MobileBottomBar />
 
       {/* Global Modals */}
       <NewClaimDialog />
