@@ -87,7 +87,7 @@ const nudgedJobs = new Set<string>();
 
 export function Sidebar() {
   const [mounted, setMounted] = useState(false);
-  const { activeTab, setActiveTab, sidebarCollapsed, toggleSidebar, isOnline, isDriveConnected, driveEmail } = useUIStore();
+  const { activeTab, setActiveTab, sidebarCollapsed, sidebarMobileOpen, toggleSidebar, isOnline, isDriveConnected, driveEmail } = useUIStore();
   const { setNewClaimDialogOpen, setClaimsListOpen } = useUIStore();
   const { getInitials, profile } = useProfileStore();
   const { currentClaim } = useClaimStore();
@@ -164,7 +164,7 @@ export function Sidebar() {
       {/* Mobile overlay */}
       <div
         className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden"
-        style={{ display: useUIStore.getState().sidebarMobileOpen ? 'block' : 'none' }}
+        style={{ display: sidebarMobileOpen ? 'block' : 'none' }}
         onClick={() => useUIStore.getState().setSidebarMobileOpen(false)}
       />
 
@@ -174,7 +174,8 @@ export function Sidebar() {
           transition-all duration-300 ease-in-out
           bg-white border-r border-[var(--color-neutral-200)]
           ${sidebarCollapsed ? 'w-[64px]' : 'w-[258px]'}
-          lg:relative
+          ${sidebarMobileOpen ? 'translate-x-0' : '-translate-x-full'}
+          lg:relative lg:translate-x-0
         `}
       >
         {/* ─── Brand Header ──────────────────────────────── */}
