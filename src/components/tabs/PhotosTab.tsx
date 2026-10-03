@@ -2,8 +2,10 @@
 
 import { useMemo, useState } from 'react';
 import { useClaimStore } from '@/stores/claim-store';
-import { listFilesInFolder, downloadFileAsBase64 } from '@/lib/drive';
-import { isDocumentFileName, partitionPhotos } from '@/lib/photos/document-annexure';
+import { listFilesInFolder } from '@/lib/drive';
+import { findNewDrivePhotos } from '@/lib/photos/drive-photo-diff';
+import { downloadDrivePhotos } from '@/lib/photos/download-drive-photos';
+import { partitionPhotos } from '@/lib/photos/document-annexure';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -100,30 +102,15 @@ export function PhotosTab() {
     setRestoringDrive(true);
     try {
       const files = await listFilesInFolder(currentClaim.gDriveFolderId);
-      const imageFiles = files.filter(f => f.mimeType.startsWith('image/'));
+      const imageFiles = findNewDrivePhotos(
+        currentClaim.photos,
+        files.filter(f => f.mimeType.startsWith('image/')),
+      );
       if (imageFiles.length === 0) {
-        toast.info('No photos found in Drive folder for this claim.');
+        toast.info('No new photos in the Drive folder for this claim.');
         return;
       }
-      let restored = 0;
-      for (const file of imageFiles) {
-        try {
-          const dataUrl = await downloadFileAsBase64(file.id, file.mimeType);
-          // Derive dimensions by loading image
-          const dims = await new Promise<{ w: number; h: number }>((resolve) => {
-            const img = new Image();
-            img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
-            img.onerror = () => resolve({ w: 800, h: 600 });
-            img.src = dataUrl;
-          });
-          const baseName = file.name.replace(/\.[^.]+$/, '');
-          const kind = isDocumentFileName(file.name) ? 'document' : 'damage';
-          addPhoto(dataUrl, baseName.substring(0, 30), dims.w, dims.h, kind);
-          restored++;
-        } catch {
-          // skip individual failures
-        }
-      }
+      const restored = await downloadDrivePhotos(imageFiles, addPhoto);
       toast.success(`Restored ${restored} photo(s) from Google Drive.`);
     } catch {
       toast.error('Failed to restore photos from Drive. Check your Drive connection.');

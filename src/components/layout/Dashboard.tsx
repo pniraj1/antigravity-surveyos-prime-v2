@@ -39,6 +39,7 @@ import { ErrorBoundary } from '@/components/layout/ErrorBoundary';
 import { Sidebar, MobileMenuButton } from '@/components/layout/sidebar';
 import { FloatingReportPreview } from '@/components/layout/FloatingReportPreview';
 import { ClaimHeader } from '@/components/layout/ClaimHeader';
+import { NewDrivePhotosBanner } from '@/components/layout/NewDrivePhotosBanner';
 import { useRouteSync } from '@/hooks/useRouteSync';
 import { useAIConfig } from '@/hooks/useAIConfig';
 import { useExtractionCompletionToast } from '@/hooks/useExtractionCompletionToast';
@@ -660,6 +661,7 @@ export default function Dashboard() {
 
       <main className="flex-1 overflow-y-auto bg-background">
         <ClaimHeader />
+        <NewDrivePhotosBanner />
         <ErrorBoundary key={activeTab}>
           {activeTab === 'dashboard' ? <DashboardContent /> : <TabPlaceholder tab={activeTab} />}
         </ErrorBoundary>

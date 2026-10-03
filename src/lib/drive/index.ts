@@ -570,7 +570,7 @@ export async function restoreProfileFromDrive(): Promise<any | null> {
 const CLAIM_BACKUP_FILE_NAME = 'claim.json';
 
 /** Resolve an existing claim folder id without creating one (cache → Drive index). */
-async function findClaimFolderId(claimId: string): Promise<string | null> {
+export async function findClaimFolderId(claimId: string): Promise<string | null> {
   const cached = localStorage.getItem(`surveyos_drive_folder_${claimId}`);
   if (cached) return cached;
   const index = await loadDriveIndex();
