@@ -16,7 +16,7 @@ import {
   FileText, Sparkles, Loader2, CheckCircle2, Car, CreditCard,
   FileCheck, ScrollText, Receipt, Shield, AlertTriangle,
   Upload, Truck, Zap, Database, RefreshCw, ExternalLink,
-  ChevronDown, ChevronRight, HardDrive,
+  ChevronDown, ChevronRight, HardDrive, Camera,
 } from 'lucide-react';
 import { SyncDrivePicker } from '@/components/sync-bridge/SyncDrivePicker';
 import { DocumentReviewSheet } from '@/components/documents/DocumentReviewSheet';
@@ -158,7 +158,7 @@ export function DocumentsTab() {
     if (currentClaim?.id && profile.autoUploadDrive !== false) {
       const claimId = currentClaim.id;
       const label = currentClaim.vehicle?.registrationNumber || claimId;
-      confirmSaveToCloud(files.length > 1 ? `${files.length} files` : files[0].name).then(ok => {
+      confirmSaveToCloud(files.length > 1 ? `${files.length} files` : files[0].name, claimId).then(ok => {
         if (!ok) return;
         files.forEach((file, idx) => {
           const ext = file.name.split('.').pop() ?? 'bin';
@@ -390,6 +390,23 @@ export function DocumentsTab() {
                       </div>
 
                       <div className="flex items-center gap-2">
+                        <label
+                          className="md:hidden relative z-20 flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border border-[var(--color-neutral-200)] bg-card"
+                          onClick={(e) => e.stopPropagation()}
+                          aria-label={`Photograph ${doc.label}`}
+                          title={`Photograph ${doc.label}`}
+                        >
+                          <Camera size={18} />
+                          <input
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            className="hidden"
+                            onChange={e => handleFile(e, doc.id)}
+                            disabled={isActive}
+                          />
+                        </label>
+
                         {syncConnected && (
                           <button
                             type="button"
