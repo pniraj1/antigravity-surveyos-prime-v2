@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import { SaveToCloudDialog } from '@/components/dialogs/SaveToCloudDialog';
+import { getCloudChoice, rememberCloudChoice } from '@/lib/photos/cloud-choice-memo';
 
 interface PendingPrompt {
   fileLabel: string;
@@ -15,9 +16,19 @@ interface PendingPrompt {
 export function useSaveToCloudPrompt() {
   const [pending, setPending] = useState<PendingPrompt | null>(null);
 
-  const confirmSaveToCloud = useCallback((fileLabel: string): Promise<boolean> => {
+  const confirmSaveToCloud = useCallback((fileLabel: string, claimId?: string): Promise<boolean> => {
+    if (claimId) {
+      const known = getCloudChoice(claimId);
+      if (known !== undefined) return Promise.resolve(known);
+    }
     return new Promise<boolean>((resolve) => {
-      setPending({ fileLabel, resolve });
+      setPending({
+        fileLabel,
+        resolve: (ok) => {
+          if (claimId) rememberCloudChoice(claimId, ok);
+          resolve(ok);
+        },
+      });
     });
   }, []);
 

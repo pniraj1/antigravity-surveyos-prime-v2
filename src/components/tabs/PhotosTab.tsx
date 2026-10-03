@@ -1,24 +1,21 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useClaimStore } from '@/stores/claim-store';
-import { useProfileStore } from '@/stores/profile-store';
-import { uploadFileToDrive, listFilesInFolder, downloadFileAsBase64 } from '@/lib/drive';
-import { PHOTO_FILE_PREFIX, isDocumentFileName, partitionPhotos } from '@/lib/photos/document-annexure';
-import { compressImage } from '@/lib/photos/compress-image';
+import { listFilesInFolder, downloadFileAsBase64 } from '@/lib/drive';
+import { isDocumentFileName, partitionPhotos } from '@/lib/photos/document-annexure';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import {
   Trash2, Image as ImageIcon, Settings, Loader2,
-  UploadCloud, Eye, EyeOff, LayoutGrid, Sliders, CloudDownload,
+  UploadCloud, Camera, Eye, EyeOff, LayoutGrid, Sliders, CloudDownload,
 } from 'lucide-react';
 import type { PhotoLayout, PhotoSheetOptions, PageOrientation } from '@/types/assessment';
 import { DEFAULT_PHOTO_SHEET_OPTIONS } from '@/components/pdf/PhotoSheetDocument';
 import { DocumentAnnexureSection } from '@/components/tabs/photos/DocumentAnnexureSection';
-import { useSaveToCloudPrompt } from '@/hooks/useSaveToCloudPrompt';
-import { saveDocuments } from '@/lib/documents/sink';
+import { usePhotoUpload } from '@/hooks/usePhotoUpload';
 import type { PhotoTag } from '@/types/documents';
 import dynamic from 'next/dynamic';
 
@@ -72,11 +69,10 @@ export function PhotosTab() {
     updatePhotoLayout,
   } = useClaimStore();
 
-  const [isProcessing, setIsProcessing] = useState(false);
   const [showPreview,  setShowPreview]  = useState(false);
   const [options, setOptions] = useState<PhotoSheetOptions>({ ...DEFAULT_PHOTO_SHEET_OPTIONS });
   const [restoringDrive, setRestoringDrive] = useState(false);
-  const { confirmSaveToCloud, saveToCloudDialog } = useSaveToCloudPrompt();
+  const { uploadPhotos, isProcessing, saveToCloudDialog } = usePhotoUpload();
 
   if (!currentClaim) return null;
 
@@ -87,43 +83,11 @@ export function PhotosTab() {
   const damagePhotos = partitionPhotos(currentClaim.photos).damage;
 
   // ── Upload handler ────────────────────────────────────────────────────────
-  const handleFileUpload = useCallback(
-    async (event: React.ChangeEvent<HTMLInputElement>) => {
-      const files = event.target.files;
-      if (!files || files.length === 0) return;
-      setIsProcessing(true);
-
-      const claimId = currentClaim.id;
-      const label   = currentClaim.vehicle?.registrationNumber || claimId;
-
-      const { profile } = useProfileStore.getState();
-      const saveToDrive = profile.autoUploadDrive !== false
-        ? await confirmSaveToCloud(files.length > 1 ? `${files.length} photos` : files[0].name)
-        : false;
-
-      const savedFiles: File[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        if (!file.type.startsWith('image/')) continue;
-        try {
-          const { dataUrl, w, h } = await compressImage(file, 600, 1.0);
-          const name = file.name.split('.')[0].substring(0, 30);
-          // Store dimensions for orientation detection
-          addPhoto(dataUrl, name, w, h);
-          savedFiles.push(file);
-          if (saveToDrive) {
-            uploadFileToDrive(claimId, `${PHOTO_FILE_PREFIX}${Date.now()}_${name}.jpg`, file, label).catch(() => {});
-          }
-        } catch {
-          // silently skip failed images
-        }
-      }
-      if (savedFiles.length) void saveDocuments('damagePhotos', savedFiles.map((f) => ({ blob: f, name: f.name })), 'photo');
-      setIsProcessing(false);
-      event.target.value = '';
-    },
-    [addPhoto, currentClaim, confirmSaveToCloud],
-  );
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files && files.length > 0) void uploadPhotos(files);
+    event.target.value = '';
+  };
 
   // ── Options helpers ───────────────────────────────────────────────────────
   const setOpt = <K extends keyof PhotoSheetOptions>(key: K, value: PhotoSheetOptions[K]) =>
@@ -413,17 +377,34 @@ export function PhotosTab() {
                 Select collision photos. Compressed locally to save memory.
                 Portrait and landscape photos are handled automatically.
               </p>
-              <Label
-                htmlFor="photo-upload"
-                className={`cursor-pointer inline-flex h-10 items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
-              >
-                {isProcessing ? 'Compressing…' : 'Browse Files'}
-              </Label>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <Label
+                  htmlFor="photo-camera"
+                  className={`md:hidden cursor-pointer inline-flex min-h-[44px] items-center justify-center gap-2 rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
+                >
+                  <Camera size={16} /> Camera
+                </Label>
+                <Label
+                  htmlFor="photo-upload"
+                  className={`cursor-pointer inline-flex min-h-[44px] md:min-h-0 md:h-10 items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
+                >
+                  {isProcessing ? 'Compressing…' : 'Gallery / Browse'}
+                </Label>
+              </div>
               <input
                 id="photo-upload"
                 type="file"
                 multiple
                 accept="image/*"
+                className="hidden"
+                onChange={handleFileUpload}
+                disabled={isProcessing}
+              />
+              <input
+                id="photo-camera"
+                type="file"
+                accept="image/*"
+                capture="environment"
                 className="hidden"
                 onChange={handleFileUpload}
                 disabled={isProcessing}

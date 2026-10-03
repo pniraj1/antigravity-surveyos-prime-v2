@@ -326,6 +326,12 @@ export interface PhotoItem {
   kind?: 'damage' | 'document';
   /** Which portal slot the shot is for. Undefined = an ordinary damage photo. */
   tag?: PhotoTag;
+  /**
+   * Exact Google Drive filename this photo was uploaded as (or restored from).
+   * Lets another device tell which Drive photos it already has. Undefined on
+   * photos taken before this field existed or never sent to Drive.
+   */
+  driveName?: string;
 }
 
 /** Number of photos to show per A4 page */
