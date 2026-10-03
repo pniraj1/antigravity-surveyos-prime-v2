@@ -19,6 +19,12 @@ describe('parseSiteNotesExtraction', () => {
     });
   });
 
+  it('strips markdown code fences', () => {
+    const fence = (body: string) => ['```json', body, '```'].join('\n');
+    expect(parseSiteNotesExtraction(fence('{"unmapped":["x"]}')).unmapped).toEqual(['x']);
+    expect(() => parseSiteNotesExtraction(fence('not json'))).toThrow();
+  });
+
   it('throws on non-JSON', () => {
     expect(() => parseSiteNotesExtraction('not json')).toThrow();
   });
@@ -59,6 +65,36 @@ describe('planSiteNotes', () => {
     ] }));
     expect(plan.fills).toEqual([]);
     expect(plan.unmapped).toEqual(['airbags maybe']);
+  });
+
+  it('accepts only ISO datetime-local for accident.dateAndTime', () => {
+    const plan = planSiteNotes(createBlankClaim('spot'), ex({ fields: [
+      { path: 'accident.dateAndTime', value: 'yesterday evening', evidence: 'yesterday evening' },
+    ] }));
+    expect(plan.fills).toEqual([]);
+    expect(plan.unmapped).toEqual(['yesterday evening']);
+    const ok = planSiteNotes(createBlankClaim('spot'), ex({ fields: [
+      { path: 'accident.dateAndTime', value: '2026-10-02T18:30', evidence: 'e' },
+    ] }));
+    expect(ok.fills.map((f) => f.value)).toEqual(['2026-10-02T18:30']);
+  });
+
+  it('matches enums case-insensitively and stores lower case', () => {
+    const plan = planSiteNotes(createBlankClaim('spot'), ex({ fields: [
+      { path: 'spotDetails.drivable', value: 'Yes', evidence: 'e' },
+    ] }));
+    expect(plan.fills.map((f) => f.value)).toEqual(['yes']);
+  });
+
+  it('drops damage rows already on the claim or repeated in the extraction', () => {
+    const c = createBlankClaim('spot');
+    const claim = { ...c, spotDamageRows: [{ id: 'old', component: 'Bonnet', damage: 'dent' }] };
+    const plan = planSiteNotes(claim, ex({ damageRows: [
+      { component: ' bonnet ', damage: 'dent', evidence: 'e' },
+      { component: 'Door', damage: 'scratch', evidence: 'e' },
+      { component: 'DOOR', damage: 'scratch', evidence: 'e' },
+    ] }));
+    expect(plan.damageRows.map((r) => r.component)).toEqual(['Door']);
   });
 
   it('keeps damage rows only for spot surveys', () => {

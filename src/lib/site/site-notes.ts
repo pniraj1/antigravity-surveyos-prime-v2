@@ -3,13 +3,13 @@ import type { SurveyType } from '@/types/report';
 import { createBlankClaim } from '@/types';
 import { getAt, setAt } from './path';
 
-export interface FieldSpec { path: string; label: string; enum?: readonly string[] }
+export interface FieldSpec { path: string; label: string; enum?: readonly string[]; pattern?: RegExp; hint?: string }
 
 const COMMON: FieldSpec[] = [
   { path: 'vehicle.registrationNumber', label: 'Registration number' },
   { path: 'vehicle.odometer', label: 'Odometer' },
   { path: 'vehicle.preAccidentCondition', label: 'Pre-accident condition' },
-  { path: 'accident.dateAndTime', label: 'Accident date and time' },
+  { path: 'accident.dateAndTime', label: 'Accident date and time', pattern: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, hint: 'format YYYY-MM-DDTHH:mm' },
   { path: 'accident.placeOfAccident', label: 'Place of accident' },
   { path: 'accident.causeOfAccident', label: 'Cause of accident' },
   { path: 'accident.placeOfSurvey', label: 'Place of survey' },
@@ -76,7 +76,7 @@ const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 
 
 /** Tolerant reader of the model's JSON. Throws only when it is not JSON at all. */
 export function parseSiteNotesExtraction(raw: string): SiteNotesExtraction {
-  const data: unknown = JSON.parse(raw);
+  const data: unknown = JSON.parse(raw.trim().replace(/^```[a-zA-Z]*\s*\n/, '').replace(/\n?```$/, ''));
   const obj = isObj(data) ? data : {};
   const list = (key: string) => (Array.isArray(obj[key]) ? (obj[key] as unknown[]) : []);
   return {
@@ -100,10 +100,11 @@ export function planSiteNotes(claim: ClaimData, extraction: SiteNotesExtraction)
 
   for (const f of extraction.fields) {
     const spec = specs.get(f.path);
-    const value = str(f.value);
+    let value = str(f.value);
     if (!spec || !value || seen.has(f.path)) continue; // not allowed, empty, or duplicate → dropped
     seen.add(f.path);
-    if (spec.enum && !spec.enum.includes(value)) {
+    if (spec.enum) value = value.toLowerCase();
+    if ((spec.enum && !spec.enum.includes(value)) || (spec.pattern && !spec.pattern.test(value))) {
       unmapped.push(f.evidence || value);
       continue;
     }
@@ -116,10 +117,16 @@ export function planSiteNotes(claim: ClaimData, extraction: SiteNotesExtraction)
     }
   }
 
+  const key = (c: string) => c.toLowerCase().trim();
+  const rowSeen = new Set(claim.spotDamageRows.map((r) => key(r.component)));
+  const damageRows = allowsDamageRows(claim.surveyType)
+    ? extraction.damageRows.filter((r) => !rowSeen.has(key(r.component)) && !!rowSeen.add(key(r.component)))
+    : [];
+
   return {
     fills,
     conflicts,
-    damageRows: allowsDamageRows(claim.surveyType) ? extraction.damageRows : [],
+    damageRows,
     unmapped,
   };
 }
