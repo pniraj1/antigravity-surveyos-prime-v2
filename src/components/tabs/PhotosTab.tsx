@@ -117,7 +117,7 @@ export function PhotosTab() {
         () => useClaimStore.getState().currentClaim?.id === claimId,
       );
       if (added > 0) toast.success(`Restored ${added} photo(s) from Google Drive.`);
-      if (failed.length > 0) toast.error(`${failed.length} photo(s) couldn't be downloaded — tap Add to try again.`);
+      if (failed.length > 0) toast.error(`${failed.length} photo(s) couldn't be restored from Drive.`);
     } catch {
       toast.error('Failed to restore photos from Drive. Check your Drive connection.');
     } finally {
