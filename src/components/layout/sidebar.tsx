@@ -5,6 +5,7 @@ import { useProfileStore } from '@/stores/profile-store';
 import { useClaimStore } from '@/stores/claim-store';
 import { useExtractionStore } from '@/stores/extraction-store';
 import { getConflictFields } from '@/lib/ai/reconciliation';
+import { isNavItemVisible } from '@/lib/navigation/visible-nav';
 import {
   LayoutDashboard,
   FileText,
@@ -263,27 +264,7 @@ export function Sidebar() {
           {groups.map((group) => {
             const items = NAV_ITEMS.filter((item) => {
               if (item.group !== group) return false;
-
-              // Workflow Logic: Restrict tabs based on Survey Type
-              if (currentClaim?.surveyType === 'spot') {
-                // Spot surveys never see assessment/billing/reinspection tabs
-                const restrictedTabs: AppTab[] = ['assessment', 'bill-check', 'reinspection', 'valuation'];
-                if (restrictedTabs.includes(item.id)) return false;
-              }
-
-              if (currentClaim?.surveyType === 'final') {
-                if (item.id === 'valuation') return false;
-              }
-
-              if (currentClaim?.surveyType === 'valuation') {
-                // Valuation report only needs: details, valuation, photos, fees, reports
-                const restrictedTabs: AppTab[] = ['assessment', 'bill-check', 'reinspection', 'review', 'documents'];
-                if (restrictedTabs.includes(item.id)) return false;
-              }
-
-              if (!currentClaim && item.id === 'valuation') return false;
-
-              return true;
+              return isNavItemVisible(item.id, currentClaim?.surveyType);
             });
 
             if (!items.length) return null;
