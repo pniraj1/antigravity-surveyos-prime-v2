@@ -28,6 +28,7 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: 'SurveyOS' }],
   metadataBase: new URL(SITE_URL),
+  manifest: '/manifest.webmanifest',
   alternates: {
     canonical: 'https://motorsurveyos-in.web.app/',
   },
@@ -77,6 +78,7 @@ export const viewport: Viewport = {
 
 import { AuthSyncWrapper } from '@/components/AuthSyncWrapper';
 import { AuthGate } from '@/components/auth/AuthGate';
+import { ServiceWorkerRegistrar } from '@/components/pwa/ServiceWorkerRegistrar';
 import { SubscriptionGuard } from '@/components/layout/SubscriptionGuard';
 import Script from 'next/script';
 
@@ -88,6 +90,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} h-full`} suppressHydrationWarning>
       <body className="min-h-full bg-background text-foreground font-sans antialiased">
+        <ServiceWorkerRegistrar />
         <AuthSyncWrapper>
           <AuthGate>
             <SubscriptionGuard>
