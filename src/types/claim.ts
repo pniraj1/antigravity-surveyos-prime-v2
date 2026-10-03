@@ -164,6 +164,9 @@ export interface ClaimData {
   reportSettings?: ReportSettings;
   /** Free-text narrative shown above the assessment sheet in the Final Survey report. Empty = auto-composed default. */
   reportPreamble?: string;
+  /** Free text the surveyor dictates on the Site screen (keyboard mic). "Fill
+   *  fields from notes" reads it; it is kept as the record of what was said. */
+  siteNotes?: string;
 
   // ─── AI Extraction Cache ───────────────────────────
   extractedData: Record<string, unknown>;
