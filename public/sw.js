@@ -19,6 +19,15 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// The page posts the hashed chunks it loaded before this worker took control.
+self.addEventListener('message', (event) => {
+  const data = event.data;
+  if (!data || data.type !== 'CACHE_URLS' || !Array.isArray(data.urls)) return;
+  event.waitUntil(
+    caches.open(CACHE).then((c) => Promise.all(data.urls.map((u) => c.add(u).catch(() => {})))),
+  );
+});
+
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
@@ -26,19 +35,30 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
 
   if (req.mode === 'navigate') {
-    // Network first. Only the app root ('/') refreshes the cached shell â€”
-    // marketing pages (/landing, /blogâ€¦) are separate HTML files.
-    event.respondWith(
+    // Network first. Only the app root ('/') refreshes the cached shell —
+    // marketing pages (/landing, /blog…) are separate HTML files.
+    // On weak signal, serve the cached shell if the network is silent for 4 s.
+    event.respondWith(new Promise((resolve) => {
+      let settled = false;
+      const settle = (res) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve(res);
+      };
+      const timer = setTimeout(() => {
+        caches.match('/').then((hit) => { if (hit) settle(hit); });
+      }, 4000);
       fetch(req)
         .then((res) => {
           if (url.pathname === '/' && res.ok) {
             const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put('/', copy));
+            event.waitUntil(caches.open(CACHE).then((c) => c.put('/', copy)));
           }
-          return res;
+          settle(res);
         })
-        .catch(() => caches.match('/')),
-    );
+        .catch(() => caches.match('/').then((hit) => settle(hit || Response.error())));
+    }));
     return;
   }
 
@@ -48,7 +68,7 @@ self.addEventListener('fetch', (event) => {
       caches.match(req).then((hit) => hit || fetch(req).then((res) => {
         if (res.ok) {
           const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy));
+          event.waitUntil(caches.open(CACHE).then((c) => c.put(req, copy)));
         }
         return res;
       })),
