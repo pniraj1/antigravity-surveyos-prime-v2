@@ -24,12 +24,13 @@ export function MobileBottomBar() {
   const base = 'flex flex-1 flex-col items-center justify-center gap-0.5 min-h-[56px] text-[11px]';
 
   return (
-    <nav className="md:hidden fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-card pb-[env(safe-area-inset-bottom)]">
+    <nav className="md:hidden fixed inset-x-0 bottom-0 z-30 flex border-t border-border bg-card pb-[env(safe-area-inset-bottom)]" aria-label="Claim navigation">
       {items.map((item) => (
         <button
           key={item.id}
           type="button"
           onClick={() => setActiveTab(item.id)}
+          aria-current={activeTab === item.id ? 'page' : undefined}
           className={cn(base, activeTab === item.id ? 'text-primary font-medium' : 'text-muted-foreground')}
         >
           {item.icon}

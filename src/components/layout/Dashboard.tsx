@@ -664,7 +664,7 @@ export default function Dashboard() {
       <Sidebar />
       <MobileMenuButton />
 
-      <main className={`flex-1 overflow-y-auto bg-background ${hasClaim ? 'pb-16 md:pb-0' : ''}`}>
+      <main className={`flex-1 overflow-y-auto bg-background ${hasClaim ? 'pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0' : ''}`}>
         <ClaimHeader />
         <NewDrivePhotosBanner />
         <ErrorBoundary key={activeTab}>

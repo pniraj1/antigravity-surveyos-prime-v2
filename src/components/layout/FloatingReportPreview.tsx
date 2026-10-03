@@ -198,7 +198,7 @@ export function FloatingReportPreview() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-medium uppercase tracking-wider transition-all hover:scale-105 active:scale-95"
+        className="fixed bottom-24 md:bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-medium uppercase tracking-wider transition-all hover:scale-105 active:scale-95"
         style={{
           background: 'var(--color-neutral-900)',
           color: 'var(--color-primary)',
