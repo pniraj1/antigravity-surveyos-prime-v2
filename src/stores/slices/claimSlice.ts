@@ -12,6 +12,7 @@ import { createBlankClaim } from '@/types';
 import { saveClaim } from '@/lib/storage/indexeddb';
 import { useUIStore } from '@/stores/ui-store';
 import { useAuthStore } from '@/stores/auth-store';
+import { ignoreDrivePhotos } from '@/lib/photos/ignored-drive-photos';
 import { resolveAnnexureOptions } from '@/lib/photos/document-annexure';
 import { repairAssessmentRow, resolveExcessFields } from '@/lib/calculations/assessment';
 import type { PhotoTag } from '@/types/documents';
@@ -297,7 +298,9 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
     set((state: ClaimSlice) => {
       if (!state.currentClaim) return {};
       const newPhotos = [...state.currentClaim.photos];
-      newPhotos.splice(index, 1);
+      const [removed] = newPhotos.splice(index, 1);
+      // So the "new photos" banner doesn't offer a photo the surveyor just deleted.
+      if (removed?.driveName) ignoreDrivePhotos(state.currentClaim.id, [removed.driveName]);
       return {
         currentClaim: {
           ...state.currentClaim,

@@ -1,7 +1,7 @@
 // SurveyOS app-shell service worker. Hand-written on purpose: it caches the
 // shell and hashed static chunks only. Every cross-origin call (Firestore,
 // Drive, Google APIs, AI providers, the Sync Worker) is left untouched.
-// ponytail: no update prompt â€” an online load always fetches the fresh shell;
+// ponytail: no update prompt - an online load always fetches the fresh shell;
 // add a "new version, reload" toast only if stale shells cause support calls.
 const CACHE = 'surveyos-shell-v1';
 
@@ -24,7 +24,7 @@ self.addEventListener('message', (event) => {
   const data = event.data;
   if (!data || data.type !== 'CACHE_URLS' || !Array.isArray(data.urls)) return;
   event.waitUntil(
-    caches.open(CACHE).then((c) => Promise.all(data.urls.map((u) => c.add(u).catch(() => {})))),
+    caches.open(CACHE).then((c) => Promise.all(data.urls.map((u) => caches.match(u).then((hit) => hit || c.add(u)).catch(() => {})))),
   );
 });
 
@@ -33,10 +33,12 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+  // Firebase Auth's redirect handler lives under /__/ - never intercept it.
+  if (url.pathname.startsWith('/__/')) return;
 
   if (req.mode === 'navigate') {
-    // Network first. Only the app root ('/') refreshes the cached shell —
-    // marketing pages (/landing, /blog…) are separate HTML files.
+    // Network first. Only the app root ('/') refreshes the cached shell;
+    // marketing pages (/landing, /blog, ...) are separate HTML files.
     // On weak signal, serve the cached shell if the network is silent for 4 s.
     event.respondWith(new Promise((resolve) => {
       let settled = false;
@@ -66,7 +68,8 @@ self.addEventListener('fetch', (event) => {
     // Content-hashed filenames never change, so cache first is safe.
     event.respondWith(
       caches.match(req).then((hit) => hit || fetch(req).then((res) => {
-        if (res.ok) {
+        // Hosting can answer a missing chunk with the HTML shell; never cache that under a .js URL.
+        if (res.ok && !(res.headers.get('content-type') || '').includes('text/html')) {
           const copy = res.clone();
           event.waitUntil(caches.open(CACHE).then((c) => c.put(req, copy)));
         }

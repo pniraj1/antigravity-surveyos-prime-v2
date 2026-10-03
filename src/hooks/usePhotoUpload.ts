@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import { toast } from 'sonner';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { uploadFileToDrive } from '@/lib/drive';
@@ -33,10 +34,13 @@ export function usePhotoUpload() {
         : false;
 
       const saved: File[] = [];
+      let failed = 0;
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         try {
           const { dataUrl, w, h } = await compressImage(file, 600, 1.0);
+          // The surveyor may have opened another claim during the awaits.
+          if (useClaimStore.getState().currentClaim?.id !== claim.id) break;
           const name = file.name.split('.')[0].substring(0, 30);
           // The index keeps names unique when a phone names every shot "image".
           const driveName = `${PHOTO_FILE_PREFIX}${Date.now()}_${i}_${name}.jpg`;
@@ -47,9 +51,10 @@ export function usePhotoUpload() {
             uploadFileToDrive(claim.id, driveName, file, label).catch(() => {});
           }
         } catch {
-          // skip images that fail to compress
+          failed++;
         }
       }
+      if (failed > 0) toast.error(`${failed} photo(s) couldn't be added — try a JPEG or retake.`);
       if (saved.length) {
         void saveDocuments('damagePhotos', saved.map((f) => ({ blob: f, name: f.name })), 'photo');
       }

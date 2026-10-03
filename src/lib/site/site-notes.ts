@@ -117,10 +117,10 @@ export function planSiteNotes(claim: ClaimData, extraction: SiteNotesExtraction)
     }
   }
 
-  const key = (c: string) => c.toLowerCase().trim();
-  const rowSeen = new Set(claim.spotDamageRows.map((r) => key(r.component)));
+  const key = (r: { component: string; damage: string }) => `${r.component.toLowerCase().trim()}|${r.damage.toLowerCase().trim()}`;
+  const rowSeen = new Set((claim.spotDamageRows ?? []).map(key));
   const damageRows = allowsDamageRows(claim.surveyType)
-    ? extraction.damageRows.filter((r) => !rowSeen.has(key(r.component)) && !!rowSeen.add(key(r.component)))
+    ? extraction.damageRows.filter((r) => !rowSeen.has(key(r)) && !!rowSeen.add(key(r)))
     : [];
 
   return {
@@ -147,7 +147,7 @@ export function siteNotesUpdates(
   }
   if (plan.damageRows.length) {
     updates.spotDamageRows = [
-      ...claim.spotDamageRows,
+      ...(claim.spotDamageRows ?? []),
       ...plan.damageRows.map((r, i) => ({ id: makeId(i), component: r.component, damage: r.damage })),
     ];
   }

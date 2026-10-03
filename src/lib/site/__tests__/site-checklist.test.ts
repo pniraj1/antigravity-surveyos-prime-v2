@@ -47,6 +47,13 @@ describe('siteChecklist', () => {
     expect(siteChecklist(createBlankClaim('final')).confirm).toEqual([]);
   });
 
+  it('valuation documents go to Details (its uploads live there); spot goes to Documents', () => {
+    const target = (t: 'spot' | 'valuation') =>
+      siteChecklist(createBlankClaim(t)).missing.find((i) => i.id === 'doc:rc')?.target;
+    expect(target('valuation')).toBe('details');
+    expect(target('spot')).toBe('documents');
+  });
+
   it('valuation points condition fields at the Valuation tab and shows insurable as Yes', () => {
     const { missing, confirm } = siteChecklist(createBlankClaim('valuation'));
     expect(missing.find((i) => i.id === 'valuationDetails.tyreCondition')?.target).toBe('valuation');

@@ -92,9 +92,9 @@ export function ProcessingProgressOverlay() {
     <div
       role="status"
       aria-live="polite"
+      // Above the phone bottom bar (< md); desktop keeps 24px.
+      className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] md:bottom-6"
       style={{
-        position: 'fixed',
-        bottom: '24px',
         right: '24px',
         zIndex: 9999,
         background: 'var(--color-neutral-900)',

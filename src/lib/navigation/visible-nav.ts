@@ -15,5 +15,5 @@ const HIDDEN_BY_SURVEY: Record<SurveyType, readonly AppTab[]> = {
 /** `surveyType` undefined = no claim open. */
 export function isNavItemVisible(id: AppTab, surveyType: SurveyType | undefined): boolean {
   if (!surveyType) return id !== 'valuation';
-  return !HIDDEN_BY_SURVEY[surveyType].includes(id);
+  return !(HIDDEN_BY_SURVEY[surveyType] ?? []).includes(id);
 }

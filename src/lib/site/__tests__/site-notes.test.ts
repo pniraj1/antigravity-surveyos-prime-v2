@@ -97,6 +97,23 @@ describe('planSiteNotes', () => {
     expect(plan.damageRows.map((r) => r.component)).toEqual(['Door']);
   });
 
+  it('keeps a different damage on the same component, drops an exact repeat', () => {
+    const c = createBlankClaim('spot');
+    const claim = { ...c, spotDamageRows: [{ id: 'old', component: 'Bonnet', damage: 'dent' }] };
+    const plan = planSiteNotes(claim, ex({ damageRows: [
+      { component: 'Bonnet', damage: 'scratch', evidence: 'e' },
+      { component: 'bonnet', damage: ' Scratch ', evidence: 'e' },
+    ] }));
+    expect(plan.damageRows.map((r) => r.damage)).toEqual(['scratch']);
+  });
+
+  it('copes with older claims that have no spotDamageRows', () => {
+    const claim = { ...createBlankClaim('spot'), spotDamageRows: undefined } as never;
+    const plan = planSiteNotes(claim, ex({ damageRows: [{ component: 'Door', damage: 'dent', evidence: 'e' }] }));
+    expect(plan.damageRows).toHaveLength(1);
+    expect(siteNotesUpdates(claim, plan, () => 'n').spotDamageRows).toEqual([{ id: 'n', component: 'Door', damage: 'dent' }]);
+  });
+
   it('keeps damage rows only for spot surveys', () => {
     const rows = [{ component: 'Front bumper', damage: 'cracked - replace', evidence: 'e' }];
     expect(planSiteNotes(createBlankClaim('spot'), ex({ damageRows: rows })).damageRows).toHaveLength(1);

@@ -8,6 +8,7 @@ import { useUIStore } from '@/stores/ui-store';
 import { getDriveToken, listFilesInFolder, findClaimFolderId } from '@/lib/drive';
 import { PHOTO_FILE_PREFIX } from '@/lib/photos/document-annexure';
 import { findNewDrivePhotos, type DriveFileLite } from '@/lib/photos/drive-photo-diff';
+import { getIgnoredDrivePhotos, ignoreDrivePhotos } from '@/lib/photos/ignored-drive-photos';
 import { downloadDrivePhotos } from '@/lib/photos/download-drive-photos';
 
 /** Offers damage photos uploaded from another device. Never downloads without a tap. */
@@ -28,8 +29,9 @@ export function NewDrivePhotosBanner() {
         if (!claim) return;
         const folderId = claim.gDriveFolderId ?? await findClaimFolderId(claim.id);
         if (!folderId) return;
+        const ignored = getIgnoredDrivePhotos(claimId);
         const files = (await listFilesInFolder(folderId))
-          .filter((f) => f.mimeType.startsWith('image/') && f.name.startsWith(PHOTO_FILE_PREFIX));
+          .filter((f) => f.mimeType.startsWith('image/') && f.name.startsWith(PHOTO_FILE_PREFIX) && !ignored.has(f.name));
         const current = useClaimStore.getState().currentClaim;
         if (alive && current?.id === claimId) setPending(findNewDrivePhotos(current.photos, files));
       } catch {
@@ -72,7 +74,7 @@ export function NewDrivePhotosBanner() {
       >
         {busy && <Loader2 size={14} className="animate-spin" />} Add
       </button>
-      <button type="button" onClick={() => setPending([])} className="min-h-[40px] px-2 text-sm text-muted-foreground">
+      <button type="button" onClick={() => { if (claimId) ignoreDrivePhotos(claimId, pending.map((f) => f.name)); setPending([]); }} className="min-h-[40px] px-2 text-sm text-muted-foreground">
         Not now
       </button>
     </div>

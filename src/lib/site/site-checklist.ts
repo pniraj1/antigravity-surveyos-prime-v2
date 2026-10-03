@@ -83,7 +83,9 @@ export function siteChecklist(claim: ClaimData): SiteChecklist {
 
   for (const doc of rules.docs) {
     if (!claim.extractedData?.[doc]) {
-      missing.push({ id: `doc:${doc}`, label: DOC_LABELS[doc] ?? doc, target: 'documents' });
+      // Valuation hides the Documents tab; its uploads live in Details.
+      const target = claim.surveyType === 'valuation' ? 'details' : 'documents';
+      missing.push({ id: `doc:${doc}`, label: DOC_LABELS[doc] ?? doc, target });
     }
   }
   for (const f of rules.fields) {

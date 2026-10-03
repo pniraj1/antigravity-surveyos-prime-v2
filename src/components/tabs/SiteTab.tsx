@@ -6,12 +6,11 @@ import { Camera, FileText, Images, MapPin, Phone, Loader2, Sparkles } from 'luci
 import { useClaimStore } from '@/stores/claim-store';
 import { useUIStore } from '@/stores/ui-store';
 import { usePhotoUpload } from '@/hooks/usePhotoUpload';
-import { DriveQueueChip } from '@/components/sync/DriveQueueChip';
 import { SiteChecklistCard } from '@/components/site/SiteChecklistCard';
 import { SiteNotesReviewDialog } from '@/components/site/SiteNotesReviewDialog';
 import { siteChecklist, type ChecklistItem } from '@/lib/site/site-checklist';
-import { readSiteNotes } from '@/lib/site/read-site-notes';
-import { siteNotesUpdates, isEmptyPlan, type SiteNotesPlan } from '@/lib/site/site-notes';
+import { readSiteNotes, type SiteNotesRead } from '@/lib/site/read-site-notes';
+import { siteNotesUpdates, isEmptyPlan, planSiteNotes } from '@/lib/site/site-notes';
 import { mapsDirectionsUrl, telHref } from '@/lib/site/contact-links';
 
 const BIG_BUTTON = 'flex flex-col items-center justify-center gap-1 rounded-xl border border-border bg-card p-4 min-h-[96px] text-sm font-medium';
@@ -24,7 +23,7 @@ export function SiteTab() {
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
   const [reading, setReading] = useState(false);
-  const [plan, setPlan] = useState<SiteNotesPlan | null>(null);
+  const [read, setRead] = useState<SiteNotesRead | null>(null);
 
   if (!claim) return null;
 
@@ -47,8 +46,8 @@ export function SiteTab() {
     setReading(true);
     try {
       const result = await readSiteNotes(claim);
-      if (isEmptyPlan(result)) toast.info('Nothing to fill from these notes.');
-      else setPlan(result);
+      if (isEmptyPlan(result.plan)) toast.info('Nothing to fill from these notes.');
+      else setRead(result);
     } catch {
       toast.error("Couldn't read the notes — try again. Your notes are saved.");
     } finally {
@@ -57,16 +56,27 @@ export function SiteTab() {
   };
 
   const apply = () => {
+    if (!read) return;
     const current = useClaimStore.getState().currentClaim;
-    if (current && plan) updateClaim(siteNotesUpdates(current, plan));
-    setPlan(null);
+    setRead(null);
+    if (!current || current.id !== read.claimId) {
+      toast.error('The claim changed — notes were not applied.');
+      return;
+    }
+    // Re-plan against the claim as it is now: fields may have been filled while the dialog was open.
+    const fresh = planSiteNotes(current, read.extraction);
+    if (fresh.fills.length === 0 && fresh.damageRows.length === 0) {
+      toast.info('Nothing left to fill — those fields were filled meanwhile.');
+      return;
+    }
+    updateClaim(siteNotesUpdates(current, fresh));
     toast.success('Fields filled from notes.');
   };
 
   return (
     <div className="mx-auto max-w-xl space-y-5 px-4 py-4 pb-24">
       {saveToCloudDialog}
-      {plan && <SiteNotesReviewDialog plan={plan} onApply={apply} onClose={() => setPlan(null)} />}
+      {read && <SiteNotesReviewDialog plan={read.plan} onApply={apply} onClose={() => setRead(null)} />}
 
       <header className="flex items-center gap-2">
         <div className="flex-1 min-w-0">
@@ -75,7 +85,6 @@ export function SiteTab() {
             {claim.surveyType} survey{claim.policy.insurerName ? ` · ${claim.policy.insurerName}` : ''}
           </p>
         </div>
-        <DriveQueueChip />
       </header>
 
       <div className="grid grid-cols-3 gap-3">
@@ -83,7 +92,7 @@ export function SiteTab() {
           {isProcessing ? <Loader2 size={24} className="animate-spin" /> : <Camera size={24} />}
           Damage photo
         </button>
-        <button type="button" className={BIG_BUTTON} onClick={() => setActiveTab('documents')}>
+        <button type="button" className={BIG_BUTTON} onClick={() => setActiveTab(claim.surveyType === 'valuation' ? 'details' : 'documents')}>
           <FileText size={24} /> Documents
         </button>
         <button type="button" className={BIG_BUTTON} onClick={() => galleryRef.current?.click()} disabled={isProcessing}>
@@ -101,6 +110,7 @@ export function SiteTab() {
         <textarea
           value={claim.siteNotes ?? ''}
           onChange={(e) => updateClaim({ siteNotes: e.target.value })}
+          aria-label="Site notes"
           rows={6}
           placeholder="Tap the mic on your keyboard and speak — damage, odometer, airbags, police, workshop…"
           className="w-full rounded-lg border border-border bg-card p-3 text-base"

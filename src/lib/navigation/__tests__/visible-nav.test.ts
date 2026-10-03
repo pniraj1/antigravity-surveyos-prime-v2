@@ -23,6 +23,10 @@ describe('isNavItemVisible (matches sidebar.tsx as of 2026-10-02)', () => {
       'reports', 'insured-report', 'photos', 'fees']);
   });
 
+  it('does not crash on an unknown survey type', () => {
+    expect(isNavItemVisible('details', 'bogus' as never)).toBe(true);
+  });
+
   it('with no claim open only valuation is hidden', () => {
     expect(visible(undefined, ALL)).toEqual(ALL.filter((id) => id !== 'valuation'));
   });

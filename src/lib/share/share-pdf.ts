@@ -1,3 +1,5 @@
+import { toast } from 'sonner';
+
 /** True when the browser can hand a PDF to the OS share sheet (Android Chrome, iOS Safari, …). */
 export function canSharePdf(): boolean {
   if (typeof navigator === 'undefined' || typeof navigator.canShare !== 'function') return false;
@@ -13,7 +15,8 @@ export async function sharePdf(blob: Blob, fileName: string): Promise<void> {
   const file = new File([blob], fileName, { type: 'application/pdf' });
   try {
     await navigator.share({ files: [file], title: fileName });
-  } catch {
-    // user cancelled or share target failed — nothing to do
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') return; // user cancelled
+    toast.error("Couldn't open the share sheet — use Download instead.");
   }
 }
