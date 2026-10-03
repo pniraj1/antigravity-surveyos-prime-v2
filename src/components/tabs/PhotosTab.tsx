@@ -110,8 +110,14 @@ export function PhotosTab() {
         toast.info('No new photos in the Drive folder for this claim.');
         return;
       }
-      const restored = await downloadDrivePhotos(imageFiles, addPhoto);
-      toast.success(`Restored ${restored} photo(s) from Google Drive.`);
+      const claimId = currentClaim.id;
+      const { added, failed } = await downloadDrivePhotos(
+        imageFiles,
+        addPhoto,
+        () => useClaimStore.getState().currentClaim?.id === claimId,
+      );
+      if (added > 0) toast.success(`Restored ${added} photo(s) from Google Drive.`);
+      if (failed.length > 0) toast.error(`${failed.length} photo(s) couldn't be downloaded — tap Add to try again.`);
     } catch {
       toast.error('Failed to restore photos from Drive. Check your Drive connection.');
     } finally {

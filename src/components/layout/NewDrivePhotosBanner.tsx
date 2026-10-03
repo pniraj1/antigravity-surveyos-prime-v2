@@ -30,7 +30,8 @@ export function NewDrivePhotosBanner() {
         if (!folderId) return;
         const files = (await listFilesInFolder(folderId))
           .filter((f) => f.mimeType.startsWith('image/') && f.name.startsWith(PHOTO_FILE_PREFIX));
-        if (alive) setPending(findNewDrivePhotos(claim.photos, files));
+        const current = useClaimStore.getState().currentClaim;
+        if (alive && current?.id === claimId) setPending(findNewDrivePhotos(current.photos, files));
       } catch {
         // offline or Drive error — checked again next time the claim opens
       }
@@ -42,11 +43,17 @@ export function NewDrivePhotosBanner() {
 
   const add = async () => {
     setBusy(true);
+    const startedFor = claimId;
     try {
-      const n = await downloadDrivePhotos(pending, addPhoto);
-      toast.success(`Added ${n} photo${n === 1 ? '' : 's'} from Drive.`);
+      const { added, failed } = await downloadDrivePhotos(
+        pending,
+        addPhoto,
+        () => useClaimStore.getState().currentClaim?.id === startedFor,
+      );
+      if (added > 0) toast.success(`Added ${added} photo${added === 1 ? '' : 's'} from Drive.`);
+      if (failed.length > 0) toast.error(`${failed.length} photo(s) couldn't be downloaded — tap Add to try again.`);
+      if (useClaimStore.getState().currentClaim?.id === startedFor) setPending(failed);
     } finally {
-      setPending([]);
       setBusy(false);
     }
   };
