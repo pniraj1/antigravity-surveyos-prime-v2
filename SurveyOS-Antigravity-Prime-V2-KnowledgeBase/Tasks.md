@@ -19,6 +19,7 @@
 
 ## In Progress
 
+- [ ] **Phone site capture — phone checks + deploy** (2026-10-03) — P1–P3 on `main` (5db7c5b2..b949bb11), not deployed. Owner: deploy to `-in`, then run the phone checklist in `Sessions/2026-10-03-phone-site-capture.md`. Then P4 plan (phone restyle of form tabs + deferred items listed there).
 - [ ] **Phase 2-C admin steps + L11** (2026-09-17) — deployed (hosting, 96098c6f). Owner: Admin → Save, then Probe all, review Excluded (L11).
 - [ ] **Live check L10** (2026-09-16) — Phase 2-A deployed (hosting, e7c1a997). L10 in `Sessions/2026-09-16-quota-aware-ranking.md`.
 - [ ] **Live check L9** (2026-09-16) — Smart Fix deployed (hosting, 56b44714). Run L9 (`npm run dev`, open with `?ai-drop=38`, upload DTC Proforma Invoice-1.PDF as estimate — expect one extra single-page call and a clean dialog).

@@ -2,6 +2,14 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-10-03 (Claude) — Phone site capture (P1–P3)
+- feat(photos): Camera button (opens the phone's own camera app) on Photos and on each document card; shared `usePhotoUpload` hook; "save to Drive?" asked once per claim; photos remember their Drive filename (`PhotoItem.driveName`)
+- feat(sync): "N waiting to upload" chip for the Drive queue; banner offers photos uploaded from another device (per-device ignore list; deleted photos never re-offered); Restore from Drive no longer duplicates
+- feat(pwa): installable (manifest, icons, iPhone icon), hand-written service worker caches the app shell + chunks, opens without signal, 4 s weak-signal fallback, skips `/__/` auth handler
+- feat(site): new `AppTab 'site'` — phones land on it: capture buttons, still-missing / confirm checklist per survey type, dictated site notes → allow-listed fields via one AI text call with review (never assessment, amounts or identity; never overwrites), navigate + tap-to-call; phone bottom bar; `isNavItemVisible` is the single tab-visibility rule
+- feat(share): Share button for Photo Sheet and Document Annexure PDFs
+- tests: 1408 passing. Spec `docs/superpowers/specs/2026-10-02-phone-site-capture-design.md`, plan `docs/superpowers/plans/2026-10-02-phone-site-capture.md`, session log `Sessions/2026-10-03-phone-site-capture.md`. Commits 5db7c5b2..b949bb11. Not deployed. Phone checks not run — no credentials or device in session.
+
 ## 2026-09-17 (Claude) — AI upload PDF page selection
 - feat(ai): multi-page PDFs dropped into any AI upload (estimate, final bill, RC/DL/policy, Documents tab, Sync picker) get a page picker — the surveyor unticks pages before the document is sent; unticked pages are never rasterized, so they cost zero tokens
 - feat(ai): `ai-pages.ts` — `setAIPages`/`getAIPages` WeakMap carrier tags the selection onto the `File` object itself, four calls deep into the rasterize chain, with no signature change; Re-scan, Smart Fix and the bank-statement extractor inherit it for free. Pure `resolveAIPages` clamps out-of-range picks
