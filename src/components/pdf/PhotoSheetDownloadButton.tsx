@@ -22,6 +22,7 @@ import type { ClaimData } from '@/types';
 import type { PhotoSheetOptions } from '@/types/assessment';
 import { DownloadCloud, Loader2 } from 'lucide-react';
 import { useProfileStore } from '@/stores/profile-store';
+import { SharePdfButton } from './SharePdfButton';
 
 interface Props {
   claim:   ClaimData;
@@ -38,7 +39,7 @@ export function PhotoSheetDownloadButton({ claim, options }: Props) {
       document={<PhotoSheetDocument claim={claim} surveyorName={surveyorName} options={options} />}
       fileName={fileName}
     >
-      {({ loading, error }) => {
+      {({ blob, loading, error }) => {
         if (error) {
           return (
             <button
@@ -52,19 +53,22 @@ export function PhotoSheetDownloadButton({ claim, options }: Props) {
         }
 
         return (
-          <button
-            disabled={loading}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-md font-semibold text-sm transition-all shadow-sm ${
-              loading
-                ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                : 'bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow'
-            }`}
-          >
-            {loading
-              ? <Loader2 size={16} className="animate-spin" />
-              : <DownloadCloud size={16} />}
-            {loading ? 'Preparing…' : 'Download PDF'}
-          </button>
+          <span className="flex flex-wrap items-center gap-2">
+            <button
+              disabled={loading}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-md font-semibold text-sm transition-all shadow-sm ${
+                loading
+                  ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                  : 'bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow'
+              }`}
+            >
+              {loading
+                ? <Loader2 size={16} className="animate-spin" />
+                : <DownloadCloud size={16} />}
+              {loading ? 'Preparing…' : 'Download PDF'}
+            </button>
+            <SharePdfButton blob={loading ? null : blob} fileName={fileName} />
+          </span>
         );
       }}
     </PDFDownloadLink>
