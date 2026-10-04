@@ -2,6 +2,13 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-10-04 (Claude) — Phone layout bug-fix pass
+- fix(layout): sidebar now slides off-screen below 1024 px (it was always visible and covered the left 258 px)
+- fix(evidence): Details/Review evidence panel closed by default on phones, opens as a full-screen overlay; shared `useEvidencePanel` + `EvidencePanelSlot` replace two copies
+- fix(layout): `h-screen`/`100vh` → `dvh`; report preview fits phone width and no longer clips left; hover-only row/photo actions visible on touch; hamburger hidden on phones with a claim open; notifications dropdown fits the phone drawer
+- chore: Playwright MCP added to the project (extension mode, Pixel 7) for phone-layout verification
+- tests: 1408 passing. Commits 472dbc5b, c1fcd3ed..47c9f8f6. Deployed to motorsurveyos-in.web.app (hosting) 2026-10-04. Visual check via Playwright pending (needs Bridge extension + session restart).
+
 ## 2026-10-03 (Claude) — Phone site capture (P1–P3)
 - feat(photos): Camera button (opens the phone's own camera app) on Photos and on each document card; shared `usePhotoUpload` hook; "save to Drive?" asked once per claim; photos remember their Drive filename (`PhotoItem.driveName`)
 - feat(sync): "N waiting to upload" chip for the Drive queue; banner offers photos uploaded from another device (per-device ignore list; deleted photos never re-offered); Restore from Drive no longer duplicates
