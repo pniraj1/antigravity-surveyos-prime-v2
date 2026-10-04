@@ -44,9 +44,13 @@ export function useEvidencePanel(storageKey: string, defaultWidth: number) {
   };
 
   // A field tapped on a phone should show its evidence, which is otherwise hidden.
+  // Only a tap made while this tab is showing counts: `field` is global, so a
+  // tap left over from another tab must not pop the overlay open on arrival.
   const field = useEvidenceStore((s) => s.field);
+  const seenField = useRef(field);
   useEffect(() => {
-    if (field && isNarrowViewport()) setPanelOpen(true);
+    if (field && field !== seenField.current && isNarrowViewport()) setPanelOpen(true);
+    seenField.current = field;
   }, [field]);
 
   const onMouseDownHandle = useCallback((e: React.MouseEvent) => {

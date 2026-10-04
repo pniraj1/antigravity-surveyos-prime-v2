@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { isNarrowViewport } from '@/lib/navigation/viewport';
+
+// Tab padding (p-3 each side on phones) + card border + a little slack.
+const PHONE_GUTTER_PX = 40;
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { calculateAssessmentSummary, getCompulsoryExcess } from '@/lib/calculations';
@@ -58,9 +61,10 @@ export function ReportTab() {
   );
   const [format, setFormat] = useState<'standard' | 'uiic'>('standard');
   const [isExportingWord, setIsExportingWord] = useState(false);
-  // A4 is 210 mm ≈ 794 px; on a phone start at the zoom that fits the screen width.
+  // A4 is 210 mm ≈ 794 px; on a phone start at the zoom that fits the screen width
+  // (the 0.4 floor matches the zoom-out button's minimum).
   const [zoom, setZoom] = useState<number>(() =>
-    isNarrowViewport() ? Math.max(0.3, Math.floor(((window.innerWidth - 32) / 794) * 100) / 100) : 0.9,
+    isNarrowViewport() ? Math.max(0.4, Math.floor(((window.innerWidth - PHONE_GUTTER_PX) / 794) * 100) / 100) : 0.9,
   );
   const [insuredDialogStage, setInsuredDialogStage] = useState<InsuredReportStage | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -144,7 +148,7 @@ export function ReportTab() {
     : defaultPreamble;
 
   return (
-    <div className="p-6 lg:p-8 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300 h-full flex flex-col">
+    <div className="p-3 md:p-6 lg:p-8 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300 h-full flex flex-col">
       
       {/* ── Header ───────────────────────────────────────────── */}
       <div className="mb-6 flex items-end justify-between">
@@ -280,7 +284,7 @@ export function ReportTab() {
           <div className="w-full h-full overflow-auto py-8">
             {/* Block + mx-auto, not flex centring: a centred flex child wider than
                 its box overflows to the left, where scrolling can't reach. */}
-            <div className="mx-auto" style={{ width: `calc(210mm * ${zoom})`, overflowX: 'clip' }}>
+            <div className="mx-auto" style={{ width: `calc(210mm * ${zoom})`, overflowX: isNarrowViewport() ? 'clip' : undefined }}>
               <div 
                 className="bg-white shadow-2xl relative"
                 style={{ 
