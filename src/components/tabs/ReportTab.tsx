@@ -3,8 +3,6 @@
 import { useState, useEffect } from 'react';
 import { isNarrowViewport } from '@/lib/navigation/viewport';
 
-// Tab padding (p-3 each side on phones) + card border + a little slack.
-const PHONE_GUTTER_PX = 40;
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { calculateAssessmentSummary, getCompulsoryExcess } from '@/lib/calculations';
@@ -28,6 +26,9 @@ import { footerFromProfile } from '@/lib/reports/print-shell';
 import { preambleFromClaim } from '@/lib/reports/final-survey-preamble';
 import DOMPurify from 'dompurify';
 import { useRef } from 'react';
+
+// Tab padding (p-3 each side on phones) + card border + a little slack.
+const PHONE_GUTTER_PX = 40;
 
 function PDFLoadingFallback() {
   return (
