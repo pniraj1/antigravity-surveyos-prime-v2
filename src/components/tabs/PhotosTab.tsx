@@ -422,7 +422,7 @@ export function PhotosTab() {
                       {/* Delete */}
                       <button
                         onClick={() => deletePhoto(index)}
-                        className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm text-destructive hover:bg-destructive hover:text-white p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-all"
+                        className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm text-destructive hover:bg-destructive hover:text-white p-1.5 rounded-md [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-all"
                       >
                         <Trash2 size={13} />
                       </button>

@@ -145,7 +145,7 @@ export function TotalLossForm() {
                       </label>
                       <div className="group relative">
                         <Info size={10} className="text-gray-300 cursor-help" />
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-[9px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none">
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-[9px] rounded [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none">
                           {field.info}
                         </div>
                       </div>

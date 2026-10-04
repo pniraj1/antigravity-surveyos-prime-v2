@@ -87,7 +87,7 @@ export function AssessmentTab() {
   if (!currentClaim) return null;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] p-6 lg:p-8 max-w-[1600px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div className="flex flex-col h-[calc(100dvh-140px)] p-6 lg:p-8 max-w-[1600px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
       {saveToCloudDialog}
       {estimateModeDialog}
       {reviewSheet && (

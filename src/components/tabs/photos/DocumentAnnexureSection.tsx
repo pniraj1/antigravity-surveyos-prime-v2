@@ -391,7 +391,7 @@ export function DocumentAnnexureSection() {
                       alt={item.name}
                       className="absolute inset-0 w-full h-full object-contain bg-muted"
                     />
-                    <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-all">
+                    <div className="absolute top-2 right-2 flex gap-1.5 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-all">
                       <button
                         onClick={() => handleRotate(index, item.dataUrl)}
                         disabled={rotatingIndex === index}

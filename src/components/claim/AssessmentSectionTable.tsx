@@ -325,7 +325,7 @@ export function AssessmentSectionTable({
                           type="button"
                           onClick={handleEvidenceClick}
                           title="View in Evidence Viewer"
-                          className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary"
+                          className="shrink-0 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary"
                         >
                           <FileSearch size={12} />
                         </button>

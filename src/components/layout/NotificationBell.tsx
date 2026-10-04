@@ -47,7 +47,7 @@ export function NotificationBell() {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 mt-2 w-[300px] max-h-[60vh] overflow-y-auto rounded-xl shadow-xl z-50 bg-white border border-[var(--color-neutral-200)]">
+          <div className="absolute left-0 mt-2 w-[300px] max-md:fixed max-md:inset-x-3 max-md:top-16 max-md:w-auto max-h-[60vh] overflow-y-auto rounded-xl shadow-xl z-50 bg-white border border-[var(--color-neutral-200)]">
             <div className="px-4 py-3 border-b border-[var(--color-neutral-100)] text-xs font-medium uppercase tracking-wider text-[var(--color-neutral-400)]">Notifications</div>
 
             {schedulePrompt && (

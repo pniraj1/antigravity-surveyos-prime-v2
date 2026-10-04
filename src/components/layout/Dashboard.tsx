@@ -659,7 +659,7 @@ export default function Dashboard() {
   useExtractionCompletionToast();
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-dvh overflow-hidden">
       <TermsReacceptGate />
       <Sidebar />
       <MobileMenuButton />

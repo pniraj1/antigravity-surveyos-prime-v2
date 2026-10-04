@@ -389,9 +389,13 @@ export function Sidebar() {
 }
 
 export function MobileMenuButton() {
+  // With a claim open, phones use the bottom bar's "More" instead; the floating
+  // button would sit on top of the claim header.
+  const hasClaim = useClaimStore((s) => !!s.currentClaim);
   return (
     <button
-      className="lg:hidden fixed top-3 left-3 z-50 p-2.5 rounded-lg shadow-lg bg-[var(--color-neutral-900)] text-white"
+      aria-label="Open menu"
+      className={cn('lg:hidden fixed top-3 left-3 z-50 p-2.5 rounded-lg shadow-lg bg-[var(--color-neutral-900)] text-white', hasClaim && 'max-md:hidden')}
       onClick={() => useUIStore.getState().setSidebarMobileOpen(true)}
     >
       <Menu size={18} />

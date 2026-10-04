@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { VehicleDetailsForm } from '@/components/claim/VehicleForm';
 import { CommercialLoadForm } from '@/components/claim/CommercialLoadForm';
 import { DriverDetailsForm } from '@/components/claim/DriverForm';
@@ -21,6 +21,8 @@ import { toast } from 'sonner';
 import { SpotTab } from '@/components/tabs/SpotTab';
 import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
 import { InlineEvidencePanel } from '@/components/evidence/InlineEvidencePanel';
+import { EvidencePanelSlot } from '@/components/evidence/EvidencePanelSlot';
+import { useEvidencePanel } from '@/hooks/useEvidencePanel';
 
 function EvidenceIconBtn({ onClick, title, children }: { onClick: () => void; title: string; children: React.ReactNode }) {
   return (
@@ -48,57 +50,9 @@ export function DetailsTab() {
   const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview } = useAIExtraction();
 
   // Evidence panel open/closed + width (px) — persisted in localStorage
-  const [panelOpen, setPanelOpen] = useState(() => {
-    try { return localStorage.getItem(STORAGE_KEY_PANEL + '-open') !== 'false'; } catch { return true; }
-  });
-  const [panelWidth, setPanelWidth] = useState(() => {
-    try { return parseInt(localStorage.getItem(STORAGE_KEY_PANEL + '-width') || '380', 10); } catch { return 380; }
-  });
+  const panel = useEvidencePanel(STORAGE_KEY_PANEL, 380);
+  const { panelOpen, togglePanel, containerRef } = panel;
   const [reviewSheet, setReviewSheet] = useState<{ key: string; label: string; file: File } | null>(null);
-
-  const isDragging = useRef(false);
-  const dragStartX = useRef(0);
-  const dragStartWidth = useRef(panelWidth);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const togglePanel = () => {
-    const next = !panelOpen;
-    setPanelOpen(next);
-    try { localStorage.setItem(STORAGE_KEY_PANEL + '-open', String(next)); } catch {}
-  };
-
-  // ── Drag-to-resize ──────────────────────────────────────────────────────────
-  const onMouseDownHandle = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    isDragging.current = true;
-    dragStartX.current = e.clientX;
-    dragStartWidth.current = panelWidth;
-
-    const onMove = (me: MouseEvent) => {
-      if (!isDragging.current) return;
-      const delta = dragStartX.current - me.clientX; // dragging left = wider panel
-      const container = containerRef.current;
-      const maxW = container ? container.offsetWidth - 400 : 800;
-      const newW = Math.min(Math.max(dragStartWidth.current + delta, 280), maxW);
-      setPanelWidth(newW);
-    };
-
-    const onUp = () => {
-      isDragging.current = false;
-      // persist
-      try { localStorage.setItem(STORAGE_KEY_PANEL + '-width', String(panelWidth)); } catch {}
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
-    };
-
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-  }, [panelWidth]);
-
-  // persist width on change (deferred)
-  useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY_PANEL + '-width', String(panelWidth)); } catch {}
-  }, [panelWidth]);
 
   if (!currentClaim) return null;
 
@@ -129,8 +83,8 @@ export function DetailsTab() {
 
       {/* ── LEFT: Form area ─────────────────────────────────────────────────── */}
       <div
-        style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: '24px 32px 40px' }}
-        className="@container animate-in fade-in slide-in-from-bottom-2 duration-300"
+        style={{ flex: 1, minWidth: 0, overflowY: 'auto' }}
+        className="@container px-4 pt-4 pb-10 md:px-8 md:pt-6 animate-in fade-in slide-in-from-bottom-2 duration-300"
       >
         <div className="w-full max-w-[1400px] mx-auto space-y-8">
 
@@ -274,43 +228,9 @@ export function DetailsTab() {
         </div>
       </div>
 
-      {/* ── DRAG HANDLE ─────────────────────────────────────────────────────── */}
-      {panelOpen && (
-        <div
-          onMouseDown={onMouseDownHandle}
-          style={{
-            width: 6,
-            flexShrink: 0,
-            cursor: 'col-resize',
-            background: 'transparent',
-            position: 'relative',
-            zIndex: 10,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-          title="Drag to resize evidence panel"
-        >
-          {/* Visual handle indicator */}
-          <div className="w-[3px] h-10 rounded-full bg-[var(--color-neutral-400)]/30 hover:bg-[var(--color-neutral-400)]/60 transition-colors" />
-        </div>
-      )}
-
-      {/* ── RIGHT: Inline Evidence Viewer ───────────────────────────────────── */}
-      {panelOpen && (
-        <div
-          style={{
-            width: panelWidth,
-            flexShrink: 0,
-            padding: '16px 16px 16px 0',
-            display: 'flex',
-            flexDirection: 'column',
-            minWidth: 280,
-          }}
-        >
-          <InlineEvidencePanel claimId={currentClaim.id} />
-        </div>
-      )}
+      <EvidencePanelSlot panel={panel}>
+        <InlineEvidencePanel claimId={currentClaim.id} />
+      </EvidencePanelSlot>
 
       {reviewSheet && (
         <DocumentReviewSheet

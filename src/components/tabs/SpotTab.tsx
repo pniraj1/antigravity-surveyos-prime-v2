@@ -315,7 +315,7 @@ export function SpotTab() {
                       {!isCompleted && (
                         <button 
                           onClick={() => deleteSpotDamageRow(row.id)}
-                          className="opacity-0 group-hover:opacity-100 p-2 rounded-md transition-all text-muted-foreground hover:text-danger hover:bg-danger/10"
+                          className="[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 p-2 rounded-md transition-all text-muted-foreground hover:text-danger hover:bg-danger/10"
                         >
                           <Trash2 size={16} />
                         </button>

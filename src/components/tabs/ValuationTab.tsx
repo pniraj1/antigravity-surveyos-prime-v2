@@ -315,7 +315,7 @@ export function ValuationTab() {
                   <div className="flex items-center justify-center">
                     <button
                       onClick={() => deleteRow(row.id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive/80 p-1"
+                      className="[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive/80 p-1"
                     >
                       <Trash2 size={15} />
                     </button>

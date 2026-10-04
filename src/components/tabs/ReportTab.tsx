@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { isNarrowViewport } from '@/lib/navigation/viewport';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { calculateAssessmentSummary, getCompulsoryExcess } from '@/lib/calculations';
@@ -57,7 +58,10 @@ export function ReportTab() {
   );
   const [format, setFormat] = useState<'standard' | 'uiic'>('standard');
   const [isExportingWord, setIsExportingWord] = useState(false);
-  const [zoom, setZoom] = useState<number>(0.9); // Default to 90% for better fit
+  // A4 is 210 mm ≈ 794 px; on a phone start at the zoom that fits the screen width.
+  const [zoom, setZoom] = useState<number>(() =>
+    isNarrowViewport() ? Math.max(0.3, Math.floor(((window.innerWidth - 32) / 794) * 100) / 100) : 0.9,
+  );
   const [insuredDialogStage, setInsuredDialogStage] = useState<InsuredReportStage | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   
@@ -272,8 +276,11 @@ export function ReportTab() {
       <Card
         className="flex-1 overflow-hidden shadow-lg border-border"
       >
-        <CardContent className="p-0 w-full h-[calc(100vh-340px)] min-h-[520px]" style={{ background: 'var(--color-neutral-600)' }}>
-          <div className="w-full h-full overflow-auto flex justify-center py-8">
+        <CardContent className="p-0 w-full h-[calc(100dvh-340px)] min-h-[520px]" style={{ background: 'var(--color-neutral-600)' }}>
+          <div className="w-full h-full overflow-auto py-8">
+            {/* Block + mx-auto, not flex centring: a centred flex child wider than
+                its box overflows to the left, where scrolling can't reach. */}
+            <div className="mx-auto" style={{ width: `calc(210mm * ${zoom})`, overflowX: 'clip' }}>
               <div 
                 className="bg-white shadow-2xl relative"
                 style={{ 
@@ -285,7 +292,7 @@ export function ReportTab() {
                   color: '#000',
                   boxSizing: 'border-box',
                   transform: `scale(${zoom})`,
-                  transformOrigin: 'top center',
+                  transformOrigin: 'top left',
                   marginBottom: `calc(297mm * ${zoom - 1})`
                 }}
               >
@@ -322,6 +329,7 @@ export function ReportTab() {
                   <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(buildValuationReportHTML(currentClaim, profile!)) }} />
                 )}
               </div>
+            </div>
           </div>
         </CardContent>
       </Card>
