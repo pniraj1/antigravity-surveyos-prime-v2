@@ -53,4 +53,4 @@ chrome.storage.onChanged.addListener((ch, area) => { if (area === 'local' && ch.
 chrome.storage.local.get('maps').then(({ maps }) => { if (!maps) refreshMaps(); });
 
 // ---- Vitest only; the service worker has no `module` ----
-if (typeof module !== 'undefined' && module.exports) module.exports = { refreshMaps };
+if (typeof module !== 'undefined' && module.exports) module.exports = { refreshMaps, MAP_IDS };

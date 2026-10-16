@@ -1,5 +1,6 @@
 // extension/__tests__/map.test.js
 import { describe, it, expect } from 'vitest';
+import { createRequire } from 'module';
 import { mapId } from '../src/lib/fill-core.js';
 
 const KINDS = ['text', 'money', 'radio', 'select', 'dateRadioOrOthers', 'file'];
@@ -35,4 +36,31 @@ describe('field maps', () => {
       });
     });
   }
+});
+
+describe('flow lists agree', () => {
+  // background.js registers listeners and reads storage at load: stub chrome first.
+  const listener = { addListener() {} };
+  globalThis.chrome = {
+    storage: { local: { get: async () => ({ maps: {} }) }, onChanged: listener },
+    runtime: { getURL: (p) => p, onInstalled: listener, onStartup: listener },
+    alarms: { create() {}, onAlarm: listener },
+  };
+  const { MAP_IDS } = createRequire(import.meta.url)('../src/background.js');
+  const { KNOWN_FLOWS } = createRequire(import.meta.url)('../src/lib/packet-validate.js');
+  const manifest = createRequire(import.meta.url)('../manifest.json');
+  const hostOf = (pattern) => new URL(pattern.replace('*', '')).host;
+  const panelScript = manifest.content_scripts.find((c) => c.js.includes('src/panel.js'));
+
+  for (const map of Object.values(bundled)) {
+    it(`${mapId(map)} is listed everywhere`, () => {
+      expect(MAP_IDS).toContain(mapId(map));
+      expect(KNOWN_FLOWS[map.portal]).toContain(map.flow);
+      expect(manifest.host_permissions.map(hostOf)).toContain(map.host);
+      expect(panelScript.matches.map(hostOf)).toContain(map.host);
+    });
+  }
+  it('MAP_IDS lists no map that is not bundled', () => {
+    expect([...MAP_IDS].sort()).toEqual(Object.values(bundled).map(mapId).sort());
+  });
 });
