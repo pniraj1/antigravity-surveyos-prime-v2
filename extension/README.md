@@ -51,8 +51,8 @@ Load `extension/dist/unpacked-dev` and, on the extension's Details page, enable
    canonical names; the file input shows the xlsx name; the summary line, the next step
    and the legend show; filled lines are behind **Show all lines**.
 10. Type `Nashik` into Place, Fill again → Place is "kept", amber, listed first.
-11. Change the fixture claim number → badge "Different claim", Fill disabled with the
-    reason shown; both numbers show in full on hover.
+11. Change the fixture claim number → badge "Different claim" (within a couple of seconds),
+    Fill disabled with the reason shown; both numbers show in full on hover.
 12. Rename one `data-ng-model` in the fixture → Fill → that field "not found",
     the rest fill.
 
@@ -78,7 +78,8 @@ Load `extension/dist/unpacked-dev` and, on the extension's Details page, enable
 5. Expect `Plot 4, MIDC-Nashik` to land as `Plot 4 MIDCNashik`, and `9:05` to split
    into hours `09` / minutes `05`.
 6. Type a value into a field first, then Fill → that field is "kept", amber.
-7. Change the claim number → badge "Different claim", Fill disabled, both numbers shown.
+7. Change the claim number → badge "Different claim" (within a couple of seconds), Fill
+   disabled, both numbers shown.
 8. With an NIA claim sent, the UIIC page shows badge "Other portal" and names both
    portals; **Check page** still works.
 
@@ -96,6 +97,13 @@ Load `extension/dist/unpacked-dev` and, on the extension's Details page, enable
 Run on the live New India portal with the release build (`extension/dist/unpacked`), logged
 in inside the Claude tab group. Only viewing and **Check page**; nothing is saved. UIIC
 waits until a login is available.
+
+Pre-flight: Claude in Chrome is allowed (the project settings must not deny
+`mcp__claude-in-chrome`), and the owner is logged in inside the Claude tab group.
+
+Done when: every one of the 23 NIA fields and the Excel slot has a status, and every
+non-ready field has a cause noted.
+
 0. In SurveyOS, open the settled claim → NIA Excel → tick → **Send to extension**. (The claim
    sent earlier may have expired after 24 h.)
 1. Open the settled claim through Claim Search. Note which page it opens on and whether the
@@ -110,7 +118,9 @@ waits until a login is available.
    a different claim and that Fill will refuse.
 4. Run `scripts/portal-map/live-extract.js` in the page (through Claude in Chrome). It lists
    the page's fields with no values. Compare with `scripts/portal-map/nia-nontieup-survey.json`
-   and commit a new capture only if it differs, after a scan for values.
+   and commit a new capture only if it differs, after a scan for values. The one known
+   value-like output: the extractor keeps radio `value` codes, and for NIA's survey-date
+   radio these are dates of the open claim, so remove them before committing a capture.
 5. Paste the Check report and the comparison into `docs/portal-integration.md` §5 as
    "Live check 2026-10-xx". Each problem line becomes a map fix through the overlay and
    `build-ext-map.py`, never a hand edit.
