@@ -2,6 +2,13 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-10-16 (Claude) — Portal fill extension Phase 2: UIIC (v0.3.0)
+- feat(extension): UIIC claim-survey map (28 fields: survey date/time/place, mobile, report no, IRDAI parts buckets, GST slabs, labour, invoice no, salvage, excesses, fee bill), generated from the capture (renamed `uiic-claimsurvey-survey.json`)
+- feat(extension): `uiicText` (portal's `[a-zA-Z0-9. ]` pattern, 500 cap), `hour`/`minute` split; any map field can read another packet field via `from`
+- feat(uiic): `buildUiicPacket` (bill-check basis, R12) + Send to extension in the UIIC summary dialog, behind the bill-check tick
+- fix(extension): unmatched select option reported rejected, not filled; new maps load on worker start; panel text portal-neutral; panel re-boots after removal; results survive a map refresh; remote maps shape-checked; fill-core wrapped in an IIFE; flow-list drift test; build fails on field/file key clash
+- tests: 1456 passing, tsc clean. Commits 2019832f..fcfff741. Not deployed; no browser run.
+
 ## 2026-10-16 (Claude) — Portal fill extension Phase 1 (multi-portal core, v0.2.0)
 - docs: roadmap `docs/superpowers/plans/2026-10-16-portal-extension-roadmap.md` — Phase 0 (live checks + capture sweep) through Phase 6 (store listing)
 - feat(extension): `pickMap(maps, host, hash)` — exact route match, so `#/WorklistSurvey` never catches `#/WorklistSurveyNew`; map headers gain `host` and `modelRoot`
