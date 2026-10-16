@@ -4,7 +4,7 @@ const NS = 'SxPacket';
 const MAX_FILE_B64 = 1_400_000; // ≈1 MB of bytes
 const SLOTS = ['assessmentExcel'];
 /** Portal → flows the extension has a map for. */
-const KNOWN_FLOWS = { nia: ['nontieup'] };
+const KNOWN_FLOWS = { nia: ['nontieup'], uiic: ['claimsurvey'] };
 
 /** @param {unknown} x */
 function validatePacket(x) {

@@ -190,7 +190,7 @@ UIIC's capture has no controller name, and the extractor doesn't record one.
 
 ## Phase 2 — UIIC claim-survey fill
 
-Built from the capture in `scripts/portal-map/uiic-claim-survey.json`. The figures already exist: `uiicPortalSummary()` in `src/lib/calculations/uiic-portal-summary.ts` feeds today's copy panel. The extension's main gain on UIIC is that **paste is blocked on 45 fields** and writes through `$setViewValue` aren't paste. Phase 0 confirms that on a live page (spec §6).
+Built from the capture in `scripts/portal-map/uiic-claimsurvey-survey.json`. The figures already exist: `uiicPortalSummary()` in `src/lib/calculations/uiic-portal-summary.ts` feeds today's copy panel. The extension's main gain on UIIC is that **paste is blocked on 45 fields** and writes through `$setViewValue` aren't paste. Phase 0 confirms that on a live page (spec §6).
 
 ### Task 6: UIIC transforms
 
@@ -220,7 +220,7 @@ expect(transforms.hour('')).toBe('');
 
 **Files:**
 - Create: `scripts/portal-map/uiic-claimsurvey.overlay.json`
-- Rename: `scripts/portal-map/uiic-claim-survey.json` → `uiic-claimsurvey-survey.json` (matches the `<id>-survey.json` rule)
+- Rename: `scripts/portal-map/uiic-claimsurvey-survey.json` → `uiic-claimsurvey-survey.json` (matches the `<id>-survey.json` rule)
 - Generated: `extension/maps/uiic-claimsurvey.json`, `public/portal-maps/uiic-claimsurvey.json`, `extension/fixture/uiic-claimsurvey.html`
 
 **Interfaces:**

@@ -450,7 +450,7 @@ requirement, but the code is on the portal's list at 0%.
 **Done**
 
 - Field map of the claim survey form, 114 controls, with validation and
-  visibility — `scripts/portal-map/uiic-claim-survey.json`
+  visibility — `scripts/portal-map/uiic-claimsurvey-survey.json`
 - Worklist map — `scripts/portal-map/uiic-worklist.json`
 - Reusable extractor — `scripts/portal-map/extract-fields.py`
 - Assessment Excel template obtained and analysed

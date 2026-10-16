@@ -70,7 +70,11 @@ def write_fixture(flow, overlay, by_model):
                 val = html.escape(str(f.get("value", "")))
                 rows.append(f'<label>{name} {val} <input type="radio" name="{name}" value="{val}" data-ng-model="{model}"></label>')
             elif t == "select":
-                opts = v.get("options", {"1": "1", "2": "2", "3": "3"}) if canon == "noOfInvoices" else v.get("options", {"Consolidated": "Consolidated", "Breakup": "Breakup"})
+                clock = {"hour": 24, "minute": 60}.get(v.get("transform"))
+                if clock:
+                    opts = {f"{i:02d}": f"{i:02d}" for i in range(clock)}
+                else:
+                    opts = v.get("options", {"1": "1", "2": "2", "3": "3"}) if canon == "noOfInvoices" else v.get("options", {"Consolidated": "Consolidated", "Breakup": "Breakup"})
                 os_ = "".join(f'<option value="{html.escape(k)}">{html.escape(str(x))}</option>' for k, x in opts.items())
                 rows.append(f'<label>{name} <select name="{name}" data-ng-model="{model}" data-ng-change="log(\'{canon}\')"><option value="">--Select--</option>{os_}</select></label>')
             elif t == "file":

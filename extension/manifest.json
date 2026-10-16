@@ -8,7 +8,8 @@
   "permissions": ["storage", "alarms"],
   "host_permissions": [
     "https://motorsurveyos-in.web.app/*",
-    "https://web.newindia.co.in/NIABancsPortal/*"
+    "https://web.newindia.co.in/NIABancsPortal/*",
+    "https://portal.uiic.in/surveyor/*"
   ],
   "background": { "service_worker": "src/background.js" },
   "content_scripts": [
@@ -18,13 +19,13 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://web.newindia.co.in/NIABancsPortal/*"],
+      "matches": ["https://web.newindia.co.in/NIABancsPortal/*", "https://portal.uiic.in/surveyor/*"],
       "js": ["src/lib/fill-core.js", "src/panel.js"],
       "css": ["src/panel.css"],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://web.newindia.co.in/NIABancsPortal/*"],
+      "matches": ["https://web.newindia.co.in/NIABancsPortal/*", "https://portal.uiic.in/surveyor/*"],
       "js": ["src/lib/fill-core.js", "src/filler.js"],
       "world": "MAIN",
       "run_at": "document_idle"

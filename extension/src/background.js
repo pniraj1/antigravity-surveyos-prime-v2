@@ -1,7 +1,7 @@
 // extension/src/background.js
 // @ts-check
 // Map fetch (install + daily), packet expiry (E6). No other network.
-const MAP_IDS = ['nia-nontieup'];
+const MAP_IDS = ['nia-nontieup', 'uiic-claimsurvey'];
 const MAP_BASE = 'https://motorsurveyos-in.web.app/portal-maps/';
 const DAY_MS = 24 * 60 * 60 * 1000;
 

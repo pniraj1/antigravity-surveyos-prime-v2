@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createRequire } from 'module';
 import bundled from '../maps/nia-nontieup.json';
+const bundledAll = import.meta.glob('../maps/*.json', { eager: true, import: 'default' });
 
 const require = createRequire(import.meta.url);
 
@@ -26,7 +27,8 @@ function installChrome(initial = {}) {
 /** ext:// → bundled map; our hosting → `remote` (or a network failure). */
 function installFetch(remote) {
   globalThis.fetch = vi.fn(async (url) => {
-    if (url.startsWith('ext://maps/nia-nontieup.json')) return { ok: true, json: async () => bundled };
+    const own = bundledAll[`../${url.replace('ext://', '')}`];
+    if (own) return { ok: true, json: async () => own };
     if (remote === undefined) throw new Error('offline');
     return { ok: true, json: async () => remote };
   });

@@ -34,10 +34,7 @@ describe('validatePacket', () => {
 
 describe('KNOWN_FLOWS', () => {
   it('drives which portal flows are accepted', () => {
-    expect(KNOWN_FLOWS).toEqual({ nia: ['nontieup'] });
-    KNOWN_FLOWS.uiic = ['claimsurvey'];
-    try {
-      expect(validatePacket({ ...good(), portal: 'uiic', flow: 'claimsurvey' }).ok).toBe(true);
-    } finally { delete KNOWN_FLOWS.uiic; }
+    expect(KNOWN_FLOWS).toEqual({ nia: ['nontieup'], uiic: ['claimsurvey'] });
+    expect(validatePacket({ ...good(), portal: 'uiic', flow: 'claimsurvey' }).ok).toBe(true);
   });
 });
