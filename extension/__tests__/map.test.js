@@ -29,6 +29,11 @@ describe('field maps', () => {
           expect('empty' in f, k).toBe(true);
         }
       });
+      it('every field has a surveyor label and the map has a next-step hint', () => {
+        expect(typeof map.doneHint).toBe('string');
+        expect(map.doneHint.length).toBeGreaterThan(10);
+        for (const [k, f] of Object.entries(map.fields)) expect(f.label, k).toMatch(/^[A-Z][^]*\S$/);
+      });
       it('hosted copy is identical', () => {
         const copy = Object.entries(hosted).find(([p]) => fileId(p) === id);
         expect(copy, 'hosted copy missing').toBeTruthy();

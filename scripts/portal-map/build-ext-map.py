@@ -34,15 +34,18 @@ def main(flow):
 
     def entry(v):
         e = {"modelPath": v["model"], "kind": v.get("kind", "text"), "empty": v.get("empty", "")}
-        for k in ("transform", "options", "maxLen", "from", "constant", "onlyIf"):
+        for k in ("label", "transform", "options", "maxLen", "from", "constant", "onlyIf"):
             if k in v:
                 e[k] = v[k]
         return e
 
-    need = ("portal", "flow", "version", "host", "route", "modelRoot", "claimNoPath")
+    need = ("portal", "flow", "version", "host", "route", "modelRoot", "claimNoPath", "doneHint")
     absent = [k for k in need if not overlay.get(k)]
     if absent:
         sys.exit(f"overlay header missing: {absent}")
+    unlabeled = [k for k, v in overlay["fields"].items() if not v.get("label")]
+    if unlabeled:
+        sys.exit(f"overlay fields without label: {unlabeled}")
     optional = ("controller", "claimNoFallback", "invoiceCountPath")
     out = {k: overlay[k] for k in need + optional if k in overlay}
     out["fields"] = {k: entry(v) for k, v in overlay["fields"].items()}

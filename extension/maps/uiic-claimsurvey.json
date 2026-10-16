@@ -1,22 +1,25 @@
 {
   "portal": "uiic",
   "flow": "claimsurvey",
-  "version": 1,
+  "version": 2,
   "host": "portal.uiic.in",
   "route": "#/SurveyorClaimSurvey",
   "modelRoot": "surveyorClaimSurvey.",
   "claimNoPath": "surveyorClaimSurvey.ClaimEntry.quickUpdate.claimNumber",
+  "doneHint": "Check the depreciated amounts and tax the portal calculated, then save or submit.",
   "fields": {
     "surveyDate": {
       "modelPath": "surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyDate",
       "kind": "text",
       "empty": "",
+      "label": "Survey date",
       "transform": "ddmmyyyy"
     },
     "surveyTimeHours": {
       "modelPath": "surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyTimeHours",
       "kind": "select",
       "empty": "",
+      "label": "Survey time (hours)",
       "transform": "hour",
       "from": "surveyTime"
     },
@@ -24,6 +27,7 @@
       "modelPath": "surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyTimeMinutes",
       "kind": "select",
       "empty": "",
+      "label": "Survey time (minutes)",
       "transform": "minute",
       "from": "surveyTime"
     },
@@ -31,130 +35,155 @@
       "modelPath": "surveyorClaimSurvey.ClaimEntry.quickUpdate.surveyPlace",
       "kind": "text",
       "empty": "",
+      "label": "Place of survey",
       "transform": "uiicText"
     },
     "claimantMobile": {
       "modelPath": "surveyorClaimSurvey.ClaimEntry.quickUpdate.claimantMobileNo",
       "kind": "text",
       "empty": "",
+      "label": "Claimant mobile",
       "maxLen": 10
     },
     "reportNo": {
       "modelPath": "surveyorClaimSurvey.ClaimEntry.quickUpdate.reportNo",
       "kind": "text",
       "empty": "",
+      "label": "Report no.",
       "maxLen": 10
     },
     "ageBasedDep": {
       "modelPath": "surveyorClaimSurvey.ClaimEntry.claimAssessment.ageBasedDep",
       "kind": "money",
-      "empty": ""
+      "empty": "",
+      "label": "Parts: vehicle age based depreciation"
     },
     "dep50": {
       "modelPath": "surveyorClaimSurvey.ClaimEntry.claimAssessment.dep50",
       "kind": "money",
-      "empty": ""
+      "empty": "",
+      "label": "Parts at 50%"
     },
     "dep30": {
       "modelPath": "surveyorClaimSurvey.ClaimEntry.claimAssessment.dep30",
       "kind": "money",
-      "empty": ""
+      "empty": "",
+      "label": "Parts at 30%"
     },
     "nilDep": {
       "modelPath": "surveyorClaimSurvey.ClaimEntry.claimAssessment.nilDep",
       "kind": "money",
-      "empty": ""
+      "empty": "",
+      "label": "Parts at nil"
     },
     "gst28AmountP": {
       "modelPath": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gst28AmountP",
       "kind": "money",
-      "empty": ""
+      "empty": "",
+      "label": "Parts GST 28% amount"
     },
     "gst18AmountP": {
       "modelPath": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gst18AmountP",
       "kind": "money",
-      "empty": ""
+      "empty": "",
+      "label": "Parts GST 18% amount"
     },
     "gst12AmountP": {
       "modelPath": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gst12AmountP",
       "kind": "money",
-      "empty": ""
+      "empty": "",
+      "label": "Parts GST 12% amount"
     },
     "gst5AmountP": {
       "modelPath": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gst5AmountP",
       "kind": "money",
-      "empty": ""
+      "empty": "",
+      "label": "Parts GST 5% amount"
     },
     "gst0AmountP": {
       "modelPath": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gst0AmountP",
       "kind": "money",
-      "empty": ""
+      "empty": "",
+      "label": "Parts GST 0% amount"
     },
     "labourCharge": {
       "modelPath": "surveyorClaimSurvey.ClaimEntry.claimAssessment.labourCharge",
       "kind": "money",
-      "empty": ""
+      "empty": "",
+      "label": "Labour charges"
     },
     "gst18AmountL": {
       "modelPath": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gst18AmountL",
       "kind": "money",
-      "empty": ""
+      "empty": "",
+      "label": "Labour GST 18% amount"
     },
     "gst0AmountL": {
       "modelPath": "surveyorClaimSurvey.ClaimEntry.claimAssessment.gst0AmountL",
       "kind": "money",
-      "empty": ""
+      "empty": "",
+      "label": "Labour GST 0% amount"
     },
     "workshopInvoiceNo": {
       "modelPath": "surveyorClaimSurvey.ClaimEntry.claimAssessment.workshopInvoiceNo",
       "kind": "text",
       "empty": "",
+      "label": "Workshop invoice no.",
       "maxLen": 16
     },
     "salvageValue": {
       "modelPath": "surveyorClaimSurvey.ClaimEntry.claimAssessment.salvageValue",
       "kind": "money",
-      "empty": ""
+      "empty": "",
+      "label": "Salvage value"
     },
     "voluntaryExcess": {
       "modelPath": "surveyorClaimSurvey.ClaimEntry.claimAssessment.voluntaryExcess",
       "kind": "money",
-      "empty": ""
+      "empty": "",
+      "label": "Voluntary excess"
     },
     "compulsoryExcess": {
       "modelPath": "surveyorClaimSurvey.ClaimEntry.claimAssessment.compulsoryExcess",
       "kind": "money",
-      "empty": ""
+      "empty": "",
+      "label": "Compulsory excess"
     },
     "towingCharge": {
       "modelPath": "surveyorClaimSurvey.ClaimEntry.claimAssessment.towingCharge",
       "kind": "money",
-      "empty": ""
+      "empty": "",
+      "label": "Towing charges"
     },
     "invoiceNo": {
       "modelPath": "surveyorClaimSurvey.ClaimEntry.claimAssessment.invoiceNo",
       "kind": "text",
-      "empty": ""
+      "empty": "",
+      "label": "Fee invoice no."
     },
     "profFeeAmount": {
       "modelPath": "surveyorClaimSurvey.ClaimEntry.claimAssessment.profFeeAmount",
       "kind": "money",
-      "empty": ""
+      "empty": "",
+      "label": "Professional fee"
     },
     "travelExpense": {
       "modelPath": "surveyorClaimSurvey.ClaimEntry.claimAssessment.travelExpense",
       "kind": "money",
-      "empty": ""
+      "empty": "",
+      "label": "Travel expense"
     },
     "photoCharge": {
       "modelPath": "surveyorClaimSurvey.ClaimEntry.claimAssessment.photoCharge",
       "kind": "money",
-      "empty": ""
+      "empty": "",
+      "label": "Photographs"
     },
     "dailyAllowance": {
       "modelPath": "surveyorClaimSurvey.ClaimEntry.claimAssessment.dailyAllowance",
       "kind": "money",
-      "empty": ""
+      "empty": "",
+      "label": "Daily allowance"
     }
   },
   "files": {}

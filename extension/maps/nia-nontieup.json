@@ -1,11 +1,12 @@
 {
   "portal": "nia",
   "flow": "nontieup",
-  "version": 2,
+  "version": 3,
   "host": "web.newindia.co.in",
   "route": "#/WorklistSurveyNew",
   "modelRoot": "surveyorData.worklist.",
   "claimNoPath": "surveyorData.worklist.viewClaimDetails.claimDetails.claimNumber",
+  "doneHint": "Now click Validate on the portal to load the Excel lines, then check the totals.",
   "controller": "surveyorWorklistSurveyCtrl",
   "claimNoFallback": "sessionStorage:claimNoForWorklist",
   "invoiceCountPath": "surveyorData.worklist.multiInvoice",
@@ -14,45 +15,53 @@
       "modelPath": "surveyorData.worklist.quickUpdate.surveyDateRadio",
       "kind": "dateRadioOrOthers",
       "empty": null,
+      "label": "Survey date choice",
       "from": "surveyDate"
     },
     "surveyDate": {
       "modelPath": "surveyorData.worklist.quickUpdate.surveyDate",
       "kind": "text",
       "empty": null,
+      "label": "Survey date",
       "transform": "ddmmyyyy"
     },
     "surveyTime": {
       "modelPath": "surveyorData.worklist.quickUpdate.timeOfSurvey",
       "kind": "text",
       "empty": "",
+      "label": "Survey time",
       "transform": "hhmm"
     },
     "surveyPlace": {
       "modelPath": "surveyorData.worklist.quickUpdate.placeOfSurvey",
       "kind": "text",
       "empty": "",
+      "label": "Place of survey",
       "maxLen": 100
     },
     "claimantMobile": {
       "modelPath": "surveyorData.worklist.quickUpdate.claimantMobileNo",
       "kind": "text",
-      "empty": ""
+      "empty": "",
+      "label": "Claimant mobile"
     },
     "claimantEmail": {
       "modelPath": "surveyorData.worklist.quickUpdate.claimantEmailId",
       "kind": "text",
-      "empty": ""
+      "empty": "",
+      "label": "Claimant email"
     },
     "noOfInvoices": {
       "modelPath": "surveyorData.worklist.claimAssessment.noOfInvoices",
       "kind": "select",
-      "empty": ""
+      "empty": "",
+      "label": "No. of invoices"
     },
     "gstApplicable": {
       "modelPath": "surveyorData.worklist.multiInvoice[$index].isGstApplicable",
       "kind": "select",
       "empty": "",
+      "label": "GST applicable (invoice)",
       "options": {
         "Y": "Y",
         "N": "N"
@@ -62,76 +71,90 @@
       "modelPath": "surveyorData.worklist.multiInvoice[$index].vendorTaxInvoiceNumber",
       "kind": "text",
       "empty": "",
+      "label": "Vendor invoice no.",
       "maxLen": 30
     },
     "vendorInvoiceDate": {
       "modelPath": "surveyorData.worklist.multiInvoice[$index].vendorTaxInvoiceDate",
       "kind": "text",
       "empty": null,
+      "label": "Vendor invoice date",
       "transform": "ddmmyyyy"
     },
     "paintingWork": {
       "modelPath": "surveyorData.worklist.multiInvoice[$index].paintingWorkDetails",
       "kind": "select",
       "empty": "",
+      "label": "Painting work details",
       "constant": "Consolidated",
       "onlyIf": "paintingAssessed"
     },
     "paintingEstimate": {
       "modelPath": "surveyorData.worklist.multiInvoice[$index].estimatedAmount",
       "kind": "money",
-      "empty": ""
+      "empty": "",
+      "label": "Painting estimated amount"
     },
     "paintingAssessed": {
       "modelPath": "surveyorData.worklist.multiInvoice[$index].assessedAmount",
       "kind": "money",
-      "empty": ""
+      "empty": "",
+      "label": "Painting assessed amount"
     },
     "netSalvage": {
       "modelPath": "surveyorData.worklist.claimAssessment.netSlavage",
       "kind": "money",
-      "empty": ""
+      "empty": "",
+      "label": "Net salvage"
     },
     "compulsoryExcess": {
       "modelPath": "surveyorData.worklist.claimAssessment.lessCompulsoryExcess",
       "kind": "money",
-      "empty": ""
+      "empty": "",
+      "label": "Compulsory excess"
     },
     "voluntaryExcess": {
       "modelPath": "surveyorData.worklist.claimAssessment.lessVoluntaryExpress",
       "kind": "money",
-      "empty": ""
+      "empty": "",
+      "label": "Voluntary excess"
     },
     "feeInvoiceDate": {
       "modelPath": "surveyorData.worklist.surveyFeeBill.surveyorFeeInvoiceDate",
       "kind": "text",
       "empty": null,
+      "label": "Fee invoice date",
       "transform": "ddmmyyyy"
     },
     "professionalFee": {
       "modelPath": "surveyorData.worklist.surveyFeeBill.professionalFee",
       "kind": "money",
-      "empty": ""
+      "empty": "",
+      "label": "Professional fee"
     },
     "photosAmount": {
       "modelPath": "surveyorData.worklist.surveyFeeBill.photosAmount",
       "kind": "money",
-      "empty": ""
+      "empty": "",
+      "label": "Photographs"
     },
     "conveyanceAmount": {
       "modelPath": "surveyorData.worklist.surveyFeeBill.conveyanceAmount",
       "kind": "money",
-      "empty": ""
+      "empty": "",
+      "label": "Conveyance"
     },
     "feeOthers": {
       "modelPath": "surveyorData.worklist.surveyFeeBill.others",
       "kind": "money",
-      "empty": ""
+      "empty": "",
+      "label": "Other charges (fee)"
     },
     "feeGstApplicable": {
       "modelPath": "surveyorData.worklist.surveyFeeBill.isGSTApplicable",
       "kind": "select",
       "empty": "",
+      "label": "GST applicable (fee)",
       "options": {
         "Y": "Y",
         "N": "N"
@@ -140,7 +163,8 @@
     "feeGstPercent": {
       "modelPath": "surveyorData.worklist.surveyFeeBill.gstPercent",
       "kind": "text",
-      "empty": ""
+      "empty": "",
+      "label": "GST % (fee)"
     }
   },
   "files": {
