@@ -3,6 +3,9 @@
  * Pure fill logic. No DOM, no Angular — the Filler feeds it readers and
  * executes the steps it returns. Everything testable lives here.
  */
+// IIFE: as a MAIN-world classic script, top-level const/function would be page globals
+// and collide with the portal's own declarations. Body left unindented to keep the diff small.
+(() => {
 const NS = 'SxFill';
 
 /** @param {string} s */
@@ -143,3 +146,4 @@ const API = { normaliseClaimNo, transforms, isEmptyValue, decide, planFill, mapI
 // ---- umd shim: classic script in the extension, ESM/CJS in Vitest ----
 if (typeof module !== 'undefined' && module.exports) module.exports = API;
 else globalThis[NS] = API;
+})();
