@@ -12,6 +12,7 @@ const DAY_MS = 24 * 3600000;
 const PORTAL_NAME = /** @type {Record<string,string>} */ ({ nia: 'New India', uiic: 'United India' });
 const SEND_PATH = /** @type {Record<string,string>} */ ({ nia: 'NIA Excel', uiic: 'UIIC summary' });
 const REASSURANCE = 'Nothing is saved until you save on the portal. To undo, reload this page.';
+const LEGEND = 'On the page: green = filled, amber = kept, red = rejected.';
 
 const NEEDS_YOU = ['notFound', 'invalid', 'error', 'manual', 'noOption', 'disabled', 'notBound'];
 const KEPT = ['kept', 'hasValue'];
@@ -51,6 +52,9 @@ function lineText(l) {
   return t.replace('{why}', l.why ?? '');
 }
 
+/** Line tone -> the panel's icon and colour: ok ✓, warn kept, info type-it-yourself, bad problem. @param {string} s */
+const toneOf = (s) => OK.includes(s) ? 'ok' : KEPT.includes(s) ? 'warn' : ['manual', 'disabled', 'notBound'].includes(s) ? 'info' : 'bad';
+
 /** Fill or Check result -> all lines (ordered, skip dropped). @param {any} map @param {any} res @param {boolean} isFill */
 function buildLines(map, res, isFill) {
   const rows = isFill
@@ -67,7 +71,7 @@ function buildLines(map, res, isFill) {
       ];
   const rank = (/** @type {string} */ s) => { const i = NEEDS_YOU.indexOf(s); return i >= 0 ? i : KEPT.includes(s) ? 50 : 100; };
   // Array.sort is stable: input order is kept inside a rank. Unknown statuses count as needs-you.
-  return rows.map((r) => ({ ...r, text: lineText(r) })).sort((a, b) => rank(a.status) - rank(b.status));
+  return rows.map((r) => ({ ...r, text: lineText(r), tone: toneOf(r.status) })).sort((a, b) => rank(a.status) - rank(b.status));
 }
 
 const isNeeds = (/** @type {string} */ s) => !KEPT.includes(s) && !OK.includes(s);
@@ -95,7 +99,7 @@ function cardView(i) {
   const claim = { packetTail, pageTail, packetFull: F.normaliseClaimNo(live?.claimNo), pageFull: F.normaliseClaimNo(probe?.claimNo) };
   const v = /** @type {any} */ ({
     state: '', badge: { tone: 'muted', text: '' }, body: '', primary: null, secondary: [],
-    summary: null, lines: [], allLines: [], okCount: 0, doneHint: null, reassurance: null, claim,
+    summary: null, lines: [], allLines: [], okCount: 0, doneHint: null, reassurance: null, legend: null, claim,
   });
   const set = (/** @type {any} */ o) => Object.assign(v, o);
   const gate = live ? F.packetGate(map, live) : null;
@@ -112,6 +116,7 @@ function cardView(i) {
   if (fill || check) {
     const isFill = !!fill;
     if (isFill && fill.ok === false) return set({ state: 'fillFailed', badge: { tone: 'bad', text: "Couldn't fill" }, body: fill.reason ?? '', primary: RETRY });
+    if (!isFill && check.ok === false) return set({ state: 'checkFailed', badge: { tone: 'bad', text: "Couldn't check" }, body: check.reason ?? '', primary: { id: 'check', label: 'Try again' } });
     const all = buildLines(map, isFill ? fill : check, isFill);
     set({
       allLines: all,
@@ -124,7 +129,7 @@ function cardView(i) {
       const k = all.filter((l) => isNeeds(l.status)).length;
       const again = (fill.steps.some((/** @type {any} */ s) => s.action === 'error' || s.action === 'invalid') || fill.files.some((/** @type {any} */ x) => x.status === 'error'));
       return set({ state: k ? 'needsYou' : 'filled', badge: k ? { tone: 'warn', text: `Needs you: ${k}` } : { tone: 'ok', text: 'Filled' },
-        primary: k && again ? { ...FILL, label: 'Fill again' } : null, secondary: [SHOW], doneHint: map.doneHint ?? null });
+        primary: k && again ? { ...FILL, label: 'Fill again' } : null, secondary: [SHOW], doneHint: map.doneHint ?? null, legend: LEGEND });
     }
     const body = check.mode === 'structure' ? 'Page check (no claim sent).'
       : check.mode === 'value' ? 'Page check for this claim.'

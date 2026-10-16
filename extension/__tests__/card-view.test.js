@@ -77,6 +77,12 @@ describe('cardView states', () => {
     expect(v.secondary.map((s) => s.id)).toEqual(['showAll']);
     expect(v.reassurance).toBe('Nothing is saved until you save on the portal. To undo, reload this page.');
   });
+  it('legend only after a fill (Check draws no outlines on the page)', () => {
+    const LEGEND = 'On the page: green = filled, amber = kept, red = rejected.';
+    expect(view({ fill: { ok: true, steps: [], files: [] } }).legend).toBe(LEGEND);
+    expect(view({ check: { ok: true, mode: 'value', fields: [], files: [] } }).legend).toBeNull();
+    expect(view().legend).toBeNull();
+  });
   it('needsYou, with Fill again only on error or invalid', () => {
     const mk = (action) => view({ fill: { ok: true, steps: [{ name: names[0], action, why: 'bad' }], files: [] } });
     const m = mk('manual');
@@ -103,6 +109,11 @@ describe('cardView states', () => {
     expect(w.primary).toBeNull();
     expect(view({ probe: { ok: true, claimNo: '', invoices: 1 }, check: { ok: true, mode: 'wrongClaim', fields: [], files: [] } }).body)
       .toBe("Page check: this page's claim number couldn't be read. You sent claim …9686.");
+  });
+  it('checkFailed: a check that could not run offers Try again (Check)', () => {
+    const v = view({ check: { ok: false, reason: 'page fields not found. The portal may have changed.' } });
+    expect(v).toMatchObject({ state: 'checkFailed', badge: { tone: 'bad', text: "Couldn't check" },
+      body: 'page fields not found. The portal may have changed.', primary: { id: 'check', label: 'Try again' }, secondary: [], lines: [] });
   });
   it('precedence: probe failure and phase beat results', () => {
     const fill = { ok: true, steps: [], files: [] };
@@ -131,6 +142,14 @@ describe('lines and summary', () => {
     const all = view({ fill, showAll: true });
     expect(all.lines.map((l) => l.status)).toEqual(['notFound', 'manual', 'kept', 'filled', 'same', 'attached']);
     expect(all.lines.at(-1).label).toBe('Excel file');
+  });
+  it('each line carries a tone for its icon and colour', () => {
+    const all = view({ fill, showAll: true }).lines;
+    expect(all.map((l) => [l.status, l.tone])).toEqual([
+      ['notFound', 'bad'], ['manual', 'info'], ['kept', 'warn'], ['filled', 'ok'], ['same', 'ok'], ['attached', 'ok']]);
+    const chk = (status) => view({ check: { ok: true, mode: 'value', files: [], fields: [{ name: 'a', label: 'A', status, modelPath: 'p' }] } }).lines[0].tone;
+    expect(['hasValue', 'disabled', 'notBound', 'noOption', 'invalid', 'error', 'weird'].map(chk))
+      .toEqual(['warn', 'info', 'info', 'bad', 'bad', 'bad', 'bad']);
   });
   it('summary omits zero parts', () => {
     expect(view({ fill }).summary).toBe('3 filled · 1 kept · 1 do by hand · 1 not found');

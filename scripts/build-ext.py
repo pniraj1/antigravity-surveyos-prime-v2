@@ -26,7 +26,7 @@ for bad in DEV:
 
 FILES = ["icons/icon128.png", *(f"maps/{flow}.json" for flow in FLOWS),
          "src/background.js", "src/relay.js", "src/panel.js", "src/panel.css", "src/filler.js",
-         "src/lib/packet-validate.js", "src/lib/fill-core.js"]
+         "src/lib/packet-validate.js", "src/lib/fill-core.js", "src/lib/card-view.js"]
 
 dist = EXT / "dist"; dist.mkdir(exist_ok=True)
 out = dist / f"surveyos-portal-fill-{manifest['version']}.zip"

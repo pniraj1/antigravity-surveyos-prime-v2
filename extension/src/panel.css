@@ -1,18 +1,55 @@
-/* extension/src/panel.css */
-#sx-panel{position:fixed;right:16px;bottom:16px;z-index:2147483000;width:300px;font:13px/1.4 system-ui,sans-serif;background:#fff;color:#111;border:1px solid #d1d5db;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
-#sx-panel .sx-head{padding:8px 12px;font-weight:600;border-bottom:1px solid #e5e7eb;background:#f8fafc;border-radius:10px 10px 0 0}
-#sx-panel .sx-v{font-weight:400;color:#6b7280;margin-left:6px}
-#sx-panel .sx-body{padding:10px 12px;max-height:280px;overflow:auto}
-#sx-panel .sx-page{color:#6b7280;margin-top:4px}
-#sx-panel .sx-foot{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-top:1px solid #e5e7eb}
-#sx-panel .sx-fill{background:#0f766e;color:#fff;border:0;border-radius:6px;padding:6px 14px;font-weight:600;cursor:pointer}
-#sx-panel .sx-fill:disabled{opacity:.5;cursor:default}
-#sx-panel .sx-clear{color:#6b7280;font-size:12px}
-#sx-panel .sx-list{list-style:none;padding:0;margin:8px 0 0}
-#sx-panel .sx-list li{padding:2px 0}
-#sx-panel .sx-kept{color:#b45309}
-#sx-panel .sx-notFound,#sx-panel .sx-error,#sx-panel .sx-err{color:#b91c1c}
-#sx-panel .sx-manual{color:#1d4ed8}
-#sx-panel .sx-filled,#sx-panel .sx-attached{color:#15803d}
-#sx-panel .sx-same{color:#6b7280}
-#sx-panel .sx-invalid{color:#b91c1c}
+/* extension/src/panel.css — spec §10.5–§10.7. Everything lives under #sx-panel so portal CSS can't bleed in. */
+#sx-panel{all:initial}
+/* Descendants drop every author rule (the portal's too) except ours below; SVG keeps its presentation attributes. */
+#sx-panel :where(*:not(svg,svg *)){all:revert}
+#sx-panel *{box-sizing:border-box}
+#sx-panel [hidden]{display:none !important}
+#sx-panel{
+  --sx-ok:#15803d;--sx-warn:#b45309;--sx-bad:#b91c1c;--sx-info:#1d4ed8;--sx-muted:#6b7280;--sx-primary:#0f766e;
+  display:block;box-sizing:border-box;position:fixed;right:0;top:0;z-index:2147483000;width:320px;
+  font-family:system-ui,sans-serif;font-size:13px;line-height:1.4;color:#111827;text-align:left;
+  background:#fff;border:1px solid #cbd5e1;border-right:0;border-radius:10px 0 0 10px;box-shadow:0 4px 16px rgba(15,23,42,.16)}
+#sx-panel :focus{outline:2px solid var(--sx-primary);outline-offset:2px}
+#sx-panel .sx-num{font-variant-numeric:tabular-nums}
+#sx-panel .sx-ic{width:14px;height:14px;flex:none}
+#sx-panel .sx-ok{color:var(--sx-ok)}
+#sx-panel .sx-warn{color:var(--sx-warn)}
+#sx-panel .sx-bad{color:var(--sx-bad)}
+#sx-panel .sx-info{color:var(--sx-info)}
+#sx-panel .sx-muted{color:var(--sx-muted)}
+
+#sx-panel .sx-head{display:flex;align-items:center;gap:6px;padding:4px 8px 4px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;border-radius:10px 0 0 0;cursor:grab;user-select:none;touch-action:none}
+#sx-panel .sx-name{font-weight:600}
+#sx-panel .sx-v{color:var(--sx-muted)}
+#sx-panel .sx-badge{display:inline-flex;align-items:center;gap:4px;margin-left:auto;font-weight:600}
+#sx-panel button{font:inherit;min-height:32px;cursor:pointer;border-radius:6px}
+#sx-panel .sx-toggle{padding:0 10px;background:#fff;color:#111827;border:1px solid #cbd5e1}
+
+#sx-panel #sx-content{max-height:60vh;overflow:auto;padding:10px 12px}
+#sx-panel p{margin:0 0 8px}
+#sx-panel .sx-summary{font-weight:600}
+#sx-panel .sx-lines{list-style:none;margin:0 0 8px;padding:0}
+#sx-panel .sx-line{display:flex;align-items:flex-start;gap:6px;width:100%;min-height:32px;padding:6px 4px;text-align:left;background:none;border:0;border-radius:6px}
+#sx-panel button.sx-line:hover{background:#f1f5f9}
+#sx-panel .sx-line .sx-ic{margin-top:2px}
+#sx-panel .sx-ll{font-weight:600;color:#111827}
+#sx-panel .sx-legend,#sx-panel .sx-reassure{color:var(--sx-muted)}
+#sx-panel .sx-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+#sx-panel .sx-primary{padding:0 14px;font-weight:600;color:#fff;background:var(--sx-primary);border:0}
+#sx-panel .sx-primary:disabled{background:#64748b;cursor:default}
+#sx-panel .sx-reason{display:inline-flex;align-items:center;gap:4px;font-weight:600}
+#sx-panel .sx-link{padding:0 4px;color:var(--sx-muted);background:none;border:0;text-decoration:underline}
+
+/* Collapsed: a 40 px tab on the right edge with the badge and the Show button. */
+#sx-panel.sx-collapsed{width:40px}
+#sx-panel.sx-collapsed .sx-head{flex-direction:column;gap:8px;padding:8px 0;border-bottom:0;border-radius:10px 0 0 10px}
+#sx-panel.sx-collapsed .sx-name,#sx-panel.sx-collapsed .sx-v{display:none}
+#sx-panel.sx-collapsed .sx-badge,#sx-panel.sx-collapsed .sx-toggle{writing-mode:vertical-rl;margin:0}
+#sx-panel.sx-collapsed .sx-toggle{width:32px;padding:8px 0}
+
+@keyframes sx-in{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: no-preference){
+  #sx-panel #sx-content{animation:sx-in 180ms ease-out}
+  #sx-panel button{transition:opacity 150ms ease-out,transform 150ms ease-out}
+  #sx-panel button:active:not(:disabled){transform:translateY(1px)}
+}

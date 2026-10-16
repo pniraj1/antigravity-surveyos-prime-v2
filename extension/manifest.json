@@ -20,7 +20,7 @@
     },
     {
       "matches": ["https://web.newindia.co.in/NIABancsPortal/*", "https://portal.uiic.in/surveyor/*"],
-      "js": ["src/lib/fill-core.js", "src/panel.js"],
+      "js": ["src/lib/fill-core.js", "src/lib/card-view.js", "src/panel.js"],
       "css": ["src/panel.css"],
       "run_at": "document_idle"
     },
