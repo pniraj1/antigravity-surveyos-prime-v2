@@ -220,7 +220,7 @@ expect(transforms.hour('')).toBe('');
 
 **Files:**
 - Create: `scripts/portal-map/uiic-claimsurvey.overlay.json`
-- Rename: `scripts/portal-map/uiic-claimsurvey-survey.json` → `uiic-claimsurvey-survey.json` (matches the `<id>-survey.json` rule)
+- Rename: `scripts/portal-map/uiic-claim-survey.json` → `uiic-claimsurvey-survey.json` (matches the `<id>-survey.json` rule)
 - Generated: `extension/maps/uiic-claimsurvey.json`, `public/portal-maps/uiic-claimsurvey.json`, `extension/fixture/uiic-claimsurvey.html`
 
 **Interfaces:**
