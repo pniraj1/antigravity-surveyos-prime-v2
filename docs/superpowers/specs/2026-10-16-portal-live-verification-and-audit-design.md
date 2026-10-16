@@ -144,8 +144,8 @@ A second button on the SurveyOS card, **Check page**, next to Fill. It runs ever
 2. **One open non-tieup claim:** open its survey page from the Worklist (the pencil icon).
    - Opening the page is viewing; nothing is committed until a portal button is clicked.
    - Then **Check page**. It runs in "wrong claim" mode: values are planned against this claim's live options, and the header says Fill will refuse.
-3. **Fill once on the same page:** the expected result is a refusal that names both claim numbers, with nothing written. This proves E3 live.
-   - Author's call: this is safe because the refusal happens before planning (`filler.js` `fill()` returns on mismatch before `planFill`).
+3. **Confirm Fill is off on the same page:** Fill is disabled with the reason shown and both claim tails (spec §10.3), so nothing can be written.
+   - The page script's own refusal before planning (`filler.js` `fill()` returns on mismatch before `planFill`) stays covered by the unit test "fill still refuses a mismatched claim".
 4. **Structure capture:** run `scripts/portal-map/live-extract.js` (new, see §9) in the page through Claude in Chrome.
    - It emits the same JSON shape as `extract-fields.py` (`groups` → `{name, id, type, model, required, pattern, options, hidden, disabled_when}`), **without values**.
    - Diff it against `scripts/portal-map/nia-nontieup-survey.json` by model path: paths added or removed, and type, options or pattern changed per path.

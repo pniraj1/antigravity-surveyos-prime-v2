@@ -101,10 +101,13 @@ waits until a login is available.
 1. Open the settled claim through Claim Search. Note which page it opens on and whether the
    card appears. If it opens on the survey page, run **Check page** only; expect mostly
    locked or already-filled fields. **Do not click Fill on it.**
-2. Open one open non-tieup claim's survey page from the Worklist (pencil icon). Run
-   **Check page**. The card should say "Different claim" and that Fill will refuse.
-3. Click **Fill** once on that page. Expect a refusal naming both claim numbers and nothing
-   written.
+2. Open one open non-tieup claim's survey page from the Worklist (pencil icon). Before running
+   Check, confirm the card shows the badge **Different claim**, **Fill** greyed out with the
+   reason "Different claim" next to it, and both claim numbers' last 4 digits (full numbers
+   on hover). Nothing can be filled on this page. (The page script's own refusal is covered
+   by an automated test.)
+3. Run **Check page**. The badge changes to **Checked**, and the first line says this page is
+   a different claim and that Fill will refuse.
 4. Run `scripts/portal-map/live-extract.js` in the page (through Claude in Chrome). It lists
    the page's fields with no values. Compare with `scripts/portal-map/nia-nontieup-survey.json`
    and commit a new capture only if it differs, after a scan for values.
