@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normaliseClaimNo, transforms, isEmptyValue, decide, planFill } from '../src/lib/fill-core.js';
+import { normaliseClaimNo, transforms, isEmptyValue, decide, planFill, mapId, pickMap } from '../src/lib/fill-core.js';
 import map from '../maps/nia-nontieup.json';
 
 describe('normaliseClaimNo', () => {
@@ -111,3 +111,25 @@ describe('planFill', () => {
     expect(steps.find((s) => s.name === 'claimantMobile')).toMatchObject({ action: 'skip' });
   });
 });
+
+describe('pickMap', () => {
+  const nontieup = { portal: 'nia', flow: 'nontieup', host: 'web.newindia.co.in', route: '#/WorklistSurveyNew' };
+  const maruti   = { portal: 'nia', flow: 'maruti',   host: 'web.newindia.co.in', route: '#/WorklistSurvey' };
+  const uiic     = { portal: 'uiic', flow: 'claimsurvey', host: 'portal.uiic.in', route: '#/SurveyorClaimSurvey' };
+  const maps = { 'nia-maruti': maruti, 'nia-nontieup': nontieup, 'uiic-claimsurvey': uiic };
+  it('exact route wins over a prefix', () => {
+    expect(pickMap(maps, 'web.newindia.co.in', '#/WorklistSurveyNew')).toBe(nontieup);
+    expect(pickMap(maps, 'web.newindia.co.in', '#/WorklistSurvey')).toBe(maruti);
+  });
+  it('ignores a query or sub-path after the route', () => {
+    expect(pickMap(maps, 'web.newindia.co.in', '#/WorklistSurveyNew?id=4')).toBe(nontieup);
+    expect(pickMap(maps, 'portal.uiic.in', '#/SurveyorClaimSurvey/2')).toBe(uiic);
+  });
+  it('host must match', () => {
+    expect(pickMap(maps, 'portal.uiic.in', '#/WorklistSurveyNew')).toBeNull();
+  });
+  it('unknown route is null', () => {
+    expect(pickMap(maps, 'web.newindia.co.in', '#/Worklist')).toBeNull();
+  });
+});
+it('mapId', () => expect(mapId({ portal: 'nia', flow: 'nontieup' })).toBe('nia-nontieup'));

@@ -88,7 +88,23 @@ function planFill(map, packet, read) {
   return steps;
 }
 
-const API = { normaliseClaimNo, transforms, isEmptyValue, decide, planFill };
+/** @param {{portal: string, flow: string}} map */
+const mapId = (map) => `${map.portal}-${map.flow}`;
+
+/**
+ * The map for this page. Exact route only: `#/WorklistSurvey` must not catch
+ * `#/WorklistSurveyNew`. A `?query` or `/sub-path` after the route is allowed.
+ * @param {Record<string, any>} maps @param {string} host @param {string} hash
+ */
+function pickMap(maps, host, hash) {
+  for (const m of Object.values(maps ?? {})) {
+    if (m.host !== host) continue;
+    if (hash === m.route || hash.startsWith(m.route + '?') || hash.startsWith(m.route + '/')) return m;
+  }
+  return null;
+}
+
+const API = { normaliseClaimNo, transforms, isEmptyValue, decide, planFill, mapId, pickMap };
 // ---- umd shim: classic script in the extension, ESM/CJS in Vitest ----
 if (typeof module !== 'undefined' && module.exports) module.exports = API;
 else globalThis[NS] = API;
