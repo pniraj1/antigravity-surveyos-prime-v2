@@ -3,7 +3,7 @@
 // Main world. The only place `angular` is reachable. Talks to the Panel over
 // window.postMessage; never touches the page except the fields it is told to.
 (() => {
-  const { normaliseClaimNo, planFill, scopeAnchors, selectMatched } = globalThis.SxFill;
+  const { normaliseClaimNo, planCheck, planFill, scopeAnchors, selectMatched } = globalThis.SxFill;
   const ng = () => /** @type {any} */ (globalThis).angular;
 
   const esc = (/** @type {string} */ s) => s.replace(/[\\"]/g, '\\$&');
@@ -112,12 +112,39 @@
     return { ok: true, steps, files };
   }
 
+  /** Read-only: gathers reads for planCheck. Never writes, dispatches or styles anything on the page. */
+  function check(/** @type {any} */ map, /** @type {any} */ packet) {
+    if (!ng()) return { ok: false, reason: 'AngularJS not found on this page' };
+    const scope = ctrlScope(map);
+    if (!scope) return { ok: false, reason: 'page fields not found. The portal may have changed.' };
+    const claimNo = readPath(scope, map.claimNoPath) || readPath(scope, map.claimNoFallback);
+    const invoices = readPath(scope, map.invoiceCountPath);
+    const ctrlOf = (/** @type {string} */ path) => { const el = q(path)[0]; return el ? ng().element(el).controller('ngModel') : null; };
+    const read = {
+      // undefined / [] (never a throw) for missing or unbound fields: planFill asks about those too
+      current: (/** @type {string} */ path) => { const c = ctrlOf(path); return c ? c.$modelValue : undefined; },
+      radioValues: (/** @type {string} */ path) => q(path).map((el) => /** @type {HTMLInputElement} */ (el).value),
+      lookup: (/** @type {string} */ path) => {
+        const els = q(path);
+        const el = els[0]; // first element, the one Fill writes to
+        if (!el) return { found: false, bound: false, disabled: false, options: null, current: undefined };
+        const c = ctrlOf(path);
+        const options = el.tagName === 'SELECT' ? Array.from(/** @type {HTMLSelectElement} */ (el).options, (o) => o.value)
+          : /** @type {HTMLInputElement} */ (el).type === 'radio' ? els.map((e) => /** @type {HTMLInputElement} */ (e).value) : null;
+        return { found: true, bound: !!c, disabled: !!(/** @type {HTMLInputElement} */ (el).disabled), options, current: c ? c.$modelValue : undefined };
+      },
+    };
+    const pageClaimNo = claimNo ? String(claimNo) : '';
+    return { ok: true, claimNo: pageClaimNo, invoices: Array.isArray(invoices) ? invoices.length : 1, ...planCheck(map, packet, pageClaimNo, read) };
+  }
+
   window.addEventListener('message', (ev) => {
     if (ev.source !== window) return;
     const d = ev.data;
     if (!d || !d.sx || !d.type) return;
     try {
       if (d.type === 'probe') window.postMessage({ sx: d.sx, type: 'probe:result', ...probe(d.map) }, '*');
+      if (d.type === 'check') window.postMessage({ sx: d.sx, type: 'check:result', ...check(d.map, d.packet ?? null) }, '*');
       if (d.type === 'fill') window.postMessage({ sx: d.sx, type: 'fill:result', ...fill(d.map, d.packet) }, '*');
     } catch (e) {
       window.postMessage({ sx: d.sx, type: `${d.type}:result`, ok: false, reason: String(e), steps: [], files: [] }, '*');
