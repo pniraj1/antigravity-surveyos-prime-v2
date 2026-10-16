@@ -117,6 +117,7 @@ A second button on the SurveyOS card, **Check page**, next to Fill. It runs ever
 - No new permissions, no network (E5 holds). Single packet storage (`packet` key) stays as it is in v0.4.0. Several packets is I-3, out of scope here.
 
 **Done when:**
+- the card UX in §11 ships with it (§11.10 is part of this stage's acceptance);
 - unit tests cover every status and all three modes;
 - the generated fixtures (`extension/fixture/nia-nontieup.html`, `uiic-claimsurvey.html`) give the expected reports by hand check. They carry no personal data, being generated from captures without values. Expected:
   - all fields `ready` / `ready?`
@@ -241,9 +242,142 @@ Ranked by surveyor minutes saved per claim (author's estimate), then by risk. Ea
 
 ## 9. Left to the builder
 
-- Card layout for the Check report, matching the existing card styles in `panel.css`.
-- Status icon glyphs and wording, consistent with the existing `icon` map in `panel.js`.
+- Exact SVG paths for the five Lucide icons (§11.4), inlined, no icon library.
 - The in-page extractor, settled as author's call: `scripts/portal-map/live-extract.js` is a standalone snippet, not shipped in the extension. It is run through Claude in Chrome's page-script tool, and its output matches `extract-fields.py`'s shape so one diff works for both. It is a second implementation of the same rules, kept short. Add a unit test that runs it in node's `vm` against `extension/fixture/nia-nontieup.html` parsed by a minimal DOM. If no DOM library is installed, compare its output by hand on the fixture in Stage A instead; add no dependency.
+
+## 11. Surveyor workflow and card UX (ships with Stage A, v0.4.0)
+
+This comes from a review of the v0.3.0 card (`extension/src/panel.js`, `panel.css`) and the SurveyOS Send step (`NIAExportDialog.tsx`, `UIICSummaryDialog.tsx`) against the UI/UX checklist (accessibility, interaction, feedback, layout). Every item is the author's call.
+
+### 11.1 Who and where
+
+- **The surveyor:**
+  - works on a desktop or laptop, with two tabs: SurveyOS and the insurer portal;
+  - is under time pressure and handles several claims a day;
+  - is expert in the portal and not in our internals.
+- **The portals:**
+  - are dense, government-style AngularJS forms, light theme only;
+  - put the commit buttons (Validate, Submit, Save) at the bottom of long pages.
+- **The card is a guest on someone else's page.** It must never hide the portal's own controls and never look like part of the portal.
+
+### 11.2 The journey, end to end
+
+| # | Where | Surveyor does | System shows | Design rule |
+|---|---|---|---|---|
+| 1 | SurveyOS → NIA Excel / UIIC summary | Ticks "Bill amounts verified" | The Send section appears | Gate stays (R12). **UIIC:** ticking also switches the dialog's view to *Bill check*, so the figures on screen are the figures Fill will write (closes the deferred minor). |
+| 2 | Same | Clicks **Send to extension** | Button shows a spinner and "Sending…", then the Ready line | Ready line names the claim and the time limit: *"Ready: claim 7700…9686 is waiting for the New India portal. Open the claim there and click Fill. Expires in 24 h. Sending another claim replaces this one."* |
+| 2a | Same, extension not installed | — | One muted line instead of the Send section: *"Fill the portal automatically with the SurveyOS Portal Fill extension."* (A link is added once the store listing exists, Phase 6.) | Discoverability: today the step is invisible without the extension. |
+| 3 | Portal | Opens the claim's survey page | Card appears collapsed-or-open (remembered), header shows the match | The card states *before* any click whether this page is the right claim. |
+| 4 | Portal card | Clicks **Fill** (primary) | "Filling…", then the results | One primary action per state. Check page is a secondary text button. |
+| 5 | Portal card | Reads the summary, clicks a problem line | The page scrolls to that field and pulses its outline | Problems first; jump to the field. |
+| 6 | Portal | Fixes amber/red fields, then **Validate / Save / Submit** themselves | Card says the portal-specific next step | The extension never commits (E2). The card reassures: nothing is saved until the surveyor saves. |
+
+### 11.3 Card states and copy
+
+Exactly one primary action per state. Copy is in plain surveyor language.
+
+| State | Header badge | Body copy | Primary | Secondary |
+|---|---|---|---|---|
+| Loading | — | "Reading this page…" | — | — |
+| No map | — | "This page isn't supported yet." | — | — |
+| No packet | grey "No claim sent" | "Send this claim from SurveyOS (Assessment → NIA Excel → Send to extension)." For UIIC the path says "UIIC summary". | — | Check page |
+| Packet for another portal | grey "Other portal" | "The claim you sent is for United India. Open it on that portal." (names both) | — | Check page |
+| **Wrong claim** | red "Different claim" | "You sent claim **…9686**. This page is claim **…0137**. Open the right claim, or send this one from SurveyOS." | Fill **disabled**, with the reason shown, not hidden | Check page |
+| Ready | green "Claim matches" | "23 fields and the Excel are ready to fill. Sent 2 h ago." | **Fill** | Check page · Clear |
+| Filling | green | "Filling…" (button disabled, spinner) | — | — |
+| Filled, all good | green "Filled" | Summary line, then the next step (below) | — | Show all lines |
+| Filled with issues | amber "Needs you: 3" | Problems list first, then the summary and the next step | **Fill again** (only when retryable) | Show all lines |
+| Failed to run | red "Couldn't fill" | Cause plus fix, e.g. *"The portal page didn't answer. Reload the page and try again."* | **Try again** | — |
+| Check results | blue "Checked" | Same layout as Filled, with Check statuses | **Fill** (if Ready) | Copy report |
+
+**Claim numbers** in the header show the last 4 digits with a "…" prefix. The full number appears on hover (`title`) and to screen readers. This keeps the header short; the full number is not hidden.
+
+**Summary line** (after Fill or Check): *"19 filled · 2 kept · 1 do by hand · 1 not found."* Each part is a filter for the list.
+
+**Next step**, from the map header's new `doneHint` key, written in each overlay:
+- NIA: *"Now click **Validate** on the portal to load the Excel lines, then check the totals."*
+- UIIC: *"Check the depreciated amounts and tax the portal calculated, then save or submit."*
+
+**Reassurance line** (always under the results): *"Nothing is saved until you save on the portal. To undo, reload this page."*
+
+### 11.4 Results list
+
+- **Order:** needs-you first (`notFound`, `invalid`, `error`, `manual`, `noOption`, `disabled`), then `kept`, then ✓ lines. The ✓ lines are collapsed behind "Show 19 filled".
+- **Labels, not internal names:** each overlay field gains a `label`, the portal's own caption (e.g. "Vendor invoice date", "Net salvage"). `build-ext-map.py` copies it into the map; captures carry the captions in `label_hint`, which never gets committed, so labels are typed into the overlay by us. Fallback: the canonical name.
+- **Each problem line says what to do:**
+
+  | Status | Line copy |
+  |---|---|
+  | `kept` | "Kept the portal's value. Check it." |
+  | `manual` | "Type this one yourself (the portal locks it for this claim)." |
+  | `notFound` | "Not on this page. The portal may have changed." |
+  | `invalid` | "The portal rejected the value ({validator}). Type it yourself." |
+  | `noOption` | "The portal has no option '09' (it offers 9, 10, 11…)." |
+
+- **Click a line** → `scrollIntoView({block:'center'})` and a 1.5 s outline pulse on that field.
+  - Allowed in Check mode too: scrolling and a temporary outline on a user click change no data. The zero-writes rule in §4.1 covers *automatic* changes. This is the one user-initiated, display-only exception, and it must be undone (outline removed) after the pulse.
+- **Icons:** inline SVG (Lucide check / alert-triangle / x / pencil / minus), always paired with the word. No emoji glyphs. Colour is never the only signal.
+
+### 11.5 Placement, size and movement
+
+- **Never cover the portal's buttons.**
+  - Default: docked to the **right edge, vertically centred**, 320 px wide, not bottom-right.
+  - **Collapse** to a 40 px tab on the right edge (header button, `aria-expanded`), showing only the badge (e.g. "Needs you: 3").
+  - The collapsed/open state is remembered per portal in `chrome.storage.local` (`ui:<mapId>`).
+  - After a successful fill the card stays open; the surveyor collapses it.
+- **Drag** by the header to move it vertically along the right edge only, a simple constraint with no free-floating. The position is remembered. Keyboard alternative: arrow keys on the focused header move it, and Home resets it.
+- **Max height** 60 vh; the results list scrolls inside the card, and the header and actions stay visible.
+- **Page outlines** stay as today (green filled / amber kept / red rejected). The card shows a one-line legend under the summary.
+- **Z-index** stays top-most, but the card never overlaps a focused portal input: when the surveyor focuses a portal field behind the card, the card collapses automatically.
+
+### 11.6 Visual style
+
+- **Neutral and clearly "not the portal":**
+  - white surface, 1 px slate border, small shadow, 10 px radius;
+  - SurveyOS teal (`#0f766e`) for the primary button only;
+  - the header carries the SurveyOS name and version.
+- **Type:**
+  - 13 px body (the portals' own density), 12 px minimum anywhere;
+  - line-height 1.4;
+  - `font-variant-numeric: tabular-nums` for counts and amounts.
+- **Contrast:**
+  - all text at least 4.5:1;
+  - status colours: green `#15803d`, amber `#b45309`, red `#b91c1c`, blue `#1d4ed8`, each with its word;
+  - the "Clear" link moves from `#6b7280` 12 px to 13 px at the same colour, which passes 4.5:1 on white.
+- **Tokens:** the CSS uses custom properties on `#sx-panel` (`--sx-ok`, `--sx-warn`, `--sx-bad`, `--sx-info`, `--sx-muted`, `--sx-primary`), not raw hex per rule.
+- **Isolation:** all styles live under `#sx-panel`, with `all: initial` on the root, so portal CSS can't bleed in. Shadow DOM is the cleaner option but changes the code too much for v0.4.0; revisit later.
+- **Motion:** 150–200 ms collapse/expand and pulse, using transform/opacity only. Respect `prefers-reduced-motion` (no animation, instant state change).
+
+### 11.7 Accessibility
+
+- The root is `role="region"` with `aria-label="SurveyOS Portal Fill"`.
+- The header collapse control is a real `<button>` with `aria-expanded` and `aria-controls`.
+- The results container is `aria-live="polite"`. After Fill or Check, the summary line is announced and focus moves to it, with `tabindex="-1"`.
+- All controls are real buttons, with a visible focus ring (2 px teal, offset 2 px) and a logical tab order: collapse → summary → problem lines → Fill/Check → Clear/Copy.
+- The card is fully usable by keyboard. Esc collapses it.
+- Click targets are at least 32 px tall. This is desktop-only, so 44 px is not required, but 32 keeps them comfortable in a dense page.
+
+### 11.8 Copy rules
+
+- Use the surveyor's words: "claim", "portal", "fill", "type it yourself". Never "packet", "map", "scope" or "model path" in surveyor-facing text.
+  - Exception: Check page's "Copy report", which is for us.
+- Every error states the cause plus what to do.
+- Names of the portal's own buttons are bold and exactly as the portal writes them (**Validate**, **Final Submit**).
+
+### 11.9 What stays out of v0.4.0
+
+- Shadow DOM isolation.
+- A worklist badge (I-5).
+- Several waiting claims (I-3). The Ready line in SurveyOS already says a new send replaces the old one.
+- Localisation: English only, which matches the portals.
+
+### 11.10 Done when (UX)
+
+- Each state in §11.3 is reachable on the fixtures and shows the specified copy and a single primary action.
+- On a 1366×768 laptop window with the NIA fixture, the docked card doesn't cover the fixture's bottom buttons, and collapsing it leaves only the 40 px tab.
+- A keyboard-only run works: Tab reaches every control, Esc collapses, and a result line jumps to its field.
+- `prefers-reduced-motion` disables the animations.
+- A contrast check of every text colour against its background passes 4.5:1.
 
 ## 10. Author's calls made after the builder check
 
