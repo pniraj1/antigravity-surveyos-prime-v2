@@ -102,7 +102,7 @@ function cardView(i) {
   const matches = !!live && gate.ok && !!claim.pageFull && claim.packetFull === claim.pageFull;
   const FILL = { id: 'fill', label: 'Fill' };
   const RETRY = { id: 'retry', label: 'Try again' };
-  const SHOW = { id: 'showAll', label: i.showAll ? 'Show fewer' : 'Show all' };
+  const SHOW = { id: 'showAll', label: i.showAll ? 'Show fewer lines' : 'Show all lines' };
 
   if (i.phase === 'loading' || !probe) return set({ state: 'loading', body: 'Reading this page…' });
   if (probe.ok === false) return set({ state: 'probeFailed', badge: { tone: 'bad', text: "Couldn't read page" }, body: probe.reason ?? '', primary: RETRY });
@@ -133,7 +133,7 @@ function cardView(i) {
     return set({ state: 'checked', badge: { tone: 'info', text: 'Checked' }, body, primary: check.mode === 'value' && live ? FILL : null, secondary: [{ id: 'copy', label: 'Copy report' }] });
   }
 
-  const CHECK = { id: 'check', label: 'Check this page' };
+  const CHECK = { id: 'check', label: 'Check page' };
   if (!live) return set({ state: 'noPacket', badge: { tone: 'muted', text: 'No claim sent' }, secondary: [CHECK],
     body: `Send this claim from SurveyOS (Assessment → ${SEND_PATH[map.portal] ?? map.portal} → Send to extension).` });
   if (!gate.ok) return set({ state: 'otherPortal', badge: { tone: 'muted', text: 'Other portal' }, secondary: [CHECK],

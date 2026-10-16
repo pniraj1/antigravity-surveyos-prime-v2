@@ -172,3 +172,15 @@ describe('claimTail and reportText', () => {
     expect(rows).toContain('noOption\tp.cause\tCause\tplanned FIRE\tlive A,B');
   });
 });
+
+describe('secondary labels (spec §10.3)', () => {
+  const labels = (v) => v.secondary.map((s) => s.label);
+  it('noPacket, ready, checked, needsYou', () => {
+    expect(labels(view({ packet: null }))).toEqual(['Check page']);
+    expect(labels(view())).toEqual(['Check page', 'Clear']);
+    expect(labels(view({ check: { ok: true, mode: 'structure', fields: [], files: [] } }))).toEqual(['Copy report']);
+    const fill = { ok: true, steps: [{ name: names[0], action: 'manual' }], files: [] };
+    expect(labels(view({ fill }))).toEqual(['Show all lines']);
+    expect(labels(view({ fill, showAll: true }))).toEqual(['Show fewer lines']);
+  });
+});
