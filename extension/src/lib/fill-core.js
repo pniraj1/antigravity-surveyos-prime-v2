@@ -162,7 +162,44 @@ const keepResults = (done, ch) => done && !ch.packet?.newValue;
  */
 const selectMatched = (selectedValue) => selectedValue != null && !selectedValue.startsWith('?');
 
-const API = { normaliseClaimNo, transforms, isEmptyValue, decide, planFill, mapId, pickMap, packetGate, scopeAnchors, routeStep, keepResults, selectMatched };
+const CHECK_STATUS = ['ready', 'ready?', 'notFound', 'notBound', 'disabled', 'noOption', 'hasValue', 'skip'];
+const CHOICE_KINDS = ['select', 'radio', 'dateRadioOrOthers'];
+
+/**
+ * Read-only "would a fill work here?" report. Writes nothing; asks `read` only
+ * for lookup / current / radioValues. Packet values for text/money are never returned.
+ * @param {any} map @param {any} packet @param {string} pageClaimNo
+ * @param {{ lookup: (p: string) => any, current: (p: string) => unknown, radioValues: (p: string) => string[] }} read
+ */
+function planCheck(map, packet, pageClaimNo, read) {
+  const gated = packet && packetGate(map, packet).ok;
+  const mode = !gated ? 'structure'
+    : normaliseClaimNo(packet.claimNo) !== normaliseClaimNo(pageClaimNo) ? 'wrongClaim' : 'value';
+  const steps = new Map((mode === 'structure' ? [] : planFill(map, packet, read)).map((s) => [s.name, s]));
+  const fields = Object.entries(map.fields).map(([name, f]) => {
+    const spec = /** @type {any} */ (f);
+    const lk = read.lookup(spec.modelPath);
+    const choice = CHOICE_KINDS.includes(spec.kind);
+    const out = { name, label: spec.label ?? name, kind: spec.kind, modelPath: spec.modelPath, status: choice ? 'ready' : 'ready?' };
+    const step = steps.get(name);
+    if (!lk.found) out.status = 'notFound';
+    else if (!lk.bound) out.status = 'notBound';
+    else if (lk.disabled) out.status = 'disabled';
+    else if (!isEmptyValue(lk.current, spec.empty)) out.status = 'hasValue';
+    else if (step && step.action === 'skip') out.status = 'skip';
+    else if (choice && step && lk.options && !lk.options.includes(step.value)) out.status = 'noOption';
+    if (choice && step && step.value !== undefined) out.planned = step.value;
+    if (out.status === 'noOption') out.liveOptions = lk.options;
+    return out;
+  });
+  const files = Object.entries(map.files ?? {}).map(([slot, f]) => {
+    const lk = read.lookup(/** @type {any} */ (f).modelPath);
+    return { slot, status: !lk.found ? 'notFound' : lk.disabled ? 'disabled' : 'found' };
+  });
+  return { mode, fields, files };
+}
+
+const API = { planCheck, CHECK_STATUS, normaliseClaimNo, transforms, isEmptyValue, decide, planFill, mapId, pickMap, packetGate, scopeAnchors, routeStep, keepResults, selectMatched };
 // ---- umd shim: classic script in the extension, ESM/CJS in Vitest ----
 if (typeof module !== 'undefined' && module.exports) module.exports = API;
 else globalThis[NS] = API;
