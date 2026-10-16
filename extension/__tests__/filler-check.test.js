@@ -11,7 +11,7 @@ const root = path.resolve(__dirname, '..');
 const map = require('../maps/nia-nontieup.json');
 const WRITE_APIS = ['$setViewValue', '$render', '$apply', '$evalAsync', '$digest', 'dispatchEvent'];
 
-function harness({ scopeAvailable = true, dup = null, selectOptions = ['Y', 'N'] } = {}) {
+function harness({ scopeAvailable = true, angularPresent = true, dup = null, selectOptions = ['Y', 'N'] } = {}) {
   const writes = [];
   const sent = [];
   let onMessage;
@@ -67,6 +67,7 @@ function harness({ scopeAvailable = true, dup = null, selectOptions = ['Y', 'N']
     postMessage: (m) => sent.push(m),
   };
   ctx.globalThis = ctx;
+  if (!angularPresent) ctx.angular = undefined;
   for (const f of ['src/lib/fill-core.js', 'src/filler.js']) vm.runInContext(fs.readFileSync(path.join(root, f), 'utf8'), ctx);
   const send = (data) => { onMessage({ source: ctx.window, data: { sx: 's1', ...data } }); return sent.at(-1); };
   return { send, writes };
@@ -108,7 +109,7 @@ describe('filler check', () => {
   it('scope unavailable', () => {
     const { send } = harness({ scopeAvailable: false });
     const r = send({ type: 'check', map, packet: null });
-    expect(r).toMatchObject({ type: 'check:result', ok: false, reason: 'page fields not found. The portal may have changed.' });
+    expect(r).toMatchObject({ type: 'check:result', ok: false, reason: 'Page fields not found. The portal may have changed.' });
   });
 
   it('fill still refuses a mismatched claim', () => {
@@ -116,5 +117,13 @@ describe('filler check', () => {
     const r = send({ type: 'fill', map, packet: { claimNo: 'OTHER-9', portal: map.portal, flow: map.flow, files: [] } });
     expect(r.ok).toBe(false);
     expect(r.reason).toMatch(/claim mismatch/);
+  });
+
+  it('probe failures use surveyor copy', () => {
+    expect(harness({ angularPresent: false }).send({ type: 'probe', map }))
+      .toMatchObject({ ok: false, reason: "This page didn't load fully. Reload it and try again." });
+    const missing = 'Page fields not found. The portal may have changed.';
+    expect(harness({ scopeAvailable: false }).send({ type: 'probe', map })).toMatchObject({ ok: false, reason: missing });
+    expect(harness({ scopeAvailable: false }).send({ type: 'probe', map: { ...map, controller: undefined } })).toMatchObject({ ok: false, reason: missing });
   });
 });

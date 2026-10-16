@@ -4,6 +4,9 @@
 // window.postMessage; never touches the page except the fields it is told to.
 (() => {
   const { normaliseClaimNo, planCheck, planFill, scopeAnchors, selectMatched } = globalThis.SxFill;
+  // Surveyor copy: these reach the card's "Couldn't read page" / "Couldn't check" body.
+  const NO_ANGULAR = "This page didn't load fully. Reload it and try again.";
+  const NO_FIELDS = 'Page fields not found. The portal may have changed.';
   const ng = () => /** @type {any} */ (globalThis).angular;
 
   const esc = (/** @type {string} */ s) => s.replace(/[\\"]/g, '\\$&');
@@ -30,9 +33,9 @@
   }
 
   function probe(/** @type {any} */ map) {
-    if (!ng()) return { ok: false, reason: 'AngularJS not found on this page' };
+    if (!ng()) return { ok: false, reason: NO_ANGULAR };
     const scope = ctrlScope(map);
-    if (!scope) return { ok: false, reason: map.controller ? `controller ${map.controller} not found — portal changed?` : 'page fields not found — portal changed?' };
+    if (!scope) return { ok: false, reason: NO_FIELDS };
     const claimNo = readPath(scope, map.claimNoPath) || readPath(scope, map.claimNoFallback);
     const invoices = readPath(scope, map.invoiceCountPath);
     return { ok: true, claimNo: claimNo ? String(claimNo) : '', invoices: Array.isArray(invoices) ? invoices.length : 1 };
@@ -116,7 +119,7 @@
   function check(/** @type {any} */ map, /** @type {any} */ packet) {
     if (!ng()) return { ok: false, reason: 'AngularJS not found on this page' };
     const scope = ctrlScope(map);
-    if (!scope) return { ok: false, reason: 'page fields not found. The portal may have changed.' };
+    if (!scope) return { ok: false, reason: NO_FIELDS };
     const claimNo = readPath(scope, map.claimNoPath) || readPath(scope, map.claimNoFallback);
     const invoices = readPath(scope, map.invoiceCountPath);
     const ctrlOf = (/** @type {string} */ path) => { const el = q(path)[0]; return el ? ng().element(el).controller('ngModel') : null; };

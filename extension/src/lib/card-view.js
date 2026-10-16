@@ -92,8 +92,7 @@ function summarise(all, isFill) {
  */
 function cardView(i) {
   const { map, packet, probe, fill, check } = i;
-  const expired = !!packet && i.storedAt != null && i.now - i.storedAt > DAY_MS;
-  const live = expired ? null : packet;
+  const live = livePacket(packet, i.storedAt, i.now, DAY_MS) ?? null;
   const packetTail = claimTail(live?.claimNo);
   const pageTail = claimTail(probe?.claimNo);
   const claim = { packetTail, pageTail, packetFull: F.normaliseClaimNo(live?.claimNo), pageFull: F.normaliseClaimNo(probe?.claimNo) };
@@ -107,6 +106,7 @@ function cardView(i) {
   const FILL = { id: 'fill', label: 'Fill' };
   const RETRY = { id: 'retry', label: 'Try again' };
   const SHOW = { id: 'showAll', label: i.showAll ? 'Show fewer lines' : 'Show all lines' };
+  const CHECK = { id: 'check', label: 'Check page' };
 
   if (i.phase === 'loading' || !probe) return set({ state: 'loading', body: 'Reading this page…' });
   if (probe.ok === false) return set({ state: 'probeFailed', badge: { tone: 'bad', text: "Couldn't read page" }, body: probe.reason ?? '', primary: RETRY });
@@ -135,10 +135,9 @@ function cardView(i) {
       : check.mode === 'value' ? 'Page check for this claim.'
       : pageTail ? `Page check: you sent claim ${packetTail}, this page is ${pageTail}. Fill will refuse.`
       : `Page check: this page's claim number couldn't be read. You sent claim ${packetTail}.`;
-    return set({ state: 'checked', badge: { tone: 'info', text: 'Checked' }, body, primary: check.mode === 'value' && live ? FILL : null, secondary: [{ id: 'copy', label: 'Copy report' }] });
+    return set({ state: 'checked', badge: { tone: 'info', text: 'Checked' }, body, primary: check.mode === 'value' && live ? FILL : null, secondary: [SHOW, CHECK, { id: 'copy', label: 'Copy report' }] });
   }
 
-  const CHECK = { id: 'check', label: 'Check page' };
   if (!live) return set({ state: 'noPacket', badge: { tone: 'muted', text: 'No claim sent' }, secondary: [CHECK],
     body: `Send this claim from SurveyOS (Assessment → ${SEND_PATH[map.portal] ?? map.portal} → Send to extension).` });
   if (!gate.ok) return set({ state: 'otherPortal', badge: { tone: 'muted', text: 'Other portal' }, secondary: [CHECK],
@@ -149,14 +148,31 @@ function cardView(i) {
       : `This page's claim number couldn't be read. You sent claim ${packetTail}.` });
   const n = Object.keys(live.fields ?? {}).length + (live.files ?? []).length;
   const h = Math.floor((i.now - (i.storedAt ?? i.now)) / 3600000);
+  const inv = map.invoiceCountPath && probe.invoices > 1 ? ` This claim has ${probe.invoices} invoices on the portal; Fill fills invoice 1 only.` : '';
   return set({ state: 'ready', badge: { tone: 'ok', text: 'Claim matches' }, primary: FILL,
     secondary: [CHECK, { id: 'clear', label: 'Clear' }],
-    body: `${n} items are ready to fill. ${h < 1 ? 'Sent just now' : `Sent ${h} h ago`}.` });
+    body: `${n} items are ready to fill. ${h < 1 ? 'Sent just now' : `Sent ${h} h ago`}.${inv}` });
 }
 
-/** Copy-report text. Field names and statuses only — never a packet text/money value. @param {any} view @param {{mapId:string, version:any, route:string, mode:string}} meta */
+/** The packet, or undefined once it is older than ttlMs (exactly ttlMs is still live). @param {any} packet @param {number | undefined} storedAt @param {number} now @param {number} ttlMs */
+const livePacket = (packet, storedAt, now, ttlMs) => packet && storedAt != null && now - storedAt > ttlMs ? undefined : packet;
+
+/** What Check may post into the page: only this portal's packet, without the Excel bytes. @param {any} map @param {any} packet */
+const checkPacket = (map, packet) => packet && F.packetGate(map, packet).ok ? { ...packet, files: [] } : null;
+
+/** Cards that may re-read the page in the background: resting, nothing running. @param {string} state @param {string} phase */
+const shouldReprobe = (state, phase) => phase === 'idle' && ['ready', 'wrongClaim', 'noPacket', 'otherPortal', 'probeFailed'].includes(state);
+
+/** A re-probe needs a redraw only when the page's readability or claim number changed. @param {any} a @param {any} b */
+const probeChanged = (a, b) => a?.ok !== b?.ok || a?.claimNo !== b?.claimNo;
+
+/**
+ * Copy-report text. Field names and statuses only — never a packet text/money value.
+ * @param {any} view @param {{extVersion:string, mapId:string, mapVersion:any, route:string, mode:string, scopeFound:boolean, invoices?:number}} meta
+ */
 function reportText(view, meta) {
-  const head = `SurveyOS Portal Fill ${meta.version} · ${meta.mapId} · ${meta.route} · mode ${meta.mode} · page claim ${view.claim.pageTail}`;
+  const head = `SurveyOS Portal Fill ${meta.extVersion} · ${meta.mapId} v${meta.mapVersion} · ${meta.route} · mode ${meta.mode}`
+    + ` · scope ${meta.scopeFound ? 'found' : 'missing'} · invoices ${meta.invoices ?? '-'} · page claim ${view.claim.pageTail || '(none)'}`;
   const rows = view.allLines.map((/** @type {any} */ l) => `${l.status}\t${l.modelPath}\t${l.label}` +
     (l.status === 'noOption' ? `\tplanned ${l.planned}\tlive ${(l.liveOptions ?? []).join(',')}` : ''));
   return [head, ...rows].join('\n');
@@ -169,7 +185,7 @@ function reportText(view, meta) {
  */
 const pulseRestore = (currentOutline, pulseOutline, orig) => currentOutline === pulseOutline ? orig : null;
 
-const API = { cardView, reportText, claimTail, LINE_COPY, pulseRestore };
+const API = { cardView, reportText, claimTail, LINE_COPY, pulseRestore, livePacket, checkPacket, shouldReprobe, probeChanged };
 // ---- umd shim: classic script in the extension, ESM/CJS in Vitest ----
 if (typeof module !== 'undefined' && module.exports) module.exports = API;
 else /** @type {any} */ (globalThis)[NS] = API;

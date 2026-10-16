@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cardView, reportText, claimTail, LINE_COPY, pulseRestore } from '../src/lib/card-view.js';
+import { cardView, reportText, claimTail, LINE_COPY, pulseRestore, shouldReprobe, probeChanged, checkPacket, livePacket } from '../src/lib/card-view.js';
 import nia from '../maps/nia-nontieup.json';
 
 const H = 3600000;
@@ -99,7 +99,7 @@ describe('cardView states', () => {
     const chk = (mode) => view({ check: { ok: true, mode, fields: [], files: [] } });
     const s = chk('structure');
     expect(s).toMatchObject({ state: 'checked', badge: { tone: 'info', text: 'Checked' }, body: 'Page check (no claim sent).', primary: null });
-    expect(s.secondary.map((x) => x.id)).toEqual(['copy']);
+    expect(s.secondary.map((x) => x.id)).toEqual(['showAll', 'check', 'copy']);
     expect(s.reassurance).toBe('Nothing is saved until you save on the portal. To undo, reload this page.');
     const v = chk('value');
     expect(v.body).toBe('Page check for this claim.');
@@ -111,9 +111,9 @@ describe('cardView states', () => {
       .toBe("Page check: this page's claim number couldn't be read. You sent claim …9686.");
   });
   it('checkFailed: a check that could not run offers Try again (Check)', () => {
-    const v = view({ check: { ok: false, reason: 'page fields not found. The portal may have changed.' } });
+    const v = view({ check: { ok: false, reason: 'Page fields not found. The portal may have changed.' } });
     expect(v).toMatchObject({ state: 'checkFailed', badge: { tone: 'bad', text: "Couldn't check" },
-      body: 'page fields not found. The portal may have changed.', primary: { id: 'check', label: 'Try again' }, secondary: [], lines: [] });
+      body: 'Page fields not found. The portal may have changed.', primary: { id: 'check', label: 'Try again' }, secondary: [], lines: [] });
   });
   it('precedence: probe failure and phase beat results', () => {
     const fill = { ok: true, steps: [], files: [] };
@@ -181,11 +181,11 @@ describe('claimTail and reportText', () => {
       { name: 'surveyPlace', label: 'Survey place', kind: 'text', modelPath: 'p.place', status: 'ready?', planned: 'Nashik Road' },
       { name: 'net', label: 'Net salvage', kind: 'money', modelPath: 'p.net', status: 'hasValue', planned: 1234, current: '1234' },
       { name: 'cause', label: 'Cause', kind: 'select', modelPath: 'p.cause', status: 'noOption', planned: 'FIRE', liveOptions: ['A', 'B'] }] };
-    const text = reportText(view({ check, packet: { ...packet, fields: { surveyPlace: 'Nashik Road', net: 1234 } } }), { mapId: 'nia-nontieup', version: 3, route: '#/WorklistSurveyNew', mode: 'value' });
+    const text = reportText(view({ check, packet: { ...packet, fields: { surveyPlace: 'Nashik Road', net: 1234 } } }), { extVersion: '0.4.0', mapId: 'nia-nontieup', mapVersion: 3, route: '#/WorklistSurveyNew', mode: 'value', scopeFound: true, invoices: 2 });
     expect(text).not.toContain('Nashik');
     expect(text).not.toContain('1234');
     const rows = text.split('\n');
-    expect(rows[0]).toBe('SurveyOS Portal Fill 3 · nia-nontieup · #/WorklistSurveyNew · mode value · page claim …9686');
+    expect(rows[0]).toBe('SurveyOS Portal Fill 0.4.0 · nia-nontieup v3 · #/WorklistSurveyNew · mode value · scope found · invoices 2 · page claim …9686');
     expect(rows).toContain('ready?\tp.place\tSurvey place');
     expect(rows).toContain('hasValue\tp.net\tNet salvage');
     expect(rows).toContain('noOption\tp.cause\tCause\tplanned FIRE\tlive A,B');
@@ -197,7 +197,7 @@ describe('secondary labels (spec §10.3)', () => {
   it('noPacket, ready, checked, needsYou', () => {
     expect(labels(view({ packet: null }))).toEqual(['Check page']);
     expect(labels(view())).toEqual(['Check page', 'Clear']);
-    expect(labels(view({ check: { ok: true, mode: 'structure', fields: [], files: [] } }))).toEqual(['Copy report']);
+    expect(labels(view({ check: { ok: true, mode: 'structure', fields: [], files: [] } }))).toEqual(['Show all lines', 'Check page', 'Copy report']);
     const fill = { ok: true, steps: [{ name: names[0], action: 'manual' }], files: [] };
     expect(labels(view({ fill }))).toEqual(['Show all lines']);
     expect(labels(view({ fill, showAll: true }))).toEqual(['Show fewer lines']);
@@ -213,4 +213,60 @@ describe('pulseRestore', () => {
   it('leaves the field alone when something newer (Fill) replaced our outline', () => {
     expect(pulseRestore('rgb(185, 28, 28) solid 2px', PULSE, '')).toBeNull();
   });
+});
+
+describe('final fix wave helpers', () => {
+  it('shouldReprobe only in resting states while idle', () => {
+    for (const s of ['ready', 'wrongClaim', 'noPacket', 'otherPortal', 'probeFailed']) {
+      expect(shouldReprobe(s, 'idle')).toBe(true);
+      expect(shouldReprobe(s, 'filling')).toBe(false);
+      expect(shouldReprobe(s, 'checking')).toBe(false);
+      expect(shouldReprobe(s, 'loading')).toBe(false);
+    }
+    for (const s of ['loading', 'filling', 'checking', 'filled', 'needsYou', 'fillFailed', 'checked', 'checkFailed']) expect(shouldReprobe(s, 'idle')).toBe(false);
+  });
+  it('probeChanged on ok or claimNo only', () => {
+    const a = { ok: true, claimNo: '1', invoices: 1 };
+    expect(probeChanged(a, { ...a })).toBe(false);
+    expect(probeChanged(a, { ...a, invoices: 3 })).toBe(false);
+    expect(probeChanged(a, { ...a, claimNo: '2' })).toBe(true);
+    expect(probeChanged(a, { ok: false, reason: 'x' })).toBe(true);
+    expect(probeChanged(null, a)).toBe(true);
+  });
+  it('checkPacket drops other-portal packets and strips files', () => {
+    expect(checkPacket(nia, { ...packet, portal: 'uiic' })).toBeNull();
+    expect(checkPacket(nia, null)).toBeNull();
+    expect(checkPacket(nia, undefined)).toBeNull();
+    const p = checkPacket(nia, { ...packet, files: [{ slot: 'x', base64: 'AAAA' }] });
+    expect(p.files).toEqual([]);
+    expect(p).toMatchObject({ portal: 'nia', flow: 'nontieup', claimNo: packet.claimNo, fields: packet.fields });
+  });
+  it('livePacket boundary: live at the TTL, expired 1 ms after', () => {
+    const TTL = 24 * H;
+    expect(livePacket(packet, now - TTL, now, TTL)).toBe(packet);
+    expect(livePacket(packet, now - TTL - 1, now, TTL)).toBeUndefined();
+    expect(livePacket(packet, undefined, now, TTL)).toBe(packet);
+  });
+  it('ready mentions multiple invoices', () => {
+    expect(view().body).toBe('3 items are ready to fill. Sent 3 h ago.');
+    expect(view({ probe: { ...probeOk, invoices: 3 } }).body)
+      .toBe('3 items are ready to fill. Sent 3 h ago. This claim has 3 invoices on the portal; Fill fills invoice 1 only.');
+  });
+  it('checked offers Show, Check and Copy, and respects showAll', () => {
+    const check = { ok: true, mode: 'value', files: [], fields: [
+      { name: 'a', label: 'A', status: 'ready', modelPath: 'p.a' }, { name: 'b', label: 'B', status: 'notFound', modelPath: 'p.b' }] };
+    const v = view({ check });
+    expect(v.secondary).toEqual([{ id: 'showAll', label: 'Show all lines' }, { id: 'check', label: 'Check page' }, { id: 'copy', label: 'Copy report' }]);
+    expect(v.primary).toEqual({ id: 'fill', label: 'Fill' });
+    expect(v.lines.map((l) => l.status)).toEqual(['notFound']);
+    const all = view({ check, showAll: true });
+    expect(all.secondary[0].label).toBe('Show fewer lines');
+    expect(all.lines.map((l) => l.status)).toEqual(['notFound', 'ready']);
+  });
+});
+
+it('reportText header with nothing read from the page', () => {
+  const v = view({ probe: { ok: false, reason: 'x' } });
+  expect(reportText(v, { extVersion: '0.4.0', mapId: 'nia-nontieup', mapVersion: 3, route: '#/x', mode: '-', scopeFound: false, invoices: undefined }))
+    .toBe('SurveyOS Portal Fill 0.4.0 · nia-nontieup v3 · #/x · mode - · scope missing · invoices - · page claim (none)');
 });
