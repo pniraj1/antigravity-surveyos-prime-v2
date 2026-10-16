@@ -3,13 +3,15 @@
 Fills New India's non-tieup survey page and United India's claim-survey page from a SurveyOS claim. Spec:
 `docs/superpowers/specs/2026-09-20-portal-fill-extension-design.md`.
 
-## Load unpacked (dev)
-1. `py scripts/build-ext.py` or `npm run build:ext` (builds every overlay: maps + fixtures)
-2. chrome://extensions → Developer mode → Load unpacked → this folder
-3. For the fixture only: on the extension's Details page enable **Allow access
-   to file URLs**, and temporarily add `"file:///*"` to both portal `matches`
-   arrays in `manifest.json`. No need to revert before zipping — the build strips
-   `localhost` and `file://` matches from the zipped manifest.
+## Load unpacked
+1. `py scripts/build-ext.py` or `npm run build:ext` (builds every overlay: maps + fixtures,
+   the zip, and two loadable folders)
+2. chrome://extensions → Developer mode → Load unpacked → pick ONE of:
+   - `extension/dist/unpacked-dev` — fixtures and `localhost:3000`. Then on the
+     extension's Details page enable **Allow access to file URLs**.
+   - `extension/dist/unpacked` — the release build (live portals + motorsurveyos-in only).
+   Not `extension/` itself: Chrome refuses a folder containing `__tests__`.
+3. After a rebuild, press the reload ↻ on the extension's card.
 4. To make a remote map win over the bundled one, bump `version` in
    `scripts/portal-map/nia-nontieup.overlay.json`, regenerate, deploy hosting.
 
