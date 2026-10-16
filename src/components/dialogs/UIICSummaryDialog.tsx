@@ -5,9 +5,13 @@ import { uiicPortalSummary, type UiicGstSlab } from '@/lib/calculations/uiic-por
 import { projectForBillCheck } from '@/lib/reports/bill-check-projection';
 import type { AssessmentRow } from '@/types/assessment';
 import type { DepreciationType } from '@/types';
-import { X, Check, Copy, ClipboardList } from 'lucide-react';
+import type { ClaimData } from '@/types/claim';
+import { buildUiicPacket } from '@/lib/portal/packet';
+import { isExtensionPresent, sendPacketToExtension } from '@/lib/portal/extension-bridge';
+import { X, Check, Copy, ClipboardList, Loader2, Send } from 'lucide-react';
 
 interface Props {
+  claim: ClaimData;
   rows: AssessmentRow[];
   ageMonths: number;
   depType: DepreciationType;
@@ -79,8 +83,25 @@ function GstTable({ title, slabs }: { title: string; slabs: UiicGstSlab[] }) {
   );
 }
 
-export function UIICSummaryDialog({ rows, ageMonths, depType, onClose }: Props) {
+export function UIICSummaryDialog({ claim, rows, ageMonths, depType, onClose }: Props) {
   const [source, setSource] = useState<'assessment' | 'billcheck'>('assessment');
+
+  // Reset on every open. The packet is always built on the bill-check basis,
+  // whatever the toggle above shows, so it must not go out before that check.
+  const [billCheckDone, setBillCheckDone] = useState(false);
+  const [extPresent] = useState(() => isExtensionPresent());
+  const [sendState, setSendState] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle');
+  const [sendError, setSendError] = useState('');
+
+  const sendToExtension = async () => {
+    setSendState('sending'); setSendError('');
+    try {
+      const r = await sendPacketToExtension(buildUiicPacket(claim, { ageMonths }));
+      if (r.ok) setSendState('sent'); else { setSendState('failed'); setSendError(r.reason); }
+    } catch (e) {
+      setSendState('failed'); setSendError(e instanceof Error ? e.message : String(e));
+    }
+  };
 
   const summary = useMemo(() => {
     const basis = source === 'billcheck' ? projectForBillCheck(rows) : rows;
@@ -168,6 +189,47 @@ export function UIICSummaryDialog({ rows, ageMonths, depType, onClose }: Props) 
               Rounding the four boxes differs from the exact total by{' '}
               <span className="font-mono font-semibold">{money(summary.tieOut.delta)}</span>. Absorb
               it in excess or salvage.
+            </div>
+          )}
+
+          {extPresent && (
+            <div className="mt-4 pt-3 border-t border-border">
+              <label className="mx-3 flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={billCheckDone}
+                  onChange={(e) => setBillCheckDone(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded border-border"
+                />
+                <span className="text-xs">
+                  <span className="font-semibold">Bill amounts verified and bill check complete</span>{' '}
+                  <span className="text-muted-foreground">
+                    for this claim. The extension is sent the bill-check figures.
+                  </span>
+                </span>
+              </label>
+              {billCheckDone && (
+                <div className="mt-3">
+                  <div className="text-[11px] font-semibold text-muted-foreground px-3 pb-1">
+                    SEND TO PORTAL
+                  </div>
+                  <div className="px-3 text-xs text-muted-foreground">
+                    Hands the figures to the SurveyOS extension. On the United India portal, open this claim and click <span className="font-semibold">Fill</span>. Nothing is submitted for you.
+                  </div>
+                  <button
+                    onClick={sendToExtension}
+                    disabled={sendState === 'sending'}
+                    className="mt-2 mx-3 flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-600 text-white text-xs font-semibold disabled:opacity-50"
+                  >
+                    {sendState === 'sending' ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                    Send to extension
+                  </button>
+                  {sendState === 'sent' && (
+                    <div className="mt-2 px-3 text-xs text-emerald-700">Ready — open the claim on the United India portal and click Fill.</div>
+                  )}
+                  {sendState === 'failed' && <div className="mt-2 px-3 text-xs text-destructive">{sendError}</div>}
+                </div>
+              )}
             </div>
           )}
         </div>

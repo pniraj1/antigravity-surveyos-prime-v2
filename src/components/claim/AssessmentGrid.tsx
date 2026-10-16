@@ -439,6 +439,7 @@ export function AssessmentGrid() {
 
       {showUiicSummary && (
         <UIICSummaryDialog
+          claim={currentClaim}
           rows={assessmentRows}
           ageMonths={ageMonths}
           depType={depreciationType}
