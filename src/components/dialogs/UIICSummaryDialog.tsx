@@ -225,7 +225,7 @@ export function UIICSummaryDialog({ claim, rows, ageMonths, depType, onClose }: 
                     Send to extension
                   </button>
                   {sendState === 'sent' && (
-                    <div className="mt-2 px-3 text-xs text-emerald-700">Ready — open the claim on the United India portal and click Fill.</div>
+                    <div className="mt-2 px-3 text-xs text-emerald-700">Ready â€” open the claim on the United India portal and click Fill.</div>
                   )}
                   {sendState === 'failed' && <div className="mt-2 px-3 text-xs text-destructive">{sendError}</div>}
                 </div>

@@ -131,7 +131,7 @@ describe('buildUiicPacket', () => {
       ...c.assessmentRows,
       row({ id: 'r3', section: 'labour', particulars: 'Fit', partType: undefined, estimated: 500, assessed: 500, billedTaxable: 400, gst: 18 }),
     ];
-    const s = uiicPortalSummary(projectForBillCheck(c.assessmentRows), 24, 'standard' as never);
+    const s = uiicPortalSummary(projectForBillCheck(c.assessmentRows), 24, 'standard');
     const f = build(c).fields;
     expect(f.ageBasedDep).toBe(s.parts.ageBasedDep);
     expect(f.dep50).toBe(s.parts.dep50);
