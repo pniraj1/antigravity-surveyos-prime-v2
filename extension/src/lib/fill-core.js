@@ -122,7 +122,24 @@ function scopeAnchors(map) {
   return [...new Set(paths.filter((p) => p && !p.startsWith('sessionStorage:')))];
 }
 
-const API = { normaliseClaimNo, transforms, isEmptyValue, decide, planFill, mapId, pickMap, packetGate, scopeAnchors };
+/**
+ * Panel lifecycle on a route check. `id` is the matched map ('' for none).
+ * A panel the page removed is re-booted even when the route did not change.
+ * @param {string} bootedFor @param {string} id @param {boolean} panelPresent
+ */
+function routeStep(bootedFor, id, panelPresent) {
+  if (id !== bootedFor) return { remove: !!bootedFor, boot: id, bootedFor: id };
+  return { remove: false, boot: id && !panelPresent ? id : '', bootedFor };
+}
+
+/**
+ * After a good fill the results stay until a new packet arrives — not on our
+ * own packet removal, not on a map refresh.
+ * @param {boolean} done @param {Record<string, any>} ch
+ */
+const keepResults = (done, ch) => done && !ch.packet?.newValue;
+
+const API = { normaliseClaimNo, transforms, isEmptyValue, decide, planFill, mapId, pickMap, packetGate, scopeAnchors, routeStep, keepResults };
 // ---- umd shim: classic script in the extension, ESM/CJS in Vitest ----
 if (typeof module !== 'undefined' && module.exports) module.exports = API;
 else globalThis[NS] = API;

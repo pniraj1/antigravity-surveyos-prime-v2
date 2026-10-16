@@ -2,7 +2,7 @@
 // @ts-check
 // Isolated world on the portal. Card UI + storage + messaging to the Filler.
 (() => {
-  const { pickMap, packetGate, mapId } = /** @type {any} */ (globalThis).SxFill;
+  const { pickMap, packetGate, mapId, routeStep, keepResults } =/** @type {any} */ (globalThis).SxFill;
   const PACKET_TTL_MS = 24 * 60 * 60 * 1000; // E6
   const ASK_TIMEOUT_MS = 5000;
 
@@ -20,9 +20,10 @@
   const onRoute = async () => {
     const { maps } = await chrome.storage.local.get('maps');
     const map = pickMap(maps, location.host, location.hash);
-    const id = map ? mapId(map) : '';
-    if (id !== bootedFor) { document.getElementById('sx-panel')?.remove(); bootedFor = ''; }
-    if (map && !bootedFor) { bootedFor = id; boot(id); }
+    const step = routeStep(bootedFor, map ? mapId(map) : '', !!document.getElementById('sx-panel'));
+    if (step.remove) document.getElementById('sx-panel')?.remove();
+    bootedFor = step.bootedFor;
+    if (step.boot) boot(step.boot);
   };
   window.addEventListener('hashchange', onRoute);
   // First install: maps land in storage after this page loaded.
@@ -99,7 +100,7 @@
     const esc = (/** @type {unknown} */ s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
     currentRender = (ch) => {
-      if (done && ch.packet && !ch.packet.newValue) return; // our own removal after a good fill — keep the results
+      if (keepResults(done, ch)) return; // after a good fill, only a new packet replaces the results
       render();
     };
     render();
