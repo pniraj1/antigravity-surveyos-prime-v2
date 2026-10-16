@@ -23,6 +23,10 @@ def main(flow):
             if f.get("model"):
                 by_model.setdefault(f["model"], []).append(f)
 
+    shared = sorted(overlay["fields"].keys() & overlay["files"].keys())
+    if shared:
+        sys.exit(f"overlay keys in both fields and files: {shared}")
+
     missing = [k for k, v in {**overlay["fields"], **overlay["files"]}.items()
                if v["model"] not in by_model]
     if missing:
