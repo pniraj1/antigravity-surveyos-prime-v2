@@ -432,7 +432,8 @@ expect(NOT_INSTALLED_LINE).toBe('Fill the portal automatically with the SurveyOS
 - [ ] **Step 3:** Implement both in `extension-bridge.ts`. In both dialogs:
   - (a) the `sent` line renders `readyLine(...)`;
   - (b) when `!extPresent` and the bill-check box is ticked, render one muted line `NOT_INSTALLED_LINE` where the Send section would be;
-  - (c) **UIIC only:** ticking the bill-check box calls `setSource('billcheck')`.
+  - (c) **UIIC only:** ticking the bill-check box calls `setSource('billcheck')`;
+  - (d) while `sendState === 'sending'`, the Send button's label reads `Sending…`, next to the existing spinner.
 - [ ] **Step 4:** Run `npx vitest run src/lib/portal`, then `npx tsc --noEmit -p .`. Expected: PASS, clean.
 - [ ] **Step 5:** Commit: `feat(portal): clearer send steps in the NIA and UIIC dialogs`.
 
