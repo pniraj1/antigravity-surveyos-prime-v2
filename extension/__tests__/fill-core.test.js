@@ -147,3 +147,25 @@ describe('scopeAnchors', () => {
     expect(scopeAnchors(m)).toEqual(['a.x']);
   });
 });
+
+describe('UIIC transforms', () => {
+  it('uiicText keeps only letters, digits, dot and space', () => {
+    expect(transforms.uiicText('Plot 4, MIDC-Nashik (W)')).toBe('Plot 4 MIDCNashik W');
+  });
+  it('uiicText collapses spaces, trims and cuts to 500', () => {
+    expect(transforms.uiicText('  a   b  ')).toBe('a b');
+    expect(transforms.uiicText('a'.repeat(600))).toHaveLength(500);
+  });
+  it('uiicText takes non-strings via String(v ?? "")', () => {
+    expect(transforms.uiicText(null)).toBe('');
+    expect(transforms.uiicText(42)).toBe('42');
+  });
+  it('hour and minute split H:MM and H:MM:SS', () => {
+    expect(transforms.hour('9:05')).toBe('09');   expect(transforms.minute('9:05')).toBe('05');
+    expect(transforms.hour('14:30:00')).toBe('14'); expect(transforms.minute('14:30:00')).toBe('30');
+  });
+  it('hour and minute are empty when unparseable', () => {
+    expect(transforms.hour('')).toBe('');
+    expect(transforms.minute('soon')).toBe('');
+  });
+});

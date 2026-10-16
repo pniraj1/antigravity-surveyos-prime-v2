@@ -30,6 +30,19 @@ const transforms = {
   },
   money2dp: (/** @type {unknown} */ v) => (Number(v) || 0).toFixed(2),
   yn: (/** @type {unknown} */ v) => (v === true || v === 'Y' || v === 'y' || v === 'yes' ? 'Y' : 'N'),
+  /** UIIC free text: only [a-zA-Z0-9. ], single spaces, trimmed, max 500. */
+  uiicText: (/** @type {unknown} */ v) =>
+    String(v ?? '').replace(/[^a-zA-Z0-9. ]/g, '').replace(/ {2,}/g, ' ').trim().slice(0, 500),
+  /** 9:05 / 14:30:00 -> '09' / '14'; '' when unparseable */
+  hour: (/** @type {unknown} */ v) => {
+    const m = String(v ?? '').trim().match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    return m ? pad2(m[1]) : '';
+  },
+  /** 9:05 / 14:30:00 -> '05' / '30'; '' when unparseable */
+  minute: (/** @type {unknown} */ v) => {
+    const m = String(v ?? '').trim().match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    return m ? m[2] : '';
+  },
 };
 
 /**
