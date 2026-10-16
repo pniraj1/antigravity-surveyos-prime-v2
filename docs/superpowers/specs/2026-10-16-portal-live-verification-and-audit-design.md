@@ -1,7 +1,7 @@
 # Portal Fill — Live Verification, Portal Audit and Integration Roadmap — Design
 
 **Date:** 2026-10-16
-**Status:** Draft for owner approval
+**Status:** Approved by owner 2026-10-16
 **Builds on:** `docs/superpowers/specs/2026-09-20-portal-fill-extension-design.md` (rules E1–E10 stay binding), `docs/superpowers/plans/2026-10-16-portal-extension-roadmap.md` (Phases 0–6), `docs/portal-integration.md`.
 **Author's note:** the owner asked for the scope to be set "as product designer and solutions architect" without a question round. Every decision below is the author's call unless marked **(owner)**.
 
@@ -233,12 +233,12 @@ Ranked by surveyor minutes saved per claim (author's estimate), then by risk. Ea
 | Session cut off mid-stage | Each stage writes its notes to `docs/portal-integration.md` as it goes; stages restart from the last recorded step |
 | Owner's time | Stage B ~45 min, Stage C ~45 min, both can run in one sitting with the owner only logging in and watching |
 
-## 8. Owner decisions needed
+## 8. Owner decisions (answered 2026-10-16)
 
-1. **(owner)** Is it OK for Claude to open the **open** worklist claims' survey pages (view only, no clicks that commit) for Stage B and C? The design assumes yes.
-2. **(owner)** Is there a UIIC login available now, or does UIIC wait?
-3. **(owner)** I-6 (portal → SurveyOS intake) needs E5 widened. Approve the direction now, or decide when it's picked up?
-4. **(owner)** I-9 and the `uiicText` question: should punctuation become a space (`MIDC Nashik`) or be deleted (`MIDCNashik`)?
+1. **(owner) Yes:** Claude may open the open worklist claims' survey pages, view only, with no clicks that commit, for Stages B and C.
+2. **(owner) UIIC waits.** The UIIC Stages B–D run when a login is available. Stage A still covers UIIC on its fixture.
+3. **(owner) I-6 is decided later,** when it's picked up. E5 is unchanged for now.
+4. **(owner) Keep delete:** `uiicText` keeps deleting punctuation (`MIDCNashik`).
 
 ## 9. Left to the builder
 
