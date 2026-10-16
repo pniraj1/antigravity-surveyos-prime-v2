@@ -129,7 +129,7 @@
         const el = els[0]; // first element, the one Fill writes to
         if (!el) return { found: false, bound: false, disabled: false, options: null, current: undefined };
         const c = ctrlOf(path);
-        const options = el.tagName === 'SELECT' ? Array.from(/** @type {HTMLSelectElement} */ (el).options, (o) => o.value)
+        const options = el.tagName === 'SELECT' ? Array.from(/** @type {HTMLSelectElement} */ (el).options, (o) => o.value.replace(/^(string|number|boolean):/, '')) // ng-options prefixes
           : /** @type {HTMLInputElement} */ (el).type === 'radio' ? els.map((e) => /** @type {HTMLInputElement} */ (e).value) : null;
         return { found: true, bound: !!c, disabled: !!(/** @type {HTMLInputElement} */ (el).disabled), options, current: c ? c.$modelValue : undefined };
       },

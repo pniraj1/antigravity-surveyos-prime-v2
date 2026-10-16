@@ -11,7 +11,7 @@ const root = path.resolve(__dirname, '..');
 const map = require('../maps/nia-nontieup.json');
 const WRITE_APIS = ['$setViewValue', '$render', '$apply', '$evalAsync', '$digest', 'dispatchEvent'];
 
-function harness({ scopeAvailable = true, dup = null } = {}) {
+function harness({ scopeAvailable = true, dup = null, selectOptions = ['Y', 'N'] } = {}) {
   const writes = [];
   const sent = [];
   let onMessage;
@@ -33,16 +33,16 @@ function harness({ scopeAvailable = true, dup = null } = {}) {
   for (const p of paths) {
     const f = Object.values(map.fields).find((x) => x.modelPath === p);
     const mk = (extra) => {
-      const el = rec(`el(${p})`, { tagName: 'INPUT', type: 'text', value: '', disabled: false, style: {}, ...extra });
+      const el = rec(`el(${p})`, { tagName: 'INPUT', type: 'text', value: '', disabled: false, style: rec(`style(${p})`, {}), ...extra });
       ctrls.set(el, rec(`ctrl(${p})`, { $modelValue: undefined, $error: {} }));
       return el;
     };
-    if (f?.kind === 'select') elsByPath.set(p, [mk({ tagName: 'SELECT', options: [{ value: 'Y' }, { value: 'N' }] })]);
+    if (f?.kind === 'select') elsByPath.set(p, [mk({ tagName: 'SELECT', options: selectOptions.map((value) => ({ value })) })]);
     else if (f?.kind === 'dateRadioOrOthers') elsByPath.set(p, [mk({ type: 'radio', value: 'Others' }), mk({ type: 'radio', value: '01/01/2026' })]);
     else elsByPath.set(p, [mk({})]);
   }
   if (dup) elsByPath.set(dup.path, dup.els.map((extra) => {
-    const el = rec('dup', { tagName: 'INPUT', type: 'text', value: '', disabled: false, style: {}, ...extra });
+    const el = rec('dup', { tagName: 'INPUT', type: 'text', value: '', disabled: false, style: rec('style(dup)', {}), ...extra });
     ctrls.set(el, rec('dupctrl', { $modelValue: undefined, $error: {} }));
     return el;
   }));
@@ -81,6 +81,21 @@ describe('filler check', () => {
     expect(r.claimNo).toBe('CLM-1');
     expect(r.fields).toHaveLength(Object.keys(map.fields).length);
     expect(writes).toEqual([]);
+  });
+
+  it('check with a matching packet touches no write API', () => {
+    const { send, writes } = harness();
+    const packet = { v: 1, portal: 'nia', flow: 'nontieup', claimNo: 'CLM-1', builtAt: '2026-10-17T00:00:00Z', fields: { surveyPlace: 'Nashik', gstApplicable: 'Y', netSalvage: 300 }, files: [] };
+    const r = send({ type: 'check', map, packet });
+    expect(r.mode).toBe('value');
+    expect(writes).toEqual([]);
+  });
+
+  it('ng-options type prefixes do not cause a false noOption', () => {
+    const { send } = harness({ selectOptions: ['?', 'string:Y', 'string:N'] });
+    const packet = { v: 1, portal: 'nia', flow: 'nontieup', claimNo: 'CLM-1', builtAt: '2026-10-17T00:00:00Z', fields: { gstApplicable: 'Y' }, files: [] };
+    const r = send({ type: 'check', map, packet });
+    expect(r.fields.find((f) => f.name === 'gstApplicable').status).not.toBe('noOption');
   });
 
   it('check reports first element of a repeated path', () => {
