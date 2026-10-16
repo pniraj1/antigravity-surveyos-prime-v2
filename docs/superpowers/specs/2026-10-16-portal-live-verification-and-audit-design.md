@@ -150,7 +150,7 @@ A second button on the SurveyOS card, **Check page**, next to Fill. It runs ever
    - Diff it against `scripts/portal-map/nia-nontieup-survey.json` by model path: paths added or removed, and type, options or pattern changed per path.
    - Commit the new capture only if it differs, and only after a scan for values.
 5. **Report:** paste the Check page report and the diff into `docs/portal-integration.md` §5 (new "Live check 2026-10-xx" subsection).
-   - Each `notFound` / `noOption` / `wouldReject` becomes an overlay fix through `build-ext-map.py` (E9: never a hand-edited map).
+   - Each `notFound` / `notBound` / `noOption` becomes an overlay fix through `build-ext-map.py` (E9: never a hand-edited map).
 
 **Stop rules:** if any step would need a click on Save, Validate, Quick Update, Submit, Upload, a declaration tick, or any confirm dialog, stop and hand back to the owner.
 
@@ -224,7 +224,7 @@ Ranked by surveyor minutes saved per claim (author's estimate), then by risk. Ea
 
 | Risk | Handling |
 |---|---|
-| Check says ready, Fill later fails | Check reuses Fill's own planner and lookups; the validator dry-run reports `unknown` rather than guessing; Stage D is the real acceptance |
+| Check says ready, Fill later fails | Check reuses Fill's own planner and lookups; text and money fields report `ready?` rather than claiming the portal will accept them; Stage D is the real acceptance |
 | Check itself changes the live page | Check only reads; no validator calls, no digest, no DOM writes; a recording-fake test proves `check()` touches no write API |
 | Fill clicked on the settled claim (claim numbers match, so E3 doesn't stop it) | Stage B step 1 forbids Fill there; the card's Check header names the claim so the owner sees which one is open |
 | Claude clicks something that commits | Stop rules in §4.2 and §4.3; Claude never clicks Save/Validate/Submit/Upload/Quick Update/declarations/confirm dialogs |
