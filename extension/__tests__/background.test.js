@@ -60,6 +60,13 @@ describe('refreshMaps', () => {
     expect(store.maps['nia-nontieup'].version).toBe(bundled.version);
   });
 
+  it('loads maps on worker start when none are stored (onInstalled may not fire)', async () => {
+    const store = installChrome({ map: { portal: 'nia', flow: 'nontieup', version: 1 } });
+    installFetch(undefined);
+    load();
+    await vi.waitFor(() => expect(store.maps?.['nia-nontieup']).toBeTruthy());
+  });
+
   it('migrates the v0.1.0 key', async () => {
     const store = installChrome({ map: bundled });
     installFetch(undefined);

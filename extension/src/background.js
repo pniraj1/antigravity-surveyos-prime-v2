@@ -47,6 +47,9 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.runtime.onStartup.addListener(refreshMaps);
 chrome.alarms.onAlarm.addListener((a) => { if (a.name === 'sx-daily') { refreshMaps(); expirePacket(); } });
 chrome.storage.onChanged.addListener((ch, area) => { if (area === 'local' && ch.packet) expirePacket(); });
+// onInstalled is not guaranteed for an update applied while disabled; without
+// `maps` the panel never appears, so load them whenever the worker starts empty.
+chrome.storage.local.get('maps').then(({ maps }) => { if (!maps) refreshMaps(); });
 
 // ---- Vitest only; the service worker has no `module` ----
 if (typeof module !== 'undefined' && module.exports) module.exports = { refreshMaps };
