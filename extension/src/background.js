@@ -26,7 +26,8 @@ async function refreshMaps() {
       const r = await fetch(`${MAP_BASE}${id}.json`, { cache: 'no-store' });
       if (r.ok) {
         const remote = await r.json();
-        if (remote && mapId(remote) === id && remote.version > best.version) best = remote;
+        const usable = remote && remote.host && remote.route && remote.fields && mapId(remote) === id;
+        if (usable && remote.version > best.version) best = remote;
       }
     } catch { /* offline: keep what we have */ }
     maps[id] = best;

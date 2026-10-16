@@ -67,8 +67,19 @@ describe('refreshMaps', () => {
     await vi.waitFor(() => expect(store.maps?.['nia-nontieup']).toBeTruthy());
   });
 
+  it('ignores a newer remote map missing host, route or fields', async () => {
+    for (const drop of ['host', 'route', 'fields']) {
+      const store = installChrome();
+      const { [drop]: _gone, ...broken } = { ...bundled, version: bundled.version + 1 };
+      installFetch(broken);
+      await load().refreshMaps();
+      expect(store.maps['nia-nontieup'].version, drop).toBe(bundled.version);
+    }
+  });
+
   it('migrates the v0.1.0 key', async () => {
-    const store = installChrome({ map: bundled });
+    const { host: _h, modelRoot: _r, ...v1 } = { ...bundled, version: 1 };
+    const store = installChrome({ map: v1 });
     installFetch(undefined);
     await load().refreshMaps();
     expect(store.maps['nia-nontieup']).toEqual(bundled);
