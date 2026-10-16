@@ -3,7 +3,7 @@
 // Isolated world on the portal. Thin renderer of SxCard.cardView + storage + messaging to the Filler.
 (() => {
   const { pickMap, mapId, routeStep, keepResults } = /** @type {any} */ (globalThis).SxFill;
-  const { cardView, reportText, pulseRestore } = /** @type {any} */ (globalThis).SxCard;
+  const { cardView, reportText, pulseRestore, livePacket, checkPacket, shouldReprobe, probeChanged } = /** @type {any} */ (globalThis).SxCard;
   /** Live line-click pulses, so overlapping clicks restore the true original once. @type {WeakMap<HTMLElement, {orig: string, timer: ReturnType<typeof setTimeout>}>} */
   const pulses = new WeakMap();
   const PACKET_TTL_MS = 24 * 60 * 60 * 1000; // E6
@@ -11,6 +11,7 @@
   const NUDGE_PX = 24;
   const PULSE_MS = 1500;
   const COPIED_MS = 2000;
+  const REPROBE_MS = 2000; // a late (UIIC XHR) or changed claim number shows within a couple of seconds
   const PULSE_OUTLINE = '2px solid #0f766e';
 
   // Lucide icons (24×24, stroke), always next to a word.
@@ -43,11 +44,12 @@
 
   // The SPA changes route without reload; re-pick the map on every hashchange.
   let bootedFor = '';
+  let teardown = () => {}; // boot() points it at the live card's interval and focus listener
   const onRoute = async () => {
     const { maps } = await chrome.storage.local.get('maps');
     const map = pickMap(maps, location.host, location.hash);
     const step = routeStep(bootedFor, map ? mapId(map) : '', !!document.getElementById('sx-panel'));
-    if (step.remove) document.getElementById('sx-panel')?.remove();
+    if (step.remove) { teardown(); document.getElementById('sx-panel')?.remove(); }
     bootedFor = step.bootedFor;
     if (step.boot) boot(step.boot);
   };
@@ -211,7 +213,7 @@
       const stored = await chrome.storage.local.get(['packet', 'storedAt', 'maps']);
       map = stored.maps?.[mapKey];
       ({ packet, storedAt } = stored);
-      if (packet && storedAt && Date.now() - storedAt > PACKET_TTL_MS) { // E6
+      if (packet && !livePacket(packet, storedAt, Date.now(), PACKET_TTL_MS)) { // E6
         chrome.storage.local.remove(['packet', 'storedAt']);
         packet = undefined;
       }
@@ -227,8 +229,15 @@
       draw();
     }
 
+    /** Held packet past its 24 h: true after render() has dropped it (E6), so the caller does not run. */
+    const expiredNow = () => {
+      if (!packet || livePacket(packet, storedAt, Date.now(), PACKET_TTL_MS)) return false;
+      render();
+      return true;
+    };
+
     async function runFill() {
-      if (!packet) return;
+      if (!packet || expiredNow()) return;
       phase = 'filling'; check = null; draw();
       const r = await ask('fill', { map, packet });
       phase = 'idle'; fill = r;
@@ -241,8 +250,9 @@
     }
 
     async function runCheck() {
+      if (expiredNow()) return;
       phase = 'checking'; draw();
-      const r = await ask('check', { map, packet: packet ?? null }); // expired packets were dropped in render(); planCheck picks the mode
+      const r = await ask('check', { map, packet: checkPacket(map, packet) }); // never another portal's packet, never the Excel bytes; planCheck picks the mode
       phase = 'idle'; fill = null; check = r;
       draw(); focusResult();
     }
@@ -250,7 +260,8 @@
     async function copyReport(/** @type {HTMLButtonElement} */ btn) {
       const label = btn.textContent;
       try {
-        await navigator.clipboard.writeText(reportText(view, { mapId: mapKey, version: map.version, route: location.hash, mode: check?.mode ?? '-' }));
+        await navigator.clipboard.writeText(reportText(view, { extVersion: chrome.runtime.getManifest().version, mapId: mapKey, mapVersion: map.version, route: location.hash,
+          mode: check?.mode ?? '-', scopeFound: !!probe?.ok, invoices: probe?.invoices }));
         btn.textContent = 'Copied';
       } catch {
         btn.textContent = "Couldn't copy";
@@ -289,6 +300,20 @@
       }, PULSE_MS);
       pulses.set(el, { orig, timer });
     });
+
+    // Re-read the page's claim number while the card rests. Read-only, so Check's zero-writes rule holds.
+    let probing = false;
+    const reprobe = async () => {
+      if (probing || document.visibilityState !== 'visible' || !view || !shouldReprobe(view.state, phase)) return;
+      probing = true;
+      const p = await ask('probe', { map });
+      probing = false;
+      if (!shouldReprobe(view.state, phase) || !probeChanged(probe, p)) return; // an action started meanwhile, or nothing changed
+      probe = p; draw();
+    };
+    const reprobeTimer = setInterval(reprobe, REPROBE_MS);
+    window.addEventListener('focus', reprobe);
+    teardown = () => { clearInterval(reprobeTimer); window.removeEventListener('focus', reprobe); };
 
     currentRender = (ch) => {
       if (keepResults(done, ch)) return; // after a good fill, only a new packet replaces the results
