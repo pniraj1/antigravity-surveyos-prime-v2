@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normaliseClaimNo, transforms, isEmptyValue, decide, planFill, mapId, pickMap, scopeAnchors } from '../src/lib/fill-core.js';
+import { normaliseClaimNo, transforms, isEmptyValue, decide, planFill, mapId, pickMap, scopeAnchors, selectMatched } from '../src/lib/fill-core.js';
 import map from '../maps/nia-nontieup.json';
 
 describe('normaliseClaimNo', () => {
@@ -175,5 +175,15 @@ describe('planFill from', () => {
     const m = { fields: { surveyTimeHours: { modelPath: 'a.h', kind: 'select', from: 'surveyTime', transform: 'hour', empty: '' } } };
     const steps = planFill(m, { fields: { surveyTime: '9:05' } }, { current: () => undefined, radioValues: () => [] });
     expect(steps[0]).toMatchObject({ action: 'fill', value: '09' });
+  });
+});
+
+describe('selectMatched', () => {
+  it('is false for an unknown-option render, true for a real option (even empty)', () => {
+    expect(selectMatched('09')).toBe(true);
+    expect(selectMatched('? string:09 ?')).toBe(false);
+    expect(selectMatched(undefined)).toBe(false);
+    expect(selectMatched(null)).toBe(false);
+    expect(selectMatched('')).toBe(true);
   });
 });

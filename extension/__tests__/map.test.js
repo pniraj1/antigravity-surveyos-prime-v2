@@ -42,7 +42,8 @@ describe('flow lists agree', () => {
   // background.js registers listeners and reads storage at load: stub chrome first.
   const listener = { addListener() {} };
   globalThis.chrome = {
-    storage: { local: { get: async () => ({ maps: {} }) }, onChanged: listener },
+    // every map "stored": no refresh at load
+    storage: { local: { get: async () => ({ maps: new Proxy({}, { get: () => ({}) }) }) }, onChanged: listener },
     runtime: { getURL: (p) => p, onInstalled: listener, onStartup: listener },
     alarms: { create() {}, onAlarm: listener },
   };

@@ -69,6 +69,13 @@ describe('refreshMaps', () => {
     await vi.waitFor(() => expect(store.maps?.['nia-nontieup']).toBeTruthy());
   });
 
+  it('loads maps on worker start when a newly bundled map is missing from storage', async () => {
+    const store = installChrome({ maps: { 'nia-nontieup': bundled } });
+    installFetch(undefined);
+    load();
+    await vi.waitFor(() => expect(store.maps['uiic-claimsurvey']).toBeTruthy());
+  });
+
   it('ignores a newer remote map missing host, route or fields', async () => {
     for (const drop of ['host', 'route', 'fields']) {
       const store = installChrome();

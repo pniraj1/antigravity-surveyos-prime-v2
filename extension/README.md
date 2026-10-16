@@ -58,3 +58,5 @@ Fills New India's non-tieup survey page and United India's claim-survey page fro
 - [ ] Final Submit validation list captured
 - [ ] `notFound` / `manual` lines captured verbatim
 - [ ] Save page ("Webpage, Complete") for re-extraction
+- [ ] Page claim number is read (hidden `claimNumber` input); if the panel shows `(none)`, note where the number actually lives
+- [ ] Survey date (readonly datepicker) accepts `dd/MM/yyyy`; if it reports `✗ rejected by portal — date`, note the format the picker wants

@@ -79,14 +79,14 @@
       const n = Object.keys(packet.fields).length;
       body.innerHTML = `<div><b>Claim</b> ${esc(packet.claimNo)}</div>
         <div>${n} fields · ${packet.files.length} file · built ${new Date(packet.builtAt).toLocaleString()}</div>
-        <div class="sx-page">Page: ${probe.ok ? `claim ${esc(probe.claimNo || '(none)')} · invoice 1 of ${probe.invoices}` : esc(probe.reason)}</div>`;
+        <div class="sx-page">Page: ${probe.ok ? `claim ${esc(probe.claimNo || '(none)')}${map.invoiceCountPath ? ` · invoice 1 of ${probe.invoices}` : ''}` : esc(probe.reason)}</div>`;
       fillBtn.disabled = !probe.ok;
       fillBtn.onclick = async () => {
         fillBtn.disabled = true;
         const r = await ask('fill', { map, packet });
         if (!r.ok) { body.innerHTML += `<div class="sx-err">${esc(r.reason)}</div>`; fillBtn.disabled = false; return; }
         const icon = { filled: '✓', kept: '⚠ kept', same: '=', skip: '·', notFound: '✗ not found', manual: '✎ do by hand', invalid: '✗ rejected by portal', error: '✗ error' };
-        body.innerHTML = `<div><b>Filled.</b> Check the amber fields, then click <b>Validate</b> on the portal yourself.</div><ul class="sx-list">` +
+        body.innerHTML = `<div><b>Filled.</b> Check the amber fields, then save or submit on the portal yourself.</div><ul class="sx-list">` +
           r.steps.filter((s) => s.action !== 'skip').map((s) => `<li class="sx-${s.action}">${icon[s.action]} ${esc(s.name)}${s.why ? ` — ${esc(s.why)}` : ''}</li>`).join('') +
           r.files.map((f) => `<li class="sx-${f.status}">${f.status === 'attached' ? '✓' : '✗'} ${esc(f.slot)} ${esc(f.why || '')}</li>`).join('') + '</ul>';
         if (r.files.every((f) => f.status === 'attached') && !r.steps.some((s) => s.action === 'error' || s.action === 'invalid')) {

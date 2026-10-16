@@ -3,7 +3,7 @@
 // Main world. The only place `angular` is reachable. Talks to the Panel over
 // window.postMessage; never touches the page except the fields it is told to.
 (() => {
-  const { normaliseClaimNo, planFill, scopeAnchors } = globalThis.SxFill;
+  const { normaliseClaimNo, planFill, scopeAnchors, selectMatched } = globalThis.SxFill;
   const ng = () => /** @type {any} */ (globalThis).angular;
 
   const esc = (/** @type {string} */ s) => s.replace(/[\\"]/g, '\\$&');
@@ -50,6 +50,7 @@
       ctrl.$setViewValue(value);
       ctrl.$render();
       if (kind !== 'select') el.dispatchEvent(new Event('input', { bubbles: true }));
+      else if (!selectMatched(/** @type {HTMLSelectElement} */ (el).selectedOptions[0]?.value)) return 'invalid:no matching option';
       return ctrl.$invalid ? 'invalid:' + Object.keys(ctrl.$error || {}).join(',') : 'filled';
     };
     if (scope.$root.$$phase) { scope.$evalAsync(doWrite); return 'filled'; } // mid-digest: runs next tick, validity unknown yet

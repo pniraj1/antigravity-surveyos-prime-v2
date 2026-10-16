@@ -155,7 +155,14 @@ function routeStep(bootedFor, id, panelPresent) {
  */
 const keepResults = (done, ch) => done && !ch.packet?.newValue;
 
-const API = { normaliseClaimNo, transforms, isEmptyValue, decide, planFill, mapId, pickMap, packetGate, scopeAnchors, routeStep, keepResults };
+/**
+ * E8: an AngularJS select with no option for the value renders an unknown
+ * option whose value starts with '?'. Anything else (even '') is a real option.
+ * @param {string | null | undefined} selectedValue
+ */
+const selectMatched = (selectedValue) => selectedValue != null && !selectedValue.startsWith('?');
+
+const API = { normaliseClaimNo, transforms, isEmptyValue, decide, planFill, mapId, pickMap, packetGate, scopeAnchors, routeStep, keepResults, selectMatched };
 // ---- umd shim: classic script in the extension, ESM/CJS in Vitest ----
 if (typeof module !== 'undefined' && module.exports) module.exports = API;
 else globalThis[NS] = API;
