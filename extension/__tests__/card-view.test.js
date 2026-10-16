@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cardView, reportText, claimTail, LINE_COPY } from '../src/lib/card-view.js';
+import { cardView, reportText, claimTail, LINE_COPY, pulseRestore } from '../src/lib/card-view.js';
 import nia from '../maps/nia-nontieup.json';
 
 const H = 3600000;
@@ -201,5 +201,16 @@ describe('secondary labels (spec §10.3)', () => {
     const fill = { ok: true, steps: [{ name: names[0], action: 'manual' }], files: [] };
     expect(labels(view({ fill }))).toEqual(['Show all lines']);
     expect(labels(view({ fill, showAll: true }))).toEqual(['Show fewer lines']);
+  });
+});
+
+describe('pulseRestore', () => {
+  const PULSE = 'rgb(15, 118, 110) solid 2px';
+  it('restores the original outline when ours is still on the field', () => {
+    expect(pulseRestore(PULSE, PULSE, 'rgb(22, 163, 74) solid 2px')).toBe('rgb(22, 163, 74) solid 2px');
+    expect(pulseRestore(PULSE, PULSE, '')).toBe('');
+  });
+  it('leaves the field alone when something newer (Fill) replaced our outline', () => {
+    expect(pulseRestore('rgb(185, 28, 28) solid 2px', PULSE, '')).toBeNull();
   });
 });

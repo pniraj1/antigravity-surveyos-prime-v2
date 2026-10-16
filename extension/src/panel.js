@@ -3,7 +3,9 @@
 // Isolated world on the portal. Thin renderer of SxCard.cardView + storage + messaging to the Filler.
 (() => {
   const { pickMap, mapId, routeStep, keepResults } = /** @type {any} */ (globalThis).SxFill;
-  const { cardView, reportText } = /** @type {any} */ (globalThis).SxCard;
+  const { cardView, reportText, pulseRestore } = /** @type {any} */ (globalThis).SxCard;
+  /** Live line-click pulses, so overlapping clicks restore the true original once. @type {WeakMap<HTMLElement, {orig: string, timer: ReturnType<typeof setTimeout>}>} */
+  const pulses = new WeakMap();
   const PACKET_TTL_MS = 24 * 60 * 60 * 1000; // E6
   const ASK_TIMEOUT_MS = 5000;
   const NUDGE_PX = 24;
@@ -275,9 +277,17 @@
       if (!el) return;
       const reduce = reducedMotion();
       el.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' });
-      const prev = el.style.outline; // keeps Fill's green/amber/red outline
+      const live = pulses.get(el);
+      if (live) clearTimeout(live.timer);
+      const orig = live ? live.orig : el.style.outline; // a re-click keeps the first original (Fill's green/amber/red)
       el.style.outline = PULSE_OUTLINE;
-      setTimeout(() => { el.style.outline = prev; }, PULSE_MS);
+      const pulsed = el.style.outline; // read back: the browser normalises the value
+      const timer = setTimeout(() => {
+        const back = pulseRestore(el.style.outline, pulsed, orig); // null: Fill outlined it since, leave that
+        if (back != null) el.style.outline = back;
+        pulses.delete(el);
+      }, PULSE_MS);
+      pulses.set(el, { orig, timer });
     });
 
     currentRender = (ch) => {

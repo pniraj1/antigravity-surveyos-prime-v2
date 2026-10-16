@@ -162,7 +162,14 @@ function reportText(view, meta) {
   return [head, ...rows].join('\n');
 }
 
-const API = { cardView, reportText, claimTail, LINE_COPY };
+/**
+ * Line-click pulse expiry: the original outline to put back, or null to leave the field alone
+ * (something newer, e.g. Fill's green/amber/red, replaced our outline).
+ * @param {string} currentOutline @param {string} pulseOutline @param {string} orig @returns {string | null}
+ */
+const pulseRestore = (currentOutline, pulseOutline, orig) => currentOutline === pulseOutline ? orig : null;
+
+const API = { cardView, reportText, claimTail, LINE_COPY, pulseRestore };
 // ---- umd shim: classic script in the extension, ESM/CJS in Vitest ----
 if (typeof module !== 'undefined' && module.exports) module.exports = API;
 else /** @type {any} */ (globalThis)[NS] = API;
