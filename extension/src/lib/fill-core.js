@@ -88,7 +88,7 @@ function planFill(map, packet, read) {
       if (spec.onlyIf && fields[spec.onlyIf] === undefined) { steps.push({ ...base, action: 'skip', why: 'condition not met' }); continue; }
       value = String(spec.constant);
     } else {
-      const raw = fields[name];
+      const raw = fields[spec.from ?? name];
       if (raw === undefined) { steps.push({ ...base, action: 'skip', why: 'not in packet' }); continue; }
       value = spec.kind === 'money' ? transforms.money2dp(raw)
         : spec.transform ? transforms[spec.transform](raw)

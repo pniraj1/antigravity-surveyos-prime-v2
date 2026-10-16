@@ -169,3 +169,11 @@ describe('UIIC transforms', () => {
     expect(transforms.minute('soon')).toBe('');
   });
 });
+
+describe('planFill from', () => {
+  it('any field with from reads fields[from] instead of fields[name]', () => {
+    const m = { fields: { surveyTimeHours: { modelPath: 'a.h', kind: 'select', from: 'surveyTime', transform: 'hour', empty: '' } } };
+    const steps = planFill(m, { fields: { surveyTime: '9:05' } }, { current: () => undefined, radioValues: () => [] });
+    expect(steps[0]).toMatchObject({ action: 'fill', value: '09' });
+  });
+});
