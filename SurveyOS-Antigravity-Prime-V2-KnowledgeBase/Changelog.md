@@ -7,7 +7,7 @@
 - feat(extension): `uiicText` (portal's `[a-zA-Z0-9. ]` pattern, 500 cap), `hour`/`minute` split; any map field can read another packet field via `from`
 - feat(uiic): `buildUiicPacket` (bill-check basis, R12) + Send to extension in the UIIC summary dialog, behind the bill-check tick
 - fix(extension): unmatched select option reported rejected, not filled; new maps load on worker start; panel text portal-neutral; panel re-boots after removal; results survive a map refresh; remote maps shape-checked; fill-core wrapped in an IIFE; flow-list drift test; build fails on field/file key clash
-- tests: 1456 passing, tsc clean. Commits 2019832f..fcfff741. Not deployed; no browser run.
+- tests: 1456 passing, tsc clean. Commits 2019832f..fcfff741. Deployed to motorsurveyos-in.web.app (hosting) 2026-10-16; hosted maps verified live. No browser run of the extension.
 
 ## 2026-10-16 (Claude) — Portal fill extension Phase 1 (multi-portal core, v0.2.0)
 - docs: roadmap `docs/superpowers/plans/2026-10-16-portal-extension-roadmap.md` — Phase 0 (live checks + capture sweep) through Phase 6 (store listing)
