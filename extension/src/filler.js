@@ -3,7 +3,7 @@
 // Main world. The only place `angular` is reachable. Talks to the Panel over
 // window.postMessage; never touches the page except the fields it is told to.
 (() => {
-  const { normaliseClaimNo, planFill } = globalThis.SxFill;
+  const { normaliseClaimNo, planFill, scopeAnchors } = globalThis.SxFill;
   const ng = () => /** @type {any} */ (globalThis).angular;
 
   const esc = (/** @type {string} */ s) => s.replace(/[\\"]/g, '\\$&');
@@ -11,8 +11,15 @@
     /** @type {HTMLElement[]} */ (Array.from(document.querySelectorAll(`[ng-model="${esc(p)}"], [data-ng-model="${esc(p)}"]`)));
 
   function ctrlScope(/** @type {any} */ map) {
-    const el = document.querySelector(`[ng-controller="${map.controller}"], [data-ng-controller="${map.controller}"]`);
-    return el ? ng().element(el).scope() : null;
+    if (map.controller) {
+      const el = document.querySelector(`[ng-controller="${map.controller}"], [data-ng-controller="${map.controller}"]`);
+      return el ? ng().element(el).scope() : null;
+    }
+    for (const path of scopeAnchors(map)) {
+      const el = q(path)[0];
+      if (el) return ng().element(el).scope();
+    }
+    return null;
   }
 
   function $parse() { return ng().element(document.body).injector().get('$parse'); }
@@ -25,7 +32,7 @@
   function probe(/** @type {any} */ map) {
     if (!ng()) return { ok: false, reason: 'AngularJS not found on this page' };
     const scope = ctrlScope(map);
-    if (!scope) return { ok: false, reason: `controller ${map.controller} not found — portal changed?` };
+    if (!scope) return { ok: false, reason: map.controller ? `controller ${map.controller} not found — portal changed?` : 'page fields not found — portal changed?' };
     const claimNo = readPath(scope, map.claimNoPath) || readPath(scope, map.claimNoFallback);
     const invoices = readPath(scope, map.invoiceCountPath);
     return { ok: true, claimNo: claimNo ? String(claimNo) : '', invoices: Array.isArray(invoices) ? invoices.length : 1 };

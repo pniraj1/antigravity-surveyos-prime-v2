@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normaliseClaimNo, transforms, isEmptyValue, decide, planFill, mapId, pickMap } from '../src/lib/fill-core.js';
+import { normaliseClaimNo, transforms, isEmptyValue, decide, planFill, mapId, pickMap, scopeAnchors } from '../src/lib/fill-core.js';
 import map from '../maps/nia-nontieup.json';
 
 describe('normaliseClaimNo', () => {
@@ -136,3 +136,14 @@ describe('pickMap', () => {
   });
 });
 it('mapId', () => expect(mapId({ portal: 'nia', flow: 'nontieup' })).toBe('nia-nontieup'));
+
+describe('scopeAnchors', () => {
+  it('claim-number path first, then every mapped field, without duplicates', () => {
+    const m = { claimNoPath: 'a.claimNumber', fields: { x: { modelPath: 'a.x' }, y: { modelPath: 'a.claimNumber' } } };
+    expect(scopeAnchors(m)).toEqual(['a.claimNumber', 'a.x']);
+  });
+  it('skips a sessionStorage claim path, which no element carries', () => {
+    const m = { claimNoPath: 'sessionStorage:k', fields: { x: { modelPath: 'a.x' } } };
+    expect(scopeAnchors(m)).toEqual(['a.x']);
+  });
+});

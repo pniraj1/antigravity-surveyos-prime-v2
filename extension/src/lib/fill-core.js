@@ -112,7 +112,17 @@ function packetGate(map, packet) {
   return { ok: false, reason: `This claim was sent for ${packet.portal} (${packet.flow}); this page is ${map.portal} (${map.flow}).` };
 }
 
-const API = { normaliseClaimNo, transforms, isEmptyValue, decide, planFill, mapId, pickMap, packetGate };
+/**
+ * Model paths whose element can lend its Angular scope when the map names no
+ * controller (UIIC's capture has none): the claim number first, then every field.
+ * @param {any} map @returns {string[]}
+ */
+function scopeAnchors(map) {
+  const paths = [map.claimNoPath, ...Object.values(map.fields ?? {}).map((/** @type {any} */ f) => f.modelPath)];
+  return [...new Set(paths.filter((p) => p && !p.startsWith('sessionStorage:')))];
+}
+
+const API = { normaliseClaimNo, transforms, isEmptyValue, decide, planFill, mapId, pickMap, packetGate, scopeAnchors };
 // ---- umd shim: classic script in the extension, ESM/CJS in Vitest ----
 if (typeof module !== 'undefined' && module.exports) module.exports = API;
 else globalThis[NS] = API;
