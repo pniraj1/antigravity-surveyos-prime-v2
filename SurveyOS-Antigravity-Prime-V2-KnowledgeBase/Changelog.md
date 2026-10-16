@@ -2,6 +2,20 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-10-16 (Claude) — Portal fill extension Phase 1 (multi-portal core, v0.2.0)
+- docs: roadmap `docs/superpowers/plans/2026-10-16-portal-extension-roadmap.md` — Phase 0 (live checks + capture sweep) through Phase 6 (store listing)
+- feat(extension): `pickMap(maps, host, hash)` — exact route match, so `#/WorklistSurvey` never catches `#/WorklistSurveyNew`; map headers gain `host` and `modelRoot`
+- feat(extension): background keeps `maps` (one per flow, `MAP_IDS`), migrates v0.1.0's `map` key, loads maps when the worker starts with none
+- feat(extension): panel re-picks its map on every route change; `packetGate` refuses a packet built for another portal/flow; validator reads `KNOWN_FLOWS`
+- feat(extension): scope found from the claim-number / field elements when a map names no controller (UIIC)
+- chore(extension): `build-ext.py` builds and zips every `*.overlay.json`; fixture scope generated from model paths; NIA map version 2
+- tests: 1424 passing. Commits e62a61fa..2019832f. Not deployed; no browser walk-through run (needs an unpacked extension in Chrome).
+
+## 2026-09-18 → 09-23 (Claude) — back-filled
+- feat(nia): NIA Assessment Excel generator with nil-dep painting and bill-check gate (09-18)
+- feat(extension): Portal Fill extension v0.1.0 for NIA non-tieup; `src/lib/portal/packet.ts` + Send to extension in the NIA dialog (09-21)
+- feat(documents): Claim Documents typed index + disk folder; folders named by vehicle + insurer short form; Scan folder; one-time Tidy up (09-21 → 09-23)
+
 ## 2026-10-04 (Claude) — Phone layout bug-fix pass
 - fix(layout): sidebar now slides off-screen below 1024 px (it was always visible and covered the left 258 px)
 - fix(evidence): Details/Review evidence panel closed by default on phones, opens as a full-screen overlay; shared `useEvidencePanel` + `EvidencePanelSlot` replace two copies

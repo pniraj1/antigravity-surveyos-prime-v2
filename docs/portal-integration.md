@@ -470,7 +470,10 @@ requirement, but the code is on the portal's list at 0%.
 - Portal-fill extension v1 built (2026-09-21) — extension/, Stage 0 pending
 - Claim Documents shipped (2026-09-21) — typed index + disk folder; extension v2 can attach by type
 
-**Next**
+- Extension v0.2.0 multi-portal core (2026-10-16) — roadmap
+  `docs/superpowers/plans/2026-10-16-portal-extension-roadmap.md`
+
+**Next** (ordered in the roadmap)
 
 - Stage 0 on a closed NIA claim (README checklist)
 - One real NIA upload on a closed claim: Validate → save page

@@ -1,6 +1,6 @@
 # Active Tasks
 
-> Last updated: 2026-09-15 by Claude
+> Last updated: 2026-10-16 by Claude
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
 
 ---
@@ -10,7 +10,7 @@
 - [ ] **Admin Simulator UI** — hidden admin page to run test RAG queries against `bramha_memories` and tune prompts
 - [ ] **Fraud detection UI** — query `bramha_memories` by policyNumber/vehicleRegistration to flag repeat claimants
 - [ ] **Hotspot map** — aggregate `placeOfAccident` field from `bramha_memories` and display on map
-- [ ] **Node.js runtime upgrade** — Cloud Functions on Node 20 (deprecated 2026-04-30, decommissioned 2026-10-30). Upgrade to Node 22 in `SurveyOS-Prime/functions/package.json` before October 2026.
+- [ ] **Node.js runtime check** — `functions/package.json` already declares `"node": "22"`; confirm in the Firebase console that the deployed functions run on Node 22 before 2026-10-30 (Node 20 decommissioned that day).
 - [ ] **firebase-functions upgrade** — current version outdated; upgrade has breaking changes, do carefully
 
 ## Reported Bugs
@@ -18,6 +18,8 @@
 - [ ] **Sign-in loop** — Google Auth completes but returns to landing page; no Drive connection request shown. Needs investigation in auth flow + Drive token handling.
 
 ## In Progress
+
+- [ ] **Portal fill extension — multi-portal** (2026-10-16) — roadmap `docs/superpowers/plans/2026-10-16-portal-extension-roadmap.md`. Phase 1 (multi-portal core, v0.2.0) done on `main` 2019832f, not deployed. Next: Phase 2 (UIIC, Tasks 6–9). Owner: Phase 0 in India — NIA Stage 0 (README checklist, use the v0.2.0 zip) + capture sweep of every portal you can log into; fixture walk-through on v0.2.0. Hosting deploy needed before the v2 NIA map is served remotely. Session log `Sessions/2026-10-16-portal-extension-phase-1.md`.
 
 - [ ] **Phone site capture — phone checks + deploy** (2026-10-03) — P1–P3 deployed to motorsurveyos-in 2026-10-03 (hosting, 93f625b0). Owner: run the phone checklist in `Sessions/2026-10-03-phone-site-capture.md`. Then P4 plan (phone restyle of form tabs + deferred items listed there).
 - [ ] **Phase 2-C admin steps + L11** (2026-09-17) — deployed (hosting, 96098c6f). Owner: Admin → Save, then Probe all, review Excluded (L11).
@@ -73,6 +75,12 @@
 ---
 
 ## Recently Completed
+
+- [x] Portal fill extension Phase 1 — multi-portal core, v0.2.0 (2026-10-16) — maps chosen by host + exact route, one map per flow in storage (v0.1.0 `map` key migrated), wrong-portal packets refused, controller-less scope lookup, build/test over every overlay. 1424 tests.
+- [x] Portal fill extension v0.1.0 (2026-09-21) — NIA non-tieup filler, `extension/`; spec `docs/superpowers/specs/2026-09-20-portal-fill-extension-design.md`. Stage 0 on live portal pending.
+- [x] Claim Documents (2026-09-21) + vehicle/insurer folder names, folder scan, one-time tidy-up (2026-09-22/23).
+- [x] NIA Assessment Excel generator (2026-09-18) — spec `docs/superpowers/specs/2026-09-18-nia-assessment-excel-design.md`.
+- [x] UIIC portal summary panel (2026-08-31) — spec `docs/superpowers/specs/2026-08-31-uiic-portal-summary-design.md`.
 
 - [x] AI upload PDF page selection (2026-09-17) — multi-page PDFs into any AI upload (estimate, final bill, RC/DL/policy, Documents, Sync) get a page picker; unticked pages are never rasterized (zero tokens). `ai-pages.ts` WeakMap carrier, shared `PdfPageGrid`, `needsReview` gate extended. 1239 tests. deployed to motorsurveyos-in 2026-09-17. Manual E2E (spec §5) not run — no credentials in session. Session log: `Sessions/2026-09-17-ai-pdf-page-selection.md`.
 - [x] AI fallback — Phase 2-C admin ranked lists + veto (2026-09-17) — schema 2, guard rails, shared `poolFromProbes`, editable limits, tab split. 1222 tests. Session log: `Sessions/2026-09-17-admin-ranked-lists.md`.
