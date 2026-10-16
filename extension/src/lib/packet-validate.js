@@ -3,6 +3,8 @@
 const NS = 'SxPacket';
 const MAX_FILE_B64 = 1_400_000; // ≈1 MB of bytes
 const SLOTS = ['assessmentExcel'];
+/** Portal → flows the extension has a map for. */
+const KNOWN_FLOWS = { nia: ['nontieup'] };
 
 /** @param {unknown} x */
 function validatePacket(x) {
@@ -10,7 +12,7 @@ function validatePacket(x) {
   if (!x || typeof x !== 'object') return fail('not an object');
   const p = /** @type {Record<string, any>} */ (x);
   if (p.v !== 1) return fail('unsupported packet version');
-  if (p.portal !== 'nia' || p.flow !== 'nontieup') return fail('packet is for another portal');
+  if (!KNOWN_FLOWS[p.portal]?.includes(p.flow)) return fail('packet is for another portal');
   if (typeof p.claimNo !== 'string' || !p.claimNo.trim()) return fail('missing claim number');
   if (typeof p.builtAt !== 'string') return fail('missing builtAt');
   if (!p.fields || typeof p.fields !== 'object') return fail('missing fields');
@@ -27,7 +29,7 @@ function validatePacket(x) {
   return { ok: /** @type {const} */ (true), packet: p };
 }
 
-const API = { validatePacket };
+const API = { validatePacket, KNOWN_FLOWS };
 // ---- umd shim: classic script in the extension, ESM/CJS in Vitest ----
 if (typeof module !== 'undefined' && module.exports) module.exports = API;
 else globalThis[NS] = API;

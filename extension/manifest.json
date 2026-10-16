@@ -19,7 +19,7 @@
     },
     {
       "matches": ["https://web.newindia.co.in/NIABancsPortal/*"],
-      "js": ["src/panel.js"],
+      "js": ["src/lib/fill-core.js", "src/panel.js"],
       "css": ["src/panel.css"],
       "run_at": "document_idle"
     },

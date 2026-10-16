@@ -2,6 +2,7 @@
 // @ts-check
 // Isolated world on the portal. Card UI + storage + messaging to the Filler.
 (() => {
+  const { pickMap, packetGate, mapId } = /** @type {any} */ (globalThis).SxFill;
   const PACKET_TTL_MS = 24 * 60 * 60 * 1000; // E6
   const ASK_TIMEOUT_MS = 5000;
 
@@ -9,20 +10,26 @@
   /** @type {((ch: Record<string, chrome.storage.StorageChange>) => void) | null} */
   let currentRender = null;
   chrome.storage.onChanged.addListener((ch, area) => {
-    if (area !== 'local' || !(ch.packet || ch.map)) return;
+    if (area !== 'local' || !(ch.packet || ch.maps)) return;
     if (!document.getElementById('sx-panel') || !currentRender) return;
     currentRender(ch);
   });
 
-  // The SPA changes route without reload; re-check on every hashchange.
-  const onRoute = () => {
-    if (location.hash.startsWith('#/WorklistSurveyNew')) boot();
-    else document.getElementById('sx-panel')?.remove();
+  // The SPA changes route without reload; re-pick the map on every hashchange.
+  let bootedFor = '';
+  const onRoute = async () => {
+    const { maps } = await chrome.storage.local.get('maps');
+    const map = pickMap(maps, location.host, location.hash);
+    const id = map ? mapId(map) : '';
+    if (id !== bootedFor) { document.getElementById('sx-panel')?.remove(); bootedFor = ''; }
+    if (map && !bootedFor) { bootedFor = id; boot(id); }
   };
   window.addEventListener('hashchange', onRoute);
+  // First install: maps land in storage after this page loaded.
+  chrome.storage.onChanged.addListener((ch, area) => { if (area === 'local' && ch.maps && !bootedFor) onRoute(); });
   onRoute();
 
-  function boot() {
+  function boot(/** @type {string} */ mapKey) {
     if (document.getElementById('sx-panel')) return;
     const nonce = crypto.randomUUID();
     let done = false; // a successful fill removes the packet; keep the results on screen
@@ -55,8 +62,8 @@
     });
 
     async function render() {
-      const stored = await chrome.storage.local.get(['packet', 'storedAt', 'map']);
-      const { map } = stored;
+      const stored = await chrome.storage.local.get(['packet', 'storedAt', 'maps']);
+      const map = stored.maps?.[mapKey];
       let { packet, storedAt } = stored;
       if (packet && storedAt && Date.now() - storedAt > PACKET_TTL_MS) { // E6
         chrome.storage.local.remove(['packet', 'storedAt']);
@@ -64,6 +71,8 @@
       }
       if (!map) { body.textContent = 'Field map not loaded yet — reopen this page in a minute.'; fillBtn.disabled = true; return; }
       if (!packet) { body.textContent = 'Send a claim from SurveyOS first.'; fillBtn.disabled = true; return; }
+      const gate = packetGate(map, packet);
+      if (!gate.ok) { body.textContent = gate.reason; fillBtn.disabled = true; return; }
       done = false;
       const probe = await ask('probe', { map });
       const n = Object.keys(packet.fields).length;

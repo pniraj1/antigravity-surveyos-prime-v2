@@ -94,17 +94,25 @@ const mapId = (map) => `${map.portal}-${map.flow}`;
 /**
  * The map for this page. Exact route only: `#/WorklistSurvey` must not catch
  * `#/WorklistSurveyNew`. A `?query` or `/sub-path` after the route is allowed.
+ * An empty host is a file:// fixture — the zipped build strips file:// matches,
+ * so a live portal page always has its host.
  * @param {Record<string, any>} maps @param {string} host @param {string} hash
  */
 function pickMap(maps, host, hash) {
   for (const m of Object.values(maps ?? {})) {
-    if (m.host !== host) continue;
+    if (host && m.host !== host) continue;
     if (hash === m.route || hash.startsWith(m.route + '?') || hash.startsWith(m.route + '/')) return m;
   }
   return null;
 }
 
-const API = { normaliseClaimNo, transforms, isEmptyValue, decide, planFill, mapId, pickMap };
+/** E3's sibling: the packet must be for the portal flow this page is. @param {any} map @param {any} packet */
+function packetGate(map, packet) {
+  if (packet.portal === map.portal && packet.flow === map.flow) return { ok: true };
+  return { ok: false, reason: `This claim was sent for ${packet.portal} (${packet.flow}); this page is ${map.portal} (${map.flow}).` };
+}
+
+const API = { normaliseClaimNo, transforms, isEmptyValue, decide, planFill, mapId, pickMap, packetGate };
 // ---- umd shim: classic script in the extension, ESM/CJS in Vitest ----
 if (typeof module !== 'undefined' && module.exports) module.exports = API;
 else globalThis[NS] = API;

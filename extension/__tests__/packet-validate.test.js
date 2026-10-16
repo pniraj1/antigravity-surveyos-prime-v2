@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validatePacket } from '../src/lib/packet-validate.js';
+import { validatePacket, KNOWN_FLOWS } from '../src/lib/packet-validate.js';
 
 const good = () => ({
   v: 1, portal: 'nia', flow: 'nontieup', claimNo: '3101/1', builtAt: '2026-09-21T10:00:00Z',
@@ -29,5 +29,15 @@ describe('validatePacket', () => {
   it('rejects non-objects', () => {
     expect(validatePacket(null).ok).toBe(false);
     expect(validatePacket('x').ok).toBe(false);
+  });
+});
+
+describe('KNOWN_FLOWS', () => {
+  it('drives which portal flows are accepted', () => {
+    expect(KNOWN_FLOWS).toEqual({ nia: ['nontieup'] });
+    KNOWN_FLOWS.uiic = ['claimsurvey'];
+    try {
+      expect(validatePacket({ ...good(), portal: 'uiic', flow: 'claimsurvey' }).ok).toBe(true);
+    } finally { delete KNOWN_FLOWS.uiic; }
   });
 });

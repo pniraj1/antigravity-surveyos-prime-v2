@@ -128,6 +128,9 @@ describe('pickMap', () => {
   it('host must match', () => {
     expect(pickMap(maps, 'portal.uiic.in', '#/WorklistSurveyNew')).toBeNull();
   });
+  it('a file:// fixture (empty host) matches on route alone', () => {
+    expect(pickMap(maps, '', '#/WorklistSurveyNew')).toBe(nontieup);
+  });
   it('unknown route is null', () => {
     expect(pickMap(maps, 'web.newindia.co.in', '#/Worklist')).toBeNull();
   });

@@ -35,6 +35,7 @@
 <label>chooseFilePrim0 <input type="file" name="chooseFilePrim0" accept=".xls,.xlsx" data-ng-model="surveyorData.worklist.multiInvoice[$index].myFiles" onchange="window.__fileChanged=(this.files[0]||{}).name"></label>
 </div>
 <script>
+if (!location.hash) location.hash = '#/WorklistSurveyNew';
 angular.module('fixture', []).controller('surveyorWorklistSurveyCtrl', ['$scope', function($scope) {
   $scope.surveyorData = { worklist: { quickUpdate: {}, claimAssessment: {}, surveyFeeBill: {},
     multiInvoice: [{}], viewClaimDetails: { claimDetails: { claimNumber: '' } } } };

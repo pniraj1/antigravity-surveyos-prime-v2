@@ -35,7 +35,7 @@ def main(flow):
                 e[k] = v[k]
         return e
 
-    out = {k: overlay[k] for k in ("portal", "flow", "version", "route", "controller",
+    out = {k: overlay[k] for k in ("portal", "flow", "version", "host", "route", "controller",
                                     "claimNoPath", "claimNoFallback", "invoiceCountPath")}
     out["fields"] = {k: entry(v) for k, v in overlay["fields"].items()}
     out["files"] = {k: {"modelPath": v["model"]} for k, v in overlay["files"].items()}
@@ -83,6 +83,7 @@ def write_fixture(flow, overlay, by_model):
 {body}
 </div>
 <script>
+if (!location.hash) location.hash = '{overlay['route']}';
 angular.module('fixture', []).controller('{overlay['controller']}', ['$scope', function($scope) {{
   $scope.surveyorData = {{ worklist: {{ quickUpdate: {{}}, claimAssessment: {{}}, surveyFeeBill: {{}},
     multiInvoice: [{{}}], viewClaimDetails: {{ claimDetails: {{ claimNumber: '' }} }} }} }};
