@@ -15,18 +15,46 @@ Fills New India's non-tieup survey page and United India's claim-survey page fro
 4. To make a remote map win over the bundled one, bump `version` in
    `scripts/portal-map/nia-nontieup.overlay.json`, regenerate, deploy hosting.
 
+## Check page
+**Check page** is a text button on the card. It looks at the portal page and says, for each
+field, whether Fill would work. It writes nothing: no values, no clicks, no events. The one
+exception is clicking a result line, which scrolls to that field and outlines it for 1.5 s.
+It works whatever the claim state:
+- **No claim sent** (or a claim for the other portal): checks that every field and the Excel
+  slot are on the page, enabled, and which already hold a value. Lists the portal's options
+  for dropdowns and radios.
+- **Claim matches**: the same, plus what Fill would put in each field, checked against the
+  portal's options. Text and money values are never shown.
+- **Different claim**: runs like the above, but the card warns that Fill will refuse.
+
+**Copy report** (after a check) copies a plain-text report with no text or money values.
+Esc or **Hide** collapses the card to a tab on the right edge; it stays that way per portal.
+
 ## Fixture walk-through (no portal needed)
-1. Open `extension/fixture/nia-nontieup.html` in Chrome.
-2. Type a claim number in the fixture's box, e.g. `3101/00312/24-C`.
-3. In SurveyOS (`localhost:3000`), open a claim with the same number → Assessment →
+Load `extension/dist/unpacked-dev` and, on the extension's Details page, enable
+**Allow access to file URLs**.
+1. Open `extension/fixture/nia-nontieup.html` in Chrome (a 1366×768 window), no claim sent.
+   Expect the card docked on the right, centred, badge "No claim sent", and **Check page**.
+2. **Check page** → badge "Checked", the lines that need you, the reassurance line,
+   **Copy report**. Copy it and paste: the first line names version, map and mode; no text
+   or money values appear.
+3. **Hide** → a 40 px tab with the badge. Reload: still collapsed. **Show**, then Esc in
+   the card: it collapses again.
+4. Click a result line: the page scrolls to the field and outlines it, then the outline clears.
+5. Drag the header up and down (it moves vertically only); ArrowUp/ArrowDown move it, Home
+   re-centres. Click a field that sits behind the card: the card collapses.
+6. Type a claim number in the fixture's box, e.g. `3101/00312/24-C`.
+7. In SurveyOS (`localhost:3000`), open a claim with the same number → Assessment →
    **NIA Excel** → tick the bill-check gate → **Send to extension** → "Ready".
-4. Back on the fixture: the card shows the packet; **Fill**.
-5. Expect: green outlines on filled inputs; the ng-change log lists the filled
-   canonical names; the file input shows the xlsx name; card lists `✓` per field.
-6. Type `Nashik` into Place, Fill again → Place is `⚠ kept`, amber.
-7. Change the fixture claim number → Fill → refused, both numbers shown.
-8. Rename one `data-ng-model` in the fixture → Fill → that field `✗ not found`,
-   the rest fill.
+8. Back on the fixture: badge "Claim matches"; **Fill**.
+9. Expect: green outlines on filled inputs; the ng-change log lists the filled
+   canonical names; the file input shows the xlsx name; the summary line, the next step
+   and the legend show; filled lines are behind **Show all lines**.
+10. Type `Nashik` into Place, Fill again → Place is "kept", amber, listed first.
+11. Change the fixture claim number → badge "Different claim", Fill disabled with the
+    reason shown; both numbers show in full on hover.
+12. Rename one `data-ng-model` in the fixture → Fill → that field "not found",
+    the rest fill.
 
 ## Stage 0 (live portal, closed claim, via screen-share)
 - [ ] Panel appears on `#/WorklistSurveyNew` only
@@ -42,16 +70,17 @@ Fills New India's non-tieup survey page and United India's claim-survey page fro
 
 ## UIIC fixture walk-through (no portal needed)
 1. Open `extension/fixture/uiic-claimsurvey.html` (it sets its own `#/SurveyorClaimSurvey` hash).
+   With no claim sent, **Check page** works here too.
 2. Type a claim number in the fixture's box.
 3. In SurveyOS, open a claim with the same number → Assessment → **UIIC summary** →
    tick the bill-check box → **Send to extension** → "Ready".
-4. On the fixture: **Fill**.
+4. On the fixture: badge "Claim matches"; **Fill**.
 5. Expect `Plot 4, MIDC-Nashik` to land as `Plot 4 MIDCNashik`, and `9:05` to split
    into hours `09` / minutes `05`.
-6. Type a value into a field first, then Fill → that field is `⚠ kept`, amber.
-7. Change the claim number → Fill → refused, both numbers shown.
-8. With an NIA packet stored, the UIIC page shows "This claim was sent for nia
-   (nontieup); this page is uiic (claimsurvey)."
+6. Type a value into a field first, then Fill → that field is "kept", amber.
+7. Change the claim number → badge "Different claim", Fill disabled, both numbers shown.
+8. With an NIA claim sent, the UIIC page shows badge "Other portal" and names both
+   portals; **Check page** still works.
 
 ## UIIC Stage 0 (live portal, closed claim)
 - [ ] Paste-blocked money fields accept the write
@@ -62,3 +91,26 @@ Fills New India's non-tieup survey page and United India's claim-survey page fro
 - [ ] Save page ("Webpage, Complete") for re-extraction
 - [ ] Page claim number is read (hidden `claimNumber` input); if the panel shows `(none)`, note where the number actually lives
 - [ ] Survey date (readonly datepicker) accepts `dd/MM/yyyy`; if it reports `✗ rejected by portal — date`, note the format the picker wants
+
+## Live check (read-only)
+Run on the live New India portal with the release build (`extension/dist/unpacked`), logged
+in inside the Claude tab group. Only viewing and **Check page**; nothing is saved. UIIC
+waits until a login is available.
+0. In SurveyOS, open the settled claim → NIA Excel → tick → **Send to extension**. (The claim
+   sent earlier may have expired after 24 h.)
+1. Open the settled claim through Claim Search. Note which page it opens on and whether the
+   card appears. If it opens on the survey page, run **Check page** only; expect mostly
+   locked or already-filled fields. **Do not click Fill on it.**
+2. Open one open non-tieup claim's survey page from the Worklist (pencil icon). Run
+   **Check page**. The card should say "Different claim" and that Fill will refuse.
+3. Click **Fill** once on that page. Expect a refusal naming both claim numbers and nothing
+   written.
+4. Run `scripts/portal-map/live-extract.js` in the page (through Claude in Chrome). It lists
+   the page's fields with no values. Compare with `scripts/portal-map/nia-nontieup-survey.json`
+   and commit a new capture only if it differs, after a scan for values.
+5. Paste the Check report and the comparison into `docs/portal-integration.md` §5 as
+   "Live check 2026-10-xx". Each problem line becomes a map fix through the overlay and
+   `build-ext-map.py`, never a hand edit.
+
+**Stop** and hand back to the owner if any step would need a click on Save, Validate,
+Quick Update, Submit, Upload, a declaration tick, or any confirm dialog.

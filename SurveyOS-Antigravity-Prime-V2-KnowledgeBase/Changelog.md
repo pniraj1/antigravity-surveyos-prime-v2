@@ -2,6 +2,12 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-10-17 (Claude) — Portal fill v0.4.0: page check and redesigned card
+- feat(extension): **Check page**, a read-only button that reports per field whether Fill would work (structure, value and wrong-claim modes); writes nothing; text and money values never shown
+- feat(extension): redesigned card: docked right and centred, collapsible 40 px tab, Esc and keyboard support, screen-reader roles, draggable header, problems listed first, click a line to jump to the field, summary, next-step hint, legend, Copy report
+- chore(extension): map labels and next-step hints in the overlays (NIA map v3, UIIC v2); README: Check page, updated fixture walk-throughs, read-only live-check steps
+- tests: 1507 passing, tsc clean. Not deployed (hosting needs the owner's go-ahead); card not yet tried in a browser.
+
 ## 2026-10-16 (Claude) — Portal fill extension Phase 2: UIIC (v0.3.0)
 - feat(extension): UIIC claim-survey map (28 fields: survey date/time/place, mobile, report no, IRDAI parts buckets, GST slabs, labour, invoice no, salvage, excesses, fee bill), generated from the capture (renamed `uiic-claimsurvey-survey.json`)
 - feat(extension): `uiicText` (portal's `[a-zA-Z0-9. ]` pattern, 500 cap), `hour`/`minute` split; any map field can read another packet field via `from`
