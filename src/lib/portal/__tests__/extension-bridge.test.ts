@@ -1,5 +1,17 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { isExtensionPresent, sendPacketToExtension } from '../extension-bridge';
+import { isExtensionPresent, sendPacketToExtension, readyLine, NOT_INSTALLED_LINE } from '../extension-bridge';
+
+describe('send-step copy', () => {
+  it('readyLine names the claim tail and portal', () => {
+    expect(readyLine('nia', '7700031260390039686')).toBe(
+      'Ready: claim …9686 is waiting for the New India portal. Open the claim there and click Fill. Expires in 24 h. Sending another claim replaces this one.');
+    expect(readyLine('uiic', 'X-12')).toBe(
+      'Ready: claim …X12 is waiting for the United India portal. Open the claim there and click Fill. Expires in 24 h. Sending another claim replaces this one.');
+  });
+  it('not-installed line', () => {
+    expect(NOT_INSTALLED_LINE).toBe('Fill the portal automatically with the SurveyOS Portal Fill extension.');
+  });
+});
 
 const packet = { v: 1, portal: 'nia', flow: 'nontieup', claimNo: '1', builtAt: '', fields: {}, files: [] } as const;
 

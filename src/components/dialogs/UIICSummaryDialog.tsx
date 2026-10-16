@@ -7,7 +7,7 @@ import type { AssessmentRow } from '@/types/assessment';
 import type { DepreciationType } from '@/types';
 import type { ClaimData } from '@/types/claim';
 import { buildUiicPacket } from '@/lib/portal/packet';
-import { isExtensionPresent, sendPacketToExtension } from '@/lib/portal/extension-bridge';
+import { isExtensionPresent, sendPacketToExtension, readyLine, NOT_INSTALLED_LINE } from '@/lib/portal/extension-bridge';
 import { X, Check, Copy, ClipboardList, Loader2, Send } from 'lucide-react';
 
 interface Props {
@@ -192,13 +192,15 @@ export function UIICSummaryDialog({ claim, rows, ageMonths, depType, onClose }: 
             </div>
           )}
 
-          {extPresent && (
             <div className="mt-4 pt-3 border-t border-border">
               <label className="mx-3 flex items-start gap-3 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={billCheckDone}
-                  onChange={(e) => setBillCheckDone(e.target.checked)}
+                  onChange={(e) => {
+                    setBillCheckDone(e.target.checked);
+                    if (e.target.checked) setSource('billcheck');
+                  }}
                   className="mt-0.5 w-4 h-4 rounded border-border"
                 />
                 <span className="text-xs">
@@ -208,7 +210,10 @@ export function UIICSummaryDialog({ claim, rows, ageMonths, depType, onClose }: 
                   </span>
                 </span>
               </label>
-              {billCheckDone && (
+              {billCheckDone && !extPresent && (
+                <div className="mt-3 px-3 text-xs text-muted-foreground">{NOT_INSTALLED_LINE}</div>
+              )}
+              {billCheckDone && extPresent && (
                 <div className="mt-3">
                   <div className="text-[11px] font-semibold text-muted-foreground px-3 pb-1">
                     SEND TO PORTAL
@@ -222,16 +227,15 @@ export function UIICSummaryDialog({ claim, rows, ageMonths, depType, onClose }: 
                     className="mt-2 mx-3 flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-600 text-white text-xs font-semibold disabled:opacity-50"
                   >
                     {sendState === 'sending' ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                    Send to extension
+                    {sendState === 'sending' ? 'Sending…' : 'Send to extension'}
                   </button>
                   {sendState === 'sent' && (
-                    <div className="mt-2 px-3 text-xs text-emerald-700">Ready — open the claim on the United India portal and click Fill.</div>
+                    <div className="mt-2 px-3 text-xs text-emerald-700">{readyLine('uiic', claim.policy?.claimNumber ?? '')}</div>
                   )}
                   {sendState === 'failed' && <div className="mt-2 px-3 text-xs text-destructive">{sendError}</div>}
                 </div>
               )}
             </div>
-          )}
         </div>
       </div>
     </div>

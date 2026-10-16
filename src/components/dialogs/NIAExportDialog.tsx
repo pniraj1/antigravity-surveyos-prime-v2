@@ -10,7 +10,7 @@ import type { AssessmentRow } from '@/types/assessment';
 import type { DepreciationType } from '@/types';
 import type { ClaimData } from '@/types/claim';
 import { buildPortalPacket } from '@/lib/portal/packet';
-import { isExtensionPresent, sendPacketToExtension } from '@/lib/portal/extension-bridge';
+import { isExtensionPresent, sendPacketToExtension, readyLine, NOT_INSTALLED_LINE } from '@/lib/portal/extension-bridge';
 import { X, Check, Copy, FileSpreadsheet, Download, Loader2, Send } from 'lucide-react';
 
 interface Props {
@@ -217,14 +217,15 @@ export function NIAExportDialog({ claim, claimNo, rows, ageMonths, depType, onCl
                     className="mt-2 mx-3 flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-600 text-white text-xs font-semibold disabled:opacity-50"
                   >
                     {sendState === 'sending' ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                    Send to extension
+                    {sendState === 'sending' ? 'Sending…' : 'Send to extension'}
                   </button>
                   {sendState === 'sent' && (
-                    <div className="mt-2 px-3 text-xs text-emerald-700">Ready — open the claim on the New India portal and click Fill.</div>
+                    <div className="mt-2 px-3 text-xs text-emerald-700">{readyLine('nia', claimNo)}</div>
                   )}
                   {sendState === 'failed' && <div className="mt-2 px-3 text-xs text-destructive">{sendError}</div>}
                 </div>
               )}
+              {!extPresent && <div className="px-3 text-xs text-muted-foreground">{NOT_INSTALLED_LINE}</div>}
             </>
           )}
 
