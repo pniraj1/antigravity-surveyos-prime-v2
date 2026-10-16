@@ -35,8 +35,12 @@ def main(flow):
                 e[k] = v[k]
         return e
 
-    out = {k: overlay[k] for k in ("portal", "flow", "version", "host", "route", "controller",
-                                    "claimNoPath", "claimNoFallback", "invoiceCountPath")}
+    need = ("portal", "flow", "version", "host", "route", "modelRoot", "claimNoPath")
+    absent = [k for k in need if not overlay.get(k)]
+    if absent:
+        sys.exit(f"overlay header missing: {absent}")
+    optional = ("controller", "claimNoFallback", "invoiceCountPath")
+    out = {k: overlay[k] for k in need + optional if k in overlay}
     out["fields"] = {k: entry(v) for k, v in overlay["fields"].items()}
     out["files"] = {k: {"modelPath": v["model"]} for k, v in overlay["files"].items()}
 
@@ -72,21 +76,31 @@ def write_fixture(flow, overlay, by_model):
             else:
                 rows.append(f'<label>{name} <input type="{t}" name="{name}" data-ng-model="{model}" data-ng-change="log(\'{canon}\')"></label>')
     body = "\n".join(rows)
+    if overlay.get("invoiceCountPath"):
+        body = (f'<div ng-repeat="inv in {overlay["invoiceCountPath"]} track by $index">'
+                f'<h4>Invoice {{{{$index+1}}}}</h4>\n{body}\n</div>')
+    ctrl = overlay.get("controller", "FixtureCtrl")
+    paths = [v["model"] for v in {**overlay["fields"], **overlay["files"]}.values()] + [overlay["claimNoPath"]]
     page = f"""<!doctype html>
-<html ng-app="fixture"><head><meta charset="utf-8"><title>NIA {flow} fixture</title>
+<html ng-app="fixture"><head><meta charset="utf-8"><title>{overlay['portal'].upper()} {flow} fixture</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.4.3/angular.min.js"></script>
 <style>label{{display:block;margin:4px 0;font:13px system-ui}}input,select,textarea{{margin-left:6px}}</style>
-</head><body ng-controller="{overlay['controller']}">
+</head><body ng-controller="{ctrl}">
 <h3>Fixture — {flow}. Claim <span id="claimNo">{{{{{overlay['claimNoPath']}}}}}</span></h3>
 <p>Set a claim number: <input data-ng-model="{overlay['claimNoPath']}"> · ng-change log: <code>{{{{changes.join(', ')}}}}</code></p>
-<div ng-repeat="inv in surveyorData.worklist.multiInvoice track by $index"><h4>Invoice {{{{$index+1}}}}</h4>
 {body}
-</div>
 <script>
 if (!location.hash) location.hash = '{overlay['route']}';
-angular.module('fixture', []).controller('{overlay['controller']}', ['$scope', function($scope) {{
-  $scope.surveyorData = {{ worklist: {{ quickUpdate: {{}}, claimAssessment: {{}}, surveyFeeBill: {{}},
-    multiInvoice: [{{}}], viewClaimDetails: {{ claimDetails: {{ claimNumber: '' }} }} }} }};
+// Build every parent object of every mapped model path; [$index] -> a one-element array.
+function ensure(o, path) {{
+  var parts = path.replace(/\\[[^\\]]+\\]/g, '.0').split('.'); parts.pop();
+  for (var i = 0; i < parts.length; i++) {{
+    if (!(parts[i] in o)) o[parts[i]] = parts[i + 1] === '0' ? [] : {{}};
+    o = o[parts[i]];
+  }}
+}}
+angular.module('fixture', []).controller('{ctrl}', ['$scope', function($scope) {{
+  {json.dumps(paths)}.forEach(function(p) {{ ensure($scope, p); }});
   $scope.changes = [];
   $scope.log = function(k) {{ $scope.changes.push(k); }};
 }}]);

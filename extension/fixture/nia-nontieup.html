@@ -36,9 +36,16 @@
 </div>
 <script>
 if (!location.hash) location.hash = '#/WorklistSurveyNew';
+// Build every parent object of every mapped model path; [$index] -> a one-element array.
+function ensure(o, path) {
+  var parts = path.replace(/\[[^\]]+\]/g, '.0').split('.'); parts.pop();
+  for (var i = 0; i < parts.length; i++) {
+    if (!(parts[i] in o)) o[parts[i]] = parts[i + 1] === '0' ? [] : {};
+    o = o[parts[i]];
+  }
+}
 angular.module('fixture', []).controller('surveyorWorklistSurveyCtrl', ['$scope', function($scope) {
-  $scope.surveyorData = { worklist: { quickUpdate: {}, claimAssessment: {}, surveyFeeBill: {},
-    multiInvoice: [{}], viewClaimDetails: { claimDetails: { claimNumber: '' } } } };
+  ["surveyorData.worklist.quickUpdate.surveyDateRadio", "surveyorData.worklist.quickUpdate.surveyDate", "surveyorData.worklist.quickUpdate.timeOfSurvey", "surveyorData.worklist.quickUpdate.placeOfSurvey", "surveyorData.worklist.quickUpdate.claimantMobileNo", "surveyorData.worklist.quickUpdate.claimantEmailId", "surveyorData.worklist.claimAssessment.noOfInvoices", "surveyorData.worklist.multiInvoice[$index].isGstApplicable", "surveyorData.worklist.multiInvoice[$index].vendorTaxInvoiceNumber", "surveyorData.worklist.multiInvoice[$index].vendorTaxInvoiceDate", "surveyorData.worklist.multiInvoice[$index].paintingWorkDetails", "surveyorData.worklist.multiInvoice[$index].estimatedAmount", "surveyorData.worklist.multiInvoice[$index].assessedAmount", "surveyorData.worklist.claimAssessment.netSlavage", "surveyorData.worklist.claimAssessment.lessCompulsoryExcess", "surveyorData.worklist.claimAssessment.lessVoluntaryExpress", "surveyorData.worklist.surveyFeeBill.surveyorFeeInvoiceDate", "surveyorData.worklist.surveyFeeBill.professionalFee", "surveyorData.worklist.surveyFeeBill.photosAmount", "surveyorData.worklist.surveyFeeBill.conveyanceAmount", "surveyorData.worklist.surveyFeeBill.others", "surveyorData.worklist.surveyFeeBill.isGSTApplicable", "surveyorData.worklist.surveyFeeBill.gstPercent", "surveyorData.worklist.multiInvoice[$index].myFiles", "surveyorData.worklist.viewClaimDetails.claimDetails.claimNumber"].forEach(function(p) { ensure($scope, p); });
   $scope.changes = [];
   $scope.log = function(k) { $scope.changes.push(k); };
 }]);

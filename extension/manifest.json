@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SurveyOS Portal Fill",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Fills the New India surveyor portal from a finished SurveyOS claim. Never submits, never sees your login.",
   "minimum_chrome_version": "111",
   "icons": { "128": "icons/icon128.png" },

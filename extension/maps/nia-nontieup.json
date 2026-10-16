@@ -4,8 +4,9 @@
   "version": 2,
   "host": "web.newindia.co.in",
   "route": "#/WorklistSurveyNew",
-  "controller": "surveyorWorklistSurveyCtrl",
+  "modelRoot": "surveyorData.worklist.",
   "claimNoPath": "surveyorData.worklist.viewClaimDetails.claimDetails.claimNumber",
+  "controller": "surveyorWorklistSurveyCtrl",
   "claimNoFallback": "sessionStorage:claimNoForWorklist",
   "invoiceCountPath": "surveyorData.worklist.multiInvoice",
   "fields": {

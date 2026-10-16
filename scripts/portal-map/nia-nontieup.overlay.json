@@ -4,6 +4,7 @@
   "version": 2,
   "host": "web.newindia.co.in",
   "route": "#/WorklistSurveyNew",
+  "modelRoot": "surveyorData.worklist.",
   "controller": "surveyorWorklistSurveyCtrl",
   "claimNoPath": "surveyorData.worklist.viewClaimDetails.claimDetails.claimNumber",
   "claimNoFallback": "sessionStorage:claimNoForWorklist",
