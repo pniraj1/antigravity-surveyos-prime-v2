@@ -379,7 +379,7 @@ Exactly one primary action per state. Copy is in plain surveyor language.
 - `prefers-reduced-motion` disables the animations.
 - A contrast check of every text colour against its background passes 4.5:1.
 
-## 10. Author's calls made after the builder check
+## 12. Author's calls made after the builder check
 
 - The Check button is always shown when a map matches, and runs in structure / value / wrong-claim mode. Fill keeps its existing gates.
 - There is no validator dry-run in v0.4.0. Text and money fields report `ready?`.
