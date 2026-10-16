@@ -1,26 +1,38 @@
 // extension/src/background.js
 // @ts-check
 // Map fetch (install + daily), packet expiry (E6). No other network.
-const MAP_URL = 'https://motorsurveyos-in.web.app/portal-maps/nia-nontieup.json';
+const MAP_IDS = ['nia-nontieup'];
+const MAP_BASE = 'https://motorsurveyos-in.web.app/portal-maps/';
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-async function loadBundledMap() {
-  const r = await fetch(chrome.runtime.getURL('maps/nia-nontieup.json'));
+// Copy of fill-core's mapId — the service worker loads no other file.
+const mapId = (/** @type {{portal: string, flow: string}} */ m) => `${m.portal}-${m.flow}`;
+
+async function loadBundledMap(/** @type {string} */ id) {
+  const r = await fetch(chrome.runtime.getURL(`maps/${id}.json`));
   return r.json();
 }
 
-async function refreshMap() {
-  const { map: current } = await chrome.storage.local.get('map');
-  const bundled = await loadBundledMap();
-  let best = current && current.version >= bundled.version ? current : bundled;
-  try {
-    const r = await fetch(MAP_URL, { cache: 'no-store' });
-    if (r.ok) {
-      const remote = await r.json();
-      if (remote && remote.portal === 'nia' && remote.flow === 'nontieup' && remote.version > best.version) best = remote;
-    }
-  } catch { /* offline: keep what we have */ }
-  await chrome.storage.local.set({ map: best });
+/** One map per flow under `maps`; a newer remote copy with the same id wins. */
+async function refreshMaps() {
+  const { maps: stored = {} } = await chrome.storage.local.get('maps');
+  /** @type {Record<string, any>} */
+  const maps = {};
+  for (const id of MAP_IDS) {
+    const bundled = await loadBundledMap(id);
+    const current = stored[id];
+    let best = current && current.version >= bundled.version ? current : bundled;
+    try {
+      const r = await fetch(`${MAP_BASE}${id}.json`, { cache: 'no-store' });
+      if (r.ok) {
+        const remote = await r.json();
+        if (remote && mapId(remote) === id && remote.version > best.version) best = remote;
+      }
+    } catch { /* offline: keep what we have */ }
+    maps[id] = best;
+  }
+  await chrome.storage.local.set({ maps });
+  await chrome.storage.local.remove('map'); // v0.1.0 kept a single map here
 }
 
 async function expirePacket() {
@@ -29,9 +41,12 @@ async function expirePacket() {
 }
 
 chrome.runtime.onInstalled.addListener(() => {
-  refreshMap();
+  refreshMaps();
   chrome.alarms.create('sx-daily', { periodInMinutes: 24 * 60 });
 });
-chrome.runtime.onStartup.addListener(refreshMap);
-chrome.alarms.onAlarm.addListener((a) => { if (a.name === 'sx-daily') { refreshMap(); expirePacket(); } });
+chrome.runtime.onStartup.addListener(refreshMaps);
+chrome.alarms.onAlarm.addListener((a) => { if (a.name === 'sx-daily') { refreshMaps(); expirePacket(); } });
 chrome.storage.onChanged.addListener((ch, area) => { if (area === 'local' && ch.packet) expirePacket(); });
+
+// ---- Vitest only; the service worker has no `module` ----
+if (typeof module !== 'undefined' && module.exports) module.exports = { refreshMaps };
