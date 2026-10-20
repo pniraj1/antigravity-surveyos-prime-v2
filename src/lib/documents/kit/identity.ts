@@ -62,10 +62,9 @@ export function identityCheck(type: DocType, pageText: string | null, claim: Cla
   // Judge the length as typed: canonical padding would turn a stub like MH18 into a 6+ character value.
   const regPresent = rawReg.length >= MIN_REG;
   const candidates = regPresent ? regCandidates(upper) : [];
-  // A registration outside the usual shape (e.g. BH series) can't be parsed out of the page, so look for it as text.
-  const regOk = regPresent && (REG_SHAPE.test(rawReg)
-    ? candidates.some((c) => c.canonical === regCanon)
-    : text.includes(regCanon));
+  // Beside the canonical candidate match, accept the plain normalised value anywhere in the text: that covers
+  // odd spacing the candidate regex can't follow, and registrations outside the usual shape (e.g. BH series).
+  const regOk = regPresent && (candidates.some((c) => c.canonical === regCanon) || text.includes(rawReg));
 
   const regMismatch = (): IdentityResult => {
     const found = candidates.find((c) => c.credible)?.canonical;

@@ -139,6 +139,10 @@ describe('identityCheck', () => {
       expect(identityCheck('rc', page('Regn MH18A0123'), claim({ reg: 'MH-18-A-123' })).status).toBe('match');
     });
 
+    it.each(['MH - 18 - AB - 1234', 'MH  18 AB 1234', 'MH 18 AB  1234'])('spacing variant %s matches', (reg) => {
+      expect(identityCheck('rc', page(`Regn No ${reg}`), claim({ reg: 'MH18AB1234' })).status).toBe('match');
+    });
+
     it('a single-digit district matches its padded form', () => {
       expect(identityCheck('rc', page('Regn MH 01 AB 1234'), claim({ reg: 'MH1AB1234' })).status).toBe('match');
     });
