@@ -1,4 +1,4 @@
-import { DEFAULT_FORMATS, merge, single, type Recipe } from './types';
+import { merge, single, type Recipe } from './types';
 
 export const NIA_CLAIM_RELATED_DOCS = merge(
   'claimRelatedDocs', 'Claim Related Documents', true,
@@ -17,7 +17,7 @@ export const NIA_NONTIEUP: Recipe = {
     single('chassisPhoto', 'Chassis Number Photograph', true),
     single('odometerPhoto', 'Odometer Reading Photograph', true),
     NIA_CLAIM_RELATED_DOCS,
-    single('estimate', 'Estimate', false, 'estimate', [...DEFAULT_FORMATS, '.xlsx']), // the NIA Excel
+    single('estimate', 'Estimate', false),
     single('puc', 'PUC', false),
     merge('spot', 'Spot Photograph and Spot Survey Report', false, ['spotPhotos']),
     merge('permitFitness', 'Permit-Fitness', false, ['permit', 'fitness']),

@@ -123,7 +123,16 @@ describe('checklist', () => {
 
   it('checklist: word and excel allowed in single boxes that list the extension, dropped from merges', () => {
     const xlsx = doc('x', 'estimate', undefined, { mime: 'application/vnd.ms-excel', relPath: 'NIA Estimate.xlsx' });
-    expect(state(claim([xlsx]), 'estimate')).toMatchObject({ status: 'ready', parts: [{ docId: 'x', pages: [] }] });
+    const recipe: Recipe = {
+      portal: 'nia', flow: 'nontieup', title: 't',
+      boxes: [
+        { id: 'xl', label: 'Excel', mandatory: true, accepts: ['estimate'], combine: 'single', formats: ['.xlsx'] },
+        { id: 'pdfOnly', label: 'PDF', mandatory: true, accepts: ['estimate'], combine: 'single', formats: ['.pdf'] },
+      ],
+    };
+    const [xl, pdfOnly] = checklist(recipe, claim([xlsx]), { device: DEV, identity: {} });
+    expect(xl).toMatchObject({ status: 'ready', parts: [{ docId: 'x', pages: [] }] });
+    expect(pdfOnly).toMatchObject({ status: 'missing', parts: [] });
     const docx = doc('w', 'surveyReport', undefined, { mime: 'application/msword', relPath: 'Report.docx' });
     const s = state(claim([docx]), 'others');
     expect(s.parts).toEqual([]);
