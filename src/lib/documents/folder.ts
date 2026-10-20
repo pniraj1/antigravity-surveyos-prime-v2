@@ -10,6 +10,7 @@ import { getStoredRootHandle, ensureReadWrite, getDeviceLabel } from '@/lib/loca
 import { addDocuments, claimDocuments, newDocId, removeDocument, onThisDevice, isDiscardablePlaceholder, addDeviceTo, replaceableEntries } from './index-ops';
 import { folderNameFor, oldNameFor, relPathsFor, docTypeFromRelPath, isScanSkippable } from './naming';
 import { reconcileKnown } from './kit/fingerprint';
+import { pageCountOf } from './kit/page-text';
 import { getAllClaims } from '@/lib/storage/indexeddb';
 
 export class NoFolderError extends Error { constructor() { super('No claim folder is connected.'); } }
@@ -315,10 +316,12 @@ export async function scanClaimFolder(
         if (!onThisDevice(k, device)) { next = addDeviceTo(next, k.id, device); adopted++; }
       }
       // The file is here now: a changed one drops the page labels made on the old one.
-      // ponytail: PDF page counts arrive with the page reader; 0 = unknown never resets on its own.
-      const here = known.map((k) => next.documents?.[k.id] ?? k);
+      // Counted from this device's own bytes, not the shared entry.pageCount; 0 = unreadable, never resets on its own.
+      const pages = /\.pdf$/i.test(relPath) || file.type === 'application/pdf' ? await pageCountOf(file) : 0;
+      const current = known.map((k) => next.documents?.[k.id] ?? k);
+      const here = current.map((c) => (pages > 0 && c.pageCount !== pages ? { ...c, pageCount: pages } : c));
       const r = reconcileKnown(here, file, device);
-      if (r.changed) { changed = true; next = addDocuments(next, r.entries); }
+      if (r.changed || here.some((h, i) => h !== current[i])) { changed = true; next = addDocuments(next, r.entries); }
       if (r.reset) reset.push(relPath);
       continue;
     }
