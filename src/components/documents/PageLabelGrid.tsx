@@ -20,19 +20,22 @@ interface Props {
 const ALL_TYPES = Object.keys(DOC_TYPE_LABEL) as DocType[];
 
 // ── Thumbnails ──────────────────────────────────────────────────────────────
-interface ThumbSource { thumb(page: number): Promise<string>; close(): void }
+interface ThumbSource { pages: number; thumb(page: number): Promise<string>; close(): void }
+
+const CANT_OPEN = "This PDF can't be opened here (it may be password-protected). Open it yourself and save an unlocked copy into the claim folder.";
 
 async function openSource(claim: ClaimData, doc: ClaimDocument): Promise<ThumbSource> {
   const file = await readDocument(claim, doc);
   if (/\.pdf$/i.test(doc.relPath) || doc.mime === 'application/pdf') {
     const pdf = await loadPdf(file);
     return {
+      pages: pdf.numPages,
       thumb: async (page) => (await pdf.renderPage(page, PDF_THUMB_WIDTH, PDF_THUMB_QUALITY)).dataUrl,
       close: () => { void pdf.destroy(); },
     };
   }
   const url = URL.createObjectURL(file);
-  return { thumb: async () => url, close: () => URL.revokeObjectURL(url) };
+  return { pages: 1, thumb: async () => url, close: () => URL.revokeObjectURL(url) };
 }
 
 // ── Small pieces ────────────────────────────────────────────────────────────
@@ -87,7 +90,7 @@ function Tile({ page, src, selected, label, identity, onPick, onVisible, onUseAn
     <div
       ref={box} role="button" tabIndex={0} aria-pressed={selected} aria-label={`Page ${page}`}
       onClick={(e) => onPick(e.shiftKey)}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick(e.shiftKey); } }}
+      onKeyDown={(e) => { if (e.target !== e.currentTarget) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick(e.shiftKey); } }}
       className={`flex cursor-pointer select-none flex-col gap-1.5 rounded-md border p-2 ${selected ? 'border-primary ring-2 ring-primary' : 'border-border hover:border-primary'}`}
     >
       <div className="flex aspect-[3/4] w-full items-center justify-center overflow-hidden rounded bg-muted">
@@ -122,6 +125,8 @@ interface FileProps {
 /** Remounted (via `key`) when the file changes on disk, which drops the old thumbnails. */
 function FileSection({ claim, doc, pages, selected, identity, onPick, onUseAnyway }: FileProps) {
   const [thumbs, setThumbs] = useState<Record<number, string>>({}); // '' = could not render
+  const [failed, setFailed] = useState(false); // the file as a whole cannot be opened
+  const [opened, setOpened] = useState(0); // page count from opening the file, when the claim doesn't know it yet
   const latest = useRef({ claim, doc });
   useEffect(() => { latest.current = { claim, doc }; });
   const run = useRef<{ source: Promise<ThumbSource> | null; asked: Set<number>; dead: boolean }>({ source: null, asked: new Set(), dead: false });
@@ -132,35 +137,57 @@ function FileSection({ claim, doc, pages, selected, identity, onPick, onUseAnywa
     return () => { state.dead = true; void state.source?.then((s) => s.close(), () => undefined); };
   }, []);
 
-  // The file is opened once, on the first tile that scrolls into view.
-  const onVisible = useCallback((page: number) => {
+  // The file is opened once, by the first tile that scrolls into view.
+  const open = useCallback(() => {
     const state = run.current;
+    state.source ??= openSource(latest.current.claim, latest.current.doc);
+    state.source.catch(() => { if (!state.dead) setFailed(true); });
+    return state;
+  }, []);
+
+  const onVisible = useCallback((page: number) => {
+    const state = open();
     if (state.asked.has(page)) return;
     state.asked.add(page);
-    state.source ??= openSource(latest.current.claim, latest.current.doc);
-    state.source.then((s) => s.thumb(page)).then(
-      (url) => { if (!state.dead) setThumbs((t) => ({ ...t, [page]: url })); },
-      () => { if (!state.dead) setThumbs((t) => ({ ...t, [page]: '' })); },
+    state.source!.then(
+      (s) => s.thumb(page).then(
+        (url) => { if (!state.dead) setThumbs((t) => ({ ...t, [page]: url })); },
+        () => { if (!state.dead) setThumbs((t) => ({ ...t, [page]: '' })); },
+      ),
+      () => undefined, // the whole file failed: `open` reports it
     );
-  }, []);
+  }, [open]);
+
+  // No page count yet means no tiles to trigger the open: try it here, so a PDF that cannot be read says so.
+  const unknownCount = pages !== null && pages.length === 0;
+  useEffect(() => {
+    if (!unknownCount) return;
+    const state = open();
+    state.source!.then((s) => { if (!state.dead) setOpened(s.pages); }, () => undefined);
+  }, [unknownCount, open]);
+
+  const shown = unknownCount && opened > 0 ? Array.from({ length: opened }, (_, i) => i + 1) : pages;
 
   return (
     <div className="px-4 py-3">
       <div className="mb-2 flex items-center gap-2 text-xs">
         <span className="truncate font-mono text-muted-foreground">{doc.relPath}</span>
       </div>
+      {failed && shown && shown.length > 0 && <div className="mb-2 text-xs text-red-600">{CANT_OPEN}</div>}
       {pages === null ? (
         <div className="flex w-40 flex-col gap-1.5 rounded-md border border-border p-2">
           <div className="flex aspect-[3/4] w-full items-center justify-center rounded bg-muted"><FileText size={24} className="text-muted-foreground" /></div>
           <LabelChip label={{ type: doc.type, by: 'known', confirmed: true }} />
         </div>
-      ) : pages.length === 0 ? (
+      ) : failed && shown?.length === 0 ? (
+        <div className="text-xs text-red-600">{CANT_OPEN}</div>
+      ) : shown?.length === 0 ? (
         <div className="text-xs text-muted-foreground">Reading the pages…</div>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {pages.map((n) => (
+          {shown?.map((n) => (
             <Tile
-              key={n} page={n} src={thumbs[n]} selected={selected.has(pageKey(doc.id, n))}
+              key={n} page={n} src={failed ? '' : thumbs[n]} selected={selected.has(pageKey(doc.id, n))}
               label={doc.pages?.[n]} identity={identity?.[n]}
               onPick={(shift) => onPick(pageKey(doc.id, n), shift)} onVisible={onVisible}
               onUseAnyway={() => onUseAnyway(doc.id, n)}

@@ -118,13 +118,16 @@ function finish(box: RecipeBox, picks: Part[], missingTypes: DocType[], dropped:
   return { box, status, parts, missingTypes: missing, reasons, alternatives };
 }
 
+/** What to ask for to fill a missing box: a merge box's missing parts, else the box's main type. */
+export const missingTypesOf = (s: BoxState): DocType[] =>
+  s.box.combine === 'merge' && s.missingTypes.length ? s.missingTypes : [s.box.accepts[0]];
+
 /** A message the surveyor sends the insured. '' when nothing is missing. */
 export function missingMessage(claim: ClaimData, states: BoxState[]): string {
   const types: DocType[] = [];
   for (const s of states) {
     if (s.status !== 'missing') continue;
-    const wanted = s.box.combine === 'merge' && s.missingTypes.length ? s.missingTypes : [s.box.accepts[0]];
-    for (const t of wanted) if (!types.includes(t)) types.push(t);
+    for (const t of missingTypesOf(s)) if (!types.includes(t)) types.push(t);
   }
   if (!types.length) return '';
   const items = types.map((t) => DOC_TYPE_LABEL[t]).join(', ');

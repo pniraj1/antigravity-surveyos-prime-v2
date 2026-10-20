@@ -7,7 +7,7 @@ const ALL: DocType[] = ['rc', 'dl', 'policy', 'pan', 'aadhaar', 'cancelledCheque
 
 function box(status: BoxState['status'], accepts: DocType[], missingTypes: DocType[] = []): BoxState {
   return {
-    box: { id: accepts[0], label: 'x', mandatory: true, accepts, combine: 'single', formats: ['.pdf'] },
+    box: { id: accepts[0], label: 'x', mandatory: true, accepts, combine: missingTypes.length ? 'merge' : 'single', formats: ['.pdf'] },
     status, parts: [], missingTypes, reasons: [], alternatives: 0,
   };
 }
@@ -18,6 +18,10 @@ describe('neededTypesFirst', () => {
     const { needed, rest } = neededTypesFirst(states, ALL);
     expect(needed).toEqual(['dl', 'aadhaar', 'policy']);
     expect(rest).toEqual(['rc', 'pan', 'cancelledCheque']);
+  });
+
+  it('a merge box lists only its missing parts, not accepts[0] when that is present', () => {
+    expect(neededTypesFirst([box('missing', ['policy', 'aadhaar'], ['aadhaar'])], ALL).needed).toEqual(['aadhaar']);
   });
 
   it('has nothing needed when no box is missing', () => {
@@ -37,9 +41,16 @@ describe('nextSelection', () => {
     expect([...nextSelection(order, r.selected, r.anchor, 'a:2', false).selected]).toEqual([]);
   });
 
-  it('shift+click selects the range from the anchor, either direction, across files', () => {
-    expect([...nextSelection(order, new Set(['a:2']), 'a:2', 'b:1', true).selected]).toEqual(['a:2', 'a:3', 'b:1']);
-    expect([...nextSelection(order, new Set(['b:1']), 'b:1', 'a:2', true).selected].sort()).toEqual(['a:2', 'a:3', 'b:1']);
+  it('shift+click selects the range from the anchor, either direction, within one file', () => {
+    expect([...nextSelection(order, new Set(['a:1']), 'a:1', 'a:3', true).selected]).toEqual(['a:1', 'a:2', 'a:3']);
+    expect([...nextSelection(order, new Set(['b:2']), 'b:2', 'b:1', true).selected].sort()).toEqual(['b:1', 'b:2']);
+  });
+
+  it('shift+click on another file is a plain toggle and becomes the anchor', () => {
+    const r = nextSelection(order, new Set(['a:2']), 'a:2', 'b:1', true);
+    expect([...r.selected]).toEqual(['a:2', 'b:1']);
+    expect(r.anchor).toBe('b:1');
+    expect([...nextSelection(order, new Set(['a:2', 'b:1']), 'a:2', 'b:1', true).selected]).toEqual(['a:2']);
   });
 
   it('shift+click with no anchor just selects the page', () => {

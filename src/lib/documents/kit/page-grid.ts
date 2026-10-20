@@ -1,22 +1,25 @@
 /** Pure helpers behind the Pages view: which types to offer first, and page selection. */
 import type { ClaimDocument, DocType } from '@/types/documents';
 import type { BoxState } from './checklist';
+import { missingTypesOf } from './checklist';
 
 /** The types the current recipe still needs (missing boxes), then every other type. */
 export function neededTypesFirst(states: BoxState[], all: DocType[]): { needed: DocType[]; rest: DocType[] } {
   const needed: DocType[] = [];
   for (const s of states) {
     if (s.status !== 'missing') continue;
-    for (const t of [...s.missingTypes, s.box.accepts[0]]) if (!needed.includes(t)) needed.push(t);
+    for (const t of missingTypesOf(s)) if (!needed.includes(t)) needed.push(t);
   }
   return { needed, rest: all.filter((t) => !needed.includes(t)) };
 }
 
 export const pageKey = (docId: string, page: number): string => `${docId}:${page}`;
 
+const docOf = (key: string): string => key.slice(0, key.lastIndexOf(':'));
+
 /**
- * Click toggles one page; Shift+click adds the range from the anchor to the clicked page.
- * `order` is every page on screen, top to bottom.
+ * Click toggles one page; Shift+click adds the range from the anchor to the clicked page, but only within
+ * one file (across files it is a plain toggle). `order` is every page on screen, top to bottom.
  */
 export function nextSelection(
   order: string[], selected: ReadonlySet<string>, anchor: string | null, clicked: string, shift: boolean,
@@ -24,7 +27,7 @@ export function nextSelection(
   const next = new Set(selected);
   const from = anchor ? order.indexOf(anchor) : -1;
   const to = order.indexOf(clicked);
-  if (shift && from >= 0 && to >= 0) {
+  if (shift && from >= 0 && to >= 0 && docOf(anchor!) === docOf(clicked)) {
     for (const k of order.slice(Math.min(from, to), Math.max(from, to) + 1)) next.add(k);
   } else if (next.has(clicked)) next.delete(clicked);
   else next.add(clicked);
