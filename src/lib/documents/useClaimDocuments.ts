@@ -71,15 +71,17 @@ export function useClaimDocuments() {
     try {
       const handle = await getStoredRootHandle();
       if (handle && !(await ensureReadWrite(handle))) { toast.error('Folder access was not granted.'); return; }
-      const { claim: next, added, adopted, unreadable, skippedDirs } = await scanClaimFolder(claim);
-      if (added === 0 && adopted === 0 && unreadable === 0 && skippedDirs === 0) { toast.info('Nothing new in the claim folder.'); return; }
+      const { claim: next, added, adopted, unreadable, skippedDirs, reset } = await scanClaimFolder(claim);
       // The walk is long; the claim may have been switched while it ran (same guard as sink.ts).
       if (useClaimStore.getState().currentClaim?.id !== claim.id) {
         toast.warning('The claim changed while scanning — nothing was added.');
         return;
       }
+      // Always saved: a scan also records fingerprints of files it sees for the first time.
       updateClaim({ documents: next.documents, documentsFolder: next.documentsFolder });
+      if (added === 0 && adopted === 0 && unreadable === 0 && skippedDirs === 0 && reset.length === 0) { toast.info('Nothing new in the claim folder.'); return; }
       const parts = [
+        reset.length ? `${reset.length} file${reset.length === 1 ? '' : 's'} changed, page labels cleared` : '',
         added ? `${added} file${added === 1 ? '' : 's'} added` : '',
         adopted ? `${adopted} now on this PC` : '',
         unreadable ? `${unreadable} could not be read` : '',

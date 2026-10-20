@@ -9,6 +9,7 @@ import { MULTI_FILE_TYPES } from '@/types/documents';
 import { getStoredRootHandle, ensureReadWrite, getDeviceLabel } from '@/lib/local-sync/directory-handle';
 import { addDocuments, claimDocuments, newDocId, removeDocument, onThisDevice, isDiscardablePlaceholder, addDeviceTo, replaceableEntries } from './index-ops';
 import { folderNameFor, oldNameFor, relPathsFor, docTypeFromRelPath, isScanSkippable } from './naming';
+import { fingerprintOf, reconcileEntry } from './kit/fingerprint';
 import { getAllClaims } from '@/lib/storage/indexeddb';
 
 export class NoFolderError extends Error { constructor() { super('No claim folder is connected.'); } }
@@ -289,7 +290,7 @@ async function listFiles(
  */
 export async function scanClaimFolder(
   claim: ClaimData,
-): Promise<{ claim: ClaimData; added: number; adopted: number; unreadable: number; skippedDirs: number }> {
+): Promise<{ claim: ClaimData; added: number; adopted: number; unreadable: number; skippedDirs: number; reset: string[] }> {
   const dir = await getClaimDirHandle(claim);
   if (!dir) throw new NoFolderError();
   const folder = dir.name; // the folder we actually walked — never a name resolved a second time
@@ -303,13 +304,20 @@ export async function scanClaimFolder(
   let next: ClaimData = { ...claim, documentsFolder: folder };
   const fresh: ClaimDocument[] = [];
   let adopted = 0;
+  const reset: string[] = []; // relPaths whose page labels were dropped because the file changed
 
   for (const { relPath, file } of found) {
     if (isScanSkippable(relPath)) continue;
     const known = byPath.get(relPath);
     if (known) {
       for (const k of known) {
-        if (!onThisDevice(k, device)) { next = addDeviceTo(next, k.id, device); adopted++; }
+        if (!onThisDevice(k, device)) { next = addDeviceTo(next, k.id, device); adopted++; continue; }
+        // Already here: a changed file drops the page labels made on the old one.
+        // ponytail: PDF page counts arrive with the page reader; 0 = unknown never resets on its own.
+        const isPdf = k.mime === 'application/pdf' || /\.pdf$/i.test(relPath);
+        const r = reconcileEntry(k, fingerprintOf(file, isPdf ? (k.pageCount ?? 0) : 1));
+        if (r.entry !== k) next = { ...next, documents: { ...next.documents, [k.id]: r.entry } };
+        if (r.reset) reset.push(relPath);
       }
       continue;
     }
@@ -325,5 +333,5 @@ export async function scanClaimFolder(
     });
   }
 
-  return { claim: addDocuments(next, fresh), added: fresh.length, adopted, unreadable, skippedDirs };
+  return { claim: addDocuments(next, fresh), added: fresh.length, adopted, unreadable, skippedDirs, reset };
 }
