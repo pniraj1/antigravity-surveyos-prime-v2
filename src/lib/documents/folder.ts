@@ -7,7 +7,7 @@ import type { ClaimData } from '@/types/claim';
 import type { ClaimDocument, DocType } from '@/types/documents';
 import { MULTI_FILE_TYPES } from '@/types/documents';
 import { getStoredRootHandle, ensureReadWrite, getDeviceLabel } from '@/lib/local-sync/directory-handle';
-import { addDocuments, claimDocuments, newDocId, removeDocument, onThisDevice, isDiscardablePlaceholder, addDeviceTo } from './index-ops';
+import { addDocuments, claimDocuments, newDocId, removeDocument, onThisDevice, isDiscardablePlaceholder, addDeviceTo, replaceableEntries } from './index-ops';
 import { folderNameFor, oldNameFor, relPathsFor, docTypeFromRelPath, isScanSkippable } from './naming';
 import { getAllClaims } from '@/lib/storage/indexeddb';
 
@@ -159,7 +159,7 @@ export async function writeDocuments(
   const discard: string[] = [];
   if (!MULTI_FILE_TYPES.has(type)) {
     const incomingMime = files[0]?.blob.type ?? '';
-    const replaced = existing.filter((d) => d.type === type && onThisDevice(d, device));
+    const replaced = replaceableEntries(existing, type, device);
     next = replaced.reduce((c, d) => removeDocument(c, d.id), next);
     for (const old of replaced) {
       if (isDiscardablePlaceholder(old, incomingMime)) {

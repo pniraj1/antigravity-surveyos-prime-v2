@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createBlankClaim } from '@/types/claim';
 import type { ClaimDocument } from '@/types/documents';
-import { claimDocuments, addDocuments, removeDocument, onThisDevice, newDocId, isDiscardablePlaceholder, addDeviceTo } from '../index-ops';
+import { claimDocuments, addDocuments, removeDocument, onThisDevice, newDocId, isDiscardablePlaceholder, addDeviceTo, replaceableEntries } from '../index-ops';
 
 const doc = (p: Partial<ClaimDocument>): ClaimDocument => ({
   id: p.id ?? newDocId(), type: 'rc', relPath: 'RC Book.pdf', mime: 'application/pdf', size: 10,
@@ -70,5 +70,19 @@ describe('addDeviceTo', () => {
     const c = addDocuments(createBlankClaim(), [doc({ id: 'a', devices: ['Office PC'] })]);
     expect(addDeviceTo(c, 'a', 'Office PC').documents!.a.devices).toEqual(['Office PC']);
     expect(addDeviceTo(c, 'nope', 'Laptop')).toEqual(c);
+  });
+});
+
+describe('replaceableEntries', () => {
+  const pol = (relPath: string, devices = ['Office PC']) => doc({ id: relPath, type: 'policy', relPath, devices });
+  it('replaceableEntries keeps a surveyor-named file', () => {
+    expect(replaceableEntries([pol('Policy.pdf'), pol('Documents.pdf')], 'policy', 'Office PC')).toEqual([]);
+  });
+  it('replaceableEntries returns SurveyOS-named files', () => {
+    const got = replaceableEntries([pol('Policy Schedule.pdf'), pol('Policy Schedule 2.pdf'), pol('Policy.pdf'), doc({ relPath: 'RC Book.pdf' })], 'policy', 'Office PC');
+    expect(got.map((d) => d.relPath)).toEqual(['Policy Schedule.pdf', 'Policy Schedule 2.pdf']);
+  });
+  it('replaceableEntries ignores other devices', () => {
+    expect(replaceableEntries([pol('Policy Schedule.pdf', ['Laptop'])], 'policy', 'Office PC')).toEqual([]);
   });
 });

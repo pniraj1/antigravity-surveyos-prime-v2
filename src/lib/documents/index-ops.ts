@@ -1,6 +1,7 @@
 /** Pure operations on the claim's document index. Every function returns a new claim. */
 import type { ClaimData } from '@/types/claim';
-import type { ClaimDocument } from '@/types/documents';
+import type { ClaimDocument, DocType } from '@/types/documents';
+import { DOC_TYPE_LABEL } from '@/types/documents';
 
 export function newDocId(): string {
   return `doc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -48,4 +49,19 @@ export function addDeviceTo(claim: ClaimData, id: string, label: string): ClaimD
     ...claim,
     documents: { ...claim.documents, [id]: { ...doc, devices: [...doc.devices, label] } },
   };
+}
+
+/**
+ * Same-type entries on this device that a new write of `type` may rename to
+ * "(old)": only files named the way SurveyOS names that type ("Policy Schedule",
+ * "Policy Schedule 2", any extension, top level). A surveyor's own `Policy.pdf`
+ * is never renamed (originals are read-only).
+ */
+export function replaceableEntries(existing: ClaimDocument[], type: DocType, device: string): ClaimDocument[] {
+  const label = DOC_TYPE_LABEL[type].toLowerCase();
+  return existing.filter((d) => {
+    if (d.type !== type || !onThisDevice(d, device) || d.relPath.includes('/')) return false;
+    const stem = d.relPath.replace(/\.[^.]+$/, '').replace(/ \d+$/, '').toLowerCase();
+    return stem === label;
+  });
 }

@@ -30,6 +30,8 @@ describe('kit types', () => {
     expect(docTypeFromRelPath('RC.pdf')).toBe('rc');
     expect(docTypeFromRelPath('dl front.jpg')).toBe('dl');
     expect(docTypeFromRelPath('Scan_0001.pdf')).toBe('other');
+    expect(docTypeFromRelPath('Fee Bill.pdf')).toBe('feeBill');
+    expect(docTypeFromRelPath('Bill 2.pdf')).toBe('invoice');
   });
 
   it('Portal Upload is skipped', () => {
