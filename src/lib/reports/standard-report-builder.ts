@@ -687,6 +687,10 @@ export function buildStandardFinalSurveyHTML(
     <td style="${td}" colspan="3">${policy.insurerName || '—'} | Appointing: ${policy.appointingOffice || '—'}</td>
   </tr>
   <tr>
+    <td style="${td}color:#444;font-size:${scale.labelFont};">Issuing Office</td>
+    <td style="${td}" colspan="3">${policy.policyIssuingOffice || '—'}</td>
+  </tr>
+  <tr>
     <td style="${td}color:#444;font-size:${scale.labelFont};">Insured Name</td>
     <td style="${td}font-weight:600;width:32%;">${policy.insuredName || '—'}</td>
     <td style="${td}color:#444;font-size:${scale.labelFont};">Mobile</td>
