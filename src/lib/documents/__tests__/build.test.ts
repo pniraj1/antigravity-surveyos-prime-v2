@@ -11,6 +11,7 @@ async function pdfBlob(pages: number): Promise<Blob> {
 }
 const PNG_1X1 = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='), (c) => c.charCodeAt(0));
 const pngBlob = () => new Blob([PNG_1X1], { type: 'image/png' });
+const sizes = async (b: Blob) => (await PDFDocument.load(await b.arrayBuffer())).getPages().map((p) => [p.getWidth(), p.getHeight()]);
 const pageCount = async (b: Blob) => (await PDFDocument.load(await b.arrayBuffer())).getPageCount();
 
 type Src = { blob: Blob; mime: string; name: string };
@@ -25,6 +26,7 @@ describe('planBox', () => {
     const out = await buildBoxFile(box, plan, reader({ combined: { blob: await pdfBlob(9), mime: 'application/pdf', name: 'scan.pdf' } }));
     expect(out.pages).toBe(2);
     expect(await pageCount(out.blob)).toBe(2);
+    expect((await sizes(out.blob)).map(([w]) => w)).toEqual([302, 306]); // source pages 3 and 7, in that order
     expect(out.name).toBe('RC Book.pdf');
   });
 });
@@ -40,13 +42,15 @@ describe('build', () => {
 
   it('merge of two PDFs and one PNG gives page count sum', async () => {
     const box = merge('kyc', 'KYC', true, ['aadhaar', 'pan']);
-    const out = await buildBoxFile(box, [{ docId: 'a', pages: [] }, { docId: 'b', pages: [2] }, { docId: 'c', pages: [] }], reader({
+    const out = await buildBoxFile(box, [{ docId: 'a', pages: [] }, { docId: 'b', pages: [3] }, { docId: 'c', pages: [] }], reader({
       a: { blob: await pdfBlob(2), mime: 'application/pdf', name: 'a.pdf' },
       b: { blob: await pdfBlob(4), mime: 'application/pdf', name: 'b.pdf' },
       c: { blob: pngBlob(), mime: 'image/png', name: 'c.png' },
     }));
     expect(out.pages).toBe(4);
     expect(await pageCount(out.blob)).toBe(4);
+    // a's two pages, then b's page 3, then the PNG on an A4 page
+    expect(await sizes(out.blob)).toEqual([[300, 400], [301, 400], [302, 400], [595, 842]]);
     expect(out.name).toBe('KYC.pdf');
   });
 });
