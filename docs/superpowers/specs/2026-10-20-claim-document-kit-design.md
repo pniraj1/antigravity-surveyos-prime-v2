@@ -1,7 +1,7 @@
 # Claim Document Kit: know what's in the folder, build what the portal wants — Design
 
 **Date:** 2026-10-20
-**Status:** Draft for owner approval
+**Status:** Approved by owner 2026-10-20 ("looks good, proceed"). The §8 items are set to defaults, pending the owner's confirmation of the recipe contents.
 **Builds on:**
 - `docs/superpowers/specs/2026-09-20-claim-documents-design.md`: the typed document index `claim.documents`, the claim folder on disk, **Scan folder**, and rules D1–D10.
 - `docs/superpowers/specs/2026-09-20-portal-fill-extension-design.md`: extension rules E1–E10.
@@ -222,7 +222,56 @@ The size of each file is shown next to its box.
 
 **Useful on its own:** even before the extension can upload, the surveyor drags these files into the portal by hand. That alone removes the splitting, merging and hunting.
 
-### 4.8 Extension upload (Phase 3)
+### 4.7a Verification before anything leaves the folder (owner, 2026-10-20)
+
+**Identity checks.** These are free and local, and run on every page that has a text layer, against this claim's own data:
+
+| Page type | Must show (normalised: uppercase, spaces and punctuation removed) | Claim field |
+|---|---|---|
+| `rc`, `rcBack`, `policy` | registration number | `vehicle.registrationNumber` |
+| `rc`, `rcBack` | chassis number (last 6 characters are enough) | `vehicle.chassisNumber` |
+| `policy` | policy number | `policy.policyNumber` |
+| `claimForm` | claim number, or the registration number | `policy.claimNumber`, `vehicle.registrationNumber` |
+| `dl`, `dlBack` | driver name (all name words present) | `driver.name` |
+| `aadhaar`, `pan`, `ckyc`, `kycOther` | insured name or driver name | `policy.insuredName`, `driver.name` |
+
+The builder confirms the exact claim field paths against `src/types/claim.ts`.
+
+**Results, per page:**
+- `match`: green, *matches this claim*.
+- `mismatch`: red. The text shows the value found, e.g. *"This RC shows MH 12 XY 9999, not MH 18 AB 1234"*.
+- `cantCheck`: the page has no text layer, or the claim field is empty. Grey, *please look*.
+
+**(owner) A mismatch blocks the box.** The box can't be built or reviewed until the surveyor either swaps the page or presses **Use anyway** on it. That override is stored on the page label with the time, and the box then shows *"overridden"*.
+
+**Review before upload.** After **Build upload files**, a **Review upload set** screen lists every box with:
+- its built file: page thumbnails, page count, size, and the identity-check marks per page;
+- a **Looks right** tick per box, plus **All look right**, which is enabled only when no box is blocked.
+
+The set is **reviewed** when every non-optional box that has a file is ticked. Its state:
+
+```ts
+interface UploadSet {
+  portal; flow; claimNo;
+  builtAt: string;
+  boxes: Record<boxId, { name; size; pages: number; sha256: string; reviewedAt?: string }>;
+}
+```
+
+It's stored on the claim, as metadata only.
+
+**Any later change cancels the review** for the affected boxes:
+- a rebuild;
+- a label change;
+- a changed source fingerprint (C2);
+- a claim-data change to a field used by an identity check.
+
+**On the portal (Phase 5):**
+- The document kit carries each file's `sha256`.
+- The extension accepts a kit only if every box in it is reviewed.
+- Just before attaching, the extension re-checks the claim number (E3) and recomputes each file's `sha256`, refusing any file that doesn't match its reviewed hash.
+
+### 4.8 Extension upload (Phase 5)
 
 - The extension learns each portal's upload boxes in its field map, as a `docs` section. The model paths are already captured: NIA `manDoc.*` / `nonmanDoc.*` repeats with a `docType` select and a file input; UIIC `impDoc.fileToUpload` ×5 plus the `input.docType` picker.
 - **Before building it,** the Stage C audit (live verification spec §4.3) must answer:
@@ -238,7 +287,7 @@ The size of each file is shown next to its box.
 | Phase | Ships | Depends on | Size |
 |---|---|---|---|
 | **1** | Folder choice (§4.1: local and Drive-for-desktop with guide), page labels, free recognisers, labelling screen, recipes (UIIC, NIA non-tieup; KIA list from owner), checklist, missing message | owner confirms NIA "Claim Related Documents" and the KIA list | M |
-| **2** | Build upload files (`pdf-lib`), the `Portal Upload` subfolder, sizes shown | 1 | S |
+| **2** | Build upload files (`pdf-lib`), the `Portal Upload` subfolder, sizes shown, **identity checks and Review upload set (§4.7a)** | 1 | M |
 | **3** | Drive-online (Google Picker) | 1 | S |
 | **4** | Opt-in "Guess the rest" AI | 1 | S |
 | **5** | Extension uploads into portal boxes (`docs` map section, document-kit transport) | 2; live verification Stage B and C findings | M |
@@ -262,7 +311,18 @@ Phases 2–4 are independent of each other once Phase 1 lands. Phase 5 waits for
 - **Surveyor time:** a few seconds per claim to tap labels for the pages free recognition couldn't place. Drive-online adds one Picker visit per claim.
 - **Build effort (author's estimate):** about 5–7 sessions across Phases 1–5. Phase 1 is the largest.
 
-## 8. Owner decisions needed
+## 8. Owner decisions (defaults in use until the owner confirms)
+
+The owner approved the design without answering these yet. The plan uses the **defaults below**, and recipes are data, so a later answer is a data edit, not a redesign.
+
+- **(a)** Reports: an HTML-only report shows *Check: File the PDF* (C1). SurveyOS does not make PDFs itself.
+- **(b)** NIA non-tieup *Claim Related Documents*: policy, aadhaar, pan, ckyc, cancelledCheque, claimIntimation, kycOther, in that order. Only **aadhaar** and **policy** make the box *Missing*.
+- **(c)** KIA tie-up: RC, DL, Claim Form, and Claim Related Documents (the same merge as (b)), marked **provisional** in the recipe.
+- **(d)** UIIC *five vehicle photographs*: photoFront, photoRear, photoLeft, photoRight, chassisPhoto, marked provisional.
+- **(e)** Insurers: New India (non-tieup, KIA) and United India only.
+- **(f)** The missing-documents message is in English.
+
+Original questions:
 
 1. **(owner)** What goes into NIA non-tieup's **Claim Related Documents** merge box, and in what order?
 2. **(owner)** The full KIA tie-up box list and what each takes, especially its "Claim related documents".
