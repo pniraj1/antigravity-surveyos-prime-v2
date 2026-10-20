@@ -23,6 +23,8 @@ import { DocumentReviewSheet } from '@/components/documents/DocumentReviewSheet'
 import { useClaimDocuments } from '@/lib/documents/useClaimDocuments';
 import { ClaimFolderCard } from '@/components/documents/ClaimFolderCard';
 import { ClaimDocumentsList } from '@/components/documents/ClaimDocumentsList';
+import { PageLabelGrid } from '@/components/documents/PageLabelGrid';
+import { useDocumentKit } from '@/lib/documents/kit/useDocumentKit';
 import { TelegramIcon } from '@/components/icons/TelegramIcon';
 import { ProviderHealthBadge, ModelSelector, DocModeToggle, ProviderToggle } from '@/components/ai/AIControls';
 import { ReconciliationDialog } from './reconciliation/ReconciliationDialog';
@@ -133,6 +135,8 @@ export function DocumentsTab() {
   }, [conflicts.length, isReconOpen]);
 
   const docs = useClaimDocuments();
+  // Mounted once here: it runs the labelling effects. The Pages, checklist and build panels all take this `kit`.
+  const kit = useDocumentKit();
 
   if (!currentClaim) return null;
   const evidenceImages: string[] = [];
@@ -322,6 +326,7 @@ export function DocumentsTab() {
         <div className="space-y-3">
           <ClaimFolderCard supported={docs.supported} folder={docs.folder} onConnect={docs.connect} onReconnect={docs.reconnect} />
           <ClaimDocumentsList documents={docs.documents} connected={!!docs.folder} onAdd={docs.addFiles} onScan={docs.scan} scanning={docs.scanning} onOpen={docs.open} onRemove={docs.remove} />
+          <PageLabelGrid claim={currentClaim} documents={docs.documents.filter((d) => d.here)} kit={kit} />
         </div>
         {DOC_GROUPS.map((group) => (
           <div key={group.title}>

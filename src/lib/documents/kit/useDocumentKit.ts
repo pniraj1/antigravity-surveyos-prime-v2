@@ -175,3 +175,5 @@ export function useDocumentKit() {
 
   return { recipe, states, identity, missingText, setFlow, setNotNeeded, setLabels, confirmAll, useAnyway, build, review };
 }
+
+export type DocumentKit = ReturnType<typeof useDocumentKit>;
