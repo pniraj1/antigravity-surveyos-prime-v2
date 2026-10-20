@@ -333,6 +333,7 @@ export async function scanClaimFolder(
       size: file.size,
       addedAt: new Date().toISOString(), // added to the list now — file.lastModified would bury it under old dates
       source: 'upload', // found on disk — never treated as a placeholder we may delete
+      adopted: true,
       devices: [device],
     });
   }

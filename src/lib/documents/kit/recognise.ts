@@ -16,9 +16,9 @@ const RULES: Array<[DocType, (t: string) => boolean]> = [
   // \bpan\b: a bare "pan" would match "company".
   ['pan', (t) => t.includes('permanent account number') || (t.includes('income tax department') && /\bpan\b/.test(t))],
   ['invoice', (t) => t.includes('tax invoice') || (t.includes('gstin') && t.includes('invoice no'))],
-  ['estimate', (t) => t.includes('estimate') && (t.includes('labour') || t.includes('labor'))],
+  ['estimate', (t) => /\bestimate\b/.test(t) && (t.includes('labour') || t.includes('labor'))],
   ['policy', (t) => t.includes('policy schedule') || t.includes('certificate of insurance') || (t.includes('policy no') && t.includes('idv'))],
-  ['cancelledCheque', (t) => t.includes('ifsc') && (t.includes('a/c') || t.includes('account no')) && t.includes('pay')],
+  ['cancelledCheque', (t) => t.includes('ifsc') && (t.includes('a/c') || t.includes('account no')) && /\bpay\b/.test(t)],
   ['fir', (t) => t.includes('first information report')],
   ['claimForm', (t) => t.includes('claim form') && t.includes('signature')],
 ];
@@ -41,7 +41,7 @@ export function recogniseName(relPath: string): DocType | null {
  */
 export function knownType(entry: ClaimDocument): DocType | null {
   if (entry.source === 'generated' || entry.source === 'photo') return entry.type;
-  if (entry.type === 'other' || entry.source !== 'upload') return null;
+  if (entry.type === 'other' || entry.source !== 'upload' || entry.adopted) return null; // a hand-dropped file's name proves nothing
   const stem = (entry.relPath.split('/').pop() ?? '').replace(/\.[^.]+$/, '').replace(/ \d+$/, '');
   return stem === DOC_TYPE_LABEL[entry.type] ? entry.type : null;
 }

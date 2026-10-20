@@ -26,6 +26,8 @@ export interface ClaimDocument {
   size: number;
   addedAt: string;
   source: 'upload' | 'generated' | 'photo';
+  /** Found on disk by Scan rather than saved by SurveyOS: its name proves nothing about its pages. */
+  adopted?: boolean;
   /** Labels of the devices whose folder holds the bytes (spec D5). */
   devices: string[];
   /** Pages in the file, once read (PDFs). */

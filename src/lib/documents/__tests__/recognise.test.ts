@@ -33,6 +33,15 @@ describe('recogniseText', () => {
     expect(recogniseText('TAX INVOICE ... ESTIMATE of labour charges')).toBeNull();
   });
 
+  it('mentions of a keyword do not make a document', () => {
+    expect(recogniseText('Estimated loss 45000. Labour assessed 12000.')).toBeNull();
+    expect(recogniseText('Bank details for payment: A/c No 1234 IFSC SBIN0001')).toBeNull();
+  });
+
+  it('a survey report is not an estimate', () => {
+    expect(recogniseText('SURVEY REPORT Vehicle Registration No MH18AB1234 Chassis No MA3 Engine No K12 Estimated cost')).not.toBe('estimate');
+  });
+
   it('unrelated text returns null', () => {
     expect(recogniseText('Company profile and coverage details')).toBeNull();
     expect(recogniseText('')).toBeNull();
@@ -55,6 +64,9 @@ describe('knownType', () => {
     expect(knownType(entry({ type: 'rc', relPath: 'RC Book.pdf' }))).toBe('rc');
     expect(knownType(entry({ type: 'rc', relPath: 'RC Book 2.pdf' }))).toBe('rc');
   });
+  it('knownType: scan-adopted file named like a label is not known', () => {
+    expect(knownType(entry({ type: 'rc', relPath: 'RC Book.pdf', adopted: true }))).toBeNull();
+  });
   it('a hand-named upload is not known', () => {
     expect(knownType(entry({ type: 'rc', relPath: 'my rc.pdf' }))).toBeNull();
     expect(knownType(entry({ type: 'other', relPath: 'Other.pdf' }))).toBeNull();
@@ -67,6 +79,14 @@ describe('labelEntry', () => {
     expect(out.pages).toEqual({
       1: { type: 'feeBill', by: 'known', confirmed: true },
       2: { type: 'feeBill', by: 'known', confirmed: true },
+    });
+  });
+
+  it('labelEntry: adopted RC Book.pdf gets unconfirmed labels', () => {
+    const out = labelEntry(entry({ type: 'rc', relPath: 'RC Book.pdf', adopted: true, pageCount: 2 }), ['blank', 'blank']);
+    expect(out.pages).toEqual({
+      1: { type: 'rc', by: 'name', confirmed: false },
+      2: { type: 'rc', by: 'name', confirmed: false },
     });
   });
 
