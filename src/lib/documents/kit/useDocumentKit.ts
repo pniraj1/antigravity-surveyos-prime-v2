@@ -16,7 +16,7 @@ import { buildBoxFile, planBox, sha256Hex } from './build';
 import { checklist, missingMessage } from './checklist';
 import type { BoxState } from './checklist';
 import {
-  blockedBoxes, buildable, confirmAllLabels, identityMap, invalidateIfReviewed, labelClaim, overrideLabel, setPageLabels,
+  blockedBoxes, buildable, claimDrift, confirmAllLabels, identityMap, invalidateIfReviewed, labelClaim, overrideLabel, setPageLabels,
 } from './orchestrate';
 import { recipeFor } from './recipes';
 import { whileReading } from './reading';
@@ -33,14 +33,15 @@ export function useDocumentKit() {
   const updateClaim = useClaimStore((s) => s.updateClaim);
   const [device, setDevice] = useState<string | null>(null);
   const [texts, setTexts] = useState<Texts>({});
-  const seenRef = useRef(new Map<string, string>()); // docId -> signature of the file as read this session
+  // docId -> page texts as read this session, with the signature of the file they came from (memory only)
+  const cacheRef = useRef(new Map<string, { sig: string; texts: (string | null)[] }>());
   const building = useRef(false);
 
   const claimId = claim?.id;
   const documents = claim?.documents;
 
   // A different claim: forget the previous one's texts.
-  useEffect(() => { setTexts({}); seenRef.current = new Map(); }, [claimId]);
+  useEffect(() => { setTexts({}); cacheRef.current = new Map(); }, [claimId]);
 
   // Label pages after every Scan (it changes `documents`) and whenever the claim's documents change.
   useEffect(() => {
@@ -51,13 +52,16 @@ export function useDocumentKit() {
       const dev = await getDeviceLabel();
       if (cancelled) return;
       setDevice(dev);
-      const seen = (d: ClaimDocument) => seenRef.current.get(d.id) === readSignature(d, dev);
-      const { claim: next, texts: fresh } = await labelClaim(current, (d) => readDocument(current, d), dev, seen);
+      const cached = (d: ClaimDocument) => {
+        const hit = cacheRef.current.get(d.id);
+        return hit?.sig === readSignature(d, dev) ? hit.texts : undefined;
+      };
+      const { claim: next, texts: fresh } = await labelClaim(current, (d) => readDocument(current, d), dev, cached);
       const now = latest();
       // Files can be slow to read; drop the result if the claim moved on meanwhile (the new run redoes it).
       if (cancelled || now?.id !== current.id || now.documents !== current.documents) return;
       if (next !== current) updateClaim({ documents: next.documents });
-      for (const id of Object.keys(fresh)) seenRef.current.set(id, readSignature(current.documents![id], dev));
+      for (const [id, t] of Object.entries(fresh)) cacheRef.current.set(id, { sig: readSignature(current.documents![id], dev), texts: t });
       if (Object.keys(fresh).length) setTexts((prev) => ({ ...prev, ...fresh }));
     }).catch(() => { /* a file that cannot be read is skipped; labelling retries on the next change */ });
     return () => { cancelled = true; };
@@ -143,7 +147,10 @@ export function useDocumentKit() {
           };
         }
         await writePortalUpload(c, recipe.title, files);
-        if (latest()?.id !== c.id) return { ok: false as const, reason: 'The claim changed while building.' };
+        // A label edit or scan reset while building makes this set's sources and hashes stale.
+        const drift = claimDrift(c, latest());
+        if (drift === 'switched') return { ok: false as const, reason: 'The claim changed while building.' };
+        if (drift === 'edited') return { ok: false as const, reason: 'Documents changed while building. Build again.' };
         updateClaim({ uploadSet: newUploadSet(recipe, c, built) });
         return { ok: true as const };
       });

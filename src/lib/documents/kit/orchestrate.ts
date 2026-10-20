@@ -30,24 +30,33 @@ function fullyLabelled(d: ClaimDocument): boolean {
 /**
  * Label the pages of every file on this device. Reads a file once for its page count and text layer.
  *
- * `seen` (optional): true when this session already read the file and holds its text. With it, a file is
- * read whenever it is not seen, even if fully labelled (its text is needed for identity checks). Without it,
- * fully labelled files are skipped. A failed read (cloud placeholder, lock) skips that file only.
+ * `cached` (optional): the page texts this session already holds for a file (null/undefined = none).
+ * With it, a cached file is never read again: if it still has unlabelled pages it is labelled from the cached
+ * text. A file that is not cached is read even when fully labelled, because identity checks need its text.
+ * Without it, fully labelled files are skipped. A failed read (cloud placeholder, lock) skips that file only.
  *
- * Returns the same `claim` object when nothing changed (no dirty claim, no cloud write).
+ * Returns the same `claim` object when nothing changed (no dirty claim, no cloud write); `texts` holds only
+ * the files read now.
  */
 export async function labelClaim(
   claim: ClaimData,
   read: (doc: ClaimDocument) => Promise<Blob>,
   device: string,
-  seen?: (doc: ClaimDocument) => boolean,
+  cached?: (doc: ClaimDocument) => (string | null)[] | undefined,
 ): Promise<{ claim: ClaimData; texts: Record<string, (string | null)[]> }> {
   const texts: Record<string, (string | null)[]> = {};
   const changed: ClaimDocument[] = [];
 
   for (const d of claimDocuments(claim)) {
     if (!onThisDevice(d, device) || !labelable(d)) continue;
-    if (seen ? seen(d) : fullyLabelled(d)) continue;
+    const held = cached?.(d);
+    if (held) {
+      // All-null = the file has no text layer; labelEntry wants null for that.
+      const labelled = fullyLabelled(d) ? d : labelEntry(d, held.every((t) => t === null) ? null : (held as string[]));
+      if (labelled !== d) changed.push(labelled);
+      continue;
+    }
+    if (!cached && fullyLabelled(d)) continue;
     let blob: Blob;
     try { blob = await read(d); } catch { continue; }
 
@@ -60,6 +69,17 @@ export async function labelClaim(
     if (labelled !== d) changed.push(labelled);
   }
   return { claim: changed.length ? addDocuments(claim, changed) : claim, texts };
+}
+
+/**
+ * Has the claim's document index moved on since slow work (a scan, a build) started from `started`?
+ * 'edited': same claim, new documents (a label write, a scan): the work's result is stale.
+ * 'switched': another claim (or none) is open now.
+ */
+export type Drift = 'same' | 'edited' | 'switched';
+export function claimDrift(started: ClaimData, now: ClaimData | null): Drift {
+  if (!now || now.id !== started.id) return 'switched';
+  return now.documents === started.documents ? 'same' : 'edited';
 }
 
 /** Identity result per labelled page, from the in-memory texts. Pages with no text give cantCheck. */

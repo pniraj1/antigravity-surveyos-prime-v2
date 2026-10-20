@@ -11,7 +11,7 @@ import {
   openDocument, claimFolderPath, scanClaimFolder, NotOnThisDeviceError, NoFolderError, PermissionDeniedError,
 } from './folder';
 import { saveDocuments } from './sink';
-import { docIdsForPaths, invalidateIfReviewed } from './kit/orchestrate';
+import { claimDrift, docIdsForPaths, invalidateIfReviewed } from './kit/orchestrate';
 import { whileReading } from './kit/reading';
 
 type FolderInfo = { rootName: string; device: string; claimPath: string | null; permission: PermissionState };
@@ -73,16 +73,30 @@ export function useClaimDocuments() {
     try {
       const handle = await getStoredRootHandle();
       if (handle && !(await ensureReadWrite(handle))) { toast.error('Folder access was not granted.'); return; }
-      const { claim: next, added, adopted, unreadable, skippedDirs, reset, changed } = await whileReading(() => scanClaimFolder(claim));
+      let base = claim;
+      let scanned = await whileReading(() => scanClaimFolder(base));
+      // Labels may have been written while the (slow) walk ran. Scan again from the latest claim, once,
+      // so the result never overwrites them.
+      if (scanned.changed && claimDrift(base, useClaimStore.getState().currentClaim) === 'edited') {
+        base = useClaimStore.getState().currentClaim!;
+        scanned = await whileReading(() => scanClaimFolder(base));
+      }
+      const { claim: next, added, adopted, unreadable, skippedDirs, reset, changed } = scanned;
       if (changed) {
-        // The walk is long; the claim may have been switched while it ran (same guard as sink.ts).
-        if (useClaimStore.getState().currentClaim?.id !== claim.id) {
-          toast.warning('The claim changed while scanning — nothing was added.');
+        const latest = useClaimStore.getState().currentClaim;
+        const drift = claimDrift(base, latest);
+        if (drift !== 'same') {
+          toast.warning(drift === 'switched'
+            ? 'The claim changed while scanning — nothing was added.'
+            : 'The claim documents changed while scanning — scan again.');
           return;
         }
         // Only a real change touches the record: updateClaim marks it dirty and triggers a cloud push.
-        // A file replaced in place had its labels dropped: any review built from it no longer holds.
-        const cancelled = reset.length && next.uploadSet ? invalidateIfReviewed(next.uploadSet, { docIds: docIdsForPaths(next, reset) }) : null;
+        // A file replaced in place had its labels dropped: any review built from it no longer holds
+        // (judged against the latest uploadSet, which a review click may have changed during the walk).
+        const cancelled = reset.length && latest?.uploadSet
+          ? invalidateIfReviewed(latest.uploadSet, { docIds: docIdsForPaths(next, reset) })
+          : null;
         updateClaim({ documents: next.documents, documentsFolder: next.documentsFolder, ...(cancelled ? { uploadSet: cancelled } : {}) });
       }
       const parts = [

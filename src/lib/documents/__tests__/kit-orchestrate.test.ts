@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../kit/page-text', () => ({ pageTexts: mocks.pageTexts, pageCountOf: mocks.pageCountOf }));
 
 import {
-  labelClaim, setPageLabels, confirmAllLabels, overrideLabel, invalidateIfReviewed, docIdsForPaths, buildable, blockedBoxes, identityMap,
+  labelClaim, setPageLabels, confirmAllLabels, overrideLabel, invalidateIfReviewed, docIdsForPaths, buildable, blockedBoxes, identityMap, claimDrift,
 } from '../kit/orchestrate';
 
 const DEV = 'PC1';
@@ -87,18 +87,36 @@ describe('labelClaim', () => {
     expect(out.texts).toEqual({});
   });
 
-  it('labelClaim with seen() reads a fully labelled entry once for its text, then not again', async () => {
+  it('labelClaim with cached() reads a fully labelled entry once for its text, then not again', async () => {
     mocks.pageCountOf.mockResolvedValue(1);
     mocks.pageTexts.mockResolvedValue(['Registration Certificate']);
     const full = doc('a', { pageCount: 1, pages: { 1: label({ confirmed: true }) } });
     const c = claimOf([full]);
     const read = vi.fn(pdfBlob);
-    const first = await labelClaim(c, read, DEV, () => false);
+    const first = await labelClaim(c, read, DEV, () => undefined);
     expect(read).toHaveBeenCalledTimes(1);
     expect(first.claim).toBe(c);
     expect(first.texts.a).toEqual(['Registration Certificate']);
-    await labelClaim(c, read, DEV, () => true);
+    const second = await labelClaim(c, read, DEV, (d) => first.texts[d.id]);
     expect(read).toHaveBeenCalledTimes(1);
+    expect(second.texts).toEqual({});
+  });
+
+  it('labelClaim with cached() relabels an unlabelled entry from the cached text without reading the file', async () => {
+    const c = claimOf([doc('a', { pageCount: 2 })]);
+    const read = vi.fn(pdfBlob);
+    const out = await labelClaim(c, read, DEV, () => ['Registration Certificate of vehicle', 'nothing useful']);
+    expect(read).not.toHaveBeenCalled();
+    expect(mocks.pageTexts).not.toHaveBeenCalled();
+    expect(out.claim.documents!.a.pages![1]).toMatchObject({ type: 'rc', by: 'text', confirmed: false });
+    expect(out.claim.documents!.a.pages![2]).toBeUndefined();
+    expect(out.texts).toEqual({});
+  });
+
+  it('labelClaim with cached() treats an all-null cache as no text layer (name labelling still works)', async () => {
+    const c = claimOf([doc('a', { relPath: 'RC Book.pdf', pageCount: 1 })]);
+    const out = await labelClaim(c, vi.fn(pdfBlob), DEV, () => [null]);
+    expect(out.claim.documents!.a.pages![1]).toMatchObject({ type: 'rc', by: 'name' });
   });
 });
 
@@ -184,5 +202,20 @@ describe('identityMap', () => {
     const m = identityMap(c, DEV, { a: ['Registration Certificate MH 18 AB 1234 chassis and more padding text to pass the minimum length', null] });
     expect(m.a[1].status).toBe('match');
     expect(m.a[2].status).toBe('cantCheck');
+  });
+});
+
+describe('claimDrift', () => {
+  const started = claimOf([doc('a')]);
+  it('same while the documents are the ones the work started from', () => {
+    expect(claimDrift(started, started)).toBe('same');
+    expect(claimDrift(started, { ...started, notNeededBoxes: {} })).toBe('same'); // only documents matter
+  });
+  it('edited when documents were replaced meanwhile (a label write, a scan)', () => {
+    expect(claimDrift(started, { ...started, documents: { ...started.documents } })).toBe('edited');
+  });
+  it('switched when the current claim is another one or none', () => {
+    expect(claimDrift(started, { ...started, id: 'other' })).toBe('switched');
+    expect(claimDrift(started, null)).toBe('switched');
   });
 });
