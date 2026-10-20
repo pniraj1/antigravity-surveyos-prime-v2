@@ -10,7 +10,7 @@ import type { VehicleDetails, DriverDetails, PolicyDetails, AccidentDetails, Veh
 import type { AssessmentRow, SpotDamageRow, SpotSurveyDetails, ReinspectionDetails, FeeBill, PhotoItem, PhotoLayout, BillCheckDetails, ExtraBillItem, ValuationDetails, DocumentAnnexureOptions } from './assessment';
 import type { SurveyType } from './report';
 import type { InsuredReportDraft, InsuredReportStages } from '@/types/insured-report';
-import type { ClaimDocument } from './documents';
+import type { ClaimDocument, UploadSet } from './documents';
 import { DEFAULT_DOCUMENT_ANNEXURE_OPTIONS } from '@/lib/photos/document-annexure';
 
 // ─── Report Settings ───────────────────────────────────
@@ -189,6 +189,10 @@ export interface ClaimData {
   documents?: Record<string, ClaimDocument>;
   /** Folder name under the surveyor's root, fixed at the first write (spec D2). */
   documentsFolder?: string;
+  portalFlow?: 'nontieup' | 'kia' | 'maruti' | 'claimsurvey';
+  /** Key `${portal}-${flow}` → ids of boxes the surveyor marked not needed. */
+  notNeededBoxes?: Record<string, string[]>;
+  uploadSet?: UploadSet;
 
   // ─── Telemetry ─────────────────────────────────────
   telemetrySent: boolean;

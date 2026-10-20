@@ -71,10 +71,28 @@ export function oldNameFor(relPath: string, taken: ReadonlySet<string>): string 
   }
 }
 
-/** Label → type, built once. Labels are unique by construction. */
-const TYPE_BY_LABEL = new Map<string, DocType>(
-  (Object.entries(DOC_TYPE_LABEL) as Array<[DocType, string]>).map(([type, label]) => [label.toLowerCase(), type]),
-);
+/** Words surveyors actually name files with, beyond our own labels (lowercase stems). */
+const ALIASES: Array<[DocType, string[]]> = [
+  ['rc', ['rc', 'rc book', 'registration certificate']],
+  ['rcBack', ['rc back']],
+  ['dl', ['dl', 'dl front', 'driving licence', 'driving license']],
+  ['dlBack', ['dl back']],
+  ['aadhaar', ['aadhar', 'aadhaar', 'aadhar card', 'aadhaar card']],
+  ['pan', ['pan', 'pan card']],
+  ['cancelledCheque', ['cheque', 'cancelled cheque', 'canceled cheque']],
+  ['policy', ['policy', 'policy copy']],
+  ['claimForm', ['claim form']],
+  ['estimate', ['estimate']],
+  ['invoice', ['invoice', 'bill']],
+  ['fir', ['fir']],
+  ['ckyc', ['ckyc']],
+];
+
+/** Label or alias → type, built once. Labels are unique by construction. */
+const TYPE_BY_LABEL = new Map<string, DocType>([
+  ...ALIASES.flatMap(([type, words]) => words.map((w): [string, DocType] => [w, type])),
+  ...(Object.entries(DOC_TYPE_LABEL) as Array<[DocType, string]>).map(([type, label]): [string, DocType] => [label.toLowerCase(), type]),
+]);
 
 /**
  * What a file found on disk is, judged only by its own name: a file inside a
@@ -92,7 +110,8 @@ export function docTypeFromRelPath(relPath: string): DocType {
 /** Our own working files and superseded copies are not documents. */
 export function isScanSkippable(relPath: string): boolean {
   const name = relPath.split('/').pop() ?? '';
-  return name.endsWith('.part')
+  return relPath.split('/')[0] === 'Portal Upload' // files we built for a portal, not the surveyor's
+    || name.endsWith('.part')
     || name.startsWith('_surveyos') // our own working files; a surveyor's _estimate.pdf is a document
     || / \(old(?: \d+)?\)\.[^.]+$/.test(name);
 }

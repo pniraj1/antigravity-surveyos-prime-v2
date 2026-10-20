@@ -11,7 +11,9 @@ export type DocType =
   | 'spotPhotos' | 'damagePhotos'
   | 'surveyReport' | 'billCheckReport' | 'feeBill' | 'reinspectionReport'
   | 'niaAssessmentExcel' | 'insuredSummary'
-  | 'workApproval' | 'deliveryOrder' | 'other';
+  | 'workApproval' | 'deliveryOrder' | 'other'
+  | 'aadhaar' | 'pan' | 'ckyc' | 'kycOther' | 'claimIntimation'
+  | 'dischargeVoucher' | 'csr' | 'investigationReport' | 'rcBack' | 'dlBack';
 
 export type PhotoTag = 'front' | 'rear' | 'left' | 'right' | 'chassis' | 'odometer' | 'spot' | 'damage';
 
@@ -26,6 +28,29 @@ export interface ClaimDocument {
   source: 'upload' | 'generated' | 'photo';
   /** Labels of the devices whose folder holds the bytes (spec D5). */
   devices: string[];
+  /** Pages in the file, once read (PDFs). */
+  pageCount?: number;
+  /** 1-based page number → what that page is. */
+  pages?: Record<number, PageLabel>;
+  /** The file as last seen on disk; a change resets `pages`. */
+  fingerprint?: Fingerprint;
+}
+
+export interface PageLabel {
+  type: DocType;
+  by: 'known' | 'text' | 'name' | 'surveyor'; // 'ai' is added in Phase 4
+  confirmed: boolean;
+  /** Set by "Use anyway" on an identity mismatch. */
+  overrideAt?: string;
+}
+
+export interface Fingerprint { size: number; lastModified: number; pageCount: number }
+
+/** The files built for one portal flow; behaviour lives in the upload-set code. */
+export interface UploadSet {
+  portal: string; flow: string; claimNo: string; builtAt: string;
+  /** `sources` = ids of the source documents a box used (a change invalidates the review). */
+  boxes: Record<string, { name: string; size: number; pages: number; sha256: string; sources: string[]; reviewedAt?: string }>;
 }
 
 /** Human label; doubles as the file stem, so keep it Windows-safe. */
@@ -59,6 +84,16 @@ export const DOC_TYPE_LABEL: Record<DocType, string> = {
   workApproval: 'Work Approval',
   deliveryOrder: 'Delivery Order',
   other: 'Other',
+  aadhaar: 'Aadhaar Card',
+  pan: 'PAN Card',
+  ckyc: 'CKYC',
+  kycOther: 'Other KYC',
+  claimIntimation: 'Claim Intimation',
+  dischargeVoucher: 'Discharge Voucher',
+  csr: 'CSR',
+  investigationReport: 'Investigation Report',
+  rcBack: 'RC Book Back',
+  dlBack: 'Driving Licence Back',
 };
 
 /** Types that hold many files in a subfolder; everything else is one file per claim. */
