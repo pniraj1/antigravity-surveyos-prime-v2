@@ -32,8 +32,8 @@ export interface ClaimDocument {
   pageCount?: number;
   /** 1-based page number → what that page is. */
   pages?: Record<number, PageLabel>;
-  /** The file as last seen on disk; a change resets `pages`. */
-  fingerprint?: Fingerprint;
+  /** The file as last seen on disk, per device label (mtime differs between PCs); a change resets `pages`. */
+  fingerprints?: Record<string, Fingerprint>;
 }
 
 export interface PageLabel {
