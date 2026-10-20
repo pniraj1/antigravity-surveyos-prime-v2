@@ -340,3 +340,33 @@ export async function scanClaimFolder(
 
   return { claim: addDocuments(next, fresh), added: fresh.length, adopted, unreadable, skippedDirs, reset, changed: changed || adopted > 0 || fresh.length > 0 };
 }
+
+/**
+ * Write built upload files to "<claim folder>/Portal Upload/<portalTitle>/<name>", overwriting.
+ * Same .part-then-rename write as writeDocuments; touches nothing outside Portal Upload/.
+ */
+export async function writePortalUpload(
+  claim: ClaimData,
+  portalTitle: string,
+  files: Array<{ name: string; blob: Blob }>,
+): Promise<void> {
+  for (const seg of [portalTitle, ...files.map((f) => f.name)]) {
+    if (!seg || /[\\/]|^\.+$/.test(seg)) throw new Error(`Unsafe name for Portal Upload: "${seg}"`);
+  }
+  const claimDir = await getClaimDirHandle(claim, true);
+  if (!claimDir) throw new NoFolderError();
+  const base = `Portal Upload/${portalTitle}`;
+  const written: string[] = [];
+  try {
+    for (const f of files) {
+      await writeFile(claimDir, `${base}/${f.name}.part`, f.blob);
+      written.push(f.name);
+    }
+  } catch (err) {
+    for (const n of written) await removeQuiet(claimDir, `${base}/${n}.part`);
+    throw err;
+  }
+  for (const f of files) {
+    await renameFile(claimDir, `${base}/${f.name}.part`, `${base}/${f.name}`);
+  }
+}
