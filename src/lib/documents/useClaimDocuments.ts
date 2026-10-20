@@ -11,6 +11,8 @@ import {
   openDocument, claimFolderPath, scanClaimFolder, NotOnThisDeviceError, NoFolderError, PermissionDeniedError,
 } from './folder';
 import { saveDocuments } from './sink';
+import { docIdsForPaths, invalidateIfReviewed } from './kit/orchestrate';
+import { whileReading } from './kit/reading';
 
 type FolderInfo = { rootName: string; device: string; claimPath: string | null; permission: PermissionState };
 
@@ -71,7 +73,7 @@ export function useClaimDocuments() {
     try {
       const handle = await getStoredRootHandle();
       if (handle && !(await ensureReadWrite(handle))) { toast.error('Folder access was not granted.'); return; }
-      const { claim: next, added, adopted, unreadable, skippedDirs, reset, changed } = await scanClaimFolder(claim);
+      const { claim: next, added, adopted, unreadable, skippedDirs, reset, changed } = await whileReading(() => scanClaimFolder(claim));
       if (changed) {
         // The walk is long; the claim may have been switched while it ran (same guard as sink.ts).
         if (useClaimStore.getState().currentClaim?.id !== claim.id) {
@@ -79,7 +81,9 @@ export function useClaimDocuments() {
           return;
         }
         // Only a real change touches the record: updateClaim marks it dirty and triggers a cloud push.
-        updateClaim({ documents: next.documents, documentsFolder: next.documentsFolder });
+        // A file replaced in place had its labels dropped: any review built from it no longer holds.
+        const cancelled = reset.length && next.uploadSet ? invalidateIfReviewed(next.uploadSet, { docIds: docIdsForPaths(next, reset) }) : null;
+        updateClaim({ documents: next.documents, documentsFolder: next.documentsFolder, ...(cancelled ? { uploadSet: cancelled } : {}) });
       }
       const parts = [
         reset.length ? `${reset.length} file${reset.length === 1 ? '' : 's'} changed, page labels cleared` : '',
