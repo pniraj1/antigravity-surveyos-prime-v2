@@ -141,7 +141,7 @@ export function PortalChecklist({ claim, kit }: Props) {
         {buildError && <span className="text-xs text-red-600">{buildError}</span>}
       </div>
     </div>
-    {set && reviewFor === claim.id && <UploadReview kit={kit} set={set} title={recipe.title} files={files} />}
+    {set && reviewFor === claim.id && <UploadReview kit={kit} set={set} files={files} />}
     </>
   );
 }

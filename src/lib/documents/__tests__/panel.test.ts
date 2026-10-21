@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { ClaimDocument } from '@/types/documents';
 import type { BoxState } from '../kit/checklist';
-import { canBuild, countsLine, droppedReviews, formatPages, formatSize, identityMarks, sourceLine } from '../kit/panel';
+import { canBuild, canTick, countsLine, droppedReviews, formatPages, formatSize, identityMarks, sourceLine } from '../kit/panel';
 
 const state = (status: BoxState['status'], mandatory = true, parts: BoxState['parts'] = []): BoxState => ({
   box: { id: status + mandatory, label: 'x', mandatory, accepts: ['rc'], combine: 'single', formats: ['.pdf'] },
@@ -67,5 +67,19 @@ describe('droppedReviews', () => {
     expect(droppedReviews(['a', 'b'], boxes)).toEqual(['b']);
     expect(droppedReviews([], boxes)).toEqual([]);
     expect(droppedReviews(['gone'], boxes)).toEqual([]);
+  });
+});
+
+describe('canTick', () => {
+  const ok = { built: true, entry: {}, state: state('ready'), setMatchesRecipe: true };
+  it('only a fresh, ready, built-this-session box of the current flow can be ticked', () => {
+    expect(canTick(ok)).toBe(true);
+    expect(canTick({ ...ok, entry: { stale: true } })).toBe(false);
+    expect(canTick({ ...ok, state: state('check') })).toBe(false);
+    expect(canTick({ ...ok, state: state('missing') })).toBe(false);
+    expect(canTick({ ...ok, state: state('notNeeded') })).toBe(false);
+    expect(canTick({ ...ok, state: undefined })).toBe(false);
+    expect(canTick({ ...ok, setMatchesRecipe: false })).toBe(false);
+    expect(canTick({ ...ok, built: false })).toBe(false);
   });
 });

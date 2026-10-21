@@ -52,7 +52,9 @@ export interface Fingerprint { size: number; lastModified: number; pageCount: nu
 export interface UploadSet {
   portal: string; flow: string; claimNo: string; builtAt: string;
   /** `sources` = ids of the source documents a box used (a change invalidates the review). */
-  boxes: Record<string, { name: string; size: number; pages: number; sha256: string; sources: string[]; reviewedAt?: string }>;
+  boxes: Record<string, { name: string; size: number; pages: number; sha256: string; sources: string[]; reviewedAt?: string;
+    /** A source or claim field changed after this file was built: it must be rebuilt before it can be reviewed. */
+    stale?: boolean }>;
 }
 
 /** Human label; doubles as the file stem, so keep it Windows-safe. */

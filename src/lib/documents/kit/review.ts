@@ -20,13 +20,13 @@ export function markReviewed(set: UploadSet, boxId: string | 'all', now: string,
   return mapBoxes(set, (id, b) => (boxId === 'all' || id === boxId ? { ...b, reviewedAt: now } : b));
 }
 
-/** A changed source document clears the review of every box that used it; a claim-field change clears all. */
+/** A changed source document clears the review of every box that used it and marks it stale; a claim-field change does so for all. */
 export function invalidate(set: UploadSet, change: { docIds?: string[]; claimFields?: boolean }): UploadSet {
   const changed = new Set(change.docIds ?? []);
   return mapBoxes(set, (_id, b) => {
     if (!change.claimFields && !b.sources.some((s) => changed.has(s))) return b;
     const { reviewedAt: _dropped, ...rest } = b;
-    return rest;
+    return { ...rest, stale: true };
   });
 }
 

@@ -53,6 +53,10 @@ export function identityMarks(
   return out;
 }
 
+/** A box can be ticked only when its built file was made this session, is still current, and still fills a ready box of the current list. */
+export const canTick = (a: { built: boolean; entry: { stale?: boolean }; state: BoxState | undefined; setMatchesRecipe: boolean }): boolean =>
+  a.built && !a.entry.stale && a.state?.status === 'ready' && a.setMatchesRecipe;
+
 /** Boxes that were reviewed (`before`) and no longer are: something changed since. */
 export const droppedReviews = (before: string[], boxes: Record<string, { reviewedAt?: string }>): string[] =>
   before.filter((id) => id in boxes && !boxes[id].reviewedAt);

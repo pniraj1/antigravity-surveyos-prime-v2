@@ -19,6 +19,18 @@ describe('review', () => {
     expect(set.boxes.kyc.reviewedAt).toBe(NOW); // input not mutated
   });
 
+  it('invalidate marks affected boxes stale', () => {
+    const next = invalidate(markReviewed(built(), 'rc', NOW), { docIds: ['d1'] });
+    expect(next.boxes.rc.stale).toBe(true);
+    expect(next.boxes.rc.reviewedAt).toBeUndefined();
+    expect(next.boxes.kyc.stale).toBeUndefined(); // untouched box
+    expect(invalidate(built(), { claimFields: true }).boxes.kyc.stale).toBe(true); // stale even if never reviewed
+  });
+
+  it('newUploadSet starts fresh', () => {
+    expect(Object.values(built().boxes).some((b) => b.stale || b.reviewedAt)).toBe(false);
+  });
+
   it('claimFields change cancels all', () => {
     const next = invalidate(markReviewed(built(), 'all', NOW), { claimFields: true });
     expect(Object.values(next.boxes).some((b) => b.reviewedAt)).toBe(false);

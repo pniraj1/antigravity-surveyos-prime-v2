@@ -163,9 +163,11 @@ describe('label edits', () => {
     expect(overrideLabel(c, 'b', 9, NOW)).toBeNull();
   });
 
-  it('invalidateIfReviewed is null when nothing was reviewed', () => {
+  it('invalidateIfReviewed marks unreviewed boxes stale once, then is null', () => {
     const unreviewed = { ...set, boxes: { rc: { ...set.boxes.rc, reviewedAt: undefined } } };
-    expect(invalidateIfReviewed(unreviewed, { claimFields: true })).toBeNull();
+    const stale = invalidateIfReviewed(unreviewed, { claimFields: true })!;
+    expect(stale.boxes.rc.stale).toBe(true);
+    expect(invalidateIfReviewed(stale, { claimFields: true })).toBeNull();
     expect(invalidateIfReviewed(set, { claimFields: true })!.boxes.rc.reviewedAt).toBeUndefined();
   });
 

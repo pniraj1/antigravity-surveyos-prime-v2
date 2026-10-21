@@ -98,10 +98,10 @@ export function identityMap(
   return out;
 }
 
-/** `set` with the given reviews cancelled, or null when no box was reviewed (so nothing needs saving). */
+/** `set` with the given boxes marked stale (reviews cancelled), or null when none newly changed (so nothing needs saving). */
 export function invalidateIfReviewed(set: UploadSet, change: { docIds?: string[]; claimFields?: boolean }): UploadSet | null {
   const next = invalidate(set, change);
-  return Object.values(set.boxes).some((b, i) => b.reviewedAt && !Object.values(next.boxes)[i].reviewedAt) ? next : null;
+  return Object.values(set.boxes).some((b, i) => !b.stale && Object.values(next.boxes)[i].stale) ? next : null;
 }
 
 /** The ids of documents whose file is at one of these paths (Scan reports resets by path). */

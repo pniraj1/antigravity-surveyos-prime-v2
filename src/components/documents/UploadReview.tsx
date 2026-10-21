@@ -2,7 +2,8 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle2, FileText, ImageOff } from 'lucide-react';
 import type { UploadSet } from '@/types/documents';
-import { droppedReviews, formatSize, identityMarks } from '@/lib/documents/kit/panel';
+import { canTick, droppedReviews, formatSize, identityMarks } from '@/lib/documents/kit/panel';
+import { RECIPES } from '@/lib/documents/kit/recipes';
 import { isReviewed } from '@/lib/documents/kit/review';
 import type { BuiltFile, DocumentKit } from '@/lib/documents/kit/useDocumentKit';
 import { loadPdf, PDF_THUMB_QUALITY, PDF_THUMB_WIDTH } from '@/lib/photos/pdf-to-images';
@@ -10,7 +11,6 @@ import { loadPdf, PDF_THUMB_QUALITY, PDF_THUMB_WIDTH } from '@/lib/photos/pdf-to
 interface Props {
   kit: DocumentKit;
   set: UploadSet;
-  title: string;
   /** The files built this session. Null after a reload: the numbers still show, the previews don't. */
   files: BuiltFile[] | null;
 }
@@ -54,10 +54,11 @@ function useThumbs(file: BuiltFile | undefined): Thumbs {
   return thumbs.blob === blob ? thumbs : { urls: [], failed: false };
 }
 
-function BoxReview({ kit, boxId, built, file }: { kit: DocumentKit; boxId: string; built: UploadSet['boxes'][string]; file?: BuiltFile }) {
+function BoxReview({ kit, boxId, built, file, matches }: { kit: DocumentKit; boxId: string; built: UploadSet['boxes'][string]; file?: BuiltFile; matches: boolean }) {
   const state = kit.states.find((s) => s.box.id === boxId);
   const blocked = kit.review.blocked.includes(boxId);
   const reviewed = !!built.reviewedAt;
+  const tickable = canTick({ built: !!file, entry: built, state, setMatchesRecipe: matches });
   const { urls, failed } = useThumbs(file);
   const marks = state ? identityMarks(state, kit.identity) : null;
   const markText = marks
@@ -76,10 +77,11 @@ function BoxReview({ kit, boxId, built, file }: { kit: DocumentKit; boxId: strin
           </div>
           {markText && <div className="text-[11px] text-muted-foreground">{markText}</div>}
           {blocked && state?.reasons.map((r) => <div key={r} className="text-[11px] text-amber-800">{r}</div>)}
+          {built.stale && <div className="text-[11px] font-medium text-amber-800">Changed since it was built: build again.</div>}
         </div>
-        <label className={`inline-flex items-center gap-1.5 text-xs font-medium ${blocked || !file ? 'opacity-50' : ''}`} title={blocked ? 'Fix the box in the checklist first.' : undefined}>
+        <label className={`inline-flex items-center gap-1.5 text-xs font-medium ${reviewed || tickable ? '' : 'opacity-50'}`} title={blocked ? 'Fix the box in the checklist first.' : undefined}>
           <input
-            type="checkbox" checked={reviewed} disabled={reviewed || blocked || !file}
+            type="checkbox" checked={reviewed} disabled={reviewed || !tickable}
             onChange={() => kit.review.markReviewed(boxId)}
           />
           Looks right
@@ -103,8 +105,13 @@ function BoxReview({ kit, boxId, built, file }: { kit: DocumentKit; boxId: strin
   );
 }
 
-export function UploadReview({ kit, set, title, files }: Props) {
+export function UploadReview({ kit, set, files }: Props) {
   const reviewed = isReviewed(set);
+  // The set may have been built for another portal list (the flow was switched since): name its own folder and don't offer ticks.
+  const matches = set.portal === kit.recipe?.portal && set.flow === kit.recipe?.flow;
+  const title = RECIPES.find((r) => r.portal === set.portal && r.flow === set.flow)?.title ?? set.flow;
+  const allTickable = matches && Object.entries(set.boxes).every(([id, b]) =>
+    canTick({ built: !!files?.some((f) => f.boxId === id), entry: b, state: kit.states.find((x) => x.box.id === id), setMatchesRecipe: matches }));
   // A review that disappears while the same set is on screen means a source or a claim field changed.
   const reviewedIds = Object.keys(set.boxes).filter((id) => set.boxes[id].reviewedAt);
   const [seen, setSeen] = useState({ builtAt: set.builtAt, ids: reviewedIds, changed: false });
@@ -129,17 +136,21 @@ export function UploadReview({ kit, set, title, files }: Props) {
           {changed && !reviewed && <div className="mt-0.5 text-[11px] font-medium text-amber-800">Changed since review: check again.</div>}
         </div>
         <button
-          type="button" onClick={() => kit.review.markReviewed('all')} disabled={reviewed || kit.review.blocked.length > 0 || !files}
+          type="button" onClick={() => kit.review.markReviewed('all')} disabled={reviewed || !allTickable}
           className="rounded-lg bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground disabled:opacity-40"
         >
           All look right
         </button>
       </div>
-      <div className="divide-y divide-border">
-        {Object.entries(set.boxes).map(([id, built]) => (
-          <BoxReview key={id} kit={kit} boxId={id} built={built} file={files?.find((f) => f.boxId === id)} />
-        ))}
-      </div>
+      {matches ? (
+        <div className="divide-y divide-border">
+          {Object.entries(set.boxes).map(([id, built]) => (
+            <BoxReview key={id} kit={kit} boxId={id} built={built} file={files?.find((f) => f.boxId === id)} matches={matches} />
+          ))}
+        </div>
+      ) : (
+        <div className="px-4 py-3 text-xs font-medium text-amber-800">This upload set was built for another portal list. Build again.</div>
+      )}
     </div>
   );
 }
