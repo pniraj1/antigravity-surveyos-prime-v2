@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createBlankClaim } from '@/types/claim';
 import type { ClaimData } from '@/types/claim';
 import type { ClaimDocument, DocType } from '@/types/documents';
-import { newUploadSet, markReviewed, invalidate, isReviewed, planSig, staleBoxes } from '../kit/review';
+import { newUploadSet, markReviewed, invalidate, isReviewed, planSig, reviewDone, staleBoxes, unbuilt } from '../kit/review';
 import { checklist } from '../kit/checklist';
 import { RECIPES } from '../kit/recipes';
 import type { Recipe } from '../kit/recipes/types';
@@ -29,6 +29,19 @@ describe('staleBoxes (I-5)', () => {
     .map((s) => [s.box.id, { name: `${s.box.id}.pdf`, size: 1, pages: 1, sha256: 'x', sources: s.parts.map((p) => p.docId), planSig: planSig(s), written: s.status === 'ready' }])));
   const base = () => claimOf([doc('rc1', 'rc'), doc('dl1', 'dl')]);
   const stale = (set: ReturnType<typeof buildFrom>, c: ClaimData) => staleBoxes(set, statesOf(c), c, DEV);
+
+  it('reviewDone: every box ticked, none blocked now, and no ready box without a file (N-1, N-3)', () => {
+    const c = base();
+    const all = markReviewed(buildFrom(c), 'all', '2026-10-21T00:00:00Z');
+    expect(reviewDone(all, statesOf(c), [])).toBe(true);
+    // a page found not to match after the review: blocked now, so not reviewed, but nothing is persisted
+    expect(reviewDone(all, statesOf(c), ['rc'])).toBe(false);
+    expect(all.boxes.rc.reviewedAt).toBeDefined();
+    // a ready box that failed to build has no file in the set
+    const partial = markReviewed(buildFrom(c, ['dl']), 'all', '2026-10-21T00:00:00Z');
+    expect(unbuilt(partial, statesOf(c))).toEqual(['rc']);
+    expect(reviewDone(partial, statesOf(c), [])).toBe(false);
+  });
 
   it('nothing is stale while the claim is as built', () => {
     const c = base();

@@ -18,7 +18,7 @@ import { fileMatchesFingerprint } from './fingerprint';
 import type { BoxState } from './checklist';
 import {
   blockedBoxes, buildBoxes, buildable, claimDrift, confirmAllLabels, evictedTexts, identityMap, invalidateIfReviewed, labelClaim,
-  mismatchedDocs, overrideLabel, readSignature, setPageLabels, toWrite,
+  overrideLabel, readSignature, setPageLabels, toWrite,
 } from './orchestrate';
 import type { BoxError, BuiltBox } from './orchestrate';
 import { recipeFor } from './recipes';
@@ -128,20 +128,6 @@ export function useDocumentKit() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [documents, fieldsKey, device, texts],
   );
-  // A page newly found not to match (its text just loaded, or a claim field changed) cancels the reviews of
-  // the boxes using its file. Only new ones: a box that is blocked by a known mismatch isn't marked again.
-  const seenMismatch = useRef<{ id?: string; docs: string[] }>({ docs: [] });
-  useEffect(() => {
-    const c = latest();
-    if (!c || c.id !== claimId) return;
-    const now = mismatchedDocs(identity, c);
-    const before = seenMismatch.current.id === claimId ? seenMismatch.current.docs : [];
-    seenMismatch.current = { id: claimId, docs: now };
-    const added = now.filter((id) => !before.includes(id));
-    const cancelled = added.length && c.uploadSet ? invalidateIfReviewed(c.uploadSet, { docIds: added }) : null;
-    if (cancelled) updateClaim({ uploadSet: cancelled });
-  }, [identity, claimId, updateClaim]);
-
   const recipe = useMemo(
     () => (claim ? recipeFor(claim) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -208,8 +194,16 @@ export function useDocumentKit() {
         if (before !== 'same') return { ok: false, reason: moved(before), errors };
         // I-3: only ready boxes go to the folder, and it keeps nothing else: it holds exactly what the review covers.
         const written = toWrite(files, boxes);
-        await clearPortalUpload(c, recipe.title, written.map((f) => f.name));
-        await writePortalUpload(c, recipe.title, written);
+        try {
+          // Write first: a failed write leaves the old files in place rather than an emptied folder.
+          await writePortalUpload(c, recipe.title, written);
+          await clearPortalUpload(c, recipe.title, written.map((f) => f.name));
+        } catch (err) {
+          // Part of the folder may be new now, so the old set (and its review) no longer describes it.
+          const now = latest();
+          if (now?.id === c.id && now.uploadSet) updateClaim({ uploadSet: invalidate(now.uploadSet, { claimFields: true }) });
+          throw err;
+        }
         const set = newUploadSet(recipe, c, await setEntries(files, written));
         // The folder holds these files now, so the set is recorded; a change during the write makes it all stale.
         const after = claimDrift(c, latest());

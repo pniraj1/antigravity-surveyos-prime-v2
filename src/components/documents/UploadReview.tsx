@@ -4,7 +4,7 @@ import { CheckCircle2, FileText, ImageOff } from 'lucide-react';
 import type { UploadSet } from '@/types/documents';
 import { canTick, droppedReviews, formatSize, identityMarks } from '@/lib/documents/kit/panel';
 import { RECIPES } from '@/lib/documents/kit/recipes';
-import { isReviewed } from '@/lib/documents/kit/review';
+import { isReviewed, reviewDone, unbuilt } from '@/lib/documents/kit/review';
 import type { BuiltFile, DocumentKit } from '@/lib/documents/kit/useDocumentKit';
 import { loadPdf, PDF_THUMB_QUALITY, PDF_THUMB_WIDTH } from '@/lib/photos/pdf-to-images';
 
@@ -107,9 +107,10 @@ function BoxReview({ kit, boxId, built, file, matches }: { kit: DocumentKit; box
 }
 
 export function UploadReview({ kit, set, files }: Props) {
-  const reviewed = isReviewed(set);
   // The set may have been built for another portal list (the flow was switched since): name its own folder and don't offer ticks.
   const matches = set.portal === kit.recipe?.portal && set.flow === kit.recipe?.flow;
+  const missing = matches ? unbuilt(set, kit.states) : [];
+  const reviewed = matches ? reviewDone(set, kit.states, kit.review.blocked) : isReviewed(set);
   const title = RECIPES.find((r) => r.portal === set.portal && r.flow === set.flow)?.title ?? set.flow;
   const allTickable = matches && Object.entries(set.boxes).every(([id, b]) =>
     canTick({ built: !!files?.some((f) => f.boxId === id), entry: b, state: kit.states.find((x) => x.box.id === id), setMatchesRecipe: matches }));
@@ -135,6 +136,11 @@ export function UploadReview({ kit, set, files }: Props) {
             <span className="font-semibold uppercase tracking-wider text-muted-foreground">Review upload set</span>
           )}
           {changed && !reviewed && <div className="mt-0.5 text-[11px] font-medium text-amber-800">Changed since review: check again.</div>}
+          {missing.length > 0 && (
+            <div className="mt-0.5 text-[11px] font-medium text-amber-800">
+              No file yet for {missing.map((id) => kit.states.find((s) => s.box.id === id)?.box.label ?? id).join(', ')}: build again.
+            </div>
+          )}
         </div>
         <button
           type="button" onClick={() => kit.review.markReviewed('all')} disabled={reviewed || !allTickable}

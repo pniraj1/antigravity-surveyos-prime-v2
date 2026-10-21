@@ -81,3 +81,14 @@ export function staleBoxes(set: UploadSet, states: BoxState[], claim: ClaimData,
 }
 
 export const isReviewed = (set: UploadSet): boolean => Object.values(set.boxes).every((b) => !!b.reviewedAt);
+
+/** Ready boxes the set has no file for: their build failed, or they weren't ready when it was built. */
+export const unbuilt = (set: UploadSet, states: BoxState[]): string[] =>
+  states.filter((s) => s.status === 'ready' && !set.boxes[s.box.id]).map((s) => s.box.id);
+
+/**
+ * The whole set is reviewed only while every box is ticked, none is blocked now (a page found not to match
+ * after the tick), and no ready box lacks a file. Derived, not stored, so a reload never cancels a review.
+ */
+export const reviewDone = (set: UploadSet, states: BoxState[], blocked: string[]): boolean =>
+  isReviewed(set) && !blocked.length && !unbuilt(set, states).length;

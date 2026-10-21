@@ -118,12 +118,6 @@ export function identityMap(
   return out;
 }
 
-/** Docs with a page that doesn't match this claim and wasn't "used anyway": the hook cancels reviews when one appears. */
-export const mismatchedDocs = (identity: Record<string, Record<number, IdentityResult>>, claim: ClaimData): string[] =>
-  Object.entries(identity)
-    .filter(([id, pages]) => Object.entries(pages).some(([n, r]) => r.status === 'mismatch' && !claim.documents?.[id]?.pages?.[Number(n)]?.overrideAt))
-    .map(([id]) => id);
-
 /** `set` with the given boxes marked stale (reviews cancelled), or null when none newly changed (so nothing needs saving). */
 export function invalidateIfReviewed(set: UploadSet, change: Parameters<typeof invalidate>[1]): UploadSet | null {
   const next = invalidate(set, change);

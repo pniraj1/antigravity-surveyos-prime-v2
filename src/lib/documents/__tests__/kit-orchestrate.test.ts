@@ -12,7 +12,7 @@ vi.mock('../kit/page-text', () => ({ pageTexts: mocks.pageTexts, pageCountOf: mo
 
 import {
   labelClaim, setPageLabels, confirmAllLabels, overrideLabel, invalidateIfReviewed, docIdsForPaths, buildable, blockedBoxes, identityMap, claimDrift,
-  mismatchedDocs, evictedTexts, readSignature,
+  evictedTexts, readSignature,
 } from '../kit/orchestrate';
 
 const DEV = 'PC1';
@@ -298,29 +298,6 @@ describe('evictedTexts', () => {
     expect(evictedTexts(cache, now, DEV)).toEqual(['changed', 'gone']);
     // a label edit is not a file change
     expect(evictedTexts(new Map([['same', { sig: readSignature(same, DEV) }]]), { same: { ...same, pages: { 1: label() } } }, DEV)).toEqual([]);
-  });
-});
-
-describe('mismatchedDocs', () => {
-  const set = { portal: 'nia', flow: 'nontieup', claimNo: 'x', builtAt: NOW, boxes: {
-    rc: { name: 'RC.pdf', size: 1, pages: 1, sha256: 'x', sources: ['a'], reviewedAt: NOW },
-    dl: { name: 'DL.pdf', size: 1, pages: 1, sha256: 'y', sources: ['b'], reviewedAt: NOW },
-  } };
-  const c = claimOf([doc('a', { pages: { 1: label() } }), doc('b', { pages: { 1: label({ type: 'dl', overrideAt: NOW }) } })]);
-
-  it('lists docs with a page that does not match and was not used anyway', () => {
-    expect(mismatchedDocs({ a: { 1: { status: 'mismatch' } }, b: { 1: { status: 'mismatch' } } }, c)).toEqual(['a']);
-    expect(mismatchedDocs({ a: { 1: { status: 'pending' } } }, c)).toEqual([]);
-  });
-
-  it('a change to mismatch cancels the reviews of the boxes using that doc', () => {
-    const before = mismatchedDocs({ a: { 1: { status: 'pending' } } }, c);
-    const now = mismatchedDocs({ a: { 1: { status: 'mismatch' } } }, c);
-    const added = now.filter((id) => !before.includes(id));
-    const next = invalidateIfReviewed(set, { docIds: added })!;
-    expect(next.boxes.rc).toMatchObject({ stale: true });
-    expect(next.boxes.rc.reviewedAt).toBeUndefined();
-    expect(next.boxes.dl.reviewedAt).toBe(NOW);
   });
 });
 
