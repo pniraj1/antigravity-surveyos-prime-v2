@@ -1,7 +1,12 @@
 import type { ClaimData } from '@/types/claim';
 import type { DocType } from '@/types/documents';
 
-export type IdentityResult = { status: 'match' | 'mismatch' | 'cantCheck'; found?: string; expected?: string };
+/**
+ * `noConflict`: the page has text and nothing on it contradicts the claim, but the claim's value isn't on it
+ * either (a policy's terms page, a card's back). identityMap lets a matching page of the same type in the same
+ * file vouch for it; otherwise it is cantCheck.
+ */
+export type IdentityResult = { status: 'match' | 'mismatch' | 'cantCheck'; found?: string; expected?: string; noConflict?: true };
 
 const MIN_TEXT = 40; // normalised characters; less is a scan with a stray text layer
 const MIN_REG = 6;
@@ -38,6 +43,11 @@ function regCandidates(upper: string): RegCandidate[] {
   });
 }
 
+// ── Other vehicles' and policies' numbers ───────────────────────────────────
+// ponytail: shape heuristics. A VIN is 17 letters/digits (no I, O, Q); a policy number follows its label.
+const VIN_IN_TEXT = /\b[A-HJ-NPR-Z0-9]{17}\b/g;
+const POLICY_NO_IN_TEXT = /POLICY\s*(?:NO|NUMBER)\.?\s*[:.-]?\s*([A-Z0-9][A-Z0-9/-]{3,})/g;
+
 // ── Names ───────────────────────────────────────────────────────────────────
 const NAME_STOP = new Set(['MR', 'MRS', 'MS', 'SHRI', 'SMT', 'KUMARI', 'M', 'S', 'PVT', 'LTD', 'PRIVATE', 'LIMITED', 'CO']);
 
@@ -66,15 +76,21 @@ export function identityCheck(type: DocType, pageText: string | null, claim: Cla
   // odd spacing the candidate regex can't follow, and registrations outside the usual shape (e.g. BH series).
   const regOk = regPresent && (candidates.some((c) => c.canonical === regCanon) || text.includes(rawReg));
 
-  const regMismatch = (): IdentityResult => {
-    const found = candidates.find((c) => c.credible)?.canonical;
-    return found ? { status: 'mismatch', found, expected: regCanon } : { status: 'mismatch', expected: regCanon };
-  };
+  // I-7: only a competing value makes a mismatch. A value that is simply not on the page proves nothing.
+  const noConflict: IdentityResult = { status: 'cantCheck', noConflict: true };
+  const otherReg = candidates.find((c) => c.credible && c.canonical !== regCanon)?.canonical;
+  const regConflict = (): IdentityResult | null =>
+    regPresent && !regOk && otherReg ? { status: 'mismatch', found: otherReg, expected: regCanon } : null;
 
   const hasNumber = (raw: string | undefined): [boolean, boolean] => {
     const n = normalise(raw ?? '');
     return [n.length >= MIN_NUMBER, text.includes(n)];
   };
+  const otherPolicyNo = (): boolean => {
+    const mine = normalise(claim.policy.policyNumber ?? '');
+    return [...upper.matchAll(POLICY_NO_IN_TEXT)].some((m) => /\d/.test(m[1]) && normalise(m[1]) !== mine);
+  };
+  const otherChassis = (): boolean => (upper.match(VIN_IN_TEXT) ?? []).some((v) => /[A-Z]/.test(v) && /\d/.test(v));
 
   // Every present field must appear. `undefined` when nothing is checkable.
   const allOf = (tests: Array<[boolean, boolean]>): Verdict => {
@@ -87,7 +103,10 @@ export function identityCheck(type: DocType, pageText: string | null, claim: Cla
     const sets = names.map((n) => tokens(n ?? '')).filter((t) => t.length);
     if (!sets.length) return { status: 'cantCheck' };
     const page = new Set(tokens(pageText));
-    return { status: sets.some((t) => t.every((w) => page.has(w))) ? 'match' : 'mismatch' };
+    if (sets.some((t) => t.every((w) => page.has(w)))) return { status: 'match' };
+    // Part of a name with the rest different is another person. No name at all may be the card's back:
+    // a different person's name can't be told from other words, so that is no conflict.
+    return sets.some((t) => t.some((w) => page.has(w))) ? { status: 'mismatch' } : noConflict;
   };
 
   switch (type) {
@@ -102,13 +121,17 @@ export function identityCheck(type: DocType, pageText: string | null, claim: Cla
       const verdict = allOf([[regPresent, regOk], second]);
       if (!verdict) return { status: 'cantCheck' };
       if (verdict === 'match') return { status: 'match' };
-      return regPresent && !regOk ? regMismatch() : { status: 'mismatch' };
+      const reg = regConflict();
+      if (reg) return reg;
+      const [hasSecond, secondOk] = second;
+      const secondConflict = hasSecond && !secondOk && (type === 'policy' ? otherPolicyNo() : otherChassis());
+      return secondConflict ? { status: 'mismatch' } : noConflict;
     }
     case 'claimForm': {
       const [hasClaimNo, claimNoOk] = hasNumber(claim.policy.claimNumber);
       if (!regPresent && !hasClaimNo) return { status: 'cantCheck' };
       if ((hasClaimNo && claimNoOk) || regOk) return { status: 'match' };
-      return regPresent ? regMismatch() : { status: 'mismatch' };
+      return regConflict() ?? noConflict;
     }
     case 'dl':
     case 'dlBack':

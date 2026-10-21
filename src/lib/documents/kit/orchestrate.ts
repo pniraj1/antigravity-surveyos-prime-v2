@@ -90,7 +90,11 @@ export function claimDrift(started: ClaimData, now: ClaimData | null): Drift {
   return now.documents === started.documents ? 'same' : 'edited';
 }
 
-/** Identity result per labelled page, from the in-memory texts. Pages with no text give cantCheck. */
+/**
+ * Identity result per labelled page, from the in-memory texts. Pages with no text give cantCheck.
+ * A page that conflicts with nothing (a policy's terms, a card's back) matches when a page of the same type in
+ * the same file matches; otherwise it is cantCheck.
+ */
 export function identityMap(
   claim: ClaimData,
   device: string,
@@ -99,9 +103,11 @@ export function identityMap(
   const out: Record<string, Record<number, IdentityResult>> = {};
   for (const d of claimDocuments(claim)) {
     if (!onThisDevice(d, device) || !d.pages) continue;
-    out[d.id] = Object.fromEntries(
-      Object.entries(d.pages).map(([n, l]) => [Number(n), identityCheck(l.type, texts[d.id]?.[Number(n) - 1] ?? null, claim)]),
-    );
+    const checked = Object.entries(d.pages).map(([n, l]) =>
+      ({ n: Number(n), type: l.type, r: identityCheck(l.type, texts[d.id]?.[Number(n) - 1] ?? null, claim) }));
+    const vouched = new Set(checked.filter((c) => c.r.status === 'match').map((c) => c.type));
+    out[d.id] = Object.fromEntries(checked.map(({ n, type, r }): [number, IdentityResult] =>
+      [n, r.noConflict ? { status: vouched.has(type) ? 'match' : 'cantCheck' } : r]));
   }
   return out;
 }

@@ -62,16 +62,21 @@ describe('identityCheck', () => {
     const c = claim({ insured: 'Rajesh Kumar Sharma', driver: 'Suresh Patil' });
     expect(identityCheck('aadhaar', page('Name: RAJESH KUMAR SHARMA  1234 5678 9012'), c)).toEqual({ status: 'match' });
     expect(identityCheck('aadhaar', page('SURESH PATIL 1234 5678 9012'), c).status).toBe('match');
-    expect(identityCheck('aadhaar', page('AMIT VERMA 1234 5678 9012'), c)).toEqual({ status: 'mismatch' });
-    expect(identityCheck('pan', page('AMIT VERMA ABCDE1234F'), c)).toEqual({ status: 'mismatch' });
+    // I-7: a page without the name at all can't be told apart from a card's back, so it proves nothing either way.
+    expect(identityCheck('aadhaar', page('AMIT VERMA 1234 5678 9012'), c)).toEqual({ status: 'cantCheck', noConflict: true });
+    expect(identityCheck('pan', page('AMIT VERMA ABCDE1234F'), c)).toEqual({ status: 'cantCheck', noConflict: true });
+    // part of the name with the rest different is another person
+    expect(identityCheck('pan', page('AMIT KUMAR SHARMA ABCDE1234F'), c)).toEqual({ status: 'mismatch' });
   });
 
   it('identity: rc needs registration and chassis tail', () => {
     const c = claim({ reg: 'MH18AB1234', chassis: 'MA3EWB22S00123456' });
     expect(identityCheck('rc', page('MH 18 AB 1234 Chassis MA3EWB22S00123456'), c).status).toBe('match');
     expect(identityCheck('rcBack', page('MH18AB1234 ch no ...123456'), c).status).toBe('match');
-    expect(identityCheck('rc', page('MH 18 AB 1234 Chassis MA3EWB22S00999999'), c).status).toBe('mismatch');
+    expect(identityCheck('rc', page('MH 18 AB 1234 Chassis MA3EWB22S00999999'), c).status).toBe('mismatch'); // another vehicle's chassis
     expect(identityCheck('rc', page('MH 12 XY 9999 Chassis MA3EWB22S00123456'), c).status).toBe('mismatch');
+    // the registration matches and no other chassis is shown: nothing conflicts
+    expect(identityCheck('rcBack', page('MH 18 AB 1234 Hypothecated to State Bank'), c)).toEqual({ status: 'cantCheck', noConflict: true });
   });
 
   it('identity: policy needs registration and policy number', () => {
@@ -80,11 +85,19 @@ describe('identityCheck', () => {
     expect(identityCheck('policy', page('MH18AB1234 Policy No P/999/000'), c).status).toBe('mismatch');
   });
 
+  it('identity: a policy terms page with no registration or policy number conflicts with nothing', () => {
+    const c = claim({ reg: 'MH18AB1234', policyNo: 'P/123/456' });
+    const terms = page('General Exceptions. The company shall not be liable under this policy number of conditions apply');
+    expect(identityCheck('policy', terms, c)).toEqual({ status: 'cantCheck', noConflict: true });
+    expect(identityCheck('policy', page('Policy No P/123/456 Vehicle MH 12 XY 9999'), c)).toMatchObject({ status: 'mismatch', found: 'MH12XY9999' });
+  });
+
   it('identity: claim form accepts claim number or registration', () => {
     const c = claim({ reg: 'MH18AB1234', claimNo: 'CL-2026-77' });
     expect(identityCheck('claimForm', page('Claim No CL/2026/77'), c).status).toBe('match');
     expect(identityCheck('claimForm', page('Vehicle MH 18 AB 1234'), c).status).toBe('match');
-    expect(identityCheck('claimForm', page('nothing here'), c).status).toBe('mismatch');
+    expect(identityCheck('claimForm', page('nothing here'), c)).toEqual({ status: 'cantCheck', noConflict: true });
+    expect(identityCheck('claimForm', page('Vehicle MH 12 XY 9999'), c).status).toBe('mismatch');
   });
 
   it('identity: dl checks every driver-name token and never returns found', () => {
@@ -154,11 +167,8 @@ describe('identityCheck', () => {
       });
     });
 
-    it('a stray serial number is a mismatch with no found value', () => {
-      const r = identityCheck('rc', page('SL NO 4567'), claim({ reg: 'MH18AB1234' }));
-      expect(r.status).toBe('mismatch');
-      expect(r.found).toBeUndefined();
-      expect(r.expected).toBe('MH18AB1234');
+    it('a stray serial number is no other registration, so nothing conflicts', () => {
+      expect(identityCheck('rc', page('SL NO 4567'), claim({ reg: 'MH18AB1234' }))).toEqual({ status: 'cantCheck', noConflict: true });
     });
 
     it('a registration outside the usual pattern is compared as plain text', () => {

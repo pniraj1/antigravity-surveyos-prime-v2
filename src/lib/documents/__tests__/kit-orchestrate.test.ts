@@ -238,6 +238,39 @@ describe('identityMap', () => {
     expect(m.a[1].status).toBe('match');
     expect(m.a[2].status).toBe('cantCheck');
   });
+
+  describe('continuation pages (I-7)', () => {
+    const PAD = ' and enough ordinary words on the page to count as a real text layer for the check';
+    const policyClaim = () => {
+      const c = claimOf([doc('p', { pages: { 1: label({ type: 'policy' }), 2: label({ type: 'policy' }), 3: label({ type: 'dl' }) } })]);
+      c.vehicle.registrationNumber = 'MH18AB1234';
+      c.policy.policyNumber = 'P/123/456';
+      return c;
+    };
+
+    it('a policy terms page next to a matching schedule page matches', () => {
+      const m = identityMap(policyClaim(), DEV, { p: [`Policy Schedule MH 18 AB 1234 Policy No P/123/456${PAD}`, `General exceptions and conditions${PAD}`, null] });
+      expect(m.p[1]).toEqual({ status: 'match' });
+      expect(m.p[2]).toEqual({ status: 'match' });
+    });
+
+    it('a terms page with no matching page of its type beside it is cantCheck', () => {
+      const m = identityMap(policyClaim(), DEV, { p: [null, `General exceptions and conditions${PAD}`, null] });
+      expect(m.p[2]).toEqual({ status: 'cantCheck' });
+    });
+
+    it('a page showing another registration stays a mismatch beside a matching page', () => {
+      const m = identityMap(policyClaim(), DEV, { p: [`Policy No P/123/456 MH 18 AB 1234${PAD}`, `Previous vehicle MH 12 XY 9999${PAD}`, null] });
+      expect(m.p[2]).toMatchObject({ status: 'mismatch', found: 'MH12XY9999' });
+    });
+
+    it('an Aadhaar back with no name next to a matching front matches', () => {
+      const c = claimOf([doc('k', { pages: { 1: label({ type: 'aadhaar' }), 2: label({ type: 'aadhaar' }) } })]);
+      c.policy.insuredName = 'Rajesh Kumar Sharma';
+      const m = identityMap(c, DEV, { k: [`RAJESH KUMAR SHARMA 1234 5678 9012${PAD}`, `Address: Flat 4, Shivaji Nagar, Pune 411005${PAD}`] });
+      expect(m.k[2]).toEqual({ status: 'match' });
+    });
+  });
 });
 
 describe('claimDrift', () => {
