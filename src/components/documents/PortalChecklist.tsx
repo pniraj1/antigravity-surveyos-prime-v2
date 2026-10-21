@@ -3,8 +3,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Copy, XCircle } from 'lucide-react';
 import type { ClaimData } from '@/types/claim';
 import type { BoxState } from '@/lib/documents/kit/checklist';
-import { countsLine, sourceLine } from '@/lib/documents/kit/panel';
-import type { DocumentKit } from '@/lib/documents/kit/useDocumentKit';
+import { canBuild, countsLine, sourceLine } from '@/lib/documents/kit/panel';
+import type { BuiltFile, DocumentKit } from '@/lib/documents/kit/useDocumentKit';
+import { UploadReview } from './UploadReview';
 
 interface Props {
   claim: ClaimData;
@@ -52,6 +53,13 @@ export function PortalChecklist({ claim, kit }: Props) {
   const { recipe, states, missingText } = kit;
   const [copied, setCopied] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [building, setBuilding] = useState(false);
+  const [buildError, setBuildError] = useState<string | null>(null);
+  // The built blobs live here only (never stored); each is tagged with its claim so a claim switch drops them.
+  const [built, setBuilt] = useState<{ claimId: string; files: BuiltFile[] } | null>(null);
+  const [reviewFor, setReviewFor] = useState<string | null>(null);
+  const files = built?.claimId === claim.id ? built.files : null;
+  const set = kit.review.set;
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
   if (!recipe) {
@@ -69,7 +77,18 @@ export function PortalChecklist({ claim, kit }: Props) {
     timer.current = setTimeout(() => setCopied(false), 2000);
   };
 
+  const build = async () => {
+    setBuilding(true);
+    setBuildError(null);
+    const result = await kit.build();
+    setBuilding(false);
+    if (!result.ok) { setBuildError(result.reason); return; }
+    setBuilt({ claimId: claim.id, files: result.files });
+    setReviewFor(claim.id);
+  };
+
   return (
+    <>
     <div id="portal-checklist" className="rounded-xl border border-border bg-card">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-2">
         <div>
@@ -108,7 +127,21 @@ export function PortalChecklist({ claim, kit }: Props) {
         >
           Label pages
         </button>
+        <button
+          type="button" onClick={build} disabled={building || !canBuild(states)}
+          className="rounded-lg bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground disabled:opacity-40"
+        >
+          {building ? 'Building…' : 'Build upload files'}
+        </button>
+        {set && reviewFor !== claim.id && (
+          <button type="button" onClick={() => setReviewFor(claim.id)} className="rounded-lg border border-border px-2.5 py-1 text-xs font-medium hover:bg-muted">
+            Review upload set
+          </button>
+        )}
+        {buildError && <span className="text-xs text-red-600">{buildError}</span>}
       </div>
     </div>
+    {set && reviewFor === claim.id && <UploadReview kit={kit} set={set} title={recipe.title} files={files} />}
+    </>
   );
 }

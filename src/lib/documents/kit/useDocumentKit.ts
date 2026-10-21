@@ -23,6 +23,9 @@ import { whileReading } from './reading';
 import { markReviewed, newUploadSet } from './review';
 
 type Flow = NonNullable<ClaimData['portalFlow']>;
+/** The built files, handed to the caller for previews. In memory only; never stored. */
+export type BuiltFile = { boxId: string; name: string; blob: Blob };
+type BuildResult = { ok: true; files: BuiltFile[] } | { ok: false; reason: string };
 type Texts = Record<string, (string | null)[]>;
 
 const latest = (): ClaimData | null => useClaimStore.getState().currentClaim;
@@ -120,7 +123,7 @@ export function useDocumentKit() {
   const confirmAll = useCallback(() => { if (device) apply((c) => confirmAllLabels(c, device)); }, [apply, device]);
   const useAnyway = useCallback((docId: string, page: number) => apply((c) => overrideLabel(c, docId, page, new Date().toISOString())), [apply]);
 
-  const build = useCallback(async (): Promise<{ ok: true } | { ok: false; reason: string }> => {
+  const build = useCallback(async (): Promise<BuildResult> => {
     const c = latest();
     if (!c || !recipe) return { ok: false, reason: 'No upload recipe for this claim.' };
     const boxes = buildable(states);
@@ -136,11 +139,11 @@ export function useDocumentKit() {
           return { blob: file, mime: file.type, name: file.name };
         };
         const built: UploadSet['boxes'] = {};
-        const files: Array<{ name: string; blob: Blob }> = [];
+        const files: BuiltFile[] = [];
         for (const s of boxes) {
           const plan = planBox(s);
           const out = await buildBoxFile(s.box, plan, read);
-          files.push({ name: out.name, blob: out.blob });
+          files.push({ boxId: s.box.id, name: out.name, blob: out.blob });
           built[s.box.id] = {
             name: out.name, size: out.blob.size, pages: out.pages, sha256: await sha256Hex(out.blob),
             sources: [...new Set(plan.map((p) => p.docId))],
@@ -152,7 +155,7 @@ export function useDocumentKit() {
         if (drift === 'switched') return { ok: false as const, reason: 'The claim changed while building.' };
         if (drift === 'edited') return { ok: false as const, reason: 'Documents changed while building. Build again.' };
         updateClaim({ uploadSet: newUploadSet(recipe, c, built) });
-        return { ok: true as const };
+        return { ok: true as const, files };
       });
     } catch (err) {
       return { ok: false, reason: err instanceof Error ? err.message : String(err) };
