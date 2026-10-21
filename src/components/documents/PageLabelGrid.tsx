@@ -234,7 +234,7 @@ export function PageLabelGrid({ claim, documents, kit }: Props) {
   );
 
   return (
-    <div className="rounded-xl border border-border bg-card">
+    <div id="document-pages" className="rounded-xl border border-border bg-card">
       <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2">
         <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pages · {order.length}</div>
         <button

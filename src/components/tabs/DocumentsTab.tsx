@@ -24,6 +24,7 @@ import { useClaimDocuments } from '@/lib/documents/useClaimDocuments';
 import { ClaimFolderCard } from '@/components/documents/ClaimFolderCard';
 import { ClaimDocumentsList } from '@/components/documents/ClaimDocumentsList';
 import { PageLabelGrid } from '@/components/documents/PageLabelGrid';
+import { PortalChecklist } from '@/components/documents/PortalChecklist';
 import { useDocumentKit } from '@/lib/documents/kit/useDocumentKit';
 import { TelegramIcon } from '@/components/icons/TelegramIcon';
 import { ProviderHealthBadge, ModelSelector, DocModeToggle, ProviderToggle } from '@/components/ai/AIControls';
@@ -325,6 +326,7 @@ export function DocumentsTab() {
       <div className="px-6 lg:px-12 py-8 max-w-5xl mx-auto space-y-10">
         <div className="space-y-3">
           <ClaimFolderCard supported={docs.supported} folder={docs.folder} onConnect={docs.connect} onReconnect={docs.reconnect} />
+          <PortalChecklist claim={currentClaim} kit={kit} />
           <ClaimDocumentsList documents={docs.documents} connected={!!docs.folder} onAdd={docs.addFiles} onScan={docs.scan} scanning={docs.scanning} onOpen={docs.open} onRemove={docs.remove} />
           <PageLabelGrid claim={currentClaim} documents={docs.documents.filter((d) => d.here)} kit={kit} />
         </div>
