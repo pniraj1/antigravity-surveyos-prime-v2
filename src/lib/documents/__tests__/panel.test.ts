@@ -55,9 +55,10 @@ describe('formatSize', () => {
 describe('identityMarks', () => {
   it('counts the identity results of the pages a box uses', () => {
     const s = state('ready', true, [{ docId: 'a', pages: [1, 2, 3] }]);
-    const identity = { a: { 1: { status: 'match' as const }, 2: { status: 'mismatch' as const }, 3: { status: 'cantCheck' as const } } };
-    expect(identityMarks(s, identity)).toEqual({ match: 1, mismatch: 1, cantCheck: 1 });
-    expect(identityMarks(state('ready', true, [{ docId: 'z', pages: [1] }]), identity)).toEqual({ match: 0, mismatch: 0, cantCheck: 1 });
+    const identity = { a: { 1: { status: 'match' as const }, 2: { status: 'mismatch' as const }, 3: { status: 'cantCheck' as const }, 4: { status: 'pending' as const } } };
+    expect(identityMarks(s, identity)).toEqual({ match: 1, mismatch: 1, cantCheck: 1, pending: 0 });
+    expect(identityMarks(state('ready', true, [{ docId: 'a', pages: [4] }]), identity)).toEqual({ match: 0, mismatch: 0, cantCheck: 0, pending: 1 });
+    expect(identityMarks(state('ready', true, [{ docId: 'z', pages: [1] }]), identity)).toEqual({ match: 0, mismatch: 0, cantCheck: 1, pending: 0 });
   });
 });
 

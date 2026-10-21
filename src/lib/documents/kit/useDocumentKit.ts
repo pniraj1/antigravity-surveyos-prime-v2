@@ -17,7 +17,8 @@ import { checklist, missingMessage } from './checklist';
 import { fileMatchesFingerprint } from './fingerprint';
 import type { BoxState } from './checklist';
 import {
-  blockedBoxes, buildable, claimDrift, confirmAllLabels, identityMap, invalidateIfReviewed, labelClaim, overrideLabel, setPageLabels,
+  blockedBoxes, buildable, claimDrift, confirmAllLabels, identityMap, invalidateIfReviewed, labelClaim, mismatchedDocs, overrideLabel,
+  setPageLabels,
 } from './orchestrate';
 import { recipeFor } from './recipes';
 import { whileReading } from './reading';
@@ -97,6 +98,20 @@ export function useDocumentKit() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [documents, fieldsKey, device, texts],
   );
+  // A page newly found not to match (its text just loaded, or a claim field changed) cancels the reviews of
+  // the boxes using its file. Only new ones: a box that is blocked by a known mismatch isn't marked again.
+  const seenMismatch = useRef<{ id?: string; docs: string[] }>({ docs: [] });
+  useEffect(() => {
+    const c = latest();
+    if (!c || c.id !== claimId) return;
+    const now = mismatchedDocs(identity, c);
+    const before = seenMismatch.current.id === claimId ? seenMismatch.current.docs : [];
+    seenMismatch.current = { id: claimId, docs: now };
+    const added = now.filter((id) => !before.includes(id));
+    const cancelled = added.length && c.uploadSet ? invalidateIfReviewed(c.uploadSet, { docIds: added }) : null;
+    if (cancelled) updateClaim({ uploadSet: cancelled });
+  }, [identity, claimId, updateClaim]);
+
   const recipe = useMemo(
     () => (claim ? recipeFor(claim) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps

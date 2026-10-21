@@ -62,7 +62,7 @@ function BoxReview({ kit, boxId, built, file, matches }: { kit: DocumentKit; box
   const { urls, failed } = useThumbs(file);
   const marks = state ? identityMarks(state, kit.identity) : null;
   const markText = marks
-    ? [marks.match && `${marks.match} match this claim`, marks.mismatch && `${marks.mismatch} don't match`, marks.cantCheck && `${marks.cantCheck} can't be checked`].filter(Boolean).join(' · ')
+    ? [marks.match && `${marks.match} match this claim`, marks.mismatch && `${marks.mismatch} don't match`, marks.cantCheck && `${marks.cantCheck} can't be checked`, marks.pending && `${marks.pending} still being checked`].filter(Boolean).join(' · ')
     : '';
   return (
     <div className="space-y-2 px-4 py-3">

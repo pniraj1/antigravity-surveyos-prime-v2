@@ -46,7 +46,7 @@ export function identityMarks(
   state: BoxState,
   identity: Record<string, Record<number, IdentityResult>>,
 ): Record<IdentityResult['status'], number> {
-  const out = { match: 0, mismatch: 0, cantCheck: 0 };
+  const out = { match: 0, mismatch: 0, cantCheck: 0, pending: 0 };
   for (const p of state.parts) {
     for (const n of p.pages.length ? p.pages : [0]) out[identity[p.docId]?.[n]?.status ?? 'cantCheck']++;
   }

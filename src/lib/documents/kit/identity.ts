@@ -5,8 +5,9 @@ import type { DocType } from '@/types/documents';
  * `noConflict`: the page has text and nothing on it contradicts the claim, but the claim's value isn't on it
  * either (a policy's terms page, a card's back). identityMap lets a matching page of the same type in the same
  * file vouch for it; otherwise it is cantCheck.
+ * `pending` (set by identityMap, never here): the page's text hasn't been read yet, so the check hasn't run.
  */
-export type IdentityResult = { status: 'match' | 'mismatch' | 'cantCheck'; found?: string; expected?: string; noConflict?: true };
+export type IdentityResult = { status: 'match' | 'mismatch' | 'cantCheck' | 'pending'; found?: string; expected?: string; noConflict?: true };
 
 const MIN_TEXT = 40; // normalised characters; less is a scan with a stray text layer
 const MIN_REG = 6;

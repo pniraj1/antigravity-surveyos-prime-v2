@@ -93,7 +93,7 @@ export function claimDrift(started: ClaimData, now: ClaimData | null): Drift {
 /**
  * Identity result per labelled page, from the in-memory texts. Pages with no text give cantCheck.
  * A page that conflicts with nothing (a policy's terms, a card's back) matches when a page of the same type in
- * the same file matches; otherwise it is cantCheck.
+ * the same file matches; otherwise it is cantCheck. A PDF whose text isn't read yet gives pending: not run is not a pass.
  */
 export function identityMap(
   claim: ClaimData,
@@ -103,6 +103,10 @@ export function identityMap(
   const out: Record<string, Record<number, IdentityResult>> = {};
   for (const d of claimDocuments(claim)) {
     if (!onThisDevice(d, device) || !d.pages) continue;
+    if (!texts[d.id] && isPdf(d)) {
+      out[d.id] = Object.fromEntries(Object.keys(d.pages).map((n): [number, IdentityResult] => [Number(n), { status: 'pending' }]));
+      continue;
+    }
     const checked = Object.entries(d.pages).map(([n, l]) =>
       ({ n: Number(n), type: l.type, r: identityCheck(l.type, texts[d.id]?.[Number(n) - 1] ?? null, claim) }));
     const vouched = new Set(checked.filter((c) => c.r.status === 'match').map((c) => c.type));
@@ -111,6 +115,12 @@ export function identityMap(
   }
   return out;
 }
+
+/** Docs with a page that doesn't match this claim and wasn't "used anyway": the hook cancels reviews when one appears. */
+export const mismatchedDocs = (identity: Record<string, Record<number, IdentityResult>>, claim: ClaimData): string[] =>
+  Object.entries(identity)
+    .filter(([id, pages]) => Object.entries(pages).some(([n, r]) => r.status === 'mismatch' && !claim.documents?.[id]?.pages?.[Number(n)]?.overrideAt))
+    .map(([id]) => id);
 
 /** `set` with the given boxes marked stale (reviews cancelled), or null when none newly changed (so nothing needs saving). */
 export function invalidateIfReviewed(set: UploadSet, change: { docIds?: string[]; claimFields?: boolean }): UploadSet | null {

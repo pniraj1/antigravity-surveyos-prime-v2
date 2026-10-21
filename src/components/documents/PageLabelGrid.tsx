@@ -68,6 +68,7 @@ function IdentityMark({ result, overridden }: { result: IdentityResult; overridd
       </span>
     );
   }
+  if (result.status === 'pending') return <span className="text-[10px] text-muted-foreground">checking…</span>;
   return <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground"><HelpCircle size={11} /> can&apos;t check</span>;
 }
 

@@ -112,7 +112,9 @@ function finish(box: RecipeBox, picks: Part[], missingTypes: DocType[], dropped:
         if (!label) continue;
         const name = DOC_TYPE_LABEL[label.type];
         if (!label.confirmed) add(`${name} is a guess. Confirm it in Pages.`);
-        if (opts.identity[p.doc.id]?.[n]?.status === 'mismatch' && !label.overrideAt) add(`${name} doesn't match this claim.`);
+        const id = opts.identity[p.doc.id]?.[n]?.status;
+        if (id === 'pending') add(`Still checking ${name}.`);
+        if (id === 'mismatch' && !label.overrideAt) add(`${name} doesn't match this claim.`);
       }
     }
     status = reasons.length ? 'check' : 'ready';

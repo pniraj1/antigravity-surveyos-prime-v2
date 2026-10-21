@@ -143,6 +143,13 @@ describe('checklist', () => {
     expect(state(overridden, 'rc', { d1: { 1: { status: 'mismatch' } } })).toMatchObject({ status: 'ready', reasons: [] });
   });
 
+  it('checklist: a page whose identity check has not run yet is check, not ready', () => {
+    const c = claim([doc('d1', 'rc', { 1: confirmed('rc') })]);
+    const s = state(c, 'rc', { d1: { 1: { status: 'pending' } } });
+    expect(s.status).toBe('check');
+    expect(s.reasons).toEqual(['Still checking RC Book.']);
+  });
+
   it('checklist: word and excel allowed in single boxes that list the extension, dropped from merges', () => {
     const xlsx = doc('x', 'estimate', undefined, { mime: 'application/vnd.ms-excel', relPath: 'NIA Estimate.xlsx' });
     const recipe: Recipe = {
