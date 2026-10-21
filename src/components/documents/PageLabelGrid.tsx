@@ -5,6 +5,7 @@ import type { ClaimData } from '@/types/claim';
 import type { ClaimDocument, DocType, PageLabel } from '@/types/documents';
 import { DOC_TYPE_LABEL } from '@/types/documents';
 import { readDocument } from '@/lib/documents/folder';
+import { CANT_OPEN_PDF } from '@/lib/documents/kit/build';
 import type { IdentityResult } from '@/lib/documents/kit/identity';
 import { neededTypesFirst, nextSelection, pageKey, pageNumbers, selectionByDoc } from '@/lib/documents/kit/page-grid';
 import type { DocumentKit } from '@/lib/documents/kit/useDocumentKit';
@@ -22,7 +23,7 @@ const ALL_TYPES = Object.keys(DOC_TYPE_LABEL) as DocType[];
 // ── Thumbnails ──────────────────────────────────────────────────────────────
 interface ThumbSource { pages: number; thumb(page: number): Promise<string>; close(): void }
 
-const CANT_OPEN = "This PDF can't be opened here (it may be password-protected). Open it yourself and save an unlocked copy into the claim folder.";
+const CANT_OPEN = CANT_OPEN_PDF;
 
 async function openSource(claim: ClaimData, doc: ClaimDocument): Promise<ThumbSource> {
   const file = await readDocument(claim, doc);

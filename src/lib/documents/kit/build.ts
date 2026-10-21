@@ -12,6 +12,8 @@ type Source = { blob: Blob; mime: string; name: string };
 
 const A4 = { w: 595, h: 842, margin: 36 };
 
+export const CANT_OPEN_PDF = "This PDF can't be opened here (it may be password-protected). Open it yourself and save an unlocked copy into the claim folder.";
+
 /** Pages sorted ascending per document, documents in state order. */
 export function planBox(state: BoxState): BoxPlan {
   return state.parts.map((p) => ({ docId: p.docId, pages: [...p.pages].sort((a, b) => a - b) }));
@@ -56,6 +58,8 @@ export async function buildBoxFile(
     const src = await read(entry.docId);
     if (isPdf(src)) {
       const doc = await loadPdf(src);
+      // Pages copied out of an encrypted PDF come out as garbage; only the untouched whole file is safe.
+      if (doc.isEncrypted) throw new Error(CANT_OPEN_PDF);
       const idx = entry.pages.length > 0 ? entry.pages.map((p) => p - 1) : doc.getPageIndices();
       for (const page of await out.copyPages(doc, idx)) out.addPage(page);
     } else if (isPng(src) || isJpeg(src)) {

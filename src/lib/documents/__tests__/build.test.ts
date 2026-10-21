@@ -54,6 +54,33 @@ describe('build', () => {
     expect(out.name).toBe('KYC.pdf');
   });
 
+  describe('encrypted PDFs', () => {
+    // pdf-lib can't encrypt, but a trailer /Encrypt entry is all its isEncrypted looks at.
+    async function encryptedPdf(pages: number): Promise<Blob> {
+      const d = await PDFDocument.create();
+      for (let i = 0; i < pages; i++) d.addPage([300 + i, 400]);
+      d.context.trailerInfo.Encrypt = d.context.register(d.context.obj({ Filter: 'Standard', V: 1, R: 2 }));
+      return new Blob([(await d.save({ useObjectStreams: false })) as BlobPart], { type: 'application/pdf' });
+    }
+    const CANT_OPEN = "This PDF can't be opened here (it may be password-protected). Open it yourself and save an unlocked copy into the claim folder.";
+
+    it('the fixture really is encrypted', async () => {
+      expect((await PDFDocument.load(await (await encryptedPdf(1)).arrayBuffer(), { ignoreEncryption: true })).isEncrypted).toBe(true);
+    });
+
+    it('cutting pages out of an encrypted PDF is refused with the unlock copy', async () => {
+      const src = { blob: await encryptedPdf(3), mime: 'application/pdf', name: 'policy.pdf' };
+      await expect(buildBoxFile(single('rc', 'RC Book', true), [{ docId: 'a', pages: [2] }], reader({ a: src }))).rejects.toThrow(CANT_OPEN);
+      await expect(buildBoxFile(merge('kyc', 'KYC', true, ['policy']), [{ docId: 'a', pages: [] }], reader({ a: src }))).rejects.toThrow(CANT_OPEN);
+    });
+
+    it('a whole encrypted file still passes through untouched', async () => {
+      const blob = await encryptedPdf(2);
+      const out = await buildBoxFile(single('policy', 'Policy', true), [{ docId: 'a', pages: [1, 2] }], reader({ a: { blob, mime: 'application/pdf', name: 'p.pdf' } }));
+      expect(out.blob).toBe(blob);
+    });
+  });
+
   it('a box label with "/" gives a file name without one', async () => {
     const box = merge('photos', 'Front/Rear/Side Photograph', false, ['photoFront']);
     const out = await buildBoxFile(box, [{ docId: 'a', pages: [] }], reader({ a: { blob: pngBlob(), mime: 'image/png', name: 'f.png' } }));
