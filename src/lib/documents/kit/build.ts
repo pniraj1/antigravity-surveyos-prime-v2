@@ -5,6 +5,7 @@
 import { PDFDocument } from 'pdf-lib';
 import type { BoxState } from './checklist';
 import type { RecipeBox } from './recipes/types';
+import { safeFileStem } from '../naming';
 
 export type BoxPlan = Array<{ docId: string; pages: number[] }>;
 type Source = { blob: Blob; mime: string; name: string };
@@ -46,7 +47,7 @@ export async function buildBoxFile(
     if (box.formats.includes(ext)) {
       const pdf = isPdf(src) ? await loadPdf(src) : null;
       const whole = plan[0].pages.length === 0 || !pdf || plan[0].pages.length === pdf.getPageCount();
-      if (whole) return { blob: src.blob, name: `${box.label}${ext}`, pages: pdf?.getPageCount() ?? 1 };
+      if (whole) return { blob: src.blob, name: `${safeFileStem(box.label)}${ext}`, pages: pdf?.getPageCount() ?? 1 };
     }
   }
 
@@ -64,7 +65,7 @@ export async function buildBoxFile(
     }
   }
   const bytes = await out.save();
-  return { blob: new Blob([bytes as BlobPart], { type: 'application/pdf' }), name: `${box.label}.pdf`, pages: out.getPageCount() };
+  return { blob: new Blob([bytes as BlobPart], { type: 'application/pdf' }), name: `${safeFileStem(box.label)}.pdf`, pages: out.getPageCount() };
 }
 
 export async function sha256Hex(blob: Blob): Promise<string> {

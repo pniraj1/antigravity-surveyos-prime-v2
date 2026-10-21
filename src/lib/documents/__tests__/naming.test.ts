@@ -1,7 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { createBlankClaim } from '@/types/claim';
 import type { ClaimDocument } from '@/types/documents';
-import { folderNameFor, extForFile, relPathsFor, oldNameFor, docTypeFromRelPath, isScanSkippable } from '../naming';
+import { folderNameFor, extForFile, relPathsFor, oldNameFor, docTypeFromRelPath, isScanSkippable, safeFileStem } from '../naming';
+
+describe('safeFileStem', () => {
+  it('replaces characters Windows forbids in file names, collapses spaces and trims', () => {
+    expect(safeFileStem('Front/Rear/Side Photograph')).toBe('Front-Rear-Side Photograph');
+    expect(safeFileStem(' a\\b:c*d?e"f<g>h|i ')).toBe('a-b-c-d-e-f-g-h-i');
+    expect(safeFileStem('Spot   Photograph  and Report')).toBe('Spot Photograph and Report');
+  });
+});
 
 const existing = (relPaths: string[], type: ClaimDocument['type'] = 'damagePhotos'): ClaimDocument[] =>
   relPaths.map((relPath, i) => ({ id: `d${i}`, type, relPath, mime: 'image/jpeg', size: 1, addedAt: '', source: 'photo', devices: [] }));
@@ -104,6 +112,11 @@ describe('isScanSkippable', () => {
     expect(isScanSkippable('_surveyos-sync.json')).toBe(true);
     expect(isScanSkippable('RC Book (old).pdf')).toBe(true);
     expect(isScanSkippable('Final Survey Report (old 3).html')).toBe(true);
+  });
+  it('skips Portal Upload in any letter case', () => {
+    expect(isScanSkippable('Portal Upload/NIA Non-Tieup/RC.pdf')).toBe(true);
+    expect(isScanSkippable('portal upload/NIA Non-Tieup/RC.pdf')).toBe(true);
+    expect(isScanSkippable('PORTAL UPLOAD/x.pdf')).toBe(true);
   });
   it('keeps ordinary files', () => {
     expect(isScanSkippable('RC Book.pdf')).toBe(false);

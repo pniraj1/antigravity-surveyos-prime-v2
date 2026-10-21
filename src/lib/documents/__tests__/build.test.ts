@@ -53,4 +53,10 @@ describe('build', () => {
     expect(await sizes(out.blob)).toEqual([[300, 400], [301, 400], [302, 400], [595, 842]]);
     expect(out.name).toBe('KYC.pdf');
   });
+
+  it('a box label with "/" gives a file name without one', async () => {
+    const box = merge('photos', 'Front/Rear/Side Photograph', false, ['photoFront']);
+    const out = await buildBoxFile(box, [{ docId: 'a', pages: [] }], reader({ a: { blob: pngBlob(), mime: 'image/png', name: 'f.png' } }));
+    expect(out.name).toBe('Front-Rear-Side Photograph.pdf');
+  });
 });

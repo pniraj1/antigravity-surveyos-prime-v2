@@ -107,10 +107,13 @@ export function docTypeFromRelPath(relPath: string): DocType {
   return TYPE_BY_LABEL.get(stem) ?? 'other';
 }
 
+/** A portal box label as a Windows-safe file stem: "Front/Rear/Side Photograph" -> "Front-Rear-Side Photograph". */
+export const safeFileStem = (label: string): string => label.replace(/[/\\:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim();
+
 /** Our own working files and superseded copies are not documents. */
 export function isScanSkippable(relPath: string): boolean {
   const name = relPath.split('/').pop() ?? '';
-  return relPath.split('/')[0] === 'Portal Upload' // files we built for a portal, not the surveyor's
+  return relPath.split('/')[0].toLowerCase() === 'portal upload' // files we built for a portal, not the surveyor's (Windows ignores case)
     || name.endsWith('.part')
     || name.startsWith('_surveyos') // our own working files; a surveyor's _estimate.pdf is a document
     || / \(old(?: \d+)?\)\.[^.]+$/.test(name);
