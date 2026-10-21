@@ -8,6 +8,8 @@
 import type { ClaimData } from '@/types/claim';
 import type { ClaimDocument, DocType, PageLabel, UploadSet } from '@/types/documents';
 import { addDocuments, claimDocuments, onThisDevice } from '../index-ops';
+import { buildBoxFile, planBox } from './build';
+import type { BoxPlan } from './build';
 import type { BoxState } from './checklist';
 import { fingerprintOf, reconcileEntry } from './fingerprint';
 import { identityCheck } from './identity';
@@ -123,7 +125,7 @@ export const mismatchedDocs = (identity: Record<string, Record<number, IdentityR
     .map(([id]) => id);
 
 /** `set` with the given boxes marked stale (reviews cancelled), or null when none newly changed (so nothing needs saving). */
-export function invalidateIfReviewed(set: UploadSet, change: { docIds?: string[]; claimFields?: boolean }): UploadSet | null {
+export function invalidateIfReviewed(set: UploadSet, change: Parameters<typeof invalidate>[1]): UploadSet | null {
   const next = invalidate(set, change);
   return Object.values(set.boxes).some((b, i) => !b.stale && Object.values(next.boxes)[i].stale) ? next : null;
 }
@@ -164,9 +166,41 @@ export function overrideLabel(claim: ClaimData, docId: string, page: number, now
   return d && l ? commit(claim, [{ ...d, pages: { ...d.pages, [page]: { ...l, overrideAt: now } } }]) : null;
 }
 
-/** Boxes that Build makes a file for. */
+/** Boxes that Build makes a file for: ready or check, with something other than the HTML stand-in to build from. */
 export const buildable = (states: BoxState[]): BoxState[] =>
-  states.filter((s) => (s.status === 'ready' || s.status === 'check') && s.parts.length > 0);
+  states.filter((s) => (s.status === 'ready' || s.status === 'check') && planBox(s).length > 0);
+
+export type BoxError = { boxId: string; reason: string };
+export type BuiltBox = { boxId: string; state: BoxState; plan: BoxPlan; blob: Blob; name: string; pages: number };
+
+/** Builds each box on its own, in memory: one box failing (an unreadable or locked source) never stops the rest. */
+export async function buildBoxes(
+  boxes: BoxState[],
+  read: (docId: string) => Promise<{ blob: Blob; mime: string; name: string }>,
+): Promise<{ files: BuiltBox[]; errors: BoxError[] }> {
+  const files: BuiltBox[] = [];
+  const errors: BoxError[] = [];
+  for (const state of boxes) {
+    const plan = planBox(state);
+    try {
+      files.push({ boxId: state.box.id, state, plan, ...(await buildBoxFile(state.box, plan, read)) });
+    } catch (err) {
+      errors.push({ boxId: state.box.id, reason: err instanceof Error ? err.message : String(err) });
+    }
+  }
+  return { files, errors };
+}
+
+/** I-3: only boxes that were ready are written to Portal Upload/; a check box is built for its preview only. */
+export const toWrite = <T extends { boxId: string }>(files: T[], states: BoxState[]): T[] =>
+  files.filter((f) => states.find((s) => s.box.id === f.boxId)?.status === 'ready');
+
+/** What a cached page text was read from: the file's size and this device's fingerprint (labels don't count). */
+export const readSignature = (d: ClaimDocument, device: string): string => `${d.size}|${JSON.stringify(d.fingerprints?.[device] ?? null)}`;
+
+/** Cached texts whose file changed since they were read, or left the claim: they no longer describe the file. */
+export const evictedTexts = (cache: Map<string, { sig: string }>, documents: Record<string, ClaimDocument>, device: string): string[] =>
+  [...cache].filter(([id, hit]) => !documents[id] || hit.sig !== readSignature(documents[id], device)).map(([id]) => id);
 
 /** Built boxes that need another look before they can be reviewed. */
 export const blockedBoxes = (states: BoxState[], builtIds: string[]): string[] =>

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createBlankClaim } from '@/types/claim';
-import { writePortalUpload } from '../folder';
+import { clearPortalUpload, writePortalUpload } from '../folder';
 import { safeFileStem } from '../naming';
 import { RECIPES } from '../kit/recipes';
 
@@ -15,6 +15,14 @@ describe('writePortalUpload path safety', () => {
 
   it.each(['..', '.', 'x/../y.pdf', 'a\\b.pdf', ''])('rejects file name %j', async (bad) => {
     await expect(writePortalUpload(claim, 'NIA', [{ name: bad, blob }])).rejects.toThrow(UNSAFE);
+  });
+
+  it.each(['..', '.', 'a/b', 'a\\b', ''])('clearPortalUpload rejects portalTitle %j', async (bad) => {
+    await expect(clearPortalUpload(claim, bad, [])).rejects.toThrow(UNSAFE);
+  });
+
+  it.each(['..', 'x/../y.pdf', ''])('clearPortalUpload rejects kept name %j', async (bad) => {
+    await expect(clearPortalUpload(claim, 'NIA', [bad])).rejects.toThrow(UNSAFE);
   });
 
   it('every recipe box label gives a file name writePortalUpload accepts', async () => {

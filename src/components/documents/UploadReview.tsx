@@ -78,6 +78,7 @@ function BoxReview({ kit, boxId, built, file, matches }: { kit: DocumentKit; box
           {markText && <div className="text-[11px] text-muted-foreground">{markText}</div>}
           {blocked && state?.reasons.map((r) => <div key={r} className="text-[11px] text-amber-800">{r}</div>)}
           {built.stale && <div className="text-[11px] font-medium text-amber-800">Changed since it was built: build again.</div>}
+          {built.written === false && !built.stale && <div className="text-[11px] font-medium text-amber-800">Not saved to the folder until it&apos;s confirmed.</div>}
         </div>
         <label className={`inline-flex items-center gap-1.5 text-xs font-medium ${reviewed || tickable ? '' : 'opacity-50'}`} title={blocked ? 'Fix the box in the checklist first.' : undefined}>
           <input

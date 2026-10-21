@@ -14,7 +14,8 @@ export type BoxStatus = 'ready' | 'check' | 'missing' | 'empty' | 'notNeeded';
 export interface BoxState {
   box: RecipeBox;
   status: BoxStatus;
-  parts: Array<{ docId: string; pages: number[] }>;
+  /** `html`: the print-time HTML stand-in report (C1), shown in the checklist but never built. */
+  parts: Array<{ docId: string; pages: number[]; html?: true }>;
   missingTypes: DocType[];
   reasons: string[];
   /** Other files that could have filled a single box. */
@@ -99,7 +100,7 @@ function mergeBox(box: RecipeBox, docs: ClaimDocument[], opts: ChecklistOpts): B
 function finish(box: RecipeBox, picks: Part[], missingTypes: DocType[], dropped: string[], alternatives: number, opts: ChecklistOpts): BoxState {
   const reasons = [...dropped];
   const add = (r: string): void => { if (!reasons.includes(r)) reasons.push(r); };
-  const parts = picks.map((p) => ({ docId: p.doc.id, pages: p.pages }));
+  const parts = picks.map((p) => ({ docId: p.doc.id, pages: p.pages, ...(isHtml(p.doc) ? { html: true as const } : {}) }));
   let status: BoxStatus;
 
   if (!picks.length) status = box.mandatory ? 'missing' : 'empty';

@@ -51,10 +51,16 @@ export interface Fingerprint { size: number; lastModified: number; pageCount: nu
 /** The files built for one portal flow; behaviour lives in the upload-set code. */
 export interface UploadSet {
   portal: string; flow: string; claimNo: string; builtAt: string;
+  /** Hash of the claim fields the identity checks compare, at build time (a change makes every box stale). */
+  fieldsSig?: string;
   /** `sources` = ids of the source documents a box used (a change invalidates the review). */
   boxes: Record<string, { name: string; size: number; pages: number; sha256: string; sources: string[]; reviewedAt?: string;
     /** A source or claim field changed after this file was built: it must be rebuilt before it can be reviewed. */
-    stale?: boolean }>;
+    stale?: boolean;
+    /** The documents and pages the box was built from; a different plan now makes it stale. */
+    planSig?: string;
+    /** false: built for its preview only (the box needed a check), never written to Portal Upload/, can't be reviewed. */
+    written?: boolean }>;
 }
 
 /** Human label; doubles as the file stem, so keep it Windows-safe. */

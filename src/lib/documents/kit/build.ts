@@ -14,9 +14,9 @@ const A4 = { w: 595, h: 842, margin: 36 };
 
 export const CANT_OPEN_PDF = "This PDF can't be opened here (it may be password-protected). Open it yourself and save an unlocked copy into the claim folder.";
 
-/** Pages sorted ascending per document, documents in state order. */
+/** Pages sorted ascending per document, documents in state order. The HTML stand-in report is never built (C1). */
 export function planBox(state: BoxState): BoxPlan {
-  return state.parts.map((p) => ({ docId: p.docId, pages: [...p.pages].sort((a, b) => a - b) }));
+  return state.parts.filter((p) => !p.html).map((p) => ({ docId: p.docId, pages: [...p.pages].sort((a, b) => a - b) }));
 }
 
 const extOf = (name: string): string => /\.[^./\\]+$/.exec(name)?.[0].toLowerCase() ?? '';

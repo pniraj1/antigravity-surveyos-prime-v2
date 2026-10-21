@@ -12,7 +12,7 @@ vi.mock('../kit/page-text', () => ({ pageTexts: mocks.pageTexts, pageCountOf: mo
 
 import {
   labelClaim, setPageLabels, confirmAllLabels, overrideLabel, invalidateIfReviewed, docIdsForPaths, buildable, blockedBoxes, identityMap, claimDrift,
-  mismatchedDocs,
+  mismatchedDocs, evictedTexts, readSignature,
 } from '../kit/orchestrate';
 
 const DEV = 'PC1';
@@ -281,6 +281,23 @@ describe('identityMap', () => {
       const m = identityMap(c, DEV, { k: [`RAJESH KUMAR SHARMA 1234 5678 9012${PAD}`, `Address: Flat 4, Shivaji Nagar, Pune 411005${PAD}`] });
       expect(m.k[2]).toEqual({ status: 'match' });
     });
+  });
+});
+
+describe('evictedTexts', () => {
+  it('drops cached texts whose file changed since it was read, or left the claim', () => {
+    const fp = { [DEV]: { size: 1, lastModified: 5, pageCount: 1 } };
+    const same = doc('same', { fingerprints: fp });
+    const changed = doc('changed', { fingerprints: fp });
+    const cache = new Map([
+      ['same', { sig: readSignature(same, DEV) }],
+      ['changed', { sig: readSignature(changed, DEV) }],
+      ['gone', { sig: 'x' }],
+    ]);
+    const now = { same, changed: { ...changed, fingerprints: { [DEV]: { size: 1, lastModified: 6, pageCount: 1 } } } };
+    expect(evictedTexts(cache, now, DEV)).toEqual(['changed', 'gone']);
+    // a label edit is not a file change
+    expect(evictedTexts(new Map([['same', { sig: readSignature(same, DEV) }]]), { same: { ...same, pages: { 1: label() } } }, DEV)).toEqual([]);
   });
 });
 

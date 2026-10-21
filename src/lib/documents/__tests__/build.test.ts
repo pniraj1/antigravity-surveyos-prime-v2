@@ -1,7 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { PDFDocument } from 'pdf-lib';
+import { createBlankClaim } from '@/types/claim';
+import type { ClaimData } from '@/types/claim';
+import type { ClaimDocument, DocType } from '@/types/documents';
 import { planBox, buildBoxFile, sha256Hex } from '../kit/build';
+import { checklist } from '../kit/checklist';
 import type { BoxState } from '../kit/checklist';
+import { buildBoxes, buildable, toWrite } from '../kit/orchestrate';
+import { staleUploads } from '../naming';
+import { recipeFor } from '../kit/recipes';
 import { merge, single } from '../kit/recipes/types';
 
 async function pdfBlob(pages: number): Promise<Blob> {
@@ -78,6 +85,67 @@ describe('build', () => {
       const blob = await encryptedPdf(2);
       const out = await buildBoxFile(single('policy', 'Policy', true), [{ docId: 'a', pages: [1, 2] }], reader({ a: { blob, mime: 'application/pdf', name: 'p.pdf' } }));
       expect(out.blob).toBe(blob);
+    });
+  });
+
+  describe('HTML placeholders and per-box failures (C1)', () => {
+    const DEV = 'PC1';
+    const doc = (id: string, type: DocType, over: Partial<ClaimDocument> = {}): ClaimDocument => ({
+      id, type, relPath: `${id}.pdf`, mime: 'application/pdf', size: 1, addedAt: '2026-10-01T00:00:00Z',
+      source: 'upload', devices: [DEV], pages: { 1: { type, by: 'surveyor', confirmed: true } }, ...over,
+    });
+    const html = (id: string, type: DocType) =>
+      doc(id, type, { relPath: `${id}.html`, mime: 'text/html', source: 'generated', pages: undefined });
+    const claimOf = (insurer: string, docs: ClaimDocument[]): ClaimData => {
+      const c = createBlankClaim();
+      return { ...c, policy: { ...c.policy, insurerName: insurer }, documents: Object.fromEntries(docs.map((d) => [d.id, d])) };
+    };
+    const pdfReader = async () => {
+      const blob = await pdfBlob(1);
+      return async (id: string) => ({ blob, mime: 'application/pdf', name: `${id}.pdf` });
+    };
+
+    it('a UIIC claim whose Survey Report is HTML-only builds the other ready boxes and skips that one', async () => {
+      const c = claimOf('United India Insurance Company Limited', [html('sr', 'surveyReport'), doc('est', 'estimate'), doc('inv', 'invoice')]);
+      const states = checklist(recipeFor(c)!, c, { device: DEV, identity: {} });
+      const sr = states.find((s) => s.box.id === 'surveyReport')!;
+      expect(sr).toMatchObject({ status: 'check', reasons: ['File the PDF of this report.'] });
+      expect(planBox(sr)).toEqual([]);
+      const boxes = buildable(states);
+      expect(boxes.map((s) => s.box.id)).toEqual(['estimate', 'invoice']);
+      const out = await buildBoxes(boxes, await pdfReader());
+      expect(out.files.map((f) => f.boxId)).toEqual(['estimate', 'invoice']);
+      expect(out.errors).toEqual([]);
+    });
+
+    it('a merge box containing an HTML part builds without it', async () => {
+      const c = claimOf('The New India Assurance Co. Ltd.', [html('sr', 'surveyReport'), doc('fee', 'feeBill')]);
+      const others = checklist(recipeFor(c)!, c, { device: DEV, identity: {} }).find((s) => s.box.id === 'others')!;
+      expect(planBox(others)).toEqual([{ docId: 'fee', pages: [1] }]);
+      const out = await buildBoxes(buildable([others]), await pdfReader());
+      expect(out.files).toHaveLength(1);
+      expect(out.files[0].pages).toBe(1);
+    });
+
+    it('one box that fails is reported and the others still build', async () => {
+      const c = claimOf('United India Insurance Company Limited', [doc('est', 'estimate'), doc('inv', 'invoice')]);
+      const boxes = buildable(checklist(recipeFor(c)!, c, { device: DEV, identity: {} }));
+      const ok = await pdfReader();
+      const out = await buildBoxes(boxes, (id) => (id === 'est' ? Promise.reject(new Error('est.pdf could not be read.')) : ok(id)));
+      expect(out.files.map((f) => f.boxId)).toEqual(['invoice']);
+      expect(out.errors).toEqual([{ boxId: 'estimate', reason: 'est.pdf could not be read.' }]);
+    });
+  });
+
+  describe('what reaches Portal Upload/ (I-3)', () => {
+    const st = (id: string, status: BoxState['status']) => ({ box: { id }, status }) as BoxState;
+    it('only boxes that were ready are written; check boxes stay in memory', () => {
+      const files = [{ boxId: 'rc', name: 'RC.pdf' }, { boxId: 'dl', name: 'DL.pdf' }];
+      expect(toWrite(files, [st('rc', 'ready'), st('dl', 'check')])).toEqual([{ boxId: 'rc', name: 'RC.pdf' }]);
+    });
+    it('every file in the portal folder that this build does not write is removed', () => {
+      expect(staleUploads(['RC.pdf', 'DL.pdf', 'Old Box.pdf', 'RC.pdf.part'], ['RC.pdf'])).toEqual(['DL.pdf', 'Old Box.pdf', 'RC.pdf.part']);
+      expect(staleUploads([], ['RC.pdf'])).toEqual([]);
     });
   });
 

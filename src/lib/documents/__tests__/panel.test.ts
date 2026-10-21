@@ -72,10 +72,11 @@ describe('droppedReviews', () => {
 });
 
 describe('canTick', () => {
-  const ok = { built: true, entry: {}, state: state('ready'), setMatchesRecipe: true };
+  const ok = { built: true, entry: { written: true }, state: state('ready'), setMatchesRecipe: true };
   it('only a fresh, ready, built-this-session box of the current flow can be ticked', () => {
     expect(canTick(ok)).toBe(true);
     expect(canTick({ ...ok, entry: { stale: true } })).toBe(false);
+    expect(canTick({ ...ok, entry: { written: false } })).toBe(false); // built for preview only, not in the folder
     expect(canTick({ ...ok, state: state('check') })).toBe(false);
     expect(canTick({ ...ok, state: state('missing') })).toBe(false);
     expect(canTick({ ...ok, state: state('notNeeded') })).toBe(false);

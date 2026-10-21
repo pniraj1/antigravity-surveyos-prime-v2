@@ -110,6 +110,9 @@ export function docTypeFromRelPath(relPath: string): DocType {
 /** A portal box label as a Windows-safe file stem: "Front/Rear/Side Photograph" -> "Front-Rear-Side Photograph". */
 export const safeFileStem = (label: string): string => label.replace(/[/\\:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim();
 
+/** Files in Portal Upload/<portal>/ (all ours, C9) that this build doesn't write: removed so the folder holds only what the review covers. */
+export const staleUploads = (onDisk: string[], keep: string[]): string[] => onDisk.filter((n) => !keep.includes(n));
+
 /** Our own working files and superseded copies are not documents. */
 export function isScanSkippable(relPath: string): boolean {
   const name = relPath.split('/').pop() ?? '';

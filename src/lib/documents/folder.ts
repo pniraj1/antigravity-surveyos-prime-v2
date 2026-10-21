@@ -8,7 +8,7 @@ import type { ClaimDocument, DocType } from '@/types/documents';
 import { MULTI_FILE_TYPES } from '@/types/documents';
 import { getStoredRootHandle, ensureReadWrite, getDeviceLabel } from '@/lib/local-sync/directory-handle';
 import { addDocuments, claimDocuments, newDocId, removeDocument, onThisDevice, isDiscardablePlaceholder, addDeviceTo, replaceableEntries } from './index-ops';
-import { folderNameFor, oldNameFor, relPathsFor, docTypeFromRelPath, isScanSkippable } from './naming';
+import { folderNameFor, oldNameFor, relPathsFor, docTypeFromRelPath, isScanSkippable, staleUploads } from './naming';
 import { fingerprintOf, reconcileKnown } from './kit/fingerprint';
 import { pageCountOf } from './kit/page-text';
 import { getAllClaims } from '@/lib/storage/indexeddb';
@@ -345,6 +345,30 @@ export async function scanClaimFolder(
   return { claim: addDocuments(next, fresh), added: fresh.length, adopted, unreadable, skippedDirs, reset, changed: changed || adopted > 0 || fresh.length > 0 };
 }
 
+/** Every path segment under Portal Upload/ is one plain name: no separators, never "." or "..". */
+function assertPortalSafe(segments: string[]): void {
+  for (const seg of segments) {
+    if (!seg || /[\\/]|^\.+$/.test(seg)) throw new Error(`Unsafe name for Portal Upload: "${seg}"`);
+  }
+}
+
+/**
+ * Remove every file in "<claim folder>/Portal Upload/<portalTitle>/" except `keep`, so the folder holds only
+ * what the current review covers. Those files are ours (C9); nothing outside that one folder is touched.
+ */
+export async function clearPortalUpload(claim: ClaimData, portalTitle: string, keep: string[]): Promise<void> {
+  assertPortalSafe([portalTitle, ...keep]);
+  const claimDir = await getClaimDirHandle(claim);
+  if (!claimDir) return;
+  let dir: FileSystemDirectoryHandle;
+  try { dir = await dirFor(claimDir, ['Portal Upload', portalTitle], false); } catch { return; } // nothing built yet
+  const names: string[] = [];
+  for await (const [name, handle] of (dir.entries as () => AsyncIterableIterator<[string, FileSystemHandle]>)()) {
+    if (handle.kind === 'file') names.push(name);
+  }
+  for (const name of staleUploads(names, keep)) await dir.removeEntry(name);
+}
+
 /**
  * Write built upload files to "<claim folder>/Portal Upload/<portalTitle>/<name>", overwriting.
  * Same .part-then-rename write as writeDocuments; touches nothing outside Portal Upload/.
@@ -354,9 +378,7 @@ export async function writePortalUpload(
   portalTitle: string,
   files: Array<{ name: string; blob: Blob }>,
 ): Promise<void> {
-  for (const seg of [portalTitle, ...files.map((f) => f.name)]) {
-    if (!seg || /[\\/]|^\.+$/.test(seg)) throw new Error(`Unsafe name for Portal Upload: "${seg}"`);
-  }
+  assertPortalSafe([portalTitle, ...files.map((f) => f.name)]);
   const claimDir = await getClaimDirHandle(claim, true);
   if (!claimDir) throw new NoFolderError();
   const base = `Portal Upload/${portalTitle}`;

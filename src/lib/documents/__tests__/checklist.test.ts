@@ -82,7 +82,7 @@ describe('checklist', () => {
     const s = state(claim([html]), 'others');
     expect(s.status).toBe('check');
     expect(s.reasons).toContain('File the PDF of this report.');
-    expect(s.parts).toEqual([{ docId: 'r', pages: [] }]);
+    expect(s.parts).toEqual([{ docId: 'r', pages: [], html: true }]); // shown, never built
   });
 
   it('checklist: a real PDF beats the html placeholder', () => {

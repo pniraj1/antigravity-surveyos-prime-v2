@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Copy, XCircle } from 'lucide-react';
 import type { ClaimData } from '@/types/claim';
 import type { BoxState } from '@/lib/documents/kit/checklist';
+import type { BoxError } from '@/lib/documents/kit/orchestrate';
 import { canBuild, countsLine, sourceLine } from '@/lib/documents/kit/panel';
 import type { BuiltFile, DocumentKit } from '@/lib/documents/kit/useDocumentKit';
 import { UploadReview } from './UploadReview';
@@ -28,7 +29,7 @@ function StatusWord({ status }: { status: BoxState['status'] }) {
   }
 }
 
-function BoxRow({ s, claim, onNotNeeded }: { s: BoxState; claim: ClaimData; onNotNeeded: (notNeeded: boolean) => void }) {
+function BoxRow({ s, claim, error, onNotNeeded }: { s: BoxState; claim: ClaimData; error?: string; onNotNeeded: (notNeeded: boolean) => void }) {
   const source = sourceLine(s.parts, claim.documents ?? {});
   return (
     <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 px-4 py-2.5">
@@ -40,6 +41,7 @@ function BoxRow({ s, claim, onNotNeeded }: { s: BoxState; claim: ClaimData; onNo
         </div>
         {source && <div className="truncate font-mono text-[11px] text-muted-foreground">{source}</div>}
         {s.reasons.map((r) => <div key={r} className="text-[11px] text-amber-800">{r}</div>)}
+        {error && <div className="text-[11px] text-red-600">Not built: {error}</div>}
       </div>
       <label className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
         <input type="checkbox" checked={s.status === 'notNeeded'} onChange={(e) => onNotNeeded(e.target.checked)} />
@@ -55,6 +57,9 @@ export function PortalChecklist({ claim, kit }: Props) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [building, setBuilding] = useState(false);
   const [buildError, setBuildError] = useState<string | null>(null);
+  // Why a box got no file in the last build; tagged with its claim like the built files.
+  const [boxErrors, setBoxErrors] = useState<{ claimId: string; errors: BoxError[] } | null>(null);
+  const errors = boxErrors?.claimId === claim.id ? boxErrors.errors : [];
   // The built blobs live here only (never stored); each is tagged with its claim so a claim switch drops them.
   const [built, setBuilt] = useState<{ claimId: string; files: BuiltFile[] } | null>(null);
   const [reviewFor, setReviewFor] = useState<string | null>(null);
@@ -82,6 +87,7 @@ export function PortalChecklist({ claim, kit }: Props) {
     setBuildError(null);
     const result = await kit.build();
     setBuilding(false);
+    setBoxErrors({ claimId: claim.id, errors: result.errors ?? [] });
     if (!result.ok) { setBuildError(result.reason); return; }
     setBuilt({ claimId: claim.id, files: result.files });
     setReviewFor(claim.id);
@@ -111,7 +117,12 @@ export function PortalChecklist({ claim, kit }: Props) {
       {recipe.provisional && <div className="px-4 pt-2 text-[11px] text-muted-foreground">This list is provisional. Check it against the portal.</div>}
 
       <div className="divide-y divide-border">
-        {states.map((s) => <BoxRow key={s.box.id} s={s} claim={claim} onNotNeeded={(v) => kit.setNotNeeded(s.box.id, v)} />)}
+        {states.map((s) => (
+          <BoxRow
+            key={s.box.id} s={s} claim={claim} error={errors.find((e) => e.boxId === s.box.id)?.reason}
+            onNotNeeded={(v) => kit.setNotNeeded(s.box.id, v)}
+          />
+        ))}
       </div>
 
       <div className="flex flex-wrap items-center gap-2 border-t border-border px-4 py-2">

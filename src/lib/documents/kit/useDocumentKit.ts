@@ -11,27 +11,65 @@ import { useClaimStore } from '@/stores/claim-store';
 import type { ClaimData } from '@/types/claim';
 import type { ClaimDocument, DocType, UploadSet } from '@/types/documents';
 import { getDeviceLabel } from '@/lib/local-sync/directory-handle';
-import { readDocument, writePortalUpload } from '../folder';
-import { buildBoxFile, planBox, sha256Hex } from './build';
+import { clearPortalUpload, readDocument, writePortalUpload } from '../folder';
+import { planBox, sha256Hex } from './build';
 import { checklist, missingMessage } from './checklist';
 import { fileMatchesFingerprint } from './fingerprint';
 import type { BoxState } from './checklist';
 import {
-  blockedBoxes, buildable, claimDrift, confirmAllLabels, identityMap, invalidateIfReviewed, labelClaim, mismatchedDocs, overrideLabel,
-  setPageLabels,
+  blockedBoxes, buildBoxes, buildable, claimDrift, confirmAllLabels, evictedTexts, identityMap, invalidateIfReviewed, labelClaim,
+  mismatchedDocs, overrideLabel, readSignature, setPageLabels, toWrite,
 } from './orchestrate';
+import type { BoxError, BuiltBox } from './orchestrate';
 import { recipeFor } from './recipes';
 import { whileReading } from './reading';
-import { markReviewed, newUploadSet } from './review';
+import { identityFieldsKey, invalidate, markReviewed, newUploadSet, planSig, staleBoxes } from './review';
 
 type Flow = NonNullable<ClaimData['portalFlow']>;
 /** The built files, handed to the caller for previews. In memory only; never stored. */
 export type BuiltFile = { boxId: string; name: string; blob: Blob };
-type BuildResult = { ok: true; files: BuiltFile[] } | { ok: false; reason: string };
+type BuildResult = { ok: true; files: BuiltFile[]; errors: BoxError[] } | { ok: false; reason: string; errors?: BoxError[] };
 type Texts = Record<string, (string | null)[]>;
+type Source = { blob: Blob; mime: string; name: string };
 
 const latest = (): ClaimData | null => useClaimStore.getState().currentClaim;
-const readSignature = (d: ClaimDocument, device: string): string => `${d.size}|${JSON.stringify(d.fingerprints?.[device] ?? null)}`;
+
+/**
+ * Reads every source of `boxes` once. C2: a file that changed since it was labelled (or was never fingerprinted
+ * here) refuses the whole build, returned as the reason. A file that can't be read fails only the boxes using it.
+ */
+async function readSources(c: ClaimData, boxes: BoxState[], device: string): Promise<string | ((docId: string) => Promise<Source>)> {
+  const files = new Map<string, File>();
+  const failed = new Map<string, string>();
+  for (const id of new Set(boxes.flatMap((s) => planBox(s).map((p) => p.docId)))) {
+    const doc = c.documents?.[id];
+    if (!doc) { failed.set(id, 'A source file is no longer in the claim.'); continue; }
+    let file: File;
+    try { file = await readDocument(c, doc); } catch (err) {
+      failed.set(id, `${doc.relPath} could not be read (${err instanceof Error ? err.message : String(err)}).`);
+      continue;
+    }
+    if (!fileMatchesFingerprint(file, doc, device)) return `${doc.relPath} changed since it was labelled. Press Scan folder.`;
+    files.set(id, file);
+  }
+  return async (docId) => {
+    const file = files.get(docId);
+    if (!file) throw new Error(failed.get(docId) ?? 'A source file could not be read.');
+    return { blob: file, mime: file.type, name: file.name };
+  };
+}
+
+/** The upload-set entry of every built box: what it was built from, and whether it went to the folder. */
+async function setEntries(files: BuiltBox[], written: BuiltBox[]): Promise<UploadSet['boxes']> {
+  const out: UploadSet['boxes'] = {};
+  for (const f of files) {
+    out[f.boxId] = {
+      name: f.name, size: f.blob.size, pages: f.pages, sha256: await sha256Hex(f.blob),
+      sources: [...new Set(f.plan.map((p) => p.docId))], planSig: planSig(f.state), written: written.includes(f),
+    };
+  }
+  return out;
+}
 
 export function useDocumentKit() {
   const claim = useClaimStore((s) => s.currentClaim);
@@ -57,6 +95,12 @@ export function useDocumentKit() {
       const dev = await getDeviceLabel();
       if (cancelled) return;
       setDevice(dev);
+      // Texts read from a file that has changed since no longer describe it: its pages are pending until re-read.
+      const gone = evictedTexts(cacheRef.current, current.documents ?? {}, dev);
+      if (gone.length) {
+        for (const id of gone) cacheRef.current.delete(id);
+        setTexts((prev) => Object.fromEntries(Object.entries(prev).filter(([id]) => !gone.includes(id))));
+      }
       const cached = (d: ClaimDocument) => {
         const hit = cacheRef.current.get(d.id);
         return hit?.sig === readSignature(d, dev) ? hit.texts : undefined;
@@ -77,21 +121,7 @@ export function useDocumentKit() {
     return () => { cancelled = true; };
   }, [claimId, documents, updateClaim]);
 
-  // Editing a field the identity checks compare against cancels every review.
-  const fieldsKey = claim
-    ? [claim.vehicle.registrationNumber, claim.vehicle.chassisNumber, claim.driver.name,
-      claim.policy.policyNumber, claim.policy.claimNumber, claim.policy.insuredName].join('|')
-    : '';
-  const prevFields = useRef<{ id: string; key: string } | null>(null);
-  useEffect(() => {
-    const prev = prevFields.current;
-    prevFields.current = claimId ? { id: claimId, key: fieldsKey } : null;
-    const set = latest()?.uploadSet;
-    if (!prev || prev.id !== claimId || prev.key === fieldsKey || !set) return;
-    const cancelled = invalidateIfReviewed(set, { claimFields: true });
-    if (cancelled) updateClaim({ uploadSet: cancelled });
-  }, [claimId, fieldsKey, updateClaim]);
-
+  const fieldsKey = claim ? identityFieldsKey(claim) : '';
   const identity = useMemo(
     () => (claim && device ? identityMap(claim, device, texts) : {}),
     // identity compares only these claim fields; keying on them (not `claim`) skips edits elsewhere.
@@ -123,6 +153,20 @@ export function useDocumentKit() {
   );
   const missingText = claim && recipe ? missingMessage(claim, states) : '';
 
+  // I-5: anything that changes what a box would be built from (a source removed, replaced or swapped, a box
+  // marked not needed, an identity field edited even while this tab was closed) makes its built file stale.
+  // Judged against the signatures stored at build time; written only when a box newly turns stale.
+  useEffect(() => {
+    const now = latest();
+    const set = now?.uploadSet;
+    // Only while this render's claim is the current one (the set may be newer: another effect may have just marked it).
+    if (!claim || !set || !device || !recipe || !states.length || now.id !== claim.id || now.documents !== claim.documents) return;
+    if (set.portal !== recipe.portal || set.flow !== recipe.flow) return; // states are for another portal list
+    const ids = staleBoxes(set, states, claim, device);
+    const next = ids.length ? invalidateIfReviewed(set, { boxIds: ids }) : null;
+    if (next) updateClaim({ uploadSet: next });
+  }, [claim, states, device, recipe, updateClaim]);
+
   const apply = useCallback((patch: (c: ClaimData) => Partial<ClaimData> | null) => {
     const c = latest();
     const p = c && patch(c);
@@ -152,38 +196,27 @@ export function useDocumentKit() {
     if (building.current) return { ok: false, reason: 'A build is already running.' };
     building.current = true;
     try {
-      return await whileReading(async () => {
-        // C2: every source must still be the file its labels were made on, or nothing is built.
-        const sources = new Map<string, File>();
-        for (const id of new Set(boxes.flatMap((s) => planBox(s).map((p) => p.docId)))) {
-          const doc = c.documents?.[id];
-          if (!doc) return { ok: false as const, reason: 'A source file is no longer in the claim.' };
-          const file = await readDocument(c, doc);
-          if (!fileMatchesFingerprint(file, doc, device)) return { ok: false as const, reason: `${doc.relPath} changed since it was labelled. Press Scan folder.` };
-          sources.set(id, file);
-        }
-        const read = async (docId: string) => {
-          const file = sources.get(docId)!;
-          return { blob: file, mime: file.type, name: file.name };
-        };
-        const built: UploadSet['boxes'] = {};
-        const files: BuiltFile[] = [];
-        for (const s of boxes) {
-          const plan = planBox(s);
-          const out = await buildBoxFile(s.box, plan, read);
-          files.push({ boxId: s.box.id, name: out.name, blob: out.blob });
-          built[s.box.id] = {
-            name: out.name, size: out.blob.size, pages: out.pages, sha256: await sha256Hex(out.blob),
-            sources: [...new Set(plan.map((p) => p.docId))],
-          };
-        }
-        await writePortalUpload(c, recipe.title, files);
-        // A label edit or scan reset while building makes this set's sources and hashes stale.
-        const drift = claimDrift(c, latest());
-        if (drift === 'switched') return { ok: false as const, reason: 'The claim changed while building.' };
-        if (drift === 'edited') return { ok: false as const, reason: 'Documents changed while building. Build again.' };
-        updateClaim({ uploadSet: newUploadSet(recipe, c, built) });
-        return { ok: true as const, files };
+      return await whileReading(async (): Promise<BuildResult> => {
+        const read = await readSources(c, boxes, device);
+        if (typeof read === 'string') return { ok: false, reason: read };
+        const { files, errors } = await buildBoxes(boxes, read);
+        if (!files.length) return { ok: false, reason: 'No upload file could be built.', errors };
+        const moved = (d: ReturnType<typeof claimDrift>) =>
+          (d === 'switched' ? 'The claim changed while building.' : 'Documents changed while building. Build again.');
+        // Nothing is written when a label edit or scan reset landed while reading and building.
+        const before = claimDrift(c, latest());
+        if (before !== 'same') return { ok: false, reason: moved(before), errors };
+        // I-3: only ready boxes go to the folder, and it keeps nothing else: it holds exactly what the review covers.
+        const written = toWrite(files, boxes);
+        await clearPortalUpload(c, recipe.title, written.map((f) => f.name));
+        await writePortalUpload(c, recipe.title, written);
+        const set = newUploadSet(recipe, c, await setEntries(files, written));
+        // The folder holds these files now, so the set is recorded; a change during the write makes it all stale.
+        const after = claimDrift(c, latest());
+        if (after === 'switched') return { ok: false, reason: moved(after), errors };
+        updateClaim({ uploadSet: after === 'same' ? set : invalidate(set, { claimFields: true }) });
+        if (after === 'edited') return { ok: false, reason: moved(after), errors };
+        return { ok: true, files: files.map(({ boxId, name, blob }) => ({ boxId, name, blob })), errors };
       });
     } catch (err) {
       return { ok: false, reason: err instanceof Error ? err.message : String(err) };
