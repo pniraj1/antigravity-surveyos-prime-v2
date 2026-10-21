@@ -472,6 +472,9 @@ requirement, but the code is on the portal's list at 0%.
 
 - Extension v0.2.0 multi-portal core (2026-10-16) — roadmap
   `docs/superpowers/plans/2026-10-16-portal-extension-roadmap.md`
+- Claim document kit Phases 1–2 built (2026-10-21), not deployed — spec
+  `2026-10-20-claim-document-kit-design.md`; recipes for NIA non-tieup, NIA
+  KIA tie-up (provisional) and UIIC. Owner to confirm spec §8(b)–(d)
 
 **Next** (ordered in the roadmap)
 

@@ -2,6 +2,15 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-10-21 (Claude) — Claim document kit, Phases 1–2
+- feat(documents): KYC and portal document types with page labels; per-device file fingerprints, so a changed file resets its labels
+- feat(documents): free page recognisers from the text layer and file names (no AI); identity checks that a document belongs to this claim (registration, chassis, policy, names; KYC compares names only)
+- feat(documents): portal recipes for New India non-tieup, New India KIA tie-up (provisional) and United India; Ready / Check / Missing checklist with a copy-ready missing-documents message
+- feat(documents): upload files built from confirmed pages with pdf-lib (split and merge) into `Portal Upload/<portal>/`; Review upload set, where a source or claim-field change marks a box stale until rebuilt
+- feat(documents): folder location choice (this computer, or Google Drive for desktop with a guide); three Documents-tab panels: Portal checklist, Pages, Review
+- chore(deps): `pdf-lib@^1.17.1`, the only new dependency
+- tests: 1666 passing, tsc clean. Commits 7181ae3c..f510fbae on `main`. Not deployed; not tried in a browser. Owner to confirm recipe defaults in spec §8(b)–(d). Next: Phases 3–5 (Google Drive online picker, opt-in AI "Guess the rest", extension upload). Spec `docs/superpowers/specs/2026-10-20-claim-document-kit-design.md`, plan `docs/superpowers/plans/2026-10-20-claim-document-kit.md`.
+
 ## 2026-10-17 (Claude) — Portal fill v0.4.0: page check and redesigned card
 - feat(extension): **Check page**, a read-only button that reports per field whether Fill would work (structure, value and wrong-claim modes); writes nothing; text and money values never shown
 - feat(extension): redesigned card: docked right and centred, collapsible 40 px tab, Esc and keyboard support, screen-reader roles, draggable header, problems listed first, click a line to jump to the field, summary, next-step hint, legend, Copy report
