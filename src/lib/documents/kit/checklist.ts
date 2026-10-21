@@ -40,6 +40,8 @@ function pagesOfType(d: ClaimDocument, type: DocType): number[] {
 }
 
 const newestFirst = (a: Part, b: Part): number => b.doc.addedAt.localeCompare(a.doc.addedAt);
+/** Every page it uses is confirmed (a whole Word/Excel file has no page labels to confirm). */
+const isConfirmed = (p: Part): boolean => p.pages.every((n) => p.doc.pages?.[n]?.confirmed);
 
 /** Files that match `type` but carry no page labels: Word/Excel (whole file) and the HTML stand-in report. */
 function wholeFiles(docs: ClaimDocument[], type: DocType): { word: Part[]; html: Part[] } {
@@ -74,7 +76,8 @@ function singleBox(box: RecipeBox, docs: ClaimDocument[], opts: ChecklistOpts): 
   }
   real.sort(newestFirst);
   html.sort(newestFirst);
-  const chosen = real[0] ?? html[0];
+  // C6: the newest confirmed file wins; only when none is confirmed does the newest guess fill it (as check).
+  const chosen = real.find(isConfirmed) ?? real[0] ?? html[0];
   return finish(box, chosen ? [chosen] : [], [], [], Math.max(real.length - 1, 0), opts);
 }
 
@@ -84,7 +87,8 @@ function mergeBox(box: RecipeBox, docs: ClaimDocument[], opts: ChecklistOpts): B
   for (const type of box.accepts) {
     const real: Part[] = docs.map((doc) => ({ doc, pages: pagesOfType(doc, type), type })).filter((p) => p.pages.length);
     const w = wholeFiles(docs, type);
-    for (const p of w.word) dropped.push(`${p.doc.relPath} can't be merged (Word/Excel).`);
+    // A Word/Excel copy only matters when no PDF or image of this type could go in instead.
+    if (!real.length) for (const p of w.word) dropped.push(`${p.doc.relPath} can't be merged (Word/Excel).`);
     const best = [...real].sort(newestFirst)[0] ?? [...w.html].sort(newestFirst)[0];
     if (best) picks.push(best);
   }
@@ -131,5 +135,7 @@ export function missingMessage(claim: ClaimData, states: BoxState[]): string {
   }
   if (!types.length) return '';
   const items = types.map((t) => DOC_TYPE_LABEL[t]).join(', ');
-  return `Claim ${claim.policy.claimNumber} (${claim.vehicle.registrationNumber}): please send the following documents: ${items}.`;
+  const reg = claim.vehicle.registrationNumber?.trim();
+  const head = ['Claim', claim.policy.claimNumber?.trim(), reg && `(${reg})`].filter(Boolean).join(' ');
+  return `${head}: please send the following documents: ${items}.`;
 }

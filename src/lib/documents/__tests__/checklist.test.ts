@@ -107,6 +107,28 @@ describe('checklist', () => {
     expect(state(c, 'rc')).toMatchObject({ parts: [{ docId: 'new', pages: [2] }], alternatives: 2 });
   });
 
+  it('checklist: a single box takes the newest confirmed file over a newer guess', () => {
+    const c = claim([
+      doc('old', 'rc', { 1: confirmed('rc') }, { addedAt: '2026-10-01T00:00:00Z' }),
+      doc('new', 'rc', { 1: confirmed('rc', { confirmed: false }) }, { addedAt: '2026-10-05T00:00:00Z' }),
+    ]);
+    expect(state(c, 'rc')).toMatchObject({ status: 'ready', parts: [{ docId: 'old', pages: [1] }], alternatives: 1 });
+  });
+
+  it('checklist: with no confirmed file the newest guess is picked and needs a check', () => {
+    const c = claim([
+      doc('old', 'rc', { 1: confirmed('rc', { confirmed: false }) }, { addedAt: '2026-10-01T00:00:00Z' }),
+      doc('new', 'rc', { 1: confirmed('rc', { confirmed: false }) }, { addedAt: '2026-10-05T00:00:00Z' }),
+    ]);
+    expect(state(c, 'rc')).toMatchObject({ status: 'check', parts: [{ docId: 'new', pages: [1] }] });
+  });
+
+  it('checklist: a merge names a Word file only when no PDF or image of that type was picked', () => {
+    const docx = doc('w', 'surveyReport', undefined, { mime: 'application/msword', relPath: 'Report.docx' });
+    const pdf = doc('p', 'surveyReport', { 1: confirmed('surveyReport') });
+    expect(state(claim([docx, pdf]), 'others')).toMatchObject({ status: 'ready', reasons: [], parts: [{ docId: 'p', pages: [1] }] });
+  });
+
   it('checklist: entries not on this device are ignored', () => {
     const c = claim([doc('d1', 'rc', { 1: confirmed('rc') }, { devices: ['PC2'] })]);
     expect(state(c, 'rc').status).toBe('missing');
@@ -166,5 +188,16 @@ describe('missingMessage', () => {
       'Claim CL/77 (MH-18-AB-1234): please send the following documents: Driving Licence, RC Book, Claim Form, Chassis Number Photo, Odometer Photo, Aadhaar Card, Policy Schedule.',
     );
     expect(missingMessage(c, [])).toBe('');
+  });
+
+  it('missingMessage leaves out an empty claim number or registration without a double space', () => {
+    const c = claim([]);
+    const states = run(c).filter((s) => s.box.id === 'rc');
+    expect(missingMessage({ ...c, policy: { ...c.policy, claimNumber: '' } }, states))
+      .toBe('Claim (MH-18-AB-1234): please send the following documents: RC Book.');
+    expect(missingMessage({ ...c, vehicle: { ...c.vehicle, registrationNumber: ' ' } }, states))
+      .toBe('Claim CL/77: please send the following documents: RC Book.');
+    expect(missingMessage({ ...c, policy: { ...c.policy, claimNumber: '' }, vehicle: { ...c.vehicle, registrationNumber: '' } }, states))
+      .toBe('Claim: please send the following documents: RC Book.');
   });
 });
