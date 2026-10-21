@@ -26,7 +26,8 @@ function doc(id: string, over: Partial<ClaimDocument> = {}): ClaimDocument {
 function claimOf(docs: ClaimDocument[], over: Partial<ClaimData> = {}): ClaimData {
   return { ...createBlankClaim(), documents: Object.fromEntries(docs.map((d) => [d.id, d])), ...over };
 }
-const pdfBlob = () => Promise.resolve(new Blob(['x'], { type: 'application/pdf' }));
+const pdfFile = (lastModified = 5, body = 'x') => new File([body], 'a.pdf', { type: 'application/pdf', lastModified });
+const pdfBlob = () => Promise.resolve(pdfFile());
 const label = (over: Partial<PageLabel> = {}): PageLabel => ({ type: 'rc', by: 'text', confirmed: false, ...over });
 
 beforeEach(() => {
@@ -95,7 +96,7 @@ describe('labelClaim', () => {
     const read = vi.fn(pdfBlob);
     const first = await labelClaim(c, read, DEV, () => undefined);
     expect(read).toHaveBeenCalledTimes(1);
-    expect(first.claim).toBe(c);
+    expect(first.claim.documents!.a.pages).toBe(full.pages); // only the fingerprint is new
     expect(first.texts.a).toEqual(['Registration Certificate']);
     const second = await labelClaim(c, read, DEV, (d) => first.texts[d.id]);
     expect(read).toHaveBeenCalledTimes(1);
@@ -111,6 +112,38 @@ describe('labelClaim', () => {
     expect(out.claim.documents!.a.pages![1]).toMatchObject({ type: 'rc', by: 'text', confirmed: false });
     expect(out.claim.documents!.a.pages![2]).toBeUndefined();
     expect(out.texts).toEqual({});
+  });
+
+  it('labelClaim stores the fingerprint of a file it reads for the first time', async () => {
+    mocks.pageCountOf.mockResolvedValue(1);
+    mocks.pageTexts.mockResolvedValue(['unrelated words']);
+    const out = await labelClaim(claimOf([doc('a')]), () => Promise.resolve(pdfFile(5)), DEV);
+    expect(out.claim.documents!.a.fingerprints).toEqual({ [DEV]: { size: 1, lastModified: 5, pageCount: 1 } });
+    expect(out.reset).toEqual([]);
+  });
+
+  it('labelClaim resets an entry whose file differs from its fingerprint, and relabels it', async () => {
+    mocks.pageCountOf.mockResolvedValue(2);
+    mocks.pageTexts.mockResolvedValue(['nothing useful', 'Registration Certificate of vehicle']);
+    const old = doc('a', {
+      pageCount: 2,
+      fingerprints: { [DEV]: { size: 1, lastModified: 5, pageCount: 2 } },
+      pages: { 1: label({ type: 'dl', by: 'surveyor', confirmed: true }) },
+    });
+    const out = await labelClaim(claimOf([old]), () => Promise.resolve(pdfFile(6)), DEV, () => undefined);
+    expect(out.reset).toEqual(['a']);
+    expect(out.claim.documents!.a.pages).toEqual({ 2: { type: 'rc', by: 'text', confirmed: false } });
+    expect(out.claim.documents!.a.fingerprints![DEV]).toEqual({ size: 1, lastModified: 6, pageCount: 2 });
+  });
+
+  it('labelClaim keeps labels when the file still matches its fingerprint', async () => {
+    mocks.pageCountOf.mockResolvedValue(1);
+    mocks.pageTexts.mockResolvedValue(['nothing']);
+    const same = doc('a', { pageCount: 1, fingerprints: { [DEV]: { size: 1, lastModified: 5, pageCount: 1 } }, pages: { 1: label({ confirmed: true }) } });
+    const c = claimOf([same]);
+    const out = await labelClaim(c, () => Promise.resolve(pdfFile(5)), DEV, () => undefined);
+    expect(out.claim).toBe(c);
+    expect(out.reset).toEqual([]);
   });
 
   it('labelClaim with cached() treats an all-null cache as no text layer (name labelling still works)', async () => {

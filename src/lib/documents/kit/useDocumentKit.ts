@@ -14,6 +14,7 @@ import { getDeviceLabel } from '@/lib/local-sync/directory-handle';
 import { readDocument, writePortalUpload } from '../folder';
 import { buildBoxFile, planBox, sha256Hex } from './build';
 import { checklist, missingMessage } from './checklist';
+import { fileMatchesFingerprint } from './fingerprint';
 import type { BoxState } from './checklist';
 import {
   blockedBoxes, buildable, claimDrift, confirmAllLabels, identityMap, invalidateIfReviewed, labelClaim, overrideLabel, setPageLabels,
@@ -59,12 +60,17 @@ export function useDocumentKit() {
         const hit = cacheRef.current.get(d.id);
         return hit?.sig === readSignature(d, dev) ? hit.texts : undefined;
       };
-      const { claim: next, texts: fresh } = await labelClaim(current, (d) => readDocument(current, d), dev, cached);
+      const { claim: next, texts: fresh, reset } = await labelClaim(current, (d) => readDocument(current, d), dev, cached);
       const now = latest();
       // Files can be slow to read; drop the result if the claim moved on meanwhile (the new run redoes it).
-      if (cancelled || now?.id !== current.id || now.documents !== current.documents) return;
-      if (next !== current) updateClaim({ documents: next.documents });
-      for (const [id, t] of Object.entries(fresh)) cacheRef.current.set(id, { sig: readSignature(current.documents![id], dev), texts: t });
+      if (cancelled || !now || now.id !== current.id || now.documents !== current.documents) return;
+      if (next !== current) {
+        // A file found changed since its labels were made: every review built from it no longer holds.
+        const cancelledSet = reset.length && now.uploadSet ? invalidateIfReviewed(now.uploadSet, { docIds: reset }) : null;
+        updateClaim({ documents: next.documents, ...(cancelledSet ? { uploadSet: cancelledSet } : {}) });
+      }
+      // Keyed on the entry as saved now (with its new fingerprint), so the next run finds the texts.
+      for (const [id, t] of Object.entries(fresh)) cacheRef.current.set(id, { sig: readSignature(next.documents![id], dev), texts: t });
       if (Object.keys(fresh).length) setTexts((prev) => ({ ...prev, ...fresh }));
     }).catch(() => { /* a file that cannot be read is skipped; labelling retries on the next change */ });
     return () => { cancelled = true; };
@@ -125,17 +131,24 @@ export function useDocumentKit() {
 
   const build = useCallback(async (): Promise<BuildResult> => {
     const c = latest();
-    if (!c || !recipe) return { ok: false, reason: 'No upload recipe for this claim.' };
+    if (!c || !recipe || !device) return { ok: false, reason: 'No upload recipe for this claim.' };
     const boxes = buildable(states);
     if (!boxes.length) return { ok: false, reason: 'Nothing is ready to build yet.' };
     if (building.current) return { ok: false, reason: 'A build is already running.' };
     building.current = true;
     try {
       return await whileReading(async () => {
-        const read = async (docId: string) => {
-          const doc = c.documents?.[docId];
-          if (!doc) throw new Error('A source file is no longer in the claim.');
+        // C2: every source must still be the file its labels were made on, or nothing is built.
+        const sources = new Map<string, File>();
+        for (const id of new Set(boxes.flatMap((s) => planBox(s).map((p) => p.docId)))) {
+          const doc = c.documents?.[id];
+          if (!doc) return { ok: false as const, reason: 'A source file is no longer in the claim.' };
           const file = await readDocument(c, doc);
+          if (!fileMatchesFingerprint(file, doc, device)) return { ok: false as const, reason: `${doc.relPath} changed since it was labelled. Press Scan folder.` };
+          sources.set(id, file);
+        }
+        const read = async (docId: string) => {
+          const file = sources.get(docId)!;
           return { blob: file, mime: file.type, name: file.name };
         };
         const built: UploadSet['boxes'] = {};
@@ -162,7 +175,7 @@ export function useDocumentKit() {
     } finally {
       building.current = false;
     }
-  }, [recipe, states, updateClaim]);
+  }, [recipe, states, device, updateClaim]);
 
   const set = claim?.uploadSet;
   const blocked = useMemo(() => (set ? blockedBoxes(states, Object.keys(set.boxes)) : []), [set, states]);

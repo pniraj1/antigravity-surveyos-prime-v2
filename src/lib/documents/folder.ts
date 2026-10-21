@@ -9,7 +9,7 @@ import { MULTI_FILE_TYPES } from '@/types/documents';
 import { getStoredRootHandle, ensureReadWrite, getDeviceLabel } from '@/lib/local-sync/directory-handle';
 import { addDocuments, claimDocuments, newDocId, removeDocument, onThisDevice, isDiscardablePlaceholder, addDeviceTo, replaceableEntries } from './index-ops';
 import { folderNameFor, oldNameFor, relPathsFor, docTypeFromRelPath, isScanSkippable } from './naming';
-import { reconcileKnown } from './kit/fingerprint';
+import { fingerprintOf, reconcileKnown } from './kit/fingerprint';
 import { pageCountOf } from './kit/page-text';
 import { getAllClaims } from '@/lib/storage/indexeddb';
 
@@ -325,6 +325,8 @@ export async function scanClaimFolder(
       if (r.reset) reset.push(relPath);
       continue;
     }
+    // C2: fingerprinted at once, so labels made before the next scan are tied to this exact file.
+    const pageCount = await pageCountOf(file); // 1 for anything not a PDF; 0 = a PDF we couldn't open (unknown)
     fresh.push({
       id: newDocId(),
       type: docTypeFromRelPath(relPath),
@@ -335,6 +337,8 @@ export async function scanClaimFolder(
       source: 'upload', // found on disk — never treated as a placeholder we may delete
       adopted: true,
       devices: [device],
+      ...(pageCount > 0 ? { pageCount } : {}),
+      fingerprints: { [device]: fingerprintOf(file, pageCount) },
     });
   }
 

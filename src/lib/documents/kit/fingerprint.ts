@@ -38,6 +38,15 @@ export function reconcileEntry(
 }
 
 /**
+ * Build's last check (C2): is the file about to be cut the one its labels were made on, here?
+ * No fingerprint for this device means the file was never checked, so it does not match.
+ */
+export function fileMatchesFingerprint(file: { size: number; lastModified: number }, doc: ClaimDocument, device: string): boolean {
+  const fp = doc.fingerprints?.[device];
+  return !!fp && fp.size === file.size && fp.lastModified === file.lastModified;
+}
+
+/**
  * Re-check every entry that shares one file on disk against what the scan just
  * saw. `reset`: some entry lost its page labels. `changed`: anything at all
  * differs, so the caller knows whether the claim needs saving.

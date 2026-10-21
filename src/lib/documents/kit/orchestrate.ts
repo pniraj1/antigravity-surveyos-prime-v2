@@ -9,6 +9,7 @@ import type { ClaimData } from '@/types/claim';
 import type { ClaimDocument, DocType, PageLabel, UploadSet } from '@/types/documents';
 import { addDocuments, claimDocuments, onThisDevice } from '../index-ops';
 import type { BoxState } from './checklist';
+import { fingerprintOf, reconcileEntry } from './fingerprint';
 import { identityCheck } from './identity';
 import type { IdentityResult } from './identity';
 import { pageCountOf, pageTexts } from './page-text';
@@ -35,17 +36,21 @@ function fullyLabelled(d: ClaimDocument): boolean {
  * text. A file that is not cached is read even when fully labelled, because identity checks need its text.
  * Without it, fully labelled files are skipped. A failed read (cloud placeholder, lock) skips that file only.
  *
+ * Every file read is fingerprinted (C2): a first read stores it; a file that no longer matches its fingerprint
+ * loses its page labels and is labelled afresh, and its id is returned in `reset`.
+ *
  * Returns the same `claim` object when nothing changed (no dirty claim, no cloud write); `texts` holds only
  * the files read now.
  */
 export async function labelClaim(
   claim: ClaimData,
-  read: (doc: ClaimDocument) => Promise<Blob>,
+  read: (doc: ClaimDocument) => Promise<File>,
   device: string,
   cached?: (doc: ClaimDocument) => (string | null)[] | undefined,
-): Promise<{ claim: ClaimData; texts: Record<string, (string | null)[]> }> {
+): Promise<{ claim: ClaimData; texts: Record<string, (string | null)[]>; reset: string[] }> {
   const texts: Record<string, (string | null)[]> = {};
   const changed: ClaimDocument[] = [];
+  const reset: string[] = [];
 
   for (const d of claimDocuments(claim)) {
     if (!onThisDevice(d, device) || !labelable(d)) continue;
@@ -57,18 +62,21 @@ export async function labelClaim(
       continue;
     }
     if (!cached && fullyLabelled(d)) continue;
-    let blob: Blob;
-    try { blob = await read(d); } catch { continue; }
+    let file: File;
+    try { file = await read(d); } catch { continue; }
 
-    const count = await pageCountOf(blob);
-    const layer = isPdf(d) ? await pageTexts(blob) : null;
+    const count = await pageCountOf(file);
+    const layer = isPdf(d) ? await pageTexts(file) : null;
     texts[d.id] = layer ?? Array.from({ length: count > 0 ? count : (d.pageCount ?? 1) }, () => null);
 
-    const counted = count > 0 && d.pageCount !== count ? { ...d, pageCount: count } : d;
+    // Same reset rule as Scan: labels made on another version of this file are dropped.
+    const seen = reconcileEntry(d, fingerprintOf(file, count), device);
+    if (seen.reset) reset.push(d.id);
+    const counted = count > 0 && seen.entry.pageCount !== count ? { ...seen.entry, pageCount: count } : seen.entry;
     const labelled = labelEntry(counted, layer);
     if (labelled !== d) changed.push(labelled);
   }
-  return { claim: changed.length ? addDocuments(claim, changed) : claim, texts };
+  return { claim: changed.length ? addDocuments(claim, changed) : claim, texts, reset };
 }
 
 /**

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { ClaimDocument, PageLabel } from '@/types/documents';
-import { fingerprintOf, reconcileEntry, reconcileKnown } from '../kit/fingerprint';
+import { fileMatchesFingerprint, fingerprintOf, reconcileEntry, reconcileKnown } from '../kit/fingerprint';
 
 const label: PageLabel = { type: 'rc', by: 'surveyor', confirmed: true };
 const entry = (over: Partial<ClaimDocument> = {}): ClaimDocument => ({
@@ -63,6 +63,20 @@ describe('fingerprint', () => {
     expect(reset).toBe(true);
     expect(out.pages).toBeUndefined();
     expect(out.fingerprints).toEqual({ Office: other, PC: mine });
+  });
+});
+
+describe('fileMatchesFingerprint', () => {
+  const e = entry({ fingerprints: { PC: { size: 100, lastModified: 5, pageCount: 3 }, Office: { size: 100, lastModified: 9, pageCount: 3 } } });
+  it('true only when size and lastModified equal this device\'s fingerprint', () => {
+    expect(fileMatchesFingerprint({ size: 100, lastModified: 5 }, e, 'PC')).toBe(true);
+    expect(fileMatchesFingerprint({ size: 100, lastModified: 6 }, e, 'PC')).toBe(false);
+    expect(fileMatchesFingerprint({ size: 101, lastModified: 5 }, e, 'PC')).toBe(false);
+    expect(fileMatchesFingerprint({ size: 100, lastModified: 9 }, e, 'PC')).toBe(false); // another device's mtime is not ours
+  });
+  it('false when this device never fingerprinted the file', () => {
+    expect(fileMatchesFingerprint({ size: 100, lastModified: 5 }, e, 'Laptop')).toBe(false);
+    expect(fileMatchesFingerprint({ size: 100, lastModified: 5 }, entry(), 'PC')).toBe(false);
   });
 });
 
