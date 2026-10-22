@@ -76,7 +76,7 @@ export function AIReviewDialog({ isOpen, onClose, onConfirm, onReScan, title, da
 
   // Flatten sample data for display
   const displayFields = Object.entries(data || {})
-    .filter(([_, v]) => typeof v === 'string' || typeof v === 'number')
+    .filter(([k, v]) => !/_(page|file)$/.test(k) && (typeof v === 'string' || typeof v === 'number'))
     .map(([k, v]) => ({
       key: k.replace(/_/g, ' ').toUpperCase(),
       value: String(v)

@@ -135,7 +135,7 @@ function profilePages(textLayers: string[]): {
 export async function fileToImages(
   file: File,
   onProgress?: (page: number, total: number) => void
-): Promise<{ viewImages: string[]; apiImages: string[]; textLayers?: string[] }> {
+): Promise<{ viewImages: string[]; apiImages: string[]; textLayers?: string[]; pageNumbers?: number[] }> {
   if (file.type === 'application/pdf') {
     const pdfjsLib = await import('pdfjs-dist');
     const version = pdfjsLib.version;
@@ -182,7 +182,7 @@ export async function fileToImages(
       await page.render({ canvasContext: apiCtx, canvas: apiCanvas, viewport: apiViewport }).promise;
       apiImages.push(apiCanvas.toDataURL('image/jpeg', 0.90));
     }
-    return { viewImages, apiImages, textLayers };
+    return { viewImages, apiImages, textLayers, pageNumbers };
   }
 
   // Handle standard images — full-res original for viewing, downscaled JPEG for the API.
@@ -211,16 +211,18 @@ export async function fileToImages(
 export async function filesToImages(
   files: File[],
   onProgress?: (page: number, total: number) => void,
-): Promise<{ viewImages: string[]; apiImages: string[]; textLayers?: string[] }> {
+): Promise<{ viewImages: string[]; apiImages: string[]; textLayers?: string[]; pageRefs: PageRef[] }> {
   const viewImages: string[] = [];
   const apiImages: string[] = [];
   const textLayers: string[] = [];
+  const pageRefs: PageRef[] = [];
   let allHaveText = files.length > 0;
 
-  for (const file of files) {
+  for (const [fileIndex, file] of files.entries()) {
     const r = await fileToImages(file, onProgress);
     viewImages.push(...r.viewImages);
     apiImages.push(...r.apiImages);
+    r.apiImages.forEach((_, i) => pageRefs.push({ file: fileIndex, page: r.pageNumbers?.[i] ?? 1 }));
     if (r.textLayers && r.textLayers.length === r.apiImages.length) {
       textLayers.push(...r.textLayers);
     } else {
@@ -228,7 +230,28 @@ export async function filesToImages(
     }
   }
 
-  return { viewImages, apiImages, textLayers: allHaveText ? textLayers : undefined };
+  return { viewImages, apiImages, textLayers: allHaveText ? textLayers : undefined, pageRefs };
+}
+
+/** Where one sent image came from: file index in the slot, real 1-based PDF page. */
+export interface PageRef { file: number; page: number }
+
+/**
+ * Tags each non-empty top-level value with where it was read — `foo_page`
+ * (real PDF page) and `foo_file` (file index, only when not the first file) —
+ * so the Evidence Viewer can open the document at that page. Light documents
+ * are read one page per call, so the chunk's first page IS the source page;
+ * for a 2-page estimate chunk it is the first of the two.
+ */
+export function tagFieldPages(fragment: unknown, ref: PageRef | undefined): unknown {
+  if (!ref || !fragment || typeof fragment !== 'object' || Array.isArray(fragment)) return fragment;
+  const out: Record<string, unknown> = { ...(fragment as Record<string, unknown>) };
+  for (const [k, v] of Object.entries(fragment as Record<string, unknown>)) {
+    if (/_(context|page|file)$/.test(k) || v === '' || v === null || v === undefined || typeof v === 'object') continue;
+    out[`${k}_page`] = ref.page;
+    if (ref.file > 0) out[`${k}_file`] = ref.file;
+  }
+  return out;
 }
 
 // Max long-edge dimension for images sent to the AI API.
@@ -406,7 +429,7 @@ export async function extractDocument(
 
   return aiQueue.add(async () => {
     if (onProgress) onProgress('Scanning document...');
-    const { viewImages, apiImages, textLayers } = await filesToImages(files, (p, t) => {
+    const { viewImages, apiImages, textLayers, pageRefs } = await filesToImages(files, (p, t) => {
       if (onProgress) onProgress(`Processing page ${p} of ${t}...`);
     });
 
@@ -549,7 +572,7 @@ export async function extractDocument(
         const mergeResponse = (rawResponse: string, first: number, last: number) => {
           try {
             const fragment = JSON.parse(rawResponse);
-            result = mergeAIResults(result, tagRows(fragment, first - 1, last - 1));   // 1-based chunk → 0-based page tags
+            result = mergeAIResults(result, tagFieldPages(tagRows(fragment, first - 1, last - 1), pageRefs[first - 1]));   // 1-based chunk → 0-based page tags
           } catch (err) {
             // For multi-page docs: one bad page should not abort the whole extraction.
             // Log the failure and continue accumulating results from other pages.

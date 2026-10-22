@@ -46,6 +46,8 @@ export function ReconciliationDialog({
       docType: origin,
       fieldKey: field.path,
       contextSnippet: source?.contextSnippet ?? '',
+      page: source?.page,
+      fileIndex: source?.fileIndex,
     });
   };
 

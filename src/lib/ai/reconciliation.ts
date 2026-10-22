@@ -13,6 +13,9 @@ export interface ReconciliationField {
     label: string;
     /** Verbatim document text this value was read from; '' when the model returned none. */
     contextSnippet: string;
+    /** 1-based PDF page / file index the value was read from, when extraction tagged it. */
+    page?: number;
+    fileIndex?: number;
   }[];
   hasConflict: boolean;
   /** True when a decision exists AND its fingerprint still matches these sources. */
@@ -133,6 +136,8 @@ function buildFields(claim: ClaimData): ReconciliationField[] {
           label: docKey.toUpperCase(),
           value: String(docData[aiKey]),
           contextSnippet: snippet ? String(snippet) : '',
+          page: Number(docData[`${aiKey}_page`]) || undefined,
+          fileIndex: Number(docData[`${aiKey}_file`]) || undefined,
         });
       }
     });

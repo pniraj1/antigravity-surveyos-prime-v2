@@ -29,6 +29,15 @@ export interface EvidenceField {
   docType: string;       // "rc" | "policy" | "dl" | "estimate" | …
   fieldKey: string;      // e.g. "registration_number"
   contextSnippet: string; // text snippet from AI _context key
+  page?: number;          // 1-based PDF page the value was read from
+  fileIndex?: number;     // which file of the slot (0 when absent)
+}
+
+/** Reads the `foo_page` / `foo_file` tags extraction writes beside each value. */
+export function fieldSource(data: Record<string, unknown> | undefined, key: string): { page?: number; fileIndex?: number } {
+  const page = Number(data?.[`${key}_page`]);
+  const fileIndex = Number(data?.[`${key}_file`]);
+  return { page: page > 0 ? page : undefined, fileIndex: fileIndex > 0 ? fileIndex : undefined };
 }
 
 interface BlobEntry {

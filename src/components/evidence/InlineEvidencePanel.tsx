@@ -51,8 +51,11 @@ export function InlineEvidencePanel({
   const uploadDocType = effectiveDocType ?? defaultDocType;
 
   const docLabel = effectiveDocType ? (DOC_LABELS[effectiveDocType] ?? effectiveDocType.toUpperCase()) : '';
-  const blobEntry = effectiveDocType ? blobUrls[`${claimId}_${effectiveDocType}`]?.[0] : undefined;
+  const slot = effectiveDocType ? blobUrls[`${claimId}_${effectiveDocType}`] : undefined;
+  // Open the file and page the clicked value was read from (extraction tags it).
+  const blobEntry = slot?.[field?.fileIndex ?? 0] ?? slot?.[0];
   const isPdf = blobEntry?.mimeType === 'application/pdf';
+  const pdfSrc = blobEntry && field?.page ? `${blobEntry.url}#page=${field.page}` : blobEntry?.url;
 
   return (
     <div className="flex flex-col h-full rounded-xl overflow-hidden border border-border bg-[var(--color-neutral-50)]">
@@ -62,7 +65,7 @@ export function InlineEvidencePanel({
           <FileSearch size={16} className="text-primary" />
           <div>
             <div className="text-xs font-medium text-foreground">Evidence Viewer</div>
-            {docLabel && <div className="text-[10px] text-primary mt-0.5">{docLabel}</div>}
+            {docLabel && <div className="text-[10px] text-primary mt-0.5">{docLabel}{field?.page ? ` · page ${field.page}` : ''}</div>}
           </div>
         </div>
         {blobEntry && (
@@ -98,7 +101,9 @@ export function InlineEvidencePanel({
         {blobEntry ? (
           isPdf ? (
             <iframe
-              src={blobEntry.url}
+              // Remount on page change: the PDF viewer ignores a hash-only src update.
+              key={pdfSrc}
+              src={pdfSrc}
               className="w-full h-full border-none block"
               title={docLabel}
             />

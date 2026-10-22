@@ -8,7 +8,7 @@ import {
   ScrollText, Receipt, AlertCircle, Eye,
   PanelRightOpen, PanelRightClose,
 } from 'lucide-react';
-import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
+import { useEvidenceStore, fieldSource } from '@/components/evidence/DocumentEvidenceViewer';
 import { InlineEvidencePanel } from '@/components/evidence/InlineEvidencePanel';
 import { EvidencePanelSlot } from '@/components/evidence/EvidencePanelSlot';
 import { useEvidencePanel } from '@/hooks/useEvidencePanel';
@@ -50,7 +50,7 @@ export function ReviewTab() {
   function handleFieldClick(docType: string, fieldKey: string, data: Record<string, unknown>) {
     const contextKey = `${fieldKey}_context`;
     const contextSnippet = (data[contextKey] as string) ?? '';
-    openField(claimId, { docType, fieldKey, contextSnippet });
+    openField(claimId, { docType, fieldKey, contextSnippet, ...fieldSource(data, fieldKey) });
   }
 
   return (
@@ -162,7 +162,7 @@ export function ReviewTab() {
             const Icon = meta.icon;
             const data = extractedDocs[key] as Record<string, unknown>;
             const fields = typeof data === 'object' && data !== null
-              ? Object.entries(data).filter(([k]) => !k.endsWith('_context'))
+              ? Object.entries(data).filter(([k]) => !/_(context|page|file)$/.test(k))
               : [];
 
             return (

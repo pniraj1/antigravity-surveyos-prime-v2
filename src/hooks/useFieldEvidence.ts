@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react';
 import { useClaimStore } from '@/stores/claim-store';
-import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
+import { useEvidenceStore, fieldSource } from '@/components/evidence/DocumentEvidenceViewer';
 
 /**
  * Maps each store field name (camelCase) to the docType and AI extraction key
@@ -90,7 +90,7 @@ export function useFieldEvidence() {
     if (!docData) return;            // document not yet scanned
 
     const contextSnippet = docData[`${aiKey}_context`] ?? '';
-    openField(claimId, { docType, fieldKey: aiKey, contextSnippet });
+    openField(claimId, { docType, fieldKey: aiKey, contextSnippet, ...fieldSource(docData, aiKey) });
   }, [claimId, extractedDocs, openField]);
 
   const hasEvidence = useCallback((fieldName: string): boolean => {
