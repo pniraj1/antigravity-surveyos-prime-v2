@@ -1,6 +1,10 @@
 'use client';
 
+import { useState } from 'react';
+import { Loader2, Sparkles } from 'lucide-react';
+import { toast } from 'sonner';
 import { useClaimStore } from '@/stores/claim-store';
+import { rephraseCause } from '@/lib/ai/rephrase-cause';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,9 +14,26 @@ const r = (v: any) => !v ? 'border-red-400' : '';
 
 export function AccidentDetailsForm() {
   const { currentClaim, updateAccident, updateSpotDetails } = useClaimStore();
+  // Text before the last AI rephrase; any manual edit drops the Undo.
+  const [beforeRephrase, setBeforeRephrase] = useState<string | null>(null);
+  const [rephrasing, setRephrasing] = useState(false);
 
   if (!currentClaim) return null;
   const a = currentClaim?.accident || {} as any;
+
+  const handleRephrase = async () => {
+    const original = a?.causeOfAccident || '';
+    setRephrasing(true);
+    try {
+      const out = await rephraseCause(original);
+      updateAccident({ causeOfAccident: out });
+      setBeforeRephrase(original);
+    } catch (err: unknown) {
+      toast.error(`Rephrase failed: ${err instanceof Error ? err.message : 'unknown error'}`);
+    } finally {
+      setRephrasing(false);
+    }
+  };
   const sd = currentClaim?.spotDetails || {} as any;
 
   return (
@@ -56,11 +77,34 @@ export function AccidentDetailsForm() {
           </div>
 
           <div className="space-y-1 lg:col-span-2 xl:col-span-4">
-            <Label htmlFor="a-cause">Cause and Nature of Accident</Label>
-            <Input
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="a-cause">Cause and Nature of Accident</Label>
+              <div className="flex items-center gap-3 text-xs">
+                {beforeRephrase !== null && (
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:underline"
+                    onClick={() => { updateAccident({ causeOfAccident: beforeRephrase }); setBeforeRephrase(null); }}
+                  >
+                    Undo
+                  </button>
+                )}
+                <button
+                  type="button"
+                  disabled={rephrasing || !a?.causeOfAccident?.trim()}
+                  onClick={handleRephrase}
+                  className="flex items-center gap-1 text-primary hover:underline disabled:opacity-40 disabled:no-underline"
+                >
+                  {rephrasing ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                  Rephrase with AI
+                </button>
+              </div>
+            </div>
+            <Textarea
               id="a-cause"
+              rows={3}
               value={a?.causeOfAccident || ''}
-              onChange={(e) => updateAccident({ causeOfAccident: e.target.value })}
+              onChange={(e) => { updateAccident({ causeOfAccident: e.target.value }); setBeforeRephrase(null); }}
               className={r(a?.causeOfAccident)}
             />
           </div>
