@@ -123,6 +123,15 @@ export function DocumentReviewSheet({ open, slotLabel, files, onConfirm, onCance
       return { ...prev, [fileIndex]: { ...cur, ticked } };
     });
 
+  // Uses numPages, not the loaded thumbnails, so pages still loading are ticked too.
+  const setAllPages = (fileIndex: number, all: boolean) =>
+    setPdfInfo(prev => {
+      const cur = prev[fileIndex];
+      if (!cur) return prev;
+      const ticked = new Set(all ? Array.from({ length: cur.numPages }, (_, k) => k + 1) : []);
+      return { ...prev, [fileIndex]: { ...cur, ticked } };
+    });
+
   // Object URLs for thumbnails/crop — regenerated whenever the files change,
   // revoked on cleanup to avoid leaks.
   const urls = useMemo(() => workingFiles.map((f) => URL.createObjectURL(f)), [workingFiles]);
@@ -236,6 +245,7 @@ export function DocumentReviewSheet({ open, slotLabel, files, onConfirm, onCance
                       pages={info.pages}
                       checked={info.ticked}
                       onToggle={p => togglePage(i, p)}
+                      onSetAll={all => setAllPages(i, all)}
                     />
                     {info.pages.length < info.numPages && (
                       <p className="text-[11px] text-muted-foreground mt-1.5 flex items-center gap-1">

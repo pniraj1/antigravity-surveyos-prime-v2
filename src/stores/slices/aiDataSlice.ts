@@ -64,6 +64,31 @@ export function parseDate(d: string): string {
   return '';
 }
 
+// ─── Time parsing helper ──────────────────────────────────────────────────────
+
+/**
+ * Normalizes an accident time to 24-hour HH:mm, or '' when none is readable.
+ * Claim forms write "4.30 pm", "16.30 hrs", "1630 hrs", "02:30 PM" — and any
+ * of those left raw makes the datetime-local input render the WHOLE value
+ * blank, date included. Dotted dates ("12.03.2026") are not times: the
+ * lookarounds refuse a match that touches another date component.
+ */
+export function parseTime(t: string): string {
+  if (!t) return '';
+  const s = String(t).toLowerCase();
+  const m =
+    s.match(/(?<![\d./-])(\d{1,2})[:.](\d{2})(?![.\/:-]?\d)\s*(?:([ap])\.?\s*m\b)?/) ??
+    s.match(/(?<![\d./:-])(\d{1,2})()\s*([ap])\.?\s*m\b/) ??
+    s.match(/(?<![\d./:-])(\d{2})(\d{2})()\s*h/);
+  if (!m) return '';
+  let h = Number(m[1]);
+  const min = Number(m[2] || 0);
+  if (m[3] === 'p' && h < 12) h += 12;
+  if (m[3] === 'a' && h === 12) h = 0;
+  if (h > 23 || min > 59) return '';
+  return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+}
+
 // ─── Amount parsing helper ────────────────────────────────────────────────────
 
 /**
@@ -111,6 +136,11 @@ const RECONCILE_NUMERIC_PATHS = new Set([
 
 export function coerceForPath(path: string, value: string): unknown {
   if (RECONCILE_DATE_PATHS.has(path)) return parseDate(value);
+  if (path === 'accident.dateAndTime') {
+    // ponytail: a date-only source resets the time to 00:00; surveyor re-enters it.
+    const d = parseDate(value);
+    return d ? `${d}T${parseTime(value) || '00:00'}` : '';
+  }
   if (RECONCILE_NUMERIC_PATHS.has(path)) {
     const digits = parseAmount(value);
     if (path === 'policy.idv') return digits;
@@ -425,7 +455,10 @@ function applyDL(claim: ClaimData, data: any): ClaimData {
   };
 }
 
-function applyClaim(claim: ClaimData, data: any): ClaimData {
+export function applyClaim(claim: ClaimData, data: any): ClaimData {
+  // Unreadable date → keep what's there. Writing "T00:00" alone made the
+  // datetime-local input render blank and wiped a good earlier value.
+  const accidentDate = parseDate(data.date_of_accident || '');
   let tpInvolved = claim.spotDetails.tpInvolved;
   if (data.third_party_details && data.third_party_details.toLowerCase() !== 'nil') {
     const s = data.third_party_details.toLowerCase();
@@ -459,8 +492,8 @@ function applyClaim(claim: ClaimData, data: any): ClaimData {
       causeOfAccident: data.cause_of_accident || claim.accident.causeOfAccident,
       placeOfSurvey: data.workshop_name || data.place_of_repair || claim.accident.placeOfSurvey,
       thirdPartyDetails: data.third_party_details || claim.accident.thirdPartyDetails,
-      dateAndTime: data.date_of_accident
-        ? `${parseDate(data.date_of_accident)}T${(data.time_of_accident || '00:00').substring(0, 5)}`
+      dateAndTime: accidentDate
+        ? `${accidentDate}T${parseTime(data.time_of_accident) || parseTime(data.date_of_accident) || '00:00'}`
         : claim.accident.dateAndTime,
     },
     // NOTE: surveyPlace -> accident.placeOfSurvey, thirdPartyDetails -> accident.thirdPartyDetails

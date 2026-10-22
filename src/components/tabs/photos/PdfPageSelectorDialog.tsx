@@ -72,6 +72,7 @@ export function PdfPageSelectorDialog({
           pages={pages}
           checked={checked}
           onToggle={togglePage}
+          onSetAll={all => setChecked(new Set(all ? pages.map(p => p.pageNumber) : []))}
           className="max-h-[50vh] overflow-y-auto py-1"
         />
 

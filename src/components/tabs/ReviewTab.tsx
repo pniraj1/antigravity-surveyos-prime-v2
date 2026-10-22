@@ -1,15 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
 import { useClaimStore } from '@/stores/claim-store';
 import { useUIStore } from '@/stores/ui-store';
 import {
   CheckCircle2, Clock, FileText, ChevronRight, Sparkles,
   Car, CreditCard, Shield, FileCheck, Wrench, Camera,
   ScrollText, Receipt, AlertCircle, Eye,
-  FileSearch, ZoomIn, ZoomOut, PanelRightOpen, PanelRightClose,
+  PanelRightOpen, PanelRightClose,
 } from 'lucide-react';
 import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
+import { InlineEvidencePanel } from '@/components/evidence/InlineEvidencePanel';
 import { EvidencePanelSlot } from '@/components/evidence/EvidencePanelSlot';
 import { useEvidencePanel } from '@/hooks/useEvidencePanel';
 
@@ -28,137 +28,6 @@ const DOC_META: Record<string, { label: string; icon: any; color: string }> = {
   auth:     { label: 'Auth Cert.',       icon: FileText,   color: 'var(--color-neutral-600)' },
   fitness:  { label: 'Fitness Cert.',    icon: Receipt,    color: 'var(--color-status-danger)' },
 };
-
-const DOC_LABELS: Record<string, string> = {
-  rc: 'Registration Certificate',
-  policy: 'Insurance Policy',
-  dl: 'Driving Licence',
-  estimate: 'Repair Estimate',
-  'final-bill': 'Final Bill',
-  permit: 'Permit',
-  fitness: 'Fitness Certificate',
-  fir: 'FIR / Panchnama',
-  claim: 'Claim Form',
-  auth: 'Authorisation',
-  photos: 'Damage Photos',
-};
-
-// ─── Helper to load a document image from session storage ────────────────────
-function loadDocImage(claimId: string | null, docType: string | null): string | null {
-  if (!claimId || !docType) return null;
-  try {
-    const raw = sessionStorage.getItem(`evidence_${claimId}_${docType}`);
-    if (!raw) return null;
-    const pages: string[] = JSON.parse(raw);
-    return pages[0] ?? null;
-  } catch {
-    return null;
-  }
-}
-
-// ─── Small icon button ────────────────────────────────────────────────────────
-function EvidenceIconBtn({ onClick, title, children }: { onClick: () => void; title: string; children: React.ReactNode }) {
-  return (
-    <button
-      onClick={onClick}
-      title={title}
-      style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 5, padding: '4px 6px', cursor: 'pointer', color: 'var(--color-neutral-400)', display: 'flex', alignItems: 'center', transition: 'background 0.15s' }}
-      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.2)')}
-      onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
-    >
-      {children}
-    </button>
-  );
-}
-
-// ─── Inline Evidence Panel (same as DetailsTab) ───────────────────────────────
-function InlineEvidencePanel({ claimId }: { claimId: string }) {
-  const { field } = useEvidenceStore();
-  const [imgSrc, setImgSrc] = useState<string | null>(null);
-  const [zoom, setZoom] = useState(1);
-
-  useEffect(() => {
-    setImgSrc(loadDocImage(claimId, field?.docType ?? null));
-    setZoom(1);
-  }, [claimId, field?.docType]);
-
-  const zoomIn  = useCallback(() => setZoom(z => Math.min(z + 0.25, 4)), []);
-  const zoomOut = useCallback(() => setZoom(z => Math.max(z - 0.25, 0.5)), []);
-  const resetZoom = useCallback(() => setZoom(1), []);
-
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-      setZoom(z => Math.min(Math.max(z + (e.deltaY > 0 ? -0.1 : 0.1), 0.5), 4));
-    }
-  }, []);
-
-  const docLabel = field ? (DOC_LABELS[field.docType] ?? field.docType.toUpperCase()) : '';
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--color-card)', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--color-neutral-200)' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: 'var(--color-neutral-50)', borderBottom: '1px solid var(--color-neutral-200)', flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <FileSearch size={16} color="var(--color-primary)" />
-          <div>
-            <div style={{ color: 'var(--color-neutral-900)', fontWeight: 500, fontSize: 12 }}>Evidence Viewer</div>
-            {docLabel && <div style={{ color: 'var(--color-neutral-400)', fontSize: 10, marginTop: 1 }}>{docLabel}</div>}
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-          <EvidenceIconBtn onClick={zoomOut} title="Zoom Out"><ZoomOut size={13} /></EvidenceIconBtn>
-          <button
-            onClick={resetZoom}
-            title="Reset zoom"
-            style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 5, padding: '3px 7px', cursor: 'pointer', color: 'var(--color-neutral-400)', fontSize: 10, fontWeight: 500, minWidth: 38 }}
-          >
-            {Math.round(zoom * 100)}%
-          </button>
-          <EvidenceIconBtn onClick={zoomIn} title="Zoom In"><ZoomIn size={13} /></EvidenceIconBtn>
-        </div>
-      </div>
-
-      {/* Context snippet */}
-      {field?.contextSnippet && (
-        <div style={{ margin: '10px 12px 0', padding: '7px 10px', background: 'var(--color-neutral-100)', border: '1px solid var(--color-neutral-200)', borderRadius: 7, flexShrink: 0 }}>
-          <div style={{ color: 'var(--color-neutral-400)', fontSize: 9, fontWeight: 500, letterSpacing: '0.05em', marginBottom: 3 }}>EXTRACTED FROM DOCUMENT</div>
-          <div style={{ color: 'var(--color-neutral-200)', fontSize: 11, lineHeight: 1.5, fontFamily: 'monospace' }}>{field.contextSnippet}</div>
-        </div>
-      )}
-
-      {/* Document image */}
-      <div onWheel={handleWheel} style={{ flex: 1, overflow: 'auto', padding: 10 }}>
-        {imgSrc ? (
-          <div style={{ display: 'inline-block', minWidth: '100%', transformOrigin: 'top left', transform: `scale(${zoom})`, transition: 'transform 0.15s ease' }}>
-            <img
-              src={imgSrc}
-              alt={`${docLabel} source document`}
-              style={{ width: '100%', display: 'block', borderRadius: 6, boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}
-            />
-          </div>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center', color: 'var(--color-neutral-600)', padding: 20 }}>
-            <div>
-              <FileSearch size={36} style={{ opacity: 0.3, marginBottom: 10 }} />
-              <p style={{ fontSize: 12, margin: 0 }}>
-                {field
-                  ? 'Document image not available.\nRe-scan the document to enable this view.'
-                  : 'Click any field in a card\nto see its source here.'}
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Footer */}
-      <div style={{ padding: '6px 12px', borderTop: '1px solid rgba(255,255,255,0.06)', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}>
-        <ChevronRight size={12} color="var(--color-neutral-600)" />
-        <span style={{ color: 'var(--color-neutral-600)', fontSize: 10 }}>Click a field above to populate this panel</span>
-      </div>
-    </div>
-  );
-}
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function ReviewTab() {
@@ -408,7 +277,7 @@ export function ReviewTab() {
       </div>
 
       <EvidencePanelSlot panel={panel}>
-        <InlineEvidencePanel claimId={claimId} />
+        <InlineEvidencePanel claimId={claimId} defaultDocType="claim" />
       </EvidencePanelSlot>
     </div>
   );

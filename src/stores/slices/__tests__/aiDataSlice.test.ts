@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applyEstimate, parseDate, parseAmount, coerceForPath, buildEstimateModePrompt } from '../aiDataSlice';
+import { applyEstimate, applyClaim, parseDate, parseTime, parseAmount, coerceForPath, buildEstimateModePrompt } from '../aiDataSlice';
 import { buildDecision, getConflictFields } from '@/lib/ai/reconciliation';
 import { createBlankClaim } from '@/types/claim';
 import type { ClaimData } from '@/types';
@@ -223,6 +223,59 @@ describe('parseDate — dates wrapped in document prose', () => {
   });
 });
 
+describe('parseTime — accident times as Indian forms write them', () => {
+  it('reads 24-hour and dotted times', () => {
+    expect(parseTime('16:30')).toBe('16:30');
+    expect(parseTime('16.30 hrs')).toBe('16:30');
+    expect(parseTime('1630 hrs')).toBe('16:30');
+    expect(parseTime('9:05')).toBe('09:05');
+  });
+
+  it('converts am/pm instead of dropping it', () => {
+    expect(parseTime('02:30 PM')).toBe('14:30');
+    expect(parseTime('4.30 pm')).toBe('16:30');
+    expect(parseTime('4 p.m.')).toBe('16:00');
+    expect(parseTime('12:15 am')).toBe('00:15');
+    expect(parseTime('12:15 pm')).toBe('12:15');
+    expect(parseTime('12:00 approx')).toBe('12:00');
+  });
+
+  it('never mistakes a dotted date for a time', () => {
+    expect(parseTime('12.03.2026')).toBe('');
+    expect(parseTime('12/03/2026')).toBe('');
+    expect(parseTime('12/03/2026 at 4.30 pm')).toBe('16:30');
+    expect(parseTime('2026-03-12T16:30')).toBe('16:30');
+  });
+
+  it('returns empty for unreadable or impossible times', () => {
+    expect(parseTime('')).toBe('');
+    expect(parseTime('evening')).toBe('');
+    expect(parseTime('25:00')).toBe('');
+  });
+});
+
+describe('applyClaim — accident date/time', () => {
+  const withDate = (v: string): ClaimData => {
+    const c = createBlankClaim() as ClaimData;
+    return { ...c, accident: { ...c.accident, dateAndTime: v } };
+  };
+
+  it('writes a valid datetime-local from loose formats', () => {
+    const out = applyClaim(withDate(''), { date_of_accident: '05/08/2026', time_of_accident: '4.30 pm' });
+    expect(out.accident.dateAndTime).toBe('2026-08-05T16:30');
+  });
+
+  it('keeps the existing value when the date is unreadable', () => {
+    const out = applyClaim(withDate('2026-08-05T10:00'), { date_of_accident: 'N/A', time_of_accident: '' });
+    expect(out.accident.dateAndTime).toBe('2026-08-05T10:00');
+  });
+
+  it('falls back to a time written inside the date field, else midnight', () => {
+    expect(applyClaim(withDate(''), { date_of_accident: '05/08/2026 at 16:30' }).accident.dateAndTime).toBe('2026-08-05T16:30');
+    expect(applyClaim(withDate(''), { date_of_accident: '05/08/2026', time_of_accident: 'night' }).accident.dateAndTime).toBe('2026-08-05T00:00');
+  });
+});
+
 describe('parseAmount — currency-formatted values', () => {
   it('strips Indian currency formatting to bare digits', () => {
     // "Rs." is the trap: stripping to [\d.] first would read the dot in the
@@ -266,6 +319,24 @@ describe('coerceForPath — Reconciliation Hub writes', () => {
   it('normalizes date fields out of document prose', () => {
     expect(coerceForPath('vehicle.fitnessValidUpto', 'expire on 16-03-2027')).toBe('2027-03-16');
     expect(coerceForPath('driver.dateOfBirth', '05-03-2025')).toBe('2025-03-05');
+  });
+
+  it('turns a document date into a valid accident datetime-local', () => {
+    expect(coerceForPath('accident.dateAndTime', '05/08/2026')).toBe('2026-08-05T00:00');
+    expect(coerceForPath('accident.dateAndTime', '05/08/2026 4.30 pm')).toBe('2026-08-05T16:30');
+    expect(coerceForPath('accident.dateAndTime', 'N/A')).toBe('');
+  });
+
+  it('does not flag a date-vs-datetime difference as a conflict', () => {
+    const c = createBlankClaim() as ClaimData;
+    const claim = {
+      ...c,
+      accident: { ...c.accident, dateAndTime: '2026-08-05T16:30' },
+      extractedData: { claim: { date_of_accident: '05/08/2026' }, fir: { date_of_accident: '2026-08-05' } },
+    } as ClaimData;
+    expect(getConflictFields(claim).map((f) => f.path)).not.toContain('accident.dateAndTime');
+    const differs = { ...claim, extractedData: { claim: { date_of_accident: '06/08/2026' } } } as ClaimData;
+    expect(getConflictFields(differs).map((f) => f.path)).toContain('accident.dateAndTime');
   });
 
   it('leaves free-text fields untouched', () => {

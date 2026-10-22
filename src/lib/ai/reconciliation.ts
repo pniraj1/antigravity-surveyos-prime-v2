@@ -1,4 +1,6 @@
 import { ClaimData, ReconciliationDecision } from '@/types';
+// ponytail: circular with aiDataSlice, safe because both sides only call at runtime.
+import { parseDate } from '@/stores/slices/aiDataSlice';
 
 export interface ReconciliationField {
   id: string;
@@ -138,7 +140,12 @@ function buildFields(claim: ClaimData): ReconciliationField[] {
     if (sources.length === 0) continue;
 
     const allValues = [currentValue, ...sources.map(s => s.value)];
-    const uniqueNormalized = new Set(allValues.filter(v => v !== '').map(normalize));
+    // Documents give the accident DATE ("05/08/2026"); the claim stores
+    // date+time ("2026-08-05T16:30"). Compare dates only, or this always conflicts.
+    const norm = mapping.path === 'accident.dateAndTime'
+      ? (v: unknown) => parseDate(String(v ?? '')) || normalize(v)
+      : normalize;
+    const uniqueNormalized = new Set(allValues.filter(v => v !== '').map(norm));
 
     // A conflict exists only when values genuinely disagree — never flag unset fields as conflicts
     const hasConflict = uniqueNormalized.size > 1;
