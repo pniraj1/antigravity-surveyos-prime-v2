@@ -1,6 +1,6 @@
 # Active Tasks
 
-> Last updated: 2026-10-16 by Claude
+> Last updated: 2026-10-22 by Claude
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
 
 ---
@@ -18,6 +18,8 @@
 - [ ] **Sign-in loop** — Google Auth completes but returns to landing page; no Drive connection request shown. Needs investigation in auth flow + Drive token handling.
 
 ## In Progress
+
+- [ ] **Surveyor feedback batch — live check** (2026-10-22) — date/time parsing, AI Review evidence viewer, select/unselect all, Rephrase with AI, page jump: all deployed to motorsurveyos-in 2026-10-22 15:54. **Owner: on one real claim, re-read the claim form → check accident date/time, press Rephrase on the cause, click a field in AI Review/Reconciliation and confirm it opens the right page.** Add more of Vikram's paragraphs to `EXAMPLES` in `src/lib/ai/rephrase-cause.ts` when available (3 so far). Session log `Sessions/2026-10-22-surveyor-feedback-batch.md`.
 
 - [ ] **Portal fill extension — multi-portal** (2026-10-16) — **2026-10-17: Stage A done on `main` (v0.4.0: Check page + redesigned card), NOT deployed, card not yet tried in a browser. Next: Stage B on the live NIA portal (owner logs in; Claude in Chrome, read-only). Owner: run the fixture walk-throughs (`extension/README.md`, load `dist/unpacked-dev`) and approve a hosting deploy (map versions moved: NIA 3, UIIC 2).** Earlier: — roadmap `docs/superpowers/plans/2026-10-16-portal-extension-roadmap.md`. Phases 1–2 done on `main` (fcfff741): multi-portal core + **UIIC claim-survey fill**, extension v0.3.0. Hosting deployed to motorsurveyos-in 2026-10-16 (hosted maps NIA v2, UIIC v1 verified live). Extension not tried in a browser. Owner: fixture walk-throughs (NIA + UIIC) on the v0.3.0 zip; Phase 0 in India (NIA + UIIC Stage 0 on closed claims, capture sweep); decide uiicText space-vs-delete. Next code: Phase 3 (NIA tie-ups, needs a spec) or Phase 4 (National Insurance) after captures. Session logs `Sessions/2026-10-16-portal-extension-phase-1.md`, `…-phase-2.md`.
 
@@ -60,6 +62,8 @@
 - [ ] Firestore field-level validation + doc size limits (M-3)
 
 ## Pending — Low Priority / Open Questions
+
+- [ ] Insured Report dialog reads policy images from a dead sessionStorage key (`evidence_<claimId>_policy`, nothing writes it) — falls back to an upload, so it works; switch to the evidence store's blob files.
 
 - [ ] AI PDF page selection — auto-suggest junk pages from the local text layer (heuristic pre-ticking). Follow-up from `docs/superpowers/specs/2026-09-17-ai-pdf-page-selection-design.md` Non-Goals.
 - [ ] AI PDF page selection — text-instead-of-image optimisation for digital PDFs (skip rasterizing pages with a clean text layer). Separate investigation, same spec's Non-Goals.

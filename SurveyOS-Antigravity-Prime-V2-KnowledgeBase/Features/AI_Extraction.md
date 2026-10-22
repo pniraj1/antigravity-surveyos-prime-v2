@@ -12,6 +12,9 @@
   - `src/hooks/useAIExtraction.ts` — React hook managing extraction workflow, targeted rescans, session storage of last files
   - `src/components/ai/AIControls.tsx` — Provider toggle, doc mode toggle, model selector UI
   - `src/components/dialogs/AIReviewDialog.tsx` — Review extracted data before applying
+  - `src/lib/ai/rephrase-cause.ts` — "Rephrase with AI" for Cause of Accident (Details tab): translate + rewrite in house style from a senior surveyor's examples (`EXAMPLES` list); never adds facts; Undo restores (2026-10-22)
+- **Page tags (2026-10-22):** extraction writes `foo_page` (real 1-based PDF page, after unticked pages are skipped) and `foo_file` (file index in the slot, when not the first) beside each top-level value — `tagFieldPages` in `processor.ts`. Light docs are read one page per call, so no prompt change. The inline Evidence Viewer opens the PDF at `#page=N`. Docs read before this have no tags (open at page 1); 2-page estimate chunks tag the first page. Screens listing raw keys must skip `_context|_page|_file`.
+- **Accident date/time (2026-10-22):** `parseTime` in `aiDataSlice.ts` reads "4.30 pm", "16.30 hrs", "1630 hrs"; an unreadable date keeps the existing value; Reconciliation compares dates only and writes a valid datetime-local.
 - **Dependencies:** Gemini API, Groq API, NVIDIA NIM API, Firebase Firestore (for AI config), Sonner toasts
 
 ## Known Issues / What Went Wrong

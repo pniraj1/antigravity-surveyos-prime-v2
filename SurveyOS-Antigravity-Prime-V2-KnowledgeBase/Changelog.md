@@ -2,6 +2,14 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-10-22 (Claude) — Surveyor feedback: date/time, evidence viewer, select-all, rephrase, page jump
+- fix(ai): accident time parsed from "4.30 pm", "16.30 hrs", "1630 hrs", "02:30 PM" (AM/PM kept); an unreadable date keeps the existing value instead of writing a blank "T00:00"; Reconciliation writes a valid datetime-local and no longer shows a false date-vs-datetime conflict
+- fix(review): AI Review tab uses the shared inline Evidence Viewer (its old copy read a sessionStorage key nothing writes, so it never showed a document)
+- feat(documents): Select all / Unselect all on the shared PDF page grid (AI reading and Photos annexure pickers)
+- feat(claim): "Rephrase with AI" beside Cause and Nature of Accident (now a 3-line textarea); translates and rewrites in a senior surveyor's house style, never adds facts, Undo restores; ~1k tokens per press
+- feat(evidence): extraction tags each value with its PDF page/file; AI Review, Details and Reconciliation open the document at that page ("page N" in the header)
+- tests: 1734 passing, tsc clean. Commits 7bc9132e, 565919af, 877ab9f8 on `main`. Deployed to motorsurveyos-in 2026-10-22 15:54 (hosting, owner-run; live chunks verified). Not tried in the signed-in app.
+
 ## 2026-10-21 (Claude) — Claim document kit, Phases 1–2
 - feat(documents): KYC and portal document types with page labels; per-device file fingerprints, so a changed file resets its labels
 - feat(documents): free page recognisers from the text layer and file names (no AI); identity checks that a document belongs to this claim (registration, chassis, policy, names; KYC compares names only)
