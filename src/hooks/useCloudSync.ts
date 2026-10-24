@@ -21,6 +21,7 @@ import {
   getLastSyncTimestamp,
   setLastSyncTimestamp,
 } from '@/lib/firebase/sync';
+import { pullSecretsFromCloud, pushSecretsToCloud } from '@/lib/firebase/sync-secrets';
 import {
   addToSyncQueue,
   getSyncQueue,
@@ -143,6 +144,14 @@ export function useCloudSync() {
           if (!remoteProfile && !driveProfile) {
             logger.log('[useCloudSync] No remote profile — pushing local profile.');
             await pushProfileToCloud(user.uid, profile);
+          }
+
+          // AI keys + signature + stamp, owner-only docs. Own try: a failure here
+          // must not hold up claim sync.
+          try {
+            await pullSecretsFromCloud(user.uid);
+          } catch (err) {
+            logger.error('[useCloudSync] Keys/signature/stamp sync failed:', err);
           }
 
           // Allow profile useEffect (Section 4) to push changes only after initial pull.
@@ -317,6 +326,9 @@ export function useCloudSync() {
     profileTimerRef.current = setTimeout(() => {
       pushProfileToCloud(user.uid, profile).catch(err => {
         logger.error('[useCloudSync] Profile cloud push failed:', err);
+      });
+      pushSecretsToCloud(user.uid, profile).catch(err => {
+        logger.error('[useCloudSync] Keys/signature/stamp push failed:', err);
       });
       // SECURITY NOTE: backupProfileToDrive writes API keys to the user's own Drive.
       // This is intentional for multi-device restore. See sync.ts pushProfileToCloud

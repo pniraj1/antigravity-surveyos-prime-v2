@@ -4,6 +4,8 @@ import { useProfileStore } from '@/stores/profile-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { useUIStore } from '@/stores/ui-store';
 import { linkGoogleDrive } from '@/lib/drive';
+import { compressImage } from '@/lib/photos/compress-image';
+import { logger } from '@/lib/utils/logger';
 import { getUserPayments } from '@/lib/firebase/payments';
 import { calculateSubscriptionState, getDaysRemaining } from '@/lib/subscription/status';
 import { PaymentSubmissionForm } from '@/components/subscription/PaymentSubmissionForm';
@@ -165,9 +167,11 @@ function ImageUploader({
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => onUpload(ev.target?.result as string);
-    reader.readAsDataURL(file);
+    // 600px PNG: 3× the largest print size (180px), keeps transparency, and
+    // stays well under Firestore's 1 MB doc cap so it syncs to other devices.
+    compressImage(file, 600, 1, 'image/png')
+      .then(({ dataUrl }) => onUpload(dataUrl))
+      .catch(err => logger.error('[Profile] Image upload failed:', err));
     e.target.value = '';
   };
 
@@ -932,7 +936,7 @@ export function ProfileTab() {
           <AlertCircle size={15} className="text-primary flex-shrink-0" style={{ marginTop: 1 }} />
           <div className="text-xs space-y-2 text-[var(--color-neutral-600)]" style={{ lineHeight: 1.6 }}>
             <p>
-              Profile data and API keys are <strong>saved locally on this device</strong> (localStorage).
+              Profile data, API keys, signature and stamp are <strong>saved to your account</strong> and appear on every device you sign in on.
               Your identity details and signatures will automatically appear on generated PDFs.
             </p>
             <p className="font-medium">

@@ -394,8 +394,9 @@ export async function pullClaimsFromCloud(uid: string, sinceTimestamp: string | 
 /**
  * Pushes the current profile to Firestore.
  * Strips locally-only fields before write:
- * - signatureDataUrl / stampDataUrl — large base64 blobs, kept local only
- * - geminiApiKeys / groqApiKeys / nvidiaApiKeys / ollamaApiKeys — sensitive credentials, kept local + Drive backup only
+ * - signatureDataUrl / stampDataUrl / geminiApiKeys / groqApiKeys / nvidiaApiKeys / ollamaApiKeys —
+ *   synced instead via sync-secrets.ts to users/{uid}/secrets/*, so the Admin Panel's
+ *   profile listing doesn't load every surveyor's keys and images.
  */
 export async function pushProfileToCloud(uid: string, profile: SurveyorProfile) {
   const profileRef = doc(db, `users/${uid}/profile`, 'current');
@@ -424,9 +425,8 @@ export async function pushProfileToCloud(uid: string, profile: SurveyorProfile) 
 
 /**
  * Pulls the profile from Firestore and merges into the local store.
- * Local-only fields are preserved (not stored in cloud):
- * - signatureDataUrl / stampDataUrl — base64 blobs
- * - geminiApiKeys / groqApiKeys / nvidiaApiKeys / ollamaApiKeys / geminiApiKey / groqApiKey — credentials
+ * Keys, signature and stamp are not in this doc — they are preserved here and
+ * merged separately by pullSecretsFromCloud (sync-secrets.ts).
  */
 export async function pullProfileFromCloud(uid: string) {
   const profileRef = doc(db, `users/${uid}/profile`, 'current');
