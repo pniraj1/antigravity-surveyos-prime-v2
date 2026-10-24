@@ -1,6 +1,7 @@
 'use client';
 
 import { Sparkles, Loader2 } from 'lucide-react';
+import { ProviderToggle, ModelSelector } from '@/components/ai/AIControls';
 
 interface BillCheckData {
   billNo: string;
@@ -92,6 +93,10 @@ export function BillCheckUploadPanel({ bc, onBillCheckChange, isProcessing, prog
             </div>
           </div>
         </label>
+        <div className="flex items-center gap-2 mt-3">
+          <ProviderToggle />
+          <ModelSelector />
+        </div>
       </div>
     </div>
   );

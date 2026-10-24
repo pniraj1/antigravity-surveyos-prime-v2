@@ -445,8 +445,16 @@ export interface GatewaySession {
   announced: Set<string>;
   /** Calls this document still needs (updated per chunk) — a key that cannot cover them is skipped. */
   pagesTotal?: number;
+  /** Surveyor's AI toggle pick — tried first, normal order after. Read once so a mid-scan click can't split a document. */
+  prefer?: ProviderId;
+  /** Surveyor's model dropdown pick within `prefer` — tried before that provider's other models. */
+  preferModel?: string;
 }
-export function newSession(id: string): GatewaySession { return { id, avoid: new Set(), announced: new Set() }; }
+export function newSession(id: string): GatewaySession {
+  const p = getProfileFromStorage();
+  const prefer = p?.preferredAI && p.preferredAI !== 'auto' ? p.preferredAI : undefined;
+  return { id, avoid: new Set(), announced: new Set(), prefer, preferModel: (prefer && p?.preferredModel) || undefined };
+}
 
 export class AllProvidersBusyError extends Error {
   tried: string[];
@@ -612,6 +620,11 @@ async function callWithFallback(
   const pagesNeeded = job === 'heavy' ? session?.pagesTotal ?? 1 : 1;
   const limitOf = limitOfFor(useAIConfigStore.getState().config);
   let chain = rankModels(job, images, pool, { health, avoid: session?.avoid, pagesNeeded, limitOf });
+  // Before lastGood: once the picked provider fails mid-document, lastGood rotates past it.
+  // A model the ranker dropped (can't do this job, dead today) stays dropped — the pick is skipped, not forced.
+  const prefer = session?.prefer, preferModel = session?.preferModel;
+  if (prefer) chain = [...chain.filter(e => e.provider === prefer), ...chain.filter(e => e.provider !== prefer)];
+  if (preferModel) chain = [...chain.filter(e => e.model.id === preferModel), ...chain.filter(e => e.model.id !== preferModel)];
   if (session?.lastGood) {
     const i = chain.findIndex(e => e.model.id === session.lastGood!.model);
     if (i > 0) chain = [...chain.slice(i), ...chain.slice(0, i)];

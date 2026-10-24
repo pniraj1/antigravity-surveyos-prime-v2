@@ -149,6 +149,10 @@ export interface SurveyorProfile {
   // ─── AI Configuration ─────────────────────────────────
   /** Which provider to use as primary */
   aiProvider: 'groq' | 'gemini' | 'nvidia';
+  /** AI toggle on the scan screens: 'auto' = admin-ranked order; a provider = try it first, then the normal order. */
+  preferredAI?: 'auto' | 'gemini' | 'groq' | 'nvidia' | 'ollama';
+  /** Model dropdown pick within preferredAI; '' = any of that AI's models. */
+  preferredModel?: string;
   /** Up to 3 Gemini API keys — rotated automatically on rate-limit/error */
   geminiApiKeys: string[];
   /** Up to 3 Groq API keys — rotated automatically on rate-limit/error */

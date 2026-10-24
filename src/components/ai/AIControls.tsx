@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useProfileStore } from '@/stores/profile-store';
 import { useUIStore } from '@/stores/ui-store';
 import { useAIConfigStore } from '@/stores/ai-config-store';
-import { PROVIDER_MODELS, fetchAvailableGeminiModels } from '@/lib/ai/service';
+import { useProbesStore } from '@/stores/probes-store';
+import { buildPool } from '@/lib/ai/service';
 import { Sparkles, ChevronDown, Zap, Eye, FileText, Wand2, Cpu } from 'lucide-react';
 
 // ─── Provider Health Badge ────────────────────────────────────────────────────
@@ -17,7 +18,11 @@ export function ProviderHealthBadge() {
   // The ranker — not the surveyor's saved model — decides which model actually
   // runs each call, so the badge names the provider, not a specific model.
   const providerLabel = provider === 'gemini' ? 'Gemini' : provider === 'nvidia' ? 'NVIDIA' : provider === 'groq' ? 'Groq' : provider;
-  const shortModel = `${providerLabel} · auto`;
+  const pick = profile.preferredAI;
+  const PICK_LABELS = { gemini: 'Gemini', groq: 'Groq', nvidia: 'NVIDIA', ollama: 'Ollama' } as const;
+  const shortModel = pick && pick !== 'auto'
+    ? `${profile.preferredModel ? profile.preferredModel.split('/').pop() : PICK_LABELS[pick]} first`
+    : `${providerLabel} · auto`;
 
   const dot = health === 'ok'           ? 'var(--color-status-success)'
             : health === 'rate-limited' ? 'var(--color-status-warning)'
@@ -43,42 +48,24 @@ export function ProviderHealthBadge() {
 }
 
 // ─── Model Selector ───────────────────────────────────────────────────────────
+// Lists exactly what the gateway can use for the AI picked in ProviderToggle
+// (admin-enabled, not vetoed, surveyor has a key). The pick is tried first —
+// see GatewaySession.preferModel. Hidden on Auto.
 export function ModelSelector() {
   const { profile, updateProfile } = useProfileStore();
-  const { availableGeminiModels, setAvailableGeminiModels } = useUIStore();
   const [open, setOpen] = useState(false);
+  useAIConfigStore(s => s.config);   // re-render when admin config or probes change —
+  useProbesStore(s => s.probes);     // buildPool reads both stores directly
 
-  const config = useAIConfigStore(s => s.config);
-  const provider = (profile.aiProvider ?? 'gemini') as 'gemini' | 'groq' | 'nvidia';
-  const providerCfg = config.providers[provider];
-
-  // Admin-curated config is the menu. Gemini may still merge the per-user live
-  // list if the admin hasn't curated any models yet.
-  const models = provider === 'gemini'
-    ? ((providerCfg.models ?? []).length > 0 ? providerCfg.models! : (availableGeminiModels ?? PROVIDER_MODELS.gemini))
-    : ((providerCfg.models ?? []).length > 0 ? providerCfg.models! : PROVIDER_MODELS[provider] ?? []);
-
-  const activeId = provider === 'gemini'
-    ? (profile.geminiModel?.trim() || (providerCfg.defaultModel ?? ''))
-    : provider === 'nvidia'
-    ? (profile.nvidiaModel?.trim() || (providerCfg.defaultModel ?? ''))
-    : (profile.groqModel?.trim() || (providerCfg.defaultModel ?? ''));
-
-  useEffect(() => {
-    if (provider !== 'gemini' || availableGeminiModels !== null) return;
-    const key = profile.geminiApiKeys?.[0]?.trim() || profile.geminiApiKey?.trim();
-    if (!key) return;
-    fetchAvailableGeminiModels(key).then(list => {
-      if (list && list.length > 0) setAvailableGeminiModels(list);
-    });
-  }, [provider, availableGeminiModels, profile.geminiApiKeys, profile.geminiApiKey, setAvailableGeminiModels]);
-
-  const active = models.find(m => m.id === activeId) ?? models[0];
+  const provider = profile.preferredAI;
+  if (!provider || provider === 'auto') return null;
+  const ANY = { id: '', label: 'Any model', note: 'Normal order within this AI' };
+  const models = [ANY, ...buildPool(profile).filter(e => e.provider === provider).map(e => e.model)];
+  const activeId = profile.preferredModel ?? '';
+  const active = models.find(m => m.id === activeId) ?? ANY;
 
   function select(id: string) {
-    if (provider === 'gemini') updateProfile({ geminiModel: id });
-    else if (provider === 'nvidia') updateProfile({ nvidiaModel: id });
-    else updateProfile({ groqModel: id });
+    updateProfile({ preferredModel: id });
     setOpen(false);
   }
 
@@ -95,7 +82,7 @@ export function ModelSelector() {
           color: 'var(--color-neutral-600)',
         }}
       >
-        <span style={{ color: accentColor }}>{active?.label ?? activeId.split('/').pop()}</span>
+        <span style={{ color: accentColor }}>{active.label}</span>
         <ChevronDown size={10} style={{ opacity: 0.6, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
       </button>
 
@@ -186,26 +173,39 @@ export function DocModeToggle() {
 }
 
 // ─── Provider Toggle ──────────────────────────────────────────────────────────
+// Auto = admin-ranked order. A provider = tried first for every scan, normal order
+// after it (see GatewaySession.prefer). Only providers the surveyor has a key for.
 export function ProviderToggle() {
   const { profile, updateProfile } = useProfileStore();
   const config = useAIConfigStore(s => s.config);
-  const aiProvider = profile.aiProvider ?? 'gemini';
 
-  const PROVIDERS: { id: 'gemini' | 'groq' | 'nvidia'; label: string; icon: React.ReactNode; activeBg: string; activeColor: string }[] = [
+  type Pick = NonNullable<typeof profile.preferredAI>;
+  const PROVIDERS: { id: Pick; label: string; icon: React.ReactNode; activeBg: string; activeColor: string }[] = [
+    { id: 'auto',   label: 'Auto',   icon: <Wand2 size={11} />,    activeBg: 'var(--color-neutral-900)',      activeColor: 'var(--color-neutral-50)' },
     { id: 'gemini', label: 'Gemini', icon: <Sparkles size={11} />, activeBg: 'var(--color-primary)',          activeColor: 'var(--color-neutral-900)' },
     { id: 'groq',   label: 'Groq',   icon: <Zap size={11} />,      activeBg: 'var(--color-status-warning)',   activeColor: 'var(--color-neutral-50)' },
     { id: 'nvidia', label: 'NVIDIA', icon: <Cpu size={11} />,      activeBg: 'var(--color-status-success)',   activeColor: 'var(--color-neutral-900)' },
+    { id: 'ollama', label: 'Ollama', icon: <Zap size={11} />,      activeBg: 'var(--color-neutral-900)',      activeColor: 'var(--color-neutral-50)' },
   ];
-  const enabled = PROVIDERS.filter(p => config.providers[p.id]?.enabled);
+  const hasKey = (id: Pick) => id === 'auto'
+    || ((profile[`${id}ApiKeys` as const] ?? []).some(k => k?.trim()))
+    || (id === 'gemini' && !!profile.geminiApiKey?.trim());
+  const enabled = PROVIDERS.filter(p => p.id === 'auto' || (config.providers[p.id]?.enabled && hasKey(p.id)));
+  if (enabled.length <= 2) return null;   // one provider: Auto already is that provider
+  const current = enabled.some(p => p.id === profile.preferredAI) ? profile.preferredAI : 'auto';
 
   return (
-    <div className="flex items-center p-1 rounded-xl gap-1" style={{ background: 'var(--color-neutral-100)', border: '1px solid var(--color-neutral-200)' }}>
+    <div
+      className="flex items-center p-1 rounded-xl gap-1"
+      style={{ background: 'var(--color-neutral-100)', border: '1px solid var(--color-neutral-200)' }}
+      title="Auto uses the normal order. Pick an AI to try it first — if it fails, the normal order takes over."
+    >
       {enabled.map(p => {
-        const active = aiProvider === p.id;
+        const active = current === p.id;
         return (
           <button
             key={p.id}
-            onClick={() => updateProfile({ aiProvider: p.id })}
+            onClick={() => updateProfile({ preferredAI: p.id, preferredModel: '' })}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all"
             style={{ background: active ? p.activeBg : 'transparent', color: active ? p.activeColor : 'var(--color-neutral-600)' }}
           >

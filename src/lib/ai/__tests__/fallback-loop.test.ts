@@ -344,3 +344,51 @@ describe('nudge', () => {
     expect(msgs.filter(m => /Ollama/.test(m))).toHaveLength(1);
   });
 });
+
+describe('surveyor override (AI toggle)', () => {
+  const ollamaOk = { ok: true, status: 200, body: JSON.stringify({ message: { content: '{"x":1}' }, done_reason: 'stop' }) };
+  beforeEach(() => { callAiProxy.mockReset(); useProfileStore.getState().updateProfile({ ollamaApiKeys: ['o1'], preferredAI: 'ollama' } as never); });
+  afterEach(() => useProfileStore.getState().updateProfile({ preferredAI: 'auto' } as never));
+
+  it('Ollama picked → a heavy document goes to Ollama first, Gemini untouched', async () => {
+    callAiProxy.mockResolvedValue(ollamaOk);
+    const spy = vi.spyOn(global, 'fetch').mockResolvedValue(ok());
+    const s = newSession('t'); s.pagesTotal = 1;
+    await callAIGateway('p', ['img'], 'json', 'heavy', s);
+    expect(callAiProxy).toHaveBeenCalledTimes(1);
+    expect(spy).not.toHaveBeenCalled();
+  });
+  it('Ollama picked but busy → falls back to the normal order', async () => {
+    callAiProxy.mockResolvedValue({ ok: false, status: 429, body: 'usage limit' });
+    const spy = vi.spyOn(global, 'fetch').mockResolvedValue(ok());
+    const s = newSession('t'); s.pagesTotal = 1;
+    await expect(callAIGateway('p', ['img'], 'json', 'heavy', s)).resolves.toBe('{"x":1}');
+    expect(spy).toHaveBeenCalled();
+  });
+  it('Auto → normal order (Gemini Flash first)', async () => {
+    useProfileStore.getState().updateProfile({ preferredAI: 'auto' } as never);
+    const spy = vi.spyOn(global, 'fetch').mockResolvedValue(ok());
+    const s = newSession('t'); s.pagesTotal = 1;
+    await callAIGateway('p', ['img'], 'json', 'heavy', s);
+    expect(modelOf(spy.mock.calls[0])).toMatch(/flash$/);
+  });
+});
+
+describe('surveyor override — specific model', () => {
+  afterEach(() => useProfileStore.getState().updateProfile({ preferredAI: 'auto', preferredModel: '' } as never));
+
+  it('a picked model goes first, even one the ranker would put later', async () => {
+    useProfileStore.getState().updateProfile({ preferredAI: 'gemini', preferredModel: 'gemini-flash-lite-latest' } as never);
+    const spy = vi.spyOn(global, 'fetch').mockResolvedValue(ok());
+    const s = newSession('t'); s.pagesTotal = 1;
+    await callAIGateway('p', ['img'], 'json', 'heavy', s);     // heavy would normally lead with Flash
+    expect(modelOf(spy.mock.calls[0])).toBe('gemini-flash-lite-latest');
+  });
+  it('picked model busy → next model in the normal order', async () => {
+    useProfileStore.getState().updateProfile({ preferredAI: 'gemini', preferredModel: 'gemini-flash-lite-latest' } as never);
+    const spy = vi.spyOn(global, 'fetch').mockResolvedValueOnce(fail(503, 'busy')).mockResolvedValue(ok());
+    const s = newSession('t'); s.pagesTotal = 1;
+    await callAIGateway('p', ['img'], 'json', 'heavy', s);
+    expect(modelOf(spy.mock.calls[1])).not.toBe('gemini-flash-lite-latest');
+  });
+});
