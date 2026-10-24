@@ -98,6 +98,7 @@ describe('docTypeFromRelPath', () => {
   });
   it('reads a file in a subfolder from the subfolder', () => {
     expect(docTypeFromRelPath('Damage Photos/Damage Photos 3.jpg')).toBe('damagePhotos');
+    expect(docTypeFromRelPath('Final Photos/Final Photos 1.jpg')).toBe('damagePhotos');
     expect(docTypeFromRelPath('Spot Photos/whatever the camera called it.jpg')).toBe('spotPhotos');
   });
   it('falls back to other', () => {

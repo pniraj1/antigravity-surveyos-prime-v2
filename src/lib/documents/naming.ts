@@ -86,6 +86,7 @@ const ALIASES: Array<[DocType, string[]]> = [
   ['invoice', ['invoice', 'bill']],
   ['fir', ['fir']],
   ['ckyc', ['ckyc']],
+  ['damagePhotos', ['final photos', 'damage photos']],
 ];
 
 /** Label or alias → type, built once. Labels are unique by construction. */
