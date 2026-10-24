@@ -10,12 +10,10 @@ import type { ValuationConditionRow } from '@/types/assessment';
 
 const CONDITION_OPTIONS = ['Good', 'Satisfactory', 'Average / Serviceable', 'Damaged', 'N/A'];
 
-const PANEL_PRESETS = [
-  'Front Bumper', 'Rear Bumper', 'Front Bonnet', 'Rear Boot / Dicky',
-  'Roof Top', 'LH Front Door', 'RH Front Door', 'LH Rear Door', 'RH Rear Door',
-  'LH Front Fender', 'RH Front Fender', 'LH Quarter Panel', 'RH Quarter Panel',
-  'LH Rocker Panel', 'RH Rocker Panel', 'Front Windshield', 'Rear Windshield',
-  'Underbody / Chassis',
+// Brakes & Suspension is the fixed Mechanical row, so it isn't repeated here.
+const PART_PRESETS = [
+  'Bodyshell', 'Headlamps', 'Fuel Tank', 'Axles', 'Bumpers', 'Hydraulic Jack',
+  'Cowl / Dashboard Assy', 'Cabin Steel Structure', 'Trailer Steel Load Body', 'Cooling System',
 ];
 
 // ── Shared 2-col row layout ────────────────────────────────────────────────────
@@ -56,10 +54,14 @@ export function ValuationTab() {
 
   const handle = (updates: Partial<typeof vd>) => updateValuationDetails(updates);
 
-  function addRow() {
-    const newRow: ValuationConditionRow = { id: `vrow-${Date.now()}`, component: '', condition: '' };
-    handle({ panelRows: [...rows, newRow] });
+  function addRows(components: string[]) {
+    const stamp = Date.now();
+    const newRows: ValuationConditionRow[] = components.map((component, i) => ({ id: `vrow-${stamp}-${i}`, component, condition: '' }));
+    handle({ panelRows: [...rows, ...newRows] });
   }
+
+  const added = new Set(rows.map(r => r.component.trim().toLowerCase()));
+  const unusedPresets = PART_PRESETS.filter(p => !added.has(p.toLowerCase()));
 
   function updateRow(id: string, patch: Partial<ValuationConditionRow>) {
     handle({ panelRows: rows.map(r => r.id === id ? { ...r, ...patch } : r) });
@@ -168,7 +170,7 @@ export function ValuationTab() {
             <Row label="Engine & Transmission">
               <CondInput value={vd.engineTransmission} onChange={(v) => handle({ engineTransmission: v })} />
             </Row>
-            <Row label="Suspension">
+            <Row label="Brakes & Suspension">
               <CondInput value={vd.suspension} onChange={(v) => handle({ suspension: v })} />
             </Row>
             <Row label="Seats & Upholstery">
@@ -270,25 +272,47 @@ export function ValuationTab() {
         </CardContent>
       </Card>
 
-      {/* ── SECTION 6: CABIN & BODY PANEL CONDITION ── */}
+      {/* ── SECTION 6: CONDITION OF VEHICLE — PARTS ── */}
       <Card className="border-border shadow-sm overflow-hidden">
         <CardHeader className="bg-muted/50 pb-4 border-b border-border flex flex-row items-center justify-between">
           <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-wider">
             <ShieldCheck size={16} className="text-primary" />
-            Cabin & Body Shell — Panel Condition
+            Condition of Vehicle — Parts
           </CardTitle>
           <button
-            onClick={addRow}
+            onClick={() => addRows([''])}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-bold hover:shadow-lg transition-all"
           >
-            <PlusCircle size={14} /> ADD PANEL
+            <PlusCircle size={14} /> OTHER PART
           </button>
         </CardHeader>
         <CardContent className="p-0">
+          {unusedPresets.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 px-5 py-3 border-b border-border bg-muted/10">
+              <span className="text-[10px] font-black uppercase text-muted-foreground/70 tracking-tighter mr-1">Tap to add:</span>
+              {unusedPresets.map(p => (
+                <button
+                  key={p}
+                  onClick={() => addRows([p])}
+                  className="px-3 py-1 rounded-full border border-primary/30 text-xs font-bold text-primary hover:bg-primary/10 transition-colors"
+                >
+                  + {p}
+                </button>
+              ))}
+              {unusedPresets.length > 1 && (
+                <button
+                  onClick={() => addRows(unusedPresets)}
+                  className="px-3 py-1 rounded-full bg-primary/10 text-xs font-black text-primary hover:bg-primary/20 transition-colors"
+                >
+                  ADD ALL
+                </button>
+              )}
+            </div>
+          )}
           {rows.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 py-16 opacity-30">
-              <Car size={48} />
-              <div className="text-sm font-bold uppercase tracking-widest">No Panels Added</div>
+            <div className="flex flex-col items-center gap-3 py-10 opacity-30">
+              <Car size={40} />
+              <div className="text-sm font-bold uppercase tracking-widest">No Parts Added</div>
             </div>
           ) : (
             <div className="divide-y divide-border">
@@ -296,21 +320,15 @@ export function ValuationTab() {
                 <div key={row.id} className="grid grid-cols-[200px_1fr_40px] items-stretch group">
                   <div className="px-5 py-2.5 bg-muted/20 border-r border-border flex items-center">
                     <input
-                      list="panel-presets-list"
+                      list="part-presets-list"
                       value={row.component}
                       onChange={(e) => updateRow(row.id, { component: e.target.value })}
                       className="h-9 w-full text-sm font-bold ring-0 border border-input rounded bg-background focus:ring-1 focus:ring-primary/20 px-3 outline-none"
-                      placeholder="Select / type panel"
+                      placeholder="Select / type part"
                     />
                   </div>
                   <div className="px-5 py-2.5 flex items-center">
-                    <Textarea
-                      value={row.condition}
-                      onChange={(e) => updateRow(row.id, { condition: e.target.value })}
-                      placeholder="e.g. Dented at RH side corner, Found intact"
-                      rows={1}
-                      className="text-sm resize-none border border-input bg-background focus:ring-1 focus:ring-primary/20 rounded px-3 outline-none min-h-[36px] w-full font-medium"
-                    />
+                    <CondInput value={row.condition} onChange={(v) => updateRow(row.id, { condition: v })} />
                   </div>
                   <div className="flex items-center justify-center">
                     <button
@@ -325,8 +343,8 @@ export function ValuationTab() {
             </div>
           )}
         </CardContent>
-        <datalist id="panel-presets-list">
-          {PANEL_PRESETS.map(p => <option key={p} value={p} />)}
+        <datalist id="part-presets-list">
+          {PART_PRESETS.map(p => <option key={p} value={p} />)}
         </datalist>
         <datalist id={COND_DATALIST_ID}>
           {CONDITION_OPTIONS.map(o => <option key={o} value={o} />)}

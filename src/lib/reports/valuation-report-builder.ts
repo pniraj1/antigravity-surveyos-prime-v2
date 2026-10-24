@@ -56,15 +56,11 @@ export function buildValuationReportHTML(claim: ClaimData, profile: SurveyorProf
     </tr>`;
   }
 
-  // ── Panel damage rows ────────────────────────────────────────────────────
-  const panelRowsHTML = vd.panelRows.length > 0
-    ? vd.panelRows.map(row =>
-        `<tr>
-          <td style="${tdl}">${g(row.component)}</td>
-          <td style="${td}" colspan="3">${g(row.condition)}</td>
-        </tr>`
-      ).join('')
-    : `<tr><td colspan="4" style="${td}color:#555;">No panel damage reported.</td></tr>`;
+  // ── Part rows (bodyshell, headlamps, axles…) — part of Condition of Vehicle ──
+  const partRowsHTML = (vd.panelRows ?? [])
+    .filter(row => row.component.trim())
+    .map(row => condRow(row.component, row.condition))
+    .join('');
 
   // ── Conclusion paragraph ─────────────────────────────────────────────────
   const insurableText = vd.isInsurable
@@ -144,7 +140,7 @@ ${getSurveyorHeader(profile)}
   <tr><td colspan="4" style="${sec}">Condition of Vehicle</td></tr>
   ${condRow('Chassis', vd.chassis || 'Monocoque type, safe')}
   ${condRow('Engine & Transmission', vd.engineTransmission || 'Found in good running order')}
-  ${condRow('Suspension', vd.suspension || 'Found in appropriate working order')}
+  ${condRow('Brakes & Suspension', vd.suspension || 'Found in appropriate working order')}
   ${condRow('Battery Make', vd.batteryMake ? `${vd.batteryMake}` : '—')}
   ${condRow('Battery Condition', vd.batteryCondition || '—')}
   ${condRow('Tyres & Stepney', (() => {
@@ -158,12 +154,7 @@ ${getSurveyorHeader(profile)}
   ${condRow('Glass Condition', vd.glassCondition || '—')}
   ${condRow('Seats & Upholstery', vd.seats || '—')}
   ${condRow('Electricals', vd.electricals || '—')}
-</table>
-
-<!-- Body Shell / Panel Damage -->
-<table style="width:100%;border-collapse:collapse;margin-bottom:6px;">
-  <tr><td colspan="4" style="${sec}">Cabin & Body Shell</td></tr>
-  ${panelRowsHTML}
+  ${partRowsHTML}
 </table>
 
 <!-- Conclusion -->
