@@ -2,6 +2,17 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-10-25 (Claude) — Claim Details regrouped by document, dates on the right
+- feat(claim): sections follow the source papers: Assignment, Policy & Insured, RC, Driving Licence, Permit & Fitness, Accident, At the Time of Accident, Survey & Workshop, Documents Obtained, Spot Findings; shared `DocSection` puts every date field in one right-hand column
+- feat(claim): Scan RC / DL / Policy buttons in their section headers (replace the three big tiles); sticky processing banner
+- feat(claim): vehicle type switch (Private / Comm. Goods / Comm. Passenger) in the report-number strip; only shows or hides type-specific fields, stored values stay
+- style(claim): "used in spot report" dots removed, red empty-borders only on core fields, neutral section titles, Spot section restyled to match; Word Report button removed from this tab (Report tab has it)
+- fix(spot): "Log Book / Tax Paid" saved into `spotDetails.fitnessType` and printed as Fitness Type; now `spotDetails.taxPaid` (old value still shown); UIIC prints `vehicle.fitnessType` only
+- fix(claim): overload prompt showed for any load on final claims (capacity 0); capacity falls back to RC GVW − ULW, unknown = no prompt
+- fix(claim): screen-width column spans inside container grids broke rows with the Evidence panel open; all spans container-based
+- Storage paths unchanged; fitness/route/goods hidden for private vehicles, passenger/load hidden for valuation (not printed there)
+- tests: 1744 passing, tsc clean. Commit ea2a9ed6 on `main`. Deployed to motorsurveyos-in 2026-10-25 10:18 (hosting; new strings verified in the live chunk). Not tried in the signed-in app. Session log `Sessions/2026-10-25-claim-details-layout.md`.
+
 ## 2026-10-22 (Claude) — Surveyor feedback: date/time, evidence viewer, select-all, rephrase, page jump
 - fix(ai): accident time parsed from "4.30 pm", "16.30 hrs", "1630 hrs", "02:30 PM" (AM/PM kept); an unreadable date keeps the existing value instead of writing a blank "T00:00"; Reconciliation writes a valid datetime-local and no longer shows a false date-vs-datetime conflict
 - fix(review): AI Review tab uses the shared inline Evidence Viewer (its old copy read a sessionStorage key nothing writes, so it never showed a document)
