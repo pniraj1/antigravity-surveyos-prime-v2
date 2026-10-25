@@ -25,7 +25,10 @@ export interface ClaimDocument {
   mime: string;
   size: number;
   addedAt: string;
-  source: 'upload' | 'generated' | 'photo';
+  /** 'scan' = imported from a SurveyOS Scan export zip; its type was sorted on the phone. */
+  source: 'upload' | 'generated' | 'photo' | 'scan';
+  /** Surveyor ticked it as checked before the portal upload (Phone files list). */
+  portalChecked?: boolean;
   /** Found on disk by Scan rather than saved by SurveyOS: its name proves nothing about its pages. */
   adopted?: boolean;
   /** Labels of the devices whose folder holds the bytes (spec D5). */

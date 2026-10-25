@@ -193,6 +193,8 @@ export interface ClaimData {
   /** Key `${portal}-${flow}` → ids of boxes the surveyor marked not needed. */
   notNeededBoxes?: Record<string, string[]>;
   uploadSet?: UploadSet;
+  /** Last SurveyOS Scan import: phone note values already decided, so a re-import never re-asks. */
+  scanImport?: { at: string; decided: Record<string, string> };
 
   // ─── Telemetry ─────────────────────────────────────
   telemetrySent: boolean;

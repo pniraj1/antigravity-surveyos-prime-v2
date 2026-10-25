@@ -40,7 +40,8 @@ export function recogniseName(relPath: string): DocType | null {
  * (saveDocuments names those "<Label>.<ext>", or "<Label> <n>.<ext>" for several at once).
  */
 export function knownType(entry: ClaimDocument): DocType | null {
-  if (entry.source === 'generated' || entry.source === 'photo') return entry.type;
+  // 'scan': the surveyor sorted it into this type on the phone.
+  if (entry.source === 'generated' || entry.source === 'photo' || entry.source === 'scan') return entry.type;
   if (entry.type === 'other' || entry.source !== 'upload' || entry.adopted) return null; // a hand-dropped file's name proves nothing
   const stem = (entry.relPath.split('/').pop() ?? '').replace(/\.[^.]+$/, '').replace(/ \d+$/, '');
   return stem === DOC_TYPE_LABEL[entry.type] ? entry.type : null;

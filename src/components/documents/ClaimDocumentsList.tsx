@@ -15,7 +15,7 @@ interface Props {
 }
 
 const kb = (n: number) => (n >= 1_048_576 ? `${(n / 1_048_576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
-const SOURCE_ICON: Record<ClaimDocument['source'], string> = { upload: '⬆', generated: '⚙', photo: '📷' };
+const SOURCE_ICON: Record<ClaimDocument['source'], string> = { upload: '⬆', generated: '⚙', photo: '📷', scan: '📱' };
 
 export function ClaimDocumentsList({ documents, connected, onAdd, onScan, scanning, onOpen, onRemove }: Props) {
   const [type, setType] = useState<DocType>('other');
