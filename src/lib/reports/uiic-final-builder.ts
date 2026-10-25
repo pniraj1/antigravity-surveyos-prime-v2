@@ -320,7 +320,7 @@ ${getSurveyorHeader(profile)}
     <table style="width:100%;border-collapse:collapse;font-size:7pt;">
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;width:55%;">Fitness certificate number</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(v.fitnessNo)}</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Valid upto date</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${fd(v.fitnessValidUpto)}</td></tr>
-      <tr><td style="padding:3px 5px;border-right:0.5pt solid #000;">Type of fitness certificate</td><td style="padding:3px 5px;">${g(v.fitnessType || sd.fitnessType)}</td></tr>
+      <tr><td style="padding:3px 5px;border-right:0.5pt solid #000;">Type of fitness certificate</td><td style="padding:3px 5px;">${g(v.fitnessType)}</td></tr>
     </table>
   </td>
 </tr>

@@ -1,230 +1,129 @@
 'use client';
 
 import { useClaimStore } from '@/stores/claim-store';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Trash2, PlusCircle, AlertTriangle, ShieldCheck, Truck, User, Gauge, Zap, FileText, ClipboardList } from 'lucide-react';
+import { DocSection, selectCls } from '@/components/claim/form-bits';
+import { Trash2, PlusCircle, Info } from 'lucide-react';
 
-const S = () => <span className="ml-1 inline-block w-2 h-2 rounded-full bg-green-500 align-middle" title="Used in Spot Report" />;
-
+/**
+ * Spot-only findings, rendered at the bottom of Claim Details. Spot dates
+ * live in AssignmentForm / SurveyForm and tax paid in PermitForm.
+ */
 export function SpotTab() {
-  const { 
-    currentClaim, 
-    updateSpotDetails, 
-    updateDriver, 
-    updateAccident, 
-    updateVehicle,
+  const {
+    currentClaim,
+    updateSpotDetails,
     addSpotDamageRow,
-    updateSpotDamageRow, 
-    deleteSpotDamageRow 
+    updateSpotDamageRow,
+    deleteSpotDamageRow
   } = useClaimStore();
 
   if (!currentClaim) return null;
 
   const isCompleted = currentClaim.isSpotCompleted;
 
-  const { spotDetails, vehicleType, driver, accident, vehicle } = currentClaim;
+  const { spotDetails, vehicleType } = currentClaim;
   const spotDamageRows = currentClaim.spotDamageRows ?? [];
   const isCommercial = vehicleType !== 'private';
-  // Numeric overload condition is informational only. The report flags it red
-  // ONLY when the surveyor explicitly opts in via spotDetails.flagOverload.
-  const overWeightNumeric = (spotDetails.actualLoad || 0) > (spotDetails.loadCapacity || 0);
-  const overloadFlagged = !!spotDetails.flagOverload;
 
   const handleUpdate = (updates: Partial<typeof spotDetails>) => {
     updateSpotDetails(updates);
   };
 
   return (
-    <div className="space-y-8 border-t pt-8 animate-in fade-in duration-300">
-      <div className="flex justify-between items-end">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-primary">Spot Survey Details</h2>
-          <p className="text-muted-foreground text-sm mt-1 uppercase tracking-wider font-semibold">
-            Scene Inspection & Preliminary Findings
-          </p>
+    <div className="space-y-6 pt-2">
+      <h3 className="text-xl font-medium tracking-tight">Spot Findings</h3>
+
+      <DocSection title="Vehicle Status at Spot">
+        <div className="space-y-1">
+          <Label htmlFor="sp-drivable">Is Drivable?</Label>
+          <select
+            id="sp-drivable"
+            value={spotDetails.drivable}
+            onChange={(e) => handleUpdate({ drivable: e.target.value })}
+            className={selectCls}
+          >
+            <option value="yes">Yes - Driven Self</option>
+            <option value="no">No - Towed/Craned</option>
+          </select>
         </div>
-        <div className="px-3 py-1 bg-primary/10 rounded-full text-primary text-xs font-bold ring-1 ring-primary/20">
-          SPOT MODE ACTIVE
+        <div className="space-y-1">
+          <Label htmlFor="sp-severity">Damage Severity</Label>
+          <select
+            id="sp-severity"
+            value={spotDetails.damageSeverity}
+            onChange={(e) => handleUpdate({ damageSeverity: e.target.value as any })}
+            className={selectCls}
+          >
+            <option value="minor">Minor Damage</option>
+            <option value="moderate">Moderate Damage</option>
+            <option value="major">Major / Total Loss</option>
+          </select>
         </div>
-      </div>
+        <div className="space-y-1">
+          <Label htmlFor="sp-airbags">Airbags Status</Label>
+          <select
+            id="sp-airbags"
+            value={spotDetails.airbags}
+            onChange={(e) => handleUpdate({ airbags: e.target.value })}
+            className={selectCls}
+          >
+            <option value="no">Not Deployed</option>
+            <option value="yes">Deployed</option>
+            <option value="na">N/A (No Airbags)</option>
+          </select>
+        </div>
+      </DocSection>
 
-      {/* ── SECTION: SURVEY DATES ── */}
-      <Card className="border-primary/20 shadow-lg overflow-hidden bg-white/50 backdrop-blur-sm">
-        <CardHeader className="bg-primary/5 pb-4 border-b border-primary/10">
-          <CardTitle className="text-sm font-black flex items-center gap-2 uppercase tracking-widest text-primary">
-            <Zap size={16} />
-            Survey Dates
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-3 gap-6">
-          <div className="space-y-1.5">
-            <Label className="text-[10px] font-black uppercase text-muted-foreground/70 tracking-tighter">Date of report</Label>
+      {isCommercial && (
+        <DocSection title="Load Capacity">
+          <div className="space-y-1">
+            <Label htmlFor="sp-gvw">GVW (KG)</Label>
             <Input
-              type="date"
-              value={spotDetails.reportDate}
-              onChange={(e) => handleUpdate({ reportDate: e.target.value })}
-              className="h-10 font-bold border-primary/10"
+              id="sp-gvw"
+              type="number"
+              value={spotDetails.gvw || ''}
+              onChange={(e) => {
+                const val = parseInt(e.target.value) || 0;
+                handleUpdate({
+                  gvw: val,
+                  loadCapacity: val - (spotDetails.ulw || 0)
+                });
+              }}
+              disabled={isCompleted}
             />
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-[10px] font-black uppercase text-muted-foreground/70 tracking-tighter">Date of Allotment</Label>
+          <div className="space-y-1">
+            <Label htmlFor="sp-ulw">ULW (KG)</Label>
             <Input
-              type="date"
-              value={spotDetails.allotmentDate}
-              onChange={(e) => handleUpdate({ allotmentDate: e.target.value })}
-              className="h-10 font-bold border-primary/10"
+              id="sp-ulw"
+              type="number"
+              value={spotDetails.ulw || ''}
+              onChange={(e) => {
+                const val = parseInt(e.target.value) || 0;
+                handleUpdate({
+                  ulw: val,
+                  loadCapacity: (spotDetails.gvw || 0) - val
+                });
+              }}
+              disabled={isCompleted}
             />
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-[10px] font-black uppercase text-muted-foreground/70 tracking-tighter text-primary">Survey Datetime (Actual)</Label>
+          <div className="space-y-1">
+            <Label htmlFor="sp-payload">Payload Capacity</Label>
             <Input
-              type="datetime-local"
-              value={spotDetails.surveyDatetime}
-              onChange={(e) => handleUpdate({ surveyDatetime: e.target.value })}
-              className="h-10 font-bold border-primary/20 bg-primary/5 ring-primary/10"
+              id="sp-payload"
+              type="number"
+              value={spotDetails.loadCapacity || ''}
+              disabled={true}
+              className="bg-muted font-medium"
             />
           </div>
-        </CardContent>
-      </Card>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* SECTION 3: VEHICLE STATUS */}
-        <Card className="border-border shadow-sm overflow-hidden">
-          <CardHeader className="bg-muted/50 pb-4 border-b border-border">
-            <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <Gauge size={16} className="text-primary" />
-              Vehicle Status at Spot
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Is Drivable?<S /></Label>
-              <select
-                value={spotDetails.drivable}
-                onChange={(e) => handleUpdate({ drivable: e.target.value })}
-                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm font-bold"
-              >
-                <option value="yes">Yes - Driven Self</option>
-                <option value="no">No - Towed/Craned</option>
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Damage Severity<S /></Label>
-              <select
-                value={spotDetails.damageSeverity}
-                onChange={(e) => handleUpdate({ damageSeverity: e.target.value as any })}
-                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm font-semibold"
-              >
-                <option value="minor">Minor Damage</option>
-                <option value="moderate">Moderate Damage</option>
-                <option value="major">Major / Total Loss</option>
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Airbags Status<S /></Label>
-              <select
-                value={spotDetails.airbags}
-                onChange={(e) => handleUpdate({ airbags: e.target.value })}
-                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-              >
-                <option value="no">Not Deployed</option>
-                <option value="yes">Deployed</option>
-                <option value="na">N/A (No Airbags)</option>
-              </select>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* SECTION 4: LEGAL & LOGISTICS (CONDITIONAL) */}
-        {isCommercial ? (
-          <div className="space-y-4">
-            <Card className="border-border shadow-sm overflow-hidden">
-              <CardHeader className="bg-muted/50 pb-4 border-b border-border">
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <FileText size={16} className="text-blue-600" />
-                  Log Book / Tax
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Log Book / Tax Paid<S /></Label>
-                  <Input
-                    value={spotDetails.fitnessType}
-                    onChange={(e) => handleUpdate({ fitnessType: e.target.value })}
-                    placeholder="e.g. Paid Upto 2026"
-                    disabled={isCompleted}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-border shadow-sm overflow-hidden">
-              <CardHeader className="bg-muted/50 pb-4 border-b border-border">
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <Truck size={16} className="text-emerald-600" />
-                  Load Capacity
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6 space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">GVW (KG)<S /></Label>
-                    <Input
-                      type="number"
-                      value={spotDetails.gvw || ''}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value) || 0;
-                        handleUpdate({ 
-                          gvw: val,
-                          loadCapacity: val - (spotDetails.ulw || 0)
-                        });
-                      }}
-                      className="font-bold text-blue-600"
-                      disabled={isCompleted}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">ULW (KG)<S /></Label>
-                    <Input
-                      type="number"
-                      value={spotDetails.ulw || ''}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value) || 0;
-                        handleUpdate({ 
-                          ulw: val,
-                          loadCapacity: (spotDetails.gvw || 0) - val
-                        });
-                      }}
-                      disabled={isCompleted}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Payload Capacity<S /></Label>
-                    <Input
-                      type="number"
-                      value={spotDetails.loadCapacity || ''}
-                      disabled={true}
-                      className="bg-muted font-bold text-primary"
-                    />
-                  </div>
-                </div>
-
-              </CardContent>
-            </Card>
-          </div>
-        ) : (
-          <Card className="border-dashed border-border flex items-center justify-center p-8 text-muted-foreground bg-muted/20">
-            <div className="text-center space-y-2">
-              <Truck size={24} className="mx-auto opacity-20" />
-              <p className="text-xs font-bold tracking-tight uppercase">Legal & Logistics Section Halted</p>
-              <p className="text-[10px]">Information only required for Goods/Commercial vehicles</p>
-            </div>
-          </Card>
-        )}
-      </div>
+        </DocSection>
+      )}
 
       <datalist id="spot-components-list">
         {[
@@ -250,46 +149,39 @@ export function SpotTab() {
         ].map((c) => <option key={c} value={c} />)}
       </datalist>
 
-      {/* SECTION 5: DAMAGE MATRIX */}
-      <Card className="border-border shadow-sm">
-        <CardHeader className="bg-muted/50 pb-4 border-b border-border flex flex-row items-center justify-between">
-          <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-wider">
-            <ShieldCheck size={16} className="text-primary" />
-            Component-wise Damage Matrix (Spot)
-          </CardTitle>
+      <Card>
+        <CardHeader className="pb-3 flex flex-row items-center justify-between gap-3">
+          <CardTitle className="text-lg">Component-wise Damage</CardTitle>
           {!isCompleted && (
             <button
               onClick={() => addSpotDamageRow()}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-bold hover:shadow-lg transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-medium"
             >
-              <PlusCircle size={14} /> ADD DAMAGE
+              <PlusCircle size={14} /> Add Damage
             </button>
           )}
         </CardHeader>
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
-            <thead className="bg-muted/30 text-muted-foreground text-xs uppercase sticky top-0">
+            <thead className="bg-muted/30 text-muted-foreground text-xs">
               <tr>
-                <th className="px-6 py-3 font-bold w-12 border-b">#</th>
-                <th className="px-6 py-3 font-bold w-1/3 border-b">Affected Component</th>
-                <th className="px-6 py-3 font-bold border-b">Visual Damage Details</th>
-                <th className="px-6 py-3 font-bold w-12 border-b"></th>
+                <th className="px-6 py-3 font-medium w-12 border-b">#</th>
+                <th className="px-6 py-3 font-medium w-1/3 border-b">Affected Component</th>
+                <th className="px-6 py-3 font-medium border-b">Visual Damage Details</th>
+                <th className="px-6 py-3 font-medium w-12 border-b"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {spotDamageRows.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-16 text-center">
-                    <div className="flex flex-col items-center gap-3 opacity-30">
-                      <ShieldCheck size={48} />
-                      <div className="text-sm font-bold uppercase tracking-widest">No Damages Logged</div>
-                    </div>
+                  <td colSpan={4} className="px-6 py-8 text-center text-sm text-muted-foreground">
+                    No damages logged yet.
                   </td>
                 </tr>
               ) : (
                 spotDamageRows.map((row, idx) => (
                   <tr key={row.id} className="hover:bg-accent/5 transition-colors group">
-                    <td className="px-6 py-4 text-xs font-bold text-muted-foreground">
+                    <td className="px-6 py-4 text-xs font-medium text-muted-foreground">
                       {String(idx + 1).padStart(2, '0')}
                     </td>
                     <td className="px-6 py-4">
@@ -298,7 +190,7 @@ export function SpotTab() {
                         value={row.component}
                         onChange={(e) => updateSpotDamageRow(row.id, { component: e.target.value })}
                         disabled={isCompleted}
-                        className="h-9 w-full text-sm font-bold ring-0 border-0 bg-transparent focus:bg-background focus:ring-1 focus:ring-primary/20 rounded px-2 outline-none"
+                        className="h-9 w-full text-sm font-medium ring-0 border-0 bg-transparent focus:bg-background focus:ring-1 focus:ring-primary/20 rounded px-2 outline-none"
                         placeholder="Select Component"
                       />
                     </td>
@@ -313,7 +205,7 @@ export function SpotTab() {
                     </td>
                     <td className="px-6 py-4">
                       {!isCompleted && (
-                        <button 
+                        <button
                           onClick={() => deleteSpotDamageRow(row.id)}
                           className="[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 p-2 rounded-md transition-all text-muted-foreground hover:text-danger hover:bg-danger/10"
                         >
@@ -328,59 +220,47 @@ export function SpotTab() {
           </table>
         </div>
       </Card>
-      
-      {/* SECTION 6: OBSERVATIONS & REMARKS */}
-      <Card className="border-border shadow-sm overflow-hidden">
-        <CardHeader className="bg-muted/50 pb-4 border-b border-border">
-          <CardTitle className="text-sm font-bold flex items-center gap-2">
-            <ClipboardList size={16} className="text-primary" />
-            Observations & Final Remarks
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Spot Observations / Comments<S /></Label>
-              <textarea
-                value={spotDetails.comments}
-                onChange={(e) => handleUpdate({ comments: e.target.value })}
-                className="w-full min-h-[120px] rounded-md border border-input bg-background p-3 text-sm focus:ring-2 focus:ring-primary/20"
-                placeholder="Describe the accident scene, vehicle position, and overall assessment..."
-                disabled={isCompleted}
-              />
-            </div>
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Further Repairs<S /></Label>
-                  <Input
-                    value={spotDetails.repairWorkshop ?? ''}
-                    placeholder="Workshop where vehicle will go for further repairs"
-                    onChange={(e) => handleUpdate({ repairWorkshop: e.target.value })}
-                    disabled={isCompleted}
-                  />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase text-muted-foreground gap-1 flex items-center">Enclosed Documents<S /></Label>
-                <textarea
-                  value={spotDetails.enclosures}
-                  onChange={(e) => handleUpdate({ enclosures: e.target.value })}
-                  className="w-full min-h-[60px] rounded-md border border-input bg-background p-3 text-sm focus:ring-2 focus:ring-primary/20"
-                  placeholder="e.g. Copy of RC, DL, Policy, Spot Photos"
-                />
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      <div className="bg-indigo/5 border border-indigo/20 p-4 rounded-xl flex items-start gap-3">
-        <AlertTriangle size={18} className="text-primary shrink-0 mt-0.5" />
-        <div className="text-xs text-primary font-medium leading-relaxed">
-          <span className="font-bold uppercase block mb-1">IRDAI Compliance Note</span>
-          The spot survey report is a preliminary scene inspection. Ensure photographs are captured sequentially from 360&deg; including Chassis/VIN and Odometer reading before vehicle movement to workshop.
+      <DocSection title="Observations & Remarks">
+        <div className="space-y-1 col-span-full">
+          <Label htmlFor="sp-comments">Spot Observations / Comments</Label>
+          <Textarea
+            id="sp-comments"
+            rows={5}
+            value={spotDetails.comments}
+            onChange={(e) => handleUpdate({ comments: e.target.value })}
+            placeholder="Describe the accident scene, vehicle position, and overall assessment..."
+            disabled={isCompleted}
+          />
         </div>
+        <div className="space-y-1 col-span-full">
+          <Label htmlFor="sp-repairs">Further Repairs</Label>
+          <Input
+            id="sp-repairs"
+            value={spotDetails.repairWorkshop ?? ''}
+            placeholder="Workshop where vehicle will go for further repairs"
+            onChange={(e) => handleUpdate({ repairWorkshop: e.target.value })}
+            disabled={isCompleted}
+          />
+        </div>
+        <div className="space-y-1 col-span-full">
+          <Label htmlFor="sp-encl">Enclosed Documents</Label>
+          <Textarea
+            id="sp-encl"
+            rows={2}
+            value={spotDetails.enclosures}
+            onChange={(e) => handleUpdate({ enclosures: e.target.value })}
+            placeholder="e.g. Copy of RC, DL, Policy, Spot Photos"
+          />
+        </div>
+      </DocSection>
+
+      <div className="flex items-start gap-2 text-xs text-muted-foreground">
+        <Info size={14} className="shrink-0 mt-0.5" />
+        <p>
+          IRDAI: a spot survey is a preliminary scene inspection. Capture photos 360&deg; including Chassis/VIN and
+          odometer before the vehicle moves to the workshop.
+        </p>
       </div>
     </div>
   );

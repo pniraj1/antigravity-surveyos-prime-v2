@@ -213,7 +213,11 @@ export interface SpotSurveyDetails {
   permitTo: string;
   natureOfPermit: string;
   areaOfOperation: string;
+  /** Legacy: older claims stored the "Log Book / Tax Paid" note here. The
+   *  fitness certificate type lives on `vehicle.fitnessType`. */
   fitnessType: string;
+  /** Log book / road tax paid-upto note, e.g. "Paid upto 2026". */
+  taxPaid?: string;
   authNo: string;
   authValid: string;
   verificationFlags: {

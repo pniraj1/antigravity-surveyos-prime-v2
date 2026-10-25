@@ -1,38 +1,44 @@
 'use client';
 
 import { useState } from 'react';
-import { VehicleDetailsForm } from '@/components/claim/VehicleForm';
-import { CommercialLoadForm } from '@/components/claim/CommercialLoadForm';
-import { DriverDetailsForm } from '@/components/claim/DriverForm';
+import { AssignmentForm } from '@/components/claim/AssignmentForm';
 import { PolicyDetailsForm } from '@/components/claim/PolicyForm';
+import { VehicleDetailsForm } from '@/components/claim/VehicleForm';
+import { DriverDetailsForm } from '@/components/claim/DriverForm';
+import { PermitForm } from '@/components/claim/PermitForm';
 import { AccidentDetailsForm } from '@/components/claim/AccidentForm';
+import { AtAccidentForm } from '@/components/claim/AtAccidentForm';
+import { SurveyForm } from '@/components/claim/SurveyForm';
+import { DocumentChecklist } from '@/components/claim/DocumentChecklist';
 import { useAIExtraction } from '@/hooks/useAIExtraction';
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import { needsReview } from '@/lib/ai/needs-review';
 import { DocumentReviewSheet } from '@/components/documents/DocumentReviewSheet';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
-import { downloadAsWord } from '@/lib/reports/word-export';
-import { footerFromProfile } from '@/lib/reports/print-shell';
-import { buildStandardFinalSurveyHTML } from '@/lib/reports/standard-report-builder';
-import { FileText, Sparkles, Download, Loader2, Hash, Wand2, PanelRightOpen, PanelRightClose } from 'lucide-react';
+import type { VehicleType } from '@/types';
+import { Sparkles, Loader2, Hash, Wand2, PanelRightOpen, PanelRightClose } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { SpotTab } from '@/components/tabs/SpotTab';
-import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
 import { InlineEvidencePanel } from '@/components/evidence/InlineEvidencePanel';
 import { EvidencePanelSlot } from '@/components/evidence/EvidencePanelSlot';
 import { useEvidencePanel } from '@/hooks/useEvidencePanel';
 
-function EvidenceIconBtn({ onClick, title, children }: { onClick: () => void; title: string; children: React.ReactNode }) {
+const VEHICLE_TYPES: { id: VehicleType; label: string }[] = [
+  { id: 'private', label: 'Private' },
+  { id: 'comm-goods', label: 'Comm. Goods' },
+  { id: 'comm-passenger', label: 'Comm. Passenger' },
+];
+
+/** "Scan RC" etc. in a section header: pick a file, AI fills that section. */
+function ScanButton({ label, busy, onFile }: { label: string; busy: boolean; onFile: (e: React.ChangeEvent<HTMLInputElement>) => void }) {
   return (
-    <button
-      onClick={onClick}
-      title={title}
-      className="flex items-center px-1.5 py-1 rounded border-none cursor-pointer text-[var(--color-neutral-400)] bg-[var(--color-neutral-100)] transition-colors hover:bg-[var(--color-neutral-200)] hover:text-[var(--color-neutral-900)]"
-    >
-      {children}
-    </button>
+    <label className="inline-flex items-center gap-1.5 shrink-0 px-2.5 py-1.5 rounded-md border border-primary/30 text-xs font-medium text-primary cursor-pointer hover:bg-primary/5 has-[:disabled]:opacity-50 has-[:disabled]:cursor-wait">
+      {busy ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+      Scan {label}
+      <input type="file" className="sr-only" accept="image/*,application/pdf" disabled={busy} onChange={onFile} />
+    </label>
   );
 }
 
@@ -44,7 +50,6 @@ export function DetailsTab() {
   const currentClaim = useClaimStore(s => s.currentClaim);
   const updateClaim = useClaimStore(s => s.updateClaim);
   const updateSpotDetails = useClaimStore(s => s.updateSpotDetails);
-  const profile = useProfileStore(s => s.profile);
   const getNextSpotNumber = useProfileStore(s => s.getNextSpotNumber);
   const getNextFinalNumber = useProfileStore(s => s.getNextFinalNumber);
   const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview } = useAIExtraction();
@@ -74,7 +79,16 @@ export function DetailsTab() {
     triggerExtraction(key, file);
   };
 
-  const surveyLabel = currentClaim.surveyType === 'spot' ? 'Spot Survey' :
+  const scan = (id: string) => (
+    <ScanButton
+      label={docSlots.find(s => s.id === id)?.label ?? id}
+      busy={isProcessing}
+      onFile={(e) => handleFileChange(e, id)}
+    />
+  );
+  const isValuation = currentClaim.surveyType === 'valuation';
+
+  const surveyLabel =currentClaim.surveyType === 'spot' ? 'Spot Survey' :
                       currentClaim.surveyType === 'final' ? 'Final Survey' :
                       currentClaim.surveyType === 'valuation' ? 'Valuation / Break-in' : 'Survey';
 
@@ -86,16 +100,35 @@ export function DetailsTab() {
         style={{ flex: 1, minWidth: 0, overflowY: 'auto' }}
         className="@container px-4 pt-4 pb-10 md:px-8 md:pt-6 animate-in fade-in slide-in-from-bottom-2 duration-300"
       >
-        <div className="w-full max-w-[1400px] mx-auto space-y-8">
+        <div className="w-full max-w-[1400px] mx-auto space-y-6">
+
+          {/* Header row */}
+          <div className="flex justify-between items-start gap-4">
+            <div>
+              <h2 className="text-2xl font-medium tracking-tight">Claim Details</h2>
+              <p className="text-muted-foreground text-sm">
+                One section per document, dates on the right. Changes save automatically offline.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={togglePanel}
+              className="gap-2 shadow-sm shrink-0"
+              title={panelOpen ? 'Hide Evidence Viewer' : 'Show Evidence Viewer'}
+            >
+              {panelOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
+              Evidence
+            </Button>
+          </div>
 
           {/* Report Number */}
           <div
-            className="flex items-center gap-4 px-5 py-4 rounded-2xl bg-[var(--color-neutral-50)] border border-primary/20"
+            className="flex flex-wrap items-center gap-4 px-5 py-4 rounded-2xl bg-[var(--color-neutral-50)] border border-primary/20"
           >
             <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-primary/15">
               <Hash size={16} className="text-primary" />
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-48">
               <div className="text-[10px] font-medium uppercase tracking-[0.2em] mb-1 text-primary/70">
                 {surveyLabel} Report No.
               </div>
@@ -148,80 +181,55 @@ export function DetailsTab() {
             >
               {currentClaim.reportNo ? 'Assigned' : 'Pending'}
             </div>
-          </div>
 
-          {/* Header row */}
-          <div className="flex justify-between items-start">
-            <div className="mb-4">
-              <h2 className="text-2xl font-medium tracking-tight">Claim Details</h2>
-              <p className="text-muted-foreground text-sm">
-                Core intake information for the claim. All changes save automatically offline.
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={togglePanel}
-                className="gap-2 shadow-sm"
-                title={panelOpen ? 'Hide Evidence Viewer' : 'Show Evidence Viewer'}
-              >
-                {panelOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
-                Evidence
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  downloadAsWord(
-                    buildStandardFinalSurveyHTML(currentClaim, profile!),
-                    `${currentClaim.vehicle.registrationNumber || 'Claim'}-Final-Survey`,
-                    footerFromProfile(profile),
+            {/* Chosen in New Claim, but a wrong pick must be undoable: it
+                decides which sections (permit, load) show. Switching only
+                hides or shows fields; stored values are kept. */}
+            <div className="flex items-center gap-2 flex-shrink-0 @2xl:border-l @2xl:pl-4 border-primary/20">
+              <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-primary/70">Vehicle</span>
+              <div role="radiogroup" aria-label="Vehicle type" className="inline-flex rounded-lg border border-input overflow-hidden bg-background">
+                {VEHICLE_TYPES.map(t => {
+                  const active = currentClaim.vehicleType === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => {
+                        if (active) return;
+                        updateClaim({ vehicleType: t.id });
+                        toast.success(`Vehicle type: ${t.label}`);
+                      }}
+                      className={`px-2.5 py-1.5 text-xs font-medium border-r border-input last:border-r-0 transition-colors ${active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}
+                    >
+                      {t.label}
+                    </button>
                   );
-                }}
-                className="gap-2 shadow-sm"
-              >
-                <Download size={16} />
-                Word Report
-              </Button>
-            </div>
-          </div>
-
-          {/* AI Extraction Slots */}
-          <div className="grid grid-cols-1 @2xl:grid-cols-3 gap-4">
-            {docSlots.map(slot => (
-              <div key={slot.id} className="relative p-6 rounded-2xl border border-dashed border-primary/20 bg-primary/5 hover:bg-primary/10 transition-all flex flex-col items-center justify-center gap-3 group">
-                <input
-                  type="file"
-                  className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                  onChange={(e) => handleFileChange(e, slot.id)}
-                  accept="image/*,application/pdf"
-                />
-                <div className="p-3 rounded-full bg-white shadow-sm text-primary group-hover:scale-110 transition-transform">
-                  {isProcessing ? <Loader2 className="animate-spin" size={24} /> : <FileText size={24} />}
-                </div>
-                <div className="text-center">
-                  <div className="text-sm font-medium text-primary flex items-center gap-1.5 justify-center">
-                    <Sparkles size={14} className="animate-pulse" />
-                    Scan {slot.label}
-                  </div>
-                  <p className="text-[10px] text-muted-foreground font-medium">Click to upload and auto-fill</p>
-                </div>
+                })}
               </div>
-            ))}
+            </div>
           </div>
 
           {isProcessing && (
-            <div className="p-4 rounded-xl bg-primary text-primary-foreground shadow-xl shadow-primary/20 flex items-center gap-3 animate-in zoom-in-95">
-              <Loader2 className="animate-spin text-white" size={18} />
-              <span className="text-sm font-medium tracking-tight uppercase">{progress || 'Processing Document...'}</span>
+            <div className="sticky top-0 z-10 p-3 rounded-xl bg-primary text-primary-foreground shadow-lg flex items-center gap-3 animate-in zoom-in-95">
+              <Loader2 className="animate-spin text-white" size={16} />
+              <span className="text-sm font-medium">{progress || 'Processing document...'}</span>
             </div>
           )}
 
+          {/* Option B: one section per source document, in the order the
+              papers come off the file. Data paths are unchanged. */}
           <div className="space-y-6">
-            <VehicleDetailsForm />
-            <CommercialLoadForm />
-            <PolicyDetailsForm />
-            {currentClaim.surveyType !== 'valuation' && <DriverDetailsForm />}
-            {currentClaim.surveyType !== 'valuation' && <AccidentDetailsForm />}
+            <AssignmentForm />
+            <PolicyDetailsForm scan={scan('policy')} />
+            <VehicleDetailsForm scan={scan('rc')} />
+            {!isValuation && <DriverDetailsForm scan={scan('dl')} />}
+            <PermitForm />
+            {!isValuation && <AccidentDetailsForm />}
+            {!isValuation && <AtAccidentForm />}
+            <SurveyForm />
+            {!isValuation && <DocumentChecklist />}
           </div>
 
           {currentClaim.surveyType === 'spot' && <SpotTab />}

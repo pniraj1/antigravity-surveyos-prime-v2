@@ -473,7 +473,9 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
               </tr>
               <tr>
                 <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Fitness Type</td>
-                <td style={{ ...parseInline(styles.td) }} colSpan={3}>{spotDetails.fitnessType || vehicle.fitnessType || '—'}</td>
+                <td style={{ ...parseInline(styles.td) }}>{vehicle.fitnessType || '—'}</td>
+                <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Tax Paid</td>
+                <td style={{ ...parseInline(styles.td) }}>{(spotDetails.taxPaid ?? spotDetails.fitnessType) || '—'}</td>
               </tr>
             </tbody>
           </table>

@@ -5,13 +5,12 @@ import { Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { useClaimStore } from '@/stores/claim-store';
 import { rephraseCause } from '@/lib/ai/rephrase-cause';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { DocSection, req, selectCls } from '@/components/claim/form-bits';
 
-const r = (v: any) => !v ? 'border-red-400' : '';
-
+/** The accident itself and its police/fire paperwork. Survey and workshop live in SurveyForm. */
 export function AccidentDetailsForm() {
   const { currentClaim, updateAccident, updateSpotDetails } = useClaimStore();
   // Text before the last AI rephrase; any manual edit drops the Undo.
@@ -36,342 +35,160 @@ export function AccidentDetailsForm() {
   };
   const sd = currentClaim?.spotDetails || {} as any;
 
+  const dates = (
+    <>
+      <div className="space-y-1">
+        <Label htmlFor="a-date">Date & Time of Accident</Label>
+        <Input
+          id="a-date"
+          type="datetime-local"
+          value={a?.dateAndTime || ''}
+          onChange={(e) => updateAccident({ dateAndTime: e.target.value })}
+          className={req(a?.dateAndTime)}
+        />
+      </div>
+
+      <div className="space-y-1">
+        <Label htmlFor="a-fir-date">FIR Date</Label>
+        <Input
+          id="a-fir-date"
+          type="date"
+          value={a?.firDate || ''}
+          onChange={(e) => updateAccident({ firDate: e.target.value })}
+        />
+      </div>
+    </>
+  );
+
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg text-danger">Accident & Survey Details</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 @md:grid-cols-2 @2xl:grid-cols-3 @4xl:grid-cols-4 gap-4">
-          <div className="space-y-1">
-            <Label htmlFor="a-date">Date & Time of Accident</Label>
-            <Input
-              id="a-date"
-              type="datetime-local"
-              value={a?.dateAndTime || ''}
-              onChange={(e) => updateAccident({ dateAndTime: e.target.value })}
-              className={r(a?.dateAndTime)}
-            />
-          </div>
+    <DocSection title="Accident" dates={dates}>
+      <div className="space-y-1 @md:col-span-2">
+        <Label htmlFor="a-place">Place of Accident</Label>
+        <Input
+          id="a-place"
+          value={a?.placeOfAccident || ''}
+          onChange={(e) => updateAccident({ placeOfAccident: e.target.value })}
+          className={req(a?.placeOfAccident)}
+        />
+      </div>
 
-          <div className="space-y-1 lg:col-span-2 xl:col-span-3">
-            <Label htmlFor="a-place">Place of Accident</Label>
-            <Input
-              id="a-place"
-              value={a?.placeOfAccident || ''}
-              onChange={(e) => updateAccident({ placeOfAccident: e.target.value })}
-              className={r(a?.placeOfAccident)}
-            />
-          </div>
+      <div className="space-y-1">
+        <Label htmlFor="a-pincode">Accident Pincode</Label>
+        <Input
+          id="a-pincode"
+          inputMode="numeric"
+          maxLength={6}
+          value={a?.pincode || ''}
+          onChange={(e) => updateAccident({ pincode: e.target.value.replace(/\D/g, '') })}
+        />
+      </div>
 
-          <div className="space-y-1">
-            <Label htmlFor="a-pincode">Accident Pincode</Label>
-            <Input
-              id="a-pincode"
-              inputMode="numeric"
-              maxLength={6}
-              value={a?.pincode || ''}
-              onChange={(e) => updateAccident({ pincode: e.target.value.replace(/\D/g, '') })}
-              className={r(a?.pincode)}
-            />
-          </div>
-
-          <div className="space-y-1 lg:col-span-2 xl:col-span-4">
-            <div className="flex items-center justify-between gap-2">
-              <Label htmlFor="a-cause">Cause and Nature of Accident</Label>
-              <div className="flex items-center gap-3 text-xs">
-                {beforeRephrase !== null && (
-                  <button
-                    type="button"
-                    className="text-muted-foreground hover:underline"
-                    onClick={() => { updateAccident({ causeOfAccident: beforeRephrase }); setBeforeRephrase(null); }}
-                  >
-                    Undo
-                  </button>
-                )}
-                <button
-                  type="button"
-                  disabled={rephrasing || !a?.causeOfAccident?.trim()}
-                  onClick={handleRephrase}
-                  className="flex items-center gap-1 text-primary hover:underline disabled:opacity-40 disabled:no-underline"
-                >
-                  {rephrasing ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                  Rephrase with AI
-                </button>
-              </div>
-            </div>
-            <Textarea
-              id="a-cause"
-              rows={3}
-              value={a?.causeOfAccident || ''}
-              onChange={(e) => { updateAccident({ causeOfAccident: e.target.value }); setBeforeRephrase(null); }}
-              className={r(a?.causeOfAccident)}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <Label htmlFor="a-sdate">Date of Survey</Label>
-            <Input
-              id="a-sdate"
-              type="date"
-              value={a?.dateOfSurvey || ''}
-              onChange={(e) => updateAccident({ dateOfSurvey: e.target.value })}
-              className={r(a?.dateOfSurvey)}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <Label htmlFor="a-stime">Time of Survey</Label>
-            <Input
-              id="a-stime"
-              type="time"
-              value={a?.timeOfSurvey || ''}
-              onChange={(e) => updateAccident({ timeOfSurvey: e.target.value })}
-            />
-          </div>
-
-          <div className="space-y-1 lg:col-span-2 xl:col-span-3">
-            <Label htmlFor="a-splace">Place of Survey (Workshop Name)</Label>
-            <Input
-              id="a-splace"
-              value={a?.placeOfSurvey || ''}
-              onChange={(e) => updateAccident({ placeOfSurvey: e.target.value })}
-              className={r(a?.placeOfSurvey)}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <Label htmlFor="a-police">Police Station</Label>
-            <Input
-              id="a-police"
-              value={a?.policeStation || ''}
-              onChange={(e) => updateAccident({ policeStation: e.target.value })}
-              className={r(a?.policeStation)}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <Label htmlFor="a-fir">FIR / Diary No.</Label>
-            <Input
-              id="a-fir"
-              value={a?.firNumber || ''}
-              onChange={(e) => updateAccident({ firNumber: e.target.value })}
-              className={r(a?.firNumber)}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <Label htmlFor="a-fir-date">FIR Date</Label>
-            <Input
-              id="a-fir-date"
-              type="date"
-              value={a?.firDate || ''}
-              onChange={(e) => updateAccident({ firDate: e.target.value })}
-              className={r(a?.firDate)}
-            />
-          </div>
-
-          {/* Fire losses only carry this, but the field is always offered — the
-              surveyor fills it when a brigade report exists and leaves it blank
-              otherwise. The UIIC final report has always printed it. */}
-          <div className="space-y-1">
-            <Label htmlFor="a-fire-report">Fire Brigade Report No.</Label>
-            <Input
-              id="a-fire-report"
-              value={a?.fireBrigadeReportNo || ''}
-              onChange={(e) => updateAccident({ fireBrigadeReportNo: e.target.value })}
-              className={r(a?.fireBrigadeReportNo)}
-            />
-          </div>
-
-          {/* Stored on spotDetails but asked here, because AccidentForm renders
-              for every survey type and SpotTab renders only for spot claims. */}
-          <div className="space-y-1">
-            <Label htmlFor="a-police-reported">Police Reported?</Label>
-            <select
-              id="a-police-reported"
-              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={sd?.policeReported || ''}
-              onChange={(e) => updateSpotDetails({ policeReported: e.target.value })}
+      <div className="space-y-1 col-span-full">
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor="a-cause">Cause and Nature of Accident</Label>
+          <div className="flex items-center gap-3 text-xs">
+            {beforeRephrase !== null && (
+              <button
+                type="button"
+                className="text-muted-foreground hover:underline"
+                onClick={() => { updateAccident({ causeOfAccident: beforeRephrase }); setBeforeRephrase(null); }}
+              >
+                Undo
+              </button>
+            )}
+            <button
+              type="button"
+              disabled={rephrasing || !a?.causeOfAccident?.trim()}
+              onClick={handleRephrase}
+              className="flex items-center gap-1 text-primary hover:underline disabled:opacity-40 disabled:no-underline"
             >
-              <option value="">—</option>
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
-            </select>
+              {rephrasing ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+              Rephrase with AI
+            </button>
           </div>
-
-          <div className="space-y-1">
-            <Label htmlFor="a-panchanama">Panchanama?</Label>
-            <select
-              id="a-panchanama"
-              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={sd?.panchanama || ''}
-              onChange={(e) => updateSpotDetails({ panchanama: e.target.value })}
-            >
-              <option value="">—</option>
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
-            </select>
-          </div>
-
-          {/* Third party is free text, not a classification. The information is
-              extensive — property damage, injuries, deaths, TP vehicle, hospital
-              — and the surveyor writes as much as the claim needs. */}
-          <div className="space-y-1 lg:col-span-2 xl:col-span-4">
-            <Label htmlFor="a-tp">Third Party Details (TPPI / TPPD)</Label>
-            <Textarea
-              id="a-tp"
-              rows={3}
-              value={a?.thirdPartyDetails || ''}
-              onChange={(e) => updateAccident({ thirdPartyDetails: e.target.value })}
-              placeholder="Property damage, injuries, deaths, TP vehicle, hospital — as much detail as available"
-            />
-          </div>
-
-          {currentClaim.surveyType !== 'spot' && (
-            <div className="space-y-1">
-              <Label htmlFor="a-app-date">Survey Appointment Date</Label>
-              <Input
-                id="a-app-date"
-                type="date"
-                value={a?.appointmentDate || ''}
-                onChange={(e) => updateAccident({ appointmentDate: e.target.value })}
-                className={r(a?.appointmentDate)}
-              />
-            </div>
-          )}
         </div>
+        <Textarea
+          id="a-cause"
+          rows={3}
+          value={a?.causeOfAccident || ''}
+          onChange={(e) => { updateAccident({ causeOfAccident: e.target.value }); setBeforeRephrase(null); }}
+          className={req(a?.causeOfAccident)}
+        />
+      </div>
 
-        {currentClaim.surveyType !== 'spot' && (
-          <div className="mt-8 pt-6 border-t">
-            <Label className="text-md font-bold mb-4 block">Workshop Details</Label>
-            <div className="grid grid-cols-1 @md:grid-cols-2 @2xl:grid-cols-3 gap-4">
-              <div className="space-y-1 @2xl:col-span-2">
-                <Label htmlFor="w-name">Workshop Name</Label>
-                <Input
-                  id="w-name"
-                  value={a?.workshopName || ''}
-                  onChange={(e) => updateAccident({ workshopName: e.target.value })}
-                  className={r(a?.workshopName)}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="w-phone">Workshop Phone</Label>
-                <Input
-                  id="w-phone"
-                  value={a?.workshopPhone || ''}
-                  onChange={(e) => updateAccident({ workshopPhone: e.target.value })}
-                  className={r(a?.workshopPhone)}
-                />
-              </div>
-              <div className="space-y-1 lg:col-span-3">
-                <Label htmlFor="w-addr">Workshop Address</Label>
-                <Input
-                  id="w-addr"
-                  value={a?.workshopAddress || ''}
-                  onChange={(e) => updateAccident({ workshopAddress: e.target.value })}
-                  className={r(a?.workshopAddress)}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="w-fax">Workshop Fax</Label>
-                <Input
-                  id="w-fax"
-                  value={a?.workshopFax || ''}
-                  onChange={(e) => updateAccident({ workshopFax: e.target.value })}
-                  className={r(a?.workshopFax)}
-                />
-              </div>
-              <div className="space-y-1 lg:col-span-2">
-                <Label htmlFor="w-email">Workshop Email</Label>
-                <Input
-                  id="w-email"
-                  type="email"
-                  value={a?.workshopEmail || ''}
-                  onChange={(e) => updateAccident({ workshopEmail: e.target.value })}
-                  className={r(a?.workshopEmail)}
-                />
-              </div>
-            </div>
-          </div>
-        )}
+      {/* Stored on spotDetails but asked here, because AccidentForm renders
+          for every survey type and SpotTab renders only for spot claims. */}
+      <div className="space-y-1">
+        <Label htmlFor="a-police-reported">Police Reported?</Label>
+        <select
+          id="a-police-reported"
+          className={selectCls}
+          value={sd?.policeReported || ''}
+          onChange={(e) => updateSpotDetails({ policeReported: e.target.value })}
+        >
+          <option value="">—</option>
+          <option value="yes">Yes</option>
+          <option value="no">No</option>
+        </select>
+      </div>
 
-        {(() => {
-          const dvFlags: any = currentClaim.documentVerification || {};
-          const DV_DOCS = [
-            { id: 'rc', label: 'RC' },
-            { id: 'dl', label: 'DL' },
-            { id: 'permit', label: 'Permit' },
-            { id: 'fitness', label: 'Fitness' },
-            { id: 'loadChallan', label: 'Load Challan' },
-            { id: 'fireReport', label: 'Fire Report' },
-            { id: 'fir', label: 'FIR' },
-          ];
-          const STATUSES = [
-            { value: 'YES', color: 'var(--color-status-success)' },
-            { value: 'NO', color: 'var(--color-status-danger)' },
-            { value: 'N.A.', color: 'var(--color-neutral-500)' },
-          ];
-          const obtained = DV_DOCS.filter((d) => dvFlags[d.id]?.status === 'YES').length;
-          const setDoc = (id: string, patch: Record<string, string>) => {
-            const cur = dvFlags[id] || { status: 'NO', detail: '' };
-            useClaimStore.getState().updateClaim({
-              documentVerification: { ...dvFlags, [id]: { ...cur, ...patch } },
-            });
-          };
+      <div className="space-y-1">
+        <Label htmlFor="a-police">Police Station</Label>
+        <Input
+          id="a-police"
+          value={a?.policeStation || ''}
+          onChange={(e) => updateAccident({ policeStation: e.target.value })}
+        />
+      </div>
 
-          return (
-            <div className="mt-8 pt-6 border-t">
-              <div className="flex items-center justify-between mb-1 gap-3">
-                <Label className="text-md font-bold">Document Verification Checklist</Label>
-                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-muted text-muted-foreground shrink-0">
-                  {obtained} / {DV_DOCS.length} obtained
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground mb-4">Mark whether a photocopy of each document was obtained.</p>
+      <div className="space-y-1">
+        <Label htmlFor="a-fir">FIR / Diary No.</Label>
+        <Input
+          id="a-fir"
+          value={a?.firNumber || ''}
+          onChange={(e) => updateAccident({ firNumber: e.target.value })}
+        />
+      </div>
 
-              <div className="grid grid-cols-1 @md:grid-cols-2 @4xl:grid-cols-3 gap-3">
-                {DV_DOCS.map((doc) => {
-                  const status: string | undefined = dvFlags[doc.id]?.status;
-                  return (
-                    <div key={doc.id} className="flex items-center gap-3 p-2.5 rounded-lg border bg-muted/20">
-                      <span className="text-xs font-bold uppercase w-20 shrink-0 truncate" title={doc.label}>{doc.label}</span>
-                      <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-                        <div className="inline-flex rounded-md border border-input overflow-hidden self-start">
-                          {STATUSES.map((s) => {
-                            const active = status === s.value;
-                            return (
-                              <button
-                                key={s.value}
-                                type="button"
-                                onClick={() => setDoc(doc.id, { status: s.value })}
-                                className="px-2.5 py-1 text-[10px] font-semibold transition-colors border-r border-input last:border-r-0"
-                                style={active
-                                  ? { background: s.color, color: '#fff' }
-                                  : { background: 'transparent', color: 'var(--color-neutral-500)' }}
-                              >
-                                {s.value}
-                              </button>
-                            );
-                          })}
-                        </div>
-                        {status === 'YES' && (
-                          <Input
-                            placeholder="e.g. Original seen"
-                            className="h-7 text-[11px] px-2"
-                            value={dvFlags[doc.id]?.detail || ''}
-                            onChange={(e) => setDoc(doc.id, { detail: e.target.value })}
-                          />
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })()}
-      </CardContent>
-    </Card>
+      <div className="space-y-1">
+        <Label htmlFor="a-panchanama">Panchanama?</Label>
+        <select
+          id="a-panchanama"
+          className={selectCls}
+          value={sd?.panchanama || ''}
+          onChange={(e) => updateSpotDetails({ panchanama: e.target.value })}
+        >
+          <option value="">—</option>
+          <option value="yes">Yes</option>
+          <option value="no">No</option>
+        </select>
+      </div>
+
+      {/* Fire losses only carry this, but the field is always offered — the
+          surveyor fills it when a brigade report exists and leaves it blank
+          otherwise. The UIIC final report has always printed it. */}
+      <div className="space-y-1">
+        <Label htmlFor="a-fire-report">Fire Brigade Report No.</Label>
+        <Input
+          id="a-fire-report"
+          value={a?.fireBrigadeReportNo || ''}
+          onChange={(e) => updateAccident({ fireBrigadeReportNo: e.target.value })}
+        />
+      </div>
+
+      {/* Third party is free text, not a classification. The information is
+          extensive — property damage, injuries, deaths, TP vehicle, hospital
+          — and the surveyor writes as much as the claim needs. */}
+      <div className="space-y-1 col-span-full">
+        <Label htmlFor="a-tp">Third Party Details (TPPI / TPPD)</Label>
+        <Textarea
+          id="a-tp"
+          rows={3}
+          value={a?.thirdPartyDetails || ''}
+          onChange={(e) => updateAccident({ thirdPartyDetails: e.target.value })}
+          placeholder="Property damage, injuries, deaths, TP vehicle, hospital — as much detail as available"
+        />
+      </div>
+    </DocSection>
   );
 }
