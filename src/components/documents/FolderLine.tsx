@@ -4,11 +4,16 @@ import { FolderOpen } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ClaimFolderCard } from './ClaimFolderCard';
 
-type Props = ComponentProps<typeof ClaimFolderCard>;
+type Props = ComponentProps<typeof ClaimFolderCard> & {
+  /** Bump to open the folder card from outside (e.g. an import that needs a folder). */
+  connectRequest?: number;
+};
 
 /** The claim folder as one quiet line; the full ClaimFolderCard opens only from here. */
-export function FolderLine({ supported, folder, onConnect, onReconnect }: Props) {
+export function FolderLine({ supported, folder, onConnect, onReconnect, connectRequest = 0 }: Props) {
   const [open, setOpen] = useState(false);
+  const [seenRequest, setSeenRequest] = useState(connectRequest);
+  if (connectRequest !== seenRequest) { setSeenRequest(connectRequest); setOpen(true); }
   if (!supported) return <ClaimFolderCard supported={false} folder={null} onConnect={onConnect} onReconnect={onReconnect} />;
 
   const link = 'text-primary underline underline-offset-2 hover:opacity-80';

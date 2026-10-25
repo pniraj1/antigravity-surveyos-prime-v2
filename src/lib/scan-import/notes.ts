@@ -7,9 +7,7 @@ import type { ClaimData } from '@/types';
 import { createBlankClaim } from '@/types';
 import { getAt, setAt } from '@/lib/site/path';
 
-// ponytail: local until Task 4 adds `ClaimData.scanImport`.
-export interface ScanImport { at: string; decided: Record<string, string> }
-type ClaimWithScan = ClaimData & { scanImport?: ScanImport };
+export type ScanImport = NonNullable<ClaimData['scanImport']>;
 
 type Kind = 'text' | 'number' | 'enum' | 'doc' | 'insurable';
 interface FieldSpec { label: string; section: 'spot' | 'valuation'; kind?: Kind; values?: readonly string[] }
@@ -232,7 +230,7 @@ export function applyNotes(
   if (parts.length || partConditions.length) touched.add('valuationDetails');
   for (const section of touched) updates[section] = (next as unknown as Record<string, unknown>)[section];
 
-  const prev = (claim as ClaimWithScan).scanImport;
+  const prev = claim.scanImport;
   const seen = [...plan.differ, ...plan.fill.filter((c) => picks[c.key] === false)];
   const decided = { ...prev?.decided, ...Object.fromEntries(seen.map((c) => [c.key, c.phone])) };
   return { ...(updates as Partial<ClaimData>), scanImport: { at: plan.at || prev?.at || '', decided } };

@@ -20,6 +20,7 @@ import { DocumentReviewSheet } from '@/components/documents/DocumentReviewSheet'
 import { useClaimDocuments } from '@/lib/documents/useClaimDocuments';
 import { FolderLine } from '@/components/documents/FolderLine';
 import { PhoneFilesList } from '@/components/documents/PhoneFilesList';
+import { BringPhoneScans } from '@/components/documents/BringPhoneScans';
 import { readDocument } from '@/lib/documents/folder';
 import { phoneFileFor, cardPhoneState } from '@/lib/scan-import/cards';
 import type { ClaimDocument } from '@/types/documents';
@@ -80,6 +81,7 @@ export function DocumentsTab() {
   const { profile, updateProfile } = useProfileStore();
   const aiProvider = profile.aiProvider ?? 'gemini';
   const [isReconOpen, setIsReconOpen] = useState(false);
+  const [folderAsk, setFolderAsk] = useState(0); // bumped when an import needs the folder connect
   const [autoFilledFields, setAutoFilledFields] = useState<ReconciliationField[]>([]);
   const prevClaimIdRef = useRef<string | null>(null);
   const [syncPicker, setSyncPicker] = useState<{ key: string; label: string } | null>(null);
@@ -329,7 +331,10 @@ export function DocumentsTab() {
 
       {/* ── Document Groups ──────────────────────────────── */}
       <div className="px-6 lg:px-12 py-8 max-w-5xl mx-auto space-y-10">
-        <FolderLine supported={docs.supported} folder={docs.folder} onConnect={docs.connect} onReconnect={docs.reconnect} />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <FolderLine supported={docs.supported} folder={docs.folder} onConnect={docs.connect} onReconnect={docs.reconnect} connectRequest={folderAsk} />
+          <BringPhoneScans onNeedsFolder={() => setFolderAsk((n) => n + 1)} />
+        </div>
         {DOC_GROUPS.map((group) => (
           <div key={group.title}>
             {/* Group header */}
