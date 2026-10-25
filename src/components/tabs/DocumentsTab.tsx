@@ -108,6 +108,7 @@ export function DocumentsTab() {
     if (currentClaim?.id !== prevClaimIdRef.current) {
       prevClaimIdRef.current = currentClaim?.id ?? null;
       setAutoFilledFields([]);
+      setReviewSheet(null); // a sheet opened for the previous claim must not confirm into this one
     }
   }, [currentClaim?.id]);
 
@@ -189,8 +190,11 @@ export function DocumentsTab() {
   };
 
   const openPhoneFile = async (key: string, label: string, phoneDoc: ClaimDocument) => {
+    const claimId = currentClaim.id;
     try {
-      setReviewSheet({ key, label, files: [await readDocument(currentClaim, phoneDoc)], phone: true });
+      const file = await readDocument(currentClaim, phoneDoc); // can be slow on Drive for desktop
+      if (useClaimStore.getState().currentClaim?.id !== claimId) return; // claim switched meanwhile: never open A's file on B
+      setReviewSheet({ key, label, files: [file], phone: true });
     } catch (err) {
       toast.error(`Could not read the phone file ${phoneDoc.relPath} (${err instanceof Error ? err.message : String(err)})`);
     }
@@ -465,6 +469,7 @@ export function DocumentsTab() {
                           e.stopPropagation();
                           void openPhoneFile(doc.id, doc.label, phoneDoc);
                         }}
+                        disabled={isActive}
                         className="relative z-20 flex items-center gap-2 text-[11px] font-medium mt-auto text-left text-primary hover:underline"
                       >
                         <Smartphone size={11} />

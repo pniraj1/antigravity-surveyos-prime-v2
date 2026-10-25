@@ -28,7 +28,7 @@ export function PhoneFilesList({ onOpen }: Props) {
     <div className="rounded-2xl bg-card border border-[var(--color-neutral-200)] px-5 py-4" style={{ boxShadow: '0 1px 3px rgba(13,27,42,0.04)' }}>
       <div className="flex items-center gap-2.5 mb-3">
         <Smartphone size={16} className="text-primary" />
-        <span className="text-xs font-medium text-[var(--color-neutral-900)] uppercase tracking-wider">Phone files</span>
+        <span className="text-xs font-medium text-[var(--color-neutral-900)]">Phone files</span>
         <span className="text-[11px] text-[var(--color-neutral-400)]">· Checked {checked} of {all.length}</span>
       </div>
       <div className="space-y-3">

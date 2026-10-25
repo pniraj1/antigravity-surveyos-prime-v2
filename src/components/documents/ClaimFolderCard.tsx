@@ -6,7 +6,7 @@ import { useReading } from '@/lib/documents/kit/reading';
 interface Props {
   supported: boolean;
   folder: { rootName: string; device: string; claimPath: string | null; permission: PermissionState } | null;
-  onConnect: (deviceLabel: string) => void;
+  onConnect: (deviceLabel: string) => void | Promise<void>;
   onReconnect: () => void;
 }
 
