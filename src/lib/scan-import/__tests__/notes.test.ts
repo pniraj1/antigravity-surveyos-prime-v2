@@ -73,6 +73,37 @@ describe('planNotes / applyNotes', () => {
     expect(keys(planNotes(after, { spot: { 'vehicle.odometer': '45300' } }, first.scanImport.decided).differ)).toEqual(['vehicle.odometer']);
   });
 
+  it('untickedFillNotOfferedAgain', () => {
+    const c = claim(); // Severity is the blank default 'moderate', so phone 'major' is a fill
+    const notes = { spot: { 'spotDetails.damageSeverity': 'major' } };
+    const plan = planNotes(c, notes);
+    expect(keys(plan.fill)).toEqual(['spotDetails.damageSeverity']);
+    const u = applyNotes(c, plan, { 'spotDetails.damageSeverity': false });
+    expect(u.spotDetails).toBeUndefined();
+    expect(u.scanImport.decided).toEqual({ 'spotDetails.damageSeverity': 'major' });
+    expect(isEmptyNotesPlan(planNotes(c, notes, u.scanImport.decided))).toBe(true);
+    expect(keys(planNotes(c, { spot: { 'spotDetails.damageSeverity': 'minor' } }, u.scanImport.decided).fill))
+      .toEqual(['spotDetails.damageSeverity']); // a new phone value is offered
+  });
+
+  it('docVerificationRules', () => {
+    const c = claim((b) => ({ ...b, documentVerification: { ...b.documentVerification, dl: { status: 'YES', detail: '' } } }));
+    const plan = planNotes(c, { spot: {
+      'documentVerification.rc': { status: 'NO', detail: 'Photocopy' },
+      'documentVerification.dl': { status: 'NO', detail: '' },
+    } });
+    expect(keys(plan.fill)).toEqual(['documentVerification.rc.detail']);
+    expect(keys(plan.differ)).toEqual(['documentVerification.dl.status']);
+  });
+
+  it('numbersParsedStrictlyAndCompared', () => {
+    const c = claim((b) => ({ ...b, vehicle: { ...b.vehicle, odometer: '45,210' } }));
+    expect(isEmptyNotesPlan(planNotes(c, { spot: { 'vehicle.odometer': '45210 km' } }))).toBe(true);
+    const bad = planNotes(claim(), { spot: { 'spotDetails.actualLoad': '0x10', 'vehicle.odometer': '-5' } });
+    expect(bad.fill).toEqual([]);
+    expect(bad.differ.map((d) => d.writable)).toEqual([false, false]);
+  });
+
   it('clearingOnPhoneNeverClears', () => {
     const c = claim((b) => ({ ...b, accident: { ...b.accident, placeOfSurvey: 'Workshop' } }));
     const plan = planNotes(c, { spot: { 'accident.placeOfSurvey': '', 'documentVerification.rc': { status: '', detail: '' } } });
@@ -106,6 +137,7 @@ describe('planNotes / applyNotes', () => {
       { component: 'bonnet', condition: 'Average / Serviceable' },
       { component: 'Dickey', condition: 'Good' },
       { component: 'dickey', condition: 'N/A' },
+      { component: '', condition: 'Good' },
     ] });
     expect(plan.rows.parts).toEqual([{ component: 'Dickey', condition: 'Good' }]);
     expect(plan.rows.partConditions).toEqual([{ id: 'p1', condition: 'Damaged' }]);
@@ -131,16 +163,21 @@ const HANDOVER = resolve(process.cwd(), '../SurveyOS Scan/docs/handover/prime-no
 describe.skipIf(!existsSync(HANDOVER))('handover', () => {
   it('allowListMatchesHandover', () => {
     const md = readFileSync(HANDOVER, 'utf8');
-    const paths = new Set<string>();
-    for (const line of md.split('\n')) {
+    const paths: string[] = []; // `section:path`
+    const rowLists: string[] = [];
+    let section = '';
+    for (const line of md.split(/\r?\n/)) {
+      if (line.startsWith('## ')) section = line === '## Valuation fields' ? 'valuation' : line === '## Fields' ? 'spot' : '';
       const cols = line.split(/(?<!\\)\|/).map((s) => s.trim());
-      const m = cols[3]?.match(/^`([^`]+)`/);
-      if (!m || m[1].includes('[]')) continue; // row lists are handled separately
+      const m = section && cols[3]?.match(/^`([^`]+)`/);
+      if (!m) continue;
+      if (m[1].includes('[]')) { rowLists.push(m[1].split('[]')[0]); continue; } // handled by planRows
       const docs = m[1].match(/^documentVerification\.<(.+)>$/);
-      if (docs) docs[1].split('\\|').forEach((id) => paths.add(`documentVerification.${id}`));
-      else paths.add(m[1]);
+      if (docs) docs[1].split('\\|').forEach((id) => paths.push(`${section}:documentVerification.${id}`));
+      else paths.push(`${section}:${m[1]}`);
     }
-    expect(paths.size).toBeGreaterThan(40);
-    expect([...paths].sort()).toEqual(Object.keys(NOTES_ALLOW_LIST).sort());
+    expect(paths.length).toBeGreaterThan(40);
+    expect(paths.sort()).toEqual(Object.entries(NOTES_ALLOW_LIST).map(([p, s]) => `${s.section}:${p}`).sort());
+    expect(rowLists).toEqual(['spotDamageRows', 'valuationPartRows']); // a new row list needs code
   });
 });

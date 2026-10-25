@@ -95,8 +95,11 @@ const str = (v: unknown) => (v === undefined || v === null ? '' : String(v).trim
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const lc = (s: string) => s.trim().toLowerCase();
 
-/** Lenient number: "45,210 km" → 45210. NaN when it is not a number. */
-const parseNumber = (s: string) => (s ? Number(s.replace(/[,\s]/g, '').replace(/(kms?|kgs?)$/i, '')) : NaN);
+/** Lenient number: "45,210 km" → 45210. NaN unless a plain non-negative number (no hex, exponent, sign). */
+const parseNumber = (s: string) => {
+  const t = s.replace(/[,\s]/g, '').replace(/(kms?|kgs?)$/i, '');
+  return /^\d+(\.\d+)?$/.test(t) ? Number(t) : NaN;
+};
 
 /** Phone string → Prime value; undefined when unusable. */
 function convert(path: string, spec: FieldSpec, raw: string): unknown {
@@ -127,7 +130,7 @@ function planRows(claim: ClaimData, notes: Record<string, unknown>): RowPlan {
   for (const r of list('valuationPartRows')) {
     const row = { component: str(r.component), condition: str(r.condition) };
     const k = lc(row.component);
-    if (!(row.component || row.condition) || pSeen.has(k)) continue;
+    if (!row.component || pSeen.has(k)) continue; // a part needs a name to de-dupe on
     pSeen.add(k);
     const have = existing.get(k);
     if (!have) parts.push(row);
@@ -151,9 +154,10 @@ export function planNotes(claim: ClaimData, notes: unknown, decided: Record<stri
     const current = getAt(claim, key);
     const prime = str(current);
     if (value !== undefined && str(value) === prime) return; // same value
+    if (decided[key] === phone) return; // already seen: kept, unticked or used
     const change = { key, label, prime, phone, value, writable: value !== undefined };
     if (empty && canFill && change.writable) fill.push(change);
-    else if (decided[key] !== phone) differ.push(change);
+    else differ.push(change);
   };
 
   for (const [path, spec] of Object.entries(NOTES_ALLOW_LIST)) {
@@ -174,7 +178,9 @@ export function planNotes(claim: ClaimData, notes: unknown, decided: Record<stri
     if (!phone) continue;
     const current = getAt(claim, path);
     const empty = !str(current) || str(current) === str(getAt(blank, path)) || (spec.kind === 'number' && current === 0);
-    consider(path, spec.label, phone, convert(path, spec, phone), empty, spec.kind !== 'insurable');
+    const value = convert(path, spec, phone);
+    if (spec.kind === 'number' && value !== undefined && parseNumber(str(current)) === Number(value)) continue; // "45,210" vs 45210
+    consider(path, spec.label, phone, value, empty, spec.kind !== 'insurable');
   }
 
   return { fill, differ, rows: planRows(claim, n), at: str(n.updatedAt) };
@@ -185,7 +191,7 @@ export const isEmptyNotesPlan = (p: NotesPlan) =>
 
 /**
  * Claim updates for the approved plan. `picks[key]`: for a differ, true = use phone (default keep Prime);
- * for a fill, false = unticked (default fill). Every differ the surveyor saw is recorded in `decided`.
+ * for a fill, false = unticked (default fill). Every differ and every unticked fill is recorded in `decided`.
  */
 export function applyNotes(
   claim: ClaimData,
@@ -197,7 +203,14 @@ export function applyNotes(
     ...plan.fill.filter((c) => picks[c.key] !== false),
     ...plan.differ.filter((c) => c.writable && picks[c.key] === true),
   ];
-  let next = writes.reduce<ClaimData>((acc, c) => setAt(acc, c.key, c.value), claim);
+  // Old claims may lack these sections; never write a partial object into them.
+  const blank = createBlankClaim(claim.surveyType, claim.vehicleType);
+  const base: ClaimData = {
+    ...claim,
+    documentVerification: claim.documentVerification ?? blank.documentVerification,
+    valuationDetails: claim.valuationDetails ?? blank.valuationDetails,
+  };
+  let next = writes.reduce<ClaimData>((acc, c) => setAt(acc, c.key, c.value), base);
 
   const { damage, parts, partConditions } = plan.rows;
   if (damage.length) {
@@ -220,6 +233,7 @@ export function applyNotes(
   for (const section of touched) updates[section] = (next as unknown as Record<string, unknown>)[section];
 
   const prev = (claim as ClaimWithScan).scanImport;
-  const decided = { ...prev?.decided, ...Object.fromEntries(plan.differ.map((c) => [c.key, c.phone])) };
+  const seen = [...plan.differ, ...plan.fill.filter((c) => picks[c.key] === false)];
+  const decided = { ...prev?.decided, ...Object.fromEntries(seen.map((c) => [c.key, c.phone])) };
   return { ...(updates as Partial<ClaimData>), scanImport: { at: plan.at || prev?.at || '', decided } };
 }
