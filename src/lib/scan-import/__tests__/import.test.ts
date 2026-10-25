@@ -11,6 +11,8 @@ const state = vi.hoisted(() => ({
   folder: true,
   bytes: new Map<string, Blob>(),
   saves: [] as Array<{ type: string; names: string[]; source: string }>,
+  mimes: [] as string[],
+  failType: '' as string,
 }));
 
 vi.mock('@/stores/claim-store', () => ({ useClaimStore: { getState: () => ({ currentClaim: state.claim }) } }));
@@ -19,7 +21,10 @@ vi.mock('@/lib/documents/folder', () => ({
   readDocument: async (_c: ClaimData, d: ClaimDocument) => state.bytes.get(d.id)!,
 }));
 vi.mock('@/lib/documents/sink', () => ({
-  saveDocuments: async (type: DocType, files: Array<{ blob: Blob; name?: string }>, source: ClaimDocument['source']) => {
+  saveDocuments: async (type: DocType, files: Array<{ blob: Blob; name?: string }>, source: ClaimDocument['source'], claimId?: string) => {
+    if (claimId && state.claim?.id !== claimId) return []; // the real sink's guard
+    if (type === state.failType) return []; // the real sink toasts and returns [] on a failed write
+    state.mimes.push(...files.map((f) => f.blob.type));
     state.saves.push({ type, names: files.map((f) => f.name ?? ''), source });
     const written = files.map((f, i): ClaimDocument => {
       const id = `d${state.bytes.size}-${i}`;
@@ -56,6 +61,8 @@ beforeEach(() => {
   state.folder = true;
   state.bytes.clear();
   state.saves = [];
+  state.mimes = [];
+  state.failType = '';
 });
 
 describe('importScanZip', () => {
@@ -78,8 +85,39 @@ describe('importScanZip', () => {
     const confirmVehicle = vi.fn(yes);
     const r = await importScanZip(scanZip([{ path: 'RC Book.pdf', type: 'rc', data: 'rc' }]), { confirmVehicle });
     expect(confirmVehicle).not.toHaveBeenCalled();
-    expect(r).toEqual({ status: 'done', added: 1, skipped: 0, notes: { spot: { place: 'Pune' } } });
+    expect(r).toEqual({ status: 'done', added: 1, skipped: 0, failed: 0, notes: { spot: { place: 'Pune' } } });
     expect(state.saves).toEqual([{ type: 'rc', names: ['RC Book.pdf'], source: 'scan' }]);
+    expect(state.mimes).toEqual(['application/pdf']);
+  });
+
+  it('claimSwitchDuringConfirmWritesNothing', async () => {
+    const confirmVehicle = async () => {
+      state.claim = { id: 'c2', vehicle: { registrationNumber: 'KA01ZZ9999' } } as unknown as ClaimData;
+      return true;
+    };
+    const r = await importScanZip(scanZip([{ path: 'RC Book.pdf', type: 'rc', data: 'rc' }], 'KA01ZZ9999'), { confirmVehicle });
+    expect(r).toEqual({ status: 'claim-changed', added: 0 });
+    expect(state.saves).toEqual([]);
+  });
+
+  it('staleManifestHashDoesNotSkipNewFile', async () => {
+    await importScanZip(scanZip([{ path: 'a.jpg', type: 'damagePhotos', data: 'old' }]), { confirmVehicle: yes });
+    // A manifest claiming the existing file's hash for different bytes of the same size.
+    const zip = buildZip([
+      { name: 'C/b.jpg', data: 'new' },
+      { name: 'C/_surveyos-scan.json', data: JSON.stringify({ app: 'surveyos-scan', v: 1, vehicle: 'MH12AB1234', insurer: '', claimNo: null,
+        exportedAt: 't', files: [{ path: 'b.jpg', type: 'damagePhotos', pages: [], sha256: sha('old') }] }) },
+    ]);
+    expect(await importScanZip(zip, { confirmVehicle: yes })).toMatchObject({ added: 1, skipped: 0 });
+  });
+
+  it('failedSaveIsCounted', async () => {
+    state.failType = 'rc';
+    const r = await importScanZip(scanZip([
+      { path: 'RC Book.pdf', type: 'rc', data: 'rc' },
+      { path: 'Spot Photos/1.jpg', type: 'spotPhotos', data: 'p' },
+    ]), { confirmVehicle: yes });
+    expect(r).toMatchObject({ status: 'done', added: 1, skipped: 0, failed: 1 });
   });
 
   it('reimportAddsNothing', async () => {

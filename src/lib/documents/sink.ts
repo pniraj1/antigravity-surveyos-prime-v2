@@ -18,8 +18,10 @@ export function saveDocuments(
   type: DocType,
   files: FolderInput[],
   source: ClaimDocument['source'],
+  /** When set, nothing is written unless this claim is still the current one at our turn in the queue. */
+  claimId?: string,
 ): Promise<ClaimDocument[]> {
-  const run = queue.then(() => doSave(type, files, source));
+  const run = queue.then(() => doSave(type, files, source, claimId));
   queue = run.catch(() => undefined);
   return run;
 }
@@ -28,9 +30,11 @@ async function doSave(
   type: DocType,
   files: FolderInput[],
   source: ClaimDocument['source'],
+  claimId?: string,
 ): Promise<ClaimDocument[]> {
   const claim = useClaimStore.getState().currentClaim; // read after our turn in the queue
   if (!claim || files.length === 0) return [];
+  if (claimId && claim.id !== claimId) return [];
   if (!(await getStoredRootHandle())) return [];
   try {
     const { claim: next, written } = await writeDocuments(claim, type, files, source);

@@ -17,7 +17,10 @@ import { findManifest, sameVehicle } from './manifest';
 export type ImportResult =
   | { status: 'cancelled' }
   | { status: 'needs-folder' }
-  | { status: 'done'; added: number; skipped: number; notes: unknown };
+  /** The surveyor opened another claim mid-import; types saved before the switch stay saved. */
+  | { status: 'claim-changed'; added: number }
+  /** `failed`: files whose save failed (the sink already toasted why); re-importing retries them safely. */
+  | { status: 'done'; added: number; skipped: number; failed: number; notes: unknown };
 
 export interface ImportOptions {
   /** Asked only on a vehicle mismatch; false aborts before anything is written. */
@@ -26,6 +29,16 @@ export interface ImportOptions {
 
 export function toDocType(type: string): DocType {
   return Object.hasOwn(DOC_TYPE_LABEL, type) ? (type as DocType) : 'other';
+}
+
+// ponytail: the types Scan exports; anything else stays untyped and naming falls back to the file's extension.
+const MIME_BY_EXT: Record<string, string> = {
+  pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', heic: 'image/heic',
+};
+
+function typedBlob(blob: Blob, name: string): Blob {
+  const mime = MIME_BY_EXT[name.split('.').pop()?.toLowerCase() ?? ''];
+  return mime ? new Blob([blob], { type: mime }) : blob;
 }
 
 async function sha256(blob: Blob): Promise<string> {
@@ -65,14 +78,19 @@ export async function importScanZip(blob: Blob, { confirmVehicle }: ImportOption
     const entry = zipFiles.get(`${root}${f.path}`);
     if (!entry) throw new Error(`This Scan export is incomplete: "${f.path}" is missing. Export it again from Scan.`);
     const type = toDocType(f.type);
+    const name = f.path.split('/').pop() ?? f.path;
     const list = byType.get(type) ?? [];
-    list.push({ blob: entry, name: f.path.split('/').pop() ?? f.path, sha: (f.sha256 || (await sha256(entry))).toLowerCase() });
+    // The real bytes, never the manifest's sha256: a stale manifest must not skip a new file.
+    list.push({ blob: typedBlob(entry, name), name, sha: await sha256(entry) });
     byType.set(type, list);
   }
 
   let added = 0;
   let skipped = 0;
+  let failed = 0;
+  const stillHere = () => useClaimStore.getState().currentClaim?.id === claim.id;
   for (const [type, files] of byType) {
+    if (!stillHere()) return { status: 'claim-changed', added };
     const seen = await existingHashes(claim, type, new Set(files.map((f) => f.blob.size)));
     const fresh = files.filter((f) => {
       if (seen.has(f.sha)) return false;
@@ -82,8 +100,11 @@ export async function importScanZip(blob: Blob, { confirmVehicle }: ImportOption
     skipped += files.length - fresh.length;
     if (fresh.length === 0) continue;
     // saveDocuments places multi-file types (photos) in their subfolder, as every other save does.
-    const written: ClaimDocument[] = await saveDocuments(type, fresh.map(({ blob: b, name }) => ({ blob: b, name })), 'scan');
+    // claim.id: the sink re-checks at its turn in the queue, so a switch while waiting writes nothing.
+    const written: ClaimDocument[] = await saveDocuments(type, fresh.map(({ blob: b, name }) => ({ blob: b, name })), 'scan', claim.id);
     added += written.length;
+    if (written.length === 0 && !stillHere()) return { status: 'claim-changed', added };
+    failed += fresh.length - written.length;
   }
-  return { status: 'done', added, skipped, notes: manifest.notes ?? null };
+  return { status: 'done', added, skipped, failed, notes: manifest.notes ?? null };
 }
