@@ -2,6 +2,10 @@
 
 import { Sparkles, Loader2 } from 'lucide-react';
 import { ProviderToggle, ModelSelector } from '@/components/ai/AIControls';
+import { UsePhoneFiles } from '@/components/documents/UsePhoneFiles';
+import type { DocType } from '@/types/documents';
+
+const INVOICE_TYPES: readonly DocType[] = ['invoice'];
 
 interface BillCheckData {
   billNo: string;
@@ -15,9 +19,11 @@ interface Props {
   isProcessing: boolean;
   progress: string;
   onFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  /** A phone file picked with Use phone files: the same path as the file input. */
+  onPhoneFile: (file: File) => void;
 }
 
-export function BillCheckUploadPanel({ bc, onBillCheckChange, isProcessing, progress, onFileUpload }: Props) {
+export function BillCheckUploadPanel({ bc, onBillCheckChange, isProcessing, progress, onFileUpload, onPhoneFile }: Props) {
   return (
     <div
       className="rounded-2xl overflow-hidden bg-card border border-border"
@@ -94,6 +100,7 @@ export function BillCheckUploadPanel({ bc, onBillCheckChange, isProcessing, prog
           </div>
         </label>
         <div className="flex items-center gap-2 mt-3">
+          <UsePhoneFiles types={INVOICE_TYPES} disabled={isProcessing} onPick={(file) => onPhoneFile(file)} />
           <ProviderToggle />
           <ModelSelector />
         </div>

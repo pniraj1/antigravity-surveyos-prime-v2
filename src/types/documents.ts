@@ -137,6 +137,11 @@ const TAG_TO_DOC_TYPE: Record<PhotoTag, DocType> = {
   damage: 'damagePhotos',
 };
 
+/** Photo DocType → its PhotoTag; the inverse of TAG_TO_DOC_TYPE. */
+export const DOC_TYPE_TO_TAG: Readonly<Partial<Record<DocType, PhotoTag>>> = Object.fromEntries(
+  Object.entries(TAG_TO_DOC_TYPE).map(([tag, type]) => [type, tag]),
+);
+
 export function tagToDocType(tag: PhotoTag | undefined): DocType {
   return TAG_TO_DOC_TYPE[tag ?? 'damage'];
 }

@@ -23,13 +23,17 @@ import { needsReview } from '@/lib/ai/needs-review';
 import { DocumentReviewSheet } from '@/components/documents/DocumentReviewSheet';
 import type { EstimateApplyMode } from '@/stores/slices/aiDataSlice';
 import { saveDocuments } from '@/lib/documents/sink';
+import { UsePhoneFiles } from '@/components/documents/UsePhoneFiles';
+import type { DocType } from '@/types/documents';
+
+const ESTIMATE_TYPES: readonly DocType[] = ['estimate', 'supplementaryEstimate'];
 
 export function AssessmentTab() {
   const { currentClaim, setDepreciationType } = useClaimStore();
   const [showEvidence, setShowEvidence] = useState(false);
   const [showSummary, setShowSummary] = useState(true);
   // Open only when there is something to decide (multi-page PDF); see needsReview.
-  const [reviewSheet, setReviewSheet] = useState<{ file: File; mode: EstimateApplyMode } | null>(null);
+  const [reviewSheet, setReviewSheet] = useState<{ file: File; mode: EstimateApplyMode; inFolder: boolean } | null>(null);
   const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview, reScanWithFeedback, hasFile, reScanLatest, smartFix, reviewProgress } = useAIExtraction();
   const { confirmEstimateMode, estimateModeDialog } = useEstimateModePrompt();
   const { profile } = useProfileStore();
@@ -37,7 +41,7 @@ export function AssessmentTab() {
 
   // Everything that happens once the surveyor has decided which file/pages go
   // to the AI: evidence blob, extraction, optional Drive upload.
-  const startEstimate = async (file: File, mode: EstimateApplyMode) => {
+  const startEstimate = async (file: File, mode: EstimateApplyMode, inFolder: boolean) => {
     // Store blob URL for the Evidence Viewer to display the file natively
     if (currentClaim?.id) {
       storeBlobUrl(currentClaim.id, 'estimate', file);
@@ -52,7 +56,7 @@ export function AssessmentTab() {
     }
 
     triggerExtraction('estimate', file, undefined, undefined, mode);
-    void saveDocuments('estimate', [{ blob: file, name: file.name }], 'upload');
+    if (!inFolder) void saveDocuments('estimate', [{ blob: file, name: file.name }], 'upload');
 
     if (currentClaim?.id && profile.autoUploadDrive !== false) {
       const claimId = currentClaim.id;
@@ -64,11 +68,14 @@ export function AssessmentTab() {
     }
   };
 
-  const handleEstimateUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEstimateUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
-    if (!file) return;
+    if (file) void processEstimateFile(file);
+  };
 
+  /** `inFolder`: the file came from the claim folder (a phone file), so it is not saved there again. */
+  const processEstimateFile = async (file: File, inFolder = false) => {
     // Asked BEFORE extraction: a wrong file, or a surveyor who changes their
     // mind, then costs nothing. Resolves straight to 'replace' on an empty
     // sheet — nothing to lose, so nothing to ask.
@@ -76,10 +83,10 @@ export function AssessmentTab() {
     if (mode === null) return;
 
     if (await needsReview([file])) {
-      setReviewSheet({ file, mode });
+      setReviewSheet({ file, mode, inFolder });
       return;
     }
-    await startEstimate(file, mode);
+    await startEstimate(file, mode, inFolder);
   };
 
   const evidenceImages: string[] = [];
@@ -97,9 +104,9 @@ export function AssessmentTab() {
           files={[reviewSheet.file]}
           onCancel={() => setReviewSheet(null)}
           onConfirm={(_all, forAI) => {
-            const { mode } = reviewSheet;
+            const { mode, inFolder } = reviewSheet;
             setReviewSheet(null);
-            if (forAI[0]) void startEstimate(forAI[0], mode);
+            if (forAI[0]) void startEstimate(forAI[0], mode, inFolder);
           }}
         />
       )}
@@ -140,6 +147,8 @@ export function AssessmentTab() {
                 Upload Estimate
               </Button>
             </div>
+
+            <UsePhoneFiles types={ESTIMATE_TYPES} className="h-12" disabled={isProcessing} onPick={(file) => void processEstimateFile(file, true)} />
 
             <Button
               variant={showEvidence ? 'secondary' : 'outline'}

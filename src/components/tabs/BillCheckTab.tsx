@@ -143,10 +143,13 @@ export function BillCheckTab() {
   };
   const blockingFlags = flags.filter(f => f.blocking);
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
-    if (!file) return;
+    if (file) void processBillFile(file);
+  };
+
+  const processBillFile = async (file: File) => {
     if (await needsReview([file])) setReviewFile(file);
     else triggerExtraction('final-bill', file);
   };
@@ -198,6 +201,7 @@ export function BillCheckTab() {
               isProcessing={isProcessing}
               progress={progress}
               onFileUpload={handleFileUpload}
+              onPhoneFile={processBillFile}
             />
 
             <BillCheckAttentionBanner
