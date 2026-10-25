@@ -7,12 +7,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { useClaimStore } from '@/stores/claim-store';
 import { importScanZip } from '@/lib/scan-import/import';
 import { planNotes, isEmptyNotesPlan, type NotesPlan } from '@/lib/scan-import/notes';
-import { pickDriveZip } from '@/lib/scan-import/picker';
+import { pickDriveZip, DriveDownloadError } from '@/lib/scan-import/picker';
 import { PhoneNotesDialog } from './PhoneNotesDialog';
 
 interface Props {
   /** The import found no claim folder: open the folder connect. */
   onNeedsFolder: () => void;
+  /** The folder lost its permission this session: "Allow access" (must run from a click). */
+  onAllowAccess: () => void;
 }
 
 interface VehicleAsk { zip: string; claim: string; resolve: (ok: boolean) => void }
@@ -20,7 +22,7 @@ interface VehicleAsk { zip: string; claim: string; resolve: (ok: boolean) => voi
 const msg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 /** "Bring phone scans": a SurveyOS Scan export zip from Google Drive or this computer. No AI calls. */
-export function BringPhoneScans({ onNeedsFolder }: Props) {
+export function BringPhoneScans({ onNeedsFolder, onAllowAccess }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [menu, setMenu] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -47,6 +49,10 @@ export function BringPhoneScans({ onNeedsFolder }: Props) {
       if (r.status === 'needs-folder') {
         toast.error('Connect the claim folder first, then bring the phone scans again.');
         onNeedsFolder();
+      } else if (r.status === 'needs-permission') {
+        toast.error('Click Allow access on the folder line, then bring the phone scans again.', {
+          action: { label: 'Allow access', onClick: onAllowAccess },
+        });
       } else if (r.status === 'claim-changed') {
         toast.warning(`Another claim was opened, so the import stopped. Added ${r.added}.`);
       } else if (r.status === 'done') {
@@ -68,6 +74,7 @@ export function BringPhoneScans({ onNeedsFolder }: Props) {
       blob = await pickDriveZip();
     } catch (e) {
       setBusy(false);
+      if (e instanceof DriveDownloadError) { toast.error(e.message); return; }
       // Picker API off, not configured, or sign-in refused: the local chooser always works.
       toast.error(`Google Drive picker unavailable (${msg(e)}). Choose the zip from this computer instead.`);
       fileRef.current?.click();

@@ -61,7 +61,10 @@ export function PhoneNotesDialog({ plan, claimId, onClose }: Props) {
                   checked={picks[c.key] !== false}
                   onChange={(e) => pick(c.key, e.target.checked)}
                 />
-                <span><span className="font-medium">{c.label}:</span> {show(c, c.phone)}</span>
+                <span>
+                  <span className="font-medium">{c.label}:</span> {show(c, c.phone)}
+                  {c.prime && <span className="text-muted-foreground"> (replaces Prime: {show(c, c.prime)})</span>}
+                </span>
               </label>
             ))}
           </section>

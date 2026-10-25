@@ -43,7 +43,13 @@ export interface FoundManifest {
 
 const NOT_SCAN = 'Not a SurveyOS Scan export';
 
-export async function findManifest(files: Map<string, Blob>): Promise<FoundManifest> {
+/**
+ * Finds the Scan manifest. A Home-screen share holds one `<folder>/_surveyos-scan.json` per claim:
+ * the one whose vehicle matches `claimVehicle` is used; a single manifest is used as-is (the caller
+ * runs the mismatch confirm); several with no match are refused.
+ */
+export async function findManifest(files: Map<string, Blob>, claimVehicle = ''): Promise<FoundManifest> {
+  const found: FoundManifest[] = [];
   for (const [path, blob] of files) {
     const parts = path.split('/');
     if (parts[parts.length - 1] !== MANIFEST_NAME || parts.length > 2) continue;
@@ -56,9 +62,14 @@ export async function findManifest(files: Map<string, Blob>): Promise<FoundManif
     if (!manifest || manifest.app !== 'surveyos-scan' || !Array.isArray(manifest.files)) {
       throw new Error(NOT_SCAN);
     }
-    return { root: parts.length === 2 ? `${parts[0]}/` : '', manifest };
+    found.push({ root: parts.length === 2 ? `${parts[0]}/` : '', manifest });
   }
-  throw new Error(NOT_SCAN);
+  if (found.length === 0) throw new Error(NOT_SCAN);
+  if (found.length === 1) return found[0];
+  const match = found.find((f) => sameVehicle(f.manifest.vehicle, claimVehicle));
+  if (match) return match;
+  const vehicles = found.map((f) => f.manifest.vehicle || '(no vehicle)').join(', ');
+  throw new Error(`This zip holds ${found.length} claims (${vehicles}); none match this claim's vehicle.`);
 }
 
 const norm = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, '');

@@ -13,10 +13,12 @@ const state = vi.hoisted(() => ({
   saves: [] as Array<{ type: string; names: string[]; source: string }>,
   mimes: [] as string[],
   failType: '' as string,
+  perm: '' as string, // '' = handle without queryPermission (older implementations)
 }));
 
 vi.mock('@/stores/claim-store', () => ({ useClaimStore: { getState: () => ({ currentClaim: state.claim }) } }));
-vi.mock('@/lib/local-sync/directory-handle', () => ({ getStoredRootHandle: async () => (state.folder ? {} : null) }));
+vi.mock('@/lib/local-sync/directory-handle', () => ({ getStoredRootHandle: async () =>
+  (state.folder ? (state.perm ? { queryPermission: async () => state.perm } : {}) : null) }));
 vi.mock('@/lib/documents/folder', () => ({
   readDocument: async (_c: ClaimData, d: ClaimDocument) => state.bytes.get(d.id)!,
 }));
@@ -63,7 +65,13 @@ beforeEach(() => {
   state.saves = [];
   state.mimes = [];
   state.failType = '';
+  state.perm = '';
 });
+const manifestEntry = (folder: string, vehicle: string, files: Array<{ path: string; type: string; data: string }>): FixtureEntry[] => [
+  ...files.map((f) => ({ name: `${folder}/${f.path}`, data: f.data })),
+  { name: `${folder}/_surveyos-scan.json`, data: JSON.stringify({ app: 'surveyos-scan', v: 1, vehicle, insurer: '', claimNo: null,
+    exportedAt: 't', files: files.map((f) => ({ path: f.path, type: f.type, pages: [], sha256: sha(f.data) })) }) },
+];
 
 describe('importScanZip', () => {
   it('requiresFolder', async () => {
@@ -71,6 +79,47 @@ describe('importScanZip', () => {
     const r = await importScanZip(scanZip([{ path: 'RC Book.pdf', type: 'rc', data: 'rc' }]), { confirmVehicle: yes });
     expect(r).toEqual({ status: 'needs-folder' });
     expect(state.saves).toEqual([]);
+  });
+
+  it('permissionNotGrantedWritesNothing', async () => {
+    state.perm = 'prompt';
+    const r = await importScanZip(scanZip([{ path: 'RC Book.pdf', type: 'rc', data: 'rc' }]), { confirmVehicle: yes });
+    expect(r).toEqual({ status: 'needs-permission' });
+    expect(state.saves).toEqual([]);
+    state.perm = 'granted';
+    expect(await importScanZip(scanZip([{ path: 'RC Book.pdf', type: 'rc', data: 'rc' }]), { confirmVehicle: yes })).toMatchObject({ added: 1 });
+  });
+
+  it('multiClaimZipPicksMatchingVehicle', async () => {
+    const zip = buildZip([
+      ...manifestEntry('A', 'KA01ZZ9999', [{ path: 'RC Book.pdf', type: 'rc', data: 'wrong rc' }]),
+      ...manifestEntry('B', 'MH12AB1234', [{ path: 'RC Book.pdf', type: 'rc', data: 'right rc' }]),
+    ]);
+    const confirmVehicle = vi.fn(yes);
+    expect(await importScanZip(zip, { confirmVehicle })).toMatchObject({ status: 'done', added: 1 });
+    expect(confirmVehicle).not.toHaveBeenCalled();
+    expect(await Object.values(state.claim!.documents!).map((d) => state.bytes.get(d.id)!)[0].text()).toBe('right rc');
+  });
+
+  it('multiClaimZipWithNoMatchIsRefused', async () => {
+    const zip = buildZip([
+      ...manifestEntry('A', 'KA01ZZ9999', [{ path: 'RC Book.pdf', type: 'rc', data: 'a' }]),
+      ...manifestEntry('B', 'MH14CD5678', [{ path: 'RC Book.pdf', type: 'rc', data: 'b' }]),
+    ]);
+    const confirmVehicle = vi.fn(yes);
+    await expect(importScanZip(zip, { confirmVehicle }))
+      .rejects.toThrow("This zip holds 2 claims (KA01ZZ9999, MH14CD5678); none match this claim's vehicle.");
+    expect(confirmVehicle).not.toHaveBeenCalled();
+    expect(state.saves).toEqual([]);
+  });
+
+  it('reexportWithAddedPageKeepsEarlierPages', async () => {
+    const p = (n: number) => ({ path: `Chassis/Chassis ${n}.jpg`, type: 'chassisPhoto', data: `chassis ${n}` });
+    await importScanZip(scanZip([p(1), p(2)]), { confirmVehicle: yes });
+    state.saves = [];
+    // Single-file type: the write rules replace the whole set, so all three must be written together.
+    expect(await importScanZip(scanZip([p(1), p(2), p(3)]), { confirmVehicle: yes })).toMatchObject({ added: 3, skipped: 0 });
+    expect(state.saves).toEqual([{ type: 'chassisPhoto', names: ['Chassis 1.jpg', 'Chassis 2.jpg', 'Chassis 3.jpg'], source: 'scan' }]);
   });
 
   it('mismatchAbortsWhenDeclined', async () => {

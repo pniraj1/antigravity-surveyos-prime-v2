@@ -28,6 +28,9 @@ type PickerWindow = Window & {
   google?: { picker?: PickerApi };
 };
 
+/** The pick worked but the download did not: not a reason to fall back to the local chooser. */
+export class DriveDownloadError extends Error {}
+
 const API_SRC = 'https://apis.google.com/js/api.js';
 let loading: Promise<PickerApi> | null = null;
 
@@ -84,6 +87,6 @@ export async function pickDriveZip(): Promise<Blob | null> {
   const res = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?alt=media`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) throw new Error(`Drive download failed (${res.status}).`);
+  if (!res.ok) throw new DriveDownloadError(`Could not download the zip from Drive (${res.status}).`);
   return res.blob();
 }

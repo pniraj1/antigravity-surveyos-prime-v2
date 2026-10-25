@@ -40,6 +40,10 @@ Owner wanted SurveyOS Scan's sorted documents and spot/valuation notes to reach 
   12. **From Google Drive** (after the Picker API is enabled): the chooser lists zips only. Pick the zip shared from Scan; it imports the same as the local file. Close the chooser: nothing happens.
   13. Before the Picker API is enabled: From Google Drive shows the toast (or Google's own error in the picker), and the app does not break.
   14. A non-Scan zip: a plain error toast, nothing written.
+  15. After a browser restart (folder permission back to "ask"): import shows ONE toast with an Allow access button. Click it, then import again; files land.
+  16. A Home-screen share of several claims: importing into one claim takes only that vehicle's files. Into a claim matching none: "This zip holds N claims (…); none match this claim's vehicle."
+  17. Re-export after adding a chassis photo (or an Estimate page): all pages stay in Phone files, none disappear.
+  18. A pill default (e.g. Drivable yes) under "Will fill" shows "(replaces Prime: yes)".
 - [ ] Phone checks for Scan (controller): Share and Save to folder still work without Drive.
 - [ ] "New phone file — click to read" never shows yet: no per-card read time is stored (controller's ruling, Task 5).
 - [ ] Follow-ups: delete the unused `src/hooks/useClaimDriveFiles.ts`; decide whether to delete `src/lib/documents/kit/*` (its UI left the tab).

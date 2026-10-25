@@ -5,7 +5,7 @@
  */
 import type { ClaimData } from '@/types/claim';
 import type { ClaimDocument, DocType } from '@/types/documents';
-import { DOC_TYPE_LABEL } from '@/types/documents';
+import { DOC_TYPE_LABEL, MULTI_FILE_TYPES } from '@/types/documents';
 import { useClaimStore } from '@/stores/claim-store';
 import { getStoredRootHandle } from '@/lib/local-sync/directory-handle';
 import { saveDocuments } from '@/lib/documents/sink';
@@ -17,6 +17,8 @@ import { findManifest, sameVehicle } from './manifest';
 export type ImportResult =
   | { status: 'cancelled' }
   | { status: 'needs-folder' }
+  /** A folder is stored but this session has no write access yet ("Allow access" needs a click). */
+  | { status: 'needs-permission' }
   /** The surveyor opened another claim mid-import; types saved before the switch stay saved. */
   | { status: 'claim-changed'; added: number }
   /** `failed`: files whose save failed (the sink already toasted why); re-importing retries them safely. */
@@ -64,13 +66,19 @@ export async function importScanZip(blob: Blob, { confirmVehicle }: ImportOption
   const claim = useClaimStore.getState().currentClaim;
   if (!claim) throw new Error('Open the claim first, then bring its phone scans.');
   const zipFiles = await readZip(blob);
-  const { root, manifest } = await findManifest(zipFiles);
-
   const claimVehicle = claim.vehicle?.registrationNumber ?? '';
+  const { root, manifest } = await findManifest(zipFiles, claimVehicle);
+
   if (!sameVehicle(manifest.vehicle, claimVehicle) && !(await confirmVehicle(manifest.vehicle, claimVehicle))) {
     return { status: 'cancelled' };
   }
-  if (!(await getStoredRootHandle())) return { status: 'needs-folder' };
+  const rootHandle = await getStoredRootHandle();
+  if (!rootHandle) return { status: 'needs-folder' };
+  // requestPermission needs a click, which is long gone after reading the zip: ask the caller to send the
+  // surveyor to "Allow access" instead of letting every type's write fail with its own toast.
+  if (rootHandle.queryPermission && (await rootHandle.queryPermission({ mode: 'readwrite' })) !== 'granted') {
+    return { status: 'needs-permission' };
+  }
 
   // Every listed file must be in the zip before anything is written.
   const byType = new Map<DocType, Array<{ blob: Blob; name: string; sha: string }>>();
@@ -97,14 +105,17 @@ export async function importScanZip(blob: Blob, { confirmVehicle }: ImportOption
       seen.add(f.sha); // the same bytes twice in one zip land once
       return true;
     });
-    skipped += files.length - fresh.length;
-    if (fresh.length === 0) continue;
+    if (fresh.length === 0) { skipped += files.length; continue; }
+    // A single-file type is replaced as a whole by the write rules, so when anything is new write the zip's
+    // full set for it (de-duped within the zip); writing only the new page would drop the earlier ones from the list.
+    const toWrite = MULTI_FILE_TYPES.has(type) ? fresh : files.filter((f, i) => files.findIndex((g) => g.sha === f.sha) === i);
+    skipped += files.length - toWrite.length;
     // saveDocuments places multi-file types (photos) in their subfolder, as every other save does.
     // claim.id: the sink re-checks at its turn in the queue, so a switch while waiting writes nothing.
-    const written: ClaimDocument[] = await saveDocuments(type, fresh.map(({ blob: b, name }) => ({ blob: b, name })), 'scan', claim.id);
+    const written: ClaimDocument[] = await saveDocuments(type, toWrite.map(({ blob: b, name }) => ({ blob: b, name })), 'scan', claim.id);
     added += written.length;
     if (written.length === 0 && !stillHere()) return { status: 'claim-changed', added };
-    failed += fresh.length - written.length;
+    failed += toWrite.length - written.length;
   }
   return { status: 'done', added, skipped, failed, notes: manifest.notes ?? null };
 }
