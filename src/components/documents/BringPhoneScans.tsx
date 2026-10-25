@@ -81,7 +81,7 @@ export function BringPhoneScans({ onNeedsFolder }: Props) {
 
   const item = 'block w-full px-4 py-2 text-left text-sm hover:bg-muted';
   return (
-    <div className="relative">
+    <div className="relative" onKeyDown={(e) => { if (e.key === 'Escape') setMenu(false); }}>
       <button
         type="button"
         disabled={busy}

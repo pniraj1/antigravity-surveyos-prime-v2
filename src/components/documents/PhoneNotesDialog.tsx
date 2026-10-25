@@ -33,8 +33,10 @@ export function PhoneNotesDialog({ plan, claimId, onClose }: Props) {
       onClose();
       return;
     }
-    updateClaim(applyNotes(currentClaim, plan, picks));
-    toast.success('Phone notes applied.');
+    const updates = applyNotes(currentClaim, plan, picks);
+    updateClaim(updates);
+    // Only scanImport means every item was kept or unticked: the choices are saved, no field changed.
+    toast.success(Object.keys(updates).length > 1 ? 'Phone notes applied.' : 'Phone notes saved. No field changed.');
     onClose();
   };
 

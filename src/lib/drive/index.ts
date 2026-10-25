@@ -83,6 +83,7 @@ export function silentlyRestoreDriveToken(): Promise<boolean> {
           'https://www.googleapis.com/auth/drive.file',
           'https://www.googleapis.com/auth/userinfo.email',
         ].join(' '),
+        error_callback: () => resolve(false), // non-OAuth failure: settle instead of hanging
         callback: async (response: any) => {
           if (response.error) {
             // Silent auth failed — do NOT disconnect. The token in localStorage
@@ -130,6 +131,14 @@ export function linkGoogleDrive(): Promise<boolean> {
           'https://www.googleapis.com/auth/drive.file',
           'https://www.googleapis.com/auth/userinfo.email',
         ].join(' '),
+        // Popup closed or blocked fires only this; without it the promise never settles.
+        error_callback: (err: { type?: string }) => {
+          reject(new Error(
+            err?.type === 'popup_closed' ? 'Google sign-in was closed.'
+              : err?.type === 'popup_failed_to_open' ? 'Google sign-in popup was blocked. Allow popups and try again.'
+                : 'Google sign-in did not complete.',
+          ));
+        },
         callback: async (response: any) => {
           if (response.error) {
             useUIStore.getState().setDriveConnected(false);

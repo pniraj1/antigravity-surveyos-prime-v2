@@ -333,7 +333,8 @@ export function DocumentsTab() {
       <div className="px-6 lg:px-12 py-8 max-w-5xl mx-auto space-y-10">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <FolderLine supported={docs.supported} folder={docs.folder} onConnect={docs.connect} onReconnect={docs.reconnect} connectRequest={folderAsk} />
-          <BringPhoneScans onNeedsFolder={() => setFolderAsk((n) => n + 1)} />
+          {/* Import needs a claim folder, which needs the File System Access API. */}
+          {docs.supported && <BringPhoneScans onNeedsFolder={() => setFolderAsk((n) => n + 1)} />}
         </div>
         {DOC_GROUPS.map((group) => (
           <div key={group.title}>

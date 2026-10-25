@@ -22,7 +22,9 @@ interface PickerBuilder {
   build(): { setVisible(v: boolean): void };
 }
 type PickerWindow = Window & {
-  gapi?: { load(name: string, cfg: { callback: () => void; onerror: () => void }): void };
+  gapi?: {
+    load(name: string, cfg: { callback: () => void; onerror: () => void; timeout: number; ontimeout: () => void }): void;
+  };
   google?: { picker?: PickerApi };
 };
 
@@ -37,6 +39,8 @@ function loadPicker(): Promise<PickerApi> {
     const loadModule = () => w.gapi!.load('picker', {
       callback: () => (w.google?.picker ? resolve(w.google.picker) : fail()),
       onerror: fail,
+      timeout: 15_000, // a filtered network can leave gapi.load silent
+      ontimeout: fail,
     });
     if (w.gapi) return loadModule();
     const s = document.createElement('script');
