@@ -22,3 +22,21 @@ export function phoneFileFor(claim: Pick<ClaimData, 'documents'>, cardId: string
   const hits = claimDocuments(claim).filter((d) => d.type === type && d.source === 'scan');
   return hits[hits.length - 1] ?? null; // claimDocuments sorts oldest first
 }
+
+/** What a card says about its phone file: unread card → 'fresh'; read card with a phone file newer than the read → 'newer'. */
+export function cardPhoneState(phone: ClaimDocument | null, isRead: boolean, readAt?: string): 'fresh' | 'newer' | null {
+  if (!phone) return null;
+  if (!isRead) return 'fresh';
+  // ponytail: no read time is stored on the claim yet, so a read card shows its plain read state; pass `readAt` once one is.
+  return readAt && phone.addedAt > readAt ? 'newer' : null;
+}
+
+/** `'scan'` documents with no card, grouped by type in first-seen order (oldest first): the Phone files list. */
+export function phoneListGroups(claim: Pick<ClaimData, 'documents'>): Array<{ type: DocType; docs: ClaimDocument[] }> {
+  const groups = new Map<DocType, ClaimDocument[]>();
+  for (const d of claimDocuments(claim)) {
+    if (d.source !== 'scan' || cardIdFor(d.type)) continue;
+    groups.set(d.type, [...(groups.get(d.type) ?? []), d]);
+  }
+  return [...groups].map(([type, docs]) => ({ type, docs }));
+}

@@ -9,23 +9,20 @@ import { FIELD_KEY_TO_DOC_TYPE } from '@/types/documents';
 import { useProfileStore } from '@/stores/profile-store';
 import { uploadWithDuplicateCheck, type DuplicateAction, type ExistingFile } from '@/lib/drive/upload-with-check';
 import { DuplicateUploadDialog } from '@/components/dialogs/DuplicateUploadDialog';
-import { useClaimDriveFiles } from '@/hooks/useClaimDriveFiles';
 import { useSaveToCloudPrompt } from '@/hooks/useSaveToCloudPrompt';
-import { getDriveToken } from '@/lib/drive';
 import {
   FileText, Sparkles, Loader2, CheckCircle2, Car, CreditCard,
   FileCheck, ScrollText, Receipt, Shield, AlertTriangle,
-  Upload, Truck, Zap, Database, RefreshCw, ExternalLink,
-  ChevronDown, ChevronRight, HardDrive, Camera,
+  Upload, Truck, Zap, Database, Camera, Smartphone,
 } from 'lucide-react';
 import { SyncDrivePicker } from '@/components/sync-bridge/SyncDrivePicker';
 import { DocumentReviewSheet } from '@/components/documents/DocumentReviewSheet';
 import { useClaimDocuments } from '@/lib/documents/useClaimDocuments';
-import { ClaimFolderCard } from '@/components/documents/ClaimFolderCard';
-import { ClaimDocumentsList } from '@/components/documents/ClaimDocumentsList';
-import { PageLabelGrid } from '@/components/documents/PageLabelGrid';
-import { PortalChecklist } from '@/components/documents/PortalChecklist';
-import { useDocumentKit } from '@/lib/documents/kit/useDocumentKit';
+import { FolderLine } from '@/components/documents/FolderLine';
+import { PhoneFilesList } from '@/components/documents/PhoneFilesList';
+import { readDocument } from '@/lib/documents/folder';
+import { phoneFileFor, cardPhoneState } from '@/lib/scan-import/cards';
+import type { ClaimDocument } from '@/types/documents';
 import { TelegramIcon } from '@/components/icons/TelegramIcon';
 import { ProviderHealthBadge, ModelSelector, DocModeToggle, ProviderToggle } from '@/components/ai/AIControls';
 import { ReconciliationDialog } from './reconciliation/ReconciliationDialog';
@@ -76,7 +73,6 @@ const DOC_GROUPS = [
 // ─── Component ───────────────────────────────────────────────────────────────
 export function DocumentsTab() {
   const currentClaim = useClaimStore(s => s.currentClaim);
-  const currentClaimId = useClaimStore(s => s.currentClaimId);
   const batchReconcile = useClaimStore(s => s.batchReconcile);
   const setReconciliationConflictCount = useClaimStore(s => s.setReconciliationConflictCount);
   const extractedDocs = currentClaim?.extractedData ?? {};
@@ -86,11 +82,9 @@ export function DocumentsTab() {
   const [isReconOpen, setIsReconOpen] = useState(false);
   const [autoFilledFields, setAutoFilledFields] = useState<ReconciliationField[]>([]);
   const prevClaimIdRef = useRef<string | null>(null);
-  const { files: driveFiles, loading: driveFilesLoading, error: driveFilesError, refresh: refreshDriveFiles } = useClaimDriveFiles(currentClaimId);
-  const [driveFilesExpanded, setDriveFilesExpanded] = useState(false);
   const [syncPicker, setSyncPicker] = useState<{ key: string; label: string } | null>(null);
-  // Review-and-crop gate shown between file-select and AI send.
-  const [reviewSheet, setReviewSheet] = useState<{ key: string; label?: string; files: File[] } | null>(null);
+  // Review-and-crop gate shown between file-select and AI send. `phone`: the file came from the claim folder (Scan import).
+  const [reviewSheet, setReviewSheet] = useState<{ key: string; label?: string; files: File[]; phone?: boolean } | null>(null);
   const syncConnected = !!profile.syncBridgeToken;
   const { confirmSaveToCloud, saveToCloudDialog } = useSaveToCloudPrompt();
   const [dupeDialog, setDupeDialog] = useState<{
@@ -136,8 +130,6 @@ export function DocumentsTab() {
   }, [conflicts.length, isReconOpen]);
 
   const docs = useClaimDocuments();
-  // Mounted once here: it runs the labelling effects. The Pages, checklist and build panels all take this `kit`.
-  const kit = useDocumentKit();
 
   if (!currentClaim) return null;
   const evidenceImages: string[] = [];
@@ -145,11 +137,12 @@ export function DocumentsTab() {
   // Source-agnostic pipeline: register blobs + trigger AI + optional Drive upload.
   // Used by both local file input (handleFile) and the SurveyOS Sync picker.
   // Handles multi-file slots (e.g. RC front + back).
-  const processFiles = (files: File[], key: string, aiFiles?: File[]) => {
+  const processFiles = (files: File[], key: string, aiFiles?: File[], inFolder = false) => {
     if (files.length === 0) return;
 
     const docType = FIELD_KEY_TO_DOC_TYPE[key] ?? 'other';
-    void saveDocuments(docType, files.map((f) => ({ blob: f, name: f.name })), 'upload');
+    // An uncropped phone file is already in the claim folder; saving it again would only leave an identical "(old)" copy.
+    if (!inFolder) void saveDocuments(docType, files.map((f) => ({ blob: f, name: f.name })), 'upload');
 
     if (currentClaim?.id) {
       storeFiles(currentClaim.id, key, files);
@@ -193,6 +186,14 @@ export function DocumentsTab() {
     if (files.length === 0) return;
     // Open the review-and-crop gate; processing happens on confirm.
     setReviewSheet({ key, files });
+  };
+
+  const openPhoneFile = async (key: string, label: string, phoneDoc: ClaimDocument) => {
+    try {
+      setReviewSheet({ key, label, files: [await readDocument(currentClaim, phoneDoc)], phone: true });
+    } catch (err) {
+      toast.error(`Could not read the phone file ${phoneDoc.relPath} (${err instanceof Error ? err.message : String(err)})`);
+    }
   };
 
   const scannedCount = Object.keys(extractedDocs).length;
@@ -324,12 +325,7 @@ export function DocumentsTab() {
 
       {/* ── Document Groups ──────────────────────────────── */}
       <div className="px-6 lg:px-12 py-8 max-w-5xl mx-auto space-y-10">
-        <div className="space-y-3">
-          <ClaimFolderCard supported={docs.supported} folder={docs.folder} onConnect={docs.connect} onReconnect={docs.reconnect} />
-          <PortalChecklist claim={currentClaim} kit={kit} />
-          <ClaimDocumentsList documents={docs.documents} connected={!!docs.folder} onAdd={docs.addFiles} onScan={docs.scan} scanning={docs.scanning} onOpen={docs.open} onRemove={docs.remove} />
-          <PageLabelGrid claim={currentClaim} documents={docs.documents.filter((d) => d.here)} kit={kit} />
-        </div>
+        <FolderLine supported={docs.supported} folder={docs.folder} onConnect={docs.connect} onReconnect={docs.reconnect} />
         {DOC_GROUPS.map((group) => (
           <div key={group.title}>
             {/* Group header */}
@@ -351,6 +347,8 @@ export function DocumentsTab() {
                 const Icon = doc.icon;
                 const isScanned = !!extractedDocs[doc.id];
                 const isActive = isProcessing;
+                const phoneDoc = phoneFileFor(currentClaim, doc.id);
+                const phoneState = cardPhoneState(phoneDoc, isScanned);
 
                 return (
                   <label
@@ -458,20 +456,37 @@ export function DocumentsTab() {
                       {doc.subLabel}
                     </div>
 
-                    {/* CTA */}
-                    <div
-                      className="flex items-center gap-2 text-[11px] font-medium mt-auto"
-                      style={{ color: isScanned ? doc.color : 'var(--color-neutral-400)' }}
-                    >
-                      <Sparkles size={11} />
-                      {isScanned ? 'Re-scan to update' : 'Click to scan with AI'}
-                    </div>
+                    {/* CTA — a phone file waiting to be read takes the line; it must not open the upload input */}
+                    {phoneDoc && phoneState ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          void openPhoneFile(doc.id, doc.label, phoneDoc);
+                        }}
+                        className="relative z-20 flex items-center gap-2 text-[11px] font-medium mt-auto text-left text-primary hover:underline"
+                      >
+                        <Smartphone size={11} />
+                        {phoneState === 'fresh' ? 'From phone — click to read' : 'New phone file — click to read'}
+                      </button>
+                    ) : (
+                      <div
+                        className="flex items-center gap-2 text-[11px] font-medium mt-auto"
+                        style={{ color: isScanned ? doc.color : 'var(--color-neutral-400)' }}
+                      >
+                        <Sparkles size={11} />
+                        {isScanned ? 'Re-scan to update' : 'Click to scan with AI'}
+                      </div>
+                    )}
                   </label>
                 );
               })}
             </div>
           </div>
         ))}
+
+        <PhoneFilesList onOpen={docs.open} />
 
         {/* ── Help Note ───────────────────────────────────── */}
         <div
@@ -485,77 +500,6 @@ export function DocumentsTab() {
           </div>
         </div>
       </div>
-
-      {/* ── Files on Drive ───────────────────────────────── */}
-        <div
-          className="rounded-2xl overflow-hidden mx-8 mb-6 lg:mx-12 bg-card border border-[var(--color-neutral-200)]"
-          style={{ boxShadow: '0 1px 3px rgba(13,27,42,0.04)' }}
-        >
-          {/* Header — click to expand/collapse */}
-          <button
-            onClick={() => setDriveFilesExpanded(prev => !prev)}
-            className="w-full flex items-center justify-between px-5 py-4 hover:bg-[var(--color-neutral-50)] transition-colors"
-          >
-            <div className="flex items-center gap-2.5">
-              <HardDrive size={16} className="text-primary" />
-              <span className="text-xs font-medium text-[var(--color-neutral-900)] uppercase tracking-wider">
-                Files on Drive
-              </span>
-              <span className="px-1.5 py-0.5 rounded-md bg-[var(--color-neutral-100)] text-[10px] font-medium text-[var(--color-neutral-400)]">
-                {driveFiles.length}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              {driveFilesLoading && <Loader2 size={14} className="animate-spin text-[var(--color-neutral-400)]" />}
-              <button
-                onClick={(e) => { e.stopPropagation(); refreshDriveFiles(); }}
-                className="p-1 rounded-lg hover:bg-[var(--color-neutral-100)] transition-colors"
-                title="Refresh file list"
-              >
-                <RefreshCw size={12} className="text-[var(--color-neutral-400)]" />
-              </button>
-              {driveFilesExpanded ? <ChevronDown size={14} className="text-[var(--color-neutral-400)]" /> : <ChevronRight size={14} className="text-[var(--color-neutral-400)]" />}
-            </div>
-          </button>
-
-          {/* Body */}
-          {driveFilesExpanded && (
-            <div className="border-t border-[var(--color-neutral-100)] px-5 py-3">
-              {driveFilesError && (
-                <p className="text-xs text-[var(--color-status-danger)] mb-2">{driveFilesError}</p>
-              )}
-              {driveFiles.length === 0 && !driveFilesLoading ? (
-                <p className="text-xs text-[var(--color-neutral-400)] py-2">
-                  {getDriveToken() ? 'No files uploaded yet.' : 'Connect Google Drive to see files.'}
-                </p>
-              ) : (
-                <div className="flex flex-col divide-y divide-[var(--color-neutral-100)]">
-                  {driveFiles.map((file) => (
-                    <div key={file.id} className="flex items-center justify-between py-2.5">
-                      <div className="flex items-center gap-2.5">
-                        <FileText size={14} className="text-[var(--color-neutral-400)] flex-shrink-0" />
-                        <span className="text-xs font-medium text-[var(--color-neutral-900)] truncate max-w-[200px]">
-                          {file.name}
-                        </span>
-                        <span className="text-[10px] text-[var(--color-neutral-200)]">
-                          {file.mimeType.split('/').pop()}
-                        </span>
-                      </div>
-                      <a
-                        href={`https://drive.google.com/file/d/${file.id}/view`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium text-primary hover:bg-[var(--color-status-warning-tint)] transition-colors"
-                      >
-                        Open <ExternalLink size={10} />
-                      </a>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
 
       {/* AI Review Dialog */}
       <AIReviewDialog
@@ -620,7 +564,8 @@ export function DocumentsTab() {
           files={reviewSheet.files}
           onCancel={() => setReviewSheet(null)}
           onConfirm={(allFiles, filesForAI) => {
-            processFiles(allFiles, reviewSheet.key, filesForAI);
+            const unchanged = allFiles.every((f) => reviewSheet.files.includes(f));
+            processFiles(allFiles, reviewSheet.key, filesForAI, !!reviewSheet.phone && unchanged);
             setReviewSheet(null);
           }}
         />
