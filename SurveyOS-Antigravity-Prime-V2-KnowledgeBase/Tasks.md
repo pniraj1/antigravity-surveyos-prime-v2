@@ -19,6 +19,12 @@
 
 ## In Progress
 
+- [ ] **Bring phone scans — enable Picker API + browser checks** (2026-10-25). Prime imports SurveyOS Scan zips (from Drive or this computer) with a vehicle check, a phone notes review and Phone files ticks. The Documents tab is cleaned up, and Scan no longer syncs to Drive. All on `main` in both repos, **NOT pushed, NOT deployed, not tried in a signed-in browser.**
+  - **Owner/controller one-time step:** enable the **Google Picker API** in `surveyos-v2-antigravity-in`. If the Firebase web key is API-restricted, add the Picker API to it, or set `NEXT_PUBLIC_GOOGLE_PICKER_API_KEY`. Until then, "From Google Drive" falls back to the local chooser.
+  - **Owner:** run checks 1–14 in `Sessions/2026-10-25-bring-phone-scans.md`.
+  - **Controller:** run the Scan phone checks.
+  - A future CSP must allow `apis.google.com`, `docs.google.com` and `www.googleapis.com`.
+
 - [ ] **Claim Details layout — live check** (2026-10-25) — regrouped by document with dates on the right, vehicle type switch, tax/overload/span fixes; commit ea2a9ed6, deployed to motorsurveyos-in 2026-10-25 10:18. **Owner: open one spot, one final and one valuation claim; flip the vehicle switch once; scan an RC and confirm fields fill.** Session log `Sessions/2026-10-25-claim-details-layout.md`.
 
 - [ ] **Surveyor feedback batch — live check** (2026-10-22) — date/time parsing, AI Review evidence viewer, select/unselect all, Rephrase with AI, page jump: all deployed to motorsurveyos-in 2026-10-22 15:54. **Owner: on one real claim, re-read the claim form → check accident date/time, press Rephrase on the cause, click a field in AI Review/Reconciliation and confirm it opens the right page.** Add more of Vikram's paragraphs to `EXAMPLES` in `src/lib/ai/rephrase-cause.ts` when available (3 so far). Session log `Sessions/2026-10-22-surveyor-feedback-batch.md`.

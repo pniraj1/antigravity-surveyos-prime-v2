@@ -2,6 +2,26 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-10-25 (Claude) — Bring phone scans (SurveyOS Scan → Prime)
+- feat(documents): **Bring phone scans** button: From Google Drive (Google Picker, existing `drive.file` token) or From this computer.
+  - A vehicle mismatch asks Import anyway / Cancel.
+  - The import needs a connected claim folder.
+  - Files are de-duped by content and saved as source `'scan'`.
+  - No AI calls.
+- feat(documents): **Phone notes** review with three parts:
+  - Will fill, ticked by default.
+  - Phone notes differ, with Keep Prime (default) / Use phone.
+  - Rows to add.
+  - Nothing is written until Apply. A re-import never asks again (`claim.scanImport.decided`), and `isInsurable` is never auto-filled.
+- feat(documents): cards show "From phone — click to read". New Phone files list with "Checked N of M" portal ticks.
+- refactor(documents): removed the Pages grid, Portal list, "Documents · N" and "Files on Drive". The claim folder is now one line.
+- Scan repo: Sync to Drive removed. Every import arrives as a zip. The handover doc is clarified.
+- Owner step: enable the Google Picker API in `surveyos-v2-antigravity-in`.
+- tests: `npm test` green, tsc clean.
+  - Prime commits 7611cc83..6ad6a0d7, plus the import entry commit.
+  - Scan commits b8b1248..0da6f79, plus the handover commit.
+  - Not pushed, not deployed, not tried in a signed-in browser. Session log `Sessions/2026-10-25-bring-phone-scans.md`.
+
 ## 2026-10-25 (Claude) — Claim Details regrouped by document, dates on the right
 - feat(claim): sections follow the source papers: Assignment, Policy & Insured, RC, Driving Licence, Permit & Fitness, Accident, At the Time of Accident, Survey & Workshop, Documents Obtained, Spot Findings; shared `DocSection` puts every date field in one right-hand column
 - feat(claim): Scan RC / DL / Policy buttons in their section headers (replace the three big tiles); sticky processing banner
