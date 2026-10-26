@@ -58,6 +58,8 @@ export interface ClaimSlice {
     h?: number,
     kind?: PhotoItem['kind'],
     driveName?: string,
+    /** Use phone files: the photo's portal tag and the claim-folder document it came from. */
+    extra?: Pick<PhotoItem, 'tag' | 'sourceDocId'>,
   ) => void;
   setPhotoTag: (index: number, tag: PhotoTag | undefined) => void;
   deletePhoto: (index: number) => void;
@@ -271,10 +273,16 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
     }));
   },
 
-  addPhoto: (dataUrl, name, w, h, kind = 'damage', driveName) => {
+  addPhoto: (dataUrl, name, w, h, kind = 'damage', driveName, extra) => {
     set((state: ClaimSlice) => {
       if (!state.currentClaim) return {};
-      const photo: PhotoItem = driveName ? { dataUrl, name, w, h, kind, driveName } : { dataUrl, name, w, h, kind };
+      // Only defined keys: an `undefined` field must never reach the saved claim.
+      const photo: PhotoItem = {
+        dataUrl, name, w, h, kind,
+        ...(driveName && { driveName }),
+        ...(extra?.tag && { tag: extra.tag }),
+        ...(extra?.sourceDocId && { sourceDocId: extra.sourceDocId }),
+      };
       return {
         currentClaim: {
           ...state.currentClaim,

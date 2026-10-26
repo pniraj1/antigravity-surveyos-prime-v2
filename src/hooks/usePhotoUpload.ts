@@ -9,6 +9,10 @@ import { PHOTO_FILE_PREFIX } from '@/lib/photos/document-annexure';
 import { compressImage } from '@/lib/photos/compress-image';
 import { saveDocuments } from '@/lib/documents/sink';
 import { useSaveToCloudPrompt } from '@/hooks/useSaveToCloudPrompt';
+import { photoNameOf } from '@/lib/scan-import/phone-files';
+import type { PhotoItem } from '@/types/assessment';
+
+export type PhotoMeta = Pick<PhotoItem, 'tag' | 'sourceDocId'>;
 
 /**
  * Compress, add to the claim, and (if the surveyor agrees) send to Drive.
@@ -19,9 +23,13 @@ export function usePhotoUpload() {
   const [isProcessing, setIsProcessing] = useState(false);
   const { confirmSaveToCloud, saveToCloudDialog } = useSaveToCloudPrompt();
 
-  const uploadPhotos = useCallback(async (input: FileList | File[]) => {
+  /** `meta[i]` goes with file i (Use phone files: tag and source document). Gallery / Browse passes none. */
+  const uploadPhotos = useCallback(async (input: FileList | File[], meta?: readonly PhotoMeta[]) => {
     // Copy synchronously: callers reset the <input> right after calling us.
-    const files = Array.from(input).filter((f) => f.type.startsWith('image/'));
+    const picked = Array.from(input)
+      .map((file, i) => ({ file, meta: meta?.[i] }))
+      .filter(({ file }) => file.type.startsWith('image/'));
+    const files = picked.map((p) => p.file);
     const claim = useClaimStore.getState().currentClaim;
     if (!claim || files.length === 0) return;
 
@@ -36,16 +44,17 @@ export function usePhotoUpload() {
       const saved: File[] = [];
       let failed = 0;
       for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+        const { file, meta: m } = picked[i];
         try {
           const { dataUrl, w, h } = await compressImage(file, 600, 1.0);
           // The surveyor may have opened another claim during the awaits.
           if (useClaimStore.getState().currentClaim?.id !== claim.id) break;
-          const name = file.name.split('.')[0].substring(0, 30);
+          const name = photoNameOf(file.name);
           // The index keeps names unique when a phone names every shot "image".
           const driveName = `${PHOTO_FILE_PREFIX}${Date.now()}_${i}_${name}.jpg`;
-          addPhoto(dataUrl, name, w, h, 'damage', saveToDrive ? driveName : undefined);
-          saved.push(file);
+          addPhoto(dataUrl, name, w, h, 'damage', saveToDrive ? driveName : undefined, m);
+          // A phone photo is already in the claim folder: don't write a second copy.
+          if (!m?.sourceDocId) saved.push(file);
           if (saveToDrive) {
             // uploadFileToDrive queues and toasts on failure itself.
             uploadFileToDrive(claim.id, driveName, file, label).catch(() => {});

@@ -18,6 +18,7 @@ import type { PhotoLayout, PhotoSheetOptions, PageOrientation } from '@/types/as
 import { DEFAULT_PHOTO_SHEET_OPTIONS } from '@/components/pdf/PhotoSheetDocument';
 import { DocumentAnnexureSection } from '@/components/tabs/photos/DocumentAnnexureSection';
 import { usePhotoUpload } from '@/hooks/usePhotoUpload';
+import { PhonePhotosDialog } from '@/components/photos/PhonePhotosDialog';
 import type { PhotoTag } from '@/types/documents';
 import dynamic from 'next/dynamic';
 
@@ -383,6 +384,7 @@ export function PhotosTab() {
                 >
                   {isProcessing ? 'Compressing…' : 'Gallery / Browse'}
                 </Label>
+                <PhonePhotosDialog onAdd={(files, meta) => void uploadPhotos(files, meta)} disabled={isProcessing} />
               </div>
               <input
                 id="photo-upload"

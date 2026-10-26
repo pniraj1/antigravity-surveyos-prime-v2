@@ -19,6 +19,9 @@
 
 ## In Progress
 
+- [ ] **Use phone files — browser checks** (2026-10-25). A **Use phone files** button picks imported phone (`'scan'`) files on Assessment → Upload Estimate, Bill Check → invoice, and the Photos tab (**Phone photos** dialog: grouped, Select all, nothing reaches the sheet without **Add to photo sheet**; already-added photos are disabled). On `main`, **NOT pushed, NOT deployed, not tried in a signed-in browser.**
+  - **Owner:** run the "Use phone files" checks U1–U12 in `Sessions/2026-10-25-bring-phone-scans.md`.
+
 - [ ] **Bring phone scans — enable Picker API + browser checks** (2026-10-25). Prime imports SurveyOS Scan zips (from Drive or this computer) with a vehicle check, a phone notes review and Phone files ticks. The Documents tab is cleaned up, and Scan no longer syncs to Drive. All on `main` in both repos, **NOT pushed, NOT deployed, not tried in a signed-in browser.**
   - **Owner/controller one-time step:** enable the **Google Picker API** in `surveyos-v2-antigravity-in`. If the Firebase web key is API-restricted, add the Picker API to it, or set `NEXT_PUBLIC_GOOGLE_PICKER_API_KEY`. Until then, "From Google Drive" falls back to the local chooser.
   - **Owner:** run checks 1–18 in `Sessions/2026-10-25-bring-phone-scans.md`.

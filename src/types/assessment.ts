@@ -336,6 +336,8 @@ export interface PhotoItem {
    * photos taken before this field existed or never sent to Drive.
    */
   driveName?: string;
+  /** Claim-folder document this photo was added from (Use phone files). Stops the same phone photo being added twice. */
+  sourceDocId?: string;
 }
 
 /** Number of photos to show per A4 page */

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { ClaimDocument, DocType } from '@/types/documents';
-import { phoneFilesOfTypes, photoGroups } from '../phone-files';
+import type { PhotoItem } from '@/types/assessment';
+import { phoneFilesOfTypes, photoGroups, skipsAlreadyAdded, tagFromGroup } from '../phone-files';
 
 const doc = (id: string, type: DocType, source: ClaimDocument['source'], addedAt: string): ClaimDocument =>
   ({ id, type, relPath: `${id}.jpg`, mime: 'image/jpeg', size: 1, addedAt, source, devices: ['PC'] });
@@ -43,5 +44,33 @@ describe('photoGroups', () => {
   it('emptyWhenNone', () => {
     expect(photoGroups({})).toEqual([]);
     expect(phoneFilesOfTypes({}, ['estimate'])).toEqual([]);
+  });
+});
+
+describe('skipsAlreadyAdded', () => {
+  const photo = (p: Partial<PhotoItem>): PhotoItem => ({ dataUrl: '', name: 'x', ...p });
+  const docs = [doc('a', 'damagePhotos', 'scan', '1'), doc('b', 'damagePhotos', 'scan', '2')];
+  it('skipsBySourceDocId', () => {
+    expect(skipsAlreadyAdded(docs, [photo({ name: 'renamed', sourceDocId: 'a' })]).map((d) => d.id)).toEqual(['b']);
+  });
+  it('fallsBackToNameOnlyWithoutId', () => {
+    // 'a.jpg' -> sheet name 'a'. A photo with an id never matches by name; an annexure image never matches.
+    expect(skipsAlreadyAdded(docs, [photo({ name: 'a' })]).map((d) => d.id)).toEqual(['b']);
+    expect(skipsAlreadyAdded(docs, [photo({ name: 'a', sourceDocId: 'other' })]).map((d) => d.id)).toEqual(['a', 'b']);
+    expect(skipsAlreadyAdded(docs, [photo({ name: 'a', kind: 'document' })]).map((d) => d.id)).toEqual(['a', 'b']);
+  });
+  it('addingTwiceAddsNothing', () => {
+    expect(skipsAlreadyAdded(docs, [photo({ sourceDocId: 'a' }), photo({ sourceDocId: 'b' })])).toEqual([]);
+  });
+});
+
+describe('tagFromGroup', () => {
+  it('finalPhotosGetNoTag', () => {
+    expect(tagFromGroup({ tag: 'damage' })).toBeUndefined();
+    expect(tagFromGroup({})).toBeUndefined();
+  });
+  it('otherGroupsKeepTheirTag', () => {
+    expect(tagFromGroup({ tag: 'chassis' })).toBe('chassis');
+    expect(tagFromGroup({ tag: 'spot' })).toBe('spot');
   });
 });

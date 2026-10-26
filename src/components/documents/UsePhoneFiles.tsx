@@ -18,6 +18,16 @@ interface Props {
   className?: string;
 }
 
+/** One toast for a failed phone-file read; a missing folder permission points to the Documents tab. */
+export function toastPhoneReadError(err: unknown, relPath: string): void {
+  const text = err instanceof Error ? `${err.name} ${err.message}` : String(err);
+  if (err instanceof PermissionDeniedError || err instanceof NoFolderError || /user gesture|user activation|SecurityError/i.test(text)) {
+    toast.error('Claim folder: click "Allow access" on the Documents tab, then try again.', { duration: 5000 });
+  } else {
+    toast.error(`Could not read the phone file ${relPath} (${err instanceof Error ? err.message : String(err)})`);
+  }
+}
+
 /** "Use phone files": pick one imported phone file of the given types. Hidden when the claim has none. */
 export function UsePhoneFiles({ types, onPick, disabled, className }: Props) {
   const [open, setOpen] = useState(false);
@@ -35,12 +45,7 @@ export function UsePhoneFiles({ types, onPick, disabled, className }: Props) {
       setOpen(false);
       onPick(file, doc);
     } catch (err) {
-      const text = err instanceof Error ? `${err.name} ${err.message}` : String(err);
-      if (err instanceof PermissionDeniedError || err instanceof NoFolderError || /user gesture|user activation|SecurityError/i.test(text)) {
-        toast.error('Claim folder: click "Allow access" on the Documents tab, then try again.', { duration: 5000 });
-      } else {
-        toast.error(`Could not read the phone file ${doc.relPath} (${err instanceof Error ? err.message : String(err)})`);
-      }
+      toastPhoneReadError(err, doc.relPath);
     } finally {
       setBusy(false);
     }

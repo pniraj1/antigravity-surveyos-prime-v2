@@ -1,5 +1,6 @@
 /** Phone (`'scan'`) files offered by the Use phone files pickers. Pure: no React, no store. */
 import type { ClaimData } from '@/types/claim';
+import type { PhotoItem } from '@/types/assessment';
 import type { ClaimDocument, DocType, PhotoTag } from '@/types/documents';
 import { DOC_TYPE_LABEL, DOC_TYPE_TO_TAG } from '@/types/documents';
 import { claimDocuments } from '@/lib/documents/index-ops';
@@ -27,4 +28,18 @@ export function photoGroups(claim: Claim): PhotoGroup[] {
     tag: DOC_TYPE_TO_TAG[type],
     docs: scans.filter((d) => d.type === type),
   })).filter((g) => g.docs.length > 0);
+}
+
+/** Name a photo gets on the sheet from its file name (the Gallery / Browse rule). */
+export const photoNameOf = (fileName: string): string => fileName.split('.')[0].substring(0, 30);
+
+/** Sheet tag for a group. Final Photos are ordinary damage photos: no tag, like the sheet's "Damage" choice. */
+export const tagFromGroup = (group: Pick<PhotoGroup, 'tag'>): PhotoTag | undefined =>
+  group.tag === 'damage' ? undefined : group.tag;
+
+/** Phone photos not yet on the sheet: matched by source doc id, or by name for photos stored without one. */
+export function skipsAlreadyAdded(docs: readonly ClaimDocument[], photos: readonly PhotoItem[]): ClaimDocument[] {
+  const ids = new Set(photos.map((p) => p.sourceDocId).filter(Boolean));
+  const names = new Set(photos.filter((p) => !p.sourceDocId && p.kind !== 'document').map((p) => p.name));
+  return docs.filter((d) => !ids.has(d.id) && !names.has(photoNameOf(d.relPath.split('/').pop() ?? d.relPath)));
 }

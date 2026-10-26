@@ -2,6 +2,15 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-10-25 (Claude) — Use phone files (Assessment, Bill Check, Photos)
+- feat(assessment, bill-check): **Use phone files** beside Upload Estimate (`estimate`, `supplementaryEstimate`) and the invoice upload (`invoice`). A pick runs the same handler as the file chooser, so the estimate mode dialog and the read and review run unchanged.
+- feat(photos): **Use phone files** beside Gallery / Browse opens **Phone photos**: phone photos grouped by type (Final Photos, Spot, Front/Rear/Left/Right, Chassis, Odometer) with lazy thumbnails (3 read at a time, object URLs revoked on close), per-photo ticks and **Select all** per group. **Add to photo sheet** runs the same compress-and-add path as Gallery / Browse. Nothing lands without that click.
+  - Tags carry over (a chassis photo arrives tagged `chassis`; Final Photos arrive as plain Damage).
+  - `PhotoItem.sourceDocId` (new, optional) records the source document; already-added photos show "Added" and are disabled, so adding twice adds nothing. Photos stored without an id are matched by name.
+  - Phone photos are not saved into the claim folder a second time; the Drive save prompt is unchanged.
+- Buttons are hidden when the claim has no matching phone files. No change to Scan. No AI call, no running cost.
+- tests: `npm test` green, tsc clean. Commits 3946c2d0 and the Photos commit. Not pushed, not deployed, not tried in a signed-in browser.
+
 ## 2026-10-25 (Claude) — Bring phone scans (SurveyOS Scan → Prime)
 - feat(documents): **Bring phone scans** button: From Google Drive (Google Picker, existing `drive.file` token) or From this computer.
   - A vehicle mismatch asks Import anyway / Cancel.

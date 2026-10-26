@@ -67,3 +67,29 @@ Owner wanted SurveyOS Scan's sorted documents and spot/valuation notes to reach 
 - PortalChecklist.tsx, ClaimDocumentsList.tsx, PageLabelGrid.tsx, UploadReview.tsx (deleted)
 - .env.example (optional `NEXT_PUBLIC_GOOGLE_PICKER_API_KEY`)
 - Scan repo: Drive sync removed; `docs/handover/prime-notes-import.md` clarified and its changelog updated
+
+## Use phone files (2026-10-25, follow-up)
+
+**What.** A **Use phone files** button on three screens picks imported phone (`'scan'`) files for the current claim. It is hidden when the claim has none of the matching types. Plan: `docs/superpowers/plans/2026-10-25-use-phone-files.md`.
+- Task 1 (3946c2d0): Assessment → Upload Estimate and Bill Check → invoice, single pick (`src/components/documents/UsePhoneFiles.tsx`).
+- Task 2: Photos tab **Phone photos** dialog (`src/components/photos/PhonePhotosDialog.tsx`), `uploadPhotos(files, meta?)` in `usePhotoUpload`, `PhotoItem.sourceDocId`, helpers `skipsAlreadyAdded` / `tagFromGroup` in `src/lib/scan-import/phone-files.ts`.
+- Not pushed, not deployed, not tried in a signed-in browser. No change to Scan.
+
+**Manual checks** (signed in, claim folder connected, a Scan zip with an estimate, an invoice and photos already imported):
+- [ ] U1. Assessment: **Use phone files** sits beside Upload Estimate. Pick the phone estimate: the estimate mode dialog appears and the read and review run exactly as when choosing the same file in the file chooser.
+- [ ] U2. Assessment on a claim with no phone estimate: the button is not shown.
+- [ ] U3. Bill Check: **Use phone files** beside the invoice upload; picking the phone invoice behaves like the file chooser. Hidden when no phone invoice.
+- [ ] U4. Photos tab: **Use phone files** sits beside Gallery / Browse; hidden on a claim with no phone photos.
+- [ ] U5. Open it: title **Phone photos**, groups in order Final Photos, Spot Photos, Front, Rear, Left, Right, Chassis, Odometer (only those present). Thumbnails fill in progressively; nothing is added to the sheet yet.
+- [ ] U6. Tick two photos, close the dialog (X or Esc): the sheet is unchanged. Reopen: nothing ticked.
+- [ ] U7. **Select all** on one group, then **Add to photo sheet**: the Save to Drive prompt (if on) appears, then the photos land compressed like Gallery / Browse. A chassis photo shows the Chassis number tag; Final Photos show Damage.
+- [ ] U8. Reopen: the added photos show "Added" and cannot be ticked. Adding again adds nothing.
+- [ ] U9. A group of 24+ photos: the dialog stays responsive while thumbnails load.
+- [ ] U10. After a browser restart (folder permission back to "ask"): opening Phone photos shows ONE toast pointing to "Allow access" on the Documents tab; thumbnails say "Can't preview".
+- [ ] U11. Start **Add to photo sheet** on a big selection, then switch claim at once: nothing lands on the other claim.
+- [ ] U12. Gallery / Browse and Camera still work exactly as before, and the claim folder still gets their copies under Damage Photos (phone photos are not copied a second time).
+
+**Decisions.**
+- Final Photos (`damagePhotos`) arrive with no tag, matching the sheet's "Damage" choice; other groups keep their tag.
+- Dedupe by `sourceDocId`; a photo stored without one is matched by its sheet name (Gallery rule: file name before the first dot, 30 chars). Annexure images never match.
+- Phone photos skip the `saveDocuments('damagePhotos', …)` copy because they are already in the claim folder. The Drive save prompt and upload are unchanged.
