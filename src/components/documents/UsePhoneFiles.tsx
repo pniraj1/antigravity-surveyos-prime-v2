@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Smartphone } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -32,6 +32,10 @@ export function toastPhoneReadError(err: unknown, relPath: string): void {
 export function UsePhoneFiles({ types, onPick, disabled, className }: Props) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  // A pick only lands while the dialog is still open and mounted.
+  const openRef = useRef(false);
+  openRef.current = open;
+  useEffect(() => () => { openRef.current = false; }, []);
   const claim = useClaimStore((s) => s.currentClaim);
   const files = claim ? phoneFilesOfTypes(claim, types) : [];
   if (!claim || files.length === 0) return null;
@@ -42,6 +46,7 @@ export function UsePhoneFiles({ types, onPick, disabled, className }: Props) {
     try {
       const file = await readDocument(claim, doc); // can be slow on Drive for desktop
       if (useClaimStore.getState().currentClaim?.id !== claimId) return; // claim switched meanwhile: never use A's file on B
+      if (!openRef.current) return; // dialog gone meanwhile: the surveyor dismissed this pick
       setOpen(false);
       onPick(file, doc);
     } catch (err) {
@@ -57,7 +62,7 @@ export function UsePhoneFiles({ types, onPick, disabled, className }: Props) {
         <Smartphone size={16} />
         Use phone files
       </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(o) => !busy && setOpen(o)}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Use phone files</DialogTitle>
