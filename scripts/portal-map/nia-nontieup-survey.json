@@ -1,28 +1,25 @@
 {
  "file": "nia-nontieup-survey.html",
- "total": 165,
+ "total": 179,
  "groups": {
   "surveyorData.worklist.quickUpdate": [
    {
     "name": "dateOfSurveyRadio",
     "id": "dateOfSurveyRadio1",
     "type": "radio",
-    "model": "surveyorData.worklist.quickUpdate.surveyDateRadio",
-    "value": "03/08/2026"
+    "model": "surveyorData.worklist.quickUpdate.surveyDateRadio"
    },
    {
     "name": "dateOfSurveyRadio",
     "id": "dateOfSurveyRadio2",
     "type": "radio",
-    "model": "surveyorData.worklist.quickUpdate.surveyDateRadio",
-    "value": "04/08/2026"
+    "model": "surveyorData.worklist.quickUpdate.surveyDateRadio"
    },
    {
     "name": "dateOfSurveyRadio",
     "id": "dateOfSurveyRadio3",
     "type": "radio",
-    "model": "surveyorData.worklist.quickUpdate.surveyDateRadio",
-    "value": "05/08/2026"
+    "model": "surveyorData.worklist.quickUpdate.surveyDateRadio"
    },
    {
     "name": "dateOfSurveyRadio",
@@ -75,6 +72,20 @@
     "id": "radioDrivingLicenseApplicable1",
     "type": "radio",
     "model": "surveyorData.worklist.quickUpdate.drivingLicenseApplicable",
+    "value": "N"
+   },
+   {
+    "name": "radioDrivingLicense",
+    "id": "radioDrivingLicense0",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.drivingLicenseVerified",
+    "value": "Y"
+   },
+   {
+    "name": "radioDrivingLicense",
+    "id": "radioDrivingLicense1",
+    "type": "radio",
+    "model": "surveyorData.worklist.quickUpdate.drivingLicenseVerified",
     "value": "N"
    },
    {
@@ -378,6 +389,85 @@
     "model": "surveyorData.worklist.additionalDetails.vehicleParked"
    },
    {
+    "name": "Relationship of the driver with the Insured",
+    "id": "relationship",
+    "type": "select",
+    "model": "surveyorData.worklist.additionalDetails.relationship"
+   },
+   {
+    "name": "License Type of Driver",
+    "id": "licenseType",
+    "type": "select",
+    "model": "surveyorData.worklist.additionalDetails.licenseType"
+   },
+   {
+    "name": "DOB of Driver",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.dobOfDriver",
+    "placeholder": "dd/mm/yyyy"
+   },
+   {
+    "name": "Driver Name",
+    "id": "driverName",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.driverName",
+    "maxlength": "50",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "Age of Driver",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.ageOfDriver",
+    "maxlength": "3",
+    "pattern": "/^[\\d]+$/"
+   },
+   {
+    "name": "Is the motor driving license valid for the type of vehicle on the date of accident?",
+    "id": "radioisDlValidForType0",
+    "type": "radio",
+    "model": "surveyorData.worklist.additionalDetails.isDlValidForType",
+    "value": "Y"
+   },
+   {
+    "name": "Is the motor driving license valid for the type of vehicle on the date of accident?",
+    "id": "radioisDlValidForType1",
+    "type": "radio",
+    "model": "surveyorData.worklist.additionalDetails.isDlValidForType",
+    "value": "N"
+   },
+   {
+    "name": "License Issuing Authority",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.licenseIssueAuth",
+    "maxlength": "30",
+    "pattern": "/^(?!\\s*$|\\s)((?!(<|>|\\^|\\&))[\\s\\S])*$/"
+   },
+   {
+    "name": "Driver driving License Number",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.driverLicenseNo",
+    "maxlength": "30",
+    "pattern": "/^[a-zA-Z0-9]+$/"
+   },
+   {
+    "name": "Driver driving License Issue Date",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.drivingLicenseDate",
+    "placeholder": "dd/mm/yyyy"
+   },
+   {
+    "name": "Driver driving License Expiry Date",
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.driverLicenseExpDate",
+    "placeholder": "dd/mm/yyyy"
+   },
+   {
+    "type": "text",
+    "model": "surveyorData.worklist.additionalDetails.badgeNo",
+    "maxlength": "20",
+    "pattern": "/^(?!\\s*$|\\s)[A-Za-z0-9 ]+$/"
+   },
+   {
     "type": "text",
     "model": "surveyorData.worklist.additionalDetails.firNo",
     "maxlength": "20",
@@ -423,6 +513,14 @@
     "model": "surveyorData.worklist.additionalDetails.anyTpClaim"
    },
    {
+    "name": "Description of the TP claim",
+    "id": "Description of the TP claim",
+    "type": "textarea",
+    "model": "surveyorData.worklist.additionalDetails.descTpClaim",
+    "maxlength": "240",
+    "pattern": "/^(?!\\s*$|\\s)[A-Za-z0-9 ]+$/"
+   },
+   {
     "type": "select",
     "model": "surveyorData.worklist.additionalDetails.paymentTo"
    },
@@ -436,12 +534,6 @@
     "name": "Whether Vehicle Details are matching with policy ?",
     "type": "select",
     "model": "surveyorData.worklist.additionalDetails.whtherVehDetMatch"
-   },
-   {
-    "name": "Vehicle Details Mismatch Remarks",
-    "type": "textarea",
-    "model": "surveyorData.worklist.additionalDetails.misMatchremarks",
-    "maxlength": "240"
    },
    {
     "name": "Cause and Nature of Accident",
@@ -461,7 +553,7 @@
     "name": "Approval Type",
     "type": "select",
     "model": "surveyorData.worklist.workApprovalType",
-    "required": "required"
+    "required": "surveyorData.worklist.worklistAprvList.length==0"
    },
    {
     "name": "Work Approval Document",
@@ -480,7 +572,7 @@
     "type": "text",
     "model": "surveyorData.worklist.approvalDate",
     "placeholder": "DD/MM/YYYY",
-    "required": "required",
+    "required": "surveyorData.worklist.workApprovalType=='Non-cashless approved' || surveyorData.worklist.workApprovalType=='Cashless approved' || (surveyorData.worklist.workApprovalType=='' && surveyorData.worklist.worklistAprvList.length==0)",
     "disabled_when": "surveyorData.worklist.workApprovalType=='Rejected'"
    },
    {
@@ -490,7 +582,7 @@
     "placeholder": "HH:MM",
     "maxlength": "5",
     "pattern": "/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/",
-    "required": "required",
+    "required": "surveyorData.worklist.workApprovalType=='Non-cashless approved' || surveyorData.worklist.workApprovalType=='Cashless approved' || (surveyorData.worklist.workApprovalType=='' && surveyorData.worklist.worklistAprvList.length==0)",
     "disabled_when": "surveyorData.worklist.workApprovalType=='Rejected'"
    },
    {
@@ -888,8 +980,7 @@
     "id": "abc1234",
     "type": "text",
     "model": "obj.partName",
-    "maxlength": "100",
-    "pattern": "/^(?!\\s*$|\\s)[A-Za-z0-9 ]+$/"
+    "maxlength": "100"
    },
    {
     "name": "Primary Assessment EstimatedAmount00",

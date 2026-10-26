@@ -33,7 +33,14 @@
     "conveyanceAmount": { "model": "surveyorData.worklist.surveyFeeBill.conveyanceAmount", "label": "Conveyance", "kind": "money", "empty": "" },
     "feeOthers":        { "model": "surveyorData.worklist.surveyFeeBill.others", "label": "Other charges (fee)", "kind": "money", "empty": "" },
     "feeGstApplicable": { "model": "surveyorData.worklist.surveyFeeBill.isGSTApplicable", "label": "GST applicable (fee)", "kind": "select", "empty": "", "options": { "Y": "Y", "N": "N" } },
-    "feeGstPercent":    { "model": "surveyorData.worklist.surveyFeeBill.gstPercent", "label": "GST % (fee)", "kind": "text", "empty": "" }
+    "feeGstPercent":    { "model": "surveyorData.worklist.surveyFeeBill.gstPercent", "label": "GST % (fee)", "kind": "text", "empty": "" },
+    "driverName":       { "model": "surveyorData.worklist.additionalDetails.driverName", "label": "Driver name", "kind": "text", "empty": "", "maxLen": 50 },
+    "driverLicenceNo":  { "model": "surveyorData.worklist.additionalDetails.driverLicenseNo", "label": "Driving licence no.", "kind": "text", "empty": "", "maxLen": 30 },
+    "licenceIssuingAuthority": { "model": "surveyorData.worklist.additionalDetails.licenseIssueAuth", "label": "Licence issuing authority", "kind": "text", "empty": "", "maxLen": 30 },
+    "licenceIssueDate": { "model": "surveyorData.worklist.additionalDetails.drivingLicenseDate", "label": "Licence issue date", "kind": "text", "transform": "ddmmyyyy", "empty": null },
+    "licenceExpiryDate":{ "model": "surveyorData.worklist.additionalDetails.driverLicenseExpDate", "label": "Licence expiry date", "kind": "text", "transform": "ddmmyyyy", "empty": null },
+    "driverDob":        { "model": "surveyorData.worklist.additionalDetails.dobOfDriver", "label": "Driver date of birth", "kind": "text", "transform": "ddmmyyyy", "empty": null },
+    "badgeNumber":      { "model": "surveyorData.worklist.additionalDetails.badgeNo", "label": "Badge no.", "kind": "text", "empty": "", "maxLen": 20 }
   },
   "files": {
     "assessmentExcel":  { "model": "surveyorData.worklist.multiInvoice[$index].myFiles" }

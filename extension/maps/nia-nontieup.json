@@ -165,6 +165,55 @@
       "kind": "text",
       "empty": "",
       "label": "GST % (fee)"
+    },
+    "driverName": {
+      "modelPath": "surveyorData.worklist.additionalDetails.driverName",
+      "kind": "text",
+      "empty": "",
+      "label": "Driver name",
+      "maxLen": 50
+    },
+    "driverLicenceNo": {
+      "modelPath": "surveyorData.worklist.additionalDetails.driverLicenseNo",
+      "kind": "text",
+      "empty": "",
+      "label": "Driving licence no.",
+      "maxLen": 30
+    },
+    "licenceIssuingAuthority": {
+      "modelPath": "surveyorData.worklist.additionalDetails.licenseIssueAuth",
+      "kind": "text",
+      "empty": "",
+      "label": "Licence issuing authority",
+      "maxLen": 30
+    },
+    "licenceIssueDate": {
+      "modelPath": "surveyorData.worklist.additionalDetails.drivingLicenseDate",
+      "kind": "text",
+      "empty": null,
+      "label": "Licence issue date",
+      "transform": "ddmmyyyy"
+    },
+    "licenceExpiryDate": {
+      "modelPath": "surveyorData.worklist.additionalDetails.driverLicenseExpDate",
+      "kind": "text",
+      "empty": null,
+      "label": "Licence expiry date",
+      "transform": "ddmmyyyy"
+    },
+    "driverDob": {
+      "modelPath": "surveyorData.worklist.additionalDetails.dobOfDriver",
+      "kind": "text",
+      "empty": null,
+      "label": "Driver date of birth",
+      "transform": "ddmmyyyy"
+    },
+    "badgeNumber": {
+      "modelPath": "surveyorData.worklist.additionalDetails.badgeNo",
+      "kind": "text",
+      "empty": "",
+      "label": "Badge no.",
+      "maxLen": 20
     }
   },
   "files": {

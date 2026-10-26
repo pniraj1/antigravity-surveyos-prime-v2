@@ -24,6 +24,8 @@ export const CANONICAL_FIELDS = [
   'noOfInvoices', 'netSalvage', 'compulsoryExcess', 'voluntaryExcess',
   'feeInvoiceDate', 'professionalFee', 'photosAmount', 'conveyanceAmount',
   'feeOthers', 'feeGstApplicable', 'feeGstPercent',
+  'driverName', 'driverLicenceNo', 'licenceIssuingAuthority', 'licenceIssueDate',
+  'licenceExpiryDate', 'driverDob', 'badgeNumber',
 ] as const;
 export type CanonicalField = (typeof CANONICAL_FIELDS)[number];
 
@@ -97,6 +99,8 @@ export async function buildPortalPacket(
   const feeSummary = calculateFeeSummary(fee);
   const painting = niaPainting(rows);
   const isNilDep = depType === 'nil';
+  const dl = claim.driver;
+  const dlValidities = [dl?.validityTransport, dl?.validityNonTransport].filter((d) => d?.trim());
 
   const sheetRows = niaAssessmentRows(rows, opts.ageMonths, depType);
   const wb = buildNiaWorkbook(sheetRows);
@@ -132,6 +136,15 @@ export async function buildPortalPacket(
       feeOthers: (fee?.postalCharges ?? 0) + (fee?.haltageCharges ?? 0),
       feeGstApplicable: fee?.includeGST ? 'Y' : 'N',
       feeGstPercent: fee?.includeGST ? FEE_GST_PERCENT : undefined,
+      driverName: dl?.name?.trim(),
+      // The portal accepts letters and digits only.
+      driverLicenceNo: dl?.licenceNumber?.replace(/[^A-Za-z0-9]/g, ''),
+      licenceIssuingAuthority: dl?.issuingAuthority?.trim(),
+      licenceIssueDate: dl?.dateOfIssue,
+      // One expiry slot: which validity applies is the surveyor's call when both are set.
+      licenceExpiryDate: dlValidities.length === 1 ? dlValidities[0] : undefined,
+      driverDob: dl?.dateOfBirth,
+      badgeNumber: dl?.badgeNumber?.trim(),
     }),
     files: [
       {

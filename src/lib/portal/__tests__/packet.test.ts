@@ -105,6 +105,39 @@ describe('buildPortalPacket', () => {
     const c = claim(); c.policy.claimNumber = '  ';
     await expect(buildPortalPacket(c, { ageMonths: 24 })).rejects.toThrow(/claim number/i);
   });
+
+  const DL_KEYS = ['driverName', 'driverLicenceNo', 'licenceIssuingAuthority', 'licenceIssueDate',
+    'licenceExpiryDate', 'driverDob', 'badgeNumber'];
+
+  it('sends the driver and DL fields from the claim', async () => {
+    const c = claim();
+    Object.assign(c.driver, {
+      name: 'A Driver', licenceNumber: 'MH15 2011-0012345', issuingAuthority: 'RTO Nashik',
+      dateOfIssue: '2011-05-02', validityNonTransport: '2031-05-01', validityTransport: '',
+      dateOfBirth: '1990-01-15', badgeNumber: 'B 123',
+    });
+    const p = await buildPortalPacket(c, { ageMonths: 24 });
+    expect(p.fields.driverName).toBe('A Driver');
+    expect(p.fields.driverLicenceNo).toBe('MH1520110012345');
+    expect(p.fields.licenceIssuingAuthority).toBe('RTO Nashik');
+    expect(p.fields.licenceIssueDate).toBe('2011-05-02');
+    expect(p.fields.licenceExpiryDate).toBe('2031-05-01');
+    expect(p.fields.driverDob).toBe('1990-01-15');
+    expect(p.fields.badgeNumber).toBe('B 123');
+  });
+
+  it('leaves blank driver fields out', async () => {
+    const p = await buildPortalPacket(claim(), { ageMonths: 24 });
+    for (const k of DL_KEYS) expect(k in p.fields, k).toBe(false);
+  });
+
+  it('leaves the expiry out when both validities are set', async () => {
+    const c = claim();
+    c.driver.validityTransport = '2027-01-01';
+    c.driver.validityNonTransport = '2031-05-01';
+    const p = await buildPortalPacket(c, { ageMonths: 24 });
+    expect('licenceExpiryDate' in p.fields).toBe(false);
+  });
 });
 
 describe('buildUiicPacket', () => {

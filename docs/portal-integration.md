@@ -457,8 +457,19 @@ page (Ctrl+S) instead of a live session. Nothing on the portal was touched.
 - **New on the page since the capture:** a driver / DL block in `additionalDetails`
   (`driverName`, `driverLicenseNo`, `licenseType`, `licenseIssueAuth`, `drivingLicenseDate`,
   `driverLicenseExpDate`, `dobOfDriver`, `ageOfDriver`, `relationship`, `badgeNo`,
-  `isDlValidForType`, `descTpClaim`) and `quickUpdate.drivingLicenseVerified`. Not mapped yet;
-  Prime holds most of this from the DL. `additionalDetails.misMatchremarks` is gone (was not mapped).
+  `isDlValidForType`, `descTpClaim`) and `quickUpdate.drivingLicenseVerified`.
+  `additionalDetails.misMatchremarks` is gone (was not mapped). Capture refreshed from the
+  saved page (field shapes only; the survey-date radio's date codes stripped).
+  - **Now mapped (map v4, from `claim.driver`):** `driverName`, `driverLicenseNo` (letters and
+    digits only, as the portal's pattern requires), `licenseIssueAuth`, `drivingLicenseDate`,
+    `dobOfDriver` (the portal works out `ageOfDriver` itself), `badgeNo`, and
+    `driverLicenseExpDate` only when exactly one of transport / non-transport validity is set.
+  - **Left to the surveyor:** `driverLicenseExpDate` when both or neither validity is set
+    (which one applies is the surveyor's call); `licenseType` (portal categories are not DL
+    classes 1:1); `relationship` (Prime's S/O-D/O-W/O is the DL holder's parentage, not the
+    driver's relation to the insured); `isDlValidForType` and `quickUpdate.drivingLicenseVerified`
+    (surveyor attestations, like the declarations); `descTpClaim`; `ageOfDriver` (computed by
+    the portal from the DOB).
 - Not covered by a saved page: whether values typed by Fill survive Angular's own events, and
   the Validate / Quick Update behaviour. That needs one live session.
 
