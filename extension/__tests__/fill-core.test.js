@@ -92,7 +92,7 @@ describe('planFill', () => {
 
   it('constant fields fire only when onlyIf is present', () => {
     const withPaint = planFill(map, packet, read()).find((s) => s.name === 'paintingWork');
-    expect(withPaint).toMatchObject({ action: 'fill', value: 'Consolidated' });
+    expect(withPaint).toMatchObject({ action: 'fill', value: 'CONSOLIDATED' });
     const noPaint = { ...packet, fields: { surveyPlace: 'Pune' } };
     const without = planFill(map, noPaint, read()).find((s) => s.name === 'paintingWork');
     expect(without).toMatchObject({ action: 'skip' });

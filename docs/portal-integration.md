@@ -443,6 +443,25 @@ Insurance but used on NIA (shared stack). One sheet, the 11 columns above,
 parts + labour only. `72041000` on every NOT ALLOWED row is a habit, not a
 requirement, but the code is on the portal's list at 0%.
 
+### 5.8 Live check 2026-10-26 (saved page, read-only)
+
+Settled claims leave the NIA worklist, so the owner saved an open non-tieup claim's survey
+page (Ctrl+S) instead of a live session. Nothing on the portal was touched.
+
+- Route, controller (`surveyorWorklistSurveyCtrl`) and claim-number path: present.
+- All 23 mapped fields and the Excel slot (`multiInvoice[$index].myFiles`): present.
+- **Fixed:** Painting work options are `CONSOLIDATED` / `BREAK UP` (labels "Consolidated" /
+  "Break-up"). The map sent `Consolidated`, so Fill would have stopped with "no option".
+  Overlay constant fixed and map bumped to v4. The fixture's guessed options now match too.
+- Selects `gstApplicable` / `feeGstApplicable` (`Y`/`N`) and `noOfInvoices` (`1`–`3`): match.
+- **New on the page since the capture:** a driver / DL block in `additionalDetails`
+  (`driverName`, `driverLicenseNo`, `licenseType`, `licenseIssueAuth`, `drivingLicenseDate`,
+  `driverLicenseExpDate`, `dobOfDriver`, `ageOfDriver`, `relationship`, `badgeNo`,
+  `isDlValidForType`, `descTpClaim`) and `quickUpdate.drivingLicenseVerified`. Not mapped yet;
+  Prime holds most of this from the DL. `additionalDetails.misMatchremarks` is gone (was not mapped).
+- Not covered by a saved page: whether values typed by Fill survive Angular's own events, and
+  the Validate / Quick Update behaviour. That needs one live session.
+
 ---
 
 ## 6. Progress

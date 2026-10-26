@@ -1,7 +1,7 @@
 {
   "portal": "nia",
   "flow": "nontieup",
-  "version": 3,
+  "version": 4,
   "host": "web.newindia.co.in",
   "route": "#/WorklistSurveyNew",
   "doneHint": "Now click Validate on the portal to load the Excel lines, then check the totals.",
@@ -21,7 +21,7 @@
     "gstApplicable":    { "model": "surveyorData.worklist.multiInvoice[$index].isGstApplicable", "label": "GST applicable (invoice)", "kind": "select", "empty": "", "options": { "Y": "Y", "N": "N" } },
     "vendorInvoiceNo":  { "model": "surveyorData.worklist.multiInvoice[$index].vendorTaxInvoiceNumber", "label": "Vendor invoice no.", "kind": "text", "empty": "", "maxLen": 30 },
     "vendorInvoiceDate":{ "model": "surveyorData.worklist.multiInvoice[$index].vendorTaxInvoiceDate", "label": "Vendor invoice date", "kind": "text", "transform": "ddmmyyyy", "empty": null },
-    "paintingWork":     { "model": "surveyorData.worklist.multiInvoice[$index].paintingWorkDetails", "label": "Painting work details", "kind": "select", "constant": "Consolidated", "onlyIf": "paintingAssessed", "empty": "" },
+    "paintingWork":     { "model": "surveyorData.worklist.multiInvoice[$index].paintingWorkDetails", "label": "Painting work details", "kind": "select", "constant": "CONSOLIDATED", "onlyIf": "paintingAssessed", "empty": "" },
     "paintingEstimate": { "model": "surveyorData.worklist.multiInvoice[$index].estimatedAmount", "label": "Painting estimated amount", "kind": "money", "empty": "" },
     "paintingAssessed": { "model": "surveyorData.worklist.multiInvoice[$index].assessedAmount", "label": "Painting assessed amount", "kind": "money", "empty": "" },
     "netSalvage":       { "model": "surveyorData.worklist.claimAssessment.netSlavage", "label": "Net salvage", "kind": "money", "empty": "" },

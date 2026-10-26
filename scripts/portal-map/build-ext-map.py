@@ -77,7 +77,8 @@ def write_fixture(flow, overlay, by_model):
                 if clock:
                     opts = {f"{i:02d}": f"{i:02d}" for i in range(clock)}
                 else:
-                    opts = v.get("options", {"1": "1", "2": "2", "3": "3"}) if canon == "noOfInvoices" else v.get("options", {"Consolidated": "Consolidated", "Breakup": "Breakup"})
+                    # ponytail: option values as the live NIA page has them (saved page 2026-10-26), not guesses
+                    opts = v.get("options", {"1": "1", "2": "2", "3": "3"}) if canon == "noOfInvoices" else v.get("options", {"CONSOLIDATED": "Consolidated", "BREAK UP": "Break-up"})
                 os_ = "".join(f'<option value="{html.escape(k)}">{html.escape(str(x))}</option>' for k, x in opts.items())
                 rows.append(f'<label>{name} <select name="{name}" data-ng-model="{model}" data-ng-change="log(\'{canon}\')"><option value="">--Select--</option>{os_}</select></label>')
             elif t == "file":
