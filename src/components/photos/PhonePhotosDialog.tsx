@@ -9,7 +9,6 @@ import { readDocument } from '@/lib/documents/folder';
 import { photoGroups, skipsAlreadyAdded, tagFromGroup } from '@/lib/scan-import/phone-files';
 import { toastPhoneReadError } from '@/components/documents/UsePhoneFiles';
 import type { PhotoMeta } from '@/hooks/usePhotoUpload';
-import type { ClaimDocument } from '@/types/documents';
 
 /** Thumbnails read at once: enough to fill the grid quickly without freezing on a 24+ photo group. */
 const THUMB_READERS = 3;
@@ -29,6 +28,8 @@ export function PhonePhotosDialog({ onAdd, disabled }: Props) {
   // doc id -> object URL; '' = could not be read.
   const [thumbs, setThumbs] = useState<Readonly<Record<string, string>>>({});
   const files = useRef(new Map<string, File>());
+  // One read-failure toast per open: set by the thumbnail pass, honoured by Add.
+  const warned = useRef(false);
   const claimId = claim?.id;
 
   // Read thumbnails a few at a time while open; revoke every URL on close or claim switch.
@@ -36,9 +37,10 @@ export function PhonePhotosDialog({ onAdd, disabled }: Props) {
     const current = useClaimStore.getState().currentClaim;
     if (!open || !current) return;
     let stop = false;
-    let warned = false;
+    warned.current = false;
     const urls: string[] = [];
-    const queue = photoGroups(current).flatMap((g) => g.docs);
+    // Photos already on the sheet can't be picked: don't spend reads on them.
+    const queue = skipsAlreadyAdded(photoGroups(current).flatMap((g) => g.docs), current.photos);
     const reader = async () => {
       for (let d = queue.shift(); d && !stop; d = queue.shift()) {
         const doc = d;
@@ -52,7 +54,7 @@ export function PhonePhotosDialog({ onAdd, disabled }: Props) {
         } catch (err) {
           if (stop) return;
           setThumbs((t) => ({ ...t, [doc.id]: '' }));
-          if (!warned) { warned = true; toastPhoneReadError(err, doc.relPath); }
+          if (!warned.current) { warned.current = true; toastPhoneReadError(err, doc.relPath); }
         }
       }
     };
@@ -84,11 +86,22 @@ export function PhonePhotosDialog({ onAdd, disabled }: Props) {
     setBusy(true);
     try {
       const read: { file: File; meta: PhotoMeta }[] = [];
+      let failure: { err: unknown; relPath: string } | undefined;
       for (const { d, tag } of picks) {
-        const file = files.current.get(d.id) ?? (await readOrToast(claim, d));
-        if (file) read.push({ file, meta: { tag, sourceDocId: d.id } });
+        let file = files.current.get(d.id);
+        if (!file) {
+          try {
+            file = await readDocument(claim, d); // its thumbnail failed: try once more
+          } catch (err) {
+            failure ??= { err, relPath: d.relPath };
+            continue;
+          }
+        }
+        read.push({ file, meta: { tag, sourceDocId: d.id } });
       }
       if (useClaimStore.getState().currentClaim?.id !== claim.id) return; // claim switched meanwhile: never add A's photos to B
+      // At most one toast per Add, and none if the thumbnail pass already told the surveyor.
+      if (failure && !warned.current) toastPhoneReadError(failure.err, failure.relPath);
       setOpen(false);
       if (read.length) onAdd(read.map((r) => r.file), read.map((r) => r.meta));
     } finally {
@@ -130,7 +143,8 @@ export function PhonePhotosDialog({ onAdd, disabled }: Props) {
                           <img src={url} alt={d.relPath} className="absolute inset-0 w-full h-full object-cover" />
                         ) : (
                           <span className="absolute inset-0 flex items-center justify-center text-[10px] text-muted-foreground p-1 text-center">
-                            {url === '' ? "Can't preview" : <Loader2 size={14} className="animate-spin" />}
+                            {/* Added photos are never read: no preview, no spinner. */}
+                            {added ? d.relPath.split('/').pop() : url === '' ? "Can't preview" : <Loader2 size={14} className="animate-spin" />}
                           </span>
                         )}
                         <input
@@ -159,14 +173,4 @@ export function PhonePhotosDialog({ onAdd, disabled }: Props) {
       </Dialog>
     </>
   );
-}
-
-/** Read a photo whose thumbnail failed; toast and skip it if it still can't be read. */
-async function readOrToast(claim: Parameters<typeof readDocument>[0], doc: ClaimDocument): Promise<File | undefined> {
-  try {
-    return await readDocument(claim, doc);
-  } catch (err) {
-    toastPhoneReadError(err, doc.relPath);
-    return undefined;
-  }
 }
