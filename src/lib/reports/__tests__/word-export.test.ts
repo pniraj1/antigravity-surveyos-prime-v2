@@ -37,6 +37,17 @@ describe('buildWordDocument', () => {
     expect(doc).toContain('margin: 10mm 12mm');   // matches buildStandardPrintDocument
     expect(doc).toContain('box-sizing: border-box');
   });
+
+  test('turns an empty page-break div into a Word page break', () => {
+    const doc = buildWordDocument('<p>a</p><div style="page-break-before:always;"></div><div>NAME</div>', 't');
+    expect(doc).not.toContain('<div style="page-break-before:always;"></div>');
+    expect(doc).toContain('<br clear=all style="page-break-before:always">');
+  });
+
+  test('leaves a page-break div with content alone', () => {
+    const html = '<div style="page-break-before:always;">x</div>';
+    expect(buildWordDocument(html, 't')).toContain(html);
+  });
 });
 
 describe('downloadAsWord', () => {

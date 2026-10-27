@@ -69,6 +69,13 @@ export function buildWordDocument(bodyHtml: string, title: string, footerLeft = 
     </table>
   </div>`;
 
+  // Word ignores page-break-before on an empty block but honours a clear-break
+  // <br>. Verified 2026-10-27: 1 page vs 2.
+  const body = bodyHtml.replace(
+    /<div style="page-break-before:\s*always;?"\s*><\/div>/g,
+    '<br clear=all style="page-break-before:always">',
+  );
+
   return `<!DOCTYPE html>
 <html xmlns:o="urn:schemas-microsoft-com:office:office"
       xmlns:w="urn:schemas-microsoft-com:office:word"
@@ -78,7 +85,7 @@ export function buildWordDocument(bodyHtml: string, title: string, footerLeft = 
   <title>${title}</title>
   <style>${WORD_SHELL_CSS}</style>
 </head>
-<body><div class="Section1">${bodyHtml}${footer}</div></body>
+<body><div class="Section1">${body}${footer}</div></body>
 </html>`;
 }
 
