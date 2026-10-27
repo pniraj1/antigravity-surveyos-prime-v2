@@ -7,6 +7,7 @@ import { useClaimStore } from '@/stores/claim-store';
 import { getClaim, saveClaim } from '@/lib/storage/indexeddb';
 import { toggleFeePaid } from '@/lib/claims/fee-status';
 import { claimLandingTab } from '@/lib/claims/landing-tab';
+import { surveyDateLabel } from '@/lib/claims/survey-date';
 import { isNarrowViewport } from '@/lib/navigation/viewport';
 import { deleteClaimEverywhere } from '@/lib/firebase/sync';
 import { useAuthStore } from '@/stores/auth-store';
@@ -417,14 +418,7 @@ export function DashboardContent() {
                         </button>
                       </div>
                       <div className="text-xs font-medium text-[var(--color-neutral-400)]">
-                        {/* Local-midnight parse: a bare YYYY-MM-DD would read as UTC and show a day early west of UTC. */}
-                        {claim.surveyDate
-                          ? new Date(`${claim.surveyDate}T00:00`).toLocaleDateString(undefined, {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                            })
-                          : '—'}
+                        {surveyDateLabel(claim.surveyDate)}
                       </div>
                       <div className="text-xs font-medium text-[var(--color-neutral-400)]">
                         {new Date(claim.updatedAt).toLocaleDateString(undefined, {

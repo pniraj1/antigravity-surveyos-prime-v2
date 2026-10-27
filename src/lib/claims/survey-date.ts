@@ -18,3 +18,11 @@ export function claimSurveyDate(
       return '';
   }
 }
+
+/** Survey date for the claim list. Local-midnight parse: a bare YYYY-MM-DD would read as UTC and show a day early west of UTC. */
+export function surveyDateLabel(surveyDate: string | null | undefined): string {
+  if (!surveyDate) return '—';
+  const d = new Date(`${surveyDate}T00:00`);
+  if (Number.isNaN(d.getTime())) return '—'; // not YYYY-MM-DD: never show "Invalid Date"
+  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}

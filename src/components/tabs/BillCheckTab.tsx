@@ -321,7 +321,7 @@ export function BillCheckTab() {
               </div>
             </div>
 
-            <BillCheckPreview claim={currentClaim} profile={profile} format={format} onPrint={handlePrint} beforeExport={run => gate(gateKind, run)} />
+            <BillCheckPreview claim={currentClaim} profile={profile} format={format} onPrint={handlePrint} beforeExport={run => gate(gateKind, run, 'Download Word')} />
           </div>
         </Panel>
 

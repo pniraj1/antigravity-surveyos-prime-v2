@@ -12,6 +12,8 @@ interface PendingPrint {
   /** Decided when the dialog opens, so the card stays visible after it turns green. */
   showPolicy: boolean;
   run: () => void;
+  /** Dialog button caption; the dialog defaults to "Print". */
+  printLabel?: string;
 }
 
 /**
@@ -20,13 +22,16 @@ interface PendingPrint {
  * asks the policy check until it is answered).
  * Render `gateDialog` once next to the buttons that call `gate`.
  */
-export function usePrintGate(): { gate: (report: GatedReport, run: () => void) => void; gateDialog: ReactNode } {
+export function usePrintGate(): {
+  gate: (report: GatedReport, run: () => void, printLabel?: string) => void;
+  gateDialog: ReactNode;
+} {
   const [pending, setPending] = useState<PendingPrint | null>(null);
 
-  const gate = useCallback((report: GatedReport, run: () => void) => {
+  const gate = useCallback((report: GatedReport, run: () => void, printLabel?: string) => {
     const claim = useClaimStore.getState().currentClaim;
     const showPolicy = !!claim && !policyCheckStatus(claim).complete;
-    if (report.startsWith('uiic') || showPolicy) setPending({ report, showPolicy, run });
+    if (report.startsWith('uiic') || showPolicy) setPending({ report, showPolicy, run, printLabel });
     else run();
   }, []);
 
@@ -40,6 +45,7 @@ export function usePrintGate(): { gate: (report: GatedReport, run: () => void) =
         run();
       }}
       onCancel={() => setPending(null)}
+      printLabel={pending.printLabel}
     />
   ) : null;
 

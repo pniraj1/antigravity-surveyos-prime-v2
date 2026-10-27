@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { claimSurveyDate } from '../survey-date';
+import { claimSurveyDate, surveyDateLabel } from '../survey-date';
 
 const base = {
   accident: { dateOfSurvey: '2026-10-01' },
@@ -22,5 +22,16 @@ describe('claimSurveyDate', () => {
 
   it('blank or missing returns empty string', () => {
     expect(claimSurveyDate({ surveyType: 'spot' } as any)).toBe('');
+  });
+});
+
+describe('surveyDateLabel', () => {
+  it('formats a YYYY-MM-DD date', () => {
+    expect(surveyDateLabel('2026-10-27')).toMatch(/2026/);
+    expect(surveyDateLabel('2026-10-27')).toMatch(/27/);
+  });
+
+  it('shows a dash for empty or unparseable dates, never Invalid Date', () => {
+    for (const v of [undefined, null, '', '27/10/2026', 'garbage']) expect(surveyDateLabel(v)).toBe('—');
   });
 });
