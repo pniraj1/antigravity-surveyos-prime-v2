@@ -18,7 +18,6 @@ import {
   Receipt,
   RotateCcw,
   User,
-  Brain,
   Plus,
   FolderOpen,
   ChevronLeft,
@@ -31,7 +30,6 @@ import {
   LogOut,
   Shield,
   ShieldCheck,
-  Zap,
   CarFront,
   Archive,
 } from 'lucide-react';
@@ -49,6 +47,8 @@ interface NavItem {
   icon: React.ReactNode;
   group: 'main' | 'claim' | 'output' | 'settings';
   requiresClaim?: boolean;
+  /** When true, only users with profile.isAdmin see this item. */
+  adminOnly?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -59,7 +59,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'valuation',   label: 'Valuation',     icon: <CarFront size={17} />,   group: 'claim',   requiresClaim: true },
   { id: 'assessment', label: 'Assessment', icon: <Calculator size={17} />, group: 'claim', requiresClaim: true },
   { id: 'reports',        label: 'Report Center',  icon: <Printer size={17} />,        group: 'output', requiresClaim: true },
-  { id: 'insured-report', label: 'Insured Report', icon: <FileText size={17} />,       group: 'output', requiresClaim: true },
+  { id: 'insured-report', label: 'Insured Report', icon: <FileText size={17} />,       group: 'output', requiresClaim: true, adminOnly: true },
   { id: 'bill-check',    label: 'Bill Check',     icon: <ClipboardCheck size={17} />, group: 'output', requiresClaim: true },
   { id: 'photos',      label: 'Photo Sheet',    icon: <Camera size={17} />,     group: 'output',   requiresClaim: true },
   { id: 'fees',        label: 'Survey Fees Bill', icon: <Receipt size={17} />,    group: 'output',   requiresClaim: true },
@@ -67,9 +67,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'profile', label: 'Profile', icon: <User size={17} />, group: 'settings' },
   { id: 'cloud-vault', label: 'Cloud Vault', icon: <Cloud size={17} />, group: 'settings' },
   { id: 'recovered-claims', label: 'Recovered', icon: <Archive size={17} />, group: 'settings' },
-  { id: 'learning', label: 'Learning', icon: <Brain size={17} />, group: 'settings' },
-  { id: 'admin', label: 'Admin Panel', icon: <ShieldCheck size={17} />, group: 'settings' },
-  { id: 'landing' as AppTab, label: 'Feature Overview', icon: <Zap size={17} />, group: 'settings' },
+  { id: 'admin', label: 'Admin Panel', icon: <ShieldCheck size={17} />, group: 'settings', adminOnly: true },
 ];
 
 const GROUP_LABELS: Record<string, string> = {
@@ -282,8 +280,8 @@ export function Sidebar() {
                 )}
                 <div className="space-y-0.5">
                   {items.map((item) => {
-                    // Hide admin tab from non-admins
-                    if (item.id === 'admin' && !profile.isAdmin) return null;
+                    // Hide admin-only tabs from non-admin users
+                    if (item.adminOnly && !profile.isAdmin) return null;
 
                     const disabled = item.requiresClaim && !hasClaim;
                     const isActive = activeTab === item.id;

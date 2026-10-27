@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import dynamicImport from 'next/dynamic';
 import { useUIStore } from '@/stores/ui-store';
 import { useClaimStore } from '@/stores/claim-store';
+import { useProfileStore } from '@/stores/profile-store';
 import { getClaim, saveClaim } from '@/lib/storage/indexeddb';
 import { toggleFeePaid } from '@/lib/claims/fee-status';
 import { claimLandingTab } from '@/lib/claims/landing-tab';
@@ -624,13 +625,16 @@ export function DashboardContent() {
 
 // ─── Tab Router ──────────────────────────────────────────
 export function TabPlaceholder({ tab }: { tab: string }) {
+  const { profile } = useProfileStore();
+
   if (tab === 'documents')   return <DocumentsTab />;
   if (tab === 'review')      return <ReviewTab />;
   if (tab === 'details')     return <DetailsTab />;
   if (tab === 'assessment')  return <AssessmentTab />;
   if (tab === 'photos')      return <PhotosTab />;
   if (tab === 'reports')         return <ReportTab />;
-  if (tab === 'insured-report')  return <InsuredReportTab />;
+  // Admin-only: guard against URL-based access for non-admin users
+  if (tab === 'insured-report')  return profile.isAdmin ? <InsuredReportTab /> : null;
   if (tab === 'bill-check')      return <BillCheckTab />;
   if (tab === 'fees')        return <FeesTab />;
   if (tab === 'profile')     return <ProfileTab />;
