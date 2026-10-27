@@ -83,7 +83,7 @@ export function useAIExtraction() {
     const originTab = useUIStore.getState().activeTab;
     startJob(key, originTab, estimateMode);
     setJobProgress(key, feedback ? 'Re-scanning with feedback...' : 'Preparing...');
-    rememberFile(key, primary);
+    rememberFile(key, primary, estimateMode);
 
     const controller = new AbortController();
     registerAbort(key, controller);

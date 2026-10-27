@@ -71,6 +71,8 @@ interface ExtractionState {
    * render-relevant and stay in the module map below.
    */
   files: Record<string, File>;
+  /** Apply mode the remembered file was uploaded with (estimate: replace/append/continue). Survives clearJob. */
+  fileModes: Record<string, EstimateApplyMode | undefined>;
 
   startJob: (key: string, originTab: AppTab | null, estimateMode?: EstimateApplyMode) => void;
   setProgress: (key: string, message: string, pagesDone?: number, pagesTotal?: number) => void;
@@ -78,7 +80,7 @@ interface ExtractionState {
   failJob: (key: string, error: string) => void;
   cancelJob: (key: string) => void;
   clearJob: (key: string) => void;
-  rememberFile: (key: string, file: File) => void;
+  rememberFile: (key: string, file: File, mode?: EstimateApplyMode) => void;
 }
 
 // ─── Abort controllers ───────────────────────────────────────────────────────
@@ -112,6 +114,7 @@ function omit<T>(record: Record<string, T>, key: string): Record<string, T> {
 export const useExtractionStore = create<ExtractionState>()((set) => ({
   jobs: {},
   files: {},
+  fileModes: {},
 
   startJob: (key, originTab, estimateMode) =>
     set((state) => ({
@@ -189,8 +192,11 @@ export const useExtractionStore = create<ExtractionState>()((set) => ({
     set((state) => ({ jobs: omit(state.jobs, key) }));
   },
 
-  rememberFile: (key, file) =>
-    set((state) => ({ files: { ...state.files, [key]: file } })),
+  rememberFile: (key, file, mode) =>
+    set((state) => ({
+      files: { ...state.files, [key]: file },
+      fileModes: { ...state.fileModes, [key]: mode },
+    })),
 }));
 
 // ─── Selectors ───────────────────────────────────────────────────────────────

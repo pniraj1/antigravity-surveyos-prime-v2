@@ -12,7 +12,7 @@ import {
 const fakeFile = {} as File;
 
 function reset() {
-  useExtractionStore.setState({ jobs: {}, files: {} });
+  useExtractionStore.setState({ jobs: {}, files: {}, fileModes: {} });
 }
 
 const s = () => useExtractionStore.getState();
@@ -109,5 +109,16 @@ it('aborts the registered controller on cancel', () => {
     s().startJob('rc', 'documents');
     s().cancelJob('rc');
     expect(s().files.rc).toBe(fakeFile);
+  });
+
+  it('remembers the apply mode with the file, surviving a job clear, and a new file resets it', () => {
+    s().rememberFile('estimate', fakeFile, 'append');
+    expect(s().fileModes.estimate).toBe('append');
+    s().startJob('estimate', 'assessment', 'append');
+    s().clearJob('estimate');
+    expect(s().fileModes.estimate).toBe('append');
+
+    s().rememberFile('estimate', fakeFile); // another file, no mode
+    expect(s().fileModes.estimate).toBeUndefined();
   });
 });

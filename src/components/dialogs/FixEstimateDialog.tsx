@@ -9,12 +9,13 @@ import { useExtractionStore } from '@/stores/extraction-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { extractDocument } from '@/lib/ai/processor';
 import { stripPageTags } from '@/lib/ai/row-check';
-import { buildEstimateRows } from '@/stores/slices/aiDataSlice';
+import { buildEstimateRows, type EstimateApplyMode } from '@/stores/slices/aiDataSlice';
 import {
   planEstimateFix,
   sheetToEstimateData,
   type EstimateFixChange,
   type EstimateFixPlan,
+  type EstimateFixSource,
 } from '@/lib/ai/estimate-fix';
 
 interface FixEstimateDialogProps {
@@ -44,6 +45,30 @@ function changeLines(c: EstimateFixChange): string[] {
     .map((k) => `${FIELD_LABELS[k]}: ${shown(k, val(c.before, k))} → ${shown(k, val(c.after, k))}`);
 }
 
+/** A file uploaded as a supplementary defaults to Supplementary; another picked file defaults to Original. */
+export function defaultFixSource(rememberedMode: EstimateApplyMode | undefined, pickedAnother: boolean): EstimateFixSource {
+  return !pickedAnother && rememberedMode === 'append' ? 'supplementary' : 'estimate';
+}
+
+const SOURCE_OPTIONS: { value: EstimateFixSource; label: string }[] = [
+  { value: 'estimate', label: 'Original estimate' },
+  { value: 'supplementary', label: 'Supplementary estimate' },
+];
+
+export function FixSourceToggle({ value, onChange }: { value: EstimateFixSource; onChange: (v: EstimateFixSource) => void }) {
+  return (
+    <div role="radiogroup" aria-label="This file is" className="flex items-center gap-3 text-xs">
+      <span className="font-medium">This file is:</span>
+      {SOURCE_OPTIONS.map((o) => (
+        <label key={o.value} className="flex items-center gap-1">
+          <input type="radio" name="fix-source" checked={value === o.value} onChange={() => onChange(o.value)} />
+          {o.label}
+        </label>
+      ))}
+    </div>
+  );
+}
+
 /**
  * Replaces the floating "Fix Extraction" chat pill. The surveyor says what the
  * AI got wrong, ONE re-read runs, the result is compared with the sheet, and
@@ -54,6 +79,7 @@ export function FixEstimateDialog({ open, onClose }: FixEstimateDialogProps) {
   const [stage, setStage] = useState<Stage>('ask');
   const [note, setNote] = useState('');
   const [chosen, setChosen] = useState<File | null>(null);
+  const [pickedSource, setPickedSource] = useState<EstimateFixSource | null>(null);
   const [progress, setProgress] = useState('');
   const [plan, setPlan] = useState<EstimateFixPlan | null>(null);
   const [missingIds, setMissingIds] = useState<string[]>([]);
@@ -61,6 +87,7 @@ export function FixEstimateDialog({ open, onClose }: FixEstimateDialogProps) {
   const abortRef = useRef<AbortController | null>(null);
 
   const storedFile = useExtractionStore((s) => s.files.estimate);
+  const storedMode = useExtractionStore((s) => s.fileModes.estimate);
   const rememberFile = useExtractionStore((s) => s.rememberFile);
   const aiDocMode = useProfileStore((s) => s.profile.aiDocMode);
   const applyEstimateFixToClaim = useClaimStore((s) => s.applyEstimateFixToClaim);
@@ -70,6 +97,7 @@ export function FixEstimateDialog({ open, onClose }: FixEstimateDialogProps) {
   if (!open) return null;
 
   const file = chosen ?? storedFile;
+  const source = pickedSource ?? defaultFixSource(storedMode, !!chosen);
   const canSend = note.trim() !== '' && !!file;
 
   const close = () => {
@@ -77,6 +105,7 @@ export function FixEstimateDialog({ open, onClose }: FixEstimateDialogProps) {
     setStage('ask');
     setNote('');
     setChosen(null);
+    setPickedSource(null);
     setPlan(null);
     onClose();
   };
@@ -88,7 +117,7 @@ export function FixEstimateDialog({ open, onClose }: FixEstimateDialogProps) {
     abortRef.current = controller;
     setProgress('Preparing...');
     setStage('reading');
-    if (chosen) rememberFile('estimate', chosen);
+    if (chosen) rememberFile('estimate', chosen, source === 'supplementary' ? 'append' : undefined);
     try {
       const forceDocMode = !aiDocMode || aiDocMode === 'auto' ? undefined : aiDocMode;
       const { data } = await extractDocument(
@@ -96,7 +125,7 @@ export function FixEstimateDialog({ open, onClose }: FixEstimateDialogProps) {
         sheetToEstimateData(sheet), forceDocMode, controller.signal,
       );
       if (controller.signal.aborted) return;
-      const next = planEstimateFix(sheet, buildEstimateRows(stripPageTags(data), 'estimate', 1));
+      const next = planEstimateFix(sheet, buildEstimateRows(stripPageTags(data), source, 1), source);
       setPlan(next);
       setMissingIds(next.missing.map((m) => m.id)); // missing rows ticked by default
       setChangedIds([]); // changed rows are opt-in
@@ -145,10 +174,14 @@ export function FixEstimateDialog({ open, onClose }: FixEstimateDialogProps) {
                 type="file"
                 accept="image/*,application/pdf"
                 aria-label={file ? 'Choose another file' : 'Choose the estimate file again'}
-                onChange={(e) => setChosen(e.target.files?.[0] ?? null)}
+                onChange={(e) => {
+                  setChosen(e.target.files?.[0] ?? null);
+                  setPickedSource(null); // a different file defaults back to Original
+                }}
                 className="text-xs"
               />
             </div>
+            <FixSourceToggle value={source} onChange={setPickedSource} />
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={close}>Cancel</Button>
               <Button onClick={() => void send()} disabled={!canSend}>Send</Button>

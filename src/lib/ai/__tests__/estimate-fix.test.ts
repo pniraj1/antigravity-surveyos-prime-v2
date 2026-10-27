@@ -150,6 +150,39 @@ describe('planEstimateFix / applyEstimateFix', () => {
     });
   });
 
+  describe('supplementary re-read', () => {
+    const supp = (srNo: number | undefined, name: string, est: number) => part(srNo, name, est, { source: 'supplementary' });
+
+    it('inserts rows as supplementary, anchored among supplementary rows', () => {
+      const sheet = [part(1, 'Bumper', 100), part(2, 'Grille', 200), supp(1, 'Spoiler', 50), supp(3, 'Mirror', 70)];
+      const plan = planEstimateFix(sheet, [supp(1, 'Spoiler', 50), supp(2, 'Lamp', 60), supp(3, 'Mirror', 70)], 'supplementary');
+      expect(plan.source).toBe('supplementary');
+      expect(plan.missing.map((r) => r.particulars)).toEqual(['Lamp']);
+      const out = applyEstimateFix(sheet, plan, all(plan));
+      expect(out.map((r) => r.particulars)).toEqual(['Bumper', 'Grille', 'Spoiler', 'Lamp', 'Mirror']);
+      expect(out.find((r) => r.particulars === 'Lamp')?.source).toBe('supplementary');
+    });
+
+    it('with no supplementary rows yet, goes after the section, never before primary rows', () => {
+      const sheet = [part(1, 'Bumper', 100), part(2, 'Grille', 200)];
+      const plan = planEstimateFix(sheet, [supp(1, 'Spoiler', 50)], 'supplementary');
+      const out = applyEstimateFix(sheet, plan, all(plan));
+      expect(out.map((r) => r.particulars)).toEqual(['Bumper', 'Grille', 'Spoiler']);
+      expect(out[2].source).toBe('supplementary');
+    });
+
+    it('serial pass never pairs across families, either way', () => {
+      const sheet = [part(1, 'Bumper', 100), supp(1, 'Spoiler', 50)];
+      const asSupp = planEstimateFix(sheet, [supp(1, 'Wing', 80)], 'supplementary');
+      expect(asSupp.changed.map((c) => c.rowId)).toEqual([sheet[1].id]);
+      const asPrimary = planEstimateFix(sheet, [part(1, 'Hood', 90)]);
+      expect(asPrimary.changed.map((c) => c.rowId)).toEqual([sheet[0].id]);
+      const noSuppRows = planEstimateFix([part(1, 'Bumper', 100)], [supp(1, 'Wing', 80)], 'supplementary');
+      expect(noSuppRows.changed).toEqual([]);
+      expect(noSuppRows.missing.map((r) => r.particulars)).toEqual(['Wing']);
+    });
+  });
+
   it('applying the same plan twice does not duplicate rows', () => {
     const sheet = [part(1, 'Bumper', 100)];
     const plan = planEstimateFix(sheet, [part(1, 'Bumper', 100), part(2, 'Grille', 200)]);
