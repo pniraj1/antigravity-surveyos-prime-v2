@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applyEstimate, applyClaim, parseDate, parseTime, parseAmount, coerceForPath, buildEstimateModePrompt } from '../aiDataSlice';
+import { applyEstimate, applyClaim, parseDate, parseTime, parseAmount, coerceForPath, buildEstimateModePrompt, buildBillModePrompt, applyFinalBill } from '../aiDataSlice';
 import { buildDecision, getConflictFields } from '@/lib/ai/reconciliation';
 import { createBlankClaim } from '@/types/claim';
 import type { ClaimData } from '@/types';
@@ -213,6 +213,61 @@ describe('buildEstimateModePrompt', () => {
   it('treats a missing estimated as zero, never NaN', () => {
     const p = buildEstimateModePrompt(sheet([{ estimated: undefined as never }, { estimated: 500 }]));
     expect(p!.total).toBe(500);
+  });
+});
+
+describe('buildBillModePrompt', () => {
+  it('does not prompt on a claim with no bill read yet', () => {
+    expect(buildBillModePrompt(sheet([{}]))).toBeNull();
+    expect(buildBillModePrompt(null)).toBeNull();
+  });
+
+  it('prompts when a bill number is set', () => {
+    const c = { ...sheet([{}]), billCheck: { billNo: 'B1', billDate: '', billTotal: 0 } } as ClaimData;
+    expect(buildBillModePrompt(c)).toEqual({ billNo: 'B1', billedRows: 0 });
+  });
+
+  it('prompts when any row is already billed', () => {
+    expect(buildBillModePrompt(sheet([{ billedAmount: 500 }, {}]))).toEqual({ billNo: '', billedRows: 1 });
+  });
+});
+
+describe('applyFinalBill continue', () => {
+  const page1 = (): ClaimData => ({
+    ...sheet([
+      { id: 'r1', particulars: 'FRONT BUMPER', billedAmount: 11800, billedTaxable: 10000, billStatus: 'in-bill' },
+      { id: 'r2', particulars: 'RADIATOR ASSY', estimated: 6000, assessed: 6000 },
+    ]),
+    billCheck: { billNo: 'B1', billDate: '2026-08-01', billTotal: 18880 },
+  }) as ClaimData;
+  const item = (description: string, amt: number) =>
+    ({ description, taxable_amount: amt, total_amount: amt * 1.18, gst_percent: 18 });
+
+  it('keeps bill no., date and total when the page prints none', () => {
+    const out = applyFinalBill(page1(), { spare_parts: [item('RADIATOR ASSY', 6000)] }, 'continue');
+    expect(out.billCheck).toEqual({ billNo: 'B1', billDate: '2026-08-01', billTotal: 18880 });
+  });
+
+  it('takes the printed total from the new page, keeping bill no. and date', () => {
+    const out = applyFinalBill(page1(), { total_amount: 50000, spare_parts: [] }, 'continue');
+    expect(out.billCheck).toEqual({ billNo: 'B1', billDate: '2026-08-01', billTotal: 50000 });
+  });
+
+  it('does not re-match a row that is already billed', () => {
+    const out = applyFinalBill(page1(), { spare_parts: [item('FRONT BUMPER', 999)] }, 'continue');
+    const r1 = out.assessmentRows.find((r) => r.id === 'r1')!;
+    expect(r1.billedAmount).toBe(11800);
+    expect(r1.billedTaxable).toBe(10000);
+  });
+
+  it('still matches the rows that are not billed yet', () => {
+    const out = applyFinalBill(page1(), { spare_parts: [item('RADIATOR ASSY', 6000)] }, 'continue');
+    expect(out.assessmentRows.find((r) => r.id === 'r2')!.billStatus).toBe('in-bill');
+  });
+
+  it('replace still overwrites the bill header', () => {
+    const out = applyFinalBill(page1(), { spare_parts: [] });
+    expect(out.billCheck).toEqual({ billNo: '', billDate: '', billTotal: 0 });
   });
 });
 

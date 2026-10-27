@@ -5,13 +5,14 @@ import { FilePlus2, FileStack, RefreshCw, X, Layers } from 'lucide-react';
 import type { EstimateApplyMode } from '@/stores/slices/aiDataSlice';
 
 interface EstimateModeDialogProps {
-  /** Task 8 adds the bill variant; only the estimate choices exist for now. */
   kind: 'estimate' | 'bill';
   fileLabel: string;
-  /** Rows already on the assessment sheet. */
+  /** Rows already on the assessment sheet (estimate) or already billed (bill). */
   rowCount: number;
-  /** Sum of `estimated` across those rows. */
-  total: number;
+  /** Sum of `estimated` across those rows. Estimate only. */
+  total?: number;
+  /** Bill no. already read. Bill only. */
+  billNo?: string;
   onChoose: (mode: EstimateApplyMode) => void;
   onCancel: () => void;
 }
@@ -26,13 +27,15 @@ const INR = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
  * surveyor may cancel.
  */
 export function EstimateModeDialog({
-  kind: _kind, // ponytail: bill copy arrives in Task 8; estimate copy for now
+  kind,
   fileLabel,
   rowCount,
-  total,
+  total = 0,
+  billNo,
   onChoose,
   onCancel,
 }: EstimateModeDialogProps) {
+  const isBill = kind === 'bill';
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="w-full max-w-md rounded-2xl p-6 flex flex-col gap-5 shadow-2xl animate-in fade-in zoom-in duration-200 bg-card border border-border">
@@ -45,12 +48,22 @@ export function EstimateModeDialog({
           </div>
           <div>
             <h2 className="text-sm font-medium text-foreground">
-              This claim already has an assessment
+              {isBill ? 'This claim already has a bill read' : 'This claim already has an assessment'}
             </h2>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-              <span className="font-medium text-foreground">{rowCount}</span>{' '}
-              {rowCount === 1 ? 'line' : 'lines'} on the sheet, totalling{' '}
-              <span className="font-medium text-foreground">₹{INR.format(total)}</span>.
+              {isBill ? (
+                <>
+                  {billNo ? <>Bill <span className="font-medium text-foreground">{billNo}</span>, </> : null}
+                  <span className="font-medium text-foreground">{rowCount}</span>{' '}
+                  {rowCount === 1 ? 'line' : 'lines'} billed so far.
+                </>
+              ) : (
+                <>
+                  <span className="font-medium text-foreground">{rowCount}</span>{' '}
+                  {rowCount === 1 ? 'line' : 'lines'} on the sheet, totalling{' '}
+                  <span className="font-medium text-foreground">₹{INR.format(total)}</span>.
+                </>
+              )}
               <br />
               What is{' '}
               <span className="font-medium text-foreground">&ldquo;{fileLabel}&rdquo;</span>?
@@ -65,25 +78,31 @@ export function EstimateModeDialog({
           >
             <FileStack size={16} className="mt-0.5 flex-shrink-0" />
             <span>
-              <span className="block text-xs font-medium">More pages of the same estimate</span>
+              <span className="block text-xs font-medium">
+                {isBill ? 'More pages of the same bill' : 'More pages of the same estimate'}
+              </span>
               <span className="block text-[11px] opacity-80 mt-0.5">
-                Items join the original estimate. Numbering carries on.
+                {isBill
+                  ? 'Keeps the bill no. and date. Lines already billed are left alone.'
+                  : 'Items join the original estimate. Numbering carries on.'}
               </span>
             </span>
           </button>
 
-          <button
-            onClick={() => onChoose('append')}
-            className="w-full flex items-start gap-3 p-3 rounded-xl text-left bg-primary text-primary-foreground transition-all hover:scale-[1.01]"
-          >
-            <FilePlus2 size={16} className="mt-0.5 flex-shrink-0" />
-            <span>
-              <span className="block text-xs font-medium">A supplementary estimate</span>
-              <span className="block text-[11px] opacity-80 mt-0.5">
-                Its items are added below the existing ones. Nothing is removed.
+          {!isBill && (
+            <button
+              onClick={() => onChoose('append')}
+              className="w-full flex items-start gap-3 p-3 rounded-xl text-left bg-primary text-primary-foreground transition-all hover:scale-[1.01]"
+            >
+              <FilePlus2 size={16} className="mt-0.5 flex-shrink-0" />
+              <span>
+                <span className="block text-xs font-medium">A supplementary estimate</span>
+                <span className="block text-[11px] opacity-80 mt-0.5">
+                  Its items are added below the existing ones. Nothing is removed.
+                </span>
               </span>
-            </span>
-          </button>
+            </button>
+          )}
 
           <button
             onClick={() => onChoose('replace')}
@@ -96,11 +115,12 @@ export function EstimateModeDialog({
             <RefreshCw size={16} className="mt-0.5 flex-shrink-0" />
             <span>
               <span className="block text-xs font-medium">
-                The same estimate again — read it fresh
+                {isBill ? 'The same bill again — read it fresh' : 'The same estimate again — read it fresh'}
               </span>
               <span className="block text-[11px] opacity-80 mt-0.5">
-                Replaces every estimate line, including continuation pages.
-                Hand-added and supplementary lines are kept.
+                {isBill
+                  ? 'Reads the whole bill again and matches every line afresh.'
+                  : 'Replaces every estimate line, including continuation pages. Hand-added and supplementary lines are kept.'}
               </span>
             </span>
           </button>

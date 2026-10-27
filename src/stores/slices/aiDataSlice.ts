@@ -574,9 +574,23 @@ function applyLokChallan(claim: ClaimData, data: any): ClaimData {
   };
 }
 
-export function applyFinalBill(claim: ClaimData, data: any): ClaimData {
+/**
+ * 'continue' = this file is more pages of the bill already read: rows already
+ * billed are not re-matched, and the earlier bill no. / date / total survive a
+ * page that does not print them. 'replace' reads the bill fresh.
+ */
+export function applyFinalBill(
+  claim: ClaimData,
+  data: any,
+  mode: 'replace' | 'continue' = 'replace',
+): ClaimData {
+  const continuing = mode === 'continue';
+  const prev = claim.billCheck;
   const billItems = buildBillItems(data);
-  const rowMatches = matchBillItemsToRows(claim.assessmentRows, billItems);
+  const rowMatches = matchBillItemsToRows(
+    continuing ? claim.assessmentRows.filter((r) => !(r.billedAmount && r.billedAmount > 0)) : claim.assessmentRows,
+    billItems,
+  );
   const matchedBillIds = new Set(Array.from(rowMatches.values()).map((m) => m.bill.idx));
 
   const updatedRows = claim.assessmentRows.map((row) => {
@@ -626,11 +640,17 @@ export function applyFinalBill(claim: ClaimData, data: any): ClaimData {
 
   return {
     ...claim,
-    billCheck: {
-      billNo: data.bill_number || '',
-      billDate: data.bill_date || '',
-      billTotal: data.total_amount || 0,
-    },
+    billCheck: continuing
+      ? {
+          billNo: prev?.billNo || data.bill_number || '',
+          billDate: prev?.billDate || data.bill_date || '',
+          billTotal: data.total_amount || prev?.billTotal || 0,
+        }
+      : {
+          billNo: data.bill_number || '',
+          billDate: data.bill_date || '',
+          billTotal: data.total_amount || 0,
+        },
     assessmentRows: updatedRows,
     extraBillItems: merged,
   };
@@ -659,6 +679,19 @@ export function buildEstimateModePrompt(
     rowCount: rows.length,
     total: rows.reduce((sum, r) => sum + (r.estimated || 0), 0),
   };
+}
+
+/**
+ * Summarises what a bill upload would collide with, for the "more pages or the
+ * same bill again?" question. Null when no bill has been read yet. Like the
+ * estimate prompt, it runs BEFORE extraction and describes the claim side only.
+ */
+export function buildBillModePrompt(
+  claim: ClaimData | null,
+): { billNo: string; billedRows: number } | null {
+  const billNo = claim?.billCheck?.billNo || '';
+  const billedRows = (claim?.assessmentRows || []).filter((r) => (r.billedAmount || 0) > 0).length;
+  return billNo || billedRows > 0 ? { billNo, billedRows } : null;
 }
 
 /**
@@ -836,7 +869,7 @@ export const createAIDataSlice: StateCreator<any, any, any, AIDataSlice> = (set)
       else if (key === 'auth') newClaim = applyAuth(newClaim, data);
       else if (key === 'fitness') newClaim = applyFitness(newClaim, data);
       else if (key === 'lok-challan') newClaim = applyLokChallan(newClaim, data);
-      else if (key === 'final-bill') newClaim = applyFinalBill(newClaim, data);
+      else if (key === 'final-bill') newClaim = applyFinalBill(newClaim, data, mode === 'continue' ? 'continue' : 'replace');
       else if (key === 'estimate') newClaim = applyEstimate(newClaim, data, mode ?? 'replace');
 
       return {

@@ -2,24 +2,30 @@
 
 import { useCallback, useState } from 'react';
 import { EstimateModeDialog } from '@/components/dialogs/EstimateModeDialog';
-import { buildEstimateModePrompt, type EstimateApplyMode } from '@/stores/slices/aiDataSlice';
+import {
+  buildBillModePrompt,
+  buildEstimateModePrompt,
+  type EstimateApplyMode,
+} from '@/stores/slices/aiDataSlice';
 import { useClaimStore } from '@/stores/claim-store';
 
 interface PendingPrompt {
+  kind: 'estimate' | 'bill';
   fileLabel: string;
+  /** Sheet rows (estimate) or already-billed rows (bill). */
   rowCount: number;
-  total: number;
+  total?: number;
+  billNo?: string;
   resolve: (mode: EstimateApplyMode | null) => void;
 }
 
 /**
- * Asks whether an incoming estimate is a supplementary or a re-scan, BEFORE the
- * document is sent for extraction.
+ * Asks whether an incoming estimate (or bill) is more pages, a supplementary,
+ * or a re-scan, BEFORE the document is sent for extraction.
  *
  * Resolves to the chosen mode, or null if the surveyor cancelled — in which
- * case the caller must not extract. A sheet with no rows resolves straight to
- * 'replace' without showing anything: there is nothing to lose, so there is
- * nothing to ask.
+ * case the caller must not extract. A claim with nothing to lose resolves
+ * straight to 'replace' without showing anything: there is nothing to ask.
  */
 export function useEstimateModePrompt() {
   const [pending, setPending] = useState<PendingPrompt | null>(null);
@@ -30,7 +36,26 @@ export function useEstimateModePrompt() {
       if (!summary) return Promise.resolve('replace');
 
       return new Promise<EstimateApplyMode | null>((resolve) => {
-        setPending({ fileLabel, ...summary, resolve });
+        setPending({ kind: 'estimate', fileLabel, ...summary, resolve });
+      });
+    },
+    [],
+  );
+
+  const confirmBillMode = useCallback(
+    (fileLabel: string): Promise<'replace' | 'continue' | null> => {
+      const summary = buildBillModePrompt(useClaimStore.getState().currentClaim);
+      if (!summary) return Promise.resolve('replace');
+
+      return new Promise<'replace' | 'continue' | null>((resolve) => {
+        setPending({
+          kind: 'bill',
+          fileLabel,
+          rowCount: summary.billedRows,
+          billNo: summary.billNo,
+          // The bill dialog only offers 'continue' | 'replace'.
+          resolve: resolve as PendingPrompt['resolve'],
+        });
       });
     },
     [],
@@ -46,14 +71,15 @@ export function useEstimateModePrompt() {
 
   const estimateModeDialog = pending ? (
     <EstimateModeDialog
-      kind="estimate"
+      kind={pending.kind}
       fileLabel={pending.fileLabel}
       rowCount={pending.rowCount}
       total={pending.total}
+      billNo={pending.billNo}
       onChoose={(mode) => handleChoice(mode)}
       onCancel={() => handleChoice(null)}
     />
   ) : null;
 
-  return { confirmEstimateMode, estimateModeDialog };
+  return { confirmEstimateMode, confirmBillMode, estimateModeDialog };
 }
