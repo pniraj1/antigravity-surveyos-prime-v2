@@ -14,6 +14,7 @@ import { rowsNeedingRemark, billCheckAssessed, resolveBillSalvage } from '@/lib/
 import { billCheckFlags, reconcileInvoice } from '@/lib/reports/bill-check-flags';
 import { salvageBasis } from '@/lib/calculations/salvage';
 import { needsReview } from '@/lib/ai/needs-review';
+import { usePrintGate } from '@/hooks/usePrintGate';
 
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import { PendingRowsDialog } from '@/components/dialogs/PendingRowsDialog';
@@ -31,7 +32,7 @@ import { BillCheckSummaryPanel } from './bill-check/BillCheckSummaryPanel';
 import { BillCheckAttentionBanner } from './bill-check/BillCheckAttentionBanner';
 import { fmt } from './bill-check/config';
 
-function BillCheckPreview({ claim, profile, format, onPrint }: { claim: any; profile: any; format: 'standard' | 'uiic'; onPrint: () => void }) {
+function BillCheckPreview({ claim, profile, format, onPrint, beforeExport }: { claim: any; profile: any; format: 'standard' | 'uiic'; onPrint: () => void; beforeExport: (run: () => void) => void }) {
   const { html, error } = useMemo(() => {
     try {
       return {
@@ -63,6 +64,7 @@ function BillCheckPreview({ claim, profile, format, onPrint }: { claim: any; pro
       onPrint={onPrint}
       wordFilename={`${claim?.vehicle?.registrationNumber || 'Claim'}-${format === 'uiic' ? 'UIIC' : 'Standard'}-Bill-Check`}
       footerLeft={footerFromProfile(profile)}
+      beforeExport={beforeExport}
     />
   );
 }
@@ -88,6 +90,7 @@ export function BillCheckTab() {
   const [reviewFile, setReviewFile] = useState<File | null>(null);
 
   const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview, smartFix, reviewProgress } = useAIExtraction();
+  const { gate, gateDialog } = usePrintGate();
 
   if (!currentClaim) return null;
 
@@ -160,10 +163,11 @@ export function BillCheckTab() {
   // A missing remark never changes a number, so it warns rather than blocks.
   const remarkRows = rowsNeedingRemark(allowedRows);
 
-  const doPrint = () => {
+  const gateKind = format === 'uiic' ? 'uiic-bill-check' : 'bill-check';
+  const doPrint = () => gate(gateKind, () => {
     if (format === 'uiic') triggerUIICBillCheckPrint(currentClaim, profile);
     else triggerStandardPrint(currentClaim, profile, 'bill-check');
-  };
+  });
 
   const handlePrint = () => {
     if (pendingRows.length > 0) { setPendingGate(true); return; }
@@ -309,7 +313,7 @@ export function BillCheckTab() {
               </div>
             </div>
 
-            <BillCheckPreview claim={currentClaim} profile={profile} format={format} onPrint={handlePrint} />
+            <BillCheckPreview claim={currentClaim} profile={profile} format={format} onPrint={handlePrint} beforeExport={run => gate(gateKind, run)} />
           </div>
         </Panel>
 
@@ -374,6 +378,8 @@ export function BillCheckTab() {
           onCancel={() => setFlagGate(false)}
         />
       )}
+
+      {gateDialog}
 
       {remarkWarning && (
         <MissingRemarkDialog

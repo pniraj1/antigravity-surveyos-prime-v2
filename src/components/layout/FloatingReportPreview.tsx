@@ -13,6 +13,7 @@ import { calculateAssessmentSummary, getCompulsoryExcess } from '@/lib/calculati
 import { getVehicleAgeMonths } from '@/lib/calculations/depreciation';
 import { SpotPrintReport } from '@/components/print/SpotPrintReport';
 import { useReactToPrint } from 'react-to-print';
+import { usePrintGate } from '@/hooks/usePrintGate';
 import { FileText, Printer, X, Minus, GripHorizontal } from 'lucide-react';
 
 type ReportFormat = 'standard' | 'uiic' | 'spot' | 'bill-check' | 'fee-bill' | 'valuation';
@@ -43,6 +44,7 @@ export function FloatingReportPreview() {
   const resizing = useRef(false);
   const resizeStart = useRef({ x: 0, y: 0, w: 420, h: 580, px: 0, py: 0 });
   const spotPrintRef = useRef<HTMLDivElement>(null);
+  const { gate, gateDialog } = usePrintGate();
 
   // Sanitize report HTML to prevent XSS via user-supplied claim field content.
   // WHOLE_DOCUMENT preserves <html>/<head>/<body> structure needed for iframe srcDoc.
@@ -177,13 +179,22 @@ export function FloatingReportPreview() {
 
   const handleHtmlPrint = useCallback(() => {
     if (!sanitizedHtml) return;
-    const win = window.open('', '_blank');
-    if (!win) return;
-    win.document.write(sanitizedHtml);
-    win.document.close();
-    win.focus();
-    setTimeout(() => win.print(), 300);
-  }, [html]);
+    const run = () => {
+      const win = window.open('', '_blank');
+      if (!win) return;
+      win.document.write(sanitizedHtml);
+      win.document.close();
+      win.focus();
+      setTimeout(() => win.print(), 300);
+    };
+    // 'bill-check' builds the UIIC bill check; fee-bill / valuation print ungated.
+    const kind = format === 'uiic' ? 'uiic-final'
+      : format === 'bill-check' ? 'uiic-bill-check'
+      : format === 'standard' ? 'final'
+      : null;
+    if (kind) gate(kind, run);
+    else run();
+  }, [sanitizedHtml, format, gate]);
 
   const handlePrint = format === 'spot' ? handleSpotPrint : handleHtmlPrint;
 
@@ -213,6 +224,8 @@ export function FloatingReportPreview() {
 
   // ── Panel ─────────────────────────────────────────────────────────────────────
   return (
+    <>
+    {gateDialog}
     <div
       className="fixed z-50 flex flex-col rounded-2xl overflow-hidden"
       style={{
@@ -367,5 +380,6 @@ export function FloatingReportPreview() {
         </div>
       )}
     </div>
+    </>
   );
 }

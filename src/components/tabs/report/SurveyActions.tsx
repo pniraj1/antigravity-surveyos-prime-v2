@@ -10,6 +10,7 @@ import { footerFromProfile } from '@/lib/reports/print-shell';
 import { triggerStandardPrint, buildStandardFinalSurveyHTML } from '@/lib/reports/standard-report-builder';
 import { triggerUIICFinalPrint, buildUIICFinalHTML } from '@/lib/reports/uiic-final-builder';
 import { useClaimStore } from '@/stores/claim-store';
+import { usePrintGate } from '@/hooks/usePrintGate';
 
 const FORMATS = [
   {
@@ -55,9 +56,11 @@ export function SurveyActions({
   zoom,
   setZoom,
 }: SurveyActionsProps) {
+  const { gate, gateDialog } = usePrintGate();
 
   return (
     <>
+      {gateDialog}
       {/* Format Selector */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5 w-full">
         {FORMATS.map(f => (
@@ -125,7 +128,7 @@ export function SurveyActions({
 
       {/* Word Export — same HTML the Power Print button sends to the printer */}
       <button
-          onClick={async () => {
+          onClick={() => gate(format === 'uiic' ? 'uiic-final' : 'final', async () => {
             setIsExportingWord(true);
             try {
               const regNo = claim.vehicle.registrationNumber || 'Claim';
@@ -141,7 +144,7 @@ export function SurveyActions({
             } finally {
               setIsExportingWord(false);
             }
-          }}
+          })}
           disabled={isExportingWord}
           className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm transition-all"
           style={{
@@ -158,7 +161,7 @@ export function SurveyActions({
       {/* Power Print — Standard */}
       {format === 'standard' && (
         <button
-          onClick={() => triggerStandardPrint(claim, profile)}
+          onClick={() => gate('final', () => triggerStandardPrint(claim, profile))}
           className="flex items-center gap-2 px-8 py-3 rounded-xl font-medium text-sm transition-all shadow-xl hover:scale-105 active:scale-95"
           style={{ background: 'var(--color-neutral-900)', color: '#FFFFFF', cursor: 'pointer', border: 'none' }}
         >
@@ -170,7 +173,7 @@ export function SurveyActions({
       {/* Power Print — UIIC */}
       {format === 'uiic' && (
         <button
-          onClick={() => triggerUIICFinalPrint(claim, profile)}
+          onClick={() => gate('uiic-final', () => triggerUIICFinalPrint(claim, profile))}
           className="flex items-center gap-2 px-8 py-3 rounded-xl font-medium text-sm transition-all shadow-xl hover:scale-105 active:scale-95"
           style={{ background: 'var(--color-status-success)', color: '#FFFFFF', cursor: 'pointer', border: 'none' }}
         >

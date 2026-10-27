@@ -31,6 +31,8 @@ interface ReportPreviewPanelProps {
   wordFilename?: string;
   /** Running-footer text for the Word export — matches the printed footer. */
   footerLeft?: string;
+  /** Lets the caller ask something first; it must call `run` to export. */
+  beforeExport?: (run: () => void) => void;
 }
 
 /** Wraps an HTML body fragment into a complete A4-ish preview document. */
@@ -76,6 +78,7 @@ export function ReportPreviewPanel({
   printLabel = 'Print / Export',
   wordFilename,
   footerLeft = '',
+  beforeExport,
 }: ReportPreviewPanelProps) {
   const [height, setHeight] = useState(520);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -127,7 +130,11 @@ export function ReportPreviewPanel({
         <div className="flex items-center gap-2">
           {wordFilename && (
             <button
-              onClick={() => downloadAsWord(html, wordFilename, footerLeft)}
+              onClick={() => {
+                const run = () => downloadAsWord(html, wordFilename, footerLeft);
+                if (beforeExport) beforeExport(run);
+                else run();
+              }}
               disabled={!html}
               title="Download this exact report as an editable Word file"
               className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[10px] font-medium uppercase tracking-wide transition-all hover:opacity-80 active:scale-95 disabled:opacity-40 border border-white/25 text-white"
