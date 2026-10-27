@@ -1,5 +1,10 @@
 # SurveyOS Prime V2 — Gemini / Antigravity Instructions
 
+## Start here (handover from Claude Code, 2026-10-27)
+1. Read `SurveyOS-Antigravity-Prime-V2-KnowledgeBase/HANDOVER.md`. It covers the product, the owner's rules, deploy steps, Prime ↔ Scan coupling and the status of every workstream.
+2. Read `CLAUDE.md` in this folder. Every rule in it applies to you as well, including the **Prime ↔ SurveyOS Scan impact rule**.
+3. Work and commit on `main` only. No branches.
+
 ## Agent Protocol (MUST READ FIRST)
 Read and follow: `SurveyOS-Antigravity-Prime-V2-KnowledgeBase/AGENT_PROTOCOL.md`
 
