@@ -22,6 +22,7 @@ Built subagent-driven (cheap models for tasks and reviews, one strong-model whol
 - Policy amounts: "Rs. 1,000" parses as 1000 (the plan's pattern gave 0.1).
 - Print buttons stay clickable while the policy check is pending; click opens the check inside the print step.
 
+- Re-read also skips repeat copies of a row it *changed* (owner approved; 88f1ccd1). Known limit: two genuinely identical new lines (same section, description, amount) show as one; add the second with Add row.
+
 ## Open
-- Duplicate copies of a row whose amount the re-read *changed* still show as "missing" on multi-page text PDFs (owner decision pending).
 - Owner checks in the app; push + deploy to the -in target.

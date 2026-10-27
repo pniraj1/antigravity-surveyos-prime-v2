@@ -11,7 +11,8 @@
 - feat: Dashboard **Survey Date** + **Last Edited** columns; Recovered list shows vehicle no.; **Add row** also below each section (Assessment and Bill Check).
 - refactor: **Site tab retired** (Scan replaces it); phone opens a claim on Claim Details; `?tab=site` falls back to Details; `getAt/setAt` moved to `src/lib/scan-import/path.ts`.
 - Scan impact: none beyond the path move; Scan unit tests pass.
-- tests: 209 files / 1863 passing, tsc clean. Commits 469aaa51..f3fa8d4a on main. Not pushed, not deployed, not tried in a signed-in browser. Spec/plan: `docs/superpowers/{specs,plans}/2026-10-27-surveyor-feedback-round-1*`.
+- fix: the re-read no longer offers repeat copies of a row it changed (multi-page text PDFs return each row once per page) — 88f1ccd1.
+- tests: 209 files / 1865 passing, tsc clean. Commits 469aaa51..88f1ccd1 on main. Not pushed, not deployed, not tried in a signed-in browser. Spec/plan: `docs/superpowers/{specs,plans}/2026-10-27-surveyor-feedback-round-1*`.
 
 ## 2026-10-25 (Claude) — Use phone files (Assessment, Bill Check, Photos)
 - feat(assessment, bill-check): **Use phone files** beside Upload Estimate (`estimate`, `supplementaryEstimate`) and the invoice upload (`invoice`). A pick runs the same handler as the file chooser, so the estimate mode dialog and the read and review run unchanged.
