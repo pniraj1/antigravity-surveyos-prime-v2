@@ -2,10 +2,13 @@
 
 import { Printer, X } from 'lucide-react';
 import { useClaimStore } from '@/stores/claim-store';
+import { policyCheckStatus } from '@/lib/policy/policy-check';
+import { PolicyCheckCard } from '@/components/policy/PolicyCheckCard';
+import type { ClaimData } from '@/types/claim';
 
 interface BeforePrintDialogProps {
   showUiic: boolean;
-  /** Reserved for the policy check (Task 13); renders nothing until then. */
+  /** Policy check card; Print stays disabled until all four are answered. */
   showPolicy: boolean;
   onPrint: () => void;
   onCancel: () => void;
@@ -23,14 +26,31 @@ const DATE_FIELDS = [
 ] as const;
 
 /** Asked at print time so the UIIC report never goes out with these blank by accident. */
-export function BeforePrintDialog({ showUiic, onPrint, onCancel, printLabel }: BeforePrintDialogProps) {
-  const reinspection = useClaimStore(s => s.currentClaim?.reinspection);
+export function BeforePrintDialog(props: BeforePrintDialogProps) {
+  const claim = useClaimStore(s => s.currentClaim); // live: Print enables as the surveyor answers in the card
   const updateReinspection = useClaimStore(s => s.updateReinspection);
+  return <BeforePrintDialogView {...props} claim={claim} updateReinspection={updateReinspection} />;
+}
+
+// ponytail: split from the store wrapper so tests can render with a claim (renderToStaticMarkup reads zustand initial state)
+export function BeforePrintDialogView({ showUiic, showPolicy, claim, updateReinspection, onPrint, onCancel, printLabel }: BeforePrintDialogProps & {
+  claim: ClaimData | null;
+  updateReinspection: (updates: Partial<ClaimData['reinspection']>) => void;
+}) {
+  const reinspection = claim?.reinspection;
+  const blocked = showPolicy && !!claim && !policyCheckStatus(claim).complete;
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="w-full max-w-md rounded-2xl p-6 flex flex-col gap-5 shadow-2xl animate-in fade-in zoom-in duration-200 bg-card border border-border">
-        <h2 className="text-sm font-medium text-foreground">Before printing — UIIC</h2>
+        <h2 className="text-sm font-medium text-foreground">{showUiic ? 'Before printing — UIIC' : 'Before printing'}</h2>
+
+        {showPolicy && (
+          <div className="flex flex-col gap-2">
+            <h3 className="text-xs font-medium text-foreground">Policy check — confirm before printing</h3>
+            <PolicyCheckCard />
+          </div>
+        )}
 
         {showUiic && (
           <div className="flex flex-col gap-4">
@@ -71,7 +91,8 @@ export function BeforePrintDialog({ showUiic, onPrint, onCancel, printLabel }: B
         <div className="flex flex-col gap-2">
           <button
             onClick={onPrint}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-medium bg-primary text-primary-foreground transition-all hover:scale-[1.01]"
+            disabled={blocked}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-medium bg-primary text-primary-foreground transition-all hover:scale-[1.01] disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
           >
             <Printer size={14} />
             {printLabel ?? 'Print'}

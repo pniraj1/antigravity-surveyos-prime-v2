@@ -11,6 +11,7 @@ import { triggerStandardPrint, buildStandardFinalSurveyHTML } from '@/lib/report
 import { triggerUIICFinalPrint, buildUIICFinalHTML } from '@/lib/reports/uiic-final-builder';
 import { useClaimStore } from '@/stores/claim-store';
 import { usePrintGate } from '@/hooks/usePrintGate';
+import { policyCheckStatus } from '@/lib/policy/policy-check';
 
 const FORMATS = [
   {
@@ -59,6 +60,8 @@ export function SurveyActions({
   const { gate, gateDialog } = usePrintGate();
   // The before-print dialog edits the store, so runs read the claim when they execute, not the prop captured at click time.
   const latestClaim = () => useClaimStore.getState().currentClaim ?? claim;
+
+  const policyPending = !policyCheckStatus(claim).complete;
 
   return (
     <>
@@ -127,6 +130,8 @@ export function SurveyActions({
 
       {/* Font Scale Selector */}
       <FontScalePill currentScale={claim.reportSettings?.fontScale ?? 'compact'} />
+
+      {policyPending && <p className="text-xs text-amber-700">Policy check pending — click Print to complete it</p>}
 
       {/* Word Export — same HTML the Power Print button sends to the printer */}
       <button

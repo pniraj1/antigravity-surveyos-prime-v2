@@ -15,6 +15,7 @@ import { billCheckFlags, reconcileInvoice } from '@/lib/reports/bill-check-flags
 import { salvageBasis } from '@/lib/calculations/salvage';
 import { needsReview } from '@/lib/ai/needs-review';
 import { usePrintGate } from '@/hooks/usePrintGate';
+import { policyCheckStatus } from '@/lib/policy/policy-check';
 
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import { PendingRowsDialog } from '@/components/dialogs/PendingRowsDialog';
@@ -304,6 +305,7 @@ export function BillCheckTab() {
                   <Printer size={16} />
                   Power Print — {format === 'uiic' ? 'UIIC' : 'Standard'} Bill Check
                 </button>
+                {!policyCheckStatus(currentClaim).complete && <p className="text-xs text-amber-700">Policy check pending — click Print to complete it</p>}
               </div>
             </div>
 
