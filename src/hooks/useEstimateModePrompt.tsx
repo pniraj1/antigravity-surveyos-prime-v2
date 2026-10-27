@@ -46,6 +46,7 @@ export function useEstimateModePrompt() {
 
   const estimateModeDialog = pending ? (
     <EstimateModeDialog
+      kind="estimate"
       fileLabel={pending.fileLabel}
       rowCount={pending.rowCount}
       total={pending.total}

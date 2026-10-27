@@ -3,7 +3,7 @@ import type { ClaimData, AssessmentRow, ExtraBillItem } from '@/types';
 import { createAssessmentRow } from '@/lib/calculations';
 import { buildDecision } from '@/lib/ai/reconciliation';
 
-export type EstimateApplyMode = 'replace' | 'append';
+export type EstimateApplyMode = 'replace' | 'append' | 'continue';
 
 export interface AIDataSlice {
   reconciliationConflictCount: number;
@@ -662,19 +662,17 @@ export function buildEstimateModePrompt(
 }
 
 /**
- * How an incoming estimate meets the rows already on the sheet.
- *   'replace' — a re-scan of the primary estimate. Drops rows tagged
- *               'estimate'; keeps supplementary and manual rows.
- *   'append'  — a supplementary estimate. Drops nothing.
+ * Turns an extracted estimate into assessment rows. Unnumbered items take
+ * startSerial, startSerial+1, … with ONE counter across parts → labour → paint
+ * (dealer estimates restart their printed numbers per section).
  */
-export function applyEstimate(
-  claim: ClaimData,
+export function buildEstimateRows(
   data: any,
-  mode: EstimateApplyMode = 'replace',
-): ClaimData {
-  const rowSource: AssessmentRow['source'] = mode === 'append' ? 'supplementary' : 'estimate';
+  rowSource: 'estimate' | 'supplementary',
+  startSerial: number,
+): AssessmentRow[] {
   const newRows: AssessmentRow[] = [];
-  let runningSerial = 1;
+  let runningSerial = startSerial;
 
   const extractBase = (item: any): number => {
     const gstPct = item.gst_percent ?? 18;
@@ -738,12 +736,37 @@ export function applyEstimate(
     );
   });
 
+  return newRows;
+}
+
+/**
+ * How an incoming estimate meets the rows already on the sheet.
+ *   'replace'  — a re-scan of the primary estimate. Drops rows tagged
+ *                'estimate' (continuation pages included); keeps supplementary
+ *                and manual rows.
+ *   'append'   — a supplementary estimate. Drops nothing.
+ *   'continue' — more pages of the same estimate. Drops nothing; new rows are
+ *                tagged 'estimate' and numbered on from the highest estimate
+ *                serial (1 if the sheet has no estimate rows).
+ */
+export function applyEstimate(
+  claim: ClaimData,
+  data: any,
+  mode: EstimateApplyMode = 'replace',
+): ClaimData {
+  const startSerial =
+    mode === 'continue'
+      ? Math.max(0, ...claim.assessmentRows.filter((r) => r.source === 'estimate').map((r) => r.srNo || 0)) + 1
+      : 1;
+  const newRows = buildEstimateRows(data, mode === 'append' ? 'supplementary' : 'estimate', startSerial);
+
   // A re-scan of the primary estimate returns the FULL document, so its old
   // rows go. A supplementary is a DIFFERENT document holding only the extra
   // items — dropping anything there would delete the original assessment,
-  // which is exactly the bug this replaces.
+  // which is exactly the bug this replaces. A continuation adds pages to the
+  // same estimate, so it drops nothing either.
   const kept =
-    mode === 'append'
+    mode === 'append' || mode === 'continue'
       ? claim.assessmentRows
       : claim.assessmentRows.filter((r) => r.source !== 'estimate');
 

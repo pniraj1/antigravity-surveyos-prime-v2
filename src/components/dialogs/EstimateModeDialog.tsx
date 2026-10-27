@@ -1,10 +1,12 @@
 'use client';
 
 import React from 'react';
-import { FilePlus2, RefreshCw, X, Layers } from 'lucide-react';
+import { FilePlus2, FileStack, RefreshCw, X, Layers } from 'lucide-react';
 import type { EstimateApplyMode } from '@/stores/slices/aiDataSlice';
 
 interface EstimateModeDialogProps {
+  /** Task 8 adds the bill variant; only the estimate choices exist for now. */
+  kind: 'estimate' | 'bill';
   fileLabel: string;
   /** Rows already on the assessment sheet. */
   rowCount: number;
@@ -24,6 +26,7 @@ const INR = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
  * surveyor may cancel.
  */
 export function EstimateModeDialog({
+  kind: _kind, // ponytail: bill copy arrives in Task 8; estimate copy for now
   fileLabel,
   rowCount,
   total,
@@ -57,6 +60,19 @@ export function EstimateModeDialog({
 
         <div className="flex flex-col gap-2">
           <button
+            onClick={() => onChoose('continue')}
+            className="w-full flex items-start gap-3 p-3 rounded-xl text-left bg-primary text-primary-foreground transition-all hover:scale-[1.01]"
+          >
+            <FileStack size={16} className="mt-0.5 flex-shrink-0" />
+            <span>
+              <span className="block text-xs font-medium">More pages of the same estimate</span>
+              <span className="block text-[11px] opacity-80 mt-0.5">
+                Items join the original estimate. Numbering carries on.
+              </span>
+            </span>
+          </button>
+
+          <button
             onClick={() => onChoose('append')}
             className="w-full flex items-start gap-3 p-3 rounded-xl text-left bg-primary text-primary-foreground transition-all hover:scale-[1.01]"
           >
@@ -83,8 +99,8 @@ export function EstimateModeDialog({
                 The same estimate again — read it fresh
               </span>
               <span className="block text-[11px] opacity-80 mt-0.5">
-                Replaces the lines this estimate created. Hand-added and
-                supplementary lines are kept.
+                Replaces every estimate line, including continuation pages.
+                Hand-added and supplementary lines are kept.
               </span>
             </span>
           </button>

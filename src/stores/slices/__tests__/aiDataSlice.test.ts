@@ -98,6 +98,61 @@ describe('applyEstimate', () => {
 
     expect(thrice.assessmentRows).toHaveLength(15);
   });
+
+  describe('continue', () => {
+    const unnumbered = {
+      spare_parts: [
+        { description: 'Headlamp', taxable_amount: 3000 },
+        { description: 'Fender', taxable_amount: 1500 },
+      ],
+    };
+    const row = (srNo: number, source: AssessmentRow['source'], section: AssessmentRow['section'] = 'parts') =>
+      ({ id: `r${srNo}${source}`, srNo, source, section, particulars: `Old ${srNo}` }) as unknown as AssessmentRow;
+
+    it('keeps every row, tags new rows estimate, numbers on from the highest estimate serial', () => {
+      const claim = {
+        ...baseClaim,
+        assessmentRows: [row(1, 'estimate'), row(2, 'estimate', 'labour'), row(3, 'estimate', 'paint'), row(9, 'supplementary')],
+      } as ClaimData;
+
+      const out = applyEstimate(claim, unnumbered, 'continue');
+
+      expect(out.assessmentRows).toHaveLength(6);
+      expect(out.assessmentRows.slice(0, 4)).toEqual(claim.assessmentRows);
+      const added = out.assessmentRows.slice(4);
+      expect(added.map((r) => r.source)).toEqual(['estimate', 'estimate']);
+      expect(added.map((r) => r.srNo)).toEqual([4, 5]);
+    });
+
+    it('printed sr_no is kept', () => {
+      const claim = { ...baseClaim, assessmentRows: [row(1, 'estimate')] } as ClaimData;
+      const out = applyEstimate(claim, { spare_parts: [{ sr_no: 40, description: 'Door', taxable_amount: 100 }] }, 'continue');
+      expect(out.assessmentRows[1].srNo).toBe(40);
+    });
+
+    it('onto a sheet with only hand-typed rows numbers from 1 and drops nothing', () => {
+      const claim = { ...baseClaim, assessmentRows: [row(7, undefined), row(8, undefined)] } as ClaimData;
+      const out = applyEstimate(claim, unnumbered, 'continue');
+      expect(out.assessmentRows).toHaveLength(4);
+      expect(out.assessmentRows.slice(2).map((r) => r.srNo)).toEqual([1, 2]);
+    });
+
+    it('replace still drops estimate rows including continuation ones and keeps supplementary/manual', () => {
+      const continued = applyEstimate(
+        { ...baseClaim, assessmentRows: [row(1, 'estimate'), row(5, 'supplementary'), row(6, undefined)] } as ClaimData,
+        unnumbered,
+        'continue',
+      );
+      expect(continued.assessmentRows.filter((r) => r.source === 'estimate')).toHaveLength(3);
+
+      const replaced = applyEstimate(continued, unnumbered, 'replace');
+
+      expect(replaced.assessmentRows.filter((r) => r.source === 'supplementary')).toHaveLength(1);
+      expect(replaced.assessmentRows.filter((r) => r.source === undefined)).toHaveLength(1);
+      expect(replaced.assessmentRows.filter((r) => r.source === 'estimate')).toHaveLength(2);
+      expect(replaced.assessmentRows).toHaveLength(4);
+    });
+  });
 });
 
 /**
