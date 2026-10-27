@@ -37,16 +37,16 @@ export function BeforePrintDialog({ showUiic, onPrint, onCancel, printLabel }: B
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {DATE_FIELDS.map(({ key, label }) => (
                 <div key={key}>
-                  <label className={LABEL}>{label}</label>
-                  <input type="date" className={INPUT}
+                  <label htmlFor={`bp-${key}`} className={LABEL}>{label}</label>
+                  <input id={`bp-${key}`} type="date" className={INPUT}
                     value={reinspection?.[key] || ''}
                     onChange={e => updateReinspection({ [key]: e.target.value })} />
                 </div>
               ))}
             </div>
             <div>
-              <label className={LABEL}>Repairs as per assessment</label>
-              <div className="flex gap-2">
+              <span id="bp-repairs-label" className={LABEL}>Repairs as per assessment</span>
+              <div role="group" aria-labelledby="bp-repairs-label" className="flex gap-2">
                 {(['YES', 'NO', 'PARTIAL'] as const).map(val => (
                   <button
                     key={val}

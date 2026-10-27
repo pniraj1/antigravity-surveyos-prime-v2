@@ -4,6 +4,7 @@ import { BeforePrintDialog } from '@/components/dialogs/BeforePrintDialog';
 import { usePrintGate } from '@/hooks/usePrintGate';
 import { useClaimStore } from '@/stores/claim-store';
 import { createBlankClaim } from '@/types/claim';
+import { buildUIICFinalHTML } from '@/lib/reports/uiic-final-builder';
 
 const props = { showPolicy: false, onPrint: () => {}, onCancel: () => {} };
 const LABELS = [
@@ -56,5 +57,18 @@ describe('usePrintGate', () => {
     renderToStaticMarkup(<Probe kind="final" run={run} />);
     renderToStaticMarkup(<Probe kind="bill-check" run={run} />);
     expect(run).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('dates typed in the dialog reach the report', () => {
+  it('a run that reads the store at execution time builds UIIC output with the new date', () => {
+    useClaimStore.setState({ currentClaim: createBlankClaim('final') });
+    // What each print place does: read the claim when `run` executes, not when gate() was called.
+    const run = () => buildUIICFinalHTML(useClaimStore.getState().currentClaim!, null);
+    const stale = run();
+    useClaimStore.getState().updateReinspection({ repairAuthDate: '2026-03-05' });
+    const fresh = run();
+    expect(stale).not.toContain('05.03.2026');
+    expect(fresh).toContain('05.03.2026');
   });
 });

@@ -25,6 +25,16 @@ function safePos() {
   return { x: window.innerWidth - 450, y: window.innerHeight - 620 };
 }
 
+function sanitizeReport(html: string): string {
+  if (!html || typeof window === 'undefined') return html;
+  return DOMPurify.sanitize(html, {
+    WHOLE_DOCUMENT: true,
+    FORCE_BODY: false,
+    ADD_TAGS: ['style', 'link'],
+    ADD_ATTR: ['style', 'media', 'type'],
+  });
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function FloatingReportPreview() {
@@ -48,15 +58,7 @@ export function FloatingReportPreview() {
 
   // Sanitize report HTML to prevent XSS via user-supplied claim field content.
   // WHOLE_DOCUMENT preserves <html>/<head>/<body> structure needed for iframe srcDoc.
-  const sanitizedHtml = useMemo(() => {
-    if (!html || typeof window === 'undefined') return html;
-    return DOMPurify.sanitize(html, {
-      WHOLE_DOCUMENT: true,
-      FORCE_BODY: false,
-      ADD_TAGS: ['style', 'link'],
-      ADD_ATTR: ['style', 'media', 'type'],
-    });
-  }, [html]);
+  const sanitizedHtml = useMemo(() => sanitizeReport(html), [html]);
 
   // ── Auto-detect format on tab / claim change ────────────────────────────────
   useEffect(() => {
@@ -180,9 +182,17 @@ export function FloatingReportPreview() {
   const handleHtmlPrint = useCallback(() => {
     if (!sanitizedHtml) return;
     const run = () => {
+      // The gate dialog edits the claim, and `html` is debounced 400ms behind it,
+      // so gated formats are rebuilt from the store here instead of reusing it.
+      const latest = useClaimStore.getState().currentClaim;
+      const fresh = !latest ? null
+        : format === 'uiic' ? buildUIICFinalHTML(latest, profile)
+        : format === 'bill-check' ? buildUIICBillCheckHTML(latest, profile)
+        : format === 'standard' ? buildStandardFinalSurveyHTML(latest, profile)
+        : null;
       const win = window.open('', '_blank');
       if (!win) return;
-      win.document.write(sanitizedHtml);
+      win.document.write(fresh === null ? sanitizedHtml : sanitizeReport(fresh));
       win.document.close();
       win.focus();
       setTimeout(() => win.print(), 300);
@@ -194,7 +204,7 @@ export function FloatingReportPreview() {
       : null;
     if (kind) gate(kind, run);
     else run();
-  }, [sanitizedHtml, format, gate]);
+  }, [sanitizedHtml, format, gate, profile]);
 
   const handlePrint = format === 'spot' ? handleSpotPrint : handleHtmlPrint;
 

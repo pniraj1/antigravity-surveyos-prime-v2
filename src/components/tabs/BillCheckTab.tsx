@@ -165,8 +165,10 @@ export function BillCheckTab() {
 
   const gateKind = format === 'uiic' ? 'uiic-bill-check' : 'bill-check';
   const doPrint = () => gate(gateKind, () => {
-    if (format === 'uiic') triggerUIICBillCheckPrint(currentClaim, profile);
-    else triggerStandardPrint(currentClaim, profile, 'bill-check');
+    // The gate dialog edits the store, so read the claim when this runs.
+    const latest = useClaimStore.getState().currentClaim ?? currentClaim;
+    if (format === 'uiic') triggerUIICBillCheckPrint(latest, profile);
+    else triggerStandardPrint(latest, profile, 'bill-check');
   });
 
   const handlePrint = () => {

@@ -82,6 +82,8 @@ export function ReportPreviewPanel({
 }: ReportPreviewPanelProps) {
   const [height, setHeight] = useState(520);
   const containerRef = useRef<HTMLDivElement>(null);
+  const htmlRef = useRef(html);
+  htmlRef.current = html;
   const srcDoc = useMemo(() => {
     if (!html) return '';
     // Sanitize the body fragment before wrapping — prevents XSS from
@@ -131,7 +133,8 @@ export function ReportPreviewPanel({
           {wordFilename && (
             <button
               onClick={() => {
-                const run = () => downloadAsWord(html, wordFilename, footerLeft);
+                // The caller's gate dialog can change the claim, and so `html`, before this runs.
+                const run = () => downloadAsWord(htmlRef.current, wordFilename, footerLeft);
                 if (beforeExport) beforeExport(run);
                 else run();
               }}
