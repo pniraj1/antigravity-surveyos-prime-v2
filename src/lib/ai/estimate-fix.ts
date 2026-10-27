@@ -79,12 +79,26 @@ export function planEstimateFix(sheetRows: AssessmentRow[], reReadRows: Assessme
     }
   }
 
+  // A multi-page re-read can return the whole sheet once per page. A row the sheet already
+  // holds (same section, description and estimate) is never "missing", and repeats of one
+  // genuinely new row are proposed once.
+  const onSheet = (r: AssessmentRow) =>
+    sheetRows.some(
+      (s) => s.section === r.section && norm(s.particulars) === norm(r.particulars) && Math.abs(s.estimated - r.estimated) <= 0.5,
+    );
+  const seen = new Set<string>();
   const missing: AssessmentRow[] = [];
   const changed: EstimateFixChange[] = [];
   for (const r of reReadRows) {
     const s = matchOf.get(r.id);
-    if (!s) missing.push(r);
-    else if (differs(s, r)) changed.push({ rowId: s.id, before: pick(s), after: pick(r) });
+    if (s) {
+      if (differs(s, r)) changed.push({ rowId: s.id, before: pick(s), after: pick(r) });
+      continue;
+    }
+    const key = `${r.section}|${norm(r.particulars)}|${r.estimated.toFixed(2)}`;
+    if (onSheet(r) || seen.has(key)) continue;
+    seen.add(key);
+    missing.push(r);
   }
   return { missing, changed };
 }

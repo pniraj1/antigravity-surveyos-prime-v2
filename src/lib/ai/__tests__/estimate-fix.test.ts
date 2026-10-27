@@ -122,6 +122,34 @@ describe('planEstimateFix / applyEstimateFix', () => {
     expect(out.map((r) => r.particulars)).toEqual(['Bumper', 'Hood', 'Supp', 'Lamp']);
   });
 
+  describe('multi-page re-read returns the whole sheet once per page', () => {
+    const sheet = () => [part(1, 'Bumper', 100), part(2, 'Grille', 200), part(3, 'Hood', 300)];
+    // fresh ids and merged-page serials, as mergeAIResults would join them
+    const copy = (rows: AssessmentRow[]) => rows.map((r) => part(r.srNo, r.particulars, r.estimated));
+
+    it('the sheet repeated twice and three times proposes nothing', () => {
+      const s = sheet();
+      for (const n of [2, 3]) {
+        const reRead = Array.from({ length: n }, () => copy(s)).flat();
+        expect(planEstimateFix(s, reRead)).toEqual({ missing: [], changed: [] });
+      }
+    });
+
+    it('a genuinely new row repeated on every page is proposed once', () => {
+      const s = sheet();
+      const x = () => part(4, 'Fender', 400);
+      const plan = planEstimateFix(s, [...copy(s), x(), ...copy(s), x()]);
+      expect(plan.missing.map((r) => r.particulars)).toEqual(['Fender']);
+      expect(plan.changed).toEqual([]);
+    });
+
+    it('a repeated row whose estimate differs by more than 0.5 is still proposed', () => {
+      const s = sheet();
+      const plan = planEstimateFix(s, [...copy(s), part(2, 'Grille', 250)]);
+      expect(plan.missing.map((r) => r.particulars)).toEqual(['Grille']);
+    });
+  });
+
   it('applying the same plan twice does not duplicate rows', () => {
     const sheet = [part(1, 'Bumper', 100)];
     const plan = planEstimateFix(sheet, [part(1, 'Bumper', 100), part(2, 'Grille', 200)]);
