@@ -114,7 +114,12 @@ Return ONLY a JSON object:
   "period_to": "CRITICAL — expiry of the CURRENT policy period. Look for 'to Midnight of', 'Valid Upto', 'Valid To'. Strip 'Midnight of'. This is NOT the 'Prev Policy' expiry date. Return YYYY-MM-DD",
   "idv": "CRITICAL — Insured Declared Value. Look for 'IDV', 'Vehicle IDV', 'Total IDV', 'Insured Declared Value', 'Sum Insured'. If both a vehicle IDV and a total IDV are shown, return the TOTAL. Digits only: 'Rs.20,00,000' → '2000000'",
   "policy_issuing_office": "Look for 'Issuing Office Name & Address', the branch that issued the policy",
-  "hpa_with": "The financer / hypothecation holder. Look for 'Financer', 'Hypothecation', 'HPA', 'Agreement with'. If it says 'SELF OWNED', 'NIL' or is blank, return \\"\\""
+  "hpa_with": "The financer / hypothecation holder. Look for 'Financer', 'Hypothecation', 'HPA', 'Agreement with'. If it says 'SELF OWNED', 'NIL' or is blank, return \\"\\"",
+  "nil_depreciation": "Is a Nil / Zero Depreciation add-on (also called 'Depreciation Reimbursement', 'Nil Dep', 'Bumper to Bumper') on THIS policy? Return \\"yes\\", \\"no\\" or \\"unknown\\"",
+  "imt23": "Is endorsement IMT 23 (cover for lamps, tyres, tubes, mudguards, bonnet, side parts, bumpers, headlights and paintwork of commercial vehicles) on this policy? Return \\"yes\\", \\"no\\" or \\"unknown\\"",
+  "consumables_cover": "Is a Consumables add-on on this policy? Return \\"yes\\", \\"no\\" or \\"unknown\\"",
+  "compulsory_excess": "Compulsory excess / deductible in rupees, digits only, or \\"\\"",
+  "voluntary_excess": "Voluntary excess in rupees, digits only, or \\"\\""
 }
 Return ONLY the JSON. No explanation, no markdown, no backticks.`,
 

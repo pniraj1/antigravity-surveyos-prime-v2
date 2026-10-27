@@ -48,6 +48,26 @@ export interface ReconciliationDecision {
   sourcesSeen: string;
 }
 
+export type YesNo = 'yes' | 'no';
+
+/** What the AI read off the policy schedule — a suggestion only, never an answer. */
+export interface PolicyAiRead {
+  nilDep?: YesNo;
+  imt23?: YesNo;
+  consumables?: YesNo;
+  compulsoryExcess?: number;
+  voluntaryExcess?: number;
+}
+
+/** Surveyor's policy check. Answers are set only by the surveyor; aiRead is advisory. */
+export interface PolicyCheck {
+  nilDep?: YesNo;
+  imt23?: YesNo | 'na';
+  consumables?: YesNo;
+  excessConfirmed?: boolean;
+  aiRead?: PolicyAiRead;
+}
+
 export interface ClaimData {
   /** Unique claim identifier */
   id: string;
@@ -106,6 +126,9 @@ export interface ClaimData {
 
   // ─── Fee Bill ──────────────────────────────────────
   feeBill: FeeBill;
+
+  /** Undefined on older claims and on new ones until the surveyor/AI touches it ("0 of 4"). */
+  policyCheck?: PolicyCheck;
 
   // ─── Valuation / Break-in Inspection ──────────────
   valuationDetails: ValuationDetails;

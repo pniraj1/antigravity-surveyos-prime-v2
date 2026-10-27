@@ -2,6 +2,7 @@ import type { StateCreator } from 'zustand';
 import type { ClaimData, AssessmentRow, ExtraBillItem } from '@/types';
 import { createAssessmentRow } from '@/lib/calculations';
 import { buildDecision } from '@/lib/ai/reconciliation';
+import { parsePolicyAddOns, mergePolicyAiRead } from '@/lib/policy/policy-check';
 
 export type EstimateApplyMode = 'replace' | 'append' | 'continue';
 
@@ -396,9 +397,23 @@ function applyRC(claim: ClaimData, data: any): ClaimData {
   };
 }
 
-function applyPolicy(claim: ClaimData, data: any): ClaimData {
+export function applyPolicy(claim: ClaimData, data: any): ClaimData {
+  const ai = parsePolicyAddOns(data);
+  // Merge BEFORE filling excess, so the comparison is against what the surveyor had.
+  const policyCheck = mergePolicyAiRead(claim.policyCheck, ai, {
+    compulsory: claim.feeBill.compulsoryExcess || 0,
+    voluntary: claim.feeBill.voluntaryExcess || 0,
+  });
+  const fillCompulsory = !claim.feeBill.compulsoryExcess && ai.compulsoryExcess;
+  const fillVoluntary = !claim.feeBill.voluntaryExcess && ai.voluntaryExcess;
   const updated = {
     ...claim,
+    policyCheck,
+    feeBill: {
+      ...claim.feeBill,
+      ...(fillCompulsory ? { compulsoryExcess: fillCompulsory, lessExcess: fillCompulsory } : {}),
+      ...(fillVoluntary ? { voluntaryExcess: fillVoluntary } : {}),
+    },
     policy: {
       ...claim.policy,
       policyNumber: data.policy_number || claim.policy.policyNumber,

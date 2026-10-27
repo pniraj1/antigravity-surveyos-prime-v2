@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applyEstimate, applyClaim, parseDate, parseTime, parseAmount, coerceForPath, buildEstimateModePrompt, buildBillModePrompt, applyFinalBill } from '../aiDataSlice';
+import { applyEstimate, applyClaim, parseDate, parseTime, parseAmount, coerceForPath, buildEstimateModePrompt, buildBillModePrompt, applyFinalBill, applyPolicy } from '../aiDataSlice';
 import { buildDecision, getConflictFields } from '@/lib/ai/reconciliation';
 import { createBlankClaim } from '@/types/claim';
 import type { ClaimData } from '@/types';
@@ -481,5 +481,38 @@ describe('buildDecision', () => {
     // The whole point: a decision built this way removes the field from the Hub.
     expect(getConflictFields(decided).map((f) => f.path))
       .not.toContain('vehicle.engineNumber');
+  });
+});
+
+describe('applyPolicy — policy check suggestions', () => {
+  const base = (): ClaimData => {
+    const c = createBlankClaim();
+    return { ...c, feeBill: { ...c.feeBill, compulsoryExcess: 0, lessExcess: 0, voluntaryExcess: 0 } };
+  };
+
+  it('stores aiRead and fills empty excess, but never sets answers', () => {
+    const r = applyPolicy(base(), { nil_depreciation: 'yes', compulsory_excess: '1000', voluntary_excess: '500' });
+    expect(r.policyCheck).toEqual({ aiRead: { nilDep: 'yes', compulsoryExcess: 1000, voluntaryExcess: 500 } });
+    expect(r.feeBill.compulsoryExcess).toBe(1000);
+    expect(r.feeBill.lessExcess).toBe(1000);
+    expect(r.feeBill.voluntaryExcess).toBe(500);
+  });
+
+  it('does not overwrite typed excess and clears excessConfirmed when AI differs', () => {
+    const c = base();
+    c.feeBill.compulsoryExcess = 2000;
+    c.feeBill.lessExcess = 2000;
+    c.policyCheck = { excessConfirmed: true, nilDep: 'no' };
+    const r = applyPolicy(c, { compulsory_excess: '1000', nil_depreciation: 'yes' });
+    expect(r.feeBill.compulsoryExcess).toBe(2000);
+    expect(r.feeBill.lessExcess).toBe(2000);
+    expect(r.policyCheck?.excessConfirmed).toBeUndefined();
+    expect(r.policyCheck?.nilDep).toBeUndefined();
+  });
+
+  it('old claim with a policy read lacking add-on keys still works', () => {
+    const r = applyPolicy(base(), { policy_number: 'P1' });
+    expect(r.policy.policyNumber).toBe('P1');
+    expect(r.policyCheck).toEqual({ aiRead: {} });
   });
 });
