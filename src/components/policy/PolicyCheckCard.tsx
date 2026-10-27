@@ -34,7 +34,7 @@ export function PolicyCheckCard() {
 export function PolicyCheckCardView({ claim: currentClaim, setPolicyCheck, updateFeeBill }: ViewProps) {
   const pc: PolicyCheck = currentClaim.policyCheck ?? {};
   const ai = pc.aiRead ?? {};
-  const fb = currentClaim.feeBill;
+  const fb = currentClaim.feeBill ?? {}; // old claims may have no feeBill
   const { warnings } = policyCheckStatus(currentClaim);
 
   return (

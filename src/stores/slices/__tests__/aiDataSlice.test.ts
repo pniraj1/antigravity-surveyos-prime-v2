@@ -515,6 +515,15 @@ describe('applyPolicy — policy check suggestions', () => {
     expect(r.feeBill.voluntaryExcess).toBe(500);
   });
 
+  it('does not throw on an old claim with no feeBill, and fills excess only into a new feeBill', () => {
+    const old = { ...createBlankClaim(), feeBill: undefined } as unknown as ClaimData;
+    const none = applyPolicy(old, { nil_depreciation: 'yes' });
+    expect(none.feeBill).toBeUndefined();
+    expect(none.policyCheck).toEqual({ aiRead: { nilDep: 'yes' } });
+    const filled = applyPolicy(old, { compulsory_excess: '1000' });
+    expect(filled.feeBill).toMatchObject({ compulsoryExcess: 1000, lessExcess: 1000 });
+  });
+
   it('does not overwrite typed excess and clears excessConfirmed when AI differs', () => {
     const c = base();
     c.feeBill.compulsoryExcess = 2000;

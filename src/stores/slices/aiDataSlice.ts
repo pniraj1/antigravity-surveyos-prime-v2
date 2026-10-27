@@ -403,19 +403,20 @@ export function applyPolicy(claim: ClaimData, data: any): ClaimData {
   const ai = parsePolicyAddOns(data);
   // Merge BEFORE filling excess, so the comparison is against what the surveyor had.
   const policyCheck = mergePolicyAiRead(claim.policyCheck, ai, {
-    compulsory: claim.feeBill.compulsoryExcess || 0,
-    voluntary: claim.feeBill.voluntaryExcess || 0,
+    compulsory: claim.feeBill?.compulsoryExcess || 0,
+    voluntary: claim.feeBill?.voluntaryExcess || 0,
   });
-  const fillCompulsory = !claim.feeBill.compulsoryExcess && ai.compulsoryExcess;
-  const fillVoluntary = !claim.feeBill.voluntaryExcess && ai.voluntaryExcess;
+  const fillCompulsory = !claim.feeBill?.compulsoryExcess && ai.compulsoryExcess;
+  const fillVoluntary = !claim.feeBill?.voluntaryExcess && ai.voluntaryExcess;
+  const fills = {
+    ...(fillCompulsory ? { compulsoryExcess: fillCompulsory, lessExcess: fillCompulsory } : {}),
+    ...(fillVoluntary ? { voluntaryExcess: fillVoluntary } : {}),
+  };
   const updated = {
     ...claim,
     policyCheck,
-    feeBill: {
-      ...claim.feeBill,
-      ...(fillCompulsory ? { compulsoryExcess: fillCompulsory, lessExcess: fillCompulsory } : {}),
-      ...(fillVoluntary ? { voluntaryExcess: fillVoluntary } : {}),
-    },
+    // An old claim may have no feeBill: only create one when there is an excess to fill.
+    ...(claim.feeBill || Object.keys(fills).length ? { feeBill: { ...claim.feeBill, ...fills } } : {}),
     policy: {
       ...claim.policy,
       policyNumber: data.policy_number || claim.policy.policyNumber,

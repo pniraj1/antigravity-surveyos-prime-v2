@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { PolicyCheckCardView } from '../PolicyCheckCard';
 import { PolicyCheckStripView } from '../PolicyCheckStrip';
 import { createBlankClaim } from '@/types/claim';
-import type { PolicyCheck } from '@/types/claim';
+import type { ClaimData, PolicyCheck } from '@/types/claim';
 
 // renderToStaticMarkup reads zustand's initial state, so the views take the claim directly.
 const claimWith = (policyCheck?: PolicyCheck) => ({ ...createBlankClaim('final'), policyCheck });
@@ -22,6 +22,12 @@ describe('PolicyCheckCard', () => {
 
   it('shows the AI read beside the question it answers', () => {
     expect(card({ aiRead: { nilDep: 'yes' } })).toContain('AI read: Yes');
+  });
+
+  it('renders for an old claim with no feeBill', () => {
+    const old = { ...claimWith(), feeBill: undefined } as unknown as ClaimData;
+    const html = renderToStaticMarkup(<PolicyCheckCardView claim={old} setPolicyCheck={noop} updateFeeBill={noop} />);
+    expect(html).toContain('Excess');
   });
 
   it('lists warnings', () => {
