@@ -5,7 +5,6 @@ import { useEffect } from 'react';
 // Tabs a surveyor needs at the vehicle. Importing them once while online puts
 // their chunks in the service-worker cache so they open without signal later.
 const WARM_TABS: Array<() => Promise<unknown>> = [
-  () => import('@/components/tabs/SiteTab'),
   () => import('@/components/tabs/DetailsTab'),
   () => import('@/components/tabs/PhotosTab'),
   () => import('@/components/tabs/DocumentsTab'),

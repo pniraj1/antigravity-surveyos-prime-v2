@@ -17,9 +17,9 @@ describe('claimLandingTab', () => {
     expect(claimLandingTab(undefined)).toBe('documents');
   });
 
-  it('lands every survey type on the Site screen on a phone', () => {
-    expect(claimLandingTab('spot', true)).toBe('site');
-    expect(claimLandingTab('final', true)).toBe('site');
-    expect(claimLandingTab('valuation', true)).toBe('site');
+  it('lands every survey type on Claim Details on a phone', () => {
+    expect(claimLandingTab('spot', true)).toBe('details');
+    expect(claimLandingTab('final', true)).toBe('details');
+    expect(claimLandingTab('valuation', true)).toBe('details');
   });
 });

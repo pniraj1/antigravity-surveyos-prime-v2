@@ -9,7 +9,6 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 
 export type AppTab =
   | 'dashboard'
-  | 'site'
   | 'documents'
   | 'review'
   | 'details'

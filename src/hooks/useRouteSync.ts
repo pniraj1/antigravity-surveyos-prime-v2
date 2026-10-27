@@ -3,6 +3,7 @@ import { useSearchParams, usePathname } from 'next/navigation';
 import { useUIStore } from '@/stores/ui-store';
 import { useClaimStore } from '@/stores/claim-store';
 import { getClaim } from '@/lib/storage/indexeddb';
+import { normalizeUrlTab } from '@/lib/navigation/url-tab';
 
 export function useRouteSync() {
   const searchParams = useSearchParams();
@@ -67,12 +68,12 @@ export function useRouteSync() {
             }
           }
           // Apply tab from URL, defaulting to 'details' when a claim is present.
-          setActiveTab((urlTab ?? 'details') as Parameters<typeof setActiveTab>[0]);
+          setActiveTab(normalizeUrlTab(urlTab, true));
         } else {
           // No claim in URL – apply tab from URL if present (e.g. admin, profile),
           // otherwise fall back to dashboard.
           if (storeClaimId) setCurrentClaimId(null);
-          setActiveTab((urlTab ?? 'dashboard') as Parameters<typeof setActiveTab>[0]);
+          setActiveTab(normalizeUrlTab(urlTab, false));
         }
       } finally {
         syncingFromUrl.current = false;

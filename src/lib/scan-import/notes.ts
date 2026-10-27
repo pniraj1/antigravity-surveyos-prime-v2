@@ -5,7 +5,7 @@
  */
 import type { ClaimData } from '@/types';
 import { createBlankClaim } from '@/types';
-import { getAt, setAt } from '@/lib/site/path';
+import { getAt, setAt } from './path';
 
 export type ScanImport = NonNullable<ClaimData['scanImport']>;
 

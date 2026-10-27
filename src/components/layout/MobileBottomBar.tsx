@@ -1,15 +1,15 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { MapPin, ClipboardList, Camera, Printer, MoreHorizontal } from 'lucide-react';
+import { ClipboardList, FileText, Camera, Printer, MoreHorizontal } from 'lucide-react';
 import { useClaimStore } from '@/stores/claim-store';
 import { useUIStore, type AppTab } from '@/stores/ui-store';
 import { isNavItemVisible } from '@/lib/navigation/visible-nav';
 import { cn } from '@/lib/utils';
 
 const ITEMS: { id: AppTab; label: string; icon: ReactNode }[] = [
-  { id: 'site', label: 'Site', icon: <MapPin size={20} /> },
   { id: 'details', label: 'Details', icon: <ClipboardList size={20} /> },
+  { id: 'documents', label: 'Documents', icon: <FileText size={20} /> },
   { id: 'photos', label: 'Photos', icon: <Camera size={20} /> },
   { id: 'reports', label: 'Report', icon: <Printer size={20} /> },
 ];

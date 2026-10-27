@@ -49,7 +49,6 @@ import { ProcessingProgressOverlay } from '@/components/ui/ProcessingProgressOve
 import { TermsReacceptGate } from '@/components/legal/TermsReacceptGate';
 
 // Dynamically import ALL tabs with ssr:false — they all use browser-only APIs:
-const SiteTab = dynamicImport(() => import('@/components/tabs/SiteTab').then(m => ({ default: m.SiteTab })), { ssr: false });
 const DetailsTab    = dynamicImport(() => import('@/components/tabs/DetailsTab').then(m    => ({ default: m.DetailsTab    })), { ssr: false });
 const AssessmentTab = dynamicImport(() => import('@/components/tabs/AssessmentTab').then(m => ({ default: m.AssessmentTab })), { ssr: false });
 const PhotosTab     = dynamicImport(() => import('@/components/tabs/PhotosTab').then(m     => ({ default: m.PhotosTab     })), { ssr: false });
@@ -632,7 +631,6 @@ export function DashboardContent() {
 // ─── Tab Router ──────────────────────────────────────────
 export function TabPlaceholder({ tab }: { tab: string }) {
   if (tab === 'documents')   return <DocumentsTab />;
-  if (tab === 'site')        return <SiteTab />;
   if (tab === 'review')      return <ReviewTab />;
   if (tab === 'details')     return <DetailsTab />;
   if (tab === 'assessment')  return <AssessmentTab />;

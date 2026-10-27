@@ -17,7 +17,7 @@ import type { SurveyType } from '@/types/report';
  * `documents` is ever unrestricted for valuation, this special case goes away.
  */
 export function claimLandingTab(surveyType: SurveyType | undefined, narrow = false): AppTab {
-  // On a phone the Site screen is the start of the workflow for every survey type.
-  if (narrow) return 'site';
+  // On a phone every survey type starts on Claim Details (the Site tab is retired).
+  if (narrow) return 'details';
   return surveyType === 'valuation' ? 'details' : 'documents';
 }
