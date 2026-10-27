@@ -130,6 +130,23 @@ describe('applyEstimate', () => {
       expect(out.assessmentRows[1].srNo).toBe(40);
     });
 
+    it('AI-numbered 1..3 continuing a sheet whose highest serial is 5 are renumbered 6..8', () => {
+      const claim = { ...baseClaim, assessmentRows: [row(1, 'estimate'), row(5, 'estimate')] } as ClaimData;
+      const page = {
+        spare_parts: [{ sr_no: 1, description: 'A', taxable_amount: 10 }, { sr_no: 2, description: 'B', taxable_amount: 10 }],
+        labour_items: [{ sr_no: 3, description: 'C', taxable_amount: 10 }],
+      };
+      const out = applyEstimate(claim, page, 'continue');
+      expect(out.assessmentRows.slice(2).map((r) => [r.particulars, r.srNo])).toEqual([['A', 6], ['B', 7], ['C', 8]]);
+    });
+
+    it('printed 41..43 on a sheet whose highest serial is 40 are kept', () => {
+      const claim = { ...baseClaim, assessmentRows: [row(40, 'estimate')] } as ClaimData;
+      const page = { spare_parts: [41, 42, 43].map((n) => ({ sr_no: n, description: 'P' + n, taxable_amount: 10 })) };
+      const out = applyEstimate(claim, page, 'continue');
+      expect(out.assessmentRows.slice(1).map((r) => r.srNo)).toEqual([41, 42, 43]);
+    });
+
     it('onto a sheet with only hand-typed rows numbers from 1 and drops nothing', () => {
       const claim = { ...baseClaim, assessmentRows: [row(7, undefined), row(8, undefined)] } as ClaimData;
       const out = applyEstimate(claim, unnumbered, 'continue');

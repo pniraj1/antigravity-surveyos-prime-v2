@@ -804,11 +804,18 @@ export function applyEstimate(
   data: any,
   mode: EstimateApplyMode = 'replace',
 ): ClaimData {
-  const startSerial =
+  const sheetMax =
     mode === 'continue'
-      ? Math.max(0, ...claim.assessmentRows.filter((r) => r.source === 'estimate').map((r) => r.srNo || 0)) + 1
-      : 1;
-  const newRows = buildEstimateRows(data, mode === 'append' ? 'supplementary' : 'estimate', startSerial);
+      ? Math.max(0, ...claim.assessmentRows.filter((r) => r.source === 'estimate').map((r) => r.srNo || 0))
+      : 0;
+  const startSerial = sheetMax + 1;
+  let newRows = buildEstimateRows(data, mode === 'append' ? 'supplementary' : 'estimate', startSerial);
+  // The AI numbers an unnumbered page 1, 2, 3…, which would clash with the sheet. Any serial at or
+  // below the sheet's highest means the page restarted, so number the whole page on from the sheet.
+  // Pages with printed serials past the sheet's highest are kept as printed.
+  if (mode === 'continue' && newRows.some((r) => (r.srNo ?? 0) <= sheetMax)) {
+    newRows = newRows.map((r, i) => ({ ...r, srNo: startSerial + i }));
+  }
 
   // A re-scan of the primary estimate returns the FULL document, so its old
   // rows go. A supplementary is a DIFFERENT document holding only the extra
