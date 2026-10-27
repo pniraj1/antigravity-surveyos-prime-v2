@@ -68,7 +68,7 @@ export function RecoveredClaimsView() {
       setItems(await getRecoveredClaims()); // the replaced copy is now stashed too
       setConfirmId(null);
       toast.success(
-        `Restored "${restored.reportNo || restored.id}". The copy it replaced was saved here as well.`,
+        `Restored "${restored.vehicle?.registrationNumber || restored.reportNo || restored.id}". The copy it replaced was saved here as well.`,
         { duration: 6000 },
       );
     } catch (err) {
@@ -123,7 +123,8 @@ export function RecoveredClaimsView() {
               className="w-full flex items-center justify-between text-left"
             >
               <span className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <Archive size={16} /> {snap.reportNo}
+                <Archive size={16} /> {snap.vehicleNo === '—' ? 'No vehicle no.' : snap.vehicleNo}
+                <span className="text-[10px] font-normal text-muted-foreground">{snap.reportNo}</span>
                 <span className="text-[10px] font-normal text-muted-foreground">
                   {snap.assessmentRows} items · {snap.photos} photos
                 </span>
