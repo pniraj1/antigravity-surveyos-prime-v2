@@ -29,7 +29,7 @@
 | Folder | What | Git |
 |---|---|---|
 | `SurveyOS-Prime-V2/` | **Prime**, the main web app. Next.js 16 static export on Firebase Hosting. Vault is inside it. | GitHub `pniraj1/antigravity-surveyos-prime-v2` (**public** repo), branch `main` |
-| `SurveyOS Scan/` | **Scan**, a native Android (Kotlin) document scanner and site-notes app. It is Prime's helper. | **Local only, no remote** |
+| `SurveyOS Scan/` | **Scan**, a native Android (Kotlin) document scanner and site-notes app. It is Prime's helper. | GitHub `pniraj1/surveyos-scan` (**private**), branch `main` |
 | `SurveyOS Sync/` | Telegram bot + Cloudflare Worker that collects insured/garage documents. Prime reads it as a read-only "drive". | its own repo |
 | `SurveyOS-Prime-V2/extension/` | **Portal Fill** Chrome extension (v0.4.0). It fills NIA non-tieup and UIIC portal fields from the claim and never submits. | part of Prime |
 | `SurveyOS-Prime/`, `legacy_versions/`, `*.html` at top | Old versions | ignore |
@@ -85,7 +85,7 @@
 - **Next:** the owner is checking all nine in the app. The checklist is in the session log; fix whatever he reports.
 
 **Other workstreams:**
-- **SurveyOS Scan** (Android, local repo, on `main`).
+- **SurveyOS Scan** (Android, private GitHub repo `pniraj1/surveyos-scan`, on `main`). Never commit `local.properties`, `keystore.properties`, `*.jks` or real AdMob ids; all are git-ignored or read from those files.
   - Built: scanning, merge/split, PDF tools, photo stamp, claim tabs, Spot and Valuation Notes, the "safe copy" of captures, and a zip export.
   - Prime side: "Bring phone scans" imports the zip, notes are reviewed into empty fields, and "Use phone files" picks from it.
   - **The redesign and newer builds have not been checked on a phone.** See `SurveyOS Scan/docs/release/phone-checklist.md` and `owner-steps.md` (package name, OAuth client, keystore, AdMob, Play listing).
