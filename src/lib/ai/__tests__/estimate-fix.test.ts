@@ -143,10 +143,25 @@ describe('planEstimateFix / applyEstimateFix', () => {
       expect(plan.changed).toEqual([]);
     });
 
-    it('a repeated row whose estimate differs by more than 0.5 is still proposed', () => {
+    it('repeat copies of a row the re-read changed are not proposed again', () => {
       const s = sheet();
-      const plan = planEstimateFix(s, [...copy(s), part(2, 'Grille', 250)]);
-      expect(plan.missing.map((r) => r.particulars)).toEqual(['Grille']);
+      const plan = planEstimateFix(s, [part(2, 'Grille', 250), part(2, 'Grille', 250)]);
+      expect(plan.missing).toEqual([]);
+      expect(plan.changed.map((c) => [c.rowId, c.after.estimated])).toEqual([[s[1].id, 250]]);
+    });
+
+    it('three copies of a changed row propose nothing new', () => {
+      const s = sheet();
+      const plan = planEstimateFix(s, [part(2, 'Grille', 250), part(2, 'Grille', 250), part(2, 'Grille', 250)]);
+      expect(plan.missing).toEqual([]);
+      expect(plan.changed).toHaveLength(1);
+    });
+
+    it('a repeat that differs from both the sheet row and the matched copy is still proposed', () => {
+      const s = sheet();
+      const plan = planEstimateFix(s, [part(2, 'Grille', 250), part(2, 'Grille', 300)]);
+      expect(plan.changed.map((c) => c.after.estimated)).toEqual([250]);
+      expect(plan.missing.map((r) => r.estimated)).toEqual([300]);
     });
   });
 

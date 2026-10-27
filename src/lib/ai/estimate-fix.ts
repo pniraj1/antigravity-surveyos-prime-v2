@@ -96,6 +96,10 @@ export function planEstimateFix(
     sheetRows.some(
       (s) => s.section === r.section && norm(s.particulars) === norm(r.particulars) && Math.abs(s.estimated - r.estimated) <= 0.5,
     );
+  // A re-read row that already matched a sheet row (changed or unchanged) names that row. Its
+  // repeat copies are not new rows, even when the re-read changed the estimate (sheet 200 -> 250).
+  const keyOf = (r: AssessmentRow) => `${r.section}|${norm(r.particulars)}|${r.estimated.toFixed(2)}`;
+  const matchedKeys = new Set(reReadRows.filter((r) => matchOf.has(r.id)).map(keyOf));
   const seen = new Set<string>();
   const missing: AssessmentRow[] = [];
   const changed: EstimateFixChange[] = [];
@@ -105,8 +109,8 @@ export function planEstimateFix(
       if (differs(s, r)) changed.push({ rowId: s.id, before: pick(s), after: pick(r) });
       continue;
     }
-    const key = `${r.section}|${norm(r.particulars)}|${r.estimated.toFixed(2)}`;
-    if (onSheet(r) || seen.has(key)) continue;
+    const key = keyOf(r);
+    if (onSheet(r) || matchedKeys.has(key) || seen.has(key)) continue;
     seen.add(key);
     missing.push(r);
   }
