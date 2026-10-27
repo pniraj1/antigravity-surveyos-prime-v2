@@ -10,7 +10,7 @@
 - [x] Closed the last "Fix estimate reading" gap: repeat copies of a row the re-read *changed* are no longer offered as "missing" (88f1ccd1).
 - [ ] Owner in-app check on one real claim: all 9 items (see session log 2026-10-27-surveyor-feedback-round-1).
 - [ ] Owner: open a UIIC final + bill-check Word download in Word and confirm page breaks.
-- [ ] Push and deploy (`firebase deploy` to the **-in** target) after the checks.
+- [x] Deployed hosting to motorsurveyos-in 2026-10-27 (verified live). Not pushed to GitHub.
 
 ---
 
