@@ -2,6 +2,17 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-10-27 (Claude) — Surveyor feedback round 1 (9 complaints)
+- feat(assessment): **Fix estimate reading** toolbar button + dialog replaces the floating "Fix Extraction" pill. One AI re-read with the surveyor's note; the review lists only rows **missing on the sheet** (ticked) and **changed** rows (old → new, unticked, "Accept all changes"). Never deletes; a surveyor-edited assessed figure is kept and the row gets an on-screen "Re-read" badge. Original/Supplementary toggle. Removes the old path that could wipe edited estimate rows after Apply.
+- feat(upload): **More pages of the same estimate** (continuation: rows join the original estimate, numbering carries on) and **More pages of the same bill** (keeps bill no./date, takes a printed total, doesn't re-match billed rows).
+- feat(policy): **Policy check** — Nil Dep, IMT 23, consumables, excess. AI policy read only *suggests* ("AI read: Yes"); notice strip on Assessment and Report Center; final + bill-check Print/Word blocked until all four answered. Nil Dep answer ↔ depreciation dropdown kept in sync.
+- feat(print): **Before printing — UIIC** step on every UIIC final / bill-check Print or Word: RI appointment, repair auth, est./actual completion dates, repairs as per assessment (same fields as the Reinspection tab).
+- fix(word): Word export keeps UIIC page breaks (verified in Word: each page starts at the surveyor name).
+- feat: Dashboard **Survey Date** + **Last Edited** columns; Recovered list shows vehicle no.; **Add row** also below each section (Assessment and Bill Check).
+- refactor: **Site tab retired** (Scan replaces it); phone opens a claim on Claim Details; `?tab=site` falls back to Details; `getAt/setAt` moved to `src/lib/scan-import/path.ts`.
+- Scan impact: none beyond the path move; Scan unit tests pass.
+- tests: 209 files / 1863 passing, tsc clean. Commits 469aaa51..f3fa8d4a on main. Not pushed, not deployed, not tried in a signed-in browser. Spec/plan: `docs/superpowers/{specs,plans}/2026-10-27-surveyor-feedback-round-1*`.
+
 ## 2026-10-25 (Claude) — Use phone files (Assessment, Bill Check, Photos)
 - feat(assessment, bill-check): **Use phone files** beside Upload Estimate (`estimate`, `supplementaryEstimate`) and the invoice upload (`invoice`). A pick runs the same handler as the file chooser, so the estimate mode dialog and the read and review run unchanged.
 - feat(photos): **Use phone files** beside Gallery / Browse opens **Phone photos**: phone photos grouped by type (Final Photos, Spot, Front/Rear/Left/Right, Chassis, Odometer) with lazy thumbnails (3 read at a time, object URLs revoked on close), per-photo ticks and **Select all** per group. **Add to photo sheet** runs the same compress-and-add path as Gallery / Browse. Nothing lands without that click.

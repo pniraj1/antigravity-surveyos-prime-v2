@@ -1,7 +1,16 @@
 # Active Tasks
 
-> Last updated: 2026-10-25 by Claude
+> Last updated: 2026-10-27 by Claude
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
+
+---
+
+## Surveyor feedback round 1 — built 2026-10-27 (on main, not pushed/deployed)
+
+- [ ] **Owner decision:** close the last gap in "Fix estimate reading" — on a multi-page text PDF where the re-read *changes* an amount, duplicate copies of that row are still offered as "missing" (ticked). Proposed one-function fix in `planEstimateFix`.
+- [ ] Owner in-app check on one real claim: all 9 items (see session log 2026-10-27-surveyor-feedback-round-1).
+- [ ] Owner: open a UIIC final + bill-check Word download in Word and confirm page breaks.
+- [ ] Push and deploy (`firebase deploy` to the **-in** target) after the checks.
 
 ---
 
