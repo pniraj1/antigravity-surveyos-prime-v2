@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { AlertCircle, Trash2, Settings2, Eye, EyeOff, FileSearch } from 'lucide-react';
+import { AlertCircle, Trash2, Settings2, Eye, EyeOff, FileSearch, PlusCircle } from 'lucide-react';
 import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
+import { useClaimStore } from '@/stores/claim-store';
 import type { AssessmentRow, AssessmentSummary, ClaimData } from '@/types';
 import { shouldStartSupplementaryBand } from '@/lib/calculations/utils';
 import { computeRowNet } from '@/lib/calculations';
@@ -68,6 +69,7 @@ export function BillCheckGrid({
   const [pendingAllowance, setPendingAllowance] = useState<{ id: string; assessed: number; proposed: number } | null>(null);
   const [openFlag, setOpenFlag] = useState<string | null>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
+  const addAssessmentRowToSection = useClaimStore(s => s.addAssessmentRowToSection);
 
   const flagsByRow = useMemo(() => {
     const m = new Map<string, BillFlag>();
@@ -592,6 +594,12 @@ export function BillCheckGrid({
           </div>
 
           {totalsRow(`${title} billed`, billed, false)}
+          <button
+            onClick={() => addAssessmentRowToSection(section)}
+            className="ml-6 mt-2 mb-3 inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-secondary hover:bg-secondary/80 text-secondary-foreground text-[11px] font-semibold transition-colors"
+          >
+            <PlusCircle size={12} /> Add row
+          </button>
           </div>
           );
           })}

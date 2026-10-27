@@ -637,6 +637,12 @@ export function AssessmentSectionTable({
           </tfoot>
         </table>
       </div>
+      <button
+        onClick={() => addAssessmentRowToSection(section)}
+        className="mt-2 inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-secondary hover:bg-secondary/80 text-secondary-foreground text-[11px] font-semibold transition-colors"
+      >
+        <PlusCircle size={12} /> Add row
+      </button>
     </div>
   );
 }
