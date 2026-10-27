@@ -7,6 +7,7 @@ import type {
   ReportSettings,
   PhotoItem,
   DocumentAnnexureOptions,
+  PolicyCheck,
 } from '@/types';
 import { createBlankClaim } from '@/types';
 import { saveClaim } from '@/lib/storage/indexeddb';
@@ -50,6 +51,8 @@ export interface ClaimSlice {
   updateSpotDetails: (updates: Partial<ClaimData['spotDetails']>) => void;
   updateValuationDetails: (updates: Partial<ClaimData['valuationDetails']>) => void;
   setDepreciationType: (depType: DepreciationType) => void;
+  /** Surveyor's policy answers. Setting nilDep also sets depreciationType. aiRead is untouched. */
+  setPolicyCheck: (updates: Partial<Omit<PolicyCheck, 'aiRead'>>) => void;
   updateFeeBill: (updates: Partial<ClaimData['feeBill']>) => void;
   updateBillCheck: (updates: Partial<ClaimData['billCheck']>) => void;
   updateReportSettings: (updates: Partial<ReportSettings>) => void;
@@ -226,6 +229,21 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
         ? {
             ...state.currentClaim,
             depreciationType: depType,
+            policyCheck: { ...state.currentClaim.policyCheck, nilDep: depType === 'nil' ? 'yes' : 'no' },
+            updatedAt: new Date().toISOString(),
+          }
+        : null,
+      isDirty: true,
+    }));
+  },
+
+  setPolicyCheck: (updates) => {
+    set((state: ClaimSlice) => ({
+      currentClaim: state.currentClaim
+        ? {
+            ...state.currentClaim,
+            policyCheck: { ...state.currentClaim.policyCheck, ...updates },
+            ...(updates.nilDep && { depreciationType: updates.nilDep === 'yes' ? 'nil' : 'standard' }),
             updatedAt: new Date().toISOString(),
           }
         : null,

@@ -17,6 +17,7 @@ import { useProfileStore } from '@/stores/profile-store';
 import { uploadFileToDrive } from '@/lib/drive';
 import { useSaveToCloudPrompt } from '@/hooks/useSaveToCloudPrompt';
 import { FixEstimateDialog } from '@/components/dialogs/FixEstimateDialog';
+import { PolicyCheckStrip } from '@/components/policy/PolicyCheckStrip';
 import { ModelSelector, DocModeToggle, ProviderHealthBadge, ProviderToggle } from '@/components/ai/AIControls';
 import { SaveProgressButton } from '@/components/sync/SaveProgressButton';
 import { needsReview } from '@/lib/ai/needs-review';
@@ -191,6 +192,8 @@ export function AssessmentTab() {
           </div>
         </div>
       </div>
+
+      <PolicyCheckStrip />
 
       <div className="flex-1 min-h-0 bg-background rounded-xl border border-border overflow-hidden">
         <PanelGroup orientation="horizontal">

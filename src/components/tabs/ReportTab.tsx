@@ -13,6 +13,7 @@ import { InsuredReportReviewDialog } from '@/components/dialogs/InsuredReportRev
 import type { InsuredReportDraft, InsuredReportStage } from '@/types/insured-report';
 import { SpotActions } from './report/SpotActions';
 import { SurveyActions } from './report/SurveyActions';
+import { PolicyCheckStrip } from '@/components/policy/PolicyCheckStrip';
 
 // Every report here renders from its HTML builder below. The @react-pdf
 // documents this tab used to host were unreachable and have been removed.
@@ -150,7 +151,8 @@ export function ReportTab() {
 
   return (
     <div className="p-3 md:p-6 lg:p-8 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300 h-full flex flex-col">
-      
+      {currentClaim.surveyType === 'final' && <PolicyCheckStrip />}
+
       {/* ── Header ───────────────────────────────────────────── */}
       <div className="mb-6 flex items-end justify-between">
         <div>

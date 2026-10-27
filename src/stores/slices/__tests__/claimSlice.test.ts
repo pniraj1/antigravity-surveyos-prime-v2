@@ -77,3 +77,43 @@ describe('updateDocumentAnnexure', () => {
     });
   });
 });
+
+describe('policy check ↔ depreciation sync', () => {
+  const seeded = () => {
+    const store = makeStore();
+    store.setState({ currentClaim: createBlankClaim('final') });
+    return store;
+  };
+
+  it('setPolicyCheck({ nilDep: "yes" }) sets depreciationType to nil and merges', () => {
+    const store = seeded();
+    store.getState().setPolicyCheck({ imt23: 'na' });
+    store.getState().setPolicyCheck({ nilDep: 'yes' });
+    const c = store.getState().currentClaim!;
+    expect(c.depreciationType).toBe('nil');
+    expect(c.policyCheck).toEqual({ imt23: 'na', nilDep: 'yes' });
+    expect(store.getState().isDirty).toBe(true);
+  });
+
+  it('setPolicyCheck without nilDep leaves depreciationType alone', () => {
+    const store = seeded();
+    store.getState().setDepreciationType('nil');
+    store.getState().setPolicyCheck({ consumables: 'yes' });
+    expect(store.getState().currentClaim!.depreciationType).toBe('nil');
+  });
+
+  it('setDepreciationType sets policyCheck.nilDep', () => {
+    const store = seeded();
+    store.getState().setDepreciationType('standard');
+    expect(store.getState().currentClaim!.policyCheck?.nilDep).toBe('no');
+    store.getState().setDepreciationType('nil');
+    expect(store.getState().currentClaim!.policyCheck?.nilDep).toBe('yes');
+  });
+
+  it('keeps the AI read when answers change', () => {
+    const store = seeded();
+    store.setState({ currentClaim: { ...createBlankClaim('final'), policyCheck: { aiRead: { nilDep: 'yes' } } } });
+    store.getState().setPolicyCheck({ nilDep: 'no' });
+    expect(store.getState().currentClaim!.policyCheck).toEqual({ nilDep: 'no', aiRead: { nilDep: 'yes' } });
+  });
+});
