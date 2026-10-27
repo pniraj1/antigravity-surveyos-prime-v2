@@ -3,6 +3,7 @@ import type { ClaimData, AssessmentRow, ExtraBillItem } from '@/types';
 import { createAssessmentRow } from '@/lib/calculations';
 import { buildDecision } from '@/lib/ai/reconciliation';
 import { parsePolicyAddOns, mergePolicyAiRead } from '@/lib/policy/policy-check';
+import { applyEstimateFix, type EstimateFixPlan, type EstimateFixPicks } from '@/lib/ai/estimate-fix';
 
 export type EstimateApplyMode = 'replace' | 'append' | 'continue';
 
@@ -10,6 +11,7 @@ export interface AIDataSlice {
   reconciliationConflictCount: number;
   setExtractedData: (key: string, data: any) => void;
   applyExtractedData: (key: string, data: any, mode?: EstimateApplyMode) => void;
+  applyEstimateFixToClaim: (plan: EstimateFixPlan, picks: EstimateFixPicks) => void;
   reconcileField: (path: string, value: string, source?: string) => void;
   batchReconcile: (updates: { path: string; value: string; source?: string }[]) => void;
   setReconciliationConflictCount: (count: number) => void;
@@ -889,6 +891,20 @@ export const createAIDataSlice: StateCreator<any, any, any, AIDataSlice> = (set)
 
       return {
         currentClaim: { ...newClaim, updatedAt: new Date().toISOString() },
+        isDirty: true,
+      };
+    });
+  },
+
+  applyEstimateFixToClaim: (plan, picks) => {
+    set((state: WithClaim) => {
+      if (!state.currentClaim) return {};
+      return {
+        currentClaim: {
+          ...state.currentClaim,
+          assessmentRows: applyEstimateFix(state.currentClaim.assessmentRows, plan, picks),
+          updatedAt: new Date().toISOString(),
+        },
         isDirty: true,
       };
     });

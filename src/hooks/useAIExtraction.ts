@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { useUIStore } from '@/stores/ui-store';
@@ -15,9 +15,6 @@ import { extractDocument, smartFixRescan } from '@/lib/ai/processor';
 import { stripPageTags, countRows } from '@/lib/ai/row-check';
 import { toast } from 'sonner';
 
-// sessionStorage key for persisting lastFiles metadata across page reloads.
-const SS_LAST_FILES_KEY = 'ai_extraction_last_file_names';
-
 /**
  * Drives AI document extraction.
  *
@@ -33,7 +30,6 @@ export function useAIExtraction() {
   const isProcessing = useExtractionStore(selectIsProcessing);
   const progress     = useExtractionStore(selectActiveProgress);
   const reviewData   = useExtractionStore(selectLatestReview);
-  const files        = useExtractionStore(s => s.files);
   const reviewProgress = useExtractionStore(s => (reviewData ? s.jobs[reviewData.key]?.progress ?? '' : ''));
 
   const startJob              = useExtractionStore(s => s.startJob);
@@ -46,21 +42,7 @@ export function useAIExtraction() {
 
   const setExtractedData   = useClaimStore(s => s.setExtractedData);
   const applyExtractedData = useClaimStore(s => s.applyExtractedData);
-  const currentClaim       = useClaimStore(s => s.currentClaim);
   const aiDocMode          = useProfileStore(s => s.profile.aiDocMode);
-
-  const [lastFileNames, setLastFileNames] = useState<Record<string, string>>(() => {
-    try {
-      const raw = sessionStorage.getItem(SS_LAST_FILES_KEY);
-      return raw ? JSON.parse(raw) : {};
-    } catch { return {}; }
-  });
-
-  useEffect(() => {
-    try {
-      sessionStorage.setItem(SS_LAST_FILES_KEY, JSON.stringify(lastFileNames));
-    } catch { /* storage quota exceeded — non-fatal */ }
-  }, [lastFileNames]);
 
   // ─── Smart Fix ───────────────────────────────────────────────────────────────
   // Runs the gap engine on the PENDING review result — the dialog stays open and
@@ -102,7 +84,6 @@ export function useAIExtraction() {
     startJob(key, originTab, estimateMode);
     setJobProgress(key, feedback ? 'Re-scanning with feedback...' : 'Preparing...');
     rememberFile(key, primary);
-    setLastFileNames(prev => ({ ...prev, [key]: primary.name }));
 
     const controller = new AbortController();
     registerAbort(key, controller);
@@ -191,19 +172,6 @@ export function useAIExtraction() {
     }
   }, [reviewData, cancelJob, triggerExtraction]);
 
-  const reScanLatest = useCallback((key: string, feedback: string) => {
-    const file = useExtractionStore.getState().files[key];
-    const prevData = currentClaim?.extractedData?.[key];
-    const mode = useExtractionStore.getState().jobs[key]?.estimateMode;
-    if (file) {
-      triggerExtraction(key, file, feedback, prevData, mode);
-    } else if (lastFileNames[key]) {
-      toast.error(`Please re-upload the ${key} document — the previous file is no longer available after the page was refreshed.`);
-    } else {
-      toast.error(`No previous ${key} document found to re-scan. Please upload it again.`);
-    }
-  }, [lastFileNames, currentClaim?.extractedData, triggerExtraction]);
-
   return {
     isProcessing,
     progress,
@@ -215,7 +183,5 @@ export function useAIExtraction() {
     cancelReview,
     cancelExtraction,
     reScanWithFeedback,
-    reScanLatest,
-    hasFile: (key: string) => !!files[key] || !!lastFileNames[key],
   };
 }

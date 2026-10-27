@@ -16,7 +16,7 @@ import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import { useProfileStore } from '@/stores/profile-store';
 import { uploadFileToDrive } from '@/lib/drive';
 import { useSaveToCloudPrompt } from '@/hooks/useSaveToCloudPrompt';
-import { AssessmentChatbot } from '@/components/chat/AssessmentChatbot';
+import { FixEstimateDialog } from '@/components/dialogs/FixEstimateDialog';
 import { ModelSelector, DocModeToggle, ProviderHealthBadge, ProviderToggle } from '@/components/ai/AIControls';
 import { SaveProgressButton } from '@/components/sync/SaveProgressButton';
 import { needsReview } from '@/lib/ai/needs-review';
@@ -32,9 +32,10 @@ export function AssessmentTab() {
   const { currentClaim, setDepreciationType } = useClaimStore();
   const [showEvidence, setShowEvidence] = useState(false);
   const [showSummary, setShowSummary] = useState(true);
+  const [fixOpen, setFixOpen] = useState(false);
   // Open only when there is something to decide (multi-page PDF); see needsReview.
   const [reviewSheet, setReviewSheet] = useState<{ file: File; mode: EstimateApplyMode; inFolder: boolean } | null>(null);
-  const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview, reScanWithFeedback, hasFile, reScanLatest, smartFix, reviewProgress } = useAIExtraction();
+  const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview, reScanWithFeedback, smartFix, reviewProgress } = useAIExtraction();
   const { confirmEstimateMode, estimateModeDialog } = useEstimateModePrompt();
   const { profile } = useProfileStore();
   const { confirmSaveToCloud, saveToCloudDialog } = useSaveToCloudPrompt();
@@ -150,6 +151,13 @@ export function AssessmentTab() {
 
             <UsePhoneFiles types={ESTIMATE_TYPES} className="h-12" disabled={isProcessing} onPick={(file) => void processEstimateFile(file, true)} />
 
+            {/* An estimate was read when some row carries a source. */}
+            {currentClaim.assessmentRows.some((r) => r.source) && (
+              <Button variant="outline" className="h-12" disabled={isProcessing} onClick={() => setFixOpen(true)}>
+                Fix estimate reading
+              </Button>
+            )}
+
             <Button
               variant={showEvidence ? 'secondary' : 'outline'}
               onClick={() => setShowEvidence(!showEvidence)}
@@ -238,13 +246,7 @@ export function AssessmentTab() {
         smartFixed={reviewData?.smartFixed}
       />
 
-
-      {/* Floating Chatbot for fixing extraction */}
-      <AssessmentChatbot 
-        hasFile={hasFile('estimate')}
-        isProcessing={isProcessing}
-        onSend={(feedback) => reScanLatest('estimate', feedback)}
-      />
+      <FixEstimateDialog open={fixOpen} onClose={() => setFixOpen(false)} />
     </div>
   );
 }

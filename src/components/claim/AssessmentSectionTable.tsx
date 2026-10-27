@@ -329,6 +329,22 @@ export function AssessmentSectionTable({
                         >
                           <FileSearch size={12} />
                         </button>
+                        {row.reReadNote && (
+                          <span
+                            className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border border-amber-500/40 bg-amber-500/10 text-amber-700"
+                            title={row.reReadNote}
+                          >
+                            Re-read
+                            <button
+                              type="button"
+                              aria-label="Clear re-read note"
+                              onClick={() => updateAssessmentRow(row.id, { reReadNote: undefined })}
+                              className="leading-none hover:text-amber-900"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        )}
                         {row.deductionCategory && (() => {
                           const tag = CATEGORY_TAGS.find((t: { value: DeductionCategory }) => t.value === row.deductionCategory);
                           return tag ? (

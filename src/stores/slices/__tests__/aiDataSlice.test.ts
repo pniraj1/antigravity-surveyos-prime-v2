@@ -516,3 +516,36 @@ describe('applyPolicy — policy check suggestions', () => {
     expect(r.policyCheck).toEqual({ aiRead: {} });
   });
 });
+
+describe('applyEstimateFixToClaim', () => {
+  const sheetRow = (id: string, particulars: string, srNo: number, estimated: number): AssessmentRow => ({
+    id, particulars, srNo, estimated, assessed: estimated, partType: 'metal', gst: 18,
+    section: 'parts', allowed: true, isDisposal: false, disposalPercent: 50, source: 'estimate',
+  } as AssessmentRow);
+
+  it('applies only the ticked picks, keeps every row, and marks the claim dirty', async () => {
+    const { useClaimStore } = await import('@/stores/claim-store');
+    const kept = sheetRow('a', 'Bumper', 1, 1000);
+    const added = sheetRow('new', 'Grille', 2, 500);
+    const skipped = sheetRow('skip', 'Lamp', 3, 700);
+    useClaimStore.setState({
+      currentClaim: { ...createBlankClaim('final'), assessmentRows: [kept], updatedAt: 'old' },
+      isDirty: false,
+    });
+    useClaimStore.getState().applyEstimateFixToClaim(
+      { missing: [added, skipped], changed: [] },
+      { missingIds: ['new'], changedRowIds: [] },
+    );
+    const s = useClaimStore.getState();
+    expect(s.currentClaim!.assessmentRows.map((r) => r.id)).toEqual(['a', 'new']);
+    expect(s.isDirty).toBe(true);
+    expect(s.currentClaim!.updatedAt).not.toBe('old');
+  });
+
+  it('does nothing without a claim', async () => {
+    const { useClaimStore } = await import('@/stores/claim-store');
+    useClaimStore.setState({ currentClaim: null, isDirty: false });
+    useClaimStore.getState().applyEstimateFixToClaim({ missing: [], changed: [] }, { missingIds: [], changedRowIds: [] });
+    expect(useClaimStore.getState().isDirty).toBe(false);
+  });
+});
