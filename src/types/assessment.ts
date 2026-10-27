@@ -113,6 +113,12 @@ export interface AssessmentRow {
    *                     re-scanning the primary leaves these alone.
    */
   source?: 'estimate' | 'supplementary';
+  /**
+   * Set when an estimate re-read changed this row's estimated figure but the
+   * surveyor had already edited the assessed figure, so it was left alone.
+   * Screen-only, never printed.
+   */
+  reReadNote?: string;
 }
 
 export interface AssessmentSummary {
