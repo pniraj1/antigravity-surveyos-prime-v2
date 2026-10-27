@@ -81,6 +81,54 @@ describe('planEstimateFix / applyEstimateFix', () => {
     expect(plan.changed[0].after.partType).toBe('plastic');
   });
 
+  describe('estimate with no printed serials (positional srNo from buildEstimateRows)', () => {
+    const item = (description: string) => ({ description, taxable_amount: 100, gst_percent: 18, quantity: 1 });
+    const build = (names: string[]) => buildEstimateRows({ spare_parts: names.map(item) }, 'estimate', 1);
+
+    it('a dropped row causes no mispairing', () => {
+      const sheet = build(['A', 'B', 'C', 'D', 'E']);
+      const plan = planEstimateFix(sheet, build(['A', 'C', 'D', 'E']));
+      expect(plan).toEqual({ missing: [], changed: [] });
+    });
+
+    it('an added row is the only missing one', () => {
+      const sheet = build(['A', 'B', 'C', 'D', 'E']);
+      const plan = planEstimateFix(sheet, build(['A', 'B', 'X', 'C', 'D', 'E']));
+      expect(plan.missing.map((r) => r.particulars)).toEqual(['X']);
+      expect(plan.changed).toEqual([]);
+    });
+  });
+
+  it('never serial-matches a supplementary row to a primary re-read row', () => {
+    const sheet = [part(1, 'Bumper', 100), part(2, 'Spoiler', 50, { source: 'supplementary' })];
+    const plan = planEstimateFix(sheet, [part(1, 'Bumper', 100), part(2, 'Grille', 200)]);
+    expect(plan.missing.map((r) => r.particulars)).toEqual(['Grille']);
+    expect(plan.changed).toEqual([]);
+  });
+
+  it('inserted rows are source estimate whatever precedes them', () => {
+    for (const prevSource of ['supplementary', undefined] as const) {
+      const sheet = [part(1, 'Bumper', 100), part(2, 'Prev', 50, { source: prevSource })];
+      const plan = planEstimateFix(sheet, [part(1, 'Bumper', 100), part(3, 'Lamp', 300)]);
+      const out = applyEstimateFix(sheet, plan, all(plan));
+      expect(out.find((r) => r.particulars === 'Lamp')?.source).toBe('estimate');
+    }
+  });
+
+  it('does not anchor an insert on a supplementary row', () => {
+    const sheet = [part(1, 'Bumper', 100), part(2, 'Supp', 50, { source: 'supplementary' }), part(5, 'Lamp', 500)];
+    const plan = planEstimateFix(sheet, [part(1, 'Bumper', 100), part(3, 'Hood', 300), part(5, 'Lamp', 500)]);
+    const out = applyEstimateFix(sheet, plan, all(plan));
+    expect(out.map((r) => r.particulars)).toEqual(['Bumper', 'Hood', 'Supp', 'Lamp']);
+  });
+
+  it('applying the same plan twice does not duplicate rows', () => {
+    const sheet = [part(1, 'Bumper', 100)];
+    const plan = planEstimateFix(sheet, [part(1, 'Bumper', 100), part(2, 'Grille', 200)]);
+    const once = applyEstimateFix(sheet, plan, all(plan));
+    expect(applyEstimateFix(once, plan, all(plan))).toHaveLength(2);
+  });
+
   it('works with rows built by buildEstimateRows', () => {
     const data = { spare_parts: [{ sr_no: 1, description: 'Bumper', taxable_amount: 1000, gst_percent: 28, quantity: 2, category: 'plastic' }] };
     const reRead = buildEstimateRows(data, 'estimate', 1);
