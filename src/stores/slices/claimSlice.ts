@@ -25,6 +25,8 @@ export interface ClaimSlice {
     id: string;
     label: string;
     updatedAt: string;
+    /** YYYY-MM-DD from claimSurveyDate(), or '' when none is recorded. */
+    surveyDate: string;
     surveyType: SurveyType;
     reportNo: string;
     vehicleNo: string;

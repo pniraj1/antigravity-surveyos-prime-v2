@@ -3,6 +3,7 @@ import { useClaimStore } from '@/stores/claim-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { getAllClaims } from '@/lib/storage/indexeddb';
 import { calculateFeeSummary } from '@/lib/calculations/fees';
+import { claimSurveyDate } from '@/lib/claims/survey-date';
 
 export function useClaimsLoader() {
   const { setClaimsList } = useClaimStore();
@@ -33,6 +34,7 @@ export function useClaimsLoader() {
             id: c.id,
             label: c.vehicle?.registrationNumber || 'Draft Claim',
             updatedAt: c.updatedAt,
+            surveyDate: claimSurveyDate(c),
             surveyType: c.surveyType,
             reportNo: c.reportNo,
             vehicleNo: c.vehicle?.registrationNumber || '',

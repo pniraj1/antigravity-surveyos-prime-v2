@@ -324,13 +324,14 @@ export function DashboardContent() {
               </div>
             ) : (
               <div>
-                <div className="px-6 py-3 grid grid-cols-[1.5fr_1fr_2fr_100px_100px_120px_60px] gap-4 text-[10px] font-medium uppercase tracking-[0.15em] items-center border-b border-border text-[var(--color-neutral-400)] bg-[var(--color-neutral-50)]">
+                <div className="px-6 py-3 grid grid-cols-[1.5fr_1fr_2fr_100px_100px_110px_110px_60px] gap-4 text-[10px] font-medium uppercase tracking-[0.15em] items-center border-b border-border text-[var(--color-neutral-400)] bg-[var(--color-neutral-50)]">
                   <span>Report No.</span>
                   <span>Stage</span>
                   <span>Vehicle & Parties</span>
                   <span>Status</span>
                   <span>Fee</span>
-                  <span>Date</span>
+                  <span>Survey Date</span>
+                  <span>Last Edited</span>
                   <span className="text-right">Action</span>
                 </div>
                 <div className="divide-y divide-[var(--color-neutral-100)]">
@@ -366,7 +367,7 @@ export function DashboardContent() {
                           toast.error('Could not open this claim.');
                         }
                       }}
-                      className="px-6 py-4 grid grid-cols-[1.5fr_1fr_2fr_100px_100px_120px_60px] gap-4 items-center cursor-pointer border-b border-[var(--color-neutral-100)] transition-colors hover:bg-[var(--color-neutral-50)]"
+                      className="px-6 py-4 grid grid-cols-[1.5fr_1fr_2fr_100px_100px_110px_110px_60px] gap-4 items-center cursor-pointer border-b border-[var(--color-neutral-100)] transition-colors hover:bg-[var(--color-neutral-50)]"
                     >
                       <div className="flex items-center gap-1.5 min-w-0">
                         <span className="text-sm font-medium truncate text-[var(--color-neutral-900)]">
@@ -415,6 +416,16 @@ export function DashboardContent() {
                         >
                           {claim.feePaid ? 'Paid' : 'Unpaid'}
                         </button>
+                      </div>
+                      <div className="text-xs font-medium text-[var(--color-neutral-400)]">
+                        {/* Local-midnight parse: a bare YYYY-MM-DD would read as UTC and show a day early west of UTC. */}
+                        {claim.surveyDate
+                          ? new Date(`${claim.surveyDate}T00:00`).toLocaleDateString(undefined, {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                            })
+                          : '—'}
                       </div>
                       <div className="text-xs font-medium text-[var(--color-neutral-400)]">
                         {new Date(claim.updatedAt).toLocaleDateString(undefined, {
