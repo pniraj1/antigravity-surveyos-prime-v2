@@ -5,6 +5,8 @@ import { useClaimStore } from '@/stores/claim-store';
 import { policyCheckStatus } from '@/lib/policy/policy-check';
 import { PolicyCheckCard } from './PolicyCheckCard';
 import type { ClaimData } from '@/types/claim';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 /** Amber bar (or green chip once all four are answered) that opens the policy check card. */
 export function PolicyCheckStrip() {
@@ -19,8 +21,8 @@ export function PolicyCheckStripView({ claim, open, onToggle }: { claim: ClaimDa
   const { answered, total, complete, warnings } = policyCheckStatus(claim);
 
   return (
-    <div className="relative inline-block shrink-0">
-      <div className="flex items-center gap-2">
+    <>
+      <div className="flex items-center gap-2 shrink-0">
         {complete ? (
           <button
             type="button"
@@ -46,11 +48,27 @@ export function PolicyCheckStripView({ claim, open, onToggle }: { claim: ClaimDa
           </button>
         )}
       </div>
-      {open && (
-        <div className="absolute top-full left-0 mt-2 z-50 w-[420px] max-w-[90vw] shadow-2xl rounded-xl bg-card border border-border p-2 animate-in fade-in-50 zoom-in-95">
-          <PolicyCheckCard />
-        </div>
-      )}
-    </div>
+
+      <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen && open) onToggle(); }}>
+        <DialogContent className="sm:max-w-lg bg-white text-foreground border border-border shadow-2xl p-5 rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-base font-semibold">Policy Terms & Deductibles</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Confirm endorsement covers (Nil Dep, IMT 23, Consumables) and policy excess.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-2">
+            <PolicyCheckCard />
+          </div>
+
+          <div className="flex justify-end pt-2 border-t border-border mt-3">
+            <Button size="sm" onClick={onToggle} className="h-8 px-4 text-xs font-medium">
+              Done
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
