@@ -5,6 +5,16 @@
 
 ---
 
+## Unify Survey Date & Time in Claim Details (Built 2026-10-28 on main)
+- [x] Resolved duplicate survey date and time inputs across Spot and Final claims in `src/components/claim/SurveyForm.tsx`.
+- [x] Consolidated into a single `datetime-local` input labeled "Date & Time of Survey" across both claim types; removed separate "Time of Survey" and spot-specific "Survey Datetime (Actual)".
+- [x] Implemented synchronized updates to both `accident.dateOfSurvey` / `accident.timeOfSurvey` and `spotDetails.surveyDatetime` to maintain 100% backward compatibility.
+- [x] Updated `src/components/print/SpotPrintReport.tsx` (headers and section C) to cross-fallback between `spotDetails.surveyDatetime` and `accident.dateOfSurvey` / `accident.timeOfSurvey`, preventing discrepancies or blank spots in printed reports.
+- [x] Updated `src/lib/claims/survey-date.ts` with fallback support for spot claims.
+- [x] Added unit tests in `src/components/claim/__tests__/SurveyForm.test.tsx` and updated `src/lib/claims/__tests__/survey-date.test.ts`. All 216 test files (1,894 tests) passing; `tsc --noEmit` clean; SurveyOS Scan Android unit tests passing with zero drift.
+
+---
+
 ## Estimate View Lenses, Prompt Overhaul & Lean Header (Built 2026-10-28 on main)
 - [x] Rewrote `RAW_PROMPTS['estimate']` and `RAW_PROMPTS['final-bill']` in `src/lib/ai/prompts.ts` with Footer-First Deductive Reconciliation, full assessment fields (`part_number`, `hsn_sac`, `quantity`, `unit_price`, `taxable_amount`, `gst_percent`, `total_amount`, `category`), and `_audit` envelope.
 - [x] Added `AuditCard` to `AIReviewDialog.tsx` showing tax posture badge, columns detected, reconciliation notes, and warnings. `stripPageTags()` removes `_audit` prior to persistence.

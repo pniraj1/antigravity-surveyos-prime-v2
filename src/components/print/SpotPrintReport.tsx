@@ -169,7 +169,7 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Date of Allotment</td>
             <td style={{ ...parseInline(styles.td) }}>{formatDateDMY(spotDetails.allotmentDate)}</td>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Date & Time of Survey</td>
-            <td style={{ ...parseInline(styles.td) }}>{formatDateTimeDMY(spotDetails.surveyDatetime)}</td>
+            <td style={{ ...parseInline(styles.td) }}>{formatDateTimeDMY(spotDetails.surveyDatetime || (accident.dateOfSurvey ? `${accident.dateOfSurvey}T${accident.timeOfSurvey || '00:00'}` : ''))}</td>
           </tr>
         </tbody>
       </table>
@@ -343,7 +343,7 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
             <td style={{ ...parseInline(styles.td), color: '#444', width: '18%', fontSize: fs.labelFont }}>Date & Time</td>
             <td style={{ ...parseInline(styles.td), width: '32%' }}>{formatDateTimeDMY(accident.dateAndTime)}</td>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Date &amp; Time of Survey</td>
-            <td style={{ ...parseInline(styles.td) }}>{formatSurveyDateTime(accident.dateOfSurvey, accident.timeOfSurvey)}</td>
+            <td style={{ ...parseInline(styles.td) }}>{formatSurveyDateTime(accident.dateOfSurvey, accident.timeOfSurvey) || formatDateTimeDMY(spotDetails.surveyDatetime)}</td>
           </tr>
           <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Place of Accident</td>

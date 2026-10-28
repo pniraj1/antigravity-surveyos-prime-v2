@@ -16,6 +16,10 @@ describe('claimSurveyDate', () => {
     expect(claimSurveyDate({ ...base, surveyType: 'spot' })).toBe('2026-09-30');
   });
 
+  it('spot falls back to accident.dateOfSurvey if spotDetails.surveyDatetime is blank', () => {
+    expect(claimSurveyDate({ accident: { dateOfSurvey: '2026-10-01' }, spotDetails: { surveyDatetime: '' }, surveyType: 'spot' } as any)).toBe('2026-10-01');
+  });
+
   it('valuation uses valuationDetails.inspectionDate', () => {
     expect(claimSurveyDate({ ...base, surveyType: 'valuation' })).toBe('2026-09-29');
   });

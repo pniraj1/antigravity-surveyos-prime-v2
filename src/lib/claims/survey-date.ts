@@ -11,7 +11,7 @@ export function claimSurveyDate(
     case 'final':
       return claim.accident?.dateOfSurvey ?? '';
     case 'spot':
-      return (claim.spotDetails?.surveyDatetime ?? '').slice(0, 10);
+      return (claim.spotDetails?.surveyDatetime ?? '').slice(0, 10) || (claim.accident?.dateOfSurvey ?? '');
     case 'valuation':
       return claim.valuationDetails?.inspectionDate ?? '';
     default:

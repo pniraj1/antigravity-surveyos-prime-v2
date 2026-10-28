@@ -9,52 +9,47 @@ import { DocSection, EvidenceDot, req } from '@/components/claim/form-bits';
 /**
  * Where and when the surveyor inspected, plus what they saw on the vehicle.
  * Survey and workshop are stored on `accident`; odometer and condition on
- * `vehicle`; the spot's actual survey time on `spotDetails`.
+ * `vehicle`; survey datetime is unified into a single field synced across
+ * `accident` (dateOfSurvey/timeOfSurvey) and `spotDetails.surveyDatetime`.
  */
-export function SurveyForm() {
+export function SurveyForm({ claim: propClaim }: { claim?: import('@/types').ClaimData } = {}) {
   const { currentClaim, updateAccident, updateVehicle, updateSpotDetails } = useClaimStore();
   const { triggerField, hasEvidence } = useFieldEvidence();
 
-  if (!currentClaim) return null;
-  const a = currentClaim.accident || {} as any;
-  const v = currentClaim.vehicle;
-  const type = currentClaim.surveyType;
+  const claim = propClaim ?? currentClaim;
+  if (!claim) return null;
+  const a = claim.accident || {} as any;
+  const v = claim.vehicle;
+  const type = claim.surveyType;
+
+  // Unified Date & Time of Survey: combines spotDetails.surveyDatetime and accident.dateOfSurvey/timeOfSurvey
+  const rawDateTime = claim.spotDetails?.surveyDatetime ||
+    (a?.dateOfSurvey ? (a?.timeOfSurvey ? `${a.dateOfSurvey}T${a.timeOfSurvey}` : `${a.dateOfSurvey}T00:00`) : '');
+  const surveyDateTimeValue = rawDateTime.length === 10 ? `${rawDateTime}T00:00` : rawDateTime;
+
+  const handleSurveyDateTimeChange = (val: string) => {
+    if (!val) {
+      updateAccident({ dateOfSurvey: '', timeOfSurvey: '' });
+      updateSpotDetails({ surveyDatetime: '' });
+      return;
+    }
+    const [d, t] = val.split('T');
+    const timeVal = t && t !== '00:00' ? t : (t || '');
+    updateAccident({ dateOfSurvey: d || '', timeOfSurvey: timeVal });
+    updateSpotDetails({ surveyDatetime: val });
+  };
 
   const dates = type === 'valuation' ? undefined : (
-    <>
-      <div className="space-y-1">
-        <Label htmlFor="a-sdate">Date of Survey</Label>
-        <Input
-          id="a-sdate"
-          type="date"
-          value={a?.dateOfSurvey || ''}
-          onChange={(e) => updateAccident({ dateOfSurvey: e.target.value })}
-          className={req(a?.dateOfSurvey)}
-        />
-      </div>
-
-      <div className="space-y-1">
-        <Label htmlFor="a-stime">Time of Survey</Label>
-        <Input
-          id="a-stime"
-          type="time"
-          value={a?.timeOfSurvey || ''}
-          onChange={(e) => updateAccident({ timeOfSurvey: e.target.value })}
-        />
-      </div>
-
-      {type === 'spot' && (
-        <div className="space-y-1">
-          <Label htmlFor="sp-datetime">Survey Datetime (Actual)</Label>
-          <Input
-            id="sp-datetime"
-            type="datetime-local"
-            value={currentClaim.spotDetails.surveyDatetime || ''}
-            onChange={(e) => updateSpotDetails({ surveyDatetime: e.target.value })}
-          />
-        </div>
-      )}
-    </>
+    <div className="space-y-1">
+      <Label htmlFor="a-sdate">Date & Time of Survey</Label>
+      <Input
+        id="a-sdate"
+        type="datetime-local"
+        value={surveyDateTimeValue}
+        onChange={(e) => handleSurveyDateTimeChange(e.target.value)}
+        className={req(a?.dateOfSurvey || claim.spotDetails?.surveyDatetime)}
+      />
+    </div>
   );
 
   return (

@@ -2,6 +2,18 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-10-28 (Antigravity) — Unify Survey Date & Time in Claim Details
+- fix(claim): **Unified Survey Date & Time Input** (`src/components/claim/SurveyForm.tsx`).
+  - Replaced separate "Date of Survey" and "Time of Survey" inputs (and the duplicate spot-only "Survey Datetime (Actual)") with a single unified `datetime-local` input labeled **"Date & Time of Survey"**.
+  - Synchronizes changes to both `accident.dateOfSurvey` / `accident.timeOfSurvey` (used by Final reports) and `spotDetails.surveyDatetime` (used by Spot reports and Scan coupling).
+  - Eliminates data entry discrepancies where one field was filled while the other remained empty or default.
+- fix(print): **Spot Print Report Dual Fallback** (`src/components/print/SpotPrintReport.tsx`).
+  - Line 172 (Header table) and Line 346 (Section C table) now both cross-fallback between `spotDetails.surveyDatetime` and `accident.dateOfSurvey` + `accident.timeOfSurvey`.
+  - Guarantees both print locations show matching, non-blank values regardless of whether the claim was populated via Spot flow, Final flow, or mobile Scan.
+- fix(lib): `claimSurveyDate` (`src/lib/claims/survey-date.ts`) falls back to `accident.dateOfSurvey` for spot claims if `spotDetails.surveyDatetime` is empty.
+- tests: Added `src/components/claim/__tests__/SurveyForm.test.tsx` verifying single unified input on both Final and Spot claims, and updated `src/lib/claims/__tests__/survey-date.test.ts`. All 216 test files (1,894 tests) passing.
+- Scan impact: None — Spot schema fields preserved with bidirectional syncing; Scan Android unit tests passing (`./gradlew :app:testDebugUnitTest`).
+
 ## 2026-10-28 (Antigravity) — Estimate View Lenses, Prompt Overhaul & Lean Header
 - feat(ai): **Footer-First Deductive Reconciliation** prompt overhaul for estimates and final bills (`src/lib/ai/prompts.ts`).
   - Eliminates blind `÷ 1.18` division bugs on tax-exclusive quotations (e.g. Dhanashree, Schwing Stetter).
