@@ -6,6 +6,7 @@ import { useUIStore } from '@/stores/ui-store';
 import { useAIConfigStore } from '@/stores/ai-config-store';
 import { useProbesStore } from '@/stores/probes-store';
 import { buildPool } from '@/lib/ai/service';
+import { FALLBACK_MODELS, type ProviderId } from '@/lib/ai/models-config';
 import { Sparkles, ChevronDown, Zap, Eye, FileText, Wand2, Cpu } from 'lucide-react';
 
 // ─── Provider Health Badge ────────────────────────────────────────────────────
@@ -15,9 +16,7 @@ export function ProviderHealthBadge() {
   const provider = profile.aiProvider ?? 'gemini';
   const healthKey = provider === 'groq' ? 'groq' : 'gemini';
   const health = aiProviderHealth[healthKey];
-  // The ranker — not the surveyor's saved model — decides which model actually
-  // runs each call, so the badge names the provider, not a specific model.
-  const providerLabel = provider === 'gemini' ? 'Gemini' : provider === 'nvidia' ? 'NVIDIA' : provider === 'groq' ? 'Groq' : provider;
+  const providerLabel = provider === 'gemini' ? 'Gemini' : provider === 'nvidia' ? 'NVIDIA' : provider === 'groq' ? 'Groq' : provider === 'ollama' ? 'Ollama' : provider;
   const pick = profile.preferredAI;
   const PICK_LABELS = { gemini: 'Gemini', groq: 'Groq', nvidia: 'NVIDIA', ollama: 'Ollama' } as const;
   const shortModel = pick && pick !== 'auto'
@@ -35,7 +34,7 @@ export function ProviderHealthBadge() {
 
   return (
     <div
-      className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-medium"
+      className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium"
       style={{ background: 'var(--color-neutral-100)', border: '1px solid var(--color-neutral-200)' }}
       title={`${shortModel} · ${label}`}
     >
@@ -48,19 +47,44 @@ export function ProviderHealthBadge() {
 }
 
 // ─── Model Selector ───────────────────────────────────────────────────────────
-// Lists exactly what the gateway can use for the AI picked in ProviderToggle
-// (admin-enabled, not vetoed, surveyor has a key). The pick is tried first —
-// see GatewaySession.preferModel. Hidden on Auto.
+// Lists what the gateway can use. When Auto is selected, allows picking Auto or a specific model.
+// Never hidden so the surveyor always has visibility and control over model selection.
 export function ModelSelector() {
   const { profile, updateProfile } = useProfileStore();
   const [open, setOpen] = useState(false);
-  useAIConfigStore(s => s.config);   // re-render when admin config or probes change —
-  useProbesStore(s => s.probes);     // buildPool reads both stores directly
+  useAIConfigStore(s => s.config);
+  useProbesStore(s => s.probes);
 
-  const provider = profile.preferredAI;
-  if (!provider || provider === 'auto') return null;
-  const ANY = { id: '', label: 'Any model', note: 'Normal order within this AI' };
-  const models = [ANY, ...buildPool(profile).filter(e => e.provider === provider).map(e => e.model)];
+  const provider = profile.preferredAI ?? 'auto';
+  const isAuto = provider === 'auto';
+  const pool = buildPool(profile);
+
+  const ANY = {
+    id: '',
+    label: isAuto ? 'Auto (Smart Model)' : 'Any model',
+    note: isAuto ? 'Dynamic quota-aware ranking' : 'Normal order within this AI',
+  };
+
+  const poolModels = isAuto
+    ? pool.map(e => e.model)
+    : pool.filter(e => e.provider === provider).map(e => e.model);
+
+  // Fallback to static catalogue if pool is empty
+  const fallbackList = isAuto
+    ? Object.values(FALLBACK_MODELS).flat()
+    : (FALLBACK_MODELS[provider as ProviderId] ?? []);
+
+  const rawList = poolModels.length > 0 ? poolModels : fallbackList;
+  const uniqueModels: { id: string; label: string; note?: string }[] = [];
+  const seenIds = new Set<string>();
+  for (const m of rawList) {
+    if (!seenIds.has(m.id)) {
+      seenIds.add(m.id);
+      uniqueModels.push({ id: m.id, label: m.label, note: (m as any).note || '' });
+    }
+  }
+
+  const models = [ANY, ...uniqueModels];
   const activeId = profile.preferredModel ?? '';
   const active = models.find(m => m.id === activeId) ?? ANY;
 
@@ -69,20 +93,26 @@ export function ModelSelector() {
     setOpen(false);
   }
 
-  const accentColor = provider === 'groq' ? 'var(--color-status-warning)' : provider === 'nvidia' ? 'var(--color-status-success)' : 'var(--color-primary)';
+  const accentColor = provider === 'groq'
+    ? 'var(--color-status-warning)'
+    : provider === 'nvidia'
+    ? 'var(--color-status-success)'
+    : provider === 'ollama'
+    ? 'var(--color-status-info, #0284c7)'
+    : 'var(--color-primary)';
 
   return (
     <div className="relative">
       <button
         onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all"
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-medium transition-all cursor-pointer"
         style={{
           background: 'var(--color-neutral-100)',
           border: '1px solid var(--color-neutral-200)',
           color: 'var(--color-neutral-600)',
         }}
       >
-        <span style={{ color: accentColor }}>{active.label}</span>
+        <span style={{ color: activeId ? accentColor : 'var(--color-neutral-700)' }}>{active.label}</span>
         <ChevronDown size={10} style={{ opacity: 0.6, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
       </button>
 
@@ -96,18 +126,20 @@ export function ModelSelector() {
               border: '1px solid rgba(255,255,255,0.12)',
               boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
               minWidth: 220,
+              maxHeight: '320px',
+              overflowY: 'auto',
             }}
           >
             {models.map(m => {
               const isActive = m.id === activeId;
               return (
                 <button
-                  key={m.id}
+                  key={m.id || '__any__'}
                   onClick={() => select(m.id)}
-                  className="w-full flex items-start gap-2 px-4 py-2.5 text-left transition-colors"
-                  style={{ background: isActive ? 'rgba(255,255,255,0.06)' : 'transparent' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = isActive ? 'rgba(255,255,255,0.06)' : 'transparent'; }}
+                  className="w-full flex items-start gap-2 px-3.5 py-2 text-left transition-colors cursor-pointer"
+                  style={{ background: isActive ? 'rgba(255,255,255,0.08)' : 'transparent' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = isActive ? 'rgba(255,255,255,0.08)' : 'transparent'; }}
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -115,12 +147,12 @@ export function ModelSelector() {
                         {m.label}
                       </span>
                       {isActive && (
-                        <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10" style={{ color: accentColor }}>
+                        <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-primary/20" style={{ color: accentColor }}>
                           Active
                         </span>
                       )}
                     </div>
-                    <div className="text-[10px] mt-0.5" style={{ color: 'rgba(232,236,240,0.45)' }}>{m.note}</div>
+                    {m.note && <div className="text-[10px] mt-0.5" style={{ color: 'rgba(232,236,240,0.5)' }}>{m.note}</div>}
                   </div>
                 </button>
               );
@@ -133,7 +165,6 @@ export function ModelSelector() {
 }
 
 // ─── Doc Mode Toggle ──────────────────────────────────────────────────────────
-// Lets the user force text-layer or vision mode instead of auto-detection.
 export function DocModeToggle() {
   const { profile, updateProfile } = useProfileStore();
   const mode = profile.aiDocMode ?? 'auto';
@@ -146,7 +177,7 @@ export function DocModeToggle() {
 
   return (
     <div
-      className="flex items-center gap-1 p-0.5 rounded-lg"
+      className="flex items-center gap-0.5 p-0.5 rounded-lg"
       style={{ background: 'var(--color-neutral-100)', border: '1px solid var(--color-neutral-200)' }}
       title="PDF extraction mode"
     >
@@ -157,7 +188,7 @@ export function DocModeToggle() {
             key={opt.id}
             onClick={() => updateProfile({ aiDocMode: opt.id })}
             title={opt.tip}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-medium transition-all"
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-all cursor-pointer"
             style={{
               background: isActive ? 'var(--color-primary)' : 'transparent',
               color: isActive ? 'var(--color-neutral-900)' : 'var(--color-neutral-600)',
@@ -173,8 +204,6 @@ export function DocModeToggle() {
 }
 
 // ─── Provider Toggle ──────────────────────────────────────────────────────────
-// Auto = admin-ranked order. A provider = tried first for every scan, normal order
-// after it (see GatewaySession.prefer). Only providers the surveyor has a key for.
 export function ProviderToggle() {
   const { profile, updateProfile } = useProfileStore();
   const config = useAIConfigStore(s => s.config);
@@ -183,22 +212,20 @@ export function ProviderToggle() {
   const PROVIDERS: { id: Pick; label: string; icon: React.ReactNode; activeBg: string; activeColor: string }[] = [
     { id: 'auto',   label: 'Auto',   icon: <Wand2 size={11} />,    activeBg: 'var(--color-neutral-900)',      activeColor: 'var(--color-neutral-50)' },
     { id: 'gemini', label: 'Gemini', icon: <Sparkles size={11} />, activeBg: 'var(--color-primary)',          activeColor: 'var(--color-neutral-900)' },
+    { id: 'ollama', label: 'Ollama', icon: <Zap size={11} />,      activeBg: 'var(--color-neutral-900)',      activeColor: 'var(--color-neutral-50)' },
     { id: 'groq',   label: 'Groq',   icon: <Zap size={11} />,      activeBg: 'var(--color-status-warning)',   activeColor: 'var(--color-neutral-50)' },
     { id: 'nvidia', label: 'NVIDIA', icon: <Cpu size={11} />,      activeBg: 'var(--color-status-success)',   activeColor: 'var(--color-neutral-900)' },
-    { id: 'ollama', label: 'Ollama', icon: <Zap size={11} />,      activeBg: 'var(--color-neutral-900)',      activeColor: 'var(--color-neutral-50)' },
   ];
-  const hasKey = (id: Pick) => id === 'auto'
-    || ((profile[`${id}ApiKeys` as const] ?? []).some(k => k?.trim()))
-    || (id === 'gemini' && !!profile.geminiApiKey?.trim());
-  const enabled = PROVIDERS.filter(p => p.id === 'auto' || (config.providers[p.id]?.enabled && hasKey(p.id)));
-  if (enabled.length <= 2) return null;   // one provider: Auto already is that provider
-  const current = enabled.some(p => p.id === profile.preferredAI) ? profile.preferredAI : 'auto';
+
+  // Show all providers configured in admin config (defaults to enabled)
+  const enabled = PROVIDERS.filter(p => p.id === 'auto' || config.providers[p.id]?.enabled !== false);
+  const current = profile.preferredAI ?? 'auto';
 
   return (
     <div
-      className="flex items-center p-1 rounded-xl gap-1"
+      className="flex items-center p-0.5 rounded-lg gap-0.5"
       style={{ background: 'var(--color-neutral-100)', border: '1px solid var(--color-neutral-200)' }}
-      title="Auto uses the normal order. Pick an AI to try it first — if it fails, the normal order takes over."
+      title="Auto uses smart ranking. Pick an AI provider to try it first."
     >
       {enabled.map(p => {
         const active = current === p.id;
@@ -206,8 +233,11 @@ export function ProviderToggle() {
           <button
             key={p.id}
             onClick={() => updateProfile({ preferredAI: p.id, preferredModel: '' })}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all"
-            style={{ background: active ? p.activeBg : 'transparent', color: active ? p.activeColor : 'var(--color-neutral-600)' }}
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-all cursor-pointer"
+            style={{
+              background: active ? p.activeBg : 'transparent',
+              color: active ? p.activeColor : 'var(--color-neutral-600)',
+            }}
           >
             {p.icon}{p.label}
           </button>
