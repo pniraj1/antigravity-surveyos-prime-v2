@@ -11,6 +11,20 @@
 - [ ] Owner in-app check on one real claim: all 9 items (see session log 2026-10-27-surveyor-feedback-round-1).
 - [ ] Owner: open a UIIC final + bill-check Word download in Word and confirm page breaks.
 - [x] Deployed hosting to motorsurveyos-in 2026-10-27 (verified live). Not pushed to GitHub.
+- [x] Nav cleanup: hidden Insured Report behind admin gate; removed Learning and Feature Overview tabs (a3ae84a6). Deployed to motorsurveyos-in.
+
+---
+
+## Bill Check Reference Serial Numbers
+- [x] Brainstorming & specification approved: `Specs/2026-10-27-bill-check-reference-serial-design.md` (2026-10-27).
+- [x] Implementation plan creation & execution following Ponytail design principles.
+- [x] Model & Grid: `refSrNo` + `refStatus` on `AssessmentRow`; `baseDocument` + `refColumnTitle` on `BillCheckDetails`.
+- [x] Grid UI: Added editable Reference column (`width: 80px`, red italic font) with click-to-rename header and amber dot for ambiguous rows.
+- [x] 400-Line Ergonomics: Added "Review Ref Numbers (N)" toggle filter in `BillCheckGrid` to filter down to uncertain/unmatched items without review fatigue.
+- [x] Standard Report: Appended Reference column on far right of section 9 (`width: 4.5%`, deducted from particulars; currency widths preserved); subtotal rows use merged trailing span to avoid whitespace waste; header customizable (`refColumnTitle` or defaults to `Bill No.` / `Est. No.`).
+- [x] UIIC Report: Appended Reference column as 13th column in `buildUIICBillCheckHTML`; red italic font; all sections and subtotals aligned to 13 columns; UIIC regular final report unaffected (12 columns preserved).
+- [x] Automated matching: `applyFinalBill` extracts `srNo` from invoice lines and tags matched estimate rows with `refSrNo` and `refStatus` (`clean` vs `ambiguous`).
+- [x] Unit Tests: Created `src/lib/reports/__tests__/bill-check-ref-sr-no.test.ts` (10 tests passing); updated existing column span tests; 36 report test files (348 tests) passing; `tsc --noEmit` clean.
 
 ---
 

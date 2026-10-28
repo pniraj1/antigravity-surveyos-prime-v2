@@ -2,7 +2,19 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
-## 2026-10-27 (Claude) — Surveyor feedback round 1 (9 complaints)
+## 2026-10-27 (Antigravity) — Bill Check Reference Serial Numbers
+- feat(bill-check): **Reference Serial Number column (`refSrNo`)** added across Bill Check grid and generated reports (both Standard and UIIC formats).
+  - Cross-references Estimate item serial numbers against Final Bill item numbers (or vice versa in bill-first UIIC flow).
+  - Rendered as the **last column** in red italic font (`#d32f2f`, `italic`, `font-weight: 600`).
+  - Column title defaults to `Bill No.` (or `Est. No.` if `baseDocument === 'final-bill'`), and is directly editable in-place on the Bill Check grid header or stored in `claim.billCheck.refColumnTitle`.
+  - Grid cell is directly editable in-place; shows amber indicator dot for ambiguous matches.
+  - Added **"Review Ref Numbers (N)"** toggle button in the grid toolbar to filter down to uncertain/missing rows in high-volume claims (up to 400 lines) with zero fatigue.
+- feat(ai): `applyFinalBill` extracts invoice line serial numbers (`sr_no`, `item_no`, `serial_no`) and writes `refSrNo` and `refStatus` (`clean` | `ambiguous`) into matched assessment rows.
+- feat(reports):
+  - Standard Bill Check Report: Added reference column on the far right of section 9 (`width: 4.5%`); column width deducted purely from Particulars so all monetary amounts retain uninterrupted currency formatting; subtotal rows use merged trailing span to avoid whitespace waste. Regular final survey report layout preserved.
+  - UIIC Bill Check Report: Added reference column as the 13th column; all headers, item rows, tax lines, and subtotals aligned to 13 columns. UIIC regular final survey report preserved at 12 columns.
+- tests: Added `src/lib/reports/__tests__/bill-check-ref-sr-no.test.ts` (10 tests); updated existing column count tests; 36 report test files (348 tests) passing; `tsc --noEmit` clean.
+- Scan impact: None — no shared schema or coupling points touched.
 - feat(assessment): **Fix estimate reading** toolbar button + dialog replaces the floating "Fix Extraction" pill. One AI re-read with the surveyor's note; the review lists only rows **missing on the sheet** (ticked) and **changed** rows (old → new, unticked, "Accept all changes"). Never deletes; a surveyor-edited assessed figure is kept and the row gets an on-screen "Re-read" badge. Original/Supplementary toggle. Removes the old path that could wipe edited estimate rows after Apply.
 - feat(upload): **More pages of the same estimate** (continuation: rows join the original estimate, numbering carries on) and **More pages of the same bill** (keeps bill no./date, takes a printed total, doesn't re-match billed rows).
 - feat(policy): **Policy check** — Nil Dep, IMT 23, consumables, excess. AI policy read only *suggests* ("AI read: Yes"); notice strip on Assessment and Report Center; final + bill-check Print/Word blocked until all four answered. Nil Dep answer ↔ depreciation dropdown kept in sync.

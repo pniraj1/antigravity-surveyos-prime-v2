@@ -663,6 +663,8 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   // Serial numbers come from the same map the Final Report uses, so an item
   // carries one number across both documents.
   const serials = buildSerialMap(rows);
+  const defaultRefTitle = claim?.billCheck?.baseDocument === 'final-bill' ? 'Est. No.' : 'Bill No.';
+  const refTitle = claim?.billCheck?.refColumnTitle || defaultRefTitle;
 
   const partTypeLabel = (r: AssessmentRow) =>
     r.partType === 'metal' ? 'Metal'
@@ -683,6 +685,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
     : 'Replace';
 
   const blank = `<td style="${td}"></td>`;
+  const refTd = (r: AssessmentRow) => `<td style="${td}text-align:center;color:#d32f2f;font-style:italic;font-weight:600;">${r.refSrNo ?? '—'}</td>`;
 
   // Mirrors buildUIICFinalHTML's imt23RowLine. A tagged row prints its full
   // pre-depreciation basis in the "Parts Assessment" cell (col 8, fa(r.assessed));
@@ -692,7 +695,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   // print "—"), so it prints nothing — exactly as imt23Totals skips it.
   const imt23RowLine = (r: AssessmentRow) =>
     r.imt23 && r.assessed && r.billStatus !== 'not-in-bill'
-      ? `<tr><td colspan="7" style="${td}font-weight:700;">Less Imt 23</td><td style="${td}text-align:right;font-weight:700;">${fa(r.assessed / 2)}</td><td colspan="4" style="${td}"></td></tr>`
+      ? `<tr><td colspan="7" style="${td}font-weight:700;">Less Imt 23</td><td style="${td}text-align:right;font-weight:700;">${fa(r.assessed / 2)}</td><td colspan="5" style="${td}"></td></tr>`
       : '';
 
   // Specimen prints "(Part) 18.00" / "(Labour) 18.00" when no code is recorded,
@@ -724,7 +727,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
       <td style="${td}text-align:right;">${noBill ? '—' : fa(r.assessed)}</td>
       <td style="${td}text-align:center;">${isDisposal ? '0' : String(r.gst ?? 0)}</td>
       <td style="${td}text-align:right;">${noBill ? '—' : (isDisposal ? `${fa(netBeforeGst)} DISP` : fa(finalAmt))}</td>
-      ${blank}${blank}
+      ${blank}${blank}${refTd(r)}
     </tr>` + imt23RowLine(r);
   }).join('');
 
@@ -746,7 +749,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
       <td style="${td}text-align:center;">${String(r.gst ?? 0)}</td>
       ${blank}
       <td style="${td}text-align:right;">${noBill ? '—' : fa(netBeforeGst)}</td>
-      ${blank}
+      ${blank}${refTd(r)}
     </tr>` + imt23RowLine(r);
   }).join('');
 
@@ -764,7 +767,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
       ${blank}
       <td style="${td}text-align:center;">${String(r.gst ?? 0)}</td>
       ${blank}${blank}
-      <td style="${td}text-align:right;">${noBill ? '—' : fa(netBeforeGst)}</td>
+      <td style="${td}text-align:right;">${noBill ? '—' : fa(netBeforeGst)}</td>${refTd(r)}
     </tr>`;
   }).join('');
 
@@ -772,7 +775,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   const taxLines = (agg: ReturnType<typeof aggregateGst>, label: string, col: 'labour' | 'paint') =>
     agg.bands.filter(b => b.rate > 0).map(b => `<tr>
       <td colspan="10" style="${td}text-align:right;font-style:italic;">TAX IN ${b.rate} % for ${label}</td>
-      ${col === 'labour' ? `<td style="${td}text-align:right;">${fa(b.cgst + b.sgst)}</td>${blank}` : `${blank}<td style="${td}text-align:right;">${fa(b.cgst + b.sgst)}</td>`}
+      ${col === 'labour' ? `<td style="${td}text-align:right;">${fa(b.cgst + b.sgst)}</td>${blank}${blank}` : `${blank}<td style="${td}text-align:right;">${fa(b.cgst + b.sgst)}</td>${blank}`}
     </tr>`).join('');
 
   // ── PAGE 1: Header + Assessment Summary ─────────────────────────────────────
@@ -890,7 +893,7 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
 <table style="${ts}font-size:7pt;">
 <thead><tr>
   <th style="${th}width:4%;">SR.<br/>NO.</th>
-  <th style="${th}text-align:left;width:18%;">Description</th>
+  <th style="${th}text-align:left;width:13.5%;">Description</th>
   <th style="${th}width:8%;">Part<br/>Type</th>
   <th style="${th}width:8%;">Job<br/>Type</th>
   <th style="${th}width:9%;">Part List<br/>Without Tax</th>
@@ -901,10 +904,11 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
   <th style="${th}width:9%;">Final amount<br/>With G.S.T</th>
   <th style="${th}width:8%;">Labour</th>
   <th style="${th}width:7%;">Paint</th>
+  <th style="${th}width:4.5%;text-align:center;">${refTitle}</th>
 </tr></thead>
 <tbody>
-<tr><td colspan="12" style="${sec}">SPARE PARTS</td></tr>
-${pHtml || `<tr><td colspan="12" style="${td}text-align:center;color:#999;font-style:italic;">No parts in allowed items</td></tr>`}
+<tr><td colspan="13" style="${sec}">SPARE PARTS</td></tr>
+${pHtml || `<tr><td colspan="13" style="${td}text-align:center;color:#999;font-style:italic;">No parts in allowed items</td></tr>`}
 <tr style="font-weight:700;background:#eee;">
   <td colspan="4" style="${td}">SUB TOTAL</td>
   <td style="${td}text-align:right;">${fa(billedParts.reduce((s, r) => s + r.estimated, 0))}</td>
@@ -913,38 +917,40 @@ ${pHtml || `<tr><td colspan="12" style="${td}text-align:center;color:#999;font-s
   <td style="${td}text-align:right;">${fa(billedParts.reduce((s, r) => s + r.assessed, 0))}</td>
   ${blank}
   <td style="${td}text-align:right;">${fa(partsAgg.amount)}</td>
-  ${blank}${blank}
+  ${blank}${blank}${blank}
 </tr>
 
-<tr><td colspan="12" style="${sec}">LABOUR</td></tr>
-${lHtml || `<tr><td colspan="12" style="${td}text-align:center;color:#999;font-style:italic;">No labour in allowed items</td></tr>`}
+<tr><td colspan="13" style="${sec}">LABOUR</td></tr>
+${lHtml || `<tr><td colspan="13" style="${td}text-align:center;color:#999;font-style:italic;">No labour in allowed items</td></tr>`}
 <tr style="font-weight:700;background:#f6f6f6;">
   <td colspan="4" style="${td}">SUB TOTAL</td>
   <td style="${td}text-align:right;">${fa(billedLabour.reduce((s, r) => s + r.estimated, 0))}</td>
   <td colspan="5" style="${td}"></td>
   <td style="${td}text-align:right;">${fa(labourAgg.base)}</td>
-  ${blank}
+  ${blank}${blank}
 </tr>
 ${taxLines(labourAgg, 'Labour', 'labour')}
 <tr style="font-weight:700;background:#eee;">
   <td colspan="10" style="${td}">SUB TOTAL</td>
   <td style="${td}text-align:right;">${fa(labourAgg.amount)}</td>
-  ${blank}
+  ${blank}${blank}
 </tr>
 
-<tr><td colspan="12" style="${sec}">PAINTING CHARGES</td></tr>
-${ptHtml || `<tr><td colspan="12" style="${td}text-align:center;color:#999;font-style:italic;">No painting in allowed items</td></tr>`}
+<tr><td colspan="13" style="${sec}">PAINTING CHARGES</td></tr>
+${ptHtml || `<tr><td colspan="13" style="${td}text-align:center;color:#999;font-style:italic;">No painting in allowed items</td></tr>`}
 <tr style="font-weight:700;background:#f6f6f6;">
   <td colspan="4" style="${td}">SUB TOTAL</td>
   <td style="${td}text-align:right;">${fa(billedPaint.reduce((s, r) => s + r.estimated, 0))}</td>
   <td colspan="6" style="${td}"></td>
   <td style="${td}text-align:right;">${fa(paintAgg.base)}</td>
+  ${blank}
 </tr>
-${bcPmRate > 0 && bcAutoPaintBasis > 0 ? `<tr><td colspan="12" style="${td}font-size:6.5pt;color:#444;">Less ${claim.paintMaterialDepPercent ?? 50}% dep. on paint material: material @ ${claim.paintMaterialPercent ?? 25}% of ${fa(bcAutoPaintBasis)} = ${fa(bcAutoPaintBasis * ((claim.paintMaterialPercent ?? 25) / 100))}, less ${claim.paintMaterialDepPercent ?? 50}% = ${fa(bcAutoPaintBasis * bcPmRate / 100)} &nbsp;&middot;&nbsp; Painting labour @ ${100 - (claim.paintMaterialPercent ?? 25)}% attracts no depreciation.</td></tr>` : ''}
+${bcPmRate > 0 && bcAutoPaintBasis > 0 ? `<tr><td colspan="13" style="${td}font-size:6.5pt;color:#444;">Less ${claim.paintMaterialDepPercent ?? 50}% dep. on paint material: material @ ${claim.paintMaterialPercent ?? 25}% of ${fa(bcAutoPaintBasis)} = ${fa(bcAutoPaintBasis * ((claim.paintMaterialPercent ?? 25) / 100))}, less ${claim.paintMaterialDepPercent ?? 50}% = ${fa(bcAutoPaintBasis * bcPmRate / 100)} &nbsp;&middot;&nbsp; Painting labour @ ${100 - (claim.paintMaterialPercent ?? 25)}% attracts no depreciation.</td></tr>` : ''}
 ${taxLines(paintAgg, 'Paint', 'paint')}
 <tr style="font-weight:700;background:#eee;">
   <td colspan="11" style="${td}">SUB TOTAL</td>
   <td style="${td}text-align:right;">${fa(paintAgg.amount)}</td>
+  ${blank}
 </tr>
 
 <tr style="font-weight:700;background:#ddd;">
@@ -961,6 +967,7 @@ ${taxLines(paintAgg, 'Paint', 'paint')}
   <td style="${td}text-align:right;">${fa(partsAgg.amount)}</td>
   <td style="${td}text-align:right;">${fa(labourAgg.amount)}</td>
   <td style="${td}text-align:right;">${fa(paintAgg.amount)}</td>
+  ${blank}
 </tr>
 </tbody>
 </table>

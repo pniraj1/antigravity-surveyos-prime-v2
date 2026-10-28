@@ -158,8 +158,8 @@ describe('standard report — section 9 fits the page', () => {
   test.each([
     ['final, with fiberglass', taggedFbr, 12, '9. DETAILS OF ASSESSMENT', 'final' as const],
     ['final, without fiberglass', taggedNoFbr, 11, '9. DETAILS OF ASSESSMENT', 'final' as const],
-    ['bill check, with fiberglass', taggedFbr, 13, '9. DETAILS OF BILL CHECK', 'bill-check' as const],
-    ['bill check, without fiberglass', taggedNoFbr, 12, '9. DETAILS OF BILL CHECK', 'bill-check' as const],
+    ['bill check, with fiberglass', taggedFbr, 14, '9. DETAILS OF BILL CHECK', 'bill-check' as const],
+    ['bill check, without fiberglass', taggedNoFbr, 13, '9. DETAILS OF BILL CHECK', 'bill-check' as const],
   ])('endorsement-23 rows and paint note span the same as the subtotal — %s', (_l, rows, expected, heading, mode) => {
     const html = buildStandardFinalSurveyHTML(
       claim(rows, { applyPaintMaterialDep: true } as Partial<ClaimData>),
@@ -196,7 +196,7 @@ describe('standard report — section 9 fits the page', () => {
     expect(final).not.toContain('>*</td>');
 
     // The extra column keeps every row aligned.
-    expect([...new Set(rowSpans(bill))]).toEqual([12]);
+    expect([...new Set(rowSpans(bill))]).toEqual([13]);
   });
 
   test('a long part description does not get its own column widened', () => {

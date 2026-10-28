@@ -260,7 +260,7 @@ export function buildStandardFinalSurveyHTML(
    * Sr, Particulars, Type, Est, Assessed, Dep%, <materials>, GST%, Price+GST,
    * plus a narrow trailing "23" marker column in bill-check mode only.
    */
-  const NCOLS = 8 + NMAT + (isBillCheck ? 1 : 0);
+  const NCOLS = 8 + NMAT + (isBillCheck ? 2 : 0);
 
   // Percentages sum to 100 in both layouts; the FbrGls share goes to Particulars.
   // Sr / Dep% / GST% are trimmed to what their content actually needs, and the
@@ -277,7 +277,7 @@ export function buildStandardFinalSurveyHTML(
   // two-digit number that measures ~11.7pt at 10.5pt type.
   const W = {
     sr: 4.5,
-    particulars: hasFiberglass ? 17.5 : 26,
+    particulars: hasFiberglass ? (isBillCheck ? 13 : 17.5) : (isBillCheck ? 21.5 : 26),
     type: 7,
     est: 9.5,
     assessed: 9.5,
@@ -285,6 +285,7 @@ export function buildStandardFinalSurveyHTML(
     material: 8.5,
     gst: 4.5,
     price: 9,
+    ref: 4.5,
   };
 
   const ts9 = `width:100%;table-layout:fixed;border-collapse:collapse;font-size:${scale.cellFont};margin-bottom:4px;`;
@@ -309,7 +310,14 @@ export function buildStandardFinalSurveyHTML(
   const mark23Th = isBillCheck ? `<th style="${th}width:2%;text-align:center;">23</th>` : '';
   const mark23Td = (r: AssessmentRow) =>
     isBillCheck ? `<td style="${tdr9}text-align:center;font-weight:700;">${r.imt23 ? '*' : ''}</td>` : '';
-  const mark23Sub = isBillCheck ? `<td style="${sub}"></td>` : '';
+
+  // ── Reference number column (bill check only) ────────────────────────────
+  const defaultRefTitle = claim?.billCheck?.baseDocument === 'final-bill' ? 'Est. No.' : 'Bill No.';
+  const refTitle = claim?.billCheck?.refColumnTitle || defaultRefTitle;
+  const refTh = isBillCheck ? `<th style="${th}width:${W.ref}%;text-align:center;">${refTitle}</th>` : '';
+  const refTd = (r: AssessmentRow) =>
+    isBillCheck ? `<td style="${tdsr9}text-align:center;color:#d32f2f;font-style:italic;font-weight:600;">${r.refSrNo ?? '—'}</td>` : '';
+  const trailingSub = isBillCheck ? `<td colspan="2" style="${sub}"></td>` : '';
 
   // ── Parts rows (Sr | Particulars | Type | Est | Assessed | Dep% | Metal | Plastic | [FbrGls] | Glass | GST% | Price+GST)
   // Numbered across every row, rejected included, so a gap in the Bill Check
@@ -410,6 +418,7 @@ export function buildStandardFinalSurveyHTML(
       <td style="${tdr9}text-align:center;">${isDisposal ? '0%' : `${gstPct}%`}</td>
       <td style="${cellStyle}">${cellLabel}</td>
       ${mark23Td(r)}
+      ${refTd(r)}
     </tr>` + (r.imt23 && r.assessed && !disallowed ? imt23SubRow(r) : '');
   }).join('');
 
@@ -458,6 +467,7 @@ export function buildStandardFinalSurveyHTML(
       <td style="${tdr9}text-align:center;">${gstPct}%</td>
       <td style="${tdr9}${disallowed ? 'color:#a00;' : 'font-weight:600;'}">${disallowed ? '—' : m9(priceGst)}</td>
       ${mark23Td(r)}
+      ${refTd(r)}
     </tr>`
       + (r.imt23 && r.assessed && !disallowed ? imt23SubRow(r) : '')
       + (tookAutoPaintRate(r) && !disallowed ? paintDepSubRow(r) : '');
@@ -489,6 +499,7 @@ export function buildStandardFinalSurveyHTML(
       <th style="${th}text-align:center;">GST%</th>
       <th style="${th}text-align:right;">Price+GST ₹</th>
       ${mark23Th}
+      ${refTh}
     </tr>`;
 
   // ── Sections that differ by mode ────────────────────────────────────────────
@@ -923,6 +934,7 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
       <th style="${th}width:${W.gst}%;text-align:center;">GST%</th>
       <th style="${th}width:${W.price}%;text-align:right;">Price+GST ₹</th>
       ${mark23Th}
+      ${refTh}
     </tr>
   </thead>
   <tbody>
@@ -939,7 +951,7 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
       <td style="${sub}text-align:right;">${m9(glass)}</td>
       <td style="${sub}text-align:center;">—</td>
       <td style="${sub}text-align:right;font-weight:700;">${m9(pT)}</td>
-      ${mark23Sub}
+      ${trailingSub}
     </tr>
     ${imt23Row(imt23.parts)}
     <tr><td colspan="${NCOLS}" style="${sec}">LABOUR</td></tr>
@@ -952,7 +964,7 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
       <td style="${sub}text-align:center;">—</td>
       <td colspan="${NMAT + 1}" style="${sub}text-align:right;">${m9(labOnlyBase)}</td>
       <td style="${sub}text-align:right;font-weight:700;">${m9(labT)}</td>
-      ${mark23Sub}
+      ${trailingSub}
     </tr>
     ${imt23Row(imt23.labour)}
     <tr><td colspan="${NCOLS}" style="${sec}">PAINTING</td></tr>
@@ -965,7 +977,7 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
       <td style="${sub}text-align:center;">—</td>
       <td colspan="${NMAT + 1}" style="${sub}text-align:right;">${m9(paintOnlyBase)}</td>
       <td style="${sub}text-align:right;font-weight:700;">${m9(paintT)}</td>
-      ${mark23Sub}
+      ${trailingSub}
     </tr>
     ${imt23Row(imt23.paint)}
     ${paintMaterialRate(claim) > 0 && paintMaterialDed > 0 ? `<tr>

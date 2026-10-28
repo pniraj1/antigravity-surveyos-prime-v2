@@ -185,6 +185,7 @@ function formatFuel(f: string): string {
 
 interface BillItem {
   idx: number;
+  srNo?: number | string;
   description: string;
   partNumber: string;
   taxableAmount: number;
@@ -239,8 +240,13 @@ export function buildBillItems(data: any): BillItem[] {
       let taxable = i.taxable_amount;
       const total = i.total_amount || i.amount || 0;
       if (!taxable || taxable <= 0) taxable = total / (1 + gstPct / 100);
+      const rawSr = i.sr_no ?? i.item_no ?? i.serial_no ?? i.srNo;
+      const srNo = rawSr !== undefined && rawSr !== null && String(rawSr).trim() !== ''
+        ? (typeof rawSr === 'number' ? rawSr : String(rawSr).trim())
+        : (items.length + 1);
       items.push({
         idx: items.length,
+        srNo,
         description: (i.description || '').toString(),
         partNumber: (i.part_number || '').toString(),
         taxableAmount: Math.round(taxable * 100) / 100,
@@ -616,6 +622,8 @@ export function applyFinalBill(
     if (!m) return row;
     const billedAmt = m.bill.totalAmount || 0;
     const billedTax = m.bill.taxableAmount || 0;
+    const refSr = m.bill.srNo ?? (m.bill.idx + 1);
+    const refStatus = m.ambiguous ? ('ambiguous' as const) : ('clean' as const);
     if (!row.allowed) {
       return {
         ...row,
@@ -623,6 +631,8 @@ export function applyFinalBill(
         billedAmount: billedAmt,
         billStatus: 'not-allowed' as const,
         billRemarks: row.billRemarks || 'Workshop billed for a disallowed item',
+        refSrNo: refSr,
+        refStatus,
       };
     }
     // The bill differing from the estimate is exactly the surveyor's "wrong
@@ -630,7 +640,15 @@ export function applyFinalBill(
     // a divergence flag against the ASSESSMENT, which is what drives the cap,
     // rather than as a status against the estimate that changed no arithmetic.
     const remark = m.ambiguous ? 'Ambiguous match — please verify' : row.billRemarks;
-    return { ...row, billedTaxable: billedTax, billedAmount: billedAmt, billStatus: 'in-bill' as const, billRemarks: remark };
+    return {
+      ...row,
+      billedTaxable: billedTax,
+      billedAmount: billedAmt,
+      billStatus: 'in-bill' as const,
+      billRemarks: remark,
+      refSrNo: refSr,
+      refStatus,
+    };
   });
 
   const extras: ExtraBillItem[] = billItems
@@ -660,14 +678,18 @@ export function applyFinalBill(
     ...claim,
     billCheck: continuing
       ? {
+          ...prev,
           billNo: prev?.billNo || data.bill_number || '',
           billDate: prev?.billDate || data.bill_date || '',
           billTotal: data.total_amount || prev?.billTotal || 0,
+          ...(prev?.baseDocument || data.baseDocument ? { baseDocument: prev?.baseDocument || data.baseDocument } : {}),
         }
       : {
+          ...prev,
           billNo: data.bill_number || '',
           billDate: data.bill_date || '',
           billTotal: data.total_amount || 0,
+          ...(prev?.baseDocument || data.baseDocument ? { baseDocument: prev?.baseDocument || data.baseDocument } : {}),
         },
     assessmentRows: updatedRows,
     extraBillItems: merged,

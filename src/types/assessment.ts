@@ -119,6 +119,8 @@ export interface AssessmentRow {
    * Screen-only, never printed.
    */
   reReadNote?: string;
+  refSrNo?: number | string;
+  refStatus?: 'clean' | 'ambiguous' | 'manual';
 }
 
 export interface AssessmentSummary {
@@ -397,6 +399,8 @@ export interface BillCheckDetails {
   billNo: string;
   billDate: string;
   billTotal: number;
+  baseDocument?: 'estimate' | 'final-bill';
+  refColumnTitle?: string;
 }
 
 export interface BillCheckSummary {

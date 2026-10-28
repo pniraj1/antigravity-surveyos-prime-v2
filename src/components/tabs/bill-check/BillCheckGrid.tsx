@@ -68,8 +68,16 @@ export function BillCheckGrid({
   const [showSettings, setShowSettings] = useState(false);
   const [pendingAllowance, setPendingAllowance] = useState<{ id: string; assessed: number; proposed: number } | null>(null);
   const [openFlag, setOpenFlag] = useState<string | null>(null);
+  const [filterUncertain, setFilterUncertain] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
   const addAssessmentRowToSection = useClaimStore(s => s.addAssessmentRowToSection);
+
+  const uncertainCount = useMemo(
+    () => allRows.filter(r => r.refStatus === 'ambiguous' || (r.allowed && !r.refSrNo)).length,
+    [allRows],
+  );
+  const defaultRefTitle = claim?.billCheck?.baseDocument === 'final-bill' ? 'Est. Item No.' : 'Bill Item No.';
+  const refColTitle = claim?.billCheck?.refColumnTitle || defaultRefTitle;
 
   const flagsByRow = useMemo(() => {
     const m = new Map<string, BillFlag>();
@@ -120,8 +128,9 @@ export function BillCheckGrid({
       .filter(k => visible[k]).map(k => COL_WIDTHS[k]);
     const priceWithGstCol = visible.priceWithGst ? [COL_WIDTHS.priceWithGst] : [];
     const billedTaxCol = visible.billedTaxable ? [COL_WIDTHS.billedTaxable] : [];
+    const refSrNoCol = visible.refSrNo ? [COL_WIDTHS.refSrNo] : [];
     const remarksCol = visible.remarks ? [COL_WIDTHS.remarks] : [];
-    return ['32px', '28px', '50px', '2fr', ...detailCols, '100px', '70px', '100px', ...priceWithGstCol, ...billedTaxCol, '120px', ...remarksCol, '40px'].join(' ');
+    return ['32px', '28px', '50px', '2fr', ...detailCols, '100px', '70px', '100px', ...priceWithGstCol, ...billedTaxCol, '120px', ...refSrNoCol, ...remarksCol, '40px'].join(' ');
   };
   const gridCols = buildCols();
 
@@ -197,6 +206,23 @@ export function BillCheckGrid({
         {visible.priceWithGst  && <span>{GRID_COLUMNS.priceWithGst.label}</span>}
         {visible.billedTaxable && <span>{GRID_COLUMNS.billedTaxable.label} (₹)</span>}
         <span>Status</span>
+        {visible.refSrNo && (
+          <span
+            className="flex items-center gap-1 cursor-pointer group hover:text-foreground"
+            onClick={() => {
+              const custom = prompt('Enter custom column title for Reference Item No.:', refColTitle);
+              if (custom !== null) {
+                useClaimStore.getState().updateClaim({
+                  billCheck: { ...claim.billCheck, refColumnTitle: custom.trim() || undefined },
+                });
+              }
+            }}
+            title="Click to rename reference column"
+          >
+            <span>{refColTitle}</span>
+            <span className="opacity-0 group-hover:opacity-100 text-[10px] text-primary">✎</span>
+          </span>
+        )}
         {visible.remarks       && <span>Remarks</span>}
         <span></span>
       </div>
@@ -238,6 +264,7 @@ export function BillCheckGrid({
         <div className={`text-xs font-medium ${onDark ? 'text-white/50' : 'text-muted-foreground'}`}>
           {fmt(t.notInBill)} not claimed
         </div>
+        {visible.refSrNo       && <div />}
         {visible.remarks && <div />}
         <div />
       </div>
@@ -293,6 +320,20 @@ export function BillCheckGrid({
             >
               <Trash2 size={14} />
               Delete Selected ({selected.size})
+            </button>
+          )}
+          {uncertainCount > 0 && (
+            <button
+              onClick={() => setFilterUncertain(!filterUncertain)}
+              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all border ${
+                filterUncertain
+                  ? 'bg-amber-600 text-white border-amber-600'
+                  : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+              }`}
+              title="Filter to ambiguous or missing reference numbers"
+            >
+              <AlertCircle size={14} />
+              {filterUncertain ? `Show All (${allRows.length})` : `Review Ref Numbers (${uncertainCount})`}
             </button>
           )}
           {/* Column visibility dropdown */}
@@ -375,9 +416,12 @@ export function BillCheckGrid({
           const sectionRows = allRows.filter(
             r => r.section === section && (r.allowed || (r.billedAmount ?? 0) > 0),
           );
+          const displayedRows = filterUncertain
+            ? sectionRows.filter(r => r.refStatus === 'ambiguous' || (r.allowed && !r.refSrNo))
+            : sectionRows;
           // An empty section is not rendered at all, as in AssessmentGrid.
-          if (sectionRows.length === 0) return null;
-          const sectionIds = sectionRows.map(r => r.id);
+          if (displayedRows.length === 0) return null;
+          const sectionIds = displayedRows.map(r => r.id);
           const sub = subtotals[section];
           // Allowed only: sectionSubtotals reads a summary the engine built from
           // allowed rows, and the two footer lines must describe one population.
@@ -388,18 +432,18 @@ export function BillCheckGrid({
           {/* Section title — full width, deliberately not a grid row */}
           <div className="px-6 pt-5 pb-2">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {title} <span className="ml-2 opacity-60">({sectionRows.length})</span>
+              {title} <span className="ml-2 opacity-60">({displayedRows.length}{filterUncertain ? ` of ${sectionRows.length}` : ''})</span>
             </h3>
           </div>
 
           {headerRow(sectionIds)}
 
-          {sectionRows.map((row, idx) => {
+          {displayedRows.map((row, idx) => {
             const isDisallowed = !row.allowed;
             const effectiveStatus: BillStatus = isDisallowed ? 'not-allowed' : (row.billStatus || 'pending');
             const st = statusLabel(effectiveStatus);
             return [
-              shouldStartSupplementaryBand(sectionRows, idx) && (
+              shouldStartSupplementaryBand(displayedRows, idx) && (
                 <div
                   key={`band-${section}-${idx}`}
                   className="px-6 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide bg-gradient-to-r from-muted via-muted to-transparent"
@@ -538,6 +582,27 @@ export function BillCheckGrid({
                     <option value="in-bill">In Bill ✓</option>
                     <option value="not-in-bill">Not in Bill ✗</option>
                   </select>
+                )}
+                {visible.refSrNo && (
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="text"
+                      value={row.refSrNo ?? ''}
+                      placeholder="—"
+                      onChange={e => {
+                        const val = e.target.value.trim();
+                        updateAssessmentRow(row.id, {
+                          refSrNo: val === '' ? undefined : val,
+                          refStatus: 'manual',
+                        });
+                      }}
+                      className="px-1.5 py-1 rounded text-xs text-center border outline-none w-full border-border font-semibold italic text-red-600 bg-red-50/30"
+                      title={row.refStatus === 'ambiguous' ? 'Ambiguous match — please verify' : 'Reference serial number'}
+                    />
+                    {row.refStatus === 'ambiguous' && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" title="Ambiguous match" />
+                    )}
+                  </div>
                 )}
                 {visible.remarks && (
                   <input

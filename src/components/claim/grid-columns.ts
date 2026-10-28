@@ -17,6 +17,7 @@ export type GridColumn =
   | 'disposal'
   | 'priceWithGst'
   | 'billedTaxable'
+  | 'refSrNo'
   | 'status'
   | 'action'
   | 'remarks';
@@ -42,6 +43,7 @@ export const GRID_COLUMNS: Record<GridColumn, GridColumnMeta> = {
   disposal:      { key: 'disposal',      label: 'Disposal',           description: 'Used/salvaged part — no GST; surveyor sets % of depreciated value', width: '110px' },
   priceWithGst:  { key: 'priceWithGst',  label: 'Price+GST',          description: 'Net assessed amount inclusive of GST', width: '100px' },
   billedTaxable: { key: 'billedTaxable', label: 'Billed Taxable',     description: 'Billed taxable (net) amount before GST, from the workshop bill', width: '110px' },
+  refSrNo:       { key: 'refSrNo',       label: 'Ref No.',            description: 'Cross-reference item number in comparison document', width: '80px' },
   status:        { key: 'status',        label: 'Status',             description: 'In Bill / Not in Bill / Partial', width: '120px' },
   action:        { key: 'action',        label: 'Action',             description: 'Replace / Repair / Disallow', width: '90px' },
   remarks:       { key: 'remarks',       label: 'Remarks',            description: 'Surveyor notes', width: '1fr' },

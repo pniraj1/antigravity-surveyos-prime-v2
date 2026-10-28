@@ -166,6 +166,6 @@ describe('UIIC Bill Check Report — Depreciation Amount column', () => {
       row({ section: 'paint', partType: 'paint', assessed: 1500 }),
     ]);
     const html = buildUIICBillCheckHTML(c, null);
-    assertColumnCountsMatch(html, 'BILLS CHECK REPORT', 12);
+    assertColumnCountsMatch(html, 'BILLS CHECK REPORT', 13);
   });
 });

@@ -136,7 +136,7 @@ describe('Bill Check table format', () => {
     expect(cellsOf('SprayPanel')).toContain('>Paint<');
   });
 
-  test('every row in the table spans exactly twelve columns', () => {
+  test('every row in the table spans exactly thirteen columns', () => {
     // Adding or removing a column means revisiting a dozen colspans by hand.
     // This catches a miscount instead of leaving it to be spotted on paper.
     // Twelve, not eleven, since the Depreciation Amount column was added.
@@ -158,7 +158,7 @@ describe('Bill Check table format', () => {
         return sum + (m ? Number(m[1]) : 1);
       }, 0);
       const label = tr.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40);
-      expect(spans, `row "${label}" spans ${spans}, not 12`).toBe(12);
+      expect(spans, `row "${label}" spans ${spans}, not 13`).toBe(13);
     }
   });
 });
