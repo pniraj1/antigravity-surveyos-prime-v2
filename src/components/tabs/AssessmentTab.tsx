@@ -96,7 +96,7 @@ export function AssessmentTab() {
   if (!currentClaim) return null;
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-140px)] p-6 lg:p-8 max-w-[1600px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div className="flex flex-col h-[calc(100dvh-140px)] p-3 lg:p-4 max-w-[1700px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
       {saveToCloudDialog}
       {estimateModeDialog}
       {reviewSheet && (
@@ -112,29 +112,41 @@ export function AssessmentTab() {
           }}
         />
       )}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6 shrink-0">
-        <div>
-          <h2 className="text-2xl font-medium tracking-tight">Assessment</h2>
-          <p className="text-muted-foreground text-sm mt-1">
-            Build the assessment grid. GST and depreciation apply automatically by part type; tick IMT 23 on a row to apply the endorsement.
-          </p>
-        </div>
-        
-        <div className="flex flex-col items-end gap-2">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-3 bg-card p-3 rounded-xl border border-border">
-              <Label htmlFor="dep-type" className="font-medium text-sm">Policy Depreciation:</Label>
-              <select
-                id="dep-type"
-                value={currentClaim.depreciationType}
-                onChange={(e) => setDepreciationType(e.target.value as any)}
-                className="h-8 rounded-md border border-input bg-background px-3 text-sm focus:ring-1 focus:ring-primary font-medium text-primary"
-              >
-                <option value="standard">Standard (Age Based)</option>
-                <option value="nil">Nil Depreciation</option>
-              </select>
-            </div>
 
+      {/* Lean Header Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5 mb-2.5 shrink-0 bg-card/60 backdrop-blur-sm border border-border/80 px-3 py-2 rounded-xl">
+        {/* Left side: Title, Policy Dep dropdown, Policy Check badge */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <h2 className="text-base font-semibold tracking-tight text-foreground">Assessment</h2>
+
+          <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 border border-border/60 rounded-md px-2 py-1">
+            <span className="font-medium text-foreground">Depreciation:</span>
+            <select
+              id="dep-type"
+              value={currentClaim.depreciationType}
+              onChange={(e) => setDepreciationType(e.target.value as any)}
+              className="h-6 rounded bg-background px-1.5 text-xs font-medium text-primary border border-input focus:ring-1 focus:ring-primary cursor-pointer"
+            >
+              <option value="standard">Standard (Age Based)</option>
+              <option value="nil">Nil Depreciation</option>
+            </select>
+          </div>
+
+          <PolicyCheckStrip />
+        </div>
+
+        {/* Right side: AI controls & Action buttons */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* AI extraction controls in a tight compact pill */}
+          <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted/40 border border-border/60 text-xs">
+            <span className="text-[10px] font-medium mr-0.5 text-muted-foreground">AI</span>
+            <ProviderToggle />
+            <DocModeToggle />
+            <ModelSelector />
+            <ProviderHealthBadge />
+          </div>
+
+          <div className="flex items-center gap-1.5">
             <div className="relative">
               <input
                 type="file"
@@ -144,56 +156,45 @@ export function AssessmentTab() {
                 disabled={isProcessing}
                 title="Upload Estimate"
               />
-              <Button variant="outline" className="gap-2 h-12 w-full" tabIndex={-1} disabled={isProcessing}>
-                <Upload size={16} />
+              <Button variant="outline" size="sm" className="gap-1.5 h-8 px-2.5 text-xs" tabIndex={-1} disabled={isProcessing}>
+                <Upload size={14} />
                 Upload Estimate
               </Button>
             </div>
 
-            <UsePhoneFiles types={ESTIMATE_TYPES} className="h-12" disabled={isProcessing} onPick={(file) => void processEstimateFile(file, true)} />
+            <UsePhoneFiles types={ESTIMATE_TYPES} className="h-8 px-2.5 text-xs" disabled={isProcessing} onPick={(file) => void processEstimateFile(file, true)} />
 
             {/* An estimate was read when some row carries a source. */}
             {currentClaim.assessmentRows.some((r) => r.source) && (
-              <Button variant="outline" className="h-12" disabled={isProcessing} onClick={() => setFixOpen(true)}>
-                Fix estimate reading
+              <Button variant="outline" size="sm" className="h-8 px-2.5 text-xs" disabled={isProcessing} onClick={() => setFixOpen(true)}>
+                Fix reading
               </Button>
             )}
 
             <Button
               variant={showEvidence ? 'secondary' : 'outline'}
+              size="sm"
               onClick={() => setShowEvidence(!showEvidence)}
-              className={`gap-2 h-12 ${showEvidence ? 'bg-primary/20 text-primary border-primary/30 hover:bg-primary/30' : ''}`}
+              className={`gap-1.5 h-8 px-2.5 text-xs ${showEvidence ? 'bg-primary/20 text-primary border-primary/30 hover:bg-primary/30' : ''}`}
             >
-              {showEvidence ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
+              {showEvidence ? <PanelRightClose size={14} /> : <PanelRightOpen size={14} />}
               {showEvidence ? 'Hide Evidence' : 'Show Evidence'}
             </Button>
 
             <Button
               variant={showSummary ? 'secondary' : 'outline'}
+              size="sm"
               onClick={() => setShowSummary(s => !s)}
-              className={`gap-2 h-12 ${showSummary ? 'bg-primary/20 text-primary border-primary/30 hover:bg-primary/30' : ''}`}
+              className={`gap-1.5 h-8 px-2.5 text-xs ${showSummary ? 'bg-primary/20 text-primary border-primary/30 hover:bg-primary/30' : ''}`}
             >
-              {showSummary ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
+              {showSummary ? <PanelRightClose size={14} /> : <PanelRightOpen size={14} />}
               {showSummary ? 'Hide Summary' : 'Show Summary'}
             </Button>
 
-            <SaveProgressButton className="h-12" />
-          </div>
-
-          {/* AI extraction controls */}
-          <div
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-card border border-border"
-          >
-            <span className="text-[10px] font-medium mr-1 text-muted-foreground">AI</span>
-            <ProviderToggle />
-            <DocModeToggle />
-            <ModelSelector />
-            <ProviderHealthBadge />
+            <SaveProgressButton className="h-8 px-2.5 text-xs" />
           </div>
         </div>
       </div>
-
-      <PolicyCheckStrip />
 
       <div className="flex-1 min-h-0 bg-background rounded-xl border border-border overflow-hidden">
         <PanelGroup orientation="horizontal">
