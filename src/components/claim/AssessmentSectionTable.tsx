@@ -66,6 +66,15 @@ export interface AssessmentSectionTableProps {
  * Sections are a rendering concern only: the claim still holds one flat row
  * array, so reports, serial numbers and the calculation engine are untouched.
  */
+const ESTIMATE_ACCENT_COLORS = [
+  'border-l-4 border-l-blue-500',
+  'border-l-4 border-l-purple-500',
+  'border-l-4 border-l-amber-500',
+  'border-l-4 border-l-emerald-500',
+  'border-l-4 border-l-rose-500',
+  'border-l-4 border-l-cyan-500',
+];
+
 export function AssessmentSectionTable({
   section,
   title,
@@ -89,6 +98,18 @@ export function AssessmentSectionTable({
     addAssessmentRowToSection,
     updateClaim,
   } = useClaimStore();
+
+  const distinctEstimateIds = React.useMemo(() => {
+    return Array.from(new Set(allRows.map((r) => r.estimateId).filter(Boolean))) as string[];
+  }, [allRows]);
+
+  const estimateColorMap = React.useMemo(() => {
+    const map: Record<string, string> = {};
+    distinctEstimateIds.forEach((id, idx) => {
+      map[id] = ESTIMATE_ACCENT_COLORS[idx % ESTIMATE_ACCENT_COLORS.length];
+    });
+    return map;
+  }, [distinctEstimateIds]);
 
   const sectionRowIds = rows.map(r => r.id);
   const totalCols = 9 + visibleCount;
@@ -243,6 +264,10 @@ export function AssessmentSectionTable({
 
                 const normalizedParticulars = row.particulars?.replace(/\s+/g, ' ').trim().toLowerCase();
                 const isDuplicate = normalizedParticulars ? duplicateParticulars.has(normalizedParticulars) : false;
+                const rowAccentClass =
+                  distinctEstimateIds.length >= 2 && row.estimateId && estimateColorMap[row.estimateId]
+                    ? estimateColorMap[row.estimateId]
+                    : '';
 
                 return [
                   // Supplementary divider band (appears before the first supplementary row)
@@ -253,11 +278,13 @@ export function AssessmentSectionTable({
                       </td>
                     </tr>
                   ),
+
+
                   // Row itself
                   <SortableRow
                     key={row.id}
                     id={row.id}
-                    className={`hover:bg-accent/30 transition-colors ${selection.selected.has(row.id) ? 'bg-red-500/5' : ''} ${!row.allowed ? 'opacity-40 bg-muted/20' : ''} ${isDuplicate ? 'bg-orange-500/10' : ''} ${row.isDisposal && row.allowed ? 'bg-amber-500/5' : ''} ${row.imt23 && row.allowed ? 'bg-primary/5' : ''}`}
+                    className={`hover:bg-accent/30 transition-colors ${rowAccentClass} ${selection.selected.has(row.id) ? 'bg-red-500/5' : ''} ${!row.allowed ? 'opacity-40 bg-muted/20' : ''} ${isDuplicate ? 'bg-orange-500/10' : ''} ${row.isDisposal && row.allowed ? 'bg-amber-500/5' : ''} ${row.imt23 && row.allowed ? 'bg-primary/5' : ''}`}
                   >
                     {/* Select checkbox — always on */}
                     <td className={`px-2 py-1.5 text-center ${isDuplicate ? 'border-l-4 border-orange-500' : ''}`}>

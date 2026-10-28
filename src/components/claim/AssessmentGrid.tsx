@@ -23,6 +23,8 @@ import type { AssessmentRow as AssessmentRowType, AssessmentSection } from '@/ty
 import { parseClipboardValue, buildPasteUpdates } from '@/lib/utils/grid-paste';
 import { useGridSelection, clampRangeToSection } from './useGridSelection';
 import { AssessmentSectionTable } from './AssessmentSectionTable';
+import { EstimateViewSwitcher } from './EstimateViewSwitcher';
+import { EstimateTallyBanner } from './EstimateTallyBanner';
 import {
   OPTIONAL_COLUMNS,
   DEFAULT_VISIBLE,
@@ -209,6 +211,13 @@ export function AssessmentGrid() {
   }, [cellSelection, currentClaim?.assessmentRows, updateAssessmentRow]);
 
   const assessmentRows = allRows;
+  const [activeEstimateId, setActiveEstimateId] = useState<string | 'all'>('all');
+
+  const displayedRows = useMemo(() => {
+    if (activeEstimateId === 'all') return assessmentRows;
+    if (activeEstimateId === '__untagged__') return assessmentRows.filter((r) => !r.estimateId);
+    return assessmentRows.filter((r) => r.estimateId === activeEstimateId);
+  }, [assessmentRows, activeEstimateId]);
   const [showUiicSummary, setShowUiicSummary] = useState(false);
   const [showNiaExport, setShowNiaExport] = useState(false);
   // Normalised, not raw: persisted claims can hold 'Nil Depreciation' or odd
@@ -398,7 +407,18 @@ export function AssessmentGrid() {
           </div>
         </div>
       </CardHeader>
-      
+
+      <EstimateViewSwitcher
+        rows={assessmentRows}
+        activeEstimateId={activeEstimateId}
+        onSelectEstimate={setActiveEstimateId}
+      />
+      <EstimateTallyBanner
+        rows={assessmentRows}
+        activeEstimateId={activeEstimateId}
+        onResetView={() => setActiveEstimateId('all')}
+      />
+
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <div className="overflow-x-auto">
           {assessmentRows.length === 0 ? (
@@ -411,7 +431,7 @@ export function AssessmentGrid() {
             </div>
           ) : (
             SECTION_ORDER.map(({ section, title }) => {
-              const sectionRows = assessmentRows.filter(r => r.section === section);
+              const sectionRows = displayedRows.filter(r => r.section === section);
               // An empty section is not rendered at all. It reappears the
               // moment a row takes that section via the type dropdown.
               if (sectionRows.length === 0) return null;
