@@ -2,6 +2,26 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-10-28 (Antigravity) — Estimate View Lenses, Prompt Overhaul & Lean Header
+- feat(ai): **Footer-First Deductive Reconciliation** prompt overhaul for estimates and final bills (`src/lib/ai/prompts.ts`).
+  - Eliminates blind `÷ 1.18` division bugs on tax-exclusive quotations (e.g. Dhanashree, Schwing Stetter).
+  - Footer reconciliation checks whether item amounts sum to Subtotal (exclusive base) or Grand Total (inclusive gross).
+  - Captures full assessment fields: `part_number`, `hsn_sac`, `quantity`, `unit_price`, `taxable_amount`, `gst_percent`, `total_amount`, and `category` (including `rubber` & `fiberglass`).
+  - Returns `_audit` envelope with `tax_posture`, `columns_detected`, `reconciliation_note`, and warnings.
+- feat(dialogs): **AI Review Dialog Audit Card** (`AIReviewDialog.tsx`) displays tax posture badge, column detection overview, and reconciliation feedback notes to the surveyor. `_audit` is stripped by `stripPageTags` before persisting.
+- feat(model): Added `estimateId` to `AssessmentRow` (`assessment.ts`), automatically computed in `buildEstimateRows` from `workshop_name + estimate_number + estimate_date`.
+- refactor(ui): **Lean Assessment Tab Header** (`AssessmentTab.tsx`, `PolicyCheckStrip.tsx`):
+  - Collapsed stacked header controls into a single lean 36px toolbar, recovering >200px vertical table space.
+  - Converted Policy Depreciation into an inline select badge and Policy Check into a compact pill chip (`Policy checked` / `Policy check: 2 of 4 [⚠️ 1]`) with a floating popover overlay.
+- feat(claim): **Estimate View Switcher & Tally Banner** (`EstimateViewSwitcher.tsx`, `EstimateTallyBanner.tsx`):
+  - Added segmented view lens pills above the assessment grid (`[ All (N) ] [ Vendor A (X) ] [ Vendor B (Y) ]`) when 2+ distinct quotations are present.
+  - Display-layer only: underlying flat `assessmentRows` array, serial numbers, calculations, and report generation remain completely untouched.
+  - Tally Banner shows live taxable base, estimated GST, and gross sum for the active quotation to cross-check against paper documents.
+- feat(claim): **Multi-Estimate Row Accent Borders** (`AssessmentSectionTable.tsx`):
+  - Rows are highlighted with distinct left-border color accents (`border-l-4 border-l-blue-500`, etc.) in "All" view to visually distinguish items from different estimates at a glance.
+- tests: Added test suites for prompt audit structure, review dialog cards, estimate tagging, view switcher, and row accent borders. All 215 test files (1,890 tests) passing; zero regressions.
+- Scan impact: None — display-only views and prompt changes do not touch Scan coupling.
+
 ## 2026-10-27 (Antigravity) — Bill Check Reference Serial Numbers
 - feat(bill-check): **Reference Serial Number column (`refSrNo`)** added across Bill Check grid and generated reports (both Standard and UIIC formats).
   - Cross-references Estimate item serial numbers against Final Bill item numbers (or vice versa in bill-first UIIC flow).

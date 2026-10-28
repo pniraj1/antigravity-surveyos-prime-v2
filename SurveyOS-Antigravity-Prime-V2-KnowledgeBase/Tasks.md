@@ -1,7 +1,18 @@
 # Active Tasks
 
-> Last updated: 2026-10-27 by Claude
+> Last updated: 2026-10-28 by Antigravity
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
+
+---
+
+## Estimate View Lenses, Prompt Overhaul & Lean Header (Built 2026-10-28 on main)
+- [x] Rewrote `RAW_PROMPTS['estimate']` and `RAW_PROMPTS['final-bill']` in `src/lib/ai/prompts.ts` with Footer-First Deductive Reconciliation, full assessment fields (`part_number`, `hsn_sac`, `quantity`, `unit_price`, `taxable_amount`, `gst_percent`, `total_amount`, `category`), and `_audit` envelope.
+- [x] Added `AuditCard` to `AIReviewDialog.tsx` showing tax posture badge, columns detected, reconciliation notes, and warnings. `stripPageTags()` removes `_audit` prior to persistence.
+- [x] Added `estimateId` to `AssessmentRow` and auto-derived in `buildEstimateRows()` (`aiDataSlice.ts`).
+- [x] Streamlined Assessment tab header into a lean ~36px toolbar, recovering >200px vertical table space; converted `PolicyCheckStrip` into an inline badge chip with popover card.
+- [x] Added `EstimateViewSwitcher` lens and `EstimateTallyBanner` above `AssessmentGrid` for multi-quotation filtering and live totals tally without mutating the underlying flat row array.
+- [x] Added visual left-border color accents to `AssessmentSectionTable` rows when 2+ estimates exist.
+- [x] All 215 test files (1,890 tests) passing; zero regressions. Commits on `main`.
 
 ---
 
