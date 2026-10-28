@@ -105,7 +105,7 @@ function AuditCard({ audit }: { audit?: { tax_posture?: string; columns_detected
         <div className="mt-2 pt-2 border-t border-amber-200/80">
           <div className="text-[10px] font-bold uppercase tracking-wider text-amber-800 mb-1">Audit Warnings</div>
           <ul className="text-xs text-amber-900 list-disc pl-4 space-y-0.5">
-            {audit.warnings.map((w, i) => <li key={i}>{w}</li>)}
+            {audit.warnings?.map((w, i) => <li key={i}>{w}</li>)}
           </ul>
         </div>
       )}

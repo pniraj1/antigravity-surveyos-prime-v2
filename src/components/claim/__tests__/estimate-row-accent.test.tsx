@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import React from 'react';
 import { AssessmentSectionTable } from '../AssessmentSectionTable';
+import { DEFAULT_VISIBLE } from '../assessment-grid-config';
 import { createAssessmentRow } from '@/lib/calculations';
 import type { SectionSubtotal } from '@/lib/calculations/section-subtotals';
 
@@ -33,7 +34,7 @@ describe('AssessmentSectionTable estimate row accent border', () => {
         rows={[row1, row2]}
         allRows={allRows}
         subtotal={emptySubtotal}
-        visible={{'hsnSac': false, 'partNumber': false, 'billGst': false, 'disposal': false, 'category': false, 'imt23': false, 'itemType': false, 'remarks': false, 'taxable': false}}
+        visible={DEFAULT_VISIBLE}
         visibleCount={0}
         selection={dummySelection}
         ageMonths={12}
@@ -60,7 +61,7 @@ describe('AssessmentSectionTable estimate row accent border', () => {
         rows={[row1, row2]}
         allRows={allRows}
         subtotal={emptySubtotal}
-        visible={{'hsnSac': false, 'partNumber': false, 'billGst': false, 'disposal': false, 'category': false, 'imt23': false, 'itemType': false, 'remarks': false, 'taxable': false}}
+        visible={DEFAULT_VISIBLE}
         visibleCount={0}
         selection={dummySelection}
         ageMonths={12}
