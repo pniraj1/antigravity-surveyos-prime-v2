@@ -65,6 +65,54 @@ function CheckCard({ findings, onSmartFix, progress, fixed, rows }: {
   );
 }
 
+
+function AuditCard({ audit }: { audit?: { tax_posture?: string; columns_detected?: string[]; reconciliation_note?: string; warnings?: string[] } }) {
+  if (!audit) return null;
+  const hasWarnings = (audit.warnings?.length ?? 0) > 0;
+  const isExclusive = audit.tax_posture?.toLowerCase().includes('exclusive');
+  return (
+    <div className={'mb-4 p-3 rounded-lg border ' + (hasWarnings ? 'border-amber-200 bg-amber-50/70 text-amber-950' : 'border-emerald-200 bg-emerald-50/70 text-emerald-950')}>
+      <div className="flex items-center justify-between gap-2 mb-1.5">
+        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider">
+          <Sparkles size={14} className={hasWarnings ? 'text-amber-600' : 'text-emerald-600'} />
+          AI Audit &amp; Tax Deduction
+        </div>
+        {audit.tax_posture && (
+          <span className={'text-[10px] font-bold px-2 py-0.5 rounded-full border ' + (isExclusive ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-purple-100 text-purple-800 border-purple-200')}>
+            {isExclusive ? 'GST Extra (Taxable Rates)' : 'Tax Inclusive (Gross Rates)'}
+          </span>
+        )}
+      </div>
+
+      {audit.reconciliation_note && (
+        <p className="text-xs leading-relaxed font-medium mb-1.5 text-zinc-800">
+          {audit.reconciliation_note}
+        </p>
+      )}
+
+      {audit.columns_detected && audit.columns_detected.length > 0 && (
+        <div className="text-[11px] text-zinc-600 flex flex-wrap gap-1 items-center mb-1.5">
+          <span className="font-semibold text-zinc-700">Columns:</span>
+          {audit.columns_detected.map((col, i) => (
+            <span key={i} className="bg-white/80 px-1.5 py-0.5 rounded border border-zinc-200 text-[10px]">
+              {col}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {hasWarnings && (
+        <div className="mt-2 pt-2 border-t border-amber-200/80">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-amber-800 mb-1">Audit Warnings</div>
+          <ul className="text-xs text-amber-900 list-disc pl-4 space-y-0.5">
+            {audit.warnings.map((w, i) => <li key={i}>{w}</li>)}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function AIReviewDialog({ isOpen, onClose, onConfirm, onReScan, title, data, evidenceImages = [], findings = [], onSmartFix, smartFixProgress = '', smartFixed = false }: AIReviewDialogProps) {
   const [feedback, setFeedback] = useState('');
 
@@ -76,7 +124,7 @@ export function AIReviewDialog({ isOpen, onClose, onConfirm, onReScan, title, da
 
   // Flatten sample data for display
   const displayFields = Object.entries(data || {})
-    .filter(([k, v]) => !/_(page|file)$/.test(k) && (typeof v === 'string' || typeof v === 'number'))
+    .filter(([k, v]) => k !== "_audit" && !/_(page|file)$/.test(k) && (typeof v === 'string' || typeof v === 'number'))
     .map(([k, v]) => ({
       key: k.replace(/_/g, ' ').toUpperCase(),
       value: String(v)
@@ -171,6 +219,7 @@ export function AIReviewDialog({ isOpen, onClose, onConfirm, onReScan, title, da
             )}
 
             <div className="space-y-4">
+              <AuditCard audit={data?._audit} />
               <CheckCard findings={findings} onSmartFix={onSmartFix} progress={smartFixProgress} fixed={smartFixed} rows={countRows(data)} />
 
               {displayFields.length > 0 ? (

@@ -145,7 +145,12 @@ export function tagRows<T>(fragment: T, first: number, last: number): T {
 }
 
 export function stripPageTags<T>(data: T): T {
-  return mapSections(data, rows => rows.map(({ _page, _pageEnd, ...rest }) => rest));
+  const stripped = mapSections(data, rows => rows.map(({ _page, _pageEnd, ...rest }) => rest));
+  if (stripped && typeof stripped === 'object') {
+    const { _audit, ...rest } = stripped as Record<string, unknown>;
+    return rest as T;
+  }
+  return stripped;
 }
 
 /** Keep the first row per serial within each section. */
