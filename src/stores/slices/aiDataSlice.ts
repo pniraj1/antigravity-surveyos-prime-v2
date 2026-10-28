@@ -747,6 +747,12 @@ export function buildEstimateRows(
   const newRows: AssessmentRow[] = [];
   let runningSerial = startSerial;
 
+  const estimateId =
+    data.estimateId ||
+    (data.workshop_name || data.estimate_number
+      ? [data.workshop_name, data.estimate_number, data.estimate_date].filter(Boolean).join('-')
+      : undefined);
+
   const extractBase = (item: any): number => {
     const gstPct = item.gst_percent ?? 18;
     if (item.taxable_amount && item.taxable_amount > 0) return item.taxable_amount;
@@ -759,6 +765,7 @@ export function buildEstimateRows(
     newRows.push(
       createAssessmentRow('parts', {
         source: rowSource,
+        estimateId,
         srNo: item.sr_no || runningSerial++,
         particulars: item.description || 'Unnamed Part',
         partNumber: item.part_number || '',
@@ -778,6 +785,7 @@ export function buildEstimateRows(
     newRows.push(
       createAssessmentRow('labour', {
         source: rowSource,
+        estimateId,
         srNo: item.sr_no || runningSerial++,
         particulars: item.description || 'Labour Item',
         hsnSac: item.hsn_sac || '',
@@ -796,6 +804,7 @@ export function buildEstimateRows(
     newRows.push(
       createAssessmentRow('paint', {
         source: rowSource,
+        estimateId,
         srNo: item.sr_no || runningSerial++,
         particulars: item.description || 'Painting Item',
         hsnSac: item.hsn_sac || '',

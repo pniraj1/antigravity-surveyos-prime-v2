@@ -121,6 +121,8 @@ export interface AssessmentRow {
   reReadNote?: string;
   refSrNo?: number | string;
   refStatus?: 'clean' | 'ambiguous' | 'manual';
+  /** Estimate batch this row was imported from. Display-only view lens metadata; never used in calculations or reports. */
+  estimateId?: string;
 }
 
 export interface AssessmentSummary {
