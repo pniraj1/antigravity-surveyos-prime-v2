@@ -2,6 +2,30 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-10-29 (Antigravity) — Unify GVW, ULW, and Accident Load
+- feat(store): **Store-Level Bi-Directional Synchronization** (`src/stores/slices/vehicleSlice.ts`, `src/stores/slices/claimSlice.ts`).
+  - Added two-way state synchronization between `vehicle.registeredLoadWeight`/`vehicle.grossWeight`/`vehicle.unladenWeight` and `spotDetails.gvw`/`spotDetails.ulw`/`spotDetails.loadCapacity`.
+  - Automatically calculates Legal Load Capacity (`(gvw > ulw && ulw > 0) ? gvw - ulw : (gvw || 0)`) whenever either weight changes in either slice.
+  - Synchronizes `spotDetails.actualLoad` (number) and `vehicle.goodsWeightAtAccident` / `vehicle.actualPayload` (string).
+  - Added unit test suite in `src/stores/slices/__tests__/weights-and-load-unification.test.ts` (11 tests).
+- fix(claim): **Deduplicate Accident Load in AtAccidentForm** (`src/components/claim/AtAccidentForm.tsx`).
+  - Removed redundant "Goods Weight at Accident" input (`v-goods-weight`), leaving a single authoritative "Load at Accident (KG)" input (`c-actual-load`).
+  - Synchronizes changes to both `spotDetails.actualLoad` and `vehicle.goodsWeightAtAccident`/`vehicle.actualPayload`.
+  - Added unit tests in `src/components/claim/__tests__/AtAccidentForm.test.tsx` (4 tests).
+- feat(claim): **Cross-Tab Weight Reflection** (`src/components/tabs/SpotTab.tsx`, `src/components/claim/VehicleForm.tsx`).
+  - `SpotTab` Load Capacity card now displays fallback values from `vehicle.registeredLoadWeight` and `vehicle.unladenWeight` and automatically computes payload capacity.
+  - Updates in `SpotTab` synchronize back to `vehicle` and vice versa.
+  - Added unit tests in `src/components/tabs/__tests__/SpotTabWeights.test.tsx` (7 tests).
+- fix(reports): **Robust Cross-Fallbacks Across All Report Builders** (`src/components/print/SpotPrintReport.tsx`, `src/lib/reports/standard-report-builder.ts`, `src/lib/reports/uiic-final-builder.ts`, `src/components/print/UIICPrintReport.tsx`).
+  - Spot Report Section C and Section E now cross-fallback across `spotDetails` and `vehicle` for GVW, ULW, legal capacity, and actual load.
+  - Standard Final Report Section 2 and Section 5 cross-fallback to `spotDetails.gvw` and `vehicle.goodsWeightAtAccident`.
+  - UIIC Final and UIIC Print reports cross-fallback across `registeredLoadWeight`, `grossWeight`, and `spotDetails.gvw`.
+  - Added test cases in `src/lib/reports/__tests__/tp-and-load-challan.test.ts` and `src/components/print/__tests__/spot-report-sections.test.tsx`.
+- feat(ai): **AI Document Extraction Alignment** (`src/stores/slices/aiDataSlice.ts`).
+  - `applyRC`, `applyFitness`, and `applyLokChallan` now uniformly populate both `vehicle.*` and `spotDetails.*` pairs.
+  - Added unit tests in `src/stores/slices/__tests__/aiDataSlice.test.ts`.
+- tests: Full test suite passing (223 files, 1,937 tests); `npx tsc --noEmit` clean (0 errors); zero drift on SurveyOS Scan coupling.
+
 ## 2026-10-29 (Antigravity) — Fix Browser Storage Exhaustion & Memory Cleaner
 - fix(photos): **Default Photo Compression to JPEG 0.85** (`src/lib/photos/compress-image.ts`, `src/hooks/usePhotoUpload.ts`).
   - Switched default canvas export format from lossless `image/png` to high-quality `image/jpeg` with quality `0.85`.

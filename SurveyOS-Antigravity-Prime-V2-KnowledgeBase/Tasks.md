@@ -5,6 +5,16 @@
 
 ---
 
+## Unify GVW, ULW, and Accident Load (Built 2026-10-29 on main)
+- [x] Implemented store-level bi-directional sync in `src/stores/slices/vehicleSlice.ts` and `src/stores/slices/claimSlice.ts` between `vehicle.registeredLoadWeight`/`vehicle.grossWeight`/`vehicle.unladenWeight` and `spotDetails.gvw`/`spotDetails.ulw`/`spotDetails.loadCapacity`, plus automatic computation of `spotDetails.loadCapacity` (`gvw - ulw`) (commit `236ec70c`).
+- [x] Deduplicated "Goods Weight at Accident" in `src/components/claim/AtAccidentForm.tsx`, leaving single authoritative "Load at Accident (KG)" input with two-way sync to both `spotDetails.actualLoad` and `vehicle.goodsWeightAtAccident` / `vehicle.actualPayload` (commit `49c20d93`).
+- [x] Added cross-tab fallback display and synchronized updates between `src/components/tabs/SpotTab.tsx` and `src/components/claim/VehicleForm.tsx` (commit `d3cdea4d`).
+- [x] Added robust cross-fallbacks across all report builders (`SpotPrintReport.tsx`, `standard-report-builder.ts`, `uiic-final-builder.ts`, `UIICPrintReport.tsx`) so reports never render blank/missing weights regardless of where data was originally entered (commit `a4d690a9`).
+- [x] Synchronized AI document extraction in `src/stores/slices/aiDataSlice.ts` across `applyRC`, `applyFitness`, and `applyLokChallan` (commit `753a1dce`).
+- [x] Full test suite passing (223 test files, 1,937 tests); `npx tsc --noEmit` clean with 0 errors; zero drift on SurveyOS Scan coupling.
+
+---
+
 ## Fix Browser Storage Exhaustion & Memory Cleaner (Built 2026-10-29 on main)
 - [x] Switched default photo canvas compression in `src/lib/photos/compress-image.ts` and `src/hooks/usePhotoUpload.ts` from lossless PNG (1.6 MB) to high-quality JPEG 0.85 (~40 KB), reducing photo payload by ~95% in `claim.photos` (commit `7bbf6703`).
 - [x] Guarded `uploadFileToDrive` and `usePhotoUpload` in `src/lib/drive/index.ts` to prevent hoarding raw uncompressed camera files in `driveQueue` when Google Drive is unlinked (commit `2ca322fe`).
