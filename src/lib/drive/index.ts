@@ -354,13 +354,18 @@ export async function uploadFileToDrive(
   blob: Blob,
   claimLabel: string = claimId
 ): Promise<void> {
+  const isLinked = useUIStore.getState().isDriveConnected;
   if (!getDriveToken()) {
-    // Drive not linked — queue persistently
+    if (!isLinked) {
+      // Drive is intentionally disconnected/unlinked: do not hoard files in local database
+      return;
+    }
+    // Drive was connected but token is temporarily expired: queue for retry on token refresh
     const fileData = await blob.arrayBuffer();
     await addToDriveQueue({ claimId, claimLabel, fileName, fileData, mimeType: blob.type || 'application/octet-stream' });
     notifyDriveQueueChanged();
     const count = await getDriveQueueCount();
-    toast.warning(`Drive not linked — "${fileName}" queued (${count} pending). Link Drive in Profile to sync.`, { duration: 5000 });
+    toast.warning(`Drive token expired — "${fileName}" queued (${count} pending). Reconnect in Profile.`, { duration: 5000 });
     return;
   }
 
