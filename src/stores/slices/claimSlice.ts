@@ -198,16 +198,46 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
   },
 
   updateSpotDetails: (updates) => {
-    set((state: ClaimSlice) => ({
-      currentClaim: state.currentClaim
-        ? {
-            ...state.currentClaim,
-            spotDetails: { ...state.currentClaim.spotDetails, ...updates },
-            updatedAt: new Date().toISOString(),
-          }
-        : null,
-      isDirty: true,
-    }));
+    set((state: ClaimSlice) => {
+      if (!state.currentClaim) return { currentClaim: null };
+
+      const updatedSpotDetails = { ...state.currentClaim.spotDetails, ...updates };
+      const updatedVehicle = { ...state.currentClaim.vehicle };
+
+      if ('gvw' in updates) {
+        const gvw = updates.gvw;
+        updatedVehicle.registeredLoadWeight = gvw ? String(gvw) : '';
+        updatedVehicle.grossWeight = gvw ?? null;
+      }
+
+      if ('ulw' in updates) {
+        const ulw = updates.ulw;
+        updatedVehicle.unladenWeight = ulw ?? null;
+      }
+
+      if ('actualLoad' in updates) {
+        const actualLoad = updates.actualLoad;
+        const loadStr = actualLoad ? String(actualLoad) : '';
+        updatedVehicle.goodsWeightAtAccident = loadStr;
+        updatedVehicle.actualPayload = loadStr;
+      }
+
+      if ('gvw' in updates || 'ulw' in updates) {
+        const g = updatedSpotDetails.gvw || 0;
+        const u = updatedSpotDetails.ulw || 0;
+        updatedSpotDetails.loadCapacity = (g > u && u > 0) ? g - u : (g || 0);
+      }
+
+      return {
+        currentClaim: {
+          ...state.currentClaim,
+          vehicle: updatedVehicle,
+          spotDetails: updatedSpotDetails,
+          updatedAt: new Date().toISOString(),
+        },
+        isDirty: true,
+      };
+    });
   },
 
   updateValuationDetails: (updates) => {
