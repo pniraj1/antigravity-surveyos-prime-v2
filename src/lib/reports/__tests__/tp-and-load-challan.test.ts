@@ -149,3 +149,34 @@ describe('Police reported / panchanama on the standard final report', () => {
     expect(t).not.toMatch(/Police Reported\s+No/);
   });
 });
+
+describe('Cross-fallbacks for load and weights on standard final report', () => {
+  test('prints Load at Accident when load was provided only via vehicle.goodsWeightAtAccident', () => {
+    const c = claim({
+      vehicle: {
+        registrationNumber: 'MH12AB1234',
+        goodsWeightAtAccident: '11500',
+      },
+      spotDetails: {
+        actualLoad: undefined,
+      },
+    });
+    const t = text(buildStandardFinalSurveyHTML(c, profile));
+    expect(t).toContain('11500');
+  });
+
+  test('prints GVW in Section 2 when provided only via spotDetails.gvw', () => {
+    const c = claim({
+      vehicle: {
+        registrationNumber: 'MH12AB1234',
+        registeredLoadWeight: '',
+      },
+      spotDetails: {
+        gvw: 16200,
+      },
+    });
+    const t = text(buildStandardFinalSurveyHTML(c, profile));
+    expect(t).toContain('16200 kg');
+  });
+});
+

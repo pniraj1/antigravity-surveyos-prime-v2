@@ -37,10 +37,10 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
   // const ntExpired = driver.validityNonTransport && new Date(driver.validityNonTransport) < today;
   // const tExpired = driver.validityTransport && new Date(driver.validityTransport) < today;
 
-  const gvwVal = parseFloat(String(spotDetails.gvw)) || 0;
-  const ulwVal = parseFloat(String(spotDetails.ulw)) || 0;
-  const capVal = parseFloat(String(spotDetails.loadCapacity)) || 0;
-  const actualLoad = parseFloat(String(spotDetails.actualLoad)) || 0;
+  const gvwVal = parseFloat(String(spotDetails.gvw || vehicle.grossWeight || vehicle.registeredLoadWeight).replace(/[^0-9.]/g, '')) || 0;
+  const ulwVal = parseFloat(String(spotDetails.ulw || vehicle.unladenWeight).replace(/[^0-9.]/g, '')) || 0;
+  const capVal = parseFloat(String(spotDetails.loadCapacity)) || (gvwVal > ulwVal && ulwVal > 0 ? gvwVal - ulwVal : 0);
+  const actualLoad = parseFloat(String((spotDetails.actualLoad && Number(spotDetails.actualLoad) > 0 ? spotDetails.actualLoad : null) ?? (vehicle as any)?.goodsWeightAtAccident ?? spotDetails.actualLoad ?? '0').replace(/[^0-9.]/g, '')) || 0;
   // Overload is shown ONLY when the surveyor explicitly opts in (flagOverload).
   // It is never auto-flagged red just because actualLoad > capacity.
   const overload = !!spotDetails.flagOverload && actualLoad > 0 && capVal > 0 && actualLoad > capVal;
@@ -234,7 +234,7 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
           </tr>
           <tr>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>GVW</td>
-            <td style={{ ...parseInline(styles.td) }}>{vehicle.registeredLoadWeight || '—'}</td>
+            <td style={{ ...parseInline(styles.td) }}>{vehicle.registeredLoadWeight || (gvwVal ? `${gvwVal} kg` : '—')}</td>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Seating Capacity</td>
             <td style={{ ...parseInline(styles.td) }}>{vehicle.seatingCapacity || '—'}</td>
           </tr>

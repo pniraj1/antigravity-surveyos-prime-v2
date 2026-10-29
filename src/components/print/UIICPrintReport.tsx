@@ -86,7 +86,7 @@ export const UIICPrintReport = React.forwardRef<HTMLDivElement, UIICPrintReportP
           <div className="grid-header">ADDITIONAL DETAILS - PASSENGER / GOODS VEHICLE</div>
           <div className="row">
              <div className="label">Seating Cap.</div><div className="value">{claim.vehicle.seatingCapacity}</div>
-             <div className="label">Gross Weight</div><div className="value">{claim.vehicle.grossWeight ? `${claim.vehicle.grossWeight} KG` : ''}</div>
+             <div className="label">Gross Weight</div><div className="value">{claim.vehicle.grossWeight || claim.vehicle.registeredLoadWeight || claim.spotDetails?.gvw ? `${claim.vehicle.grossWeight || claim.vehicle.registeredLoadWeight || claim.spotDetails?.gvw} KG` : ''}</div>
           </div>
 
           {/* DL Section */}

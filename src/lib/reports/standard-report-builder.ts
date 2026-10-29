@@ -583,6 +583,9 @@ export function buildStandardFinalSurveyHTML(
   // tab's "Load Logistics & Challan" card, so the report mirrors that card
   // one-for-one. Overload prints red only when the surveyor opted in via
   // flagOverload; a numeric excess alone never colours the row.
+  const actualLoadVal = (sd?.actualLoad !== null && sd?.actualLoad !== undefined && sd?.actualLoad > 0)
+    ? sd.actualLoad
+    : ((vehicle as any)?.goodsWeightAtAccident || '—');
   const loadSectionHtml = !isCommercial ? '' : `<div style="font-weight:700;font-size:7pt;background:#0d1b2a;color:#fff;padding:2px 4px;margin-bottom:2px;">5. PERMIT, LOAD &amp; CHALLAN</div>
 <table style="${ts}">
   <tr>
@@ -617,7 +620,7 @@ export function buildStandardFinalSurveyHTML(
   </tr>
   <tr>
     <td style="${td}color:#444;font-size:${scale.labelFont};">Load at Accident (KG)</td>
-    <td style="${td}${sd?.flagOverload ? 'color:#b00020;font-weight:700;' : ''}" colspan="3">${sd?.actualLoad || '—'}${sd?.flagOverload ? ' — OVERLOADED' : ''}</td>
+    <td style="${td}${sd?.flagOverload ? 'color:#b00020;font-weight:700;' : ''}" colspan="3">${actualLoadVal}${sd?.flagOverload ? ' — OVERLOADED' : ''}</td>
   </tr>
   <tr>
     <td style="${td}color:#444;font-size:${scale.labelFont};">Description of Goods / Passengers</td>
@@ -751,7 +754,7 @@ export function buildStandardFinalSurveyHTML(
   </tr>
   <tr>
     <td style="${td}color:#444;font-size:${scale.labelFont};">GVW</td>
-    <td style="${td}">${vehicle.registeredLoadWeight || '—'}</td>
+    <td style="${td}">${vehicle.registeredLoadWeight || (sd?.gvw ? `${sd.gvw} kg` : '—')}</td>
     <td style="${td}color:#444;font-size:${scale.labelFont};">Seating Capacity</td>
     <td style="${td}">${vehicle.seatingCapacity || '—'}</td>
   </tr>

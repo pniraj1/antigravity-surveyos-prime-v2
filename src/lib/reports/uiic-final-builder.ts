@@ -262,8 +262,8 @@ ${getSurveyorHeader(profile)}
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Type of passenger carried (Employee / Hire / Gratuitous)</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g((v as any).passengerType)}</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Whether Passengers carried in contravention of rule?</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g((v as any).passengersContravention)}</td></tr>
       <tr><td colspan="2" style="background:#e8e8e8;text-align:center;font-weight:700;padding:3px 5px;border-bottom:0.5pt solid #000;">ADDITIONAL DETAILS - GOODS CARRYING VEHICLE</td></tr>
-      <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Registered Laden Weight</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(v.registeredLoadWeight || v.grossWeight)}</td></tr>
-      <tr><td style="padding:3px 5px;border-right:0.5pt solid #000;">Registered Unladen Weight</td><td style="padding:3px 5px;">${g(v.unladenWeight)}</td></tr>
+      <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Registered Laden Weight</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(v.registeredLoadWeight || v.grossWeight || sd?.gvw)}</td></tr>
+      <tr><td style="padding:3px 5px;border-right:0.5pt solid #000;">Registered Unladen Weight</td><td style="padding:3px 5px;">${g(v.unladenWeight || sd?.ulw)}</td></tr>
     </table>
   </td>
 </tr>

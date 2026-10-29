@@ -10,17 +10,17 @@ import type { ClaimData, SurveyorProfile } from '@/types';
  * private claims silently skipping E.
  */
 
-function claim(vehicleType: string): ClaimData {
+function claim(vehicleType: string, over: Record<string, unknown> = {}): ClaimData {
   return {
     id: 'c1',
     vehicleType,
     surveyType: 'spot',
     assessmentRows: [],
     spotDamageRows: [],
-    vehicle: { registrationNumber: 'MH12AB1234', fitnessNo: 'FIT/1', fitnessValidUpto: '2027-01-01' },
+    vehicle: { registrationNumber: 'MH12AB1234', fitnessNo: 'FIT/1', fitnessValidUpto: '2027-01-01', ...(over.vehicle as object) },
     policy: {},
     driver: {},
-    accident: { thirdPartyDetails: 'TP text' },
+    accident: { thirdPartyDetails: 'TP text', ...(over.accident as object) },
     spotDetails: {
       permitNo: 'PERMIT-777',
       permitType: 'National',
@@ -39,18 +39,20 @@ function claim(vehicleType: string): ClaimData {
       loadDesc: 'Cement bags',
       loadOrigin: 'Pune',
       loadDest: 'Solapur',
+      ...(over.spotDetails as object),
     },
     documentVerification: {},
     feeBill: {},
     billCheck: {},
     reinspection: {},
+    ...over,
   } as unknown as ClaimData;
 }
 
 const profile = { name: 'SURVEYOR' } as SurveyorProfile;
 
-const render = (vehicleType: string) =>
-  renderToStaticMarkup(<SpotPrintReport claim={claim(vehicleType)} profile={profile} />);
+const render = (vehicleType: string, over: Record<string, unknown> = {}) =>
+  renderToStaticMarkup(<SpotPrintReport claim={claim(vehicleType, over)} profile={profile} />);
 
 /** The section letters, in document order, as the reader sees them. */
 function sectionLetters(html: string): string[] {
@@ -99,3 +101,47 @@ describe('Spot report commercial and load details', () => {
     expect(html.split('Area of Operation').length - 1).toBe(1);
   });
 });
+
+describe('Spot report weight and load cross-fallbacks', () => {
+  test('Section E prints GVW, ULW, and computed Legal Load Capacity when weights were provided only via vehicle', () => {
+    const html = render('comm-goods', {
+      vehicle: {
+        registeredLoadWeight: '16200 KG',
+        unladenWeight: 6200,
+      },
+      spotDetails: {
+        gvw: null,
+        ulw: 0,
+        loadCapacity: undefined,
+      },
+    });
+    expect(html).toContain('16200');
+    expect(html).toContain('6200');
+    expect(html).toContain('10000 kg');
+  });
+
+  test('Section E prints Actual Load Carried when provided only via vehicle.goodsWeightAtAccident', () => {
+    const html = render('comm-goods', {
+      vehicle: {
+        goodsWeightAtAccident: '12000',
+      },
+      spotDetails: {
+        actualLoad: null,
+      },
+    });
+    expect(html).toContain('12000 kg');
+  });
+
+  test('Section C prints GVW when provided only via spotDetails.gvw: 16200', () => {
+    const html = render('comm-goods', {
+      vehicle: {
+        registeredLoadWeight: '',
+      },
+      spotDetails: {
+        gvw: 16200,
+      },
+    });
+    expect(html).toContain('16200 kg');
+  });
+});
+
