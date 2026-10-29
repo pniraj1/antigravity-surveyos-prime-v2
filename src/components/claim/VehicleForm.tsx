@@ -202,8 +202,8 @@ export function VehicleDetailsForm({ scan }: { scan?: React.ReactNode }) {
         <Label htmlFor="v-rlw">GVW (Gross Vehicle Weight)<EvidenceDot has={hasEvidence('registeredLoadWeight')} /></Label>
         <Input
           id="v-rlw"
-          value={v?.registeredLoadWeight || ''}
-          onChange={(e) => updateVehicle({ registeredLoadWeight: e.target.value })}
+          value={v?.registeredLoadWeight || (currentClaim.spotDetails?.gvw ? String(currentClaim.spotDetails.gvw) : '')}
+          onChange={(e) => updateVehicle({ registeredLoadWeight: e.target.value, grossWeight: parseInt(e.target.value.replace(/[^0-9.]/g, '')) || null })}
           onFocus={() => triggerField('registeredLoadWeight')}
           placeholder="e.g. 1500 KG"
         />
@@ -214,7 +214,7 @@ export function VehicleDetailsForm({ scan }: { scan?: React.ReactNode }) {
         <Input
           id="v-ulw"
           type="number"
-          value={v?.unladenWeight || ''}
+          value={v?.unladenWeight ?? (currentClaim.spotDetails?.ulw ?? '')}
           onChange={(e) => updateVehicle({ unladenWeight: parseInt(e.target.value) || null })}
           onFocus={() => triggerField('unladenWeight')}
           placeholder="e.g. 800"

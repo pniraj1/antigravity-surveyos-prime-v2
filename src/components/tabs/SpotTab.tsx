@@ -16,6 +16,7 @@ export function SpotTab() {
   const {
     currentClaim,
     updateSpotDetails,
+    updateVehicle,
     addSpotDamageRow,
     updateSpotDamageRow,
     deleteSpotDamageRow
@@ -28,6 +29,10 @@ export function SpotTab() {
   const { spotDetails, vehicleType } = currentClaim;
   const spotDamageRows = currentClaim.spotDamageRows ?? [];
   const isCommercial = vehicleType !== 'private';
+
+  const effectiveGvw = spotDetails.gvw || parseFloat(String(currentClaim.vehicle?.registeredLoadWeight || '').replace(/[^0-9.]/g, '')) || 0;
+  const effectiveUlw = spotDetails.ulw ?? currentClaim.vehicle?.unladenWeight ?? 0;
+  const effectiveCap = spotDetails.loadCapacity ?? ((effectiveGvw > effectiveUlw && effectiveUlw > 0) ? effectiveGvw - effectiveUlw : (effectiveGvw || 0));
 
   const handleUpdate = (updates: Partial<typeof spotDetails>) => {
     updateSpotDetails(updates);
@@ -85,12 +90,16 @@ export function SpotTab() {
             <Input
               id="sp-gvw"
               type="number"
-              value={spotDetails.gvw || ''}
+              value={effectiveGvw || ''}
               onChange={(e) => {
                 const val = parseInt(e.target.value) || 0;
                 handleUpdate({
-                  gvw: val,
-                  loadCapacity: val - (spotDetails.ulw || 0)
+                  gvw: val || null,
+                  loadCapacity: (val > (effectiveUlw || 0) && (effectiveUlw || 0) > 0) ? val - effectiveUlw : (val || 0)
+                });
+                updateVehicle({
+                  registeredLoadWeight: val ? String(val) : '',
+                  grossWeight: val || null
                 });
               }}
               disabled={isCompleted}
@@ -101,12 +110,15 @@ export function SpotTab() {
             <Input
               id="sp-ulw"
               type="number"
-              value={spotDetails.ulw || ''}
+              value={effectiveUlw || ''}
               onChange={(e) => {
                 const val = parseInt(e.target.value) || 0;
                 handleUpdate({
-                  ulw: val,
-                  loadCapacity: (spotDetails.gvw || 0) - val
+                  ulw: val || null,
+                  loadCapacity: ((effectiveGvw || 0) > val && val > 0) ? effectiveGvw - val : (effectiveGvw || 0)
+                });
+                updateVehicle({
+                  unladenWeight: val || null
                 });
               }}
               disabled={isCompleted}
@@ -117,7 +129,7 @@ export function SpotTab() {
             <Input
               id="sp-payload"
               type="number"
-              value={spotDetails.loadCapacity || ''}
+              value={effectiveCap || ''}
               disabled={true}
               className="bg-muted font-medium"
             />
