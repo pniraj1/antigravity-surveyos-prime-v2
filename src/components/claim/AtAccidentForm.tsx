@@ -90,8 +90,15 @@ export function AtAccidentForm() {
               id="c-actual-load"
               type="number"
               className={`font-mono font-bold ${sd.flagOverload ? 'text-red-600 border-red-200 bg-red-50' : ''}`}
-              value={sd.actualLoad || ''}
-              onChange={(e) => updateSpotDetails({ actualLoad: Number(e.target.value) })}
+              value={
+                (sd.actualLoad !== null && sd.actualLoad !== undefined && sd.actualLoad > 0)
+                  ? sd.actualLoad
+                  : (v?.goodsWeightAtAccident ? parseFloat(String(v.goodsWeightAtAccident).replace(/,/g, '')) || '' : '')
+              }
+              onChange={(e) => {
+                updateSpotDetails({ actualLoad: e.target.value ? Number(e.target.value) : null });
+                updateVehicle({ goodsWeightAtAccident: e.target.value, actualPayload: e.target.value });
+              }}
             />
             {/* Keep the box while flagged, so a stale flag can still be cleared. */}
             {(overWeightNumeric || sd.flagOverload) && (
@@ -104,15 +111,6 @@ export function AtAccidentForm() {
                 Flag as overloaded in report
               </label>
             )}
-          </div>
-
-          <div className="space-y-1">
-            <Label htmlFor="v-goods-weight">Goods Weight at Accident</Label>
-            <Input
-              id="v-goods-weight"
-              value={v?.goodsWeightAtAccident || ''}
-              onChange={(e) => updateVehicle({ goodsWeightAtAccident: e.target.value })}
-            />
           </div>
 
           {currentClaim.surveyType !== 'spot' && (
