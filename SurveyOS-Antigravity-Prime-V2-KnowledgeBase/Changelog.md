@@ -2,6 +2,24 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-10-29 (Antigravity) — Fix Browser Storage Exhaustion & Memory Cleaner
+- fix(photos): **Default Photo Compression to JPEG 0.85** (`src/lib/photos/compress-image.ts`, `src/hooks/usePhotoUpload.ts`).
+  - Switched default canvas export format from lossless `image/png` to high-quality `image/jpeg` with quality `0.85`.
+  - Drops base64 payload size from ~1.6 MB down to ~40 KB per photo (~95% reduction), eliminating rapid IndexedDB quota exhaustion when importing 20–30 claim photos.
+  - Added unit test in `src/lib/photos/__tests__/compress-image-jpeg.test.ts`.
+- fix(drive): **Guard Drive Queue Against Unlinked Accumulation** (`src/lib/drive/index.ts`, `src/hooks/usePhotoUpload.ts`).
+  - Prevents `uploadFileToDrive` and `usePhotoUpload` from dumping uncompressed raw camera blobs into IndexedDB `driveQueue` (which accumulated up to 500 MB) when Google Drive is disconnected or never linked.
+  - Added unit test in `src/lib/drive/__tests__/unlinked-queue-guard.test.ts`.
+- feat(storage): **Storage Usage Summary & Queue Pruning** (`src/lib/storage/indexeddb.ts`).
+  - Added `StorageSummary` interface and exported `getStorageUsageSummary()`, `clearDriveQueue()`, and `clearRecoveredClaims()`.
+  - Added unit tests in `src/lib/storage/__tests__/prune-storage.test.ts` verifying counts and byte aggregation.
+- feat(profile): **Storage & Memory Cleaner Section & Modular Profile** (`src/components/profile/StorageCleanerSection.tsx`, `src/components/profile/SubscriptionSection.tsx`, `src/components/tabs/ProfileTab.tsx`).
+  - Added live storage metrics card in Profile Settings displaying active claims, pending Drive queue size (MB), and recovery snapshots.
+  - Added 1-click "Clean Up Storage" button with toast notification to immediately flush stuck queues and restore Chrome quota without deleting saved claims.
+  - Factored out `SubscriptionSection.tsx` (217 lines), shrinking `ProfileTab.tsx` from 950 lines down to 729 lines (strict ≤ 800 line rule compliance).
+  - Added unit tests in `src/components/profile/__tests__/StorageCleanerSection.test.tsx`.
+- tests: All 220 test files (1,906 tests) passing; `tsc --noEmit` clean; zero impact on SurveyOS Scan coupling.
+
 ## 2026-10-28 (Antigravity) — Unify Survey Date & Time in Claim Details
 - fix(claim): **Unified Survey Date & Time Input** (`src/components/claim/SurveyForm.tsx`).
   - Replaced separate "Date of Survey" and "Time of Survey" inputs (and the duplicate spot-only "Survey Datetime (Actual)") with a single unified `datetime-local` input labeled **"Date & Time of Survey"**.

@@ -1,7 +1,16 @@
 # Active Tasks
 
-> Last updated: 2026-10-28 by Antigravity
+> Last updated: 2026-10-29 by Antigravity
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
+
+---
+
+## Fix Browser Storage Exhaustion & Memory Cleaner (Built 2026-10-29 on main)
+- [x] Switched default photo canvas compression in `src/lib/photos/compress-image.ts` and `src/hooks/usePhotoUpload.ts` from lossless PNG (1.6 MB) to high-quality JPEG 0.85 (~40 KB), reducing photo payload by ~95% in `claim.photos` (commit `7bbf6703`).
+- [x] Guarded `uploadFileToDrive` and `usePhotoUpload` in `src/lib/drive/index.ts` to prevent hoarding raw uncompressed camera files in `driveQueue` when Google Drive is unlinked (commit `2ca322fe`).
+- [x] Added `getStorageUsageSummary()`, `clearDriveQueue()`, and `clearRecoveredClaims()` to `src/lib/storage/indexeddb.ts` with unit tests in `src/lib/storage/__tests__/prune-storage.test.ts` (commit `75366034`).
+- [x] Built `StorageCleanerSection.tsx` with live storage metric cards and 1-click memory cleanup; factored `SubscriptionSection.tsx` out of `ProfileTab.tsx` to reduce file size from 950 to 729 lines (≤ 800 line rule compliance) (commit `a28bdccb`).
+- [x] Full test suite (220 files, 1,906 tests) passing; `tsc --noEmit` clean with 0 errors; zero impact on SurveyOS Scan coupling.
 
 ---
 
