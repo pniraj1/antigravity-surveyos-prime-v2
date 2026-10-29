@@ -694,3 +694,37 @@ export async function getRecoveredClaims(): Promise<RecoveredClaim[]> {
   const all = await db.getAll('recoveredClaims');
   return all.sort((a, b) => (a.supersededAt < b.supersededAt ? 1 : -1));
 }
+
+// ─── Storage Maintenance & Pruning ──────────────────────────────────────────
+
+export interface StorageSummary {
+  claimsCount: number;
+  driveQueueCount: number;
+  driveQueueBytes: number;
+  recoveredClaimsCount: number;
+}
+
+export async function getStorageUsageSummary(): Promise<StorageSummary> {
+  const db = await getDB();
+  const claimsCount = await db.count('claims');
+  const driveItems = await db.getAll('driveQueue');
+  const driveQueueBytes = driveItems.reduce((acc, item) => acc + (item.fileData?.byteLength || 0), 0);
+  const recoveredClaimsCount = await db.count('recoveredClaims');
+
+  return {
+    claimsCount,
+    driveQueueCount: driveItems.length,
+    driveQueueBytes,
+    recoveredClaimsCount,
+  };
+}
+
+export async function clearDriveQueue(): Promise<void> {
+  const db = await getDB();
+  await db.clear('driveQueue');
+}
+
+export async function clearRecoveredClaims(): Promise<void> {
+  const db = await getDB();
+  await db.clear('recoveredClaims');
+}
