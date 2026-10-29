@@ -346,7 +346,7 @@ export function matchBillItemsToRows(
 
 // ─── Key-specific mapping functions ──────────────────────────────────────────
 
-function applyRC(claim: ClaimData, data: any): ClaimData {
+export function applyRC(claim: ClaimData, data: any): ClaimData {
   const hypothecation = data.hypothecation || data.hpa || claim.vehicle.hypothecation;
   const rlw =
     typeof data.gross_weight === 'string'
@@ -356,8 +356,8 @@ function applyRC(claim: ClaimData, data: any): ClaimData {
   const yomMatch = yomStr.match(/\b(19|20)\d{2}\b/);
   const yom = yomMatch ? parseInt(yomMatch[0]) : claim.vehicle.yearOfManufacture;
 
-  const gvwStr = String(data.gross_weight || '0').replace(/[^0-9.]/g, '');
-  const ulwStr = String(data.unladen_weight || '0').replace(/[^0-9.]/g, '');
+  const gvwStr = String(data.gross_weight || data.rlw || '0').replace(/[^0-9.]/g, '');
+  const ulwStr = String(data.unladen_weight || data.ulw || '0').replace(/[^0-9.]/g, '');
   const gvw = gvwStr ? Math.round(parseFloat(gvwStr)) : 0;
   const ulw = ulwStr ? Math.round(parseFloat(ulwStr)) : 0;
 
@@ -380,6 +380,7 @@ function applyRC(claim: ClaimData, data: any): ClaimData {
       // and yields 2, which then renders in the ULW number input as a plausible
       // but wrong weight.
       unladenWeight: Number(parseAmount(data.unladen_weight || data.ulw)) || claim.vehicle.unladenWeight,
+      grossWeight: gvw || claim.vehicle.grossWeight || null,
       registeredLoadWeight: rlw || claim.vehicle.registeredLoadWeight,
       classOfVehicle: data.class_of_vehicle || data.vehicle_class || claim.vehicle.classOfVehicle,
       registrationType: data.class_of_vehicle || data.vehicle_class || claim.vehicle.registrationType,
@@ -400,7 +401,7 @@ function applyRC(claim: ClaimData, data: any): ClaimData {
       ...claim.spotDetails,
       gvw: gvw || claim.spotDetails.gvw,
       ulw: ulw || claim.spotDetails.ulw,
-      loadCapacity: gvw && ulw && gvw > ulw ? gvw - ulw : claim.spotDetails.loadCapacity,
+      loadCapacity: (gvw > ulw && ulw > 0) ? gvw - ulw : (gvw || claim.spotDetails.loadCapacity),
     },
   };
 }
@@ -557,7 +558,7 @@ function applyAuth(claim: ClaimData, data: any): ClaimData {
   };
 }
 
-function applyFitness(claim: ClaimData, data: any): ClaimData {
+export function applyFitness(claim: ClaimData, data: any): ClaimData {
   const updated = {
     ...claim,
     vehicle: {
@@ -572,14 +573,28 @@ function applyFitness(claim: ClaimData, data: any): ClaimData {
     spotDetails: { ...claim.spotDetails },
   };
   // NOTE: fitnessNo/fitnessValid removed from spotDetails — vehicle.* is the single source of truth.
-  const gvwStr = String(data.gross_vehicle_weight_kg || '0').replace(/[^0-9.]/g, '');
-  const ulwStr = String(data.unladen_weight_kg || '0').replace(/[^0-9.]/g, '');
-  if (gvwStr) updated.spotDetails.gvw = Math.round(parseFloat(gvwStr));
-  if (ulwStr) updated.spotDetails.ulw = Math.round(parseFloat(ulwStr));
+  const gvwStr = String(data.gross_vehicle_weight_kg || '').replace(/[^0-9.]/g, '');
+  const ulwStr = String(data.unladen_weight_kg || '').replace(/[^0-9.]/g, '');
+  if (gvwStr) {
+    const val = Math.round(parseFloat(gvwStr));
+    updated.spotDetails.gvw = val;
+    updated.vehicle.grossWeight = val;
+    updated.vehicle.registeredLoadWeight = String(val);
+  }
+  if (ulwStr) {
+    const val = Math.round(parseFloat(ulwStr));
+    updated.spotDetails.ulw = val;
+    updated.vehicle.unladenWeight = val;
+  }
+  const effGvw = updated.spotDetails.gvw || 0;
+  const effUlw = updated.spotDetails.ulw || 0;
+  if (effGvw > 0) {
+    updated.spotDetails.loadCapacity = (effGvw > effUlw && effUlw > 0) ? effGvw - effUlw : effGvw;
+  }
   return updated;
 }
 
-function applyLokChallan(claim: ClaimData, data: any): ClaimData {
+export function applyLokChallan(claim: ClaimData, data: any): ClaimData {
   return {
     ...claim,
     spotDetails: {
@@ -593,7 +608,8 @@ function applyLokChallan(claim: ClaimData, data: any): ClaimData {
     },
     vehicle: {
       ...claim.vehicle,
-      actualPayload: data.weight_kg || claim.vehicle.actualPayload,
+      goodsWeightAtAccident: data.weight_kg ? String(data.weight_kg) : claim.vehicle.goodsWeightAtAccident,
+      actualPayload: data.weight_kg ? String(data.weight_kg) : claim.vehicle.actualPayload,
     },
   };
 }

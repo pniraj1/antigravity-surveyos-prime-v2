@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applyEstimate, applyClaim, parseDate, parseTime, parseAmount, coerceForPath, buildEstimateModePrompt, buildBillModePrompt, applyFinalBill, applyPolicy } from '../aiDataSlice';
+import { applyEstimate, applyClaim, parseDate, parseTime, parseAmount, coerceForPath, buildEstimateModePrompt, buildBillModePrompt, applyFinalBill, applyPolicy, applyRC, applyFitness, applyLokChallan } from '../aiDataSlice';
 import { buildDecision, getConflictFields } from '@/lib/ai/reconciliation';
 import { createBlankClaim } from '@/types/claim';
 import type { ClaimData } from '@/types';
@@ -575,3 +575,59 @@ describe('applyEstimateFixToClaim', () => {
     expect(useClaimStore.getState().isDirty).toBe(false);
   });
 });
+
+describe('unified AI weight extraction (applyRC, applyFitness, applyLokChallan)', () => {
+  it('applyRC sets vehicle and spotDetails GVW, ULW, and computes load capacity', () => {
+    const claim = createBlankClaim();
+    const updated = applyRC(claim, {
+      gross_weight: '16200',
+      unladen_weight: '6200',
+    });
+
+    expect(updated.vehicle.grossWeight).toBe(16200);
+    expect(updated.vehicle.registeredLoadWeight).toBe('16200');
+    expect(updated.spotDetails.gvw).toBe(16200);
+    expect(updated.vehicle.unladenWeight).toBe(6200);
+    expect(updated.spotDetails.ulw).toBe(6200);
+    expect(updated.spotDetails.loadCapacity).toBe(10000);
+  });
+
+  it('applyFitness sets vehicle and spotDetails GVW, ULW, registeredLoadWeight, and computes load capacity', () => {
+    const claim = createBlankClaim();
+    const updated = applyFitness(claim, {
+      gross_vehicle_weight_kg: '16200',
+      unladen_weight_kg: '6200',
+    });
+
+    expect(updated.spotDetails.gvw).toBe(16200);
+    expect(updated.vehicle.grossWeight).toBe(16200);
+    expect(updated.vehicle.registeredLoadWeight).toBe('16200');
+    expect(updated.spotDetails.ulw).toBe(6200);
+    expect(updated.vehicle.unladenWeight).toBe(6200);
+    expect(updated.spotDetails.loadCapacity).toBe(10000);
+  });
+
+  it('applyFitness computes loadCapacity as gvw when ulw is absent or 0', () => {
+    const claim = createBlankClaim();
+    const updated = applyFitness(claim, {
+      gross_vehicle_weight_kg: '15000',
+    });
+
+    expect(updated.spotDetails.gvw).toBe(15000);
+    expect(updated.vehicle.grossWeight).toBe(15000);
+    expect(updated.vehicle.registeredLoadWeight).toBe('15000');
+    expect(updated.spotDetails.loadCapacity).toBe(15000);
+  });
+
+  it('applyLokChallan sets spotDetails.actualLoad, vehicle.goodsWeightAtAccident and vehicle.actualPayload', () => {
+    const claim = createBlankClaim();
+    const updated = applyLokChallan(claim, {
+      weight_kg: 10500,
+    });
+
+    expect(updated.spotDetails.actualLoad).toBe(10500);
+    expect(updated.vehicle.goodsWeightAtAccident).toBe('10500');
+    expect(updated.vehicle.actualPayload).toBe('10500');
+  });
+});
+
