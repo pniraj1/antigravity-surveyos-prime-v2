@@ -46,7 +46,7 @@ export function usePhotoUpload() {
       for (let i = 0; i < files.length; i++) {
         const { file, meta: m } = picked[i];
         try {
-          const { dataUrl, w, h } = await compressImage(file, 600, 1.0);
+          const { dataUrl, w, h } = await compressImage(file, 600, 0.85, 'image/jpeg');
           // The surveyor may have opened another claim during the awaits.
           if (useClaimStore.getState().currentClaim?.id !== claim.id) break;
           const name = photoNameOf(file.name);

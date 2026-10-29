@@ -1,15 +1,14 @@
 /**
  * Compress an image to a data URL and return its post-compress dimensions.
  *
- * `mime` defaults to PNG to keep the damage-photo path byte-identical to what
- * it produced before the annexure existed. PNG ignores `quality` in every
- * browser; only the JPEG path uses it.
+ * `mime` defaults to JPEG (quality 0.85) to significantly reduce storage footprint
+ * while preserving high visual fidelity for surveyor damage photos and reports.
  */
 export function compressImage(
   file: File,
   maxWidth: number,
-  quality: number,
-  mime: 'image/png' | 'image/jpeg' = 'image/png',
+  quality: number = 0.85,
+  mime: 'image/png' | 'image/jpeg' = 'image/jpeg',
 ): Promise<{ dataUrl: string; w: number; h: number }> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
