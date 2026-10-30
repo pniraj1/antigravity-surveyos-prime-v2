@@ -156,6 +156,118 @@ describe('planNotes / applyNotes', () => {
     });
     expect(isEmptyNotesPlan(plan)).toBe(true);
   });
+
+  it('feeBillAllowListIncludesAll16Paths', () => {
+    const expected = [
+      'feeBill.billDate',
+      'feeBill.advanceReceipt',
+      'feeBill.cashReceived',
+      'feeBill.feePaid',
+      'feeBill.professionalFee',
+      'feeBill.riFee',
+      'feeBill.distanceKm',
+      'feeBill.ratePerKm',
+      'feeBill.travelNote',
+      'feeBill.tollCharges',
+      'feeBill.tollNote',
+      'feeBill.photosCount',
+      'feeBill.photoRate',
+      'feeBill.postalCharges',
+      'feeBill.haltageCharges',
+      'feeBill.includeGST',
+    ];
+    for (const path of expected) {
+      expect(NOTES_ALLOW_LIST).toHaveProperty(path);
+      expect((NOTES_ALLOW_LIST as any)[path].section).toBe('feeBill');
+    }
+  });
+
+  it('feeBillPlansAndAppliesNumericAndBoolean', () => {
+    const c = claim();
+    const plan = planNotes(c, {
+      feeBill: {
+        'feeBill.distanceKm': '45',
+        'feeBill.tollCharges': '270',
+        'feeBill.photosCount': '12',
+        'feeBill.includeGST': 'yes',
+        'feeBill.feePaid': 'yes',
+        'feeBill.billDate': '2026-10-30',
+      },
+    });
+    expect(keys(plan.fill)).toEqual([
+      'feeBill.billDate',
+      'feeBill.feePaid',
+      'feeBill.distanceKm',
+      'feeBill.tollCharges',
+      'feeBill.photosCount',
+      'feeBill.includeGST',
+    ]);
+    const u = applyNotes(c, plan);
+    expect(u.feeBill?.distanceKm).toBe(45);
+    expect(u.feeBill?.tollCharges).toBe(270);
+    expect(u.feeBill?.photosCount).toBe(12);
+    expect(u.feeBill?.includeGST).toBe(true);
+    expect(u.feeBill?.feePaid).toBe(true);
+    expect(u.feeBill?.billDate).toBe('2026-10-30');
+  });
+
+  it('feeBillBooleanConversionAndDiffers', () => {
+    const c = claim((b) => ({
+      ...b,
+      feeBill: {
+        ...b.feeBill,
+        distanceKm: 30,
+        includeGST: true,
+        feePaid: true,
+      },
+    }));
+    const plan = planNotes(c, {
+      feeBill: {
+        'feeBill.distanceKm': '45',
+        'feeBill.includeGST': 'no',
+        'feeBill.feePaid': 'no',
+      },
+    });
+    expect(plan.fill).toEqual([]);
+    expect(keys(plan.differ).sort()).toEqual(['feeBill.distanceKm', 'feeBill.feePaid', 'feeBill.includeGST'].sort());
+    expect(plan.differ.find((d) => d.key === 'feeBill.includeGST')?.value).toBe(false);
+    expect(plan.differ.find((d) => d.key === 'feeBill.feePaid')?.value).toBe(false);
+
+    const u = applyNotes(c, plan, { 'feeBill.distanceKm': true, 'feeBill.includeGST': true, 'feeBill.feePaid': true });
+    expect(u.feeBill?.distanceKm).toBe(45);
+    expect(u.feeBill?.includeGST).toBe(false);
+    expect(u.feeBill?.feePaid).toBe(false);
+  });
+
+  it('surveyDateTimeBackfillsAccidentOnImport', () => {
+    const c = claim();
+    expect(c.accident.dateOfSurvey).toBe('');
+    expect(c.accident.timeOfSurvey).toBe('');
+
+    // 1. spotDetails.surveyDatetime backfills accident.dateOfSurvey and accident.timeOfSurvey
+    const planSpot = planNotes(c, {
+      spot: { 'spotDetails.surveyDatetime': '2026-10-30T14:45' },
+    });
+    const uSpot = applyNotes(c, planSpot);
+    expect(uSpot.accident?.dateOfSurvey).toBe('2026-10-30');
+    expect(uSpot.accident?.timeOfSurvey).toBe('14:45');
+
+    // 2. valuationDetails.inspectionDate with datetime backfills accident.dateOfSurvey and accident.timeOfSurvey
+    const planVal = planNotes(c, {
+      valuation: { 'valuationDetails.inspectionDate': '2026-10-30T10:30' },
+    });
+    const uVal = applyNotes(c, planVal);
+    expect(uVal.accident?.dateOfSurvey).toBe('2026-10-30');
+    expect(uVal.accident?.timeOfSurvey).toBe('10:30');
+
+    // 3. accident.placeOfSurvey syncs to valuationDetails.inspectionPlace
+    const planPlace = planNotes(c, {
+      spot: { 'accident.placeOfSurvey': 'Workshop Pune' },
+    });
+    const uPlace = applyNotes(c, planPlace);
+    expect(uPlace.accident?.placeOfSurvey).toBe('Workshop Pune');
+    expect(uPlace.valuationDetails?.inspectionPlace).toBe('Workshop Pune');
+  });
 });
 
 const HANDOVER = resolve(process.cwd(), '../SurveyOS Scan/docs/handover/prime-notes-import.md');
@@ -167,7 +279,7 @@ describe.skipIf(!existsSync(HANDOVER))('handover', () => {
     const rowLists: string[] = [];
     let section = '';
     for (const line of md.split(/\r?\n/)) {
-      if (line.startsWith('## ')) section = line === '## Valuation fields' ? 'valuation' : line === '## Fields' ? 'spot' : '';
+      if (line.startsWith('## ')) section = line === '## Fee Bill fields' ? 'feeBill' : line === '## Valuation fields' ? 'valuation' : line === '## Fields' ? 'spot' : '';
       const cols = line.split(/(?<!\\)\|/).map((s) => s.trim());
       const m = section && cols[3]?.match(/^`([^`]+)`/);
       if (!m) continue;

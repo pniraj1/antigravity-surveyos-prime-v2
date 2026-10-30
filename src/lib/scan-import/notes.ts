@@ -9,12 +9,13 @@ import { getAt, setAt } from './path';
 
 export type ScanImport = NonNullable<ClaimData['scanImport']>;
 
-type Kind = 'text' | 'number' | 'enum' | 'doc' | 'insurable';
-interface FieldSpec { label: string; section: 'spot' | 'valuation'; kind?: Kind; values?: readonly string[] }
+type Kind = 'text' | 'number' | 'enum' | 'doc' | 'insurable' | 'boolean';
+interface FieldSpec { label: string; section: 'spot' | 'valuation' | 'feeBill'; kind?: Kind; values?: readonly string[] }
 
 const YES_NO = ['yes', 'no'] as const;
 const spot = (label: string, extra: Partial<FieldSpec> = {}): FieldSpec => ({ label, section: 'spot', ...extra });
 const val = (label: string, extra: Partial<FieldSpec> = {}): FieldSpec => ({ label, section: 'valuation', ...extra });
+const fee = (label: string, extra: Partial<FieldSpec> = {}): FieldSpec => ({ label, section: 'feeBill', ...extra });
 const doc = (label: string) => spot(label, { kind: 'doc' });
 
 /** The handover field tables, keyed by Prime claim path, in report order. Nothing else is ever written. */
@@ -69,6 +70,23 @@ export const NOTES_ALLOW_LIST: Readonly<Record<string, FieldSpec>> = {
   'valuationDetails.isInsurable': val('Vehicle Insurable?', { kind: 'insurable', values: YES_NO }),
   'valuationDetails.remarks': val('Remarks'),
   'valuationDetails.enclosures': val('Enclosures'),
+
+  'feeBill.billDate': fee('Bill Date'),
+  'feeBill.advanceReceipt': fee('Advance Receipt No.'),
+  'feeBill.cashReceived': fee('Cash / Cheque Received'),
+  'feeBill.feePaid': fee('Payment Status', { kind: 'boolean' }),
+  'feeBill.professionalFee': fee('Professional Fee', { kind: 'number' }),
+  'feeBill.riFee': fee('Re-inspection Fee', { kind: 'number' }),
+  'feeBill.distanceKm': fee('Distance to & fro (KM)', { kind: 'number' }),
+  'feeBill.ratePerKm': fee('Rate per KM', { kind: 'number' }),
+  'feeBill.travelNote': fee('Travel Route Note'),
+  'feeBill.tollCharges': fee('Toll Charges', { kind: 'number' }),
+  'feeBill.tollNote': fee('Toll Note'),
+  'feeBill.photosCount': fee('No. of Photos', { kind: 'number' }),
+  'feeBill.photoRate': fee('Rate per Photo', { kind: 'number' }),
+  'feeBill.postalCharges': fee('Postal / Courier Charges', { kind: 'number' }),
+  'feeBill.haltageCharges': fee('Haltage Charges', { kind: 'number' }),
+  'feeBill.includeGST': fee('Include GST @ 18%', { kind: 'boolean' }),
 };
 
 /** One field change. `key` is the claim path written; `phone` is the raw phone string (what `decided` stores). */
@@ -104,10 +122,16 @@ function convert(path: string, spec: FieldSpec, raw: string): unknown {
   const v = spec.values ? raw.toLowerCase() : raw;
   if (spec.values && !spec.values.includes(v)) return undefined;
   if (spec.kind === 'insurable') return v === 'yes';
+  if (spec.kind === 'boolean' || path === 'feeBill.includeGST' || path === 'feeBill.feePaid') {
+    const s = raw.trim().toLowerCase();
+    if (s === 'yes' || s === 'true') return true;
+    if (s === 'no' || s === 'false') return false;
+    return undefined;
+  }
   if (spec.kind === 'number') {
     const n = parseNumber(raw);
     if (!Number.isFinite(n)) return undefined;
-    return path === 'spotDetails.actualLoad' ? n : String(n);
+    return path === 'spotDetails.actualLoad' || path.startsWith('feeBill.') ? n : String(n);
   }
   return v;
 }
@@ -143,7 +167,11 @@ function planRows(claim: ClaimData, notes: Record<string, unknown>): RowPlan {
  */
 export function planNotes(claim: ClaimData, notes: unknown, decided: Record<string, string> = {}): NotesPlan {
   const n = isObj(notes) ? notes : {};
-  const sections = { spot: isObj(n.spot) ? n.spot : {}, valuation: isObj(n.valuation) ? n.valuation : {} };
+  const sections: Record<string, Record<string, unknown>> = {
+    spot: isObj(n.spot) ? n.spot : {},
+    valuation: isObj(n.valuation) ? n.valuation : {},
+    feeBill: isObj(n.feeBill) ? n.feeBill : {},
+  };
   const blank = createBlankClaim(claim.surveyType, claim.vehicleType);
   const fill: Change[] = [];
   const differ: Change[] = [];
@@ -159,7 +187,7 @@ export function planNotes(claim: ClaimData, notes: unknown, decided: Record<stri
   };
 
   for (const [path, spec] of Object.entries(NOTES_ALLOW_LIST)) {
-    const raw = sections[spec.section][path];
+    const raw = sections[spec.section]?.[path];
     if (spec.kind === 'doc') {
       if (!isObj(raw)) continue;
       const cur = getAt(claim, path) as { status?: string; detail?: string } | undefined;
@@ -205,10 +233,42 @@ export function applyNotes(
   const blank = createBlankClaim(claim.surveyType, claim.vehicleType);
   const base: ClaimData = {
     ...claim,
+    accident: claim.accident ?? blank.accident,
     documentVerification: claim.documentVerification ?? blank.documentVerification,
     valuationDetails: claim.valuationDetails ?? blank.valuationDetails,
+    feeBill: claim.feeBill ?? blank.feeBill,
   };
   let next = writes.reduce<ClaimData>((acc, c) => setAt(acc, c.key, c.value), base);
+
+  const touched = new Set(writes.map((c) => c.key.split('.')[0]));
+
+  const spotDtWrite = writes.find((c) => c.key === 'spotDetails.surveyDatetime');
+  if (spotDtWrite && !next.accident?.dateOfSurvey) {
+    const raw = String(spotDtWrite.value ?? '').trim();
+    if (raw) {
+      const [d = '', t = ''] = raw.split('T');
+      next = setAt(next, 'accident.dateOfSurvey', d);
+      next = setAt(next, 'accident.timeOfSurvey', t.includes(':') ? t.slice(0, 5) : t);
+      touched.add('accident');
+    }
+  }
+
+  const valDtWrite = writes.find((c) => c.key === 'valuationDetails.inspectionDate');
+  if (valDtWrite && !next.accident?.dateOfSurvey) {
+    const raw = String(valDtWrite.value ?? '').trim();
+    if (raw) {
+      const [d = '', t = ''] = raw.split('T');
+      next = setAt(next, 'accident.dateOfSurvey', d);
+      next = setAt(next, 'accident.timeOfSurvey', t.includes(':') ? t.slice(0, 5) : t);
+      touched.add('accident');
+    }
+  }
+
+  const placeWrite = writes.find((c) => c.key === 'accident.placeOfSurvey');
+  if (placeWrite && !next.valuationDetails?.inspectionPlace) {
+    next = setAt(next, 'valuationDetails.inspectionPlace', String(placeWrite.value ?? ''));
+    touched.add('valuationDetails');
+  }
 
   const { damage, parts, partConditions } = plan.rows;
   if (damage.length) {
@@ -225,7 +285,6 @@ export function applyNotes(
   }
 
   const updates: Record<string, unknown> = {};
-  const touched = new Set(writes.map((c) => c.key.split('.')[0]));
   if (damage.length) touched.add('spotDamageRows');
   if (parts.length || partConditions.length) touched.add('valuationDetails');
   for (const section of touched) updates[section] = (next as unknown as Record<string, unknown>)[section];
