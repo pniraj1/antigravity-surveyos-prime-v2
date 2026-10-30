@@ -122,7 +122,7 @@ function convert(path: string, spec: FieldSpec, raw: string): unknown {
   const v = spec.values ? raw.toLowerCase() : raw;
   if (spec.values && !spec.values.includes(v)) return undefined;
   if (spec.kind === 'insurable') return v === 'yes';
-  if (spec.kind === 'boolean' || path === 'feeBill.includeGST' || path === 'feeBill.feePaid') {
+  if (spec.kind === 'boolean') {
     const s = raw.trim().toLowerCase();
     if (s === 'yes' || s === 'true') return true;
     if (s === 'no' || s === 'false') return false;
@@ -246,7 +246,7 @@ export function applyNotes(
   if (spotDtWrite && !next.accident?.dateOfSurvey) {
     const raw = String(spotDtWrite.value ?? '').trim();
     if (raw) {
-      const [d = '', t = ''] = raw.split('T');
+      const [d = '', t = ''] = raw.split(/[T ]/);
       next = setAt(next, 'accident.dateOfSurvey', d);
       next = setAt(next, 'accident.timeOfSurvey', t.includes(':') ? t.slice(0, 5) : t);
       touched.add('accident');
@@ -257,7 +257,7 @@ export function applyNotes(
   if (valDtWrite && !next.accident?.dateOfSurvey) {
     const raw = String(valDtWrite.value ?? '').trim();
     if (raw) {
-      const [d = '', t = ''] = raw.split('T');
+      const [d = '', t = ''] = raw.split(/[T ]/);
       next = setAt(next, 'accident.dateOfSurvey', d);
       next = setAt(next, 'accident.timeOfSurvey', t.includes(':') ? t.slice(0, 5) : t);
       touched.add('accident');
@@ -268,6 +268,12 @@ export function applyNotes(
   if (placeWrite && !next.valuationDetails?.inspectionPlace) {
     next = setAt(next, 'valuationDetails.inspectionPlace', String(placeWrite.value ?? ''));
     touched.add('valuationDetails');
+  }
+
+  const valPlaceWrite = writes.find((c) => c.key === 'valuationDetails.inspectionPlace');
+  if (valPlaceWrite && !next.accident?.placeOfSurvey) {
+    next = setAt(next, 'accident.placeOfSurvey', String(valPlaceWrite.value ?? ''));
+    touched.add('accident');
   }
 
   const { damage, parts, partConditions } = plan.rows;

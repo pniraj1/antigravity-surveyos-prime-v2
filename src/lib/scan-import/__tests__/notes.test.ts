@@ -267,6 +267,14 @@ describe('planNotes / applyNotes', () => {
     const uPlace = applyNotes(c, planPlace);
     expect(uPlace.accident?.placeOfSurvey).toBe('Workshop Pune');
     expect(uPlace.valuationDetails?.inspectionPlace).toBe('Workshop Pune');
+
+    // 4. valuationDetails.inspectionPlace syncs to accident.placeOfSurvey
+    const planValPlace = planNotes(c, {
+      valuation: { 'valuationDetails.inspectionPlace': 'Garage Nashik' },
+    });
+    const uValPlace = applyNotes(c, planValPlace);
+    expect(uValPlace.valuationDetails?.inspectionPlace).toBe('Garage Nashik');
+    expect(uValPlace.accident?.placeOfSurvey).toBe('Garage Nashik');
   });
 });
 
