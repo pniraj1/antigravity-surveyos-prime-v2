@@ -203,6 +203,14 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
           const parts = d.split('T');
           d = parts[0] || '';
           if (!t && parts[1]) t = parts[1];
+          updatedAccident.dateOfSurvey = d;
+          if (t && !updatedAccident.timeOfSurvey) {
+            updatedAccident.timeOfSurvey = t.includes(':') ? t.slice(0, 5) : t;
+          }
+        }
+        if (t && t.includes(':')) {
+          t = t.slice(0, 5);
+          updatedAccident.timeOfSurvey = t;
         }
         const combined = d ? (t ? `${d}T${t}` : d) : '';
         updatedSpotDetails.surveyDatetime = combined;
@@ -292,7 +300,7 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
         } else {
           const [d = '', t = ''] = raw.split('T');
           updatedAccident.dateOfSurvey = d;
-          updatedAccident.timeOfSurvey = t;
+          updatedAccident.timeOfSurvey = t.includes(':') ? t.slice(0, 5) : t;
           updatedValuationDetails.inspectionDate = raw;
         }
       }
@@ -344,7 +352,7 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
         } else {
           const [d = '', t = ''] = raw.split('T');
           updatedAccident.dateOfSurvey = d;
-          updatedAccident.timeOfSurvey = t;
+          updatedAccident.timeOfSurvey = t.includes(':') ? t.slice(0, 5) : t;
           updatedSpotDetails.surveyDatetime = raw;
         }
       }

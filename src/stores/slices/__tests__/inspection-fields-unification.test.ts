@@ -176,5 +176,30 @@ describe('Inspection Fields Store Synchronization', () => {
       const claim = store.getState().currentClaim!;
       expect(claim.accident.appointmentDate).toBe('');
     });
+
+    it('syncs updateClaim({ reportDate }) to spotDetails.reportDate', () => {
+      store.getState().updateClaim({ reportDate: '2026-11-10' });
+
+      const claim = store.getState().currentClaim!;
+      expect(claim.spotDetails.reportDate).toBe('2026-11-10');
+    });
+
+    it('normalizes composite ISO datetime passed to updateAccident({ dateOfSurvey })', () => {
+      store.getState().updateAccident({ dateOfSurvey: '2026-10-30T11:30:00' });
+
+      const claim = store.getState().currentClaim!;
+      expect(claim.accident.dateOfSurvey).toBe('2026-10-30');
+      expect(claim.accident.timeOfSurvey).toBe('11:30');
+      expect(claim.spotDetails.surveyDatetime).toBe('2026-10-30T11:30');
+      expect(claim.valuationDetails.inspectionDate).toBe('2026-10-30T11:30');
+    });
+
+    it('truncates seconds in surveyDatetime to 5-char HH:mm timeOfSurvey', () => {
+      store.getState().updateSpotDetails({ surveyDatetime: '2026-10-30T14:45:00.000Z' });
+
+      const claim = store.getState().currentClaim!;
+      expect(claim.accident.dateOfSurvey).toBe('2026-10-30');
+      expect(claim.accident.timeOfSurvey).toBe('14:45');
+    });
   });
 });
