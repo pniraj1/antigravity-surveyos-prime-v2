@@ -89,7 +89,9 @@ export const createVehicleSlice: StateCreator<any, any, any, VehicleSlice> = (se
       }
 
       if ('odometer' in updates) {
-        updatedValuationDetails.odometer = updates.odometer ?? '';
+        const odo = updates.odometer != null ? String(updates.odometer) : '';
+        updatedVehicle.odometer = odo;
+        updatedValuationDetails.odometer = odo;
       }
 
       if (recomputeCapacity) {

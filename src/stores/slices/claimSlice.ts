@@ -137,12 +137,22 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
   },
 
   updateClaim: (updates) => {
-    set((state: ClaimSlice) => ({
-      currentClaim: state.currentClaim
-        ? { ...state.currentClaim, ...updates, updatedAt: new Date().toISOString() }
-        : null,
-      isDirty: true,
-    }));
+    set((state: ClaimSlice) => {
+      if (!state.currentClaim) return { currentClaim: null };
+      const updatedSpotDetails = { ...state.currentClaim.spotDetails };
+      if ('reportDate' in updates && updates.reportDate !== undefined) {
+        updatedSpotDetails.reportDate = updates.reportDate ?? '';
+      }
+      return {
+        currentClaim: {
+          ...state.currentClaim,
+          ...updates,
+          spotDetails: updatedSpotDetails,
+          updatedAt: new Date().toISOString(),
+        },
+        isDirty: true,
+      };
+    });
   },
 
   updateDriver: (updates) => {
@@ -180,16 +190,44 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
   },
 
   updateAccident: (updates) => {
-    set((state: ClaimSlice) => ({
-      currentClaim: state.currentClaim
-        ? {
-            ...state.currentClaim,
-            accident: { ...state.currentClaim.accident, ...updates },
-            updatedAt: new Date().toISOString(),
-          }
-        : null,
-      isDirty: true,
-    }));
+    set((state: ClaimSlice) => {
+      if (!state.currentClaim) return { currentClaim: null };
+      const updatedAccident = { ...state.currentClaim.accident, ...updates };
+      const updatedSpotDetails = { ...state.currentClaim.spotDetails };
+      const updatedValuationDetails = { ...state.currentClaim.valuationDetails };
+
+      if ('dateOfSurvey' in updates || 'timeOfSurvey' in updates) {
+        let d = (updatedAccident.dateOfSurvey ?? '').trim();
+        let t = (updatedAccident.timeOfSurvey ?? '').trim();
+        if (d.includes('T')) {
+          const parts = d.split('T');
+          d = parts[0] || '';
+          if (!t && parts[1]) t = parts[1];
+        }
+        const combined = d ? (t ? `${d}T${t}` : d) : '';
+        updatedSpotDetails.surveyDatetime = combined;
+        updatedValuationDetails.inspectionDate = combined;
+      }
+
+      if ('placeOfSurvey' in updates) {
+        updatedValuationDetails.inspectionPlace = updates.placeOfSurvey ?? '';
+      }
+
+      if ('appointmentDate' in updates) {
+        updatedSpotDetails.allotmentDate = updates.appointmentDate ?? '';
+      }
+
+      return {
+        currentClaim: {
+          ...state.currentClaim,
+          accident: updatedAccident,
+          spotDetails: updatedSpotDetails,
+          valuationDetails: updatedValuationDetails,
+          updatedAt: new Date().toISOString(),
+        },
+        isDirty: true,
+      };
+    });
   },
 
   updateReinspection: (updates) => {
@@ -211,6 +249,9 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
 
       const updatedSpotDetails = { ...state.currentClaim.spotDetails, ...updates };
       const updatedVehicle = { ...state.currentClaim.vehicle };
+      const updatedAccident = { ...state.currentClaim.accident };
+      const updatedValuationDetails = { ...state.currentClaim.valuationDetails };
+      let updatedReportDate = state.currentClaim.reportDate;
 
       if ('gvw' in updates) {
         const gvw = updates.gvw;
@@ -242,11 +283,40 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
         updatedSpotDetails.loadCapacity = (g > u && u > 0) ? g - u : (g || 0);
       }
 
+      if ('surveyDatetime' in updates) {
+        const raw = (updates.surveyDatetime ?? '').trim();
+        if (!raw) {
+          updatedAccident.dateOfSurvey = '';
+          updatedAccident.timeOfSurvey = '';
+          updatedValuationDetails.inspectionDate = '';
+        } else {
+          const [d = '', t = ''] = raw.split('T');
+          updatedAccident.dateOfSurvey = d;
+          updatedAccident.timeOfSurvey = t;
+          updatedValuationDetails.inspectionDate = raw;
+        }
+      }
+
+      if ('enclosures' in updates) {
+        updatedValuationDetails.enclosures = updates.enclosures ?? '';
+      }
+
+      if ('reportDate' in updates) {
+        updatedReportDate = updates.reportDate ?? '';
+      }
+
+      if ('allotmentDate' in updates) {
+        updatedAccident.appointmentDate = updates.allotmentDate ?? '';
+      }
+
       return {
         currentClaim: {
           ...state.currentClaim,
           vehicle: updatedVehicle,
           spotDetails: updatedSpotDetails,
+          accident: updatedAccident,
+          valuationDetails: updatedValuationDetails,
+          reportDate: updatedReportDate,
           updatedAt: new Date().toISOString(),
         },
         isDirty: true,
@@ -258,14 +328,42 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
     set((state: ClaimSlice) => {
       if (!state.currentClaim) return { currentClaim: null };
       const updatedVehicle = { ...state.currentClaim.vehicle };
+      const updatedAccident = { ...state.currentClaim.accident };
+      const updatedSpotDetails = { ...state.currentClaim.spotDetails };
+
       if ('odometer' in updates) {
-        updatedVehicle.odometer = updates.odometer ?? '';
+        updatedVehicle.odometer = updates.odometer != null ? String(updates.odometer) : '';
       }
+
+      if ('inspectionDate' in updates) {
+        const raw = (updates.inspectionDate ?? '').trim();
+        if (!raw) {
+          updatedAccident.dateOfSurvey = '';
+          updatedAccident.timeOfSurvey = '';
+          updatedSpotDetails.surveyDatetime = '';
+        } else {
+          const [d = '', t = ''] = raw.split('T');
+          updatedAccident.dateOfSurvey = d;
+          updatedAccident.timeOfSurvey = t;
+          updatedSpotDetails.surveyDatetime = raw;
+        }
+      }
+
+      if ('inspectionPlace' in updates) {
+        updatedAccident.placeOfSurvey = updates.inspectionPlace ?? '';
+      }
+
+      if ('enclosures' in updates) {
+        updatedSpotDetails.enclosures = updates.enclosures ?? '';
+      }
+
       return {
         currentClaim: {
           ...state.currentClaim,
           valuationDetails: { ...state.currentClaim.valuationDetails, ...updates },
           vehicle: updatedVehicle,
+          accident: updatedAccident,
+          spotDetails: updatedSpotDetails,
           updatedAt: new Date().toISOString(),
         },
         isDirty: true,
