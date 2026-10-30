@@ -176,7 +176,14 @@ const PROXY_TARGETS = {
 // before the provider answers, and the client reports it as an invalid key.
 async function proxyToProvider(request) {
   if (!request.auth) throw new HttpsError("unauthenticated", "Must be logged in.");
-  await assertActiveSubscription(request.auth.uid);
+
+  // Anonymous auth is enabled for sandbox / evaluation sessions. Since the caller
+  // provides their own key (BYOK) and endpoints are allowlisted, anonymous callers
+  // are permitted without requiring an active paid subscription document.
+  const isAnonymous = request.auth.token?.firebase?.sign_in_provider === "anonymous";
+  if (!isAnonymous) {
+    await assertActiveSubscription(request.auth.uid);
+  }
 
   const { provider = "nvidia", path, key, body } = request.data || {};
   // Object.hasOwn: a plain bracket lookup would resolve __proto__/constructor.

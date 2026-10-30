@@ -2,6 +2,13 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-10-30 (Antigravity) — Anonymous Firebase Auth & BYOK Proxy Exemption for Sandbox
+- feat(ai): **BYOK Proxy Access for Anonymous Sandbox Sessions** (`functions/index.js`, `src/lib/sandbox.ts`).
+  - Added anonymous caller exemption in Cloud Functions `aiProxy` and `nvidiaProxy`: anonymous sessions bringing their own API key (BYOK) are permitted without requiring an active paid subscription record in Firestore.
+  - In `initSandboxSession()` (`src/lib/sandbox.ts`): calls `signInAnonymously(auth)` in the background so the browser obtains a genuine Firebase Auth ID token automatically without any Google login prompt or account popup.
+  - Enables all AI providers (Ollama `gemma4:31b`, NVIDIA NIM, Gemini, Groq) to work seamlessly in the sandbox testing environment.
+  - Deployed `aiProxy` and `nvidiaProxy` to `asia-south1`; re-deployed sandbox hosting builds.
+
 ## 2026-10-30 (Antigravity) — Zero-Login Sandbox & OAuth Bypass for Multi-Estimate Testing
 - feat(sandbox): **Zero-Login Bypass for Sandbox Environments** (`src/lib/sandbox.ts`, `src/hooks/useAuth.ts`, `src/app/page.tsx`, `src/components/layout/SubscriptionGuard.tsx`, `src/components/auth/AuthGate.tsx`, `src/hooks/useRouteSync.ts`).
   - Implemented `isSandbox()` to auto-detect preview/sandbox URLs (`motorsurveyos-in--sandbox-*.web.app`, `surveyos-v2-antigravity-in.web.app`, or `?sandbox=true`).

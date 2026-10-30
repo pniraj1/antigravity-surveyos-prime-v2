@@ -1,3 +1,5 @@
+import { signInAnonymously } from 'firebase/auth';
+import { auth } from '@/lib/firebase/config';
 import { useAuthStore } from '@/stores/auth-store';
 import { useUIStore } from '@/stores/ui-store';
 import { useProfileStore } from '@/stores/profile-store';
@@ -21,31 +23,49 @@ export function isSandbox(): boolean {
 export async function initSandboxSession() {
   if (typeof window === 'undefined') return;
 
+  // 1. Authenticate anonymously with Firebase so backend Cloud Functions (e.g. aiProxy for Ollama/NVIDIA)
+  // receive a valid Firebase Auth token without requiring Google OAuth or any login popups.
+  let firebaseUser = auth.currentUser;
+  if (!firebaseUser) {
+    try {
+      const cred = await signInAnonymously(auth);
+      firebaseUser = cred.user;
+    } catch (err) {
+      console.warn('[Sandbox] Anonymous sign-in fallback:', err);
+    }
+  }
+
+  const effectiveUid = firebaseUser?.uid || 'sandbox-surveyor';
+
   try {
-    await initUserDB('sandbox-surveyor');
+    await initUserDB(effectiveUid);
   } catch (err) {
     console.warn('[Sandbox] initUserDB fallback:', err);
   }
 
-  // 1. Authenticate virtual sandbox surveyor
-  useAuthStore.getState().setUser({
-    uid: 'sandbox-surveyor',
-    email: 'sandbox@surveyos.internal',
-    displayName: 'Sandbox Surveyor',
-  } as any);
+  // 2. Set user in auth store with valid authentication
+  useAuthStore.getState().setUser(
+    firebaseUser ||
+    ({
+      uid: effectiveUid,
+      email: 'sandbox@surveyos.internal',
+      displayName: 'Sandbox Surveyor',
+      isAnonymous: true,
+    } as any)
+  );
 
-  // 2. Mark Drive connected and switch active tab to 'assessment'
+  // 3. Mark Drive connected and switch active tab to 'assessment'
   useUIStore.getState().setDriveConnected(true, 'sandbox-drive@surveyos.internal');
   useUIStore.getState().setActiveTab('assessment');
 
-  // 3. Set Profile active & compliant
+  // 4. Set Profile active & compliant
   useProfileStore.getState().updateProfile({
     subscriptionStatus: 'active',
     isAdmin: true,
     consent: buildConsentRecord(),
   });
 
-  // 4. Seed an isolated working claim if none active
+  // 5. Seed an isolated working claim if none active
   const claimStore = useClaimStore.getState();
   if (!claimStore.currentClaim) {
     let blank = null;
