@@ -631,3 +631,49 @@ describe('unified AI weight extraction (applyRC, applyFitness, applyLokChallan)'
   });
 });
 
+describe('AI extraction alignment: HPA, goods description, odometer', () => {
+  it('applyRC populates vehicle.hypothecation, vehicle.rcEndorsement, and policy.hpaWith', () => {
+    const claim = createBlankClaim();
+    const updated = applyRC(claim, {
+      hypothecation: 'HDFC Bank Ltd',
+    });
+
+    expect(updated.vehicle.hypothecation).toBe('HDFC Bank Ltd');
+    expect(updated.vehicle.rcEndorsement).toBe('HDFC Bank Ltd');
+    expect(updated.policy.hpaWith).toBe('HDFC Bank Ltd');
+  });
+
+  it('applyRC populates vehicle.odometer and valuationDetails.odometer when odometer is extracted', () => {
+    const claim = createBlankClaim();
+    const updated = applyRC(claim, {
+      odometer: 45200,
+    });
+
+    expect(updated.vehicle.odometer).toBe('45200');
+    expect(updated.valuationDetails.odometer).toBe('45200');
+  });
+
+  it('applyPolicy populates policy.hpaWith, vehicle.hypothecation, and vehicle.rcEndorsement', () => {
+    const claim = createBlankClaim();
+    const updated = applyPolicy(claim, {
+      hpa_with: 'State Bank of India',
+    });
+
+    expect(updated.policy.hpaWith).toBe('State Bank of India');
+    expect(updated.vehicle.hypothecation).toBe('State Bank of India');
+    expect(updated.vehicle.rcEndorsement).toBe('State Bank of India');
+  });
+
+  it('applyLokChallan populates spotDetails.loadDesc, vehicle.natureOfGoods, and vehicle.detailsOfGoodsCarried', () => {
+    const claim = createBlankClaim();
+    const updated = applyLokChallan(claim, {
+      goods_description: 'Industrial machinery spare parts',
+    });
+
+    expect(updated.spotDetails.loadDesc).toBe('Industrial machinery spare parts');
+    expect(updated.vehicle.natureOfGoods).toBe('Industrial machinery spare parts');
+    expect(updated.vehicle.detailsOfGoodsCarried).toBe('Industrial machinery spare parts');
+  });
+});
+
+

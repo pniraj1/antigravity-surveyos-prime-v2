@@ -361,7 +361,7 @@ export function applyRC(claim: ClaimData, data: any): ClaimData {
   const gvw = gvwStr ? Math.round(parseFloat(gvwStr)) : 0;
   const ulw = ulwStr ? Math.round(parseFloat(ulwStr)) : 0;
 
-  return {
+  const updated: ClaimData = {
     ...claim,
     vehicle: {
       ...claim.vehicle,
@@ -389,6 +389,7 @@ export function applyRC(claim: ClaimData, data: any): ClaimData {
       yearOfManufacture: yom,
       registrationValidUpTo: parseDate(data.registration_valid_upto || data.reg_valid_upto || data.regn_valid_upto) || claim.vehicle.registrationValidUpTo,
       hypothecation,
+      rcEndorsement: hypothecation || data.rc_endorsement || claim.vehicle.rcEndorsement,
     },
     policy: {
       ...claim.policy,
@@ -404,6 +405,13 @@ export function applyRC(claim: ClaimData, data: any): ClaimData {
       loadCapacity: (gvw > ulw && ulw > 0) ? gvw - ulw : (gvw || claim.spotDetails.loadCapacity),
     },
   };
+
+  if (data.odometer) {
+    updated.vehicle.odometer = String(data.odometer);
+    updated.valuationDetails = { ...claim.valuationDetails, odometer: String(data.odometer) };
+  }
+
+  return updated;
 }
 
 export function applyPolicy(claim: ClaimData, data: any): ClaimData {
@@ -419,6 +427,7 @@ export function applyPolicy(claim: ClaimData, data: any): ClaimData {
     ...(fillCompulsory ? { compulsoryExcess: fillCompulsory, lessExcess: fillCompulsory } : {}),
     ...(fillVoluntary ? { voluntaryExcess: fillVoluntary } : {}),
   };
+  const hpa = data.hpa_with || claim.policy.hpaWith;
   const updated = {
     ...claim,
     policyCheck,
@@ -436,7 +445,7 @@ export function applyPolicy(claim: ClaimData, data: any): ClaimData {
           : data.insurer_name || claim.policy.insurerName,
       idv: parseAmount(data.idv) || claim.policy.idv,
       // Write to both hpaWith (primary) and hpa (alias) so all report paths are covered
-      hpaWith: data.hpa_with || claim.policy.hpaWith,
+      hpaWith: hpa,
       periodFrom: parseDate(data.period_from) || claim.policy.periodFrom,
       periodTo: parseDate(data.period_to) || claim.policy.periodTo,
       policyIssuingOffice: data.policy_issuing_office || claim.policy.policyIssuingOffice,
@@ -444,7 +453,11 @@ export function applyPolicy(claim: ClaimData, data: any): ClaimData {
       appointingOffice: claim.policy.appointingOffice,
       policyType: data.policy_type || claim.policy.policyType,
     },
-    vehicle: { ...claim.vehicle },
+    vehicle: {
+      ...claim.vehicle,
+      hypothecation: hpa || claim.vehicle.hypothecation,
+      rcEndorsement: hpa || claim.vehicle.rcEndorsement,
+    },
   };
   if (data.registration_number) updated.vehicle.registrationNumber = data.registration_number;
   if (data.chassis_number) updated.vehicle.chassisNumber = data.chassis_number;
@@ -595,6 +608,7 @@ export function applyFitness(claim: ClaimData, data: any): ClaimData {
 }
 
 export function applyLokChallan(claim: ClaimData, data: any): ClaimData {
+  const goods = data.goods_description || claim.spotDetails.loadDesc;
   return {
     ...claim,
     spotDetails: {
@@ -603,13 +617,15 @@ export function applyLokChallan(claim: ClaimData, data: any): ClaimData {
       challanDate: parseDate(data.challan_date) || claim.spotDetails.challanDate,
       loadOrigin: data.origin || claim.spotDetails.loadOrigin,
       loadDest: data.destination || claim.spotDetails.loadDest,
-      loadDesc: data.goods_description || claim.spotDetails.loadDesc,
+      loadDesc: goods,
       actualLoad: parseFloat(data.weight_kg) || claim.spotDetails.actualLoad,
     },
     vehicle: {
       ...claim.vehicle,
       goodsWeightAtAccident: data.weight_kg ? String(data.weight_kg) : claim.vehicle.goodsWeightAtAccident,
       actualPayload: data.weight_kg ? String(data.weight_kg) : claim.vehicle.actualPayload,
+      natureOfGoods: goods || claim.vehicle.natureOfGoods,
+      detailsOfGoodsCarried: goods || claim.vehicle.detailsOfGoodsCarried,
     },
   };
 }
