@@ -2,6 +2,12 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-10-30 (Antigravity) — Revert Over-engineered Estimate/Bill Extraction Prompts
+- revert(ai): **Restored Battle-Tested Estimate & Final Bill Prompts** (`src/lib/ai/prompts.ts`, `src/lib/ai/__tests__/prompts-estimate.test.ts`).
+  - Reverted experimental footer-first deduction rule, top-level `_audit` envelope, and extra per-row fields that had caused token limit blowouts and unparseable truncated JSON on dense bills (e.g. Pawar quotation pages 1–2).
+  - Restored clean, direct row extraction into `spare_parts`, `labour_items`, and `painting_items` with standard fields (`sr_no`, `description`, `part_number`, `hsn_sac`, `taxable_amount`, `cgst_amount`, `sgst_amount`, `total_amount`, `gst_percent`, `category`).
+  - All 227 test files (1,997 tests) passing; `next build` static export clean; deployed live to Firebase Hosting.
+
 ## 2026-10-30 (Antigravity) — Scan Fee Bill Notes & Unified Inspection Date/Time
 - feat(store): **Store-Level Bi-Directional Sync for Shared Inspection Metadata** (`src/stores/slices/claimSlice.ts`, `src/stores/slices/vehicleSlice.ts`).
   - Added two-way state synchronization between `accident.dateOfSurvey` & `accident.timeOfSurvey`, `spotDetails.surveyDatetime`, and `valuationDetails.inspectionDate`.
