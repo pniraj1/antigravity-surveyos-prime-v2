@@ -131,7 +131,7 @@ export function ValuationTab() {
         </CardHeader>
         <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-3 gap-6">
           <div className="space-y-1.5">
-            <Label className="text-[10px] font-black uppercase text-muted-foreground/70 tracking-tighter">Date &amp; Time of Inspection</Label>
+            <Label className="text-[10px] font-black uppercase text-muted-foreground/70 tracking-tighter">Date & Time of Inspection</Label>
             <Input
               type="datetime-local"
               value={inspectionDateValue}
