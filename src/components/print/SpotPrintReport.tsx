@@ -262,7 +262,7 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Insured Mobile</td>
             <td style={{ ...parseInline(styles.td) }}>{policy.insuredMobile || '—'}</td>
             <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>HPA / Finance With</td>
-            <td style={{ ...parseInline(styles.td) }}>{policy.hpaWith || 'NIL'}</td>
+            <td style={{ ...parseInline(styles.td) }}>{policy.hpaWith || vehicle.hypothecation || vehicle.rcEndorsement || 'NIL'}</td>
           </tr>
           {policy.insuredAddress && (
             <tr>
@@ -512,7 +512,7 @@ export const SpotPrintReport = React.forwardRef<HTMLDivElement, SpotPrintReportP
               </tr>
               <tr>
                 <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Goods / Passengers Carried</td>
-                <td style={{ ...parseInline(styles.td) }} colSpan={3}>{spotDetails.loadDesc || '—'}</td>
+                <td style={{ ...parseInline(styles.td) }} colSpan={3}>{spotDetails.loadDesc || vehicle.natureOfGoods || (vehicle as any)?.detailsOfGoodsCarried || '—'}</td>
               </tr>
               <tr>
                 <td style={{ ...parseInline(styles.td), color: '#444', fontSize: fs.labelFont }}>Origin</td>

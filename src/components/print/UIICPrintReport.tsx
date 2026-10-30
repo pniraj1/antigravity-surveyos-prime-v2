@@ -79,7 +79,7 @@ export const UIICPrintReport = React.forwardRef<HTMLDivElement, UIICPrintReportP
               <div className="row"><div className="label">Reg. Date</div><div className="value">{claim.vehicle.dateOfRegistration}</div></div>
               <div className="row"><div className="label">Authority</div><div className="value">{claim.vehicle.registeringAuthority}</div></div>
               <div className="row"><div className="label">Valid-To</div><div className="value">{claim.vehicle.registrationValidUpTo}</div></div>
-              <div className="row" style={{ borderBottom: 0 }}><div className="label">RC Endorsement</div><div className="value">{claim.vehicle.rcEndorsement}</div></div>
+              <div className="row" style={{ borderBottom: 0 }}><div className="label">RC Endorsement</div><div className="value">{claim.vehicle.rcEndorsement || claim.vehicle.hypothecation || claim.policy.hpaWith || ''}</div></div>
             </div>
           </div>
 

@@ -195,7 +195,7 @@ ${getSurveyorHeader(profile)}
 <table style="${ts}"><tr><td style="${sec}width:50%;">INSURED / CLAIMANT DETAILS</td><td style="${sec}">SPOT SURVEY DETAILS</td></tr>
 <tr><td style="${td}vertical-align:top;"><table style="width:100%;border-collapse:collapse;font-size:7pt;">
 <tr><td style="padding:2px 3px;color:#333;width:40%;">Insured / Claimant Name &amp; Address</td><td style="padding:2px 3px;">${g(p.insuredName)}<br/>${g(p.insuredAddress)}</td></tr>
-<tr><td style="padding:2px 3px;color:#333;">FINANCIER INTEREST</td><td style="padding:2px 3px;">${g(p.hpaWith || v.hypothecation) || 'NIL'}</td></tr>
+<tr><td style="padding:2px 3px;color:#333;">FINANCIER INTEREST</td><td style="padding:2px 3px;">${g(p.hpaWith || v.hypothecation || v.rcEndorsement) || 'NIL'}</td></tr>
 <tr><td style="padding:2px 3px;color:#333;">Insured Contact Details</td><td style="padding:2px 3px;">${g(p.insuredMobile)}</td></tr>
 </table></td><td style="${td}vertical-align:top;"><table style="width:100%;border-collapse:collapse;font-size:7pt;">
 <tr><td style="padding:2px 3px;color:#333;width:50%;">Spot Survey Appointment Date</td><td style="padding:2px 3px;">${fd(sd.allotmentDate)}</td></tr>
@@ -255,7 +255,7 @@ ${getSurveyorHeader(profile)}
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Date of registration</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${fd(v.dateOfRegistration)}</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Registering Authority</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(v.registeringAuthority)}</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Registration valid up to</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${fd(v.registrationValidUpTo)}</td></tr>
-      <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">RC endorsement on financier interest</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(v.rcEndorsement)}</td></tr>
+      <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">RC endorsement on financier interest</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(v.rcEndorsement || v.hypothecation || p.hpaWith)}</td></tr>
       <tr><td colspan="2" style="background:#e8e8e8;text-align:center;font-weight:700;padding:3px 5px;border-bottom:0.5pt solid #000;">ADDITIONAL DETAILS - PASSENGER CARRYING VEHICLE</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Registered Seating Capacity</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(v.seatingCapacity)}</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Number of Passengers carried at the time of accident</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g((v as any).passengersAtAccident)}</td></tr>
@@ -308,8 +308,8 @@ ${getSurveyorHeader(profile)}
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;width:55%;">Load Challan Number</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g((v as any).loadChallanNumber || sd.challanNo)}</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Load Challan Date</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${fd((v as any).loadChallanDate || sd.challanDate)}</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Weight of goods carried at the time of accident</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g((v as any).goodsWeightAtAccident || sd.actualLoad)}</td></tr>
-      <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Details of goods carried at the time of accident</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g((v as any).detailsOfGoodsCarried || sd.loadDesc)}</td></tr>
-      <tr><td style="padding:3px 5px;border-right:0.5pt solid #000;">Nature of goods carried</td><td style="padding:3px 5px;">${g((v as any).natureOfGoods)}</td></tr>
+      <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Details of goods carried at the time of accident</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g((v as any).detailsOfGoodsCarried || sd.loadDesc || (v as any).natureOfGoods)}</td></tr>
+      <tr><td style="padding:3px 5px;border-right:0.5pt solid #000;">Nature of goods carried</td><td style="padding:3px 5px;">${g((v as any).natureOfGoods || sd.loadDesc || (v as any).detailsOfGoodsCarried)}</td></tr>
     </table>
   </td>
 </tr>

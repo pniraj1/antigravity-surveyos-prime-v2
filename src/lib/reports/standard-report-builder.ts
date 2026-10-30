@@ -624,7 +624,7 @@ export function buildStandardFinalSurveyHTML(
   </tr>
   <tr>
     <td style="${td}color:#444;font-size:${scale.labelFont};">Description of Goods / Passengers</td>
-    <td style="${td}" colspan="3">${sd?.loadDesc || '—'}</td>
+    <td style="${td}" colspan="3">${sd?.loadDesc || (vehicle as any)?.natureOfGoods || (vehicle as any)?.detailsOfGoodsCarried || '—'}</td>
   </tr>
   <tr>
     <td style="${td}color:#444;font-size:${scale.labelFont};">Route</td>
@@ -716,7 +716,7 @@ export function buildStandardFinalSurveyHTML(
   </tr>
   <tr>
     <td style="${td}color:#444;font-size:${scale.labelFont};">H.P.A.</td>
-    <td style="${td}" colspan="3">${policy.hpaWith || vehicle.hypothecation || 'NIL'}</td>
+    <td style="${td}" colspan="3">${policy.hpaWith || vehicle.hypothecation || vehicle.rcEndorsement || 'NIL'}</td>
   </tr>
 </table>
 

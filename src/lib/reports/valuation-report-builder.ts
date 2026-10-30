@@ -131,7 +131,7 @@ ${getSurveyorHeader(profile)}
   ${detailRow('Make / Model', `${g(v.make)} / ${g(v.model)}`, 'Fuel Type', g(v.fuel))}
   ${detailRow('Seating Capacity', g(v.seatingCapacity), 'Class of Vehicle', g(v.classOfVehicle))}
   ${detailRow('Type of Body', g(v.bodyType), 'Unladen Weight', v.unladenWeight ? g(v.unladenWeight) + ' kg' : '—')}
-  ${detailRow('Registered Laden Weight', v.registeredLoadWeight ? g(v.registeredLoadWeight) + ' kg' : '—', 'Kilometerage', g(vd.odometer))}
+  ${detailRow('Registered Laden Weight', v.registeredLoadWeight ? g(v.registeredLoadWeight) + ' kg' : '—', 'Kilometerage', g(vd.odometer || v.odometer))}
   ${p.insuredName ? detailRow('Insured Name', g(p.insuredName), 'Policy Number', g(p.policyNumber)) : ''}
 </table>
 
