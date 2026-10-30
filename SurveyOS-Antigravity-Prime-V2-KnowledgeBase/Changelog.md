@@ -2,6 +2,29 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-10-30 (Antigravity) — Unify Goods Nature/Description, HPA/Financier, and Valuation Odometer
+- feat(store): **Bi-Directional Store Sync for Goods, HPA, and Odometer** (`src/stores/slices/claimSlice.ts`, `src/stores/slices/vehicleSlice.ts`).
+  - Added two-way state synchronization between `spotDetails.loadDesc` and `vehicle.natureOfGoods` / `vehicle.detailsOfGoodsCarried`.
+  - Added two-way state synchronization between `policy.hpaWith` and `vehicle.hypothecation` / `vehicle.rcEndorsement`.
+  - Added two-way state synchronization between `vehicle.odometer` and `valuationDetails.odometer`.
+  - Added unit test suite in `src/stores/slices/__tests__/goods-hpa-odometer-sync.test.ts` (8 tests).
+- fix(claim): **Form Consolidation & Fallbacks across Claims and Valuation** (`src/components/claim/AtAccidentForm.tsx`, `src/components/claim/PolicyForm.tsx`, `src/components/claim/VehicleForm.tsx`, `src/components/claim/SurveyForm.tsx`, `src/components/tabs/ValuationTab.tsx`).
+  - Replaced separate "Nature of Goods" and "Description of Goods" inputs in `AtAccidentForm.tsx` with a single unified input: "Nature / Description of Goods" (`c-goods`).
+  - Wired cross-fallbacks for HPA / Financier across `PolicyForm.tsx` and `VehicleForm.tsx`.
+  - Wired cross-fallbacks for Odometer across `SurveyForm.tsx` and `ValuationTab.tsx`.
+  - Added unit tests in `src/components/claim/__tests__/AtAccidentForm.test.tsx` and `src/components/claim/__tests__/HpaAndOdometerFormSync.test.tsx` (16 tests).
+- feat(ai): **AI Extraction Alignment for HPA, Goods, and Odometer** (`src/stores/slices/aiDataSlice.ts`).
+  - `applyRC`: sets `vehicle.hypothecation`, `vehicle.rcEndorsement`, `policy.hpaWith`, and synchronizes odometer to both `vehicle` and `valuationDetails`.
+  - `applyPolicy`: propagates `hpa_with` to `policy.hpaWith`, `vehicle.hypothecation`, and `vehicle.rcEndorsement`.
+  - `applyLokChallan`: synchronizes `data.goods_description` across `spotDetails.loadDesc`, `vehicle.natureOfGoods`, and `vehicle.detailsOfGoodsCarried`.
+  - Added unit tests in `src/stores/slices/__tests__/aiDataSlice.test.ts`.
+- fix(reports): **Robust Cross-Fallbacks in Report Builders** (`src/components/print/SpotPrintReport.tsx`, `src/lib/reports/standard-report-builder.ts`, `src/lib/reports/uiic-final-builder.ts`, `src/components/print/UIICPrintReport.tsx`, `src/lib/reports/valuation-report-builder.ts`).
+  - Spot Report & Standard Final Report fall back across `spotDetails.loadDesc`, `vehicle.natureOfGoods`, and `vehicle.detailsOfGoodsCarried`.
+  - HPA / Financier falls back across `policy.hpaWith`, `vehicle.hypothecation`, and `vehicle.rcEndorsement` in Spot, Standard, UIIC Final, and UIIC Print.
+  - Valuation Report builder falls back to `vehicle.odometer` when `valuationDetails.odometer` is blank.
+  - Added unit tests in `src/lib/reports/__tests__/tp-and-load-challan.test.ts` (23 tests).
+- tests: Full test suite passing (226 files, 1,987 tests); `npx tsc --noEmit` clean (0 errors); zero drift on SurveyOS Scan coupling.
+
 ## 2026-10-29 (Antigravity) — Unify GVW, ULW, and Accident Load
 - feat(store): **Store-Level Bi-Directional Synchronization** (`src/stores/slices/vehicleSlice.ts`, `src/stores/slices/claimSlice.ts`).
   - Added two-way state synchronization between `vehicle.registeredLoadWeight`/`vehicle.grossWeight`/`vehicle.unladenWeight` and `spotDetails.gvw`/`spotDetails.ulw`/`spotDetails.loadCapacity`.

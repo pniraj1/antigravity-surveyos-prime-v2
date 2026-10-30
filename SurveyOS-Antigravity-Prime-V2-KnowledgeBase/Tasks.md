@@ -1,7 +1,16 @@
 # Active Tasks
 
-> Last updated: 2026-10-29 by Antigravity
+> Last updated: 2026-10-30 by Antigravity
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
+
+---
+
+## Unify Goods Description, HPA/Financier, and Valuation Odometer (Built 2026-10-30 on main)
+- [x] Implemented store-level bi-directional sync in `src/stores/slices/claimSlice.ts` and `src/stores/slices/vehicleSlice.ts` between `spotDetails.loadDesc` and `vehicle.natureOfGoods`/`vehicle.detailsOfGoodsCarried`, between `policy.hpaWith` and `vehicle.hypothecation`/`vehicle.rcEndorsement`, and between `vehicle.odometer` and `valuationDetails.odometer` (commit `9ffa4788`).
+- [x] Consolidated "Nature of Goods" and "Description of Goods" in `src/components/claim/AtAccidentForm.tsx` into a single authoritative "Nature / Description of Goods" input; wired fallback displays and dual-store updates across `PolicyForm.tsx`, `VehicleForm.tsx`, `SurveyForm.tsx`, and `ValuationTab.tsx` (commit `960ff541`).
+- [x] Synchronized AI document extraction in `src/stores/slices/aiDataSlice.ts` across `applyRC`, `applyPolicy`, and `applyLokChallan` so HPA, goods description, and odometer update all paired fields uniformly without impacting extraction accuracy (commit `2d4267e3`).
+- [x] Added robust cross-fallbacks across report builders (`SpotPrintReport.tsx`, `standard-report-builder.ts`, `uiic-final-builder.ts`, `UIICPrintReport.tsx`, `valuation-report-builder.ts`) ensuring no blank fields appear regardless of where data was entered (commit `04b07835`).
+- [x] Full test suite passing (226 test files, 1,987 tests); `npx tsc --noEmit` clean with 0 errors; zero drift on SurveyOS Scan coupling.
 
 ---
 
