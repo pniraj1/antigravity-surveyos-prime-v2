@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useClaimStore } from '@/stores/claim-store';
+import { isSandbox } from '@/lib/sandbox';
 import { useAuthStore } from '@/stores/auth-store';
 import { useUIStore } from '@/stores/ui-store';
 import { pushClaimToCloud } from '@/lib/firebase/sync';
@@ -19,6 +20,10 @@ export function ClaimHeader() {
   const [saving, setSaving] = useState(false);
 
   const handleSave = useCallback(async () => {
+    if (isSandbox()) {
+      toast.success('Sandbox: Changes saved locally (no cloud sync needed)');
+      return;
+    }
     if (!user || !currentClaim || saving) return;
     setSaving(true);
     setSaveStatus('saving');
@@ -89,11 +94,17 @@ export function ClaimHeader() {
       <span className="font-medium tracking-wide text-primary">
         {currentClaim.reportNo || 'Draft'}
       </span>
+      {isSandbox() && (
+        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-500 border border-amber-500/40">
+          SANDBOX (NO LOGIN REQUIRED)
+        </span>
+      )}
       <span className="text-muted-foreground hidden sm:inline">·</span>
       <span className="font-medium truncate max-w-[120px] sm:max-w-[180px] text-muted-foreground">{reg}</span>
       {name && (
         <>
-          <span className="text-muted-foreground hidden sm:inline">·</span>
+
+      <span className="text-muted-foreground hidden sm:inline">·</span>
           <span className="truncate max-w-[140px] sm:max-w-[200px] text-muted-foreground hidden sm:inline">{name}</span>
         </>
       )}

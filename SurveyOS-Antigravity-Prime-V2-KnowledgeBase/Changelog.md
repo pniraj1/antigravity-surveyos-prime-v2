@@ -2,6 +2,19 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-10-30 (Antigravity) — Zero-Login Sandbox & OAuth Bypass for Multi-Estimate Testing
+- feat(sandbox): **Zero-Login Bypass for Sandbox Environments** (`src/lib/sandbox.ts`, `src/hooks/useAuth.ts`, `src/app/page.tsx`, `src/components/layout/SubscriptionGuard.tsx`, `src/components/auth/AuthGate.tsx`, `src/hooks/useRouteSync.ts`).
+  - Implemented `isSandbox()` to auto-detect preview/sandbox URLs (`motorsurveyos-in--sandbox-*.web.app`, `surveyos-v2-antigravity-in.web.app`, or `?sandbox=true`).
+  - Implemented `initSandboxSession()`: seeds virtual surveyor session (`sandbox-surveyor`), sets Google Drive connected with mock email, marks profile subscription active & compliant with legal consent, seeds/persists isolated working claim (`SANDBOX-TEST-01`, `MH-12-AB-1234`, Pawar Brothers), and drops the surveyor directly into the live **Assessment Tab**.
+  - Bypasses landing page, drive gate, and subscription guards.
+- fix(auth): **Eliminated Google OAuth Origin Mismatch (`Error 400: origin_mismatch`)** (`src/lib/drive/index.ts`, `src/hooks/useCloudSync.ts`, `src/hooks/useSessionHeartbeat.ts`, `src/lib/firebase/auth.ts`, `src/components/layout/ClaimHeader.tsx`).
+  - Guarded `silentlyRestoreDriveToken()` and `linkGoogleDrive()` in `src/lib/drive/index.ts` to skip GIS `google.accounts.oauth2.initTokenClient` calls when in sandbox mode.
+  - Guarded `useCloudSync()` and `useSessionHeartbeat()` to avoid background Firestore sync or Drive token requests during sandbox sessions.
+  - Guarded `signInWithGoogle()` and `signOutUser()` in `src/lib/firebase/auth.ts` to seamlessly initialize sandbox sessions without triggering Firebase Google OAuth popups.
+  - Added sandbox visual indicator in `ClaimHeader.tsx`: `SANDBOX (NO LOGIN REQUIRED)` badge; made Save button save locally without cloud sync errors.
+- ops(deploy): **Deployed to Sandbox Channels** (`motorsurveyos-in--sandbox-izvlcn5z.web.app` and `surveyos-v2-antigravity-in.web.app`).
+  - Production (`motorsurveyos-in.web.app`) remains untouched.
+
 ## 2026-10-30 (Antigravity) — Multi-Estimate Mode, Start Gap Detection & Auto-Split Fallback (Sandbox)
 - feat(assessment): **"Another Estimate (Estimate 2, 3...)" Mode** (`src/components/dialogs/EstimateModeDialog.tsx`, `src/stores/slices/aiDataSlice.ts`).
   - Added 4th option in `EstimateModeDialog` when an existing assessment is on the sheet: "Another estimate (Estimate 2, 3...)".

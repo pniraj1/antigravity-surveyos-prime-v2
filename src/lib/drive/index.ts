@@ -5,6 +5,7 @@
 
 import { useUIStore } from '@/stores/ui-store';
 import { useProfileStore } from '@/stores/profile-store';
+import { isSandbox } from '@/lib/sandbox';
 import type { ClaimData } from '@/types';
 import { toast } from 'sonner';
 import { partitionPhotos } from '@/lib/photos/document-annexure';
@@ -64,6 +65,7 @@ export function getDriveToken(): string | null {
  * On failure (session expired, access revoked), clears the connected state.
  */
 export function silentlyRestoreDriveToken(): Promise<boolean> {
+  if (isSandbox()) return Promise.resolve(false);
   return new Promise((resolve) => {
     // @ts-ignore
     if (typeof google === 'undefined' || !google?.accounts?.oauth2) {
@@ -112,6 +114,10 @@ export function silentlyRestoreDriveToken(): Promise<boolean> {
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 export function linkGoogleDrive(): Promise<boolean> {
+  if (isSandbox()) {
+    useUIStore.getState().setDriveConnected(true, 'sandbox-drive@surveyos.internal');
+    return Promise.resolve(true);
+  }
   return new Promise((resolve, reject) => {
     // @ts-ignore
     if (typeof google === 'undefined' || !google?.accounts?.oauth2) {
@@ -354,6 +360,7 @@ export async function uploadFileToDrive(
   blob: Blob,
   claimLabel: string = claimId
 ): Promise<void> {
+  if (isSandbox()) return;
   const isLinked = useUIStore.getState().isDriveConnected;
   if (!getDriveToken()) {
     if (!isLinked) {

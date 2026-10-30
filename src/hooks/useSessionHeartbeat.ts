@@ -27,6 +27,7 @@ import { flushAllPendingToCloud } from '@/lib/firebase/sync';
 import { getDeviceId } from '@/lib/firebase/session';
 import type { ActiveSession } from '@/lib/firebase/session';
 import { logger } from '@/lib/utils/logger';
+import { isSandbox } from '@/lib/sandbox';
 
 const HEARTBEAT_INTERVAL_MS = 300_000;
 
@@ -35,7 +36,7 @@ export function useSessionHeartbeat() {
   const kickedRef = useRef(false);
 
   useEffect(() => {
-    if (!isAuthenticated || !user) return;
+    if (isSandbox() || !isAuthenticated || !user) return;
 
     const uid = user.uid;
     const ref = doc(db, 'users', uid, 'session', 'active');

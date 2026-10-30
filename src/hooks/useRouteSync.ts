@@ -4,6 +4,7 @@ import { useUIStore } from '@/stores/ui-store';
 import { useClaimStore } from '@/stores/claim-store';
 import { getClaim } from '@/lib/storage/indexeddb';
 import { normalizeUrlTab } from '@/lib/navigation/url-tab';
+import { isSandbox } from '@/lib/sandbox';
 
 export function useRouteSync() {
   const searchParams = useSearchParams();
@@ -72,8 +73,18 @@ export function useRouteSync() {
         } else {
           // No claim in URL – apply tab from URL if present (e.g. admin, profile),
           // otherwise fall back to dashboard.
-          if (storeClaimId) setCurrentClaimId(null);
-          setActiveTab(normalizeUrlTab(urlTab, false));
+          if (isSandbox()) {
+            const claim = useClaimStore.getState().currentClaim;
+            if (claim) {
+              setCurrentClaimId(claim.id);
+              setActiveTab(normalizeUrlTab(urlTab, true) || 'assessment');
+            } else {
+              setActiveTab(normalizeUrlTab(urlTab, false) || 'assessment');
+            }
+          } else {
+            if (storeClaimId) setCurrentClaimId(null);
+            setActiveTab(normalizeUrlTab(urlTab, false));
+          }
         }
       } finally {
         syncingFromUrl.current = false;

@@ -30,6 +30,7 @@ import {
   getPushedAt,
 } from '@/lib/storage/indexeddb';
 import { flushDriveQueue, silentlyRestoreDriveToken, backupProfileToDrive, restoreProfileFromDrive, getDriveToken } from '@/lib/drive';
+import { isSandbox } from '@/lib/sandbox';
 
 export function useCloudSync() {
   const { user, isAuthenticated } = useAuthStore();
@@ -56,6 +57,7 @@ export function useCloudSync() {
   // Drive replica write; milestone callers omit it and default to mirroring.
   const milestonePushRef = useRef(async (_claim: ClaimData, _uid: string, _opts?: { mirrorToDrive?: boolean }) => {});
   milestonePushRef.current = async (claim: ClaimData, uid: string, opts?: { mirrorToDrive?: boolean }) => {
+    if (isSandbox()) return;
     // Root-cause dirty guard: every milestone caller (2a/2b/2d) routes
     // through here, so one check covers all of them. Same definition as
     // sync-guard.ts selectDirtyClaims — never pushed, or edited since.
@@ -102,6 +104,7 @@ export function useCloudSync() {
   // doesn't have to re-link Drive on every refresh.
   const { isDriveConnected } = useUIStore();
   useEffect(() => {
+    if (isSandbox()) return;
     if (isDriveConnected && !driveRestoreAttemptedRef.current) {
       driveRestoreAttemptedRef.current = true;
       const attempt = () => silentlyRestoreDriveToken().then(success => {
@@ -127,6 +130,7 @@ export function useCloudSync() {
   // that changed since the last successful sync. Falls back to full
   // sync on first login on this device (timestamp is null).
   useEffect(() => {
+    if (isSandbox()) return;
     if (isAuthenticated && user && !isSyncingFullRef.current) {
       isSyncingFullRef.current = true;
       (async () => {
@@ -260,7 +264,7 @@ export function useCloudSync() {
 
   // ─── 3. Drain Sync Queue on Reconnect ────────────────────
   useEffect(() => {
-    if (!isAuthenticated || !user || !isOnline || isDrainingRef.current) return;
+    if (isSandbox() || !isAuthenticated || !user || !isOnline || isDrainingRef.current) return;
 
     isDrainingRef.current = true;
     (async () => {
@@ -319,7 +323,7 @@ export function useCloudSync() {
   // Only fires after the initial pull completes (profileSyncReadyRef = true).
   // Debounced 3s to avoid a write storm while the user types in profile fields.
   useEffect(() => {
-    if (!isAuthenticated || !user || !profile || !profileSyncReadyRef.current) return;
+    if (isSandbox() || !isAuthenticated || !user || !profile || !profileSyncReadyRef.current) return;
 
     if (profileTimerRef.current) clearTimeout(profileTimerRef.current);
 

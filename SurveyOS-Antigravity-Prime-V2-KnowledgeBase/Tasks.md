@@ -5,12 +5,15 @@
 
 ---
 
-## Multi-Estimate Mode & Auto-Split Fallback on Isolated Sandbox (Built 2026-10-30 on main)
+## Multi-Estimate Mode, Auto-Split Fallback & Zero-Login Sandbox (Built 2026-10-30 on main)
+- [x] Zero-Login Sandbox Bypass (`src/lib/sandbox.ts`): auto-detects sandbox environments (hostname containing `sandbox` or `surveyos-v2-antigravity-in`, or query `?sandbox=true`), seeds a virtual authenticated surveyor session (`sandbox-surveyor`), connects virtual Google Drive, activates compliant subscription profile, and drops surveyors directly into the live **Assessment Tab** (`SANDBOX-TEST-01`, `MH-12-AB-1234`) with zero login prompts or Google OAuth popups.
+- [x] Eliminated Google OAuth Origin Mismatch (`Error 400: origin_mismatch`): guarded `silentlyRestoreDriveToken()`, `linkGoogleDrive()`, and `uploadFileToDrive()` in `src/lib/drive/index.ts`, guarded `useCloudSync()` and `useSessionHeartbeat()`, and bypassed `signInWithGoogle()` and `signOutUser()` in `src/lib/firebase/auth.ts` during sandbox sessions so Google Identity Services (GIS) never communicates with Google OAuth endpoints from unauthorized preview origins.
+- [x] Protected Live Production: Whitelisted bypass strictly for sandbox domains/params; live production users on `https://motorsurveyos-in.web.app` remain 100% guarded by Google Sign-In and cloud Firestore sync.
 - [x] Added "Another Estimate (Estimate 2, 3...)" mode (`'another'`) to `EstimateModeDialog.tsx` and `aiDataSlice.ts` (`applyEstimate`). Keeps original printed serials (1..N) without renumbering, keeps all existing assessment rows, and assigns distinct `estimateId` (e.g. `Quote 2`) with automatic view switching via `EstimateViewSwitcher`.
 - [x] Implemented Start-of-Document Gap Detection in `src/lib/ai/row-check.ts` (`gapsIn`): flags serials `1..present[0].sr-1` when extracted rows start at `sr > 1`, ensuring early-page drops are immediately detected and targeted for re-read by Smart Fix.
 - [x] Implemented In-Flight Auto-Split in `src/lib/ai/processor.ts`: multi-page chunks (2 pages) that fail JSON parsing (e.g. dense 70+ item pages overflowing token caps) automatically split into 1-page-at-a-time calls on the fly, eliminating silent drops.
 - [x] Zero prompt changes: `src/lib/ai/prompts.ts` strictly untouched in battle-tested state.
-- [x] Isolated Sandbox Deployment: built and deployed to Firebase Hosting site `surveyos-v2-antigravity-in` (`https://surveyos-v2-antigravity-in.web.app`) which is pre-authorized in Google Cloud Console OAuth 2.0 (eliminates `origin_mismatch` error on preview channels). Live production (`https://motorsurveyos-in.web.app`) untouched.
+- [x] Sandbox Deployed to Both Channels: `https://motorsurveyos-in--sandbox-izvlcn5z.web.app` and `https://surveyos-v2-antigravity-in.web.app`.
 - [x] Full test suite passing (227 files, 1,999 tests); `npx tsc --noEmit` clean (0 errors); Next.js production build verified.
 
 ---

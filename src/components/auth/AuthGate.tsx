@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth-store';
+import { isSandbox } from '@/lib/sandbox';
 import LandingPage from '@/app/landing/page';
 import { Shield } from 'lucide-react';
 
@@ -26,7 +27,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     '/features', '/pricing', '/about', '/faq', '/contact',
     '/privacy', '/terms', '/refund',
   ];
-  if (SANDBOX_MODE || publicRoutes.some((r) => pathname?.startsWith(r))) return <>{children}</>;
+  if (SANDBOX_MODE || isSandbox() || publicRoutes.some((r) => pathname?.startsWith(r))) return <>{children}</>;
 
   // Firebase is still checking the session — show a silent loader
   if (loading) {

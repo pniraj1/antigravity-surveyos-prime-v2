@@ -39,6 +39,7 @@ import {
   isSessionMine,
 } from '@/lib/firebase/session';
 import { logger } from '@/lib/utils/logger';
+import { isSandbox, initSandboxSession } from '@/lib/sandbox';
 
 const FORCE_SESSION_KEY = 'surveyos_force_session';
 
@@ -46,6 +47,11 @@ export function useAuth() {
   const setUser = useAuthStore(s => s.setUser);
 
   useEffect(() => {
+    if (isSandbox()) {
+      void initSandboxSession();
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         // ── INTENTIONAL LOGOUT GUARD ───────────────────────────

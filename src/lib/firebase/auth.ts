@@ -5,6 +5,7 @@
 
 import { GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
 import { auth } from './config';
+import { isSandbox, initSandboxSession } from '@/lib/sandbox';
 
 const googleProvider = new GoogleAuthProvider();
 // Always show the Google account picker so logout feels real —
@@ -16,11 +17,16 @@ googleProvider.setCustomParameters({ prompt: 'select_account' });
  * onAuthStateChanged in useAuth.ts picks up the result automatically.
  */
 export async function signInWithGoogle(): Promise<void> {
+  if (isSandbox()) {
+    await initSandboxSession();
+    return;
+  }
   try { localStorage.removeItem('surveyos_intentional_logout'); } catch { /* ignore */ }
   await signInWithPopup(auth, googleProvider);
 }
 
 export async function signOutUser() {
+  if (isSandbox()) return;
   try {
     await signOut(auth);
   } catch (error: any) {

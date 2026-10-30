@@ -13,6 +13,7 @@ import { getUserPayments } from '@/lib/firebase/payments';
 import { UPI_ID } from '@/lib/subscription/plans';
 import type { PaymentRecord } from '@/types/payment';
 
+import { isSandbox } from '@/lib/sandbox';
 const SANDBOX_MODE = process.env.NEXT_PUBLIC_SANDBOX_MODE === 'true';
 
 function ExpiryWarningBanner({ daysLeft, label }: { daysLeft: number; label: string }) {
@@ -177,7 +178,7 @@ export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
     }
   }, [isAuthenticated, isAdminUser, effectiveState, onAccessRequest, router]);
 
-  if (SANDBOX_MODE || pathname?.startsWith('/landing') || onAccessRequest) return <>{children}</>;
+  if (SANDBOX_MODE || isSandbox() || pathname?.startsWith('/landing') || onAccessRequest) return <>{children}</>;
 
   if (!isAuthenticated || isAdminUser) return <>{children}</>;
 

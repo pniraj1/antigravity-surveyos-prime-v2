@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useUIStore } from '@/stores/ui-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { useClaimsLoader } from '@/hooks/useClaimsLoader';
+import { isSandbox } from '@/lib/sandbox';
 import LandingPage from './landing/page';
 import Dashboard from '@/components/layout/Dashboard';
 import { DriveGateScreen } from '@/components/auth/DriveGateScreen';
@@ -52,6 +53,11 @@ export default function Home() {
 
   // Hydrate claims list and sync across tabs
   useClaimsLoader();
+
+  // ── Sandbox Mode: bypass all auth, drive, and subscription gates directly to Dashboard ──
+  if (isSandbox()) {
+    return <Dashboard />;
+  }
 
   // ── 1. Auth loading: show neutral splash — never flash DriveGateScreen ──
   if (loading) {

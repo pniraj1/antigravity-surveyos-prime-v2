@@ -11,6 +11,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { signInWithGoogle } from '@/lib/firebase/auth';
+import { isSandbox, initSandboxSession } from '@/lib/sandbox';
 import { useAuthStore } from '@/stores/auth-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { logger } from '@/lib/utils/logger';
@@ -263,6 +264,11 @@ export default function LandingPage() {
   // redirect effect above takes over (or SubscriptionGuard sends a pending
   // profile to /access-request).
   const handleSignIn = () => {
+    if (isSandbox()) {
+      void initSandboxSession();
+      router.push('/');
+      return;
+    }
     if (isAuthenticated) { router.push('/'); return; }
     signInWithGoogle().catch((err: { code?: string }) => {
       // Previously fire-and-forget: a rejected popup vanished silently and the
