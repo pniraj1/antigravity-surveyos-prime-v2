@@ -1,44 +1,32 @@
 import { describe, it, expect } from 'vitest';
 import { getDocPrompt } from '../prompts';
 
-describe('Estimate and Final Bill Prompt Overhaul', () => {
-  it('estimate prompt includes footer-first tax posture reconciliation', () => {
+describe('Estimate and Final Bill Prompt Structure', () => {
+  it('estimate prompt includes all essential extraction rules', () => {
     const prompt = getDocPrompt('estimate');
-    expect(prompt).toContain('RECONCILE THE SUMMARY FIRST');
-    expect(prompt).not.toContain('put it in "total_amount" and set "taxable_amount" to total_amount / (1 + gst_percent/100)');
+    expect(prompt).toContain('Extract EVERY SINGLE line item from ALL pages');
+    expect(prompt).toContain('spare_parts');
+    expect(prompt).toContain('labour_items');
+    expect(prompt).toContain('painting_items');
   });
 
-  it('estimate prompt includes all assessment table fields and categories', () => {
+  it('estimate prompt includes essential line item fields', () => {
     const prompt = getDocPrompt('estimate');
     expect(prompt).toContain('part_number');
     expect(prompt).toContain('hsn_sac');
-    expect(prompt).toContain('quantity');
-    expect(prompt).toContain('unit_price');
     expect(prompt).toContain('taxable_amount');
     expect(prompt).toContain('gst_percent');
     expect(prompt).toContain('total_amount');
     expect(prompt).toContain('category');
-    expect(prompt).toContain('rubber');
-    expect(prompt).toContain('fiberglass');
   });
 
-  it('estimate prompt includes _audit feedback envelope in JSON schema', () => {
-    const prompt = getDocPrompt('estimate');
-    expect(prompt).toContain('_audit');
-    expect(prompt).toContain('tax_posture');
-    expect(prompt).toContain('columns_detected');
-    expect(prompt).toContain('reconciliation_note');
-    expect(prompt).toContain('warnings');
-  });
-
-  it('final-bill prompt includes footer deduction and _audit schema', () => {
+  it('final-bill prompt includes essential extraction fields', () => {
     const prompt = getDocPrompt('final-bill');
-    expect(prompt).toContain('RECONCILE THE SUMMARY FIRST');
-    expect(prompt).not.toContain('put it in "total_amount" and set "taxable_amount" to total_amount / (1 + gst_percent/100)');
-    expect(prompt).toContain('_audit');
+    expect(prompt).toContain('Extract EVERY SINGLE line item from ALL pages');
+    expect(prompt).toContain('spare_parts');
+    expect(prompt).toContain('labour_items');
+    expect(prompt).toContain('painting_items');
     expect(prompt).toContain('part_number');
     expect(prompt).toContain('hsn_sac');
-    expect(prompt).toContain('rubber');
-    expect(prompt).toContain('fiberglass');
   });
 });

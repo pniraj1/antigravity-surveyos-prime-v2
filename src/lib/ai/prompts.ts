@@ -123,58 +123,40 @@ Return ONLY a JSON object:
 }
 Return ONLY the JSON. No explanation, no markdown, no backticks.`,
 
-  estimate: `You are an expert at reading Indian vehicle repair estimates, proforma invoices, and workshop bills (e.g. Tata DTC, Maruti MGA, Hyundai, Mahindra, commercial body builders, etc.).
+  estimate: `You are an expert at reading Indian vehicle repair estimates, proforma invoices, and workshop bills (e.g. Tata DTC, Maruti MGA, Hyundai etc.).
 
 CRITICAL RULES:
-1. RECONCILE THE SUMMARY FIRST (Inspect the footer / summary box on the last page before extracting line items):
-   - Locate Subtotal (Parts/Labour/Material), CGST, SGST/UTGST, IGST, and Grand Total.
-   - Determine the TAX POSTURE of line items:
-     * If Subtotal + Total Taxes ≈ Grand Total → Line amounts are TAXABLE (exclusive of GST, tax is extra). Do NOT divide by 1.18! Set "taxable_amount" = printed amount, and compute "total_amount" = taxable_amount × (1 + gst_percent/100).
-     * If Line Amount = Rate × (1 + GST%) or Subtotal equals Grand Total → Line amounts are GROSS (inclusive of GST). Set "total_amount" = printed amount, and compute "taxable_amount" = total_amount / (1 + gst_percent/100).
-   - TERMINOLOGY WARNING: In Indian workshop software, "Net Bill Amount" or "Net Amount" at the summary footer almost always means the FINAL PAYABLE GRAND TOTAL (inclusive of GST), NOT the pre-tax base. The pre-tax base is usually labelled "Sub Total Amount" or "Basic".
-2. Extract EVERY SINGLE line item from ALL pages. Do NOT stop at page 1. This document may have 50-80+ items across 3-5 pages.
-3. PRESERVE the original serial number (Sr No / S.No / #) from the document as "sr_no". If not numbered, assign 1, 2, 3... in the order items appear.
-4. Classify each item into one of three categories based on these rules:
-   - spare_parts: Physical parts (HSN code starting with 87xx, 85xx, 27xx, 35xx, 40xx etc.). These have part_number columns.
-   - labour_items: Labour/service charges (SAC code starting with 9987). Descriptions contain words like "REPLACE", "R & R", "REMOVE", "FITMENT CHARGES", "DIAGNOSIS", "CUTTING", "WELDING", "GAS CHARGES", "OVERHAULING". Do NOT put these in spare_parts.
+1. Extract EVERY SINGLE line item from ALL pages. Do NOT stop at page 1. This document may have 50-80+ items across 3-5 pages.
+2. PRESERVE the original serial number (Sr No / S.No / #) from the document as "sr_no". If not numbered, assign 1, 2, 3... in the order items appear.
+3. Classify each item into one of three categories based on these rules:
+   - spare_parts: Physical parts (HSN code starting with 87xx, 85xx, 27xx, 35xx etc.). These have part_number columns.
+   - labour_items: Labour/service charges (SAC code starting with 9987). Descriptions contain words like "REPLACE", "R & R", "REMOVE", "FITMENT CHARGES", "DIAGNOSIS", "CUTTING", "WELDING", "GAS CHARGES". Do NOT put these in spare_parts.
    - painting_items: Painting jobs (SAC 9987). Descriptions contain "PAINTING", "SOLID COLOUR", "METALLIC COLOUR", "TOUCH UP". Do NOT put these in labour_items.
-5. AMOUNTS & DETAILS — extract for every line:
-   - "quantity": Number of units (default 1).
-   - "unit_price": Unit rate before GST (or unit rate printed on row).
-   - "taxable_amount": TAXABLE BASE VALUE before GST (Qty × Unit Price).
-   - "cgst_amount": CGST amount for this line (if printed, else compute taxable_amount × cgst_rate/100).
-   - "sgst_amount": SGST amount for this line (if printed, else compute taxable_amount × sgst_rate/100).
-   - "total_amount": Final gross amount including GST.
-   - "gst_percent": TOTAL GST rate for this line (CGST% + SGST% + IGST%). Example: CGST 9% + SGST 9% = 18, not 9. Default 18 if not specified.
-   - "part_number": OEM or dealer part code (e.g. "6102CAA00050N", "80105294").
-   - "hsn_sac": 4-8 digit HSN or SAC code per line (e.g. "87082900", "9987").
-6. For "category" on spare_parts: classify as "metal", "plastic", "glass", "rubber", or "fiberglass" based on the part name:
+4. AMOUNTS — extract BOTH per line item (these are separate columns on the invoice):
+   - "taxable_amount": the TAXABLE VALUE / BASE AMOUNT before GST (Qty × Unit Price column). This is the NET amount.
+   - "cgst_amount": CGST amount for this line (printed on invoice).
+   - "sgst_amount": SGST amount for this line (printed on invoice).
+   - "total_amount": the FINAL AMOUNT including GST (last column). This is the GROSS amount.
+   - "gst_percent": TOTAL GST rate for this line — add ALL components: CGST rate + SGST rate + IGST rate. Example: CGST 9% + SGST 9% = 18, not 9. Never write just one component's rate.
+   If only one amount column exists, put it in "total_amount" and set "taxable_amount" to total_amount / (1 + gst_percent/100).
+5. For "category" on spare_parts: classify as "metal", "plastic", or "glass" based on the part name:
    - glass: windshield, window, mirror glass
    - plastic: bumper, cladding, grille, garnish, cap, air duct, skid plate, fender liner
-   - rubber: mud flap, wiper blade, hoses, seals, weatherstrips, beadings, bush, mountings, dampers
-   - fiberglass: specialized cabin shells, roof caps, cowls
-   - metal: everything else (brackets, radiator, intercooler, hinges, cross member, structural parts, panels, chassis, engine/transmission parts, headlamp assy)
-7. Look at the LAST PAGE for summary totals:
+   - metal: everything else (brackets, radiator, intercooler, hinges, cross member, structural parts, headlamp assy, fan assy, airbag, sensor, seat belt)
+6. Look at the LAST PAGE for summary totals. Extract them as:
    - "subtotal_parts_taxable": Sum of parts taxable amounts (before GST)
    - "subtotal_labour_taxable": Sum of labour taxable amounts (before GST)
    - "subtotal_painting_taxable": Sum of painting taxable amounts (before GST)
    - "total_cgst": Total CGST from the invoice
    - "total_sgst": Total SGST from the invoice
-   - "total_tax": Total tax (CGST + SGST + IGST)
+   - "total_tax": Total tax (CGST + SGST)
    - "gross_amount": Final grand total (all items + all tax)
-8. Multi-Column Sections: If an estimate prints separate columns like "Part Amount without tax" and "Labour Charges without tax" side-by-side on the same row:
-   - Put non-zero Part Amounts in spare_parts.
-   - Put non-zero Labour Charges in labour_items.
-9. DO NOT DUPLICATE ITEMS: If an item has only ONE price, place it in ONLY ONE category. Do not extract subtotal or carry-forward rows ("Total", "Sub Total", "Total c/f", "Carried Forward", "Grand Total") as line items.
+7. Extract the HSN/SAC code for each line item as "hsn_sac". It is typically a 4-8 digit code in a column.
+8. DO NOT DUPLICATE ITEMS: If an item has only ONE price, place it in ONLY ONE category (spare_parts OR labour_items OR painting_items). ONLY split a line item if it explicitly has TWO separate price columns (e.g. a Part Price column AND a Labour Price column). If you DO split it, you MUST append " (Part)" and " (Labour)" to their descriptions respectively.
+9. Do NOT extract subtotal or carry-forward rows ("Total", "Sub Total", "Total c/f", "Carried Forward", "Brought Forward / b/f", "Grand Total") as line items — those are totals, not items.
 
 Return ONLY a JSON object:
 {
-  "_audit": {
-    "tax_posture": "exclusive OR inclusive",
-    "columns_detected": ["List of detected column headers"],
-    "reconciliation_note": "Brief explanation of how row amounts reconcile to footer totals",
-    "warnings": []
-  },
   "workshop_name": "",
   "workshop_address": "",
   "vehicle_number": "",
@@ -183,13 +165,13 @@ Return ONLY a JSON object:
   "estimate_date": "",
   "bill_number": "",
   "spare_parts": [
-    { "sr_no": 1, "description": "", "part_number": "", "hsn_sac": "", "quantity": 1, "unit_price": 0, "taxable_amount": 0, "cgst_amount": 0, "sgst_amount": 0, "total_amount": 0, "gst_percent": 18, "category": "metal or plastic or glass or rubber or fiberglass" }
+    { "sr_no": 1, "description": "", "part_number": "", "hsn_sac": "", "quantity": 1, "unit_price": 0, "taxable_amount": 0, "cgst_amount": 0, "sgst_amount": 0, "total_amount": 0, "gst_percent": 18, "category": "metal or plastic or glass" }
   ],
   "labour_items": [
-    { "sr_no": 1, "description": "", "part_number": "", "hsn_sac": "", "quantity": 1, "unit_price": 0, "taxable_amount": 0, "cgst_amount": 0, "sgst_amount": 0, "total_amount": 0, "gst_percent": 18 }
+    { "sr_no": 1, "description": "", "hsn_sac": "", "quantity": 1, "unit_price": 0, "taxable_amount": 0, "cgst_amount": 0, "sgst_amount": 0, "total_amount": 0, "gst_percent": 18 }
   ],
   "painting_items": [
-    { "sr_no": 1, "description": "", "part_number": "", "hsn_sac": "", "quantity": 1, "unit_price": 0, "taxable_amount": 0, "cgst_amount": 0, "sgst_amount": 0, "total_amount": 0, "gst_percent": 18 }
+    { "sr_no": 1, "description": "", "hsn_sac": "", "quantity": 1, "unit_price": 0, "taxable_amount": 0, "cgst_amount": 0, "sgst_amount": 0, "total_amount": 0, "gst_percent": 18 }
   ],
   "subtotal_parts_taxable": 0,
   "subtotal_labour_taxable": 0,
@@ -201,47 +183,35 @@ Return ONLY a JSON object:
 }
 Return ONLY the JSON. No explanation, no markdown, no backticks.`,
 
-  'final-bill': `You are an expert at reading Indian FINAL WORKSHOP BILLS (Tax Invoices). Extract ALL final billed line items from ALL pages.
+  'final-bill': `You are an expert at reading Indian FINAL WORKSHOP BILLS (Invoices/Tax Invoices). Extract ALL final billed line items from ALL pages.
 
 CRITICAL RULES:
-1. RECONCILE THE SUMMARY FIRST (Inspect the footer / summary box on the last page before extracting line items):
-   - Locate Subtotal (Parts/Labour/Material), CGST, SGST/UTGST, IGST, and Grand Total.
-   - Determine the TAX POSTURE of line items:
-     * If Subtotal + Total Taxes ≈ Grand Total → Line amounts are TAXABLE (exclusive of GST, tax is extra). Do NOT divide by 1.18! Set "taxable_amount" = printed amount, and compute "total_amount" = taxable_amount × (1 + gst_percent/100).
-     * If Line Amount = Rate × (1 + GST%) or Subtotal equals Grand Total → Line amounts are GROSS (inclusive of GST). Set "total_amount" = printed amount, and compute "taxable_amount" = total_amount / (1 + gst_percent/100).
-   - TERMINOLOGY WARNING: In Indian workshop software, "Net Bill Amount" or "Net Amount" at the summary footer almost always means the FINAL PAYABLE GRAND TOTAL (inclusive of GST), NOT the pre-tax base.
-2. Extract EVERY SINGLE line item from ALL pages. Do NOT stop early. Multi-page bills may have 50-80+ items.
-3. PRESERVE the original serial number (Sr No / S.No / #) from the bill as "sr_no". If not numbered, assign 1, 2, 3... in order of appearance.
-4. Classify items:
-   - spare_parts: Physical parts (HSN 87xx, 85xx, 27xx, 35xx, 40xx etc.). Have part_number columns.
-   - labour_items: Labour/service (SAC 9987) — "REPLACE", "R & R", "REMOVE", "FITMENT CHARGES", "DIAGNOSIS", "CUTTING", "WELDING", "GAS CHARGES", "OVERHAULING".
+1. Extract EVERY SINGLE line item from ALL pages. Do NOT stop early. Multi-page bills may have 50-80+ items.
+2. PRESERVE the original serial number (Sr No / S.No / #) from the bill as "sr_no". If not numbered, assign 1, 2, 3... in order of appearance.
+3. Classify items:
+   - spare_parts: Physical parts (HSN 87xx, 85xx, 27xx, 35xx etc.). Have part_number columns.
+   - labour_items: Labour/service (SAC 9987) — "REPLACE", "R & R", "REMOVE", "FITMENT CHARGES", "DIAGNOSIS", "CUTTING", "WELDING", "GAS CHARGES".
    - painting_items: Paint jobs (SAC 9987) — "PAINTING", "SOLID COLOUR", "METALLIC COLOUR", "TOUCH UP".
-5. AMOUNTS & DETAILS — extract for every line:
-   - "quantity": Number of units (default 1).
-   - "unit_price": Unit rate before GST.
-   - "taxable_amount": TAXABLE VALUE / BASE AMOUNT before GST (Qty × Unit Price).
+4. AMOUNTS — extract BOTH per line (separate columns on the invoice):
+   - "taxable_amount": TAXABLE VALUE / BASE AMOUNT before GST (Qty × Unit Price). This is the NET amount and is the PRIMARY anchor for matching against the estimate.
    - "cgst_amount": CGST for this line (if printed).
    - "sgst_amount": SGST for this line (if printed).
    - "total_amount": FINAL amount INCLUDING GST (last column, gross).
-   - "gst_percent": TOTAL GST rate for this line (CGST% + SGST% + IGST%).
-   - "part_number": extract for spare_parts ALWAYS. Also extract for labour/paint if printed.
-   - "hsn_sac": 4-8 digit HSN/SAC code per line.
-6. For "category" on spare_parts: classify as "metal", "plastic", "glass", "rubber", or "fiberglass".
-7. DO NOT DUPLICATE ITEMS: If an item has only ONE price, place it in ONLY ONE category. Do not extract subtotal or carry-forward rows.
+   - "gst_percent": TOTAL GST rate for this line — add ALL components: CGST rate + SGST rate + IGST rate. Example: CGST 9% + SGST 9% = 18, not 9. Never write just one component's rate.
+   If only one amount column exists, put it in "total_amount" and set "taxable_amount" to total_amount / (1 + gst_percent/100).
+5. "part_number": extract for spare_parts ALWAYS. Also extract for labour/paint if the bill prints a code/SAC-ref in a part-number column (some workshops do this).
+6. "hsn_sac": 4-8 digit HSN/SAC code per line.
+7. "category" on spare_parts: glass (windshield/window/mirror glass), plastic (bumper/grille/cladding/garnish/cap/air duct/skid plate/fender liner), metal (everything else).
+8. DO NOT DUPLICATE ITEMS: If an item has only ONE price, place it in ONLY ONE category (spare_parts OR labour_items OR painting_items). ONLY split a line item if it explicitly has TWO separate price columns (e.g. a Part Price column AND a Labour Price column). If you DO split it, you MUST append " (Part)" and " (Labour)" to their descriptions respectively.
+9. Do NOT extract subtotal or carry-forward rows ("Total", "Sub Total", "Total c/f", "Carried Forward", "Brought Forward / b/f", "Grand Total") as line items — those are totals, not items.
 
 Return ONLY a JSON object:
 {
-  "_audit": {
-    "tax_posture": "exclusive OR inclusive",
-    "columns_detected": ["List of detected column headers"],
-    "reconciliation_note": "Brief explanation of how row amounts reconcile to footer totals",
-    "warnings": []
-  },
   "workshop_name": "",
   "bill_number": "",
   "bill_date": "",
   "spare_parts": [
-    { "sr_no": 1, "description": "", "part_number": "", "hsn_sac": "", "quantity": 1, "unit_price": 0, "taxable_amount": 0, "cgst_amount": 0, "sgst_amount": 0, "total_amount": 0, "gst_percent": 18, "category": "metal or plastic or glass or rubber or fiberglass" }
+    { "sr_no": 1, "description": "", "part_number": "", "hsn_sac": "", "quantity": 1, "unit_price": 0, "taxable_amount": 0, "cgst_amount": 0, "sgst_amount": 0, "total_amount": 0, "gst_percent": 18, "category": "metal or plastic or glass" }
   ],
   "labour_items": [
     { "sr_no": 1, "description": "", "part_number": "", "hsn_sac": "", "quantity": 1, "unit_price": 0, "taxable_amount": 0, "cgst_amount": 0, "sgst_amount": 0, "total_amount": 0, "gst_percent": 18 }
