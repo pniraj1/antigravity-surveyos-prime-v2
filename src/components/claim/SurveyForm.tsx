@@ -24,6 +24,7 @@ export function SurveyForm({ claim: propClaim }: { claim?: import('@/types').Cla
 
   // Unified Date & Time of Survey: combines spotDetails.surveyDatetime and accident.dateOfSurvey/timeOfSurvey
   const rawDateTime = claim.spotDetails?.surveyDatetime ||
+    claim.valuationDetails?.inspectionDate ||
     (a?.dateOfSurvey ? (a?.timeOfSurvey ? `${a.dateOfSurvey}T${a.timeOfSurvey}` : `${a.dateOfSurvey}T00:00`) : '');
   const surveyDateTimeValue = rawDateTime.length === 10 ? `${rawDateTime}T00:00` : rawDateTime;
 
@@ -31,40 +32,43 @@ export function SurveyForm({ claim: propClaim }: { claim?: import('@/types').Cla
     if (!val) {
       updateAccident({ dateOfSurvey: '', timeOfSurvey: '' });
       updateSpotDetails({ surveyDatetime: '' });
+      updateValuationDetails({ inspectionDate: '' });
       return;
     }
     const [d, t] = val.split('T');
     const timeVal = t && t !== '00:00' ? t : (t || '');
     updateAccident({ dateOfSurvey: d || '', timeOfSurvey: timeVal });
     updateSpotDetails({ surveyDatetime: val });
+    updateValuationDetails({ inspectionDate: val });
   };
 
-  const dates = type === 'valuation' ? undefined : (
+  const dateLabel = type === 'valuation' ? 'Date & Time of Inspection' : 'Date & Time of Survey';
+  const placeLabel = type === 'valuation' ? 'Place of Inspection' : 'Place of Survey (Workshop Name)';
+
+  const dates = (
     <div className="space-y-1">
-      <Label htmlFor="a-sdate">Date & Time of Survey</Label>
+      <Label htmlFor="a-sdate">{dateLabel}</Label>
       <Input
         id="a-sdate"
         type="datetime-local"
         value={surveyDateTimeValue}
         onChange={(e) => handleSurveyDateTimeChange(e.target.value)}
-        className={req(a?.dateOfSurvey || claim.spotDetails?.surveyDatetime)}
+        className={req(a?.dateOfSurvey || claim.spotDetails?.surveyDatetime || claim.valuationDetails?.inspectionDate)}
       />
     </div>
   );
 
   return (
     <DocSection title={type === 'valuation' ? 'Inspection' : 'Survey & Workshop'} dates={dates}>
-      {type !== 'valuation' && (
-        <div className="space-y-1 col-span-full">
-          <Label htmlFor="a-splace">Place of Survey (Workshop Name)</Label>
-          <Input
-            id="a-splace"
-            value={a?.placeOfSurvey || ''}
-            onChange={(e) => updateAccident({ placeOfSurvey: e.target.value })}
-            className={req(a?.placeOfSurvey)}
-          />
-        </div>
-      )}
+      <div className="space-y-1 col-span-full">
+        <Label htmlFor="a-splace">{placeLabel}</Label>
+        <Input
+          id="a-splace"
+          value={a?.placeOfSurvey || claim.valuationDetails?.inspectionPlace || ''}
+          onChange={(e) => updateAccident({ placeOfSurvey: e.target.value })}
+          className={req(a?.placeOfSurvey || claim.valuationDetails?.inspectionPlace)}
+        />
+      </div>
 
       {type === 'final' && (
         <>

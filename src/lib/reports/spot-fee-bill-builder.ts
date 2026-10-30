@@ -26,10 +26,11 @@ export function buildSpotFeeBillHTML(
   profile: SurveyorProfile,
 ): string {
   const fb       = claim.feeBill  || ({} as any);
-  const vehicle  = claim.vehicle;
-  const policy   = claim.policy;
-  const accident = claim.accident;
-  const spot     = claim.spotDetails;
+  const vehicle  = claim.vehicle  || ({} as any);
+  const policy   = claim.policy   || ({} as any);
+  const accident = claim.accident || ({} as any);
+  const spot     = claim.spotDetails || ({} as any);
+  const val      = claim.valuationDetails || ({} as any);
 
   // ── Charge calculations ──────────────────────────────────────────────────
   const profFee   = parseFloat(String(fb.professionalFee  || 0)) || 0;
@@ -60,8 +61,8 @@ export function buildSpotFeeBillHTML(
   const doaDisplay  = formatDateDMY(accident.dateAndTime || spot.surveyDatetime || '');
   const surveyDate  = accident.dateOfSurvey
     ? formatSurveyDateTime(accident.dateOfSurvey, accident.timeOfSurvey)
-    : formatDateDMY(spot.surveyDatetime || '');
-  const surveyPlace = accident.placeOfSurvey || spot.repairWorkshop || '—';
+    : formatDateDMY(spot.surveyDatetime || val.inspectionDate || '');
+  const surveyPlace = accident.placeOfSurvey || spot.repairWorkshop || val.inspectionPlace || '—';
   const reportNo    = claim.surveyType === 'spot'
     ? (spot.reportNo || claim.reportNo || '—')
     : (claim.reportNo || '—');

@@ -52,6 +52,10 @@ export function ValuationTab() {
   const vd = currentClaim.valuationDetails;
   const rows: ValuationConditionRow[] = vd.panelRows ?? [];
 
+  const rawInspectionDate = vd.inspectionDate || currentClaim.spotDetails?.surveyDatetime ||
+    (currentClaim.accident?.dateOfSurvey ? (currentClaim.accident?.timeOfSurvey ? `${currentClaim.accident.dateOfSurvey}T${currentClaim.accident.timeOfSurvey}` : `${currentClaim.accident.dateOfSurvey}T00:00`) : '');
+  const inspectionDateValue = rawInspectionDate.length === 10 ? `${rawInspectionDate}T00:00` : rawInspectionDate;
+
   const handle = (updates: Partial<typeof vd>) => updateValuationDetails(updates);
 
   function addRows(components: string[]) {
@@ -125,10 +129,10 @@ export function ValuationTab() {
         </CardHeader>
         <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-3 gap-6">
           <div className="space-y-1.5">
-            <Label className="text-[10px] font-black uppercase text-muted-foreground/70 tracking-tighter">Date of Inspection</Label>
+            <Label className="text-[10px] font-black uppercase text-muted-foreground/70 tracking-tighter">Date &amp; Time of Inspection</Label>
             <Input
-              type="date"
-              value={vd.inspectionDate}
+              type="datetime-local"
+              value={inspectionDateValue}
               onChange={(e) => handle({ inspectionDate: e.target.value })}
               className="h-10 font-bold border-primary/10"
             />
@@ -136,7 +140,7 @@ export function ValuationTab() {
           <div className="space-y-1.5">
             <Label className="text-[10px] font-black uppercase text-muted-foreground/70 tracking-tighter">Place of Inspection</Label>
             <Input
-              value={vd.inspectionPlace}
+              value={vd.inspectionPlace || currentClaim.accident?.placeOfSurvey || ''}
               onChange={(e) => handle({ inspectionPlace: e.target.value })}
               placeholder="e.g. Chandannagar, Pune"
               className="h-10 font-bold border-primary/10"

@@ -24,9 +24,14 @@ function g(v: string | number | null | undefined): string {
 }
 
 export function buildValuationReportHTML(claim: ClaimData, profile: SurveyorProfile | null): string {
-  const v = claim.vehicle;
-  const p = claim.policy;
-  const vd = claim.valuationDetails;
+  const v = claim.vehicle || ({} as any);
+  const p = claim.policy || ({} as any);
+  const vd = claim.valuationDetails || ({} as any);
+
+  const inspectionDate = vd.inspectionDate || claim.accident?.dateOfSurvey || claim.spotDetails?.surveyDatetime || claim.reportDate;
+  const inspectionPlace = vd.inspectionPlace || claim.accident?.placeOfSurvey || claim.accident?.workshopName || claim.spotDetails?.repairWorkshop || 'the workshop';
+  const odometer = vd.odometer || claim.vehicle?.odometer || '';
+  const enclosuresValue = vd.enclosures || claim.spotDetails?.enclosures || '';
 
   const B = 'border:0.5pt solid #000;';
   const td = B + 'padding:3px 6px;vertical-align:top;font-size:8pt;';
@@ -58,8 +63,8 @@ export function buildValuationReportHTML(claim: ClaimData, profile: SurveyorProf
 
   // ── Part rows (bodyshell, headlamps, axles…) — part of Condition of Vehicle ──
   const partRowsHTML = (vd.panelRows ?? [])
-    .filter(row => row.component.trim())
-    .map(row => condRow(row.component, row.condition))
+    .filter((row: any) => row.component.trim())
+    .map((row: any) => condRow(row.component, row.condition))
     .join('');
 
   // ── Conclusion paragraph ─────────────────────────────────────────────────
@@ -75,8 +80,8 @@ export function buildValuationReportHTML(claim: ClaimData, profile: SurveyorProf
     ? `<p style="font-size:8pt;margin:6px 0 0;">WE HAVE VERIFIED XEROX COPIES OF SET OF DOCUMENTS AND FOUND THEM TO BE IN ORDER${vd.documentVerificationNote ? ' EXCEPT FOR THE ' + vd.documentVerificationNote.toUpperCase() : ''}.</p>`
     : '';
 
-  const enclosures = vd.enclosures
-    ? `<p style="font-size:8pt;margin:6px 0 0;"><strong>Enclosures:</strong> ${vd.enclosures}</p>`
+  const enclosures = enclosuresValue
+    ? `<p style="font-size:8pt;margin:6px 0 0;"><strong>Enclosures:</strong> ${enclosuresValue}</p>`
     : '';
 
   const remarksBlock = vd.remarks
@@ -106,7 +111,7 @@ ${getSurveyorHeader(profile)}
       ${vd.toAddress?.trim() || g(p.policyIssuingOffice)}
     </td>
     <td style="text-align:right;font-size:8pt;">
-      <strong>Date:</strong> ${fd(vd.inspectionDate) !== '—' ? fd(vd.inspectionDate) : fd(claim.reportDate)}<br/>
+      <strong>Date:</strong> ${fd(inspectionDate)}<br/>
       ${claim.reportNo ? `<strong>Ref No.:</strong> ${claim.reportNo}` : ''}
     </td>
   </tr>
@@ -120,7 +125,7 @@ ${getSurveyorHeader(profile)}
   RESPECTED SIR / MADAM,<br/><br/>
   WE HAVE UNDERTAKEN THIS INSPECTION SINCE THERE WAS BREAKIN IN THE INSURANCE PERIOD.
   AS PER YOUR INSTRUCTION, WE HAVE INSPECTED THE BELOW MENTIONED VEHICLE AT
-  ${g(vd.inspectionPlace).toUpperCase()} AND FOUND IT TO BE IN GOOD RUNNING ORDER.
+  ${g(inspectionPlace).toUpperCase()} AND FOUND IT TO BE IN GOOD RUNNING ORDER.
 </p>
 
 <!-- Vehicle Details -->
@@ -131,7 +136,7 @@ ${getSurveyorHeader(profile)}
   ${detailRow('Make / Model', `${g(v.make)} / ${g(v.model)}`, 'Fuel Type', g(v.fuel))}
   ${detailRow('Seating Capacity', g(v.seatingCapacity), 'Class of Vehicle', g(v.classOfVehicle))}
   ${detailRow('Type of Body', g(v.bodyType), 'Unladen Weight', v.unladenWeight ? g(v.unladenWeight) + ' kg' : '—')}
-  ${detailRow('Registered Laden Weight', v.registeredLoadWeight ? g(v.registeredLoadWeight) + ' kg' : '—', 'Kilometerage', g(vd.odometer || v.odometer))}
+  ${detailRow('Registered Laden Weight', v.registeredLoadWeight ? g(v.registeredLoadWeight) + ' kg' : '—', 'Kilometerage', g(odometer))}
   ${p.insuredName ? detailRow('Insured Name', g(p.insuredName), 'Policy Number', g(p.policyNumber)) : ''}
 </table>
 
@@ -169,3 +174,5 @@ ${getSigBlock(profile)}
 </body>
 </html>`;
 }
+
+export const buildValuationHTML = buildValuationReportHTML;
