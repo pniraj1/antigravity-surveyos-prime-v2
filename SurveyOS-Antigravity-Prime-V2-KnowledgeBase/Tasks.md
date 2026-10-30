@@ -5,6 +5,17 @@
 
 ---
 
+## Scan Fee Bill Notes & Unified Inspection Date/Time (Built 2026-10-30 on main)
+- [x] Implemented store-level bi-directional sync in Prime (`src/stores/slices/claimSlice.ts`, `src/stores/slices/vehicleSlice.ts`) for Survey/Inspection Date & Time (`dateOfSurvey`/`timeOfSurvey` ↔ `surveyDatetime` ↔ `inspectionDate`), Place (`placeOfSurvey` ↔ `inspectionPlace`), Odometer (`odometer`), Enclosures (`enclosures`), Allotment Date (`dateOfAllotment` ↔ `allotmentDate`), and Report Date (`dateOfReport` ↔ `reportDate`) (commits `83753194`, `5a9dd9f0`).
+- [x] Upgraded Valuation Tab in Prime to `type="datetime-local"` labeled "Date & Time of Inspection"; added robust cross-fallbacks across Valuation Report builder (`valuation-report-builder.ts`) and Spot Fee Bill builder (`spot-fee-bill-builder.ts`) (commits `d9a44f29`, `d7f6c5a6`, `068f6a67`, `af743391`).
+- [x] Updated Handover Contract (`SurveyOS Scan/docs/handover/prime-notes-import.md`) and Prime Scan Import Engine (`src/lib/scan-import/notes.ts`) with allow-list for 16 `feeBill.*` paths, boolean/number parsing, and survey datetime/place backfills into Spot, Final, and Valuation claim state (commits `7931736b`, `a3b454bf`, Scan `0c4bf85`).
+- [x] Upgraded Scan Valuation inspection date to `NoteControl.DATE_TIME`; implemented `SHARED_SYNC_MAP` cross-section draft sync in Room SQLite (`NotesViewModel.kt`) for date/time, place, odometer, and enclosures (commits Scan `13e72204`, `9aeff5b`).
+- [x] Defined 16 Fee Bill fields across 6 sections (`BILL`, `FEES`, `TRAVEL`, `PHOTOS`, `EXPENSES`, `TAX`) in Scan (`FeeBillFields.kt`); implemented sticky rate preferences (`ratePerKm: "10"`, `photoRate: "15"`, `includeGST: "yes"`) via SharedPreferences (`FeeRatesStore.kt`); exported `Fee Bill Notes.txt` and `notes.feeBill` snapshot in `_surveyos-scan.json` (commit Scan `ff3227ce`).
+- [x] Added 3-way chips (`Spot`, `Valuation`, `Fee Bill`) with horizontal scroll in Scan; built `FeeBillNotes.kt` screen with live calculation cards (`TravelLiveCard`, `PhotosLiveCard`, `TaxLiveCard`), photo count suggestion chip, and guarded sticky rate persistence (commits Scan `e9660f5`, `b55b0b9`).
+- [x] All unit tests passing in both repositories: Prime Vitest (227 files, 1,998 tests) and Scan Gradle (`:app:testDebugUnitTest`, 337 tests); `npx tsc --noEmit` clean (0 errors); 100% contract coupling verified.
+
+---
+
 ## Unify Goods Description, HPA/Financier, and Valuation Odometer (Built 2026-10-30 on main)
 - [x] Implemented store-level bi-directional sync in `src/stores/slices/claimSlice.ts` and `src/stores/slices/vehicleSlice.ts` between `spotDetails.loadDesc` and `vehicle.natureOfGoods`/`vehicle.detailsOfGoodsCarried`, between `policy.hpaWith` and `vehicle.hypothecation`/`vehicle.rcEndorsement`, and between `vehicle.odometer` and `valuationDetails.odometer` (commit `9ffa4788`).
 - [x] Consolidated "Nature of Goods" and "Description of Goods" in `src/components/claim/AtAccidentForm.tsx` into a single authoritative "Nature / Description of Goods" input; wired fallback displays and dual-store updates across `PolicyForm.tsx`, `VehicleForm.tsx`, `SurveyForm.tsx`, and `ValuationTab.tsx` (commit `960ff541`).

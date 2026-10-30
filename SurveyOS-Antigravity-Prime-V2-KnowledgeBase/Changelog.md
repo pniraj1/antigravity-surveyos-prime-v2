@@ -2,6 +2,35 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-10-30 (Antigravity) — Scan Fee Bill Notes & Unified Inspection Date/Time
+- feat(store): **Store-Level Bi-Directional Sync for Shared Inspection Metadata** (`src/stores/slices/claimSlice.ts`, `src/stores/slices/vehicleSlice.ts`).
+  - Added two-way state synchronization between `accident.dateOfSurvey` & `accident.timeOfSurvey`, `spotDetails.surveyDatetime`, and `valuationDetails.inspectionDate`.
+  - Added two-way state synchronization between `accident.placeOfSurvey`, `spotDetails.placeOfSurvey`, and `valuationDetails.inspectionPlace`.
+  - Added two-way state synchronization between `accident.dateOfAllotment` and `valuationDetails.allotmentDate`, and `accident.dateOfReport` and `valuationDetails.reportDate`.
+  - Added two-way state synchronization between `spotDetails.enclosures` and `valuationDetails.enclosures`.
+  - Added unit test suite in `src/stores/slices/__tests__/inspection-fields-unification.test.ts` (22 tests).
+- feat(ui): **Valuation Tab Datetime Upgrade & Report Fallbacks** (`src/components/tabs/ValuationTab.tsx`, `src/components/claim/SurveyForm.tsx`, `src/lib/reports/valuation-report-builder.ts`, `src/lib/reports/spot-fee-bill-builder.ts`).
+  - Upgraded Valuation Inspection Date input to `type="datetime-local"` labeled "Date & Time of Inspection".
+  - Wired robust cross-fallbacks for inspection date, place, odometer, and enclosures in Valuation Report builder and Spot Fee Bill builder.
+  - Added unit test suite in `src/lib/reports/__tests__/valuation-report-fallbacks.test.ts` (4 tests).
+- feat(scan-import): **Handover Contract & Fee Bill Notes Import** (`SurveyOS Scan/docs/handover/prime-notes-import.md`, `src/lib/scan-import/notes.ts`).
+  - Added specification for 16 `feeBill.*` fields and `Fee Bill Notes.txt` format.
+  - Allow-listed 16 `feeBill.*` paths, added boolean/number parsing, and auto-backfilled survey datetime/place across Spot, Final, and Valuation claim state.
+  - Added unit tests in `src/lib/scan-import/__tests__/notes.test.ts` (16 tests).
+- feat(scan-android): **SurveyOS Scan: Valuation Datetime & Cross-Section Draft Sync** (`ValuationFields.kt`, `ValuationExport.kt`, `NotesViewModel.kt`, `ValuationNotes.kt`).
+  - Upgraded Valuation inspection date control to `NoteControl.DATE_TIME` ("Date & Time of Inspection").
+  - Implemented `SHARED_SYNC_MAP` cross-section draft sync in Room SQLite for date/time, place, odometer, and enclosures.
+  - Added unit tests in `ValuationFieldsTest.kt` and `ValuationExportTest.kt`.
+- feat(scan-android): **SurveyOS Scan: Fee Bill Fields, Sticky Rates, and Export** (`FeeBillFields.kt`, `FeeRatesStore.kt`, `FeeBillExport.kt`, `NotesExport.kt`, `ValuationExport.kt`, `Exporter.kt`, `SafExport.kt`, `Repository.kt`).
+  - Defined 16 fee billing fields across 6 sections (`BILL`, `FEES`, `TRAVEL`, `PHOTOS`, `EXPENSES`, `TAX`) plus calculation helpers.
+  - Implemented sticky rate preferences (`ratePerKm: "10"`, `photoRate: "15"`, `includeGST: "yes"`) via SharedPreferences.
+  - Exported `Fee Bill Notes.txt` and `notes.feeBill` snapshot in `_surveyos-scan.json`.
+  - Added unit tests in `FeeBillFieldsTest.kt`, `FeeBillExportTest.kt`, and `NotesExportTest.kt`.
+- feat(scan-android): **SurveyOS Scan: Fee Bill Notes UI & Live Calculations** (`FeeBillNotes.kt`, `NoteFields.kt`, `NotesTab.kt`, `ClaimScreen.kt`).
+  - Added 3-way chips (`Spot`, `Valuation`, `Fee Bill`) with horizontal scrolling.
+  - Built `FeeBillNotes.kt` screen with live calculation cards (`TravelLiveCard`, `PhotosLiveCard`, `TaxLiveCard`), photo count suggestion chip, and guarded sticky rate persistence.
+- tests: Full test suites passing in both projects: Prime Vitest (227 files, 1,998 tests) and Scan Gradle (`:app:testDebugUnitTest`, 337 tests); `npx tsc --noEmit` clean (0 errors); 100% coupling verified.
+
 ## 2026-10-30 (Antigravity) — Unify Goods Nature/Description, HPA/Financier, and Valuation Odometer
 - feat(store): **Bi-Directional Store Sync for Goods, HPA, and Odometer** (`src/stores/slices/claimSlice.ts`, `src/stores/slices/vehicleSlice.ts`).
   - Added two-way state synchronization between `spotDetails.loadDesc` and `vehicle.natureOfGoods` / `vehicle.detailsOfGoodsCarried`.
