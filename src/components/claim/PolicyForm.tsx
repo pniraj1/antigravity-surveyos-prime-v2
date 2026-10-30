@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import { DocSection, EvidenceDot, req, selectCls } from '@/components/claim/form-bits';
 
 export function PolicyDetailsForm({ scan }: { scan?: React.ReactNode }) {
-  const { currentClaim, updatePolicy } = useClaimStore();
+  const { currentClaim, updatePolicy, updateVehicle } = useClaimStore();
   const { triggerField, hasEvidence } = useFieldEvidence();
 
   if (!currentClaim) return null;
@@ -98,8 +98,11 @@ export function PolicyDetailsForm({ scan }: { scan?: React.ReactNode }) {
         <Label htmlFor="p-hpa">Hypothecation (HPA)<EvidenceDot has={hasEvidence('hpaWith')} /></Label>
         <Input
           id="p-hpa"
-          value={p?.hpaWith || ''}
-          onChange={(e) => updatePolicy({ hpaWith: e.target.value })}
+          value={p?.hpaWith || currentClaim.vehicle?.hypothecation || currentClaim.vehicle?.rcEndorsement || ''}
+          onChange={(e) => {
+            updatePolicy({ hpaWith: e.target.value });
+            updateVehicle({ hypothecation: e.target.value.toUpperCase(), rcEndorsement: e.target.value.toUpperCase() });
+          }}
           onFocus={() => triggerField('hpaWith')}
           placeholder="Financier name, or NIL"
         />

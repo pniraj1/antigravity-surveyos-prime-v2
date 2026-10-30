@@ -12,7 +12,7 @@ import { DocSection, EvidenceDot, req, selectCls } from '@/components/claim/form
  * AtAccidentForm. All of them are still stored on `vehicle`.
  */
 export function VehicleDetailsForm({ scan }: { scan?: React.ReactNode }) {
-  const { currentClaim, updateVehicle } = useClaimStore();
+  const { currentClaim, updateVehicle, updatePolicy } = useClaimStore();
   const { triggerField, hasEvidence } = useFieldEvidence();
 
   if (!currentClaim) return null;
@@ -225,8 +225,12 @@ export function VehicleDetailsForm({ scan }: { scan?: React.ReactNode }) {
         <Label htmlFor="v-hpa">Hypothecation (H.P.A.)<EvidenceDot has={hasEvidence('hypothecation')} /></Label>
         <Input
           id="v-hpa"
-          value={v?.hypothecation || ''}
-          onChange={(e) => updateVehicle({ hypothecation: e.target.value.toUpperCase() })}
+          value={v?.hypothecation || currentClaim.policy?.hpaWith || ''}
+          onChange={(e) => {
+            const val = e.target.value.toUpperCase();
+            updateVehicle({ hypothecation: val, rcEndorsement: val });
+            updatePolicy({ hpaWith: val });
+          }}
           onFocus={() => triggerField('hypothecation')}
           placeholder="Financier name, or NIL"
           className="uppercase"
@@ -237,8 +241,13 @@ export function VehicleDetailsForm({ scan }: { scan?: React.ReactNode }) {
         <Label htmlFor="v-rc-end">RC Endorsement (Financier)<EvidenceDot has={hasEvidence('rcEndorsement')} /></Label>
         <Input
           id="v-rc-end"
-          value={v?.rcEndorsement || ''}
-          onChange={(e) => updateVehicle({ rcEndorsement: e.target.value.toUpperCase() })}
+          value={v?.rcEndorsement || v?.hypothecation || currentClaim.policy?.hpaWith || ''}
+          onChange={(e) => {
+            const val = e.target.value.toUpperCase();
+            updateVehicle({ rcEndorsement: val });
+            if (!v?.hypothecation) updateVehicle({ hypothecation: val });
+            if (!currentClaim.policy?.hpaWith) updatePolicy({ hpaWith: val });
+          }}
           onFocus={() => triggerField('rcEndorsement')}
           placeholder="e.g. NO"
           className="uppercase"

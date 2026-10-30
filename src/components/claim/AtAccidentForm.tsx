@@ -113,23 +113,15 @@ export function AtAccidentForm() {
             )}
           </div>
 
-          {currentClaim.surveyType !== 'spot' && (
-            <div className="space-y-1">
-              <Label htmlFor="v-goods-nature">Nature of Goods</Label>
-              <Input
-                id="v-goods-nature"
-                value={v?.natureOfGoods || ''}
-                onChange={(e) => updateVehicle({ natureOfGoods: e.target.value.toUpperCase() })}
-              />
-            </div>
-          )}
-
           <div className="space-y-1 col-span-full">
-            <Label htmlFor="c-goods">Description of Goods</Label>
+            <Label htmlFor="c-goods">Nature / Description of Goods</Label>
             <Input
               id="c-goods"
-              value={sd.loadDesc || ''}
-              onChange={(e) => updateSpotDetails({ loadDesc: e.target.value })}
+              value={sd.loadDesc || v?.natureOfGoods || v?.detailsOfGoodsCarried || ''}
+              onChange={(e) => {
+                updateSpotDetails({ loadDesc: e.target.value });
+                updateVehicle({ natureOfGoods: e.target.value.toUpperCase(), detailsOfGoodsCarried: e.target.value });
+              }}
               placeholder="Type of goods being carried"
             />
           </div>

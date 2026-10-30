@@ -13,7 +13,7 @@ import { DocSection, EvidenceDot, req } from '@/components/claim/form-bits';
  * `accident` (dateOfSurvey/timeOfSurvey) and `spotDetails.surveyDatetime`.
  */
 export function SurveyForm({ claim: propClaim }: { claim?: import('@/types').ClaimData } = {}) {
-  const { currentClaim, updateAccident, updateVehicle, updateSpotDetails } = useClaimStore();
+  const { currentClaim, updateAccident, updateVehicle, updateSpotDetails, updateValuationDetails } = useClaimStore();
   const { triggerField, hasEvidence } = useFieldEvidence();
 
   const claim = propClaim ?? currentClaim;
@@ -116,8 +116,11 @@ export function SurveyForm({ claim: propClaim }: { claim?: import('@/types').Cla
         <Label htmlFor="v-odo">Odometer<EvidenceDot has={hasEvidence('odometer')} /></Label>
         <Input
           id="v-odo"
-          value={v?.odometer || ''}
-          onChange={(e) => updateVehicle({ odometer: e.target.value })}
+          value={v?.odometer || claim.valuationDetails?.odometer || ''}
+          onChange={(e) => {
+            updateVehicle({ odometer: e.target.value });
+            updateValuationDetails({ odometer: e.target.value });
+          }}
           onFocus={() => triggerField('odometer')}
         />
       </div>

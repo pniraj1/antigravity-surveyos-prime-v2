@@ -45,7 +45,7 @@ function CondInput({ value, onChange }: { value: string; onChange: (v: string) =
 }
 
 export function ValuationTab() {
-  const { currentClaim, updateValuationDetails } = useClaimStore();
+  const { currentClaim, updateValuationDetails, updateVehicle } = useClaimStore();
 
   if (!currentClaim) return null;
 
@@ -145,8 +145,11 @@ export function ValuationTab() {
           <div className="space-y-1.5">
             <Label className="text-[10px] font-black uppercase text-muted-foreground/70 tracking-tighter">Odometer Reading (km)</Label>
             <Input
-              value={vd.odometer}
-              onChange={(e) => handle({ odometer: e.target.value })}
+              value={vd.odometer || currentClaim.vehicle?.odometer || ''}
+              onChange={(e) => {
+                handle({ odometer: e.target.value });
+                updateVehicle({ odometer: e.target.value });
+              }}
               placeholder="e.g. 42987"
               className="h-10 font-bold border-primary/10"
             />
