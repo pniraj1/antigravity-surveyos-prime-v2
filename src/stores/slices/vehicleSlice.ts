@@ -11,6 +11,8 @@ export const createVehicleSlice: StateCreator<any, any, any, VehicleSlice> = (se
       if (!state.currentClaim) return { currentClaim: null };
       const updatedVehicle = { ...state.currentClaim.vehicle, ...updates };
       let updatedSpotDetails = { ...state.currentClaim.spotDetails };
+      let updatedPolicy = { ...state.currentClaim.policy };
+      let updatedValuationDetails = { ...state.currentClaim.valuationDetails };
       let recomputeCapacity = false;
 
       // When registeredLoadWeight or grossWeight is in updates: parse numeric value.
@@ -62,6 +64,34 @@ export const createVehicleSlice: StateCreator<any, any, any, VehicleSlice> = (se
         updatedVehicle.goodsWeightAtAccident = ap ?? '';
       }
 
+      if ('natureOfGoods' in updates) {
+        const val = updates.natureOfGoods ?? '';
+        updatedSpotDetails.loadDesc = val;
+        updatedVehicle.detailsOfGoodsCarried = val;
+      }
+
+      if ('detailsOfGoodsCarried' in updates) {
+        const val = updates.detailsOfGoodsCarried ?? '';
+        updatedSpotDetails.loadDesc = val;
+        updatedVehicle.natureOfGoods = val;
+      }
+
+      if ('hypothecation' in updates) {
+        const val = updates.hypothecation ?? '';
+        updatedPolicy.hpaWith = val;
+        updatedVehicle.rcEndorsement = val;
+      }
+
+      if ('rcEndorsement' in updates) {
+        const val = updates.rcEndorsement ?? '';
+        updatedPolicy.hpaWith = val;
+        updatedVehicle.hypothecation = val;
+      }
+
+      if ('odometer' in updates) {
+        updatedValuationDetails.odometer = updates.odometer ?? '';
+      }
+
       if (recomputeCapacity) {
         const g = updatedSpotDetails.gvw || 0;
         const u = updatedSpotDetails.ulw || 0;
@@ -73,6 +103,8 @@ export const createVehicleSlice: StateCreator<any, any, any, VehicleSlice> = (se
           ...state.currentClaim,
           vehicle: updatedVehicle,
           spotDetails: updatedSpotDetails,
+          policy: updatedPolicy,
+          valuationDetails: updatedValuationDetails,
           updatedAt: new Date().toISOString(),
         },
         isDirty: true,

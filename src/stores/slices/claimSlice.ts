@@ -159,16 +159,24 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
   },
 
   updatePolicy: (updates) => {
-    set((state: ClaimSlice) => ({
-      currentClaim: state.currentClaim
-        ? {
-            ...state.currentClaim,
-            policy: { ...state.currentClaim.policy, ...updates },
-            updatedAt: new Date().toISOString(),
-          }
-        : null,
-      isDirty: true,
-    }));
+    set((state: ClaimSlice) => {
+      if (!state.currentClaim) return { currentClaim: null };
+      const updatedVehicle = { ...state.currentClaim.vehicle };
+      if ('hpaWith' in updates) {
+        const hpa = updates.hpaWith ?? '';
+        updatedVehicle.hypothecation = hpa;
+        updatedVehicle.rcEndorsement = hpa;
+      }
+      return {
+        currentClaim: {
+          ...state.currentClaim,
+          policy: { ...state.currentClaim.policy, ...updates },
+          vehicle: updatedVehicle,
+          updatedAt: new Date().toISOString(),
+        },
+        isDirty: true,
+      };
+    });
   },
 
   updateAccident: (updates) => {
@@ -222,6 +230,12 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
         updatedVehicle.actualPayload = loadStr;
       }
 
+      if ('loadDesc' in updates) {
+        const loadDesc = updates.loadDesc ?? '';
+        updatedVehicle.natureOfGoods = loadDesc;
+        updatedVehicle.detailsOfGoodsCarried = loadDesc;
+      }
+
       if ('gvw' in updates || 'ulw' in updates) {
         const g = updatedSpotDetails.gvw || 0;
         const u = updatedSpotDetails.ulw || 0;
@@ -241,16 +255,22 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
   },
 
   updateValuationDetails: (updates) => {
-    set((state: ClaimSlice) => ({
-      currentClaim: state.currentClaim
-        ? {
-            ...state.currentClaim,
-            valuationDetails: { ...state.currentClaim.valuationDetails, ...updates },
-            updatedAt: new Date().toISOString(),
-          }
-        : null,
-      isDirty: true,
-    }));
+    set((state: ClaimSlice) => {
+      if (!state.currentClaim) return { currentClaim: null };
+      const updatedVehicle = { ...state.currentClaim.vehicle };
+      if ('odometer' in updates) {
+        updatedVehicle.odometer = updates.odometer ?? '';
+      }
+      return {
+        currentClaim: {
+          ...state.currentClaim,
+          valuationDetails: { ...state.currentClaim.valuationDetails, ...updates },
+          vehicle: updatedVehicle,
+          updatedAt: new Date().toISOString(),
+        },
+        isDirty: true,
+      };
+    });
   },
 
   setDepreciationType: (depType) => {
