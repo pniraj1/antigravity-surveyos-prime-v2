@@ -54,7 +54,9 @@ export function ValuationTab() {
 
   const rawInspectionDate = vd.inspectionDate || currentClaim.spotDetails?.surveyDatetime ||
     (currentClaim.accident?.dateOfSurvey ? (currentClaim.accident?.timeOfSurvey ? `${currentClaim.accident.dateOfSurvey}T${currentClaim.accident.timeOfSurvey}` : `${currentClaim.accident.dateOfSurvey}T00:00`) : '');
-  const inspectionDateValue = rawInspectionDate.length === 10 ? `${rawInspectionDate}T00:00` : rawInspectionDate;
+  const inspectionDateValue = rawInspectionDate
+    ? (rawInspectionDate.length === 10 ? `${rawInspectionDate}T00:00` : rawInspectionDate.slice(0, 16))
+    : '';
 
   const handle = (updates: Partial<typeof vd>) => updateValuationDetails(updates);
 
@@ -150,10 +152,7 @@ export function ValuationTab() {
             <Label className="text-[10px] font-black uppercase text-muted-foreground/70 tracking-tighter">Odometer Reading (km)</Label>
             <Input
               value={vd.odometer || currentClaim.vehicle?.odometer || ''}
-              onChange={(e) => {
-                handle({ odometer: e.target.value });
-                updateVehicle({ odometer: e.target.value });
-              }}
+              onChange={(e) => handle({ odometer: e.target.value })}
               placeholder="e.g. 42987"
               className="h-10 font-bold border-primary/10"
             />

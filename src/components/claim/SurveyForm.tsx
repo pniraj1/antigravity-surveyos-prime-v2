@@ -26,20 +26,18 @@ export function SurveyForm({ claim: propClaim }: { claim?: import('@/types').Cla
   const rawDateTime = claim.spotDetails?.surveyDatetime ||
     claim.valuationDetails?.inspectionDate ||
     (a?.dateOfSurvey ? (a?.timeOfSurvey ? `${a.dateOfSurvey}T${a.timeOfSurvey}` : `${a.dateOfSurvey}T00:00`) : '');
-  const surveyDateTimeValue = rawDateTime.length === 10 ? `${rawDateTime}T00:00` : rawDateTime;
+  const surveyDateTimeValue = rawDateTime
+    ? (rawDateTime.length === 10 ? `${rawDateTime}T00:00` : rawDateTime.slice(0, 16))
+    : '';
 
   const handleSurveyDateTimeChange = (val: string) => {
     if (!val) {
       updateAccident({ dateOfSurvey: '', timeOfSurvey: '' });
-      updateSpotDetails({ surveyDatetime: '' });
-      updateValuationDetails({ inspectionDate: '' });
       return;
     }
     const [d, t] = val.split('T');
     const timeVal = t && t !== '00:00' ? t : (t || '');
     updateAccident({ dateOfSurvey: d || '', timeOfSurvey: timeVal });
-    updateSpotDetails({ surveyDatetime: val });
-    updateValuationDetails({ inspectionDate: val });
   };
 
   const dateLabel = type === 'valuation' ? 'Date & Time of Inspection' : 'Date & Time of Survey';
