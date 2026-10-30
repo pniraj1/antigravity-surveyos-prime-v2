@@ -14,9 +14,11 @@
 - feat(ai): **In-Flight Auto-Split Fallback on JSON Parse Failures** (`src/lib/ai/processor.ts`).
   - When a multi-page chunk (2 pages) fails `JSON.parse` (due to dense 70+ item pages truncating JSON output tokens), `mergeResponse` auto-splits the chunk and calls each page individually.
   - Recovers dense pages without dropping items or requiring surveyor intervention.
-- ops(deploy): **Isolated Firebase Hosting Preview Channel Deploy** (`npx firebase hosting:channel:deploy sandbox`).
-  - Deployed exclusively to preview channel: `https://motorsurveyos-in--sandbox-izvlcn5z.web.app`.
-  - Live production site (`https://motorsurveyos-in.web.app`) remains 100% untouched. All 227 test files (1,999 tests) passing; `tsc --noEmit` clean.
+- ops(deploy): **Isolated Firebase Hosting Sandbox Deploy** (`firebase.json`, `npx firebase deploy --only hosting:surveyos-v2-antigravity-in`).
+  - Added multi-site hosting definition in `firebase.json` for secondary site `surveyos-v2-antigravity-in`.
+  - Deployed sandbox build to: `https://surveyos-v2-antigravity-in.web.app`.
+  - Solves the `Error 400: origin_mismatch` caused by dynamic preview channels: `surveyos-v2-antigravity-in.web.app` is pre-registered as an Authorized Domain and JavaScript Origin in Google Cloud Console OAuth 2.0.
+  - Live production site (`https://motorsurveyos-in.web.app`) remains 100% untouched.
 
 ## 2026-10-30 (Antigravity) — Revert Over-engineered Estimate/Bill Extraction Prompts
 - revert(ai): **Restored Battle-Tested Estimate & Final Bill Prompts** (`src/lib/ai/prompts.ts`, `src/lib/ai/__tests__/prompts-estimate.test.ts`).
