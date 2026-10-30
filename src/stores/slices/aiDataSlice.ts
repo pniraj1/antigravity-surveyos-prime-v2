@@ -5,7 +5,7 @@ import { buildDecision } from '@/lib/ai/reconciliation';
 import { parsePolicyAddOns, mergePolicyAiRead } from '@/lib/policy/policy-check';
 import { applyEstimateFix, type EstimateFixPlan, type EstimateFixPicks } from '@/lib/ai/estimate-fix';
 
-export type EstimateApplyMode = 'replace' | 'append' | 'continue';
+export type EstimateApplyMode = 'replace' | 'append' | 'continue' | 'another';
 
 export interface AIDataSlice {
   reconciliationConflictCount: number;
@@ -862,6 +862,9 @@ export function buildEstimateRows(
  *   'continue' — more pages of the same estimate. Drops nothing; new rows are
  *                tagged 'estimate' and numbered on from the highest estimate
  *                serial (1 if the sheet has no estimate rows).
+ *   'another'  — another independent estimate (e.g. Quote #2, Quote #3).
+ *                Drops nothing. Retains original serial numbers (1..N) as printed,
+ *                and tags rows with a distinct estimateId.
  */
 export function applyEstimate(
   claim: ClaimData,
@@ -886,10 +889,45 @@ export function applyEstimate(
   // items — dropping anything there would delete the original assessment,
   // which is exactly the bug this replaces. A continuation adds pages to the
   // same estimate, so it drops nothing either.
-  const kept =
-    mode === 'append' || mode === 'continue'
+  let kept =
+    mode === 'append' || mode === 'continue' || mode === 'another'
       ? claim.assessmentRows
       : claim.assessmentRows.filter((r) => r.source !== 'estimate');
+
+  if (mode === 'another') {
+    const existingIds = Array.from(
+      new Set(claim.assessmentRows.map((r) => r.estimateId).filter(Boolean))
+    ) as string[];
+    const nextNum = existingIds.length + 1;
+
+    // If existing rows were untagged, tag them so they can be viewed distinctly
+    if (existingIds.length === 0 && claim.assessmentRows.length > 0) {
+      const firstId = claim.accident?.placeOfSurvey
+        ? `${claim.accident.placeOfSurvey}-Quote 1`
+        : 'Estimate-1';
+      kept = kept.map((r) =>
+        r.source === 'estimate' && !r.estimateId ? { ...r, estimateId: firstId } : r
+      );
+      existingIds.push(firstId);
+    }
+
+    // Determine target estimateId for new rows
+    let targetId =
+      data.estimateId ||
+      (data.workshop_name || data.estimate_number
+        ? [data.workshop_name, data.estimate_number, data.estimate_date].filter(Boolean).join('-')
+        : undefined);
+
+    if (!targetId || existingIds.includes(targetId)) {
+      const baseName = data.workshop_name || claim.accident?.placeOfSurvey || 'Estimate';
+      targetId = `${baseName}-Quote ${nextNum}`;
+    }
+
+    newRows = newRows.map((r) => ({
+      ...r,
+      estimateId: targetId,
+    }));
+  }
 
   return {
     ...claim,

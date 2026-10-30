@@ -2,6 +2,22 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-10-30 (Antigravity) — Multi-Estimate Mode, Start Gap Detection & Auto-Split Fallback (Sandbox)
+- feat(assessment): **"Another Estimate (Estimate 2, 3...)" Mode** (`src/components/dialogs/EstimateModeDialog.tsx`, `src/stores/slices/aiDataSlice.ts`).
+  - Added 4th option in `EstimateModeDialog` when an existing assessment is on the sheet: "Another estimate (Estimate 2, 3...)".
+  - In `applyEstimate`: keeps all existing rows intact, preserves printed document serial numbers (`1..N`), and tags new rows with a distinct `estimateId` (e.g. `Quote 2`). Existing rows are tagged as `Quote 1` if previously untagged, enabling instant lens switching via `EstimateViewSwitcher`.
+  - Added unit test suite in `src/stores/slices/__tests__/aiDataSlice.test.ts`.
+- feat(ai): **Start-of-Document Gap Detection** (`src/lib/ai/row-check.ts`, `src/lib/ai/__tests__/row-check.test.ts`).
+  - Updated `gapsIn` to detect missing opening serials when the first extracted item starts at `sr > 1`.
+  - Missing serials `1..present[0].sr-1` are flagged and attributed to candidate pages `0..minPage`, triggering Smart Fix gap fill and surfacing to the surveyor.
+  - Added unit test in `src/lib/ai/__tests__/row-check.test.ts`.
+- feat(ai): **In-Flight Auto-Split Fallback on JSON Parse Failures** (`src/lib/ai/processor.ts`).
+  - When a multi-page chunk (2 pages) fails `JSON.parse` (due to dense 70+ item pages truncating JSON output tokens), `mergeResponse` auto-splits the chunk and calls each page individually.
+  - Recovers dense pages without dropping items or requiring surveyor intervention.
+- ops(deploy): **Isolated Firebase Hosting Preview Channel Deploy** (`npx firebase hosting:channel:deploy sandbox`).
+  - Deployed exclusively to preview channel: `https://motorsurveyos-in--sandbox-izvlcn5z.web.app`.
+  - Live production site (`https://motorsurveyos-in.web.app`) remains 100% untouched. All 227 test files (1,999 tests) passing; `tsc --noEmit` clean.
+
 ## 2026-10-30 (Antigravity) — Revert Over-engineered Estimate/Bill Extraction Prompts
 - revert(ai): **Restored Battle-Tested Estimate & Final Bill Prompts** (`src/lib/ai/prompts.ts`, `src/lib/ai/__tests__/prompts-estimate.test.ts`).
   - Reverted experimental footer-first deduction rule, top-level `_audit` envelope, and extra per-row fields that had caused token limit blowouts and unparseable truncated JSON on dense bills (e.g. Pawar quotation pages 1–2).

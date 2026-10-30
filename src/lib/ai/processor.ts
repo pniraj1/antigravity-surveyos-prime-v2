@@ -569,11 +569,37 @@ export async function extractDocument(
         // Parse one gateway reply and fold it into `result`; an unparseable page is
         // logged as an issue (multi-page) or thrown (single-page). Shared by the
         // normal path and the page-at-a-time 413 fallback below.
-        const mergeResponse = (rawResponse: string, first: number, last: number) => {
+        const mergeResponse = async (rawResponse: string, first: number, last: number, images?: string[]) => {
           try {
             const fragment = JSON.parse(rawResponse);
             result = mergeAIResults(result, tagFieldPages(tagRows(fragment, first - 1, last - 1), pageRefs[first - 1]));   // 1-based chunk → 0-based page tags
           } catch (err) {
+            // Auto-split fallback: if a multi-page chunk (first < last) fails JSON parse
+            // (often due to dense pages overflowing output token limits and truncating the JSON),
+            // re-read each page of this chunk individually.
+            if (first < last && images && images.length > 1) {
+              console.warn(
+                `[AI Extraction] ${key}: page chunk ${first}–${last} returned unparseable JSON ` +
+                `— auto-splitting into 1-page calls.`
+              );
+              for (let p = 0; p < images.length; p++) {
+                if (signal?.aborted) throw abortError();
+                const singlePageNum = first + p;
+                onProgress?.(`Re-reading page ${singlePageNum} of ${totalPages} individually...`);
+                try {
+                  const singleResp = await callAIGateway(chunkPrompt, [images[p]], 'json', job, session, signal);
+                  const singleFragment = JSON.parse(singleResp);
+                  result = mergeAIResults(
+                    result,
+                    tagFieldPages(tagRows(singleFragment, singlePageNum - 1, singlePageNum - 1), pageRefs[singlePageNum - 1])
+                  );
+                } catch (singleErr) {
+                  console.warn(`[AI Extraction] ${key}: single page ${singlePageNum} fallback failed:`, singleErr);
+                  issues.push(`Page ${singlePageNum} could not be read by the AI — line items from this page may be missing.`);
+                }
+              }
+              return;
+            }
             // For multi-page docs: one bad page should not abort the whole extraction.
             // Log the failure and continue accumulating results from other pages.
             console.warn(
@@ -645,7 +671,7 @@ export async function extractDocument(
               // One page left in this fallback call — plus every chunk after it.
               session.pagesTotal = (chunkImages.length - p) + Math.ceil((totalPages - currentBatchEnd) / CHUNK_SIZE);
               const r = await callAIGateway(enhancedPrompt, [chunkImages[p]], 'json', job, session, signal);
-              mergeResponse(r, currentBatchStart + p, currentBatchStart + p);
+              await mergeResponse(r, currentBatchStart + p, currentBatchStart + p, [chunkImages[p]]);
             }
             continue;
           } else if (isTooBig) {
@@ -668,7 +694,7 @@ export async function extractDocument(
           }
         }
 
-        mergeResponse(rawResponse, currentBatchStart, currentBatchEnd);
+        await mergeResponse(rawResponse, currentBatchStart, currentBatchEnd, chunkImages);
       }
 
       return { result, issues };

@@ -5,6 +5,16 @@
 
 ---
 
+## Multi-Estimate Mode & Auto-Split Fallback on Isolated Sandbox (Built 2026-10-30 on main)
+- [x] Added "Another Estimate (Estimate 2, 3...)" mode (`'another'`) to `EstimateModeDialog.tsx` and `aiDataSlice.ts` (`applyEstimate`). Keeps original printed serials (1..N) without renumbering, keeps all existing assessment rows, and assigns distinct `estimateId` (e.g. `Quote 2`) with automatic view switching via `EstimateViewSwitcher`.
+- [x] Implemented Start-of-Document Gap Detection in `src/lib/ai/row-check.ts` (`gapsIn`): flags serials `1..present[0].sr-1` when extracted rows start at `sr > 1`, ensuring early-page drops are immediately detected and targeted for re-read by Smart Fix.
+- [x] Implemented In-Flight Auto-Split in `src/lib/ai/processor.ts`: multi-page chunks (2 pages) that fail JSON parsing (e.g. dense 70+ item pages overflowing token caps) automatically split into 1-page-at-a-time calls on the fly, eliminating silent drops.
+- [x] Zero prompt changes: `src/lib/ai/prompts.ts` strictly untouched in battle-tested state.
+- [x] Isolated Sandbox Deployment: built and deployed exclusively to Firebase Hosting preview channel `sandbox` (`https://motorsurveyos-in--sandbox-izvlcn5z.web.app`). Live production (`https://motorsurveyos-in.web.app`) untouched.
+- [x] Full test suite passing (227 files, 1,999 tests); `npx tsc --noEmit` clean (0 errors); Next.js production build verified.
+
+---
+
 ## Scan Fee Bill Notes & Unified Inspection Date/Time (Built 2026-10-30 on main)
 - [x] Implemented store-level bi-directional sync in Prime (`src/stores/slices/claimSlice.ts`, `src/stores/slices/vehicleSlice.ts`) for Survey/Inspection Date & Time (`dateOfSurvey`/`timeOfSurvey` ↔ `surveyDatetime` ↔ `inspectionDate`), Place (`placeOfSurvey` ↔ `inspectionPlace`), Odometer (`odometer`), Enclosures (`enclosures`), Allotment Date (`dateOfAllotment` ↔ `allotmentDate`), and Report Date (`dateOfReport` ↔ `reportDate`) (commits `83753194`, `5a9dd9f0`).
 - [x] Upgraded Valuation Tab in Prime to `type="datetime-local"` labeled "Date & Time of Inspection"; added robust cross-fallbacks across Valuation Report builder (`valuation-report-builder.ts`) and Spot Fee Bill builder (`spot-fee-bill-builder.ts`) (commits `d9a44f29`, `d7f6c5a6`, `068f6a67`, `af743391`).

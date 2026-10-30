@@ -18,6 +18,18 @@ describe('rowCheck — one serial run (DTC)', () => {
     const c = rowCheck(dtc());
     expect(c).toEqual({ gaps: [], duplicates: [], serialsUsable: true, duplicatesDroppable: true });
   });
+  it('detects missing serials at the start of the document (sr > 1)', () => {
+    const d = {
+      spare_parts: [row(3, 100, 1), row(4, 100, 1)],
+      labour_items: [],
+      painting_items: [],
+      gross_amount: 200,
+    };
+    expect(rowCheck(d).gaps).toEqual([
+      { srNo: 1, pages: [0, 1] },
+      { srNo: 2, pages: [0, 1] },
+    ]);
+  });
   it('a missing serial is a gap pinned to its page when neighbours agree', () => {
     const d = dtc();
     d.spare_parts = d.spare_parts.filter(r => r.sr_no !== 38);          // 37 and 39 both on page 1

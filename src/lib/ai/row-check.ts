@@ -58,6 +58,16 @@ function gapsIn(list: Row[]): Gap[] {
   const present = list.map(r => ({ sr: serial(r), r })).filter((x): x is { sr: number; r: Row } => x.sr !== null)
     .sort((a, b) => a.sr - b.sr);
   const gaps: Gap[] = [];
+  if (present.length > 0 && present[0].sr > 1) {
+    const firstRowPages = pagesOf(present[0].r);
+    const minPage = firstRowPages.length > 0 ? Math.min(...firstRowPages) : 0;
+    const candidatePages = typeof present[0].r._page === 'number'
+      ? Array.from({ length: minPage + 1 }, (_, i) => i)
+      : firstRowPages;
+    for (let n = 1; n < present[0].sr; n++) {
+      gaps.push({ srNo: n, pages: candidatePages.length > 0 ? candidatePages : [0] });
+    }
+  }
   for (let i = 1; i < present.length; i++) {
     const a = present[i - 1], b = present[i];
     if (b.sr <= a.sr + 1) continue;

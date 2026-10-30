@@ -169,6 +169,41 @@ describe('applyEstimate', () => {
       expect(replaced.assessmentRows.filter((r) => r.source === 'estimate')).toHaveLength(2);
       expect(replaced.assessmentRows).toHaveLength(4);
     });
+
+    describe('mode === "another"', () => {
+      it('drops nothing, preserves original serial numbers (1..N), and assigns distinct estimateId', () => {
+        const claim = {
+          ...baseClaim,
+          assessmentRows: [
+            row(1, 'estimate'),
+            row(2, 'estimate'),
+          ],
+        } as ClaimData;
+
+        const secondQuote = {
+          workshop_name: 'Pawar Automobiles',
+          spare_parts: [
+            { sr_no: 1, description: 'Cabin Shell', taxable_amount: 50000 },
+            { sr_no: 2, description: 'Windshield Glass', taxable_amount: 8000 },
+          ],
+        };
+
+        const out = applyEstimate(claim, secondQuote, 'another');
+
+        expect(out.assessmentRows).toHaveLength(4);
+        // Original rows kept, serials 1, 2
+        expect(out.assessmentRows[0].srNo).toBe(1);
+        expect(out.assessmentRows[1].srNo).toBe(2);
+        // New rows kept as serials 1, 2 (NOT renumbered 3, 4)
+        expect(out.assessmentRows[2].srNo).toBe(1);
+        expect(out.assessmentRows[2].particulars).toBe('Cabin Shell');
+        expect(out.assessmentRows[3].srNo).toBe(2);
+        // Both sets have distinct estimateIds
+        expect(out.assessmentRows[0].estimateId).toBeDefined();
+        expect(out.assessmentRows[2].estimateId).toBeDefined();
+        expect(out.assessmentRows[0].estimateId).not.toEqual(out.assessmentRows[2].estimateId);
+      });
+    });
   });
 });
 

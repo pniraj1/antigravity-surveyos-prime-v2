@@ -91,13 +91,28 @@ export function EstimateModeDialog({
 
           {!isBill && (
             <button
-              onClick={() => onChoose('append')}
-              className="w-full flex items-start gap-3 p-3 rounded-xl text-left bg-primary text-primary-foreground transition-all hover:scale-[1.01]"
+              onClick={() => onChoose('another')}
+              className="w-full flex items-start gap-3 p-3 rounded-xl text-left bg-muted/70 hover:bg-muted text-foreground border border-border transition-all hover:scale-[1.01]"
             >
-              <FilePlus2 size={16} className="mt-0.5 flex-shrink-0" />
+              <Layers size={16} className="mt-0.5 flex-shrink-0 text-primary" />
+              <span>
+                <span className="block text-xs font-medium">Another estimate (Estimate 2, 3...)</span>
+                <span className="block text-[11px] text-muted-foreground mt-0.5">
+                  Multiple upfront quotes (e.g. cabin, mechanical). Retains original serials (1..N) and separate totals.
+                </span>
+              </span>
+            </button>
+          )}
+
+          {!isBill && (
+            <button
+              onClick={() => onChoose('append')}
+              className="w-full flex items-start gap-3 p-3 rounded-xl text-left bg-muted/70 hover:bg-muted text-foreground border border-border transition-all hover:scale-[1.01]"
+            >
+              <FilePlus2 size={16} className="mt-0.5 flex-shrink-0 text-primary" />
               <span>
                 <span className="block text-xs font-medium">A supplementary estimate</span>
-                <span className="block text-[11px] opacity-80 mt-0.5">
+                <span className="block text-[11px] text-muted-foreground mt-0.5">
                   Its items are added below the existing ones. Nothing is removed.
                 </span>
               </span>
