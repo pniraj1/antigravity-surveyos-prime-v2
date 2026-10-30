@@ -68,21 +68,20 @@
 - **Verify** without logging in: `grep -rl "<new UI text>" out/_next/static/chunks/`, then curl that chunk from the live site and grep the same text. "Deploy complete!" alone has lied before.
 - Deploy only when the owner asks. The public pre-sign-in redesign in `design/landing-v2/` must **never** be deployed without explicit approval.
 
-## 6. Status (2026-10-27)
+## 6. Status (2026-10-30)
 
-**Just shipped: surveyor feedback round 1.** Deployed and pushed; commits `469aaa51..88f1ccd1`.
-- Spec and plan: `docs/superpowers/{specs,plans}/2026-10-27-surveyor-feedback-round-1*`.
+**Just shipped: Claim & Spot Field Unification (Weights, Load, Goods Description, HPA, Odometer).** Deployed to https://motorsurveyos-in.web.app and pushed to `origin/main`.
+- Spec and plan: `docs/superpowers/{specs,plans}/2026-10-30-unify-goods-hpa-odometer-workflow*`
+- Session logs: `Sessions/2026-10-29-unify-gvw-ulw-accident-load.md` and `Sessions/2026-10-30-unify-goods-hpa-odometer.md`
 - What it includes:
-  - the "Fix estimate reading" dialog (re-read + tick-to-apply, never deletes);
-  - Site tab retired;
-  - Dashboard Survey Date + Last Edited;
-  - the policy check (Nil Dep / IMT 23 / consumables / excess), where AI suggests only and final + bill-check print is blocked until it is answered;
-  - estimate and bill "continuation" uploads;
-  - Recovered list shows the vehicle no.;
-  - Add row below each section;
-  - Word export keeps UIIC page breaks;
-  - the UIIC "Before printing" repair dates.
-- **Next:** the owner is checking all nine in the app. The checklist is in the session log; fix whatever he reports.
+  - **Option A (Weights & Load):** Bi-directional store sync between `vehicle.registeredLoadWeight`/`grossWeight`/`unladenWeight` and `spotDetails.gvw`/`spotDetails.ulw`/`spotDetails.loadCapacity` (`gvw - ulw`); consolidated duplicate accident load in `AtAccidentForm.tsx` into a single authoritative "Load at Accident (KG)" input; synchronized AI document extraction and report builders.
+  - **Option B (Goods, HPA & Odometer):** Bi-directional store sync between `spotDetails.loadDesc` and `vehicle.natureOfGoods`/`vehicle.detailsOfGoodsCarried`; bi-directional sync between `policy.hpaWith` and `vehicle.hypothecation`/`vehicle.rcEndorsement`; bi-directional sync between `vehicle.odometer` and `valuationDetails.odometer`; single unified "Nature / Description of Goods" input in `AtAccidentForm.tsx`; AI extraction dual-field update; cross-builder fallbacks in all reports.
+  - **Surveyor Rulings:** Kept Place of Survey (`accident.placeOfSurvey`) and Workshop Name (`accident.workshopName`) separate and distinct.
+  - **Scan Coupling:** Zero drift in `src/lib/scan-import/notes.ts`.
+- **Live verification:** Static chunk curl on `https://motorsurveyos-in.web.app` verified live content string `"Nature / Description of Goods"`. All 226 Vitest test suites (1,987 tests) passed; `npx tsc --noEmit` clean.
+
+**Earlier Shipped (2026-10-29):** Scan fee bill notes import + Survey Date & Time normalization.
+**Earlier Shipped (2026-10-27):** Surveyor feedback round 1 (Fix estimate reading dialog, Site tab retired, Dashboard Survey Date + Last Edited, policy check card, estimate/bill continuation uploads, Recovered list vehicle no., Add row below, Word export UIIC page breaks, UIIC repair dates).
 
 **Other workstreams:**
 - **SurveyOS Scan** (Android, private GitHub repo `pniraj1/surveyos-scan`, on `main`). Never commit `local.properties`, `keystore.properties`, `*.jks` or real AdMob ids; all are git-ignored or read from those files.
