@@ -114,11 +114,15 @@ function pickCell(texts: string[]): string | undefined {
   return rev.find(t => parseMoney(t) !== 0) ?? rev[0];
 }
 
-/** Amounts are right-aligned under their header, so a wide one starts left of its column: match by right edge (3pt slack). Text uses the centre. */
+const RIGHT_EDGE_SLACK = 3;   // pt
+const AMOUNT_FIELDS: ReadonlySet<Field | null> = new Set<Field | null>(['quantity', 'unit_price', 'taxable_amount', 'total_amount', 'gst_percent', null]);
+
+/** Text goes by centre. Amounts are right-aligned under their header, so a wide one starts left of its column: a number whose centre falls in an amount (or unmapped) column is matched by right edge instead; numeric words in description/part/HSN columns stay put. */
 function columnOf(t: PdfToken, cols: Column[]): Column | undefined {
-  if (parseMoney(t.s) !== null) return cols.find(c => c.right >= t.x + t.w - 3) ?? cols[cols.length - 1];
   const m = t.x + t.w / 2;
-  return cols.find(c => m >= c.start && m < c.end);
+  const byCentre = cols.find(c => m >= c.start && m < c.end);
+  if (parseMoney(t.s) === null || (byCentre && !AMOUNT_FIELDS.has(byCentre.field))) return byCentre;
+  return cols.find(c => c.right >= t.x + t.w - RIGHT_EDGE_SLACK) ?? cols[cols.length - 1];
 }
 
 function rowCells(band: PdfToken[], anchor: PdfToken, cols: Column[]): Partial<Record<Field, string>> {

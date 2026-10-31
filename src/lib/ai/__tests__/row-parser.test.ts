@@ -100,4 +100,15 @@ describe('readRows', () => {
     expect(row.cells.total_amount).toBe('1,18,000.00');
     expect(row.cells.unit_price).toBeUndefined();
   });
+
+  it('keeps numeric words inside text columns', () => {
+    const page = [
+      ...line(700, [[10, 'Srl'], [100, 'Description'], [260, 'Qty.'], [300, 'Rate']]),
+      ...line(680, [[10, '1'], [100, 'TYRE'], [160, '185'], [185, '65'], [210, 'R15'], [275, '2'], [295, '99.00']]),
+    ];
+    const [row] = rowsOf(readRows([page]));
+    expect(row.cells.description).toBe('TYRE 185 65 R15');
+    expect(row.cells.quantity).toBe('2');
+    expect(row.cells.unit_price).toBe('99.00');
+  });
 });
