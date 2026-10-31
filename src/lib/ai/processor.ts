@@ -4,13 +4,15 @@
 // ═══════════════════════════════════════════════════════════
 
 // import * as pdfjsLib from 'pdfjs-dist'; // DO NOT STACTIC IMPORT THIS
-import { callAIGateway, getActiveImageCap, newSession, AllProvidersBusyError, OfflineError } from './service';
+import { callAIGateway, getActiveImageCap, getAITestOverride, newSession, AllProvidersBusyError, OfflineError } from './service';
 import { resolveVisionChunkSize } from './image-cap';
 import { getDocPrompt } from './prompts';
 import { jobForDocType } from './jobs';
 import { toast } from 'sonner';
 import { rowCheck, tagRows, dropDuplicates, toFindings, type Finding } from './row-check';
 import { fillGaps } from './gap-fill';
+import { mergeAIResults } from './merge-results';
+import { chunkSizeFor, isRaw, apiImageScale } from './bench-override';
 import { takeDrop } from './fault';
 import { getAIPages, resolveAIPages } from './ai-pages';
 
@@ -316,52 +318,8 @@ class AITaskQueue {
   }
 }
 
-const aiQueue = new AITaskQueue();
 
-/**
- * Helper to deep merge AI JSON fragments from multi-page extractions.
- * Concatenates arrays and fills in empty/new fields.
- */
-// Fields that represent document-level financial totals.
-// For these we keep the LARGEST non-zero value seen across all page chunks
-// (a page that has no summary row returns 0, which should never overwrite
-// a real total found on a later page).
-const TOTAL_FIELDS = new Set([
-  'total_amount', 'gross_amount', 'net_amount', 'payable_amount',
-  'subtotal_parts_taxable', 'subtotal_labour_taxable', 'subtotal_painting_taxable',
-  'gst_amount', 'discount_amount', 'tds_amount',
-]);
 
-function mergeAIResults(acc: any, fragment: any): any {
-  if (!acc) return fragment;
-  const result = { ...acc };
-
-  for (const key in fragment) {
-    const newVal = fragment[key];
-    const oldVal = result[key];
-
-    if (Array.isArray(newVal)) {
-      // Concatenate list items (e.g. spare_parts, labour_items)
-      result[key] = [...(Array.isArray(oldVal) ? oldVal : []), ...newVal];
-    } else if (typeof newVal === 'object' && newVal !== null) {
-      // Recursive merge for sub-objects
-      result[key] = mergeAIResults(oldVal || {}, newVal);
-    } else if (TOTAL_FIELDS.has(key)) {
-      // Financial totals: keep the largest non-zero value across all pages.
-      // This prevents a page-1 zero from permanently hiding the real total
-      // found on a later summary page.
-      const oldNum = Number(oldVal) || 0;
-      const newNum = Number(newVal) || 0;
-      result[key] = Math.max(oldNum, newNum) || oldVal;
-    } else {
-      // Simple values: prefer existing if already set, otherwise take new
-      if (oldVal === undefined || oldVal === null || oldVal === '') {
-        result[key] = newVal;
-      }
-    }
-  }
-  return result;
-}
 
 /**
  * High-level orchestrator for document extraction.
@@ -445,7 +403,7 @@ export async function extractDocument(
       ? profilePages(textLayers)
       : { pages: [], docMode: 'vision' as DocMode };
 
-    const docMode = forceDocMode ?? detectedMode;
+    const docMode = forceDocMode ?? getAITestOverride()?.method ?? detectedMode;
 
     const useTextMode = docMode === 'text';
     if (useTextMode) {
@@ -458,7 +416,7 @@ export async function extractDocument(
     // In vision-mode: estimates prefer 2 pages per call for efficiency; others get 1.
     // The preference is then clamped to the active provider's image cap — NVIDIA
     // accepts exactly 1, and exceeding it 400s the whole request.
-    const PREFERRED_VISION_CHUNK = (key === 'estimate' || key === 'final-bill') ? 2 : 1;
+    const PREFERRED_VISION_CHUNK = chunkSizeFor((key === 'estimate' || key === 'final-bill') ? 2 : 1, getAITestOverride());
     const VISION_CHUNK_SIZE = resolveVisionChunkSize(PREFERRED_VISION_CHUNK, getActiveImageCap(job));
     const CHUNK_SIZE = useTextMode ? 1 : VISION_CHUNK_SIZE;
 
@@ -577,7 +535,7 @@ export async function extractDocument(
             // Auto-split fallback: if a multi-page chunk (first < last) fails JSON parse
             // (often due to dense pages overflowing output token limits and truncating the JSON),
             // re-read each page of this chunk individually.
-            if (first < last && images && images.length > 1) {
+            if (first < last && images && images.length > 1 && !isRaw(getAITestOverride())) {
               console.warn(
                 `[AI Extraction] ${key}: page chunk ${first}–${last} returned unparseable JSON ` +
                 `— auto-splitting into 1-page calls.`
@@ -717,7 +675,7 @@ export async function extractDocument(
       }
 
       let check = rowCheck(finalResult, pageTexts);
-      if (check.duplicates.length) {
+      if (check.duplicates.length && !isRaw(getAITestOverride())) {
         if (check.duplicatesDroppable) {
           console.info('[Smart Fix] dropped duplicate serials', check.duplicates);
           finalResult = dropDuplicates(finalResult);
@@ -727,7 +685,7 @@ export async function extractDocument(
         }
       }
 
-      if (check.gaps.length) {
+      if (check.gaps.length && !isRaw(getAITestOverride())) {
         console.info('[Smart Fix] serial gaps after first pass:', check.gaps);
         try {
           finalResult = await fillGaps({
@@ -746,7 +704,7 @@ export async function extractDocument(
       // ponytail: the second opinion re-runs the WHOLE document on the next
       // model. Only when the gross is off and no serial gap can be blamed —
       // an unserialled row is gone and no page can be pinned.
-      if (check.grossMismatch && check.gaps.length === 0 && session.lastGood) {
+      if (check.grossMismatch && check.gaps.length === 0 && session.lastGood && !isRaw(getAITestOverride())) {
         console.info('[ai-fallback] gross does not reconcile and no serial gap explains it:', check.grossMismatch);
         onProgress?.('Totals don\'t add up — asking a second AI model to re-read the document…');
         if (firstPassModel) session.avoid.add(firstPassModel);

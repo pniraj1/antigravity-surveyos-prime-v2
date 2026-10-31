@@ -11,6 +11,8 @@ globalThis.FileReader = class {
 
 vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn(), info: vi.fn() } }));
 
+const bench = vi.hoisted(() => ({ cap: 1 as number | null, override: null as any }));
+
 vi.mock('../service', () => {
   class AllProvidersBusyError extends Error {
     tried: string[];
@@ -23,7 +25,8 @@ vi.mock('../service', () => {
   }
   return {
     callAIGateway: vi.fn(),
-    getActiveImageCap: () => 1,
+    getActiveImageCap: () => bench.cap,
+    getAITestOverride: () => bench.override,
     newSession: (id: string) => ({ id, avoid: new Set(), announced: new Set(), lastGood: undefined as { provider: string; model: string } | undefined }),
     AllProvidersBusyError,
     OfflineError,
@@ -47,6 +50,7 @@ function queue(...responses: string[]) { queued.push(...responses); }
 let pagesTotalAtCall: (number | undefined)[] = [];
 beforeEach(() => {
   queued = [];
+  bench.cap = 1; bench.override = null;
   pagesTotalAtCall = [];
   gw.mockReset();
   gw.mockImplementation(async (_prompt: string, _images: string[], _jobType: string, _job: string, session?: { lastGood?: unknown; pagesTotal?: number }) => {
@@ -162,5 +166,40 @@ describe('extractDocument — image path (estimate)', () => {
     expect(gw).toHaveBeenCalledTimes(3);
     expect(data.spare_parts).toHaveLength(6);
     expect(findings).toEqual([]);
+  });
+});
+
+describe('extractDocument — bench override', () => {
+  const ov = (o: object) => { bench.override = { provider: 'groq', model: 'm', key: 'k', ...o }; };
+  const rows = (n: number, from: number) => JSON.stringify({ spare_parts: Array.from({ length: n }, (_, i) => ({ sr_no: from + i, total_amount: 10 })) });
+
+  it('no override: 2-page chunks on a 3-page doc → 2 calls', async () => {
+    bench.cap = null;
+    queue(rows(2, 1), rows(1, 3));
+    await extractDocument('estimate', threeFiles());
+    expect(gw).toHaveBeenCalledTimes(2);
+  });
+
+  it('pagesPerCall 1 on 3 pages → 3 calls', async () => {
+    bench.cap = null; ov({ pagesPerCall: 1 });
+    queue(rows(1, 1), rows(1, 2), rows(1, 3));
+    await extractDocument('estimate', threeFiles());
+    expect(gw).toHaveBeenCalledTimes(3);
+  });
+
+  it('raw: truncated 2-page chunk is not split, issue lists pages 1–2', async () => {
+    bench.cap = null; ov({ raw: true });
+    queue('{"spare_parts": [{"sr_no": 1,', rows(1, 3));
+    const { issues } = await extractDocument('estimate', threeFiles());
+    expect(gw).toHaveBeenCalledTimes(2);
+    expect(JSON.stringify(issues)).toContain('Pages 1–2');
+  });
+
+  it('raw: a serial gap is not re-read', async () => {
+    bench.cap = null; ov({ raw: true });
+    queue(rows(1, 1), rows(1, 3));
+    const { data } = await extractDocument('estimate', [pngFile('a.png'), pngFile('b.png'), pngFile('c.png')]);
+    expect(gw).toHaveBeenCalledTimes(2);
+    expect(data.spare_parts).toHaveLength(2);
   });
 });

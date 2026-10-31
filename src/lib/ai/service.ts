@@ -41,7 +41,9 @@ export function resolveEnabledModel(saved: string | undefined, providerCfg: Prov
 // When set, callAIGateway routes a single extraction to one specific
 // provider+model+key (no profile, no fallback chain). Used by the Admin
 // "Test with estimate PDF" tool. Always cleared in runModelTest's finally.
-export interface AITestOverride { provider: 'gemini' | 'groq' | 'nvidia' | 'ollama'; model: string; key: string; }
+export interface AITestOverride { provider: 'gemini' | 'groq' | 'nvidia' | 'ollama'; model: string; key: string;
+  /** Bench-only (extraction bench): force pages per call, doc mode, API image scale; raw skips auto-split, gap fill, duplicate drop and second opinion. */
+  pagesPerCall?: number; method?: 'text' | 'vision'; imageScale?: 1 | 1.25 | 1.5; raw?: boolean; }
 let _testOverride: AITestOverride | null = null;
 export function setAITestOverride(o: AITestOverride | null): void { _testOverride = o; }
 export function getAITestOverride(): AITestOverride | null { return _testOverride; }
