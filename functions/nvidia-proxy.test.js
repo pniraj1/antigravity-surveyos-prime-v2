@@ -19,3 +19,32 @@ assert.ok(nvidiaProxy.__endpoint, "nvidiaProxy alias must still be exported for 
 assert.strictEqual(nvidiaProxy.__endpoint.timeoutSeconds, 300);
 
 console.log("nvidia-proxy.test.js: all assertions passed");
+
+// Rate-limit pass-through: stub https.request (node-fetch sends through it) so
+// no network is touched, then call the function body directly.
+(async () => {
+  const https = require("https");
+  const { PassThrough, Readable } = require("stream");
+  const realRequest = https.request;
+  https.request = () => {
+    const req = new PassThrough();
+    req.setTimeout = () => req;
+    req.once("finish", () => {
+      const res = Readable.from([Buffer.from("{}")]);
+      res.statusCode = 200;
+      res.statusMessage = "OK";
+      res.headers = { "x-ratelimit-remaining-requests": "5", "x-other": "no" };
+      res.rawHeaders = ["x-ratelimit-remaining-requests", "5", "x-other", "no"];
+      req.emit("response", res);
+    });
+    return req;
+  };
+  try {
+    const out = await aiProxy.run({ auth: { uid: "u", token: { firebase: { sign_in_provider: "anonymous" } } }, data: { provider: "ollama", path: "api/tags", key: "k" } });
+    assert.strictEqual(out.rateLimit["x-ratelimit-remaining-requests"], "5");
+    assert.deepStrictEqual(Object.keys(out.rateLimit), ["x-ratelimit-remaining-requests"]);
+    console.log("nvidia-proxy.test.js: rateLimit pass-through ok");
+  } finally {
+    https.request = realRequest;
+  }
+})().catch((e) => { console.error(e); process.exit(1); });

@@ -171,6 +171,8 @@ const PROXY_TARGETS = {
   ollama: { base: "https://ollama.com", paths: { "api/tags": "GET", "api/chat": "POST" }, auth: (k) => ({ Authorization: `Bearer ${k}` }) },
 };
 
+const RATE_LIMIT_HEADERS = ["x-ratelimit-limit-requests", "x-ratelimit-remaining-requests", "x-ratelimit-limit-tokens", "x-ratelimit-remaining-tokens", "retry-after"];
+
 // timeoutSeconds: NVIDIA vision inference measured at 27-200s per page; Ollama
 // gemma4:31b at 55-63s for five pages. The v2 default of 60s kills every call
 // before the provider answers, and the client reports it as an invalid key.
@@ -202,7 +204,12 @@ async function proxyToProvider(request) {
 
   // Pass the provider's response through verbatim; the client interprets status.
   const text = await res.text();
-  return { status: res.status, ok: res.ok, body: text };
+  const rateLimit = {};
+  for (const h of RATE_LIMIT_HEADERS) {
+    const v = res.headers.get(h);
+    if (v != null) rateLimit[h] = v;
+  }
+  return { status: res.status, ok: res.ok, body: text, rateLimit };
 }
 
 const PROXY_OPTS = { maxInstances: 10, memory: "512MiB", timeoutSeconds: 300 };
