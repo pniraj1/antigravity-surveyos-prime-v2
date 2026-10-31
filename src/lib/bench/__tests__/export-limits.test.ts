@@ -14,16 +14,24 @@ const cell = (profileId: string, pagesPerCall: number, runNo: number, ok: boolea
 describe('proposeLimits', () => {
   it('picks 2 when 3 failed', () => {
     const rows = [row(1), row(1), row(2), row(3)];
-    const cells = [cell('h', 1, 1, true, rows), cell('h', 2, 1, true, rows), cell('h', 3, 1, false), cell('h', 3, 2, false)];
+    const cells = [cell('h', 1, 1, true, rows), cell('h', 1, 2, true, rows), cell('h', 2, 1, true, rows), cell('h', 2, 2, true, rows), cell('h', 3, 1, false), cell('h', 3, 2, false)];
     const [l] = proposeLimits(cells, ['h']);
     expect(l).toMatchObject({ model: 'm', method: 'vision', maxPagesPerCall: 2, maxRowsPerCall: 3, imageScale: 1.5, modelVersion: 'v1' });
   });
   it('cheapest passing scale', () => {
-    const cells = [cell('h', 1, 1, true, [row(1)]), cell('h', 1, 1, true, [row(1)], 1)];
+    const cells = [cell('h', 1, 1, true, [row(1)]), cell('h', 1, 2, true, [row(1)]), cell('h', 1, 1, true, [row(1)], 1)];
     expect(proposeLimits(cells, ['h'])[0].imageScale).toBe(1);
   });
+  it('a single passing run is not enough', () => {
+    expect(proposeLimits([cell('h', 1, 1, true, [row(1)])], ['h'])).toEqual([]);
+  });
+  it('the chosen scale must pass on every hard PDF', () => {
+    const ok = (id: string) => [cell(id, 1, 1, true, [row(1)]), cell(id, 1, 2, true, [row(1)])];
+    const cells = [...ok('a'), ...ok('b'), cell('a', 1, 1, true, [row(1)], 1)];
+    expect(proposeLimits(cells, ['a', 'b'])[0].imageScale).toBe(1.5);
+  });
   it('a failing wide cell at that setting rules it out', () => {
-    expect(proposeLimits([cell('h', 1, 1, true, [row(1)]), cell('w', 1, 1, false)], ['h'])).toEqual([]);
+    expect(proposeLimits([cell('h', 1, 1, true, [row(1)]), cell('h', 1, 2, true, [row(1)]), cell('w', 1, 1, false)], ['h'])).toEqual([]);
   });
 });
 
@@ -33,7 +41,7 @@ describe('limitsSource', () => {
     expect(limitsSource([])).toBe(file);
   });
   it('embeds the limits as data', () => {
-    const l = proposeLimits([cell('h', 1, 1, true, [row(1)])], ['h']);
+    const l = proposeLimits([cell('h', 1, 1, true, [row(1)]), cell('h', 1, 2, true, [row(1)])], ['h']);
     expect(limitsSource(l)).toContain('"maxRowsPerCall": 1');
   });
 });

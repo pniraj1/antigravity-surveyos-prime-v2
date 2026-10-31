@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════════════════
 
 // import * as pdfjsLib from 'pdfjs-dist'; // DO NOT STACTIC IMPORT THIS
-import { callAIGateway, getActiveImageCap, getAITestOverride, newSession, AllProvidersBusyError, OfflineError } from './service';
+import { callAIGateway, firstModel, getActiveImageCap, getAITestOverride, newSession, AllProvidersBusyError, OfflineError } from './service';
 import { resolveVisionChunkSize } from './image-cap';
 import { getDocPrompt } from './prompts';
 import { jobForDocType } from './jobs';
@@ -17,6 +17,7 @@ import { takeDrop } from './fault';
 import { getAIPages, resolveAIPages } from './ai-pages';
 import { layoutLines, countAmountLines } from './text-lines';
 import { planChunks } from './group-pages';
+import { limitsFor } from './page-limits';
 import { profilePages, pageRuns, chunkRuns } from './page-runs';
 
 /**
@@ -73,7 +74,8 @@ function estimateTokens(text: string): number {
  */
 export async function fileToImages(
   file: File,
-  onProgress?: (page: number, total: number) => void
+  onProgress?: (page: number, total: number) => void,
+  apiScale?: number,
 ): Promise<{ viewImages: string[]; apiImages: string[]; textLayers?: string[]; pageNumbers?: number[] }> {
   if (file.type === 'application/pdf') {
     const pdfjsLib = await import('pdfjs-dist');
@@ -112,7 +114,7 @@ export async function fileToImages(
       // ── API image (JPEG 90%, scale 1.5× unless the bench override sets it) ───────────────────────────────
       // Increased quality from 80% to 90% to improve digit OCR accuracy for scanned PDFs.
       // 1.5× scale gives ~1275×1650px JPEG ≈ 500-900 KB — still within Gemini 4MB limit.
-      const apiViewport = page.getViewport({ scale: apiImageScale(getAITestOverride()) });
+      const apiViewport = page.getViewport({ scale: apiScale ?? apiImageScale(getAITestOverride()) });
       const apiCanvas = document.createElement('canvas');
       const apiCtx = apiCanvas.getContext('2d');
       if (!apiCtx) throw new Error('Canvas context failed');
@@ -150,6 +152,7 @@ export async function fileToImages(
 export async function filesToImages(
   files: File[],
   onProgress?: (page: number, total: number) => void,
+  apiScale?: number,
 ): Promise<{ viewImages: string[]; apiImages: string[]; textLayers?: string[]; pageRefs: PageRef[] }> {
   const viewImages: string[] = [];
   const apiImages: string[] = [];
@@ -158,7 +161,7 @@ export async function filesToImages(
   let allHaveText = files.length > 0;
 
   for (const [fileIndex, file] of files.entries()) {
-    const r = await fileToImages(file, onProgress);
+    const r = await fileToImages(file, onProgress, apiScale);
     viewImages.push(...r.viewImages);
     apiImages.push(...r.apiImages);
     r.apiImages.forEach((_, i) => pageRefs.push({ file: fileIndex, page: r.pageNumbers?.[i] ?? 1 }));
@@ -324,9 +327,11 @@ export async function extractDocument(
 
   return aiQueue.add(async () => {
     if (onProgress) onProgress('Scanning document...');
+    // Render scale from the first model's limit; pages keep it after a mid-document fallback.
+    const apiScale = limitsFor(firstModel(session, job) ?? '', 'vision')?.imageScale;
     const { viewImages, apiImages, textLayers, pageRefs } = await filesToImages(files, (p, t) => {
       if (onProgress) onProgress(`Processing page ${p} of ${t}...`);
-    });
+    }, apiScale);
 
     const totalPages = apiImages.length;
     session.pagesTotal = totalPages;   // heavy ranking skips keys that cannot cover the whole document
@@ -376,7 +381,7 @@ export async function extractDocument(
         // Cancelled between pages — stop before spending another call.
         if (signal?.aborted) throw abortError();
         // Group the remaining pages for the model now answering (bench runs keep their fixed sizes).
-        if (!getAITestOverride()) chunks = planChunks(chunks, ci, session.lastGood?.model, expectedRows, sizes);
+        if (!getAITestOverride()) chunks = planChunks(chunks, ci, session.lastGood?.model ?? firstModel(session, job), expectedRows, sizes);
 
         const { method, first: i, last } = chunks[ci];
         const currentBatchStart = i + 1;

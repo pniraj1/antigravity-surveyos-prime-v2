@@ -13,7 +13,7 @@ vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn(), warning: v
 
 const bench = vi.hoisted(() => ({ cap: 1 as number | null, override: null as any }));
 
-const limits = vi.hoisted(() => ({ table: [] as any[] }));
+const limits = vi.hoisted(() => ({ table: [] as any[], first: undefined as string | undefined }));
 vi.mock('../page-limits', () => ({
   get PAGE_LIMITS() { return limits.table; },
   limitsFor: (model: string, method: string, table: any[] = limits.table) => table.find(l => l.model === model && l.method === method),
@@ -32,6 +32,7 @@ vi.mock('../service', () => {
   return {
     callAIGateway: vi.fn(),
     getActiveImageCap: () => bench.cap,
+    firstModel: () => limits.first,
     getAITestOverride: () => bench.override,
     newSession: (id: string) => ({ id, avoid: new Set(), announced: new Set(), lastGood: undefined as { provider: string; model: string } | undefined }),
     AllProvidersBusyError,
@@ -201,6 +202,18 @@ describe('extractDocument — bench override', () => {
       await extractDocument('estimate', [...threeFiles(), pngFile('p3.png')]);
       expect(gw).toHaveBeenCalledTimes(3);
     } finally { limits.table = []; }
+  });
+
+  it('a limit for the preferred model re-groups the very first chunk (4 pages → 4 calls)', async () => {
+    bench.cap = null;
+    limits.first = 'pref';
+    limits.table = [{ model: 'pref', method: 'vision', maxRowsPerCall: 60, maxPagesPerCall: 1, imageScale: 1.5, measuredAt: '', modelVersion: '' },
+      { model: 'test-model', method: 'vision', maxRowsPerCall: 60, maxPagesPerCall: 1, imageScale: 1.5, measuredAt: '', modelVersion: '' }];
+    try {
+      queue(rows(1, 1), rows(1, 2), rows(1, 3), rows(1, 4));
+      await extractDocument('estimate', [...threeFiles(), pngFile('p3.png')]);
+      expect(gw).toHaveBeenCalledTimes(4);
+    } finally { limits.table = []; limits.first = undefined; }
   });
 
   it('pagesPerCall 1 on 3 pages → 3 calls', async () => {

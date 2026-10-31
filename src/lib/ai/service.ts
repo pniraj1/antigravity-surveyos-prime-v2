@@ -156,16 +156,41 @@ function resolveNvidiaKeys(profile: ReturnType<typeof getProfileFromStorage>): s
   return profile.nvidiaApiKeys.filter(k => k?.trim());
 }
 
+/**
+ * Surveyor's pick first (provider, then model), then rotate to lastGood. Shared by
+ * callAIGateway and firstEntry so the processor's guess matches the real walk.
+ */
+export function orderChain<T extends { provider: ProviderId; model: { id: string } }>(chain: T[], session?: GatewaySession): T[] {
+  const prefer = session?.prefer, preferModel = session?.preferModel;
+  if (prefer) chain = [...chain.filter(e => e.provider === prefer), ...chain.filter(e => e.provider !== prefer)];
+  if (preferModel) chain = [...chain.filter(e => e.model.id === preferModel), ...chain.filter(e => e.model.id !== preferModel)];
+  if (session?.lastGood) {
+    const i = chain.findIndex(e => e.model.id === session.lastGood!.model);
+    if (i > 0) chain = [...chain.slice(i), ...chain.slice(0, i)];
+  }
+  return chain;
+}
+
+/** The entry callAIGateway would try first. Without a session: the ranker's first (no reorder). */
+function firstEntry(job: AIJob, session?: GatewaySession): PoolEntry | undefined {
+  const pool = buildPool(getProfileFromStorage());
+  const limitOf = limitOfFor(useAIConfigStore.getState().config);
+  const pagesNeeded = job === 'heavy' ? session?.pagesTotal ?? 1 : 1;
+  try {
+    return orderChain(rankModels(job, ['x'], pool, { health: getHealth(), avoid: session?.avoid, pagesNeeded, limitOf }), session)[0];
+  } catch { return undefined; }
+}
+
+/** Model the next call for this document would go to; undefined under a bench override. */
+export function firstModel(session: GatewaySession, job: AIJob): string | undefined {
+  return getAITestOverride() ? undefined : firstEntry(job, session)?.model.id;
+}
+
 /** Image cap of the model the ranker would try first for this job — the processor sizes chunks from it. */
 export function getActiveImageCap(job: AIJob = 'heavy'): number | null {
   const override = getAITestOverride();
   if (override) return buildOverrideProvider(override).maxImages ?? null;
-  const pool = buildPool(getProfileFromStorage());
-  const limitOf = limitOfFor(useAIConfigStore.getState().config);
-  try {
-    const [first] = rankModels(job, ['x'], pool, { health: getHealth(), limitOf });
-    return first?.model.imageCap ?? null;
-  } catch { return null; }
+  return firstEntry(job)?.model.imageCap ?? null;
 }
 
 /**
@@ -683,13 +708,7 @@ async function callWithFallback(
   let chain = rankModels(job, images, pool, { health, avoid: session?.avoid, pagesNeeded, limitOf });
   // Before lastGood: once the picked provider fails mid-document, lastGood rotates past it.
   // A model the ranker dropped (can't do this job, dead today) stays dropped — the pick is skipped, not forced.
-  const prefer = session?.prefer, preferModel = session?.preferModel;
-  if (prefer) chain = [...chain.filter(e => e.provider === prefer), ...chain.filter(e => e.provider !== prefer)];
-  if (preferModel) chain = [...chain.filter(e => e.model.id === preferModel), ...chain.filter(e => e.model.id !== preferModel)];
-  if (session?.lastGood) {
-    const i = chain.findIndex(e => e.model.id === session.lastGood!.model);
-    if (i > 0) chain = [...chain.slice(i), ...chain.slice(0, i)];
-  }
+  chain = orderChain(chain, session);
   // "Spent out" (truly at zero) is a stronger claim than "can't cover this
   // document" — a fresh 20/day key with 5 pages left is not spent, so the
   // day-limit / Flash-nudge toasts must not fire on it. The ranker still uses

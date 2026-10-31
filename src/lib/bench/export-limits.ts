@@ -3,11 +3,8 @@ import type { ModelLimit } from '../ai/page-limits';
 import { passes } from './score';
 import type { CellResult } from './store';
 
-/** At one pages-per-call: pass on r1, or ≥ 2 passing runs with at most one failure (borderline 3rd run). */
-const profilePasses = (cs: CellResult[]): boolean => {
-  const ok = cs.filter(c => passes(c.errors)).length;
-  return cs.length > 0 && (ok === cs.length || (ok >= 2 && cs.length - ok <= 1));
-};
+/** One hard PDF at one setting: at least 2 runs, every one passing. */
+const profilePasses = (cs: CellResult[]): boolean => cs.length >= 2 && cs.every(c => passes(c.errors));
 
 /** Densest call of a cell: rows on pages k·p+1 … (k+1)·p. */
 const densestCall = (c: CellResult): number => {
@@ -30,8 +27,11 @@ export function proposeLimits(cells: CellResult[], hardIds: string[]): ModelLimi
     });
     if (p === undefined) continue;
     const at = cs.filter(c => c.pagesPerCall === p && passes(c.errors));
-    const imageScale = ([1, 1.25, 1.5] as const).find(s => at.some(c => c.imageScale === s)
-      && cs.filter(c => c.pagesPerCall === p && c.imageScale === s).every(c => passes(c.errors))) ?? 1.5;
+    // Cheapest scale read on every hard PDF with no failure at that setting (1.5 is the pages check above).
+    const imageScale = ([1, 1.25] as const).find(s => {
+      const atS = cs.filter(c => c.pagesPerCall === p && c.imageScale === s);
+      return hardIds.every(id => atS.some(c => c.profileId === id)) && atS.every(c => passes(c.errors));
+    }) ?? 1.5;
     out.push({
       model: cs[0].model, method: cs[0].method, maxRowsPerCall: Math.min(...at.map(densestCall)), maxPagesPerCall: p, imageScale,
       measuredAt: new Date(Math.max(...cs.map(c => c.at))).toISOString().slice(0, 10), modelVersion: cs[0].modelVersion,
