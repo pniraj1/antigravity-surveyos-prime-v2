@@ -4,8 +4,8 @@
 
 export interface PdfToken { s: string; x: number; y: number; w: number }   // y grows upward (pdf.js)
 export type Field = 'sr_no' | 'part_number' | 'description' | 'hsn_sac' | 'quantity' | 'unit_price' | 'taxable_amount' | 'total_amount' | 'gst_percent';
-export interface RawRow { sr: number; page: number; cells: Partial<Record<Field, string>>; text: string }   // page 0-based
-export interface NonItemLine { page: number; text: string; nums: number[] }
+export interface RawRow { sr: number; page: number; cells: Partial<Record<Field, string>>; text: string; y: number; lead?: string }   // lead: text above the serial line, on section-start rows only   // page 0-based
+export interface NonItemLine { page: number; text: string; nums: number[]; y: number }
 
 const MONEY = /^(\d{1,3}(,\d{2,3})+(\.\d{1,2})?|\d+(\.\d{1,2})?)$/;
 const SERIAL_WORD = /^(srl|s\.?no\.?|sr|seq\.?|s)$/i;
@@ -157,14 +157,84 @@ export function readRows(pages: PdfToken[][]): { rows: RawRow[]; nonItemLines: N
     });
     for (const { a, hi, lo } of bands) {
       const band = toks.filter(t => t.y < hi && t.y >= lo);
-      rows.push({ sr: Number(a.s), page: p, cells: rowCells(band.filter(t => t !== a), a, cols!), text: [...band].sort(byReading).map(t => t.s).join(' ') });
+      rows.push({ sr: Number(a.s), page: p, y: a.y, lead: a.s === '1' ? band.filter(t => t.y > a.y + 2).sort(byReading).map(t => t.s).join(' ') : undefined, cells: rowCells(band.filter(t => t !== a), a, cols!), text: [...band].sort(byReading).map(t => t.s).join(' ') });
     }
     for (const l of linesOf(toks)) {
       if (bands.some(b => l[0].y < b.hi && l[0].y >= b.lo)) continue;
-      nonItemLines.push({ page: p, text: l.map(t => t.s).join(' '), nums: l.map(t => parseMoney(t.s)).filter((n): n is number => n !== null) });
+      nonItemLines.push({ page: p, y: l[0].y, text: l.map(t => t.s).join(' '), nums: l.map(t => parseMoney(t.s)).filter((n): n is number => n !== null) });
     }
   }
   if (!cols) return { declined: 'no header line with a serial and Qty column found' };
   if (!rows.length) return { declined: 'no serial-numbered rows found under the header' };
   return { rows, nonItemLines };
+}
+
+export interface ParsedEstimate { spare_parts: any[]; labour_items: any[]; painting_items: any[]; gross_amount: number }
+export type ParseOutcome = { ok: true; data: ParsedEstimate } | { ok: false; reason: string };
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+const sum = (ns: number[]) => ns.reduce((a, b) => a + b, 0);
+const num = (s: string | undefined) => (s === undefined ? null : parseMoney(s));
+
+/** Estimate row shape of prompts.ts; null when taxable and total cannot both be had without guessing. */
+function toItem(r: RawRow): { item: Record<string, unknown>; printedTotal: boolean } | null {
+  const c = r.cells;
+  const gst = num(c.gst_percent);
+  const printed = num(c.total_amount);
+  const taxable = num(c.taxable_amount) ?? (printed !== null && gst !== null ? round2(printed / (1 + gst / 100)) : null);
+  const total = printed ?? (taxable !== null && gst !== null ? round2(taxable * (1 + gst / 100)) : null);
+  if (taxable === null || total === null) return null;
+  const item = {
+    sr_no: r.sr, description: c.description ?? '', part_number: c.part_number ?? '', hsn_sac: c.hsn_sac ?? '',
+    quantity: num(c.quantity) ?? 1, unit_price: num(c.unit_price) ?? 0, taxable_amount: taxable,
+    cgst_amount: 0, sgst_amount: 0, total_amount: total, gst_percent: gst ?? 0, category: '', _page: r.page,
+  };
+  return { item, printedTotal: printed !== null };
+}
+
+/** Parts / labour from the nearest non-header line above the section's first row; null = unknown. */
+function kindOf(first: RawRow, lines: NonItemLine[]): 'part' | 'labour' | null {
+  const above = lines.filter(l => !/\bqty\b/i.test(l.text) && (l.page < first.page || (l.page === first.page && l.y > first.y)));
+  // a heading between sections sits inside the first row's band, so `lead` is the nearest candidate
+  for (const text of [first.lead ?? '', above[above.length - 1]?.text ?? '']) {
+    if (/part/i.test(text)) return 'part';
+    if (/labou?r|service/i.test(text)) return 'labour';
+  }
+  return null;
+}
+
+/** Rows → estimate sections, accepted only when every section and the grand total tie to printed figures. */
+export function parseEstimate(pages: PdfToken[][]): ParseOutcome {
+  const read = readRows(pages);
+  if ('declined' in read) return { ok: false, reason: read.declined };
+  const { rows, nonItemLines } = read;
+  // a serial the reader skipped leaves a multi-token line starting with an integer outside every row band
+  if (nonItemLines.some(l => /^\d{1,3}\s+\S/.test(l.text))) return { ok: false, reason: 'serial gap: a numbered line was not read as a row' };
+  const grands = nonItemLines.filter(l => /grand\s*total/i.test(l.text) && l.nums.length);
+  if (grands.length !== 1) return { ok: false, reason: grands.length ? 'more than one grand total (merged estimates?)' : 'no grand total found' };
+  const gross = grands[0].nums[grands[0].nums.length - 1];
+  const labelled = nonItemLines.filter(l => /total/i.test(l.text)).flatMap(l => l.nums);
+
+  const sections: RawRow[][] = [];
+  for (const r of rows) { if (r.sr === 1) sections.push([]); sections[sections.length - 1].push(r); }
+  const out: ParsedEstimate = { spare_parts: [], labour_items: [], painting_items: [], gross_amount: gross };
+  for (const [i, sec] of sections.entries()) {
+    if (sec.some((r, k) => r.sr !== k + 1)) return { ok: false, reason: `serial gap in section ${i + 1}` };
+    const built = sec.map(toItem);
+    if (built.some(b => !b)) return { ok: false, reason: `section ${i + 1}: a row has no readable amount` };
+    const items = built.map(b => b!.item as any);
+    const key = built.every(b => b!.printedTotal) ? 'total_amount' : 'taxable_amount';
+    const secSum = sum(items.map(it => it[key] as number));
+    if (!labelled.some(n => Math.abs(n - secSum) <= 1)) return { ok: false, reason: `section ${i + 1} sum ${round2(secSum)} matches no printed subtotal` };
+    const kind = kindOf(sec[0], nonItemLines);
+    for (const it of items) {
+      const labour = kind ? kind === 'labour' : /^9987/.test(it.hsn_sac);
+      if (!labour) out.spare_parts.push(it);
+      else if (/PAINT|COLOU?R/i.test(it.description)) out.painting_items.push(it);
+      else out.labour_items.push(it);
+    }
+  }
+  const all = [...out.spare_parts, ...out.labour_items, ...out.painting_items];
+  if (Math.abs(sum(all.map(it => it.total_amount)) - gross) > Math.max(5, gross * 0.001)) return { ok: false, reason: 'rows do not add up to the grand total' };
+  return { ok: true, data: out };
 }

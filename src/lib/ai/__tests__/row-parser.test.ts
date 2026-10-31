@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readRows, parseMoney, tokensFromItems, type PdfToken } from '../row-parser';
+import { readRows, parseMoney, tokensFromItems, parseEstimate, type PdfToken } from '../row-parser';
 
 const line = (y: number, cells: Array<[number, string]>): PdfToken[] =>
   cells.map(([x, s]) => ({ s, x, y, w: s.length * 5 }));
@@ -110,5 +110,93 @@ describe('readRows', () => {
     expect(row.cells.description).toBe('TYRE 185 65 R15');
     expect(row.cells.quantity).toBe('2');
     expect(row.cells.unit_price).toBe('99.00');
+  });
+});
+
+describe('parseEstimate', () => {
+  const amt = (right: number, s: string): [number, string] => [right - s.length * 5, s];
+  const head = (y: number) => line(y, [[10, 'Srl'], [60, 'Description'], [150, 'HSN'], [210, 'Qty.'], [260, 'Taxable'], [320, 'Tax%']]);
+  const item = (y: number, sr: number, desc: string, taxable: string, hsn = '87089900') =>
+    line(y, [[10, String(sr)], [60, desc], [150, hsn], [220, '1'], amt(295, taxable), amt(340, '18')]);
+  const totals = (grand: string | null, sub = ['4,137.28', '5,968.00']) => [
+    ...line(590, [[60, 'Sub'], [90, 'Total'], amt(295, sub[0]), amt(400, sub[1])]),
+    ...line(580, [[60, 'Total'], amt(295, '4,882.00'), amt(400, '7,042.24')]),
+    ...(grand ? line(570, [[60, 'Grand'], [100, 'Total'], [150, '(Rounded)'], amt(295, grand)]) : []),
+  ];
+  const kia = (labour3 = '4,092.00', grand: string | null = '11924', sr = [1, 2, 3]) => [
+    ...line(710, [[60, 'Part'], [90, 'Invoice']]),
+    ...head(700),
+    ...item(680, 1, 'DOOR', '2,738.98'),
+    ...item(670, 2, 'LAMP', '1,398.30'),
+    ...line(650, [[60, 'Labour'], [100, 'and'], [120, 'Services']]),
+    ...item(640, 1, 'DENTING', '1,426.00', '998729'),
+    ...item(630, 2, 'FITTING', '450.00', '998729'),
+    ...item(620, sr[2], 'Painting Charges', labour3, '998729'),
+    ...totals(grand),
+  ];
+  const reason = (o: ReturnType<typeof parseEstimate>) => (o.ok ? '' : o.reason);
+
+  it('two sections tie to their subtotals and grand total', () => {
+    const o = parseEstimate([kia()]);
+    if (!o.ok) throw new Error(o.reason);
+    expect(o.data.spare_parts).toHaveLength(2);
+    expect(o.data.labour_items).toHaveLength(2);
+    expect(o.data.painting_items).toHaveLength(1);
+    expect(o.data.painting_items[0]).toMatchObject({ sr_no: 3, taxable_amount: 4092, total_amount: 4828.56, gst_percent: 18, _page: 0 });
+    expect(o.data.gross_amount).toBe(11924);
+  });
+
+  it('section off by 2 rupees declines', () => {
+    expect(reason(parseEstimate([kia('4,094.00')]))).toContain('section');
+  });
+
+  it('no grand total declines', () => {
+    expect(reason(parseEstimate([kia('4,092.00', null)]))).toContain('grand total');
+  });
+
+  it('serial gap declines', () => {
+    const page = [...head(700), ...item(680, 1, 'A', '100.00'), ...item(670, 2, 'B', '100.00'), ...item(660, 4, 'D', '100.00'),
+      ...line(620, [[60, 'Grand'], [100, 'Total'], amt(295, '236')])];
+    expect(reason(parseEstimate([page]))).toContain('gap');
+  });
+
+  it('item row with TOTAL in its description is not a labelled total', () => {
+    const page = [...head(700), ...item(680, 1, 'TOTAL KIT', '1,000.00')];
+    expect(reason(parseEstimate([page]))).toContain('grand total');
+  });
+
+  it('merged PDF of two estimates declines', () => {
+    expect(parseEstimate([kia(), kia()]).ok).toBe(false);
+  });
+
+  it('stray integer in serial column does not create a row', () => {
+    const page = [...head(700), ...item(680, 1, 'A', '100.00'), ...item(670, 2, 'B', '100.00'),
+      ...line(660, [[10, '7']]), ...item(650, 3, 'C', '100.00'),
+      ...line(615, [[60, 'Sub'], [90, 'Total'], amt(295, '300.00')]),
+      ...line(610, [[60, 'Grand'], [100, 'Total'], amt(295, '354')])];
+    const o = parseEstimate([page]);
+    if (!o.ok) throw new Error(o.reason);
+    expect(o.data.spare_parts.map(r => r.sr_no)).toEqual([1, 2, 3]);
+  });
+
+  it('single-section doc classifies 9987 SAC as labour', () => {
+    const page = [...head(700), ...item(680, 1, 'DOOR', '100.00'), ...item(670, 2, 'FIT', '200.00', '998729'),
+      ...line(630, [[60, 'Sub'], [90, 'Total'], amt(295, '300.00')]),
+      ...line(620, [[60, 'Grand'], [100, 'Total'], amt(295, '354')])];
+    const o = parseEstimate([page]);
+    if (!o.ok) throw new Error(o.reason);
+    expect(o.data.spare_parts).toHaveLength(1);
+    expect(o.data.labour_items).toHaveLength(1);
+  });
+
+  it('printed total column is used as-is', () => {
+    const page = [
+      ...line(700, [[10, 'Srl'], [60, 'Description'], [210, 'Qty.'], [260, 'Taxable'], [320, 'Tax%'], [380, 'Total']]),
+      ...line(680, [[10, '1'], [60, 'DOOR'], [220, '1'], amt(295, '100.00'), amt(340, '18'), amt(405, '119.00')]),
+      ...line(620, [[60, 'Grand'], [100, 'Total'], amt(405, '119')]),
+    ];
+    const o = parseEstimate([page]);
+    if (!o.ok) throw new Error(o.reason);
+    expect(o.data.spare_parts[0]).toMatchObject({ taxable_amount: 100, total_amount: 119 });
   });
 });
