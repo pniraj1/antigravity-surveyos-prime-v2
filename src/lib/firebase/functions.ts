@@ -17,6 +17,8 @@ export interface ProxyResult {
   ok: boolean;
   /** Raw response body text from the upstream provider (JSON or error HTML). */
   body: string;
+  /** Raw upstream rate-limit headers (lowercase names), added by the server proxy. */
+  rateLimit?: Record<string, string>;
 }
 
 export type ProxiedProvider = 'nvidia' | 'ollama';

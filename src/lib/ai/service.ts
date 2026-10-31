@@ -25,6 +25,7 @@ import { ModelEntry, PROVIDER_IMAGE_CAPS, type ProviderConfig, type ProviderId, 
 import { useAIConfigStore } from '@/stores/ai-config-store';
 import { useProbesStore } from '@/stores/probes-store';
 import { poolFromProbes, limitOfFor } from './pool';
+import { parseRateLimit, usageOf, recordCall, type CallRecord, type RateLimitInfo } from './call-meter';
 
 export { DEPRECATED_GEMINI_MODELS, DEPRECATED_GROQ_MODELS };
 
@@ -219,7 +220,7 @@ export function geminiAuthHeaders(key: string): Record<string, string> {
 }
 
 export type Finish = 'STOP' | 'MAX_TOKENS' | 'SAFETY' | 'OTHER';
-export interface CallResult { text: string; finish: Finish }
+export interface CallResult { text: string; finish: Finish; usage?: { tokensIn: number | null; tokensOut: number | null } }
 export interface CallOptions { timeoutMs: number; thinkingOff: boolean }
 
 /** One provider's HTTP failure, with enough attached for the loop to classify it. */
@@ -257,10 +258,60 @@ function geminiFinish(reason: unknown): Finish {
   return reason === 'STOP' ? 'STOP' : reason === 'MAX_TOKENS' ? 'MAX_TOKENS' : reason === 'SAFETY' ? 'SAFETY' : 'OTHER';
 }
 
-/** Calls one provider with one specific key. Throws ProviderError on error. */
+const RL_HEADERS = ['x-ratelimit-limit-requests', 'x-ratelimit-remaining-requests', 'x-ratelimit-limit-tokens', 'x-ratelimit-remaining-tokens', 'retry-after'];
+/** Rate-limit headers of a browser fetch; CORS may hide them, then this is undefined. */
+function headerLimits(res: Response): RateLimitInfo | undefined {
+  const h: Record<string, string | null> = {};
+  for (const n of RL_HEADERS) h[n] = res.headers?.get?.(n) ?? null;
+  return parseRateLimit(h);
+}
+
+/** usageOf, but undefined when the provider reported nothing (keeps CallResult shape unchanged). */
+function usageIf(p: ProviderId, body: unknown): CallResult['usage'] {
+  const u = usageOf(p, body);
+  return u.tokensIn === null && u.tokensOut === null ? undefined : u;
+}
+
+/** Gemini 429 RetryInfo.retryDelay ("12s") in ms, when present. */
+function geminiRetryMs(details: unknown[]): number | undefined {
+  for (const d of details as any[]) {
+    const m = /^(\d+(?:\.\d+)?)s$/.exec(String(d?.retryDelay ?? ''));
+    if (m) return Math.round(Number(m[1]) * 1000);
+  }
+  return undefined;
+}
+
+/** Calls one provider with one specific key, recording the attempt. Throws ProviderError on error. */
 export async function callWithKey(
   provider: AIProvider, key: string, prompt: string, images: string[],
   responseFormat: 'json' | 'text', opts: CallOptions,
+): Promise<CallResult> {
+  const t0 = Date.now();
+  const meta: { rateLimit?: RateLimitInfo } = {};
+  const record = (r: Partial<CallRecord>) => {
+    try {
+      recordCall({ provider: provider.name as ProviderId, model: provider.model, tokensIn: null, tokensOut: null,
+        ms: Date.now() - t0, finish: 'ERROR', rateLimit: meta.rateLimit, at: t0, ...r });
+    } catch { /* recording never reaches callers */ }
+  };
+  try {
+    const out = await callOnce(provider, key, prompt, images, responseFormat, opts, meta);
+    record({ ...out.usage, finish: out.finish });
+    return out;
+  } catch (e: any) {
+    const status = typeof e?.status === 'number' ? e.status : undefined;
+    if (e instanceof ProviderError && provider.name === 'gemini' && status === 429) {
+      const ms = geminiRetryMs(e.details);
+      if (ms !== undefined) meta.rateLimit = { ...meta.rateLimit, retryAfterMs: ms };
+    }
+    record({ status });
+    throw e;
+  }
+}
+
+async function callOnce(
+  provider: AIProvider, key: string, prompt: string, images: string[],
+  responseFormat: 'json' | 'text', opts: CallOptions, meta: { rateLimit?: RateLimitInfo },
 ): Promise<CallResult> {
   if (provider.name === 'gemini') {
     const parts: any[] = images.map(img => ({ inlineData: { mimeType: getMimeType(img), data: toRawBase64(img) } }));
@@ -296,6 +347,7 @@ export async function callWithKey(
         ],
       }),
     }, opts.timeoutMs);
+    meta.rateLimit = headerLimits(res);
 
     if (!res.ok) {
       const info = parseGeminiError(res.status, await res.json().catch(() => ({})));
@@ -307,6 +359,7 @@ export async function callWithKey(
     return {
       text: (cand?.content?.parts?.[0]?.text || '').replace(/```json|```/g, '').trim(),
       finish: geminiFinish(cand?.finishReason),
+      usage: usageIf('gemini', data),
     };
   }
 
@@ -323,6 +376,7 @@ export async function callWithKey(
       messages: [{ role: 'user', content: prompt, ...(images.length ? { images: images.map(toRawBase64) } : {}) }],
     };
     const proxied = await callAiProxy('ollama', 'api/chat', key, body);
+    meta.rateLimit = proxied.rateLimit ? parseRateLimit(proxied.rateLimit) : undefined;
     if (!proxied.ok) {
       const err = safeJsonParse(proxied.body);
       throw new ProviderError('ollama', proxied.status, typeof err?.error === 'string' ? err.error : err?.error?.message || String(proxied.status));
@@ -331,6 +385,7 @@ export async function callWithKey(
     return {
       text: (data.message?.content || '').trim(),
       finish: data.done_reason === 'length' ? 'MAX_TOKENS' : 'STOP',
+      usage: usageIf('ollama', data),
     };
   }
 
@@ -380,6 +435,7 @@ export async function callWithKey(
     // applied mid-flight (a callable cannot be aborted once sent).
     const { callAiProxy } = await import('@/lib/firebase/functions');
     const proxied = await callAiProxy('nvidia', 'chat/completions', key, requestBody);
+    meta.rateLimit = proxied.rateLimit ? parseRateLimit(proxied.rateLimit) : undefined;
     if (!proxied.ok) {
       const err = safeJsonParse(proxied.body);
       throw new ProviderError('nvidia', proxied.status, err?.error?.message || String(proxied.status));
@@ -391,6 +447,7 @@ export async function callWithKey(
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
       body: JSON.stringify(requestBody),
     }, opts.timeoutMs);
+    meta.rateLimit = headerLimits(res);
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -403,6 +460,7 @@ export async function callWithKey(
   return {
     text: (data.choices?.[0]?.message?.content || '').trim(),
     finish: data.choices?.[0]?.finish_reason === 'length' ? 'MAX_TOKENS' : 'STOP',
+    usage: usageIf(provider.name as ProviderId, data),
   };
 }
 
