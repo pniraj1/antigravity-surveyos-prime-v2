@@ -172,10 +172,10 @@ export async function fileToImages(
       await page.render({ canvasContext: viewCtx, canvas: viewCanvas, viewport: viewViewport }).promise;
       viewImages.push(viewCanvas.toDataURL('image/png'));
 
-      // ── API image (JPEG 90%, scale 1.5×) ───────────────────────────────
+      // ── API image (JPEG 90%, scale 1.5× unless the bench override sets it) ───────────────────────────────
       // Increased quality from 80% to 90% to improve digit OCR accuracy for scanned PDFs.
       // 1.5× scale gives ~1275×1650px JPEG ≈ 500-900 KB — still within Gemini 4MB limit.
-      const apiViewport = page.getViewport({ scale: 1.5 });
+      const apiViewport = page.getViewport({ scale: apiImageScale(getAITestOverride()) });
       const apiCanvas = document.createElement('canvas');
       const apiCtx = apiCanvas.getContext('2d');
       if (!apiCtx) throw new Error('Canvas context failed');
@@ -318,7 +318,7 @@ class AITaskQueue {
   }
 }
 
-
+const aiQueue = new AITaskQueue();
 
 
 /**
