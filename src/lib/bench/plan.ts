@@ -21,6 +21,8 @@ function stepUp(cells: CellResult[], k: Omit<CellKey, 'pagesPerCall' | 'imageSca
   const at = (p: number, s: Scale, r: number) => cells.find(c => c.pagesPerCall === p && c.imageScale === s && c.runNo === r);
   const key = (p: number, s: Scale, r: number): CellKey => ({ ...k, pagesPerCall: p, imageScale: s, runNo: r });
   let best: number | null = null;
+  // a bad key/model fails every cell: one provider_error ends this method on this PDF
+  if (cells.some(c => c.errors.some(e => e.type === 'provider_error'))) return { next: null, best };
   for (const p of PAGES_STEPS) {
     const r1 = at(p, 1.5, 1);
     if (!r1) return { next: key(p, 1.5, 1), best };

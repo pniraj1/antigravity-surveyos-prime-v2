@@ -14,6 +14,11 @@ const P = prof('h');
 const pick3 = (k: CellKey | null) => k && [k.pagesPerCall, k.imageScale, k.runNo];
 
 describe('nextCell hard set', () => {
+  it('provider_error at 1 page stops the climb for that method', () => {
+    const c = cell('h', 1, 1.5, 1, false);
+    c.errors = [{ type: 'provider_error', estimate: 'E1', page: 1, srNo: null, detail: '' }];
+    expect(nextCell([c], P, pick, 'hard')).toBeNull();
+  });
   it('starts at 1 page, scale 1.5', () => expect(pick3(nextCell([], P, pick, 'hard'))).toEqual([1, 1.5, 1]));
   it('pass@1, pass@2, fail@3 → repeat@3', () => {
     const d = [cell('h', 1, 1.5, 1, true), cell('h', 2, 1.5, 1, true), cell('h', 3, 1.5, 1, false)];
