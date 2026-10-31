@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { toBenchRows, selfCheck, compareToReference, passes } from '../score';
 import type { BenchRow, PdfProfile } from '../types';
 
-const row = (o: Partial<BenchRow>): BenchRow => ({ section: 'spare_parts', srNo: 1, description: 'Front bumper', qty: 1, rate: 100, amount: 100, page: 1, ...o });
+const row = (o: Partial<BenchRow>): BenchRow => ({ section: 'spare_parts', srNo: 1, description: 'Front bumper', qty: 1, rate: 100, amount: 100, taxable: 100, page: 1, ...o });
 const profile = (o: Partial<PdfProfile> = {}): PdfProfile => ({
   id: 'p', fileName: 'a.pdf', kind: 'digital', pageCount: 4, confirmed: true, unreadablePages: [],
   estimates: [{ label: 'E1', firstPage: 1, lastPage: 4, grandTotal: null }], ...o,
@@ -11,8 +11,8 @@ const profile = (o: Partial<PdfProfile> = {}): PdfProfile => ({
 describe('toBenchRows', () => {
   it('maps fields and 1-bases the page', () => {
     const r = toBenchRows({ labour_items: [{ sr_no: 2, description: 'Fit', quantity: 2, unit_price: 50, total_amount: 100, _page: 2 }], spare_parts: [{ sr_no: 1, description: 'X', amount: 7, _page: 0 }] });
-    expect(r).toContainEqual({ section: 'labour_items', srNo: 2, description: 'Fit', qty: 2, rate: 50, amount: 100, page: 3 });
-    expect(r.find(x => x.section === 'spare_parts')).toMatchObject({ amount: 7, page: 1, qty: null });
+    expect(r).toContainEqual({ section: 'labour_items', srNo: 2, description: 'Fit', qty: 2, rate: 50, amount: 100, taxable: null, discount: null, page: 3 });
+    expect(r.find(x => x.section === 'spare_parts')).toMatchObject({ amount: 7, page: 1, qty: null, taxable: null });
   });
   it('tolerates junk', () => { expect(toBenchRows(null)).toEqual([]); });
 });
@@ -35,12 +35,28 @@ describe('selfCheck', () => {
     expect(selfCheck([row({ srNo: 1, page: 1 }), row({ srNo: 1, page: 3 })], p)).toEqual([]);
   });
   it('flags gap and duplicate serials and qty x rate', () => {
-    const t = selfCheck([row({ srNo: 1 }), row({ srNo: 3 }), row({ srNo: 3, amount: 500 })], profile());
-    expect(t.map(e => e.type).sort()).toEqual(['duplicated', 'missed', 'wrong_amount']);
+    const t = selfCheck([row({ srNo: 1 }), row({ srNo: 3 }), row({ srNo: 3, taxable: 500, amount: 500 })], profile());
+    expect(t.map(e => e.type).sort()).toEqual(['serial_gap', 'serial_gap', 'wrong_amount']);
+    expect(passes(t.filter(e => e.type === 'serial_gap'))).toBe(true);
   });
   it('row on unreadable page -> no error', () => {
     const p = profile({ unreadablePages: [2], estimates: [{ label: 'E1', firstPage: 1, lastPage: 4, grandTotal: 100 }] });
     expect(selfCheck([row({}), row({ srNo: 9, page: 2, amount: 9999 })], p)).toEqual([]);
+  });
+});
+
+describe('R5/R6', () => {
+  it('GST row passes qty x rate; discounted row passes', () => {
+    expect(selfCheck([row({ qty: 1, rate: 1000, taxable: 1000, amount: 1180 })], profile())).toEqual([]);
+    expect(selfCheck([row({ qty: 1, rate: 1000, taxable: 900, discount: 100, amount: 1062 })], profile())).toEqual([]);
+  });
+  it('taxable-basis subtotals tie', () => {
+    const p = profile({ estimates: [{ label: 'E1', firstPage: 1, lastPage: 4, grandTotal: null, totalsBasis: 'taxable', subtotals: { spare_parts: 1000 } }] });
+    expect(selfCheck([row({ qty: 1, rate: 1000, taxable: 1000, amount: 1180 })], p)).toEqual([]);
+  });
+  it('grand total with adjustment -500 ties', () => {
+    const p = profile({ estimates: [{ label: 'E1', firstPage: 1, lastPage: 4, grandTotal: 700, adjustment: -500 }] });
+    expect(selfCheck([row({ qty: 1, rate: 1000, taxable: 1000, amount: 1200 })], p)).toEqual([]);
   });
 });
 

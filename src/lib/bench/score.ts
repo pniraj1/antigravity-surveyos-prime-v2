@@ -19,6 +19,8 @@ export function toBenchRows(data: unknown): BenchRow[] {
         qty: num(r.quantity),
         rate: num(r.unit_price),
         amount: num(r.total_amount) ?? num(r.amount) ?? 0,
+        taxable: num(r.taxable_amount),
+        discount: num(r.discount_amount) ?? num(r.discount),
         page: (typeof r._page === 'number' ? r._page : 0) + 1,
       });
     }
@@ -38,8 +40,9 @@ export function selfCheck(rows: BenchRow[], profile: PdfProfile): BenchError[] {
   const errors: BenchError[] = [];
   for (const e of profile.estimates) {
     const mine = inSpan(rows, e, profile);
-    const sum = (list: BenchRow[]) => list.reduce((s, r) => s + r.amount, 0);
-    if (e.grandTotal !== null && Math.abs(sum(mine) - e.grandTotal) > TIE) {
+    const basis = (r: BenchRow) => (e.totalsBasis === 'taxable' ? (r.taxable ?? 0) : r.amount);
+    const sum = (list: BenchRow[]) => list.reduce((s, r) => s + basis(r), 0);
+    if (e.grandTotal !== null && Math.abs(sum(mine) + (e.adjustment ?? 0) - e.grandTotal) > TIE) {
       errors.push(err('totals_mismatch', e.label, null, null, `rows add to ${sum(mine)}, printed ${e.grandTotal}`));
     }
     for (const s of SECTIONS) {
@@ -52,18 +55,18 @@ export function selfCheck(rows: BenchRow[], profile: PdfProfile): BenchError[] {
       let prev: BenchRow | undefined;
       for (const r of secRows) {
         if (r.srNo === null) continue;
-        if (seen.has(r.srNo)) errors.push(err('duplicated', e.label, r.page, r.srNo, `${s} serial ${r.srNo} repeats`));
+        if (seen.has(r.srNo)) errors.push(err('serial_gap', e.label, r.page, r.srNo, `${s} serial ${r.srNo} repeats`));
         seen.set(r.srNo, r);
       }
       const nums = [...seen.keys()].sort((a, b) => a - b);
       for (let n = 1; n <= (nums[nums.length - 1] ?? 0); n++) {
         if (seen.has(n)) { prev = seen.get(n); continue; }
-        errors.push(err('missed', e.label, prev?.page ?? seen.get(nums.find(x => x > n)!)!.page, n, `${s} serial ${n} missing`));
+        errors.push(err('serial_gap', e.label, prev?.page ?? seen.get(nums.find(x => x > n)!)!.page, n, `${s} serial ${n} missing`));
       }
     }
     for (const r of mine) {
-      if (r.qty !== null && r.rate !== null && Math.abs(r.qty * r.rate - r.amount) > TIE) {
-        errors.push(err('wrong_amount', e.label, r.page, r.srNo, `${r.qty} x ${r.rate} != ${r.amount}`));
+      if (r.qty !== null && r.rate !== null && r.taxable !== null && !r.discount && Math.abs(r.qty * r.rate - r.taxable) > TIE) {
+        errors.push(err('wrong_amount', e.label, r.page, r.srNo, `${r.qty} x ${r.rate} != taxable ${r.taxable}`));
       }
     }
   }
