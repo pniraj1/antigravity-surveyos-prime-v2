@@ -1,7 +1,18 @@
 # Active Tasks
 
-> Last updated: 2026-10-30 by Antigravity
+> Last updated: 2026-10-31 by Antigravity (Handover to Claude Code)
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
+
+---
+
+## In Progress: Auto-Split Multi-Page Row Ordering Bug (Active Handover Task)
+- [ ] **Fix Inverted Row Order on Multi-Page Auto-Split:**
+  - **Observed Behavior:** In sandbox testing with Ollama (`gemma4:31b`), extracting the first 2 pages of Pawar Brothers' merged estimate PDF triggered the in-flight auto-split fallback (`"Re-reading page 1 of 2 individually..."`, `"Re-reading page 2 of 2 individually..."`). However, Page 2's line items appeared *first* in the assessment sheet, followed by Page 1's items.
+  - **Inspection Targets:**
+    1. `src/lib/ai/processor.ts` lines 585–601: Check `mergeResponse` and `singleResp` error handling; if page 1 threw during individual pass, `rowCheck` start-gap detector called `fillGaps` which appended page 1 rows after page 2.
+    2. `src/stores/slices/aiDataSlice.ts` (`buildEstimateRows`): Sort built rows by printed `srNo` (ascending) when present so items 1..N always precede items N+1..M regardless of network resolution order.
+    3. `src/lib/ai/ai-pages.ts` & `src/lib/photos/pdf-to-images.ts`: Verify `apiImages` array order matches `resolveAIPages`.
+  - **Verification:** Test with Pawar Brothers estimate pages 1 & 2 on Ollama `gemma4:31b` in sandbox (`https://surveyos-v2-antigravity-in.web.app`).
 
 ---
 

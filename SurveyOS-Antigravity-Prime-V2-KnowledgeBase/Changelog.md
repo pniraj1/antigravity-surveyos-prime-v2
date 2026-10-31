@@ -2,6 +2,12 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-10-31 (Antigravity) — Comprehensive Handover to Claude Code
+- docs(kb): **Comprehensive Handover Document & Knowledge Base Synchronization** (`HANDOVER.md`, `Tasks.md`, `Sessions/2026-10-31-handover-to-claude.md`).
+  - Documented all 7 workstreams completed between 2026-10-27 and 2026-10-31.
+  - Recorded active investigation on auto-split multi-page row ordering (Page 2 appearing before Page 1 during individual chunk fallback on dense multi-page PDFs with Ollama `gemma4:31b`).
+  - Synced git status, test status (227 Vitest test suites, 1,999 tests passing, `tsc` clean), and deployment status across production (`motorsurveyos-in.web.app`), dedicated sandbox (`surveyos-v2-antigravity-in.web.app`), and Cloud Functions in `asia-south1`.
+
 ## 2026-10-30 (Antigravity) — Anonymous Firebase Auth & BYOK Proxy Exemption for Sandbox
 - feat(ai): **BYOK Proxy Access for Anonymous Sandbox Sessions** (`functions/index.js`, `src/lib/sandbox.ts`).
   - Added anonymous caller exemption in Cloud Functions `aiProxy` and `nvidiaProxy`: anonymous sessions bringing their own API key (BYOK) are permitted without requiring an active paid subscription record in Firestore.
