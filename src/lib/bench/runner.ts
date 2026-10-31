@@ -12,6 +12,7 @@ import type { BenchError, PdfProfile } from './types';
 export interface RunnerDeps { runModelTest: typeof RunModelTest; store: typeof bench; pacerFor(p: ProviderId): Pacer; subscribeCalls: typeof SubscribeCalls }
 export interface RunProgress { provider: ProviderId; callsMade: number; callsPlanned: number; tokensIn: number; tokensOut: number; waitMs: number; lastError: string | null; paused: boolean }
 
+// NOTE: the override is module-global, so a real extraction started in this tab during a bench run would use it (bench is sandbox-only).
 // ponytail: the AI test override is a module-level singleton, so model runs are serialised
 // across providers by this one gate. Pacer waits (take) stay outside it and overlap.
 // Upgrade path: a per-call override in service.ts if parallel extraction is ever needed.
