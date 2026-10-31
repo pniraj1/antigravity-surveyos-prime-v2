@@ -152,6 +152,29 @@ describe('parseEstimate', () => {
     expect(parseEstimate([page]).ok).toBe(true);
   });
 
+  it('a second estimate below the first grand total declines', () => {
+    const second = [...head(540), ...item(530, 1, 'WING', '100.00'), ...item(520, 2, 'BULB', '50.00'),
+      ...line(500, [[60, 'Total'], [100, 'Amount'], amt(295, '177')])];
+    expect(reason(parseEstimate([[...kia(), ...second]]))).toContain('multiple');
+  });
+
+  it('a second estimate on the next page declines', () => {
+    const second = [...head(700), ...item(680, 1, 'WING', '100.00'), ...line(620, [[60, 'Payable'], amt(295, '118')])];
+    expect(reason(parseEstimate([kia(), second]))).toContain('multiple');
+  });
+
+  it('heading-less labour section after a parts subtotal line is classified by SAC', () => {
+    const page = [...head(700), ...item(680, 1, 'DOOR', '100.00'), ...item(670, 2, 'LAMP', '200.00'),
+      ...line(650, [[60, 'Parts'], [100, 'Total'], amt(295, '300.00')]),
+      ...item(640, 1, 'DENTING', '400.00', '998729'), ...item(630, 2, 'FITTING', '100.00', '998729'),
+      ...line(590, [[60, 'Sub'], [90, 'Total'], amt(295, '300.00'), amt(400, '500.00')]),
+      ...line(570, [[60, 'Grand'], [100, 'Total'], amt(295, '944')])];
+    const o = parseEstimate([page]);
+    if (!o.ok) throw new Error(o.reason);
+    expect(o.data.spare_parts).toHaveLength(2);
+    expect(o.data.labour_items).toHaveLength(2);
+  });
+
   it('letterhead text above the header does not classify a section', () => {
     const page = [...line(740, [[60, 'Authorised'], [130, 'Service'], [180, 'Centre']]), ...head(700), ...item(680, 1, 'DOOR', '100.00', '998729'),
       ...line(630, [[60, 'Sub'], [90, 'Total'], amt(295, '100.00')]), ...line(620, [[60, 'Grand'], [100, 'Total'], amt(295, '118')])];

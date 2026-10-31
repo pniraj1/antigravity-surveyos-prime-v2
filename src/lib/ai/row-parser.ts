@@ -165,7 +165,7 @@ export function readRows(pages: PdfToken[][]): { rows: RawRow[]; nonItemLines: N
       const band = toks.filter(t => t.y < hi && t.y >= lo);
       const leadToks = a.s === '1' ? band.filter(t => t.y > a.y + 2) : [];
       const lead = leadToks.sort(byReading).map(t => t.s).join(' ');
-      const heading = KIND_WORDS.test(lead);   // a section heading is not part of the row's cells
+      const heading = KIND_WORDS.test(lead) || TOTAL_LABEL.test(lead);   // a heading or a totals line is not part of the row's cells
       rows.push({ sr: Number(a.s), page: p, y: a.y, x: a.x, lead: a.s === '1' ? lead : undefined, cells: rowCells(band.filter(t => t !== a && !(heading && leadToks.includes(t))), a, cols!), text: [...band].sort(byReading).map(t => t.s).join(' ') });
     }
     for (const l of linesOf(toks)) {
@@ -208,8 +208,8 @@ const TOTAL_LABEL = /\btotal\b|\bnet\s*amount\b|\b(part|labou?r)\s*(amt|amount)\
 /** Parts / labour from the heading between the header (or the previous section) and this section's first row; null = unknown. */
 function kindOf(first: RawRow, prevRow: RawRow | undefined, lines: NonItemLine[]): 'part' | 'labour' | null {
   const header = lines.filter(l => /\bqty\b/i.test(l.text) && above(l, first)).pop();
-  const floor = [header, prevRow].filter((b): b is NonItemLine | RawRow => !!b).sort((a, b) => (above(a, b) ? 1 : -1)).pop();
-  const text = [first.lead ?? '', ...lines.filter(l => above(l, first) && (!floor || above(floor, l))).map(l => l.text)].join(' ');
+  const floor = [header, prevRow].filter((b): b is NonItemLine | RawRow => !!b).sort((a, b) => (above(a, b) ? -1 : 1)).pop();
+  const text = [TOTAL_LABEL.test(first.lead ?? '') ? '' : first.lead ?? '', ...lines.filter(l => above(l, first) && (!floor || above(floor, l)) && !TOTAL_LABEL.test(l.text)).map(l => l.text)].join(' ');
   const part = PART_WORD.test(text), labour = LABOUR_WORD.test(text);
   return part === labour ? null : part ? 'part' : 'labour';
 }
@@ -222,6 +222,11 @@ export function parseEstimate(pages: PdfToken[][]): ParseOutcome {
   const grands = nonItemLines.filter(l => GRAND_LABEL.test(l.text) && l.nums.length);
   if (!grands.length) return { ok: false, reason: 'no grand total found' };
   const gross = Math.max(...grands.flatMap(l => l.nums));
+  // a second document (or a page of one) after the first grand total must not be silently dropped
+  const afterGrand = nonItemLines.slice(nonItemLines.indexOf(grands[0]) + 1);
+  const isHeader = (l: NonItemLine) => /\bqty\b/i.test(l.text) && l.text.split(' ').some(w => SERIAL_WORD.test(w));
+  const looksLikeRow = (l: NonItemLine) => /^\d{1,3}$/.test(l.text.split(' ')[0]) && l.nums.length >= 3;
+  if (afterGrand.some(l => isHeader(l) || looksLikeRow(l))) return { ok: false, reason: 'multiple documents: a header or numbered item line follows the grand total' };
   // a serial the reader skipped leaves a line starting in the serial column, between the header and the last grand total
   const lastGrand = grands[grands.length - 1];
   const header = nonItemLines.find(l => /\bqty\b/i.test(l.text));
