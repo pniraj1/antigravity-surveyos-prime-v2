@@ -17,7 +17,7 @@ import { takeDrop } from './fault';
 import { getAIPages, resolveAIPages } from './ai-pages';
 import { layoutLines, countAmountLines } from './text-lines';
 import { planChunks } from './group-pages';
-import { limitsFor } from './page-limits';
+import { limitsFor, PAGE_LIMITS } from './page-limits';
 import { profilePages, pageRuns, chunkRuns } from './page-runs';
 
 /**
@@ -328,7 +328,7 @@ export async function extractDocument(
   return aiQueue.add(async () => {
     if (onProgress) onProgress('Scanning document...');
     // Render scale from the first model's limit; pages keep it after a mid-document fallback.
-    const apiScale = limitsFor(firstModel(session, job) ?? '', 'vision')?.imageScale;
+    const apiScale = PAGE_LIMITS.length ? limitsFor(firstModel(session, job) ?? '', 'vision')?.imageScale : undefined;
     const { viewImages, apiImages, textLayers, pageRefs } = await filesToImages(files, (p, t) => {
       if (onProgress) onProgress(`Processing page ${p} of ${t}...`);
     }, apiScale);
@@ -381,7 +381,7 @@ export async function extractDocument(
         // Cancelled between pages — stop before spending another call.
         if (signal?.aborted) throw abortError();
         // Group the remaining pages for the model now answering (bench runs keep their fixed sizes).
-        if (!getAITestOverride()) chunks = planChunks(chunks, ci, session.lastGood?.model ?? firstModel(session, job), expectedRows, sizes);
+        if (!getAITestOverride()) chunks = planChunks(chunks, ci, session.lastGood?.model ?? (PAGE_LIMITS.length ? firstModel(session, job) : undefined), expectedRows, sizes);
 
         const { method, first: i, last } = chunks[ci];
         const currentBatchStart = i + 1;
