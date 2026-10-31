@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  rowCheck, tagRows, dropDuplicates, mergeBySerial, stripPageTags, toFindings, describeFinding, countRows,
+  rowCheck, tagRows, dropDuplicates, mergeBySerial, orderByPage, stripPageTags, toFindings, describeFinding, countRows,
 } from '../row-check';
 
 const row = (sr_no: number, total_amount: number, _page?: number, extra: object = {}) => ({ sr_no, total_amount, _page, ...extra });
@@ -147,4 +147,25 @@ describe('helpers', () => {
     expect(describeFinding({ kind: 'gross', rows: 225100, printed: 226860 })).toBe('Rows add up to ₹2,25,100 but the bill says ₹2,26,860');
   });
   it('countRows sums the three sections', () => { expect(countRows(dtc())).toBe(80); });
+});
+
+describe('orderByPage', () => {
+  it('gap-filled page-1 rows go before page-2 rows', () => {
+    const data = tagRows({ labour_items: [{ sr_no: 11 }, { sr_no: 12 }] }, 1, 1);
+    const out = mergeBySerial(data, tagRows({ labour_items: [{ sr_no: 1 }, { sr_no: 2 }] }, 0, 0));
+    expect(out.labour_items.map(r => r.sr_no)).toEqual([1, 2, 11, 12]);
+  });
+  it('keeps model order within one page (no serial sort)', () => {
+    const data = tagRows({ spare_parts: [{ sr_no: 5 }, { sr_no: 3 }] }, 0, 0);
+    expect(orderByPage(data).spare_parts.map(r => r.sr_no)).toEqual([5, 3]);
+  });
+  it('parts and labour stay in their sections', () => {
+    const data = { ...tagRows({ spare_parts: [{ sr_no: 9 }] }, 1, 1), ...tagRows({ labour_items: [{ sr_no: 1 }] }, 0, 0) };
+    const out = orderByPage(data);
+    expect(out.spare_parts).toHaveLength(1); expect(out.labour_items).toHaveLength(1);
+  });
+  it('an untagged row stays next to the row before it', () => {
+    const data = { spare_parts: [{ sr_no: 1, _page: 1 }, { sr_no: 2 }, { sr_no: 3, _page: 0 }] };
+    expect(orderByPage(data).spare_parts.map(r => r.sr_no)).toEqual([3, 1, 2]);
+  });
 });

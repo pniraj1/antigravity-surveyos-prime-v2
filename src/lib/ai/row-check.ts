@@ -179,7 +179,18 @@ export function mergeBySerial<T>(data: T, fragment: unknown): T {
     const fresh = rowsOf(fragment, s).filter(r => { const n = serial(r); if (n === null || have.has(n)) return false; have.add(n); return true; });
     if (fresh.length) out[s] = [...rowsOf(data, s), ...fresh];
   }
-  return out as T;
+  return orderByPage(out as T);
+}
+
+/** Stable sort per section by source page. Untagged rows inherit the previous row's page, so they stay beside it. Never sorts by serial. */
+export function orderByPage<T>(data: T): T {
+  return mapSections(data, rows => {
+    let last = -1;
+    return rows
+      .map(r => ({ r, p: (last = typeof r._page === 'number' ? r._page : last) }))
+      .sort((a, b) => a.p - b.p)
+      .map(x => x.r);
+  });
 }
 
 export function toFindings(check: RowCheck): Finding[] {
