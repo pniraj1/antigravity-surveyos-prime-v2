@@ -16,6 +16,7 @@ import { chunkSizeFor, isRaw, apiImageScale } from './bench-override';
 import { takeDrop } from './fault';
 import { getAIPages, resolveAIPages } from './ai-pages';
 import { layoutLines } from './text-lines';
+import { profilePages, pageRuns, chunkRuns } from './page-runs';
 
 /**
  * Extracts text content from a PDF page (if it has a text layer).
@@ -41,11 +42,6 @@ function hasFinancialData(text: string): boolean {
   return matches.length > 3;
 }
 
-// ─── Smart PDF Mode Detection ─────────────────────────────────────────────────
-
-const TEXT_RICH_THRESHOLD = 200;  // chars/page → clearly digitally-born
-const TEXT_POOR_THRESHOLD = 30;   // chars/page → clearly scanned / image-only
-
 // ─── Token Budget ─────────────────────────────────────────────────────────────
 // Groq's on-demand (free) tier: 8,000 TPM cap.
 // We budget 4,500 tokens for the ENTIRE prompt (instructions + page text).
@@ -65,64 +61,6 @@ function estimateTokens(text: string): number {
   return Math.ceil(text.length / CHARS_PER_TOKEN);
 }
 
-/**
- * Returns true if the text is mostly garbage (corrupted export from legacy ERP).
- * A garbled text layer has high char count but unreadable content — we should
- * fall back to vision processing in that case.
- *
- * Heuristic: if >25% of characters are not printable ASCII, digits, common
- * punctuation, or basic Devanagari/Hindi Unicode range, treat as garbage.
- */
-function isGarbageText(text: string): boolean {
-  if (text.length < 50) return false;
-  const printable = text.match(/[\x20-\x7E\u0900-\u097F\u20B9]/g) ?? [];
-  return (printable.length / text.length) < 0.75;
-}
-
-type PageMode = 'text' | 'vision';
-type DocMode  = 'text' | 'vision' | 'mixed';
-
-interface PageProfile {
-  pageIndex: number;
-  charCount: number;
-  text: string;
-  mode: PageMode;
-}
-
-/**
- * Classifies each page as text-native or vision-only, then determines the
- * overall document mode:
- *
- *   text   — ≥85% of pages are text-rich → send text to AI, skip images
- *   vision — ≥85% of pages are scanned   → current path (send PNG images)
- *   mixed  — blend of both               → treated as 'vision' (safe fallback)
- *
- * A page is "text-rich" only if:
- *   1. charCount ≥ TEXT_RICH_THRESHOLD, AND
- *   2. The extracted text is NOT garbled (passes isGarbageText check)
- */
-function profilePages(textLayers: string[]): {
-  pages: PageProfile[];
-  docMode: DocMode;
-} {
-  const pages: PageProfile[] = textLayers.map((text, i) => {
-    const isTextRich = text.length >= TEXT_RICH_THRESHOLD && !isGarbageText(text);
-    return {
-      pageIndex: i,
-      charCount: text.length,
-      text,
-      mode: isTextRich ? 'text' : 'vision',
-    };
-  });
-
-  const textCount = pages.filter(p => p.mode === 'text').length;
-  const ratio = pages.length > 0 ? textCount / pages.length : 0;
-
-  // mixed → treat as vision (simpler, safer, no per-chunk routing complexity)
-  const docMode: DocMode = ratio >= 0.85 ? 'text' : 'vision';
-
-  return { pages, docMode };
-}
 
 /**
  * Converts a file (Image or PDF) to a list of base64 strings.
@@ -392,36 +330,25 @@ export async function extractDocument(
     const totalPages = apiImages.length;
     session.pagesTotal = totalPages;   // heavy ranking skips keys that cannot cover the whole document
 
-    // ── Smart PDF Mode Detection ─────────────────────────────────────────────
-    // Classify each page as text-native or vision-only.
-    // If ≥85% of pages have a rich text layer (and not garbled), send text to
-    // the AI directly — no images, no encoding overhead, Groq-compatible.
-    // Otherwise fall through to the existing image/vision path.
-    const { pages: pageProfiles, docMode: detectedMode } = textLayers
-      ? profilePages(textLayers)
-      : { pages: [], docMode: 'vision' as DocMode };
+    // ── Text or image, decided per page ──────────────────────────────────────
+    // A page with a rich, non-garbled text layer is sent as text; others as an
+    // image. Consecutive pages of one kind form a run; chunks never cross runs.
+    const pageProfiles = textLayers ? profilePages(textLayers).pages : [];
+    const modes = pageProfiles.length === totalPages ? pageProfiles.map(p => p.mode) : apiImages.map(() => 'vision' as const);
+    const runs = pageRuns(modes, forceDocMode ?? getAITestOverride()?.method);
+    const allText = runs.length > 0 && runs.every(r => r.method === 'text');
+    console.log(`[AI Extraction] ${key}: ${runs.map(r => `${r.method} ${r.pages[0] + 1}–${r.pages[r.pages.length - 1] + 1}`).join(', ')}`);
 
-    const docMode = forceDocMode ?? getAITestOverride()?.method ?? detectedMode;
-
-    const useTextMode = docMode === 'text';
-    if (useTextMode) {
-      console.log(`[AI Extraction] ${key}: text-mode detected (${totalPages} pages, text-native PDF)`);
-    } else {
-      console.log(`[AI Extraction] ${key}: vision-mode (${docMode})`);
-    }
-
-    // Chunk size: always 1 page per call in text-mode (avoids 413 on dense documents).
-    // In vision-mode: estimates prefer 2 pages per call for efficiency; others get 1.
-    // The preference is then clamped to the active provider's image cap — NVIDIA
-    // accepts exactly 1, and exceeding it 400s the whole request.
+    // Text: 1 page per call (avoids 413 on dense documents) unless the bench sets
+    // pagesPerCall. Vision: estimates prefer 2 pages per call, others 1, clamped
+    // to the active provider's image cap — NVIDIA accepts exactly 1.
     const PREFERRED_VISION_CHUNK = chunkSizeFor((key === 'estimate' || key === 'final-bill') ? 2 : 1, getAITestOverride());
     const VISION_CHUNK_SIZE = resolveVisionChunkSize(PREFERRED_VISION_CHUNK, getActiveImageCap(job));
-    const CHUNK_SIZE = useTextMode ? 1 : VISION_CHUNK_SIZE;
+    const chunks = chunkRuns(runs, chunkSizeFor(1, getAITestOverride()), VISION_CHUNK_SIZE);
 
-    // Build the base prompt — for vision mode on digitally-born docs we still
-    // hint the AI with the text layer for accuracy, but send images too.
+    // Text pages present on a digitally-born doc: hint the AI with the text layer.
     let enhancedPrompt = prompt;
-    if (docMode !== 'vision' && textLayers && textLayers.some(t => hasFinancialData(t))) {
+    if (runs.some(r => r.method === 'text') && textLayers && textLayers.some(t => hasFinancialData(t))) {
       const textPreview = textLayers.slice(0, 3).join('\n---PAGE BREAK---\n');
       enhancedPrompt = `${prompt}\n\nNOTE: This appears to be a digitally-created document (not scanned). The extracted text layer is provided below for reference to guide your extraction:\n\n${textPreview}\n\nUse this text as a reference to ensure accuracy, but validate against the visual document.`;
     }
@@ -441,12 +368,13 @@ export async function extractDocument(
       // math discrepancies so missing line items are never silent.
       const issues: string[] = [];
 
-      for (let i = 0; i < totalPages; i += CHUNK_SIZE) {
+      for (let ci = 0; ci < chunks.length; ci++) {
         // Cancelled between pages — stop before spending another call.
         if (signal?.aborted) throw abortError();
 
+        const { method, first: i, last } = chunks[ci];
         const currentBatchStart = i + 1;
-        const currentBatchEnd = Math.min(i + CHUNK_SIZE, totalPages);
+        const currentBatchEnd = last + 1;
 
         if (onProgress) {
           let msg = totalPages > 1
@@ -459,66 +387,53 @@ export async function extractDocument(
         }
 
         // Small throttle delay between chunks to avoid rate limiting
-        if (i > 0) await new Promise(r => setTimeout(r, 600));
+        if (ci > 0) await new Promise(r => setTimeout(r, 600));
 
         // Budget is "calls still needed from here on", not the whole document —
         // a key with just enough left for the rest must not be dropped mid-read.
-        session.pagesTotal = Math.ceil((totalPages - i) / CHUNK_SIZE);
+        session.pagesTotal = chunks.length - ci;
 
         // ── Choose text-mode or vision-mode payload ──────────────────────────
         let chunkImages: string[];
         let chunkPrompt: string;
 
-        if (useTextMode) {
-          // Text-native PDF: embed the raw text directly in the prompt.
-          // No images sent → works with all providers including Groq.
-          //
-          // ⚠️  TOKEN BUDGET GUARD (Groq 8K TPM limit)
-          // Build the chunk text for the current CHUNK_SIZE window, then measure
-          // estimated tokens. If the full prompt would exceed MAX_PROMPT_TOKENS,
-          // shrink the window page-by-page until it fits.
-          // If even a SINGLE page is too large, fall back to vision for that chunk.
+        if (method === 'text') {
+          // Text pages: embed the raw text in the prompt, no images (works with Groq).
+          // Each page is truncated hard at MAX_PAGE_TEXT_CHARS (last full line) so a
+          // pathologically dense page cannot 413; if the prompt is still over the
+          // token budget, the chunk goes as images instead.
+          const truncatedPages: number[] = [];
+          const chunkText = pageProfiles.slice(i, last + 1).map((p, k) => {
+            let pageText = p?.text ?? '';
+            if (pageText.length > MAX_PAGE_TEXT_CHARS) {
+              truncatedPages.push(i + k + 1);
+              console.warn(`[AI Extraction] ${key}: page ${i + k + 1} text is very large (${pageText.length} chars) — truncating to ${MAX_PAGE_TEXT_CHARS} chars.`);
+              const truncated = pageText.slice(0, MAX_PAGE_TEXT_CHARS);
+              const lastNewline = truncated.lastIndexOf('\n');
+              pageText = lastNewline > MAX_PAGE_TEXT_CHARS * 0.8 ? truncated.slice(0, lastNewline) : truncated;
+            }
+            return `--- PAGE ${i + k + 1} ---\n${pageText}`;
+          }).join('\n');
+          const span = i === last ? `page ${currentBatchStart}` : `pages ${currentBatchStart}–${currentBatchEnd}`;
+          const candidatePrompt = `${enhancedPrompt}\n\n--- DOCUMENT TEXT (${span} of ${totalPages}) ---\n${chunkText}`;
 
-          // Since CHUNK_SIZE=1 in text-mode, we always process exactly one page at a time.
-          // Build the page text, but truncate it hard if it exceeds MAX_PAGE_TEXT_CHARS.
-          // This prevents 413s even on pathologically dense pages (e.g. 200-line estimates).
-          let pageText = pageProfiles[i]?.text ?? '';
-          let pageTruncated = false;
-          if (pageText.length > MAX_PAGE_TEXT_CHARS) {
-            pageTruncated = true;
-            console.warn(
-              `[AI Extraction] ${key}: page ${currentBatchStart} text is very large ` +
-              `(${pageText.length} chars) — truncating to ${MAX_PAGE_TEXT_CHARS} chars.`
-            );
-            // Truncate to the last complete line before the limit to avoid mid-row cuts.
-            const truncated = pageText.slice(0, MAX_PAGE_TEXT_CHARS);
-            const lastNewline = truncated.lastIndexOf('\n');
-            pageText = lastNewline > MAX_PAGE_TEXT_CHARS * 0.8
-              ? truncated.slice(0, lastNewline)
-              : truncated;
-          }
-
-          const chunkText = `--- PAGE ${currentBatchStart} ---\n${pageText}`;
-          let candidatePrompt = `${enhancedPrompt}\n\n--- DOCUMENT TEXT (page ${currentBatchStart} of ${totalPages}) ---\n${chunkText}`;
-
-          // If even the truncated single-page prompt is still too large, fall back to vision.
           if (estimateTokens(candidatePrompt) > MAX_PROMPT_TOKENS) {
             console.warn(
-              `[AI Extraction] ${key}: page ${currentBatchStart} still too large for text-mode ` +
+              `[AI Extraction] ${key}: ${span} still too large for text-mode ` +
               `(~${estimateTokens(candidatePrompt)} tokens) — falling back to vision.`
             );
-            chunkImages = apiImages.slice(i, i + 1);
+            chunkImages = apiImages.slice(i, last + 1);
             chunkPrompt = enhancedPrompt;
           } else {
             chunkPrompt = candidatePrompt;
             chunkImages = []; // pure text mode — no images
-            if (pageTruncated) {
-              issues.push(`Page ${currentBatchStart} is very dense and was only partially read — verify its line items against the document.`);
+            for (const n of truncatedPages) {
+              issues.push(`Page ${n} is very dense and was only partially read — verify its line items against the document.`);
             }
           }
         } else {
           // Vision path: send JPEG images (existing behaviour)
-          chunkImages = apiImages.slice(i, i + CHUNK_SIZE);
+          chunkImages = apiImages.slice(i, last + 1);
           chunkPrompt = enhancedPrompt;
         }
 
@@ -596,7 +511,7 @@ export async function extractDocument(
               `[AI Extraction] ${key}: PAYLOAD_TOO_LARGE on text chunk ${currentBatchStart} ` +
               `— retrying as vision (image) chunk.`
             );
-            const visionImages = apiImages.slice(i, i + 1); // 1 page vision fallback
+            const visionImages = apiImages.slice(i, last + 1); // same pages as images
             try {
               rawResponse = await callAIGateway(enhancedPrompt, visionImages, 'json', job, session, signal);
             } catch (visionErr: any) {
@@ -625,7 +540,7 @@ export async function extractDocument(
             for (let p = 0; p < chunkImages.length; p++) {
               if (signal?.aborted) throw abortError();
               // One page left in this fallback call — plus every chunk after it.
-              session.pagesTotal = (chunkImages.length - p) + Math.ceil((totalPages - currentBatchEnd) / CHUNK_SIZE);
+              session.pagesTotal = (chunkImages.length - p) + (chunks.length - ci - 1);
               const r = await callAIGateway(enhancedPrompt, [chunkImages[p]], 'json', job, session, signal);
               await mergeResponse(r, currentBatchStart + p, currentBatchStart + p, [chunkImages[p]]);
             }
@@ -662,7 +577,7 @@ export async function extractDocument(
     const money = key === 'estimate' || key === 'final-bill';
     // Text-mode pages give us something to verify the printed gross against;
     // vision pages do not, so the model's figure is trusted there.
-    const pageTexts = money && useTextMode && textLayers ? textLayers : undefined;
+    const pageTexts = money && allText && textLayers ? textLayers : undefined;
 
     if (money && finalResult) {
       const drop = takeDrop();                                   // dev-only ?ai-drop=38
