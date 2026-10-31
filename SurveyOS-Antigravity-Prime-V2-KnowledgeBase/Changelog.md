@@ -2,6 +2,13 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-10-31 (Claude Code) — Extraction bench, page-order fix, per-page text/image
+- fix(ai): gap-filled rows keep page order (`orderByPage`). This was the cause of page 2's rows showing before page 1's.
+- feat(ai): digital PDF text keeps lines and columns; text or image is decided per page; grouping by model limits from `page-limits.ts` (empty, so no change yet).
+- feat(bench): sandbox-only `/bench`: call meter, per-call pacer, scoring, agreement, IndexedDB v8 store, step-up runner, limits export.
+- fix(sandbox): `?sandbox=true` is ignored on `motorsurveyos-in.*`.
+- Commits `78ea329e..c8f01875`; 2125 tests pass. Not deployed or pushed. Session log `Sessions/2026-10-31-extraction-bench.md`.
+
 ## 2026-10-31 (Antigravity) — Comprehensive Handover to Claude Code
 - docs(kb): **Comprehensive Handover Document & Knowledge Base Synchronization** (`HANDOVER.md`, `Tasks.md`, `Sessions/2026-10-31-handover-to-claude.md`).
   - Documented all 7 workstreams completed between 2026-10-27 and 2026-10-31.

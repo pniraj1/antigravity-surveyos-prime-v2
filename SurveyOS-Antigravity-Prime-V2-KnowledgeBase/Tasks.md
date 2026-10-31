@@ -5,8 +5,14 @@
 
 ---
 
-## In Progress: Auto-Split Multi-Page Row Ordering Bug (Active Handover Task)
-- [ ] **Fix Inverted Row Order on Multi-Page Auto-Split:**
+## In Progress: Extraction bench (built 2026-10-31 on main, NOT deployed or pushed)
+- [x] Page-order fix, PDF text lines, per-page text/image, `/bench` (sandbox only), limits grouping (empty table), `?sandbox=true` production guard. See `Sessions/2026-10-31-extraction-bench.md`.
+- [ ] Owner: approve the sandbox deploy (functions `aiProxy` + hosting `surveyos-v2-antigravity-in`).
+- [ ] Owner: on the sandbox `/bench`, add the Pawar PDF, confirm its profile, lock its gold key, enter keys and run.
+- [ ] Spec checklist §6.6 A–F before any `page-limits.ts` table goes to production.
+
+## Done: Auto-Split Multi-Page Row Ordering Bug (fixed 2026-10-31, commit fb851ec5: gap-fill appended rows; now page order)
+- [x] **Fix Inverted Row Order on Multi-Page Auto-Split:**
   - **Observed Behavior:** In sandbox testing with Ollama (`gemma4:31b`), extracting the first 2 pages of Pawar Brothers' merged estimate PDF triggered the in-flight auto-split fallback (`"Re-reading page 1 of 2 individually..."`, `"Re-reading page 2 of 2 individually..."`). However, Page 2's line items appeared *first* in the assessment sheet, followed by Page 1's items.
   - **Inspection Targets:**
     1. `src/lib/ai/processor.ts` lines 585–601: Check `mergeResponse` and `singleResp` error handling; if page 1 threw during individual pass, `rowCheck` start-gap detector called `fillGaps` which appended page 1 rows after page 2.
