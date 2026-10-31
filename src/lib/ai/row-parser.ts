@@ -70,13 +70,13 @@ function repairNumbers(toks: PdfToken[]): PdfToken[] {
   return out;
 }
 
-interface Column { field: Field | null; start: number; end: number }
+interface Column { field: Field | null; start: number; end: number; right: number }   // right = header's right edge
 
 /** Header = first line with a serial word and Qty; synonyms may span adjacent tokens. */
 function findHeader(toks: PdfToken[]): { y: number; cols: Column[] } | null {
   const line = linesOf(toks).find(l => l.some(t => SERIAL_WORD.test(t.s)) && l.some(t => /^qty\.?$/i.test(t.s)));
   if (!line) return null;
-  const groups: { field: Field | null; x: number }[] = [];
+  const groups: { field: Field | null; x: number; right: number }[] = [];
   for (let i = 0; i < line.length;) {
     let field: Field | null = null, n = 1;
     for (const k of [3, 2, 1]) {
@@ -85,10 +85,10 @@ function findHeader(toks: PdfToken[]): { y: number; cols: Column[] } | null {
       if (f) { field = f; n = k; break; }
     }
     if (!field && SERIAL_WORD.test(line[i].s)) field = 'sr_no';
-    groups.push({ field, x: line[i].x });
+    groups.push({ field, x: line[i].x, right: line[i + n - 1].x + line[i + n - 1].w });
     i += n;
   }
-  const cols = groups.map((g, i) => ({ field: g.field, start: i === 0 ? -Infinity : g.x, end: i + 1 < groups.length ? groups[i + 1].x : Infinity }));
+  const cols = groups.map((g, i) => ({ field: g.field, start: i === 0 ? -Infinity : g.x, end: i + 1 < groups.length ? groups[i + 1].x : Infinity, right: g.right }));
   return { y: line[0].y, cols };
 }
 
@@ -114,11 +114,18 @@ function pickCell(texts: string[]): string | undefined {
   return rev.find(t => parseMoney(t) !== 0) ?? rev[0];
 }
 
+/** Amounts are right-aligned under their header, so a wide one starts left of its column: match by right edge (3pt slack). Text uses the centre. */
+function columnOf(t: PdfToken, cols: Column[]): Column | undefined {
+  if (parseMoney(t.s) !== null) return cols.find(c => c.right >= t.x + t.w - 3) ?? cols[cols.length - 1];
+  const m = t.x + t.w / 2;
+  return cols.find(c => m >= c.start && m < c.end);
+}
+
 function rowCells(band: PdfToken[], anchor: PdfToken, cols: Column[]): Partial<Record<Field, string>> {
   const perField = new Map<Field, string[]>();
   for (const c of cols) {
     if (!c.field) continue;
-    const text = band.filter(t => { const m = t.x + t.w / 2; return m >= c.start && m < c.end; }).sort(byReading).map(t => t.s).join(' ');
+    const text = band.filter(t => columnOf(t, cols) === c).sort(byReading).map(t => t.s).join(' ');
     perField.set(c.field, [...(perField.get(c.field) ?? []), text]);
   }
   const cells: Partial<Record<Field, string>> = {};

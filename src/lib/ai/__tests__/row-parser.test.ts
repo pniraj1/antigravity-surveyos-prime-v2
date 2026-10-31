@@ -32,9 +32,9 @@ describe('readRows', () => {
   it('maps single-line rows to header columns', () => {
     const page = [
       ...header(),
-      ...line(680, [[10, '1'], [40, 'P-1'], [120, 'DOOR'], [220, '2'], [260, '100.00'], [310, '200.00']]),
-      ...line(670, [[10, '2'], [120, 'LAMP'], [220, '1'], [260, '50.00'], [310, '50.00']]),
-      ...line(660, [[10, '3'], [120, 'BOLT'], [220, '4'], [260, '5.00'], [310, '20.00']]),
+      ...line(680, [[10, '1'], [40, 'P-1'], [120, 'DOOR'], [235, '2'], [250, '100.00'], [315, '200.00']]),
+      ...line(670, [[10, '2'], [120, 'LAMP'], [235, '1'], [255, '50.00'], [320, '50.00']]),
+      ...line(660, [[10, '3'], [120, 'BOLT'], [235, '4'], [260, '5.00'], [320, '20.00']]),
     ];
     const rows = rowsOf(readRows([page]));
     expect(rows.map(r => r.sr)).toEqual([1, 2, 3]);
@@ -46,7 +46,7 @@ describe('readRows', () => {
     const page = [
       ...line(700, [[10, 'Srl'], [50, 'Description'], [200, 'Qty.'], [300, 'Total']]),
       ...line(606, [[50, 'CED'], [80, 'ASSY']]),
-      ...line(603, [[300, '8,845.']]),
+      ...line(603, [[295, '8,845.']]),
       ...line(600, [[10, '1'], [200, '1']]),
       ...line(597, [[300, '76']]),
       ...line(594, [[50, 'TAILGATE']]),
@@ -72,8 +72,8 @@ describe('readRows', () => {
   it('takes the rightmost non-zero cell when headers share a Field', () => {
     const page = [
       ...line(700, [[10, 'Srl'], [120, 'Description'], [200, 'Qty.'], [260, 'Ins.Amt'], [330, 'Amount']]),
-      ...line(680, [[10, '1'], [120, 'A'], [260, '0.00'], [330, '500.00']]),
-      ...line(670, [[10, '2'], [120, 'B'], [260, '300.00']]),
+      ...line(680, [[10, '1'], [120, 'A'], [275, '0.00'], [330, '500.00']]),
+      ...line(670, [[10, '2'], [120, 'B'], [265, '300.00']]),
     ];
     const rows = rowsOf(readRows([page]));
     expect(rows.map(r => r.cells.total_amount)).toEqual(['500.00', '300.00']);
@@ -82,12 +82,22 @@ describe('readRows', () => {
   it('maps a bare Labor header to taxable_amount and reports non-item lines', () => {
     const page = [
       ...line(700, [[10, 'Srl'], [120, 'Description'], [200, 'Qty.'], [300, 'Labor']]),
-      ...line(680, [[10, '1'], [120, 'PAINT'], [300, '900.00']]),
+      ...line(680, [[10, '1'], [120, 'PAINT'], [295, '900.00']]),
       ...line(600, [[120, 'Total'], [300, '900.00']]),
     ];
     const r = readRows([page]);
     if ('declined' in r) throw new Error(r.declined);
     expect(r.rows[0].cells.taxable_amount).toBe('900.00');
     expect(r.nonItemLines.some(l => l.text === 'Total 900.00' && l.nums[0] === 900)).toBe(true);
+  });
+
+  it('assigns a wide right-aligned amount by right edge, not centre', () => {
+    const page = [
+      ...line(700, [[10, 'Srl'], [120, 'Description'], [200, 'Qty.'], [260, 'Rate'], [330, 'Total']]),
+      ...line(680, [[10, '1'], [120, 'A'], [300, '1,18,000.00']]),
+    ];
+    const [row] = rowsOf(readRows([page]));
+    expect(row.cells.total_amount).toBe('1,18,000.00');
+    expect(row.cells.unit_price).toBeUndefined();
   });
 });
