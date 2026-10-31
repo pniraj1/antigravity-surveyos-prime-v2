@@ -346,9 +346,10 @@ export async function extractDocument(
     const VISION_CHUNK_SIZE = resolveVisionChunkSize(PREFERRED_VISION_CHUNK, getActiveImageCap(job));
     const chunks = chunkRuns(runs, chunkSizeFor(1, getAITestOverride()), VISION_CHUNK_SIZE);
 
-    // Text pages present on a digitally-born doc: hint the AI with the text layer.
+    // All-text digitally-born doc: hint the AI with the text layer. Never on mixed
+    // docs — image calls would carry extra tokens and could copy preview rows.
     let enhancedPrompt = prompt;
-    if (runs.some(r => r.method === 'text') && textLayers && textLayers.some(t => hasFinancialData(t))) {
+    if (allText && textLayers && textLayers.some(t => hasFinancialData(t))) {
       const textPreview = textLayers.slice(0, 3).join('\n---PAGE BREAK---\n');
       enhancedPrompt = `${prompt}\n\nNOTE: This appears to be a digitally-created document (not scanned). The extracted text layer is provided below for reference to guide your extraction:\n\n${textPreview}\n\nUse this text as a reference to ensure accuracy, but validate against the visual document.`;
     }
@@ -471,6 +472,8 @@ export async function extractDocument(
               }
               return;
             }
+            // A multi-page text chunk (bench pagesPerCall override) lands here: no
+            // images to split, so it is logged as an issue, as in bench raw mode.
             // For multi-page docs: one bad page should not abort the whole extraction.
             // Log the failure and continue accumulating results from other pages.
             console.warn(
@@ -577,6 +580,7 @@ export async function extractDocument(
     const money = key === 'estimate' || key === 'final-bill';
     // Text-mode pages give us something to verify the printed gross against;
     // vision pages do not, so the model's figure is trusted there.
+    // Mixed docs skip the page-text check: stricter is the safe direction.
     const pageTexts = money && allText && textLayers ? textLayers : undefined;
 
     if (money && finalResult) {

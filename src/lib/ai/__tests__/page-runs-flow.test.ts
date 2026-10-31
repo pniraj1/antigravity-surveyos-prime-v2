@@ -61,6 +61,19 @@ describe('extractDocument — text or image per page', () => {
     expect(gw.mock.calls[1][0]).toContain('--- PAGE 3 ---');
   });
 
+  it('text-layer hint: none on a mixed doc, kept on an all-text doc', async () => {
+    const HINT = 'digitally-created document';
+    const money = (n: number) => `${page(n)} ₹1,200 ₹300 ₹400 ₹500`;   // hasFinancialData needs >3 amounts
+    texts.splice(0, texts.length, money(1), money(2), '');
+    gw.mockResolvedValue(rows(1));
+    await extractDocument('estimate', pdf());
+    expect(gw.mock.calls.slice(0, 3).every(c => !String(c[0]).includes(HINT))).toBe(true);
+    gw.mockClear();
+    texts.splice(0, texts.length, money(1), money(2), money(3));
+    await extractDocument('estimate', pdf());
+    expect(gw.mock.calls.slice(0, 3).every(c => String(c[0]).includes(HINT))).toBe(true);
+  });
+
   it('no override: all-text doc stays 1 page per call', async () => {
     texts.splice(0, texts.length, page(1), page(2), page(3));
     gw.mockResolvedValueOnce(rows(1)).mockResolvedValueOnce(rows(2)).mockResolvedValueOnce(rows(3));
