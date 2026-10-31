@@ -1,10 +1,11 @@
 import type { CellResult } from '@/lib/bench/store';
 import type { BenchRow, PdfProfile } from '@/lib/bench/types';
+import { limitsSource, proposeLimits } from '@/lib/bench/export-limits';
 import { checkerVsGold, needsOwner, summarize } from './bench-logic';
 
-interface Props { profiles: PdfProfile[]; cells: CellResult[]; gold: Record<string, BenchRow[] | undefined> }
+interface Props { profiles: PdfProfile[]; cells: CellResult[]; gold: Record<string, BenchRow[] | undefined>; hardIds: string[] }
 
-export function ResultsTable({ profiles, cells, gold }: Props) {
+export function ResultsTable({ profiles, cells, gold, hardIds }: Props) {
   const { agree, total } = checkerVsGold(profiles, cells, gold);
   const greyed = total === 0 || agree !== total;
   const rows = summarize(cells);
@@ -12,6 +13,11 @@ export function ResultsTable({ profiles, cells, gold }: Props) {
   return (
     <section className="space-y-3">
       <h2 className="text-lg font-semibold">Results</h2>
+      <button type="button" className="rounded border px-2 py-1 text-sm disabled:opacity-40" disabled={greyed}
+        onClick={() => void navigator.clipboard.writeText(limitsSource(proposeLimits(cells, hardIds)))
+          .then(() => alert('Limits table copied — paste it into src/lib/ai/page-limits.ts after review.'), e => alert(`Copy failed: ${e}`))}>
+        Export limits table
+      </button>
       <p className={greyed ? 'text-sm font-medium text-red-600' : 'text-sm text-slate-700'}>
         Checker vs gold: {agree}/{total} agree
         {total === 0 ? ". Lock at least one gold PDF — results don't count until the checker agrees with gold" : greyed ? '. Fix the checker before trusting the results below.' : ''}

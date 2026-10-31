@@ -60,16 +60,17 @@ describe('checker vs gold', () => {
   test('agreeing readings give N/N and results stay visible', () => {
     const cells = [cell('m1', [row(100)])];
     expect(checkerVsGold([profile], cells, { p1: gold })).toEqual({ agree: 1, total: 1 });
-    const html = renderToStaticMarkup(<ResultsTable profiles={[profile]} cells={cells} gold={{ p1: gold }} />);
+    const html = renderToStaticMarkup(<ResultsTable profiles={[profile]} cells={cells} gold={{ p1: gold }} hardIds={[]} />);
     expect(html).toContain('1/1');
     expect(html).not.toContain('data-greyed="true"');
   });
 
   test('no gold at all greys the results with a lock message', () => {
-    const html = renderToStaticMarkup(<ResultsTable profiles={[profile]} cells={[cell('m1', [row(100)])]} gold={{}} />);
+    const html = renderToStaticMarkup(<ResultsTable profiles={[profile]} cells={[cell('m1', [row(100)])]} gold={{}} hardIds={[]} />);
     expect(html).toContain('0/0');
     expect(html).toContain('data-greyed="true"');
     expect(html).toContain('Lock at least one gold PDF');
+    expect(html).toMatch(/disabled=""[^>]*>\s*Export limits table/);
   });
 
   test('one disagreeing reading greys the results', () => {
@@ -77,7 +78,7 @@ describe('checker vs gold', () => {
     const cells = [cell('m1', [row(100)]), cell('m2', [row(60, 'y'), row(40, 'z')])];
     const r = checkerVsGold([profile], cells, { p1: gold });
     expect(r.agree).toBeLessThan(r.total);
-    const html = renderToStaticMarkup(<ResultsTable profiles={[profile]} cells={cells} gold={{ p1: gold }} />);
+    const html = renderToStaticMarkup(<ResultsTable profiles={[profile]} cells={cells} gold={{ p1: gold }} hardIds={[]} />);
     expect(html).toContain('data-greyed="true"');
   });
 });

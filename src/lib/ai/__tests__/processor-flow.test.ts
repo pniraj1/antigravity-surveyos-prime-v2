@@ -13,6 +13,12 @@ vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn(), warning: v
 
 const bench = vi.hoisted(() => ({ cap: 1 as number | null, override: null as any }));
 
+const limits = vi.hoisted(() => ({ table: [] as any[] }));
+vi.mock('../page-limits', () => ({
+  get PAGE_LIMITS() { return limits.table; },
+  limitsFor: (model: string, method: string, table: any[] = limits.table) => table.find(l => l.model === model && l.method === method),
+}));
+
 vi.mock('../service', () => {
   class AllProvidersBusyError extends Error {
     tried: string[];
@@ -178,6 +184,23 @@ describe('extractDocument — bench override', () => {
     queue(rows(2, 1), rows(1, 3));
     await extractDocument('estimate', threeFiles());
     expect(gw).toHaveBeenCalledTimes(2);
+  });
+
+  it('empty PAGE_LIMITS: call count unchanged (4 pages → 2 calls)', async () => {
+    bench.cap = null;
+    queue(rows(2, 1), rows(2, 3));
+    await extractDocument('estimate', [...threeFiles(), pngFile('p3.png')]);
+    expect(gw).toHaveBeenCalledTimes(2);
+  });
+
+  it('a limit for the answering model re-groups the remaining pages (4 pages → 3 calls)', async () => {
+    bench.cap = null;
+    limits.table = [{ model: 'test-model', method: 'vision', maxRowsPerCall: 60, maxPagesPerCall: 1, imageScale: 1.5, measuredAt: '', modelVersion: '' }];
+    try {
+      queue(rows(2, 1), rows(1, 3), rows(1, 4));
+      await extractDocument('estimate', [...threeFiles(), pngFile('p3.png')]);
+      expect(gw).toHaveBeenCalledTimes(3);
+    } finally { limits.table = []; }
   });
 
   it('pagesPerCall 1 on 3 pages → 3 calls', async () => {

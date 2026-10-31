@@ -15,7 +15,8 @@ import { mergeAIResults } from './merge-results';
 import { chunkSizeFor, isRaw, apiImageScale } from './bench-override';
 import { takeDrop } from './fault';
 import { getAIPages, resolveAIPages } from './ai-pages';
-import { layoutLines } from './text-lines';
+import { layoutLines, countAmountLines } from './text-lines';
+import { planChunks } from './group-pages';
 import { profilePages, pageRuns, chunkRuns } from './page-runs';
 
 /**
@@ -344,7 +345,9 @@ export async function extractDocument(
     // to the active provider's image cap — NVIDIA accepts exactly 1.
     const PREFERRED_VISION_CHUNK = chunkSizeFor((key === 'estimate' || key === 'final-bill') ? 2 : 1, getAITestOverride());
     const VISION_CHUNK_SIZE = resolveVisionChunkSize(PREFERRED_VISION_CHUNK, getActiveImageCap(job));
-    const chunks = chunkRuns(runs, chunkSizeFor(1, getAITestOverride()), VISION_CHUNK_SIZE);
+    const sizes = { text: chunkSizeFor(1, getAITestOverride()), vision: VISION_CHUNK_SIZE, imageCap: getActiveImageCap(job) };
+    let chunks = chunkRuns(runs, sizes.text, sizes.vision);
+    const expectedRows = modes.map((m, p) => m === 'text' ? countAmountLines(pageProfiles[p].text) : null);
 
     // All-text digitally-born doc: hint the AI with the text layer. Never on mixed
     // docs — image calls would carry extra tokens and could copy preview rows.
@@ -372,6 +375,8 @@ export async function extractDocument(
       for (let ci = 0; ci < chunks.length; ci++) {
         // Cancelled between pages — stop before spending another call.
         if (signal?.aborted) throw abortError();
+        // Group the remaining pages for the model now answering (bench runs keep their fixed sizes).
+        if (!getAITestOverride()) chunks = planChunks(chunks, ci, session.lastGood?.model, expectedRows, sizes);
 
         const { method, first: i, last } = chunks[ci];
         const currentBatchStart = i + 1;

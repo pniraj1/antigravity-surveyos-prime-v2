@@ -27,4 +27,7 @@ describe('countAmountLines', () => {
   it('counts lines ending in an amount', () => {
     expect(countAmountLines('Bumper | 1 | 2,450.00\nTotal\n')).toBe(1);
   });
+  it('counts decimals and thousands commas, not bare integers', () => {
+    expect(countAmountLines('Door | 1234.50\nMirror 1,234\nBolt | 1\nPage 2\nTotal 5\n3')).toBe(2);
+  });
 });

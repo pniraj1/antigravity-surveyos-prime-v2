@@ -36,7 +36,12 @@ export function layoutLines(items: TextItem[]): string {
     .join('\n');
 }
 
-/** Lines ending in an amount (1,234.00 or 1234): the expected row count. */
+/**
+ * Lines whose last ' | ' cell (or line end) is an amount with a decimal part
+ * (1234.50) or a thousands comma (1,234): the expected row count. Bare
+ * integers (qty, page numbers, "Total 5") don't count.
+ */
 export function countAmountLines(text: string): number {
-  return text.split('\n').filter(l => /\d[\d,]*(\.\d{1,2})?\s*$/.test(l)).length;
+  const amount = /(?:^|\s)(?:\d{1,3}(?:,\d{2,3})+(?:\.\d{1,2})?|\d+\.\d{1,2})$/;
+  return text.split('\n').filter(l => amount.test((l.split(' | ').pop() ?? '').trim())).length;
 }

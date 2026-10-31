@@ -64,7 +64,7 @@ export function BenchPage() {
         ))}
       </section>
       <RunPanel profiles={data.profiles} hardIds={hardIds} onHardIds={setHardIds} onFinished={() => void reload()} />
-      <ResultsTable profiles={data.profiles} cells={data.cells} gold={data.gold} />
+      <ResultsTable profiles={data.profiles} cells={data.cells} gold={data.gold} hardIds={hardIds} />
     </BenchView>
   );
 }
