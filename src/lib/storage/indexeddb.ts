@@ -43,6 +43,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { openDB, type IDBPDatabase } from 'idb';
+import { toast } from 'sonner';
 import type { ClaimData } from '@/types';
 import { shouldStashOnRemoteDelete } from '@/lib/sync/tombstone';
 
@@ -252,6 +253,14 @@ export async function initUserDB(uid: string): Promise<void> {
           if (!db.objectStoreNames.contains(name)) db.createObjectStore(name, { keyPath });
         }
       }
+    },
+    // An old tab still holding the previous version would stall the upgrade in a new tab.
+    blocking() {
+      dbPromise?.then(d => d.close()).catch(() => undefined);
+    },
+    blocked() {
+      console.warn('[DB] Upgrade blocked by another open SurveyOS tab');
+      toast.error('Close your other SurveyOS tabs so the app can finish updating.');
     },
   });
 
