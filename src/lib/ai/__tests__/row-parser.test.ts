@@ -143,7 +143,21 @@ describe('parseEstimate', () => {
     expect(o.data.labour_items).toHaveLength(2);
     expect(o.data.painting_items).toHaveLength(1);
     expect(o.data.painting_items[0]).toMatchObject({ sr_no: 3, taxable_amount: 4092, total_amount: 4828.56, gst_percent: 18, _page: 0 });
+    expect(o.data.labour_items[0].description).toBe('DENTING');
     expect(o.data.gross_amount).toBe(11924);
+  });
+
+  it('numbered terms after the grand total do not decline', () => {
+    const page = [...kia(), ...line(550, [[10, '1'], [60, 'All'], [90, 'disputes'], [150, 'subject']])];
+    expect(parseEstimate([page]).ok).toBe(true);
+  });
+
+  it('letterhead text above the header does not classify a section', () => {
+    const page = [...line(740, [[60, 'Authorised'], [130, 'Service'], [180, 'Centre']]), ...head(700), ...item(680, 1, 'DOOR', '100.00', '998729'),
+      ...line(630, [[60, 'Sub'], [90, 'Total'], amt(295, '100.00')]), ...line(620, [[60, 'Grand'], [100, 'Total'], amt(295, '118')])];
+    const o = parseEstimate([page]);
+    if (!o.ok) throw new Error(o.reason);
+    expect(o.data.labour_items).toHaveLength(1);
   });
 
   it('section off by 2 rupees declines', () => {

@@ -4,8 +4,8 @@
 
 export interface PdfToken { s: string; x: number; y: number; w: number }   // y grows upward (pdf.js)
 export type Field = 'sr_no' | 'part_number' | 'description' | 'hsn_sac' | 'quantity' | 'unit_price' | 'taxable_amount' | 'total_amount' | 'gst_percent';
-export interface RawRow { sr: number; page: number; cells: Partial<Record<Field, string>>; text: string; y: number; lead?: string }   // lead: text above the serial line, on section-start rows only   // page 0-based
-export interface NonItemLine { page: number; text: string; nums: number[]; y: number }
+export interface RawRow { sr: number; page: number; cells: Partial<Record<Field, string>>; text: string; y: number; x: number; lead?: string }   // lead: text above the serial line, on section-start rows only   // page 0-based
+export interface NonItemLine { page: number; text: string; nums: number[]; y: number; x: number }
 
 const MONEY = /^(\d{1,3}(,\d{2,3})+(\.\d{1,2})?|\d+(\.\d{1,2})?)$/;
 const SERIAL_WORD = /^(srl|s\.?no\.?|sr|seq\.?|s)$/i;
@@ -138,6 +138,10 @@ function rowCells(band: PdfToken[], anchor: PdfToken, cols: Column[]): Partial<R
   return cells;
 }
 
+const PART_WORD = /\bparts?\b/i;
+const LABOUR_WORD = /\blabou?r\b|\bservices?\b/i;
+const KIND_WORDS = new RegExp(`${PART_WORD.source}|${LABOUR_WORD.source}`, 'i');
+
 export function readRows(pages: PdfToken[][]): { rows: RawRow[]; nonItemLines: NonItemLine[] } | { declined: string } {
   const rows: RawRow[] = [];
   const nonItemLines: NonItemLine[] = [];
@@ -147,7 +151,9 @@ export function readRows(pages: PdfToken[][]): { rows: RawRow[]; nonItemLines: N
     const toks = repairNumbers(pages[p]);
     const header = findHeader(toks);
     if (header) cols = header.cols;
-    const { anchors, last } = cols ? anchorsOf(toks, header?.y ?? Infinity, prev) : { anchors: [], last: prev };
+    // numbered terms printed under the grand total are not rows
+    const grandY = Math.min(...linesOf(toks).filter(l => GRAND_LABEL.test(l.map(t => t.s).join(' ')) && l.some(t => parseMoney(t.s) !== null)).map(l => l[0].y), Infinity);
+    const { anchors, last } = cols ? anchorsOf(toks.filter(t => grandY === Infinity || t.y > grandY - 2), header?.y ?? Infinity, prev) : { anchors: [], last: prev };
     prev = last;
     const bands = anchors.map((a, i) => {
       const gapUp = i > 0 ? (anchors[i - 1].y - a.y) / 2 : null;
@@ -157,11 +163,14 @@ export function readRows(pages: PdfToken[][]): { rows: RawRow[]; nonItemLines: N
     });
     for (const { a, hi, lo } of bands) {
       const band = toks.filter(t => t.y < hi && t.y >= lo);
-      rows.push({ sr: Number(a.s), page: p, y: a.y, lead: a.s === '1' ? band.filter(t => t.y > a.y + 2).sort(byReading).map(t => t.s).join(' ') : undefined, cells: rowCells(band.filter(t => t !== a), a, cols!), text: [...band].sort(byReading).map(t => t.s).join(' ') });
+      const leadToks = a.s === '1' ? band.filter(t => t.y > a.y + 2) : [];
+      const lead = leadToks.sort(byReading).map(t => t.s).join(' ');
+      const heading = KIND_WORDS.test(lead);   // a section heading is not part of the row's cells
+      rows.push({ sr: Number(a.s), page: p, y: a.y, x: a.x, lead: a.s === '1' ? lead : undefined, cells: rowCells(band.filter(t => t !== a && !(heading && leadToks.includes(t))), a, cols!), text: [...band].sort(byReading).map(t => t.s).join(' ') });
     }
     for (const l of linesOf(toks)) {
       if (bands.some(b => l[0].y < b.hi && l[0].y >= b.lo)) continue;
-      nonItemLines.push({ page: p, y: l[0].y, text: l.map(t => t.s).join(' '), nums: l.map(t => parseMoney(t.s)).filter((n): n is number => n !== null) });
+      nonItemLines.push({ page: p, y: l[0].y, x: l[0].x, text: l.map(t => t.s).join(' '), nums: l.map(t => parseMoney(t.s)).filter((n): n is number => n !== null) });
     }
   }
   if (!cols) return { declined: 'no header line with a serial and Qty column found' };
@@ -192,15 +201,17 @@ function toItem(r: RawRow): { item: Record<string, unknown>; printedTotal: boole
   return { item, printedTotal: printed !== null };
 }
 
-/** Parts / labour from the nearest non-header line above the section's first row; null = unknown. */
-function kindOf(first: RawRow, lines: NonItemLine[]): 'part' | 'labour' | null {
-  const above = lines.filter(l => !/\bqty\b/i.test(l.text) && (l.page < first.page || (l.page === first.page && l.y > first.y)));
-  // a heading between sections sits inside the first row's band, so `lead` is the nearest candidate
-  for (const text of [first.lead ?? '', above[above.length - 1]?.text ?? '']) {
-    if (/part/i.test(text)) return 'part';
-    if (/labou?r|service/i.test(text)) return 'labour';
-  }
-  return null;
+const above = (a: { page: number; y: number }, b: { page: number; y: number }) => a.page < b.page || (a.page === b.page && a.y > b.y);   // a is higher in reading order
+const GRAND_LABEL = /\bgrand\s*total\b|\bnet\s*amount\b|\btotal\s*amt\b/i;
+const TOTAL_LABEL = /\btotal\b|\bnet\s*amount\b|\b(part|labou?r)\s*(amt|amount)\b/i;
+
+/** Parts / labour from the heading between the header (or the previous section) and this section's first row; null = unknown. */
+function kindOf(first: RawRow, prevRow: RawRow | undefined, lines: NonItemLine[]): 'part' | 'labour' | null {
+  const header = lines.filter(l => /\bqty\b/i.test(l.text) && above(l, first)).pop();
+  const floor = [header, prevRow].filter((b): b is NonItemLine | RawRow => !!b).sort((a, b) => (above(a, b) ? 1 : -1)).pop();
+  const text = [first.lead ?? '', ...lines.filter(l => above(l, first) && (!floor || above(floor, l))).map(l => l.text)].join(' ');
+  const part = PART_WORD.test(text), labour = LABOUR_WORD.test(text);
+  return part === labour ? null : part ? 'part' : 'labour';
 }
 
 /** Rows → estimate sections, accepted only when every section and the grand total tie to printed figures. */
@@ -208,12 +219,16 @@ export function parseEstimate(pages: PdfToken[][]): ParseOutcome {
   const read = readRows(pages);
   if ('declined' in read) return { ok: false, reason: read.declined };
   const { rows, nonItemLines } = read;
-  // a serial the reader skipped leaves a multi-token line starting with an integer outside every row band
-  if (nonItemLines.some(l => /^\d{1,3}\s+\S/.test(l.text))) return { ok: false, reason: 'serial gap: a numbered line was not read as a row' };
-  const grands = nonItemLines.filter(l => /grand\s*total/i.test(l.text) && l.nums.length);
-  if (grands.length !== 1) return { ok: false, reason: grands.length ? 'more than one grand total (merged estimates?)' : 'no grand total found' };
-  const gross = grands[0].nums[grands[0].nums.length - 1];
-  const labelled = nonItemLines.filter(l => /total/i.test(l.text)).flatMap(l => l.nums);
+  const grands = nonItemLines.filter(l => GRAND_LABEL.test(l.text) && l.nums.length);
+  if (!grands.length) return { ok: false, reason: 'no grand total found' };
+  const gross = Math.max(...grands.flatMap(l => l.nums));
+  // a serial the reader skipped leaves a line starting in the serial column, between the header and the last grand total
+  const lastGrand = grands[grands.length - 1];
+  const header = nonItemLines.find(l => /\bqty\b/i.test(l.text));
+  const serialX = (page: number) => Math.min(...rows.filter(r => r.page === page).map(r => r.x), Infinity);
+  if (nonItemLines.some(l => /^\d{1,3}$/.test(l.text.split(' ')[0]) && l.text.includes(' ') && l.x < serialX(l.page) + 12
+    && header && above(header, l) && above(l, lastGrand))) return { ok: false, reason: 'serial gap: a numbered line was not read as a row' };
+  const labelled = nonItemLines.filter(l => TOTAL_LABEL.test(l.text)).flatMap(l => l.nums);
 
   const sections: RawRow[][] = [];
   for (const r of rows) { if (r.sr === 1) sections.push([]); sections[sections.length - 1].push(r); }
@@ -226,7 +241,7 @@ export function parseEstimate(pages: PdfToken[][]): ParseOutcome {
     const key = built.every(b => b!.printedTotal) ? 'total_amount' : 'taxable_amount';
     const secSum = sum(items.map(it => it[key] as number));
     if (!labelled.some(n => Math.abs(n - secSum) <= 1)) return { ok: false, reason: `section ${i + 1} sum ${round2(secSum)} matches no printed subtotal` };
-    const kind = kindOf(sec[0], nonItemLines);
+    const kind = kindOf(sec[0], rows[rows.indexOf(sec[0]) - 1], nonItemLines);
     for (const it of items) {
       const labour = kind ? kind === 'labour' : /^9987/.test(it.hsn_sac);
       if (!labour) out.spare_parts.push(it);
