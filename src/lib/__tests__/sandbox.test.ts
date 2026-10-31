@@ -21,6 +21,11 @@ describe('isSandbox', () => {
     expect(isSandbox()).toBe(false);
   });
 
+  it('returns false on the production host with a trailing dot even with ?sandbox=true', () => {
+    stubLocation('motorsurveyos-in.web.app.', '?sandbox=true');
+    expect(isSandbox()).toBe(false);
+  });
+
   it('returns false on the production firebaseapp host even with ?sandbox=true', () => {
     stubLocation('motorsurveyos-in.firebaseapp.com', '?sandbox=true');
     expect(isSandbox()).toBe(false);

@@ -13,7 +13,7 @@ export function isSandbox(): boolean {
   const host = window.location.hostname || '';
   const search = window.location.search || '';
   // Production never runs the bench, whatever the query or env says.
-  if (/^motorsurveyos-in\.(web\.app|firebaseapp\.com)$/.test(host)) return false;
+  if (/^motorsurveyos-in\.(web\.app|firebaseapp\.com)\.?$/i.test(host)) return false;
   return (
     process.env.NEXT_PUBLIC_SANDBOX_MODE === 'true' ||
     host.includes('sandbox') ||
