@@ -15,6 +15,8 @@ type GoldMap = Record<string, BenchRow[] | undefined>;
 
 interface Data { profiles: PdfProfile[]; cells: CellResult[]; gold: GoldMap }
 
+const msg = (e: unknown) => (e instanceof Error ? e.message : 'unknown error');
+
 async function load(): Promise<Data> {
   const [profiles, cells] = await Promise.all([bench.profiles(), bench.cells()]);
   const golds = await Promise.all(profiles.map(async p => [p.id, (await bench.gold(p.id)) ?? undefined] as const));
@@ -30,6 +32,7 @@ export function BenchView({ mode, children }: { mode: BenchMode; children?: Reac
 export function BenchPage() {
   const [mode, setMode] = useState<BenchMode>('checking');
   const [data, setData] = useState<Data>({ profiles: [], cells: [], gold: {} });
+  const [error, setError] = useState<string | null>(null);
   const [hardIds, setHardIds] = useState<string[]>([]);
   const reload = useCallback(async () => setData(await load()), []);
 
@@ -37,15 +40,18 @@ export function BenchPage() {
     if (!isSandbox()) { setMode('blocked'); return; }
     setMode('loading');
     // IndexedDB is per user: open it through the sandbox session before touching the store.
-    void initSandboxSession().then(reload).then(() => setMode('ready'));
+    void initSandboxSession().then(reload).then(() => setMode('ready'))
+      .catch(e => { setError(`Could not open the bench: ${msg(e)}`); setMode('ready'); });
   }, [reload]);
 
-  const saveProfile = async (p: PdfProfile) => { await bench.putProfile(p); await reload(); };
-  const importFile = async (f: File) => { await bench.importJson(await f.text()); await reload(); };
+  const guard = (what: string, fn: () => Promise<void>) => { setError(null); fn().catch(e => setError(`${what} failed: ${msg(e)}`)); };
+  const saveProfile = (p: PdfProfile) => guard('Saving the PDF profile', async () => { await bench.putProfile(p); await reload(); });
+  const importFile = (f: File) => guard('Import', async () => { await bench.importJson(await f.text()); await reload(); });
 
   return (
     <BenchView mode={mode}>
       <h1 className="text-2xl font-bold">Extraction bench</h1>
+      {error && <p role="alert" className="rounded border border-red-300 bg-red-50 p-2 text-sm text-red-700">{error}</p>}
       <div className="flex gap-3">
         <Button variant="outline" onClick={() => void bench.exportJson().then(j => downloadText('bench-results.json', j))}>Export results (JSON)</Button>
         <label className="text-sm">Import <input type="file" accept="application/json" onChange={e => { const f = e.target.files?.[0]; if (f) void importFile(f); e.target.value = ''; }} /></label>

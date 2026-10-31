@@ -20,8 +20,12 @@ export function defaultPickRows(): PickRow[] {
 export const toPicks = (rows: PickRow[], keys: Partial<Record<ProviderId, string>>): ModelPick[] =>
   rows.filter(r => r.checked && r.methods.length).map(r => ({ provider: r.provider, model: r.model, key: keys[r.provider] ?? '', methods: r.methods }));
 
-export const canStart = (profiles: PdfProfile[], pickCount: number): boolean =>
-  pickCount > 0 && profiles.some(p => p.confirmed);
+/** Providers with a ticked pick but no key (every provider is BYOK). */
+export const missingKeys = (picks: ModelPick[]): ProviderId[] =>
+  [...new Set(picks.filter(k => !k.key.trim()).map(k => k.provider))];
+
+export const canStart = (profiles: PdfProfile[], picks: ModelPick[]): boolean =>
+  picks.length > 0 && missingKeys(picks).length === 0 && profiles.some(p => p.confirmed);
 
 /** Largest amount that follows the word "total" on the given 1-based page range. Only a proposal. */
 // ponytail: regex over the joined page text, not real line geometry.

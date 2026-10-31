@@ -6,15 +6,15 @@ interface Props { profiles: PdfProfile[]; cells: CellResult[]; gold: Record<stri
 
 export function ResultsTable({ profiles, cells, gold }: Props) {
   const { agree, total } = checkerVsGold(profiles, cells, gold);
-  const greyed = agree !== total;
+  const greyed = total === 0 || agree !== total;
   const rows = summarize(cells);
   const owner = needsOwner(profiles, cells, gold);
   return (
     <section className="space-y-3">
       <h2 className="text-lg font-semibold">Results</h2>
       <p className={greyed ? 'text-sm font-medium text-red-600' : 'text-sm text-slate-700'}>
-        Checker vs gold: {agree}/{total} agree{total === 0 ? ' (no gold keys locked yet, results unverified)' : ''}
-        {greyed ? '. Fix the checker before trusting the results below.' : ''}
+        Checker vs gold: {agree}/{total} agree
+        {total === 0 ? ". Lock at least one gold PDF — results don't count until the checker agrees with gold" : greyed ? '. Fix the checker before trusting the results below.' : ''}
       </p>
       <div data-greyed={greyed ? 'true' : 'false'} className={greyed ? 'opacity-40' : ''}>
         <table className="w-full text-sm">

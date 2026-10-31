@@ -9,7 +9,7 @@ import type { BenchRow, PdfProfile } from '@/lib/bench/types';
 interface Props { profile: PdfProfile; cells: CellResult[]; locked: BenchRow[] | undefined; onLocked(rows: BenchRow[]): void }
 
 const blank = (page: number): BenchRow => ({ section: 'spare_parts', srNo: null, description: '', qty: null, rate: null, amount: 0, taxable: null, page });
-const numOrNull = (s: string) => (s.trim() === '' ? null : Number(s));
+const numOrNull = (s: string) => (s.trim() === '' || !Number.isFinite(Number(s)) ? null : Number(s));
 
 /** Best reading = a done cell that passes the self-check, with the most rows. */
 function seed(profile: PdfProfile, cells: CellResult[]): BenchRow[] {

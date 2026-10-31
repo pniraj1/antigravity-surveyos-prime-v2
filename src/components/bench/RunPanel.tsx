@@ -5,7 +5,7 @@ import { defaultDailyCap } from '@/lib/bench/pacer';
 import { planEstimate } from '@/lib/bench/plan';
 import type { ProviderId } from '@/lib/ai/models-config';
 import type { PdfProfile } from '@/lib/bench/types';
-import { PROVIDERS, canStart, defaultPickRows, toPicks, type PickRow } from './bench-logic';
+import { PROVIDERS, canStart, missingKeys, defaultPickRows, toPicks, type PickRow } from './bench-logic';
 import { useBenchRun } from './useBenchRun';
 
 interface Props { profiles: PdfProfile[]; hardIds: string[]; onHardIds(ids: string[]): void; onFinished(): void }
@@ -71,11 +71,12 @@ export function RunPanel({ profiles, hardIds, onHardIds, onFinished }: Props) {
         <input type="checkbox" checked={autoSave} onChange={e => setAutoSave(e.target.checked)} /> Save a file after each PDF
       </label>
       <div className="flex gap-2">
-        <Button disabled={run.running || !canStart(profiles, picks.length)}
+        <Button disabled={run.running || !canStart(profiles, picks)}
           onClick={() => void run.start({ profiles: confirmed, picks, hardIds, caps, autoSave })}>Start</Button>
         <Button variant="outline" disabled={!run.running} onClick={run.stop}>Stop</Button>
       </div>
-      {run.error && <p className="text-sm text-red-600">{run.error}</p>}
+      {missingKeys(picks).length > 0 && <p className="text-sm text-amber-700">Missing API key for: {missingKeys(picks).join(', ')}</p>}
+      {run.error &&<p className="text-sm text-red-600">{run.error}</p>}
       <ul className="text-sm">
         {Object.values(run.progress).map(p => p && (
           <li key={p.provider}>

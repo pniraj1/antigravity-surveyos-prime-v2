@@ -47,10 +47,11 @@ describe('bench page', () => {
   test('Start disabled until a profile is confirmed', () => {
     const off = renderToStaticMarkup(<RunPanel profiles={[{ ...profile, confirmed: false }]} hardIds={[]} onHardIds={() => {}} onFinished={() => {}} />);
     expect(off).toMatch(/disabled=""[^>]*>Start/);
-    const on = renderToStaticMarkup(<RunPanel profiles={[profile]} hardIds={[]} onHardIds={() => {}} onFinished={() => {}} />);
-    expect(on).not.toMatch(/disabled=""[^>]*>Start/);
-    expect(canStart([profile], 1)).toBe(true);
-    expect(canStart([{ ...profile, confirmed: false }], 1)).toBe(false);
+    expect(off).toContain('Missing API key for: groq, nvidia, ollama');
+    const pick = (provider: 'groq' | 'nvidia', key: string) => ({ provider, model: 'm', key, methods: ['vision' as const] });
+    expect(canStart([profile], [pick('groq', 'k')])).toBe(true);
+    expect(canStart([profile], [pick('groq', 'k'), pick('nvidia', '')])).toBe(false);
+    expect(canStart([{ ...profile, confirmed: false }], [pick('groq', 'k')])).toBe(false);
   });
 });
 
@@ -62,6 +63,13 @@ describe('checker vs gold', () => {
     const html = renderToStaticMarkup(<ResultsTable profiles={[profile]} cells={cells} gold={{ p1: gold }} />);
     expect(html).toContain('1/1');
     expect(html).not.toContain('data-greyed="true"');
+  });
+
+  test('no gold at all greys the results with a lock message', () => {
+    const html = renderToStaticMarkup(<ResultsTable profiles={[profile]} cells={[cell('m1', [row(100)])]} gold={{}} />);
+    expect(html).toContain('0/0');
+    expect(html).toContain('data-greyed="true"');
+    expect(html).toContain('Lock at least one gold PDF');
   });
 
   test('one disagreeing reading greys the results', () => {
