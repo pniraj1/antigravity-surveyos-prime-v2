@@ -3,7 +3,7 @@ import { runBench, type RunnerDeps } from '../runner';
 import { createPacer, type Pacer } from '../pacer';
 import type { ModelPick } from '../plan';
 import type { CellResult } from '../store';
-import type { CallRecord } from '../../ai/call-meter';
+import { beforeCall, type CallRecord } from '../../ai/call-meter';
 import type { ProviderId } from '../../ai/models-config';
 import type { PdfProfile } from '../types';
 
@@ -12,18 +12,25 @@ const groq: ModelPick = { provider: 'groq', model: 'g', key: 'k', methods: ['vis
 const nv: ModelPick = { provider: 'nvidia', model: 'n', key: 'k', methods: ['vision'] };
 const ok = { ok: true, ms: 1, data: {} };
 
-function fake(behave: (provider: string, n: number) => 'ok' | 429, initial: CellResult[] = [], caps: Partial<Record<ProviderId, number>> = {}) {
+function fake(behave: (provider: string, n: number) => 'ok' | 429 | 401, initial: CellResult[] = [], caps: Partial<Record<ProviderId, number>> = {}, callsPerCell = 1) {
   const cells = new Map(initial.map(c => [c.id, c]));
   const subs = new Set<(r: CallRecord) => void>();
   const counts: Record<string, number> = {};
+  const takes: Record<string, number> = {};
   const pacers: Partial<Record<ProviderId, Pacer>> = {};
   const deps: RunnerDeps = {
     runModelTest: vi.fn(async (o) => {
       counts[o.provider] = (counts[o.provider] ?? 0) + 1;
       const b = behave(o.provider, counts[o.provider]);
-      const rec: CallRecord = { provider: o.provider, model: `${o.model}-v1`, tokensIn: 10, tokensOut: 5, ms: 1, finish: b === 429 ? 'ERROR' : 'STOP', status: b === 429 ? 429 : 200, at: 0 };
-      subs.forEach(f => f(rec));
-      return b === 429 ? { ok: false, ms: 1, data: null, error: 'groq API Error: 429' } : ok;
+      try {
+        for (let i = 0; i < callsPerCell; i++) {
+          await beforeCall(o.provider);
+          const bad = b !== 'ok' && i === callsPerCell - 1;
+          subs.forEach(f => f({ provider: o.provider, model: `${o.model}-v1`, tokensIn: 10, tokensOut: 5, ms: 1, finish: bad ? 'ERROR' : 'STOP', status: bad ? b as number : 200, at: 0 }));
+          if (bad) throw new Error(`API Error: ${b}`);
+        }
+        return ok;
+      } catch (e) { return { ok: false, ms: 1, data: null, error: (e as Error).message }; }
     }) as unknown as RunnerDeps['runModelTest'],
     store: {
       cells: async () => [...cells.values()],
@@ -31,10 +38,18 @@ function fake(behave: (provider: string, n: number) => 'ok' | 429, initial: Cell
       pdf: async () => new File(['x'], 'h.pdf'),
       gold: async () => null,
     } as unknown as RunnerDeps['store'],
-    pacerFor: (p) => (pacers[p] ??= createPacer({ minGapMs: 0, dailyCap: caps[p] ?? 100, sleep: async () => {} })),
+    pacerFor: (p) => {
+      if (!pacers[p]) {
+        const inner = createPacer({ minGapMs: 0, dailyCap: caps[p] ?? 100, sleep: async () => {} });
+        const take = inner.take.bind(inner);
+        inner.take = () => { takes[p] = (takes[p] ?? 0) + 1; return take(); };
+        pacers[p] = inner;
+      }
+      return pacers[p]!;
+    },
     subscribeCalls: (fn) => { subs.add(fn); return () => subs.delete(fn); },
   };
-  return { deps, cells, counts };
+  return { deps, cells, counts, takes };
 }
 const run = (deps: RunnerDeps, picks: ModelPick[]) => runBench(deps, [P], picks, ['h'], () => {}, new AbortController().signal);
 
@@ -70,9 +85,36 @@ describe('runBench', () => {
   it('capped stops the provider and keeps the remaining cells for the next run', async () => {
     const f = fake(() => 'ok', [], { groq: 2 });
     await run(f.deps, [groq]);
-    expect(f.counts.groq).toBe(2);
+    expect(f.counts.groq).toBe(3);
+    expect([...f.cells.values()].map(c => c.status)).toEqual(['done', 'done', 'capped']);
     const g = fake(() => 'ok', [...f.cells.values()]);
     await run(g.deps, [groq]);
     expect(g.counts.groq).toBeGreaterThan(0);
+  });
+
+  it('a 3-call cell makes 3 take() calls', async () => {
+    const f = fake(() => 'ok', [], {}, 3);
+    await run(f.deps, [groq]);
+    expect(f.takes.groq).toBe(3 * f.counts.groq);
+  });
+
+  it('cap reached mid-cell → cell capped, not done, re-queued next run', async () => {
+    const f = fake(() => 'ok', [], { groq: 2 }, 3);
+    await run(f.deps, [groq]);
+    expect([...f.cells.values()].map(c => c.status)).toEqual(['capped']);
+    const g = fake(() => 'ok', [...f.cells.values()], {}, 3);
+    await run(g.deps, [groq]);
+    expect([...g.cells.values()][0].status).toBe('done');
+  });
+
+  it('a 401 twice → stored done with provider_error, not re-queued on resume', async () => {
+    const f = fake(() => 401);
+    await run(f.deps, [groq]);
+    const all = [...f.cells.values()];
+    expect(f.counts.groq).toBe(2 * all.length);
+    expect(all.every(c => c.status === 'done' && c.errors[0].type === 'provider_error')).toBe(true);
+    const g = fake(() => 401, all);
+    await run(g.deps, [groq]);
+    expect(g.counts.groq ?? 0).toBe(0);
   });
 });

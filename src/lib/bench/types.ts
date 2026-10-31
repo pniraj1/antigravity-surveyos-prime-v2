@@ -4,7 +4,7 @@ export interface EstimateSpan { label: string; firstPage: number; lastPage: numb
 export interface PdfProfile { id: string; fileName: string; kind: 'digital' | 'scan' | 'mixed'; pageCount: number; estimates: EstimateSpan[]; unreadablePages: number[]; confirmed: boolean }
 /** page: 1-based, first page of the call that produced the row. */
 export interface BenchRow { section: BenchSection; srNo: number | null; description: string; qty: number | null; rate: number | null; amount: number; taxable: number | null; discount?: number | null; page: number }
-export type ErrorType = 'serial_gap' | 'missed' | 'invented' | 'duplicated' | 'wrong_amount' | 'wrong_order' | 'totals_mismatch' | 'broken_reply' | 'rate_limited' | 'unreadable';
+export type ErrorType = 'serial_gap' | 'missed' | 'invented' | 'duplicated' | 'wrong_amount' | 'wrong_order' | 'totals_mismatch' | 'broken_reply' | 'rate_limited' | 'unreadable' | 'provider_error';
 export interface BenchError { type: ErrorType; estimate: string; page: number | null; srNo: number | null; detail: string }
 export const COUNTS_AGAINST_MODEL: ReadonlySet<ErrorType> = new Set<ErrorType>([
   'missed', 'invented', 'duplicated', 'wrong_amount', 'wrong_order', 'totals_mismatch', 'broken_reply',

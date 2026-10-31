@@ -79,3 +79,22 @@ describe('callWithKey — ollama via proxy', () => {
     await expect(callWithKey(ollama, 'k', 'p', [], 'json', opts)).rejects.toMatchObject({ status: 402, provider: 'ollama' });
   });
 });
+
+describe('callWithKey — bench beforeCall hook', () => {
+  afterEach(async () => { (await import('../call-meter')).setBeforeCall(null); vi.restoreAllMocks(); });
+  it('with no hook set, behaves as before', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue(geminiOk('{"a":1}'));
+    expect(await callWithKey(gemini, 'k', 'p', [], 'json', opts)).toEqual({ text: '{"a":1}', finish: 'STOP' });
+  });
+  it('awaits the hook before fetching, and a hook throw stops the call', async () => {
+    const { setBeforeCall } = await import('../call-meter');
+    const spy = vi.spyOn(global, 'fetch').mockResolvedValue(geminiOk('{"a":1}'));
+    const seen: string[] = [];
+    setBeforeCall(async (p) => { seen.push(p); });
+    await callWithKey(gemini, 'k', 'p', [], 'json', opts);
+    expect(seen).toEqual(['gemini']);
+    setBeforeCall(async () => { throw new Error('capped'); });
+    await expect(callWithKey(gemini, 'k', 'p', [], 'json', opts)).rejects.toThrow('capped');
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+});

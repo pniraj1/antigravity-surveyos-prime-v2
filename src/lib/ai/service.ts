@@ -25,7 +25,7 @@ import { ModelEntry, PROVIDER_IMAGE_CAPS, type ProviderConfig, type ProviderId, 
 import { useAIConfigStore } from '@/stores/ai-config-store';
 import { useProbesStore } from '@/stores/probes-store';
 import { poolFromProbes, limitOfFor } from './pool';
-import { parseRateLimit, usageOf, recordCall, type CallRecord, type RateLimitInfo } from './call-meter';
+import { beforeCall, parseRateLimit, usageOf, recordCall, type CallRecord, type RateLimitInfo } from './call-meter';
 
 export { DEPRECATED_GEMINI_MODELS, DEPRECATED_GROQ_MODELS };
 
@@ -288,6 +288,7 @@ export async function callWithKey(
   provider: AIProvider, key: string, prompt: string, images: string[],
   responseFormat: 'json' | 'text', opts: CallOptions,
 ): Promise<CallResult> {
+  await beforeCall(provider.name as ProviderId);
   const t0 = Date.now();
   const meta: { rateLimit?: RateLimitInfo } = {};
   const record = (r: Partial<CallRecord>) => {

@@ -52,3 +52,8 @@ export function subscribeCalls(fn: (r: CallRecord) => void): () => void {
   listeners.add(fn);
   return () => { listeners.delete(fn); };
 }
+
+// Bench-only hook awaited at the top of every callWithKey (pacing per API call). Unset in live use.
+let beforeCallHook: ((provider: ProviderId) => Promise<void>) | null = null;
+export function setBeforeCall(fn: ((provider: ProviderId) => Promise<void>) | null): void { beforeCallHook = fn; }
+export async function beforeCall(provider: ProviderId): Promise<void> { if (beforeCallHook) await beforeCallHook(provider); }
