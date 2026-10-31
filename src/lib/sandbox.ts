@@ -12,6 +12,8 @@ export function isSandbox(): boolean {
   if (typeof window === 'undefined' || !window.location) return false;
   const host = window.location.hostname || '';
   const search = window.location.search || '';
+  // Production never runs the bench, whatever the query or env says.
+  if (/^motorsurveyos-in\.(web\.app|firebaseapp\.com)$/.test(host)) return false;
   return (
     process.env.NEXT_PUBLIC_SANDBOX_MODE === 'true' ||
     host.includes('sandbox') ||
