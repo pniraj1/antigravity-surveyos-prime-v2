@@ -15,6 +15,7 @@ import { mergeAIResults } from './merge-results';
 import { chunkSizeFor, isRaw, apiImageScale } from './bench-override';
 import { takeDrop } from './fault';
 import { getAIPages, resolveAIPages } from './ai-pages';
+import { layoutLines } from './text-lines';
 
 /**
  * Extracts text content from a PDF page (if it has a text layer).
@@ -23,10 +24,7 @@ import { getAIPages, resolveAIPages } from './ai-pages';
 async function extractPageText(page: any): Promise<string> {
   try {
     const textContent = await page.getTextContent();
-    const text = textContent.items
-      .map((item: any) => item.str)
-      .join(' ');
-    return text.trim();
+    return layoutLines(textContent.items).trim();
   } catch {
     return '';
   }
