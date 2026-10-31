@@ -58,7 +58,7 @@ const LEGACY_DB_NAME = 'surveyos-v2';
  * Current database version. Bump this when adding new object stores
  * or indexes. The `upgrade` function handles all version transitions.
  */
-const DB_VERSION = 7;
+const DB_VERSION = 8;
 
 /**
  * localStorage key prefix for tracking whether a user's legacy data
@@ -168,6 +168,10 @@ interface SurveyOSDB {
       addedBy: string;
     };
   };
+  benchProfiles: { key: string; value: { id: string } };
+  benchGold: { key: string; value: { profileId: string } };
+  benchCells: { key: string; value: { id: string } };
+  benchPdfs: { key: string; value: { id: string; blob: Blob; fileName: string } };
 }
 
 // ─── DB Lifecycle ─────────────────────────────────────────────────────────────
@@ -239,6 +243,15 @@ export async function initUserDB(uid: string): Promise<void> {
       if (oldVersion < 7 && !db.objectStoreNames.contains('benchmarkDoc')) {
         db.createObjectStore('benchmarkDoc', { keyPath: 'id' });
       }
+      // Extraction bench (sandbox only): profiles, gold keys, test PDFs, cell results (v8)
+      if (oldVersion < 8) {
+        for (const [name, keyPath] of [
+          ['benchProfiles', 'id'], ['benchGold', 'profileId'],
+          ['benchCells', 'id'], ['benchPdfs', 'id'],
+        ] as const) {
+          if (!db.objectStoreNames.contains(name)) db.createObjectStore(name, { keyPath });
+        }
+      }
     },
   });
 
@@ -275,6 +288,23 @@ function getDB(): Promise<IDBPDatabase<SurveyOSDB>> {
     );
   }
   return dbPromise;
+}
+
+// ─── Extraction bench raw access (used by src/lib/bench/store.ts) ────────────
+
+export type BenchStore = 'benchProfiles' | 'benchGold' | 'benchCells' | 'benchPdfs';
+
+export async function benchPut(store: BenchStore, value: object): Promise<void> {
+  const db = await getDB();
+  await db.put(store, value as never);
+}
+export async function benchGet<T>(store: BenchStore, key: string): Promise<T | undefined> {
+  const db = await getDB();
+  return (await db.get(store, key)) as T | undefined;
+}
+export async function benchGetAll<T>(store: BenchStore): Promise<T[]> {
+  const db = await getDB();
+  return (await db.getAll(store)) as T[];
 }
 
 // ─── One-time Migration from Legacy Shared DB ─────────────────────────────────
