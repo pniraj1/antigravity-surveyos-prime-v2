@@ -8,7 +8,7 @@ import type { DocType } from '@/types/documents';
 import { DOC_TYPE_TO_TAG } from '@/types/documents';
 import { useClaimStore } from '@/stores/claim-store';
 import { driveRequest, findFolder, getDriveToken } from './index';
-import { STATUS_FILE, parseStatus, statusToChase, statusToJson, withCompletion, withReceived, type Status } from './scan-status';
+import { STATUS_FILE, parseStatus, reconcileCompletion, statusToChase, statusToJson, withCompletion, withReceived, type Status } from './scan-status';
 
 const API = 'https://www.googleapis.com/drive/v3/files';
 const FOLDER = 'application/vnd.google-apps.folder';
@@ -32,9 +32,9 @@ export async function phoneScansFolder(): Promise<string | null> {
   return (root && (await findFolder('Phone Scans', root))) || null;
 }
 
-/** The Scan claim folder, by `appProperties.claimId` (never by name), oldest first. Never creates anything. */
-export async function findScanFolder(scanClaimId: string): Promise<string | null> {
-  const phoneScans = await phoneScansFolder();
+/** The Scan claim folder, by `appProperties.claimId` (never by name), oldest first. Never creates anything. Pass [phoneScansId] to skip its lookup. */
+export async function findScanFolder(scanClaimId: string, phoneScansId?: string | null): Promise<string | null> {
+  const phoneScans = phoneScansId === undefined ? await phoneScansFolder() : phoneScansId;
   if (!phoneScans) return null;
   const id = scanClaimId.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
   return firstId(`mimeType='${FOLDER}' and '${phoneScans}' in parents and appProperties has { key='claimId' and value='${id}' } and trashed=false`);
@@ -73,13 +73,20 @@ function applyToClaim(claimId: string, s: Status): void {
 const linked = (claim: ClaimData | null | undefined): claim is ClaimData & { scanClaimId: string } =>
   !!claim?.scanClaimId && !!getDriveToken();
 
-/** On claim open: read Scan's status and refresh `scanChase` (so the Ask dialog is current). */
+/**
+ * On claim open: read Scan's status and refresh `scanChase` (so the Ask dialog is current). If the file's
+ * status/statusAt disagree with the claim's completion, write them again (reconcileCompletion).
+ */
 export async function syncScanStatus(claim: ClaimData | null | undefined): Promise<void> {
   if (!linked(claim)) return;
   try {
     const folder = await findScanFolder(claim.scanClaimId);
-    const status = folder && (await readStatus(folder)).status;
-    if (status) applyToClaim(claim.id, status);
+    if (!folder) return;
+    const { fileId, status } = await readStatus(folder);
+    const fix = reconcileCompletion(status, claim, Date.now());
+    if (fix) await writeStatus(folder, fileId, fix);
+    const current = fix ?? status;
+    if (current) applyToClaim(claim.id, current);
   } catch (e) { warnOnce(e); }
 }
 
@@ -96,13 +103,13 @@ export async function markReceivedInScan(claim: ClaimData | null | undefined, ty
   } catch (e) { warnOnce(e); }
 }
 
-/** On Mark completed / Reopen: set `status` (completed|active) in Scan's status file with updatedAt = now. */
-export async function setCompletedInScan(claim: ClaimData | null | undefined, completed: boolean): Promise<void> {
+/** On Mark completed / Reopen: `status` (completed|active) with `statusAt` = [atIso]. A failed write is redone on the next claim open. */
+export async function setCompletedInScan(claim: ClaimData | null | undefined, completed: boolean, atIso: string): Promise<void> {
   if (!linked(claim)) return;
   try {
     const folder = await findScanFolder(claim.scanClaimId);
     if (!folder) return;
     const { fileId, status } = await readStatus(folder);
-    await writeStatus(folder, fileId, withCompletion(status, claim.scanClaimId, completed, Date.now()));
+    await writeStatus(folder, fileId, withCompletion(status, claim.scanClaimId, completed, Date.now(), Date.parse(atIso)));
   } catch (e) { warnOnce(e); }
 }

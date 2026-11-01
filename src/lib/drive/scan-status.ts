@@ -14,6 +14,8 @@ export interface Status {
   claimId: string; updatedAt: number; vehicle: string; insurer: string; claimNo: string | null;
   slots: Record<string, SlotStatus>; contacts: Record<string, Record<string, FieldValue>>;
   asks: StatusAsk[]; status: string;
+  /** When Prime set `status` (Mark completed / Reopen). Only Prime writes it; absent in older files. */
+  statusAt?: number;
 }
 
 const APP = 'surveyos-scan-status';
@@ -37,6 +39,7 @@ export function statusToJson(s: Status): string {
     slots, contacts,
     asks: s.asks.map((a) => ({ at: istNow(a.at), to: a.to, via: a.via, lang: a.lang, docs: a.docs })),
     status: s.status,
+    ...(s.statusAt != null ? { statusAt: istNow(s.statusAt) } : {}),
   });
 }
 
@@ -70,6 +73,7 @@ export function parseStatus(text: string): Status | null {
     }
     contacts[r] = fs;
   }
+  const statusAt = time(j.statusAt);
   const asks: StatusAsk[] = [];
   for (const v of Array.isArray(j.asks) ? j.asks : []) {
     const o = obj(v); const at = time(o?.at);
@@ -79,6 +83,7 @@ export function parseStatus(text: string): Status | null {
   return {
     claimId: str(j.claimId), updatedAt: time(j.updatedAt) ?? 0, vehicle: str(j.vehicle), insurer: str(j.insurer),
     claimNo: 'claimNo' in j ? str(j.claimNo) : null, slots, contacts, asks, status: str(j.status, 'active'),
+    ...(statusAt != null ? { statusAt } : {}),
   };
 }
 
@@ -87,7 +92,7 @@ const newer = <T extends { at: number }>(l: T | undefined, r: T | undefined): T 
 
 /**
  * Newest `at` wins per slot and per contact field (ties keep local); asks are a union by at+to;
- * `status` comes from remote only. No tombstones.
+ * `status` and `statusAt` come from remote only. No tombstones.
  */
 export function mergeStatus(local: Status, remote: Status | null): Status {
   if (!remote) return local;
@@ -103,7 +108,10 @@ export function mergeStatus(local: Status, remote: Status | null): Status {
   const asks = [...local.asks, ...remote.asks]
     .filter((a) => !seen.has(`${a.at}|${a.to}`) && !!seen.add(`${a.at}|${a.to}`))
     .sort((a, b) => a.at - b.at);
-  return { ...local, updatedAt: Math.max(local.updatedAt, remote.updatedAt), slots, contacts, asks, status: remote.status };
+  return {
+    ...local, updatedAt: Math.max(local.updatedAt, remote.updatedAt), slots, contacts, asks,
+    status: remote.status, statusAt: remote.statusAt,
+  };
 }
 
 /**
@@ -122,15 +130,42 @@ export function withReceived(remote: Status | null, scanClaimId: string, slotKey
 }
 
 /**
- * Prime's write on Mark completed / Reopen: the remote file (or a fresh one) with `status` set and `updatedAt` = now,
- * so Scan can tell it is newer than its own Done/Reopen. Slots, contacts and asks stay as in the file.
+ * Prime's write on Mark completed / Reopen: the remote file (or a fresh one) with `status`, `statusAt` = [at]
+ * (the claim's change time, default now) and `updatedAt` = now. Scan compares `statusAt` with its own Done/Reopen.
+ * Slots, contacts and asks stay as in the file.
  */
-export function withCompletion(remote: Status | null, scanClaimId: string, completed: boolean, now: number): Status {
+export function withCompletion(remote: Status | null, scanClaimId: string, completed: boolean, now: number, at = now): Status {
   const status = completed ? 'completed' : 'active';
   const updatedAt = sec(now);
+  const statusAt = sec(at);
   return remote
-    ? { ...remote, updatedAt, status }
-    : { claimId: scanClaimId, updatedAt, vehicle: '', insurer: '', claimNo: null, slots: {}, contacts: {}, asks: [], status };
+    ? { ...remote, updatedAt, status, statusAt }
+    : { claimId: scanClaimId, updatedAt, vehicle: '', insurer: '', claimNo: null, slots: {}, contacts: {}, asks: [], status, statusAt };
+}
+
+/** The claim fields Mark completed / Reopen sets. Reopen also clears `driveTrashedAt` so a later cleanup lists it again. */
+export function completionPatch(completed: boolean, nowIso: string): Partial<ClaimData> {
+  return completed
+    ? { completedAt: nowIso, statusChangedAt: nowIso }
+    : { completedAt: undefined, statusChangedAt: nowIso, driveTrashedAt: undefined };
+}
+
+/**
+ * On claim open: the status to write when the file disagrees with the claim (completed iff `completedAt`; time =
+ * `statusChangedAt`, else `completedAt`). Repairs an offline write, or one a concurrent Scan read-merge-write lost.
+ * Null when it agrees, the claim was never marked, or the file holds a newer `statusAt`.
+ */
+export function reconcileCompletion(
+  file: Status | null, claim: Pick<ClaimData, 'completedAt' | 'statusChangedAt' | 'scanClaimId'>, now: number,
+): Status | null {
+  const changed = claim.statusChangedAt ?? claim.completedAt;
+  const t = changed ? Date.parse(changed) : NaN;
+  if (Number.isNaN(t)) return null;
+  const at = sec(t);
+  const status = claim.completedAt ? 'completed' : 'active';
+  if (file?.statusAt != null && file.statusAt > at) return null;
+  if (file && file.status === status && file.statusAt === at) return null;
+  return withCompletion(file, claim.scanClaimId ?? '', !!claim.completedAt, now, at);
 }
 
 type Chase = NonNullable<ClaimData['scanChase']>;

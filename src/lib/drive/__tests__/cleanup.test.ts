@@ -33,11 +33,12 @@ describe('cleanupTargets', () => {
 import { vi, beforeEach } from 'vitest';
 vi.mock('../index', () => ({
   driveRequest: vi.fn(async () => ({ ok: true })),
-  getRootFolder: vi.fn(), loadDriveIndexStrict: vi.fn(),
+  getRootFolder: vi.fn(), findRootFolder: vi.fn(), loadDriveIndexStrict: vi.fn(),
 }));
 vi.mock('../scan-status-sync', () => ({ findScanFolder: vi.fn(), phoneScansFolder: vi.fn() }));
-import { driveRequest } from '../index';
-import { trashFolder, runCleanup, type CleanupLookup } from '../cleanup';
+import { driveRequest, findRootFolder, getRootFolder, loadDriveIndexStrict } from '../index';
+import { findScanFolder, phoneScansFolder } from '../scan-status-sync';
+import { trashFolder, runCleanup, loadCleanupLookup, type CleanupLookup } from '../cleanup';
 
 describe('trashFolder', () => {
   beforeEach(() => vi.mocked(driveRequest).mockClear());
@@ -85,5 +86,30 @@ describe('runCleanup', () => {
     expect((await runCleanup(['k1'], lookup({ index: { k1: 'ROOT' } }), i)).failed).toBe(1);
     expect(driveRequest).not.toHaveBeenCalled();
     expect(i.stamp).not.toHaveBeenCalled();
+  });
+});
+
+describe('loadCleanupLookup (read-only)', () => {
+  beforeEach(() => vi.clearAllMocks());
+  it('never creates the root: none on Drive means nothing found, nothing failed', async () => {
+    vi.mocked(findRootFolder).mockResolvedValue(null);
+    const l = await loadCleanupLookup([c('k1', 'x', { scanClaimId: 's1' })]);
+    expect(l.failed.size).toBe(0);
+    expect(l.index).toEqual({});
+    expect(getRootFolder).not.toHaveBeenCalled();
+    expect(loadDriveIndexStrict).not.toHaveBeenCalled();
+  });
+  it('resolves Phone Scans once for all claims', async () => {
+    vi.mocked(findRootFolder).mockResolvedValue('ROOT');
+    vi.mocked(loadDriveIndexStrict).mockResolvedValue({ k1: 'P' });
+    vi.mocked(phoneScansFolder).mockResolvedValue('PS');
+    vi.mocked(findScanFolder).mockImplementation(async (id) => `F-${id}`);
+    const l = await loadCleanupLookup([c('k1', 'x', { scanClaimId: 's1' }), c('k2', 'x', { scanClaimId: 's2' })]);
+    expect(phoneScansFolder).toHaveBeenCalledOnce();
+    expect(findScanFolder).toHaveBeenCalledWith('s1', 'PS');
+    expect(loadDriveIndexStrict).toHaveBeenCalledWith('ROOT');
+    expect(l.scanFolders).toEqual({ s1: 'F-s1', s2: 'F-s2' });
+    expect([...l.protectedIds]).toEqual(['ROOT', 'PS']);
+    expect(getRootFolder).not.toHaveBeenCalled();
   });
 });

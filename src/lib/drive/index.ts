@@ -257,9 +257,18 @@ async function getIndexFileId(rootId: string): Promise<string | null> {
   return data.files?.[0]?.id ?? null;
 }
 
-/** Like loadDriveIndex but throws on any Drive/network failure ({} only when there is no index file). */
-export async function loadDriveIndexStrict(): Promise<Record<string, string>> {
-  const rootId = await getRootFolder();
+/** The SurveyOS root folder id, or null when there is none. Never creates anything. */
+export async function findRootFolder(): Promise<string | null> {
+  const cached = localStorage.getItem('surveyos_drive_root');
+  if (cached) return cached;
+  const id = await findFolder(ROOT_FOLDER_NAME);
+  if (id) localStorage.setItem('surveyos_drive_root', id);
+  return id;
+}
+
+/** Like loadDriveIndex but throws on any Drive/network failure ({} only when there is no index file). Pass [rootId] for a read-only lookup. */
+export async function loadDriveIndexStrict(rootIdArg?: string): Promise<Record<string, string>> {
+  const rootId = rootIdArg ?? await getRootFolder();
   const fileId = await getIndexFileId(rootId);
   if (!fileId) return {};
   const res = await driveRequest(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);

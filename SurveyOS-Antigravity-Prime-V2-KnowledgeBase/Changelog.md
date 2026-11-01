@@ -2,6 +2,12 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-01 (Claude Code) — Plan 4 final fixes (status time, reconcile, cleanup lookup)
+- fix(drive): Scan's status file gains `statusAt` (Prime-only, written with `status` on Mark completed / Reopen). `ClaimData.statusChangedAt` stores that time. On claim open, `syncScanStatus` rewrites `status`/`statusAt` when the file disagrees with the claim (`reconcileCompletion`): repairs an offline write or one lost to a concurrent Scan merge; a newer `statusAt` in the file is left alone.
+- Reopen clears `driveTrashedAt` (`completionPatch`), so a re-completed claim shows in Drive cleanup again.
+- Cleanup lookup is read-only: `findRootFolder` (find, never create) and Phone Scans resolved once for all claims.
+- Scan impact: Scan reads `statusAt` (newer than its own Done/Reopen and its restored marker wins); contract `SurveyOS Scan/docs/handover/scan-drive-status.md` updated in the same wave.
+
 ## 2026-11-01 (Claude Code) — Drive cleanup (Plan 4 Task 4)
 - feat(drive): Profile tab, "Drive cleanup" (`components/profile/DriveCleanupSection.tsx`, shown when Drive is linked). Lists completed claims (`completedAt`, not yet trashed) by year then month, newest first, with vehicle, insurer, and Prime folder (Drive index) / Scan folder (by `scanClaimId`) each "found" or "not on Drive". Tick a claim or a year; two confirmations (dialog, then type the number of claims); then `trashed=true` PATCH on each folder (`lib/drive/cleanup.ts`, never DELETE).
 - `ClaimData.driveTrashedAt` (ISO) set on success; the claim stays in Prime and drops off the list. Nothing local is deleted.

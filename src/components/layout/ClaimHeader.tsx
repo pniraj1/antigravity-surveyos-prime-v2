@@ -11,6 +11,7 @@ import { flushDriveQueue, backupAllPendingToDrive } from '@/lib/drive';
 import { getDriveQueueCount } from '@/lib/storage/indexeddb';
 import { Cloud, Loader2, CheckCircle2, RotateCcw } from 'lucide-react';
 import { setCompletedInScan } from '@/lib/drive/scan-status-sync';
+import { completionPatch } from '@/lib/drive/scan-status';
 import { DriveQueueChip } from '@/components/sync/DriveQueueChip';
 import { SyncStatusBadge } from '@/components/sync/SyncStatusBadge';
 
@@ -85,8 +86,9 @@ export function ClaimHeader() {
 
   const completed = !!currentClaim.completedAt;
   const toggleCompleted = () => {
-    updateClaim({ completedAt: completed ? undefined : new Date().toISOString() });
-    void setCompletedInScan(currentClaim, !completed); // Scan's status file; quiet when unlinked or offline
+    const at = new Date().toISOString();
+    updateClaim(completionPatch(!completed, at));
+    void setCompletedInScan(currentClaim, !completed, at); // Scan's status file; quiet when unlinked or offline
   };
 
   const reg  = currentClaim.vehicle?.registrationNumber || '—';

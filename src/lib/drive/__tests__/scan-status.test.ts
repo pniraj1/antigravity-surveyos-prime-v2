@@ -1,7 +1,7 @@
 // Port of SurveyOS Scan's StatusFileTest (chase/StatusFileTest.kt); buildStatus/remoteReceived are Scan-only.
 import { describe, it, expect } from 'vitest';
 import {
-  mergeStatus, parseStatus, statusToJson, statusToChase, withCompletion, withReceived,
+  completionPatch, mergeStatus, parseStatus, reconcileCompletion, statusToJson, statusToChase, withCompletion, withReceived,
   type FieldValue, type SlotStatus, type Status, type StatusAsk,
 } from '../scan-status';
 
@@ -148,4 +148,50 @@ describe('Prime side', () => {
     const m = withCompletion(null, 'scan-c', true, 2000);
     expect(m).toMatchObject({ claimId: 'scan-c', status: 'completed', updatedAt: 2000, slots: {} });
   });
+
+  it('statusAt round trips; merge carries the remote one; older files have none', () => {
+    const s = { ...status({}, {}, [], 'completed'), statusAt: 1730370000000 };
+    expect(parseStatus(statusToJson(s))).toEqual(s);
+    expect(parseStatus(statusToJson(status()))!.statusAt).toBeUndefined();
+    expect(mergeStatus({ ...status(), updatedAt: 9_000_000 }, s).statusAt).toBe(1730370000000);
+  });
+
+  it('withCompletion writes statusAt (the given time, else now)', () => {
+    expect(withCompletion(null, 'c', true, 9500, 4500).statusAt).toBe(4000);
+    expect(withCompletion(status(), 'c', false, 9500).statusAt).toBe(9000);
+  });
+});
+
+describe('completion on the claim', () => {
+  it('Mark completed stamps completedAt and statusChangedAt', () =>
+    expect(completionPatch(true, 'T')).toEqual({ completedAt: 'T', statusChangedAt: 'T' }));
+  it('Reopen clears completedAt and driveTrashedAt', () => {
+    const p = completionPatch(false, 'T');
+    expect(p).toEqual({ completedAt: undefined, statusChangedAt: 'T', driveTrashedAt: undefined });
+    expect('driveTrashedAt' in p).toBe(true);
+  });
+});
+
+describe('reconcileCompletion', () => {
+  const at = '2026-11-01T05:00:00.000Z';
+  const t = Date.parse(at);
+  const claim = (o: Record<string, unknown>) => ({ id: 'k', scanClaimId: 'sc', ...o }) as never;
+  it('never marked: nothing to do', () =>
+    expect(reconcileCompletion(status(), claim({}), 99_000)).toBeNull());
+  it('agrees: nothing to do', () =>
+    expect(reconcileCompletion({ ...status({}, {}, [], 'completed'), statusAt: t }, claim({ completedAt: at }), 99_000)).toBeNull());
+  it('lost completion (offline or overwritten by Scan): writes it again with the claim time', () => {
+    const w = reconcileCompletion(status(), claim({ completedAt: at, statusChangedAt: at }), 99_000_000);
+    expect(w).toMatchObject({ status: 'completed', statusAt: t, updatedAt: 99_000_000, slots: {} });
+  });
+  it('older file without statusAt gets it from completedAt', () =>
+    expect(reconcileCompletion(status({}, {}, [], 'completed'), claim({ completedAt: at }), 99_000)?.statusAt).toBe(t));
+  it('reopened: writes active at the reopen time', () => {
+    const w = reconcileCompletion({ ...status({}, {}, [], 'completed'), statusAt: t - 5000 }, claim({ statusChangedAt: at }), 99_000);
+    expect(w).toMatchObject({ status: 'active', statusAt: t });
+  });
+  it('no file yet: starts one', () =>
+    expect(reconcileCompletion(null, claim({ completedAt: at }), 99_000)).toMatchObject({ claimId: 'sc', status: 'completed', statusAt: t }));
+  it('a newer statusAt in the file is left alone', () =>
+    expect(reconcileCompletion({ ...status(), statusAt: t + 5000 }, claim({ completedAt: at }), 99_000)).toBeNull());
 });

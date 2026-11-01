@@ -3,7 +3,7 @@
  * Only Prime calls this, and only after the surveyor's two confirmations (see DriveCleanup.tsx).
  */
 import type { ClaimData } from '@/types';
-import { driveRequest, getRootFolder, loadDriveIndexStrict } from './index';
+import { driveRequest, findRootFolder, loadDriveIndexStrict } from './index';
 import { findScanFolder, phoneScansFolder } from './scan-status-sync';
 
 export interface CleanupMonth { month: number; claims: ClaimData[] } // month is 0-based
@@ -49,19 +49,23 @@ export interface CleanupLookup {
 /** Read-only lookup. A failure is reported in `failed`, never mistaken for "not on Drive". */
 export async function loadCleanupLookup(claims: ClaimData[]): Promise<CleanupLookup> {
   const out: CleanupLookup = { index: {}, scanFolders: {}, failed: new Set(), protectedIds: new Set() };
+  let ps: string | null;
   try {
-    out.index = await loadDriveIndexStrict();
-    out.protectedIds.add(await getRootFolder());
-    const ps = await phoneScansFolder();
+    const root = await findRootFolder(); // find only: a cleanup never creates the SurveyOS folder
+    if (!root) return out; // nothing on Drive
+    out.index = await loadDriveIndexStrict(root);
+    out.protectedIds.add(root);
+    ps = await phoneScansFolder();
     if (ps) out.protectedIds.add(ps);
   } catch {
     claims.forEach(c => out.failed.add(c.id));
     return out;
   }
+  if (!ps) return out; // no Scan folders
   for (const c of claims) {
     if (!c.scanClaimId) continue;
     try {
-      const id = await findScanFolder(c.scanClaimId);
+      const id = await findScanFolder(c.scanClaimId, ps); // Phone Scans resolved once above
       if (id) out.scanFolders[c.scanClaimId] = id;
     } catch { out.failed.add(c.id); }
   }
