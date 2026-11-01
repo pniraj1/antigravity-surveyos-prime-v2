@@ -96,7 +96,8 @@ const byReading = (a: PdfToken, b: PdfToken) => (b.y - a.y) || (a.x - b.x);
 
 /** Serial tokens near the leftmost integer column, below the header, continuing the sequence. */
 function anchorsOf(toks: PdfToken[], headerY: number, prev: number): { anchors: PdfToken[]; last: number } {
-  const ints = toks.filter(t => /^\d{1,3}$/.test(t.s) && t.y < headerY);
+  // with rows already read, numbers above this page's header may continue the previous section (the sequence check keeps strays out)
+  const ints = toks.filter(t => /^\d{1,3}$/.test(t.s) && (prev > 0 || t.y < headerY));
   if (!ints.length) return { anchors: [], last: prev };
   const minX = Math.min(...ints.map(t => t.x));
   const anchors: PdfToken[] = [];
@@ -153,6 +154,7 @@ export function readRows(pages: PdfToken[][]): { rows: RawRow[]; nonItemLines: N
   for (let p = 0; p < pages.length; p++) {
     const toks = repairNumbers(pages[p]);
     const header = findHeader(toks);
+    const earlierCols = cols;   // rows above this page's header still follow the columns they were printed under
     if (header) cols = header.cols;
     // numbered terms printed under the grand total are not rows
     const grandY = Math.min(...linesOf(toks).filter(l => GRAND_LABEL.test(l.map(t => t.s).join(' ')) && l.some(t => parseMoney(t.s) !== null)).map(l => l[0].y), Infinity);
@@ -162,14 +164,16 @@ export function readRows(pages: PdfToken[][]): { rows: RawRow[]; nonItemLines: N
       const gapUp = i > 0 ? (anchors[i - 1].y - a.y) / 2 : null;
       const gapDn = i + 1 < anchors.length ? (a.y - anchors[i + 1].y) / 2 : null;
       const up = gapUp ?? gapDn ?? 8;
-      return { a, hi: a.y + up, lo: a.y - (gapDn ?? up) };
+      const lo = a.y - (gapDn ?? up);
+      return { a, hi: a.y + up, lo: header && a.y > header.y ? Math.max(lo, a.y - up) : lo };   // the last row above a header must not swallow it
     });
     for (const { a, hi, lo } of bands) {
-      const band = toks.filter(t => t.y < hi && t.y >= lo);
+      const belowHeader = header && a.y < header.y - 2;   // the header line (and what sits above it) is never part of a row below it
+      const band = toks.filter(t => t.y < hi && t.y >= lo && !(belowHeader && t.y >= header.y - 2));
       const leadToks = a.s === '1' ? band.filter(t => t.y > a.y + 2) : [];
       const lead = leadToks.sort(byReading).map(t => t.s).join(' ');
       const heading = KIND_WORDS.test(lead) || TOTAL_LABEL.test(lead);   // a heading or a totals line is not part of the row's cells
-      rows.push({ sr: Number(a.s), page: p, y: a.y, x: a.x, lead: a.s === '1' ? lead : undefined, cells: rowCells(band.filter(t => t !== a && !(heading && leadToks.includes(t))), a, cols!), text: [...band].sort(byReading).map(t => t.s).join(' ') });
+      rows.push({ sr: Number(a.s), page: p, y: a.y, x: a.x, lead: a.s === '1' ? lead : undefined, cells: rowCells(band.filter(t => t !== a && !(heading && leadToks.includes(t))), a, (header && a.y > header.y && earlierCols) || cols!), text: [...band].sort(byReading).map(t => t.s).join(' ') });
     }
     for (const l of linesOf(toks)) {
       if (bands.some(b => l[0].y < b.hi && l[0].y >= b.lo)) continue;

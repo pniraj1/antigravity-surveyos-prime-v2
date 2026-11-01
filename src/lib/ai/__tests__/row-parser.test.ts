@@ -296,6 +296,35 @@ describe('parseEstimate', () => {
     expect(parseEstimate([page]).ok).toBe(true);
   });
 
+  it('rows above a repeated header on the same page continue the previous section', () => {
+    const p0 = [...head(700), ...item(680, 1, 'DOOR', '100.00'), ...item(670, 2, 'LAMP', '200.00')];
+    const p1 = [
+      ...item(780, 3, 'WING', '100.00'), ...item(770, 4, 'BULB', '200.00'),
+      ...line(740, [[60, 'Labour'], [100, 'Services']]),
+      ...head(730), ...item(710, 1, 'DENT', '400.00', '998729'), ...item(700, 2, 'FIT', '100.00', '998729'),
+      ...line(650, [[60, 'Sub'], [90, 'Total'], amt(295, '600.00'), amt(400, '500.00')]),
+      ...line(630, [[60, 'Grand'], [100, 'Total'], amt(295, '1298')]),
+    ];
+    const o = parseEstimate([p0, p1]);
+    if (!o.ok) throw new Error(o.reason);
+    expect(o.data.spare_parts.map(r => r.sr_no)).toEqual([1, 2, 3, 4]);
+    expect(o.data.labour_items).toHaveLength(2);
+  });
+
+  it('continuation rows above a header with shifted columns use the earlier columns', () => {
+    const shifted = line(730, [[10, 'Srl'], [60, 'Description'], [150, 'HSN'], [210, 'Qty.'], [300, 'Taxable'], [400, 'Tax%']]);
+    const p0 = [...head(700), ...item(680, 1, 'DOOR', '100.00')];
+    const p1 = [
+      ...item(780, 2, 'WING', '200.00'),
+      ...shifted, ...line(710, [[10, '1'], [60, 'DENT'], [150, '998729'], [220, '1'], amt(335, '300.00'), amt(420, '18')]),
+      ...line(650, [[60, 'Sub'], [90, 'Total'], amt(295, '300.00'), amt(400, '300.00')]),
+      ...line(630, [[60, 'Grand'], [100, 'Total'], amt(295, '708')]),
+    ];
+    const o = parseEstimate([p0, p1]);
+    if (!o.ok) throw new Error(o.reason);
+    expect(o.data.spare_parts.map(r => r.taxable_amount)).toEqual([100, 200]);
+  });
+
   it('a percentage printed beside the amount does not hide the amount', () => {
     const page = [
       ...line(700, [[10, 'Srl'], [60, 'Description'], [200, 'Tax%'], [260, 'Qty.'], [310, 'Ins'], [330, 'Share'], [350, 'Amount']]),
