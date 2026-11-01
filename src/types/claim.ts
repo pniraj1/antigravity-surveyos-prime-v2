@@ -223,6 +223,8 @@ export interface ClaimData {
   scanClaimId?: string;
   /** ISO time the surveyor marked the claim completed (synced to Scan as Done); undefined while open. */
   completedAt?: string;
+  /** ISO time this claim's Drive folders were moved to the Drive trash (Settings > Drive cleanup). The claim stays in Prime. */
+  driveTrashedAt?: string;
   /** Last imported Scan chase state (contacts, slot states, ask log). */
   scanChase?: ScanChase & { importedAt: string };
 

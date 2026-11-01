@@ -2,6 +2,11 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-01 (Claude Code) — Drive cleanup (Plan 4 Task 4)
+- feat(drive): Profile tab, "Drive cleanup" (`components/profile/DriveCleanupSection.tsx`, shown when Drive is linked). Lists completed claims (`completedAt`, not yet trashed) by year then month, newest first, with vehicle, insurer, and Prime folder (Drive index) / Scan folder (by `scanClaimId`) each "found" or "not on Drive". Tick a claim or a year; two confirmations (dialog, then type the number of claims); then `trashed=true` PATCH on each folder (`lib/drive/cleanup.ts`, never DELETE).
+- `ClaimData.driveTrashedAt` (ISO) set on success; the claim stays in Prime and drops off the list. Nothing local is deleted.
+- Scan impact: none. Scan folders are trashed on Drive (recoverable ~30 days); Scan's local copy and Drive copy rules are unchanged.
+
 ## 2026-11-01 (Claude Code) — Import phone scans from Drive (Plan 4 Task 2)
 - feat(scan-import): "Import from Drive" (Documents tab, shown when Drive is connected) imports the claim's SurveyOS Scan folder (`SurveyOS/Phone Scans/<folder>`, Scan's Full mode) like a zip, then moves each file into Prime's claim folder (`moveFile`: PATCH addParents/removeParents, same file id). Contract: `SurveyOS Scan/docs/handover/scan-drive-status.md`.
   - `import.ts`: core is `importScanFiles(Map<path, Blob>)`; the zip path builds the map as before. A Drive source skips manifest files already moved ("nothing new" when none are left); a single-file type with moved pages is rewritten whole from the claim's own copies.

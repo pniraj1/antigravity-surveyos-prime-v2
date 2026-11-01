@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { ConnectSyncDialog } from '@/components/sync-bridge/ConnectSyncDialog';
 import { FeeScheduleSection } from '@/components/profile/FeeScheduleSection';
+import { DriveCleanupSection } from '@/components/profile/DriveCleanupSection';
 import { StorageCleanerSection } from '@/components/profile/StorageCleanerSection';
 import { SubscriptionSection } from '@/components/profile/SubscriptionSection';
 
@@ -687,6 +688,8 @@ export function ProfileTab() {
         </div>
 
         <ConnectSyncDialog open={connectSyncOpen} onOpenChange={setConnectSyncOpen} />
+
+        <DriveCleanupSection />
 
         {/* ── Browser Storage Cleaner ──────────────────── */}
         <StorageCleanerSection />

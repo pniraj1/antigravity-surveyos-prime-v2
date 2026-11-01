@@ -1,7 +1,13 @@
 # Active Tasks
 
-> Last updated: 2026-11-01 by Claude Code (Scan Drive status sync)
+> Last updated: 2026-11-01 by Claude Code (Drive cleanup)
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
+
+---
+
+## In Progress: Drive cleanup (Plan 4 Task 4, built 2026-11-01 on main, NOT deployed or pushed)
+- [x] `lib/drive/cleanup.ts` (`groupForCleanup`, `cleanupTargets`, `trashFolder`) + Profile tab `DriveCleanupSection`; `ClaimData.driveTrashedAt`.
+- [ ] Owner: try in a signed-in browser with a completed claim (not tried against real Drive yet).
 
 ---
 
