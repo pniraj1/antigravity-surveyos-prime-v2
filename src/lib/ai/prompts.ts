@@ -391,6 +391,21 @@ export function getDocPrompt(docType: string, withContext = true): string {
     : `${base}\n${FORMAT_INSTRUCTION}`;
 }
 
+const HEADER_FIELDS = {
+  estimate: ['workshop_name', 'workshop_address', 'vehicle_number', 'chassis_number', 'engine_number', 'estimate_date', 'bill_number'],
+  'final-bill': ['workshop_name', 'bill_number', 'bill_date'],
+} as const;
+
+export function headerFields(key: 'estimate' | 'final-bill'): readonly string[] {
+  return HEADER_FIELDS[key];
+}
+
+/** Lean prompt for the parser-first path: header fields only, no line items. */
+export function getHeaderPrompt(key: 'estimate' | 'final-bill'): string {
+  const fields = HEADER_FIELDS[key].map(f => `"${f}"`).join(', ');
+  return `Read the header of this ${key === 'estimate' ? 'repair estimate' : 'final bill'} from the text below. Return ONLY a JSON object with exactly these string keys: ${fields}. Use "" for anything not found. Do not list line items or totals.`;
+}
+
 /**
  * @deprecated  Use getDocPrompt() instead so that context snippets are included.
  * Kept for backward compatibility with any legacy callers.

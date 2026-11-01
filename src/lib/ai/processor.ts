@@ -9,7 +9,7 @@ import { resolveVisionChunkSize } from './image-cap';
 import { getDocPrompt } from './prompts';
 import { jobForDocType } from './jobs';
 import { toast } from 'sonner';
-import { rowCheck, tagRows, dropDuplicates, toFindings, type Finding } from './row-check';
+import { rowCheck, countRows, tagRows, dropDuplicates, toFindings, type Finding } from './row-check';
 import { fillGaps } from './gap-fill';
 import { mergeAIResults } from './merge-results';
 import { chunkSizeFor, isRaw, apiImageScale } from './bench-override';
@@ -19,7 +19,8 @@ import { layoutLines, countAmountLines } from './text-lines';
 import { planChunks } from './group-pages';
 import { limitsFor, PAGE_LIMITS } from './page-limits';
 import { profilePages, pageRuns, chunkRuns } from './page-runs';
-import { tokensFromItems, type PdfToken } from './row-parser';
+import { tokensFromItems, parseEstimate, type PdfToken } from './row-parser';
+import { parserEligible, readHeader } from './parser-first';
 
 /**
  * Extracts text content from a PDF page (if it has a text layer).
@@ -284,6 +285,8 @@ export interface ExtractionResult {
   findings: Finding[];
   /** Pages the AI could not (fully) read. */
   issues: string[];
+  /** Rows read in code and tied to printed totals, or by the AI. */
+  source: 'parser' | 'ai';
 }
 
 /**
@@ -340,7 +343,7 @@ export async function extractDocument(
     if (onProgress) onProgress('Scanning document...');
     // Render scale from the first model's limit; pages keep it after a mid-document fallback.
     const apiScale = PAGE_LIMITS.length ? limitsFor(firstModel(session, job) ?? '', 'vision')?.imageScale : undefined;
-    const { viewImages, apiImages, textLayers, pageRefs } = await filesToImages(files, (p, t) => {
+    const { viewImages, apiImages, textLayers, pageRefs, pageTokens } = await filesToImages(files, (p, t) => {
       if (onProgress) onProgress(`Processing page ${p} of ${t}...`);
     }, apiScale);
 
@@ -355,6 +358,19 @@ export async function extractDocument(
     const runs = pageRuns(modes, forceDocMode ?? getAITestOverride()?.method);
     const allText = runs.length > 0 && runs.every(r => r.method === 'text');
     console.log(`[AI Extraction] ${key}: ${runs.map(r => `${r.method} ${r.pages[0] + 1}–${r.pages[r.pages.length - 1] + 1}`).join(', ')}`);
+
+    // ── Parser-first: rows read in code, accepted only if they tie to the printed totals ──
+    if (pageTokens && textLayers && parserEligible({ key, allText, fileCount: files.length, feedback, previousData, forceDocMode, override: getAITestOverride() })) {
+      const parsed = parseEstimate(pageTokens);
+      if (parsed.ok) {
+        const header = await readHeader(key as 'estimate' | 'final-bill', textLayers, p => callAIGateway(p, [], 'json', job, session, signal));
+        const data = { ...header, ...parsed.data };
+        const findings = toFindings(rowCheck(data, textLayers)).filter(f => f.kind !== 'gap');
+        console.log(`[Parser] read ${countRows(data)} rows, tie ok`);
+        return { data, images: viewImages, findings, issues: [], source: 'parser' as const };
+      }
+      console.log(`[Parser] declined: ${parsed.reason}`);
+    }
 
     // Text: 1 page per call (avoids 413 on dense documents) unless the bench sets
     // pagesPerCall. Vision: estimates prefer 2 pages per call, others 1, clamped
@@ -681,7 +697,7 @@ export async function extractDocument(
     }
 
     // Return high-res view images to caller so they can be stored in sessionStorage
-    return { data: finalResult, images: viewImages, findings, issues: pageIssues };
+    return { data: finalResult, images: viewImages, findings, issues: pageIssues, source: 'ai' as const };
   });
 }
 
