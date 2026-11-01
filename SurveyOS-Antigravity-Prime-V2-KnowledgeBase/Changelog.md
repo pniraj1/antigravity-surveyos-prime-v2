@@ -2,6 +2,11 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-01 (Claude Code) — Shipped model defaults refreshed
+- fix(ai): built-in backup list and defaults moved to live-checked models: Gemini `gemini-3.5-flash-lite` (pinned), `gemini-3.1-flash-lite`, `gemini-3.5-flash`; Groq `qwen/qwen3.8-27b` (vision), `openai/gpt-oss-120b` (text); NVIDIA `nvidia/nemotron-3.5-super-vl-120b-a12b`. Saved profiles using now-dead ids (gemini-2.5-flash, qwen3.6, llama-3.3-70b, llama-3.1-8b) migrate. Commit `b4bc3469`. Not deployed.
+- Finding: the Admin probe (manual, ~20–30 min) last ran 2026-10-28 from the owner's account. NVIDIA was skipped ("No admin key for this provider"), so its results date from 2026-08-11 and include models that now 404/410. Ollama's probe failed (key rejected during rollout), so Ollama uses the backup list.
+- Scan impact: none.
+
 ## 2026-11-01 (Claude Code) — Scan Drive status sync
 - feat(drive): Prime reads and writes SurveyOS Scan's `_surveyos-status.json` in `SurveyOS/Phone Scans/<folder>/` (folder found by `appProperties.claimId`, oldest first). Contract: `SurveyOS Scan/docs/handover/scan-drive-status.md`.
   - `scan-status.ts`: codec + merge ported from Scan's `StatusFile.kt` (newest `at` wins per slot/contact field, ties keep local, asks union by at+to, `status` from remote only, whole-second IST times).
