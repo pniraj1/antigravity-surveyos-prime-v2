@@ -2,6 +2,13 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-01 (Claude Code) — Scan chase import and Ask for documents
+- feat(scan-import): `planChase` (`src/lib/scan-import/chase.ts`) reads the manifest `chase` object. It fills blank insured name/mobile and workshop name/phone/email only (Prime's value wins), stores `scanChase` and `scanClaimId`, and refuses a zip from a different phone claim.
+- feat(chase): `src/lib/chase/ask-message.ts` ports Scan's EN/HI/MR ask templates. `ASK_COPY` is exported and pinned by Scan's `AskTemplatesTest`.
+- feat(documents): "Ask for documents" dialog on the Documents tab (WhatsApp or email). Logs each ask to `scanChase.asks` in the manifest shape.
+- Commits `155e618c`, `a46ee91b`, `7fbd16aa`, `8dc3b150`, `77bd5faa`. Not pushed, not deployed. Session log `Sessions/2026-11-01-prime-chase-import.md`.
+- Scan impact: Scan's contract doc `docs/handover/scan-manifest-chase.md` has a matching changelog line. Changing the ASK_COPY strings needs a Scan change too.
+
 ## 2026-11-01 (Claude Code) — Parser-first extraction for digital estimates and bills
 - feat(ai): `row-parser.ts` reads estimate/final-bill rows from pdf.js text positions with **no AI call**, and accepts them only when every section ties to a labelled subtotal (₹1) and the grand total ties; otherwise the AI path runs unchanged.
   - Merged PDFs (a second estimate after the first grand total) always decline.

@@ -1,7 +1,17 @@
 # Active Tasks
 
-> Last updated: 2026-10-31 by Antigravity (Handover to Claude Code)
+> Last updated: 2026-11-01 by Claude Code (Scan chase import and Ask)
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
+
+---
+
+## In Progress: Scan chase import and Ask for documents (built 2026-11-01 on main, NOT deployed or pushed)
+- [x] `planChase`: fill blank insured/workshop fields from Scan's manifest `chase`, store `scanChase` + `scanClaimId`, refuse a zip from another phone claim. Commits `155e618c`, `a46ee91b`.
+- [x] Ask message templates (EN/HI/MR) shared with Scan, pinned by Scan's `AskTemplatesTest`. Commit `7fbd16aa`.
+- [x] Ask for documents dialog on the Documents tab (WhatsApp or email), slot-key normalisation. Commits `8dc3b150`, `77bd5faa`.
+- [ ] Owner: review and approve a push and deploy.
+- [ ] Plan 2 says the claim shows slot states and the ask log. Only the Ask dialog reads them so far; confirm before calling it done.
+- [ ] Rejected slots need a fresh copy in Ask (Plan 2). Check whether the dialog covers this.
 
 ---
 
