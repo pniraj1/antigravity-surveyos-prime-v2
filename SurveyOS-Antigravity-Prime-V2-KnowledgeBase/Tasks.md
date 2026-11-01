@@ -11,7 +11,10 @@
 - [x] Ask for documents dialog on the Documents tab (WhatsApp or email), slot-key normalisation. Commits `8dc3b150`, `77bd5faa`.
 - [ ] Owner: review and approve a push and deploy.
 - [ ] Plan 2 says the claim shows slot states and the ask log. Only the Ask dialog reads them so far; confirm before calling it done.
-- [ ] Rejected slots need a fresh copy in Ask (Plan 2). Check whether the dialog covers this.
+- [x] Rejected slots listed with reason in Ask. Missing slots Prime has since received a document for are dropped; claim-id conflict now asks to relink (2026-11-01).
+- [ ] Deferred: insured email field in Prime (Ask uses Scan's email only).
+- [ ] Deferred: show slot states and the ask log on the claim outside the Ask dialog.
+- [ ] Deferred: mobile number normalisation (Prime's number is stored as typed).
 
 ---
 

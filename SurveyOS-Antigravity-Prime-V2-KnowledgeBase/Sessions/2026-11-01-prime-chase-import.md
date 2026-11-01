@@ -16,7 +16,7 @@ Scan now lets the surveyor save contacts, reject documents and ask for missing o
 
 ## Decisions
 1. Prime's value wins on every blank-check. Scan only fills blanks.
-2. Asks are logged in the manifest shape, so a later Scan export round-trips them.
+2. Asks are logged in the manifest shape, but Prime asks do NOT go back to Scan: they are only stored on the Prime claim (`scanChase.asks`).
 3. Garage documents (Estimate, Supplementary Estimate, Invoice) go to the garage. Everything else goes to the insured.
 4. Slot keys like `type:title` and `(n)` suffixes resolve to their base type for the label and default recipient. The original key is still logged.
 

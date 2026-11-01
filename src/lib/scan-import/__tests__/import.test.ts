@@ -248,14 +248,35 @@ describe('cards', () => {
     expect(c.scanChase?.importedAt).toBeTruthy();
   });
 
+  const conflictZip = (chase?: object) => buildZip([
+    ...manifestEntry('C', 'MH12AB1234', [{ path: 'rc.pdf', type: 'rc', data: 'rc' }]).slice(0, 1),
+    { name: 'C/_surveyos-scan.json', data: JSON.stringify({ app: 'surveyos-scan', v: 1, vehicle: 'MH12AB1234', insurer: '', claimNo: null,
+      exportedAt: 't', claimId: 'S2', ...(chase ? { chase } : {}), files: [{ path: 'rc.pdf', type: 'rc', pages: [], sha256: sha('rc') }] }) },
+  ]);
+  const linked = () => ({ id: 'c1', scanClaimId: 'S1', vehicle: { registrationNumber: 'MH12AB1234' } }) as unknown as ClaimData;
+
   it('differentClaimIdIsRefused', async () => {
-    state.claim = { id: 'c1', scanClaimId: 'S1', vehicle: { registrationNumber: 'MH12AB1234' } } as unknown as ClaimData;
-    const zip = buildZip([
-      ...manifestEntry('C', 'MH12AB1234', [{ path: 'rc.pdf', type: 'rc', data: 'rc' }]).slice(0, 1),
-      { name: 'C/_surveyos-scan.json', data: JSON.stringify({ app: 'surveyos-scan', v: 1, vehicle: 'MH12AB1234', insurer: '', claimNo: null,
-        exportedAt: 't', claimId: 'S2', files: [{ path: 'rc.pdf', type: 'rc', pages: [], sha256: sha('rc') }] }) },
-    ]);
-    await expect(importScanZip(zip, { confirmVehicle: yes })).rejects.toThrow('different claim on the phone');
+    state.claim = linked();
+    await expect(importScanZip(conflictZip(), { confirmVehicle: yes })).rejects.toThrow('different claim on the phone');
+    await expect(importScanZip(conflictZip(), { confirmVehicle: yes, confirmRelink: async () => false })).rejects.toThrow('different claim on the phone');
     expect(state.saves).toEqual([]);
+  });
+
+  it('differentClaimIdRelinksWhenConfirmed', async () => {
+    state.claim = linked();
+    const confirmRelink = vi.fn(async () => true);
+    const r = await importScanZip(conflictZip({ contacts: { insured: { name: 'N' } }, slotStates: { dl: 'missing' } }), { confirmVehicle: yes, confirmRelink });
+    expect(confirmRelink).toHaveBeenCalledWith('S2', 'S1');
+    expect(r).toMatchObject({ status: 'done', added: 1 });
+    const c = state.claim as unknown as ClaimData;
+    expect(c.scanClaimId).toBe('S2');
+    expect(c.scanChase?.slotStates).toEqual({ dl: 'missing' });
+  });
+
+  it('differentClaimIdRelinksWithoutChase', async () => {
+    state.claim = linked();
+    const r = await importScanZip(conflictZip(), { confirmVehicle: yes, confirmRelink: async () => true });
+    expect(r).toMatchObject({ status: 'done', added: 1 });
+    expect((state.claim as unknown as ClaimData).scanClaimId).toBe('S2');
   });
 });

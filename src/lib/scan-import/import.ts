@@ -30,6 +30,8 @@ export type ImportResult =
 export interface ImportOptions {
   /** Asked only on a vehicle mismatch; false aborts before anything is written. */
   confirmVehicle: (zipVehicle: string, claimVehicle: string) => Promise<boolean>;
+  /** Asked only when the zip's Scan claim id differs from the one this claim is linked to; false aborts. */
+  confirmRelink?: (zipClaimId: string, linkedClaimId: string) => Promise<boolean>;
 }
 
 export function toDocType(type: string): DocType {
@@ -65,15 +67,17 @@ async function existingHashes(claim: ClaimData, type: DocType, sizes: Set<number
   return out;
 }
 
-export async function importScanZip(blob: Blob, { confirmVehicle }: ImportOptions): Promise<ImportResult> {
+export async function importScanZip(blob: Blob, { confirmVehicle, confirmRelink }: ImportOptions): Promise<ImportResult> {
   const claim = useClaimStore.getState().currentClaim;
   if (!claim) throw new Error('Open the claim first, then bring its phone scans.');
   const zipFiles = await readZip(blob);
   const claimVehicle = claim.vehicle?.registrationNumber ?? '';
   const { root, manifest } = await findManifest(zipFiles, claimVehicle);
-  // Refuse a zip from another phone claim before anything is written (notes included).
+  // A zip from another phone claim needs the surveyor's yes before anything is written (notes included).
+  let relink = false;
   if (planChase(claim, manifest.chase, manifest.claimId).conflict) {
-    throw new Error('This zip is from a different claim on the phone. Open the matching claim in Prime.');
+    relink = !!confirmRelink && (await confirmRelink(manifest.claimId ?? '', claim.scanClaimId ?? ''));
+    if (!relink) throw new Error('This zip is from a different claim on the phone. Open the matching claim in Prime.');
   }
 
   if (!sameVehicle(manifest.vehicle, claimVehicle) && !(await confirmVehicle(manifest.vehicle, claimVehicle))) {
@@ -125,14 +129,14 @@ export async function importScanZip(blob: Blob, { confirmVehicle }: ImportOption
     failed += toWrite.length - written.length;
   }
   if (!stillHere()) return { status: 'claim-changed', added };
-  return { status: 'done', added, skipped, failed, notes: manifest.notes ?? null, contactsFilled: applyChase(manifest) };
+  return { status: 'done', added, skipped, failed, notes: manifest.notes ?? null, contactsFilled: applyChase(manifest, relink) };
 }
 
 /** Fills blank contacts, stores the chase state and the Scan claim id. Returns how many contacts were filled. */
-function applyChase(manifest: { chase?: ScanChase; claimId?: string }): number {
+function applyChase(manifest: { chase?: ScanChase; claimId?: string }, relink: boolean): number {
   const { currentClaim, updateClaim } = useClaimStore.getState();
   if (!currentClaim) return 0;
-  const plan = planChase(currentClaim, manifest.chase, manifest.claimId);
+  const plan = planChase(currentClaim, manifest.chase, manifest.claimId, relink);
   if (plan.conflict) return 0;
   const next = plan.fills.reduce<ClaimData>((acc, f) => setAt(acc, f.path, f.value), currentClaim);
   const updates: Record<string, unknown> = {};

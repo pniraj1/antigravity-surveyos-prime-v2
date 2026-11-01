@@ -27,9 +27,12 @@ export function BringPhoneScans({ onNeedsFolder, onAllowAccess }: Props) {
   const [menu, setMenu] = useState(false);
   const [busy, setBusy] = useState(false);
   const [vehicleAsk, setVehicleAsk] = useState<VehicleAsk | null>(null);
+  const [relinkAsk, setRelinkAsk] = useState<{ resolve: (ok: boolean) => void } | null>(null);
   const [notes, setNotes] = useState<{ plan: NotesPlan; claimId: string } | null>(null);
 
   const answerVehicle = (ok: boolean) => { vehicleAsk?.resolve(ok); setVehicleAsk(null); };
+
+  const answerRelink = (ok: boolean) => { relinkAsk?.resolve(ok); setRelinkAsk(null); };
 
   const showNotes = (raw: unknown, claimId: string | undefined) => {
     const claim = useClaimStore.getState().currentClaim;
@@ -45,6 +48,7 @@ export function BringPhoneScans({ onNeedsFolder, onAllowAccess }: Props) {
     try {
       const r = await importScanZip(blob, {
         confirmVehicle: (zip, claim) => new Promise((resolve) => setVehicleAsk({ zip, claim, resolve })),
+        confirmRelink: () => new Promise((resolve) => setRelinkAsk({ resolve })),
       });
       if (r.status === 'needs-folder') {
         toast.error('Connect the claim folder first, then bring the phone scans again.');
@@ -121,6 +125,31 @@ export function BringPhoneScans({ onNeedsFolder, onAllowAccess }: Props) {
           if (f) void run(f);
         }}
       />
+
+      {relinkAsk && (
+        <Dialog open onOpenChange={(open) => { if (!open) answerRelink(false); }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Different claim on the phone</DialogTitle>
+              <DialogDescription>
+                This zip is from a different claim on the phone. Import it and link this claim to it?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2">
+              <button type="button" onClick={() => answerRelink(false)} className="min-h-[44px] rounded-md border border-border px-4 text-sm">
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => answerRelink(true)}
+                className="min-h-[44px] rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
+              >
+                Import and link
+              </button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {vehicleAsk && (
         <Dialog open onOpenChange={(open) => { if (!open) answerVehicle(false); }}>

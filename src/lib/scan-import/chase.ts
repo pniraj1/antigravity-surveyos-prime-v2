@@ -16,8 +16,8 @@ export interface ChasePlan {
 
 const askKey = (a: ScanAsk) => [a.at, a.to, a.via, a.lang, a.docs.join(',')].join('|');
 
-export function planChase(claim: ClaimData, chase: ScanChase | undefined, scanClaimId: string | undefined): ChasePlan {
-  const keep = claim.scanClaimId;
+export function planChase(claim: ClaimData, chase: ScanChase | undefined, scanClaimId: string | undefined, relink = false): ChasePlan {
+  const keep = relink ? undefined : claim.scanClaimId;
   if (keep && scanClaimId && keep !== scanClaimId) {
     return { fills: [], next: claim.scanChase, scanClaimId: keep, conflict: `Claim already linked to Scan claim ${keep}, not ${scanClaimId}` };
   }
