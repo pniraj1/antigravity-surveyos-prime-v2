@@ -205,14 +205,14 @@ export async function driveRequest(url: string, options: RequestInit = {}): Prom
   return res;
 }
 
-/** Find a folder by name under a given parent (undefined = root). Returns ID or null. */
+/** Find a folder by name under a given parent (undefined = root). Returns the oldest match's ID (as Scan does), or null. */
 export async function findFolder(name: string, parentId?: string): Promise<string | null> {
   const q = parentId
     ? `name='${name}' and mimeType='application/vnd.google-apps.folder' and '${parentId}' in parents and trashed=false`
     : `name='${name}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
 
   const res = await driveRequest(
-    `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name)&spaces=drive`
+    `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name)&spaces=drive&orderBy=createdTime`
   );
   const data = await res.json();
   return data.files?.[0]?.id ?? null;

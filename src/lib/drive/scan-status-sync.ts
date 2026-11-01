@@ -20,8 +20,9 @@ const warnOnce = (e: unknown) => {
   console.warn('[Drive] Scan status sync skipped:', e instanceof Error ? e.message : e);
 };
 
-async function firstId(q: string, orderBy = ''): Promise<string | null> {
-  const res = await driveRequest(`${API}?q=${encodeURIComponent(q)}&fields=files(id)&spaces=drive${orderBy ? `&orderBy=${orderBy}` : ''}`);
+/** Oldest first, so both apps pick the same item when there are duplicates. */
+async function firstId(q: string): Promise<string | null> {
+  const res = await driveRequest(`${API}?q=${encodeURIComponent(q)}&fields=files(id)&spaces=drive&orderBy=createdTime`);
   return ((await res.json()).files?.[0]?.id as string | undefined) ?? null;
 }
 
@@ -31,7 +32,7 @@ async function findScanFolder(scanClaimId: string): Promise<string | null> {
   const phoneScans = root && (await findFolder('Phone Scans', root));
   if (!phoneScans) return null;
   const id = scanClaimId.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-  return firstId(`mimeType='${FOLDER}' and '${phoneScans}' in parents and appProperties has { key='claimId' and value='${id}' } and trashed=false`, 'createdTime');
+  return firstId(`mimeType='${FOLDER}' and '${phoneScans}' in parents and appProperties has { key='claimId' and value='${id}' } and trashed=false`);
 }
 
 async function readStatus(folderId: string): Promise<{ fileId: string | null; status: Status | null }> {

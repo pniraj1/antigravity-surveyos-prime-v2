@@ -45,7 +45,7 @@ async function doSave(
     }
     useClaimStore.getState().updateClaim({ documents: next.documents, documentsFolder: next.documentsFolder });
     toast.success(`${DOC_TYPE_LABEL[type]} saved to the claim folder`, { duration: 2500 });
-    if (source === 'upload') void markReceivedInScan(useClaimStore.getState().currentClaim, type); // Scan's status file, quiet on failure
+    if (source === 'upload') void markReceivedInScan(next, type); // the claim just saved; Scan's status file, quiet on failure
     return written;
   } catch (err) {
     const text = err instanceof Error ? err.message : String(err);
