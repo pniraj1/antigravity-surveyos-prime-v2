@@ -46,8 +46,8 @@ describe('lastEligibleFor', () => {
   it('names the job that would be left empty', () => {
     // groq/nvidia fall back to their default model even with no probe data (poolFromProbes),
     // so they must be excluded too or 'text' (vision-optional) never actually empties.
-    const c = { ...cfg, providers: { ...cfg.providers, gemini: { ...emptyProviderConfig(), excluded: ['gemini-3.5-flash', 'gemini-3.5-flash-lite'] }, ollama: { ...emptyProviderConfig(), excluded: ['gemma4:31b'] },
-      groq: { ...emptyProviderConfig(), excluded: ['qwen/qwen3.6-27b'] }, nvidia: { ...emptyProviderConfig(), excluded: ['meta/llama-3.2-90b-vision-instruct'] } } };
+    const c = { ...cfg, providers: { ...cfg.providers, gemini: { ...emptyProviderConfig(), excluded: ['gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'] }, ollama: { ...emptyProviderConfig(), excluded: ['gemma4:31b'] },
+      groq: { ...emptyProviderConfig(), excluded: ['qwen/qwen3.8-27b'] }, nvidia: { ...emptyProviderConfig(), excluded: ['nvidia/nemotron-3.5-super-vl-120b-a12b'] } } };
     expect(lastEligibleFor(c, probes(), 'gemini', 'gemini-text')).toBe('Letters & text');
   });
   it('null when other models remain', () => { expect(lastEligibleFor(cfg, probes(), 'gemini', 'gemini-3.5-flash')).toBeNull(); });

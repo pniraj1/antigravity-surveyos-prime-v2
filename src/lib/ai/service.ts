@@ -51,18 +51,13 @@ export function setAITestOverride(o: AITestOverride | null): void { _testOverrid
 export function getAITestOverride(): AITestOverride | null { return _testOverride; }
 
 // ─── Developer-controlled model defaults ─────────────────────────────────────
-// Last verified: May 2026 — Free Tier limits:
-//   gemini-2.5-flash     : 10 RPM · 500 RPD · 250K TPM  ← best stable free model
-//   gemini-2.5-flash-lite : 15 RPM · 1000 RPD
-//   llama-4-scout        : Groq free tier, vision-capable
+// Live-checked 2026-11-01 with real keys. The Admin probe list overrides these when it has run.
 export const CURRENT_MODELS = {
-  gemini: 'gemini-2.5-flash',
-  // Llama 3.3 70B — the fastest correct extraction measured on Groq (2.3s/page).
-  // Text-only: Groq's only vision model is qwen/qwen3.6-27b, whose 8000 TPM
+  gemini: 'gemini-3.5-flash-lite',   // extraction bench winner (2026-10-31)
+  // Text-only: Groq's only vision model is qwen/qwen3.8-27b, whose 8000 TPM
   // free-tier ceiling is below a single rendered estimate page (~10600 tokens).
-  groq:   'llama-3.3-70b-versatile',
-  // NVIDIA NIM free tier: model prefix is "meta/" not "nvidia/"
-  nvidia: 'meta/llama-3.2-90b-vision-instruct',
+  groq:   'openai/gpt-oss-120b',   // llama-3.3-70b: 404 since 2026-11
+  nvidia: 'nvidia/nemotron-3.5-super-vl-120b-a12b',
 };
 
 export interface ModelOption {
@@ -78,20 +73,18 @@ export interface ModelOption {
  */
 export const PROVIDER_MODELS: Record<'gemini' | 'groq' | 'nvidia' | 'ollama', ModelOption[]> = {
   gemini: [
-    { id: 'gemini-2.5-flash',        label: '2.5 Flash ✓',  note: 'Best value · ~10s/page · vision + text' },
-    { id: 'gemini-flash-lite-latest', label: 'Flash-Lite',   note: 'Fastest · ~3s/page' },
+    { id: 'gemini-3.5-flash-lite',   label: '3.5 Flash-Lite ✓', note: 'Bench winner · fastest · vision + text' },
+    { id: 'gemini-3.1-flash-lite',   label: '3.1 Flash-Lite',   note: 'Fast · vision + text' },
     { id: 'gemini-3.5-flash',        label: '3.5 Flash',     note: 'Newer · ~15s/page · vision + text' },
     // gemini-2.5-pro is deliberately absent: it 429s on the free tier.
   ],
   groq: [
-    { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B ✓', note: 'Fastest correct · ~2.3s/page · text only' },
-    { id: 'qwen/qwen3.6-27b',        label: 'Qwen 3.6 27B',    note: 'Only vision model · 8K TPM limits scans' },
+    { id: 'qwen/qwen3.8-27b',        label: 'Qwen 3.8 27B',    note: 'Only vision model · 8K TPM limits scans' },
     { id: 'openai/gpt-oss-120b',     label: 'GPT-OSS 120B',    note: 'Text only · 131K ctx' },
-    { id: 'llama-3.1-8b-instant',    label: 'Llama 3.1 8B',    note: 'Fastest · text only · 6K TPM' },
+    { id: 'openai/gpt-oss-20b',      label: 'GPT-OSS 20B',     note: 'Fast · text only' },
   ],
   nvidia: [
-    { id: 'meta/llama-3.2-90b-vision-instruct', label: 'Llama 3.2 90B', note: 'Default · best vision' },
-    { id: 'meta/llama-3.2-11b-vision-instruct', label: 'Llama 3.2 11B', note: 'Smaller · faster' },
+    { id: 'nvidia/nemotron-3.5-super-vl-120b-a12b', label: 'Nemotron 3.5 Super VL', note: 'Default · vision · may truncate long pages' },
   ],
   ollama: [
     { id: 'gemma4:31b', label: 'Gemma 4 31B', note: 'Free · vision · via proxy' },

@@ -53,7 +53,7 @@ describe('quota-aware order', () => {
     const spy = vi.spyOn(global, 'fetch').mockResolvedValue(ok());
     // F3: the nudge fires on a truly spent (remaining === 0) key, not merely
     // "can't cover this document" — spend every call, not just 18 of 20.
-    for (const m of ['gemini-2.5-flash', 'gemini-3.5-flash']) for (let i = 0; i < 20; i++) health.recordSpend(keyHash('g1'), m);
+    for (const m of ['gemini-3.7-flash', 'gemini-3.5-flash']) for (let i = 0; i < 20; i++) health.recordSpend(keyHash('g1'), m);
     const s = newSession('t'); s.pagesTotal = 5;
     await callAIGateway('p', ['img'], 'json', 'heavy', s);
     expect(modelOf(spy.mock.calls[0])).toMatch(/lite/);
@@ -66,14 +66,14 @@ describe('quota-aware order', () => {
     useProfileStore.getState().updateProfile({ ollamaApiKeys: ['o1'] } as never);
     callAiProxy.mockResolvedValue({ ok: true, status: 200, body: JSON.stringify({ message: { content: '{"x":1}' }, done_reason: 'stop' }) });
     vi.spyOn(global, 'fetch').mockResolvedValue(ok());
-    for (const m of ['gemini-2.5-flash', 'gemini-3.5-flash']) for (let i = 0; i < 20; i++) health.recordSpend(keyHash('g1'), m);
+    for (const m of ['gemini-3.7-flash', 'gemini-3.5-flash']) for (let i = 0; i < 20; i++) health.recordSpend(keyHash('g1'), m);
     const s = newSession('t'); s.pagesTotal = 5;
     await callAIGateway('p', ['img'], 'json', 'heavy', s);
     expect(toast.info.mock.calls.some(c => /Flash quota/.test(String(c[0])))).toBe(false);
   });
   it('second key is used when the first cannot cover the document', async () => {
     useProfileStore.getState().updateProfile({ geminiApiKeys: ['g1', 'g2'] } as never);
-    for (const m of ['gemini-2.5-flash', 'gemini-3.5-flash']) for (let i = 0; i < 18; i++) health.recordSpend(keyHash('g1'), m);
+    for (const m of ['gemini-3.7-flash', 'gemini-3.5-flash']) for (let i = 0; i < 18; i++) health.recordSpend(keyHash('g1'), m);
     const spy = vi.spyOn(global, 'fetch').mockResolvedValue(ok());
     const s = newSession('t'); s.pagesTotal = 5;
     await callAIGateway('p', ['img'], 'json', 'heavy', s);
@@ -88,8 +88,8 @@ describe('quota-aware order', () => {
   });
   it('every model spent by the ledger → "free limit is used up" toast and AllProvidersBusyError, zero fetches', async () => {
     const spy = vi.spyOn(global, 'fetch').mockResolvedValue(ok());
-    for (const m of ['gemini-2.5-flash', 'gemini-3.5-flash']) for (let i = 0; i < 20; i++) health.recordSpend(keyHash('g1'), m);
-    for (let i = 0; i < 500; i++) health.recordSpend(keyHash('g1'), 'gemini-flash-lite-latest');
+    for (let i = 0; i < 20; i++) health.recordSpend(keyHash('g1'), 'gemini-3.5-flash');
+    for (const m of ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite']) for (let i = 0; i < 500; i++) health.recordSpend(keyHash('g1'), m);
     await expect(callAIGateway('p', ['img'], 'json', 'light')).rejects.toBeInstanceOf(AllProvidersBusyError);
     expect(toast.error.mock.calls.some(c => /free limit is used up/.test(String(c[0])))).toBe(true);
     expect(spy).not.toHaveBeenCalled();
@@ -97,7 +97,7 @@ describe('quota-aware order', () => {
   it('F1: budget is calls still needed, not the whole document fixed once — no mid-document switch', async () => {
     // g1 has exactly 2 Flash calls left on gemini-3.5-flash, 0 left on gemini-2.5-flash.
     for (let i = 0; i < 18; i++) health.recordSpend(keyHash('g1'), 'gemini-3.5-flash');
-    for (let i = 0; i < 20; i++) health.recordSpend(keyHash('g1'), 'gemini-2.5-flash');
+    for (let i = 0; i < 20; i++) health.recordSpend(keyHash('g1'), 'gemini-3.7-flash');
     const spy = vi.spyOn(global, 'fetch').mockResolvedValue(ok());
     const s = newSession('t'); s.pagesTotal = 2;
     await callAIGateway('p', ['img'], 'json', 'heavy', s);
@@ -116,8 +116,8 @@ describe('quota-aware order', () => {
         ...FALLBACK_AI_MODELS_CONFIG.providers,
         gemini: {
           ...emptyProviderConfig(),
-          defaultModel: 'gemini-2.5-flash',
-          excluded: ['gemini-flash-lite-latest'],
+          defaultModel: 'gemini-3.5-flash',
+          excluded: ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'],
         },
       },
     });
@@ -128,7 +128,7 @@ describe('quota-aware order', () => {
   });
   it('nudge is silent when the Flash model is merely avoided, not spent', async () => {
     const s = newSession('t'); s.pagesTotal = 5;
-    s.avoid.add('gemini-2.5-flash'); s.avoid.add('gemini-3.5-flash');
+    s.avoid.add('gemini-3.7-flash'); s.avoid.add('gemini-3.5-flash');
     vi.spyOn(global, 'fetch').mockResolvedValue(ok());
     await callAIGateway('p', ['img'], 'json', 'heavy', s);
     expect(toast.info.mock.calls.some(c => /Flash quota/.test(String(c[0])))).toBe(false);
@@ -326,7 +326,7 @@ describe('session stickiness', () => {
 
 describe('admin limits', () => {
   it('admin limit override reaches the loop', async () => {
-    useAIConfigStore.getState().setConfig({ ...FALLBACK_AI_MODELS_CONFIG, providers: { ...FALLBACK_AI_MODELS_CONFIG.providers, gemini: { ...FALLBACK_AI_MODELS_CONFIG.providers.gemini, limits: { 'gemini-3.5-flash': 0, 'gemini-2.5-flash': 0 } } } });
+    useAIConfigStore.getState().setConfig({ ...FALLBACK_AI_MODELS_CONFIG, providers: { ...FALLBACK_AI_MODELS_CONFIG.providers, gemini: { ...FALLBACK_AI_MODELS_CONFIG.providers.gemini, limits: { 'gemini-3.5-flash': 0, 'gemini-3.7-flash': 0 } } } });
     const spy = vi.spyOn(global, 'fetch').mockResolvedValue(ok());
     const s = newSession('t'); s.pagesTotal = 2;
     await callAIGateway('p', ['img'], 'json', 'heavy', s);
@@ -378,17 +378,17 @@ describe('surveyor override — specific model', () => {
   afterEach(() => useProfileStore.getState().updateProfile({ preferredAI: 'auto', preferredModel: '' } as never));
 
   it('a picked model goes first, even one the ranker would put later', async () => {
-    useProfileStore.getState().updateProfile({ preferredAI: 'gemini', preferredModel: 'gemini-flash-lite-latest' } as never);
+    useProfileStore.getState().updateProfile({ preferredAI: 'gemini', preferredModel: 'gemini-3.1-flash-lite' } as never);
     const spy = vi.spyOn(global, 'fetch').mockResolvedValue(ok());
     const s = newSession('t'); s.pagesTotal = 1;
     await callAIGateway('p', ['img'], 'json', 'heavy', s);     // heavy would normally lead with Flash
-    expect(modelOf(spy.mock.calls[0])).toBe('gemini-flash-lite-latest');
+    expect(modelOf(spy.mock.calls[0])).toBe('gemini-3.1-flash-lite');
   });
   it('picked model busy → next model in the normal order', async () => {
-    useProfileStore.getState().updateProfile({ preferredAI: 'gemini', preferredModel: 'gemini-flash-lite-latest' } as never);
+    useProfileStore.getState().updateProfile({ preferredAI: 'gemini', preferredModel: 'gemini-3.1-flash-lite' } as never);
     const spy = vi.spyOn(global, 'fetch').mockResolvedValueOnce(fail(503, 'busy')).mockResolvedValue(ok());
     const s = newSession('t'); s.pagesTotal = 1;
     await callAIGateway('p', ['img'], 'json', 'heavy', s);
-    expect(modelOf(spy.mock.calls[1])).not.toBe('gemini-flash-lite-latest');
+    expect(modelOf(spy.mock.calls[1])).not.toBe('gemini-3.1-flash-lite');
   });
 });

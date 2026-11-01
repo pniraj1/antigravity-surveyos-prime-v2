@@ -32,6 +32,13 @@ const KNOWN_DEAD = new Set([
   'gemini-2.0-flash-lite',
   'gemini-1.5-flash',
   'gemini-pro',
+  // 404/410 on live calls 2026-11-01
+  'gemini-2.5-flash',
+  'qwen/qwen3.6-27b',
+  'llama-3.3-70b-versatile',
+  'llama-3.1-8b-instant',
+  'meta/llama-3.2-11b-vision-instruct',
+  'nvidia/nemotron-nano-12b-v2-vl',
 ]);
 
 function assertLive(ids: string[], where: string) {
@@ -53,7 +60,7 @@ describe('shipped default models are alive', () => {
   it('migration maps never rewrite a live model into something else', () => {
     // openai/gpt-oss-120b and -20b are live on Groq (verified 2026-08-10) but
     // were being migrated away as "fake ids that never existed".
-    const live = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'llama-3.3-70b-versatile'];
+    const live = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.8-27b', 'gemini-3.5-flash-lite'];
     for (const id of live) {
       expect(DEPRECATED_GROQ_MODELS[id], `live model "${id}" is being migrated away`).toBeUndefined();
     }

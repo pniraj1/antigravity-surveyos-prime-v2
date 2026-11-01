@@ -60,40 +60,46 @@ export function formatCtx(n: number): string {
   return String(n);
 }
 
-/** Used only when the probes doc has never been written. Ids verified live 2026-09-16. */
+/** Used when the probes doc is missing or a provider's probe failed, and by /bench. Ids verified live 2026-11-01. */
 export const FALLBACK_MODELS: Record<ProviderId, FallbackModel[]> = {
   gemini: [
-    { id: 'gemini-2.5-flash', label: '2.5 Flash', vision: true, imageCap: null, ctxWindow: 1_048_576 },
-    { id: 'gemini-flash-lite-latest', label: 'Flash-Lite', vision: true, imageCap: null, ctxWindow: 1_048_576 },
+    // pinned, not 'gemini-flash-lite-latest': that alias silently changes model (3.5 Flash-Lite today, the bench winner)
+    { id: 'gemini-3.5-flash-lite', label: '3.5 Flash-Lite', vision: true, imageCap: null, ctxWindow: 1_048_576 },
+    { id: 'gemini-3.1-flash-lite', label: '3.1 Flash-Lite', vision: true, imageCap: null, ctxWindow: 1_048_576 },
     { id: 'gemini-3.5-flash', label: '3.5 Flash', vision: true, imageCap: null, ctxWindow: 1_048_576 },
   ],
-  groq: [{ id: 'qwen/qwen3.6-27b', label: 'Qwen 3.6 27B', vision: true, imageCap: 5, ctxWindow: 131_072 }],
-  nvidia: [{ id: 'meta/llama-3.2-90b-vision-instruct', label: 'Llama 3.2 90B', vision: true, imageCap: 1, ctxWindow: 128_000 }],
+  groq: [{ id: 'qwen/qwen3.8-27b', label: 'Qwen 3.8 27B', vision: true, imageCap: 5, ctxWindow: 131_072 }],
+  nvidia: [{ id: 'nvidia/nemotron-3.5-super-vl-120b-a12b', label: 'Nemotron 3.5 Super VL', vision: true, imageCap: 1, ctxWindow: 128_000 }],
   ollama: [{ id: 'gemma4:31b', label: 'Gemma 4 31B', vision: true, imageCap: null, ctxWindow: 131_072 }],
 };
 
 // Old model names stored in user profiles → auto-migrated to current default
 export const DEPRECATED_GEMINI_MODELS: Record<string, string> = {
-  'gemini-pro':               'gemini-2.5-flash',
-  'gemini-pro-vision':        'gemini-2.5-flash',
-  'gemini-1.0-pro':           'gemini-2.5-flash',
-  'gemini-1.5-flash':         'gemini-2.5-flash',
-  'gemini-1.5-flash-latest':  'gemini-2.5-flash',
-  'gemini-1.5-pro':           'gemini-2.5-flash',
-  'gemini-2.0-flash':         'gemini-2.5-flash',          // 429 on the free tier
-  'gemini-2.0-flash-lite':    'gemini-flash-lite-latest',  // was → 2.5-flash-lite, now 404
-  'gemini-2.0-flash-exp':     'gemini-2.5-flash',
-  'gemini-2.5-flash-lite':    'gemini-flash-lite-latest',  // 404 "no longer available to new users"
+  'gemini-pro':               'gemini-3.5-flash-lite',
+  'gemini-pro-vision':        'gemini-3.5-flash-lite',
+  'gemini-1.0-pro':           'gemini-3.5-flash-lite',
+  'gemini-1.5-flash':         'gemini-3.5-flash-lite',
+  'gemini-1.5-flash-latest':  'gemini-3.5-flash-lite',
+  'gemini-1.5-pro':           'gemini-3.5-flash-lite',
+  'gemini-2.0-flash':         'gemini-3.5-flash-lite',          // 429 on the free tier
+  'gemini-2.0-flash-lite':    'gemini-3.5-flash-lite',     // was → 2.5-flash-lite, now 404
+  'gemini-2.0-flash-exp':     'gemini-3.5-flash-lite',
+  'gemini-2.5-flash-lite':    'gemini-3.5-flash-lite',     // 404 "no longer available to new users"
+  'gemini-2.5-flash':         'gemini-3.5-flash-lite',     // 404 since 2026-10
   'gemini-3-pro-preview':     'gemini-3.1-pro-preview',    // shut down March 9, 2026
 };
 
 export const DEPRECATED_GROQ_MODELS: Record<string, string> = {
   // Every llama-4 model was retired by Groq — all 404 "does not exist".
-  'meta-llama/llama-4-scout-17b-16e-instruct':    'llama-3.3-70b-versatile',
-  'meta-llama/llama-4-maverick-17b-128e-instruct': 'llama-3.3-70b-versatile',
+  'meta-llama/llama-4-scout-17b-16e-instruct':    'openai/gpt-oss-120b',
+  'meta-llama/llama-4-maverick-17b-128e-instruct': 'openai/gpt-oss-120b',
   // Old vision-preview models removed by Groq
-  'llama-3.2-90b-vision-preview': 'qwen/qwen3.6-27b',
-  'llama-3.2-11b-vision-preview': 'qwen/qwen3.6-27b',
+  'llama-3.2-90b-vision-preview': 'qwen/qwen3.8-27b',
+  'llama-3.2-11b-vision-preview': 'qwen/qwen3.8-27b',
+  // 404 "does not exist" (checked live 2026-11-01)
+  'qwen/qwen3.6-27b':        'qwen/qwen3.8-27b',
+  'llama-3.3-70b-versatile': 'openai/gpt-oss-120b',
+  'llama-3.1-8b-instant':    'openai/gpt-oss-20b',
   // NOTE: openai/gpt-oss-120b and -20b were listed here as "fake model IDs that
   // never existed on Groq". They are live (verified 2026-08-10), so migrating
   // them away was rewriting a working model into one that 404s. Do not re-add.

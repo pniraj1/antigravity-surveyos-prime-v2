@@ -27,11 +27,11 @@ describe('poolFromProbes', () => {
     expect(poolFromProbes(cfg({ enabled: false }), probes(), { gemini: ['g1'] })).toEqual([]);
   });
   it('no probes → fallback models', () => {
-    expect(ids(poolFromProbes(cfg(), null, { gemini: ['g1'] }))).toEqual(['gemini/gemini-2.5-flash', 'gemini/gemini-3.5-flash', 'gemini/gemini-flash-lite-latest']);
+    expect(ids(poolFromProbes(cfg(), null, { gemini: ['g1'] }))).toEqual(['gemini/gemini-3.1-flash-lite', 'gemini/gemini-3.5-flash', 'gemini/gemini-3.5-flash-lite']);
   });
   it('an errored probe with no models → fallback models', () => {
     const erroredProbes = { ...probes(), providers: { ...probes().providers, gemini: { probedAt: 5, error: 'key rejected', accuracy: {}, models: {} } } };
-    expect(ids(poolFromProbes(cfg(), erroredProbes, { gemini: ['g1'] }))).toEqual(['gemini/gemini-2.5-flash', 'gemini/gemini-3.5-flash', 'gemini/gemini-flash-lite-latest']);
+    expect(ids(poolFromProbes(cfg(), erroredProbes, { gemini: ['g1'] }))).toEqual(['gemini/gemini-3.1-flash-lite', 'gemini/gemini-3.5-flash', 'gemini/gemini-3.5-flash-lite']);
   });
   it('a legacy (schema 1) config is migrated on the fly', () => {
     const legacy = { ...cfg(), schema: undefined, providers: { ...cfg().providers, gemini: { enabled: true, defaultModel: 'gemini-3.5-flash', models: [{ id: 'gemini-3.5-flash', label: '', note: '', ctxWindow: null, vision: true, imageCap: null }] } as any } };
@@ -44,11 +44,11 @@ describe('limitOfFor', () => {
     const f = limitOfFor(cfg({ limits: { 'gemini-3.5-flash': 50, 'gemini-3.5-flash-lite': 0 } }));
     expect(f('gemini', 'gemini-3.5-flash')).toBe(50);
     expect(f('gemini', 'gemini-3.5-flash-lite')).toBe(0);
-    expect(f('gemini', 'gemini-2.5-flash')).toBe(20);
+    expect(f('gemini', 'gemini-3.7-flash')).toBe(20);
     expect(f('ollama', 'gemma4:31b')).toBe(Infinity);
   });
   it('ignores non-numeric or negative overrides', () => {
-    const f = limitOfFor(cfg({ limits: { 'gemini-3.5-flash': -1, 'gemini-2.5-flash': NaN } }));
-    expect(f('gemini', 'gemini-3.5-flash')).toBe(20); expect(f('gemini', 'gemini-2.5-flash')).toBe(20);
+    const f = limitOfFor(cfg({ limits: { 'gemini-3.5-flash': -1, 'gemini-3.7-flash': NaN } }));
+    expect(f('gemini', 'gemini-3.5-flash')).toBe(20); expect(f('gemini', 'gemini-3.7-flash')).toBe(20);
   });
 });
