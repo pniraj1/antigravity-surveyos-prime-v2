@@ -13,7 +13,7 @@ const { fakePdf, requestedPages } = vi.hoisted(() => {
       return {
         getViewport: () => ({ width: 10, height: 10 }),
         render: () => ({ promise: Promise.resolve() }),
-        getTextContent: async () => ({ items: [{ str: `text${n}` }] }),
+        getTextContent: async () => ({ items: [{ str: `text${n}`, transform: [1, 0, 0, 1, 10, 20], width: 20 }] }),
       };
     },
   };
@@ -32,7 +32,7 @@ vi.stubGlobal('document', {
 } as unknown as Document);
 
 import { setAIPages } from '../ai-pages';
-import { fileToImages } from '../processor';
+import { fileToImages, filesToImages } from '../processor';
 
 function pdfFile(): File {
   return new File(['x'], 'a.pdf', { type: 'application/pdf' });
@@ -77,5 +77,19 @@ describe('fileToImages — PDF page filter', () => {
     expect(apiImages).toHaveLength(0);
     expect(viewImages).toHaveLength(0);
     expect(requestedPages).toEqual([]);
+  });
+});
+
+describe('pageTokens', () => {
+  it('fileToImages returns positioned tokens per page', async () => {
+    const file = pdfFile();
+    setAIPages(file, [1, 3]);
+    const { pageTokens } = await fileToImages(file);
+    expect(pageTokens).toEqual([[{ s: 'text1', x: 10, w: 20, y: 20 }], [{ s: 'text3', x: 10, w: 20, y: 20 }]]);
+  });
+
+  it('filesToImages passes them for one file only', async () => {
+    expect((await filesToImages([pdfFile()])).pageTokens).toHaveLength(4);
+    expect((await filesToImages([pdfFile(), pdfFile()])).pageTokens).toBeUndefined();
   });
 });

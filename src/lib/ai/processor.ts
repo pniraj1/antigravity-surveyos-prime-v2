@@ -19,17 +19,22 @@ import { layoutLines, countAmountLines } from './text-lines';
 import { planChunks } from './group-pages';
 import { limitsFor, PAGE_LIMITS } from './page-limits';
 import { profilePages, pageRuns, chunkRuns } from './page-runs';
+import { tokensFromItems, type PdfToken } from './row-parser';
 
 /**
  * Extracts text content from a PDF page (if it has a text layer).
  * Returns empty string if page is image-only (scanned).
  */
-async function extractPageText(page: any): Promise<string> {
+async function extractPageText(page: any): Promise<{ text: string; tokens: PdfToken[] }> {
   try {
     const textContent = await page.getTextContent();
-    return layoutLines(textContent.items).trim();
+    const text = layoutLines(textContent.items).trim();
+    // Tokens are a bonus: a malformed item must never cost the page its text.
+    let tokens: PdfToken[] = [];
+    try { tokens = tokensFromItems(textContent.items); } catch { /* text path still works */ }
+    return { text, tokens };
   } catch {
-    return '';
+    return { text: '', tokens: [] };
   }
 }
 
@@ -76,7 +81,7 @@ export async function fileToImages(
   file: File,
   onProgress?: (page: number, total: number) => void,
   apiScale?: number,
-): Promise<{ viewImages: string[]; apiImages: string[]; textLayers?: string[]; pageNumbers?: number[] }> {
+): Promise<{ viewImages: string[]; apiImages: string[]; textLayers?: string[]; pageNumbers?: number[]; pageTokens?: PdfToken[][] }> {
   if (file.type === 'application/pdf') {
     const pdfjsLib = await import('pdfjs-dist');
     const version = pdfjsLib.version;
@@ -88,6 +93,7 @@ export async function fileToImages(
     const viewImages: string[] = [];
     const apiImages: string[] = [];
     const textLayers: string[] = [];
+    const pageTokens: PdfToken[][] = [];
 
     // Only the pages the surveyor ticked in the review sheet are rendered —
     // unticked pages never become images and never reach the provider.
@@ -97,8 +103,9 @@ export async function fileToImages(
       const page = await pdf.getPage(pageNumbers[idx]);
 
       // Try to extract text (for digitally-born PDFs)
-      const pageText = await extractPageText(page);
+      const { text: pageText, tokens } = await extractPageText(page);
       textLayers.push(pageText);
+      pageTokens.push(tokens);
 
       // ── High-res view image (PNG, scale 3×) ────────────────────────────
       // Scale 3.0 → ~2550×3300px for a typical A4 — crisp enough for zooming
@@ -123,7 +130,7 @@ export async function fileToImages(
       await page.render({ canvasContext: apiCtx, canvas: apiCanvas, viewport: apiViewport }).promise;
       apiImages.push(apiCanvas.toDataURL('image/jpeg', 0.90));
     }
-    return { viewImages, apiImages, textLayers, pageNumbers };
+    return { viewImages, apiImages, textLayers, pageNumbers, pageTokens };
   }
 
   // Handle standard images — full-res original for viewing, downscaled JPEG for the API.
@@ -153,15 +160,17 @@ export async function filesToImages(
   files: File[],
   onProgress?: (page: number, total: number) => void,
   apiScale?: number,
-): Promise<{ viewImages: string[]; apiImages: string[]; textLayers?: string[]; pageRefs: PageRef[] }> {
+): Promise<{ viewImages: string[]; apiImages: string[]; textLayers?: string[]; pageRefs: PageRef[]; pageTokens?: PdfToken[][] }> {
   const viewImages: string[] = [];
   const apiImages: string[] = [];
   const textLayers: string[] = [];
   const pageRefs: PageRef[] = [];
   let allHaveText = files.length > 0;
+  let firstTokens: PdfToken[][] | undefined;
 
   for (const [fileIndex, file] of files.entries()) {
     const r = await fileToImages(file, onProgress, apiScale);
+    if (fileIndex === 0) firstTokens = r.pageTokens;
     viewImages.push(...r.viewImages);
     apiImages.push(...r.apiImages);
     r.apiImages.forEach((_, i) => pageRefs.push({ file: fileIndex, page: r.pageNumbers?.[i] ?? 1 }));
@@ -172,7 +181,9 @@ export async function filesToImages(
     }
   }
 
-  return { viewImages, apiImages, textLayers: allHaveText ? textLayers : undefined, pageRefs };
+  // Positioned tokens only travel for a single file; multi-file slots keep the text path.
+  const pageTokens = files.length === 1 ? firstTokens : undefined;
+  return { viewImages, apiImages, textLayers: allHaveText ? textLayers : undefined, pageRefs, pageTokens };
 }
 
 /** Where one sent image came from: file index in the slot, real 1-based PDF page. */
