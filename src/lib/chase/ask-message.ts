@@ -46,3 +46,14 @@ const enc = encodeURIComponent;
 export const waLink = (number: string, text: string) => `https://wa.me/${number}?text=${enc(text)}`;
 
 export const mailtoUri = (to: string, subject: string, body: string) => `mailto:${to}?subject=${enc(subject)}&body=${enc(body)}`;
+
+/** wa.me number (91 + 10-digit Indian mobile) from typed text, or null. Same rules as Scan's Contacts.kt waNumber. */
+export function waNumber(raw: string): string | null {
+  const d = raw.replace(/\D/g, '');
+  const last10 = d.slice(-10);
+  const mobile = last10.length === 10 && /[6-9]/.test(last10[0]);
+  if (d.length === 10 && mobile) return `91${d}`;
+  if (d.length === 11 && d[0] === '0' && mobile) return `91${last10}`;
+  if (d.length === 12 && d.startsWith('91') && mobile) return d;
+  return null;
+}

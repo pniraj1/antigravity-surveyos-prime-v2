@@ -21,6 +21,7 @@ import { useClaimDocuments } from '@/lib/documents/useClaimDocuments';
 import { FolderLine } from '@/components/documents/FolderLine';
 import { PhoneFilesList } from '@/components/documents/PhoneFilesList';
 import { BringPhoneScans } from '@/components/documents/BringPhoneScans';
+import { AskForDocumentsButton } from '@/components/documents/AskForDocumentsDialog';
 import { readDocument } from '@/lib/documents/folder';
 import { phoneFileFor, cardPhoneState } from '@/lib/scan-import/cards';
 import type { ClaimDocument } from '@/types/documents';
@@ -334,7 +335,10 @@ export function DocumentsTab() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <FolderLine supported={docs.supported} folder={docs.folder} onConnect={docs.connect} onReconnect={docs.reconnect} connectRequest={folderAsk} />
           {/* Import needs a claim folder, which needs the File System Access API. */}
-          {docs.supported && <BringPhoneScans onNeedsFolder={() => setFolderAsk((n) => n + 1)} onAllowAccess={docs.reconnect} />}
+          <div className="flex flex-wrap items-center gap-2">
+            <AskForDocumentsButton />
+            {docs.supported && <BringPhoneScans onNeedsFolder={() => setFolderAsk((n) => n + 1)} onAllowAccess={docs.reconnect} />}
+          </div>
         </div>
         {DOC_GROUPS.map((group) => (
           <div key={group.title}>
