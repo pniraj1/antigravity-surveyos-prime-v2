@@ -2,6 +2,15 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-01 (Claude Code) — Parser reads Maruti and Tata
+- feat(ai): `row-parser.ts` now reads Maruti estimates and final bills, and Tata DTC / INTRA / Consolidated invoices.
+  - Total labels "Net Estimate Amounts", "Net Bill Amount", "Gross Amount"; serial heading "Srl.".
+  - Maruti rows that print no tax rate: the one GST rate whose with-tax subtotal is printed is applied; otherwise the rows are taken as tax-inclusive (rate left blank, app default 18%).
+  - Tata headings over several lines: amount columns found by where the amounts right-align, named by the heading words above (fallback reading, only after the normal one declines).
+  - Quantities like "2.000" were read as 1; fixed.
+- Real-PDF check: all 23 sample PDFs (owner's 18 + 5 new) read with 0 calls, every gross = printed total. Not pushed, not deployed.
+- Scan impact: none.
+
 ## 2026-11-01 (Claude Code) — Scan chase import and Ask for documents
 - feat(scan-import): `planChase` (`src/lib/scan-import/chase.ts`) reads the manifest `chase` object. It fills blank insured name/mobile and workshop name/phone/email only (Prime's value wins), stores `scanChase` and `scanClaimId`, and refuses a zip from a different phone claim.
 - feat(chase): `src/lib/chase/ask-message.ts` ports Scan's EN/HI/MR ask templates. `ASK_COPY` is exported and pinned by Scan's `AskTemplatesTest`.

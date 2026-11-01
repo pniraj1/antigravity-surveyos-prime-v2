@@ -29,3 +29,10 @@ Section sum ≠ labelled subtotal (₹1); no grand total; gross off (₹5/0.1%, 
 
 ## Impact on SurveyOS Scan
 None.
+
+## Later the same day: Maruti and Tata
+The owner sent 7 more digital PDFs (Maruti estimate, Maruti final bill ×3, Tata ×2). All 23 now read with 0 calls; every gross equals the printed total; rows spot-checked against the PDF text.
+- Maruti: grand total "Net Estimate Amounts" / "Net Bill Amount (Rounded)"; labour printed pre-tax with CGST+SGST under the section → `footerTax` applies the single GST rate whose with-tax subtotal is printed. Estimate parts print no rate and are tax-inclusive → total = printed amount, rate blank.
+- Tata: headings stacked over 3–5 lines and split mid-word → `findHeaderBlock` (fallback reading): amount columns from right-aligned values, named by heading words; text columns start halfway between headings. Row GST inferred when taxable and total are printed.
+- Fixes found on the way: "2.000" quantities read as 1; "Suggested Jobs" caption leaking into Maruti row 1; wrapped HSN codes.
+- Ruling: tax-inclusive rows with no printed rate keep `gst_percent` blank rather than a guessed 18 (the app's own default then applies).

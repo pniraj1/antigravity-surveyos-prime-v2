@@ -20,8 +20,8 @@
 
 ## In Progress: Parser-first extraction (built 2026-11-01 on main, NOT deployed or pushed)
 - [ ] Owner: approve a sandbox deploy, then upload a few digital estimates and confirm the "Read from the PDF text" note.
-- [ ] Follow-up: Maruti layout (grand total "Net Estimate Amounts"; parts include tax, labour excludes it).
-- [ ] Follow-up: Tata DTC / INTRA / Consolidated layouts (multi-line headers).
+- [x] Maruti estimate + final bill and Tata DTC / INTRA / Consolidated layouts (2026-11-01): all 23 sample PDFs read with 0 calls, all match printed totals.
+- [ ] Owner: send digital PDFs from other makes (Honda, Mahindra, Toyota, Renault, MG, Skoda/VW, Hyundai estimates) to extend coverage.
 - [ ] Phase 2: image-PDF hardening (spec §8): page-coverage retry, per-page totals message.
 - [ ] Deferred review minors: see `.superpowers` ledger summary in the session log.
 
