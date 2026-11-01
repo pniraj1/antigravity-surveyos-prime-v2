@@ -58,3 +58,16 @@ describe('plannedCalls / planEstimate', () => {
     expect(planEstimate([prof('h'), prof('w')], [pick], ['h']).groq).toBe(39);
   });
 });
+
+describe('parser method', () => {
+  const parserPick: ModelPick = { provider: 'ollama', model: 'row-parser', key: '', methods: ['parser'] };
+  it('is one cell per PDF, for hard and wide sets, then done', () => {
+    for (const set of ['hard', 'wide'] as const) {
+      const k = nextCell([], P, parserPick, set);
+      expect(k).toMatchObject({ method: 'parser', pagesPerCall: 1, imageScale: 1.5, runNo: 1 });
+      const done: CellResult = { ...k!, id: cellId(k!), status: 'done', rows: [], errors: [miss], calls: [], tokensIn: 0, tokensOut: 0, ms: 0, modelVersion: 'row-parser', at: 0 };
+      expect(nextCell([done], P, parserPick, set)).toBeNull();   // a failure is not repeated: it is deterministic
+    }
+  });
+  it('plans no calls', () => expect(planEstimate([P], [parserPick], ['h']).ollama).toBe(0));
+});

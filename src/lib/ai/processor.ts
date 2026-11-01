@@ -39,6 +39,17 @@ async function extractPageText(page: any): Promise<{ text: string; tokens: PdfTo
   }
 }
 
+/** Positioned text only (no rendering): what the row parser reads. Bench use; honours the ticked pages. */
+export async function fileToTokens(file: File): Promise<PdfToken[][]> {
+  if (file.type !== 'application/pdf') return [];
+  const pdfjsLib = await import('pdfjs-dist');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+  const out: PdfToken[][] = [];
+  for (const n of resolveAIPages(pdf.numPages, getAIPages(file))) out.push((await extractPageText(await pdf.getPage(n))).tokens);
+  return out;
+}
+
 /**
  * Parses extracted text to detect financial amounts.
  * Looks for currency symbols and digits: ₹12,456, $1234.56, etc.
@@ -355,7 +366,8 @@ export async function extractDocument(
     // image. Consecutive pages of one kind form a run; chunks never cross runs.
     const pageProfiles = textLayers ? profilePages(textLayers).pages : [];
     const modes = pageProfiles.length === totalPages ? pageProfiles.map(p => p.mode) : apiImages.map(() => 'vision' as const);
-    const runs = pageRuns(modes, forceDocMode ?? getAITestOverride()?.method);
+    const testMethod = getAITestOverride()?.method;   // 'parser' never reaches here (runModelTest handles it)
+    const runs = pageRuns(modes, forceDocMode ?? (testMethod === 'parser' ? undefined : testMethod));
     const allText = runs.length > 0 && runs.every(r => r.method === 'text');
     console.log(`[AI Extraction] ${key}: ${runs.map(r => `${r.method} ${r.pages[0] + 1}–${r.pages[r.pages.length - 1] + 1}`).join(', ')}`);
 

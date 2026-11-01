@@ -5,16 +5,20 @@ import { compareToReference, passes, selfCheck } from '@/lib/bench/score';
 import type { CellResult } from '@/lib/bench/store';
 import type { BenchRow, ErrorType, PdfProfile } from '@/lib/bench/types';
 
-export type Method = 'text' | 'vision';
+export type Method = 'text' | 'vision' | 'parser';
 export interface PickRow { provider: ProviderId; model: string; label: string; checked: boolean; methods: Method[] }
 export const PROVIDERS: ProviderId[] = ['gemini', 'groq', 'nvidia', 'ollama'];
+/** The row parser is benched like a model, but makes no calls and needs no key. */
+export const PARSER_MODEL = 'row-parser';
+export const METHODS_OFFERED = (model: string): Method[] => (model === PARSER_MODEL ? ['parser'] : ['text', 'vision']);
 export const STALE_MS = 30 * 86_400_000;
 
 // ponytail: picks come from the built-in fallback catalogue, not the live probe list; add when the owner needs other models.
 export function defaultPickRows(): PickRow[] {
-  return PROVIDERS.flatMap(provider => FALLBACK_MODELS[provider].map(m => ({
+  const parser: PickRow = { provider: 'ollama', model: PARSER_MODEL, label: 'Row parser (no AI)', checked: true, methods: ['parser'] };
+  return [parser, ...PROVIDERS.flatMap(provider => FALLBACK_MODELS[provider].map(m => ({
     provider, model: m.id, label: m.label, checked: provider !== 'gemini', methods: [m.vision ? 'vision' : 'text'] as Method[],
-  })));
+  })))];
 }
 
 export const toPicks = (rows: PickRow[], keys: Partial<Record<ProviderId, string>>): ModelPick[] =>
@@ -22,7 +26,7 @@ export const toPicks = (rows: PickRow[], keys: Partial<Record<ProviderId, string
 
 /** Providers with a ticked pick but no key (every provider is BYOK). */
 export const missingKeys = (picks: ModelPick[]): ProviderId[] =>
-  [...new Set(picks.filter(k => !k.key.trim()).map(k => k.provider))];
+  [...new Set(picks.filter(k => !k.key.trim() && !k.methods.every(m => m === 'parser')).map(k => k.provider))];
 
 export const canStart = (profiles: PdfProfile[], picks: ModelPick[]): boolean =>
   picks.length > 0 && missingKeys(picks).length === 0 && profiles.some(p => p.confirmed);

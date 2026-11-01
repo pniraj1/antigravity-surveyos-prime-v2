@@ -5,7 +5,7 @@ import { defaultDailyCap } from '@/lib/bench/pacer';
 import { planEstimate } from '@/lib/bench/plan';
 import type { ProviderId } from '@/lib/ai/models-config';
 import type { PdfProfile } from '@/lib/bench/types';
-import { PROVIDERS, canStart, missingKeys, defaultPickRows, toPicks, type PickRow } from './bench-logic';
+import { PROVIDERS, METHODS_OFFERED, canStart, missingKeys, defaultPickRows, toPicks, type PickRow } from './bench-logic';
 import { useBenchRun } from './useBenchRun';
 
 interface Props { profiles: PdfProfile[]; hardIds: string[]; onHardIds(ids: string[]): void; onFinished(): void }
@@ -35,7 +35,7 @@ export function RunPanel({ profiles, hardIds, onHardIds, onFinished }: Props) {
             <input type="checkbox" data-pick={`${r.provider}/${r.model}`} checked={r.checked}
               onChange={e => setRow(i, { checked: e.target.checked })} />
             {r.provider} / {r.label}
-            {(['text', 'vision'] as const).map(m => (
+            {METHODS_OFFERED(r.model).map(m => (
               <span key={m} className="ml-2">
                 <input type="checkbox" aria-label={`${r.model} ${m}`} checked={r.methods.includes(m)}
                   onChange={e => setRow(i, { methods: e.target.checked ? [...r.methods, m] : r.methods.filter(x => x !== m) })} /> {m}

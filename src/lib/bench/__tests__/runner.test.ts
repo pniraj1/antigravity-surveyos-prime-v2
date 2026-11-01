@@ -118,3 +118,16 @@ describe('runBench', () => {
     expect(g.counts.groq ?? 0).toBe(0);
   });
 });
+
+describe('runBench parser method', () => {
+  it('runs the parser through runModelTest with no calls, no tokens and no pacing', async () => {
+    const f = fake(() => 'ok');
+    f.deps.runModelTest = vi.fn(async () => ok) as unknown as RunnerDeps['runModelTest'];   // the parser makes no provider call
+    const parser: ModelPick = { provider: 'ollama', model: 'row-parser', key: '', methods: ['parser'] };
+    await run(f.deps, [parser]);
+    const [cell] = [...f.cells.values()];
+    expect(cell).toMatchObject({ method: 'parser', status: 'done', calls: [], tokensIn: 0, tokensOut: 0 });
+    expect(f.takes.ollama ?? 0).toBe(0);
+    expect(f.deps.runModelTest).toHaveBeenCalledWith(expect.objectContaining({ method: 'parser' }), 'estimate', expect.anything(), expect.anything());
+  });
+});

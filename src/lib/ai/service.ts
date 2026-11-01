@@ -45,7 +45,7 @@ export function resolveEnabledModel(saved: string | undefined, providerCfg: Prov
 // "Test with estimate PDF" tool. Always cleared in runModelTest's finally.
 export interface AITestOverride { provider: 'gemini' | 'groq' | 'nvidia' | 'ollama'; model: string; key: string;
   /** Bench-only (extraction bench): force pages per call, doc mode, API image scale; raw skips auto-split, gap fill, duplicate drop and second opinion. */
-  pagesPerCall?: number; method?: 'text' | 'vision'; imageScale?: 1 | 1.25 | 1.5; raw?: boolean; }
+  pagesPerCall?: number; method?: 'text' | 'vision' | 'parser'; imageScale?: 1 | 1.25 | 1.5; raw?: boolean; }
 let _testOverride: AITestOverride | null = null;
 export function setAITestOverride(o: AITestOverride | null): void { _testOverride = o; }
 export function getAITestOverride(): AITestOverride | null { return _testOverride; }
@@ -668,6 +668,16 @@ export async function runModelTest(
   onProgress: (msg: string) => void,
 ): Promise<ModelTestResult> {
   const started = Date.now();
+  if (override.method === 'parser') {   // bench: the row parser alone, no model call, no override set
+    try {
+      const { fileToTokens } = await import('./processor');
+      const { safeParse } = await import('./parser-first');
+      const parsed = safeParse(await fileToTokens(file));
+      return parsed.ok ? { ok: true, ms: Date.now() - started, data: parsed.data } : { ok: false, ms: Date.now() - started, data: null, error: `parser declined: ${parsed.reason}` };
+    } catch (e: unknown) {
+      return { ok: false, ms: Date.now() - started, data: null, error: e instanceof Error ? e.message : 'unknown error' };
+    }
+  }
   setAITestOverride(override);
   try {
     // Lazy import avoids a circular dependency (processor imports callAIGateway from here).

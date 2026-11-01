@@ -56,6 +56,11 @@ function bestScale(cells: CellResult[]): Scale {
 export function nextCell(done: CellResult[], profile: PdfProfile, pick: ModelPick, set: 'hard' | 'wide', proposed?: number): CellKey | null {
   for (const method of pick.methods) {
     const base = { profileId: profile.id, provider: pick.provider, model: pick.model, method };
+    // the parser is deterministic: one run per PDF, no page or scale steps
+    if (method === 'parser') {
+      if (done.some(c => mine(c, pick, method) && c.profileId === profile.id)) continue;
+      return { ...base, pagesPerCall: 1, imageScale: 1.5, runNo: 1 };
+    }
     const ours = done.filter(c => mine(c, pick, method));
     const here = ours.filter(c => c.profileId === profile.id);
     // rate_limited / capped cells are re-queued as the same key
@@ -79,7 +84,7 @@ export function nextCell(done: CellResult[], profile: PdfProfile, pick: ModelPic
 /** Upper bound: hard = 3 runs at every step + 2 scale runs at 1 page; wide = one run at 1 page. */
 export function planEstimate(profiles: PdfProfile[], picks: ModelPick[], hardIds: string[]): Record<ProviderId, number> {
   const out: Record<ProviderId, number> = { gemini: 0, groq: 0, nvidia: 0, ollama: 0 };
-  for (const pick of picks) for (const _m of pick.methods) for (const p of profiles) {
+  for (const pick of picks) for (const _m of pick.methods.filter(m => m !== 'parser')) for (const p of profiles) {
     out[pick.provider] += hardIds.includes(p.id)
       ? PAGES_STEPS.reduce((n, s) => n + 3 * plannedCalls(p, s), 0) + 2 * plannedCalls(p, 1)
       : plannedCalls(p, 1);

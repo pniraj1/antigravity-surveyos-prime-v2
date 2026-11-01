@@ -14,7 +14,7 @@ const densestCall = (c: CellResult): number => {
 };
 
 export function proposeLimits(cells: CellResult[], hardIds: string[]): ModelLimit[] {
-  const done = cells.filter(c => c.status === 'done');
+  const done = cells.filter(c => c.status === 'done' && c.method !== 'parser');   // the parser has no page limits
   const groups = new Map<string, CellResult[]>();
   for (const c of done) { const k = JSON.stringify([c.model, c.method]); groups.set(k, [...(groups.get(k) ?? []), c]); }
   const out: ModelLimit[] = [];
@@ -33,7 +33,7 @@ export function proposeLimits(cells: CellResult[], hardIds: string[]): ModelLimi
       return hardIds.every(id => atS.some(c => c.profileId === id)) && atS.every(c => passes(c.errors));
     }) ?? 1.5;
     out.push({
-      model: cs[0].model, method: cs[0].method, maxRowsPerCall: Math.min(...at.map(densestCall)), maxPagesPerCall: p, imageScale,
+      model: cs[0].model, method: cs[0].method as ModelLimit['method'], maxRowsPerCall: Math.min(...at.map(densestCall)), maxPagesPerCall: p, imageScale,
       measuredAt: new Date(Math.max(...cs.map(c => c.at))).toISOString().slice(0, 10), modelVersion: cs[0].modelVersion,
     });
   }

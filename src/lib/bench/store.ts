@@ -3,7 +3,7 @@ import type { CallRecord } from '../ai/call-meter';
 import type { ProviderId } from '../ai/models-config';
 import type { BenchError, BenchRow, PdfProfile } from './types';
 
-export interface CellKey { profileId: string; provider: ProviderId; model: string; method: 'text' | 'vision'; pagesPerCall: number; imageScale: 1 | 1.25 | 1.5; runNo: number }
+export interface CellKey { profileId: string; provider: ProviderId; model: string; method: 'text' | 'vision' | 'parser'; pagesPerCall: number; imageScale: 1 | 1.25 | 1.5; runNo: number }
 export interface CellResult extends CellKey { id: string; status: 'done' | 'rate_limited' | 'capped'; rows: BenchRow[]; errors: BenchError[]; calls: CallRecord[]; tokensIn: number; tokensOut: number; ms: number; modelVersion: string; at: number }
 
 /** Stable join of all key fields. JSON array so no separator can collide with a model name. */
