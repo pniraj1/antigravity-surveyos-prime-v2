@@ -54,6 +54,9 @@ export const PROVIDER_MIN_GAP_MS: Record<ProviderId, number> = {
   ollama: 3_000,
 };
 
+/** Pause before re-trying models that were busy (429/5xx/timeout) on the first pass. */
+export const TRANSIENT_RETRY_WAIT_MS = 60_000;
+
 /** Printed on public/ai-probe-page.jpg. A text-only model cannot produce it. */
 export const PROBE_VISION_CODE = 'PROBE7X';
 
@@ -392,9 +395,9 @@ export async function runProviderProbe(
     const gap = PROVIDER_MIN_GAP_MS[provider];
     const lastAt = { t: 0 };
     let done = 0;
-    const total = catalogue.length;
+    let total = catalogue.length;
 
-    const results = await mapWithConcurrency(catalogue, PROVIDER_CONCURRENCY[provider], async (entry) => {
+    const probeOne = async (entry: CatalogueEntry): Promise<ProbeResult> => {
       const previousFailures = previous.models[entry.id]?.consecutiveFailures ?? 0;
       const previousVision = previous.models[entry.id]?.vision;
 
@@ -500,6 +503,29 @@ export async function runProviderProbe(
         id: entry.id, ping: verdict, providerCap, providerCtx: entry.ctxWindow,
         visionOk, visionUnknown, previousVision, probedCap, latencyMs, now, previousFailures,
       });
+    };
+
+    let results = await mapWithConcurrency(catalogue, PROVIDER_CONCURRENCY[provider], probeOne);
+
+    // Live 2026-10-28: gemini-3.8-flash answered 503 "high demand" and
+    // 3.7-flash timed out, so both were hidden as transient. One more try
+    // after a pause catches a short spike. The counter shows the extra calls.
+    const busy = catalogue.filter((e, i) => results[i].status === 'transient');
+    if (busy.length) {
+      await new Promise(r => setTimeout(r, TRANSIENT_RETRY_WAIT_MS));
+      total += busy.length; onProgress(done, total);
+      const retried = await mapWithConcurrency(busy, PROVIDER_CONCURRENCY[provider], probeOne);
+      const byId = new Map(retried.map(r => [r.id, r]));
+      results = results.map(r => byId.get(r.id) ?? r);
+    }
+
+    // A busy model says nothing about itself. Keep a working model's last good
+    // result, or one 503 during the probe would drop it from the chain.
+    results = results.map(r => {
+      const prior = previous.models[r.id];
+      return r.status === 'transient' && prior?.status === 'ok'
+        ? { ...prior, reason: 'Busy during this probe; last good result kept.' }
+        : r;
     });
 
     const models: Record<string, ProbeResult> = Object.fromEntries(results.map(r => [r.id, r]));

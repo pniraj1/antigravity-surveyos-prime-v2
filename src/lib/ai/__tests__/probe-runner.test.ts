@@ -3,7 +3,7 @@ import {
   mapWithConcurrency, buildProbeResult, PROBE_VISION_CODE,
   LATENCY_CUTOFF_MS, PROBE_CAPABILITY_MAX_TOKENS,
   PROVIDER_CONCURRENCY, PROVIDER_MIN_GAP_MS,
-  orderCatalogue, fetchCatalogue,
+  orderCatalogue, fetchCatalogue, runProviderProbe,
 } from '../probe-runner';
 import { DURABLE_FAILURES } from '../probe-types';
 import type { ProbeResult, ProviderProbe } from '../probe-types';
@@ -294,5 +294,36 @@ describe('buildProbeResult — vision unknown keeps the previous verdict', () =>
   });
   it('a real negative (400) still wins over history', () => {
     expect(buildProbeResult({ ...base, visionOk: false, visionUnknown: false, previousVision: true }).vision).toBe(false);
+  });
+});
+
+describe('runProviderProbe — busy models', () => {
+  it('retries busy models once, and keeps a working model when it is still busy', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(new Blob(['x']))));
+    vi.stubGlobal('FileReader', class { result = 'data:image/jpeg;base64,eA=='; onload?: () => void; readAsDataURL() { this.onload?.(); } });
+    const pings: Record<string, number> = {};
+    callAiProxy.mockImplementation(async (_p: string, path: string, _k: string, body?: { model: string }) => {
+      if (path === 'api/tags') return { ok: true, status: 200, body: JSON.stringify({ models: [{ name: 'old' }, { name: 'new' }] }) };
+      const n = pings[body!.model] = (pings[body!.model] ?? 0) + 1;
+      // 'old' is busy throughout; 'new' is busy on the first pass (ping + its retry) only.
+      const busy = body!.model === 'old' || n <= 2;
+      return busy ? { ok: false, status: 503, body: 'high demand' } : { ok: true, status: 200, body: 'OK' };
+    });
+    const prior = buildProbeResult({
+      id: 'old', ping: { status: 'ok', reason: '', ctxWindow: null }, providerCap: null, providerCtx: null,
+      visionOk: true, probedCap: null, latencyMs: 1000, now: 1, previousFailures: 0,
+    });
+    const run = runProviderProbe('ollama', 'k', { probedAt: 1, error: null, models: { old: prior }, accuracy: {} }, () => {});
+    let out: ProviderProbe | undefined;
+    void run.then(r => { out = r; });
+    for (let i = 0; i < 200 && !out; i++) await vi.advanceTimersByTimeAsync(5_000);
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+
+    expect(out!.models.new.status).toBe('ok');
+    expect(out!.models.old.status).toBe('ok');
+    expect(out!.models.old.vision).toBe(true);
+    expect(out!.models.old.reason).toMatch(/last good result kept/);
   });
 });
