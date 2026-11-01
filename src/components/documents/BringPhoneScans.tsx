@@ -56,7 +56,7 @@ export function BringPhoneScans({ onNeedsFolder, onAllowAccess }: Props) {
       } else if (r.status === 'claim-changed') {
         toast.warning(`Another claim was opened, so the import stopped. Added ${r.added}.`);
       } else if (r.status === 'done') {
-        toast.success(`Added ${r.added}, skipped ${r.skipped}${r.failed ? `, ${r.failed} failed` : ''}`);
+        toast.success(`Added ${r.added}, skipped ${r.skipped}${r.failed ? `, ${r.failed} failed` : ''}${r.contactsFilled ? `, ${r.contactsFilled} contacts filled` : ''}`);
         showNotes(r.notes, claimId);
       }
     } catch (e) {

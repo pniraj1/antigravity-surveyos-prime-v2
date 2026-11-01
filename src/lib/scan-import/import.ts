@@ -12,7 +12,10 @@ import { saveDocuments } from '@/lib/documents/sink';
 import { readDocument } from '@/lib/documents/folder';
 import { claimDocuments } from '@/lib/documents/index-ops';
 import { readZip } from './zip';
+import type { ScanChase } from './manifest';
 import { findManifest, sameVehicle } from './manifest';
+import { planChase } from './chase';
+import { setAt } from './path';
 
 export type ImportResult =
   | { status: 'cancelled' }
@@ -22,7 +25,7 @@ export type ImportResult =
   /** The surveyor opened another claim mid-import; types saved before the switch stay saved. */
   | { status: 'claim-changed'; added: number }
   /** `failed`: files whose save failed (the sink already toasted why); re-importing retries them safely. */
-  | { status: 'done'; added: number; skipped: number; failed: number; notes: unknown };
+  | { status: 'done'; added: number; skipped: number; failed: number; notes: unknown; contactsFilled: number };
 
 export interface ImportOptions {
   /** Asked only on a vehicle mismatch; false aborts before anything is written. */
@@ -68,6 +71,10 @@ export async function importScanZip(blob: Blob, { confirmVehicle }: ImportOption
   const zipFiles = await readZip(blob);
   const claimVehicle = claim.vehicle?.registrationNumber ?? '';
   const { root, manifest } = await findManifest(zipFiles, claimVehicle);
+  // Refuse a zip from another phone claim before anything is written (notes included).
+  if (planChase(claim, manifest.chase, manifest.claimId).conflict) {
+    throw new Error('This zip is from a different claim on the phone. Open the matching claim in Prime.');
+  }
 
   if (!sameVehicle(manifest.vehicle, claimVehicle) && !(await confirmVehicle(manifest.vehicle, claimVehicle))) {
     return { status: 'cancelled' };
@@ -117,5 +124,23 @@ export async function importScanZip(blob: Blob, { confirmVehicle }: ImportOption
     if (written.length === 0 && !stillHere()) return { status: 'claim-changed', added };
     failed += toWrite.length - written.length;
   }
-  return { status: 'done', added, skipped, failed, notes: manifest.notes ?? null };
+  if (!stillHere()) return { status: 'claim-changed', added };
+  return { status: 'done', added, skipped, failed, notes: manifest.notes ?? null, contactsFilled: applyChase(manifest) };
+}
+
+/** Fills blank contacts, stores the chase state and the Scan claim id. Returns how many contacts were filled. */
+function applyChase(manifest: { chase?: ScanChase; claimId?: string }): number {
+  const { currentClaim, updateClaim } = useClaimStore.getState();
+  if (!currentClaim) return 0;
+  const plan = planChase(currentClaim, manifest.chase, manifest.claimId);
+  if (plan.conflict) return 0;
+  const next = plan.fills.reduce<ClaimData>((acc, f) => setAt(acc, f.path, f.value), currentClaim);
+  const updates: Record<string, unknown> = {};
+  for (const section of new Set(plan.fills.map((f) => f.path.split('.')[0]))) {
+    updates[section] = (next as unknown as Record<string, unknown>)[section];
+  }
+  if (manifest.chase) updates.scanChase = plan.next;
+  if (plan.scanClaimId) updates.scanClaimId = plan.scanClaimId;
+  if (Object.keys(updates).length) updateClaim(updates as Partial<ClaimData>);
+  return plan.fills.length;
 }

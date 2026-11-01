@@ -16,7 +16,8 @@ const state = vi.hoisted(() => ({
   perm: '' as string, // '' = handle without queryPermission (older implementations)
 }));
 
-vi.mock('@/stores/claim-store', () => ({ useClaimStore: { getState: () => ({ currentClaim: state.claim }) } }));
+vi.mock('@/stores/claim-store', () => ({ useClaimStore: { getState: () => ({ currentClaim: state.claim,
+  updateClaim: (u: Partial<ClaimData>) => { state.claim = { ...state.claim!, ...u }; } }) } }));
 vi.mock('@/lib/local-sync/directory-handle', () => ({ getStoredRootHandle: async () =>
   (state.folder ? (state.perm ? { queryPermission: async () => state.perm } : {}) : null) }));
 vi.mock('@/lib/documents/folder', () => ({
@@ -134,7 +135,7 @@ describe('importScanZip', () => {
     const confirmVehicle = vi.fn(yes);
     const r = await importScanZip(scanZip([{ path: 'RC Book.pdf', type: 'rc', data: 'rc' }]), { confirmVehicle });
     expect(confirmVehicle).not.toHaveBeenCalled();
-    expect(r).toEqual({ status: 'done', added: 1, skipped: 0, failed: 0, notes: { spot: { place: 'Pune' } } });
+    expect(r).toEqual({ status: 'done', added: 1, skipped: 0, failed: 0, notes: { spot: { place: 'Pune' } }, contactsFilled: 0 });
     expect(state.saves).toEqual([{ type: 'rc', names: ['RC Book.pdf'], source: 'scan' }]);
     expect(state.mimes).toEqual(['application/pdf']);
   });
@@ -229,5 +230,32 @@ describe('cards', () => {
     expect(phoneFileFor({ documents }, 'final-bill')?.id).toBe('new');
     expect(phoneFileFor({ documents }, 'rc')).toBeNull();
     expect(phoneFileFor({ documents }, 'auth')).toBeNull();
+  });
+
+  it('importAppliesChase', async () => {
+    state.claim = { id: 'c1', vehicle: { registrationNumber: 'MH12AB1234' }, policy: { insuredName: 'Kept' } } as unknown as ClaimData;
+    const zip = buildZip([{ name: 'C/_surveyos-scan.json', data: JSON.stringify({ app: 'surveyos-scan', v: 1, vehicle: 'MH12AB1234',
+      insurer: '', claimNo: null, exportedAt: 't', files: [], claimId: 'S1',
+      chase: { contacts: { insured: { name: 'Other', phone: '9999' }, garage: { name: 'Gar' } }, slotStates: { rc: 'missing' } } }) }]);
+    const r = await importScanZip(zip, { confirmVehicle: yes });
+    expect(r).toMatchObject({ status: 'done', contactsFilled: 2 });
+    const c = state.claim as unknown as Record<string, Record<string, string>> & ClaimData;
+    expect(c.policy.insuredName).toBe('Kept');
+    expect(c.policy.insuredMobile).toBe('9999');
+    expect(c.accident.workshopName).toBe('Gar');
+    expect(c.scanClaimId).toBe('S1');
+    expect(c.scanChase?.slotStates).toEqual({ rc: 'missing' });
+    expect(c.scanChase?.importedAt).toBeTruthy();
+  });
+
+  it('differentClaimIdIsRefused', async () => {
+    state.claim = { id: 'c1', scanClaimId: 'S1', vehicle: { registrationNumber: 'MH12AB1234' } } as unknown as ClaimData;
+    const zip = buildZip([
+      ...manifestEntry('C', 'MH12AB1234', [{ path: 'rc.pdf', type: 'rc', data: 'rc' }]).slice(0, 1),
+      { name: 'C/_surveyos-scan.json', data: JSON.stringify({ app: 'surveyos-scan', v: 1, vehicle: 'MH12AB1234', insurer: '', claimNo: null,
+        exportedAt: 't', claimId: 'S2', files: [{ path: 'rc.pdf', type: 'rc', pages: [], sha256: sha('rc') }] }) },
+    ]);
+    await expect(importScanZip(zip, { confirmVehicle: yes })).rejects.toThrow('different claim on the phone');
+    expect(state.saves).toEqual([]);
   });
 });
