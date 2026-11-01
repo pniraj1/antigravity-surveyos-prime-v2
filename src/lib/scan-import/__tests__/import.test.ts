@@ -14,6 +14,7 @@ const state = vi.hoisted(() => ({
   mimes: [] as string[],
   failType: '' as string,
   perm: '' as string, // '' = handle without queryPermission (older implementations)
+  driveIds: [] as Array<string | undefined>,
 }));
 
 vi.mock('@/stores/claim-store', () => ({ useClaimStore: { getState: () => ({ currentClaim: state.claim,
@@ -24,15 +25,17 @@ vi.mock('@/lib/documents/folder', () => ({
   readDocument: async (_c: ClaimData, d: ClaimDocument) => state.bytes.get(d.id)!,
 }));
 vi.mock('@/lib/documents/sink', () => ({
-  saveDocuments: async (type: DocType, files: Array<{ blob: Blob; name?: string }>, source: ClaimDocument['source'], claimId?: string) => {
+  saveDocuments: async (type: DocType, files: Array<{ blob: Blob; name?: string; driveFileId?: string }>, source: ClaimDocument['source'], claimId?: string) => {
     if (claimId && state.claim?.id !== claimId) return []; // the real sink's guard
     if (type === state.failType) return []; // the real sink toasts and returns [] on a failed write
     state.mimes.push(...files.map((f) => f.blob.type));
     state.saves.push({ type, names: files.map((f) => f.name ?? ''), source });
+    state.driveIds.push(...files.map((f) => f.driveFileId));
     const written = files.map((f, i): ClaimDocument => {
       const id = `d${state.bytes.size}-${i}`;
       state.bytes.set(id, f.blob);
-      return { id, type, relPath: `${type}/${f.name}`, mime: '', size: f.blob.size, addedAt: `t${state.bytes.size}`, source, devices: ['pc'] };
+      return { id, type, relPath: `${type}/${f.name}`, mime: '', size: f.blob.size, addedAt: `t${state.bytes.size}`, source, devices: ['pc'],
+        ...(f.driveFileId && { driveFileId: f.driveFileId }) };
     });
     const docs = { ...(state.claim!.documents ?? {}) };
     for (const d of written) docs[d.id] = d;
@@ -41,7 +44,7 @@ vi.mock('@/lib/documents/sink', () => ({
   },
 }));
 
-const { importScanZip } = await import('../import');
+const { importScanZip, importScanFiles } = await import('../import');
 const { cardIdFor, phoneFileFor } = await import('../cards');
 
 const sha = (s: string) => createHash('sha256').update(s).digest('hex');
@@ -67,6 +70,7 @@ beforeEach(() => {
   state.mimes = [];
   state.failType = '';
   state.perm = '';
+  state.driveIds = [];
 });
 const manifestEntry = (folder: string, vehicle: string, files: Array<{ path: string; type: string; data: string }>): FixtureEntry[] => [
   ...files.map((f) => ({ name: `${folder}/${f.path}`, data: f.data })),
@@ -278,5 +282,72 @@ describe('cards', () => {
     const r = await importScanZip(conflictZip(), { confirmVehicle: yes, confirmRelink: async () => true });
     expect(r).toMatchObject({ status: 'done', added: 1 });
     expect((state.claim as unknown as ClaimData).scanClaimId).toBe('S2');
+  });
+});
+
+/** A Drive source: the manifest at the root, only the files still in the Scan folder, and their Drive ids. */
+const driveSource = (listed: Array<{ path: string; type: string; data: string }>, present: string[]) => {
+  const files = new Map<string, Blob>([['_surveyos-scan.json', new Blob([JSON.stringify({
+    app: 'surveyos-scan', v: 1, vehicle: 'MH12AB1234', insurer: '', claimNo: null, exportedAt: 't',
+    files: listed.map((f) => ({ path: f.path, type: f.type, pages: [], sha256: sha(f.data) })),
+  })])]]);
+  const driveFileIds = new Map<string, string>();
+  for (const f of listed.filter((l) => present.includes(l.path))) {
+    files.set(f.path, new Blob([f.data]));
+    driveFileIds.set(f.path, `id:${f.path}`);
+  }
+  return { files, driveFileIds };
+};
+
+describe('importScanFiles (Drive source)', () => {
+  const rc = { path: 'RC Book.pdf', type: 'rc', data: 'rc' };
+  const ph = (n: number) => ({ path: `Final Photos/Final Photos ${n}.jpg`, type: 'damagePhotos', data: `p${n}` });
+
+  it('recordsDriveIdsAndReportsWhatPrimeHolds', async () => {
+    const { files, driveFileIds } = driveSource([rc, ph(1)], [rc.path, ph(1).path]);
+    const r = await importScanFiles(files, { confirmVehicle: yes, driveFileIds });
+    expect(r).toMatchObject({ status: 'done', added: 2, skipped: 0, failed: 0, inPrime: ['id:RC Book.pdf', 'id:Final Photos/Final Photos 1.jpg'] });
+    expect(state.driveIds).toEqual(['id:RC Book.pdf', 'id:Final Photos/Final Photos 1.jpg']);
+  });
+
+  it('absentFilesAreAlreadyImported', async () => {
+    const { files, driveFileIds } = driveSource([rc, ph(1), ph(2)], [ph(2).path]);
+    const r = await importScanFiles(files, { confirmVehicle: yes, driveFileIds });
+    expect(r).toMatchObject({ status: 'done', added: 1, skipped: 0, failed: 0, inPrime: ['id:Final Photos/Final Photos 2.jpg'] });
+    expect(state.saves).toEqual([{ type: 'damagePhotos', names: ['Final Photos 2.jpg'], source: 'scan' }]);
+  });
+
+  it('nothingLeftIsNothingNew', async () => {
+    const { files, driveFileIds } = driveSource([rc, ph(1)], []);
+    expect(await importScanFiles(files, { confirmVehicle: yes, driveFileIds })).toMatchObject({ status: 'done', added: 0, skipped: 0, inPrime: [] });
+    expect(state.saves).toEqual([]);
+  });
+
+  it('duplicateContentIsInPrimeWithoutAWrite', async () => {
+    await importScanZip(scanZip([rc]), { confirmVehicle: yes });
+    state.saves = [];
+    const { files, driveFileIds } = driveSource([rc], [rc.path]);
+    expect(await importScanFiles(files, { confirmVehicle: yes, driveFileIds })).toMatchObject({ added: 0, skipped: 1, inPrime: ['id:RC Book.pdf'] });
+    expect(state.saves).toEqual([]);
+  });
+
+  it('failedSaveIsNotInPrime', async () => {
+    state.failType = 'rc';
+    const { files, driveFileIds } = driveSource([rc], [rc.path]);
+    expect(await importScanFiles(files, { confirmVehicle: yes, driveFileIds })).toMatchObject({ failed: 1, inPrime: [] });
+  });
+
+  it('singleFileTypeKeepsEarlierPagesFromTheClaim', async () => {
+    const c = (n: number) => ({ path: `Chassis/Chassis ${n}.jpg`, type: 'chassisPhoto', data: `chassis ${n}` });
+    const first = driveSource([c(1), c(2)], [c(1).path, c(2).path]);
+    await importScanFiles(first.files, { confirmVehicle: yes, driveFileIds: first.driveFileIds });
+    state.saves = [];
+    state.driveIds = [];
+    // Pages 1 and 2 were moved; Scan added page 3. The type is rewritten whole, in manifest order.
+    const next = driveSource([c(1), c(2), c(3)], [c(3).path]);
+    const r = await importScanFiles(next.files, { confirmVehicle: yes, driveFileIds: next.driveFileIds });
+    expect(state.saves).toEqual([{ type: 'chassisPhoto', names: ['Chassis 1.jpg', 'Chassis 2.jpg', 'Chassis 3.jpg'], source: 'scan' }]);
+    expect(state.driveIds).toEqual(['id:Chassis/Chassis 1.jpg', 'id:Chassis/Chassis 2.jpg', 'id:Chassis/Chassis 3.jpg']);
+    expect(r).toMatchObject({ added: 3, inPrime: ['id:Chassis/Chassis 3.jpg'] });
   });
 });

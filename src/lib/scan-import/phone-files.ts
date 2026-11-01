@@ -30,6 +30,9 @@ export function photoGroups(claim: Claim): PhotoGroup[] {
   })).filter((g) => g.docs.length > 0);
 }
 
+/** Already on Drive (moved there from Scan's folder): an upload would only make a second copy. */
+export const isOnDrive = (doc: Pick<ClaimDocument, 'driveFileId'> | undefined): boolean => !!doc?.driveFileId;
+
 /** Name a photo gets on the sheet from its file name (the Gallery / Browse rule). */
 export const photoNameOf = (fileName: string): string => fileName.split('.')[0].substring(0, 30);
 

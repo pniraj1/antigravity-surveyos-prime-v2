@@ -2,6 +2,12 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-01 (Claude Code) — Import phone scans from Drive (Plan 4 Task 2)
+- feat(scan-import): "Import from Drive" (Documents tab, shown when Drive is connected) imports the claim's SurveyOS Scan folder (`SurveyOS/Phone Scans/<folder>`, Scan's Full mode) like a zip, then moves each file into Prime's claim folder (`moveFile`: PATCH addParents/removeParents, same file id). Contract: `SurveyOS Scan/docs/handover/scan-drive-status.md`.
+  - `import.ts`: core is `importScanFiles(Map<path, Blob>)`; the zip path builds the map as before. A Drive source skips manifest files already moved ("nothing new" when none are left); a single-file type with moved pages is rewritten whole from the claim's own copies.
+  - `drive-source.ts`: folder by `scanClaimId`, else by manifest vehicle (the surveyor picks when several match); newest same-name file wins; bytes must match the manifest `sha256` or the file waits for the next import.
+  - `ClaimDocument.driveFileId`: set on imported files; `isOnDrive` stops the estimate and phone-photo paths from uploading them again. A failed move keeps the document ("Saved, but couldn't move on Drive") and is retried on the next import.
+
 ## 2026-11-01 (Claude Code) — Shipped model defaults refreshed
 - fix(ai): built-in backup list and defaults moved to live-checked models: Gemini `gemini-3.5-flash-lite` (pinned), `gemini-3.1-flash-lite`, `gemini-3.5-flash`; Groq `qwen/qwen3.8-27b` (vision), `openai/gpt-oss-120b` (text); NVIDIA `nvidia/nemotron-3.5-super-vl-120b-a12b`. Saved profiles using now-dead ids (gemini-2.5-flash, qwen3.6, llama-3.3-70b, llama-3.1-8b) migrate. Commit `b4bc3469`. Not deployed.
 - Finding: the Admin probe (manual, ~20–30 min) last ran 2026-10-28 from the owner's account. NVIDIA was skipped ("No admin key for this provider"), so its results date from 2026-08-11 and include models that now 404/410. Ollama's probe failed (key rejected during rollout), so Ollama uses the backup list.

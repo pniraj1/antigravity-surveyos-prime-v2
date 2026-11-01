@@ -10,7 +10,7 @@ import { PHOTO_FILE_PREFIX } from '@/lib/photos/document-annexure';
 import { compressImage } from '@/lib/photos/compress-image';
 import { saveDocuments } from '@/lib/documents/sink';
 import { useSaveToCloudPrompt } from '@/hooks/useSaveToCloudPrompt';
-import { photoNameOf } from '@/lib/scan-import/phone-files';
+import { isOnDrive, photoNameOf } from '@/lib/scan-import/phone-files';
 import type { PhotoItem } from '@/types/assessment';
 
 export type PhotoMeta = Pick<PhotoItem, 'tag' | 'sourceDocId'>;
@@ -54,10 +54,12 @@ export function usePhotoUpload() {
           const name = photoNameOf(file.name);
           // The index keeps names unique when a phone names every shot "image".
           const driveName = `${PHOTO_FILE_PREFIX}${Date.now()}_${i}_${name}.jpg`;
-          addPhoto(dataUrl, name, w, h, 'damage', saveToDrive ? driveName : undefined, m);
+          // A phone file moved from Scan's Drive folder is already on Drive: never a second copy.
+          const toDrive = saveToDrive && !isOnDrive(m?.sourceDocId ? claim.documents?.[m.sourceDocId] : undefined);
+          addPhoto(dataUrl, name, w, h, 'damage', toDrive ? driveName : undefined, m);
           // A phone photo is already in the claim folder: don't write a second copy.
           if (!m?.sourceDocId) saved.push(file);
-          if (saveToDrive) {
+          if (toDrive) {
             // uploadFileToDrive queues and toasts on failure itself.
             uploadFileToDrive(claim.id, driveName, file, label).catch(() => {});
           }

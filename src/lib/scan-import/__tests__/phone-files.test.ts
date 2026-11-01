@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { ClaimDocument, DocType } from '@/types/documents';
 import type { PhotoItem } from '@/types/assessment';
-import { phoneFilesOfTypes, photoGroups, skipsAlreadyAdded, tagFromGroup } from '../phone-files';
+import { isOnDrive, phoneFilesOfTypes, photoGroups, skipsAlreadyAdded, tagFromGroup } from '../phone-files';
 
 const doc = (id: string, type: DocType, source: ClaimDocument['source'], addedAt: string): ClaimDocument =>
   ({ id, type, relPath: `${id}.jpg`, mime: 'image/jpeg', size: 1, addedAt, source, devices: ['PC'] });
@@ -72,5 +72,13 @@ describe('tagFromGroup', () => {
   it('otherGroupsKeepTheirTag', () => {
     expect(tagFromGroup({ tag: 'chassis' })).toBe('chassis');
     expect(tagFromGroup({ tag: 'spot' })).toBe('spot');
+  });
+});
+
+describe('isOnDrive', () => {
+  it('aFileMovedFromScansDriveFolderIsNeverUploadedAgain', () => {
+    expect(isOnDrive({ ...doc('a', 'estimate', 'scan', 't'), driveFileId: 'x' })).toBe(true);
+    expect(isOnDrive(doc('b', 'estimate', 'scan', 't'))).toBe(false);
+    expect(isOnDrive(undefined)).toBe(false);
   });
 });

@@ -31,6 +31,8 @@ export interface ClaimDocument {
   portalChecked?: boolean;
   /** Found on disk by Scan rather than saved by SurveyOS: its name proves nothing about its pages. */
   adopted?: boolean;
+  /** Imported from Scan's Drive folder: this Drive file (moved into the claim's Drive folder) is its Drive copy, so it is never uploaded again. */
+  driveFileId?: string;
   /** Labels of the devices whose folder holds the bytes (spec D5). */
   devices: string[];
   /** Pages in the file, once read (PDFs). */

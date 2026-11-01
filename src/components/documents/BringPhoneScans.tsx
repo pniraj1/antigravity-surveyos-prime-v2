@@ -2,10 +2,12 @@
 
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Smartphone, ChevronDown, Loader2 } from 'lucide-react';
+import { Smartphone, ChevronDown, Loader2, CloudDownload } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useClaimStore } from '@/stores/claim-store';
-import { importScanZip } from '@/lib/scan-import/import';
+import { useUIStore } from '@/stores/ui-store';
+import { importScanZip, type ImportOptions, type ImportResult } from '@/lib/scan-import/import';
+import { importFromDrive } from '@/lib/scan-import/drive-source';
 import { planNotes, isEmptyNotesPlan, type NotesPlan } from '@/lib/scan-import/notes';
 import { pickDriveZip, DriveDownloadError } from '@/lib/scan-import/picker';
 import { PhoneNotesDialog } from './PhoneNotesDialog';
@@ -18,14 +20,20 @@ interface Props {
 }
 
 interface VehicleAsk { zip: string; claim: string; resolve: (ok: boolean) => void }
+interface FolderAsk { folders: Array<{ id: string; name: string }>; resolve: (id: string | null) => void }
 
 const msg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
-/** "Bring phone scans": a SurveyOS Scan export zip from Google Drive or this computer. No AI calls. */
+/**
+ * "Bring phone scans": a SurveyOS Scan export zip from Google Drive or this computer, or (Drive connected)
+ * "Import from Drive": the claim's Scan folder, whose files are moved into Prime's claim folder. No AI calls.
+ */
 export function BringPhoneScans({ onNeedsFolder, onAllowAccess }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [menu, setMenu] = useState(false);
   const [busy, setBusy] = useState(false);
+  const driveConnected = useUIStore((s) => s.isDriveConnected);
+  const [folderAsk, setFolderAsk] = useState<FolderAsk | null>(null);
   const [vehicleAsk, setVehicleAsk] = useState<VehicleAsk | null>(null);
   const [relinkAsk, setRelinkAsk] = useState<{ resolve: (ok: boolean) => void } | null>(null);
   const [notes, setNotes] = useState<{ plan: NotesPlan; claimId: string } | null>(null);
@@ -33,6 +41,8 @@ export function BringPhoneScans({ onNeedsFolder, onAllowAccess }: Props) {
   const answerVehicle = (ok: boolean) => { vehicleAsk?.resolve(ok); setVehicleAsk(null); };
 
   const answerRelink = (ok: boolean) => { relinkAsk?.resolve(ok); setRelinkAsk(null); };
+
+  const answerFolder = (id: string | null) => { folderAsk?.resolve(id); setFolderAsk(null); };
 
   const showNotes = (raw: unknown, claimId: string | undefined) => {
     const claim = useClaimStore.getState().currentClaim;
@@ -42,27 +52,34 @@ export function BringPhoneScans({ onNeedsFolder, onAllowAccess }: Props) {
     else setNotes({ plan, claimId: claim.id });
   };
 
+  const asks: ImportOptions = {
+    confirmVehicle: (zip, claim) => new Promise((resolve) => setVehicleAsk({ zip, claim, resolve })),
+    confirmRelink: () => new Promise((resolve) => setRelinkAsk({ resolve })),
+  };
+
+  /** Toasts the outcome and offers the notes; `fromDrive`: an import that found nothing says "nothing new". */
+  const report = (r: ImportResult, claimId: string | undefined, fromDrive = false) => {
+    if (r.status === 'needs-folder') {
+      toast.error('Connect the claim folder first, then bring the phone scans again.');
+      onNeedsFolder();
+    } else if (r.status === 'needs-permission') {
+      toast.error('Click Allow access on the folder line, then bring the phone scans again.', {
+        action: { label: 'Allow access', onClick: onAllowAccess },
+      });
+    } else if (r.status === 'claim-changed') {
+      toast.warning(`Another claim was opened, so the import stopped. Added ${r.added}.`);
+    } else if (r.status === 'done') {
+      if (fromDrive && r.added === 0 && !r.failed) toast.info(`Phone scans on Drive: nothing new${r.contactsFilled ? `, ${r.contactsFilled} contacts filled` : ''}`);
+      else toast.success(`Added ${r.added}, skipped ${r.skipped}${r.failed ? `, ${r.failed} failed` : ''}${r.contactsFilled ? `, ${r.contactsFilled} contacts filled` : ''}`);
+      showNotes(r.notes, claimId);
+    }
+  };
+
   const run = async (blob: Blob) => {
     setBusy(true);
     const claimId = useClaimStore.getState().currentClaim?.id;
     try {
-      const r = await importScanZip(blob, {
-        confirmVehicle: (zip, claim) => new Promise((resolve) => setVehicleAsk({ zip, claim, resolve })),
-        confirmRelink: () => new Promise((resolve) => setRelinkAsk({ resolve })),
-      });
-      if (r.status === 'needs-folder') {
-        toast.error('Connect the claim folder first, then bring the phone scans again.');
-        onNeedsFolder();
-      } else if (r.status === 'needs-permission') {
-        toast.error('Click Allow access on the folder line, then bring the phone scans again.', {
-          action: { label: 'Allow access', onClick: onAllowAccess },
-        });
-      } else if (r.status === 'claim-changed') {
-        toast.warning(`Another claim was opened, so the import stopped. Added ${r.added}.`);
-      } else if (r.status === 'done') {
-        toast.success(`Added ${r.added}, skipped ${r.skipped}${r.failed ? `, ${r.failed} failed` : ''}${r.contactsFilled ? `, ${r.contactsFilled} contacts filled` : ''}`);
-        showNotes(r.notes, claimId);
-      }
+      report(await importScanZip(blob, asks), claimId);
     } catch (e) {
       toast.error(msg(e));
     } finally {
@@ -90,9 +107,38 @@ export function BringPhoneScans({ onNeedsFolder, onAllowAccess }: Props) {
 
   const fromComputer = () => { setMenu(false); fileRef.current?.click(); };
 
+  const fromDriveFolder = async () => {
+    setBusy(true);
+    const claimId = useClaimStore.getState().currentClaim?.id;
+    try {
+      const { result, moveFailed, mismatched } = await importFromDrive({
+        ...asks,
+        choose: (folders) => new Promise((resolve) => setFolderAsk({ folders, resolve })),
+      });
+      report(result, claimId, true);
+      if (mismatched.length) toast.warning(`Not imported yet (still uploading from the phone?): ${mismatched.join(', ')}. Try again shortly.`, { duration: 8000 });
+      if (moveFailed) toast.warning(`Saved, but couldn't move ${moveFailed} file(s) on Drive. They move on the next import.`, { duration: 8000 });
+    } catch (e) {
+      toast.error(msg(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const item = 'block w-full px-4 py-2 text-left text-sm hover:bg-muted';
   return (
-    <div className="relative" onKeyDown={(e) => { if (e.key === 'Escape') setMenu(false); }}>
+    <div className="relative flex items-center gap-2" onKeyDown={(e) => { if (e.key === 'Escape') setMenu(false); }}>
+      {driveConnected && (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void fromDriveFolder()}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-medium uppercase tracking-widest bg-white border border-border text-muted-foreground hover:text-primary hover:border-primary/30 transition-all active:scale-95 disabled:opacity-50"
+        >
+          {busy ? <Loader2 size={12} className="animate-spin" /> : <CloudDownload size={12} />}
+          Import from Drive
+        </button>
+      )}
       <button
         type="button"
         disabled={busy}
@@ -125,6 +171,31 @@ export function BringPhoneScans({ onNeedsFolder, onAllowAccess }: Props) {
           if (f) void run(f);
         }}
       />
+
+      {folderAsk && (
+        <Dialog open onOpenChange={(open) => { if (!open) answerFolder(null); }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Which phone claim?</DialogTitle>
+              <DialogDescription>Several claims on the phone have this vehicle number. Pick the one to import.</DialogDescription>
+            </DialogHeader>
+            <ul className="space-y-2">
+              {folderAsk.folders.map((f) => (
+                <li key={f.id}>
+                  <button type="button" onClick={() => answerFolder(f.id)} className="min-h-[44px] w-full rounded-md border border-border px-3 text-left text-sm hover:bg-muted">
+                    {f.name}
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <DialogFooter>
+              <button type="button" onClick={() => answerFolder(null)} className="min-h-[44px] rounded-md border border-border px-4 text-sm">
+                Cancel
+              </button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {relinkAsk && (
         <Dialog open onOpenChange={(open) => { if (!open) answerRelink(false); }}>

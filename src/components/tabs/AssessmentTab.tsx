@@ -25,7 +25,8 @@ import { DocumentReviewSheet } from '@/components/documents/DocumentReviewSheet'
 import type { EstimateApplyMode } from '@/stores/slices/aiDataSlice';
 import { saveDocuments } from '@/lib/documents/sink';
 import { UsePhoneFiles } from '@/components/documents/UsePhoneFiles';
-import type { DocType } from '@/types/documents';
+import type { ClaimDocument, DocType } from '@/types/documents';
+import { isOnDrive } from '@/lib/scan-import/phone-files';
 
 const ESTIMATE_TYPES: readonly DocType[] = ['estimate', 'supplementaryEstimate'];
 
@@ -35,7 +36,7 @@ export function AssessmentTab() {
   const [showSummary, setShowSummary] = useState(true);
   const [fixOpen, setFixOpen] = useState(false);
   // Open only when there is something to decide (multi-page PDF); see needsReview.
-  const [reviewSheet, setReviewSheet] = useState<{ file: File; mode: EstimateApplyMode; inFolder: boolean } | null>(null);
+  const [reviewSheet, setReviewSheet] = useState<{ file: File; mode: EstimateApplyMode; phone?: ClaimDocument } | null>(null);
   const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview, reScanWithFeedback, smartFix, reviewProgress } = useAIExtraction();
   const { confirmEstimateMode, estimateModeDialog } = useEstimateModePrompt();
   const { profile } = useProfileStore();
@@ -43,7 +44,7 @@ export function AssessmentTab() {
 
   // Everything that happens once the surveyor has decided which file/pages go
   // to the AI: evidence blob, extraction, optional Drive upload.
-  const startEstimate = async (file: File, mode: EstimateApplyMode, inFolder: boolean) => {
+  const startEstimate = async (file: File, mode: EstimateApplyMode, phone?: ClaimDocument) => {
     // Store blob URL for the Evidence Viewer to display the file natively
     if (currentClaim?.id) {
       storeBlobUrl(currentClaim.id, 'estimate', file);
@@ -58,9 +59,10 @@ export function AssessmentTab() {
     }
 
     triggerExtraction('estimate', file, undefined, undefined, mode);
-    if (!inFolder) void saveDocuments('estimate', [{ blob: file, name: file.name }], 'upload');
+    if (!phone) void saveDocuments('estimate', [{ blob: file, name: file.name }], 'upload');
 
-    if (currentClaim?.id && profile.autoUploadDrive !== false) {
+    // A phone file moved from Scan's Drive folder is already on Drive: never a second copy.
+    if (currentClaim?.id && profile.autoUploadDrive !== false && !isOnDrive(phone)) {
       const claimId = currentClaim.id;
       const label = currentClaim.vehicle?.registrationNumber || claimId;
       const ext = file.name.split('.').pop() ?? 'bin';
@@ -76,8 +78,8 @@ export function AssessmentTab() {
     if (file) void processEstimateFile(file);
   };
 
-  /** `inFolder`: the file came from the claim folder (a phone file), so it is not saved there again. */
-  const processEstimateFile = async (file: File, inFolder = false) => {
+  /** `phone`: the file came from the claim folder (a phone file), so it is not saved there again. */
+  const processEstimateFile = async (file: File, phone?: ClaimDocument) => {
     // Asked BEFORE extraction: a wrong file, or a surveyor who changes their
     // mind, then costs nothing. Resolves straight to 'replace' on an empty
     // sheet — nothing to lose, so nothing to ask.
@@ -85,10 +87,10 @@ export function AssessmentTab() {
     if (mode === null) return;
 
     if (await needsReview([file])) {
-      setReviewSheet({ file, mode, inFolder });
+      setReviewSheet({ file, mode, phone });
       return;
     }
-    await startEstimate(file, mode, inFolder);
+    await startEstimate(file, mode, phone);
   };
 
   const evidenceImages: string[] = [];
@@ -106,9 +108,9 @@ export function AssessmentTab() {
           files={[reviewSheet.file]}
           onCancel={() => setReviewSheet(null)}
           onConfirm={(_all, forAI) => {
-            const { mode, inFolder } = reviewSheet;
+            const { mode, phone } = reviewSheet;
             setReviewSheet(null);
-            if (forAI[0]) void startEstimate(forAI[0], mode, inFolder);
+            if (forAI[0]) void startEstimate(forAI[0], mode, phone);
           }}
         />
       )}
@@ -162,7 +164,7 @@ export function AssessmentTab() {
               </Button>
             </div>
 
-            <UsePhoneFiles types={ESTIMATE_TYPES} className="h-8 px-2.5 text-xs" disabled={isProcessing} onPick={(file) => void processEstimateFile(file, true)} />
+            <UsePhoneFiles types={ESTIMATE_TYPES} className="h-8 px-2.5 text-xs" disabled={isProcessing} onPick={(file, doc) => void processEstimateFile(file, doc)} />
 
             {/* An estimate was read when some row carries a source. */}
             {currentClaim.assessmentRows.some((r) => r.source) && (

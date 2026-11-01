@@ -412,6 +412,16 @@ export async function listFilesInFolder(
   return (data.files ?? []) as { id: string; name: string; mimeType: string }[];
 }
 
+/** Moves a file between folders: a parent change, so the file keeps its id and is never copied. */
+export async function moveFile(fileId: string, toFolderId: string, fromFolderId: string): Promise<void> {
+  const qs = new URLSearchParams({ addParents: toFolderId, removeParents: fromFolderId, fields: 'id' });
+  await driveRequest(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?${qs}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+}
+
 /**
  * Download a Drive file by ID and return it as a base64 data URL.
  */

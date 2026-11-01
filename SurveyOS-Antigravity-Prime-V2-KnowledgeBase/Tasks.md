@@ -5,6 +5,12 @@
 
 ---
 
+## In Progress: Import phone scans from Drive (Plan 4 Task 2, built 2026-11-01 on main, NOT deployed or pushed)
+- [x] `drive-source.ts` + `importScanFiles` core: import Scan's Drive folder, move files into Prime's claim folder, `driveFileId` on documents.
+- [ ] Owner: try with a phone on Drive backup › Full (not tried in a browser yet).
+
+---
+
 ## In Progress: Scan Drive status sync (Plan 3 Task 5, built 2026-11-01 on main, NOT deployed or pushed)
 - [x] `src/lib/drive/scan-status.ts`: port of Scan's `StatusFile` codec and merge (same tests). `scan-status-sync.ts`: find `SurveyOS/Phone Scans/<folder>` by `appProperties.claimId`, read/merge/write `_surveyos-status.json`.
 - [x] Claim open (`AuthSyncWrapper`) refreshes `scanChase` from the file; a document upload (`sink.ts`, source `upload`) marks the base DocType slot received by Prime.

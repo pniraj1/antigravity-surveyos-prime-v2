@@ -26,10 +26,15 @@ async function firstId(q: string): Promise<string | null> {
   return ((await res.json()).files?.[0]?.id as string | undefined) ?? null;
 }
 
-/** The Scan claim folder, by `appProperties.claimId` (never by name), oldest first. Never creates anything. */
-async function findScanFolder(scanClaimId: string): Promise<string | null> {
+/** `SurveyOS/Phone Scans`, where Scan keeps one folder per claim. Never creates anything. */
+export async function phoneScansFolder(): Promise<string | null> {
   const root = localStorage.getItem('surveyos_drive_root') ?? (await findFolder('SurveyOS'));
-  const phoneScans = root && (await findFolder('Phone Scans', root));
+  return (root && (await findFolder('Phone Scans', root))) || null;
+}
+
+/** The Scan claim folder, by `appProperties.claimId` (never by name), oldest first. Never creates anything. */
+export async function findScanFolder(scanClaimId: string): Promise<string | null> {
+  const phoneScans = await phoneScansFolder();
   if (!phoneScans) return null;
   const id = scanClaimId.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
   return firstId(`mimeType='${FOLDER}' and '${phoneScans}' in parents and appProperties has { key='claimId' and value='${id}' } and trashed=false`);

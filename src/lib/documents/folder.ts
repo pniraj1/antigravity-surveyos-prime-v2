@@ -17,7 +17,7 @@ export class NoFolderError extends Error { constructor() { super('No claim folde
 export class PermissionDeniedError extends Error { constructor() { super('Folder access was not granted.'); } }
 export class NotOnThisDeviceError extends Error { constructor(where: string[]) { super(`This file is on ${where.join(', ') || 'another device'}.`); } }
 
-export interface FolderInput { blob: Blob; name?: string }
+export interface FolderInput { blob: Blob; name?: string; /** Recorded on the document: the file is already on Drive. */ driveFileId?: string }
 
 async function root(): Promise<FileSystemDirectoryHandle> {
   const handle = await getStoredRootHandle();
@@ -181,6 +181,7 @@ export async function writeDocuments(
     written.push({
       id: newDocId(), type, relPath: relPaths[i], mime: files[i].blob.type || 'application/octet-stream',
       size: files[i].blob.size, addedAt: new Date().toISOString(), source, devices: [device],
+      ...(files[i].driveFileId && { driveFileId: files[i].driveFileId }),
     });
   }
   // The placeholder goes only once its replacement is safely in place.
