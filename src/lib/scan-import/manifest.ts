@@ -32,7 +32,27 @@ export interface ScanManifest {
   files: ScanManifestFile[];
   /** Spot/valuation notes; typed and consumed by the notes importer. */
   notes?: unknown;
+  chase?: ScanChase;
   claimId?: string;
+}
+
+export interface ScanAsk {
+  at: string;
+  to: 'insured' | 'garage' | 'other';
+  via: 'whatsapp' | 'email';
+  lang: 'en' | 'hi' | 'mr';
+  docs: string[];
+}
+
+/** Manifest `chase` (contract: Scan docs/handover/scan-manifest-chase.md). */
+export interface ScanChase {
+  contacts?: {
+    insured?: { name?: string; phone?: string; email?: string };
+    garage?: { name?: string; person?: string; phone?: string; email?: string };
+    other?: { name?: string; role?: string; phone?: string; email?: string };
+  };
+  slotStates?: Record<string, 'received' | 'missing' | { state: 'rejected'; reason: string }>;
+  asks?: ScanAsk[];
 }
 
 export interface FoundManifest {

@@ -6,6 +6,7 @@
 // See: SURVEYOS_V2_MASTER_BOOK.md Chapter 6, Section 4
 // ═══════════════════════════════════════════════════════════
 
+import type { ScanChase } from '@/lib/scan-import/manifest';
 import type { VehicleDetails, DriverDetails, PolicyDetails, AccidentDetails, VehicleType, DepreciationType } from './vehicle';
 import type { AssessmentRow, SpotDamageRow, SpotSurveyDetails, ReinspectionDetails, FeeBill, PhotoItem, PhotoLayout, BillCheckDetails, ExtraBillItem, ValuationDetails, DocumentAnnexureOptions } from './assessment';
 import type { SurveyType } from './report';
@@ -218,6 +219,10 @@ export interface ClaimData {
   uploadSet?: UploadSet;
   /** Last SurveyOS Scan import: phone note values already decided, so a re-import never re-asks. */
   scanImport?: { at: string; decided: Record<string, string> };
+  /** Scan's Drive claim id (manifest `claimId`); a different id on a later import is a conflict. */
+  scanClaimId?: string;
+  /** Last imported Scan chase state (contacts, slot states, ask log). */
+  scanChase?: ScanChase & { importedAt: string };
 
   // ─── Telemetry ─────────────────────────────────────
   telemetrySent: boolean;
