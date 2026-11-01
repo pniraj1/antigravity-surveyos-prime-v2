@@ -29,3 +29,61 @@ describe('cleanupTargets', () => {
   it('no scanClaimId -> scan null', () =>
     expect(cleanupTargets(c('k1', 'x'), { k1: 'P' }, { s1: 'S' })).toEqual({ prime: 'P', scan: null }));
 });
+
+import { vi, beforeEach } from 'vitest';
+vi.mock('../index', () => ({
+  driveRequest: vi.fn(async () => ({ ok: true })),
+  getRootFolder: vi.fn(), loadDriveIndexStrict: vi.fn(),
+}));
+vi.mock('../scan-status-sync', () => ({ findScanFolder: vi.fn(), phoneScansFolder: vi.fn() }));
+import { driveRequest } from '../index';
+import { trashFolder, runCleanup, type CleanupLookup } from '../cleanup';
+
+describe('trashFolder', () => {
+  beforeEach(() => vi.mocked(driveRequest).mockClear());
+  it('PATCHes trashed:true, never DELETE', async () => {
+    await trashFolder('F1');
+    const [url, opt] = vi.mocked(driveRequest).mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('/files/F1');
+    expect(opt.method).toBe('PATCH');
+    expect(JSON.parse(opt.body as string)).toEqual({ trashed: true });
+  });
+});
+
+describe('runCleanup', () => {
+  const lookup = (o: Partial<CleanupLookup> = {}): CleanupLookup =>
+    ({ index: { k1: 'P' }, scanFolders: { s1: 'S' }, failed: new Set(), protectedIds: new Set(['ROOT']), ...o });
+  const done = () => c('k1', '2026-01-01T00:00:00Z', { scanClaimId: 's1' });
+  const io = (claim: ClaimData | undefined) => ({ read: vi.fn(async () => claim), stamp: vi.fn(async () => {}) });
+  beforeEach(() => vi.mocked(driveRequest).mockClear());
+
+  it('trashes both folders and stamps', async () => {
+    const i = io(done());
+    expect(await runCleanup(['k1'], lookup(), i)).toEqual({ trashed: 1, skipped: 0, failed: 0 });
+    expect(driveRequest).toHaveBeenCalledTimes(2);
+    expect(i.stamp).toHaveBeenCalledOnce();
+  });
+  it('skips a claim reopened after load', async () => {
+    const i = io(c('k1', undefined));
+    expect((await runCleanup(['k1'], lookup(), i)).skipped).toBe(1);
+    expect(driveRequest).not.toHaveBeenCalled();
+    expect(i.stamp).not.toHaveBeenCalled();
+  });
+  it('does not stamp when nothing to trash', async () => {
+    const i = io(done());
+    expect((await runCleanup(['k1'], lookup({ index: {}, scanFolders: {} }), i)).skipped).toBe(1);
+    expect(i.stamp).not.toHaveBeenCalled();
+  });
+  it('does not touch a claim whose lookup failed', async () => {
+    const i = io(done());
+    expect((await runCleanup(['k1'], lookup({ failed: new Set(['k1']) }), i)).skipped).toBe(1);
+    expect(driveRequest).not.toHaveBeenCalled();
+    expect(i.stamp).not.toHaveBeenCalled();
+  });
+  it('refuses the SurveyOS root', async () => {
+    const i = io(done());
+    expect((await runCleanup(['k1'], lookup({ index: { k1: 'ROOT' } }), i)).failed).toBe(1);
+    expect(driveRequest).not.toHaveBeenCalled();
+    expect(i.stamp).not.toHaveBeenCalled();
+  });
+});

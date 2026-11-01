@@ -3,8 +3,8 @@
  * Only Prime calls this, and only after the surveyor's two confirmations (see DriveCleanup.tsx).
  */
 import type { ClaimData } from '@/types';
-import { driveRequest, loadDriveIndex } from './index';
-import { findScanFolder } from './scan-status-sync';
+import { driveRequest, getRootFolder, loadDriveIndexStrict } from './index';
+import { findScanFolder, phoneScansFolder } from './scan-status-sync';
 
 export interface CleanupMonth { month: number; claims: ClaimData[] } // month is 0-based
 export interface CleanupYear { year: number; months: CleanupMonth[] }
@@ -37,15 +37,35 @@ export function cleanupTargets(
   };
 }
 
-/** Looks up Scan folders for the claims (read-only). Missing/failed lookups are simply absent. */
-export async function loadCleanupLookup(claims: ClaimData[]) {
-  const index = await loadDriveIndex();
-  const scanFolders: Record<string, string> = {};
+export interface CleanupLookup {
+  index: Record<string, string>;
+  scanFolders: Record<string, string>;
+  /** Claim ids whose Drive lookup failed: shown as "Couldn't check Drive", never trashed or stamped. */
+  failed: Set<string>;
+  /** SurveyOS root and Phone Scans folder ids: never trashed. */
+  protectedIds: Set<string>;
+}
+
+/** Read-only lookup. A failure is reported in `failed`, never mistaken for "not on Drive". */
+export async function loadCleanupLookup(claims: ClaimData[]): Promise<CleanupLookup> {
+  const out: CleanupLookup = { index: {}, scanFolders: {}, failed: new Set(), protectedIds: new Set() };
+  try {
+    out.index = await loadDriveIndexStrict();
+    out.protectedIds.add(await getRootFolder());
+    const ps = await phoneScansFolder();
+    if (ps) out.protectedIds.add(ps);
+  } catch {
+    claims.forEach(c => out.failed.add(c.id));
+    return out;
+  }
   for (const c of claims) {
     if (!c.scanClaimId) continue;
-    try { const id = await findScanFolder(c.scanClaimId); if (id) scanFolders[c.scanClaimId] = id; } catch { /* shown as not on Drive */ }
+    try {
+      const id = await findScanFolder(c.scanClaimId);
+      if (id) out.scanFolders[c.scanClaimId] = id;
+    } catch { out.failed.add(c.id); }
   }
-  return { index, scanFolders };
+  return out;
 }
 
 /** Moves a folder to the Drive trash (PATCH, never DELETE). */
@@ -55,4 +75,30 @@ export async function trashFolder(id: string): Promise<void> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ trashed: true }),
   });
+}
+
+export interface CleanupIO {
+  /** The claim as it is now (open store copy, else IndexedDB). */
+  read(id: string): Promise<ClaimData | undefined>;
+  /** Writes ONLY driveTrashedAt onto the current copy of the claim. */
+  stamp(id: string, at: string): Promise<void>;
+}
+
+/** Trashes the picked claims' folders. Stamps a claim only when at least one folder was trashed. */
+export async function runCleanup(ids: string[], lookup: CleanupLookup, io: CleanupIO) {
+  const r = { trashed: 0, skipped: 0, failed: 0 };
+  for (const id of ids) {
+    try {
+      const fresh = await io.read(id); // re-read: it may have been reopened since the list loaded
+      if (!fresh || !fresh.completedAt || fresh.driveTrashedAt || lookup.failed.has(id)) { r.skipped++; continue; }
+      const t = cleanupTargets(fresh, lookup.index, lookup.scanFolders);
+      const folders = [t.prime, t.scan].filter((x): x is string => !!x);
+      if (folders.length === 0) { r.skipped++; continue; }
+      if (folders.some(f => lookup.protectedIds.has(f))) { r.failed++; continue; }
+      for (const f of folders) await trashFolder(f);
+      await io.stamp(id, new Date().toISOString());
+      r.trashed++;
+    } catch { r.failed++; }
+  }
+  return r;
 }

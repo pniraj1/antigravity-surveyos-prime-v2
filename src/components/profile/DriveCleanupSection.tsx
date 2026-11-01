@@ -4,21 +4,20 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Trash2, RefreshCw } from 'lucide-react';
 import type { ClaimData } from '@/types';
-import { getAllClaims, saveClaim } from '@/lib/storage/indexeddb';
+import { getAllClaims, getClaim, saveClaim } from '@/lib/storage/indexeddb';
 import { useClaimStore } from '@/stores/claim-store';
 import { useUIStore } from '@/stores/ui-store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { cleanupTargets, groupForCleanup, loadCleanupLookup, trashFolder } from '@/lib/drive/cleanup';
+import { cleanupTargets, groupForCleanup, loadCleanupLookup, runCleanup, type CleanupLookup } from '@/lib/drive/cleanup';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-type Lookup = Awaited<ReturnType<typeof loadCleanupLookup>>;
 
 export function DriveCleanupSection() {
   const connected = useUIStore(s => s.isDriveConnected);
   const [claims, setClaims] = useState<ClaimData[]>([]);
-  const [lookup, setLookup] = useState<Lookup>({ index: {}, scanFolders: {} });
+  const [lookup, setLookup] = useState<CleanupLookup>({ index: {}, scanFolders: {}, failed: new Set(), protectedIds: new Set() });
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<0 | 1 | 2>(0);
@@ -46,21 +45,20 @@ export function DriveCleanupSection() {
 
   const run = async () => {
     setBusy(true);
-    let ok = 0, failed = 0;
-    for (const c of claims.filter(x => picked.has(x.id))) {
-      const t = cleanupTargets(c, lookup.index, lookup.scanFolders);
-      try {
-        for (const id of [t.prime, t.scan]) if (id) await trashFolder(id);
-        const at = new Date().toISOString();
-        const open = useClaimStore.getState();
-        if (open.currentClaim?.id === c.id) open.updateClaim({ driveTrashedAt: at });
-        else await saveClaim({ ...c, driveTrashedAt: at });
-        ok++;
-      } catch { failed++; }
-    }
+    const r = await runCleanup([...picked], lookup, {
+      read: async id => {
+        const open = useClaimStore.getState().currentClaim;
+        return open?.id === id ? open : getClaim(id);
+      },
+      stamp: async (id, at) => {
+        const st = useClaimStore.getState();
+        if (st.currentClaim?.id === id) st.updateClaim({ driveTrashedAt: at });
+        else { const fresh = await getClaim(id); if (fresh) await saveClaim({ ...fresh, driveTrashedAt: at }); }
+      },
+    });
     setBusy(false); close();
-    const msg = `${ok} claim${ok === 1 ? '' : 's'} moved to Drive trash${failed ? `, ${failed} failed (try again)` : ''}.`;
-    if (failed) toast.error(msg); else toast.success(msg);
+    const msg = `${r.trashed} claim${r.trashed === 1 ? '' : 's'} moved to Drive trash${r.skipped ? `, ${r.skipped} skipped` : ''}${r.failed ? `, ${r.failed} failed (try again)` : ''}.`;
+    if (r.failed) toast.error(msg); else toast.success(msg);
     await load();
   };
 
@@ -85,11 +83,11 @@ export function DriveCleanupSection() {
         </p>
         {years.length === 0 && <p className="text-xs text-muted-foreground">{loading ? 'Looking...' : 'No completed claims to clean up.'}</p>}
         {years.map(y => {
-          const ids = y.months.flatMap(m => m.claims.map(c => c.id));
+          const ids = y.months.flatMap(m => m.claims).filter(c => { const t = cleanupTargets(c, lookup.index, lookup.scanFolders); return !lookup.failed.has(c.id) && (t.prime || t.scan); }).map(c => c.id);
           return (
             <div key={y.year} className="space-y-2">
               <label className="flex items-center gap-2 text-sm font-medium">
-                <input type="checkbox" checked={ids.every(i => picked.has(i))} onChange={e => toggle(ids, e.target.checked)} />
+                <input type="checkbox" disabled={ids.length === 0} checked={ids.length > 0 && ids.every(i => picked.has(i))} onChange={e => toggle(ids, e.target.checked)} />
                 {y.year} <span className="text-xs text-muted-foreground">({ids.length})</span>
               </label>
               {y.months.map(m => (
@@ -99,11 +97,11 @@ export function DriveCleanupSection() {
                     const t = cleanupTargets(c, lookup.index, lookup.scanFolders);
                     return (
                       <label key={c.id} className="flex items-start gap-2 text-xs">
-                        <input type="checkbox" className="mt-0.5" checked={picked.has(c.id)} onChange={e => toggle([c.id], e.target.checked)} />
+                        <input type="checkbox" className="mt-0.5" disabled={lookup.failed.has(c.id) || (!t.prime && !t.scan)} checked={picked.has(c.id)} onChange={e => toggle([c.id], e.target.checked)} />
                         <span>
                           <span className="font-medium text-foreground">{c.vehicle?.registrationNumber || c.id}</span>
                           {c.policy?.insurerName ? ` · ${c.policy.insurerName}` : ''}
-                          <span className="block text-muted-foreground">Prime folder: {found(t.prime)} · Scan folder: {c.scanClaimId ? found(t.scan) : 'no phone scan'}</span>
+                          <span className="block text-muted-foreground">{lookup.failed.has(c.id) ? "Couldn't check Drive - try again" : `Prime folder: ${found(t.prime)} · Scan folder: ${c.scanClaimId ? found(t.scan) : 'no phone scan'}`}</span>
                         </span>
                       </label>
                     );
