@@ -63,7 +63,7 @@ export function useAIExtraction() {
       // The job may have been replaced (re-scanned, cancelled, re-run) while
       // this Smart Fix was in flight — only land the result on the same job.
       if (useExtractionStore.getState().jobs[key]?.result !== result) return;
-      finishJob(key, { ...result, data: fixed.data, findings: fixed.findings, smartFixed: true });   // finishJob also clears progress
+      finishJob(key, { ...result, data: fixed.data, findings: fixed.findings, smartFixed: true, source: 'ai' });   // finishJob also clears progress
     } catch (err: any) {
       if (err?.name === 'AbortError') return;
       setJobProgress(key, '');

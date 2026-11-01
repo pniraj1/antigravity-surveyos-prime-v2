@@ -158,6 +158,18 @@ describe('parseEstimate', () => {
     expect(reason(parseEstimate([[...kia(), ...second]]))).toContain('multiple');
   });
 
+  it('a continuation page with no recognised header and a combined grand total declines', () => {
+    const cont = [...item(680, 4, 'WING', '100.00', '998729'), ...item(670, 5, 'BULB', '50.00', '998729'),
+      ...line(620, [[60, 'Sub'], [90, 'Total'], amt(295, '6118.00')]),
+      ...line(600, [[60, 'Grand'], [100, 'Total'], amt(295, '12101')])];
+    expect(reason(parseEstimate([kia(), cont]))).toContain('multiple');
+  });
+
+  it('computed totals: a gross off by 4 rupees declines, a rounded grand total (0.40) is accepted', () => {
+    expect(parseEstimate([kia('4,092.00', '11928')]).ok).toBe(false);
+    expect(parseEstimate([kia('4,092.00', '11924.64')]).ok).toBe(true);
+  });
+
   it('a second estimate on the next page declines', () => {
     const second = [...head(700), ...item(680, 1, 'WING', '100.00'), ...line(620, [[60, 'Payable'], amt(295, '118')])];
     expect(reason(parseEstimate([kia(), second]))).toContain('multiple');
@@ -280,6 +292,11 @@ describe('parseEstimate', () => {
     });
     it('a value that is neither a rate nor an amount for one (37) declines', () => {
       expect(parseEstimate([doc('37.00')]).ok).toBe(false);
+    });
+    it('a rate that is also an amount for a different rate (18 on 378) declines', () => {
+      const page = doc('18');
+      const amb = page.map(t => (t.s === '590.00' ? { ...t, s: '378.00' } : t));
+      expect(parseEstimate([amb]).ok).toBe(false);
     });
   });
 

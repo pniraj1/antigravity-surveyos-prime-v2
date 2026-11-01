@@ -198,7 +198,8 @@ function bareTax(v: number | null, total: number | null): { rate: number; amount
   if (v === null) return null;
   if (total !== null) {
     const rate = GST_RATES.find(s => Math.abs(round2((total - v) * s / 100) - v) <= 0.02);
-    if (rate !== undefined) return { rate, amount: v };
+    // both readings can pass (rate 18 on a 378 total is also 5% of 360): only trust the amount when the value cannot be a rate, or is the same rate
+    if (rate !== undefined) return rate === v || !GST_RATES.includes(v) ? { rate, amount: v } : null;
   }
   return GST_RATES.includes(v) ? { rate: v } : null;
 }
@@ -256,7 +257,7 @@ function parseWith(pages: PdfToken[][], preTax: boolean): ParseOutcome {
   const afterGrand = nonItemLines.slice(nonItemLines.indexOf(grands[0]) + 1);
   const isHeader = (l: NonItemLine) => /\bqty\b/i.test(l.text) && l.text.split(' ').some(w => SERIAL_WORD.test(w));
   const looksLikeRow = (l: NonItemLine) => /^\d{1,3}$/.test(l.text.split(' ')[0]) && l.nums.length >= 3;
-  if (afterGrand.some(l => isHeader(l) || looksLikeRow(l))) return { ok: false, reason: 'multiple documents: a header or numbered item line follows the grand total' };
+  if (afterGrand.some(l => isHeader(l) || looksLikeRow(l)) || rows.some(r => above(grands[0], r))) return { ok: false, reason: 'multiple documents: a header or numbered item line follows the grand total' };
   // a serial the reader skipped leaves a line starting in the serial column, between the header and the last grand total
   const lastGrand = grands[grands.length - 1];
   const header = nonItemLines.find(l => /\bqty\b/i.test(l.text));
@@ -267,11 +268,13 @@ function parseWith(pages: PdfToken[][], preTax: boolean): ParseOutcome {
 
   const sections: RawRow[][] = [];
   for (const r of rows) { if (r.sr === 1) sections.push([]); sections[sections.length - 1].push(r); }
+  let computed = false;   // some row total is taxable x (1+gst), not printed
   const out: ParsedEstimate = { spare_parts: [], labour_items: [], painting_items: [], gross_amount: gross };
   for (const [i, sec] of sections.entries()) {
     if (sec.some((r, k) => r.sr !== k + 1)) return { ok: false, reason: `serial gap in section ${i + 1}` };
     const built = sec.map(r => toItem(r, preTax));
     if (built.some(b => !b)) return { ok: false, reason: `section ${i + 1}: a row has no readable amount` };
+    if (built.some(b => !b!.printedTotal)) computed = true;
     const items = built.map(b => b!.item as any);
     const key = built.every(b => b!.printedTotal) ? 'total_amount' : 'taxable_amount';
     const secSum = sum(items.map(it => it[key] as number));
@@ -285,6 +288,6 @@ function parseWith(pages: PdfToken[][], preTax: boolean): ParseOutcome {
     }
   }
   const all = [...out.spare_parts, ...out.labour_items, ...out.painting_items];
-  if (Math.abs(sum(all.map(it => it.total_amount)) - gross) > Math.max(5, gross * 0.001)) return { ok: false, reason: 'rows do not add up to the grand total' };
+  if (Math.abs(sum(all.map(it => it.total_amount)) - gross) > (computed ? Math.max(1, all.length * 0.01) : Math.max(5, gross * 0.001))) return { ok: false, reason: 'rows do not add up to the grand total' };
   return { ok: true, data: out };
 }
