@@ -374,4 +374,64 @@ describe('parseEstimate', () => {
     if (!o.ok) throw new Error(o.reason);
     expect(o.data.gross_amount).toBe(118);
   });
+
+  describe('Maruti: tax added under the section', () => {
+    const maruti = (net: string, sub = '1,180.00') => [
+      ...line(700, [[10, 'Srl.'], [60, 'Description'], [200, 'Qty.'], [250, 'Rate'], [300, 'Taxable'], [380, 'Labor']]),
+      ...line(690, [[60, 'Parts']]),
+      ...line(680, [[10, '1'], [60, 'BOLT'], amt(220, '2.000'), amt(270, '100.00'), amt(335, '200.00')]),
+      ...line(670, [[10, '2'], [60, 'CLIP'], amt(220, '1.000'), amt(270, '100.00'), amt(335, '100.00')]),
+      ...line(656, [[60, 'Labour']]),
+      ...line(650, [[10, '1'], [60, 'DENTING'], amt(405, '1,000.00')]),
+      ...line(620, [[60, 'Total'], [90, ':'], amt(335, '300.00'), amt(405, '1,000.00')]),
+      ...line(610, [[200, 'CGST'], [230, '@'], [240, '9%'], amt(405, '90.00')]),
+      ...line(600, [[200, 'Sub'], [230, 'Total'], amt(405, sub)]),
+      ...line(590, [[60, 'Net'], [80, 'Estimate'], [130, 'Amounts'], amt(405, net)]),
+    ];
+
+    it('labour gets the one GST rate its with-tax subtotal implies; parts already include tax', () => {
+      const o = parseEstimate([maruti('1,480.00')]);
+      if (!o.ok) throw new Error(o.reason);
+      expect(o.data.gross_amount).toBe(1480);
+      expect(o.data.labour_items[0]).toMatchObject({ taxable_amount: 1000, total_amount: 1180, gst_percent: 18 });
+      expect(o.data.spare_parts.map(r => [r.quantity, r.total_amount, r.gst_percent, r.taxable_amount])).toEqual([[2, 200, undefined, undefined], [1, 100, undefined, undefined]]);
+    });
+
+    it('no subtotal settling a rate declines', () => {
+      expect(parseEstimate([maruti('1,480.00', '1,190.00')]).ok).toBe(false);
+    });
+
+    it('rows with no rate are not taken as tax-inclusive when no section shows tax being added', () => {
+      const page = [
+        ...line(700, [[10, 'Srl'], [60, 'Description'], [200, 'Qty.'], [300, 'Taxable']]),
+        ...line(680, [[10, '1'], [60, 'BOLT'], amt(220, '1'), amt(335, '200.00')]),
+        ...line(600, [[60, 'Gross'], [100, 'Amount'], amt(335, '200.00')]),   // may be pre-tax
+      ];
+      expect(reason(parseEstimate([page]))).toMatch(/no section shows tax/);
+    });
+  });
+
+  it('Tata: headings stacked over several lines map amounts by where they right-align', () => {
+    const page = [
+      ...line(708, [[10, 'S']]),
+      ...line(702, [[10, 'No'], [60, 'Particulars'], [200, 'Qty'], [250, 'Rate'], [300, 'Taxable'], [360, 'CGST'], [420, 'Total']]),
+      ...line(696, [[305, 'Amt'], [345, 'Rate'], [370, 'Amount'], [420, 'Amt']]),
+      ...line(690, [[346, '%'], [415, '(Incl.']]),
+      ...line(684, [[415, 'Taxes)']]),
+      ...line(660, [[10, '1'], [60, 'DOOR'], amt(215, '1'), amt(270, '100.00'), amt(335, '100.00'), amt(350, '9'), amt(400, '9.00'), amt(450, '118.00')]),
+      ...line(640, [[10, '2'], [60, 'LAMP'], amt(215, '2'), amt(270, '50.00'), amt(335, '100.00'), amt(350, '9'), amt(400, '9.00'), amt(450, '118.00')]),
+      ...line(600, [[60, 'Gross'], [100, 'Amount'], amt(450, '236.00')]),
+    ];
+    const o = parseEstimate([page]);
+    if (!o.ok) throw new Error(o.reason);
+    expect(o.data.spare_parts.map(r => [r.description, r.quantity, r.taxable_amount, r.total_amount, r.gst_percent])).toEqual([['DOOR', 1, 100, 118, 18], ['LAMP', 2, 100, 118, 18]]);
+  });
+
+  it('joins "2,916.9" with a stray digit below, but not two one-decimal amounts', () => {
+    const head = line(700, [[10, 'Srl'], [60, 'Description'], [200, 'Qty.'], [300, 'Total']]);
+    const split = rowsOf(readRows([[...head, ...line(603, [[295, '2,916.9']]), ...line(600, [[10, '1'], [200, '1']]), ...line(597, [[325, '5']])]]));
+    expect(split[0].cells.total_amount).toBe('2,916.95');
+    const whole = rowsOf(readRows([[...head, ...line(603, [[10, '1'], [300, '496.0']]), ...line(594, [[10, '2'], [300, '992.0']])]]));
+    expect(whole.map(r => r.cells.total_amount)).toEqual(['496.0', '992.0']);
+  });
 });

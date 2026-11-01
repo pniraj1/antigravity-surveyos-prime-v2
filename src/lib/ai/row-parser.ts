@@ -8,7 +8,7 @@ export interface RawRow { sr: number; page: number; cells: Partial<Record<Field,
 export interface NonItemLine { page: number; text: string; nums: number[]; y: number; x: number }
 
 const MONEY = /^(\d{1,3}(,\d{2,3})+(\.\d{1,2})?|\d+(\.\d{1,2})?)$/;
-const SERIAL_WORD = /^(srl|s\.?no\.?|sr|seq\.?|s)$/i;
+const SERIAL_WORD = /^(srl\.?|s\.?no\.?|sr\.?|seq\.?|s)$/i;
 const HEADER_SYNONYMS: Record<string, Field> = {
   'part number': 'part_number', 'part no': 'part_number', 'part #': 'part_number',
   'description': 'description', 'particulars': 'description', 'part description': 'description',
@@ -57,9 +57,10 @@ function repairNumbers(toks: PdfToken[]): PdfToken[] {
   for (const t of sorted) {
     if (used.has(t)) continue;
     let cur = t;
-    while (/^[\d,]*\d[.,]$/.test(cur.s)) {
+    while (/^[\d,]*\d[.,]$|^(\d{1,3}(,\d{2,3})+|\d{4,})\.\d$/.test(cur.s)) {   // "8,845." / "76", and Tata's "2,916.9" / "5" (one stray digit only: "496.0" and a qty "1.5" are whole)
       const top = cur;
-      const below = sorted.find(b => !used.has(b) && b !== top && /^[\d,.]+$/.test(b.s) && top.y - b.y > 0 && top.y - b.y < 14
+      const tail = /\.\d$/.test(top.s) ? /^\d$/ : /^[\d,.]+$/;
+      const below = sorted.find(b => !used.has(b) && b !== top && tail.test(b.s) && top.y - b.y > 0 && top.y - b.y < 14
         && b.x < top.x + top.w + 2 && b.x + b.w > top.x - 2);
       if (!below) break;
       used.add(below);
@@ -93,6 +94,47 @@ function findHeader(toks: PdfToken[]): { y: number; cols: Column[] } | null {
 }
 
 const byReading = (a: PdfToken, b: PdfToken) => (b.y - a.y) || (a.x - b.x);
+
+// Tata: headings stacked over short lines ("Total Amt" / "(Incl." / "Taxes)"), often split mid-word ("Amoun" / "t").
+const BLOCK_AMOUNT: [RegExp, Field | null][] = [
+  [/incl/, 'total_amount'], [/gst|%|base|disc|extra|insura|liabil|campai/, null],
+  [/^taxabl/, 'taxable_amount'], [/^qty/, 'quantity'], [/^rate/, 'unit_price'],
+];
+const BLOCK_TEXT: [RegExp, Field | null][] = [
+  [/^(particulars|description)/i, 'description'], [/^part/i, 'part_number'], [/^hsn/i, 'hsn_sac'], [/^(type|uom?|um)$/i, null],
+];
+
+/** Header spread over several close lines: amount columns are where the row amounts right-align, each named by the heading words above it; text columns start at their heading word. */
+function findHeaderBlock(toks: PdfToken[]): { y: number; cols: Column[] } | null {
+  const lines = linesOf(toks);
+  const qi = lines.findIndex(l => l.some(t => /^qty\.?$/i.test(t.s)));
+  if (qi < 0) return null;
+  const plain = (l: PdfToken[]) => !l.some(t => /\d/.test(t.s));
+  let a = qi, b = qi;
+  while (a > 0 && lines[a - 1][0].y - lines[a][0].y <= 10 && plain(lines[a - 1])) a--;
+  while (b + 1 < lines.length && lines[b][0].y - lines[b + 1][0].y <= 10 && plain(lines[b + 1])) b++;
+  const block = lines.slice(a, b + 1).flat();
+  const y = Math.min(...block.map(t => t.y));
+  const text = block.flatMap(t => { const m = BLOCK_TEXT.find(([re]) => re.test(t.s)); return m ? [{ field: m[1], x: t.x, right: t.x + t.w }] : []; });
+  const desc = text.find(c => c.field === 'description');
+  if (!desc || !block.some(t => SERIAL_WORD.test(t.s))) return null;
+  // right edges of the amounts under the block, within 4pt; a real column has a value on many rows
+  const clusters: { right: number; narrow: number; n: number }[] = [];
+  for (const t of toks.filter(t => t.y < y - 2 && t.x > desc.right && parseMoney(t.s) !== null)) {
+    const c = clusters.find(c => Math.abs(c.right - (t.x + t.w)) <= 4);
+    if (c) { c.narrow = Math.min(c.narrow, t.w); c.n++; } else clusters.push({ right: t.x + t.w, narrow: t.w, n: 1 });
+  }
+  const most = Math.max(0, ...clusters.map(c => c.n));
+  const amounts = clusters.filter(c => c.n >= Math.max(2, most * 0.3)).map(c => {
+    const label = block.filter(t => t.x < c.right && t.x + t.w > c.right - c.narrow).sort(byReading).map(t => t.s).join('').toLowerCase();   // headings over the narrowest value
+    return { field: BLOCK_AMOUNT.find(([re]) => re.test(label))?.[1] ?? null, x: c.right - c.narrow, right: c.right };
+  });
+  if (!amounts.some(c => c.field === 'quantity') || !amounts.some(c => c.field === 'total_amount' || c.field === 'taxable_amount')) return null;
+  const all = [...text, ...amounts].sort((p, q) => p.x - q.x);
+  // Tata centres headings over left-aligned text: a column starts halfway between the previous heading's end and its own
+  const starts = all.map((g, i) => (i === 0 ? -Infinity : (Math.min(all[i - 1].right, g.x) + g.x) / 2));
+  return { y, cols: all.map((g, i) => ({ field: g.field, start: starts[i], end: i + 1 < all.length ? starts[i + 1] : Infinity, right: g.right })) };
+}
 
 /** Serial tokens near the leftmost integer column, below the header, continuing the sequence. */
 function anchorsOf(toks: PdfToken[], headerY: number, prev: number): { anchors: PdfToken[]; last: number } {
@@ -133,7 +175,7 @@ function rowCells(band: PdfToken[], anchor: PdfToken, cols: Column[]): Partial<R
   const perField = new Map<Field, string[]>();
   for (const c of cols) {
     if (!c.field) continue;
-    const text = band.filter(t => columnOf(t, cols) === c && (c.field === 'gst_percent' || c.field === 'tax' || !PERCENT.test(t.s))).sort(byReading).map(t => t.s).join(' ');
+    const text = band.filter(t => columnOf(t, cols) === c && (c.field === 'gst_percent' || c.field === 'tax' || !PERCENT.test(t.s))).sort(byReading).map(t => t.s).join(c.field === 'hsn_sac' ? '' : ' ');   // a wrapped HSN ("8708.22" / ".00") is one code
     perField.set(c.field, [...(perField.get(c.field) ?? []), text]);
   }
   const cells: Partial<Record<Field, string>> = {};
@@ -146,14 +188,14 @@ const PART_WORD = /\bparts?\b/i;
 const LABOUR_WORD = /\blabou?r\b|\bservices?\b/i;
 const KIND_WORDS = new RegExp(`${PART_WORD.source}|${LABOUR_WORD.source}`, 'i');
 
-export function readRows(pages: PdfToken[][]): { rows: RawRow[]; nonItemLines: NonItemLine[] } | { declined: string } {
+export function readRows(pages: PdfToken[][], stacked = false): { rows: RawRow[]; nonItemLines: NonItemLine[] } | { declined: string } {
   const rows: RawRow[] = [];
   const nonItemLines: NonItemLine[] = [];
   let cols: Column[] | null = null;   // a page without its own header reuses the previous one
   let prev = 0;
   for (let p = 0; p < pages.length; p++) {
     const toks = repairNumbers(pages[p]);
-    const header = findHeader(toks);
+    const header = stacked ? findHeaderBlock(toks) : findHeader(toks);
     const earlierCols = cols;   // rows above this page's header still follow the columns they were printed under
     if (header) cols = header.cols;
     // numbered terms printed under the grand total are not rows
@@ -172,7 +214,7 @@ export function readRows(pages: PdfToken[][]): { rows: RawRow[]; nonItemLines: N
       const band = toks.filter(t => t.y < hi && t.y >= lo && !(belowHeader && t.y >= header.y - 2));
       const leadToks = a.s === '1' ? band.filter(t => t.y > a.y + 2) : [];
       const lead = leadToks.sort(byReading).map(t => t.s).join(' ');
-      const heading = KIND_WORDS.test(lead) || TOTAL_LABEL.test(lead);   // a heading or a totals line is not part of the row's cells
+      const heading = KIND_WORDS.test(lead) || TOTAL_LABEL.test(lead) || /\bsuggested\s*jobs\b/i.test(lead);   // a heading (Maruti bills: "Demanded Repairs-Others/Suggested Jobs") or a totals line is not part of the row's cells
       rows.push({ sr: Number(a.s), page: p, y: a.y, x: a.x, lead: a.s === '1' ? lead : undefined, cells: rowCells(band.filter(t => t !== a && !(heading && leadToks.includes(t))), a, (header && a.y > header.y && earlierCols) || cols!), text: [...band].sort(byReading).map(t => t.s).join(' ') });
     }
     for (const l of linesOf(toks)) {
@@ -204,8 +246,8 @@ function bareTax(v: number | null, total: number | null): { rate: number; amount
   return GST_RATES.includes(v) ? { rate: v } : null;
 }
 
-/** Estimate row shape of prompts.ts; null when taxable and total cannot both be had without guessing. */
-function toItem(r: RawRow, preTax: boolean): { item: Record<string, unknown>; printedTotal: boolean } | null {
+/** Estimate row shape of prompts.ts; null when taxable and total cannot both be had without guessing. noRate: only a bare amount is printed, its tax is settled per section (footerTax). */
+function toItem(r: RawRow, preTax: boolean): { item: Record<string, unknown>; printedTotal: boolean; noRate?: boolean } | null {
   const c = r.cells;
   const bare = c.tax !== undefined && !c.tax.endsWith('%') ? bareTax(num(c.tax), num(c.total_amount)) : undefined;
   if (bare === null) return null;   // a bare Tax value that is neither a GST rate nor the amount for one: decline
@@ -216,18 +258,34 @@ function toItem(r: RawRow, preTax: boolean): { item: Record<string, unknown>; pr
   const printed = asTaxable ? null : num(c.total_amount);
   const taxable = num(c.taxable_amount) ?? (asTaxable ? num(c.total_amount) : printed !== null && gst !== null ? round2(printed / (1 + gst / 100)) : printed !== null && taxAmount !== null ? round2(printed - taxAmount) : null);
   const total = printed ?? (taxable !== null && gst !== null ? round2(taxable * (1 + gst / 100)) : null);
-  if (taxable === null || total === null) return null;
+  const noRate = taxable !== null && total === null && taxAmount === null && c.tax === undefined;
+  if (taxable === null || (total === null && !noRate)) return null;
+  // Tata prints taxable and total but only half-rates (CGST 9%): the rate is the one standard GST rate that joins them
+  const joins = gst === null && printed !== null && num(c.taxable_amount) !== null ? GST_RATES.filter(g => Math.abs(taxable * (1 + g / 100) - printed) <= 1) : [];
   const item = {
     sr_no: r.sr, description: c.description ?? '', part_number: c.part_number ?? '', hsn_sac: c.hsn_sac ?? '',
-    quantity: num(c.quantity) ?? 1, unit_price: num(c.unit_price) ?? 0, taxable_amount: taxable,
-    cgst_amount: 0, sgst_amount: 0, total_amount: total, gst_percent: gst ?? 0, category: '', _page: r.page,
+    quantity: /^\d+(\.\d+)?$/.test(c.quantity ?? '') ? Number(c.quantity) : num(c.quantity) ?? 1,   // Maruti prints "2.000"
+    unit_price: num(c.unit_price) ?? 0, taxable_amount: taxable,
+    cgst_amount: 0, sgst_amount: 0, total_amount: total, gst_percent: gst ?? (joins.length === 1 ? joins[0] : 0), category: '', _page: r.page,
   };
-  return { item, printedTotal: printed !== null };
+  return { item, printedTotal: printed !== null, noRate };
+}
+
+/** Maruti: rows print a bare amount and the tax is added under the section. The section's base plus exactly one GST rate must be a labelled total;
+ *  else the base itself must be one, and the rows already include tax (rate left blank: the app's 18% default applies). null = no reading ties. */
+function footerTax(items: any[], labelled: number[]): { items: any[]; inclusive: boolean } | null {
+  const base = sum(items.map(it => it.taxable_amount as number));
+  const ties = (n: number) => labelled.some(l => Math.abs(l - n) <= 1);
+  const rates = GST_RATES.filter(g => g > 0 && ties(base * (1 + g / 100)));
+  if (rates.length === 1) return { inclusive: false, items: items.map(it => ({ ...it, gst_percent: rates[0], total_amount: round2(it.taxable_amount * (1 + rates[0] / 100)) })) };
+  if (rates.length || !ties(base)) return null;
+  return { inclusive: true, items: items.map(({ taxable_amount, gst_percent, ...it }) => ({ ...it, total_amount: taxable_amount })) };
 }
 
 const above = (a: { page: number; y: number }, b: { page: number; y: number }) => a.page < b.page || (a.page === b.page && a.y > b.y);   // a is higher in reading order
-const GRAND_LABEL = /\bgrand\s*total\b|\bnet\s*amount\b|\btotal\s*amt\b/i;
-const TOTAL_LABEL = /\btotal\b|\bnet\s*amount\b|\b(part|labou?r)\s*(amt|amount)\b/i;
+// Maruti: "Net Estimate Amounts", "Net Bill Amount (Rounded)"; Tata: "Gross Amount"
+const GRAND_LABEL = /\bgrand\s*total\b|\bnet\s*((estimate|bill)\s*)?amounts?\b|\btotal\s*amt\b|\bgross\s*amount\b/i;
+const TOTAL_LABEL = /\btotal\b|\bnet\s*((estimate|bill)\s*)?amounts?\b|\bgross\s*amount\b|\b(part|labou?r)\s*(amt|amount)\b/i;
 
 /** Parts / labour from the heading between the header (or the previous section) and this section's first row; null = unknown. */
 function kindOf(first: RawRow, prevRow: RawRow | undefined, lines: NonItemLine[]): 'part' | 'labour' | null {
@@ -242,12 +300,13 @@ function kindOf(first: RawRow, prevRow: RawRow | undefined, lines: NonItemLine[]
 export function parseEstimate(pages: PdfToken[][]): ParseOutcome {
   const first = parseWith(pages, false);
   if (first.ok) return first;
-  const second = parseWith(pages, true);   // each reading must tie to printed figures, so trying both is safe
-  return second.ok ? second : first;
+  // each reading must tie to printed figures, so trying others is safe
+  const other = [parseWith(pages, true), parseWith(pages, false, true)].find(r => r.ok);
+  return other ?? first;
 }
 
-function parseWith(pages: PdfToken[][], preTax: boolean): ParseOutcome {
-  const read = readRows(pages);
+function parseWith(pages: PdfToken[][], preTax: boolean, stacked = false): ParseOutcome {
+  const read = readRows(pages, stacked);
   if ('declined' in read) return { ok: false, reason: read.declined };
   const { rows, nonItemLines } = read;
   const grands = nonItemLines.filter(l => GRAND_LABEL.test(l.text) && l.nums.length);
@@ -269,16 +328,26 @@ function parseWith(pages: PdfToken[][], preTax: boolean): ParseOutcome {
   const sections: RawRow[][] = [];
   for (const r of rows) { if (r.sr === 1) sections.push([]); sections[sections.length - 1].push(r); }
   let computed = false;   // some row total is taxable x (1+gst), not printed
+  let footerRated = false, inclusiveSum = 0;   // tax-inclusive bare rows are trusted only beside a section whose tax was visibly added
   const out: ParsedEstimate = { spare_parts: [], labour_items: [], painting_items: [], gross_amount: gross };
   for (const [i, sec] of sections.entries()) {
     if (sec.some((r, k) => r.sr !== k + 1)) return { ok: false, reason: `serial gap in section ${i + 1}` };
     const built = sec.map(r => toItem(r, preTax));
     if (built.some(b => !b)) return { ok: false, reason: `section ${i + 1}: a row has no readable amount` };
-    if (built.some(b => !b!.printedTotal)) computed = true;
-    const items = built.map(b => b!.item as any);
-    const key = built.every(b => b!.printedTotal) ? 'total_amount' : 'taxable_amount';
-    const secSum = sum(items.map(it => it[key] as number));
-    if (!labelled.some(n => Math.abs(n - secSum) <= 1)) return { ok: false, reason: `section ${i + 1} sum ${round2(secSum)} matches no printed subtotal` };
+    const noRate = built.filter(b => b!.noRate).length;
+    if (noRate && noRate < built.length) return { ok: false, reason: `section ${i + 1}: some rows print a tax rate and some do not` };
+    let items = built.map(b => b!.item as any);
+    if (noRate) {
+      const taxed = footerTax(items, labelled);
+      if (!taxed) return { ok: false, reason: `section ${i + 1}: rows have no tax rate and no printed subtotal settles one` };
+      items = taxed.items;
+      if (taxed.inclusive) inclusiveSum += sum(items.map(it => it.total_amount)); else { computed = true; footerRated = true; }
+    } else {
+      if (built.some(b => !b!.printedTotal)) computed = true;
+      const key = built.every(b => b!.printedTotal) ? 'total_amount' : 'taxable_amount';
+      const secSum = sum(items.map(it => it[key] as number));
+      if (!labelled.some(n => Math.abs(n - secSum) <= 1)) return { ok: false, reason: `section ${i + 1} sum ${round2(secSum)} matches no printed subtotal` };
+    }
     const kind = kindOf(sec[0], rows[rows.indexOf(sec[0]) - 1], nonItemLines);
     for (const it of items) {
       const labour = kind ? kind === 'labour' : /^9987/.test(it.hsn_sac);
@@ -287,6 +356,8 @@ function parseWith(pages: PdfToken[][], preTax: boolean): ParseOutcome {
       else out.labour_items.push(it);
     }
   }
+  // a pre-tax "Gross Amount" would also tie: only trust it when the document visibly adds tax to another section (Maruti estimates)
+  if (inclusiveSum && !footerRated) return { ok: false, reason: 'rows print no tax rate and no section shows tax being added' };
   const all = [...out.spare_parts, ...out.labour_items, ...out.painting_items];
   if (Math.abs(sum(all.map(it => it.total_amount)) - gross) > (computed ? Math.max(1, all.length * 0.01) : Math.max(5, gross * 0.001))) return { ok: false, reason: 'rows do not add up to the grand total' };
   return { ok: true, data: out };
