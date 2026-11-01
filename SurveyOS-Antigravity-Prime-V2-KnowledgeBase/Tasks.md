@@ -1,7 +1,16 @@
 # Active Tasks
 
-> Last updated: 2026-11-01 by Claude Code (Scan chase import and Ask)
+> Last updated: 2026-11-01 by Claude Code (Scan Drive status sync)
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
+
+---
+
+## In Progress: Scan Drive status sync (Plan 3 Task 5, built 2026-11-01 on main, NOT deployed or pushed)
+- [x] `src/lib/drive/scan-status.ts`: port of Scan's `StatusFile` codec and merge (same tests). `scan-status-sync.ts`: find `SurveyOS/Phone Scans/<folder>` by `appProperties.claimId`, read/merge/write `_surveyos-status.json`.
+- [x] Claim open (`AuthSyncWrapper`) refreshes `scanChase` from the file; a document upload (`sink.ts`, source `upload`) marks the base DocType slot received by Prime.
+- [ ] Owner: try in a signed-in browser with a phone that has Drive backup on (not tried yet).
+- [ ] Plan 4: Prime writes `status: "completed"` when the claim is completed.
+- [ ] Deferred: asks logged in Prime's Ask dialog are not written to the file (contract: Prime writes the slot only).
 
 ---
 

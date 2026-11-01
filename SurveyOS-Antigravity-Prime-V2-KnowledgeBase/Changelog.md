@@ -2,6 +2,16 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-01 (Claude Code) — Scan Drive status sync
+- feat(drive): Prime reads and writes SurveyOS Scan's `_surveyos-status.json` in `SurveyOS/Phone Scans/<folder>/` (folder found by `appProperties.claimId`, oldest first). Contract: `SurveyOS Scan/docs/handover/scan-drive-status.md`.
+  - `scan-status.ts`: codec + merge ported from Scan's `StatusFile.kt` (newest `at` wins per slot/contact field, ties keep local, asks union by at+to, `status` from remote only, whole-second IST times).
+  - On claim open: `scanChase` (slots, contacts, asks) refreshed from the file, unless a later manifest import is fresher.
+  - On a document upload into a claim with `scanClaimId`: slot `<DocType>` = `{state:"received", by:"prime", at}` merged and written (PATCH in place, else create).
+  - No token, no folder or a network error: nothing happens, one console warning per session, no toast. Prime never writes `status: "completed"` yet (Plan 4).
+  - `driveRequest` and `findFolder` in `src/lib/drive/index.ts` are now exported.
+- Not pushed, not deployed. Session log `Sessions/2026-11-01-scan-drive-status.md`.
+- Scan impact: none to Scan code; Prime now follows the existing contract `scan-drive-status.md`. A change to Scan's `StatusFile` merge rules needs the same change in `scan-status.ts`.
+
 ## 2026-11-01 (Claude Code) — Parser reads Maruti and Tata
 - feat(ai): `row-parser.ts` now reads Maruti estimates and final bills, and Tata DTC / INTRA / Consolidated invoices.
   - Total labels "Net Estimate Amounts", "Net Bill Amount", "Gross Amount"; serial heading "Srl.".

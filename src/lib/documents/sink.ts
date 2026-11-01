@@ -10,6 +10,7 @@ import { useClaimStore } from '@/stores/claim-store';
 import { getStoredRootHandle } from '@/lib/local-sync/directory-handle';
 import { writeDocuments, PermissionDeniedError, type FolderInput } from './folder';
 import { DOC_TYPE_LABEL } from '@/types/documents';
+import { markReceivedInScan } from '@/lib/drive/scan-status-sync';
 
 // Saves run one at a time so two callers never race on the same index snapshot.
 let queue: Promise<unknown> = Promise.resolve();
@@ -44,6 +45,7 @@ async function doSave(
     }
     useClaimStore.getState().updateClaim({ documents: next.documents, documentsFolder: next.documentsFolder });
     toast.success(`${DOC_TYPE_LABEL[type]} saved to the claim folder`, { duration: 2500 });
+    if (source === 'upload') void markReceivedInScan(useClaimStore.getState().currentClaim, type); // Scan's status file, quiet on failure
     return written;
   } catch (err) {
     const text = err instanceof Error ? err.message : String(err);

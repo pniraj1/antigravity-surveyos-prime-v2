@@ -181,7 +181,7 @@ export function linkGoogleDrive(): Promise<boolean> {
 
 // ─── Drive API helpers ────────────────────────────────────────────────────────
 
-async function driveRequest(url: string, options: RequestInit = {}): Promise<Response> {
+export async function driveRequest(url: string, options: RequestInit = {}): Promise<Response> {
   const token = getDriveToken();
   if (!token) throw new Error('Drive not linked. Please link your Google Drive first.');
 
@@ -206,7 +206,7 @@ async function driveRequest(url: string, options: RequestInit = {}): Promise<Res
 }
 
 /** Find a folder by name under a given parent (undefined = root). Returns ID or null. */
-async function findFolder(name: string, parentId?: string): Promise<string | null> {
+export async function findFolder(name: string, parentId?: string): Promise<string | null> {
   const q = parentId
     ? `name='${name}' and mimeType='application/vnd.google-apps.folder' and '${parentId}' in parents and trashed=false`
     : `name='${name}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;

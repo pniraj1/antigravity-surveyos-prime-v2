@@ -13,6 +13,7 @@ import { useClaimStore } from '@/stores/claim-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { getClaim } from '@/lib/storage/indexeddb';
 import { logger } from '@/lib/utils/logger';
+import { syncScanStatus } from '@/lib/drive/scan-status-sync';
 
 /**
  * A wrapper component that initializes global Auth and Cloud Sync listeners.
@@ -48,6 +49,12 @@ export function AuthSyncWrapper({ children }: { children: React.ReactNode }) {
         });
     }
   }, [currentClaimId, currentClaim, loadClaim]);
+
+  // Scan's Drive status file: refresh scanChase once per claim open (no-op without scanClaimId or Drive token).
+  const openClaimId = currentClaim?.id;
+  useEffect(() => {
+    if (openClaimId) void syncScanStatus(useClaimStore.getState().currentClaim);
+  }, [openClaimId]);
 
   return (
     <>
