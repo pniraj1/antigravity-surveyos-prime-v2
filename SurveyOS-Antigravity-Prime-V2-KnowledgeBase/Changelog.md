@@ -8,7 +8,7 @@
   - Maruti rows that print no tax rate: the one GST rate whose with-tax subtotal is printed is applied; otherwise the rows are taken as tax-inclusive (rate left blank, app default 18%).
   - Tata headings over several lines: amount columns found by where the amounts right-align, named by the heading words above (fallback reading, only after the normal one declines).
   - Quantities like "2.000" were read as 1; fixed.
-- Real-PDF check: all 23 sample PDFs (owner's 18 + 5 new) read with 0 calls, every gross = printed total. Not pushed, not deployed.
+- Real-PDF check: all 23 sample PDFs (owner's 18 + 5 new) read with 0 calls, every gross = printed total. Deployed to the sandbox (hosting `surveyos-v2-antigravity-in` + `aiProxy`); not prod, not pushed.
 - Scan impact: none.
 
 ## 2026-11-01 (Claude Code) — Scan chase import and Ask for documents
