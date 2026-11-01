@@ -250,6 +250,52 @@ describe('parseEstimate', () => {
     expect(o.data.spare_parts[0]).toMatchObject({ taxable_amount: 100, total_amount: 118, gst_percent: 18 });
   });
 
+  it('a bare Tax column holding amounts gives taxable = total - tax', () => {
+    const page = [
+      ...line(700, [[20, 'Seq.'], [80, 'Description'], [300, 'Part'], [330, 'Amt'], [385, 'Qty'], [430, 'Tax'], [500, 'Total']]),
+      ...line(680, [[20, '1'], [80, 'DOOR'], [302, '100.00'], [387, '1.0'], [430, '18.00'], [502, '118.00']]),
+      ...line(670, [[20, '2'], [80, 'LAMP'], [302, '200.0'], [387, '1.0'], [430, '36.00'], [502, '236.00']]),
+      ...line(620, [[20, 'Total'], [60, 'Amt'], [80, ':'], amt(300, '354.00')]),
+    ];
+    const o = parseEstimate([page]);
+    if (!o.ok) throw new Error(o.reason);
+    expect(o.data.spare_parts[1]).toMatchObject({ taxable_amount: 200, total_amount: 236 });
+  });
+
+  it('a bare Tax column holding "18%" with a pre-tax Total ties through taxable', () => {
+    const page = [
+      ...line(700, [[20, 'Seq.'], [80, 'Description'], [300, 'Part'], [330, 'Amt'], [385, 'Qty'], [430, 'Tax'], [500, 'Total']]),
+      ...line(680, [[20, '1'], [80, 'DOOR'], [302, '100.00'], [387, '1.0'], [430, '18%'], [502, '100.00']]),
+      ...line(630, [[20, 'Sub'], [50, 'Total'], amt(300, '100.00')]),
+      ...line(620, [[20, 'Grand'], [60, 'Total'], amt(300, '118.00')]),
+    ];
+    const o = parseEstimate([page]);
+    if (!o.ok) throw new Error(o.reason);
+    expect(o.data.spare_parts[0]).toMatchObject({ taxable_amount: 100, total_amount: 118, gst_percent: 18 });
+  });
+
+  it('a SAC header keeps the SAC out of the Tax% column', () => {
+    const page = [
+      ...line(700, [[10, 'Srl'], [60, 'Description'], [150, 'SAC'], [200, 'Tax'], [220, '%'], [260, 'Qty.'], [330, 'Amount']]),
+      ...line(680, [[10, '1'], [60, 'DENT'], [150, '998729'], [200, '18%'], [262, '1.0'], amt(360, '100.00')]),
+      ...line(630, [[60, 'Sub'], [90, 'Total'], amt(360, '100.00')]),
+      ...line(620, [[60, 'Grand'], [100, 'Total'], amt(360, '118')]),
+    ];
+    const o = parseEstimate([page]);
+    if (!o.ok) throw new Error(o.reason);
+    expect(o.data.labour_items[0]).toMatchObject({ hsn_sac: '998729', gst_percent: 18 });
+  });
+
+  it('a subtotal printed 3pt below its label still counts as a labelled line', () => {
+    const page = [
+      ...line(700, [[10, 'Srl'], [60, 'Description'], [200, 'Qty.'], [260, 'Taxable'], [320, 'Tax%']]),
+      ...line(680, [[10, '1'], [60, 'DOOR'], [205, '1'], amt(295, '100.00'), amt(340, '18')]),
+      ...line(620, [[10, 'Part'], [40, 'Amt'], [100, 'Grand'], [140, 'Total'], amt(295, '118')]),
+      ...line(617, [amt(200, '100.00')]),
+    ];
+    expect(parseEstimate([page]).ok).toBe(true);
+  });
+
   it('a percentage printed beside the amount does not hide the amount', () => {
     const page = [
       ...line(700, [[10, 'Srl'], [60, 'Description'], [200, 'Tax%'], [260, 'Qty.'], [310, 'Ins'], [330, 'Share'], [350, 'Amount']]),

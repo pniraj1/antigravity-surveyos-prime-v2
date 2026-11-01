@@ -3,7 +3,7 @@
 // to its neighbours, so wrapped text and split numbers ("8,845." / "76") stay with their row.
 
 export interface PdfToken { s: string; x: number; y: number; w: number }   // y grows upward (pdf.js)
-export type Field = 'sr_no' | 'part_number' | 'description' | 'hsn_sac' | 'quantity' | 'unit_price' | 'taxable_amount' | 'total_amount' | 'gst_percent';
+export type Field = 'sr_no' | 'part_number' | 'description' | 'hsn_sac' | 'quantity' | 'unit_price' | 'taxable_amount' | 'total_amount' | 'gst_percent' | 'tax';   // tax: a bare "Tax" header, holding either a rate (18%) or an amount
 export interface RawRow { sr: number; page: number; cells: Partial<Record<Field, string>>; text: string; y: number; x: number; lead?: string }   // lead: text above the serial line, on section-start rows only   // page 0-based
 export interface NonItemLine { page: number; text: string; nums: number[]; y: number; x: number }
 
@@ -13,12 +13,12 @@ const HEADER_SYNONYMS: Record<string, Field> = {
   'part number': 'part_number', 'part no': 'part_number', 'part #': 'part_number',
   'description': 'description', 'particulars': 'description', 'part description': 'description',
   'labour description': 'description', 'part labor description': 'description',
-  'hsn': 'hsn_sac', 'hsn/sac': 'hsn_sac',
+  'hsn': 'hsn_sac', 'hsn/sac': 'hsn_sac', 'sac': 'hsn_sac',
   'qty': 'quantity', 'qty.': 'quantity',
   'rate': 'unit_price', 'rate/unit': 'unit_price', 'part amt': 'unit_price', 'labour amt': 'unit_price',
   'taxable': 'taxable_amount', 'labor': 'taxable_amount', 'labour': 'taxable_amount',   // Maruti: labour amount sits under bare "Labor"
   'total': 'total_amount', 'amount': 'total_amount', 'ins.amt': 'total_amount', 'ins share amount': 'total_amount', 'total amt': 'total_amount',
-  'tax%': 'gst_percent', 'tax %': 'gst_percent',
+  'tax%': 'gst_percent', 'tax %': 'gst_percent', 'tax': 'tax',
 };
 
 /** '2,27,794.00'→227794; fragments like '8,845.' or '8708.99.00' → null. */
@@ -43,7 +43,7 @@ export function tokensFromItems(items: Array<{ str: string; transform: number[];
 function linesOf(toks: PdfToken[]): PdfToken[][] {
   const lines: PdfToken[][] = [];
   for (const t of [...toks].sort((a, b) => b.y - a.y)) {
-    const l = lines.find(l => Math.abs(l[0].y - t.y) <= 2);
+    const l = lines.find(l => Math.abs(l[0].y - t.y) <= 4);   // a figure may sit a few pt below its label
     if (l) l.push(t); else lines.push([t]);
   }
   return lines.map(l => l.sort((a, b) => a.x - b.x));
@@ -115,22 +115,24 @@ function pickCell(texts: string[]): string | undefined {
 }
 
 const PERCENT = /^\d+(\.\d+)?%$/;   // a share like "100.00%" sits beside an amount but is never one
-const RIGHT_EDGE_SLACK = 3;   // pt
-const AMOUNT_FIELDS: ReadonlySet<Field | null> = new Set<Field | null>(['quantity', 'unit_price', 'taxable_amount', 'total_amount', 'gst_percent', null]);
+const RIGHT_EDGE_SLACK = 8;   // pt
+const AMOUNT_FIELDS: ReadonlySet<Field | null> = new Set<Field | null>(['quantity', 'unit_price', 'taxable_amount', 'total_amount', 'gst_percent', 'tax', null]);
 
 /** Text goes by centre. Amounts are right-aligned under their header, so a wide one starts left of its column: a number whose centre falls in an amount (or unmapped) column is matched by right edge instead; numeric words in description/part/HSN columns stay put. */
 function columnOf(t: PdfToken, cols: Column[]): Column | undefined {
   const m = t.x + t.w / 2;
   const byCentre = cols.find(c => m >= c.start && m < c.end);
   if (parseMoney(t.s) === null || (byCentre && !AMOUNT_FIELDS.has(byCentre.field))) return byCentre;
-  return cols.find(c => c.right >= t.x + t.w - RIGHT_EDGE_SLACK) ?? cols[cols.length - 1];
+  const right = t.x + t.w;   // the closest header right edge wins; a header narrower than its numbers falls back to the centre column
+  const near = cols.filter(c => Math.abs(c.right - right) <= RIGHT_EDGE_SLACK).sort((a, b) => Math.abs(a.right - right) - Math.abs(b.right - right))[0];
+  return near ?? byCentre ?? cols[cols.length - 1];
 }
 
 function rowCells(band: PdfToken[], anchor: PdfToken, cols: Column[]): Partial<Record<Field, string>> {
   const perField = new Map<Field, string[]>();
   for (const c of cols) {
     if (!c.field) continue;
-    const text = band.filter(t => columnOf(t, cols) === c && (c.field === 'gst_percent' || !PERCENT.test(t.s))).sort(byReading).map(t => t.s).join(' ');
+    const text = band.filter(t => columnOf(t, cols) === c && (c.field === 'gst_percent' || c.field === 'tax' || !PERCENT.test(t.s))).sort(byReading).map(t => t.s).join(' ');
     perField.set(c.field, [...(perField.get(c.field) ?? []), text]);
   }
   const cells: Partial<Record<Field, string>> = {};
@@ -189,11 +191,13 @@ const num = (s: string | undefined) => (s === undefined ? null : parseMoney(s.re
 /** Estimate row shape of prompts.ts; null when taxable and total cannot both be had without guessing. */
 function toItem(r: RawRow, preTax: boolean): { item: Record<string, unknown>; printedTotal: boolean } | null {
   const c = r.cells;
-  const gst = num(c.gst_percent);
+  const taxIsRate = c.tax?.endsWith('%') === true;
+  const taxAmount = c.tax !== undefined && !taxIsRate ? num(c.tax) : null;
+  const gst = num(c.gst_percent) ?? (taxIsRate ? num(c.tax) : null);
   // preTax: the Amount column is printed before tax (Kia and Maruti invoices), so it is the taxable value
   const asTaxable = preTax && c.taxable_amount === undefined && gst !== null;
   const printed = asTaxable ? null : num(c.total_amount);
-  const taxable = num(c.taxable_amount) ?? (asTaxable ? num(c.total_amount) : printed !== null && gst !== null ? round2(printed / (1 + gst / 100)) : null);
+  const taxable = num(c.taxable_amount) ?? (asTaxable ? num(c.total_amount) : printed !== null && gst !== null ? round2(printed / (1 + gst / 100)) : printed !== null && taxAmount !== null ? round2(printed - taxAmount) : null);
   const total = printed ?? (taxable !== null && gst !== null ? round2(taxable * (1 + gst / 100)) : null);
   if (taxable === null || total === null) return null;
   const item = {
