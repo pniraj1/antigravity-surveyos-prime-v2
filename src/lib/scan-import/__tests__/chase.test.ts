@@ -55,4 +55,11 @@ describe('planChase', () => {
     expect(plan.fills).toEqual([]);
     expect(planChase(c, chase, 'old').conflict).toBeNull();
   });
+
+  it('keepsPrimeOriginAsksOnReimport', () => {
+    const x = ask('2026-11-01T10:00:00+05:30', ['rc']);
+    const y = ask('2026-11-02T10:00:00+05:30', ['dl']);
+    const plan = planChase(claim((c) => ({ ...c, scanChase: { importedAt: 'z', asks: [x] } })), { ...chase, asks: [y] }, undefined);
+    expect(plan.next?.asks).toEqual([x, y]);
+  });
 });

@@ -5,7 +5,20 @@ import { defaultRecipient, type ContactRole } from './ask-message';
 export interface DialogDoc { key: string; label: string; reason: string | null }
 export interface Recipient { role: ContactRole; name: string; phone: string; email: string }
 
-const labelOf = (key: string) => DOC_TYPE_LABEL[key as DocType] ?? key;
+/** Scan slot keys are `type`, `type:title` or `... (n)`: split into base type and title. */
+const parseKey = (key: string) => {
+  const i = key.search(/:| \(/);
+  if (i < 0) return { base: key, title: '' };
+  const title = key[i] === ':' ? key.slice(i + 1).replace(/ \(\d+\)$/, '').trim() : '';
+  return { base: key.slice(0, i), title };
+};
+const labelOf = (key: string) => {
+  const { base, title } = parseKey(key);
+  const label = DOC_TYPE_LABEL[base as DocType] ?? base;
+  if (!title) return label;
+  return base === 'other' ? title : `${label} – ${title}`;
+};
+const roleOf = (key: string) => defaultRecipient(parseKey(key).base as DocType);
 
 /** Scan path: missing and rejected slots. Otherwise every non-photo DocType. */
 export function dialogDocs(claim: ClaimData): DialogDoc[] {
@@ -21,7 +34,7 @@ export function dialogDocs(claim: ClaimData): DialogDoc[] {
 
 /** Keys ticked for a recipient: only on the Scan path (no slot states = nothing ticked). */
 export const preTicked = (claim: ClaimData, role: ContactRole): string[] =>
-  claim.scanChase?.slotStates ? dialogDocs(claim).filter((d) => defaultRecipient(d.key as DocType) === role).map((d) => d.key) : [];
+  claim.scanChase?.slotStates ? dialogDocs(claim).filter((d) => roleOf(d.key) === role).map((d) => d.key) : [];
 
 /** Prime's own fields win; Scan's contacts fill the rest. */
 export function recipients(claim: ClaimData): Recipient[] {

@@ -34,6 +34,21 @@ describe('dialogDocs / preTicked', () => {
   });
 });
 
+describe('slot key normalisation', () => {
+  const c = claim({ scanChase: { importedAt: 'x', slotStates: { 'invoice:Extra': 'missing', 'estimate (2)': 'missing', 'other:Bank letter': 'missing' } } });
+  it('labels and keeps original keys', () => {
+    expect(dialogDocs(c)).toEqual([
+      { key: 'invoice:Extra', label: 'Invoice – Extra', reason: null },
+      { key: 'estimate (2)', label: 'Estimate', reason: null },
+      { key: 'other:Bank letter', label: 'Bank letter', reason: null },
+    ]);
+  });
+  it('recipients by base type', () => {
+    expect(preTicked(c, 'garage')).toEqual(['invoice:Extra', 'estimate (2)']);
+    expect(preTicked(c, 'insured')).toEqual(['other:Bank letter']);
+  });
+});
+
 describe('recipients / istNow', () => {
   it('Prime wins, Scan fills', () => {
     const c = claim({ policy: { insuredName: 'Ram', insuredMobile: '' }, scanChase: { importedAt: 'x', contacts: { insured: { name: 'Other', phone: '9822012345', email: 'a@b.in' } } } });
