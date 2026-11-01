@@ -117,7 +117,8 @@ export function BringPhoneScans({ onNeedsFolder, onAllowAccess }: Props) {
       });
       report(result, claimId, true);
       if (mismatched.length) toast.warning(`Not imported yet (still uploading from the phone?): ${mismatched.join(', ')}. Try again shortly.`, { duration: 8000 });
-      if (moveFailed) toast.warning(`Saved, but couldn't move ${moveFailed} file(s) on Drive. They move on the next import.`, { duration: 8000 });
+      if (result.status === 'done' && result.kept?.length) toast.warning(result.kept.join('. '), { duration: 8000 });
+      if (moveFailed) toast.warning("Saved. Some files couldn't be moved on Drive — tap Import from Drive again later.", { duration: 8000 });
     } catch (e) {
       toast.error(msg(e));
     } finally {
@@ -203,7 +204,7 @@ export function BringPhoneScans({ onNeedsFolder, onAllowAccess }: Props) {
             <DialogHeader>
               <DialogTitle>Different claim on the phone</DialogTitle>
               <DialogDescription>
-                This zip is from a different claim on the phone. Import it and link this claim to it?
+                These phone scans are from a different claim on the phone. Import them and link this claim to it?
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="gap-2">

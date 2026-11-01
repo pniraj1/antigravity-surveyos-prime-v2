@@ -27,7 +27,9 @@ export type ImportResult =
   /** `failed`: files whose save failed (the sink already toasted why); re-importing retries them safely. */
   | { status: 'done'; added: number; skipped: number; failed: number; notes: unknown; contactsFilled: number;
       /** Drive source only: ids of the source files whose content the claim now holds (saved now, or already there). */
-      inPrime?: string[] };
+      inPrime?: string[];
+      /** Drive source only: types left untouched because some of their pages could not be had ("<label>: n pages ..."). */
+      kept?: string[] };
 
 export interface ImportOptions {
   /** Asked only on a vehicle mismatch; false aborts before anything is written. */
@@ -121,6 +123,7 @@ export async function importScanFiles(
   let skipped = 0;
   let failed = 0;
   const inPrime: string[] = [];
+  const kept: string[] = [];
   const stillHere = () => useClaimStore.getState().currentClaim?.id === claim.id;
   for (const [type, items] of byType) {
     if (!stillHere()) return { status: 'claim-changed', added };
@@ -130,6 +133,7 @@ export async function importScanFiles(
     const refill = !MULTI_FILE_TYPES.has(type) && present.length < items.length;
     const have = await existingByHash(claim, type, refill ? undefined : new Set(present.map((i) => i.entry!.size)));
     const files: Array<{ blob: Blob; name: string; sha: string; driveFileId?: string }> = [];
+    let unavailable = 0;
     for (const { f, entry } of items) {
       const name = f.path.split('/').pop() ?? f.path;
       // The real bytes, never the manifest's sha256: a stale manifest must not skip a new file.
@@ -137,8 +141,11 @@ export async function importScanFiles(
       else if (refill) {
         const hit = have.get(f.sha256);
         if (hit) files.push({ blob: typedBlob(hit.blob, name), name, sha: f.sha256, driveFileId: hit.doc.driveFileId });
+        else unavailable++;
       }
     }
+    // A page found neither on Drive nor here: rewriting the type would drop it, so leave the type (and its Drive files) as is.
+    if (unavailable) { kept.push(`${DOC_TYPE_LABEL[type]}: ${unavailable} page${unavailable === 1 ? '' : 's'} not available, kept as is`); continue; }
     const presentIds = present.flatMap((i) => driveFileIds?.get(i.f.path) ?? []);
     const seen = new Set(have.keys());
     const fresh = files.filter((f) => {
@@ -163,7 +170,7 @@ export async function importScanFiles(
   if (!stillHere()) return { status: 'claim-changed', added };
   return {
     status: 'done', added, skipped, failed, notes: manifest.notes ?? null, contactsFilled: applyChase(manifest, relink),
-    ...(driveFileIds && { inPrime }),
+    ...(driveFileIds && { inPrime, kept }),
   };
 }
 

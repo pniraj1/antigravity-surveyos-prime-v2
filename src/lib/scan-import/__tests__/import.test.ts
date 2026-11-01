@@ -350,4 +350,18 @@ describe('importScanFiles (Drive source)', () => {
     expect(state.driveIds).toEqual(['id:Chassis/Chassis 1.jpg', 'id:Chassis/Chassis 2.jpg', 'id:Chassis/Chassis 3.jpg']);
     expect(r).toMatchObject({ added: 3, inPrime: ['id:Chassis/Chassis 3.jpg'] });
   });
+
+  it('singleFileTypeWithAPageNowhereIsKeptAsIs', async () => {
+    const c = (n: number) => ({ path: `Chassis/Chassis ${n}.jpg`, type: 'chassisPhoto', data: `chassis ${n}` });
+    const first = driveSource([c(1), c(2)], [c(1).path, c(2).path]);
+    await importScanFiles(first.files, { confirmVehicle: yes, driveFileIds: first.driveFileIds });
+    // Page 2's local copy is gone (or its Drive file did not match the manifest): no local hit, not in the map.
+    const page2 = Object.values(state.claim!.documents!).find((d) => d.relPath.endsWith('Chassis 2.jpg'))!;
+    state.bytes.set(page2.id, new Blob(['changed on disk']));
+    state.saves = [];
+    const next = driveSource([c(1), c(2), c(3)], [c(3).path]);
+    const r = await importScanFiles(next.files, { confirmVehicle: yes, driveFileIds: next.driveFileIds });
+    expect(state.saves).toEqual([]);
+    expect(r).toMatchObject({ status: 'done', added: 0, inPrime: [], kept: ['Chassis Number Photo: 1 page not available, kept as is'] });
+  });
 });
