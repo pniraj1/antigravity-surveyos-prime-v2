@@ -248,6 +248,7 @@ export function AssessmentTab() {
         onSmartFix={reviewData ? () => smartFix(reviewData.key) : undefined}
         smartFixProgress={reviewProgress}
         smartFixed={reviewData?.smartFixed}
+        source={reviewData?.source}
       />
 
       <FixEstimateDialog open={fixOpen} onClose={() => setFixOpen(false)} />

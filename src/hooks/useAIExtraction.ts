@@ -90,7 +90,7 @@ export function useAIExtraction() {
 
     try {
       const forceDocMode = (!aiDocMode || aiDocMode === 'auto') ? undefined : aiDocMode;
-      const { data, images, findings, issues } = await extractDocument(
+      const { data, images, findings, issues, source } = await extractDocument(
         key,
         fileList,
         (msg: string, pagesDone?: number, pagesTotal?: number) => {
@@ -108,7 +108,7 @@ export function useAIExtraction() {
       if (!useExtractionStore.getState().jobs[key]) return;
 
       setExtractedData(key, stripPageTags(data));
-      finishJob(key, { key, data, file: primary, findings });
+      finishJob(key, { key, data, file: primary, findings, source });
 
       for (const issue of issues) toast.warning(issue, { duration: 12000 });
       const label = key === 'estimate' ? 'Estimate' : key === 'final-bill' ? 'Final Bill' : key.toUpperCase();

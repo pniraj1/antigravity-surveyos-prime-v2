@@ -5,6 +5,15 @@ import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 const data = { spare_parts: [{ sr_no: 1, total_amount: 10 }], labour_items: [], painting_items: [], gross_amount: 10 };
 const base = { isOpen: true, onClose: () => {}, onConfirm: () => {}, title: 'estimate', data };
 
+describe('AIReviewDialog — parser source note', () => {
+  it('shows the note only for source=parser', () => {
+    const note = 'Read from the PDF text — totals match';
+    expect(renderToStaticMarkup(<AIReviewDialog {...base} source="parser" />)).toContain(note);
+    expect(renderToStaticMarkup(<AIReviewDialog {...base} source="ai" />)).not.toContain(note);
+    expect(renderToStaticMarkup(<AIReviewDialog {...base} />)).not.toContain(note);
+  });
+});
+
 describe('AIReviewDialog — Check before applying card', () => {
   it('renders nothing extra on a clean read', () => {
     const html = renderToStaticMarkup(<AIReviewDialog {...base} findings={[]} />);

@@ -366,6 +366,7 @@ export function BillCheckTab() {
         onSmartFix={reviewData ? () => smartFix(reviewData.key) : undefined}
         smartFixProgress={reviewProgress}
         smartFixed={reviewData?.smartFixed}
+        source={reviewData?.source}
       />
 
       {pendingGate && (

@@ -20,6 +20,8 @@ interface AIReviewDialogProps {
   /** Non-empty while Smart Fix is running; shown inline in the card. */
   smartFixProgress?: string;
   smartFixed?: boolean;
+  /** 'parser' = rows read from the PDF text in code and tied to printed totals. UI only. */
+  source?: 'parser' | 'ai';
 }
 
 const INR = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 });
@@ -113,7 +115,7 @@ function AuditCard({ audit }: { audit?: { tax_posture?: string; columns_detected
   );
 }
 
-export function AIReviewDialog({ isOpen, onClose, onConfirm, onReScan, title, data, evidenceImages = [], findings = [], onSmartFix, smartFixProgress = '', smartFixed = false }: AIReviewDialogProps) {
+export function AIReviewDialog({ isOpen, onClose, onConfirm, onReScan, title, data, evidenceImages = [], findings = [], onSmartFix, smartFixProgress = '', smartFixed = false, source }: AIReviewDialogProps) {
   const [feedback, setFeedback] = useState('');
 
   if (!isOpen) return null;
@@ -198,6 +200,10 @@ export function AIReviewDialog({ isOpen, onClose, onConfirm, onReScan, title, da
                     </tr>
                   </tbody>
                 </table>
+
+                {source === 'parser' && (
+                  <p className="mt-2 text-[11px] text-muted-foreground">Read from the PDF text — totals match</p>
+                )}
 
                 <p className="mt-2.5 text-[11px] leading-relaxed text-muted-foreground">
                   Confirm the item count and gross total against the last page of the bill.

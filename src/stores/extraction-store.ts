@@ -34,6 +34,8 @@ export interface ExtractionResult {
   findings: Finding[];
   /** Smart Fix has run at least once on this result. */
   smartFixed?: boolean;
+  /** How the rows were read; UI-only, never saved to the claim. */
+  source?: 'parser' | 'ai';
 }
 
 export interface ExtractionJob {
