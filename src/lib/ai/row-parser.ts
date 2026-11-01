@@ -114,6 +114,7 @@ function pickCell(texts: string[]): string | undefined {
   return rev.find(t => parseMoney(t) !== 0) ?? rev[0];
 }
 
+const PERCENT = /^\d+(\.\d+)?%$/;   // a share like "100.00%" sits beside an amount but is never one
 const RIGHT_EDGE_SLACK = 3;   // pt
 const AMOUNT_FIELDS: ReadonlySet<Field | null> = new Set<Field | null>(['quantity', 'unit_price', 'taxable_amount', 'total_amount', 'gst_percent', null]);
 
@@ -129,7 +130,7 @@ function rowCells(band: PdfToken[], anchor: PdfToken, cols: Column[]): Partial<R
   const perField = new Map<Field, string[]>();
   for (const c of cols) {
     if (!c.field) continue;
-    const text = band.filter(t => columnOf(t, cols) === c).sort(byReading).map(t => t.s).join(' ');
+    const text = band.filter(t => columnOf(t, cols) === c && (c.field === 'gst_percent' || !PERCENT.test(t.s))).sort(byReading).map(t => t.s).join(' ');
     perField.set(c.field, [...(perField.get(c.field) ?? []), text]);
   }
   const cells: Partial<Record<Field, string>> = {};
@@ -183,14 +184,16 @@ export type ParseOutcome = { ok: true; data: ParsedEstimate } | { ok: false; rea
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const sum = (ns: number[]) => ns.reduce((a, b) => a + b, 0);
-const num = (s: string | undefined) => (s === undefined ? null : parseMoney(s));
+const num = (s: string | undefined) => (s === undefined ? null : parseMoney(s.replace(/%$/, '')));
 
 /** Estimate row shape of prompts.ts; null when taxable and total cannot both be had without guessing. */
-function toItem(r: RawRow): { item: Record<string, unknown>; printedTotal: boolean } | null {
+function toItem(r: RawRow, preTax: boolean): { item: Record<string, unknown>; printedTotal: boolean } | null {
   const c = r.cells;
   const gst = num(c.gst_percent);
-  const printed = num(c.total_amount);
-  const taxable = num(c.taxable_amount) ?? (printed !== null && gst !== null ? round2(printed / (1 + gst / 100)) : null);
+  // preTax: the Amount column is printed before tax (Kia and Maruti invoices), so it is the taxable value
+  const asTaxable = preTax && c.taxable_amount === undefined && gst !== null;
+  const printed = asTaxable ? null : num(c.total_amount);
+  const taxable = num(c.taxable_amount) ?? (asTaxable ? num(c.total_amount) : printed !== null && gst !== null ? round2(printed / (1 + gst / 100)) : null);
   const total = printed ?? (taxable !== null && gst !== null ? round2(taxable * (1 + gst / 100)) : null);
   if (taxable === null || total === null) return null;
   const item = {
@@ -216,6 +219,13 @@ function kindOf(first: RawRow, prevRow: RawRow | undefined, lines: NonItemLine[]
 
 /** Rows → estimate sections, accepted only when every section and the grand total tie to printed figures. */
 export function parseEstimate(pages: PdfToken[][]): ParseOutcome {
+  const first = parseWith(pages, false);
+  if (first.ok) return first;
+  const second = parseWith(pages, true);   // each reading must tie to printed figures, so trying both is safe
+  return second.ok ? second : first;
+}
+
+function parseWith(pages: PdfToken[][], preTax: boolean): ParseOutcome {
   const read = readRows(pages);
   if ('declined' in read) return { ok: false, reason: read.declined };
   const { rows, nonItemLines } = read;
@@ -240,7 +250,7 @@ export function parseEstimate(pages: PdfToken[][]): ParseOutcome {
   const out: ParsedEstimate = { spare_parts: [], labour_items: [], painting_items: [], gross_amount: gross };
   for (const [i, sec] of sections.entries()) {
     if (sec.some((r, k) => r.sr !== k + 1)) return { ok: false, reason: `serial gap in section ${i + 1}` };
-    const built = sec.map(toItem);
+    const built = sec.map(r => toItem(r, preTax));
     if (built.some(b => !b)) return { ok: false, reason: `section ${i + 1}: a row has no readable amount` };
     const items = built.map(b => b!.item as any);
     const key = built.every(b => b!.printedTotal) ? 'total_amount' : 'taxable_amount';

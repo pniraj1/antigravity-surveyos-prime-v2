@@ -236,4 +236,29 @@ describe('parseEstimate', () => {
     if (!o.ok) throw new Error(o.reason);
     expect(o.data.spare_parts[0]).toMatchObject({ taxable_amount: 100, total_amount: 119 });
   });
+
+  it('Amount column printed before tax (Tax% as "18%") ties through taxable', () => {
+    const page = [
+      ...line(700, [[10, 'Srl'], [60, 'Description'], [200, 'Tax%'], [260, 'Qty.'], [330, 'Amount']]),
+      ...line(680, [[10, '1'], [60, 'DOOR'], [200, '18%'], [262, '1.0'], amt(360, '100.00')]),
+      ...line(670, [[10, '2'], [60, 'LAMP'], [200, '18%'], [262, '1.0'], amt(360, '200.00')]),
+      ...line(620, [[60, 'Sub'], [90, 'Total'], amt(360, '300.00')]),
+      ...line(600, [[60, 'Grand'], [100, 'Total'], amt(360, '354')]),
+    ];
+    const o = parseEstimate([page]);
+    if (!o.ok) throw new Error(o.reason);
+    expect(o.data.spare_parts[0]).toMatchObject({ taxable_amount: 100, total_amount: 118, gst_percent: 18 });
+  });
+
+  it('a percentage printed beside the amount does not hide the amount', () => {
+    const page = [
+      ...line(700, [[10, 'Srl'], [60, 'Description'], [200, 'Tax%'], [260, 'Qty.'], [310, 'Ins'], [330, 'Share'], [350, 'Amount']]),
+      ...line(680, [[10, '1'], [60, 'DOOR'], [200, '18%'], [262, '1.0'], [312, '100.00%'], amt(385, '100.00')]),
+      ...line(620, [[60, 'Total'], amt(385, '100.00')]),
+      ...line(600, [[60, 'Grand'], [100, 'Total'], amt(385, '118')]),
+    ];
+    const o = parseEstimate([page]);
+    if (!o.ok) throw new Error(o.reason);
+    expect(o.data.gross_amount).toBe(118);
+  });
 });
