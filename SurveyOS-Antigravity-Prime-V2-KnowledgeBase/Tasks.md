@@ -5,6 +5,13 @@
 
 ---
 
+## In Progress: Parser-first extraction (built 2026-11-01 on main, NOT deployed or pushed)
+- [ ] Owner: approve a sandbox deploy, then upload a few digital estimates and confirm the "Read from the PDF text" note.
+- [ ] Follow-up: Maruti layout (grand total "Net Estimate Amounts"; parts include tax, labour excludes it).
+- [ ] Follow-up: Tata DTC / INTRA / Consolidated layouts (multi-line headers).
+- [ ] Phase 2: image-PDF hardening (spec §8): page-coverage retry, per-page totals message.
+- [ ] Deferred review minors: see `.superpowers` ledger summary in the session log.
+
 ## In Progress: Extraction bench (built 2026-10-31 on main, NOT deployed or pushed)
 - [x] Page-order fix, PDF text lines, per-page text/image, `/bench` (sandbox only), limits grouping (empty table), `?sandbox=true` production guard. See `Sessions/2026-10-31-extraction-bench.md`.
 - [ ] Owner: approve the sandbox deploy (functions `aiProxy` + hosting `surveyos-v2-antigravity-in`).

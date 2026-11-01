@@ -2,6 +2,15 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-01 (Claude Code) — Parser-first extraction for digital estimates and bills
+- feat(ai): `row-parser.ts` reads estimate/final-bill rows from pdf.js text positions with **no AI call**, and accepts them only when every section ties to a labelled subtotal (₹1) and the grand total ties; otherwise the AI path runs unchanged.
+  - Merged PDFs (a second estimate after the first grand total) always decline.
+  - A bare Tax figure is used only when it implies a standard GST rate.
+- feat(ai): one small header-only AI call (page 1 + last page) fills the header fields. `source: 'parser' | 'ai'` lives on `ExtractionResult` only; the review dialog notes "Read from the PDF text — totals match".
+- feat(bench): `/bench` has a "Row parser (no AI)" method.
+- Real-PDF check (owner's 18 PDFs): 9 read with 0 calls, 0 accepted wrongly. Maruti and Tata layouts decline to AI for now.
+- Commits `b8a18753..c17346e3` (spec, plan, 15 code commits). Not pushed, not deployed. Session log `Sessions/2026-11-01-parser-first-extraction.md`.
+
 ## 2026-10-31 (Claude Code) — Extraction bench, page-order fix, per-page text/image
 - fix(ai): gap-filled rows keep page order (`orderByPage`). This was the cause of page 2's rows showing before page 1's.
 - feat(ai): digital PDF text keeps lines and columns; text or image is decided per page; grouping by model limits from `page-limits.ts` (empty, so no change yet).
