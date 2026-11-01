@@ -1,5 +1,16 @@
 import { describe, it, expect, vi } from 'vitest';
-import { parserEligible, readHeader } from '../parser-first';
+import { parserEligible, readHeader, safeParse } from '../parser-first';
+
+vi.mock('../row-parser', () => ({ parseEstimate: (t: unknown[]) => { if (!t.length) throw new Error('odd layout'); return { ok: false, reason: 'x' }; } }));
+
+describe('safeParse', () => {
+  it('turns a parser throw into a decline', () => {
+    expect(safeParse([])).toEqual({ ok: false, reason: 'parser error: odd layout' });
+  });
+  it('passes through a normal outcome', () => {
+    expect(safeParse([[]])).toEqual({ ok: false, reason: 'x' });
+  });
+});
 
 const ok = { key: 'estimate', allText: true, fileCount: 1, override: undefined };
 

@@ -19,8 +19,8 @@ import { layoutLines, countAmountLines } from './text-lines';
 import { planChunks } from './group-pages';
 import { limitsFor, PAGE_LIMITS } from './page-limits';
 import { profilePages, pageRuns, chunkRuns } from './page-runs';
-import { tokensFromItems, parseEstimate, type PdfToken } from './row-parser';
-import { parserEligible, readHeader } from './parser-first';
+import { tokensFromItems, type PdfToken } from './row-parser';
+import { parserEligible, readHeader, safeParse } from './parser-first';
 
 /**
  * Extracts text content from a PDF page (if it has a text layer).
@@ -361,9 +361,10 @@ export async function extractDocument(
 
     // ── Parser-first: rows read in code, accepted only if they tie to the printed totals ──
     if (pageTokens && textLayers && parserEligible({ key, allText, fileCount: files.length, feedback, previousData, forceDocMode, override: getAITestOverride() })) {
-      const parsed = parseEstimate(pageTokens);
+      const parsed = safeParse(pageTokens);
       if (parsed.ok) {
         const header = await readHeader(key as 'estimate' | 'final-bill', textLayers, p => callAIGateway(p, [], 'json', job, session, signal));
+        if (signal?.aborted) throw abortError();
         const data = { ...header, ...parsed.data };
         const findings = toFindings(rowCheck(data, textLayers)).filter(f => f.kind !== 'gap');
         console.log(`[Parser] read ${countRows(data)} rows, tie ok`);

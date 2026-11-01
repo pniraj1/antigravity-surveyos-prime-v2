@@ -1,6 +1,13 @@
 // Parser-first reading: rows come from code (row-parser) and are accepted only
 // when they tie to the printed totals; the model only reads the header fields.
 import { getHeaderPrompt, headerFields } from './prompts';
+import { parseEstimate, type ParseOutcome, type PdfToken } from './row-parser';
+
+/** A parser throw on an odd layout is a decline, not a failed extraction. */
+export function safeParse(pageTokens: PdfToken[][]): ParseOutcome {
+  try { return parseEstimate(pageTokens); }
+  catch (e) { return { ok: false, reason: 'parser error: ' + (e instanceof Error ? e.message : String(e)) }; }
+}
 
 export function parserEligible(o: {
   key: string; allText: boolean; fileCount: number;
