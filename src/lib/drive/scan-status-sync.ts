@@ -8,7 +8,7 @@ import type { DocType } from '@/types/documents';
 import { DOC_TYPE_TO_TAG } from '@/types/documents';
 import { useClaimStore } from '@/stores/claim-store';
 import { driveRequest, findFolder, getDriveToken } from './index';
-import { STATUS_FILE, parseStatus, statusToChase, statusToJson, withReceived, type Status } from './scan-status';
+import { STATUS_FILE, parseStatus, statusToChase, statusToJson, withCompletion, withReceived, type Status } from './scan-status';
 
 const API = 'https://www.googleapis.com/drive/v3/files';
 const FOLDER = 'application/vnd.google-apps.folder';
@@ -93,5 +93,16 @@ export async function markReceivedInScan(claim: ClaimData | null | undefined, ty
     const merged = withReceived(status, claim.scanClaimId, type, Date.now());
     await writeStatus(folder, fileId, merged);
     applyToClaim(claim.id, merged);
+  } catch (e) { warnOnce(e); }
+}
+
+/** On Mark completed / Reopen: set `status` (completed|active) in Scan's status file with updatedAt = now. */
+export async function setCompletedInScan(claim: ClaimData | null | undefined, completed: boolean): Promise<void> {
+  if (!linked(claim)) return;
+  try {
+    const folder = await findScanFolder(claim.scanClaimId);
+    if (!folder) return;
+    const { fileId, status } = await readStatus(folder);
+    await writeStatus(folder, fileId, withCompletion(status, claim.scanClaimId, completed, Date.now()));
   } catch (e) { warnOnce(e); }
 }

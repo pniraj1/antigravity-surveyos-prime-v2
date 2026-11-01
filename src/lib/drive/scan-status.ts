@@ -121,6 +121,18 @@ export function withReceived(remote: Status | null, scanClaimId: string, slotKey
   return mergeStatus(local, remote);
 }
 
+/**
+ * Prime's write on Mark completed / Reopen: the remote file (or a fresh one) with `status` set and `updatedAt` = now,
+ * so Scan can tell it is newer than its own Done/Reopen. Slots, contacts and asks stay as in the file.
+ */
+export function withCompletion(remote: Status | null, scanClaimId: string, completed: boolean, now: number): Status {
+  const status = completed ? 'completed' : 'active';
+  const updatedAt = sec(now);
+  return remote
+    ? { ...remote, updatedAt, status }
+    : { claimId: scanClaimId, updatedAt, vehicle: '', insurer: '', claimNo: null, slots: {}, contacts: {}, asks: [], status };
+}
+
 type Chase = NonNullable<ClaimData['scanChase']>;
 const ROLES = ['insured', 'garage', 'other'] as const;
 

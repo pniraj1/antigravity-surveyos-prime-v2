@@ -221,6 +221,8 @@ export interface ClaimData {
   scanImport?: { at: string; decided: Record<string, string> };
   /** Scan's Drive claim id (manifest `claimId`); a different id on a later import is a conflict. */
   scanClaimId?: string;
+  /** ISO time the surveyor marked the claim completed (synced to Scan as Done); undefined while open. */
+  completedAt?: string;
   /** Last imported Scan chase state (contacts, slot states, ask log). */
   scanChase?: ScanChase & { importedAt: string };
 

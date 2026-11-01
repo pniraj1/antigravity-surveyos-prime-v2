@@ -1,7 +1,7 @@
 // Port of SurveyOS Scan's StatusFileTest (chase/StatusFileTest.kt); buildStatus/remoteReceived are Scan-only.
 import { describe, it, expect } from 'vitest';
 import {
-  mergeStatus, parseStatus, statusToJson, statusToChase, withReceived,
+  mergeStatus, parseStatus, statusToJson, statusToChase, withCompletion, withReceived,
   type FieldValue, type SlotStatus, type Status, type StatusAsk,
 } from '../scan-status';
 
@@ -129,5 +129,23 @@ describe('Prime side', () => {
   it('statusToChase keeps a fresher manifest import', () => {
     const s = { ...status({ rc: slot('missing', 'scan', 1) }), updatedAt: Date.parse('2026-10-01T00:00:00Z') };
     expect(statusToChase(s, { importedAt: '2026-10-02T00:00:00.000Z', slotStates: { rc: 'received' } })).toBeNull();
+  });
+
+  it('withCompletion sets status and a fresh updatedAt, keeping the rest', () => {
+    const remote = status({ rc: slot('missing', 'scan', 1000) });
+    const done = withCompletion(remote, 'c', true, 5500);
+    expect(done.status).toBe('completed');
+    expect(done.updatedAt).toBe(5000);
+    expect(done.slots).toEqual(remote.slots);
+    expect(done.vehicle).toBe('MH12AB1234');
+    const reopened = withCompletion(done, 'c', false, 9000);
+    expect(reopened.status).toBe('active');
+    expect(reopened.updatedAt).toBe(9000);
+    expect(parseStatus(statusToJson(reopened))).toEqual(reopened);
+  });
+
+  it('withCompletion with no remote file starts one', () => {
+    const m = withCompletion(null, 'scan-c', true, 2000);
+    expect(m).toMatchObject({ claimId: 'scan-c', status: 'completed', updatedAt: 2000, slots: {} });
   });
 });

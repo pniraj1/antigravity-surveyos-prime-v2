@@ -9,12 +9,13 @@ import { useUIStore } from '@/stores/ui-store';
 import { pushClaimToCloud } from '@/lib/firebase/sync';
 import { flushDriveQueue, backupAllPendingToDrive } from '@/lib/drive';
 import { getDriveQueueCount } from '@/lib/storage/indexeddb';
-import { Cloud, Loader2 } from 'lucide-react';
+import { Cloud, Loader2, CheckCircle2, RotateCcw } from 'lucide-react';
+import { setCompletedInScan } from '@/lib/drive/scan-status-sync';
 import { DriveQueueChip } from '@/components/sync/DriveQueueChip';
 import { SyncStatusBadge } from '@/components/sync/SyncStatusBadge';
 
 export function ClaimHeader() {
-  const { currentClaim } = useClaimStore();
+  const { currentClaim, updateClaim } = useClaimStore();
   const { user } = useAuthStore();
   const { setSaveStatus, isDriveConnected } = useUIStore();
   const [saving, setSaving] = useState(false);
@@ -82,6 +83,12 @@ export function ClaimHeader() {
 
   if (!currentClaim) return null;
 
+  const completed = !!currentClaim.completedAt;
+  const toggleCompleted = () => {
+    updateClaim({ completedAt: completed ? undefined : new Date().toISOString() });
+    void setCompletedInScan(currentClaim, !completed); // Scan's status file; quiet when unlinked or offline
+  };
+
   const reg  = currentClaim.vehicle?.registrationNumber || '—';
   const name = currentClaim.policy?.insuredName || '';
 
@@ -114,6 +121,14 @@ export function ClaimHeader() {
       <DriveQueueChip />
 
       <SyncStatusBadge />
+
+      <button
+        onClick={toggleCompleted}
+        className="flex items-center gap-1.5 px-3 py-2.5 sm:py-1.5 rounded-lg text-[11px] sm:text-[10px] font-medium uppercase tracking-wide transition-all hover:opacity-80 min-h-[44px] sm:min-h-0 border border-border"
+      >
+        {completed ? <RotateCcw size={12} /> : <CheckCircle2 size={12} />}
+        {completed ? 'Reopen' : 'Mark completed'}
+      </button>
 
       <button
         onClick={handleSave}
