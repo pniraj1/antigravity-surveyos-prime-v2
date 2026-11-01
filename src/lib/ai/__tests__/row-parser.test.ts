@@ -262,6 +262,27 @@ describe('parseEstimate', () => {
     expect(o.data.spare_parts[1]).toMatchObject({ taxable_amount: 200, total_amount: 236 });
   });
 
+  describe('bare Tax value without a % sign', () => {
+    const doc = (tax: string) => [
+      ...line(700, [[20, 'Seq.'], [80, 'Description'], [300, 'Part'], [330, 'Amt'], [385, 'Qty'], [430, 'Tax'], [500, 'Total']]),
+      ...line(680, [[20, '1'], [80, 'DOOR'], [302, '500.00'], [387, '1.0'], [430, tax], [502, '590.00']]),
+      ...line(620, [[20, 'Total'], [60, 'Amt'], [80, ':'], amt(300, '590.00')]),
+    ];
+    it('a rate printed as "18" is read as the rate: taxable 500', () => {
+      const o = parseEstimate([doc('18')]);
+      if (!o.ok) throw new Error(o.reason);
+      expect(o.data.spare_parts[0]).toMatchObject({ taxable_amount: 500, total_amount: 590, gst_percent: 18 });
+    });
+    it('an amount implying a GST rate (90 on 590) is read as the amount: taxable 500', () => {
+      const o = parseEstimate([doc('90.00')]);
+      if (!o.ok) throw new Error(o.reason);
+      expect(o.data.spare_parts[0]).toMatchObject({ taxable_amount: 500, total_amount: 590, gst_percent: 18 });
+    });
+    it('a value that is neither a rate nor an amount for one (37) declines', () => {
+      expect(parseEstimate([doc('37.00')]).ok).toBe(false);
+    });
+  });
+
   it('a bare Tax column holding "18%" with a pre-tax Total ties through taxable', () => {
     const page = [
       ...line(700, [[20, 'Seq.'], [80, 'Description'], [300, 'Part'], [330, 'Amt'], [385, 'Qty'], [430, 'Tax'], [500, 'Total']]),

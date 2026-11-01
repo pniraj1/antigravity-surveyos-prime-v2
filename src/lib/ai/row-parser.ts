@@ -192,12 +192,24 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 const sum = (ns: number[]) => ns.reduce((a, b) => a + b, 0);
 const num = (s: string | undefined) => (s === undefined ? null : parseMoney(s.replace(/%$/, '')));
 
+const GST_RATES = [0, 5, 12, 18, 28];
+/** A bare Tax value is an amount only if it is exactly a standard GST rate of the pre-tax part of the printed total; otherwise a rate only if it is itself a standard rate; else null. */
+function bareTax(v: number | null, total: number | null): { rate: number; amount?: number } | null {
+  if (v === null) return null;
+  if (total !== null) {
+    const rate = GST_RATES.find(s => Math.abs(round2((total - v) * s / 100) - v) <= 0.02);
+    if (rate !== undefined) return { rate, amount: v };
+  }
+  return GST_RATES.includes(v) ? { rate: v } : null;
+}
+
 /** Estimate row shape of prompts.ts; null when taxable and total cannot both be had without guessing. */
 function toItem(r: RawRow, preTax: boolean): { item: Record<string, unknown>; printedTotal: boolean } | null {
   const c = r.cells;
-  const taxIsRate = c.tax?.endsWith('%') === true;
-  const taxAmount = c.tax !== undefined && !taxIsRate ? num(c.tax) : null;
-  const gst = num(c.gst_percent) ?? (taxIsRate ? num(c.tax) : null);
+  const bare = c.tax !== undefined && !c.tax.endsWith('%') ? bareTax(num(c.tax), num(c.total_amount)) : undefined;
+  if (bare === null) return null;   // a bare Tax value that is neither a GST rate nor the amount for one: decline
+  const taxAmount = bare?.amount ?? null;
+  const gst = num(c.gst_percent) ?? (c.tax?.endsWith('%') ? num(c.tax) : null) ?? bare?.rate ?? null;
   // preTax: the Amount column is printed before tax (Kia and Maruti invoices), so it is the taxable value
   const asTaxable = preTax && c.taxable_amount === undefined && gst !== null;
   const printed = asTaxable ? null : num(c.total_amount);
