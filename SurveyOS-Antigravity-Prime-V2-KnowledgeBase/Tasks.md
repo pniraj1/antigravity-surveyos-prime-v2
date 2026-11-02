@@ -1,7 +1,16 @@
 # Active Tasks
 
-> Last updated: 2026-11-01 by Claude Code (Drive cleanup)
+> Last updated: 2026-11-02 by Antigravity (SurveyOS Scan Launch Roadmap & Marketing Video Strategy)
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
+
+---
+
+## In Progress: SurveyOS Scan Marketing Video & Google Play Store Launch
+- [x] Documented full Google Play Store Launch Blueprint in `docs/marketing/2026-11-02-surveyos-scan-marketing-video-plan.md` (Accounts, AdMob release guards, upload keystore, `ad_free` IAP, privacy policy URL hosting, 14-day Closed Testing track).
+- [x] Documented comprehensive SurveyOS Scan status and updates (WhatsApp/Email document chasing in EN/HI/MR, rejection reasons, "Waiting for" filter chip, Drive sync, on-site fee bill notes, geo-stamped photos).
+- [x] Established 5-Act problem-first marketing video narrative sequence (Chaos without app -> Problem defined -> Prominent SurveyOS brand reveal -> Step-by-step transformation -> Resolution & CTA).
+- [ ] Next step: Write individual scene prompts (visual direction, camera angles, voiceover, on-screen text) for AI video generators / production crews.
+- [ ] Owner step: Generate `surveyos-scan-upload.jks`, set `ADMOB_APP_ID`/`ADMOB_BANNER_ID` in `SurveyOS Scan/local.properties`, host privacy policy, and upload AAB to Closed Testing track.
 
 ---
 

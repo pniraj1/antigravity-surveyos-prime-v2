@@ -2,6 +2,14 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-02 (Antigravity) — SurveyOS Scan Play Store Launch Playbook & Marketing Video Strategy
+- docs(marketing): Added comprehensive blueprint and strategy in `docs/marketing/2026-11-02-surveyos-scan-marketing-video-plan.md`.
+  - Full Google Play Store launch process for SurveyOS Scan (`in.surveyos.scan`): developer accounts, AdMob release guards, upload signing keys, `ad_free` IAP product, privacy policy hosting, and 14-day Closed Testing requirements.
+  - Up-to-date Scan feature dossier: WhatsApp/Email document chasing in EN/HI/MR, document rejection states with reasons, "Waiting for" filter chip, Drive text/full sync with Prime, mobile fee bill notes & rate memory, geo-stamped damage photos.
+  - 5-Act problem-first marketing video narrative structure (Current chaos -> Core bottleneck -> Prominent SurveyOS brand reveal -> Step-by-step transformation -> Life after SurveyOS & CTA).
+- docs(vault): Session log `Sessions/2026-11-02-scan-launch-and-marketing-video.md` and `Tasks.md` updated for handoff.
+- Scan impact: None to Scan code.
+
 ## 2026-11-01 (Claude Code) — Plan 4 final fixes (status time, reconcile, cleanup lookup)
 - fix(drive): Scan's status file gains `statusAt` (Prime-only, written with `status` on Mark completed / Reopen). `ClaimData.statusChangedAt` stores that time. On claim open, `syncScanStatus` rewrites `status`/`statusAt` when the file disagrees with the claim (`reconcileCompletion`): repairs an offline write or one lost to a concurrent Scan merge; a newer `statusAt` in the file is left alone.
 - Reopen clears `driveTrashedAt` (`completionPatch`), so a re-completed claim shows in Drive cleanup again.
