@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { doc, setDoc, Timestamp, collectionGroup, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
@@ -9,6 +9,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useProfileStore } from '@/stores/profile-store';
 import Logo from '@/components/ui/Logo';
 import { REFERRALS_ENABLED } from '@/lib/subscription/plans';
+import { calculateSubscriptionState } from '@/lib/subscription/status';
 import { ATTESTATION_TEXT, buildConsentRecord } from '@/lib/legal/versions';
 import {
   Shield, User, Phone, Mail, FileText, Loader2,
@@ -373,6 +374,14 @@ export default function AccessRequestPage() {
     phone.trim().length >= 7 &&
     agreedTerms &&
     attested;
+
+  // Approved (or admin) users don't belong here. SubscriptionGuard only pushes
+  // pending users IN; this is the way back OUT once the admin approves.
+  const approved = isAuthenticated && (profile.isAdmin || calculateSubscriptionState(profile) !== 'pending');
+  useEffect(() => {
+    if (approved) router.replace('/');
+  }, [approved, router]);
+  if (approved) return null;
 
   // State 1: not signed in — show Google sign-in card inside split-panel
   if (!isAuthenticated) {

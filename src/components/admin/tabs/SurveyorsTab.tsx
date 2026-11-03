@@ -198,10 +198,10 @@ export function SurveyorsTab({
                           <input
                             type="text"
                             className="text-sm font-medium text-foreground bg-transparent border-b border-dashed border-transparent hover:border-border focus:border-primary focus:ring-0 focus:outline-none p-0 w-40"
-                            value={surveyor.name}
-                            onChange={e => onUpdateName(surveyor.id, e.target.value)}
+                            defaultValue={surveyor.name}
+                            onBlur={e => { const v = e.target.value.trim(); if (v && v !== surveyor.name) onUpdateName(surveyor.id, v); }}
+                            onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
                             onClick={e => e.stopPropagation()}
-                            disabled={isProcessing}
                           />
                           {surveyor.isAdmin && <ShieldCheck size={14} className="text-primary flex-shrink-0" />}
                         </div>
@@ -219,10 +219,12 @@ export function SurveyorsTab({
                       type="text"
                       placeholder="ASSIGN ID..."
                       className="bg-transparent border-b border-dashed border-border focus:border-primary focus:ring-0 text-sm p-0 w-24 font-medium uppercase tracking-tight"
-                      value={surveyor.surveyorId}
-                      onChange={(e) => onUpdateId(surveyor.id, e.target.value.toUpperCase())}
+                      // Save on blur/Enter, not per keystroke: a per-key save set processingId,
+                      // which disabled the input and dropped focus after one character.
+                      defaultValue={surveyor.surveyorId}
+                      onBlur={e => { const v = e.target.value.trim().toUpperCase(); if (v !== surveyor.surveyorId) onUpdateId(surveyor.id, v); }}
+                      onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
                       onClick={e => e.stopPropagation()}
-                      disabled={isProcessing}
                     />
                   </td>
                   <td className="px-6 py-5">
