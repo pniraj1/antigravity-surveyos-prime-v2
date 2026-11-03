@@ -6,7 +6,7 @@
 - feat(assessment): clock icon next to each row's part name (shows on hover, like the Evidence icon). Click opens a popup with the surveyor's own past claims for the same part on the same make/model: date, workshop, estimate, assessed (or "Disallowed"), newest first, 5 at a time. Click a line to open that claim (current claim saved first). Esc / click outside closes.
 - Matching (`lib/claims/part-history.ts`): OEM part number when both rows have one, else a part-name key (case, word order, punctuation, F/Frt/R/Rr, "assy" ignored). Variant and year ignored. Read-only: never flags, never writes a figure.
 - Stack/cost: none. Reads IndexedDB claims already on the device; no server, AI or Firestore reads.
-- Not browser-tested (grid needs login + real claims). Not deployed.
+- Not browser-tested (grid needs login + real claims). Deployed 2026-11-03 to motorsurveyos-in (live chunk checked).
 - Scan impact: none (reads Prime claim data only; no coupling file touched).
 
 ## 2026-11-02 (Antigravity) — SurveyOS Scan Play Store Launch Playbook & Marketing Video Strategy

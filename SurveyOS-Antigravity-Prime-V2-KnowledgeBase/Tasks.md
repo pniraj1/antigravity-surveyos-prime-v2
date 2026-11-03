@@ -7,7 +7,8 @@
 
 ## In Progress: Past prices for a part (2026-11-03, Claude Code)
 - [x] Clock icon + popup on assessment rows (`components/claim/PartHistoryButton.tsx`, `lib/claims/part-history.ts` + tests).
-- [ ] Owner: check in the app on a claim whose model has past claims; then deploy.
+- [x] Deployed 2026-11-03 (motorsurveyos-in).
+- [ ] Owner: check in the app on a claim whose model has past claims.
 
 ## In Progress: SurveyOS Scan Marketing Video & Google Play Store Launch
 - [x] Documented full Google Play Store Launch Blueprint in `docs/marketing/2026-11-02-surveyos-scan-marketing-video-plan.md` (Accounts, AdMob release guards, upload keystore, `ad_free` IAP, privacy policy URL hosting, 14-day Closed Testing track).

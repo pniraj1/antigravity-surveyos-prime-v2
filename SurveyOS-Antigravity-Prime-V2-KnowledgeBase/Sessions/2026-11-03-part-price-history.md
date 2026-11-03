@@ -6,6 +6,6 @@
 
 **Built:** `src/lib/claims/part-history.ts` (+ `__tests__/part-history.test.ts`), `src/components/claim/PartHistoryButton.tsx`, wired into `AssessmentSectionTable.tsx` next to the Evidence icon.
 
-**State:** tsc clean, full vitest suite passing. Not browser-tested, not deployed. Scan impact: none.
+**State:** tsc clean, full vitest suite passing. Deployed 2026-11-03; not browser-tested. Scan impact: none.
 
 **Next:** owner checks it on real claims; add name abbreviations to `WORD_ALIASES` if matches are missed.
