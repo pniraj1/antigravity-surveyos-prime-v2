@@ -2,6 +2,13 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-03 (Claude Code) — Past prices for a part (assessment grid)
+- feat(assessment): clock icon next to each row's part name (shows on hover, like the Evidence icon). Click opens a popup with the surveyor's own past claims for the same part on the same make/model: date, workshop, estimate, assessed (or "Disallowed"), newest first, 5 at a time. Click a line to open that claim (current claim saved first). Esc / click outside closes.
+- Matching (`lib/claims/part-history.ts`): OEM part number when both rows have one, else a part-name key (case, word order, punctuation, F/Frt/R/Rr, "assy" ignored). Variant and year ignored. Read-only: never flags, never writes a figure.
+- Stack/cost: none. Reads IndexedDB claims already on the device; no server, AI or Firestore reads.
+- Not browser-tested (grid needs login + real claims). Not deployed.
+- Scan impact: none (reads Prime claim data only; no coupling file touched).
+
 ## 2026-11-02 (Antigravity) — SurveyOS Scan Play Store Launch Playbook & Marketing Video Strategy
 - docs(marketing): Added comprehensive blueprint and strategy in `docs/marketing/2026-11-02-surveyos-scan-marketing-video-plan.md`.
   - Full Google Play Store launch process for SurveyOS Scan (`in.surveyos.scan`): developer accounts, AdMob release guards, upload signing keys, `ad_free` IAP product, privacy policy hosting, and 14-day Closed Testing requirements.

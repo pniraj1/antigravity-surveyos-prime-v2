@@ -14,6 +14,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
 import { CATEGORY_BADGE_LABELS, CATEGORY_BADGE_COLOURS } from '@/lib/constants/deduction-categories';
 import { SmartRemarksCell } from '@/components/claim/SmartRemarksCell';
+import { PartHistoryButton } from '@/components/claim/PartHistoryButton';
 import type { PartType, AssessmentRow as AssessmentRowType, AssessmentSection } from '@/types';
 import type { DeductionCategory } from '@/lib/constants/deduction-categories';
 import type { SectionSubtotal } from '@/lib/calculations/section-subtotals';
@@ -356,6 +357,7 @@ export function AssessmentSectionTable({
                         >
                           <FileSearch size={12} />
                         </button>
+                        <PartHistoryButton row={row} />
                         {row.reReadNote && (
                           <span
                             className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border border-amber-500/40 bg-amber-500/10 text-amber-700"
