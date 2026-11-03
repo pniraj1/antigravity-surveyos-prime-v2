@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { MarketingShell } from '@/components/marketing/MarketingShell';
-import { TRIAL_DAYS } from '@/lib/subscription/plans';
 
 export const metadata: Metadata = {
   title: 'Refund & Cancellation Policy | Motor SurveyOS',
@@ -18,7 +17,7 @@ export default function RefundPage() {
       <section>
         <h2 className="text-h3 font-bold text-slate-900 mb-4">1. Your free trial is the evaluation period</h2>
         <p>
-          Every account begins with a {TRIAL_DAYS}-day free trial with full access to all features, and no
+          Every account begins with a 3-day free trial with full access to all features, and no
           credit card is required. We ask you to satisfy yourself during the trial that Motor SurveyOS suits
           your practice, because paid periods are non-refundable.
         </p>

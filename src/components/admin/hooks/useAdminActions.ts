@@ -21,7 +21,7 @@ import {
 } from '@/lib/email/sendEmail';
 import { generateReferralCode, addDaysToDate } from '@/lib/subscription/status';
 import type { NewSignup, SurveyorAdminProfile } from '../types';
-import { REFERRAL_TRIAL_BONUS_DAYS } from '@/lib/subscription/plans';
+import { REFERRAL_TRIAL_BONUS_DAYS, REFERRALS_ENABLED } from '@/lib/subscription/plans';
 
 interface UseAdminActionsParams {
   fetchAllProfiles: () => Promise<Map<string, SurveyorAdminProfile>>;
@@ -62,7 +62,7 @@ export function useAdminActions({
 
       // Referred signups get extra trial days automatically — the admin's
       // trialDays input stays the base, so the bonus can't be forgotten.
-      const effectiveTrialDays = profileData.referredBy
+      const effectiveTrialDays = REFERRALS_ENABLED && profileData.referredBy
         ? trialDays + REFERRAL_TRIAL_BONUS_DAYS
         : trialDays;
 

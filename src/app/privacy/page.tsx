@@ -97,7 +97,7 @@ export default function PrivacyPage() {
               {[
                 'Google Firebase — authentication and database',
                 'Google Drive API — report and document export',
-                'Google Gemini / AI APIs — document data extraction',
+                'AI model providers — document data extraction',
                 'Telegram Bot API — SurveyOS Sync document handling',
                 'Cloudflare Workers — backend API infrastructure',
               ].map((item) => (

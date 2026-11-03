@@ -1,7 +1,7 @@
 import { describe, test, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 
-const PAGES = ['pricing', 'features', 'about', 'faq', 'contact', 'refund'].map(
+const PAGES = ['_pricing', 'features', 'about', 'faq', 'contact', 'refund'].map(
   (p) => [`/${p}`, readFileSync(`src/app/${p}/page.tsx`, 'utf8')] as const,
 );
 

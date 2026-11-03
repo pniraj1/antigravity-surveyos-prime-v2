@@ -424,7 +424,7 @@ export function ProfileTab() {
                   boxShadow: profile.aiProvider === 'gemini' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'
                 }}
               >
-                Google Gemini
+                G
               </button>
               <button
                 onClick={() => updateProfile({ aiProvider: 'groq' })}
@@ -435,7 +435,7 @@ export function ProfileTab() {
                   boxShadow: profile.aiProvider === 'groq' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'
                 }}
               >
-                Groq (Speed)
+                Q
               </button>
               <button
                 onClick={() => updateProfile({ aiProvider: 'nvidia' })}
@@ -461,7 +461,7 @@ export function ProfileTab() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <div className="text-xs font-medium text-foreground">Google Gemini AI</div>
+                      <div className="text-xs font-medium text-foreground">G</div>
                       {profile.aiProvider === 'gemini' && <span className="text-[9px] font-medium px-1.5 py-0.5 rounded" style={{ background: '#4285F4', color: '#fff' }}>PRIMARY</span>}
                     </div>
                     <div className="text-[10px] font-medium text-muted-foreground">Auto-selects best model · Add up to 3 keys for rate-limit resilience</div>
@@ -488,10 +488,10 @@ export function ProfileTab() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <div className="text-xs font-medium text-foreground">Groq LPQ Intelligence</div>
+                      <div className="text-xs font-medium text-foreground">Q</div>
                       {profile.aiProvider === 'groq' && <span className="text-[9px] font-medium px-1.5 py-0.5 rounded" style={{ background: '#F26639', color: '#fff' }}>PRIMARY</span>}
                     </div>
-                    <div className="text-[10px] font-medium text-muted-foreground">Fastest Inference Engine · Add up to 3 keys for rate-limit resilience</div>
+                    <div className="text-[10px] font-medium text-muted-foreground">Add up to 3 keys for rate-limit resilience</div>
                   </div>
                 </div>
                 <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all hover:opacity-80" style={{ background: '#F26639', color: '#FFFFFF' }}>
@@ -518,7 +518,7 @@ export function ProfileTab() {
                       <div className="text-xs font-medium text-foreground">NVIDIA NIM · Free Tier</div>
                       {profile.aiProvider === 'nvidia' && <span className="text-[9px] font-medium px-1.5 py-0.5 rounded" style={{ background: '#76B900', color: '#fff' }}>PRIMARY</span>}
                     </div>
-                    <div className="text-[10px] font-medium text-muted-foreground">90B Vision Model · 40 req/min · No monthly cap · Fallback when Gemini &amp; Groq fail</div>
+                    <div className="text-[10px] font-medium text-muted-foreground">90B Vision Model · 40 req/min · No monthly cap · Fallback when G &amp; Q fail</div>
                   </div>
                 </div>
                 <a href="https://build.nvidia.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all hover:opacity-80" style={{ background: '#76B900', color: '#FFFFFF' }}>
@@ -541,8 +541,8 @@ export function ProfileTab() {
                     <Cpu size={18} style={{ color: '#000000' }} />
                   </div>
                   <div>
-                    <div className="text-xs font-medium text-foreground">Ollama Cloud</div>
-                    <div className="text-[10px] font-medium text-muted-foreground">Optional · free backup (Gemma 4) used automatically when Google is busy</div>
+                    <div className="text-xs font-medium text-foreground">O</div>
+                    <div className="text-[10px] font-medium text-muted-foreground">Optional · free backup used automatically when G is busy</div>
                   </div>
                 </div>
                 <a href="https://ollama.com/settings/keys" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all hover:opacity-80" style={{ background: '#000000', color: '#FFFFFF' }}>
@@ -552,7 +552,7 @@ export function ProfileTab() {
               <MultiKeyInput
                 keys={profile.ollamaApiKeys || []}
                 onChange={keys => updateProfile({ ollamaApiKeys: keys })}
-                placeholder="Ollama API key"
+                placeholder="O API key"
                 accentColor="#000000"
               />
             </div>
@@ -722,7 +722,7 @@ export function ProfileTab() {
               Your identity details and signatures will automatically appear on generated PDFs.
             </p>
             <p className="font-medium">
-              AI Future-Proofing: By using your own API keys, your SurveyOS remains free forever. You can update the Model ID anytime to use the latest AI releases from Google or Groq.
+              AI Future-Proofing: By using your own API keys, your SurveyOS remains free forever. You can update the Model ID anytime to use the latest AI releases from your providers.
             </p>
           </div>
         </div>

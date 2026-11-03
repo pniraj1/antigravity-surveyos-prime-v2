@@ -6,7 +6,7 @@ import type { SurveyorProfile } from '@/types';
 import { getUserPayments } from '@/lib/firebase/payments';
 import { calculateSubscriptionState, getDaysRemaining } from '@/lib/subscription/status';
 import { PaymentSubmissionForm } from '@/components/subscription/PaymentSubmissionForm';
-import { UPI_ID } from '@/lib/subscription/plans';
+import { UPI_ID, REFERRALS_ENABLED } from '@/lib/subscription/plans';
 import {
   CreditCard, Calendar, Gift, Copy, CheckCircle2,
   RefreshCw, Clock, BadgeCheck, Hourglass, XCircle,
@@ -132,12 +132,12 @@ export function SubscriptionSection({ uid, profile }: { uid: string; profile: Su
         )}
 
         {/* Referral code */}
-        {profile.referralCode && (
+        {REFERRALS_ENABLED && profile.referralCode && (
           <div className="rounded-xl p-4 bg-primary/5 border border-primary/20">
             {/* The mechanic was never stated anywhere in the app — surveyors had
                 a code with no idea what it did. Say it plainly. */}
             <p className="text-xs text-muted-foreground mb-3">
-              Share this code with a fellow surveyor. They get <strong className="text-foreground">14 extra trial days</strong>,
+              Share this code with a fellow surveyor. They get <strong className="text-foreground">3 extra trial days</strong>,
               and when their first payment is verified <strong className="text-foreground">you get 30 days free</strong> —
               both automatic.
             </p>
@@ -170,7 +170,7 @@ export function SubscriptionSection({ uid, profile }: { uid: string; profile: Su
               </button>
               <a
                 href={`https://wa.me/?text=${encodeURIComponent(
-                  `I use Motor SurveyOS for my survey reports — AI reads the RC/DL/policy and drafts the report in minutes. Use my referral code at signup and your free trial doubles from 14 to 28 days: https://motorsurveyos-in.web.app\n\nCode: ${profile.referralCode}`
+                  `I use Motor SurveyOS for my survey reports — AI reads the RC/DL/policy and drafts the report in minutes. Use my referral code at signup and your free trial doubles from 3 to 6 days: https://motorsurveyos-in.web.app\n\nCode: ${profile.referralCode}`
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"

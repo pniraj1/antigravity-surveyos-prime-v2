@@ -79,10 +79,10 @@ export default function FeaturesPage() {
 
       <section className="text-center pt-4">
         <Link
-          href="/pricing"
+          href="/signup"
           className="inline-flex items-center gap-1.5 px-6 py-3 text-sm font-bold text-slate-900 bg-amber-400 rounded-full hover:scale-105 transition-transform"
         >
-          See pricing
+          Start free demo
         </Link>
       </section>
     </MarketingShell>

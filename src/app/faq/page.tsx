@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { MarketingShell } from '@/components/marketing/MarketingShell';
-import { TRIAL_DAYS, REFERRAL_TRIAL_BONUS_DAYS } from '@/lib/subscription/plans';
+import { REFERRAL_TRIAL_BONUS_DAYS, REFERRALS_ENABLED } from '@/lib/subscription/plans';
 
 export const metadata: Metadata = {
   title: 'Frequently Asked Questions | Motor SurveyOS',
@@ -13,7 +13,7 @@ const GROUPS: { heading: string; items: { q: string; a: string }[] }[] = [
     heading: 'Getting started',
     items: [
       { q: 'Who can use Motor SurveyOS?', a: 'IRDAI-licensed surveyors and loss assessors practising in India. Every registration is reviewed manually against the licence details you provide before the account is activated.' },
-      { q: 'How long is the free trial?', a: `${TRIAL_DAYS} days with full access, or ${TRIAL_DAYS + REFERRAL_TRIAL_BONUS_DAYS} days if you sign up using another surveyor's referral code. No credit card is required.` },
+      { q: 'How long is the free trial?', a: `3 days with full access. No credit card is required.` },
       { q: 'Why does approval take time?', a: 'Because a human checks it. We verify the licence details in each request before granting access, which usually takes less than a working day.' },
     ],
   },
@@ -38,7 +38,7 @@ const GROUPS: { heading: string; items: { q: string; a: string }[] }[] = [
   {
     heading: 'AI and reports',
     items: [
-      { q: 'Do I need my own API key?', a: 'Yes, for document extraction. You add a free Google Gemini or Groq key in your profile, so your document processing runs on your own account and stays under your control.' },
+      { q: 'Do I need my own API key?', a: 'Yes, for document extraction. You add a free AI key in your profile, so your document processing runs on your own account and stays under your control.' },
       { q: 'How accurate is the extraction?', a: 'Good enough to draft from, never good enough to sign blindly. Every extracted field is shown for review, discrepancies between documents are flagged, and the assessment remains yours.' },
       { q: 'Which reports can it produce?', a: 'Spot survey, final survey, re-inspection and valuation reports, plus fee bills, in PDF, printable HTML, Word and Excel formats.' },
     ],
@@ -57,7 +57,7 @@ const GROUPS: { heading: string; items: { q: string; a: string }[] }[] = [
       { q: 'Is there a limit?', a: 'No. Every referred surveyor whose first payment is verified extends your subscription by another 30 days.' },
     ],
   },
-];
+].filter((g) => REFERRALS_ENABLED || g.heading !== 'Referrals');
 
 export default function FaqPage() {
   const all = GROUPS.flatMap((g) => g.items);

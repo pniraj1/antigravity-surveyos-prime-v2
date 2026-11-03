@@ -8,6 +8,7 @@ import { signInWithGoogle, signOutUser } from '@/lib/firebase/auth';
 import { useAuthStore } from '@/stores/auth-store';
 import { useProfileStore } from '@/stores/profile-store';
 import Logo from '@/components/ui/Logo';
+import { REFERRALS_ENABLED } from '@/lib/subscription/plans';
 import { ATTESTATION_TEXT, buildConsentRecord } from '@/lib/legal/versions';
 import {
   Shield, User, Phone, Mail, FileText, Loader2,
@@ -95,7 +96,7 @@ function SplitLayout({
           <ul className="space-y-4 flex-1">
             {[
               'IRDAI credential verification',
-              '14-day free trial on approval',
+              '3-day free trial on approval',
               'All reports backed up to Google Drive',
             ].map(signal => (
               <li key={signal} className="flex items-center gap-3">
@@ -157,7 +158,7 @@ function SignInPanel() {
         </h1>
         <p className="text-sm font-medium text-[#8D99AE] leading-relaxed">
           Sign in with Google to begin your{' '}
-          <strong className="text-amber-600">14-day free trial</strong>.
+          <strong className="text-amber-600">3-day free trial</strong>.
           No credit card needed.
         </p>
       </div>
@@ -473,7 +474,7 @@ export default function AccessRequestPage() {
             <p className="text-sm font-medium text-blue-700 leading-relaxed">
               <strong className="font-bold">No existing account found.</strong>{' '}
               Complete the form below to register and start your{' '}
-              <strong className="text-amber-600">14-day free trial</strong>.
+              <strong className="text-amber-600">3-day free trial</strong>.
             </p>
           </div>
         )}
@@ -527,7 +528,7 @@ export default function AccessRequestPage() {
         />
 
         {/* Referral code */}
-        <div className="space-y-2">
+        {REFERRALS_ENABLED && <div className="space-y-2">
           <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.15em] text-[#8D99AE]">
             <Gift size={13} />
             Referral Code
@@ -555,9 +556,9 @@ export default function AccessRequestPage() {
             )}
           </div>
           {referralValid === false && <p className="text-xs font-medium text-red-500">Invalid referral code. Please check and try again.</p>}
-          {referralValid === true  && <p className="text-xs font-medium text-green-600">Code applied — your free trial doubles to 28 days, and your referrer earns 30 bonus days when you subscribe.</p>}
-          {!referralCode           && <p className="text-xs font-medium text-gray-400">Got a code from a fellow surveyor? Enter it and your free trial doubles to 28 days.</p>}
-        </div>
+          {referralValid === true  && <p className="text-xs font-medium text-green-600">Code applied — your free trial doubles to 6 days, and your referrer earns 30 bonus days when you subscribe.</p>}
+          {!referralCode           && <p className="text-xs font-medium text-gray-400">Got a code from a fellow surveyor? Enter it and your free trial doubles to 6 days.</p>}
+        </div>}
 
         <Field
           label="Email ID" value={email} icon={<Mail size={13} />}

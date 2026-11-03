@@ -28,6 +28,9 @@ export const PLANS: Plan[] = [
   { id: 'yearly',    label: '12 Months', months: 12, amount: 7990, note: '2 months free' },
 ];
 
+/** Referral scheme off for launch. ponytail: one switch gates the signup field, Profile card, approval bonus and payment reward. */
+export const REFERRALS_ENABLED = false;
+
 /** Base free trial granted on admin approval. */
 export const TRIAL_DAYS = 14;
 

@@ -313,7 +313,6 @@ export default function LandingPage() {
         </Link>
         <div className="flex items-center gap-4">
           <Link href="/features" className="hidden md:block text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors">Features</Link>
-          <Link href="/pricing" className="hidden md:block text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors">Pricing</Link>
           <ProductsDropdown />
           {isAuthenticated ? (
             <button
@@ -334,10 +333,10 @@ export default function LandingPage() {
               </button>
               <button
                 onClick={handleAction}
-                aria-label="Start 14-Day Free Trial"
+                aria-label="Start 3-Day Free Demo"
                 className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-gray-900 bg-amber-400 rounded-full hover:scale-105 active:scale-95 transition-transform shadow-sm"
               >
-                Start 14-Day Free Trial <ArrowRight size={12} aria-hidden="true" />
+                Start 3-Day Free Demo <ArrowRight size={12} aria-hidden="true" />
               </button>
             </div>
           )}
@@ -395,11 +394,11 @@ export default function LandingPage() {
           >
             <button
               onClick={handleAction}
-              aria-label={isAuthenticated ? 'Enter Dashboard' : 'Start 14-Day Free Trial'}
+              aria-label={isAuthenticated ? 'Enter Dashboard' : 'Start 3-Day Free Demo'}
               className="w-full sm:w-auto relative inline-flex items-center justify-center gap-2 px-8 py-4 text-sm font-bold text-white bg-amber-500 rounded-xl hover:bg-amber-600 hover:scale-[1.03] active:scale-95 transition-all shadow-xl shadow-amber-500/20 overflow-hidden group"
             >
               <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
-              <span className="z-10 relative">{isAuthenticated ? 'Enter Dashboard' : 'Start 14-Day Free Trial'}</span>
+              <span className="z-10 relative">{isAuthenticated ? 'Enter Dashboard' : 'Start 3-Day Free Demo'}</span>
               <ArrowRight size={16} className="z-10 relative" aria-hidden="true" />
             </button>
             
@@ -568,47 +567,6 @@ export default function LandingPage() {
           </div>
         </GlassCard>
 
-        {/* ── 5. PRICING CARD ──────────────────────────────────────────── */}
-        <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-1 relative z-10 mt-4" id="pricing">
-          Pricing
-        </div>
-
-        <GlassCard className="p-5 relative z-10">
-          <div className="mb-4">
-            <div className="flex items-center gap-2">
-              <div className="text-slate-900 font-black text-lg">Motor SurveyOS</div>
-              <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-amber-700 bg-amber-400/20 border border-amber-400/40 rounded-full">30 Days Free</span>
-            </div>
-            <div className="text-slate-500 text-xs mt-1">Everything included. No credit card required.</div>
-          </div>
-          <div className="flex items-baseline gap-1 mb-5">
-            <span className="text-3xl font-black text-amber-500">₹799</span>
-            <span className="text-slate-500 text-sm">/month</span>
-          </div>
-          {[
-            'Unlimited claims & reports',
-            'AI document extraction (OCR)',
-            'Auto Google Drive sync',
-            'LLM reconciliation engine',
-            'Offline-first mobile support',
-            'Priority support',
-          ].map((item) => (
-            <div key={item} className="flex items-center gap-2 py-1.5 border-b border-black/5 last:border-0">
-              <div className="w-4 h-4 rounded-full bg-amber-400/15 border border-amber-400/30 flex items-center justify-center flex-shrink-0">
-                <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-              </div>
-              <span className="text-xs text-slate-700">{item}</span>
-            </div>
-          ))}
-          <button
-            onClick={handleAction}
-            aria-label="Get Started Now"
-            className="w-full mt-5 inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-bold text-gray-900 bg-amber-400 rounded-xl hover:scale-[1.02] active:scale-95 transition-transform"
-          >
-            Get Started Now <ArrowRight size={16} aria-hidden="true" />
-          </button>
-        </GlassCard>
-
         {/* ── 6. CTA CARD ──────────────────────────────────────────────── */}
         <GlassCard
           className="p-6 text-center relative z-10 overflow-hidden mt-4"
@@ -674,7 +632,6 @@ export default function LandingPage() {
           <div className="flex flex-wrap justify-center gap-x-5 gap-y-2.5 mb-5 text-[13px] font-medium text-slate-700">
             {[
               { href: '/features', label: 'Features' },
-              { href: '/pricing', label: 'Pricing' },
               { href: '/about', label: 'About' },
               { href: '/faq', label: 'FAQ' },
               { href: '/contact', label: 'Contact' },

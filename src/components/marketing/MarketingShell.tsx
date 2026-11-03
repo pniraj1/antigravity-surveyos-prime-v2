@@ -3,7 +3,6 @@ import Link from 'next/link';
 /** Every marketing + legal route. The footer renders this list verbatim. */
 export const MARKETING_LINKS: { href: string; label: string }[] = [
   { href: '/features', label: 'Features' },
-  { href: '/pricing', label: 'Pricing' },
   { href: '/about', label: 'About' },
   { href: '/contact', label: 'Contact' },
   { href: '/faq', label: 'FAQ' },
@@ -28,7 +27,6 @@ export function MarketingShell({ eyebrow, title, subtitle, children, wide = fals
         <Link href="/landing" className="text-sm font-black text-slate-900 tracking-tight">Motor SurveyOS</Link>
         <div className="flex items-center gap-5">
           <Link href="/features" className="hidden sm:block text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors">Features</Link>
-          <Link href="/pricing" className="hidden sm:block text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors">Pricing</Link>
           <Link href="/signup" className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-gray-900 bg-amber-400 rounded-full hover:scale-105 active:scale-95 transition-transform shadow-sm">
             Start Free Trial
           </Link>

@@ -16,9 +16,9 @@ export function ProviderHealthBadge() {
   const provider = profile.aiProvider ?? 'gemini';
   const healthKey = provider === 'groq' ? 'groq' : 'gemini';
   const health = aiProviderHealth[healthKey];
-  const providerLabel = provider === 'gemini' ? 'Gemini' : provider === 'nvidia' ? 'NVIDIA' : provider === 'groq' ? 'Groq' : provider === 'ollama' ? 'Ollama' : provider;
+  const providerLabel = provider === 'gemini' ? 'G' : provider === 'nvidia' ? 'NVIDIA' : provider === 'groq' ? 'Q' : provider === 'ollama' ? 'O' : provider;
   const pick = profile.preferredAI;
-  const PICK_LABELS = { gemini: 'Gemini', groq: 'Groq', nvidia: 'NVIDIA', ollama: 'Ollama' } as const;
+  const PICK_LABELS = { gemini: 'G', groq: 'Q', nvidia: 'NVIDIA', ollama: 'O' } as const;
   const shortModel = pick && pick !== 'auto'
     ? `${profile.preferredModel ? profile.preferredModel.split('/').pop() : PICK_LABELS[pick]} first`
     : `${providerLabel} · auto`;
@@ -211,9 +211,9 @@ export function ProviderToggle() {
   type Pick = NonNullable<typeof profile.preferredAI>;
   const PROVIDERS: { id: Pick; label: string; icon: React.ReactNode; activeBg: string; activeColor: string }[] = [
     { id: 'auto',   label: 'Auto',   icon: <Wand2 size={11} />,    activeBg: 'var(--color-neutral-900)',      activeColor: 'var(--color-neutral-50)' },
-    { id: 'gemini', label: 'Gemini', icon: <Sparkles size={11} />, activeBg: 'var(--color-primary)',          activeColor: 'var(--color-neutral-900)' },
-    { id: 'ollama', label: 'Ollama', icon: <Zap size={11} />,      activeBg: 'var(--color-neutral-900)',      activeColor: 'var(--color-neutral-50)' },
-    { id: 'groq',   label: 'Groq',   icon: <Zap size={11} />,      activeBg: 'var(--color-status-warning)',   activeColor: 'var(--color-neutral-50)' },
+    { id: 'gemini', label: 'G',      icon: <Sparkles size={11} />, activeBg: 'var(--color-primary)',          activeColor: 'var(--color-neutral-900)' },
+    { id: 'ollama', label: 'O',      icon: <Zap size={11} />,      activeBg: 'var(--color-neutral-900)',      activeColor: 'var(--color-neutral-50)' },
+    { id: 'groq',   label: 'Q',      icon: <Zap size={11} />,      activeBg: 'var(--color-status-warning)',   activeColor: 'var(--color-neutral-50)' },
     { id: 'nvidia', label: 'NVIDIA', icon: <Cpu size={11} />,      activeBg: 'var(--color-status-success)',   activeColor: 'var(--color-neutral-900)' },
   ];
 

@@ -18,7 +18,7 @@ describe('landing footer', () => {
   // there passes while real users see no links at all.
   test('the rendered landing page links to every marketing and legal page', () => {
     const text = readFileSync('src/app/landing/page.tsx', 'utf8');
-    for (const href of ['/privacy', '/terms', '/refund', '/contact', '/about', '/faq', '/pricing', '/features']) {
+    for (const href of ['/privacy', '/terms', '/refund', '/contact', '/about', '/faq', '/features']) {
       expect(text).toContain(`'${href}'`);
     }
   });

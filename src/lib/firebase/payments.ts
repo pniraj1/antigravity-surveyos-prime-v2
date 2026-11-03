@@ -12,6 +12,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db } from './config';
+import { REFERRALS_ENABLED } from '@/lib/subscription/plans';
 import type { PaymentRecord } from '@/types/payment';
 import { addDaysToDate } from '@/lib/subscription/status';
 
@@ -110,6 +111,7 @@ export async function rejectPayment(
 }
 
 async function handleReferralReward(referredUserUid: string): Promise<void> {
+  if (!REFERRALS_ENABLED) return;
   const profileRef = doc(db, 'users', referredUserUid, 'profile', 'current');
   const profileSnap = await getDoc(profileRef);
   const profileData = profileSnap.data();

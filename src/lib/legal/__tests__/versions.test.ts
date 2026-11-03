@@ -4,8 +4,8 @@ import { TERMS_VERSION, PRIVACY_VERSION, buildConsentRecord } from '../versions'
 
 describe('legal versions', () => {
   test('terms version matches the date printed on the page', () => {
-    expect(TERMS_VERSION).toBe('2026-07-31');
-    expect(readFileSync('src/app/terms/page.tsx', 'utf8')).toContain('Version 2026-07-31');
+    expect(TERMS_VERSION).toBe('2026-11-03');
+    expect(readFileSync('src/app/terms/page.tsx', 'utf8')).toContain('Version 2026-11-03');
   });
 
   test('terms names the contracting party and Pune jurisdiction', () => {
