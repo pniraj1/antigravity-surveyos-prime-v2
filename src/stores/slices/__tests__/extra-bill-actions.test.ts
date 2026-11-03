@@ -102,3 +102,37 @@ describe('promoteExtraBillItem', () => {
     expect(get().currentClaim!.extraBillItems).toHaveLength(1);
   });
 });
+
+describe('correcting a wrong match', () => {
+  const wrongLine: ExtraBillItem = { ...extra, id: 'e-lh', description: 'HEAD LAMP LH', srNo: 9 };
+  const rightLine: ExtraBillItem = { ...extra, id: 'e-rh', description: 'HEAD LAMP RH', srNo: 10 };
+  const matched = () => row({
+    particulars: 'HEAD LAMP RH', billedTaxable: 6000, billStatus: 'in-bill', refSrNo: 9,
+    refStatus: 'ambiguous', refMatch: { bill: wrongLine, score: 45, reasons: ['Left vs right'] },
+  });
+
+  test('linking the right line returns the wrong one to unmatched', () => {
+    const claim = { id: 'c1', assessmentRows: [matched()], extraBillItems: [rightLine] } as unknown as ClaimData;
+    const { slice, get } = harness(claim);
+
+    slice.linkExtraBillItem('e-rh', 'r1');
+
+    const r = get().currentClaim!.assessmentRows[0];
+    expect(r.refSrNo).toBe(10);
+    expect(r.refStatus).toBe('manual');
+    expect(get().currentClaim!.extraBillItems!.map(e => e.id)).toEqual(['e-lh']);
+  });
+
+  test('unlinking puts the line back and leaves the row unchecked', () => {
+    const claim = { id: 'c1', assessmentRows: [matched()], extraBillItems: [] } as unknown as ClaimData;
+    const { slice, get } = harness(claim);
+
+    slice.unlinkBillMatch('r1');
+
+    const r = get().currentClaim!.assessmentRows[0];
+    expect(r.billedTaxable).toBeUndefined();
+    expect(r.billStatus).toBe('pending');
+    expect(r.refSrNo).toBeUndefined();
+    expect(get().currentClaim!.extraBillItems!.map(e => e.id)).toEqual(['e-lh']);
+  });
+});

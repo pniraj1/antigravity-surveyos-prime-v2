@@ -21,7 +21,7 @@ import { GRID_COLUMNS } from '@/components/claim/grid-columns';
 import { AllowanceScopeDialog } from '@/components/dialogs/AllowanceScopeDialog';
 import { AllowanceInput } from './AllowanceInput';
 import { billCheckFlags, type BillFlag } from '@/lib/reports/bill-check-flags';
-import { BillCheckFlagMark, BillCheckFlagDetail } from './BillCheckFlagRow';
+import { BillCheckFlagMark, BillCheckFlagDetail, BillCheckMatchDetail } from './BillCheckFlagRow';
 
 interface Props {
   allRows: AssessmentRow[];
@@ -71,6 +71,8 @@ export function BillCheckGrid({
   const [filterUncertain, setFilterUncertain] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
   const addAssessmentRowToSection = useClaimStore(s => s.addAssessmentRowToSection);
+  const linkExtraBillItem = useClaimStore(s => s.linkExtraBillItem);
+  const unlinkBillMatch = useClaimStore(s => s.unlinkBillMatch);
 
   const uncertainCount = useMemo(
     () => allRows.filter(r => r.refStatus === 'ambiguous' || (r.allowed && !r.refSrNo)).length,
@@ -81,9 +83,26 @@ export function BillCheckGrid({
 
   const flagsByRow = useMemo(() => {
     const m = new Map<string, BillFlag>();
-    for (const f of billCheckFlags(allRows)) m.set(f.rowId, f);
+    // First flag per row wins: a doubtful match is settled before its price.
+    for (const f of billCheckFlags(allRows)) if (!m.has(f.rowId)) m.set(f.rowId, f);
     return m;
   }, [allRows]);
+
+  // Flagged rows in on-screen order: section by section, same rows the grid shows.
+  const flaggedIds = SECTION_ORDER.flatMap(({ section }) =>
+    allRows
+      .filter(r => r.section === section && (r.allowed || (r.billedAmount ?? 0) > 0) && flagsByRow.has(r.id))
+      .map(r => r.id),
+  );
+  const flagPos = openFlag ? flaggedIds.indexOf(openFlag) : -1;
+  const stepFlag = (dir: 1 | -1) => {
+    const n = flaggedIds.length;
+    const id = flaggedIds[flagPos < 0 ? (dir === 1 ? 0 : n - 1) : (flagPos + dir + n) % n];
+    setOpenFlag(id);
+    setFilterUncertain(false);
+    requestAnimationFrame(() =>
+      document.getElementById(`bc-row-${id}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }));
+  };
 
   /**
    * Allowing above the assessed figure means editing `assessed` — the field
@@ -336,6 +355,13 @@ export function BillCheckGrid({
               {filterUncertain ? `Show All (${allRows.length})` : `Review Ref Numbers (${uncertainCount})`}
             </button>
           )}
+          {flaggedIds.length > 0 && (
+            <div className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+              <button onClick={() => stepFlag(-1)} className="px-2 py-1.5 rounded-lg border border-border text-foreground">‹ Prev</button>
+              <button onClick={() => stepFlag(1)} className="px-2 py-1.5 rounded-lg border border-border text-foreground">Next ›</button>
+              <span>{flagPos + 1} / {flaggedIds.length}</span>
+            </div>
+          )}
           {/* Column visibility dropdown */}
           <div className="relative" ref={settingsRef}>
             <button
@@ -453,6 +479,7 @@ export function BillCheckGrid({
               ),
               <div
                 key={row.id}
+                id={`bc-row-${row.id}`}
                 className="px-6 py-3 grid gap-2 items-center"
                 style={{
                   gridTemplateColumns: gridCols,
@@ -600,7 +627,7 @@ export function BillCheckGrid({
                       title={row.refStatus === 'ambiguous' ? 'Ambiguous match — please verify' : 'Reference serial number'}
                     />
                     {row.refStatus === 'ambiguous' && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" title="Ambiguous match" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" title={row.refMatch ? `${row.refMatch.score}% match — check` : 'Ambiguous match'} />
                     )}
                   </div>
                 )}
@@ -621,7 +648,29 @@ export function BillCheckGrid({
                   <Trash2 size={14} />
                 </button>
               </div>,
-              openFlag === row.id && flagsByRow.get(row.id) && (
+              openFlag === row.id && flagsByRow.get(row.id)?.kind === 'ambiguous' && (
+                <BillCheckMatchDetail
+                  key={`flag-${row.id}`}
+                  flag={flagsByRow.get(row.id)!}
+                  row={row}
+                  serial={serials.get(row.id)}
+                  extraBillItems={claim.extraBillItems || []}
+                  colSpan={gridCols.split(' ').length}
+                  onConfirm={() => {
+                    updateAssessmentRow(row.id, { refStatus: 'manual' });
+                    setOpenFlag(null);
+                  }}
+                  onUnlink={() => {
+                    unlinkBillMatch(row.id);
+                    setOpenFlag(null);
+                  }}
+                  onUseOther={id => {
+                    linkExtraBillItem(id, row.id);
+                    setOpenFlag(null);
+                  }}
+                />
+              ),
+              openFlag === row.id && flagsByRow.get(row.id) && flagsByRow.get(row.id)!.kind !== 'ambiguous' && (
                 <BillCheckFlagDetail
                   key={`flag-${row.id}`}
                   flag={flagsByRow.get(row.id)!}

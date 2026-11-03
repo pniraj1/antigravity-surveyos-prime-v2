@@ -2,6 +2,18 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-03 (Claude Code) — Bill Check: match score and review of doubtful matches
+- fix(bill-check): matcher (`matchBillItemsToRows`) now scores every estimate row against every bill line, 0–100 with reasons (`lib/reports/bill-match-score.ts`), best pairs first. Was: row-by-row passes where an amount-only match, LH vs RH, or front vs rear came out "clean".
+  - LH/RH, front/rear, upper/lower, inner/outer clashes cap the score below "sure". Short names no longer fully match longer ones (Dice, not overlap-of-smaller). "Assy" ignored.
+  - Bands: ≥85 sure, 40–84 check (`refStatus: 'ambiguous'`), <40 not matched (goes to unmatched bill items). A runner-up within 10 points also makes it "check".
+  - Row keeps `refMatch` (bill line snapshot + score + reasons). "Ambiguous match — please verify" is no longer written into `billRemarks`.
+- feat(bill-check): the amber "?" card for a doubtful match shows estimate row and bill line side by side, clashing words in red, score and reasons, next-best unmatched lines with "Use this", and "Right line" / "Wrong line — unlink". Prev/Next steps through flagged rows. Link list in unmatched items is ranked by score.
+  - `linkExtraBillItem` sets refSrNo + `refStatus: 'manual'` and returns the row's previous line to unmatched; new `unlinkBillMatch`.
+  - Doubtful matches stay amber (never block print), per the banner's existing rule; the match flag shows before the price flag.
+- Stack/cost: none. Plain code, no AI calls. 400×400 match ≈ 0.35 s.
+- Not browser-tested (needs login + real claim). Not deployed.
+- Scan impact: none (bill matching is Prime-only; no coupling file touched).
+
 ## 2026-11-03 (Claude Code) — Past prices for a part (assessment grid)
 - feat(assessment): clock icon next to each row's part name (shows on hover, like the Evidence icon). Click opens a popup with the surveyor's own past claims for the same part on the same make/model: date, workshop, estimate, assessed (or "Disallowed"), newest first, 5 at a time. Click a line to open that claim (current claim saved first). Esc / click outside closes.
 - Matching (`lib/claims/part-history.ts`): OEM part number when both rows have one, else a part-name key (case, word order, punctuation, F/Frt/R/Rr, "assy" ignored). Variant and year ignored. Read-only: never flags, never writes a figure.

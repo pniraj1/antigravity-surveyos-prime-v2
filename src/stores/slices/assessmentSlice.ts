@@ -14,6 +14,8 @@ export interface AssessmentSlice {
   deleteExtraBillItem: (id: string) => void;
   clearExtraBillItems: () => void;
   linkExtraBillItem: (extraId: string, rowId: string) => void;
+  /** Undo a row's bill match: the line returns to the unmatched list. */
+  unlinkBillMatch: (rowId: string) => void;
   promoteExtraBillItem: (extraId: string) => void;
   toggleRowAllowed: (id: string) => void;
   addSpotDamageRow: (component?: string, damage?: string) => void;
@@ -247,10 +249,14 @@ export const createAssessmentSlice: StateCreator<any, any, any, AssessmentSlice>
   linkExtraBillItem: (extraId, rowId) => {
     set((state: WithClaim) => {
       if (!state.currentClaim) return {};
-      const extra = (state.currentClaim.extraBillItems || []).find((i) => i.id === extraId);
-      if (!extra) return {};
+      const extras = state.currentClaim.extraBillItems || [];
+      const extra = extras.find((i) => i.id === extraId);
+      const target = state.currentClaim.assessmentRows.find((r) => r.id === rowId);
+      if (!extra || !target) return {};
+      // The line this row held goes back to the unmatched list rather than
+      // vanishing: re-linking is how a wrong match gets corrected.
+      const displaced = target.refMatch?.bill;
 
-      const AMT_TOL = 1;
       return {
         currentClaim: {
           ...state.currentClaim,
@@ -265,9 +271,46 @@ export const createAssessmentSlice: StateCreator<any, any, any, AssessmentSlice>
               billedAmount: extra.amount,
               billStatus: 'in-bill' as const,
               billRemarks: r.billRemarks || `Linked from bill: ${extra.description}`,
+              refSrNo: extra.srNo ?? r.refSrNo,
+              refStatus: 'manual' as const,
+              refMatch: { bill: extra, score: 100, reasons: ['Linked by you'] },
             };
           }),
-          extraBillItems: (state.currentClaim.extraBillItems || []).filter((i) => i.id !== extraId),
+          extraBillItems: [
+            ...extras.filter((i) => i.id !== extraId),
+            ...(displaced && !extras.some((i) => i.id === displaced.id) ? [displaced] : []),
+          ],
+          updatedAt: new Date().toISOString(),
+        },
+        isDirty: true,
+      };
+    });
+  },
+
+  unlinkBillMatch: (rowId) => {
+    set((state: WithClaim) => {
+      if (!state.currentClaim) return {};
+      const row = state.currentClaim.assessmentRows.find((r) => r.id === rowId);
+      const bill = row?.refMatch?.bill;
+      if (!row || !bill) return {};
+      const extras = state.currentClaim.extraBillItems || [];
+      return {
+        currentClaim: {
+          ...state.currentClaim,
+          // Back to unchecked: the surveyor then marks it Not in Bill or links
+          // the right line. Guessing either here would be the same mistake.
+          assessmentRows: state.currentClaim.assessmentRows.map((r) =>
+            r.id !== rowId ? r : {
+              ...r,
+              billedTaxable: undefined,
+              billedAmount: undefined,
+              billStatus: 'pending' as const,
+              billVerified: undefined,
+              refSrNo: undefined,
+              refStatus: undefined,
+              refMatch: undefined,
+            }),
+          extraBillItems: extras.some((i) => i.id === bill.id) ? extras : [...extras, bill],
           updatedAt: new Date().toISOString(),
         },
         isDirty: true,

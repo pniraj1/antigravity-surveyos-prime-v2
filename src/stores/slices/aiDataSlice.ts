@@ -4,6 +4,7 @@ import { createAssessmentRow } from '@/lib/calculations';
 import { buildDecision } from '@/lib/ai/reconciliation';
 import { parsePolicyAddOns, mergePolicyAiRead } from '@/lib/policy/policy-check';
 import { applyEstimateFix, type EstimateFixPlan, type EstimateFixPicks } from '@/lib/ai/estimate-fix';
+import { scorePair, SURE_SCORE, MIN_SCORE, type PairScore } from '@/lib/reports/bill-match-score';
 
 export type EstimateApplyMode = 'replace' | 'append' | 'continue' | 'another';
 
@@ -196,38 +197,38 @@ interface BillItem {
   raw: any;
 }
 
-/** Significant words of a description, lowercased, order-independent. */
-function descTokens(s: string): Set<string> {
-  return new Set(
-    s.toLowerCase()
-      .replace(/[^a-z0-9\s]/g, ' ')
-      .split(/\s+/)
-      .filter(w => w.length > 2)
-  );
-}
-
-/**
- * Fraction of the smaller token set that both descriptions share.
- * "FRONT BUMPER" vs "BUMPER FRONT" scores 1 — substring matching scored 0,
- * which is how genuinely-assessed items ended up reported as extras.
- */
-function descOverlap(a: string, b: string): number {
-  const ta = descTokens(a);
-  const tb = descTokens(b);
-  if (ta.size === 0 || tb.size === 0) return 0;
-  let shared = 0;
-  ta.forEach(w => { if (tb.has(w)) shared += 1; });
-  return shared / Math.min(ta.size, tb.size);
-}
-
-const DESC_MATCH_THRESHOLD = 0.6;
-
 export interface BillMatch {
   bill: BillItem;
   reason: 'part' | 'amount' | 'desc';
   /** Returned rather than mutated onto the bill item. */
   ambiguous: boolean;
+  /** 0–100, from scorePair. */
+  score: number;
+  /** Why, in the surveyor's words: "Left vs right", "Amount matches"… */
+  reasons: string[];
 }
+
+function extraFromBillItem(bi: BillItem): ExtraBillItem {
+  return {
+    // Stable id from content, so a re-upload of the same bill produces the
+    // same id and merging can tell a repeat from a new item.
+    id: `extra-${bi.section}-${bi.partNumber || bi.description}-${bi.totalAmount}`.replace(/\s+/g, '_'),
+    description: bi.description || 'Unnamed item',
+    amount: bi.totalAmount,
+    taxableAmount: bi.taxableAmount,
+    gstPercent: bi.gstPercent,
+    partNumber: bi.partNumber || undefined,
+    hsnSac: bi.raw?.hsn_sac || bi.raw?.hsn || undefined,
+    section: bi.section,
+    category:
+      bi.section === 'parts' ? 'spare_parts' : bi.section === 'labour' ? 'labour' : 'painting',
+    source: 'final-bill' as const,
+    srNo: bi.srNo,
+  };
+}
+
+/** A runner-up this close to the winner makes the pick a coin toss. */
+const RIVAL_GAP = 10;
 
 // ─── Final-bill helpers ───────────────────────────────────────────────────────
 
@@ -269,77 +270,47 @@ export function matchBillItemsToRows(
   rows: AssessmentRow[],
   billItems: BillItem[]
 ): Map<string, BillMatch> {
-  const AMT_TOL = 1;
-  const normPart = (s: string) => s.toLowerCase().replace(/[\s\-_.]/g, '');
-
-  const matchedBillIds = new Set<number>();
-  const rowMatches = new Map<string, BillMatch>();
-
-  // Step 1: exact part-number match — the strongest signal.
-  rows.forEach((row) => {
-    if (rowMatches.has(row.id)) return;
-    const rowPart = normPart(row.partNumber || '');
-    if (!rowPart) return;
-    const hit = billItems.find((bi) => {
-      if (matchedBillIds.has(bi.idx)) return false;
-      const biPart = normPart(bi.partNumber);
-      return !!biPart && biPart === rowPart;
-    });
-    if (hit) {
-      matchedBillIds.add(hit.idx);
-      rowMatches.set(row.id, { bill: hit, reason: 'part', ambiguous: false });
+  // Every row against every line, best pairs first. Matching row by row let
+  // an early vague row ("BUMPER") take the line a later row fitted exactly.
+  // ponytail: greedy over sorted pairs; optimal assignment if greedy misfires.
+  const pairs: { row: AssessmentRow; bi: BillItem; s: PairScore }[] = [];
+  for (const row of rows) {
+    for (const bi of billItems) {
+      const s = scorePair(row, bi);
+      if (s.score >= MIN_SCORE) pairs.push({ row, bi, s });
     }
-  });
+  }
+  pairs.sort((a, b) => b.s.score - a.s.score);
 
-  // Step 2: taxable amount within tolerance, description breaking ties.
-  // Section is a tie-breaker, not a gate: the AI misfiling a part under
-  // labour used to make the item unmatchable.
-  rows.forEach((row) => {
-    if (rowMatches.has(row.id)) return;
-    const rowAmt = row.estimated || row.assessed || 0;
-    if (rowAmt <= 0) return;
-
-    const candidates = billItems.filter(
-      (bi) => !matchedBillIds.has(bi.idx) && Math.abs(bi.taxableAmount - rowAmt) <= AMT_TOL
-    );
-    if (candidates.length === 0) return;
-
-    const scored = candidates
-      .map((c) => ({
-        c,
-        score: descOverlap(row.particulars, c.description) + (c.section === row.section ? 0.25 : 0),
-      }))
-      .sort((a, b) => b.score - a.score);
-
-    const ambiguous =
-      scored[0].score === 0 || (scored[1] !== undefined && scored[0].score === scored[1].score);
-
-    matchedBillIds.add(scored[0].c.idx);
-    rowMatches.set(row.id, { bill: scored[0].c, reason: ambiguous ? 'desc' : 'amount', ambiguous });
-  });
-
-  // Step 3: description overlap alone, for rows with no usable amount.
-  rows.forEach((row) => {
-    if (rowMatches.has(row.id)) return;
-    if (!row.particulars) return;
-
-    const scored = billItems
-      .filter((bi) => !matchedBillIds.has(bi.idx))
-      .map((bi) => ({
-        bi,
-        score: descOverlap(row.particulars, bi.description) + (bi.section === row.section ? 0.25 : 0),
-      }))
-      .filter((s) => s.score >= DESC_MATCH_THRESHOLD)
-      .sort((a, b) => b.score - a.score);
-
-    if (scored.length === 0) return;
-    matchedBillIds.add(scored[0].bi.idx);
+  const takenAt = new Map<number, number>(); // bill idx → score it went at
+  const rowMatches = new Map<string, BillMatch>();
+  for (const { row, bi, s } of pairs) {
+    if (rowMatches.has(row.id) || takenAt.has(bi.idx)) continue;
+    takenAt.set(bi.idx, s.score);
+    const first = s.reasons[0];
     rowMatches.set(row.id, {
-      bill: scored[0].bi,
-      reason: 'desc',
-      ambiguous: scored.length > 1 && scored[0].score === scored[1].score,
+      bill: bi,
+      reason: first === 'Part no. matches' ? 'part' : s.reasons.includes('Amount matches') ? 'amount' : 'desc',
+      ambiguous: s.score < SURE_SCORE,
+      score: s.score,
+      reasons: s.reasons,
     });
-  });
+  }
+
+  // A close runner-up makes even a high score a guess — unless another row
+  // took that line because it fitted there better.
+  for (const { row, bi, s } of pairs) {
+    const m = rowMatches.get(row.id);
+    if (!m || m.bill.idx === bi.idx || s.score < m.score - RIVAL_GAP) continue;
+    if ((takenAt.get(bi.idx) ?? -1) > s.score) continue;
+    if (!m.ambiguous || !m.reasons.some(r => r.startsWith('Bill item'))) {
+      rowMatches.set(row.id, {
+        ...m,
+        ambiguous: true,
+        reasons: [...m.reasons, `Bill item ${bi.srNo ?? bi.idx + 1} fits nearly as well`],
+      });
+    }
+  }
 
   return rowMatches;
 }
@@ -656,6 +627,7 @@ export function applyFinalBill(
     const billedTax = m.bill.taxableAmount || 0;
     const refSr = m.bill.srNo ?? (m.bill.idx + 1);
     const refStatus = m.ambiguous ? ('ambiguous' as const) : ('clean' as const);
+    const refMatch = { bill: extraFromBillItem(m.bill), score: m.score, reasons: m.reasons };
     if (!row.allowed) {
       return {
         ...row,
@@ -665,41 +637,28 @@ export function applyFinalBill(
         billRemarks: row.billRemarks || 'Workshop billed for a disallowed item',
         refSrNo: refSr,
         refStatus,
+        refMatch,
       };
     }
     // The bill differing from the estimate is exactly the surveyor's "wrong
     // pricings during estimates which are later corrected". It is surfaced as
     // a divergence flag against the ASSESSMENT, which is what drives the cap,
     // rather than as a status against the estimate that changed no arithmetic.
-    const remark = m.ambiguous ? 'Ambiguous match — please verify' : row.billRemarks;
+    // A doubtful match is carried by refStatus, not a remark that would print.
     return {
       ...row,
       billedTaxable: billedTax,
       billedAmount: billedAmt,
       billStatus: 'in-bill' as const,
-      billRemarks: remark,
       refSrNo: refSr,
       refStatus,
+      refMatch,
     };
   });
 
   const extras: ExtraBillItem[] = billItems
     .filter((bi) => !matchedBillIds.has(bi.idx))
-    .map((bi) => ({
-      // Stable id from content, so a re-upload of the same bill produces the
-      // same id and merging can tell a repeat from a new item.
-      id: `extra-${bi.section}-${bi.partNumber || bi.description}-${bi.totalAmount}`.replace(/\s+/g, '_'),
-      description: bi.description || 'Unnamed item',
-      amount: bi.totalAmount,
-      taxableAmount: bi.taxableAmount,
-      gstPercent: bi.gstPercent,
-      partNumber: bi.partNumber || undefined,
-      hsnSac: bi.raw?.hsn_sac || bi.raw?.hsn || undefined,
-      section: bi.section,
-      category:
-        bi.section === 'parts' ? 'spare_parts' : bi.section === 'labour' ? 'labour' : 'painting',
-      source: 'final-bill' as const,
-    }));
+    .map(extraFromBillItem);
 
   // Merge, don't overwrite: the surveyor may have deleted or promoted items
   // from a previous upload of this bill.

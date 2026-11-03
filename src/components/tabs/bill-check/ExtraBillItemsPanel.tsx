@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { AlertCircle, Trash2, Link2, PlusCircle } from 'lucide-react';
 import type { ExtraBillItem, AssessmentRow } from '@/types';
+import { scorePair, SURE_SCORE } from '@/lib/reports/bill-match-score';
 
 interface Props {
   extraBillItems: ExtraBillItem[];
@@ -23,9 +24,13 @@ export function ExtraBillItemsPanel({
   if (extraBillItems.length === 0) return null;
 
   const total = extraBillItems.reduce((s, i) => s + (i.amount || 0), 0);
-  const candidates = assessmentRows.filter(r =>
-    r.particulars.toLowerCase().includes(search.toLowerCase())
-  );
+  const linkingItem = extraBillItems.find(i => i.id === linkingId);
+  const candidates = linkingItem
+    ? assessmentRows
+        .filter(r => r.particulars.toLowerCase().includes(search.toLowerCase()))
+        .map(r => ({ row: r, ...scorePair(r, linkingItem) }))
+        .sort((a, b) => b.score - a.score)
+    : [];
 
   return (
     <div className="rounded-2xl overflow-hidden bg-white border-2 border-status-danger">
@@ -107,7 +112,7 @@ export function ExtraBillItemsPanel({
                 {candidates.length === 0 && (
                   <div className="px-3 py-3 text-xs text-muted-foreground">No matching assessment items.</div>
                 )}
-                {candidates.map(r => (
+                {candidates.map(({ row: r, score, reasons }) => (
                   <button
                     key={r.id}
                     onClick={() => { onLink(item.id, r.id); setLinkingId(null); }}
@@ -115,7 +120,8 @@ export function ExtraBillItemsPanel({
                   >
                     <span className="text-xs font-medium text-foreground truncate">{r.particulars || '—'}</span>
                     <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                      {r.section} · assessed {fmt(r.assessed)}{r.allowed ? '' : ' · not allowed'}
+                      <span className={score >= SURE_SCORE ? 'text-status-success' : undefined}>{score}% · {reasons[0]}</span>
+                      {' · '}{r.section} · assessed {fmt(r.assessed)}{r.allowed ? '' : ' · not allowed'}
                     </span>
                   </button>
                 ))}

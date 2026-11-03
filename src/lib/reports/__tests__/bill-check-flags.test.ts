@@ -73,10 +73,20 @@ describe('billCheckFlags', () => {
 
   test('a low-confidence match advises', () => {
     const [f] = billCheckFlags([
-      row({ assessed: 1000, billedTaxable: 1000, billRemarks: 'Ambiguous match — please verify' }),
+      row({ assessed: 1000, billedTaxable: 1000, refStatus: 'ambiguous' }),
     ]);
     expect(f.kind).toBe('ambiguous');
     expect(f.blocking).toBe(false);
+  });
+
+  test('a doubtful match is asked before its price, and the price still blocks', () => {
+    const flags = billCheckFlags([row({ assessed: 1000, billedTaxable: 1200, refStatus: 'ambiguous' })]);
+    expect(flags.map(f => f.kind)).toEqual(['ambiguous', 'billed-above']);
+    expect(flags[1].blocking).toBe(true);
+  });
+
+  test('a match the surveyor confirmed no longer flags', () => {
+    expect(billCheckFlags([row({ assessed: 1000, billedTaxable: 1000, refStatus: 'manual' })])).toHaveLength(0);
   });
 
   test('a not-in-bill row is the print gate’s business, not this one’s', () => {

@@ -25,6 +25,16 @@ export interface ExtraBillItem {
   section: AssessmentSection;
   category?: 'spare_parts' | 'labour' | 'painting';
   source: 'final-bill';
+  /** The line's serial on the bill — becomes the row's refSrNo when linked. */
+  srNo?: number | string;
+}
+
+/** The bill line a row was matched to, kept so a wrong match can be undone. */
+export interface RefMatch {
+  bill: ExtraBillItem;
+  /** 0–100 from scorePair; 100 when the surveyor linked it by hand. */
+  score: number;
+  reasons: string[];
 }
 
 
@@ -121,6 +131,8 @@ export interface AssessmentRow {
   reReadNote?: string;
   refSrNo?: number | string;
   refStatus?: 'clean' | 'ambiguous' | 'manual';
+  /** Screen only: what the bill said for this row, and how sure the match was. */
+  refMatch?: RefMatch;
   /** Estimate batch this row was imported from. Display-only view lens metadata; never used in calculations or reports. */
   estimateId?: string;
 }

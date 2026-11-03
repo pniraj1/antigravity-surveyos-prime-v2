@@ -69,6 +69,23 @@ export function billCheckFlags(rows: AssessmentRow[]): BillFlag[] {
 
     if (r.billStatus === 'not-in-bill' || billed === undefined) continue;
 
+    // First, so the screen asks "is this the right bill line?" before "is this
+    // the right price?" — a price flag on the wrong line is noise. Advisory,
+    // like every amber flag; the price flag below still blocks on its own.
+    if (r.refStatus === 'ambiguous') {
+      flags.push({
+        rowId: r.id,
+        kind: 'ambiguous',
+        blocking: false,
+        estimate: r.estimated,
+        assessed: r.assessed,
+        billed,
+        delta: billed - r.assessed,
+        heading: 'Check this is the right line on the bill',
+        detail: 'The match to the invoice is not certain. Compare the two descriptions below.',
+      });
+    }
+
     if (billed !== r.assessed && !r.billVerified) {
       const below = billed < r.assessed;
       // The estimate is what tells you WHY the bill differs, and it changes the
@@ -99,20 +116,6 @@ export function billCheckFlags(rows: AssessmentRow[]): BillFlag[] {
             `The claim holds at ${rs(r.assessed)} unless you raise it.`,
       });
       continue;
-    }
-
-    if (r.billRemarks?.startsWith('Ambiguous match')) {
-      flags.push({
-        rowId: r.id,
-        kind: 'ambiguous',
-        blocking: false,
-        estimate: r.estimated,
-        assessed: r.assessed,
-        billed,
-        delta: billed - r.assessed,
-        heading: 'This line was matched to the invoice with low confidence',
-        detail: 'Check the billed figure against the bill before issuing.',
-      });
     }
   }
 
