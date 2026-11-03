@@ -180,7 +180,11 @@ export function useAuth() {
             try {
               const currentData = currentSnap.exists() ? currentSnap.data() : null;
               const alreadySubmitted = currentData?.accessRequestSubmitted === true;
-              if (!alreadySubmitted) {
+              // Admins never belong in the approval queue — approving one there
+              // would hand them a trial in place of their admin access.
+              const isAdminAccount = currentData?.isAdmin === true
+                || user.uid === process.env.NEXT_PUBLIC_MASTER_ADMIN_UID;
+              if (!alreadySubmitted && !isAdminAccount) {
                 const signupRef = doc(db, 'newSignups', user.uid);
                 await setDoc(signupRef, {
                   email: user.email ?? '',

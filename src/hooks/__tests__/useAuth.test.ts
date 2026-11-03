@@ -20,6 +20,9 @@ let authCallback: ((user: unknown) => Promise<void>) | null = null;
 /** Flipped per-test to simulate Firestore being reachable or not. */
 let firestoreFails = false;
 
+/** The profile/current doc getDoc returns; per-test override. */
+let profileData: Record<string, unknown> = { subscriptionStatus: 'active', isAdmin: false };
+
 // Run hooks outside a renderer so useAuth() can be called as a plain function
 // (no DOM / testing-library in this project — the suite runs in node).
 // useEffect fires immediately; the rest are the primitives zustand's useStore
@@ -50,7 +53,7 @@ vi.mock('firebase/firestore', () => ({
   doc: vi.fn(() => ({})),
   getDoc: vi.fn(async () => {
     if (firestoreFails) throw new Error('unavailable: backend cannot be reached');
-    return { exists: () => true, data: () => ({ subscriptionStatus: 'active', isAdmin: false }) };
+    return { exists: () => true, data: () => profileData };
   }),
   setDoc: vi.fn(async () => {}),
   deleteDoc: vi.fn(async () => {}),
@@ -81,6 +84,7 @@ vi.mock('@/lib/subscription/status', () => ({ isExpired: () => false }));
 
 import { useAuth } from '../useAuth';
 import { useAuthStore } from '@/stores/auth-store';
+import { setDoc } from 'firebase/firestore';
 
 const FAKE_USER = { uid: 'uid-1', email: 's@example.com', displayName: 'Surveyor' };
 
@@ -88,6 +92,8 @@ describe('useAuth — post-login bootstrap', () => {
   beforeEach(() => {
     authCallback = null;
     firestoreFails = false;
+    profileData = { subscriptionStatus: 'active', isAdmin: false };
+    vi.mocked(setDoc).mockClear();
     useAuthStore.setState({ user: null, isAuthenticated: false, loading: true, sessionConflict: null });
     // The bootstrap logs the swallowed failure; keep the test output clean.
     vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -111,5 +117,23 @@ describe('useAuth — post-login bootstrap', () => {
     // signed in to Firebase but the UI never left the landing page.
     expect(useAuthStore.getState().isAuthenticated).toBe(true);
     expect(useAuthStore.getState().loading).toBe(false);
+  });
+
+  // An admin in the approval queue gets demoted to a trial if someone clicks Approve.
+  const queueWrites = () => vi.mocked(setDoc).mock.calls
+    .filter(([, data]) => (data as { signedUpAt?: unknown }).signedUpAt !== undefined);
+
+  it('queues a pending surveyor who has not submitted the form', async () => {
+    profileData = { subscriptionStatus: 'pending', isAdmin: false, accessRequestSubmitted: false };
+    useAuth();
+    await authCallback!(FAKE_USER);
+    expect(queueWrites()).toHaveLength(1);
+  });
+
+  it('never queues an admin, even with a pending status', async () => {
+    profileData = { subscriptionStatus: 'pending', isAdmin: true, accessRequestSubmitted: false };
+    useAuth();
+    await authCallback!(FAKE_USER);
+    expect(queueWrites()).toHaveLength(0);
   });
 });

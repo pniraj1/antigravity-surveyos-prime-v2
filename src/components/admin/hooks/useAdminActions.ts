@@ -76,7 +76,7 @@ export function useAdminActions({
         trialStartDate: trialStart,
         trialEndDate: trialEnd,
         referralCode: refCode,
-        isAdmin: false,
+        // isAdmin left untouched: approving must never demote an admin.
         email: authorEmail,
         displayName: signup.displayName || profileData.displayName || '',
         updatedAt: Timestamp.now(),
