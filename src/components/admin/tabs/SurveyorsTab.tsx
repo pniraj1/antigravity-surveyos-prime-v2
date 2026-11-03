@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { getDaysRemaining } from '@/lib/subscription/status';
 import type { SurveyorAdminProfile, SurveyorFilter } from '../types';
+import { SurveyorAIKeys } from '../SurveyorAIKeys';
 
 const FILTERS: { key: SurveyorFilter; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -409,6 +410,9 @@ export function SurveyorsTab({
                               }
                             </span>
                           </div>
+                        </div>
+                        <div className="mt-5 pt-5 border-t border-border">
+                          <SurveyorAIKeys uid={surveyor.id} />
                         </div>
                       </div>
                     </td>

@@ -68,7 +68,7 @@ function Field({
 }
 
 // ─── Multi-Key Input ─────────────────────────────────────────────────────────
-function MultiKeyInput({
+export function MultiKeyInput({
   keys, onChange, placeholder, accentColor,
 }: {
   keys: string[]; onChange: (keys: string[]) => void; placeholder: string; accentColor: string;
