@@ -278,6 +278,11 @@ export function Sidebar() {
                     {GROUP_LABELS[group]}
                   </div>
                 )}
+                {group === 'claim' && !hasClaim && !sidebarCollapsed && (
+                  <div className="px-3 pb-2 text-[11px] text-[var(--color-neutral-400)]">
+                    Open or create a claim to use these
+                  </div>
+                )}
                 <div className="space-y-0.5">
                   {items.map((item) => {
                     // Hide admin-only tabs from non-admin users
@@ -291,7 +296,11 @@ export function Sidebar() {
                         key={item.id}
                         onClick={() => !disabled && handleTabChange(item.id)}
                         disabled={disabled}
-                        title={sidebarCollapsed ? item.label : undefined}
+                        title={
+                          disabled
+                            ? sidebarCollapsed ? `${item.label} — open or create a claim first` : 'Open or create a claim first'
+                            : sidebarCollapsed ? item.label : undefined
+                        }
                         className={cn(
                           'w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm relative transition-colors',
                           sidebarCollapsed ? 'justify-center' : '',

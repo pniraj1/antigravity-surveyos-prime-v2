@@ -388,6 +388,16 @@ export function NewClaimDialog() {
                 Valuation
               </button>
             </div>
+            {surveyType === 'spot' && (
+              <p className="text-[11px] text-muted-foreground font-medium px-1">
+                First inspection after the accident, before repairs. Records the damage and its cause.
+              </p>
+            )}
+            {surveyType === 'final' && (
+              <p className="text-[11px] text-muted-foreground font-medium px-1">
+                Full assessment: estimate, parts, labour, bills and the final report.
+              </p>
+            )}
             {surveyType === 'valuation' && (
               <p className="text-[11px] text-status-warning font-medium px-1">
                 Break-in inspection — RC upload auto-fills vehicle details, surveyor fills condition manually.

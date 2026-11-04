@@ -313,7 +313,7 @@ export function DashboardContent() {
                 </div>
                 <div className="text-base font-medium mb-1 text-[var(--color-neutral-900)]">No claims yet</div>
                 <div className="text-sm text-[var(--color-neutral-400)]">
-                  Click &ldquo;New Claim&rdquo; to start your first digital survey.
+                  Start with a vehicle number. Prime then takes you through documents, checks and the report.
                 </div>
                 <button
                   onClick={() => setNewClaimDialogOpen(true)}

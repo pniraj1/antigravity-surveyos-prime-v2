@@ -417,6 +417,8 @@ export function ProfileTab() {
             <div className="flex items-center gap-1 p-1 rounded-lg" style={{ background: 'var(--color-neutral-100)' }}>
               <button
                 onClick={() => updateProfile({ aiProvider: 'gemini' })}
+                title="Use the main AI key first"
+                aria-label="Use the main AI key first"
                 className="px-3 py-1 rounded-md text-[10px] font-medium uppercase transition-all"
                 style={{
                   background: profile.aiProvider === 'gemini' ? 'white' : 'transparent',
@@ -428,6 +430,8 @@ export function ProfileTab() {
               </button>
               <button
                 onClick={() => updateProfile({ aiProvider: 'groq' })}
+                title="Use the backup AI key first"
+                aria-label="Use the backup AI key first"
                 className="px-3 py-1 rounded-md text-[10px] font-medium uppercase transition-all"
                 style={{
                   background: profile.aiProvider === 'groq' ? 'white' : 'transparent',
@@ -461,7 +465,7 @@ export function ProfileTab() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <div className="text-xs font-medium text-foreground">G</div>
+                      <div className="text-xs font-medium text-foreground">G · Main AI key (recommended)</div>
                       {profile.aiProvider === 'gemini' && <span className="text-[9px] font-medium px-1.5 py-0.5 rounded" style={{ background: '#4285F4', color: '#fff' }}>PRIMARY</span>}
                     </div>
                     <div className="text-[10px] font-medium text-muted-foreground">Auto-selects best model · Add up to 3 keys for rate-limit resilience</div>
@@ -488,7 +492,7 @@ export function ProfileTab() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <div className="text-xs font-medium text-foreground">Q</div>
+                      <div className="text-xs font-medium text-foreground">Q · Backup AI key</div>
                       {profile.aiProvider === 'groq' && <span className="text-[9px] font-medium px-1.5 py-0.5 rounded" style={{ background: '#F26639', color: '#fff' }}>PRIMARY</span>}
                     </div>
                     <div className="text-[10px] font-medium text-muted-foreground">Add up to 3 keys for rate-limit resilience</div>
@@ -541,7 +545,7 @@ export function ProfileTab() {
                     <Cpu size={18} style={{ color: '#000000' }} />
                   </div>
                   <div>
-                    <div className="text-xs font-medium text-foreground">O</div>
+                    <div className="text-xs font-medium text-foreground">O · Extra backup key (optional)</div>
                     <div className="text-[10px] font-medium text-muted-foreground">Optional · free backup used automatically when G is busy</div>
                   </div>
                 </div>
