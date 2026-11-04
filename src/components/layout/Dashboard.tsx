@@ -49,6 +49,8 @@ import { useAIConfig } from '@/hooks/useAIConfig';
 import { useExtractionCompletionToast } from '@/hooks/useExtractionCompletionToast';
 import { ProcessingProgressOverlay } from '@/components/ui/ProcessingProgressOverlay';
 import { TermsReacceptGate } from '@/components/legal/TermsReacceptGate';
+import { GettingStartedCard } from '@/components/onboarding/GettingStartedCard';
+import { OnboardingGate } from '@/components/onboarding/OnboardingGate';
 
 // Dynamically import ALL tabs with ssr:false — they all use browser-only APIs:
 const DetailsTab    = dynamicImport(() => import('@/components/tabs/DetailsTab').then(m    => ({ default: m.DetailsTab    })), { ssr: false });
@@ -156,6 +158,8 @@ export function DashboardContent() {
 
       {/* ── Content Area ────────────────────────────────── */}
       <div className="px-6 lg:px-14 py-10 max-w-6xl mx-auto space-y-10">
+
+        <GettingStartedCard />
 
         {/* Stats Row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -683,6 +687,7 @@ export default function Dashboard() {
 
       {/* Global Modals */}
       <NewClaimDialog />
+      <OnboardingGate />
 
       {/* Floating live report preview — visible on all tabs except Reports */}
       <FloatingReportPreview />

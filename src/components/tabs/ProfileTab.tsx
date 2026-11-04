@@ -6,6 +6,7 @@ import { useUIStore } from '@/stores/ui-store';
 import { linkGoogleDrive } from '@/lib/drive';
 import { compressImage } from '@/lib/photos/compress-image';
 import { logger } from '@/lib/utils/logger';
+import { reopenSetupGuide } from '@/lib/onboarding/setup';
 import { useState, useRef } from 'react';
 import {
   User, Shield,
@@ -35,7 +36,7 @@ function Section({ title, icon, children }: { title: string; icon: React.ReactNo
 }
 
 // ─── Input Field ─────────────────────────────────────────────────────────────
-function Field({
+export function Field({
   label, value, onChange, placeholder = '', type = 'text', fullWidth = false, readOnly = false, hint = ''
 }: {
   label: string; value: string; onChange?: (v: string) => void;
@@ -153,7 +154,7 @@ export function MultiKeyInput({
 }
 
 // ─── Image Upload Block ───────────────────────────────────────────────────────
-function ImageUploader({
+export function ImageUploader({
   label, dataUrl, onUpload, onClear, hint,
 }: {
   label: string; dataUrl: string | null;
@@ -310,6 +311,13 @@ export function ProfileTab() {
             >
               {profile.name ? profile.name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() : 'SP'}
             </div>
+            <button
+              type="button"
+              onClick={reopenSetupGuide}
+              className="min-h-11 px-4 rounded-xl text-xs font-medium border border-white/30 text-white hover:bg-white/10"
+            >
+              Show setup guide
+            </button>
           </div>
         </div>
       </div>
