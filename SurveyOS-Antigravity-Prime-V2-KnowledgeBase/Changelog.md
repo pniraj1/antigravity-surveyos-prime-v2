@@ -2,6 +2,12 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-04 (Antigravity) — Custom domain (surveyos.in) Google/Firebase sign-in operational
+- ops(auth): Diagnosed and resolved authentication failures on newly mapped custom domain `https://surveyos.in`.
+- ops(firebase): Authorized `surveyos.in` and `www.surveyos.in` in Firebase Authentication settings and Google Cloud OAuth 2.0 Web Client credentials.
+- Verified: User sign-in and trial onboarding flows verified operational live by owner.
+- Scan impact: None.
+
 ## 2026-11-04 (Antigravity) — Re-inspection conclusion & remarks default and editable field
 - feat(reinspection): pre-filled standard surveyor conclusion in sentence case: "We have re-inspected the captioned vehicle and have found that the repairs / replacement made there were strictly followed as per our final survey report. The salvage of the replaced parts was also verified by me." (`DEFAULT_REINSPECTION_REMARKS` in `src/types/assessment.ts`).
 - fix(reinspection): `observations` is no longer merely a placeholder that disappears and forces retyping. It is pre-populated in `createBlankClaim()` and seeded into existing claims on opening `ReinspectionTab` if blank, rendering as actual editable text.

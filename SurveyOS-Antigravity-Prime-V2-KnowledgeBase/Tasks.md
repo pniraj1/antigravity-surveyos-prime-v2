@@ -1,7 +1,16 @@
 # Active Tasks
 
-> Last updated: 2026-11-04 by Antigravity (Re-inspection surveyor conclusion & remarks default and editable field)
+> Last updated: 2026-11-04 by Antigravity (Resolved surveyos.in custom domain Google/Firebase OAuth sign-in)
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
+
+---
+
+## Done: Custom Domain (surveyos.in) Sign-in & OAuth Debugging (2026-11-04, Antigravity)
+- [x] Diagnosed sign-in failure on new custom domain `https://surveyos.in` (`auth/unauthorized-domain` + OAuth origin mismatch).
+- [x] Identified missing Firebase Auth Authorized Domains and Google Cloud Console OAuth 2.0 Web Client origins.
+- [x] Guided owner through adding `surveyos.in` to Firebase Auth and Google Cloud Console.
+- [x] Verified live: owner confirmed Google Sign-In and trial onboarding are fully functional on `surveyos.in`.
+- [x] Session log created: `Sessions/2026-11-04-custom-domain-auth-debugging.md`.
 
 ---
 
