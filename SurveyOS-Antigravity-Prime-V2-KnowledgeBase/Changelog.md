@@ -2,6 +2,11 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-04 (Antigravity) — Live check guide & Phase 2C tour confirmation
+- docs: Formulated structured verification checklist for the owner covering all Phase 0 and Phase 1 changes on the live site.
+- design: Logged owner confirmation for Phase 2C (Dashboard Tour); planned implementation using `driver.js` (~5 KB, MIT licence, ₹0).
+- Scan impact: None.
+
 ## 2026-11-04 (Antigravity) — Onboarding design review & digital PDF recommendation
 - design: Incorporated owner's instruction to prompt surveyors for original digital PDFs from garages/workshops.
 - ui/ux: Applied `ui-ux-pro-max` guidelines (Executive Platinum system alignment, slim ergonomic banner height, 44px touch targets, 4.5:1 contrast, no emojis).

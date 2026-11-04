@@ -34,8 +34,8 @@
 - [ ] Owner: review proposed tab wording for Phase 2A and approve Phase 2 plan (digital garage PDF advice integrated).
 - [x] Design review & brainstorming: audited Executive Platinum style with `/ui-ux-pro-max` (slim banner, touch targets, contrast) and completed `/multi-agent-brainstorming` review.
 - [ ] Owner: confirm whether the admin-key fallback is on in live `ai_config/routing`; if so the AI key row could say optional.
-- [ ] Owner: confirm whether Phase 2C (Dashboard Tour) is still desired after 2A & 2B.
-- [ ] Phase 2: First-visit tips (2A) and Help button (2B). Phase 3: report section guide. Phase 4: admin progress column.
+- [x] Owner confirmed Phase 2C (Dashboard Tour) is desired (to be built after 2A & 2B using driver.js, ~5 KB, MIT, ₹0).
+- [ ] Phase 2: First-visit tips (2A), Help button (2B), and Dashboard tour (2C). Phase 3: report section guide. Phase 4: admin progress column.
 
 ---
 
