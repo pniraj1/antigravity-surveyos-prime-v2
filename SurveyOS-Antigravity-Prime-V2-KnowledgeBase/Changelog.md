@@ -2,6 +2,12 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-04 (Antigravity) — User onboarding handover takeover & Phase 2 plan
+- docs: Antigravity assumed responsibility for User Onboarding workstream from Claude Code. Read all handover briefs, design specs, and codebase files in `src/lib/onboarding` and `src/components/onboarding`.
+- docs: Formulated Phase 2 implementation plan (first-visit tab tips in 2A, permanent Help button in 2B, tour inquiry for 2C) with cost/resource estimate (₹0 / 0 dependencies) and proposed tab copy.
+- ops: Verified git working tree is on `main`; commit `11790138` (reinspection) verified already live and pushed.
+- Scan impact: None.
+
 ## 2026-11-04 (Claude Code) — Reinspection remarks deployed, GitHub brought up to date
 - ops: deployed `main` to motorsurveyos-in at 22:12 IST (hosting only); the reinspection chunk checked on both motorsurveyos-in.web.app and surveyos.in. 2358 tests pass, type check clean. Not browser-tested.
 - ops: pushed `main` to GitHub `origin/main`. Older "not pushed" notes in `Tasks.md` no longer apply to anything committed up to this entry.

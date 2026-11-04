@@ -25,15 +25,16 @@
 
 ---
 
-## In Progress: User onboarding (2026-11-04, Claude Code, deployed 2026-11-04 to motorsurveyos-in, pushed to GitHub)
-- **Handed to Google Antigravity: read `Sessions/2026-11-04-claude-onboarding-handover.md` first. Phase 2 is next and not started.**
-- Spec and plan: `Specs/2026-11-04-user-onboarding-design.md`, `Specs/2026-11-04-user-onboarding-plan.md`.
-- [x] Phase 0: disabled tabs explained, AI key labels (provider names stay hidden), empty state, survey type lines, blank-profile banner in Report Center. "Open saved" and the sidebar folder button now work (they were dead).
-- [x] Phase 1: welcome, 3-step profile setup, Getting Started checklist (`components/onboarding/`, `lib/onboarding/`).
-- [ ] Owner: review survey type and setup wording as a surveyor.
-- [ ] Owner: live check with a fresh trial account: welcome, Esc and X, each checklist row, hide then "Show setup guide", file pick on a phone.
+## In Progress: User onboarding (2026-11-04, Handed over to Google Antigravity)
+- **Handover complete:** Antigravity read all handover documents, protocol, specs, and existing onboarding code (`lib/onboarding/`, `components/onboarding/`).
+- Spec and plan: `Specs/2026-11-04-user-onboarding-design.md`, `Sessions/2026-11-04-antigravity-onboarding-takeover.md`.
+- [x] Phase 0: disabled tabs explained, AI key labels (provider names stay hidden), empty state, survey type lines, blank-profile banner in Report Center. "Open saved" and the sidebar folder button now work. Deployed.
+- [x] Phase 1: welcome, 3-step profile setup, Getting Started checklist. Deployed.
+- [ ] Owner: live check feedback on Phases 0 & 1 with a fresh trial account (any feedback comes before new work).
+- [ ] Owner: review proposed tab wording for Phase 2A and approve Phase 2 plan.
 - [ ] Owner: confirm whether the admin-key fallback is on in live `ai_config/routing`; if so the AI key row could say optional.
-- [ ] Phase 2: Dashboard tour, first-visit tips, Help button. Phase 3: report section guide. Phase 4: admin progress column.
+- [ ] Owner: confirm whether Phase 2C (Dashboard Tour) is still desired after 2A & 2B.
+- [ ] Phase 2: First-visit tips (2A) and Help button (2B). Phase 3: report section guide. Phase 4: admin progress column.
 
 ---
 
