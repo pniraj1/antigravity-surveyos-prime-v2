@@ -25,7 +25,7 @@
 
 ---
 
-## In Progress: User onboarding (2026-11-04, Claude Code, deployed 2026-11-04 to motorsurveyos-in, not pushed)
+## In Progress: User onboarding (2026-11-04, Claude Code, deployed 2026-11-04 to motorsurveyos-in, pushed to GitHub)
 - **Handed to Google Antigravity: read `Sessions/2026-11-04-claude-onboarding-handover.md` first. Phase 2 is next and not started.**
 - Spec and plan: `Specs/2026-11-04-user-onboarding-design.md`, `Specs/2026-11-04-user-onboarding-plan.md`.
 - [x] Phase 0: disabled tabs explained, AI key labels (provider names stay hidden), empty state, survey type lines, blank-profile banner in Report Center. "Open saved" and the sidebar folder button now work (they were dead).

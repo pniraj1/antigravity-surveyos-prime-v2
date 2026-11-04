@@ -26,9 +26,9 @@ The product is about removing admin, not about AI. Copy leads with less paperwor
 | Phase 4 (admin progress column) | Not started |
 | Tests when deployed | `npx vitest run`: 260 files, 2356 tests pass. `npx tsc --noEmit`: clean |
 | Browser testing | **None.** Nobody has tried it with a real login |
-| Git | On `main`, 18 commits ahead of `origin/main`, not pushed |
+| Git | `main` pushed to `origin/main` on 2026-11-04 |
 
-**Commit to check:** `11790138 feat(reinspection): pre-fill editable standard surveyor conclusion and remarks` sits after the onboarding commits. It is not part of onboarding and was not made in this session. Its deploy state is unknown; read `Changelog.md`. Any new deploy from `main` will release it too, so tell the owner first.
+**Update, 22:12 IST:** the reinspection commit `11790138` is now deployed too, so the live site matches `main` as of that time. The owner is doing the live check.
 
 Leave these untracked folders alone: `design/`, `docs/research/`, `scratch/`.
 

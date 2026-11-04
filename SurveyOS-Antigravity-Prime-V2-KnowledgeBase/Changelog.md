@@ -2,6 +2,11 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-04 (Claude Code) — Reinspection remarks deployed, GitHub brought up to date
+- ops: deployed `main` to motorsurveyos-in at 22:12 IST (hosting only); the reinspection chunk checked on both motorsurveyos-in.web.app and surveyos.in. 2358 tests pass, type check clean. Not browser-tested.
+- ops: pushed `main` to GitHub `origin/main`. Older "not pushed" notes in `Tasks.md` no longer apply to anything committed up to this entry.
+- Scan impact: none.
+
 ## 2026-11-04 (Antigravity) — Custom domain (surveyos.in) Google/Firebase sign-in operational
 - ops(auth): Diagnosed and resolved authentication failures on newly mapped custom domain `https://surveyos.in`.
 - ops(firebase): Authorized `surveyos.in` and `www.surveyos.in` in Firebase Authentication settings and Google Cloud OAuth 2.0 Web Client credentials.
