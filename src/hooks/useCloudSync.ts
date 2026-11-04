@@ -161,6 +161,7 @@ export function useCloudSync() {
           // Allow profile useEffect (Section 4) to push changes only after initial pull.
           // Prevents an empty new-device profile from overwriting Firestore on login.
           profileSyncReadyRef.current = true;
+          useUIStore.getState().setLoginSyncDone(true);
 
           // Capture timestamp BEFORE sync so any claims edited during sync are caught next time
           const sinceTimestamp = getLastSyncTimestamp(user.uid);
@@ -184,6 +185,7 @@ export function useCloudSync() {
     } else if (!isAuthenticated) {
       isSyncingFullRef.current = false;
       profileSyncReadyRef.current = false;
+      useUIStore.getState().setLoginSyncDone(false);
     }
   }, [isAuthenticated, user]);
 

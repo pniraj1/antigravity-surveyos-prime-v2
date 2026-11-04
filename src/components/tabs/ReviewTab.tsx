@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect } from 'react';
+import { markOnboarding } from '@/lib/onboarding/rules';
 import { useClaimStore } from '@/stores/claim-store';
 import { useUIStore } from '@/stores/ui-store';
 import {
@@ -39,6 +41,10 @@ export function ReviewTab() {
   // Panel open/closed + width — persisted in localStorage
   const panel = useEvidencePanel(STORAGE_KEY, 400);
   const { panelOpen, togglePanel, containerRef } = panel;
+
+  useEffect(() => {
+    markOnboarding({ reviewSeenAt: new Date().toISOString() });
+  }, []);
 
   if (!currentClaim) return null;
 

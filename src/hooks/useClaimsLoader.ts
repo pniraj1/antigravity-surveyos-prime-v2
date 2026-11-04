@@ -46,6 +46,9 @@ export function useClaimsLoader() {
             feeTotal: c.feeBill ? calculateFeeSummary(c.feeBill).grandTotal : 0,
             isActive: c.isActive !== false,
             gDriveFolderId: c.gDriveFolderId ?? null,
+            hasDocuments:
+              Object.keys(c.documents ?? {}).length > 0 ||
+              Object.keys(c.extractedData ?? {}).length > 0,
           };
         });
 

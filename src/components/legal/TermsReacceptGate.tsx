@@ -5,19 +5,10 @@ import { doc, setDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { useAuthStore } from '@/stores/auth-store';
 import { useProfileStore } from '@/stores/profile-store';
-import { TERMS_VERSION, PRIVACY_VERSION, buildConsentRecord } from '@/lib/legal/versions';
+import { buildConsentRecord, needsReaccept } from '@/lib/legal/versions';
 import { FileText, Loader2 } from 'lucide-react';
 
-/**
- * True when the stored consent is missing or predates the current documents.
- * Surveyors onboarded before the attestation shipped have no record at all.
- */
-export function needsReaccept(
-  consent: { termsVersion?: string; privacyVersion?: string } | undefined,
-): boolean {
-  if (!consent) return true;
-  return consent.termsVersion !== TERMS_VERSION || consent.privacyVersion !== PRIVACY_VERSION;
-}
+export { needsReaccept };
 
 export function TermsReacceptGate() {
   const uid = useAuthStore((s) => s.user?.uid);

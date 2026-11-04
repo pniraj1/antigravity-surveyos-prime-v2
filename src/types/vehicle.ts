@@ -243,6 +243,13 @@ export interface SurveyorProfile {
     privacyVersion: string;
     acceptedAt: string;
   };
+  /** First-run onboarding progress (ISO strings). Never write undefined keys. */
+  onboarding?: {
+    welcomeDoneAt?: string;
+    checklistHiddenAt?: string;
+    reviewSeenAt?: string;
+    reportSeenAt?: string;
+  };
   /** ISO timestamp when SurveyOS Sync was connected; null if never. */
   syncConnectedAt?: string | null;
 }

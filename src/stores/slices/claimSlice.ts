@@ -39,6 +39,8 @@ export interface ClaimSlice {
     feeTotal: number;
     isActive: boolean;
     gDriveFolderId: string | null;
+    /** Any uploaded document or extracted data; drives the onboarding checklist. */
+    hasDocuments: boolean;
   }[];
 
   newClaim: (surveyType: SurveyType, vehicleType: VehicleType) => void;

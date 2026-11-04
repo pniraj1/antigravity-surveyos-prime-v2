@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { isNarrowViewport } from '@/lib/navigation/viewport';
 
+import { markOnboarding } from '@/lib/onboarding/rules';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { calculateAssessmentSummary, getCompulsoryExcess } from '@/lib/calculations';
@@ -54,6 +55,10 @@ const REPORT_TYPES = [
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function ReportTab() {
+  useEffect(() => {
+    markOnboarding({ reportSeenAt: new Date().toISOString() });
+  }, []);
+
   const { currentClaim, isDirty, updateClaim } = useClaimStore();
   const { profile } = useProfileStore();
   const [mounted, setMounted] = useState(false);

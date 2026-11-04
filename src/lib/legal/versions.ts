@@ -36,6 +36,17 @@ export interface ConsentRecord {
   acceptedAt: string;
 }
 
+/**
+ * True when the stored consent is missing or predates the current documents.
+ * Surveyors onboarded before the attestation shipped have no record at all.
+ */
+export function needsReaccept(
+  consent: { termsVersion?: string; privacyVersion?: string } | undefined,
+): boolean {
+  if (!consent) return true;
+  return consent.termsVersion !== TERMS_VERSION || consent.privacyVersion !== PRIVACY_VERSION;
+}
+
 export function buildConsentRecord(): ConsentRecord {
   return {
     attestationVersion: ATTESTATION_VERSION,

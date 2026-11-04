@@ -26,7 +26,16 @@ export type AppTab =
   | 'cloud-vault'
   | 'recovered-claims';
 
+/** First-run setup wizard step; 0 = welcome. */
+export type SetupStep = 0 | 1 | 2 | 3;
+
 interface UIState {
+  // ─── Onboarding (not persisted) ─────────────────────
+  loginSyncDone: boolean;
+  setLoginSyncDone: (v: boolean) => void;
+  setupStep: SetupStep | null;
+  setSetupStep: (s: SetupStep | null) => void;
+
   // ─── Navigation ─────────────────────────────────────
   activeTab: AppTab;
   previousTab: AppTab | null;
@@ -75,6 +84,10 @@ interface UIState {
 export const useUIStore = create<UIState>()(
   persist(
     (set) => ({
+      loginSyncDone: false,
+      setLoginSyncDone: (v) => set({ loginSyncDone: v }),
+      setupStep: null,
+      setSetupStep: (s) => set({ setupStep: s }),
       activeTab: 'dashboard',
       previousTab: null,
       sidebarCollapsed: false,
