@@ -283,6 +283,9 @@ export type RepairQuality = 'satisfactory' | 'good' | 'partial' | 'unsatisfactor
 export type VehicleCondition = 'roadworthy' | 'needs-attention' | 'not-roadworthy';
 export type SalvageStatus = 'collected' | 'not-collected' | 'partial' | 'na';
 
+export const DEFAULT_REINSPECTION_REMARKS =
+  'We have re-inspected the captioned vehicle and have found that the repairs / replacement made there were strictly followed as per our final survey report. The salvage of the replaced parts was also verified by me.';
+
 export interface ReinspectionDetails {
   refNo: string;
   date: string;

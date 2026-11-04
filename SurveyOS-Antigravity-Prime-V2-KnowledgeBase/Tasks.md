@@ -1,7 +1,18 @@
 # Active Tasks
 
-> Last updated: 2026-11-04 by Claude Code (user onboarding Phases 0 and 1)
+> Last updated: 2026-11-04 by Antigravity (Re-inspection surveyor conclusion & remarks default and editable field)
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
+
+---
+
+## Done: Re-inspection Surveyor Conclusion & Remarks Editable Defaults (2026-11-04, Antigravity)
+- [x] Defined `DEFAULT_REINSPECTION_REMARKS` constant in `src/types/assessment.ts`: "We have re-inspected the captioned vehicle and have found that the repairs / replacement made there were strictly followed as per our final survey report. The salvage of the replaced parts was also verified by me."
+- [x] Seeded default in `createBlankClaim()` in `src/types/claim.ts` so new claims start with the standard remark populated.
+- [x] Auto-seeded empty observations in `ReinspectionTab.tsx` when opening claims that had empty observations, so surveyors see actual text rather than a ghost placeholder.
+- [x] Changed textarea text styling to `text-foreground` and added "Reset to default" button to quickly restore standard phrasing if modified.
+- [x] Updated `buildReinspectionHTML` in `reinspection-report-builder.ts` to fallback to `DEFAULT_REINSPECTION_REMARKS` when observations is empty, preventing blank reports.
+- [x] Added unit tests in `src/lib/reports/__tests__/reinspection-report.test.ts` for default vs overridden observations. All 2358 tests pass.
+- [ ] Owner: verify in Re-inspection tab on a claim and test print/export.
 
 ---
 

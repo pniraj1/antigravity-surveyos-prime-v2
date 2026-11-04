@@ -9,6 +9,7 @@
 import type { ScanChase } from '@/lib/scan-import/manifest';
 import type { VehicleDetails, DriverDetails, PolicyDetails, AccidentDetails, VehicleType, DepreciationType } from './vehicle';
 import type { AssessmentRow, SpotDamageRow, SpotSurveyDetails, ReinspectionDetails, FeeBill, PhotoItem, PhotoLayout, BillCheckDetails, ExtraBillItem, ValuationDetails, DocumentAnnexureOptions } from './assessment';
+import { DEFAULT_REINSPECTION_REMARKS } from './assessment';
 import type { SurveyType } from './report';
 import type { InsuredReportDraft, InsuredReportStages } from '@/types/insured-report';
 import type { ClaimDocument, UploadSet } from './documents';
@@ -420,7 +421,7 @@ export function createBlankClaim(
       repairQuality: 'satisfactory',
       vehicleCondition: 'roadworthy',
       salvageStatus: 'na',
-      observations: '',
+      observations: DEFAULT_REINSPECTION_REMARKS,
       riAppointmentDate: '',
       // Left unset on purpose. This is a certification the surveyor makes in
       // the Reinspection tab, so seeding it here asserted it on every claim.

@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { buildReinspectionHTML } from '../reinspection-report-builder';
 import { createBlankClaim } from '@/types/claim';
+import { DEFAULT_REINSPECTION_REMARKS } from '@/types/assessment';
 import type { ClaimData } from '@/types';
 
 function claim(): ClaimData {
@@ -73,5 +74,28 @@ describe('reinspection report fields', () => {
     );
     expect(html).toContain('XYZ Body Shop, Mumbai');
     expect(html).not.toContain('ABC Motors, Pune');
+  });
+
+  test('prints default surveyor conclusion when observations is default or empty', () => {
+    const htmlDefault = buildReinspectionHTML(claim(), null);
+    expect(htmlDefault).toContain(DEFAULT_REINSPECTION_REMARKS);
+
+    const cEmpty = claim();
+    const htmlEmpty = buildReinspectionHTML(
+      { ...cEmpty, reinspection: { ...cEmpty.reinspection, observations: '' } },
+      null,
+    );
+    expect(htmlEmpty).toContain(DEFAULT_REINSPECTION_REMARKS);
+  });
+
+  test('prints custom edited observations when surveyor overrides it', () => {
+    const cCustom = claim();
+    const customText = 'Re-inspected at workshop. Replaced front bumper verified. Salvage retained by insured.';
+    const htmlCustom = buildReinspectionHTML(
+      { ...cCustom, reinspection: { ...cCustom.reinspection, observations: customText } },
+      null,
+    );
+    expect(htmlCustom).toContain(customText);
+    expect(htmlCustom).not.toContain(DEFAULT_REINSPECTION_REMARKS);
   });
 });

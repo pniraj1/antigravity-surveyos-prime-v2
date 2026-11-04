@@ -2,6 +2,14 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-04 (Antigravity) — Re-inspection conclusion & remarks default and editable field
+- feat(reinspection): pre-filled standard surveyor conclusion in sentence case: "We have re-inspected the captioned vehicle and have found that the repairs / replacement made there were strictly followed as per our final survey report. The salvage of the replaced parts was also verified by me." (`DEFAULT_REINSPECTION_REMARKS` in `src/types/assessment.ts`).
+- fix(reinspection): `observations` is no longer merely a placeholder that disappears and forces retyping. It is pre-populated in `createBlankClaim()` and seeded into existing claims on opening `ReinspectionTab` if blank, rendering as actual editable text.
+- feat(reinspection): added "Reset to default" button in `ReinspectionTab.tsx` so surveyors can instantly revert customized remarks back to the standard text.
+- fix(reports): `reinspection-report-builder.ts` falls back to `DEFAULT_REINSPECTION_REMARKS` when `observations` is empty, ensuring printable Re-inspection reports always include surveyor verification.
+- tests: Added test coverage in `src/lib/reports/__tests__/reinspection-report.test.ts` for default vs overridden observations. All 2358 tests pass. Next.js production build clean.
+- Scan impact: None (Prime-only field; no Scan coupling points or manifest touched).
+
 ## 2026-11-04 (Claude Code) — User onboarding, Phases 0 and 1
 - feat(onboarding): once-only welcome, 3-step profile setup (report details, signature and stamp, AI key with a test button), and a self-ticking Getting Started checklist on the Dashboard. Progress is on `profile.onboarding`, carried by the existing profile sync. "Show setup guide" on Profile replays it.
 - fix(onboarding): disabled tabs say why; AI key headings explain themselves with provider names still hidden; better empty state; New claim explains Spot and Final; Report Center warns when name, licence, signature or stamp are missing.

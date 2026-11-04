@@ -7,6 +7,7 @@
 
 import type { ClaimData } from '@/types/claim';
 import type { SurveyorProfile } from '@/types/vehicle';
+import { DEFAULT_REINSPECTION_REMARKS } from '@/types/assessment';
 import { formatDateDMY, getVehicleAgeMonths, getSurveyorHeader, getSigBlock } from './report-utils';
 import { buildPrintShell, footerFromProfile, openPrintWindow } from './print-shell';
 import { saveDocuments } from '@/lib/documents/sink';
@@ -164,7 +165,7 @@ ${getSurveyorHeader(profile)}
 
 <div style="${sec}">SURVEYOR CONCLUSION</div>
 <div style="border:0.5pt solid #000;padding:5px;font-size:7.5pt;line-height:1.4;margin-bottom:6px;min-height:40px;">
-${g(ri.observations)}
+${g(ri.observations?.trim() ? ri.observations : DEFAULT_REINSPECTION_REMARKS)}
 </div>
 
 ${getSigBlock(profile, '10px')}

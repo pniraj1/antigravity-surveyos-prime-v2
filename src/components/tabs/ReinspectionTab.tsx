@@ -6,7 +6,8 @@ import { buildReinspectionHTML, triggerReinspectionPrint } from '@/lib/reports/r
 import { ReportPreviewPanel } from '@/components/shared/ReportPreviewPanel';
 import { footerFromProfile } from '@/lib/reports/print-shell';
 import { RotateCcw, Calendar, FileText, Link2 } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
+import { DEFAULT_REINSPECTION_REMARKS } from '@/types/assessment';
 
 // ─── Inline Live Preview ─────────────────────────────────────────────────────
 function RIPreview({ claim, profile }: { claim: any; profile: any }) {
@@ -42,6 +43,12 @@ function SharedLabel({ text, tab }: { text: string; tab: string }) {
 export function ReinspectionTab() {
   const { currentClaim, updateClaim, updatePolicy, updateAccident, updateReinspection } = useClaimStore();
   const { profile } = useProfileStore();
+
+  useEffect(() => {
+    if (currentClaim?.reinspection && !currentClaim.reinspection.observations) {
+      updateReinspection({ observations: DEFAULT_REINSPECTION_REMARKS });
+    }
+  }, [currentClaim?.id, updateReinspection]);
 
   if (!currentClaim) return null;
 
@@ -239,16 +246,26 @@ export function ReinspectionTab() {
 
         {/* ── Conclusion ─────────────────────────────────── */}
         <div className="p-6 rounded-2xl bg-card border border-border shadow-sm">
-          <h3 className="text-sm font-medium mb-4 flex items-center gap-2 text-foreground">
-            <FileText size={16} className="text-primary" />
-            Surveyor Conclusion / Remarks
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium flex items-center gap-2 text-foreground">
+              <FileText size={16} className="text-primary" />
+              Surveyor Conclusion / Remarks
+            </h3>
+            <button
+              type="button"
+              onClick={() => updateReinspection({ observations: DEFAULT_REINSPECTION_REMARKS })}
+              className="text-xs text-primary hover:underline font-medium transition-colors"
+              title="Reset to default text"
+            >
+              Reset to default
+            </button>
+          </div>
           <textarea
             rows={5}
-            value={currentClaim.reinspection.observations || ''}
+            value={currentClaim.reinspection.observations ?? ''}
             onChange={e => updateReinspection({ observations: e.target.value })}
-            placeholder="WE HAVE RE-INSPECTED THE CAPTIONED VEHICLE & HAVE FOUND THAT THE REPAIRS / REPLACEMENTS MADE THEREIN WERE STRICTLY FOLLOWED AS PER OUR FINAL SURVEY REPORT..."
-            className="w-full px-4 py-3 rounded-xl border border-border outline-none text-sm text-muted-foreground bg-[var(--color-neutral-50)] focus:bg-card transition-all"
+            placeholder={DEFAULT_REINSPECTION_REMARKS}
+            className="w-full px-4 py-3 rounded-xl border border-border outline-none text-sm text-foreground bg-[var(--color-neutral-50)] focus:bg-card transition-all"
           />
         </div>
 
