@@ -20,9 +20,9 @@ type Onboarding = NonNullable<SurveyorProfile['onboarding']>;
 /** Onboarding is for active or trial surveyors who have synced and accepted current terms. */
 export function canShowOnboarding(profile: SurveyorProfile, loginSyncDone: boolean): boolean {
   if (!loginSyncDone) return false;
+  if (profile.isAdmin) return true;
   if (profile.subscriptionStatus !== 'active' && profile.subscriptionStatus !== 'trial') return false;
-  if (!profile.isAdmin && needsReaccept(profile.consent)) return false;
-  return true;
+  return !needsReaccept(profile.consent);
 }
 
 export function shouldShowWelcome(profile: SurveyorProfile, loginSyncDone: boolean): boolean {

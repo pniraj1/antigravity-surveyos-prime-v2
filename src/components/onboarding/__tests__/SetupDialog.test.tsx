@@ -9,7 +9,7 @@ vi.mock('@/lib/ai/service', () => ({
 
 import { SetupStepContent } from '../SetupDialog';
 import { KeyTestMessage, testKeyResult } from '../SetupSteps';
-import { canContinueDetails, licencePrefill, closeSetup } from '@/lib/onboarding/setup';
+import { canContinueDetails, profilePrefill, closeSetup } from '@/lib/onboarding/setup';
 import { useProfileStore } from '@/stores/profile-store';
 import { useUIStore } from '@/stores/ui-store';
 import type { SurveyorProfile } from '@/types/vehicle';
@@ -72,11 +72,21 @@ describe('details helpers', () => {
     expect(canContinueDetails({ ...base(), name: 'A', licenceNumber: '   ' })).toBe(false);
     expect(canContinueDetails({ ...base(), name: 'A', licenceNumber: 'L1' })).toBe(true);
   });
-  it('prefills from irdaiLicence only when licence number is blank', () => {
-    expect(licencePrefill({ ...base(), irdaiLicence: 'SLA-1' })).toBe('SLA-1');
-    expect(licencePrefill({ ...base(), irdaiLicence: 'SLA-1', licenceNumber: '  ' })).toBe('SLA-1');
-    expect(licencePrefill({ ...base(), irdaiLicence: 'SLA-1', licenceNumber: 'X' })).toBeNull();
-    expect(licencePrefill(base())).toBeNull();
+  it('prefills licence from irdaiLicence only when licence number is blank', () => {
+    expect(profilePrefill({ ...base(), irdaiLicence: 'SLA-1', name: 'A' }, null)).toEqual({ licenceNumber: 'SLA-1' });
+    expect(profilePrefill({ ...base(), irdaiLicence: 'SLA-1', licenceNumber: '  ', name: 'A' }, null)).toEqual({ licenceNumber: 'SLA-1' });
+    expect(profilePrefill({ ...base(), irdaiLicence: 'SLA-1', licenceNumber: 'X', name: 'A' }, null)).toEqual({});
+    expect(profilePrefill({ ...base(), name: 'A' }, null)).toEqual({});
+  });
+  it('prefills name from the display name only when blank, never undefined', () => {
+    expect(profilePrefill({ ...base(), name: '' }, '  Asha K ')).toEqual({ name: 'Asha K' });
+    expect(profilePrefill({ ...base(), name: 'Locked' }, 'Asha K')).toEqual({});
+    expect(profilePrefill({ ...base(), name: '' }, '   ')).toEqual({});
+    expect(profilePrefill({ ...base(), name: '' }, undefined)).toEqual({});
+    expect('name' in profilePrefill({ ...base(), name: 'X' }, null)).toBe(false);
+  });
+  it('step 3 copy does not overstate privacy', () => {
+    expect(render(3)).toContain('Prime uses this free key to read your documents, on your own account.');
   });
 });
 

@@ -1,15 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import dynamicImport from 'next/dynamic';
 import { useUIStore } from '@/stores/ui-store';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { getClaim, saveClaim } from '@/lib/storage/indexeddb';
 import { toggleFeePaid } from '@/lib/claims/fee-status';
-import { claimLandingTab } from '@/lib/claims/landing-tab';
+import { openClaim } from '@/lib/claims/open-claim';
 import { surveyDateLabel } from '@/lib/claims/survey-date';
-import { isNarrowViewport } from '@/lib/navigation/viewport';
 import { deleteClaimEverywhere } from '@/lib/firebase/sync';
 import { useAuthStore } from '@/stores/auth-store';
 import { toast } from 'sonner';
@@ -71,8 +70,16 @@ const InsuredReportTab    = dynamicImport(() => import('@/components/tabs/Insure
 
 // ─── Dashboard Tab Content ──────────────────────────────
 export function DashboardContent() {
-  const { setNewClaimDialogOpen, setClaimsListOpen } = useUIStore();
+  const { setNewClaimDialogOpen, setClaimsListOpen, isClaimsListOpen } = useUIStore();
   const { claimsList } = useClaimStore();
+
+  // "Open saved" and the sidebar folder button raise this flag; bring the claims table into view.
+  useEffect(() => {
+    if (!isClaimsListOpen) return;
+    const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    document.getElementById('claims-table')?.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' });
+    setClaimsListOpen(false);
+  }, [isClaimsListOpen, setClaimsListOpen]);
   const [showArchived, setShowArchived] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
@@ -248,7 +255,7 @@ export function DashboardContent() {
 
 
         {/* Recent Claims Table */}
-        <div>
+        <div id="claims-table">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-5 gap-4">
             <div className="flex items-center space-x-4">
               <h2 className="text-xs font-medium uppercase tracking-[0.2em] text-[var(--color-neutral-400)]">
@@ -343,35 +350,7 @@ export function DashboardContent() {
                   {displayClaims.slice(0, 50).map((claim) => (
                     <div
                       key={claim.id}
-                      onClick={async () => {
-                        // Fetch BEFORE touching navigation state.
-                        //
-                        // This used to set currentClaimId ahead of the await. That
-                        // published an inconsistent state — claim selected, but
-                        // activeTab still 'dashboard' — which useRouteSync Effect 2
-                        // wrote straight to the URL as ?claim=<id>&tab=dashboard.
-                        // Next's patched history.pushState feeds that back into
-                        // useSearchParams, waking Effect 1 (URL→Store), which then
-                        // raced this handler and set activeTab back to 'dashboard'.
-                        // Whichever getClaim() settled last won, so the claim opened
-                        // only some of the time — the rest of the time the surveyor
-                        // stayed on the dashboard with just the sidebar unlocking.
-                        try {
-                          const fullClaim = await getClaim(claim.id);
-                          if (!fullClaim) {
-                            toast.error('Could not open this claim.');
-                            return;
-                          }
-                          // loadClaim sets currentClaimId itself (claimSlice.ts).
-                          // These two run back-to-back in one task, so React batches
-                          // them into a single render and Effect 2 only ever sees
-                          // the final, consistent state.
-                          useClaimStore.getState().loadClaim(fullClaim);
-                          useUIStore.getState().setActiveTab(claimLandingTab(fullClaim.surveyType, isNarrowViewport()));
-                        } catch {
-                          toast.error('Could not open this claim.');
-                        }
-                      }}
+                      onClick={() => void openClaim(claim.id)}
                       className="px-6 py-4 grid grid-cols-[1.5fr_1fr_2fr_100px_100px_110px_110px_60px] gap-4 items-center cursor-pointer border-b border-[var(--color-neutral-100)] transition-colors hover:bg-[var(--color-neutral-50)]"
                     >
                       <div className="flex items-center gap-1.5 min-w-0">
@@ -687,7 +666,7 @@ export default function Dashboard() {
 
       {/* Global Modals */}
       <NewClaimDialog />
-      <OnboardingGate />
+      <ErrorBoundary fallback={<></>}><OnboardingGate /></ErrorBoundary>
 
       {/* Floating live report preview — visible on all tabs except Reports */}
       <FloatingReportPreview />

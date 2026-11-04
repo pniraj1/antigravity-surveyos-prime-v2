@@ -1,12 +1,11 @@
 'use client';
 
-import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useProfileStore } from '@/stores/profile-store';
 import { useUIStore, type SetupStep } from '@/stores/ui-store';
 import type { SurveyorProfile } from '@/types/vehicle';
-import { canContinueDetails, closeSetup, licencePrefill } from '@/lib/onboarding/setup';
+import { canContinueDetails, closeSetup } from '@/lib/onboarding/setup';
 import { DetailsBody, KeyBody, MarksBody } from './SetupSteps';
 
 const PATH = ['Documents', 'Check', 'Assess', 'Report'] as const;
@@ -16,7 +15,7 @@ const STEPS = {
   2: { title: 'Signature and stamp', sub: 'A clear photo from your phone works. You can add these later.', Body: MarksBody },
   3: {
     title: 'Your AI key',
-    sub: 'Prime uses this free key to read your documents. It stays on your own account.',
+    sub: 'Prime uses this free key to read your documents, on your own account.',
     Body: KeyBody,
   },
 } as const;
@@ -96,19 +95,12 @@ export function SetupDialog() {
   const profile = useProfileStore((s) => s.profile);
   const updateProfile = useProfileStore((s) => s.updateProfile);
 
-  // Copy the registration licence into the report field the first time step 1 opens with it blank.
-  useEffect(() => {
-    if (step !== 1) return;
-    const prefill = licencePrefill(useProfileStore.getState().profile);
-    if (prefill) updateProfile({ licenceNumber: prefill });
-  }, [step, updateProfile]);
-
   if (step === null) return null;
   const go = (next: SetupStep) => setStep(next);
   const forward = () => (step === 3 ? closeSetup() : go((step + 1) as SetupStep));
 
   return (
-    <Dialog open onOpenChange={(open) => { if (!open) closeSetup(); }}>
+    <Dialog open disablePointerDismissal onOpenChange={(open) => { if (!open) closeSetup(); }}>
       <DialogContent aria-label="Profile setup" className="sm:max-w-lg max-h-[90dvh] overflow-y-auto print:hidden">
         <SetupStepContent
           step={step}

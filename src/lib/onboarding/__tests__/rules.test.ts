@@ -59,6 +59,11 @@ describe('canShowOnboarding', () => {
       expect(canShowOnboarding(profile({ subscriptionStatus: s }), true)).toBe(false);
     }
   });
+  it('admin passes with any status, non-admin pending stays false', () => {
+    expect(canShowOnboarding(profile({ subscriptionStatus: 'pending', isAdmin: true }), true)).toBe(true);
+    expect(canShowOnboarding(profile({ subscriptionStatus: 'pending', isAdmin: false }), true)).toBe(false);
+    expect(canShowOnboarding(profile({ subscriptionStatus: 'pending', isAdmin: true }), false)).toBe(false);
+  });
   it('false before sync', () => {
     expect(canShowOnboarding(profile(), false)).toBe(false);
   });

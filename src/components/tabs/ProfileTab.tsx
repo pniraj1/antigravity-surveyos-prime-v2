@@ -182,7 +182,7 @@ export function ImageUploader({
 
       {dataUrl ? (
         <div
-          className="relative flex items-center gap-4 p-3 rounded-xl border border-border"
+          className="relative flex flex-wrap items-center gap-4 p-3 rounded-xl border border-border"
           style={{ background: 'var(--color-neutral-50)' }}
         >
           <img

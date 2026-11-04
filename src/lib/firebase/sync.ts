@@ -438,6 +438,10 @@ export async function pullProfileFromCloud(uid: string) {
 
     useProfileStore.getState().updateProfile({
       ...remoteProfile,
+      // A mark made before the pull finished must survive it.
+      ...(local.onboarding || remoteProfile.onboarding
+        ? { onboarding: { ...local.onboarding, ...remoteProfile.onboarding } }
+        : {}),
       signatureDataUrl: local.signatureDataUrl,
       stampDataUrl: local.stampDataUrl,
       geminiApiKeys: local.geminiApiKeys,

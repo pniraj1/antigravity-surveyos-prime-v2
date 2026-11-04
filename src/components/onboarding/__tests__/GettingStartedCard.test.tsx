@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import React from 'react';
 import { ChecklistView } from '../GettingStartedCard';
-import { checklistAction, isChecklistVisible, reopenSetupGuide } from '@/lib/onboarding/setup';
+import { checklistAction, checklistClaimTarget, isChecklistVisible, reopenSetupGuide } from '@/lib/onboarding/setup';
 import { getChecklist, markOnboarding, type ChecklistItem } from '@/lib/onboarding/rules';
 import { useProfileStore } from '@/stores/profile-store';
 import { useUIStore } from '@/stores/ui-store';
@@ -85,7 +85,7 @@ describe('checklistAction', () => {
   it('claim rows depend on whether claims exist', () => {
     expect(checklistAction('claim', true)).toEqual({ kind: 'newClaim' });
     for (const id of ['document', 'review', 'report'] as const) {
-      expect(checklistAction(id, true)).toEqual({ kind: 'claimsList' });
+      expect(checklistAction(id, true)).toEqual({ kind: 'openClaim' });
       expect(checklistAction(id, false)).toEqual({ kind: 'newClaim' });
     }
     expect(checklistAction('drive', true)).toBeNull();
@@ -96,6 +96,33 @@ describe('checklistAction', () => {
     expect(checklistAction(find('Add your AI key'), false)).toEqual({ kind: 'setup', step: 3 });
     expect(checklistAction(find('Add your report details'), false)).toEqual({ kind: 'setup', step: 1 });
     expect(checklistAction(find('Add your signature and stamp'), false)).toEqual({ kind: 'setup', step: 2 });
+  });
+});
+
+describe('checklistClaimTarget', () => {
+  const c = (id: string, updatedAt: string, surveyType: 'final' | 'spot' | 'valuation' = 'final', isActive = true) =>
+    ({ id, updatedAt, surveyType, isActive });
+  it('picks the newest active claim and maps rows to tabs', () => {
+    const claims = [c('a', '2026-11-01'), c('b', '2026-11-03'), c('c', '2026-11-02')];
+    expect(checklistClaimTarget('document', claims)).toEqual({ claimId: 'b', tab: 'documents' });
+    expect(checklistClaimTarget('review', claims)).toEqual({ claimId: 'b', tab: 'review' });
+    expect(checklistClaimTarget('report', claims)).toEqual({ claimId: 'b', tab: 'reports' });
+  });
+  it('skips inactive claims', () => {
+    const claims = [c('a', '2026-11-01'), c('b', '2026-11-03', 'final', false)];
+    expect(checklistClaimTarget('report', claims)?.claimId).toBe('a');
+  });
+  it('skips valuation for document and review, not for report', () => {
+    const claims = [c('v', '2026-11-05', 'valuation'), c('f', '2026-11-01')];
+    expect(checklistClaimTarget('document', claims)?.claimId).toBe('f');
+    expect(checklistClaimTarget('review', claims)?.claimId).toBe('f');
+    expect(checklistClaimTarget('report', claims)?.claimId).toBe('v');
+  });
+  it('is null when nothing qualifies or the row is not a claim row', () => {
+    expect(checklistClaimTarget('document', [])).toBeNull();
+    expect(checklistClaimTarget('document', [c('v', '2026-11-05', 'valuation')])).toBeNull();
+    expect(checklistClaimTarget('report', [c('a', '2026-11-01', 'final', false)])).toBeNull();
+    expect(checklistClaimTarget('aiKey', [c('a', '2026-11-01')])).toBeNull();
   });
 });
 

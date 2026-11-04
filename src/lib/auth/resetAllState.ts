@@ -84,4 +84,8 @@ export function resetAllState(): void {
   // localStorage entry, so Surveyor B sees a blank profile until
   // their own profile is pulled from Firestore on login.
   useProfileStore.getState().resetProfile();
+
+  // ── 5. Open setup dialog ─────────────────────────────────
+  // loginSyncDone needs no reset here: useCloudSync sets it false on logout.
+  useUIStore.getState().setSetupStep(null);
 }

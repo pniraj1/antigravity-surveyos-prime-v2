@@ -5,7 +5,8 @@ import { useProfileStore } from '@/stores/profile-store';
 import { useUIStore } from '@/stores/ui-store';
 import { useClaimStore } from '@/stores/claim-store';
 import { getChecklist, markOnboarding, type ChecklistId, type ChecklistItem } from '@/lib/onboarding/rules';
-import { checklistAction, isChecklistVisible } from '@/lib/onboarding/setup';
+import { checklistAction, checklistClaimTarget, isChecklistVisible } from '@/lib/onboarding/setup';
+import { openClaim } from '@/lib/claims/open-claim';
 
 interface ChecklistViewProps {
   items: ChecklistItem[];
@@ -74,7 +75,11 @@ export function GettingStartedCard() {
     const ui = useUIStore.getState();
     if (action?.kind === 'setup') ui.setSetupStep(action.step);
     else if (action?.kind === 'newClaim') ui.setNewClaimDialogOpen(true);
-    else if (action?.kind === 'claimsList') ui.setClaimsListOpen(true);
+    else if (action?.kind === 'openClaim') {
+      const target = checklistClaimTarget(id, claimsList);
+      if (target) void openClaim(target.claimId, target.tab);
+      else ui.setNewClaimDialogOpen(true);
+    }
   };
 
   return (

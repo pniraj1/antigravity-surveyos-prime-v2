@@ -232,7 +232,7 @@ export function Sidebar() {
           </Button>
           {!sidebarCollapsed && (
             <button
-              onClick={() => setClaimsListOpen(true)}
+              onClick={() => { handleTabChange('dashboard'); setClaimsListOpen(true); }}
               title="Open claim"
               className="flex items-center justify-center w-9 h-9 rounded-lg transition-colors border border-[var(--color-neutral-200)] text-[var(--color-neutral-400)] hover:border-[var(--color-neutral-900)] hover:text-[var(--color-neutral-900)]"
             >
