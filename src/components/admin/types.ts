@@ -24,6 +24,15 @@ export interface SurveyorAdminProfile {
   referralCode?: string;
   referredBy?: string | null;
   createdAt?: unknown;
+  onboarding?: {
+    welcomeDoneAt?: string;
+    checklistHiddenAt?: string;
+    reviewSeenAt?: string;
+    reportSeenAt?: string;
+    tipsSeen?: Partial<Record<string, string>>;
+    tourDoneAt?: string;
+  };
+  syncConnectedAt?: string | null;
 }
 
 export interface NewSignup {

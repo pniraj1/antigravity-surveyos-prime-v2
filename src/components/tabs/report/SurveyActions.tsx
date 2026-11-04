@@ -174,7 +174,7 @@ export function SurveyActions({
           style={{ background: 'var(--color-neutral-900)', color: '#FFFFFF', cursor: 'pointer', border: 'none' }}
         >
           <div className="w-3 h-3 rounded-sm bg-primary animate-pulse" />
-          POWER PRINT — FINAL SURVEY REPORT
+          PRINT PDF — FINAL SURVEY REPORT
         </button>
       )}
 
@@ -186,7 +186,7 @@ export function SurveyActions({
           style={{ background: 'var(--color-status-success)', color: '#FFFFFF', cursor: 'pointer', border: 'none' }}
         >
           <div className="w-3 h-3 rounded-sm bg-primary animate-pulse" />
-          POWER PRINT — UIIC FINAL SURVEY REPORT
+          PRINT PDF — UIIC FINAL SURVEY REPORT
         </button>
       )}
     </>

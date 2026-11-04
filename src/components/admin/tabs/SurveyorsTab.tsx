@@ -9,6 +9,7 @@ import {
 import { getDaysRemaining } from '@/lib/subscription/status';
 import type { SurveyorAdminProfile, SurveyorFilter } from '../types';
 import { SurveyorAIKeys } from '../SurveyorAIKeys';
+import { getSurveyorOnboardingProgress } from '@/lib/onboarding/admin-progress';
 
 const FILTERS: { key: SurveyorFilter; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -163,6 +164,7 @@ export function SurveyorsTab({
               <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Platform ID</th>
               <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Licence</th>
               <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Subscription</th>
+              <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Onboarding</th>
               <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Days Left</th>
               <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Expiry Date</th>
               <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-wider text-muted-foreground text-right">Actions</th>
@@ -176,6 +178,7 @@ export function SurveyorsTab({
               const days = getDaysRemaining(expiry);
               const rowBg = expiring ? 'bg-[var(--color-status-warning-tint)]' : '';
               const isProcessing = processingId === surveyor.id;
+              const onboardingSummary = getSurveyorOnboardingProgress(surveyor);
 
               return (
                 <React.Fragment key={surveyor.id}>
@@ -254,6 +257,34 @@ export function SurveyorsTab({
                     </span>
                   </td>
                   <td className="px-6 py-5">
+                    <div className="flex flex-col gap-1">
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-medium uppercase tracking-wider border w-fit ${
+                          onboardingSummary.badgeStatus === 'completed'
+                            ? 'bg-[var(--color-status-success-tint)] text-[var(--color-status-success)] border-[var(--color-status-success)]'
+                            : onboardingSummary.badgeStatus === 'in_progress'
+                            ? 'bg-primary/10 text-primary border-primary/20'
+                            : 'bg-[var(--color-neutral-100)] text-[var(--color-neutral-500)] border-[var(--color-neutral-200)]'
+                        }`}
+                        title={onboardingSummary.milestones.map(m => `${m.label}: ${m.done ? 'Done' : 'Pending'}`).join(' | ')}
+                      >
+                        {onboardingSummary.badgeStatus === 'completed' ? (
+                          <CheckCircle2 size={10} />
+                        ) : onboardingSummary.badgeStatus === 'in_progress' ? (
+                          <Clock size={10} />
+                        ) : (
+                          <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60" />
+                        )}
+                        {onboardingSummary.badgeText}
+                      </span>
+                      {onboardingSummary.tipsSeenCount > 0 && (
+                        <span className="text-[10px] text-muted-foreground">
+                          {onboardingSummary.tipsSeenCount} tips seen
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-5">
                     {!expiry ? (
                       <span className="text-[10px] text-muted-foreground">—</span>
                     ) : (
@@ -324,7 +355,7 @@ export function SurveyorsTab({
                 </tr>
                 {expandedId === surveyor.id && (
                   <tr>
-                    <td colSpan={7} className="px-6 py-0">
+                    <td colSpan={8} className="px-6 py-0">
                       <div
                         className="py-5 px-6 mb-4 rounded-xl animate-in fade-in slide-in-from-top-2 duration-200"
                         style={{ background: 'var(--color-neutral-50)', borderTop: '2px dashed var(--color-neutral-200)' }}
@@ -409,6 +440,35 @@ export function SurveyorsTab({
                                 : <span className="text-muted-foreground">&mdash;</span>
                               }
                             </span>
+                          </div>
+                        </div>
+                        <div className="mt-5 pt-5 border-t border-border">
+                          <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-2">
+                            Trial Onboarding Progress ({onboardingSummary.percentage}%)
+                          </div>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+                            {onboardingSummary.milestones.map((m) => (
+                              <div
+                                key={m.key}
+                                className={`p-2.5 rounded-xl border text-xs flex items-center gap-2 ${
+                                  m.done
+                                    ? 'bg-[var(--color-status-success-tint)] border-[var(--color-status-success)] text-foreground'
+                                    : 'bg-card border-border text-muted-foreground'
+                                }`}
+                              >
+                                {m.done ? (
+                                  <CheckCircle2 size={13} className="text-[var(--color-status-success)] flex-shrink-0" />
+                                ) : (
+                                  <XCircle size={13} className="text-muted-foreground/50 flex-shrink-0" />
+                                )}
+                                <div className="min-w-0">
+                                  <div className="font-medium text-[11px] truncate">{m.label}</div>
+                                  <div className="text-[9px] text-muted-foreground">
+                                    {m.done ? 'Completed' : 'Pending'}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
                         <div className="mt-5 pt-5 border-t border-border">

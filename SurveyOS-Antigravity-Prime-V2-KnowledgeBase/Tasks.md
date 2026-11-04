@@ -37,8 +37,9 @@
 - [x] Phase 2A: First-visit tips on each tab (`tab-help.ts`, `TabTip.tsx`) with digital PDF guidance and survey-aware next tab.
 - [x] Phase 2B: Always-available Help button (`HelpDialog.tsx`, sidebar footer, claim header, mobile drawer).
 - [x] Phase 2C: Desktop Dashboard tour using `driver.js` (`dashboard-tour.ts`, 4 stops, reduced-motion safe).
-- [ ] Phase 3: Report section guide in Report Center (sections catalogued from print components; wording submitted to owner for review).
-- [ ] Phase 4: Admin progress column showing trial surveyor onboarding status.
+- [x] User Requested: Renamed "Power Print" buttons and labels across the app to "Print PDF" (`SpotActions.tsx`, `SurveyActions.tsx`, `BillCheckTab.tsx`, `FeesTab.tsx`, `ReinspectionTab.tsx`).
+- [x] Phase 3: Report section guide in Report Center (`report-guide.ts`, `ReportSectionGuide.tsx`) with insurer check explanations and direct jump-to-fix navigation.
+- [x] Phase 4: Admin progress column in `SurveyorsTab.tsx` showing onboarding milestone badges (0/5, 3/5, Ready 5/5) and full onboarding checklist in expanded row (`admin-progress.ts`, `useAdminData.ts`).
 
 ---
 

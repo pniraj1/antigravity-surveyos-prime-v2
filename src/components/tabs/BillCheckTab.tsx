@@ -62,7 +62,7 @@ function BillCheckPreview({ claim, profile, format, onPrint, beforeExport }: { c
     <ReportPreviewPanel
       html={html}
       title={`${format === 'uiic' ? 'UIIC' : 'Standard'} Bill Check Report — Live Preview`}
-      printLabel="Power Print"
+      printLabel="Print PDF"
       onPrint={onPrint}
       wordFilename={`${claim?.vehicle?.registrationNumber || 'Claim'}-${format === 'uiic' ? 'UIIC' : 'Standard'}-Bill-Check`}
       footerLeft={footerFromProfile(profile)}
@@ -303,7 +303,7 @@ export function BillCheckTab() {
                   style={{ boxShadow: '0 4px 14px rgba(13,27,42,0.3)' }}
                 >
                   <Printer size={16} />
-                  Power Print — {format === 'uiic' ? 'UIIC' : 'Standard'} Bill Check
+                  Print PDF — {format === 'uiic' ? 'UIIC' : 'Standard'} Bill Check
                 </button>
                 {!policyCheckStatus(currentClaim).complete && <p className="text-xs text-amber-700">Policy check pending — click Print to complete it</p>}
               </div>

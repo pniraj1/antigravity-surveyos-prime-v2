@@ -31,7 +31,7 @@ function FeeBillPreview({ claim, profile }: { claim: any; profile: any }) {
     <ReportPreviewPanel
       html={html}
       title="Surveyor Fee Bill — Live Preview"
-      printLabel="Power Print — Fee Bill"
+      printLabel="Print PDF — Fee Bill"
       onPrint={() => triggerSpotFeeBillPrint(claim, profile)}
       wordFilename={`${claim?.vehicle?.registrationNumber || 'Claim'}-Fee-Bill`}
       footerLeft={footerFromProfile(profile)}
@@ -176,7 +176,7 @@ export function FeesTab() {
               }}
             >
               <FileText size={14} />
-              POWER PRINT — FEE BILL
+              PRINT PDF — FEE BILL
             </button>
           </div>
         </div>

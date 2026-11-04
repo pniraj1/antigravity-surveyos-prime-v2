@@ -16,6 +16,7 @@ import { SpotActions } from './report/SpotActions';
 import { SurveyActions } from './report/SurveyActions';
 import { PolicyCheckStrip } from '@/components/policy/PolicyCheckStrip';
 import { ProfileGapBanner } from '@/components/onboarding/ProfileGapBanner';
+import { ReportSectionGuide } from '@/components/onboarding/ReportSectionGuide';
 
 // Every report here renders from its HTML builder below. The @react-pdf
 // documents this tab used to host were unreachable and have been removed.
@@ -160,6 +161,8 @@ export function ReportTab() {
       {currentClaim.surveyType === 'final' && <PolicyCheckStrip />}
 
       <ProfileGapBanner />
+
+      <ReportSectionGuide reportType={activeReport} />
 
       {/* ── Header ───────────────────────────────────────────── */}
       <div className="mb-6 flex items-end justify-between">

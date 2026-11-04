@@ -19,7 +19,7 @@ function RIPreview({ claim, profile }: { claim: any; profile: any }) {
     <ReportPreviewPanel
       html={html}
       title="Re-inspection Report — Live Preview"
-      printLabel="Power Print"
+      printLabel="Print PDF"
       onPrint={() => triggerReinspectionPrint(claim, profile)}
       wordFilename={`${claim?.vehicle?.registrationNumber || 'Claim'}-Reinspection`}
       footerLeft={footerFromProfile(profile)}

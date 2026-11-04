@@ -2,6 +2,13 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-05 (Antigravity) — User Onboarding Phase 3 & 4 + "Power Print" renamed to "Print PDF"
+- refactor(ui): Renamed legacy "Power Print" buttons and labels across the app to "Print PDF" (`SpotActions.tsx`, `SurveyActions.tsx`, `BillCheckTab.tsx`, `FeesTab.tsx`, `ReinspectionTab.tsx`) per surveyor request.
+- feat(onboarding): Phase 3 Report Section Guide in Report Center (`ReportTab.tsx`, `ReportSectionGuide.tsx`, `report-guide.ts`). Collapsible executive guide explaining what insurers inspect in each section across Final Survey (Standard & UIIC), Spot Survey, and Valuation reports, with direct 1-click jump-to-fix navigation to source tabs (`details`, `assessment`, `profile`). Carries `print:hidden` to protect exported PDFs.
+- feat(admin): Phase 4 Admin Onboarding Progress column in `SurveyorsTab.tsx` with `getSurveyorOnboardingProgress` helper (`admin-progress.ts`, `useAdminData.ts`). Displays milestone badge (`0/5`, `3/5`, `Ready 5/5`) in table and full interactive milestone checklist in expanded surveyor row.
+- tests: Added 11 new unit tests across `ReportSectionGuide.test.tsx`, `report-guide.test.ts`, `admin-progress.test.ts`, and `SurveyorsTab.test.tsx`. All 268 test files (2,393 tests) pass; TypeScript check 100% clean.
+- Scan impact: None. Sibling repo `../SurveyOS Scan` is unaffected.
+
 ## 2026-11-04 (Antigravity) — User Onboarding Phase 2 (Tips, Help button, Dashboard tour)
 - feat(onboarding): Phase 2A first-visit tips (`TabTip.tsx`, `tab-help.ts`) with digital garage PDF guidance on estimate and bill tabs, next-tab workflow navigation, and deep-merge safe acknowledgment tracking in `profile.onboarding.tipsSeen`.
 - feat(onboarding): Phase 2B always-available Help button (`HelpDialog.tsx`) in sidebar footer and claim header, featuring screen-specific advice, 1-click setup guide replay, FAQ link, and direct surveyor support email.

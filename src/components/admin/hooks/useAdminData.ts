@@ -77,6 +77,8 @@ export function useAdminData(isAuthorized: boolean): UseAdminDataReturn {
           referralCode: data.referralCode || '',
           referredBy: data.referredBy ?? null,
           createdAt: data.createdAt || null,
+          onboarding: data.onboarding || undefined,
+          syncConnectedAt: data.syncConnectedAt ?? null,
         });
       });
       setSurveyorMap(seen);

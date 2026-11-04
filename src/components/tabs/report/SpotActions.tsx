@@ -60,7 +60,7 @@ export function SpotActions({ claim, isExportingWord, setIsExportingWord, onPrin
         style={{ background: 'var(--color-card)', cursor: 'pointer' }}
       >
         <div className="w-2 h-2 rounded-full bg-status-success animate-pulse" />
-        POWER PRINT (SPOT)
+        PRINT PDF (SPOT)
       </button>
     </>
   );
