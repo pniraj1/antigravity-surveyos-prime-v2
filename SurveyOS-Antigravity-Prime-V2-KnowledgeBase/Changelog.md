@@ -2,6 +2,16 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-04 (Claude Code) — User onboarding, Phases 0 and 1
+- feat(onboarding): once-only welcome, 3-step profile setup (report details, signature and stamp, AI key with a test button), and a self-ticking Getting Started checklist on the Dashboard. Progress is on `profile.onboarding`, carried by the existing profile sync. "Show setup guide" on Profile replays it.
+- fix(onboarding): disabled tabs say why; AI key headings explain themselves with provider names still hidden; better empty state; New claim explains Spot and Final; Report Center warns when name, licence, signature or stamp are missing.
+- fix: "Open saved" and the sidebar folder button did nothing (`isClaimsListOpen` had no reader). They now scroll to the claims table. `openClaim` extracted to `lib/claims/open-claim.ts`.
+- Blank name prefilled from the Google name and licence from `irdaiLicence` after sync, so reports stop printing "SURVEYOR NAME".
+- Checklist limit: "Check what was read" and "See your first report" tick on opening those screens; the app does not record review or report generation.
+- Stack/cost: none. No new dependency, no AI calls except the optional key test, one small field on the profile doc.
+- Not browser-tested (needs login). Not deployed. Not pushed.
+- Scan impact: none (no doc types, insurer table, folder layout, field labels, claim paths or manifest touched; Scan's drift tests not run).
+
 ## 2026-11-04 (Claude Code) — Simple documents try Gemma first
 - fix(ai): `light` job (RC, DL, policy and other non-estimate documents) now ranks Gemma, then Flash-Lite, then Flash (`LIGHT_TIER` in `lib/ai/rank.ts`). Gemma on Google (direct, 14 400/day) goes before Ollama Gemma (via `aiProxy`). `heavy` and `text` order unchanged. With no Gemma reachable the order is as before.
 - fix(ai): after the parser reads an estimate or bill, the header call runs as `light`, not `heavy`, so it no longer spends Flash (20/day).

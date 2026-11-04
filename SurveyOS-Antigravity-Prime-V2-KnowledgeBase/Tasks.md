@@ -1,7 +1,18 @@
 # Active Tasks
 
-> Last updated: 2026-11-02 by Antigravity (SurveyOS Scan Launch Roadmap & Marketing Video Strategy)
+> Last updated: 2026-11-04 by Claude Code (user onboarding Phases 0 and 1)
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
+
+---
+
+## In Progress: User onboarding (2026-11-04, Claude Code, built on main, NOT deployed or pushed)
+- Spec and plan: `Specs/2026-11-04-user-onboarding-design.md`, `Specs/2026-11-04-user-onboarding-plan.md`.
+- [x] Phase 0: disabled tabs explained, AI key labels (provider names stay hidden), empty state, survey type lines, blank-profile banner in Report Center. "Open saved" and the sidebar folder button now work (they were dead).
+- [x] Phase 1: welcome, 3-step profile setup, Getting Started checklist (`components/onboarding/`, `lib/onboarding/`).
+- [ ] Owner: review survey type and setup wording as a surveyor.
+- [ ] Owner: live check with a fresh trial account: welcome, Esc and X, each checklist row, hide then "Show setup guide", file pick on a phone.
+- [ ] Owner: confirm whether the admin-key fallback is on in live `ai_config/routing`; if so the AI key row could say optional.
+- [ ] Phase 2: Dashboard tour, first-visit tips, Help button. Phase 3: report section guide. Phase 4: admin progress column.
 
 ---
 
