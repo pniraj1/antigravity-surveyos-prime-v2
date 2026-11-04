@@ -31,7 +31,8 @@
 - [x] Phase 0: disabled tabs explained, AI key labels (provider names stay hidden), empty state, survey type lines, blank-profile banner in Report Center. "Open saved" and the sidebar folder button now work. Deployed.
 - [x] Phase 1: welcome, 3-step profile setup, Getting Started checklist. Deployed.
 - [ ] Owner: live check feedback on Phases 0 & 1 with a fresh trial account (any feedback comes before new work).
-- [ ] Owner: review proposed tab wording for Phase 2A and approve Phase 2 plan.
+- [ ] Owner: review proposed tab wording for Phase 2A and approve Phase 2 plan (digital garage PDF advice integrated).
+- [x] Design review & brainstorming: audited Executive Platinum style with `/ui-ux-pro-max` (slim banner, touch targets, contrast) and completed `/multi-agent-brainstorming` review.
 - [ ] Owner: confirm whether the admin-key fallback is on in live `ai_config/routing`; if so the AI key row could say optional.
 - [ ] Owner: confirm whether Phase 2C (Dashboard Tour) is still desired after 2A & 2B.
 - [ ] Phase 2: First-visit tips (2A) and Help button (2B). Phase 3: report section guide. Phase 4: admin progress column.
