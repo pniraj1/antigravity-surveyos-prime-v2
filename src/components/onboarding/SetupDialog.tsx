@@ -9,8 +9,6 @@ import type { SurveyorProfile } from '@/types/vehicle';
 import { canContinueDetails, closeSetup, licencePrefill } from '@/lib/onboarding/setup';
 import { DetailsBody, KeyBody, MarksBody } from './SetupSteps';
 
-export { KeyTestMessage, testKeyResult } from './SetupSteps';
-
 const PATH = ['Documents', 'Check', 'Assess', 'Report'] as const;
 
 const STEPS = {

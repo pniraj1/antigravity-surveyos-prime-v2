@@ -7,7 +7,8 @@ vi.mock('@/lib/ai/service', () => ({
   fetchGeminiModelEntries: (k: string) => fetchGeminiModelEntries(k),
 }));
 
-import { SetupStepContent, KeyTestMessage, testKeyResult } from '../SetupDialog';
+import { SetupStepContent } from '../SetupDialog';
+import { KeyTestMessage, testKeyResult } from '../SetupSteps';
 import { canContinueDetails, licencePrefill, closeSetup } from '@/lib/onboarding/setup';
 import { useProfileStore } from '@/stores/profile-store';
 import { useUIStore } from '@/stores/ui-store';

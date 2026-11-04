@@ -45,7 +45,7 @@ describe('isChecklistVisible', () => {
 describe('ChecklistView', () => {
   it('shows the count, title, Hide and a text label for each row', () => {
     const html = renderToStaticMarkup(
-      <ChecklistView items={items([true, false, false])} onHide={() => {}} onOpen={() => {}} />,
+      <ChecklistView items={items([true, false, false])} onHide={() => {}} onOpen={() => {}} hasClaims={false} />,
     );
     expect(html).toContain('Getting started');
     expect(html).toContain('1 of 3 done');
@@ -53,6 +53,26 @@ describe('ChecklistView', () => {
     expect(html).toContain('Item 0');
     expect(html).toContain('Item 1');
     expect(html).toContain('min-h-11');
+  });
+});
+
+describe('ChecklistView rows without an action', () => {
+  it('Drive row is not a button, an actionable row is', () => {
+    const html = renderToStaticMarkup(
+      <ChecklistView
+        items={[
+          { id: 'drive', label: 'Connect Google Drive', done: false },
+          { id: 'aiKey', label: 'Add your AI key', done: false },
+        ]}
+        onHide={() => {}}
+        onOpen={() => {}}
+        hasClaims={false}
+      />,
+    );
+    const buttons = html.match(/<button[\s\S]*?<\/button>/g) ?? [];
+    expect(buttons.some((b) => b.includes('Connect Google Drive'))).toBe(false);
+    expect(buttons.some((b) => b.includes('Add your AI key'))).toBe(true);
+    expect(html).toContain('Connect Google Drive');
   });
 });
 

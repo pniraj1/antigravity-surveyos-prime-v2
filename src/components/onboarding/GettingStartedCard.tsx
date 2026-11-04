@@ -11,9 +11,10 @@ interface ChecklistViewProps {
   items: ChecklistItem[];
   onHide: () => void;
   onOpen: (id: ChecklistId) => void;
+  hasClaims: boolean;
 }
 
-export function ChecklistView({ items, onHide, onOpen }: ChecklistViewProps) {
+export function ChecklistView({ items, onHide, onOpen, hasClaims }: ChecklistViewProps) {
   const done = items.filter((i) => i.done).length;
   const firstOpen = items.find((i) => !i.done)?.id;
   return (
@@ -31,21 +32,29 @@ export function ChecklistView({ items, onHide, onOpen }: ChecklistViewProps) {
         <div className="h-full bg-primary" style={{ width: `${(done / items.length) * 100}%` }} />
       </div>
       <ul className="mt-3 space-y-1">
-        {items.map((item) => (
-          <li key={item.id}>
-            <button
-              type="button"
-              onClick={() => onOpen(item.id)}
-              className={`w-full min-h-11 flex items-center gap-3 px-2 rounded-lg text-left text-sm hover:bg-muted ${
-                item.id === firstOpen ? 'font-medium text-foreground bg-primary/5' : 'text-muted-foreground'
-              }`}
-            >
+        {items.map((item) => {
+          const rowClass = `w-full min-h-11 flex items-center gap-3 px-2 rounded-lg text-left text-sm ${
+            item.id === firstOpen ? 'font-medium text-foreground bg-primary/5' : 'text-muted-foreground'
+          }`;
+          const content = (
+            <>
               {item.done ? <CheckCircle2 size={16} className="text-status-success" /> : <Circle size={16} />}
               <span className={item.done ? 'line-through' : ''}>{item.label}</span>
               <span className="sr-only">{item.done ? '(done)' : '(not done yet)'}</span>
-            </button>
-          </li>
-        ))}
+            </>
+          );
+          return (
+            <li key={item.id}>
+              {checklistAction(item.id, hasClaims) ? (
+                <button type="button" onClick={() => onOpen(item.id)} className={`${rowClass} hover:bg-muted`}>
+                  {content}
+                </button>
+              ) : (
+                <div className={rowClass}>{content}</div>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </section>
   );
@@ -73,6 +82,7 @@ export function GettingStartedCard() {
       items={items}
       onHide={() => markOnboarding({ checklistHiddenAt: new Date().toISOString() })}
       onOpen={open}
+      hasClaims={claimsList.length > 0}
     />
   );
 }
