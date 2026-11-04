@@ -5,7 +5,7 @@
 
 ---
 
-## In Progress: User onboarding (2026-11-04, Claude Code, built on main, NOT deployed or pushed)
+## In Progress: User onboarding (2026-11-04, Claude Code, deployed 2026-11-04 to motorsurveyos-in, not pushed)
 - Spec and plan: `Specs/2026-11-04-user-onboarding-design.md`, `Specs/2026-11-04-user-onboarding-plan.md`.
 - [x] Phase 0: disabled tabs explained, AI key labels (provider names stay hidden), empty state, survey type lines, blank-profile banner in Report Center. "Open saved" and the sidebar folder button now work (they were dead).
 - [x] Phase 1: welcome, 3-step profile setup, Getting Started checklist (`components/onboarding/`, `lib/onboarding/`).

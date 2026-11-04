@@ -9,7 +9,7 @@
 - Blank name prefilled from the Google name and licence from `irdaiLicence` after sync, so reports stop printing "SURVEYOR NAME".
 - Checklist limit: "Check what was read" and "See your first report" tick on opening those screens; the app does not record review or report generation.
 - Stack/cost: none. No new dependency, no AI calls except the optional key test, one small field on the profile doc.
-- Not browser-tested (needs login). Not deployed. Not pushed.
+- Not browser-tested (needs login). Deployed 2026-11-04 to motorsurveyos-in (hosting only, live chunk checked). Not pushed.
 - Scan impact: none (no doc types, insurer table, folder layout, field labels, claim paths or manifest touched; Scan's drift tests not run).
 
 ## 2026-11-04 (Claude Code) — Simple documents try Gemma first

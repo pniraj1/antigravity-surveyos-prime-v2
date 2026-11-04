@@ -7,7 +7,8 @@
 
 ## What's Unfinished
 - [ ] Owner: live check with a fresh trial account; review wording.
-- [ ] Deploy (to motorsurveyos-in, not the default site) and push: not done.
+- [x] Deployed 2026-11-04 to motorsurveyos-in (hosting only).
+- [ ] Push: not done.
 - [ ] Owner: is the admin-key fallback on in live `ai_config/routing`?
 - [ ] Phases 2 to 4.
 
