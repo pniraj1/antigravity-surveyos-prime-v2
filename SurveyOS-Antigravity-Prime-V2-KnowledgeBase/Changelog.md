@@ -7,7 +7,7 @@
 - fix(ai): after the parser reads an estimate or bill, the header call runs as `light`, not `heavy`, so it no longer spends Flash (20/day).
 - Finding, no code: the sandbox site has no extra parsing to port. `src/lib/ai` is identical between its build (2026-11-01 23:36) and live, and both serve the same parser chunk. The `sandbox` preview channel (2026-10-30, expires 2026-11-06) is older and has no parser.
 - Stack/cost: no new provider, no extra calls per document. Gemma has not been benched on RC/DL (the bench reads estimates only). Google Gemma has not been tried with JSON mode; a rejection hops to the next model.
-- Not browser-tested. Not deployed.
+- Not browser-tested. Deployed 2026-11-04 to motorsurveyos-in (live chunk checked).
 - Scan impact: none (model choice is Prime-only; no coupling file touched).
 
 ## 2026-11-03 (Claude Code) — Bill Check: match score and review of doubtful matches
