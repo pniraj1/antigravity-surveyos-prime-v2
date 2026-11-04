@@ -50,6 +50,8 @@ import { ProcessingProgressOverlay } from '@/components/ui/ProcessingProgressOve
 import { TermsReacceptGate } from '@/components/legal/TermsReacceptGate';
 import { GettingStartedCard } from '@/components/onboarding/GettingStartedCard';
 import { OnboardingGate } from '@/components/onboarding/OnboardingGate';
+import { TabTip } from '@/components/onboarding/TabTip';
+import { HelpDialog } from '@/components/onboarding/HelpDialog';
 
 // Dynamically import ALL tabs with ssr:false — they all use browser-only APIs:
 const DetailsTab    = dynamicImport(() => import('@/components/tabs/DetailsTab').then(m    => ({ default: m.DetailsTab    })), { ssr: false });
@@ -146,6 +148,7 @@ export function DashboardContent() {
           {/* CTA Buttons */}
           <div className="flex flex-wrap gap-3">
             <button
+              data-tour="new-claim-btn"
               onClick={() => setNewClaimDialogOpen(true)}
               className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium transition-all bg-primary text-[var(--color-neutral-900)] hover:bg-primary/90"
             >
@@ -153,6 +156,7 @@ export function DashboardContent() {
               New claim
             </button>
             <button
+              data-tour="open-saved-btn"
               onClick={() => setClaimsListOpen(true)}
               className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium transition-all bg-white/10 text-white border border-white/15 hover:bg-white/20"
             >
@@ -255,7 +259,7 @@ export function DashboardContent() {
 
 
         {/* Recent Claims Table */}
-        <div id="claims-table">
+        <div id="claims-table" data-tour="claims-table">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-5 gap-4">
             <div className="flex items-center space-x-4">
               <h2 className="text-xs font-medium uppercase tracking-[0.2em] text-[var(--color-neutral-400)]">
@@ -657,6 +661,7 @@ export default function Dashboard() {
       <main className={`flex-1 overflow-y-auto bg-background ${hasClaim ? 'pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0' : ''}`}>
         <ClaimHeader />
         <NewDrivePhotosBanner />
+        <TabTip />
         <ErrorBoundary key={activeTab}>
           {activeTab === 'dashboard' ? <DashboardContent /> : <TabPlaceholder tab={activeTab} />}
         </ErrorBoundary>
@@ -666,6 +671,7 @@ export default function Dashboard() {
 
       {/* Global Modals */}
       <NewClaimDialog />
+      <HelpDialog />
       <ErrorBoundary fallback={<></>}><OnboardingGate /></ErrorBoundary>
 
       {/* Floating live report preview — visible on all tabs except Reports */}

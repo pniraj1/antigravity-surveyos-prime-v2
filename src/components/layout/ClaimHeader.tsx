@@ -9,7 +9,7 @@ import { useUIStore } from '@/stores/ui-store';
 import { pushClaimToCloud } from '@/lib/firebase/sync';
 import { flushDriveQueue, backupAllPendingToDrive } from '@/lib/drive';
 import { getDriveQueueCount } from '@/lib/storage/indexeddb';
-import { Cloud, Loader2, CheckCircle2, RotateCcw } from 'lucide-react';
+import { Cloud, Loader2, CheckCircle2, RotateCcw, HelpCircle } from 'lucide-react';
 import { setCompletedInScan } from '@/lib/drive/scan-status-sync';
 import { completionPatch } from '@/lib/drive/scan-status';
 import { DriveQueueChip } from '@/components/sync/DriveQueueChip';
@@ -141,6 +141,16 @@ export function ClaimHeader() {
           ? <Loader2 size={12} className="animate-spin" />
           : <Cloud size={12} />}
         Save &amp; Sync
+      </button>
+
+      <button
+        onClick={() => useUIStore.getState().setHelpDialogOpen(true)}
+        className="flex items-center gap-1.5 px-2.5 py-2.5 sm:py-1.5 rounded-lg text-[11px] sm:text-[10px] font-medium transition-all hover:bg-muted min-h-[44px] sm:min-h-0 border border-border text-muted-foreground hover:text-foreground cursor-pointer"
+        title="Help & Guide"
+        aria-label="Help & Guide"
+      >
+        <HelpCircle size={14} className="text-primary" />
+        <span className="hidden sm:inline">Help</span>
       </button>
     </div>
   );

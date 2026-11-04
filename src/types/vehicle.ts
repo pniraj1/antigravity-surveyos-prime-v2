@@ -249,6 +249,8 @@ export interface SurveyorProfile {
     checklistHiddenAt?: string;
     reviewSeenAt?: string;
     reportSeenAt?: string;
+    tipsSeen?: Partial<Record<string, string>>;
+    tourDoneAt?: string;
   };
   /** ISO timestamp when SurveyOS Sync was connected; null if never. */
   syncConnectedAt?: string | null;

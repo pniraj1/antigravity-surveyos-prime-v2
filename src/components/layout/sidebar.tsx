@@ -32,6 +32,7 @@ import {
   ShieldCheck,
   CarFront,
   Archive,
+  HelpCircle,
 } from 'lucide-react';
 import { NotificationBell } from './NotificationBell';
 import { useAuthStore } from '@/stores/auth-store';
@@ -294,6 +295,7 @@ export function Sidebar() {
                     return (
                       <button
                         key={item.id}
+                        data-tour={item.id === 'profile' ? 'nav-profile' : undefined}
                         onClick={() => !disabled && handleTabChange(item.id)}
                         disabled={disabled}
                         title={
@@ -371,6 +373,14 @@ export function Sidebar() {
                 <Cloud size={12} />
                 {isDriveConnected ? driveEmail : 'Drive unlinked'}
               </div>
+              <button
+                type="button"
+                onClick={() => useUIStore.getState().setHelpDialogOpen(true)}
+                className="flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+              >
+                <HelpCircle size={14} className="text-primary" />
+                <span>Help & Guide</span>
+              </button>
               {/* The privacy notice has to stay reachable from inside the app,
                   not only from the marketing footer a signed-in surveyor never
                   sees again after registering. */}
@@ -383,6 +393,15 @@ export function Sidebar() {
           )}
           {mounted && sidebarCollapsed && (
             <div className="flex flex-col items-center gap-3">
+              <button
+                type="button"
+                onClick={() => useUIStore.getState().setHelpDialogOpen(true)}
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                title="Help & Guide"
+                aria-label="Help & Guide"
+              >
+                <HelpCircle size={15} className="text-primary" />
+              </button>
               {isOnline ? <Wifi size={13} className="text-emerald-400" /> : <WifiOff size={13} className="text-amber-400" />}
               <Cloud size={13} className={isDriveConnected ? 'text-primary' : 'text-[var(--color-neutral-200)]'} />
             </div>

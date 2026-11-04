@@ -7,6 +7,7 @@ import { useUIStore } from '@/stores/ui-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { canShowOnboarding, shouldShowWelcome } from '@/lib/onboarding/rules';
 import { profilePrefill } from '@/lib/onboarding/setup';
+import { shouldStartDashboardTour, startDashboardTour } from '@/lib/onboarding/dashboard-tour';
 
 // Lazy: SetupDialog pulls in ProfileTab code, which stays out of the main bundle.
 const SetupDialog = dynamic(() => import('./SetupDialog').then((m) => ({ default: m.SetupDialog })), {
@@ -21,8 +22,10 @@ export function OnboardingGate() {
   const setupStep = useUIStore((s) => s.setupStep);
   const setSetupStep = useUIStore((s) => s.setSetupStep);
   const newClaimOpen = useUIStore((s) => s.isNewClaimDialogOpen);
+  const activeTab = useUIStore((s) => s.activeTab);
   const opened = useRef(false);
   const prefilled = useRef(false);
+  const tourStarted = useRef(false);
 
   // Once per mount, after sync: fill blank name and licence from what the account already has.
   useEffect(() => {
@@ -39,6 +42,17 @@ export function OnboardingGate() {
       setSetupStep(0);
     }
   }, [profile, loginSyncDone, setupStep, setSetupStep, newClaimOpen]);
+
+  useEffect(() => {
+    if (tourStarted.current || opened.current || setupStep !== null || newClaimOpen) return;
+    if (shouldStartDashboardTour(profile, loginSyncDone, setupStep, activeTab)) {
+      tourStarted.current = true;
+      const timer = setTimeout(() => {
+        startDashboardTour();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [profile, loginSyncDone, setupStep, newClaimOpen, activeTab]);
 
   return setupStep !== null ? <SetupDialog /> : null;
 }

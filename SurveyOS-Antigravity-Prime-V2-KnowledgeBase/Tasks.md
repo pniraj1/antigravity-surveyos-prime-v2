@@ -34,8 +34,11 @@
 - [ ] Owner: review proposed tab wording for Phase 2A and approve Phase 2 plan (digital garage PDF advice integrated).
 - [x] Design review & brainstorming: audited Executive Platinum style with `/ui-ux-pro-max` (slim banner, touch targets, contrast) and completed `/multi-agent-brainstorming` review.
 - [ ] Owner: confirm whether the admin-key fallback is on in live `ai_config/routing`; if so the AI key row could say optional.
-- [x] Owner confirmed Phase 2C (Dashboard Tour) is desired (to be built after 2A & 2B using driver.js, ~5 KB, MIT, ₹0).
-- [ ] Phase 2: First-visit tips (2A), Help button (2B), and Dashboard tour (2C). Phase 3: report section guide. Phase 4: admin progress column.
+- [x] Phase 2A: First-visit tips on each tab (`tab-help.ts`, `TabTip.tsx`) with digital PDF guidance and survey-aware next tab.
+- [x] Phase 2B: Always-available Help button (`HelpDialog.tsx`, sidebar footer, claim header, mobile drawer).
+- [x] Phase 2C: Desktop Dashboard tour using `driver.js` (`dashboard-tour.ts`, 4 stops, reduced-motion safe).
+- [ ] Phase 3: Report section guide in Report Center (sections catalogued from print components; wording submitted to owner for review).
+- [ ] Phase 4: Admin progress column showing trial surveyor onboarding status.
 
 ---
 

@@ -46,6 +46,7 @@ interface UIState {
   // ─── Workspace ──────────────────────────────────────
   isNewClaimDialogOpen: boolean;
   isClaimsListOpen: boolean;
+  isHelpDialogOpen: boolean;
 
   // ─── Connection Status ──────────────────────────────
   isOnline: boolean;
@@ -73,6 +74,7 @@ interface UIState {
   setSidebarMobileOpen: (open: boolean) => void;
   setNewClaimDialogOpen: (open: boolean) => void;
   setClaimsListOpen: (open: boolean) => void;
+  setHelpDialogOpen: (open: boolean) => void;
   setOnline: (online: boolean) => void;
   setDriveConnected: (connected: boolean, email?: string) => void;
   setSaveStatus: (status: UIState['saveStatus']) => void;
@@ -95,6 +97,7 @@ export const useUIStore = create<UIState>()(
       currentClaimId: null,
       isNewClaimDialogOpen: false,
       isClaimsListOpen: false,
+      isHelpDialogOpen: false,
       isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
       isDriveConnected: false,
       driveEmail: '',
@@ -119,6 +122,8 @@ export const useUIStore = create<UIState>()(
       setNewClaimDialogOpen: (open) => set({ isNewClaimDialogOpen: open }),
 
       setClaimsListOpen: (open) => set({ isClaimsListOpen: open }),
+
+      setHelpDialogOpen: (open) => set({ isHelpDialogOpen: open }),
 
       setOnline: (online) => set({ isOnline: online }),
 

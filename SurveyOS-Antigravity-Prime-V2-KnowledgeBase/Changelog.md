@@ -2,6 +2,13 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-04 (Antigravity) — User Onboarding Phase 2 (Tips, Help button, Dashboard tour)
+- feat(onboarding): Phase 2A first-visit tips (`TabTip.tsx`, `tab-help.ts`) with digital garage PDF guidance on estimate and bill tabs, next-tab workflow navigation, and deep-merge safe acknowledgment tracking in `profile.onboarding.tipsSeen`.
+- feat(onboarding): Phase 2B always-available Help button (`HelpDialog.tsx`) in sidebar footer and claim header, featuring screen-specific advice, 1-click setup guide replay, FAQ link, and direct surveyor support email.
+- feat(onboarding): Phase 2C desktop Dashboard tour (`dashboard-tour.ts`) using lightweight `driver.js` (~5 KB gzipped, MIT, ₹0), highlighting New Claim, Open Saved, Claims Registry, and Profile. Guarded against mobile, reduced motion, and open dialogs.
+- tests: Added 24 new unit tests across `tab-help.test.ts`, `TabTip.test.tsx`, `HelpDialog.test.tsx`, and `dashboard-tour.test.ts`. All 263 test files (2,376 tests) passing; type check clean.
+- Scan impact: None.
+
 ## 2026-11-04 (Antigravity) — Live check guide & Phase 2C tour confirmation
 - docs: Formulated structured verification checklist for the owner covering all Phase 0 and Phase 1 changes on the live site.
 - design: Logged owner confirmation for Phase 2C (Dashboard Tour); planned implementation using `driver.js` (~5 KB, MIT licence, ₹0).
