@@ -375,7 +375,8 @@ export async function extractDocument(
     if (pageTokens && textLayers && parserEligible({ key, allText, fileCount: files.length, feedback, previousData, forceDocMode, override: getAITestOverride() })) {
       const parsed = safeParse(pageTokens);
       if (parsed.ok) {
-        const header = await readHeader(key as 'estimate' | 'final-bill', textLayers, p => callAIGateway(p, [], 'json', job, session, signal));
+        // Rows are already read: the header is one small text call, not a heavy job that spends Flash.
+        const header = await readHeader(key as 'estimate' | 'final-bill', textLayers, p => callAIGateway(p, [], 'json', 'light', session, signal));
         if (signal?.aborted) throw abortError();
         const data = { ...header, ...parsed.data };
         const findings = toFindings(rowCheck(data, textLayers)).filter(f => f.kind !== 'gap');

@@ -12,11 +12,11 @@ const probes = (): ModelProbes => ({ ...EMPTY_PROBES, providers: { ...EMPTY_PROB
 const cfg = FALLBACK_AI_MODELS_CONFIG;
 
 describe('rankedLists', () => {
-  it('three jobs in the loop order: heavy leads with Flash, light with Flash-Lite', () => {
+  it('three jobs in the loop order: heavy leads with Flash, light with Gemma', () => {
     const lists = rankedLists(cfg, probes(), new Set(['gemma4:31b']));
     expect(ADMIN_JOBS.map(j => j.job)).toEqual(['heavy', 'light', 'text']);
     expect(lists.heavy[0].id).toBe('gemini-3.5-flash');
-    expect(lists.light[0].id).toBe('gemini-3.5-flash-lite');
+    expect(lists.light[0].id).toBe('gemma4:31b');
     expect(lists.heavy.map(x => x.id)).not.toContain('gemini-text');       // vision needed
     expect(lists.text.map(x => x.id)).toContain('gemini-text');
   });
@@ -30,7 +30,7 @@ describe('rankedLists', () => {
     const c = { ...cfg, providers: { ...cfg.providers, gemini: { ...emptyProviderConfig(), excluded: ['gemini-3.5-flash'], limits: { 'gemini-3.5-flash-lite': 300 } } } };
     const lists = rankedLists(c, probes(), new Set());
     expect(lists.heavy.map(x => x.id)).not.toContain('gemini-3.5-flash');
-    expect(lists.light[0]).toMatchObject({ id: 'gemini-3.5-flash-lite', limit: 300 });
+    expect(lists.light.find(x => x.id === 'gemini-3.5-flash-lite')).toMatchObject({ limit: 300 });
   });
   it('a model limited to 0 still appears — last — instead of vanishing', () => {
     const c = { ...cfg, providers: { ...cfg.providers, gemini: { ...emptyProviderConfig(), limits: { 'gemini-3.5-flash': 0 } } } };

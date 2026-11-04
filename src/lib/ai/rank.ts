@@ -51,7 +51,9 @@ export function modelStrength(id: string): number {
 }
 
 const HEAVY_TIER: Record<Tier, number> = { flash: 0, lite: 1, gemma: 2, other: 3 };
-const CHEAP_TIER: Record<Tier, number> = { lite: 0, gemma: 1, flash: 2, other: 3 };   // light/text: Flash is the last resort before untested providers
+const CHEAP_TIER: Record<Tier, number> = { lite: 0, gemma: 1, flash: 2, other: 3 };   // text: Flash is the last resort before untested providers
+// RC, DL and other one-page reads: Gemma first, so Flash-Lite's 500/day is left for estimates once Flash runs out.
+const LIGHT_TIER: Record<Tier, number> = { gemma: 0, lite: 1, flash: 2, other: 3 };
 
 const VERDICT_RANK: Record<NonNullable<PoolEntry['verdict']>, number> = { exact: 0, close: 1, untested: 2, wrong: 9, failed: 9 };
 
@@ -112,7 +114,7 @@ export function rankModels(job: AIJob, images: readonly string[], pool: readonly
         || cmp(verdictRank(a), verdictRank(b)) || cmp(busy(a), busy(b)) || cmp(proxied(a), proxied(b))
         || cmp(modelStrength(b.model.id), modelStrength(a.model.id)) || cmp(speed(a), speed(b))
     : job === 'light'
-    ? (a, b) => cmp(tier(a, CHEAP_TIER), tier(b, CHEAP_TIER)) || cmp(proxied(a), proxied(b))
+    ? (a, b) => cmp(tier(a, LIGHT_TIER), tier(b, LIGHT_TIER)) || cmp(proxied(a), proxied(b))
         || cmp(+(speed(a) > LIGHT_FAST_MS_PER_PAGE), +(speed(b) > LIGHT_FAST_MS_PER_PAGE)) || cmp(speed(a), speed(b)) || cmp(busy(a), busy(b))
     : (a, b) => cmp(tier(a, CHEAP_TIER), tier(b, CHEAP_TIER)) || cmp(speed(a), speed(b)) || cmp(busy(a), busy(b)) || cmp(proxied(a), proxied(b));
 

@@ -94,7 +94,7 @@ describe('ordering', () => {
     const pool = [entry('gemini', 'a', { verdict: 'failed' }), entry('gemini', 'b'), entry('gemini', 'c', { verdict: 'close' })];
     expect(ids(rankModels('heavy', ['i'], pool, { health: health() }))).toEqual(['c', 'b']);
   });
-  it('light: tier order (lite → gemma → flash), then speed within tier', () => {
+  it('light: tier order (gemma → lite → flash), then speed within tier', () => {
     const pool = [
       entry('ollama', 'gemma4:31b', { msPerPage: 5_000 }),
       entry('gemini', 'slow', { msPerPage: 40_000 }),
@@ -161,8 +161,21 @@ describe('quota-aware ordering', () => {
     h.markDeadToday(keyHash('k'), 'gemini-3.5-flash');
     expect(ids(rankModels('heavy', ['i'], pool(), { health: h, pagesNeeded: 1 }))).not.toContain('gemini-3.5-flash');
   });
-  it('light: lite first, gemma next, flash only as last resort', () => {
-    expect(ids(rankModels('light', ['i'], pool(), { health: health() }))).toEqual(['gemini-3.5-flash-lite', 'gemma4:31b', 'gemini-3.5-flash', 'gemini-2.5-flash']);
+  it('light: gemma first, lite next, flash only as last resort', () => {
+    expect(ids(rankModels('light', ['i'], pool(), { health: health() }))).toEqual(['gemma4:31b', 'gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-2.5-flash']);
+  });
+  it('light: Gemma on Google (direct, 14 400/day) goes before Gemma through the proxy', () => {
+    const p = [{ ...entry('ollama', 'gemma4:31b'), proxied: true }, entry('gemini', 'gemma-4-31b-it'), entry('gemini', 'gemini-3.5-flash-lite')];
+    expect(ids(rankModels('light', ['i'], p, { health: health() }))).toEqual(['gemma-4-31b-it', 'gemma4:31b', 'gemini-3.5-flash-lite']);
+  });
+  it('light: with no Gemma reachable, Flash-Lite still leads', () => {
+    const p = [entry('gemini', 'gemini-3.5-flash'), entry('gemini', 'gemini-3.5-flash-lite')];
+    expect(ids(rankModels('light', ['i'], p, { health: health() }))).toEqual(['gemini-3.5-flash-lite', 'gemini-3.5-flash']);
+  });
+  it('heavy and text keep Flash-Lite ahead of Gemma', () => {
+    expect(ids(rankModels('text', [], pool(), { health: health() }))[0]).toBe('gemini-3.5-flash-lite');
+    expect(ids(rankModels('heavy', ['i'], pool(), { health: health() })).indexOf('gemini-3.5-flash-lite'))
+      .toBeLessThan(ids(rankModels('heavy', ['i'], pool(), { health: health() })).indexOf('gemma4:31b'));
   });
   it('light: falls to flash when nothing cheaper is eligible', () => {
     const h = createHealth(mem(), () => T0);
