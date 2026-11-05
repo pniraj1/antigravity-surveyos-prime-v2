@@ -1,0 +1,189 @@
+{
+  "portal": "oic",
+  "flow": "assessment",
+  "version": 1,
+  "host": "orientalinsurance.org.in",
+  "route": "/surveyor-assessment-form",
+  "modelRoot": "#",
+  "claimNoPath": "claimNumber",
+  "claimNoSelector": "#claimNumber, input[name='claimNumber']",
+  "doneHint": "Review Step 2 Basic Details and proceed to Step 4 to upload your generated Excel assessment.",
+  "fields": {
+    "regNumber": {
+      "modelPath": "#regNumber",
+      "kind": "text",
+      "empty": "",
+      "label": "Registration No.",
+      "from": "vehicle.regNo"
+    },
+    "make": {
+      "modelPath": "#make",
+      "kind": "text",
+      "empty": "",
+      "label": "Make",
+      "from": "vehicle.make"
+    },
+    "model": {
+      "modelPath": "#model",
+      "kind": "text",
+      "empty": "",
+      "label": "Variant (Model)",
+      "from": "vehicle.model"
+    },
+    "chasisNumber": {
+      "modelPath": "#chasisNumber",
+      "kind": "text",
+      "empty": "",
+      "label": "Chassis Number",
+      "from": "vehicle.chassisNumber"
+    },
+    "engineNumber": {
+      "modelPath": "#engineNumber",
+      "kind": "text",
+      "empty": "",
+      "label": "Engine Number",
+      "from": "vehicle.engineNumber"
+    },
+    "cubicCapacity": {
+      "modelPath": "#cubicCapacity input",
+      "kind": "text",
+      "empty": "",
+      "label": "Cubic Capacity (CC)",
+      "from": "vehicle.cubicCapacity"
+    },
+    "manufacturingYear": {
+      "modelPath": "#manufacturingYear input",
+      "kind": "text",
+      "empty": "",
+      "label": "Manufacturing Year",
+      "from": "vehicle.yearOfManufacture"
+    },
+    "colorOfVehicle": {
+      "modelPath": "#colorOfVehicle",
+      "kind": "text",
+      "empty": "",
+      "label": "Color of Vehicle",
+      "from": "vehicle.color"
+    },
+    "typeOfFuel": {
+      "modelPath": "#typeOfFuel",
+      "kind": "text",
+      "empty": "",
+      "label": "Type of Fuel",
+      "from": "vehicle.fuelType"
+    },
+    "typeOfBody": {
+      "modelPath": "#typeOfBody",
+      "kind": "text",
+      "empty": "",
+      "label": "Type of Body",
+      "from": "vehicle.typeOfBody"
+    },
+    "classOfVehicle": {
+      "modelPath": "#classOfVehicle",
+      "kind": "text",
+      "empty": "",
+      "label": "Class of Vehicle",
+      "from": "vehicle.classOfVehicle"
+    },
+    "unladenWeight": {
+      "modelPath": "#unladenWeight input",
+      "kind": "text",
+      "empty": "",
+      "label": "Unladen Weight",
+      "from": "vehicle.unladenWeight"
+    },
+    "registeredLadenWeight": {
+      "modelPath": "#registeredLadenWeight input",
+      "kind": "text",
+      "empty": "",
+      "label": "Laden Weight",
+      "from": "vehicle.registeredLadenWeight"
+    },
+    "seatingCapacity": {
+      "modelPath": "#seatingLoadCarryingCapacity input",
+      "kind": "text",
+      "empty": "",
+      "label": "Seating Capacity",
+      "from": "vehicle.seatingCapacity"
+    },
+    "lossDescription": {
+      "modelPath": "#lossDescription",
+      "kind": "text",
+      "empty": "",
+      "label": "Loss Description",
+      "from": "accident.lossDescription",
+      "maxLen": 2000
+    },
+    "closeProximity": {
+      "modelPath": "#closeProximity2",
+      "kind": "radio",
+      "empty": "",
+      "label": "Close Proximity (No)"
+    },
+    "vbConfirmed": {
+      "modelPath": "#vbConfirmed1",
+      "kind": "radio",
+      "empty": "",
+      "label": "Confirmed 64VB (Yes)"
+    },
+    "driverName": {
+      "modelPath": "#driverName",
+      "kind": "text",
+      "empty": "",
+      "label": "Driver Name",
+      "from": "driver.name"
+    },
+    "driverLicenseNoTwo": {
+      "modelPath": "#driverLicenseNoTwo",
+      "kind": "text",
+      "empty": "",
+      "label": "DL Number Part 2",
+      "from": "driver.licenseNumber"
+    },
+    "driverBadgeNo": {
+      "modelPath": "#badgeNo",
+      "kind": "text",
+      "empty": "",
+      "label": "Badge Number",
+      "from": "driver.badgeNumber"
+    },
+    "driverQualification": {
+      "modelPath": "#qualification",
+      "kind": "text",
+      "empty": "",
+      "label": "Qualification",
+      "from": "driver.qualification"
+    },
+    "driverAddress": {
+      "modelPath": "#address",
+      "kind": "text",
+      "empty": "",
+      "label": "Driver Address",
+      "from": "driver.address",
+      "maxLen": 240
+    },
+    "workshopName": {
+      "modelPath": "#workshopName",
+      "kind": "text",
+      "empty": "",
+      "label": "Workshop Name",
+      "from": "vehicle.workshopName"
+    },
+    "workshopEstimateAmount": {
+      "modelPath": "#workshopEstimateAmount input",
+      "kind": "text",
+      "empty": "",
+      "label": "Estimate Amount",
+      "from": "billCheck.billTotal"
+    },
+    "workshopGstNo": {
+      "modelPath": "#workshopGstNo",
+      "kind": "text",
+      "empty": "",
+      "label": "Workshop GST No",
+      "from": "vehicle.workshopGst"
+    }
+  },
+  "files": {}
+}

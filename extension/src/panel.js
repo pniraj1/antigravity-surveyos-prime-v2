@@ -30,7 +30,12 @@
   const esc = (/** @type {unknown} */ s) => String(s ?? '').replace(/[&<>"]/g, (c) => /** @type {any} */ ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
   // Same selector as the Filler's q(): the first element is the one Fill writes to.
   const cssq = (/** @type {string} */ s) => s.replace(/[\\"]/g, '\\$&');
-  const fieldEl = (/** @type {string} */ p) => /** @type {HTMLElement | null} */ (document.querySelector(`[ng-model="${cssq(p)}"], [data-ng-model="${cssq(p)}"]`));
+  const fieldEl = (/** @type {string} */ p) => {
+    if (p.startsWith('#') || p.startsWith('.') || p.includes(' ')) {
+      return /** @type {HTMLElement | null} */ (document.querySelector(p));
+    }
+    return /** @type {HTMLElement | null} */ (document.querySelector(`[ng-model="${cssq(p)}"], [data-ng-model="${cssq(p)}"]`));
+  };
   const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /** Registered once; boot() points it at the live card's render. */
@@ -42,18 +47,19 @@
     currentRender(ch);
   });
 
-  // The SPA changes route without reload; re-pick the map on every hashchange.
+  // The SPA changes route without reload; re-pick the map on every hashchange or popstate.
   let bootedFor = '';
   let teardown = () => {}; // boot() points it at the live card's interval and focus listener
   const onRoute = async () => {
     const { maps } = await chrome.storage.local.get('maps');
-    const map = pickMap(maps, location.host, location.hash);
+    const map = pickMap(maps, location.host, location.hash || location.pathname);
     const step = routeStep(bootedFor, map ? mapId(map) : '', !!document.getElementById('sx-panel'));
     if (step.remove) { teardown(); document.getElementById('sx-panel')?.remove(); }
     bootedFor = step.bootedFor;
     if (step.boot) boot(step.boot);
   };
   window.addEventListener('hashchange', onRoute);
+  window.addEventListener('popstate', onRoute);
   // First install: maps land in storage after this page loaded.
   chrome.storage.onChanged.addListener((ch, area) => { if (area === 'local' && ch.maps && !bootedFor) onRoute(); });
   onRoute();

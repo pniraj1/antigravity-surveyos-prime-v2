@@ -9,7 +9,8 @@
   "host_permissions": [
     "https://motorsurveyos-in.web.app/*",
     "https://web.newindia.co.in/NIABancsPortal/*",
-    "https://portal.uiic.in/surveyor/*"
+    "https://portal.uiic.in/surveyor/*",
+    "https://orientalinsurance.org.in/*"
   ],
   "background": { "service_worker": "src/background.js" },
   "content_scripts": [
@@ -19,13 +20,13 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://web.newindia.co.in/NIABancsPortal/*", "https://portal.uiic.in/surveyor/*"],
+      "matches": ["https://web.newindia.co.in/NIABancsPortal/*", "https://portal.uiic.in/surveyor/*", "https://orientalinsurance.org.in/*"],
       "js": ["src/lib/fill-core.js", "src/lib/card-view.js", "src/panel.js"],
       "css": ["src/panel.css"],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://web.newindia.co.in/NIABancsPortal/*", "https://portal.uiic.in/surveyor/*"],
+      "matches": ["https://web.newindia.co.in/NIABancsPortal/*", "https://portal.uiic.in/surveyor/*", "https://orientalinsurance.org.in/*"],
       "js": ["src/lib/fill-core.js", "src/filler.js"],
       "world": "MAIN",
       "run_at": "document_idle"

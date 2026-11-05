@@ -10,8 +10,13 @@
   const ng = () => /** @type {any} */ (globalThis).angular;
 
   const esc = (/** @type {string} */ s) => s.replace(/[\\"]/g, '\\$&');
-  const q = (/** @type {string} */ p) =>
-    /** @type {HTMLElement[]} */ (Array.from(document.querySelectorAll(`[ng-model="${esc(p)}"], [data-ng-model="${esc(p)}"]`)));
+  const q = (/** @type {string} */ p) => {
+    if (p.startsWith('#') || p.startsWith('.') || p.includes(' ')) {
+      const el = document.querySelector(p);
+      return el ? [/** @type {HTMLElement} */ (el)] : [];
+    }
+    return /** @type {HTMLElement[]} */ (Array.from(document.querySelectorAll(`[ng-model="${esc(p)}"], [data-ng-model="${esc(p)}"]`)));
+  };
 
   function ctrlScope(/** @type {any} */ map) {
     if (map.controller) {
@@ -33,7 +38,14 @@
   }
 
   function probe(/** @type {any} */ map) {
-    if (!ng()) return { ok: false, reason: NO_ANGULAR };
+    if (!ng()) {
+      if (map && map.portal === 'oic') {
+        const claimNoEl = document.querySelector(map.claimNoSelector || '#claimNumber');
+        const claimNo = claimNoEl ? (/** @type {HTMLInputElement} */ (claimNoEl).value || claimNoEl.textContent || '') : '';
+        return { ok: true, claimNo: String(claimNo).trim(), invoices: 1 };
+      }
+      return { ok: false, reason: NO_ANGULAR };
+    }
     const scope = ctrlScope(map);
     if (!scope) return { ok: false, reason: NO_FIELDS };
     const claimNo = readPath(scope, map.claimNoPath) || readPath(scope, map.claimNoFallback);
@@ -46,8 +58,24 @@
    *  Synchronous via $apply when no digest is running so a throwing $setViewValue/$render
    *  surfaces to the caller as an 'error' step instead of vanishing into $exceptionHandler. */
   function write(/** @type {HTMLElement} */ el, /** @type {string} */ value, /** @type {string} */ kind) {
-    const ctrl = ng().element(el).controller('ngModel');
-    if (!ctrl) return 'manual';
+    const ctrl = ng() ? ng().element(el).controller('ngModel') : null;
+    if (!ctrl) {
+      if (kind === 'radio') {
+        /** @type {HTMLInputElement} */ (el).checked = true;
+        el.dispatchEvent(new Event('click', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        return 'filled';
+      }
+      const input = /** @type {HTMLInputElement} */ (el);
+      const prev = input.value;
+      input.value = value;
+      // @ts-ignore
+      const tracker = input._valueTracker;
+      if (tracker) tracker.setValue(prev);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      return 'filled';
+    }
     const scope = ng().element(el).scope();
     const doWrite = () => {
       ctrl.$setViewValue(value);
@@ -117,7 +145,28 @@
 
   /** Read-only: gathers reads for planCheck. Never writes, dispatches or styles anything on the page. */
   function check(/** @type {any} */ map, /** @type {any} */ packet) {
-    if (!ng()) return { ok: false, reason: 'AngularJS not found on this page' };
+    if (!ng()) {
+      if (map && map.portal === 'oic') {
+        const claimNoEl = document.querySelector(map.claimNoSelector || '#claimNumber');
+        const claimNo = claimNoEl ? (/** @type {HTMLInputElement} */ (claimNoEl).value || claimNoEl.textContent || '') : '';
+        const read = {
+          current: (/** @type {string} */ path) => {
+            const el = q(path)[0];
+            return el ? (/** @type {HTMLInputElement} */ (el)).value : undefined;
+          },
+          radioValues: (/** @type {string} */ path) => q(path).map((el) => /** @type {HTMLInputElement} */ (el).value),
+          lookup: (/** @type {string} */ path) => {
+            const els = q(path);
+            const el = els[0];
+            if (!el) return { found: false, bound: false, disabled: false, options: null, current: undefined };
+            return { found: true, bound: true, disabled: !!(/** @type {HTMLInputElement} */ (el).disabled), options: null, current: (/** @type {HTMLInputElement} */ (el)).value };
+          },
+        };
+        const pageClaimNo = claimNo ? String(claimNo) : '';
+        return { ok: true, claimNo: pageClaimNo, invoices: 1, ...planCheck(map, packet, pageClaimNo, read) };
+      }
+      return { ok: false, reason: 'AngularJS not found on this page' };
+    }
     const scope = ctrlScope(map);
     if (!scope) return { ok: false, reason: NO_FIELDS };
     const claimNo = readPath(scope, map.claimNoPath) || readPath(scope, map.claimNoFallback);
