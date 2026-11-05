@@ -57,7 +57,7 @@
 - [x] Documented comprehensive SurveyOS Scan status and updates (WhatsApp/Email document chasing in EN/HI/MR, rejection reasons, "Waiting for" filter chip, Drive sync, on-site fee bill notes, geo-stamped photos).
 - [x] Established 5-Act problem-first marketing video narrative sequence (Chaos without app -> Problem defined -> Prominent SurveyOS brand reveal -> Step-by-step transformation -> Resolution & CTA).
 - [ ] Next step: Write individual scene prompts (visual direction, camera angles, voiceover, on-screen text) for AI video generators / production crews.
-- [ ] Owner step: Generate `surveyos-scan-upload.jks`, set `ADMOB_APP_ID`/`ADMOB_BANNER_ID` in `SurveyOS Scan/local.properties`, host privacy policy, and upload AAB to Closed Testing track.
+- [x] Owner step: Generated upload keystore, set AdMob IDs, hosted privacy policy, and uploaded signed AAB v1.3 (versionCode 4) to Play Console.
 
 ---
 
