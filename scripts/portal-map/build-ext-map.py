@@ -46,7 +46,7 @@ def main(flow):
     unlabeled = [k for k, v in overlay["fields"].items() if not v.get("label")]
     if unlabeled:
         sys.exit(f"overlay fields without label: {unlabeled}")
-    optional = ("controller", "claimNoFallback", "invoiceCountPath")
+    optional = ("controller", "claimNoFallback", "invoiceCountPath", "claimNoSelector")
     out = {k: overlay[k] for k in need + optional if k in overlay}
     out["fields"] = {k: entry(v) for k, v in overlay["fields"].items()}
     out["files"] = {k: {"modelPath": v["model"]} for k, v in overlay["files"].items()}

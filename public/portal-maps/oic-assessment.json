@@ -6,8 +6,8 @@
   "route": "/surveyor-assessment-form",
   "modelRoot": "#",
   "claimNoPath": "claimNumber",
-  "claimNoSelector": "#claimNumber, input[name='claimNumber']",
   "doneHint": "Review Step 2 Basic Details and proceed to Step 4 to upload your generated Excel assessment.",
+  "claimNoSelector": "#claimNumber, input[name='claimNumber']",
   "fields": {
     "regNumber": {
       "modelPath": "#regNumber",
@@ -112,8 +112,8 @@
       "kind": "text",
       "empty": "",
       "label": "Loss Description",
-      "from": "accident.lossDescription",
-      "maxLen": 2000
+      "maxLen": 2000,
+      "from": "accident.lossDescription"
     },
     "closeProximity": {
       "modelPath": "#closeProximity2",
@@ -160,8 +160,8 @@
       "kind": "text",
       "empty": "",
       "label": "Driver Address",
-      "from": "driver.address",
-      "maxLen": 240
+      "maxLen": 240,
+      "from": "driver.address"
     },
     "workshopName": {
       "modelPath": "#workshopName",

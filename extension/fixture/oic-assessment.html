@@ -1,0 +1,48 @@
+<!doctype html>
+<html ng-app="fixture"><head><meta charset="utf-8"><title>OIC oic-assessment fixture</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.4.3/angular.min.js"></script>
+<style>label{display:block;margin:4px 0;font:13px system-ui}input,select,textarea{margin-left:6px}</style>
+</head><body ng-controller="FixtureCtrl">
+<h3>Fixture — oic-assessment. Claim <span id="claimNo">{{claimNumber}}</span></h3>
+<p>Set a claim number: <input data-ng-model="claimNumber"> · ng-change log: <code>{{changes.join(', ')}}</code></p>
+<label>regNumber <input type="text" name="regNumber" data-ng-model="#regNumber" data-ng-change="log('regNumber')"></label>
+<label>make <input type="text" name="make" data-ng-model="#make" data-ng-change="log('make')"></label>
+<label>model <input type="text" name="model" data-ng-model="#model" data-ng-change="log('model')"></label>
+<label>chasisNumber <input type="text" name="chasisNumber" data-ng-model="#chasisNumber" data-ng-change="log('chasisNumber')"></label>
+<label>engineNumber <input type="text" name="engineNumber" data-ng-model="#engineNumber" data-ng-change="log('engineNumber')"></label>
+<label>cubicCapacity <input type="text" name="cubicCapacity" data-ng-model="#cubicCapacity input" data-ng-change="log('cubicCapacity')"></label>
+<label>manufacturingYear <input type="text" name="manufacturingYear" data-ng-model="#manufacturingYear input" data-ng-change="log('manufacturingYear')"></label>
+<label>colorOfVehicle <input type="text" name="colorOfVehicle" data-ng-model="#colorOfVehicle" data-ng-change="log('colorOfVehicle')"></label>
+<label>typeOfFuel <input type="text" name="typeOfFuel" data-ng-model="#typeOfFuel" data-ng-change="log('typeOfFuel')"></label>
+<label>typeOfBody <input type="text" name="typeOfBody" data-ng-model="#typeOfBody" data-ng-change="log('typeOfBody')"></label>
+<label>classOfVehicle <input type="text" name="classOfVehicle" data-ng-model="#classOfVehicle" data-ng-change="log('classOfVehicle')"></label>
+<label>unladenWeight <input type="text" name="unladenWeight" data-ng-model="#unladenWeight input" data-ng-change="log('unladenWeight')"></label>
+<label>registeredLadenWeight <input type="text" name="registeredLadenWeight" data-ng-model="#registeredLadenWeight input" data-ng-change="log('registeredLadenWeight')"></label>
+<label>seatingCapacity <input type="text" name="seatingCapacity" data-ng-model="#seatingLoadCarryingCapacity input" data-ng-change="log('seatingCapacity')"></label>
+<label>lossDescription <input type="text" name="lossDescription" data-ng-model="#lossDescription" data-ng-change="log('lossDescription')"></label>
+<label>closeProximity <input type="text" name="closeProximity" data-ng-model="#closeProximity2" data-ng-change="log('closeProximity')"></label>
+<label>vbConfirmed <input type="text" name="vbConfirmed" data-ng-model="#vbConfirmed1" data-ng-change="log('vbConfirmed')"></label>
+<label>driverName <input type="text" name="driverName" data-ng-model="#driverName" data-ng-change="log('driverName')"></label>
+<label>driverLicenseNoTwo <input type="text" name="driverLicenseNoTwo" data-ng-model="#driverLicenseNoTwo" data-ng-change="log('driverLicenseNoTwo')"></label>
+<label>driverBadgeNo <input type="text" name="driverBadgeNo" data-ng-model="#badgeNo" data-ng-change="log('driverBadgeNo')"></label>
+<label>driverQualification <input type="text" name="driverQualification" data-ng-model="#qualification" data-ng-change="log('driverQualification')"></label>
+<label>driverAddress <input type="text" name="driverAddress" data-ng-model="#address" data-ng-change="log('driverAddress')"></label>
+<label>workshopName <input type="text" name="workshopName" data-ng-model="#workshopName" data-ng-change="log('workshopName')"></label>
+<label>workshopEstimateAmount <input type="text" name="workshopEstimateAmount" data-ng-model="#workshopEstimateAmount input" data-ng-change="log('workshopEstimateAmount')"></label>
+<label>workshopGstNo <input type="text" name="workshopGstNo" data-ng-model="#workshopGstNo" data-ng-change="log('workshopGstNo')"></label>
+<script>
+if (!location.hash) location.hash = '/surveyor-assessment-form';
+// Build every parent object of every mapped model path; [$index] -> a one-element array.
+function ensure(o, path) {
+  var parts = path.replace(/\[[^\]]+\]/g, '.0').split('.'); parts.pop();
+  for (var i = 0; i < parts.length; i++) {
+    if (!(parts[i] in o)) o[parts[i]] = parts[i + 1] === '0' ? [] : {};
+    o = o[parts[i]];
+  }
+}
+angular.module('fixture', []).controller('FixtureCtrl', ['$scope', function($scope) {
+  ["#regNumber", "#make", "#model", "#chasisNumber", "#engineNumber", "#cubicCapacity input", "#manufacturingYear input", "#colorOfVehicle", "#typeOfFuel", "#typeOfBody", "#classOfVehicle", "#unladenWeight input", "#registeredLadenWeight input", "#seatingLoadCarryingCapacity input", "#lossDescription", "#closeProximity2", "#vbConfirmed1", "#driverName", "#driverLicenseNoTwo", "#badgeNo", "#qualification", "#address", "#workshopName", "#workshopEstimateAmount input", "#workshopGstNo", "claimNumber"].forEach(function(p) { ensure($scope, p); });
+  $scope.changes = [];
+  $scope.log = function(k) { $scope.changes.push(k); };
+}]);
+</script></body></html>

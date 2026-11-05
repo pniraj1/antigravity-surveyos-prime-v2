@@ -1,0 +1,158 @@
+{
+  "file": "oic-assessment.html",
+  "total": 25,
+  "groups": {
+    "oicBasicDetails": [
+      {
+        "id": "regNumber",
+        "model": "#regNumber",
+        "type": "text",
+        "name": "regNumber"
+      },
+      {
+        "id": "make",
+        "model": "#make",
+        "type": "text",
+        "name": "make"
+      },
+      {
+        "id": "model",
+        "model": "#model",
+        "type": "text",
+        "name": "model"
+      },
+      {
+        "id": "chasisNumber",
+        "model": "#chasisNumber",
+        "type": "text",
+        "name": "chasisNumber"
+      },
+      {
+        "id": "engineNumber",
+        "model": "#engineNumber",
+        "type": "text",
+        "name": "engineNumber"
+      },
+      {
+        "id": "cubicCapacity",
+        "model": "#cubicCapacity input",
+        "type": "text",
+        "name": "cubicCapacity"
+      },
+      {
+        "id": "manufacturingYear",
+        "model": "#manufacturingYear input",
+        "type": "text",
+        "name": "manufacturingYear"
+      },
+      {
+        "id": "colorOfVehicle",
+        "model": "#colorOfVehicle",
+        "type": "text",
+        "name": "colorOfVehicle"
+      },
+      {
+        "id": "typeOfFuel",
+        "model": "#typeOfFuel",
+        "type": "text",
+        "name": "typeOfFuel"
+      },
+      {
+        "id": "typeOfBody",
+        "model": "#typeOfBody",
+        "type": "text",
+        "name": "typeOfBody"
+      },
+      {
+        "id": "classOfVehicle",
+        "model": "#classOfVehicle",
+        "type": "text",
+        "name": "classOfVehicle"
+      },
+      {
+        "id": "unladenWeight",
+        "model": "#unladenWeight input",
+        "type": "text",
+        "name": "unladenWeight"
+      },
+      {
+        "id": "registeredLadenWeight",
+        "model": "#registeredLadenWeight input",
+        "type": "text",
+        "name": "registeredLadenWeight"
+      },
+      {
+        "id": "seatingLoadCarryingCapacity",
+        "model": "#seatingLoadCarryingCapacity input",
+        "type": "text",
+        "name": "seatingCapacity"
+      },
+      {
+        "id": "lossDescription",
+        "model": "#lossDescription",
+        "type": "text",
+        "name": "lossDescription"
+      },
+      {
+        "id": "closeProximity2",
+        "model": "#closeProximity2",
+        "type": "text",
+        "name": "closeProximity"
+      },
+      {
+        "id": "vbConfirmed1",
+        "model": "#vbConfirmed1",
+        "type": "text",
+        "name": "vbConfirmed"
+      },
+      {
+        "id": "driverName",
+        "model": "#driverName",
+        "type": "text",
+        "name": "driverName"
+      },
+      {
+        "id": "driverLicenseNoTwo",
+        "model": "#driverLicenseNoTwo",
+        "type": "text",
+        "name": "driverLicenseNoTwo"
+      },
+      {
+        "id": "badgeNo",
+        "model": "#badgeNo",
+        "type": "text",
+        "name": "driverBadgeNo"
+      },
+      {
+        "id": "qualification",
+        "model": "#qualification",
+        "type": "text",
+        "name": "driverQualification"
+      },
+      {
+        "id": "address",
+        "model": "#address",
+        "type": "text",
+        "name": "driverAddress"
+      },
+      {
+        "id": "workshopName",
+        "model": "#workshopName",
+        "type": "text",
+        "name": "workshopName"
+      },
+      {
+        "id": "workshopEstimateAmount",
+        "model": "#workshopEstimateAmount input",
+        "type": "text",
+        "name": "workshopEstimateAmount"
+      },
+      {
+        "id": "workshopGstNo",
+        "model": "#workshopGstNo",
+        "type": "text",
+        "name": "workshopGstNo"
+      }
+    ]
+  }
+}
