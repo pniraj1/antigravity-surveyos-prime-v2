@@ -2,6 +2,17 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-05 (Antigravity) — SurveyOS Scan In-Viewer Gallery Photo Stamp Modes & 1-Tap Compression
+- feat(scan/photo): In-viewer photo stamp mode chips (`[ Full ]`, `[ No Date ]`, `[ No Stamp ]`) in `PhotoViewer.kt` and `PageStamp.kt`. `No Date` omits timestamp for pre-stamped gallery imports. When GPS coordinates are absent, zero blank lines or empty text boxes are rendered.
+- feat(scan/compress): Live photo file size display in `PhotoViewer` header (`sizeText(item.page.sizeBytes)`). Added 1-tap `[ Compress ]` button opening dialog with target pills:
+  - `~100 KB · Photo Sheet / Email Friendly (1280px · 60% quality · Optimal for 6-up A4 report sheets)`
+  - `~250 KB · Balanced (1600px · 70% quality)`
+  - `Original Full Resolution (1920px · 75% quality · Full survey detail)`
+- feat(scan/batch): Safe batch application confirmation dialog when editing gallery photos (`source == "GALLERY"`), prompting to apply to all gallery photos in the claim or just this one. On-site camera photos retain original evidence.
+- feat(scan/engine): Lossless re-render architecture in `PageFileEdits.kt` and `JpegEncoder.kt` rebuilds working JPEG from untouched `originalFile`. Added `photoQualityForSize` to preserve chosen compression preset across stamp/time edits without database migration.
+- tests(scan): Unit tests added in `StampTextTest.kt` verifying stamp mode detection, transitions, zero-line generation on missing GPS, and quality range boundaries. All 28 tasks passed. Commit `8ddf370` on `main`.
+- Prime impact: None. SurveyOS Prime V2 is 100% compatible without changes.
+
 ## 2026-11-05 (Antigravity) — User Onboarding Phase 3 & 4 + "Power Print" renamed to "Print PDF"
 - refactor(ui): Renamed legacy "Power Print" buttons and labels across the app to "Print PDF" (`SpotActions.tsx`, `SurveyActions.tsx`, `BillCheckTab.tsx`, `FeesTab.tsx`, `ReinspectionTab.tsx`) per surveyor request.
 - feat(onboarding): Phase 3 Report Section Guide in Report Center (`ReportTab.tsx`, `ReportSectionGuide.tsx`, `report-guide.ts`). Collapsible executive guide explaining what insurers inspect in each section across Final Survey (Standard & UIIC), Spot Survey, and Valuation reports, with direct 1-click jump-to-fix navigation to source tabs (`details`, `assessment`, `profile`). Carries `print:hidden` to protect exported PDFs.
