@@ -1,7 +1,30 @@
 # Active Tasks
 
-> Last updated: 2026-11-04 by Antigravity (Resolved surveyos.in custom domain Google/Firebase OAuth sign-in)
+> Last updated: 2026-11-05 by Antigravity (Unified Claim Folder, Local Storage & Auto-Filing Architecture Spec & Plan)
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
+
+---
+
+## In Progress: Unified Claim Folder, Local Storage & Auto-Filing Architecture (2026-11-05, Antigravity)
+- **Problem Diagnosed:** 
+  1. Rigid single-root folder guessing (`${reg} - ${insurer}`) causes new claims without vehicle registration to fall back to `"claim"`, cross-connecting multiple claims into the same folder and adopting each other's files.
+  2. Direct uploads on `DetailsTab` ("Scan RC", "Scan DL", "Scan Policy") are only fed to AI extraction in memory and never saved to disk, evidence viewer, or Google Drive (files are permanently lost on reload).
+  3. No automatic output filing: generated PDF reports (Final, Reinspection, Spot, Valuation) and photo sheets download to Windows `Downloads` rather than saving to the claim's folder.
+  4. Missing "Use Phone Files" button on `DetailsTab` for phone-scanned RC and DL.
+  5. Asynchronous Chromium permission drops on reload throw `SecurityError: Must be handling a user gesture`.
+  6. Photos use `${Date.now()}` in filenames, causing duplicate accumulation on Google Drive.
+- **Workflow Vision:** Surveyors allocate any folder on their PC per claim (freedom to organise by Spot/Final/Valuation, Year, or Insurer); all inputs (phone scans, direct RC/DL uploads, estimates, invoices) and all outputs (Final Report, Re-inspection Report, Spot Report, Valuation Report, Photo Sheet, Bill Check) automatically save into that allocated folder.
+- **Spec & Plan:**
+  - Design Spec: `Specs/2026-11-05-unified-claim-folder-and-storage-design.md`
+  - Implementation Plan: `Specs/2026-11-05-unified-claim-folder-and-storage-implementation-plan.md`
+  - Downloaded 39 Ruflo skills to `.claude/skills` and `C:\Users\Manasi\.gemini\config\skills` for SPARC methodology and DDD patterns.
+- [ ] Task 1: Per-Claim Directory Handle Storage (`claim-folder-store.ts`).
+- [ ] Task 2: Claim Header Folder Allocation Button & Permission Chip.
+- [ ] Task 3: Universal Document Ingestion Pipeline (`ingest.ts`).
+- [ ] Task 4: Fix Details Tab Direct Uploads & Add Phone Scans Support.
+- [ ] Task 5: Automatic Output Filing for Final, Re-inspection, and Spot Reports.
+- [ ] Task 6: Photo Upload De-duplication & Drive Hygiene.
+- [ ] Task 7: Full System Verification, Vitest, TypeScript & Scan Drift Tests.
 
 ---
 
