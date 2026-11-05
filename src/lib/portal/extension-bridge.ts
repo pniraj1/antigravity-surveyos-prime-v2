@@ -10,8 +10,8 @@ export const NOT_INSTALLED_LINE = 'Fill the portal automatically with the Survey
 /** Must match the extension's claimTail: uppercase, alphanumerics only, last 4. */
 const claimTail = (claimNo: string) => '…' + claimNo.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(-4);
 
-export function readyLine(portal: 'nia' | 'uiic', claimNo: string): string {
-  const name = portal === 'nia' ? 'New India' : 'United India';
+export function readyLine(portal: 'nia' | 'uiic' | 'oic', claimNo: string): string {
+  const name = portal === 'nia' ? 'New India' : portal === 'oic' ? 'Oriental Insurance' : 'United India';
   return `Ready: claim ${claimTail(claimNo)} is waiting for the ${name} portal. Open the claim there and click Fill. Expires in 24 h. Sending another claim replaces this one.`;
 }
 

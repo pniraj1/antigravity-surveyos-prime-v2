@@ -43,11 +43,11 @@ const mockClaim: Partial<ClaimData> = {
     policyNumber: 'P123',
     insuranceCompany: 'Oriental Insurance',
   } as any,
-  repairer: {
-    name: 'Auto Garage',
-    estimateNumber: 'EST-99',
-    estimateDate: '2026-10-15',
-  } as any,
+  billCheck: {
+    billNo: 'EST-99',
+    billDate: '2026-10-15',
+    billTotal: 5000,
+  },
 };
 
 const mockRows: AssessmentRow[] = [

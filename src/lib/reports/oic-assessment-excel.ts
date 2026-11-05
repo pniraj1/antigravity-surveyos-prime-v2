@@ -101,7 +101,6 @@ function mapPartDescription(r: AssessmentRow): OicItemDescription {
       return 'Metallic Parts';
     case 'glass':
       return 'Glass';
-    case 'rubber':
     case 'fiberglass':
       return 'Non-Metalic Parts';
     default:

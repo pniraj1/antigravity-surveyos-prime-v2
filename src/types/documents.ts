@@ -10,7 +10,7 @@ export type DocType =
   | 'chassisPhoto' | 'odometerPhoto' | 'photoFront' | 'photoRear' | 'photoLeft' | 'photoRight'
   | 'spotPhotos' | 'damagePhotos'
   | 'surveyReport' | 'billCheckReport' | 'feeBill' | 'reinspectionReport'
-  | 'niaAssessmentExcel' | 'insuredSummary'
+  | 'niaAssessmentExcel' | 'oicAssessmentExcel' | 'insuredSummary'
   | 'workApproval' | 'deliveryOrder' | 'other'
   | 'aadhaar' | 'pan' | 'ckyc' | 'kycOther' | 'claimIntimation'
   | 'dischargeVoucher' | 'csr' | 'investigationReport' | 'rcBack' | 'dlBack';
@@ -95,6 +95,7 @@ export const DOC_TYPE_LABEL: Record<DocType, string> = {
   feeBill: 'Fee Bill',
   reinspectionReport: 'Reinspection Report',
   niaAssessmentExcel: 'Primary Assessment Template',
+  oicAssessmentExcel: 'OIC Assessment Sheet',
   insuredSummary: 'Insured Summary',
   workApproval: 'Work Approval',
   deliveryOrder: 'Delivery Order',

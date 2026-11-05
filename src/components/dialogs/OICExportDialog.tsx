@@ -57,13 +57,10 @@ export function OICExportDialog({ claim, claimNo, rows, ageMonths, depType, onCl
 
   // Invoice parameters for Sheet 1
   const initialInvNo =
-    claim?.repairer?.invoiceNumber ||
-    claim?.repairer?.estimateNumber ||
+    claim?.billCheck?.billNo ||
     (claimNo ? `INV-${claimNo.slice(-4)}` : 'INV-01');
 
-  const initialInvDate = formatDateToDDMMYYYY(
-    claim?.repairer?.invoiceDate || claim?.repairer?.estimateDate,
-  );
+  const initialInvDate = formatDateToDDMMYYYY(claim?.billCheck?.billDate);
 
   const [invoiceNumber, setInvoiceNumber] = useState(initialInvNo);
   const [invoiceDate, setInvoiceDate] = useState(initialInvDate);

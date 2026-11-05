@@ -9,6 +9,7 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trash2, PlusCircle, Wrench, Settings2, Eye, EyeOff, ClipboardList } from 'lucide-react';
 import { UIICSummaryDialog } from '@/components/dialogs/UIICSummaryDialog';
 import { NIAExportDialog } from '@/components/dialogs/NIAExportDialog';
+import { OICExportDialog } from '@/components/dialogs/OICExportDialog';
 import {
   DndContext,
   closestCenter,
@@ -220,6 +221,7 @@ export function AssessmentGrid() {
   }, [assessmentRows, activeEstimateId]);
   const [showUiicSummary, setShowUiicSummary] = useState(false);
   const [showNiaExport, setShowNiaExport] = useState(false);
+  const [showOicExport, setShowOicExport] = useState(false);
   // Normalised, not raw: persisted claims can hold 'Nil Depreciation' or odd
   // casing, and the engine already routes through toDepreciationType. A raw
   // 'Standard' would make the engine depreciate paint while the grid's strict
@@ -310,6 +312,13 @@ export function AssessmentGrid() {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 transition-colors border border-emerald-500/20 text-xs font-semibold"
           >
             <ClipboardList size={14} /> NIA Excel
+          </button>
+          <button
+            onClick={() => setShowOicExport(true)}
+            title="Excel for the Oriental Insurance portal"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 transition-colors border border-indigo-500/20 text-xs font-semibold"
+          >
+            <ClipboardList size={14} /> OIC Excel
           </button>
           <button
             onClick={() => addAssessmentRowToSection('paint')}
@@ -475,6 +484,17 @@ export function AssessmentGrid() {
           ageMonths={ageMonths}
           depType={depreciationType}
           onClose={() => setShowNiaExport(false)}
+        />
+      )}
+
+      {showOicExport && currentClaim && (
+        <OICExportDialog
+          claim={currentClaim}
+          claimNo={currentClaim?.policy?.claimNumber ?? ''}
+          rows={assessmentRows}
+          ageMonths={ageMonths}
+          depType={depreciationType}
+          onClose={() => setShowOicExport(false)}
         />
       )}
     </Card>
