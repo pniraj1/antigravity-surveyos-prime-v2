@@ -2,7 +2,14 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
-## 2026-11-05 (Antigravity) — Unified Per-Claim Folder Allocation, Storage Isolation & Auto-Filing Architecture
+## 2026-11-05 (Antigravity) — Oriental Insurance (OIC) Assessment Excel Generator & Portal Mapping
+- feat(reports): Implemented OIC assessment Excel workbook builder (`src/lib/reports/oic-assessment-excel.ts`) generating 2-sheet workbook (`Invoice` and `Items`) matching `9400ExcelOICL.xlsx` and official sample report. Implemented statutory painting adapter: splits standard painting into 75% Labour (0% dep) and 25% Plastic (50% dep) yielding the exact statutory 12.5% deduction, while keeping SurveyOS Final Survey Reports 100% pure. Injected exact OIC formula `=ROUND((E{row}-(E{row}*F{row}/100))*(G{row}/100),2)` in Column K.
+- feat(ui): Added `OICExportDialog.tsx` with bill-check verification gate, statutory painting translation preview chip, and auto-filing directly into the claim folder via `saveOrDownloadReport`.
+- feat(claim): Added indigo-themed `OIC Excel` export button in `AssessmentGrid.tsx` toolbar alongside UIIC and NIA. Registered `oicAssessmentExcel` in `src/types/documents.ts` and `src/lib/portal/extension-bridge.ts`.
+- feat(portal): Created `scripts/portal-map/oic-assessment.overlay.json` mapping 25+ fields from OIC portal Step 2 ("Basic Details"). Compiled to `extension/maps/oic-assessment.json` and `public/portal-maps/oic-assessment.json`.
+- feat(extension): Updated `extension/manifest.json`, `extension/src/background.js`, and `extension/src/lib/packet-validate.js` for OIC portal (`oic: ['assessment']`). Enhanced `panel.js` and `filler.js` to support ID selector matching (`#<id>`), HTML5 pushState path matching, and React Synthetic Event tracking (`_valueTracker`).
+- contract(scan): Updated Android sibling app `../SurveyOS Scan` (`PrimeContract.kt`) with `OIC_ASSESSMENT_EXCEL` to maintain 100% contract parity with zero drift. All Scan unit tests pass (`:app:testDebugUnitTest`).
+- tests: Full Vitest suite: 278 test files passed, 2,491 tests passed (100% green). Extension tests: 10 test files passed, 124 tests passed (100% green). TypeScript check clean (0 errors).
 - feat(storage): Implemented per-claim directory handle isolation store (`src/lib/storage/claim-folder-store.ts`) under IndexedDB `surveyos-local-sync` (version 2, store `claim-handles`). Allows surveyors complete freedom to allocate any local folder on their PC per claim (Spot, Final, Valuation, or custom hierarchy) with zero folder guessing or name collisions.
 - feat(ui): Added `ClaimFolderButton.tsx` in `ClaimHeader.tsx` displaying the current allocated folder name, folder picker ("Set Folder"), and permission status ("Grant Folder Access") with 1-click synchronous Chromium user-gesture handling.
 - feat(documents): Built universal document ingestion pipeline (`src/lib/documents/ingest.ts`) orchestrating: Disk write -> Evidence Viewer registration (`storeFiles`) -> AI optical extraction -> Google Drive sync (`uploadWithDuplicateCheck`).

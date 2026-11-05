@@ -1,7 +1,39 @@
 # Active Tasks
 
-> Last updated: 2026-11-05 by Antigravity (Unified Claim Folder, Local Storage & Auto-Filing Architecture Spec & Plan)
+> Last updated: 2026-11-05 by Antigravity (OIC Assessment Excel Template Generation & OIC Portal Fill Extension Mapping)
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
+
+---
+
+## Done: Oriental Insurance (OIC / OICL) Assessment Excel & Portal Mapping (2026-11-05, Antigravity)
+- **Problem Solved:**
+  1. Surveyors required generating an Oriental Insurance Company (OICL) assessment upload Excel workbook conforming to the exact 2-sheet specification (`Invoice` and `Items`) in `9400ExcelOICL.xlsx` and official sample report format.
+  2. Solved OIC's missing native painting engine limitation: standard painting requires 25% material depreciation (50% on plastic/material = 12.5% effective statutory deduction), but OIC portal only allows assessing either 0% Labour or 50% Plastic/Rubber.
+  3. Handled user-agreed architectural boundary: SurveyOS Final Survey Reports remain 100% pure and IRDAI-compliant without workarounds, while the OIC export and portal filler isolate statutory translation into an adapter layer (splits painting into 75% Labour at 0% dep and 25% Plastic at 50% dep, yielding identical 12.5% net assessment to the exact paisa).
+  4. Mapped OIC Surveyor Portal (`https://orientalinsurance.org.in/surveyor-assessment-form`) Step 2 "Basic Details" (25+ fields) in the SurveyOS Portal Fill Chrome extension.
+  5. Enhanced Chrome extension engine to support React Synthetic Event tracking (`_valueTracker`), selector-based ID querying (`#<id>`), and HTML5 pushState URL path routing (`location.pathname`).
+- **Architecture Delivered:**
+  - **OIC Excel Generator (`src/lib/reports/oic-assessment-excel.ts`):** Produces 2-sheet workbook (`Invoice` with metadata, `Items` with parts/labour/painting assessment). Employs exact OIC formula `=ROUND((E{row}-(E{row}*F{row}/100))*(G{row}/100),2)` in Column K. Adds Data Validations for all dropdowns and automatically files into claim folder via `saveOrDownloadReport`.
+  - **OIC Export Dialog (`src/components/dialogs/OICExportDialog.tsx`):** Dialog with bill-check verification gate, statutory painting translation summary chip, and customizable invoice metadata.
+  - **AssessmentGrid Integration (`src/components/claim/AssessmentGrid.tsx`):** Indigo-themed `OIC Excel` export action button in toolbar alongside UIIC and NIA.
+  - **Extension Portal Overlay & Compilation (`scripts/portal-map/oic-assessment.overlay.json`):** 25+ DOM fields mapped to SurveyOS canonical packet paths. Compiled to `extension/maps/oic-assessment.json` and `public/portal-maps/oic-assessment.json`.
+  - **Chrome Extension Support (`manifest.json`, `background.js`, `packet-validate.js`, `panel.js`, `filler.js`):** Registered `https://orientalinsurance.org.in/*`, validated `oic: ['assessment']` flow, and added selector + React event dispatch support.
+- **Verification:**
+  - Full Vitest suite: 278 test files passed, 2,491 tests passed (100% green).
+  - Extension test suite: 10 test files passed, 124 tests passed (100% green).
+  - TypeScript compiler (`npx tsc --noEmit`): 0 errors.
+  - Sibling Android App (`SurveyOS Scan`): Unit tests passed (`:app:testDebugUnitTest`) with 0 drift.
+- **Commits on `main`:**
+  - `a978f83b` feat(reports): OIC assessment Excel workbook generator and statutory painting translation
+  - `8cc072c4` feat(ui): OIC assessment Excel export dialog with statutory painting translation
+  - `80ff2fc1` feat(claim): integrate OIC assessment Excel export button into AssessmentGrid toolbar
+  - `64a6101f` feat(portal): OIC portal assessment mapping and extension support
+  - `a903f39a` test(documents): update kit-types test for oicAssessmentExcel DocType
+- [x] Task 1: OIC Assessment Excel Generator with statutory painting adapter (`src/lib/reports/oic-assessment-excel.ts`).
+- [x] Task 2: OIC Export Dialog with bill check validation gate (`src/components/dialogs/OICExportDialog.tsx`).
+- [x] Task 3: AssessmentGrid Toolbar Integration (`AssessmentGrid.tsx`, `documents.ts`, `extension-bridge.ts`).
+- [x] Task 4: OIC Portal Mapping & Extension Engine Updates (`oic-assessment.overlay.json`, `filler.js`, `panel.js`).
+- [x] Task 5: Scan Contract Parity, Drift Verification, and KnowledgeBase Documentation.
 
 ---
 
