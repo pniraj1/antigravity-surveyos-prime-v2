@@ -25,8 +25,8 @@ import { getCompulsoryExcess, calculateAssessmentSummary } from '@/lib/calculati
 import { shouldStartSupplementaryBand } from '@/lib/calculations/utils';
 import { buildSerialMap } from '@/lib/calculations/serial-numbers';
 import { buildPrintShell, footerFromProfile, openPrintWindow } from './print-shell';
-import { saveDocuments } from '@/lib/documents/sink';
 import { promptForPrintedPdf } from '@/lib/documents/print-followup';
+import { saveReportToClaimFolder, finalSurveyFileName, billCheckFileName } from './auto-file-report';
 
 // NOTE: SurveyReportDocument.tsx (React-PDF) is no longer a parallel rendering
 // of this report — it is only used by scripts/generate-pdf.ts to produce the
@@ -1024,8 +1024,8 @@ export function triggerStandardPrint(
 ): void {
   const html = buildStandardPrintDocument(claim, profile, mode);
   const type = mode === 'bill-check' ? 'billCheckReport' : 'surveyReport';
-  const name = mode === 'bill-check' ? 'Bill Check Report.html' : 'Final Survey Report.html';
-  void saveDocuments(type, [{ blob: new Blob([html], { type: 'text/html' }), name }], 'generated');
+  const fileName = mode === 'bill-check' ? billCheckFileName(claim, 'html') : finalSurveyFileName(claim, 'html');
+  void saveReportToClaimFolder(claim, fileName, new Blob([html], { type: 'text/html' }), type);
   openPrintWindow(html);
   void promptForPrintedPdf(type);
 }

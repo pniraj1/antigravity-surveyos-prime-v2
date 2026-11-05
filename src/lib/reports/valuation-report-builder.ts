@@ -1,7 +1,9 @@
 import type { ClaimData } from '@/types/claim';
 import type { SurveyorProfile } from '@/types/vehicle';
 import { formatDateDMY, getSurveyorHeader, getSigBlock } from './report-utils';
-import { buildPrintShell, footerFromProfile } from './print-shell';
+import { buildPrintShell, footerFromProfile, openPrintWindow } from './print-shell';
+import { promptForPrintedPdf } from '@/lib/documents/print-followup';
+import { saveReportToClaimFolder, valuationFileName } from './auto-file-report';
 
 /**
  * Full printable document. Until this existed the Valuation report was written
@@ -176,3 +178,11 @@ ${getSigBlock(profile)}
 }
 
 export const buildValuationHTML = buildValuationReportHTML;
+
+export function triggerValuationPrint(claim: ClaimData, profile: SurveyorProfile | null): void {
+  const html = buildValuationPrintDocument(claim, profile);
+  const fileName = valuationFileName(claim, 'html');
+  void saveReportToClaimFolder(claim, fileName, new Blob([html], { type: 'text/html' }), 'surveyReport');
+  openPrintWindow(html);
+  void promptForPrintedPdf('surveyReport');
+}

@@ -23,6 +23,7 @@ import type { PhotoSheetOptions } from '@/types/assessment';
 import { DownloadCloud, Loader2 } from 'lucide-react';
 import { useProfileStore } from '@/stores/profile-store';
 import { SharePdfButton } from './SharePdfButton';
+import { saveReportToClaimFolder } from '@/lib/reports/auto-file-report';
 
 interface Props {
   claim:   ClaimData;
@@ -56,6 +57,11 @@ export function PhotoSheetDownloadButton({ claim, options }: Props) {
           <span className="flex flex-wrap items-center gap-2">
             <button
               disabled={loading}
+              onClick={() => {
+                if (blob) {
+                  void saveReportToClaimFolder(claim, fileName, blob, 'damagePhotos');
+                }
+              }}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-md font-semibold text-sm transition-all shadow-sm ${
                 loading
                   ? 'bg-muted text-muted-foreground cursor-not-allowed'

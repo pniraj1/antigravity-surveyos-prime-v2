@@ -169,13 +169,14 @@ export async function removeClaimFolderHandle(
  */
 export async function verifyHandlePermission(
   handle: FileSystemDirectoryHandle,
-  mode: 'read' | 'readwrite' = 'readwrite'
+  mode: 'read' | 'readwrite' | boolean = 'readwrite'
 ): Promise<boolean> {
   if (!handle) return false;
   if (typeof handle.queryPermission !== 'function') return true;
 
   try {
-    const opts = { mode };
+    const resolvedMode: 'read' | 'readwrite' = mode === false || mode === 'read' ? 'read' : 'readwrite';
+    const opts = { mode: resolvedMode };
     const queryStatus = await handle.queryPermission(opts);
     if (queryStatus === 'granted') return true;
 

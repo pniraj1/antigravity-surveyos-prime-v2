@@ -16,7 +16,7 @@ import type { SurveyorProfile } from '@/types/vehicle';
 
 import { formatDateDMY, formatSurveyDateTime, fa, numberToWords, getSurveyorHeader, getSigBlock } from './report-utils';
 import { buildPrintShell, footerFromProfile, openPrintWindow } from './print-shell';
-import { saveDocuments } from '@/lib/documents/sink';
+import { saveReportToClaimFolder, spotFeeBillFileName } from './auto-file-report';
 import { promptForPrintedPdf } from '@/lib/documents/print-followup';
 
 // ─── Main Fee Bill HTML Builder ───────────────────────────────────────────────
@@ -225,7 +225,8 @@ export function triggerSpotFeeBillPrint(
   profile: SurveyorProfile,
 ): void {
   const html = buildSpotFeeBillDocument(claim, profile);
-  void saveDocuments('feeBill', [{ blob: new Blob([html], { type: 'text/html' }), name: 'Fee Bill.html' }], 'generated');
+  const fileName = spotFeeBillFileName(claim, 'html');
+  void saveReportToClaimFolder(claim, fileName, new Blob([html], { type: 'text/html' }), 'feeBill');
   openPrintWindow(html);
   void promptForPrintedPdf('feeBill');
 }

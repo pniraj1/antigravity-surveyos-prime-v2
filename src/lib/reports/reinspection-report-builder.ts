@@ -10,8 +10,8 @@ import type { SurveyorProfile } from '@/types/vehicle';
 import { DEFAULT_REINSPECTION_REMARKS } from '@/types/assessment';
 import { formatDateDMY, getVehicleAgeMonths, getSurveyorHeader, getSigBlock } from './report-utils';
 import { buildPrintShell, footerFromProfile, openPrintWindow } from './print-shell';
-import { saveDocuments } from '@/lib/documents/sink';
 import { promptForPrintedPdf } from '@/lib/documents/print-followup';
+import { saveReportToClaimFolder, reinspectionFileName } from './auto-file-report';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -188,7 +188,8 @@ export function buildReinspectionPrintDocument(claim: ClaimData, profile: Survey
 
 export function triggerReinspectionPrint(claim: ClaimData, profile: SurveyorProfile | null): void {
   const html = buildReinspectionPrintDocument(claim, profile);
-  void saveDocuments('reinspectionReport', [{ blob: new Blob([html], { type: 'text/html' }), name: 'Reinspection Report.html' }], 'generated');
+  const fileName = reinspectionFileName(claim, 'html');
+  void saveReportToClaimFolder(claim, fileName, new Blob([html], { type: 'text/html' }), 'reinspectionReport');
   openPrintWindow(html, { features: 'width=900,height=1200', closeAfter: true });
   void promptForPrintedPdf('reinspectionReport');
 }

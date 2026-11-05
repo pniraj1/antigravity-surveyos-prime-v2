@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import type { DocType } from '@/types/documents';
 import { DOC_TYPE_LABEL } from '@/types/documents';
 import { getStoredRootHandle } from '@/lib/local-sync/directory-handle';
+import { getClaimFolderHandle } from '@/lib/storage/claim-folder-store';
 import { useClaimStore } from '@/stores/claim-store';
 import { saveDocuments } from './sink';
 import { getClaimDirHandle } from './folder';
@@ -34,13 +35,15 @@ export async function promptForPrintedPdf(type: DocType): Promise<void> {
   // open when the surveyor eventually clicks it.
   const claimId = useClaimStore.getState().currentClaim?.id;
   if (!claimId) return;
-  if (!(await getStoredRootHandle())) return;
+  const hasRoot = await getStoredRootHandle().catch(() => null);
+  const hasClaimFolder = await getClaimFolderHandle(claimId).catch(() => null);
+  if (!hasRoot && !hasClaimFolder) return;
 
   const label = DOC_TYPE_LABEL[type];
   const id = `print-pdf-${type}-${claimId}`;
   toast(`Saved the ${label} as a PDF?`, {
     description: 'Save it into the claim folder, then file it here so the list holds the copy you sent.',
-    duration: Infinity,
+    duration: 6000,
     id,
     action: {
       label: 'File the PDF',

@@ -24,7 +24,7 @@ import { useReactToPrint } from 'react-to-print';
 import { SpotPrintReport } from '@/components/print/SpotPrintReport';
 import { buildStandardFinalSurveyHTML } from '@/lib/reports/standard-report-builder';
 import { buildUIICFinalHTML } from '@/lib/reports/uiic-final-builder';
-import { buildValuationReportHTML, buildValuationPrintDocument } from '@/lib/reports/valuation-report-builder';
+import { buildValuationReportHTML, buildValuationPrintDocument, triggerValuationPrint } from '@/lib/reports/valuation-report-builder';
 import { downloadAsWord } from '@/lib/reports/word-export';
 import { footerFromProfile } from '@/lib/reports/print-shell';
 import { preambleFromClaim } from '@/lib/reports/final-survey-preamble';
@@ -221,14 +221,7 @@ export function ReportTab() {
         {activeReport === 'valuation' && (
           <>
             <button
-              onClick={() => {
-                const win = window.open('', '_blank');
-                if (win) {
-                  win.document.write(buildValuationPrintDocument(currentClaim, profile!));
-                  win.document.close();
-                  setTimeout(() => { win.focus(); win.print(); }, 600);
-                }
-              }}
+              onClick={() => triggerValuationPrint(currentClaim, profile)}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all shadow-sm"
               style={{ background: 'var(--color-status-warning)', color: 'var(--color-neutral-50)' }}
             >
