@@ -14,6 +14,7 @@ import { setCompletedInScan } from '@/lib/drive/scan-status-sync';
 import { completionPatch } from '@/lib/drive/scan-status';
 import { DriveQueueChip } from '@/components/sync/DriveQueueChip';
 import { SyncStatusBadge } from '@/components/sync/SyncStatusBadge';
+import { ClaimFolderButton } from '@/components/layout/ClaimFolderButton';
 
 export function ClaimHeader() {
   const { currentClaim, updateClaim } = useClaimStore();
@@ -112,11 +113,12 @@ export function ClaimHeader() {
       <span className="font-medium truncate max-w-[120px] sm:max-w-[180px] text-muted-foreground">{reg}</span>
       {name && (
         <>
-
-      <span className="text-muted-foreground hidden sm:inline">·</span>
+          <span className="text-muted-foreground hidden sm:inline">·</span>
           <span className="truncate max-w-[140px] sm:max-w-[200px] text-muted-foreground hidden sm:inline">{name}</span>
         </>
       )}
+
+      <ClaimFolderButton />
 
       <div className="flex-1" />
 
