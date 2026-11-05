@@ -5,26 +5,40 @@
 
 ---
 
-## In Progress: Unified Claim Folder, Local Storage & Auto-Filing Architecture (2026-11-05, Antigravity)
-- **Problem Diagnosed:** 
-  1. Rigid single-root folder guessing (`${reg} - ${insurer}`) causes new claims without vehicle registration to fall back to `"claim"`, cross-connecting multiple claims into the same folder and adopting each other's files.
-  2. Direct uploads on `DetailsTab` ("Scan RC", "Scan DL", "Scan Policy") are only fed to AI extraction in memory and never saved to disk, evidence viewer, or Google Drive (files are permanently lost on reload).
-  3. No automatic output filing: generated PDF reports (Final, Reinspection, Spot, Valuation) and photo sheets download to Windows `Downloads` rather than saving to the claim's folder.
+## Done: Unified Claim Folder, Local Storage & Auto-Filing Architecture (2026-11-05, Antigravity)
+- **Problem Solved:** 
+  1. Rigid single-root folder guessing (`${reg} - ${insurer}`) caused new claims without vehicle registration to fall back to `"claim"`, cross-connecting multiple claims into the same folder and adopting each other's files.
+  2. Direct uploads on `DetailsTab` ("Scan RC", "Scan DL", "Scan Policy") were only fed to AI extraction in memory and never saved to disk, evidence viewer, or Google Drive (files were lost on reload).
+  3. No automatic output filing: generated reports (Final, Re-inspection, Spot, Valuation, Bill Check, Photo Sheet) downloaded to generic Windows folders rather than saving to the claim's designated folder.
   4. Missing "Use Phone Files" button on `DetailsTab` for phone-scanned RC and DL.
-  5. Asynchronous Chromium permission drops on reload throw `SecurityError: Must be handling a user gesture`.
-  6. Photos use `${Date.now()}` in filenames, causing duplicate accumulation on Google Drive.
-- **Workflow Vision:** Surveyors allocate any folder on their PC per claim (freedom to organise by Spot/Final/Valuation, Year, or Insurer); all inputs (phone scans, direct RC/DL uploads, estimates, invoices) and all outputs (Final Report, Re-inspection Report, Spot Report, Valuation Report, Photo Sheet, Bill Check) automatically save into that allocated folder.
-- **Spec & Plan:**
-  - Design Spec: `Specs/2026-11-05-unified-claim-folder-and-storage-design.md`
-  - Implementation Plan: `Specs/2026-11-05-unified-claim-folder-and-storage-implementation-plan.md`
-  - Downloaded 39 Ruflo skills to `.claude/skills` and `C:\Users\Manasi\.gemini\config\skills` for SPARC methodology and DDD patterns.
-- [ ] Task 1: Per-Claim Directory Handle Storage (`claim-folder-store.ts`).
-- [ ] Task 2: Claim Header Folder Allocation Button & Permission Chip.
-- [ ] Task 3: Universal Document Ingestion Pipeline (`ingest.ts`).
-- [ ] Task 4: Fix Details Tab Direct Uploads & Add Phone Scans Support.
-- [ ] Task 5: Automatic Output Filing for Final, Re-inspection, and Spot Reports.
-- [ ] Task 6: Photo Upload De-duplication & Drive Hygiene.
-- [ ] Task 7: Full System Verification, Vitest, TypeScript & Scan Drift Tests.
+  5. Asynchronous Chromium permission drops on reload threw `SecurityError: Must be handling a user gesture`.
+  6. Photos used `${Date.now()}` in filenames, causing duplicate accumulation on Google Drive.
+- **Architecture Delivered:**
+  - **Per-Claim Folder Store (`claim-folder-store.ts`):** Isolated directory handle store in IndexedDB (`surveyos-local-sync`, store `claim-handles`). Allows surveyors complete freedom to allocate any local folder on their PC per claim.
+  - **ClaimHeader Folder Button (`ClaimFolderButton.tsx`):** 1-click synchronous user gesture for folder selection, name display, and permission re-granting that survives Chromium reloads without errors.
+  - **Universal Ingestion Pipeline (`ingest.ts`):** 4-step pipeline (Disk Write -> Evidence Viewer Register -> AI Extraction -> Google Drive Cloud Mirror) unifying DetailsTab direct uploads and phone file imports.
+  - **DetailsTab Integration:** Added "Use phone files" pickers for RC (`['rc', 'rcBack']`), DL (`['dl', 'dlBack']`), and Policy (`['policy']`). Persisted direct uploads immediately via `ingestDocument`.
+  - **Auto-Filing Report Engine (`auto-file-report.ts`):** Report builders (`standard-report-builder.ts`, `reinspection-report-builder.ts`, `uiic-final-builder.ts`, `spot-fee-bill-builder.ts`, `valuation-report-builder.ts`, and `PhotoSheetDownloadButton.tsx`) auto-save output files (`Final_Survey_Report_<ReportNo>.html`, `Reinspection_Report_<ReportNo>.html`, `Spot_Fee_Bill_<ReportNo>.html`, `Valuation_Report_<ReportNo>.html`, etc.) directly into the claim's folder.
+  - **Photo Upload Deduplication & Drive Hygiene (`usePhotoUpload.ts`, `index.ts`, `upload-with-check.ts`):** Switched to deterministic indexed filenames (`final_photo_01_<name>.jpg`), integrated `uploadWithDuplicateCheck`, and added guards in `saveDriveIndex` preventing index wiping on network flakes.
+- **Verification:**
+  - Full Vitest suite: 276 test files passed, 2,475 tests passed (100% green).
+  - TypeScript compiler (`npx tsc --noEmit`): 0 errors.
+  - Sibling Android App (`SurveyOS Scan`): Gradle unit tests passed (`:app:testDebugUnitTest`) with 0 drift.
+- **Commits on `main`:**
+  - `7ed523b9` docs(spec): unified claim folder, storage and auto-filing architecture specification and plan
+  - `03cca639` feat(storage): per-claim directory handle isolation store
+  - `8759fa26` feat(ui): add per-claim folder selector and permission status in ClaimHeader
+  - `1cc8436b` feat(documents): unified document ingestion pipeline and per-claim folder integration
+  - `8c37d8d8` fix(details-tab): persist direct field uploads and add phone files picker
+  - `85d5a5d1` feat(reports): auto-write generated reports directly into claim folder
+  - `4073e6ce` fix(photos): deterministic drive photo names and duplicate check integration
+- [x] Task 1: Per-Claim Directory Handle Storage (`claim-folder-store.ts`).
+- [x] Task 2: Claim Header Folder Allocation Button & Permission Chip.
+- [x] Task 3: Universal Document Ingestion Pipeline (`ingest.ts`).
+- [x] Task 4: Fix Details Tab Direct Uploads & Add Phone Scans Support.
+- [x] Task 5: Automatic Output Filing for Final, Re-inspection, and Spot Reports.
+- [x] Task 6: Photo Upload De-duplication & Drive Hygiene.
+- [x] Task 7: Full System Verification, Vitest, TypeScript & Scan Drift Tests.
 
 ---
 

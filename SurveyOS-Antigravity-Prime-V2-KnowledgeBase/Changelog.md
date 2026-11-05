@@ -2,6 +2,19 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-05 (Antigravity) — Unified Per-Claim Folder Allocation, Storage Isolation & Auto-Filing Architecture
+- feat(storage): Implemented per-claim directory handle isolation store (`src/lib/storage/claim-folder-store.ts`) under IndexedDB `surveyos-local-sync` (version 2, store `claim-handles`). Allows surveyors complete freedom to allocate any local folder on their PC per claim (Spot, Final, Valuation, or custom hierarchy) with zero folder guessing or name collisions.
+- feat(ui): Added `ClaimFolderButton.tsx` in `ClaimHeader.tsx` displaying the current allocated folder name, folder picker ("Set Folder"), and permission status ("Grant Folder Access") with 1-click synchronous Chromium user-gesture handling.
+- feat(documents): Built universal document ingestion pipeline (`src/lib/documents/ingest.ts`) orchestrating: Disk write -> Evidence Viewer registration (`storeFiles`) -> AI optical extraction -> Google Drive sync (`uploadWithDuplicateCheck`).
+- fix(details-tab): Wired `handleFileChange` in `DetailsTab.tsx` to `ingestDocument` so raw files from "Scan RC", "Scan DL", and "Scan Policy" are never lost in memory. Added "Use phone files" pickers (`UsePhoneFiles`) to `VehicleDetailsForm`, `DriverDetailsForm`, and `PolicyDetailsForm`.
+- feat(reports): Built `auto-file-report.ts` and integrated automatic output filing across all report builders (`reinspection-report-builder.ts`, `standard-report-builder.ts`, `uiic-final-builder.ts`, `spot-fee-bill-builder.ts`, `valuation-report-builder.ts`, `PhotoSheetDownloadButton.tsx`). Reports auto-write directly into the claim folder with canonical filenames (`Final_Survey_Report_<ReportNo>.html`, `Reinspection_Report_<ReportNo>.html`, `Spot_Fee_Bill_<ReportNo>.html`, `Valuation_Report_<ReportNo>.html`, `Bill_Check_<ReportNo>.html`, and `Photo_Sheet.pdf`).
+- fix(photos): Replaced `Date.now()` photo naming in `usePhotoUpload.ts` with deterministic indexed names (`final_photo_01_<name>.jpg`). Integrated `uploadWithDuplicateCheck`.
+- fix(drive): Hardened `saveDriveIndex` and `getOrCreateClaimFolder` in `src/lib/drive/index.ts` to abort before overwriting the index file with an empty map on network or authentication flakes.
+- tests: Added 58 new unit tests across `claim-folder-store.test.ts`, `ClaimFolderButton.test.tsx`, `folder-per-claim.test.ts`, `ingest.test.ts`, `DetailsTabUploads.test.tsx`, `auto-file-report.test.ts`, `usePhotoUploadDedupe.test.ts`, and `index-hygiene.test.ts`. Full Vitest suite: 276 test files passed, 2,475 tests passed (100% green).
+- typecheck: `npx tsc --noEmit` clean (0 errors).
+- Scan coupling: Verified Android sibling app `../SurveyOS Scan` with `./gradlew :app:testDebugUnitTest` (BUILD SUCCESSFUL, 0 drift).
+
+
 ## 2026-11-05 (Antigravity) — SurveyOS Scan In-Viewer Gallery Photo Stamp Modes & 1-Tap Compression
 - chore(scan/release): Bumped `versionCode` to 4 (`versionName = "1.3"`) for Google Play Store release. Built and signed production bundle `app-release.aab` (12.18 MB). Commit `f633e78`.
 - feat(scan/photo): In-viewer photo stamp mode chips (`[ Full ]`, `[ No Date ]`, `[ No Stamp ]`) in `PhotoViewer.kt` and `PageStamp.kt`. `No Date` omits timestamp for pre-stamped gallery imports. When GPS coordinates are absent, zero blank lines or empty text boxes are rendered.
