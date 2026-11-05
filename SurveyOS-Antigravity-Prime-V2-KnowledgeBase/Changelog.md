@@ -3,6 +3,7 @@
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
 ## 2026-11-05 (Antigravity) — SurveyOS Scan In-Viewer Gallery Photo Stamp Modes & 1-Tap Compression
+- chore(scan/release): Bumped `versionCode` to 4 (`versionName = "1.3"`) for Google Play Store release. Built and signed production bundle `app-release.aab` (12.18 MB). Commit `f633e78`.
 - feat(scan/photo): In-viewer photo stamp mode chips (`[ Full ]`, `[ No Date ]`, `[ No Stamp ]`) in `PhotoViewer.kt` and `PageStamp.kt`. `No Date` omits timestamp for pre-stamped gallery imports. When GPS coordinates are absent, zero blank lines or empty text boxes are rendered.
 - feat(scan/compress): Live photo file size display in `PhotoViewer` header (`sizeText(item.page.sizeBytes)`). Added 1-tap `[ Compress ]` button opening dialog with target pills:
   - `~100 KB · Photo Sheet / Email Friendly (1280px · 60% quality · Optimal for 6-up A4 report sheets)`
