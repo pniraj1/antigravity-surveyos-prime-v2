@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import type { ClaimDocument, DocType } from '@/types/documents';
 import { useClaimStore } from '@/stores/claim-store';
 import { getStoredRootHandle } from '@/lib/local-sync/directory-handle';
+import { getClaimFolderHandle } from '@/lib/storage/claim-folder-store';
 import { writeDocuments, PermissionDeniedError, type FolderInput } from './folder';
 import { DOC_TYPE_LABEL } from '@/types/documents';
 import { markReceivedInScan } from '@/lib/drive/scan-status-sync';
@@ -36,7 +37,9 @@ async function doSave(
   const claim = useClaimStore.getState().currentClaim; // read after our turn in the queue
   if (!claim || files.length === 0) return [];
   if (claimId && claim.id !== claimId) return [];
-  if (!(await getStoredRootHandle())) return [];
+  const hasPerClaimFolder = !!(await getClaimFolderHandle(claim.id));
+  const hasRootFolder = !!(await getStoredRootHandle());
+  if (!hasPerClaimFolder && !hasRootFolder) return [];
   try {
     const { claim: next, written } = await writeDocuments(claim, type, files, source);
     if (useClaimStore.getState().currentClaim?.id !== claim.id) {

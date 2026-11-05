@@ -12,6 +12,7 @@ import { folderNameFor, oldNameFor, relPathsFor, docTypeFromRelPath, isScanSkipp
 import { fingerprintOf, reconcileKnown } from './kit/fingerprint';
 import { pageCountOf } from './kit/page-text';
 import { getAllClaims } from '@/lib/storage/indexeddb';
+import { getClaimFolderHandle, verifyHandlePermission, getClaimFolderPath } from '@/lib/storage/claim-folder-store';
 
 export class NoFolderError extends Error { constructor() { super('No claim folder is connected.'); } }
 export class PermissionDeniedError extends Error { constructor() { super('Folder access was not granted.'); } }
@@ -109,9 +110,9 @@ export async function writeDocuments(
   source: ClaimDocument['source'],
 ): Promise<{ claim: ClaimData; written: ClaimDocument[] }> {
   if (files.length === 0) return { claim, written: [] };
-  const rootHandle = await root();
-  const folder = await resolveFolderName(claim, rootHandle);
-  const claimDir = await rootHandle.getDirectoryHandle(folder, { create: true });
+  const claimDir = await getClaimDirHandle(claim, true);
+  if (!claimDir) throw new NoFolderError();
+  const folder = claimDir.name;
   const device = await getDeviceLabel();
   const existing = claimDocuments(claim);
   const inputs = files.map((f) => ({ mime: f.blob.type, name: f.name }));
@@ -192,8 +193,8 @@ export async function writeDocuments(
 export async function readDocument(claim: ClaimData, doc: ClaimDocument): Promise<File> {
   const device = await getDeviceLabel();
   if (!onThisDevice(doc, device)) throw new NotOnThisDeviceError(doc.devices);
-  const rootHandle = await root();
-  const claimDir = await rootHandle.getDirectoryHandle(await resolveFolderName(claim, rootHandle));
+  const claimDir = await getClaimDirHandle(claim, false);
+  if (!claimDir) throw new NoFolderError();
   const parts = doc.relPath.split('/');
   const dir = await dirFor(claimDir, parts.slice(0, -1), false);
   return (await dir.getFileHandle(parts[parts.length - 1])).getFile();
@@ -222,6 +223,8 @@ export async function openDocument(claim: ClaimData, doc: ClaimDocument): Promis
 }
 
 export async function claimFolderPath(claim: ClaimData): Promise<string | null> {
+  const allocatedPath = await getClaimFolderPath(claim.id);
+  if (allocatedPath) return allocatedPath;
   const handle = await getStoredRootHandle();
   return handle ? `${handle.name}\\${await resolveFolderName(claim, handle)}` : null;
 }
@@ -236,6 +239,12 @@ export async function getClaimDirHandle(
   claim: ClaimData,
   create = false,
 ): Promise<FileSystemDirectoryHandle | null> {
+  const allocated = await getClaimFolderHandle(claim.id);
+  if (allocated) {
+    const granted = await verifyHandlePermission(allocated, 'readwrite');
+    if (!granted) throw new PermissionDeniedError();
+    return allocated;
+  }
   const rootHandle = await root();
   try {
     return await rootHandle.getDirectoryHandle(await resolveFolderName(claim, rootHandle), { create });

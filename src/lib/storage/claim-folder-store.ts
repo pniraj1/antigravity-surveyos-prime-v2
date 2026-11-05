@@ -118,9 +118,13 @@ export async function getClaimFolderHandle(
   const trimmedId = claimId?.trim();
   if (!trimmedId) return null;
 
-  const database = await getLocalSyncDB();
-  const record = await database.get(CLAIM_HANDLES_STORE, trimmedId);
-  return record?.handle ?? null;
+  try {
+    const database = await getLocalSyncDB();
+    const record = await database.get(CLAIM_HANDLES_STORE, trimmedId);
+    return record?.handle ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -132,9 +136,13 @@ export async function getClaimFolderPath(
   const trimmedId = claimId?.trim();
   if (!trimmedId) return null;
 
-  const database = await getLocalSyncDB();
-  const record = await database.get(CLAIM_HANDLES_STORE, trimmedId);
-  return record?.folderPath ?? null;
+  try {
+    const database = await getLocalSyncDB();
+    const record = await database.get(CLAIM_HANDLES_STORE, trimmedId);
+    return record?.folderPath ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -146,8 +154,12 @@ export async function removeClaimFolderHandle(
   const trimmedId = claimId?.trim();
   if (!trimmedId) return;
 
-  const database = await getLocalSyncDB();
-  await database.delete(CLAIM_HANDLES_STORE, trimmedId);
+  try {
+    const database = await getLocalSyncDB();
+    await database.delete(CLAIM_HANDLES_STORE, trimmedId);
+  } catch {
+    // Graceful no-op
+  }
 }
 
 /**
