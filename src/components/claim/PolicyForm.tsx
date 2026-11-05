@@ -7,12 +7,19 @@ import { useFieldEvidence } from '@/hooks/useFieldEvidence';
 import { cn } from '@/lib/utils';
 import { DocSection, EvidenceDot, req, selectCls } from '@/components/claim/form-bits';
 
-export function PolicyDetailsForm({ scan }: { scan?: React.ReactNode }) {
+export function PolicyDetailsForm({ scan, usePhone }: { scan?: React.ReactNode; usePhone?: React.ReactNode }) {
   const { currentClaim, updatePolicy, updateVehicle } = useClaimStore();
   const { triggerField, hasEvidence } = useFieldEvidence();
 
   if (!currentClaim) return null;
   const p = currentClaim.policy;
+
+  const action = (scan || usePhone) ? (
+    <div className="flex items-center gap-2">
+      {usePhone}
+      {scan}
+    </div>
+  ) : undefined;
 
   const dates = (
     <>
@@ -43,7 +50,7 @@ export function PolicyDetailsForm({ scan }: { scan?: React.ReactNode }) {
   );
 
   return (
-    <DocSection title="Policy & Insured" action={scan} dates={dates}>
+    <DocSection title="Policy & Insured" action={action} dates={dates}>
       <div className="space-y-1">
         <Label htmlFor="p-polno">Policy No.<EvidenceDot has={hasEvidence('policyNumber')} /></Label>
         <Input

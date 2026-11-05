@@ -11,12 +11,19 @@ import { DocSection, EvidenceDot, req, selectCls } from '@/components/claim/form
  * odometer and pre-accident condition in SurveyForm; passengers and goods in
  * AtAccidentForm. All of them are still stored on `vehicle`.
  */
-export function VehicleDetailsForm({ scan }: { scan?: React.ReactNode }) {
+export function VehicleDetailsForm({ scan, usePhone }: { scan?: React.ReactNode; usePhone?: React.ReactNode }) {
   const { currentClaim, updateVehicle, updatePolicy } = useClaimStore();
   const { triggerField, hasEvidence } = useFieldEvidence();
 
   if (!currentClaim) return null;
   const v = currentClaim.vehicle;
+
+  const action = (scan || usePhone) ? (
+    <div className="flex items-center gap-2">
+      {usePhone}
+      {scan}
+    </div>
+  ) : undefined;
 
   const dates = (
     <>
@@ -46,7 +53,7 @@ export function VehicleDetailsForm({ scan }: { scan?: React.ReactNode }) {
   );
 
   return (
-    <DocSection title="Registration Certificate (RC)" action={scan} dates={dates}>
+    <DocSection title="Registration Certificate (RC)" action={action} dates={dates}>
       <div className="space-y-1">
         <Label htmlFor="v-reg">Registration No.<EvidenceDot has={hasEvidence('registrationNumber')} /></Label>
         <Input

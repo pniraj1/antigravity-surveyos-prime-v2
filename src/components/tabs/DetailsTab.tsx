@@ -14,6 +14,10 @@ import { useAIExtraction } from '@/hooks/useAIExtraction';
 import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import { needsReview } from '@/lib/ai/needs-review';
 import { DocumentReviewSheet } from '@/components/documents/DocumentReviewSheet';
+import { UsePhoneFiles } from '@/components/documents/UsePhoneFiles';
+import { ingestDocument } from '@/lib/documents/ingest';
+import { storeFiles } from '@/components/evidence/DocumentEvidenceViewer';
+import type { DocType } from '@/types/documents';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import type { VehicleType } from '@/types';
@@ -67,6 +71,25 @@ export function DetailsTab() {
     { id: 'policy', label: 'Policy Schedule' }
   ];
 
+  const runIngest = async (key: string, file: File) => {
+    try {
+      await ingestDocument({
+        claimId: currentClaim.id,
+        docType: key as DocType,
+        file,
+        slotKey: key,
+        triggerExtraction,
+      });
+    } catch (err) {
+      console.error('[DetailsTab] Document ingestion failed, falling back to direct extraction:', err);
+      try {
+        await triggerExtraction(key, file);
+      } catch (extractErr) {
+        console.error('[DetailsTab] Fallback extraction failed:', extractErr);
+      }
+    }
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, key: string) => {
     const file = e.target.files?.[0];
     e.target.value = '';
@@ -76,7 +99,7 @@ export function DetailsTab() {
       setReviewSheet({ key, label, file });
       return;
     }
-    triggerExtraction(key, file);
+    await runIngest(key, file);
   };
 
   const scan = (id: string) => (
@@ -86,6 +109,42 @@ export function DetailsTab() {
       onFile={(e) => handleFileChange(e, id)}
     />
   );
+  const phoneRc = (
+    <UsePhoneFiles
+      types={['rc', 'rcBack']}
+      className="h-8 px-2.5 text-xs"
+      disabled={isProcessing}
+      onPick={(file) => {
+        storeFiles(currentClaim.id, 'rc', [file]);
+        void triggerExtraction('rc', file);
+      }}
+    />
+  );
+
+  const phoneDl = (
+    <UsePhoneFiles
+      types={['dl', 'dlBack']}
+      className="h-8 px-2.5 text-xs"
+      disabled={isProcessing}
+      onPick={(file) => {
+        storeFiles(currentClaim.id, 'dl', [file]);
+        void triggerExtraction('dl', file);
+      }}
+    />
+  );
+
+  const phonePolicy = (
+    <UsePhoneFiles
+      types={['policy']}
+      className="h-8 px-2.5 text-xs"
+      disabled={isProcessing}
+      onPick={(file) => {
+        storeFiles(currentClaim.id, 'policy', [file]);
+        void triggerExtraction('policy', file);
+      }}
+    />
+  );
+
   const isValuation = currentClaim.surveyType === 'valuation';
 
   const surveyLabel =currentClaim.surveyType === 'spot' ? 'Spot Survey' :
@@ -222,9 +281,9 @@ export function DetailsTab() {
               papers come off the file. Data paths are unchanged. */}
           <div className="space-y-6">
             <AssignmentForm />
-            <PolicyDetailsForm scan={scan('policy')} />
-            <VehicleDetailsForm scan={scan('rc')} />
-            {!isValuation && <DriverDetailsForm scan={scan('dl')} />}
+            <PolicyDetailsForm scan={scan('policy')} usePhone={phonePolicy} />
+            <VehicleDetailsForm scan={scan('rc')} usePhone={phoneRc} />
+            {!isValuation && <DriverDetailsForm scan={scan('dl')} usePhone={phoneDl} />}
             <PermitForm />
             {!isValuation && <AccidentDetailsForm />}
             {!isValuation && <AtAccidentForm />}
@@ -246,10 +305,12 @@ export function DetailsTab() {
           slotLabel={reviewSheet.label}
           files={[reviewSheet.file]}
           onCancel={() => setReviewSheet(null)}
-          onConfirm={(_all, forAI) => {
-            const { key } = reviewSheet;
+          onConfirm={async (_all, forAI) => {
+            const { key, file } = reviewSheet;
+            const targetFile = forAI[0] ?? file;
+            await runIngest(key, targetFile);
             setReviewSheet(null);
-            if (forAI[0]) triggerExtraction(key, forAI[0]);
+
           }}
         />
       )}

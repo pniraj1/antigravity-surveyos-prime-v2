@@ -11,12 +11,19 @@ import { cn } from '@/lib/utils';
 import { DocSection, EvidenceDot, req, selectCls } from '@/components/claim/form-bits';
 import { AlertTriangle } from 'lucide-react';
 
-export function DriverDetailsForm({ scan }: { scan?: React.ReactNode }) {
+export function DriverDetailsForm({ scan, usePhone }: { scan?: React.ReactNode; usePhone?: React.ReactNode }) {
   const { currentClaim, updateDriver } = useClaimStore();
   const { triggerField, hasEvidence } = useFieldEvidence();
 
   if (!currentClaim) return null;
   const d = currentClaim.driver;
+
+  const action = (scan || usePhone) ? (
+    <div className="flex items-center gap-2">
+      {usePhone}
+      {scan}
+    </div>
+  ) : undefined;
 
   // ── DL expiry, judged on the ACCIDENT DATE ──────────────────────────────
   // This used to compare against `today`, which is the wrong reference for a
@@ -129,7 +136,7 @@ export function DriverDetailsForm({ scan }: { scan?: React.ReactNode }) {
   );
 
   return (
-    <DocSection title="Driving Licence" action={scan} dates={dates} footer={footer}>
+    <DocSection title="Driving Licence" action={action} dates={dates} footer={footer}>
       <div className="space-y-1">
         <Label htmlFor="d-name">Driver Name<EvidenceDot has={hasEvidence('name')} /></Label>
         <Input
