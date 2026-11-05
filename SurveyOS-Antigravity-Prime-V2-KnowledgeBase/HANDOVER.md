@@ -58,7 +58,7 @@
 - **Public repo:** never commit keys. `.env.local` is ignored and `.env.example` holds placeholders only.
 
 ## 5. Deploy (production)
-- **Live site:** https://motorsurveyos-in.web.app, Firebase project `surveyos-v2-antigravity-in`, hosting site `motorsurveyos-in`. The old `motorsurveyos` site and project are **dead**; always pass `--project`.
+- **Live site:** **https://surveyos.in** (primary custom domain) / https://motorsurveyos-in.web.app (Firebase default), Firebase project `surveyos-v2-antigravity-in`, hosting site `motorsurveyos-in`. The old `motorsurveyos` site and project are **dead**; always pass `--project`.
 - Build first: hosting serves the prebuilt `out/` folder, and skipping the build silently redeploys the old one. Then:
   ```
   npm run build

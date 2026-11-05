@@ -7,7 +7,8 @@
 
 - **Project:** SurveyOS Prime V2 — Insurance survey management platform for Indian motor insurance surveyors
 - **Stack:** Next.js 16 + React 19 + TypeScript 5 + Firebase (Auth, Firestore, Hosting) + Zustand
-- **Deployment:** Firebase Hosting (static export via `next export` → `out/`)
+- **Primary Live Website:** https://surveyos.in (custom domain mapped to Firebase Hosting site `motorsurveyos-in`)
+- **Deployment:** Firebase Hosting (static export via `next export` → `out/` on site `motorsurveyos-in`)
 - **Vault Location:** `SurveyOS-Antigravity-Prime-V2-KnowledgeBase/`
 - **Primary User:** Manasi / Pniraj (pniraj.india@gmail.com)
 
