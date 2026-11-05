@@ -15,9 +15,10 @@ export function isLocalSyncSupported(): boolean {
 }
 
 async function db() {
-  return openDB(DB_NAME, 1, {
+  return openDB(DB_NAME, 2, {
     upgrade(d) {
       if (!d.objectStoreNames.contains(STORE)) d.createObjectStore(STORE)
+      if (!d.objectStoreNames.contains('claim-handles')) d.createObjectStore('claim-handles', { keyPath: 'claimId' })
     },
   })
 }
