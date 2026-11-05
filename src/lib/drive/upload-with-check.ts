@@ -60,7 +60,7 @@ export async function uploadWithDuplicateCheck(
   fileName: string,
   blob: Blob,
   claimLabel: string,
-  showDialog: (existing: ExistingFile, suffixedName: string) => Promise<DuplicateAction>,
+  showDialog?: (existing: ExistingFile, suffixedName: string) => Promise<DuplicateAction>,
 ): Promise<void> {
   // If Drive isn't linked, skip duplicate check — uploadFileToDrive will queue
   if (!getDriveToken()) {
@@ -90,9 +90,10 @@ export async function uploadWithDuplicateCheck(
   }
 
   // Duplicate found — ask user
+  const dialogFn = showDialog ?? (async () => 'replace' as DuplicateAction);
   const allNames = existingFiles.map(f => f.name);
   const suffixedName = generateSuffixedName(fileName, allNames);
-  const action = await showDialog(match, suffixedName);
+  const action = await dialogFn(match, suffixedName);
 
   switch (action) {
     case 'replace':

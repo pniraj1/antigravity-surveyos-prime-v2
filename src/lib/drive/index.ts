@@ -287,6 +287,20 @@ export async function saveDriveIndex(index: Record<string, string>): Promise<voi
   try {
     const rootId = await getRootFolder();
     const fileId = await getIndexFileId(rootId);
+    // Safety guard: never overwrite an existing non-empty index with an empty map
+    if (Object.keys(index).length === 0 && fileId) {
+      try {
+        const existing = await loadDriveIndexStrict(rootId);
+        if (Object.keys(existing).length > 0) {
+          console.warn('[Drive] Aborting saveDriveIndex with empty map to prevent wiping existing index');
+          return;
+        }
+      } catch {
+        console.warn('[Drive] Aborting saveDriveIndex with empty map to prevent wiping existing index');
+        return;
+      }
+    }
+
     const content = JSON.stringify(index, null, 2);
     const blob = new Blob([content], { type: 'application/json' });
 
@@ -326,10 +340,31 @@ export async function getOrCreateClaimFolder(claimId: string, label: string): Pr
   const cached = localStorage.getItem(cacheKey);
   if (cached) return cached;
 
-  const index = await loadDriveIndex();
-  if (index[claimId]) {
+  let index: Record<string, string> = {};
+  let indexLoaded = false;
+  try {
+    index = await loadDriveIndexStrict();
+    indexLoaded = true;
+  } catch (err) {
+    console.warn('[Drive] Failed to load index strictly in getOrCreateClaimFolder:', err);
+  }
+
+  if (indexLoaded && index[claimId]) {
     localStorage.setItem(cacheKey, index[claimId]);
     return index[claimId];
+  }
+
+  // If index couldn't be loaded, check IndexedDB as a fallback before creating a duplicate folder
+  if (!indexLoaded) {
+    try {
+      const claim = await getClaim(claimId);
+      if (claim?.gDriveFolderId) {
+        localStorage.setItem(cacheKey, claim.gDriveFolderId);
+        return claim.gDriveFolderId;
+      }
+    } catch {
+      // non-critical
+    }
   }
 
   // Create new folder
@@ -337,9 +372,11 @@ export async function getOrCreateClaimFolder(claimId: string, label: string): Pr
   const folderName = `${label}_${claimId.slice(-6)}`;
   const folderId = await createFolder(folderName, rootId);
 
-  // Update Drive index + localStorage cache
-  index[claimId] = folderId;
-  await saveDriveIndex(index);
+  // Update Drive index (only if safely loaded) + localStorage cache
+  if (indexLoaded) {
+    index[claimId] = folderId;
+    await saveDriveIndex(index);
+  }
   localStorage.setItem(cacheKey, folderId);
 
   // Persist folder ID back to the claim in IndexedDB so the sync indicator works

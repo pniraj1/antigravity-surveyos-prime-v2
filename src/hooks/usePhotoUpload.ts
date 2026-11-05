@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { useUIStore } from '@/stores/ui-store';
-import { uploadFileToDrive } from '@/lib/drive';
+import { uploadWithDuplicateCheck } from '@/lib/drive/upload-with-check';
 import { PHOTO_FILE_PREFIX } from '@/lib/photos/document-annexure';
 import { compressImage } from '@/lib/photos/compress-image';
 import { saveDocuments } from '@/lib/documents/sink';
@@ -52,16 +52,16 @@ export function usePhotoUpload() {
           // The surveyor may have opened another claim during the awaits.
           if (useClaimStore.getState().currentClaim?.id !== claim.id) break;
           const name = photoNameOf(file.name);
-          // The index keeps names unique when a phone names every shot "image".
-          const driveName = `${PHOTO_FILE_PREFIX}${Date.now()}_${i}_${name}.jpg`;
+          const existingCount = claim.photos?.length || 0;
+          const photoIndex = String(existingCount + i + 1).padStart(2, '0');
+          const driveName = `${PHOTO_FILE_PREFIX}${photoIndex}_${name}.jpg`;
           // A phone file moved from Scan's Drive folder is already on Drive: never a second copy.
           const toDrive = saveToDrive && !isOnDrive(m?.sourceDocId ? claim.documents?.[m.sourceDocId] : undefined);
           addPhoto(dataUrl, name, w, h, 'damage', toDrive ? driveName : undefined, m);
           // A phone photo is already in the claim folder: don't write a second copy.
           if (!m?.sourceDocId) saved.push(file);
           if (toDrive) {
-            // uploadFileToDrive queues and toasts on failure itself.
-            uploadFileToDrive(claim.id, driveName, file, label).catch(() => {});
+            uploadWithDuplicateCheck(claim.id, driveName, file, label).catch(() => {});
           }
         } catch {
           failed++;
@@ -69,7 +69,7 @@ export function usePhotoUpload() {
       }
       if (failed > 0) toast.error(`${failed} photo(s) couldn't be added — try a JPEG or retake.`);
       if (saved.length) {
-        void saveDocuments('damagePhotos', saved.map((f) => ({ blob: f, name: f.name })), 'photo');
+        void saveDocuments('damagePhotos', saved.map((f) => ({ blob: f, name: f.name })), 'photo', claim.id);
       }
     } finally {
       setIsProcessing(false);
