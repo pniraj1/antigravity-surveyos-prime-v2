@@ -9,7 +9,7 @@ const ALL_TYPES: DocType[] = [
   'chassisPhoto', 'odometerPhoto', 'photoFront', 'photoRear', 'photoLeft', 'photoRight',
   'spotPhotos', 'damagePhotos',
   'surveyReport', 'billCheckReport', 'feeBill', 'reinspectionReport',
-  'niaAssessmentExcel', 'insuredSummary',
+  'niaAssessmentExcel', 'oicAssessmentExcel', 'insuredSummary',
   'workApproval', 'deliveryOrder', 'other',
   'aadhaar', 'pan', 'ckyc', 'kycOther', 'claimIntimation',
   'dischargeVoucher', 'csr', 'investigationReport', 'rcBack', 'dlBack',
@@ -17,9 +17,9 @@ const ALL_TYPES: DocType[] = [
 
 describe('kit types', () => {
   it('every DocType has a label', () => {
-    expect(ALL_TYPES).toHaveLength(39);
+    expect(ALL_TYPES).toHaveLength(40);
     for (const t of ALL_TYPES) expect(DOC_TYPE_LABEL[t]).toBeTruthy();
-    expect(Object.keys(DOC_TYPE_LABEL)).toHaveLength(39);
+    expect(Object.keys(DOC_TYPE_LABEL)).toHaveLength(40);
   });
 
   it('docTypeFromRelPath recognises common words', () => {
