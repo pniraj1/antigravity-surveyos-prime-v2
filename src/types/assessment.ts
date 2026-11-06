@@ -178,6 +178,7 @@ export interface AssessmentSummary {
   compulsoryExcess: number;
   voluntaryExcess: number;
   excess: number; // For legacy support/total
+  towingCharges: number;
   netAssessedLoss: number; // max(0, grandTotal - salvage - compulsoryExcess - voluntaryExcess)
   netInWords: string;
 
@@ -335,6 +336,7 @@ export interface FeeBill {
   lessExcess: number; // Compulsory Excess
   voluntaryExcess: number;
   compulsoryExcess: number;
+  towingCharges?: number;
   /** Whether the surveyor fee has been received from the insurer */
   feePaid: boolean;
 }
@@ -431,6 +433,7 @@ export interface BillCheckSummary {
   compulsoryExcess: number;
   voluntaryExcess: number;
   excess: number;
+  towingCharges: number;
   netLiability: number;
   netInWords: string;
 }

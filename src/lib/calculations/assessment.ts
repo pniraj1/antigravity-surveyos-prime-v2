@@ -70,7 +70,8 @@ export function calculateAssessmentSummary(
   // Paint's GR-9 rate is a claim-level setting, so the engine needs the claim's
   // three paint fields. Optional: omitted means no paint material depreciation,
   // which is exactly how every stored claim behaved before this existed.
-  paintDep: PaintDepClaim = { depreciationType: depType }
+  paintDep: PaintDepClaim = { depreciationType: depType },
+  towingCharges: number = 0
 ): AssessmentSummary {
   let metal = 0;
   let plastic = 0;
@@ -134,7 +135,7 @@ export function calculateAssessmentSummary(
   const grandTotal = partsBase + partsGSTAccumulator + labourBase + labourGSTAccumulator;
   
   const totalExcess = compulsoryExcess + voluntaryExcess;
-  const netAssessedLoss = Math.max(0, grandTotal - salvage - totalExcess);
+  const netAssessedLoss = Math.max(0, grandTotal + towingCharges - salvage - totalExcess);
 
   // ─── Estimated totals (from Invoice — computed locally, zero API cost) ──────
   // NOTE: estimated/assessed store BASE (taxable) amounts; GST is added here.
@@ -202,6 +203,7 @@ export function calculateAssessmentSummary(
     compulsoryExcess,
     voluntaryExcess,
     excess: totalExcess,
+    towingCharges,
     netAssessedLoss,
     netInWords: `RUPEES ${numberToWords(netAssessedLoss)} ONLY`,
 
@@ -227,7 +229,8 @@ export function calculateBillCheckSummary(
   salvage: number = 0,
   compulsoryExcess: number = 0,
   voluntaryExcess: number = 0,
-  paintDep: PaintDepClaim = { depreciationType: depType }
+  paintDep: PaintDepClaim = { depreciationType: depType },
+  towingCharges: number = 0
 ): BillCheckSummary {
   let assessedBaseSum = 0;
   let billedBaseSum = 0;
@@ -255,7 +258,7 @@ export function calculateBillCheckSummary(
   });
 
   const totalExcess = compulsoryExcess + voluntaryExcess;
-  const netLiability = Math.max(0, assessedGrandTotal - salvage - totalExcess);
+  const netLiability = Math.max(0, assessedGrandTotal + towingCharges - salvage - totalExcess);
 
   return {
     grandTotalAssessed: assessedGrandTotal,
@@ -266,6 +269,7 @@ export function calculateBillCheckSummary(
     compulsoryExcess,
     voluntaryExcess,
     excess: totalExcess,
+    towingCharges,
     netLiability,
     netInWords: `RUPEES ${numberToWords(netLiability)} ONLY`,
   };

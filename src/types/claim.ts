@@ -452,6 +452,7 @@ export function createBlankClaim(
       lessExcess: 0,
       compulsoryExcess: 0,
       voluntaryExcess: 0,
+      towingCharges: 0,
       feePaid: false,
     },
 

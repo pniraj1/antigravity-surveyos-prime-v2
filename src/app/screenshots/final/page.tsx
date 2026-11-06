@@ -48,6 +48,7 @@ const MOCK_SUMMARY: AssessmentSummary & {
   compulsoryExcess: 1000,
   voluntaryExcess: 0,
   excess: 1000,
+  towingCharges: 0,
   netAssessedLoss: 87382,
   netInWords: 'Rupees Eighty Seven Thousand Three Hundred Eighty Two Only',
   totalEstimated: 97500,
