@@ -13,7 +13,8 @@ import type { VehicleType } from '@/types';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { AlertTriangle, CheckCircle2, Loader2, Car, Archive, AlertCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Loader2, Car, Archive, AlertCircle, Folder } from 'lucide-react';
+import { isLocalFolderSupported, setClaimFolderHandle } from '@/lib/storage/claim-folder-store';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -150,6 +151,7 @@ export function NewClaimDialog() {
   const [vehicleType, setVehicleType] = useState<VehicleType>('private');
   const [activeClaims, setActiveClaims] = useState<ActiveClaimSummary[]>([]);
   const [limitReached, setLimitReached] = useState(false);
+  const [folderHandle, setFolderHandle] = useState<FileSystemDirectoryHandle | null>(null);
 
   const [dupState, setDupState]     = useState<DupState>('idle');
   const [dupMatches, setDupMatches] = useState<DuplicateMatch[]>([]);
@@ -163,6 +165,7 @@ export function NewClaimDialog() {
     setDupState('idle');
     setDupMatches([]);
     setConfirmed(false);
+    setFolderHandle(null);
 
     getAllClaims().then(all => {
       const active = all
@@ -263,7 +266,19 @@ export function NewClaimDialog() {
     );
   }
 
-  const handleCreate = () => {
+  const handlePickFolder = async () => {
+    if (typeof window === 'undefined' || !window.showDirectoryPicker) return;
+    try {
+      const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+      setFolderHandle(handle);
+    } catch (err) {
+      if ((err as Error)?.name !== 'AbortError') {
+        console.warn('Folder selection canceled or failed', err);
+      }
+    }
+  };
+
+  const handleCreate = async () => {
     if (!vehicleNo.trim()) return;
     if (dupState === 'duplicate' && !confirmed) return;
 
@@ -272,14 +287,29 @@ export function NewClaimDialog() {
     useClaimStore.getState().updateVehicle({ registrationNumber: vehicleNo.toUpperCase() });
     useClaimStore.getState().updateClaim({ reportNo });
 
-    const { currentClaimId } = useClaimStore.getState();
+    const currentClaimId = useClaimStore.getState().currentClaimId;
     if (currentClaimId) {
+      if (folderHandle) {
+        try {
+          await setClaimFolderHandle(currentClaimId, folderHandle);
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(
+              new CustomEvent('surveyos:claim-folder-updated', {
+                detail: { claimId: currentClaimId },
+              })
+            );
+          }
+        } catch (err) {
+          console.warn('[NewClaimDialog] Failed to set claim folder handle:', err);
+        }
+      }
       const label = vehicleNo.toUpperCase();
       getOrCreateClaimFolder(currentClaimId, label).catch(e =>
         console.warn('[Drive] Folder creation skipped:', e.message)
       );
     }
 
+    setFolderHandle(null);
     setVehicleNo('');
     setNewClaimDialogOpen(false);
     // Valuation surveys don't get a Documents tab — see claimLandingTab.
@@ -414,10 +444,56 @@ export function NewClaimDialog() {
             </div>
           </div>
 
+          {isLocalFolderSupported() && (
+            <div className="space-y-1.5 pt-1 border-t border-border/50">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs text-muted-foreground">
+                  Claim Local Folder (Optional)
+                </Label>
+                {folderHandle && (
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+                    <CheckCircle2 size={11} /> Selected
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={handlePickFolder}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border text-xs font-medium transition-all ${
+                  folderHandle
+                    ? 'border-emerald-500/30 bg-emerald-500/5 text-foreground'
+                    : 'border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                }`}
+              >
+                <div className="flex items-center gap-2 truncate">
+                  <Folder
+                    size={14}
+                    className={folderHandle ? 'text-emerald-500 shrink-0' : 'text-muted-foreground shrink-0'}
+                  />
+                  <span className="truncate">
+                    {folderHandle ? folderHandle.name : 'Choose folder for photos & docs...'}
+                  </span>
+                </div>
+                <span className="text-[11px] font-semibold text-primary shrink-0 ml-2">
+                  {folderHandle ? 'Change' : 'Browse'}
+                </span>
+              </button>
+              <p className="text-[11px] text-muted-foreground font-medium px-1">
+                Auto-saves phone scans, uploads, and PDF reports directly to your computer.
+              </p>
+            </div>
+          )}
+
         </CardContent>
 
         <CardFooter className="flex justify-end gap-2 mt-2">
-          <button onClick={() => setNewClaimDialogOpen(false)} className="px-4 py-2 rounded-md text-sm font-semibold text-muted-foreground hover:bg-muted">
+          <button
+            onClick={() => {
+              setFolderHandle(null);
+              setNewClaimDialogOpen(false);
+            }}
+            className="px-4 py-2 rounded-md text-sm font-semibold text-muted-foreground hover:bg-muted"
+          >
             Cancel
           </button>
           <button

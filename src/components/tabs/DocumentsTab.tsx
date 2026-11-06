@@ -18,7 +18,13 @@ import {
 import { SyncDrivePicker } from '@/components/sync-bridge/SyncDrivePicker';
 import { DocumentReviewSheet } from '@/components/documents/DocumentReviewSheet';
 import { useClaimDocuments } from '@/lib/documents/useClaimDocuments';
-import { FolderLine } from '@/components/documents/FolderLine';
+import {
+  isLocalFolderSupported,
+  getClaimFolderHandle,
+  verifyHandlePermission,
+} from '@/lib/storage/claim-folder-store';
+import { getStoredRootHandle, ensureReadWrite } from '@/lib/local-sync/directory-handle';
+import { ClaimFolderPromptDialog } from '@/components/layout/ClaimFolderPromptDialog';
 import { PhoneFilesList } from '@/components/documents/PhoneFilesList';
 import { BringPhoneScans } from '@/components/documents/BringPhoneScans';
 import { AskForDocumentsButton } from '@/components/documents/AskForDocumentsDialog';
@@ -82,7 +88,7 @@ export function DocumentsTab() {
   const { profile, updateProfile } = useProfileStore();
   const aiProvider = profile.aiProvider ?? 'gemini';
   const [isReconOpen, setIsReconOpen] = useState(false);
-  const [folderAsk, setFolderAsk] = useState(0); // bumped when an import needs the folder connect
+  const [folderPromptOpen, setFolderPromptOpen] = useState(false);
   const [autoFilledFields, setAutoFilledFields] = useState<ReconciliationField[]>([]);
   const prevClaimIdRef = useRef<string | null>(null);
   const [syncPicker, setSyncPicker] = useState<{ key: string; label: string } | null>(null);
@@ -201,6 +207,28 @@ export function DocumentsTab() {
     } catch (err) {
       toast.error(`Could not read the phone file ${phoneDoc.relPath} (${err instanceof Error ? err.message : String(err)})`);
     }
+  };
+
+  const handleAllowAccess = async () => {
+    if (currentClaim?.id) {
+      const claimHandle = await getClaimFolderHandle(currentClaim.id);
+      if (claimHandle) {
+        const granted = await verifyHandlePermission(claimHandle, 'readwrite');
+        if (granted) {
+          toast.success('Folder access granted');
+          return;
+        }
+      }
+    }
+    const rootHandle = await getStoredRootHandle().catch(() => null);
+    if (rootHandle) {
+      const ok = await ensureReadWrite(rootHandle);
+      if (ok) {
+        toast.success('Folder access granted');
+        return;
+      }
+    }
+    toast.error('Folder access was not granted');
   };
 
   const scannedCount = Object.keys(extractedDocs).length;
@@ -332,13 +360,14 @@ export function DocumentsTab() {
 
       {/* ── Document Groups ──────────────────────────────── */}
       <div className="px-6 lg:px-12 py-8 max-w-5xl mx-auto space-y-10">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <FolderLine supported={docs.supported} folder={docs.folder} onConnect={docs.connect} onReconnect={docs.reconnect} connectRequest={folderAsk} />
-          {/* Import needs a claim folder, which needs the File System Access API. */}
-          <div className="flex flex-wrap items-center gap-2">
-            <AskForDocumentsButton />
-            {docs.supported && <BringPhoneScans onNeedsFolder={() => setFolderAsk((n) => n + 1)} onAllowAccess={docs.reconnect} />}
-          </div>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <AskForDocumentsButton />
+          {isLocalFolderSupported() && (
+            <BringPhoneScans
+              onNeedsFolder={() => setFolderPromptOpen(true)}
+              onAllowAccess={handleAllowAccess}
+            />
+          )}
         </div>
         {DOC_GROUPS.map((group) => (
           <div key={group.title}>
@@ -585,6 +614,14 @@ export function DocumentsTab() {
           }}
         />
       )}
+
+      {/* Claim folder selection prompt */}
+      <ClaimFolderPromptDialog
+        isOpen={folderPromptOpen}
+        onClose={() => setFolderPromptOpen(false)}
+        claimId={currentClaim.id}
+        registrationNumber={currentClaim.vehicle?.registrationNumber}
+      />
     </div>
   );
 }
