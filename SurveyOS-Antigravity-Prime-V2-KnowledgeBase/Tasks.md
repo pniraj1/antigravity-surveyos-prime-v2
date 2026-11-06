@@ -1,11 +1,28 @@
 # Active Tasks
 
-> Last updated: 2026-11-06 by Antigravity (Reconciliation Interactive Dual Evidence & No Auto-Close)
+> Last updated: 2026-11-06 by Antigravity (Volkswagen Group DMS Estimate & Invoice Parser Support)
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
 
 ---
 
-## Done: Reconciliation Interactive Dual Evidence & No Auto-Close (2026-11-06, Antigravity)
+## Done: Volkswagen Group DMS Estimate & Invoice Parser Support (2026-11-06, Antigravity)
+- **Problem Solved:**
+  1. Surveyors assessing Volkswagen Group vehicles (VW, Skoda, Audi) received digital estimates lacking a serial number column (`Srl` / `S.No`), structured as `Type | Description | HSN\SAC | Category | Qty | Unit Price | Amount`.
+  2. Previously, `row-parser.ts` strictly required `SERIAL_WORD` and declined to Tier 2 (AI Vision LLM), spending surveyor API tokens and adding several seconds of latency.
+  3. Ensured that zero-token deterministic parsing preserves 100% mathematical precision and field fidelity without downgrading accuracy.
+- **Architecture Delivered:**
+  - **Type-Anchored Header Detection (`src/lib/ai/row-parser.ts`):** `findHeader` recognizes `Type` + `Description` + `Qty` + `Amount` tables.
+  - **Anchor-by-Type (`anchorsOf`):** Automatically anchors on `Item` and `Labor` tokens when serial columns are absent, generating synthetic sequential 1..N serials.
+  - **Pre-tax & Footer Tax Settlement (`toItem` & `footerTax`):** Resolves pre-tax `Amount` columns via `footerTax` against printed `Summary Details` and `Grand Total`.
+  - **Tax Invoice Synonyms:** Mapped `GST Base Amount`, `Base Amount`, `Amount Incl. Tax`, `Total GST`, and `Final Amount` for Volkswagen final invoices.
+  - **Category Routing:** Routes `Item` -> `spare_parts`, `Labor` with `/paint|colour/i` -> `painting_items`, and other `Labor` -> `labour_items`.
+- **Verification:**
+  - Full Vitest suite: 281 test files passed, 2,515 tests passed (100% green).
+  - TypeScript compiler (`npx tsc --noEmit`): 0 errors.
+  - Prime <-> Scan impact: None (0 drift).
+- **Commits on `main`:**
+  - `feat(ai): deterministic parser for Volkswagen DMS estimates and invoices`
+
 - **Problem Solved:**
   1. Clicking any option in the Reconciliation Hub immediately committed the field and wiped it from the table because `getConflictFields` drops `isDecided` fields.
   2. If the user resolved the last/only conflict, an auto-close `useEffect` in `DocumentsTab.tsx` detected `conflicts.length === 0` and forcefully dismissed the dialog.

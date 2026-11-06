@@ -3,7 +3,7 @@
 // to its neighbours, so wrapped text and split numbers ("8,845." / "76") stay with their row.
 
 export interface PdfToken { s: string; x: number; y: number; w: number }   // y grows upward (pdf.js)
-export type Field = 'sr_no' | 'part_number' | 'description' | 'hsn_sac' | 'quantity' | 'unit_price' | 'taxable_amount' | 'total_amount' | 'gst_percent' | 'tax';   // tax: a bare "Tax" header, holding either a rate (18%) or an amount
+export type Field = 'sr_no' | 'part_number' | 'description' | 'hsn_sac' | 'quantity' | 'unit_price' | 'taxable_amount' | 'total_amount' | 'gst_percent' | 'tax' | 'type';   // tax: a bare "Tax" header, holding either a rate (18%) or an amount
 export interface RawRow { sr: number; page: number; cells: Partial<Record<Field, string>>; text: string; y: number; x: number; lead?: string }   // lead: text above the serial line, on section-start rows only   // page 0-based
 export interface NonItemLine { page: number; text: string; nums: number[]; y: number; x: number }
 
@@ -13,12 +13,13 @@ const HEADER_SYNONYMS: Record<string, Field> = {
   'part number': 'part_number', 'part no': 'part_number', 'part #': 'part_number',
   'description': 'description', 'particulars': 'description', 'part description': 'description',
   'labour description': 'description', 'part labor description': 'description',
-  'hsn': 'hsn_sac', 'hsn/sac': 'hsn_sac', 'sac': 'hsn_sac',
+  'hsn': 'hsn_sac', 'hsn/sac': 'hsn_sac', 'sac': 'hsn_sac', 'hsn\\sac': 'hsn_sac', 'hsn sac': 'hsn_sac',
   'qty': 'quantity', 'qty.': 'quantity',
-  'rate': 'unit_price', 'rate/unit': 'unit_price', 'part amt': 'unit_price', 'labour amt': 'unit_price',
-  'taxable': 'taxable_amount', 'labor': 'taxable_amount', 'labour': 'taxable_amount',   // Maruti: labour amount sits under bare "Labor"
-  'total': 'total_amount', 'amount': 'total_amount', 'ins.amt': 'total_amount', 'ins share amount': 'total_amount', 'total amt': 'total_amount',
-  'tax%': 'gst_percent', 'tax %': 'gst_percent', 'tax': 'tax',
+  'rate': 'unit_price', 'rate/unit': 'unit_price', 'unit price': 'unit_price', 'part amt': 'unit_price', 'labour amt': 'unit_price',
+  'taxable': 'taxable_amount', 'labor': 'taxable_amount', 'labour': 'taxable_amount', 'gst base amount': 'taxable_amount', 'base amount': 'taxable_amount',
+  'total': 'total_amount', 'amount': 'total_amount', 'amount incl. tax': 'total_amount', 'amount incl tax': 'total_amount', 'final amount': 'total_amount', 'ins.amt': 'total_amount', 'ins share amount': 'total_amount', 'total amt': 'total_amount',
+  'tax%': 'gst_percent', 'tax %': 'gst_percent', 'tax': 'tax', 'total gst': 'tax',
+  'type': 'type',
 };
 
 /** '2,27,794.00'→227794; fragments like '8,845.' or '8708.99.00' → null. */
@@ -75,7 +76,7 @@ interface Column { field: Field | null; start: number; end: number; right: numbe
 
 /** Header = first line with a serial word and Qty; synonyms may span adjacent tokens. */
 function findHeader(toks: PdfToken[]): { y: number; cols: Column[] } | null {
-  const line = linesOf(toks).find(l => l.some(t => SERIAL_WORD.test(t.s)) && l.some(t => /^qty\.?$/i.test(t.s)));
+  const line = linesOf(toks).find(l => (l.some(t => SERIAL_WORD.test(t.s)) || l.some(t => /^type$/i.test(t.s))) && l.some(t => /^qty\.?$/i.test(t.s)));
   if (!line) return null;
   const groups: { field: Field | null; x: number; right: number }[] = [];
   for (let i = 0; i < line.length;) {
@@ -137,7 +138,20 @@ function findHeaderBlock(toks: PdfToken[]): { y: number; cols: Column[] } | null
 }
 
 /** Serial tokens near the leftmost integer column, below the header, continuing the sequence. */
-function anchorsOf(toks: PdfToken[], headerY: number, prev: number): { anchors: PdfToken[]; last: number } {
+function anchorsOf(toks: PdfToken[], headerY: number, prev: number, cols?: Column[]): { anchors: PdfToken[]; last: number } {
+  const typeCol = cols?.find(c => c.field === 'type');
+  if (typeCol) {
+    const typeToks = toks.filter(t => (prev > 0 || t.y < headerY) && t.x >= typeCol.start && t.x <= typeCol.end && /^(item|labou?r)$/i.test(t.s));
+    if (typeToks.length) {
+      const anchors: PdfToken[] = [];
+      let last = prev;
+      for (const t of typeToks.sort((p, q) => q.y - p.y)) {
+        last++;
+        anchors.push({ ...t, s: String(last) });
+      }
+      return { anchors, last };
+    }
+  }
   // with rows already read, numbers above this page's header may continue the previous section (the sequence check keeps strays out)
   const ints = toks.filter(t => /^\d{1,3}$/.test(t.s) && (prev > 0 || t.y < headerY));
   if (!ints.length) return { anchors: [], last: prev };
@@ -200,7 +214,7 @@ export function readRows(pages: PdfToken[][], stacked = false): { rows: RawRow[]
     if (header) cols = header.cols;
     // numbered terms printed under the grand total are not rows
     const grandY = Math.min(...linesOf(toks).filter(l => GRAND_LABEL.test(l.map(t => t.s).join(' ')) && l.some(t => parseMoney(t.s) !== null)).map(l => l[0].y), Infinity);
-    const { anchors, last } = cols ? anchorsOf(toks.filter(t => grandY === Infinity || t.y > grandY - 2), header?.y ?? Infinity, prev) : { anchors: [], last: prev };
+    const { anchors, last } = cols ? anchorsOf(toks.filter(t => grandY === Infinity || t.y > grandY - 2), header?.y ?? Infinity, prev, cols) : { anchors: [], last: prev };
     prev = last;
     const bands = anchors.map((a, i) => {
       const gapUp = i > 0 ? (anchors[i - 1].y - a.y) / 2 : null;
@@ -254,7 +268,7 @@ function toItem(r: RawRow, preTax: boolean): { item: Record<string, unknown>; pr
   const taxAmount = bare?.amount ?? null;
   const gst = num(c.gst_percent) ?? (c.tax?.endsWith('%') ? num(c.tax) : null) ?? bare?.rate ?? null;
   // preTax: the Amount column is printed before tax (Kia and Maruti invoices), so it is the taxable value
-  const asTaxable = preTax && c.taxable_amount === undefined && gst !== null;
+  const asTaxable = preTax && c.taxable_amount === undefined;
   const printed = asTaxable ? null : num(c.total_amount);
   const taxable = num(c.taxable_amount) ?? (asTaxable ? num(c.total_amount) : printed !== null && gst !== null ? round2(printed / (1 + gst / 100)) : printed !== null && taxAmount !== null ? round2(printed - taxAmount) : null);
   const total = printed ?? (taxable !== null && gst !== null ? round2(taxable * (1 + gst / 100)) : null);
@@ -266,7 +280,7 @@ function toItem(r: RawRow, preTax: boolean): { item: Record<string, unknown>; pr
     sr_no: r.sr, description: c.description ?? '', part_number: c.part_number ?? '', hsn_sac: c.hsn_sac ?? '',
     quantity: /^\d+(\.\d+)?$/.test(c.quantity ?? '') ? Number(c.quantity) : num(c.quantity) ?? 1,   // Maruti prints "2.000"
     unit_price: num(c.unit_price) ?? 0, taxable_amount: taxable,
-    cgst_amount: 0, sgst_amount: 0, total_amount: total, gst_percent: gst ?? (joins.length === 1 ? joins[0] : 0), category: '', _page: r.page,
+    cgst_amount: 0, sgst_amount: 0, total_amount: total, gst_percent: gst ?? (joins.length === 1 ? joins[0] : 0), category: '', _page: r.page, type: c.type ?? '',
   };
   return { item, printedTotal: printed !== null, noRate };
 }
@@ -284,7 +298,7 @@ function footerTax(items: any[], labelled: number[]): { items: any[]; inclusive:
 
 const above = (a: { page: number; y: number }, b: { page: number; y: number }) => a.page < b.page || (a.page === b.page && a.y > b.y);   // a is higher in reading order
 // Maruti: "Net Estimate Amounts", "Net Bill Amount (Rounded)"; Tata: "Gross Amount"
-const GRAND_LABEL = /\bgrand\s*total\b|\bnet\s*((estimate|bill)\s*)?amounts?\b|\btotal\s*amt\b|\bgross\s*amount\b/i;
+const GRAND_LABEL = /\bgrand\s*total\b|\bnet\s*((estimate|bill)\s*)?amounts?\b|\btotal\s*amt\b|\bgross\s*amount\b|\bfinal\s*amount\b/i;
 const TOTAL_LABEL = /\btotal\b|\bnet\s*((estimate|bill)\s*)?amounts?\b|\bgross\s*amount\b|\b(part|labou?r)\s*(amt|amount)\b/i;
 
 /** Parts / labour from the heading between the header (or the previous section) and this section's first row; null = unknown. */
@@ -323,7 +337,7 @@ function parseWith(pages: PdfToken[][], preTax: boolean, stacked = false): Parse
   const serialX = (page: number) => Math.min(...rows.filter(r => r.page === page).map(r => r.x), Infinity);
   if (nonItemLines.some(l => /^\d{1,3}$/.test(l.text.split(' ')[0]) && l.text.includes(' ') && l.x < serialX(l.page) + 12
     && header && above(header, l) && above(l, lastGrand))) return { ok: false, reason: 'serial gap: a numbered line was not read as a row' };
-  const labelled = nonItemLines.filter(l => TOTAL_LABEL.test(l.text)).flatMap(l => l.nums);
+  const labelled = nonItemLines.filter((l, idx) => TOTAL_LABEL.test(l.text) || (idx > 0 && TOTAL_LABEL.test(nonItemLines[idx - 1].text) && nonItemLines[idx - 1].nums.length === 0)).flatMap(l => l.nums);
 
   const sections: RawRow[][] = [];
   for (const r of rows) { if (r.sr === 1) sections.push([]); sections[sections.length - 1].push(r); }
@@ -350,7 +364,7 @@ function parseWith(pages: PdfToken[][], preTax: boolean, stacked = false): Parse
     }
     const kind = kindOf(sec[0], rows[rows.indexOf(sec[0]) - 1], nonItemLines);
     for (const it of items) {
-      const labour = kind ? kind === 'labour' : /^9987/.test(it.hsn_sac);
+      const labour = kind ? kind === 'labour' : /labou?r/i.test(it.type) || /^0*9987/.test(it.hsn_sac);
       if (!labour) out.spare_parts.push(it);
       else if (/PAINT|COLOU?R/i.test(it.description)) out.painting_items.push(it);
       else out.labour_items.push(it);

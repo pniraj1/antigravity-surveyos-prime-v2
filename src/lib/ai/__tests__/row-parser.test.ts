@@ -434,4 +434,112 @@ describe('parseEstimate', () => {
     const whole = rowsOf(readRows([[...head, ...line(603, [[10, '1'], [300, '496.0']]), ...line(594, [[10, '2'], [300, '992.0']])]]));
     expect(whole.map(r => r.cells.total_amount)).toEqual(['496.0', '992.0']);
   });
+
+  describe('Volkswagen Group: unnumbered estimate table with Type column', () => {
+    const vwHead = (y = 700) => line(y, [
+      [10, 'Type'], [50, 'Description'], [160, 'HSN\\SAC'], [230, 'Category'], [280, 'Qty'], [320, 'Unit Price'], [390, 'Amount'],
+    ]);
+    const vwRow = (y: number, type: string, desc: string, hsn: string, qty: string, price: string, amount: string) => line(y, [
+      [10, type], [50, desc], [160, hsn], [230, 'Paid'], [285, qty], amt(360, price), amt(430, amount),
+    ]);
+
+    it('reads parts and labour when anchored by Type column without serial numbers', () => {
+      const p0 = [
+        ...vwHead(700),
+        ...vwRow(680, 'Item', 'HOOD', '87089900', '1', '13733.05', '13733.05'),
+        ...vwRow(660, 'Item', 'FENDER', '87089900', '1', '4517.80', '4517.80'),
+        ...vwRow(640, 'Item', 'HEADLAMP', '85122010', '1', '8664.41', '8664.41'),
+      ];
+      const p1 = [
+        ...vwRow(680, 'Labor', 'DENTING CHARGES', '00998729', '1', '2030.41', '2030.41'),
+        ...vwRow(660, 'Labor', 'PAINTING CHARGES', '00998729', '1', '21191.03', '21191.03'),
+        ...vwRow(640, 'Labor', 'REMOVING & REFITTING', '00998729', '1', '8304.89', '8304.89'),
+        ...line(600, [[50, 'Service'], [90, 'Job'], [120, 'Total'], amt(430, '58441.59')]),
+        ...line(580, [[50, 'Summary'], [100, 'Details']]),
+        ...line(560, [[50, 'Details'], [100, 'Labor'], [130, 'Amount'], [170, 'Labor'], [200, 'Tax'], [240, 'Parts'], [270, 'Amount'], [310, 'Parts'], [340, 'Tax'], [380, 'Total']]),
+        ...line(540, [[50, 'Jobs'], amt(140, '31526.33'), amt(210, '5674.74'), amt(280, '26915.26'), amt(350, '4844.75'), amt(430, '68961.08')]),
+        ...line(520, [[50, 'Grand'], [90, 'Total'], amt(430, '68961.08')]),
+      ];
+      const o = parseEstimate([p0, p1]);
+      if (!o.ok) throw new Error(o.reason);
+      expect(o.data.spare_parts.length).toBe(3);
+      expect(o.data.spare_parts[0]).toMatchObject({ description: 'HOOD', quantity: 1, taxable_amount: 13733.05, total_amount: 16205, gst_percent: 18 });
+      expect(o.data.labour_items.length).toBe(2);
+      expect(o.data.labour_items.map(r => r.description)).toEqual(['DENTING CHARGES', 'REMOVING & REFITTING']);
+      expect(o.data.painting_items.length).toBe(1);
+      expect(o.data.painting_items[0].description).toBe('PAINTING CHARGES');
+      expect(o.data.gross_amount).toBe(68961.08);
+    });
+
+    it('reads all 33 rows from 2-page Volkswagen Dhule estimate (SOA2600192) and ties to exact grand total', () => {
+      const p1Rows: Array<[string, string, string, string, string]> = [
+        ['HOOD', '87089900', '1', '13733.05', '13733.05'],
+        ['FENDER', '87089900', '1', '4517.80', '4517.80'],
+        ['HEADLAMP', '85122010', '1', '8664.41', '8664.41'],
+        ['MOUNTING', '87089900', '1', '404.24', '404.24'],
+        ['MOUNTING', '87089900', '1', '417.80', '417.80'],
+        ['COVER', '87081090', '1', '1790.68', '1790.68'],
+        ['RETAINER', '87081090', '1', '1294.07', '1294.07'],
+        ['CARRIER', '87089900', '1', '4354.24', '4354.24'],
+        ['WHEEL HOUS', '87089900', '1', '665.25', '665.25'],
+        ['WHEEL HOUS', '87089900', '1', '684.75', '684.75'],
+        ['BEAM', '87089900', '1', '2930.51', '2930.51'],
+        ['MEMBER', '87089900', '1', '1322.03', '1322.03'],
+        ['BOLT', '73181500', '2', '41.53', '83.05'],
+        ['BOLT', '73181500', '1', '43.22', '43.22'],
+        ['BOLT', '73181500', '1', '56.78', '56.78'],
+        ['HEADLIGHT', '85122010', '1', '2455.93', '2455.93'],
+        ['HEADLIGHT', '85122010', '1', '2455.93', '2455.93'],
+        ['COVER', '87081090', '1', '1238.14', '1238.14'],
+        ['COVER', '87081090', '1', '1273.73', '1273.73'],
+        ['GRILLE', '87089900', '1', '1914.41', '1914.41'],
+        ['GRILLE', '87081090', '1', '1764.41', '1764.41'],
+        ['WATER RES.', '87089900', '1', '949.15', '949.15'],
+        ['PIPE HOLDE', '87089900', '1', '379.66', '379.66'],
+        ['TENSIONER', '84835090', '1', '6417.80', '6417.80'],
+        ['CLIP', '73182990', '4', '106.78', '427.12'],
+        ['REPAIR KIT', '87089900', '1', '2131.36', '2131.36'],
+        ['BOLT', '73181500', '15', '81.36', '1220.34'],
+      ];
+      const p0 = [
+        ...vwHead(700),
+        ...p1Rows.flatMap((r, idx) => vwRow(680 - idx * 15, 'Item', r[0], r[1], r[2], r[3], r[4])),
+      ];
+
+      const p2Items: Array<[string, string, string, string, string]> = [
+        ['REPAIR KIT', '87089900', '1', '2131.36', '2131.36'],
+        ['COVER', '87081090', '1', '105.93', '105.93'],
+        ['COOLER', '87089900', '1', '2918.64', '2918.64'],
+      ];
+      const p2Labor: Array<[string, string, string, string, string]> = [
+        ['DENTING CHARGES', '00998729', '1', '2030.41', '2030.41'],
+        ['PAINTING CHARGES', '00998729', '1', '21191.03', '21191.03'],
+        ['REMOVING & REFITTING', '00998729', '1', '8304.89', '8304.89'],
+      ];
+      const p1 = [
+        ...p2Items.flatMap((r, idx) => vwRow(680 - idx * 15, 'Item', r[0], r[1], r[2], r[3], r[4])),
+        ...p2Labor.flatMap((r, idx) => vwRow(635 - idx * 15, 'Labor', r[0], r[1], r[2], r[3], r[4])),
+        ...line(560, [[50, 'Service'], [90, 'Job'], [120, 'Total'], amt(430, '100272.12')]),
+        ...line(540, [[50, 'Summary'], [100, 'Details']]),
+        ...line(520, [[50, 'Details'], [100, 'Labor'], [130, 'Amount'], [170, 'Labor'], [200, 'Tax'], [240, 'Parts'], [270, 'Amount'], [310, 'Parts'], [340, 'Tax'], [380, 'Total']]),
+        ...line(500, [[50, 'Jobs'], amt(140, '31526.33'), amt(210, '5674.74'), amt(280, '68745.79'), amt(350, '12374.20'), amt(430, '118321.06')]),
+        ...line(480, [[50, 'Grand'], [90, 'Total'], amt(430, '118321.06')]),
+      ];
+
+      const o = parseEstimate([p0, p1]);
+      if (!o.ok) throw new Error(o.reason);
+      expect(o.data.spare_parts.length).toBe(30);
+      expect(o.data.labour_items.length).toBe(2);
+      expect(o.data.painting_items.length).toBe(1);
+      expect(o.data.painting_items[0].description).toBe('PAINTING CHARGES');
+      expect(o.data.gross_amount).toBe(118321.06);
+      const partsTaxableSum = o.data.spare_parts.reduce((s, r) => s + (r.taxable_amount ?? 0), 0);
+      expect(Math.round(partsTaxableSum * 100) / 100).toBe(68745.79);
+      const laborTaxableSum = o.data.labour_items.reduce((s, r) => s + (r.taxable_amount ?? 0), 0);
+      expect(Math.round(laborTaxableSum * 100) / 100).toBe(10335.30);
+      const paintingTaxableSum = o.data.painting_items.reduce((s, r) => s + (r.taxable_amount ?? 0), 0);
+      expect(Math.round(paintingTaxableSum * 100) / 100).toBe(21191.03);
+    });
+
+  });
 });

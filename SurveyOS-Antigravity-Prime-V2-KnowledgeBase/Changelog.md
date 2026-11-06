@@ -2,6 +2,15 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-06 (Antigravity) — Volkswagen Group DMS Estimate & Invoice Zero-Token Parser Support
+- feat(ai): Added deterministic zero-token parsing support for Volkswagen Group DMS estimates and invoices in `src/lib/ai/row-parser.ts`.
+- feat(ai): Extended table header detection in `findHeader` to recognize unnumbered column schemas containing `Type` + `Description` + `Qty` + `Amount` (as printed by Volkswagen/Skoda/Audi dealership software).
+- feat(ai): Implemented row anchoring on `Type` column values (`Item` vs `Labor`) with synthetic sequential `sr_no` generation (1..N).
+- feat(ai): Handled unnumbered pre-tax estimates where `Amount` is taxable base without row-level GST% column. Settled via `footerTax` using multi-point tie-out against printed `Summary Details` (Parts Amount, Labor Amount, and Grand Total).
+- feat(ai): Added column synonyms for Volkswagen final tax invoices: `GST Base Amount`, `Base Amount`, `Amount Incl. Tax`, `Total GST`, `Final Amount`.
+- tests: Added comprehensive test fixtures in `src/lib/ai/__tests__/row-parser.test.ts` covering both minimal VW items and the complete 33-row 2-page Volkswagen estimate (`SOA2600192`), verifying exact mathematical tie-out to ₹118,321.06 in <40ms.
+- verification: Full Vitest suite passed: 281 test files, 2,515 tests (100% green). `npx tsc --noEmit` clean (0 errors). Prime ↔ SurveyOS Scan impact: None.
+
 ## 2026-11-06 (Antigravity) — Production Deployment of Data Reconciliation Interactive Dual Evidence & No Auto-Close
 - deploy: Built Next.js static export (`npm run build`) and deployed to Firebase Hosting (`motorsurveyos-in` and `surveyos-v2-antigravity-in`) on project `surveyos-v2-antigravity-in`.
 - verify: Verified deployed chunk `0n1i3q1dzc0gx.js` via curl directly on `https://motorsurveyos-in.web.app` and `https://surveyos.in`, confirming live dual evidence switcher ("Click to flip document & select"), live claim updates, and explicit finish reconciliation are live in production.
