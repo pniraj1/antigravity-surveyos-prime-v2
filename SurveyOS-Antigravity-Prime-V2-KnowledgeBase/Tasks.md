@@ -22,7 +22,10 @@
   - Vitest: 281 test files passed, 2,513 unit tests passed (100% green).
   - TypeScript: 0 errors via `npx tsc --noEmit`.
   - Scan Coupling Impact: None.
-- **Commits on `main`:** Pending user push.
+  - Deployed to Firebase Hosting (`motorsurveyos-in` and `surveyos-v2-antigravity-in`) on project `surveyos-v2-antigravity-in`.
+  - Verified live chunk `0n1i3q1dzc0gx.js` via curl on `https://motorsurveyos-in.web.app` and `https://surveyos.in`.
+- **Commits on `main`:**
+  - `ddc0fcca` feat(reconciliation): interactive dual evidence inspection without premature auto-close
 
 ---
 

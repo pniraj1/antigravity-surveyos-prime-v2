@@ -2,6 +2,10 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-06 (Antigravity) — Production Deployment of Data Reconciliation Interactive Dual Evidence & No Auto-Close
+- deploy: Built Next.js static export (`npm run build`) and deployed to Firebase Hosting (`motorsurveyos-in` and `surveyos-v2-antigravity-in`) on project `surveyos-v2-antigravity-in`.
+- verify: Verified deployed chunk `0n1i3q1dzc0gx.js` via curl directly on `https://motorsurveyos-in.web.app` and `https://surveyos.in`, confirming live dual evidence switcher ("Click to flip document & select"), live claim updates, and explicit finish reconciliation are live in production.
+
 ## 2026-11-06 (Antigravity) — Data Reconciliation Interactive Dual Evidence & No Auto-Close
 - feat(ui): Implemented interactive dual document evidence inspection in `ReconciliationDialog.tsx`. Surveyors can now click between conflicting document options (e.g. RC Book vs Insurance Policy) to flip the right-side evidence viewer in real time without premature dismissal.
 - feat(ui): Added a persistent active field source comparison switcher at the top of the evidence panel, allowing instant 1-click toggling between source documents, pages, and OCR context snippets.
