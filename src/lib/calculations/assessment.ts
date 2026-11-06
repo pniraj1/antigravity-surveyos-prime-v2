@@ -233,6 +233,7 @@ export function calculateBillCheckSummary(
   let billedBaseSum = 0;
   let notInBillTotal = 0;
   let billedGrandTotal = 0;
+  let assessedGrandTotal = 0;
 
   rows.forEach(r => {
     // Disallowed items are not insurer liability, so they are not verified here.
@@ -240,9 +241,10 @@ export function calculateBillCheckSummary(
 
     const depRate = rowDepRate(r, ageMonths, { ...paintDep, depreciationType: depType });
 
-    const { liability } = computeRowLiability(r, depRate);
+    const { assessedNet, liability } = computeRowLiability(r, depRate);
 
     assessedBaseSum += r.assessed;
+    assessedGrandTotal += assessedNet;
     billedBaseSum += r.billStatus === 'not-in-bill' ? 0 : (r.billedTaxable ?? r.assessed);
 
     if (r.billStatus === 'not-in-bill') {
@@ -253,10 +255,10 @@ export function calculateBillCheckSummary(
   });
 
   const totalExcess = compulsoryExcess + voluntaryExcess;
-  const netLiability = Math.max(0, billedGrandTotal - salvage - totalExcess);
+  const netLiability = Math.max(0, assessedGrandTotal - salvage - totalExcess);
 
   return {
-    grandTotalAssessed: assessedBaseSum,
+    grandTotalAssessed: assessedGrandTotal,
     grandTotalBilled: billedGrandTotal,
     notInBillTotal,
     variance: assessedBaseSum - billedBaseSum,

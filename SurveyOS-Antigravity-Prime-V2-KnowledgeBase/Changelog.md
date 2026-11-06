@@ -2,6 +2,14 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-06 (Antigravity) — Standard Bill Check Net Liability Calculation Reconciliation
+- fix(reports): Reconciled Standard Bill Check Report (`buildStandardFinalSurveyHTML` in `bill-check` mode in `src/lib/reports/standard-report-builder.ts`). Disconnected assessment rows from `projectForBillCheck` so Column 3 (`Assessed (after Dep.)`), Column 4 (`Incl. GST`), `grand`, and `net` are derived strictly from the surveyor's true assessed loss instead of capped workshop billed amounts.
+- fix(reports): Wired Column 2 (`Billed`) in Section 8 to explicit workshop billed taxable base totals (`col2PartsBase`, `col2LabBase`, `col2Metal`, `col2Plastic`, `col2Glass`, `col2Fbr`, `col2LabOnly`, `col2PaintOnly`), providing a clear comparison between workshop billing and surveyor assessment.
+- fix(reports): Labeled Section 8 final total as `NET LIABILITY` in bill check mode, and guaranteed $grand - salvage - excess = net$ without deducting salvage/excess from billed figures.
+- fix(reports): In Section 9 item table, preserved the surveyor's true assessment in the `Assessed ₹` column, and populated the `Bill ₹` column with `r.billedTaxable ?? r.estimated` (or `No Bill` for `not-in-bill`).
+- fix(calculations): In `src/lib/calculations/assessment.ts` (`calculateBillCheckSummary`), accumulated `assessedGrandTotal += assessedNet` across allowed items, updated `netLiability = Math.max(0, assessedGrandTotal - salvage - totalExcess)`, and set `grandTotalAssessed: assessedGrandTotal`. This ensures the Bill Check tab summary card displays final liability based on assessed loss.
+- tests: Added regression unit test in `src/lib/reports/__tests__/standard-bill-check.test.ts`. Full Vitest suite: 280 test files passed, 2,509 tests passed (100% green). `npx tsc --noEmit` clean (0 errors).
+
 ## 2026-11-06 (Antigravity) — Production Deployment of UIIC Bill Check Net Liability Fix
 - deploy: Built Next.js static export (`npm run build`) and deployed to Firebase Hosting (`motorsurveyos-in` and `surveyos-v2-antigravity-in`) on project `surveyos-v2-antigravity-in`.
 - verify: Verified deployed chunk `0ggmzt3b_5lsd.js` via curl directly on `https://surveyos.in` and `https://motorsurveyos-in.web.app`, confirming `Towing Charges` row and reconciled `Less: Voluntary / Imposed Excess` deduction stack are live in production.

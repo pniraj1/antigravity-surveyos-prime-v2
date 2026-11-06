@@ -5,25 +5,35 @@
 
 ---
 
-## Done: UIIC and Standard Bill Check Calculation Audit & Net Liability Fix (2026-11-06, Antigravity)
+## Done: Standard and UIIC Bill Check Net Liability Calculation Reconciliation (2026-11-06, Antigravity)
 - **Problem Solved:**
   1. In the UIIC Bill Check Report, the Page 2 summary box placed `Total Assessed (After Dep + GST)` at the top, but the deduction formula subtracted salvage and excess from `totalBilled` (derived from `bcSummary.grandTotalBilled`), completely ignoring the Total Assessed row above it.
   2. Page 1 summary table right column had an arithmetic impossibility ($gross - salvage - excess \ne netBilledLiability$).
   3. Page 2 displayed two conflicting Net Loss amounts and words (`asum.netAssessedLoss` in Table A vs `netBilledLiability` in Table B).
-  4. Mislabeled `totalBilled` as "Total Billed by Workshop" even though it had vehicle age depreciation applied and was capped at assessed amounts.
+  4. In the Standard Bill Check Report (`buildStandardFinalSurveyHTML` in `bill-check` mode), the report previously projected rows via `projectForBillCheck(rows)`, mutating `r.assessed` to $\min(r.\text{assessed}, r.\text{billedTaxable})$. This improperly capped Columns 3 (`Assessed (after Dep.)`) and 4 (`Incl. GST`) as well as `grand` and `net` at workshop billed amounts, wiping out the surveyor's true assessment and deducting salvage/excess from billed figures.
+  5. In `calculateBillCheckSummary` (`src/lib/calculations/assessment.ts`), `netLiability` was derived from `billedGrandTotal - salvage - totalExcess`, causing the UI "Final Liability" card on the Bill Check screen to deduct salvage and policy excess from billed amounts rather than assessed loss.
 - **Architecture Delivered:**
-  - Reconciled UIIC Bill Check Report (`buildUIICBillCheckHTML` in `src/lib/reports/uiic-final-builder.ts`) to calculate Net Liability strictly as $\text{Total Assessed (After Dep + GST)} - \text{Salvage} - \text{Voluntary Excess} - \text{Compulsory Excess}$.
-  - Removed misleading `Total Billed by Workshop` row from Page 2 summary box so the table balances cleanly from line 1 to net liability.
-  - Reconciled Page 1 summary table, Page 2 words, and Service Hub use block to use `net`.
-  - Audited Standard Bill Check Report and verified its item-level projection (`projectForBillCheck`) cleanly and consistently deducts salvage and excess from Column 4 (`Incl. GST`).
+  - **Standard Bill Check Report (`src/lib/reports/standard-report-builder.ts`):**
+    - Assessment rows (`claim.assessmentRows || []`) remain the pure source of truth for assessed loss across both final survey and bill-check modes.
+    - Column 2 (`Billed`) cleanly computes and displays the workshop billed taxable base totals (`col2PartsBase`, `col2Metal`, `col2Plastic`, `col2Glass`, `col2Fbr`, `col2LabBase`, `col2LabOnly`, `col2PaintOnly`).
+    - Columns 3 (`Assessed (after Dep.)`) and 4 (`Incl. GST`) strictly reflect the surveyor's assessed figures (`pb`, `labBase`, `grand`).
+    - Section 8 Net row: Labeled `NET LIABILITY` in bill check mode and calculated strictly as $\text{grandTotalAssessed} - \text{salvage} - \text{excess}$.
+    - Section 9 item table: Disconnected `Assessed ₹` from the billed cap so it preserves the surveyor's actual assessed figure (`r.assessed`), and Column 4 prints `m9(isBillCheck ? (r.billedTaxable ?? r.estimated) : r.estimated)`.
+  - **Bill Check Calculation Engine (`src/lib/calculations/assessment.ts`):**
+    - Accumulated `assessedGrandTotal += assessedNet` for all allowed rows in `calculateBillCheckSummary`.
+    - Updated `netLiability` to $\max(0, \text{assessedGrandTotal} - \text{salvage} - \text{totalExcess})$ and set `grandTotalAssessed: assessedGrandTotal`.
+  - **UIIC Bill Check Report (`src/lib/reports/uiic-final-builder.ts`):**
+    - Reconciled Net Liability to strictly derive from $\text{Total Assessed (After Dep + GST)} - \text{Salvage} - \text{Voluntary Excess} - \text{Compulsory Excess}$.
+    - Removed misleading `Total Billed by Workshop` row from Page 2 summary box so the table balances cleanly from line 1 to net liability.
+    - Reconciled Page 1 summary table, Page 2 words, and Service Hub use block to use `net`.
 - **Verification:**
-  - Added regression unit test in `src/lib/reports/__tests__/bill-check-report.test.ts`.
-  - Full Vitest suite: 280 test files passed, 2,508 tests passed (100% green).
+  - Added regression unit tests in `src/lib/reports/__tests__/standard-bill-check.test.ts` and `src/lib/reports/__tests__/bill-check-report.test.ts`.
+  - Full Vitest suite: 280 test files passed, 2,509 tests passed (100% green).
   - TypeScript compiler (`npx tsc --noEmit`): 0 errors.
-  - Deployed to Firebase Hosting (`motorsurveyos-in` and `surveyos-v2-antigravity-in`) on project `surveyos-v2-antigravity-in`.
-  - Verified live chunk `0ggmzt3b_5lsd.js` on `https://surveyos.in` and `https://motorsurveyos-in.web.app`.
+  - Sibling Android App (`SurveyOS Scan`): 0 impact on shared contracts or sync.
 - **Commits on `main`:**
   - `4744d70a` fix(reports): reconcile UIIC bill check net liability calculation from assessed loss
+  - (pending) fix(reports): reconcile standard bill check net liability from assessed loss
 
 ---
 

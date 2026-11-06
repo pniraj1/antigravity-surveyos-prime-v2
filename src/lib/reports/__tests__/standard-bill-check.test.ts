@@ -310,3 +310,64 @@ describe('the cap and the Final Survey Report', () => {
     expect(final).not.toContain('700.00');
   });
 });
+
+describe('Standard Bill Check — Pure Assessed Loss and Net Liability', () => {
+  test('assessed loss, GST, and net liability derive from surveyor assessment, not capped billed amount', () => {
+    // Row assessed at 10,000 metal, billed lower at 7,000.
+    // Fee bill with explicit billSalvage 500, compulsory excess 1,000.
+    const c = {
+      ...claim([
+        row({
+          particulars: 'BONNET ASSY',
+          partType: 'metal',
+          depOverride: 0,
+          gst: 18,
+          estimated: 12000,
+          assessed: 10000,
+          billedTaxable: 7000,
+        }),
+      ]),
+      feeBill: {
+        salvageValue: 500,
+        billSalvage: 500,
+        compulsoryExcess: 1000,
+        voluntaryExcess: 0,
+        travelExpenses: 0,
+      },
+    } as unknown as ClaimData;
+
+    const html = buildStandardFinalSurveyHTML(c, profile, 'bill-check');
+
+    // Section 8 checks
+    const sec8 = html.split('8. ASSESSMENT SUMMARY')[1].split('</table>')[0];
+
+    // Header has NET LIABILITY in bill check mode
+    expect(sec8).toContain('NET LIABILITY');
+    expect(sec8).not.toContain('NET ASSESSED LOSS');
+
+    // Column 2 (Billed) should show 7,000.00
+    expect(sec8).toContain('7,000.00');
+
+    // Column 3 (Assessed after dep) should reflect assessed 10,000.00, NOT 7,000.00
+    expect(sec8).toContain('10,000.00');
+
+    // Column 4 (Incl. GST) should reflect 10,000 + 18% = 11,800.00
+    expect(sec8).toContain('11,800.00');
+
+    // Salvage (500.00) and Excess (1,000.00)
+    expect(sec8).toContain('500.00');
+    expect(sec8).toContain('1,000.00');
+
+    // Net Liability = 11,800 - 500 - 1000 = 10,300.00
+    // If it had used billed: 7000 * 1.18 = 8260 - 1500 = 6,760.00 (which is wrong)
+    expect(sec8).toContain('10,300.00');
+    expect(sec8).not.toContain('6,760.00');
+
+    // Section 9 item table checks
+    const sec9 = html.split('9. DETAILS OF BILL CHECK')[1].split('</table>')[0];
+    // In section 9, Bill ₹ column shows 7,000.00 and Assessed ₹ column shows 10,000.00
+    expect(sec9).toContain('7,000.00');
+    expect(sec9).toContain('10,000.00');
+  });
+});
+

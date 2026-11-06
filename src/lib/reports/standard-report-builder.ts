@@ -89,11 +89,11 @@ export function buildStandardFinalSurveyHTML(
   // the same gate the Spot tab uses to show or hide those inputs.
   const isCommercial = claim.vehicleType !== 'private';
   const bc = claim.billCheck;
-  // Bill check renders the same report over projected rows. Everything below
-  // this line — every total, every GST band — is untouched by the mode.
-  const rows = isBillCheck
-    ? projectForBillCheck(claim.assessmentRows || [])
-    : (claim.assessmentRows || []);
+  // Assessment rows remain the source of truth for assessed loss in both final
+  // survey and bill-check modes. In bill-check mode, billed figures populate
+  // the Billed column while assessed figures, depreciation, GST, and net liability
+  // strictly derive from the surveyor's assessed loss.
+  const rows = claim.assessmentRows || [];
 
   const depType = toDepreciationType(claim.depreciationType);
   const ageMonths = getVehicleAgeMonths(
@@ -182,6 +182,26 @@ export function buildStandardFinalSurveyHTML(
   const estLabOnly = summary.estimateLabourOnlyBase;
   const estPaintOnly = summary.estimatePaintOnlyBase;
   const estLabBase = estLabOnly + estPaintOnly;
+
+  // In bill-check mode, Column 2 reflects the workshop's billed amounts (taxable);
+  // in final survey mode, it reflects the garage estimate.
+  const billedPartsBase = rows.filter(r => r.section === 'parts').reduce((s, r) => s + (r.billStatus === 'not-in-bill' ? 0 : (r.billedTaxable ?? 0)), 0);
+  const billedLabOnly = rows.filter(r => r.section === 'labour').reduce((s, r) => s + (r.billStatus === 'not-in-bill' ? 0 : (r.billedTaxable ?? 0)), 0);
+  const billedPaintOnly = rows.filter(r => r.section === 'paint').reduce((s, r) => s + (r.billStatus === 'not-in-bill' ? 0 : (r.billedTaxable ?? 0)), 0);
+  const billedLabBase = billedLabOnly + billedPaintOnly;
+  const billedMetal = rows.filter(r => r.section === 'parts' && r.partType === 'metal').reduce((s, r) => s + (r.billStatus === 'not-in-bill' ? 0 : (r.billedTaxable ?? 0)), 0);
+  const billedPlastic = rows.filter(r => r.section === 'parts' && r.partType === 'plastic').reduce((s, r) => s + (r.billStatus === 'not-in-bill' ? 0 : (r.billedTaxable ?? 0)), 0);
+  const billedGlass = rows.filter(r => r.section === 'parts' && r.partType === 'glass').reduce((s, r) => s + (r.billStatus === 'not-in-bill' ? 0 : (r.billedTaxable ?? 0)), 0);
+  const billedFbr = rows.filter(r => r.section === 'parts' && r.partType === 'fiberglass').reduce((s, r) => s + (r.billStatus === 'not-in-bill' ? 0 : (r.billedTaxable ?? 0)), 0);
+
+  const col2PartsBase = isBillCheck ? billedPartsBase : estPartsBase;
+  const col2Metal = isBillCheck ? billedMetal : estMetal;
+  const col2Plastic = isBillCheck ? billedPlastic : estPlastic;
+  const col2Glass = isBillCheck ? billedGlass : estGlass;
+  const col2Fbr = isBillCheck ? billedFbr : estFbr;
+  const col2LabOnly = isBillCheck ? billedLabOnly : estLabOnly;
+  const col2PaintOnly = isBillCheck ? billedPaintOnly : estPaintOnly;
+  const col2LabBase = isBillCheck ? billedLabBase : estLabBase;
 
   // Section 9's Assessed column prints the pre-depreciation figure, so its
   // subtotal must too. The engine only exposes post-depreciation totals, which
@@ -408,7 +428,7 @@ export function buildStandardFinalSurveyHTML(
       <td style="${tdsr9}">${serials.get(r.id) ?? 0}</td>
       <td style="${td9}">${partLabel(r)}</td>
       <td style="${td9}text-align:center;">${r.partType === 'plastic' ? 'Pla/Rub' : r.partType === 'fiberglass' ? 'FbrGls' : r.partType.charAt(0).toUpperCase() + r.partType.slice(1)}</td>
-      <td style="${tdr9}">${isBillCheck && r.billStatus === 'not-in-bill' ? 'No Bill' : m9(r.estimated)}</td>
+      <td style="${tdr9}">${isBillCheck && r.billStatus === 'not-in-bill' ? 'No Bill' : m9(isBillCheck ? (r.billedTaxable ?? r.estimated) : r.estimated)}</td>
       <td style="${tdr9}${disallowed ? 'color:#a00;font-weight:700;font-size:6.5pt;text-align:center;' : ''}">${disallowed ? 'NOT ALLOWED' : m9(r.assessed)}</td>
       <td style="${tdr9}${r.depOverride !== undefined ? 'color:#b45309;' : ''}">${depLabel}</td>
       ${matCell('metal')}
@@ -460,7 +480,7 @@ export function buildStandardFinalSurveyHTML(
       <td style="${tdsr9}">${serials.get(r.id) ?? 0}</td>
       <td style="${td9}">${partLabel(r)}</td>
       <td style="${td9}text-align:center;">${typeLabel}</td>
-      <td style="${tdr9}">${isBillCheck && r.billStatus === 'not-in-bill' ? 'No Bill' : m9(r.estimated)}</td>
+      <td style="${tdr9}">${isBillCheck && r.billStatus === 'not-in-bill' ? 'No Bill' : m9(isBillCheck ? (r.billedTaxable ?? r.estimated) : r.estimated)}</td>
       <td style="${tdr9}${disallowed ? 'color:#a00;font-weight:700;font-size:6.5pt;text-align:center;' : ''}">${disallowed ? 'NOT ALLOWED' : m9(r.assessed)}</td>
       <td style="${tdr9}text-align:center;${r.depOverride !== undefined ? 'color:#b45309;' : ''}">${depLabel}</td>
       <td colspan="${NMAT}" style="${tdr9}">${disallowed ? '—' : m9(netBeforeGst)}</td>
@@ -658,7 +678,7 @@ export function buildStandardFinalSurveyHTML(
     <td style="${td}color:#444;font-size:${scale.labelFont};">Total Bill Amount (incl. GST)</td>
     <td style="${td}font-weight:700;">₹ ${fmt2(bc?.billTotal || 0)}</td>
     <td style="${td}color:#444;font-size:${scale.labelFont};">Allowed by this Report (incl. GST)</td>
-    <td style="${td}font-weight:700;">₹ ${fmt2(grand)}</td>
+    <td style="${td}font-weight:700;">₹ ${fmt2(net)}</td>
   </tr>
 </table>`;
 
@@ -779,15 +799,15 @@ ${isBillCheck ? '' : '\n' + causeSectionHtml}
   <tbody>
     <tr>
       <td style="${td}">Spare Parts</td>
-      <td style="${tdr}">${fa(estPartsBase)}</td>
+      <td style="${tdr}">${fa(col2PartsBase)}</td>
       <td style="${tdr}">${fa(pb)}</td>
       <td style="${tdr}">${fa(pT)}</td>
     </tr>
     ${[
-      { label: 'Metal', est: estMetal, ass: summary.metalTotal, incl: summary.metalTotalInclGst },
-      { label: 'Plastic / Rubber', est: estPlastic, ass: summary.plasticTotal, incl: summary.plasticTotalInclGst },
-      { label: 'Glass', est: estGlass, ass: summary.glassTotal, incl: summary.glassTotalInclGst },
-      { label: 'Fibre Glass', est: estFbr, ass: summary.fiberglassTotal, incl: summary.fiberglassTotalInclGst },
+      { label: 'Metal', est: col2Metal, ass: summary.metalTotal, incl: summary.metalTotalInclGst },
+      { label: 'Plastic / Rubber', est: col2Plastic, ass: summary.plasticTotal, incl: summary.plasticTotalInclGst },
+      { label: 'Glass', est: col2Glass, ass: summary.glassTotal, incl: summary.glassTotalInclGst },
+      { label: 'Fibre Glass', est: col2Fbr, ass: summary.fiberglassTotal, incl: summary.fiberglassTotalInclGst },
     ].filter(s => s.est > 0 || s.ass > 0).map(s => `
     <tr>
       <td style="${td}padding-left:14pt;color:#555;">↳ ${s.label}</td>
@@ -797,19 +817,19 @@ ${isBillCheck ? '' : '\n' + causeSectionHtml}
     </tr>`).join('')}
     <tr>
       <td style="${td}">Labour</td>
-      <td style="${tdr}">${fa(estLabOnly)}</td>
+      <td style="${tdr}">${fa(col2LabOnly)}</td>
       <td style="${tdr}">${fa(labOnlyBase)}</td>
       <td style="${tdr}">${fa(labT)}</td>
     </tr>
     <tr>
       <td style="${td}">Painting</td>
-      <td style="${tdr}">${fa(estPaintOnly)}</td>
+      <td style="${tdr}">${fa(col2PaintOnly)}</td>
       <td style="${tdr}">${fa(paintOnlyBase)}</td>
       <td style="${tdr}">${fa(paintT)}</td>
     </tr>
     <tr style="background:#e8f5f3;">
       <td style="${td}font-weight:700;">GRAND TOTAL</td>
-      <td style="${tdr}font-weight:700;background:#e8f5f3;">${fa(estPartsBase + estLabBase)}</td>
+      <td style="${tdr}font-weight:700;background:#e8f5f3;">${fa(col2PartsBase + col2LabBase)}</td>
       <td style="${tdr}font-weight:700;background:#e8f5f3;">${fa(pb + labBase)}</td>
       <td style="${tdr}font-weight:700;background:#e8f5f3;">${fa(grand)}</td>
     </tr>
@@ -821,7 +841,7 @@ ${isBillCheck ? '' : '\n' + causeSectionHtml}
     </tr>
     <tr>
       <td style="${td}font-weight:700;">Billed against allowed items</td>
-      <td style="${tdr}font-weight:700;">${fa(estPartsBase + estLabBase - rejectedBilledTotal)}</td>
+      <td style="${tdr}font-weight:700;">${fa(col2PartsBase + col2LabBase - rejectedBilledTotal)}</td>
       <td colspan="2" style="border:0.4pt solid #bbb;"></td>
     </tr>` : ''}
     ${imt23.parts.amount + imt23.labour.amount + imt23.paint.amount > 0 ? `
@@ -841,7 +861,7 @@ ${isBillCheck ? '' : '\n' + causeSectionHtml}
       <td style="${tdr}">( ${fa(salvage)} )</td>
     </tr>
     <tr style="background:#0d1b2a;color:#fff;">
-      <td style="padding:3px 4px;font-weight:700;font-size:8pt;">NET ASSESSED LOSS</td>
+      <td style="padding:3px 4px;font-weight:700;font-size:8pt;">${isBillCheck ? 'NET LIABILITY' : 'NET ASSESSED LOSS'}</td>
       <td colspan="2" style="border:none;"></td>
       <td style="padding:3px 4px;text-align:right;font-weight:700;font-size:8pt;">${fa(net)}</td>
     </tr>
@@ -945,7 +965,7 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
     ${partsHtml}
     <tr>
       <td colspan="3" style="${sub}text-align:right;font-size:${scale.labelFont};">Sub-Total Parts (after dep, before GST)</td>
-      <td style="${sub}text-align:right;">${m9(estPartsBase)}</td>
+      <td style="${sub}text-align:right;">${m9(col2PartsBase)}</td>
       <td style="${sub}text-align:right;">${m9(assessedPartsRaw)}</td>
       <td style="${sub}text-align:center;">—</td>
       <td style="${sub}text-align:right;">${m9(metal)}</td>
@@ -962,7 +982,7 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
     ${labOnlyHtml}
     <tr>
       <td colspan="3" style="${sub}text-align:right;font-size:${scale.labelFont};">Sub-Total Labour (incl. GST)</td>
-      <td style="${sub}text-align:right;">${m9(estLabOnly)}</td>
+      <td style="${sub}text-align:right;">${m9(col2LabOnly)}</td>
       <td style="${sub}text-align:right;">${m9(assessedLabourRaw)}</td>
       <td style="${sub}text-align:center;">—</td>
       <td colspan="${NMAT + 1}" style="${sub}text-align:right;">${m9(labOnlyBase)}</td>
@@ -975,7 +995,7 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
     ${paintHtml}
     <tr>
       <td colspan="3" style="${sub}text-align:right;font-size:${scale.labelFont};">Sub-Total Painting (incl. GST)</td>
-      <td style="${sub}text-align:right;">${m9(estPaintOnly)}</td>
+      <td style="${sub}text-align:right;">${m9(col2PaintOnly)}</td>
       <td style="${sub}text-align:right;">${m9(assessedPaintRaw)}</td>
       <td style="${sub}text-align:center;">—</td>
       <td colspan="${NMAT + 1}" style="${sub}text-align:right;">${m9(paintOnlyBase)}</td>
