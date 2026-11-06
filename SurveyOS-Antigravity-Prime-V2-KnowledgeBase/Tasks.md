@@ -1,7 +1,29 @@
 # Active Tasks
 
-> Last updated: 2026-11-06 by Antigravity (UIIC and Standard Bill Check Calculation Audit & Net Liability Fix)
+> Last updated: 2026-11-06 by Antigravity (Floating Preview Bill Check Parity & Clean Bill Check Header)
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
+
+---
+
+## Done: Floating Preview Bill Check Parity & Clean Bill Check Header (2026-11-06, Antigravity)
+- **Problem Solved:**
+  1. The Bill Check tab header hardcoded "UIIC Bill Check Report", creating misleading branding for general insurer claims (National, New India, Oriental, private insurers).
+  2. The Live Preview floater box (`FloatingReportPreview.tsx`) only supported UIIC Bill Check (`buildUIICBillCheckHTML`); Standard Bill Check (`buildStandardFinalSurveyHTML(..., 'bill-check')`) was completely missing.
+  3. The Live Preview floater had a clunky 48px height minimize button that compromised ergonomics.
+- **Architecture Delivered:**
+  - **Clean Header (`src/components/tabs/bill-check/BillCheckHeader.tsx`):** Changed title from "UIIC Bill Check Report" to the universal "Bill Check Report".
+  - **Live Preview Floater (`src/components/layout/FloatingReportPreview.tsx`):**
+    - Expanded `ReportFormat` to include `std-bill` and `uiic-bill`.
+    - Added Standard Bill Check HTML generation (`buildStandardFinalSurveyHTML(claim, profile, 'bill-check')`) and print gate (`gate('bill-check', ...)`).
+    - Introduced 5-pill toolbar: `Std` | `UIIC` | `Std Bill` | `UIIC Bill` | `Fees`.
+    - Smart auto-detection: when navigating to `bill-check` tab, auto-selects `uiic-bill` for United India claims and `std-bill` for all other insurers.
+    - Removed redundant minimise button, keeping clean Close (`X`) button that docks back into the floating bubble pill.
+- **Verification:**
+  - Added unit test in `src/components/layout/__tests__/FloatingReportPreview.test.tsx` verifying generic title, format tabs (`Std Bill`, `UIIC Bill`), and absence of minimise button.
+  - Full Vitest suite: 281 test files passed, 2,512 tests passed (100% green).
+  - TypeScript compiler (`npx tsc --noEmit`): 0 errors.
+- **Commits on `main`:**
+  - (pending) feat(ui): add standard bill check to live preview floater and clean bill check header
 
 ---
 

@@ -2,6 +2,14 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-06 (Antigravity) — Floating Preview Bill Check Parity & Clean Bill Check Header
+- feat(ui): Added Standard Bill Check preview support to `FloatingReportPreview.tsx` (`buildStandardFinalSurveyHTML(..., 'bill-check')`) with gated print trigger (`gate('bill-check', ...)`).
+- feat(ui): Implemented 5-pill format selector in floating report preview toolbar: `Std` | `UIIC` | `Std Bill` | `UIIC Bill` | `Fees`.
+- feat(ui): Added smart insurer-aware auto-selection when navigating to the Bill Check tab: auto-selects `UIIC Bill` for United India claims and `Std Bill` for other insurers.
+- refactor(ui): Removed the clunky 48px height minimise button from `FloatingReportPreview.tsx`, keeping the clean Close (`X`) button that docks back into the floating bubble pill.
+- refactor(ui): Updated `BillCheckHeader.tsx` to display universal "Bill Check Report" title instead of hardcoded "UIIC Bill Check Report".
+- tests: Added unit test in `src/components/layout/__tests__/FloatingReportPreview.test.tsx`. Vitest suite: 281 test files passed, 2,512 tests passed (100% green). `npx tsc --noEmit` clean (0 errors).
+
 ## 2026-11-06 (Antigravity) — Production Deployment of Standard Bill Check Net Liability Fix
 - deploy: Built Next.js static export (`npm run build`) and deployed to Firebase Hosting (`motorsurveyos-in` and `surveyos-v2-antigravity-in`) on project `surveyos-v2-antigravity-in`.
 - verify: Verified deployed chunk `0es4-_7.7_kel.js` via curl directly on `https://surveyos.in` and `https://motorsurveyos-in.web.app`, confirming `NET LIABILITY` row and reconciled assessed loss calculation are live in production.

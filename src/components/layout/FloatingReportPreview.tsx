@@ -14,15 +14,15 @@ import { getVehicleAgeMonths } from '@/lib/calculations/depreciation';
 import { SpotPrintReport } from '@/components/print/SpotPrintReport';
 import { useReactToPrint } from 'react-to-print';
 import { usePrintGate } from '@/hooks/usePrintGate';
-import { FileText, Printer, X, Minus, GripHorizontal } from 'lucide-react';
+import { FileText, Printer, X, GripHorizontal } from 'lucide-react';
 
-type ReportFormat = 'standard' | 'uiic' | 'spot' | 'bill-check' | 'fee-bill' | 'valuation';
+type ReportFormat = 'standard' | 'uiic' | 'std-bill' | 'uiic-bill' | 'spot' | 'fee-bill' | 'valuation';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function safePos() {
   if (typeof window === 'undefined') return { x: 200, y: 100 };
-  return { x: window.innerWidth - 450, y: window.innerHeight - 620 };
+  return { x: window.innerWidth - 480, y: window.innerHeight - 620 };
 }
 
 function sanitizeReport(html: string): string {
@@ -37,22 +37,21 @@ function sanitizeReport(html: string): string {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function FloatingReportPreview() {
+export function FloatingReportPreview({ defaultOpen = false }: { defaultOpen?: boolean } = {}) {
   const currentClaim = useClaimStore(s => s.currentClaim);
   const profile = useProfileStore(s => s.profile);
   const { activeTab } = useUIStore();
 
-  const [open, setOpen] = useState(false);
-  const [minimised, setMinimised] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [format, setFormat] = useState<ReportFormat>('standard');
   const [html, setHtml] = useState('');
   const [pos, setPos] = useState(safePos);
-  const [size, setSize] = useState({ width: 420, height: 580 });
+  const [size, setSize] = useState({ width: 460, height: 580 });
 
   const dragging = useRef(false);
   const dragOffset = useRef({ x: 0, y: 0 });
   const resizing = useRef(false);
-  const resizeStart = useRef({ x: 0, y: 0, w: 420, h: 580, px: 0, py: 0 });
+  const resizeStart = useRef({ x: 0, y: 0, w: 460, h: 580, px: 0, py: 0 });
   const spotPrintRef = useRef<HTMLDivElement>(null);
   const { gate, gateDialog } = usePrintGate();
 
@@ -75,17 +74,18 @@ export function FloatingReportPreview() {
       if (format !== 'valuation' && format !== 'fee-bill') setFormat('valuation');
     } else {
       if (activeTab === 'bill-check') {
-        setFormat('bill-check');
+        const isUIIC = currentClaim.policy?.insurerName?.toLowerCase().includes('united');
+        setFormat(isUIIC ? 'uiic-bill' : 'std-bill');
       } else if (activeTab === 'reinspection') {
         // UIIC format directly represents Reinspection well
         if (format !== 'standard' && format !== 'uiic') setFormat('uiic');
       } else {
-        if (format === 'bill-check' || format === 'fee-bill' || format === 'valuation') {
+        if (format === 'std-bill' || format === 'uiic-bill' || format === 'fee-bill' || format === 'valuation') {
           setFormat('standard');
         }
       }
     }
-  }, [currentClaim?.id, currentClaim?.surveyType, activeTab]);
+  }, [currentClaim?.id, currentClaim?.surveyType, currentClaim?.policy?.insurerName, activeTab]);
 
   // ── Debounced HTML generation ────────────────────────────────────────────────
   useEffect(() => {
@@ -95,15 +95,12 @@ export function FloatingReportPreview() {
     }
     const timer = setTimeout(() => {
       try {
-        // No summary computed here any more. This block passed `null` for the
-        // registration date, so its vehicle age fell in a different
-        // depreciation bracket than the report's own — and the report printed
-        // a Spare Parts line that disagreed with the rows beneath it. Each
-        // builder now computes its own totals from the claim.
         let out = '';
         if (format === 'uiic') {
           out = buildUIICFinalHTML(currentClaim, profile);
-        } else if (format === 'bill-check') {
+        } else if (format === 'std-bill') {
+          out = buildStandardFinalSurveyHTML(currentClaim, profile, 'bill-check');
+        } else if (format === 'uiic-bill') {
           out = buildUIICBillCheckHTML(currentClaim, profile);
         } else if (format === 'fee-bill') {
           out = buildSpotFeeBillHTML(currentClaim, profile);
@@ -187,7 +184,8 @@ export function FloatingReportPreview() {
       const latest = useClaimStore.getState().currentClaim;
       const fresh = !latest ? null
         : format === 'uiic' ? buildUIICFinalHTML(latest, profile)
-        : format === 'bill-check' ? buildUIICBillCheckHTML(latest, profile)
+        : format === 'std-bill' ? buildStandardFinalSurveyHTML(latest, profile, 'bill-check')
+        : format === 'uiic-bill' ? buildUIICBillCheckHTML(latest, profile)
         : format === 'standard' ? buildStandardFinalSurveyHTML(latest, profile)
         : null;
       const win = window.open('', '_blank');
@@ -197,9 +195,9 @@ export function FloatingReportPreview() {
       win.focus();
       setTimeout(() => win.print(), 300);
     };
-    // 'bill-check' builds the UIIC bill check; fee-bill / valuation print ungated.
     const kind = format === 'uiic' ? 'uiic-final'
-      : format === 'bill-check' ? 'uiic-bill-check'
+      : format === 'uiic-bill' ? 'uiic-bill-check'
+      : format === 'std-bill' ? 'bill-check'
       : format === 'standard' ? 'final'
       : null;
     if (kind) gate(kind, run);
@@ -242,11 +240,10 @@ export function FloatingReportPreview() {
         left: pos.x,
         top: pos.y,
         width: size.width,
-        height: minimised ? 48 : size.height,
+        height: size.height,
         background: 'var(--color-neutral-50)',
         border: '1px solid var(--color-neutral-200)',
         boxShadow: '0 20px 60px color-mix(in srgb, var(--color-neutral-900) 35%, transparent)',
-        transition: minimised ? 'height 0.18s ease' : undefined,
         userSelect: 'none',
       }}
     >
@@ -268,56 +265,43 @@ export function FloatingReportPreview() {
         </span>
 
         {/* Format tabs */}
-        {!minimised && (
-          <div
-            className="flex items-center gap-0.5 rounded-lg p-0.5 flex-shrink-0 bg-white/[0.08]"
-          >
-            {(currentClaim?.surveyType === 'spot'
-                ? (['spot', 'fee-bill'] as const)
-                : currentClaim?.surveyType === 'valuation'
-                ? (['valuation', 'fee-bill'] as const)
-                : (['standard', 'uiic', 'bill-check', 'fee-bill'] as const)).map(f => (
-              <button
-                key={f}
-                onPointerDown={e => e.stopPropagation()}
-                onClick={() => setFormat(f)}
-                className="px-2 py-1 rounded-md text-[9px] font-medium uppercase tracking-wide transition-all"
-                style={{
-                  background: format === f ? 'var(--color-primary)' : 'transparent',
-                  color: format === f ? 'var(--color-neutral-900)' : 'var(--color-neutral-400)',
-                }}
-              >
-                {f === 'standard' ? 'Std' :
-                 f === 'uiic' ? 'UIIC' :
-                 f === 'bill-check' ? 'UIIC Bill Chk' :
-                 f === 'fee-bill' ? 'Fees' :
-                 f === 'valuation' ? 'Valuation' : 'Spot'}
-              </button>
-            ))}
-          </div>
-        )}
+        <div
+          className="flex items-center gap-0.5 rounded-lg p-0.5 flex-shrink-0 bg-white/[0.08]"
+        >
+          {(currentClaim?.surveyType === 'spot'
+              ? (['spot', 'fee-bill'] as const)
+              : currentClaim?.surveyType === 'valuation'
+              ? (['valuation', 'fee-bill'] as const)
+              : (['standard', 'uiic', 'std-bill', 'uiic-bill', 'fee-bill'] as const)).map(f => (
+            <button
+              key={f}
+              onPointerDown={e => e.stopPropagation()}
+              onClick={() => setFormat(f)}
+              className="px-2 py-1 rounded-md text-[9px] font-medium uppercase tracking-wide transition-all"
+              style={{
+                background: format === f ? 'var(--color-primary)' : 'transparent',
+                color: format === f ? 'var(--color-neutral-900)' : 'var(--color-neutral-400)',
+              }}
+            >
+              {f === 'standard' ? 'Std' :
+               f === 'uiic' ? 'UIIC' :
+               f === 'std-bill' ? 'Std Bill' :
+               f === 'uiic-bill' ? 'UIIC Bill' :
+               f === 'fee-bill' ? 'Fees' :
+               f === 'valuation' ? 'Valuation' : 'Spot'}
+            </button>
+          ))}
+        </div>
 
         {/* Print */}
-        {!minimised && (
-          <button
-            onPointerDown={e => e.stopPropagation()}
-            onClick={handlePrint}
-            className="flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-medium uppercase tracking-wide transition-all hover:opacity-80 flex-shrink-0"
-            style={{ background: 'var(--color-primary)', color: 'var(--color-neutral-900)' }}
-          >
-            <Printer size={10} />
-            Print
-          </button>
-        )}
-
-        {/* Minimise */}
         <button
           onPointerDown={e => e.stopPropagation()}
-          onClick={() => setMinimised(m => !m)}
-          className="p-1 rounded transition-colors hover:bg-white/10 flex-shrink-0"
-          style={{ color: 'var(--color-neutral-400)' }}
+          onClick={handlePrint}
+          className="flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-medium uppercase tracking-wide transition-all hover:opacity-80 flex-shrink-0"
+          style={{ background: 'var(--color-primary)', color: 'var(--color-neutral-900)' }}
         >
-          <Minus size={12} />
+          <Printer size={10} />
+          Print
         </button>
 
         {/* Close */}
@@ -332,63 +316,59 @@ export function FloatingReportPreview() {
       </div>
 
       {/* ── Preview area ── */}
-      {!minimised && (
-        <div
-          className="flex-1 overflow-auto"
-          style={{ background: 'var(--color-neutral-100)', position: 'relative' }}
-        >
-          {format === 'spot' ? (
-            <div style={{ padding: 8, zoom }}>
-              <SpotPrintReport ref={spotPrintRef} claim={currentClaim} profile={profile} />
-            </div>
-          ) : sanitizedHtml ? (
-            <iframe
-              key={format}
-              srcDoc={sanitizedHtml}
-              title="Report Preview"
-              style={{
-                border: 'none',
-                display: 'block',
-                zoom,
-                width: '210mm',
-                height: `${Math.ceil(size.height / zoom) + 400}px`,
-              }}
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full">
-              <span className="text-[11px] font-medium text-muted-foreground">
-                Generating preview…
-              </span>
-            </div>
-          )}
-        </div>
-      )}
+      <div
+        className="flex-1 overflow-auto"
+        style={{ background: 'var(--color-neutral-100)', position: 'relative' }}
+      >
+        {format === 'spot' ? (
+          <div style={{ padding: 8, zoom }}>
+            <SpotPrintReport ref={spotPrintRef} claim={currentClaim} profile={profile} />
+          </div>
+        ) : sanitizedHtml ? (
+          <iframe
+            key={format}
+            srcDoc={sanitizedHtml}
+            title="Report Preview"
+            style={{
+              border: 'none',
+              display: 'block',
+              zoom,
+              width: '210mm',
+              height: `${Math.ceil(size.height / zoom) + 400}px`,
+            }}
+          />
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <span className="text-[11px] font-medium text-muted-foreground">
+              Generating preview…
+            </span>
+          </div>
+        )}
+      </div>
 
       {/* ── Resize grip (top-left corner) ── */}
-      {!minimised && (
-        <div
-          onPointerDown={onResizePointerDown}
-          onPointerMove={onResizePointerMove}
-          onPointerUp={onResizePointerUp}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: 22,
-            height: 22,
-            cursor: 'nwse-resize',
-            display: 'flex',
-            alignItems: 'flex-start',
-            justifyContent: 'flex-start',
-            padding: 4,
-            zIndex: 10,
-          }}
-        >
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-            <path d="M1 9L9 1M1 5L5 1M1 1" stroke="var(--color-primary)" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-        </div>
-      )}
+      <div
+        onPointerDown={onResizePointerDown}
+        onPointerMove={onResizePointerMove}
+        onPointerUp={onResizePointerUp}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: 22,
+          height: 22,
+          cursor: 'nwse-resize',
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'flex-start',
+          padding: 4,
+          zIndex: 10,
+        }}
+      >
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+          <path d="M1 9L9 1M1 5L5 1M1 1" stroke="var(--color-primary)" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+      </div>
     </div>
     </>
   );
