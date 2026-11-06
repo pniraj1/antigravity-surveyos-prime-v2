@@ -1,7 +1,44 @@
 # Active Tasks
 
-> Last updated: 2026-11-06 by Antigravity (Sidebar Realignment: Bill Check & Reinspection into Claim Workflow + DELIVERABLES Group)
+> Last updated: 2026-11-06 by Antigravity (Bill Check Financial Summary: Realignment to Assessment Tab Format focusing on Assessed Loss & Net Liability)
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
+
+---
+
+## Done: Bill Check Financial Summary: Realignment to Assessment Tab Format (2026-11-06, Antigravity)
+- **Problem Solved:**
+  - In `BillCheckTab`, the financial summary panel prioritized secondary audit metrics (Workshop Invoice total, difference/variance, and allowed vs. not-in-bill figures) at the top, while the step-by-step calculation showing how the **Assessed Amount** derives the statutory **Net Final Liability** figure was missing.
+  - Surveyors need immediate visibility into the loss assessment engine (Parts base, Material subtypes, Parts GST, Total Parts, Labour base, Labour GST, Total Labour, Painting charges, Total GST, Gross Assessed Loss, Salvage deduction, Policy Excess) to verify insurer liability without mental arithmetic or switching tabs.
+- **Architecture Delivered:**
+  - **Adapted Financial Calculation Panel (`src/components/tabs/bill-check/BillCheckSummaryPanel.tsx`):**
+    - **Zone 1 (Top):** Workshop Invoice Details strip (`billNo`, `billDate`, `billTotal`, and `[✓ Verified against workshop bill]` compliance checkbox).
+    - **Zone 2 (The Core Calculation Engine):** Loss Assessment breakdown adapted from `AssessmentSummary.tsx`:
+      - Sub total: Parts (Taxable)
+      - ↳ Material subtypes (Metal, Plastic / Rubber, Glass, Fibreglass)
+      - ↳ Tax on parts (CGST + SGST)
+      - Final parts assessed amt
+      - Sub total: Labour (Taxable)
+      - ↳ Tax on labour (GST)
+      - Final labour assessed amt
+      - Painting charges (with GST, if present)
+      - Total tax (GST)
+      - **GROSS ASSESSED LOSS** (high-contrast dark banner)
+    - **Zone 3 (Deductions):**
+      - Interactive `SalvageInput` (with `salvageBasis` and rescaled metal basis note)
+      - Less: Policy Excess (`-fmt(excess)`)
+    - **Zone 4 (The Hero Anchor):** **TOTAL LIABILITY** (large bold tabular digits + Indian currency words `RUPEES ... ONLY`).
+    - **Zone 5 (Secondary - Moved Down):** Compact Audit & Reconciliation block:
+      - Workshop Invoice Total vs. Verified in Bill = Variance/Difference
+      - Items Not in Bill (Saving for Insurer)
+      - Capped Variance (if any)
+    - **Zone 6:** Direct action link `[View & Print in Report Center ↗]`.
+  - **Comprehensive Vitest Suite (`src/components/tabs/__tests__/BillCheckSummaryPanel.test.tsx`):**
+    - Added tests asserting all calculation rows (parts, labour, painting, tax, gross assessed loss, excess, salvage, total liability, audit reconciliation variance, and report center navigation).
+- **Verification:**
+  - Full Vitest suite: 287 test files, 2,556 tests passed (100% green).
+  - TypeScript check (`npx tsc --noEmit`): 0 errors.
+  - Production build (`npm run build`): compiled cleanly with 25 static routes prerendered.
+  - Prime <-> Scan impact: None (0 schema drift).
 
 ---
 

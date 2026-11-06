@@ -2,6 +2,16 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-06 (Antigravity) — Bill Check Financial Summary: Realignment to Assessment Tab Format
+- feat(bill-check): Realigned `BillCheckSummaryPanel.tsx` to adapt the proven `AssessmentSummary.tsx` financial table structure, placing primary emphasis on the **Assessed Amount** and step-by-step calculation deriving the statutory **Net Final Liability**.
+- feat(bill-check): Rendered explicit breakdown: Parts taxable base, material subtypes (Metal, Plastic/Rubber, Glass, Fibreglass), Parts GST (CGST + SGST), Final parts assessed, Labour taxable base, Labour GST, Final labour assessed, Painting charges, Total GST, and GROSS ASSESSED LOSS banner.
+- feat(bill-check): Retained interactive `SalvageInput` (with dynamic metal basis rescaling) and Less Policy Excess deductions.
+- feat(bill-check): Maintained prominent hero **TOTAL LIABILITY** block with tabular figures and full Indian currency words (`RUPEES ... ONLY`).
+- feat(bill-check): Moved secondary audit metrics (Workshop Invoice Total vs. Verified in Bill, Difference, and Items Not in Bill / Capped Variance) below the core assessment calculation engine.
+- tests: Added comprehensive test coverage in `src/components/tabs/__tests__/BillCheckSummaryPanel.test.tsx` verifying all assessment calculation rows, hero liability display, and audit reconciliation.
+- verification: Full Vitest suite passed: 287 test files, 2,556 tests (100% green). `npx tsc --noEmit` clean (0 errors). Next.js production build (`npm run build`) passed with 25 routes prerendered. Prime ↔ Scan impact: None (0 drift).
+
+
 ## 2026-11-06 (Antigravity) — Sidebar Navigation Realignment: Bill Check & Reinspection into Claim Workflow
 - feat(nav): Moved `Bill Check` and `Reinspection` from `OUTPUT` into `CLAIM WORKFLOW` in `src/components/layout/sidebar.tsx`, sequenced directly after `Assessment` (`Assessment` → `Bill Check` → `Reinspection`).
 - feat(nav): Renamed sidebar group label `OUTPUT` to `DELIVERABLES` (`Report Center`, `Photo Sheet`, `Survey Fees Bill`, `Insured Report`).
