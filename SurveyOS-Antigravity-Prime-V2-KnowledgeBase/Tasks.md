@@ -23,6 +23,7 @@
   - Extension test suite: 10 test files passed, 124 tests passed (100% green).
   - TypeScript compiler (`npx tsc --noEmit`): 0 errors.
   - Sibling Android App (`SurveyOS Scan`): Unit tests passed (`:app:testDebugUnitTest`) with 0 drift.
+  - **Live Deployment Verified:** Deployed to Firebase Hosting (`motorsurveyos-in`). Verified live chunk `0e3uv-_6it7cw.js` on `https://surveyos.in` and `https://motorsurveyos-in.web.app` containing `OIC Excel`.
 - **Commits on `main`:**
   - `a978f83b` feat(reports): OIC assessment Excel workbook generator and statutory painting translation
   - `8cc072c4` feat(ui): OIC assessment Excel export dialog with statutory painting translation

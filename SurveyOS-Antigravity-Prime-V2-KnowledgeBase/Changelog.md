@@ -2,6 +2,9 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-06 (Antigravity) — Production Deployment of OIC Excel Generator & Portal Mapping
+- deploy: Built Next.js static export (`npm run build`) and deployed to Firebase Hosting (`motorsurveyos-in`) on project `surveyos-v2-antigravity-in`. Verified live chunk `0e3uv-_6it7cw.js` directly on `https://surveyos.in` and `https://motorsurveyos-in.web.app`.
+
 ## 2026-11-05 (Antigravity) — Oriental Insurance (OIC) Assessment Excel Generator & Portal Mapping
 - feat(reports): Implemented OIC assessment Excel workbook builder (`src/lib/reports/oic-assessment-excel.ts`) generating 2-sheet workbook (`Invoice` and `Items`) matching `9400ExcelOICL.xlsx` and official sample report. Implemented statutory painting adapter: splits standard painting into 75% Labour (0% dep) and 25% Plastic (50% dep) yielding the exact statutory 12.5% deduction, while keeping SurveyOS Final Survey Reports 100% pure. Injected exact OIC formula `=ROUND((E{row}-(E{row}*F{row}/100))*(G{row}/100),2)` in Column K.
 - feat(ui): Added `OICExportDialog.tsx` with bill-check verification gate, statutory painting translation preview chip, and auto-filing directly into the claim folder via `saveOrDownloadReport`.
