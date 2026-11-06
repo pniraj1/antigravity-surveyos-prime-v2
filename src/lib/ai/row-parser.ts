@@ -277,7 +277,7 @@ function toItem(r: RawRow, preTax: boolean): { item: Record<string, unknown>; pr
   // Tata prints taxable and total but only half-rates (CGST 9%): the rate is the one standard GST rate that joins them
   const joins = gst === null && printed !== null && num(c.taxable_amount) !== null ? GST_RATES.filter(g => Math.abs(taxable * (1 + g / 100) - printed) <= 1) : [];
   const item = {
-    sr_no: r.sr, description: c.description ?? '', part_number: c.part_number ?? '', hsn_sac: c.hsn_sac ?? '',
+    sr_no: r.sr, description: (c.description ?? '').replace(/\b(CGST|SGST|IGST)\b.*$/i, '').trim(), part_number: c.part_number ?? '', hsn_sac: c.hsn_sac ?? '',
     quantity: /^\d+(\.\d+)?$/.test(c.quantity ?? '') ? Number(c.quantity) : num(c.quantity) ?? 1,   // Maruti prints "2.000"
     unit_price: num(c.unit_price) ?? 0, taxable_amount: taxable,
     cgst_amount: 0, sgst_amount: 0, total_amount: total, gst_percent: gst ?? (joins.length === 1 ? joins[0] : 0), category: '', _page: r.page, type: c.type ?? '',
