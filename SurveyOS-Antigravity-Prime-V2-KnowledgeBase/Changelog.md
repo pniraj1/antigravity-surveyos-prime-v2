@@ -2,6 +2,10 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-06 (Antigravity) — Production Deployment of Floating Preview Bill Check Parity & Clean Bill Check Header
+- deploy: Built Next.js static export (`npm run build`) and deployed to Firebase Hosting (`motorsurveyos-in` and `surveyos-v2-antigravity-in`) on project `surveyos-v2-antigravity-in`.
+- verify: Verified deployed chunk `02eq3bw-3li1l.js` via curl directly on `https://surveyos.in` and `https://motorsurveyos-in.web.app`, confirming 5-pill preview selector with `Std Bill` / `UIIC Bill` and clean `Bill Check Report` header are live in production.
+
 ## 2026-11-06 (Antigravity) — Floating Preview Bill Check Parity & Clean Bill Check Header
 - feat(ui): Added Standard Bill Check preview support to `FloatingReportPreview.tsx` (`buildStandardFinalSurveyHTML(..., 'bill-check')`) with gated print trigger (`gate('bill-check', ...)`).
 - feat(ui): Implemented 5-pill format selector in floating report preview toolbar: `Std` | `UIIC` | `Std Bill` | `UIIC Bill` | `Fees`.

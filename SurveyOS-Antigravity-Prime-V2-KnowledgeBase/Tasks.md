@@ -22,8 +22,10 @@
   - Added unit test in `src/components/layout/__tests__/FloatingReportPreview.test.tsx` verifying generic title, format tabs (`Std Bill`, `UIIC Bill`), and absence of minimise button.
   - Full Vitest suite: 281 test files passed, 2,512 tests passed (100% green).
   - TypeScript compiler (`npx tsc --noEmit`): 0 errors.
+  - Deployed to Firebase Hosting (`motorsurveyos-in` and `surveyos-v2-antigravity-in`) on project `surveyos-v2-antigravity-in`.
+  - Verified live chunk `02eq3bw-3li1l.js` on `https://surveyos.in` and `https://motorsurveyos-in.web.app`.
 - **Commits on `main`:**
-  - (pending) feat(ui): add standard bill check to live preview floater and clean bill check header
+  - `54143d7f` feat(ui): add standard bill check to live preview floater and clean bill check header
 
 ---
 
