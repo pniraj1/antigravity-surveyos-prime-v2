@@ -145,7 +145,7 @@ export function buildUIICFinalHTML(claim: ClaimData, profile: SurveyorProfile | 
   // specimen's "(Part)" / "(Labour)" placeholder only when no code is recorded.
   const codeCell = (b: { hsnSac: string; rate: number }, fallback: 'Part' | 'Labour') =>
     `${b.hsnSac || `(${fallback})`} ${b.rate.toFixed(2)}`;
-  const tow = parseFloat(String(claim.feeBill?.travelExpenses || 0)) || 0; // towing mapped from travelExpenses or 0
+  const tow = parseFloat(String(claim.feeBill?.towingCharges || 0)) || 0;
   const gross = pT + lT + tow;
   const depAmt = effParts - partsDepreciated;
   const salvage = claim.feeBill?.salvageValue || 0;
@@ -647,7 +647,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
     claim.feeBill?.voluntaryExcess ?? 0,
     claim,
   );
-  const tow = parseFloat(String(claim.feeBill?.travelExpenses || 0)) || 0;
+  const tow = parseFloat(String(claim.feeBill?.towingCharges || 0)) || 0;
   const gross = pT + lT + tow;
   const depAmt = effParts - partsDepreciated;
   const salvage    = salvageFigure;
