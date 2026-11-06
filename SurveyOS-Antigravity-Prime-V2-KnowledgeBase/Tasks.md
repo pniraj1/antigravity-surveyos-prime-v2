@@ -1,7 +1,42 @@
 # Active Tasks
 
-> Last updated: 2026-11-06 by Antigravity (Bill Check Financial Summary: Realignment to Assessment Tab Format focusing on Assessed Loss & Net Liability)
+> Last updated: 2026-11-06 by Antigravity (Disconnect Surveyor Travel Expenses from Assessment Vehicle Towing & Permanent Towing Line)
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
+
+---
+
+## Done: Disconnect Surveyor Travel Expenses from Assessment Vehicle Towing & Permanent Towing Line (2026-11-06, Antigravity)
+- **Problem Solved:**
+  - Surveyor travel expenses (`feeBill.travelExpenses`) was historically conflated with vehicle towing charges in parts of the codebase and report builders.
+  - In Indian motor insurance claim assessment, surveyor travel expenses are a professional conveyance disbursement billed by the surveyor to the insurer under the fee bill, whereas vehicle towing charges are an admissible claim loss component incurred by the insured/workshop and settled as part of the vehicle loss assessment.
+  - Conflating them caused surveyor conveyance to leak into vehicle loss or towing to overwrite surveyor travel fees. Furthermore, the Standard Final Survey Report omitted a dedicated permanent towing charges line item in Section 8's assessment summary table.
+- **Architecture Delivered:**
+  - **Clean Domain Model Separation (`src/types/assessment.ts`, `src/types/claim.ts`):**
+    - `feeBill.travelExpenses` strictly remains the surveyor's conveyance fee.
+    - Added dedicated `feeBill.towingCharges?: number` for admissible vehicle towing charges.
+  - **Assessment Engine Wiring (`src/lib/calculations/assessment.ts`):**
+    - `calculateAssessmentSummary` and `calculateBillCheckSummary` now accept `towingCharges: number = 0` as the 8th parameter.
+    - `netAssessedLoss` and `netLiability` calculate as `Math.max(0, grandTotal + towingCharges - salvage - excess)`.
+  - **UI Integration (`src/components/claim/AssessmentSummary.tsx`):**
+    - Added dedicated "Towing charges (admissible)" input in the financial summary section between Gross Assessed Loss and Deductions (Salvage/Excess), updating `feeBill.towingCharges` in real time with currency formatting and zero defaults.
+  - **Statutory Report Alignments:**
+    - **UIIC Final Report (`src/lib/reports/uiic-final-builder.ts`):** Remapped towing charges from `feeBill.towingCharges` (formerly reading `feeBill.travelExpenses`), ensuring clean separation.
+    - **Standard Final Survey Report (`src/lib/reports/standard-report-builder.ts` & `SurveyReportDocument.tsx`):** Added permanent "Add: Towing Charges" line in Section 8 assessment summary table (Option C), formatting the admissible towing amount (or ₹0.00 / Nil if zero) so that parts + labour + towing - salvage - excess exactly sums to Net Assessed Loss.
+  - **Call Sites Alignment:**
+    - Aligned all `calculateAssessmentSummary` call sites across the application:
+      - `src/components/tabs/ReportTab.tsx`: passes `fb?.towingCharges || 0`
+      - `src/lib/reports/irdai-summary-builder.ts`: passes `claim.feeBill?.towingCharges ?? 0`
+      - `src/lib/calculations/insured-report.ts`: passes `fb.towingCharges || 0`
+      - `src/components/claim/AssessmentGrid.tsx`: passes `currentClaim?.feeBill?.towingCharges || 0`
+      - `src/components/claim/AssessmentSummary.tsx`: passes `fb.towingCharges || 0`
+      - `src/components/tabs/BillCheckTab.tsx`: passes `fb?.towingCharges ?? 0`
+  - **Comprehensive Vitest Coverage:**
+    - Dedicated test suite `src/lib/calculations/__tests__/assessment-towing.test.ts` verifying engine calculations with/without towing charges, salvage/excess interactions, and bill-check summary alignment.
+- **Verification:**
+  - Full Vitest suite: all test files pass (100% green).
+  - TypeScript check (`npx tsc --noEmit`): 0 errors.
+  - Production build (`npm run build`): completed cleanly with static prerendering.
+  - Prime ↔ Scan impact: None (0 drift).
 
 ---
 

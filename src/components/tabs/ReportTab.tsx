@@ -145,6 +145,7 @@ export function ReportTab() {
     getCompulsoryExcess(fb),
     fb?.voluntaryExcess || 0,
     currentClaim,
+    fb?.towingCharges || 0,
   );
 
   // Safety fallback for summary values

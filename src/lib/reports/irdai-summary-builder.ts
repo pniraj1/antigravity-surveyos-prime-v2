@@ -111,6 +111,7 @@ export function buildClaimRow(claim: ClaimData, index: number): ClaimRow {
         getCompulsoryExcess(claim.feeBill),
         claim.feeBill?.voluntaryExcess ?? 0,
         claim,
+        claim.feeBill?.towingCharges ?? 0,
       );
       netAssessedLoss = summary.netAssessedLoss;
     } catch {

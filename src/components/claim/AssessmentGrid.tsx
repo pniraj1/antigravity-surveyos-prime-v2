@@ -340,6 +340,7 @@ export function AssessmentGrid() {
     () => calculateAssessmentSummary(
       assessmentRows, ageMonths, depreciationType, 0, 0, 0,
       currentClaim ?? { depreciationType },
+      currentClaim?.feeBill?.towingCharges || 0,
     ),
     [assessmentRows, ageMonths, depreciationType, currentClaim],
   );

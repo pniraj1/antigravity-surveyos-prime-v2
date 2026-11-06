@@ -139,6 +139,7 @@ export function computeInsuredFinancialSummary(
     fb.compulsoryExcess || 0,
     fb.voluntaryExcess || 0,
     claim,
+    fb.towingCharges || 0,
   );
   const insurerPays = summary.netAssessedLoss;
 

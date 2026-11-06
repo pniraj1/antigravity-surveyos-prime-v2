@@ -2,6 +2,17 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-06 (Antigravity) — Disconnect Surveyor Travel Expenses from Assessment Vehicle Towing & Permanent Towing Line
+- feat(assessment): Disconnected surveyor travel expenses (`feeBill.travelExpenses`) from assessment vehicle towing charges.
+- fix(model): `feeBill.travelExpenses` strictly remains the surveyor's conveyance fee. Dedicated `feeBill.towingCharges` added for admissible vehicle towing.
+- feat(ui): Added "Towing charges (admissible)" input in Assessment tab financial summary (`AssessmentSummary.tsx`).
+- fix(reports): Updated `uiic-final-builder.ts` to map Towing Charges from `feeBill.towingCharges`.
+- feat(reports): Added permanent "Add: Towing Charges" line in Section 8 assessment summary table in `standard-report-builder.ts` and `SurveyReportDocument.tsx`.
+- feat(engine): Updated `assessment.ts` (`calculateAssessmentSummary` and `calculateBillCheckSummary`) to factor towing charges into `netAssessedLoss` and `netLiability`.
+- feat(assessment): Aligned all remaining assessment call sites (`ReportTab.tsx`, `irdai-summary-builder.ts`, `insured-report.ts`, `AssessmentGrid.tsx`) to pass `towingCharges`.
+- tests: Added test coverage in `src/lib/calculations/__tests__/assessment-towing.test.ts` covering assessment math, zero-flooring, salvage/excess offsets, and bill check consistency.
+- verification: Full Vitest suite passed (100% green). `npx tsc --noEmit` clean (0 errors). Next.js production build (`npm run build`) passed with all routes prerendered. Prime ↔ Scan impact: None (0 drift).
+
 ## 2026-11-06 (Antigravity) — Bill Check Financial Summary: Realignment to Assessment Tab Format
 - feat(bill-check): Realigned `BillCheckSummaryPanel.tsx` to adapt the proven `AssessmentSummary.tsx` financial table structure, placing primary emphasis on the **Assessed Amount** and step-by-step calculation deriving the statutory **Net Final Liability**.
 - feat(bill-check): Rendered explicit breakdown: Parts taxable base, material subtypes (Metal, Plastic/Rubber, Glass, Fibreglass), Parts GST (CGST + SGST), Final parts assessed, Labour taxable base, Labour GST, Final labour assessed, Painting charges, Total GST, and GROSS ASSESSED LOSS banner.
