@@ -76,7 +76,7 @@ export type ReportMode = 'final' | 'bill-check';
 
 export function buildStandardFinalSurveyHTML(
   claim: ClaimData,
-  profile: SurveyorProfile,
+  profile: SurveyorProfile | null = null,
   mode: ReportMode = 'final'
 ): string {
   const isBillCheck = mode === 'bill-check';
@@ -145,6 +145,8 @@ export function buildStandardFinalSurveyHTML(
     ? resolveBillSalvage(claim.feeBill, claim.assessmentRows || [])
     : (claim.feeBill?.salvageValue ?? 0);
 
+  const towing = parseFloat(String(claim.feeBill?.towingCharges || 0)) || 0;
+
   // Computed from this builder's own ageMonths so the summary block and the
   // material rows beneath it can never disagree.
   const summary = calculateAssessmentSummary(
@@ -155,6 +157,7 @@ export function buildStandardFinalSurveyHTML(
     getCompulsoryExcess(claim.feeBill),
     claim.feeBill?.voluntaryExcess ?? 0,
     claim,
+    towing,
   );
 
   const pb = summary.partsBase;
@@ -168,7 +171,7 @@ export function buildStandardFinalSurveyHTML(
   const volExcess = claim.feeBill?.voluntaryExcess || 0;
   const compExcess = getCompulsoryExcess(claim.feeBill);
   const excess = volExcess + compExcess;
-  const net = Math.max(0, grand - salvage - excess);
+  const net = Math.max(0, grand + towing - salvage - excess);
 
   // The engine already derives every one of these. This file used to compute
   // its own, filtered by `allowed`, and the two drifted — the builder printed
@@ -851,6 +854,11 @@ ${isBillCheck ? '' : '\n' + causeSectionHtml}
       <td style="${tdr}">${fa(imt23.parts.amount + imt23.labour.amount + imt23.paint.amount)}</td>
     </tr>` : ''}
     <tr>
+      <td style="${td}">Add: Towing Charges</td>
+      <td colspan="2" style="border:0.4pt solid #bbb;"></td>
+      <td style="${tdr}">${fa(towing)}</td>
+    </tr>
+    <tr>
       <td style="${td}">Less: Policy Excess</td>
       <td colspan="2" style="border:0.4pt solid #bbb;"></td>
       <td style="${tdr}">( ${fa(excess)} )</td>
@@ -1022,7 +1030,7 @@ ${getSigBlock(profile)}
 
 export function buildStandardPrintDocument(
   claim: ClaimData,
-  profile: SurveyorProfile,
+  profile: SurveyorProfile | null = null,
   mode: ReportMode = 'final'
 ): string {
   const reg = claim.vehicle?.registrationNumber || 'Claim';
@@ -1039,7 +1047,7 @@ export function buildStandardPrintDocument(
 
 export function triggerStandardPrint(
   claim: ClaimData,
-  profile: SurveyorProfile,
+  profile: SurveyorProfile | null = null,
   mode: ReportMode = 'final'
 ): void {
   const html = buildStandardPrintDocument(claim, profile, mode);
@@ -1048,4 +1056,14 @@ export function triggerStandardPrint(
   void saveReportToClaimFolder(claim, fileName, new Blob([html], { type: 'text/html' }), type);
   openPrintWindow(html);
   void promptForPrintedPdf(type);
+}
+
+// ─── Convenience Builder Functions (Parity with UIIC builder) ─────────────────
+
+export function buildStandardFinalHTML(claim: ClaimData, profile: SurveyorProfile | null = null): string {
+  return buildStandardFinalSurveyHTML(claim, profile, 'final');
+}
+
+export function buildStandardBillCheckHTML(claim: ClaimData, profile: SurveyorProfile | null = null): string {
+  return buildStandardFinalSurveyHTML(claim, profile, 'bill-check');
 }

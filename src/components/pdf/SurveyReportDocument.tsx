@@ -242,7 +242,7 @@ export function SurveyReportDocument({ claim }: Props) {
   const salvage = fb.salvageValue || 0;
   const volEx = fb.voluntaryExcess || 0;
   const comEx = getCompulsoryExcess(fb);
-  const tow = fb.travelExpenses || 0;
+  const tow = fb.towingCharges || 0;
   const finalNet = Math.max(0, totalNet + tow - salvage - volEx - comEx);
   const preambleText = (claim.reportPreamble && claim.reportPreamble.trim())
     ? claim.reportPreamble

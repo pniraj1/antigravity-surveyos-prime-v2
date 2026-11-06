@@ -640,14 +640,15 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
 
   // Financial summary, mirroring section 8 of the standard report. Reads the
   // same engine so the two documents cannot disagree.
+  const tow = parseFloat(String(claim.feeBill?.towingCharges || 0)) || 0;
   const asum = calculateAssessmentSummary(
     rows, ageMonths, depType,
     salvageFigure,
     getCompulsoryExcess(claim.feeBill),
     claim.feeBill?.voluntaryExcess ?? 0,
     claim,
+    tow,
   );
-  const tow = parseFloat(String(claim.feeBill?.towingCharges || 0)) || 0;
   const gross = pT + lT + tow;
   const depAmt = effParts - partsDepreciated;
   const salvage    = salvageFigure;
