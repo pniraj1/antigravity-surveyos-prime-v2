@@ -2,6 +2,10 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-06 (Antigravity) — Production Deployment of Volkswagen Group DMS Estimate & Invoice Parser
+- deploy: Built Next.js static export (`npm run build`) and deployed to Firebase Hosting (`motorsurveyos-in` and `surveyos-v2-antigravity-in`) on project `surveyos-v2-antigravity-in`.
+- verify: Verified deployed chunk `0g48r3-g3sb-v.js` via curl directly on `https://motorsurveyos-in.web.app`, confirming `gst base amount`, `amount incl. tax`, `final amount`, `type`, and inline CGST/SGST description stripping are live in production.
+
 ## 2026-11-06 (Antigravity) — Assessment Grid Excel Copy/Paste, Fill-Down & Inline Formula Calculations
 - feat(claim): Added native React `onPaste` handler on `tbody` in `AssessmentSectionTable` and `AssessmentGrid` reading `e.clipboardData.getData('text/plain')`. Replaced permissions-blocked `navigator.clipboard.readText()`.
 - feat(claim): Implemented multi-cell range fill: copying a single value (e.g. `18` or `18%`) and pasting into a column selection fills all cells in that range.

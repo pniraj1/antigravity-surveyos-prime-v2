@@ -418,6 +418,8 @@ export interface BillCheckDetails {
   billTotal: number;
   baseDocument?: 'estimate' | 'final-bill';
   refColumnTitle?: string;
+  verifiedBySurveyor?: boolean;
+  verifiedAt?: string;
 }
 
 export interface BillCheckSummary {
