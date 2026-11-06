@@ -2,6 +2,12 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-06 (Antigravity) — UIIC Bill Check Net Liability Calculation Reconciliation
+- fix(reports): Reconciled UIIC Bill Check Net Liability calculation in `src/lib/reports/uiic-final-builder.ts` (`buildUIICBillCheckHTML`). Net Liability is now strictly derived as $\text{Total Assessed (After Dep + GST)} - \text{Salvage} - \text{Voluntary Excess} - \text{Compulsory Excess}$.
+- fix(reports): Removed misleading `Total Billed by Workshop` row from the Page 2 bottom summary table so the vertical deduction stack cleanly balances from the Assessed gross figure to Net Liability. Updated words amount and Service Hub confirmation block to match `net` exactly.
+- fix(reports): Corrected Page 1 summary table: left column now displays `Towing Charges: ${fa(tow)}` instead of duplicate billed total, and right column displays `Net Liability: ${fa(net)}` reconciling $gross - salvage - excess = net$ without arithmetic discrepancy.
+- tests: Added regression test in `src/lib/reports/__tests__/bill-check-report.test.ts`. Full Vitest suite: 280 test files passed, 2,508 tests passed (100% green). `npx tsc --noEmit` clean (0 errors).
+
 ## 2026-11-06 (Antigravity) — Claim Folder Deduplication, Silent Auto-Replace & 3-Touchpoint Allocation
 - feat(documents): Implemented silent auto-replace for single-file document slots (`rc`, `dl`, `policy`, `permit`, `fitness`, `reinspectionReport`, `surveyReport`, etc.) in `src/lib/documents/folder.ts`. Eliminates `(old)`, `(old 2)` file clutter by overwriting files under clean canonical names (`RC Book.pdf`).
 - feat(documents): Added in-folder deduplication in `folder.ts` that checks existing file size and name to skip redundant writes when an identical file already exists on disk. Automatically removes discarded files with previous extensions (e.g. replaced `.html` report with `.pdf`).

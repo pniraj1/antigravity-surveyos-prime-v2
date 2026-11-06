@@ -82,4 +82,23 @@ describe('Bill Check report', () => {
     expect(html).toContain('DentingRear');
     expect(html).toContain('Not');
   });
+
+  test('calculates net liability by reducing salvage and excess from assessed amount after dep and GST, not billed amount', () => {
+    // Assessed 10,000 (10% dep -> 9,000 -> 18% GST -> 10,620.00)
+    // Workshop billed less: 7,000.
+    // Salvage 500, Compulsory Excess 1,000.
+    // Net liability MUST be 10,620 - 500 - 1,000 = 9,120.00 (not calculated from 7,000).
+    const rows = [
+      row({ assessed: 10000, billedTaxable: 7000, billedAmount: 8260, billStatus: 'in-bill' }),
+    ];
+    const c = {
+      ...claim(rows),
+      feeBill: { billSalvage: 500, salvageValue: 500, compulsoryExcess: 1000, voluntaryExcess: 0, travelExpenses: 0 },
+    } as unknown as ClaimData;
+
+    const html = buildUIICBillCheckHTML(c, null);
+    expect(html).toContain('9120.00');
+    expect(html).not.toContain('Total Billed by Workshop');
+    expect(html).toContain('NET LIABILITY (PAYABLE TO WORKSHOP)');
+  });
 });

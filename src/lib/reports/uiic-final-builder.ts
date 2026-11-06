@@ -24,7 +24,7 @@ import { rowDepRate } from '@/lib/calculations/row-dep-rate';
 import { paintMaterialRate } from '@/lib/calculations/depreciation';
 import { imt23Totals, imt23FootnoteText } from '@/lib/calculations/imt23-totals';
 import { aggregateGst } from '@/lib/calculations/gst-bands';
-import { getCompulsoryExcess, calculateBillCheckSummary, calculateAssessmentSummary } from '@/lib/calculations/assessment';
+import { getCompulsoryExcess, calculateAssessmentSummary } from '@/lib/calculations/assessment';
 import { buildSerialMap } from '@/lib/calculations/serial-numbers';
 import { shouldStartSupplementaryBand } from '@/lib/calculations/utils';
 import { buildPrintShell, footerFromProfile, openPrintWindow } from './print-shell';
@@ -655,12 +655,12 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   const compExcess = getCompulsoryExcess(claim.feeBill);
   const net = Math.max(0, gross - salvage - volExcess - compExcess);
 
-  // One calculation, shared with the screen. The two documents cannot diverge.
-  // The old arithmetic here multiplied a GST-inclusive figure by 1.18 and
-  // applied no depreciation, printing a liability ~31% above the true one.
-  const bcSummary = calculateBillCheckSummary(rows, ageMonths, depType, salvage, compExcess, volExcess, claim);
-  const totalBilled = bcSummary.grandTotalBilled + tow;
-  const netBilledLiability = Math.max(0, totalBilled - salvage - volExcess - compExcess);
+
+
+
+
+
+
 
   // Serial numbers come from the same map the Final Report uses, so an item
   // carries one number across both documents.
@@ -881,9 +881,9 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
 <tr><td style="${tdl}width:16%;">Cost of Parts (Assessed)</td><td style="${td}text-align:right;width:17%;">${fa(pT)}</td><td style="${tdl}width:17%;">Vehicle Type</td><td style="${td}width:16%;">${g(v.classOfVehicle || v.bodyType)}</td><td style="${tdl}width:17%;">Assessed Loss</td><td style="${td}text-align:right;width:17%;">${fa(gross)}</td></tr>
 <tr><td style="${tdl}">Labour Charges (Assessed)</td><td style="${td}text-align:right;">${fa(labourAgg.amount)}</td><td style="${tdl}"></td><td style="${td}"></td><td style="${tdl}">Depreciation</td><td style="${td}text-align:right;">${fa(depAmt)}</td></tr>
 <tr><td style="${tdl}">Painting Charges (Assessed)</td><td style="${td}text-align:right;">${fa(paintAgg.amount)}</td><td style="${tdl}"></td><td style="${td}"></td><td style="${tdl}">Salvage</td><td style="${td}text-align:right;">${fa(salvage)}</td></tr>
-<tr><td style="${tdl}">Total Billed by Workshop</td><td style="${td}text-align:right;font-weight:700;">${fa(totalBilled)}</td><td style="${tdl}"></td><td style="${td}"></td><td style="${tdl}">Voluntary / Imposed Excess</td><td style="${td}text-align:right;">${fa(volExcess)}</td></tr>
+<tr><td style="${tdl}">Towing Charges</td><td style="${td}text-align:right;">${fa(tow)}</td><td style="${tdl}"></td><td style="${td}"></td><td style="${tdl}">Voluntary / Imposed Excess</td><td style="${td}text-align:right;">${fa(volExcess)}</td></tr>
 <tr><td style="${tdl}">Gross Assessment</td><td style="${td}text-align:right;">${fa(gross)}</td><td style="${tdl}"></td><td style="${td}"></td><td style="${tdl}">Compulsory Excess</td><td style="${td}text-align:right;">${fa(compExcess)}</td></tr>
-<tr><td style="${tdl}">IDV</td><td style="${td}text-align:right;">${fa(p.idv)}</td><td style="${tdl}">Bill Check Done</td><td style="${td}text-align:center;">YES</td><td style="${tdb}">Net Liability (Billed)</td><td style="${tdb}text-align:right;">${fa(netBilledLiability)}</td></tr>
+<tr><td style="${tdl}">IDV</td><td style="${td}text-align:right;">${fa(p.idv)}</td><td style="${tdl}">Bill Check Done</td><td style="${td}text-align:center;">YES</td><td style="${tdb}">Net Liability</td><td style="${tdb}text-align:right;">${fa(net)}</td></tr>
 </table>`;
 
   // ── PAGE 2: Bill Check Item Table ───────────────────────────────────────────
@@ -1100,26 +1100,26 @@ ${[
 <div style="display:flex;justify-content:flex-end;margin-top:6px;">
 <table style="border-collapse:collapse;font-size:7.5pt;min-width:280px;">
   <tr><td style="${tdl}">Total Assessed (After Dep + GST)</td><td style="${tdb}text-align:right;">₹ ${fa(gross)}</td></tr>
-  <tr><td style="${tdl}">Total Billed by Workshop</td><td style="${tdb}text-align:right;">₹ ${fa(totalBilled)}</td></tr>
+
   <tr><td style="${tdl}">Less: Salvage</td><td style="${td}text-align:right;">₹ ${fa(salvage)}</td></tr>
   <tr><td style="${tdl}">Less: Voluntary / Imposed Excess</td><td style="${td}text-align:right;">₹ ${fa(volExcess)}</td></tr>
   <tr><td style="${tdl}">Less: Compulsory Excess</td><td style="${td}text-align:right;">₹ ${fa(compExcess)}</td></tr>
   <tr style="background:#0D1B2A;">
     <td style="border:0.5pt solid #000;padding:4px 6px;font-weight:700;font-size:8pt;color:#fff;">NET LIABILITY (PAYABLE TO WORKSHOP)</td>
-    <td style="border:0.5pt solid #000;padding:4px 6px;font-weight:700;font-size:9pt;color:#F59E0B;text-align:right;">₹ ${fa(netBilledLiability)}</td>
+    <td style="border:0.5pt solid #000;padding:4px 6px;font-weight:700;font-size:9pt;color:#F59E0B;text-align:right;">₹ ${fa(net)}</td>
   </tr>
 </table>
 </div>
 
 <div style="font-size:6.5pt;color:#555;margin-top:4px;border-top:0.4pt solid #ccc;padding-top:2px;">
-  In words: RUPEES ${numberToWords(netBilledLiability)} ONLY
+  In words: RUPEES ${numberToWords(net)} ONLY
 </div>
 
 ${getSigBlock(profile)}
 
 <div style="text-align:center;font-weight:700;font-size:8pt;border-top:1pt solid #000;padding-top:4px;margin-top:12px;">FOR SERVICE HUB USE</div>
 <div style="font-size:7pt;line-height:1.6;margin-top:3px;">
-  Bill check is carried out. All disallowed items have been excluded. Only allowed items as per Final Survey Report are reflected. Net liability confirmed at Rs. ${fa(netBilledLiability)}.
+  Bill check is carried out. All disallowed items have been excluded. Only allowed items as per Final Survey Report are reflected. Net liability confirmed at Rs. ${fa(net)}.
 </div>
 <div style="font-size:7pt;">NOTE:- UIIC BILL CHECK REPORT AS PER ASSESSMENT SHEET — DISALLOWED ITEMS NOT INCLUDED.</div>
 <div style="display:flex;justify-content:space-between;margin-top:16px;font-size:7pt;">

@@ -1,7 +1,25 @@
 # Active Tasks
 
-> Last updated: 2026-11-06 by Antigravity (Claim Folder Deduplication, Silent Auto-Replace & 3-Touchpoint Allocation)
+> Last updated: 2026-11-06 by Antigravity (UIIC and Standard Bill Check Calculation Audit & Net Liability Fix)
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
+
+---
+
+## Done: UIIC and Standard Bill Check Calculation Audit & Net Liability Fix (2026-11-06, Antigravity)
+- **Problem Solved:**
+  1. In the UIIC Bill Check Report, the Page 2 summary box placed `Total Assessed (After Dep + GST)` at the top, but the deduction formula subtracted salvage and excess from `totalBilled` (derived from `bcSummary.grandTotalBilled`), completely ignoring the Total Assessed row above it.
+  2. Page 1 summary table right column had an arithmetic impossibility ($gross - salvage - excess \ne netBilledLiability$).
+  3. Page 2 displayed two conflicting Net Loss amounts and words (`asum.netAssessedLoss` in Table A vs `netBilledLiability` in Table B).
+  4. Mislabeled `totalBilled` as "Total Billed by Workshop" even though it had vehicle age depreciation applied and was capped at assessed amounts.
+- **Architecture Delivered:**
+  - Reconciled UIIC Bill Check Report (`buildUIICBillCheckHTML` in `src/lib/reports/uiic-final-builder.ts`) to calculate Net Liability strictly as $\text{Total Assessed (After Dep + GST)} - \text{Salvage} - \text{Voluntary Excess} - \text{Compulsory Excess}$.
+  - Removed misleading `Total Billed by Workshop` row from Page 2 summary box so the table balances cleanly from line 1 to net liability.
+  - Reconciled Page 1 summary table, Page 2 words, and Service Hub use block to use `net`.
+  - Audited Standard Bill Check Report and verified its item-level projection (`projectForBillCheck`) cleanly and consistently deducts salvage and excess from Column 4 (`Incl. GST`).
+- **Verification:**
+  - Added regression unit test in `src/lib/reports/__tests__/bill-check-report.test.ts`.
+  - Full Vitest suite: 280 test files passed, 2,508 tests passed (100% green).
+  - TypeScript compiler (`npx tsc --noEmit`): 0 errors.
 
 ---
 
