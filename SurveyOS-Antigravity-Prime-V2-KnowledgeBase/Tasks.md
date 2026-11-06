@@ -20,6 +20,10 @@
   - Added regression unit test in `src/lib/reports/__tests__/bill-check-report.test.ts`.
   - Full Vitest suite: 280 test files passed, 2,508 tests passed (100% green).
   - TypeScript compiler (`npx tsc --noEmit`): 0 errors.
+  - Deployed to Firebase Hosting (`motorsurveyos-in` and `surveyos-v2-antigravity-in`) on project `surveyos-v2-antigravity-in`.
+  - Verified live chunk `0ggmzt3b_5lsd.js` on `https://surveyos.in` and `https://motorsurveyos-in.web.app`.
+- **Commits on `main`:**
+  - `4744d70a` fix(reports): reconcile UIIC bill check net liability calculation from assessed loss
 
 ---
 

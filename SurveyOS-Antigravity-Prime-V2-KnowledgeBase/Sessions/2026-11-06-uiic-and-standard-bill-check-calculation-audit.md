@@ -48,3 +48,10 @@
 - `src/lib/reports/uiic-final-builder.ts` (modified)
 - `src/lib/reports/__tests__/bill-check-report.test.ts` (modified)
 - `C:\Users\Manasi\.gemini\antigravity\brain\10cf1a78-69db-41da-a8c1-96dc06889aa3\bill-check-audit-report.md` (new artifact)
+
+## Production Deployment & Live Verification
+- Static export build: `npm run build` completed cleanly (Next.js 16.2.2 static export to `out/`).
+- Deployed to Firebase Hosting target `motorsurveyos-in` on project `surveyos-v2-antigravity-in`.
+- Deployed to Firebase Hosting target `surveyos-v2-antigravity-in` on project `surveyos-v2-antigravity-in`.
+- Live chunk verification: Queried chunk `0ggmzt3b_5lsd.js` via curl on `https://surveyos.in` and `https://motorsurveyos-in.web.app`, confirming `Towing Charges` and `Less: Voluntary / Imposed Excess` deduction stack are live in production.
+- Git commit on `main`: `4744d70a` pushed to `origin/main`.

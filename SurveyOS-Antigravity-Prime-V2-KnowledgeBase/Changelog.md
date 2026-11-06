@@ -2,6 +2,10 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-06 (Antigravity) — Production Deployment of UIIC Bill Check Net Liability Fix
+- deploy: Built Next.js static export (`npm run build`) and deployed to Firebase Hosting (`motorsurveyos-in` and `surveyos-v2-antigravity-in`) on project `surveyos-v2-antigravity-in`.
+- verify: Verified deployed chunk `0ggmzt3b_5lsd.js` via curl directly on `https://surveyos.in` and `https://motorsurveyos-in.web.app`, confirming `Towing Charges` row and reconciled `Less: Voluntary / Imposed Excess` deduction stack are live in production.
+
 ## 2026-11-06 (Antigravity) — UIIC Bill Check Net Liability Calculation Reconciliation
 - fix(reports): Reconciled UIIC Bill Check Net Liability calculation in `src/lib/reports/uiic-final-builder.ts` (`buildUIICBillCheckHTML`). Net Liability is now strictly derived as $\text{Total Assessed (After Dep + GST)} - \text{Salvage} - \text{Voluntary Excess} - \text{Compulsory Excess}$.
 - fix(reports): Removed misleading `Total Billed by Workshop` row from the Page 2 bottom summary table so the vertical deduction stack cleanly balances from the Assessed gross figure to Net Liability. Updated words amount and Service Hub confirmation block to match `net` exactly.
