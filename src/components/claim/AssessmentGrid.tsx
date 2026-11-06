@@ -21,7 +21,12 @@ import {
 } from '@dnd-kit/core';
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import type { AssessmentRow as AssessmentRowType, AssessmentSection } from '@/types';
-import { parseClipboardValue, buildPasteUpdates } from '@/lib/utils/grid-paste';
+import {
+  parseClipboardValue,
+  buildPasteUpdates,
+  buildMultiLinePasteUpdates,
+  getSelectionClipboardText,
+} from '@/lib/utils/grid-paste';
 import { useGridSelection, clampRangeToSection } from './useGridSelection';
 import { AssessmentSectionTable } from './AssessmentSectionTable';
 import { EstimateViewSwitcher } from './EstimateViewSwitcher';
@@ -112,36 +117,28 @@ export function AssessmentGrid() {
       return;
     }
 
-    // Ctrl+V / Cmd+V: paste clipboard value into selected range
-    if ((e.ctrlKey || e.metaKey) && e.key === 'v' && cellSelection) {
+    // Ctrl+D / Cmd+D: Fill Down top cell value into selected column range
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'd' || e.key === 'D') && cellSelection) {
       e.preventDefault();
-      navigator.clipboard.readText().then(text => {
-        const parsedValue = parseClipboardValue(
-          text,
-          cellSelection.columnKey as keyof AssessmentRowType,
-        );
-        // Confine the paste to the anchor's own section. buildPasteUpdates
-        // walks the array from anchor to focus, and the claim array is
-        // interleaved — without this, pasting down the Parts column writes
-        // into the labour and paint rows sitting between them in the array,
-        // which are not even on screen in that table.
-        const rows = currentClaim?.assessmentRows ?? [];
-        const inRange = rows.filter(r =>
-          clampRangeToSection(rows, cellSelection.anchorRowId, cellSelection.focusRowId).has(r.id));
-        const updates = inRange.length === 0 ? {} : buildPasteUpdates(
-          inRange,
-          inRange[0].id,
-          inRange[inRange.length - 1].id,
-          cellSelection.columnKey as keyof AssessmentRowType,
-          parsedValue,
-        );
-        Object.entries(updates).forEach(([rowId, update]) => {
-          updateAssessmentRow(rowId, update);
-        });
-        setCellSelection(null);
-      }).catch(() => {
-        // Clipboard read denied — silently ignore
-      });
+      const rows = currentClaim?.assessmentRows ?? [];
+      const anchor = rows.find(r => r.id === cellSelection.anchorRowId);
+      if (!anchor) return;
+
+      const sectionRows = rows.filter(r => r.section === anchor.section);
+      const inRangeSet = clampRangeToSection(rows, cellSelection.anchorRowId, cellSelection.focusRowId);
+      const targetRows = sectionRows.filter(r => inRangeSet.has(r.id));
+      if (targetRows.length < 2) return;
+
+      const topRow = targetRows[0];
+      const columnKey = cellSelection.columnKey as keyof AssessmentRowType;
+      const topValue = topRow[columnKey];
+
+      for (let i = 1; i < targetRows.length; i++) {
+        const row = targetRows[i];
+        if (columnKey === 'gst' && row.isDisposal) continue;
+        if (columnKey === 'depOverride' && !row.allowed) continue;
+        updateAssessmentRow(row.id, { [columnKey]: topValue });
+      }
       return;
     }
 
@@ -199,17 +196,100 @@ export function AssessmentGrid() {
         // Extend cell selection on Shift+Up/Down
         if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && nextRowId) {
           const columnKey = (td as HTMLElement).dataset.columnKey;
+          const currentRowId = (tr as HTMLElement).dataset.rowId;
           if (columnKey) {
             setCellSelection(prev =>
               prev && prev.columnKey === columnKey
                 ? { ...prev, focusRowId: nextRowId! }
-                : { columnKey, anchorRowId: nextRowId!, focusRowId: nextRowId! },
+                : { columnKey, anchorRowId: currentRowId ?? nextRowId!, focusRowId: nextRowId! },
             );
           }
         }
       }
     }
   }, [cellSelection, currentClaim?.assessmentRows, updateAssessmentRow]);
+
+  const handleGridPaste = useCallback((e: React.ClipboardEvent<HTMLTableSectionElement>) => {
+    if (!cellSelection) return;
+
+    const text = e.clipboardData.getData('text/plain');
+    if (!text) return;
+
+    const rows = currentClaim?.assessmentRows ?? [];
+    const anchor = rows.find(r => r.id === cellSelection.anchorRowId);
+    if (!anchor) return;
+
+    const sectionRows = rows.filter(r => r.section === anchor.section);
+    const inRangeSet = clampRangeToSection(rows, cellSelection.anchorRowId, cellSelection.focusRowId);
+    const targetRows = sectionRows.filter(r => inRangeSet.has(r.id));
+    const targetRowIds = targetRows.map(r => r.id);
+
+    if (targetRowIds.length === 0) return;
+
+    const rawLines = text
+      .split(/\r?\n/)
+      .map(l => l.trim())
+      .filter(l => l.length > 0);
+
+    if (rawLines.length === 0) return;
+
+    // If only 1 cell selected and 1 line pasted:
+    // If typing in a text field (particulars, remarks, partNumber), allow native caret paste
+    const isSingleCell = targetRowIds.length === 1;
+    const isSingleLine = rawLines.length === 1;
+    const columnKey = cellSelection.columnKey as keyof AssessmentRowType;
+    const textColumns = new Set(['particulars', 'remarks', 'partNumber', 'hsnSac']);
+    const target = e.target as HTMLElement;
+
+    if (isSingleCell && isSingleLine && textColumns.has(columnKey) && target.tagName === 'INPUT') {
+      return;
+    }
+
+    const updates = buildMultiLinePasteUpdates(
+      sectionRows,
+      targetRowIds,
+      columnKey,
+      rawLines,
+    );
+
+    const updateCount = Object.keys(updates).length;
+    if (updateCount > 0) {
+      e.preventDefault();
+      Object.entries(updates).forEach(([rowId, update]) => {
+        updateAssessmentRow(rowId, update);
+      });
+    }
+  }, [cellSelection, currentClaim?.assessmentRows, updateAssessmentRow]);
+
+  const handleGridCopy = useCallback((e: React.ClipboardEvent<HTMLTableSectionElement>) => {
+    if (!cellSelection) return;
+
+    // If user highlighted substring text inside an input, let native copy handle it
+    const windowSel = window.getSelection()?.toString();
+    if (windowSel && windowSel.length > 0) return;
+
+    const rows = currentClaim?.assessmentRows ?? [];
+    const anchor = rows.find(r => r.id === cellSelection.anchorRowId);
+    if (!anchor) return;
+
+    const sectionRows = rows.filter(r => r.section === anchor.section);
+    const inRangeSet = clampRangeToSection(rows, cellSelection.anchorRowId, cellSelection.focusRowId);
+    const targetRows = sectionRows.filter(r => inRangeSet.has(r.id));
+    const targetRowIds = targetRows.map(r => r.id);
+
+    if (targetRowIds.length === 0) return;
+
+    const text = getSelectionClipboardText(
+      sectionRows,
+      targetRowIds,
+      cellSelection.columnKey as keyof AssessmentRowType,
+    );
+
+    if (text) {
+      e.clipboardData.setData('text/plain', text);
+      e.preventDefault();
+    }
+  }, [cellSelection, currentClaim?.assessmentRows]);
 
   const assessmentRows = allRows;
   const [activeEstimateId, setActiveEstimateId] = useState<string | 'all'>('all');
@@ -459,6 +539,8 @@ export function AssessmentGrid() {
                   depreciationType={depreciationType}
                   duplicateParticulars={duplicateParticulars}
                   onGridKeyDown={handleGridNavigation}
+                  onGridPaste={handleGridPaste}
+                  onGridCopy={handleGridCopy}
                 />
               );
             })

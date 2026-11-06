@@ -1,7 +1,27 @@
 # Active Tasks
 
-> Last updated: 2026-11-06 by Antigravity (Volkswagen Group DMS Estimate & Invoice Parser Support)
+> Last updated: 2026-11-06 by Antigravity (Assessment Grid Excel Copy/Paste & Inline Formula Evaluation)
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
+
+---
+
+## Done: Assessment Grid Excel Copy/Paste & Inline Formula Evaluation (2026-11-06, Antigravity)
+- **Problem Solved:**
+  1. **Paste Failed Across Selected Range:** Surveyors select a column range (e.g. 5 rows in GST column) via Shift+Arrow keys to update 0% to 18%, but Ctrl+V failed silently because `AssessmentGrid.tsx` intercepted keydown with `e.preventDefault()` and called `navigator.clipboard.readText()`, which modern browsers block with `NotAllowedError`.
+  2. **Inability to Type Math Expressions:** In standard `<input type="number">`, browsers strictly reject `=`, `+`, `*`, `/`. Surveyors evaluating single item figures (e.g. `=150+200`) were forced to open an external calculator.
+- **Architecture Delivered:**
+  - **Safe Arithmetic Evaluator (`src/lib/utils/formula-eval.ts`):** Safe recursive descent parser supporting `+`, `-`, `*`, `/`, parenthesis, unary minus, and decimals without `eval()`. Rounds to 2 decimal places.
+  - **Formula Numeric Input (`src/components/claim/FormulaNumericInput.tsx`):** Text-capable numeric input that accepts formulas like `=150+200` or `150+200` while editing and evaluates immediately on `Enter` or `blur`.
+  - **Native Clipboard Paste (`Ctrl+V`):** React `onPaste` on `tbody` reading `e.clipboardData.getData('text/plain')`. Works synchronously with zero browser permissions. If 1 value copied, fills all selected cells in range. If multi-line copied from Excel, applies line-by-line down the column.
+  - **Native Clipboard Copy (`Ctrl+C`):** React `onCopy` on `tbody` placing selected cell values on the clipboard separated by newlines.
+  - **Fill Down (`Ctrl+D`):** Classic Excel shortcut in `handleGridNavigation` duplicating the top cell's value down into all selected cells in the section.
+- **Verification:**
+  - Full Vitest suite: 283 test files passed, 2,543 tests passed (100% green).
+  - Production build: `next build` completed in 19.5s with all 25 routes prerendered.
+  - TypeScript compiler (`npx tsc --noEmit`): 0 errors.
+  - Prime <-> Scan impact: None (0 drift).
+- **Commits on `main`:**
+  - `feat(claim): assessment grid excel copy paste fill-down and inline formula calculation`
 
 ---
 

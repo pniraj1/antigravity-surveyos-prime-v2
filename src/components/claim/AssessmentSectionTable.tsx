@@ -15,6 +15,7 @@ import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
 import { CATEGORY_BADGE_LABELS, CATEGORY_BADGE_COLOURS } from '@/lib/constants/deduction-categories';
 import { SmartRemarksCell } from '@/components/claim/SmartRemarksCell';
 import { PartHistoryButton } from '@/components/claim/PartHistoryButton';
+import { FormulaNumericInput } from '@/components/claim/FormulaNumericInput';
 import type { PartType, AssessmentRow as AssessmentRowType, AssessmentSection } from '@/types';
 import type { DeductionCategory } from '@/lib/constants/deduction-categories';
 import type { SectionSubtotal } from '@/lib/calculations/section-subtotals';
@@ -58,6 +59,8 @@ export interface AssessmentSectionTableProps {
   depreciationType: 'standard' | 'nil';
   duplicateParticulars: Set<string>;
   onGridKeyDown: (e: React.KeyboardEvent<HTMLTableSectionElement>) => void;
+  onGridPaste?: (e: React.ClipboardEvent<HTMLTableSectionElement>) => void;
+  onGridCopy?: (e: React.ClipboardEvent<HTMLTableSectionElement>) => void;
 }
 
 /**
@@ -89,6 +92,8 @@ export function AssessmentSectionTable({
   depreciationType,
   duplicateParticulars,
   onGridKeyDown,
+  onGridPaste,
+  onGridCopy,
 }: AssessmentSectionTableProps) {
   const {
     currentClaim,
@@ -221,6 +226,8 @@ export function AssessmentSectionTable({
             className="divide-y divide-border"
             onKeyDown={onGridKeyDown}
             onMouseDown={selection.handleCellMouseDown}
+            onPaste={onGridPaste}
+            onCopy={onGridCopy}
           >
             {rows.length === 0 ? (
               <tr>
@@ -456,42 +463,37 @@ export function AssessmentSectionTable({
                     )}
                     {visible.quantity && (
                       <td className={`px-1 py-1.5${selection.isCellSelected(row.id, 'quantity') ? ' ring-2 ring-blue-400 ring-inset' : ''}`} data-column-key="quantity">
-                        <Input
-                          type="number"
-                          value={row.quantity ?? ''}
-                          onChange={(e) => {
-                            const n = parseInt(e.target.value);
-                            updateAssessmentRow(row.id, { quantity: Number.isNaN(n) ? 1 : n });
-                          }}
+                        <FormulaNumericInput
+                          integerOnly
+                          value={row.quantity ?? 1}
+                          onChange={(val) => updateAssessmentRow(row.id, { quantity: val || 1 })}
                           className="h-7 text-[11px] text-center border-transparent hover:border-input focus:bg-background px-0"
                           placeholder="1"
-                          min="0"
+                          min={0}
                         />
                       </td>
                     )}
                     {visible.unitPrice && (
                       <td className={`px-1 py-1.5${selection.isCellSelected(row.id, 'estimated') ? ' ring-2 ring-blue-400 ring-inset' : ''}`} data-column-key="estimated">
-                        <Input
-                          type="number"
-                          value={row.estimated ?? ''}
-                          onChange={(e) => {
-                            const val = parseFloat(e.target.value) || 0;
+                        <FormulaNumericInput
+                          value={row.estimated ?? 0}
+                          onChange={(val) => {
                             // Estimate only. Assessed is the surveyor's figure
                             // and is never derived from it.
                             updateAssessmentRow(row.id, { estimated: val });
                           }}
                           className="h-7 text-[11px] text-right bg-transparent border-transparent hover:border-input focus:bg-background px-1"
                           placeholder="0.00"
-                          min="0"
+                          min={0}
                         />
                       </td>
                     )}
                     {visible.gst && (
                       <td className={`px-1 py-1.5${selection.isCellSelected(row.id, 'gst') ? ' ring-2 ring-blue-400 ring-inset' : ''}`} data-column-key="gst">
-                        <Input
-                          type="number"
+                        <FormulaNumericInput
+                          integerOnly
                           value={row.isDisposal ? 0 : row.gst}
-                          onChange={(e) => updateAssessmentRow(row.id, { gst: parseInt(e.target.value) || 0 })}
+                          onChange={(val) => updateAssessmentRow(row.id, { gst: val })}
                           disabled={!!row.isDisposal}
                           className="h-7 text-[11px] text-center border-transparent hover:border-input focus:bg-background px-0 disabled:opacity-40 disabled:cursor-not-allowed"
                           placeholder="18"
@@ -544,13 +546,12 @@ export function AssessmentSectionTable({
 
                     {/* ─── Always-on assessment columns ────── */}
                     <td className={`px-1 py-1.5${selection.isCellSelected(row.id, 'assessed') ? ' ring-2 ring-blue-400 ring-inset' : ''}`} data-column-key="assessed">
-                      <Input
-                        type="number"
-                        value={row.assessed ?? ''}
-                        onChange={(e) => updateAssessmentRow(row.id, { assessed: parseFloat(e.target.value) || 0 })}
+                      <FormulaNumericInput
+                        value={row.assessed ?? 0}
+                        onChange={(val) => updateAssessmentRow(row.id, { assessed: val })}
                         className="h-7 text-[11px] text-right font-medium text-primary bg-transparent border-transparent hover:border-input focus:bg-background px-1"
                         placeholder="0.00"
-                        min="0"
+                        min={0}
                       />
                     </td>
                     <td className={`px-1 py-1 text-center${selection.isCellSelected(row.id, 'depOverride') ? ' ring-2 ring-blue-400 ring-inset' : ''}`} data-column-key="depOverride">

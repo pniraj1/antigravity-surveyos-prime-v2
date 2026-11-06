@@ -2,6 +2,17 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-06 (Antigravity) — Assessment Grid Excel Copy/Paste, Fill-Down & Inline Formula Calculations
+- feat(claim): Added native React `onPaste` handler on `tbody` in `AssessmentSectionTable` and `AssessmentGrid` reading `e.clipboardData.getData('text/plain')`. Replaced permissions-blocked `navigator.clipboard.readText()`.
+- feat(claim): Implemented multi-cell range fill: copying a single value (e.g. `18` or `18%`) and pasting into a column selection fills all cells in that range.
+- feat(claim): Implemented multi-line paste: copying rows from Excel applies line-by-line down the active section in `AssessmentGrid`.
+- feat(claim): Added native React `onCopy` handler on `tbody` copying selected cell(s) as newline-delimited text to system clipboard.
+- feat(claim): Added classic Excel Fill Down (`Ctrl+D` / `Cmd+D`) in `handleGridNavigation` duplicating the top cell's value down into all selected cells in the section.
+- feat(claim): Built safe recursive descent arithmetic evaluator `evaluateFormula` in `src/lib/utils/formula-eval.ts` supporting `+`, `-`, `*`, `/`, `()`, unary minus, decimals, and `=`. Safe from code injection (zero `eval()` or `Function()`).
+- feat(claim): Built `FormulaNumericInput` (`src/components/claim/FormulaNumericInput.tsx`) and wired into `assessed`, `estimated`, `quantity`, and `gst` cells. Allows typing math expressions (e.g. `=150+200` or `150+200`), evaluating automatically on `Enter` or `blur`.
+- tests: Added unit tests in `src/lib/utils/__tests__/formula-eval.test.ts` (15 tests), `src/components/claim/__tests__/FormulaNumericInput.test.tsx` (5 tests), and expanded `src/lib/utils/__tests__/grid-paste.test.ts` to 30 tests.
+- verification: Full Vitest suite passed: 283 test files, 2,543 tests (100% green). `npx tsc --noEmit` clean (0 errors). Next.js production build (`npm run build`) passed with 25 routes prerendered.
+
 ## 2026-11-06 (Antigravity) — Volkswagen Group DMS Estimate & Invoice Zero-Token Parser Support
 - feat(ai): Added deterministic zero-token parsing support for Volkswagen Group DMS estimates and invoices in `src/lib/ai/row-parser.ts`.
 - feat(ai): Extended table header detection in `findHeader` to recognize unnumbered column schemas containing `Type` + `Description` + `Qty` + `Amount` (as printed by Volkswagen/Skoda/Audi dealership software).

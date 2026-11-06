@@ -1,5 +1,10 @@
 import { describe, test, expect } from 'vitest';
-import { parseClipboardValue, buildPasteUpdates } from '../grid-paste';
+import {
+  parseClipboardValue,
+  buildPasteUpdates,
+  buildMultiLinePasteUpdates,
+  getSelectionClipboardText,
+} from '../grid-paste';
 import type { AssessmentRow } from '@/types/assessment';
 
 function row(overrides: Partial<AssessmentRow> = {}): AssessmentRow {
@@ -15,6 +20,14 @@ function row(overrides: Partial<AssessmentRow> = {}): AssessmentRow {
 describe('parseClipboardValue', () => {
   test('parses number for gst column', () => {
     expect(parseClipboardValue('18', 'gst')).toBe(18);
+  });
+  test('parses percentage string with % symbol', () => {
+    expect(parseClipboardValue('18%', 'gst')).toBe(18);
+    expect(parseClipboardValue(' 28 % ', 'gst')).toBe(28);
+  });
+  test('parses inline math formula for assessed column', () => {
+    expect(parseClipboardValue('=150+200', 'assessed')).toBe(350);
+    expect(parseClipboardValue('150+200', 'assessed')).toBe(350);
   });
   test('parses float for assessed column', () => {
     expect(parseClipboardValue('1234.5', 'assessed')).toBe(1234.5);
@@ -111,6 +124,64 @@ describe('buildPasteUpdates', () => {
     const updates = buildPasteUpdates(rows, 'r2', 'r2', 'gst', 28);
     expect(Object.keys(updates)).toHaveLength(1);
     expect(updates['r2']).toEqual({ gst: 28 });
+  });
+});
+
+describe('buildMultiLinePasteUpdates', () => {
+  const sectionRows = [
+    row({ id: 'r1', gst: 0, particulars: 'Item 1' }),
+    row({ id: 'r2', gst: 0, particulars: 'Item 2' }),
+    row({ id: 'r3', gst: 0, particulars: 'Item 3', isDisposal: true }),
+    row({ id: 'r4', gst: 0, particulars: 'Item 4' }),
+    row({ id: 'r5', gst: 0, particulars: 'Item 5' }),
+  ];
+
+  test('single line pasted across multiple selected rows updates all rows', () => {
+    const updates = buildMultiLinePasteUpdates(sectionRows, ['r1', 'r2', 'r4'], 'gst', ['18']);
+    expect(updates).toEqual({
+      r1: { gst: 18 },
+      r2: { gst: 18 },
+      r4: { gst: 18 },
+    });
+  });
+
+  test('single line skips disposal row for gst column', () => {
+    const updates = buildMultiLinePasteUpdates(sectionRows, ['r1', 'r2', 'r3', 'r4'], 'gst', ['18']);
+    expect(updates['r3']).toBeUndefined();
+    expect(Object.keys(updates)).toEqual(['r1', 'r2', 'r4']);
+  });
+
+  test('multi-line pasted into single selected cell fills downwards', () => {
+    const updates = buildMultiLinePasteUpdates(sectionRows, ['r2'], 'gst', ['18', '28', '12']);
+    expect(updates).toEqual({
+      r2: { gst: 18 },
+      // r3 is disposal so gst is skipped
+      r4: { gst: 12 },
+    });
+  });
+
+  test('multi-line pasted into range of matching size applies line-by-line', () => {
+    const updates = buildMultiLinePasteUpdates(sectionRows, ['r1', 'r2'], 'particulars', ['Bumper', 'Fender']);
+    expect(updates).toEqual({
+      r1: { particulars: 'Bumper' },
+      r2: { particulars: 'Fender' },
+    });
+  });
+});
+
+describe('getSelectionClipboardText', () => {
+  const sectionRows = [
+    row({ id: 'r1', gst: 18 }),
+    row({ id: 'r2', gst: 28 }),
+    row({ id: 'r3', gst: 18 }),
+  ];
+
+  test('returns single value for single selected cell', () => {
+    expect(getSelectionClipboardText(sectionRows, ['r1'], 'gst')).toBe('18');
+  });
+
+  test('returns newline-separated values for multiple selected cells', () => {
+    expect(getSelectionClipboardText(sectionRows, ['r1', 'r2', 'r3'], 'gst')).toBe('18\n28\n18');
   });
 });
 
