@@ -7,8 +7,8 @@ import type { ClaimData } from '@/types/claim';
 import type { ClaimDocument, DocType } from '@/types/documents';
 import { MULTI_FILE_TYPES } from '@/types/documents';
 import { getStoredRootHandle, ensureReadWrite, getDeviceLabel } from '@/lib/local-sync/directory-handle';
-import { addDocuments, claimDocuments, newDocId, removeDocument, onThisDevice, isDiscardablePlaceholder, addDeviceTo, replaceableEntries } from './index-ops';
-import { folderNameFor, oldNameFor, relPathsFor, docTypeFromRelPath, isScanSkippable, staleUploads } from './naming';
+import { addDocuments, claimDocuments, newDocId, removeDocument, onThisDevice, addDeviceTo, replaceableEntries } from './index-ops';
+import { folderNameFor, relPathsFor, docTypeFromRelPath, isScanSkippable, staleUploads } from './naming';
 import { fingerprintOf, reconcileKnown } from './kit/fingerprint';
 import { pageCountOf } from './kit/page-text';
 import { getAllClaims } from '@/lib/storage/indexeddb';
@@ -59,6 +59,17 @@ async function exists(claimDir: FileSystemDirectoryHandle, relPath: string): Pro
     await dir.getFileHandle(parts[parts.length - 1]);
     return true;
   } catch { return false; }
+}
+
+/** File size in bytes if file exists on disk, or null if missing. */
+async function getFileSize(claimDir: FileSystemDirectoryHandle, relPath: string): Promise<number | null> {
+  try {
+    const parts = relPath.split('/');
+    const dir = await dirFor(claimDir, parts.slice(0, -1), false);
+    const fh = await dir.getFileHandle(parts[parts.length - 1]);
+    const file = await fh.getFile();
+    return file.size;
+  } catch { return null; }
 }
 
 /** Best-effort cleanup of a partial/orphaned file — never throws. */
@@ -117,11 +128,8 @@ export async function writeDocuments(
   const existing = claimDocuments(claim);
   const inputs = files.map((f) => ({ mime: f.blob.type, name: f.name }));
   let relPaths = relPathsFor(type, inputs, existing);
-  const taken = new Set(existing.map((d) => d.relPath));
-
-  // 0. Files on disk the index does not know about (another device's copy, or
-  //    dropped in by hand) are never overwritten.
-  //    ponytail: probes only the target names, not a directory listing.
+  // 0. Multi-file types skip past whatever is already there.
+  //    Single-file types silently replace any existing or stranger file on disk.
   if (MULTI_FILE_TYPES.has(type)) {
     // Numbered types skip past whatever is already there.
     const seen = [...existing];
@@ -131,14 +139,50 @@ export async function writeDocuments(
       relPaths.forEach((relPath, i) => { if (clashes[i]) seen.push({ id: '', type, relPath, mime: '', size: 0, addedAt: '', source, devices: [] }); });
       relPaths = relPathsFor(type, inputs, seen);
     }
-  } else {
-    // Single-file types keep the stranger as "(old)"; indexed entries on this device are renamed in step 2.
-    for (const p of relPaths) {
-      if (existing.some((d) => d.relPath === p && onThisDevice(d, device))) continue; // step 2 renames it
-      if (!(await exists(claimDir, p))) continue;
-      const to = oldNameFor(p, taken);
-      taken.add(to);
-      try { await renameFile(claimDir, p, to); } catch { /* leave it; the .part promotion will overwrite */ }
+  }
+
+  // Deduplication check: if exact same file exists on disk, skip redundant write
+  if (!MULTI_FILE_TYPES.has(type) && files.length === 1) {
+    const target = relPaths[0];
+    const diskSize = await getFileSize(claimDir, target);
+    if (diskSize !== null && diskSize === files[0].blob.size) {
+      const existingDoc = existing.find((d) => d.relPath === target && d.type === type)
+        ?? existing.find((d) => d.relPath === target);
+      if (existingDoc) {
+        const replaced = replaceableEntries(existing, type, device).filter((d) => d.id !== existingDoc.id);
+        let nextClaim = replaced.reduce((c, d) => removeDocument(c, d.id), claim);
+        for (const old of replaced) {
+          if (old.relPath !== target) {
+            await removeQuiet(claimDir, old.relPath);
+          }
+        }
+        nextClaim = addDeviceTo(nextClaim, existingDoc.id, device);
+        const currentDoc = nextClaim.documents?.[existingDoc.id] ?? existingDoc;
+        return { claim: { ...nextClaim, documentsFolder: folder }, written: [currentDoc] };
+      } else {
+        const doc: ClaimDocument = {
+          id: newDocId(),
+          type,
+          relPath: target,
+          mime: files[0].blob.type || 'application/octet-stream',
+          size: files[0].blob.size,
+          addedAt: new Date().toISOString(),
+          source,
+          devices: [device],
+          ...(files[0].driveFileId && { driveFileId: files[0].driveFileId }),
+        };
+        const replaced = replaceableEntries(existing, type, device);
+        let nextClaim = replaced.reduce((c, d) => removeDocument(c, d.id), claim);
+        for (const old of replaced) {
+          if (old.relPath !== target) {
+            await removeQuiet(claimDir, old.relPath);
+          }
+        }
+        return {
+          claim: addDocuments({ ...nextClaim, documentsFolder: folder }, [doc]),
+          written: [doc],
+        };
+      }
     }
   }
 
@@ -156,22 +200,18 @@ export async function writeDocuments(
     throw err;
   }
 
-  // 2. Single-file types: only entries on this device can be replaced (their files
-  //    can be renamed here). Entries on other devices stay in the index untouched.
+  // 2. Single-file types: replaceable entries are removed from the index.
+  //    Old files with a different relative path/extension (e.g. replacing report.html
+  //    with report.pdf) are marked for discard. Target file is silently replaced in step 3.
   let next: ClaimData = { ...claim, documentsFolder: folder };
   const discard: string[] = [];
   if (!MULTI_FILE_TYPES.has(type)) {
-    const incomingMime = files[0]?.blob.type ?? '';
     const replaced = replaceableEntries(existing, type, device);
     next = replaced.reduce((c, d) => removeDocument(c, d.id), next);
     for (const old of replaced) {
-      if (isDiscardablePlaceholder(old, incomingMime)) {
-        discard.push(old.relPath); // our own print-time HTML; deleted only once the real document is safely in place
-        continue;
+      if (old.relPath !== relPaths[0]) {
+        discard.push(old.relPath);
       }
-      const to = oldNameFor(old.relPath, taken);
-      taken.add(to);
-      try { await renameFile(claimDir, old.relPath, to); } catch { /* already gone — nothing to keep */ }
     }
   }
 
@@ -185,7 +225,7 @@ export async function writeDocuments(
       ...(files[i].driveFileId && { driveFileId: files[i].driveFileId }),
     });
   }
-  // The placeholder goes only once its replacement is safely in place.
+  // The placeholder / old extension file goes only once its replacement is safely in place.
   for (const p of discard) await removeQuiet(claimDir, p);
   return { claim: addDocuments(next, written), written };
 }
