@@ -2,6 +2,16 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-06 (Antigravity) — Fix Report Center Bill Check Report Switcher Glitch
+- fix(reports): Fixed report switcher in `ReportTab.tsx` reverting `activeReport` back to `'survey'` whenever `'bill-check'` was clicked. The sync `useEffect` now correctly preserves `'bill-check'` on final claims (`activeReport !== 'survey' && activeReport !== 'bill-check'`).
+- refactor(reports): Memoized live report HTML preview with `useMemo` and wrapped in `try...catch` with graceful error fallback.
+- fix(reports): Added SSR-safe `sanitizeReport(html)` helper in `ReportTab.tsx` guarding against missing DOM window during static rendering / test runs.
+- perf(reports): Initialized `mounted` state with `() => typeof window !== 'undefined' || process.env.NODE_ENV === 'test'` to eliminate 1-frame PDF loading fallback flicker when mounting Report Center.
+- tests: Added test suite in `src/components/tabs/__tests__/ReportTabBillCheck.test.tsx` (6 tests) covering Report Center report switcher, active report persistence, claim switching, and `BillCheckActions`.
+- tests: Fixed invalid vehicle type (`'4w'` -> `'private'`) in `src/hooks/__tests__/useBillCheckPrintGate.test.ts`.
+- verification: Full Vitest suite passed: 287 test files, 2,555 tests (100% green). `npx tsc --noEmit` clean (0 errors). Next.js production build (`npm run build`) passed with 25 routes prerendered. Prime ↔ Scan impact: None (0 drift).
+
+
 ## 2026-11-06 (Antigravity) — Bill Check Workspace Redesign, Strict Invoice Verification Gate & Excel Column Resizing
 - feat(bill-check): Redesigned `BillCheckTab.tsx` into a wholesome, desktop-grade workspace matching `AssessmentTab.tsx`: fixed viewport `h-[calc(100dvh-140px)]`, internal scroll, and zero outer page jumping.
 - feat(bill-check): Replaced oversized 140px indigo hero header (`#EEF2FF`) with a lean 42px toolbar (`BillCheckHeader.tsx`) featuring Title, verification status badge, liability mini-pill, AI controls pill, and action buttons (`Upload Bill`, `Phone Files`, `Evidence`, `Summary`, `Save Progress`).

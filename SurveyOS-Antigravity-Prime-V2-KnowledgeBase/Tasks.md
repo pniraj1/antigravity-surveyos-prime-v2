@@ -1,7 +1,42 @@
 # Active Tasks
 
-> Last updated: 2026-11-06 by Antigravity (Bill Check Workspace Redesign, Strict Pre-Print Gate & Excel Column Resizing)
+> Last updated: 2026-11-06 by Antigravity (Fix Report Center Bill Check Switcher Glitch)
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
+
+---
+
+## Done: Fix Report Center Bill Check Switcher Glitch (2026-11-06, Antigravity)
+- **Problem Solved:**
+  - When clicking "Bill Check Report" in the Report Center (`ReportTab.tsx`), the view glitched or instantly snapped back to "Final Survey Report".
+  - **Root Cause Isolated:** In `ReportTab.tsx`, a `useEffect` synchronized `activeReport` based on `currentClaim.surveyType`:
+    ```ts
+    else if (currentClaim.surveyType === 'final' && activeReport !== 'survey') {
+      setActiveReport('survey');
+    }
+    ```
+    Because `activeReport` was in the effect's dependency array, switching to `activeReport = 'bill-check'` immediately triggered the effect, which found `activeReport !== 'survey'` to be true and forcefully reverted `activeReport` to `'survey'`.
+- **Architecture Delivered:**
+  - **Sync Logic Guard (`ReportTab.tsx`):**
+    - Updated condition to:
+      ```ts
+      else if (type === 'final' && activeReport !== 'survey' && activeReport !== 'bill-check') {
+        setActiveReport('survey');
+      }
+      ```
+      Now preserves `bill-check` when on final claims while still resetting invalid reports if the claim type changes (e.g. from spot to final or vice versa).
+    - Added fallback `const type = currentClaim?.surveyType || 'final';`.
+  - **Memoized & Safe Report Preview (`ReportTab.tsx`):**
+    - Extracted report HTML computation into a memoized `useMemo` block with `try...catch` error handling.
+    - Added SSR/window-safe `sanitizeReport(html)` helper (avoiding Node SSR / static markup errors with DOMPurify).
+    - Initialized `mounted` with `() => typeof window !== 'undefined' || process.env.NODE_ENV === 'test'` to eliminate 1-frame PDF loading flicker on client mount.
+  - **Comprehensive Vitest Suite (`ReportTabBillCheck.test.tsx`):**
+    - Added unit tests verifying report switcher renders 'Bill Check Report', active report state transitions, spot claim switching, and `BillCheckActions` format switching.
+    - Fixed `VehicleType` parameter in `useBillCheckPrintGate.test.ts`.
+- **Verification:**
+  - Full Vitest suite: 287 test files passed, 2,555 tests passed (100% green).
+  - Production build: `next build` compiled cleanly in 14.8s with all 25 static routes prerendered.
+  - TypeScript check (`npx tsc --noEmit`): 0 errors.
+  - Prime <-> Scan impact: None (0 schema drift).
 
 ---
 

@@ -3,7 +3,7 @@ import { useClaimStore } from '@/stores/claim-store';
 
 describe('useBillCheckPrintGate logic', () => {
   beforeEach(() => {
-    useClaimStore.getState().newClaim('final', '4w');
+    useClaimStore.getState().newClaim('final', 'private');
   });
 
   it('detects unverified invoice when billNo or billDate is empty', () => {

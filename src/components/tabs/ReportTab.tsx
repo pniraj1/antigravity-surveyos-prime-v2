@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { isNarrowViewport } from '@/lib/navigation/viewport';
 
 import { markOnboarding } from '@/lib/onboarding/rules';
@@ -30,7 +30,16 @@ import { downloadAsWord } from '@/lib/reports/word-export';
 import { footerFromProfile } from '@/lib/reports/print-shell';
 import { preambleFromClaim } from '@/lib/reports/final-survey-preamble';
 import DOMPurify from 'dompurify';
-import { useRef } from 'react';
+
+function sanitizeReport(html: string): string {
+  if (!html || typeof window === 'undefined') return html;
+  return DOMPurify.sanitize(html, {
+    WHOLE_DOCUMENT: true,
+    FORCE_BODY: false,
+    ADD_TAGS: ['style', 'link'],
+    ADD_ATTR: ['style', 'media', 'type'],
+  });
+}
 
 // Tab padding (p-3 each side on phones) + card border + a little slack.
 const PHONE_GUTTER_PX = 40;
@@ -64,7 +73,7 @@ export function ReportTab() {
 
   const { currentClaim, isDirty, updateClaim } = useClaimStore();
   const { profile } = useProfileStore();
-  const [mounted, setMounted] = useState(false);
+  const [mounted, setMounted] = useState(() => typeof window !== 'undefined' || process.env.NODE_ENV === 'test');
 
   const [activeReport, setActiveReport] = useState<ReportType>(
     currentClaim?.surveyType === 'spot' ? 'spot' :
@@ -101,11 +110,12 @@ export function ReportTab() {
 
   useEffect(() => {
     if (currentClaim) {
-      if (currentClaim.surveyType === 'spot' && activeReport !== 'spot') {
+      const type = currentClaim.surveyType || 'final';
+      if (type === 'spot' && activeReport !== 'spot') {
         setActiveReport('spot');
-      } else if (currentClaim.surveyType === 'final' && activeReport !== 'survey') {
+      } else if (type === 'final' && activeReport !== 'survey' && activeReport !== 'bill-check') {
         setActiveReport('survey');
-      } else if (currentClaim.surveyType === 'valuation' && activeReport !== 'valuation') {
+      } else if (type === 'valuation' && activeReport !== 'valuation') {
         setActiveReport('valuation');
       }
     }
@@ -114,8 +124,9 @@ export function ReportTab() {
   if (!currentClaim || !mounted) return <PDFLoadingFallback />;
 
   const availableReports = REPORT_TYPES.filter(rt => {
-    if (currentClaim.surveyType === 'spot') return rt.id === 'spot';
-    if (currentClaim.surveyType === 'valuation') return rt.id === 'valuation';
+    const type = currentClaim?.surveyType || 'final';
+    if (type === 'spot') return rt.id === 'spot';
+    if (type === 'valuation') return rt.id === 'valuation';
     return rt.id === 'survey' || rt.id === 'bill-check';
   });
 
@@ -157,6 +168,28 @@ export function ReportTab() {
   const preambleValue = (currentClaim.reportPreamble && currentClaim.reportPreamble.trim())
     ? currentClaim.reportPreamble
     : defaultPreamble;
+
+  const reportHtml = useMemo(() => {
+    try {
+      if (activeReport === 'survey') {
+        return format === 'uiic'
+          ? buildUIICFinalHTML(currentClaim, profile!)
+          : buildStandardFinalSurveyHTML(currentClaim, profile!);
+      }
+      if (activeReport === 'bill-check') {
+        return format === 'uiic'
+          ? buildUIICBillCheckHTML(currentClaim, profile!)
+          : buildStandardFinalSurveyHTML(currentClaim, profile!, 'bill-check');
+      }
+      if (activeReport === 'valuation') {
+        return buildValuationReportHTML(currentClaim, profile!);
+      }
+      return '';
+    } catch (err) {
+      console.error('[ReportTab] Failed to generate report HTML:', err);
+      return '<div style="padding: 24px; color: #dc2626; font-family: sans-serif;">Failed to generate report preview. Please verify claim and assessment data.</div>';
+    }
+  }, [activeReport, format, currentClaim, profile]);
 
   return (
     <div className="p-3 md:p-6 lg:p-8 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300 h-full flex flex-col">
@@ -341,23 +374,10 @@ export function ReportTab() {
                   </div>
                 )}
                 
-                {activeReport === 'survey' && format === 'standard' && (
-                  <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(buildStandardFinalSurveyHTML(currentClaim, profile!)) }} />
-                )}
-                {activeReport === 'survey' && format === 'uiic' && (
-                  <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(buildUIICFinalHTML(currentClaim, profile!)) }} />
-                )}
-                {activeReport === 'bill-check' && format === 'standard' && (
-                  <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(buildStandardFinalSurveyHTML(currentClaim, profile!, 'bill-check')) }} />
-                )}
-                {activeReport === 'bill-check' && format === 'uiic' && (
-                  <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(buildUIICBillCheckHTML(currentClaim, profile!)) }} />
-                )}
-                {activeReport === 'spot' && (
+                {activeReport === 'spot' ? (
                   <SpotPrintReport claim={currentClaim} profile={profile!} />
-                )}
-                {activeReport === 'valuation' && (
-                  <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(buildValuationReportHTML(currentClaim, profile!)) }} />
+                ) : (
+                  <div dangerouslySetInnerHTML={{ __html: sanitizeReport(reportHtml) }} />
                 )}
               </div>
             </div>
