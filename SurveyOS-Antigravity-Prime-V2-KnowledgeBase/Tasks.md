@@ -1,7 +1,43 @@
 # Active Tasks
 
-> Last updated: 2026-11-06 by Antigravity (Assessment Grid Excel Copy/Paste & Inline Formula Evaluation)
+> Last updated: 2026-11-06 by Antigravity (Bill Check Workspace Redesign, Strict Pre-Print Gate & Excel Column Resizing)
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
+
+---
+
+## Done: Bill Check Workspace Redesign, Strict Pre-Print Gate & Excel Column Resizing (2026-11-06, Antigravity)
+- **Problem Solved:**
+  1. **Disjointed Layout & Endless Scrolling:** `BillCheckTab` was an unconstrained vertical scroll of 7 stacked cards (~3,500px tall) with a massive 140px custom indigo hero banner (`#EEF2FF`), burying the financial summary at the bottom below all table rows. Surveyors verified items in the dark without seeing real-time liability.
+  2. **Bloated Hybrid Tab:** `BillCheckTab` embedded a heavy live multi-page HTML document preview (`BillCheckPreview`) and printing controls, causing slow re-renders on every keystroke.
+  3. **Strict Compliance Requirement:** Ensuring surveyors manually verify `Bill No`, `Bill Date`, and `Total Bill Amount` against the physical/PDF workshop invoice before any report can be printed.
+  4. **Excel-Style Column Resizing:** Surveyors dealing with long part descriptions needed the ability to drag-resize the "Particulars" column in both Assessment and Bill Check grids.
+- **Architecture Delivered:**
+  - **Wholesome Desktop Workspace (`src/components/tabs/BillCheckTab.tsx`):**
+    - Fixed height `h-[calc(100dvh-140px)]` with zero outer page scroll, exactly matching `AssessmentTab.tsx`.
+    - Lean 42px top toolbar (`BillCheckHeader.tsx`) with Title, Invoice verification badge (`✓ Verified` / `⚠️ Unverified`), Liability mini-pill, AI controls pill, `[Upload Bill]`, `[Phone Files]`, `[Evidence]`, `[Summary]`, and `[Save Progress]`.
+    - Horizontal split via `react-resizable-panels` with `[Show/Hide Summary]` toggle and draggable `PanelResizeHandle`.
+  - **Wholesome Summary Card (`src/components/tabs/bill-check/BillCheckSummaryPanel.tsx`):**
+    - Sticky sidebar card matching `AssessmentSummary.tsx`.
+    - Section 1: Workshop Invoice Details (`billNo`, `billDate`, `billTotal`) with an interactive verification checkbox (`verifiedBySurveyor`). Editing any field resets verification.
+    - Section 2: Invoice Reconciliation Math (Total Workshop Bill vs. Allowed in Bill = Variance).
+    - Section 3: Financial Summary & Deductions (Salvage input, Policy Excess, Net Final Liability in figures and words).
+    - Section 4: Quick action link: `[View & Print in Report Center ↗]`.
+  - **Unified Report Center (`src/components/tabs/ReportTab.tsx` & `BillCheckActions.tsx`):**
+    - Added `'bill-check'` to `REPORT_TYPES` in `ReportTab.tsx`.
+    - Single unified deliverable hub: renders live report preview (`buildUIICBillCheckHTML` or `buildStandardFinalSurveyHTML`), Standard vs. UIIC format switcher, Zoom controls, Word export, and Print PDF.
+  - **Strict Pre-Print Compliance Gate (`src/hooks/useBillCheckPrintGate.tsx` & `VerifyInvoiceDetailsDialog.tsx`):**
+    - Blocks printing if `billNo` is blank, `billDate` is missing, `billTotal <= 0`, `verifiedBySurveyor` is false, `pendingRows > 0`, or `blockingFlags > 0`.
+    - Displays interactive `VerifyInvoiceDetailsDialog` allowing on-the-spot verification before printing.
+  - **Excel-Style Column Resizing (`src/hooks/useColumnResize.ts`):**
+    - Lightweight, zero-dependency hook with pointer tracking, clamping (`180px` to `750px`), double-click reset, and `localStorage` persistence.
+    - Wired into `AssessmentSectionTable.tsx` (resizes Parts, Labour, and Painting columns in sync) and `BillCheckGrid.tsx`.
+- **Verification:**
+  - Full Vitest suite: 286 test files passed, 2,549 tests passed (100% green).
+  - Production build: `next build` compiled in 22.0s with all 25 static routes prerendered.
+  - TypeScript check (`npx tsc --noEmit`): 0 errors.
+  - Prime <-> Scan impact: None (0 drift).
+- **Commits on `main`:**
+  - `feat(bill-check): wholesome workspace redesign, strict invoice verification gate, and excel column resizing`
 
 ---
 

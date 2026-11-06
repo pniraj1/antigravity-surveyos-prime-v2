@@ -13,14 +13,14 @@ import { Sparkles, ChevronDown, Zap, Eye, FileText, Wand2, Cpu } from 'lucide-re
 export function ProviderHealthBadge() {
   const { aiProviderHealth } = useUIStore();
   const { profile } = useProfileStore();
-  const provider = profile.aiProvider ?? 'gemini';
+  const provider = profile?.aiProvider ?? 'gemini';
   const healthKey = provider === 'groq' ? 'groq' : 'gemini';
-  const health = aiProviderHealth[healthKey];
+  const health = aiProviderHealth?.[healthKey];
   const providerLabel = provider === 'gemini' ? 'G' : provider === 'nvidia' ? 'NVIDIA' : provider === 'groq' ? 'Q' : provider === 'ollama' ? 'O' : provider;
-  const pick = profile.preferredAI;
+  const pick = profile?.preferredAI;
   const PICK_LABELS = { gemini: 'G', groq: 'Q', nvidia: 'NVIDIA', ollama: 'O' } as const;
   const shortModel = pick && pick !== 'auto'
-    ? `${profile.preferredModel ? profile.preferredModel.split('/').pop() : PICK_LABELS[pick]} first`
+    ? `${profile?.preferredModel ? profile.preferredModel.split('/').pop() : (pick in PICK_LABELS ? PICK_LABELS[pick as keyof typeof PICK_LABELS] : pick)} first`
     : `${providerLabel} · auto`;
 
   const dot = health === 'ok'           ? 'var(--color-status-success)'

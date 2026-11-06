@@ -2,6 +2,21 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-06 (Antigravity) — Bill Check Workspace Redesign, Strict Invoice Verification Gate & Excel Column Resizing
+- feat(bill-check): Redesigned `BillCheckTab.tsx` into a wholesome, desktop-grade workspace matching `AssessmentTab.tsx`: fixed viewport `h-[calc(100dvh-140px)]`, internal scroll, and zero outer page jumping.
+- feat(bill-check): Replaced oversized 140px indigo hero header (`#EEF2FF`) with a lean 42px toolbar (`BillCheckHeader.tsx`) featuring Title, verification status badge, liability mini-pill, AI controls pill, and action buttons (`Upload Bill`, `Phone Files`, `Evidence`, `Summary`, `Save Progress`).
+- feat(bill-check): Redesigned `BillCheckSummaryPanel.tsx` into a sticky sidebar card hosting:
+  1. Workshop Invoice Details (`billNo`, `billDate`, `billTotal`) with surveyor verification toggle (`verifiedBySurveyor`). Editing fields resets verification.
+  2. Invoice Reconciliation math (Workshop Total vs. Allowed in Bill = Variance).
+  3. Metric breakdown, Deductions (with `SalvageInput`), and Net Final Liability.
+  4. Quick navigation link: `[View & Print in Report Center ↗]`.
+- feat(reports): Unified all deliverable generation into **Report Center** (`ReportTab.tsx`). Added `'bill-check'` to `REPORT_TYPES`, rendered live report preview (`buildUIICBillCheckHTML` or `buildStandardFinalSurveyHTML`), and added `BillCheckActions.tsx` (Standard vs. UIIC toggle, zoom controls, Word export, Print PDF).
+- feat(reports): Built strict pre-print compliance gate `useBillCheckPrintGate.tsx` and interactive `VerifyInvoiceDetailsDialog.tsx`. Prevents issuing reports with blank invoice numbers, unverified totals, pending items, or blocking flags.
+- feat(claim): Created zero-dependency Excel-style column resizer hook `useColumnResize.ts` with drag handling (`cursor: col-resize`), width clamping (`180px` to `750px`), double-click reset, and `localStorage` persistence.
+- feat(claim): Wired `useColumnResize` into `AssessmentSectionTable.tsx` (resizing Parts, Labour, and Painting columns in lockstep) and `BillCheckGrid.tsx`.
+- tests: Added unit tests in `src/hooks/__tests__/useColumnResize.test.tsx` (2 tests), `src/hooks/__tests__/useBillCheckPrintGate.test.ts` (2 tests), and `src/components/tabs/__tests__/BillCheckSummaryPanel.test.tsx` (2 tests).
+- verification: Full Vitest suite passed: 286 test files, 2,549 tests (100% green). `npx tsc --noEmit` clean (0 errors). Next.js production build (`npm run build`) completed in 22.0s with all 25 static routes prerendered. Prime ↔ Scan impact: None (0 drift).
+
 ## 2026-11-06 (Antigravity) — Production Deployment of Volkswagen Group DMS Estimate & Invoice Parser
 - deploy: Built Next.js static export (`npm run build`) and deployed to Firebase Hosting (`motorsurveyos-in` and `surveyos-v2-antigravity-in`) on project `surveyos-v2-antigravity-in`.
 - verify: Verified deployed chunk `0g48r3-g3sb-v.js` via curl directly on `https://motorsurveyos-in.web.app`, confirming `gst base amount`, `amount incl. tax`, `final amount`, `type`, and inline CGST/SGST description stripping are live in production.

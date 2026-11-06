@@ -61,6 +61,11 @@ export interface AssessmentSectionTableProps {
   onGridKeyDown: (e: React.KeyboardEvent<HTMLTableSectionElement>) => void;
   onGridPaste?: (e: React.ClipboardEvent<HTMLTableSectionElement>) => void;
   onGridCopy?: (e: React.ClipboardEvent<HTMLTableSectionElement>) => void;
+  particularsWidth?: number;
+  particularsResizeHandleProps?: {
+    onMouseDown: (e: React.MouseEvent) => void;
+    onDoubleClick: () => void;
+  };
 }
 
 /**
@@ -94,6 +99,8 @@ export function AssessmentSectionTable({
   onGridKeyDown,
   onGridPaste,
   onGridCopy,
+  particularsWidth = 350,
+  particularsResizeHandleProps,
 }: AssessmentSectionTableProps) {
   const {
     currentClaim,
@@ -184,7 +191,26 @@ export function AssessmentSectionTable({
               </th>
               <th className="px-2 py-2 font-medium w-10 text-center">Sr</th>
               <th className="px-2 py-2 font-medium w-8 text-center" title="Allowed?"><ShieldAlert size={12} className="mx-auto opacity-50" /></th>
-              <th className="px-2 py-2 font-medium min-w-[350px] w-[40%]">Particulars</th>
+              <th
+                className="px-2 py-2 font-medium relative group select-none"
+                style={{ width: `${particularsWidth}px`, minWidth: `${particularsWidth}px` }}
+              >
+                <div className="flex items-center justify-between">
+                  <span>Particulars</span>
+                  <span className="text-[9px] text-muted-foreground/40 font-mono tracking-normal opacity-0 group-hover:opacity-100 transition-opacity">
+                    {particularsWidth}px
+                  </span>
+                </div>
+                {particularsResizeHandleProps && (
+                  <div
+                    {...particularsResizeHandleProps}
+                    className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-primary/50 active:bg-primary group/handle z-10"
+                    title="Drag to resize column (double-click to reset)"
+                  >
+                    <div className="w-0.5 h-full bg-border group-hover/handle:bg-primary mx-auto transition-colors" />
+                  </div>
+                )}
+              </th>
 
               {/* ─── Optional columns ──────────────────── */}
               {visible.partNumber && <th className="px-2 py-2 font-medium w-24">Part No.</th>}
@@ -330,7 +356,11 @@ export function AssessmentSectionTable({
                       />
                     </td>
                     {/* Particulars — always on — click opens Evidence Viewer */}
-                    <td className={`px-2 py-1.5${selection.isCellSelected(row.id, 'particulars') ? ' ring-2 ring-blue-400 ring-inset' : ''}`} data-column-key="particulars">
+                    <td
+                      className={`px-2 py-1.5${selection.isCellSelected(row.id, 'particulars') ? ' ring-2 ring-blue-400 ring-inset' : ''}`}
+                      data-column-key="particulars"
+                      style={{ width: `${particularsWidth}px`, minWidth: `${particularsWidth}px`, maxWidth: `${particularsWidth}px` }}
+                    >
                       <div className="relative group flex items-start gap-1">
                         {/*
                           A textarea, not an Input: an <input> cannot wrap, so a

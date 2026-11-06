@@ -14,6 +14,7 @@ import { InsuredReportReviewDialog } from '@/components/dialogs/InsuredReportRev
 import type { InsuredReportDraft, InsuredReportStage } from '@/types/insured-report';
 import { SpotActions } from './report/SpotActions';
 import { SurveyActions } from './report/SurveyActions';
+import { BillCheckActions } from './report/BillCheckActions';
 import { PolicyCheckStrip } from '@/components/policy/PolicyCheckStrip';
 import { ProfileGapBanner } from '@/components/onboarding/ProfileGapBanner';
 import { ReportSectionGuide } from '@/components/onboarding/ReportSectionGuide';
@@ -23,7 +24,7 @@ import { ReportSectionGuide } from '@/components/onboarding/ReportSectionGuide';
 import { useReactToPrint } from 'react-to-print';
 import { SpotPrintReport } from '@/components/print/SpotPrintReport';
 import { buildStandardFinalSurveyHTML } from '@/lib/reports/standard-report-builder';
-import { buildUIICFinalHTML } from '@/lib/reports/uiic-final-builder';
+import { buildUIICFinalHTML, buildUIICBillCheckHTML } from '@/lib/reports/uiic-final-builder';
 import { buildValuationReportHTML, buildValuationPrintDocument, triggerValuationPrint } from '@/lib/reports/valuation-report-builder';
 import { downloadAsWord } from '@/lib/reports/word-export';
 import { footerFromProfile } from '@/lib/reports/print-shell';
@@ -46,12 +47,13 @@ function PDFLoadingFallback() {
 }
 
 // ─── Report Types ─────────────────────────────────────────────────────────────
-type ReportType = 'spot' | 'survey' | 'valuation';
+type ReportType = 'spot' | 'survey' | 'bill-check' | 'valuation';
 
 const REPORT_TYPES = [
-  { id: 'spot',      label: 'Spot Report',              icon: <FileText size={16} />, color: '#B91C1C' },
-  { id: 'survey',    label: 'Final Survey Report',      icon: <FileText size={16} />, color: '#0D1B2A' },
-  { id: 'valuation', label: 'Valuation / Break-in',     icon: <FileText size={16} />, color: '#92400E' },
+  { id: 'spot',       label: 'Spot Report',              icon: <FileText size={16} />, color: '#B91C1C' },
+  { id: 'survey',     label: 'Final Survey Report',      icon: <FileText size={16} />, color: '#0D1B2A' },
+  { id: 'bill-check', label: 'Bill Check Report',        icon: <FileText size={16} />, color: '#006838' },
+  { id: 'valuation',  label: 'Valuation / Break-in',     icon: <FileText size={16} />, color: '#92400E' },
 ];
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -114,7 +116,7 @@ export function ReportTab() {
   const availableReports = REPORT_TYPES.filter(rt => {
     if (currentClaim.surveyType === 'spot') return rt.id === 'spot';
     if (currentClaim.surveyType === 'valuation') return rt.id === 'valuation';
-    return rt.id === 'survey';
+    return rt.id === 'survey' || rt.id === 'bill-check';
   });
 
   const ageMonths = getVehicleAgeMonths(
@@ -162,7 +164,7 @@ export function ReportTab() {
 
       <ProfileGapBanner />
 
-      <ReportSectionGuide reportType={activeReport} />
+      {activeReport !== 'bill-check' && <ReportSectionGuide reportType={activeReport} />}
 
       {/* ── Header ───────────────────────────────────────────── */}
       <div className="mb-6 flex items-end justify-between">
@@ -209,6 +211,18 @@ export function ReportTab() {
           <SurveyActions
             claim={currentClaim}
             summary={safeSummary}
+            profile={profile!}
+            format={format}
+            setFormat={setFormat}
+            isExportingWord={isExportingWord}
+            setIsExportingWord={setIsExportingWord}
+            zoom={zoom}
+            setZoom={setZoom}
+          />
+        )}
+        {activeReport === 'bill-check' && (
+          <BillCheckActions
+            claim={currentClaim}
             profile={profile!}
             format={format}
             setFormat={setFormat}
@@ -332,6 +346,12 @@ export function ReportTab() {
                 )}
                 {activeReport === 'survey' && format === 'uiic' && (
                   <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(buildUIICFinalHTML(currentClaim, profile!)) }} />
+                )}
+                {activeReport === 'bill-check' && format === 'standard' && (
+                  <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(buildStandardFinalSurveyHTML(currentClaim, profile!, 'bill-check')) }} />
+                )}
+                {activeReport === 'bill-check' && format === 'uiic' && (
+                  <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(buildUIICBillCheckHTML(currentClaim, profile!)) }} />
                 )}
                 {activeReport === 'spot' && (
                   <SpotPrintReport claim={currentClaim} profile={profile!} />

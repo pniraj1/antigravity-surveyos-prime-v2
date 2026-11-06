@@ -28,6 +28,7 @@ import {
   getSelectionClipboardText,
 } from '@/lib/utils/grid-paste';
 import { useGridSelection, clampRangeToSection } from './useGridSelection';
+import { useColumnResize } from '@/hooks/useColumnResize';
 import { AssessmentSectionTable } from './AssessmentSectionTable';
 import { EstimateViewSwitcher } from './EstimateViewSwitcher';
 import { EstimateTallyBanner } from './EstimateTallyBanner';
@@ -302,6 +303,12 @@ export function AssessmentGrid() {
   const [showUiicSummary, setShowUiicSummary] = useState(false);
   const [showNiaExport, setShowNiaExport] = useState(false);
   const [showOicExport, setShowOicExport] = useState(false);
+  const { width: particularsWidth, resizeHandleProps: particularsResizeHandleProps } = useColumnResize({
+    storageKey: 'surveyos_assessment_particulars_width',
+    defaultWidth: 350,
+    minWidth: 180,
+    maxWidth: 750,
+  });
   // Normalised, not raw: persisted claims can hold 'Nil Depreciation' or odd
   // casing, and the engine already routes through toDepreciationType. A raw
   // 'Standard' would make the engine depreciate paint while the grid's strict
@@ -541,6 +548,8 @@ export function AssessmentGrid() {
                   onGridKeyDown={handleGridNavigation}
                   onGridPaste={handleGridPaste}
                   onGridCopy={handleGridCopy}
+                  particularsWidth={particularsWidth}
+                  particularsResizeHandleProps={particularsResizeHandleProps}
                 />
               );
             })

@@ -22,6 +22,7 @@ import { AllowanceScopeDialog } from '@/components/dialogs/AllowanceScopeDialog'
 import { AllowanceInput } from './AllowanceInput';
 import { billCheckFlags, type BillFlag } from '@/lib/reports/bill-check-flags';
 import { BillCheckFlagMark, BillCheckFlagDetail, BillCheckMatchDetail } from './BillCheckFlagRow';
+import { useColumnResize } from '@/hooks/useColumnResize';
 
 interface Props {
   allRows: AssessmentRow[];
@@ -63,6 +64,12 @@ export function BillCheckGrid({
    */
   const asBilled = (row: AssessmentRow): AssessmentRow =>
     ({ ...row, assessed: billCheckAssessed(row) });
+  const { width: particularsWidth, resizeHandleProps: particularsResizeHandleProps } = useColumnResize({
+    storageKey: 'surveyos_billcheck_particulars_width',
+    defaultWidth: 350,
+    minWidth: 180,
+    maxWidth: 750,
+  });
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [visible, setVisible] = useState<Record<OptionalColumn, boolean>>(DEFAULT_VISIBLE);
   const [showSettings, setShowSettings] = useState(false);
@@ -149,7 +156,7 @@ export function BillCheckGrid({
     const billedTaxCol = visible.billedTaxable ? [COL_WIDTHS.billedTaxable] : [];
     const refSrNoCol = visible.refSrNo ? [COL_WIDTHS.refSrNo] : [];
     const remarksCol = visible.remarks ? [COL_WIDTHS.remarks] : [];
-    return ['32px', '28px', '50px', '2fr', ...detailCols, '100px', '70px', '100px', ...priceWithGstCol, ...billedTaxCol, '120px', ...refSrNoCol, ...remarksCol, '40px'].join(' ');
+    return ['32px', '28px', '50px', `${particularsWidth}px`, ...detailCols, '100px', '70px', '100px', ...priceWithGstCol, ...billedTaxCol, '120px', ...refSrNoCol, ...remarksCol, '40px'].join(' ');
   };
   const gridCols = buildCols();
 
@@ -212,7 +219,19 @@ export function BillCheckGrid({
         </span>
         <span></span>
         <span>Sr.</span>
-        <span>Particulars</span>
+        <span className="relative flex items-center justify-between group pr-2 select-none">
+          <span>Particulars</span>
+          <span className="text-[8px] text-muted-foreground/40 font-mono tracking-normal opacity-0 group-hover:opacity-100 transition-opacity">
+            {particularsWidth}px
+          </span>
+          <div
+            {...particularsResizeHandleProps}
+            className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-primary/50 active:bg-primary group/handle z-10"
+            title="Drag to resize column (double-click to reset)"
+          >
+            <div className="w-0.5 h-full bg-border group-hover/handle:bg-primary mx-auto transition-colors" />
+          </div>
+        </span>
         {visible.partNumber    && <span>Part No.</span>}
         {visible.hsnSac        && <span>HSN/SAC</span>}
         {visible.section       && <span>Section</span>}

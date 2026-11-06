@@ -1,9 +1,14 @@
 'use client';
 
-import { CheckCircle2, Layout, Columns } from 'lucide-react';
-import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
+import React from 'react';
+import { Upload, PanelRightOpen, PanelRightClose, CheckCircle2, AlertTriangle, Receipt } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { SaveProgressButton } from '@/components/sync/SaveProgressButton';
-import type { fmt as FmtType } from './config';
+import { UsePhoneFiles } from '@/components/documents/UsePhoneFiles';
+import { ProviderToggle, DocModeToggle, ModelSelector, ProviderHealthBadge } from '@/components/ai/AIControls';
+import type { DocType } from '@/types/documents';
+
+const INVOICE_TYPES: readonly DocType[] = ['invoice'];
 
 interface BcSummary {
   grandTotalBilled: number;
@@ -14,69 +19,126 @@ interface BcSummary {
 interface Props {
   showEvidence: boolean;
   onToggleEvidence: () => void;
+  showSummary?: boolean;
+  onToggleSummary?: () => void;
   bcSummary: BcSummary;
   claimId: string | null;
-  fmt: typeof FmtType;
+  fmt: (n: number) => string;
+  isProcessing?: boolean;
+  isInvoiceVerified?: boolean;
+  onFileUpload?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onPhoneFile?: (file: File) => void;
 }
 
-export function BillCheckHeader({ showEvidence, onToggleEvidence, bcSummary, claimId, fmt }: Props) {
-  const handleToggle = () => {
-    onToggleEvidence();
-    if (!showEvidence && claimId) {
-      useEvidenceStore.getState().openField(claimId, {
-        docType: 'final-bill',
-        fieldKey: 'bill_items',
-        contextSnippet: 'Reviewing extracted bill items against assessment...',
-      });
-    }
-  };
-
+export function BillCheckHeader({
+  showEvidence,
+  onToggleEvidence,
+  showSummary = true,
+  onToggleSummary = () => {},
+  bcSummary,
+  fmt,
+  isProcessing = false,
+  isInvoiceVerified = false,
+  onFileUpload = () => {},
+  onPhoneFile = () => {},
+}: Props) {
   return (
-    <div
-      className="px-8 py-8 lg:px-12"
-      style={{ background: '#EEF2FF', borderBottom: '1px solid #C7D2FE' }}
-    >
-      <div className="max-w-5xl mx-auto">
-        <div
-          className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-medium uppercase tracking-[0.2em] mb-4 bg-primary/10 text-primary border border-primary/30"
-        >
-          <CheckCircle2 size={11} />
-          Final Bill Verification
+    <div className="flex flex-wrap items-center justify-between gap-2.5 mb-2.5 shrink-0 bg-card border border-border px-3 py-2 rounded-xl shadow-xs">
+      {/* Left side: Title, Invoice Verified Badge, Liability Preview */}
+      <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex items-center gap-1.5">
+          <Receipt size={17} className="text-primary" />
+          <h2 className="text-base font-semibold tracking-tight text-foreground">Bill Check</h2>
         </div>
-        <div className="flex items-center justify-between gap-4">
-          <h1 className="text-2xl lg:text-3xl font-medium mb-2 text-[#1D1D1F]" style={{ letterSpacing: '-0.02em' }}>
-            Bill Check Report
-          </h1>
-          <div className="flex items-center gap-3">
-            <SaveProgressButton className="shadow-lg" />
-            <button
-              onClick={handleToggle}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all shadow-lg"
-              style={{
-                background: showEvidence ? 'var(--color-primary)' : '#E0E7FF',
-                color: showEvidence ? 'var(--color-primary-foreground)' : '#3730A3',
-                border: `1px solid ${showEvidence ? 'var(--color-primary)' : '#A5B4FC'}`,
-              }}
+
+        {/* Verification Status Badge */}
+        {isInvoiceVerified ? (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-emerald-500/10 text-emerald-700 border border-emerald-500/30">
+            <CheckCircle2 size={12} /> Invoice Verified
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-amber-500/10 text-amber-700 border border-amber-500/30">
+            <AlertTriangle size={12} /> Invoice Unverified
+          </span>
+        )}
+
+        {/* Mini Summary Pill */}
+        <div className="inline-flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 border border-border/60 rounded-md px-2.5 py-1">
+          <span>
+            Net Liability: <strong className="text-foreground">{fmt(bcSummary.netLiability)}</strong>
+          </span>
+          <span className="text-border">|</span>
+          <span>
+            Saving: <strong className="text-destructive">-{fmt(bcSummary.notInBillTotal)}</strong>
+          </span>
+        </div>
+      </div>
+
+      {/* Right side: AI controls & Action buttons */}
+      <div className="flex flex-wrap items-center gap-2">
+        {/* AI extraction controls */}
+        <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted/40 border border-border/60 text-xs">
+          <span className="text-[10px] font-medium mr-0.5 text-muted-foreground">AI</span>
+          <ProviderToggle />
+          <DocModeToggle />
+          <ModelSelector />
+          <ProviderHealthBadge />
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          {/* Upload Bill Button */}
+          <div className="relative">
+            <input
+              type="file"
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+              accept="image/*,application/pdf"
+              onChange={onFileUpload}
+              disabled={isProcessing}
+              title="Upload Final Workshop Bill"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 h-8 px-2.5 text-xs"
+              tabIndex={-1}
+              disabled={isProcessing}
             >
-              {showEvidence ? <Layout size={16} /> : <Columns size={16} />}
-              {showEvidence ? 'Full View' : 'Show Evidence'}
-            </button>
+              <Upload size={14} />
+              Upload Bill
+            </Button>
           </div>
-        </div>
-        <p className="text-sm text-[#4B5563]">
-          Verify that items <strong className="text-primary">allowed</strong> in the Final Survey Report are correctly
-          reflected in the workshop&apos;s final bill submitted to the insurer.
-        </p>
-        <div className="flex flex-wrap gap-3 mt-5">
-          <div className="px-3 py-1.5 rounded-full text-xs font-medium bg-status-success/10 text-status-success">
-            Total Billed: {fmt(bcSummary.grandTotalBilled)}
-          </div>
-          <div className="px-3 py-1.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-            Final Liability: {fmt(bcSummary.netLiability)}
-          </div>
-          <div className="px-3 py-1.5 rounded-full text-xs font-medium bg-status-danger/10 text-status-danger">
-            Saving to Insurer: {fmt(bcSummary.notInBillTotal)}
-          </div>
+
+          {/* Use Phone Files */}
+          <UsePhoneFiles
+            types={INVOICE_TYPES}
+            className="h-8 px-2.5 text-xs"
+            disabled={isProcessing}
+            onPick={(file) => void onPhoneFile(file)}
+          />
+
+          {/* Show / Hide Evidence */}
+          <Button
+            variant={showEvidence ? 'secondary' : 'outline'}
+            size="sm"
+            onClick={onToggleEvidence}
+            className={`gap-1.5 h-8 px-2.5 text-xs ${showEvidence ? 'bg-primary/20 text-primary border-primary/30 hover:bg-primary/30' : ''}`}
+          >
+            {showEvidence ? <PanelRightClose size={14} /> : <PanelRightOpen size={14} />}
+            {showEvidence ? 'Hide Evidence' : 'Show Evidence'}
+          </Button>
+
+          {/* Show / Hide Summary */}
+          <Button
+            variant={showSummary ? 'secondary' : 'outline'}
+            size="sm"
+            onClick={onToggleSummary}
+            className={`gap-1.5 h-8 px-2.5 text-xs ${showSummary ? 'bg-primary/20 text-primary border-primary/30 hover:bg-primary/30' : ''}`}
+          >
+            {showSummary ? <PanelRightClose size={14} /> : <PanelRightOpen size={14} />}
+            {showSummary ? 'Hide Summary' : 'Show Summary'}
+          </Button>
+
+          <SaveProgressButton className="h-8 px-2.5 text-xs" />
         </div>
       </div>
     </div>

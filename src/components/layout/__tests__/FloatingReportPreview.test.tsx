@@ -49,10 +49,12 @@ vi.mock('@/stores/ui-store', () => ({
   useUIStore: Object.assign(
     vi.fn(() => ({
       activeTab: 'assessment',
+      aiProviderHealth: {},
     })),
     {
       getState: () => ({
         activeTab: 'assessment',
+        aiProviderHealth: {},
       }),
     }
   ),
@@ -70,7 +72,7 @@ describe('BillCheckHeader', () => {
       />
     );
 
-    expect(html).toContain('Bill Check Report');
+    expect(html).toContain('Bill Check');
     expect(html).not.toContain('UIIC Bill Check Report');
   });
 });
