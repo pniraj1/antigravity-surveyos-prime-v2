@@ -1,7 +1,29 @@
 # Active Tasks
 
-> Last updated: 2026-11-05 by Antigravity (OIC Assessment Excel Template Generation & OIC Portal Fill Extension Mapping)
+> Last updated: 2026-11-06 by Antigravity (Claim Folder Deduplication, Silent Auto-Replace & 3-Touchpoint Allocation)
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
+
+---
+
+## Done: Claim Folder Deduplication, Silent Auto-Replace & 3-Touchpoint Allocation (2026-11-06, Antigravity)
+- **Problem Solved:**
+  1. Clutter from unwanted `(old)`, `(old 2)` file accumulation when re-uploading clearer versions of single-file documents (RC, DL, Policy, reports).
+  2. Redundant re-writes of identical files already existing in the claim folder.
+  3. Visual confusion from legacy `No claim folder · Connect` in `DocumentsTab` alongside the header's `Set Folder`.
+  4. Missing early proactive prompt during claim creation.
+- **Architecture Delivered:**
+  - **Silent Auto-Replace (`src/lib/documents/folder.ts`):** Single-file document slots (`rc`, `dl`, `policy`, `permit`, `fitness`, `surveyReport`, `reinspectionReport`, etc.) silently overwrite/replace in-place with clean canonical names (`RC Book.pdf`), eliminating `(old)` file generation.
+  - **In-Folder Deduplication (`folder.ts`):** Checks existing file size/name before disk writes to skip redundant writes when identical files are present. Old extension files (e.g. replaced `.html` report with `.pdf`) are cleanly removed after new file promotion.
+  - **Clean Documents Tab (Option A) (`src/components/tabs/DocumentsTab.tsx`):** Removed duplicate legacy `FolderLine` (`No claim folder · Connect`) from below the reconciliation hub. Cleaned top actions row to host `AskForDocumentsButton` and `BringPhoneScans`.
+  - **Touchpoint 1 (Proactive Creation) (`src/components/dialogs/NewClaimDialog.tsx`):** Added optional folder picker row in `NewClaimDialog` allowing surveyors to designate their claim folder right during claim creation.
+  - **Touchpoint 3 (Just-in-Time Gate) (`src/components/layout/ClaimFolderPromptDialog.tsx`):** Built accessible `/ui-ux-pro-max` dialog prompting for folder allocation when triggering folder-dependent actions (`Bring phone scans`, `Use phone files`, `Print PDF`) on unallocated claims.
+- **Verification:**
+  - Full Vitest suite: 280 test files passed, 2,507 tests passed (100% green).
+  - TypeScript compiler (`npx tsc --noEmit`): 0 errors.
+  - Sibling Android App (`SurveyOS Scan`): Unit tests passed (`:app:testDebugUnitTest`) with 0 drift.
+- **Commits on `main`:**
+  - `b15909c7` fix(documents): silent auto-replace for single-file slots without (old) clutter
+  - `7b9a0b41` feat(ui): proactive folder allocation in NewClaimDialog and clean DocumentsTab
 
 ---
 

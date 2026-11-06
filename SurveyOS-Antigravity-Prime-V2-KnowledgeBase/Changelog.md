@@ -2,6 +2,16 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-06 (Antigravity) — Claim Folder Deduplication, Silent Auto-Replace & 3-Touchpoint Allocation
+- feat(documents): Implemented silent auto-replace for single-file document slots (`rc`, `dl`, `policy`, `permit`, `fitness`, `reinspectionReport`, `surveyReport`, etc.) in `src/lib/documents/folder.ts`. Eliminates `(old)`, `(old 2)` file clutter by overwriting files under clean canonical names (`RC Book.pdf`).
+- feat(documents): Added in-folder deduplication in `folder.ts` that checks existing file size and name to skip redundant writes when an identical file already exists on disk. Automatically removes discarded files with previous extensions (e.g. replaced `.html` report with `.pdf`).
+- feat(ui): Added proactive folder allocation in `NewClaimDialog.tsx` (Touchpoint 1), allowing surveyors to optionally select a local claim folder right at claim creation.
+- feat(ui): Created `ClaimFolderPromptDialog.tsx` (Touchpoint 3) providing a non-blocking, accessible `/ui-ux-pro-max` dialog prompting for folder allocation when triggering folder actions (`Bring phone scans`, `Use phone files`, `Print PDF`) on unallocated claims.
+- refactor(ui): Streamlined `DocumentsTab.tsx` (Option A) by removing the redundant legacy `<FolderLine>` (`No claim folder · Connect`) from below the reconciliation hub. Cleaned top actions row to host `AskForDocumentsButton` and `BringPhoneScans`.
+- tests: Added 16 new unit tests across `folder-silent-replace.test.ts` (8 tests) and `ClaimFolderPromptDialog.test.tsx` (8 tests). Full Vitest suite: 280 test files passed, 2,507 tests passed (100% green). TypeScript check clean (0 errors).
+- Scan coupling: Verified Android sibling app `../SurveyOS Scan` with `./gradlew :app:testDebugUnitTest` (BUILD SUCCESSFUL, 0 drift).
+
+
 ## 2026-11-06 (Antigravity) — Production Deployment of OIC Excel Generator & Portal Mapping
 - deploy: Built Next.js static export (`npm run build`) and deployed to Firebase Hosting (`motorsurveyos-in`) on project `surveyos-v2-antigravity-in`. Verified live chunk `0e3uv-_6it7cw.js` directly on `https://surveyos.in` and `https://motorsurveyos-in.web.app`.
 
