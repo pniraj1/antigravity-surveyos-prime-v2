@@ -38,3 +38,8 @@ code-review-graph MCP tools BEFORE using Grep/Glob/Read.**
 
 ## Next.js Warning
 This project uses **Next.js 16** with breaking changes. Check `node_modules/next/dist/docs/` before writing code.
+
+## SurveyOS Scan Release Rule (CRITICAL)
+- Before building a Scan release bundle (`./gradlew :app:bundleRelease`), verify `version.properties` has bumped `VERSION_CODE` (strictly > `PLAY_CONSOLE_LAST_USED_CODE`).
+- Never generate a release AAB without incrementing `VERSION_CODE`, or Google Play Console will reject the bundle with "Version code X has already been used".
+- Gradle's release guard in `SurveyOS Scan/app/build.gradle.kts` automatically halts the build if `versionCode <= PLAY_CONSOLE_LAST_USED_CODE`.
