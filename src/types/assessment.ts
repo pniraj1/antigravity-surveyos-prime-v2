@@ -179,7 +179,7 @@ export interface AssessmentSummary {
   voluntaryExcess: number;
   excess: number; // For legacy support/total
   towingCharges: number;
-  netAssessedLoss: number; // max(0, grandTotal - salvage - compulsoryExcess - voluntaryExcess)
+  netAssessedLoss: number; // max(0, grandTotal + towingCharges - salvage - compulsoryExcess - voluntaryExcess)
   netInWords: string;
 
   // ─── Estimated Totals (from Invoice) ────────────────

@@ -31,7 +31,8 @@ export function AssessmentSummary() {
     fb.salvageValue, 
     fb.compulsoryExcess,
     fb.voluntaryExcess,
-    currentClaim
+    currentClaim,
+    fb.towingCharges || 0
   );
 
   // Per-material Parts breakdown (hide materials with nothing on either side)
@@ -184,10 +185,34 @@ export function AssessmentSummary() {
               />
             </div>
           </div>
+
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <Label htmlFor="towing-charges" className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest">
+                Towing charges (admissible)
+              </Label>
+              <span className="text-[10px] text-muted-foreground">Add to assessment</span>
+            </div>
+            <Input
+              id="towing-charges"
+              type="number"
+              min={0}
+              value={fb.towingCharges || ''}
+              onChange={(e) => updateFeeBill({ towingCharges: parseFloat(e.target.value) || 0 })}
+              className="text-right font-medium text-foreground bg-white border-[var(--color-neutral-200)] focus:border-primary transition-all h-9"
+              placeholder="0"
+            />
+          </div>
         </div>
 
         <div className="p-6 bg-white relative">
           <div className="absolute top-0 left-0 w-full h-[2px] bg-[var(--color-neutral-900)]"></div>
+          {summary.towingCharges > 0 && (
+            <div className="flex justify-between items-center text-xs text-muted-foreground pb-2">
+              <span>Includes Towing Charges</span>
+              <span className="font-medium text-foreground">+ {formatCurrency(summary.towingCharges)}</span>
+            </div>
+          )}
           <div className="flex justify-between items-end">
             <div>
               <div className="text-[11px] font-medium text-foreground uppercase tracking-[0.2em] mb-1">TOTAL LIABILITY</div>

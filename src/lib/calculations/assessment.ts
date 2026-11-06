@@ -58,7 +58,7 @@ export function resolveExcessFields(
  * 3. Parts GST: 9% CGST + 9% SGST
  * 4. Labour GST: 18% flat
  * 5. Grand = partsTotal + labourTotal
- * 6. Net = max(0, grand - salvage - excess)
+ * 6. Net = max(0, grand + towing - salvage - excess)
  */
 export function calculateAssessmentSummary(
   rows: AssessmentRow[],
