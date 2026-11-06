@@ -179,6 +179,15 @@ export function getConflictFields(claim: ClaimData): ReconciliationField[] {
   return buildFields(claim).filter(f => f.hasConflict && !f.isDecided);
 }
 
+/**
+ * All fields where extracted sources genuinely disagree, whether decided or not.
+ * Used by the Reconciliation Dialog to keep conflicts visible during the session
+ * so the surveyor can compare documents and toggle options without rows vanishing.
+ */
+export function getAllConflictFields(claim: ClaimData): ReconciliationField[] {
+  return buildFields(claim).filter(f => f.hasConflict);
+}
+
 /** Returns fields where the claim value is unset but all sources unanimously agree. */
 export function getUnanimousFields(claim: ClaimData): ReconciliationField[] {
   return buildFields(claim).filter(

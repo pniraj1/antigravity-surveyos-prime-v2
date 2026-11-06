@@ -34,7 +34,7 @@ import type { ClaimDocument } from '@/types/documents';
 import { TelegramIcon } from '@/components/icons/TelegramIcon';
 import { ProviderHealthBadge, ModelSelector, DocModeToggle, ProviderToggle } from '@/components/ai/AIControls';
 import { ReconciliationDialog } from './reconciliation/ReconciliationDialog';
-import { getConflictFields, getUnanimousFields, ReconciliationField } from '@/lib/ai/reconciliation';
+import { getConflictFields, getAllConflictFields, getUnanimousFields, ReconciliationField } from '@/lib/ai/reconciliation';
 import { toast } from 'sonner';
 import { useState, useMemo, useEffect, useRef } from 'react';
 
@@ -107,6 +107,11 @@ export function DocumentsTab() {
     return getConflictFields(currentClaim);
   }, [currentClaim]);
 
+  const allConflicts = useMemo(() => {
+    if (!currentClaim) return [];
+    return getAllConflictFields(currentClaim);
+  }, [currentClaim]);
+
   // Sync conflict count to store so sidebar can read it
   useEffect(() => {
     setReconciliationConflictCount(conflicts.length);
@@ -132,12 +137,6 @@ export function DocumentsTab() {
     toast.success(`${unanimous.length} field${unanimous.length === 1 ? '' : 's'} filled automatically from scanned documents.`);
   }, [currentClaim]);
 
-  // Auto-close dialog when all conflicts are resolved
-  useEffect(() => {
-    if (isReconOpen && conflicts.length === 0) {
-      setIsReconOpen(false);
-    }
-  }, [conflicts.length, isReconOpen]);
 
   const docs = useClaimDocuments();
 
@@ -563,7 +562,7 @@ export function DocumentsTab() {
         <ReconciliationDialog
           isOpen={isReconOpen}
           onClose={() => setIsReconOpen(false)}
-          conflictFields={conflicts}
+          conflictFields={allConflicts}
           autoFilledFields={autoFilledFields}
           claimId={currentClaim.id}
         />

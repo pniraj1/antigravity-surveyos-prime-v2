@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getConflictFields, fingerprintSources } from '../reconciliation';
+import { getConflictFields, getAllConflictFields, fingerprintSources } from '../reconciliation';
 import { createBlankClaim } from '@/types/claim';
 import type { ClaimData } from '@/types';
 
@@ -126,5 +126,26 @@ describe('fingerprintSources', () => {
     const a = fingerprintSources([{ origin: 'rc', value: 'ABC' }]);
     const b = fingerprintSources([{ origin: 'rc', value: 'ABD' }]);
     expect(a).not.toBe(b);
+  });
+});
+
+describe('getAllConflictFields — preserves decided fields', () => {
+  it('keeps the field even after the surveyor has decided it', () => {
+    const claim = claimWith(CONFLICTING);
+    const field = getConflictFields(claim).find((f) => f.path === 'vehicle.engineNumber')!;
+
+    const decided = claimWith(CONFLICTING, {
+      'vehicle.engineNumber': {
+        value: '1.5CR08EVXW09578',
+        source: 'rc',
+        decidedAt: '2026-08-05T10:00:00.000Z',
+        sourcesSeen: field.sourcesFingerprint,
+      },
+    });
+
+    const all = getAllConflictFields(decided);
+    const resolvedField = all.find((f) => f.path === 'vehicle.engineNumber');
+    expect(resolvedField).toBeDefined();
+    expect(resolvedField?.isDecided).toBe(true);
   });
 });

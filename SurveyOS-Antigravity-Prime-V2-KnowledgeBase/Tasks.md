@@ -1,7 +1,28 @@
 # Active Tasks
 
-> Last updated: 2026-11-06 by Antigravity (Floating Preview Bill Check Parity & Clean Bill Check Header)
+> Last updated: 2026-11-06 by Antigravity (Reconciliation Interactive Dual Evidence & No Auto-Close)
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
+
+---
+
+## Done: Reconciliation Interactive Dual Evidence & No Auto-Close (2026-11-06, Antigravity)
+- **Problem Solved:**
+  1. Clicking any option in the Reconciliation Hub immediately committed the field and wiped it from the table because `getConflictFields` drops `isDecided` fields.
+  2. If the user resolved the last/only conflict, an auto-close `useEffect` in `DocumentsTab.tsx` detected `conflicts.length === 0` and forcefully dismissed the dialog.
+  3. The Evidence panel only rendered a single document slot, preventing surveyors from comparing both conflicting evidence documents (e.g. RC Book vs Insurance Policy) side-by-side or toggling between them.
+- **Architecture Delivered:**
+  - **`src/lib/ai/reconciliation.ts`:** Added `getAllConflictFields(claim)` to keep conflict rows visible in the dialog even after a decision is made.
+  - **`src/components/tabs/DocumentsTab.tsx`:** Removed the auto-close `useEffect` on `conflicts.length === 0`; passed `allConflicts` to `ReconciliationDialog`.
+  - **`src/components/tabs/reconciliation/ReconciliationDialog.tsx`:**
+    - Live Document Switcher: Added top comparison bar in the right-hand panel showing the active field's conflicting sources (`[ 📄 RC Book ]`, `[ 📄 Policy ]`).
+    - Clicking any option on either the table row or the evidence switcher flips the document iframe/image and verbatim context snippet live and updates the claim.
+    - Decided rows transition smoothly into `✓ Resolved` state with green visual accents without disappearing.
+    - Dialog stays open until the surveyor clicks the explicit **Finish Reconciliation** button.
+- **Verification:**
+  - Vitest: 281 test files passed, 2,513 unit tests passed (100% green).
+  - TypeScript: 0 errors via `npx tsc --noEmit`.
+  - Scan Coupling Impact: None.
+- **Commits on `main`:** Pending user push.
 
 ---
 

@@ -2,6 +2,13 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-06 (Antigravity) — Data Reconciliation Interactive Dual Evidence & No Auto-Close
+- feat(ui): Implemented interactive dual document evidence inspection in `ReconciliationDialog.tsx`. Surveyors can now click between conflicting document options (e.g. RC Book vs Insurance Policy) to flip the right-side evidence viewer in real time without premature dismissal.
+- feat(ui): Added a persistent active field source comparison switcher at the top of the evidence panel, allowing instant 1-click toggling between source documents, pages, and OCR context snippets.
+- fix(ui): Removed premature auto-close `useEffect` in `DocumentsTab.tsx` that closed the dialog instantly when `conflicts.length === 0`. The dialog now stays open until the surveyor explicitly clicks "Finish Reconciliation".
+- fix(ui): Added `getAllConflictFields` in `src/lib/ai/reconciliation.ts` to supply `ReconciliationDialog` with all conflicting fields throughout the session. Resolving a conflict marks the row as `✓ Resolved` with green accenting instead of causing it to abruptly vanish.
+- tests: Added regression test in `src/lib/ai/__tests__/reconciliation.test.ts` for `getAllConflictFields`. Full Vitest suite: 281 test files passed, 2,513 tests passed (100% green). `npx tsc --noEmit` clean (0 errors).
+
 ## 2026-11-06 (Antigravity) — Production Deployment of Floating Preview Bill Check Parity & Clean Bill Check Header
 - deploy: Built Next.js static export (`npm run build`) and deployed to Firebase Hosting (`motorsurveyos-in` and `surveyos-v2-antigravity-in`) on project `surveyos-v2-antigravity-in`.
 - verify: Verified deployed chunk `02eq3bw-3li1l.js` via curl directly on `https://surveyos.in` and `https://motorsurveyos-in.web.app`, confirming 5-pill preview selector with `Std Bill` / `UIIC Bill` and clean `Bill Check Report` header are live in production.
