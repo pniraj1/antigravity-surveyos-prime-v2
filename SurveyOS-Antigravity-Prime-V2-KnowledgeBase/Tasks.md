@@ -1,7 +1,30 @@
 # Active Tasks
 
-> Last updated: 2026-11-06 by Antigravity (Fix Report Center Bill Check Switcher Glitch)
+> Last updated: 2026-11-06 by Antigravity (Sidebar Realignment: Bill Check & Reinspection into Claim Workflow + DELIVERABLES Group)
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
+
+---
+
+## Done: Sidebar Realignment: Bill Check & Reinspection into Claim Workflow (2026-11-06, Antigravity)
+- **Problem Solved:**
+  - `Bill Check` and `Reinspection` were incorrectly categorized under `OUTPUT` in the sidebar. In motor insurance survey practice, these are core working workspaces (quantification, physical verification, invoice auditing) rather than final statutory deliverables.
+- **Architecture Delivered:**
+  - **Sidebar Realignment (`src/components/layout/sidebar.tsx`):**
+    - Moved `bill-check` and `reinspection` into `group: 'claim'` (`CLAIM WORKFLOW`), placed directly after `assessment` in order: `Assessment` → `Bill Check` → `Reinspection`.
+    - Renamed group label `OUTPUT` to `DELIVERABLES` (`Report Center`, `Photo Sheet`, `Survey Fees Bill`, `Insured Report`).
+    - Added subtle, uncluttered Ponytail micro-status indicators: conflict counter pill on `AI Review` when discrepancies exist, and green `✓` on `Bill Check` when verified by surveyor.
+  - **Workflow Progression Alignment (`src/lib/onboarding/tab-help.ts`):**
+    - Updated `CLAIM_TAB_ORDER` to `['documents', 'review', 'details', 'valuation', 'assessment', 'bill-check', 'reinspection', 'reports', 'photos', 'fees']`.
+    - Synchronized `getNextClaimTab` so tab progression and onboarding guides naturally flow from Bill Check to Reinspection and then to Report Center.
+  - **Report Center Quick Cross-Links (`src/components/tabs/ReportTab.tsx`):**
+    - Added clean, subtle working tab jump links (`[Assessment ↗]`, `[Bill Check ↗]`) in Report Center header for rapid 1-click navigation.
+  - **Unit Tests:**
+    - Updated `tab-help.test.ts` and `visible-nav.test.ts` to assert the new logical sequence.
+- **Verification:**
+  - Full Vitest suite: 287 test files, 2,555 tests passed (100% green).
+  - TypeScript check (`npx tsc --noEmit`): 0 errors.
+  - Production build (`npm run build`): compiled cleanly in 14.8s with all 25 static routes prerendered.
+  - Prime <-> Scan impact: None (0 schema drift).
 
 ---
 

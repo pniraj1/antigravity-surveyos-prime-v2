@@ -125,10 +125,10 @@ export const CLAIM_TAB_ORDER: readonly AppTab[] = [
   'valuation',
   'assessment',
   'bill-check',
+  'reinspection',
   'reports',
   'photos',
   'fees',
-  'reinspection',
 ];
 
 /** Return next visible tab in the survey workflow, or null if last tab or not a claim tab. */

@@ -72,11 +72,11 @@ describe('getNextClaimTab workflow progression', () => {
     expect(getNextClaimTab('review', 'final')).toBe('details');
     expect(getNextClaimTab('details', 'final')).toBe('assessment');
     expect(getNextClaimTab('assessment', 'final')).toBe('bill-check');
-    expect(getNextClaimTab('bill-check', 'final')).toBe('reports');
+    expect(getNextClaimTab('bill-check', 'final')).toBe('reinspection');
+    expect(getNextClaimTab('reinspection', 'final')).toBe('reports');
     expect(getNextClaimTab('reports', 'final')).toBe('photos');
     expect(getNextClaimTab('photos', 'final')).toBe('fees');
-    expect(getNextClaimTab('fees', 'final')).toBe('reinspection');
-    expect(getNextClaimTab('reinspection', 'final')).toBeNull();
+    expect(getNextClaimTab('fees', 'final')).toBeNull();
   });
 
   it('skips assessment, bill-check, and reinspection for Spot surveys', () => {

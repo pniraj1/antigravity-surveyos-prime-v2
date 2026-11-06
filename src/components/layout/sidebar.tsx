@@ -59,12 +59,12 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'details', label: 'Claim Details', icon: <ClipboardList size={17} />, group: 'claim', requiresClaim: true },
   { id: 'valuation',   label: 'Valuation',     icon: <CarFront size={17} />,   group: 'claim',   requiresClaim: true },
   { id: 'assessment', label: 'Assessment', icon: <Calculator size={17} />, group: 'claim', requiresClaim: true },
+  { id: 'bill-check',    label: 'Bill Check',     icon: <ClipboardCheck size={17} />, group: 'claim', requiresClaim: true },
+  { id: 'reinspection',label: 'Reinspection',  icon: <RotateCcw size={17} />,  group: 'claim',   requiresClaim: true },
   { id: 'reports',        label: 'Report Center',  icon: <Printer size={17} />,        group: 'output', requiresClaim: true },
-  { id: 'insured-report', label: 'Insured Report', icon: <FileText size={17} />,       group: 'output', requiresClaim: true, adminOnly: true },
-  { id: 'bill-check',    label: 'Bill Check',     icon: <ClipboardCheck size={17} />, group: 'output', requiresClaim: true },
   { id: 'photos',      label: 'Photo Sheet',    icon: <Camera size={17} />,     group: 'output',   requiresClaim: true },
   { id: 'fees',        label: 'Survey Fees Bill', icon: <Receipt size={17} />,    group: 'output',   requiresClaim: true },
-  { id: 'reinspection',label: 'Reinspection',  icon: <RotateCcw size={17} />,  group: 'output',   requiresClaim: true },
+  { id: 'insured-report', label: 'Insured Report', icon: <FileText size={17} />,       group: 'output', requiresClaim: true, adminOnly: true },
   { id: 'profile', label: 'Profile', icon: <User size={17} />, group: 'settings' },
   { id: 'cloud-vault', label: 'Cloud Vault', icon: <Cloud size={17} />, group: 'settings' },
   { id: 'recovered-claims', label: 'Recovered', icon: <Archive size={17} />, group: 'settings' },
@@ -74,7 +74,7 @@ const NAV_ITEMS: NavItem[] = [
 const GROUP_LABELS: Record<string, string> = {
   main: '',
   claim: 'CLAIM WORKFLOW',
-  output: 'OUTPUT',
+  output: 'DELIVERABLES',
   settings: 'SETTINGS',
 };
 
@@ -93,6 +93,7 @@ export function Sidebar() {
   useEffect(() => { setMounted(true); }, []);
 
   const hasClaim = !!currentClaim;
+  const conflictsCount = currentClaim ? getConflictFields(currentClaim).length : 0;
   const groups = ['main', 'claim', 'output', 'settings'] as const;
 
   const handleTabChange = (targetTab: AppTab) => {
@@ -315,7 +316,27 @@ export function Sidebar() {
                       >
                         {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 h-[55%] w-[3px] rounded-r-full bg-primary" />}
                         <span className={isActive ? 'text-primary' : ''}>{item.icon}</span>
-                        {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
+                        {!sidebarCollapsed && (
+                          <div className="flex-1 flex items-center justify-between min-w-0 pr-1">
+                            <span className="truncate">{item.label}</span>
+                            {item.id === 'review' && conflictsCount > 0 && (
+                              <span
+                                className="text-[10px] font-mono px-1.5 py-0.5 rounded-full font-medium"
+                                style={{ background: 'var(--color-status-warning-tint)', color: 'var(--color-status-warning)' }}
+                              >
+                                {conflictsCount}
+                              </span>
+                            )}
+                            {item.id === 'bill-check' && currentClaim?.billCheck?.verifiedBySurveyor && (
+                              <span
+                                className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400"
+                                title="Invoice verified by surveyor"
+                              >
+                                ✓
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </button>
                     );
                   })}

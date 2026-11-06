@@ -99,7 +99,7 @@ describe('ReportTab Bill Check Report Integration', () => {
   it('preserves bill-check report when activeReport is bill-check (does not reset)', () => {
     // When claim.surveyType is 'final', activeReport can be 'bill-check'
     // Verify effect logic: if currentClaim.surveyType === 'final', activeReport !== 'survey' && activeReport !== 'bill-check'
-    const type = 'final';
+    let type: string = 'final';
     let activeReport: string = 'bill-check';
 
     // Emulate the updated useEffect condition
@@ -114,7 +114,7 @@ describe('ReportTab Bill Check Report Integration', () => {
   });
 
   it('resets to spot report when switching to spot claim', () => {
-    const type = 'spot';
+    let type: string = 'spot';
     let activeReport: string = 'bill-check';
 
     if (type === 'spot' && activeReport !== 'spot') {
@@ -127,7 +127,7 @@ describe('ReportTab Bill Check Report Integration', () => {
   });
 
   it('resets to survey report when switching from spot to final claim', () => {
-    const type = 'final';
+    let type: string = 'final';
     let activeReport: string = 'spot';
 
     if (type === 'spot' && activeReport !== 'spot') {

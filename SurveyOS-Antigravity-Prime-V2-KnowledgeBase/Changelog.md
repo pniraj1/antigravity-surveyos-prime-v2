@@ -2,6 +2,15 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-06 (Antigravity) — Sidebar Navigation Realignment: Bill Check & Reinspection into Claim Workflow
+- feat(nav): Moved `Bill Check` and `Reinspection` from `OUTPUT` into `CLAIM WORKFLOW` in `src/components/layout/sidebar.tsx`, sequenced directly after `Assessment` (`Assessment` → `Bill Check` → `Reinspection`).
+- feat(nav): Renamed sidebar group label `OUTPUT` to `DELIVERABLES` (`Report Center`, `Photo Sheet`, `Survey Fees Bill`, `Insured Report`).
+- feat(nav): Added uncluttered Ponytail micro-status indicators on sidebar items: discrepancy count on `AI Review` and subtle green `✓` on `Bill Check` when invoice is verified.
+- feat(nav): Synchronized `CLAIM_TAB_ORDER` in `src/lib/onboarding/tab-help.ts` so keyboard navigation and step progression flow seamlessly: `assessment` → `bill-check` → `reinspection` → `reports`.
+- feat(reports): Added rapid jump links (`[Assessment ↗]`, `[Bill Check ↗]`) in `ReportTab.tsx` header for instant 1-click teleporting to working tabs from the live preview.
+- tests: Updated `src/lib/onboarding/__tests__/tab-help.test.ts` and `src/lib/navigation/__tests__/visible-nav.test.ts`. Full Vitest suite: 287 passed, 2,555 tests (100% green).
+
+
 ## 2026-11-06 (Antigravity) — Fix Report Center Bill Check Report Switcher Glitch
 - fix(reports): Fixed report switcher in `ReportTab.tsx` reverting `activeReport` back to `'survey'` whenever `'bill-check'` was clicked. The sync `useEffect` now correctly preserves `'bill-check'` on final claims (`activeReport !== 'survey' && activeReport !== 'bill-check'`).
 - refactor(reports): Memoized live report HTML preview with `useMemo` and wrapped in `try...catch` with graceful error fallback.

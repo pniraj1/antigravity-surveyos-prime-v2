@@ -6,6 +6,7 @@ import { isNarrowViewport } from '@/lib/navigation/viewport';
 import { markOnboarding } from '@/lib/onboarding/rules';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
+import { useUIStore } from '@/stores/ui-store';
 import { calculateAssessmentSummary, getCompulsoryExcess } from '@/lib/calculations';
 import { getVehicleAgeMonths } from '@/lib/calculations/depreciation';
 import { Card, CardContent } from '@/components/ui/card';
@@ -200,13 +201,36 @@ export function ReportTab() {
       {activeReport !== 'bill-check' && <ReportSectionGuide reportType={activeReport} />}
 
       {/* ── Header ───────────────────────────────────────────── */}
-      <div className="mb-6 flex items-end justify-between">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-medium tracking-tight text-foreground" style={{ letterSpacing: '-0.02em' }}>
-            Report Center
-          </h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl font-medium tracking-tight text-foreground" style={{ letterSpacing: '-0.02em' }}>
+              Report Center
+            </h2>
+            {currentClaim.surveyType === 'final' && (
+              <div className="hidden sm:flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground border-l border-border pl-3">
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70">Jump to:</span>
+                <button
+                  type="button"
+                  onClick={() => useUIStore.getState().setActiveTab('assessment')}
+                  className="px-2 py-0.5 rounded-md hover:bg-neutral-100 hover:text-foreground transition-colors cursor-pointer"
+                  title="Switch to Assessment tab"
+                >
+                  Assessment ↗
+                </button>
+                <button
+                  type="button"
+                  onClick={() => useUIStore.getState().setActiveTab('bill-check')}
+                  className="px-2 py-0.5 rounded-md hover:bg-neutral-100 hover:text-foreground transition-colors cursor-pointer"
+                  title="Switch to Bill Check tab"
+                >
+                  Bill Check ↗
+                </button>
+              </div>
+            )}
+          </div>
           <p className="text-sm mt-1 text-muted-foreground">
-            Select report type and format to generate professional outputs.
+            Select deliverable format to preview, download Word, or print PDF.
           </p>
         </div>
         <div className="flex gap-1 p-1 rounded-xl bg-neutral-50">
