@@ -31,9 +31,11 @@
   - Full Vitest suite: 280 test files passed, 2,509 tests passed (100% green).
   - TypeScript compiler (`npx tsc --noEmit`): 0 errors.
   - Sibling Android App (`SurveyOS Scan`): 0 impact on shared contracts or sync.
+  - Deployed to Firebase Hosting (`motorsurveyos-in` and `surveyos-v2-antigravity-in`) on project `surveyos-v2-antigravity-in`.
+  - Verified live chunk `0es4-_7.7_kel.js` on `https://surveyos.in` and `https://motorsurveyos-in.web.app`.
 - **Commits on `main`:**
   - `4744d70a` fix(reports): reconcile UIIC bill check net liability calculation from assessed loss
-  - (pending) fix(reports): reconcile standard bill check net liability from assessed loss
+  - `511ab333` fix(reports): reconcile standard bill check net liability calculation from assessed loss
 
 ---
 

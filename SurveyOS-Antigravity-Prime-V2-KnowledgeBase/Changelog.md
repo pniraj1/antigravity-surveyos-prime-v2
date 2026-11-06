@@ -2,6 +2,10 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-06 (Antigravity) — Production Deployment of Standard Bill Check Net Liability Fix
+- deploy: Built Next.js static export (`npm run build`) and deployed to Firebase Hosting (`motorsurveyos-in` and `surveyos-v2-antigravity-in`) on project `surveyos-v2-antigravity-in`.
+- verify: Verified deployed chunk `0es4-_7.7_kel.js` via curl directly on `https://surveyos.in` and `https://motorsurveyos-in.web.app`, confirming `NET LIABILITY` row and reconciled assessed loss calculation are live in production.
+
 ## 2026-11-06 (Antigravity) — Standard Bill Check Net Liability Calculation Reconciliation
 - fix(reports): Reconciled Standard Bill Check Report (`buildStandardFinalSurveyHTML` in `bill-check` mode in `src/lib/reports/standard-report-builder.ts`). Disconnected assessment rows from `projectForBillCheck` so Column 3 (`Assessed (after Dep.)`), Column 4 (`Incl. GST`), `grand`, and `net` are derived strictly from the surveyor's true assessed loss instead of capped workshop billed amounts.
 - fix(reports): Wired Column 2 (`Billed`) in Section 8 to explicit workshop billed taxable base totals (`col2PartsBase`, `col2LabBase`, `col2Metal`, `col2Plastic`, `col2Glass`, `col2Fbr`, `col2LabOnly`, `col2PaintOnly`), providing a clear comparison between workshop billing and surveyor assessment.

@@ -71,16 +71,12 @@
 - The Net Liability payable to workshop is strictly $gross - salvage - excess$.
 - Standard Bill Check Report presents Column 2 as the workshop Billed amount, while Columns 3, 4, and Net Liability reflect the surveyor's true assessment, ensuring complete transparency and mathematical integrity between billed and assessed figures.
 
-## Files Changed
-- `src/lib/reports/uiic-final-builder.ts` (modified)
-- `src/lib/reports/standard-report-builder.ts` (modified)
-- `src/lib/calculations/assessment.ts` (modified)
-- `src/lib/reports/__tests__/bill-check-report.test.ts` (modified)
-- `src/lib/reports/__tests__/standard-bill-check.test.ts` (modified)
-- `SurveyOS-Antigravity-Prime-V2-KnowledgeBase/Tasks.md` (modified)
-- `SurveyOS-Antigravity-Prime-V2-KnowledgeBase/Changelog.md` (modified)
-- `SurveyOS-Antigravity-Prime-V2-KnowledgeBase/Sessions/2026-11-06-uiic-and-standard-bill-check-calculation-audit.md` (modified)
-- `C:\Users\Manasi\.gemini\antigravity\brain\10cf1a78-69db-41da-a8c1-96dc06889aa3\bill-check-audit-report.md` (new artifact)
+## Production Deployment & Live Verification (Part 2 — Standard Bill Check)
+- Static export build: `npm run build` completed cleanly (Next.js 16.2.2 static export to `out/`).
+- Deployed to Firebase Hosting target `motorsurveyos-in` on project `surveyos-v2-antigravity-in`.
+- Deployed to Firebase Hosting target `surveyos-v2-antigravity-in` on project `surveyos-v2-antigravity-in`.
+- Live chunk verification: Queried chunk `0es4-_7.7_kel.js` via curl on `https://surveyos.in` and `https://motorsurveyos-in.web.app`, confirming `NET LIABILITY` row and reconciled assessed loss calculation are live in production.
+- Git commit on `main`: `511ab333` pushed to `origin/main`.
 
 ## Production Deployment & Live Verification
 - Static export build: `npm run build` completed cleanly (Next.js 16.2.2 static export to `out/`).
