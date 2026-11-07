@@ -66,6 +66,7 @@ export function useCloudSync() {
   const milestonePushRef = useRef(async (_claim: ClaimData, _uid: string, _opts?: { mirrorToDrive?: boolean }) => {});
   milestonePushRef.current = async (claim: ClaimData, uid: string, opts?: { mirrorToDrive?: boolean }) => {
     if (isSandbox()) return;
+    if (useAuthStore.getState().viewAsSurveyor) return;
     // Root-cause dirty guard: every milestone caller (2a/2b/2d) routes
     // through here, so one check covers all of them. Same definition as
     // sync-guard.ts selectDirtyClaims — never pushed, or edited since.

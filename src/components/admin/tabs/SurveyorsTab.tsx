@@ -14,6 +14,8 @@ import { SurveyorAIKeys } from '../SurveyorAIKeys';
 import { getSurveyorOnboardingProgress } from '@/lib/onboarding/admin-progress';
 import { getSurveyorClaimCount } from '@/lib/firebase/claims-count';
 import { ExtendSubscriptionModal } from '../modals/ExtendSubscriptionModal';
+import { useAuthStore } from '@/stores/auth-store';
+import { useUIStore } from '@/stores/ui-store';
 
 const FILTERS: { key: SurveyorFilter; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -189,12 +191,14 @@ export function IdentityEditorCard({
   isProcessing,
   onUpdateName,
   onUpdateId,
+  onViewWorkspace,
   claimsCount,
 }: {
   surveyor: SurveyorAdminProfile;
   isProcessing: boolean;
   onUpdateName: (uid: string, name: string) => void;
   onUpdateId: (uid: string, idStr: string) => void;
+  onViewWorkspace?: (surveyor: SurveyorAdminProfile) => void;
   claimsCount?: number | 'loading' | 'error';
 }) {
   const [name, setName] = useState(surveyor.name);
@@ -277,6 +281,16 @@ export function IdentityEditorCard({
           >
             <CheckCircle2 size={14} /> Save Identity Changes
           </button>
+          {onViewWorkspace && (
+            <button
+              type="button"
+              onClick={() => onViewWorkspace(surveyor)}
+              aria-label={`View workspace for ${surveyor.name}`}
+              className="w-full py-2 px-3 rounded-lg text-xs font-semibold bg-muted hover:bg-muted/80 text-foreground border border-border transition-all flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
+            >
+              <Eye size={14} /> View Workspace
+            </button>
+          )}
         </div>
 
         {/* Metadata display */}
@@ -584,6 +598,21 @@ export function SurveyorsTab({
 
   const countFetcher = getClaimCountFn || getSurveyorClaimCount;
 
+  const handleViewWorkspace = (s: SurveyorAdminProfile) => {
+    if (onViewWorkspace) {
+      onViewWorkspace(s);
+    } else {
+      useAuthStore.getState().setViewAsSurveyor({
+        uid: s.uid || s.id,
+        name: s.profileName || s.name || 'Surveyor',
+        licence: s.profileIrdai || s.licenceNumber,
+        email: s.email,
+      });
+      useUIStore.getState().setActiveTab('dashboard');
+      toast.info(`Entered read-only Support Mode for ${s.profileName || s.name || 'Surveyor'}`);
+    }
+  };
+
   const handleToggleExpand = (id: string) => {
     setExpandedId(prev => {
       const next = prev === id ? null : id;
@@ -683,7 +712,7 @@ export function SurveyorsTab({
               const onboardingSummary = getSurveyorOnboardingProgress(surveyor);
 
               return (
-                <React.Fragment key={surveyor.id}>
+                <React.Fragment key={surveyor.id || surveyor.uid}>
                   <tr
                     className={`hover:bg-muted/50 transition-colors group cursor-pointer ${rowBg}`}
                     onClick={() => handleToggleExpand(surveyor.id)}
@@ -864,16 +893,19 @@ export function SurveyorsTab({
                           <Plus size={14} /> Extend
                         </button>
 
-                        {onViewWorkspace && (
-                          <button
-                            type="button"
-                            onClick={() => onViewWorkspace(surveyor)}
-                            aria-label={`View workspace for ${surveyor.name}`}
-                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-muted hover:bg-muted/80 text-foreground transition-all focus-visible:ring-2 focus-visible:ring-primary"
-                          >
-                            <Eye size={14} /> View
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewWorkspace(surveyor);
+                          }}
+                          aria-label={`View workspace for ${surveyor.name}`}
+                          title="Inspect this surveyor's claims & workspace in read-only mode"
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-muted hover:bg-muted/80 text-foreground transition-all focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
+                        >
+                          <Eye size={14} />
+                          <span>View Workspace</span>
+                        </button>
 
                         <button
                           type="button"
@@ -912,6 +944,7 @@ export function SurveyorsTab({
                               isProcessing={isProcessing}
                               onUpdateName={onUpdateName}
                               onUpdateId={onUpdateId}
+                              onViewWorkspace={handleViewWorkspace}
                               claimsCount={claimsCountMap[surveyor.id]}
                             />
 

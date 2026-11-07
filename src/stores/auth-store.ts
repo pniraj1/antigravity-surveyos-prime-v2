@@ -19,6 +19,13 @@ export interface TeamAffiliation {
   ownerEmail: string;
 }
 
+export interface ViewAsSurveyor {
+  uid: string;
+  name: string;
+  licence?: string;
+  email?: string;
+}
+
 interface AuthState {
   user: User | null;
   loading: boolean;
@@ -27,12 +34,14 @@ interface AuthState {
   activeWorkspaceUid: string | null;
   isTeamMember: boolean;
   teamAffiliation: TeamAffiliation | null;
+  viewAsSurveyor: ViewAsSurveyor | null;
 
   // Actions
   setUser: (user: User | null) => void;
   setLoading: (loading: boolean) => void;
   setSessionConflict: (conflict: SessionConflict | null) => void;
   setWorkspace: (workspaceUid: string | null, isTeamMember: boolean, affiliation?: TeamAffiliation | null) => void;
+  setViewAsSurveyor: (surveyor: ViewAsSurveyor | null) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -43,6 +52,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   activeWorkspaceUid: null,
   isTeamMember: false,
   teamAffiliation: null,
+  viewAsSurveyor: null,
 
   setUser: (user) => set({
     user,
@@ -59,4 +69,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     isTeamMember,
     teamAffiliation: affiliation ?? null,
   }),
+
+  setViewAsSurveyor: (surveyor) => set((state) => ({
+    viewAsSurveyor: surveyor,
+    activeWorkspaceUid: surveyor ? surveyor.uid : (state.user?.uid ?? null),
+  })),
 }));

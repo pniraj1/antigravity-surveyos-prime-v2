@@ -44,6 +44,7 @@ import { FloatingReportPreview } from '@/components/layout/FloatingReportPreview
 import { ClaimHeader } from '@/components/layout/ClaimHeader';
 import { NewDrivePhotosBanner } from '@/components/layout/NewDrivePhotosBanner';
 import { ClaimPresenceBanner } from '@/components/claims/ClaimPresenceBanner';
+import { ViewAsSupportBanner } from '@/components/admin/ViewAsSupportBanner';
 import { MobileBottomBar } from '@/components/layout/MobileBottomBar';
 import { useRouteSync } from '@/hooks/useRouteSync';
 import { useAIConfig } from '@/hooks/useAIConfig';
@@ -90,6 +91,53 @@ export function DashboardContent({ initialShowArchived = false }: { initialShowA
     document.getElementById('claims-table')?.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' });
     setClaimsListOpen(false);
   }, [isClaimsListOpen, setClaimsListOpen]);
+  const viewAsSurveyor = auth.viewAsSurveyor;
+  const [supportClaims, setSupportClaims] = useState<typeof storeClaimsList | null>(null);
+
+  useEffect(() => {
+    if (!viewAsSurveyor) {
+      setSupportClaims(null);
+      return;
+    }
+    let cancelled = false;
+    async function loadSupportClaims() {
+      try {
+        const { collection, getDocs } = await import('firebase/firestore');
+        const { db } = await import('@/lib/firebase/config');
+        const snap = await getDocs(collection(db, `users/${viewAsSurveyor.uid}/claims`));
+        if (cancelled) return;
+        const list = snap.docs
+          .map((d) => d.data())
+          .filter((d): d is any => !d._isDeleted && !d.deletedAt)
+          .map((c) => ({
+            id: c.id,
+            label: `${c.vehicle?.registrationNumber || 'No Reg'} — ${c.insured?.name || 'No Insured'}`,
+            updatedAt: c.updatedAt || new Date().toISOString(),
+            surveyDate: c.accident?.surveyDate || '',
+            surveyType: c.surveyType || 'final',
+            reportNo: c.reportNo || '',
+            vehicleNo: c.vehicle?.registrationNumber || '',
+            insurerName: c.policy?.companyName || '',
+            insuredName: c.insured?.name || '',
+            stage: c.stage || 'final',
+            isCompleted: !!c.isCompleted,
+            feePaid: !!c.feeBill?.isPaid,
+            feeTotal: c.feeBill?.total || 0,
+            isActive: !c.isArchived,
+            gDriveFolderId: c.gDriveFolderId || null,
+            hasDocuments: !!(c.documents?.length || c.photos?.length),
+          }));
+        setSupportClaims(list);
+      } catch (err) {
+        console.error('Failed to load support surveyor claims:', err);
+      }
+    }
+    loadSupportClaims();
+    return () => { cancelled = true; };
+  }, [viewAsSurveyor]);
+
+  const effectiveClaimsList = (viewAsSurveyor && supportClaims) ? supportClaims : claimsList;
+
   const [showArchived, setShowArchived] = useState(initialShowArchived);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
@@ -99,19 +147,19 @@ export function DashboardContent({ initialShowArchived = false }: { initialShowA
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; vehicleNo: string } | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
-  const activeClaims = claimsList.filter(c => c.isActive);
+  const activeClaims = effectiveClaimsList.filter(c => c.isActive);
   const today = new Date().toDateString();
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const claimsToday = activeClaims.filter(c => new Date(c.updatedAt).toDateString() === today).length;
   const claimsWeek = activeClaims.filter(c => new Date(c.updatedAt).getTime() >= weekAgo).length;
   const claimsPending = activeClaims.filter(c => !c.isCompleted).length;
-  const archivedCount = claimsList.filter(c => !c.isActive).length;
+  const archivedCount = effectiveClaimsList.filter(c => !c.isActive).length;
 
   const feesBilled = activeClaims.reduce((sum, c) => sum + (c.feeTotal || 0), 0);
   const feesReceived = activeClaims.filter(c => c.feePaid).reduce((sum, c) => sum + (c.feeTotal || 0), 0);
   const feesOutstanding = activeClaims.filter(c => !c.feePaid && c.feeTotal > 0).reduce((sum, c) => sum + (c.feeTotal || 0), 0);
 
-  const filteredClaims = claimsList.filter(c => {
+  const filteredClaims = effectiveClaimsList.filter(c => {
     // Stage 1: Active/Archived
     if (showArchived ? c.isActive : !c.isActive) return false;
     
@@ -688,6 +736,7 @@ export default function Dashboard() {
       <MobileMenuButton />
 
       <main className={`flex-1 overflow-y-auto bg-background ${hasClaim ? 'pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0' : ''}`}>
+        <ViewAsSupportBanner />
         <ClaimHeader />
         <NewDrivePhotosBanner />
         <ClaimPresenceBanner />
