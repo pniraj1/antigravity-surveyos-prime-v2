@@ -79,6 +79,8 @@ export function useAdminData(isAuthorized: boolean): UseAdminDataReturn {
           createdAt: data.createdAt || null,
           onboarding: data.onboarding || undefined,
           syncConnectedAt: data.syncConnectedAt ?? null,
+          maxTeamSeats: typeof data.maxTeamSeats === 'number' ? data.maxTeamSeats : 0,
+          teamEmails: Array.isArray(data.teamEmails) ? data.teamEmails : [],
         });
       });
       setSurveyorMap(seen);

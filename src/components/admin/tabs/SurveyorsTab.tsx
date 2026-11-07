@@ -50,6 +50,7 @@ interface SurveyorsTabProps {
   onUpdateName: (uid: string, name: string) => void;
   onExtend: (uid: string, days: number) => void;
   onDeleteAccount: (surveyor: SurveyorAdminProfile) => void;
+  onUpdateTeamSeats?: (surveyorId: string, seats: number) => Promise<void> | void;
   getClaimCountFn?: (uid: string) => Promise<number>;
   initialClaimsCountMap?: Record<string, number | 'loading' | 'error'>;
   initialExpandedId?: string | null;
@@ -111,6 +112,7 @@ export function SurveyorsTab({
   onUpdateName,
   onExtend,
   onDeleteAccount,
+  onUpdateTeamSeats,
   getClaimCountFn,
   initialClaimsCountMap,
   initialExpandedId,

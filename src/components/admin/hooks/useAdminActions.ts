@@ -11,7 +11,9 @@ import {
   deleteDoc,
   writeBatch,
   Timestamp,
+  serverTimestamp,
 } from 'firebase/firestore';
+import { toast } from 'sonner';
 import { db } from '@/lib/firebase/config';
 import {
   sendEmail,
@@ -41,6 +43,7 @@ interface UseAdminActionsReturn {
   handleUpdateName: (uid: string, name: string) => Promise<void>;
   handleExtendSubscription: (uid: string, days: number) => Promise<void>;
   handleDeleteAccount: (uid: string, onDone: () => void) => Promise<void>;
+  handleUpdateTeamSeats: (surveyorId: string, seats: number) => Promise<void>;
 }
 
 export function useAdminActions({
@@ -279,6 +282,27 @@ export function useAdminActions({
     }
   }, []);
 
+  const handleUpdateTeamSeats = useCallback(async (surveyorId: string, seats: number) => {
+    setProcessingId(surveyorId);
+    try {
+      const validSeats = Math.max(0, Math.floor(seats));
+      const currentRef = doc(db, 'users', surveyorId, 'profile', 'current');
+      await updateDoc(currentRef, {
+        maxTeamSeats: validSeats,
+        updatedAt: serverTimestamp(),
+      });
+      setSurveyors(prev =>
+        prev.map(s => (s.id === surveyorId ? { ...s, maxTeamSeats: validSeats } : s))
+      );
+      toast.success(`Updated team seats to ${validSeats}`);
+    } catch (error) {
+      console.error('Error updating team seats:', error);
+      toast.error('Failed to update team seats');
+    } finally {
+      setProcessingId(null);
+    }
+  }, [setSurveyors]);
+
   return {
     processingId,
     handleApprove,
@@ -290,5 +314,6 @@ export function useAdminActions({
     handleUpdateName,
     handleExtendSubscription,
     handleDeleteAccount,
+    handleUpdateTeamSeats,
   };
 }

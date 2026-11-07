@@ -82,6 +82,7 @@ export function AdminDashboard() {
     handleUpdateName,
     handleExtendSubscription,
     handleDeleteAccount,
+    handleUpdateTeamSeats,
   } = useAdminActions({ fetchAllProfiles, fetchSignups, setSurveyors, setSignups });
 
   // Badge counts
@@ -292,6 +293,7 @@ export function AdminDashboard() {
               onUpdateName={handleUpdateName}
               onExtend={handleExtendSubscription}
               onDeleteAccount={(surveyor) => setDeleteModal({ surveyor })}
+              onUpdateTeamSeats={handleUpdateTeamSeats}
             />
           )}
 
