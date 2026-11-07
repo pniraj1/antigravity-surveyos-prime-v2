@@ -8,6 +8,11 @@ describe('ApprovalQueueTab Polish', () => {
   const mockSignup: NewSignup = {
     uid: 'user-signup-123',
     email: 'newsurveyor@example.com',
+    displayName: 'Rajesh Sharma',
+    name: 'Rajesh Sharma',
+    irdaiLicence: 'SLA-88219',
+    mobile: '+91 98765 43210',
+    status: 'pending',
     profileName: 'Rajesh Sharma',
     profileIrdai: 'SLA-88219',
     profileMobile: '+91 98765 43210',

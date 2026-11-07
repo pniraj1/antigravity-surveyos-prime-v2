@@ -99,12 +99,13 @@ export function DashboardContent({ initialShowArchived = false }: { initialShowA
       setSupportClaims(null);
       return;
     }
+    const targetUid = viewAsSurveyor.uid;
     let cancelled = false;
     async function loadSupportClaims() {
       try {
         const { collection, getDocs } = await import('firebase/firestore');
         const { db } = await import('@/lib/firebase/config');
-        const snap = await getDocs(collection(db, `users/${viewAsSurveyor.uid}/claims`));
+        const snap = await getDocs(collection(db, `users/${targetUid}/claims`));
         if (cancelled) return;
         const list = snap.docs
           .map((d) => d.data())

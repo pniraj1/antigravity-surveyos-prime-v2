@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { useAuthStore, type ViewAsSurveyor } from '@/stores/auth-store';
 import { ViewAsSupportBanner } from '../ViewAsSupportBanner';
 import { SurveyorsTab } from '../tabs/SurveyorsTab';
-import type { AdminSurveyor } from '../types';
+import type { SurveyorAdminProfile } from '../types';
 
 describe('View-As Read-Only Support Mode', () => {
   beforeEach(() => {
@@ -78,17 +78,15 @@ describe('View-As Read-Only Support Mode', () => {
   });
 
   describe('SurveyorsTab View Workspace Action', () => {
-    const mockSurveyor: AdminSurveyor = {
-      uid: 'surveyor-uid-777',
+    const mockSurveyor: SurveyorAdminProfile = {
+      id: 'surveyor-uid-777',
+      surveyorId: 'RAMESH-01',
       name: 'Ramesh Patel',
       email: 'ramesh@patel.in',
-      profileName: 'Ramesh Patel',
-      profileIrdai: 'SLA-77777',
+      licenceNumber: 'SLA-77777',
+      irdaiLicence: 'SLA-77777',
       subscriptionStatus: 'active',
       subscriptionExpiry: '2026-12-31T23:59:59Z',
-      claimsCount: 15,
-      completedClaimsCount: 10,
-      activeClaimsCount: 5,
       createdAt: '2026-01-01T00:00:00Z',
     };
 

@@ -603,13 +603,13 @@ export function SurveyorsTab({
       onViewWorkspace(s);
     } else {
       useAuthStore.getState().setViewAsSurveyor({
-        uid: s.uid || s.id,
-        name: s.profileName || s.name || 'Surveyor',
-        licence: s.profileIrdai || s.licenceNumber,
+        uid: s.id,
+        name: s.name || 'Surveyor',
+        licence: s.licenceNumber || s.irdaiLicence || '',
         email: s.email,
       });
       useUIStore.getState().setActiveTab('dashboard');
-      toast.info(`Entered read-only Support Mode for ${s.profileName || s.name || 'Surveyor'}`);
+      toast.info(`Entered read-only Support Mode for ${s.name || 'Surveyor'}`);
     }
   };
 
@@ -712,7 +712,7 @@ export function SurveyorsTab({
               const onboardingSummary = getSurveyorOnboardingProgress(surveyor);
 
               return (
-                <React.Fragment key={surveyor.id || surveyor.uid}>
+                <React.Fragment key={surveyor.id}>
                   <tr
                     className={`hover:bg-muted/50 transition-colors group cursor-pointer ${rowBg}`}
                     onClick={() => handleToggleExpand(surveyor.id)}
