@@ -158,4 +158,30 @@ describe('importFromDrive', () => {
     expect(await importFromDrive({ confirmVehicle: yes, choose })).toMatchObject({ result: { status: 'cancelled' } });
     expect(choose).toHaveBeenCalledWith([{ id: 'A', name: 'First' }, { id: 'B', name: 'Second' }]);
   });
+
+  it('importsNotesFromBackupJsonWhenManifestIsMissing', async () => {
+    state.claim = { id: 'c1', scanClaimId: 'S1', vehicle: { registrationNumber: 'MH12AB1234' } } as unknown as ClaimData;
+    const backupData = JSON.stringify({
+      app: 'surveyos-scan-backup',
+      v: 1,
+      claimId: 'S1',
+      vehicleNo: 'MH12AB1234',
+      notes: { spot: { 'vehicle.odometer': '45210' } },
+      rows: [],
+    });
+    state.nodes = [
+      file('b', '_surveyos-backup.json', 'F', backupData),
+    ];
+    const r = await importFromDrive({ confirmVehicle: yes });
+    expect(r).toMatchObject({
+      result: {
+        status: 'done',
+        added: 0,
+        notes: expect.objectContaining({
+          spot: { 'vehicle.odometer': '45210' },
+          vehicle: 'MH12AB1234',
+        }),
+      },
+    });
+  });
 });

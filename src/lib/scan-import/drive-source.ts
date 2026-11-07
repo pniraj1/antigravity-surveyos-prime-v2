@@ -10,6 +10,7 @@ import { findScanFolder, phoneScansFolder } from '@/lib/drive/scan-status-sync';
 import { claimDocuments } from '@/lib/documents/index-ops';
 import { importScanFiles, sha256, type ImportOptions, type ImportResult } from './import';
 import { MANIFEST_NAME, sameVehicle, type ScanManifest } from './manifest';
+import { normalizeScanNotes } from './normalizer';
 
 const API = 'https://www.googleapis.com/drive/v3/files';
 const FOLDER = 'application/vnd.google-apps.folder';
@@ -127,7 +128,28 @@ export async function importFromDrive(opts: DriveImportOptions): Promise<DriveIm
 
   const listed = await listTree(folderId);
   const manifestFile = listed.find((l) => l.name === MANIFEST_NAME);
-  if (!manifestFile) throw new Error(`No phone files on Drive for this claim yet. ${FULL_HINT}`);
+  if (!manifestFile) {
+    const backupFile = listed.find((l) => l.name === '_surveyos-backup.json');
+    if (backupFile) {
+      const backupBlob = await download(backupFile.id);
+      const normalized = normalizeScanNotes(await backupBlob.text());
+      if (normalized) {
+        return {
+          result: {
+            status: 'done',
+            added: 0,
+            skipped: 0,
+            failed: 0,
+            notes: normalized,
+            contactsFilled: 0,
+          },
+          moveFailed: 0,
+          mismatched: [],
+        };
+      }
+    }
+    throw new Error(`No phone files on Drive for this claim yet. ${FULL_HINT}`);
+  }
   const { blob: manifestBlob, manifest } = await readManifest(manifestFile.id);
 
   // Saved on an earlier import whose move failed: move it now, never import it again.

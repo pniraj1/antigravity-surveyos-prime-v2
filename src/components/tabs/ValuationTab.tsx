@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { PlusCircle, Trash2, Car, Gauge, ShieldCheck, Zap, FileText, MapPin } from 'lucide-react';
+import { UsePhoneNotesButton } from '@/components/documents/UsePhoneNotesButton';
 import type { ValuationConditionRow } from '@/types/assessment';
 
 const CONDITION_OPTIONS = ['Good', 'Satisfactory', 'Average / Serviceable', 'Damaged', 'N/A'];
@@ -86,8 +87,11 @@ export function ValuationTab() {
             Pre-Insurance Vehicle Condition Report
           </p>
         </div>
-        <div className="px-3 py-1 bg-amber-100 rounded-full text-amber-700 text-xs font-bold ring-1 ring-amber-300">
-          BREAK-IN MODE
+        <div className="flex items-center gap-2">
+          <UsePhoneNotesButton label="Use Phone Notes" />
+          <div className="px-3 py-1 bg-amber-100 rounded-full text-amber-700 text-xs font-bold ring-1 ring-amber-300">
+            BREAK-IN MODE
+          </div>
         </div>
       </div>
 

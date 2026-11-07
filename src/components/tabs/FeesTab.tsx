@@ -12,6 +12,7 @@ import {
   Package, Phone, Truck, CheckCircle, XCircle,
   RotateCcw, Sparkles,
 } from 'lucide-react';
+import { UsePhoneNotesButton } from '@/components/documents/UsePhoneNotesButton';
 import { useMemo, useState, useEffect } from 'react';
 import { calculateAssessmentSummary } from '@/lib/calculations';
 import { getVehicleAgeMonths } from '@/lib/calculations/depreciation';
@@ -163,6 +164,7 @@ export function FeesTab() {
 
             
             <div className="flex-1" />
+            <UsePhoneNotesButton label="Use Phone Notes" />
             <button
               onClick={() => {
                 triggerSpotFeeBillPrint(currentClaim, profile!);

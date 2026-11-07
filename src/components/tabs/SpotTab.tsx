@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { DocSection, selectCls } from '@/components/claim/form-bits';
 import { Trash2, PlusCircle, Info } from 'lucide-react';
+import { UsePhoneNotesButton } from '@/components/documents/UsePhoneNotesButton';
 
 /**
  * Spot-only findings, rendered at the bottom of Claim Details. Spot dates
@@ -40,7 +41,10 @@ export function SpotTab() {
 
   return (
     <div className="space-y-6 pt-2">
-      <h3 className="text-xl font-medium tracking-tight">Spot Findings</h3>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <h3 className="text-xl font-medium tracking-tight">Spot Findings</h3>
+        <UsePhoneNotesButton label="Use Phone Notes" />
+      </div>
 
       <DocSection title="Vehicle Status at Spot">
         <div className="space-y-1">

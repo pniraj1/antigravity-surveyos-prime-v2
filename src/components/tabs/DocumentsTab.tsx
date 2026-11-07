@@ -27,6 +27,7 @@ import { getStoredRootHandle, ensureReadWrite } from '@/lib/local-sync/directory
 import { ClaimFolderPromptDialog } from '@/components/layout/ClaimFolderPromptDialog';
 import { PhoneFilesList } from '@/components/documents/PhoneFilesList';
 import { BringPhoneScans } from '@/components/documents/BringPhoneScans';
+import { UsePhoneNotesButton } from '@/components/documents/UsePhoneNotesButton';
 import { AskForDocumentsButton } from '@/components/documents/AskForDocumentsDialog';
 import { readDocument } from '@/lib/documents/folder';
 import { phoneFileFor, cardPhoneState } from '@/lib/scan-import/cards';
@@ -360,6 +361,7 @@ export function DocumentsTab() {
       {/* ── Document Groups ──────────────────────────────── */}
       <div className="px-6 lg:px-12 py-8 max-w-5xl mx-auto space-y-10">
         <div className="flex flex-wrap items-center justify-end gap-2">
+          <UsePhoneNotesButton label="Use Phone Notes" />
           <AskForDocumentsButton />
           {isLocalFolderSupported() && (
             <BringPhoneScans
