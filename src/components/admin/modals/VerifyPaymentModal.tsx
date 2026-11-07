@@ -6,12 +6,13 @@ import type { PaymentRecord } from '@/types/payment';
 
 interface VerifyPaymentModalProps {
   payment: PaymentRecord;
-  onConfirm: (payment: PaymentRecord, duration: number) => void;
+  onConfirm: (payment: PaymentRecord, duration: number, adminNotes: string) => void;
   onCancel: () => void;
 }
 
 export function VerifyPaymentModal({ payment, onConfirm, onCancel }: VerifyPaymentModalProps) {
   const [verifyDuration, setVerifyDuration] = useState('30');
+  const [adminNotes, setAdminNotes] = useState(payment.adminNotes || '');
 
   return (
     <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4" style={{ background: 'rgba(13,27,42,0.85)', backdropFilter: 'blur(4px)' }}>
@@ -40,6 +41,22 @@ export function VerifyPaymentModal({ payment, onConfirm, onCancel }: VerifyPayme
               User&apos;s subscription will be extended by this many days from today (or current expiry if still valid).
             </p>
           </div>
+          <div>
+            <label className="block text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-2">
+              Admin Notes (Optional)
+            </label>
+            <textarea
+              value={adminNotes}
+              onChange={e => setAdminNotes(e.target.value)}
+              placeholder="e.g. Bank UTR verified, corporate bulk discount, cash receipt ref..."
+              rows={3}
+              className="w-full px-4 py-2.5 rounded-xl text-xs font-medium outline-none resize-none"
+              style={{ background: 'var(--color-neutral-50)', border: '1px solid var(--color-neutral-200)', color: 'var(--color-neutral-900)' }}
+            />
+            <p className="text-[10px] text-muted-foreground mt-1 font-medium">
+              Internal reference visible in payment audits and surveyor payment history.
+            </p>
+          </div>
         </div>
         <div className="px-6 py-4 border-t border-border flex gap-3 justify-end">
           <button
@@ -49,7 +66,7 @@ export function VerifyPaymentModal({ payment, onConfirm, onCancel }: VerifyPayme
             Cancel
           </button>
           <button
-            onClick={() => onConfirm(payment, parseInt(verifyDuration) || 30)}
+            onClick={() => onConfirm(payment, parseInt(verifyDuration) || 30, adminNotes.trim())}
             className="px-5 py-2 rounded-xl text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition-all"
           >
             <CheckCircle2 size={12} className="inline mr-1.5" />

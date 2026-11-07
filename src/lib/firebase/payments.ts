@@ -68,15 +68,20 @@ export async function verifyPayment(
   userUid: string,
   paymentId: string,
   adminUid: string,
-  durationDays: number
+  durationDays: number,
+  adminNotes?: string
 ): Promise<void> {
   const paymentRef = doc(db, 'users', userUid, 'payments', paymentId);
-  await updateDoc(paymentRef, {
+  const updates: Record<string, unknown> = {
     status: 'verified',
     verifiedAt: new Date().toISOString(),
     verifiedBy: adminUid,
     durationGranted: durationDays,
-  });
+  };
+  if (adminNotes !== undefined) {
+    updates.adminNotes = adminNotes;
+  }
+  await updateDoc(paymentRef, updates);
 
   const profileRef = doc(db, 'users', userUid, 'profile', 'current');
   const profileSnap = await getDoc(profileRef);
@@ -96,6 +101,56 @@ export async function verifyPayment(
   });
 
   await handleReferralReward(userUid);
+}
+
+export async function recordManualPayment(
+  adminUid: string,
+  userUid: string,
+  data: {
+    amount: number;
+    transactionId?: string;
+    durationDays: number;
+    paymentMode?: string;
+    adminNotes?: string;
+    planName?: string;
+  }
+): Promise<string> {
+  const paymentsRef = collection(db, 'users', userUid, 'payments');
+  const now = new Date().toISOString();
+  const docRef = await addDoc(paymentsRef, {
+    amount: data.amount,
+    transactionId: data.transactionId || `OFFLINE-${Date.now().toString().slice(-6)}`,
+    paymentDate: now.split('T')[0],
+    submittedAt: now,
+    verifiedAt: now,
+    verifiedBy: adminUid,
+    status: 'verified',
+    durationGranted: data.durationDays,
+    notes: data.adminNotes || 'Recorded manually by Admin',
+    adminNotes: data.adminNotes || '',
+    paymentMode: data.paymentMode || 'Manual',
+    planName: data.planName || '',
+    screenshotUrl: null,
+  });
+
+  const profileRef = doc(db, 'users', userUid, 'profile', 'current');
+  const profileSnap = await getDoc(profileRef);
+  const profileData = profileSnap.data();
+
+  const currentExpiry = profileData?.subscriptionExpiry || null;
+  const baseDate = currentExpiry && new Date(currentExpiry) > new Date()
+    ? currentExpiry
+    : now;
+
+  const newExpiry = addDaysToDate(baseDate, data.durationDays);
+
+  await updateDoc(profileRef, {
+    subscriptionStatus: 'active',
+    subscriptionExpiry: newExpiry,
+    lastPaymentDate: now,
+  });
+
+  return docRef.id;
 }
 
 export async function rejectPayment(

@@ -5,9 +5,11 @@ import {
   Loader2, UserX, Mail, IdCard, ShieldCheck,
   Calendar, CheckCircle2, XCircle, Clock, Eye, Trash2, Plus,
   Phone, MapPin, Award, ChevronDown, ChevronRight, Link2, FileText,
+  CreditCard,
 } from 'lucide-react';
 import { getDaysRemaining } from '@/lib/subscription/status';
 import type { SurveyorAdminProfile, SurveyorFilter } from '../types';
+import type { PaymentRecord } from '@/types/payment';
 import { SurveyorAIKeys } from '../SurveyorAIKeys';
 import { getSurveyorOnboardingProgress } from '@/lib/onboarding/admin-progress';
 import { getSurveyorClaimCount } from '@/lib/firebase/claims-count';
@@ -41,6 +43,7 @@ function isExpiredDate(surveyor: SurveyorAdminProfile): boolean {
 
 interface SurveyorsTabProps {
   surveyors: SurveyorAdminProfile[];
+  payments?: PaymentRecord[];
   loading: boolean;
   processingId: string | null;
   searchQuery: string;
@@ -138,6 +141,7 @@ export function TeamSeatsControl({
 
 export function SurveyorsTab({
   surveyors,
+  payments,
   loading,
   processingId,
   searchQuery,
@@ -618,6 +622,92 @@ export function SurveyorsTab({
                               </p>
                             )}
                           </div>
+                        </div>
+
+                        {/* Payment History & Notes */}
+                        <div className="mt-5 pt-5 border-t border-border">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <CreditCard size={14} className="text-muted-foreground" />
+                              <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                                Payment History &amp; Notes
+                              </div>
+                              {(payments?.filter(p => p.userUid === surveyor.id).length || 0) > 0 && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[var(--color-neutral-100)] text-[var(--color-neutral-700)] border border-[var(--color-neutral-200)]">
+                                  ({payments?.filter(p => p.userUid === surveyor.id).length} recorded)
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {(() => {
+                            const surveyorPayments = payments?.filter(p => p.userUid === surveyor.id) || [];
+                            if (surveyorPayments.length === 0) {
+                              return (
+                                <div className="bg-card rounded-xl border border-border p-4 text-center">
+                                  <p className="text-xs text-muted-foreground italic">No payments recorded yet</p>
+                                </div>
+                              );
+                            }
+                            return (
+                              <div className="space-y-2">
+                                {surveyorPayments.map((p) => (
+                                  <div
+                                    key={p.id || p.transactionId}
+                                    className="bg-card rounded-xl border border-border p-3.5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                                  >
+                                    <div className="space-y-1">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="font-semibold text-foreground">₹{p.amount}</span>
+                                        <span className="font-mono text-[11px] text-muted-foreground bg-[var(--color-neutral-100)] px-1.5 py-0.5 rounded">
+                                          {p.transactionId}
+                                        </span>
+                                        {p.paymentMode && (
+                                          <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-muted-foreground border border-border">
+                                            {p.paymentMode}
+                                          </span>
+                                        )}
+                                        {p.planName && (
+                                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                                            {p.planName}
+                                          </span>
+                                        )}
+                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider border ${
+                                          p.status === 'verified'
+                                            ? 'bg-[var(--color-status-success-tint)] text-[var(--color-status-success)] border-[var(--color-status-success)]'
+                                            : p.status === 'rejected'
+                                            ? 'bg-[var(--color-status-danger-tint)] text-[var(--color-status-danger)] border-[var(--color-status-danger)]'
+                                            : 'bg-[var(--color-status-warning-tint)] text-[var(--color-status-warning)] border-[var(--color-status-warning)]'
+                                        }`}>
+                                          {p.status === 'verified' ? <CheckCircle2 size={10} /> : p.status === 'rejected' ? <XCircle size={10} /> : <Clock size={10} />}
+                                          {p.status}
+                                          {p.durationGranted ? ` (+${p.durationGranted}d)` : ''}
+                                        </span>
+                                      </div>
+                                      {p.adminNotes && (
+                                        <div className="text-[11px] text-muted-foreground">
+                                          <span className="font-medium text-foreground">Admin Note:</span> {p.adminNotes}
+                                        </div>
+                                      )}
+                                      {p.notes && p.notes !== p.adminNotes && (
+                                        <div className="text-[11px] text-muted-foreground italic">
+                                          {p.notes}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="text-left sm:text-right text-[11px] text-muted-foreground flex-shrink-0">
+                                      <div>{p.paymentDate || (p.submittedAt ? new Date(p.submittedAt).toLocaleDateString('en-IN') : '—')}</div>
+                                      {p.verifiedAt && (
+                                        <div className="text-[10px] text-muted-foreground">
+                                          Verified: {new Date(p.verifiedAt).toLocaleDateString('en-IN')}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          })()}
                         </div>
 
                         <div className="mt-5 pt-5 border-t border-border">

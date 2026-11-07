@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Loader2, CreditCard, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { Loader2, CreditCard, CheckCircle2, XCircle, Clock, Plus } from 'lucide-react';
 import type { SurveyorAdminProfile, PaymentFilter } from '../types';
 import type { PaymentRecord } from '@/types/payment';
 
@@ -13,6 +13,7 @@ interface PaymentsTabProps {
   setPaymentFilter: (f: PaymentFilter) => void;
   onVerify: (payment: PaymentRecord) => void;
   onReject: (payment: PaymentRecord) => void;
+  onOpenRecordModal?: () => void;
 }
 
 export function PaymentsTab({
@@ -23,25 +24,37 @@ export function PaymentsTab({
   setPaymentFilter,
   onVerify,
   onReject,
+  onOpenRecordModal,
 }: PaymentsTabProps) {
   const visiblePayments = payments.filter(p => paymentFilter === 'all' || p.status === paymentFilter);
 
   return (
     <>
-      <div className="mb-4 flex items-center gap-2">
-        {(['all', 'pending', 'verified', 'rejected'] as const).map((f) => (
+      <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          {(['all', 'pending', 'verified', 'rejected'] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setPaymentFilter(f)}
+              className={`px-4 py-2 rounded-lg text-xs font-medium uppercase tracking-wider transition-all ${
+                paymentFilter === f
+                  ? 'bg-[var(--color-neutral-900)] text-primary-foreground'
+                  : 'bg-card border border-border text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {f} {f !== 'all' && `(${payments.filter(p => p.status === f).length})`}
+            </button>
+          ))}
+        </div>
+
+        {onOpenRecordModal && (
           <button
-            key={f}
-            onClick={() => setPaymentFilter(f)}
-            className={`px-4 py-2 rounded-lg text-xs font-medium uppercase tracking-wider transition-all ${
-              paymentFilter === f
-                ? 'bg-[var(--color-neutral-900)] text-primary-foreground'
-                : 'bg-card border border-border text-muted-foreground hover:text-foreground'
-            }`}
+            onClick={onOpenRecordModal}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-sm"
           >
-            {f} {f !== 'all' && `(${payments.filter(p => p.status === f).length})`}
+            <Plus size={14} /> Record Manual Payment
           </button>
-        ))}
+        )}
       </div>
 
       {loading ? (
@@ -75,7 +88,27 @@ export function PaymentsTab({
                       <span className="text-sm font-medium text-foreground">₹{payment.amount}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <code className="text-xs font-mono bg-[var(--color-neutral-100)] px-2 py-1 rounded">{payment.transactionId}</code>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <code className="text-xs font-mono bg-[var(--color-neutral-100)] px-2 py-1 rounded">
+                          {payment.transactionId}
+                        </code>
+                        {payment.paymentMode && (
+                          <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-muted-foreground border border-border">
+                            {payment.paymentMode}
+                          </span>
+                        )}
+                        {payment.planName && (
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                            {payment.planName}
+                          </span>
+                        )}
+                      </div>
+                      {payment.adminNotes && (
+                        <div className="text-[11px] text-muted-foreground mt-1.5 flex items-start gap-1">
+                          <span className="font-semibold text-foreground">Note:</span>
+                          <span>{payment.adminNotes}</span>
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-foreground">{new Date(payment.submittedAt).toLocaleDateString('en-IN')}</div>

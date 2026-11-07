@@ -15,6 +15,9 @@ export interface PaymentRecord {
   userUid?: string;
   userName?: string;
   userEmail?: string;
+  adminNotes?: string;
+  planName?: string;
+  paymentMode?: string;
 }
 
 export type SubscriptionState =

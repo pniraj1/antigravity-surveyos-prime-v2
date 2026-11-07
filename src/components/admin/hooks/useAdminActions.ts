@@ -22,14 +22,18 @@ import {
   buildCustomEmail,
 } from '@/lib/email/sendEmail';
 import { generateReferralCode, addDaysToDate } from '@/lib/subscription/status';
+import { verifyPayment, recordManualPayment } from '@/lib/firebase/payments';
 import type { NewSignup, SurveyorAdminProfile } from '../types';
+import type { PaymentRecord } from '@/types/payment';
 import { REFERRAL_TRIAL_BONUS_DAYS, REFERRALS_ENABLED } from '@/lib/subscription/plans';
 
 interface UseAdminActionsParams {
   fetchAllProfiles: () => Promise<Map<string, SurveyorAdminProfile>>;
   fetchSignups: (mapOverride?: Map<string, SurveyorAdminProfile>) => Promise<void>;
+  fetchPayments?: () => Promise<void>;
   setSurveyors: React.Dispatch<React.SetStateAction<SurveyorAdminProfile[]>>;
   setSignups: React.Dispatch<React.SetStateAction<NewSignup[]>>;
+  adminUid?: string;
 }
 
 interface UseAdminActionsReturn {
@@ -44,13 +48,27 @@ interface UseAdminActionsReturn {
   handleExtendSubscription: (uid: string, days: number) => Promise<void>;
   handleDeleteAccount: (uid: string, onDone: () => void) => Promise<void>;
   handleUpdateTeamSeats: (surveyorId: string, seats: number) => Promise<void>;
+  handleVerify: (payment: PaymentRecord, duration: number, adminNotes?: string) => Promise<void>;
+  handleRecordManualPayment: (
+    userUid: string,
+    data: {
+      amount: number;
+      transactionId?: string;
+      durationDays: number;
+      paymentMode?: string;
+      adminNotes?: string;
+      planName?: string;
+    }
+  ) => Promise<void>;
 }
 
 export function useAdminActions({
   fetchAllProfiles,
   fetchSignups,
+  fetchPayments,
   setSurveyors,
   setSignups,
+  adminUid,
 }: UseAdminActionsParams): UseAdminActionsReturn {
   const [processingId, setProcessingId] = useState<string | null>(null);
 
@@ -303,6 +321,62 @@ export function useAdminActions({
     }
   }, [setSurveyors]);
 
+  const handleVerify = useCallback(async (
+    payment: PaymentRecord,
+    duration: number,
+    adminNotes?: string
+  ) => {
+    if (!payment.userUid || !payment.id) {
+      toast.error('Payment record is missing userUid or payment ID');
+      return;
+    }
+    const effectiveAdminUid = adminUid || 'admin';
+    setProcessingId(payment.id);
+    try {
+      await verifyPayment(payment.userUid, payment.id, effectiveAdminUid, duration, adminNotes);
+      toast.success('Payment verified successfully');
+      if (fetchPayments) {
+        await fetchPayments();
+      }
+      await fetchAllProfiles();
+    } catch (error) {
+      console.error('Failed to verify payment:', error);
+      toast.error('Payment verification failed');
+      throw error;
+    } finally {
+      setProcessingId(null);
+    }
+  }, [adminUid, fetchPayments, fetchAllProfiles]);
+
+  const handleRecordManualPayment = useCallback(async (
+    userUid: string,
+    data: {
+      amount: number;
+      transactionId?: string;
+      durationDays: number;
+      paymentMode?: string;
+      adminNotes?: string;
+      planName?: string;
+    }
+  ) => {
+    const effectiveAdminUid = adminUid || 'admin';
+    setProcessingId(userUid);
+    try {
+      await recordManualPayment(effectiveAdminUid, userUid, data);
+      toast.success('Manual payment recorded successfully');
+      if (fetchPayments) {
+        await fetchPayments();
+      }
+      await fetchAllProfiles();
+    } catch (error) {
+      console.error('Failed to record manual payment:', error);
+      toast.error('Failed to record manual payment');
+      throw error;
+    } finally {
+      setProcessingId(null);
+    }
+  }, [adminUid, fetchPayments, fetchAllProfiles]);
+
   return {
     processingId,
     handleApprove,
@@ -315,5 +389,7 @@ export function useAdminActions({
     handleExtendSubscription,
     handleDeleteAccount,
     handleUpdateTeamSeats,
+    handleVerify,
+    handleRecordManualPayment,
   };
 }

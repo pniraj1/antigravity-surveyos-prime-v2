@@ -15,7 +15,7 @@ import {
   Receipt,
   Megaphone,
 } from 'lucide-react';
-import { verifyPayment, rejectPayment } from '@/lib/firebase/payments';
+import { rejectPayment } from '@/lib/firebase/payments';
 import { useAuthStore } from '@/stores/auth-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { getDaysRemaining } from '@/lib/subscription/status';
@@ -36,6 +36,7 @@ import { EmailComposerModal } from './modals/EmailComposerModal';
 import { VerifyPaymentModal } from './modals/VerifyPaymentModal';
 import { RejectPaymentModal } from './modals/RejectPaymentModal';
 import { DeleteAccountModal } from './modals/DeleteAccountModal';
+import { RecordOfflinePaymentModal } from './modals/RecordOfflinePaymentModal';
 
 import type { AdminTab, PaymentFilter, NewSignup, SurveyorAdminProfile } from './types';
 import type { PaymentRecord } from '@/types/payment';
@@ -55,6 +56,7 @@ export function AdminDashboard() {
   const [verifyModal, setVerifyModal] = useState<{ payment: PaymentRecord } | null>(null);
   const [rejectModal, setRejectModal] = useState<{ payment: PaymentRecord } | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ surveyor: SurveyorAdminProfile } | null>(null);
+  const [isRecordModalOpen, setIsRecordModalOpen] = useState<boolean>(false);
 
   const {
     surveyors,
@@ -83,7 +85,16 @@ export function AdminDashboard() {
     handleExtendSubscription,
     handleDeleteAccount,
     handleUpdateTeamSeats,
-  } = useAdminActions({ fetchAllProfiles, fetchSignups, setSurveyors, setSignups });
+    handleVerify,
+    handleRecordManualPayment,
+  } = useAdminActions({
+    fetchAllProfiles,
+    fetchSignups,
+    fetchPayments,
+    setSurveyors,
+    setSignups,
+    adminUid: user?.uid,
+  });
 
   // Badge counts
   const expiringSoonCount = surveyors.filter(s => {
@@ -284,6 +295,7 @@ export function AdminDashboard() {
           {activeTab === 'surveyors' && (
             <SurveyorsTab
               surveyors={surveyors}
+              payments={payments}
               loading={loading}
               processingId={processingId}
               searchQuery={searchQuery}
@@ -306,6 +318,7 @@ export function AdminDashboard() {
               setPaymentFilter={setPaymentFilter}
               onVerify={(payment) => setVerifyModal({ payment })}
               onReject={(payment) => setRejectModal({ payment })}
+              onOpenRecordModal={() => setIsRecordModalOpen(true)}
             />
           )}
 
@@ -353,16 +366,11 @@ export function AdminDashboard() {
       {verifyModal && (
         <VerifyPaymentModal
           payment={verifyModal.payment}
-          onConfirm={async (payment, duration) => {
-            if (!user) return;
+          onConfirm={async (payment, duration, adminNotes) => {
             try {
-              await verifyPayment(payment.userUid!, payment.id!, user.uid, duration);
-              // Refresh both — order matters: payments first, then profiles
-              await fetchPayments();
-              await fetchAllProfiles();
+              await handleVerify(payment, duration, adminNotes);
             } catch (err) {
               console.error('Verify failed:', err);
-              alert('Payment verification failed. Check console.');
             } finally {
               setVerifyModal(null);
             }
@@ -399,6 +407,16 @@ export function AdminDashboard() {
             });
           }}
           onCancel={() => setDeleteModal(null)}
+        />
+      )}
+
+      {isRecordModalOpen && (
+        <RecordOfflinePaymentModal
+          surveyors={surveyors}
+          onClose={() => setIsRecordModalOpen(false)}
+          onRecord={async (userUid, data) => {
+            await handleRecordManualPayment(userUid, data);
+          }}
         />
       )}
     </div>
