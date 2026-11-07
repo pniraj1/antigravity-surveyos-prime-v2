@@ -55,6 +55,8 @@ export type OicSideDescription =
 
 export type OicGstType = 'CGST/SGST' | 'IGST';
 
+export type OicPaintingMode = 'split' | 'net_single';
+
 export interface OicItemRow {
   invoiceNumber: string;
   itemDescription: OicItemDescription;
@@ -150,6 +152,7 @@ export function oicAssessmentRows(
   ageMonths: number,
   depType: DepreciationType,
   invoiceNumber: string,
+  opts?: { paintingMode?: OicPaintingMode },
 ): OicItemRow[] {
   const invNo = cleanText(invoiceNumber, 50) || '1';
 
@@ -209,8 +212,26 @@ export function oicAssessmentRows(
         estimatedAmount: summary.totalEstimated,
         hsnCode: hsnForRate(paintGst),
       });
+    } else if (opts?.paintingMode === 'net_single') {
+      // Standard policy (Single Net Line): Pre-deducted 12.5% statutory deduction under Labour Charge
+      // As seen in live OIC Surveyor Assessment Reports (e.g. Painting charges FRONT @ 0% dep).
+      const netPaintingAssessed = Math.round(summary.totalAssessed * 0.875 * 100) / 100;
+      const netPaintingEstimated = Math.round(summary.totalEstimated * 0.875 * 100) / 100;
+
+      if (netPaintingAssessed > 0 || netPaintingEstimated > 0) {
+        itemRows.push({
+          invoiceNumber: invNo,
+          itemDescription: 'Labour Charge',
+          itemSubType: 'Painting charges (Net 12.5% Dep)',
+          itemAmount: netPaintingAssessed,
+          depreciationRate: 0,
+          gstRate: paintGst,
+          estimatedAmount: summary.totalEstimated,
+          hsnCode: '9987',
+        });
+      }
     } else {
-      // Standard policy: Statutory 75% Labour (0% dep) + 25% Material (50% dep)
+      // Standard policy (Statutory 2-line split, default): 75% Labour (0% dep) + 25% Material (50% dep)
       const estLabour = Math.round(summary.totalEstimated * 0.75 * 100) / 100;
       const estMat = Math.round((summary.totalEstimated - estLabour) * 100) / 100;
 
@@ -351,13 +372,16 @@ export async function exportOicAssessmentExcel(
     invoiceNumber?: string;
     invoiceDate?: string;
     gstType?: OicGstType;
+    paintingMode?: OicPaintingMode;
   },
 ): Promise<void> {
   const invNo = options?.invoiceNumber?.trim() || '1';
   const invDate = options?.invoiceDate?.trim() || new Date().toISOString().split('T')[0].split('-').reverse().join('-');
   const gstType = options?.gstType || 'CGST/SGST';
 
-  const itemRows = oicAssessmentRows(rows, ageMonths, depType, invNo);
+  const itemRows = oicAssessmentRows(rows, ageMonths, depType, invNo, {
+    paintingMode: options?.paintingMode,
+  });
   const wb = buildOicWorkbook({
     invoiceNumber: invNo,
     invoiceDate: invDate,

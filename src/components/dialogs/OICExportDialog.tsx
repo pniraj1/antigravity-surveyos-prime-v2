@@ -10,7 +10,8 @@ import {
 import type { AssessmentRow } from '@/types/assessment';
 import type { DepreciationType } from '@/types';
 import type { ClaimData } from '@/types/claim';
-import { buildPortalPacket } from '@/lib/portal/packet';
+import { buildOicPacket } from '@/lib/portal/packet';
+import type { OicPaintingMode } from '@/lib/reports/oic-assessment-excel';
 import {
   isExtensionPresent,
   sendPacketToExtension,
@@ -65,6 +66,7 @@ export function OICExportDialog({ claim, claimNo, rows, ageMonths, depType, onCl
   const [invoiceNumber, setInvoiceNumber] = useState(initialInvNo);
   const [invoiceDate, setInvoiceDate] = useState(initialInvDate);
   const [gstType, setGstType] = useState<OicGstType>('CGST/SGST');
+  const [paintingMode, setPaintingMode] = useState<OicPaintingMode>('split');
 
   // Extension bridge state
   const [extPresent] = useState(() => isExtensionPresent());
@@ -75,7 +77,13 @@ export function OICExportDialog({ claim, claimNo, rows, ageMonths, depType, onCl
     setSendState('sending');
     setSendError('');
     try {
-      const packet = await buildPortalPacket(claim, { ageMonths });
+      const packet = await buildOicPacket(claim, {
+        ageMonths,
+        invoiceNumber,
+        invoiceDate,
+        gstType,
+        paintingMode,
+      });
       const r = await sendPacketToExtension(packet);
       if (r.ok) {
         setSendState('sent');
@@ -92,7 +100,7 @@ export function OICExportDialog({ claim, claimNo, rows, ageMonths, depType, onCl
   const { sheetRows, rowError } = useMemo(() => {
     try {
       return {
-        sheetRows: oicAssessmentRows(rows, ageMonths, depType, invoiceNumber),
+        sheetRows: oicAssessmentRows(rows, ageMonths, depType, invoiceNumber, { paintingMode }),
         rowError: '',
       };
     } catch (e) {
@@ -101,7 +109,7 @@ export function OICExportDialog({ claim, claimNo, rows, ageMonths, depType, onCl
         rowError: e instanceof Error ? e.message : 'Rows could not be prepared.',
       };
     }
-  }, [rows, ageMonths, depType, invoiceNumber]);
+  }, [rows, ageMonths, depType, invoiceNumber, paintingMode]);
 
   const painting = useMemo(() => oicPaintingSummary(rows), [rows]);
 
@@ -113,6 +121,7 @@ export function OICExportDialog({ claim, claimNo, rows, ageMonths, depType, onCl
         invoiceNumber,
         invoiceDate,
         gstType,
+        paintingMode,
       });
     } catch {
       setError('Could not build the Excel file. Try again.');
@@ -253,8 +262,44 @@ export function OICExportDialog({ claim, claimNo, rows, ageMonths, depType, onCl
                         Included as 1 consolidated <span className="font-medium text-foreground">Labour Charge</span> line at 0% depreciation (₹{painting.totalAssessed.toFixed(2)}).
                       </div>
                     ) : (
-                      <div className="text-muted-foreground text-[11px]">
-                        Split into <span className="font-medium text-foreground">75% Labour</span> (₹{painting.labourPart.toFixed(2)} at 0% dep) and <span className="font-medium text-foreground">25% Paint Material</span> (₹{painting.materialPart.toFixed(2)} at 50% dep) to show the statutory 12.5% deduction on OIC without manual math.
+                      <div className="space-y-2">
+                        <div className="text-muted-foreground text-[11px]">
+                          OIC portal lacks an automated 12.5% paint deduction rule. SurveyOS accounts for the statutory 12.5% deduction using your choice below:
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 pt-1">
+                          <label className={`flex flex-col p-2 rounded-lg border cursor-pointer transition-colors text-[11px] ${paintingMode === 'split' ? 'bg-indigo-500/10 border-indigo-500/40 text-foreground' : 'bg-background/60 border-border text-muted-foreground'}`}>
+                            <div className="flex items-center gap-1.5 font-medium">
+                              <input
+                                type="radio"
+                                name="oic-paint-mode"
+                                value="split"
+                                checked={paintingMode === 'split'}
+                                onChange={() => setPaintingMode('split')}
+                                className="w-3 h-3 text-indigo-600"
+                              />
+                              2-Line Statutory Split
+                            </div>
+                            <span className="text-[10px] text-muted-foreground mt-0.5">
+                              75% Labour (0% dep) + 25% Material (50% dep)
+                            </span>
+                          </label>
+                          <label className={`flex flex-col p-2 rounded-lg border cursor-pointer transition-colors text-[11px] ${paintingMode === 'net_single' ? 'bg-indigo-500/10 border-indigo-500/40 text-foreground' : 'bg-background/60 border-border text-muted-foreground'}`}>
+                            <div className="flex items-center gap-1.5 font-medium">
+                              <input
+                                type="radio"
+                                name="oic-paint-mode"
+                                value="net_single"
+                                checked={paintingMode === 'net_single'}
+                                onChange={() => setPaintingMode('net_single')}
+                                className="w-3 h-3 text-indigo-600"
+                              />
+                              Single Net Line
+                            </div>
+                            <span className="text-[10px] text-muted-foreground mt-0.5">
+                              ₹{(painting.totalAssessed * 0.875).toFixed(2)} (12.5% pre-deducted, 0% dep)
+                            </span>
+                          </label>
+                        </div>
                       </div>
                     )}
                   </div>

@@ -2,6 +2,17 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-07 (Antigravity) — OIC Portal Auto-Fill Strengthening, Safe Step 2 Field Mapping & Painting 12.5% Statutory Fix
+- feat(portal): Implemented `buildOicPacket` in `src/lib/portal/packet.ts` generating canonical, type-safe `OicPortalPacket` for Oriental Insurance assessment flow with 23 safe Step 2 fields (`regNumber`, `make`, `model`, `chasisNumber`, `engineNumber`, `cubicCapacity`, `manufacturingYear`, `colorOfVehicle`, `typeOfFuel`, `typeOfBody`, `classOfVehicle`, `unladenWeight`, `registeredLadenWeight`, `seatingCapacity`, `lossDescription`, `driverName`, `driverLicenseNoTwo`, `driverBadgeNo`, `driverAddress`, `workshopName`, `workshopEstimateAmount`).
+- feat(extension): Added `https://surveyos.in/*` to `extension/manifest.json` under `host_permissions` and `content_scripts[0].matches`, resolving the relay bridge disconnection on production domain `surveyos.in`.
+- fix(extension): Fixed potential non-Angular runtime crash in `extension/src/filler.js` by checking `ng()` availability in `ctrlScope` and `fill.read.current` before querying AngularJS elements, guaranteeing robust execution on non-Angular portal frameworks like PrimeVue/React on OIC.
+- feat(reports): Fixed painting 12.5% statutory depreciation problem in `src/lib/reports/oic-assessment-excel.ts` by introducing `OicPaintingMode` ('split' vs 'net_single'). Standard policies now support:
+  1) `split` (default): Statutory 2-line split: 75% Labour (0% dep) + 25% Material (50% dep) = 12.5% net deduction.
+  2) `net_single`: Single net pre-deducted line under `Labour Charge` (`Painting charges (Net 12.5% Dep)` @ 0% dep, HSN 9987) matching real live OIC assessment reports. Both methods eliminate the portal 0% depreciation bug.
+- feat(ui): Enhanced `OICExportDialog.tsx` with a painting mode selector for standard policies, wired `buildOicPacket` into the extension bridge button, and preserved Step 4 assessment grid boundaries (handled strictly via Excel upload).
+- test: Added comprehensive unit tests in `src/lib/reports/__tests__/oic-assessment-excel.test.ts` and `src/lib/portal/__tests__/packet.test.ts`. Rebuilt extension zip and unpacked targets via `scripts/build-ext.py`.
+- verification: 310 Vitest test files passed (2,720 tests, 100% green), `npx tsc --noEmit` clean (0 errors), Next.js production build (`npm run build`) succeeded, SurveyOS Scan coupling test (`:app:testDebugUnitTest`) 28 tasks passed (100% green).
+
 ## 2026-11-07 (Antigravity) — Multi-User Team Workspaces, Active Editing Conflict Warnings & Admin Payment Controls
 - feat(team): Added `maxTeamSeats`, `teamEmails`, and `hideEarningsFromTeam` to `SurveyorProfile` and `SurveyorAdminProfile` in `src/types/vehicle.ts` and `src/components/admin/types.ts`.
 - feat(admin): Implemented Master Admin seat quota management in `src/components/admin/tabs/SurveyorsTab.tsx` and `useAdminActions.ts` (`handleUpdateTeamSeats`). Enhanced search filter to match assistant emails within `surveyor.teamEmails`.

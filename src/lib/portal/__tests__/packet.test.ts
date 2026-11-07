@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildPortalPacket, buildUiicPacket, CANONICAL_FIELDS, UIIC_FIELDS } from '../packet';
+import { buildPortalPacket, buildUiicPacket, buildOicPacket, CANONICAL_FIELDS, UIIC_FIELDS, OIC_FIELDS } from '../packet';
 import { uiicPortalSummary } from '@/lib/calculations/uiic-portal-summary';
 import { projectForBillCheck } from '@/lib/reports/bill-check-projection';
 import uiicMap from '../../../../extension/maps/uiic-claimsurvey.json';
@@ -212,5 +212,54 @@ describe('buildUiicPacket', () => {
   it('throws without a claim number', () => {
     const c = claim(); c.policy.claimNumber = '  ';
     expect(() => build(c)).toThrow(/claim number/i);
+  });
+});
+
+describe('buildOicPacket', () => {
+  it('emits portal: oic, flow: assessment, OIC_FIELDS, and one Excel file', async () => {
+    const c = claim();
+    c.vehicle.registrationNumber = 'MH 02 DW 3096';
+    c.vehicle.make = 'SKODA';
+    c.vehicle.model = 'RAPID';
+    c.vehicle.chassisNumber = 'TMB123456';
+    c.vehicle.engineNumber = 'ENG98765';
+    c.vehicle.yearOfManufacture = 2018;
+    c.vehicle.colour = 'White';
+    c.vehicle.fuel = 'Diesel';
+    c.driver.name = 'Virendrakumar Jain';
+    c.driver.licenceNumber = 'MH02201800123';
+    c.accident.causeOfAccident = 'Frontal collision with divider';
+    c.accident.workshopName = 'Skoda Workshop Pune';
+
+    const p = await buildOicPacket(c, { ageMonths: 80, paintingMode: 'net_single' });
+    expect(p.v).toBe(1);
+    expect(p.portal).toBe('oic');
+    expect(p.flow).toBe('assessment');
+    expect(p.claimNo).toBe('3101/00312/24-C');
+    for (const k of Object.keys(p.fields)) expect(OIC_FIELDS).toContain(k);
+
+    expect(p.fields.regNumber).toBe('MH02DW3096');
+    expect(p.fields.make).toBe('SKODA');
+    expect(p.fields.model).toBe('RAPID');
+    expect(p.fields.chasisNumber).toBe('TMB123456');
+    expect(p.fields.engineNumber).toBe('ENG98765');
+    expect(p.fields.manufacturingYear).toBe('2018');
+    expect(p.fields.colorOfVehicle).toBe('White');
+    expect(p.fields.typeOfFuel).toBe('Diesel');
+    expect(p.fields.driverName).toBe('Virendrakumar Jain');
+    expect(p.fields.driverLicenseNoTwo).toBe('MH02201800123');
+    expect(p.fields.lossDescription).toBe('Frontal collision with divider');
+    expect(p.fields.workshopName).toBe('Skoda Workshop Pune');
+    expect(p.fields.workshopEstimateAmount).toBe(5000);
+
+    expect(p.files).toHaveLength(1);
+    expect(p.files[0].slot).toBe('assessmentExcel');
+    expect(p.files[0].name).toBe('3101_00312_24-C_OIC_Assessment.xlsx');
+  });
+
+  it('throws without a claim number', async () => {
+    const c = claim();
+    c.policy.claimNumber = '  ';
+    await expect(buildOicPacket(c, { ageMonths: 24 })).rejects.toThrow(/claim number/i);
   });
 });

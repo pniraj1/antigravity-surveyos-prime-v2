@@ -13,6 +13,12 @@ import {
   niaAssessmentRows,
   niaPainting,
 } from '@/lib/reports/nia-assessment-excel';
+import {
+  buildOicWorkbook,
+  oicAssessmentRows,
+  type OicGstType,
+  type OicPaintingMode,
+} from '@/lib/reports/oic-assessment-excel';
 import { projectForBillCheck, resolveBillSalvage } from '@/lib/reports/bill-check-projection';
 import { uiicPortalSummary, type UiicGstSlab } from '@/lib/calculations/uiic-portal-summary';
 
@@ -60,7 +66,27 @@ export interface UiicPortalPacket {
   files: [];
 }
 
-export type PortalPacket = NiaPortalPacket | UiicPortalPacket;
+export const OIC_FIELDS = [
+  'regNumber', 'make', 'model', 'chasisNumber', 'engineNumber',
+  'cubicCapacity', 'manufacturingYear', 'colorOfVehicle', 'typeOfFuel',
+  'typeOfBody', 'classOfVehicle', 'unladenWeight', 'registeredLadenWeight',
+  'seatingCapacity', 'lossDescription', 'driverName', 'driverLicenseNoTwo',
+  'driverBadgeNo', 'driverQualification', 'driverAddress',
+  'workshopName', 'workshopEstimateAmount', 'workshopGstNo',
+] as const;
+export type OicField = (typeof OIC_FIELDS)[number];
+
+export interface OicPortalPacket {
+  v: 1;
+  portal: 'oic';
+  flow: 'assessment';
+  claimNo: string;
+  builtAt: string;
+  fields: Partial<Record<OicField, string | number>>;
+  files: Array<{ slot: 'assessmentExcel'; name: string; mime: string; base64: string }> | [];
+}
+
+export type PortalPacket = NiaPortalPacket | UiicPortalPacket | OicPortalPacket;
 
 /** The fee-bill GST rate the engine applies, as a whole percent. */
 const FEE_GST_PERCENT = Math.round(calculateFeeGST(100).totalGST);
@@ -206,5 +232,92 @@ export function buildUiicPacket(claim: ClaimData, opts: { ageMonths: number }): 
       dailyAllowance: fee?.haltageCharges ?? 0,
     }),
     files: [],
+  };
+}
+
+export interface BuildOicPacketOptions {
+  ageMonths: number;
+  invoiceNumber?: string;
+  invoiceDate?: string; // DD-MM-YYYY
+  gstType?: OicGstType;
+  paintingMode?: OicPaintingMode;
+  includeExcel?: boolean;
+}
+
+export async function buildOicPacket(
+  claim: ClaimData,
+  opts: BuildOicPacketOptions,
+): Promise<OicPortalPacket> {
+  const claimNo = (claim.policy?.claimNumber ?? '').trim();
+  if (!claimNo) throw new Error('This claim has no claim number; the portal needs one to match on.');
+
+  const v = claim.vehicle;
+  const d = claim.driver;
+  const a = claim.accident;
+  const bc = claim.billCheck;
+  const depType = toDepreciationType(claim.depreciationType);
+
+  let files: OicPortalPacket['files'] = [];
+  if (opts.includeExcel !== false) {
+    const invNo = opts.invoiceNumber?.trim() || bc?.billNo || (claimNo ? `INV-${claimNo.slice(-4)}` : '1');
+    const invDate =
+      opts.invoiceDate?.trim() ||
+      (bc?.billDate
+        ? bc.billDate.split('-').reverse().join('-')
+        : new Date().toISOString().split('T')[0].split('-').reverse().join('-'));
+    const gstType = opts.gstType || 'CGST/SGST';
+    const rows = claim.assessmentRows ?? [];
+    const itemRows = oicAssessmentRows(rows, opts.ageMonths, depType, invNo, {
+      paintingMode: opts.paintingMode,
+    });
+    const wb = buildOicWorkbook({
+      invoiceNumber: invNo,
+      invoiceDate: invDate,
+      gstType,
+      rows: itemRows,
+    });
+    const buf = await wb.xlsx.writeBuffer();
+    const safeNo = claimNo.replace(/[^A-Za-z0-9_-]+/g, '_');
+    files = [
+      {
+        slot: 'assessmentExcel',
+        name: `${safeNo}_OIC_Assessment.xlsx`,
+        mime: XLSX_MIME,
+        base64: bytesToBase64(buf as ArrayBuffer),
+      },
+    ];
+  }
+
+  return {
+    v: 1,
+    portal: 'oic',
+    flow: 'assessment',
+    claimNo,
+    builtAt: new Date().toISOString(),
+    fields: compact<OicField>({
+      regNumber: v?.registrationNumber?.replace(/\s+/g, '')?.toUpperCase(),
+      make: v?.make?.trim(),
+      model: v?.model?.trim(),
+      chasisNumber: v?.chassisNumber?.trim(),
+      engineNumber: v?.engineNumber?.trim(),
+      cubicCapacity: v?.cubicCapacity?.trim(),
+      manufacturingYear: v?.yearOfManufacture != null ? String(v.yearOfManufacture) : undefined,
+      colorOfVehicle: v?.colour?.trim(),
+      typeOfFuel: v?.fuel?.trim(),
+      typeOfBody: v?.bodyType?.trim(),
+      classOfVehicle: v?.classOfVehicle?.trim(),
+      unladenWeight: v?.unladenWeight != null ? String(v.unladenWeight) : undefined,
+      registeredLadenWeight:
+        v?.registeredLoadWeight?.trim() || (v?.grossWeight != null ? String(v.grossWeight) : undefined),
+      seatingCapacity: v?.seatingCapacity?.trim(),
+      lossDescription: (a?.causeOfAccident || a?.remarks || '')?.trim().slice(0, 2000) || undefined,
+      driverName: d?.name?.trim(),
+      driverLicenseNoTwo: d?.licenceNumber?.trim(),
+      driverBadgeNo: d?.badgeNumber?.trim(),
+      driverAddress: d?.address?.trim().slice(0, 240) || undefined,
+      workshopName: a?.workshopName?.trim(),
+      workshopEstimateAmount: bc?.billTotal ?? undefined,
+    }),
+    files,
   };
 }

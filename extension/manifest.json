@@ -2,11 +2,12 @@
   "manifest_version": 3,
   "name": "SurveyOS Portal Fill",
   "version": "0.4.0",
-  "description": "Fills insurer surveyor portals (New India, United India) from a finished SurveyOS claim. Never submits, never sees your login.",
+  "description": "Fills insurer surveyor portals (New India, United India, Oriental) from a finished SurveyOS claim. Never submits, never sees your login.",
   "minimum_chrome_version": "111",
   "icons": { "128": "icons/icon128.png" },
   "permissions": ["storage", "alarms"],
   "host_permissions": [
+    "https://surveyos.in/*",
     "https://motorsurveyos-in.web.app/*",
     "https://web.newindia.co.in/NIABancsPortal/*",
     "https://portal.uiic.in/surveyor/*",
@@ -15,7 +16,11 @@
   "background": { "service_worker": "src/background.js" },
   "content_scripts": [
     {
-      "matches": ["https://motorsurveyos-in.web.app/*", "http://localhost:3000/*"],
+      "matches": [
+        "https://surveyos.in/*",
+        "https://motorsurveyos-in.web.app/*",
+        "http://localhost:3000/*"
+      ],
       "js": ["src/lib/packet-validate.js", "src/relay.js"],
       "run_at": "document_idle"
     },

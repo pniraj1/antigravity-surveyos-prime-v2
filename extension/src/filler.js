@@ -19,6 +19,7 @@
   };
 
   function ctrlScope(/** @type {any} */ map) {
+    if (!ng()) return null;
     if (map.controller) {
       const el = document.querySelector(`[ng-controller="${map.controller}"], [data-ng-controller="${map.controller}"]`);
       return el ? ng().element(el).scope() : null;
@@ -108,8 +109,8 @@
     const read = {
       current: (/** @type {string} */ path) => {
         const el = q(path)[0];
-        const c = el ? ng().element(el).controller('ngModel') : null;
-        return c ? c.$modelValue : readPath(scope, path);
+        const c = el && ng() ? ng().element(el).controller('ngModel') : null;
+        return c ? c.$modelValue : el ? (/** @type {HTMLInputElement} */ (el)).value : readPath(scope, path);
       },
       radioValues: (/** @type {string} */ path) => q(path).map((el) => /** @type {HTMLInputElement} */ (el).value),
     };

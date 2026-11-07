@@ -1,7 +1,37 @@
 # Active Tasks
 
-> Last updated: 2026-11-07 by Antigravity (Multi-User Team Workspaces, Active Editing Conflict Warnings & Admin Payment Controls)
+> Last updated: 2026-11-07 by Antigravity (OIC Portal Auto-Fill Strengthening, Safe Step 2 Field Mapping & Painting 12.5% Statutory Fix)
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
+
+---
+
+## Done: OIC Portal Auto-Fill Strengthening, Safe Step 2 Field Mapping & Painting 12.5% Statutory Fix (2026-11-07, Antigravity)
+- **Problem Solved:**
+  - The SurveyOS Portal Fill extension lacked `https://surveyos.in/*` in `extension/manifest.json`, preventing the extension relay from connecting when running on the production domain.
+  - `src/lib/portal/packet.ts` lacked an `OicPortalPacket` and `buildOicPacket`, causing `OICExportDialog.tsx` to transmit an NIA packet that the extension rejected or misrouted.
+  - `extension/src/filler.js` contained an unhandled `ng()` reference in `ctrlScope` and `fill.read.current`, which would throw a `TypeError` when run on non-Angular portal frameworks (such as OIC's PrimeVue/Vue setup).
+  - In live OIC uploads, painting was previously uploaded as `Labour Charge | TOTAL PAINTING CHARGES | 15000 | dep=0`, causing OIC to take 0% depreciation on painting instead of the statutory 12.5% deduction under Indian Motor Tariff GR-9.
+- **Architecture Delivered:**
+  - **Extension Bridge & Manifest (`extension/manifest.json`, `extension/src/filler.js`):**
+    - Added `https://surveyos.in/*` to `host_permissions` and `content_scripts[0].matches`.
+    - Protected `ctrlScope` and `fill.read.current` against missing AngularJS, ensuring flawless execution on non-Angular web portals.
+  - **OIC Portal Packet (`src/lib/portal/packet.ts`):**
+    - Defined `OIC_FIELDS` and `OicPortalPacket` (`portal: 'oic'`, `flow: 'assessment'`).
+    - Implemented `buildOicPacket(claim, opts)` flattening 23 safe, high-confidence Step 2 Basic Details fields (`regNumber`, `make`, `model`, `chasisNumber`, `engineNumber`, `cubicCapacity`, `manufacturingYear`, `colorOfVehicle`, `typeOfFuel`, `typeOfBody`, `classOfVehicle`, `unladenWeight`, `registeredLadenWeight`, `seatingCapacity`, `lossDescription`, `driverName`, `driverLicenseNoTwo`, `driverBadgeNo`, `driverAddress`, `workshopName`, `workshopEstimateAmount`).
+    - Strictly omitted tricky dynamic MUI datepickers and verification questions in accordance with user guidelines.
+  - **Painting 12.5% Statutory Treatment (`src/lib/reports/oic-assessment-excel.ts`, `OICExportDialog.tsx`):**
+    - Added `OicPaintingMode` (`'split'` vs `'net_single'`).
+    - Standard policy painting offers:
+      1. `split` (default): 75% Labour (0% dep) + 25% Plastic (50% dep) = net 12.5% deduction.
+      2. `net_single`: Single net pre-deducted line under `Labour Charge` (`Painting charges (Net 12.5% Dep)` @ 0% dep, HSN 9987) matching live OIC surveyor assessment reports (e.g. Item 1 FRONT 13,125.0).
+    - Added visual mode toggle in `OICExportDialog.tsx`.
+    - Maintained Step 4 boundary: line items remain strictly in the 2-sheet Excel file upload (`#fileInput`), never through DOM typing.
+- **Verification:**
+  - Vitest test suite: 310 test files passed (2,720 tests, 100% green).
+  - Extension tests: 10 test files (124 tests, 100% green).
+  - `npx tsc --noEmit`: 0 errors.
+  - Next.js production build (`npm run build`): Succeeded.
+  - Scan unit tests (`:app:testDebugUnitTest`): 28 tasks passed (100% green).
 
 ---
 

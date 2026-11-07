@@ -164,6 +164,34 @@ describe('oicAssessmentRows — painting handling', () => {
     expect(netAssessed).toBe(3500);
   });
 
+  test('standard policy with net_single produces 1 line with 12.5% pre-deducted under Labour Charge', () => {
+    const rows = oicAssessmentRows(
+      [
+        row({
+          section: 'paint',
+          particulars: 'Front Bumper Painting',
+          estimated: 20000,
+          assessed: 15000,
+          gst: 18,
+        }),
+      ],
+      AGE,
+      'standard',
+      '66',
+      { paintingMode: 'net_single' },
+    );
+    expect(rows).toHaveLength(1);
+    const [r] = rows;
+    expect(r.itemDescription).toBe('Labour Charge');
+    expect(r.itemSubType).toBe('Painting charges (Net 12.5% Dep)');
+    // 15000 * 0.875 = 13125
+    expect(r.itemAmount).toBe(13125);
+    expect(r.depreciationRate).toBe(0);
+    expect(r.gstRate).toBe(18);
+    expect(r.hsnCode).toBe('9987');
+    expect(r.estimatedAmount).toBe(20000);
+  });
+
   test('oicPaintingSummary calculates accurate totals', () => {
     const summary = oicPaintingSummary([
       row({ section: 'paint', estimated: 5000, assessed: 4000, allowed: true }),
