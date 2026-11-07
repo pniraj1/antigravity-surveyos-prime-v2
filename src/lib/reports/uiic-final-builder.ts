@@ -70,7 +70,7 @@ export function buildUIICFinalHTML(claim: ClaimData, profile: SurveyorProfile | 
   const p = claim.policy;
   const a = claim.accident;
   const sd = claim.spotDetails;
-  const ri = claim.reinspection;
+  const ri = claim.reinspection || ({} as any);
   const rows = claim.assessmentRows || [];
   const depType = claim.depreciationType || 'standard';
   const nm = profile?.name || 'SURVEYOR NAME';
@@ -221,7 +221,7 @@ ${getSurveyorHeader(profile)}
 <tr><td style="padding:2px 3px;color:#333;width:50%;">Final Survey Appointment Date</td><td style="padding:2px 3px;">${fd(a.appointmentDate)}</td></tr>
 <tr><td style="padding:2px 3px;color:#333;">Date of visits</td><td style="padding:2px 3px;">${formatSurveyDateTime(a.dateOfSurvey, a.timeOfSurvey)}</td></tr>
 <tr><td style="padding:2px 3px;color:#333;">Place of Survey</td><td style="padding:2px 3px;">${g(a.placeOfSurvey)}</td></tr>
-<tr><td style="padding:2px 3px;color:#333;">Workshop Name</td><td style="padding:2px 3px;">${g(a.workshopName || sd.repairWorkshop)}</td></tr>
+<tr><td style="padding:2px 3px;color:#333;">Workshop Name</td><td style="padding:2px 3px;">${g(a.workshopName)}</td></tr>
 <tr><td style="padding:2px 3px;color:#333;">Workshop Address</td><td style="padding:2px 3px;">${g(a.workshopAddress)}</td></tr>
 <tr><td style="padding:2px 3px;color:#333;">Workshop Empanelled</td><td style="padding:2px 3px;">NO</td></tr>
 <tr><td style="padding:2px 3px;color:#333;">Workshop Phone</td><td style="padding:2px 3px;">${g(a.workshopPhone)}</td></tr>
@@ -279,7 +279,7 @@ ${getSurveyorHeader(profile)}
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Class of vehicles licenced to drive</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(d.vehicleClasses)}</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Licence Issuing Authority</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(d.issuingAuthority)}</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Date of Issue of Licence</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${fd(d.dateOfIssue)}</td></tr>
-      <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">License Valid upto</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${fd(d.validityNonTransport || d.validityTransport)}</td></tr>
+      <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">License Valid upto</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${(d.validityNonTransport && d.validityTransport) ? `NT: ${fd(d.validityNonTransport)} &nbsp;|&nbsp; TR: ${fd(d.validityTransport)}` : fd(d.validityNonTransport || d.validityTransport)}</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Badge number</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(d.badgeNumber)}</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Hazardous Goods Endorsement</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${(d as any).hazardousEndorsement === 'yes' ? `Yes${(d as any).hazardousEndorsementNote ? ' — ' + g((d as any).hazardousEndorsementNote) : ''}` : (d as any).hazardousEndorsement === 'no' ? 'No' : '—'}</td></tr>
 
@@ -533,7 +533,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   const v = claim.vehicle;
   const p = claim.policy;
   const a = claim.accident;
-  const ri = claim.reinspection;
+  const ri = claim.reinspection || ({} as any);
   const bc = claim.billCheck;
   const rows = claim.assessmentRows || [];
   const depType = claim.depreciationType || 'standard';

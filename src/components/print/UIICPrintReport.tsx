@@ -98,7 +98,7 @@ export const UIICPrintReport = React.forwardRef<HTMLDivElement, UIICPrintReportP
               <div className="row"><div className="label">Holder</div><div className="value">{claim.driver.name}</div></div>
               <div className="row"><div className="label">DL No.</div><div className="value">{claim.driver.licenceNumber}</div></div>
               <div className="row"><div className="label">Class</div><div className="value">{claim.driver.vehicleClasses}</div></div>
-              <div className="row" style={{ borderBottom: 0 }}><div className="label">Validity</div><div className="value">{claim.driver.validityTransport || claim.driver.validityNonTransport}</div></div>
+              <div className="row" style={{ borderBottom: 0 }}><div className="label">Validity</div><div className="value">{claim.driver.validityNonTransport && claim.driver.validityTransport ? `NT: ${claim.driver.validityNonTransport} | TR: ${claim.driver.validityTransport}` : (claim.driver.validityNonTransport || claim.driver.validityTransport || '')}</div></div>
             </div>
           </div>
 

@@ -25,9 +25,11 @@ interface BcSummary {
   netLiability: number;
   excess: number;
   salvage: number;
+  towingCharges?: number;
 }
 
 interface Props {
+  claimId?: string;
   bc: BillCheckDetails;
   onBillCheckChange: (updates: Partial<BillCheckDetails>) => void;
   summary: Partial<AssessmentSummary>;
@@ -251,7 +253,7 @@ export function BillCheckSummaryPanel({
             {/* Sub Total: Labour */}
             <div className="grid grid-cols-2 p-2 border-b border-border/60 hover:bg-muted/10 transition-colors">
               <span className="font-medium text-foreground">Sub total: Labour (Taxable)</span>
-              <span className="text-right font-medium text-foreground">{fmt(summary?.labourOnlyBase || summary?.labourBase || 0)}</span>
+              <span className="text-right font-medium text-foreground">{fmt(summary?.labourOnlyBase ?? summary?.labourBase ?? 0)}</span>
             </div>
 
             {/* Tax on Labour */}
@@ -265,7 +267,7 @@ export function BillCheckSummaryPanel({
             {/* Final Labour Assessed Amount */}
             <div className="grid grid-cols-2 p-2 border-b border-border/60 bg-muted/20 font-medium text-foreground">
               <span>Final labour assessed amt</span>
-              <span className="text-right">{fmt(summary?.labourOnlyTotal || summary?.labourTotal || 0)}</span>
+              <span className="text-right">{fmt(summary?.labourOnlyTotal ?? summary?.labourTotal ?? 0)}</span>
             </div>
 
             {/* Painting Charges (if present) */}
@@ -288,7 +290,7 @@ export function BillCheckSummaryPanel({
             <div className="grid grid-cols-2 p-2.5 bg-[var(--color-neutral-900)] text-white font-medium">
               <span className="uppercase tracking-wider text-[10px]">GROSS ASSESSED LOSS</span>
               <span className="text-right text-[12px] font-bold">
-                {fmt(summary?.grandTotal || bcSummary.grandTotalAssessed || 0)}
+                {fmt(summary?.grandTotal ?? bcSummary.grandTotalAssessed ?? 0)}
               </span>
             </div>
           </div>
@@ -307,12 +309,18 @@ export function BillCheckSummaryPanel({
           <div className="flex justify-between items-center px-1 text-xs text-muted-foreground pt-1.5 border-t border-border/60">
             <span className="font-medium">Less: Policy Excess</span>
             <span className="font-semibold text-destructive">
-              -{fmt(bcSummary.excess || summary?.excess || 0)}
+              -{fmt(bcSummary.excess ?? summary?.excess ?? 0)}
             </span>
           </div>
         </div>
 
         {/* ─── 4. The Hero Anchor: NET FINAL LIABILITY ────────────── */}
+        {((bcSummary.towingCharges ?? summary?.towingCharges ?? 0) > 0) && (
+          <div className="flex justify-between items-center text-xs text-muted-foreground px-1 pb-1">
+            <span>Includes Towing Charges</span>
+            <span className="font-medium text-foreground">+ {fmt(bcSummary.towingCharges ?? summary?.towingCharges ?? 0)}</span>
+          </div>
+        )}
         <div className="p-4 rounded-xl border-2 border-primary/40 bg-primary/5 text-foreground space-y-1 shadow-sm">
           <div className="flex justify-between items-baseline">
             <div>

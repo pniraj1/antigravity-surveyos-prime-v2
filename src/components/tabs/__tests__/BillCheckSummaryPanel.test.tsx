@@ -151,4 +151,49 @@ describe('BillCheckSummaryPanel', () => {
     // Report Center Link
     expect(html).toContain('View &amp; Print in Report Center');
   });
+
+  it('respects zero policy excess and displays towing charges callout when present', () => {
+    const zeroExcessBcSummary = {
+      ...dummyBcSummary,
+      excess: 0,
+      towingCharges: 1000,
+    };
+    const summaryWithExcess = {
+      ...dummySummary,
+      excess: 1500, // Should NOT be used because bcSummary.excess is 0!
+      towingCharges: 1000,
+    };
+
+    const html = renderToStaticMarkup(
+      <BillCheckSummaryPanel
+        claimId="test-claim-1"
+        bc={{
+          billNo: 'INV-001',
+          billDate: '2026-11-06',
+          billTotal: 50000,
+          verifiedBySurveyor: true,
+        }}
+        onBillCheckChange={() => {}}
+        summary={summaryWithExcess}
+        bcSummary={zeroExcessBcSummary}
+        inBillTotal={46000}
+        notInBillTotal={6000}
+        partialTotal={500}
+        fmt={(n) => `₹ ${n}`}
+        salvageValue={2500}
+        salvageBasis={20000}
+        onSalvageChange={() => {}}
+        onNavigateToReports={() => {}}
+      />
+    );
+
+    // Policy excess should strictly be 0, not 1500!
+    expect(html).toContain('Less: Policy Excess');
+    expect(html).toContain('-₹ 0');
+    expect(html).not.toContain('-₹ 1500');
+
+    // Towing charges callout should be rendered
+    expect(html).toContain('Includes Towing Charges');
+    expect(html).toContain('+ ₹ 1000');
+  });
 });
