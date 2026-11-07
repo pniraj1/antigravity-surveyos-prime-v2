@@ -30,6 +30,7 @@ import {
   Building2,
   Trash2,
   AlertTriangle,
+  Lock,
 } from 'lucide-react';
 
 import { StageBadge } from '@/components/ui/StageBadge';
@@ -38,7 +39,7 @@ import { BankReconcileDialog } from '@/components/dialogs/BankReconcileDialog';
 import { IRDAISummaryDialog } from '@/components/dialogs/IRDAISummaryDialog';
 import { NewClaimDialog } from '@/components/dialogs/NewClaimDialog';
 import { ErrorBoundary } from '@/components/layout/ErrorBoundary';
-import { Sidebar, MobileMenuButton } from '@/components/layout/sidebar';
+import { Sidebar, MobileMenuButton, shouldHideFees } from '@/components/layout/sidebar';
 import { FloatingReportPreview } from '@/components/layout/FloatingReportPreview';
 import { ClaimHeader } from '@/components/layout/ClaimHeader';
 import { NewDrivePhotosBanner } from '@/components/layout/NewDrivePhotosBanner';
@@ -72,9 +73,15 @@ const ValuationTab        = dynamicImport(() => import('@/components/tabs/Valuat
 const InsuredReportTab    = dynamicImport(() => import('@/components/tabs/InsuredReportTab').then(m    => ({ default: m.InsuredReportTab    })), { ssr: false });
 
 // ─── Dashboard Tab Content ──────────────────────────────
-export function DashboardContent() {
+export function DashboardContent({ initialShowArchived = false }: { initialShowArchived?: boolean } = {}) {
   const { setNewClaimDialogOpen, setClaimsListOpen, isClaimsListOpen } = useUIStore();
-  const { claimsList } = useClaimStore();
+  const storeClaimsList = useClaimStore((s) => s.claimsList);
+  const claimsList = (typeof useClaimStore?.getState === 'function' ? useClaimStore.getState().claimsList : null) ?? storeClaimsList ?? [];
+  const auth = useAuthStore();
+  const isTeamMember = typeof useAuthStore?.getState === 'function' ? useAuthStore.getState().isTeamMember : auth.isTeamMember;
+  const teamAffiliation = typeof useAuthStore?.getState === 'function' ? useAuthStore.getState().teamAffiliation : auth.teamAffiliation;
+  const profile = (typeof useProfileStore?.getState === 'function' ? useProfileStore.getState().profile : null) ?? useProfileStore().profile;
+  const hideEarnings = teamAffiliation ? teamAffiliation.hideEarnings : profile.hideEarningsFromTeam;
 
   // "Open saved" and the sidebar folder button raise this flag; bring the claims table into view.
   useEffect(() => {
@@ -83,7 +90,7 @@ export function DashboardContent() {
     document.getElementById('claims-table')?.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' });
     setClaimsListOpen(false);
   }, [isClaimsListOpen, setClaimsListOpen]);
-  const [showArchived, setShowArchived] = useState(false);
+  const [showArchived, setShowArchived] = useState(initialShowArchived);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   const [showReconcile, setShowReconcile] = useState(false);
@@ -200,63 +207,65 @@ export function DashboardContent() {
         </div>
 
         {/* Fees Overview */}
-        <div>
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-              Fees overview
-            </h2>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowIRDAI(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all bg-[var(--color-status-success-tint)] text-[var(--color-status-success)] border border-[var(--color-status-success)]/30 hover:opacity-90"
-              >
-                Export annual summary
-              </button>
-              <button
-                onClick={() => setShowReconcile(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all bg-[var(--color-status-warning-tint)] text-[var(--color-status-warning)] border border-[var(--color-status-warning)]/30 hover:opacity-90"
-              >
-                Reconcile bank statement
-              </button>
+        {!shouldHideFees(isTeamMember, hideEarnings) && (
+          <div>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                Fees overview
+              </h2>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowIRDAI(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all bg-[var(--color-status-success-tint)] text-[var(--color-status-success)] border border-[var(--color-status-success)]/30 hover:opacity-90"
+                >
+                  Export annual summary
+                </button>
+                <button
+                  onClick={() => setShowReconcile(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all bg-[var(--color-status-warning-tint)] text-[var(--color-status-warning)] border border-[var(--color-status-warning)]/30 hover:opacity-90"
+                >
+                  Reconcile bank statement
+                </button>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {[
+                {
+                  label: 'Total Billed',
+                  value: feesBilled > 0 ? `₹${feesBilled.toLocaleString('en-IN')}` : '—',
+                  bgClass: 'bg-[var(--color-neutral-600)]', textClass: 'text-[var(--color-neutral-900)]',
+                  desc: 'across active claims',
+                },
+                {
+                  label: 'Fees Received',
+                  value: feesReceived > 0 ? `₹${feesReceived.toLocaleString('en-IN')}` : '—',
+                  bgClass: 'bg-[var(--color-status-success)]', textClass: 'text-[var(--color-status-success)]',
+                  desc: `${activeClaims.filter(c => c.feePaid).length} claim(s) paid`,
+                },
+                {
+                  label: 'Outstanding',
+                  value: feesOutstanding > 0 ? `₹${feesOutstanding.toLocaleString('en-IN')}` : '—',
+                  bgClass: 'bg-[var(--color-status-danger)]', textClass: 'text-[var(--color-status-danger)]',
+                  desc: `${activeClaims.filter(c => !c.feePaid && c.feeTotal > 0).length} claim(s) unpaid`,
+                },
+              ].map((card) => (
+                <div
+                  key={card.label}
+                  className="p-5 rounded-2xl relative overflow-hidden bg-card border border-border shadow-sm"
+                >
+                  <div className={`absolute top-0 left-0 w-full h-[3px] rounded-t-2xl ${card.bgClass}`} />
+                  <div className="text-[10px] font-medium uppercase tracking-[0.15em] mb-2 mt-1 text-muted-foreground">
+                    {card.label}
+                  </div>
+                  <div className={`text-2xl font-medium tracking-tight mb-1 ${card.textClass}`}>
+                    {card.value}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">{card.desc}</div>
+                </div>
+              ))}
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {[
-              {
-                label: 'Total Billed',
-                value: feesBilled > 0 ? `₹${feesBilled.toLocaleString('en-IN')}` : '—',
-                bgClass: 'bg-[var(--color-neutral-600)]', textClass: 'text-[var(--color-neutral-900)]',
-                desc: 'across active claims',
-              },
-              {
-                label: 'Fees Received',
-                value: feesReceived > 0 ? `₹${feesReceived.toLocaleString('en-IN')}` : '—',
-                bgClass: 'bg-[var(--color-status-success)]', textClass: 'text-[var(--color-status-success)]',
-                desc: `${activeClaims.filter(c => c.feePaid).length} claim(s) paid`,
-              },
-              {
-                label: 'Outstanding',
-                value: feesOutstanding > 0 ? `₹${feesOutstanding.toLocaleString('en-IN')}` : '—',
-                bgClass: 'bg-[var(--color-status-danger)]', textClass: 'text-[var(--color-status-danger)]',
-                desc: `${activeClaims.filter(c => !c.feePaid && c.feeTotal > 0).length} claim(s) unpaid`,
-              },
-            ].map((card) => (
-              <div
-                key={card.label}
-                className="p-5 rounded-2xl relative overflow-hidden bg-card border border-border shadow-sm"
-              >
-                <div className={`absolute top-0 left-0 w-full h-[3px] rounded-t-2xl ${card.bgClass}`} />
-                <div className="text-[10px] font-medium uppercase tracking-[0.15em] mb-2 mt-1 text-muted-foreground">
-                  {card.label}
-                </div>
-                <div className={`text-2xl font-medium tracking-tight mb-1 ${card.textClass}`}>
-                  {card.value}
-                </div>
-                <div className="text-[10px] text-muted-foreground">{card.desc}</div>
-              </div>
-            ))}
-          </div>
-        </div>
+        )}
 
 
         {/* Recent Claims Table */}
@@ -469,7 +478,7 @@ export function DashboardContent() {
                           {claim.isActive ? <Archive size={16} /> : <ArchiveRestore size={16} />}
                         </button>
                         {/* Delete button — only on archived claims */}
-                        {!claim.isActive && (
+                        {!claim.isActive && !isTeamMember && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -613,7 +622,11 @@ export function DashboardContent() {
 
 // ─── Tab Router ──────────────────────────────────────────
 export function TabPlaceholder({ tab }: { tab: string }) {
-  const { profile } = useProfileStore();
+  const auth = useAuthStore();
+  const isTeamMember = typeof useAuthStore?.getState === 'function' ? useAuthStore.getState().isTeamMember : auth.isTeamMember;
+  const teamAffiliation = typeof useAuthStore?.getState === 'function' ? useAuthStore.getState().teamAffiliation : auth.teamAffiliation;
+  const profile = (typeof useProfileStore?.getState === 'function' ? useProfileStore.getState().profile : null) ?? useProfileStore().profile;
+  const hideEarnings = teamAffiliation ? teamAffiliation.hideEarnings : profile.hideEarningsFromTeam;
 
   if (tab === 'documents')   return <DocumentsTab />;
   if (tab === 'review')      return <ReviewTab />;
@@ -624,7 +637,22 @@ export function TabPlaceholder({ tab }: { tab: string }) {
   // Admin-only: guard against URL-based access for non-admin users
   if (tab === 'insured-report')  return profile.isAdmin ? <InsuredReportTab /> : null;
   if (tab === 'bill-check')      return <BillCheckTab />;
-  if (tab === 'fees')        return <FeesTab />;
+  if (tab === 'fees') {
+    if (shouldHideFees(isTeamMember, hideEarnings)) {
+      return (
+        <div className="flex flex-col items-center justify-center p-16 text-center">
+          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center mb-4">
+            <Lock size={24} />
+          </div>
+          <h3 className="text-base font-medium text-foreground">Access Restricted</h3>
+          <p className="text-xs text-muted-foreground max-w-sm mt-1.5 leading-relaxed">
+            Professional survey fee bills and earnings are restricted to the primary surveyor.
+          </p>
+        </div>
+      );
+    }
+    return <FeesTab />;
+  }
   if (tab === 'profile')     return <ProfileTab />;
   if (tab === 'admin')       return <AdminDashboard />;
   if (tab === 'cloud-vault')  return <CloudVaultTab />;

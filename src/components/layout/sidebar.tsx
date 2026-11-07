@@ -54,6 +54,10 @@ export interface NavItem {
   subtitle?: string;
 }
 
+export function shouldHideFees(isTeamMember: boolean, hideEarnings: boolean | undefined): boolean {
+  return isTeamMember && hideEarnings === true;
+}
+
 export const NAV_ITEMS: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={17} />, group: 'main' },
   { id: 'documents', label: 'Documents', icon: <FileText size={17} />, group: 'claim', requiresClaim: true },
@@ -102,9 +106,14 @@ export function Sidebar() {
   const [mounted, setMounted] = useState(false);
   const { activeTab, setActiveTab, sidebarCollapsed, sidebarMobileOpen, toggleSidebar, isOnline, isDriveConnected, driveEmail } = useUIStore();
   const { setNewClaimDialogOpen, setClaimsListOpen } = useUIStore();
-  const { getInitials, profile } = useProfileStore();
+  const { getInitials } = useProfileStore();
+  const profile = (typeof useProfileStore?.getState === 'function' ? useProfileStore.getState().profile : null) ?? useProfileStore().profile;
   const { currentClaim } = useClaimStore();
   const { user, isAuthenticated } = useAuthStore();
+  const isTeamMember = typeof useAuthStore?.getState === 'function' ? useAuthStore.getState().isTeamMember : false;
+  const teamAffiliation = typeof useAuthStore?.getState === 'function' ? useAuthStore.getState().teamAffiliation : null;
+
+  const hideEarnings = teamAffiliation ? teamAffiliation.hideEarnings : profile.hideEarningsFromTeam;
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -281,6 +290,7 @@ export function Sidebar() {
           {groups.map((group) => {
             const items = NAV_ITEMS.filter((item) => {
               if (item.group !== group) return false;
+              if (item.id === 'fees' && shouldHideFees(isTeamMember, hideEarnings)) return false;
               return isNavItemVisible(item.id, currentClaim?.surveyType);
             });
 
