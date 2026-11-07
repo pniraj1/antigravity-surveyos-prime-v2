@@ -221,16 +221,6 @@ export function useCloudSync() {
     };
   }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Clear tab-switch coalesce timer on unmount
-  useEffect(() => {
-    return () => {
-      if (tabSwitchTimerRef.current) {
-        clearTimeout(tabSwitchTimerRef.current);
-        tabSwitchTimerRef.current = null;
-      }
-    };
-  }, []);
-
   // ─── 2b. Milestone: Claim switch ────────────────────────
   // Push the claim being left when the surveyor opens a different claim.
   // Flushes any coalesced tab-switch push immediately.

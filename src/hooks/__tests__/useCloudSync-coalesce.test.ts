@@ -230,7 +230,7 @@ describe('useCloudSync — Tab-Switch Coalescing (Firestore Quota Optimization)'
       isAuthenticated: true,
     });
     useClaimStore.setState({ currentClaim: fakeClaim1 });
-    useUIStore.setState({ activeTab: 'general', isOnline: true });
+    useUIStore.setState({ activeTab: 'details', isOnline: true });
     (document as any).visibilityState = 'visible';
   });
 
@@ -250,24 +250,24 @@ describe('useCloudSync — Tab-Switch Coalescing (Firestore Quota Optimization)'
   it('coalesces rapid tab switches within 15 seconds into a single cloud write', async () => {
     activeHook = renderHook(() => useCloudSync());
 
-    // Switch from general -> policy (t = 0s)
-    useUIStore.setState({ activeTab: 'policy' });
+    // Switch from details -> documents (t = 0s)
+    useUIStore.setState({ activeTab: 'documents' });
     activeHook.rerender();
 
     // Advance 5s (t = 5s) — should not have pushed yet
     await vi.advanceTimersByTimeAsync(5_000);
     expect(mockPushClaimToCloud).not.toHaveBeenCalled();
 
-    // Switch policy -> vehicle (t = 5s)
-    useUIStore.setState({ activeTab: 'vehicle' });
+    // Switch documents -> photos (t = 5s)
+    useUIStore.setState({ activeTab: 'photos' });
     activeHook.rerender();
 
     // Advance 5s (t = 10s) — still quiet window reset
     await vi.advanceTimersByTimeAsync(5_000);
     expect(mockPushClaimToCloud).not.toHaveBeenCalled();
 
-    // Switch vehicle -> cause (t = 10s)
-    useUIStore.setState({ activeTab: 'cause' });
+    // Switch photos -> assessment (t = 10s)
+    useUIStore.setState({ activeTab: 'assessment' });
     activeHook.rerender();
 
     // Advance 14.9s after last switch (t = 24.9s)
@@ -286,7 +286,7 @@ describe('useCloudSync — Tab-Switch Coalescing (Firestore Quota Optimization)'
     activeHook = renderHook(() => useCloudSync());
 
     // Switch tab on Claim 1 (starts debounce timer)
-    useUIStore.setState({ activeTab: 'policy' });
+    useUIStore.setState({ activeTab: 'documents' });
     activeHook.rerender();
 
     // Wait 3 seconds
@@ -314,7 +314,7 @@ describe('useCloudSync — Tab-Switch Coalescing (Firestore Quota Optimization)'
     activeHook = renderHook(() => useCloudSync());
 
     // Switch tab on Claim 1 (starts debounce timer)
-    useUIStore.setState({ activeTab: 'policy' });
+    useUIStore.setState({ activeTab: 'documents' });
     activeHook.rerender();
 
     // Wait 4 seconds
@@ -340,7 +340,7 @@ describe('useCloudSync — Tab-Switch Coalescing (Firestore Quota Optimization)'
     activeHook = renderHook(() => useCloudSync());
 
     // Switch tab on Claim 1 (starts debounce timer)
-    useUIStore.setState({ activeTab: 'policy' });
+    useUIStore.setState({ activeTab: 'documents' });
     activeHook.rerender();
 
     // Wait 2 seconds
@@ -365,7 +365,7 @@ describe('useCloudSync — Tab-Switch Coalescing (Firestore Quota Optimization)'
     activeHook = renderHook(() => useCloudSync());
 
     // Switch tab (starts debounce timer)
-    useUIStore.setState({ activeTab: 'policy' });
+    useUIStore.setState({ activeTab: 'documents' });
     activeHook.rerender();
 
     await vi.advanceTimersByTimeAsync(5_000);
