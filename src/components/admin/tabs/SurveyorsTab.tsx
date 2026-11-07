@@ -354,6 +354,11 @@ export function SurveyorsTab({
                     </div>
                   </td>
                   <td className="px-6 py-5">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border bg-[var(--color-neutral-100)] text-[var(--color-neutral-700)] border-[var(--color-neutral-200)]">
+                      👥 {surveyor.teamEmails?.length || 0} / {surveyor.maxTeamSeats || 0}
+                    </span>
+                  </td>
+                  <td className="px-6 py-5">
                     {!expiry ? (
                       <span className="text-[10px] text-muted-foreground">—</span>
                     ) : (
@@ -424,7 +429,7 @@ export function SurveyorsTab({
                 </tr>
                 {expandedId === surveyor.id && (
                   <tr>
-                    <td colSpan={8} className="px-6 py-0">
+                    <td colSpan={9} className="px-6 py-0">
                       <div
                         className="py-5 px-6 mb-4 rounded-xl animate-in fade-in slide-in-from-top-2 duration-200"
                         style={{ background: 'var(--color-neutral-50)', borderTop: '2px dashed var(--color-neutral-200)' }}
@@ -567,6 +572,54 @@ export function SurveyorsTab({
                             ))}
                           </div>
                         </div>
+                        {/* Firm Team & Seats */}
+                        <div className="mt-5 pt-5 border-t border-border">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                            <div className="flex items-center gap-2">
+                              <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                                Firm Team &amp; Seats
+                              </div>
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[var(--color-neutral-100)] text-[var(--color-neutral-700)] border border-[var(--color-neutral-200)]">
+                                ({surveyor.teamEmails?.length || 0} of {surveyor.maxTeamSeats || 0} seats used)
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                              <label htmlFor={`seats-${surveyor.id}`} className="text-xs font-medium text-foreground">
+                                Allowed Team Seats:
+                              </label>
+                              <TeamSeatsControl
+                                surveyorId={surveyor.id}
+                                maxTeamSeats={surveyor.maxTeamSeats}
+                                disabled={isProcessing}
+                                onUpdateTeamSeats={onUpdateTeamSeats}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="bg-card rounded-xl border border-border p-3.5 shadow-sm">
+                            <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-2">
+                              Registered Assistants ({surveyor.teamEmails?.length || 0})
+                            </div>
+                            {surveyor.teamEmails && surveyor.teamEmails.length > 0 ? (
+                              <div className="flex flex-wrap gap-2">
+                                {surveyor.teamEmails.map((email, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono bg-[var(--color-neutral-50)] border border-border text-foreground"
+                                  >
+                                    <Mail size={12} className="text-muted-foreground" />
+                                    <span>{email}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-muted-foreground italic">
+                                No assistants registered yet
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
                         <div className="mt-5 pt-5 border-t border-border">
                           <SurveyorAIKeys uid={surveyor.id} />
                         </div>
