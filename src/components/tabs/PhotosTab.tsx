@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useClaimStore } from '@/stores/claim-store';
-import { listFilesInFolder } from '@/lib/drive';
+import { listFilesInFolder, findClaimFolderId } from '@/lib/drive';
 import { findNewDrivePhotos } from '@/lib/photos/drive-photo-diff';
 import { downloadDrivePhotos } from '@/lib/photos/download-drive-photos';
 import { partitionPhotos } from '@/lib/photos/document-annexure';
@@ -75,7 +75,7 @@ export function PhotosTab() {
   const [showPreview,  setShowPreview]  = useState(false);
   const [options, setOptions] = useState<PhotoSheetOptions>({ ...DEFAULT_PHOTO_SHEET_OPTIONS });
   const [restoringDrive, setRestoringDrive] = useState(false);
-  const { uploadPhotos, isProcessing, saveToCloudDialog } = usePhotoUpload();
+  const { uploadPhotos, isProcessing } = usePhotoUpload();
 
   if (!currentClaim) return null;
 
@@ -99,16 +99,20 @@ export function PhotosTab() {
   const resetOptions = () => setOptions({ ...DEFAULT_PHOTO_SHEET_OPTIONS });
 
   const handleRestoreFromDrive = async () => {
-    if (!currentClaim.gDriveFolderId) return;
     setRestoringDrive(true);
     try {
-      const files = await listFilesInFolder(currentClaim.gDriveFolderId);
+      const folderId = currentClaim.gDriveFolderId ?? await findClaimFolderId(currentClaim.id);
+      if (!folderId) {
+        toast.info('No Google Drive folder found for this claim.');
+        return;
+      }
+      const files = await listFilesInFolder(folderId);
       const imageFiles = findNewDrivePhotos(
         currentClaim.photos,
         files.filter(f => f.mimeType.startsWith('image/')),
       );
       if (imageFiles.length === 0) {
-        toast.info('No new photos in the Drive folder for this claim.');
+        toast.info('No new photos found in Google Drive for this claim.');
         return;
       }
       const claimId = currentClaim.id;
@@ -117,22 +121,20 @@ export function PhotosTab() {
         addPhoto,
         () => useClaimStore.getState().currentClaim?.id === claimId,
       );
-      if (added > 0) toast.success(`Restored ${added} photo(s) from Google Drive.`);
-      if (failed.length > 0) toast.error(`${failed.length} photo(s) couldn't be restored from Drive.`);
+      if (added > 0) toast.success(`Downloaded ${added} photo${added === 1 ? '' : 's'} from Google Drive.`);
+      if (failed.length > 0) toast.error(`${failed.length} photo(s) couldn't be downloaded from Drive.`);
     } catch {
-      toast.error('Failed to restore photos from Drive. Check your Drive connection.');
+      toast.error('Failed to download photos from Drive. Check your connection.');
     } finally {
       setRestoringDrive(false);
     }
   };
 
   const hasPhotos = damagePhotos.length > 0;
-  const canRestoreFromDrive = !hasPhotos && !currentClaim.isActive && !!currentClaim.gDriveFolderId;
+  const canRestoreFromDrive = !hasPhotos;
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {saveToCloudDialog}
-
       {/* ── Toolbar ── */}
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -142,25 +144,39 @@ export function PhotosTab() {
           </p>
         </div>
 
-        {hasPhotos && (
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Preview toggle */}
-            <button
-              onClick={() => setShowPreview(v => !v)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-md font-semibold text-sm transition-all shadow-sm border ${
-                showPreview
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'bg-background border-border hover:border-primary hover:text-primary'
-              }`}
-            >
-              {showPreview ? <EyeOff size={16} /> : <Eye size={16} />}
-              {showPreview ? 'Hide Preview' : 'Preview PDF'}
-            </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Drive Download Trigger */}
+          <button
+            type="button"
+            onClick={handleRestoreFromDrive}
+            disabled={restoringDrive}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-md font-semibold text-sm transition-all shadow-sm border border-border bg-background hover:bg-muted text-foreground hover:border-primary/50 disabled:opacity-60"
+            title="Check Google Drive for photos added from another device"
+          >
+            {restoringDrive ? <Loader2 size={16} className="animate-spin text-primary" /> : <CloudDownload size={16} className="text-primary" />}
+            {restoringDrive ? 'Downloading…' : 'Sync from Drive'}
+          </button>
 
-            {/* Download */}
-            <PhotoSheetDownloadButton claim={currentClaim} options={options} />
-          </div>
-        )}
+          {hasPhotos && (
+            <>
+              {/* Preview toggle */}
+              <button
+                onClick={() => setShowPreview(v => !v)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-md font-semibold text-sm transition-all shadow-sm border ${
+                  showPreview
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-background border-border hover:border-primary hover:text-primary'
+                }`}
+              >
+                {showPreview ? <EyeOff size={16} /> : <Eye size={16} />}
+                {showPreview ? 'Hide Preview' : 'Preview PDF'}
+              </button>
+
+              {/* Download */}
+              <PhotoSheetDownloadButton claim={currentClaim} options={options} />
+            </>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -333,30 +349,32 @@ export function PhotosTab() {
             </Card>
           )}
 
-          {/* Restore from Drive — shown for archived claims with no local photos */}
+          {/* Restore / Download from Drive banner — prominent when this device has no local photos */}
           {canRestoreFromDrive && (
-            <Card className="border-status-warning shadow-sm bg-status-warning-tint">
+            <Card className="border-primary/30 shadow-sm bg-primary/5">
               <CardContent className="p-6 flex flex-col items-center justify-center text-center gap-3">
-                <CloudDownload size={36} className="text-status-warning opacity-80" />
+                <CloudDownload size={36} className="text-primary opacity-80" />
                 <div>
-                  <h3 className="text-sm font-medium text-status-warning">Photos cleared on archive</h3>
-                  <p className="text-xs text-status-warning mt-1 max-w-xs mx-auto">
-                    Photos were removed from this device when the claim was archived to free up space.
-                    They are still saved in your Google Drive.
+                  <h3 className="text-sm font-semibold text-foreground">Photos in Google Drive</h3>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-md mx-auto">
+                    {currentClaim.isActive
+                      ? 'This claim has photos stored in Google Drive from another device or session. Download them to view and generate photo sheets on this laptop.'
+                      : 'Photos were removed from this device when the claim was archived to free up space. They are still saved in your Google Drive.'}
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={handleRestoreFromDrive}
                   disabled={restoringDrive}
-                  className={`flex items-center gap-2 px-5 py-2 rounded-md text-sm font-medium transition-all ${
+                  className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-md text-sm font-medium transition-all shadow-sm ${
                     restoringDrive
                       ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-70'
-                      : 'bg-primary text-foreground cursor-pointer'
+                      : 'bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer'
                   }`}
                 >
                   {restoringDrive
-                    ? <><Loader2 size={14} className="animate-spin" /> Restoring…</>
-                    : <><CloudDownload size={14} /> Restore from Google Drive</>}
+                    ? <><Loader2 size={15} className="animate-spin" /> Downloading to this Laptop…</>
+                    : <><CloudDownload size={15} /> Download to this Laptop</>}
                 </button>
               </CardContent>
             </Card>

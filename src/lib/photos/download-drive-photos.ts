@@ -13,6 +13,7 @@ function imageSize(dataUrl: string): Promise<{ w: number; h: number }> {
 }
 
 export interface DownloadResult { added: number; failed: DriveFileLite[] }
+export type DownloadProgressCallback = (progress: { completed: number; total: number }) => void;
 
 /**
  * Downloads each file and adds it to the open claim. Stops (without counting
@@ -22,10 +23,13 @@ export async function downloadDrivePhotos(
   files: readonly DriveFileLite[],
   addPhoto: ClaimSlice['addPhoto'],
   isStillCurrent: () => boolean,
+  onProgress?: DownloadProgressCallback,
 ): Promise<DownloadResult> {
   let added = 0;
   const failed: DriveFileLite[] = [];
-  for (const file of files) {
+  const total = files.length;
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
     try {
       const dataUrl = await downloadFileAsBase64(file.id, file.mimeType);
       const { w, h } = await imageSize(dataUrl);
@@ -37,6 +41,7 @@ export async function downloadDrivePhotos(
     } catch {
       failed.push(file); // the rest still arrive
     }
+    onProgress?.({ completed: i + 1, total });
   }
   return { added, failed };
 }
