@@ -29,6 +29,7 @@
 import { useUIStore } from '@/stores/ui-store';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
+import { useAuthStore } from '@/stores/auth-store';
 
 /**
  * Wipes all user-specific client-side state on logout.
@@ -88,4 +89,8 @@ export function resetAllState(): void {
   // ── 5. Open setup dialog ─────────────────────────────────
   // loginSyncDone needs no reset here: useCloudSync sets it false on logout.
   useUIStore.getState().setSetupStep(null);
+
+  // ── 6. Team workspace state ──────────────────────────────
+  // Resets active firm workspace and team member affiliation.
+  useAuthStore.getState().setWorkspace(null, false, null);
 }

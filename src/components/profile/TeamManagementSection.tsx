@@ -1,6 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
+import { doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase/config';
+import { useAuthStore } from '@/stores/auth-store';
+import { useProfileStore } from '@/stores/profile-store';
+import { logger } from '@/lib/utils/logger';
 import {
   Users,
   UserPlus,
@@ -19,6 +24,14 @@ export interface TeamManagementSectionProps {
   teamEmails?: string[];
   hideEarnings?: boolean;
   ownerEmail?: string;
+  ownerUid?: string;
+  profile?: {
+    name?: string;
+    irdaiLicence?: string;
+    licenceNumber?: string;
+    hideEarningsFromTeam?: boolean;
+    email?: string;
+  };
   onUpdateTeam?: (emails: string[]) => void;
   onUpdateTeamEmails?: (emails: string[]) => void;
   onUpdateHideEarnings?: (hide: boolean) => void;
@@ -103,6 +116,8 @@ export function TeamManagementSection({
   teamEmails = [],
   hideEarnings = true,
   ownerEmail,
+  ownerUid,
+  profile,
   onUpdateTeam,
   onUpdateTeamEmails,
   onUpdateHideEarnings,
@@ -110,6 +125,11 @@ export function TeamManagementSection({
 }: TeamManagementSectionProps) {
   const [emailInput, setEmailInput] = useState('');
   const [error, setError] = useState('');
+
+  const authUser = useAuthStore((s) => s.user);
+  const currentProfile = useProfileStore((s) => s.profile);
+  const effectiveOwnerUid = ownerUid || authUser?.uid || '';
+  const effectiveProfile = profile || currentProfile;
 
   const usedSeats = teamEmails.length;
   const isLimitReached = maxSeats > 0 && usedSeats >= maxSeats;
@@ -124,7 +144,7 @@ export function TeamManagementSection({
     onToggleHideEarnings?.(hide);
   };
 
-  const handleAdd = (e: React.FormEvent) => {
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     const result = validateAndAddTeamEmail({
       email: emailInput,
@@ -138,21 +158,62 @@ export function TeamManagementSection({
       return;
     }
 
+    const normalized = emailInput.trim().toLowerCase();
     setError('');
     setEmailInput('');
     if (result.updatedEmails) {
       notifyTeamUpdate(result.updatedEmails);
     }
+
+    // Sync to team_members/{email} collection
+    try {
+      if (effectiveOwnerUid && db) {
+        const memberRef = doc(db, 'team_members', normalized);
+        await setDoc(memberRef, {
+          firmOwnerUid: effectiveOwnerUid,
+          firmName: effectiveProfile?.name || '',
+          firmLicence: effectiveProfile?.irdaiLicence || (effectiveProfile as any)?.licenceNumber || '',
+          hideEarnings: !!effectiveProfile?.hideEarningsFromTeam,
+          ownerEmail: effectiveProfile?.email || ownerEmail || '',
+          addedAt: new Date().toISOString(),
+        });
+      }
+    } catch (err) {
+      logger.error('[TeamManagementSection] Failed to sync team member in cloud (non-fatal):', err);
+    }
   };
 
-  const handleRemove = (email: string) => {
-    const updated = teamEmails.filter((e) => e.toLowerCase() !== email.toLowerCase());
+  const handleRemove = async (email: string) => {
+    const normalized = email.trim().toLowerCase();
+    const updated = teamEmails.filter((e) => e.toLowerCase() !== normalized);
     notifyTeamUpdate(updated);
+
+    // Remove from team_members collection
+    try {
+      if (db) {
+        const memberRef = doc(db, 'team_members', normalized);
+        await deleteDoc(memberRef);
+      }
+    } catch (err) {
+      logger.error('[TeamManagementSection] Failed to delete team member from cloud (non-fatal):', err);
+    }
   };
 
   const handleToggleEarnings = () => {
-    toggleHideEarnings(hideEarnings, (val) => {
+    toggleHideEarnings(hideEarnings, async (val) => {
       notifyHideEarningsUpdate(val);
+      try {
+        if (effectiveOwnerUid && db && teamEmails.length > 0) {
+          await Promise.all(
+            teamEmails.map((em) => {
+              const ref = doc(db, 'team_members', em.trim().toLowerCase());
+              return setDoc(ref, { hideEarnings: val }, { merge: true });
+            })
+          );
+        }
+      } catch (err) {
+        logger.error('[TeamManagementSection] Failed to sync hideEarnings to team_members:', err);
+      }
     });
   };
 

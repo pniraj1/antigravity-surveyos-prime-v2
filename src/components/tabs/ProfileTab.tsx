@@ -713,6 +713,8 @@ export function ProfileTab() {
           teamEmails={profile.teamEmails}
           hideEarnings={profile.hideEarningsFromTeam}
           ownerEmail={profile.email || user?.email || ''}
+          ownerUid={user?.uid}
+          profile={profile}
           onUpdateTeam={(emails) => updateProfile({ teamEmails: emails })}
           onUpdateHideEarnings={(hide) => updateProfile({ hideEarningsFromTeam: hide })}
         />

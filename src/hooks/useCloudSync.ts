@@ -35,7 +35,8 @@ import { isSandbox } from '@/lib/sandbox';
 export const TAB_SWITCH_COALESCE_MS = 15_000;
 
 export function useCloudSync() {
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, isAuthenticated, activeWorkspaceUid, isTeamMember } = useAuthStore();
+  const effectiveUid = activeWorkspaceUid || user?.uid || '';
   const { currentClaim } = useClaimStore();
   const { profile } = useProfileStore();
   const { isOnline, setSaveStatus, activeTab } = useUIStore();
@@ -51,9 +52,13 @@ export function useCloudSync() {
   const prevClaimRef = useRef<ClaimData | null>(null);
   const userRef = useRef(user);
   const isAuthRef = useRef(isAuthenticated);
+  const effectiveUidRef = useRef(effectiveUid);
+  const isTeamMemberRef = useRef(isTeamMember);
   currentClaimRef.current = currentClaim;
   userRef.current = user;
   isAuthRef.current = isAuthenticated;
+  effectiveUidRef.current = effectiveUid;
+  isTeamMemberRef.current = isTeamMember;
 
   // Stable ref to the milestone push fn (avoids stale closures in effects)
   // opts.mirrorToDrive lets background callers (staleness timer) skip the
@@ -140,7 +145,8 @@ export function useCloudSync() {
         try {
           logger.log('[useCloudSync] Login sync started...');
 
-          // Restore profile: Drive first (has signatures), then Firestore (has latest text)
+          if (!isTeamMember) {
+            // Restore profile: Drive first (has signatures), then Firestore (has latest text)
           const driveProfile = await restoreProfileFromDrive();
           if (driveProfile) {
             logger.log('[useCloudSync] Restored profile from Google Drive.');
@@ -161,23 +167,31 @@ export function useCloudSync() {
             logger.error('[useCloudSync] Keys/signature/stamp sync failed:', err);
           }
 
+          } else {
+            // Team member: Pull firm owner's profile so senior surveyor's details appear on reports
+            if (effectiveUid) {
+              await pullProfileFromCloud(effectiveUid);
+            }
+          }
+
           // Allow profile useEffect (Section 4) to push changes only after initial pull.
           // Prevents an empty new-device profile from overwriting Firestore on login.
           profileSyncReadyRef.current = true;
           useUIStore.getState().setLoginSyncDone(true);
 
           // Capture timestamp BEFORE sync so any claims edited during sync are caught next time
-          const sinceTimestamp = getLastSyncTimestamp(user.uid);
+          const syncTargetUid = effectiveUid || user.uid;
+          const sinceTimestamp = getLastSyncTimestamp(syncTargetUid);
           const syncStartedAt = new Date().toISOString();
 
           // Delete tombstoned claims from cloud BEFORE pulling so the pull
           // can't resurrect anything the user just deleted.
-          await syncTombstones(user.uid);
-          await syncDeltaToCloud(user.uid, sinceTimestamp);
-          await pullClaimsFromCloud(user.uid, sinceTimestamp);
+          await syncTombstones(syncTargetUid);
+          await syncDeltaToCloud(syncTargetUid, sinceTimestamp);
+          await pullClaimsFromCloud(syncTargetUid, sinceTimestamp);
 
           // Only update the timestamp after both push and pull succeed
-          setLastSyncTimestamp(user.uid, syncStartedAt);
+          setLastSyncTimestamp(syncTargetUid, syncStartedAt);
           logger.log(`[useCloudSync] Login sync complete. Next sync will be delta from ${syncStartedAt}.`);
         } catch (err) {
           logger.error('[useCloudSync] Login sync failed:', err);
@@ -190,7 +204,7 @@ export function useCloudSync() {
       profileSyncReadyRef.current = false;
       useUIStore.getState().setLoginSyncDone(false);
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, effectiveUid, isTeamMember]);
 
   // ─── 2a. Milestone: Tab switch ───────────────────────────
   // Push current claim whenever the surveyor moves to a different tab.
@@ -199,7 +213,7 @@ export function useCloudSync() {
   useEffect(() => {
     if (!tabInitRef.current) { tabInitRef.current = true; return; } // skip mount
     const claim = currentClaimRef.current;
-    const uid = userRef.current?.uid;
+    const uid = effectiveUidRef.current || userRef.current?.uid;
     if (!claim || !uid || !isAuthRef.current) return;
 
     if (tabSwitchTimerRef.current) {
@@ -208,7 +222,7 @@ export function useCloudSync() {
     tabSwitchTimerRef.current = setTimeout(() => {
       tabSwitchTimerRef.current = null;
       const latestClaim = currentClaimRef.current;
-      const latestUid = userRef.current?.uid;
+      const latestUid = effectiveUidRef.current || userRef.current?.uid;
       if (!latestClaim || !latestUid || !isAuthRef.current) return;
       milestonePushRef.current(latestClaim, latestUid);
     }, TAB_SWITCH_COALESCE_MS);
@@ -232,7 +246,7 @@ export function useCloudSync() {
       clearTimeout(tabSwitchTimerRef.current);
       tabSwitchTimerRef.current = null;
     }
-    const uid = userRef.current?.uid;
+    const uid = effectiveUidRef.current || userRef.current?.uid;
     if (!uid || !isAuthRef.current) return;
     milestonePushRef.current(prev, uid);
   }, [currentClaim?.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -248,7 +262,7 @@ export function useCloudSync() {
         tabSwitchTimerRef.current = null;
       }
       const claim = currentClaimRef.current;
-      const uid = userRef.current?.uid;
+      const uid = effectiveUidRef.current || userRef.current?.uid;
       if (!claim || !uid) return;
       if (hadPendingTimer && isAuthRef.current) {
         milestonePushRef.current(claim, uid);
@@ -275,7 +289,7 @@ export function useCloudSync() {
         tabSwitchTimerRef.current = null;
       }
       const claim = currentClaimRef.current;
-      const uid = userRef.current?.uid;
+      const uid = effectiveUidRef.current || userRef.current?.uid;
       if (!claim || !uid || !isAuthRef.current) return;
       milestonePushRef.current(claim, uid);
     };
@@ -295,7 +309,7 @@ export function useCloudSync() {
     if (!isAuthenticated) return;
     const interval = setInterval(() => {
       const claim = currentClaimRef.current;
-      const uid = userRef.current?.uid;
+      const uid = effectiveUidRef.current || userRef.current?.uid;
       if (!claim || !uid || !isAuthRef.current) return;
       if (!navigator.onLine) return;
       milestonePushRef.current(claim, uid, { mirrorToDrive: false });
@@ -310,11 +324,12 @@ export function useCloudSync() {
     isDrainingRef.current = true;
     (async () => {
       try {
+        const syncTargetUid = effectiveUid || user.uid;
         // Deletions made offline are queued as local tombstones. Flush them on
         // reconnect — waiting for the next login leaves a deleted claim alive
         // in the cloud, and visible in Cloud Vault, for the rest of the day.
         try {
-          await syncTombstones(user.uid);
+          await syncTombstones(syncTargetUid);
         } catch (err) {
           logger.error('[useCloudSync] Pending tombstone flush failed:', err);
         }
@@ -332,10 +347,11 @@ export function useCloudSync() {
 
         for (const item of claimItems) {
           try {
-            const payload = item.payload as { claimId: string; uid: string };
+            const payload = item.payload as { claimId: string; uid?: string };
             const claim = await getClaim(payload.claimId);
             if (claim) {
-              await pushClaimToCloud(payload.uid, claim);
+            const targetUid = payload.uid || syncTargetUid;
+            await pushClaimToCloud(targetUid, claim);
               await removeSyncItem(item.id);
               logger.log(`[useCloudSync] Queue item ${item.id} synced and removed.`);
             } else {
@@ -358,13 +374,13 @@ export function useCloudSync() {
         logger.error('[useCloudSync] Drive queue drain failed:', err);
       });
     })();
-  }, [isOnline, isAuthenticated, user, setSaveStatus]);
+  }, [isOnline, isAuthenticated, user, effectiveUid, setSaveStatus]);
 
   // ─── 4. Debounced Profile Sync on Profile Changes ─────────
   // Only fires after the initial pull completes (profileSyncReadyRef = true).
   // Debounced 3s to avoid a write storm while the user types in profile fields.
   useEffect(() => {
-    if (isSandbox() || !isAuthenticated || !user || !profile || !profileSyncReadyRef.current) return;
+    if (isSandbox() || !isAuthenticated || !user || !profile || !profileSyncReadyRef.current || isTeamMember) return;
 
     if (profileTimerRef.current) clearTimeout(profileTimerRef.current);
 
@@ -386,5 +402,5 @@ export function useCloudSync() {
     return () => {
       if (profileTimerRef.current) clearTimeout(profileTimerRef.current);
     };
-  }, [isAuthenticated, user, profile]);
+  }, [isAuthenticated, user, profile, isTeamMember]);
 }

@@ -11,16 +11,28 @@ export interface SessionConflict {
   deviceHint: string;
 }
 
+export interface TeamAffiliation {
+  firmOwnerUid: string;
+  firmName: string;
+  firmLicence: string;
+  hideEarnings: boolean;
+  ownerEmail: string;
+}
+
 interface AuthState {
   user: User | null;
   loading: boolean;
   isAuthenticated: boolean;
   sessionConflict: SessionConflict | null;
+  activeWorkspaceUid: string | null;
+  isTeamMember: boolean;
+  teamAffiliation: TeamAffiliation | null;
 
   // Actions
   setUser: (user: User | null) => void;
   setLoading: (loading: boolean) => void;
   setSessionConflict: (conflict: SessionConflict | null) => void;
+  setWorkspace: (workspaceUid: string | null, isTeamMember: boolean, affiliation?: TeamAffiliation | null) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -28,6 +40,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   loading: true,
   isAuthenticated: false,
   sessionConflict: null,
+  activeWorkspaceUid: null,
+  isTeamMember: false,
+  teamAffiliation: null,
 
   setUser: (user) => set({
     user,
@@ -38,4 +53,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   setLoading: (loading) => set({ loading }),
 
   setSessionConflict: (conflict) => set({ sessionConflict: conflict }),
+
+  setWorkspace: (workspaceUid, isTeamMember, affiliation = null) => set({
+    activeWorkspaceUid: workspaceUid,
+    isTeamMember,
+    teamAffiliation: affiliation ?? null,
+  }),
 }));
