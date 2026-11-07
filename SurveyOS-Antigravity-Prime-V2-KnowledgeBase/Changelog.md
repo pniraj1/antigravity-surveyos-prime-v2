@@ -2,6 +2,17 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-07 (Antigravity) — Unified Storage Hub, Firestore Quota Optimization & Cloud Sync UX
+- perf(sync): Added 15-second tab-switch coalescing window (`TAB_SWITCH_COALESCE_MS = 15_000`) in `src/hooks/useCloudSync.ts`, debouncing milestone pushes during rapid tab navigation while immediately flushing on claim switch, app backgrounding, and window beforeunload.
+- feat(storage): Automated Google Drive mirroring in `src/hooks/useSaveToCloudPrompt.tsx` without blocking modal popups. Files automatically sync in the background when Drive is connected and save locally on laptop when disconnected.
+- feat(ui): Implemented unified Top Header Storage & Safety Status Pill in `src/components/layout/ClaimHeader.tsx` (`[✓ All Changes Saved]`, `[↻ Saving...]`, `[● Saved to Laptop]`) replacing scattered chips and the manual "Save & Sync" button.
+- feat(ui): Added `StorageSafetyPopover.tsx` displaying interactive status for Local Computer Folder, Google Drive, and Cloud Vault (Firestore) with an on-demand `[Sync Now]` button.
+- feat(ui): Added helper subtitles and tooltips for `Cloud Vault` (*"Cloud Text Sync"*) and `Recovered` (*"Emergency Cache"*) in `src/components/layout/sidebar.tsx`.
+- feat(photos): Enhanced multi-device Drive photo discovery in `drive-photo-diff.ts` and `NewDrivePhotosBanner.tsx` to detect camera photos without `photo_` prefix, providing a 1-click notification banner (`"☁️ {pending.length} photo(s) found in Google Drive for this claim. [Download to this Laptop]"`) with dynamic progress feedback.
+- feat(documents): Created unified `[📱 From Phone]` dropdown button in `src/components/documents/FromPhoneButton.tsx` and integrated it into `DocumentsTab.tsx`, consolidating "Phone Notes" and "Phone Scans & Photos" into a clean, single control.
+- test: Added comprehensive unit tests in `useCloudSync-coalesce.test.ts`, `useSaveToCloudPrompt.test.ts`, `StorageSafetyPopover.test.tsx`, `ClaimHeader.test.tsx`, `sidebar-navigation.test.tsx`, `drive-photo-diff.test.ts`, `NewDrivePhotosBanner.test.tsx`, and `FromPhoneButton.test.tsx`.
+- verification: Full Vitest suite passing (302 test files, 2,638 tests, 100% green), `npx tsc --noEmit` clean (0 errors), Android Scan drift test passed (28 tasks green).
+
 ## 2026-11-07 (Antigravity) — Single Unified Google Drive Claim Folder & Manual Surveyor Linking
 - feat(drive): Updated `getOrCreateClaimFolder` in `index.ts` to check `claim.gDriveFolderId` before creating a new Drive folder, preventing duplicate folder creation when a folder is already linked.
 - feat(scan-notes): Wired `UsePhoneNotesButton.tsx` to bind `claim.gDriveFolderId` to the selected Drive folder, save it in `localStorage` and `surveyos_index.json`, and toast `Linked claim to Drive folder: ${folder.name}`.

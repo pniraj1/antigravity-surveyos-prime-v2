@@ -1,7 +1,40 @@
 # Active Tasks
 
-> Last updated: 2026-11-07 by Antigravity (Single Unified Google Drive Claim Folder & Manual Surveyor Linking)
+> Last updated: 2026-11-07 by Antigravity (Unified Storage Hub & Cloud Sync Optimization)
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
+
+---
+
+## Done: Unified Storage Hub & Cloud Sync Optimization (2026-11-07, Antigravity)
+- **Problem Solved:**
+  - Surveyors faced confusing, fragmented storage and sync mechanisms: scattered chips in the top header (`Save & Sync`, `ClaimFolderButton`, `DriveQueueChip`, `SyncStatusBadge`), intrusive modal popups asking "Save to Drive?" on every photo or document upload, rapid tab switching triggering unnecessary Firestore writes burning quotas, unclear sidebar items for `Cloud Vault` vs `Recovered`, and no easy way to pull photos from Google Drive when opening an existing claim on a second laptop.
+- **Architecture Delivered:**
+  - **Firestore Quota Optimization (Tab-Switch Coalescing, `src/hooks/useCloudSync.ts`):**
+    - Added `TAB_SWITCH_COALESCE_MS = 15_000` (15s quiet window) so rapid tab switching across claim sections coalesces into a single write once the surveyor pauses.
+    - Implemented immediate flushing on claim switch (Milestone 2b), visibility hidden (Milestone 2d), and beforeunload (Milestone 2c) so changes are never lost.
+  - **Seamless Drive Mirroring (`src/hooks/useSaveToCloudPrompt.tsx`):**
+    - Eliminated `SaveToCloudDialog` modal interruptions.
+    - `confirmSaveToCloud` automatically resolves `true` when Google Drive is connected (uploading/mirroring silently in the background with local sink backup) and `false` when disconnected without blocking user flow.
+  - **Top Header Unified Storage & Safety Status Pill (`src/components/layout/ClaimHeader.tsx`, `StorageSafetyPopover.tsx`):**
+    - Replaced the blue "Save & Sync" button and scattered chips with a unified interactive pill: `[✓ All Changes Saved]` (emerald), `[↻ Saving...]` (pulse), or `[● Saved to Laptop]` (amber).
+    - Clicking the pill opens a detailed 3-tier popover: Local Computer Folder (path or link/change action), Google Drive (connected account, folder link, pending photo queue), Cloud Vault (Firestore status), and a tactile `[Sync Now]` button.
+  - **Sidebar Helper Tooltips & Subtitles (`src/components/layout/sidebar.tsx`):**
+    - Added explicit subtitle metadata and descriptive tooltips:
+      - `Cloud Vault`: Subtitle *"Cloud Text Sync"*, Tooltip *"View, download, or restore claim text synced to your SurveyOS cloud account"*.
+      - `Recovered`: Subtitle *"Emergency Cache"*, Tooltip *"Local emergency cache — find autosaved claims if browser closed unexpectedly"*.
+  - **Multi-Device Photos 1-Click Download Banner (`src/components/layout/NewDrivePhotosBanner.tsx`, `PhotosTab.tsx`, `drive-photo-diff.ts`):**
+    - General photo detection on Drive without requiring `photo_` prefix (supporting mobile camera names `IMG_...`).
+    - 1-click notification banner: `"☁️ {pending.length} photo(s) found in Google Drive for this claim. [Download to this Laptop]"` with dynamic progress bar and item count (`Downloading (X/Y)...`).
+    - Added "Sync from Drive" and empty-state download cards in `PhotosTab.tsx`.
+  - **Unified "From Phone" Action (`src/components/documents/FromPhoneButton.tsx`, `DocumentsTab.tsx`):**
+    - Consolidated separate `UsePhoneNotesButton` and `BringPhoneScans` buttons into a single `[📱 From Phone]` dropdown button with options:
+      1. 📝 **Phone Notes** (Review field notes recorded on phone & auto-populate details)
+      2. 📁 **Phone Scans & Photos** (Import scans and photos from phone .zip or Drive folder)
+- **Verification:**
+  - Full Vitest suite: 302 test files passed, 2,638 tests passed (100% green).
+  - TypeScript compilation (`npx tsc --noEmit`): 0 errors.
+  - Android Scan drift test (`./gradlew.bat :app:testDebugUnitTest`): BUILD SUCCESSFUL (28 tasks passed).
+  - Production verified with subagent-driven development TDD and 2-stage spec & code quality reviews per task.
 
 ---
 

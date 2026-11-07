@@ -101,6 +101,41 @@ function ExtendControl({ uid, onExtend, disabled }: { uid: string; onExtend: (ui
   );
 }
 
+export function TeamSeatsControl({
+  surveyorId,
+  maxTeamSeats,
+  disabled,
+  onUpdateTeamSeats,
+}: {
+  surveyorId: string;
+  maxTeamSeats?: number;
+  disabled?: boolean;
+  onUpdateTeamSeats?: (id: string, seats: number) => Promise<void> | void;
+}) {
+  return (
+    <input
+      type="number"
+      min="0"
+      max="50"
+      disabled={disabled}
+      defaultValue={maxTeamSeats || 0}
+      onBlur={(e) => {
+        const val = parseInt(e.target.value, 10);
+        const seats = isNaN(val) ? 0 : Math.max(0, Math.min(50, val));
+        e.target.value = String(seats);
+        if (seats !== (maxTeamSeats || 0)) {
+          onUpdateTeamSeats?.(surveyorId, seats);
+        }
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') e.currentTarget.blur();
+      }}
+      className="w-16 px-2.5 py-1 text-xs font-medium text-center rounded-lg border border-border bg-white text-foreground focus:outline-none focus:ring-1 focus:ring-primary shadow-sm"
+      aria-label="Allowed Team Seats"
+    />
+  );
+}
+
 export function SurveyorsTab({
   surveyors,
   loading,
@@ -150,7 +185,8 @@ export function SurveyorsTab({
       return (
         s.name.toLowerCase().includes(q) ||
         s.id.toLowerCase().includes(q) ||
-        s.email?.toLowerCase().includes(q)
+        s.email?.toLowerCase().includes(q) ||
+        s.teamEmails?.some(e => e.toLowerCase().includes(q))
       );
     })
     .filter(s => {
@@ -197,6 +233,7 @@ export function SurveyorsTab({
               <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Licence</th>
               <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Subscription</th>
               <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Onboarding</th>
+              <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Team Seats</th>
               <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Days Left</th>
               <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Expiry Date</th>
               <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-wider text-muted-foreground text-right">Actions</th>
