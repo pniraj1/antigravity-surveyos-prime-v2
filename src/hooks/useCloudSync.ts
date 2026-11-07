@@ -32,6 +32,8 @@ import {
 import { flushDriveQueue, silentlyRestoreDriveToken, backupProfileToDrive, restoreProfileFromDrive, getDriveToken } from '@/lib/drive';
 import { isSandbox } from '@/lib/sandbox';
 
+export const TAB_SWITCH_COALESCE_MS = 15_000;
+
 export function useCloudSync() {
   const { user, isAuthenticated } = useAuthStore();
   const { currentClaim } = useClaimStore();
@@ -40,6 +42,7 @@ export function useCloudSync() {
   const isSyncingFullRef = useRef(false);
   const profileSyncReadyRef = useRef(false);
   const profileTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const tabSwitchTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isDrainingRef = useRef(false);
   const driveRestoreAttemptedRef = useRef(false);
 
@@ -191,21 +194,54 @@ export function useCloudSync() {
 
   // ─── 2a. Milestone: Tab switch ───────────────────────────
   // Push current claim whenever the surveyor moves to a different tab.
+  // Debounced with 15s quiet window so rapid tab navigation coalesces into 1 write.
   const tabInitRef = useRef(false);
   useEffect(() => {
     if (!tabInitRef.current) { tabInitRef.current = true; return; } // skip mount
     const claim = currentClaimRef.current;
     const uid = userRef.current?.uid;
     if (!claim || !uid || !isAuthRef.current) return;
-    milestonePushRef.current(claim, uid);
+
+    if (tabSwitchTimerRef.current) {
+      clearTimeout(tabSwitchTimerRef.current);
+    }
+    tabSwitchTimerRef.current = setTimeout(() => {
+      tabSwitchTimerRef.current = null;
+      const latestClaim = currentClaimRef.current;
+      const latestUid = userRef.current?.uid;
+      if (!latestClaim || !latestUid || !isAuthRef.current) return;
+      milestonePushRef.current(latestClaim, latestUid);
+    }, TAB_SWITCH_COALESCE_MS);
+
+    return () => {
+      if (tabSwitchTimerRef.current) {
+        clearTimeout(tabSwitchTimerRef.current);
+        tabSwitchTimerRef.current = null;
+      }
+    };
   }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Clear tab-switch coalesce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (tabSwitchTimerRef.current) {
+        clearTimeout(tabSwitchTimerRef.current);
+        tabSwitchTimerRef.current = null;
+      }
+    };
+  }, []);
 
   // ─── 2b. Milestone: Claim switch ────────────────────────
   // Push the claim being left when the surveyor opens a different claim.
+  // Flushes any coalesced tab-switch push immediately.
   useEffect(() => {
     const prev = prevClaimRef.current;
     prevClaimRef.current = currentClaim;
     if (!prev || prev.id === currentClaim?.id) return;
+    if (tabSwitchTimerRef.current) {
+      clearTimeout(tabSwitchTimerRef.current);
+      tabSwitchTimerRef.current = null;
+    }
     const uid = userRef.current?.uid;
     if (!uid || !isAuthRef.current) return;
     milestonePushRef.current(prev, uid);
@@ -213,11 +249,20 @@ export function useCloudSync() {
 
   // ─── 2c. Milestone: Page close / refresh ────────────────
   // Queue for next-login drain (can't await async in beforeunload).
+  // Flushes any coalesced tab-switch push immediately before unload.
   useEffect(() => {
     const handler = () => {
+      const hadPendingTimer = Boolean(tabSwitchTimerRef.current);
+      if (tabSwitchTimerRef.current) {
+        clearTimeout(tabSwitchTimerRef.current);
+        tabSwitchTimerRef.current = null;
+      }
       const claim = currentClaimRef.current;
       const uid = userRef.current?.uid;
       if (!claim || !uid) return;
+      if (hadPendingTimer && isAuthRef.current) {
+        milestonePushRef.current(claim, uid);
+      }
       addToSyncQueue('claim-backup', { claimId: claim.id, uid }).catch(err => {
         logger.error('[useCloudSync] beforeunload queue failed — claim may not sync:', err);
       });
@@ -231,10 +276,14 @@ export function useCloudSync() {
   // (unlike beforeunload, which can only queue locally). We attempt a real
   // cloud push here so a surveyor who just switches tabs or minimises the
   // window — then walks to another computer — has their latest state in the
-  // vault. milestonePushRef pushes when online and queues when offline.
+  // vault. Flushes any coalesced tab-switch push immediately.
   useEffect(() => {
     const handler = () => {
       if (document.visibilityState !== 'hidden') return;
+      if (tabSwitchTimerRef.current) {
+        clearTimeout(tabSwitchTimerRef.current);
+        tabSwitchTimerRef.current = null;
+      }
       const claim = currentClaimRef.current;
       const uid = userRef.current?.uid;
       if (!claim || !uid || !isAuthRef.current) return;
