@@ -33,6 +33,8 @@ export interface SurveyorAdminProfile {
     tourDoneAt?: string;
   };
   syncConnectedAt?: string | null;
+  maxTeamSeats?: number;
+  teamEmails?: string[];
 }
 
 export interface NewSignup {

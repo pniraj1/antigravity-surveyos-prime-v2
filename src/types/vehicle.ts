@@ -254,4 +254,11 @@ export interface SurveyorProfile {
   };
   /** ISO timestamp when SurveyOS Sync was connected; null if never. */
   syncConnectedAt?: string | null;
+  // ─── Team / Organization Access ───────────────────────────
+  /** Max assistants allowed (set by Master Admin only, default 0) */
+  maxTeamSeats?: number;
+  /** List of assistant emails authorized to collaborate under this surveyor */
+  teamEmails?: string[];
+  /** Privacy toggle: hide fee bills, earnings & bank account from team members */
+  hideEarningsFromTeam?: boolean;
 }

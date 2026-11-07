@@ -27,7 +27,7 @@ interface ProfileState {
   resetProfile: () => void;
 }
 
-const DEFAULT_PROFILE: SurveyorProfile = {
+export const DEFAULT_PROFILE: SurveyorProfile = {
   name: '',
   qualifications: '',
   licenceNumber: '',
@@ -76,6 +76,9 @@ const DEFAULT_PROFILE: SurveyorProfile = {
   reportYear: new Date().getFullYear(),
   syncBridgeToken: '',
   syncConnectedAt: null,
+  maxTeamSeats: 0,
+  teamEmails: [],
+  hideEarningsFromTeam: true,
 };
 
 /**
