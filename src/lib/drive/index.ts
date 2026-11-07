@@ -354,17 +354,19 @@ export async function getOrCreateClaimFolder(claimId: string, label: string): Pr
     return index[claimId];
   }
 
-  // If index couldn't be loaded, check IndexedDB as a fallback before creating a duplicate folder
-  if (!indexLoaded) {
-    try {
-      const claim = await getClaim(claimId);
-      if (claim?.gDriveFolderId) {
-        localStorage.setItem(cacheKey, claim.gDriveFolderId);
-        return claim.gDriveFolderId;
+  // Check if claim already has a linked gDriveFolderId (e.g. chosen from Phone Scans or manually bound)
+  try {
+    const claim = await getClaim(claimId);
+    if (claim?.gDriveFolderId) {
+      if (indexLoaded) {
+        index[claimId] = claim.gDriveFolderId;
+        await saveDriveIndex(index);
       }
-    } catch {
-      // non-critical
+      localStorage.setItem(cacheKey, claim.gDriveFolderId);
+      return claim.gDriveFolderId;
     }
+  } catch {
+    // non-critical
   }
 
   // Create new folder

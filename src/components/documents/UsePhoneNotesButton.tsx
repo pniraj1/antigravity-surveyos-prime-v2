@@ -10,6 +10,7 @@ import { readZip } from '@/lib/scan-import/zip';
 import { normalizeScanNotes, type NormalizedNotesPayload } from '@/lib/scan-import/normalizer';
 import { sameVehicle } from '@/lib/scan-import/manifest';
 import { fetchNotesFromScanFolder, type ScanDriveFolderItem } from '@/lib/scan-import/drive-notes';
+import { loadDriveIndex, saveDriveIndex } from '@/lib/drive';
 import { PhoneFolderPickerDialog } from './PhoneFolderPickerDialog';
 import { PhoneNotesDialog } from './PhoneNotesDialog';
 
@@ -79,6 +80,22 @@ export function UsePhoneNotesButton({ className = '', label = 'Use Phone Notes' 
       if (!normalized) {
         toast.error('No notes file (_surveyos-backup.json or _surveyos-scan.json) found in this Drive folder.');
         return;
+      }
+      // Bind this Drive folder directly to the claim so phone & Prime share the exact same folder
+      const claim = useClaimStore.getState().currentClaim;
+      if (claim) {
+        useClaimStore.getState().updateClaim({
+          gDriveFolderId: folder.id,
+          scanClaimId: folder.scanClaimId || claim.scanClaimId,
+        });
+        localStorage.setItem(`surveyos_drive_folder_${claim.id}`, folder.id);
+        toast.success(`Linked claim to Drive folder: ${folder.name}`);
+        loadDriveIndex().then((index) => {
+          if (index[claim.id] !== folder.id) {
+            index[claim.id] = folder.id;
+            return saveDriveIndex(index);
+          }
+        }).catch(() => {});
       }
       processNotesPayload(normalized, folder.scanClaimId);
     } catch (err) {

@@ -1,7 +1,33 @@
 # Active Tasks
 
-> Last updated: 2026-11-07 by Antigravity (Admin Panel Surveyor Claims Count & Trial Activity Tracking)
+> Last updated: 2026-11-07 by Antigravity (Single Unified Google Drive Claim Folder & Manual Surveyor Linking)
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
+
+---
+
+## Done: Single Unified Google Drive Claim Folder & Manual Surveyor Linking (2026-11-07, Antigravity)
+- **Problem Solved:**
+  - Surveyors creating scan folders on their phone in SurveyOS Scan and subsequently creating claims on their computer in Prime faced duplicate folder creation on Google Drive because Prime generated an arbitrary `${label}_${claimId.slice(-6)}` folder under `SurveyOS/` instead of reusing the phone's claim folder.
+  - Furthermore, `getOrCreateClaimFolder` in `src/lib/drive/index.ts` only checked `claim.gDriveFolderId` if the remote index strictly failed to load; when the index was loaded, it ignored `claim.gDriveFolderId` and generated a second folder.
+  - Surveyors explicitly require full manual control: zero automatic guessing or popups, with manual Drive folder selection and automatic cloud mirroring when files are loaded from computer.
+- **Architecture Delivered:**
+  - **Drive Folder De-duplication Guard (`src/lib/drive/index.ts`):**
+    - Updated `getOrCreateClaimFolder` to ALWAYS check `claim?.gDriveFolderId` before creating a new folder on Google Drive.
+    - When a claim is linked to an existing folder, registers `index[claimId] = claim.gDriveFolderId`, updates `surveyos_index.json` and `localStorage`, and returns that folder directly without executing any folder creation POST requests.
+  - **Single Folder Binding on Manual Import (`src/components/documents/UsePhoneNotesButton.tsx`):**
+    - When a surveyor manually selects a phone folder from Drive in `PhoneFolderPickerDialog`, Prime binds `claim.gDriveFolderId = folder.id` and `claim.scanClaimId = folder.scanClaimId`.
+    - Shows feedback toast (`Linked claim to Drive folder: ${folder.name}`) and updates Drive index asynchronously.
+    - All subsequent photo uploads, document attachments, and report auto-filing on Prime now write directly into this unified folder.
+  - **Drive Folder Discovery Across Staging & Root (`src/lib/scan-import/drive-notes.ts`):**
+    - `listScanDriveFolders` queries both `My Drive/SurveyOS/Phone Scans/` and `My Drive/SurveyOS/` claim folders.
+    - Filters out container folders like `Phone Scans` and deduplicates by folder ID, presenting all available folders sorted by modified time.
+  - **Ingest Cloud Mirror Protection Preserved (`src/lib/documents/ingest.ts`, `usePhotoUpload.ts`):**
+    - Confirmed that files loaded from computer (via .zip or direct upload) continue to be safely mirrored to the linked Google Drive folder via `uploadWithDuplicateCheck` with MD5 hash de-duplication.
+- **Verification:**
+  - Unit tests: `src/lib/drive/__tests__/index-hygiene.test.ts` (4 tests) and `src/lib/scan-import/__tests__/drive-notes.test.ts` (3 tests).
+  - Full Vitest suite: 294 test files passed, 2,598 tests passed (100% green).
+  - Scan drift unit tests (`./gradlew :app:testDebugUnitTest`): 28 tasks passed (100% green).
+  - TypeScript compiler (`npx tsc --noEmit`): 0 errors.
 
 ---
 

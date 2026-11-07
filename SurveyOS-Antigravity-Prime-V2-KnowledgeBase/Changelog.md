@@ -2,6 +2,13 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-07 (Antigravity) — Single Unified Google Drive Claim Folder & Manual Surveyor Linking
+- feat(drive): Updated `getOrCreateClaimFolder` in `index.ts` to check `claim.gDriveFolderId` before creating a new Drive folder, preventing duplicate folder creation when a folder is already linked.
+- feat(scan-notes): Wired `UsePhoneNotesButton.tsx` to bind `claim.gDriveFolderId` to the selected Drive folder, save it in `localStorage` and `surveyos_index.json`, and toast `Linked claim to Drive folder: ${folder.name}`.
+- feat(scan-notes): Updated `listScanDriveFolders` in `drive-notes.ts` to list claim folders from both `SurveyOS/Phone Scans/` and root `SurveyOS/`, filtering container folders and deduplicating by ID.
+- test: Added test in `index-hygiene.test.ts` verifying that `getOrCreateClaimFolder` respects pre-existing `gDriveFolderId` and updates the index without POSTing new folder requests.
+- tests: Vitest suite 294 passed (2,598 tests, 100% green). TypeScript clean (`npx tsc --noEmit`). Scan drift tests (`:app:testDebugUnitTest`) 28 tasks passed (100% green).
+
 ## 2026-11-07 (Antigravity) — Admin Panel Surveyor Claims Count & Trial Activity Tracking
 - feat(admin): Implemented server-side claim aggregation helper `getSurveyorClaimCount(uid: string)` in `src/lib/firebase/claims-count.ts` using Firestore `getCountFromServer`.
 - feat(admin): Added lazy, on-demand claim count fetching and in-memory caching to `SurveyorsTab.tsx` when a surveyor row is expanded.

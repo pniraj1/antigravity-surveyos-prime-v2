@@ -201,5 +201,62 @@ describe('saveDriveIndex and getOrCreateClaimFolder hygiene', () => {
 
       warnSpy.mockRestore();
     });
+
+    it('returns existing claim.gDriveFolderId and updates index without creating a new folder', async () => {
+      const { getClaim } = await import('@/lib/storage/indexeddb');
+      vi.mocked(getClaim).mockResolvedValueOnce({
+        id: 'claim-bound',
+        gDriveFolderId: 'pre-existing-drive-folder',
+      } as any);
+
+      const mockFetch = vi.fn().mockImplementation(async (url: string, opts?: any) => {
+        const urlStr = String(url);
+        if (urlStr.includes('mimeType') || urlStr.includes('SurveyOS')) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ files: [{ id: 'root-1' }] }),
+          };
+        }
+        if (urlStr.includes('surveyos_index.json')) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ files: [{ id: 'index-file-1' }] }),
+          };
+        }
+        if (urlStr.includes('/files/index-file-1?alt=media')) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ 'other-claim': 'other-folder' }),
+          };
+        }
+        if (opts?.method === 'PATCH') {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ id: 'index-file-1' }),
+          };
+        }
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({}),
+        };
+      });
+
+      vi.stubGlobal('fetch', mockFetch);
+
+      const folderId = await getOrCreateClaimFolder('claim-bound', 'MH12');
+      expect(folderId).toBe('pre-existing-drive-folder');
+      expect(memStorage.getItem('surveyos_drive_folder_claim-bound')).toBe('pre-existing-drive-folder');
+
+      // Verify no createFolder (POST) was executed
+      const postCalls = mockFetch.mock.calls.filter((call: any[]) =>
+        call[1]?.method === 'POST' && !String(call[0]).includes('multipart')
+      );
+      expect(postCalls.length).toBe(0);
+    });
   });
 });
