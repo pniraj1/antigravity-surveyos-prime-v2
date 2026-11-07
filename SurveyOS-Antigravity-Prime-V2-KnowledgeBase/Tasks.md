@@ -1,7 +1,49 @@
 # Active Tasks
 
-> Last updated: 2026-11-06 by Antigravity (Disconnect Surveyor Travel Expenses from Assessment Vehicle Towing & Permanent Towing Line)
+> Last updated: 2026-11-07 by Antigravity (Surveyor Report Fixes & Scan Notes Import from Drive)
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
+
+---
+
+## Done: Surveyor Report Fixes: Workshop Name Isolation, Dual DL Validity & Bill Check Zero Excess Preservation (2026-11-07, Antigravity)
+- **Problem Solved:**
+  1. **Cross-Survey Workshop Contamination:** In `uiic-final-builder.ts`, `a.workshopName || sd.repairWorkshop` secretly fell back to Spot survey repair workshop when the Final survey workshop field was blank. A spot crane yard or intermediate garage was being printed on final survey reports.
+  2. **Single DL Validity Rejection:** Indian driving licences frequently hold dual validities: Non-Transport (private cars/bikes) and Transport (commercial badge). UIIC reports only showed one or the other, triggering hub queries/rejections when commercial claims had valid TR licenses but only NT was printed.
+  3. **Zero Excess Erasure:** In `BillCheckSummaryPanel.tsx`, `bcSummary.excess || summary?.excess` treated a typed `0` Policy Excess as falsy and fell back to the initial policy excess. Surveyors settling zero-excess or nil-depreciation claims could not enforce a `0.00` excess.
+- **Architecture Delivered:**
+  - **Workshop Name Isolation (`src/lib/reports/uiic-final-builder.ts`):** Removed `sd.repairWorkshop` fallback from Final Survey Details (`${g(a.workshopName)}`). Spot and Final survey workshops remain completely segregated.
+  - **Dual DL Validity Display (`uiic-final-builder.ts`, `UIICPrintReport.tsx`):**
+    - When both `validityNonTransport` and `validityTransport` are present: displays formatted string `NT: DD/MM/YYYY | TR: DD/MM/YYYY`.
+    - If only one is populated, displays that date without prefix.
+  - **Zero Excess & Numeric Strictness (`src/components/tabs/bill-check/BillCheckSummaryPanel.tsx`):**
+    - Switched numeric fallback chains from `||` to nullish coalescing `??` for `excess`, `labourOnlyBase`, `labourOnlyTotal`, and `grandTotal`.
+    - Added dedicated `Includes Towing Charges (+ ₹X)` callout row in Bill Check Financial Summary above Net Final Liability when towing charges are admissible.
+- **Verification:**
+  - Unit tests: `src/lib/reports/__tests__/uiic-workshop-and-dl-validity.test.ts` (4 tests) and `BillCheckSummaryPanel.test.tsx`.
+  - Full Vitest suite: 293 test files, 2,587 tests passed (100% green).
+  - Production build: `next build` compiled cleanly with all 25 static routes prerendered.
+  - TypeScript compiler (`npx tsc --noEmit`): 0 errors.
+  - Prime <-> Scan impact: None (0 drift).
+
+---
+
+## Done: SurveyOS Scan Notes Import: Drive Folder Picker, Normalizer & Cross-Tab Integration (2026-11-07, Antigravity)
+- **Problem Solved:**
+  - Surveyors capturing spot and valuation notes on their phone using SurveyOS Scan needed to import those notes directly into Prime V2 without having to retype them or manually unzip files.
+- **Architecture Delivered:**
+  - **Google Drive Folder Picker (`src/components/documents/PhoneFolderPickerDialog.tsx`):**
+    - Scans `My Drive/SurveyOS/Phone Scans/` with vehicle match indicators (`Recommended: MH12AB1234`).
+    - Guard rails: Vehicle mismatch warning dialog if importing into a claim with a different vehicle number.
+  - **Scan Notes Normalizer (`src/lib/scan-import/normalizer.ts`):**
+    - Normalizes both rich manifest notes (`_surveyos-scan.json`) and lightweight text-only backups (`_surveyos-backup.json`).
+  - **Drive Source Fallback (`src/lib/scan-import/drive-source.ts`):**
+    - Seamlessly falls back to `_surveyos-backup.json` when `_surveyos-scan.json` is missing.
+  - **Cross-Tab Import Button (`src/components/documents/UsePhoneNotesButton.tsx`):**
+    - Embedded on `SpotTab.tsx`, `ValuationTab.tsx`, `FeesTab.tsx`, and `DocumentsTab.tsx`.
+- **Verification:**
+  - Unit tests: `drive-notes.test.ts`, `normalizer.test.ts`, `drive-source.test.ts`.
+  - Full Vitest suite: 293 passed (100% green).
+  - TypeScript check: 0 errors.
 
 ---
 

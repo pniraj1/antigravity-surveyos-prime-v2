@@ -2,6 +2,24 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-07 (Antigravity) — Surveyor Report Fixes: Workshop Name Isolation, Dual DL Validity, and Bill Check Zero Excess Preservation
+- fix(reports): Prevented Final Survey Report (`uiic-final-builder.ts`) from silently falling back to Spot Survey repair workshop (`sd.repairWorkshop`). Final reports now strictly print the repairer/dealership workshop (`accident.workshopName`).
+- feat(reports): Added dual DL validity display (`NT: <date> | TR: <date>`) to UIIC Final Report and `UIICPrintReport.tsx` when both private/non-transport and commercial/transport validities are recorded on the licence, preventing insurance hub rejections.
+- fix(bill-check): In `BillCheckSummaryPanel.tsx`, replaced logical OR `||` with nullish coalescing `??` for `excess`, `labourOnlyBase`, `labourOnlyTotal`, and `grandTotal`. A typed `0` Policy Excess is now strictly preserved as `0.00` rather than falling back to assessment excess.
+- feat(bill-check): Added `Includes Towing Charges (+ ₹X)` callout in Bill Check Financial Summary above Net Final Liability when towing charges are admissible.
+- tests: Added test suite `src/lib/reports/__tests__/uiic-workshop-and-dl-validity.test.ts` and updated `BillCheckSummaryPanel.test.tsx`.
+- verification: Full Vitest suite (293 test files, 2,587 tests, 100% green), `npx tsc --noEmit` (0 errors), Next.js production build cleanly compiled.
+
+## 2026-11-07 (Antigravity) — SurveyOS Scan Notes Import: Drive Folder Picker, Normalizer & Cross-Tab Integration
+- feat(scan-notes): Implemented `UsePhoneNotesButton.tsx` offering on-demand notes import from Google Drive or local computer export (.zip).
+- feat(scan-notes): Implemented `PhoneFolderPickerDialog.tsx` displaying claim folders from `My Drive/SurveyOS/Phone Scans/` with vehicle match indicators (`Recommended: MH12AB1234`), 48px touch targets, and inline Google Drive connection flow.
+- feat(scan-notes): Added vehicle mismatch confirmation dialog (`Different Vehicle Number`) guarding against cross-claim data contamination when the selected phone notes belong to a different vehicle.
+- feat(scan-notes): Built `normalizer.ts` (`normalizeScanNotes`) converting both manifest notes (`_surveyos-scan.json`) and lightweight Scan text-only backups (`_surveyos-backup.json`) into the unified Prime notes shape.
+- feat(scan-notes): Updated `drive-source.ts` to seamlessly fall back to `_surveyos-backup.json` when `_surveyos-scan.json` is missing, unblocking Scan's lightweight "Text only" Drive sync.
+- feat(ui): Embedded `UsePhoneNotesButton` into headers of `SpotTab.tsx`, `ValuationTab.tsx`, `FeesTab.tsx`, and `DocumentsTab.tsx` so surveyors can pull notes directly where they work.
+- tests: Added test suites in `normalizer.test.ts` and `drive-notes.test.ts`. Full Vitest suite: 293 passed (2,587 tests, 100% green).
+- verification: `npx tsc --noEmit` passed with 0 errors. Scan drift tests (`:app:testDebugUnitTest`) passed (100% green).
+
 ## 2026-11-06 (Antigravity) — Disconnect Surveyor Travel Expenses from Assessment Vehicle Towing & Permanent Towing Line
 - feat(assessment): Disconnected surveyor travel expenses (`feeBill.travelExpenses`) from assessment vehicle towing charges.
 - fix(model): `feeBill.travelExpenses` strictly remains the surveyor's conveyance fee. Dedicated `feeBill.towingCharges` added for admissible vehicle towing.
