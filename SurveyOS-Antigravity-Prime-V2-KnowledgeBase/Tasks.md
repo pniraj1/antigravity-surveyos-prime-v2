@@ -1,3 +1,30 @@
+## Done: Photo Sheet PDF Splitting (<2MB) & Photo Engine Orientation Toggle (2026-11-07, Antigravity)
+- **Problem Solved:**
+  - Indian insurer portals (NIA, OIC, UIIC, NIC, ICICI, etc.) have a strict 2 MB upload cap on photo sheet PDFs. Multi-photo sheets (e.g. 8 pages / 40+ photos) regularly reach 3.5 MB, resulting in portal rejections.
+  - When browsing and uploading photos to the Photo Engine, photos taken in mobile portrait or landscape sometimes had improper orientation. The gallery displayed a static badge (`▯` / `▭`) without any ability to toggle or rotate the photo.
+- **Architecture Delivered:**
+  - **Client-Side PDF Splitting Utility (`src/lib/pdf/split-pdf.ts`):**
+    - Built `splitPdfBySize(pdfBlob, maxSizeBytes = 1.95MB)` using `pdf-lib`.
+    - If $\le 1.95\text{ MB}$, returns single part (`isSplit: false`).
+    - If $> 1.95\text{ MB}$, uses binary search chunking to partition pages into balanced sub-documents with exact 1-indexed page boundaries (`pageStart`, `pageEnd`), guaranteeing each part is $<1.95\text{ MB}$.
+    - Handles single-page and oversized page edge cases gracefully.
+  - **Multi-Part Download Buttons (`PhotoSheetDownloadButton.tsx`):**
+    - Seamlessly inspects the react-pdf blob upon generation.
+    - If split is triggered, presents an informative badge (`PDF > 2 MB — Split into N parts (<2 MB each)`) and separate download buttons: `[Download Part 1 (Pages 1–4 · 1.7 MB)]`, `[Download Part 2 (Pages 5–8 · 1.8 MB)]`.
+    - Downloads each part named `{regNum}-Photo-Sheet-Part{N}.pdf` and automatically saves each to the claim folder via `saveReportToClaimFolder(claim, partFileName, blob, 'damagePhotos')`.
+    - Provides a dedicated `SharePdfButton` for each part.
+  - **1-Click Photo Orientation Toggle (`PhotosTab.tsx`):**
+    - Converted the static orientation pill into an interactive `<PhotoOrientationButton>`.
+    - 1-click 90° clockwise rotation using `rotateImage90` and `replacePhotoImage`, flipping portrait $\leftrightarrow$ landscape.
+    - Baked directly into pixel data, immediately synchronizing gallery thumbnails, PDF preview, and generated PDFs.
+    - Includes `Loader2` spinner during the ~50ms rotation, accessible ARIA label, and descriptive tooltip.
+- **Verification:**
+  - Full Vitest suite: 318 test files passed (2,795 tests, 100% green).
+  - TypeScript compiler (`npx tsc --noEmit`): 0 errors.
+  - Next.js production build (`npm run build`): Succeeded (25/25 static routes prerendered).
+  - Android Scan drift unit tests (`./gradlew :app:testDebugUnitTest`): 28 tasks passed (100% green).
+  - Prime ↔ Scan coupling impact: None.
+
 ## Done: Admin Panel UI/UX Pro Max Overhaul, Table Consolidation & Read-Only Support Mode (2026-11-07, Antigravity)
 - **Problem Solved:**
   - The Admin Panel looked "shabby", cluttered, and inaccessible: 9 horizontal tabs crammed into a single row, 9 columns overflowing viewport with microscopic text (`text-[9px]` and `text-[10px]`), click-hijacking inline `<input>` widgets directly inside table cells, a cramped inline subscription extension tool (`[ 30 ] d [✓] [✕]`) prone to accidental clicks, browser-native `alert(...)` prompts instead of Sonner toasts, and zero capability for administrators to inspect a surveyor's workspace in a safe, read-only mode for support investigations.
@@ -33,7 +60,7 @@
 
 # Active Tasks
 
-> Last updated: 2026-11-07 by Antigravity (OIC Portal Auto-Fill Strengthening, Safe Step 2 Field Mapping & Painting 12.5% Statutory Fix)
+> Last updated: 2026-11-07 by Antigravity (Photo Sheet PDF Splitting <2MB & Photo Engine Orientation Toggle)
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
 
 ---
