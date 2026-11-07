@@ -42,6 +42,7 @@ import { Sidebar, MobileMenuButton } from '@/components/layout/sidebar';
 import { FloatingReportPreview } from '@/components/layout/FloatingReportPreview';
 import { ClaimHeader } from '@/components/layout/ClaimHeader';
 import { NewDrivePhotosBanner } from '@/components/layout/NewDrivePhotosBanner';
+import { ClaimPresenceBanner } from '@/components/claims/ClaimPresenceBanner';
 import { MobileBottomBar } from '@/components/layout/MobileBottomBar';
 import { useRouteSync } from '@/hooks/useRouteSync';
 import { useAIConfig } from '@/hooks/useAIConfig';
@@ -661,6 +662,7 @@ export default function Dashboard() {
       <main className={`flex-1 overflow-y-auto bg-background ${hasClaim ? 'pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0' : ''}`}>
         <ClaimHeader />
         <NewDrivePhotosBanner />
+        <ClaimPresenceBanner />
         <TabTip />
         <ErrorBoundary key={activeTab}>
           {activeTab === 'dashboard' ? <DashboardContent /> : <TabPlaceholder tab={activeTab} />}
