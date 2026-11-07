@@ -1,3 +1,21 @@
+## 2026-11-07 (Antigravity) — Admin Panel UI/UX Pro Max Overhaul, Table Consolidation & Read-Only Support Mode
+- feat(admin-nav): Reorganized Admin navigation into Primary Operations (`Surveyors`, `New Signups`, `Payments`) and System Tools (`AI Models`, `Fee Schedule`, `Announcements`, `Dev Notes`) with badge counters (`expiringSoonCount`, `signups.length`, `pendingPaymentsCount`). Replaced `alert(...)` with Sonner `toast.success(...)`. Added universal search with `aria-label`.
+- feat(surveyors-table): Consolidated 9 cluttered columns into 6 high-density, accessible columns (`Surveyor & Identity`, `Licence & Platform ID`, `Status & Plan`, `Claims & Onboarding`, `Expiry`, `Actions`) with `scope="col"`. Eliminated click-hijacking inline `<input>` tags from table cells.
+- feat(bento-drawer): Redesigned expanded drawer into a 3-column Bento Grid:
+  1) `IdentityEditorCard`: Clean Full Name and Platform ID inputs with explicit `[Save Identity Changes]` button and `Quals/Referral/City` metadata.
+  2) `FirmTeamSeatsCard`: Accessible `[-][+][seats]` stepper with bounds checking (1–50) and active team assistant email chips.
+  3) `PaymentLedgerCard`: Current status, subscription expiry datepicker, total lifetime revenue sum badge, and scrollable payment history with admin verification notes and payment modes.
+- feat(extend-modal): Replaced cramped inline `[ 30 ] d [✓] [✕]` with accessible `ExtendSubscriptionModal.tsx` featuring quick preset pills (`+30d`, `+90d`, `+180d`, `+365d`), custom numeric input, and live new expiry date preview with Escape/backdrop dismiss and ARIA dialog semantics.
+- feat(approval-queue): Polished `ApprovalQueueTab.tsx` by raising typography floor (eliminated `text-[9px]/[10px]`), standardizing icons to 12-14px, adding accessible trial duration input with `aria-label`, and providing clear `[Approve (30d)]` button with loading feedback.
+- feat(support-mode): Implemented View-As Read-Only Support Mode ("View Workspace"):
+  - Added `viewAsSurveyor` and `setViewAsSurveyor` to `useAuthStore.ts`.
+  - Built `ViewAsSupportBanner.tsx`: High-contrast amber top banner (`"👁️ SUPPORT MODE: Viewing workspace of {name} ({licence}) — STRICT READ-ONLY ACCESS [ Exit to Admin Panel ]"`).
+  - In `Dashboard.tsx` and `DashboardContent`, mounted support banner, loaded surveyor's cloud claims from Firestore directly into the claims list without mutating local IndexedDB, and disabled new claim/delete/archive actions.
+  - In `openClaim.ts`, added fallback to fetch claim document from Firestore `users/{viewAs.uid}/claims/{id}` into in-memory store.
+  - In `useCloudSync.ts`, strictly blocked milestone pushes, delta syncs, and deletions while in support mode.
+  - In `SurveyorsTab.tsx`, added `[ 👁️ View Workspace ]` button in both table row and drawer.
+- verification: 315 Vitest test files passed (2,776 tests, 100% green), `npx tsc --noEmit` clean (0 errors), Next.js production build (`npm run build`) succeeded with 25/25 static routes, Android Scan drift tests (`:app:testDebugUnitTest`) 28 tasks passed (100% green), deployed to Firebase Hosting (`https://surveyos.in` & `https://motorsurveyos-in.web.app`) verified `HTTP 200 OK`.
+
 # Changelog
 
 > Most recent entries at the top. Updated by whichever agent makes changes.

@@ -1,3 +1,36 @@
+## Done: Admin Panel UI/UX Pro Max Overhaul, Table Consolidation & Read-Only Support Mode (2026-11-07, Antigravity)
+- **Problem Solved:**
+  - The Admin Panel looked "shabby", cluttered, and inaccessible: 9 horizontal tabs crammed into a single row, 9 columns overflowing viewport with microscopic text (`text-[9px]` and `text-[10px]`), click-hijacking inline `<input>` widgets directly inside table cells, a cramped inline subscription extension tool (`[ 30 ] d [✓] [✕]`) prone to accidental clicks, browser-native `alert(...)` prompts instead of Sonner toasts, and zero capability for administrators to inspect a surveyor's workspace in a safe, read-only mode for support investigations.
+- **Architecture Delivered:**
+  - **Segmented Admin Navigation (`AdminDashboard.tsx`):**
+    - Split 7 tabs into two visual tiers: Primary Operations (`Surveyors`, `New Signups`, `Payments`) with real-time status badges, and System Tools (`AI Models`, `Fee Schedule`, `Announcements`, `Dev Notes`).
+    - Standardized typography: raised text floor from 9px/10px to WCAG-compliant 12px/14px.
+    - Replaced `alert(...)` with Sonner `toast.success(...)`.
+    - Added universal search input with accessible label.
+  - **6-Column Consolidated Surveyor Registry Table (`SurveyorsTab.tsx`):**
+    - Consolidated 9 columns to 6 structured columns: `Surveyor & Identity`, `Licence & Platform ID`, `Status & Plan`, `Claims & Onboarding`, `Expiry`, `Actions`.
+    - Removed all raw inline inputs from table cells, eliminating row-expand click conflicts.
+  - **3-Column Bento Drawer (`SurveyorsTab.tsx`):**
+    - `IdentityEditorCard`: Full Name and Platform ID inputs with explicit `[Save Identity Changes]` button, qualifications, and city/state.
+    - `FirmTeamSeatsCard`: Accessible `[-][+][seats]` stepper and team assistant emails.
+    - `PaymentLedgerCard`: Subscription status, expiry datepicker, total lifetime revenue sum, and scrollable payment history with admin verification notes and payment modes.
+  - **Accessible Subscription Extension Modal (`ExtendSubscriptionModal.tsx`):**
+    - Created accessible dialog modal with backdrop blur, preset duration pills (`+30d`, `+90d`, `+180d`, `+365d`), custom day input, live new expiry date calculation preview, and Escape/backdrop click dismiss.
+  - **Approval Queue Polish (`ApprovalQueueTab.tsx`):**
+    - Raised text floor, standardized icons to 12-14px, added accessible trial duration input with `aria-label`, and clear 1-click `[Approve (30d)]` button.
+  - **View-As Read-Only Support Mode (`auth-store.ts`, `ViewAsSupportBanner.tsx`, `Dashboard.tsx`, `openClaim.ts`, `useCloudSync.ts`, `SurveyorsTab.tsx`):**
+    - Master Admin can click `[ 👁️ View Workspace ]` on any surveyor to inspect their exact workspace in read-only mode.
+    - Amber sticky top banner: `"👁️ SUPPORT MODE: Viewing workspace of {name} ({licence}) — STRICT READ-ONLY ACCESS [ Exit to Admin Panel ]"`.
+    - Automatically streams surveyor's claims from Firestore without polluting admin's local IndexedDB.
+    - Mutation controls (New Claim, Delete, Archive, Save) strictly disabled. Milestone cloud pushes and syncs blocked.
+    - Exiting returns immediately to the Admin Panel.
+- **Verification:**
+  - Full Vitest suite: 315 test files passed (2,776 tests, 100% green).
+  - TypeScript compiler (`npx tsc --noEmit`): 0 errors.
+  - Next.js production build (`npm run build`): Succeeded (25/25 static routes prerendered).
+  - Android Scan drift unit tests (`./gradlew :app:testDebugUnitTest`): 28 tasks passed (100% green).
+  - Production deployment to Firebase Hosting (`https://surveyos.in` & `https://motorsurveyos-in.web.app`): Verified `HTTP 200 OK`.
+
 # Active Tasks
 
 > Last updated: 2026-11-07 by Antigravity (OIC Portal Auto-Fill Strengthening, Safe Step 2 Field Mapping & Painting 12.5% Statutory Fix)
