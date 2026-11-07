@@ -1,7 +1,32 @@
 # Active Tasks
 
-> Last updated: 2026-11-07 by Antigravity (Surveyor Report Fixes & Scan Notes Import from Drive)
+> Last updated: 2026-11-07 by Antigravity (Admin Panel Surveyor Claims Count & Trial Activity Tracking)
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
+
+---
+
+## Done: Admin Panel Surveyor Claims Count & Trial Activity Tracking (2026-11-07, Antigravity)
+- **Problem Solved:**
+  - On the Admin Panel (`SurveyorsTab`), administrators evaluating surveyors on trial lacked immediate visibility into whether a trial surveyor actually created claims and tested the app workflow.
+  - Adding table columns would clutter the main registry view, while eagerly fetching claim counts across dozens of surveyors on initial load would cause slow page loads and wasteful Firestore reads.
+- **Architecture Delivered:**
+  - **Lightweight Firestore Aggregation (`src/lib/firebase/claims-count.ts`):**
+    - `getSurveyorClaimCount(uid: string)` uses Firestore's server-side `getCountFromServer(collection(db, 'users', uid, 'claims'))`. Costs only 1 metadata read per 1,000 index items and downloads 0 document payloads.
+  - **On-Demand Lazy Fetch & In-Memory Cache (`src/components/admin/tabs/SurveyorsTab.tsx`):**
+    - Queries claim count on-demand only when an admin clicks to expand a surveyor row.
+    - Caches count in `claimsCountMap` React state to eliminate duplicate network queries.
+  - **UI/UX Pro Max Visual Presentation (`SurveyorsTab.tsx`):**
+    - Expanded profile card displays dedicated `Claims Created` metric alongside City, State, Qualifications, and Join Date.
+    - Features inline loading skeleton pulse while resolving.
+    - Highlights untested trial accounts with an amber badge: `0 (Untested)`.
+    - Displays active testers in emerald: `{count} {claims}` with `FileText` icon.
+    - Displays non-trial inactive accounts gracefully as `0 claims` in muted text.
+- **Verification:**
+  - Unit tests: `src/lib/firebase/__tests__/claims-count.test.ts` (4 tests) and `src/components/admin/tabs/__tests__/SurveyorsTab.test.tsx` (7 tests).
+  - Full Vitest suite: 294 test files, 2,597 tests passed (100% green).
+  - Next.js production build: compiled cleanly with all 25 static pages prerendered.
+  - TypeScript compiler (`npx tsc --noEmit`): 0 errors.
+  - Prime ↔ Scan coupling: None (0 drift).
 
 ---
 

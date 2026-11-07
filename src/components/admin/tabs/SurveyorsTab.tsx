@@ -4,12 +4,13 @@ import React, { useState } from 'react';
 import {
   Loader2, UserX, Mail, IdCard, ShieldCheck,
   Calendar, CheckCircle2, XCircle, Clock, Eye, Trash2, Plus,
-  Phone, MapPin, Award, ChevronDown, ChevronRight, Link2,
+  Phone, MapPin, Award, ChevronDown, ChevronRight, Link2, FileText,
 } from 'lucide-react';
 import { getDaysRemaining } from '@/lib/subscription/status';
 import type { SurveyorAdminProfile, SurveyorFilter } from '../types';
 import { SurveyorAIKeys } from '../SurveyorAIKeys';
 import { getSurveyorOnboardingProgress } from '@/lib/onboarding/admin-progress';
+import { getSurveyorClaimCount } from '@/lib/firebase/claims-count';
 
 const FILTERS: { key: SurveyorFilter; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -49,6 +50,9 @@ interface SurveyorsTabProps {
   onUpdateName: (uid: string, name: string) => void;
   onExtend: (uid: string, days: number) => void;
   onDeleteAccount: (surveyor: SurveyorAdminProfile) => void;
+  getClaimCountFn?: (uid: string) => Promise<number>;
+  initialClaimsCountMap?: Record<string, number | 'loading' | 'error'>;
+  initialExpandedId?: string | null;
 }
 
 function ExtendControl({ uid, onExtend, disabled }: { uid: string; onExtend: (uid: string, days: number) => void; disabled: boolean }) {
@@ -107,9 +111,35 @@ export function SurveyorsTab({
   onUpdateName,
   onExtend,
   onDeleteAccount,
+  getClaimCountFn,
+  initialClaimsCountMap,
+  initialExpandedId,
 }: SurveyorsTabProps) {
   const [activeFilter, setActiveFilter] = useState<SurveyorFilter>('all');
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(initialExpandedId ?? null);
+  const [claimsCountMap, setClaimsCountMap] = useState<Record<string, number | 'loading' | 'error'>>(
+    initialClaimsCountMap || {}
+  );
+
+  const countFetcher = getClaimCountFn || getSurveyorClaimCount;
+
+  const handleToggleExpand = (id: string) => {
+    setExpandedId(prev => {
+      const next = prev === id ? null : id;
+      if (next && claimsCountMap[next] === undefined) {
+        setClaimsCountMap(old => ({ ...old, [next]: 'loading' }));
+        countFetcher(next)
+          .then(count => {
+            setClaimsCountMap(old => ({ ...old, [next]: count }));
+          })
+          .catch(err => {
+            console.error('Failed to load surveyor claim count:', next, err);
+            setClaimsCountMap(old => ({ ...old, [next]: 'error' }));
+          });
+      }
+      return next;
+    });
+  };
 
   const filtered = surveyors
     .filter(s => s.subscriptionStatus !== 'pending')
@@ -184,7 +214,7 @@ export function SurveyorsTab({
                 <React.Fragment key={surveyor.id}>
                 <tr
                   className={`hover:bg-[var(--color-neutral-50)] transition-colors group cursor-pointer ${rowBg}`}
-                  onClick={() => setExpandedId(prev => prev === surveyor.id ? null : surveyor.id)}
+                  onClick={() => handleToggleExpand(surveyor.id)}
                 >
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-3">
@@ -440,6 +470,33 @@ export function SurveyorsTab({
                                 : <span className="text-muted-foreground">&mdash;</span>
                               }
                             </span>
+                          </div>
+                          <div>
+                            <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-1">Claims Created</div>
+                            {claimsCountMap[surveyor.id] === 'loading' ? (
+                              <div className="h-4 w-16 rounded bg-[var(--color-neutral-200)] animate-pulse" />
+                            ) : claimsCountMap[surveyor.id] === 'error' ? (
+                              <span className="text-xs text-muted-foreground">&mdash;</span>
+                            ) : typeof claimsCountMap[surveyor.id] === 'number' ? (
+                              <div className="flex items-center gap-1.5">
+                                <FileText size={10} className="text-muted-foreground" />
+                                {claimsCountMap[surveyor.id] === 0 ? (
+                                  surveyor.subscriptionStatus === 'trial' ? (
+                                    <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                                      0 (Untested)
+                                    </span>
+                                  ) : (
+                                    <span className="text-xs font-medium text-muted-foreground">0 claims</span>
+                                  )
+                                ) : (
+                                  <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                                    {claimsCountMap[surveyor.id]} {claimsCountMap[surveyor.id] === 1 ? 'claim' : 'claims'}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">&mdash;</span>
+                            )}
                           </div>
                         </div>
                         <div className="mt-5 pt-5 border-t border-border">

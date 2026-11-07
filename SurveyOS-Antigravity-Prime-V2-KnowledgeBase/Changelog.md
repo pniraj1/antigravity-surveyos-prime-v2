@@ -2,6 +2,17 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-07 (Antigravity) — Admin Panel Surveyor Claims Count & Trial Activity Tracking
+- feat(admin): Implemented server-side claim aggregation helper `getSurveyorClaimCount(uid: string)` in `src/lib/firebase/claims-count.ts` using Firestore `getCountFromServer`.
+- feat(admin): Added lazy, on-demand claim count fetching and in-memory caching to `SurveyorsTab.tsx` when a surveyor row is expanded.
+- feat(ui): Added `Claims Created` metric in the expanded surveyor card (`SurveyorsTab.tsx`) with UI/UX Pro Max standards:
+  - Inline skeleton placeholder during asynchronous loading.
+  - Amber badge `0 (Untested)` for trial surveyors who have not yet created claims.
+  - Emerald badge `{count} {claims}` with `FileText` icon for surveyors who have tested/created claims.
+  - Subtle muted `0 claims` for non-trial accounts without claims.
+- tests: Added unit tests in `src/lib/firebase/__tests__/claims-count.test.ts` (4 tests) and comprehensive component test coverage in `src/components/admin/tabs/__tests__/SurveyorsTab.test.tsx` (7 tests).
+- verification: Full Vitest suite (294 test files, 2,597 tests, 100% green), `npx tsc --noEmit` (0 errors), Next.js production build (`npm run build`) completed cleanly with 25 static routes prerendered.
+
 ## 2026-11-07 (Antigravity) — Surveyor Report Fixes: Workshop Name Isolation, Dual DL Validity, and Bill Check Zero Excess Preservation
 - fix(reports): Prevented Final Survey Report (`uiic-final-builder.ts`) from silently falling back to Spot Survey repair workshop (`sd.repairWorkshop`). Final reports now strictly print the repairer/dealership workshop (`accident.workshopName`).
 - feat(reports): Added dual DL validity display (`NT: <date> | TR: <date>`) to UIIC Final Report and `UIICPrintReport.tsx` when both private/non-transport and commercial/transport validities are recorded on the licence, preventing insurance hub rejections.
