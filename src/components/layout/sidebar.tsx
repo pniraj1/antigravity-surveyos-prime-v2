@@ -42,7 +42,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-interface NavItem {
+export interface NavItem {
   id: AppTab;
   label: string;
   icon: React.ReactNode;
@@ -50,9 +50,11 @@ interface NavItem {
   requiresClaim?: boolean;
   /** When true, only users with profile.isAdmin see this item. */
   adminOnly?: boolean;
+  tooltip?: string;
+  subtitle?: string;
 }
 
-const NAV_ITEMS: NavItem[] = [
+export const NAV_ITEMS: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={17} />, group: 'main' },
   { id: 'documents', label: 'Documents', icon: <FileText size={17} />, group: 'claim', requiresClaim: true },
   { id: 'review', label: 'AI Review', icon: <ScanSearch size={17} />, group: 'claim', requiresClaim: true },
@@ -66,8 +68,22 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'fees',        label: 'Survey Fees Bill', icon: <Receipt size={17} />,    group: 'output',   requiresClaim: true },
   { id: 'insured-report', label: 'Insured Report', icon: <FileText size={17} />,       group: 'output', requiresClaim: true, adminOnly: true },
   { id: 'profile', label: 'Profile', icon: <User size={17} />, group: 'settings' },
-  { id: 'cloud-vault', label: 'Cloud Vault', icon: <Cloud size={17} />, group: 'settings' },
-  { id: 'recovered-claims', label: 'Recovered', icon: <Archive size={17} />, group: 'settings' },
+  {
+    id: 'cloud-vault',
+    label: 'Cloud Vault',
+    subtitle: 'Cloud Text Sync',
+    tooltip: 'View, download, or restore claim text synced to your SurveyOS cloud account',
+    icon: <Cloud size={17} />,
+    group: 'settings',
+  },
+  {
+    id: 'recovered-claims',
+    label: 'Recovered',
+    subtitle: 'Emergency Cache',
+    tooltip: 'Local emergency cache — find autosaved claims if browser closed unexpectedly',
+    icon: <Archive size={17} />,
+    group: 'settings',
+  },
   { id: 'admin', label: 'Admin Panel', icon: <ShieldCheck size={17} />, group: 'settings', adminOnly: true },
 ];
 
@@ -302,7 +318,7 @@ export function Sidebar() {
                         title={
                           disabled
                             ? sidebarCollapsed ? `${item.label} — open or create a claim first` : 'Open or create a claim first'
-                            : sidebarCollapsed ? item.label : undefined
+                            : (item.tooltip || item.label)
                         }
                         className={cn(
                           'w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm relative transition-colors',
@@ -318,7 +334,14 @@ export function Sidebar() {
                         <span className={isActive ? 'text-primary' : ''}>{item.icon}</span>
                         {!sidebarCollapsed && (
                           <div className="flex-1 flex items-center justify-between min-w-0 pr-1">
-                            <span className="truncate">{item.label}</span>
+                            <div className="flex flex-col min-w-0">
+                              <span className="truncate">{item.label}</span>
+                              {item.subtitle && (
+                                <span className="text-[9px] text-muted-foreground/70 font-normal truncate">
+                                  {item.subtitle}
+                                </span>
+                              )}
+                            </div>
                             {item.id === 'review' && conflictsCount > 0 && (
                               <span
                                 className="text-[10px] font-mono px-1.5 py-0.5 rounded-full font-medium"
