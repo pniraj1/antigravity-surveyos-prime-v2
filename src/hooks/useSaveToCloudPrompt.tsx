@@ -1,49 +1,20 @@
 'use client';
 
-import { useCallback, useState } from 'react';
-import { SaveToCloudDialog } from '@/components/dialogs/SaveToCloudDialog';
-import { getCloudChoice, rememberCloudChoice } from '@/lib/photos/cloud-choice-memo';
-
-interface PendingPrompt {
-  fileLabel: string;
-  resolve: (ok: boolean) => void;
-}
+import { useCallback } from 'react';
+import { useUIStore } from '@/stores/ui-store';
+import { getDriveToken } from '@/lib/drive';
 
 /**
- * Shared "Save to Drive?" confirmation, reused by every upload path
- * (Documents, Photos, Estimate) instead of auto-uploading silently.
+ * Non-intrusive cloud save resolver.
+ * When Google Drive is connected, uploads proceed automatically to Drive in the background.
+ * When Google Drive is not connected, files stay on local device without interrupting the surveyor.
  */
 export function useSaveToCloudPrompt() {
-  const [pending, setPending] = useState<PendingPrompt | null>(null);
-
-  const confirmSaveToCloud = useCallback((fileLabel: string, claimId?: string): Promise<boolean> => {
-    if (claimId) {
-      const known = getCloudChoice(claimId);
-      if (known !== undefined) return Promise.resolve(known);
-    }
-    return new Promise<boolean>((resolve) => {
-      setPending({
-        fileLabel,
-        resolve: (ok) => {
-          if (claimId) rememberCloudChoice(claimId, ok);
-          resolve(ok);
-        },
-      });
-    });
+  const confirmSaveToCloud = useCallback(async (_fileLabel?: string, _claimId?: string): Promise<boolean> => {
+    const isDriveConnected = useUIStore.getState().isDriveConnected;
+    const hasToken = !!getDriveToken();
+    return isDriveConnected || hasToken;
   }, []);
 
-  const handleChoice = useCallback((ok: boolean) => {
-    pending?.resolve(ok);
-    setPending(null);
-  }, [pending]);
-
-  const saveToCloudDialog = pending ? (
-    <SaveToCloudDialog
-      fileLabel={pending.fileLabel}
-      onConfirm={() => handleChoice(true)}
-      onCancel={() => handleChoice(false)}
-    />
-  ) : null;
-
-  return { confirmSaveToCloud, saveToCloudDialog };
+  return { confirmSaveToCloud, saveToCloudDialog: null };
 }

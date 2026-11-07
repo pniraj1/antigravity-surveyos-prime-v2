@@ -4,7 +4,6 @@ import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
-import { useUIStore } from '@/stores/ui-store';
 import { uploadWithDuplicateCheck } from '@/lib/drive/upload-with-check';
 import { PHOTO_FILE_PREFIX } from '@/lib/photos/document-annexure';
 import { compressImage } from '@/lib/photos/compress-image';
@@ -38,8 +37,7 @@ export function usePhotoUpload() {
     try {
       const label = claim.vehicle?.registrationNumber || claim.id;
       const { profile } = useProfileStore.getState();
-      const isDriveConnected = useUIStore.getState().isDriveConnected;
-      const saveToDrive = isDriveConnected && profile.autoUploadDrive !== false
+      const saveToDrive = profile.autoUploadDrive !== false
         ? await confirmSaveToCloud(files.length > 1 ? `${files.length} photos` : files[0].name, claim.id)
         : false;
 

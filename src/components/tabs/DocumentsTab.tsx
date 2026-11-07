@@ -96,7 +96,7 @@ export function DocumentsTab() {
   // Review-and-crop gate shown between file-select and AI send. `phone`: the file came from the claim folder (Scan import).
   const [reviewSheet, setReviewSheet] = useState<{ key: string; label?: string; files: File[]; phone?: boolean } | null>(null);
   const syncConnected = !!profile.syncBridgeToken;
-  const { confirmSaveToCloud, saveToCloudDialog } = useSaveToCloudPrompt();
+  const { confirmSaveToCloud } = useSaveToCloudPrompt();
   const [dupeDialog, setDupeDialog] = useState<{
     existing: ExistingFile;
     suffixedName: string;
@@ -236,8 +236,6 @@ export function DocumentsTab() {
 
   return (
     <div className="h-full overflow-y-auto bg-[var(--color-neutral-50)]">
-      {saveToCloudDialog}
-
       {/* ── Header ───────────────────────────────────────── */}
       <div
         className="px-8 py-8 lg:px-12"
