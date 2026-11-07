@@ -15,6 +15,7 @@ import {
   Receipt,
   Megaphone,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { rejectPayment } from '@/lib/firebase/payments';
 import { useAuthStore } from '@/stores/auth-store';
 import { useProfileStore } from '@/stores/profile-store';
@@ -41,12 +42,26 @@ import { RecordOfflinePaymentModal } from './modals/RecordOfflinePaymentModal';
 import type { AdminTab, PaymentFilter, NewSignup, SurveyorAdminProfile } from './types';
 import type { PaymentRecord } from '@/types/payment';
 
-export function AdminDashboard() {
+export interface AdminDashboardProps {
+  initialTab?: AdminTab;
+  isAuthorized?: boolean;
+  getAction?: (actions: {
+    handleCopyEmails: () => void;
+    setActiveTab: (tab: AdminTab) => void;
+    setSearchQuery: (q: string) => void;
+  }) => void;
+}
+
+export function AdminDashboard({
+  initialTab = 'surveyors',
+  isAuthorized: isAuthorizedProp,
+  getAction,
+}: AdminDashboardProps = {}) {
   const user = useAuthStore((s) => s.user);
   const profile = useProfileStore((s) => s.profile);
-  const isAuthorized = Boolean(user && profile?.isAdmin === true);
+  const isAuthorized = isAuthorizedProp !== undefined ? isAuthorizedProp : Boolean(user && profile?.isAdmin === true);
 
-  const [activeTab, setActiveTab] = useState<AdminTab>('surveyors');
+  const [activeTab, setActiveTab] = useState<AdminTab>(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('pending');
 
@@ -106,6 +121,22 @@ export function AdminDashboard() {
 
   const pendingPaymentsCount = payments.filter(p => p.status === 'pending').length;
 
+  const handleCopyEmails = () => {
+    const emails = surveyors.map(s => s.email).filter((email): email is string => Boolean(email));
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(emails.join(', '));
+    }
+    toast.success(`Copied ${emails.length} email addresses to clipboard!`);
+  };
+
+  if (getAction) {
+    getAction({
+      handleCopyEmails,
+      setActiveTab,
+      setSearchQuery,
+    });
+  }
+
   if (!isAuthorized) {
     return (
       <div className="h-full flex flex-col items-center justify-center bg-neutral-50 p-8">
@@ -142,33 +173,33 @@ export function AdminDashboard() {
 
           <div className="flex items-center gap-3">
             {activeTab === 'surveyors' && (
-              <>
-                <button
-                  onClick={() => {
-                    const emails = surveyors.map(s => s.email).filter(Boolean).join(', ');
-                    navigator.clipboard.writeText(emails);
-                    alert(`Copied ${surveyors.length} email addresses to clipboard!`);
-                  }}
-                  className="px-4 py-2.5 rounded-xl border border-border text-foreground hover:bg-neutral-50 transition-all font-medium text-xs flex items-center gap-2 shadow-sm"
-                  title="Copy All Emails"
-                >
-                  <Mail size={16} className="text-primary" /> Copy All Emails
-                </button>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-                  <input
-                    type="text"
-                    placeholder="Search by name or UID..."
-                    className="pl-10 pr-4 py-2.5 rounded-xl border border-border text-sm w-64 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                  />
-                </div>
-              </>
+              <button
+                onClick={handleCopyEmails}
+                className="px-4 py-2.5 rounded-xl border border-border text-foreground hover:bg-neutral-50 transition-all font-medium text-xs flex items-center gap-2 shadow-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
+                title="Copy All Emails"
+              >
+                <Mail size={16} className="text-primary" /> Copy All Emails
+              </button>
             )}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+              <input
+                type="text"
+                aria-label="Search surveyors, licence, or ID"
+                placeholder="Search by name, licence, or UID..."
+                className="pl-10 pr-4 py-2.5 rounded-xl border border-border text-sm w-64 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none transition-all font-medium"
+                value={searchQuery}
+                onChange={e => {
+                  setSearchQuery(e.target.value);
+                  if (activeTab !== 'surveyors' && e.target.value.trim() !== '') {
+                    setActiveTab('surveyors');
+                  }
+                }}
+              />
+            </div>
             <button
               onClick={refreshAll}
-              className="p-2.5 rounded-xl border border-border text-foreground hover:bg-neutral-50 transition-all"
+              className="p-2.5 rounded-xl border border-border text-foreground hover:bg-neutral-50 transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
               title="Refresh Data"
             >
               <RefreshCw size={18} className={loading || signupsLoading || paymentsLoading ? 'animate-spin' : ''} />
@@ -176,103 +207,129 @@ export function AdminDashboard() {
           </div>
         </div>
 
-        {/* Tab bar */}
-        <div className="max-w-7xl mx-auto mt-6 flex gap-1 border-b border-border">
-          <button
-            onClick={() => setActiveTab('surveyors')}
-            className={`flex items-center gap-2 px-5 py-2.5 text-xs font-medium uppercase tracking-wider rounded-t-lg transition-all ${
-              activeTab === 'surveyors'
-                ? 'bg-white border border-b-white border-border text-primary -mb-px'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Users size={14} />
-            All Surveyors
-            <span className="ml-1 px-1.5 py-0.5 rounded-md bg-neutral-100 text-foreground text-[9px]">
-              {surveyors.length}
+        {/* Tab navigation: Primary Operations + System Tools */}
+        <div className="max-w-7xl mx-auto mt-6 flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border">
+          {/* Primary Operations Tabs */}
+          <div role="tablist" aria-label="Primary Operations" className="flex items-center gap-2 overflow-x-auto">
+            <button
+              role="tab"
+              aria-selected={activeTab === 'surveyors'}
+              onClick={() => setActiveTab('surveyors')}
+              className={`flex items-center gap-2 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-t-lg transition-all border-b-2 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none ${
+                activeTab === 'surveyors'
+                  ? 'bg-white border-primary text-primary -mb-px'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-neutral-50'
+              }`}
+            >
+              <Users size={16} />
+              <span>All Surveyors</span>
+              <span className="ml-1 px-1.5 py-0.5 rounded-md bg-neutral-100 text-foreground text-[11px] font-medium">
+                {surveyors.length}
+              </span>
+              {expiringSoonCount > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 rounded-md bg-status-danger-tint text-status-danger text-[11px] font-medium">
+                  {expiringSoonCount}
+                </span>
+              )}
+            </button>
+
+            <button
+              role="tab"
+              aria-selected={activeTab === 'signups'}
+              onClick={() => setActiveTab('signups')}
+              className={`flex items-center gap-2 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-t-lg transition-all border-b-2 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none ${
+                activeTab === 'signups'
+                  ? 'bg-white border-primary text-primary -mb-px'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-neutral-50'
+              }`}
+            >
+              <Bell size={16} />
+              <span>New Signups</span>
+              {signups.length > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 rounded-md bg-status-warning-tint text-foreground text-[11px] font-medium">
+                  {signups.length}
+                </span>
+              )}
+            </button>
+
+            <button
+              role="tab"
+              aria-selected={activeTab === 'payments'}
+              onClick={() => setActiveTab('payments')}
+              className={`flex items-center gap-2 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-t-lg transition-all border-b-2 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none ${
+                activeTab === 'payments'
+                  ? 'bg-white border-primary text-primary -mb-px'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-neutral-50'
+              }`}
+            >
+              <CreditCard size={16} />
+              <span>Payments</span>
+              {pendingPaymentsCount > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 rounded-md bg-status-success-tint text-status-success text-[11px] font-medium">
+                  {pendingPaymentsCount}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* System Tools Segmented Group */}
+          <div role="tablist" aria-label="System Tools" className="flex items-center gap-1 bg-neutral-100 p-1 rounded-xl border border-border mb-1 overflow-x-auto">
+            <span className="px-2.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider hidden sm:inline">
+              System
             </span>
-            {expiringSoonCount > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 rounded-md bg-status-danger-tint text-status-danger text-[9px] font-medium">
-                {expiringSoonCount}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab('signups')}
-            className={`flex items-center gap-2 px-5 py-2.5 text-xs font-medium uppercase tracking-wider rounded-t-lg transition-all ${
-              activeTab === 'signups'
-                ? 'bg-white border border-b-white border-border text-primary -mb-px'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Bell size={14} />
-            New Signups
-            {signups.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 rounded-md bg-status-warning-tint text-foreground text-[9px] font-medium">
-                {signups.length}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab('payments')}
-            className={`flex items-center gap-2 px-5 py-2.5 text-xs font-medium uppercase tracking-wider rounded-t-lg transition-all ${
-              activeTab === 'payments'
-                ? 'bg-white border border-b-white border-border text-primary -mb-px'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <CreditCard size={14} />
-            Payments
-            {pendingPaymentsCount > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 rounded-md bg-status-success-tint text-status-success text-[9px] font-medium">
-                {pendingPaymentsCount}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab('dev-notes')}
-            className={`flex items-center gap-2 px-5 py-2.5 text-xs font-medium uppercase tracking-wider rounded-t-lg transition-all ${
-              activeTab === 'dev-notes'
-                ? 'bg-white border border-b-white border-border text-primary -mb-px'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Code2 size={14} />
-            Dev Notes
-          </button>
-          <button
-            onClick={() => setActiveTab('ai-models')}
-            className={`flex items-center gap-2 px-5 py-2.5 text-xs font-medium uppercase tracking-wider rounded-t-lg transition-all ${
-              activeTab === 'ai-models'
-                ? 'bg-white border border-b-white border-border text-primary -mb-px'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Cpu size={14} />
-            AI Models
-          </button>
-          <button
-            onClick={() => setActiveTab('fee-schedule')}
-            className={`flex items-center gap-2 px-5 py-2.5 text-xs font-medium uppercase tracking-wider rounded-t-lg transition-all ${
-              activeTab === 'fee-schedule'
-                ? 'bg-white border border-b-white border-border text-primary -mb-px'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Receipt size={14} />
-            Fee Schedule
-          </button>
-          <button
-            onClick={() => setActiveTab('announcements')}
-            className={`flex items-center gap-2 px-5 py-2.5 text-xs font-medium uppercase tracking-wider rounded-t-lg transition-all ${
-              activeTab === 'announcements'
-                ? 'bg-white border border-b-white border-border text-primary -mb-px'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Megaphone size={14} />
-            Announcements
-          </button>
+            <button
+              role="tab"
+              aria-selected={activeTab === 'ai-models'}
+              onClick={() => setActiveTab('ai-models')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none ${
+                activeTab === 'ai-models'
+                  ? 'bg-white text-primary shadow-xs font-semibold'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Cpu size={16} />
+              <span>AI Models</span>
+            </button>
+            <button
+              role="tab"
+              aria-selected={activeTab === 'fee-schedule'}
+              onClick={() => setActiveTab('fee-schedule')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none ${
+                activeTab === 'fee-schedule'
+                  ? 'bg-white text-primary shadow-xs font-semibold'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Receipt size={16} />
+              <span>Fee Schedule</span>
+            </button>
+            <button
+              role="tab"
+              aria-selected={activeTab === 'announcements'}
+              onClick={() => setActiveTab('announcements')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none ${
+                activeTab === 'announcements'
+                  ? 'bg-white text-primary shadow-xs font-semibold'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Megaphone size={16} />
+              <span>Announcements</span>
+            </button>
+            <button
+              role="tab"
+              aria-selected={activeTab === 'dev-notes'}
+              onClick={() => setActiveTab('dev-notes')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none ${
+                activeTab === 'dev-notes'
+                  ? 'bg-white text-primary shadow-xs font-semibold'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Code2 size={16} />
+              <span>Dev Notes</span>
+            </button>
+          </div>
         </div>
       </div>
 
