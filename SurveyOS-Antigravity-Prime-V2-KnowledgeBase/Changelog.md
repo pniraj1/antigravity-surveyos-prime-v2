@@ -2,6 +2,19 @@
 
 > Most recent entries at the top. Updated by whichever agent makes changes.
 
+## 2026-11-07 (Antigravity) — Multi-User Team Workspaces, Active Editing Conflict Warnings & Admin Payment Controls
+- feat(team): Added `maxTeamSeats`, `teamEmails`, and `hideEarningsFromTeam` to `SurveyorProfile` and `SurveyorAdminProfile` in `src/types/vehicle.ts` and `src/components/admin/types.ts`.
+- feat(admin): Implemented Master Admin seat quota management in `src/components/admin/tabs/SurveyorsTab.tsx` and `useAdminActions.ts` (`handleUpdateTeamSeats`). Enhanced search filter to match assistant emails within `surveyor.teamEmails`.
+- feat(profile): Created `TeamManagementSection.tsx` in `src/components/profile/` allowing senior surveyors to add/remove team members up to their admin seat quota and toggle earnings privacy.
+- feat(security): Scoped Firestore security rules (`firestore.rules`) to allow authorized team members (`isTeamMember`) to read/write claims under `users/{ownerUid}/claims` while keeping per-user independent single-session heartbeats, eliminating cross-device kickouts.
+- feat(auth): Implemented `src/lib/auth/workspace-resolver.ts`, automatically resolving team workspaces on login and syncing claims to the firm owner's account without allowing assistant logins to overwrite senior surveyor credentials.
+- feat(presence): Implemented live claim active editing detection in `src/hooks/useClaimPresence.ts` and `ClaimPresenceBanner.tsx`, displaying an animated amber warning when a colleague is currently editing the same claim.
+- feat(privacy): Gated the `'fees'` tab in `sidebar.tsx` and Fees Overview in `Dashboard.tsx` when `hideEarnings` is enabled. Restricted permanent claim deletion to primary surveyors.
+- feat(admin): Added `adminNotes`, `paymentMode`, and `planName` to `PaymentRecord`. Enhanced `VerifyPaymentModal.tsx` with an Admin Notes input, and created `RecordOfflinePaymentModal.tsx` for manual offline payment recording. Added payment history and notes drawer in `SurveyorsTab.tsx`.
+- feat(billing): Enhanced `SubscriptionSection.tsx` to render firm workspace plan/seat stats, payment modes, and admin verification notes, hiding sensitive financial data from assistants when privacy is enabled.
+- docs(contract): Updated `docs/handover/prime-notes-import.md` to document the team shared Google Drive folder contract for SurveyOS Scan and Prime.
+- verification: 310 Vitest test files passed (2,717 tests, 100% green), `npx tsc --noEmit` clean (0 errors), SurveyOS Scan drift tests (`:app:testDebugUnitTest`) 28 tasks passed (100% green).
+
 ## 2026-11-07 (Antigravity) — Unified Storage Hub, Firestore Quota Optimization & Cloud Sync UX
 - perf(sync): Added 15-second tab-switch coalescing window (`TAB_SWITCH_COALESCE_MS = 15_000`) in `src/hooks/useCloudSync.ts`, debouncing milestone pushes during rapid tab navigation while immediately flushing on claim switch, app backgrounding, and window beforeunload.
 - feat(storage): Automated Google Drive mirroring in `src/hooks/useSaveToCloudPrompt.tsx` without blocking modal popups. Files automatically sync in the background when Drive is connected and save locally on laptop when disconnected.

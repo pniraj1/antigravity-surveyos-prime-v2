@@ -1,7 +1,57 @@
 # Active Tasks
 
-> Last updated: 2026-11-07 by Antigravity (Unified Storage Hub & Cloud Sync Optimization)
+> Last updated: 2026-11-07 by Antigravity (Multi-User Team Workspaces, Active Editing Conflict Warnings & Admin Payment Controls)
 > Both agents (Claude and Antigravity) MUST read this before starting and update it before stopping.
+
+---
+
+## Done: Multi-User Team Workspaces, Active Editing Conflict Warnings & Admin Payment Controls (2026-11-07, Antigravity)
+- **Problem Solved:**
+  - Surveyors operating with teams, junior surveyors, or office typists were unable to have multiple people collaborate on claims because Prime's strict single-session heartbeat kicked users out whenever the same Google account was opened on multiple devices.
+  - Sharing the senior surveyor's personal Google account exposed personal Gmail, Drive, and IRDAI identity.
+  - Furthermore, administrators lacked seat quota controls and offline payment note logging; surveyors had no privacy toggle to hide their professional fee bills and revenue earnings from staff; and multiple users editing the same claim risked silent overwrites.
+- **Architecture Delivered:**
+  - **Admin-Controlled Team Seat Quotas (`src/components/admin/tabs/SurveyorsTab.tsx`, `useAdminActions.ts`, `useAdminData.ts`):**
+    - Master Admin sets `maxTeamSeats` (e.g. 0 for Solo, 3 or 5 for Firm plans) in `users/{surveyorUid}/profile/current`.
+    - Protected `maxTeamSeats` from client modification in `firestore.rules` and `pushProfileToCloud`.
+    - Enhanced admin search to match assistant emails within `surveyor.teamEmails` for fast customer support lookup.
+    - Added team seat badges (`👥 X / Y Seats`) and expanded card team member management.
+  - **Surveyor Team Management & Privacy Switch (`src/components/profile/TeamManagementSection.tsx`, `ProfileTab.tsx`):**
+    - Senior surveyors manage team member emails up to their admin-assigned quota.
+    - Added `[x] Hide Fee Bills & Professional Earnings from Team Members` privacy switch.
+    - Maintains `team_members/{email}` registry document for fast direct lookup.
+  - **Firestore Multi-User Scoping (`firestore.rules`):**
+    - Added `isTeamMember(ownerUid)` and `hasOwnerActiveAccess(ownerUid)` helpers.
+    - Allows authorized team members to read and write claims under `users/{ownerUid}/claims/{claimId}` while strictly maintaining per-user independent session heartbeats (`users/{request.auth.uid}/session/current`), eliminating session conflict kickouts between team members.
+    - Team members are permitted to read the owner's profile to render the surveyor's IRDAI license and letterhead, while writes remain restricted to owner/admin.
+  - **Workspace State Resolution (`src/lib/auth/workspace-resolver.ts`, `useAuth.ts`, `useCloudSync.ts`, `auth-store.ts`):**
+    - On login, resolves whether the user is operating as a team assistant under a firm owner.
+    - Sets `activeWorkspaceUid`, `isTeamMember`, and `teamAffiliation`.
+    - Initializes IndexedDB with `activeWorkspaceUid` and synchronizes claims with the firm owner's cloud store.
+    - Skips client profile pushes when operating as an assistant to protect the senior surveyor's credentials.
+  - **Active Editing Conflict Detection (`src/hooks/useClaimPresence.ts`, `ClaimPresenceBanner.tsx`, `Dashboard.tsx`):**
+    - Real-time 30s heartbeat updates `users/{workspaceUid}/claim_presence/{claimId}` with user identity and timestamp.
+    - If another colleague is active on the same claim within 5 minutes, an amber animated warning banner alerts the user: `"{userName} ({userEmail}) is currently working on this claim (active X mins ago). Coordinate before saving to prevent overwriting changes."`
+  - **Role & Privacy Gates (`src/components/layout/sidebar.tsx`, `Dashboard.tsx`):**
+    - When `hideEarnings` is enabled, omits `'fees'` (Survey Fees Bill) from the sidebar navigation.
+    - Hides Fees Overview cards (`feesBilled`, `feesReceived`, `feesOutstanding`) on the dashboard for assistants.
+    - Restricts archived claim deletion to primary surveyors (`!isTeamMember`).
+    - Masks bank account details, IFSC, and PAN with `••••••••` in the profile tab.
+  - **Admin Payment Notes & Offline Payment Recording (`src/types/payment.ts`, `payments.ts`, `VerifyPaymentModal.tsx`, `RecordOfflinePaymentModal.tsx`, `PaymentsTab.tsx`):**
+    - Added `adminNotes`, `paymentMode`, and `planName` to `PaymentRecord`.
+    - Enhanced `VerifyPaymentModal` with an Admin Notes input to record verification details.
+    - Created `RecordOfflinePaymentModal` allowing admins to manually record direct UPI/bank/cash payments with custom duration and notes, immediately activating subscriptions.
+    - Displayed historical payments and notes in the expanded surveyor card on `SurveyorsTab`.
+  - **Surveyor Subscription & Billing View (`src/components/profile/SubscriptionSection.tsx`):**
+    - Renders firm workspace seats card (`Firm Workspace (${maxTeamSeats} Team Seats)`).
+    - Displays clean admin note cards and payment mode tags on payment history items.
+    - Completely hides billing details from assistants when privacy is enabled.
+  - **SurveyOS Scan Contract Handover (`../SurveyOS Scan/docs/handover/prime-notes-import.md`):**
+    - Documented team shared Google Drive folder delegation for Android Scan field captures.
+- **Verification:**
+  - Full Vitest suite: 310 test files passed, 2,717 tests passed (100% green).
+  - TypeScript compiler (`npx tsc --noEmit`): 0 errors.
+  - SurveyOS Scan drift unit tests (`./gradlew :app:testDebugUnitTest`): 28 tasks passed (100% green).
 
 ---
 
