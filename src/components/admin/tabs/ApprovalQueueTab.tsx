@@ -32,98 +32,102 @@ function SignupRow({
   const isApproving = approvingId === signup.uid;
 
   return (
-    <tr className="hover:bg-neutral-50 transition-colors group">
-      <td className="px-6 py-5">
+    <tr className="hover:bg-neutral-50/80 transition-colors group">
+      <td className="px-6 py-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center font-medium text-primary text-lg">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center font-semibold text-primary text-base shrink-0">
             {displayName.charAt(0).toUpperCase()}
           </div>
           <div>
-            <div className="text-sm font-medium text-foreground">{displayName}</div>
+            <div className="text-sm font-semibold text-foreground">{displayName}</div>
             <div className="text-xs text-muted-foreground mt-0.5">{signup.email}</div>
-            <div className="text-[10px] text-muted-foreground font-mono mt-0.5 flex items-center gap-1">
-              <IdCard size={10} /> {signup.uid}
+            <div className="text-xs text-muted-foreground/80 font-mono mt-0.5 flex items-center gap-1.5">
+              <IdCard size={12} className="shrink-0" /> {signup.uid}
             </div>
           </div>
         </div>
       </td>
-      <td className="px-6 py-5">
+      <td className="px-6 py-4">
         {!signup.accessRequestSubmitted ? (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-medium bg-neutral-100 text-neutral-600 border border-neutral-200">
-            <AlertCircle size={10} /> Awaiting form submission
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-neutral-100 text-neutral-600 border border-neutral-200">
+            <AlertCircle size={12} /> Awaiting form submission
           </span>
         ) : signup.profileIrdai ? (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium" style={{ background: 'var(--color-status-warning-tint)', color: 'var(--color-status-warning)', border: '1px solid var(--color-status-warning)' }}>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold" style={{ background: 'var(--color-status-warning-tint)', color: 'var(--color-status-warning)', border: '1px solid var(--color-status-warning)' }}>
             {signup.profileIrdai}
           </span>
         ) : (
-          <span className="text-[10px] font-medium text-muted-foreground italic">Not provided</span>
+          <span className="text-xs font-medium text-muted-foreground italic">Not provided</span>
         )}
       </td>
-      <td className="px-6 py-5">
+      <td className="px-6 py-4">
         <div className="text-sm font-medium text-foreground">
           {signup.profileMobile || '—'}
         </div>
       </td>
-      <td className="px-6 py-5">
+      <td className="px-6 py-4">
         <div className="text-sm font-medium text-foreground">
           {signup.profileCity && signup.profileState
             ? `${signup.profileCity}, ${signup.profileState}`
             : signup.profileCity || signup.profileState || '—'}
         </div>
       </td>
-      <td className="px-6 py-5">
+      <td className="px-6 py-4">
         <div className="text-sm font-medium text-foreground">
           {(signup.updatedAt ?? signup.signedUpAt)
             ? (signup.updatedAt ?? signup.signedUpAt).toDate().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
             : '—'}
         </div>
-        <div className="text-[10px] text-muted-foreground">
+        <div className="text-xs text-muted-foreground mt-0.5">
           {(signup.updatedAt ?? signup.signedUpAt)
             ? (signup.updatedAt ?? signup.signedUpAt).toDate().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
             : ''}
         </div>
       </td>
-      <td className="px-6 py-5 text-right">
+      <td className="px-6 py-4 text-right">
         <div className="flex items-center justify-end gap-2">
           <button
             onClick={() => onEmail(signup.email, displayName)}
             title="Send a custom email to this surveyor"
-            className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[10px] font-medium bg-neutral-100 text-neutral-600 hover:bg-neutral-200 transition-all"
+            aria-label={`Email ${displayName}`}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-neutral-100 text-neutral-700 hover:bg-neutral-200 border border-border/60 transition-all cursor-pointer"
           >
-            <Mail size={10} /> Email
+            <Mail size={13} /> Email
           </button>
           {/* Per-row trial days input */}
-          <div className="flex items-center gap-1 border border-border rounded-lg px-2 py-1 bg-card">
-            <Calendar size={10} className="text-muted-foreground" />
+          <div className="flex items-center gap-1.5 border border-border rounded-lg px-2.5 py-1 bg-card shadow-xs">
+            <Calendar size={13} className="text-muted-foreground shrink-0" />
             <input
               type="number"
               min={1}
               max={365}
               value={trialDays}
               onChange={e => setTrialDays(Math.max(1, Math.min(365, Number(e.target.value))))}
-              className="w-10 text-xs font-medium text-center border-none focus:ring-0 p-0 text-foreground"
+              className="w-10 text-xs font-semibold text-center border-none focus:ring-0 p-0 text-foreground"
               title="Trial duration in days"
+              aria-label={`Trial duration in days for ${displayName}`}
             />
-            <span className="text-[10px] text-muted-foreground">d</span>
+            <span className="text-xs text-muted-foreground font-medium">d</span>
           </div>
           <button
             onClick={() => onApprove(signup, trialDays)}
             disabled={isApproving}
             title={`Approve with ${trialDays}-day trial`}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium bg-[var(--color-status-success-tint)] text-[var(--color-status-success)] hover:opacity-80 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            aria-label={`Approve ${displayName} with ${trialDays}-day trial`}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[var(--color-status-success-tint)] text-[var(--color-status-success)] border border-[var(--color-status-success)]/30 hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-xs cursor-pointer"
           >
             {isApproving
-              ? <Loader2 size={10} className="animate-spin" />
-              : <CheckCircle2 size={10} />}
-            Approve
+              ? <Loader2 size={13} className="animate-spin" />
+              : <CheckCircle2 size={13} />}
+            Approve ({trialDays}d)
           </button>
           <button
             onClick={() => onDismiss(signup)}
             disabled={isApproving}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium bg-[var(--color-status-danger-tint)] text-[var(--color-status-danger)] hover:opacity-80 transition-all disabled:opacity-50"
+            aria-label={`Dismiss ${displayName}`}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[var(--color-status-danger-tint)] text-[var(--color-status-danger)] border border-[var(--color-status-danger)]/30 hover:opacity-90 transition-all disabled:opacity-50 cursor-pointer"
           >
-            <XCircle size={10} />
+            <XCircle size={13} />
             Dismiss
           </button>
         </div>
@@ -152,20 +156,20 @@ export function ApprovalQueueTab({
           <div className="w-16 h-16 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto mb-4">
             <UserPlus size={32} className="text-muted-foreground" />
           </div>
-          <h3 className="text-base font-medium text-foreground">No pending signups</h3>
+          <h3 className="text-base font-semibold text-foreground">No pending signups</h3>
           <p className="text-sm text-muted-foreground mt-1">New signups will appear here for approval.</p>
         </div>
       ) : (
         <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-neutral-50 border-b border-border">
-                <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">User</th>
-                <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">IRDAI Licence</th>
-                <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Phone</th>
-                <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Location</th>
-                <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Submitted</th>
-                <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-wider text-muted-foreground text-right">Actions</th>
+              <tr className="bg-neutral-50/80 border-b border-border">
+                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">User</th>
+                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">IRDAI Licence</th>
+                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Phone</th>
+                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Location</th>
+                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Submitted</th>
+                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
