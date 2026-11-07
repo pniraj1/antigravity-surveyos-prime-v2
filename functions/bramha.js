@@ -129,7 +129,7 @@ async function embedBatch(texts, apiKey) {
 
 // ─── Admin-triggered rebuild ───
 exports.rebuildBramhaIndex = onCall(
-  { memory: "512MiB", timeoutSeconds: 3600 },
+  { memory: "512MiB", timeoutSeconds: 3600, maxInstances: 1 },
   async (request) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "Must be logged in.");
 
