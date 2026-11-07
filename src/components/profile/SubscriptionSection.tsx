@@ -7,9 +7,10 @@ import { getUserPayments } from '@/lib/firebase/payments';
 import { calculateSubscriptionState, getDaysRemaining } from '@/lib/subscription/status';
 import { PaymentSubmissionForm } from '@/components/subscription/PaymentSubmissionForm';
 import { UPI_ID, REFERRALS_ENABLED } from '@/lib/subscription/plans';
+import { useAuthStore } from '@/stores/auth-store';
 import {
   CreditCard, Calendar, Gift, Copy, CheckCircle2,
-  RefreshCw, Clock, BadgeCheck, Hourglass, XCircle,
+  RefreshCw, Clock, BadgeCheck, Hourglass, XCircle, Info,
 } from 'lucide-react';
 
 const STATUS_CONFIG: Record<string, { label: string; badgeClass: string; icon: React.ReactNode }> = {
@@ -20,9 +21,27 @@ const STATUS_CONFIG: Record<string, { label: string; badgeClass: string; icon: R
   suspended:{ label: 'Suspended',   badgeClass: 'bg-[var(--color-neutral-200)] text-[var(--color-neutral-600)]', icon: <XCircle size={11} /> },
 };
 
-export function SubscriptionSection({ uid, profile }: { uid: string; profile: SurveyorProfile }) {
-  const [payments, setPayments] = useState<PaymentRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+export function SubscriptionSection({
+  uid,
+  profile,
+  initialPayments,
+}: {
+  uid: string;
+  profile: SurveyorProfile;
+  initialPayments?: PaymentRecord[];
+}) {
+  const auth = useAuthStore();
+  const isTeamMember = typeof useAuthStore?.getState === 'function' ? useAuthStore.getState().isTeamMember : auth.isTeamMember;
+  const teamAffiliation = typeof useAuthStore?.getState === 'function' ? useAuthStore.getState().teamAffiliation : auth.teamAffiliation;
+
+  const isAssistant = isTeamMember;
+  const hideEarnings = teamAffiliation ? teamAffiliation.hideEarnings : profile.hideEarningsFromTeam;
+  if (isAssistant && hideEarnings) {
+    return null; // completely hidden from team assistants when privacy is enabled
+  }
+
+  const [payments, setPayments] = useState<PaymentRecord[]>(initialPayments ?? []);
+  const [loading, setLoading] = useState(initialPayments === undefined);
   const [copied, setCopied] = useState(false);
 
   const state = calculateSubscriptionState(profile);
@@ -32,12 +51,13 @@ export function SubscriptionSection({ uid, profile }: { uid: string; profile: Su
   const daysLeft = getDaysRemaining(expiryDate);
 
   useEffect(() => {
+    if (initialPayments !== undefined) return;
     if (!uid) { setLoading(false); return; }
     getUserPayments(uid)
       .then(setPayments)
       .catch(() => setPayments([]))
       .finally(() => setLoading(false));
-  }, [uid]);
+  }, [uid, initialPayments]);
 
   const handleCopyReferral = () => {
     if (!profile.referralCode) return;
@@ -64,6 +84,31 @@ export function SubscriptionSection({ uid, profile }: { uid: string; profile: Su
       </div>
 
       <div className="p-5 space-y-5">
+        {/* Team Seats & Plan Card */}
+        <div
+          className="rounded-xl p-4 border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+          style={{ background: 'var(--color-neutral-50)' }}
+        >
+          <div className="space-y-1">
+            <div className="text-[9px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              Account Workspace &amp; Seats
+            </div>
+            <div className="text-sm font-semibold text-foreground">
+              {(profile.maxTeamSeats ?? 0) > 0
+                ? `Firm Workspace (${profile.maxTeamSeats} Team Seats)`
+                : 'Solo Surveyor Account (1 User)'}
+            </div>
+            {(profile.maxTeamSeats ?? 0) > 0 && (
+              <div className="text-xs text-muted-foreground font-medium">
+                Seats used: {(profile.teamEmails || []).length} / {profile.maxTeamSeats}
+              </div>
+            )}
+          </div>
+          <span className="self-start sm:self-center px-2.5 py-1 rounded-full text-[10px] font-medium uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">
+            {(profile.maxTeamSeats ?? 0) > 0 ? 'Firm Workspace' : 'Solo Account'}
+          </span>
+        </div>
+
         {/* Expiry row */}
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           {/* Plan period */}
@@ -192,7 +237,7 @@ export function SubscriptionSection({ uid, profile }: { uid: string; profile: Su
           ) : payments.length === 0 ? (
             <div className="text-xs font-medium text-[var(--color-neutral-400)]">No payments on record.</div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {payments.map((p, idx) => {
                 const statusMap = {
                   verified: { icon: <CheckCircle2 size={11} />, iconClass: 'text-status-success', badgeClass: 'bg-status-success-tint text-status-success', label: 'Verified' },
@@ -203,24 +248,52 @@ export function SubscriptionSection({ uid, profile }: { uid: string; profile: Su
                 return (
                   <div
                     key={p.id ?? idx}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl border border-border"
+                    className="px-4 py-3 rounded-xl border border-border space-y-2.5"
                     style={{ background: 'var(--color-neutral-50)' }}
                   >
-                    <span className={`${s.iconClass} flex-shrink-0`}>{s.icon}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-medium truncate text-foreground">
-                        ₹{p.amount.toLocaleString('en-IN')}
-                        {p.durationGranted ? <span className="ml-2 text-[10px] font-medium text-status-success">+{p.durationGranted} days</span> : null}
+                    <div className="flex items-center gap-3">
+                      <span className={`${s.iconClass} flex-shrink-0`}>{s.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-semibold text-foreground">
+                            ₹{p.amount.toLocaleString('en-IN')}
+                          </span>
+                          {p.durationGranted ? (
+                            <span className="text-[10px] font-medium text-status-success">
+                              +{p.durationGranted} days
+                            </span>
+                          ) : null}
+                          {p.planName && (
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-medium uppercase bg-primary/10 text-primary border border-primary/20">
+                              {p.planName}
+                            </span>
+                          )}
+                          {p.paymentMode && (
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-medium uppercase bg-muted text-muted-foreground border border-border">
+                              {p.paymentMode}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[10px] font-medium truncate text-muted-foreground mt-0.5">
+                          Txn: {p.transactionId || '—'} · {formatDate(p.submittedAt)}
+                        </div>
                       </div>
-                      <div className="text-[10px] font-medium truncate text-muted-foreground">
-                        Txn: {p.transactionId || '—'} · {formatDate(p.submittedAt)}
-                      </div>
+                      <span
+                        className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-medium uppercase flex-shrink-0 ${s.badgeClass}`}
+                      >
+                        {s.label}
+                      </span>
                     </div>
-                    <span
-                      className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-medium uppercase flex-shrink-0 ${s.badgeClass}`}
-                    >
-                      {s.label}
-                    </span>
+
+                    {p.adminNotes && (
+                      <div className="mt-2 text-xs bg-primary/5 border border-primary/20 rounded-lg p-2 text-foreground">
+                        <span className="font-medium text-primary text-[10px] uppercase tracking-wider block mb-0.5">
+                          <Info size={11} className="inline mr-1 -mt-0.5" />
+                          Admin Note
+                        </span>
+                        {p.adminNotes}
+                      </div>
+                    )}
                   </div>
                 );
               })}

@@ -12,7 +12,7 @@ import {
   User, Shield,
   Landmark, Sparkles, Camera, RefreshCw, CheckCircle2,
   AlertCircle, Upload, Trash2, Cpu, ExternalLink, Cloud, CloudOff, Link,
-  ShieldCheck, Plus, Eye, EyeOff, Lock, Plane,
+  ShieldCheck, Plus, Eye, EyeOff, Lock, Plane, CreditCard,
 } from 'lucide-react';
 import { ConnectSyncDialog } from '@/components/sync-bridge/ConnectSyncDialog';
 import { FeeScheduleSection } from '@/components/profile/FeeScheduleSection';
@@ -235,15 +235,23 @@ export function ImageUploader({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function ProfileTab() {
-  const { profile, updateProfile } = useProfileStore();
+  const profileStore = useProfileStore();
+  const profile = (typeof useProfileStore?.getState === 'function' ? useProfileStore.getState().profile : null) ?? profileStore.profile;
+  const updateProfile = profileStore.updateProfile;
   const { isDriveConnected, driveEmail } = useUIStore();
   const [saved, setSaved] = useState(false);
   const [driveLinking, setDriveLinking] = useState(false);
   const [driveError, setDriveError] = useState('');
   const [connectSyncOpen, setConnectSyncOpen] = useState(false);
 
-  const user = useAuthStore((s) => s.user);
+  const auth = useAuthStore();
+  const user = auth.user;
+  const isTeamMember = typeof useAuthStore?.getState === 'function' ? useAuthStore.getState().isTeamMember : auth.isTeamMember;
+  const teamAffiliation = typeof useAuthStore?.getState === 'function' ? useAuthStore.getState().teamAffiliation : auth.teamAffiliation;
   const isAdminUser = profile.isAdmin;
+  const isAssistant = isTeamMember;
+  const hideEarnings = teamAffiliation ? teamAffiliation.hideEarnings : profile.hideEarningsFromTeam;
+  const hideFinancialDetails = isAssistant && hideEarnings;
 
   const isNameLocked = !isAdminUser; // Only admins can rename
 
@@ -321,12 +329,41 @@ export function ProfileTab() {
             </button>
           </div>
         </div>
+
+        {/* Quick navigation pills */}
+        <div className="max-w-4xl mx-auto mt-6 pt-4 border-t border-white/10 flex items-center gap-2 flex-wrap">
+          <a
+            href="#identity"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-white/80 bg-white/10 hover:bg-white/20 hover:text-white transition-colors"
+          >
+            <Shield size={12} className="text-primary" />
+            Identity &amp; IRDAI
+          </a>
+          <a
+            href="#team"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-white/80 bg-white/10 hover:bg-white/20 hover:text-white transition-colors"
+          >
+            <User size={12} className="text-primary" />
+            Team &amp; Members
+          </a>
+          {!hideFinancialDetails && (
+            <a
+              href="#billing"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-white/80 bg-white/10 hover:bg-white/20 hover:text-white transition-colors"
+            >
+              <CreditCard size={12} className="text-primary" />
+              Subscription &amp; Billing
+            </a>
+          )}
+        </div>
+
       </div>
 
       <div className="px-6 lg:px-12 py-8 max-w-4xl mx-auto space-y-5">
 
-        {/* ── Personal ──────────────────────────────────── */}
-        <Section title="Personal Details" icon={<User size={14} />}>
+        {/* ── Personal & Licence (Identity & IRDAI) ───────── */}
+        <div id="identity" className="scroll-mt-6 space-y-5">
+          <Section title="Personal Details" icon={<User size={14} />}>
           <div className={isNameLocked ? '' : ''}>
             <label className="flex items-center gap-1.5 mb-1.5 text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground">
               Full Name
@@ -376,14 +413,45 @@ export function ProfileTab() {
           <Field label="Surveyor Code" value={profile.code} onChange={set('code')} placeholder="e.g. MH-SP-001" />
           <Field label="Licence Categories" value={profile.categories} onChange={set('categories')} placeholder="MOTOR, MARINE, FIRE…" fullWidth />
         </Section>
+        </div>
 
         {/* ── Financial ─────────────────────────────────── */}
         <Section title="Financial & Tax Details" icon={<Landmark size={14} />}>
-          <Field label="GST Number" value={profile.gstNumber} onChange={set('gstNumber')} placeholder="e.g. 27AABCU9603R1ZX" />
-          <Field label="PAN Number" value={profile.panNumber} onChange={set('panNumber')} placeholder="e.g. AABCU9603R" />
-          <Field label="Bank Name" value={profile.bankName} onChange={set('bankName')} placeholder="e.g. State Bank of India" />
-          <Field label="Account Number" value={profile.bankAccount} onChange={set('bankAccount')} placeholder="e.g. 1234567890" />
-          <Field label="IFSC Code" value={profile.bankIFSC} onChange={set('bankIFSC')} placeholder="e.g. SBIN0001234" />
+          <Field
+            label="GST Number"
+            value={hideFinancialDetails ? '••••••••' : profile.gstNumber}
+            onChange={hideFinancialDetails ? undefined : set('gstNumber')}
+            readOnly={hideFinancialDetails}
+            placeholder={hideFinancialDetails ? '••••••••' : 'e.g. 27AABCU9603R1ZX'}
+          />
+          <Field
+            label="PAN Number"
+            value={hideFinancialDetails ? '••••••••' : profile.panNumber}
+            onChange={hideFinancialDetails ? undefined : set('panNumber')}
+            readOnly={hideFinancialDetails}
+            placeholder={hideFinancialDetails ? '••••••••' : 'e.g. AABCU9603R'}
+          />
+          <Field
+            label="Bank Name"
+            value={hideFinancialDetails ? '••••••••' : profile.bankName}
+            onChange={hideFinancialDetails ? undefined : set('bankName')}
+            readOnly={hideFinancialDetails}
+            placeholder={hideFinancialDetails ? '••••••••' : 'e.g. State Bank of India'}
+          />
+          <Field
+            label="Account Number"
+            value={hideFinancialDetails ? '••••••••' : profile.bankAccount}
+            onChange={hideFinancialDetails ? undefined : set('bankAccount')}
+            readOnly={hideFinancialDetails}
+            placeholder={hideFinancialDetails ? '••••••••' : 'e.g. 1234567890'}
+          />
+          <Field
+            label="IFSC Code"
+            value={hideFinancialDetails ? '••••••••' : profile.bankIFSC}
+            onChange={hideFinancialDetails ? undefined : set('bankIFSC')}
+            readOnly={hideFinancialDetails}
+            placeholder={hideFinancialDetails ? '••••••••' : 'e.g. SBIN0001234'}
+          />
         </Section>
 
         {/* ── Signature & Stamp ─────────────────────────── */}
@@ -708,19 +776,23 @@ export function ProfileTab() {
         <StorageCleanerSection />
 
         {/* ── Team Collaboration & Privacy ─────────────── */}
-        <TeamManagementSection
-          maxSeats={profile.maxTeamSeats}
-          teamEmails={profile.teamEmails}
-          hideEarnings={profile.hideEarningsFromTeam}
-          ownerEmail={profile.email || user?.email || ''}
-          ownerUid={user?.uid}
-          profile={profile}
-          onUpdateTeam={(emails) => updateProfile({ teamEmails: emails })}
-          onUpdateHideEarnings={(hide) => updateProfile({ hideEarningsFromTeam: hide })}
-        />
+        <div id="team" className="scroll-mt-6">
+          <TeamManagementSection
+            maxSeats={profile.maxTeamSeats}
+            teamEmails={profile.teamEmails}
+            hideEarnings={profile.hideEarningsFromTeam}
+            ownerEmail={profile.email || user?.email || ''}
+            ownerUid={user?.uid}
+            profile={profile}
+            onUpdateTeam={(emails) => updateProfile({ teamEmails: emails })}
+            onUpdateHideEarnings={(hide) => updateProfile({ hideEarningsFromTeam: hide })}
+          />
+        </div>
 
         {/* ── Subscription & Billing ────────────────────── */}
-        <SubscriptionSection uid={user?.uid ?? ''} profile={profile} />
+        <div id="billing" className="scroll-mt-6">
+          <SubscriptionSection uid={user?.uid ?? ''} profile={profile} />
+        </div>
 
         {/* ── Save ──────────────────────────────────────── */}
         <div className="flex justify-end pb-8">
