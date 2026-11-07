@@ -1,11 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { useClaimStore } from '@/stores/claim-store';
 import { listFilesInFolder, findClaimFolderId } from '@/lib/drive';
 import { findNewDrivePhotos } from '@/lib/photos/drive-photo-diff';
 import { downloadDrivePhotos } from '@/lib/photos/download-drive-photos';
 import { partitionPhotos } from '@/lib/photos/document-annexure';
+import { rotateImage90 } from '@/lib/photos/rotate-image';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,6 +14,7 @@ import { toast } from 'sonner';
 import {
   Trash2, Image as ImageIcon, Settings, Loader2,
   UploadCloud, Camera, Eye, EyeOff, LayoutGrid, Sliders, CloudDownload,
+  RotateCw,
 } from 'lucide-react';
 import type { PhotoLayout, PhotoSheetOptions, PageOrientation } from '@/types/assessment';
 import { DEFAULT_PHOTO_SHEET_OPTIONS } from '@/components/pdf/PhotoSheetDocument';
@@ -60,6 +62,66 @@ const LAYOUT_OPTIONS: { value: PhotoLayout; label: string }[] = [
   { value: 9, label: '9 Photos  –  3 × 3'             },
 ];
 
+export interface PhotoOrientationButtonProps {
+  item: { w?: number; h?: number; dataUrl: string };
+  index: number;
+  isRotating: boolean;
+  disabled?: boolean;
+  onRotate: (index: number, dataUrl: string) => void | Promise<void>;
+}
+
+export function PhotoOrientationButton({
+  item,
+  index,
+  isRotating,
+  disabled,
+  onRotate,
+}: PhotoOrientationButtonProps) {
+  if (item.w == null || item.h == null) return null;
+  const isPortrait = item.h > item.w;
+
+  return (
+    <button
+      type="button"
+      onClick={() => void onRotate(index, item.dataUrl)}
+      disabled={isRotating || disabled}
+      title={`${isPortrait ? 'Portrait' : 'Landscape'} (click to rotate 90°)`}
+      aria-label={`Rotate photo 90° (currently ${isPortrait ? 'portrait' : 'landscape'})`}
+      className={`absolute top-2 left-2 px-1.5 py-0.5 rounded text-[9px] font-medium backdrop-blur-sm flex items-center gap-1 transition-all cursor-pointer hover:shadow-sm ${
+        isPortrait
+          ? 'bg-status-success-tint text-status-success hover:bg-status-success/20'
+          : 'bg-status-warning-tint text-status-warning hover:bg-status-warning/20'
+      } ${isRotating ? 'opacity-80' : ''}`}
+    >
+      <span>{isPortrait ? '▯' : '▭'}</span>
+      {isRotating ? (
+        <Loader2 size={10} className="animate-spin" data-testid="rotate-spinner" />
+      ) : (
+        <RotateCw size={10} data-testid="rotate-icon" />
+      )}
+    </button>
+  );
+}
+
+export async function rotatePhoto(
+  index: number,
+  dataUrl: string,
+  replacePhotoImage: (index: number, dataUrl: string, w: number, h: number) => void,
+  setRotatingIndex?: (idx: number | null) => void,
+) {
+  setRotatingIndex?.(index);
+  try {
+    const rotated = await rotateImage90(dataUrl);
+    replacePhotoImage(index, rotated.dataUrl, rotated.w, rotated.h);
+    return rotated;
+  } catch (error) {
+    toast.error('Could not rotate this photo.');
+    throw error;
+  } finally {
+    setRotatingIndex?.(null);
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function PhotosTab() {
@@ -70,12 +132,25 @@ export function PhotosTab() {
     deletePhoto,
     updatePhotoName,
     updatePhotoLayout,
+    replacePhotoImage,
   } = useClaimStore();
 
   const [showPreview,  setShowPreview]  = useState(false);
   const [options, setOptions] = useState<PhotoSheetOptions>({ ...DEFAULT_PHOTO_SHEET_OPTIONS });
   const [restoringDrive, setRestoringDrive] = useState(false);
+  const [rotatingIndex, setRotatingIndex] = useState<number | null>(null);
   const { uploadPhotos, isProcessing } = usePhotoUpload();
+
+  const handleRotate = useCallback(
+    async (index: number, dataUrl: string) => {
+      try {
+        await rotatePhoto(index, dataUrl, replacePhotoImage, setRotatingIndex);
+      } catch {
+        // toast error already handled in rotatePhoto
+      }
+    },
+    [replacePhotoImage],
+  );
 
   if (!currentClaim) return null;
 
@@ -450,15 +525,15 @@ export function PhotosTab() {
                       <div className="absolute bottom-2 left-2 bg-background/80 backdrop-blur-sm px-2 py-0.5 rounded text-[10px] font-mono text-muted-foreground shadow-sm flex items-center gap-1">
                         <ImageIcon size={9} /> {idx + 1}
                       </div>
-                      {/* Orientation pill */}
+                      {/* Orientation button */}
                       {item.w != null && item.h != null && (
-                        <div className={`absolute top-2 left-2 px-1.5 py-0.5 rounded text-[9px] font-medium backdrop-blur-sm ${
-                          isPortrait
-                            ? 'bg-status-success-tint text-status-success'
-                            : 'bg-status-warning-tint text-status-warning'
-                        }`}>
-                          {isPortrait ? '▯' : '▭'}
-                        </div>
+                        <PhotoOrientationButton
+                          item={item}
+                          index={index}
+                          isRotating={rotatingIndex === index}
+                          disabled={rotatingIndex !== null}
+                          onRotate={handleRotate}
+                        />
                       )}
                     </div>
                     <div className="p-2 border-t border-border">
