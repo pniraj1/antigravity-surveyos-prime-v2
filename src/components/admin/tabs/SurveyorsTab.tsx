@@ -13,6 +13,7 @@ import type { PaymentRecord } from '@/types/payment';
 import { SurveyorAIKeys } from '../SurveyorAIKeys';
 import { getSurveyorOnboardingProgress } from '@/lib/onboarding/admin-progress';
 import { getSurveyorClaimCount } from '@/lib/firebase/claims-count';
+import { ExtendSubscriptionModal } from '../modals/ExtendSubscriptionModal';
 
 const FILTERS: { key: SurveyorFilter; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -100,68 +101,7 @@ export interface SurveyorsTabProps {
   initialExpandedId?: string | null;
 }
 
-function ExtendControl({
-  uid,
-  onExtend,
-  disabled,
-}: {
-  uid: string;
-  onExtend: (uid: string, days: number) => void;
-  disabled: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const [days, setDays] = useState(30);
 
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        disabled={disabled}
-        aria-label="Extend subscription"
-        title="Extend subscription"
-        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-muted text-foreground hover:bg-muted/80 transition-all disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-primary"
-      >
-        <Plus size={14} /> Extend
-      </button>
-    );
-  }
-
-  return (
-    <div className="flex items-center gap-1 border border-border rounded-lg px-2 py-1 bg-muted">
-      <input
-        type="number"
-        min={1}
-        max={365}
-        value={days}
-        onChange={(e) => setDays(Math.max(1, Math.min(365, Number(e.target.value))))}
-        className="w-12 text-xs font-medium text-center border-none focus:ring-0 p-0 bg-transparent text-foreground"
-        aria-label="Days to extend"
-        autoFocus
-      />
-      <span className="text-xs text-muted-foreground">d</span>
-      <button
-        type="button"
-        onClick={() => {
-          onExtend(uid, days);
-          setOpen(false);
-        }}
-        aria-label="Confirm extend"
-        className="text-xs font-semibold text-primary hover:underline ml-1 px-1 focus-visible:ring-2 focus-visible:ring-primary"
-      >
-        ✓
-      </button>
-      <button
-        type="button"
-        onClick={() => setOpen(false)}
-        aria-label="Cancel extend"
-        className="text-xs text-muted-foreground hover:text-foreground px-1 focus-visible:ring-2 focus-visible:ring-primary"
-      >
-        ✕
-      </button>
-    </div>
-  );
-}
 
 export function TeamSeatsControl({
   surveyorId,
@@ -636,6 +576,11 @@ export function SurveyorsTab({
   const [claimsCountMap, setClaimsCountMap] = useState<Record<string, number | 'loading' | 'error'>>(
     initialClaimsCountMap || {}
   );
+  const [extendModalSurveyor, setExtendModalSurveyor] = useState<{
+    id: string;
+    name: string;
+    subscriptionExpiry: string;
+  } | null>(null);
 
   const countFetcher = getClaimCountFn || getSurveyorClaimCount;
 
@@ -901,7 +846,23 @@ export function SurveyorsTab({
                     {/* Column 6: Actions */}
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                        <ExtendControl uid={surveyor.id} onExtend={onExtend} disabled={isProcessing} />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExtendModalSurveyor({
+                              id: surveyor.id,
+                              name: surveyor.name,
+                              subscriptionExpiry: surveyor.subscriptionExpiry || '',
+                            });
+                          }}
+                          disabled={isProcessing}
+                          aria-label="Extend subscription"
+                          title="Extend subscription"
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-muted text-foreground hover:bg-muted/80 transition-all disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-primary"
+                        >
+                          <Plus size={14} /> Extend
+                        </button>
 
                         {onViewWorkspace && (
                           <button
@@ -1071,6 +1032,16 @@ export function SurveyorsTab({
           </div>
         )}
       </div>
+
+      <ExtendSubscriptionModal
+        isOpen={Boolean(extendModalSurveyor)}
+        surveyor={extendModalSurveyor}
+        onConfirm={(uid, days) => {
+          onExtend(uid, days);
+          setExtendModalSurveyor(null);
+        }}
+        onClose={() => setExtendModalSurveyor(null)}
+      />
     </>
   );
 }
