@@ -88,18 +88,18 @@ describe('Admin Team Seats Quota & Team Display', () => {
   });
 
   describe('2. Table seats badge and expanded team card', () => {
-    it('displays seats badge correctly in table row (e.g. 2 / 3 and 0 / 0)', () => {
+    it('displays seats badge correctly in table row (e.g. 2/3 Seats and Solo)', () => {
       const html = renderToStaticMarkup(<SurveyorsTab {...defaultProps} />);
 
-      // Team Seats column header
-      expect(html).toContain('Team Seats');
+      // Consolidated Status & Plan column header
+      expect(html).toContain('Status &amp; Plan');
       // Surveyor with 2 assistants out of 3 seats
-      expect(html).toContain('👥 2 / 3');
-      // Surveyor with 0 assistants out of 0 seats
-      expect(html).toContain('👥 0 / 0');
+      expect(html).toContain('👥 Firm (2/3 Seats)');
+      // Surveyor with 0 assistants out of 0 seats (Solo)
+      expect(html).toContain('👤 Solo');
     });
 
-    it('displays single seat usage accurately e.g. 1 / 3', () => {
+    it('displays single seat usage accurately e.g. Firm (1/3 Seats)', () => {
       const singleAssistantSurveyor: SurveyorAdminProfile[] = [
         {
           id: 'usr-single',
@@ -120,8 +120,7 @@ describe('Admin Team Seats Quota & Team Display', () => {
         />
       );
 
-      expect(html).toContain('1 / 3');
-      expect(html).toContain('👥 1 / 3');
+      expect(html).toContain('👥 Firm (1/3 Seats)');
     });
 
     it('renders Firm Team & Seats card when row is expanded with assistants list', () => {
