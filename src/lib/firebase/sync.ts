@@ -411,6 +411,7 @@ export async function pushProfileToCloud(uid: string, profile: SurveyorProfile) 
     geminiApiKey: _gKey,
     groqApiKey: _rKey,
     isAdmin: _isAdmin, // Never overwrite from client — only set by admin actions in Firestore
+    maxTeamSeats: _maxSeats, // Never overwrite from client — admin-granted quota only set by master admin
     ...cloudProfile
   } = profile;
 
@@ -438,6 +439,9 @@ export async function pullProfileFromCloud(uid: string) {
 
     useProfileStore.getState().updateProfile({
       ...remoteProfile,
+      maxTeamSeats: remoteProfile.maxTeamSeats ?? local.maxTeamSeats ?? 0,
+      teamEmails: Array.isArray(remoteProfile.teamEmails) ? remoteProfile.teamEmails : (local.teamEmails ?? []),
+      hideEarningsFromTeam: remoteProfile.hideEarningsFromTeam !== undefined ? remoteProfile.hideEarningsFromTeam : (local.hideEarningsFromTeam ?? true),
       // A mark made before the pull finished must survive it.
       ...(local.onboarding || remoteProfile.onboarding
         ? { onboarding: { ...local.onboarding, ...remoteProfile.onboarding } }

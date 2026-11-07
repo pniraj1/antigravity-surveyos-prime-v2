@@ -19,6 +19,7 @@ import { FeeScheduleSection } from '@/components/profile/FeeScheduleSection';
 import { DriveCleanupSection } from '@/components/profile/DriveCleanupSection';
 import { StorageCleanerSection } from '@/components/profile/StorageCleanerSection';
 import { SubscriptionSection } from '@/components/profile/SubscriptionSection';
+import { TeamManagementSection } from '@/components/profile/TeamManagementSection';
 
 // ─── Section Wrapper ─────────────────────────────────────────────────────────
 function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
@@ -705,6 +706,16 @@ export function ProfileTab() {
 
         {/* ── Browser Storage Cleaner ──────────────────── */}
         <StorageCleanerSection />
+
+        {/* ── Team Collaboration & Privacy ─────────────── */}
+        <TeamManagementSection
+          maxSeats={profile.maxTeamSeats}
+          teamEmails={profile.teamEmails}
+          hideEarnings={profile.hideEarningsFromTeam}
+          ownerEmail={profile.email || user?.email || ''}
+          onUpdateTeam={(emails) => updateProfile({ teamEmails: emails })}
+          onUpdateHideEarnings={(hide) => updateProfile({ hideEarningsFromTeam: hide })}
+        />
 
         {/* ── Subscription & Billing ────────────────────── */}
         <SubscriptionSection uid={user?.uid ?? ''} profile={profile} />
