@@ -67,6 +67,15 @@ describe('ClaimHeader Component', () => {
     expect(html).toContain('Saving...');
   });
 
+  it('renders "Saved to Laptop" when saveStatus is error', () => {
+    useUIStore.setState({ isOnline: true, saveStatus: 'error' });
+
+    const html = renderToStaticMarkup(<ClaimHeader />);
+
+    expect(html).toContain('Saved to Laptop');
+    expect(html).not.toContain('All Changes Saved');
+  });
+
   it('maintains ClaimFolderButton for direct folder access', () => {
     const html = renderToStaticMarkup(<ClaimHeader />);
 

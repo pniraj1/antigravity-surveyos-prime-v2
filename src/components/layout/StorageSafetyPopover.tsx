@@ -211,7 +211,8 @@ export function StorageSafetyPopover({
               <button
                 type="button"
                 onClick={handleFolderClick}
-                disabled={loadingFolder}
+                disabled={loadingFolder || !supported}
+                title={!supported ? 'Local folder access requires Chrome or Edge' : undefined}
                 className="px-2 py-0.5 rounded text-[10px] font-medium bg-background border border-border hover:bg-muted text-foreground transition-all cursor-pointer disabled:opacity-50"
               >
                 {loadingFolder ? (

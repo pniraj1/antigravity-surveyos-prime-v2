@@ -46,11 +46,7 @@ export function ClaimHeader() {
     storeSaveStatus ??
     'idle';
 
-  const storeSetSaveStatus = useUIStore((s) => s.setSaveStatus);
-  const setSaveStatus =
-    (typeof useUIStore?.getState === 'function' ? useUIStore.getState().setSaveStatus : null) ??
-    storeSetSaveStatus ??
-    (() => {});
+  const setSaveStatus = useUIStore((s) => s.setSaveStatus);
 
   const storeIsDriveConnected = useUIStore((s) => s.isDriveConnected);
   const isDriveConnected =
@@ -176,7 +172,11 @@ export function ClaimHeader() {
   // 2. [● Saved to Laptop] (when offline or local only)
   // 3. [✓ All Changes Saved] (subtle emerald check icon + clean badge when synced and online)
   const isCurrentlySaving = saving || saveStatus === 'saving';
-  const isOfflineOrLocal = !isOnline || saveStatus === 'unsynced' || saveStatus === 'queued';
+  const isOfflineOrLocal =
+    !isOnline ||
+    saveStatus === 'unsynced' ||
+    saveStatus === 'queued' ||
+    saveStatus === 'error';
 
   let pillIcon = <Check size={12} className="text-emerald-500 shrink-0" />;
   let pillText = 'All Changes Saved';
