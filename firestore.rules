@@ -32,10 +32,17 @@ service cloud.firestore {
     // and the expensive path (callAI) re-checks expiry in JS. Upgrade path if this
     // matters: store subscriptionExpiry as a number/Timestamp and compare to
     // request.time here, or a scheduled function that flips expired→readonly.
-    function hasActiveAccess() {
+    function isTeamMember(ownerUid) {
       return isSignedIn() &&
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)/profile/current) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)/profile/current)
+        exists(/databases/$(database)/documents/users/$(ownerUid)/profile/current) &&
+        'teamEmails' in get(/databases/$(database)/documents/users/$(ownerUid)/profile/current).data &&
+        request.auth.token.email != null &&
+        request.auth.token.email in get(/databases/$(database)/documents/users/$(ownerUid)/profile/current).data.teamEmails;
+    }
+
+    function hasOwnerActiveAccess(ownerUid) {
+      return exists(/databases/$(database)/documents/users/$(ownerUid)/profile/current) &&
+        get(/databases/$(database)/documents/users/$(ownerUid)/profile/current)
           .data.subscriptionStatus in ['active', 'trial'];
     }
 
@@ -97,7 +104,7 @@ service cloud.firestore {
       //    verification / admin panel, which run in an admin session). A non-admin
       //    may still edit their own name, keys, bank details, etc.
       match /profile/{docId} {
-        allow read: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
+        allow read: if (isSignedIn() && (request.auth.uid == userId || isTeamMember(userId))) || isAdmin();
 
         allow create: if isAdmin() || (
           isSignedIn() && request.auth.uid == userId &&
@@ -126,7 +133,7 @@ service cloud.firestore {
           isSignedIn() && request.auth.uid == userId &&
           // A non-admin may never touch admin/grant fields...
           !request.resource.data.diff(resource.data).affectedKeys()
-            .hasAny(['isAdmin', 'subscriptionExpiry', 'trialStartDate', 'trialEndDate', 'lastPaymentDate']) &&
+            .hasAny(['isAdmin', 'maxTeamSeats', 'subscriptionExpiry', 'trialStartDate', 'trialEndDate', 'lastPaymentDate']) &&
           // ...and may only change their own subscriptionStatus DOWN to 'readonly'
           // (this is the useAuth expired→readonly auto-transition; never an upgrade).
           (
@@ -153,13 +160,17 @@ service cloud.firestore {
       //           still functions for read-only users.
       match /{collectionId}/{document=**} {
         allow read: if isAdmin() || (
-          isSignedIn() && request.auth.uid == userId &&
+          isSignedIn() && (request.auth.uid == userId || isTeamMember(userId)) &&
           collectionId != 'profile' && collectionId != 'payments'
         );
         allow write: if isAdmin() || (
-          isSignedIn() && request.auth.uid == userId &&
+          isSignedIn() &&
           collectionId != 'profile' && collectionId != 'payments' &&
-          (collectionId == 'session' || hasActiveAccess())
+          (
+            (request.auth.uid == userId && collectionId == 'session') ||
+            (collectionId == 'claim_presence' && (request.auth.uid == userId || isTeamMember(userId))) ||
+            ((request.auth.uid == userId || isTeamMember(userId)) && hasOwnerActiveAccess(userId))
+          )
         );
       }
     }
