@@ -48,7 +48,7 @@ export function BillCheckTab() {
   if (!currentClaim) return null;
 
   const fb = currentClaim.feeBill;
-  const bc = currentClaim.billCheck || { billNo: '', billDate: '', billTotal: 0 };
+  const bc = currentClaim.billCheck || { billNo: '', billDate: '', billTotal: 0, billCheckDate: '' };
   const allRows = currentClaim.assessmentRows;
   const allowedRows = allRows.filter(r => r.allowed);
   const extraBillItems = currentClaim.extraBillItems || [];

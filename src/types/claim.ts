@@ -486,6 +486,7 @@ export function createBlankClaim(
       billNo: '',
       billDate: '',
       billTotal: 0,
+      billCheckDate: '',
     },
     extraBillItems: [],
 

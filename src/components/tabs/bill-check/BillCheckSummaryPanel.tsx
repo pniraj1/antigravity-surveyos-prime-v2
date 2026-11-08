@@ -186,6 +186,18 @@ export function BillCheckSummaryPanel({
               </div>
             </div>
 
+            <div>
+              <Label className="text-[10px] text-muted-foreground font-medium mb-1 block">
+                Date of Bill Check Report
+              </Label>
+              <Input
+                type="date"
+                value={bc.billCheckDate || ''}
+                onChange={(e) => onBillCheckChange({ billCheckDate: e.target.value })}
+                className="h-7 text-xs bg-background px-1.5"
+              />
+            </div>
+
             {/* Verification Checkbox */}
             <label className={`flex items-start gap-2 pt-2 mt-1 border-t border-border/60 cursor-pointer select-none ${isVerified ? 'text-emerald-800' : 'text-foreground'}`}>
               <input

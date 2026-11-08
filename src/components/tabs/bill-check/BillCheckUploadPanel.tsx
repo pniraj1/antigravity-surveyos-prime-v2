@@ -11,6 +11,7 @@ interface BillCheckData {
   billNo: string;
   billDate: string;
   billTotal: number;
+  billCheckDate?: string;
 }
 
 interface Props {
@@ -35,7 +36,7 @@ export function BillCheckUploadPanel({ bc, onBillCheckChange, isProcessing, prog
         </div>
       </div>
       <div className="p-5">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
           <div>
             <label className="text-[10px] font-medium uppercase tracking-widest block mb-1 text-muted-foreground">
               Bill / Invoice No.
@@ -67,6 +68,17 @@ export function BillCheckUploadPanel({ bc, onBillCheckChange, isProcessing, prog
               value={bc.billTotal || ''}
               onChange={e => onBillCheckChange({ billTotal: Number(e.target.value) })}
               placeholder="0"
+              className="w-full px-3 py-2 rounded-lg text-sm border border-border bg-neutral-50 text-foreground outline-none"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] font-medium uppercase tracking-widest block mb-1 text-muted-foreground">
+              Date of Bill Check Report
+            </label>
+            <input
+              type="date"
+              value={bc.billCheckDate || ''}
+              onChange={e => onBillCheckChange({ billCheckDate: e.target.value })}
               className="w-full px-3 py-2 rounded-lg text-sm border border-border bg-neutral-50 text-foreground outline-none"
             />
           </div>

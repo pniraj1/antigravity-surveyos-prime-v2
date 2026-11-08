@@ -418,6 +418,8 @@ export interface BillCheckDetails {
   billNo: string;
   billDate: string;
   billTotal: number;
+  /** Surveyor's Bill Check report date (YYYY-MM-DD) */
+  billCheckDate?: string;
   baseDocument?: 'estimate' | 'final-bill';
   refColumnTitle?: string;
   verifiedBySurveyor?: boolean;

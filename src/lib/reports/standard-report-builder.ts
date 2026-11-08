@@ -697,7 +697,7 @@ export function buildStandardFinalSurveyHTML(
     <td style="${td}color:#444;width:18%;font-size:${scale.labelFont};">Report No.</td>
     <td style="${td}font-weight:700;width:32%;">${claim.reportNo || '—'}</td>
     <td style="${td}color:#444;width:18%;font-size:${scale.labelFont};">Date of report</td>
-    <td style="${td}font-weight:700;">${formatDateDMY(claim.reportDate)}</td>
+    <td style="${td}font-weight:700;">${formatDateDMY(isBillCheck ? (bc?.billCheckDate || claim.reportDate) : claim.reportDate)}</td>
   </tr>
   <tr>
     <td style="${td}color:#444;font-size:${scale.labelFont};">Policy No.</td>

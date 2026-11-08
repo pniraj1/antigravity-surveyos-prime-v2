@@ -196,4 +196,32 @@ describe('BillCheckSummaryPanel', () => {
     expect(html).toContain('Includes Towing Charges');
     expect(html).toContain('+ ₹ 1000');
   });
+  it('renders Date of Bill Check Report input with value', () => {
+    const html = renderToStaticMarkup(
+      <BillCheckSummaryPanel
+        claimId="test-claim-1"
+        bc={{
+          billNo: 'INV-001',
+          billDate: '2026-11-06',
+          billTotal: 50000,
+          billCheckDate: '2026-11-08',
+          verifiedBySurveyor: true,
+        }}
+        onBillCheckChange={() => {}}
+        summary={dummySummary}
+        bcSummary={dummyBcSummary}
+        inBillTotal={46000}
+        notInBillTotal={6000}
+        partialTotal={500}
+        fmt={(n) => `₹ ${n}`}
+        salvageValue={2500}
+        salvageBasis={20000}
+        onSalvageChange={() => {}}
+        onNavigateToReports={() => {}}
+      />
+    );
+
+    expect(html).toContain('Date of Bill Check Report');
+    expect(html).toContain('value="2026-11-08"');
+  });
 });

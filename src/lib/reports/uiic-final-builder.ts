@@ -231,7 +231,7 @@ ${getSurveyorHeader(profile)}
 <div style="${sec}">REINSPECTION SURVEY DETAILS</div>
 <table style="${ts}"><tr><td style="${tdl}width:25%;">Reinspection appointment date</td><td style="${td}width:25%;">${fd(ri.riAppointmentDate || ri.date)}</td><td style="${tdl}width:25%;">Repair Authorisation Date</td><td style="${td}">${fd(ri.repairAuthDate)}</td></tr>
 <tr><td style="${tdl}">Est. Repair Completion Date</td><td style="${td}">${fd(ri.estCompletionDate)}</td><td style="${tdl}">Actual Repair Completion Date</td><td style="${td}">${fd(ri.actualCompletionDate)}</td></tr>
-<tr><td style="${tdl}">Workshop Final Invoice Date</td><td style="${td}">${fd(claim.billCheck?.billDate)}</td><td style="${tdl}">Bill Check finalisation date</td><td style="${td}">${fd(claim.billCheck?.billDate)}</td></tr>
+<tr><td style="${tdl}">Workshop Final Invoice Date</td><td style="${td}">${fd(claim.billCheck?.billDate)}</td><td style="${tdl}">Bill Check finalisation date</td><td style="${td}">${fd(claim.billCheck?.billCheckDate || claim.billCheck?.billDate)}</td></tr>
 <tr><td style="${tdl}">Repairs as per assessment</td><td style="${tdb}">${g(ri.repairsAsAssessed) || '—'}</td><td style="${tdl}">Remarks</td><td style="${td}font-size:7pt;">${g(ri.observations)}</td></tr></table>
 <div style="font-size:7.5pt;margin-top:4px;"><b>SURVEYOR REMARKS</b><br/>${g(a.remarks) || 'The damages sustained by the vehicle were concurrent with the cause and nature of the accident.'}</div>`;
 
@@ -858,7 +858,7 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
     </div>
   `;
 })() : ''}
-<table style="${ts}"><tr><td style="${tdl}width:25%;">Report Number:</td><td style="${tdb}width:25%;">${g(claim.reportNo)}</td><td style="${tdl}width:25%;">Report Date:</td><td style="${tdb}">${fd(claim.reportDate)}</td></tr>
+<table style="${ts}"><tr><td style="${tdl}width:25%;">Report Number:</td><td style="${tdb}width:25%;">${g(claim.reportNo)}</td><td style="${tdl}width:25%;">Report Date:</td><td style="${tdb}">${fd(bc?.billCheckDate || claim.reportDate)}</td></tr>
 <tr><td style="${tdl}">Bill / Invoice No.:</td><td style="${tdb}">${g(bc?.billNo)}</td><td style="${tdl}">Bill / Invoice Date:</td><td style="${tdb}">${fd(bc?.billDate)}</td></tr></table>
 
 <div style="${sec}">POLICY &amp; CLAIM DETAILS</div>
@@ -873,7 +873,7 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
 <table style="${ts}">
 <tr><td style="${tdl}width:25%;">Final Survey Appt. Date</td><td style="${td}width:25%;">${fd(a.appointmentDate)}</td><td style="${tdl}width:25%;">Repair Auth. Date</td><td style="${td}">${fd(ri?.repairAuthDate)}</td></tr>
 <tr><td style="${tdl}">Date of Final Survey</td><td style="${td}">${formatSurveyDateTime(a.dateOfSurvey, a.timeOfSurvey)}</td><td style="${tdl}">Actual Repair Completion</td><td style="${td}">${fd(ri?.actualCompletionDate)}</td></tr>
-<tr><td style="${tdl}">Workshop Name</td><td style="${td}">${g(a.workshopName)}</td><td style="${tdl}">Bill Check Date</td><td style="${tdb}">${fd(bc?.billDate)}</td></tr>
+<tr><td style="${tdl}">Workshop Name</td><td style="${td}">${g(a.workshopName)}</td><td style="${tdl}">Bill Check Date</td><td style="${tdb}">${fd(bc?.billCheckDate || bc?.billDate)}</td></tr>
 <tr><td style="${tdl}">Workshop Invoice Total (₹)</td><td style="${tdb}">${fa(bc?.billTotal || 0)}</td><td style="${tdl}">Repairs As Per Assessment</td><td style="${tdb}">${g(ri?.repairsAsAssessed) || '—'}</td></tr>
 </table>
 

@@ -1,3 +1,25 @@
+## Done: Bill Check Report Date Field & Report Builder Separation (2026-11-08, Antigravity)
+- **Problem Solved:**
+  - In the Bill Check tab, there was no input field for the date of the Bill Check Report. The system only captured the workshop invoice's `billDate` and defaulted to printing `claim.reportDate` (the Final Survey report date / claim creation date) or mistakenly reusing the workshop invoice date.
+  - In Standard Bill Check reports (`buildStandardFinalSurveyHTML` with mode `'bill-check'`), "Date of report" was hardcoded to `claim.reportDate`.
+  - In UIIC Bill Check reports (`buildUIICBillCheckHTML`), the header "Report Date" printed `claim.reportDate`, and "Bill Check Date" printed the workshop's `bc?.billDate`.
+  - In UIIC Final reports (`buildUIICFinalHTML`), "Bill Check finalisation date" also mistakenly printed `claim.billCheck?.billDate` (the workshop final invoice date) twice.
+- **Architecture Delivered:**
+  - **Schema & Types (`src/types/assessment.ts`, `src/types/claim.ts`):**
+    - Added `billCheckDate?: string` to `BillCheckDetails` and initialized `billCheckDate: ''` in `INITIAL_CLAIM_DATA`.
+  - **User Interface (`BillCheckSummaryPanel.tsx`, `BillCheckUploadPanel.tsx`, `BillCheckTab.tsx`):**
+    - Added "Date of Bill Check Report" (`billCheckDate`) input field in `BillCheckSummaryPanel.tsx` within the workshop/report details card.
+    - Added "Date of Bill Check Report" input in `BillCheckUploadPanel.tsx` across responsive grid layouts.
+    - Ensured updates to `billCheckDate` do not reset `verifiedBySurveyor`.
+  - **Report Generation (`standard-report-builder.ts`, `uiic-final-builder.ts`):**
+    - In `standard-report-builder.ts`, "Date of report" now renders `isBillCheck ? (bc?.billCheckDate || claim.reportDate) : claim.reportDate`.
+    - In `uiic-final-builder.ts`, `buildUIICBillCheckHTML` header renders `bc?.billCheckDate || claim.reportDate` as Report Date, and `bc?.billCheckDate || bc?.billDate` as Bill Check Date.
+    - In `uiic-final-builder.ts`, `buildUIICFinalHTML` renders `claim.billCheck?.billCheckDate || claim.billCheck?.billDate` as "Bill Check finalisation date".
+- **Verification:**
+  - 48 test files (445 tests) in reports and tabs suites passed 100% green.
+  - Added unit test in `BillCheckSummaryPanel.test.tsx` verifying "Date of Bill Check Report" rendering and value binding.
+  - Prime ↔ Scan coupling impact: None.
+
 ## Done: Photo Sheet PDF Splitting (<2MB) & Photo Engine Orientation Toggle (2026-11-07, Antigravity)
 - **Problem Solved:**
   - Indian insurer portals (NIA, OIC, UIIC, NIC, ICICI, etc.) have a strict 2 MB upload cap on photo sheet PDFs. Multi-photo sheets (e.g. 8 pages / 40+ photos) regularly reach 3.5 MB, resulting in portal rejections.

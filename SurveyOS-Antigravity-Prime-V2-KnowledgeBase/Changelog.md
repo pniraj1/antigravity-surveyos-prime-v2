@@ -1,3 +1,11 @@
+## 2026-11-08 (Antigravity) — Bill Check Report Date Field & Report Builder Separation
+- feat(bill-check): Added `billCheckDate?: string` to `BillCheckDetails` in `src/types/assessment.ts` and `src/types/claim.ts`.
+- feat(ui): Added "Date of Bill Check Report" input field in `BillCheckSummaryPanel.tsx` and `BillCheckUploadPanel.tsx`.
+- fix(reports): In Standard Bill Check report (`standard-report-builder.ts`), decoupled "Date of report" from `claim.reportDate`, prioritizing `claim.billCheck?.billCheckDate`.
+- fix(reports): In UIIC Bill Check and Final reports (`uiic-final-builder.ts`), updated "Report Date", "Bill Check Date", and "Bill Check finalisation date" to render `claim.billCheck?.billCheckDate`, stopping duplicate rendering of the workshop invoice date.
+- test: Added test cases in `BillCheckSummaryPanel.test.tsx` verifying input rendering and binding.
+- verification: 48 Vitest test files (445 tests) passed (100% green).
+
 ## 2026-11-07 (Antigravity) — Photo Sheet PDF Splitting (<2MB) & Photo Engine Orientation Toggle
 - feat(pdf): Implemented client-side `splitPdfBySize(pdfBlob, maxSizeBytes = 1.95MB)` in `src/lib/pdf/split-pdf.ts` using `pdf-lib`. Accurately checks generated PDF size and partitions pages into $<1.95\text{ MB}$ parts with 1-indexed page boundaries (`pageStart`, `pageEnd`).
 - feat(photosheet): Updated `PhotoSheetDownloadButton.tsx` to detect when a generated photo sheet PDF exceeds 1.95 MB, automatically rendering individual download buttons: `[Download Part 1 (Pages 1–4 · X.X MB)]`, `[Download Part 2 (Pages 5–8 · Y.Y MB)]`. Each part downloads as `{regNum}-Photo-Sheet-Part{N}.pdf`, saves to the claim folder via `saveReportToClaimFolder(claim, fileName, blob, 'damagePhotos')`, and provides a dedicated `SharePdfButton`.
