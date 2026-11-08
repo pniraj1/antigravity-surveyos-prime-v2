@@ -11,6 +11,7 @@ import Logo from '@/components/ui/Logo';
 import { REFERRALS_ENABLED } from '@/lib/subscription/plans';
 import { calculateSubscriptionState } from '@/lib/subscription/status';
 import { ATTESTATION_TEXT, buildConsentRecord } from '@/lib/legal/versions';
+import { waNumber } from '@/lib/chase/ask-message';
 import {
   Shield, User, Phone, Mail, FileText, Loader2,
   CheckCircle2, ArrowRight, AlertCircle, Gift, LogOut, ChevronLeft, MapPin,
@@ -219,17 +220,18 @@ function SignInPanel() {
 
 // ─── Input field ──────────────────────────────────────────────────────────────
 function Field({
-  label, value, onChange, placeholder, type = 'text', locked = false, hint = '', icon,
+  label, value, onChange, placeholder, type = 'text', locked = false, hint = '', icon, required = false, error = '',
 }: {
   label: string; value: string; onChange?: (v: string) => void;
   placeholder?: string; type?: string; locked?: boolean; hint?: string;
-  icon: React.ReactNode;
+  icon: React.ReactNode; required?: boolean; error?: string;
 }) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.15em] text-[#8D99AE]">
         {icon}
         {label}
+        {required && <span className="text-amber-500 font-black ml-0.5" title="Required field">*</span>}
         {locked && (
           <span className="ml-1 px-2 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-600 border border-amber-200">
             Pre-filled
@@ -245,21 +247,96 @@ function Field({
         className="w-full px-4 py-3 rounded-xl text-sm font-medium outline-none transition-all border"
         style={{
           background: locked ? '#F8F9FA' : '#fff',
-          borderColor: locked ? '#E9ECEF' : '#DEE2E6',
+          borderColor: error ? '#EF4444' : locked ? '#E9ECEF' : '#DEE2E6',
           color: locked ? '#8D99AE' : '#0D1B2A',
           cursor: locked ? 'not-allowed' : 'text',
         }}
-        onFocus={e => { if (!locked) e.currentTarget.style.borderColor = '#D4AF37'; }}
-        onBlur={e => { if (!locked) e.currentTarget.style.borderColor = '#DEE2E6'; }}
+        onFocus={e => { if (!locked) e.currentTarget.style.borderColor = error ? '#EF4444' : '#D4AF37'; }}
+        onBlur={e => { if (!locked) e.currentTarget.style.borderColor = error ? '#EF4444' : '#DEE2E6'; }}
       />
-      {hint && <p className="text-xs font-medium text-gray-400">{hint}</p>}
+      {error ? (
+        <p className="text-xs font-medium text-red-500 flex items-center gap-1">
+          <AlertCircle size={11} className="shrink-0" /> {error}
+        </p>
+      ) : hint ? (
+        <p className="text-xs font-medium text-gray-400">{hint}</p>
+      ) : null}
     </div>
   );
 }
 
 // ─── Confirmation ─────────────────────────────────────────────────────────────
 function ConfirmationPanel({ onLogout }: { onLogout?: () => void }) {
-  const { profile } = useProfileStore();
+  const authStore = useAuthStore();
+  const user = (typeof useAuthStore?.getState === 'function' ? useAuthStore.getState().user : null) ?? authStore.user;
+  const profileStore = useProfileStore();
+  const profile = (typeof useProfileStore?.getState === 'function' ? useProfileStore.getState().profile : null) ?? profileStore.profile;
+  const updateProfile = profileStore.updateProfile;
+
+  const isPhoneValid = Boolean(profile.mobile && waNumber(profile.mobile));
+  const isCityValid = Boolean(profile.city && profile.city.trim().length >= 2);
+  const isStateValid = Boolean(profile.state && profile.state.trim().length >= 2);
+  const hasGaps = !isPhoneValid || !isCityValid || !isStateValid;
+
+  const [editPhone, setEditPhone] = useState(profile.mobile || '');
+  const [editCity, setEditCity] = useState(profile.city || '');
+  const [editState, setEditState] = useState(profile.state || '');
+  const [updating, setUpdating] = useState(false);
+  const [updateError, setUpdateError] = useState('');
+  const [updateSuccess, setUpdateSuccess] = useState(false);
+
+  const canSaveUpdate =
+    Boolean(waNumber(editPhone)) &&
+    editCity.trim().length >= 2 &&
+    editState.trim().length >= 2;
+
+  const handleUpdateMissingDetails = async () => {
+    if (!canSaveUpdate) {
+      setUpdateError('Please fill in a valid 10-digit mobile number, city, and state.');
+      return;
+    }
+    setUpdating(true);
+    setUpdateError('');
+    try {
+      const validMobile = waNumber(editPhone);
+      const formattedMobile = validMobile ? `+91 ${validMobile.slice(2)}` : editPhone.trim();
+      const trimmedCity = editCity.trim();
+      const trimmedState = editState.trim();
+
+      if (user) {
+        const profileRef = doc(db, 'users', user.uid, 'profile', 'current');
+        const signupRef  = doc(db, 'newSignups', user.uid);
+        const payload = {
+          mobile: formattedMobile,
+          city: trimmedCity,
+          state: trimmedState,
+          updatedAt: Timestamp.now(),
+        };
+        await setDoc(profileRef, payload, { merge: true });
+        try {
+          await setDoc(signupRef, {
+            mobile: formattedMobile,
+            profileMobile: formattedMobile,
+            profileCity: trimmedCity,
+            profileState: trimmedState,
+            updatedAt: Timestamp.now(),
+          }, { merge: true });
+        } catch { /* best effort */ }
+      }
+
+      updateProfile({
+        mobile: formattedMobile,
+        city: trimmedCity,
+        state: trimmedState,
+      });
+
+      setUpdateSuccess(true);
+    } catch (err: unknown) {
+      setUpdateError(err instanceof Error ? err.message : 'Failed to update details. Please try again.');
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   return (
     <SplitLayout right={
@@ -280,13 +357,98 @@ function ConfirmationPanel({ onLogout }: { onLogout?: () => void }) {
           </p>
         </div>
 
+        {/* Missing details self-healing card for existing applicants */}
+        {hasGaps && !updateSuccess && (
+          <div className="bg-amber-50 border border-amber-300 rounded-2xl p-5 space-y-4 shadow-sm animate-in fade-in duration-300">
+            <div className="flex items-start gap-2.5">
+              <AlertCircle size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-sm font-black text-amber-950">
+                  Action Required: Complete Contact &amp; Territory
+                </h3>
+                <p className="text-xs font-medium text-amber-850 mt-1 leading-relaxed">
+                  Our team cannot verify your credentials or activate your 3-day free trial without a reachable 10-digit mobile number and your operating location. Please provide them below:
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3.5 pt-1">
+              {!isPhoneValid && (
+                <Field
+                  label="Mobile / WhatsApp Number"
+                  required
+                  value={editPhone}
+                  onChange={setEditPhone}
+                  placeholder="+91 98765 43210"
+                  type="tel"
+                  icon={<Phone size={13} />}
+                  hint="10-digit Indian mobile number for verification call / WhatsApp."
+                  error={editPhone.trim() && !waNumber(editPhone) ? 'Please enter a valid 10-digit Indian mobile number' : ''}
+                />
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {!isCityValid && (
+                  <Field
+                    label="Operating City"
+                    required
+                    value={editCity}
+                    onChange={setEditCity}
+                    placeholder="e.g. Pune"
+                    icon={<MapPin size={13} />}
+                    hint="Primary city."
+                  />
+                )}
+                {!isStateValid && (
+                  <Field
+                    label="Operating State"
+                    required
+                    value={editState}
+                    onChange={setEditState}
+                    placeholder="e.g. Maharashtra"
+                    icon={<MapPin size={13} />}
+                    hint="Operating state."
+                  />
+                )}
+              </div>
+
+              {updateError && (
+                <div className="flex items-start gap-2 px-3 py-2 rounded-xl bg-red-50 border border-red-200">
+                  <AlertCircle size={13} className="text-red-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs font-medium text-red-600">{updateError}</p>
+                </div>
+              )}
+
+              <button
+                onClick={handleUpdateMissingDetails}
+                disabled={updating || !canSaveUpdate}
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-black text-xs transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-xs cursor-pointer"
+                style={{
+                  background: canSaveUpdate && !updating ? 'linear-gradient(135deg, #D4AF37, #f0d870)' : '#E2E8F0',
+                  color: canSaveUpdate && !updating ? '#0D1B2A' : '#64748B',
+                }}
+              >
+                {updating ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
+                {updating ? 'Saving Details…' : 'Save Details & Notify Admin'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {updateSuccess && (
+          <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-green-50 border border-green-200 text-green-800 text-xs font-semibold animate-in fade-in">
+            <CheckCircle2 size={16} className="text-green-600 flex-shrink-0" />
+            Contact details updated successfully! Our team will reach you on your mobile number.
+          </div>
+        )}
+
         {/* Details card */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4">
           {[
-            { label: 'Name',          value: profile.name },
-            { label: 'IRDAI Licence', value: profile.irdaiLicence },
-            { label: 'Phone',         value: profile.mobile },
-            { label: 'Email',         value: profile.email },
+            { label: 'Name',           value: profile.name },
+            { label: 'IRDAI Licence',  value: profile.irdaiLicence },
+            { label: 'Phone',          value: profile.mobile },
+            { label: 'Operating Area', value: profile.city && profile.state ? `${profile.city}, ${profile.state}` : profile.city || profile.state || '—' },
+            { label: 'Email',          value: profile.email },
           ].map(({ label, value }) => (
             <div key={label} className="flex justify-between items-center">
               <span className="text-sm font-medium text-[#8D99AE]">{label}</span>
@@ -303,7 +465,7 @@ function ConfirmationPanel({ onLogout }: { onLogout?: () => void }) {
 
         <button
           onClick={() => window.location.reload()}
-          className="block text-sm font-bold text-[#8D99AE] hover:text-[#0D1B2A] transition-colors"
+          className="block text-sm font-bold text-[#8D99AE] hover:text-[#0D1B2A] transition-colors cursor-pointer"
         >
           Already approved? Refresh →
         </button>
@@ -326,8 +488,12 @@ function ConfirmationPanel({ onLogout }: { onLogout?: () => void }) {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function AccessRequestPage() {
-  const { user, isAuthenticated } = useAuthStore();
-  const { profile, updateProfile } = useProfileStore();
+  const authStore = useAuthStore();
+  const user = (typeof useAuthStore?.getState === 'function' ? useAuthStore.getState().user : null) ?? authStore.user;
+  const isAuthenticated = (typeof useAuthStore?.getState === 'function' ? useAuthStore.getState().isAuthenticated : null) ?? authStore.isAuthenticated;
+  const profileStore = useProfileStore();
+  const profile = (typeof useProfileStore?.getState === 'function' ? useProfileStore.getState().profile : null) ?? profileStore.profile;
+  const updateProfile = profileStore.updateProfile;
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -368,10 +534,18 @@ export default function AccessRequestPage() {
   const [agreedTerms, setAgreedTerms] = useState(false);
   const [attested, setAttested] = useState(false);
 
+  const isMobileValid = Boolean(waNumber(phone));
+  const isCityValid = city.trim().length >= 2;
+  const isStateValid = state.trim().length >= 2;
+  const isNameValid = name.trim().length >= 2;
+  const isIrdaiValid = irdai.trim().length >= 3;
+
   const isValid =
-    name.trim().length >= 2 &&
-    irdai.trim().length >= 3 &&
-    phone.trim().length >= 7 &&
+    isNameValid &&
+    isIrdaiValid &&
+    isMobileValid &&
+    isCityValid &&
+    isStateValid &&
     agreedTerms &&
     attested;
 
@@ -414,14 +588,19 @@ export default function AccessRequestPage() {
     setSubmitting(true);
     setError('');
     try {
+      const validMobile = waNumber(phone);
+      const formattedMobile = validMobile ? `+91 ${validMobile.slice(2)}` : phone.trim();
+      const trimmedCity = city.trim();
+      const trimmedState = state.trim();
+
       const profileRef = doc(db, 'users', user.uid, 'profile', 'current');
       const signupRef  = doc(db, 'newSignups', user.uid);
       const payload: Record<string, unknown> = {
         name:                   name.trim(),
         irdaiLicence:           irdai.trim().toUpperCase(),
-        mobile:                 phone.trim(),
-        city:                   city.trim(),
-        state:                  state.trim(),
+        mobile:                 formattedMobile,
+        city:                   trimmedCity,
+        state:                  trimmedState,
         email,
         accessRequestSubmitted: true,
         updatedAt:              Timestamp.now(),
@@ -435,16 +614,24 @@ export default function AccessRequestPage() {
       // SECONDARY: newSignups is a lightweight queue pointer — best-effort
       try {
         await setDoc(signupRef, {
-          displayName: name.trim(),
+          displayName:   name.trim(),
+          name:          name.trim(),
           email,
-          status: 'pending',
-          updatedAt: Timestamp.now(),
+          mobile:        formattedMobile,
+          profileMobile: formattedMobile,
+          profileCity:   trimmedCity,
+          profileState:  trimmedState,
+          irdaiLicence:  irdai.trim().toUpperCase(),
+          status:        'pending',
+          updatedAt:     Timestamp.now(),
         }, { merge: true });
       } catch { /* non-fatal — admin reads real data from profile */ }
       updateProfile({
         name:                   name.trim(),
         irdaiLicence:           irdai.trim().toUpperCase(),
-        mobile:                 phone.trim(),
+        mobile:                 formattedMobile,
+        city:                   trimmedCity,
+        state:                  trimmedState,
         email,
         accessRequestSubmitted: true,
       });
@@ -513,28 +700,36 @@ export default function AccessRequestPage() {
         <Field
           label="Full Name" value={name} onChange={setName}
           placeholder="e.g. Niraj Patil" icon={<User size={13} />}
+          required
           hint="Will appear on all survey reports."
         />
         <Field
           label="IRDAI Licence Number" value={irdai} onChange={v => setIrdai(v.toUpperCase())}
           placeholder="e.g. SLA-MH-123456" icon={<FileText size={13} />}
+          required
           hint="Your active IRDAI surveyor licence number."
         />
         <Field
-          label="Phone Number" value={phone} onChange={setPhone}
+          label="Mobile / WhatsApp Number" value={phone} onChange={setPhone}
           placeholder="+91 98765 43210" type="tel" icon={<Phone size={13} />}
-          hint="We will contact you on this number to verify your identity."
+          required
+          hint="10-digit Indian mobile number for verification call / WhatsApp."
+          error={phone.trim() && !isMobileValid ? 'Please enter a valid 10-digit Indian mobile number (e.g. 98765 43210)' : ''}
         />
-        <Field
-          label="City" value={city} onChange={setCity}
-          placeholder="e.g. Mumbai" icon={<MapPin size={13} />}
-          hint="Optional — helps us assign regional claims."
-        />
-        <Field
-          label="State" value={state} onChange={setState}
-          placeholder="e.g. Maharashtra" icon={<MapPin size={13} />}
-          hint="Optional — helps us assign regional claims."
-        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field
+            label="Operating City" value={city} onChange={setCity}
+            placeholder="e.g. Mumbai" icon={<MapPin size={13} />}
+            required
+            hint="Primary city for survey claims."
+          />
+          <Field
+            label="Operating State" value={state} onChange={setState}
+            placeholder="e.g. Maharashtra" icon={<MapPin size={13} />}
+            required
+            hint="Operating state / chapter."
+          />
+        </div>
 
         {/* Referral code */}
         {REFERRALS_ENABLED && <div className="space-y-2">

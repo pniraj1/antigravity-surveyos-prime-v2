@@ -6,13 +6,22 @@ import { Mail, Loader2 } from 'lucide-react';
 interface EmailComposerModalProps {
   email: string;
   name: string;
+  initialSubject?: string;
+  initialBody?: string;
   onSend: (email: string, name: string, subject: string, body: string) => Promise<void>;
   onCancel: () => void;
 }
 
-export function EmailComposerModal({ email, name, onSend, onCancel }: EmailComposerModalProps) {
-  const [customSubject, setCustomSubject] = useState('');
-  const [customBody, setCustomBody] = useState('');
+export function EmailComposerModal({
+  email,
+  name,
+  initialSubject = '',
+  initialBody = '',
+  onSend,
+  onCancel,
+}: EmailComposerModalProps) {
+  const [customSubject, setCustomSubject] = useState(initialSubject);
+  const [customBody, setCustomBody] = useState(initialBody);
   const [sendingEmail, setSendingEmail] = useState(false);
 
   const handleSend = async () => {

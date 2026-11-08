@@ -1,3 +1,12 @@
+## 2026-11-08 (Antigravity) — Mandatory Contact & Operating Territory on Access Request + Existing Applicant Self-Healing
+- feat(access-request): Made `Mobile / WhatsApp Number` strictly mandatory with 10-digit Indian mobile regex validation (`waNumber`). Normalized to `+91 XXXXXXXXXX`.
+- feat(access-request): Made `Operating City` and `Operating State` mandatory fields in a sleek 2-column responsive grid layout with required asterisks and descriptive hints.
+- feat(self-healing): Implemented interactive self-healing card in `ConfirmationPanel` (`src/app/access-request/page.tsx`) for existing applicants who previously submitted access requests without mobile or location details, eliminating the silent deadlock where neither admin nor user could proceed.
+- feat(admin): Polished `ApprovalQueueTab.tsx` with high-visibility `Missing phone` and `Not provided` badges for incomplete applications, plus a 1-click `[Request Phone]` action in the approval queue that pre-fills an activation email template.
+- feat(admin): Enhanced `EmailComposerModal.tsx` and `AdminDashboard.tsx` to accept optional `initialSubject` and `initialBody`.
+- test: Added 5 unit tests in `src/app/access-request/__tests__/access-request.test.tsx` and 1 unit test in `src/components/admin/__tests__/approval-queue-polish.test.tsx`.
+- verification: 319 Vitest test files (2,802 tests) passed (100% green), `npx tsc --noEmit` clean (0 errors), Next.js production build (`npm run build`) succeeded (25/25 static routes).
+
 ## 2026-11-08 (Antigravity) — Bill Check Report Date Field & Report Builder Separation
 - feat(bill-check): Added `billCheckDate?: string` to `BillCheckDetails` in `src/types/assessment.ts` and `src/types/claim.ts`.
 - feat(ui): Added "Date of Bill Check Report" input field in `BillCheckSummaryPanel.tsx` and `BillCheckUploadPanel.tsx`.

@@ -67,7 +67,7 @@ export function AdminDashboard({
 
   // Modal state
   const [dismissModal, setDismissModal] = useState<{ uid: string; email: string; name: string } | null>(null);
-  const [emailModal, setEmailModal] = useState<{ email: string; name: string } | null>(null);
+  const [emailModal, setEmailModal] = useState<{ email: string; name: string; initialSubject?: string; initialBody?: string } | null>(null);
   const [verifyModal, setVerifyModal] = useState<{ payment: PaymentRecord } | null>(null);
   const [rejectModal, setRejectModal] = useState<{ payment: PaymentRecord } | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ surveyor: SurveyorAdminProfile } | null>(null);
@@ -345,7 +345,7 @@ export function AdminDashboard({
               onDismiss={(signup: NewSignup) =>
                 setDismissModal({ uid: signup.uid, email: signup.email, name: signup.profileName || signup.name || signup.displayName })
               }
-              onEmail={(email, name) => setEmailModal({ email, name })}
+              onEmail={(email, name, initialSubject, initialBody) => setEmailModal({ email, name, initialSubject, initialBody })}
             />
           )}
 
@@ -412,6 +412,8 @@ export function AdminDashboard({
         <EmailComposerModal
           email={emailModal.email}
           name={emailModal.name}
+          initialSubject={emailModal.initialSubject}
+          initialBody={emailModal.initialBody}
           onSend={async (email, name, subject, body) => {
             await handleSendCustomEmail(email, name, subject, body);
             setEmailModal(null);

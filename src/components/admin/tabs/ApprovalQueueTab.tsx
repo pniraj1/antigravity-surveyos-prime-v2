@@ -11,7 +11,7 @@ interface ApprovalQueueTabProps {
   approvingId: string | null;
   onApprove: (signup: NewSignup, trialDays: number) => void;
   onDismiss: (signup: NewSignup) => void;
-  onEmail: (email: string, name: string) => void;
+  onEmail: (email: string, name: string, initialSubject?: string, initialBody?: string) => void;
 }
 
 function SignupRow({
@@ -25,11 +25,26 @@ function SignupRow({
   approvingId: string | null;
   onApprove: (signup: NewSignup, trialDays: number) => void;
   onDismiss: (signup: NewSignup) => void;
-  onEmail: (email: string, name: string) => void;
+  onEmail: (email: string, name: string, initialSubject?: string, initialBody?: string) => void;
 }) {
   const [trialDays, setTrialDays] = useState(TRIAL_DAYS);
   const displayName = signup.profileName || signup.name || signup.displayName || '—';
   const isApproving = approvingId === signup.uid;
+  const isPhoneMissing = !signup.profileMobile || signup.profileMobile.trim() === '' || signup.profileMobile === '—';
+  const isLocationMissing = !signup.profileCity && !signup.profileState;
+
+  const handleEmailClick = () => {
+    if (isPhoneMissing) {
+      onEmail(
+        signup.email,
+        displayName,
+        `Action Required: Mobile number needed to activate your SurveyOS access (${signup.profileIrdai || 'IRDAI'})`,
+        `Hi ${displayName},\n\nWe received your access request for the SurveyOS platform. To verify your IRDAI credentials and activate your 3-day free trial, our team needs an active 10-digit mobile / WhatsApp number.\n\nPlease reply directly to this email with your mobile number, or log into https://surveyos.in/access-request to update your profile.\n\nThank you,\nSurveyOS Team`
+      );
+    } else {
+      onEmail(signup.email, displayName);
+    }
+  };
 
   return (
     <tr className="hover:bg-neutral-50/80 transition-colors group">
@@ -61,16 +76,28 @@ function SignupRow({
         )}
       </td>
       <td className="px-6 py-4">
-        <div className="text-sm font-medium text-foreground">
-          {signup.profileMobile || '—'}
-        </div>
+        {isPhoneMissing ? (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+            <AlertCircle size={12} /> Missing phone
+          </span>
+        ) : (
+          <div className="text-sm font-medium text-foreground">
+            {signup.profileMobile}
+          </div>
+        )}
       </td>
       <td className="px-6 py-4">
-        <div className="text-sm font-medium text-foreground">
-          {signup.profileCity && signup.profileState
-            ? `${signup.profileCity}, ${signup.profileState}`
-            : signup.profileCity || signup.profileState || '—'}
-        </div>
+        {isLocationMissing ? (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium text-neutral-400 italic">
+            Not provided
+          </span>
+        ) : (
+          <div className="text-sm font-medium text-foreground">
+            {signup.profileCity && signup.profileState
+              ? `${signup.profileCity}, ${signup.profileState}`
+              : signup.profileCity || signup.profileState}
+          </div>
+        )}
       </td>
       <td className="px-6 py-4">
         <div className="text-sm font-medium text-foreground">
@@ -87,12 +114,16 @@ function SignupRow({
       <td className="px-6 py-4 text-right">
         <div className="flex items-center justify-end gap-2">
           <button
-            onClick={() => onEmail(signup.email, displayName)}
-            title="Send a custom email to this surveyor"
+            onClick={handleEmailClick}
+            title={isPhoneMissing ? "Request missing phone number via email" : "Send a custom email to this surveyor"}
             aria-label={`Email ${displayName}`}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-neutral-100 text-neutral-700 hover:bg-neutral-200 border border-border/60 transition-all cursor-pointer"
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
+              isPhoneMissing
+                ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100 font-semibold'
+                : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 border-border/60'
+            }`}
           >
-            <Mail size={13} /> Email
+            <Mail size={13} /> {isPhoneMissing ? 'Request Phone' : 'Email'}
           </button>
           {/* Per-row trial days input */}
           <div className="flex items-center gap-1.5 border border-border rounded-lg px-2.5 py-1 bg-card shadow-xs">

@@ -78,4 +78,30 @@ describe('ApprovalQueueTab Polish', () => {
     expect(html).toContain('No pending signups');
     expect(html).toContain('New signups will appear here for approval.');
   });
+
+  it('renders Missing phone badge and Request Phone action when mobile is not provided', () => {
+    const incompleteSignup: NewSignup = {
+      ...mockSignup,
+      uid: 'user-incomplete',
+      mobile: '',
+      profileMobile: '',
+      profileCity: '',
+      profileState: '',
+    };
+
+    const html = renderToStaticMarkup(
+      <ApprovalQueueTab
+        signups={[incompleteSignup]}
+        loading={false}
+        approvingId={null}
+        onApprove={vi.fn()}
+        onDismiss={vi.fn()}
+        onEmail={vi.fn()}
+      />
+    );
+
+    expect(html).toContain('Missing phone');
+    expect(html).toContain('Request Phone');
+    expect(html).toContain('Not provided');
+  });
 });

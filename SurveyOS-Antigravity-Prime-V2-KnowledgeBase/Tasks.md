@@ -1,3 +1,23 @@
+## Done: Mandatory Contact & Operating Territory on Access Request + Existing Applicant Self-Healing (2026-11-08, Antigravity)
+- **Problem Solved:**
+  - Surveyors submitting access requests were frequently unreachable because phone numbers were not properly enforced with regex validation (a loose length check allowed fake or empty entries), and operating locations (City/State) were marked optional.
+  - Applicants who had already submitted incomplete requests were stuck on a read-only confirmation screen without any ability to provide their phone number, causing a silent deadlock between the applicant and the admin.
+- **Architecture Delivered:**
+  - **Form Validation & UI (`src/app/access-request/page.tsx`):**
+    - Enforced strict 10-digit Indian mobile number validation using `waNumber` from `@/lib/chase/ask-message`. Validates format `^[6-9]\d{9}$` (supporting `+91`, `0`, or spaces) and normalizes storage to `+91 XXXXXXXXXX`.
+    - Made `Operating City` and `Operating State` mandatory (minimum 2 characters), placed side-by-side in a responsive 2-column grid.
+    - Updated `Field` UI primitive to render a high-visibility required asterisk (`*`) and real-time inline validation errors.
+  - **Self-Healing Workflow for Existing Pending Applicants (`ConfirmationPanel`):**
+    - When an existing applicant with an already-submitted access request visits `/access-request`, the system checks for missing/invalid mobile or location data.
+    - Instead of trapping them in a read-only confirmation state, it renders an interactive `Action Required: Complete Contact & Territory` card with inline inputs and a `[Save Details & Notify Admin]` action that updates Firestore (`users/{uid}/profile/current` and `newSignups/{uid}`) and syncs local Zustand store.
+  - **Admin Approval Queue Polishing (`ApprovalQueueTab.tsx`, `AdminDashboard.tsx`, `EmailComposerModal.tsx`):**
+    - Added high-visibility `Missing phone` and `Not provided` badges in the approval queue.
+    - If phone is missing, the table row action transforms from generic `[Email]` into an amber `[Request Phone]` button that pre-populates `EmailComposerModal` with an activation request email template.
+- **Verification:**
+  - 319 Vitest test files (2,802 tests) passed (100% green).
+  - Added unit tests in `src/app/access-request/__tests__/access-request.test.tsx` and `src/components/admin/__tests__/approval-queue-polish.test.tsx`.
+  - Next.js production build (`npm run build`) succeeded with 25/25 static routes.
+
 ## Done: Bill Check Report Date Field & Report Builder Separation (2026-11-08, Antigravity)
 - **Problem Solved:**
   - In the Bill Check tab, there was no input field for the date of the Bill Check Report. The system only captured the workshop invoice's `billDate` and defaulted to printing `claim.reportDate` (the Final Survey report date / claim creation date) or mistakenly reusing the workshop invoice date.
