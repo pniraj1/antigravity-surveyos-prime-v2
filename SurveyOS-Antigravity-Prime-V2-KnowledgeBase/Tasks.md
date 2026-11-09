@@ -1,3 +1,27 @@
+## Done: Bill Check Tab Editability (GST, Disposal, Dep%) & Report Integration (2026-11-09, Antigravity)
+- **Problem Solved:**
+  - In Bill Check, surveyors frequently need to adjust the assessed amount or resolve real-world changes that happened during vehicle repairs (e.g., insured originally planned to fit a 2nd-hand disposal part, but had to fit a new OEM part with GST).
+  - Previously, the GST rate and Dep% in the Bill Check tab were static, non-editable text, and the Disposal column was completely absent from the Bill Check grid.
+  - Furthermore, if a surveyor set `billAllowed` on a row in Bill Check, reports (Standard Bill Check and UIIC Bill Check) did not project `billAllowed` into the assessment summary calculations and item tables.
+- **Architecture Delivered:**
+  - **Disposal Column Configuration (`src/components/tabs/bill-check/config.ts`):**
+    - Added `'disposal'` to `OptionalColumn`, `OPTIONAL_COLUMN_ORDER`, and `DEFAULT_VISIBLE: true`.
+    - Added column definition in `GRID_COLUMNS` with label `'Disposal'`, `defaultWidth: 100`, `minWidth: 80`, and icon `PackageX`.
+  - **Interactive Cells in Bill Check Grid (`src/components/tabs/bill-check/BillCheckGrid.tsx`):**
+    - **GST Cell:** Replaced static text div with `FormulaNumericInput` (bounds 0–100), updating `row.gst` directly and synchronizing `billedAmount = Math.round(row.billedTaxable * (1 + newGst / 100))` when `row.billedTaxable` is present.
+    - **Disposal Cell:** Added interactive checkbox and numeric percentage input for `row.disposalPercent` (default 50%). Toggling disposal off resets `isDisposal: false`, restores default `gst: 18%`, and synchronizes `billedAmount`. Toggling disposal on sets `isDisposal: true` and `gst: 0%`.
+    - **Dep% Cell:** Replaced static text div with interactive numeric input for `row.depOverride` (bounds 0–100), highlighted in amber with an asterisk marker when active.
+  - **Report Builder Projection (`src/lib/reports/`, `src/lib/calculations/`):**
+    - **Standard Report Builder (`standard-report-builder.ts`):** In `'bill-check'` mode, projected rows using `row.billAllowed ?? row.assessed`. In Section 8 Summary and Section 9 Details of Bill Check, items and subtotals derive strictly from the surveyor's active allowance, updated GST, disposal status, and depreciation override. Final Survey mode remains untouched (`billAllowed` never reaches the Final Survey Report).
+    - **UIIC Bill Check Builder (`uiic-final-builder.ts`):** Projected `rows` with `row.billAllowed !== undefined ? { ...r, assessed: r.billAllowed } : r`. Derived `rawParts`, `effParts`, `computeRowNet`, `aggregateGst` (GST tax summary bands), and Page 1 `calculateAssessmentSummary` (`asum`) from active allowance and updated GST.
+    - **Liability & Summary Calculation (`row-net.ts`, `assessment.ts`):** Updated `computeRowLiability` and `calculateBillCheckSummary` to recognize `row.billAllowed`, ensuring the surveyor's deliberate allowance overrides the automatic `min(assessed, billed)` cap in either direction.
+- **Verification:**
+  - Added unit test suite in `src/components/tabs/__tests__/BillCheckGridEditability.test.tsx` (3 tests).
+  - Added report test suite in `src/lib/reports/__tests__/bill-check-gst-disposal-override.test.ts` (4 tests).
+  - Full Vitest suite: 325 test files passed (2,866 tests, 100% green).
+  - TypeScript check (`npx tsc --noEmit`): 0 errors.
+  - Prime ↔ Scan coupling: Scan impact is **None**.
+
 ## Done: AI SurveyOS Portal Fill — Phase 3 Semantic AI Engine & Agent Skill (2026-11-09, Antigravity)
 - **Problem Solved:**
   - Indian insurer portals (UIIC, NIA, OIC, National, and private carriers) utilize proprietary coded dropdowns (e.g. `fuel: "Petrol"` is rendered as `"01 - MOTOR SPIRIT (PETROL)"` or `"MS"`), causing fill failures when doing naive direct value matching.

@@ -1,3 +1,14 @@
+## 2026-11-09 (Antigravity) — Bill Check Tab Editability (GST, Disposal, Dep%) & Report Integration
+- feat(bill-check): Added `'disposal'` column to `OptionalColumn`, `OPTIONAL_COLUMN_ORDER`, and `GRID_COLUMNS` in `src/components/tabs/bill-check/config.ts` (default visible).
+- feat(bill-check-grid): Replaced static text div for GST in `BillCheckGrid.tsx` with interactive `FormulaNumericInput`, editing `row.gst` directly and synchronizing `billedAmount = Math.round(row.billedTaxable * (1 + newGst / 100))` when `billedTaxable` is present.
+- feat(bill-check-grid): Added interactive disposal checkbox and percentage input for `row.disposalPercent` in `BillCheckGrid.tsx`. Toggling disposal off resets `isDisposal: false`, restores default `gst: 18%`, and synchronizes `billedAmount`. Toggling disposal on sets `isDisposal: true` and `gst: 0%`.
+- feat(bill-check-grid): Replaced static text div for Dep% in `BillCheckGrid.tsx` with interactive numeric input for `row.depOverride`, styled with amber highlight and asterisk indicator.
+- fix(reports): In `standard-report-builder.ts`, projected rows in `'bill-check'` mode with `row.billAllowed ?? row.assessed`, ensuring Section 8 and Section 9 items and subtotals reflect active allowances, updated GST, disposal status, and depOverride. Final survey report mode remains strictly unaffected.
+- fix(reports): In `uiic-final-builder.ts`, projected `rows` in `buildUIICBillCheckHTML` with `row.billAllowed !== undefined ? { ...r, assessed: r.billAllowed } : r`, updating `rawParts`, `effParts`, `computeRowNet`, `aggregateGst` bands, and Page 1 `asum`.
+- fix(calculations): Updated `computeRowLiability` (`row-net.ts`) and `calculateBillCheckSummary` (`assessment.ts`) to recognize `row.billAllowed`, overriding the `min(assessed, billed)` cap in either direction.
+- test: Added `BillCheckGridEditability.test.tsx` (3 tests) and `bill-check-gst-disposal-override.test.ts` (4 tests).
+- verification: 325 Vitest test files passed (2,866 tests, 100% green), `npx tsc --noEmit` clean (0 errors). Prime ↔ Scan coupling: None.
+
 ## 2026-11-09 (Antigravity) — AI SurveyOS Portal Fill (Phase 3): Semantic AI Engine & Agent Skill
 - feat(skill): Authored `.claude/skills/portal-fill-semantic-ai/SKILL.md` and synced with local runtime config under `/writing-skills` standards, outlining anti-rationalization rules, Indian motor taxonomy, and testing requirements.
 - feat(semantic-ai): Implemented `extension/src/lib/semantic-ai.js` featuring multi-stage dropdown normalization (`normalizeDropdownOption`), Indian insurance synonym taxonomy (fuel, policy, vehicle class, loss cause, settlement basis, garage type), and prefix stripping.
