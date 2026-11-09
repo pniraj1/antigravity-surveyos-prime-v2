@@ -535,7 +535,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   const a = claim.accident;
   const ri = claim.reinspection || ({} as any);
   const bc = claim.billCheck;
-  const rows = claim.assessmentRows || [];
+  const rows = (claim.assessmentRows || []).map(r => r.billAllowed !== undefined ? { ...r, assessed: r.billAllowed } : r);
   const depType = claim.depreciationType || 'standard';
   const nm = profile?.name || 'SURVEYOR NAME';
 

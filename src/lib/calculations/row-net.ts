@@ -74,21 +74,27 @@ function withGst(netBeforeGst: number, isDisposal: boolean, gstPercent: number):
  * already includes GST.
  */
 export function computeRowLiability(row: AssessmentRow, depRate: number): RowLiabilityResult {
-  const { isDisposal, netBeforeGst } = computeRowNet(row, depRate);
-  const assessedNet = withGst(netBeforeGst, isDisposal, row.gst);
+  const effAssessed = row.billAllowed !== undefined ? row.billAllowed : row.assessed;
+  const effectiveRow = row.billAllowed !== undefined ? { ...row, assessed: effAssessed } : row;
+  const { isDisposal, netBeforeGst } = computeRowNet(effectiveRow, depRate);
+  const assessedNet = withGst(netBeforeGst, isDisposal, effectiveRow.gst);
 
   let billedNet: number;
-  if (row.billedTaxable === undefined || row.billedTaxable === null) {
+  if (effectiveRow.billedTaxable === undefined || effectiveRow.billedTaxable === null) {
     // "Billed as assessed." Falling back to 0 here would drop the item from
     // the insurer's liability the moment min() saw it.
     billedNet = assessedNet;
   } else {
-    const billedAfterDep = row.billedTaxable * (1 - depRate / 100);
-    const disposalFactor = (row.disposalPercent ?? 50) / 100;
+    const billedAfterDep = effectiveRow.billedTaxable * (1 - depRate / 100);
+    const disposalFactor = (effectiveRow.disposalPercent ?? 50) / 100;
     const billedBeforeGst = isDisposal ? billedAfterDep * disposalFactor : billedAfterDep;
-    billedNet = withGst(billedBeforeGst, isDisposal, row.gst);
+    billedNet = withGst(billedBeforeGst, isDisposal, effectiveRow.gst);
   }
 
-  const liability = row.billStatus === 'not-in-bill' ? 0 : Math.min(assessedNet, billedNet);
+  const liability = effectiveRow.billStatus === 'not-in-bill'
+    ? 0
+    : effectiveRow.billAllowed !== undefined
+      ? assessedNet
+      : Math.min(assessedNet, billedNet);
   return { assessedNet, billedNet, liability };
 }

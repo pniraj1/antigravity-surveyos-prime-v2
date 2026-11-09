@@ -93,7 +93,7 @@ export function buildStandardFinalSurveyHTML(
   // survey and bill-check modes. In bill-check mode, billed figures populate
   // the Billed column while assessed figures, depreciation, GST, and net liability
   // strictly derive from the surveyor's assessed loss.
-  const rows = claim.assessmentRows || [];
+  const rows = (claim.assessmentRows || []).map(r => isBillCheck && r.billAllowed !== undefined ? { ...r, assessed: r.billAllowed } : r);
 
   const depType = toDepreciationType(claim.depreciationType);
   const ageMonths = getVehicleAgeMonths(

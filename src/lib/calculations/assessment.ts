@@ -242,16 +242,18 @@ export function calculateBillCheckSummary(
     // Disallowed items are not insurer liability, so they are not verified here.
     if (!r.allowed) return;
 
-    const depRate = rowDepRate(r, ageMonths, { ...paintDep, depreciationType: depType });
+    const effAssessed = r.billAllowed !== undefined ? r.billAllowed : r.assessed;
+    const effectiveRow = r.billAllowed !== undefined ? { ...r, assessed: effAssessed } : r;
+    const depRate = rowDepRate(effectiveRow, ageMonths, { ...paintDep, depreciationType: depType });
 
-    const { assessedNet, liability } = computeRowLiability(r, depRate);
+    const { assessedNet, liability } = computeRowLiability(effectiveRow, depRate);
 
-    assessedBaseSum += r.assessed;
+    assessedBaseSum += effAssessed;
     assessedGrandTotal += assessedNet;
-    billedBaseSum += r.billStatus === 'not-in-bill' ? 0 : (r.billedTaxable ?? r.assessed);
+    billedBaseSum += effectiveRow.billStatus === 'not-in-bill' ? 0 : (effectiveRow.billedTaxable ?? effAssessed);
 
-    if (r.billStatus === 'not-in-bill') {
-      notInBillTotal += r.assessed;
+    if (effectiveRow.billStatus === 'not-in-bill') {
+      notInBillTotal += effAssessed;
     } else {
       billedGrandTotal += liability;
     }
