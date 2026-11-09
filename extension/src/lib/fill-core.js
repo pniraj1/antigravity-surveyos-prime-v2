@@ -189,7 +189,18 @@ function planCheck(map, packet, pageClaimNo, read) {
     else if (lk.disabled) out.status = 'disabled';
     else if (!isEmptyValue(lk.current, spec.empty)) out.status = 'hasValue';
     else if (step && step.action === 'skip') out.status = 'skip';
-    else if (choice && step && lk.options && !lk.options.includes(step.value)) out.status = 'noOption';
+    else if (choice && step && lk.options) {
+      const stepVal = step.value !== undefined ? String(step.value) : '';
+      let matched = lk.options.includes(stepVal);
+      if (!matched && typeof globalThis !== 'undefined' && globalThis.SxSemanticAI) {
+        const norm = globalThis.SxSemanticAI.normalizeDropdownOption(stepVal, lk.options);
+        if (norm) {
+          matched = true;
+          step.value = norm.match.value;
+        }
+      }
+      if (!matched) out.status = 'noOption';
+    }
     if (choice && step && step.value !== undefined) out.planned = step.value;
     if (out.status === 'noOption') out.liveOptions = lk.options;
     return out;

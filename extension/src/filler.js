@@ -67,6 +67,12 @@
         el.dispatchEvent(new Event('change', { bubbles: true }));
         return 'filled';
       }
+      if (kind === 'select' || el.tagName === 'SELECT') {
+        const sel = /** @type {HTMLSelectElement} */ (el);
+        sel.value = value;
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+        return 'filled';
+      }
       const input = /** @type {HTMLInputElement} */ (el);
       const prev = input.value;
       input.value = value;
@@ -123,6 +129,26 @@
         : els[0];
       if (!el) return { ...s, action: 'notFound', why: 'no option with that value' };
       if (/** @type {HTMLInputElement} */ (el).disabled) return { ...s, action: 'manual', why: 'disabled on the page' };
+
+      // Phase 3 Semantic AI: Dropdown Option Normalization
+      if (el.tagName === 'SELECT' && typeof globalThis !== 'undefined' && globalThis.SxSemanticAI) {
+        const sel = /** @type {HTMLSelectElement} */ (el);
+        const directMatch = Array.from(sel.options).some(
+          (o) => o.value.replace(/^(string|number|boolean):/, '') === String(s.value)
+        );
+        if (!directMatch) {
+          const norm = globalThis.SxSemanticAI.normalizeDropdownOption(
+            String(s.value),
+            Array.from(sel.options, (o) => ({
+              text: o.text,
+              value: o.value.replace(/^(string|number|boolean):/, '')
+            }))
+          );
+          if (norm && norm.match) {
+            s.value = norm.match.value;
+          }
+        }
+      }
       try {
         const r = write(el, /** @type {string} */ (s.value), s.kind);
         if (r === 'filled') { el.style.outline = '2px solid #16a34a'; return { ...s, action: 'filled' }; }

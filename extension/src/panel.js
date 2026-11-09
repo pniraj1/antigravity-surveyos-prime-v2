@@ -95,6 +95,7 @@
       <div id="sx-content">
         <div class="sx-learned-bar" id="sx-learned-bar" style="display: none;"></div>
         <div class="sx-disambig" id="sx-disambig" style="display: none;"></div>
+        <div class="sx-ai-draft" id="sx-ai-draft" style="display: none;"></div>
         <p class="sx-body"></p>
         <p class="sx-summary sx-num" tabindex="-1"></p>
         <ul class="sx-lines" aria-live="polite"></ul>
@@ -107,7 +108,7 @@
     const $ = (/** @type {string} */ s) => /** @type {HTMLElement} */ (root.querySelector(s));
     $('.sx-v').textContent = chrome.runtime.getManifest().version;
     const head = $('.sx-head'), badge = $('.sx-badge'), toggle = $('.sx-toggle'), content = $('#sx-content');
-    const learnedBar = $('#sx-learned-bar'), disambig = /** @type {any} */ ($('#sx-disambig'));
+    const learnedBar = $('#sx-learned-bar'), disambig = /** @type {any} */ ($('#sx-disambig')), aiDraft = $('#sx-ai-draft');
     const body = $('.sx-body'), summary = $('.sx-summary'), lines = $('.sx-lines'), legend = $('.sx-legend');
     const hint = $('.sx-hint'), reassure = $('.sx-reassure'), actions = $('.sx-actions');
 
@@ -246,6 +247,14 @@
       phase = 'idle';
       draw();
 
+      if (globalThis.SxSemanticAI && packet?.fields && map) {
+        const portalUpper = (map.portal || 'portal').toUpperCase();
+        aiDraft.innerHTML = `<button type="button" class="sx-ai-btn">✦ AI Draft ${esc(portalUpper)} Remarks</button><div class="sx-draft-preview" style="display:none;"></div>`;
+        aiDraft.style.display = 'block';
+      } else {
+        aiDraft.style.display = 'none';
+      }
+
       if (globalThis.SxObserver && packet?.fields && map) {
         const mappedPaths = new Set(Object.values(map.fields || {}).map((f) => /** @type {any} */(f).modelPath).filter(Boolean));
         const mappedSelectors = new Set(Object.values(map.fields || {}).map((f) => /** @type {any} */(f).modelPath).filter((p) => p && (p.startsWith('#') || p.startsWith('.'))));
@@ -364,6 +373,32 @@
           });
           disambig.style.display = 'none';
           render();
+        }
+      }
+      if (target.classList.contains('sx-ai-btn')) {
+        if (!packet || !map || !globalThis.SxSemanticAI) return;
+        const draft = globalThis.SxSemanticAI.draftPortalObservations(packet, { portal: map.portal });
+        const preview = aiDraft.querySelector('.sx-draft-preview');
+        if (preview) {
+          preview.innerHTML = `
+            <div class="sx-draft-text">${esc(draft.text)}</div>
+            <div class="sx-draft-meta">
+              <span>${draft.charCount}/${draft.maxChars} chars (${esc(draft.portal.toUpperCase())} Safe)</span>
+              <button type="button" class="sx-copy-draft">Copy</button>
+            </div>`;
+          /** @type {HTMLElement} */ (preview).style.display = 'block';
+        }
+      }
+      if (target.classList.contains('sx-copy-draft')) {
+        const textEl = aiDraft.querySelector('.sx-draft-text');
+        if (textEl && textEl.textContent) {
+          try {
+            await navigator.clipboard.writeText(textEl.textContent);
+            target.textContent = 'Copied!';
+            setTimeout(() => { if (target.isConnected) target.textContent = 'Copy'; }, 1500);
+          } catch {
+            target.textContent = 'Failed';
+          }
         }
       }
     });

@@ -1,3 +1,13 @@
+## 2026-11-09 (Antigravity) — AI SurveyOS Portal Fill (Phase 3): Semantic AI Engine & Agent Skill
+- feat(skill): Authored `.claude/skills/portal-fill-semantic-ai/SKILL.md` and synced with local runtime config under `/writing-skills` standards, outlining anti-rationalization rules, Indian motor taxonomy, and testing requirements.
+- feat(semantic-ai): Implemented `extension/src/lib/semantic-ai.js` featuring multi-stage dropdown normalization (`normalizeDropdownOption`), Indian insurance synonym taxonomy (fuel, policy, vehicle class, loss cause, settlement basis, garage type), and prefix stripping.
+- feat(observations): Added surveyor remarks and loss observations auto-drafter (`draftPortalObservations`) with strict character limits and UIIC punctuation sanitization (`[a-zA-Z0-9. \n]`), preventing UIIC ASP.NET session crashes.
+- feat(zero-shot): Added zero-shot DOM semantic field matcher (`predictFieldMapping`) scoring candidate claim fields from label, placeholder, name, and id context.
+- feat(integration): Integrated dropdown normalization into `extension/src/lib/fill-core.js` (`planCheck`) and `extension/src/filler.js` (`fill`), enabling automatic resolution of coded portal `<select>` options.
+- feat(ui): Added `#sx-ai-draft` card in `panel.js` and `panel.css` with `[✦ AI Draft Remarks]` button, character count badge (`UIIC Safe`), and 1-click clipboard copy.
+- test: Added comprehensive test suite in `extension/__tests__/semantic-ai.test.js` (15 unit tests covering exact, coded, synonym, UIIC punctuation sanitization, and zero-shot matching).
+- verification: 323 Vitest test files (2,859 tests) passed (100% green), `npx tsc --noEmit` clean (0 errors), Next.js production build (`npm run build`) succeeded with 25/25 static routes, extension build (`python scripts/build-ext.py`) produced zip + unpacked distributions cleanly.
+
 ## 2026-11-09 (Antigravity) — AI SurveyOS Portal Fill (Phase 2): Universal Portal Activation & Cloud-Synced Intelligence
 - feat(extension): Added `popup.html` and `popup.js` supporting dynamic 1-click activation on any unlisted or custom insurer portal via `optional_host_permissions` and `activeTab`.
 - feat(manifest): Pre-authorized top 15 Indian motor insurers (NIC, ICICI Lombard, Bajaj Allianz, HDFC ERGO, Tata AIG, Go Digit, SBI General, Chola MS, Reliance General, IFFCO Tokio, Future Generali, Royal Sundaram) in `host_permissions`.

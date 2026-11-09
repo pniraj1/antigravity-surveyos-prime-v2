@@ -1,3 +1,36 @@
+## Done: AI SurveyOS Portal Fill — Phase 3 Semantic AI Engine & Agent Skill (2026-11-09, Antigravity)
+- **Problem Solved:**
+  - Indian insurer portals (UIIC, NIA, OIC, National, and private carriers) utilize proprietary coded dropdowns (e.g. `fuel: "Petrol"` is rendered as `"01 - MOTOR SPIRIT (PETROL)"` or `"MS"`), causing fill failures when doing naive direct value matching.
+  - Surveyor loss remarks and observations frequently cause unhandled portal crashes (especially on United India Insurance UIIC's legacy ASP.NET forms, which throw `ERR_INVALID_CHARACTER` and session crashes on quotes, commas, ampersands, or semicolons; or exceed character limits like 500 chars).
+  - Unmapped or redesigned portal fields required manual inspection instead of intelligent zero-shot semantic matching.
+- **Architecture Delivered:**
+  - **Phase 3 Agent Skill (`.claude/skills/portal-fill-semantic-ai/SKILL.md` & `C:\Users\Manasi\.gemini\config\skills\portal-fill-semantic-ai\SKILL.md`):**
+    - Authored according to the `/writing-skills` specification (Tier 1/2 structure).
+    - Contains strict anti-rationalization guardrails: 100% offline local runtime execution with zero PII exfiltration, mandatory UIIC punctuation sanitization (`[a-zA-Z0-9. \n]`), and strict prohibition of auto-submission (Rule E1).
+    - Outlines Indian Motor Insurance Synonym & Taxonomy Matrix, observation templates, and verification test scenarios.
+  - **Coded Dropdown Option Normalization (`extension/src/lib/semantic-ai.js`):**
+    - Multi-stage matching: exact value/text match, code prefix stripping (`"01 - "`, `"PKG - "`), substring containment, domain taxonomy synonym expansion (covering Fuel types, Policy types, Vehicle classes, Loss causes, Settlement bases, Garage relations), and Jaccard token similarity fallback.
+    - Integrated with `fill-core.js` (`planCheck` dynamically recognizes matchable options) and `filler.js` (`fill` dynamically resolves normalized option values for `<select>` elements).
+  - **Surveyor Observations & Narrative Auto-Drafter (`extension/src/lib/semantic-ai.js`):**
+    - Generates concise, legally compliant surveyor loss observations tailored per insurer.
+    - Insurer-specific character limits: UIIC (500 chars), NIA (1000 chars), OIC (2000 chars).
+    - Strict UIIC punctuation sanitization: strips crash-inducing punctuation (`,`, `;`, `'`, `"`, `/`, `\`, `&`, `-`), collapses spaces, preserves amounts (e.g. `15,000` $\rightarrow$ `15000`), and truncates cleanly at word boundaries.
+  - **Zero-Shot DOM Semantic Matcher (`extension/src/lib/semantic-ai.js`):**
+    - Extracts context from `label`, `placeholder`, `name`, `id`, and nearby DOM elements.
+    - Scores candidate canonical fields (`regNumber`, `chassisNumber`, `engineNumber`, `driverLicenceNo`, `surveyRemarks`, `netAssessment`, etc.) via weighted patterns and token similarity.
+  - **In-Panel UI Integration (`panel.js`, `panel.css`):**
+    - Added `#sx-ai-draft` with `[✦ AI Draft Remarks]` button in sidecar panel when a claim packet is active.
+    - Live preview card with character count indicator (`245/500 chars (UIIC Safe)`) and 1-click `[Copy]` button.
+  - **Packaging & Manifest (`manifest.json`, `build-ext.py`):**
+    - Bundled `semantic-ai.js` into isolated world content scripts and MAIN world content scripts.
+    - Updated `scripts/build-ext.py` to package `semantic-ai.js` into zipped and unpacked distributions.
+- **Verification:**
+  - 15 extension test files (186 tests) passed (100% green).
+  - Full Vitest suite: 323 test files (2,859 tests) passed (100% green).
+  - TypeScript check (`npx tsc --noEmit`): 0 errors.
+  - Next.js 16 build (`npm run build`): Succeeded, 25/25 static pages generated.
+  - Rebuilt extension packages: `dist/surveyos-portal-fill-0.4.0.zip`, `dist/unpacked`, `dist/unpacked-dev`.
+
 ## Done: AI SurveyOS Portal Fill — Phase 2 Universal Portal Expansion & Cloud-Synced Proprietary Intelligence (2026-11-09, Antigravity)
 - **Problem Solved:**
   - Surveyors need to use SurveyOS Portal Fill across arbitrary insurer portals (both public PSU and private insurers like ICICI Lombard, Bajaj Allianz, HDFC ERGO, Tata AIG, Go Digit, SBI General, etc.), without requiring manual hardcoded maps or Chrome Web Store re-reviews.
