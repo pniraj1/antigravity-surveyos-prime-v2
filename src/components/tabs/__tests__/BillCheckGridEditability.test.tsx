@@ -31,7 +31,7 @@ describe('BillCheckGrid Editability Markup', () => {
     billStatus: 'in-bill',
   };
 
-  const mockSummary: AssessmentSummary = {
+  const mockSummary = {
     partsBase: 10000,
     metalTotal: 0,
     plasticTotal: 10000,
@@ -67,7 +67,7 @@ describe('BillCheckGrid Editability Markup', () => {
     estimateLabourGST: 0,
     estimateLabourTotal: 0,
     estimateGrossTotal: 11800,
-  };
+  } as unknown as AssessmentSummary;
 
   const mockClaim = {
     id: 'claim-1',
