@@ -79,6 +79,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Portal Fill Community Consensus — anonymous structural fingerprints (zero PII)
+    match /portalConsensus/{portalFlow} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() || isAdmin();
+    }
+
     // New signup notifications — users create their own entry on first login,
     // and can update it when they submit the access-request form (adds name,
     // IRDAI licence, phone). Only admins can read or delete entries.
