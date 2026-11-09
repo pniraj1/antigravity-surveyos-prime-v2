@@ -90,7 +90,9 @@ function planFill(map, packet, read) {
     } else {
       const raw = fields[spec.from ?? name];
       if (raw === undefined) { steps.push({ ...base, action: 'skip', why: 'not in packet' }); continue; }
+      const learnedApply = typeof globalThis !== 'undefined' && globalThis.SxInverter ? globalThis.SxInverter.applyTransform : null;
       value = spec.kind === 'money' ? transforms.money2dp(raw)
+        : spec.learnedTransform && learnedApply ? learnedApply(raw, spec.learnedTransform)
         : spec.transform ? transforms[spec.transform](raw)
         : String(raw);
       if (spec.options) value = spec.options[value] ?? value;

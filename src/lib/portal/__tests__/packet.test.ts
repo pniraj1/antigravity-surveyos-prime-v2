@@ -247,7 +247,9 @@ describe('buildOicPacket', () => {
     expect(p.fields.colorOfVehicle).toBe('White');
     expect(p.fields.typeOfFuel).toBe('Diesel');
     expect(p.fields.driverName).toBe('Virendrakumar Jain');
-    expect(p.fields.driverLicenseNoTwo).toBe('MH02201800123');
+    expect(p.fields.driverLicenseNoOne).toBe('MH02');
+    expect(p.fields.driverLicenseNoTwo).toBe('20180');
+    expect(p.fields.driverLicenseNoThree).toBe('0123');
     expect(p.fields.lossDescription).toBe('Frontal collision with divider');
     expect(p.fields.workshopName).toBe('Skoda Workshop Pune');
     expect(p.fields.workshopEstimateAmount).toBe(5000);

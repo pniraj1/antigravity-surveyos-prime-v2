@@ -1,3 +1,12 @@
+## 2026-11-09 (Antigravity) — AI SurveyOS Portal Fill (Phase 1) & OIC 3-Box DL Splitter
+- feat(ai-portal-fill): Implemented passive `blur` observer in `extension/src/lib/observer.js` building multi-attribute semantic fingerprints (`label`, `name`, `inputType`, `maxLength`, `nearbyText`, `placeholder`, `ariaLabel`, `idHint`, `siblingIndex`) while enforcing zero-touch security on passwords, logins, OTPs, and CAPTCHAs.
+- feat(ai-portal-fill): Built value inverter in `extension/src/lib/inverter.js` correlating typed values to `PortalPacket` claim fields via exact, alphanumeric, numeric equivalence, date format variations, and prefix/suffix/substr matching, with built-in ambiguity detection.
+- feat(ai-portal-fill): Built learned overlay manager in `extension/src/lib/learned-store.js` with 2-claim promotion gate (`matchCount >= 2`), zero PII storage guarantee, and static map priority (Rule D4).
+- feat(ai-portal-fill): Wired learning engine into `extension/src/panel.js` (dynamic merge and passive observation), `extension/src/lib/fill-core.js` (`learnedTransform` application), `extension/manifest.json`, and `scripts/build-ext.py`.
+- feat(oic): Added `splitIndianDl` helper in `src/lib/portal/packet.ts` to split Indian driving licences into Box 1 (4-char State/RTO prefix), Box 2 (middle digits), and Box 3 (last 4 digits). Populated `driverLicenseNoOne`, `driverLicenseNoTwo`, and `driverLicenseNoThree` in `OIC_FIELDS` and `buildOicPacket`.
+- test: Added 40 new extension unit tests across `extension/__tests__/inverter.test.js`, `learned-store.test.js`, and `observer.test.js`. Updated `src/lib/portal/__tests__/packet.test.ts`.
+- verification: 322 Vitest test files passed (2,842 tests, 100% green), `npx tsc --noEmit` clean (0 errors), Next.js production build (`npm run build`) succeeded with 25/25 static routes, extension build (`python scripts/build-ext.py`) produced zip + unpacked distributions cleanly.
+
 ## 2026-11-08 (Antigravity) — Mandatory Contact & Operating Territory on Access Request + Existing Applicant Self-Healing
 - feat(access-request): Made `Mobile / WhatsApp Number` strictly mandatory with 10-digit Indian mobile regex validation (`waNumber`). Normalized to `+91 XXXXXXXXXX`.
 - feat(access-request): Made `Operating City` and `Operating State` mandatory fields in a sleek 2-column responsive grid layout with required asterisks and descriptive hints.

@@ -229,10 +229,53 @@
         for (const el of [summary, lines, legend, hint, reassure, actions]) el.hidden = true;
         return;
       }
+      if (globalThis.SxLearnedStore) {
+        try {
+          const confirmed = await globalThis.SxLearnedStore.getConfirmed(chrome.storage.local, map.portal, map.flow);
+          if (confirmed?.length) {
+            map = globalThis.SxLearnedStore.mergeWithStaticMap(map, confirmed);
+          }
+        } catch { /* storage fallback */ }
+      }
       draw();
       probe = await ask('probe', { map });
       phase = 'idle';
       draw();
+
+      if (globalThis.SxObserver && packet?.fields && map) {
+        const mappedPaths = new Set(Object.values(map.fields || {}).map((f) => /** @type {any} */(f).modelPath).filter(Boolean));
+        const mappedSelectors = new Set(Object.values(map.fields || {}).map((f) => /** @type {any} */(f).modelPath).filter((p) => p && (p.startsWith('#') || p.startsWith('.'))));
+        globalThis.SxObserver.startObserving({
+          mappedPaths,
+          mappedSelectors,
+          onBatch: async (batch) => {
+            if (!globalThis.SxInverter || !globalThis.SxLearnedStore || !packet?.fields) return;
+            let newlyPromoted = false;
+            for (const item of batch) {
+              const res = globalThis.SxInverter.correlate(item.typedValue, packet.fields);
+              if (res.match) {
+                const { promoted, binding } = await globalThis.SxLearnedStore.recordCandidate(
+                  chrome.storage.local,
+                  map.portal,
+                  map.flow,
+                  {
+                    fingerprint: item.fingerprint,
+                    claimField: res.claimField,
+                    transform: res.transform,
+                  }
+                );
+                if (promoted) {
+                  newlyPromoted = true;
+                  console.info('[SurveyOS AI Fill] Confirmed learned field:', binding.claimField, binding.fingerprint);
+                }
+              }
+            }
+            if (newlyPromoted) {
+              render();
+            }
+          },
+        });
+      }
     }
 
     /** Held packet past its 24 h: true after render() has dropped it (E6), so the caller does not run. */
@@ -319,7 +362,11 @@
     };
     const reprobeTimer = setInterval(reprobe, REPROBE_MS);
     window.addEventListener('focus', reprobe);
-    teardown = () => { clearInterval(reprobeTimer); window.removeEventListener('focus', reprobe); };
+    teardown = () => {
+      clearInterval(reprobeTimer);
+      window.removeEventListener('focus', reprobe);
+      if (globalThis.SxObserver) globalThis.SxObserver.stopObserving();
+    };
 
     currentRender = (ch) => {
       if (keepResults(done, ch)) return; // after a good fill, only a new packet replaces the results

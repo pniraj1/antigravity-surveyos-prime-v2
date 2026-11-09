@@ -1,3 +1,37 @@
+## Done: AI SurveyOS Portal Fill — Phase 1 Self-Learning Architecture & OIC 3-Box DL Splitter (2026-11-09, Antigravity)
+- **Problem Solved:**
+  - Insurer portals frequently add/rename fields, vary date/number formats, or split values across multiple inputs (such as 3 separate boxes for Driving Licence on Oriental Insurance: RTO prefix, middle number, suffix).
+  - Previously, supporting any new portal field or insurer flow required a developer to write a custom JSON map and ship an extension update through the Chrome Web Store.
+  - On OIC, Driving Licence was previously dumped as a single string into `driverLicenseNoTwo` because the other two boxes were unmapped.
+- **Architecture Delivered:**
+  - **Deterministic Passive Observer (`extension/src/lib/observer.js`):**
+    - Listens on `blur` events (event delegation on document body) rather than expensive keystrokes.
+    - Generates multi-attribute semantic fingerprints: `{ label, name, inputType, maxLength, nearbyText, placeholder, ariaLabel, idHint, siblingIndex }`.
+    - Strict security skip list: ignores `password`, `file`, `hidden`, elements in login/captcha/OTP forms, and inputs inside `#sx-panel`.
+    - Batches and debounces `blur` events with 1-second window.
+  - **Value Inverter & Format Correlation (`extension/src/lib/inverter.js`):**
+    - Correlates observed typed values against the active `PortalPacket` claim fields.
+    - Deterministic transform matches: exact string (case-insensitive), alphanumeric normalized, numeric equivalence (commas/decimals/zeros), date formats (DD/MM/YYYY $\leftrightarrow$ YYYY-MM-DD $\leftrightarrow$ DD-MM-YYYY), and substring matching (prefix/suffix/substr) for split fields.
+    - Ambiguity detection: if $>1$ claim field matches, marks as ambiguous and refuses to auto-promote without confirmation.
+  - **Learned Overlay Store & Promotion Gate (`extension/src/lib/learned-store.js`):**
+    - Stores learned bindings under `learned:<portal>-<flow>` in `chrome.storage.local`.
+    - Zero PII storage rule: never stores claim values, only fingerprints, field paths, and transforms.
+    - 2-claim promotion gate: a candidate binding requires `matchCount >= 2` across claims before auto-promotion from `candidate` to `confirmed`.
+    - Rule D4 priority: static bundled/remote map fields always take priority over learned bindings.
+  - **OIC 3-Box Driving Licence Splitter (`src/lib/portal/packet.ts`):**
+    - Added `splitIndianDl(dlRaw)` utility to intelligently split Indian DLs into Box 1 (4-char State/RTO prefix e.g. `MH12`), Box 2 (middle digits), and Box 3 (last 4 digits).
+    - Populates `driverLicenseNoOne`, `driverLicenseNoTwo`, and `driverLicenseNoThree` in `OIC_FIELDS` and `buildOicPacket`.
+  - **Extension Wiring (`panel.js`, `fill-core.js`, `manifest.json`, `build-ext.py`):**
+    - `panel.js` merges confirmed learned bindings into map at render time, and activates `startObserving` on unmapped inputs when an active packet is present.
+    - `fill-core.js` supports `learnedTransform` in `planFill`.
+    - `manifest.json` and `build-ext.py` updated to package `inverter.js`, `observer.js`, and `learned-store.js`.
+- **Verification:**
+  - 322 Vitest test files (2,842 tests) passed (100% green).
+  - Added unit test suites: `extension/__tests__/inverter.test.js` (20 tests), `extension/__tests__/learned-store.test.js` (11 tests), `extension/__tests__/observer.test.js` (9 tests). Total extension tests: 14 test files, 169 tests (100% green).
+  - Next.js production build (`npm run build`) succeeded with 25/25 static routes.
+  - TypeScript type check (`npx tsc --noEmit`) clean with 0 errors.
+  - Extension build (`python scripts/build-ext.py`) produced zip + unpacked distributions cleanly.
+
 ## Done: Mandatory Contact & Operating Territory on Access Request + Existing Applicant Self-Healing (2026-11-08, Antigravity)
 - **Problem Solved:**
   - Surveyors submitting access requests were frequently unreachable because phone numbers were not properly enforced with regex validation (a loose length check allowed fake or empty entries), and operating locations (City/State) were marked optional.

@@ -66,11 +66,29 @@ export interface UiicPortalPacket {
   files: [];
 }
 
+/**
+ * Splits an Indian Driving Licence into 3 parts for portals with split inputs (e.g. OIC):
+ * Part 1: 4 chars (State + RTO code, e.g. "MH12")
+ * Part 3: last 4 chars (e.g. "0123")
+ * Part 2: middle characters (e.g. "2018000")
+ */
+export function splitIndianDl(dlRaw?: string): { one?: string; two?: string; three?: string } {
+  if (!dlRaw) return {};
+  const clean = dlRaw.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+  if (clean.length < 8) {
+    return { two: dlRaw.trim() };
+  }
+  const one = clean.slice(0, 4);
+  const three = clean.slice(-4);
+  const two = clean.slice(4, -4);
+  return { one, two: two || clean, three };
+}
 export const OIC_FIELDS = [
   'regNumber', 'make', 'model', 'chasisNumber', 'engineNumber',
   'cubicCapacity', 'manufacturingYear', 'colorOfVehicle', 'typeOfFuel',
   'typeOfBody', 'classOfVehicle', 'unladenWeight', 'registeredLadenWeight',
-  'seatingCapacity', 'lossDescription', 'driverName', 'driverLicenseNoTwo',
+  'seatingCapacity', 'lossDescription', 'driverName',
+  'driverLicenseNoOne', 'driverLicenseNoTwo', 'driverLicenseNoThree',
   'driverBadgeNo', 'driverQualification', 'driverAddress',
   'workshopName', 'workshopEstimateAmount', 'workshopGstNo',
 ] as const;
@@ -255,6 +273,7 @@ export async function buildOicPacket(
   const d = claim.driver;
   const a = claim.accident;
   const bc = claim.billCheck;
+  const dlParts = splitIndianDl(d?.licenceNumber);
   const depType = toDepreciationType(claim.depreciationType);
 
   let files: OicPortalPacket['files'] = [];
@@ -312,7 +331,9 @@ export async function buildOicPacket(
       seatingCapacity: v?.seatingCapacity?.trim(),
       lossDescription: (a?.causeOfAccident || a?.remarks || '')?.trim().slice(0, 2000) || undefined,
       driverName: d?.name?.trim(),
-      driverLicenseNoTwo: d?.licenceNumber?.trim(),
+      driverLicenseNoOne: dlParts.one,
+      driverLicenseNoTwo: dlParts.two || d?.licenceNumber?.trim(),
+      driverLicenseNoThree: dlParts.three,
       driverBadgeNo: d?.badgeNumber?.trim(),
       driverAddress: d?.address?.trim().slice(0, 240) || undefined,
       workshopName: a?.workshopName?.trim(),
