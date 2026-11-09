@@ -87,6 +87,7 @@
     root.setAttribute('aria-label', 'SurveyOS Portal Fill');
     root.innerHTML = `
       <div class="sx-head" title="Drag to move up or down. Arrow keys move it, Home puts it back.">
+        <img class="sx-logo" src="${chrome.runtime.getURL('icons/icon16.png')}" width="16" height="16" alt="" style="border-radius:3px;flex-shrink:0;">
         <span class="sx-name">SurveyOS</span><span class="sx-v sx-num"></span>
         <span class="sx-badge"></span>
         <button type="button" class="sx-toggle" aria-expanded="true" aria-controls="sx-content">Hide</button>

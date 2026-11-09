@@ -5,6 +5,9 @@
   "description": "Fills insurer surveyor portals (New India, United India, Oriental) from a finished SurveyOS claim. Never submits, never sees your login.",
   "minimum_chrome_version": "111",
   "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
   "permissions": [
@@ -109,10 +112,25 @@
   ],
   "action": {
     "default_title": "SurveyOS Portal Fill",
-    "default_popup": "src/popup.html"
+    "default_popup": "src/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png"
+    }
   },
   "optional_host_permissions": [
     "https://*/*",
     "http://*/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icons/*.png"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
   ]
 }

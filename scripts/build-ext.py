@@ -24,7 +24,8 @@ for bad in DEV:
     if bad in text:
         sys.exit(f"manifest.json still contains '{bad}' outside content_scripts.matches — remove it before building")
 
-FILES = ["icons/icon128.png", *(f"maps/{flow}.json" for flow in FLOWS),
+FILES = ["icons/icon16.png", "icons/icon32.png", "icons/icon48.png", "icons/icon128.png",
+         *(f"maps/{flow}.json" for flow in FLOWS),
          "src/background.js", "src/relay.js", "src/panel.js", "src/panel.css", "src/filler.js",
          "src/popup.html", "src/popup.js",
          "src/lib/packet-validate.js", "src/lib/fill-core.js", "src/lib/card-view.js",
