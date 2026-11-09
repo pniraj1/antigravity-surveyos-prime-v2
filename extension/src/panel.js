@@ -92,6 +92,8 @@
         <button type="button" class="sx-toggle" aria-expanded="true" aria-controls="sx-content">Hide</button>
       </div>
       <div id="sx-content">
+        <div class="sx-learned-bar" id="sx-learned-bar" style="display: none;"></div>
+        <div class="sx-disambig" id="sx-disambig" style="display: none;"></div>
         <p class="sx-body"></p>
         <p class="sx-summary sx-num" tabindex="-1"></p>
         <ul class="sx-lines" aria-live="polite"></ul>
@@ -104,6 +106,7 @@
     const $ = (/** @type {string} */ s) => /** @type {HTMLElement} */ (root.querySelector(s));
     $('.sx-v').textContent = chrome.runtime.getManifest().version;
     const head = $('.sx-head'), badge = $('.sx-badge'), toggle = $('.sx-toggle'), content = $('#sx-content');
+    const learnedBar = $('#sx-learned-bar'), disambig = /** @type {any} */ ($('#sx-disambig'));
     const body = $('.sx-body'), summary = $('.sx-summary'), lines = $('.sx-lines'), legend = $('.sx-legend');
     const hint = $('.sx-hint'), reassure = $('.sx-reassure'), actions = $('.sx-actions');
 
@@ -266,8 +269,14 @@
                 );
                 if (promoted) {
                   newlyPromoted = true;
+                  learnedBar.innerHTML = `<span>✦ Auto-learned: <b>${esc(binding.claimField)}</b></span><button type="button" class="sx-undo" data-field="${esc(binding.claimField)}">Undo</button>`;
+                  learnedBar.style.display = 'flex';
                   console.info('[SurveyOS AI Fill] Confirmed learned field:', binding.claimField, binding.fingerprint);
                 }
+              } else if (res.reason === 'ambiguous' && res.candidates?.length) {
+                disambig.innerHTML = `<p class="sx-disambig-text">"${esc(item.typedValue)}" matches multiple fields. Which is this?</p><div class="sx-disambig-btns">${res.candidates.map((c) => `<button type="button" class="sx-disambig-btn" data-field="${esc(c.field)}" data-transform="${esc(c.transform)}">${esc(c.field)}</button>`).join('')}</div>`;
+                disambig.style.display = 'block';
+                disambig.pendingFp = item.fingerprint;
               }
             }
             if (newlyPromoted) {
@@ -328,6 +337,34 @@
       else if (act === 'clear') { done = false; chrome.storage.local.remove(['packet', 'storedAt'], render); }
       else if (act === 'copy') copyReport(btn);
       else if (act === 'showAll') { showAll = !showAll; draw(); /** @type {HTMLElement | null} */ (actions.querySelector('[data-act="showAll"]'))?.focus(); }
+    });
+
+    content.addEventListener('click', async (e) => {
+      const target = /** @type {HTMLElement} */ (e.target);
+      if (target.classList.contains('sx-undo')) {
+        const field = target.dataset.field;
+        if (field && map) {
+          const bindings = await globalThis.SxLearnedStore.getLearned(chrome.storage.local, map.portal, map.flow);
+          const filtered = bindings.filter((/** @type {any} */ b) => b.claimField !== field);
+          await globalThis.SxLearnedStore.saveLearned(chrome.storage.local, map.portal, map.flow, filtered);
+          learnedBar.style.display = 'none';
+          render();
+        }
+      }
+      if (target.classList.contains('sx-disambig-btn')) {
+        const field = target.dataset.field;
+        const transform = target.dataset.transform;
+        const fp = disambig.pendingFp;
+        if (field && fp && map) {
+          await globalThis.SxLearnedStore.recordCandidate(chrome.storage.local, map.portal, map.flow, {
+            fingerprint: fp,
+            claimField: field,
+            transform: transform || 'exact',
+          });
+          disambig.style.display = 'none';
+          render();
+        }
+      }
     });
 
     // The one user-initiated, display-only touch on the portal (spec §10.4): scroll to the field, outline it 1.5 s, put it back.

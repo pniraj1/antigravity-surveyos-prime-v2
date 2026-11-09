@@ -1,5 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { isExtensionPresent, sendPacketToExtension, readyLine, NOT_INSTALLED_LINE } from '../extension-bridge';
+import {
+  isExtensionPresent,
+  sendPacketToExtension,
+  pushCloudLearningsToExtension,
+  pullLearningsFromExtension,
+  readyLine,
+  NOT_INSTALLED_LINE,
+} from '../extension-bridge';
 
 describe('send-step copy', () => {
   it('readyLine names the claim tail and portal', () => {
@@ -53,5 +60,29 @@ describe('extension bridge', () => {
 
   it('times out without an ack', async () => {
     await expect(sendPacketToExtension(packet as any, 20)).resolves.toMatchObject({ ok: false, reason: expect.stringMatching(/no reply/i) });
+  });
+
+  it('pushCloudLearningsToExtension posts and resolves on ack', async () => {
+    const p = pushCloudLearningsToExtension('oic', 'assessment', [{ claimField: 'test' }], 100);
+    expect((globalThis as any).window.postMessage).toHaveBeenCalledWith(
+      { type: 'surveyos:portal-sync-push', portal: 'oic', flow: 'assessment', bindings: [{ claimField: 'test' }] },
+      'https://motorsurveyos-in.web.app',
+    );
+    listeners[0]({ origin: 'https://motorsurveyos-in.web.app', source: globalThis.window, data: { type: 'surveyos:portal-sync-push-ack', ok: true } } as any);
+    await expect(p).resolves.toEqual({ ok: true });
+  });
+
+  it('pullLearningsFromExtension posts and retrieves learnings on ack', async () => {
+    const p = pullLearningsFromExtension(100);
+    expect((globalThis as any).window.postMessage).toHaveBeenCalledWith(
+      { type: 'surveyos:portal-sync-pull' },
+      'https://motorsurveyos-in.web.app',
+    );
+    listeners[0]({
+      origin: 'https://motorsurveyos-in.web.app',
+      source: globalThis.window,
+      data: { type: 'surveyos:portal-sync-pull-ack', ok: true, learnings: { 'learned:oic-assessment': [] } },
+    } as any);
+    await expect(p).resolves.toEqual({ ok: true, learnings: { 'learned:oic-assessment': [] } });
   });
 });

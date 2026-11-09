@@ -1,3 +1,13 @@
+## 2026-11-09 (Antigravity) — AI SurveyOS Portal Fill (Phase 2): Universal Portal Activation & Cloud-Synced Intelligence
+- feat(extension): Added `popup.html` and `popup.js` supporting dynamic 1-click activation on any unlisted or custom insurer portal via `optional_host_permissions` and `activeTab`.
+- feat(manifest): Pre-authorized top 15 Indian motor insurers (NIC, ICICI Lombard, Bajaj Allianz, HDFC ERGO, Tata AIG, Go Digit, SBI General, Chola MS, Reliance General, IFFCO Tokio, Future Generali, Royal Sundaram) in `host_permissions`.
+- feat(cloud-sync): Implemented `src/lib/firebase/portal-sync.ts` saving per-surveyor learned overlays in Firestore under `users/{uid}/portalLearnings/{portal}`, making learned bindings permanent across devices and browser resets.
+- feat(consensus): Built anonymous community consensus pipeline (`submitConsensusTelemetry`) aggregating structural fingerprints to auto-verify field bindings across the surveyor fleet without ever touching customer PII.
+- feat(relay): Upgraded `extension/src/relay.js` and `extension-bridge.ts` with bidirectional sync messages (`surveyos:portal-sync-push` and `surveyos:portal-sync-pull`).
+- feat(ui): Added in-panel `.sx-learned-bar` with 1-click `[Undo]` button and `.sx-disambig` single-click disambiguation card in `panel.js` and `panel.css`.
+- test: Added test cases in `src/lib/portal/__tests__/extension-bridge.test.ts`. Verified 14 extension test files (171 tests) passed (100% green).
+- verification: `npx tsc --noEmit` clean (0 errors), Next.js production build (`npm run build`) succeeded with 25/25 static routes, extension build (`python scripts/build-ext.py`) produced zip + unpacked distributions cleanly.
+
 ## 2026-11-09 (Antigravity) — AI SurveyOS Portal Fill (Phase 1) & OIC 3-Box DL Splitter
 - feat(ai-portal-fill): Implemented passive `blur` observer in `extension/src/lib/observer.js` building multi-attribute semantic fingerprints (`label`, `name`, `inputType`, `maxLength`, `nearbyText`, `placeholder`, `ariaLabel`, `idHint`, `siblingIndex`) while enforcing zero-touch security on passwords, logins, OTPs, and CAPTCHAs.
 - feat(ai-portal-fill): Built value inverter in `extension/src/lib/inverter.js` correlating typed values to `PortalPacket` claim fields via exact, alphanumeric, numeric equivalence, date format variations, and prefix/suffix/substr matching, with built-in ambiguity detection.

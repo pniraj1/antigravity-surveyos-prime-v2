@@ -9,14 +9,28 @@
   },
   "permissions": [
     "storage",
-    "alarms"
+    "alarms",
+    "activeTab",
+    "scripting"
   ],
   "host_permissions": [
     "https://surveyos.in/*",
     "https://motorsurveyos-in.web.app/*",
     "https://web.newindia.co.in/NIABancsPortal/*",
     "https://portal.uiic.in/surveyor/*",
-    "https://orientalinsurance.org.in/*"
+    "https://orientalinsurance.org.in/*",
+    "https://*.nationalinsurance.nic.co.in/*",
+    "https://*.icicilombard.com/*",
+    "https://*.bajajallianz.com/*",
+    "https://*.hdfcergo.com/*",
+    "https://*.tataaig.com/*",
+    "https://*.godigit.com/*",
+    "https://*.sbigeneral.in/*",
+    "https://*.chola.in/*",
+    "https://*.reliancegeneral.co.in/*",
+    "https://*.iffcotokio.com/*",
+    "https://*.futuregenerali.in/*",
+    "https://*.royalsundaram.in/*"
   ],
   "background": {
     "service_worker": "src/background.js"
@@ -38,7 +52,19 @@
       "matches": [
         "https://web.newindia.co.in/NIABancsPortal/*",
         "https://portal.uiic.in/surveyor/*",
-        "https://orientalinsurance.org.in/*"
+        "https://orientalinsurance.org.in/*",
+        "https://*.nationalinsurance.nic.co.in/*",
+        "https://*.icicilombard.com/*",
+        "https://*.bajajallianz.com/*",
+        "https://*.hdfcergo.com/*",
+        "https://*.tataaig.com/*",
+        "https://*.godigit.com/*",
+        "https://*.sbigeneral.in/*",
+        "https://*.chola.in/*",
+        "https://*.reliancegeneral.co.in/*",
+        "https://*.iffcotokio.com/*",
+        "https://*.futuregenerali.in/*",
+        "https://*.royalsundaram.in/*"
       ],
       "js": [
         "src/lib/fill-core.js",
@@ -57,7 +83,19 @@
       "matches": [
         "https://web.newindia.co.in/NIABancsPortal/*",
         "https://portal.uiic.in/surveyor/*",
-        "https://orientalinsurance.org.in/*"
+        "https://orientalinsurance.org.in/*",
+        "https://*.nationalinsurance.nic.co.in/*",
+        "https://*.icicilombard.com/*",
+        "https://*.bajajallianz.com/*",
+        "https://*.hdfcergo.com/*",
+        "https://*.tataaig.com/*",
+        "https://*.godigit.com/*",
+        "https://*.sbigeneral.in/*",
+        "https://*.chola.in/*",
+        "https://*.reliancegeneral.co.in/*",
+        "https://*.iffcotokio.com/*",
+        "https://*.futuregenerali.in/*",
+        "https://*.royalsundaram.in/*"
       ],
       "js": [
         "src/lib/fill-core.js",
@@ -68,5 +106,13 @@
       "world": "MAIN",
       "run_at": "document_idle"
     }
+  ],
+  "action": {
+    "default_title": "SurveyOS Portal Fill",
+    "default_popup": "src/popup.html"
+  },
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://*/*"
   ]
 }

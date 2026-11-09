@@ -1,3 +1,26 @@
+## Done: AI SurveyOS Portal Fill — Phase 2 Universal Portal Expansion & Cloud-Synced Proprietary Intelligence (2026-11-09, Antigravity)
+- **Problem Solved:**
+  - Surveyors need to use SurveyOS Portal Fill across arbitrary insurer portals (both public PSU and private insurers like ICICI Lombard, Bajaj Allianz, HDFC ERGO, Tata AIG, Go Digit, SBI General, etc.), without requiring manual hardcoded maps or Chrome Web Store re-reviews.
+  - Client-side-only retention risked losing all learned field rules if the browser cache was cleared or if the surveyor used another workstation.
+  - SurveyOS needed a proprietary data engine moat to protect its mapping intelligence and crowdsource field consensus securely without exposing customer PII.
+- **Architecture Delivered:**
+  - **Universal Dynamic Portal Activation (`extension/manifest.json`, `popup.html`, `popup.js`):**
+    - Pre-authorized 15 major Indian motor insurer domains in `host_permissions` and `content_scripts`.
+    - Added `optional_host_permissions: ["https://*/*", "http://*/*"]` and permissions `["activeTab", "scripting"]`.
+    - Built interactive `popup.html`/`popup.js` enabling surveyors to click `[Enable SurveyOS on this Portal]` on any custom, regional, or garage portal, dynamically injecting the sidecar panel with 1-click browser permission.
+  - **Cloud-Synced Proprietary Intelligence & Consensus Engine (`src/lib/firebase/portal-sync.ts`, `extension-bridge.ts`, `relay.js`):**
+    - Extended relay bridge with bidirectional sync (`surveyos:portal-sync-push` and `surveyos:portal-sync-pull`).
+    - Cloud storage for learned overlays under `users/{uid}/portalLearnings/{portal}` in Firestore, persisting mappings across laptops and browser cache purges.
+    - Built consensus telemetry engine (`submitConsensusTelemetry`): aggregates anonymous structural fingerprints (zero claim values or PII) and flags rules as verified community consensus once $\ge 3$ distinct surveyors independently confirm the mapping.
+  - **In-Panel Surveyor Feedback & Disambiguation UI (`panel.js`, `panel.css`):**
+    - Added high-visibility `.sx-learned-bar` badge (`✦ Auto-learned: [Field Name]`) with an interactive `[Undo]` button allowing surveyors to revoke an unwanted learned rule instantly.
+    - Implemented `.sx-disambig` single-click disambiguation card: when typed text matches multiple claim fields, prompts the surveyor with clickable pills (`[Driver Name]` / `[Insured Name]`) to resolve the mapping immediately.
+- **Verification:**
+  - 14 extension test suites (171 tests) passed (100% green).
+  - TypeScript compiler (`npx tsc --noEmit`) clean with 0 errors.
+  - Next.js production build (`npm run build`) succeeded with 25/25 static routes.
+  - Extension build (`python scripts/build-ext.py`) produced zip + unpacked distributions cleanly.
+
 ## Done: AI SurveyOS Portal Fill — Phase 1 Self-Learning Architecture & OIC 3-Box DL Splitter (2026-11-09, Antigravity)
 - **Problem Solved:**
   - Insurer portals frequently add/rename fields, vary date/number formats, or split values across multiple inputs (such as 3 separate boxes for Driving Licence on Oriental Insurance: RTO prefix, middle number, suffix).

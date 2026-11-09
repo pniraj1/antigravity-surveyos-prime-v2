@@ -26,6 +26,7 @@ for bad in DEV:
 
 FILES = ["icons/icon128.png", *(f"maps/{flow}.json" for flow in FLOWS),
          "src/background.js", "src/relay.js", "src/panel.js", "src/panel.css", "src/filler.js",
+         "src/popup.html", "src/popup.js",
          "src/lib/packet-validate.js", "src/lib/fill-core.js", "src/lib/card-view.js",
          "src/lib/inverter.js", "src/lib/observer.js", "src/lib/learned-store.js"]
 

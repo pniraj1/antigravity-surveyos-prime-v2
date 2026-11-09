@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>SurveyOS Portal Fill</title>
+  <style>
+    body {
+      width: 320px;
+      margin: 0;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 13px;
+      color: #1e293b;
+      background: #f8fafc;
+    }
+    .head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .logo {
+      font-weight: 700;
+      color: #0f172a;
+      font-size: 15px;
+    }
+    .tag {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #0284c7;
+      color: #fff;
+      font-weight: 600;
+    }
+    .status-box {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .status-title {
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .active-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #16a34a;
+    }
+    .inactive-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #eab308;
+    }
+    .status-desc {
+      color: #64748b;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .btn-enable {
+      display: block;
+      width: 100%;
+      padding: 8px 12px;
+      background: #0f766e;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.15s;
+    }
+    .btn-enable:hover {
+      background: #0d9488;
+    }
+    .foot {
+      font-size: 11px;
+      color: #94a3b8;
+      text-align: center;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="head">
+    <span class="logo">SurveyOS</span>
+    <span class="tag">AI Portal Fill</span>
+  </div>
+  <div class="status-box" id="status-card">
+    <div class="status-title" id="status-title">Checking portal...</div>
+    <div class="status-desc" id="status-desc">Reading current browser tab.</div>
+  </div>
+  <div id="action-area" style="display: none;">
+    <button type="button" class="btn-enable" id="btn-enable">Enable SurveyOS on this Portal</button>
+  </div>
+  <div class="foot">SurveyOS Prime • Zero Credential Capture</div>
+  <script src="popup.js"></script>
+</body>
+</html>
