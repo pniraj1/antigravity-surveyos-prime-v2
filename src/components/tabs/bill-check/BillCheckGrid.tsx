@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { AlertCircle, Trash2, Settings2, Eye, EyeOff, FileSearch, PlusCircle } from 'lucide-react';
+import { AlertCircle, Trash2, Settings2, Eye, EyeOff, FileSearch, PlusCircle, PackageX } from 'lucide-react';
 import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
 import { useClaimStore } from '@/stores/claim-store';
 import type { AssessmentRow, AssessmentSummary, ClaimData } from '@/types';
@@ -20,6 +20,8 @@ import {
 import { GRID_COLUMNS } from '@/components/claim/grid-columns';
 import { AllowanceScopeDialog } from '@/components/dialogs/AllowanceScopeDialog';
 import { AllowanceInput } from './AllowanceInput';
+import { FormulaNumericInput } from '@/components/claim/FormulaNumericInput';
+import { Input } from '@/components/ui/input';
 import { billCheckFlags, type BillFlag } from '@/lib/reports/bill-check-flags';
 import { BillCheckFlagMark, BillCheckFlagDetail, BillCheckMatchDetail } from './BillCheckFlagRow';
 import { useColumnResize } from '@/hooks/useColumnResize';
@@ -150,7 +152,7 @@ export function BillCheckGrid({
   const visibleCount = Object.values(visible).filter(Boolean).length;
 
   const buildCols = () => {
-    const detailCols = (['partNumber', 'hsnSac', 'section', 'quantity', 'unitPrice', 'gst'] as OptionalColumn[])
+    const detailCols = (['partNumber', 'hsnSac', 'section', 'quantity', 'unitPrice', 'gst', 'disposal'] as OptionalColumn[])
       .filter(k => visible[k]).map(k => COL_WIDTHS[k]);
     const priceWithGstCol = visible.priceWithGst ? [COL_WIDTHS.priceWithGst] : [];
     const billedTaxCol = visible.billedTaxable ? [COL_WIDTHS.billedTaxable] : [];
@@ -238,6 +240,12 @@ export function BillCheckGrid({
         {visible.quantity      && <span>Qty</span>}
         {visible.unitPrice     && <span>{GRID_COLUMNS.unitPrice.label}</span>}
         {visible.gst           && <span>{GRID_COLUMNS.gst.label}</span>}
+        {visible.disposal      && (
+          <span className="flex items-center justify-center gap-1 text-amber-600" title="Disposal: used/salvaged part — no GST">
+            <PackageX size={11} />
+            {GRID_COLUMNS.disposal.label}
+          </span>
+        )}
         <span>Assessed (₹)</span>
         <span>Dep%</span>
         <span>Net (₹)</span>
@@ -294,6 +302,7 @@ export function BillCheckGrid({
         {visible.quantity      && <div />}
         {visible.unitPrice     && <div className="text-sm font-medium" style={money}>{fmt(t.estimated)}</div>}
         {visible.gst           && <div />}
+        {visible.disposal      && <div />}
         <div className="text-sm font-medium" style={money}>{fmt(t.assessed)}</div>
         <div />
         <div />
@@ -549,7 +558,55 @@ export function BillCheckGrid({
                 {visible.section       && <div><span className="text-[9px] font-medium px-2 py-0.5 rounded-full uppercase tracking-wider" style={{ background: 'var(--color-neutral-100)', color: 'var(--color-neutral-600)' }}>{row.section}</span></div>}
                 {visible.quantity      && <div className="text-sm font-medium text-center" style={{ color: 'var(--color-neutral-600)' }}>{row.quantity ?? '—'}</div>}
                 {visible.unitPrice     && <div className="text-sm font-medium" style={{ color: 'var(--color-neutral-600)' }}>{fmt(row.estimated || 0)}</div>}
-                {visible.gst           && <div className="text-xs font-medium text-center" style={{ color: 'var(--color-neutral-600)' }}>{row.gst ?? 18}%</div>}
+                {visible.gst           && (
+                  <div className="flex items-center justify-center">
+                    <FormulaNumericInput
+                      integerOnly
+                      value={row.isDisposal ? 0 : (row.gst ?? 18)}
+                      onChange={(val) => {
+                        const gst = Math.max(0, val);
+                        const updates: Partial<AssessmentRow> = { gst };
+                        if (row.billedTaxable !== undefined) {
+                          updates.billedAmount = Math.round(row.billedTaxable * (1 + gst / 100));
+                        }
+                        updateAssessmentRow(row.id, updates);
+                      }}
+                      className="h-7 w-12 text-[11px] text-center border-transparent hover:border-input focus:bg-background px-0 font-medium"
+                      placeholder="18"
+                      min={0}
+                      max={100}
+                    />
+                  </div>
+                )}
+                {visible.disposal      && (
+                  <div className="flex items-center justify-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={!!row.isDisposal}
+                      onChange={(e) => {
+                        const isDisposal = e.target.checked;
+                        updateAssessmentRow(row.id, {
+                          isDisposal,
+                          ...(isDisposal ? { gst: 0 } : (row.gst === 0 ? { gst: 18 } : {})),
+                        });
+                      }}
+                      className="h-3.5 w-3.5 cursor-pointer rounded accent-amber-500 shrink-0"
+                      title="Disposal / Used Part (No GST)"
+                    />
+                    {row.isDisposal && (
+                      <Input
+                        type="number"
+                        value={row.disposalPercent ?? 50}
+                        onChange={(e) => updateAssessmentRow(row.id, { disposalPercent: parseFloat(e.target.value) || 0 })}
+                        className="h-6 w-10 text-[11px] text-center px-0 font-medium bg-background"
+                        style={{ borderColor: 'var(--color-status-warning)', color: 'var(--color-status-warning)' }}
+                        min={0}
+                        max={100}
+                        title="Disposal percentage (default 50%)"
+                      />
+                    )}
+                  </div>
+                )}
                 <AllowanceInput
                   value={row.billAllowed ?? row.assessed ?? 0}
                   disabled={isDisallowed}
@@ -557,8 +614,34 @@ export function BillCheckGrid({
                   title={row.billAllowed !== undefined ? `Allowed against an assessed value of ₹${row.assessed}` : undefined}
                   onCommit={next => commitAllowance(row, next)}
                 />
-                <div className="text-xs font-medium text-center" style={{ color: row.depOverride !== undefined ? 'var(--color-status-warning)' : 'var(--color-status-danger)' }}>
-                  {row.depOverride !== undefined ? `${row.depOverride}%*` : `${depRateFor(row)}%`}
+                <div className="flex items-center justify-center">
+                  {row.allowed ? (
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={row.depOverride !== undefined ? row.depOverride : depRateFor(row)}
+                      onChange={e => {
+                        const raw = e.target.value;
+                        const autoRate = depRateFor({ ...row, depOverride: undefined });
+                        if (raw === '') {
+                          updateAssessmentRow(row.id, { depOverride: undefined });
+                        } else {
+                          const v = Math.min(100, Math.max(0, Number(raw)));
+                          updateAssessmentRow(row.id, { depOverride: v === autoRate ? undefined : v });
+                        }
+                      }}
+                      className={`w-12 text-center text-[11px] font-medium rounded border focus:outline-none focus:ring-1 focus:ring-[var(--color-status-warning)] ${
+                        row.depOverride !== undefined
+                          ? 'bg-[var(--color-status-warning-tint)] border-[var(--color-status-warning)] text-[var(--color-status-warning)]'
+                          : 'bg-transparent border-transparent text-danger hover:border-input'
+                      }`}
+                      title={row.depOverride !== undefined ? `Auto: ${depRateFor({ ...row, depOverride: undefined })}% — Click to clear override` : `Auto rate: ${depRateFor(row)}%`}
+                    />
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  )}
                 </div>
                 <div className="text-sm font-medium text-right" style={{ color: 'var(--color-neutral-600)' }}>
                   {fmt(computeRowNet(asBilled(row), depRateFor(row)).netBeforeGst)}
