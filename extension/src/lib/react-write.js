@@ -55,6 +55,7 @@ function pickDropdown(root, value) {
 
 /** @param {any} input */
 function clickRadio(input) {
+  if (input?.type !== 'radio') return 'manual';
   input.click();
   return 'filled';
 }

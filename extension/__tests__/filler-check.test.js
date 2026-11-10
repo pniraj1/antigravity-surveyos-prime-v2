@@ -138,13 +138,14 @@ const reactMap = {
   },
 };
 
-function reactHarness({ claimSelect = 'C-1', saved = null, id = 'A', make = '' } = {}) {
+function reactHarness({ claimSelect = 'C-1', saved = null, id = 'A', make = '', checked2 = false, extra = {}, claimSel = "select[name='claimNumber']" } = {}) {
   const store = new Map(Object.entries({ surveyAssessmentId: id, ...(saved ? { 'sx-oic-claim': JSON.stringify(saved) } : {}) }));
   const clicks = [];
   const input = (value) => ({ value, disabled: false, style: {}, dispatchEvent: () => {} });
-  const radio = (sel) => ({ value: 'on', checked: false, disabled: false, style: {}, click() { clicks.push(sel); this.checked = true; } });
-  const els = { '#place': input(''), '#make': input(make), '#near1': radio('#near1'), '#near2': radio('#near2') };
-  if (claimSelect !== null) els["select[name='claimNumber']"] = { value: claimSelect, textContent: claimSelect + claimSelect };
+  const radio = (sel) => ({ type: 'radio', value: 'on', checked: false, disabled: false, style: {}, click() { clicks.push(sel); this.checked = true; } });
+  const els = { '#place': input(''), '#make': input(make), '#near1': radio('#near1'), '#near2': radio('#near2'), ...extra };
+  els['#near2'].checked = checked2;
+  if (claimSelect !== null) els[claimSel] = { value: claimSelect, textContent: claimSelect + claimSelect };
   const sent = [];
   let onMessage;
   const ctx = vm.createContext({
@@ -200,5 +201,55 @@ describe('filler on a React (OIC) page', () => {
     expect(r.fields.map((f) => f.status)).toEqual(['ready?', 'ready?', 'ready?']);
     expect(els['#place'].value).toBe('');
     expect(clicks).toEqual([]);
+  });
+
+  it('radioPick on a non-radio element: manual, nothing clicked, and its checked is not an answer', () => {
+    const clicks = [];
+    const div = { checked: true, disabled: false, style: {}, click() { clicks.push('div'); } };
+    const map = { ...reactMap, fields: { near: { modelPath: '#n', kind: 'radioPick', empty: '', choices: { yes: '#n', no: '#n2' }, constant: 'yes' } } };
+    const { send } = reactHarness({ extra: { '#n': div } });
+    const r = send({ type: 'fill', map, packet: { portal: 'oic', flow: 'assessment', claimNo: 'C-1', fields: {}, files: [] } });
+    expect(r.steps[0]).toMatchObject({ action: 'manual', why: 'not a radio input' });
+    expect(clicks).toEqual([]);
+  });
+
+  it('a disabled PrimeReact dropdown is manual and onChange never runs', () => {
+    const calls = [];
+    const mkDd = (extraProps, classList) => ({
+      style: {}, classList: { contains: (c) => (classList ?? []).includes(c) },
+      '__reactFiber$x': { memoizedProps: { options: ['LMV'], onChange: (e) => calls.push(e), ...extraProps }, return: null },
+    });
+    const map = { ...reactMap, fields: { lic: { modelPath: '#lic', kind: 'dropdown', empty: '', from: 'lic' } } };
+    const packet = { portal: 'oic', flow: 'assessment', claimNo: 'C-1', fields: { lic: 'LMV' }, files: [] };
+    for (const el of [mkDd({ disabled: true }), mkDd({}, ['p-disabled'])]) {
+      const { send } = reactHarness({ extra: { '#lic': el } });
+      expect(send({ type: 'fill', map, packet }).steps[0]).toMatchObject({ action: 'manual', why: 'disabled on the page' });
+    }
+    expect(calls).toEqual([]);
+  });
+
+  it('kept radioPick outlines the checked choice', () => {
+    const { send, els } = reactHarness({ checked2: true });
+    send({ type: 'fill', map: reactMap, packet: { portal: 'oic', flow: 'assessment', claimNo: 'C-1', fields: {}, files: [] } });
+    // constant 'no' matches the checked #near2 (same); force a kept: constant yes vs checked no
+    const map = { ...reactMap, fields: { near: { ...reactMap.fields.near, constant: 'yes' } } };
+    const h = reactHarness({ checked2: true });
+    h.send({ type: 'fill', map, packet: { portal: 'oic', flow: 'assessment', claimNo: 'C-1', fields: {}, files: [] } });
+    expect(h.els['#near2'].style.outline).toBe('2px solid #f59e0b');
+    expect(h.els['#near1'].style.outline).toBeUndefined();
+    expect(els['#near1'].style.outline).toBeUndefined();
+  });
+
+  it('claim number comes from map.claimNoSelector', () => {
+    const map = { ...reactMap, claimNoSelector: 'select#other' };
+    const { send } = reactHarness({ claimSelect: 'Z-9', claimSel: 'select#other' });
+    expect(send({ type: 'probe', map })).toMatchObject({ ok: true, claimNo: 'Z-9' });
+  });
+
+  it('check does not write sessionStorage', () => {
+    const { send, store } = reactHarness();
+    const before = JSON.stringify([...store]);
+    expect(send({ type: 'check', map: reactMap, packet: null }).ok).toBe(true);
+    expect(JSON.stringify([...store])).toBe(before);
   });
 });

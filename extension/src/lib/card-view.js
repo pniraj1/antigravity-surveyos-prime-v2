@@ -44,7 +44,8 @@ function lineText(l) {
   if (OK_COPY[l.status]) return OK_COPY[l.status];
   if (KEPT.includes(l.status)) return LINE_COPY.kept;
   if (l.status === 'noOption') {
-    const live = l.liveOptions ?? [];
+    if (l.liveOptions == null) return LINE_COPY.noOption.replace(/ \(it offers .*\)/, '').replace('{planned}', l.planned);
+    const live = l.liveOptions;
     const options = live.slice(0, 3).join(', ') + (live.length > 3 ? '…' : '');
     return LINE_COPY.noOption.replace('{planned}', l.planned).replace('{options}', options);
   }
@@ -64,7 +65,7 @@ function buildLines(map, res, isFill) {
     ? [
         ...res.steps.filter((/** @type {any} */ s) => s.action !== 'skip').map((/** @type {any} */ s) => {
           const f = map.fields?.[s.name];
-          return { status: s.action, name: s.name, label: f?.label ?? s.name, modelPath: f?.modelPath ?? '', why: s.why };
+          return { status: s.action, name: s.name, label: f?.label ?? s.name, modelPath: f?.modelPath ?? '', why: s.why, planned: s.value };
         }),
         ...res.files.map((/** @type {any} */ x) => ({ status: x.status, label: 'Excel file', modelPath: map.files?.[x.slot]?.modelPath ?? '', why: x.why })),
       ]

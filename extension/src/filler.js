@@ -207,12 +207,12 @@
   };
 
   /** B1/B9: step 2's claim select, else the number saved on step 2 of this same assessment; null when neither. */
-  function reactClaimNo() {
+  function reactClaimNo(/** @type {any} */ map, save = true) {
     const id = sessionStorage.getItem('surveyAssessmentId');
-    const sel = /** @type {HTMLSelectElement|null} */ (document.querySelector("select[name='claimNumber']"));
+    const sel = /** @type {HTMLSelectElement|null} */ (document.querySelector(map?.claimNoSelector ?? "select[name='claimNumber']"));
     if (sel) {
       const claimNo = String(sel.value ?? '').trim();
-      if (claimNo) sessionStorage.setItem(SAVED_CLAIM, JSON.stringify({ id, claimNo }));
+      if (claimNo && save) sessionStorage.setItem(SAVED_CLAIM, JSON.stringify({ id, claimNo }));
       return claimNo;
     }
     try {
@@ -223,14 +223,14 @@
   }
 
   function reactProbe(/** @type {any} */ map) {
-    const claimNo = reactClaimNo();
+    const claimNo = reactClaimNo(map);
     return claimNo === null ? { ok: false, reason: STEP2 } : { ok: true, claimNo, invoices: 1 };
   }
 
   /** Ruling 1: a radioPick reads as the answer whose input is checked; a dropdown as its React value. */
   function reactCurrent(/** @type {string} */ path, /** @type {any} */ spec) {
     if (spec?.kind === 'radioPick') {
-      return Object.keys(spec.choices ?? {}).find((k) => /** @type {HTMLInputElement|undefined} */ (rq(spec.choices[k])[0])?.checked) ?? '';
+      return Object.keys(spec.choices ?? {}).find((k) => { const e = /** @type {HTMLInputElement|undefined} */ (rq(spec.choices[k])[0]); return e?.type === 'radio' && e.checked; }) ?? '';
     }
     const el = rq(path)[0];
     if (!el) return undefined;
@@ -239,12 +239,15 @@
     return /** @type {HTMLInputElement} */ (el).value;
   }
 
+  /** Disabled for a PrimeReact dropdown lives in its props or a p-disabled class, not on the <div>. */
+  const reactDisabled = (/** @type {any} */ el) => !!(el.disabled || globalThis.SxReact.reactProps(el)?.disabled || el.classList?.contains('p-disabled'));
+
   function reactWrite(/** @type {HTMLElement} */ el, /** @type {any} */ s) {
     const W = globalThis.SxReact;
     const v = String(s.value);
     if (s.kind === 'text' || s.kind === 'money' || s.kind === 'textarea') return W.writeText(el, v);
     if (s.kind === 'dropdown') return W.pickDropdown(el, v);
-    if (s.kind === 'radioPick') return W.clickRadio(el);
+    if (s.kind === 'radioPick') { const r = W.clickRadio(el); return r === 'manual' ? 'manual:not a radio input' : r; }
     if (s.kind === 'date') return W.writeDate(el, v);
     return 'manual';
   }
@@ -260,18 +263,18 @@
       if (s.action !== 'fill') return s;
       const el = rq(s.kind === 'radioPick' ? s.choice : s.modelPath)[0];
       if (!el) return { ...s, action: 'notFound' };
-      if (/** @type {HTMLInputElement} */ (el).disabled) return { ...s, action: 'manual', why: 'disabled on the page' };
+      if (reactDisabled(el)) return { ...s, action: 'manual', why: 'disabled on the page' };
       try {
         const r = reactWrite(el, s);
         if (r === 'filled') { el.style.outline = '2px solid #16a34a'; return { ...s, action: 'filled' }; }
         if (r === 'noOption') { el.style.outline = '2px solid #b91c1c'; return { ...s, action: 'noOption' }; }
         if (r.startsWith('invalid:')) { el.style.outline = '2px solid #b91c1c'; return { ...s, action: 'invalid', why: r.slice(8) }; }
-        return { ...s, action: 'manual', why: `can't fill a ${s.kind} box here` };
+        return { ...s, action: 'manual', why: r.startsWith('manual:') ? r.slice(7) : `can't fill a ${s.kind} box here` };
       } catch (e) {
         return { ...s, action: 'error', why: String(e) };
       }
     });
-    for (const s of steps) if (s.action === 'kept') { const el = rq(s.modelPath)[0]; if (el) el.style.outline = '2px solid #f59e0b'; }
+    for (const s of steps) if (s.action === 'kept') { const el = rq(s.kind === 'radioPick' ? map.fields[s.name]?.choices?.[s.current] ?? '' : s.modelPath)[0]; if (el) el.style.outline = '2px solid #f59e0b'; }
     const files = (packet.files ?? []).map((/** @type {any} */ f) => {
       const spec = map.files?.[f.slot];
       const el = spec ? rq(spec.modelPath)[0] : null;
@@ -284,7 +287,7 @@
 
   /** Read-only, like check(). */
   function reactCheck(/** @type {any} */ map, /** @type {any} */ packet) {
-    const claimNo = reactClaimNo();
+    const claimNo = reactClaimNo(map, false);
     if (claimNo === null) return { ok: false, reason: STEP2 };
     const specOf = (/** @type {string} */ path) => Object.values(map.fields ?? {}).find((/** @type {any} */ f) => f.modelPath === path);
     const read = {
@@ -294,7 +297,7 @@
         const el = rq(path)[0];
         if (!el) return { found: false, bound: false, disabled: false, options: null, current: undefined };
         // ponytail: options stay null, so Check says ready? for dropdowns; a missing option shows as noOption on Fill
-        return { found: true, bound: true, disabled: !!(/** @type {HTMLInputElement} */ (el).disabled), options: null, current: reactCurrent(path, specOf(path)) };
+        return { found: true, bound: true, disabled: reactDisabled(el), options: null, current: reactCurrent(path, specOf(path)) };
       },
     };
     return { ok: true, claimNo, invoices: 1, ...planCheck(map, packet, claimNo, read) };

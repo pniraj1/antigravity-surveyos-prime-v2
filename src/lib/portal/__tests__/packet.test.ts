@@ -322,6 +322,10 @@ describe('buildOicPacket new values', () => {
     expect(r.fields.licenseType).toBeUndefined();
     const two = await build((c) => { c.vehicle.classOfVehicle = 'M-Cycle/Scooter'; c.driver.licenceType = 'MCWG, LMV'; });
     expect(two.fields.licenseType).toBe('MCWG');
+    const wd = await build((c) => { c.vehicle.classOfVehicle = 'LMV 2WD'; c.driver.licenceType = 'MCWG, LMV'; });
+    expect(wd.fields.licenseType).toBe('LMV');
+    const tw = await build((c) => { c.vehicle.classOfVehicle = '2W'; c.driver.licenceType = 'MCWG, LMV'; });
+    expect(tw.fields.licenseType).toBe('MCWG');
     const none = await build((c) => { c.driver.licenceType = ''; });
     expect(none.fields.licenseType).toBeUndefined();
   });

@@ -105,6 +105,7 @@ function planFill(map, packet, read) {
         : spec.learnedTransform && learnedApply ? learnedApply(raw, spec.learnedTransform)
         : spec.transform ? transforms[spec.transform](raw)
         : String(raw);
+      if (spec.kind === 'date' && value === '') { steps.push({ ...base, action: 'skip', why: 'unreadable date' }); continue; }
       if (spec.options) value = spec.options[value] ?? value;
       if (spec.maxLen) value = value.slice(0, spec.maxLen);
     }

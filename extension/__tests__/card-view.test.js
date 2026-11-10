@@ -163,6 +163,10 @@ describe('lines and summary', () => {
     expect(mk(['A', 'B', 'C', 'D'])).toBe("The portal has no option 'Z' (it offers A, B, C…).");
     expect(mk(['A', 'B'])).toBe("The portal has no option 'Z' (it offers A, B).");
   });
+  it('fill-side noOption names the planned value and no unknown options', () => {
+    const v = view({ fill: { ok: true, steps: [{ name: names[0], action: 'noOption', value: 'LMV' }], files: [] } });
+    expect(v.lines[0].text).toBe("The portal has no option 'LMV'.");
+  });
   it('invalid and error copy carry why', () => {
     const v = view({ fill: { ok: true, steps: [{ name: names[0], action: 'invalid', why: 'bad date' }, { name: names[1], action: 'error', why: 'boom' }], files: [] } });
     expect(v.lines.map((l) => l.text)).toEqual(['The portal rejected the value (bad date). Type it yourself.', 'Something went wrong here: boom']);

@@ -188,6 +188,15 @@ describe('selectMatched', () => {
   });
 });
 
+describe('date that cannot be read', () => {
+  it('is skipped, never filled', () => {
+    const map = { fields: { d: { modelPath: '#d', kind: 'date', empty: '', transform: 'ddmmyyyyDash', from: 'd' } } };
+    const read = { current: () => '', radioValues: () => [] };
+    expect(planFill(map, { fields: { d: 'garbage' } }, read)[0]).toMatchObject({ action: 'skip', why: 'unreadable date' });
+    expect(planFill(map, { fields: { d: '2026-03-07' } }, read)[0]).toMatchObject({ action: 'fill', value: '07-03-2026' });
+  });
+});
+
 describe('OIC: rupee-zero, DD-MM-YYYY, radioPick', () => {
   it('isEmptyValue strips rupee, spaces, commas when empty is ""', () => {
     expect(isEmptyValue('₹0', '')).toBe(true);

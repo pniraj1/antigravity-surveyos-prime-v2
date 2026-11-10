@@ -103,7 +103,7 @@ function normName(n?: string): string {
     .filter((w) => w && !NAME_TITLES.has(w)).join(' ');
 }
 
-const TWO_WHEELER = /M\.?\s?CYCLE|MOTOR\s?CYCLE|SCOOTER|TWO\s?WHEEL|2W|MCWG|MCWOG/i;
+const TWO_WHEELER = /M\.?\s?CYCLE|MOTOR\s?CYCLE|SCOOTER|TWO\s?WHEEL|\b2W\b|MCWG|MCWOG/i;
 
 /** No fallback: a class that does not fit the vehicle is left for the surveyor. */
 function pickLicenseType(raw: string | undefined, v: ClaimData['vehicle'] | undefined): string | undefined {

@@ -50,7 +50,14 @@ describe('react-write', () => {
 
   it('clickRadio clicks the input', () => {
     let clicked = 0;
-    expect(clickRadio({ click: () => { clicked++; } })).toBe('filled');
+    expect(clickRadio({ type: 'radio', click: () => { clicked++; } })).toBe('filled');
     expect(clicked).toBe(1);
+  });
+
+  it('clickRadio never clicks anything that is not a radio input', () => {
+    let clicked = 0;
+    expect(clickRadio({ type: 'submit', click: () => { clicked++; } })).toBe('manual');
+    expect(clickRadio({ click: () => { clicked++; } })).toBe('manual');
+    expect(clicked).toBe(0);
   });
 });
