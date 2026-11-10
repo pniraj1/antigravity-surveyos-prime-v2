@@ -86,6 +86,12 @@ export function oicRegNumber(raw?: string): string | undefined {
   return m ? m.slice(1).filter(Boolean).join(' ') : compact;
 }
 
+/** "MH 19 DV 9776" -> "MH19": the RTO code, matched on OIC ignoring leading zeros (OIC has MH01 and DL2). */
+export function oicRtoCode(raw?: string): string | undefined {
+  const m = /^([A-Z]{2})(\d{1,2})[A-Z]/.exec(raw?.replace(/[\s-]+/g, '').toUpperCase() ?? '');
+  return m ? m[1] + m[2] : undefined;
+}
+
 /** ponytail: one figure for the Excel and step 3, so both use the same row filter. */
 export function oicNetLiability(claim: ClaimData, ageMonths: number): number {
   const fee = claim.feeBill;
@@ -138,7 +144,7 @@ function spotSurveyDone(spot: ClaimData['spotDetails'] | undefined): 'yes' | 'no
 }
 
 export const OIC_FIELDS = [
-  'regNumber', 'make', 'model', 'chasisNumber', 'engineNumber',
+  'regNumber', 'rto', 'make', 'model', 'chasisNumber', 'engineNumber',
   'cubicCapacity', 'manufacturingYear', 'colorOfVehicle', 'typeOfFuel',
   'typeOfBody', 'classOfVehicle', 'unladenWeight', 'registeredLadenWeight',
   'seatingCapacity', 'lossDescription', 'driverName',
@@ -375,6 +381,7 @@ export async function buildOicPacket(
     builtAt: new Date().toISOString(),
     fields: compact<OicField>({
       regNumber: oicRegNumber(v?.registrationNumber),
+      rto: oicRtoCode(v?.registrationNumber),
       make: v?.make?.trim(),
       model: v?.model?.trim(),
       chasisNumber: v?.chassisNumber?.trim(),

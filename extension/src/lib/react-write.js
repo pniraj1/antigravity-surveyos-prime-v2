@@ -43,10 +43,19 @@ function writeText(input, value) {
   return 'filled';
 }
 
-/** Calls the PrimeReact Dropdown's onChange with the matched option's value. @param {any} root @param {string} value */
-function pickDropdown(root, value) {
+/** "MH01" and "MH1" are the same code. @param {unknown} c */
+const normCode = (c) => String(c ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/^([A-Z]+)0+(?=\d)/, '$1');
+
+/**
+ * Calls the PrimeReact Dropdown's onChange with the matched option's value.
+ * `byKey`: match that option field as a code instead, and only when exactly one option has it.
+ * @param {any} root @param {string} value @param {string} [byKey]
+ */
+function pickDropdown(root, value, byKey) {
   const props = reactProps(root);
-  const opt = props ? matchOption(props.options ?? [], props.optionLabel, props.optionValue, value) : null;
+  const hits = byKey && props ? (props.options ?? []).filter((/** @type {any} */ o) => normCode(o?.[byKey]) === normCode(value)) : [];
+  const opt = !props ? null : byKey ? (hits.length === 1 ? hits[0] : null)
+    : matchOption(props.options ?? [], props.optionLabel, props.optionValue, value);
   if (!props || opt === null) return 'noOption';
   const v = valueOf(opt, props.optionValue);
   props.onChange({ originalEvent: null, value: v, stopPropagation() {}, preventDefault() {}, target: { name: props.name, id: props.id, value: v } });

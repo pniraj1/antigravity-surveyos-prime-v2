@@ -34,7 +34,7 @@ def main(flow):
 
     def entry(v):
         e = {"modelPath": v["model"], "kind": v.get("kind", "text"), "empty": v.get("empty", "")}
-        for k in ("label", "transform", "options", "maxLen", "from", "constant", "onlyIf", "step", "default", "choices"):
+        for k in ("label", "transform", "options", "maxLen", "from", "constant", "onlyIf", "step", "default", "choices", "match"):
             if k in v:
                 e[k] = v[k]
         return e

@@ -38,6 +38,17 @@ describe('react-write', () => {
     expect(calls).toHaveLength(1);
   });
 
+  it('pickDropdown by code: leading zeros ignored, ambiguous or missing is noOption', () => {
+    const calls = [];
+    const opts = [{ rtoCode: 'MH18', rtoName: 'DHULA' }, { rtoCode: 'MH01', rtoName: 'Mumbai Central' }, { rtoCode: 'TN94', rtoName: 'A' }, { rtoCode: 'TN94', rtoName: 'B' }];
+    const root = dropdownRoot({ name: 'rto', options: opts, optionLabel: 'rtoName', onChange: (e) => calls.push(e.value) });
+    expect(pickDropdown(root, 'MH18', 'rtoCode')).toBe('filled');
+    expect(pickDropdown(root, 'MH1', 'rtoCode')).toBe('filled');
+    expect(pickDropdown(root, 'TN94', 'rtoCode')).toBe('noOption');
+    expect(pickDropdown(root, 'MH99', 'rtoCode')).toBe('noOption');
+    expect(calls).toEqual([opts[0], opts[1]]);
+  });
+
   it('writeText sets the value, resets the tracker, fires input and change', () => {
     const events = [];
     let tracked;

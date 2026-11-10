@@ -239,6 +239,7 @@ describe('buildOicPacket', () => {
     for (const k of Object.keys(p.fields)) expect(OIC_FIELDS).toContain(k);
 
     expect(p.fields.regNumber).toBe('MH 02 DW 3096');
+    expect(p.fields.rto).toBe('MH02');
     expect(p.fields.make).toBe('SKODA');
     expect(p.fields.model).toBe('RAPID');
     expect(p.fields.chasisNumber).toBe('TMB123456');

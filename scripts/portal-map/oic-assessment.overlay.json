@@ -211,6 +211,15 @@
       "step": 2,
       "from": "driverLicenseNoThree"
     },
+    "rto": {
+      "model": "#rto",
+      "label": "RTO",
+      "kind": "dropdown",
+      "empty": "",
+      "step": 2,
+      "from": "rto",
+      "match": "rtoCode"
+    },
     "licenseType": {
       "model": "#licenseType",
       "label": "License Type",

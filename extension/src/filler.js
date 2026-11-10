@@ -252,7 +252,7 @@
     const v = String(s.value);
     if ((s.kind === 'text' || s.kind === 'money') && isNumberBox(el)) return W.writeNumber(el, v);
     if (s.kind === 'text' || s.kind === 'money' || s.kind === 'textarea') return W.writeText(el, v);
-    if (s.kind === 'dropdown') return W.pickDropdown(el, v);
+    if (s.kind === 'dropdown') return W.pickDropdown(el, v, s.match);
     if (s.kind === 'radioPick') { const r = W.clickRadio(el); return r === 'manual' ? 'manual:not a radio input' : r; }
     if (s.kind === 'date') return W.writeDate(el, v);
     return 'manual';
@@ -278,7 +278,7 @@
       if (!el) return { ...s, action: 'notFound' };
       if (reactDisabled(el)) return { ...s, action: 'manual', why: 'disabled on the page' };
       try {
-        const r = reactWrite(el, s);
+        const r = reactWrite(el, { ...s, match: map.fields?.[s.name]?.match });
         await pause();
         if (r === 'filled') { el.style.outline = '2px solid #16a34a'; return { ...s, action: 'filled' }; }
         if (r === 'noOption') { el.style.outline = '2px solid #b91c1c'; return { ...s, action: 'noOption' }; }
