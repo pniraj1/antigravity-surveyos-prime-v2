@@ -1,3 +1,12 @@
+## 2026-11-10 (Antigravity) — SurveyOS Scan Direct Share Photos (Spot/Final/RI) & Document Field Naming
+- feat(scan-share): Added direct photo ingestion targets (**Final Photos**, **RI Photos**, and **Spot Photos**) to `ShareSlotPicker` in `ShareInScreens.kt` when shared intent holds images (`hasImages = true`), displaying current photo counts and camera icons.
+- feat(scan-vm): Implemented `importSharedPhotos(kind, items)` in `ClaimViewModel.kt`, ingesting images with `Quality.PHOTO` (`PageFilter.NATURAL`, EXIF/GPS metadata preserved) directly into `repo.photoDoc(claimId, kind)` (`spotPhotos`, `damagePhotos`, `riPhotos`).
+- feat(scan-share): Replaced blind `"Imported document"` generation on `+ New document` with interactive `NameSheet` chooser populated with `vm.neededTypes()` suggestions, categorized document groups, and custom name input.
+- feat(scan-vm): Implemented `importSharedAsNamedDoc(type, title, items)` in `ClaimViewModel.kt`, safely provisioning the chosen document slot via `repo.docForScan(claimId, type, title, null)` or `repo.addOtherDoc(claimId, title)` with document scanning quality (`prefs.quality(claimId)`).
+- fix(scan-share): Updated `shareSlotOrder` in `SharePickOrder.kt` to filter out photo documents (`!it.doc.isPhotos`), keeping the document list strictly focused on non-photo documents.
+- test(scan): Added unit test `photoDocsExcludedFromSlots` in `SharePickOrderTest.kt`.
+- verification: Android test suite (`./gradlew.bat :app:testDebugUnitTest`) 100% green; Prime Vitest suite (327 files / 2,915 tests) 100% green; `npx tsc --noEmit` clean (0 errors). Prime ↔ Scan coupling: None.
+
 ## 2026-11-10 (Claude Code) — OIC live check fixes + estimate floor (not deployed)
 - fix(portal-fill): live OIC step 2/3 fixes: licence type in OIC's wording, paced writes (OIC's handler dropped one of two same-tick writes), InputNumber via onChange, DD-MM-YYYY placeholder counts as empty, RTO from the DL's first 4 characters, date/place of survey, always-Yes defaults replace OIC's saved-blank "No".
 - fix(extension-build): Chrome injects a script file once per frame, so libs shared by the panel and the MAIN-world filler never ran in MAIN ("The portal page didn't answer" on every portal since 0cbef575). Build copies them to `src/main/`; the card re-asks the page until it starts.

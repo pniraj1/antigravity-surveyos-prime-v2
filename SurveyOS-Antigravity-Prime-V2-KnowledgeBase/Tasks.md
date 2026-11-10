@@ -4,6 +4,25 @@
 - **Built:** the Excel leaves out not-billed, not-allowed and zero rows; the packet carries the DL split MH / middle / last 4, reg spacing, DL dates, step 3 answers and net liability; React widget writes (`extension/src/lib/react-write.js`); the step 3 claim gate; the OIC map for steps 2–4 with approved defaults marked "default"; panel "Fill this step" and pushState routes.
 - **Next (Task 6, owner present):** check that each widget accepts the write and keeps it after Next/Back; dropdown option lists; boxes OIC pre-fills; radio 1 = Yes; hidden steps unmounted and labels unique; whether `surveyAssessmentId` changes per assessment; attach the Excel on step 4 without a double upload; then add excess and salvage. Plan: `docs/superpowers/plans/2026-11-10-oic-portal-fill.md`.
 
+## Done: SurveyOS Scan Direct Share Photos (Spot/Final/RI) & Document Field Naming (2026-11-10, Antigravity)
+- **Problem Solved:**
+  - When surveyors shared images directly from gallery apps (Google Photos, WhatsApp, Gallery) into SurveyOS Scan, the app only showed a "Add to which document?" list with no way to save them into photo collections ("Spot Photos", "Final Photos", "RI Photos").
+  - Furthermore, clicking "+ New document" blindly created an "other" document titled `"Imported document"` without allowing the surveyor to select a standard document field (Estimate, Invoice, Discharge Voucher, Claim Form, etc.) or enter a custom name.
+- **Architecture Delivered:**
+  - **Photo Ingest Direct Targets (`ClaimViewModel.kt` & `ShareInScreens.kt`):**
+    - Added `importSharedPhotos(kind, items)` in `ClaimViewModel`: routes shared images directly to `repo.photoDoc(claimId, kind)` (`spotPhotos`, `damagePhotos`, or `riPhotos`) with `Quality.PHOTO` (`PageFilter.NATURAL`, unboosted, EXIF/GPS/timestamp preserved).
+    - In `ShareSlotPicker`, when shared items contain images (`hasImages = true`), renders a dedicated `SAVE AS PHOTOS` section featuring **Final Photos**, **RI Photos**, and **Spot Photos** cards with live page counts and camera icons.
+  - **Interactive Document Field Selection (`NameSheet` Integration):**
+    - Replaced the hardcoded `go(null)` with `naming = true`, triggering `NameSheet` populated with `vm.neededTypes()` suggestions, categorized document groups, and custom title input.
+    - Added `importSharedAsNamedDoc(type, title, items)` in `ClaimViewModel`: reuses or creates the document slot using `repo.docForScan(claimId, type, title, null)` (or `repo.addOtherDoc`), applies document quality (`prefs.quality(claimId)`), and cleans up safely.
+  - **Non-Photo Document Slots Isolation (`SharePickOrder.kt`):**
+    - Updated `shareSlotOrder` to filter `!it.doc.isPhotos`, ensuring photo documents are cleanly separated from the document checklist.
+- **Verification:**
+    - Full Android unit test suite (`./gradlew.bat :app:testDebugUnitTest`): 28 actionable tasks, all unit tests passed green, including `SharePickOrderTest.photoDocsExcludedFromSlots` and drift tests.
+    - Prime Vitest suite: 327 test files passed (2,915 tests, 100% green).
+    - TypeScript check (`npx tsc --noEmit`): 0 errors.
+    - Prime ↔ Scan coupling: Scan-internal share pipeline fix; impact on Prime is **None**.
+
 ## Done: UIIC Reports Table Nomenclature Clarification (Assessed Amount) (2026-11-10, Antigravity)
 - **Problem Solved:**
   - In official United India Insurance Co. (UIIC) report formats (both Final Survey Report and Bill Check Report), insurers do not display workshop billed or estimate amounts in the item table. Every row represents the surveyor's assessment: Column 5 is the assessed amount without tax, Column 6 is depreciation %, Column 7 is depreciation amount, Column 8 is net assessed amount after depreciation, Column 9 is GST %, and Column 10 is the final assessed amount with GST.
