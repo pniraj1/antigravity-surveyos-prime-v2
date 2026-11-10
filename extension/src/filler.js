@@ -236,8 +236,13 @@
     if (!el) return undefined;
     // a PrimeReact Dropdown root is a <div>: its value lives in props, not on the element
     if (spec?.kind === 'dropdown') { const props = globalThis.SxReact.reactProps(el); if (props) return props.value; }
-    return /** @type {HTMLInputElement} */ (el).value;
+    const input = /** @type {HTMLInputElement} */ (el);
+    // an empty MUI date box shows its placeholder (DD-MM-YYYY) as its value (live 2026-11-10)
+    if (input.placeholder && input.value === input.placeholder) return '';
+    return isNumberBox(input) ? input.value.replace(/[₹,\s]/g, '') : input.value;
   }
+
+  const isNumberBox = (/** @type {any} */ el) => !!el.classList?.contains('p-inputnumber-input');
 
   /** Disabled for a PrimeReact dropdown lives in its props or a p-disabled class, not on the <div>. */
   const reactDisabled = (/** @type {any} */ el) => !!(el.disabled || globalThis.SxReact.reactProps(el)?.disabled || el.classList?.contains('p-disabled'));
@@ -245,6 +250,7 @@
   function reactWrite(/** @type {HTMLElement} */ el, /** @type {any} */ s) {
     const W = globalThis.SxReact;
     const v = String(s.value);
+    if ((s.kind === 'text' || s.kind === 'money') && isNumberBox(el)) return W.writeNumber(el, v);
     if (s.kind === 'text' || s.kind === 'money' || s.kind === 'textarea') return W.writeText(el, v);
     if (s.kind === 'dropdown') return W.pickDropdown(el, v);
     if (s.kind === 'radioPick') { const r = W.clickRadio(el); return r === 'manual' ? 'manual:not a radio input' : r; }
@@ -252,20 +258,28 @@
     return 'manual';
   }
 
-  function reactFill(/** @type {any} */ map, /** @type {any} */ packet) {
+  // OIC's change handler spreads a stale copy of the form, so two writes in one tick lose the first
+  // (live 2026-11-10). A short pause lets React re-render between writes.
+  const WRITE_PAUSE_MS = 30;
+  const pause = () => new Promise((r) => setTimeout(r, WRITE_PAUSE_MS));
+
+  async function reactFill(/** @type {any} */ map, /** @type {any} */ packet) {
     const p = reactProbe(map);
     if (!p.ok) return { ok: false, reason: p.reason, steps: [], files: [] };
     if (normaliseClaimNo(p.claimNo) !== normaliseClaimNo(packet.claimNo)) {
       return { ok: false, reason: `claim mismatch — page: ${p.claimNo || '(none)'}, packet: ${packet.claimNo}`, steps: [], files: [] };
     }
     const read = { current: reactCurrent, radioValues: (/** @type {string} */ path) => rq(path).map((el) => /** @type {HTMLInputElement} */ (el).value) };
-    const steps = planFill(map, packet, read).map((s) => {
+    const steps = [];
+    for (const s of planFill(map, packet, read)) steps.push(await writeStep(s));
+    async function writeStep(/** @type {any} */ s) {
       if (s.action !== 'fill') return s;
       const el = rq(s.kind === 'radioPick' ? s.choice : s.modelPath)[0];
       if (!el) return { ...s, action: 'notFound' };
       if (reactDisabled(el)) return { ...s, action: 'manual', why: 'disabled on the page' };
       try {
         const r = reactWrite(el, s);
+        await pause();
         if (r === 'filled') { el.style.outline = '2px solid #16a34a'; return { ...s, action: 'filled' }; }
         if (r === 'noOption') { el.style.outline = '2px solid #b91c1c'; return { ...s, action: 'noOption' }; }
         if (r.startsWith('invalid:')) { el.style.outline = '2px solid #b91c1c'; return { ...s, action: 'invalid', why: r.slice(8) }; }
@@ -273,7 +287,7 @@
       } catch (e) {
         return { ...s, action: 'error', why: String(e) };
       }
-    });
+    }
     for (const s of steps) if (s.action === 'kept') { const el = rq(s.kind === 'radioPick' ? map.fields[s.name]?.choices?.[s.current] ?? '' : s.modelPath)[0]; if (el) el.style.outline = '2px solid #f59e0b'; }
     const files = (packet.files ?? []).map((/** @type {any} */ f) => {
       const spec = map.files?.[f.slot];
@@ -310,7 +324,12 @@
     try {
       if (d.type === 'probe') window.postMessage({ sx: d.sx, type: 'probe:result', ...probe(d.map) }, '*');
       if (d.type === 'check') window.postMessage({ sx: d.sx, type: 'check:result', ...check(d.map, d.packet ?? null) }, '*');
-      if (d.type === 'fill') window.postMessage({ sx: d.sx, type: 'fill:result', ...fill(d.map, d.packet) }, '*');
+      if (d.type === 'fill') {
+        const post = (/** @type {any} */ r) => window.postMessage({ sx: d.sx, type: 'fill:result', ...r }, '*');
+        const r = fill(d.map, d.packet); // a Promise on React portals (paced writes)
+        if (r instanceof Promise) r.then(post, (e) => post({ ok: false, reason: String(e), steps: [], files: [] }));
+        else post(r);
+      }
     } catch (e) {
       window.postMessage({ sx: d.sx, type: `${d.type}:result`, ok: false, reason: String(e), steps: [], files: [] }, '*');
     }

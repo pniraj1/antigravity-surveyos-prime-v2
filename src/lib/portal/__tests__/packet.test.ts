@@ -308,7 +308,7 @@ describe('buildOicPacket new values', () => {
     expect(p.fields.driverDob).toBe('1985-02-03');
     expect(p.fields.dlValidFrom).toBe('2010-04-05');
     expect(p.fields.dlValidUpTo).toBe('2030-04-04');
-    expect(p.fields.licenseType).toBe('LMV');
+    expect(p.fields.licenseType).toBe('LIGHT MOTOR VEHICLE - NON TRANSPORT');
     expect(p.fields.dlVerifiedRemarks).toBe('fake remark');
     const q = await build((c) => {
       c.vehicle.isCommercial = true;
@@ -317,15 +317,20 @@ describe('buildOicPacket new values', () => {
       c.driver.licenceType = 'MCWG, LMV-TR';
     });
     expect(q.fields.dlValidUpTo).toBe('2028-01-01');
-    expect(q.fields.licenseType).toBe('LMV-TR');
+    // goods vs passenger is unknown for LMV-TR: left blank
+    expect(q.fields.licenseType).toBeUndefined();
+    const hgv = await build((c) => { c.vehicle.isCommercial = true; c.driver.licenceType = 'LMV, HGV'; });
+    expect(hgv.fields.licenseType).toBe('HGV');
+    const wog = await build((c) => { c.vehicle.classOfVehicle = 'Scooter'; c.driver.licenceType = 'MCWOG'; });
+    expect(wog.fields.licenseType).toBe('MOTOR CYCLE WITHOUT GEAR');
     const r = await build((c) => { c.driver.licenceType = 'MCWG'; });
     expect(r.fields.licenseType).toBeUndefined();
     const two = await build((c) => { c.vehicle.classOfVehicle = 'M-Cycle/Scooter'; c.driver.licenceType = 'MCWG, LMV'; });
-    expect(two.fields.licenseType).toBe('MCWG');
+    expect(two.fields.licenseType).toBe('MOTOR CYCLE WITH GEAR');
     const wd = await build((c) => { c.vehicle.classOfVehicle = 'LMV 2WD'; c.driver.licenceType = 'MCWG, LMV'; });
-    expect(wd.fields.licenseType).toBe('LMV');
+    expect(wd.fields.licenseType).toBe('LIGHT MOTOR VEHICLE - NON TRANSPORT');
     const tw = await build((c) => { c.vehicle.classOfVehicle = '2W'; c.driver.licenceType = 'MCWG, LMV'; });
-    expect(tw.fields.licenseType).toBe('MCWG');
+    expect(tw.fields.licenseType).toBe('MOTOR CYCLE WITH GEAR');
     const none = await build((c) => { c.driver.licenceType = ''; });
     expect(none.fields.licenseType).toBeUndefined();
   });

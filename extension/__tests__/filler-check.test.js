@@ -160,60 +160,67 @@ function reactHarness({ claimSelect = 'C-1', saved = null, id = 'A', make = '', 
   ctx.window = { addEventListener: (t, h) => { if (t === 'message') onMessage = h; }, postMessage: (m) => sent.push(m) };
   ctx.globalThis = ctx;
   for (const f of ['src/lib/fill-core.js', 'src/lib/react-write.js', 'src/filler.js']) vm.runInContext(fs.readFileSync(path.join(root, f), 'utf8'), ctx);
-  const send = (data) => { onMessage({ source: ctx.window, data: { sx: 's1', ...data } }); return sent.at(-1); };
+  ctx.setTimeout = setTimeout;
+  // fill is paced on React pages: wait for its answer
+  const send = async (data) => {
+    const n = sent.length;
+    onMessage({ source: ctx.window, data: { sx: 's1', ...data } });
+    for (let i = 0; sent.length === n && i < 400; i++) await new Promise((r) => setTimeout(r, 5));
+    return sent.at(-1);
+  };
   return { send, store, els, clicks };
 }
 
 describe('filler on a React (OIC) page', () => {
-  it('reads the claim number from the select value and saves it', () => {
+  it('reads the claim number from the select value and saves it', async () => {
     const { send, store } = reactHarness();
-    expect(send({ type: 'probe', map: reactMap })).toMatchObject({ ok: true, claimNo: 'C-1' });
+    expect(await send({ type: 'probe', map: reactMap })).toMatchObject({ ok: true, claimNo: 'C-1' });
     expect(JSON.parse(store.get('sx-oic-claim'))).toEqual({ id: 'A', claimNo: 'C-1' });
   });
 
-  it('without the select, uses the claim saved for this assessment', () => {
+  it('without the select, uses the claim saved for this assessment', async () => {
     const { send } = reactHarness({ claimSelect: null, saved: { id: 'A', claimNo: 'C-1' }, id: 'A' });
-    expect(send({ type: 'probe', map: reactMap })).toMatchObject({ ok: true, claimNo: 'C-1' });
+    expect(await send({ type: 'probe', map: reactMap })).toMatchObject({ ok: true, claimNo: 'C-1' });
   });
 
-  it('refuses a claim saved for another assessment', () => {
+  it('refuses a claim saved for another assessment', async () => {
     const { send } = reactHarness({ claimSelect: null, saved: { id: 'A', claimNo: 'C-1' }, id: 'B' });
-    expect(send({ type: 'probe', map: reactMap })).toMatchObject({ ok: false, reason: 'Open step 2 of this claim first.' });
-    expect(send({ type: 'fill', map: reactMap, packet: { claimNo: 'C-1', fields: {}, files: [] } })).toMatchObject({ ok: false, reason: 'Open step 2 of this claim first.' });
+    expect(await send({ type: 'probe', map: reactMap })).toMatchObject({ ok: false, reason: 'Open step 2 of this claim first.' });
+    expect(await send({ type: 'fill', map: reactMap, packet: { claimNo: 'C-1', fields: {}, files: [] } })).toMatchObject({ ok: false, reason: 'Open step 2 of this claim first.' });
   });
 
-  it('fill writes text, clicks only the chosen radio and keeps a box with another value', () => {
+  it('fill writes text, clicks only the chosen radio and keeps a box with another value', async () => {
     const { send, els, clicks } = reactHarness({ make: 'Old' });
-    const r = send({ type: 'fill', map: reactMap, packet: { portal: 'oic', flow: 'assessment', claimNo: 'C-1', fields: { place: 'Nashik', make: 'New' }, files: [] } });
+    const r = await send({ type: 'fill', map: reactMap, packet: { portal: 'oic', flow: 'assessment', claimNo: 'C-1', fields: { place: 'Nashik', make: 'New' }, files: [] } });
     expect(r.ok).toBe(true);
     expect(Object.fromEntries(r.steps.map((s) => [s.name, s.action]))).toEqual({ place: 'filled', make: 'kept', near: 'filled' });
     expect(els['#place'].value).toBe('Nashik');
     expect(els['#make'].value).toBe('Old');
     expect(clicks).toEqual(['#near2']);
-    expect(send({ type: 'fill', map: reactMap, packet: { portal: 'oic', flow: 'assessment', claimNo: 'C-1', fields: {}, files: [] } })
+    expect((await send({ type: 'fill', map: reactMap, packet: { portal: 'oic', flow: 'assessment', claimNo: 'C-1', fields: {}, files: [] } }))
       .steps.find((s) => s.name === 'near').action).toBe('same');
   });
 
-  it('check reports fields without writing', () => {
+  it('check reports fields without writing', async () => {
     const { send, els, clicks } = reactHarness();
-    const r = send({ type: 'check', map: reactMap, packet: null });
+    const r = await send({ type: 'check', map: reactMap, packet: null });
     expect(r).toMatchObject({ ok: true, claimNo: 'C-1' });
     expect(r.fields.map((f) => f.status)).toEqual(['ready?', 'ready?', 'ready?']);
     expect(els['#place'].value).toBe('');
     expect(clicks).toEqual([]);
   });
 
-  it('radioPick on a non-radio element: manual, nothing clicked, and its checked is not an answer', () => {
+  it('radioPick on a non-radio element: manual, nothing clicked, and its checked is not an answer', async () => {
     const clicks = [];
     const div = { checked: true, disabled: false, style: {}, click() { clicks.push('div'); } };
     const map = { ...reactMap, fields: { near: { modelPath: '#n', kind: 'radioPick', empty: '', choices: { yes: '#n', no: '#n2' }, constant: 'yes' } } };
     const { send } = reactHarness({ extra: { '#n': div } });
-    const r = send({ type: 'fill', map, packet: { portal: 'oic', flow: 'assessment', claimNo: 'C-1', fields: {}, files: [] } });
+    const r = await send({ type: 'fill', map, packet: { portal: 'oic', flow: 'assessment', claimNo: 'C-1', fields: {}, files: [] } });
     expect(r.steps[0]).toMatchObject({ action: 'manual', why: 'not a radio input' });
     expect(clicks).toEqual([]);
   });
 
-  it('a disabled PrimeReact dropdown is manual and onChange never runs', () => {
+  it('a disabled PrimeReact dropdown is manual and onChange never runs', async () => {
     const calls = [];
     const mkDd = (extraProps, classList) => ({
       style: {}, classList: { contains: (c) => (classList ?? []).includes(c) },
@@ -223,33 +230,49 @@ describe('filler on a React (OIC) page', () => {
     const packet = { portal: 'oic', flow: 'assessment', claimNo: 'C-1', fields: { lic: 'LMV' }, files: [] };
     for (const el of [mkDd({ disabled: true }), mkDd({}, ['p-disabled'])]) {
       const { send } = reactHarness({ extra: { '#lic': el } });
-      expect(send({ type: 'fill', map, packet }).steps[0]).toMatchObject({ action: 'manual', why: 'disabled on the page' });
+      expect((await send({ type: 'fill', map, packet })).steps[0]).toMatchObject({ action: 'manual', why: 'disabled on the page' });
     }
     expect(calls).toEqual([]);
   });
 
-  it('kept radioPick outlines the checked choice', () => {
+  it('an empty date box showing its placeholder is filled; a money box goes through InputNumber onChange', async () => {
+    const calls = [];
+    const date = { value: 'DD-MM-YYYY', placeholder: 'DD-MM-YYYY', disabled: false, style: {}, dispatchEvent: () => {} };
+    const amt = { value: '₹0', disabled: false, style: {}, classList: { contains: (c) => c === 'p-inputnumber-input' },
+      '__reactFiber$x': { memoizedProps: { onChange: (e) => calls.push(e.value) }, return: null } };
+    const map = { ...reactMap, fields: {
+      dob: { modelPath: '#dob', kind: 'date', empty: '', from: 'dob' },
+      amt: { modelPath: '#amt', kind: 'money', empty: '', from: 'amt' },
+    } };
+    const { send } = reactHarness({ extra: { '#dob': date, '#amt': amt } });
+    const r = await send({ type: 'fill', map, packet: { portal: 'oic', flow: 'assessment', claimNo: 'C-1', fields: { dob: '1990-01-01', amt: 1000 }, files: [] } });
+    expect(r.steps.find((x) => x.name === 'dob').action).not.toBe('kept');
+    expect(r.steps.find((x) => x.name === 'amt').action).toBe('filled');
+    expect(calls).toEqual([1000]);
+  });
+
+  it('kept radioPick outlines the checked choice', async () => {
     const { send, els } = reactHarness({ checked2: true });
-    send({ type: 'fill', map: reactMap, packet: { portal: 'oic', flow: 'assessment', claimNo: 'C-1', fields: {}, files: [] } });
+    await send({ type: 'fill', map: reactMap, packet: { portal: 'oic', flow: 'assessment', claimNo: 'C-1', fields: {}, files: [] } });
     // constant 'no' matches the checked #near2 (same); force a kept: constant yes vs checked no
     const map = { ...reactMap, fields: { near: { ...reactMap.fields.near, constant: 'yes' } } };
     const h = reactHarness({ checked2: true });
-    h.send({ type: 'fill', map, packet: { portal: 'oic', flow: 'assessment', claimNo: 'C-1', fields: {}, files: [] } });
+    await h.send({ type: 'fill', map, packet: { portal: 'oic', flow: 'assessment', claimNo: 'C-1', fields: {}, files: [] } });
     expect(h.els['#near2'].style.outline).toBe('2px solid #f59e0b');
     expect(h.els['#near1'].style.outline).toBeUndefined();
     expect(els['#near1'].style.outline).toBeUndefined();
   });
 
-  it('claim number comes from map.claimNoSelector', () => {
+  it('claim number comes from map.claimNoSelector', async () => {
     const map = { ...reactMap, claimNoSelector: 'select#other' };
     const { send } = reactHarness({ claimSelect: 'Z-9', claimSel: 'select#other' });
-    expect(send({ type: 'probe', map })).toMatchObject({ ok: true, claimNo: 'Z-9' });
+    expect(await send({ type: 'probe', map })).toMatchObject({ ok: true, claimNo: 'Z-9' });
   });
 
-  it('check does not write sessionStorage', () => {
+  it('check does not write sessionStorage', async () => {
     const { send, store } = reactHarness();
     const before = JSON.stringify([...store]);
-    expect(send({ type: 'check', map: reactMap, packet: null }).ok).toBe(true);
+    expect((await send({ type: 'check', map: reactMap, packet: null })).ok).toBe(true);
     expect(JSON.stringify([...store])).toBe(before);
   });
 });

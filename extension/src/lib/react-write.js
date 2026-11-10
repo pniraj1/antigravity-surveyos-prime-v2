@@ -53,6 +53,19 @@ function pickDropdown(root, value) {
   return 'filled';
 }
 
+/**
+ * PrimeReact InputNumber: typing into its <input> never reaches React (live 2026-11-10),
+ * so call the component's own onChange with a number.
+ * @param {any} input @param {string} value
+ */
+function writeNumber(input, value) {
+  const n = Number(String(value).replace(/[₹,\s]/g, ''));
+  const props = reactProps(input);
+  if (!props || String(value).trim() === '' || Number.isNaN(n)) return 'invalid:number';
+  props.onChange({ originalEvent: null, value: n, stopPropagation() {}, preventDefault() {} });
+  return 'filled';
+}
+
 /** @param {any} input */
 function clickRadio(input) {
   if (input?.type !== 'radio') return 'manual';
@@ -73,7 +86,7 @@ function writeDate(input, ddmmyyyy) {
   return input.value === ddmmyyyy ? 'filled' : 'invalid:date';
 }
 
-const API = { reactProps, matchOption, writeText, pickDropdown, clickRadio, writeDate };
+const API = { reactProps, matchOption, writeText, writeNumber, pickDropdown, clickRadio, writeDate };
 // ---- umd shim: classic script in the extension, ESM/CJS in Vitest ----
 if (typeof module !== 'undefined' && module.exports) module.exports = API;
 else globalThis[NS] = API;

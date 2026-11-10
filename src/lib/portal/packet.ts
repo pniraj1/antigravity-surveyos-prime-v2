@@ -105,14 +105,18 @@ function normName(n?: string): string {
 
 const TWO_WHEELER = /M\.?\s?CYCLE|MOTOR\s?CYCLE|SCOOTER|TWO\s?WHEEL|\b2W\b|MCWG|MCWOG/i;
 
-/** No fallback: a class that does not fit the vehicle is left for the surveyor. */
+/**
+ * The class that fits the vehicle, in OIC's own option wording (live list, 2026-11-10).
+ * No fallback: no fit, or LMV-TR (goods vs passenger unknown), is left for the surveyor.
+ */
 function pickLicenseType(raw: string | undefined, v: ClaimData['vehicle'] | undefined): string | undefined {
-  const classes = (raw ?? '').split(/[,/]/).map((c) => c.trim()).filter(Boolean);
+  const classes = (raw ?? '').split(/[,/]/).map((c) => c.trim().toUpperCase()).filter(Boolean);
   if (TWO_WHEELER.test(`${v?.classOfVehicle ?? ''} ${v?.bodyType ?? ''}`)) {
-    return classes.find((c) => /MCWG|MCWOG/i.test(c));
+    if (classes.some((c) => c.includes('MCWOG'))) return 'MOTOR CYCLE WITHOUT GEAR';
+    return classes.some((c) => c.includes('MCWG')) ? 'MOTOR CYCLE WITH GEAR' : undefined;
   }
-  if (v?.isCommercial) return classes.find((c) => /TR/i.test(c));
-  return classes.find((c) => /^LMV/i.test(c) && !/TR/i.test(c));
+  if (v?.isCommercial) return classes.map((c) => c.match(/^(HGV|HPV|MGV|MPV)\b/)?.[1]).find(Boolean);
+  return classes.some((c) => /^LMV/.test(c) && !/TR/.test(c)) ? 'LIGHT MOTOR VEHICLE - NON TRANSPORT' : undefined;
 }
 
 function localIsoDate(t = new Date()): string {

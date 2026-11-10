@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const { reactProps, matchOption, pickDropdown, writeText, clickRadio } = require('../src/lib/react-write.js');
+const { reactProps, matchOption, pickDropdown, writeText, writeNumber, clickRadio } = require('../src/lib/react-write.js');
 
 const OPTS = [{ l: 'LMV', v: '1' }, { l: 'MCWG', v: '2' }];
 
@@ -46,6 +46,15 @@ describe('react-write', () => {
     expect(input.value).toBe('new');
     expect(tracked).toBe('old');
     expect(events).toEqual(['input', 'change']);
+  });
+
+  it('writeNumber calls the InputNumber onChange with a number, never with junk', () => {
+    const calls = [];
+    const input = dropdownRoot({ onChange: (e) => calls.push(e.value) });
+    expect(writeNumber(input, '₹1,000')).toBe('filled');
+    expect(writeNumber(input, 'abc')).toBe('invalid:number');
+    expect(writeNumber(input, '')).toBe('invalid:number');
+    expect(calls).toEqual([1000]);
   });
 
   it('clickRadio clicks the input', () => {
