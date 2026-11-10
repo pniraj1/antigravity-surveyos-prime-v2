@@ -146,8 +146,36 @@ describe('usePrintGate with an estimate below the assessed amount', () => {
       return <>{gateDialog}</>;
     }
     const html = renderToStaticMarkup(<Probe />);
-    expect(html).toContain('lower than the amount passed');
+    expect(html).toContain('lower than the assessed amount');
     expect(html).toContain('Bumper');
     expect(run).not.toHaveBeenCalled();
+  });
+});
+
+describe('usePrintGate on a Bill Check report', () => {
+  const probe = (row: ClaimData['assessmentRows'][number]) => {
+    useClaimStore.setState({
+      currentClaim: { ...createBlankClaim('final'), assessmentRows: [row], policyCheck: { nilDep: 'no', imt23: 'na', consumables: 'no', excessConfirmed: true } },
+    });
+    const run = vi.fn();
+    function Probe() {
+      const { gate, gateDialog } = usePrintGate();
+      const [asked, setAsked] = useState(false);
+      if (!asked) { setAsked(true); gate('bill-check', run); }
+      return <>{gateDialog}</>;
+    }
+    return { html: renderToStaticMarkup(<Probe />), run };
+  };
+  const base = { id: 'x', particulars: 'Shockup', partType: 'metal', gst: 18, section: 'parts', allowed: true } as ClaimData['assessmentRows'][number];
+
+  it('holds a row allowed above the bill', () => {
+    const { html, run } = probe({ ...base, estimated: 3000, assessed: 3000, billedTaxable: 2500, billStatus: 'in-bill' });
+    expect(html).toContain('allowed above the billed amount');
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  it('prints when the bill is above the estimate', () => {
+    const { run } = probe({ ...base, estimated: 3000, assessed: 3000, billAllowed: 3690.69, billedTaxable: 3690.69, billStatus: 'in-bill' });
+    expect(run).toHaveBeenCalled();
   });
 });

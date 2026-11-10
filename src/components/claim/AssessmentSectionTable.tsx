@@ -24,7 +24,7 @@ import { CATEGORY_TAGS, type OptionalColumn } from './assessment-grid-config';
 import { estimateShortRows } from '@/lib/calculations/estimate-floor';
 
 /** Owner rule: an estimate below the assessed amount is shown red and holds printing. */
-const estimateLow = (row: AssessmentRowType) => estimateShortRows([row], 'assessment').length > 0;
+const estimateLow = (row: AssessmentRowType) => estimateShortRows([row]).length > 0;
 
 function SortableRow({ id, className, children }: { id: string; className: string; children: React.ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });

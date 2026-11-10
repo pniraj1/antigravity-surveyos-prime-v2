@@ -4,8 +4,8 @@ import { useCallback, useState, type ReactNode } from 'react';
 import { BeforePrintDialog } from '@/components/dialogs/BeforePrintDialog';
 import { useClaimStore } from '@/stores/claim-store';
 import { policyCheckStatus } from '@/lib/policy/policy-check';
-import { estimateShortRows, type EstimateShort } from '@/lib/calculations/estimate-floor';
-import { EstimateShortDialog } from '@/components/dialogs/EstimateShortDialog';
+import { estimateShortRows, overBilledRows } from '@/lib/calculations/estimate-floor';
+import { EstimateShortDialog, type RowIssueSet } from '@/components/dialogs/EstimateShortDialog';
 
 export type GatedReport = 'final' | 'uiic-final' | 'bill-check' | 'uiic-bill-check';
 
@@ -29,20 +29,23 @@ export function usePrintGate(): {
   gateDialog: ReactNode;
 } {
   const [pending, setPending] = useState<PendingPrint | null>(null);
-  const [short, setShort] = useState<EstimateShort[]>([]);
+  const [issues, setIssues] = useState<RowIssueSet | null>(null);
 
   const gate = useCallback((report: GatedReport, run: () => void, printLabel?: string) => {
     const claim = useClaimStore.getState().currentClaim;
-    // Owner rule: no report goes out while an estimate is below what was passed.
-    const low = estimateShortRows(claim?.assessmentRows ?? [], report.includes('bill-check') ? 'bill' : 'assessment');
-    if (low.length > 0) { setShort(low); return; }
+    // Owner rules: Assessment estimate >= assessed; Bill Check allowed <= billed.
+    const rows = claim?.assessmentRows ?? [];
+    const set: RowIssueSet = report.includes('bill-check')
+      ? { kind: 'over-billed', rows: overBilledRows(rows) }
+      : { kind: 'estimate-short', rows: estimateShortRows(rows) };
+    if (set.rows.length > 0) { setIssues(set); return; }
     const showPolicy = !!claim && !policyCheckStatus(claim).complete;
     if (report.startsWith('uiic') || showPolicy) setPending({ report, showPolicy, run, printLabel });
     else run();
   }, []);
 
-  const gateDialog = short.length > 0 ? (
-    <EstimateShortDialog rows={short} onClose={() => setShort([])} />
+  const gateDialog = issues ? (
+    <EstimateShortDialog issues={issues} onClose={() => setIssues(null)} />
   ) : pending ? (
     <BeforePrintDialog
       showUiic={pending.report.startsWith('uiic')}

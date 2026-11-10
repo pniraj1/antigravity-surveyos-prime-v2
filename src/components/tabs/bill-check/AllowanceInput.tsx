@@ -8,6 +8,8 @@ interface AllowanceInputProps {
   disabled: boolean;
   /** Renders in the warning colour — used when a bill-check allowance is set. */
   highlighted: boolean;
+  /** Red: allowed above the billed amount (owner rule, holds printing). */
+  error?: boolean;
   title?: string;
   onCommit: (value: number) => void;
 }
@@ -20,7 +22,7 @@ interface AllowanceInputProps {
  * "Both reports" wrote 95 into a Final Survey Report already filed. The store
  * is written once per edit now — on blur or Enter. Escape abandons the edit.
  */
-export function AllowanceInput({ value, disabled, highlighted, title, onCommit }: AllowanceInputProps) {
+export function AllowanceInput({ value, disabled, highlighted, error, title, onCommit }: AllowanceInputProps) {
   const [draft, setDraft] = useState<string | null>(null);
 
   // A commit elsewhere (the scope dialog, a bulk action) must win over a stale
@@ -50,10 +52,10 @@ export function AllowanceInput({ value, disabled, highlighted, title, onCommit }
       }}
       disabled={disabled}
       title={title}
-      className="px-2 py-1 rounded-lg text-sm text-right border outline-none w-full border-border font-medium"
+      className={`px-2 py-1 rounded-lg text-sm text-right border outline-none w-full font-medium ${error ? 'border-destructive' : 'border-border'}`}
       style={{
         background: disabled ? 'var(--color-neutral-100)' : 'var(--color-neutral-50)',
-        color: highlighted ? 'var(--color-status-warning)' : 'var(--color-foreground)',
+        color: error ? 'var(--color-destructive)' : highlighted ? 'var(--color-status-warning)' : 'var(--color-foreground)',
       }}
     />
   );

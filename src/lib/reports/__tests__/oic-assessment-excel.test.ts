@@ -52,6 +52,14 @@ describe('oicAssessmentRows — parts & labour', () => {
     expect(paint.totalAssessed).toBe(1600);
   });
 
+  test('Estimated Amount is the billed amount before GST (owner, 2026-11-10), else the estimate', () => {
+    const rows = oicAssessmentRows(
+      [row({ estimated: 3000, assessed: 3000, billAllowed: 3690.69, billedTaxable: 3690.69 }), row({ estimated: 700, assessed: 600, billedTaxable: undefined })],
+      AGE, 'standard', '1',
+    );
+    expect(rows.map((r) => [r.itemAmount, r.estimatedAmount])).toEqual([[3690.69, 3690.69], [600, 700]]);
+  });
+
   test('plastic, glass, fiberglass map to OIC dropdown categories', () => {
     const rows = oicAssessmentRows(
       [
@@ -73,7 +81,7 @@ describe('oicAssessmentRows — parts & labour', () => {
 
   test('labour rows map to Labour Charge with 0% depreciation', () => {
     const [r] = oicAssessmentRows(
-      [row({ section: 'labour', particulars: 'Denting Fender LH', assessed: 550, estimated: 900 })],
+      [row({ section: 'labour', particulars: 'Denting Fender LH', assessed: 550, estimated: 500, billedTaxable: 900 })],
       AGE,
       'standard',
       '66',
@@ -197,8 +205,9 @@ describe('oicAssessmentRows — painting handling', () => {
         row({
           section: 'paint',
           particulars: 'Front Bumper Painting',
-          estimated: 20000,
+          estimated: 12000,
           assessed: 15000,
+          billedTaxable: 20000,
           gst: 18,
         }),
       ],
@@ -221,7 +230,7 @@ describe('oicAssessmentRows — painting handling', () => {
 
   test('oicPaintingSummary calculates accurate totals', () => {
     const summary = oicPaintingSummary([
-      row({ section: 'paint', estimated: 5000, assessed: 4000, allowed: true }),
+      row({ section: 'paint', estimated: 3000, assessed: 4000, billedTaxable: 5000, allowed: true }),
       row({ section: 'paint', estimated: 2000, assessed: 2000, allowed: false }),
       row({ section: 'paint', estimated: 900, assessed: 900, billStatus: 'not-in-bill' }),
     ]);

@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import {
+  billPendingRows,
   exportOicAssessmentExcel,
   oicAssessmentRows,
   oicPaintingSummary,
@@ -11,7 +12,8 @@ import type { AssessmentRow } from '@/types/assessment';
 import type { DepreciationType } from '@/types';
 import type { ClaimData } from '@/types/claim';
 import { buildOicPacket } from '@/lib/portal/packet';
-import { estimateShortRows } from '@/lib/calculations/estimate-floor';
+import { overBilledRows } from '@/lib/calculations/estimate-floor';
+import { rowIssueSummary, type RowIssueSet } from '@/components/dialogs/EstimateShortDialog';
 import type { OicPaintingMode } from '@/lib/reports/oic-assessment-excel';
 import {
   isExtensionPresent,
@@ -98,8 +100,12 @@ export function OICExportDialog({ claim, claimNo, rows, ageMonths, depType, onCl
     }
   };
 
-  // Owner rule: the Excel uses Bill Check figures, and OIC rejects an estimate below them.
-  const short = useMemo(() => estimateShortRows(rows, 'bill'), [rows]);
+  // Owner rules: Estimated Amount is the bill and Item Amount the allowed figure, so every
+  // row needs a bill figure, and OIC rejects an amount above its estimate.
+  const short = useMemo<RowIssueSet[]>(() => [
+    { kind: 'bill-pending' as const, rows: billPendingRows(rows) },
+    { kind: 'over-billed' as const, rows: overBilledRows(rows) },
+  ].filter((s) => s.rows.length > 0), [rows]);
 
   const { sheetRows, rowError } = useMemo(() => {
     try {
@@ -310,13 +316,9 @@ export function OICExportDialog({ claim, claimNo, rows, ageMonths, depType, onCl
                 )}
 
                 {rowError && <div className="text-xs text-destructive">{rowError}</div>}
-                {short.length > 0 && (
-                  <div className="text-xs text-destructive" role="alert">
-                    {short.length} item{short.length === 1 ? ' has an estimate' : 's have estimates'} lower than the allowed or billed amount
-                    ({short.slice(0, 3).map((s) => s.particulars || 'Item').join(', ')}{short.length > 3 ? '…' : ''}).
-                    Correct the estimate in Assessment before exporting.
-                  </div>
-                )}
+                {short.map((s) => (
+                  <div key={s.kind} className="text-xs text-destructive" role="alert">{rowIssueSummary(s)}</div>
+                ))}
 
                 <button
                   onClick={download}

@@ -1,3 +1,10 @@
+## 2026-11-10 (Claude Code) — OIC Excel estimate = billed; Bill Check allowed may not exceed the bill (not deployed)
+- fix(oic-excel): Estimated Amount is the billed amount before GST (owner), painting totals too; the estimate is only a fallback. A bill above the estimate no longer holds the Excel.
+- feat(bill-check): an item allowed above its billed amount shows a red Allowed cell and holds the Bill Check print/Word and the OIC Excel (`overBilledRows`). Replaces the estimate-vs-billed check.
+- feat(oic-excel): the Excel waits while an item it would carry has no billed amount ("enter the bill, mark Not in Bill, or disallow") (`billPendingRows`). Not billed / not allowed items stay out.
+- Assessment rule unchanged: estimate >= assessed, red cell, holds the assessment print.
+- verification: 327 files / 2921 tests, tsc clean. Grid/dialog colours not browser-checked (needs login). Prime ↔ Scan coupling: none.
+
 ## 2026-11-10 (Antigravity) — SurveyOS Scan Direct Share Photos (Spot/Final/RI) & Document Field Naming
 - feat(scan-share): Added direct photo ingestion targets (**Final Photos**, **RI Photos**, and **Spot Photos**) to `ShareSlotPicker` in `ShareInScreens.kt` when shared intent holds images (`hasImages = true`), displaying current photo counts and camera icons.
 - feat(scan-vm): Implemented `importSharedPhotos(kind, items)` in `ClaimViewModel.kt`, ingesting images with `Quality.PHOTO` (`PageFilter.NATURAL`, EXIF/GPS metadata preserved) directly into `repo.photoDoc(claimId, kind)` (`spotPhotos`, `damagePhotos`, `riPhotos`).

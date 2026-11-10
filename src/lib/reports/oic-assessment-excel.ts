@@ -12,6 +12,7 @@ import { computeRowNet, effectiveAssessed } from '@/lib/calculations/row-net';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { saveDocuments } from '@/lib/documents/sink';
+import type { RowIssue } from '@/lib/calculations/estimate-floor';
 
 export const OIC_INVOICE_COLUMNS = [
   'Invoice Number',
@@ -143,10 +144,26 @@ function billCheckRow(r: AssessmentRow): AssessmentRow {
   return r.billAllowed !== undefined ? { ...r, assessed: r.billAllowed } : r;
 }
 
+/**
+ * Owner rule (2026-11-10): the Excel's Estimated Amount is what the workshop billed,
+ * pre-GST like Item Amount. The estimate is only a fallback for a row with no bill
+ * figure, which the export dialog holds back (billPendingRows).
+ */
+function billedEstimate(r: AssessmentRow): number {
+  return r.billedTaxable ?? r.estimated ?? 0;
+}
+
+/** Excel rows with no billed amount yet. The export waits until each is billed, not billed or disallowed. */
+export function billPendingRows(rows: AssessmentRow[]): RowIssue[] {
+  return rows
+    .filter((r) => inOicExcel(r) && (r.billedTaxable === undefined || r.billedTaxable === null))
+    .map((r) => ({ rowId: r.id, particulars: r.particulars, detail: 'no billed amount' }));
+}
+
 export function oicPaintingSummary(rows: AssessmentRow[]): OicPaintingSummary {
   const paintRows = rows.filter((r) => r.section === 'paint' && inOicExcel(r));
 
-  const totalEstimated = paintRows.reduce((s, r) => s + (r.estimated || 0), 0);
+  const totalEstimated = paintRows.reduce((s, r) => s + billedEstimate(r), 0);
   const totalAssessed = paintRows.reduce((s, r) => s + effectiveAssessed(billCheckRow(r)), 0);
 
   const labourPart = Math.round(totalAssessed * 0.75 * 100) / 100;
@@ -206,7 +223,7 @@ export function oicAssessmentRows(
       itemAmount: Math.round(assessed * 100) / 100,
       depreciationRate: depRate,
       gstRate,
-      estimatedAmount: Math.round((r.estimated || 0) * 100) / 100,
+      estimatedAmount: Math.round(billedEstimate(r) * 100) / 100,
       hsnCode: isDisposal ? '72041000' : hsnForRate(gstRate),
     });
   }

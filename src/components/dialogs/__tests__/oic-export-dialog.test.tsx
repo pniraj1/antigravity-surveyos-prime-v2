@@ -7,6 +7,7 @@ import type { ClaimData } from '@/types/claim';
 
 vi.mock('@/lib/reports/oic-assessment-excel', () => ({
   exportOicAssessmentExcel: vi.fn(),
+  billPendingRows: vi.fn().mockReturnValue([]),
   oicAssessmentRows: vi.fn().mockReturnValue([
     {
       invoiceNumber: 'INV-01',
