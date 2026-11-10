@@ -1,3 +1,12 @@
+## Priority: OIC Live Portal Fill Injection & Probing Fix (2026-11-10, Handed to Claude)
+- **Status:** Pending / Next Up for Claude Code
+- **Symptom:** Live Oriental Insurance (OIC) portal shows "Couldn't read page / No fields here" when sidecar opens.
+- **Root Causes to Address:**
+  1. Add `"all_frames": true` to content scripts in `extension/manifest.json` (OIC embeds form inside `<iframe>`).
+  2. Relax `probe()` in `extension/src/filler.js`: do not fail with `NO_ANGULAR` if `#claimNumber` is missing or on non-Angular pages.
+  3. Relax route matching in `extension/src/lib/fill-core.js` (`pickMap`) to permit arbitrary subpaths.
+  4. See detailed technical briefing in `SurveyOS-Antigravity-Prime-V2-KnowledgeBase/HANDOVER_2026_11_10_CLAUDE.md`.
+
 ## Done: Bill Check Tab Editability (GST, Disposal, Dep%) & Report Integration (2026-11-09, Antigravity)
 - **Problem Solved:**
   - In Bill Check, surveyors frequently need to adjust the assessed amount or resolve real-world changes that happened during vehicle repairs (e.g., insured originally planned to fit a 2nd-hand disposal part, but had to fit a new OEM part with GST).

@@ -1,19 +1,22 @@
 # HANDOVER — read this before any work on Prime or Scan
 
-> Last updated 2026-10-31 by Antigravity, handing back to Claude Code.
+> Last updated 2026-11-10 by Antigravity, handing back to Claude Code.
+>
+> 🚨 **PRIMARY HANDOVER FILE:** See [`HANDOVER_2026_11_10_CLAUDE.md`](HANDOVER_2026_11_10_CLAUDE.md) for the 5-day developments summary and OIC portal failure diagnosis.
 >
 > This file condenses everything learned across development sessions between Claude Code and Antigravity.
 >
 > Keep it current. When you finish a piece of work, update the **Status** section, `Tasks.md`, `Changelog.md`, and a new `Sessions/` log, as `Rules/Handoff_Protocol.md` asks.
 
 ## 1. Read order (first session)
-1. This file.
-2. `../CLAUDE.md` and `../GEMINI.md` in the Prime repo. Every rule in CLAUDE.md applies to you too.
-3. `AGENT_PROTOCOL.md`, then `Tasks.md`.
-4. The latest `Sessions/` log: `2026-10-31-handover-to-claude.md`.
-5. The last 5 entries of `Changelog.md`.
-6. Before touching Scan: `../../SurveyOS Scan/CLAUDE.md` and `../../SurveyOS Scan/docs/handover/prime-notes-import.md`.
-7. `git status` and `git log --oneline -15` in both repos.
+1. [`HANDOVER_2026_11_10_CLAUDE.md`](HANDOVER_2026_11_10_CLAUDE.md) (Crucial: OIC portal fill failure root cause & 5-day development log).
+2. This file.
+3. `../CLAUDE.md` and `../GEMINI.md` in the Prime repo. Every rule in CLAUDE.md applies to you too.
+4. `AGENT_PROTOCOL.md`, then `Tasks.md`.
+5. The latest `Sessions/` log: `2026-11-10-handover-to-claude.md`.
+6. The last 5 entries of `Changelog.md`.
+7. Before touching Scan: `../../SurveyOS Scan/CLAUDE.md` and `../../SurveyOS Scan/docs/handover/prime-notes-import.md`.
+8. `git status` and `git log --oneline -15` in both repos.
 
 **Trust the code over these docs.** Older vault notes (Architecture/, Features/, the "bible" files) can be stale or aspirational. Read the real source before you assert how something behaves.
 

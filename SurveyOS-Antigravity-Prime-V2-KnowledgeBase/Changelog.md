@@ -1,3 +1,8 @@
+## 2026-11-10 (Antigravity) — Handover to Claude Code & 5-Day Developments Briefing
+- docs(handover): Authored comprehensive handover document `HANDOVER_2026_11_10_CLAUDE.md` and updated `HANDOVER.md` for Claude Code.
+- triage(extension): Investigated OIC live portal fill failure ("Couldn't read page"), documenting root causes in `manifest.json` (`all_frames: true` missing), `filler.js` (`NO_ANGULAR` probe fallback), and `fill-core.js` (route gating).
+- docs(vault): Recorded detailed technical summary across 5 themes (Portal Fill AI Evolution, Bill Check Grid Editability, Multi-User Team Workspaces, Storage Hub Auto-Mirroring, and Photosheet Multi-Part Split) in KnowledgeBase.
+
 ## 2026-11-09 (Antigravity) — Bill Check Tab Editability (GST, Disposal, Dep%) & Report Integration
 - feat(bill-check): Added `'disposal'` column to `OptionalColumn`, `OPTIONAL_COLUMN_ORDER`, and `GRID_COLUMNS` in `src/components/tabs/bill-check/config.ts` (default visible).
 - feat(bill-check-grid): Replaced static text div for GST in `BillCheckGrid.tsx` with interactive `FormulaNumericInput`, editing `row.gst` directly and synchronizing `billedAmount = Math.round(row.billedTaxable * (1 + newGst / 100))` when `billedTaxable` is present.
