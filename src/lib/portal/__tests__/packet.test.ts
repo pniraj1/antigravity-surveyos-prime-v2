@@ -319,7 +319,9 @@ describe('buildOicPacket new values', () => {
     expect(q.fields.dlValidUpTo).toBe('2028-01-01');
     expect(q.fields.licenseType).toBe('LMV-TR');
     const r = await build((c) => { c.driver.licenceType = 'MCWG'; });
-    expect(r.fields.licenseType).toBe('MCWG');
+    expect(r.fields.licenseType).toBeUndefined();
+    const two = await build((c) => { c.vehicle.classOfVehicle = 'M-Cycle/Scooter'; c.driver.licenceType = 'MCWG, LMV'; });
+    expect(two.fields.licenseType).toBe('MCWG');
     const none = await build((c) => { c.driver.licenceType = ''; });
     expect(none.fields.licenseType).toBeUndefined();
   });
@@ -348,14 +350,18 @@ describe('buildOicPacket new values', () => {
       c.accident.appointmentDate = '2026-09-10';
       c.policy.insuredMobile = '+91 98765-43210';
     });
-    expect(p.fields.finalDocumentDate).toBe(new Date().toISOString().slice(0, 10));
+    const t = new Date();
+    const local = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+    expect(p.fields.finalDocumentDate).toBe(local);
     expect(p.fields.initialLossAmount).toBe(oicNetLiability(claim(), 100));
     expect(p.fields.workshopEstimateAmount).toBe(5000);
     expect(p.fields.workshopEstimateDate).toBe('2026-09-19');
     expect(p.fields.surveyorObservation).toBe('obs text');
     expect(p.fields.causeOfAccident).toBe('cause text');
     expect(p.fields.surveyorAppointedDate).toBe('2026-09-10');
-    expect(p.fields.claimantMobile).toBe('919876543210');
+    expect(p.fields.claimantMobile).toBe('9876543210');
+    const z = await build((c) => { c.policy.insuredMobile = '09876543210'; });
+    expect(z.fields.claimantMobile).toBe('9876543210');
     expect(p.fields.spotSurveyDone).toBe('no');
     const spot = await build((c) => { c.spotDetails = { ...c.spotDetails, comments: 'checked' }; });
     expect(spot.fields.spotSurveyDone).toBe('yes');
@@ -366,5 +372,10 @@ describe('buildOicPacket new values', () => {
     expect(p.fields.workshopEstimateAmount).toBeUndefined();
     expect(p.fields.workshopEstimateDate).toBeUndefined();
     expect(p.fields.initialLossAmount).toBeDefined();
+  });
+
+  it('no row in the Excel: no initialLossAmount', async () => {
+    const p = await build((c) => { c.assessmentRows = [row({ billStatus: 'not-in-bill' })]; });
+    expect(p.fields.initialLossAmount).toBeUndefined();
   });
 });

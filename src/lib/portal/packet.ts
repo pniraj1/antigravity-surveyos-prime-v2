@@ -4,8 +4,7 @@
  * portal model paths. Nothing here knows an Angular path.
  */
 import { createBlankClaim, type ClaimData } from '@/types/claim';
-import { calculateBillCheckSummary } from '@/lib/calculations/assessment';
-import { getCompulsoryExcess } from '@/lib/calculations/assessment';
+import { calculateBillCheckSummary, getCompulsoryExcess } from '@/lib/calculations/assessment';
 import { calculateFeeSummary } from '@/lib/calculations/fees';
 import { calculateFeeGST } from '@/lib/calculations/gst';
 import { toDepreciationType } from '@/lib/calculations/depreciation';
@@ -104,11 +103,26 @@ function normName(n?: string): string {
     .filter((w) => w && !NAME_TITLES.has(w)).join(' ');
 }
 
-function pickLicenseType(raw: string | undefined, commercial: boolean): string | undefined {
+const TWO_WHEELER = /M\.?\s?CYCLE|MOTOR\s?CYCLE|SCOOTER|TWO\s?WHEEL|2W|MCWG|MCWOG/i;
+
+/** No fallback: a class that does not fit the vehicle is left for the surveyor. */
+function pickLicenseType(raw: string | undefined, v: ClaimData['vehicle'] | undefined): string | undefined {
   const classes = (raw ?? '').split(/[,/]/).map((c) => c.trim()).filter(Boolean);
-  const matching = classes.filter((c) => c.toUpperCase().includes('TR') === commercial);
-  // Private: a four-wheeler class (LMV) beats e.g. MCWG listed first.
-  return commercial ? matching[0] : (matching.find((c) => /LMV/i.test(c)) ?? matching[0]);
+  if (TWO_WHEELER.test(`${v?.classOfVehicle ?? ''} ${v?.bodyType ?? ''}`)) {
+    return classes.find((c) => /MCWG|MCWOG/i.test(c));
+  }
+  if (v?.isCommercial) return classes.find((c) => /TR/i.test(c));
+  return classes.find((c) => /^LMV/i.test(c) && !/TR/i.test(c));
+}
+
+function localIsoDate(t = new Date()): string {
+  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+}
+
+/** Digits only; a leading 91 or 0 on a longer number is dropped. */
+function oicMobile(raw?: string): string | undefined {
+  const d = raw?.replace(/\D/g, '') ?? '';
+  return (d.length > 10 && /^(91|0)/.test(d) ? d.slice(-10) : d) || undefined;
 }
 
 /** 'yes' when the surveyor changed anything from a fresh claim's spot defaults. */
@@ -384,18 +398,19 @@ export async function buildOicPacket(
       driverDob: d?.dateOfBirth,
       dlValidFrom: d?.dateOfIssue,
       dlValidUpTo: v?.isCommercial ? d?.validityTransport : d?.validityNonTransport,
-      licenseType: pickLicenseType(d?.licenceType, !!v?.isCommercial),
+      licenseType: pickLicenseType(d?.licenceType, v),
       dlVerifiedRemarks: d?.invalidRemarks?.trim(),
       ownerDriver: ownerName && driverName ? (ownerName === driverName ? 'yes' : 'no') : undefined,
       thirdPartyInvolved: a ? (a.thirdPartyDetails?.trim() ? 'yes' : 'no') : undefined,
       nilDepCover: claim.policyCheck?.nilDep,
       spotSurveyDone: spotSurveyDone(claim.spotDetails),
-      initialLossAmount: oicNetLiability(claim, opts.ageMonths),
-      claimantMobile: claim.policy?.insuredMobile?.replace(/\D/g, '') || undefined,
+      initialLossAmount: (claim.assessmentRows ?? []).some(inOicExcel)
+        ? oicNetLiability(claim, opts.ageMonths) : undefined,
+      claimantMobile: oicMobile(claim.policy?.insuredMobile),
       surveyorObservation: a?.remarks?.trim().slice(0, 2000),
       causeOfAccident: a?.causeOfAccident?.trim().slice(0, 500),
       surveyorAppointedDate: a?.appointmentDate,
-      finalDocumentDate: new Date().toISOString().slice(0, 10),
+      finalDocumentDate: localIsoDate(),
     }),
     files,
   };
