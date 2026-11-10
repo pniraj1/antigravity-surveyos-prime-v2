@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildPortalPacket, buildUiicPacket, buildOicPacket, CANONICAL_FIELDS, UIIC_FIELDS, OIC_FIELDS } from '../packet';
+import { buildPortalPacket, buildUiicPacket, buildOicPacket, splitIndianDl, oicRegNumber, oicNetLiability, CANONICAL_FIELDS, UIIC_FIELDS, OIC_FIELDS } from '../packet';
 import { uiicPortalSummary } from '@/lib/calculations/uiic-portal-summary';
 import { projectForBillCheck } from '@/lib/reports/bill-check-projection';
 import uiicMap from '../../../../extension/maps/uiic-claimsurvey.json';
@@ -238,7 +238,7 @@ describe('buildOicPacket', () => {
     expect(p.claimNo).toBe('3101/00312/24-C');
     for (const k of Object.keys(p.fields)) expect(OIC_FIELDS).toContain(k);
 
-    expect(p.fields.regNumber).toBe('MH02DW3096');
+    expect(p.fields.regNumber).toBe('MH 02 DW 3096');
     expect(p.fields.make).toBe('SKODA');
     expect(p.fields.model).toBe('RAPID');
     expect(p.fields.chasisNumber).toBe('TMB123456');
@@ -247,8 +247,8 @@ describe('buildOicPacket', () => {
     expect(p.fields.colorOfVehicle).toBe('White');
     expect(p.fields.typeOfFuel).toBe('Diesel');
     expect(p.fields.driverName).toBe('Virendrakumar Jain');
-    expect(p.fields.driverLicenseNoOne).toBe('MH02');
-    expect(p.fields.driverLicenseNoTwo).toBe('20180');
+    expect(p.fields.driverLicenseNoOne).toBe('MH');
+    expect(p.fields.driverLicenseNoTwo).toBe('0220180');
     expect(p.fields.driverLicenseNoThree).toBe('0123');
     expect(p.fields.lossDescription).toBe('Frontal collision with divider');
     expect(p.fields.workshopName).toBe('Skoda Workshop Pune');
@@ -263,5 +263,108 @@ describe('buildOicPacket', () => {
     const c = claim();
     c.policy.claimNumber = '  ';
     await expect(buildOicPacket(c, { ageMonths: 24 })).rejects.toThrow(/claim number/i);
+  });
+});
+
+describe('OIC helpers', () => {
+  it('splitIndianDl: 2 / middle / last 4', () => {
+    expect(splitIndianDl('MH1820100012611')).toEqual({ one: 'MH', two: '182010001', three: '2611' });
+    expect(splitIndianDl('MH-18 2010 0012611')).toEqual({ one: 'MH', two: '182010001', three: '2611' });
+    expect(splitIndianDl('GJ0119')).toEqual({ two: 'GJ0119' });
+  });
+  it('oicRegNumber spaces the groups', () => {
+    expect(oicRegNumber('MH19DV9776')).toBe('MH 19 DV 9776');
+    expect(oicRegNumber('mh 19 dv 9776')).toBe('MH 19 DV 9776');
+    expect(oicRegNumber('MH12A5')).toBe('MH 12 A 5');
+    expect(oicRegNumber('22BH1234AA')).toBe('22BH1234AA');
+  });
+  it('oicNetLiability ignores rows the Excel leaves out', () => {
+    const base = claim();
+    const keep = row({});
+    const withNot = { ...base, assessmentRows: [keep, row({ id: 'x', billStatus: 'not-in-bill' })] };
+    const without = { ...base, assessmentRows: [keep] };
+    expect(oicNetLiability(withNot, 24)).toBe(oicNetLiability(without, 24));
+    const withNA = { ...base, assessmentRows: [keep, row({ id: 'y', billStatus: 'not-allowed' })] };
+    expect(oicNetLiability(withNA, 24)).toBe(oicNetLiability(without, 24));
+  });
+});
+
+describe('buildOicPacket new values', () => {
+  const build = (mut: (c: ReturnType<typeof claim>) => void = () => {}) => {
+    const c = claim();
+    mut(c);
+    return buildOicPacket(c, { ageMonths: 100, includeExcel: false });
+  };
+
+  it('driver and licence values', async () => {
+    const p = await build((c) => {
+      c.driver.dateOfBirth = '1985-02-03';
+      c.driver.dateOfIssue = '2010-04-05';
+      c.driver.validityNonTransport = '2030-04-04';
+      c.driver.validityTransport = '2028-01-01';
+      c.driver.licenceType = 'MCWG, LMV';
+      c.driver.invalidRemarks = 'fake remark';
+    });
+    expect(p.fields.driverDob).toBe('1985-02-03');
+    expect(p.fields.dlValidFrom).toBe('2010-04-05');
+    expect(p.fields.dlValidUpTo).toBe('2030-04-04');
+    expect(p.fields.licenseType).toBe('LMV');
+    expect(p.fields.dlVerifiedRemarks).toBe('fake remark');
+    const q = await build((c) => {
+      c.vehicle.isCommercial = true;
+      c.driver.validityNonTransport = '2030-04-04';
+      c.driver.validityTransport = '2028-01-01';
+      c.driver.licenceType = 'MCWG, LMV-TR';
+    });
+    expect(q.fields.dlValidUpTo).toBe('2028-01-01');
+    expect(q.fields.licenseType).toBe('LMV-TR');
+    const r = await build((c) => { c.driver.licenceType = 'MCWG'; });
+    expect(r.fields.licenseType).toBe('MCWG');
+    const none = await build((c) => { c.driver.licenceType = ''; });
+    expect(none.fields.licenseType).toBeUndefined();
+  });
+
+  it('ownerDriver, thirdPartyInvolved, nilDepCover', async () => {
+    const yes = await build((c) => { c.driver.name = 'Mr. Ramesh  Patil'; c.policy.insuredName = 'RAMESH PATIL'; });
+    expect(yes.fields.ownerDriver).toBe('yes');
+    const no = await build((c) => { c.driver.name = 'Sunil Rao'; c.policy.insuredName = 'RAMESH PATIL'; });
+    expect(no.fields.ownerDriver).toBe('no');
+    const absent = await build((c) => { c.driver.name = ''; c.policy.insuredName = 'RAMESH PATIL'; });
+    expect(absent.fields.ownerDriver).toBeUndefined();
+    const tp = await build((c) => { c.accident.thirdPartyDetails = ' a car '; });
+    expect(tp.fields.thirdPartyInvolved).toBe('yes');
+    const notp = await build((c) => { c.accident.thirdPartyDetails = '  '; });
+    expect(notp.fields.thirdPartyInvolved).toBe('no');
+    const nd = await build((c) => { c.policyCheck = { nilDep: 'no' }; });
+    expect(nd.fields.nilDepCover).toBe('no');
+    const ai = await build((c) => { c.policyCheck = { aiRead: { nilDep: 'yes' } }; });
+    expect(ai.fields.nilDepCover).toBeUndefined();
+  });
+
+  it('dates, amounts, text, spot flag', async () => {
+    const p = await build((c) => {
+      c.accident.remarks = 'obs text';
+      c.accident.causeOfAccident = 'cause text';
+      c.accident.appointmentDate = '2026-09-10';
+      c.policy.insuredMobile = '+91 98765-43210';
+    });
+    expect(p.fields.finalDocumentDate).toBe(new Date().toISOString().slice(0, 10));
+    expect(p.fields.initialLossAmount).toBe(oicNetLiability(claim(), 100));
+    expect(p.fields.workshopEstimateAmount).toBe(5000);
+    expect(p.fields.workshopEstimateDate).toBe('2026-09-19');
+    expect(p.fields.surveyorObservation).toBe('obs text');
+    expect(p.fields.causeOfAccident).toBe('cause text');
+    expect(p.fields.surveyorAppointedDate).toBe('2026-09-10');
+    expect(p.fields.claimantMobile).toBe('919876543210');
+    expect(p.fields.spotSurveyDone).toBe('no');
+    const spot = await build((c) => { c.spotDetails = { ...c.spotDetails, comments: 'checked' }; });
+    expect(spot.fields.spotSurveyDone).toBe('yes');
+  });
+
+  it('no billCheck: no workshop estimate, still initialLossAmount', async () => {
+    const p = await build((c) => { delete (c as { billCheck?: unknown }).billCheck; });
+    expect(p.fields.workshopEstimateAmount).toBeUndefined();
+    expect(p.fields.workshopEstimateDate).toBeUndefined();
+    expect(p.fields.initialLossAmount).toBeDefined();
   });
 });

@@ -3,7 +3,8 @@
  * Canonical names are the contract; the extension's field map turns them into
  * portal model paths. Nothing here knows an Angular path.
  */
-import type { ClaimData } from '@/types/claim';
+import { createBlankClaim, type ClaimData } from '@/types/claim';
+import { calculateBillCheckSummary } from '@/lib/calculations/assessment';
 import { getCompulsoryExcess } from '@/lib/calculations/assessment';
 import { calculateFeeSummary } from '@/lib/calculations/fees';
 import { calculateFeeGST } from '@/lib/calculations/gst';
@@ -15,6 +16,7 @@ import {
 } from '@/lib/reports/nia-assessment-excel';
 import {
   buildOicWorkbook,
+  inOicExcel,
   oicAssessmentRows,
   type OicGstType,
   type OicPaintingMode,
@@ -67,22 +69,56 @@ export interface UiicPortalPacket {
 }
 
 /**
- * Splits an Indian Driving Licence into 3 parts for portals with split inputs (e.g. OIC):
- * Part 1: 4 chars (State + RTO code, e.g. "MH12")
- * Part 3: last 4 chars (e.g. "0123")
- * Part 2: middle characters (e.g. "2018000")
+ * Splits an Indian Driving Licence into the OIC portal's 3 boxes:
+ * state code (2), middle, last 4. Under 8 characters it all goes in the middle box.
  */
 export function splitIndianDl(dlRaw?: string): { one?: string; two?: string; three?: string } {
   if (!dlRaw) return {};
   const clean = dlRaw.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-  if (clean.length < 8) {
-    return { two: dlRaw.trim() };
-  }
-  const one = clean.slice(0, 4);
-  const three = clean.slice(-4);
-  const two = clean.slice(4, -4);
-  return { one, two: two || clean, three };
+  if (clean.length < 8) return { two: dlRaw.trim() };
+  return { one: clean.slice(0, 2), two: clean.slice(2, -4), three: clean.slice(-4) };
 }
+
+/** "MH19DV9776" -> "MH 19 DV 9776"; anything that does not fit stays compact upper-case. */
+export function oicRegNumber(raw?: string): string | undefined {
+  const compact = raw?.replace(/\s+/g, '').toUpperCase();
+  if (!compact) return undefined;
+  const m = /^([A-Z]{2})(\d{1,2})([A-Z]{0,3})(\d{1,4})$/.exec(compact);
+  return m ? m.slice(1).filter(Boolean).join(' ') : compact;
+}
+
+/** ponytail: one figure for the Excel and step 3, so both use the same row filter. */
+export function oicNetLiability(claim: ClaimData, ageMonths: number): number {
+  const fee = claim.feeBill;
+  const rows = claim.assessmentRows ?? [];
+  return calculateBillCheckSummary(
+    rows.filter(inOicExcel), ageMonths, toDepreciationType(claim.depreciationType),
+    resolveBillSalvage(fee, rows), fee?.compulsoryExcess ?? 0, fee?.voluntaryExcess ?? 0,
+    claim, fee?.towingCharges ?? 0,
+  ).netLiability;
+}
+
+const NAME_TITLES = new Set(['MR', 'MRS', 'MS', 'SHRI', 'SMT', 'KUM', 'DR']);
+function normName(n?: string): string {
+  return (n ?? '').toUpperCase().replace(/[^A-Z ]/g, ' ').split(/\s+/)
+    .filter((w) => w && !NAME_TITLES.has(w)).join(' ');
+}
+
+function pickLicenseType(raw: string | undefined, commercial: boolean): string | undefined {
+  const classes = (raw ?? '').split(/[,/]/).map((c) => c.trim()).filter(Boolean);
+  const matching = classes.filter((c) => c.toUpperCase().includes('TR') === commercial);
+  // Private: a four-wheeler class (LMV) beats e.g. MCWG listed first.
+  return commercial ? matching[0] : (matching.find((c) => /LMV/i.test(c)) ?? matching[0]);
+}
+
+/** 'yes' when the surveyor changed anything from a fresh claim's spot defaults. */
+function spotSurveyDone(spot: ClaimData['spotDetails'] | undefined): 'yes' | 'no' {
+  const blank = createBlankClaim('final', 'private').spotDetails as unknown as Record<string, unknown>;
+  const cur = (spot ?? {}) as unknown as Record<string, unknown>;
+  return Object.keys(cur).some((k) => JSON.stringify(cur[k]) !== JSON.stringify(blank[k])
+    && cur[k] !== undefined && cur[k] !== '') ? 'yes' : 'no';
+}
+
 export const OIC_FIELDS = [
   'regNumber', 'make', 'model', 'chasisNumber', 'engineNumber',
   'cubicCapacity', 'manufacturingYear', 'colorOfVehicle', 'typeOfFuel',
@@ -91,6 +127,10 @@ export const OIC_FIELDS = [
   'driverLicenseNoOne', 'driverLicenseNoTwo', 'driverLicenseNoThree',
   'driverBadgeNo', 'driverQualification', 'driverAddress',
   'workshopName', 'workshopEstimateAmount', 'workshopGstNo',
+  'driverDob', 'dlValidFrom', 'dlValidUpTo', 'licenseType', 'nilDepCover',
+  'ownerDriver', 'thirdPartyInvolved', 'workshopEstimateDate', 'dlVerifiedRemarks',
+  'spotSurveyDone', 'initialLossAmount', 'claimantMobile', 'surveyorObservation',
+  'causeOfAccident', 'surveyorAppointedDate', 'finalDocumentDate',
 ] as const;
 export type OicField = (typeof OIC_FIELDS)[number];
 
@@ -275,6 +315,8 @@ export async function buildOicPacket(
   const bc = claim.billCheck;
   const dlParts = splitIndianDl(d?.licenceNumber);
   const depType = toDepreciationType(claim.depreciationType);
+  const ownerName = normName(claim.policy?.insuredName);
+  const driverName = normName(d?.name);
 
   let files: OicPortalPacket['files'] = [];
   if (opts.includeExcel !== false) {
@@ -314,7 +356,7 @@ export async function buildOicPacket(
     claimNo,
     builtAt: new Date().toISOString(),
     fields: compact<OicField>({
-      regNumber: v?.registrationNumber?.replace(/\s+/g, '')?.toUpperCase(),
+      regNumber: oicRegNumber(v?.registrationNumber),
       make: v?.make?.trim(),
       model: v?.model?.trim(),
       chasisNumber: v?.chassisNumber?.trim(),
@@ -338,6 +380,22 @@ export async function buildOicPacket(
       driverAddress: d?.address?.trim().slice(0, 240) || undefined,
       workshopName: a?.workshopName?.trim(),
       workshopEstimateAmount: bc?.billTotal ?? undefined,
+      workshopEstimateDate: bc?.billDate,
+      driverDob: d?.dateOfBirth,
+      dlValidFrom: d?.dateOfIssue,
+      dlValidUpTo: v?.isCommercial ? d?.validityTransport : d?.validityNonTransport,
+      licenseType: pickLicenseType(d?.licenceType, !!v?.isCommercial),
+      dlVerifiedRemarks: d?.invalidRemarks?.trim(),
+      ownerDriver: ownerName && driverName ? (ownerName === driverName ? 'yes' : 'no') : undefined,
+      thirdPartyInvolved: a ? (a.thirdPartyDetails?.trim() ? 'yes' : 'no') : undefined,
+      nilDepCover: claim.policyCheck?.nilDep,
+      spotSurveyDone: spotSurveyDone(claim.spotDetails),
+      initialLossAmount: oicNetLiability(claim, opts.ageMonths),
+      claimantMobile: claim.policy?.insuredMobile?.replace(/\D/g, '') || undefined,
+      surveyorObservation: a?.remarks?.trim().slice(0, 2000),
+      causeOfAccident: a?.causeOfAccident?.trim().slice(0, 500),
+      surveyorAppointedDate: a?.appointmentDate,
+      finalDocumentDate: new Date().toISOString().slice(0, 10),
     }),
     files,
   };

@@ -127,7 +127,7 @@ function hsnForRate(gst: number): string {
  * Disallowed rows, rows the bill check marked not billed / not allowed, and rows
  * with nothing assessed are left out entirely, estimate included.
  */
-function inOicExcel(r: AssessmentRow): boolean {
+export function inOicExcel(r: AssessmentRow): boolean {
   return r.allowed
     && r.billStatus !== 'not-in-bill'
     && r.billStatus !== 'not-allowed'
