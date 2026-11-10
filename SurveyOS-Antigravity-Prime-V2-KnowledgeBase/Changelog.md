@@ -1,3 +1,10 @@
+## 2026-11-10 (Antigravity) — UIIC Reports Table Nomenclature Clarification (Assessed Amount)
+- feat(uiic-report): Added small subtitle `(Assessed Amount)` beneath "Part List W/o Tax" in UIIC Final Survey Report and beneath "Part List Without Tax" in UIIC Bill Check Report.
+- fix(uiic-bill-check): Reconciled Bill Check table cells: Column 5 displays assessed amount without tax (`r.assessed`) for parts, labour, and paint, and Column 8 displays net assessed amount after depreciation (`afterDep` / `netBeforeGst`).
+- fix(uiic-bill-check): Updated Subtotal and Total rows so Column 5 reflects total assessed amounts and Column 8 reflects total net assessed liability after depreciation.
+- test: Updated report test suites (`bill-check-format.test.ts` and `labour-paint-depreciation.test.ts`) to assert on official UIIC assessed amounts.
+- verification: 325 Vitest test files passed (2,866 tests, 100% green), `npx tsc --noEmit` clean (0 errors). Prime ↔ Scan coupling: None.
+
 ## 2026-11-10 (Antigravity) — Handover to Claude Code & 5-Day Developments Briefing
 - docs(handover): Authored comprehensive handover document `HANDOVER_2026_11_10_CLAUDE.md` and updated `HANDOVER.md` for Claude Code.
 - triage(extension): Investigated OIC live portal fill failure ("Couldn't read page"), documenting root causes in `manifest.json` (`all_frames: true` missing), `filler.js` (`NO_ANGULAR` probe fallback), and `fill-core.js` (route gating).

@@ -7,6 +7,29 @@
   3. Relax route matching in `extension/src/lib/fill-core.js` (`pickMap`) to permit arbitrary subpaths.
   4. See detailed technical briefing in `SurveyOS-Antigravity-Prime-V2-KnowledgeBase/HANDOVER_2026_11_10_CLAUDE.md`.
 
+## Done: UIIC Reports Table Nomenclature Clarification (Assessed Amount) (2026-11-10, Antigravity)
+- **Problem Solved:**
+  - In official United India Insurance Co. (UIIC) report formats (both Final Survey Report and Bill Check Report), insurers do not display workshop billed or estimate amounts in the item table. Every row represents the surveyor's assessment: Column 5 is the assessed amount without tax, Column 6 is depreciation %, Column 7 is depreciation amount, Column 8 is net assessed amount after depreciation, Column 9 is GST %, and Column 10 is the final assessed amount with GST.
+  - Previously, `uiic-final-builder.ts` put workshop `r.estimated` into Column 5 of the Bill Check table and `r.assessed` into Column 8, which inverted the arithmetic relationship and displayed workshop estimates where UIIC expects the surveyor's assessment.
+  - Furthermore, surveyors requested explicit clarity in the header subtitle: beneath "Part List Without Tax" / "Part List W/o Tax", display a small clarification `(Assessed Amount)`.
+- **Architecture Delivered:**
+  - **Header Subtitle Clarification (`src/lib/reports/uiic-final-builder.ts`):**
+    - Final Survey Report: Added `<br/><span style="font-size:5.5pt;font-weight:normal;text-transform:none;">(Assessed Amount)</span>` under `Part List<br/>W/o Tax`.
+    - Bill Check Report: Added `<br/><span style="font-size:5.5pt;font-weight:normal;text-transform:none;">(Assessed Amount)</span>` under `Part List<br/>Without Tax`.
+  - **Bill Check Table Cells Reconciled (`src/lib/reports/uiic-final-builder.ts`):**
+    - Column 5 (Part List Without Tax): Renders `${noBill ? 'No Bill' : fa(r.assessed)}` for parts, labour, and paint rows.
+    - Column 8 (Parts Assessment): Renders `${noBill ? '—' : (isDisposal ? fa(netBeforeGst) : fa(afterDep))}` (net assessed basis after depreciation).
+    - IMT-23 Row Line: Formatted with `colspan="4"` then `fa(r.assessed / 2)` under Column 5 and `colspan="8"` (13 columns total), matching the layout of the Final Survey Report.
+  - **Subtotals & Grand Total Reconciled (`src/lib/reports/uiic-final-builder.ts`):**
+    - Parts Subtotal: Column 5 sums `rawParts` (assessed total), Column 7 shows `effParts - partsDepreciated`, Column 8 shows `partsDepreciated + disposalNet`.
+    - Labour Subtotal: Column 5 sums `billedLabour.reduce((s, r) => s + r.assessed, 0)`.
+    - Paint Subtotal: Column 5 sums `billedPaint.reduce((s, r) => s + r.assessed, 0)`.
+    - Grand Total: Column 5 sums all allowed assessed items `[...billedParts, ...billedLabour, ...billedPaint].reduce((s, r) => s + r.assessed, 0)`.
+- **Verification:**
+  - Full Vitest suite: 325 test files passed (2,866 tests, 100% green).
+  - TypeScript check (`npx tsc --noEmit`): 0 errors.
+  - Prime ↔ Scan coupling: Scan impact is **None**.
+
 ## Done: Bill Check Tab Editability (GST, Disposal, Dep%) & Report Integration (2026-11-09, Antigravity)
 - **Problem Solved:**
   - In Bill Check, surveyors frequently need to adjust the assessed amount or resolve real-world changes that happened during vehicle repairs (e.g., insured originally planned to fit a 2nd-hand disposal part, but had to fit a new OEM part with GST).
