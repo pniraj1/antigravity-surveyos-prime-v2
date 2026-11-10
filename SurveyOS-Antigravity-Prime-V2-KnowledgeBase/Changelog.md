@@ -1,3 +1,10 @@
+## 2026-11-10 (Claude Code) — OIC live check fixes + estimate floor (not deployed)
+- fix(portal-fill): live OIC step 2/3 fixes: licence type in OIC's wording, paced writes (OIC's handler dropped one of two same-tick writes), InputNumber via onChange, DD-MM-YYYY placeholder counts as empty, RTO from the DL's first 4 characters, date/place of survey, always-Yes defaults replace OIC's saved-blank "No".
+- fix(extension-build): Chrome injects a script file once per frame, so libs shared by the panel and the MAIN-world filler never ran in MAIN ("The portal page didn't answer" on every portal since 0cbef575). Build copies them to `src/main/`; the card re-asks the page until it starts.
+- feat(assessment): estimate may not be below assessed (Assessment) or allowed/billed (Bill Check): red cell, every print/Word export and the OIC Excel are held (`estimate-floor.ts`, `usePrintGate`). Prime never changes the estimate.
+- fix(oic-excel): Item Amount = Bill Check allowed amount, else assessed.
+- verification: 327 files / 2915 tests, tsc clean. Grid/dialog changes not browser-checked. Prime ↔ Scan coupling: none.
+
 ## 2026-11-10 (Claude Code) — OIC Portal Fill rebuild (not deployed)
 - fix(oic-excel): rows that are not billed, not allowed or zero-assessed are left out of the OIC Excel (`inOicExcel`).
 - feat(oic-packet): DL split MH / middle / last 4, reg number spacing, DL dates and DOB, licence class by vehicle, step 3 answers, initial loss amount = net liability over the Excel's rows.
