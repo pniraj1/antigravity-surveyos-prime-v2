@@ -55,13 +55,16 @@ function lineText(l) {
 /** Line tone -> the panel's icon and colour: ok ✓, warn kept, info type-it-yourself, bad problem. @param {string} s */
 const toneOf = (s) => OK.includes(s) ? 'ok' : KEPT.includes(s) ? 'warn' : ['manual', 'disabled', 'notBound'].includes(s) ? 'info' : 'bad';
 
+/** A multi-step page's map: any field names its step. @param {any} map */
+const isStepped = (map) => Object.values(map?.fields ?? {}).some((/** @type {any} */ f) => f && 'step' in f);
+
 /** Fill or Check result -> all lines (ordered, skip dropped). @param {any} map @param {any} res @param {boolean} isFill */
 function buildLines(map, res, isFill) {
   const rows = isFill
     ? [
         ...res.steps.filter((/** @type {any} */ s) => s.action !== 'skip').map((/** @type {any} */ s) => {
           const f = map.fields?.[s.name];
-          return { status: s.action, label: f?.label ?? s.name, modelPath: f?.modelPath ?? '', why: s.why };
+          return { status: s.action, name: s.name, label: f?.label ?? s.name, modelPath: f?.modelPath ?? '', why: s.why };
         }),
         ...res.files.map((/** @type {any} */ x) => ({ status: x.status, label: 'Excel file', modelPath: map.files?.[x.slot]?.modelPath ?? '', why: x.why })),
       ]
@@ -71,7 +74,11 @@ function buildLines(map, res, isFill) {
       ];
   const rank = (/** @type {string} */ s) => { const i = NEEDS_YOU.indexOf(s); return i >= 0 ? i : KEPT.includes(s) ? 50 : 100; };
   // Array.sort is stable: input order is kept inside a rank. Unknown statuses count as needs-you.
-  return rows.map((r) => ({ ...r, text: lineText(r), tone: toneOf(r.status) })).sort((a, b) => rank(a.status) - rank(b.status));
+  const stepped = isStepped(map);
+  const fieldOf = (/** @type {any} */ r) => map.fields?.[r.name] ?? Object.values(map.fields ?? {}).find((/** @type {any} */ f) => r.modelPath && f.modelPath === r.modelPath);
+  // On a stepped map a notFound field just lives on another step: leave it out.
+  return rows.filter((r) => !(stepped && r.status === 'notFound'))
+    .map((r) => ({ ...r, text: lineText(r), tone: toneOf(r.status), isDefault: !!fieldOf(r)?.default })).sort((a, b) => rank(a.status) - rank(b.status));
 }
 
 const isNeeds = (/** @type {string} */ s) => !KEPT.includes(s) && !OK.includes(s);
@@ -129,7 +136,7 @@ function cardView(i) {
       const k = all.filter((l) => isNeeds(l.status)).length;
       const again = (fill.steps.some((/** @type {any} */ s) => s.action === 'error' || s.action === 'invalid') || fill.files.some((/** @type {any} */ x) => x.status === 'error'));
       return set({ state: k ? 'needsYou' : 'filled', badge: k ? { tone: 'warn', text: `Needs you: ${k}` } : { tone: 'ok', text: 'Filled' },
-        primary: k && again ? { ...FILL, label: 'Fill again' } : null, secondary: [SHOW], doneHint: map.doneHint ?? null, legend: LEGEND });
+        primary: isStepped(map) ? { ...FILL, label: 'Fill this step' } : k && again ? { ...FILL, label: 'Fill again' } : null, secondary: [SHOW], doneHint: map.doneHint ?? null, legend: LEGEND });
     }
     const body = check.mode === 'structure' ? 'Page check (no claim sent).'
       : check.mode === 'value' ? 'Page check for this claim.'
@@ -185,7 +192,7 @@ function reportText(view, meta) {
  */
 const pulseRestore = (currentOutline, pulseOutline, orig) => currentOutline === pulseOutline ? orig : null;
 
-const API = { cardView, reportText, claimTail, LINE_COPY, pulseRestore, livePacket, checkPacket, shouldReprobe, probeChanged };
+const API = { isStepped, cardView, reportText, claimTail, LINE_COPY, pulseRestore, livePacket, checkPacket, shouldReprobe, probeChanged };
 // ---- umd shim: classic script in the extension, ESM/CJS in Vitest ----
 if (typeof module !== 'undefined' && module.exports) module.exports = API;
 else /** @type {any} */ (globalThis)[NS] = API;

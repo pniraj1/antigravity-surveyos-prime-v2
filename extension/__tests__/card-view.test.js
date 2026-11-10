@@ -270,3 +270,32 @@ it('reportText header with nothing read from the page', () => {
   expect(reportText(v, { extVersion: '0.4.0', mapId: 'nia-nontieup', mapVersion: 3, route: '#/x', mode: '-', scopeFound: false, invoices: undefined }))
     .toBe('SurveyOS Portal Fill 0.4.0 · nia-nontieup v3 · #/x · mode - · scope missing · invoices - · page claim (none)');
 });
+
+describe('stepped map (OIC)', () => {
+  const smap = { ...nia, fields: {
+    a: { label: 'A', modelPath: 'a', step: 2 }, b: { label: 'B', modelPath: 'b', step: 2, default: true }, c: { label: 'C', modelPath: 'c', step: 2 },
+    d: { label: 'D', modelPath: 'd', step: 3 }, e: { label: 'E', modelPath: 'e', step: 3 },
+  } };
+  const steps = [['a', 'filled'], ['b', 'filled'], ['c', 'filled'], ['d', 'notFound'], ['e', 'notFound']].map(([name, action]) => ({ name, action }));
+  const fill = { ok: true, steps, files: [] };
+  it('drops notFound lines and counts, flags defaults, keeps Fill this step', () => {
+    const v = view({ map: smap, fill, showAll: true });
+    expect(v.allLines.map((l) => l.label)).toEqual(['A', 'B', 'C']);
+    expect(v.allLines.map((l) => l.isDefault)).toEqual([false, true, false]);
+    expect(v.summary).toBe('3 filled');
+    expect(v.primary).toEqual({ id: 'fill', label: 'Fill this step' });
+  });
+  it('check results drop notFound too', () => {
+    const check = { ok: true, mode: 'value', fields: [{ status: 'ready', label: 'A', modelPath: 'a', name: 'a' }, { status: 'notFound', label: 'D', modelPath: 'd', name: 'd' }], files: [] };
+    const v = view({ map: smap, check });
+    expect(v.allLines).toHaveLength(1);
+    expect(v.summary).toBe('1 ready');
+  });
+  it('non-stepped map is unchanged: notFound shown, no primary after clean fill', () => {
+    const v = view({ fill: { ok: true, steps: [{ name: names[0], action: 'notFound' }], files: [] } });
+    expect(v.allLines).toHaveLength(1);
+    expect(v.allLines[0].isDefault).toBe(false);
+    expect(v.summary).toBe('1 not found');
+    expect(v.primary).toBeNull();
+  });
+});

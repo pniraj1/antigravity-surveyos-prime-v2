@@ -3,7 +3,7 @@
 // Isolated world on the portal. Thin renderer of SxCard.cardView + storage + messaging to the Filler.
 (() => {
   const { pickMap, mapId, routeStep, keepResults } = /** @type {any} */ (globalThis).SxFill;
-  const { cardView, reportText, pulseRestore, livePacket, checkPacket, shouldReprobe, probeChanged } = /** @type {any} */ (globalThis).SxCard;
+  const { cardView, reportText, pulseRestore, livePacket, checkPacket, shouldReprobe, probeChanged, isStepped } = /** @type {any} */ (globalThis).SxCard;
   /** Live line-click pulses, so overlapping clicks restore the true original once. @type {WeakMap<HTMLElement, {orig: string, timer: ReturnType<typeof setTimeout>}>} */
   const pulses = new WeakMap();
   const PACKET_TTL_MS = 24 * 60 * 60 * 1000; // E6
@@ -60,6 +60,9 @@
   };
   window.addEventListener('hashchange', onRoute);
   window.addEventListener('popstate', onRoute);
+  // ponytail: 1 s poll; use the Navigation API if it ever lags. React Router's pushState fires no event.
+  let lastHref = location.href;
+  setInterval(() => { if (location.href !== lastHref) { lastHref = location.href; onRoute(); } }, 1000);
   // First install: maps land in storage after this page loaded.
   chrome.storage.onChanged.addListener((ch, area) => { if (area === 'local' && ch.maps && !bootedFor) onRoute(); });
   onRoute();
@@ -204,7 +207,7 @@
       body.hidden = !view.body;
       fillText(summary, view.summary);
       lines.innerHTML = view.lines.map((/** @type {any} */ l) => {
-        const inner = `${TONE_ICON[l.tone]}<span><span class="sx-ll">${esc(l.label)}</span> ${esc(l.text)}</span>`;
+        const inner = `${TONE_ICON[l.tone]}<span><span class="sx-ll">${esc(l.label)}</span>${l.isDefault ? ' <span class="sx-tag">default</span>' : ''} ${esc(l.text)}</span>`;
         return `<li>${l.modelPath ? `<button type="button" class="sx-line sx-${l.tone}" data-path="${esc(l.modelPath)}">${inner}</button>` : `<span class="sx-line sx-${l.tone}">${inner}</span>`}</li>`;
       }).join('');
       lines.hidden = !view.lines.length;
@@ -309,7 +312,8 @@
       phase = 'filling'; check = null; draw();
       const r = await ask('fill', { map, packet });
       phase = 'idle'; fill = r;
-      if (r.ok && r.files.every((/** @type {any} */ f) => f.status === 'attached') && !r.steps.some((/** @type {any} */ s) => s.action === 'error' || s.action === 'invalid')) {
+      // A stepped page is filled again after Next, so keep its packet and never mark it done.
+      if (!isStepped(map) && r.ok && r.files.every((/** @type {any} */ f) => f.status === 'attached') && !r.steps.some((/** @type {any} */ s) => s.action === 'error' || s.action === 'invalid')) {
         done = true;
         packet = undefined;
         chrome.storage.local.remove(['packet', 'storedAt']); // E6

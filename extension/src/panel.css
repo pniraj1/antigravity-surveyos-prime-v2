@@ -70,3 +70,4 @@
 #sx-panel .sx-draft-meta{display:flex;align-items:center;justify-content:space-between;font-size:10px;color:#64748b}
 #sx-panel .sx-copy-draft{padding:2px 8px;background:#0f766e;color:#fff;border:none;border-radius:3px;font-size:10px;font-weight:600;cursor:pointer;min-height:20px}
 #sx-panel .sx-copy-draft:hover{background:#115e59}
+#sx-panel .sx-tag{font-size:11px;color:var(--sx-muted);border:1px solid currentColor;border-radius:4px;padding:0 4px}
