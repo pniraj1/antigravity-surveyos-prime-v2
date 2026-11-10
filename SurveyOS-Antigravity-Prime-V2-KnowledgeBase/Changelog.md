@@ -1,3 +1,10 @@
+## 2026-11-10 (Claude Code) — OIC Portal Fill rebuild (not deployed)
+- fix(oic-excel): rows that are not billed, not allowed or zero-assessed are left out of the OIC Excel (`inOicExcel`).
+- feat(oic-packet): DL split MH / middle / last 4, reg number spacing, DL dates and DOB, licence class by vehicle, step 3 answers, initial loss amount = net liability over the Excel's rows.
+- feat(portal-fill): React writes for PrimeReact/MUI (`react-write.js`), radioPick, DD-MM-YYYY dates, ₹0 counts as empty, step 3 claim gate, OIC map v2 for steps 2–4, "Fill this step", pushState route poll.
+- fix(portal-fill): final-review hardening: only radio inputs are clicked, disabled dropdowns are skipped, `2W`, unreadable dates are skipped, `check()` is read-only.
+- verification: 326 test files / 2905 tests pass, tsc clean. Live OIC check pending with the owner. Prime ↔ Scan coupling: none.
+
 ## 2026-11-10 (Antigravity) — UIIC Reports Table Nomenclature Clarification (Assessed Amount)
 - feat(uiic-report): Added small subtitle `(Assessed Amount)` beneath "Part List W/o Tax" in UIIC Final Survey Report and beneath "Part List Without Tax" in UIIC Bill Check Report.
 - fix(uiic-bill-check): Reconciled Bill Check table cells: Column 5 displays assessed amount without tax (`r.assessed`) for parts, labour, and paint, and Column 8 displays net assessed amount after depreciation (`afterDep` / `netBeforeGst`).

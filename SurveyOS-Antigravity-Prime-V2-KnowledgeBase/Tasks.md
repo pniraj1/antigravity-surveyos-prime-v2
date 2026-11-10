@@ -1,11 +1,8 @@
-## Priority: OIC Live Portal Fill Injection & Probing Fix (2026-11-10, Handed to Claude)
-- **Status:** Pending / Next Up for Claude Code
-- **Symptom:** Live Oriental Insurance (OIC) portal shows "Couldn't read page / No fields here" when sidecar opens.
-- **Root Causes to Address:**
-  1. Add `"all_frames": true` to content scripts in `extension/manifest.json` (OIC embeds form inside `<iframe>`).
-  2. Relax `probe()` in `extension/src/filler.js`: do not fail with `NO_ANGULAR` if `#claimNumber` is missing or on non-Angular pages.
-  3. Relax route matching in `extension/src/lib/fill-core.js` (`pickMap`) to permit arbitrary subpaths.
-  4. See detailed technical briefing in `SurveyOS-Antigravity-Prime-V2-KnowledgeBase/HANDOVER_2026_11_10_CLAUDE.md`.
+## In progress: OIC Portal Fill rebuild (2026-11-10, Claude Code)
+- **Status:** Built and reviewed on `main` (0abced2c..e297fff0), not deployed. Waiting on the **live check with the owner** (plan Task 6).
+- **Real cause** (the handover's iframe / probe / route diagnosis was rejected): the claim number was read twice over (B1), and the map's `from` keys didn't match the packet (B2). See `docs/superpowers/specs/2026-11-10-oic-portal-fill-debug.md`.
+- **Built:** the Excel leaves out not-billed, not-allowed and zero rows; the packet carries the DL split MH / middle / last 4, reg spacing, DL dates, step 3 answers and net liability; React widget writes (`extension/src/lib/react-write.js`); the step 3 claim gate; the OIC map for steps 2–4 with approved defaults marked "default"; panel "Fill this step" and pushState routes.
+- **Next (Task 6, owner present):** check that each widget accepts the write and keeps it after Next/Back; dropdown option lists; boxes OIC pre-fills; radio 1 = Yes; hidden steps unmounted and labels unique; whether `surveyAssessmentId` changes per assessment; attach the Excel on step 4 without a double upload; then add excess and salvage. Plan: `docs/superpowers/plans/2026-11-10-oic-portal-fill.md`.
 
 ## Done: UIIC Reports Table Nomenclature Clarification (Assessed Amount) (2026-11-10, Antigravity)
 - **Problem Solved:**
