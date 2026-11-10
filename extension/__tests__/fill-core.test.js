@@ -52,6 +52,18 @@ describe('isEmptyValue / decide (E4)', () => {
   });
 });
 
+describe('planFill replaces', () => {
+  it('a `replaces` value is overwritten; any other value is kept', () => {
+    const map = { fields: { insp: { modelPath: '#i1', kind: 'radioPick', empty: '', constant: 'yes', replaces: ['no'], choices: { yes: '#i1', no: '#i2' } } } };
+    const at = (cur) => planFill(map, { fields: {} }, { current: () => cur, radioValues: () => [] })[0].action;
+    expect(at('no')).toBe('fill');
+    expect(at('')).toBe('fill');
+    expect(at('yes')).toBe('same');
+    const plain = { fields: { insp: { ...map.fields.insp, replaces: undefined } } };
+    expect(planFill(plain, { fields: {} }, { current: () => 'no', radioValues: () => [] })[0].action).toBe('kept');
+  });
+});
+
 describe('planFill', () => {
   const packet = {
     v: 1, portal: 'nia', flow: 'nontieup', claimNo: '1', builtAt: '',

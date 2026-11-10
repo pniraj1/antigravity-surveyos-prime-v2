@@ -157,7 +157,7 @@ export const OIC_FIELDS = [
   'driverDob', 'dlValidFrom', 'dlValidUpTo', 'licenseType', 'nilDepCover',
   'ownerDriver', 'thirdPartyInvolved', 'workshopEstimateDate', 'dlVerifiedRemarks',
   'spotSurveyDone', 'initialLossAmount', 'claimantMobile', 'surveyorObservation',
-  'causeOfAccident', 'surveyorAppointedDate', 'finalDocumentDate',
+  'causeOfAccident', 'surveyorAppointedDate', 'finalDocumentDate', 'surveyDate', 'surveyPlace',
 ] as const;
 export type OicField = (typeof OIC_FIELDS)[number];
 
@@ -425,6 +425,8 @@ export async function buildOicPacket(
       causeOfAccident: a?.causeOfAccident?.trim().slice(0, 500),
       surveyorAppointedDate: a?.appointmentDate,
       finalDocumentDate: localIsoDate(),
+      surveyDate: a?.dateOfSurvey,
+      surveyPlace: a?.placeOfSurvey?.trim(),
     }),
     files,
   };

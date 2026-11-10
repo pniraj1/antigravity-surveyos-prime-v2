@@ -363,8 +363,12 @@ describe('buildOicPacket new values', () => {
       c.accident.remarks = 'obs text';
       c.accident.causeOfAccident = 'cause text';
       c.accident.appointmentDate = '2026-09-10';
+      c.accident.dateOfSurvey = '2026-09-12';
+      c.accident.placeOfSurvey = ' Dhule workshop ';
       c.policy.insuredMobile = '+91 98765-43210';
     });
+    expect(p.fields.surveyDate).toBe('2026-09-12');
+    expect(p.fields.surveyPlace).toBe('Dhule workshop');
     const t = new Date();
     const local = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
     expect(p.fields.finalDocumentDate).toBe(local);

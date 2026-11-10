@@ -117,7 +117,8 @@ function planFill(map, packet, read) {
       if (choice === undefined || !Object.hasOwn(spec.choices, value)) { steps.push({ ...base, action: 'skip', why: 'no such choice' }); continue; }
     }
     const current = read.current(spec.modelPath, spec);
-    const action = decide(current, spec.empty, value);
+    // replaces: values the portal shows for an unanswered box (OIC saves a blank Yes/No as No)
+    const action = Array.isArray(spec.replaces) && spec.replaces.includes(current) ? 'fill' : decide(current, spec.empty, value);
     steps.push(choice === undefined ? { ...base, action, value, current } : { ...base, action, value, current, choice });
   }
   return steps;

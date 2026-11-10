@@ -274,6 +274,23 @@
       "from": "surveyorAppointedDate",
       "transform": "ddmmyyyyDash"
     },
+    "surveyDate": {
+      "model": "label=Date of Survey",
+      "label": "Date of Survey",
+      "kind": "date",
+      "empty": "",
+      "step": 3,
+      "from": "surveyDate",
+      "transform": "ddmmyyyyDash"
+    },
+    "surveyPlace": {
+      "model": "#placeOfSurvey",
+      "label": "Place of Survey",
+      "kind": "text",
+      "empty": "",
+      "step": 3,
+      "from": "surveyPlace"
+    },
     "finalDocumentDate": {
       "model": "label=Submission Date of Final Document",
       "label": "Submission Date of Final Document",
@@ -308,7 +325,10 @@
       "choices": {
         "yes": "#vbConfirmed1",
         "no": "#vbConfirmed2"
-      }
+      },
+      "replaces": [
+        "no"
+      ]
     },
     "nilDepCover": {
       "model": "#nillDepreciationCover1",
@@ -368,7 +388,10 @@
       "choices": {
         "yes": "#whetherVehicleInspected1",
         "no": "#whetherVehicleInspected2"
-      }
+      },
+      "replaces": [
+        "no"
+      ]
     },
     "surveyCompleted": {
       "model": "#isSurveyCompleted1",
@@ -381,7 +404,10 @@
       "choices": {
         "yes": "#isSurveyCompleted1",
         "no": "#isSurveyCompleted2"
-      }
+      },
+      "replaces": [
+        "no"
+      ]
     },
     "dlApplicable": {
       "model": "#isDrivingLicenseApplicable1",
@@ -394,7 +420,10 @@
       "choices": {
         "yes": "#isDrivingLicenseApplicable1",
         "no": "#isDrivingLicenseApplicable2"
-      }
+      },
+      "replaces": [
+        "no"
+      ]
     },
     "dlVerified": {
       "model": "#isDrivingLicenseVerified1",
@@ -407,7 +436,10 @@
       "choices": {
         "yes": "#isDrivingLicenseVerified1",
         "no": "#isDrivingLicenseVerified2"
-      }
+      },
+      "replaces": [
+        "no"
+      ]
     },
     "dlVerifiedRemarks": {
       "model": "#isDrivingLicenseVerifiedRemarks",

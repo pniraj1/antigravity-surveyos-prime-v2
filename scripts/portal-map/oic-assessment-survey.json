@@ -1,6 +1,6 @@
 {
   "file": "oic-assessment.html",
-  "total": 60,
+  "total": 62,
   "groups": {
     "oicBasicDetails": [
       {
@@ -206,6 +206,18 @@
         "model": "label=Surveyor Appointed Date",
         "type": "text",
         "name": "surveyorAppointedDate"
+      },
+      {
+        "id": "surveyDate",
+        "model": "label=Date of Survey",
+        "type": "text",
+        "name": "surveyDate"
+      },
+      {
+        "id": "surveyPlace",
+        "model": "#placeOfSurvey",
+        "type": "text",
+        "name": "surveyPlace"
       },
       {
         "id": "finalDocumentDate",
