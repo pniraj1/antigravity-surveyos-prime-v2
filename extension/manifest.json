@@ -106,6 +106,7 @@
         "src/lib/inverter.js",
         "src/lib/learned-store.js",
         "src/lib/semantic-ai.js",
+        "src/lib/react-write.js",
         "src/filler.js"
       ],
       "world": "MAIN",

@@ -29,7 +29,8 @@ FILES = ["icons/icon16.png", "icons/icon32.png", "icons/icon48.png", "icons/icon
          "src/background.js", "src/relay.js", "src/panel.js", "src/panel.css", "src/filler.js",
          "src/popup.html", "src/popup.js",
          "src/lib/packet-validate.js", "src/lib/fill-core.js", "src/lib/card-view.js",
-         "src/lib/inverter.js", "src/lib/observer.js", "src/lib/learned-store.js", "src/lib/semantic-ai.js"]
+         "src/lib/inverter.js", "src/lib/observer.js", "src/lib/learned-store.js", "src/lib/semantic-ai.js",
+         "src/lib/react-write.js"]
 
 dist = EXT / "dist"; dist.mkdir(exist_ok=True)
 out = dist / f"surveyos-portal-fill-{manifest['version']}.zip"

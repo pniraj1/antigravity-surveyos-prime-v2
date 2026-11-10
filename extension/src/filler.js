@@ -39,14 +39,8 @@
   }
 
   function probe(/** @type {any} */ map) {
-    if (!ng()) {
-      if (map && map.portal === 'oic') {
-        const claimNoEl = document.querySelector(map.claimNoSelector || '#claimNumber');
-        const claimNo = claimNoEl ? (/** @type {HTMLInputElement} */ (claimNoEl).value || claimNoEl.textContent || '') : '';
-        return { ok: true, claimNo: String(claimNo).trim(), invoices: 1 };
-      }
-      return { ok: false, reason: NO_ANGULAR };
-    }
+    if (map?.framework === 'react') return reactProbe(map);
+    if (!ng()) return { ok: false, reason: NO_ANGULAR };
     const scope = ctrlScope(map);
     if (!scope) return { ok: false, reason: NO_FIELDS };
     const claimNo = readPath(scope, map.claimNoPath) || readPath(scope, map.claimNoFallback);
@@ -106,6 +100,7 @@
   }
 
   function fill(/** @type {any} */ map, /** @type {any} */ packet) {
+    if (map?.framework === 'react') return reactFill(map, packet);
     const p = probe(map);
     if (!p.ok) return { ok: false, reason: p.reason, steps: [], files: [] };
     if (normaliseClaimNo(p.claimNo) !== normaliseClaimNo(packet.claimNo)) {
@@ -172,28 +167,8 @@
 
   /** Read-only: gathers reads for planCheck. Never writes, dispatches or styles anything on the page. */
   function check(/** @type {any} */ map, /** @type {any} */ packet) {
-    if (!ng()) {
-      if (map && map.portal === 'oic') {
-        const claimNoEl = document.querySelector(map.claimNoSelector || '#claimNumber');
-        const claimNo = claimNoEl ? (/** @type {HTMLInputElement} */ (claimNoEl).value || claimNoEl.textContent || '') : '';
-        const read = {
-          current: (/** @type {string} */ path) => {
-            const el = q(path)[0];
-            return el ? (/** @type {HTMLInputElement} */ (el)).value : undefined;
-          },
-          radioValues: (/** @type {string} */ path) => q(path).map((el) => /** @type {HTMLInputElement} */ (el).value),
-          lookup: (/** @type {string} */ path) => {
-            const els = q(path);
-            const el = els[0];
-            if (!el) return { found: false, bound: false, disabled: false, options: null, current: undefined };
-            return { found: true, bound: true, disabled: !!(/** @type {HTMLInputElement} */ (el).disabled), options: null, current: (/** @type {HTMLInputElement} */ (el)).value };
-          },
-        };
-        const pageClaimNo = claimNo ? String(claimNo) : '';
-        return { ok: true, claimNo: pageClaimNo, invoices: 1, ...planCheck(map, packet, pageClaimNo, read) };
-      }
-      return { ok: false, reason: 'AngularJS not found on this page' };
-    }
+    if (map?.framework === 'react') return reactCheck(map, packet);
+    if (!ng()) return { ok: false, reason: 'AngularJS not found on this page' };
     const scope = ctrlScope(map);
     if (!scope) return { ok: false, reason: NO_FIELDS };
     const claimNo = readPath(scope, map.claimNoPath) || readPath(scope, map.claimNoFallback);
@@ -215,6 +190,114 @@
     };
     const pageClaimNo = claimNo ? String(claimNo) : '';
     return { ok: true, claimNo: pageClaimNo, invoices: Array.isArray(invoices) ? invoices.length : 1, ...planCheck(map, packet, pageClaimNo, read) };
+  }
+
+  // ---- React portals (OIC): PrimeReact + MUI widgets, written through SxReact ----
+  const STEP2 = 'Open step 2 of this claim first.';
+  const SAVED_CLAIM = 'sx-oic-claim';
+
+  /** `label=Text` → the element the matching <label> points at (MUI date ids change per load); else a CSS selector. */
+  const rq = (/** @type {string} */ p) => {
+    if (!p.startsWith('label=')) return /** @type {HTMLElement[]} */ (Array.from(document.querySelectorAll(p)));
+    const text = p.slice('label='.length);
+    const label = /** @type {HTMLLabelElement|undefined} */ (Array.from(document.querySelectorAll('label'))
+      .find((l) => (l.textContent ?? '').trim().replace(/\s*\*$/, '') === text));
+    const el = label?.htmlFor ? document.getElementById(label.htmlFor) : null;
+    return el ? [el] : [];
+  };
+
+  /** B1/B9: step 2's claim select, else the number saved on step 2 of this same assessment; null when neither. */
+  function reactClaimNo() {
+    const id = sessionStorage.getItem('surveyAssessmentId');
+    const sel = /** @type {HTMLSelectElement|null} */ (document.querySelector("select[name='claimNumber']"));
+    if (sel) {
+      const claimNo = String(sel.value ?? '').trim();
+      if (claimNo) sessionStorage.setItem(SAVED_CLAIM, JSON.stringify({ id, claimNo }));
+      return claimNo;
+    }
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(SAVED_CLAIM) ?? 'null');
+      if (id && saved?.id === id && saved.claimNo) return String(saved.claimNo);
+    } catch { /* a corrupt saved value counts as none */ }
+    return null;
+  }
+
+  function reactProbe(/** @type {any} */ map) {
+    const claimNo = reactClaimNo();
+    return claimNo === null ? { ok: false, reason: STEP2 } : { ok: true, claimNo, invoices: 1 };
+  }
+
+  /** Ruling 1: a radioPick reads as the answer whose input is checked; a dropdown as its React value. */
+  function reactCurrent(/** @type {string} */ path, /** @type {any} */ spec) {
+    if (spec?.kind === 'radioPick') {
+      return Object.keys(spec.choices ?? {}).find((k) => /** @type {HTMLInputElement|undefined} */ (rq(spec.choices[k])[0])?.checked) ?? '';
+    }
+    const el = rq(path)[0];
+    if (!el) return undefined;
+    // a PrimeReact Dropdown root is a <div>: its value lives in props, not on the element
+    if (spec?.kind === 'dropdown') { const props = globalThis.SxReact.reactProps(el); if (props) return props.value; }
+    return /** @type {HTMLInputElement} */ (el).value;
+  }
+
+  function reactWrite(/** @type {HTMLElement} */ el, /** @type {any} */ s) {
+    const W = globalThis.SxReact;
+    const v = String(s.value);
+    if (s.kind === 'text' || s.kind === 'money' || s.kind === 'textarea') return W.writeText(el, v);
+    if (s.kind === 'dropdown') return W.pickDropdown(el, v);
+    if (s.kind === 'radioPick') return W.clickRadio(el);
+    if (s.kind === 'date') return W.writeDate(el, v);
+    return 'manual';
+  }
+
+  function reactFill(/** @type {any} */ map, /** @type {any} */ packet) {
+    const p = reactProbe(map);
+    if (!p.ok) return { ok: false, reason: p.reason, steps: [], files: [] };
+    if (normaliseClaimNo(p.claimNo) !== normaliseClaimNo(packet.claimNo)) {
+      return { ok: false, reason: `claim mismatch — page: ${p.claimNo || '(none)'}, packet: ${packet.claimNo}`, steps: [], files: [] };
+    }
+    const read = { current: reactCurrent, radioValues: (/** @type {string} */ path) => rq(path).map((el) => /** @type {HTMLInputElement} */ (el).value) };
+    const steps = planFill(map, packet, read).map((s) => {
+      if (s.action !== 'fill') return s;
+      const el = rq(s.kind === 'radioPick' ? s.choice : s.modelPath)[0];
+      if (!el) return { ...s, action: 'notFound' };
+      if (/** @type {HTMLInputElement} */ (el).disabled) return { ...s, action: 'manual', why: 'disabled on the page' };
+      try {
+        const r = reactWrite(el, s);
+        if (r === 'filled') { el.style.outline = '2px solid #16a34a'; return { ...s, action: 'filled' }; }
+        if (r === 'noOption') { el.style.outline = '2px solid #b91c1c'; return { ...s, action: 'noOption' }; }
+        if (r.startsWith('invalid:')) { el.style.outline = '2px solid #b91c1c'; return { ...s, action: 'invalid', why: r.slice(8) }; }
+        return { ...s, action: 'manual', why: `can't fill a ${s.kind} box here` };
+      } catch (e) {
+        return { ...s, action: 'error', why: String(e) };
+      }
+    });
+    for (const s of steps) if (s.action === 'kept') { const el = rq(s.modelPath)[0]; if (el) el.style.outline = '2px solid #f59e0b'; }
+    const files = (packet.files ?? []).map((/** @type {any} */ f) => {
+      const spec = map.files?.[f.slot];
+      const el = spec ? rq(spec.modelPath)[0] : null;
+      if (!el) return { slot: f.slot, status: 'notFound' };
+      try { attachFile(el, f); return { slot: f.slot, status: 'attached' }; }
+      catch (e) { return { slot: f.slot, status: 'error', why: String(e) }; }
+    });
+    return { ok: true, steps, files };
+  }
+
+  /** Read-only, like check(). */
+  function reactCheck(/** @type {any} */ map, /** @type {any} */ packet) {
+    const claimNo = reactClaimNo();
+    if (claimNo === null) return { ok: false, reason: STEP2 };
+    const specOf = (/** @type {string} */ path) => Object.values(map.fields ?? {}).find((/** @type {any} */ f) => f.modelPath === path);
+    const read = {
+      current: reactCurrent,
+      radioValues: (/** @type {string} */ path) => rq(path).map((el) => /** @type {HTMLInputElement} */ (el).value),
+      lookup: (/** @type {string} */ path) => {
+        const el = rq(path)[0];
+        if (!el) return { found: false, bound: false, disabled: false, options: null, current: undefined };
+        // ponytail: options stay null, so Check says ready? for dropdowns; a missing option shows as noOption on Fill
+        return { found: true, bound: true, disabled: !!(/** @type {HTMLInputElement} */ (el).disabled), options: null, current: reactCurrent(path, specOf(path)) };
+      },
+    };
+    return { ok: true, claimNo, invoices: 1, ...planCheck(map, packet, claimNo, read) };
   }
 
   window.addEventListener('message', (ev) => {

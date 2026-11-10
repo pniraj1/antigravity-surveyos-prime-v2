@@ -127,3 +127,78 @@ describe('filler check', () => {
     expect(harness({ scopeAvailable: false }).send({ type: 'probe', map: { ...map, controller: undefined } })).toMatchObject({ ok: false, reason: missing });
   });
 });
+
+// ---- React (OIC) page: plain fake elements keyed by selector ----
+const reactMap = {
+  portal: 'oic', flow: 'assessment', framework: 'react',
+  fields: {
+    place: { modelPath: '#place', kind: 'text', empty: '', from: 'place' },
+    make: { modelPath: '#make', kind: 'text', empty: '', from: 'make' },
+    near: { modelPath: '#near1', kind: 'radioPick', empty: '', choices: { yes: '#near1', no: '#near2' }, constant: 'no' },
+  },
+};
+
+function reactHarness({ claimSelect = 'C-1', saved = null, id = 'A', make = '' } = {}) {
+  const store = new Map(Object.entries({ surveyAssessmentId: id, ...(saved ? { 'sx-oic-claim': JSON.stringify(saved) } : {}) }));
+  const clicks = [];
+  const input = (value) => ({ value, disabled: false, style: {}, dispatchEvent: () => {} });
+  const radio = (sel) => ({ value: 'on', checked: false, disabled: false, style: {}, click() { clicks.push(sel); this.checked = true; } });
+  const els = { '#place': input(''), '#make': input(make), '#near1': radio('#near1'), '#near2': radio('#near2') };
+  if (claimSelect !== null) els["select[name='claimNumber']"] = { value: claimSelect, textContent: claimSelect + claimSelect };
+  const sent = [];
+  let onMessage;
+  const ctx = vm.createContext({
+    sessionStorage: { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, String(v)) },
+    Event: class { constructor(type) { this.type = type; } }, DataTransfer: class {}, File: class {},
+    document: {
+      querySelector: (s) => els[s] ?? null,
+      querySelectorAll: (s) => (els[s] ? [els[s]] : []),
+      getElementById: () => null,
+    },
+  });
+  ctx.window = { addEventListener: (t, h) => { if (t === 'message') onMessage = h; }, postMessage: (m) => sent.push(m) };
+  ctx.globalThis = ctx;
+  for (const f of ['src/lib/fill-core.js', 'src/lib/react-write.js', 'src/filler.js']) vm.runInContext(fs.readFileSync(path.join(root, f), 'utf8'), ctx);
+  const send = (data) => { onMessage({ source: ctx.window, data: { sx: 's1', ...data } }); return sent.at(-1); };
+  return { send, store, els, clicks };
+}
+
+describe('filler on a React (OIC) page', () => {
+  it('reads the claim number from the select value and saves it', () => {
+    const { send, store } = reactHarness();
+    expect(send({ type: 'probe', map: reactMap })).toMatchObject({ ok: true, claimNo: 'C-1' });
+    expect(JSON.parse(store.get('sx-oic-claim'))).toEqual({ id: 'A', claimNo: 'C-1' });
+  });
+
+  it('without the select, uses the claim saved for this assessment', () => {
+    const { send } = reactHarness({ claimSelect: null, saved: { id: 'A', claimNo: 'C-1' }, id: 'A' });
+    expect(send({ type: 'probe', map: reactMap })).toMatchObject({ ok: true, claimNo: 'C-1' });
+  });
+
+  it('refuses a claim saved for another assessment', () => {
+    const { send } = reactHarness({ claimSelect: null, saved: { id: 'A', claimNo: 'C-1' }, id: 'B' });
+    expect(send({ type: 'probe', map: reactMap })).toMatchObject({ ok: false, reason: 'Open step 2 of this claim first.' });
+    expect(send({ type: 'fill', map: reactMap, packet: { claimNo: 'C-1', fields: {}, files: [] } })).toMatchObject({ ok: false, reason: 'Open step 2 of this claim first.' });
+  });
+
+  it('fill writes text, clicks only the chosen radio and keeps a box with another value', () => {
+    const { send, els, clicks } = reactHarness({ make: 'Old' });
+    const r = send({ type: 'fill', map: reactMap, packet: { portal: 'oic', flow: 'assessment', claimNo: 'C-1', fields: { place: 'Nashik', make: 'New' }, files: [] } });
+    expect(r.ok).toBe(true);
+    expect(Object.fromEntries(r.steps.map((s) => [s.name, s.action]))).toEqual({ place: 'filled', make: 'kept', near: 'filled' });
+    expect(els['#place'].value).toBe('Nashik');
+    expect(els['#make'].value).toBe('Old');
+    expect(clicks).toEqual(['#near2']);
+    expect(send({ type: 'fill', map: reactMap, packet: { portal: 'oic', flow: 'assessment', claimNo: 'C-1', fields: {}, files: [] } })
+      .steps.find((s) => s.name === 'near').action).toBe('same');
+  });
+
+  it('check reports fields without writing', () => {
+    const { send, els, clicks } = reactHarness();
+    const r = send({ type: 'check', map: reactMap, packet: null });
+    expect(r).toMatchObject({ ok: true, claimNo: 'C-1' });
+    expect(r.fields.map((f) => f.status)).toEqual(['ready?', 'ready?', 'ready?']);
+    expect(els['#place'].value).toBe('');
+    expect(clicks).toEqual([]);
+  });
+});
