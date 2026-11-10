@@ -42,6 +42,16 @@ describe('oicAssessmentRows — parts & labour', () => {
     expect(r.hsnCode).toBe('8512');
   });
 
+  test('Item Amount is the Bill Check allowed amount when set, else assessed', () => {
+    const rows = oicAssessmentRows(
+      [row({ assessed: 10000, billAllowed: 9500 }), row({ assessed: 8000 }), row({ assessed: 4000, billAllowed: 0 })],
+      AGE, 'standard', '1',
+    );
+    expect(rows.map((r) => r.itemAmount)).toEqual([9500, 8000]);
+    const paint = oicPaintingSummary([row({ section: 'paint', assessed: 2000, billAllowed: 1600 })]);
+    expect(paint.totalAssessed).toBe(1600);
+  });
+
   test('plastic, glass, fiberglass map to OIC dropdown categories', () => {
     const rows = oicAssessmentRows(
       [

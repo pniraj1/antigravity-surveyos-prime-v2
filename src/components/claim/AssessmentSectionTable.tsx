@@ -21,6 +21,10 @@ import type { DeductionCategory } from '@/lib/constants/deduction-categories';
 import type { SectionSubtotal } from '@/lib/calculations/section-subtotals';
 import type { useGridSelection } from './useGridSelection';
 import { CATEGORY_TAGS, type OptionalColumn } from './assessment-grid-config';
+import { estimateShortRows } from '@/lib/calculations/estimate-floor';
+
+/** Owner rule: an estimate below the assessed amount is shown red and holds printing. */
+const estimateLow = (row: AssessmentRowType) => estimateShortRows([row], 'assessment').length > 0;
 
 function SortableRow({ id, className, children }: { id: string; className: string; children: React.ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
@@ -504,7 +508,11 @@ export function AssessmentSectionTable({
                       </td>
                     )}
                     {visible.unitPrice && (
-                      <td className={`px-1 py-1.5${selection.isCellSelected(row.id, 'estimated') ? ' ring-2 ring-blue-400 ring-inset' : ''}`} data-column-key="estimated">
+                      <td
+                        className={`px-1 py-1.5${selection.isCellSelected(row.id, 'estimated') ? ' ring-2 ring-blue-400 ring-inset' : ''}`}
+                        data-column-key="estimated"
+                        title={estimateLow(row) ? `Estimate is lower than the assessed ₹${row.assessed}. Raise it before printing.` : undefined}
+                      >
                         <FormulaNumericInput
                           value={row.estimated ?? 0}
                           onChange={(val) => {
@@ -512,7 +520,7 @@ export function AssessmentSectionTable({
                             // and is never derived from it.
                             updateAssessmentRow(row.id, { estimated: val });
                           }}
-                          className="h-7 text-[11px] text-right bg-transparent border-transparent hover:border-input focus:bg-background px-1"
+                          className={`h-7 text-[11px] text-right bg-transparent border-transparent hover:border-input focus:bg-background px-1${estimateLow(row) ? ' text-destructive font-semibold' : ''}`}
                           placeholder="0.00"
                           min={0}
                         />

@@ -11,6 +11,7 @@ import type { AssessmentRow } from '@/types/assessment';
 import type { DepreciationType } from '@/types';
 import type { ClaimData } from '@/types/claim';
 import { buildOicPacket } from '@/lib/portal/packet';
+import { estimateShortRows } from '@/lib/calculations/estimate-floor';
 import type { OicPaintingMode } from '@/lib/reports/oic-assessment-excel';
 import {
   isExtensionPresent,
@@ -96,6 +97,9 @@ export function OICExportDialog({ claim, claimNo, rows, ageMonths, depType, onCl
       setSendError(e instanceof Error ? e.message : String(e));
     }
   };
+
+  // Owner rule: the Excel uses Bill Check figures, and OIC rejects an estimate below them.
+  const short = useMemo(() => estimateShortRows(rows, 'bill'), [rows]);
 
   const { sheetRows, rowError } = useMemo(() => {
     try {
@@ -306,10 +310,17 @@ export function OICExportDialog({ claim, claimNo, rows, ageMonths, depType, onCl
                 )}
 
                 {rowError && <div className="text-xs text-destructive">{rowError}</div>}
+                {short.length > 0 && (
+                  <div className="text-xs text-destructive" role="alert">
+                    {short.length} item{short.length === 1 ? ' has an estimate' : 's have estimates'} lower than the allowed or billed amount
+                    ({short.slice(0, 3).map((s) => s.particulars || 'Item').join(', ')}{short.length > 3 ? '…' : ''}).
+                    Correct the estimate in Assessment before exporting.
+                  </div>
+                )}
 
                 <button
                   onClick={download}
-                  disabled={busy || sheetRows.length === 0 || !!rowError}
+                  disabled={busy || sheetRows.length === 0 || !!rowError || short.length > 0}
                   className="mt-2 flex items-center gap-2 px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition-colors disabled:opacity-50"
                 >
                   {busy ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
@@ -329,7 +340,7 @@ export function OICExportDialog({ claim, claimNo, rows, ageMonths, depType, onCl
                   </div>
                   <button
                     onClick={sendToExtension}
-                    disabled={sendState === 'sending' || !!rowError}
+                    disabled={sendState === 'sending' || !!rowError || short.length > 0}
                     className="mt-1 flex items-center gap-2 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-colors disabled:opacity-50"
                   >
                     {sendState === 'sending' ? (

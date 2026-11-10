@@ -131,14 +131,23 @@ export function inOicExcel(r: AssessmentRow): boolean {
   return r.allowed
     && r.billStatus !== 'not-in-bill'
     && r.billStatus !== 'not-allowed'
-    && effectiveAssessed(r) > 0;
+    && effectiveAssessed(billCheckRow(r)) > 0;
+}
+
+/**
+ * Owner rule (2026-11-10): the Excel's Item Amount is the Bill Check report's figure,
+ * i.e. the allowed amount when the surveyor set one in Bill Check, else assessed.
+ * Same substitution as calculateBillCheckSummary, so the Excel agrees with that report.
+ */
+function billCheckRow(r: AssessmentRow): AssessmentRow {
+  return r.billAllowed !== undefined ? { ...r, assessed: r.billAllowed } : r;
 }
 
 export function oicPaintingSummary(rows: AssessmentRow[]): OicPaintingSummary {
   const paintRows = rows.filter((r) => r.section === 'paint' && inOicExcel(r));
 
   const totalEstimated = paintRows.reduce((s, r) => s + (r.estimated || 0), 0);
-  const totalAssessed = paintRows.reduce((s, r) => s + effectiveAssessed(r), 0);
+  const totalAssessed = paintRows.reduce((s, r) => s + effectiveAssessed(billCheckRow(r)), 0);
 
   const labourPart = Math.round(totalAssessed * 0.75 * 100) / 100;
   const materialPart = Math.round((totalAssessed - labourPart) * 100) / 100;
@@ -187,7 +196,8 @@ export function oicAssessmentRows(
     const depRate = isLabour || isDisposal || depType === 'nil' ? 0 : depRateFor(r);
     const gstRate = isDisposal ? 0 : r.gst ?? 18;
 
-    const assessed = isDisposal ? computeRowNet(r, depRate).netBeforeGst : effectiveAssessed(r);
+    const bc = billCheckRow(r);
+    const assessed = isDisposal ? computeRowNet(bc, depRate).netBeforeGst : effectiveAssessed(bc);
 
     itemRows.push({
       invoiceNumber: invNo,

@@ -131,3 +131,23 @@ describe('dates typed in the dialog reach the report', () => {
     expect(fresh).toContain('05.03.2026');
   });
 });
+
+describe('usePrintGate with an estimate below the assessed amount', () => {
+  it('holds the report and never runs it', () => {
+    const low = { id: 'x', particulars: 'Bumper', estimated: 500, assessed: 900, partType: 'plastic', gst: 18, section: 'parts', allowed: true } as ClaimData['assessmentRows'][number];
+    useClaimStore.setState({
+      currentClaim: { ...createBlankClaim('final'), assessmentRows: [low], policyCheck: { nilDep: 'no', imt23: 'na', consumables: 'no', excessConfirmed: true } },
+    });
+    const run = vi.fn();
+    function Probe() {
+      const { gate, gateDialog } = usePrintGate();
+      const [asked, setAsked] = useState(false);
+      if (!asked) { setAsked(true); gate('final', run); }
+      return <>{gateDialog}</>;
+    }
+    const html = renderToStaticMarkup(<Probe />);
+    expect(html).toContain('lower than the amount passed');
+    expect(html).toContain('Bumper');
+    expect(run).not.toHaveBeenCalled();
+  });
+});

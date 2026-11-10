@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { billCheckFlags, type BillFlag } from '@/lib/reports/bill-check-flags';
 import { BillCheckFlagMark, BillCheckFlagDetail, BillCheckMatchDetail } from './BillCheckFlagRow';
 import { useColumnResize } from '@/hooks/useColumnResize';
+import { estimateShortRows } from '@/lib/calculations/estimate-floor';
 
 interface Props {
   allRows: AssessmentRow[];
@@ -557,7 +558,9 @@ export function BillCheckGrid({
                 {visible.hsnSac        && <div className="text-xs font-mono" style={{ color: 'var(--color-neutral-600)' }}>{row.hsnSac || '—'}</div>}
                 {visible.section       && <div><span className="text-[9px] font-medium px-2 py-0.5 rounded-full uppercase tracking-wider" style={{ background: 'var(--color-neutral-100)', color: 'var(--color-neutral-600)' }}>{row.section}</span></div>}
                 {visible.quantity      && <div className="text-sm font-medium text-center" style={{ color: 'var(--color-neutral-600)' }}>{row.quantity ?? '—'}</div>}
-                {visible.unitPrice     && <div className="text-sm font-medium" style={{ color: 'var(--color-neutral-600)' }}>{fmt(row.estimated || 0)}</div>}
+                {visible.unitPrice     && (estimateShortRows([row], 'bill').length > 0
+                  ? <div className="text-sm font-semibold text-destructive" title="Estimate is lower than the allowed or billed amount. Raise it in Assessment before printing.">{fmt(row.estimated || 0)}</div>
+                  : <div className="text-sm font-medium" style={{ color: 'var(--color-neutral-600)' }}>{fmt(row.estimated || 0)}</div>)}
                 {visible.gst           && (
                   <div className="flex items-center justify-center">
                     <FormulaNumericInput
