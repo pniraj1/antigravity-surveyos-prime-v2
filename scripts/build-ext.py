@@ -32,12 +32,28 @@ FILES = ["icons/icon16.png", "icons/icon32.png", "icons/icon48.png", "icons/icon
          "src/lib/inverter.js", "src/lib/observer.js", "src/lib/learned-store.js", "src/lib/semantic-ai.js",
          "src/lib/react-write.js"]
 
+# Chrome injects a script file only once per frame, so a file listed for both the
+# isolated world and the MAIN world runs in the first one only (found live on OIC,
+# 2026-11-10: SxFill missing in MAIN, filler never answered). MAIN gets its own copies.
+MAIN_COPIES = {}  # copy path -> source path
+def split_main(m):
+    isolated = {js for cs in m["content_scripts"] if cs.get("world") != "MAIN" for js in cs["js"]}
+    for cs in m["content_scripts"]:
+        if cs.get("world") == "MAIN":
+            cs["js"] = [js.replace("src/", "src/main/", 1) if js in isolated else js for js in cs["js"]]
+            for js in cs["js"]:
+                if js.startswith("src/main/"):
+                    MAIN_COPIES[js] = js.replace("src/main/", "src/", 1)
+split_main(manifest)
+
 dist = EXT / "dist"; dist.mkdir(exist_ok=True)
 out = dist / f"surveyos-portal-fill-{manifest['version']}.zip"
 with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
     z.writestr("manifest.json", json.dumps(manifest, indent=2))
     for p in FILES:
         z.write(EXT / p, p)
+    for copy_path, src in MAIN_COPIES.items():
+        z.write(EXT / src, copy_path)
 print("built", out)
 
 # Dev manifest: the source's localhost match, plus file:///* on the portal scripts
@@ -46,6 +62,7 @@ dev = copy.deepcopy(source)
 for cs in dev["content_scripts"]:
     if "src/relay.js" not in cs["js"] and "file:///*" not in cs["matches"]:
         cs["matches"].append("file:///*")
+split_main(dev)
 
 for name, m in (("unpacked", manifest), ("unpacked-dev", dev)):
     folder = dist / name
@@ -53,5 +70,8 @@ for name, m in (("unpacked", manifest), ("unpacked-dev", dev)):
     for p in FILES:
         (folder / p).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(EXT / p, folder / p)
+    for copy_path, src in MAIN_COPIES.items():
+        (folder / copy_path).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(EXT / src, folder / copy_path)
     (folder / "manifest.json").write_text(json.dumps(m, indent=2), encoding="utf8")
     print("wrote", folder)
