@@ -34,7 +34,7 @@ def main(flow):
 
     def entry(v):
         e = {"modelPath": v["model"], "kind": v.get("kind", "text"), "empty": v.get("empty", "")}
-        for k in ("label", "transform", "options", "maxLen", "from", "constant", "onlyIf"):
+        for k in ("label", "transform", "options", "maxLen", "from", "constant", "onlyIf", "step", "default", "choices"):
             if k in v:
                 e[k] = v[k]
         return e
@@ -46,10 +46,10 @@ def main(flow):
     unlabeled = [k for k, v in overlay["fields"].items() if not v.get("label")]
     if unlabeled:
         sys.exit(f"overlay fields without label: {unlabeled}")
-    optional = ("controller", "claimNoFallback", "invoiceCountPath", "claimNoSelector")
+    optional = ("controller", "claimNoFallback", "invoiceCountPath", "claimNoSelector", "framework")
     out = {k: overlay[k] for k in need + optional if k in overlay}
     out["fields"] = {k: entry(v) for k, v in overlay["fields"].items()}
-    out["files"] = {k: {"modelPath": v["model"]} for k, v in overlay["files"].items()}
+    out["files"] = {k: {"modelPath": v["model"], **({"step": v["step"]} if "step" in v else {})} for k, v in overlay["files"].items()}
 
     text = json.dumps(out, indent=2) + "\n"
     for dest in (ROOT / "extension/maps" / f"{flow}.json", ROOT / "public/portal-maps" / f"{flow}.json"):

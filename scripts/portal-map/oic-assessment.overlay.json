@@ -1,189 +1,467 @@
 {
   "portal": "oic",
   "flow": "assessment",
-  "version": 1,
+  "version": 2,
   "host": "orientalinsurance.org.in",
   "route": "/surveyor-assessment-form",
   "modelRoot": "#",
   "claimNoPath": "claimNumber",
-  "claimNoSelector": "#claimNumber, input[name='claimNumber']",
+  "claimNoSelector": "select[name='claimNumber']",
   "doneHint": "Review Step 2 Basic Details and proceed to Step 4 to upload your generated Excel assessment.",
   "fields": {
     "regNumber": {
       "model": "#regNumber",
       "label": "Registration No.",
       "kind": "text",
-      "empty": "",
-      "from": "vehicle.regNo"
+      "from": "regNumber",
+      "step": 2,
+      "empty": ""
     },
     "make": {
       "model": "#make",
       "label": "Make",
       "kind": "text",
-      "empty": "",
-      "from": "vehicle.make"
+      "from": "make",
+      "step": 2,
+      "empty": ""
     },
     "model": {
       "model": "#model",
       "label": "Variant (Model)",
       "kind": "text",
-      "empty": "",
-      "from": "vehicle.model"
+      "from": "model",
+      "step": 2,
+      "empty": ""
     },
     "chasisNumber": {
       "model": "#chasisNumber",
       "label": "Chassis Number",
       "kind": "text",
-      "empty": "",
-      "from": "vehicle.chassisNumber"
+      "from": "chasisNumber",
+      "step": 2,
+      "empty": ""
     },
     "engineNumber": {
       "model": "#engineNumber",
       "label": "Engine Number",
       "kind": "text",
-      "empty": "",
-      "from": "vehicle.engineNumber"
+      "from": "engineNumber",
+      "step": 2,
+      "empty": ""
     },
     "cubicCapacity": {
       "model": "#cubicCapacity input",
       "label": "Cubic Capacity (CC)",
       "kind": "text",
-      "empty": "",
-      "from": "vehicle.cubicCapacity"
+      "from": "cubicCapacity",
+      "step": 2,
+      "empty": ""
     },
     "manufacturingYear": {
       "model": "#manufacturingYear input",
       "label": "Manufacturing Year",
       "kind": "text",
-      "empty": "",
-      "from": "vehicle.yearOfManufacture"
+      "from": "manufacturingYear",
+      "step": 2,
+      "empty": ""
     },
     "colorOfVehicle": {
       "model": "#colorOfVehicle",
       "label": "Color of Vehicle",
       "kind": "text",
-      "empty": "",
-      "from": "vehicle.color"
+      "from": "colorOfVehicle",
+      "step": 2,
+      "empty": ""
     },
     "typeOfFuel": {
       "model": "#typeOfFuel",
       "label": "Type of Fuel",
       "kind": "text",
-      "empty": "",
-      "from": "vehicle.fuelType"
+      "from": "typeOfFuel",
+      "step": 2,
+      "empty": ""
     },
     "typeOfBody": {
       "model": "#typeOfBody",
       "label": "Type of Body",
       "kind": "text",
-      "empty": "",
-      "from": "vehicle.typeOfBody"
+      "from": "typeOfBody",
+      "step": 2,
+      "empty": ""
     },
     "classOfVehicle": {
       "model": "#classOfVehicle",
       "label": "Class of Vehicle",
       "kind": "text",
-      "empty": "",
-      "from": "vehicle.classOfVehicle"
+      "from": "classOfVehicle",
+      "step": 2,
+      "empty": ""
     },
     "unladenWeight": {
       "model": "#unladenWeight input",
       "label": "Unladen Weight",
       "kind": "text",
-      "empty": "",
-      "from": "vehicle.unladenWeight"
+      "from": "unladenWeight",
+      "step": 2,
+      "empty": ""
     },
     "registeredLadenWeight": {
       "model": "#registeredLadenWeight input",
       "label": "Laden Weight",
       "kind": "text",
-      "empty": "",
-      "from": "vehicle.registeredLadenWeight"
+      "from": "registeredLadenWeight",
+      "step": 2,
+      "empty": ""
     },
     "seatingCapacity": {
       "model": "#seatingLoadCarryingCapacity input",
       "label": "Seating Capacity",
       "kind": "text",
-      "empty": "",
-      "from": "vehicle.seatingCapacity"
+      "from": "seatingCapacity",
+      "step": 2,
+      "empty": ""
     },
     "lossDescription": {
       "model": "#lossDescription",
       "label": "Loss Description",
       "kind": "text",
-      "empty": "",
-      "from": "accident.lossDescription",
-      "maxLen": 2000
-    },
-    "closeProximity": {
-      "model": "#closeProximity2",
-      "label": "Close Proximity (No)",
-      "kind": "radio",
-      "empty": ""
-    },
-    "vbConfirmed": {
-      "model": "#vbConfirmed1",
-      "label": "Confirmed 64VB (Yes)",
-      "kind": "radio",
+      "from": "lossDescription",
+      "maxLen": 2000,
+      "step": 2,
       "empty": ""
     },
     "driverName": {
       "model": "#driverName",
       "label": "Driver Name",
       "kind": "text",
-      "empty": "",
-      "from": "driver.name"
+      "from": "driverName",
+      "step": 2,
+      "empty": ""
     },
     "driverLicenseNoTwo": {
       "model": "#driverLicenseNoTwo",
       "label": "DL Number Part 2",
       "kind": "text",
-      "empty": "",
-      "from": "driver.licenseNumber"
+      "from": "driverLicenseNoTwo",
+      "step": 2,
+      "empty": ""
     },
     "driverBadgeNo": {
       "model": "#badgeNo",
       "label": "Badge Number",
       "kind": "text",
-      "empty": "",
-      "from": "driver.badgeNumber"
+      "from": "driverBadgeNo",
+      "step": 2,
+      "empty": ""
     },
     "driverQualification": {
       "model": "#qualification",
       "label": "Qualification",
       "kind": "text",
-      "empty": "",
-      "from": "driver.qualification"
+      "from": "driverQualification",
+      "step": 2,
+      "empty": ""
     },
     "driverAddress": {
       "model": "#address",
       "label": "Driver Address",
-      "kind": "text",
-      "empty": "",
-      "from": "driver.address",
-      "maxLen": 240
+      "kind": "textarea",
+      "from": "driverAddress",
+      "maxLen": 240,
+      "step": 2,
+      "empty": ""
     },
     "workshopName": {
       "model": "#workshopName",
       "label": "Workshop Name",
       "kind": "text",
-      "empty": "",
-      "from": "vehicle.workshopName"
+      "from": "workshopName",
+      "step": 2,
+      "empty": ""
     },
     "workshopEstimateAmount": {
       "model": "#workshopEstimateAmount input",
       "label": "Estimate Amount",
-      "kind": "text",
-      "empty": "",
-      "from": "billCheck.billTotal"
+      "kind": "money",
+      "from": "workshopEstimateAmount",
+      "step": 2,
+      "empty": ""
     },
     "workshopGstNo": {
       "model": "#workshopGstNo",
       "label": "Workshop GST No",
       "kind": "text",
+      "from": "workshopGstNo",
+      "step": 2,
+      "empty": ""
+    },
+    "driverLicenseNoOne": {
+      "model": "#driverLicenseNoOne",
+      "label": "DL Number Part 1",
+      "kind": "dropdown",
       "empty": "",
-      "from": "vehicle.workshopGst"
+      "step": 2,
+      "from": "driverLicenseNoOne"
+    },
+    "driverLicenseNoThree": {
+      "model": "#driverLicenseNoThree",
+      "label": "DL Number Part 3",
+      "kind": "text",
+      "empty": "",
+      "step": 2,
+      "from": "driverLicenseNoThree"
+    },
+    "licenseType": {
+      "model": "#licenseType",
+      "label": "License Type",
+      "kind": "dropdown",
+      "empty": "",
+      "step": 2,
+      "from": "licenseType"
+    },
+    "driverDob": {
+      "model": "label=Date of Birth",
+      "label": "Date of Birth",
+      "kind": "date",
+      "empty": "",
+      "step": 2,
+      "from": "driverDob",
+      "transform": "ddmmyyyyDash"
+    },
+    "dlValidFrom": {
+      "model": "label=Valid From",
+      "label": "Valid From",
+      "kind": "date",
+      "empty": "",
+      "step": 2,
+      "from": "dlValidFrom",
+      "default": true,
+      "transform": "ddmmyyyyDash"
+    },
+    "dlValidUpTo": {
+      "model": "label=Valid Up To",
+      "label": "Valid Up To",
+      "kind": "date",
+      "empty": "",
+      "step": 2,
+      "from": "dlValidUpTo",
+      "transform": "ddmmyyyyDash"
+    },
+    "workshopEstimateDate": {
+      "model": "label=Workshop Estimate Date",
+      "label": "Workshop Estimate Date",
+      "kind": "date",
+      "empty": "",
+      "step": 2,
+      "from": "workshopEstimateDate",
+      "transform": "ddmmyyyyDash"
+    },
+    "surveyorAppointedDate": {
+      "model": "label=Surveyor Appointed Date",
+      "label": "Surveyor Appointed Date",
+      "kind": "date",
+      "empty": "",
+      "step": 3,
+      "from": "surveyorAppointedDate",
+      "transform": "ddmmyyyyDash"
+    },
+    "finalDocumentDate": {
+      "model": "label=Submission Date of Final Document",
+      "label": "Submission Date of Final Document",
+      "kind": "date",
+      "empty": "",
+      "step": 3,
+      "from": "finalDocumentDate",
+      "default": true,
+      "transform": "ddmmyyyyDash"
+    },
+    "closeProximity": {
+      "model": "#closeProximity1",
+      "label": "Close Proximity",
+      "kind": "radioPick",
+      "empty": "",
+      "step": 2,
+      "constant": "no",
+      "default": true,
+      "choices": {
+        "yes": "#closeProximity1",
+        "no": "#closeProximity2"
+      }
+    },
+    "vbConfirmed": {
+      "model": "#vbConfirmed1",
+      "label": "Confirmed 64VB",
+      "kind": "radioPick",
+      "empty": "",
+      "step": 2,
+      "constant": "yes",
+      "default": true,
+      "choices": {
+        "yes": "#vbConfirmed1",
+        "no": "#vbConfirmed2"
+      }
+    },
+    "nilDepCover": {
+      "model": "#nillDepreciationCover1",
+      "label": "Nil Depreciation Cover",
+      "kind": "radioPick",
+      "empty": "",
+      "step": 2,
+      "from": "nilDepCover",
+      "choices": {
+        "yes": "#nillDepreciationCover1",
+        "no": "#nillDepreciationCover2"
+      }
+    },
+    "ownerDriver": {
+      "model": "#ownerDriver1",
+      "label": "Owner Is Driver",
+      "kind": "radioPick",
+      "empty": "",
+      "step": 2,
+      "from": "ownerDriver",
+      "default": true,
+      "choices": {
+        "yes": "#ownerDriver1",
+        "no": "#ownerDriver2"
+      }
+    },
+    "thirdPartyInvolved": {
+      "model": "#thirdPartyInvolved1",
+      "label": "Third Party Involved",
+      "kind": "radioPick",
+      "empty": "",
+      "step": 2,
+      "from": "thirdPartyInvolved",
+      "default": true,
+      "choices": {
+        "yes": "#thirdPartyInvolved1",
+        "no": "#thirdPartyInvolved2"
+      }
+    },
+    "chargesFiled": {
+      "model": "#chargesFiled",
+      "label": "Charges Filed",
+      "kind": "textarea",
+      "empty": "",
+      "step": 2,
+      "constant": "No",
+      "default": true
+    },
+    "vehicleInspected": {
+      "model": "#whetherVehicleInspected1",
+      "label": "Vehicle Inspected",
+      "kind": "radioPick",
+      "empty": "",
+      "step": 3,
+      "constant": "yes",
+      "default": true,
+      "choices": {
+        "yes": "#whetherVehicleInspected1",
+        "no": "#whetherVehicleInspected2"
+      }
+    },
+    "surveyCompleted": {
+      "model": "#isSurveyCompleted1",
+      "label": "Survey Completed",
+      "kind": "radioPick",
+      "empty": "",
+      "step": 3,
+      "constant": "yes",
+      "default": true,
+      "choices": {
+        "yes": "#isSurveyCompleted1",
+        "no": "#isSurveyCompleted2"
+      }
+    },
+    "dlApplicable": {
+      "model": "#isDrivingLicenseApplicable1",
+      "label": "DL Applicable",
+      "kind": "radioPick",
+      "empty": "",
+      "step": 3,
+      "constant": "yes",
+      "default": true,
+      "choices": {
+        "yes": "#isDrivingLicenseApplicable1",
+        "no": "#isDrivingLicenseApplicable2"
+      }
+    },
+    "dlVerified": {
+      "model": "#isDrivingLicenseVerified1",
+      "label": "DL Verified",
+      "kind": "radioPick",
+      "empty": "",
+      "step": 3,
+      "constant": "yes",
+      "default": true,
+      "choices": {
+        "yes": "#isDrivingLicenseVerified1",
+        "no": "#isDrivingLicenseVerified2"
+      }
+    },
+    "dlVerifiedRemarks": {
+      "model": "#isDrivingLicenseVerifiedRemarks",
+      "label": "DL Verified Remarks",
+      "kind": "textarea",
+      "empty": "",
+      "step": 3,
+      "from": "dlVerifiedRemarks"
+    },
+    "spotSurveyDone": {
+      "model": "#spotSurveyDone1",
+      "label": "Spot Survey Done",
+      "kind": "radioPick",
+      "empty": "",
+      "step": 3,
+      "from": "spotSurveyDone",
+      "default": true,
+      "choices": {
+        "yes": "#spotSurveyDone1",
+        "no": "#spotSurveyDone2"
+      }
+    },
+    "initialLossAmount": {
+      "model": "#initialLossAssessmentAmount input",
+      "label": "Initial Loss Amount",
+      "kind": "money",
+      "empty": "",
+      "step": 3,
+      "from": "initialLossAmount"
+    },
+    "claimantMobile": {
+      "model": "#mobileNumberClaimant",
+      "label": "Claimant Mobile",
+      "kind": "text",
+      "empty": "",
+      "step": 3,
+      "from": "claimantMobile"
+    },
+    "surveyorObservation": {
+      "model": "#surveyorObservation",
+      "label": "Surveyor Observation",
+      "kind": "textarea",
+      "empty": "",
+      "step": 3,
+      "from": "surveyorObservation",
+      "maxLen": 2000
+    },
+    "causeOfAccident": {
+      "model": "#causeNatureOfAccident",
+      "label": "Cause of Accident",
+      "kind": "text",
+      "empty": "",
+      "step": 3,
+      "from": "causeOfAccident"
     }
   },
-  "files": {}
+  "files": {
+    "assessmentExcel": {
+      "model": "#fileInput",
+      "label": "Assessment Excel",
+      "kind": "file",
+      "step": 4
+    }
+  },
+  "framework": "react"
 }

@@ -1,6 +1,6 @@
 {
   "file": "oic-assessment.html",
-  "total": 25,
+  "total": 59,
   "groups": {
     "oicBasicDetails": [
       {
@@ -152,6 +152,210 @@
         "model": "#workshopGstNo",
         "type": "text",
         "name": "workshopGstNo"
+      },
+      {
+        "id": "driverLicenseNoOne",
+        "model": "#driverLicenseNoOne",
+        "type": "select",
+        "name": "driverLicenseNoOne"
+      },
+      {
+        "id": "driverLicenseNoThree",
+        "model": "#driverLicenseNoThree",
+        "type": "text",
+        "name": "driverLicenseNoThree"
+      },
+      {
+        "id": "licenseType",
+        "model": "#licenseType",
+        "type": "select",
+        "name": "licenseType"
+      },
+      {
+        "id": "driverDob",
+        "model": "label=Date of Birth",
+        "type": "text",
+        "name": "driverDob"
+      },
+      {
+        "id": "dlValidFrom",
+        "model": "label=Valid From",
+        "type": "text",
+        "name": "dlValidFrom"
+      },
+      {
+        "id": "dlValidUpTo",
+        "model": "label=Valid Up To",
+        "type": "text",
+        "name": "dlValidUpTo"
+      },
+      {
+        "id": "workshopEstimateDate",
+        "model": "label=Workshop Estimate Date",
+        "type": "text",
+        "name": "workshopEstimateDate"
+      },
+      {
+        "id": "surveyorAppointedDate",
+        "model": "label=Surveyor Appointed Date",
+        "type": "text",
+        "name": "surveyorAppointedDate"
+      },
+      {
+        "id": "finalDocumentDate",
+        "model": "label=Submission Date of Final Document",
+        "type": "text",
+        "name": "finalDocumentDate"
+      },
+      {
+        "id": "closeProximity",
+        "model": "#closeProximity1",
+        "type": "radio",
+        "name": "closeProximity"
+      },
+      {
+        "id": "vbConfirmed",
+        "model": "#vbConfirmed2",
+        "type": "radio",
+        "name": "vbConfirmed"
+      },
+      {
+        "id": "nilDepCover",
+        "model": "#nillDepreciationCover1",
+        "type": "radio",
+        "name": "nilDepCover"
+      },
+      {
+        "id": "nilDepCover",
+        "model": "#nillDepreciationCover2",
+        "type": "radio",
+        "name": "nilDepCover"
+      },
+      {
+        "id": "ownerDriver",
+        "model": "#ownerDriver1",
+        "type": "radio",
+        "name": "ownerDriver"
+      },
+      {
+        "id": "ownerDriver",
+        "model": "#ownerDriver2",
+        "type": "radio",
+        "name": "ownerDriver"
+      },
+      {
+        "id": "thirdPartyInvolved",
+        "model": "#thirdPartyInvolved1",
+        "type": "radio",
+        "name": "thirdPartyInvolved"
+      },
+      {
+        "id": "thirdPartyInvolved",
+        "model": "#thirdPartyInvolved2",
+        "type": "radio",
+        "name": "thirdPartyInvolved"
+      },
+      {
+        "id": "chargesFiled",
+        "model": "#chargesFiled",
+        "type": "textarea",
+        "name": "chargesFiled"
+      },
+      {
+        "id": "vehicleInspected",
+        "model": "#whetherVehicleInspected1",
+        "type": "radio",
+        "name": "vehicleInspected"
+      },
+      {
+        "id": "vehicleInspected",
+        "model": "#whetherVehicleInspected2",
+        "type": "radio",
+        "name": "vehicleInspected"
+      },
+      {
+        "id": "surveyCompleted",
+        "model": "#isSurveyCompleted1",
+        "type": "radio",
+        "name": "surveyCompleted"
+      },
+      {
+        "id": "surveyCompleted",
+        "model": "#isSurveyCompleted2",
+        "type": "radio",
+        "name": "surveyCompleted"
+      },
+      {
+        "id": "dlApplicable",
+        "model": "#isDrivingLicenseApplicable1",
+        "type": "radio",
+        "name": "dlApplicable"
+      },
+      {
+        "id": "dlApplicable",
+        "model": "#isDrivingLicenseApplicable2",
+        "type": "radio",
+        "name": "dlApplicable"
+      },
+      {
+        "id": "dlVerified",
+        "model": "#isDrivingLicenseVerified1",
+        "type": "radio",
+        "name": "dlVerified"
+      },
+      {
+        "id": "dlVerified",
+        "model": "#isDrivingLicenseVerified2",
+        "type": "radio",
+        "name": "dlVerified"
+      },
+      {
+        "id": "dlVerifiedRemarks",
+        "model": "#isDrivingLicenseVerifiedRemarks",
+        "type": "textarea",
+        "name": "dlVerifiedRemarks"
+      },
+      {
+        "id": "spotSurveyDone",
+        "model": "#spotSurveyDone1",
+        "type": "radio",
+        "name": "spotSurveyDone"
+      },
+      {
+        "id": "spotSurveyDone",
+        "model": "#spotSurveyDone2",
+        "type": "radio",
+        "name": "spotSurveyDone"
+      },
+      {
+        "id": "initialLossAmount",
+        "model": "#initialLossAssessmentAmount input",
+        "type": "text",
+        "name": "initialLossAmount"
+      },
+      {
+        "id": "claimantMobile",
+        "model": "#mobileNumberClaimant",
+        "type": "text",
+        "name": "claimantMobile"
+      },
+      {
+        "id": "surveyorObservation",
+        "model": "#surveyorObservation",
+        "type": "textarea",
+        "name": "surveyorObservation"
+      },
+      {
+        "id": "causeOfAccident",
+        "model": "#causeNatureOfAccident",
+        "type": "text",
+        "name": "causeOfAccident"
+      },
+      {
+        "id": "fileInput",
+        "model": "#fileInput",
+        "type": "file",
+        "name": "fileInput"
       }
     ]
   }

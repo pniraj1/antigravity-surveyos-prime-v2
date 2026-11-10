@@ -20,8 +20,6 @@
 <label>registeredLadenWeight <input type="text" name="registeredLadenWeight" data-ng-model="#registeredLadenWeight input" data-ng-change="log('registeredLadenWeight')"></label>
 <label>seatingCapacity <input type="text" name="seatingCapacity" data-ng-model="#seatingLoadCarryingCapacity input" data-ng-change="log('seatingCapacity')"></label>
 <label>lossDescription <input type="text" name="lossDescription" data-ng-model="#lossDescription" data-ng-change="log('lossDescription')"></label>
-<label>closeProximity <input type="text" name="closeProximity" data-ng-model="#closeProximity2" data-ng-change="log('closeProximity')"></label>
-<label>vbConfirmed <input type="text" name="vbConfirmed" data-ng-model="#vbConfirmed1" data-ng-change="log('vbConfirmed')"></label>
 <label>driverName <input type="text" name="driverName" data-ng-model="#driverName" data-ng-change="log('driverName')"></label>
 <label>driverLicenseNoTwo <input type="text" name="driverLicenseNoTwo" data-ng-model="#driverLicenseNoTwo" data-ng-change="log('driverLicenseNoTwo')"></label>
 <label>driverBadgeNo <input type="text" name="driverBadgeNo" data-ng-model="#badgeNo" data-ng-change="log('driverBadgeNo')"></label>
@@ -30,6 +28,32 @@
 <label>workshopName <input type="text" name="workshopName" data-ng-model="#workshopName" data-ng-change="log('workshopName')"></label>
 <label>workshopEstimateAmount <input type="text" name="workshopEstimateAmount" data-ng-model="#workshopEstimateAmount input" data-ng-change="log('workshopEstimateAmount')"></label>
 <label>workshopGstNo <input type="text" name="workshopGstNo" data-ng-model="#workshopGstNo" data-ng-change="log('workshopGstNo')"></label>
+<label>driverLicenseNoOne <select name="driverLicenseNoOne" data-ng-model="#driverLicenseNoOne" data-ng-change="log('driverLicenseNoOne')"><option value="">--Select--</option><option value="CONSOLIDATED">Consolidated</option><option value="BREAK UP">Break-up</option></select></label>
+<label>driverLicenseNoThree <input type="text" name="driverLicenseNoThree" data-ng-model="#driverLicenseNoThree" data-ng-change="log('driverLicenseNoThree')"></label>
+<label>licenseType <select name="licenseType" data-ng-model="#licenseType" data-ng-change="log('licenseType')"><option value="">--Select--</option><option value="CONSOLIDATED">Consolidated</option><option value="BREAK UP">Break-up</option></select></label>
+<label>driverDob <input type="text" name="driverDob" data-ng-model="label=Date of Birth" data-ng-change="log('driverDob')"></label>
+<label>dlValidFrom <input type="text" name="dlValidFrom" data-ng-model="label=Valid From" data-ng-change="log('dlValidFrom')"></label>
+<label>dlValidUpTo <input type="text" name="dlValidUpTo" data-ng-model="label=Valid Up To" data-ng-change="log('dlValidUpTo')"></label>
+<label>workshopEstimateDate <input type="text" name="workshopEstimateDate" data-ng-model="label=Workshop Estimate Date" data-ng-change="log('workshopEstimateDate')"></label>
+<label>surveyorAppointedDate <input type="text" name="surveyorAppointedDate" data-ng-model="label=Surveyor Appointed Date" data-ng-change="log('surveyorAppointedDate')"></label>
+<label>finalDocumentDate <input type="text" name="finalDocumentDate" data-ng-model="label=Submission Date of Final Document" data-ng-change="log('finalDocumentDate')"></label>
+<label>closeProximity  <input type="radio" name="closeProximity" value="" data-ng-model="#closeProximity1"></label>
+<label>vbConfirmed <input type="text" name="vbConfirmed" data-ng-model="#vbConfirmed1" data-ng-change="log('vbConfirmed')"></label>
+<label>nilDepCover  <input type="radio" name="nilDepCover" value="" data-ng-model="#nillDepreciationCover1"></label>
+<label>ownerDriver  <input type="radio" name="ownerDriver" value="" data-ng-model="#ownerDriver1"></label>
+<label>thirdPartyInvolved  <input type="radio" name="thirdPartyInvolved" value="" data-ng-model="#thirdPartyInvolved1"></label>
+<label>chargesFiled <textarea name="chargesFiled" data-ng-model="#chargesFiled" data-ng-change="log('chargesFiled')"></textarea></label>
+<label>vehicleInspected  <input type="radio" name="vehicleInspected" value="" data-ng-model="#whetherVehicleInspected1"></label>
+<label>surveyCompleted  <input type="radio" name="surveyCompleted" value="" data-ng-model="#isSurveyCompleted1"></label>
+<label>dlApplicable  <input type="radio" name="dlApplicable" value="" data-ng-model="#isDrivingLicenseApplicable1"></label>
+<label>dlVerified  <input type="radio" name="dlVerified" value="" data-ng-model="#isDrivingLicenseVerified1"></label>
+<label>dlVerifiedRemarks <textarea name="dlVerifiedRemarks" data-ng-model="#isDrivingLicenseVerifiedRemarks" data-ng-change="log('dlVerifiedRemarks')"></textarea></label>
+<label>spotSurveyDone  <input type="radio" name="spotSurveyDone" value="" data-ng-model="#spotSurveyDone1"></label>
+<label>initialLossAmount <input type="text" name="initialLossAmount" data-ng-model="#initialLossAssessmentAmount input" data-ng-change="log('initialLossAmount')"></label>
+<label>claimantMobile <input type="text" name="claimantMobile" data-ng-model="#mobileNumberClaimant" data-ng-change="log('claimantMobile')"></label>
+<label>surveyorObservation <textarea name="surveyorObservation" data-ng-model="#surveyorObservation" data-ng-change="log('surveyorObservation')"></textarea></label>
+<label>causeOfAccident <input type="text" name="causeOfAccident" data-ng-model="#causeNatureOfAccident" data-ng-change="log('causeOfAccident')"></label>
+<label>fileInput <input type="file" name="fileInput" accept=".xls,.xlsx" data-ng-model="#fileInput" onchange="window.__fileChanged=(this.files[0]||{}).name"></label>
 <script>
 if (!location.hash) location.hash = '/surveyor-assessment-form';
 // Build every parent object of every mapped model path; [$index] -> a one-element array.
@@ -41,7 +65,7 @@ function ensure(o, path) {
   }
 }
 angular.module('fixture', []).controller('FixtureCtrl', ['$scope', function($scope) {
-  ["#regNumber", "#make", "#model", "#chasisNumber", "#engineNumber", "#cubicCapacity input", "#manufacturingYear input", "#colorOfVehicle", "#typeOfFuel", "#typeOfBody", "#classOfVehicle", "#unladenWeight input", "#registeredLadenWeight input", "#seatingLoadCarryingCapacity input", "#lossDescription", "#closeProximity2", "#vbConfirmed1", "#driverName", "#driverLicenseNoTwo", "#badgeNo", "#qualification", "#address", "#workshopName", "#workshopEstimateAmount input", "#workshopGstNo", "claimNumber"].forEach(function(p) { ensure($scope, p); });
+  ["#regNumber", "#make", "#model", "#chasisNumber", "#engineNumber", "#cubicCapacity input", "#manufacturingYear input", "#colorOfVehicle", "#typeOfFuel", "#typeOfBody", "#classOfVehicle", "#unladenWeight input", "#registeredLadenWeight input", "#seatingLoadCarryingCapacity input", "#lossDescription", "#driverName", "#driverLicenseNoTwo", "#badgeNo", "#qualification", "#address", "#workshopName", "#workshopEstimateAmount input", "#workshopGstNo", "#driverLicenseNoOne", "#driverLicenseNoThree", "#licenseType", "label=Date of Birth", "label=Valid From", "label=Valid Up To", "label=Workshop Estimate Date", "label=Surveyor Appointed Date", "label=Submission Date of Final Document", "#closeProximity1", "#vbConfirmed1", "#nillDepreciationCover1", "#ownerDriver1", "#thirdPartyInvolved1", "#chargesFiled", "#whetherVehicleInspected1", "#isSurveyCompleted1", "#isDrivingLicenseApplicable1", "#isDrivingLicenseVerified1", "#isDrivingLicenseVerifiedRemarks", "#spotSurveyDone1", "#initialLossAssessmentAmount input", "#mobileNumberClaimant", "#surveyorObservation", "#causeNatureOfAccident", "#fileInput", "claimNumber"].forEach(function(p) { ensure($scope, p); });
   $scope.changes = [];
   $scope.log = function(k) { $scope.changes.push(k); };
 }]);

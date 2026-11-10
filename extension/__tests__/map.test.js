@@ -2,8 +2,9 @@
 import { describe, it, expect } from 'vitest';
 import { createRequire } from 'module';
 import { mapId } from '../src/lib/fill-core.js';
+import { OIC_FIELDS } from '../../src/lib/portal/packet';
 
-const KINDS = ['text', 'money', 'radio', 'select', 'dateRadioOrOthers', 'file'];
+const KINDS = ['text', 'money', 'radio', 'select', 'dateRadioOrOthers', 'file', 'textarea', 'dropdown', 'date', 'radioPick'];
 const bundled = import.meta.glob('../maps/*.json', { eager: true, import: 'default' });
 const hosted = import.meta.glob('../../public/portal-maps/*.json', { eager: true, import: 'default' });
 const fileId = (p) => p.split('/').pop().replace(/\.json$/, '');
@@ -24,7 +25,7 @@ describe('field maps', () => {
       });
       it('every field has a modelPath under its root, a known kind and an empty value', () => {
         for (const [k, f] of Object.entries(map.fields)) {
-          expect(f.modelPath.startsWith(map.modelRoot), k).toBe(true);
+          expect(f.modelPath.startsWith(map.modelRoot) || f.modelPath.startsWith('label='), k).toBe(true);
           expect(KINDS, k).toContain(f.kind);
           expect('empty' in f, k).toBe(true);
         }
@@ -68,5 +69,36 @@ describe('flow lists agree', () => {
   }
   it('MAP_IDS lists no map that is not bundled', () => {
     expect([...MAP_IDS].sort()).toEqual(Object.values(bundled).map(mapId).sort());
+  });
+});
+
+describe('oic-assessment map (steps 2-4)', () => {
+  const map = Object.entries(bundled).find(([p]) => fileId(p) === 'oic-assessment')[1];
+  const fields = Object.entries(map.fields);
+  it('is version 2, React, with the claim selector', () => {
+    expect(map.version).toBe(2);
+    expect(map.framework).toBe('react');
+    expect(map.claimNoSelector).toBe("select[name='claimNumber']");
+  });
+  it('every from is a packet key (OIC_FIELDS); constants have none', () => {
+    for (const [k, f] of fields) {
+      if ('from' in f) expect(OIC_FIELDS, k).toContain(f.from);
+      else expect('constant' in f, k).toBe(true);
+    }
+  });
+  it('every radioPick has yes and no choices', () => {
+    for (const [k, f] of fields.filter(([, f]) => f.kind === 'radioPick')) {
+      expect(Object.keys(f.choices).sort(), k).toEqual(['no', 'yes']);
+    }
+  });
+  it('every field has a step 2-4; dates carry ddmmyyyyDash; the Excel is step 4', () => {
+    for (const [k, f] of fields) expect([2, 3], k).toContain(f.step);
+    for (const [k, f] of fields.filter(([, f]) => f.kind === 'date')) expect(f.transform, k).toBe('ddmmyyyyDash');
+    expect(map.files.assessmentExcel.step).toBe(4);
+  });
+  it('approved defaults are flagged', () => {
+    expect(map.fields.closeProximity).toMatchObject({ constant: 'no', default: true });
+    expect(map.fields.vbConfirmed).toMatchObject({ constant: 'yes', default: true });
+    expect(map.fields.chargesFiled).toMatchObject({ constant: 'No', default: true });
   });
 });
