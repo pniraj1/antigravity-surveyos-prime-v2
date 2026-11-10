@@ -452,7 +452,7 @@ ${/* Fixed layout makes the declared widths binding. Under the default auto
      the 186mm printable width of A4 — the same overflow the Standard
      report's section 9 hit when its fibre-glass column went in. */ ''}
 <table style="${ts}table-layout:fixed;overflow-wrap:anywhere;font-size:7pt;">
-<thead><tr><th style="${th}width:4%;">SR.</th><th style="${th}text-align:left;width:16%;">Part Name</th><th style="${th}width:8%;">Part<br/>Type</th><th style="${th}width:7%;">Job<br/>Type</th><th style="${th}width:9%;">Part List<br/>W/o Tax</th><th style="${th}width:7%;">Dep%</th><th style="${th}width:8%;">Dep<br/>Amt</th><th style="${th}width:9%;">Parts<br/>Assess</th><th style="${th}width:5%;">GST%</th><th style="${th}width:9%;">Part<br/>with GST</th><th style="${th}width:9%;">Labour<br/>with GST</th><th style="${th}width:9%;">Paint<br/>with GST</th></tr></thead><tbody>
+<thead><tr><th style="${th}width:4%;">SR.</th><th style="${th}text-align:left;width:16%;">Part Name</th><th style="${th}width:8%;">Part<br/>Type</th><th style="${th}width:7%;">Job<br/>Type</th><th style="${th}width:9%;">Part List<br/>W/o Tax<br/><span style="font-size:5.5pt;font-weight:normal;text-transform:none;">(Assessed Amount)</span></th><th style="${th}width:7%;">Dep%</th><th style="${th}width:8%;">Dep<br/>Amt</th><th style="${th}width:9%;">Parts<br/>Assess</th><th style="${th}width:5%;">GST%</th><th style="${th}width:9%;">Part<br/>with GST</th><th style="${th}width:9%;">Labour<br/>with GST</th><th style="${th}width:9%;">Paint<br/>with GST</th></tr></thead><tbody>
 <tr><td colspan="12" style="${sec}">SPARE PARTS</td></tr>${pHtml}
 <tr><td colspan="12" style="${sec}">LABOUR</td></tr>${lHtml}
 <tr><td colspan="12" style="${sec}">PAINTING CHARGES</td></tr>${ptHtml}
@@ -698,7 +698,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   // print "—"), so it prints nothing — exactly as imt23Totals skips it.
   const imt23RowLine = (r: AssessmentRow) =>
     r.imt23 && r.assessed && r.billStatus !== 'not-in-bill'
-      ? `<tr><td colspan="7" style="${td}font-weight:700;">Less Imt 23</td><td style="${td}text-align:right;font-weight:700;">${fa(r.assessed / 2)}</td><td colspan="5" style="${td}"></td></tr>`
+      ? `<tr><td colspan="4" style="${td}font-weight:700;">Less Imt 23</td><td style="${td}text-align:right;font-weight:700;">${fa(r.assessed / 2)}</td><td colspan="8" style="${td}"></td></tr>`
       : '';
 
   // Specimen prints "(Part) 18.00" / "(Labour) 18.00" when no code is recorded,
@@ -724,10 +724,10 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
       <td style="${td}">${escapeHtml(r.particulars)}</td>
       <td style="${td}text-align:center;">${partTypeLabel(r)}</td>
       <td style="${td}text-align:center;">${jobTypeLabel(r)}</td>
-      <td style="${td}text-align:right;">${noBill ? 'No Bill' : fa(r.estimated)}</td>
+      <td style="${td}text-align:right;">${noBill ? 'No Bill' : fa(r.assessed)}</td>
       <td style="${td}text-align:center;">${depLabel(r)}</td>
       <td style="${td}text-align:right;">${noBill ? '—' : fa(effectiveAssessed(r) - afterDep)}</td>
-      <td style="${td}text-align:right;">${noBill ? '—' : fa(r.assessed)}</td>
+      <td style="${td}text-align:right;">${noBill ? '—' : (isDisposal ? fa(netBeforeGst) : fa(afterDep))}</td>
       <td style="${td}text-align:center;">${isDisposal ? '0' : String(r.gst ?? 0)}</td>
       <td style="${td}text-align:right;">${noBill ? '—' : (isDisposal ? `${fa(netBeforeGst)} DISP` : fa(finalAmt))}</td>
       ${blank}${blank}${refTd(r)}
@@ -745,7 +745,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
       <td style="${td}">${escapeHtml(r.particulars)}</td>
       <td style="${td}text-align:center;">Labour</td>
       <td style="${td}text-align:center;">${jobTypeLabel(r)}</td>
-      <td style="${td}text-align:right;">${noBill ? 'No Bill' : fa(r.estimated)}</td>
+      <td style="${td}text-align:right;">${noBill ? 'No Bill' : fa(r.assessed)}</td>
       <td style="${td}text-align:center;">${depLabel(r)}</td>
       <td style="${td}text-align:right;">${noBill ? '—' : fa(effectiveAssessed(r) - afterDep)}</td>
       ${blank}
@@ -764,7 +764,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
       <td style="${td}">${escapeHtml(r.particulars)}</td>
       <td style="${td}text-align:center;">Paint</td>
       <td style="${td}text-align:center;">${jobTypeLabel(r)}</td>
-      <td style="${td}text-align:right;">${noBill ? 'No Bill' : fa(r.estimated)}</td>
+      <td style="${td}text-align:right;">${noBill ? 'No Bill' : fa(r.assessed)}</td>
       <td style="${td}text-align:center;">${depLabel(r)}</td>
       <td style="${td}text-align:right;">${noBill ? '—' : fa(effectiveAssessed(r) - afterDep)}</td>
       ${blank}
@@ -899,7 +899,7 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
   <th style="${th}text-align:left;width:13.5%;">Description</th>
   <th style="${th}width:8%;">Part<br/>Type</th>
   <th style="${th}width:8%;">Job<br/>Type</th>
-  <th style="${th}width:9%;">Part List<br/>Without Tax</th>
+  <th style="${th}width:9%;">Part List<br/>Without Tax<br/><span style="font-size:5.5pt;font-weight:normal;text-transform:none;">(Assessed Amount)</span></th>
   <th style="${th}width:8%;">Part<br/>Depreciation</th>
   <th style="${th}width:7%;">Dep.<br/>Amount</th>
   <th style="${th}width:9%;">Parts<br/>Assessment</th>
@@ -914,10 +914,10 @@ ${claim.isTotalLoss && claim.totalLossDetails ? (() => {
 ${pHtml || `<tr><td colspan="13" style="${td}text-align:center;color:#999;font-style:italic;">No parts in allowed items</td></tr>`}
 <tr style="font-weight:700;background:#eee;">
   <td colspan="4" style="${td}">SUB TOTAL</td>
-  <td style="${td}text-align:right;">${fa(billedParts.reduce((s, r) => s + r.estimated, 0))}</td>
+  <td style="${td}text-align:right;">${fa(rawParts)}</td>
   ${blank}
   <td style="${td}text-align:right;">${fa(billedParts.reduce((s, r) => s + effectiveAssessed(r) - computeRowNet(r, rowDepFor(r)).afterDep, 0))}</td>
-  <td style="${td}text-align:right;">${fa(billedParts.reduce((s, r) => s + r.assessed, 0))}</td>
+  <td style="${td}text-align:right;">${fa(partsDepreciated + disposalNet)}</td>
   ${blank}
   <td style="${td}text-align:right;">${fa(partsAgg.amount)}</td>
   ${blank}${blank}${blank}
@@ -927,7 +927,7 @@ ${pHtml || `<tr><td colspan="13" style="${td}text-align:center;color:#999;font-s
 ${lHtml || `<tr><td colspan="13" style="${td}text-align:center;color:#999;font-style:italic;">No labour in allowed items</td></tr>`}
 <tr style="font-weight:700;background:#f6f6f6;">
   <td colspan="4" style="${td}">SUB TOTAL</td>
-  <td style="${td}text-align:right;">${fa(billedLabour.reduce((s, r) => s + r.estimated, 0))}</td>
+  <td style="${td}text-align:right;">${fa(billedLabour.reduce((s, r) => s + r.assessed, 0))}</td>
   <td colspan="5" style="${td}"></td>
   <td style="${td}text-align:right;">${fa(labourAgg.base)}</td>
   ${blank}${blank}
@@ -943,7 +943,7 @@ ${taxLines(labourAgg, 'Labour', 'labour')}
 ${ptHtml || `<tr><td colspan="13" style="${td}text-align:center;color:#999;font-style:italic;">No painting in allowed items</td></tr>`}
 <tr style="font-weight:700;background:#f6f6f6;">
   <td colspan="4" style="${td}">SUB TOTAL</td>
-  <td style="${td}text-align:right;">${fa(billedPaint.reduce((s, r) => s + r.estimated, 0))}</td>
+  <td style="${td}text-align:right;">${fa(billedPaint.reduce((s, r) => s + r.assessed, 0))}</td>
   <td colspan="6" style="${td}"></td>
   <td style="${td}text-align:right;">${fa(paintAgg.base)}</td>
   ${blank}
@@ -959,7 +959,7 @@ ${taxLines(paintAgg, 'Paint', 'paint')}
 <tr style="font-weight:700;background:#ddd;">
   <td colspan="4" style="${td}">TOTAL</td>
   <td style="${td}text-align:right;">${fa(
-    [...billedParts, ...billedLabour, ...billedPaint].reduce((s, r) => s + r.estimated, 0)
+    [...billedParts, ...billedLabour, ...billedPaint].reduce((s, r) => s + r.assessed, 0)
   )}</td>
   ${blank}
   <td style="${td}text-align:right;">${fa(

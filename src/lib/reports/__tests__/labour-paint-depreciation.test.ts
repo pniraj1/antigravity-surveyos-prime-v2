@@ -95,14 +95,18 @@ describe('Labour and Paint honour a manual depreciation override', () => {
   // all means the amount column ignored the override.
   test('UIIC bill check depreciates a labour row', () => {
     const html = money(buildUIICBillCheckHTML(labour(), null));
-    expect(html).not.toContain('10000.00');
+    // In UIIC format, 10000.00 appears as pre-dep assessed amount in Col 5;
+    // net liability must be 8260.00 with GST (not 11800.00), and base 7000.00 in Col 11.
+    expect(html).not.toContain('11800.00');
     expect(html).toContain('7000.00');
+    expect(html).toContain('8260.00');
   });
 
   test('UIIC bill check depreciates a paint row', () => {
     const html = money(buildUIICBillCheckHTML(paint(), null));
-    expect(html).not.toContain('10000.00');
+    expect(html).not.toContain('11800.00');
     expect(html).toContain('7000.00');
+    expect(html).toContain('8260.00');
   });
 
   test('the engine agrees with the builders on the labour base', () => {
@@ -129,30 +133,33 @@ function section(html: string, startMarker: string, endMarker: string): string {
   return html.slice(start, end);
 }
 
-describe('UIIC bill check prints labour and paint estimates', () => {
+describe('UIIC bill check prints labour and paint assessed amounts in Part List Without Tax', () => {
   const rows = [
     row({ particulars: 'Bumper', partType: 'plastic', estimated: 11000, assessed: 10000 }),
     row({ particulars: 'Fitting', section: 'labour', partType: 'labour', estimated: 4400, assessed: 4000 }),
     row({ particulars: 'Painting', section: 'paint', partType: 'paint', estimated: 6600, assessed: 6000 }),
   ];
 
-  test('the labour row shows its own estimate inside the LABOUR table section', () => {
+  test('the labour row shows its assessed amount inside the LABOUR table section', () => {
     const html = money(buildUIICBillCheckHTML(claim(rows), null));
     const labourSection = section(html, '>LABOUR<', '>PAINTING CHARGES<');
-    expect(labourSection).toContain('4400.00');
+    expect(labourSection).toContain('4000.00');
+    expect(labourSection).not.toContain('4400.00');
   });
 
-  test('the paint row shows its own estimate inside the PAINTING CHARGES table section', () => {
+  test('the paint row shows its assessed amount inside the PAINTING CHARGES table section', () => {
     const html = money(buildUIICBillCheckHTML(claim(rows), null));
     const paintSection = section(html, '>PAINTING CHARGES<', '>TOTAL<');
-    expect(paintSection).toContain('6600.00');
+    expect(paintSection).toContain('6000.00');
+    expect(paintSection).not.toContain('6600.00');
   });
 
-  test('the allowed-items grand total estimate covers parts, labour and paint', () => {
+  test('the allowed-items grand total covers parts, labour and paint assessed amounts', () => {
     const html = money(buildUIICBillCheckHTML(claim(rows), null));
     const totalSection = section(html, '>TOTAL<', '</tbody>');
-    // 11000 + 4400 + 6600 = 22000. Previously this row printed 11000 — parts only.
-    expect(totalSection).toContain('22000.00');
+    // 10000 + 4000 + 6000 = 20000 assessed total in column 5
+    expect(totalSection).toContain('20000.00');
+    expect(totalSection).not.toContain('22000.00');
   });
 });
 

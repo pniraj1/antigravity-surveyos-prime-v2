@@ -39,6 +39,7 @@ describe('Bill Check table format', () => {
   test('carries the specimen column headers', () => {
     const html = buildUIICBillCheckHTML(claim([row()]), null);
     expect(html).toContain('Part List');
+    expect(html).toContain('(Assessed Amount)');
     expect(html).toContain('Part<br/>Depreciation');
     expect(html).toContain('Parts<br/>Assessment');
     expect(html).toContain('Final amount<br/>With G.S.T');
@@ -86,14 +87,20 @@ describe('Bill Check table format', () => {
     expect(html).toContain('0%');
   });
 
-  test('shows estimated and assessed as separate columns', () => {
+  test('shows assessed amount in Part List Without Tax and post-depreciation assessment', () => {
     const html = buildUIICBillCheckHTML(
-      claim([row({ particulars: 'FenderRH', estimated: 12000, assessed: 9000 })]),
+      claim([row({ particulars: 'FenderRH', estimated: 12000, assessed: 9000, depOverride: 10 })]),
       null
     );
     const rowHtml = html.split('FenderRH')[1].split('</tr>')[0];
-    expect(rowHtml).toContain('12000.00');
+    // In UIIC format, Column 5 is assessed amount without tax (9000.00), not workshop estimate
     expect(rowHtml).toContain('9000.00');
+    // Dep amount is 900.00 (10% of 9000)
+    expect(rowHtml).toContain('900.00');
+    // Column 8 is Parts Assessment (net after depreciation: 8100.00)
+    expect(rowHtml).toContain('8100.00');
+    // Estimated is not shown in UIIC table
+    expect(rowHtml).not.toContain('12000.00');
   });
 
   test('emits one labour tax line per distinct rate', () => {
