@@ -122,12 +122,23 @@ function hsnForRate(gst: number): string {
 /**
  * Calculates painting breakdown for standard (75/25 split) vs nil-depreciation policies.
  */
+/**
+ * Owner rule (2026-11-10): the OIC Excel carries only what the insurer pays for.
+ * Disallowed rows, rows the bill check marked not billed / not allowed, and rows
+ * with nothing assessed are left out entirely, estimate included.
+ */
+function inOicExcel(r: AssessmentRow): boolean {
+  return r.allowed
+    && r.billStatus !== 'not-in-bill'
+    && r.billStatus !== 'not-allowed'
+    && effectiveAssessed(r) > 0;
+}
+
 export function oicPaintingSummary(rows: AssessmentRow[]): OicPaintingSummary {
-  const paintRows = rows.filter((r) => r.section === 'paint');
-  const allowedPaint = paintRows.filter((r) => r.allowed);
+  const paintRows = rows.filter((r) => r.section === 'paint' && inOicExcel(r));
 
   const totalEstimated = paintRows.reduce((s, r) => s + (r.estimated || 0), 0);
-  const totalAssessed = allowedPaint.reduce((s, r) => s + effectiveAssessed(r), 0);
+  const totalAssessed = paintRows.reduce((s, r) => s + effectiveAssessed(r), 0);
 
   const labourPart = Math.round(totalAssessed * 0.75 * 100) / 100;
   const materialPart = Math.round((totalAssessed - labourPart) * 100) / 100;
@@ -169,17 +180,14 @@ export function oicAssessmentRows(
   // 1. Process Parts and Labour rows
   for (const r of rows) {
     if (r.section !== 'parts' && r.section !== 'labour') continue;
+    if (!inOicExcel(r)) continue;
 
     const isLabour = r.section === 'labour';
     const isDisposal = !isLabour && !!r.isDisposal;
     const depRate = isLabour || isDisposal || depType === 'nil' ? 0 : depRateFor(r);
     const gstRate = isDisposal ? 0 : r.gst ?? 18;
 
-    const assessed = !r.allowed
-      ? 0
-      : isDisposal
-        ? computeRowNet(r, depRate).netBeforeGst
-        : effectiveAssessed(r);
+    const assessed = isDisposal ? computeRowNet(r, depRate).netBeforeGst : effectiveAssessed(r);
 
     itemRows.push({
       invoiceNumber: invNo,
@@ -194,10 +202,10 @@ export function oicAssessmentRows(
   }
 
   // 2. Process Painting
-  const paintRows = rows.filter((r) => r.section === 'paint');
+  const paintRows = rows.filter((r) => r.section === 'paint' && inOicExcel(r));
   if (paintRows.length > 0) {
     const summary = oicPaintingSummary(rows);
-    const paintRates = new Set(paintRows.filter((r) => r.allowed).map((r) => r.gst ?? 18));
+    const paintRates = new Set(paintRows.map((r) => r.gst ?? 18));
     const paintGst = paintRates.values().next().value ?? 18;
 
     if (depType === 'nil') {

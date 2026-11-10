@@ -90,15 +90,32 @@ describe('oicAssessmentRows — parts & labour', () => {
     expect(rows[1].depreciationRate).toBe(0);
   });
 
-  test('disallowed parts are set to 0 item amount while preserving estimated amount', () => {
-    const [r] = oicAssessmentRows(
-      [row({ particulars: 'Non-accidental Dent', allowed: false, estimated: 5000, assessed: 5000 })],
+  // OIC owner rule 2026-11-10: a row with zero assessed amount (not allowed, or not billed) is left out of the Excel.
+  test('leaves out disallowed and zero-assessed parts and labour', () => {
+    const rows = oicAssessmentRows(
+      [
+        row({ particulars: 'Non-accidental Dent', allowed: false, estimated: 5000, assessed: 5000 }),
+        row({ particulars: 'Not billed', estimated: 3000, assessed: 0 }),
+        row({ section: 'labour', particulars: 'Not billed labour', estimated: 800, assessed: 0 }),
+        row({ particulars: 'Not in bill', billStatus: 'not-in-bill', estimated: 2000, assessed: 2000 }),
+        row({ section: 'labour', particulars: 'Bill not allowed', billStatus: 'not-allowed', estimated: 500, assessed: 500 }),
+        row({ particulars: 'Bonnet', estimated: 4000, assessed: 3500, billStatus: 'in-bill' }),
+      ],
       AGE,
       'standard',
       '66',
     );
-    expect(r.itemAmount).toBe(0);
-    expect(r.estimatedAmount).toBe(5000);
+    expect(rows.map((r) => r.itemSubType)).toEqual(['Bonnet']);
+  });
+
+  test('leaves out painting lines when no painting is assessed', () => {
+    const paint = [
+      row({ section: 'paint', estimated: 2000, assessed: 2000, allowed: false }),
+      row({ section: 'paint', estimated: 1500, assessed: 1500, billStatus: 'not-in-bill' }),
+    ];
+    expect(oicAssessmentRows(paint, AGE, 'standard', '66')).toEqual([]);
+    expect(oicAssessmentRows(paint, AGE, 'standard', '66', { paintingMode: 'net_single' })).toEqual([]);
+    expect(oicAssessmentRows(paint, AGE, 'nil', '66')).toEqual([]);
   });
 });
 
@@ -196,8 +213,10 @@ describe('oicAssessmentRows — painting handling', () => {
     const summary = oicPaintingSummary([
       row({ section: 'paint', estimated: 5000, assessed: 4000, allowed: true }),
       row({ section: 'paint', estimated: 2000, assessed: 2000, allowed: false }),
+      row({ section: 'paint', estimated: 900, assessed: 900, billStatus: 'not-in-bill' }),
     ]);
-    expect(summary.totalEstimated).toBe(7000);
+    // Disallowed and not-billed painting is left out entirely, estimate included.
+    expect(summary.totalEstimated).toBe(5000);
     expect(summary.totalAssessed).toBe(4000);
     expect(summary.labourPart).toBe(3000);
     expect(summary.materialPart).toBe(1000);
