@@ -8,6 +8,8 @@
   const pulses = new WeakMap();
   const PACKET_TTL_MS = 24 * 60 * 60 * 1000; // E6
   const ASK_TIMEOUT_MS = 5000;
+  const RESEND_MS = 300;
+  const FILL_TIMEOUT_MS = 20000;
   const NUDGE_PX = 24;
   const PULSE_MS = 1500;
   const COPIED_MS = 2000;
@@ -119,12 +121,16 @@
     const ask = (type, payload) => new Promise((resolve) => {
       const onMsg = (/** @type {MessageEvent} */ ev) => {
         if (ev.source !== window || !ev.data || ev.data.sx !== nonce || ev.data.type !== `${type}:result`) return;
-        clearTimeout(timer); window.removeEventListener('message', onMsg); resolve(ev.data);
+        clearTimeout(timer); clearInterval(resend); window.removeEventListener('message', onMsg); resolve(ev.data);
       };
+      // The MAIN-world filler may start after this card, so a read-only ask is re-sent until
+      // it answers (found live on OIC, 2026-11-10). Fill is never re-sent: it writes.
+      const resend = type === 'fill' ? undefined : setInterval(() => window.postMessage({ sx: nonce, type, ...payload }, '*'), RESEND_MS);
       const timer = setTimeout(() => {
+        clearInterval(resend);
         window.removeEventListener('message', onMsg);
         resolve({ ok: false, reason: "The portal page didn't answer. Reload the page and try again.", steps: [], files: [] });
-      }, ASK_TIMEOUT_MS);
+      }, type === 'fill' ? FILL_TIMEOUT_MS : ASK_TIMEOUT_MS); // fill is paced (30 ms per write)
       window.addEventListener('message', onMsg);
       window.postMessage({ sx: nonce, type, ...payload }, '*');
     });
