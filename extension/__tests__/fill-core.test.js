@@ -187,3 +187,36 @@ describe('selectMatched', () => {
     expect(selectMatched('')).toBe(true);
   });
 });
+
+describe('OIC: rupee-zero, DD-MM-YYYY, radioPick', () => {
+  it('isEmptyValue strips rupee, spaces, commas when empty is ""', () => {
+    expect(isEmptyValue('₹0', '')).toBe(true);
+    expect(isEmptyValue('₹ 0.00', '')).toBe(true);
+    expect(isEmptyValue('₹0.00', '')).toBe(true);
+    expect(isEmptyValue('₹1,200', '')).toBe(false);
+    expect(isEmptyValue('₹0', 'N')).toBe(false);
+  });
+  it('ddmmyyyyDash', () => {
+    expect(transforms.ddmmyyyyDash('2026-03-07')).toBe('07-03-2026');
+    expect(transforms.ddmmyyyyDash('07/03/2026')).toBe('07-03-2026');
+    expect(transforms.ddmmyyyyDash('')).toBe('');
+    expect(transforms.ddmmyyyyDash('garbage')).toBe('');
+  });
+  const radio = { kind: 'radioPick', modelPath: '#x1', choices: { yes: '#x1', no: '#x2' } };
+  const plan = (spec, fields, cur) =>
+    planFill({ fields: { q: spec } }, { fields }, { current: () => cur, radioValues: () => [] })[0];
+  it('radioPick constant: fills, same, and passes spec to read.current', () => {
+    const spec = { ...radio, constant: 'no' };
+    expect(plan(spec, {}, '')).toMatchObject({ action: 'fill', value: 'no', choice: '#x2' });
+    expect(plan(spec, {}, 'no').action).toBe('same');
+    let seen;
+    planFill({ fields: { q: spec } }, { fields: {} }, { current: (p, s) => { seen = s; return ''; }, radioValues: () => [] });
+    expect(seen).toBe(spec);
+  });
+  it('radioPick from packet: maps value, skips unknown choice', () => {
+    const spec = { ...radio, from: 'ans' };
+    expect(plan(spec, { ans: 'yes' }, '')).toMatchObject({ action: 'fill', value: 'yes', choice: '#x1' });
+    expect(plan(spec, { ans: 'maybe' }, '')).toMatchObject({ action: 'skip', why: 'no such choice' });
+    expect(plan({ ...radio, constant: 'maybe' }, {}, '')).toMatchObject({ action: 'skip', why: 'no such choice' });
+  });
+});

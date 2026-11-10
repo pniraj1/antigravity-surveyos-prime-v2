@@ -23,6 +23,11 @@ const transforms = {
     if (m) return `${pad2(m[1])}/${pad2(m[2])}/${m[3]}`;
     return s;
   },
+  /** ISO date / ISO datetime / dd/MM/yyyy -> DD-MM-YYYY; '' when unparseable */
+  ddmmyyyyDash: (/** @type {unknown} */ v) => {
+    const m = transforms.ddmmyyyy(v).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    return m ? `${m[1]}-${m[2]}-${m[3]}` : '';
+  },
   /** 9:05 / 14:30:00 -> HH:MM */
   hhmm: (/** @type {unknown} */ v) => {
     const m = String(v ?? '').trim().match(/^(\d{1,2}):(\d{2})/);
@@ -54,6 +59,11 @@ function isEmptyValue(current, empty) {
   if (current === null || current === undefined || current === '') return true;
   if (empty !== null && empty !== undefined && current === empty) return true;
   if (empty === '' && (current === 0 || current === '0' || current === '0.00')) return true;
+  // OIC money boxes show '₹0' / '₹ 0.00'
+  if (empty === '' && typeof current === 'string') {
+    const n = current.replace(/[₹\s,]/g, '');
+    if (n === '' || n === '0' || n === '0.00') return true;
+  }
   return false;
 }
 
@@ -67,7 +77,7 @@ function decide(current, empty, incoming) {
 
 /**
  * @param {any} map @param {any} packet
- * @param {{ current: (p: string) => unknown, radioValues: (p: string) => string[] }} read
+ * @param {{ current: (p: string, spec?: any) => unknown, radioValues: (p: string) => string[] }} read
  */
 function planFill(map, packet, read) {
   const fields = packet.fields ?? {};
@@ -99,9 +109,15 @@ function planFill(map, packet, read) {
       if (spec.maxLen) value = value.slice(0, spec.maxLen);
     }
 
-    const current = read.current(spec.modelPath);
+    /** @type {string|undefined} */
+    let choice;
+    if (spec.kind === 'radioPick') {
+      choice = spec.choices?.[value];
+      if (choice === undefined || !Object.hasOwn(spec.choices, value)) { steps.push({ ...base, action: 'skip', why: 'no such choice' }); continue; }
+    }
+    const current = read.current(spec.modelPath, spec);
     const action = decide(current, spec.empty, value);
-    steps.push({ ...base, action, value, current });
+    steps.push(choice === undefined ? { ...base, action, value, current } : { ...base, action, value, current, choice });
   }
   return steps;
 }
