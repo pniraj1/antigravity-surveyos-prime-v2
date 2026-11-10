@@ -86,9 +86,12 @@ export function oicRegNumber(raw?: string): string | undefined {
   return m ? m.slice(1).filter(Boolean).join(' ') : compact;
 }
 
-/** "MH 19 DV 9776" -> "MH19": the RTO code, matched on OIC ignoring leading zeros (OIC has MH01 and DL2). */
-export function oicRtoCode(raw?: string): string | undefined {
-  const m = /^([A-Z]{2})(\d{1,2})[A-Z]/.exec(raw?.replace(/[\s-]+/g, '').toUpperCase() ?? '');
+/**
+ * Driving licence "MH18 2010 0012611" -> "MH18": the RTO code (owner: the licence's first 4 characters).
+ * Matched on OIC ignoring leading zeros (OIC has MH01 and DL2).
+ */
+export function oicRtoCode(licence?: string): string | undefined {
+  const m = /^([A-Z]{2})(\d{2})/.exec(licence?.replace(/[^A-Za-z0-9]/g, '').toUpperCase() ?? '');
   return m ? m[1] + m[2] : undefined;
 }
 
@@ -381,7 +384,7 @@ export async function buildOicPacket(
     builtAt: new Date().toISOString(),
     fields: compact<OicField>({
       regNumber: oicRegNumber(v?.registrationNumber),
-      rto: oicRtoCode(v?.registrationNumber),
+      rto: oicRtoCode(d?.licenceNumber),
       make: v?.make?.trim(),
       model: v?.model?.trim(),
       chasisNumber: v?.chassisNumber?.trim(),

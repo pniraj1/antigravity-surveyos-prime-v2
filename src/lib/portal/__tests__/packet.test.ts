@@ -240,6 +240,11 @@ describe('buildOicPacket', () => {
 
     expect(p.fields.regNumber).toBe('MH 02 DW 3096');
     expect(p.fields.rto).toBe('MH02');
+    // owner: the RTO is the licence's first 4 characters, not the registration's
+    const dl = await buildOicPacket({ ...c, driver: { ...c.driver, licenceNumber: 'MH-18 2010 0012611' } }, { ageMonths: 80, paintingMode: 'net_single' });
+    expect(dl.fields.rto).toBe('MH18');
+    const noDl = await buildOicPacket({ ...c, driver: { ...c.driver, licenceNumber: '' } }, { ageMonths: 80, paintingMode: 'net_single' });
+    expect(noDl.fields.rto).toBeUndefined();
     expect(p.fields.make).toBe('SKODA');
     expect(p.fields.model).toBe('RAPID');
     expect(p.fields.chasisNumber).toBe('TMB123456');
