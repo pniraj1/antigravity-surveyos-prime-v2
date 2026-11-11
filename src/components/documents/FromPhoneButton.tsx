@@ -1,12 +1,10 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 import {
-  ChevronDown,
   Cloud,
   CloudDownload,
-  FileText,
   FolderArchive,
   Laptop,
   Loader2,
@@ -25,11 +23,12 @@ import { useUIStore } from '@/stores/ui-store';
 import { isLocalFolderSupported } from '@/lib/storage/claim-folder-store';
 import { planNotes, isEmptyNotesPlan, type NotesPlan } from '@/lib/scan-import/notes';
 import { readZip } from '@/lib/scan-import/zip';
-import { normalizeScanNotes, type NormalizedNotesPayload } from '@/lib/scan-import/normalizer';
+import { backupOnlyNotes } from '@/lib/scan-import/backup-notes';
+import type { NormalizedNotesPayload } from '@/lib/scan-import/normalizer';
 import { sameVehicle } from '@/lib/scan-import/manifest';
 import { fetchNotesFromScanFolder, type ScanDriveFolderItem } from '@/lib/scan-import/drive-notes';
 import { loadDriveIndex, saveDriveIndex, linkGoogleDrive } from '@/lib/drive';
-import { importScanZip, type ImportOptions, type ImportResult } from '@/lib/scan-import/import';
+import { importScanFiles, type ImportOptions, type ImportResult } from '@/lib/scan-import/import';
 import { importFromDrive } from '@/lib/scan-import/drive-source';
 import { pickDriveZip, DriveDownloadError } from '@/lib/scan-import/picker';
 import { PhoneFolderPickerDialog } from './PhoneFolderPickerDialog';
@@ -41,12 +40,7 @@ export interface FromPhoneButtonProps {
   className?: string;
   disabled?: boolean;
   initialOpen?: boolean;
-  getAction?: (actions: {
-    toggleMenu: () => void;
-    openNotes: () => void;
-    openScans: () => void;
-    closeMenu: () => void;
-  }) => void;
+  getAction?: (actions: { open: () => void; close: () => void }) => void;
 }
 
 interface VehicleMismatchAsk {
@@ -66,6 +60,39 @@ interface ScansFolderAsk {
   resolve: (id: string | null) => void;
 }
 
+type ScanMessage = { kind: 'error' | 'warning' | 'info' | 'success'; text: string };
+
+/** The toast for an import result, or null when none is needed. Pure, so it can be tested. */
+export function scanResultMessage(r: ImportResult, fromDrive = false): ScanMessage | null {
+  if (r.status === 'needs-folder' || r.status === 'needs-permission') {
+    const folder = r.status === 'needs-folder';
+    if (r.notes) {
+      return {
+        kind: 'info',
+        text: folder
+          ? 'Notes brought in. Documents and photos were not saved: link the claim folder on the Documents tab (desktop Chrome).'
+          : 'Notes brought in. Documents and photos were not saved: click Allow access on the folder line, then bring them again.',
+      };
+    }
+    return {
+      kind: 'error',
+      text: folder
+        ? 'Connect the claim folder first, then bring the phone scans again.'
+        : 'Click Allow access on the folder line, then bring the phone scans again.',
+    };
+  }
+  if (r.status === 'claim-changed') {
+    return { kind: 'warning', text: `Another claim was opened, so the import stopped. Added ${r.added}.` };
+  }
+  if (r.status === 'done') {
+    if (fromDrive && r.added === 0 && !r.failed) {
+      return { kind: 'info', text: `Phone scans on Drive: nothing new${r.contactsFilled ? `, ${r.contactsFilled} contacts filled` : ''}` };
+    }
+    return { kind: 'success', text: `Added ${r.added}, skipped ${r.skipped}${r.failed ? `, ${r.failed} failed` : ''}${r.contactsFilled ? `, ${r.contactsFilled} contacts filled` : ''}` };
+  }
+  return null;
+}
+
 const msg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 export function FromPhoneButton({
@@ -76,11 +103,8 @@ export function FromPhoneButton({
   initialOpen = false,
   getAction,
 }: FromPhoneButtonProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const notesFileRef = useRef<HTMLInputElement>(null);
   const scansFileRef = useRef<HTMLInputElement>(null);
 
-  const [menuOpen, setMenuOpen] = useState(initialOpen);
   const [busy, setBusy] = useState(false);
 
   // Notes state
@@ -89,7 +113,7 @@ export function FromPhoneButton({
   const [notesVehicleAsk, setNotesVehicleAsk] = useState<VehicleMismatchAsk | null>(null);
 
   // Scans state
-  const [scansSourceDialogOpen, setScansSourceDialogOpen] = useState(false);
+  const [scansSourceDialogOpen, setScansSourceDialogOpen] = useState(initialOpen);
   const [scansFolderAsk, setScansFolderAsk] = useState<ScansFolderAsk | null>(null);
   const [scansVehicleAsk, setScansVehicleAsk] = useState<ScansVehicleAsk | null>(null);
   const [scansRelinkAsk, setScansRelinkAsk] = useState<{ resolve: (ok: boolean) => void } | null>(null);
@@ -99,30 +123,6 @@ export function FromPhoneButton({
   const claimVehicle = currentClaim?.vehicle?.registrationNumber ?? '';
   const localFolderSupported = isLocalFolderSupported();
   const isDisabled = disabled || !currentClaim || busy;
-
-  // Click-outside and keyboard Escape listener
-  useEffect(() => {
-    if (!menuOpen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setMenuOpen(false);
-      }
-    };
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [menuOpen]);
 
   // Handle Phone Notes logic
   const processNotesPayload = useCallback((normalized: NormalizedNotesPayload, scanClaimId?: string) => {
@@ -193,36 +193,6 @@ export function FromPhoneButton({
     }
   };
 
-  const handleNotesFileInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-
-    setBusy(true);
-    try {
-      const zipMap = await readZip(file);
-      let rawText: string | null = null;
-      for (const [path, blob] of zipMap) {
-        if (path.endsWith('_surveyos-scan.json') || path.endsWith('_surveyos-backup.json')) {
-          rawText = await blob.text();
-          break;
-        }
-      }
-      if (!rawText) {
-        throw new Error('This zip does not contain a SurveyOS Scan notes or backup file.');
-      }
-      const normalized = normalizeScanNotes(rawText);
-      if (!normalized) {
-        throw new Error('Could not parse notes from this zip file.');
-      }
-      processNotesPayload(normalized);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not read zip file.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
   // Handle Phone Scans logic
   const answerScansVehicle = (ok: boolean) => {
     scansVehicleAsk?.resolve(ok);
@@ -253,21 +223,16 @@ export function FromPhoneButton({
   };
 
   const reportScans = (r: ImportResult, claimId: string | undefined, fromDrive = false) => {
-    if (r.status === 'needs-folder') {
-      toast.error('Connect the claim folder first, then bring the phone scans again.');
-      onNeedsFolder?.();
-    } else if (r.status === 'needs-permission') {
-      toast.error('Click Allow access on the folder line, then bring the phone scans again.', {
-        action: onAllowAccess ? { label: 'Allow access', onClick: onAllowAccess } : undefined,
-      });
-    } else if (r.status === 'claim-changed') {
-      toast.warning(`Another claim was opened, so the import stopped. Added ${r.added}.`);
-    } else if (r.status === 'done') {
-      if (fromDrive && r.added === 0 && !r.failed) {
-        toast.info(`Phone scans on Drive: nothing new${r.contactsFilled ? `, ${r.contactsFilled} contacts filled` : ''}`);
+    const m = scanResultMessage(r, fromDrive);
+    if (m) {
+      if (r.status === 'needs-permission') {
+        toast[m.kind](m.text, { action: onAllowAccess ? { label: 'Allow access', onClick: onAllowAccess } : undefined });
       } else {
-        toast.success(`Added ${r.added}, skipped ${r.skipped}${r.failed ? `, ${r.failed} failed` : ''}${r.contactsFilled ? `, ${r.contactsFilled} contacts filled` : ''}`);
+        toast[m.kind](m.text);
       }
+    }
+    if (r.status === 'needs-folder') onNeedsFolder?.();
+    if (r.status === 'done' || r.status === 'needs-folder' || r.status === 'needs-permission') {
       showNotesFromScanZip(r.notes, claimId);
     }
   };
@@ -276,7 +241,10 @@ export function FromPhoneButton({
     setBusy(true);
     const claimId = useClaimStore.getState().currentClaim?.id;
     try {
-      reportScans(await importScanZip(blob, scanAsks), claimId);
+      const files = await readZip(blob);
+      const notes = await backupOnlyNotes(files);
+      if (notes) processNotesPayload(notes);
+      else reportScans(await importScanFiles(files, scanAsks), claimId);
     } catch (e) {
       toast.error(msg(e));
     } finally {
@@ -337,23 +305,9 @@ export function FromPhoneButton({
     if (f) void runScansZipBlob(f);
   };
 
-  const handleOpenNotes = () => {
-    setMenuOpen(false);
+  const handleOpen = () => {
     if (!currentClaim) {
-      toast.error('Open a claim first before importing phone notes.');
-      return;
-    }
-    setNotesPickerOpen(true);
-  };
-
-  const handleOpenScans = () => {
-    setMenuOpen(false);
-    if (!currentClaim) {
-      toast.error('Open a claim first before bringing phone scans.');
-      return;
-    }
-    if (!localFolderSupported) {
-      toast.error('Local claim folder access requires Chrome, Edge, or Brave on desktop.');
+      toast.error('Open a claim first before bringing items from phone.');
       return;
     }
     setScansSourceDialogOpen(true);
@@ -362,28 +316,18 @@ export function FromPhoneButton({
   // Expose action callbacks for unit tests
   if (getAction) {
     getAction({
-      toggleMenu: () => setMenuOpen((o) => !o),
-      openNotes: handleOpenNotes,
-      openScans: handleOpenScans,
-      closeMenu: () => setMenuOpen(false),
+      open: handleOpen,
+      close: () => setScansSourceDialogOpen(false),
     });
   }
 
   return (
-    <div
-      ref={containerRef}
-      className={`relative inline-flex items-center ${className}`}
-      onKeyDown={(e) => {
-        if (e.key === 'Escape') setMenuOpen(false);
-      }}
-    >
+    <div className={`relative inline-flex items-center ${className}`}>
       {/* Trigger Button */}
       <button
         type="button"
         disabled={isDisabled}
-        onClick={() => setMenuOpen((o) => !o)}
-        aria-haspopup="menu"
-        aria-expanded={menuOpen}
+        onClick={handleOpen}
         title={!currentClaim ? 'Open a claim first before bringing items from phone' : 'From Phone'}
         className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-card border border-border text-foreground hover:border-primary/40 hover:text-primary transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none shadow-sm min-h-[38px]"
       >
@@ -393,86 +337,9 @@ export function FromPhoneButton({
           <Smartphone size={14} className="text-primary" />
         )}
         <span>From Phone</span>
-        <ChevronDown
-          size={13}
-          className={`text-muted-foreground transition-transform duration-150 ${menuOpen ? 'rotate-180' : ''}`}
-        />
       </button>
 
-      {/* Unified Dropdown Menu */}
-      {menuOpen && (
-        <>
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setMenuOpen(false)}
-            aria-hidden="true"
-          />
-          <div
-            role="menu"
-            aria-label="From Phone options"
-            className="absolute right-0 top-full mt-1.5 z-50 min-w-[19rem] overflow-hidden rounded-2xl border border-border bg-card p-1.5 shadow-xl text-xs"
-          >
-            {/* Option 1: Phone Notes */}
-            <button
-              type="button"
-              role="menuitem"
-              onClick={handleOpenNotes}
-              className="w-full flex items-start gap-3 p-2.5 rounded-xl text-left text-foreground hover:bg-muted font-medium transition-colors group cursor-pointer"
-            >
-              <div className="p-2 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
-                <FileText size={16} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-xs text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
-                  Phone Notes
-                </div>
-                <div className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
-                  Review field notes recorded on phone & auto-populate details
-                </div>
-              </div>
-            </button>
-
-            {/* Option 2: Phone Scans & Photos */}
-            <button
-              type="button"
-              role="menuitem"
-              data-unsupported={!localFolderSupported}
-              onClick={handleOpenScans}
-              className={`w-full flex items-start gap-3 p-2.5 rounded-xl text-left font-medium transition-colors group cursor-pointer ${
-                !localFolderSupported
-                  ? 'opacity-60 hover:bg-transparent'
-                  : 'text-foreground hover:bg-muted'
-              }`}
-            >
-              <div className="p-2 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
-                <FolderArchive size={16} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-xs text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
-                  Phone Scans & Photos
-                  {!localFolderSupported && (
-                    <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-normal">
-                      Desktop Chrome Only
-                    </span>
-                  )}
-                </div>
-                <div className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
-                  Import scans and photos from phone .zip or Drive folder
-                </div>
-              </div>
-            </button>
-          </div>
-        </>
-      )}
-
       {/* Hidden file inputs */}
-      <input
-        ref={notesFileRef}
-        type="file"
-        accept=".zip"
-        className="hidden"
-        onChange={handleNotesFileInput}
-      />
       <input
         ref={scansFileRef}
         type="file"
@@ -486,7 +353,7 @@ export function FromPhoneButton({
         isOpen={notesPickerOpen}
         onClose={() => setNotesPickerOpen(false)}
         onSelectFolder={handleSelectDriveFolderForNotes}
-        onPickComputerFile={() => notesFileRef.current?.click()}
+        onPickComputerFile={() => scansFileRef.current?.click()}
         currentVehicle={claimVehicle}
       />
 
@@ -541,10 +408,10 @@ export function FromPhoneButton({
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-base font-semibold">
                 <FolderArchive size={18} className="text-primary" />
-                Import Phone Scans & Photos
+                From Phone
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
-                Bring scanned documents, inspection photos, and files into this claim.
+                Choose the zip SurveyOS Scan shared
               </DialogDescription>
             </DialogHeader>
 
@@ -555,7 +422,8 @@ export function FromPhoneButton({
                     type="button"
                     onClick={() => {
                       setScansSourceDialogOpen(false);
-                      void handleScansFromDriveFolder();
+                      if (localFolderSupported) void handleScansFromDriveFolder();
+                      else setNotesPickerOpen(true);
                     }}
                     className="w-full flex items-center justify-between p-3.5 rounded-xl border border-border bg-card hover:bg-muted/60 transition-colors text-left group"
                   >
@@ -565,10 +433,10 @@ export function FromPhoneButton({
                       </div>
                       <div>
                         <div className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
-                          Sync from Google Drive Folder
+                          {localFolderSupported ? 'Sync from Google Drive Folder' : 'Notes from a Google Drive folder'}
                         </div>
                         <div className="text-[11px] text-muted-foreground mt-0.5">
-                          Directly import from phone scan folder in Drive
+                          {localFolderSupported ? 'Directly import from phone scan folder in Drive' : 'Bring field notes from a phone folder on Drive'}
                         </div>
                       </div>
                     </div>
@@ -633,7 +501,7 @@ export function FromPhoneButton({
                       From this Computer (.zip)
                     </div>
                     <div className="text-[11px] text-muted-foreground mt-0.5">
-                      Choose an exported SurveyOS Scan .zip file
+                      Notes, documents and photos in one go
                     </div>
                   </div>
                 </div>

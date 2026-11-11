@@ -4,7 +4,7 @@ import React from 'react';
 import { useClaimStore } from '@/stores/claim-store';
 import { useUIStore } from '@/stores/ui-store';
 import * as claimFolderStore from '@/lib/storage/claim-folder-store';
-import { FromPhoneButton } from '../FromPhoneButton';
+import { FromPhoneButton, scanResultMessage } from '../FromPhoneButton';
 
 vi.mock('sonner', () => ({
   toast: {
@@ -14,6 +14,19 @@ vi.mock('sonner', () => ({
     info: vi.fn(),
   },
 }));
+
+// Radix dialogs portal out of static markup; render them inline so the content can be asserted.
+vi.mock('@/components/ui/dialog', () => {
+  const Pass = ({ children }: any) => <div>{children}</div>;
+  return {
+    Dialog: ({ open, children }: any) => (open ? <div>{children}</div> : null),
+    DialogContent: Pass,
+    DialogHeader: Pass,
+    DialogTitle: Pass,
+    DialogDescription: Pass,
+    DialogFooter: Pass,
+  };
+});
 
 vi.mock('@/lib/drive', () => ({
   loadDriveIndex: vi.fn().mockResolvedValue({}),
@@ -40,27 +53,24 @@ describe('FromPhoneButton', () => {
     });
   });
 
-  it('renders a trigger button labeled "From Phone" with mobile smartphone icon and dropdown chevron', () => {
+  it('renders "From Phone" with no Notes/Scans menu', () => {
     const html = renderToStaticMarkup(<FromPhoneButton />);
     expect(html).toContain('From Phone');
-    // Checks that it renders the button trigger with aria attributes
-    expect(html).toContain('aria-haspopup="menu"');
-    expect(html).toContain('aria-expanded="false"');
-    // Checks for svg icons (lucide-react Smartphone and ChevronDown)
-    expect(html).toContain('<svg');
-    // Dropdown menu options should be closed initially
+    expect(html).not.toContain('aria-haspopup');
     expect(html).not.toContain('Phone Notes');
     expect(html).not.toContain('Phone Scans &amp; Photos');
   });
 
-  it('renders a menu with "Phone Notes" and "Phone Scans & Photos" options when open', () => {
-    const html = renderToStaticMarkup(<FromPhoneButton initialOpen={true} />);
-    expect(html).toContain('aria-expanded="true"');
-    expect(html).toContain('role="menu"');
-    expect(html).toContain('Phone Notes');
-    expect(html).toContain('Review field notes recorded on phone &amp; auto-populate details');
-    expect(html).toContain('Phone Scans &amp; Photos');
-    expect(html).toContain('Import scans and photos from phone .zip or Drive folder');
+  it('initialOpen shows the source dialog with the computer zip option', () => {
+    const html = renderToStaticMarkup(<FromPhoneButton initialOpen />);
+    expect(html).toContain('From this Computer (.zip)');
+    expect(html).toContain('Choose the zip SurveyOS Scan shared');
+  });
+
+  it('still offers the computer zip when local folders are unsupported', () => {
+    vi.mocked(claimFolderStore.isLocalFolderSupported).mockReturnValue(false);
+    const html = renderToStaticMarkup(<FromPhoneButton initialOpen />);
+    expect(html).toContain('From this Computer (.zip)');
   });
 
   it('respects disabled state when no claim is loaded', () => {
@@ -74,24 +84,26 @@ describe('FromPhoneButton', () => {
     expect(html).toContain('disabled');
   });
 
-  it('handles unsupported local folder gracefully in Phone Scans option', () => {
-    vi.spyOn(claimFolderStore, 'isLocalFolderSupported').mockReturnValue(false);
-    const html = renderToStaticMarkup(<FromPhoneButton initialOpen={true} />);
-    // When unsupported, the menu still renders Phone Notes cleanly
-    expect(html).toContain('Phone Notes');
-    expect(html).toContain('Phone Scans &amp; Photos');
-    // Phone Scans indicates disabled/unsupported state
-    expect(html).toContain('data-unsupported="true"');
-  });
-
-  it('provides getAction hook to trigger menu toggle and actions', () => {
+  it('getAction exposes open/close', () => {
     let actions: any = null;
-    renderToStaticMarkup(
-      <FromPhoneButton getAction={(a) => { actions = a; }} />
-    );
-    expect(actions).toBeDefined();
-    expect(typeof actions.toggleMenu).toBe('function');
-    expect(typeof actions.openNotes).toBe('function');
-    expect(typeof actions.openScans).toBe('function');
+    renderToStaticMarkup(<FromPhoneButton getAction={(a) => { actions = a; }} />);
+    expect(typeof actions.open).toBe('function');
+    expect(typeof actions.close).toBe('function');
+    expect(() => actions.open()).not.toThrow();
+  });
+});
+
+describe('scanResultMessage', () => {
+  it('needs-folder with notes says notes came in', () => {
+    expect(scanResultMessage({ status: 'needs-folder', notes: { spot: {} } })).toEqual({
+      kind: 'info',
+      text: 'Notes brought in. Documents and photos were not saved: link the claim folder on the Documents tab (desktop Chrome).',
+    });
+  });
+  it('needs-folder without notes keeps the old error', () => {
+    expect(scanResultMessage({ status: 'needs-folder', notes: null })?.kind).toBe('error');
+  });
+  it('cancelled needs no toast', () => {
+    expect(scanResultMessage({ status: 'cancelled' })).toBeNull();
   });
 });
