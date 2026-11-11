@@ -1,3 +1,7 @@
+## 2026-11-11 (Claude Code) — Driver Date of Birth on the UIIC Final report (not deployed)
+- feat(uiic-report): the Driving Licence block prints "Date of Birth" (DD.MM.YYYY) under the licence holder name. Covers UIIC print, Word download and preview (same HTML). The rest of the chain already carried DOB: DL prompt → applyDL → Details form → cross-check → portal packet → Spot and Standard Final reports.
+- verification: new test in `uiic-workshop-and-dl-validity.test.ts`; report/tab/dialog suites 63 files / 546 tests, tsc clean. Prime ↔ Scan coupling: none.
+
 ## 2026-11-11 (Claude Code) — Load challan / E-way bill uploads now read and fill the claim (not deployed)
 - fix(extraction): the Load Challan card sends key `load-challan`, but the prompt and the Apply step were filed under `lok-challan`. Every challan read with the generic "extract everything" prompt and Apply saved nothing. Both now use `load-challan`; the evidence viewer labels too.
 - feat(prompt): one prompt for load challan / LR / E-way bill / tax invoice. It names the document kind, then reads only what the surveyor needs (no., date, E-way valid-until, vehicle no., from/to, goods in detail with quantity and packing, goods value, hazardous mark, weight + unit); blank when not printed.

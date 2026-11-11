@@ -274,6 +274,7 @@ ${getSurveyorHeader(profile)}
   <td style="padding:0;margin:0;vertical-align:top;border-bottom:1pt solid #000;">
     <table style="width:100%;border-collapse:collapse;font-size:7pt;">
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;width:55%;">Name of Driving Licence Holder</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(d.name)}</td></tr>
+      <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Date of Birth</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${fd(d.dateOfBirth)}</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Driving Licence Number</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(d.licenceNumber)}</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Licence Type</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g((d as any).licenceType)}</td></tr>
       <tr><td style="padding:3px 5px;border-bottom:0.5pt solid #000;border-right:0.5pt solid #000;">Class of vehicles licenced to drive</td><td style="padding:3px 5px;border-bottom:0.5pt solid #000;">${g(d.vehicleClasses)}</td></tr>

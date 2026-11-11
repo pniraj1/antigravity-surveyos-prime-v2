@@ -108,4 +108,15 @@ describe('UIIC Final Report - Workshop and DL Validity integrity', () => {
     expect(html).toContain('08.08.2031');
     expect(html).not.toContain('TR:');
   });
+
+  it('prints the driver Date of Birth under the licence holder name', () => {
+    const claim = makeBaseClaim({
+      driver: { name: 'AJAY RODGE', licenceNumber: 'MH19 19980017274', dateOfBirth: '1985-07-22' } as any,
+    });
+    const html = buildUIICFinalHTML(claim, mockProfile);
+    expect(html).toContain('22.07.1985');
+    const dob = html.indexOf('>Date of Birth<');
+    expect(dob).toBeGreaterThan(html.indexOf('Name of Driving Licence Holder'));
+    expect(dob).toBeLessThan(html.indexOf('Driving Licence Number'));
+  });
 });
