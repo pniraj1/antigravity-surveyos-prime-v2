@@ -5,5 +5,8 @@ export async function backupOnlyNotes(zipFiles: Map<string, Blob>): Promise<Norm
   const names = [...zipFiles.keys()];
   if (names.some((n) => n.endsWith('_surveyos-scan.json'))) return null;
   const name = names.find((n) => n.endsWith('_surveyos-backup.json'));
-  return name ? normalizeScanNotes(await zipFiles.get(name)!.text()) : null;
+  if (!name) return null;
+  const notes = normalizeScanNotes(await zipFiles.get(name)!.text());
+  if (!notes) throw new Error("Couldn't read the notes in this zip.");
+  return notes;
 }

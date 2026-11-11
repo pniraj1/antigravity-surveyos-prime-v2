@@ -17,4 +17,7 @@ describe('backupOnlyNotes', () => {
   it('returns null when neither file is there', async () => {
     expect(await backupOnlyNotes(mapOf({ 'a.jpg': 'x' }))).toBeNull();
   });
+  it('throws a clear error when the backup cannot be read', async () => {
+    await expect(backupOnlyNotes(mapOf({ '_surveyos-backup.json': 'not json' }))).rejects.toThrow("Couldn't read the notes in this zip.");
+  });
 });

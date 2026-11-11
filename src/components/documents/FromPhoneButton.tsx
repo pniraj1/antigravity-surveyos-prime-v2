@@ -70,8 +70,8 @@ export function scanResultMessage(r: ImportResult, fromDrive = false): ScanMessa
       return {
         kind: 'info',
         text: folder
-          ? 'Notes brought in. Documents and photos were not saved: link the claim folder on the Documents tab (desktop Chrome).'
-          : 'Notes brought in. Documents and photos were not saved: click Allow access on the folder line, then bring them again.',
+          ? 'Documents and photos were not saved: link the claim folder on the Documents tab (desktop Chrome).'
+          : 'Documents and photos were not saved: click Allow access on the folder line on the Documents tab.',
       };
     }
     return {
@@ -231,7 +231,7 @@ export function FromPhoneButton({
         toast[m.kind](m.text);
       }
     }
-    if (r.status === 'needs-folder') onNeedsFolder?.();
+    if (r.status === 'needs-folder' && !r.notes) onNeedsFolder?.();
     if (r.status === 'done' || r.status === 'needs-folder' || r.status === 'needs-permission') {
       showNotesFromScanZip(r.notes, claimId);
     }
@@ -243,7 +243,10 @@ export function FromPhoneButton({
     try {
       const files = await readZip(blob);
       const notes = await backupOnlyNotes(files);
-      if (notes) processNotesPayload(notes);
+      if (notes) {
+        toast.info('This zip has notes only — no documents or photos.');
+        processNotesPayload(notes);
+      }
       else reportScans(await importScanFiles(files, scanAsks), claimId);
     } catch (e) {
       toast.error(msg(e));

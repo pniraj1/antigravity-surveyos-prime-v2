@@ -41,6 +41,7 @@ vi.mock('@/lib/storage/claim-folder-store', () => ({
 describe('FromPhoneButton', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(claimFolderStore.isLocalFolderSupported).mockReturnValue(true);
     useClaimStore.setState({
       currentClaim: {
         id: 'claim-123',
@@ -69,8 +70,14 @@ describe('FromPhoneButton', () => {
 
   it('still offers the computer zip when local folders are unsupported', () => {
     vi.mocked(claimFolderStore.isLocalFolderSupported).mockReturnValue(false);
+    // Static render reads the store's initial state, not setState; link Drive there (restored below).
+    const initial = useUIStore.getInitialState();
+    const was = initial.isDriveConnected;
+    initial.isDriveConnected = true;
     const html = renderToStaticMarkup(<FromPhoneButton initialOpen />);
     expect(html).toContain('From this Computer (.zip)');
+    initial.isDriveConnected = was;
+    expect(html).toContain('Notes from a Google Drive folder');
   });
 
   it('respects disabled state when no claim is loaded', () => {
@@ -97,7 +104,13 @@ describe('scanResultMessage', () => {
   it('needs-folder with notes says notes came in', () => {
     expect(scanResultMessage({ status: 'needs-folder', notes: { spot: {} } })).toEqual({
       kind: 'info',
-      text: 'Notes brought in. Documents and photos were not saved: link the claim folder on the Documents tab (desktop Chrome).',
+      text: 'Documents and photos were not saved: link the claim folder on the Documents tab (desktop Chrome).',
+    });
+  });
+  it('needs-permission with notes says to click Allow access', () => {
+    expect(scanResultMessage({ status: 'needs-permission', notes: { spot: {} } })).toEqual({
+      kind: 'info',
+      text: 'Documents and photos were not saved: click Allow access on the folder line on the Documents tab.',
     });
   });
   it('needs-folder without notes keeps the old error', () => {
