@@ -1,4 +1,4 @@
-## 2026-11-11 (Claude Code) — One From Phone button for the Scan zip (not deployed)
+## 2026-11-11 (Claude Code) — One From Phone button for the Scan zip (deployed 2026-11-11)
 - feat(phone-import): Documents, Spot, Valuation and Fees tabs share one **From Phone** button that opens one dialog. Picking the Scan zip once brings notes (through the existing review), documents and photos. Replaces the Notes/Scans menu and the "Use Phone Notes" button; dead `UsePhoneNotesButton.tsx` and `BringPhoneScans.tsx` deleted.
 - fix(phone-import): with no claim folder linked (or not desktop Chrome) the notes still come in, with "Documents and photos were not saved: link the claim folder…"; no folder prompt on top of the notes review. A zip with only `_surveyos-backup.json` gives notes only; an unreadable one says "Couldn't read the notes in this zip."
 - Spec/plan: `docs/superpowers/specs/2026-11-11-phone-import-and-gallery-duplicates-design.md`, `docs/superpowers/plans/2026-11-11-one-button-phone-import.md`.
