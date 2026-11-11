@@ -159,7 +159,7 @@ function cardView(i) {
   const inv = map.invoiceCountPath && probe.invoices > 1 ? ` This claim has ${probe.invoices} invoices on the portal; Fill fills invoice 1 only.` : '';
   return set({ state: 'ready', badge: { tone: 'ok', text: 'Claim matches' }, primary: FILL,
     secondary: [CHECK, { id: 'clear', label: 'Clear' }],
-    body: `${n} items are ready to fill. ${h < 1 ? 'Sent just now' : `Sent ${h} h ago`}.${inv}` });
+    body: `${probe.step ? `Step ${probe.step} is open. ` : ''}${n} items are ready to fill. ${h < 1 ? 'Sent just now' : `Sent ${h} h ago`}.${inv}` });
 }
 
 /** The packet, or undefined once it is older than ttlMs (exactly ttlMs is still live). @param {any} packet @param {number | undefined} storedAt @param {number} now @param {number} ttlMs */
@@ -168,11 +168,16 @@ const livePacket = (packet, storedAt, now, ttlMs) => packet && storedAt != null 
 /** What Check may post into the page: only this portal's packet, without the Excel bytes. @param {any} map @param {any} packet */
 const checkPacket = (map, packet) => packet && F.packetGate(map, packet).ok ? { ...packet, files: [] } : null;
 
-/** Cards that may re-read the page in the background: resting, nothing running. @param {string} state @param {string} phase */
-const shouldReprobe = (state, phase) => phase === 'idle' && ['ready', 'wrongClaim', 'noPacket', 'otherPortal', 'probeFailed'].includes(state);
+/**
+ * Cards that may re-read the page in the background: resting, nothing running. A stepped page
+ * also re-reads after a fill or check, so the card notices Next (the URL does not change).
+ * @param {string} state @param {string} phase @param {boolean} [stepped]
+ */
+const shouldReprobe = (state, phase, stepped = false) => phase === 'idle' && (['ready', 'wrongClaim', 'noPacket', 'otherPortal', 'probeFailed'].includes(state)
+  || (stepped && ['filled', 'needsYou', 'fillFailed', 'checked', 'checkFailed'].includes(state)));
 
-/** A re-probe needs a redraw only when the page's readability or claim number changed. @param {any} a @param {any} b */
-const probeChanged = (a, b) => a?.ok !== b?.ok || a?.claimNo !== b?.claimNo;
+/** A re-probe needs a redraw only when the page's readability, claim number or open step changed. @param {any} a @param {any} b */
+const probeChanged = (a, b) => a?.ok !== b?.ok || a?.claimNo !== b?.claimNo || a?.step !== b?.step;
 
 /**
  * Copy-report text. Field names and statuses only — never a packet text/money value.

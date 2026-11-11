@@ -436,11 +436,14 @@
     // Re-read the page's claim number while the card rests. Read-only, so Check's zero-writes rule holds.
     let probing = false;
     const reprobe = async () => {
-      if (probing || document.visibilityState !== 'visible' || !view || !shouldReprobe(view.state, phase)) return;
+      const stepped = isStepped(map);
+      if (probing || document.visibilityState !== 'visible' || !view || !shouldReprobe(view.state, phase, stepped)) return;
       probing = true;
       const p = await ask('probe', { map });
       probing = false;
-      if (!shouldReprobe(view.state, phase) || !probeChanged(probe, p)) return; // an action started meanwhile, or nothing changed
+      if (!shouldReprobe(view.state, phase, stepped) || !probeChanged(probe, p)) return; // an action started meanwhile, or nothing changed
+      // Next on a stepped page: the last step's results no longer apply, so the card is ready for this one.
+      if (stepped && p?.step !== probe?.step) { fill = null; check = null; }
       probe = p; draw();
     };
     const reprobeTimer = setInterval(reprobe, REPROBE_MS);

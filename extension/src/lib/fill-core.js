@@ -169,6 +169,21 @@ function routeStep(bootedFor, id, panelPresent) {
 }
 
 /**
+ * Which step of a stepped page is on screen: the step with the most of its fields showing.
+ * OIC's Next swaps the step without changing the URL (live 2026-11-11). Undefined when none shows.
+ * @param {any} map @param {(path: string) => boolean} onScreen
+ */
+function visibleStep(map, onScreen) {
+  /** @type {Record<string, number>} */
+  const count = {};
+  for (const f of Object.values(map?.fields ?? {})) {
+    if (f && 'step' in f && f.modelPath && onScreen(f.modelPath)) count[f.step] = (count[f.step] ?? 0) + 1;
+  }
+  const best = Object.entries(count).sort((a, b) => b[1] - a[1])[0];
+  return best ? Number(best[0]) : undefined;
+}
+
+/**
  * After a good fill the results stay until a new packet arrives — not on our
  * own packet removal, not on a map refresh.
  * @param {boolean} done @param {Record<string, any>} ch
@@ -230,7 +245,7 @@ function planCheck(map, packet, pageClaimNo, read) {
   return { mode, fields, files };
 }
 
-const API = { planCheck, CHECK_STATUS, normaliseClaimNo, transforms, isEmptyValue, decide, planFill, mapId, pickMap, packetGate, scopeAnchors, routeStep, keepResults, selectMatched };
+const API = { planCheck, CHECK_STATUS, normaliseClaimNo, transforms, isEmptyValue, decide, planFill, mapId, pickMap, packetGate, scopeAnchors, routeStep, keepResults, selectMatched, visibleStep };
 // ---- umd shim: classic script in the extension, ESM/CJS in Vitest ----
 if (typeof module !== 'undefined' && module.exports) module.exports = API;
 else globalThis[NS] = API;

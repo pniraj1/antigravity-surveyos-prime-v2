@@ -229,6 +229,20 @@ describe('final fix wave helpers', () => {
     }
     for (const s of ['loading', 'filling', 'checking', 'filled', 'needsYou', 'fillFailed', 'checked', 'checkFailed']) expect(shouldReprobe(s, 'idle')).toBe(false);
   });
+  it('a stepped page keeps re-reading after a fill, so Next is noticed', () => {
+    for (const s of ['filled', 'needsYou', 'fillFailed', 'checked', 'checkFailed']) {
+      expect(shouldReprobe(s, 'idle', true)).toBe(true);
+      expect(shouldReprobe(s, 'filling', true)).toBe(false);
+    }
+    expect(shouldReprobe('loading', 'idle', true)).toBe(false);
+  });
+  it('probeChanged on the visible step', () => {
+    const a = { ok: true, claimNo: '1', invoices: 1, step: 2 };
+    expect(probeChanged(a, { ...a, step: 3 })).toBe(true);
+  });
+  it('ready names the open step', () => {
+    expect(view({ probe: { ...probeOk, step: 3 } }).body).toBe('Step 3 is open. 3 items are ready to fill. Sent 3 h ago.');
+  });
   it('probeChanged on ok or claimNo only', () => {
     const a = { ok: true, claimNo: '1', invoices: 1 };
     expect(probeChanged(a, { ...a })).toBe(false);

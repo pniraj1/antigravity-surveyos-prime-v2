@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normaliseClaimNo, transforms, isEmptyValue, decide, planFill, mapId, pickMap, scopeAnchors, selectMatched } from '../src/lib/fill-core.js';
+import { normaliseClaimNo, transforms, isEmptyValue, decide, planFill, mapId, pickMap, scopeAnchors, selectMatched, visibleStep } from '../src/lib/fill-core.js';
 import map from '../maps/nia-nontieup.json';
 
 describe('normaliseClaimNo', () => {
@@ -239,5 +239,18 @@ describe('OIC: rupee-zero, DD-MM-YYYY, radioPick', () => {
     expect(plan(spec, { ans: 'yes' }, '')).toMatchObject({ action: 'fill', value: 'yes', choice: '#x1' });
     expect(plan(spec, { ans: 'maybe' }, '')).toMatchObject({ action: 'skip', why: 'no such choice' });
     expect(plan({ ...radio, constant: 'maybe' }, {}, '')).toMatchObject({ action: 'skip', why: 'no such choice' });
+  });
+});
+
+describe('visibleStep', () => {
+  const stepped = { fields: { a: { modelPath: '#a', step: 2 }, b: { modelPath: '#b', step: 2 }, c: { modelPath: '#c', step: 3 }, d: { modelPath: '#d', kind: 'radioPick', step: 3, choices: { yes: '#d1' } } } };
+  it('the step most of whose fields are on screen', () => {
+    expect(visibleStep(stepped, (p) => ['#a', '#b'].includes(p))).toBe(2);
+    expect(visibleStep(stepped, (p) => ['#c', '#d'].includes(p))).toBe(3);
+    expect(visibleStep(stepped, (p) => ['#a', '#c', '#d'].includes(p))).toBe(3);
+  });
+  it('undefined when nothing is on screen or the map has no steps', () => {
+    expect(visibleStep(stepped, () => false)).toBeUndefined();
+    expect(visibleStep(map, () => true)).toBeUndefined();
   });
 });

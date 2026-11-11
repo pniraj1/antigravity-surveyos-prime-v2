@@ -3,7 +3,7 @@
 // Main world. The only place `angular` is reachable. Talks to the Panel over
 // window.postMessage; never touches the page except the fields it is told to.
 (() => {
-  const { normaliseClaimNo, planCheck, planFill, scopeAnchors, selectMatched } = globalThis.SxFill;
+  const { normaliseClaimNo, planCheck, planFill, scopeAnchors, selectMatched, visibleStep } = globalThis.SxFill;
   // Surveyor copy: these reach the card's "Couldn't read page" / "Couldn't check" body.
   const NO_ANGULAR = "This page didn't load fully. Reload it and try again.";
   const NO_FIELDS = 'Page fields not found. The portal may have changed.';
@@ -224,7 +224,10 @@
 
   function reactProbe(/** @type {any} */ map) {
     const claimNo = reactClaimNo(map);
-    return claimNo === null ? { ok: false, reason: STEP2 } : { ok: true, claimNo, invoices: 1 };
+    if (claimNo === null) return { ok: false, reason: STEP2 };
+    // a hidden step may stay mounted: only boxes with a layout box count as on screen
+    const step = visibleStep(map, (/** @type {string} */ p) => { const el = rq(p)[0]; return !!el && el.getClientRects().length > 0; });
+    return { ok: true, claimNo, invoices: 1, step };
   }
 
   /** Ruling 1: a radioPick reads as the answer whose input is checked; a dropdown as its React value. */
