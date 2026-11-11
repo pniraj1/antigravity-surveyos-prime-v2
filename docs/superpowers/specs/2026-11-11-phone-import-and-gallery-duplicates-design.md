@@ -5,7 +5,9 @@ Date: 2026-11-11. Owner: Niraj (practising surveyor). Two changes, two repos:
 - **Part A — Prime** (`SurveyOS-Prime-V2`): one button brings everything in from the Scan zip.
 - **Part B — Scan** (`../SurveyOS Scan`): photos picked from Gallery stop showing twice in Gallery and Google Photos, and existing duplicates are cleaned up, without losing what an uninstall would need.
 
-They don't depend on each other. Either can ship first.
+- **Part C — Scan**: a Complete button, a question after sharing the zip, and a Completed tab on Home.
+
+They don't depend on each other. Any can ship first.
 
 ## Why
 
@@ -111,6 +113,35 @@ The safe copy exists for a real reason (owner, earlier): **if Scan is uninstalle
 - Docs: `docs/handover/` gets a line that Gallery-picked pages are backed up in Documents with the new extension (for anyone reading a claim folder), the phone checklist gets the test above, and the safe-copy plan's decisions note D-85 for this change.
 
 **Impact on Prime:** none. The shared zip still carries normal photos; the hidden files are never put in the zip.
+
+---
+
+## Part C — Scan: mark a claim complete, and a Completed tab
+
+Added 2026-11-11 at the owner's request: "when the claim is complete, i.e. sent via zip or the documents are not required in list, let there be a complete button. Ask this to be complete when the zip itself is exported. And let there be an option to mark a claim as complete so it goes in another tab."
+
+**Already there** (verified in code): `claims.status` is `OPEN | DONE`; the claim screen's ⋮ menu has "Mark done" / "Reopen" (`ClaimScreen.kt`, `vm.setStatus`); Home shows a green "Done" pill (`claimStatus`) and sorts Done claims last inside each insurer group (`grouped`). Prime's Drive status sync (`TextSync.applyRemoteStatus`) already maps to `DONE`.
+
+**Behaviour**
+
+1. **Complete button** on the claim screen, visible while the claim is `OPEN` and either:
+   - its zip has been shared at least once (single-claim share or a Home multi-claim share), or
+   - nothing is needed: the claim's needed count is 0 and it has at least one document or photo (Home's "Ready").
+   Tapping it sets `DONE`. The ⋮ menu item stays, so a surveyor can still complete any claim, any time.
+2. **Ask after sharing the zip.** When the surveyor comes back from the share sheet after sharing a claim's zip (`shareFolder`), Scan asks: "Mark this claim complete? It moves to the Completed tab." **Complete** / **Not now**. For a Home multi-claim share, one question covers all the claims shared ("Mark these 3 claims complete?"). Android does not say whether the zip was really sent, so this is a question, never automatic.
+3. **Completed tab on Home.** Complete claims leave the normal list (All and insurer chips) and the Waiting list, and show under a new **Completed (n)** chip. Opening one and tapping **Reopen** puts it back. Search still finds complete claims.
+4. **Wording** (*my call*): the surveyor sees "Complete" everywhere ("Mark complete", the green pill says "Complete", tab "Completed"). The stored value stays `DONE`, so no database migration and no change to Prime's status sync.
+5. **"Zip shared" memory** (*my call*): store a per-claim flag when its zip is shared (builder's choice of place, e.g. the claim's notes section that already holds status markers), so the Complete button survives an app restart and a Restore.
+
+**Done when**
+
+- Sharing a claim's zip ends with the question; Complete moves it to Completed; Not now leaves it.
+- The Complete button shows under the two conditions and not otherwise; the ⋮ menu still works.
+- Completed chip lists only complete claims; All, insurer chips and Waiting list only open ones; Reopen moves a claim back.
+- Unit tests for the button condition and the Home filtering; `./gradlew :app:testDebugUnitTest` green.
+- Phone check added to `docs/release/phone-checklist.md`.
+
+**Impact on Prime:** none. Status values, the zip and the manifest are unchanged.
 
 ## Left to the builder
 
