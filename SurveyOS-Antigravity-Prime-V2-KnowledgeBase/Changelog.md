@@ -1,3 +1,9 @@
+## 2026-11-11 (Claude Code) — One From Phone button for the Scan zip (not deployed)
+- feat(phone-import): Documents, Spot, Valuation and Fees tabs share one **From Phone** button that opens one dialog. Picking the Scan zip once brings notes (through the existing review), documents and photos. Replaces the Notes/Scans menu and the "Use Phone Notes" button; dead `UsePhoneNotesButton.tsx` and `BringPhoneScans.tsx` deleted.
+- fix(phone-import): with no claim folder linked (or not desktop Chrome) the notes still come in, with "Documents and photos were not saved: link the claim folder…"; no folder prompt on top of the notes review. A zip with only `_surveyos-backup.json` gives notes only; an unreadable one says "Couldn't read the notes in this zip."
+- Spec/plan: `docs/superpowers/specs/2026-11-11-phone-import-and-gallery-duplicates-design.md`, `docs/superpowers/plans/2026-11-11-one-button-phone-import.md`.
+- verification: 328 files / 2936 tests at task 3, then scan-import + documents 105 tests and tsc clean after review fixes. Not browser-checked (needs login). Prime ↔ Scan coupling: none — zip/manifest unchanged; Scan handover line updated to name From Phone.
+
 ## 2026-11-11 (Claude Code) — Driver Date of Birth on the UIIC Final report (not deployed)
 - feat(uiic-report): the Driving Licence block prints "Date of Birth" (DD.MM.YYYY) under the licence holder name. Covers UIIC print, Word download and preview (same HTML). The rest of the chain already carried DOB: DL prompt → applyDL → Details form → cross-check → portal packet → Spot and Standard Final reports.
 - verification: new test in `uiic-workshop-and-dl-validity.test.ts`; report/tab/dialog suites 63 files / 546 tests, tsc clean. Prime ↔ Scan coupling: none.
