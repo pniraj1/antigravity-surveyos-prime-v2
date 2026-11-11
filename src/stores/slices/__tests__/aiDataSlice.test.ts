@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applyEstimate, applyClaim, parseDate, parseTime, parseAmount, coerceForPath, buildEstimateModePrompt, buildBillModePrompt, applyFinalBill, applyPolicy, applyRC, applyFitness, applyLokChallan } from '../aiDataSlice';
+import { applyEstimate, applyClaim, parseDate, parseTime, parseAmount, coerceForPath, buildEstimateModePrompt, buildBillModePrompt, applyFinalBill, applyPolicy, applyRC, applyFitness, applyLoadChallan } from '../aiDataSlice';
 import { buildDecision, getConflictFields } from '@/lib/ai/reconciliation';
 import { createBlankClaim } from '@/types/claim';
 import type { ClaimData } from '@/types';
@@ -611,7 +611,7 @@ describe('applyEstimateFixToClaim', () => {
   });
 });
 
-describe('unified AI weight extraction (applyRC, applyFitness, applyLokChallan)', () => {
+describe('unified AI weight extraction (applyRC, applyFitness, applyLoadChallan)', () => {
   it('applyRC sets vehicle and spotDetails GVW, ULW, and computes load capacity', () => {
     const claim = createBlankClaim();
     const updated = applyRC(claim, {
@@ -654,10 +654,10 @@ describe('unified AI weight extraction (applyRC, applyFitness, applyLokChallan)'
     expect(updated.spotDetails.loadCapacity).toBe(15000);
   });
 
-  it('applyLokChallan sets spotDetails.actualLoad, vehicle.goodsWeightAtAccident and vehicle.actualPayload', () => {
+  it('applyLoadChallan sets spotDetails.actualLoad, vehicle.goodsWeightAtAccident and vehicle.actualPayload', () => {
     const claim = createBlankClaim();
-    const updated = applyLokChallan(claim, {
-      weight_kg: 10500,
+    const updated = applyLoadChallan(claim, {
+      weight: 10500,
     });
 
     expect(updated.spotDetails.actualLoad).toBe(10500);
@@ -699,9 +699,9 @@ describe('AI extraction alignment: HPA, goods description, odometer', () => {
     expect(updated.vehicle.rcEndorsement).toBe('State Bank of India');
   });
 
-  it('applyLokChallan populates spotDetails.loadDesc, vehicle.natureOfGoods, and vehicle.detailsOfGoodsCarried', () => {
+  it('applyLoadChallan populates spotDetails.loadDesc, vehicle.natureOfGoods, and vehicle.detailsOfGoodsCarried', () => {
     const claim = createBlankClaim();
-    const updated = applyLokChallan(claim, {
+    const updated = applyLoadChallan(claim, {
       goods_description: 'Industrial machinery spare parts',
     });
 

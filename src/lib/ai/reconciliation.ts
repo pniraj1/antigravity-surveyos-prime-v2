@@ -31,7 +31,7 @@ export interface ReconciliationField {
 // their reconciliation choice simply not take effect.
 export const FIELD_MAPPINGS = [
   // ─── Vehicle Details ──────────────────────────────────────────────────────
-  { label: 'Registration Number', path: 'vehicle.registrationNumber', aiKeys: { rc: 'registration_number', policy: 'registration_number', fitness: 'vehicle_number', claim: 'vehicle_number', fir: 'vehicle_number' } },
+  { label: 'Registration Number', path: 'vehicle.registrationNumber', aiKeys: { rc: 'registration_number', policy: 'registration_number', fitness: 'vehicle_number', claim: 'vehicle_number', fir: 'vehicle_number', 'load-challan': 'vehicle_number' } },
   { label: 'Chassis Number',      path: 'vehicle.chassisNumber',      aiKeys: { rc: 'chassis_number', policy: 'chassis_number', fitness: 'chassis_number', estimate: 'chassis_number' } },
   { label: 'Engine Number',       path: 'vehicle.engineNumber',       aiKeys: { rc: 'engine_number', policy: 'engine_number', fitness: 'engine_number', estimate: 'engine_number' } },
   { label: 'Make',                path: 'vehicle.make',              aiKeys: { rc: 'make' } },

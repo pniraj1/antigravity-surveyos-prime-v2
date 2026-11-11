@@ -285,19 +285,23 @@ Return ONLY a JSON object:
 }
 Return ONLY the JSON. No explanation, no markdown, no backticks.`,
 
-  'lok-challan': `You are an expert at reading Indian goods transport Lok Challan / Consignment Note documents. Return ONLY a JSON object:
+  // Key = the Documents tab card id. Surveyors put load challans, LRs, E-way bills and tax invoices on this one card.
+  'load-challan': `This is an Indian goods-transport document: a load challan / lorry receipt (LR) / consignment note, a GST E-way Bill, or a tax invoice that travelled with the goods.
+A motor surveyor needs only the items below. For each one, look for it on the document. If it is printed, copy it. If it is not printed, return "". Never guess and never fill one item from another.
+Return ONLY a JSON object:
 {
-  "challan_no": "",
-  "challan_date": "",
-  "vehicle_number": "",
-  "origin": "",
-  "destination": "",
-  "consignor": "",
-  "consignee": "",
-  "goods_description": "",
-  "weight_kg": "",
-  "freight_amount": "",
-  "remarks": ""
+  "document_kind": "'Load Challan', 'LR', 'E-way Bill' or 'Tax Invoice' — whichever this document is",
+  "document_no": "Challan / LR / CN No.; on an E-way Bill the 'E-Way Bill No.' (12 digits); on an invoice the Invoice No.",
+  "document_date": "Challan / LR / invoice date; on an E-way Bill the 'Generated Date'",
+  "valid_until": "E-way Bill 'Valid Upto' only; otherwise \\"\\"",
+  "vehicle_number": "the vehicle carrying the goods; on an E-way Bill it is in Part-B",
+  "origin": "place the goods left from (From / Place of Dispatch)",
+  "destination": "place the goods were going to (To / Place of Delivery)",
+  "goods_description": "what is carried, in detail as printed: every item name with its quantity and packing, e.g. 'Cement OPC 53 grade, 400 bags; TMT bars 12 mm, 2 bundles'",
+  "goods_value": "total value of the goods (invoice / declared / taxable value)",
+  "hazardous": "only if the document marks the goods hazardous, inflammable or dangerous: what it says; otherwise \\"\\"",
+  "weight": "load weight as printed, number only",
+  "weight_unit": "unit of that weight exactly as printed: kg, MT, tonne, quintal"
 }
 Return ONLY the JSON. No explanation, no markdown, no backticks.`,
 

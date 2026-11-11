@@ -1,4 +1,14 @@
-## 2026-11-11 (Claude Code) — Dep% typed by surveyor reset to 0 on reopen (Vikram Patil; not deployed)
+## 2026-11-11 (Claude Code) — Load challan / E-way bill uploads now read and fill the claim (not deployed)
+- fix(extraction): the Load Challan card sends key `load-challan`, but the prompt and the Apply step were filed under `lok-challan`. Every challan read with the generic "extract everything" prompt and Apply saved nothing. Both now use `load-challan`; the evidence viewer labels too.
+- feat(prompt): one prompt for load challan / LR / E-way bill / tax invoice. It names the document kind, then reads only what the surveyor needs (no., date, E-way valid-until, vehicle no., from/to, goods in detail with quantity and packing, goods value, hazardous mark, weight + unit); blank when not printed.
+- feat(apply): `applyLoadChallan` fills challan no/date, from/to, load description (goods + value + hazardous), nature of goods, weight converted to kg in TS (MT/tonne/quintal), and marks Documents Obtained → Load Challan YES with "E-way Bill No. … dt …, valid until …" unless the surveyor typed a note. The challan's vehicle no. joins the Registration Number cross-check.
+- verification: new `load-challan.test.ts`; 329 files / 2943 tests, tsc clean. Not tried on a real challan or E-way bill (needs login + AI key). Prime ↔ Scan coupling: none (card id and doc type unchanged; Scan does not reference the prompt).
+
+## 2026-11-11 (Claude Code) — Portal fill notices OIC's Next (extension 0.4.1, not live-checked)
+- fix(portal-fill): OIC's Next changes the step without changing the URL, and the card stopped re-reading the page after a fill, so step 3 still showed step 2's results. The probe now reports the step on screen (`visibleStep`: the step with the most fields showing); a stepped card keeps re-reading after a fill and resets to "Step N is open" when the step changes.
+- verification: extension 15 files / 218 tests. Not tried on the live OIC page yet. Prime ↔ Scan coupling: none.
+
+## 2026-11-11 (Claude Code) — Dep% typed by surveyor reset to 0 on reopen (Vikram Patil; deployed 2026-11-11)
 - fix(sync): the cloud save turned every blank field into `null`. A row with no Dep% override (box cleared, or the typed rate equals the IRDAI rate) was saved as `depOverride: null`, and reopening read that as a 0% override (empty amber box, Net = Assessed). `sanitize` now drops undefined keys; the push is a full `tx.set`, so the field is still cleared.
 - fix(dep): every `depOverride` check (grid, Bill Check, rowDepRate, standard/UIIC/NIA/OIC reports, insured report, UIIC summary) treats `null` as no override, so claims already saved with null fix themselves on open.
 - verification: 327 files / 2924 tests, tsc clean. Not checked on Vikram's real claim or in the browser (needs login). Prime ↔ Scan coupling: none (Scan doesn't read assessment rows).

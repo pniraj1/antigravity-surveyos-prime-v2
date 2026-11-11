@@ -578,25 +578,57 @@ export function applyFitness(claim: ClaimData, data: any): ClaimData {
   return updated;
 }
 
-export function applyLokChallan(claim: ClaimData, data: any): ClaimData {
-  const goods = data.goods_description || claim.spotDetails.loadDesc;
+/** Printed load weight → kg. The prompt keeps the unit apart because the digits-only format rule would strip it. */
+export function weightToKg(weight: unknown, unit: unknown): number {
+  const n = parseFloat(String(weight ?? '').replace(/,/g, ''));
+  if (!(n > 0)) return 0;
+  const u = String(unit ?? '').toLowerCase();
+  if (/qu?i?ntal|qtl/.test(u)) return Math.round(n * 100);
+  if (/^\s*(mt|t|tons?|tonnes?|metric)/.test(u)) return Math.round(n * 1000);
+  return Math.round(n); // kg, or no unit printed
+}
+
+/** Load challan / LR / E-way bill / invoice. A blank field keeps what the claim already has. */
+export function applyLoadChallan(claim: ClaimData, data: any): ClaimData {
+  const sd = claim.spotDetails;
+  const goods = String(data.goods_description || '').trim();
+  const details = [
+    goods,
+    data.goods_value && `value Rs. ${data.goods_value}`,
+    data.hazardous && !/^(no|nil|none|n\.?a\.?|non[- ]?hazardous)$/i.test(String(data.hazardous).trim()) && `hazardous: ${data.hazardous}`,
+  ].filter(Boolean).join('; ');
+  const kg = weightToKg(data.weight, data.weight_unit);
+  const date = parseDate(data.document_date);
+  const no = String(data.document_no || '').trim();
+  const dv = claim.documentVerification?.loadChallan;
+  const dvDetail = no
+    ? `${data.document_kind || 'Load Challan'} No. ${no}${date ? ` dt ${date}` : ''}${data.valid_until ? `, valid until ${parseDate(data.valid_until) || data.valid_until}` : ''}`
+    : '';
   return {
     ...claim,
     spotDetails: {
-      ...claim.spotDetails,
-      challanNo: data.challan_no || claim.spotDetails.challanNo,
-      challanDate: parseDate(data.challan_date) || claim.spotDetails.challanDate,
-      loadOrigin: data.origin || claim.spotDetails.loadOrigin,
-      loadDest: data.destination || claim.spotDetails.loadDest,
-      loadDesc: goods,
-      actualLoad: parseFloat(data.weight_kg) || claim.spotDetails.actualLoad,
+      ...sd,
+      challanNo: no || sd.challanNo,
+      challanDate: date || sd.challanDate,
+      loadOrigin: data.origin || sd.loadOrigin,
+      loadDest: data.destination || sd.loadDest,
+      loadDesc: details || sd.loadDesc,
+      actualLoad: kg || sd.actualLoad,
     },
     vehicle: {
       ...claim.vehicle,
-      goodsWeightAtAccident: data.weight_kg ? String(data.weight_kg) : claim.vehicle.goodsWeightAtAccident,
-      actualPayload: data.weight_kg ? String(data.weight_kg) : claim.vehicle.actualPayload,
+      goodsWeightAtAccident: kg ? String(kg) : claim.vehicle.goodsWeightAtAccident,
+      actualPayload: kg ? String(kg) : claim.vehicle.actualPayload,
       natureOfGoods: goods || claim.vehicle.natureOfGoods,
-      detailsOfGoodsCarried: goods || claim.vehicle.detailsOfGoodsCarried,
+      detailsOfGoodsCarried: details || claim.vehicle.detailsOfGoodsCarried,
+    },
+    documentVerification: {
+      ...claim.documentVerification,
+      // The document was produced, so it is obtained; the surveyor's own note wins.
+      loadChallan: {
+        status: 'YES',
+        detail: dv?.detail || dvDetail,
+      },
     },
   };
 }
@@ -953,7 +985,7 @@ export const createAIDataSlice: StateCreator<any, any, any, AIDataSlice> = (set)
       else if (key === 'permit') newClaim = applyPermit(newClaim, data);
       else if (key === 'auth') newClaim = applyAuth(newClaim, data);
       else if (key === 'fitness') newClaim = applyFitness(newClaim, data);
-      else if (key === 'lok-challan') newClaim = applyLokChallan(newClaim, data);
+      else if (key === 'load-challan') newClaim = applyLoadChallan(newClaim, data);
       else if (key === 'final-bill') newClaim = applyFinalBill(newClaim, data, mode === 'continue' ? 'continue' : 'replace');
       else if (key === 'estimate') newClaim = applyEstimate(newClaim, data, mode ?? 'replace');
 

@@ -6,7 +6,7 @@ describe('jobForDocType', () => {
     for (const k of ['estimate', 'final-bill', 'bank-statement']) expect(jobForDocType(k)).toBe('heavy');
   });
   it('identity and policy documents are light', () => {
-    for (const k of ['rc', 'dl', 'policy', 'claim', 'permit', 'auth', 'fitness', 'lok-challan', 'fir', 'photos']) expect(jobForDocType(k)).toBe('light');
+    for (const k of ['rc', 'dl', 'policy', 'claim', 'permit', 'auth', 'fitness', 'load-challan', 'fir', 'photos']) expect(jobForDocType(k)).toBe('light');
   });
   it('unknown doc types default to light (vision, fast)', () => {
     expect(jobForDocType('something-new')).toBe('light');

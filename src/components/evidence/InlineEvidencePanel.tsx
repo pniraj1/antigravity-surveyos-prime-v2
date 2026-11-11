@@ -22,7 +22,7 @@ export const DOC_LABELS: Record<string, string> = {
   fir: 'FIR / Panchnama',
   claim: 'Claim Form',
   auth: 'Authorisation',
-  'lok-challan': 'Lok Challan',
+  'load-challan': 'Load Challan',
   photos: 'Damage Photos',
 };
 
