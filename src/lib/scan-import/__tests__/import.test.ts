@@ -82,14 +82,23 @@ describe('importScanZip', () => {
   it('requiresFolder', async () => {
     state.folder = false;
     const r = await importScanZip(scanZip([{ path: 'RC Book.pdf', type: 'rc', data: 'rc' }]), { confirmVehicle: yes });
-    expect(r).toEqual({ status: 'needs-folder' });
+    expect(r).toEqual({ status: 'needs-folder', notes: { spot: { place: 'Pune' } } });
     expect(state.saves).toEqual([]);
+  });
+
+  it('needs-folder carries the manifest notes', async () => {
+    state.folder = false;
+    const zip = buildZip([{ name: 'C/_surveyos-scan.json', data: JSON.stringify({ app: 'surveyos-scan', v: 1, vehicle: 'MH12AB1234',
+      insurer: '', claimNo: null, exportedAt: 't', files: [], notes: { spot: { 'vehicle.odometer': '45210' }, spotDamageRows: [], updatedAt: '2026-11-11T10:00:00+05:30' } }) }]);
+    const r = await importScanFiles(await (await import('../zip')).readZip(zip), { confirmVehicle: yes });
+    expect(r.status).toBe('needs-folder');
+    expect((r as { notes: any }).notes.spot['vehicle.odometer']).toBe('45210');
   });
 
   it('permissionNotGrantedWritesNothing', async () => {
     state.perm = 'prompt';
     const r = await importScanZip(scanZip([{ path: 'RC Book.pdf', type: 'rc', data: 'rc' }]), { confirmVehicle: yes });
-    expect(r).toEqual({ status: 'needs-permission' });
+    expect(r).toEqual({ status: 'needs-permission', notes: { spot: { place: 'Pune' } } });
     expect(state.saves).toEqual([]);
     state.perm = 'granted';
     expect(await importScanZip(scanZip([{ path: 'RC Book.pdf', type: 'rc', data: 'rc' }]), { confirmVehicle: yes })).toMatchObject({ added: 1 });

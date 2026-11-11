@@ -19,9 +19,9 @@ import { setAt } from './path';
 
 export type ImportResult =
   | { status: 'cancelled' }
-  | { status: 'needs-folder' }
+  | { status: 'needs-folder'; notes: unknown }
   /** A folder is stored but this session has no write access yet ("Allow access" needs a click). */
-  | { status: 'needs-permission' }
+  | { status: 'needs-permission'; notes: unknown }
   /** The surveyor opened another claim mid-import; types saved before the switch stay saved. */
   | { status: 'claim-changed'; added: number }
   /** `failed`: files whose save failed (the sink already toasted why); re-importing retries them safely. */
@@ -103,11 +103,11 @@ export async function importScanFiles(
     return { status: 'cancelled' };
   }
   const rootHandle = await getStoredRootHandle();
-  if (!rootHandle) return { status: 'needs-folder' };
+  if (!rootHandle) return { status: 'needs-folder', notes: manifest.notes ?? null };
   // requestPermission needs a click, which is long gone after reading the zip: ask the caller to send the
   // surveyor to "Allow access" instead of letting every type's write fail with its own toast.
   if (rootHandle.queryPermission && (await rootHandle.queryPermission({ mode: 'readwrite' })) !== 'granted') {
-    return { status: 'needs-permission' };
+    return { status: 'needs-permission', notes: manifest.notes ?? null };
   }
 
   // Every listed file must be in the zip before anything is written (a Drive source skips the ones already moved).
