@@ -1,3 +1,23 @@
+## Done: SurveyOS Scan Batch Photo Share Limit & Transaction Batching Fix (2026-11-11, Antigravity)
+- **Problem Solved:**
+  - When surveyors selected 25+ photos from external gallery apps (Google Photos, WhatsApp, Gallery) to share into SurveyOS Scan, only 20 photos were added to Spot/Final/RI photos and the remaining photos were silently dropped.
+  - Root cause was const val MAX_SHARED_URIS = 20 in ShareInbox.kt (introduced when share-in was originally built only for 1-3 page document scans).
+  - Additionally, ClaimViewModel.importSharedPhotos and importSharedAsNamedDoc called ingest() sequentially inside a for loop per photo, triggering N separate Room transactions, UI redraws, and duplicate state emissions.
+- **Architecture Delivered:**
+  - **Headroom Limit Expanded (ShareInbox.kt):**
+    - Increased MAX_SHARED_URIS from 20 to 200 to support large-scale motor survey photo sets (25, 50, 100+ photos).
+    - Sequential 64 KB streaming buffer (copyCapped) keeps RAM usage strictly O(1).
+  - **Batch Database Ingestion (ClaimViewModel.kt):**
+    - Refactored importSharedPhotos, importSharedAsNamedDoc, and importShared to pass the entire list of imageUris into ingest(target, imageUris, ...) in a single call, executing one atomic Room transaction in Repository.addPages().
+  - **Release Bundle & Versioning:**
+    - Bumped version.properties to VERSION_CODE=7 (PLAY_CONSOLE_LAST_USED_CODE=6) and VERSION_NAME=1.5.1.
+    - Generated signed release AAB via ./gradlew :app:bundleRelease (11.64 MB).
+- **Verification:**
+  - Added unit test maxSharedUrisAllowsLargeBatchPhotoSharing in ShareInboxTest.kt.
+  - Android test suite (./gradlew.bat :app:testDebugUnitTest): 28 actionable tasks, 100% green.
+  - Signed release AAB built successfully in 11m 10s.
+  - Prime <-> Scan coupling: None.
+
 ## In progress: OIC Portal Fill rebuild (2026-11-10, Claude Code)
 - **Status:** Built and reviewed on `main` (0abced2c..e297fff0), not deployed. Waiting on the **live check with the owner** (plan Task 6).
 - **Real cause** (the handover's iframe / probe / route diagnosis was rejected): the claim number was read twice over (B1), and the map's `from` keys didn't match the packet (B2). See `docs/superpowers/specs/2026-11-10-oic-portal-fill-debug.md`.

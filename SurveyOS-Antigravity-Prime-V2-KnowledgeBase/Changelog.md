@@ -1,3 +1,10 @@
+## 2026-11-11 (Antigravity) — SurveyOS Scan Batch Photo Share Limit & Transaction Batching Fix
+- fix(scan-share): Increased MAX_SHARED_URIS from 20 to 200 in ShareInbox.kt, allowing surveyors to share full albums of 25-100+ photos into Spot/Final/RI photos without truncation.
+- perf(scan-vm): Refactored importSharedPhotos, importSharedAsNamedDoc, and importShared in ClaimViewModel.kt to ingest image batches atomically via ingest(target, imageUris, ...) in a single Room database transaction.
+- test(scan): Added unit test maxSharedUrisAllowsLargeBatchPhotoSharing in ShareInboxTest.kt.
+- chore(release): Bumped version to 1.5.1 (code 7) and built signed release AAB bundle (11.64 MB) for Google Play Console.
+- verification: Android unit test suite (./gradlew.bat :app:testDebugUnitTest) 100% green; release bundle signed and verified; Prime <-> Scan coupling: None.
+
 ## 2026-11-10 (Claude Code) — OIC Excel estimate = billed; Bill Check allowed may not exceed the bill (not deployed)
 - fix(oic-excel): Estimated Amount is the billed amount before GST (owner), painting totals too; the estimate is only a fallback. A bill above the estimate no longer holds the Excel.
 - feat(bill-check): an item allowed above its billed amount shows a red Allowed cell and holds the Bill Check print/Word and the OIC Excel (`overBilledRows`). Replaces the estimate-vs-billed check.
@@ -14,12 +21,26 @@
 - test(scan): Added unit test `photoDocsExcludedFromSlots` in `SharePickOrderTest.kt`.
 - verification: Android test suite (`./gradlew.bat :app:testDebugUnitTest`) 100% green; Prime Vitest suite (327 files / 2,915 tests) 100% green; `npx tsc --noEmit` clean (0 errors). Prime ↔ Scan coupling: None.
 
+## 2026-11-11 (Antigravity) — SurveyOS Scan Batch Photo Share Limit & Transaction Batching Fix
+- fix(scan-share): Increased MAX_SHARED_URIS from 20 to 200 in ShareInbox.kt, allowing surveyors to share full albums of 25-100+ photos into Spot/Final/RI photos without truncation.
+- perf(scan-vm): Refactored importSharedPhotos, importSharedAsNamedDoc, and importShared in ClaimViewModel.kt to ingest image batches atomically via ingest(target, imageUris, ...) in a single Room database transaction.
+- test(scan): Added unit test maxSharedUrisAllowsLargeBatchPhotoSharing in ShareInboxTest.kt.
+- chore(release): Bumped version to 1.5.1 (code 7) and built signed release AAB bundle (11.64 MB) for Google Play Console.
+- verification: Android unit test suite (./gradlew.bat :app:testDebugUnitTest) 100% green; release bundle signed and verified; Prime <-> Scan coupling: None.
+
 ## 2026-11-10 (Claude Code) — OIC live check fixes + estimate floor (not deployed)
 - fix(portal-fill): live OIC step 2/3 fixes: licence type in OIC's wording, paced writes (OIC's handler dropped one of two same-tick writes), InputNumber via onChange, DD-MM-YYYY placeholder counts as empty, RTO from the DL's first 4 characters, date/place of survey, always-Yes defaults replace OIC's saved-blank "No".
 - fix(extension-build): Chrome injects a script file once per frame, so libs shared by the panel and the MAIN-world filler never ran in MAIN ("The portal page didn't answer" on every portal since 0cbef575). Build copies them to `src/main/`; the card re-asks the page until it starts.
 - feat(assessment): estimate may not be below assessed (Assessment) or allowed/billed (Bill Check): red cell, every print/Word export and the OIC Excel are held (`estimate-floor.ts`, `usePrintGate`). Prime never changes the estimate.
 - fix(oic-excel): Item Amount = Bill Check allowed amount, else assessed.
 - verification: 327 files / 2915 tests, tsc clean. Grid/dialog changes not browser-checked. Prime ↔ Scan coupling: none.
+
+## 2026-11-11 (Antigravity) — SurveyOS Scan Batch Photo Share Limit & Transaction Batching Fix
+- fix(scan-share): Increased MAX_SHARED_URIS from 20 to 200 in ShareInbox.kt, allowing surveyors to share full albums of 25-100+ photos into Spot/Final/RI photos without truncation.
+- perf(scan-vm): Refactored importSharedPhotos, importSharedAsNamedDoc, and importShared in ClaimViewModel.kt to ingest image batches atomically via ingest(target, imageUris, ...) in a single Room database transaction.
+- test(scan): Added unit test maxSharedUrisAllowsLargeBatchPhotoSharing in ShareInboxTest.kt.
+- chore(release): Bumped version to 1.5.1 (code 7) and built signed release AAB bundle (11.64 MB) for Google Play Console.
+- verification: Android unit test suite (./gradlew.bat :app:testDebugUnitTest) 100% green; release bundle signed and verified; Prime <-> Scan coupling: None.
 
 ## 2026-11-10 (Claude Code) — OIC Portal Fill rebuild (not deployed)
 - fix(oic-excel): rows that are not billed, not allowed or zero-assessed are left out of the OIC Excel (`inOicExcel`).
