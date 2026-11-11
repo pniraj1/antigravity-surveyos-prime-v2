@@ -129,7 +129,7 @@ export function buildPreClassifiedExplanations(
       row.section === 'parts' &&
       row.allowed &&
       row.action !== 'disallow' &&
-      row.depOverride === undefined &&
+      row.depOverride == null &&
       !row.isDisposal &&
       delta > 0
     ) {

@@ -625,7 +625,7 @@ export function BillCheckGrid({
                       min={0}
                       max={100}
                       step={1}
-                      value={row.depOverride !== undefined ? row.depOverride : depRateFor(row)}
+                      value={row.depOverride != null ? row.depOverride : depRateFor(row)}
                       onChange={e => {
                         const raw = e.target.value;
                         const autoRate = depRateFor({ ...row, depOverride: undefined });
@@ -637,11 +637,11 @@ export function BillCheckGrid({
                         }
                       }}
                       className={`w-12 text-center text-[11px] font-medium rounded border focus:outline-none focus:ring-1 focus:ring-[var(--color-status-warning)] ${
-                        row.depOverride !== undefined
+                        row.depOverride != null
                           ? 'bg-[var(--color-status-warning-tint)] border-[var(--color-status-warning)] text-[var(--color-status-warning)]'
                           : 'bg-transparent border-transparent text-danger hover:border-input'
                       }`}
-                      title={row.depOverride !== undefined ? `Auto: ${depRateFor({ ...row, depOverride: undefined })}% — Click to clear override` : `Auto rate: ${depRateFor(row)}%`}
+                      title={row.depOverride != null ? `Auto: ${depRateFor({ ...row, depOverride: undefined })}% — Click to clear override` : `Auto rate: ${depRateFor(row)}%`}
                     />
                   ) : (
                     <span className="text-xs text-muted-foreground">—</span>

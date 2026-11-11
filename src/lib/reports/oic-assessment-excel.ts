@@ -197,7 +197,7 @@ export function oicAssessmentRows(
     if (depType === 'nil') return 0;
     if (r.section === 'labour') return 0;
     if (r.isDisposal) return 0;
-    if (r.depOverride !== undefined) return r.depOverride;
+    if (r.depOverride != null) return r.depOverride;
     return getDepreciationRate(r.partType, ageMonths, depType);
   };
 

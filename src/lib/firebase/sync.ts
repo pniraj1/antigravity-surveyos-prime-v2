@@ -52,13 +52,21 @@ export function setLastSyncTimestamp(uid: string, timestamp: string): void {
   localStorage.setItem(`${LAST_SYNC_KEY_PREFIX}${uid}`, timestamp);
 }
 
-/** Recursively replaces undefined values with null for Firestore compatibility. */
-function sanitize<T>(obj: T): T {
+/**
+ * Makes a claim Firestore-safe: drops undefined object keys (Firestore rejects
+ * undefined). Array slots become null, since an array can't skip an index.
+ * Keys are dropped rather than nulled because a null reads back as a set value:
+ * a cleared Dep% override came back as a 0% override. The push is a full
+ * `tx.set`, so a dropped key does clear the field in the cloud.
+ */
+export function sanitize<T>(obj: T): T {
   if (obj === undefined) return null as unknown as T;
   if (obj === null || typeof obj !== 'object') return obj;
   if (Array.isArray(obj)) return obj.map(sanitize) as unknown as T;
   return Object.fromEntries(
-    Object.entries(obj as Record<string, unknown>).map(([k, v]) => [k, sanitize(v)])
+    Object.entries(obj as Record<string, unknown>)
+      .filter(([, v]) => v !== undefined)
+      .map(([k, v]) => [k, sanitize(v)])
   ) as T;
 }
 

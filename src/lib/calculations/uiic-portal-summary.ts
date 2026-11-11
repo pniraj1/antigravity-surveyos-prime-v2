@@ -77,7 +77,7 @@ export function uiicPortalSummary(
   const allowed = rows.filter((r) => r.allowed);
 
   const depRateFor = (r: AssessmentRow) =>
-    r.depOverride !== undefined
+    r.depOverride != null
       ? r.depOverride
       : getDepreciationRate(r.partType, ageMonths, depType);
 

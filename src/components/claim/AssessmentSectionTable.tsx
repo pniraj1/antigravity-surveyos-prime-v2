@@ -275,7 +275,7 @@ export function AssessmentSectionTable({
                 const claimForDep = currentClaim ?? { depreciationType };
                 const autoDepRate = rowDepRate({ ...row, depOverride: undefined }, ageMonths, claimForDep);
                 const depRate = rowDepRate(row, ageMonths, claimForDep);
-                const isDepOverridden = row.depOverride !== undefined;
+                const isDepOverridden = row.depOverride != null;
                 const depFactor = depRate / 100;
                 // IMT-23: the Net and Price+GST cells show the halved
                 // (post-endorsement) basis the engine uses; the Assessed cell
@@ -599,7 +599,7 @@ export function AssessmentSectionTable({
                           min={0}
                           max={100}
                           step={1}
-                          value={row.depOverride !== undefined ? row.depOverride : autoDepRate}
+                          value={row.depOverride != null ? row.depOverride : autoDepRate}
                           onChange={e => {
                             const raw = e.target.value;
                             if (raw === '') {

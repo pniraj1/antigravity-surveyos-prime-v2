@@ -170,7 +170,7 @@ export function buildUIICFinalHTML(claim: ClaimData, profile: SurveyorProfile | 
   // paintRaw. Mirror the standard report: basis is the post-endorsement assessed
   // of the auto-rate rows only, and the line renders only when that basis > 0.
   const autoPaintBasis = APT
-    .filter(r => r.allowed !== false && r.depOverride === undefined)
+    .filter(r => r.allowed !== false && r.depOverride == null)
     .reduce((s, r) => s + effectiveAssessed(r), 0);
   const payableByInsurer = net;
 
@@ -362,7 +362,7 @@ ${getSurveyorHeader(profile)}
 
   const pHtml = AP.map((r, idx) => {
     const dep = rowDepRate(r, ageMonths, claim);
-    const dL = r.depOverride !== undefined ? `${dep}%*` : (dep > 0 ? dep + '%' : '0%');
+    const dL = r.depOverride != null ? `${dep}%*` : (dep > 0 ? dep + '%' : '0%');
     const isNA = r.allowed === false;
     const { isDisposal, afterDep, netBeforeGst } = isNA ? { isDisposal: false, afterDep: 0, netBeforeGst: 0 } : computeRowNet(r, dep);
     const wg = isNA ? 0 : isDisposal ? netBeforeGst : afterDep * (1 + (r.gst || 0) / 100);
@@ -388,7 +388,7 @@ ${getSurveyorHeader(profile)}
   // a manual override. These rows used to print `r.assessed` with a
   // hardcoded "N.D." label — so an override was both invisible and uncharged.
   const serviceDepLabel = (r: AssessmentRow, dep: number) =>
-    r.depOverride !== undefined ? `${dep}%*` : (dep > 0 ? dep + '%' : '0%');
+    r.depOverride != null ? `${dep}%*` : (dep > 0 ? dep + '%' : '0%');
 
   const lHtml = AL.map((r, idx) => {
     const isNA = r.allowed === false;
@@ -424,7 +424,7 @@ ${getSurveyorHeader(profile)}
     // put the same figure on the page twice with nothing saying they were one
     // deduction. A row carrying the surveyor's own depOverride still shows it —
     // that rate is the surveyor's, and no block accounts for it.
-    const tookAutoRate = r.depOverride === undefined && paintMaterialRate(claim) > 0;
+    const tookAutoRate = r.depOverride == null && paintMaterialRate(claim) > 0;
     const depAmt = isNA || tookAutoRate ? '' : fa(effectiveAssessed(r) - afterDep);
     const depCell = isNA || tookAutoRate ? '' : serviceDepLabel(r, dep);
 
@@ -622,7 +622,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
   // automatic GR-9 rate — a row carrying the surveyor's own depOverride did not.
   const bcPmRate = paintMaterialRate(claim);
   const bcAutoPaintBasis = billedPaint
-    .filter(r => r.depOverride === undefined)
+    .filter(r => r.depOverride == null)
     .reduce((sum, r) => sum + effectiveAssessed(r), 0);
 
   // Was `labOnly + paintOnly` accumulated raw. serviceAgg computes the same
@@ -677,7 +677,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
 
   const depLabel = (r: AssessmentRow) => {
     const d = rowDepFor(r);
-    if (r.depOverride !== undefined) return `${d}%*`;
+    if (r.depOverride != null) return `${d}%*`;
     return d > 0 ? `${d}%` : '0%';
   };
 

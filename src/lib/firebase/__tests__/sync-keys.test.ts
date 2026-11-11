@@ -30,7 +30,7 @@ vi.mock('@/lib/storage/indexeddb', () => ({
   applyRemoteDeletion: vi.fn(),
 }));
 
-import { pushProfileToCloud } from '../sync';
+import { pushProfileToCloud, sanitize } from '../sync';
 
 describe('pushProfileToCloud', () => {
   it('never writes any provider key to Firestore', async () => {
@@ -45,5 +45,17 @@ describe('pushProfileToCloud', () => {
     // nvidiaApiKeys leaked to Firestore before it was stripped — the push purges it.
     expect(written.nvidiaApiKeys).toBe('__DELETE__');
     expect(written.name).toBe('S');
+  });
+});
+
+describe('sanitize', () => {
+  it('drops undefined keys instead of saving null (null read back as a 0% Dep override)', () => {
+    const out = sanitize({ rows: [{ id: 'r', depOverride: undefined, gst: 18 }], note: undefined });
+    expect(out).toEqual({ rows: [{ id: 'r', gst: 18 }] });
+    expect(out.rows[0]).not.toHaveProperty('depOverride');
+  });
+
+  it('keeps array slots as null so indexes do not shift', () => {
+    expect(sanitize([1, undefined, 3])).toEqual([1, null, 3]);
   });
 });

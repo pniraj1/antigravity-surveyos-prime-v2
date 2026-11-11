@@ -33,6 +33,12 @@ describe('rowDepRate', () => {
     expect(rowDepRate(r, 46, claim)).toBe(0);
   });
 
+  it('treats a null override (cloud copy of a cleared box) as no override', () => {
+    // Firestore saves stored a cleared override as null; reopening read it as 0%.
+    const r = row({ partType: 'plastic', depOverride: null as unknown as number });
+    expect(rowDepRate(r, 46, claim)).toBe(50);
+  });
+
   it('gives paint nothing when the claim switch is off', () => {
     const r = row({ section: 'paint', partType: 'paint' });
     expect(rowDepRate(r, 46, { depreciationType: 'standard' })).toBe(0);

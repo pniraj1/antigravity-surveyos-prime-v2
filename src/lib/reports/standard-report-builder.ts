@@ -236,7 +236,7 @@ export function buildStandardFinalSurveyHTML(
   // gross in the subtotal. Basis is the IMT-23-halved assessed figure those
   // auto rows contributed, so the note's "of X" ties back to the subtotal.
   const autoPaintBasis = rows
-    .filter(r => r.section === 'paint' && r.allowed !== false && r.depOverride === undefined)
+    .filter(r => r.section === 'paint' && r.allowed !== false && r.depOverride == null)
     .reduce((sum, r) => sum + effectiveAssessed(r), 0);
   const paintMaterialBase = autoPaintBasis * (mPct / 100);
   const paintMaterialDed = paintMaterialBase * (mDepPct / 100);
@@ -402,12 +402,12 @@ export function buildStandardFinalSurveyHTML(
     </tr>`;
 
   const tookAutoPaintRate = (r: AssessmentRow) =>
-    r.section === 'paint' && r.depOverride === undefined
+    r.section === 'paint' && r.depOverride == null
     && paintMaterialRate(claim) > 0 && r.assessed > 0;
 
   const partsHtml = partRows.map((r, idx) => {
     const dep = rowDepRate(r, ageMonths, claim);
-    const depLabel = r.depOverride !== undefined ? `${dep}%*` : `${dep}%`;
+    const depLabel = r.depOverride != null ? `${dep}%*` : `${dep}%`;
     const disallowed = r.allowed === false;
     // A tagged row's net columns (material cells + Price+GST) show the halved
     // post-endorsement basis; a "Less Imt 23" sub-line beneath spells out the
@@ -433,7 +433,7 @@ export function buildStandardFinalSurveyHTML(
       <td style="${td9}text-align:center;">${r.partType === 'plastic' ? 'Pla/Rub' : r.partType === 'fiberglass' ? 'FbrGls' : r.partType.charAt(0).toUpperCase() + r.partType.slice(1)}</td>
       <td style="${tdr9}">${isBillCheck && r.billStatus === 'not-in-bill' ? 'No Bill' : m9(isBillCheck ? (r.billedTaxable ?? r.estimated) : r.estimated)}</td>
       <td style="${tdr9}${disallowed ? 'color:#a00;font-weight:700;font-size:6.5pt;text-align:center;' : ''}">${disallowed ? 'NOT ALLOWED' : m9(r.assessed)}</td>
-      <td style="${tdr9}${r.depOverride !== undefined ? 'color:#b45309;' : ''}">${depLabel}</td>
+      <td style="${tdr9}${r.depOverride != null ? 'color:#b45309;' : ''}">${depLabel}</td>
       ${matCell('metal')}
       ${matCell('plastic')}
       ${hasFiberglass ? matCell('fiberglass') : ''}
@@ -470,7 +470,7 @@ export function buildStandardFinalSurveyHTML(
       // reduction is spelled out on a sub-line beneath instead.
       const dep = rowDepRate(r, ageMonths, claim);
       const shownDep = r.depOverride ?? 0;
-      const depLabel = r.depOverride !== undefined ? `${shownDep}%*` : `${shownDep}%`;
+      const depLabel = r.depOverride != null ? `${shownDep}%*` : `${shownDep}%`;
       const gstPct = r.gst ?? 18;
       const { netBeforeGst } = disallowed ? { netBeforeGst: 0 } : computeRowNet(r, dep);
       const priceGst = disallowed ? 0 : netBeforeGst * (1 + gstPct / 100);
@@ -485,7 +485,7 @@ export function buildStandardFinalSurveyHTML(
       <td style="${td9}text-align:center;">${typeLabel}</td>
       <td style="${tdr9}">${isBillCheck && r.billStatus === 'not-in-bill' ? 'No Bill' : m9(isBillCheck ? (r.billedTaxable ?? r.estimated) : r.estimated)}</td>
       <td style="${tdr9}${disallowed ? 'color:#a00;font-weight:700;font-size:6.5pt;text-align:center;' : ''}">${disallowed ? 'NOT ALLOWED' : m9(r.assessed)}</td>
-      <td style="${tdr9}text-align:center;${r.depOverride !== undefined ? 'color:#b45309;' : ''}">${depLabel}</td>
+      <td style="${tdr9}text-align:center;${r.depOverride != null ? 'color:#b45309;' : ''}">${depLabel}</td>
       <td colspan="${NMAT}" style="${tdr9}">${disallowed ? '—' : m9(netBeforeGst)}</td>
       <td style="${tdr9}text-align:center;">${gstPct}%</td>
       <td style="${tdr9}${disallowed ? 'color:#a00;' : 'font-weight:600;'}">${disallowed ? '—' : m9(priceGst)}</td>

@@ -88,7 +88,7 @@ function descriptionFor(r: AssessmentRow, depType: DepreciationType): NiaDescrip
   // rate only for Agewise. When our rate is not the class default — a nil
   // depreciation policy, or a surveyor override — Agewise is the only
   // description that carries the truth.
-  if (depType === 'nil' || r.depOverride !== undefined) return 'Parts at Agewise Depreciation';
+  if (depType === 'nil' || r.depOverride != null) return 'Parts at Agewise Depreciation';
   switch (r.partType) {
     case 'plastic':
       return 'Parts at 50% Depreciation';
@@ -112,7 +112,7 @@ export function niaAssessmentRows(
   depType: DepreciationType,
 ): NiaAssessmentRow[] {
   const depRateFor = (r: AssessmentRow) =>
-    r.depOverride !== undefined
+    r.depOverride != null
       ? r.depOverride
       : getDepreciationRate(r.partType, ageMonths, depType);
 

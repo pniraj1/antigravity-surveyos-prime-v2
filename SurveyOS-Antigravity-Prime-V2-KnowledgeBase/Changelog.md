@@ -1,3 +1,8 @@
+## 2026-11-11 (Claude Code) — Dep% typed by surveyor reset to 0 on reopen (Vikram Patil; not deployed)
+- fix(sync): the cloud save turned every blank field into `null`. A row with no Dep% override (box cleared, or the typed rate equals the IRDAI rate) was saved as `depOverride: null`, and reopening read that as a 0% override (empty amber box, Net = Assessed). `sanitize` now drops undefined keys; the push is a full `tx.set`, so the field is still cleared.
+- fix(dep): every `depOverride` check (grid, Bill Check, rowDepRate, standard/UIIC/NIA/OIC reports, insured report, UIIC summary) treats `null` as no override, so claims already saved with null fix themselves on open.
+- verification: 327 files / 2924 tests, tsc clean. Not checked on Vikram's real claim or in the browser (needs login). Prime ↔ Scan coupling: none (Scan doesn't read assessment rows).
+
 ## 2026-11-11 (Antigravity) — SurveyOS Scan Batch Photo Share Limit & Transaction Batching Fix
 - fix(scan-share): Increased MAX_SHARED_URIS from 20 to 200 in ShareInbox.kt, allowing surveyors to share full albums of 25-100+ photos into Spot/Final/RI photos without truncation.
 - perf(scan-vm): Refactored importSharedPhotos, importSharedAsNamedDoc, and importShared in ClaimViewModel.kt to ingest image batches atomically via ingest(target, imageUris, ...) in a single Room database transaction.
