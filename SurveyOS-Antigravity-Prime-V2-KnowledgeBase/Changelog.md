@@ -1,3 +1,10 @@
+## 2026-11-12 (Claude Code) — Phone notes from backup / Drive picker lost fields (not deployed)
+- fix(scan-import): `normalizer.ts` read Scan's `_surveyos-backup.json` with the wrong names. Fee bill notes are stored under `fee_bill` (Prime read `feeBill`), and rows are tagged `spot` / `valuation` (Prime kept only `spotDamageRows` / `valuationPartRows`). So every fee bill field, damage row and part row from a "Text only" zip or a Drive backup was dropped. Both names are now read; the old ones are kept as a fallback.
+- fix(scan-import): the Drive folder picker hands the whole `_surveyos-scan.json` to the normalizer. That fell into the "notes object" branch and found nothing, so it said "nothing new to import". A whole manifest now unwraps its `notes` and keeps `vehicle` / `claimId`.
+- test: the normalizer fixture was a made-up shape; it is now what Scan's `backupJson()` writes, plus a whole-manifest case. Both failed before the fix.
+- Report: `docs/scan-notes-import-gaps-2026-11-12.md`.
+- verification: scan-import 11 files / 96 tests, no tsc errors in scan-import. Not tried with a real phone zip or Drive folder (needs login). Prime ↔ Scan coupling: Scan change none — Scan's output was already right.
+
 ## 2026-11-11 (Claude Code) — One From Phone button for the Scan zip (deployed 2026-11-11)
 - feat(phone-import): Documents, Spot, Valuation and Fees tabs share one **From Phone** button that opens one dialog. Picking the Scan zip once brings notes (through the existing review), documents and photos. Replaces the Notes/Scans menu and the "Use Phone Notes" button; dead `UsePhoneNotesButton.tsx` and `BringPhoneScans.tsx` deleted.
 - fix(phone-import): with no claim folder linked (or not desktop Chrome) the notes still come in, with "Documents and photos were not saved: link the claim folder…"; no folder prompt on top of the notes review. A zip with only `_surveyos-backup.json` gives notes only; an unreadable one says "Couldn't read the notes in this zip."

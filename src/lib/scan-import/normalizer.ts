@@ -58,11 +58,14 @@ export function normalizeScanNotes(raw: unknown): NormalizedNotesPayload | null 
     const notesObj = isObj(data.notes) ? data.notes : {};
     const rawSpot = isObj(notesObj.spot) ? (notesObj.spot as Record<string, unknown>) : {};
     const rawVal = isObj(notesObj.valuation) ? (notesObj.valuation as Record<string, unknown>) : {};
-    const rawFee = isObj(notesObj.feeBill) ? (notesObj.feeBill as Record<string, unknown>) : {};
+    // Scan stores fee notes under "fee_bill" (Repository.kt); "feeBill" kept for older test-made files.
+    const feeObj = notesObj.fee_bill ?? notesObj.feeBill;
+    const rawFee = isObj(feeObj) ? (feeObj as Record<string, unknown>) : {};
     const rows = Array.isArray(data.rows) ? (data.rows as Array<Record<string, unknown>>) : [];
 
+    // Scan tags rows with their notes section: "spot" = damage rows, "valuation" = part rows.
     const spotDamageRows = rows
-      .filter((r) => r.section === 'spotDamageRows')
+      .filter((r) => r.section === 'spot' || r.section === 'spotDamageRows')
       .map((r) => ({
         component: String(r.component ?? '').trim(),
         damage: String(r.damage ?? '').trim(),
@@ -70,7 +73,7 @@ export function normalizeScanNotes(raw: unknown): NormalizedNotesPayload | null 
       .filter((r) => r.component || r.damage);
 
     const valuationPartRows = rows
-      .filter((r) => r.section === 'valuationPartRows')
+      .filter((r) => r.section === 'valuation' || r.section === 'valuationPartRows')
       .map((r) => ({
         component: String(r.component ?? '').trim(),
         condition: String(r.condition ?? r.damage ?? '').trim(),
@@ -95,6 +98,17 @@ export function normalizeScanNotes(raw: unknown): NormalizedNotesPayload | null 
       updatedAt,
       vehicle: typeof data.vehicleNo === 'string' ? data.vehicleNo : undefined,
       claimId: typeof data.claimId === 'string' ? data.claimId : undefined,
+    };
+  }
+
+  // A whole `_surveyos-scan.json` (Drive folder picker): read its `notes`, keep the manifest's vehicle and claimId.
+  if (data.app === 'surveyos-scan') {
+    const inner = normalizeScanNotes(isObj(data.notes) ? data.notes : {});
+    if (!inner) return null;
+    return {
+      ...inner,
+      vehicle: typeof data.vehicle === 'string' ? data.vehicle : inner.vehicle,
+      claimId: typeof data.claimId === 'string' ? data.claimId : inner.claimId,
     };
   }
 

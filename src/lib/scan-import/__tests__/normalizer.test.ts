@@ -23,15 +23,17 @@ describe('normalizeScanNotes', () => {
           'valuationDetails.odometer': '45210',
           'valuationDetails.chassis': 'Good',
         },
-        feeBill: {
+        // Scan's stored section names (Repository.kt): fee notes live under "fee_bill".
+        fee_bill: {
           'feeBill.professionalFee': '2500',
           'feeBill.distanceKm': '45',
         },
       },
+      // Scan tags rows with their notes section ("spot" / "valuation"), as BackupJson.kt writes them.
       rows: [
-        { section: 'spotDamageRows', component: 'Front bumper', damage: 'Broken at centre' },
-        { section: 'spotDamageRows', component: 'Bonnet', damage: 'Dented' },
-        { section: 'valuationPartRows', component: 'Bodyshell', damage: 'Good' },
+        { id: 'r1', section: 'spot', sortOrder: 0, component: 'Front bumper', damage: 'Broken at centre' },
+        { id: 'r2', section: 'spot', sortOrder: 1, component: 'Bonnet', damage: 'Dented' },
+        { id: 'r3', section: 'valuation', sortOrder: 0, component: 'Bodyshell', damage: 'Good' },
       ],
       updatedAt: 1730000000000,
     };
@@ -81,6 +83,38 @@ describe('normalizeScanNotes', () => {
     expect(normalized?.spot['vehicle.odometer']).toBe('32000');
     expect(normalized?.spotDamageRows).toEqual([{ component: 'Headlight LH', damage: 'Shattered' }]);
     expect(normalized?.vehicle).toBe('MH14CD5678');
+  });
+
+  it('reads notes from a whole _surveyos-scan.json file (Drive folder picker)', () => {
+    const manifest = {
+      app: 'surveyos-scan',
+      v: 1,
+      vehicle: 'MH12AB1234',
+      insurer: 'NIA',
+      claimNo: null,
+      exportedAt: '2026-11-12T10:00:00+05:30',
+      files: [],
+      notes: {
+        spot: { 'vehicle.odometer': '45210', 'documentVerification.rc': { status: 'YES', detail: '' } },
+        spotDamageRows: [{ component: 'Front bumper', damage: 'Broken' }],
+        valuation: { 'valuationDetails.chassis': 'Good' },
+        valuationPartRows: [{ component: 'Bodyshell', condition: 'Good' }],
+        feeBill: { 'feeBill.tollCharges': '270' },
+        updatedAt: '2026-11-12T10:00:00+05:30',
+      },
+      claimId: 'scan-claim-9',
+    };
+
+    const n = normalizeScanNotes(JSON.stringify(manifest));
+    expect(n?.spot['vehicle.odometer']).toBe('45210');
+    expect(n?.spot['documentVerification.rc']).toEqual({ status: 'YES', detail: '' });
+    expect(n?.spotDamageRows).toEqual([{ component: 'Front bumper', damage: 'Broken' }]);
+    expect(n?.valuation['valuationDetails.chassis']).toBe('Good');
+    expect(n?.valuationPartRows).toEqual([{ component: 'Bodyshell', condition: 'Good' }]);
+    expect(n?.feeBill['feeBill.tollCharges']).toBe('270');
+    expect(n?.updatedAt).toBe('2026-11-12T10:00:00+05:30');
+    expect(n?.vehicle).toBe('MH12AB1234');
+    expect(n?.claimId).toBe('scan-claim-9');
   });
 
   it('returns null for null, undefined, or invalid inputs', () => {
