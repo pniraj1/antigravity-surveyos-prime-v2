@@ -1,6 +1,6 @@
 ## Done: Phone notes from backup / Drive picker lost fields (2026-11-12, Claude Code)
   - Fee bill notes, damage rows and part rows were dropped from "Text only" zips and Drive backups; the Drive picker dropped every note. Fixed in `src/lib/scan-import/normalizer.ts`; report in `docs/scan-notes-import-gaps-2026-11-12.md`.
-  - Not deployed; not tried with a real phone zip.
+  - Deployed 2026-11-12 (motorsurveyos-in + surveyos.in, live chunk checked); not tried with a real phone zip.
   - Prime <-> Scan coupling: Scan change none.
 
 ## Done: SurveyOS Scan Batch Photo Share Limit & Transaction Batching Fix (2026-11-11, Antigravity)

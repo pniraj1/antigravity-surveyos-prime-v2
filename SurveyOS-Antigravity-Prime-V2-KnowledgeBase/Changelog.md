@@ -1,4 +1,4 @@
-## 2026-11-12 (Claude Code) — Phone notes from backup / Drive picker lost fields (not deployed)
+## 2026-11-12 (Claude Code) — Phone notes from backup / Drive picker lost fields (deployed 2026-11-12)
 - fix(scan-import): `normalizer.ts` read Scan's `_surveyos-backup.json` with the wrong names. Fee bill notes are stored under `fee_bill` (Prime read `feeBill`), and rows are tagged `spot` / `valuation` (Prime kept only `spotDamageRows` / `valuationPartRows`). So every fee bill field, damage row and part row from a "Text only" zip or a Drive backup was dropped. Both names are now read; the old ones are kept as a fallback.
 - fix(scan-import): the Drive folder picker hands the whole `_surveyos-scan.json` to the normalizer. That fell into the "notes object" branch and found nothing, so it said "nothing new to import". A whole manifest now unwraps its `notes` and keeps `vehicle` / `claimId`.
 - test: the normalizer fixture was a made-up shape; it is now what Scan's `backupJson()` writes, plus a whole-manifest case. Both failed before the fix.
