@@ -40,7 +40,8 @@ export function parserEligible(o: {
   feedback?: string; previousData?: unknown; forceDocMode?: string; override: unknown;
 }): boolean {
   return (o.key === 'estimate' || o.key === 'final-bill') && o.allText && o.fileCount === 1
-    && !o.feedback && !o.previousData && !o.forceDocMode && !o.override;
+    // forced Text means a digital PDF: the parser still goes first (a page with no text layer gives it no rows, so it declines)
+    && !o.feedback && !o.previousData && o.forceDocMode !== 'vision' && !o.override;
 }
 
 /** Header comes from page 1 + the last page only. Never returns gross_amount. */

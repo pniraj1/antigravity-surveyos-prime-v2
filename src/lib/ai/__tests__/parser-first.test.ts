@@ -35,6 +35,9 @@ describe('parserEligible', () => {
     expect(parserEligible(ok)).toBe(true);
     expect(parserEligible({ ...ok, key: 'final-bill' })).toBe(true);
   });
+  it('true when the surveyor forces Text mode (a digital PDF is exactly what the parser reads)', () => {
+    expect(parserEligible({ ...ok, forceDocMode: 'text' })).toBe(true);
+  });
   it.each([
     ['other doc type', { key: 'rc' }],
     ['mixed pages', { allText: false }],
