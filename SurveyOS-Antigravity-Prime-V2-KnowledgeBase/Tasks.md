@@ -1,5 +1,5 @@
 ## Done: Parser reads BharatBenz DMS invoices; blank pages skipped (2026-11-14, Claude Code)
-  - Prabal Motors 13-page invoice now 0 row calls (was 13). See Changelog 2026-11-14. Not deployed, not committed.
+  - Prabal Motors 13-page invoice now 0 row calls (was 13). See Changelog 2026-11-14. Committed 067d390d, deployed 2026-11-14 (motorsurveyos-in + surveyos.in, live chunk checked); not tried in the live app.
   - Next with owner: learning loop (parser-miss log + consented sample folder) and its DPDP handling; whether to AI-fill blanked part no./HSN.
   - Prime <-> Scan coupling: none.
 
