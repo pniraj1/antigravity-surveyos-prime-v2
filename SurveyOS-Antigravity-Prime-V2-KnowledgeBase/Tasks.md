@@ -1,3 +1,8 @@
+## Done: Parser reads BharatBenz DMS invoices; blank pages skipped (2026-11-14, Claude Code)
+  - Prabal Motors 13-page invoice now 0 row calls (was 13). See Changelog 2026-11-14. Not deployed, not committed.
+  - Next with owner: learning loop (parser-miss log + consented sample folder) and its DPDP handling; whether to AI-fill blanked part no./HSN.
+  - Prime <-> Scan coupling: none.
+
 ## Done: Phone notes from backup / Drive picker lost fields (2026-11-12, Claude Code)
   - Fee bill notes, damage rows and part rows were dropped from "Text only" zips and Drive backups; the Drive picker dropped every note. Fixed in `src/lib/scan-import/normalizer.ts`; report in `docs/scan-notes-import-gaps-2026-11-12.md`.
   - Deployed 2026-11-12 (motorsurveyos-in + surveyos.in, live chunk checked); not tried with a real phone zip.

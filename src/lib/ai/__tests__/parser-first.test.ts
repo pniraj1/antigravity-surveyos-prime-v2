@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { parserEligible, readHeader, safeParse } from '../parser-first';
+import { parserEligible, readHeader, safeParse, checkFields } from '../parser-first';
 
 vi.mock('../row-parser', () => ({ parseEstimate: (t: unknown[]) => { if (!t.length) throw new Error('odd layout'); return { ok: false, reason: 'x' }; } }));
 
@@ -9,6 +9,22 @@ describe('safeParse', () => {
   });
   it('passes through a normal outcome', () => {
     expect(safeParse([[]])).toEqual({ ok: false, reason: 'x' });
+  });
+});
+
+describe('checkFields', () => {
+  const row = (sr_no: number, part_number: string, hsn_sac: string) => ({ sr_no, part_number, hsn_sac, total_amount: 10 });
+  it('blanks a part no. printed like an amount and an HSN/SAC that is not 4, 6 or 8 digits, and says which rows', () => {
+    const data = { spare_parts: [row(1, '1,990.00', '73181500'), row(2, '5442551063 04', '8708.99.0'), row(3, '1018805163', '8708.29.00Y')], labour_items: [row(1, '', 'assembly')], painting_items: [], gross_amount: 40 };
+    const { data: out, issues } = checkFields(data);
+    expect(out.spare_parts.map(r => [r.part_number, r.hsn_sac])).toEqual([['', '73181500'], ['5442551063 04', ''], ['1018805163', '']]);
+    expect(out.labour_items[0].hsn_sac).toBe('');
+    expect(issues).toEqual(['Part no. or HSN/SAC was unclear and left blank on 4 rows (parts 1, 2, 3; labour 1). Please check them against the PDF.']);
+    expect(data.spare_parts[0].part_number).toBe('1,990.00');   // input untouched
+  });
+  it('keeps good values and raises nothing', () => {
+    const data = { spare_parts: [row(1, 'A401990215 0', '7318'), row(2, '', ''), row(3, 'X', '8708.99.00')], labour_items: [row(1, '', '998714')], painting_items: [], gross_amount: 40 };
+    expect(checkFields(data)).toEqual({ data, issues: [] });
   });
 });
 

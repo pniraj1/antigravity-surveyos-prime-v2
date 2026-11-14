@@ -20,7 +20,7 @@ import { planChunks } from './group-pages';
 import { limitsFor, PAGE_LIMITS } from './page-limits';
 import { profilePages, pageRuns, chunkRuns } from './page-runs';
 import { tokensFromItems, type PdfToken } from './row-parser';
-import { parserEligible, readHeader, safeParse } from './parser-first';
+import { parserEligible, readHeader, safeParse, checkFields } from './parser-first';
 
 /**
  * Extracts text content from a PDF page (if it has a text layer).
@@ -36,6 +36,20 @@ async function extractPageText(page: any): Promise<{ text: string; tokens: PdfTo
     return { text, tokens };
   } catch {
     return { text: '', tokens: [] };
+  }
+}
+
+// ponytail: "almost nothing drawn" is an operator count. A page of vector-outlined text has hundreds; a border or rule a few dozen.
+const BLANK_MAX_OPS = 50;
+
+/** No text layer, no image and almost nothing drawn: a blank page (an empty last page of a DMS invoice). Never rendered or sent. */
+async function isBlankPage(page: any, pdfjsLib: { OPS?: Record<string, number> }): Promise<boolean> {
+  try {
+    const { fnArray } = await page.getOperatorList() as { fnArray: number[] };
+    const imageOps = new Set(Object.entries(pdfjsLib.OPS ?? {}).filter(([k]) => /image/i.test(k)).map(([, v]) => v));
+    return fnArray.length < BLANK_MAX_OPS && !fnArray.some(f => imageOps.has(f));
+  } catch {
+    return false;   // can't tell: keep the page
   }
 }
 
@@ -109,13 +123,16 @@ export async function fileToImages(
 
     // Only the pages the surveyor ticked in the review sheet are rendered —
     // unticked pages never become images and never reach the provider.
-    const pageNumbers = resolveAIPages(pdf.numPages, getAIPages(file));
-    for (let idx = 0; idx < pageNumbers.length; idx++) {
-      if (onProgress) onProgress(idx + 1, pageNumbers.length);
-      const page = await pdf.getPage(pageNumbers[idx]);
+    const ticked = resolveAIPages(pdf.numPages, getAIPages(file));
+    const pageNumbers: number[] = [];
+    for (let idx = 0; idx < ticked.length; idx++) {
+      if (onProgress) onProgress(idx + 1, ticked.length);
+      const page = await pdf.getPage(ticked[idx]);
 
       // Try to extract text (for digitally-born PDFs)
       const { text: pageText, tokens } = await extractPageText(page);
+      if (!pageText && await isBlankPage(page, pdfjsLib)) continue;
+      pageNumbers.push(ticked[idx]);
       textLayers.push(pageText);
       pageTokens.push(tokens);
 
@@ -378,10 +395,11 @@ export async function extractDocument(
         // Rows are already read: the header is one small text call, not a heavy job that spends Flash.
         const header = await readHeader(key as 'estimate' | 'final-bill', textLayers, p => callAIGateway(p, [], 'json', 'light', session, signal));
         if (signal?.aborted) throw abortError();
-        const data = { ...header, ...parsed.data };
+        const checked = checkFields(parsed.data);
+        const data = { ...header, ...checked.data };
         const findings = toFindings(rowCheck(data, textLayers)).filter(f => f.kind !== 'gap');
         console.log(`[Parser] read ${countRows(data)} rows, tie ok`);
-        return { data, images: viewImages, findings, issues: [], source: 'parser' as const };
+        return { data, images: viewImages, findings, issues: checked.issues, source: 'parser' as const };
       }
       console.log(`[Parser] declined: ${parsed.reason}`);
     }

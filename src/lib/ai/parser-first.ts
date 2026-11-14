@@ -9,6 +9,32 @@ export function safeParse(pageTokens: PdfToken[][]): ParseOutcome {
   catch (e) { return { ok: false, reason: 'parser error: ' + (e instanceof Error ? e.message : String(e)) }; }
 }
 
+const AMOUNT_LIKE = /^\d{1,3}(,\d{2,3})*\.\d{2}$|^\d+\.\d{2}$/;   // "1,990.00": a row total in the part no. column. Plain digits (Tata 1018805163) are real part numbers.
+const HSN_OK = /^(\d{4}|\d{6}|\d{8})$/;
+const SECTIONS = [['spare_parts', 'parts'], ['labour_items', 'labour'], ['painting_items', 'painting']] as const;
+
+type Row = { sr_no: number; part_number?: string; hsn_sac?: string };
+
+/** A doubtful part no. or HSN/SAC is blanked, never passed on: the surveyor gets a blank to check, not a confident wrong value. */
+export function checkFields<T extends Record<(typeof SECTIONS)[number][0], Row[]>>(data: T): { data: T; issues: string[] } {
+  const flagged: string[] = [];
+  let n = 0;
+  const out = { ...data };
+  for (const [key, label] of SECTIONS) {
+    const srs: number[] = [];
+    out[key] = data[key].map(r => {
+      const badPart = !!r.part_number && AMOUNT_LIKE.test(r.part_number.trim());
+      const badHsn = !!r.hsn_sac && !HSN_OK.test(r.hsn_sac.replace(/[.\s]/g, ''));
+      if (!badPart && !badHsn) return r;
+      srs.push(r.sr_no);
+      return { ...r, ...(badPart && { part_number: '' }), ...(badHsn && { hsn_sac: '' }) };
+    }) as T[typeof key];
+    if (srs.length) { flagged.push(`${label} ${srs.join(', ')}`); n += srs.length; }
+  }
+  if (!n) return { data, issues: [] };
+  return { data: out, issues: [`Part no. or HSN/SAC was unclear and left blank on ${n} ${n === 1 ? 'row' : 'rows'} (${flagged.join('; ')}). Please check them against the PDF.`] };
+}
+
 export function parserEligible(o: {
   key: string; allText: boolean; fileCount: number;
   feedback?: string; previousData?: unknown; forceDocMode?: string; override: unknown;

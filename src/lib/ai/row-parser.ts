@@ -99,16 +99,18 @@ const byReading = (a: PdfToken, b: PdfToken) => (b.y - a.y) || (a.x - b.x);
 // Tata: headings stacked over short lines ("Total Amt" / "(Incl." / "Taxes)"), often split mid-word ("Amoun" / "t").
 const BLOCK_AMOUNT: [RegExp, Field | null][] = [
   [/incl/, 'total_amount'], [/gst|%|base|disc|extra|insura|liabil|campai/, null],
-  [/^taxabl/, 'taxable_amount'], [/^qty/, 'quantity'], [/^rate/, 'unit_price'],
+  [/^taxabl/, 'taxable_amount'], [/^qty/, 'quantity'], [/hrs$/, 'quantity'], [/^rate/, 'unit_price'],   // BharatBenz labour: "Std Hrs"
+  [/^total(parts?|labou?r)amount/, 'total_amount'],   // BharatBenz DMS: "Total Parts Amount" (a wider "total…amount" takes Tata's rounded column)
 ];
 const BLOCK_TEXT: [RegExp, Field | null][] = [
-  [/^(particulars|description)/i, 'description'], [/^part/i, 'part_number'], [/^hsn/i, 'hsn_sac'], [/^(type|uom?|um)$/i, null],
+  // "Part" / Tata "Part#/Job", never "Parts": BharatBenz prints "Parts" as the section title and in "Total Parts Amount"
+  [/^(particulars|description)/i, 'description'], [/^part(?!s\b)/i, 'part_number'], [/^(hsn|sac)/i, 'hsn_sac'], [/^(type|uom?|um)$/i, null], [SERIAL_WORD, null],
 ];
 
 /** Header spread over several close lines: amount columns are where the row amounts right-align, each named by the heading words above it; text columns start at their heading word. */
 function findHeaderBlock(toks: PdfToken[]): { y: number; cols: Column[] } | null {
   const lines = linesOf(toks);
-  const qi = lines.findIndex(l => l.some(t => /^qty\.?$/i.test(t.s)));
+  const qi = lines.findIndex(l => l.some(t => /^(qty\.?|hrs)$/i.test(t.s)));   // a labour-only page heads its quantity "Std Hrs"
   if (qi < 0) return null;
   const plain = (l: PdfToken[]) => !l.some(t => /\d/.test(t.s));
   let a = qi, b = qi;
@@ -126,7 +128,9 @@ function findHeaderBlock(toks: PdfToken[]): { y: number; cols: Column[] } | null
     if (c) { c.narrow = Math.min(c.narrow, t.w); c.n++; } else clusters.push({ right: t.x + t.w, narrow: t.w, n: 1 });
   }
   const most = Math.max(0, ...clusters.map(c => c.n));
-  const amounts = clusters.filter(c => c.n >= Math.max(2, most * 0.3)).map(c => {
+  // all-digit codes under a text heading (HSN 7318, numeric part numbers) right-align too, but are not an amount column
+  const underText = (right: number) => text.some(g => g.field && right >= g.x && right <= g.right + 4);
+  const amounts = clusters.filter(c => c.n >= Math.max(2, most * 0.3) && !underText(c.right)).map(c => {
     const label = block.filter(t => t.x < c.right && t.x + t.w > c.right - c.narrow).sort(byReading).map(t => t.s).join('').toLowerCase();   // headings over the narrowest value
     return { field: BLOCK_AMOUNT.find(([re]) => re.test(label))?.[1] ?? null, x: c.right - c.narrow, right: c.right };
   });
@@ -297,8 +301,8 @@ function footerTax(items: any[], labelled: number[]): { items: any[]; inclusive:
 }
 
 const above = (a: { page: number; y: number }, b: { page: number; y: number }) => a.page < b.page || (a.page === b.page && a.y > b.y);   // a is higher in reading order
-// Maruti: "Net Estimate Amounts", "Net Bill Amount (Rounded)"; Tata: "Gross Amount"
-const GRAND_LABEL = /\bgrand\s*total\b|\bnet\s*((estimate|bill)\s*)?amounts?\b|\btotal\s*amt\b|\bgross\s*amount\b|\bfinal\s*amount\b/i;
+// Maruti: "Net Estimate Amounts", "Net Bill Amount (Rounded)"; Tata: "Gross Amount"; BharatBenz: "Total Invoice Value( in figure):", "Balance Payable"
+const GRAND_LABEL = /\bgrand\s*total\b|\bnet\s*((estimate|bill)\s*)?amounts?\b|\btotal\s*amt\b|\bgross\s*amount\b|\bfinal\s*amount\b|\btotal\s*invoice\s*value\b|\bbalance\s*payable\b/i;
 const TOTAL_LABEL = /\btotal\b|\bnet\s*((estimate|bill)\s*)?amounts?\b|\bgross\s*amount\b|\b(part|labou?r)\s*(amt|amount)\b/i;
 
 /** Parts / labour from the heading between the header (or the previous section) and this section's first row; null = unknown. */
