@@ -141,6 +141,35 @@ function findHeaderBlock(toks: PdfToken[]): { y: number; cols: Column[] } | null
   return { y, cols: all.map((g, i) => ({ field: g.field, start: starts[i], end: i + 1 < all.length ? starts[i + 1] : Infinity, right: g.right })) };
 }
 
+/** A table layout learned once (layout-learning.ts): its heading words, to find it again, and where each column's values sit. */
+export interface LayoutTable { words: { s: string; x: number; dy: number }[]; cols: { field: Field | null; x: number; right: number }[] }   // dy: above the heading's bottom line
+export type Layout = LayoutTable[];
+
+const LAYOUT_MATCH = 0.7;   // share of a table's heading words found at their place
+
+function columnsOf(cols: LayoutTable['cols']): Column[] {
+  const all = [...cols].sort((p, q) => p.x - q.x);
+  const starts = all.map((g, i) => (i === 0 ? -Infinity : (Math.min(all[i - 1].right, g.x) + g.x) / 2));
+  return all.map((g, i) => ({ field: g.field, start: starts[i], end: i + 1 < all.length ? starts[i + 1] : Infinity, right: g.right }));
+}
+
+/** Every learned table heading on this page, top first; a page may hold several (labour, then parts). */
+function locateTables(toks: PdfToken[], layout: Layout): { y: number; cols: Column[] }[] {
+  const byWord = new Map<string, PdfToken[]>();
+  for (const t of toks) byWord.set(t.s, [...(byWord.get(t.s) ?? []), t]);
+  const found: { y: number; cols: Column[] }[] = [];
+  for (const y of [...new Set(toks.map(t => t.y))].sort((a, b) => b - a)) {
+    if (found.some(f => Math.abs(f.y - y) <= 2)) continue;
+    let best: { hit: number; t: LayoutTable } | null = null;
+    for (const t of layout) {
+      const hit = t.words.filter(w => (byWord.get(w.s) ?? []).some(k => Math.abs(k.x - w.x) <= 6 && Math.abs(k.y - (y + w.dy)) <= 2)).length / t.words.length;
+      if (hit >= LAYOUT_MATCH && (!best || hit > best.hit)) best = { hit, t };
+    }
+    if (best) found.push({ y, cols: columnsOf(best.t.cols) });
+  }
+  return found;
+}
+
 /** Serial tokens near the leftmost integer column, below the header, continuing the sequence. */
 function anchorsOf(toks: PdfToken[], headerY: number, prev: number, cols?: Column[]): { anchors: PdfToken[]; last: number } {
   const typeCol = cols?.find(c => c.field === 'type');
@@ -206,16 +235,18 @@ const PART_WORD = /\bparts?\b/i;
 const LABOUR_WORD = /\blabou?r\b|\bservices?\b/i;
 const KIND_WORDS = new RegExp(`${PART_WORD.source}|${LABOUR_WORD.source}`, 'i');
 
-export function readRows(pages: PdfToken[][], stacked = false): { rows: RawRow[]; nonItemLines: NonItemLine[] } | { declined: string } {
+export function readRows(pages: PdfToken[][], stacked = false, layout?: Layout): { rows: RawRow[]; nonItemLines: NonItemLine[] } | { declined: string } {
   const rows: RawRow[] = [];
   const nonItemLines: NonItemLine[] = [];
   let cols: Column[] | null = null;   // a page without its own header reuses the previous one
   let prev = 0;
   for (let p = 0; p < pages.length; p++) {
     const toks = repairNumbers(pages[p]);
-    const header = stacked ? findHeaderBlock(toks) : findHeader(toks);
+    const one = layout ? null : stacked ? findHeaderBlock(toks) : findHeader(toks);
+    const headers = layout ? locateTables(toks, layout) : one ? [one] : [];   // top first; built-in rules find one per page
+    const header = headers[0];
     const earlierCols = cols;   // rows above this page's header still follow the columns they were printed under
-    if (header) cols = header.cols;
+    if (headers.length) cols = headers[headers.length - 1].cols;
     // numbered terms printed under the grand total are not rows
     const grandY = Math.min(...linesOf(toks).filter(l => GRAND_LABEL.test(l.map(t => t.s).join(' ')) && l.some(t => parseMoney(t.s) !== null)).map(l => l[0].y), Infinity);
     const { anchors, last } = cols ? anchorsOf(toks.filter(t => grandY === Infinity || t.y > grandY - 2), header?.y ?? Infinity, prev, cols) : { anchors: [], last: prev };
@@ -225,15 +256,17 @@ export function readRows(pages: PdfToken[][], stacked = false): { rows: RawRow[]
       const gapDn = i + 1 < anchors.length ? (a.y - anchors[i + 1].y) / 2 : null;
       const up = gapUp ?? gapDn ?? 8;
       const lo = a.y - (gapDn ?? up);
-      return { a, hi: a.y + up, lo: header && a.y > header.y ? Math.max(lo, a.y - up) : lo };   // the last row above a header must not swallow it
+      return { a, hi: a.y + up, lo: headers.some(h => a.y > h.y) ? Math.max(lo, a.y - up) : lo };   // the last row above a header must not swallow it
     });
+    // VW: a "CGST - 9.00% - 79.16, SGST …" line under each row sits as close to the next row as to its own: it is no row's cell
+    const taxLines = new Set(linesOf(toks).filter(l => /^(CGST|SGST|IGST|UTGST)$/i.test(l[0].s)).flat());
     for (const { a, hi, lo } of bands) {
-      const belowHeader = header && a.y < header.y - 2;   // the header line (and what sits above it) is never part of a row below it
-      const band = toks.filter(t => t.y < hi && t.y >= lo && !(belowHeader && t.y >= header.y - 2));
+      const own = headers.filter(h => a.y < h.y - 2).pop();   // the nearest header above: its line (and what sits above it) is never part of the row
+      const band = toks.filter(t => t.y < hi && t.y >= lo && !(own && t.y >= own.y - 2) && !taxLines.has(t));
       const leadToks = a.s === '1' ? band.filter(t => t.y > a.y + 2) : [];
       const lead = leadToks.sort(byReading).map(t => t.s).join(' ');
       const heading = KIND_WORDS.test(lead) || TOTAL_LABEL.test(lead) || /\bsuggested\s*jobs\b/i.test(lead);   // a heading (Maruti bills: "Demanded Repairs-Others/Suggested Jobs") or a totals line is not part of the row's cells
-      rows.push({ sr: Number(a.s), page: p, y: a.y, x: a.x, lead: a.s === '1' ? lead : undefined, cells: rowCells(band.filter(t => t !== a && !(heading && leadToks.includes(t))), a, (header && a.y > header.y && earlierCols) || cols!), text: [...band].sort(byReading).map(t => t.s).join(' ') });
+      rows.push({ sr: Number(a.s), page: p, y: a.y, x: a.x, lead: a.s === '1' ? lead : undefined, cells: rowCells(band.filter(t => t !== a && !(heading && leadToks.includes(t))), a, own?.cols ?? earlierCols ?? cols!), text: [...band].sort(byReading).map(t => t.s).join(' ') });
     }
     for (const l of linesOf(toks)) {
       if (bands.some(b => l[0].y < b.hi && l[0].y >= b.lo)) continue;
@@ -315,7 +348,8 @@ function kindOf(first: RawRow, prevRow: RawRow | undefined, lines: NonItemLine[]
 }
 
 /** Rows → estimate sections, accepted only when every section and the grand total tie to printed figures. */
-export function parseEstimate(pages: PdfToken[][]): ParseOutcome {
+export function parseEstimate(pages: PdfToken[][], layout?: Layout): ParseOutcome {
+  if (layout) { const r = parseWith(pages, false, false, layout); return r.ok ? r : parseWith(pages, true, false, layout); }
   const first = parseWith(pages, false);
   if (first.ok) return first;
   // each reading must tie to printed figures, so trying others is safe
@@ -323,8 +357,8 @@ export function parseEstimate(pages: PdfToken[][]): ParseOutcome {
   return other ?? first;
 }
 
-function parseWith(pages: PdfToken[][], preTax: boolean, stacked = false): ParseOutcome {
-  const read = readRows(pages, stacked);
+function parseWith(pages: PdfToken[][], preTax: boolean, stacked = false, layout?: Layout): ParseOutcome {
+  const read = readRows(pages, stacked, layout);
   if ('declined' in read) return { ok: false, reason: read.declined };
   const { rows, nonItemLines } = read;
   const grands = nonItemLines.filter(l => GRAND_LABEL.test(l.text) && l.nums.length);

@@ -71,13 +71,14 @@ describe('extractDocument — text or image per page', () => {
     gw.mockClear();
     texts.splice(0, texts.length, money(1), money(2), money(3));
     await extractDocument('estimate', pdf());
-    expect(gw.mock.calls.slice(0, 3).every(c => String(c[0]).includes(HINT))).toBe(true);
+    expect(String(gw.mock.calls[0][0])).toContain('item table heading');   // all-text: the parser declined, one small layout call first
+    expect(gw.mock.calls.slice(1, 4).every(c => String(c[0]).includes(HINT))).toBe(true);
   });
 
   it('no override: all-text doc stays 1 page per call', async () => {
     texts.splice(0, texts.length, page(1), page(2), page(3));
-    gw.mockResolvedValueOnce(rows(1)).mockResolvedValueOnce(rows(2)).mockResolvedValueOnce(rows(3));
+    gw.mockResolvedValueOnce('{}').mockResolvedValueOnce(rows(1)).mockResolvedValueOnce(rows(2)).mockResolvedValueOnce(rows(3));
     await extractDocument('estimate', pdf());
-    expect(gw).toHaveBeenCalledTimes(3);
+    expect(gw).toHaveBeenCalledTimes(4);   // the parser's layout call, then one per page
   });
 });

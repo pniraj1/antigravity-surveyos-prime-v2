@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readRows, parseMoney, tokensFromItems, parseEstimate, type PdfToken } from '../row-parser';
+import { labourHead, partsHead, page } from './fixtures/vw-two-tables';
 
 const line = (y: number, cells: Array<[number, string]>): PdfToken[] =>
   cells.map(([x, s]) => ({ s, x, y, w: s.length * 5 }));
@@ -576,5 +577,32 @@ describe('parseEstimate', () => {
       expect(Math.round(paintingTaxableSum * 100) / 100).toBe(21191.03);
     });
 
+  });
+});
+
+describe('learned layout (stacked two-table bill the built-in rules do not know)', () => {
+  const headWords = (toks: PdfToken[]) => { const bottom = Math.min(...toks.map(t => t.y)); return toks.map(t => ({ s: t.s, x: t.x, dy: t.y - bottom })); };
+  const layout = [
+    { words: headWords(labourHead), cols: [
+      { field: 'sr_no' as const, x: 46, right: 51 }, { field: 'description' as const, x: 60, right: 95 }, { field: 'hsn_sac' as const, x: 293, right: 333 },
+      { field: 'quantity' as const, x: 353, right: 373 }, { field: 'taxable_amount' as const, x: 433, right: 463 }, { field: 'total_amount' as const, x: 546, right: 576 }] },
+    { words: headWords(partsHead), cols: [
+      { field: 'sr_no' as const, x: 43, right: 48 }, { field: 'description' as const, x: 58, right: 78 }, { field: 'part_number' as const, x: 157, right: 207 },
+      { field: 'hsn_sac' as const, x: 252, right: 292 }, { field: 'quantity' as const, x: 313, right: 333 }, { field: 'unit_price' as const, x: 337, right: 362 },
+      { field: 'taxable_amount' as const, x: 424, right: 449 }, { field: 'total_amount' as const, x: 546, right: 571 }] },
+  ];
+
+  it('the built-in rules decline it', () => {
+    expect(parseEstimate([page]).ok).toBe(false);
+  });
+  it('with the learned layout every row is read and ties, each table with its own columns', () => {
+    const r = parseEstimate([page], layout);
+    if (!r.ok) throw new Error(r.reason);
+    expect(r.data.labour_items.map(i => [i.description, i.hsn_sac, i.taxable_amount, i.total_amount])).toEqual([['DENTING', '00998729', 100, 118], ['REFITTING', '00998729', 200, 236]]);
+    expect(r.data.spare_parts.map(i => [i.description, i.part_number, i.hsn_sac, i.quantity, i.unit_price, i.total_amount])).toEqual([['HOOD', '6R0823031G', '87089900', 1, 50, 59], ['FENDER', '6RG821106J', '87089900', 2, 25, 59]]);
+    expect(r.data.gross_amount).toBe(472);
+  });
+  it('a layout whose headings are not on the page reads nothing', () => {
+    expect(parseEstimate([page], [{ ...layout[0], words: layout[0].words.map(w => ({ ...w, x: w.x + 50 })) }]).ok).toBe(false);
   });
 });

@@ -20,7 +20,7 @@ import { planChunks } from './group-pages';
 import { limitsFor, PAGE_LIMITS } from './page-limits';
 import { profilePages, pageRuns, chunkRuns } from './page-runs';
 import { tokensFromItems, type PdfToken } from './row-parser';
-import { parserEligible, readHeader, safeParse, checkFields } from './parser-first';
+import { parserEligible, readHeader, parseFirst, checkFields } from './parser-first';
 
 /**
  * Extracts text content from a PDF page (if it has a text layer).
@@ -390,15 +390,18 @@ export async function extractDocument(
 
     // ── Parser-first: rows read in code, accepted only if they tie to the printed totals ──
     if (pageTokens && textLayers && parserEligible({ key, allText, fileCount: files.length, feedback, previousData, forceDocMode, override: getAITestOverride() })) {
-      const parsed = safeParse(pageTokens);
+      // light: the same small text call the header uses (a new layout's column names, then the header)
+      const light = (p: string) => callAIGateway(p, [], 'json', 'light', session, signal);
+      const parsed = await parseFirst(pageTokens, light);
+      if (signal?.aborted) throw abortError();
       if (parsed.ok) {
         // Rows are already read: the header is one small text call, not a heavy job that spends Flash.
-        const header = await readHeader(key as 'estimate' | 'final-bill', textLayers, p => callAIGateway(p, [], 'json', 'light', session, signal));
+        const header = await readHeader(key as 'estimate' | 'final-bill', textLayers, light);
         if (signal?.aborted) throw abortError();
         const checked = checkFields(parsed.data);
         const data = { ...header, ...checked.data };
         const findings = toFindings(rowCheck(data, textLayers)).filter(f => f.kind !== 'gap');
-        console.log(`[Parser] read ${countRows(data)} rows, tie ok`);
+        console.log(`[Parser] read ${countRows(data)} rows, tie ok${parsed.learned ? ' (learned layout)' : ''}`);
         return { data, images: viewImages, findings, issues: checked.issues, source: 'parser' as const };
       }
       console.log(`[Parser] declined: ${parsed.reason}`);
