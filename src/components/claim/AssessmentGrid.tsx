@@ -37,11 +37,13 @@ import {
   DEFAULT_VISIBLE,
   loadVisibility,
   saveVisibility,
+  imt23ColumnShown,
   type OptionalColumn,
 } from './assessment-grid-config';
 
 // ─── Component ───────────────────────────────────────────────────
-export function AssessmentGrid() {
+/** `footer`: rendered at the end of the scrolling rows (the tab puts the Total Loss form there). */
+export function AssessmentGrid({ footer }: { footer?: React.ReactNode } = {}) {
   const {
     currentClaim,
     addAssessmentRowToSection,
@@ -104,7 +106,12 @@ export function AssessmentGrid() {
     saveVisibility({ ...DEFAULT_VISIBLE });
   };
 
-  const visibleCount = Object.values(visible).filter(Boolean).length;
+  // What the grid actually draws: the picker, with IMT 23 following the policy answer.
+  const shown: Record<OptionalColumn, boolean> = {
+    ...visible,
+    imt23: imt23ColumnShown(visible.imt23, currentClaim?.policyCheck?.imt23, allRows),
+  };
+  const visibleCount = Object.values(shown).filter(Boolean).length;
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -381,12 +388,12 @@ export function AssessmentGrid() {
 
   return (
     <Card className="flex flex-col h-full border-border">
-      <CardHeader className="border-b border-border bg-card/50 px-4 py-3 flex flex-row items-center justify-between sticky top-0 z-20 rounded-t-xl">
+      <CardHeader className="border-b border-border bg-card/50 px-4 py-3 flex flex-row items-center justify-between shrink-0 rounded-t-xl">
         <CardTitle className="text-sm font-semibold flex items-center gap-2">
           <Wrench size={16} className="text-primary" />
           Parts Assessment Grid
         </CardTitle>
-        <div className="flex gap-2 items-center">
+        <div className="flex flex-wrap justify-end gap-2 items-center [&>button]:whitespace-nowrap">
           <button
             onClick={() => setShowUiicSummary(true)}
             title="Figures for the United India portal"
@@ -517,7 +524,10 @@ export function AssessmentGrid() {
       />
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <div className="overflow-x-auto">
+        {/* The one scroll box, both ways: column headings stick to its top, and
+            there is a single sideways scrollbar at its bottom edge. */}
+        <div className="flex-1 min-h-0 overflow-auto">
+
           {assessmentRows.length === 0 ? (
             <div className="px-6 py-12 text-center text-muted-foreground">
               <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-3">
@@ -540,7 +550,7 @@ export function AssessmentGrid() {
                   rows={sectionRows}
                   allRows={assessmentRows}
                   subtotal={subtotals[section]}
-                  visible={visible}
+                  visible={shown}
                   visibleCount={visibleCount}
                   selection={selection}
                   ageMonths={ageMonths}
@@ -555,6 +565,7 @@ export function AssessmentGrid() {
               );
             })
           )}
+          {footer}
         </div>
       </DndContext>
 

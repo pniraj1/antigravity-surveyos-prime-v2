@@ -8,7 +8,8 @@ import { effectiveAssessed } from '@/lib/calculations/row-net';
 import { formatCurrency, shouldStartSupplementaryBand } from '@/lib/calculations/utils';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Trash2, PlusCircle, PackageX, FileSearch, GripVertical, Wrench, ShieldAlert } from 'lucide-react';
+import { Trash2, PlusCircle, PackageX, FileSearch, GripVertical, Wrench, Check, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
@@ -20,7 +21,7 @@ import type { PartType, AssessmentRow as AssessmentRowType, AssessmentSection } 
 import type { DeductionCategory } from '@/lib/constants/deduction-categories';
 import type { SectionSubtotal } from '@/lib/calculations/section-subtotals';
 import type { useGridSelection } from './useGridSelection';
-import { CATEGORY_TAGS, type OptionalColumn } from './assessment-grid-config';
+import { CATEGORY_TAGS, insertRowAt, type OptionalColumn } from './assessment-grid-config';
 import { estimateShortRows } from '@/lib/calculations/estimate-floor';
 
 /** Owner rule: an estimate below the assessed amount is shown red and holds printing. */
@@ -128,6 +129,25 @@ export function AssessmentSectionTable({
     return map;
   }, [distinctEstimateIds]);
 
+  /** Deletes at once and offers Undo, which puts the row back at its old place. */
+  const deleteWithUndo = (id: string) => {
+    const before = useClaimStore.getState().currentClaim?.assessmentRows ?? [];
+    const index = before.findIndex(r => r.id === id);
+    if (index < 0) return;
+    const removed = before[index];
+    deleteAssessmentRow(id);
+    toast(`Deleted "${removed.particulars || 'row'}"`, {
+      duration: 6000,
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          const now = useClaimStore.getState().currentClaim?.assessmentRows ?? [];
+          if (!now.some(r => r.id === id)) updateClaim({ assessmentRows: insertRowAt(now, removed, index) });
+        },
+      },
+    });
+  };
+
   const sectionRowIds = rows.map(r => r.id);
   const totalCols = 9 + visibleCount;
   // Tagged rows now show their halved (post-endorsement) net, so the section
@@ -178,9 +198,10 @@ export function AssessmentSectionTable({
           <PlusCircle size={12} /> Add row
         </button>
       </div>
-      <div className="overflow-x-auto">
+      {/* No scroll box of its own: the grid's single box scrolls, so this header can stick. */}
+      <div>
         <table className="w-full text-sm text-left" style={{ minWidth: visibleCount >= 6 ? '1200px' : '800px' }}>
-          <thead className="bg-muted/50 text-muted-foreground text-xs uppercase sticky top-0 z-0 shadow-sm">
+          <thead className="bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10 shadow-sm">
             <tr>
               {/* ─── Always-on columns ──────────────────── */}
               <th className="px-1 py-2 w-6" aria-label="Drag handle column" />
@@ -190,11 +211,11 @@ export function AssessmentSectionTable({
                   checked={selection.sectionTickState(sectionRowIds) === 'all'}
                   ref={el => { if (el) el.indeterminate = selection.sectionTickState(sectionRowIds) === 'some'; }}
                   onChange={() => selection.toggleSectionSelectAll(sectionRowIds)}
-                  className="rounded border-border h-3.5 w-3.5 cursor-pointer accent-red-600"
+                  aria-label={`Select every ${title} row`}
+                  className="rounded border-border h-3.5 w-3.5 cursor-pointer accent-slate-600"
                 />
               </th>
               <th className="px-2 py-2 font-medium w-10 text-center">Sr</th>
-              <th className="px-2 py-2 font-medium w-8 text-center" title="Allowed?"><ShieldAlert size={12} className="mx-auto opacity-50" /></th>
               <th
                 className="px-2 py-2 font-medium relative group select-none"
                 style={{ width: `${particularsWidth}px`, minWidth: `${particularsWidth}px` }}
@@ -243,6 +264,7 @@ export function AssessmentSectionTable({
               <th className="px-2 py-2 font-medium w-16 text-danger text-center">Dep%</th>
               <th className="px-2 py-2 font-medium w-24 text-right">Net (₹)</th>
               {visible.priceWithGst && <th className="px-2 py-2 font-medium w-24 text-right">Price+GST</th>}
+              <th className="px-1 py-2 font-medium w-10 text-center" title="✓ allowed · ✕ disallowed. Click a row's icon to switch.">Allow</th>
 
               {/* ─── Optional trailing columns ─────────── */}
               {visible.action && <th className="px-2 py-2 font-medium w-20">Action</th>}
@@ -322,7 +344,7 @@ export function AssessmentSectionTable({
                   <SortableRow
                     key={row.id}
                     id={row.id}
-                    className={`hover:bg-accent/30 transition-colors ${rowAccentClass} ${selection.selected.has(row.id) ? 'bg-red-500/5' : ''} ${!row.allowed ? 'opacity-40 bg-muted/20' : ''} ${isDuplicate ? 'bg-orange-500/10' : ''} ${row.isDisposal && row.allowed ? 'bg-amber-500/5' : ''} ${row.imt23 && row.allowed ? 'bg-primary/5' : ''}`}
+                    className={`hover:bg-accent/30 transition-colors ${rowAccentClass} ${selection.selected.has(row.id) ? 'bg-slate-500/5' : ''} ${!row.allowed ? 'bg-muted/40 text-muted-foreground' : ''} ${isDuplicate ? 'bg-orange-500/10' : ''} ${row.isDisposal && row.allowed ? 'bg-amber-500/5' : ''} ${row.imt23 && row.allowed ? 'bg-primary/5' : ''}`}
                   >
                     {/* Select checkbox — always on */}
                     <td className={`px-2 py-1.5 text-center ${isDuplicate ? 'border-l-4 border-orange-500' : ''}`}>
@@ -330,7 +352,9 @@ export function AssessmentSectionTable({
                         type="checkbox"
                         checked={selection.selected.has(row.id)}
                         onChange={() => selection.toggleSelect(row.id)}
-                        className="rounded border-border h-3.5 w-3.5 cursor-pointer accent-red-600"
+                        aria-label={`Select row ${row.srNo ?? idx + 1}`}
+                        title="Select (for Delete Selected)"
+                        className="rounded border-border h-3.5 w-3.5 cursor-pointer accent-slate-600"
                       />
                     </td>
                     {/* Sr No — always on, editable */}
@@ -348,15 +372,6 @@ export function AssessmentSectionTable({
                         placeholder={String(idx + 1)}
                         min="0"
                         title="Serial number — editable"
-                      />
-                    </td>
-                    {/* Allowed — always on */}
-                    <td className="px-2 py-1.5 text-center">
-                      <input 
-                        type="checkbox" 
-                        checked={row.allowed}
-                        onChange={() => toggleRowAllowed(row.id)}
-                        className="rounded border-border focus:ring-primary h-3.5 w-3.5 cursor-pointer accent-primary" 
                       />
                     </td>
                     {/* Particulars — always on — click opens Evidence Viewer */}
@@ -386,7 +401,7 @@ export function AssessmentSectionTable({
                             }
                           }}
                           rows={1}
-                          className="min-h-7 py-1 px-2 text-xs font-semibold leading-snug bg-transparent border-transparent hover:border-input focus:bg-background resize-none"
+                          className={`min-h-7 py-1 px-2 text-xs font-semibold leading-snug bg-transparent border-transparent hover:border-input focus:bg-background resize-none${row.allowed ? '' : ' line-through text-muted-foreground'}`}
                           placeholder="Item Description"
                           title={row.particulars}
                         />
@@ -639,6 +654,24 @@ export function AssessmentSectionTable({
                         {row.allowed ? formatCurrency(priceWithGst) : '₹0.00'}
                       </td>
                     )}
+                    {/* Allow — always on, beside the money it decides. A round ✓ / ✕ icon,
+                        so it cannot be mistaken for the square Select box on the left. */}
+                    <td className="px-1 py-1.5 text-center">
+                      <button
+                        type="button"
+                        onClick={() => toggleRowAllowed(row.id)}
+                        aria-pressed={row.allowed}
+                        aria-label={row.allowed ? 'Allowed. Click to disallow' : 'Disallowed. Click to allow'}
+                        title={row.allowed ? 'Allowed. Click to disallow' : 'Disallowed. Click to allow'}
+                        className={`inline-flex items-center justify-center h-6 w-6 rounded-full border transition-colors cursor-pointer ${
+                          row.allowed
+                            ? 'border-green-600 bg-green-600 text-white hover:bg-green-700'
+                            : 'border-red-300 bg-red-50 text-red-600 hover:bg-red-100'
+                        }`}
+                      >
+                        {row.allowed ? <Check size={14} strokeWidth={3} /> : <X size={14} strokeWidth={3} />}
+                      </button>
+                    </td>
 
                     {/* ─── Optional trailing columns ─────────── */}
                     {visible.action && (
@@ -668,9 +701,10 @@ export function AssessmentSectionTable({
                     {/* Delete — always on */}
                     <td className="px-1 py-1.5 text-center">
                       <button 
-                        onClick={() => deleteAssessmentRow(row.id)}
+                        onClick={() => deleteWithUndo(row.id)}
                         className="text-muted-foreground hover:text-danger hover:bg-danger/10 p-1 rounded-md transition-colors"
-                        title="Delete Row"
+                        title="Delete row (you can undo)"
+                        aria-label="Delete row"
                       >
                         <Trash2 size={13} />
                       </button>
@@ -682,13 +716,14 @@ export function AssessmentSectionTable({
                   row.imt23 && row.assessed > 0 && row.allowed ? (
                     <tr key={`imt23-${row.id}`} className="bg-primary/5 text-primary text-xs">
                       <td
-                        colSpan={totalCols - 4 - (visible.priceWithGst ? 1 : 0) - (visible.action ? 1 : 0) - (visible.remarks ? 1 : 0)}
+                        // Columns after Assessed: Dep, Net, [Price+GST], Allow, [Action], [Remarks], Delete.
+                        colSpan={totalCols - 5 - (visible.priceWithGst ? 1 : 0) - (visible.action ? 1 : 0) - (visible.remarks ? 1 : 0)}
                         className="px-2 py-1 text-right"
                       >
                         Less Imt 23
                       </td>
                       <td className="px-2 py-1 text-right tabular-nums">{formatCurrency(row.assessed / 2)}</td>
-                      <td colSpan={3 + (visible.priceWithGst ? 1 : 0) + (visible.action ? 1 : 0) + (visible.remarks ? 1 : 0)} />
+                      <td colSpan={4 + (visible.priceWithGst ? 1 : 0) + (visible.action ? 1 : 0) + (visible.remarks ? 1 : 0)} />
                     </tr>
                   ) : null,
                 ];

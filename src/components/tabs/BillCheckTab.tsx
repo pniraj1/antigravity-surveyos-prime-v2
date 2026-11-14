@@ -17,6 +17,7 @@ import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import { DocumentEvidenceViewer } from '@/components/evidence/DocumentEvidenceViewer';
 import { DocumentReviewSheet } from '@/components/documents/DocumentReviewSheet';
 import { useEstimateModePrompt } from '@/hooks/useEstimateModePrompt';
+import { useBillCheckPrintGate } from '@/hooks/useBillCheckPrintGate';
 
 import { BillCheckHeader } from './bill-check/BillCheckHeader';
 import { BillCheckGrid } from './bill-check/BillCheckGrid';
@@ -44,6 +45,7 @@ export function BillCheckTab() {
 
   const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview, smartFix, reviewProgress } = useAIExtraction();
   const { confirmBillMode, estimateModeDialog } = useEstimateModePrompt();
+  const { requestPrint, dialogs: printDialogs } = useBillCheckPrintGate();
 
   if (!currentClaim) return null;
 
@@ -114,6 +116,7 @@ export function BillCheckTab() {
   return (
     <div className="flex flex-col h-[calc(100dvh-140px)] p-3 lg:p-4 max-w-[1700px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
       {estimateModeDialog}
+      {printDialogs}
 
       {/* Lean Header Toolbar */}
       <BillCheckHeader
@@ -128,6 +131,7 @@ export function BillCheckTab() {
         isInvoiceVerified={isInvoiceVerified}
         onFileUpload={handleFileUpload}
         onPhoneFile={processBillFile}
+        onPrint={requestPrint}
       />
 
       {/* Split Workspace */}

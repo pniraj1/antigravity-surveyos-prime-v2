@@ -7,6 +7,7 @@ import { SaveProgressButton } from '@/components/sync/SaveProgressButton';
 import { UsePhoneFiles } from '@/components/documents/UsePhoneFiles';
 import { ProviderToggle, DocModeToggle, ModelSelector, ProviderHealthBadge } from '@/components/ai/AIControls';
 import type { DocType } from '@/types/documents';
+import { PrintMenu } from '@/components/tabs/report/PrintMenu';
 
 const INVOICE_TYPES: readonly DocType[] = ['invoice'];
 
@@ -28,6 +29,8 @@ interface Props {
   isInvoiceVerified?: boolean;
   onFileUpload?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onPhoneFile?: (file: File) => void;
+  /** Runs the bill-check print gate (invoice, flags, policy) for that format. */
+  onPrint?: (format: 'standard' | 'uiic') => void;
 }
 
 export function BillCheckHeader({
@@ -41,6 +44,7 @@ export function BillCheckHeader({
   isInvoiceVerified = false,
   onFileUpload = () => {},
   onPhoneFile = () => {},
+  onPrint = () => {},
 }: Props) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2.5 mb-2.5 shrink-0 bg-card border border-border px-3 py-2 rounded-xl shadow-xs">
@@ -139,6 +143,13 @@ export function BillCheckHeader({
           </Button>
 
           <SaveProgressButton className="h-8 px-2.5 text-xs" />
+          <PrintMenu
+            disabled={isProcessing}
+            options={[
+              { label: 'Bill check (standard)', onSelect: () => onPrint('standard') },
+              { label: 'Bill check (UIIC format)', onSelect: () => onPrint('uiic') },
+            ]}
+          />
         </div>
       </div>
     </div>

@@ -44,7 +44,9 @@ export function AssessmentSummary() {
   ].filter((s) => s.est > 0 || s.assessed > 0);
 
   return (
-    <Card className="border border-border shadow-sm sticky top-6 bg-white overflow-hidden">
+    // Scrolls inside its own column; the TOTAL LIABILITY block sticks to its bottom.
+    <Card className="border border-border shadow-sm bg-white max-h-full overflow-y-auto">
+
       <CardHeader className="bg-[var(--color-neutral-50)] border-b border-[var(--color-neutral-200)] pb-4">
         <CardTitle className="text-sm font-medium text-foreground uppercase tracking-widest">Financial summary</CardTitle>
       </CardHeader>
@@ -205,7 +207,7 @@ export function AssessmentSummary() {
           </div>
         </div>
 
-        <div className="p-6 bg-white relative">
+        <div className="p-6 bg-white sticky bottom-0 z-10 shadow-[0_-6px_16px_rgba(13,27,42,0.06)]">
           <div className="absolute top-0 left-0 w-full h-[2px] bg-[var(--color-neutral-900)]"></div>
           {summary.towingCharges > 0 && (
             <div className="flex justify-between items-center text-xs text-muted-foreground pb-2">

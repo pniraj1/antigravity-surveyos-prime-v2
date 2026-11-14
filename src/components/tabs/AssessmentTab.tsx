@@ -27,11 +27,15 @@ import { saveDocuments } from '@/lib/documents/sink';
 import { UsePhoneFiles } from '@/components/documents/UsePhoneFiles';
 import type { ClaimDocument, DocType } from '@/types/documents';
 import { isOnDrive } from '@/lib/scan-import/phone-files';
+import { usePrintGate } from '@/hooks/usePrintGate';
+import { PrintMenu } from '@/components/tabs/report/PrintMenu';
+import { triggerStandardPrint } from '@/lib/reports/standard-report-builder';
+import { triggerUIICFinalPrint } from '@/lib/reports/uiic-final-builder';
 
 const ESTIMATE_TYPES: readonly DocType[] = ['estimate', 'supplementaryEstimate'];
 
 export function AssessmentTab() {
-  const { currentClaim, setDepreciationType } = useClaimStore();
+  const { currentClaim, setPolicyCheck } = useClaimStore();
   const [showEvidence, setShowEvidence] = useState(false);
   const [showSummary, setShowSummary] = useState(true);
   const [fixOpen, setFixOpen] = useState(false);
@@ -41,6 +45,9 @@ export function AssessmentTab() {
   const { confirmEstimateMode, estimateModeDialog } = useEstimateModePrompt();
   const { profile } = useProfileStore();
   const { confirmSaveToCloud } = useSaveToCloudPrompt();
+  const { gate, gateDialog } = usePrintGate();
+  // Read at click time: the gate's dialog may have just saved the policy answers.
+  const latestClaim = () => useClaimStore.getState().currentClaim!;
 
   // Everything that happens once the surveyor has decided which file/pages go
   // to the AI: evidence blob, extraction, optional Drive upload.
@@ -100,6 +107,7 @@ export function AssessmentTab() {
   return (
     <div className="flex flex-col h-[calc(100dvh-140px)] p-3 lg:p-4 max-w-[1700px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
       {estimateModeDialog}
+      {gateDialog}
       {reviewSheet && (
         <DocumentReviewSheet
           open
@@ -125,7 +133,8 @@ export function AssessmentTab() {
             <select
               id="dep-type"
               value={currentClaim.depreciationType}
-              onChange={(e) => setDepreciationType(e.target.value as any)}
+              // Through the policy answer, so the dropdown and Policy Check never disagree.
+              onChange={(e) => setPolicyCheck({ nilDep: e.target.value === 'nil' ? 'yes' : 'no' })}
               className="h-6 rounded bg-background px-1.5 text-xs font-medium text-primary border border-input focus:ring-1 focus:ring-primary cursor-pointer"
             >
               <option value="standard">Standard (Age Based)</option>
@@ -133,7 +142,7 @@ export function AssessmentTab() {
             </select>
           </div>
 
-          <PolicyCheckStrip />
+          <PolicyCheckStrip autoOpen />
         </div>
 
         {/* Right side: AI controls & Action buttons */}
@@ -193,6 +202,14 @@ export function AssessmentTab() {
             </Button>
 
             <SaveProgressButton className="h-8 px-2.5 text-xs" />
+            {/* Same checks as Report Center: estimate floor, policy check, UIIC repair dates. */}
+            <PrintMenu
+              disabled={isProcessing}
+              options={[
+                { label: 'Final survey report', onSelect: () => gate('final', () => triggerStandardPrint(latestClaim(), profile)) },
+                { label: 'UIIC final report', onSelect: () => gate('uiic-final', () => triggerUIICFinalPrint(latestClaim(), profile)) },
+              ]}
+            />
           </div>
         </div>
       </div>
@@ -201,20 +218,20 @@ export function AssessmentTab() {
         <PanelGroup orientation="horizontal">
           {/* Main Assessment Content */}
           <Panel defaultSize={showEvidence ? 60 : 100} minSize={30}>
-            <div className="h-full overflow-y-auto p-4">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                <div className={showSummary ? 'lg:col-span-8 xl:col-span-9' : 'lg:col-span-12'}>
-                  <AssessmentGrid />
+            {/*
+              Grid and summary each scroll on their own, at full height. The grid's
+              rows scroll inside the card (see AssessmentGrid), so its toolbar and
+              column headings stay in view however long the estimate is.
+            */}
+            <div className="h-full flex gap-4 p-4">
+              <div className="flex-1 min-w-0 h-full">
+                <AssessmentGrid footer={<div className="mt-8 pb-8"><TotalLossForm /></div>} />
+              </div>
+              {showSummary && (
+                <div className="w-[300px] xl:w-[340px] shrink-0 h-full">
+                  <AssessmentSummary />
                 </div>
-                {showSummary && (
-                  <div className="lg:col-span-4 xl:col-span-3">
-                    <AssessmentSummary />
-                  </div>
-                )}
-              </div>
-              <div className="mt-8 pb-8">
-                <TotalLossForm />
-              </div>
+              )}
             </div>
           </Panel>
 

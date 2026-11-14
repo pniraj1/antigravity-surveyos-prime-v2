@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { PolicyCheckCardView } from '../PolicyCheckCard';
-import { PolicyCheckStripView } from '../PolicyCheckStrip';
+import { PolicyCheckStripView, PolicyDialogFooter } from '../PolicyCheckStrip';
 import { createBlankClaim } from '@/types/claim';
 import type { ClaimData, PolicyCheck } from '@/types/claim';
 
@@ -32,6 +32,23 @@ describe('PolicyCheckCard', () => {
 
   it('lists warnings', () => {
     expect(card({ consumables: 'no' })).toContain('Consumables not payable');
+  });
+});
+
+describe('PolicyDialogFooter', () => {
+  const footer = (complete: boolean) =>
+    renderToStaticMarkup(<PolicyDialogFooter complete={complete} onDone={noop} onLater={noop} />);
+
+  it('blocks Done and offers Answer later while the check is unfinished', () => {
+    const html = footer(false);
+    expect(html).toContain('Answer later');
+    expect(html).toMatch(/<button[^>]* disabled=""[^>]*>Done/);
+  });
+
+  it('enables Done and drops Answer later once all four are answered', () => {
+    const html = footer(true);
+    expect(html).not.toContain('Answer later');
+    expect(html).not.toMatch(/<button[^>]* disabled=""[^>]*>Done/);
   });
 });
 

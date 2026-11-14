@@ -1,3 +1,16 @@
+## In progress: Assessment / Bill Check usability (2026-11-14, Claude Code)
+  - Batch 1 built on `main`, not committed, not deployed: compulsory policy pop-up, ✓/✕ Allow column on the right, IMT 23 by policy, Undo delete, sticky headings, pinned total, Print on both tabs, Bill Check delete warning. See Changelog 2026-11-14.
+  - Owner said: keep Paint / Part / Labour Row buttons; all rows allowed by default (already true).
+  - Next batch (scored in the audit): one invoice-difference figure; bulk Allow/Disallow and bulk bill status; "Pending only" filter. Later: duplicate tag, text sizes, export menu, AI menu, Total Loss on demand, wording.
+  - Open: app font bug (`--font-sans` self-reference → Times New Roman), owner to decide.
+  - Prime <-> Scan coupling: none.
+
+## Done: Comprehensive Codebase Audit & Authoritative Architecture Map (2026-11-14, Antigravity)
+  - Conducted line-by-line inspection of all 807 production source files (116,108 lines of code in `src/`, `extension/`, and `functions/`) across prompts, deterministic DMS parsers, report builders, IRDAI calculations, storage isolation, and Chrome portal-fill extension.
+  - Published permanent authoritative map to `SurveyOS-Antigravity-Prime-V2-KnowledgeBase/Architecture/Codebase_Architecture_Map.md` and created in-app artifacts `surveyos_full_codebase_deep_dive.md` and `codebase_architecture_map.md`.
+  - Tests verified: 329 files, 2,945 tests, 100% green; `tsc --noEmit` clean.
+  - Prime <-> Scan coupling: none.
+
 ## Done: Parser reads BharatBenz DMS invoices; blank pages skipped (2026-11-14, Claude Code)
   - Prabal Motors 13-page invoice now 0 row calls (was 13). See Changelog 2026-11-14. Committed 067d390d, deployed 2026-11-14 (motorsurveyos-in + surveyos.in, live chunk checked); not tried in the live app.
   - Next with owner: learning loop (parser-miss log + consented sample folder) and its DPDP handling; whether to AI-fill blanked part no./HSN.

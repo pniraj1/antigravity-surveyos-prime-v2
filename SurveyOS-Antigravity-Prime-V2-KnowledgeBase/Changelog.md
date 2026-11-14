@@ -1,3 +1,20 @@
+## 2026-11-14 (Claude Code) — Assessment / Bill Check usability batch 1 (not committed, not deployed)
+- feat(policy): the policy check pops up by itself when the Assessment tab opens and it is unfinished. Outside click / Escape do not close it; Done stays off until all four are answered; "Answer later" closes it, printing stays blocked as before and it returns on the next visit (`PolicyCheckStrip autoOpen`).
+- fix(policy): the toolbar Depreciation dropdown now sets the Nil Dep answer (`setPolicyCheck`), so the two can no longer disagree.
+- feat(assessment): Allowed tick box replaced by a round ✓ / ✕ icon button in an "Allow" column between Price+GST and Action, so it cannot be mistaken for the square Select box. Select box grey (was red), aria-labels added. Disallowed rows: struck-through name, readable text (was 40 % opacity).
+- feat(assessment): IMT 23 column hidden when the policy check says No / N.A., unless a row is ticked (`imt23ColumnShown`). Row delete is immediate with a 6 s Undo that puts the row back in place (`insertRowAt`).
+- feat(assessment): one scroll box for the grid rows: column headings stick, one sideways scrollbar, card toolbar always visible. Summary scrolls in its own column with TOTAL LIABILITY pinned at its bottom. Grid toolbar buttons wrap instead of squashing.
+- feat(print): Print ▾ in the Assessment toolbar (Final / UIIC final, through `usePrintGate`) and the Bill Check toolbar (standard / UIIC, through `useBillCheckPrintGate`). New `components/tabs/report/PrintMenu.tsx`.
+- fix(bill-check): every delete ("Delete Selected", row trash, "Remove 0 Amount") now says it also removes the item from the Assessment and the Final Survey Report, and points to "Not in Bill". Help text no longer mentions a "Partial" status; the Ref Item No. box is plain unless the match is doubtful or missing.
+- Audit: `docs/research/2026-11-14-assessment-billcheck-ux-audit.md`.
+- verification: components + hooks 64 files / 435 tests, tsc clean on touched files. Checked in sandbox (`localhost:3000/?sandbox=true`): pop-up and its lock, sticky headings after scrolling, ✓/✕ toggle, IMT 23 hide/show, Undo order, IMT 23 sub-row alignment after the column move, both Print menus reach their gates. Prime ↔ Scan coupling: none (no doc types, labels, folder layout or manifest touched).
+- Found, not fixed: `globals.css` maps `--font-sans` to itself, so the loaded Inter font is never used and the app renders in Times New Roman.
+
+## 2026-11-14 (Antigravity) — Full Codebase Deep Dive & Authoritative Architecture Map
+- feat(docs): conducted line-by-line inspection of all 807 production source files (116,108 lines of code in `src/`, `extension/`, and `functions/`) across prompts, deterministic DMS parsers, report builders, IRDAI calculations, storage isolation, and Chrome portal-fill extension.
+- feat(architecture): authored permanent comprehensive architectural map in `SurveyOS-Antigravity-Prime-V2-KnowledgeBase/Architecture/Codebase_Architecture_Map.md` featuring 4 core Mermaid diagrams: Ecosystem Topology, Subsystems Interconnections, End-to-End Claim Lifecycle Data Flow, and Developer Change Impact Decision Tree.
+- verification: 329 test suites passing (2,945 tests, 100% green), `tsc --noEmit` clean. Prime ↔ Scan coupling: none.
+
 ## 2026-11-14 (Claude Code) — Parser also runs with the PDF mode switch on Text (deployed 2026-11-14)
 - fix(parser): any PDF mode other than Auto switched the parser off, so a surveyor on Text (described as "best for digital PDFs") or Vision got 12 page-by-page AI calls on the Prabal invoice. `parserEligible` now only stops for Vision; with Text the parser goes first and declines on a page with no text.
 - verification: real PDF through `extractDocument` with AI mocked: Text → parser, 1 call; Vision → AI, 12 calls. AI tests 56 files / 593 tests, tsc clean. Found from the owner's live run on Ollama. Prime ↔ Scan coupling: none.

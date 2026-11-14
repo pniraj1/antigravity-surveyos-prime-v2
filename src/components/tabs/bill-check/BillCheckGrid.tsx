@@ -27,6 +27,10 @@ import { BillCheckFlagMark, BillCheckFlagDetail, BillCheckMatchDetail } from './
 import { useColumnResize } from '@/hooks/useColumnResize';
 import { overBilledRows } from '@/lib/calculations/estimate-floor';
 
+/** Bill Check rows are the assessment's rows: deleting here deletes there too. */
+const ALSO_REMOVES =
+  'This also removes it from the Assessment tab and the Final Survey Report. It cannot be undone.';
+
 interface Props {
   allRows: AssessmentRow[];
   allowedRows: AssessmentRow[];
@@ -186,12 +190,12 @@ export function BillCheckGrid({
   };
   const handleBulkDelete = () => {
     if (selected.size === 0) return;
-    if (!confirm(`Delete ${selected.size} selected item${selected.size === 1 ? '' : 's'}? This cannot be undone.`)) return;
+    if (!confirm(`Delete ${selected.size} selected item${selected.size === 1 ? '' : 's'}?\n\n${ALSO_REMOVES}\n\nIf the workshop simply did not bill it, set it to "Not in Bill" instead.`)) return;
     deleteAssessmentRows(Array.from(selected));
     setSelected(new Set());
   };
   const handleDeleteRow = (id: string) => {
-    if (!confirm('Delete this row? This cannot be undone.')) return;
+    if (!confirm(`Delete this row?\n\n${ALSO_REMOVES}\n\nIf the workshop simply did not bill it, set it to "Not in Bill" instead.`)) return;
     deleteAssessmentRow(id);
     setSelected(prev => { const n = new Set(prev); n.delete(id); return n; });
   };
@@ -343,7 +347,7 @@ export function BillCheckGrid({
             Step 2 — Verify Each Item ({allRows.length} items · {allowedRows.length} allowed)
           </div>
           <div className="text-xs mt-0.5 text-muted-foreground">
-            Mark each item as In Bill / Not In Bill / Partial. Disallowed items are shown greyed out — flagged if workshop billed them anyway.
+            Mark each item as In Bill or Not in Bill. Disallowed items are shown greyed out — flagged if workshop billed them anyway.
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -351,7 +355,7 @@ export function BillCheckGrid({
             onClick={() => {
               const zeros = allRows.filter(r => r.assessed === 0 && r.estimated === 0);
               if (zeros.length === 0) { alert('No zero amount parts found.'); return; }
-              if (confirm(`Remove ${zeros.length} zero amount parts? This cannot be undone.`)) {
+              if (confirm(`Remove ${zeros.length} zero amount parts?\n\n${ALSO_REMOVES}`)) {
                 deleteAssessmentRows(zeros.map(r => r.id));
               }
             }}
@@ -729,7 +733,12 @@ export function BillCheckGrid({
                           refStatus: 'manual',
                         });
                       }}
-                      className="px-1.5 py-1 rounded text-xs text-center border outline-none w-full border-border font-semibold italic text-red-600 bg-red-50/30"
+                      // Red only when the match is doubtful or missing: a normal ref is plain.
+                      className={`px-1.5 py-1 rounded text-xs text-center border outline-none w-full font-medium ${
+                        row.refStatus === 'ambiguous' || (row.allowed && !row.refSrNo)
+                          ? 'border-amber-400 text-amber-800 bg-amber-50'
+                          : 'border-border text-foreground bg-background'
+                      }`}
                       title={row.refStatus === 'ambiguous' ? 'Ambiguous match — please verify' : 'Reference serial number'}
                     />
                     {row.refStatus === 'ambiguous' && (

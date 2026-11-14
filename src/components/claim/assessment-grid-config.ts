@@ -82,3 +82,24 @@ export function loadVisibility(): Record<OptionalColumn, boolean> {
 export function saveVisibility(v: Record<OptionalColumn, boolean>) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch { /* ignore */ }
 }
+
+/**
+ * The IMT 23 column only earns its space when the policy carries IMT 23. Hidden
+ * when the surveyor answered No / N.A., unless a row is already ticked (a tick
+ * must never vanish). Unanswered: the column picker decides, as before.
+ */
+export function imt23ColumnShown(
+  pickerOn: boolean,
+  policyImt23: 'yes' | 'no' | 'na' | undefined,
+  rows: ReadonlyArray<{ imt23?: boolean }>,
+): boolean {
+  if (rows.some(r => r.imt23)) return true;
+  if (policyImt23 === 'no' || policyImt23 === 'na') return false;
+  return pickerOn;
+}
+
+/** New array with `item` at `index` (clamped). Used to undo a row delete. */
+export function insertRowAt<T>(list: readonly T[], item: T, index: number): T[] {
+  const i = Math.min(Math.max(index, 0), list.length);
+  return [...list.slice(0, i), item, ...list.slice(i)];
+}
