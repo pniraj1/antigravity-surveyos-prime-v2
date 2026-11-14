@@ -14,7 +14,7 @@
 - fix(bill-check): every delete ("Delete Selected", row trash, "Remove 0 Amount") now says it also removes the item from the Assessment and the Final Survey Report, and points to "Not in Bill". Help text no longer mentions a "Partial" status; the Ref Item No. box is plain unless the match is doubtful or missing.
 - Audit: `docs/research/2026-11-14-assessment-billcheck-ux-audit.md`.
 - verification: components + hooks 64 files / 435 tests, tsc clean on touched files. Checked in sandbox (`localhost:3000/?sandbox=true`): pop-up and its lock, sticky headings after scrolling, ✓/✕ toggle, IMT 23 hide/show, Undo order, IMT 23 sub-row alignment after the column move, both Print menus reach their gates. Prime ↔ Scan coupling: none (no doc types, labels, folder layout or manifest touched).
-- Found, not fixed: `globals.css` maps `--font-sans` to itself, so the loaded Inter font is never used and the app renders in Times New Roman.
+- fix(ui): `globals.css` mapped `--font-sans` to itself, so the loaded Inter font was never used and the app rendered in Times New Roman. Now `var(--font-inter)`; mono uses the system stack (Geist Mono was never loaded). Committed 4ea5512c, deployed 2026-11-14, live CSS checked on both sites.
 
 ## 2026-11-14 (Antigravity) — Full Codebase Deep Dive & Authoritative Architecture Map
 - feat(docs): conducted line-by-line inspection of all 807 production source files (116,108 lines of code in `src/`, `extension/`, and `functions/`) across prompts, deterministic DMS parsers, report builders, IRDAI calculations, storage isolation, and Chrome portal-fill extension.

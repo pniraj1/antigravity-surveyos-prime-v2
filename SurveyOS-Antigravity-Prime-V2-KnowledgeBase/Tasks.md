@@ -2,7 +2,7 @@
   - Batch 1 committed e308ab05 and deployed 2026-11-14 (motorsurveyos-in + surveyos.in, live chunks checked; deploy also carried 7d97a381 parser layout learning, owner approved): compulsory policy pop-up, ✓/✕ Allow column on the right, IMT 23 by policy, Undo delete, sticky headings, pinned total, Print on both tabs, Bill Check delete warning. See Changelog 2026-11-14.
   - Owner said: keep Paint / Part / Labour Row buttons; all rows allowed by default (already true).
   - Next batch (scored in the audit): one invoice-difference figure; bulk Allow/Disallow and bulk bill status; "Pending only" filter. Later: duplicate tag, text sizes, export menu, AI menu, Total Loss on demand, wording.
-  - Open: app font bug (`--font-sans` self-reference → Times New Roman), owner to decide.
+  - Done: app font fixed (Inter), 4ea5512c, deployed 2026-11-14.
   - Prime <-> Scan coupling: none.
 
 ## Done: Comprehensive Codebase Audit & Authoritative Architecture Map (2026-11-14, Antigravity)
