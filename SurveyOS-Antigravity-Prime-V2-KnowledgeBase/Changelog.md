@@ -1,4 +1,4 @@
-## 2026-11-14 (Claude Code) — Assessment / Bill Check usability batch 1 (not committed, not deployed)
+## 2026-11-14 (Claude Code) — Assessment / Bill Check usability batch 1 (deployed 2026-11-14)
 - feat(policy): the policy check pops up by itself when the Assessment tab opens and it is unfinished. Outside click / Escape do not close it; Done stays off until all four are answered; "Answer later" closes it, printing stays blocked as before and it returns on the next visit (`PolicyCheckStrip autoOpen`).
 - fix(policy): the toolbar Depreciation dropdown now sets the Nil Dep answer (`setPolicyCheck`), so the two can no longer disagree.
 - feat(assessment): Allowed tick box replaced by a round ✓ / ✕ icon button in an "Allow" column between Price+GST and Action, so it cannot be mistaken for the square Select box. Select box grey (was red), aria-labels added. Disallowed rows: struck-through name, readable text (was 40 % opacity).
