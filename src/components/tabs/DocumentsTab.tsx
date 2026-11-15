@@ -40,7 +40,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 
 
 // ─── Document Slot Definitions ──────────────────────────────────────────────
-const DOC_GROUPS = [
+export const DOC_GROUPS = [
   {
     title: 'Core Documents',
     description: 'Mandatory for every claim',
@@ -50,13 +50,6 @@ const DOC_GROUPS = [
       { id: 'policy',  label: 'Policy Schedule',   subLabel: 'Insurance Policy',            icon: Shield,       color: '#D4AF37', bg: 'rgba(212,175,55,0.08)', accept: 'image/*,application/pdf' },
       { id: 'claim',   label: 'Claim Form',        subLabel: 'Intimation / Claim Form',     icon: FileCheck,    color: '#4A4E69', bg: 'rgba(74,78,105,0.07)',  accept: 'image/*,application/pdf' },
       { id: 'fir',     label: 'Police FIR',        subLabel: 'Spot Panchnama / FIR',       icon: ScrollText,   color: '#0D1B2A', bg: 'rgba(13,27,42,0.06)',   accept: 'image/*,application/pdf' },
-    ],
-  },
-  {
-    title: 'Workshop',
-    description: 'Final garage bill / workshop invoice',
-    docs: [
-      { id: 'final-bill', label: 'Final Garage Bill', subLabel: 'Final Workshop Invoice',     icon: Receipt,      color: '#0284c7', bg: 'rgba(2,132,199,0.07)',  accept: 'image/*,application/pdf' },
     ],
   },
   {
