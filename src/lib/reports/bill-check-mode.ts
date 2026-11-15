@@ -30,6 +30,17 @@ export function selfBillUpdates(rows: AssessmentRow[]): RowUpdate[] {
   return out;
 }
 
+/** Rows setBillCheckUpload(kind) would change (refs cleared, billed figures replaced or cleared). */
+export function rowsLostOnSwitch(claim: ClaimData, kind: 'final-bill' | 'estimate'): number {
+  const fromBill = isFromBill(claim);
+  if (kind === 'estimate' ? fromBill : !fromBill) return 0;
+  const selfIds = new Set(kind === 'estimate' ? selfBillUpdates(claim.assessmentRows).map((u) => u.id) : []);
+  return claim.assessmentRows.filter((r) =>
+    r.refSrNo != null
+    || (kind === 'estimate' ? selfIds.has(r.id) : r.allowed && (r.billedTaxable != null || r.billedAmount != null)),
+  ).length;
+}
+
 /** Bill no. / date / total from the Estimate-tab read, only where the field is empty. */
 export function billHeaderFromEstimate(claim: ClaimData): Partial<BillCheckDetails> {
   const est = claim.extractedData?.estimate;

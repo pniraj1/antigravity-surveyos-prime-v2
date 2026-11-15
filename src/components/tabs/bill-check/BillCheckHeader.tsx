@@ -107,6 +107,7 @@ export function BillCheckHeader({
               variant={upload === c.kind ? 'secondary' : 'outline'}
               size="sm"
               aria-pressed={upload === c.kind}
+              disabled={isProcessing}
               onClick={() => upload !== c.kind && onUploadChange(c.kind)}
               className={`h-8 px-2.5 text-xs ${upload === c.kind ? 'bg-primary/20 text-primary border-primary/30' : ''}`}
             >

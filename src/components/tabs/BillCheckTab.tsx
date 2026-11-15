@@ -22,7 +22,7 @@ import { useBillCheckPrintGate } from '@/hooks/useBillCheckPrintGate';
 
 import { BillCheckHeader } from './bill-check/BillCheckHeader';
 import { BillCheckGrid } from './bill-check/BillCheckGrid';
-import { isFromBill } from '@/lib/reports/bill-check-mode';
+import { isFromBill, rowsLostOnSwitch } from '@/lib/reports/bill-check-mode';
 import { ExtraBillItemsPanel } from './bill-check/ExtraBillItemsPanel';
 import { BillCheckSummaryPanel } from './bill-check/BillCheckSummaryPanel';
 import { BillCheckAttentionBanner } from './bill-check/BillCheckAttentionBanner';
@@ -122,15 +122,11 @@ export function BillCheckTab() {
   };
 
   const handleUploadChange = (kind: 'final-bill' | 'estimate') => {
-    const losing = kind === 'final-bill'
-      ? isFromBill(currentClaim)
-        ? allowedRows.filter(r => r.refSrNo != null || r.billedTaxable != null || r.billedAmount != null).length
-        : 0
-      : isFromBill(currentClaim) ? 0 : allRows.filter(r => r.refSrNo != null).length;
-    if (losing > 0) {
-      const ok = kind === 'final-bill'
-        ? window.confirm(`Switch to Final bill? The estimate numbers and billed amounts on ${losing} items will be cleared, because a final bill will now be read for them.`)
-        : window.confirm(`Switch to Estimate? The bill item numbers on ${losing} items will be cleared, because their numbers will now come from the estimate.`);
+    const losing = rowsLostOnSwitch(currentClaim, kind);
+    if (losing > 0 || extraBillItems.length > 0) {
+      const ok = window.confirm(kind === 'final-bill'
+        ? `Switch to Final bill? The estimate numbers and billed amounts on ${losing} items will be cleared, because a final bill will now be read for them.`
+        : `Switch to Estimate? The bill item numbers and billed amounts on ${losing} items will be replaced by the bill's own figures, and the bill lines read so far will be cleared.`);
       if (!ok) return;
     }
     setBillCheckUpload(kind);

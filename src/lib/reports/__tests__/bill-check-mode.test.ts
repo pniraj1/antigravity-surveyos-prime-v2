@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { billHeaderFromEstimate, isFromBill, selfBilled, selfBillUpdates } from '../bill-check-mode';
+import { billHeaderFromEstimate, isFromBill, rowsLostOnSwitch, selfBilled, selfBillUpdates } from '../bill-check-mode';
 import type { ClaimData } from '@/types';
 import type { AssessmentRow } from '@/types/assessment';
 
@@ -42,4 +42,20 @@ describe('bill-check-mode', () => {
       extractedData: { estimate: { bill_number: 'INV-9', estimate_date: '2026-06-03', gross_amount: 250000 } } } as unknown as ClaimData;
     expect(billHeaderFromEstimate(c)).toEqual({ billDate: '2026-06-03', billTotal: 250000 });
   });
+});
+
+describe('rowsLostOnSwitch', () => {
+  const claim = (rows: AssessmentRow[], baseDocument: 'estimate' | 'final-bill' = 'estimate') =>
+    ({ assessmentRows: rows, billCheck: { baseDocument } }) as unknown as ClaimData;
+
+  it('to estimate: a real bill figure with no ref counts', () =>
+    expect(rowsLostOnSwitch(claim([row({ estimated: 5000, billedTaxable: 4200, billedAmount: 4956 })]), 'estimate')).toBe(1));
+  it('to estimate: a disallowed row holding a ref counts, once', () =>
+    expect(rowsLostOnSwitch(claim([row({ allowed: false, refSrNo: 3 }), row({ refSrNo: 2, billedTaxable: 1 })]), 'estimate')).toBe(2));
+  it('to estimate from a from-bill claim is 0', () =>
+    expect(rowsLostOnSwitch(claim([row({ refSrNo: 1, billedTaxable: 1 })], 'final-bill'), 'estimate')).toBe(0));
+  it('to final-bill from a from-bill claim counts refs and billed figures', () =>
+    expect(rowsLostOnSwitch(claim([row({ billedAmount: 5 }), row({ allowed: false, refSrNo: 1 }), row()], 'final-bill'), 'final-bill')).toBe(2));
+  it('to final-bill from a normal claim is 0', () =>
+    expect(rowsLostOnSwitch(claim([row({ refSrNo: 1 })]), 'final-bill')).toBe(0));
 });
