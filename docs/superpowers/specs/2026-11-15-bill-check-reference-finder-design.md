@@ -65,7 +65,7 @@ Conclusion: reading is not the problem. **Matching rules, data safety and review
   - every allowed row counts as **in bill** at its own figures (the rows *are* the bill), so the print gate's "resolve pending" never marks them No Bill;
   - bill no., date and total come from the header of the document the assessment was built from;
   - estimate uploads fill estimate refs only.
-- **How the mode is set (proposed):** the first upload into an Estimate slot in Bill Check switches the claim to from-bill mode (`billCheck.baseDocument = 'final-bill'`, a field that exists today but nothing sets). Uploading a final bill sets normal mode. No extra question for the surveyor. A small label in the Bill Check header shows the mode and lets the surveyor switch it.
+- **How the mode is set (decided 2026-11-15):** one choice on the Bill Check upload panel, "This upload is: Final bill / Estimate", saved per claim as `billCheck.baseDocument` (`'final-bill'` = assessment built from the bill, so uploads are estimates; unset or `'estimate'` = normal). Default: Final bill. Switching to Estimate marks every allowed row as billed at its own figures and fills an empty bill no. / date / total from the document read in the Estimate tab.
 
 ### D1. Part number decides (matching, `src/lib/reports/bill-match-score.ts`, `matchBillItemsToRows` in `src/stores/slices/aiDataSlice.ts`)
 Each pair gets one of four levels:
@@ -93,7 +93,15 @@ Each pair gets one of four levels:
 - Ref No. prints only when `refStatus` is `clean` (Certain) or `manual` (surveyor set or accepted).
 - Anything else prints "—".
 
-### D4. Labour codes
+### D4. Labour codes (owner 2026-11-15: codes differ by brand; no rule from one brand)
+**Decided:** no 6-character rule. A labour code printed identically on both documents is already matched by D1 (exact part number). Labour without codes is matched by exact wording (D4a). The text below is kept for history.
+
+### D4a. Labour and paint by exact wording (Plan 2)
+- A labour or paint row with no part number and a line of the same section with no part number match when their words are identical, ignoring case, spaces and punctuation ("FRONT BUMPER R&R" = "front bumper r & r").
+- Repeats follow D2. Different wording stays blank: paste, Link, or the AI suggestion step (D11).
+- Parts rows are not matched by wording: two different parts often share a name ("BOLT").
+
+### D4 (history)
 - The invoice parser keeps the "Labor Code" column (BharatBenz prints "PAID 14202103") as the line's `part_number`.
 - **Labour codes match on their first 6 characters** at the Certain level. **Open:** this has only been seen on BharatBenz. Check one other brand's estimate and invoice before enabling; until then, treat it as Suggested.
 
@@ -105,7 +113,10 @@ Each pair gets one of four levels:
   - A ref with no `refStatus` becomes `manual`, so it keeps printing.
 - **"Leave blank"** is saved per row and per document (`refStatus: 'blank'`, or the per-document equivalent). Later uploads don't suggest that row again. A later **Certain** (exact part number) match still fills it, because it carries proof. Rows left blank move to a collapsed "Left blank (k)" group at the end of Tab 1, so they can be reopened.
 
-### D6. Comparison slots (Bill Check upload panel)
+### D6. Comparison slots — superseded 2026-11-15 (owner: generally there is no Estimate 2)
+**Decided (Option A):** no slots. The upload panel's one choice (D0) says whether the upload is the final bill or the estimate. An estimate upload fills only Ref No. (`refSrNo`); it never writes billed amounts, bill status, bill no., bill date or Bill Total, and Link/Unlink on its lines touch only the ref. A rare second estimate's refs are pasted or typed ("E2-43", D10). The text below is kept for history.
+
+### D6 (history)
 - Three slots: **Final bill**, **Estimate 1**, **Estimate 2**. The surveyor picks the slot; an estimate file is never treated as a bill.
 - An **estimate** slot fills only the estimate ref for that slot (`refE1`, `refE2`). It never writes billed amounts, bill status, bill no., bill date or Bill Total.
 - The **final bill** slot keeps today's behaviour, under D1's rules.
@@ -152,6 +163,14 @@ Why: the owner typed every estimate number by hand from the sheet Gemini produce
 - **The check:** a ref made only of serials is checked against every line Bill Check has read: the stored read (`extractedData['final-bill']`), the unmatched lines, and the lines already matched to rows. A serial not on that document, or a line whose part number differs from the row's (both present, compared with `normPart`), marks the row `ambiguous` instead: it does not print and blocks the print gate until checked. Refs with letters (E1-…) are not checked.
 - **After the paste:** one message says how many were filled, flagged and skipped, with an Undo that restores those rows' previous Ref No. and status.
 - No AI call, no new storage.
+
+### D11. AI suggestions for rows still blank (sandbox first; built only if needed)
+Trimmed with the owner 2026-11-15.
+- **Gate:** after Plan 2, the owner counts blank allowed rows on 3 real claims. Usually under 5 → not built (the Plan 3 panel's ranked candidates suffice).
+- **Shape:** a button "Ask AI to suggest (N rows)" in the panel. One text call: the blank rows plus all unmatched lines of the same section, with short ids the code assigns; 3 few-shot examples (shorthand match, left/right → none, not listed → none); output `{ rowId: lineId | "none" }`.
+- **Code check:** id exists, same section, no left/right clash, no line picked twice; otherwise "none". A pick shows as "AI suggests" on that row; the surveyor taps Accept.
+- **Not built:** second model / self-consistency, reason field, learned wording aliases, bulk accept, automatic call. Each returns only if the bench shows the need.
+- **Bench pass bar:** 5 runs each of a bare prompt and the final prompt on known answers; 0 wrong suggestions; ≥ 70 % of rows with a true match get it; runs agree. Reference: dair-ai prompt-engineering guide.
 
 ## Constraints
 - Free-tier BYOK: the design adds no AI calls. D8 adds a few output tokens per scanned row.
