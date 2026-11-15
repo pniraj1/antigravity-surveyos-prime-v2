@@ -49,7 +49,7 @@ export function BillCheckTab() {
 
   const [showEvidence, setShowEvidence] = useState(false);
   const [showSummary, setShowSummary] = useState(true);
-  const [reviewFile, setReviewFile] = useState<{ file: File; mode: 'replace' | 'continue' } | null>(null);
+  const [reviewFile, setReviewFile] = useState<{ file: File; mode: 'replace' | 'continue'; phone: boolean } | null>(null);
 
   const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview, smartFix, reviewProgress } = useAIExtraction();
   const { confirmBillMode, estimateModeDialog } = useEstimateModePrompt();
@@ -133,12 +133,17 @@ export function BillCheckTab() {
     uploadFileToDrive(currentClaim.id, `${docType}.${ext}`, file, label).catch(console.error);
   };
 
+  /** The one place extraction starts: file the upload (not phone files), then read it. */
+  const startBill = (file: File, mode: 'replace' | 'continue', phone: boolean) => {
+    if (!phone) void fileUpload(file);
+    triggerExtraction('final-bill', file, undefined, undefined, mode);
+  };
+
   const processBillFile = async (file: File, phone = true) => {
     const mode = await confirmBillMode(file.name, upload === 'estimate' ? 'estimate' : 'bill');
     if (!mode) return;
-    if (!phone) void fileUpload(file);
-    if (await needsReview([file])) setReviewFile({ file, mode });
-    else triggerExtraction('final-bill', file, undefined, undefined, mode);
+    if (await needsReview([file])) setReviewFile({ file, mode, phone });
+    else startBill(file, mode, phone);
   };
 
   const handleUploadChange = (kind: 'final-bill' | 'estimate') => {
@@ -279,9 +284,9 @@ export function BillCheckTab() {
           files={[reviewFile.file]}
           onCancel={() => setReviewFile(null)}
           onConfirm={(_all, forAI) => {
-            const { mode } = reviewFile;
+            const { mode, phone } = reviewFile;
             setReviewFile(null);
-            if (forAI[0]) triggerExtraction('final-bill', forAI[0], undefined, undefined, mode);
+            if (forAI[0]) startBill(forAI[0], mode, phone);
           }}
         />
       )}
