@@ -1,3 +1,9 @@
+## 2026-11-16 (Claude Code) — Bill Check grid: keyboard moves, Excel paste, sticky headings (deployed 2026-11-16)
+- feat(bill-check): Shift+arrows move between editable boxes like the Assessment tab (locked boxes skipped; never changes a value at the edges). Paste a column from Excel into GST %, Disposal %, Allowed, Dep %, Billed or Remarks: fills down in screen order, skips locked boxes, Indian-format numbers ("1,20,000", "₹1,200.00") read correctly, one toast with Undo. Allowed paste sets Bill Check's figure only (never `assessed`). Ref No. keeps its own paste.
+- feat(bill-check): the grid is one scroll box — column headings stick, the sideways scrollbar is always on screen (`maxHeight calc(100dvh - 240px)`, `scrollPaddingTop 44`).
+- plan `docs/superpowers/plans/2026-11-16-bill-check-grid-keys-paste.md`; pure logic `src/lib/reports/grid-fill.ts`. Subagent-driven (ruflo), opus final review (1 Critical + 3 Important fixed in one wave, re-review clean).
+- verification: tsc clean; suite 3127/3127 (Plan 2 Task 7 files stashed during build, restored). Live chunk checked on both sites. Not browser-tested by Claude; owner tests live. Not pushed. Prime ↔ Scan: none.
+
 ## 2026-11-16 (Claude Code) — Simplify + deploy Plans 2 and 3a (deployed 2026-11-16)
 - refactor: Assessment files the upload at once (8 s deferred filing and its gate removed; Undo now only flips the claim mode for the same claim and says to re-upload if filed under the wrong name). In claims made from the bill, Bill Check's Billed amount and Status are locked (they are the bill's own figures).
 - deploy: hosting to motorsurveyos-in + surveyos-v2-antigravity-in; live chunks checked on motorsurveyos-in.web.app and surveyos.in. Plan 2 Task 7 (prompt wording) kept OUT of the build (stashed during build, restored, still uncommitted). Owner tests on the live site; not browser-tested by Claude. Not pushed (31 commits ahead). Commit 3ef5c5b2.
