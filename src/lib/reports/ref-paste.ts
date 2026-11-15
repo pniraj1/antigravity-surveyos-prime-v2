@@ -4,6 +4,9 @@
  * The grid applies the result; nothing here touches the store.
  */
 
+import type { AssessmentRow } from '@/types/assessment';
+import { normPart } from './bill-match-score';
+
 export type RefPaste =
   | { kind: 'single' }                                        // no line break, no tab: let the input paste natively
   | { kind: 'column'; refs: string[] }                        // '' = leave that row unchanged
@@ -28,4 +31,67 @@ export function parseRefPaste(text: string): RefPaste {
     kind: 'keyed',
     pairs: body.filter(r => r[1] !== '').map(r => ({ srNo: Number(r[0]), ref: r[1] })),
   };
+}
+
+/** A line of the document read in Bill Check (buildBillItems output fits this shape). */
+export interface ReadLine { srNo?: number | string; partNumber?: string }
+export interface RowUpdate { id: string; updates: Partial<AssessmentRow> }
+export interface RefPastePlan {
+  apply: RowUpdate[];
+  undo: RowUpdate[];      // each touched row's previous refSrNo, refStatus, refMatch
+  filled: number;         // written as manual
+  flagged: number;        // written as ambiguous
+  notOnDocument: number;  // of flagged: a serial not on the stored document
+  skipped: number;        // pasted values that found no row
+}
+
+const SERIALS = /^\d+(\s*,\s*\d+)*$/;
+
+/** Why a pasted ref is doubtful against what Bill Check read, or null when it holds. */
+function doubt(row: AssessmentRow, ref: string, lines: ReadLine[] | null): 'missing' | 'part' | null {
+  if (!lines || !SERIALS.test(ref)) return null;
+  const rp = normPart(row.partNumber);
+  for (const s of ref.split(/\s*,\s*/)) {
+    const found = lines.filter(l => String(l.srNo) === s);
+    if (!found.length) return 'missing';
+    if (rp && found.every(l => normPart(l.partNumber) && normPart(l.partNumber) !== rp)) return 'part';
+  }
+  return null;
+}
+
+export function planRefPaste(
+  paste: RefPaste,
+  onScreen: AssessmentRow[],
+  startRowId: string,
+  lines: ReadLine[] | null,
+): RefPastePlan {
+  const plan: RefPastePlan = { apply: [], undo: [], filled: 0, flagged: 0, notOnDocument: 0, skipped: 0 };
+  const targets: Array<[AssessmentRow, string]> = [];
+
+  if (paste.kind === 'column') {
+    const start = onScreen.findIndex(r => r.id === startRowId);
+    if (start < 0) return plan;
+    paste.refs.forEach((ref, i) => {
+      if (ref === '') return;
+      const row = onScreen[start + i];
+      if (row) targets.push([row, ref]);
+      else plan.skipped += 1;
+    });
+  } else if (paste.kind === 'keyed') {
+    for (const { srNo, ref } of paste.pairs) {
+      const hits = onScreen.filter(r => r.srNo !== undefined && Number(r.srNo) === srNo);
+      if (hits.length === 1) targets.push([hits[0], ref]);
+      else plan.skipped += 1;
+    }
+  }
+
+  for (const [row, ref] of targets) {
+    if (String(row.refSrNo ?? '') === ref) continue;
+    const why = doubt(row, ref, lines);
+    plan.apply.push({ id: row.id, updates: { refSrNo: ref, refStatus: why ? 'ambiguous' : 'manual', refMatch: undefined } });
+    plan.undo.push({ id: row.id, updates: { refSrNo: row.refSrNo, refStatus: row.refStatus, refMatch: row.refMatch } });
+    if (why) plan.flagged += 1; else plan.filled += 1;
+    if (why === 'missing') plan.notOnDocument += 1;
+  }
+  return plan;
 }
