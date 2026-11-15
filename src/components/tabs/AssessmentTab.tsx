@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { useClaimStore } from '@/stores/claim-store';
 import { AssessmentGrid } from '@/components/claim/AssessmentGrid';
 import { AssessmentSummary } from '@/components/claim/AssessmentSummary';
@@ -24,6 +25,9 @@ import { needsReview } from '@/lib/ai/needs-review';
 import { DocumentReviewSheet } from '@/components/documents/DocumentReviewSheet';
 import type { EstimateApplyMode } from '@/stores/slices/aiDataSlice';
 import { saveDocuments } from '@/lib/documents/sink';
+import { DocumentKindDialog } from '@/components/dialogs/DocumentKindDialog';
+import { assessmentUploadDocType, asksDocumentKind, otherKind } from '@/lib/documents/upload-doc-type';
+import { createFileGate, type FileGate } from '@/lib/documents/file-gate';
 import { UsePhoneFiles } from '@/components/documents/UsePhoneFiles';
 import type { ClaimDocument, DocType } from '@/types/documents';
 import { isOnDrive } from '@/lib/scan-import/phone-files';
@@ -32,7 +36,7 @@ import { PrintMenu } from '@/components/tabs/report/PrintMenu';
 import { triggerStandardPrint } from '@/lib/reports/standard-report-builder';
 import { triggerUIICFinalPrint } from '@/lib/reports/uiic-final-builder';
 
-const ESTIMATE_TYPES: readonly DocType[] = ['estimate', 'supplementaryEstimate'];
+const ESTIMATE_TYPES: readonly DocType[] = ['estimate', 'supplementaryEstimate', 'invoice'];
 
 export function AssessmentTab() {
   const { currentClaim, setPolicyCheck } = useClaimStore();
@@ -40,7 +44,8 @@ export function AssessmentTab() {
   const [showSummary, setShowSummary] = useState(true);
   const [fixOpen, setFixOpen] = useState(false);
   // Open only when there is something to decide (multi-page PDF); see needsReview.
-  const [reviewSheet, setReviewSheet] = useState<{ file: File; mode: EstimateApplyMode; phone?: ClaimDocument } | null>(null);
+  const [reviewSheet, setReviewSheet] = useState<{ file: File; mode: EstimateApplyMode; phone?: ClaimDocument; gate: FileGate } | null>(null);
+  const [kindAsk, setKindAsk] = useState<{ resolve: (k: 'estimate' | 'final-bill' | null) => void } | null>(null);
   const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview, reScanWithFeedback, smartFix, reviewProgress } = useAIExtraction();
   const { confirmEstimateMode, estimateModeDialog } = useEstimateModePrompt();
   const { profile } = useProfileStore();
@@ -51,7 +56,7 @@ export function AssessmentTab() {
 
   // Everything that happens once the surveyor has decided which file/pages go
   // to the AI: evidence blob, extraction, optional Drive upload.
-  const startEstimate = async (file: File, mode: EstimateApplyMode, phone?: ClaimDocument) => {
+  const startEstimate = async (file: File, mode: EstimateApplyMode, gate: FileGate, phone?: ClaimDocument) => {
     // Store blob URL for the Evidence Viewer to display the file natively
     if (currentClaim?.id) {
       storeBlobUrl(currentClaim.id, 'estimate', file);
@@ -66,7 +71,10 @@ export function AssessmentTab() {
     }
 
     triggerExtraction('estimate', file, undefined, undefined, mode);
-    if (!phone) void saveDocuments('estimate', [{ blob: file, name: file.name }], 'upload');
+    // Filing waits for the Undo window; the doc type is read then, so an undone answer is filed right.
+    await gate.whenOpen;
+    const docType = assessmentUploadDocType(useClaimStore.getState().currentClaim);
+    if (!phone) void saveDocuments(docType, [{ blob: file, name: file.name }], 'upload');
 
     // A phone file moved from Scan's Drive folder is already on Drive: never a second copy.
     if (currentClaim?.id && profile.autoUploadDrive !== false && !isOnDrive(phone)) {
@@ -74,7 +82,7 @@ export function AssessmentTab() {
       const label = currentClaim.vehicle?.registrationNumber || claimId;
       const ext = file.name.split('.').pop() ?? 'bin';
       if (await confirmSaveToCloud(file.name)) {
-        uploadFileToDrive(claimId, `estimate.${ext}`, file, label).catch(console.error);
+        uploadFileToDrive(claimId, `${docType}.${ext}`, file, label).catch(console.error);
       }
     }
   };
@@ -85,19 +93,46 @@ export function AssessmentTab() {
     if (file) void processEstimateFile(file);
   };
 
+  /** Records the answer and offers Undo; filing (gate) opens when the toast closes or right after Undo. */
+  const answerKind = (kind: 'estimate' | 'final-bill', gate: FileGate) => {
+    const { updateBillCheck } = useClaimStore.getState();
+    updateBillCheck({ baseDocument: kind });
+    toast(kind === 'final-bill' ? 'Read as the final bill — the claim is made from the bill.' : 'Read as the estimate.', {
+      duration: 8000,
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          updateBillCheck({ baseDocument: otherKind(kind) });
+          gate.open();
+        },
+      },
+      onAutoClose: gate.open,
+      onDismiss: gate.open,
+    });
+  };
+
   /** `phone`: the file came from the claim folder (a phone file), so it is not saved there again. */
   const processEstimateFile = async (file: File, phone?: ClaimDocument) => {
     // Asked BEFORE extraction: a wrong file, or a surveyor who changes their
     // mind, then costs nothing. Resolves straight to 'replace' on an empty
     // sheet — nothing to lose, so nothing to ask.
+    // Open at once, unless the question is asked: then it opens when the Undo toast closes.
+    const asked = asksDocumentKind(useClaimStore.getState().currentClaim);
+    const gate = createFileGate(!asked);
+    if (asked) {
+      const kind = await new Promise<'estimate' | 'final-bill' | null>((resolve) => setKindAsk({ resolve }));
+      setKindAsk(null);
+      if (kind === null) return;
+      answerKind(kind, gate);
+    }
     const mode = await confirmEstimateMode(file.name);
     if (mode === null) return;
 
     if (await needsReview([file])) {
-      setReviewSheet({ file, mode, phone });
+      setReviewSheet({ file, mode, phone, gate });
       return;
     }
-    await startEstimate(file, mode, phone);
+    await startEstimate(file, mode, gate, phone);
   };
 
   const evidenceImages: string[] = [];
@@ -107,6 +142,7 @@ export function AssessmentTab() {
   return (
     <div className="flex flex-col h-[calc(100dvh-140px)] p-3 lg:p-4 max-w-[1700px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
       {estimateModeDialog}
+      {kindAsk && <DocumentKindDialog onChoose={(k) => kindAsk.resolve(k)} onCancel={() => kindAsk.resolve(null)} />}
       {gateDialog}
       {reviewSheet && (
         <DocumentReviewSheet
@@ -115,9 +151,9 @@ export function AssessmentTab() {
           files={[reviewSheet.file]}
           onCancel={() => setReviewSheet(null)}
           onConfirm={(_all, forAI) => {
-            const { mode, phone } = reviewSheet;
+            const { mode, phone, gate } = reviewSheet;
             setReviewSheet(null);
-            if (forAI[0]) void startEstimate(forAI[0], mode, phone);
+            if (forAI[0]) void startEstimate(forAI[0], mode, gate, phone);
           }}
         />
       )}
