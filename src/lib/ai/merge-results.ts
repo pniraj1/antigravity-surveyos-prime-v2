@@ -12,6 +12,20 @@ const TOTAL_FIELDS = new Set([
   'gst_amount', 'discount_amount', 'tds_amount',
 ]);
 
+const isDocument = (x: unknown): boolean =>
+  !!x && typeof x === 'object' && !Array.isArray(x) && Object.values(x).some(Array.isArray);
+
+/**
+ * A model sometimes wraps a page's answer in a list (`[ { spare_parts: … } ]`).
+ * mergeAIResults would file that under key "0", where nothing reads it, and
+ * the page's rows are lost. Fold document-shaped elements back into one object.
+ */
+// ponytail: a bare row list (no section keys) is left as-is — its section can't be known; it fails as before.
+export function asFragment(parsed: unknown): unknown {
+  if (!Array.isArray(parsed) || parsed.length === 0 || !parsed.every(isDocument)) return parsed;
+  return parsed.reduce((acc: unknown, doc: unknown) => mergeAIResults(acc, doc), null);
+}
+
 export function mergeAIResults(acc: any, fragment: any): any {
   if (!acc) return fragment;
   const result = { ...acc };

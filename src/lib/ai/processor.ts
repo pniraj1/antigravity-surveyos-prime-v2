@@ -11,7 +11,7 @@ import { jobForDocType } from './jobs';
 import { toast } from 'sonner';
 import { rowCheck, countRows, tagRows, dropDuplicates, toFindings, type Finding } from './row-check';
 import { fillGaps } from './gap-fill';
-import { mergeAIResults } from './merge-results';
+import { asFragment, mergeAIResults } from './merge-results';
 import { chunkSizeFor, isRaw, apiImageScale } from './bench-override';
 import { takeDrop } from './fault';
 import { getAIPages, resolveAIPages } from './ai-pages';
@@ -515,7 +515,7 @@ export async function extractDocument(
         // normal path and the page-at-a-time 413 fallback below.
         const mergeResponse = async (rawResponse: string, first: number, last: number, images?: string[]) => {
           try {
-            const fragment = JSON.parse(rawResponse);
+            const fragment = asFragment(JSON.parse(rawResponse));
             result = mergeAIResults(result, tagFieldPages(tagRows(fragment, first - 1, last - 1), pageRefs[first - 1]));   // 1-based chunk → 0-based page tags
           } catch (err) {
             // Auto-split fallback: if a multi-page chunk (first < last) fails JSON parse
@@ -532,7 +532,7 @@ export async function extractDocument(
                 onProgress?.(`Re-reading page ${singlePageNum} of ${totalPages} individually...`);
                 try {
                   const singleResp = await callAIGateway(chunkPrompt, [images[p]], 'json', job, session, signal);
-                  const singleFragment = JSON.parse(singleResp);
+                  const singleFragment = asFragment(JSON.parse(singleResp));
                   result = mergeAIResults(
                     result,
                     tagFieldPages(tagRows(singleFragment, singlePageNum - 1, singlePageNum - 1), pageRefs[singlePageNum - 1])

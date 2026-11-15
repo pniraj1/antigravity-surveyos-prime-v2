@@ -3,6 +3,7 @@
 // for the missed rows, merged by serial so nothing already read is touched.
 import { callAIGateway, AllProvidersBusyError, OfflineError, newSession } from './service';
 import { SECTIONS, mergeBySerial, tagRows } from './row-check';
+import { asFragment } from './merge-results';
 
 export const MAX_GAP_PAGES = 6;
 
@@ -63,7 +64,7 @@ export async function fillGaps(input: GapFillInput): Promise<unknown> {
         continue;
       }
       try {
-        data = mergeBySerial(data, tagRows(JSON.parse(raw), p, p));
+        data = mergeBySerial(data, tagRows(asFragment(JSON.parse(raw)), p, p));
       } catch {
         console.warn(`[Smart Fix] page ${p + 1} returned unparseable JSON — skipping.`);
       }

@@ -99,6 +99,19 @@ describe('extractDocument — image path (estimate)', () => {
     expect(findings).toEqual([]);
   });
 
+  it('a page answered as a list keeps its rows (no "0" key)', async () => {
+    queue(
+      JSON.stringify({ spare_parts: [{ sr_no: 1, total_amount: 10 }, { sr_no: 2, total_amount: 10 }] }),
+      JSON.stringify({ spare_parts: [{ sr_no: 3, total_amount: 10 }, { sr_no: 4, total_amount: 10 }] }),
+      JSON.stringify([{ labour_items: [{ sr_no: 5, total_amount: 10 }], gross_amount: 50 }]),
+    );
+    const { data, findings } = await extractDocument('estimate', threeFiles());
+    expect(data['0']).toBeUndefined();
+    expect(data.labour_items).toHaveLength(1);
+    expect(data.labour_items[0]._page).toBe(2);
+    expect(findings).toEqual([]);
+  });
+
   it('(b) chunk 2 omits serial 3 → a targeted re-read call for page 2 fills it in', async () => {
     // Both neighbours of the missing serial (2 and 4) land on page 1 so the
     // gap resolves to a single extra page, exercising exactly one gap call.
