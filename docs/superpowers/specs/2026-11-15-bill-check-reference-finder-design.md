@@ -141,6 +141,18 @@ Each pair gets one of four levels:
 - Rows no longer lost on list-shaped page answers (9af8a682, 7934f345).
 - The model that read each document is stored as `_models` (cc8ef1aa). Optional: show it in the evidence view.
 
+### D10. Paste refs from a spreadsheet (owner approved 2026-11-15; ships first, as Plan A)
+Why: the owner typed every estimate number by hand from the sheet Gemini produced. The assessment grid already takes an Excel paste; the Bill Check Ref No. column does not.
+- **Where:** pasting into any Ref No. cell. A single value (no line break, no tab) pastes as it does today.
+- **One column pasted:** values fill that row and the rows below it, in on-screen order (section by section, honouring the "needs a ref" filter). A blank line leaves its row unchanged; it never clears a ref.
+- **Two columns pasted, the first all whole numbers:** read as row Sr No. → Ref No. Each pair goes to the row with that Sr No. among the rows Bill Check shows. A Sr No. found on no row, or on more than one, is skipped. A first line whose first column is not a number is a header and is dropped. This is the safe shape: a shifted paste cannot happen.
+- **Anything else** (three or more columns, a non-numeric first column): nothing is written; the surveyor is told to copy the Ref No. column, or the Sr No. and Ref No. columns.
+- **Values** are kept as typed ("61, 65, 71", "E1-301 / E2-43").
+- **A pasted ref is the surveyor's** (`manual`), like a typed one, and the row's old `refMatch` is dropped when the ref changes.
+- **The check:** a ref made only of serials is checked against every line Bill Check has read: the stored read (`extractedData['final-bill']`), the unmatched lines, and the lines already matched to rows. A serial not on that document, or a line whose part number differs from the row's (both present, compared with `normPart`), marks the row `ambiguous` instead: it does not print and blocks the print gate until checked. Refs with letters (E1-…) are not checked.
+- **After the paste:** one message says how many were filled, flagged and skipped, with an Undo that restores those rows' previous Ref No. and status.
+- No AI call, no new storage.
+
 ## Constraints
 - Free-tier BYOK: the design adds no AI calls. D8 adds a few output tokens per scanned row.
 - The assessment is the surveyor's: suggestions are never applied without a tap.
