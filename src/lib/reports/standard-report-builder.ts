@@ -9,6 +9,7 @@
  */
 
 import type { ClaimData } from '@/types/claim';
+import { printableRef } from './bill-ref';
 import type { AssessmentSummary } from '@/types';
 import type { AssessmentRow } from '@/types/assessment';
 import type { SurveyorProfile } from '@/types/vehicle';
@@ -339,7 +340,7 @@ export function buildStandardFinalSurveyHTML(
   const refTitle = claim?.billCheck?.refColumnTitle || defaultRefTitle;
   const refTh = isBillCheck ? `<th style="${th}width:${W.ref}%;text-align:center;">${refTitle}</th>` : '';
   const refTd = (r: AssessmentRow) =>
-    isBillCheck ? `<td style="${tdsr9}text-align:center;color:#d32f2f;font-style:italic;font-weight:600;">${r.refSrNo ?? '—'}</td>` : '';
+    isBillCheck ? `<td style="${tdsr9}text-align:center;color:#d32f2f;font-style:italic;font-weight:600;">${printableRef(r) ?? '—'}</td>` : '';
   const trailingSub = isBillCheck ? `<td colspan="2" style="${sub}"></td>` : '';
 
   // ── Parts rows (Sr | Particulars | Type | Est | Assessed | Dep% | Metal | Plastic | [FbrGls] | Glass | GST% | Price+GST)

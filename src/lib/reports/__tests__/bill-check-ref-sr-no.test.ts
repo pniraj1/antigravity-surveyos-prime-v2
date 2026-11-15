@@ -74,6 +74,13 @@ describe('Bill Check Reference Serial Number Column', () => {
       expect(html).toMatch(/color:#d32f2f;font-style:italic;font-weight:600;[^"]*">—<\/td>/);
     });
 
+    test('a doubtful ref prints a dash, not its number', () => {
+      const claim = makeClaim([makeRow({ refSrNo: 146, refStatus: 'ambiguous' })]);
+      const html = buildStandardFinalSurveyHTML(claim, profile, 'bill-check');
+      expect(html).not.toContain('>146</td>');
+      expect(html).toMatch(/color:#d32f2f;font-style:italic;font-weight:600;[^"]*">—<\/td>/);
+    });
+
     test('does not render reference serial number column in final report mode', () => {
       const claim = makeClaim([makeRow({ refSrNo: 12 })]);
       const html = buildStandardFinalSurveyHTML(claim, profile, 'final');
@@ -84,6 +91,12 @@ describe('Bill Check Reference Serial Number Column', () => {
   });
 
   describe('UIIC Bill Check Report', () => {
+    test('UIIC: a doubtful ref prints a dash, not its number', () => {
+      const claim = makeClaim([makeRow({ section: 'parts', refSrNo: 146, refStatus: 'ambiguous' })]);
+      const html = buildUIICBillCheckHTML(claim, profile);
+      expect(html).not.toMatch(/font-weight:600;">146<\/td>/);
+    });
+
     test('renders default "Bill No." header and 13th cell in UIIC bill check report', () => {
       const partsRow = makeRow({ section: 'parts', refSrNo: 5 });
       const labourRow = makeRow({ section: 'labour', particulars: 'Bumper R&R', refSrNo: 6 });

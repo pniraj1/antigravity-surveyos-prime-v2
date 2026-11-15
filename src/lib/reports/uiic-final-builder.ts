@@ -17,6 +17,7 @@
  */
 
 import type { ClaimData } from '@/types/claim';
+import { printableRef } from './bill-ref';
 import type { SurveyorProfile } from '@/types/vehicle';
 import type { AssessmentRow } from '@/types/assessment';
 import { computeRowNet, computeRowLiability, effectiveAssessed } from '@/lib/calculations/row-net';
@@ -689,7 +690,7 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
     : 'Replace';
 
   const blank = `<td style="${td}"></td>`;
-  const refTd = (r: AssessmentRow) => `<td style="${td}text-align:center;color:#d32f2f;font-style:italic;font-weight:600;">${r.refSrNo ?? '—'}</td>`;
+  const refTd = (r: AssessmentRow) => `<td style="${td}text-align:center;color:#d32f2f;font-style:italic;font-weight:600;">${printableRef(r) ?? '—'}</td>`;
 
   // Mirrors buildUIICFinalHTML's imt23RowLine. A tagged row prints its full
   // pre-depreciation basis in the "Parts Assessment" cell (col 8, fa(r.assessed));
