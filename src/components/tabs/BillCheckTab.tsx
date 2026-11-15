@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
 
 import { useClaimStore } from '@/stores/claim-store';
@@ -9,6 +9,7 @@ import { useUIStore } from '@/stores/ui-store';
 import { useAIExtraction } from '@/hooks/useAIExtraction';
 import { calculateAssessmentSummary, calculateBillCheckSummary, getVehicleAgeMonths, buildSerialMap } from '@/lib/calculations';
 import { billCheckAssessed, resolveBillSalvage } from '@/lib/reports/bill-check-projection';
+import { settleLegacyRefs } from '@/lib/reports/bill-ref';
 import { billCheckFlags, reconcileInvoice } from '@/lib/reports/bill-check-flags';
 import { salvageBasis } from '@/lib/calculations/salvage';
 import { needsReview } from '@/lib/ai/needs-review';
@@ -46,6 +47,15 @@ export function BillCheckTab() {
   const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview, smartFix, reviewProgress } = useAIExtraction();
   const { confirmBillMode, estimateModeDialog } = useEstimateModePrompt();
   const { requestPrint, dialogs: printDialogs } = useBillCheckPrintGate();
+
+  // Once per claim: refs saved by the old word matcher between two different
+  // part numbers stop counting as sure; status-less refs become the surveyor's.
+  const claimId = currentClaim?.id;
+  useEffect(() => {
+    const rows = useClaimStore.getState().currentClaim?.assessmentRows;
+    if (!rows) return;
+    for (const { id, updates } of settleLegacyRefs(rows)) updateAssessmentRow(id, updates);
+  }, [claimId, updateAssessmentRow]);
 
   if (!currentClaim) return null;
 
