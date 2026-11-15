@@ -68,4 +68,55 @@ describe('matchBillItemsToRows', () => {
     const m = matchBillItemsToRows(rows, bill);
     expect([m.get('a')?.bill.srNo, m.get('b')?.bill.srNo]).toEqual([10, 11]);
   });
+
+  describe('labour and paint by identical wording', () => {
+    const lab = (o: Partial<AssessmentRow>) => row({ section: 'labour', ...o });
+
+    test('identical labour wording matches, ignoring case and punctuation', () => {
+      const rows = [lab({ id: 'r1', particulars: 'FRONT BUMPER R&R' })];
+      const bill = buildBillItems({ labour_items: [{ sr_no: 4, description: 'front bumper r & r', total_amount: 500 }] });
+      const m = matchBillItemsToRows(rows, bill).get('r1');
+      expect(m?.reason).toBe('words');
+      expect(m?.reasons).toEqual(['Same wording']);
+      expect(m?.score).toBe(100);
+      expect(m?.ambiguous).toBe(false);
+      expect(m?.bill.srNo).toBe(4);
+    });
+
+    test('different wording stays unmatched', () => {
+      const rows = [lab({ id: 'r1', particulars: 'R/R BUMPER FRT' })];
+      const bill = buildBillItems({ labour_items: [{ description: 'BUMPER FRONT REMOVE & REFIT', total_amount: 500 }] });
+      expect(matchBillItemsToRows(rows, bill).size).toBe(0);
+    });
+
+    test('parts are never matched by wording', () => {
+      const rows = [row({ id: 'r1', particulars: 'FRONT BUMPER' })];
+      const bill = buildBillItems({ spare_parts: [{ description: 'FRONT BUMPER', total_amount: 500 }] });
+      expect(matchBillItemsToRows(rows, bill).size).toBe(0);
+    });
+
+    test('a labour row with a part number is not wording-matched', () => {
+      const rows = [lab({ id: 'r1', particulars: 'FITTING', partNumber: 'X1' })];
+      const bill = buildBillItems({ labour_items: [{ description: 'FITTING', total_amount: 500 }] });
+      expect(matchBillItemsToRows(rows, bill).size).toBe(0);
+    });
+
+    test('repeated labour wording pairs in serial order', () => {
+      const rows = [lab({ id: 'a', srNo: 3, particulars: 'LABOUR CHARGES' }), lab({ id: 'b', srNo: 9, particulars: 'LABOUR CHARGES' })];
+      const bill = buildBillItems({ labour_items: [{ sr_no: 41, description: 'LABOUR CHARGES', total_amount: 1 }, { sr_no: 20, description: 'LABOUR CHARGES', total_amount: 1 }] });
+      const m = matchBillItemsToRows(rows, bill);
+      expect([m.get('a')?.bill.srNo, m.get('b')?.bill.srNo]).toEqual([20, 41]);
+    });
+
+    test('a line used by a part-number match is not reused by wording', () => {
+      const rows = [
+        lab({ id: 'p', partNumber: 'P1', particulars: 'PAINT WORK' }),
+        lab({ id: 'w', particulars: 'PAINT WORK' }),
+      ];
+      const bill = buildBillItems({ labour_items: [{ sr_no: 1, part_number: 'P1', description: 'PAINT WORK', total_amount: 1 }] });
+      const m = matchBillItemsToRows(rows, bill);
+      expect(m.get('p')?.reason).toBe('part');
+      expect(m.has('w')).toBe(false);
+    });
+  });
 });

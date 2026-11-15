@@ -205,7 +205,7 @@ export interface BillMatch {
   also?: BillItem[];
   /** More rows than lines: this row shares `bill`'s ref and takes no amount. */
   refOnly?: boolean;
-  reason: 'part';
+  reason: 'part' | 'words';
   ambiguous: false;
   score: 100;
   reasons: string[];
@@ -279,34 +279,53 @@ export function matchBillItemsToRows(
     const x = Number(sr(a)), y = Number(sr(b));
     return Number.isFinite(x) && Number.isFinite(y) && x !== y ? x - y : pos(a) - pos(b);
   };
-  const group = <T>(items: T[], key: (x: T) => string | undefined) => {
+  const group = <T>(items: T[], key: (x: T) => string) => {
     const g = new Map<string, T[]>();
-    for (const it of items) { const k = normPart(key(it)); if (k) g.set(k, [...(g.get(k) || []), it]); }
+    for (const it of items) { const k = key(it); if (k) g.set(k, [...(g.get(k) || []), it]); }
     return g;
   };
   const rowPos = new Map(rows.map((r, i) => [r.id, i]));
-  const rowGroups = group(rows, (r) => r.partNumber);
-  const lineGroups = group(billItems, (b) => b.partNumber);
-
   const out = new Map<string, BillMatch>();
-  const match = (bill: BillItem, extra: Partial<BillMatch> = {}): BillMatch =>
-    ({ bill, reason: 'part', ambiguous: false, score: 100, reasons: ['Part no. matches'], ...extra });
+  const usedLines = new Set<BillItem>();
 
-  for (const [pn, groupRows] of rowGroups) {
-    const groupLines = lineGroups.get(pn);
-    if (!groupLines) continue;
-    // Allowed rows first: a disallowed duplicate must not take the money.
-    const serialOrder = bySerial<AssessmentRow>((r) => r.srNo, (r) => rowPos.get(r.id) ?? 0);
-    const rs = [...groupRows].sort((a, b) => Number(b.allowed) - Number(a.allowed) || serialOrder(a, b));
-    const ls = [...groupLines].sort(bySerial((b) => b.srNo, (b) => b.idx));
-    if (rs.length === 1) {
-      out.set(rs[0].id, match(ls[0], ls.length > 1 ? { also: ls.slice(1) } : {}));
-      continue;
+  // One pairing pass: rows and lines grouped by the same key.
+  const pass = (
+    rowKey: (r: AssessmentRow) => string,
+    lineKey: (b: BillItem) => string,
+    base: Pick<BillMatch, 'reason' | 'reasons'>,
+  ) => {
+    const match = (bill: BillItem, extra: Partial<BillMatch> = {}): BillMatch =>
+      ({ bill, ambiguous: false, score: 100, ...base, ...extra });
+    const lineGroups = group(billItems.filter((b) => !usedLines.has(b)), lineKey);
+    for (const [k, groupRows] of group(rows.filter((r) => !out.has(r.id)), rowKey)) {
+      const groupLines = lineGroups.get(k);
+      if (!groupLines) continue;
+      // Allowed rows first: a disallowed duplicate must not take the money.
+      const serialOrder = bySerial<AssessmentRow>((r) => r.srNo, (r) => rowPos.get(r.id) ?? 0);
+      const rs = [...groupRows].sort((a, b) => Number(b.allowed) - Number(a.allowed) || serialOrder(a, b));
+      const ls = [...groupLines].sort(bySerial((b) => b.srNo, (b) => b.idx));
+      if (rs.length === 1) {
+        out.set(rs[0].id, match(ls[0], ls.length > 1 ? { also: ls.slice(1) } : {}));
+        ls.forEach((l) => usedLines.add(l));
+        continue;
+      }
+      // Several rows: pair in serial order. Extra rows share the last line's ref
+      // without its money; extra lines stay unmatched, visible to the surveyor.
+      rs.forEach((r, i) => out.set(r.id, i < ls.length ? match(ls[i]) : match(ls[ls.length - 1], { refOnly: true })));
+      ls.slice(0, rs.length).forEach((l) => usedLines.add(l));
     }
-    // Several rows: pair in serial order. Extra rows share the last line's ref
-    // without its money; extra lines stay unmatched, visible to the surveyor.
-    rs.forEach((r, i) => out.set(r.id, i < ls.length ? match(ls[i]) : match(ls[ls.length - 1], { refOnly: true })));
-  }
+  };
+
+  pass((r) => normPart(r.partNumber), (b) => normPart(b.partNumber),
+    { reason: 'part', reasons: ['Part no. matches'] });
+
+  // Labour and paint carry no part number: identical wording is the only key.
+  const words = (section: string, text?: string, pn?: string) => {
+    const k = (text || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    return section === 'parts' || normPart(pn) || !k ? '' : `${section}|${k}`;
+  };
+  pass((r) => words(r.section, r.particulars, r.partNumber), (b) => words(b.section, b.description, b.partNumber),
+    { reason: 'words', reasons: ['Same wording'] });
   return out;
 }
 
