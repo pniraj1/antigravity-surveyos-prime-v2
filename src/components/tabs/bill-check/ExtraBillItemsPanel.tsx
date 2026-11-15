@@ -12,11 +12,13 @@ interface Props {
   onClearAll: () => void;
   onLink: (extraId: string, rowId: string) => void;
   onPromote: (extraId: string) => void;
+  /** False in from-bill mode: an unmatched estimate line is not a new bill item. */
+  canPromote: boolean;
   fmt: (n: number) => string;
 }
 
 export function ExtraBillItemsPanel({
-  extraBillItems, assessmentRows, onDelete, onClearAll, onLink, onPromote, fmt,
+  extraBillItems, assessmentRows, onDelete, onClearAll, onLink, onPromote, canPromote, fmt,
 }: Props) {
   const [linkingId, setLinkingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -79,16 +81,18 @@ export function ExtraBillItemsPanel({
               Link
             </button>
 
-            <button
-              onClick={() => {
-                if (confirm(`Add "${item.description}" to the Final Report as Not Allowed? You can then allow it and enter your assessed figure.`)) onPromote(item.id);
-              }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-border text-foreground hover:bg-neutral-50 transition-colors"
-              title="Add as a new item in the Final Report"
-            >
-              <PlusCircle size={13} />
-              Add
-            </button>
+            {canPromote && (
+              <button
+                onClick={() => {
+                  if (confirm(`Add "${item.description}" to the Final Report as Not Allowed? You can then allow it and enter your assessed figure.`)) onPromote(item.id);
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-border text-foreground hover:bg-neutral-50 transition-colors"
+                title="Add as a new item in the Final Report"
+              >
+                <PlusCircle size={13} />
+                Add
+              </button>
+            )}
 
             <button
               onClick={() => { if (confirm(`Discard "${item.description}" (${fmt(item.amount)})?`)) onDelete(item.id); }}

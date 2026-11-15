@@ -152,3 +152,44 @@ describe('unlinkBillMatch — repeated lines', () => {
     expect(get().currentClaim!.extraBillItems).toEqual([]);
   });
 });
+
+describe('from-bill mode (estimate links)', () => {
+  const fromBill = { baseDocument: 'final-bill' };
+  const billed = { billedTaxable: 9000, billedAmount: 10620, billStatus: 'in-bill' as const, billRemarks: 'kept' };
+
+  test('link in from-bill mode keeps the row\'s billed figures', () => {
+    const claim = { id: 'c1', billCheck: fromBill, assessmentRows: [row(billed)], extraBillItems: [extra] } as unknown as ClaimData;
+    const { slice, get } = harness(claim);
+
+    slice.linkExtraBillItem('e1', 'r1');
+
+    const r = get().currentClaim!.assessmentRows[0];
+    expect(r.billedTaxable).toBe(9000);
+    expect(r.billedAmount).toBe(10620);
+    expect(r.billStatus).toBe('in-bill');
+    expect(r.billRemarks).toBe('kept');
+    expect(r.estimateAmount).toBe(6000);
+    expect(r.refStatus).toBe('manual');
+    expect(get().currentClaim!.extraBillItems).toHaveLength(0);
+  });
+
+  test('unlink in from-bill mode keeps the row\'s billed figures and status', () => {
+    const r0 = row({
+      ...billed, estimateAmount: 6000, refSrNo: 9, refStatus: 'manual',
+      refMatch: { bill: extra, score: 100, reasons: [] },
+    });
+    const claim = { id: 'c1', billCheck: fromBill, assessmentRows: [r0], extraBillItems: [] } as unknown as ClaimData;
+    const { slice, get } = harness(claim);
+
+    slice.unlinkBillMatch('r1');
+
+    const r = get().currentClaim!.assessmentRows[0];
+    expect(r.billedTaxable).toBe(9000);
+    expect(r.billedAmount).toBe(10620);
+    expect(r.billStatus).toBe('in-bill');
+    expect(r.estimateAmount).toBeUndefined();
+    expect(r.refSrNo).toBeUndefined();
+    expect(r.refMatch).toBeUndefined();
+    expect(get().currentClaim!.extraBillItems!.map(e => e.id)).toEqual(['e1']);
+  });
+});

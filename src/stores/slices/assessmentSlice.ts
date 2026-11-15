@@ -3,6 +3,7 @@ import type { ClaimData, AssessmentRow, SpotDamageRow } from '@/types';
 import { createAssessmentRow } from '@/lib/calculations';
 import { resolveSectionMove } from '@/lib/calculations/section-move';
 import type { ExtraBillItem, RefMatch } from '@/types/assessment';
+import { isFromBill } from '@/lib/reports/bill-check-mode';
 
 /** The bill lines a row holds and would hand back: none when it only shares a sibling's line. */
 const heldLines = (m: RefMatch | undefined): ExtraBillItem[] =>
@@ -261,6 +262,7 @@ export const createAssessmentSlice: StateCreator<any, any, any, AssessmentSlice>
       // The line this row held goes back to the unmatched list rather than
       // vanishing: re-linking is how a wrong match gets corrected.
       const displaced = heldLines(target.refMatch);
+      const fromBill = isFromBill(state.currentClaim);
 
       return {
         currentClaim: {
@@ -270,12 +272,16 @@ export const createAssessmentSlice: StateCreator<any, any, any, AssessmentSlice>
             // Same item, worded differently by the workshop. A figure differing
             // from the assessment is surfaced as a divergence flag, which is
             // what drives the cap — it is not a status.
-            return {
-              ...r,
+            // From-bill mode: the bill is the base, the link is an estimate ref only.
+            const billed = fromBill ? { estimateAmount: extra.taxableAmount } : {
               billedTaxable: extra.taxableAmount,
               billedAmount: extra.amount,
               billStatus: 'in-bill' as const,
               billRemarks: r.billRemarks || `Linked from bill: ${extra.description}`,
+            };
+            return {
+              ...r,
+              ...billed,
               refSrNo: extra.srNo ?? r.refSrNo,
               refStatus: 'manual' as const,
               refMatch: { bill: extra, score: 100, reasons: ['Linked by you'] },
@@ -298,6 +304,7 @@ export const createAssessmentSlice: StateCreator<any, any, any, AssessmentSlice>
       const row = state.currentClaim.assessmentRows.find((r) => r.id === rowId);
       if (!row || !row.refMatch) return {};
       const returned = heldLines(row.refMatch);
+      const fromBill = isFromBill(state.currentClaim);
       const extras = state.currentClaim.extraBillItems || [];
       return {
         currentClaim: {
@@ -307,10 +314,12 @@ export const createAssessmentSlice: StateCreator<any, any, any, AssessmentSlice>
           assessmentRows: state.currentClaim.assessmentRows.map((r) =>
             r.id !== rowId ? r : {
               ...r,
-              billedTaxable: undefined,
-              billedAmount: undefined,
-              billStatus: 'pending' as const,
-              billVerified: undefined,
+              ...(fromBill ? { estimateAmount: undefined } : {
+                billedTaxable: undefined,
+                billedAmount: undefined,
+                billStatus: 'pending' as const,
+                billVerified: undefined,
+              }),
               refSrNo: undefined,
               refStatus: undefined,
               refMatch: undefined,

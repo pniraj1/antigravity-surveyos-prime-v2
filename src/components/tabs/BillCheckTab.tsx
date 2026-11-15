@@ -22,6 +22,7 @@ import { useBillCheckPrintGate } from '@/hooks/useBillCheckPrintGate';
 
 import { BillCheckHeader } from './bill-check/BillCheckHeader';
 import { BillCheckGrid } from './bill-check/BillCheckGrid';
+import { isFromBill } from '@/lib/reports/bill-check-mode';
 import { ExtraBillItemsPanel } from './bill-check/ExtraBillItemsPanel';
 import { BillCheckSummaryPanel } from './bill-check/BillCheckSummaryPanel';
 import { BillCheckAttentionBanner } from './bill-check/BillCheckAttentionBanner';
@@ -183,6 +184,7 @@ export function BillCheckTab() {
                       onClearAll={clearExtraBillItems}
                       onLink={linkExtraBillItem}
                       onPromote={promoteExtraBillItem}
+                      canPromote={!isFromBill(currentClaim)}
                       fmt={fmt}
                     />
                   </div>
