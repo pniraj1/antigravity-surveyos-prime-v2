@@ -674,7 +674,7 @@ export function applyFinalBill(
       ...(m.refOnly ? { refOnly: true } : {}),
     };
     // More rows than lines: the ref only. A 0 billed figure would drive the cap to 0.
-    if (m.refOnly) return { ...row, refSrNo: refSr, refStatus, refMatch };
+    if (m.refOnly) return { ...row, refSrNo: refSr, refStatus, refMatch, ...(fromBill ? { estimateAmount: undefined } : {}) };
     // An estimate upload on a claim built from the bill: the ref, and what the estimate quoted.
     if (fromBill) return { ...row, refSrNo: refSr, refStatus, refMatch, estimateAmount: billedTax };
     if (!row.allowed) {

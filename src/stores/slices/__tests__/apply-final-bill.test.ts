@@ -210,8 +210,9 @@ describe('applyFinalBill — claim built from the bill (estimate upload)', () =>
   });
 
   test('continue in from-bill mode keeps refs already set and matches the rest', () => {
-    const a = row({ id: 'A', partNumber: 'ZZ-0', refSrNo: '7', refStatus: 'clean' });
-    const b = row({ id: 'B', partNumber: 'RD-9' });
+    // A matches a line and B is self-billed with no ref: only the ref test tells them apart.
+    const a = row({ id: 'A', partNumber: 'BP-1', refSrNo: '7', refStatus: 'clean', billedAmount: 11800 });
+    const b = row({ id: 'B', partNumber: 'RD-9', billedAmount: 7080 });
     const out = applyFinalBill(fromBill(claim([a, b])), EST, 'continue');
     expect(out.assessmentRows.find(r => r.id === 'A')!.refSrNo).toBe('7');
     expect(out.assessmentRows.find(r => r.id === 'B')!.refSrNo).toBe(2);
@@ -243,5 +244,11 @@ describe('applyFinalBill — claim built from the bill (estimate upload)', () =>
       spare_parts: [{ description: 'HEAD LAMP', part_number: 'HL-1', taxable_amount: 100, total_amount: 118, category: 'Plastic' }],
     });
     expect(out.extraBillItems![0].material).toBe('plastic');
+  });
+
+  test('a row that becomes refOnly on re-upload drops its stale estimate amount', () => {
+    const rows = [row({ id: 'r1', estimateAmount: 5000 }), row({ id: 'r2', estimateAmount: 5000 })];
+    const out = applyFinalBill(fromBill(claim(rows)), EST);
+    expect(out.assessmentRows.find(r => r.refMatch?.refOnly)!.estimateAmount).toBeUndefined();
   });
 });
