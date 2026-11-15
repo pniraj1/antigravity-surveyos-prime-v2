@@ -53,4 +53,11 @@ describe('rowsToMarkNotInBill', () => {
     ];
     expect(rowsToMarkNotInBill(rows as never).map(r => r.id)).toEqual(['none']);
   });
+
+  it('marks nothing in a claim built from the bill', async () => {
+    const { rowsToMarkNotInBill } = await import('../useBillCheckPrintGate');
+    const base = { particulars: 'X', estimated: 1, assessed: 1, partType: 'metal', gst: 18, section: 'parts', allowed: true, isDisposal: false, disposalPercent: 50 } as const;
+    const rows = [{ ...base, id: 'p', billStatus: 'pending' }];
+    expect(rowsToMarkNotInBill(rows as never, true)).toEqual([]);
+  });
 });

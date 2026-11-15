@@ -5,6 +5,7 @@ import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { usePrintGate } from '@/hooks/usePrintGate';
 import { rowsNeedingRemark } from '@/lib/reports/bill-check-projection';
+import { isFromBill, selfBillUpdates } from '@/lib/reports/bill-check-mode';
 import { billCheckFlags } from '@/lib/reports/bill-check-flags';
 import { triggerUIICBillCheckPrint } from '@/lib/reports/uiic-final-builder';
 import { triggerStandardPrint } from '@/lib/reports/standard-report-builder';
@@ -19,7 +20,8 @@ import type { SurveyorProfile } from '@/types/vehicle';
  * Rows the one-tap "Not in Bill" may close. A row carrying a sure ref shares a
  * billed line with a sibling (repeated part) — it is in the bill, so it stays.
  */
-export function rowsToMarkNotInBill(rows: AssessmentRow[]): AssessmentRow[] {
+export function rowsToMarkNotInBill(rows: AssessmentRow[], fromBill = false): AssessmentRow[] {
+  if (fromBill) return [];
   return rows.filter((r) => r.allowed && (!r.billStatus || r.billStatus === 'pending') && !(r.refStatus === 'clean' && r.refSrNo != null));
 }
 
@@ -141,8 +143,11 @@ export function useBillCheckPrintGate() {
   const resolveAllPending = () => {
     const claim = useClaimStore.getState().currentClaim ?? currentClaim;
     if (!claim) return;
-    const pending = rowsToMarkNotInBill(claim.assessmentRows || []);
-    pending.forEach((r) =>
+    const fromBill = isFromBill(claim);
+    if (fromBill) {
+      selfBillUpdates(claim.assessmentRows || []).forEach((u) => updateAssessmentRow(u.id, u.updates));
+    }
+    rowsToMarkNotInBill(claim.assessmentRows || [], fromBill).forEach((r) =>
       updateAssessmentRow(r.id, { billStatus: 'not-in-bill', billedTaxable: 0, billedAmount: 0 })
     );
     setPendingGate(false);
