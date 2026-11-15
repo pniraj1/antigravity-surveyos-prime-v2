@@ -643,9 +643,8 @@ export function buildUIICBillCheckHTML(claim: ClaimData, profile: SurveyorProfil
 
   // Financial summary, mirroring section 8 of the standard report. Reads the
   // same engine so the two documents cannot disagree.
-  // Claims built from the bill print the surveyor's confirmed estimate heads (grouped, like the paint block).
+  // Claims built from the bill print the surveyor's confirmed estimate heads.
   const eh = isFromBill(claim) ? claim.billCheck?.estimateHeads : undefined;
-  const fe = eh ? fc : fa;
   const tow = parseFloat(String(claim.feeBill?.towingCharges || 0)) || 0;
   const asum = calculateAssessmentSummary(
     rows, ageMonths, depType,
@@ -1050,7 +1049,7 @@ ${serviceAgg.bands.map((b, i) => `<tr>
 <tbody>
 <tr>
   <td style="${td}">Spare Parts</td>
-  <td style="${td}text-align:right;">${fe(eh ? eh.metal + eh.plastic + eh.glass + eh.fiberglass : asum.estimatePartsBase)}</td>
+  <td style="${td}text-align:right;">${fa(eh ? eh.metal + eh.plastic + eh.glass + eh.fiberglass : asum.estimatePartsBase)}</td>
   <td style="${td}text-align:right;">${fa(asum.partsBase)}</td>
   <td style="${td}text-align:right;">${fa(asum.partsTotal)}</td>
 </tr>
@@ -1061,25 +1060,25 @@ ${[
   { label: 'Fibre Glass', est: eh ? eh.fiberglass : asum.estimateFiberglassBase, ass: asum.fiberglassTotal, incl: asum.fiberglassTotalInclGst },
 ].filter(s => s.est > 0 || s.ass > 0).map(s => `<tr>
   <td style="${td}padding-left:14pt;color:#555;">&#8627; ${s.label}</td>
-  <td style="${td}text-align:right;color:#555;">${fe(s.est)}</td>
+  <td style="${td}text-align:right;color:#555;">${fa(s.est)}</td>
   <td style="${td}text-align:right;color:#555;">${fa(s.ass)}</td>
   <td style="${td}text-align:right;color:#555;">${fa(s.incl)}</td>
 </tr>`).join('')}
 <tr>
   <td style="${td}">Labour</td>
-  <td style="${td}text-align:right;">${fe(eh ? eh.labour : asum.estimateLabourOnlyBase)}</td>
+  <td style="${td}text-align:right;">${fa(eh ? eh.labour : asum.estimateLabourOnlyBase)}</td>
   <td style="${td}text-align:right;">${fa(asum.labourOnlyBase)}</td>
   <td style="${td}text-align:right;">${fa(asum.labourOnlyTotal)}</td>
 </tr>
 <tr>
   <td style="${td}">Painting</td>
-  <td style="${td}text-align:right;">${fe(eh ? eh.paint : asum.estimatePaintOnlyBase)}</td>
+  <td style="${td}text-align:right;">${fa(eh ? eh.paint : asum.estimatePaintOnlyBase)}</td>
   <td style="${td}text-align:right;">${fa(asum.paintOnlyBase)}</td>
   <td style="${td}text-align:right;">${fa(asum.paintOnlyTotal)}</td>
 </tr>
 <tr style="font-weight:700;background:#eee;">
   <td style="${td}">GRAND TOTAL</td>
-  <td style="${td}text-align:right;">${fe(eh ? eh.metal + eh.plastic + eh.glass + eh.fiberglass + eh.labour + eh.paint : asum.estimatePartsBase + asum.estimateLabourBase)}</td>
+  <td style="${td}text-align:right;">${fa(eh ? eh.metal + eh.plastic + eh.glass + eh.fiberglass + eh.labour + eh.paint : asum.estimatePartsBase + asum.estimateLabourBase)}</td>
   <td style="${td}text-align:right;">${fa(asum.partsBase + asum.labourBase)}</td>
   <td style="${td}text-align:right;">${fa(asum.grandTotal)}</td>
 </tr>
