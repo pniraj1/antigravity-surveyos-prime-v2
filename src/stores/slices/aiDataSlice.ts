@@ -635,20 +635,32 @@ export function applyFinalBill(
   const continuing = mode === 'continue';
   const prev = claim.billCheck;
   const billItems = buildBillItems(data);
+  // A ref the surveyor set is theirs: never re-matched, and the line it holds
+  // is not listed again as unmatched.
+  const isManual = (r: AssessmentRow) => r.refStatus === 'manual';
+  const manualRefs = new Set(
+    claim.assessmentRows.filter(isManual).flatMap((r) => String(r.refSrNo ?? '').split(',').map((x) => x.trim()).filter(Boolean)),
+  );
   const rowMatches = matchBillItemsToRows(
-    continuing ? claim.assessmentRows.filter((r) => !(r.billedAmount && r.billedAmount > 0)) : claim.assessmentRows,
+    claim.assessmentRows.filter((r) => !isManual(r) && !(continuing && r.billedAmount && r.billedAmount > 0)),
     billItems,
   );
-  const matchedBillIds = new Set(Array.from(rowMatches.values()).map((m) => m.bill.idx));
+  const matchedBillIds = new Set(Array.from(rowMatches.values()).flatMap((m) => [m.bill, ...(m.also ?? [])].map((b) => b.idx)));
 
   const updatedRows = claim.assessmentRows.map((row) => {
     const m = rowMatches.get(row.id);
     if (!m) return row;
-    const billedAmt = m.bill.totalAmount || 0;
-    const billedTax = m.bill.taxableAmount || 0;
-    const refSr = m.bill.srNo ?? (m.bill.idx + 1);
+    // Same part on several lines of this one row: one figure, every serial.
+    const lines = [m.bill, ...(m.also ?? [])];
+    const sum = (f: (b: BillItem) => number) => Math.round(lines.reduce((t, b) => t + (f(b) || 0), 0) * 100) / 100;
+    const billedAmt = sum((b) => b.totalAmount);
+    const billedTax = sum((b) => b.taxableAmount);
+    const serial = (b: BillItem) => b.srNo ?? (b.idx + 1);
+    const refSr = lines.length > 1 ? lines.map(serial).join(', ') : serial(m.bill);
     const refStatus = m.ambiguous ? ('ambiguous' as const) : ('clean' as const);
     const refMatch = { bill: extraFromBillItem(m.bill), score: m.score, reasons: m.reasons };
+    // More rows than lines: the ref only. A 0 billed figure would drive the cap to 0.
+    if (m.refOnly) return { ...row, refSrNo: refSr, refStatus, refMatch };
     if (!row.allowed) {
       return {
         ...row,
@@ -678,7 +690,7 @@ export function applyFinalBill(
   });
 
   const extras: ExtraBillItem[] = billItems
-    .filter((bi) => !matchedBillIds.has(bi.idx))
+    .filter((bi) => !matchedBillIds.has(bi.idx) && !manualRefs.has(String(bi.srNo ?? '')))
     .map(extraFromBillItem);
 
   // Merge, don't overwrite: the surveyor may have deleted or promoted items

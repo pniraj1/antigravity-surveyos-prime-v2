@@ -288,7 +288,7 @@ describe('applyFinalBill continue', () => {
   const page1 = (): ClaimData => ({
     ...sheet([
       { id: 'r1', particulars: 'FRONT BUMPER', billedAmount: 11800, billedTaxable: 10000, billStatus: 'in-bill' },
-      { id: 'r2', particulars: 'RADIATOR ASSY', estimated: 6000, assessed: 6000 },
+      { id: 'r2', particulars: 'RADIATOR ASSY', partNumber: 'RD-9', estimated: 6000, assessed: 6000 },
     ]),
     billCheck: { billNo: 'B1', billDate: '2026-08-01', billTotal: 18880 },
   }) as ClaimData;
@@ -313,7 +313,7 @@ describe('applyFinalBill continue', () => {
   });
 
   it('still matches the rows that are not billed yet', () => {
-    const out = applyFinalBill(page1(), { spare_parts: [item('RADIATOR ASSY', 6000)] }, 'continue');
+    const out = applyFinalBill(page1(), { spare_parts: [{ ...item('RADIATOR ASSY', 6000), part_number: 'RD-9' }] }, 'continue');
     expect(out.assessmentRows.find((r) => r.id === 'r2')!.billStatus).toBe('in-bill');
   });
 

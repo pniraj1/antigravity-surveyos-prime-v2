@@ -7,6 +7,7 @@ function row(overrides: Partial<AssessmentRow> = {}): AssessmentRow {
   return {
     id: `r${Math.random()}`,
     particulars: 'FRONT BUMPER',
+    partNumber: 'BP-1',
     estimated: 10000,
     assessed: 10000,
     partType: 'metal',
@@ -89,5 +90,44 @@ describe('applyFinalBill', () => {
     };
     const second = applyFinalBill(first as ClaimData, withNew);
     expect(second.extraBillItems!.some(e => e.description === 'FOG LAMP')).toBe(true);
+  });
+});
+
+describe('applyFinalBill — reference finder rules', () => {
+  const line = (sr_no: number, part_number: string, taxable_amount: number, total_amount: number) =>
+    ({ sr_no, description: 'X', part_number, taxable_amount, total_amount, gst_percent: 18 });
+
+  test('manual row untouched and its line not re-listed', () => {
+    const r = row({ id: 'r1', partNumber: 'P12', refStatus: 'manual', refSrNo: 12, billedAmount: 500, billStatus: 'in-bill' });
+    const out = applyFinalBill(claim([r]), { spare_parts: [line(12, 'P12', 900, 1062), line(13, 'Q13', 50, 59)] });
+    expect(out.assessmentRows[0]).toEqual(r);
+    expect(out.extraBillItems!.map(e => e.srNo)).toEqual([13]);
+  });
+
+  test('one row, three lines: amounts summed, serials joined', () => {
+    const r = row({ id: 'r1', partNumber: 'A0019901167' });
+    const out = applyFinalBill(claim([r]), { spare_parts: [61, 65, 71].map(sr => line(sr, 'A0019901167', 142, 168)) });
+    const m = out.assessmentRows[0];
+    expect(m.billedTaxable).toBe(426);
+    expect(m.billedAmount).toBe(504);
+    expect(m.refSrNo).toBe('61, 65, 71');
+    expect(out.extraBillItems).toEqual([]);
+  });
+
+  test('refOnly row gets the ref and no billed figures', () => {
+    const a = row({ id: 'a', srNo: 36, partNumber: 'MBBC0076' });
+    const b = row({ id: 'b', srNo: 193, partNumber: 'MBBC0076', billStatus: 'pending' });
+    const out = applyFinalBill(claim([a, b]), { spare_parts: [line(260, 'MBBC0076', 2200, 2596)] });
+    const second = out.assessmentRows.find(x => x.id === 'b')!;
+    expect(second.refSrNo).toBe(260);
+    expect(second.billedAmount).toBeUndefined();
+    expect(second.billStatus).toBe('pending');
+  });
+
+  test('no part numbers → no row billed, every line unmatched', () => {
+    const r = row({ id: 'r1', partNumber: undefined, billStatus: 'pending' });
+    const out = applyFinalBill(claim([r]), { spare_parts: [{ description: 'FRONT BUMPER', taxable_amount: 10000, total_amount: 11800 }, { description: 'GRILLE', taxable_amount: 500, total_amount: 590 }] });
+    expect(out.assessmentRows[0].billStatus).toBe('pending');
+    expect(out.extraBillItems).toHaveLength(2);
   });
 });
