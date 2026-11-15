@@ -6,11 +6,6 @@ import { UsePhoneFiles } from '@/components/documents/UsePhoneFiles';
 import type { DocType } from '@/types/documents';
 
 const INVOICE_TYPES: readonly DocType[] = ['invoice'];
-const ESTIMATE_TYPES: readonly DocType[] = ['estimate'];
-const CHOICES = [
-  { kind: 'final-bill', label: 'Final bill' },
-  { kind: 'estimate', label: 'Estimate' },
-] as const;
 
 interface BillCheckData {
   billNo: string;
@@ -27,46 +22,20 @@ interface Props {
   onFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   /** A phone file picked with Use phone files: the same path as the file input. */
   onPhoneFile: (file: File) => void;
-  /** Which document this upload is read as. */
-  upload: 'final-bill' | 'estimate';
-  onUploadChange: (kind: 'final-bill' | 'estimate') => void;
 }
 
-export function BillCheckUploadPanel({ bc, onBillCheckChange, isProcessing, progress, onFileUpload, onPhoneFile, upload, onUploadChange }: Props) {
-  const isEstimate = upload === 'estimate';
+export function BillCheckUploadPanel({ bc, onBillCheckChange, isProcessing, progress, onFileUpload, onPhoneFile }: Props) {
   return (
     <div
       className="rounded-2xl overflow-hidden bg-card border border-border"
     >
       <div className="px-6 py-4 border-b border-border bg-neutral-50">
-        <div className="text-sm font-medium text-foreground">
-          {isEstimate ? 'Step 1 — Upload the estimate' : 'Step 1 — Upload Final Workshop Bill'}
-        </div>
+        <div className="text-sm font-medium text-foreground">Step 1 — Upload Final Workshop Bill</div>
         <div className="text-xs mt-0.5 text-muted-foreground">
-          {isEstimate
-            ? "AI reads the estimate to find each item's estimate number"
-            : 'AI will extract the bill items to compare against allowed assessment'}
+          AI will extract the bill items to compare against allowed assessment
         </div>
       </div>
       <div className="p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <span className="text-xs text-muted-foreground">This upload is:</span>
-          {CHOICES.map(c => (
-            <button
-              key={c.kind}
-              type="button"
-              aria-pressed={upload === c.kind}
-              onClick={() => upload !== c.kind && onUploadChange(c.kind)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${
-                upload === c.kind
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'bg-neutral-50 text-foreground border-border'
-              }`}
-            >
-              {c.label}
-            </button>
-          ))}
-        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
           <div>
             <label className="text-[10px] font-medium uppercase tracking-widest block mb-1 text-muted-foreground">
@@ -135,17 +104,15 @@ export function BillCheckUploadPanel({ bc, onBillCheckChange, isProcessing, prog
           </div>
           <div>
             <div className="text-sm font-medium text-foreground">
-              {isProcessing ? progress || (isEstimate ? 'Scanning estimate…' : 'Scanning bill…') : isEstimate ? 'Upload Estimate' : 'Upload Final Workshop Bill'}
+              {isProcessing ? progress || 'Scanning bill…' : 'Upload Final Workshop Bill'}
             </div>
             <div className="text-xs text-muted-foreground">
-              {isProcessing
-                ? `AI is reading the ${isEstimate ? 'estimate' : 'bill'}…`
-                : isEstimate ? 'Image or PDF — AI reads every line' : 'Image or PDF — AI extracts all line items'}
+              {isProcessing ? 'AI is reading the bill…' : 'Image or PDF — AI extracts all line items'}
             </div>
           </div>
         </label>
         <div className="flex items-center gap-2 mt-3">
-          <UsePhoneFiles types={isEstimate ? ESTIMATE_TYPES : INVOICE_TYPES} disabled={isProcessing} onPick={(file) => onPhoneFile(file)} />
+          <UsePhoneFiles types={INVOICE_TYPES} disabled={isProcessing} onPick={(file) => onPhoneFile(file)} />
           <ProviderToggle />
           <ModelSelector />
         </div>

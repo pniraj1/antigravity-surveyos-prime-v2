@@ -10,6 +10,11 @@ import type { DocType } from '@/types/documents';
 import { PrintMenu } from '@/components/tabs/report/PrintMenu';
 
 const INVOICE_TYPES: readonly DocType[] = ['invoice'];
+const ESTIMATE_TYPES: readonly DocType[] = ['estimate'];
+const CHOICES = [
+  { kind: 'final-bill', label: 'Final bill' },
+  { kind: 'estimate', label: 'Estimate' },
+] as const;
 
 interface BcSummary {
   grandTotalBilled: number;
@@ -29,6 +34,9 @@ interface Props {
   isInvoiceVerified?: boolean;
   onFileUpload?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onPhoneFile?: (file: File) => void;
+  /** Which document the upload button reads. */
+  upload?: 'final-bill' | 'estimate';
+  onUploadChange?: (kind: 'final-bill' | 'estimate') => void;
   /** Runs the bill-check print gate (invoice, flags, policy) for that format. */
   onPrint?: (format: 'standard' | 'uiic') => void;
 }
@@ -44,6 +52,8 @@ export function BillCheckHeader({
   isInvoiceVerified = false,
   onFileUpload = () => {},
   onPhoneFile = () => {},
+  upload = 'final-bill',
+  onUploadChange = () => {},
   onPrint = () => {},
 }: Props) {
   return (
@@ -90,6 +100,20 @@ export function BillCheckHeader({
         </div>
 
         <div className="flex items-center gap-1.5">
+          {/* Which document this upload is */}
+          {CHOICES.map(c => (
+            <Button
+              key={c.kind}
+              variant={upload === c.kind ? 'secondary' : 'outline'}
+              size="sm"
+              aria-pressed={upload === c.kind}
+              onClick={() => upload !== c.kind && onUploadChange(c.kind)}
+              className={`h-8 px-2.5 text-xs ${upload === c.kind ? 'bg-primary/20 text-primary border-primary/30' : ''}`}
+            >
+              {c.label}
+            </Button>
+          ))}
+
           {/* Upload Bill Button */}
           <div className="relative">
             <input
@@ -98,7 +122,7 @@ export function BillCheckHeader({
               accept="image/*,application/pdf"
               onChange={onFileUpload}
               disabled={isProcessing}
-              title="Upload Final Workshop Bill"
+              title={upload === 'estimate' ? 'Upload the estimate' : 'Upload Final Workshop Bill'}
             />
             <Button
               variant="outline"
@@ -108,13 +132,13 @@ export function BillCheckHeader({
               disabled={isProcessing}
             >
               <Upload size={14} />
-              Upload Bill
+              {upload === 'estimate' ? 'Upload Estimate' : 'Upload Bill'}
             </Button>
           </div>
 
           {/* Use Phone Files */}
           <UsePhoneFiles
-            types={INVOICE_TYPES}
+            types={upload === 'estimate' ? ESTIMATE_TYPES : INVOICE_TYPES}
             className="h-8 px-2.5 text-xs"
             disabled={isProcessing}
             onPick={(file) => void onPhoneFile(file)}

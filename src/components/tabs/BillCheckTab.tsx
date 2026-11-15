@@ -22,7 +22,6 @@ import { useBillCheckPrintGate } from '@/hooks/useBillCheckPrintGate';
 
 import { BillCheckHeader } from './bill-check/BillCheckHeader';
 import { BillCheckGrid } from './bill-check/BillCheckGrid';
-import { BillCheckUploadPanel } from './bill-check/BillCheckUploadPanel';
 import { isFromBill } from '@/lib/reports/bill-check-mode';
 import { ExtraBillItemsPanel } from './bill-check/ExtraBillItemsPanel';
 import { BillCheckSummaryPanel } from './bill-check/BillCheckSummaryPanel';
@@ -161,6 +160,8 @@ export function BillCheckTab() {
         isInvoiceVerified={isInvoiceVerified}
         onFileUpload={handleFileUpload}
         onPhoneFile={processBillFile}
+        upload={upload}
+        onUploadChange={handleUploadChange}
         onPrint={requestPrint}
       />
 
@@ -178,19 +179,6 @@ export function BillCheckTab() {
                     onConfirmAllBelow={confirmAllBelow}
                     onKeepAllAbove={keepAllAbove}
                   />
-
-                  <div className="mt-4">
-                    <BillCheckUploadPanel
-                      bc={bc}
-                      onBillCheckChange={updateBillCheck}
-                      isProcessing={isProcessing}
-                      progress={progress}
-                      onFileUpload={handleFileUpload}
-                      onPhoneFile={processBillFile}
-                      upload={upload}
-                      onUploadChange={handleUploadChange}
-                    />
-                  </div>
 
                   <div className="mt-4">
                     <BillCheckGrid
