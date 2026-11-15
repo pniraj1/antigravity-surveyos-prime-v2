@@ -13,6 +13,8 @@ interface EstimateModeDialogProps {
   total?: number;
   /** Bill no. already read. Bill only. */
   billNo?: string;
+  /** What the bill-kind texts call the document. */
+  docWord?: 'bill' | 'estimate';
   onChoose: (mode: EstimateApplyMode) => void;
   onCancel: () => void;
 }
@@ -32,6 +34,7 @@ export function EstimateModeDialog({
   rowCount,
   total = 0,
   billNo,
+  docWord = 'bill',
   onChoose,
   onCancel,
 }: EstimateModeDialogProps) {
@@ -48,14 +51,14 @@ export function EstimateModeDialog({
           </div>
           <div>
             <h2 className="text-sm font-medium text-foreground">
-              {isBill ? 'This claim already has a bill read' : 'This claim already has an assessment'}
+              {isBill ? `This claim already has ${docWord === 'bill' ? 'a bill' : 'an estimate'} read` : 'This claim already has an assessment'}
             </h2>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
               {isBill ? (
                 <>
-                  {billNo ? <>Bill <span className="font-medium text-foreground">{billNo}</span>, </> : null}
+                  {billNo ? <>{docWord === 'bill' ? 'Bill' : 'Estimate'} <span className="font-medium text-foreground">{billNo}</span>, </> : null}
                   <span className="font-medium text-foreground">{rowCount}</span>{' '}
-                  {rowCount === 1 ? 'line' : 'lines'} billed so far.
+                  {rowCount === 1 ? 'line' : 'lines'} {docWord === 'bill' ? 'billed' : 'read'} so far.
                 </>
               ) : (
                 <>
@@ -79,11 +82,11 @@ export function EstimateModeDialog({
             <FileStack size={16} className="mt-0.5 flex-shrink-0" />
             <span>
               <span className="block text-xs font-medium">
-                {isBill ? 'More pages of the same bill' : 'More pages of the same estimate'}
+                {isBill ? `More pages of the same ${docWord}` : 'More pages of the same estimate'}
               </span>
               <span className="block text-[11px] opacity-80 mt-0.5">
                 {isBill
-                  ? 'Keeps the bill no. and date. Lines already billed are left alone.'
+                  ? `Keeps the ${docWord} no. and date. Lines already ${docWord === 'bill' ? 'billed' : 'read'} are left alone.`
                   : 'Items join the original estimate. Numbering carries on.'}
               </span>
             </span>
@@ -130,11 +133,11 @@ export function EstimateModeDialog({
             <RefreshCw size={16} className="mt-0.5 flex-shrink-0" />
             <span>
               <span className="block text-xs font-medium">
-                {isBill ? 'The same bill again — read it fresh' : 'The same estimate again — read it fresh'}
+                {isBill ? `The same ${docWord} again — read it fresh` : 'The same estimate again — read it fresh'}
               </span>
               <span className="block text-[11px] opacity-80 mt-0.5">
                 {isBill
-                  ? 'Reads the whole bill again and matches every line afresh.'
+                  ? `Reads the whole ${docWord} again and matches every line afresh.`
                   : 'Replaces every estimate line, including continuation pages. Hand-added and supplementary lines are kept.'}
               </span>
             </span>

@@ -173,6 +173,7 @@ export function useBillCheckPrintGate() {
   const blockingFlags = flags.filter((f) => f.blocking);
   const remarkRows = rowsNeedingRemark(allowedRows);
   const bc = activeClaim?.billCheck || { billNo: '', billDate: '', billTotal: 0 };
+  const fromBill = isFromBill(activeClaim);
 
   const dialogs = (
     <>
@@ -192,7 +193,8 @@ export function useBillCheckPrintGate() {
           rows={pendingRows}
           body={unmatchedLines > 0
             ? `${unmatchedLines} bill line${unmatchedLines === 1 ? ' is' : 's are'} not matched to any item yet. Link ${unmatchedLines === 1 ? 'it' : 'them'} first under Bill Items Not Matched — otherwise these items print as No Bill.`
-            : undefined}
+            : fromBill ? 'These items will be billed at their own figures from the bill.' : undefined}
+          resolveLabel={fromBill ? 'Bill them at their own figures' : undefined}
           onResolveAll={resolveAllPending}
           onCancel={() => setPendingGate(false)}
         />

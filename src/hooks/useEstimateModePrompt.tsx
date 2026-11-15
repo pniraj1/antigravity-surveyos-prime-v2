@@ -16,6 +16,7 @@ interface PendingPrompt {
   rowCount: number;
   total?: number;
   billNo?: string;
+  docWord?: 'bill' | 'estimate';
   resolve: (mode: EstimateApplyMode | null) => void;
 }
 
@@ -43,7 +44,7 @@ export function useEstimateModePrompt() {
   );
 
   const confirmBillMode = useCallback(
-    (fileLabel: string): Promise<'replace' | 'continue' | null> => {
+    (fileLabel: string, docWord: 'bill' | 'estimate' = 'bill'): Promise<'replace' | 'continue' | null> => {
       const summary = buildBillModePrompt(useClaimStore.getState().currentClaim);
       if (!summary) return Promise.resolve('replace');
 
@@ -53,6 +54,7 @@ export function useEstimateModePrompt() {
           fileLabel,
           rowCount: summary.billedRows,
           billNo: summary.billNo,
+          docWord,
           // The bill dialog only offers 'continue' | 'replace'.
           resolve: resolve as PendingPrompt['resolve'],
         });
@@ -76,6 +78,7 @@ export function useEstimateModePrompt() {
       rowCount={pending.rowCount}
       total={pending.total}
       billNo={pending.billNo}
+      docWord={pending.docWord}
       onChoose={(mode) => handleChoice(mode)}
       onCancel={() => handleChoice(null)}
     />

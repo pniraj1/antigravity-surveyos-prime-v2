@@ -22,6 +22,7 @@ import { useBillCheckPrintGate } from '@/hooks/useBillCheckPrintGate';
 
 import { BillCheckHeader } from './bill-check/BillCheckHeader';
 import { BillCheckGrid } from './bill-check/BillCheckGrid';
+import { BillCheckUploadPanel } from './bill-check/BillCheckUploadPanel';
 import { isFromBill } from '@/lib/reports/bill-check-mode';
 import { ExtraBillItemsPanel } from './bill-check/ExtraBillItemsPanel';
 import { BillCheckSummaryPanel } from './bill-check/BillCheckSummaryPanel';
@@ -39,6 +40,7 @@ export function BillCheckTab() {
   const promoteExtraBillItem = useClaimStore(s => s.promoteExtraBillItem);
   const updateBillCheck     = useClaimStore(s => s.updateBillCheck);
   const updateFeeBill       = useClaimStore(s => s.updateFeeBill);
+  const setBillCheckUpload  = useClaimStore(s => s.setBillCheckUpload);
   const { profile } = useProfileStore();
 
   const [showEvidence, setShowEvidence] = useState(false);
@@ -59,6 +61,8 @@ export function BillCheckTab() {
   }, [claimId, updateAssessmentRow]);
 
   if (!currentClaim) return null;
+
+  const upload = isFromBill(currentClaim) ? 'estimate' : 'final-bill';
 
   const fb = currentClaim.feeBill;
   const bc = currentClaim.billCheck || { billNo: '', billDate: '', billTotal: 0, billCheckDate: '' };
@@ -112,10 +116,25 @@ export function BillCheckTab() {
   };
 
   const processBillFile = async (file: File) => {
-    const mode = await confirmBillMode(file.name);
+    const mode = await confirmBillMode(file.name, upload === 'estimate' ? 'estimate' : 'bill');
     if (!mode) return;
     if (await needsReview([file])) setReviewFile({ file, mode });
     else triggerExtraction('final-bill', file, undefined, undefined, mode);
+  };
+
+  const handleUploadChange = (kind: 'final-bill' | 'estimate') => {
+    const losing = kind === 'final-bill'
+      ? isFromBill(currentClaim)
+        ? allowedRows.filter(r => r.refSrNo != null || r.billedTaxable != null || r.billedAmount != null).length
+        : 0
+      : isFromBill(currentClaim) ? 0 : allRows.filter(r => r.refSrNo != null).length;
+    if (losing > 0) {
+      const ok = kind === 'final-bill'
+        ? window.confirm(`Switch to Final bill? The estimate numbers and billed amounts on ${losing} items will be cleared, because a final bill will now be read for them.`)
+        : window.confirm(`Switch to Estimate? The bill item numbers on ${losing} items will be cleared, because their numbers will now come from the estimate.`);
+      if (!ok) return;
+    }
+    setBillCheckUpload(kind);
   };
 
   const isInvoiceVerified =
@@ -159,6 +178,19 @@ export function BillCheckTab() {
                     onConfirmAllBelow={confirmAllBelow}
                     onKeepAllAbove={keepAllAbove}
                   />
+
+                  <div className="mt-4">
+                    <BillCheckUploadPanel
+                      bc={bc}
+                      onBillCheckChange={updateBillCheck}
+                      isProcessing={isProcessing}
+                      progress={progress}
+                      onFileUpload={handleFileUpload}
+                      onPhoneFile={processBillFile}
+                      upload={upload}
+                      onUploadChange={handleUploadChange}
+                    />
+                  </div>
 
                   <div className="mt-4">
                     <BillCheckGrid
@@ -235,7 +267,7 @@ export function BillCheckTab() {
       {reviewFile && (
         <DocumentReviewSheet
           open
-          slotLabel="Final Bill"
+          slotLabel={upload === 'estimate' ? 'Estimate' : 'Final Bill'}
           files={[reviewFile.file]}
           onCancel={() => setReviewFile(null)}
           onConfirm={(_all, forAI) => {
