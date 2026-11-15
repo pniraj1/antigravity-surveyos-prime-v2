@@ -44,6 +44,7 @@ const withTax = (taxable: number, gst: number): number => Math.round(taxable * (
 function updatesFor(
   col: FillColumn, v: string, row: AssessmentRow, ctx: FillCtx,
 ): Partial<AssessmentRow> | null {
+  // billRemarks is never disabled on screen.
   if (col === 'billRemarks') return { billRemarks: v };
   const n = parseClipboardValue(v, 'billedTaxable');
   if (typeof n !== 'number') return null;
@@ -56,13 +57,14 @@ function updatesFor(
     case 'disposalPercent':
       return row.isDisposal ? { disposalPercent: clamp(n, 0, 100) } : null;
     case 'billAllowed':
-      return row.allowed === false ? null : { billAllowed: clamp(n, 0) };
+      return !row.allowed ? null : { billAllowed: clamp(n, 0) };
     case 'depOverride': {
+      if (!row.allowed) return null; // the grid hides the dep box on disallowed rows
       const dep = clamp(n, 0, 100);
       return { depOverride: dep === ctx.autoDepRate(row) ? undefined : dep };
     }
     case 'billedTaxable': {
-      if (ctx.fromBill || row.allowed === false || row.billStatus === 'not-in-bill') return null;
+      if (ctx.fromBill || !row.allowed || row.billStatus === 'not-in-bill') return null;
       const billedTaxable = clamp(n, 0);
       return { billedTaxable, billedAmount: withTax(billedTaxable, row.gst ?? 18) };
     }

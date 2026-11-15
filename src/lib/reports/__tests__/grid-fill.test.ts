@@ -75,6 +75,19 @@ describe('planColumnFill', () => {
     expect(p.apply[0].updates).toEqual({ depOverride: undefined });
     expect(p.undo[0].updates).toEqual({ depOverride: 10 });
   });
+  it('depOverride skips disallowed rows', () => {
+    expect(planColumnFill('depOverride', ['10'], [row({ allowed: false })], 'a', ctx).skipped).toBe(1);
+  });
+  it('treats allowed: undefined as locked for billAllowed, billedTaxable and depOverride', () => {
+    const r = row({ allowed: undefined });
+    for (const c of ['billAllowed', 'billedTaxable', 'depOverride'] as const) {
+      expect(planColumnFill(c, ['10'], [r], 'a', ctx)).toMatchObject({ apply: [], skipped: 1 });
+    }
+  });
+  it('gst undo restores gst and billedAmount', () => {
+    const p = planColumnFill('gst', ['28'], [row({ billedTaxable: 1000, billedAmount: 1180 })], 'a', ctx);
+    expect(p.undo[0].updates).toEqual({ gst: 18, billedAmount: 1180 });
+  });
   it('billRemarks keeps text', () => {
     expect(planColumnFill('billRemarks', ['ok'], [row()], 'a', ctx).apply[0].updates).toEqual({ billRemarks: 'ok' });
   });
