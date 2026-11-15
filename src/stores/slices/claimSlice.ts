@@ -17,6 +17,7 @@ import { ignoreDrivePhotos } from '@/lib/photos/ignored-drive-photos';
 import { resolveAnnexureOptions } from '@/lib/photos/document-annexure';
 import { repairAssessmentRow, resolveExcessFields } from '@/lib/calculations/assessment';
 import type { PhotoTag } from '@/types/documents';
+import { isFromBill, selfBillUpdates, billHeaderFromEstimate } from '@/lib/reports/bill-check-mode';
 
 export interface ClaimSlice {
   currentClaim: ClaimData | null;
@@ -57,6 +58,8 @@ export interface ClaimSlice {
   setPolicyCheck: (updates: Partial<Omit<PolicyCheck, 'aiRead'>>) => void;
   updateFeeBill: (updates: Partial<ClaimData['feeBill']>) => void;
   updateBillCheck: (updates: Partial<ClaimData['billCheck']>) => void;
+  /** Bill Check uploads the final bill ('final-bill') or the estimate ('estimate', from-bill mode). */
+  setBillCheckUpload: (kind: 'final-bill' | 'estimate') => void;
   updateReportSettings: (updates: Partial<ReportSettings>) => void;
   addPhoto: (
     dataUrl: string,
@@ -433,6 +436,35 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
         : null,
       isDirty: true,
     }));
+  },
+
+  setBillCheckUpload: (kind) => {
+    set((state: ClaimSlice) => {
+      const c = state.currentClaim;
+      if (!c) return {};
+      const wasFromBill = isFromBill(c);
+      const byId = new Map(
+        (kind === 'estimate' ? selfBillUpdates(c.assessmentRows) : []).map((u) => [u.id, u.updates]),
+      );
+      const assessmentRows = c.assessmentRows.map((r) => {
+        const { estimateAmount: _drop, ...row } = r;
+        if (kind === 'estimate') return { ...row, ...byId.get(r.id) };
+        if (!wasFromBill) return row;
+        const { refSrNo: _a, refStatus: _b, refMatch: _c, ...rest } = row;
+        return r.allowed
+          ? { ...rest, billedTaxable: undefined, billedAmount: undefined, billStatus: 'pending' as const }
+          : rest;
+      });
+      const { estimateHeads: _heads, ...billCheck } = {
+        ...c.billCheck,
+        ...(kind === 'estimate' ? billHeaderFromEstimate(c) : {}),
+        baseDocument: kind === 'estimate' ? ('final-bill' as const) : ('estimate' as const),
+      };
+      return {
+        currentClaim: { ...c, assessmentRows, billCheck, extraBillItems: [], updatedAt: new Date().toISOString() },
+        isDirty: true,
+      };
+    });
   },
 
   updateReportSettings: (updates) => {

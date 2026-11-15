@@ -27,6 +27,8 @@ export interface ExtraBillItem {
   source: 'final-bill';
   /** The line's serial on the bill — becomes the row's refSrNo when linked. */
   srNo?: number | string;
+  /** Which estimate head this line counts under (from-bill mode). */
+  material?: 'metal' | 'plastic' | 'glass';
 }
 
 /** The bill line a row was matched to, kept so a wrong match can be undone. */
@@ -63,6 +65,8 @@ export interface AssessmentRow {
   billedAmount?: number;
   billStatus?: BillStatus;
   billRemarks?: string;
+  /** The real estimate's taxable amount (from-bill claims only). Never read by money code. */
+  estimateAmount?: number;
   /**
    * Bill-check allowance, pre-GST. When set, the Bill Check report uses this
    * in place of `assessed`. The Final Survey Report never reads it, so allowing
@@ -418,6 +422,15 @@ export interface DocumentAnnexureOptions {
   borderColor: string;
 }
 
+export interface EstimateHeads {
+  metal: number;
+  plastic: number;
+  glass: number;
+  fiberglass: number;
+  labour: number;
+  paint: number;
+}
+
 export interface BillCheckDetails {
   billNo: string;
   billDate: string;
@@ -425,6 +438,8 @@ export interface BillCheckDetails {
   /** Surveyor's Bill Check report date (YYYY-MM-DD) */
   billCheckDate?: string;
   baseDocument?: 'estimate' | 'final-bill';
+  /** Estimate heads the surveyor typed in (UIIC from-bill mode). */
+  estimateHeads?: EstimateHeads;
   refColumnTitle?: string;
   verifiedBySurveyor?: boolean;
   verifiedAt?: string;

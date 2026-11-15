@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { createClaimSlice, type ClaimSlice } from '../claimSlice';
 import { createBlankClaim } from '@/types';
 import { DEFAULT_DOCUMENT_ANNEXURE_OPTIONS } from '@/lib/photos/document-annexure';
-import type { PhotoItem } from '@/types/assessment';
+import type { PhotoItem, AssessmentRow } from '@/types/assessment';
 
 /**
  * A fresh, isolated instance of the claim slice per test — never the shared
@@ -115,5 +115,57 @@ describe('policy check ↔ depreciation sync', () => {
     store.setState({ currentClaim: { ...createBlankClaim('final'), policyCheck: { aiRead: { nilDep: 'yes' } } } });
     store.getState().setPolicyCheck({ nilDep: 'no' });
     expect(store.getState().currentClaim!.policyCheck).toEqual({ nilDep: 'no', aiRead: { nilDep: 'yes' } });
+  });
+});
+
+describe('setBillCheckUpload', () => {
+  const row = (over: Partial<AssessmentRow> = {}): AssessmentRow =>
+    ({ id: 'r1', particulars: 'Door', allowed: true, estimated: 1000, gst: 18, assessed: 900, ...over }) as AssessmentRow;
+  const seed = (rows: AssessmentRow[]) => {
+    const store = makeStore();
+    store.setState({
+      currentClaim: {
+        ...createBlankClaim(),
+        assessmentRows: rows,
+        extractedData: { estimate: { bill_number: 'B-7' } },
+        extraBillItems: [{ id: 'x' } as never],
+        billCheck: { billNo: '', billDate: '', billTotal: 0, estimateHeads: { metal: 1 } as never },
+      },
+    });
+    return store;
+  };
+
+  it("'estimate' self-bills allowed rows and fills the bill no.", () => {
+    const store = seed([row({ estimateAmount: 5 })]);
+    store.getState().setBillCheckUpload('estimate');
+    const c = store.getState().currentClaim!;
+    expect(c.billCheck.baseDocument).toBe('final-bill');
+    expect(c.assessmentRows[0]).toMatchObject({ billedAmount: 1180, billStatus: 'in-bill' });
+    expect(c.billCheck.billNo).toBe('B-7');
+    expect(c.extraBillItems).toEqual([]);
+    expect(c.assessmentRows[0].estimateAmount).toBeUndefined();
+    expect(c.billCheck.estimateHeads).toBeUndefined();
+  });
+
+  it("'final-bill' after from-bill clears the self-billed figures and refs", () => {
+    const store = seed([row({ refSrNo: 3 })]);
+    store.getState().setBillCheckUpload('estimate');
+    store.getState().setBillCheckUpload('final-bill');
+    const c = store.getState().currentClaim!;
+    expect(c.billCheck.baseDocument).toBe('estimate');
+    expect(c.assessmentRows[0].billStatus).toBe('pending');
+    expect(c.assessmentRows[0].billedAmount).toBeUndefined();
+    expect(c.assessmentRows[0].refSrNo).toBeUndefined();
+  });
+
+  it("'final-bill' on a normal claim leaves rows untouched but still clears extras", () => {
+    const r = row({ billedAmount: 77, billStatus: 'in-bill', refSrNo: 2, estimateAmount: 9 });
+    const store = seed([r]);
+    store.getState().setBillCheckUpload('final-bill');
+    const c = store.getState().currentClaim!;
+    expect(c.assessmentRows[0]).toMatchObject({ billedAmount: 77, billStatus: 'in-bill', refSrNo: 2 });
+    expect(c.assessmentRows[0].estimateAmount).toBeUndefined();
+    expect(c.extraBillItems).toEqual([]);
+    expect(c.billCheck.estimateHeads).toBeUndefined();
   });
 });
