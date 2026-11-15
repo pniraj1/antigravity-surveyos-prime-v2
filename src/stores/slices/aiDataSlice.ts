@@ -5,7 +5,7 @@ import { buildDecision } from '@/lib/ai/reconciliation';
 import { parsePolicyAddOns, mergePolicyAiRead } from '@/lib/policy/policy-check';
 import { applyEstimateFix, type EstimateFixPlan, type EstimateFixPicks } from '@/lib/ai/estimate-fix';
 import { normPart } from '@/lib/reports/bill-match-score';
-import { isFromBill, selfBillUpdates } from '@/lib/reports/bill-check-mode';
+import { isFromBill, selfBillUpdates, heldLineIds } from '@/lib/reports/bill-check-mode';
 
 export type EstimateApplyMode = 'replace' | 'append' | 'continue' | 'another';
 
@@ -734,7 +734,8 @@ export function applyFinalBill(
   // Merge, don't overwrite: the surveyor may have deleted or promoted items
   // from a previous upload of this bill.
   const seen = new Set((claim.extraBillItems || []).map((e) => e.id));
-  const merged = [...(claim.extraBillItems || []), ...extras.filter((e) => !seen.has(e.id))];
+  const heldNow = fromBill ? heldLineIds(updatedRows) : new Set<string>();
+  const merged = [...(claim.extraBillItems || []), ...extras.filter((e) => !seen.has(e.id))].filter((e) => !heldNow.has(e.id));
 
   return {
     ...claim,

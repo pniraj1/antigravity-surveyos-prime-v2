@@ -252,3 +252,16 @@ describe('applyFinalBill — claim built from the bill (estimate upload)', () =>
     expect(out.assessmentRows.find(r => r.refMatch?.refOnly)!.estimateAmount).toBeUndefined();
   });
 });
+
+describe('applyFinalBill — from-bill re-upload does not keep matched extras (I2b)', () => {
+  test('an older extra now held by a row is dropped', () => {
+    const line = (sr_no: number) => ({ sr_no, description: 'FRONT BUMPER', part_number: 'BP-1', taxable_amount: 9000, total_amount: 10620, gst_percent: 18 });
+    // First read leaves the line unmatched (no row yet matches), then a row appears and the same estimate is re-read.
+    const first = applyFinalBill({ ...claim([row({ id: 'r0', partNumber: 'ZZ-0', particulars: 'OTHER' })]), billCheck: { baseDocument: 'final-bill' } } as unknown as ClaimData, { spare_parts: [line(1)] });
+    expect(first.extraBillItems).toHaveLength(1);
+    const withRow = { ...first, assessmentRows: [...first.assessmentRows, row({ id: 'r1' })] } as ClaimData;
+    const second = applyFinalBill(withRow, { spare_parts: [line(1)] });
+    expect(second.assessmentRows.find(r => r.id === 'r1')?.refMatch).toBeDefined();
+    expect(second.extraBillItems).toHaveLength(0);
+  });
+});

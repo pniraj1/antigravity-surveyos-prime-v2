@@ -22,11 +22,14 @@ const ROWS: { key: keyof EstimateHeads; label: string }[] = [
   { key: 'paint', label: 'Painting' },
 ];
 
+/** A typed head figure: blank or negative counts as 0. */
+export const clampHead = (s: string): number => Math.max(0, parseFloat(s) || 0);
+
 export function EstimateHeadsDialog({ initial, totals, onConfirm, onCancel }: Props) {
   const [vals, setVals] = useState<Record<keyof EstimateHeads, string>>(
     () => Object.fromEntries(ROWS.map((r) => [r.key, String(initial[r.key])])) as Record<keyof EstimateHeads, string>
   );
-  const num = (k: keyof EstimateHeads) => parseFloat(vals[k]) || 0;
+  const num = (k: keyof EstimateHeads) => clampHead(vals[k]);
   const sum = ROWS.reduce((s, r) => s + num(r.key), 0);
   const diff = totals && totals.printed > 0 ? totals.linesInclGst - totals.printed : 0;
 
@@ -72,6 +75,12 @@ export function EstimateHeadsDialog({ initial, totals, onConfirm, onCancel }: Pr
                 <td className="pt-2" colSpan={2}>Total of heads</td>
                 <td className="pt-2 text-right">{formatCurrencyShort(sum)}</td>
               </tr>
+              {totals && (
+                <tr className="text-muted-foreground">
+                  <td className="py-1" colSpan={2}>Lines read, incl. GST</td>
+                  <td className="py-1 text-right">{formatCurrencyShort(totals.linesInclGst)}</td>
+                </tr>
+              )}
               {totals && (
                 <tr className="text-muted-foreground">
                   <td className="py-1" colSpan={2}>Estimate total (printed on estimate)</td>

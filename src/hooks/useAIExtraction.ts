@@ -14,6 +14,7 @@ import type { EstimateApplyMode } from '@/stores/slices/aiDataSlice';
 import { extractDocument, smartFixRescan } from '@/lib/ai/processor';
 import { stripPageTags, countRows } from '@/lib/ai/row-check';
 import { toast } from 'sonner';
+import { finalBillReadBlocked } from '@/lib/reports/bill-check-mode';
 
 /**
  * Drives AI document extraction.
@@ -133,7 +134,14 @@ export function useAIExtraction() {
   const confirmApply = useCallback(() => {
     if (reviewData) {
       // Read before clearJob — clearing drops the job and the mode with it.
-      const mode = useExtractionStore.getState().jobs[reviewData.key]?.estimateMode;
+      const job = useExtractionStore.getState().jobs[reviewData.key];
+      const mode = job?.estimateMode;
+      if (finalBillReadBlocked(useClaimStore.getState().currentClaim, reviewData.key, job?.originTab)) {
+        // Stored only (setExtractedData ran at read time): Bill Check is where the upload is named.
+        clearJob(reviewData.key);
+        toast.warning("This claim's assessment was built from the bill, so Bill Check reads the estimate. The bill was saved but not applied — upload the estimate in Bill Check.", { duration: 12000 });
+        return;
+      }
       applyExtractedData(reviewData.key, stripPageTags(reviewData.data), mode);
       clearJob(reviewData.key);
       toast.success('Fields auto-filled!');

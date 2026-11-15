@@ -30,6 +30,21 @@ export function selfBillUpdates(rows: AssessmentRow[]): RowUpdate[] {
   return out;
 }
 
+/** From-bill claims: billed is always the row's own figure, so a changed estimated re-bills it. */
+export function fromBillSelfBillUpdates(claim: ClaimData): RowUpdate[] {
+  return isFromBill(claim) ? selfBillUpdates(claim.assessmentRows) : [];
+}
+
+/** A Final Bill read that did not start in Bill Check must not become the estimate of a from-bill claim. */
+export function finalBillReadBlocked(claim: ClaimData | null | undefined, key: string, originTab: string | null | undefined): boolean {
+  return key === 'final-bill' && isFromBill(claim) && originTab !== 'bill-check';
+}
+
+/** Ids of the lines rows hold (bill or also). */
+export function heldLineIds(rows: AssessmentRow[]): Set<string> {
+  return new Set(rows.flatMap((r) => [r.refMatch?.bill, ...(r.refMatch?.also ?? [])]).filter((l): l is ExtraBillItem => !!l).map((l) => l.id));
+}
+
 /** Rows setBillCheckUpload(kind) would change (refs cleared, billed figures replaced or cleared). */
 export function rowsLostOnSwitch(claim: ClaimData, kind: 'final-bill' | 'estimate'): number {
   const fromBill = isFromBill(claim);
@@ -69,7 +84,9 @@ export function estimateHeads(claim: ClaimData): EstimateHeads {
   for (const r of claim.assessmentRows) {
     if (r.estimateAmount != null) out[headOf(r.section, r.partType)] += r.estimateAmount;
   }
+  const held = heldLineIds(claim.assessmentRows);
   for (const x of claim.extraBillItems ?? []) {
+    if (held.has(x.id)) continue;
     out[headOf(x.section, x.material ?? 'metal')] += x.taxableAmount;
   }
   return out;
@@ -81,7 +98,7 @@ export function estimateTotals(claim: ClaimData): { linesInclGst: number; printe
   for (const r of claim.assessmentRows) {
     for (const l of [r.refMatch?.bill, ...(r.refMatch?.also ?? [])]) if (l) lines.set(l.id, l);
   }
-  const extras = claim.extraBillItems ?? [];
+  const extras = (claim.extraBillItems ?? []).filter((x) => !lines.has(x.id));
   if (!lines.size && !extras.length) return null;
   const sum = (a: Iterable<ExtraBillItem>) => [...a].reduce((t, l) => t + l.amount, 0);
   const total = (claim.extractedData?.['final-bill'] as { total_amount?: unknown } | undefined)?.total_amount;

@@ -460,6 +460,8 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
         ...c.billCheck,
         ...(kind === 'estimate' ? billHeaderFromEstimate(c) : {}),
         baseDocument: kind === 'estimate' ? ('final-bill' as const) : ('estimate' as const),
+        // A damaged claim's header was the estimate's: the surveyor confirms it again.
+        ...(kind === 'estimate' && !wasFromBill ? { verifiedBySurveyor: false } : {}),
       };
       return {
         currentClaim: { ...c, assessmentRows, billCheck, extraBillItems: [], updatedAt: new Date().toISOString() },

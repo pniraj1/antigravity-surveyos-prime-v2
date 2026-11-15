@@ -176,6 +176,13 @@ describe('setBillCheckUpload', () => {
     expect([r0.refSrNo, r0.refStatus, r0.refMatch]).toEqual([undefined, undefined, undefined]);
   });
 
+  it("'estimate' on a normal claim un-verifies the estimate's header (I5)", () => {
+    const store = seed([row()]);
+    store.getState().updateBillCheck({ verifiedBySurveyor: true });
+    store.getState().setBillCheckUpload('estimate');
+    expect(store.getState().currentClaim!.billCheck.verifiedBySurveyor).toBe(false);
+  });
+
   it("'estimate' again on a from-bill claim keeps its refs", () => {
     const store = seed([row({ refSrNo: '7' })]);
     store.getState().updateBillCheck({ baseDocument: 'final-bill' });

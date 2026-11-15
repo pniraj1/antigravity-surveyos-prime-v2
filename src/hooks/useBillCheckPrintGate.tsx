@@ -5,7 +5,7 @@ import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { usePrintGate } from '@/hooks/usePrintGate';
 import { rowsNeedingRemark } from '@/lib/reports/bill-check-projection';
-import { isFromBill, selfBillUpdates, estimateHeads, estimateTotals, needsEstimateHeads } from '@/lib/reports/bill-check-mode';
+import { isFromBill, selfBillUpdates, fromBillSelfBillUpdates, estimateHeads, estimateTotals, needsEstimateHeads } from '@/lib/reports/bill-check-mode';
 import { billCheckFlags } from '@/lib/reports/bill-check-flags';
 import { triggerUIICBillCheckPrint } from '@/lib/reports/uiic-final-builder';
 import { triggerStandardPrint } from '@/lib/reports/standard-report-builder';
@@ -55,6 +55,9 @@ export function useBillCheckPrintGate() {
   }, [currentClaim, profile, gate]);
 
   const requestPrint = useCallback((format: 'standard' | 'uiic') => {
+    // From-bill: re-bill any row whose estimated changed since it was self-billed, before any check.
+    const stored = useClaimStore.getState().currentClaim ?? currentClaim;
+    if (stored) for (const { id, updates } of fromBillSelfBillUpdates(stored)) updateAssessmentRow(id, updates);
     const claim = useClaimStore.getState().currentClaim ?? currentClaim;
     if (!claim) return;
     setTargetFormat(format);
@@ -104,7 +107,7 @@ export function useBillCheckPrintGate() {
     }
 
     executePrint(format, claim);
-  }, [currentClaim, executePrint]);
+  }, [currentClaim, executePrint, updateAssessmentRow]);
 
   const handleInvoiceVerified = (data: { billNo: string; billDate: string; billTotal: number }) => {
     const claim = useClaimStore.getState().currentClaim ?? currentClaim;
@@ -220,9 +223,11 @@ export function useBillCheckPrintGate() {
       {pendingGate && (
         <PendingRowsDialog
           rows={pendingRows}
-          body={unmatchedLines > 0
+          body={fromBill
+            ? 'These items will be billed at their own figures from the bill.'
+            : unmatchedLines > 0
             ? `${unmatchedLines} bill line${unmatchedLines === 1 ? ' is' : 's are'} not matched to any item yet. Link ${unmatchedLines === 1 ? 'it' : 'them'} first under Bill Items Not Matched — otherwise these items print as No Bill.`
-            : fromBill ? 'These items will be billed at their own figures from the bill.' : undefined}
+            : undefined}
           resolveLabel={fromBill ? 'Bill them at their own figures' : undefined}
           onResolveAll={resolveAllPending}
           onCancel={() => setPendingGate(false)}

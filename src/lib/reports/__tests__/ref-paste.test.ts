@@ -108,3 +108,12 @@ describe('review fixes', () => {
     expect(planRefPaste({ kind: 'column', refs: ['301'] }, [refOnly], 'a', null).released).toEqual([]);
   });
 });
+
+describe('planRefPaste estimateAmount (I2a)', () => {
+  it('apply clears estimateAmount and undo restores it', () => {
+    const row = { ...r('a', 1), estimateAmount: 900 } as AssessmentRow;
+    const p = planRefPaste({ kind: 'column', refs: ['5'] }, [row], 'a', null);
+    expect(p.apply[0].updates).toHaveProperty('estimateAmount', undefined);
+    expect(p.undo[0].updates.estimateAmount).toBe(900);
+  });
+});

@@ -173,6 +173,14 @@ describe('from-bill mode (estimate links)', () => {
     expect(get().currentClaim!.extraBillItems).toHaveLength(0);
   });
 
+  test('link in from-bill mode leaves an empty remark empty (M4)', () => {
+    const { billRemarks: _drop, ...noRemark } = billed;
+    const claim = { id: 'c1', billCheck: fromBill, assessmentRows: [row(noRemark)], extraBillItems: [extra] } as unknown as ClaimData;
+    const { slice, get } = harness(claim);
+    slice.linkExtraBillItem('e1', 'r1');
+    expect(get().currentClaim!.assessmentRows[0].billRemarks).toBeUndefined();
+  });
+
   test('unlink in from-bill mode keeps the row\'s billed figures and status', () => {
     const r0 = row({
       ...billed, estimateAmount: 6000, refSrNo: 9, refStatus: 'manual',

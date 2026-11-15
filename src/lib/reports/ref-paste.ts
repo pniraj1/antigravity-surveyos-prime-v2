@@ -105,8 +105,8 @@ export function planRefPaste(
   for (const [row, ref] of targets) {
     if (String(row.refSrNo ?? '') === ref) continue;
     const why = doubt(row, ref, lines);
-    plan.apply.push({ id: row.id, updates: { refSrNo: ref, refStatus: why ? 'ambiguous' : 'manual', refMatch: undefined } });
-    plan.undo.push({ id: row.id, updates: { refSrNo: row.refSrNo, refStatus: row.refStatus, refMatch: row.refMatch } });
+    plan.apply.push({ id: row.id, updates: { refSrNo: ref, refStatus: why ? 'ambiguous' : 'manual', refMatch: undefined, estimateAmount: undefined } });
+    plan.undo.push({ id: row.id, updates: { refSrNo: row.refSrNo, refStatus: row.refStatus, refMatch: row.refMatch, estimateAmount: row.estimateAmount } });
     if (why) plan.flagged += 1; else plan.filled += 1;
     if (why === 'missing') plan.notOnDocument += 1;
     if (row.refMatch && !row.refMatch.refOnly) plan.released.push(row.refMatch.bill, ...(row.refMatch.also ?? []));

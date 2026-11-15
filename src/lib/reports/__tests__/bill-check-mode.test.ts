@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { estimateHeads, estimateTotals, needsEstimateHeads, billHeaderFromEstimate, isFromBill, rowsLostOnSwitch, selfBilled, selfBillUpdates } from '../bill-check-mode';
+import { fromBillSelfBillUpdates, finalBillReadBlocked, estimateHeads, estimateTotals, needsEstimateHeads, billHeaderFromEstimate, isFromBill, rowsLostOnSwitch, selfBilled, selfBillUpdates } from '../bill-check-mode';
 import type { ClaimData } from '@/types';
 import type { AssessmentRow } from '@/types/assessment';
 
@@ -83,4 +83,30 @@ describe('rowsLostOnSwitch', () => {
       expect(needsEstimateHeads(fb([], x, estimateHeads(fb([], x))))).toBe(false);
     });
   });
+});
+
+describe('fromBillSelfBillUpdates (I1)', () => {
+  const stale = row({ id: 's', estimated: 5400, gst: 18, billedTaxable: 4500, billedAmount: 5310, billStatus: 'in-bill' });
+  const mk = (baseDocument: 'estimate' | 'final-bill') => ({ assessmentRows: [stale], billCheck: { baseDocument } }) as unknown as ClaimData;
+  it('from-bill claim: a row whose estimated changed after self-billing gets the new figures', () =>
+    expect(fromBillSelfBillUpdates(mk('final-bill'))).toEqual([{ id: 's', updates: { billedTaxable: 5400, billedAmount: 6372, billStatus: 'in-bill' } }]));
+  it('normal claim: nothing', () => expect(fromBillSelfBillUpdates(mk('estimate'))).toEqual([]));
+});
+
+describe('finalBillReadBlocked (I3)', () => {
+  const c = (baseDocument: 'estimate' | 'final-bill') => ({ billCheck: { baseDocument } }) as unknown as ClaimData;
+  it('from-bill + final-bill read started elsewhere: blocked', () => expect(finalBillReadBlocked(c('final-bill'), 'final-bill', 'documents')).toBe(true));
+  it('started in Bill Check: applied', () => expect(finalBillReadBlocked(c('final-bill'), 'final-bill', 'bill-check')).toBe(false));
+  it('normal claim: applied', () => expect(finalBillReadBlocked(c('estimate'), 'final-bill', 'documents')).toBe(false));
+  it('other documents: applied', () => expect(finalBillReadBlocked(c('final-bill'), 'rc', 'documents')).toBe(false));
+});
+
+describe('estimate heads skip lines held by a row (I2c)', () => {
+  const line = { id: 'L1', description: 'X', amount: 1180, taxableAmount: 1000, gstPercent: 18, section: 'parts' as const, source: 'final-bill' as const };
+  const claim = {
+    assessmentRows: [row({ refMatch: { bill: line, score: 100, reasons: [] } })],
+    extraBillItems: [line],
+  } as unknown as ClaimData;
+  it('heads do not count the held line twice', () => expect(estimateHeads(claim).plastic + estimateHeads(claim).metal).toBe(0));
+  it('totals do not count the held line twice', () => expect(estimateTotals(claim)?.linesInclGst).toBe(1180));
 });

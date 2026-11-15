@@ -10,6 +10,7 @@ import { useAIExtraction } from '@/hooks/useAIExtraction';
 import { calculateAssessmentSummary, calculateBillCheckSummary, getVehicleAgeMonths, buildSerialMap } from '@/lib/calculations';
 import { billCheckAssessed, resolveBillSalvage } from '@/lib/reports/bill-check-projection';
 import { settleLegacyRefs } from '@/lib/reports/bill-ref';
+import { fromBillSelfBillUpdates } from '@/lib/reports/bill-check-mode';
 import { billCheckFlags, reconcileInvoice } from '@/lib/reports/bill-check-flags';
 import { salvageBasis } from '@/lib/calculations/salvage';
 import { needsReview } from '@/lib/ai/needs-review';
@@ -54,9 +55,12 @@ export function BillCheckTab() {
   // part numbers stop counting as sure; status-less refs become the surveyor's.
   const claimId = currentClaim?.id;
   useEffect(() => {
-    const rows = useClaimStore.getState().currentClaim?.assessmentRows;
-    if (!rows) return;
-    for (const { id, updates } of settleLegacyRefs(rows)) updateAssessmentRow(id, updates);
+    const claim = useClaimStore.getState().currentClaim;
+    if (!claim) return;
+    for (const { id, updates } of settleLegacyRefs(claim.assessmentRows)) updateAssessmentRow(id, updates);
+    // From-bill: billed is the row's own figure; an estimated edited since then must not silently cap it.
+    const latest = useClaimStore.getState().currentClaim;
+    if (latest) for (const { id, updates } of fromBillSelfBillUpdates(latest)) updateAssessmentRow(id, updates);
   }, [claimId, updateAssessmentRow]);
 
   if (!currentClaim) return null;
@@ -124,7 +128,11 @@ export function BillCheckTab() {
   const handleUploadChange = (kind: 'final-bill' | 'estimate') => {
     const losing = rowsLostOnSwitch(currentClaim, kind);
     if (losing > 0 || extraBillItems.length > 0) {
-      const ok = window.confirm(kind === 'final-bill'
+      const ok = window.confirm(losing === 0
+        ? (kind === 'final-bill'
+          ? 'Switch to Final bill? The estimate lines read so far will be cleared.'
+          : 'Switch to Estimate? The bill lines read so far will be cleared.')
+        : kind === 'final-bill'
         ? `Switch to Final bill? The estimate numbers and billed amounts on ${losing} items will be cleared, because a final bill will now be read for them.`
         : `Switch to Estimate? The bill item numbers and billed amounts on ${losing} items will be replaced by the bill's own figures, and the bill lines read so far will be cleared.`);
       if (!ok) return;
