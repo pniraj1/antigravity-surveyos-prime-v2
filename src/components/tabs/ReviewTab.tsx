@@ -32,6 +32,9 @@ const DOC_META: Record<string, { label: string; icon: any; color: string }> = {
 };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
+/** Extraction keys shown to the surveyor: not the internal model record or per-field context/page/file helpers. */
+export const isReviewField = (k: string): boolean => k !== '_models' && !/_(context|page|file)$/.test(k);
+
 export function ReviewTab() {
   const currentClaim  = useClaimStore(s => s.currentClaim);
   const extractedDocs = currentClaim?.extractedData ?? {};
@@ -168,7 +171,7 @@ export function ReviewTab() {
             const Icon = meta.icon;
             const data = extractedDocs[key] as Record<string, unknown>;
             const fields = typeof data === 'object' && data !== null
-              ? Object.entries(data).filter(([k]) => !/_(context|page|file)$/.test(k))
+              ? Object.entries(data).filter(([k]) => isReviewField(k))
               : [];
 
             return (

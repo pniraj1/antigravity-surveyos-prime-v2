@@ -190,6 +190,15 @@ describe('extractDocument — image path (estimate)', () => {
   });
 });
 
+describe('extractDocument — single-page scalar document', () => {
+  it('an RC answered as a list keeps its fields (no "0" key)', async () => {
+    queue(JSON.stringify([{ registration_number: 'MH40BG5830' }]));
+    const { data } = await extractDocument('rc', [pngFile('rc.png')]);
+    expect(data['0']).toBeUndefined();
+    expect(data.registration_number).toBe('MH40BG5830');
+  });
+});
+
 describe('extractDocument — bench override', () => {
   const ov = (o: object) => { bench.override = { provider: 'groq', model: 'm', key: 'k', ...o }; };
   const rows = (n: number, from: number) => JSON.stringify({ spare_parts: Array.from({ length: n }, (_, i) => ({ sr_no: from + i, total_amount: 10 })) });

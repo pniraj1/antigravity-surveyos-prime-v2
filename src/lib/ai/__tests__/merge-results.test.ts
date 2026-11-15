@@ -28,3 +28,18 @@ describe('asFragment', () => {
     expect(out.painting_items).toHaveLength(1);
   });
 });
+
+describe('asFragment — review fixes', () => {
+  it('unwraps a one-element list holding a scalar-only document (RC)', () => {
+    expect(asFragment([{ registration_number: 'MH40BG5830', owner_name: 'X' }]))
+      .toEqual({ registration_number: 'MH40BG5830', owner_name: 'X' });
+  });
+  it('folds a mixed list: rows object plus a header-only object', () => {
+    expect(asFragment([{ spare_parts: [{ sr_no: 1 }] }, { gross_amount: 5000, workshop_name: 'X' }]))
+      .toEqual({ spare_parts: [{ sr_no: 1 }], gross_amount: 5000, workshop_name: 'X' });
+  });
+  it('leaves a one-row list alone', () => {
+    const rows = [{ sr_no: 1, description: 'NUT', total_amount: 10 }];
+    expect(asFragment(rows)).toBe(rows);
+  });
+});

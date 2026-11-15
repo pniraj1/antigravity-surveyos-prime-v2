@@ -12,17 +12,22 @@ const TOTAL_FIELDS = new Set([
   'gst_amount', 'discount_amount', 'tds_amount',
 ]);
 
-const isDocument = (x: unknown): boolean =>
-  !!x && typeof x === 'object' && !Array.isArray(x) && Object.values(x).some(Array.isArray);
+const isPlainObject = (x: unknown): x is Record<string, unknown> =>
+  !!x && typeof x === 'object' && !Array.isArray(x);
+const isDocument = (x: unknown): boolean => isPlainObject(x) && Object.values(x).some(Array.isArray);
+/** Rows carry a serial; a lone object without one is a scalar document (RC, DL, header). */
+const isLoneDocument = (list: unknown[]): boolean =>
+  list.length === 1 && isPlainObject(list[0]) && !('sr_no' in list[0]);
 
 /**
  * A model sometimes wraps a page's answer in a list (`[ { spare_parts: … } ]`).
  * mergeAIResults would file that under key "0", where nothing reads it, and
  * the page's rows are lost. Fold document-shaped elements back into one object.
  */
-// ponytail: a bare row list (no section keys) is left as-is — its section can't be known; it fails as before.
+// ponytail: a bare row list (rows with sr_no, no section keys) is left as-is — its section can't be known; it fails as before.
 export function asFragment(parsed: unknown): unknown {
-  if (!Array.isArray(parsed) || parsed.length === 0 || !parsed.every(isDocument)) return parsed;
+  if (!Array.isArray(parsed) || !parsed.every(isPlainObject)) return parsed;
+  if (!parsed.some(isDocument) && !isLoneDocument(parsed)) return parsed;
   return parsed.reduce((acc: unknown, doc: unknown) => mergeAIResults(acc, doc), null);
 }
 
