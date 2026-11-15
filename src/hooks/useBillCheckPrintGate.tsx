@@ -5,15 +5,16 @@ import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { usePrintGate } from '@/hooks/usePrintGate';
 import { rowsNeedingRemark } from '@/lib/reports/bill-check-projection';
-import { isFromBill, selfBillUpdates } from '@/lib/reports/bill-check-mode';
+import { isFromBill, selfBillUpdates, estimateHeads, estimateTotals, needsEstimateHeads } from '@/lib/reports/bill-check-mode';
 import { billCheckFlags } from '@/lib/reports/bill-check-flags';
 import { triggerUIICBillCheckPrint } from '@/lib/reports/uiic-final-builder';
 import { triggerStandardPrint } from '@/lib/reports/standard-report-builder';
 import { PendingRowsDialog } from '@/components/dialogs/PendingRowsDialog';
 import { MissingRemarkDialog } from '@/components/dialogs/MissingRemarkDialog';
 import { VerifyInvoiceDetailsDialog } from '@/components/dialogs/VerifyInvoiceDetailsDialog';
+import { EstimateHeadsDialog } from '@/components/dialogs/EstimateHeadsDialog';
 import type { ClaimData } from '@/types/claim';
-import type { AssessmentRow } from '@/types/assessment';
+import type { AssessmentRow, EstimateHeads } from '@/types/assessment';
 import type { SurveyorProfile } from '@/types/vehicle';
 
 /**
@@ -33,6 +34,7 @@ export function useBillCheckPrintGate() {
   const { gate, gateDialog } = usePrintGate();
 
   const [verifyOpen, setVerifyOpen] = useState(false);
+  const [headsOpen, setHeadsOpen] = useState(false);
   const [pendingGate, setPendingGate] = useState(false);
   const [flagGate, setFlagGate] = useState(false);
   const [remarkWarning, setRemarkWarning] = useState(false);
@@ -60,6 +62,12 @@ export function useBillCheckPrintGate() {
     const bc = claim.billCheck || { billNo: '', billDate: '', billTotal: 0 };
     const allRows = claim.assessmentRows || [];
     const allowedRows = allRows.filter((r) => r.allowed);
+
+    // ── Check 0: UIIC estimate heads (from-bill claims, not yet confirmed) ──
+    if (format === 'uiic' && needsEstimateHeads(claim)) {
+      setHeadsOpen(true);
+      return;
+    }
 
     // ── Check 1: Invoice metadata verification ───────────────────
     const isInvoiceVerified =
@@ -118,6 +126,10 @@ export function useBillCheckPrintGate() {
     setVerifyOpen(false);
 
     // Continue to next check after state update
+    if (targetFormat === 'uiic' && needsEstimateHeads(updatedClaim)) {
+      setHeadsOpen(true);
+      return;
+    }
     const allRows = updatedClaim.assessmentRows || [];
     const allowedRows = allRows.filter((r) => r.allowed);
     const pending = allowedRows.filter((r) => !r.billStatus || r.billStatus === 'pending');
@@ -138,6 +150,14 @@ export function useBillCheckPrintGate() {
     }
 
     executePrint(targetFormat, updatedClaim);
+  };
+
+  const handleHeadsConfirmed = (heads: EstimateHeads) => {
+    const claim = useClaimStore.getState().currentClaim ?? currentClaim;
+    if (!claim) return;
+    updateClaim({ billCheck: { ...(claim.billCheck || { billNo: '', billDate: '', billTotal: 0 }), estimateHeads: heads } });
+    setHeadsOpen(false);
+    requestPrint('uiic');
   };
 
   const resolveAllPending = () => {
@@ -177,6 +197,15 @@ export function useBillCheckPrintGate() {
 
   const dialogs = (
     <>
+      {headsOpen && activeClaim && (
+        <EstimateHeadsDialog
+          initial={estimateHeads(activeClaim)}
+          totals={estimateTotals(activeClaim)}
+          onConfirm={handleHeadsConfirmed}
+          onCancel={() => setHeadsOpen(false)}
+        />
+      )}
+
       {verifyOpen && (
         <VerifyInvoiceDetailsDialog
           open={verifyOpen}
