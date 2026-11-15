@@ -262,7 +262,8 @@ Use a `row(overrides)` helper like the one in `src/stores/slices/__tests__/apply
 - Above the upload box, two buttons in one row: **This upload is:** `Final bill` | `Estimate`. The chosen one is highlighted. Clicking the other calls `onUploadChange`.
 - `BillCheckTab` behaviour when the choice changes:
   - Switching **to Final bill** while the claim is from-bill and any allowed row has a `refSrNo` or billed figures asks first, with `window.confirm`: `Switch to Final bill? The estimate numbers and billed amounts on {n} items will be cleared, because a final bill will now be read for them.` Cancel changes nothing.
-  - Switching **to Estimate** needs no question. It sets every allowed item's billed amounts to its own figures (Task 1, `selfBillUpdates`), and touches no Ref No.
+  - Switching **to Estimate** on a claim that isn't yet from-bill, while any row has a `refSrNo`, asks first: `Switch to Estimate? The bill item numbers on {n} items will be cleared, because their numbers will now come from the estimate.` Cancel changes nothing (Task 2 ruling).
+  - Otherwise switching **to Estimate** needs no question. It sets every allowed item's billed amounts to its own figures (Task 1, `selfBillUpdates`), and touches no Ref No.
   - Either way, it then calls `setBillCheckUpload`.
 - Texts when `upload === 'estimate'`:
   - title: `Step 1 — Upload the estimate`;
