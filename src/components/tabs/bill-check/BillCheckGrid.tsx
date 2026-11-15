@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo, type ClipboardEvent } from 'react';
+import { useState, useEffect, useRef, useMemo, type ClipboardEvent, type KeyboardEvent } from 'react';
 import { AlertCircle, Trash2, Settings2, Eye, EyeOff, FileSearch, PlusCircle, PackageX } from 'lucide-react';
 import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
 import { useClaimStore } from '@/stores/claim-store';
@@ -32,6 +32,7 @@ import { useColumnResize } from '@/hooks/useColumnResize';
 import { overBilledRows } from '@/lib/calculations/estimate-floor';
 import { toast } from 'sonner';
 import { buildBillItems } from '@/stores/slices/aiDataSlice';
+import { columnValues, moveTarget, planColumnFill, type FillColumn, type MoveKey } from '@/lib/reports/grid-fill';
 import { parseRefPaste, planRefPaste, type ReadLine, type RowUpdate } from '@/lib/reports/ref-paste';
 
 /** Bill Check rows are the assessment's rows: deleting here deletes there too. */
@@ -124,6 +125,56 @@ export function BillCheckGrid({
    * A single value pastes natively. Pasted refs are the surveyor's, unless what
    * Bill Check read contradicts them — then they are left to check, not printed.
    */
+  // Same rows, same order as the grid shows them; pool ignores the "needs a ref" filter.
+  const screenRows = () => {
+    const pool = SECTION_ORDER.flatMap(({ section }) =>
+      allRows.filter(r => r.section === section && (r.allowed || (r.billedAmount ?? 0) > 0)));
+    const onScreen = filterUncertain
+      ? pool.filter(r => r.refStatus === 'ambiguous' || (r.allowed && !r.refSrNo))
+      : pool;
+    return { pool, onScreen };
+  };
+
+  const FILL_COLS: readonly string[] = ['gst', 'disposalPercent', 'billAllowed', 'depOverride', 'billedTaxable', 'billRemarks'];
+  const ARROWS: readonly string[] = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+
+  /** Shift+arrows: move between editable boxes, as in the Assessment tab. */
+  const handleGridKeys = (e: KeyboardEvent<HTMLElement>) => {
+    const t = e.target as HTMLElement;
+    if (!e.shiftKey || !ARROWS.includes(e.key) || !t.dataset?.bcRow) return;
+    const els = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('[data-bc-row][data-bc-col]'))
+      .filter(el => !(el as HTMLInputElement).disabled);
+    const cells = els.map(el => ({ row: el.dataset.bcRow!, col: el.dataset.bcCol! }));
+    const to = moveTarget(cells, { row: t.dataset.bcRow, col: t.dataset.bcCol! }, e.key as MoveKey);
+    if (to === null) return;
+    e.preventDefault();
+    const next = els[to];
+    next.focus();
+    if (next instanceof HTMLInputElement && (next.type === 'text' || next.type === 'number')) next.select();
+  };
+
+  /** A column pasted from Excel into any editable column but Ref No (that has its own paste). */
+  const handleColumnPaste = (e: ClipboardEvent<HTMLElement>) => {
+    const t = e.target as HTMLElement;
+    const col = t.dataset?.bcCol;
+    if (e.defaultPrevented || !col || !FILL_COLS.includes(col)) return;
+    const values = columnValues(e.clipboardData.getData('text'));
+    if (!values) return;
+    e.preventDefault();
+    const plan = planColumnFill(col as FillColumn, values, screenRows().onScreen, t.dataset.bcRow!, {
+      fromBill,
+      autoDepRate: r => depRateFor({ ...r, depOverride: undefined }),
+    });
+    if (plan.filled === 0) {
+      toast.info('Nothing pasted — those boxes are locked or the values could not be read.');
+      return;
+    }
+    plan.apply.forEach(u => updateAssessmentRow(u.id, u.updates));
+    toast(`Pasted ${plan.filled} value${plan.filled === 1 ? '' : 's'}${plan.skipped > 0 ? ` · ${plan.skipped} skipped` : ''}`, {
+      action: { label: 'Undo', onClick: () => plan.undo.forEach(u => updateAssessmentRow(u.id, u.updates)) },
+    });
+  };
+
   const handleRefPaste = (e: ClipboardEvent<HTMLInputElement>, rowId: string) => {
     const paste = parseRefPaste(e.clipboardData.getData('text'));
     if (paste.kind === 'single') return;
@@ -132,12 +183,7 @@ export function BillCheckGrid({
       toast.error('Copy just the Ref No. column, or the Sr No. and Ref No. columns of one section at a time.');
       return;
     }
-    // Same rows, same order as the grid shows them; pool ignores the "needs a ref" filter.
-    const pool = SECTION_ORDER.flatMap(({ section }) =>
-      allRows.filter(r => r.section === section && (r.allowed || (r.billedAmount ?? 0) > 0)));
-    const onScreen = filterUncertain
-      ? pool.filter(r => r.refStatus === 'ambiguous' || (r.allowed && !r.refSrNo))
-      : pool;
+    const { pool, onScreen } = screenRows();
     // Every line Bill Check has read: a "continue" upload stores only its own pages.
     const stored = claim.extractedData?.['final-bill'];
     const lines: ReadLine[] = [
@@ -403,7 +449,7 @@ export function BillCheckGrid({
 
   return (
     <>
-    <div className="rounded-2xl overflow-hidden bg-card border border-border">
+    <div className="rounded-2xl overflow-hidden bg-card border border-border" onKeyDown={handleGridKeys} onPaste={handleColumnPaste}>
       {/* Grid header / toolbar */}
       <div className="px-6 py-4 flex items-start justify-between gap-4" style={{ borderBottom: '1px solid var(--color-neutral-100)', background: 'var(--color-neutral-50)' }}>
         <div>
@@ -630,6 +676,8 @@ export function BillCheckGrid({
                 {visible.gst           && (
                   <div className="flex items-center justify-center">
                     <FormulaNumericInput
+                      data-bc-row={row.id}
+                      data-bc-col="gst"
                       integerOnly
                       value={row.isDisposal ? 0 : (row.gst ?? 18)}
                       onChange={(val) => {
@@ -664,6 +712,8 @@ export function BillCheckGrid({
                     />
                     {row.isDisposal && (
                       <Input
+                        data-bc-row={row.id}
+                        data-bc-col="disposalPercent"
                         type="number"
                         value={row.disposalPercent ?? 50}
                         onChange={(e) => updateAssessmentRow(row.id, { disposalPercent: parseFloat(e.target.value) || 0 })}
@@ -677,6 +727,8 @@ export function BillCheckGrid({
                   </div>
                 )}
                 <AllowanceInput
+                  data-bc-row={row.id}
+                  data-bc-col="billAllowed"
                   value={row.billAllowed ?? row.assessed ?? 0}
                   disabled={isDisallowed}
                   highlighted={row.billAllowed !== undefined}
@@ -689,6 +741,8 @@ export function BillCheckGrid({
                 <div className="flex items-center justify-center">
                   {row.allowed ? (
                     <input
+                      data-bc-row={row.id}
+                      data-bc-col="depOverride"
                       type="number"
                       min={0}
                       max={100}
@@ -728,6 +782,8 @@ export function BillCheckGrid({
                 )}
                 {visible.billedTaxable && (
                   <input
+                    data-bc-row={row.id}
+                    data-bc-col="billedTaxable"
                     type="number"
                     value={row.billedTaxable ?? ''}
                     onChange={e => {
@@ -759,6 +815,8 @@ export function BillCheckGrid({
                   </div>
                 ) : (
                   <select
+                    data-bc-row={row.id}
+                    data-bc-col="billStatus"
                     value={row.billStatus || 'pending'}
                     onChange={e => {
                       const s = e.target.value as BillStatus;
@@ -790,6 +848,8 @@ export function BillCheckGrid({
                 {visible.refSrNo && (
                   <div className="flex items-center gap-1">
                     <input
+                      data-bc-row={row.id}
+                      data-bc-col="refSrNo"
                       type="text"
                       value={row.refSrNo ?? ''}
                       placeholder="—"
@@ -816,6 +876,8 @@ export function BillCheckGrid({
                 )}
                 {visible.remarks && (
                   <input
+                    data-bc-row={row.id}
+                    data-bc-col="billRemarks"
                     value={row.billRemarks || ''}
                     onChange={e => updateAssessmentRow(row.id, { billRemarks: e.target.value })}
                     placeholder="Notes…"

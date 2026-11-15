@@ -163,4 +163,11 @@ describe('BillCheckGrid Editability Markup', () => {
   it('leaves them editable in a normal claim', () => {
     expect(render(mockClaim)).not.toContain('own figure');
   });
+
+  it('tags the editable boxes for Shift+arrow moves and column paste', () => {
+    const html = render(mockClaim);
+    for (const col of ['gst', 'billAllowed', 'depOverride', 'billedTaxable', 'billStatus', 'refSrNo', 'billRemarks']) {
+      expect(html).toMatch(new RegExp(`data-bc-row="row-1"[^>]*data-bc-col="${col}"|data-bc-col="${col}"[^>]*data-bc-row="row-1"`));
+    }
+  });
 });

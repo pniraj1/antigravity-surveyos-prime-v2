@@ -12,6 +12,9 @@ interface AllowanceInputProps {
   error?: boolean;
   title?: string;
   onCommit: (value: number) => void;
+  /** Grid navigation tags (Bill Check Shift+arrows / paste). */
+  'data-bc-row'?: string;
+  'data-bc-col'?: string;
 }
 
 /**
@@ -22,7 +25,7 @@ interface AllowanceInputProps {
  * "Both reports" wrote 95 into a Final Survey Report already filed. The store
  * is written once per edit now — on blur or Enter. Escape abandons the edit.
  */
-export function AllowanceInput({ value, disabled, highlighted, error, title, onCommit }: AllowanceInputProps) {
+export function AllowanceInput({ value, disabled, highlighted, error, title, onCommit, ...tags }: AllowanceInputProps) {
   const [draft, setDraft] = useState<string | null>(null);
 
   // A commit elsewhere (the scope dialog, a bulk action) must win over a stale
@@ -42,6 +45,7 @@ export function AllowanceInput({ value, disabled, highlighted, error, title, onC
 
   return (
     <input
+      {...tags}
       type="number"
       value={draft ?? String(value ?? '')}
       onChange={e => setDraft(e.target.value)}
