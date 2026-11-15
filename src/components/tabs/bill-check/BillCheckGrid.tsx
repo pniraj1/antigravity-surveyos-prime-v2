@@ -25,6 +25,8 @@ import { FormulaNumericInput } from '@/components/claim/FormulaNumericInput';
 import { Input } from '@/components/ui/input';
 import { billCheckFlags, type BillFlag } from '@/lib/reports/bill-check-flags';
 import { isFromBill } from '@/lib/reports/bill-check-mode';
+
+const FROM_BILL_LOCK = "Billed at the bill's own figure (this claim is made from the bill).";
 import { BillCheckFlagMark, BillCheckFlagDetail, BillCheckMatchDetail } from './BillCheckFlagRow';
 import { useColumnResize } from '@/hooks/useColumnResize';
 import { overBilledRows } from '@/lib/calculations/estimate-floor';
@@ -741,9 +743,10 @@ export function BillCheckGrid({
                       if (!Number.isFinite(tax)) return;
                       updateAssessmentRow(row.id, { billedTaxable: tax, billedAmount: Math.round(tax * (1 + gstPct / 100)) });
                     }}
-                    disabled={isDisallowed || row.billStatus === 'not-in-bill'}
+                    disabled={fromBill || isDisallowed || row.billStatus === 'not-in-bill'}
+                    title={fromBill ? FROM_BILL_LOCK : undefined}
                     className="px-2 py-1 rounded-lg text-sm text-right border outline-none w-full border-border text-foreground"
-                    style={{ background: isDisallowed || row.billStatus === 'not-in-bill' ? 'var(--color-neutral-100)' : 'var(--color-neutral-50)' }}
+                    style={{ background: fromBill || isDisallowed || row.billStatus === 'not-in-bill' ?  'var(--color-neutral-100)' : 'var(--color-neutral-50)' }}
                   />
                 )}
                 {isDisallowed ? (
@@ -774,8 +777,10 @@ export function BillCheckGrid({
                         updateAssessmentRow(row.id, { billStatus: s });
                       }
                     }}
+                    disabled={fromBill}
+                    title={fromBill ? FROM_BILL_LOCK : undefined}
                     className="px-2 py-1 rounded-lg text-[11px] font-medium border outline-none w-full border-border"
-                    style={{ background: st.bg, color: st.color }}
+                    style={{ background: fromBill ? 'var(--color-neutral-100)' : st.bg, color: st.color }}
                   >
                     <option value="pending">Pending</option>
                     <option value="in-bill">In Bill ✓</option>

@@ -27,7 +27,6 @@ import type { EstimateApplyMode } from '@/stores/slices/aiDataSlice';
 import { saveDocuments } from '@/lib/documents/sink';
 import { DocumentKindDialog } from '@/components/dialogs/DocumentKindDialog';
 import { assessmentUploadDocType, asksDocumentKind, docTypeForAnswer, otherKind, shouldApplyUndo } from '@/lib/documents/upload-doc-type';
-import { createFileGate } from '@/lib/documents/file-gate';
 import { UsePhoneFiles } from '@/components/documents/UsePhoneFiles';
 import type { ClaimDocument, DocType } from '@/types/documents';
 import { isOnDrive } from '@/lib/scan-import/phone-files';
@@ -75,30 +74,21 @@ export function AssessmentTab() {
     }
 
     triggerExtraction('estimate', file, undefined, undefined, mode);
-    // Bound to this claim: the type follows the (possibly undone) answer, never whatever claim is current later.
-    let kind = answer;
-    const fileGate = createFileGate(!answer);
+    const docType = answer ? docTypeForAnswer(answer) : assessmentUploadDocType(claim);
     if (answer && claimId) {
       toast(answer === 'final-bill' ? 'Read as the final bill — the claim is made from the bill.' : 'Read as the estimate.', {
         duration: 8000,
         action: {
           label: 'Undo',
           onClick: () => {
-            kind = otherKind(kind ?? answer);
-            if (shouldApplyUndo(useClaimStore.getState().currentClaim?.id, claimId)) {
-              useClaimStore.getState().updateBillCheck({ baseDocument: kind });
-            }
-            fileGate.open();
+            if (!shouldApplyUndo(useClaimStore.getState().currentClaim?.id, claimId)) return;
+            useClaimStore.getState().updateBillCheck({ baseDocument: otherKind(answer) });
+            toast.info('Changed. Re-upload the document if it was filed under the wrong name.');
           },
         },
-        onAutoClose: fileGate.open,
-        onDismiss: fileGate.open,
       });
       useClaimStore.getState().updateBillCheck({ baseDocument: answer });
     }
-    // Filing waits for the Undo window.
-    await fileGate.whenOpen;
-    const docType = kind ? docTypeForAnswer(kind) : assessmentUploadDocType(claim);
     if (!phone) void saveDocuments(docType, [{ blob: file, name: file.name }], 'upload', claimId);
 
     // A phone file moved from Scan's Drive folder is already on Drive: never a second copy.

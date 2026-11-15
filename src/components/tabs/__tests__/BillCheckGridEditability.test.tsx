@@ -136,4 +136,31 @@ describe('BillCheckGrid Editability Markup', () => {
     expect(html).toContain('checked=""');
     expect(html).toContain('value="50"');
   });
+
+  const render = (claim: ClaimData) =>
+    renderToStaticMarkup(
+      <BillCheckGrid
+        allRows={[baseRow]}
+        allowedRows={[baseRow]}
+        summary={mockSummary}
+        serials={new Map([['row-1', 1]])}
+        updateAssessmentRow={vi.fn()}
+        deleteAssessmentRow={vi.fn()}
+        deleteAssessmentRows={vi.fn()}
+        claimId="claim-1"
+        fmt={n => String(n)}
+        ageMonths={12}
+        claim={claim}
+      />
+    );
+  const LOCK = 'title="Billed at the bill&#x27;s own figure (this claim is made from the bill)."';
+
+  it('locks the billed box and status in a claim made from the bill', () => {
+    const html = render({ ...mockClaim, billCheck: { baseDocument: 'final-bill' } } as unknown as ClaimData);
+    expect(html.split(LOCK).length - 1).toBe(2);
+  });
+
+  it('leaves them editable in a normal claim', () => {
+    expect(render(mockClaim)).not.toContain('own figure');
+  });
 });
