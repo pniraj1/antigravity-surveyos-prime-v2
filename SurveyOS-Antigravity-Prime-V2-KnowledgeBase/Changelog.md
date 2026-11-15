@@ -1,11 +1,15 @@
-## 2026-11-16 (Claude Code) — Say what the document is at upload (Plan 3a) — built, NOT deployed
+## 2026-11-16 (Claude Code) — Simplify + deploy Plans 2 and 3a (deployed 2026-11-16)
+- refactor: Assessment files the upload at once (8 s deferred filing and its gate removed; Undo now only flips the claim mode for the same claim and says to re-upload if filed under the wrong name). In claims made from the bill, Bill Check's Billed amount and Status are locked (they are the bill's own figures).
+- deploy: hosting to motorsurveyos-in + surveyos-v2-antigravity-in; live chunks checked on motorsurveyos-in.web.app and surveyos.in. Plan 2 Task 7 (prompt wording) kept OUT of the build (stashed during build, restored, still uncommitted). Owner tests on the live site; not browser-tested by Claude. Not pushed (31 commits ahead). Commit 3ef5c5b2.
+
+## 2026-11-16 (Claude Code) — Say what the document is at upload (Plan 3a) — DEPLOYED 2026-11-16
 - feat(documents): Documents tab's "Final Garage Bill" card removed (owner). Bills are read in Assessment (claims made from the bill) or Bill Check. Phone-scanned invoices now listed in Phone files (`CARD_DOC_TYPES` excludes 'final-bill'). `FIELD_KEY_TO_DOC_TYPE`, Scan import, new-claim drop unchanged.
 - feat(bill-check): uploads filed as `invoice` (Final bill) or `estimate` when reading starts; Drive copy `invoice.<ext>`/`estimate.<ext>`; phone files never filed twice.
 - feat(assessment): first upload of a claim asks "What is this document? Estimate / Final bill" with one explanation line; the answer sets `billCheck.baseDocument`, so Bill Check starts on the right choice. 8 s "Undo" toast; filing waits for it and is bound to the claim. Bill photos pickable in Assessment.
 - resolves Plan 2's open I3-N1 (no Documents-tab bill read any more).
 - verification: tsc clean; suite 3100/3100 (excl. parked Plan 2 Task 7 test); Scan `testDebugUnitTest` BUILD SUCCESSFUL; opus final review "ready to merge". Not browser-tested. Commits f4330b57..bff721ae. Prime ↔ Scan: none.
 
-## 2026-11-15 (Claude Code) — Bill Check: claims built from the bill (Plan 2) — built, NOT deployed
+## 2026-11-15 (Claude Code) — Bill Check: claims built from the bill (Plan 2) — DEPLOYED 2026-11-16 (without Task 7)
 - feat(bill-check): "Final bill | Estimate" choice next to the upload button (`billCheck.baseDocument`). In a claim built from the bill (UIIC): an estimate upload fills only Ref No. and `estimateAmount` (never billed figures or bill header); allowed rows billed at their own figures ("reset all", owner-confirmed; re-applied when Bill Check opens and at print); mode switches ask before clearing; Link/Unlink touch only the ref; rows never print No Bill; "billed above/below" replaced by a screen-only "billed more than the estimate" note.
 - feat(bill-check): labour and paint matched by identical wording (both sides without part numbers). Parts never by wording.
 - feat(uiic): UIIC Bill Check "Estimated" column prints surveyor-confirmed heads from a confirm-and-edit dialog at UIIC print (D12). `estimateAmount`/`estimateHeads` never reach liability.
