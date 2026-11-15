@@ -31,6 +31,7 @@ No new AI calls and no new doc types.
 
 ## Review Focus
 1. **A UIIC claim whose first Assessment upload is the bill.** Bill Check opens already on "Estimate", and its column reads "Est. No." (Task 3 test on the helper, plus the existing `isFromBill`).
+6. **Undo after choosing Final bill** files the upload as `'estimate'`, not `'invoice'`, and sets `baseDocument: 'estimate'` (Task 3: filing reads the type when the toast closes).
 5. **Answering Estimate** records it, so a failed first read or deleted rows never ask again (Task 3).
 2. **A second Assessment upload** (more pages or supplementary) on a claim already made from the bill is filed as invoice and never asks again (Task 3 test).
 3. **The insurer upload kit** for UIIC still finds an `invoice` document after a Bill Check upload of the final bill (Task 2 test via the filing helper).
@@ -67,6 +68,8 @@ No new AI calls and no new doc types.
   export function assessmentUploadDocType(claim: { billCheck?: { baseDocument?: string } } | null): 'invoice' | 'estimate';
   /** True on a claim's first Assessment upload: no rows and no baseDocument chosen yet. */
   export function asksDocumentKind(claim: { assessmentRows?: unknown[]; billCheck?: { baseDocument?: string } } | null): boolean;
+  /** The other answer, for Undo. */
+  export function otherKind(k: 'estimate' | 'final-bill'): 'estimate' | 'final-bill';
   ```
 
 **Behaviour in BillCheckTab:**
@@ -77,6 +80,7 @@ No new AI calls and no new doc types.
 - [ ] **Step 1: Write the failing tests** for the three functions:
   - `billCheckUploadDocType('final-bill') === 'invoice'`, and `('estimate') === 'estimate'`;
   - `assessmentUploadDocType` gives `'invoice'` for `baseDocument: 'final-bill'` and `'estimate'` for none;
+  - `otherKind('estimate') === 'final-bill'` and `otherKind('final-bill') === 'estimate'`;
   - `asksDocumentKind` is true for `{ assessmentRows: [] }`, false once rows exist, false once `baseDocument` is `'final-bill'`, and false once it is `'estimate'`.
 - [ ] **Step 2:** Run them and expect FAIL. Implement. Run again and expect PASS.
 - [ ] **Step 3:** Wire BillCheckTab. Then run `npx tsc --noEmit -p .` and `npx vitest run src/components/tabs src/lib/documents`.
@@ -96,7 +100,13 @@ No new AI calls and no new doc types.
   - Cancel → stop, with no extraction.
   - Final bill → `updateBillCheck({ baseDocument: 'final-bill' })`.
   - Estimate → `updateBillCheck({ baseDocument: 'estimate' })`, so the question is never repeated (e.g. after a failed first read, or after the rows are deleted). `isFromBill` is false for `'estimate'`.
-- **Filing.** In `startEstimate`, file with `assessmentUploadDocType(useClaimStore.getState().currentClaim)` instead of the fixed `'estimate'`. Use the same doc type for the Drive name (`${docType}.${ext}`).
+- **Undo (owner, 2026-11-16).** After the surveyor answers, show one toast with an `Undo` action, using sonner like the Ref No. paste toast:
+  - text: `Read as the final bill — the claim is made from the bill.` or `Read as the estimate.`;
+  - duration 8000 ms;
+  - Undo sets `baseDocument` to the other value.
+  The AI read is the same for both answers (`'estimate'` key), so Undo changes only the claim mode and how the file is filed.
+- **Filing waits for the Undo window.** In `startEstimate`, `saveDocuments` and the Drive step (`confirmSaveToCloud` → `uploadFileToDrive`) run when that toast closes (sonner `onAutoClose` / `onDismiss`, and also right after Undo). They read the doc type at that moment with `assessmentUploadDocType(useClaimStore.getState().currentClaim)`, so an undone answer is filed correctly. Use the same doc type for the Drive name (`${docType}.${ext}`). Uploads that weren't asked the question are filed immediately, as today.
+- **Later changes** go through the Bill Check choice. A document already filed keeps its type; re-uploading it re-files it.
 - **Unchanged.** Extraction stays `triggerExtraction('estimate', …)`: the Assessment reads every upload the same way.
 - **Phone files.** `ESTIMATE_TYPES` (AssessmentTab.tsx:35) gains `'invoice'`, so a bill photographed with Scan can be picked in Assessment for a claim made from the bill. Today it can only be picked in Bill Check.
 - **Dialog props:** `{ onChoose: (k: 'estimate' | 'final-bill') => void; onCancel: () => void }`. Follow an existing dialog's look (e.g. `EstimateModeDialog.tsx`).
