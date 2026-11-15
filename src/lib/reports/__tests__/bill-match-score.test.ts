@@ -46,3 +46,25 @@ describe('sideConflicts', () => {
     expect(sideConflicts('FRONT BUMPER', 'BUMPER FRONT')).toEqual(new Set());
   });
 });
+
+describe('scorePair — part numbers decide', () => {
+  const bill = (description: string, partNumber: string, taxableAmount = 100) => ({ description, partNumber, taxableAmount });
+  test('different part numbers cap below MIN_SCORE even when words match', () => {
+    const s = scorePair({ particulars: 'HEX SCREW MBN 10105-M6X50', partNumber: 'N910105006013', estimated: 100 }, bill('HEX SCREW MBN 10105-M6X50', 'N910105008026'));
+    expect(s.score).toBeLessThan(MIN_SCORE);
+    expect(s.reasons[0]).toBe('Part no. differs');
+  });
+  test('one character off with identical words keeps its score and says so', () => {
+    const s = scorePair({ particulars: 'FENDER LH_Darkgrey', partNumber: 'A4008800006A8', estimated: 4193 }, bill('FENDER LH_Darkgrey', 'A40088800006A8', 4193));
+    expect(s.score).toBeGreaterThanOrEqual(SURE_SCORE);
+    expect(s.reasons[0]).toBe('Part no. 1 character off');
+  });
+  test('one character off but different words is "differs"', () => {
+    const s = scorePair({ particulars: 'HEX SCREW M14X1,5X40', partNumber: 'N000000005514' }, bill('HEX SCREW M14X1,5X50', 'N000000005517'));
+    expect(s.reasons[0]).toBe('Part no. differs');
+  });
+  test('a missing part number on one side is scored by words as before', () => {
+    const s = scorePair({ particulars: 'FRONT BUMPER', estimated: 100 }, bill('BUMPER FRONT', 'A123', 100));
+    expect(s.score).toBeGreaterThanOrEqual(SURE_SCORE);
+  });
+});

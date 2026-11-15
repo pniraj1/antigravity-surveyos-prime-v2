@@ -84,7 +84,20 @@ const OPPOSITE_LABEL: Record<string, string> = {
   left: 'Left vs right', front: 'Front vs rear', upper: 'Upper vs lower', inner: 'Inner vs outer',
 };
 
-const normPart = (s = '') => s.toLowerCase().replace(/[\s\-_.]/g, '');
+/** Part numbers compared as the matcher compares them: case, spaces, '-', '_' and '.' ignored. */
+export const normPart = (s = ''): string => s.toLowerCase().replace(/[\s\-_.]/g, '');
+
+/** Different part numbers cap here — below MIN_SCORE, so never a likely candidate. */
+const PART_CLASH_CAP = 30;
+
+/** One character inserted, deleted or changed — a misread, or a genuinely different part. */
+function oneEditApart(a: string, b: string): boolean {
+  if (Math.abs(a.length - b.length) > 1) return false;
+  let i = 0;
+  while (i < a.length && i < b.length && a[i] === b[i]) i++;
+  if (a.length === b.length) return a.slice(i + 1) === b.slice(i + 1);
+  return a.length > b.length ? a.slice(i + 1) === b.slice(i) : a.slice(i) === b.slice(i + 1);
+}
 
 export function scorePair(row: PairRow, bill: PairBill): PairScore {
   const rp = normPart(row.partNumber);
@@ -121,6 +134,17 @@ export function scorePair(row: PairRow, bill: PairBill): PairScore {
     const kinds = new Set([...clash].map(w => SIDE[w]));
     for (const [x] of OPPOSITES) if (kinds.has(x)) reasons.unshift(OPPOSITE_LABEL[x]);
     score = Math.min(score, CONFLICT_CAP);
+  }
+
+  // Both sides printed a part number and they differ: a different part, unless
+  // it is one slip with identical words (FENDER LH_Darkgrey A40088800006A8).
+  const bp = normPart(bill.partNumber);
+  if (rp && bp) {
+    if (oneEditApart(rp, bp) && desc >= 0.99) reasons.unshift('Part no. 1 character off');
+    else {
+      reasons.unshift('Part no. differs');
+      score = Math.min(score, PART_CLASH_CAP);
+    }
   }
   return { score, reasons };
 }
