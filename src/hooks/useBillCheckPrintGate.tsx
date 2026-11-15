@@ -12,7 +12,16 @@ import { PendingRowsDialog } from '@/components/dialogs/PendingRowsDialog';
 import { MissingRemarkDialog } from '@/components/dialogs/MissingRemarkDialog';
 import { VerifyInvoiceDetailsDialog } from '@/components/dialogs/VerifyInvoiceDetailsDialog';
 import type { ClaimData } from '@/types/claim';
+import type { AssessmentRow } from '@/types/assessment';
 import type { SurveyorProfile } from '@/types/vehicle';
+
+/**
+ * Rows the one-tap "Not in Bill" may close. A row carrying a sure ref shares a
+ * billed line with a sibling (repeated part) — it is in the bill, so it stays.
+ */
+export function rowsToMarkNotInBill(rows: AssessmentRow[]): AssessmentRow[] {
+  return rows.filter((r) => r.allowed && (!r.billStatus || r.billStatus === 'pending') && !(r.refStatus === 'clean' && r.refSrNo != null));
+}
 
 export function useBillCheckPrintGate() {
   const currentClaim = useClaimStore((s) => s.currentClaim);
@@ -132,9 +141,7 @@ export function useBillCheckPrintGate() {
   const resolveAllPending = () => {
     const claim = useClaimStore.getState().currentClaim ?? currentClaim;
     if (!claim) return;
-    const pending = (claim.assessmentRows || []).filter(
-      (r) => r.allowed && (!r.billStatus || r.billStatus === 'pending')
-    );
+    const pending = rowsToMarkNotInBill(claim.assessmentRows || []);
     pending.forEach((r) =>
       updateAssessmentRow(r.id, { billStatus: 'not-in-bill', billedTaxable: 0, billedAmount: 0 })
     );
@@ -156,6 +163,7 @@ export function useBillCheckPrintGate() {
   const allRows = activeClaim?.assessmentRows || [];
   const allowedRows = allRows.filter((r) => r.allowed);
   const pendingRows = allowedRows.filter((r) => !r.billStatus || r.billStatus === 'pending');
+  const unmatchedLines = currentClaim?.extraBillItems?.length ?? 0;
   const flags = billCheckFlags(allRows);
   const blockingFlags = flags.filter((f) => f.blocking);
   const remarkRows = rowsNeedingRemark(allowedRows);
@@ -177,6 +185,9 @@ export function useBillCheckPrintGate() {
       {pendingGate && (
         <PendingRowsDialog
           rows={pendingRows}
+          body={unmatchedLines > 0
+            ? `${unmatchedLines} bill line${unmatchedLines === 1 ? ' is' : 's are'} not matched to any item yet. Link ${unmatchedLines === 1 ? 'it' : 'them'} first under Bill Items Not Matched — otherwise these items print as No Bill.`
+            : undefined}
           onResolveAll={resolveAllPending}
           onCancel={() => setPendingGate(false)}
         />

@@ -70,13 +70,13 @@ export function billCheckFlags(rows: AssessmentRow[]): BillFlag[] {
     if (r.billStatus === 'not-in-bill' || billed === undefined) continue;
 
     // First, so the screen asks "is this the right bill line?" before "is this
-    // the right price?" — a price flag on the wrong line is noise. Advisory,
-    // like every amber flag; the price flag below still blocks on its own.
+    // the right price?" — a price flag on the wrong line is noise. Blocking:
+    // a doubtful line's figures still drive the cap, so they must be looked at.
     if (r.refStatus === 'ambiguous') {
       flags.push({
         rowId: r.id,
         kind: 'ambiguous',
-        blocking: false,
+        blocking: true,
         estimate: r.estimated,
         assessed: r.assessed,
         billed,

@@ -34,6 +34,10 @@ export interface RefMatch {
   bill: ExtraBillItem;
   /** 0–100 from scorePair; 100 when the surveyor linked it by hand. */
   score: number;
+  /** More lines of the same part held by this one row (their money is summed onto it). */
+  also?: ExtraBillItem[];
+  /** This row shares another row's line: the ref only, no money. Unlinking it returns no line. */
+  refOnly?: boolean;
   reasons: string[];
 }
 

@@ -6,8 +6,16 @@ import { normPart } from './bill-match-score';
  * ('manual'), or a legacy ref saved before statuses existed. A doubtful match
  * never reaches the insurer — the report shows "—" and the surveyor settles it.
  */
-export function printableRef(row: Pick<AssessmentRow, 'refSrNo' | 'refStatus'>): string | number | undefined {
-  return row.refStatus === 'ambiguous' ? undefined : row.refSrNo;
+export function printableRef(
+  row: Pick<AssessmentRow, 'refSrNo' | 'refStatus'> & Partial<Pick<AssessmentRow, 'partNumber' | 'refMatch'>>,
+): string | number | undefined {
+  if (row.refStatus === 'ambiguous') return undefined;
+  // A legacy 'clean' ref between two different part numbers: wrong, whichever
+  // tab the report is printed from.
+  const mine = normPart(row.partNumber);
+  const theirs = normPart(row.refMatch?.bill.partNumber);
+  if (row.refStatus === 'clean' && mine && theirs && mine !== theirs) return undefined;
+  return row.refSrNo;
 }
 
 /**

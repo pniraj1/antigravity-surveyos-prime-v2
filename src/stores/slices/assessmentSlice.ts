@@ -2,6 +2,11 @@ import type { StateCreator } from 'zustand';
 import type { ClaimData, AssessmentRow, SpotDamageRow } from '@/types';
 import { createAssessmentRow } from '@/lib/calculations';
 import { resolveSectionMove } from '@/lib/calculations/section-move';
+import type { ExtraBillItem, RefMatch } from '@/types/assessment';
+
+/** The bill lines a row holds and would hand back: none when it only shares a sibling's line. */
+const heldLines = (m: RefMatch | undefined): ExtraBillItem[] =>
+  !m || m.refOnly ? [] : [m.bill, ...(m.also ?? [])];
 
 export interface AssessmentSlice {
   addAssessmentRow: (section: AssessmentRow['section']) => void;
@@ -255,7 +260,7 @@ export const createAssessmentSlice: StateCreator<any, any, any, AssessmentSlice>
       if (!extra || !target) return {};
       // The line this row held goes back to the unmatched list rather than
       // vanishing: re-linking is how a wrong match gets corrected.
-      const displaced = target.refMatch?.bill;
+      const displaced = heldLines(target.refMatch);
 
       return {
         currentClaim: {
@@ -278,7 +283,7 @@ export const createAssessmentSlice: StateCreator<any, any, any, AssessmentSlice>
           }),
           extraBillItems: [
             ...extras.filter((i) => i.id !== extraId),
-            ...(displaced && !extras.some((i) => i.id === displaced.id) ? [displaced] : []),
+            ...displaced.filter((d) => !extras.some((i) => i.id === d.id)),
           ],
           updatedAt: new Date().toISOString(),
         },
@@ -291,8 +296,8 @@ export const createAssessmentSlice: StateCreator<any, any, any, AssessmentSlice>
     set((state: WithClaim) => {
       if (!state.currentClaim) return {};
       const row = state.currentClaim.assessmentRows.find((r) => r.id === rowId);
-      const bill = row?.refMatch?.bill;
-      if (!row || !bill) return {};
+      if (!row || !row.refMatch) return {};
+      const returned = heldLines(row.refMatch);
       const extras = state.currentClaim.extraBillItems || [];
       return {
         currentClaim: {
@@ -310,7 +315,7 @@ export const createAssessmentSlice: StateCreator<any, any, any, AssessmentSlice>
               refStatus: undefined,
               refMatch: undefined,
             }),
-          extraBillItems: extras.some((i) => i.id === bill.id) ? extras : [...extras, bill],
+          extraBillItems: [...extras, ...returned.filter((b) => !extras.some((i) => i.id === b.id))],
           updatedAt: new Date().toISOString(),
         },
         isDirty: true,

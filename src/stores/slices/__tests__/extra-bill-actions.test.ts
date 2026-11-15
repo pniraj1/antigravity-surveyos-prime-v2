@@ -136,3 +136,19 @@ describe('correcting a wrong match', () => {
     expect(get().currentClaim!.extraBillItems!.map(e => e.id)).toEqual(['e-lh']);
   });
 });
+
+describe('unlinkBillMatch — repeated lines', () => {
+  const l = (id: string, srNo: number): ExtraBillItem => ({ ...extra, id, srNo });
+  test('unlinking a row returns every line it held', () => {
+    const r = row({ refSrNo: '61, 65, 71', refStatus: 'clean', billedAmount: 504, refMatch: { bill: l('x61', 61), also: [l('x65', 65), l('x71', 71)], score: 100, reasons: [] } });
+    const { slice, get } = harness({ id: 'c', assessmentRows: [r], extraBillItems: [] } as unknown as ClaimData);
+    slice.unlinkBillMatch('r1');
+    expect(get().currentClaim!.extraBillItems!.map(e => e.id).sort()).toEqual(['x61', 'x65', 'x71']);
+  });
+  test('unlinking a refOnly row returns no line (its sibling still holds it)', () => {
+    const r = row({ refSrNo: 260, refStatus: 'clean', refMatch: { bill: l('x260', 260), refOnly: true, score: 100, reasons: [] } });
+    const { slice, get } = harness({ id: 'c', assessmentRows: [r], extraBillItems: [] } as unknown as ClaimData);
+    slice.unlinkBillMatch('r1');
+    expect(get().currentClaim!.extraBillItems).toEqual([]);
+  });
+});

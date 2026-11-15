@@ -291,7 +291,9 @@ export function matchBillItemsToRows(
   for (const [pn, groupRows] of rowGroups) {
     const groupLines = lineGroups.get(pn);
     if (!groupLines) continue;
-    const rs = [...groupRows].sort(bySerial((r) => r.srNo, (r) => rowPos.get(r.id) ?? 0));
+    // Allowed rows first: a disallowed duplicate must not take the money.
+    const serialOrder = bySerial<AssessmentRow>((r) => r.srNo, (r) => rowPos.get(r.id) ?? 0);
+    const rs = [...groupRows].sort((a, b) => Number(b.allowed) - Number(a.allowed) || serialOrder(a, b));
     const ls = [...groupLines].sort(bySerial((b) => b.srNo, (b) => b.idx));
     if (rs.length === 1) {
       out.set(rs[0].id, match(ls[0], ls.length > 1 ? { also: ls.slice(1) } : {}));
@@ -637,13 +639,16 @@ export function applyFinalBill(
   const billItems = buildBillItems(data);
   // A ref the surveyor set is theirs: never re-matched, and the line it holds
   // is not listed again as unmatched.
+  // Lines are held by identity (the stable content id), not by serial: two
+  // invoices, or unnumbered pages, reuse serials.
   const isManual = (r: AssessmentRow) => r.refStatus === 'manual';
-  const manualRefs = new Set(
-    claim.assessmentRows.filter(isManual).flatMap((r) => String(r.refSrNo ?? '').split(',').map((x) => x.trim()).filter(Boolean)),
+  const held = new Set(
+    claim.assessmentRows.filter(isManual).flatMap((r) => (r.refMatch ? [r.refMatch.bill, ...(r.refMatch.also ?? [])] : []).map((b) => b.id)),
   );
+  const freeItems = billItems.filter((bi) => !held.has(extraFromBillItem(bi).id));
   const rowMatches = matchBillItemsToRows(
     claim.assessmentRows.filter((r) => !isManual(r) && !(continuing && r.billedAmount && r.billedAmount > 0)),
-    billItems,
+    freeItems,
   );
   const matchedBillIds = new Set(Array.from(rowMatches.values()).flatMap((m) => [m.bill, ...(m.also ?? [])].map((b) => b.idx)));
 
@@ -658,7 +663,11 @@ export function applyFinalBill(
     const serial = (b: BillItem) => b.srNo ?? (b.idx + 1);
     const refSr = lines.length > 1 ? lines.map(serial).join(', ') : serial(m.bill);
     const refStatus = m.ambiguous ? ('ambiguous' as const) : ('clean' as const);
-    const refMatch = { bill: extraFromBillItem(m.bill), score: m.score, reasons: m.reasons };
+    const refMatch = {
+      bill: extraFromBillItem(m.bill), score: m.score, reasons: m.reasons,
+      ...(m.also ? { also: m.also.map(extraFromBillItem) } : {}),
+      ...(m.refOnly ? { refOnly: true } : {}),
+    };
     // More rows than lines: the ref only. A 0 billed figure would drive the cap to 0.
     if (m.refOnly) return { ...row, refSrNo: refSr, refStatus, refMatch };
     if (!row.allowed) {
@@ -689,8 +698,8 @@ export function applyFinalBill(
     };
   });
 
-  const extras: ExtraBillItem[] = billItems
-    .filter((bi) => !matchedBillIds.has(bi.idx) && !manualRefs.has(String(bi.srNo ?? '')))
+  const extras: ExtraBillItem[] = freeItems
+    .filter((bi) => !matchedBillIds.has(bi.idx))
     .map(extraFromBillItem);
 
   // Merge, don't overwrite: the surveyor may have deleted or promoted items

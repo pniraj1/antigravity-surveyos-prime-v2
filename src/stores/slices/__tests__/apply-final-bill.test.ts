@@ -98,7 +98,8 @@ describe('applyFinalBill — reference finder rules', () => {
     ({ sr_no, description: 'X', part_number, taxable_amount, total_amount, gst_percent: 18 });
 
   test('manual row untouched and its line not re-listed', () => {
-    const r = row({ id: 'r1', partNumber: 'P12', refStatus: 'manual', refSrNo: 12, billedAmount: 500, billStatus: 'in-bill' });
+    const held = { id: 'extra-parts-P12-1062', description: 'X', amount: 1062, taxableAmount: 900, gstPercent: 18, section: 'parts' as const, source: 'final-bill' as const, partNumber: 'P12', srNo: 12 };
+    const r = row({ id: 'r1', partNumber: 'P12', refStatus: 'manual', refSrNo: 12, billedAmount: 500, billStatus: 'in-bill', refMatch: { bill: held, score: 100, reasons: ['Linked by you'] } });
     const out = applyFinalBill(claim([r]), { spare_parts: [line(12, 'P12', 900, 1062), line(13, 'Q13', 50, 59)] });
     expect(out.assessmentRows[0]).toEqual(r);
     expect(out.extraBillItems!.map(e => e.srNo)).toEqual([13]);
@@ -129,5 +130,43 @@ describe('applyFinalBill — reference finder rules', () => {
     const out = applyFinalBill(claim([r]), { spare_parts: [{ description: 'FRONT BUMPER', taxable_amount: 10000, total_amount: 11800 }, { description: 'GRILLE', taxable_amount: 500, total_amount: 590 }] });
     expect(out.assessmentRows[0].billStatus).toBe('pending');
     expect(out.extraBillItems).toHaveLength(2);
+  });
+});
+
+describe('applyFinalBill — review fixes', () => {
+  const line = (sr_no: number, part_number: string, taxable_amount: number, total_amount: number) =>
+    ({ sr_no, description: 'X', part_number, taxable_amount, total_amount, gst_percent: 18 });
+  const held = (id: string, partNumber: string, srNo: number) =>
+    ({ id, description: 'X', amount: 1, taxableAmount: 1, gstPercent: 18, section: 'parts' as const, source: 'final-bill' as const, partNumber, srNo });
+
+  test("a manual row's line is not given to a sibling row", () => {
+    const a = row({ id: 'a', srNo: 36, partNumber: 'MBBC0076', refStatus: 'manual', refSrNo: 260, refMatch: { bill: held('extra-parts-MBBC0076-2596', 'MBBC0076', 260), score: 100, reasons: [] } });
+    const b = row({ id: 'b', srNo: 193, partNumber: 'MBBC0076', billStatus: 'pending' });
+    const out = applyFinalBill(claim([a, b]), { spare_parts: [line(260, 'MBBC0076', 2200, 2596)] });
+    const sib = out.assessmentRows.find(x => x.id === 'b')!;
+    expect(sib.billedAmount).toBeUndefined();
+    expect(sib.refSrNo).toBeUndefined();
+    expect(out.extraBillItems).toEqual([]);
+  });
+
+  test('a typed ref without its line does not hide a different line', () => {
+    const r = row({ id: 'r1', partNumber: 'P1', refStatus: 'manual', refSrNo: 12 });
+    const out = applyFinalBill(claim([r]), { spare_parts: [line(12, 'Q13', 50, 59)] });
+    expect(out.extraBillItems!.map(e => e.srNo)).toEqual([12]);
+  });
+
+  test('the allowed row takes the money before a disallowed duplicate', () => {
+    const d = row({ id: 'd', srNo: 1, partNumber: 'P', allowed: false });
+    const a = row({ id: 'a', srNo: 2, partNumber: 'P' });
+    const out = applyFinalBill(claim([d, a]), { spare_parts: [line(9, 'P', 100, 118)] });
+    expect(out.assessmentRows.find(x => x.id === 'a')!.billedAmount).toBe(118);
+    expect(out.assessmentRows.find(x => x.id === 'd')!.billedAmount).toBeUndefined();
+  });
+
+  test('refMatch keeps every line of a repeated part, and marks refOnly', () => {
+    const one = applyFinalBill(claim([row({ id: 'r1', partNumber: 'A0019901167' })]), { spare_parts: [61, 65, 71].map(sr => line(sr, 'A0019901167', 142, 168)) });
+    expect(one.assessmentRows[0].refMatch?.also?.map(b => b.srNo)).toEqual([65, 71]);
+    const two = applyFinalBill(claim([row({ id: 'a', srNo: 1, partNumber: 'M' }), row({ id: 'b', srNo: 2, partNumber: 'M' })]), { spare_parts: [line(260, 'M', 1, 1)] });
+    expect(two.assessmentRows.find(x => x.id === 'b')!.refMatch?.refOnly).toBe(true);
   });
 });

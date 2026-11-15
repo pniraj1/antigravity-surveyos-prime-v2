@@ -24,3 +24,10 @@ describe('settleLegacyRefs', () => {
     expect(settleLegacyRefs([r])).toEqual([]);
   });
 });
+
+describe('printableRef — legacy wrong-part refs', () => {
+  it('hides a clean ref whose saved line has a different part number', () => {
+    expect(printableRef({ refSrNo: 146, refStatus: 'clean', partNumber: 'N910105006013',
+      refMatch: { bill: { id: 'b', description: 'X', amount: 1, taxableAmount: 1, gstPercent: 18, section: 'parts', source: 'final-bill', partNumber: 'N910105008026' }, score: 86, reasons: [] } })).toBeUndefined();
+  });
+});

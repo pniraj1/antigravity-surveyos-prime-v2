@@ -42,3 +42,15 @@ describe('useBillCheckPrintGate logic', () => {
     expect(isInvoiceVerified).toBe(true);
   });
 });
+
+describe('rowsToMarkNotInBill', () => {
+  it('skips a pending row that carries a sure ref (it shares a billed line)', async () => {
+    const { rowsToMarkNotInBill } = await import('../useBillCheckPrintGate');
+    const base = { particulars: 'X', estimated: 1, assessed: 1, partType: 'metal', gst: 18, section: 'parts', allowed: true, isDisposal: false, disposalPercent: 50 } as const;
+    const rows = [
+      { ...base, id: 'shared', billStatus: 'pending', refSrNo: 260, refStatus: 'clean' },
+      { ...base, id: 'none', billStatus: 'pending' },
+    ];
+    expect(rowsToMarkNotInBill(rows as never).map(r => r.id)).toEqual(['none']);
+  });
+});

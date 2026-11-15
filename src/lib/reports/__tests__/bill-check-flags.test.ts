@@ -71,12 +71,12 @@ describe('billCheckFlags', () => {
     expect(billCheckFlags([row({ assessed: 0, allowed: false })])).toHaveLength(0);
   });
 
-  test('a low-confidence match advises', () => {
+  test('a low-confidence match blocks until checked', () => {
     const [f] = billCheckFlags([
       row({ assessed: 1000, billedTaxable: 1000, refStatus: 'ambiguous' }),
     ]);
     expect(f.kind).toBe('ambiguous');
-    expect(f.blocking).toBe(false);
+    expect(f.blocking).toBe(true);
   });
 
   test('a doubtful match is asked before its price, and the price still blocks', () => {
