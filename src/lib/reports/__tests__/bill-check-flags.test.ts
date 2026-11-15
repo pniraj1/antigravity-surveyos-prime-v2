@@ -18,6 +18,24 @@ function row(overrides: Partial<AssessmentRow> = {}): AssessmentRow {
   } as AssessmentRow;
 }
 
+describe('billCheckFlags from-bill mode', () => {
+  test('from-bill mode raises no billed-above flag on a row the surveyor reduced', () => {
+    const f = billCheckFlags([row({ estimated: 1000, assessed: 800, billedTaxable: 1000 })], true);
+    expect(f.filter(x => x.kind === 'billed-above')).toHaveLength(0);
+  });
+
+  test('from-bill mode notes a bill above the estimate without blocking', () => {
+    const f = billCheckFlags([row({ assessed: 1000, billedTaxable: 1000, estimateAmount: 900 })], true);
+    expect(f).toHaveLength(1);
+    expect(f[0]).toMatchObject({ kind: 'over-estimate', blocking: false });
+  });
+
+  test('normal mode still raises billed-above', () => {
+    const f = billCheckFlags([row({ estimated: 1000, assessed: 800, billedTaxable: 1000 })]);
+    expect(f[0].kind).toBe('billed-above');
+  });
+});
+
 describe('billCheckFlags', () => {
   test('a row where the bill agrees with the assessment never flags', () => {
     expect(billCheckFlags([row({ assessed: 1000, billedTaxable: 1000 })])).toHaveLength(0);

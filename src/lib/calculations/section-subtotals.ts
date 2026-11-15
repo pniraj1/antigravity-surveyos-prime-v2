@@ -66,10 +66,10 @@ export interface BilledTotals {
  * absent on rows persisted before those columns existed, and one bare `+` on an
  * undefined turns a whole column into NaN.
  */
-export function billedTotals(rows: AssessmentRow[]): BilledTotals {
+export function billedTotals(rows: AssessmentRow[], fromBill = false): BilledTotals {
   return rows.reduce<BilledTotals>(
     (t, r) => ({
-      estimated: t.estimated + (r.estimated || 0),
+      estimated: t.estimated + (fromBill ? r.estimateAmount || 0 : r.estimated || 0),
       assessed: t.assessed + (r.assessed || 0),
       billedTaxable: t.billedTaxable + (r.billedTaxable || 0),
       billedAmount: t.billedAmount + (r.billedAmount || 0),

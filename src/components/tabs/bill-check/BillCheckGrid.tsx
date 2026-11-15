@@ -24,6 +24,7 @@ import { AllowanceInput } from './AllowanceInput';
 import { FormulaNumericInput } from '@/components/claim/FormulaNumericInput';
 import { Input } from '@/components/ui/input';
 import { billCheckFlags, type BillFlag } from '@/lib/reports/bill-check-flags';
+import { isFromBill } from '@/lib/reports/bill-check-mode';
 import { BillCheckFlagMark, BillCheckFlagDetail, BillCheckMatchDetail } from './BillCheckFlagRow';
 import { useColumnResize } from '@/hooks/useColumnResize';
 import { overBilledRows } from '@/lib/calculations/estimate-floor';
@@ -100,12 +101,13 @@ export function BillCheckGrid({
   const defaultRefTitle = claim?.billCheck?.baseDocument === 'final-bill' ? 'Est. Item No.' : 'Bill Item No.';
   const refColTitle = claim?.billCheck?.refColumnTitle || defaultRefTitle;
 
+  const fromBill = isFromBill(claim);
   const flagsByRow = useMemo(() => {
     const m = new Map<string, BillFlag>();
     // First flag per row wins: a doubtful match is settled before its price.
-    for (const f of billCheckFlags(allRows)) if (!m.has(f.rowId)) m.set(f.rowId, f);
+    for (const f of billCheckFlags(allRows, fromBill)) if (!m.has(f.rowId)) m.set(f.rowId, f);
     return m;
-  }, [allRows]);
+  }, [allRows, fromBill]);
 
   // Flagged rows in on-screen order: section by section, same rows the grid shows.
   const flaggedIds = SECTION_ORDER.flatMap(({ section }) =>
@@ -544,7 +546,7 @@ export function BillCheckGrid({
           const sub = subtotals[section];
           // Allowed only: sectionSubtotals reads a summary the engine built from
           // allowed rows, and the two footer lines must describe one population.
-          const billed = billedTotals(sectionRows.filter(r => r.allowed));
+          const billed = billedTotals(sectionRows.filter(r => r.allowed), fromBill);
 
           return (
           <div key={section}>
@@ -622,7 +624,7 @@ export function BillCheckGrid({
                 {visible.hsnSac        && <div className="text-xs font-mono" style={{ color: 'var(--color-neutral-600)' }}>{row.hsnSac || '—'}</div>}
                 {visible.section       && <div><span className="text-[9px] font-medium px-2 py-0.5 rounded-full uppercase tracking-wider" style={{ background: 'var(--color-neutral-100)', color: 'var(--color-neutral-600)' }}>{row.section}</span></div>}
                 {visible.quantity      && <div className="text-sm font-medium text-center" style={{ color: 'var(--color-neutral-600)' }}>{row.quantity ?? '—'}</div>}
-                {visible.unitPrice     && <div className="text-sm font-medium" style={{ color: 'var(--color-neutral-600)' }}>{fmt(row.estimated || 0)}</div>}
+                {visible.unitPrice     && <div className="text-sm font-medium" style={{ color: 'var(--color-neutral-600)' }}>{fromBill ? (row.estimateAmount === undefined ? '—' : fmt(row.estimateAmount)) : fmt(row.estimated || 0)}</div>}
                 {visible.gst           && (
                   <div className="flex items-center justify-center">
                     <FormulaNumericInput
@@ -894,7 +896,7 @@ export function BillCheckGrid({
           );
           })}
 
-          {totalsRow('TOTAL', billedTotals(allowedRows), true)}
+          {totalsRow('TOTAL', billedTotals(allowedRows, fromBill), true)}
         </div>
       </div>
     </div>

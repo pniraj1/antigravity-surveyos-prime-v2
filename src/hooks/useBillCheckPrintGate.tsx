@@ -81,7 +81,7 @@ export function useBillCheckPrintGate() {
     }
 
     // ── Check 3: Blocking flags ──────────────────────────────────
-    const flags = billCheckFlags(allRows);
+    const flags = billCheckFlags(allRows, isFromBill(claim));
     const blocking = flags.filter((f) => f.blocking);
     if (blocking.length > 0) {
       setFlagGate(true);
@@ -125,7 +125,7 @@ export function useBillCheckPrintGate() {
       setPendingGate(true);
       return;
     }
-    const flags = billCheckFlags(allRows);
+    const flags = billCheckFlags(allRows, isFromBill(claim));
     const blocking = flags.filter((f) => f.blocking);
     if (blocking.length > 0) {
       setFlagGate(true);
@@ -157,7 +157,7 @@ export function useBillCheckPrintGate() {
   const resolveAllFlags = () => {
     const claim = useClaimStore.getState().currentClaim ?? currentClaim;
     if (!claim) return;
-    const flags = billCheckFlags(claim.assessmentRows || []);
+    const flags = billCheckFlags(claim.assessmentRows || [], isFromBill(claim));
     const blocking = flags.filter((f) => f.blocking);
     blocking.forEach((f) => updateAssessmentRow(f.rowId, { billVerified: true }));
     setFlagGate(false);
@@ -169,7 +169,7 @@ export function useBillCheckPrintGate() {
   const allowedRows = allRows.filter((r) => r.allowed);
   const pendingRows = allowedRows.filter((r) => !r.billStatus || r.billStatus === 'pending');
   const unmatchedLines = currentClaim?.extraBillItems?.length ?? 0;
-  const flags = billCheckFlags(allRows);
+  const flags = billCheckFlags(allRows, isFromBill(activeClaim));
   const blockingFlags = flags.filter((f) => f.blocking);
   const remarkRows = rowsNeedingRemark(allowedRows);
   const bc = activeClaim?.billCheck || { billNo: '', billDate: '', billTotal: 0 };

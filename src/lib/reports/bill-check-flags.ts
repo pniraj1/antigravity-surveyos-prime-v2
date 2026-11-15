@@ -15,7 +15,8 @@ export type BillFlagKind =
   | 'billed-below'     // cap bit; the claim already dropped
   | 'billed-above'     // the assessment holds; the surveyor may raise it
   | 'billed-rejected'  // the workshop billed for something rejected at survey
-  | 'ambiguous';       // the bill was read with low confidence
+  | 'ambiguous'       // the bill was read with low confidence
+  | 'over-estimate';  // from-bill claim: billed above the workshop's own estimate; advisory
 
 export interface BillFlag {
   rowId: string;
@@ -41,7 +42,7 @@ const rs = (n: number) => `₹${INR.format(n)}`;
  * A row with no billed figure does not appear here: that is the pending gate's
  * business, and flagging it twice would say the same thing in two voices.
  */
-export function billCheckFlags(rows: AssessmentRow[]): BillFlag[] {
+export function billCheckFlags(rows: AssessmentRow[], fromBill = false): BillFlag[] {
   const flags: BillFlag[] = [];
 
   for (const r of rows) {
@@ -87,6 +88,26 @@ export function billCheckFlags(rows: AssessmentRow[]): BillFlag[] {
           ? 'The match to the invoice is not certain. Compare the two descriptions below.'
           : 'This Ref No. was pasted, but the document read here disagrees: the number is not on it, or that line has a different part number. Check it against the estimate.',
       });
+    }
+
+    // From-bill claim: the bill IS the assessment, so billed-vs-assessed is not
+    // a disagreement. Only a bill above the workshop's own estimate is worth a look.
+    if (fromBill) {
+      const est = r.estimateAmount;
+      if (est !== undefined && billed > est + 0.005) {
+        flags.push({
+          rowId: r.id,
+          kind: 'over-estimate',
+          blocking: false,
+          estimate: est,
+          assessed: r.assessed,
+          billed,
+          delta: billed - est,
+          heading: 'Billed more than the estimate',
+          detail: `The workshop billed ${rs(billed)}; its estimate said ${rs(est)}. For your judgement only — this is not printed.`,
+        });
+      }
+      continue;
     }
 
     if (billed !== r.assessed && !r.billVerified) {

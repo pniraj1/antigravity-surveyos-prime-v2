@@ -95,7 +95,7 @@ export function BillCheckTab() {
   const notInBillTotal = allowedRows.filter(r => r.billStatus === 'not-in-bill').reduce((s, r) => s + r.assessed, 0);
   const partialTotal   = allowedRows.reduce((s, r) => s + Math.max(0, r.assessed - billCheckAssessed(r)), 0);
 
-  const flags = billCheckFlags(allRows);
+  const flags = billCheckFlags(allRows, isFromBill(currentClaim));
   const reconciliation = reconcileInvoice(allRows, bc.billTotal ?? 0);
 
   const confirmAllBelow = () => {
