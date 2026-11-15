@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { billHeaderFromEstimate, isFromBill, rowsLostOnSwitch, selfBilled, selfBillUpdates } from '../bill-check-mode';
+import { estimateHeads, estimateTotals, needsEstimateHeads, billHeaderFromEstimate, isFromBill, rowsLostOnSwitch, selfBilled, selfBillUpdates } from '../bill-check-mode';
 import type { ClaimData } from '@/types';
 import type { AssessmentRow } from '@/types/assessment';
 
@@ -58,4 +58,29 @@ describe('rowsLostOnSwitch', () => {
     expect(rowsLostOnSwitch(claim([row({ billedAmount: 5 }), row({ allowed: false, refSrNo: 1 }), row()], 'final-bill'), 'final-bill')).toBe(2));
   it('to final-bill from a normal claim is 0', () =>
     expect(rowsLostOnSwitch(claim([row({ refSrNo: 1 })]), 'final-bill')).toBe(0));
+
+  describe('estimate heads', () => {
+    const line = (o: Record<string, unknown> = {}) => ({ id: 'L1', description: 'x', amount: 10620, taxableAmount: 9000, gstPercent: 18, section: 'parts', source: 'final-bill', ...o });
+    const fb = (rows: AssessmentRow[], extras: unknown[] = [], heads?: unknown) => ({
+      assessmentRows: rows, extraBillItems: extras,
+      billCheck: { baseDocument: 'final-bill', estimateHeads: heads },
+      extractedData: { 'final-bill': { total_amount: 20000 } },
+    }) as unknown as ClaimData;
+    it('splits a matched metal row and an unmatched glass line', () => {
+      const c = fb([row({ estimateAmount: 9000 })], [line({ id: 'G', taxableAmount: 1500, amount: 1770, material: 'glass' })]);
+      expect(estimateHeads(c)).toEqual({ metal: 9000, plastic: 0, glass: 1500, fiberglass: 0, labour: 0, paint: 0 });
+    });
+    it('counts a shared line once', () => {
+      const l = line();
+      const a = row({ estimateAmount: 9000, refMatch: { bill: l, score: 100, reasons: [] } as never });
+      const b = row({ refMatch: { bill: l, score: 100, refOnly: true, reasons: [] } as never });
+      expect(estimateTotals(fb([a, b]))).toEqual({ linesInclGst: 10620, printed: 20000 });
+    });
+    it('needsEstimateHeads', () => {
+      const x = [line()];
+      expect(needsEstimateHeads({ assessmentRows: [], extraBillItems: x, billCheck: { baseDocument: 'estimate' } } as unknown as ClaimData)).toBe(false);
+      expect(needsEstimateHeads(fb([], x))).toBe(true);
+      expect(needsEstimateHeads(fb([], x, estimateHeads(fb([], x))))).toBe(false);
+    });
+  });
 });

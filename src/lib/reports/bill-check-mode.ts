@@ -1,5 +1,5 @@
 import type { ClaimData } from '@/types';
-import type { AssessmentRow, BillCheckDetails } from '@/types/assessment';
+import type { AssessmentRow, BillCheckDetails, EstimateHeads, ExtraBillItem } from '@/types/assessment';
 import type { RowUpdate } from './ref-paste';
 
 export type { RowUpdate } from './ref-paste';
@@ -52,4 +52,43 @@ export function billHeaderFromEstimate(claim: ClaimData): Partial<BillCheckDetai
   if (!bc?.billDate && typeof e.estimate_date === 'string' && e.estimate_date.trim()) out.billDate = e.estimate_date.trim();
   if (!bc?.billTotal && typeof e.gross_amount === 'number' && e.gross_amount > 0) out.billTotal = e.gross_amount;
   return out;
+}
+
+type Head = keyof EstimateHeads;
+
+/** The head a row's money counts under: labour/paint by section, parts by material (else plastic). */
+function headOf(section: string, material: string | undefined): Head {
+  if (section === 'labour') return 'labour';
+  if (section === 'paint') return 'paint';
+  return material === 'metal' || material === 'glass' || material === 'fiberglass' ? material : 'plastic';
+}
+
+/** Default heads: matched rows by the surveyor's category, unmatched lines by what was read. */
+export function estimateHeads(claim: ClaimData): EstimateHeads {
+  const out: EstimateHeads = { metal: 0, plastic: 0, glass: 0, fiberglass: 0, labour: 0, paint: 0 };
+  for (const r of claim.assessmentRows) {
+    if (r.estimateAmount != null) out[headOf(r.section, r.partType)] += r.estimateAmount;
+  }
+  for (const x of claim.extraBillItems ?? []) {
+    out[headOf(x.section, x.material ?? 'metal')] += x.taxableAmount;
+  }
+  return out;
+}
+
+/** Lines read, incl. GST, against the estimate's printed total; null when no estimate lines exist. */
+export function estimateTotals(claim: ClaimData): { linesInclGst: number; printed: number } | null {
+  const lines = new Map<string, ExtraBillItem>();
+  for (const r of claim.assessmentRows) {
+    for (const l of [r.refMatch?.bill, ...(r.refMatch?.also ?? [])]) if (l) lines.set(l.id, l);
+  }
+  const extras = claim.extraBillItems ?? [];
+  if (!lines.size && !extras.length) return null;
+  const sum = (a: Iterable<ExtraBillItem>) => [...a].reduce((t, l) => t + l.amount, 0);
+  const total = (claim.extractedData?.['final-bill'] as { total_amount?: unknown } | undefined)?.total_amount;
+  return { linesInclGst: sum(lines.values()) + sum(extras), printed: typeof total === 'number' ? total : 0 };
+}
+
+/** True when the UIIC dialog must ask: from-bill, estimate lines exist, no confirmed heads. */
+export function needsEstimateHeads(claim: ClaimData): boolean {
+  return isFromBill(claim) && !claim.billCheck?.estimateHeads && estimateTotals(claim) != null;
 }

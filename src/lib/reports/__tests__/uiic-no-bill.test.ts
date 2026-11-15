@@ -69,3 +69,11 @@ describe('UIIC Bill Check — not-in-bill rows', () => {
     expect(s.notInBillTotal).toBe(3400);
   });
 });
+
+describe('UIIC Bill Check — estimate heads', () => {
+  test('a from-bill claim prints the confirmed heads as Estimated', () => {
+    const c = claim([row({ particulars: 'BILLED' })]);
+    c.billCheck = { ...c.billCheck, baseDocument: 'final-bill', estimateHeads: { metal: 12345, plastic: 0, glass: 0, fiberglass: 0, labour: 0, paint: 0 } } as never;
+    expect(buildUIICBillCheckHTML(c, null)).toContain('12,345');
+  });
+});
