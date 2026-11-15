@@ -175,5 +175,6 @@ describe('BillCheckGrid Editability Markup', () => {
     const html = render(mockClaim);
     expect(html).toMatch(/overflow:auto;max-height:calc\(100dvh - 240px\)/);
     expect(html).toMatch(/position:sticky;top:0;z-index:10/);
+    expect(html).toMatch(/scroll-padding-top:44px/);
   });
 });

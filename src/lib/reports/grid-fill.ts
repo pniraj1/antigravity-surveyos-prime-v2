@@ -44,9 +44,11 @@ const withTax = (taxable: number, gst: number): number => Math.round(taxable * (
 function updatesFor(
   col: FillColumn, v: string, row: AssessmentRow, ctx: FillCtx,
 ): Partial<AssessmentRow> | null {
+  if (v.includes('	')) return null; // several Excel columns copied: not one box's value
   // billRemarks is never disabled on screen.
   if (col === 'billRemarks') return { billRemarks: v };
-  const n = parseClipboardValue(v, 'billedTaxable');
+  // Excel copies "1,20,000" or "₹1,200".
+  const n = parseClipboardValue(v.replace(/[,\s₹]/g, ''), 'billedTaxable');
   if (typeof n !== 'number') return null;
   switch (col) {
     case 'gst': {

@@ -40,6 +40,18 @@ describe('columnValues', () => {
 });
 
 describe('planColumnFill', () => {
+  it.each([['1,20,000', 120000], ['₹1,200.00', 1200], ['1 200', 1200]])('reads %s as a number', (v, n) => {
+    const p = planColumnFill('billedTaxable', [v], [row()], 'a', ctx);
+    expect(p.apply[0]?.updates.billedTaxable).toBe(n);
+  });
+  it('gst paste with comma-number keeps billedAmount at 141600 for 120000', () => {
+    const p = planColumnFill('billedTaxable', ['1,20,000'], [row()], 'a', ctx);
+    expect(p.apply[0].updates.billedAmount).toBe(141600);
+  });
+  it('skips and counts a value with a tab (several columns copied)', () => {
+    const p = planColumnFill('billedTaxable', ['1	2'], [row()], 'a', ctx);
+    expect(p).toMatchObject({ apply: [], filled: 0, skipped: 1 });
+  });
   it('billedTaxable writes billedAmount and undoes both', () => {
     const r = row({ billedTaxable: 5, billedAmount: 6 });
     const p = planColumnFill('billedTaxable', ['1000'], [r], 'a', ctx);

@@ -120,11 +120,6 @@ export function BillCheckGrid({
   );
   const flagPos = openFlag ? flaggedIds.indexOf(openFlag) : -1;
 
-  /**
-   * A column pasted from Excel / Sheets / a Gemini table into Ref No. (spec D10).
-   * A single value pastes natively. Pasted refs are the surveyor's, unless what
-   * Bill Check read contradicts them — then they are left to check, not printed.
-   */
   // Same rows, same order as the grid shows them; pool ignores the "needs a ref" filter.
   const screenRows = () => {
     const pool = SECTION_ORDER.flatMap(({ section }) =>
@@ -142,12 +137,12 @@ export function BillCheckGrid({
   const handleGridKeys = (e: KeyboardEvent<HTMLElement>) => {
     const t = e.target as HTMLElement;
     if (!e.shiftKey || !ARROWS.includes(e.key) || !t.dataset?.bcRow) return;
+    e.preventDefault(); // never let Shift+arrow change a select or step a number box, even at the edges
     const els = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('[data-bc-row][data-bc-col]'))
       .filter(el => !(el as HTMLInputElement).disabled);
     const cells = els.map(el => ({ row: el.dataset.bcRow!, col: el.dataset.bcCol! }));
     const to = moveTarget(cells, { row: t.dataset.bcRow, col: t.dataset.bcCol! }, e.key as MoveKey);
     if (to === null) return;
-    e.preventDefault();
     const next = els[to];
     next.focus();
     if (next instanceof HTMLInputElement && (next.type === 'text' || next.type === 'number')) next.select();
@@ -161,6 +156,7 @@ export function BillCheckGrid({
     const values = columnValues(e.clipboardData.getData('text'));
     if (!values) return;
     e.preventDefault();
+    t.blur(); // FormulaNumericInput only syncs from the store while not focused
     const plan = planColumnFill(col as FillColumn, values, screenRows().onScreen, t.dataset.bcRow!, {
       fromBill,
       autoDepRate: r => depRateFor({ ...r, depOverride: undefined }),
@@ -175,6 +171,11 @@ export function BillCheckGrid({
     });
   };
 
+  /**
+   * A column pasted from Excel / Sheets / a Gemini table into Ref No. (spec D10).
+   * A single value pastes natively. Pasted refs are the surveyor's, unless what
+   * Bill Check read contradicts them — then they are left to check, not printed.
+   */
   const handleRefPaste = (e: ClipboardEvent<HTMLInputElement>, rowId: string) => {
     const paste = parseRefPaste(e.clipboardData.getData('text'));
     if (paste.kind === 'single') return;
@@ -562,7 +563,7 @@ export function BillCheckGrid({
         </div>
       </div>
 
-      <div style={{ overflow: 'auto', maxHeight: 'calc(100dvh - 240px)' }}>
+      <div style={{ overflow: 'auto', maxHeight: 'calc(100dvh - 240px)', scrollPaddingTop: 44 }}>
         <div style={{ minWidth: `${800 + visibleCount * 90}px` }}>
           {/*
             Grouped Parts / Labour / Painting, mirroring the Assessment tab and
