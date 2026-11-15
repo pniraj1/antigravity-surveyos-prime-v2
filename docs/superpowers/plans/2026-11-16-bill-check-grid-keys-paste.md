@@ -132,7 +132,30 @@
 
 ---
 
-### Task 3: Ship
+### Task 3: One scroll box with sticky headings and an always-visible sideways scrollbar (owner, 2026-11-16)
+
+**Why:** in Assessment the grid is one box that scrolls both ways (`AssessmentGrid.tsx:529`, `flex-1 min-h-0 overflow-auto`, with a `sticky top-0` header). In Bill Check, the page scrolls vertically (`BillCheckTab.tsx:198`) and the grid only scrolls sideways (`BillCheckGrid.tsx:519`, `overflowX: auto`). So the sideways scrollbar sits under the last row, and the headings scroll away.
+
+**Files:**
+- Modify: `src/components/tabs/bill-check/BillCheckGrid.tsx`. The scroll wrapper is around line 519; `headerRow` is around line 274.
+- Test: `src/components/tabs/__tests__/BillCheckGridEditability.test.tsx`
+
+**Behaviour:**
+- **The scroll box.** The wrapper at line 519 becomes the grid's own scroll box in both directions: `overflow: auto` and `maxHeight: 'calc(100dvh - 240px)'`. The sideways scrollbar then sits at the box's bottom edge, which stays on screen.
+- **Unchanged:** the toolbar, the settings popover and the section footers.
+- **Sticky headings.** Each section's column heading row (the element `headerRow(...)` returns) gets `position: sticky; top: 0; z-index: 10` and an opaque background (the same `bg-muted` / card background it already has), so rows don't show through.
+- **Section titles** scroll normally.
+- **Keyboard moves** (Task 2) that focus a box out of view scroll it into view. Native `focus()` already does this inside a scroll box, so don't add `scrollIntoView` unless the test shows it's needed.
+
+- [ ] **Step 1: Write the failing test** (static markup):
+  - the scroll wrapper renders with `overflow:auto` and a `max-height` containing `100dvh`;
+  - a section heading row renders with `position:sticky`.
+- [ ] **Step 2: Run, expect FAIL.** Implement. Run `npx vitest run src/components/tabs/__tests__` and expect PASS. Then `npx tsc --noEmit -p .`.
+- [ ] **Step 3: Commit** with `feat(bill-check): one scroll box with sticky headings and a visible sideways scrollbar`.
+
+---
+
+### Task 4: Ship
 - [ ] **Step 1: Full suite.** Run `npx vitest run --exclude "src/lib/ai/__tests__/prompts-final-bill.test.ts"`, with output to a file. Expected: all pass.
 - [ ] **Step 2: Build.** Run `npm run build` with the parked Task 7 files stashed (`git stash push -u -- src/lib/ai/prompts.ts src/lib/ai/__tests__/prompts-final-bill.test.ts`), deploy hosting to `--project surveyos-v2-antigravity-in`, then `git stash pop`. The owner asked for live deploys.
 - [ ] **Step 3: Verify and record.** Check a live chunk on motorsurveyos-in.web.app and surveyos.in for `Nothing pasted`. Add a Changelog entry in the vault, update memory, and commit.
