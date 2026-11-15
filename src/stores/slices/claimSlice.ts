@@ -448,9 +448,10 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
       );
       const assessmentRows = c.assessmentRows.map((r) => {
         const { estimateAmount: _drop, ...row } = r;
-        if (kind === 'estimate') return { ...row, ...byId.get(r.id) };
-        if (!wasFromBill) return row;
+        if (kind === 'estimate' && wasFromBill) return { ...row, ...byId.get(r.id) };
+        if (kind === 'final-bill' && !wasFromBill) return row;
         const { refSrNo: _a, refStatus: _b, refMatch: _c, ...rest } = row;
+        if (kind === 'estimate') return { ...rest, ...byId.get(r.id) };
         return r.allowed
           ? { ...rest, billedTaxable: undefined, billedAmount: undefined, billStatus: 'pending' as const }
           : rest;

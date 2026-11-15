@@ -168,4 +168,18 @@ describe('setBillCheckUpload', () => {
     expect(c.extraBillItems).toEqual([]);
     expect(c.billCheck.estimateHeads).toBeUndefined();
   });
+
+  it("'estimate' on a normal claim clears refs from the real bill", () => {
+    const store = seed([row({ refSrNo: '12', refStatus: 'clean', refMatch: {} as never })]);
+    store.getState().setBillCheckUpload('estimate');
+    const r0 = store.getState().currentClaim!.assessmentRows[0];
+    expect([r0.refSrNo, r0.refStatus, r0.refMatch]).toEqual([undefined, undefined, undefined]);
+  });
+
+  it("'estimate' again on a from-bill claim keeps its refs", () => {
+    const store = seed([row({ refSrNo: '7' })]);
+    store.getState().updateBillCheck({ baseDocument: 'final-bill' });
+    store.getState().setBillCheckUpload('estimate');
+    expect(store.getState().currentClaim!.assessmentRows[0].refSrNo).toBe('7');
+  });
 });
