@@ -20,3 +20,13 @@ export function asksDocumentKind(claim: (BaseDocClaim & { assessmentRows?: unkno
 export function otherKind(k: Kind): Kind {
   return k === 'estimate' ? 'final-bill' : 'estimate';
 }
+
+/** The doc type an Estimate / Final bill answer files as. */
+export function docTypeForAnswer(k: Kind): 'invoice' | 'estimate' {
+  return k === 'final-bill' ? 'invoice' : 'estimate';
+}
+
+/** Undo may flip the claim's mode only while the claim it was answered on is still the current one. */
+export function shouldApplyUndo(currentId: string | undefined, claimId: string): boolean {
+  return !!currentId && currentId === claimId;
+}

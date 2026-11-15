@@ -26,8 +26,8 @@ import { DocumentReviewSheet } from '@/components/documents/DocumentReviewSheet'
 import type { EstimateApplyMode } from '@/stores/slices/aiDataSlice';
 import { saveDocuments } from '@/lib/documents/sink';
 import { DocumentKindDialog } from '@/components/dialogs/DocumentKindDialog';
-import { assessmentUploadDocType, asksDocumentKind, otherKind } from '@/lib/documents/upload-doc-type';
-import { createFileGate, type FileGate } from '@/lib/documents/file-gate';
+import { assessmentUploadDocType, asksDocumentKind, docTypeForAnswer, otherKind, shouldApplyUndo } from '@/lib/documents/upload-doc-type';
+import { createFileGate } from '@/lib/documents/file-gate';
 import { UsePhoneFiles } from '@/components/documents/UsePhoneFiles';
 import type { ClaimDocument, DocType } from '@/types/documents';
 import { isOnDrive } from '@/lib/scan-import/phone-files';
@@ -36,6 +36,7 @@ import { PrintMenu } from '@/components/tabs/report/PrintMenu';
 import { triggerStandardPrint } from '@/lib/reports/standard-report-builder';
 import { triggerUIICFinalPrint } from '@/lib/reports/uiic-final-builder';
 
+type Kind = 'estimate' | 'final-bill';
 const ESTIMATE_TYPES: readonly DocType[] = ['estimate', 'supplementaryEstimate', 'invoice'];
 
 export function AssessmentTab() {
@@ -44,8 +45,8 @@ export function AssessmentTab() {
   const [showSummary, setShowSummary] = useState(true);
   const [fixOpen, setFixOpen] = useState(false);
   // Open only when there is something to decide (multi-page PDF); see needsReview.
-  const [reviewSheet, setReviewSheet] = useState<{ file: File; mode: EstimateApplyMode; phone?: ClaimDocument; gate: FileGate } | null>(null);
-  const [kindAsk, setKindAsk] = useState<{ resolve: (k: 'estimate' | 'final-bill' | null) => void } | null>(null);
+  const [reviewSheet, setReviewSheet] = useState<{ file: File; mode: EstimateApplyMode; phone?: ClaimDocument; answer: Kind | null } | null>(null);
+  const [kindAsk, setKindAsk] = useState<{ resolve: (k: Kind | null) => void } | null>(null);
   const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview, reScanWithFeedback, smartFix, reviewProgress } = useAIExtraction();
   const { confirmEstimateMode, estimateModeDialog } = useEstimateModePrompt();
   const { profile } = useProfileStore();
@@ -56,14 +57,17 @@ export function AssessmentTab() {
 
   // Everything that happens once the surveyor has decided which file/pages go
   // to the AI: evidence blob, extraction, optional Drive upload.
-  const startEstimate = async (file: File, mode: EstimateApplyMode, gate: FileGate, phone?: ClaimDocument) => {
+  // `answer`: the Estimate / Final bill choice, when this upload was asked it.
+  const startEstimate = async (file: File, mode: EstimateApplyMode, answer: Kind | null, phone?: ClaimDocument) => {
+    const claim = useClaimStore.getState().currentClaim;
+    const claimId = claim?.id;
     // Store blob URL for the Evidence Viewer to display the file natively
-    if (currentClaim?.id) {
-      storeBlobUrl(currentClaim.id, 'estimate', file);
+    if (claimId) {
+      storeBlobUrl(claimId, 'estimate', file);
 
       // Auto-open evidence panel and focus on estimate
       setShowEvidence(true);
-      useEvidenceStore.getState().openField(currentClaim.id, {
+      useEvidenceStore.getState().openField(claimId, {
         docType: 'estimate',
         fieldKey: '',
         contextSnippet: ''
@@ -71,15 +75,35 @@ export function AssessmentTab() {
     }
 
     triggerExtraction('estimate', file, undefined, undefined, mode);
-    // Filing waits for the Undo window; the doc type is read then, so an undone answer is filed right.
-    await gate.whenOpen;
-    const docType = assessmentUploadDocType(useClaimStore.getState().currentClaim);
-    if (!phone) void saveDocuments(docType, [{ blob: file, name: file.name }], 'upload');
+    // Bound to this claim: the type follows the (possibly undone) answer, never whatever claim is current later.
+    let kind = answer;
+    const fileGate = createFileGate(!answer);
+    if (answer && claimId) {
+      toast(answer === 'final-bill' ? 'Read as the final bill — the claim is made from the bill.' : 'Read as the estimate.', {
+        duration: 8000,
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            kind = otherKind(kind ?? answer);
+            if (shouldApplyUndo(useClaimStore.getState().currentClaim?.id, claimId)) {
+              useClaimStore.getState().updateBillCheck({ baseDocument: kind });
+            }
+            fileGate.open();
+          },
+        },
+        onAutoClose: fileGate.open,
+        onDismiss: fileGate.open,
+      });
+      useClaimStore.getState().updateBillCheck({ baseDocument: answer });
+    }
+    // Filing waits for the Undo window.
+    await fileGate.whenOpen;
+    const docType = kind ? docTypeForAnswer(kind) : assessmentUploadDocType(claim);
+    if (!phone) void saveDocuments(docType, [{ blob: file, name: file.name }], 'upload', claimId);
 
     // A phone file moved from Scan's Drive folder is already on Drive: never a second copy.
-    if (currentClaim?.id && profile.autoUploadDrive !== false && !isOnDrive(phone)) {
-      const claimId = currentClaim.id;
-      const label = currentClaim.vehicle?.registrationNumber || claimId;
+    if (claimId && profile.autoUploadDrive !== false && !isOnDrive(phone)) {
+      const label = claim?.vehicle?.registrationNumber || claimId;
       const ext = file.name.split('.').pop() ?? 'bin';
       if (await confirmSaveToCloud(file.name)) {
         uploadFileToDrive(claimId, `${docType}.${ext}`, file, label).catch(console.error);
@@ -93,46 +117,27 @@ export function AssessmentTab() {
     if (file) void processEstimateFile(file);
   };
 
-  /** Records the answer and offers Undo; filing (gate) opens when the toast closes or right after Undo. */
-  const answerKind = (kind: 'estimate' | 'final-bill', gate: FileGate) => {
-    const { updateBillCheck } = useClaimStore.getState();
-    updateBillCheck({ baseDocument: kind });
-    toast(kind === 'final-bill' ? 'Read as the final bill — the claim is made from the bill.' : 'Read as the estimate.', {
-      duration: 8000,
-      action: {
-        label: 'Undo',
-        onClick: () => {
-          updateBillCheck({ baseDocument: otherKind(kind) });
-          gate.open();
-        },
-      },
-      onAutoClose: gate.open,
-      onDismiss: gate.open,
-    });
-  };
-
   /** `phone`: the file came from the claim folder (a phone file), so it is not saved there again. */
   const processEstimateFile = async (file: File, phone?: ClaimDocument) => {
+    // The question only collects the answer; it is recorded when reading starts,
+    // so cancelling anything below leaves the next upload asking again.
+    let answer: Kind | null = null;
+    if (asksDocumentKind(useClaimStore.getState().currentClaim)) {
+      answer = await new Promise<Kind | null>((resolve) => setKindAsk({ resolve }));
+      setKindAsk(null);
+      if (answer === null) return;
+    }
     // Asked BEFORE extraction: a wrong file, or a surveyor who changes their
     // mind, then costs nothing. Resolves straight to 'replace' on an empty
     // sheet — nothing to lose, so nothing to ask.
-    // Open at once, unless the question is asked: then it opens when the Undo toast closes.
-    const asked = asksDocumentKind(useClaimStore.getState().currentClaim);
-    const gate = createFileGate(!asked);
-    if (asked) {
-      const kind = await new Promise<'estimate' | 'final-bill' | null>((resolve) => setKindAsk({ resolve }));
-      setKindAsk(null);
-      if (kind === null) return;
-      answerKind(kind, gate);
-    }
     const mode = await confirmEstimateMode(file.name);
     if (mode === null) return;
 
     if (await needsReview([file])) {
-      setReviewSheet({ file, mode, phone, gate });
+      setReviewSheet({ file, mode, phone, answer });
       return;
     }
-    await startEstimate(file, mode, gate, phone);
+    await startEstimate(file, mode, answer, phone);
   };
 
   const evidenceImages: string[] = [];
@@ -151,9 +156,9 @@ export function AssessmentTab() {
           files={[reviewSheet.file]}
           onCancel={() => setReviewSheet(null)}
           onConfirm={(_all, forAI) => {
-            const { mode, phone, gate } = reviewSheet;
+            const { mode, phone, answer } = reviewSheet;
             setReviewSheet(null);
-            if (forAI[0]) void startEstimate(forAI[0], mode, gate, phone);
+            if (forAI[0]) void startEstimate(forAI[0], mode, answer, phone);
           }}
         />
       )}

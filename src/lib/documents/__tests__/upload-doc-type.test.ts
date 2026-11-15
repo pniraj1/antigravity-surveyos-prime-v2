@@ -22,3 +22,17 @@ describe('upload-doc-type', () => {
     expect(asksDocumentKind({ assessmentRows: [], billCheck: { baseDocument: 'estimate' } })).toBe(false);
   });
 });
+
+import { docTypeForAnswer, shouldApplyUndo } from '../upload-doc-type';
+
+describe('answer binding', () => {
+  it('files the answer, not the current claim', () => {
+    expect(docTypeForAnswer('final-bill')).toBe('invoice');
+    expect(docTypeForAnswer('estimate')).toBe('estimate');
+  });
+  it('applies Undo only on the claim it was answered on', () => {
+    expect(shouldApplyUndo('a', 'a')).toBe(true);
+    expect(shouldApplyUndo('b', 'a')).toBe(false);
+    expect(shouldApplyUndo(undefined, 'a')).toBe(false);
+  });
+});
