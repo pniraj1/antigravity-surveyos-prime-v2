@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, type ClipboardEvent } from 'react';
 import { AlertCircle, Trash2, Settings2, Eye, EyeOff, FileSearch, PlusCircle, PackageX } from 'lucide-react';
 import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
 import { useClaimStore } from '@/stores/claim-store';
@@ -26,6 +26,9 @@ import { billCheckFlags, type BillFlag } from '@/lib/reports/bill-check-flags';
 import { BillCheckFlagMark, BillCheckFlagDetail, BillCheckMatchDetail } from './BillCheckFlagRow';
 import { useColumnResize } from '@/hooks/useColumnResize';
 import { overBilledRows } from '@/lib/calculations/estimate-floor';
+import { toast } from 'sonner';
+import { buildBillItems } from '@/stores/slices/aiDataSlice';
+import { parseRefPaste, planRefPaste, type ReadLine, type RowUpdate } from '@/lib/reports/ref-paste';
 
 /** Bill Check rows are the assessment's rows: deleting here deletes there too. */
 const ALSO_REMOVES =
@@ -109,6 +112,44 @@ export function BillCheckGrid({
       .map(r => r.id),
   );
   const flagPos = openFlag ? flaggedIds.indexOf(openFlag) : -1;
+
+  /**
+   * A column pasted from Excel / Sheets / a Gemini table into Ref No. (spec D10).
+   * A single value pastes natively. Pasted refs are the surveyor's, unless what
+   * Bill Check read contradicts them — then they are left to check, not printed.
+   */
+  const handleRefPaste = (e: ClipboardEvent<HTMLInputElement>, rowId: string) => {
+    const paste = parseRefPaste(e.clipboardData.getData('text'));
+    if (paste.kind === 'single') return;
+    e.preventDefault();
+    if (paste.kind === 'invalid') {
+      toast.error('Copy just the Ref No. column, or the Sr No. and Ref No. columns.');
+      return;
+    }
+    // Same rows, same order as the grid shows them.
+    const onScreen = SECTION_ORDER.flatMap(({ section }) =>
+      allRows.filter(r => r.section === section && (r.allowed || (r.billedAmount ?? 0) > 0)
+        && (!filterUncertain || r.refStatus === 'ambiguous' || (r.allowed && !r.refSrNo))),
+    );
+    // Every line Bill Check has read: a "continue" upload stores only its own pages.
+    const stored = claim.extractedData?.['final-bill'];
+    const lines: ReadLine[] = [
+      ...(stored ? buildBillItems(stored) : []),
+      ...(claim.extraBillItems ?? []),
+      ...allRows.flatMap(r => (r.refMatch ? [r.refMatch.bill, ...(r.refMatch.also ?? [])] : [])),
+    ];
+    const plan = planRefPaste(paste, onScreen, rowId, lines.length ? lines : null, id => serials.get(id));
+    const run = (us: RowUpdate[]) => us.forEach(u => updateAssessmentRow(u.id, u.updates));
+    if (plan.filled + plan.flagged === 0) {
+      toast.info('Nothing to fill — the pasted values already match or found no row.');
+      return;
+    }
+    run(plan.apply);
+    const parts = [`Filled ${plan.filled} Ref Nos.`];
+    if (plan.flagged) parts.push(`${plan.flagged} to check${plan.notOnDocument ? ` (${plan.notOnDocument} not on the document read here)` : ''}`);
+    if (plan.skipped) parts.push(`${plan.skipped} found no row`);
+    toast(parts.join(' · '), { action: { label: 'Undo', onClick: () => run(plan.undo) } });
+  };
   const stepFlag = (dir: 1 | -1) => {
     const n = flaggedIds.length;
     const id = flaggedIds[flagPos < 0 ? (dir === 1 ? 0 : n - 1) : (flagPos + dir + n) % n];
@@ -726,6 +767,7 @@ export function BillCheckGrid({
                       type="text"
                       value={row.refSrNo ?? ''}
                       placeholder="—"
+                      onPaste={e => handleRefPaste(e, row.id)}
                       onChange={e => {
                         const val = e.target.value.trim();
                         updateAssessmentRow(row.id, {

@@ -64,6 +64,8 @@ export function planRefPaste(
   onScreen: AssessmentRow[],
   startRowId: string,
   lines: ReadLine[] | null,
+  /** The Sr No. the surveyor sees for a row (the report's serial); defaults to the estimate's. */
+  serialOf: (id: string) => number | undefined = () => undefined,
 ): RefPastePlan {
   const plan: RefPastePlan = { apply: [], undo: [], filled: 0, flagged: 0, notOnDocument: 0, skipped: 0 };
   const targets: Array<[AssessmentRow, string]> = [];
@@ -79,7 +81,7 @@ export function planRefPaste(
     });
   } else if (paste.kind === 'keyed') {
     for (const { srNo, ref } of paste.pairs) {
-      const hits = onScreen.filter(r => r.srNo !== undefined && Number(r.srNo) === srNo);
+      const hits = onScreen.filter(r => (serialOf(r.id) ?? r.srNo) === srNo);
       if (hits.length === 1) targets.push([hits[0], ref]);
       else plan.skipped += 1;
     }

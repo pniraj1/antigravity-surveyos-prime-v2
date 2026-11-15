@@ -64,3 +64,12 @@ describe('parseRefPaste', () => {
   it('three columns are invalid', () =>
     expect(parseRefPaste('12\tBUMPER\t301')).toEqual({ kind: 'invalid' }));
 });
+
+describe('planRefPaste keyed on the serial the grid shows', () => {
+  it('uses serialOf, not the estimate srNo', () => {
+    const rows = [r('a', 50), r('b', 60)];
+    const shown = new Map([['a', 1], ['b', 2]]);
+    const p = planRefPaste({ kind: 'keyed', pairs: [{ srNo: 2, ref: '43' }] }, rows, 'a', null, id => shown.get(id));
+    expect(p.apply.map(u => u.id)).toEqual(['b']);
+  });
+});
