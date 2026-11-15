@@ -1,3 +1,10 @@
+## 2026-11-16 (Claude Code) — Say what the document is at upload (Plan 3a) — built, NOT deployed
+- feat(documents): Documents tab's "Final Garage Bill" card removed (owner). Bills are read in Assessment (claims made from the bill) or Bill Check. Phone-scanned invoices now listed in Phone files (`CARD_DOC_TYPES` excludes 'final-bill'). `FIELD_KEY_TO_DOC_TYPE`, Scan import, new-claim drop unchanged.
+- feat(bill-check): uploads filed as `invoice` (Final bill) or `estimate` when reading starts; Drive copy `invoice.<ext>`/`estimate.<ext>`; phone files never filed twice.
+- feat(assessment): first upload of a claim asks "What is this document? Estimate / Final bill" with one explanation line; the answer sets `billCheck.baseDocument`, so Bill Check starts on the right choice. 8 s "Undo" toast; filing waits for it and is bound to the claim. Bill photos pickable in Assessment.
+- resolves Plan 2's open I3-N1 (no Documents-tab bill read any more).
+- verification: tsc clean; suite 3100/3100 (excl. parked Plan 2 Task 7 test); Scan `testDebugUnitTest` BUILD SUCCESSFUL; opus final review "ready to merge". Not browser-tested. Commits f4330b57..bff721ae. Prime ↔ Scan: none.
+
 ## 2026-11-15 (Claude Code) — Bill Check: claims built from the bill (Plan 2) — built, NOT deployed
 - feat(bill-check): "Final bill | Estimate" choice next to the upload button (`billCheck.baseDocument`). In a claim built from the bill (UIIC): an estimate upload fills only Ref No. and `estimateAmount` (never billed figures or bill header); allowed rows billed at their own figures ("reset all", owner-confirmed; re-applied when Bill Check opens and at print); mode switches ask before clearing; Link/Unlink touch only the ref; rows never print No Bill; "billed above/below" replaced by a screen-only "billed more than the estimate" note.
 - feat(bill-check): labour and paint matched by identical wording (both sides without part numbers). Parts never by wording.
