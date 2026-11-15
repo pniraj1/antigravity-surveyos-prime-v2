@@ -164,6 +164,20 @@ Why: the owner typed every estimate number by hand from the sheet Gemini produce
 - **After the paste:** one message says how many were filled, flagged and skipped, with an Undo that restores those rows' previous Ref No. and status.
 - No AI call, no new storage.
 
+### D12. The real estimate's amount, UIIC only on paper (owner decided 2026-11-15)
+Study: `docs/research/2026-11-15-estimate-amount-in-bill-check-study.md`.
+- **`estimateAmount` on a row:** the taxable amount of the estimate line(s) matched to it in a from-bill claim, by an exact match or a Link. It is never read by any money calculation (cap, subtotal, liability, export).
+- **Bill Check grid, from-bill mode:** the Estimate column shows `estimateAmount` (or "—"); Billed shows the row's own bill figure.
+- **"Billed more than estimated":** a non-blocking note on screen only, when the bill figure is above `estimateAmount`. Never printed, never blocks.
+- **From-bill mode skips the "billed above / below what you assessed" flags:** there, billed is the row's own figure, so the difference is the surveyor's own cut.
+- **Reset all (D0) is required:** wrong billed figures also lowered the claim through the Bill Check cap (`billCheckAssessed` = min(assessed, billed)).
+- **Switching mode clears the unmatched lines list**, so lines from the other document are not counted.
+- **UIIC Bill Check report, "Estimated" column:** heads Metal, Plastic / Rubber, Glass, Fibre Glass, Labour, Painting.
+  - Default figures: matched lines take the surveyor's category (row `partType` / section); unmatched estimate lines take the category the AI read (parts) or their section (labour, paint).
+  - Before a UIIC Bill Check print of a from-bill claim with estimate lines, a dialog shows the heads. The surveyor edits any head and confirms. The dialog also shows the lines' total incl. GST against the estimate's printed total, with any difference in red; confirming is still allowed.
+  - Confirmed figures are saved (`billCheck.estimateHeads`) and printed. The dialog asks again only after the estimate is uploaded again.
+  - Other insurers and reports: unchanged.
+
 ### D11. AI suggestions for rows still blank (sandbox first; built only if needed)
 Trimmed with the owner 2026-11-15.
 - **Gate:** after Plan 2, the owner counts blank allowed rows on 3 real claims. Usually under 5 → not built (the Plan 3 panel's ranked candidates suffice).

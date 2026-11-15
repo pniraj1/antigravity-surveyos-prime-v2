@@ -12,7 +12,7 @@
 
 **Tech Stack:** TypeScript, React (Next.js 16), Zustand slices, Vitest.
 
-**Spec:** `docs/superpowers/specs/2026-11-15-bill-check-reference-finder-design.md`, sections D0, D4, D4a and D6 (as decided 2026-11-15). D1–D3, D5 and D10 are already live and must keep working.
+**Spec:** `docs/superpowers/specs/2026-11-15-bill-check-reference-finder-design.md`, sections D0, D4, D4a, D6 and D12 (as decided 2026-11-15). Study behind D12: `docs/research/2026-11-15-estimate-amount-in-bill-check-study.md`. D1–D3, D5 and D10 are already live and must keep working.
 
 ## Global Constraints
 - Commit to `main` (`master` is abandoned). End commit messages with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
@@ -29,6 +29,8 @@
 2. **Switching back to Final bill by mistake.** The surveyor is asked before billed figures and refs are cleared. Nothing changes on Cancel (Task 2 test plus Task 8 confirm).
 3. **A row allowed after the switch** (ticked in the Assessment tab later) is pending. The print gate bills it at its own figures and never marks it No Bill (Task 6 test).
 4. **More pages of the same estimate ("continue") in from-bill mode.** Rows that already hold a ref keep it, and only the rest are matched. Every row is self-billed, so "billed > 0" can't be the skip test there (Task 3 test).
+6. **The same estimate line counted twice in the UIIC heads.** A line shared by several rows (`refOnly`) or listed as unmatched after a Link must count once (Task 10 test).
+7. **An estimate uploaded again after the heads were confirmed** must clear the confirmation, so the dialog asks again (Task 3 test).
 5. **Generic repeated labour wording** ("LABOUR CHARGES" on two rows and two lines) pairs in serial order like repeated part numbers, and a labour row that has a part number is never wording-matched (Task 5 tests).
 
 ---
@@ -101,12 +103,18 @@ Use a `row(overrides)` helper like the one in `src/stores/slices/__tests__/apply
 - Produces: `setBillCheckUpload(kind: 'final-bill' | 'estimate'): void` on the claim store.
   - `'estimate'` sets `billCheck.baseDocument = 'final-bill'`, applies `selfBillUpdates` to the rows, and merges `billHeaderFromEstimate`.
   - `'final-bill'` sets `baseDocument = 'estimate'`. If the claim was in from-bill mode, it clears `refSrNo`, `refStatus` and `refMatch` on every row, and on allowed rows also `billedTaxable` and `billedAmount`, with `billStatus` set to `'pending'`. There was no real bill read, so all of it came from the estimate mode.
+  - Either direction also clears `claim.extraBillItems` (lines from the other document must not count), every row's `estimateAmount`, and `billCheck.estimateHeads`.
   - It's one store write either way. The confirmation is the UI's job (Task 8).
+- Types added in this task (`src/types/assessment.ts`):
+  - `AssessmentRow.estimateAmount?: number`: the real estimate's taxable amount, from-bill claims only; never read by money code;
+  - `ExtraBillItem.material?: 'metal' | 'plastic' | 'glass'`;
+  - `BillCheckDetails.estimateHeads?: EstimateHeads`, with `export interface EstimateHeads { metal: number; plastic: number; glass: number; fiberglass: number; labour: number; paint: number }`.
 
 - [ ] **Step 1: Write the failing tests** in `claimSlice.test.ts`, using the store the way that file already does:
   - `setBillCheckUpload('estimate')` → `baseDocument === 'final-bill'`, an allowed row with `estimated 1000, gst 18` has `billedAmount 1180, billStatus 'in-bill'`, and an empty `billNo` is filled from `extractedData.estimate.bill_number`.
   - Then `setBillCheckUpload('final-bill')` → `baseDocument === 'estimate'`, that row has `billStatus 'pending'` and `billedAmount` and `refSrNo` are undefined.
   - `setBillCheckUpload('final-bill')` on a normal claim (never from-bill) leaves rows untouched.
+  - Either switch empties `extraBillItems` and removes `estimateAmount` and `billCheck.estimateHeads`.
 - [ ] **Step 2: Run, expect FAIL.** Run `npx vitest run src/stores/slices/__tests__/claimSlice.test.ts`. Expected: the new tests fail because `setBillCheckUpload` isn't a function.
 - [ ] **Step 3: Implement `setBillCheckUpload`.**
 - [ ] **Step 4: Run, expect PASS.**
@@ -128,7 +136,9 @@ Use a `row(overrides)` helper like the one in `src/stores/slices/__tests__/apply
     - `billCheck.billNo`, `billDate` and `billTotal` stay as they were;
     - `selfBillUpdates` is applied after matching;
     - in `'continue'` mode, the rows excluded from matching are those with a `refSrNo`, not those with `billedAmount > 0`;
-    - extras are merged as today, so the surveyor can still Link by hand.
+    - extras are merged as today, so the surveyor can still Link by hand; `extraFromBillItem` keeps `material` from the line's `category` when it's `metal`, `plastic` or `glass`;
+    - a matched row also gets `estimateAmount` = the summed `taxableAmount` of its matched lines (`bill` + `also`). A `refOnly` row gets none, so a shared line counts once;
+    - `billCheck.estimateHeads` is removed, so a re-upload asks for confirmation again.
   - `buildBillModePrompt(claim)` in from-bill mode returns `{ billNo: '', billedRows: <rows with refSrNo> }`, or `null` when there are none.
   - Normal mode is unchanged.
 
@@ -138,6 +148,8 @@ Use a `row(overrides)` helper like the one in `src/stores/slices/__tests__/apply
   - **"a disallowed row matched by an estimate gets only the ref":** `billStatus` stays undefined and `billRemarks` stays undefined.
   - **"continue in from-bill mode keeps refs already set and matches the rest":** row A has `refSrNo '7'` and status `clean`; row B has part `RD-9` and no ref. After `applyFinalBill(…, BILL, 'continue')`, A still has `'7'` and B has RD-9's serial.
   - **"buildBillModePrompt counts rows with refs in from-bill mode".**
+  - **"an estimate match records the estimate's amount"**: a row matched to a line of taxable 9000 gets `estimateAmount 9000`; a `refOnly` row gets none.
+  - **"an estimate upload clears confirmed estimate heads"**.
 - [ ] **Step 2: Run, expect FAIL.** Run `npx vitest run src/stores/slices/__tests__/apply-final-bill.test.ts`.
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Run, expect PASS.** Also run `npx vitest run src/stores/slices/__tests__` to confirm no normal-mode test changed.
@@ -156,8 +168,8 @@ Use a `row(overrides)` helper like the one in `src/stores/slices/__tests__/apply
 **Interfaces:**
 - Consumes: `isFromBill` (Task 1).
 - Produces:
-  - In from-bill mode, `linkExtraBillItem` writes only `refSrNo`, `refStatus: 'manual'` and `refMatch`. It writes no billed fields and no "Linked from bill" remark. Displaced lines still return to the extras.
-  - `unlinkBillMatch` clears only `refSrNo`, `refStatus` and `refMatch`; billed figures and status stay. Held lines still return.
+  - In from-bill mode, `linkExtraBillItem` writes only `refSrNo`, `refStatus: 'manual'`, `refMatch` and `estimateAmount` (= the line's `taxableAmount`). It writes no billed fields and no "Linked from bill" remark. Displaced lines still return to the extras.
+  - `unlinkBillMatch` clears only `refSrNo`, `refStatus`, `refMatch` and `estimateAmount`; billed figures and status stay. Held lines still return.
   - Normal mode is unchanged.
 
 - [ ] **Step 1: Write the failing tests:**
@@ -271,7 +283,109 @@ Use a `row(overrides)` helper like the one in `src/stores/slices/__tests__/apply
 
 ---
 
-### Task 9: Ship
+### Task 9: Warnings and the estimate column in from-bill claims
+
+**Files:**
+- Modify: `src/lib/reports/bill-check-flags.ts`. `billCheckFlags(rows, fromBill = false)`; the `BillFlagKind` union gains `'over-estimate'`.
+- Modify: the callers, passing `isFromBill(claim)`: `src/components/tabs/bill-check/BillCheckGrid.tsx:106`, `src/components/tabs/BillCheckTab.tsx:94`, and `src/hooks/useBillCheckPrintGate.tsx` (lines 82, 126, 155, 167).
+- Modify: `src/components/tabs/bill-check/BillCheckGrid.tsx:625`. In from-bill mode the estimate cell shows `row.estimateAmount` (or `—`); otherwise `row.estimated` as today. The section total at line 368 follows the same rule.
+- Test: `src/lib/reports/__tests__/bill-check-flags.test.ts`
+
+**Interfaces:**
+- Consumes: `isFromBill` (Task 1); `AssessmentRow.estimateAmount` (Task 2).
+- Produces: with `fromBill`, no `'billed-above'` / `'billed-below'` flags. Instead, an allowed row with `estimateAmount !== undefined` and `billedTaxable > estimateAmount + 0.005` gets one flag:
+  - `kind: 'over-estimate'`, `blocking: false`;
+  - heading: `Billed more than the estimate`;
+  - detail: `The workshop billed ${rs(billedTaxable)}; its estimate said ${rs(estimateAmount)}. For your judgement only — this is not printed.`
+
+  Ambiguous and billed-rejected flags are unchanged.
+
+- [ ] **Step 1: Write the failing tests:**
+  - "from-bill mode raises no billed-above flag on a row the surveyor reduced": `estimated 1000, assessed 800, billedTaxable 1000`, fromBill → no flag of kind billed-above;
+  - "from-bill mode notes a bill above the estimate without blocking": `billedTaxable 1000, estimateAmount 900` → one `over-estimate`, `blocking false`;
+  - "normal mode still raises billed-above".
+- [ ] **Step 2: Run, expect FAIL.** Run `npx vitest run src/lib/reports/__tests__/bill-check-flags.test.ts`.
+- [ ] **Step 3: Implement the flags, callers and grid cell.**
+- [ ] **Step 4: Run, expect PASS.** Then `npx tsc --noEmit -p .` and `npx vitest run src/hooks src/components/tabs`.
+- [ ] **Step 5: Commit** with `feat(bill-check): in claims built from the bill, warn only when billed is above the estimate`.
+
+---
+
+### Task 10: Estimate heads for the UIIC report
+
+**Files:**
+- Modify: `src/lib/reports/bill-check-mode.ts`
+- Modify: `src/lib/reports/uiic-final-builder.ts`: `buildUIICBillCheckHTML`, "ASSESSMENT SUMMARY → Estimated" (around lines 1040–1080).
+- Test: `src/lib/reports/__tests__/bill-check-mode.test.ts`, plus one case in the existing UIIC Bill Check report tests (`src/lib/reports/__tests__/uiic-no-bill.test.ts` shows how they build a claim).
+
+**Interfaces:**
+- Consumes: `EstimateHeads`, `estimateAmount`, `ExtraBillItem.material` (Task 2).
+- Produces:
+  ```ts
+  /** Default heads: matched rows by the surveyor's category, unmatched lines by what was read. */
+  export function estimateHeads(claim: ClaimData): EstimateHeads;
+  /** Lines read, incl. GST, against the estimate's printed total; null when no estimate lines exist. */
+  export function estimateTotals(claim: ClaimData): { linesInclGst: number; printed: number } | null;
+  /** True when the UIIC dialog must ask: from-bill, estimate lines exist, no confirmed heads. */
+  export function needsEstimateHeads(claim: ClaimData): boolean;
+  ```
+
+**Rules:**
+- **Matched rows** (with `estimateAmount`) go to a head by section: `labour` → labour, `paint` → paint. Parts go by `partType`: `metal`, `plastic`, `glass`, `fiberglass`; anything else → plastic, as the summary's Plastic / Rubber row does.
+- **Unmatched lines** (`claim.extraBillItems`) go by section the same way, with parts by `material` (none → metal).
+- **`linesInclGst`** = Σ the `amount` of each distinct matched line (`refMatch.bill` and `also`, deduplicated by id, from-bill rows only) + Σ extras' `amount`.
+- **`printed`** = `claim.extractedData?.['final-bill']?.total_amount` (number, else 0).
+- **UIIC report:** when `isFromBill(claim)` and `claim.billCheck.estimateHeads` is set, the Estimated column prints those heads:
+  - Spare Parts = metal + plastic + glass + fiberglass;
+  - sub-rows per material;
+  - Labour; Painting;
+  - GRAND TOTAL = the sum.
+
+  Otherwise it prints today's figures.
+
+- [ ] **Step 1: Write the failing tests:**
+  - heads from one matched metal row (9000) and one unmatched glass line (taxable 1500) → `metal 9000, glass 1500`;
+  - a line shared by two rows counts once in `linesInclGst`;
+  - `needsEstimateHeads` is false for a normal claim, true for a from-bill claim with extras and no heads, false once heads are set;
+  - the UIIC Bill Check HTML of a from-bill claim with `estimateHeads.metal = 12345` contains `12,345` in the summary.
+- [ ] **Step 2: Run, expect FAIL.**
+- [ ] **Step 3: Implement.**
+- [ ] **Step 4: Run, expect PASS.** Run `npx vitest run src/lib/reports`.
+- [ ] **Step 5: Commit** with `feat(uiic): estimate heads for the UIIC Bill Check report in claims built from the bill`.
+
+---
+
+### Task 11: The UIIC confirm-and-edit dialog
+
+**Files:**
+- Create: `src/components/dialogs/EstimateHeadsDialog.tsx`
+- Modify: `src/hooks/useBillCheckPrintGate.tsx`. In `requestPrint` (and the same chain after `handleInvoiceVerified`), for `format === 'uiic'` and `needsEstimateHeads(claim)`, open the dialog before the other checks run. On confirm: `updateClaim({ billCheck: { ...bc, estimateHeads } })`, then continue the chain.
+- Test: `src/components/dialogs/__tests__/EstimateHeadsDialog.test.tsx` (static markup with `renderToStaticMarkup`).
+
+**Props:**
+```ts
+{ initial: EstimateHeads; totals: { linesInclGst: number; printed: number } | null;
+  onConfirm: (h: EstimateHeads) => void; onCancel: () => void }
+```
+
+**Copy:**
+- title: `Estimate amounts for the UIIC report`;
+- columns: `Head` · `From estimate` · `You confirm (₹)`;
+- rows: Metal, Plastic / Rubber, Glass, Fibre Glass, Labour, Painting;
+- `Total of heads` (updates as you type), then `Estimate total (printed on estimate)`;
+- when `printed > 0` and `|linesInclGst − printed| > 1`: a red line `Difference ₹{n} — a line may have been missed`;
+- footnote: `Before GST. Printed in the Estimated column only; the claim amount does not change.`;
+- buttons: `Cancel` and `Confirm and print`. Confirm is always enabled.
+
+- [ ] **Step 1: Write the failing test:** the markup shows the six heads with the initial figures, and with totals `{ linesInclGst: 246500, printed: 250000 }` shows `Difference ₹3,500`.
+- [ ] **Step 2: Run, expect FAIL.**
+- [ ] **Step 3: Implement the dialog and the gate step.**
+- [ ] **Step 4: Run, expect PASS.** Then `npx tsc --noEmit -p .` and `npx vitest run src/hooks src/components`.
+- [ ] **Step 5: Commit** with `feat(uiic): confirm and edit estimate amounts before printing the UIIC Bill Check report`.
+
+---
+
+### Task 12: Ship
 
 - [ ] **Step 1: Full suite.** Run `npx vitest run`, with output to a file in the SDD workspace, and read the tail. Expected: all pass (3031 before this plan, plus the new tests).
 - [ ] **Step 2: Build.** Run `npm run build`. Expected: build completes.
