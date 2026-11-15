@@ -4,7 +4,7 @@ import { createAssessmentRow } from '@/lib/calculations';
 import { buildDecision } from '@/lib/ai/reconciliation';
 import { parsePolicyAddOns, mergePolicyAiRead } from '@/lib/policy/policy-check';
 import { applyEstimateFix, type EstimateFixPlan, type EstimateFixPicks } from '@/lib/ai/estimate-fix';
-import { scorePair, SURE_SCORE, MIN_SCORE, type PairScore } from '@/lib/reports/bill-match-score';
+import { normPart } from '@/lib/reports/bill-match-score';
 
 export type EstimateApplyMode = 'replace' | 'append' | 'continue' | 'another';
 
@@ -198,13 +198,15 @@ interface BillItem {
 }
 
 export interface BillMatch {
+  /** The line this row is paired with — the first of several in the one-row case. */
   bill: BillItem;
-  reason: 'part' | 'amount' | 'desc';
-  /** Returned rather than mutated onto the bill item. */
-  ambiguous: boolean;
-  /** 0–100, from scorePair. */
-  score: number;
-  /** Why, in the surveyor's words: "Left vs right", "Amount matches"… */
+  /** More lines with the same part number, when this is the only row carrying it. */
+  also?: BillItem[];
+  /** More rows than lines: this row shares `bill`'s ref and takes no amount. */
+  refOnly?: boolean;
+  reason: 'part';
+  ambiguous: false;
+  score: 100;
   reasons: string[];
 }
 
@@ -226,9 +228,6 @@ function extraFromBillItem(bi: BillItem): ExtraBillItem {
     srNo: bi.srNo,
   };
 }
-
-/** A runner-up this close to the winner makes the pick a coin toss. */
-const RIVAL_GAP = 10;
 
 // ─── Final-bill helpers ───────────────────────────────────────────────────────
 
@@ -270,49 +269,39 @@ export function matchBillItemsToRows(
   rows: AssessmentRow[],
   billItems: BillItem[]
 ): Map<string, BillMatch> {
-  // Every row against every line, best pairs first. Matching row by row let
-  // an early vague row ("BUMPER") take the line a later row fitted exactly.
-  // ponytail: greedy over sorted pairs; optimal assignment if greedy misfires.
-  const pairs: { row: AssessmentRow; bi: BillItem; s: PairScore }[] = [];
-  for (const row of rows) {
-    for (const bi of billItems) {
-      const s = scorePair(row, bi);
-      if (s.score >= MIN_SCORE) pairs.push({ row, bi, s });
+  // A ref is written on an exact part number only (Bill Check reference
+  // finder, D1). Words and amounts are the surveyor's call, in the panel.
+  const bySerial = <T>(sr: (x: T) => number | string | undefined, pos: (x: T) => number) => (a: T, b: T) => {
+    const x = Number(sr(a)), y = Number(sr(b));
+    return Number.isFinite(x) && Number.isFinite(y) && x !== y ? x - y : pos(a) - pos(b);
+  };
+  const group = <T>(items: T[], key: (x: T) => string | undefined) => {
+    const g = new Map<string, T[]>();
+    for (const it of items) { const k = normPart(key(it)); if (k) g.set(k, [...(g.get(k) || []), it]); }
+    return g;
+  };
+  const rowPos = new Map(rows.map((r, i) => [r.id, i]));
+  const rowGroups = group(rows, (r) => r.partNumber);
+  const lineGroups = group(billItems, (b) => b.partNumber);
+
+  const out = new Map<string, BillMatch>();
+  const match = (bill: BillItem, extra: Partial<BillMatch> = {}): BillMatch =>
+    ({ bill, reason: 'part', ambiguous: false, score: 100, reasons: ['Part no. matches'], ...extra });
+
+  for (const [pn, groupRows] of rowGroups) {
+    const groupLines = lineGroups.get(pn);
+    if (!groupLines) continue;
+    const rs = [...groupRows].sort(bySerial((r) => r.srNo, (r) => rowPos.get(r.id) ?? 0));
+    const ls = [...groupLines].sort(bySerial((b) => b.srNo, (b) => b.idx));
+    if (rs.length === 1) {
+      out.set(rs[0].id, match(ls[0], ls.length > 1 ? { also: ls.slice(1) } : {}));
+      continue;
     }
+    // Several rows: pair in serial order. Extra rows share the last line's ref
+    // without its money; extra lines stay unmatched, visible to the surveyor.
+    rs.forEach((r, i) => out.set(r.id, i < ls.length ? match(ls[i]) : match(ls[ls.length - 1], { refOnly: true })));
   }
-  pairs.sort((a, b) => b.s.score - a.s.score);
-
-  const takenAt = new Map<number, number>(); // bill idx → score it went at
-  const rowMatches = new Map<string, BillMatch>();
-  for (const { row, bi, s } of pairs) {
-    if (rowMatches.has(row.id) || takenAt.has(bi.idx)) continue;
-    takenAt.set(bi.idx, s.score);
-    const first = s.reasons[0];
-    rowMatches.set(row.id, {
-      bill: bi,
-      reason: first === 'Part no. matches' ? 'part' : s.reasons.includes('Amount matches') ? 'amount' : 'desc',
-      ambiguous: s.score < SURE_SCORE,
-      score: s.score,
-      reasons: s.reasons,
-    });
-  }
-
-  // A close runner-up makes even a high score a guess — unless another row
-  // took that line because it fitted there better.
-  for (const { row, bi, s } of pairs) {
-    const m = rowMatches.get(row.id);
-    if (!m || m.bill.idx === bi.idx || s.score < m.score - RIVAL_GAP) continue;
-    if ((takenAt.get(bi.idx) ?? -1) > s.score) continue;
-    if (!m.ambiguous || !m.reasons.some(r => r.startsWith('Bill item'))) {
-      rowMatches.set(row.id, {
-        ...m,
-        ambiguous: true,
-        reasons: [...m.reasons, `Bill item ${bi.srNo ?? bi.idx + 1} fits nearly as well`],
-      });
-    }
-  }
-
-  return rowMatches;
+  return out;
 }
 
 // ─── Key-specific mapping functions ──────────────────────────────────────────
