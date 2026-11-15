@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { applyFinalBill } from '../aiDataSlice';
+import { applyFinalBill, buildBillModePrompt } from '../aiDataSlice';
 import type { ClaimData } from '@/types';
 import type { AssessmentRow } from '@/types/assessment';
 
@@ -168,5 +168,80 @@ describe('applyFinalBill — review fixes', () => {
     expect(one.assessmentRows[0].refMatch?.also?.map(b => b.srNo)).toEqual([65, 71]);
     const two = applyFinalBill(claim([row({ id: 'a', srNo: 1, partNumber: 'M' }), row({ id: 'b', srNo: 2, partNumber: 'M' })]), { spare_parts: [line(260, 'M', 1, 1)] });
     expect(two.assessmentRows.find(x => x.id === 'b')!.refMatch?.refOnly).toBe(true);
+  });
+});
+
+describe('applyFinalBill — claim built from the bill (estimate upload)', () => {
+  const fromBill = (c: ClaimData): ClaimData => ({
+    ...c,
+    billCheck: { baseDocument: 'final-bill', billNo: 'B-REAL', billDate: '2026-05-01', billTotal: 99999 },
+  } as ClaimData);
+  // Line amounts differ from the row's own figures, so a pass proves the row's were kept.
+  const EST = {
+    bill_number: 'E1',
+    total_amount: 1,
+    spare_parts: [
+      { description: 'FRONT BUMPER', part_number: 'BP-1', taxable_amount: 9000, total_amount: 10620, gst_percent: 18 },
+      { description: 'RADIATOR ASSY', part_number: 'RD-9', taxable_amount: 6000, total_amount: 7080, gst_percent: 18 },
+    ],
+  };
+
+  test('an estimate upload writes the ref but not the billed figures', () => {
+    const out = applyFinalBill(fromBill(claim([row({ id: 'r1', billedTaxable: 10000, billedAmount: 11800 })])), EST);
+    const m = out.assessmentRows[0];
+    expect(m.refSrNo).toBeDefined();
+    expect(m.refStatus).toBe('clean');
+    expect(m.billedTaxable).toBe(10000);
+    expect(m.billedAmount).toBe(11800);
+  });
+
+  test('an estimate upload leaves the bill no., date and total', () => {
+    const out = applyFinalBill(fromBill(claim([row({ id: 'r1' })])), EST);
+    expect(out.billCheck?.billNo).toBe('B-REAL');
+    expect(out.billCheck?.billDate).toBe('2026-05-01');
+    expect(out.billCheck?.billTotal).toBe(99999);
+  });
+
+  test('a disallowed row matched by an estimate gets only the ref', () => {
+    const out = applyFinalBill(fromBill(claim([row({ id: 'r1', allowed: false })])), EST);
+    expect(out.assessmentRows[0].refSrNo).toBeDefined();
+    expect(out.assessmentRows[0].billStatus).toBeUndefined();
+    expect(out.assessmentRows[0].billRemarks).toBeUndefined();
+  });
+
+  test('continue in from-bill mode keeps refs already set and matches the rest', () => {
+    const a = row({ id: 'A', partNumber: 'ZZ-0', refSrNo: '7', refStatus: 'clean' });
+    const b = row({ id: 'B', partNumber: 'RD-9' });
+    const out = applyFinalBill(fromBill(claim([a, b])), EST, 'continue');
+    expect(out.assessmentRows.find(r => r.id === 'A')!.refSrNo).toBe('7');
+    expect(out.assessmentRows.find(r => r.id === 'B')!.refSrNo).toBe(2);
+  });
+
+  test('buildBillModePrompt counts rows with refs in from-bill mode', () => {
+    const c = fromBill(claim([row({ id: 'a', refSrNo: '1' }), row({ id: 'b', billedAmount: 500 }), row({ id: 'c' })]));
+    expect(buildBillModePrompt(c)).toEqual({ billNo: '', billedRows: 1 });
+    expect(buildBillModePrompt(fromBill(claim([row()])))).toBeNull();
+  });
+
+  test('an estimate match records the amount of the estimate', () => {
+    const out = applyFinalBill(fromBill(claim([row({ id: 'r1' })])), EST);
+    expect(out.assessmentRows[0].estimateAmount).toBe(9000);
+    const two = applyFinalBill(fromBill(claim([row({ id: 'r1' }), row({ id: 'r2' })])), EST);
+    const withAmt = two.assessmentRows.filter(r => r.estimateAmount !== undefined);
+    expect(withAmt).toHaveLength(1);
+    expect(two.assessmentRows.find(r => r.refMatch?.refOnly)!.estimateAmount).toBeUndefined();
+  });
+
+  test('an estimate upload clears confirmed estimate heads', () => {
+    const c = fromBill(claim([row({ id: 'r1' })]));
+    const withHeads = { ...c, billCheck: { ...c.billCheck!, estimateHeads: { metal: 1, plastic: 0, glass: 0, fiberglass: 0, labour: 0, paint: 0 } } };
+    expect(applyFinalBill(withHeads, EST).billCheck?.estimateHeads).toBeUndefined();
+  });
+
+  test('a metal/plastic/glass line category survives onto its extra', () => {
+    const out = applyFinalBill(fromBill(claim([])), {
+      spare_parts: [{ description: 'HEAD LAMP', part_number: 'HL-1', taxable_amount: 100, total_amount: 118, category: 'Plastic' }],
+    });
+    expect(out.extraBillItems![0].material).toBe('plastic');
   });
 });

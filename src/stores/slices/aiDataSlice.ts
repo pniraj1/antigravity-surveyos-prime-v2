@@ -5,6 +5,7 @@ import { buildDecision } from '@/lib/ai/reconciliation';
 import { parsePolicyAddOns, mergePolicyAiRead } from '@/lib/policy/policy-check';
 import { applyEstimateFix, type EstimateFixPlan, type EstimateFixPicks } from '@/lib/ai/estimate-fix';
 import { normPart } from '@/lib/reports/bill-match-score';
+import { isFromBill, selfBillUpdates } from '@/lib/reports/bill-check-mode';
 
 export type EstimateApplyMode = 'replace' | 'append' | 'continue' | 'another';
 
@@ -210,6 +211,8 @@ export interface BillMatch {
   reasons: string[];
 }
 
+const MATERIALS = ['metal', 'plastic', 'glass'];
+
 function extraFromBillItem(bi: BillItem): ExtraBillItem {
   return {
     // Stable id from content, so a re-upload of the same bill produces the
@@ -226,6 +229,7 @@ function extraFromBillItem(bi: BillItem): ExtraBillItem {
       bi.section === 'parts' ? 'spare_parts' : bi.section === 'labour' ? 'labour' : 'painting',
     source: 'final-bill' as const,
     srNo: bi.srNo,
+    ...(MATERIALS.includes(bi.category?.toLowerCase() as never) ? { material: bi.category!.toLowerCase() as ExtraBillItem['material'] } : {}),
   };
 }
 
@@ -635,6 +639,7 @@ export function applyFinalBill(
   mode: 'replace' | 'continue' = 'replace',
 ): ClaimData {
   const continuing = mode === 'continue';
+  const fromBill = isFromBill(claim);
   const prev = claim.billCheck;
   const billItems = buildBillItems(data);
   // A ref the surveyor set is theirs: never re-matched, and the line it holds
@@ -647,12 +652,12 @@ export function applyFinalBill(
   );
   const freeItems = billItems.filter((bi) => !held.has(extraFromBillItem(bi).id));
   const rowMatches = matchBillItemsToRows(
-    claim.assessmentRows.filter((r) => !isManual(r) && !(continuing && r.billedAmount && r.billedAmount > 0)),
+    claim.assessmentRows.filter((r) => !isManual(r) && !(continuing && (fromBill ? r.refSrNo : r.billedAmount && r.billedAmount > 0))),
     freeItems,
   );
   const matchedBillIds = new Set(Array.from(rowMatches.values()).flatMap((m) => [m.bill, ...(m.also ?? [])].map((b) => b.idx)));
 
-  const updatedRows = claim.assessmentRows.map((row) => {
+  const matchedRows = claim.assessmentRows.map((row) => {
     const m = rowMatches.get(row.id);
     if (!m) return row;
     // Same part on several lines of this one row: one figure, every serial.
@@ -670,6 +675,8 @@ export function applyFinalBill(
     };
     // More rows than lines: the ref only. A 0 billed figure would drive the cap to 0.
     if (m.refOnly) return { ...row, refSrNo: refSr, refStatus, refMatch };
+    // An estimate upload on a claim built from the bill: the ref, and what the estimate quoted.
+    if (fromBill) return { ...row, refSrNo: refSr, refStatus, refMatch, estimateAmount: billedTax };
     if (!row.allowed) {
       return {
         ...row,
@@ -698,6 +705,9 @@ export function applyFinalBill(
     };
   });
 
+  const selfBills = new Map(fromBill ? selfBillUpdates(matchedRows).map((u) => [u.id, u.updates]) : []);
+  const updatedRows = matchedRows.map((r) => (selfBills.has(r.id) ? { ...r, ...selfBills.get(r.id) } : r));
+
   const extras: ExtraBillItem[] = freeItems
     .filter((bi) => !matchedBillIds.has(bi.idx))
     .map(extraFromBillItem);
@@ -709,7 +719,9 @@ export function applyFinalBill(
 
   return {
     ...claim,
-    billCheck: continuing
+    billCheck: fromBill
+      ? { ...prev!, estimateHeads: undefined }
+      : continuing
       ? {
           ...prev,
           billNo: prev?.billNo || data.bill_number || '',
@@ -762,8 +774,9 @@ export function buildEstimateModePrompt(
 export function buildBillModePrompt(
   claim: ClaimData | null,
 ): { billNo: string; billedRows: number } | null {
-  const billNo = claim?.billCheck?.billNo || '';
-  const billedRows = (claim?.assessmentRows || []).filter((r) => (r.billedAmount || 0) > 0).length;
+  const fromBill = isFromBill(claim);
+  const billNo = fromBill ? '' : claim?.billCheck?.billNo || '';
+  const billedRows = (claim?.assessmentRows || []).filter((r) => (fromBill ? r.refSrNo : (r.billedAmount || 0) > 0)).length;
   return billNo || billedRows > 0 ? { billNo, billedRows } : null;
 }
 
