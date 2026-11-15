@@ -5,6 +5,7 @@ import { AlertCircle, Trash2, Settings2, Eye, EyeOff, FileSearch, PlusCircle, Pa
 import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
 import { useClaimStore } from '@/stores/claim-store';
 import type { AssessmentRow, AssessmentSummary, ClaimData } from '@/types';
+import type { ExtraBillItem } from '@/types/assessment';
 import { shouldStartSupplementaryBand } from '@/lib/calculations/utils';
 import { computeRowNet } from '@/lib/calculations';
 import { rowDepRate } from '@/lib/calculations/row-dep-rate';
@@ -90,6 +91,7 @@ export function BillCheckGrid({
   const addAssessmentRowToSection = useClaimStore(s => s.addAssessmentRowToSection);
   const linkExtraBillItem = useClaimStore(s => s.linkExtraBillItem);
   const unlinkBillMatch = useClaimStore(s => s.unlinkBillMatch);
+  const updateClaim = useClaimStore(s => s.updateClaim);
 
   const uncertainCount = useMemo(
     () => allRows.filter(r => r.refStatus === 'ambiguous' || (r.allowed && !r.refSrNo)).length,
@@ -123,14 +125,15 @@ export function BillCheckGrid({
     if (paste.kind === 'single') return;
     e.preventDefault();
     if (paste.kind === 'invalid') {
-      toast.error('Copy just the Ref No. column, or the Sr No. and Ref No. columns.');
+      toast.error('Copy just the Ref No. column, or the Sr No. and Ref No. columns of one section at a time.');
       return;
     }
-    // Same rows, same order as the grid shows them.
-    const onScreen = SECTION_ORDER.flatMap(({ section }) =>
-      allRows.filter(r => r.section === section && (r.allowed || (r.billedAmount ?? 0) > 0)
-        && (!filterUncertain || r.refStatus === 'ambiguous' || (r.allowed && !r.refSrNo))),
-    );
+    // Same rows, same order as the grid shows them; pool ignores the "needs a ref" filter.
+    const pool = SECTION_ORDER.flatMap(({ section }) =>
+      allRows.filter(r => r.section === section && (r.allowed || (r.billedAmount ?? 0) > 0)));
+    const onScreen = filterUncertain
+      ? pool.filter(r => r.refStatus === 'ambiguous' || (r.allowed && !r.refSrNo))
+      : pool;
     // Every line Bill Check has read: a "continue" upload stores only its own pages.
     const stored = claim.extractedData?.['final-bill'];
     const lines: ReadLine[] = [
@@ -138,17 +141,33 @@ export function BillCheckGrid({
       ...(claim.extraBillItems ?? []),
       ...allRows.flatMap(r => (r.refMatch ? [r.refMatch.bill, ...(r.refMatch.also ?? [])] : [])),
     ];
-    const plan = planRefPaste(paste, onScreen, rowId, lines.length ? lines : null, id => serials.get(id));
+    const plan = planRefPaste(paste, onScreen, rowId, lines.length ? lines : null, id => serials.get(id), pool);
+    // A changed ref frees the line its old match held: back to the unmatched list, as unlinking does.
+    // Only lines not already listed: Undo takes back exactly what the paste added.
+    const listed = new Set((claim.extraBillItems ?? []).map(x => x.id));
+    const added = plan.released.filter((b, i, all) => !listed.has(b.id) && all.findIndex(o => o.id === b.id) === i);
+    const addedIds = new Set(added.map(b => b.id));
+    const setExtras = (f: (xs: ExtraBillItem[]) => ExtraBillItem[]) =>
+      updateClaim({ extraBillItems: f(useClaimStore.getState().currentClaim?.extraBillItems ?? []) });
     const run = (us: RowUpdate[]) => us.forEach(u => updateAssessmentRow(u.id, u.updates));
     if (plan.filled + plan.flagged === 0) {
       toast.info('Nothing to fill — the pasted values already match or found no row.');
       return;
     }
     run(plan.apply);
+    if (added.length) setExtras(xs => [...xs, ...added]);
     const parts = [`Filled ${plan.filled} Ref Nos.`];
     if (plan.flagged) parts.push(`${plan.flagged} to check${plan.notOnDocument ? ` (${plan.notOnDocument} not on the document read here)` : ''}`);
     if (plan.skipped) parts.push(`${plan.skipped} found no row`);
-    toast(parts.join(' · '), { action: { label: 'Undo', onClick: () => run(plan.undo) } });
+    toast(parts.join(' · '), {
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          run(plan.undo);
+          if (addedIds.size) setExtras(xs => xs.filter(x => !addedIds.has(x.id)));
+        },
+      },
+    });
   };
   const stepFlag = (dir: 1 | -1) => {
     const n = flaggedIds.length;

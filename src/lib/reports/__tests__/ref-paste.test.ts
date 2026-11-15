@@ -73,3 +73,38 @@ describe('planRefPaste keyed on the serial the grid shows', () => {
     expect(p.apply.map(u => u.id)).toEqual(['b']);
   });
 });
+
+describe('review fixes', () => {
+  const lab = (id: string, srNo?: number, refSrNo?: string): AssessmentRow =>
+    ({ ...r(id, srNo, undefined, refSrNo), section: 'labour' } as AssessmentRow);
+
+  it('C-1: a two-column paste that repeats a serial spans sections and is refused', () =>
+    expect(parseRefPaste('1\t301\n2\t302\n1\t112')).toEqual({ kind: 'invalid' }));
+
+  it('C-1: a labour pair pasted into a labour cell never lands on the parts row with that serial', () => {
+    const parts7 = r('p7', 7);
+    const labour7 = lab('l7', 7, '90');                       // has a ref, so "needs a ref" hides it
+    const labour9 = lab('l9', 9);
+    const p = planRefPaste({ kind: 'keyed', pairs: [{ srNo: 7, ref: '112' }] },
+      [parts7, labour9], 'l9', null, undefined, [parts7, labour7, labour9]);
+    expect(p.apply).toEqual([]);
+    expect(p.skipped).toBe(1);
+  });
+
+  it('I-1: only lines of the row\'s own section are checked', () => {
+    const lines = [{ srNo: 12, partNumber: 'XX-7', section: 'parts' }, { srNo: 12, section: 'labour' }];
+    const p = planRefPaste({ kind: 'column', refs: ['12'] }, [r('a', 1, 'BP-1')], 'a', lines);
+    expect(p.apply[0].updates.refStatus).toBe('ambiguous');
+  });
+
+  it('I-2: a one-column paste drops a header line with no digit', () =>
+    expect(parseRefPaste('Est No\n301\n43')).toEqual({ kind: 'column', refs: ['301', '43'] }));
+
+  it('I-3: a changed ref releases the line its old match held', () => {
+    const bill = { id: 'extra-parts-BP-1-100', srNo: 12, partNumber: 'BP-1' } as never;
+    const row = { ...r('a', 1, 'BP-1', '12'), refStatus: 'clean' as const, refMatch: { bill, score: 100, reasons: [] } } as AssessmentRow;
+    expect(planRefPaste({ kind: 'column', refs: ['301'] }, [row], 'a', null).released).toEqual([bill]);
+    const refOnly = { ...row, refMatch: { bill, score: 100, reasons: [], refOnly: true } } as AssessmentRow;
+    expect(planRefPaste({ kind: 'column', refs: ['301'] }, [refOnly], 'a', null).released).toEqual([]);
+  });
+});

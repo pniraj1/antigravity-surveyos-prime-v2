@@ -82,7 +82,10 @@ export function billCheckFlags(rows: AssessmentRow[]): BillFlag[] {
         billed,
         delta: billed - r.assessed,
         heading: 'Check this is the right line on the bill',
-        detail: 'The match to the invoice is not certain. Compare the two descriptions below.',
+        // No match kept: the Ref No. was pasted and what Bill Check read disagrees with it.
+        detail: r.refMatch
+          ? 'The match to the invoice is not certain. Compare the two descriptions below.'
+          : 'This Ref No. was pasted, but the document read here disagrees: the number is not on it, or that line has a different part number. Check it against the estimate.',
       });
     }
 

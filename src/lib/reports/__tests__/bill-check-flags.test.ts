@@ -79,6 +79,12 @@ describe('billCheckFlags', () => {
     expect(f.blocking).toBe(true);
   });
 
+  test('a doubtful ref with no match (pasted) says why instead of pointing at nothing', () => {
+    const [f] = billCheckFlags([row({ assessed: 1000, billedTaxable: 1000, refStatus: 'ambiguous' })]);
+    expect(f.detail).toMatch(/pasted/i);
+    expect(f.detail).not.toMatch(/below/);
+  });
+
   test('a doubtful match is asked before its price, and the price still blocks', () => {
     const flags = billCheckFlags([row({ assessed: 1000, billedTaxable: 1200, refStatus: 'ambiguous' })]);
     expect(flags.map(f => f.kind)).toEqual(['ambiguous', 'billed-above']);
