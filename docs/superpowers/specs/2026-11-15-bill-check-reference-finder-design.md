@@ -178,6 +178,15 @@ Study: `docs/research/2026-11-15-estimate-amount-in-bill-check-study.md`.
   - Confirmed figures are saved (`billCheck.estimateHeads`) and printed. The dialog asks again only after the estimate is uploaded again.
   - Other insurers and reports: unchanged.
 
+### D13. Say what the document is where it is read (owner decided 2026-11-16)
+- **The Documents tab's "Final Garage Bill" card is removed.** A bill is uploaded in Assessment (claims made from the bill) or in Bill Check, and verified there. The internal key `'final-bill'`, `FIELD_KEY_TO_DOC_TYPE['final-bill'] = 'invoice'`, Scan import and new-claim drop routing are unchanged.
+- **Uploads are filed by what they are:**
+  - Bill Check files its upload as `invoice` (Final bill) or `estimate` (Estimate);
+  - Assessment files as `invoice` in a claim made from the bill, else `estimate`.
+  The insurer upload kit, chase messages, naming and Scan's "invoice" slot keep finding the bill.
+- **Assessment asks once, on the first upload of a claim** (no rows yet, no `billCheck.baseDocument`): "This document is: Estimate / Final bill". Estimate is the default. The explanation line reads: *Choose Final bill when the insurer asks you to assess from the bill (UIIC). Bill Check will then read the estimate for Est. No.* Final bill sets `billCheck.baseDocument = 'final-bill'`, so Bill Check already starts on "Estimate". Later changes go through the Bill Check choice (D0).
+- Consequence: the Documents-tab path behind I3-N1 no longer exists for new uploads.
+
 ### D11. AI suggestions for rows still blank (sandbox first; built only if needed)
 Trimmed with the owner 2026-11-15.
 - **Gate:** after Plan 2, the owner counts blank allowed rows on 3 real claims. Usually under 5 → not built (the Plan 3 panel's ranked candidates suffice).
