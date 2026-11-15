@@ -356,6 +356,9 @@ export async function extractDocument(
   const files = Array.isArray(file) ? file : [file];
   const job = jobForDocType(key);
   const session = newSession(`${key}-${Date.now()}`);
+  // Which models answered, in first-use order — kept on the data so a bad read can be traced.
+  const usedModels = new Set<string>();
+  const noteModel = () => { if (session.lastGood?.model) usedModels.add(session.lastGood.model); };
   const basePrompt = getDocPrompt(key) || "Extract all visible details from this document as JSON.";
   
   let prompt = basePrompt;
@@ -402,7 +405,7 @@ export async function extractDocument(
         const data = { ...header, ...checked.data };
         const findings = toFindings(rowCheck(data, textLayers)).filter(f => f.kind !== 'gap');
         console.log(`[Parser] read ${countRows(data)} rows, tie ok${parsed.learned ? ' (learned layout)' : ''}`);
-        return { data, images: viewImages, findings, issues: checked.issues, source: 'parser' as const };
+        return { data: { ...data, _models: ['row-parser'] }, images: viewImages, findings, issues: checked.issues, source: 'parser' as const };
       }
       console.log(`[Parser] declined: ${parsed.reason}`);
     }
@@ -517,6 +520,7 @@ export async function extractDocument(
           try {
             const fragment = asFragment(JSON.parse(rawResponse));
             result = mergeAIResults(result, tagFieldPages(tagRows(fragment, first - 1, last - 1), pageRefs[first - 1]));   // 1-based chunk → 0-based page tags
+            noteModel();
           } catch (err) {
             // Auto-split fallback: if a multi-page chunk (first < last) fails JSON parse
             // (often due to dense pages overflowing output token limits and truncating the JSON),
@@ -537,6 +541,7 @@ export async function extractDocument(
                     result,
                     tagFieldPages(tagRows(singleFragment, singlePageNum - 1, singlePageNum - 1), pageRefs[singlePageNum - 1])
                   );
+                  noteModel();
                 } catch (singleErr) {
                   console.warn(`[AI Extraction] ${key}: single page ${singlePageNum} fallback failed:`, singleErr);
                   issues.push(`Page ${singlePageNum} could not be read by the AI — line items from this page may be missing.`);
@@ -732,7 +737,7 @@ export async function extractDocument(
     }
 
     // Return high-res view images to caller so they can be stored in sessionStorage
-    return { data: finalResult, images: viewImages, findings, issues: pageIssues, source: 'ai' as const };
+    return { data: finalResult && { ...finalResult, _models: [...usedModels] }, images: viewImages, findings, issues: pageIssues, source: 'ai' as const };
   });
 }
 

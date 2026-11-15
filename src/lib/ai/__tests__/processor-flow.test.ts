@@ -97,6 +97,7 @@ describe('extractDocument — image path (estimate)', () => {
     expect(parts.find((r: any) => r.sr_no === 4)._page).toBe(1);
     expect(data.labour_items[0]._page).toBe(2);
     expect(findings).toEqual([]);
+    expect(data._models).toEqual(['test-model']);
   });
 
   it('a page answered as a list keeps its rows (no "0" key)', async () => {
