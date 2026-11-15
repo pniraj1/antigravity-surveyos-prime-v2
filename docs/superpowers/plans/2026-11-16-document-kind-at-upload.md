@@ -31,6 +31,7 @@ No new AI calls and no new doc types.
 
 ## Review Focus
 1. **A UIIC claim whose first Assessment upload is the bill.** Bill Check opens already on "Estimate", and its column reads "Est. No." (Task 3 test on the helper, plus the existing `isFromBill`).
+5. **Answering Estimate** records it, so a failed first read or deleted rows never ask again (Task 3).
 2. **A second Assessment upload** (more pages or supplementary) on a claim already made from the bill is filed as invoice and never asks again (Task 3 test).
 3. **The insurer upload kit** for UIIC still finds an `invoice` document after a Bill Check upload of the final bill (Task 2 test via the filing helper).
 4. **A phone file picked in Bill Check** is not filed twice (Task 2, keeps the `phone` guard).
@@ -76,7 +77,7 @@ No new AI calls and no new doc types.
 - [ ] **Step 1: Write the failing tests** for the three functions:
   - `billCheckUploadDocType('final-bill') === 'invoice'`, and `('estimate') === 'estimate'`;
   - `assessmentUploadDocType` gives `'invoice'` for `baseDocument: 'final-bill'` and `'estimate'` for none;
-  - `asksDocumentKind` is true for `{ assessmentRows: [] }`, false once rows exist, and false once `baseDocument` is set.
+  - `asksDocumentKind` is true for `{ assessmentRows: [] }`, false once rows exist, false once `baseDocument` is `'final-bill'`, and false once it is `'estimate'`.
 - [ ] **Step 2:** Run them and expect FAIL. Implement. Run again and expect PASS.
 - [ ] **Step 3:** Wire BillCheckTab. Then run `npx tsc --noEmit -p .` and `npx vitest run src/components/tabs src/lib/documents`.
 - [ ] **Step 4:** Commit with `feat(bill-check): file the uploaded bill or estimate in the claim's documents`.
@@ -94,9 +95,10 @@ No new AI calls and no new doc types.
 - **The question.** In `processEstimateFile`, before `confirmEstimateMode`: when `asksDocumentKind(currentClaim)`, show `DocumentKindDialog`, using the copy from Global Constraints.
   - Cancel → stop, with no extraction.
   - Final bill → `updateBillCheck({ baseDocument: 'final-bill' })`.
-  - Estimate → nothing changes.
+  - Estimate → `updateBillCheck({ baseDocument: 'estimate' })`, so the question is never repeated (e.g. after a failed first read, or after the rows are deleted). `isFromBill` is false for `'estimate'`.
 - **Filing.** In `startEstimate`, file with `assessmentUploadDocType(useClaimStore.getState().currentClaim)` instead of the fixed `'estimate'`. Use the same doc type for the Drive name (`${docType}.${ext}`).
 - **Unchanged.** Extraction stays `triggerExtraction('estimate', …)`: the Assessment reads every upload the same way.
+- **Phone files.** `ESTIMATE_TYPES` (AssessmentTab.tsx:35) gains `'invoice'`, so a bill photographed with Scan can be picked in Assessment for a claim made from the bill. Today it can only be picked in Bill Check.
 - **Dialog props:** `{ onChoose: (k: 'estimate' | 'final-bill') => void; onCancel: () => void }`. Follow an existing dialog's look (e.g. `EstimateModeDialog.tsx`).
 
 - [ ] **Step 1: Write the failing test:** the dialog markup shows the title, both buttons and the explanation line verbatim. Run it and expect FAIL.
