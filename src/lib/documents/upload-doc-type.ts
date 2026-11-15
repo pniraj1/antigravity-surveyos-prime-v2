@@ -1,0 +1,22 @@
+type Kind = 'estimate' | 'final-bill';
+interface BaseDocClaim { billCheck?: { baseDocument?: string } }
+
+/** Where a Bill Check upload is filed: the bill as 'invoice', the estimate as 'estimate'. */
+export function billCheckUploadDocType(upload: Kind): 'invoice' | 'estimate' {
+  return upload === 'final-bill' ? 'invoice' : 'estimate';
+}
+
+/** Where an Assessment upload is filed: 'invoice' in a claim made from the bill, else 'estimate'. */
+export function assessmentUploadDocType(claim: BaseDocClaim | null): 'invoice' | 'estimate' {
+  return claim?.billCheck?.baseDocument === 'final-bill' ? 'invoice' : 'estimate';
+}
+
+/** True on a claim's first Assessment upload: no rows and no baseDocument chosen yet. */
+export function asksDocumentKind(claim: (BaseDocClaim & { assessmentRows?: unknown[] }) | null): boolean {
+  return !!claim && !claim.assessmentRows?.length && !claim.billCheck?.baseDocument;
+}
+
+/** The other answer, for Undo. */
+export function otherKind(k: Kind): Kind {
+  return k === 'estimate' ? 'final-bill' : 'estimate';
+}

@@ -28,6 +28,10 @@ import { ExtraBillItemsPanel } from './bill-check/ExtraBillItemsPanel';
 import { BillCheckSummaryPanel } from './bill-check/BillCheckSummaryPanel';
 import { BillCheckAttentionBanner } from './bill-check/BillCheckAttentionBanner';
 import { fmt } from './bill-check/config';
+import { saveDocuments } from '@/lib/documents/sink';
+import { billCheckUploadDocType } from '@/lib/documents/upload-doc-type';
+import { uploadFileToDrive } from '@/lib/drive';
+import { useSaveToCloudPrompt } from '@/hooks/useSaveToCloudPrompt';
 
 export function BillCheckTab() {
   const currentClaim        = useClaimStore(s => s.currentClaim);
@@ -49,6 +53,7 @@ export function BillCheckTab() {
 
   const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview, smartFix, reviewProgress } = useAIExtraction();
   const { confirmBillMode, estimateModeDialog } = useEstimateModePrompt();
+  const { confirmSaveToCloud } = useSaveToCloudPrompt();
   const { requestPrint, dialogs: printDialogs } = useBillCheckPrintGate();
 
   // Once per claim: refs saved by the old word matcher between two different
@@ -115,12 +120,23 @@ export function BillCheckTab() {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
-    if (file) void processBillFile(file);
+    if (file) void processBillFile(file, false);
   };
 
-  const processBillFile = async (file: File) => {
+  /** Files the upload in the claim's documents (and Drive); phone files are already there. */
+  const fileUpload = async (file: File) => {
+    const docType = billCheckUploadDocType(upload);
+    void saveDocuments(docType, [{ blob: file, name: file.name }], 'upload');
+    if (profile.autoUploadDrive === false || !(await confirmSaveToCloud(file.name))) return;
+    const ext = file.name.split('.').pop() ?? 'bin';
+    const label = currentClaim.vehicle?.registrationNumber || currentClaim.id;
+    uploadFileToDrive(currentClaim.id, `${docType}.${ext}`, file, label).catch(console.error);
+  };
+
+  const processBillFile = async (file: File, phone = true) => {
     const mode = await confirmBillMode(file.name, upload === 'estimate' ? 'estimate' : 'bill');
     if (!mode) return;
+    if (!phone) void fileUpload(file);
     if (await needsReview([file])) setReviewFile({ file, mode });
     else triggerExtraction('final-bill', file, undefined, undefined, mode);
   };
@@ -163,7 +179,7 @@ export function BillCheckTab() {
         isProcessing={isProcessing}
         isInvoiceVerified={isInvoiceVerified}
         onFileUpload={handleFileUpload}
-        onPhoneFile={processBillFile}
+        onPhoneFile={(f) => processBillFile(f, true)}
         upload={upload}
         onUploadChange={handleUploadChange}
         onPrint={requestPrint}
