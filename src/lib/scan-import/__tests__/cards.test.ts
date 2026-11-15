@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { ClaimDocument, DocType } from '@/types/documents';
-import { cardPhoneState, phoneListGroups } from '../cards';
+import { cardIdFor, cardPhoneState, phoneListGroups } from '../cards';
 
 const doc = (id: string, type: DocType, source: ClaimDocument['source'], addedAt: string): ClaimDocument =>
   ({ id, type, relPath: `${id}.jpg`, mime: 'image/jpeg', size: 1, addedAt, source, devices: ['PC'] });
@@ -26,6 +26,11 @@ describe('phoneListGroups', () => {
     const groups = phoneListGroups({ documents });
     expect(groups.map((g) => g.type)).toEqual(['spotPhotos', 'cancelledCheque']);
     expect(groups[0].docs.map((d) => d.id)).toEqual(['s1', 's2']);
+  });
+  it('invoiceHasNoCardSoPhoneBillsAreListed', () => {
+    const bill = doc('b1', 'invoice', 'scan', '1');
+    expect(cardIdFor('invoice')).toBeNull();
+    expect(phoneListGroups({ documents: { b1: bill } }).map((g) => g.type)).toEqual(['invoice']);
   });
   it('emptyWithoutDocuments', () => expect(phoneListGroups({})).toEqual([]));
 });

@@ -7,7 +7,8 @@ import { claimDocuments } from '@/lib/documents/index-ops';
 /** DocType → card id; the inverse of FIELD_KEY_TO_DOC_TYPE without `other` (auth, load-challan). */
 export const CARD_DOC_TYPES: Readonly<Partial<Record<DocType, string>>> = Object.fromEntries(
   Object.entries(FIELD_KEY_TO_DOC_TYPE)
-    .filter(([, type]) => type !== 'other')
+    // 'final-bill': the Documents-tab card was removed (D13), so phone bills go to Phone files
+    .filter(([cardId, type]) => type !== 'other' && cardId !== 'final-bill')
     .map(([cardId, type]) => [type, cardId]),
 );
 

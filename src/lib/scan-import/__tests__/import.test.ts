@@ -229,7 +229,7 @@ describe('cards', () => {
     }
     expect(cardIdFor('rc')).toBe('rc');
     expect(cardIdFor('claimForm')).toBe('claim');
-    expect(cardIdFor('invoice')).toBe('final-bill');
+    expect(cardIdFor('invoice')).toBeNull(); // the Final Garage Bill card was removed (D13)
   });
 
   it('phoneFileForPicksNewestScanOfCardType', () => {
