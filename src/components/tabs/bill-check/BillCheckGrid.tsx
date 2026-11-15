@@ -322,7 +322,7 @@ export function BillCheckGrid({
     return (
       <div
         className="px-6 py-3 grid gap-2 text-[9px] font-medium uppercase tracking-[0.15em] text-muted-foreground border-b border-border"
-        style={{ gridTemplateColumns: gridCols, background: 'var(--color-neutral-50)' }}
+        style={{ gridTemplateColumns: gridCols, background: 'var(--color-neutral-50)', position: 'sticky', top: 0, zIndex: 10 }}
       >
         <span className="flex items-center justify-center">
           <input
@@ -562,7 +562,7 @@ export function BillCheckGrid({
         </div>
       </div>
 
-      <div style={{ overflowX: 'auto' }}>
+      <div style={{ overflow: 'auto', maxHeight: 'calc(100dvh - 240px)' }}>
         <div style={{ minWidth: `${800 + visibleCount * 90}px` }}>
           {/*
             Grouped Parts / Labour / Painting, mirroring the Assessment tab and

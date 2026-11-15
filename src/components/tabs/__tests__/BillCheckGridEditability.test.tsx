@@ -170,4 +170,10 @@ describe('BillCheckGrid Editability Markup', () => {
       expect(html).toMatch(new RegExp(`data-bc-row="row-1"[^>]*data-bc-col="${col}"|data-bc-col="${col}"[^>]*data-bc-row="row-1"`));
     }
   });
+
+  it('is one scroll box with sticky section headings', () => {
+    const html = render(mockClaim);
+    expect(html).toMatch(/overflow:auto;max-height:calc\(100dvh - 240px\)/);
+    expect(html).toMatch(/position:sticky;top:0;z-index:10/);
+  });
 });
