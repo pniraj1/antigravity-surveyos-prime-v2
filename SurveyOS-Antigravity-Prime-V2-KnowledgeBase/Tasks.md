@@ -1,5 +1,6 @@
 ## Done: Bill Check Orange-Themed Upload Dialog & Modal Reconciliation Wizard (2026-11-16, Antigravity) — DEPLOYED
 - **Status:** Deployed to `https://surveyos.in` and `https://motorsurveyos-in.web.app` (Firebase project `surveyos-v2-antigravity-in`, target `motorsurveyos-in`). Live chunks verified with `curl.exe`.
+- **Surgical Header Refactor:** Removed redundant `[Final bill]` and `[Estimate]` toggle buttons from `BillCheckHeader.tsx`. The document type is now selected exclusively within the accessible `BillCheckUploadDialog`, presenting a single clean `[Upload Document]` button on the tab.
 - **Problem Solved:**
   - Previous implementation inline-rendered the 4-stage tally stepper on the page body, replacing the spreadsheet grid (`BillCheckGrid`) and using foreign blue/purple gradients.
   - The application's canonical design system is **Brand Orange / Amber (`#F59E0B`, `amber-500`)** with warm amber accents (`#FEF3C7`), clean white cards, and platinum (`#F8F9FA`) background.
