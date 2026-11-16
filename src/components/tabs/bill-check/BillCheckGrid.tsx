@@ -57,7 +57,17 @@ export function billCheckRowsShown(
 export function sectionFooterTotals(
   rows: AssessmentRow[], section: AssessmentSection, allowedOnly: boolean, fromBill: boolean,
 ): BilledTotals {
-  return billedTotals(billCheckRowsShown(rows, section, allowedOnly).filter(r => r.allowed), fromBill);
+  return gridTotals(billCheckRowsShown(rows, section, allowedOnly).filter(r => r.allowed), fromBill);
+}
+
+/**
+ * Totals in the grid's column terms: BASE (estimated) is the row's own figure in
+ * both cases; UPLOADED is the bill (case 1) or the uploaded estimate (case 2).
+ * billedTotals alone swaps these for from-bill claims, so it is not used as is.
+ */
+export function gridTotals(rows: AssessmentRow[], fromBill: boolean): BilledTotals {
+  const t = billedTotals(rows, fromBill);
+  return { ...t, estimated: billedTotals(rows, false).estimated, billedTaxable: fromBill ? t.estimated : t.billedTaxable };
 }
 
 /** Counts over the rows the grid lists, so buttons and headers match the screen. */
@@ -133,7 +143,8 @@ export function BillCheckGrid({
     () => billCheckCounts(allRows, allowedOnly),
     [allRows, allowedOnly],
   );
-  const defaultRefTitle = uploadLabels(claim).itemNo;
+  const labels = uploadLabels(claim);
+  const defaultRefTitle = labels.itemNo;
   const refColTitle = claim?.billCheck?.refColumnTitle || defaultRefTitle;
 
   const fromBill = isFromBill(claim);
@@ -365,13 +376,11 @@ export function BillCheckGrid({
   const visibleCount = Object.values(visible).filter(Boolean).length;
 
   const buildCols = () => {
-    const detailCols = (['partNumber', 'hsnSac', 'section', 'quantity', 'unitPrice', 'gst', 'disposal'] as OptionalColumn[])
-      .filter(k => visible[k]).map(k => COL_WIDTHS[k]);
-    const priceWithGstCol = visible.priceWithGst ? [COL_WIDTHS.priceWithGst] : [];
-    const billedTaxCol = visible.billedTaxable ? [COL_WIDTHS.billedTaxable] : [];
-    const refSrNoCol = visible.refSrNo ? [COL_WIDTHS.refSrNo] : [];
-    const remarksCol = visible.remarks ? [COL_WIDTHS.remarks] : [];
-    return ['32px', '28px', '50px', `${particularsWidth}px`, ...detailCols, '100px', '70px', '100px', ...priceWithGstCol, ...billedTaxCol, '120px', ...refSrNoCol, ...remarksCol, '40px'].join(' ');
+    const w = (keys: OptionalColumn[]) => keys.filter(k => visible[k]).map(k => COL_WIDTHS[k]);
+    // Same order as headerRow, totalsRow and the row cells: base, assessed, uploaded, item no., status, then the rest.
+    return ['32px', '28px', '50px', `${particularsWidth}px`, ...w(['partNumber', 'hsnSac', 'section', 'quantity', 'unitPrice']),
+      '100px', ...w(['billedTaxable', 'refSrNo']), '120px', ...w(['gst', 'disposal']), '70px', '100px',
+      ...w(['priceWithGst', 'remarks']), '40px'].join(' ');
   };
   const gridCols = buildCols();
 
@@ -430,20 +439,9 @@ export function BillCheckGrid({
         {visible.hsnSac        && <span>HSN/SAC</span>}
         {visible.section       && <span>Section</span>}
         {visible.quantity      && <span>Qty</span>}
-        {visible.unitPrice     && <span>{GRID_COLUMNS.unitPrice.label}</span>}
-        {visible.gst           && <span>{GRID_COLUMNS.gst.label}</span>}
-        {visible.disposal      && (
-          <span className="flex items-center justify-center gap-1 text-amber-600" title="Disposal: used/salvaged part — no GST">
-            <PackageX size={11} />
-            {GRID_COLUMNS.disposal.label}
-          </span>
-        )}
+        {visible.unitPrice     && <span>{labels.base === 'Billed' ? 'Bill' : labels.base} (taxable)</span>}
         <span>Assessed (₹)</span>
-        <span>Dep%</span>
-        <span>Net (₹)</span>
-        {visible.priceWithGst  && <span>{GRID_COLUMNS.priceWithGst.label}</span>}
-        {visible.billedTaxable && <span>{GRID_COLUMNS.billedTaxable.label} (₹)</span>}
-        <span>Status</span>
+        {visible.billedTaxable && <span>{labels.amount} (taxable)</span>}
         {visible.refSrNo && (
           <span
             className="flex items-center gap-1 cursor-pointer group hover:text-foreground"
@@ -461,6 +459,17 @@ export function BillCheckGrid({
             <span className="opacity-0 group-hover:opacity-100 text-[10px] text-primary">✎</span>
           </span>
         )}
+        <span>Status</span>
+        {visible.gst           && <span>{GRID_COLUMNS.gst.label}</span>}
+        {visible.disposal      && (
+          <span className="flex items-center justify-center gap-1 text-amber-600" title="Disposal: used/salvaged part — no GST">
+            <PackageX size={11} />
+            {GRID_COLUMNS.disposal.label}
+          </span>
+        )}
+        <span>Dep%</span>
+        <span>Net (₹)</span>
+        {visible.priceWithGst  && <span>{GRID_COLUMNS.priceWithGst.label}</span>}
         {visible.remarks       && <span>Remarks</span>}
         <span></span>
       </div>
@@ -493,17 +502,17 @@ export function BillCheckGrid({
         {visible.section       && <div />}
         {visible.quantity      && <div />}
         {visible.unitPrice     && <div className="text-sm font-medium" style={money}>{fmt(t.estimated)}</div>}
-        {visible.gst           && <div />}
-        {visible.disposal      && <div />}
         <div className="text-sm font-medium" style={money}>{fmt(t.assessed)}</div>
-        <div />
-        <div />
-        {visible.priceWithGst  && <div />}
         {visible.billedTaxable && <div className="text-sm font-medium text-primary">{fmt(t.billedTaxable)}</div>}
+        {visible.refSrNo       && <div />}
         <div className={`text-xs font-medium ${onDark ? 'text-white/50' : 'text-muted-foreground'}`}>
           {fmt(t.notInBill)} not claimed
         </div>
-        {visible.refSrNo       && <div />}
+        {visible.gst           && <div />}
+        {visible.disposal      && <div />}
+        <div />
+        <div />
+        {visible.priceWithGst  && <div />}
         {visible.remarks && <div />}
         <div />
       </div>
@@ -718,7 +727,124 @@ export function BillCheckGrid({
                 {visible.hsnSac        && <div className="text-xs font-mono" style={{ color: 'var(--color-neutral-600)' }}>{row.hsnSac || '—'}</div>}
                 {visible.section       && <div><span className="text-[9px] font-medium px-2 py-0.5 rounded-full uppercase tracking-wider" style={{ background: 'var(--color-neutral-100)', color: 'var(--color-neutral-600)' }}>{row.section}</span></div>}
                 {visible.quantity      && <div className="text-sm font-medium text-center" style={{ color: 'var(--color-neutral-600)' }}>{row.quantity ?? '—'}</div>}
-                {visible.unitPrice     && <div className="text-sm font-medium" style={{ color: 'var(--color-neutral-600)' }}>{fromBill ? (row.estimateAmount === undefined ? '—' : fmt(row.estimateAmount)) : fmt(row.estimated || 0)}</div>}
+                {visible.unitPrice     && <div className="text-sm font-medium" style={{ color: 'var(--color-neutral-600)' }}>{fmt(row.estimated || 0)}</div>}
+                <AllowanceInput
+                  data-bc-row={row.id}
+                  data-bc-col="billAllowed"
+                  data-column-key="billAllowed"
+                  data-sel={cs(row.id, 'billAllowed')}
+                  value={row.billAllowed ?? row.assessed ?? 0}
+                  disabled={isDisallowed}
+                  highlighted={row.billAllowed !== undefined}
+                  error={overBilledRows([row]).length > 0}
+                  title={overBilledRows([row]).length > 0
+                    ? `Allowed above the billed ₹${row.billedTaxable}. Lower it before printing.`
+                    : row.billAllowed !== undefined ? `Allowed against an assessed value of ₹${row.assessed}` : undefined}
+                  onCommit={next => commitAllowance(row, next)}
+                />
+                {visible.billedTaxable && fromBill && (
+                  <div className="text-sm font-medium text-right" style={{ color: 'var(--color-neutral-600)' }} title={FROM_BILL_LOCK}>
+                    {row.estimateAmount === undefined ? '—' : fmt(row.estimateAmount)}
+                  </div>
+                )}
+                {visible.billedTaxable && !fromBill && (
+                  <DecimalInput
+                    data-bc-row={row.id}
+                    data-bc-col="billedTaxable"
+                    data-column-key="billedTaxable"
+                    data-sel={cs(row.id, 'billedTaxable')}
+                    value={row.billedTaxable ?? ''}
+                    onChange={e => {
+                      const raw = e.target.value.trim();
+                      const gstPct = row.gst ?? 18;
+                      // Cleared means not checked yet, which is what the print
+                      // gate reads. Zero would mean the workshop billed nothing.
+                      if (raw === '') {
+                        updateAssessmentRow(row.id, { billedTaxable: undefined, billedAmount: undefined });
+                        return;
+                      }
+                      const tax = Number(raw);
+                      if (!Number.isFinite(tax)) return;
+                      updateAssessmentRow(row.id, { billedTaxable: tax, billedAmount: Math.round(tax * (1 + gstPct / 100)) });
+                    }}
+                    disabled={isDisallowed || row.billStatus === 'not-in-bill'}
+                    className="px-2 py-1 rounded-lg text-sm text-right border outline-none w-full border-border text-foreground"
+                    style={{ background: isDisallowed || row.billStatus === 'not-in-bill' ?  'var(--color-neutral-100)' : 'var(--color-neutral-50)' }}
+                  />
+                )}
+                {visible.refSrNo && (
+                  <div className="flex items-center gap-1">
+                    <input
+                      data-bc-row={row.id}
+                      data-bc-col="refSrNo"
+                      data-column-key="refSrNo"
+                      data-sel={cs(row.id, 'refSrNo')}
+                      type="text"
+                      value={row.refSrNo ?? ''}
+                      placeholder="—"
+                      onPaste={e => handleRefPaste(e, row.id)}
+                      onChange={e => {
+                        const val = e.target.value.trim();
+                        updateAssessmentRow(row.id, {
+                          refSrNo: val === '' ? undefined : val,
+                          refStatus: 'manual',
+                        });
+                      }}
+                      // Red only when the match is doubtful or missing: a normal ref is plain.
+                      className={`px-1.5 py-1 rounded text-xs text-center border outline-none w-full font-medium ${
+                        row.refStatus === 'ambiguous' || (row.allowed && !row.refSrNo)
+                          ? 'border-amber-400 text-amber-800 bg-amber-50'
+                          : 'border-border text-foreground bg-background'
+                      }`}
+                      title={row.refStatus === 'ambiguous' ? 'Ambiguous match — please verify' : 'Reference serial number'}
+                    />
+                    {row.refStatus === 'ambiguous' && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" title={row.refMatch ? `${row.refMatch.score}% match — check` : 'Ambiguous match'} />
+                    )}
+                  </div>
+                )}
+                {isDisallowed ? (
+                  <div
+                    className="px-2 py-1 rounded-lg text-[10px] font-medium text-center border border-border"
+                    style={{ background: st.bg, color: st.color }}
+                    title="This item was marked Not Allowed in Assessment"
+                  >
+                    {(row.billedAmount ?? 0) > 0 ? '⚠ Billed (Not Allowed)' : 'Not Allowed'}
+                  </div>
+                ) : (
+                  <select
+                    data-bc-row={row.id}
+                    data-bc-col="billStatus"
+                    data-column-key="billStatus"
+                    data-sel={cs(row.id, 'billStatus')}
+                    value={row.billStatus || 'pending'}
+                    onChange={e => {
+                      const s = e.target.value as BillStatus;
+                      const gstPct = row.gst ?? 18;
+                      if (s === 'in-bill') {
+                        // "Billed as assessed." assessed is pre-GST, so it is the
+                        // taxable basis; billedAmount is the incl-GST display figure.
+                        updateAssessmentRow(row.id, {
+                          billStatus: s,
+                          billedTaxable: row.assessed,
+                          billedAmount: Math.round(row.assessed * (1 + gstPct / 100)),
+                        });
+                      } else if (s === 'not-in-bill') {
+                        updateAssessmentRow(row.id, { billStatus: s, billedTaxable: 0, billedAmount: 0 });
+                      } else {
+                        updateAssessmentRow(row.id, { billStatus: s });
+                      }
+                    }}
+                    disabled={fromBill}
+                    title={fromBill ? FROM_BILL_LOCK : undefined}
+                    className="px-2 py-1 rounded-lg text-[11px] font-medium border outline-none w-full border-border"
+                    style={{ background: fromBill ? 'var(--color-neutral-100)' : st.bg, color: st.color }}
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="in-bill">In Bill ✓</option>
+                    <option value="not-in-bill">Not in Bill ✗</option>
+                  </select>
+                )}
                 {visible.gst           && (
                   <div className="flex items-center justify-center">
                     <FormulaNumericInput
@@ -775,20 +901,6 @@ export function BillCheckGrid({
                     )}
                   </div>
                 )}
-                <AllowanceInput
-                  data-bc-row={row.id}
-                  data-bc-col="billAllowed"
-                  data-column-key="billAllowed"
-                  data-sel={cs(row.id, 'billAllowed')}
-                  value={row.billAllowed ?? row.assessed ?? 0}
-                  disabled={isDisallowed}
-                  highlighted={row.billAllowed !== undefined}
-                  error={overBilledRows([row]).length > 0}
-                  title={overBilledRows([row]).length > 0
-                    ? `Allowed above the billed ₹${row.billedTaxable}. Lower it before printing.`
-                    : row.billAllowed !== undefined ? `Allowed against an assessed value of ₹${row.assessed}` : undefined}
-                  onCommit={next => commitAllowance(row, next)}
-                />
                 <div className="flex items-center justify-center">
                   {row.allowed ? (
                     <DecimalInput
@@ -831,105 +943,6 @@ export function BillCheckGrid({
                       const { isDisposal, netBeforeGst } = computeRowNet(asBilled(row), depRateFor(row));
                       return fmt(isDisposal ? netBeforeGst : netBeforeGst * (1 + (row.gst ?? 18) / 100));
                     })()}
-                  </div>
-                )}
-                {visible.billedTaxable && (
-                  <DecimalInput
-                    data-bc-row={row.id}
-                    data-bc-col="billedTaxable"
-                    data-column-key="billedTaxable"
-                    data-sel={cs(row.id, 'billedTaxable')}
-                    value={row.billedTaxable ?? ''}
-                    onChange={e => {
-                      const raw = e.target.value.trim();
-                      const gstPct = row.gst ?? 18;
-                      // Cleared means not checked yet, which is what the print
-                      // gate reads. Zero would mean the workshop billed nothing.
-                      if (raw === '') {
-                        updateAssessmentRow(row.id, { billedTaxable: undefined, billedAmount: undefined });
-                        return;
-                      }
-                      const tax = Number(raw);
-                      if (!Number.isFinite(tax)) return;
-                      updateAssessmentRow(row.id, { billedTaxable: tax, billedAmount: Math.round(tax * (1 + gstPct / 100)) });
-                    }}
-                    disabled={fromBill || isDisallowed || row.billStatus === 'not-in-bill'}
-                    title={fromBill ? FROM_BILL_LOCK : undefined}
-                    className="px-2 py-1 rounded-lg text-sm text-right border outline-none w-full border-border text-foreground"
-                    style={{ background: fromBill || isDisallowed || row.billStatus === 'not-in-bill' ?  'var(--color-neutral-100)' : 'var(--color-neutral-50)' }}
-                  />
-                )}
-                {isDisallowed ? (
-                  <div
-                    className="px-2 py-1 rounded-lg text-[10px] font-medium text-center border border-border"
-                    style={{ background: st.bg, color: st.color }}
-                    title="This item was marked Not Allowed in Assessment"
-                  >
-                    {(row.billedAmount ?? 0) > 0 ? '⚠ Billed (Not Allowed)' : 'Not Allowed'}
-                  </div>
-                ) : (
-                  <select
-                    data-bc-row={row.id}
-                    data-bc-col="billStatus"
-                    data-column-key="billStatus"
-                    data-sel={cs(row.id, 'billStatus')}
-                    value={row.billStatus || 'pending'}
-                    onChange={e => {
-                      const s = e.target.value as BillStatus;
-                      const gstPct = row.gst ?? 18;
-                      if (s === 'in-bill') {
-                        // "Billed as assessed." assessed is pre-GST, so it is the
-                        // taxable basis; billedAmount is the incl-GST display figure.
-                        updateAssessmentRow(row.id, {
-                          billStatus: s,
-                          billedTaxable: row.assessed,
-                          billedAmount: Math.round(row.assessed * (1 + gstPct / 100)),
-                        });
-                      } else if (s === 'not-in-bill') {
-                        updateAssessmentRow(row.id, { billStatus: s, billedTaxable: 0, billedAmount: 0 });
-                      } else {
-                        updateAssessmentRow(row.id, { billStatus: s });
-                      }
-                    }}
-                    disabled={fromBill}
-                    title={fromBill ? FROM_BILL_LOCK : undefined}
-                    className="px-2 py-1 rounded-lg text-[11px] font-medium border outline-none w-full border-border"
-                    style={{ background: fromBill ? 'var(--color-neutral-100)' : st.bg, color: st.color }}
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="in-bill">In Bill ✓</option>
-                    <option value="not-in-bill">Not in Bill ✗</option>
-                  </select>
-                )}
-                {visible.refSrNo && (
-                  <div className="flex items-center gap-1">
-                    <input
-                      data-bc-row={row.id}
-                      data-bc-col="refSrNo"
-                      data-column-key="refSrNo"
-                      data-sel={cs(row.id, 'refSrNo')}
-                      type="text"
-                      value={row.refSrNo ?? ''}
-                      placeholder="—"
-                      onPaste={e => handleRefPaste(e, row.id)}
-                      onChange={e => {
-                        const val = e.target.value.trim();
-                        updateAssessmentRow(row.id, {
-                          refSrNo: val === '' ? undefined : val,
-                          refStatus: 'manual',
-                        });
-                      }}
-                      // Red only when the match is doubtful or missing: a normal ref is plain.
-                      className={`px-1.5 py-1 rounded text-xs text-center border outline-none w-full font-medium ${
-                        row.refStatus === 'ambiguous' || (row.allowed && !row.refSrNo)
-                          ? 'border-amber-400 text-amber-800 bg-amber-50'
-                          : 'border-border text-foreground bg-background'
-                      }`}
-                      title={row.refStatus === 'ambiguous' ? 'Ambiguous match — please verify' : 'Reference serial number'}
-                    />
-                    {row.refStatus === 'ambiguous' && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" title={row.refMatch ? `${row.refMatch.score}% match — check` : 'Ambiguous match'} />
-                    )}
                   </div>
                 )}
                 {visible.remarks && (
@@ -1023,7 +1036,7 @@ export function BillCheckGrid({
           );
           })}
 
-          {totalsRow('TOTAL', billedTotals(allowedRows, fromBill), true)}
+          {totalsRow('TOTAL', gridTotals(allowedRows, fromBill), true)}
         </div>
         {after && <div className="sticky left-0 p-4">{after}</div>}
       </div>
