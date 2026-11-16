@@ -173,11 +173,34 @@ describe('StageAuditView from-bill wording', () => {
     expect(html).toContain('Estimate Lines Not on the Bill');
     expect(html).not.toContain('Mark All Remaining Allowed as Not in Bill');
   });
+  it('from-bill lists bill rows the estimate did not include, with no Total Saved (F6)', () => {
+    const rows = [
+      makeRow('r1', 'PN1', 'TAIL LAMP', 1000, { billedTaxable: 1200 }),
+      makeRow('r2', 'PN2', 'FRONT GRILLE', 500, { refSrNo: 4 }),
+    ];
+    Object.assign(useClaimStore.getInitialState(), {
+      currentClaim: { id: 'c', assessmentRows: rows, extraBillItems: [], billCheck: { baseDocument: 'final-bill' } } as unknown as ClaimData,
+    });
+    const html = renderToStaticMarkup(<StageAuditView />);
+    expect(html).toContain('TAIL LAMP');
+    expect(html).toContain('₹1,200');
+    expect(html).not.toContain('FRONT GRILLE');
+    expect(html).not.toContain('Total Saved');
+    expect(html).toContain('Estimate lines not matched to any billed item.');
+    expect(html).not.toContain('Billed lines not matched to initial assessment');
+  });
+  it('from-bill with every row found says so (F6)', () => {
+    set('final-bill');
+    expect(renderToStaticMarkup(<StageAuditView />)).toContain('Every billed item was found in the estimate.');
+  });
   it('normal claim keeps the original wording', () => {
     set();
     const html = renderToStaticMarkup(<StageAuditView />);
     expect(html).toContain('Insurer Savings (Allowed Items Not in Bill)');
     expect(html).toContain('Extra Bill Items (Leftover Invoice Lines)');
     expect(html).toContain('Mark All Remaining Allowed as Not in Bill');
+    expect(html).toContain('Total Saved');
+    expect(html).toContain('No allowed items saved (all allowed items appeared in the bill).');
+    expect(html).toContain('Billed lines not matched to initial assessment');
   });
 });

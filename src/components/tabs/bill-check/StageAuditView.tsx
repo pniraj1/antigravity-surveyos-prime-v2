@@ -91,6 +91,10 @@ export function StageAuditView({
   const remainingAllowedUnmarked = fromBill
     ? []
     : rows.filter((r) => r.allowed && r.billedTaxable === undefined);
+  // From-bill: bill rows no estimate line was linked to or priced for.
+  const notInEstimate = fromBill
+    ? rows.filter((r) => r.allowed && r.refSrNo == null && r.estimateAmount == null)
+    : [];
 
   const handleMarkSavings = () => {
     if (onMarkSavings) {
@@ -255,6 +259,7 @@ export function StageAuditView({
           </div>
 
           <div className="flex items-center gap-3">
+            {!fromBill && (
             <div className="text-right">
               <span className="text-xs text-muted-foreground block uppercase tracking-wide">
                 Total Saved
@@ -263,6 +268,7 @@ export function StageAuditView({
                 {formatInr(matrix.totalSaved)}
               </span>
             </div>
+            )}
 
             {!fromBill && (
             <button
@@ -278,7 +284,34 @@ export function StageAuditView({
           </div>
         </div>
 
-        {matrix.savings.length === 0 ? (
+        {fromBill ? (
+          notInEstimate.length === 0 ? (
+            <div className="py-4 px-3 bg-white/60 border border-dashed border-emerald-200 rounded-lg text-center text-xs text-muted-foreground">
+              Every billed item was found in the estimate.
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-emerald-200/80 bg-white max-h-56 overflow-y-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="sticky top-0 bg-emerald-100/60 text-emerald-900 border-b border-emerald-200 font-semibold z-10">
+                  <tr>
+                    <th className="py-2.5 px-3">Item Particulars</th>
+                    <th className="py-2.5 px-3">Part Number</th>
+                    <th className="py-2.5 px-3">Billed</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-emerald-100">
+                  {notInEstimate.map((r) => (
+                    <tr key={r.id} className="hover:bg-emerald-50/50">
+                      <td className="py-2 px-3 font-medium text-foreground">{r.particulars}</td>
+                      <td className="py-2 px-3 font-mono text-[11px] text-muted-foreground">{r.partNumber || '—'}</td>
+                      <td className="py-2 px-3 font-semibold text-foreground">{formatInr(r.billedTaxable ?? r.estimated)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        ) : matrix.savings.length === 0 ? (
           <div className="py-4 px-3 bg-white/60 dark:bg-slate-900/40 border border-dashed border-emerald-200 dark:border-emerald-800 rounded-lg text-center text-xs text-muted-foreground">
             No allowed items saved (all allowed items appeared in the bill).
           </div>
@@ -332,7 +365,7 @@ export function StageAuditView({
             </span>
           </div>
           <span className="text-xs text-amber-800 dark:text-amber-300 font-medium">
-            Billed lines not matched to initial assessment
+            {fromBill ? 'Estimate lines not matched to any billed item.' : 'Billed lines not matched to initial assessment'}
           </span>
         </div>
 
