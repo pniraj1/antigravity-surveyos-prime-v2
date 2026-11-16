@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { BillCheckGrid, billCheckRowsShown } from '../bill-check/BillCheckGrid';
+import { BillCheckGrid, billCheckRowsShown, billCheckCounts } from '../bill-check/BillCheckGrid';
+import { billedTotals } from '@/lib/calculations/section-subtotals';
 import type { AssessmentRow, AssessmentSummary, ClaimData } from '@/types';
 
 const mk = (id: string, particulars: string, allowed: boolean, billedAmount?: number): AssessmentRow => ({
@@ -45,5 +46,36 @@ describe('BillCheckGrid allowed-only toggle', () => {
   });
   it('shows a pressed Allowed only toggle', () => {
     expect(html).toMatch(/<button[^>]*aria-pressed="true"[^>]*>(?:(?!<\/button>).)*Allowed only/);
+  });
+});
+
+describe('counts follow the rows shown', () => {
+  const D = { ...mk('d', 'HOOD', false, 300), refStatus: 'ambiguous' as const };
+  const rows = [{ ...A, refSrNo: '1' }, B, C, D];
+  it('allowed only ignores hidden rows', () => {
+    expect(billCheckCounts(rows, true)).toEqual({ shown: 1, uncertain: 0 });
+  });
+  it('off counts billed disallowed rows too', () => {
+    expect(billCheckCounts(rows, false)).toEqual({ shown: 3, uncertain: 1 });
+  });
+  it('button and header agree with the screen by default', () => {
+    const h = renderToStaticMarkup(
+      <BillCheckGrid
+        allRows={rows} allowedRows={[rows[0]]} summary={summary}
+        serials={new Map([['a', 1]])} updateAssessmentRow={vi.fn()} deleteAssessmentRow={vi.fn()}
+        deleteAssessmentRows={vi.fn()} claimId="c1" fmt={n => String(n)} ageMonths={12} claim={claim}
+      />,
+    );
+    expect(h).not.toContain('Review Ref Numbers');
+    expect(h).toContain('1 items');
+    expect(h).toContain('Turn off Allowed only');
+  });
+});
+
+describe('TOTAL figures do not depend on the toggle', () => {
+  it('billed totals are identical on and off', () => {
+    const on = billedTotals(billCheckRowsShown([A, B, C], 'parts', true).filter(r => r.allowed), false);
+    const off = billedTotals(billCheckRowsShown([A, B, C], 'parts', false).filter(r => r.allowed), false);
+    expect(off).toEqual(on);
   });
 });

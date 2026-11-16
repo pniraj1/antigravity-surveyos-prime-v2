@@ -53,6 +53,17 @@ export function billCheckRowsShown(
   );
 }
 
+/** Counts over the rows the grid lists, so buttons and headers match the screen. */
+export function billCheckCounts(
+  rows: AssessmentRow[], allowedOnly: boolean,
+): { shown: number; uncertain: number } {
+  const shown = SECTION_ORDER.flatMap(({ section }) => billCheckRowsShown(rows, section, allowedOnly));
+  return {
+    shown: shown.length,
+    uncertain: shown.filter(r => r.refStatus === 'ambiguous' || (r.allowed && !r.refSrNo)).length,
+  };
+}
+
 interface Props {
   allRows: AssessmentRow[];
   allowedRows: AssessmentRow[];
@@ -111,9 +122,9 @@ export function BillCheckGrid({
   const unlinkBillMatch = useClaimStore(s => s.unlinkBillMatch);
   const updateClaim = useClaimStore(s => s.updateClaim);
 
-  const uncertainCount = useMemo(
-    () => allRows.filter(r => r.refStatus === 'ambiguous' || (r.allowed && !r.refSrNo)).length,
-    [allRows],
+  const { shown: shownCount, uncertain: uncertainCount } = useMemo(
+    () => billCheckCounts(allRows, allowedOnly),
+    [allRows, allowedOnly],
   );
   const defaultRefTitle = uploadLabels(claim).itemNo;
   const refColTitle = claim?.billCheck?.refColumnTitle || defaultRefTitle;
@@ -516,10 +527,10 @@ export function BillCheckGrid({
       <div className="px-4 py-3 flex items-start justify-between gap-4" style={{ borderBottom: '1px solid var(--color-neutral-100)', background: 'var(--color-neutral-50)' }}>
         <div>
           <div className="text-sm font-medium text-foreground">
-            Step 2 — Verify Each Item ({allRows.length} items · {allowedRows.length} allowed)
+            Step 2 — Verify Each Item ({shownCount} items · {allowedRows.length} allowed)
           </div>
           <div className="text-xs mt-0.5 text-muted-foreground">
-            Mark each item as In Bill or Not in Bill. Disallowed items are shown greyed out — flagged if workshop billed them anyway.
+            Mark each item as In Bill or Not in Bill. Turn off Allowed only to also see disallowed items the workshop billed.
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -558,7 +569,7 @@ export function BillCheckGrid({
           >
             Allowed only
           </button>
-          {uncertainCount > 0 && (
+          {(uncertainCount > 0 || filterUncertain) && (
             <button
               onClick={() => setFilterUncertain(!filterUncertain)}
               className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all border ${
@@ -569,7 +580,7 @@ export function BillCheckGrid({
               title="Filter to ambiguous or missing reference numbers"
             >
               <AlertCircle size={14} />
-              {filterUncertain ? `Show All (${allRows.length})` : `Review Ref Numbers (${uncertainCount})`}
+              {filterUncertain ? `Show All (${shownCount})` : `Review Ref Numbers (${uncertainCount})`}
             </button>
           )}
           {flaggedIds.length > 0 && (
