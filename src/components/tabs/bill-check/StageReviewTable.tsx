@@ -8,7 +8,7 @@ import { normPart } from '@/lib/reports/bill-match-score';
 import { matchStage1PartNumbers } from '@/lib/tally/stage1-part-number';
 import { matchStage2NameAndCost } from '@/lib/tally/stage2-name-cost';
 import { isTallyCandidate } from '@/lib/tally/candidate';
-import { isFromBill } from '@/lib/reports/bill-check-mode';
+import { isFromBill, uploadLabels } from '@/lib/reports/bill-check-mode';
 import { isPartNumberMatched, isSemanticMatched } from './BillCheckStepper';
 
 export interface ReviewPair {
@@ -93,6 +93,7 @@ export function StageReviewTable({
   const setStoreTallyStage = useClaimStore((s) => s.setTallyStage);
   const currentClaim = useClaimStore((s) => s.currentClaim);
   const fromBill = isFromBill(currentClaim);
+  const labels = uploadLabels(currentClaim);
   const updateAssessmentRow = useClaimStore((s) => s.updateAssessmentRow);
   const unlinkBillMatch = useClaimStore((s) => s.unlinkBillMatch);
   const linkExtraBillItem = useClaimStore((s) => s.linkExtraBillItem);
@@ -322,6 +323,14 @@ export function StageReviewTable({
     .map((s) => ({ s, n: derivedPairs.filter((p) => p.row.section === s).length }))
     .filter((x) => x.n > 0);
 
+  // From-bill the uploaded document is the estimate, so lower is the worrying direction.
+  const diffColour = (d: number) =>
+    d < 0 ? (fromBill ? 'text-amber-700' : 'text-emerald-700') : fromBill ? 'text-muted-foreground' : 'text-amber-700';
+  const diffTitle = (d: number) =>
+    Math.round(d) === 0 ? `${fromBill ? 'Estimate' : 'Bill'} matches assessment`
+      : d < 0 ? (fromBill ? 'Estimate is lower than assessed' : 'Bill is cheaper than assessed')
+      : fromBill ? 'Estimate is higher than assessed' : 'Bill is higher than assessed';
+
   const renderRow = (pair: ReviewPair) => {
     const assessedAmt = pair.row.assessed || pair.row.estimated || 0;
     const delta = pair.priceDelta;
@@ -351,9 +360,9 @@ export function StageReviewTable({
         <td className="py-2 px-2 align-top text-right tabular-nums text-foreground">{formatInr(pair.billItem.taxableAmount)}</td>
         <td
           className={`py-2 px-2 align-top text-right tabular-nums font-semibold ${
-            Math.round(delta) === 0 ? 'text-muted-foreground font-normal' : delta < 0 ? 'text-emerald-700' : 'text-amber-700'
+            Math.round(delta) === 0 ? 'text-muted-foreground font-normal' : diffColour(delta)
           }`}
-          title={Math.round(delta) === 0 ? 'Bill matches assessment' : delta < 0 ? 'Bill is cheaper than assessed' : 'Bill is higher than assessed'}
+          title={diffTitle(delta)}
         >
           {Math.round(delta) === 0 ? '—' : delta < 0 ? `−${formatInr(Math.abs(delta))}` : `+${formatInr(delta)}`}
         </td>
@@ -389,9 +398,9 @@ export function StageReviewTable({
       <tr className="border-b border-border text-[11px] text-muted-foreground font-medium">
         <th className="py-2 pl-4 pr-2 w-10 font-medium">#</th>
         <th className="py-2 px-2 font-medium">Assessment</th>
-        <th className="py-2 px-2 font-medium">Workshop bill</th>
+        <th className="py-2 px-2 font-medium">{labels.doc}</th>
         <th className="py-2 px-2 text-right font-medium">Assessed</th>
-        <th className="py-2 px-2 text-right font-medium">Billed</th>
+        <th className="py-2 px-2 text-right font-medium">{labels.amount}</th>
         <th className="py-2 px-2 text-right font-medium">Difference</th>
         <th className="py-2 pl-2 pr-4" aria-label="Actions" />
       </tr>

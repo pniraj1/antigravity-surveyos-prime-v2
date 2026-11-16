@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { StageReviewTable, keepUpdates, type ReviewPair } from '../StageReviewTable';
@@ -334,5 +334,30 @@ describe('keepUpdates', () => {
     expect(keepUpdates(pair, false)).toEqual({
       billVerified: true, billStatus: 'in-bill', billedTaxable: 900, billedAmount: 1062,
     });
+  });
+});
+
+describe('StageReviewTable wording follows the uploaded document', () => {
+  const rows = [makeRow('r1', 'PN1', 'FRONT BUMPER', 1000)];
+  const extras = [makeExtra('e1', 'PN1', 'FRONT BUMPER', 900)];
+  const render = (baseDocument?: string) => {
+    // Server render reads the store's initial state, so put the claim under test there.
+    Object.assign(useClaimStore.getInitialState(), { currentClaim: { id: 'c', assessmentRows: rows, extraBillItems: extras, billCheck: { baseDocument } } as unknown as ClaimData });
+    return renderToStaticMarkup(<StageReviewTable stage={1} rows={rows} extraBillItems={extras} />);
+  };
+  afterEach(() => { Object.assign(useClaimStore.getInitialState(), { currentClaim: null }); });
+  it('from-bill says Estimate / Estimated and a lower figure is amber', () => {
+    const html = render('final-bill');
+    expect(html).toContain('>Estimate<');
+    expect(html).toContain('>Estimated<');
+    expect(html).toContain('text-amber-700');
+    expect(html).toContain('Estimate is lower than assessed');
+  });
+  it('normal claim keeps Workshop bill / Billed and emerald', () => {
+    const html = render();
+    expect(html).toContain('>Workshop bill<');
+    expect(html).toContain('>Billed<');
+    expect(html).toContain('text-emerald-700');
+    expect(html).toContain('Bill is cheaper than assessed');
   });
 });

@@ -19,15 +19,16 @@ export interface AIProposal {
 
 export function buildStage3AIPrompt(
   rows: CandidateRow[],
-  lines: CandidateLine[]
+  lines: CandidateLine[],
+  docName = 'workshop invoice'
 ): string {
-  return `You are an expert Indian motor insurance surveyor. Compare these remaining unmatched assessment items against workshop invoice lines.
+  return `You are an expert Indian motor insurance surveyor. Compare these remaining unmatched assessment items against ${docName} lines.
 Identify if any pair refers to the same vehicle part or labour operation, considering Indian workshop vocabulary, abbreviations, and assembly terms.
 
 ASSESSMENT ROWS:
 ${rows.map((r) => `- ID: ${r.id} | "${r.particulars}" | ₹${r.amount}`).join('\n')}
 
-WORKSHOP INVOICE LINES:
+${docName.toUpperCase()} LINES:
 ${lines.map((l) => `- ID: ${l.id} | "${l.description}" | ₹${l.amount}`).join('\n')}
 
 Return ONLY a JSON array of matching pairs:

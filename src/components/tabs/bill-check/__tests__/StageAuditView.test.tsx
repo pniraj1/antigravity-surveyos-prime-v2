@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { StageAuditView } from '../StageAuditView';
@@ -155,5 +155,29 @@ describe('StageAuditView', () => {
 
     expect(html).toContain('Print Bill Check Report');
     expect(html).toContain('Apply to Assessment Grid &amp; Finish');
+  });
+});
+
+describe('StageAuditView from-bill wording', () => {
+  // Server render reads the store's initial state, so put the claim under test there.
+  const set = (baseDocument?: string) =>
+    Object.assign(useClaimStore.getInitialState(), {
+      currentClaim: { id: 'c', assessmentRows: [], extraBillItems: [], billCheck: { baseDocument } } as unknown as ClaimData,
+    });
+  afterEach(() => { Object.assign(useClaimStore.getInitialState(), { currentClaim: null }); });
+  it('from-bill renames the sections and hides the saving button', () => {
+    set('final-bill');
+    const html = renderToStaticMarkup(<StageAuditView />);
+    expect(html).toContain('Billed Items Not in Estimate');
+    expect(html).toContain('Items on the bill that the estimate did not include.');
+    expect(html).toContain('Estimate Lines Not on the Bill');
+    expect(html).not.toContain('Mark All Remaining Allowed as Not in Bill');
+  });
+  it('normal claim keeps the original wording', () => {
+    set();
+    const html = renderToStaticMarkup(<StageAuditView />);
+    expect(html).toContain('Insurer Savings (Allowed Items Not in Bill)');
+    expect(html).toContain('Extra Bill Items (Leftover Invoice Lines)');
+    expect(html).toContain('Mark All Remaining Allowed as Not in Bill');
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fromBillSelfBillUpdates, finalBillReadBlocked, estimateHeads, estimateTotals, needsEstimateHeads, billHeaderFromEstimate, isFromBill, rowsLostOnSwitch, selfBilled, selfBillUpdates, switchPrompt } from '../bill-check-mode';
+import { fromBillSelfBillUpdates, finalBillReadBlocked, estimateHeads, estimateTotals, needsEstimateHeads, billHeaderFromEstimate, isFromBill, rowsLostOnSwitch, selfBilled, selfBillUpdates, switchPrompt, uploadLabels } from '../bill-check-mode';
 import type { ClaimData } from '@/types';
 import type { AssessmentRow } from '@/types/assessment';
 
@@ -123,4 +123,14 @@ describe('estimate heads skip lines held by a row (I2c)', () => {
   } as unknown as ClaimData;
   it('heads do not count the held line twice', () => expect(estimateHeads(claim).plastic + estimateHeads(claim).metal).toBe(0));
   it('totals do not count the held line twice', () => expect(estimateTotals(claim)?.linesInclGst).toBe(1180));
+});
+
+describe('uploadLabels', () => {
+  it('normal claim names the upload a workshop bill', () => {
+    expect(uploadLabels({})).toEqual({ doc: 'Workshop bill', amount: 'Billed', itemNo: 'Bill Item No.', base: 'Estimate', comparison: 'Estimate vs assessment comparison' });
+    expect(uploadLabels(null).doc).toBe('Workshop bill');
+  });
+  it('from-bill claim names the upload an estimate', () => {
+    expect(uploadLabels({ billCheck: { baseDocument: 'final-bill' } })).toEqual({ doc: 'Estimate', amount: 'Estimated', itemNo: 'Est. Item No.', base: 'Billed', comparison: 'Bill vs assessment comparison' });
+  });
 });

@@ -9,6 +9,21 @@ export function isFromBill(claim: { billCheck?: { baseDocument?: string } } | nu
   return claim?.billCheck?.baseDocument === 'final-bill';
 }
 
+export interface UploadLabels {
+  doc: 'Workshop bill' | 'Estimate';
+  amount: 'Billed' | 'Estimated';
+  itemNo: 'Bill Item No.' | 'Est. Item No.';
+  base: 'Estimate' | 'Billed';
+  comparison: 'Estimate vs assessment comparison' | 'Bill vs assessment comparison';
+}
+
+/** What the document uploaded in Bill Check is called: the estimate on from-bill claims, else the workshop bill. */
+export function uploadLabels(claim: { billCheck?: { baseDocument?: string } } | null | undefined): UploadLabels {
+  return isFromBill(claim)
+    ? { doc: 'Estimate', amount: 'Estimated', itemNo: 'Est. Item No.', base: 'Billed', comparison: 'Bill vs assessment comparison' }
+    : { doc: 'Workshop bill', amount: 'Billed', itemNo: 'Bill Item No.', base: 'Estimate', comparison: 'Estimate vs assessment comparison' };
+}
+
 /** The row billed at its own figures (from-bill mode). */
 export function selfBilled(row: AssessmentRow): Pick<AssessmentRow, 'billedTaxable' | 'billedAmount' | 'billStatus'> {
   return {

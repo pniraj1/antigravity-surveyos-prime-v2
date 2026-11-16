@@ -3,6 +3,7 @@
 import React from 'react';
 import { X, Sparkles, ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { uploadLabels } from '@/lib/reports/bill-check-mode';
 import { useClaimStore } from '@/stores/claim-store';
 import { BillCheckStepper } from '@/components/tabs/bill-check/BillCheckStepper';
 import { StageReviewTable } from '@/components/tabs/bill-check/StageReviewTable';
@@ -65,7 +66,7 @@ export function ReconciliationWizardDialog({
   const stageNum = typeof activeStage === 'number' ? activeStage : 1;
 
   const bc = currentClaim?.billCheck;
-  const billLabel = bc?.billNo ? `Bill #${bc.billNo}` : 'Workshop Bill';
+  const billLabel = bc?.billNo ? `Bill #${bc.billNo}` : uploadLabels(currentClaim).doc === 'Estimate' ? 'Estimate' : 'Workshop Bill';
   const billTotalFormatted = bc?.billTotal
     ? `₹${Math.round(bc.billTotal).toLocaleString('en-IN')}`
     : null;

@@ -26,7 +26,7 @@ import { AllowanceScopeDialog } from '@/components/dialogs/AllowanceScopeDialog'
 import { AllowanceInput } from './AllowanceInput';
 import { FormulaNumericInput } from '@/components/claim/FormulaNumericInput';
 import { billCheckFlags, type BillFlag } from '@/lib/reports/bill-check-flags';
-import { isFromBill } from '@/lib/reports/bill-check-mode';
+import { isFromBill, uploadLabels } from '@/lib/reports/bill-check-mode';
 
 const FROM_BILL_LOCK = "Billed at the bill's own figure (this claim is made from the bill).";
 import { BillCheckFlagMark, BillCheckFlagDetail, BillCheckMatchDetail } from './BillCheckFlagRow';
@@ -99,7 +99,7 @@ export function BillCheckGrid({
     () => allRows.filter(r => r.refStatus === 'ambiguous' || (r.allowed && !r.refSrNo)).length,
     [allRows],
   );
-  const defaultRefTitle = claim?.billCheck?.baseDocument === 'final-bill' ? 'Est. Item No.' : 'Bill Item No.';
+  const defaultRefTitle = uploadLabels(claim).itemNo;
   const refColTitle = claim?.billCheck?.refColumnTitle || defaultRefTitle;
 
   const fromBill = isFromBill(claim);

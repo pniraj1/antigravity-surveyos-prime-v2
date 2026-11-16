@@ -95,7 +95,7 @@ export function StageAITrigger({
     }));
 
     try {
-      const prompt = buildStage3AIPrompt(candidateRows, candidateLines);
+      const prompt = buildStage3AIPrompt(candidateRows, candidateLines, fromBill ? 'repair estimate' : undefined);
       const rawResponse = await callAIGateway(prompt, [], 'json', 'light');
       const parsed = parseStage3AIResponse(rawResponse);
 

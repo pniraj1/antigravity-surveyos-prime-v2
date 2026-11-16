@@ -87,7 +87,8 @@ export function StageAuditView({
   }, [rows, invoiceTotal]);
 
   // Savings only exist on normal claims; from-bill rows are all self-billed.
-  const remainingAllowedUnmarked = isFromBill(currentClaim)
+  const fromBill = isFromBill(currentClaim);
+  const remainingAllowedUnmarked = fromBill
     ? []
     : rows.filter((r) => r.allowed && r.billedTaxable === undefined);
 
@@ -245,10 +246,10 @@ export function StageAuditView({
             <PiggyBank className="w-5 h-5 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
             <div>
               <h3 id="insurer-savings-heading" className="text-sm font-bold text-foreground">
-                Insurer Savings (Allowed Items Not in Bill)
+                {fromBill ? 'Billed Items Not in Estimate' : 'Insurer Savings (Allowed Items Not in Bill)'}
               </h3>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Items surveyed and approved in estimate that the workshop did not invoice.
+                {fromBill ? 'Items on the bill that the estimate did not include.' : 'Items surveyed and approved in estimate that the workshop did not invoice.'}
               </p>
             </div>
           </div>
@@ -263,6 +264,7 @@ export function StageAuditView({
               </span>
             </div>
 
+            {!fromBill && (
             <button
               type="button"
               onClick={handleMarkSavings}
@@ -272,6 +274,7 @@ export function StageAuditView({
               <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
               <span>Mark All Remaining Allowed as Not in Bill (Saving)</span>
             </button>
+            )}
           </div>
         </div>
 
@@ -322,7 +325,7 @@ export function StageAuditView({
           <div className="flex items-center gap-2">
             <FileText className="w-4 h-4 text-amber-600 dark:text-amber-400" aria-hidden="true" />
             <h3 id="extra-items-heading" className="text-sm font-bold text-foreground">
-              Extra Bill Items (Leftover Invoice Lines)
+              {fromBill ? 'Estimate Lines Not on the Bill' : 'Extra Bill Items (Leftover Invoice Lines)'}
             </h3>
             <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-900 dark:bg-amber-900/60 dark:text-amber-200 border border-amber-300">
               {extraItems.length} {extraItems.length === 1 ? 'line' : 'lines'}

@@ -12,6 +12,11 @@ describe('stage3-ai-matcher', () => {
     expect(prompt).toContain('Return ONLY a JSON array');
   });
 
+  it('names the uploaded document, defaulting to the workshop invoice', () => {
+    expect(buildStage3AIPrompt([], [], 'repair estimate')).toContain('repair estimate');
+    expect(buildStage3AIPrompt([], [])).toContain('workshop invoice');
+  });
+
   it('parses valid AI JSON proposals', () => {
     const rawJson = JSON.stringify([
       { rowId: 'r1', lineId: 'b1', confidence: 92, reason: 'Alternator belt is drive belt' }
