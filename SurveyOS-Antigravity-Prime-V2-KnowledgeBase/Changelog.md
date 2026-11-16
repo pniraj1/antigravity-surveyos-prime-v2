@@ -1,3 +1,12 @@
+## 2026-11-16 (Antigravity) — Bill Check: Orange-Themed Upload Dialog & Modal Reconciliation Wizard
+- feat(bill-check): overhauled the Bill Check user experience following a comprehensive UI/UX audit and Google Chrome Modern Web Guidance:
+  - Document Upload Disambiguation (`BillCheckUploadDialog.tsx`): Clicking `[Upload Document]` opens a dedicated modal dialogue box prompting whether the uploaded file is a "Final Workshop Bill / Tax Invoice (Recommended)" or a "Repair Estimate / Quotation", with integrated drag-and-drop dropzone.
+  - Dedicated Modal Wizard (`ReconciliationWizardDialog.tsx`): Relocated the 4-stage reconciliation workflow out of the tab body into a focused full-screen modal wizard dialog with accessible ARIA semantics (`role="dialog"`, `aria-modal="true"`, `aria-labelledby`, `Escape` key handling).
+  - 100% Brand Orange Theme: Replaced all foreign blue and purple classes with the canonical SurveyOS Brand Orange (`#F59E0B`, `bg-primary`, `hover:bg-amber-600`), warm amber accents (`#FEF3C7`, `border-amber-300`, `text-amber-900`), and clean white cards on platinum (`#F8F9FA`).
+  - Stage 4 Segregation: Strictly enforces ₹0 liability and red alert styling for surveyor-disallowed parts, emerald badges for insurer savings, and amber badges for extra items flowing to the tray.
+  - Workspace Stability: The spreadsheet grid (`BillCheckGrid`) remains permanently mounted and visible as the primary workspace at all times. Added header pill `[Reconciliation Cockpit (N)]` to re-open wizard anytime.
+- verification: tsc clean (0 errors); vitest 3,200/3,200 tests passed (355 test files); Next.js 16 build passed with 25 static pages compiled; Prime ↔ Scan coupling: none.
+
 ## 2026-11-16 (Antigravity) — Bill Check: Surveyor-Controlled Progressive Tallying Cockpit (4-stage workflow)
 - feat(tally): built 4-stage progressive tallying engine & UI in Bill Check tab (`docs/plans/2026-11-16-surveyor-controlled-tallying-cockpit.md`). Replaces the single-pass auto-link and bottom red error box with an authoritative, surveyor-driven workflow:
   - Stage 1 (`stage1-part-number.ts`): Part Numbers only. Matches exact and normalized part numbers, displays price difference, enables single-click Unlink.

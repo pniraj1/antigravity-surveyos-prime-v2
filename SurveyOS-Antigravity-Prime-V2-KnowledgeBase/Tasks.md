@@ -1,3 +1,20 @@
+## Done: Bill Check Orange-Themed Upload Dialog & Modal Reconciliation Wizard (2026-11-16, Antigravity)
+- **Problem Solved:**
+  - Previous implementation inline-rendered the 4-stage tally stepper on the page body, replacing the spreadsheet grid (`BillCheckGrid`) and using foreign blue/purple gradients.
+  - The application's canonical design system is **Brand Orange / Amber (`#F59E0B`, `amber-500`)** with warm amber accents (`#FEF3C7`), clean white cards, and platinum (`#F8F9FA`) background.
+  - Multi-step document ingestion should not disrupt the spreadsheet grid.
+- **Architecture Delivered:**
+  - **`BillCheckUploadDialog.tsx`:** Modal dialogue box triggered on clicking `[Upload Document]`. Disambiguates between **Final Workshop Bill (Recommended)** and **Repair Estimate**, with drag-and-drop dropzone. Complies with Google Chrome Modern Web Guidance (`role="dialog"`, `aria-modal="true"`, `aria-labelledby`, `Escape` key handling).
+  - **`ReconciliationWizardDialog.tsx`:** Full-screen modal wizard housing the 4 reconciliation stages with sticky header/footer navigation.
+  - **Stage Components 100% Brand Orange:** Re-themed `BillCheckStepper`, `StageReviewTable`, `StageAITrigger`, and `StageAuditView` to Brand Orange and warm amber.
+  - **Stage 4 Disallowed Isolation:** Clear red border/badge with ₹0 liability for surveyor-disallowed parts, emerald for insurer savings, and amber for extra workshop items.
+  - **Main Tab Parity:** `BillCheckGrid` remains permanently mounted as the primary workspace. Added Brand Orange pill `[Reconciliation Cockpit (N)]` in `BillCheckHeader.tsx` to re-open the wizard at any time.
+- **Verification:**
+  - `npx vitest run`: 355 test files, 3,200 tests passed, 0 failures.
+  - `npx tsc --noEmit`: Clean (0 errors).
+  - `npm run build`: All 25 static pages compiled successfully in Next.js 16 with Turbopack.
+  - Prime ↔ Scan coupling: None.
+
 ## In progress: Assessment / Bill Check usability (2026-11-14, Claude Code)
   - Batch 1 committed e308ab05 and deployed 2026-11-14 (motorsurveyos-in + surveyos.in, live chunks checked; deploy also carried 7d97a381 parser layout learning, owner approved): compulsory policy pop-up, ✓/✕ Allow column on the right, IMT 23 by policy, Undo delete, sticky headings, pinned total, Print on both tabs, Bill Check delete warning. See Changelog 2026-11-14.
   - Owner said: keep Paint / Part / Labour Row buttons; all rows allowed by default (already true).
