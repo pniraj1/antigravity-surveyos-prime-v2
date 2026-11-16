@@ -51,11 +51,15 @@ describe('assessmentSwitch', () => {
   it('answer Final bill on an estimate claim files the OPPOSITE Bill Check upload kind (estimate)', () => {
     const r = assessmentSwitch(claim('estimate'), 'final-bill');
     expect(r?.upload).toBe('estimate');
-    expect(r?.prompt).toContain('Switch to Estimate?');
+    expect(r?.prompt).toBe('Make this claim from the final bill? The new document will replace the current rows, and item numbers and billed amounts matched so far will be cleared.');
   });
   it('answer Estimate on a from-bill claim files the final-bill upload kind', () => {
     const r = assessmentSwitch(claim('final-bill'), 'estimate');
     expect(r?.upload).toBe('final-bill');
-    expect(r?.prompt).toContain('Switch to Final bill?');
+    expect(r?.prompt).toBe('Make this claim from the estimate? The new document will replace the current rows, and item numbers and billed amounts matched so far will be cleared.');
+  });
+  it('is null on a claim with no rows', () => {
+    const empty = { billCheck: { baseDocument: 'estimate' }, assessmentRows: [], extraBillItems: [] } as unknown as ClaimData;
+    expect(assessmentSwitch(empty, 'final-bill')).toBeNull();
   });
 });
