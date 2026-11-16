@@ -7,7 +7,7 @@ import { ColumnPicker } from '@/components/claim/ColumnPicker';
 import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
 import { useClaimStore } from '@/stores/claim-store';
 import type { AssessmentRow, AssessmentSummary, ClaimData } from '@/types';
-import type { ExtraBillItem } from '@/types/assessment';
+import type { ExtraBillItem, AssessmentSection } from '@/types/assessment';
 import { shouldStartSupplementaryBand } from '@/lib/calculations/utils';
 import { computeRowNet } from '@/lib/calculations';
 import { rowDepRate } from '@/lib/calculations/row-dep-rate';
@@ -40,6 +40,18 @@ import { parseRefPaste, planRefPaste, type ReadLine, type RowUpdate } from '@/li
 /** Bill Check rows are the assessment's rows: deleting here deletes there too. */
 const ALSO_REMOVES =
   'This also removes it from the Assessment tab and the Final Survey Report. It cannot be undone.';
+
+/**
+ * Rows of a section the grid lists. Allowed only is the default view; the wider
+ * view also lists disallowed rows the workshop billed anyway.
+ */
+export function billCheckRowsShown(
+  rows: AssessmentRow[], section: AssessmentSection, allowedOnly: boolean,
+): AssessmentRow[] {
+  return rows.filter(
+    r => r.section === section && (r.allowed || (!allowedOnly && (r.billedAmount ?? 0) > 0)),
+  );
+}
 
 interface Props {
   allRows: AssessmentRow[];
@@ -93,6 +105,7 @@ export function BillCheckGrid({
   const [pendingAllowance, setPendingAllowance] = useState<{ id: string; assessed: number; proposed: number } | null>(null);
   const [openFlag, setOpenFlag] = useState<string | null>(null);
   const [filterUncertain, setFilterUncertain] = useState(false);
+  const [allowedOnly, setAllowedOnly] = useState(true);
   const addAssessmentRowToSection = useClaimStore(s => s.addAssessmentRowToSection);
   const linkExtraBillItem = useClaimStore(s => s.linkExtraBillItem);
   const unlinkBillMatch = useClaimStore(s => s.unlinkBillMatch);
@@ -115,16 +128,15 @@ export function BillCheckGrid({
 
   // Flagged rows in on-screen order: section by section, same rows the grid shows.
   const flaggedIds = SECTION_ORDER.flatMap(({ section }) =>
-    allRows
-      .filter(r => r.section === section && (r.allowed || (r.billedAmount ?? 0) > 0) && flagsByRow.has(r.id))
+    billCheckRowsShown(allRows, section, allowedOnly)
+      .filter(r => flagsByRow.has(r.id))
       .map(r => r.id),
   );
   const flagPos = openFlag ? flaggedIds.indexOf(openFlag) : -1;
 
   // Same rows, same order as the grid shows them; pool ignores the "needs a ref" filter.
   const screenRows = () => {
-    const pool = SECTION_ORDER.flatMap(({ section }) =>
-      allRows.filter(r => r.section === section && (r.allowed || (r.billedAmount ?? 0) > 0)));
+    const pool = SECTION_ORDER.flatMap(({ section }) => billCheckRowsShown(allRows, section, allowedOnly));
     const onScreen = filterUncertain
       ? pool.filter(r => r.refStatus === 'ambiguous' || (r.allowed && !r.refSrNo))
       : pool;
@@ -534,6 +546,18 @@ export function BillCheckGrid({
               Delete Selected ({selected.size})
             </button>
           )}
+          <button
+            onClick={() => setAllowedOnly(!allowedOnly)}
+            aria-pressed={allowedOnly}
+            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all border ${
+              allowedOnly
+                ? 'bg-amber-600 text-white border-amber-600'
+                : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+            }`}
+            title="Show allowed rows only. Turn off to also see disallowed items the workshop billed."
+          >
+            Allowed only
+          </button>
           {uncertainCount > 0 && (
             <button
               onClick={() => setFilterUncertain(!filterUncertain)}
@@ -586,9 +610,8 @@ export function BillCheckGrid({
           // `r.allowed`: a rejected row the workshop billed anyway still needs
           // the surveyor's eye. That is a claim for refused work, and hiding it
           // would hide the one thing on this screen worth acting on.
-          const sectionRows = allRows.filter(
-            r => r.section === section && (r.allowed || (r.billedAmount ?? 0) > 0),
-          );
+          // That exception is the "Allowed only" toggle's off state.
+          const sectionRows = billCheckRowsShown(allRows, section, allowedOnly);
           const displayedRows = filterUncertain
             ? sectionRows.filter(r => r.refStatus === 'ambiguous' || (r.allowed && !r.refSrNo))
             : sectionRows;
