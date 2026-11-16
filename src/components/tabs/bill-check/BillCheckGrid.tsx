@@ -482,6 +482,7 @@ export function BillCheckGrid({
 
   if (allRows.length === 0) {
     return (
+      <div className="h-full min-h-0 overflow-auto">
       <div
         className="rounded-2xl p-12 flex flex-col items-center text-center bg-card border border-border"
       >
@@ -490,6 +491,8 @@ export function BillCheckGrid({
         <div className="text-sm text-muted-foreground">
           Go to Assessment tab and add items to begin bill check.
         </div>
+      </div>
+      {after && <div className="mt-6">{after}</div>}
       </div>
     );
   }

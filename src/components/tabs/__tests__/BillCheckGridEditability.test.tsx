@@ -189,4 +189,25 @@ describe('BillCheckGrid Editability Markup', () => {
     expect(pinned).toBeGreaterThan(html.indexOf('Front Bumper'));
     expect(extras).toBeGreaterThan(pinned);
   });
+
+  it('still shows the extras when the assessment has no rows', () => {
+    const html = renderToStaticMarkup(
+      <BillCheckGrid
+        allRows={[]}
+        allowedRows={[]}
+        summary={mockSummary}
+        serials={new Map()}
+        updateAssessmentRow={vi.fn()}
+        deleteAssessmentRow={vi.fn()}
+        deleteAssessmentRows={vi.fn()}
+        claimId="claim-1"
+        fmt={n => String(n)}
+        ageMonths={12}
+        claim={mockClaim}
+        after={<div>EXTRAS</div>}
+      />
+    );
+    expect(html).toContain('No items in assessment');
+    expect(html).toContain('EXTRAS');
+  });
 });
