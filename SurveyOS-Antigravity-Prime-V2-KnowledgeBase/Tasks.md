@@ -1,3 +1,10 @@
+## Done (not deployed): Cockpit Stage 3 / Stage 4 rework (2026-11-16, Claude Code)
+- **Status:** built on `main`, NOT pushed, NOT deployed. Plan: `docs/superpowers/plans/2026-11-16-cockpit-stage3-stage4.md` (owner's answers 2026-11-16).
+- Task 1 `db9556cf`: Stage 3 "Ask AI" shows two lists side by side before AI is asked (assessment rows left; remaining uploaded lines right, "Workshop bill lines" / "Estimate lines"); proposal cards say "Assessment" / "<doc> line"; cockpit dialog bigger (max-w-[1600px], h-[94vh]); instruction box now one line.
+- Task 2 `7db85bad`: Stage 4 opens on "Assessed rows not linked": Link to (unlinked uploaded lines), Not in bill / Not in estimate (claim built from the bill; writes ref text "Not in estimate", never touches the bill figure), or a typed ref. Then uploaded lines not linked; disallowed items, not-in-bill rows and final seal folded into a collapsed "Summary".
+- **Owner still to check by eye (no browser for agents):** dialog size; the two Stage 3 lists; Stage 4 controls on a normal claim and on a claim built from the bill. Then decide deploy.
+- Verification: vitest 3260 passed (358 files, 1 skipped); tsc 0 errors; build ok. Impact on SurveyOS Scan: none (no doc types, folder layout or manifest touched).
+
 ## Done (not deployed): Bill Check / Assessment document-kind fixes, Issues 1-5 (2026-11-16, Claude Code)
 - **Status:** built on `main`, NOT pushed, NOT deployed. Not deployed - owner holding. Spec: `Specs/2026-11-16-bill-check-document-kind-report.md`.
 - Issue 3 `07008b88` (unmatched/labour rows reach Stages 1-3 on from-bill claims); Issue 2 `d1af624d` (upload dialog Cancel + files under chosen kind); Issue 1 `fee88f50` (cockpit wording/colours follow document); Issue 4 `67ca0865` (Assessment asks Bill/Estimate every upload, headings follow); Issue 5 `409373fc` + `40bf3ef9` (one scroll box, extras pinned left, shown on empty grid).

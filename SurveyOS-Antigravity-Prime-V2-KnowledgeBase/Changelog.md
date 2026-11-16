@@ -1,3 +1,8 @@
+## 2026-11-16 (Claude Code) - Cockpit Stage 3 / Stage 4 rework (NOT deployed)
+- feat(bill-check) `db9556cf`: Stage 3 shows assessment rows and remaining uploaded lines side by side before AI is asked; cards say "Assessment" / "<doc> line"; dialog bigger; one-line instruction box.
+- feat(bill-check) `7db85bad`: Stage 4 opens on assessed rows not linked (Link to, Not in bill / Not in estimate, typed ref), then uploaded lines not linked; disallowed, not-in-bill and seal in a collapsed Summary.
+- verification: vitest 3260 passed; tsc clean; build ok. Not browser-tested. Not pushed. Impact on SurveyOS Scan: none (no doc types, folder layout or manifest touched).
+
 ## 2026-11-16 (Claude Code) - Bill Check / Assessment document-kind fixes (NOT deployed - owner holding)
 - fix(bill-check) `07008b88`: `isTallyCandidate` lets unmatched/labour rows reach Stages 1-3 on from-bill claims; Keep keeps the bill figure.
 - fix(bill-check) `d1af624d`: upload dialog honours Cancel and files under the chosen kind.
