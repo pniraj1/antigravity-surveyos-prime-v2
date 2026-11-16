@@ -53,6 +53,13 @@ export function billCheckRowsShown(
   );
 }
 
+/** Billed figures a section footer shows. Allowed rows only, whatever the view. */
+export function sectionFooterTotals(
+  rows: AssessmentRow[], section: AssessmentSection, allowedOnly: boolean, fromBill: boolean,
+): BilledTotals {
+  return billedTotals(billCheckRowsShown(rows, section, allowedOnly).filter(r => r.allowed), fromBill);
+}
+
 /** Counts over the rows the grid lists, so buttons and headers match the screen. */
 export function billCheckCounts(
   rows: AssessmentRow[], allowedOnly: boolean,
@@ -632,7 +639,7 @@ export function BillCheckGrid({
           const sub = subtotals[section];
           // Allowed only: sectionSubtotals reads a summary the engine built from
           // allowed rows, and the two footer lines must describe one population.
-          const billed = billedTotals(sectionRows.filter(r => r.allowed), fromBill);
+          const billed = sectionFooterTotals(allRows, section, allowedOnly, fromBill);
 
           return (
           <div key={section}>

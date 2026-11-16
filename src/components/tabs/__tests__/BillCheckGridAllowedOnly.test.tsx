@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { BillCheckGrid, billCheckRowsShown, billCheckCounts } from '../bill-check/BillCheckGrid';
+import { BillCheckGrid, billCheckRowsShown, billCheckCounts, sectionFooterTotals } from '../bill-check/BillCheckGrid';
 import { billedTotals } from '@/lib/calculations/section-subtotals';
 import type { AssessmentRow, AssessmentSummary, ClaimData } from '@/types';
 
@@ -72,10 +72,22 @@ describe('counts follow the rows shown', () => {
   });
 });
 
-describe('TOTAL figures do not depend on the toggle', () => {
-  it('billed totals are identical on and off', () => {
-    const on = billedTotals(billCheckRowsShown([A, B, C], 'parts', true).filter(r => r.allowed), false);
-    const off = billedTotals(billCheckRowsShown([A, B, C], 'parts', false).filter(r => r.allowed), false);
-    expect(off).toEqual(on);
+describe('footer totals do not depend on the toggle', () => {
+  it('section footer is identical on and off, and equals the allowed row alone', () => {
+    const rows = [A, B, C];
+    const on = sectionFooterTotals(rows, 'parts', true, false);
+    expect(sectionFooterTotals(rows, 'parts', false, false)).toEqual(on);
+    expect(on).toEqual(billedTotals([A], false));
+  });
+  it('grand TOTAL line reads the allowedRows prop, not the toggle', () => {
+    const h = (allowedRows: AssessmentRow[]) => renderToStaticMarkup(
+      <BillCheckGrid
+        allRows={[A, B, C]} allowedRows={allowedRows} summary={summary}
+        serials={new Map([['a', 1]])} updateAssessmentRow={vi.fn()} deleteAssessmentRow={vi.fn()}
+        deleteAssessmentRows={vi.fn()} claimId="c1" fmt={n => String(n)} ageMonths={12} claim={claim}
+      />,
+    );
+    const total = (html: string) => html.slice(html.indexOf('>TOTAL<'));
+    expect(total(h([A]))).not.toEqual(total(h([A, { ...A, id: 'z', assessed: 5000 }])));
   });
 });
