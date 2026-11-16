@@ -50,6 +50,15 @@ describe('ReconciliationWizardDialog', () => {
     expect(html).not.toContain('Next Stage');
   });
 
+  it('uses a big dialog box and drops the subtitle', () => {
+    const html = renderToStaticMarkup(
+      <ReconciliationWizardDialog isOpen={true} onClose={vi.fn()} claim={mockClaim} stage={1} />
+    );
+    expect(html).toContain('max-w-[1600px]');
+    expect(html).toContain('h-[94vh]');
+    expect(html).not.toContain('4-Stage surveyor-controlled matching');
+  });
+
   it('complies with Google Chrome Modern Web Guidance for modal dialogs', () => {
     const html = renderToStaticMarkup(
       <ReconciliationWizardDialog isOpen={true} onClose={vi.fn()} claim={mockClaim} stage={1} />

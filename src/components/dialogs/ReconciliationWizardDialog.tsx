@@ -106,7 +106,7 @@ export function ReconciliationWizardDialog({
       }}
       className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-xs p-2 sm:p-4 lg:p-6 animate-in fade-in duration-200"
     >
-      <div className="w-[98vw] max-w-6xl h-[90vh] bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+      <div className="w-[98vw] max-w-[1600px] h-[94vh] bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden">
         {/* Top Header Bar */}
         <div className="px-5 py-3.5 bg-white dark:bg-slate-900 border-b border-border flex flex-wrap items-center justify-between gap-3 shrink-0">
           {/* Left: Document Info */}
@@ -128,9 +128,6 @@ export function ReconciliationWizardDialog({
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                4-Stage surveyor-controlled matching against assessment rows.
-              </p>
             </div>
           </div>
 

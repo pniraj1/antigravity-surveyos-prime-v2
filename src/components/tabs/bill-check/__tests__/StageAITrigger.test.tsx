@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { StageAITrigger } from '../StageAITrigger';
@@ -70,14 +70,8 @@ describe('StageAITrigger', () => {
       <StageAITrigger rows={rows} extraBillItems={extras} />
     );
 
-    expect(html).toContain('Stage 3 · Surveyor-Controlled');
-    expect(html).toContain('Targeted AI Semantic Matching');
-    expect(html).toContain('bg-amber-50/70');
-    expect(html).toContain('border-amber-300');
-    expect(html).toContain('bg-amber-100');
-    expect(html).toContain('text-primary');
     expect(html).toContain('Remaining Items');
-    expect(html).toContain('Bill Lines');
+    expect(html).not.toContain('Bill Lines');
     expect(html).toContain('Ask AI to Match Remaining Items');
     expect(html).toContain('Proceed to Stage 4 (Disallowed &amp; Tally)');
   });
@@ -131,5 +125,51 @@ describe('StageAITrigger', () => {
     expect(extra?.id).toBe('e1');
     onAccept(extra!.id, proposal.rowId);
     expect(onAccept).toHaveBeenCalledWith('e1', 'r1');
+  });
+
+  describe('two lists side by side', () => {
+    afterEach(() => {
+      Object.assign(useClaimStore.getInitialState(), { currentClaim: null });
+    });
+    const rows = [makeRow('r1', 'PN-77', 'ALTERNATOR BELT', 850)];
+    const extras = [makeExtra('e1', 'XY-9', 'DRIVE BELT V-RIBBED', 900)];
+
+    it('lists assessment on the left and workshop bill lines on the right', () => {
+      const html = renderToStaticMarkup(<StageAITrigger rows={rows} extraBillItems={extras} />);
+      expect(html).toContain('Assessment');
+      expect(html).toContain('Workshop bill lines');
+      expect(html).toContain('ALTERNATOR BELT');
+      expect(html).toContain('₹850');
+      expect(html).toContain('#11');
+      expect(html).toContain('DRIVE BELT V-RIBBED');
+      expect(html).toContain('₹900');
+      expect(html.indexOf('ALTERNATOR BELT')).toBeLessThan(html.indexOf('DRIVE BELT V-RIBBED'));
+    });
+
+    it('calls the right side Estimate on from-bill claims', () => {
+      Object.assign(useClaimStore.getInitialState(), {
+        currentClaim: { id: 'c', billCheck: { baseDocument: 'final-bill' } } as unknown as ClaimData,
+      });
+      const proposals: AIProposal[] = [{ rowId: 'r1', lineId: 'e1', confidence: 90, reason: 'same' }];
+      const html = renderToStaticMarkup(
+        <StageAITrigger rows={rows} extraBillItems={extras} proposals={proposals} />
+      );
+      expect(html).toContain('Estimate lines');
+      expect(html).toContain('Estimate line');
+      expect(html).toContain('Estimated:');
+      expect(html).not.toContain('Workshop bill');
+      expect(html).not.toContain('Estimate Item');
+      expect(html).not.toContain('Bill Lines');
+    });
+
+    it('proposal card uses Assessment / Workshop bill line / Billed labels', () => {
+      const proposals: AIProposal[] = [{ rowId: 'r1', lineId: 'e1', confidence: 90, reason: 'same' }];
+      const html = renderToStaticMarkup(
+        <StageAITrigger rows={rows} extraBillItems={extras} proposals={proposals} />
+      );
+      expect(html).toContain('Workshop bill line');
+      expect(html).toContain('Billed:');
+      expect(html).not.toContain('Estimate Item');
+    });
   });
 });

@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import {
-  Bot,
   Sparkles,
   CheckCircle2,
   X,
@@ -13,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useClaimStore } from '@/stores/claim-store';
 import { isTallyCandidate } from '@/lib/tally/candidate';
-import { isFromBill } from '@/lib/reports/bill-check-mode';
+import { isFromBill, uploadLabels } from '@/lib/reports/bill-check-mode';
 import type { AssessmentRow, ExtraBillItem } from '@/types/assessment';
 import {
   buildStage3AIPrompt,
@@ -57,6 +56,7 @@ export function StageAITrigger({
 
   // Filter remaining unmatched rows
   const fromBill = isFromBill(currentClaim);
+  const labels = uploadLabels(currentClaim);
   const remainingRows = rows.filter((r) => isTallyCandidate(r, fromBill));
   const remainingLines = extraItems;
 
@@ -157,89 +157,91 @@ export function StageAITrigger({
       aria-label="Stage 3: Surveyor-Triggered AI Matching"
       className={`flex flex-col gap-6 bg-card border border-border rounded-xl shadow-sm p-5 ${className}`}
     >
-      {/* Hero Card */}
-      <div className="bg-amber-50/70 dark:bg-amber-950/25 border border-amber-300 dark:border-amber-800/60 rounded-xl p-6 shadow-xs">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-primary flex items-center justify-center shrink-0 shadow-xs border border-amber-300">
-              <Bot className="w-6 h-6 text-primary" aria-hidden="true" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wider text-amber-800 dark:text-amber-400">
-                  Stage 3 · Surveyor-Controlled
-                </span>
-                <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-900 dark:bg-amber-900/60 dark:text-amber-200 border border-amber-300">
-                  Automotive Reasoning
-                </span>
-              </div>
-              <h2 className="text-lg font-bold text-foreground mt-1">
-                Targeted AI Semantic Matching
-              </h2>
-              <p className="text-sm text-muted-foreground mt-1 max-w-xl">
-                Compare remaining unmatched assessment items against workshop bill lines. Uses AI to catch
-                regional workshop terminology, assembly naming quirks, and alternate abbreviations without altering your figures.
-              </p>
-            </div>
-          </div>
-
-          {/* Counts and Trigger Button */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 shrink-0">
-            <div className="flex items-center gap-3 bg-white/90 dark:bg-slate-800/80 border border-amber-200/80 dark:border-slate-700/80 rounded-lg px-4 py-2.5 shadow-xs">
-              <div className="text-center">
-                <div className="text-base font-bold text-foreground" data-testid="remaining-rows-count">
-                  {remainingRows.length}
-                </div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                  Remaining Items
-                </div>
-              </div>
-              <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
-              <div className="text-center">
-                <div className="text-base font-bold text-foreground" data-testid="remaining-lines-count">
-                  {remainingLines.length}
-                </div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                  Bill Lines
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleAskAI}
-              disabled={isLoading || remainingRows.length === 0 || remainingLines.length === 0}
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-primary hover:bg-amber-600 active:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-xs transition-all focus:outline-hidden focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 cursor-pointer"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
-                  <span>Matching Remaining Items...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4" aria-hidden="true" />
-                  <span>🤖 Ask AI to Match Remaining Items</span>
-                </>
-              )}
-            </button>
-          </div>
+      {/* Compact header: title, one-line hint, Ask AI */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-sm font-bold text-foreground">Stage 3 · Ask AI to pair what is left</h2>
+          <p className="text-xs text-muted-foreground">
+            AI only suggests pairs; nothing changes until you accept.
+          </p>
         </div>
+        <button
+          type="button"
+          onClick={handleAskAI}
+          disabled={isLoading || remainingRows.length === 0 || remainingLines.length === 0}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white bg-primary hover:bg-amber-600 active:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-xs transition-all focus:outline-hidden focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 cursor-pointer"
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+              <span>Matching Remaining Items...</span>
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-4 h-4" aria-hidden="true" />
+              <span>Ask AI to Match Remaining Items</span>
+            </>
+          )}
+        </button>
+      </div>
 
-        {/* Error notification if AI failed */}
-        {errorMessage && (
-          <div className="mt-4 flex items-center gap-3 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-800 dark:text-red-300">
-            <AlertCircle className="w-4 h-4 shrink-0 text-red-600 dark:text-red-400" />
-            <span className="flex-1">{errorMessage}</span>
-            <button
-              type="button"
-              onClick={handleAskAI}
-              className="text-xs font-semibold underline hover:no-underline"
-            >
-              Retry
-            </button>
-          </div>
-        )}
+      {errorMessage && (
+        <div className="flex items-center gap-3 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-800 dark:text-red-300">
+          <AlertCircle className="w-4 h-4 shrink-0 text-red-600 dark:text-red-400" />
+          <span className="flex-1">{errorMessage}</span>
+          <button type="button" onClick={handleAskAI} className="text-xs font-semibold underline hover:no-underline">
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* Two lists: assessment always on the left */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <section aria-label="Assessment rows left over">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
+            Assessment{' '}
+            <span className="font-semibold normal-case" data-testid="remaining-rows-count">
+              {remainingRows.length}
+            </span>
+          </h3>
+          <ul className="max-h-[45vh] overflow-y-auto border border-border rounded-lg divide-y divide-border">
+            {remainingRows.map((r) => (
+              <li key={r.id} className="flex items-center gap-2 px-2.5 py-1.5 text-sm">
+                <span className="flex-1 min-w-0 truncate text-foreground">{r.particulars}</span>
+                {r.partNumber && (
+                  <span className="font-mono text-[11px] text-muted-foreground shrink-0">{r.partNumber}</span>
+                )}
+                <span className="shrink-0 tabular-nums text-foreground">
+                  {formatInr(r.assessed || r.estimated || 0)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+        <section aria-label="Uploaded document lines left over">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
+            {labels.doc} lines{' '}
+            <span className="font-semibold normal-case" data-testid="remaining-lines-count">
+              {remainingLines.length}
+            </span>
+          </h3>
+          <ul className="max-h-[45vh] overflow-y-auto border border-border rounded-lg divide-y divide-border">
+            {remainingLines.map((e) => (
+              <li key={e.id} className="flex items-center gap-2 px-2.5 py-1.5 text-sm">
+                {e.srNo !== undefined && (
+                  <span className="text-[11px] text-muted-foreground shrink-0">#{e.srNo}</span>
+                )}
+                <span className="flex-1 min-w-0 truncate text-foreground">{e.description}</span>
+                {e.partNumber && (
+                  <span className="font-mono text-[11px] text-muted-foreground shrink-0">{e.partNumber}</span>
+                )}
+                <span className="shrink-0 tabular-nums text-foreground">
+                  {formatInr(e.taxableAmount || e.amount || 0)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
       </div>
 
       {/* AI Proposals Section */}
@@ -293,7 +295,7 @@ export function StageAITrigger({
                       {/* Estimate Row */}
                       <div className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-lg border border-slate-200/60 dark:border-slate-800">
                         <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                          Estimate Item
+                          Assessment
                         </div>
                         <div className="text-sm font-bold text-foreground truncate mt-0.5">
                           {row?.particulars || `Row #${prop.rowId}`}
@@ -316,7 +318,7 @@ export function StageAITrigger({
                       {/* Bill Item */}
                       <div className="flex-1 min-w-0 bg-amber-50/50 dark:bg-amber-950/20 p-2.5 rounded-lg border border-amber-200/60 dark:border-amber-900/50">
                         <div className="text-[11px] font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider">
-                          Bill Line
+                          {labels.doc} line
                         </div>
                         <div className="text-sm font-bold text-foreground truncate mt-0.5">
                           {extra?.description || `Bill #${prop.lineId}`}
@@ -327,7 +329,7 @@ export function StageAITrigger({
                               {extra.partNumber}
                             </span>
                           )}
-                          <span>Billed: {formatInr(lineCost)}</span>
+                          <span>{labels.amount}: {formatInr(lineCost)}</span>
                           <span className={priceDelta <= 0 ? 'text-emerald-600 font-medium' : 'text-amber-600 font-medium'}>
                             ({priceDelta > 0 ? `+${formatInr(priceDelta)}` : formatInr(priceDelta)})
                           </span>
