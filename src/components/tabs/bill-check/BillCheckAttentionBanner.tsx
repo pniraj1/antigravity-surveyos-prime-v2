@@ -76,7 +76,7 @@ export function BillCheckAttentionBanner({
                 The workshop billed for {rejected.length} item{rejected.length === 1 ? '' : 's'} you
                 rejected at final survey. {rejected.length === 1 ? 'It carries' : 'They carry'} no
                 liability and the report shows {rejected.length === 1 ? 'it' : 'them'} as billed
-                against rejected items.
+                against rejected items. Turn off Allowed only to see them.
               </div>
             )}
           </div>
