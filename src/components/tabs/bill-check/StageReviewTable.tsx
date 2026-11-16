@@ -50,6 +50,11 @@ export function pairsToKeep(pairs: ReviewPair[], dismissed: ReadonlySet<string>)
   return pairs.filter((p) => !p.isVerified && !dismissed.has(p.row.id));
 }
 
+/** Keep all keeps every section, so say so while a section filter hides some. */
+export function keepAllLabel(n: number, sectionFilter: string, nextLabel: string): string {
+  return `Keep all ${n > 0 ? n : ''}${sectionFilter !== 'all' ? ' (all sections)' : ''} and go to ${nextLabel}`;
+}
+
 export interface StageReviewTableProps {
   stage?: 1 | 2;
   rows?: AssessmentRow[];
@@ -507,7 +512,7 @@ export function StageReviewTable({
               onClick={handleConfirmStage}
               className="min-h-[40px] px-4 rounded-lg bg-primary hover:bg-amber-600 text-white text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
             >
-              Keep all {derivedPairs.length - verifiedCount > 0 ? derivedPairs.length - verifiedCount : ''} and go to {nextLabel}
+              {keepAllLabel(pairsToKeep(derivedPairs, dismissed).length, sectionFilter, nextLabel)}
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>

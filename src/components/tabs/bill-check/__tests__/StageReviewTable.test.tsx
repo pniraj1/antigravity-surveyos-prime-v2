@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { StageReviewTable, keepUpdates, pairsToKeep, type ReviewPair } from '../StageReviewTable';
+import { StageReviewTable, keepUpdates, pairsToKeep, keepAllLabel, type ReviewPair } from '../StageReviewTable';
 import { useClaimStore } from '@/stores/claim-store';
 import type { AssessmentRow, ExtraBillItem, ClaimData } from '@/types';
 
@@ -393,5 +393,13 @@ describe('Not billed on from-bill (F5)', () => {
   });
   it('normal claim still shows Not billed', () => {
     expect(render()).toContain('Not billed');
+  });
+});
+
+describe('keepAllLabel (M2)', () => {
+  it('says all sections only while a section filter is on', () => {
+    expect(keepAllLabel(3, 'labour', 'Stage 2')).toBe('Keep all 3 (all sections) and go to Stage 2');
+    expect(keepAllLabel(3, 'all', 'Stage 2')).toBe('Keep all 3 and go to Stage 2');
+    expect(keepAllLabel(0, 'all', 'Stage 3')).toBe('Keep all  and go to Stage 3');
   });
 });
