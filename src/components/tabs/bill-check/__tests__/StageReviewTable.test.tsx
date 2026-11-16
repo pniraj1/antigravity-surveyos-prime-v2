@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { StageReviewTable, keepUpdates, type ReviewPair } from '../StageReviewTable';
+import { StageReviewTable, keepUpdates, pairsToKeep, type ReviewPair } from '../StageReviewTable';
 import { useClaimStore } from '@/stores/claim-store';
 import type { AssessmentRow, ExtraBillItem, ClaimData } from '@/types';
 
@@ -361,3 +361,22 @@ describe('StageReviewTable wording follows the uploaded document', () => {
     expect(html).toContain('Bill is cheaper than assessed');
   });
 });
+
+describe('pairsToKeep (F4)', () => {
+  const pair = (id: string, isVerified = false) => ({
+    row: makeRow(id, 'P', 'X'), billItem: { srNo: 1, description: 'X', taxableAmount: 1 },
+    stage: 1, matchBadge: { text: 'x', type: 'exact' }, priceDelta: 0, isVerified,
+  }) as ReviewPair;
+  it('skips dismissed candidates and already-kept pairs', () => {
+    const kept = pairsToKeep([pair('a'), pair('b'), pair('c', true)], new Set(['b']));
+    expect(kept.map((p) => p.row.id)).toEqual(['a']);
+  });
+  it('with no dismissals a candidate is still rendered', () => {
+    const html = renderToStaticMarkup(
+      <StageReviewTable stage={1} rows={[makeRow('r1', 'PN9', 'DOOR', 1000)]} extraBillItems={[makeExtra('e1', 'PN9', 'DOOR', 900)]} />
+    );
+    expect(html).toContain('DOOR');
+    expect(html).toContain('Keep all 1 and go to Stage 2');
+  });
+});
+

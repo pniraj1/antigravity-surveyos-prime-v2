@@ -45,6 +45,11 @@ export function keepUpdates(pair: ReviewPair, fromBill: boolean): Partial<Assess
   };
 }
 
+/** Pairs "Keep all" keeps: not yet kept, and not unlinked by the surveyor on this screen. */
+export function pairsToKeep(pairs: ReviewPair[], dismissed: ReadonlySet<string>): ReviewPair[] {
+  return pairs.filter((p) => !p.isVerified && !dismissed.has(p.row.id));
+}
+
 export interface StageReviewTableProps {
   stage?: 1 | 2;
   rows?: AssessmentRow[];
@@ -98,11 +103,13 @@ export function StageReviewTable({
   const unlinkBillMatch = useClaimStore((s) => s.unlinkBillMatch);
   const linkExtraBillItem = useClaimStore((s) => s.linkExtraBillItem);
   const [sectionFilter, setSectionFilter] = useState<'all' | 'parts' | 'labour' | 'paint'>('all');
+  // Suggested pairs (no refMatch) the surveyor unlinked: nothing in the store to clear, so hide them here.
+  const [dismissed, setDismissed] = useState<ReadonlySet<string>>(new Set());
 
   const stage = propStage ?? (storeStage === 2 ? 2 : 1);
   const nextStageNum = stage === 1 ? 2 : 3;
 
-  const derivedPairs = useMemo<ReviewPair[]>(() => {
+  const allPairs = useMemo<ReviewPair[]>(() => {
     if (propPairs) return propPairs;
 
     const rows = propRows ?? currentClaim?.assessmentRows ?? [];
@@ -249,6 +256,7 @@ export function StageReviewTable({
 
     return pairsList;
   }, [propPairs, propRows, propExtraBillItems, currentClaim, stage]);
+  const derivedPairs = dismissed.size ? allPairs.filter((p) => !dismissed.has(p.row.id)) : allPairs;
 
   const verifiedCount = derivedPairs.filter((p) => p.isVerified).length;
 
@@ -268,12 +276,13 @@ export function StageReviewTable({
     }
   };
 
-  const handleUnlink = (rowId: string) => {
+  const handleUnlink = (pair: ReviewPair) => {
     if (onUnlink) {
-      onUnlink(rowId);
+      onUnlink(pair.row.id);
       return;
     }
-    unlinkBillMatch(rowId);
+    if (pair.row.refMatch) unlinkBillMatch(pair.row.id);
+    else setDismissed((prev) => new Set([...prev, pair.row.id]));
   };
 
   const handleNotBilled = (rowId: string) => {
@@ -298,11 +307,7 @@ export function StageReviewTable({
       return;
     }
 
-    for (const pair of derivedPairs) {
-      if (!pair.isVerified) {
-        handleKeep(pair);
-      }
-    }
+    for (const pair of pairsToKeep(derivedPairs, dismissed)) handleKeep(pair);
     setStoreTallyStage(nextStageNum as 2 | 3);
   };
 
@@ -374,7 +379,7 @@ export function StageReviewTable({
           )}
           <button
             type="button"
-            onClick={() => handleUnlink(pair.row.id)}
+            onClick={() => handleUnlink(pair)}
             aria-label={`Unlink match for ${pair.row.particulars}`}
             className="text-[11px] font-medium text-muted-foreground hover:text-rose-700 px-1.5 py-1 rounded cursor-pointer"
           >
