@@ -1,5 +1,6 @@
 'use client';
 
+import { DecimalInput } from '@/components/claim/DecimalInput';
 import React from 'react';
 import {
   CheckCircle2,
@@ -176,8 +177,7 @@ export function BillCheckSummaryPanel({
                 <Label className="text-[10px] text-muted-foreground font-medium mb-1 block">
                   Bill Total (₹)
                 </Label>
-                <Input
-                  type="number"
+                <DecimalInput as={Input}
                   value={bc.billTotal || ''}
                   onChange={(e) => handleFieldChange({ billTotal: parseFloat(e.target.value) || 0 })}
                   placeholder="0.00"

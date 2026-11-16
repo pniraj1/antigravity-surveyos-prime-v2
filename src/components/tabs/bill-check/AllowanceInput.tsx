@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { evaluateFormula, isFormulaCandidate } from '@/lib/utils/formula-eval';
 
 interface AllowanceInputProps {
   /** The committed figure. Re-synced whenever it changes from outside. */
@@ -38,7 +39,7 @@ export function AllowanceInput({ value, disabled, highlighted, error, title, onC
     setDraft(null);
     // An emptied cell is not a decision to allow nothing; leave the figure be.
     if (trimmed === '') return;
-    const next = Number(trimmed);
+    const next = isFormulaCandidate(trimmed) ? (evaluateFormula(trimmed) ?? NaN) : Number(trimmed.replace(/[,₹\s]/g, ''));
     if (!Number.isFinite(next) || next === value) return;
     onCommit(next);
   };
@@ -46,7 +47,7 @@ export function AllowanceInput({ value, disabled, highlighted, error, title, onC
   return (
     <input
       {...tags}
-      type="number"
+      type="text" inputMode="decimal"
       value={draft ?? String(value ?? '')}
       onChange={e => setDraft(e.target.value)}
       onBlur={commit}

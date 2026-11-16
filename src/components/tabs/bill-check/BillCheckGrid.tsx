@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo, type ClipboardEvent, type KeyboardEvent } from 'react';
-import { AlertCircle, Trash2, Settings2, Eye, EyeOff, FileSearch, PlusCircle, PackageX } from 'lucide-react';
+import { DecimalInput } from '@/components/claim/DecimalInput';
+import { useState, useEffect, useMemo, type ClipboardEvent, type KeyboardEvent } from 'react';
+import { AlertCircle, Trash2, FileSearch, PlusCircle, PackageX } from 'lucide-react';
+import { ColumnPicker } from '@/components/claim/ColumnPicker';
 import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
 import { useClaimStore } from '@/stores/claim-store';
 import type { AssessmentRow, AssessmentSummary, ClaimData } from '@/types';
@@ -22,7 +24,6 @@ import { GRID_COLUMNS } from '@/components/claim/grid-columns';
 import { AllowanceScopeDialog } from '@/components/dialogs/AllowanceScopeDialog';
 import { AllowanceInput } from './AllowanceInput';
 import { FormulaNumericInput } from '@/components/claim/FormulaNumericInput';
-import { Input } from '@/components/ui/input';
 import { billCheckFlags, type BillFlag } from '@/lib/reports/bill-check-flags';
 import { isFromBill } from '@/lib/reports/bill-check-mode';
 
@@ -87,11 +88,9 @@ export function BillCheckGrid({
   });
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [visible, setVisible] = useState<Record<OptionalColumn, boolean>>(DEFAULT_VISIBLE);
-  const [showSettings, setShowSettings] = useState(false);
   const [pendingAllowance, setPendingAllowance] = useState<{ id: string; assessed: number; proposed: number } | null>(null);
   const [openFlag, setOpenFlag] = useState<string | null>(null);
   const [filterUncertain, setFilterUncertain] = useState(false);
-  const settingsRef = useRef<HTMLDivElement>(null);
   const addAssessmentRowToSection = useClaimStore(s => s.addAssessmentRowToSection);
   const linkExtraBillItem = useClaimStore(s => s.linkExtraBillItem);
   const unlinkBillMatch = useClaimStore(s => s.unlinkBillMatch);
@@ -133,19 +132,36 @@ export function BillCheckGrid({
   const FILL_COLS: readonly string[] = ['gst', 'disposalPercent', 'billAllowed', 'depOverride', 'billedTaxable', 'billRemarks'];
   const ARROWS: readonly string[] = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
 
-  /** Shift+arrows: move between editable boxes, as in the Assessment tab. */
+  /**
+   * Shift+arrows move between editable boxes, as in the Assessment tab.
+   * In a text box plain ↑/↓ and Enter move a row too, like Excel; a dropdown
+   * keeps plain arrows for choosing. Ctrl+D copies the box above into this one.
+   */
   const handleGridKeys = (e: KeyboardEvent<HTMLElement>) => {
     const t = e.target as HTMLElement;
-    if (!e.shiftKey || !ARROWS.includes(e.key) || !t.dataset?.bcRow) return;
-    e.preventDefault(); // never let Shift+arrow change a select or step a number box, even at the edges
+    if (!t.dataset?.bcRow) return;
     const els = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('[data-bc-row][data-bc-col]'))
       .filter(el => !(el as HTMLInputElement).disabled);
     const cells = els.map(el => ({ row: el.dataset.bcRow!, col: el.dataset.bcCol! }));
-    const to = moveTarget(cells, { row: t.dataset.bcRow, col: t.dataset.bcCol! }, e.key as MoveKey);
+    const here = { row: t.dataset.bcRow, col: t.dataset.bcCol! };
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
+      e.preventDefault();
+      const above = moveTarget(cells, here, 'ArrowUp');
+      if (above !== null) fillColumn(t, [(els[above] as HTMLInputElement).value ?? '']);
+      return;
+    }
+    const isTextBox = t instanceof HTMLInputElement && t.type === 'text';
+    const plain = !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && isTextBox;
+    const key = e.key === 'Enter' && plain ? 'ArrowDown'
+      : (e.shiftKey && ARROWS.includes(e.key)) || (plain && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) ? e.key
+      : null;
+    if (!key) return;
+    e.preventDefault(); // never let Shift+arrow change a select, even at the edges
+    const to = moveTarget(cells, here, key as MoveKey);
     if (to === null) return;
     const next = els[to];
     next.focus();
-    if (next instanceof HTMLInputElement && (next.type === 'text' || next.type === 'number')) next.select();
+    if (next instanceof HTMLInputElement && next.type === 'text') next.select();
   };
 
   /** A column pasted from Excel into any editable column but Ref No (that has its own paste). */
@@ -156,6 +172,13 @@ export function BillCheckGrid({
     const values = columnValues(e.clipboardData.getData('text'));
     if (!values) return;
     e.preventDefault();
+    fillColumn(t, values);
+  };
+
+  /** Writes values down the column from box `t`, through the same lock rules as a paste. */
+  const fillColumn = (t: HTMLElement, values: string[]) => {
+    const col = t.dataset.bcCol;
+    if (!col || !FILL_COLS.includes(col)) return;
     t.blur(); // FormulaNumericInput only syncs from the store while not focused
     const plan = planColumnFill(col as FillColumn, values, screenRows().onScreen, t.dataset.bcRow!, {
       fromBill,
@@ -248,14 +271,6 @@ export function BillCheckGrid({
   };
 
   useEffect(() => { setVisible(loadVisibility()); }, []);
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) setShowSettings(false);
-    }
-    if (showSettings) document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showSettings]);
-
   const toggleColumn = (key: OptionalColumn) => {
     const next = { ...visible, [key]: !visible[key] };
     setVisible(next); saveVisibility(next);
@@ -322,8 +337,8 @@ export function BillCheckGrid({
     const tick = sectionTickState(sectionIds, selected);
     return (
       <div
-        className="px-6 py-3 grid gap-2 text-[9px] font-medium uppercase tracking-[0.15em] text-muted-foreground border-b border-border"
-        style={{ gridTemplateColumns: gridCols, background: 'var(--color-neutral-50)', position: 'sticky', top: 0, zIndex: 10 }}
+        className="px-2 py-2 grid gap-2 items-center text-xs font-medium uppercase text-muted-foreground bg-muted shadow-sm border-b border-border"
+        style={{ gridTemplateColumns: gridCols, position: 'sticky', top: 0, zIndex: 10 }}
       >
         <span className="flex items-center justify-center">
           <input
@@ -336,8 +351,8 @@ export function BillCheckGrid({
           />
         </span>
         <span></span>
-        <span>Sr.</span>
-        <span className="relative flex items-center justify-between group pr-2 select-none">
+        <span className="sticky left-0 z-[1] bg-muted -mr-2 pr-2">Sr.</span>
+        <span className="sticky left-[58px] z-[1] bg-muted flex items-center justify-between group pr-2 select-none">
           <span>Particulars</span>
           <span className="text-[8px] text-muted-foreground/40 font-mono tracking-normal opacity-0 group-hover:opacity-100 transition-opacity">
             {particularsWidth}px
@@ -402,7 +417,7 @@ export function BillCheckGrid({
     const money = onDark ? { color: 'var(--color-neutral-50)' } : undefined;
     return (
       <div
-        className="px-6 py-3 grid gap-2"
+        className="px-2 py-2 grid gap-2"
         style={{
           gridTemplateColumns: gridCols,
           background: onDark ? 'var(--color-neutral-900)' : 'var(--color-neutral-100)',
@@ -452,7 +467,7 @@ export function BillCheckGrid({
     <>
     <div className="rounded-2xl overflow-hidden bg-card border border-border" onKeyDown={handleGridKeys} onPaste={handleColumnPaste}>
       {/* Grid header / toolbar */}
-      <div className="px-6 py-4 flex items-start justify-between gap-4" style={{ borderBottom: '1px solid var(--color-neutral-100)', background: 'var(--color-neutral-50)' }}>
+      <div className="px-4 py-3 flex items-start justify-between gap-4" style={{ borderBottom: '1px solid var(--color-neutral-100)', background: 'var(--color-neutral-50)' }}>
         <div>
           <div className="text-sm font-medium text-foreground">
             Step 2 — Verify Each Item ({allRows.length} items · {allowedRows.length} allowed)
@@ -506,65 +521,19 @@ export function BillCheckGrid({
               <span>{flagPos + 1} / {flaggedIds.length}</span>
             </div>
           )}
-          {/* Column visibility dropdown */}
-          <div className="relative" ref={settingsRef}>
-            <button
-              onClick={() => setShowSettings(!showSettings)}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all border border-border"
-              style={{
-                background: showSettings ? 'var(--color-neutral-900)' : 'var(--color-neutral-50)',
-                color: showSettings ? 'white' : 'var(--color-neutral-600)',
-              }}
-              title="Toggle column visibility"
-            >
-              <Settings2 size={14} />
-              Columns
-              <span
-                className={`ml-0.5 text-[10px] px-1.5 rounded-full font-medium ${showSettings ? 'bg-white/20' : 'bg-[var(--color-neutral-100)]'}`}
-              >
-                {visibleCount}/{OPTIONAL_COLUMNS.length}
-              </span>
-            </button>
-            {showSettings && (
-              <div className="absolute right-0 top-full mt-1.5 w-72 rounded-xl shadow-xl z-50 overflow-hidden bg-card border border-border">
-                <div className="px-3 py-2.5 border-b border-border" style={{ background: 'var(--color-neutral-50)' }}>
-                  <p className="text-xs font-medium text-foreground">Column Visibility</p>
-                  <p className="text-[10px] mt-0.5 text-muted-foreground">Toggle columns to keep the grid clean</p>
-                </div>
-                <div className="p-2 max-h-[300px] overflow-y-auto">
-                  {OPTIONAL_COLUMNS.map((col) => (
-                    <button
-                      key={col.key}
-                      onClick={() => toggleColumn(col.key)}
-                      className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors hover:bg-[var(--color-neutral-100)]"
-                      style={{ background: visible[col.key] ? 'var(--color-neutral-50)' : 'transparent' }}
-                    >
-                      <div
-                        className="flex-shrink-0 w-7 h-4 rounded-full relative transition-colors"
-                        style={{ background: visible[col.key] ? 'var(--color-neutral-900)' : 'var(--color-neutral-200)' }}
-                      >
-                        <div className="absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-all" style={{ left: visible[col.key] ? '14px' : '2px' }} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <span className="text-xs font-medium text-foreground">{col.label}</span>
-                        <span className="text-[10px] ml-1.5 text-muted-foreground">{col.description}</span>
-                      </div>
-                      {visible[col.key] ? <Eye size={12} className="text-foreground" /> : <EyeOff size={12} className="text-muted-foreground" />}
-                    </button>
-                  ))}
-                </div>
-                <div className="px-3 py-2 flex gap-2 border-t border-border" style={{ background: 'var(--color-neutral-50)' }}>
-                  <button onClick={showAllCols} className="flex-1 text-[10px] font-medium rounded-md py-1.5 transition-colors hover:bg-[var(--color-neutral-100)] text-foreground">Show All</button>
-                  <button onClick={resetDefaults} className="flex-1 text-[10px] font-medium rounded-md py-1.5 transition-colors hover:bg-[var(--color-neutral-100)] text-foreground">Reset</button>
-                </div>
-              </div>
-            )}
-          </div>
+          <ColumnPicker
+            columns={OPTIONAL_COLUMNS}
+            visible={visible}
+            count={visibleCount}
+            onToggle={toggleColumn}
+            onShowAll={showAllCols}
+            onReset={resetDefaults}
+          />
         </div>
       </div>
 
       <div style={{ overflow: 'auto', maxHeight: 'calc(100dvh - 240px)', scrollPaddingTop: 44 }}>
-        <div style={{ minWidth: `${800 + visibleCount * 90}px` }}>
+        <div style={{ width: 'max-content', minWidth: '100%' }}>{/* every row as wide as its columns, so frozen columns hold all the way right */}
           {/*
             Grouped Parts / Labour / Painting, mirroring the Assessment tab and
             the printed Bill Check, which the surveyor reads side by side.
@@ -600,7 +569,7 @@ export function BillCheckGrid({
           return (
           <div key={section}>
           {/* Section title — full width, deliberately not a grid row */}
-          <div className="px-6 pt-5 pb-2">
+          <div className="px-2 pt-4 pb-2">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               {title} <span className="ml-2 opacity-60">({displayedRows.length}{filterUncertain ? ` of ${sectionRows.length}` : ''})</span>
             </h3>
@@ -616,7 +585,7 @@ export function BillCheckGrid({
               shouldStartSupplementaryBand(displayedRows, idx) && (
                 <div
                   key={`band-${section}-${idx}`}
-                  className="px-6 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide bg-gradient-to-r from-muted via-muted to-transparent"
+                  className="px-4 py-1.5 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide bg-gradient-to-r from-muted via-muted to-transparent"
                 >
                   Supplementary Estimate
                 </div>
@@ -624,7 +593,7 @@ export function BillCheckGrid({
               <div
                 key={row.id}
                 id={`bc-row-${row.id}`}
-                className="px-6 py-3 grid gap-2 items-center"
+                className="px-2 py-1.5 grid gap-2 items-center"
                 style={{
                   gridTemplateColumns: gridCols,
                   borderBottom: '1px solid var(--color-neutral-100)',
@@ -650,10 +619,10 @@ export function BillCheckGrid({
                   )}
                 </div>
                 {/* The number the insurer reads in both PDFs, not the estimate's srNo. */}
-                <div className="text-sm font-medium" style={{ color: 'var(--color-neutral-600)' }}>{serials.get(row.id) ?? idx + 1}</div>
+                <div className="text-sm font-medium sticky left-0 z-[1] bg-card -mr-2 pr-2 self-stretch flex items-center" style={{ color: 'var(--color-neutral-600)', ...(isDisallowed ? { background: 'var(--color-neutral-100)' } : {}) }}>{serials.get(row.id) ?? idx + 1}</div>
                 <div
-                  className="group text-sm font-medium flex items-center gap-1.5 cursor-pointer select-none text-foreground"
-                  style={{ textDecoration: isDisallowed ? 'line-through' : 'none' }}
+                  className="group text-sm font-medium flex items-center gap-1.5 cursor-pointer select-none text-foreground sticky left-[58px] z-[1] bg-card self-stretch"
+                  style={{ textDecoration: isDisallowed ? 'line-through' : 'none', ...(isDisallowed ? { background: 'var(--color-neutral-100)' } : {}) }}
                   onClick={() => {
                     if (!claimId) return;
                     useEvidenceStore.getState().openField(claimId, {
@@ -712,12 +681,11 @@ export function BillCheckGrid({
                       title="Disposal / Used Part (No GST)"
                     />
                     {row.isDisposal && (
-                      <Input
+                      <FormulaNumericInput
                         data-bc-row={row.id}
                         data-bc-col="disposalPercent"
-                        type="number"
                         value={row.disposalPercent ?? 50}
-                        onChange={(e) => updateAssessmentRow(row.id, { disposalPercent: parseFloat(e.target.value) || 0 })}
+                        onChange={(val) => updateAssessmentRow(row.id, { disposalPercent: Math.min(100, Math.max(0, val)) })}
                         className="h-6 w-10 text-[11px] text-center px-0 font-medium bg-background"
                         style={{ borderColor: 'var(--color-status-warning)', color: 'var(--color-status-warning)' }}
                         min={0}
@@ -741,10 +709,9 @@ export function BillCheckGrid({
                 />
                 <div className="flex items-center justify-center">
                   {row.allowed ? (
-                    <input
+                    <DecimalInput
                       data-bc-row={row.id}
                       data-bc-col="depOverride"
-                      type="number"
                       min={0}
                       max={100}
                       step={1}
@@ -755,6 +722,7 @@ export function BillCheckGrid({
                         if (raw === '') {
                           updateAssessmentRow(row.id, { depOverride: undefined });
                         } else {
+                          if (!Number.isFinite(Number(raw))) return; // letters typed: ignore
                           const v = Math.min(100, Math.max(0, Number(raw)));
                           updateAssessmentRow(row.id, { depOverride: v === autoRate ? undefined : v });
                         }
@@ -782,10 +750,9 @@ export function BillCheckGrid({
                   </div>
                 )}
                 {visible.billedTaxable && (
-                  <input
+                  <DecimalInput
                     data-bc-row={row.id}
                     data-bc-col="billedTaxable"
-                    type="number"
                     value={row.billedTaxable ?? ''}
                     onChange={e => {
                       const raw = e.target.value.trim();
@@ -944,7 +911,7 @@ export function BillCheckGrid({
             heading that promises an undepreciated one.
           */}
           <div
-            className="px-6 py-1.5 text-right text-[11px] text-muted-foreground border-b border-border"
+            className="px-2 py-1.5 text-right text-[11px] text-muted-foreground border-b border-border"
             style={{ background: 'var(--color-neutral-50)' }}
           >
             {title} assessed —{' '}
@@ -956,7 +923,7 @@ export function BillCheckGrid({
           {totalsRow(`${title} billed`, billed, false)}
           <button
             onClick={() => addAssessmentRowToSection(section)}
-            className="ml-6 mt-2 mb-3 inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-secondary hover:bg-secondary/80 text-secondary-foreground text-[11px] font-semibold transition-colors"
+            className="ml-2 mt-2 mb-3 inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-secondary hover:bg-secondary/80 text-secondary-foreground text-[11px] font-semibold transition-colors"
           >
             <PlusCircle size={12} /> Add row
           </button>

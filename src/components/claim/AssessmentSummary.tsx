@@ -1,5 +1,6 @@
 'use client';
 
+import { DecimalInput } from '@/components/claim/DecimalInput';
 import { useClaimStore } from '@/stores/claim-store';
 import { calculateAssessmentSummary } from '@/lib/calculations/assessment';
 import { formatCurrency } from '@/lib/calculations/utils';
@@ -163,9 +164,8 @@ export function AssessmentSummary() {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="compulsory-excess" className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest">Compulsory excess</Label>
-              <Input
+              <DecimalInput as={Input}
                 id="compulsory-excess"
-                type="number"
                 value={fb.compulsoryExcess || ''}
                 onChange={(e) => {
                   const val = parseFloat(e.target.value) || 0;
@@ -177,9 +177,8 @@ export function AssessmentSummary() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="voluntary-excess" className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest">Voluntary excess</Label>
-              <Input
+              <DecimalInput as={Input}
                 id="voluntary-excess"
-                type="number"
                 value={fb.voluntaryExcess || ''}
                 onChange={(e) => updateFeeBill({ voluntaryExcess: parseFloat(e.target.value) || 0 })}
                 className="text-right font-medium text-[var(--color-status-danger)] bg-white border-[var(--color-neutral-200)] hover:border-[var(--color-status-danger)] focus:border-[var(--color-status-danger)] transition-all h-9"
@@ -195,9 +194,8 @@ export function AssessmentSummary() {
               </Label>
               <span className="text-[10px] text-muted-foreground">Add to assessment</span>
             </div>
-            <Input
+            <DecimalInput as={Input}
               id="towing-charges"
-              type="number"
               min={0}
               value={fb.towingCharges || ''}
               onChange={(e) => updateFeeBill({ towingCharges: parseFloat(e.target.value) || 0 })}

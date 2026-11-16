@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useClaimStore } from '@/stores/claim-store';
 import { getVehicleAgeMonths, toDepreciationType } from '@/lib/calculations/depreciation';
 import { calculateAssessmentSummary } from '@/lib/calculations/assessment';
 import { sectionSubtotals, SECTION_ORDER } from '@/lib/calculations/section-subtotals';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trash2, PlusCircle, Wrench, Settings2, Eye, EyeOff, ClipboardList } from 'lucide-react';
+import { Trash2, PlusCircle, Wrench, ClipboardList } from 'lucide-react';
+import { ColumnPicker } from './ColumnPicker';
 import { UIICSummaryDialog } from '@/components/dialogs/UIICSummaryDialog';
 import { NIAExportDialog } from '@/components/dialogs/NIAExportDialog';
 import { OICExportDialog } from '@/components/dialogs/OICExportDialog';
@@ -69,25 +70,12 @@ export function AssessmentGrid({ footer }: { footer?: React.ReactNode } = {}) {
     deleteAssessmentRows(Array.from(selection.selected));
     selection.clearSelection();
   };
-  const [showSettings, setShowSettings] = useState(false);
   const { cellSelection, setCellSelection } = selection;
-  const settingsRef = useRef<HTMLDivElement>(null);
 
   // Load from localStorage on mount
   useEffect(() => {
     setVisible(loadVisibility());
   }, []);
-
-  // Close settings panel on outside click
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
-        setShowSettings(false);
-      }
-    }
-    if (showSettings) document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showSettings]);
 
   const toggleColumn = (key: OptionalColumn) => {
     const next = { ...visible, [key]: !visible[key] };
@@ -134,8 +122,15 @@ export function AssessmentGrid({ footer }: { footer?: React.ReactNode } = {}) {
 
       const sectionRows = rows.filter(r => r.section === anchor.section);
       const inRangeSet = clampRangeToSection(rows, cellSelection.anchorRowId, cellSelection.focusRowId);
-      const targetRows = sectionRows.filter(r => inRangeSet.has(r.id));
-      if (targetRows.length < 2) return;
+      let targetRows = sectionRows.filter(r => inRangeSet.has(r.id));
+      if (targetRows.length < 2) {
+        // One cell: copy the cell above into it, as Excel does.
+        const i = sectionRows.findIndex(r => r.id === anchor.id);
+        if (i < 1) return;
+        targetRows = [sectionRows[i - 1], anchor];
+      }
+      // FormulaNumericInput only resyncs from the store while not focused.
+      (document.activeElement as HTMLElement | null)?.blur();
 
       const topRow = targetRows[0];
       const columnKey = cellSelection.columnKey as keyof AssessmentRowType;
@@ -150,9 +145,15 @@ export function AssessmentGrid({ footer }: { footer?: React.ReactNode } = {}) {
       return;
     }
 
-    if (!e.shiftKey) return;
+    // In a text box plain ↑/↓ and Enter move a row, like Excel. Dropdowns and
+    // the Particulars box keep plain arrows; Shift+arrows work everywhere.
+    const el = e.target as HTMLElement;
+    const plain = !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey
+      && el instanceof HTMLInputElement && el.type === 'text';
+    const key = plain && e.key === 'Enter' ? 'ArrowDown' : e.key;
+    if (!e.shiftKey && !(plain && (key === 'ArrowUp' || key === 'ArrowDown'))) return;
 
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key)) {
       const target = e.target as HTMLElement;
       if (target.tagName !== 'INPUT' && target.tagName !== 'SELECT') return;
 
@@ -172,23 +173,23 @@ export function AssessmentGrid({ footer }: { footer?: React.ReactNode } = {}) {
       let nextInput: HTMLElement | null = null;
       let nextRowId: string | null = null;
 
-      if (e.key === 'ArrowRight') {
+      if (key === 'ArrowRight') {
         for (let i = colIndex + 1; i < tds.length; i++) {
           const input = tds[i].querySelector('input:not([disabled]), select:not([disabled])') as HTMLElement;
           if (input) { nextInput = input; break; }
         }
-      } else if (e.key === 'ArrowLeft') {
+      } else if (key === 'ArrowLeft') {
         for (let i = colIndex - 1; i >= 0; i--) {
           const input = tds[i].querySelector('input:not([disabled]), select:not([disabled])') as HTMLElement;
           if (input) { nextInput = input; break; }
         }
-      } else if (e.key === 'ArrowDown') {
+      } else if (key === 'ArrowDown') {
         if (rowIndex < trs.length - 1) {
           const nextTr = trs[rowIndex + 1] as HTMLElement;
           nextInput = nextTr.children[colIndex]?.querySelector('input:not([disabled]), select:not([disabled])') as HTMLElement;
           nextRowId = nextTr.dataset.rowId ?? null;
         }
-      } else if (e.key === 'ArrowUp') {
+      } else if (key === 'ArrowUp') {
         if (rowIndex > 0) {
           const prevTr = trs[rowIndex - 1] as HTMLElement;
           nextInput = prevTr.children[colIndex]?.querySelector('input:not([disabled]), select:not([disabled])') as HTMLElement;
@@ -202,10 +203,13 @@ export function AssessmentGrid({ footer }: { footer?: React.ReactNode } = {}) {
           nextInput.select();
         }
         // Extend cell selection on Shift+Up/Down
-        if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && nextRowId) {
+        if ((key === 'ArrowUp' || key === 'ArrowDown') && nextRowId) {
           const columnKey = (td as HTMLElement).dataset.columnKey;
           const currentRowId = (tr as HTMLElement).dataset.rowId;
-          if (columnKey) {
+          if (columnKey && plain) {
+            // A plain move starts a fresh selection on the new cell, as Excel does.
+            setCellSelection({ columnKey, anchorRowId: nextRowId, focusRowId: nextRowId });
+          } else if (columnKey) {
             setCellSelection(prev =>
               prev && prev.columnKey === columnKey
                 ? { ...prev, focusRowId: nextRowId! }
@@ -353,6 +357,16 @@ export function AssessmentGrid({ footer }: { footer?: React.ReactNode } = {}) {
   );
   const subtotals = useMemo(() => sectionSubtotals(summary), [summary]);
 
+  /** Excel's status bar: Sum and Count of the selected figures (two or more cells). */
+  const selectionSum = useMemo(() => {
+    const col = cellSelection?.columnKey as keyof AssessmentRowType | undefined;
+    if (!cellSelection || !col || !['quantity', 'estimated', 'assessed'].includes(col)) return null;
+    const ids = clampRangeToSection(assessmentRows, cellSelection.anchorRowId, cellSelection.focusRowId);
+    if (ids.size < 2) return null;
+    const sum = assessmentRows.filter(r => ids.has(r.id)).reduce((a, r) => a + (Number(r[col]) || 0), 0);
+    return { count: ids.size, sum };
+  }, [cellSelection, assessmentRows]);
+
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -444,71 +458,14 @@ export function AssessmentGrid({ footer }: { footer?: React.ReactNode } = {}) {
             </button>
           )}
 
-          {/* ─── Settings Gear ─────────────────────────── */}
-          <div className="relative" ref={settingsRef}>
-            <button
-              onClick={() => setShowSettings(!showSettings)}
-              className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium transition-all border ${
-                showSettings 
-                  ? 'bg-primary text-primary-foreground border-primary shadow-md' 
-                  : 'bg-muted/50 hover:bg-muted text-muted-foreground border-transparent hover:border-border'
-              }`}
-              title="Toggle column visibility"
-            >
-              <Settings2 size={14} />
-              <span className="hidden sm:inline">Columns</span>
-              <span className="ml-0.5 bg-primary/20 text-primary text-[10px] px-1 rounded-full font-medium leading-tight" style={showSettings ? { background: 'rgba(255,255,255,0.2)', color: 'inherit' } : {}}>
-                {visibleCount}/{OPTIONAL_COLUMNS.length}
-              </span>
-            </button>
-
-            {/* ─── Settings Dropdown Panel ─────────────── */}
-            {showSettings && (
-              <div className="absolute right-0 top-full mt-1.5 w-72 bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
-                <div className="px-3 py-2.5 border-b border-border bg-muted/30">
-                  <p className="text-xs font-semibold text-foreground">Column Visibility</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">Toggle columns to keep the grid clean</p>
-                </div>
-                <div className="p-2 max-h-[300px] overflow-y-auto">
-                  {OPTIONAL_COLUMNS.map((col) => (
-                    <button
-                      key={col.key}
-                      onClick={() => toggleColumn(col.key)}
-                      className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors ${
-                        visible[col.key]
-                          ? 'bg-primary/8 hover:bg-primary/12'
-                          : 'hover:bg-muted/50'
-                      }`}
-                    >
-                      <div className={`flex-shrink-0 w-7 h-4 rounded-full relative transition-colors ${
-                        visible[col.key] ? 'bg-primary' : 'bg-muted-foreground/20'
-                      }`}>
-                        <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${
-                          visible[col.key] ? 'left-3.5' : 'left-0.5'
-                        }`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <span className="text-xs font-semibold text-foreground">{col.label}</span>
-                        <span className="text-[10px] text-muted-foreground ml-1.5">{col.description}</span>
-                      </div>
-                      {visible[col.key] 
-                        ? <Eye size={12} className="text-primary flex-shrink-0" /> 
-                        : <EyeOff size={12} className="text-muted-foreground/40 flex-shrink-0" />
-                      }
-                    </button>
-                  ))}
-                </div>
-                <div className="px-3 py-2 border-t border-border flex gap-2 bg-muted/20">
-                  <button onClick={showAll} className="flex-1 text-[10px] font-semibold text-primary hover:bg-primary/10 rounded-md py-1.5 transition-colors">
-                    Show All
-                  </button>
-                  <button onClick={resetDefaults} className="flex-1 text-[10px] font-semibold text-muted-foreground hover:bg-muted rounded-md py-1.5 transition-colors">
-                    Reset Defaults
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          <ColumnPicker
+            columns={OPTIONAL_COLUMNS}
+            visible={visible}
+            count={visibleCount}
+            onToggle={toggleColumn}
+            onShowAll={showAll}
+            onReset={resetDefaults}
+          />
         </div>
       </CardHeader>
 
@@ -568,6 +525,13 @@ export function AssessmentGrid({ footer }: { footer?: React.ReactNode } = {}) {
           {footer}
         </div>
       </DndContext>
+
+      {selectionSum && (
+        <div className="shrink-0 border-t border-border bg-muted/50 px-4 py-1 text-right text-[11px] text-muted-foreground">
+          Sum <span className="font-semibold text-foreground">{selectionSum.sum.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
+          {' · '}Count <span className="font-semibold text-foreground">{selectionSum.count}</span>
+        </div>
+      )}
 
       {showUiicSummary && (
         <UIICSummaryDialog

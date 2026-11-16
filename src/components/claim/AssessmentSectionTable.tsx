@@ -1,5 +1,6 @@
 'use client';
 
+import { DecimalInput } from '@/components/claim/DecimalInput';
 import React from 'react';
 import { useClaimStore } from '@/stores/claim-store';
 import { rowDepRate } from '@/lib/calculations/row-dep-rate';
@@ -174,17 +175,17 @@ export function AssessmentSectionTable({
             </label>
             <span>
               material
-              <input
-                type="number" min={0} max={100}
+              <DecimalInput
+                min={0} max={100}
                 value={currentClaim?.paintMaterialPercent ?? 25}
-                onChange={(e) => updateClaim({ paintMaterialPercent: e.target.value === '' ? undefined : Number(e.target.value) })}
+                onChange={(e) => { const v = e.target.value; if (v !== '' && !Number.isFinite(Number(v))) return; updateClaim({ paintMaterialPercent: v === '' ? undefined : Number(v) }); }}
                 className="w-12 mx-1 px-1 border border-border rounded text-right"
               />
               % @
-              <input
-                type="number" min={0} max={100}
+              <DecimalInput
+                min={0} max={100}
                 value={currentClaim?.paintMaterialDepPercent ?? 50}
-                onChange={(e) => updateClaim({ paintMaterialDepPercent: e.target.value === '' ? undefined : Number(e.target.value) })}
+                onChange={(e) => { const v = e.target.value; if (v !== '' && !Number.isFinite(Number(v))) return; updateClaim({ paintMaterialDepPercent: v === '' ? undefined : Number(v) }); }}
                 className="w-12 mx-1 px-1 border border-border rounded text-right"
               />
               % dep
@@ -215,9 +216,9 @@ export function AssessmentSectionTable({
                   className="rounded border-border h-3.5 w-3.5 cursor-pointer accent-slate-600"
                 />
               </th>
-              <th className="px-2 py-2 font-medium w-10 text-center">Sr</th>
+              <th className="px-2 py-2 font-medium w-12 min-w-12 max-w-12 text-center sticky left-0 z-20 bg-muted">Sr</th>
               <th
-                className="px-2 py-2 font-medium relative group select-none"
+                className="px-2 py-2 font-medium sticky left-12 z-20 bg-muted group select-none"
                 style={{ width: `${particularsWidth}px`, minWidth: `${particularsWidth}px` }}
               >
                 <div className="flex items-center justify-between">
@@ -358,9 +359,8 @@ export function AssessmentSectionTable({
                       />
                     </td>
                     {/* Sr No — always on, editable */}
-                    <td className={`px-1 py-1.5${selection.isCellSelected(row.id, 'srNo') ? ' ring-2 ring-blue-400 ring-inset' : ''}`} data-column-key="srNo">
-                      <Input
-                        type="number"
+                    <td className={`px-1 py-1.5 w-12 min-w-12 max-w-12 sticky left-0 z-[1] bg-card${selection.isCellSelected(row.id, 'srNo') ? ' ring-2 ring-blue-400 ring-inset' : ''}`} data-column-key="srNo">
+                      <DecimalInput as={Input}
                         value={row.srNo ?? ''}
                         onChange={(e) => {
                           const raw = e.target.value;
@@ -376,7 +376,7 @@ export function AssessmentSectionTable({
                     </td>
                     {/* Particulars — always on — click opens Evidence Viewer */}
                     <td
-                      className={`px-2 py-1.5${selection.isCellSelected(row.id, 'particulars') ? ' ring-2 ring-blue-400 ring-inset' : ''}`}
+                      className={`px-2 py-1.5 sticky left-12 z-[1] bg-card${selection.isCellSelected(row.id, 'particulars') ? ' ring-2 ring-blue-400 ring-inset' : ''}`}
                       data-column-key="particulars"
                       style={{ width: `${particularsWidth}px`, minWidth: `${particularsWidth}px`, maxWidth: `${particularsWidth}px` }}
                     >
@@ -568,8 +568,7 @@ export function AssessmentSectionTable({
                           />
                           {row.isDisposal && (
                             <div className="flex items-center gap-0.5">
-                              <Input
-                                type="number"
+                              <DecimalInput as={Input}
                                 value={row.disposalPercent ?? 50}
                                 onChange={(e) => updateAssessmentRow(row.id, { disposalPercent: parseFloat(e.target.value) || 0 })}
                                 className="h-6 w-12 text-[11px] text-center px-0 font-medium"
@@ -609,8 +608,7 @@ export function AssessmentSectionTable({
                     </td>
                     <td className={`px-1 py-1 text-center${selection.isCellSelected(row.id, 'depOverride') ? ' ring-2 ring-blue-400 ring-inset' : ''}`} data-column-key="depOverride">
                       {row.allowed ? (
-                        <input
-                          type="number"
+                        <DecimalInput
                           min={0}
                           max={100}
                           step={1}
@@ -620,6 +618,7 @@ export function AssessmentSectionTable({
                             if (raw === '') {
                               updateAssessmentRow(row.id, { depOverride: undefined });
                             } else {
+                              if (!Number.isFinite(Number(raw))) return; // letters typed: ignore
                               const v = Math.min(100, Math.max(0, Number(raw)));
                               updateAssessmentRow(row.id, { depOverride: v === autoDepRate ? undefined : v });
                             }
