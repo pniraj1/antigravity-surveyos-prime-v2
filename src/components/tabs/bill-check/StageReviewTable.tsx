@@ -290,6 +290,8 @@ export function StageReviewTable({
       onMarkNotInBill(rowId);
       return;
     }
+    // From-bill every row IS the bill: "not billed" would zero it.
+    if (fromBill) return;
     const r = currentClaim?.assessmentRows.find((row) => row.id === rowId);
     if (r?.refMatch) {
       unlinkBillMatch(rowId);
@@ -385,14 +387,16 @@ export function StageReviewTable({
           >
             Unlink
           </button>
-          <button
-            type="button"
-            onClick={() => handleNotBilled(pair.row.id)}
-            aria-label={`Mark ${pair.row.particulars} not billed`}
-            className="text-[11px] font-medium text-muted-foreground hover:text-foreground px-1.5 py-1 rounded cursor-pointer"
-          >
-            Not billed
-          </button>
+          {!fromBill && (
+            <button
+              type="button"
+              onClick={() => handleNotBilled(pair.row.id)}
+              aria-label={`Mark ${pair.row.particulars} not billed`}
+              className="text-[11px] font-medium text-muted-foreground hover:text-foreground px-1.5 py-1 rounded cursor-pointer"
+            >
+              Not billed
+            </button>
+          )}
         </td>
       </tr>
     );

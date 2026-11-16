@@ -380,3 +380,18 @@ describe('pairsToKeep (F4)', () => {
   });
 });
 
+describe('Not billed on from-bill (F5)', () => {
+  const rows = [makeRow('r1', 'PN1', 'FRONT BUMPER', 1000)];
+  const extras = [makeExtra('e1', 'PN1', 'FRONT BUMPER', 900)];
+  const render = (baseDocument?: string) => {
+    Object.assign(useClaimStore.getInitialState(), { currentClaim: { id: 'c', assessmentRows: rows, extraBillItems: extras, billCheck: { baseDocument } } as unknown as ClaimData });
+    return renderToStaticMarkup(<StageReviewTable stage={1} rows={rows} extraBillItems={extras} />);
+  };
+  afterEach(() => { Object.assign(useClaimStore.getInitialState(), { currentClaim: null }); });
+  it('from-bill hides Not billed', () => {
+    expect(render('final-bill')).not.toContain('Not billed');
+  });
+  it('normal claim still shows Not billed', () => {
+    expect(render()).toContain('Not billed');
+  });
+});
