@@ -15,4 +15,16 @@ describe('DocumentKindDialog', () => {
       expect(html).toContain(t);
     }
   });
+
+  it('marks the current answer', () => {
+    const html = renderToStaticMarkup(<DocumentKindDialog current="final-bill" onChoose={() => {}} onCancel={() => {}} />);
+    expect(html.match(/aria-pressed="true"/g)).toHaveLength(1);
+    expect(html).toMatch(/aria-pressed="true"[^>]*>[^<]*Final bill/);
+    expect(html).toContain('Current');
+  });
+  it('marks nothing when there is no current answer', () => {
+    const html = renderToStaticMarkup(<DocumentKindDialog onChoose={() => {}} onCancel={() => {}} />);
+    expect(html).not.toContain('aria-pressed="true"');
+    expect(html).not.toContain('Current');
+  });
 });

@@ -1,3 +1,6 @@
+import type { ClaimData } from '@/types';
+import { isFromBill, switchPrompt } from '@/lib/reports/bill-check-mode';
+
 type Kind = 'estimate' | 'final-bill';
 interface BaseDocClaim { billCheck?: { baseDocument?: string } }
 
@@ -11,9 +14,9 @@ export function assessmentUploadDocType(claim: BaseDocClaim | null): 'invoice' |
   return claim?.billCheck?.baseDocument === 'final-bill' ? 'invoice' : 'estimate';
 }
 
-/** True on a claim's first Assessment upload: no rows and no baseDocument chosen yet. */
-export function asksDocumentKind(claim: (BaseDocClaim & { assessmentRows?: unknown[] }) | null): boolean {
-  return !!claim && !claim.assessmentRows?.length && !claim.billCheck?.baseDocument;
+/** Every Assessment upload asks Estimate or Final bill. */
+export function asksDocumentKind(claim: object | null): boolean {
+  return !!claim;
 }
 
 /** The other answer, for Undo. */
@@ -29,4 +32,14 @@ export function docTypeForAnswer(k: Kind): 'invoice' | 'estimate' {
 /** Undo may flip the claim's mode only while the claim it was answered on is still the current one. */
 export function shouldApplyUndo(currentId: string | undefined, claimId: string): boolean {
   return !!currentId && currentId === claimId;
+}
+
+/**
+ * The Assessment answer is the claim's BASE document; setBillCheckUpload and switchPrompt take the
+ * Bill Check UPLOAD kind, which is the opposite. Null when the answer is already the claim's base.
+ */
+export function assessmentSwitch(claim: ClaimData, answer: Kind): { upload: Kind; prompt: string | null } | null {
+  if (answer === (isFromBill(claim) ? 'final-bill' : 'estimate')) return null;
+  const upload = otherKind(answer);
+  return { upload, prompt: switchPrompt(claim, upload) };
 }

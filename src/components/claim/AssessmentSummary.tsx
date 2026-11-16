@@ -10,6 +10,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { uploadLabels } from '@/lib/reports/bill-check-mode';
 import { SalvageInput } from './SalvageInput';
 
 export function AssessmentSummary() {
@@ -55,12 +56,12 @@ export function AssessmentSummary() {
       <CardContent className="p-0">
         {/* ─── Estimated vs Assessed Comparison Table ─────────────────────── */}
         <div className="p-5">
-          <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest mb-3">Estimate vs assessment comparison</div>
+          <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest mb-3">{uploadLabels(currentClaim).comparison}</div>
           <div className="border border-[var(--color-neutral-200)] rounded-lg overflow-hidden text-xs">
             {/* Header */}
             <div className="grid grid-cols-3 bg-[var(--color-neutral-100)] border-b border-[var(--color-neutral-200)]">
               <div className="p-2.5 font-medium text-muted-foreground uppercase tracking-wider text-[10px]">Particulars</div>
-              <div className="p-2.5 text-right font-medium text-muted-foreground uppercase tracking-wider text-[10px] border-l border-[var(--color-neutral-200)]">Estimated</div>
+              <div className="p-2.5 text-right font-medium text-muted-foreground uppercase tracking-wider text-[10px] border-l border-[var(--color-neutral-200)]">{uploadLabels(currentClaim).base === 'Billed' ? 'Billed' : 'Estimated'}</div>
               <div className="p-2.5 text-right font-medium text-muted-foreground uppercase tracking-wider text-[10px] border-l border-[var(--color-neutral-200)]">Assessed</div>
             </div>
 

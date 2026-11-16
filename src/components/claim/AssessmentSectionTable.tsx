@@ -22,6 +22,7 @@ import type { DeductionCategory } from '@/lib/constants/deduction-categories';
 import type { SectionSubtotal } from '@/lib/calculations/section-subtotals';
 import type { useGridSelection } from './useGridSelection';
 import { CATEGORY_TAGS, deleteRowWithUndo, normParticulars, rowTintClass, type OptionalColumn } from './assessment-grid-config';
+import { uploadLabels } from '@/lib/reports/bill-check-mode';
 import { estimateShortRows } from '@/lib/calculations/estimate-floor';
 
 /** Owner rule: an estimate below the assessed amount is shown red and holds printing. */
@@ -224,7 +225,7 @@ export function AssessmentSectionTable({
               {visible.hsnSac && <th className="px-2 py-2 font-medium w-20">HSN/SAC</th>}
               {visible.type && <th className="px-2 py-2 font-medium w-24">Type</th>}
               {visible.quantity && <th className="px-2 py-2 font-medium w-12 text-center">Qty</th>}
-              {visible.unitPrice && <th className="px-2 py-2 font-medium w-20">Estimate(taxable amount)</th>}
+              {visible.unitPrice && <th className="px-2 py-2 font-medium w-20">{uploadLabels(currentClaim).base}(taxable amount)</th>}
               {visible.gst && <th className="px-2 py-2 font-medium w-14 text-center">GST%</th>}
               {visible.disposal && (
                 <th className="px-2 py-2 font-medium w-28 text-center text-amber-600" title="Disposal: used/salvaged part — no GST">

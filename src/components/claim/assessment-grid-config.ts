@@ -48,7 +48,7 @@ export const OPTIONAL_COLUMNS: ColumnMeta[] = [
   { key: 'hsnSac',     label: 'HSN/SAC',             description: 'Tax classification code' },
   { key: 'type',       label: 'Type',                description: 'Metal / Plastic / Glass / Labour' },
   { key: 'quantity',   label: 'Qty',                 description: 'Quantity from estimate' },
-  { key: 'unitPrice',  label: 'Estimate (taxable)',  description: 'Taxable amount from estimate (net, before GST)' },
+  { key: 'unitPrice',  label: 'Estimate / Billed (taxable)',  description: 'Taxable amount from estimate (net, before GST)' },
   { key: 'gst',        label: 'GST %',               description: 'GST percentage (0 for disposal rows)' },
   { key: 'disposal',   label: 'Disposal',            description: 'Used/salvaged part — no GST; surveyor decides % of depreciated value' },
   { key: 'imt23',      label: 'IMT 23',              description: 'Endorsement IMT-23 part — insurer bears 50% of the assessed loss' },

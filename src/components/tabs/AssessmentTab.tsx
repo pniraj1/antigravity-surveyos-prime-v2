@@ -26,7 +26,8 @@ import { DocumentReviewSheet } from '@/components/documents/DocumentReviewSheet'
 import type { EstimateApplyMode } from '@/stores/slices/aiDataSlice';
 import { saveDocuments } from '@/lib/documents/sink';
 import { DocumentKindDialog } from '@/components/dialogs/DocumentKindDialog';
-import { assessmentUploadDocType, asksDocumentKind, docTypeForAnswer, otherKind, shouldApplyUndo } from '@/lib/documents/upload-doc-type';
+import { assessmentSwitch, assessmentUploadDocType, asksDocumentKind, docTypeForAnswer, otherKind, shouldApplyUndo } from '@/lib/documents/upload-doc-type';
+import { isFromBill } from '@/lib/reports/bill-check-mode';
 import { UsePhoneFiles } from '@/components/documents/UsePhoneFiles';
 import type { ClaimDocument, DocType } from '@/types/documents';
 import { isOnDrive } from '@/lib/scan-import/phone-files';
@@ -75,7 +76,10 @@ export function AssessmentTab() {
 
     triggerExtraction('estimate', file, undefined, undefined, mode);
     const docType = answer ? docTypeForAnswer(answer) : assessmentUploadDocType(claim);
-    if (answer && claimId) {
+    // A claim with rows switches through the store action (clears what the old mode held).
+    const sw = answer && claim?.assessmentRows.length ? assessmentSwitch(claim, answer) : null;
+    if (sw) useClaimStore.getState().setBillCheckUpload(sw.upload);
+    else if (answer && claimId && !claim?.assessmentRows.length) {
       toast(answer === 'final-bill' ? 'Read as the final bill — the claim is made from the bill.' : 'Read as the estimate.', {
         duration: 8000,
         action: {
@@ -116,6 +120,10 @@ export function AssessmentTab() {
       answer = await new Promise<Kind | null>((resolve) => setKindAsk({ resolve }));
       setKindAsk(null);
       if (answer === null) return;
+      // Switching a claim that already has rows loses figures: confirm before anything starts.
+      const claim = useClaimStore.getState().currentClaim;
+      const prompt = claim?.assessmentRows.length ? assessmentSwitch(claim, answer)?.prompt : null;
+      if (prompt && !window.confirm(prompt)) return;
     }
     // Asked BEFORE extraction: a wrong file, or a surveyor who changes their
     // mind, then costs nothing. Resolves straight to 'replace' on an empty
@@ -137,7 +145,7 @@ export function AssessmentTab() {
   return (
     <div className="flex flex-col h-[calc(100dvh-140px)] p-3 lg:p-4 max-w-[1700px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
       {estimateModeDialog}
-      {kindAsk && <DocumentKindDialog onChoose={(k) => kindAsk.resolve(k)} onCancel={() => kindAsk.resolve(null)} />}
+      {kindAsk && <DocumentKindDialog current={currentClaim.billCheck?.baseDocument ? (isFromBill(currentClaim) ? 'final-bill' : 'estimate') : undefined} onChoose={(k) => kindAsk.resolve(k)} onCancel={() => kindAsk.resolve(null)} />}
       {gateDialog}
       {reviewSheet && (
         <DocumentReviewSheet
@@ -195,11 +203,11 @@ export function AssessmentTab() {
                 accept="image/*,application/pdf"
                 onChange={handleEstimateUpload}
                 disabled={isProcessing}
-                title="Upload Estimate"
+                title="Upload Document"
               />
               <Button variant="outline" size="sm" className="gap-1.5 h-8 px-2.5 text-xs" tabIndex={-1} disabled={isProcessing}>
                 <Upload size={14} />
-                Upload Estimate
+                Upload Document
               </Button>
             </div>
 
