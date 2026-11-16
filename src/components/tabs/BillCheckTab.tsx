@@ -205,9 +205,10 @@ export function BillCheckTab() {
         <PanelGroup orientation="horizontal">
           {/* Main Bill Check Content */}
           <Panel defaultSize={showEvidence ? 60 : 100} minSize={30}>
-            <div className="h-full p-4">
+            {/* Below lg grid and summary stack: this box scrolls. At lg+ only the grid scrolls. */}
+            <div className="h-full p-4 overflow-y-auto lg:overflow-hidden">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full min-h-0">
-                <div className={`flex flex-col h-full min-h-0 ${showSummary ? 'lg:col-span-8 xl:col-span-9' : 'lg:col-span-12'}`}>
+                <div className={`flex flex-col lg:h-full min-h-0 ${showSummary ? 'lg:col-span-8 xl:col-span-9' : 'lg:col-span-12'}`}>
                   <div className="shrink-0">
                   <BillCheckAttentionBanner
                     flags={flags}
@@ -247,7 +248,7 @@ export function BillCheckTab() {
                 </div>
 
                 {showSummary && (
-                  <div className="lg:col-span-4 xl:col-span-3 overflow-y-auto h-full">
+                  <div className="lg:col-span-4 xl:col-span-3 overflow-y-auto lg:h-full">
                     <BillCheckSummaryPanel
                       bc={bc}
                       onBillCheckChange={updateBillCheck}
