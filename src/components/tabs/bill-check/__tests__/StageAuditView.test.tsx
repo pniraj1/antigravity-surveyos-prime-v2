@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { StageAuditView } from '../StageAuditView';
+import { StageAuditView, notInDocUpdates, typedRefUpdates } from '../StageAuditView';
 import { useClaimStore } from '@/stores/claim-store';
 import type { AssessmentRow, ExtraBillItem, ClaimData } from '@/types';
 
@@ -202,5 +202,68 @@ describe('StageAuditView from-bill wording', () => {
     expect(html).toContain('Total Saved');
     expect(html).toContain('No allowed items saved (all allowed items appeared in the bill).');
     expect(html).toContain('Billed lines not matched to initial assessment');
+  });
+});
+
+describe('StageAuditView unlinked assessed rows', () => {
+  afterEach(() => { Object.assign(useClaimStore.getInitialState(), { currentClaim: null }); });
+  const setup = (baseDocument?: string) => {
+    const rows = [
+      makeRow('r1', 'PN-W', 'WIPER BLADE', 500),
+      makeRow('r2', 'PN-B', 'BELT', 400, { refSrNo: 3 }),
+    ];
+    const extras = [{ ...makeExtra('e1', 'PN-X', 'WIPER BLADE ASSY', 450), srNo: 7 }];
+    Object.assign(useClaimStore.getInitialState(), {
+      currentClaim: { id: 'c', assessmentRows: rows, extraBillItems: extras, billCheck: { baseDocument } } as unknown as ClaimData,
+    });
+    return renderToStaticMarkup(<StageAuditView />);
+  };
+
+  it('notInDocUpdates / typedRefUpdates return the exact patches', () => {
+    expect(notInDocUpdates(false)).toEqual({ billStatus: 'not-in-bill', billedTaxable: 0, billedAmount: 0 });
+    const fb = notInDocUpdates(true);
+    expect(fb).toEqual({ refSrNo: 'Not in estimate', refStatus: 'manual' });
+    expect(fb).not.toHaveProperty('billedTaxable');
+    expect(fb).not.toHaveProperty('billedAmount');
+    expect(fb).not.toHaveProperty('billStatus');
+    expect(typedRefUpdates('  12 ')).toEqual({ refSrNo: '12', refStatus: 'manual' });
+    expect(typedRefUpdates('   ').refSrNo).toBeUndefined();
+  });
+
+  it('first section lists only unlinked rows with Link to, Not in bill and a ref input', () => {
+    const html = setup();
+    const first = html.slice(html.indexOf('<section'), html.indexOf('</section>'));
+    expect(first).toContain('Assessed rows not linked');
+    expect(first).toContain('WIPER BLADE');
+    expect(first).not.toContain('BELT');
+    expect(first).toContain('Link to');
+    expect(first).toContain('#7 WIPER BLADE ASSY');
+    expect(first).toContain('Not in bill');
+    expect(first).toMatch(/<input[^>]*aria-label="[^"]*ref/);
+    expect(first).toContain('Mark All Remaining');
+  });
+
+  it('from-bill says Not in estimate and has no Mark All', () => {
+    const html = setup('final-bill');
+    const first = html.slice(html.indexOf('<section'), html.indexOf('</section>'));
+    expect(first).toContain('Not in estimate');
+    expect(first).not.toContain('Mark All Remaining');
+  });
+
+  it('keeps disallowed, savings and seal inside a collapsed Summary details', () => {
+    const html = setup();
+    const m = html.match(/<details([^>]*)><summary[^>]*>\s*(?:<[^>]+>)*Summary/);
+    expect(m).not.toBeNull();
+    expect(m![1]).not.toContain('open');
+    const d = html.slice(html.indexOf('<details'), html.indexOf('</details>'));
+    expect(d).toContain('Disallowed Items Billed by Workshop');
+    expect(d).toContain('Final Reconciliation Seal');
+  });
+
+  it('empty state when everything is linked', () => {
+    Object.assign(useClaimStore.getInitialState(), {
+      currentClaim: { id: 'c', assessmentRows: [], extraBillItems: [], billCheck: {} } as unknown as ClaimData,
+    });
+    expect(renderToStaticMarkup(<StageAuditView />)).toContain('Every allowed row is linked.');
   });
 });

@@ -16,7 +16,8 @@ import {
   FileText,
 } from 'lucide-react';
 import { useClaimStore } from '@/stores/claim-store';
-import { isFromBill } from '@/lib/reports/bill-check-mode';
+import { isTallyCandidate } from '@/lib/tally/candidate';
+import { isFromBill, uploadLabels } from '@/lib/reports/bill-check-mode';
 import type { AssessmentRow, ExtraBillItem, BillItem } from '@/types/assessment';
 import { segregateStage4Tally } from '@/lib/tally/stage4-tally-matrix';
 import { reconcileInvoice } from '@/lib/reports/bill-check-flags';
@@ -33,6 +34,19 @@ export interface StageAuditViewProps {
   onPrint?: (format: 'standard' | 'uiic') => void;
   onComplete?: () => void;
   className?: string;
+}
+
+/** Patch for "this row is not in the uploaded document". From-bill never touches the bill figure. */
+export function notInDocUpdates(fromBill: boolean): Partial<AssessmentRow> {
+  return fromBill
+    ? { refSrNo: 'Not in estimate', refStatus: 'manual' }
+    : { billStatus: 'not-in-bill', billedTaxable: 0, billedAmount: 0 };
+}
+
+/** Same write the grid's ref cell makes. */
+export function typedRefUpdates(text: string): Partial<AssessmentRow> {
+  const v = text.trim();
+  return { refSrNo: v === '' ? undefined : v, refStatus: 'manual' };
 }
 
 function formatInr(val: number): string {
@@ -56,6 +70,7 @@ export function StageAuditView({
   const promoteExtraBillItem = useClaimStore((s) => s.promoteExtraBillItem);
   const linkExtraBillItem = useClaimStore((s) => s.linkExtraBillItem);
   const deleteExtraBillItem = useClaimStore((s) => s.deleteExtraBillItem);
+  const updateAssessmentRow = useClaimStore((s) => s.updateAssessmentRow);
   const setStoreTallyStage = useClaimStore((s) => s.setTallyStage);
 
   const rows = propRows ?? currentClaim?.assessmentRows ?? [];
@@ -95,6 +110,9 @@ export function StageAuditView({
   const notInEstimate = fromBill
     ? rows.filter((r) => r.allowed && r.refSrNo == null && r.estimateAmount == null)
     : [];
+
+  const unlinked = rows.filter((r) => isTallyCandidate(r, fromBill));
+  const labels = uploadLabels(currentClaim);
 
   const handleMarkSavings = () => {
     if (onMarkSavings) {
@@ -175,6 +193,184 @@ export function StageAuditView({
         </div>
       </div>
 
+      {/* Unlinked assessed rows: the surveyor settles each one here. */}
+      <section
+        aria-labelledby="unlinked-heading"
+        className="flex flex-col gap-2 rounded-xl border border-amber-300 bg-amber-50/40 p-4"
+      >
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h3 id="unlinked-heading" className="text-sm font-bold text-foreground">
+            Assessed rows not linked
+            <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-900 border border-amber-300">
+              {unlinked.length}
+            </span>
+          </h3>
+          {!fromBill && (
+            <button
+              type="button"
+              onClick={handleMarkSavings}
+              disabled={remainingAllowedUnmarked.length === 0}
+              className="px-2.5 py-1 rounded text-xs font-semibold text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Mark All Remaining Allowed as Not in Bill (Saving)
+            </button>
+          )}
+        </div>
+        {unlinked.length === 0 ? (
+          <div className="py-3 px-3 bg-white/60 border border-dashed border-amber-200 rounded-lg text-center text-xs text-muted-foreground">
+            Every allowed row is linked.
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1.5 max-h-72 overflow-y-auto pr-1">
+            {unlinked.map((r) => (
+              <div key={r.id} className="flex flex-wrap items-center gap-2 px-2.5 py-1.5 bg-white border border-amber-200 rounded-lg text-xs">
+                <span className="font-semibold text-foreground min-w-0 flex-1 truncate">{r.particulars}</span>
+                <span className="font-mono text-[11px] text-muted-foreground">{r.partNumber || '—'}</span>
+                <span className="font-semibold text-foreground">{formatInr(r.assessed || r.estimated || 0)}</span>
+                <select
+                  aria-label={`Link ${r.particulars} to a ${labels.doc} line`}
+                  defaultValue=""
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      linkExtraBillItem(e.target.value, r.id);
+                      e.target.value = '';
+                    }
+                  }}
+                  className="px-2 py-1 rounded text-xs font-semibold text-slate-700 bg-slate-100 border border-slate-300 cursor-pointer"
+                >
+                  <option value="" disabled>Link to ▾</option>
+                  {extraItems.map((x) => (
+                    <option key={x.id} value={x.id}>
+                      #{x.srNo ?? '—'} {x.description} ({formatInr(x.amount)})
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => updateAssessmentRow(r.id, notInDocUpdates(fromBill))}
+                  className="px-2 py-1 rounded text-xs font-semibold text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300"
+                >
+                  {fromBill ? 'Not in estimate' : 'Not in bill'}
+                </button>
+                <input
+                  type="text"
+                  aria-label={`Typed ref for ${r.particulars}`}
+                  placeholder="or type ref"
+                  defaultValue=""
+                  onBlur={(e) => {
+                    if (e.target.value.trim()) updateAssessmentRow(r.id, typedRefUpdates(e.target.value));
+                  }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                  className="w-24 px-1.5 py-1 rounded text-xs border border-border bg-background"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* SECTION 3: Extra Bill Items Tray (Amber) */}
+      <section
+        aria-labelledby="extra-items-heading"
+        className="flex flex-col gap-3 rounded-xl border border-amber-300 dark:border-amber-900/60 bg-amber-50/40 dark:bg-amber-950/20 p-4"
+      >
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <FileText className="w-4 h-4 text-amber-600 dark:text-amber-400" aria-hidden="true" />
+            <h3 id="extra-items-heading" className="text-sm font-bold text-foreground">
+              {fromBill ? 'Estimate Lines Not on the Bill' : 'Extra Bill Items (Leftover Invoice Lines)'}
+            </h3>
+            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-900 dark:bg-amber-900/60 dark:text-amber-200 border border-amber-300">
+              {extraItems.length} {extraItems.length === 1 ? 'line' : 'lines'}
+            </span>
+          </div>
+          <span className="text-xs text-amber-800 dark:text-amber-300 font-medium">
+            {fromBill ? 'Estimate lines not matched to any billed item.' : 'Billed lines not matched to initial assessment'}
+          </span>
+        </div>
+
+        {extraItems.length === 0 ? (
+          <div className="py-4 px-3 bg-white/60 dark:bg-slate-900/40 border border-dashed border-amber-200 dark:border-amber-800 rounded-lg text-center text-xs text-muted-foreground">
+            All invoice lines have been reconciled. Zero leftover lines.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-2.5 max-h-64 overflow-y-auto pr-1">
+            {extraItems.map((extra) => (
+              <div
+                key={extra.id}
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/50 rounded-lg shadow-2xs"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-bold text-foreground truncate">
+                    {extra.description}
+                  </div>
+                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
+                    {extra.partNumber && (
+                      <span className="font-mono bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 px-1 py-0.2 rounded border border-amber-200 dark:border-amber-800">
+                        {extra.partNumber}
+                      </span>
+                    )}
+                    <span>Taxable: {formatInr(extra.taxableAmount)}</span>
+                    <span>Total: {formatInr(extra.amount)}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {/* Promote Button */}
+                  <button
+                    type="button"
+                    onClick={() => handlePromote(extra.id)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold text-amber-900 dark:text-amber-100 bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/60 dark:hover:bg-amber-800 border border-amber-300 dark:border-amber-700 transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" aria-hidden="true" />
+                    <span>+ Add as Supplementary</span>
+                  </button>
+
+                  {/* Link Select Dropdown */}
+                  <div className="relative inline-block">
+                    <select
+                      aria-label={`Link ${extra.description} to assessment row`}
+                      defaultValue=""
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          handleLink(extra.id, e.target.value);
+                          e.target.value = '';
+                        }
+                      }}
+                      className="px-2.5 py-1 rounded text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 cursor-pointer transition-colors"
+                    >
+                      <option value="" disabled>
+                        Link ▾
+                      </option>
+                      {rows.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.particulars} ({formatInr(r.assessed || r.estimated || 0)})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Discard Button */}
+                  <button
+                    type="button"
+                    onClick={() => handleDiscard(extra.id)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 border border-red-200 dark:border-red-800 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                    <span>Discard</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <details className="rounded-xl border border-border">
+        <summary className="cursor-pointer px-4 py-2.5 text-sm font-bold text-foreground">
+          Summary — disallowed, {fromBill ? 'not in estimate' : 'savings'} and reconciliation seal
+        </summary>
+        <div className="flex flex-col gap-6 p-4">
       {/* SECTION 1: Disallowed Items Billed by Workshop */}
       <section
         aria-labelledby="disallowed-billed-heading"
@@ -349,103 +545,6 @@ export function StageAuditView({
         )}
       </section>
 
-      {/* SECTION 3: Extra Bill Items Tray (Amber) */}
-      <section
-        aria-labelledby="extra-items-heading"
-        className="flex flex-col gap-3 rounded-xl border border-amber-300 dark:border-amber-900/60 bg-amber-50/40 dark:bg-amber-950/20 p-4"
-      >
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <FileText className="w-4 h-4 text-amber-600 dark:text-amber-400" aria-hidden="true" />
-            <h3 id="extra-items-heading" className="text-sm font-bold text-foreground">
-              {fromBill ? 'Estimate Lines Not on the Bill' : 'Extra Bill Items (Leftover Invoice Lines)'}
-            </h3>
-            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-900 dark:bg-amber-900/60 dark:text-amber-200 border border-amber-300">
-              {extraItems.length} {extraItems.length === 1 ? 'line' : 'lines'}
-            </span>
-          </div>
-          <span className="text-xs text-amber-800 dark:text-amber-300 font-medium">
-            {fromBill ? 'Estimate lines not matched to any billed item.' : 'Billed lines not matched to initial assessment'}
-          </span>
-        </div>
-
-        {extraItems.length === 0 ? (
-          <div className="py-4 px-3 bg-white/60 dark:bg-slate-900/40 border border-dashed border-amber-200 dark:border-amber-800 rounded-lg text-center text-xs text-muted-foreground">
-            All invoice lines have been reconciled. Zero leftover lines.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-2.5 max-h-64 overflow-y-auto pr-1">
-            {extraItems.map((extra) => (
-              <div
-                key={extra.id}
-                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/50 rounded-lg shadow-2xs"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs font-bold text-foreground truncate">
-                    {extra.description}
-                  </div>
-                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
-                    {extra.partNumber && (
-                      <span className="font-mono bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 px-1 py-0.2 rounded border border-amber-200 dark:border-amber-800">
-                        {extra.partNumber}
-                      </span>
-                    )}
-                    <span>Taxable: {formatInr(extra.taxableAmount)}</span>
-                    <span>Total: {formatInr(extra.amount)}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  {/* Promote Button */}
-                  <button
-                    type="button"
-                    onClick={() => handlePromote(extra.id)}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold text-amber-900 dark:text-amber-100 bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/60 dark:hover:bg-amber-800 border border-amber-300 dark:border-amber-700 transition-colors"
-                  >
-                    <Plus className="w-3.5 h-3.5" aria-hidden="true" />
-                    <span>+ Add as Supplementary</span>
-                  </button>
-
-                  {/* Link Select Dropdown */}
-                  <div className="relative inline-block">
-                    <select
-                      aria-label={`Link ${extra.description} to assessment row`}
-                      defaultValue=""
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          handleLink(extra.id, e.target.value);
-                          e.target.value = '';
-                        }
-                      }}
-                      className="px-2.5 py-1 rounded text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 cursor-pointer transition-colors"
-                    >
-                      <option value="" disabled>
-                        Link ▾
-                      </option>
-                      {rows.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {r.particulars} ({formatInr(r.assessed || r.estimated || 0)})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Discard Button */}
-                  <button
-                    type="button"
-                    onClick={() => handleDiscard(extra.id)}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 border border-red-200 dark:border-red-800 transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
-                    <span>Discard</span>
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
       {/* SECTION 4: Final Reconciliation Seal */}
       <section
         aria-labelledby="seal-heading"
@@ -519,6 +618,8 @@ export function StageAuditView({
           </div>
         )}
       </section>
+        </div>
+      </details>
 
       {/* Bottom Actions */}
       <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-border">
