@@ -27,7 +27,8 @@ export const createTallySlice: StateCreator<any, any, any, TallySlice> = (set) =
         currentClaim: {
           ...state.currentClaim,
           assessmentRows: state.currentClaim.assessmentRows.map((r: AssessmentRow) => {
-            if (r.allowed && r.billedTaxable === undefined) {
+            // A row with a bill line number is on the bill: not a saving.
+            if (r.allowed && r.billedTaxable === undefined && r.refSrNo == null) {
               return {
                 ...r,
                 billStatus: 'not-in-bill' as const,

@@ -108,3 +108,20 @@ describe('tallySlice', () => {
     });
   });
 });
+
+describe('markRemainingAllowedAsNotInBill skips rows with a bill line (M1)', () => {
+  it('leaves a row with refSrNo alone', () => {
+    useClaimStore.setState({
+      currentClaim: {
+        id: 'c1',
+        assessmentRows: [{ ...makeRow('a', true), refSrNo: 5 }, makeRow('b', true)],
+        extraBillItems: [],
+      } as unknown as ClaimData,
+    });
+    useClaimStore.getState().markRemainingAllowedAsNotInBill();
+    const [a, b] = useClaimStore.getState().currentClaim!.assessmentRows;
+    expect(a.billStatus).toBeUndefined();
+    expect(a.billedTaxable).toBeUndefined();
+    expect(b.billStatus).toBe('not-in-bill');
+  });
+});

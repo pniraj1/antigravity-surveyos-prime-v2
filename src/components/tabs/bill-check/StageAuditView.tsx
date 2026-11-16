@@ -90,7 +90,7 @@ export function StageAuditView({
   const fromBill = isFromBill(currentClaim);
   const remainingAllowedUnmarked = fromBill
     ? []
-    : rows.filter((r) => r.allowed && r.billedTaxable === undefined);
+    : rows.filter((r) => r.allowed && r.billedTaxable === undefined && r.refSrNo == null);
   // From-bill: bill rows no estimate line was linked to or priced for.
   const notInEstimate = fromBill
     ? rows.filter((r) => r.allowed && r.refSrNo == null && r.estimateAmount == null)
