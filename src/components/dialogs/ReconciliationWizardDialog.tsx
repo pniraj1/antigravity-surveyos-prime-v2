@@ -43,6 +43,21 @@ export function ReconciliationWizardDialog({
   const storeActiveStage = useClaimStore((s) => s.activeTallyStage);
   const setTallyStage = useClaimStore((s) => s.setTallyStage);
 
+  // Google Chrome Modern Web Guidance: Escape key listener for modal dialogs.
+  // Must stay above the `!isOpen` return: a hook after it crashes on open (React #310).
+  React.useEffect(() => {
+    if (!isOpen || typeof window === 'undefined') return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      handleWizardKeyDown(e, { onClose, setTallyStage });
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose, setTallyStage]);
+
   if (!isOpen) return null;
 
   // If in 'grid' mode when opened, default wizard to Stage 1
@@ -66,20 +81,6 @@ export function ReconciliationWizardDialog({
       setTallyStage((stageNum - 1) as TallyStage);
     }
   };
-
-  // Google Chrome Modern Web Guidance: Escape key listener for modal dialogs
-  React.useEffect(() => {
-    if (!isOpen || typeof window === 'undefined') return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      handleWizardKeyDown(e, { onClose, setTallyStage });
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen, onClose, setTallyStage]);
 
   const handleApplyFinish = () => {
     setTallyStage('grid');

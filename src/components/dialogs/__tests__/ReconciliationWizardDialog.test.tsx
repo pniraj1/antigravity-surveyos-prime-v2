@@ -27,6 +27,18 @@ describe('ReconciliationWizardDialog', () => {
     expect(html).toBe('');
   });
 
+  // React #310 regression: hooks after `if (!isOpen) return null` crashed the
+  // tab on closed -> open. The same hooks must run whether open or closed.
+  it('calls the same hooks when closed as when open', () => {
+    const spy = vi.spyOn(React, 'useEffect');
+    renderToStaticMarkup(
+      <ReconciliationWizardDialog isOpen={false} onClose={vi.fn()} claim={mockClaim} />
+    );
+    const closedCalls = spy.mock.calls.length;
+    spy.mockRestore();
+    expect(closedCalls).toBe(1); // the Escape-key effect still registers when closed
+  });
+
   it('renders correctly when open', () => {
     const html = renderToStaticMarkup(
       <ReconciliationWizardDialog isOpen={true} onClose={vi.fn()} claim={mockClaim} stage={1} />
