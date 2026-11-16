@@ -157,18 +157,18 @@ export function StageAITrigger({
       className={`flex flex-col gap-6 bg-card border border-border rounded-xl shadow-sm p-5 ${className}`}
     >
       {/* Hero Card */}
-      <div className="bg-gradient-to-br from-blue-50 via-indigo-50/50 to-purple-50/40 dark:from-slate-900 dark:via-blue-950/20 dark:to-purple-950/20 border border-blue-200/80 dark:border-blue-900/50 rounded-xl p-6 shadow-sm">
+      <div className="bg-amber-50/70 dark:bg-amber-950/25 border border-amber-300 dark:border-amber-800/60 rounded-xl p-6 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-              <Bot className="w-6 h-6" aria-hidden="true" />
+            <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-primary flex items-center justify-center shrink-0 shadow-xs border border-amber-300">
+              <Bot className="w-6 h-6 text-primary" aria-hidden="true" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                <span className="text-xs font-semibold uppercase tracking-wider text-amber-800 dark:text-amber-400">
                   Stage 3 · Surveyor-Controlled
                 </span>
-                <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200">
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-900 dark:bg-amber-900/60 dark:text-amber-200 border border-amber-300">
                   Automotive Reasoning
                 </span>
               </div>
@@ -184,7 +184,7 @@ export function StageAITrigger({
 
           {/* Counts and Trigger Button */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 shrink-0">
-            <div className="flex items-center gap-3 bg-white/80 dark:bg-slate-800/80 border border-blue-100 dark:border-slate-700/80 rounded-lg px-4 py-2.5 shadow-xs">
+            <div className="flex items-center gap-3 bg-white/90 dark:bg-slate-800/80 border border-amber-200/80 dark:border-slate-700/80 rounded-lg px-4 py-2.5 shadow-xs">
               <div className="text-center">
                 <div className="text-base font-bold text-foreground" data-testid="remaining-rows-count">
                   {remainingRows.length}
@@ -208,7 +208,7 @@ export function StageAITrigger({
               type="button"
               onClick={handleAskAI}
               disabled={isLoading || remainingRows.length === 0 || remainingLines.length === 0}
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-primary hover:bg-amber-600 active:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-xs transition-all focus:outline-hidden focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 cursor-pointer"
             >
               {isLoading ? (
                 <>
@@ -284,7 +284,7 @@ export function StageAITrigger({
               return (
                 <div
                   key={`${prop.rowId}-${prop.lineId}-${idx}`}
-                  className="bg-card border border-border hover:border-blue-300 dark:hover:border-blue-700 rounded-xl p-4 shadow-xs transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4"
+                  className="bg-card border border-border hover:border-amber-400 dark:hover:border-amber-700 rounded-xl p-4 shadow-xs transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4"
                 >
                   <div className="flex-1 min-w-0 flex flex-col gap-2">
                     {/* Items pairing preview */}
@@ -313,8 +313,8 @@ export function StageAITrigger({
                       </div>
 
                       {/* Bill Item */}
-                      <div className="flex-1 min-w-0 bg-blue-50/50 dark:bg-blue-950/20 p-2.5 rounded-lg border border-blue-200/60 dark:border-blue-900/50">
-                        <div className="text-[11px] font-semibold text-blue-700 dark:text-blue-300 uppercase tracking-wider">
+                      <div className="flex-1 min-w-0 bg-amber-50/50 dark:bg-amber-950/20 p-2.5 rounded-lg border border-amber-200/60 dark:border-amber-900/50">
+                        <div className="text-[11px] font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider">
                           Bill Line
                         </div>
                         <div className="text-sm font-bold text-foreground truncate mt-0.5">
@@ -322,7 +322,7 @@ export function StageAITrigger({
                         </div>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                           {extra?.partNumber && (
-                            <span className="font-mono bg-blue-100 dark:bg-blue-900/40 text-blue-900 dark:text-blue-200 px-1.5 py-0.2 rounded text-[11px]">
+                            <span className="font-mono bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 px-1.5 py-0.2 rounded text-[11px]">
                               {extra.partNumber}
                             </span>
                           )}
@@ -341,8 +341,8 @@ export function StageAITrigger({
                           isHighConfidence
                             ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
                             : isMediumConfidence
-                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
-                            : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                            ? 'bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-200 border border-amber-300 dark:border-amber-800'
+                            : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300 border border-slate-200'
                         }`}
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
@@ -390,9 +390,9 @@ export function StageAITrigger({
         <button
           type="button"
           onClick={handleProceedToStage4}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-sm transition-colors ml-auto"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-primary hover:bg-amber-600 active:bg-amber-700 shadow-xs transition-colors ml-auto cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
         >
-          <span>Proceed to Stage 4 (Disallowed & Tally)</span>
+          <span>Proceed to Stage 4 (Disallowed &amp; Tally)</span>
           <ArrowRight className="w-4 h-4" aria-hidden="true" />
         </button>
       </div>

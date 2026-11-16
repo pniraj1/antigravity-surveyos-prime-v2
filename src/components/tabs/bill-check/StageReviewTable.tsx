@@ -322,13 +322,13 @@ export function StageReviewTable({
       {/* Header bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 bg-slate-50 dark:bg-slate-900/60 border-b border-border">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 flex items-center justify-center shrink-0">
+          <div className="w-9 h-9 rounded-lg bg-amber-100 dark:bg-amber-950/60 text-primary flex items-center justify-center shrink-0 border border-amber-300/60">
             <StageIcon className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
             <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
               <span>Stage {stage}: {stageTitle}</span>
-              <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200">
+              <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 border border-amber-300/60">
                 {derivedPairs.length} {derivedPairs.length === 1 ? 'match' : 'matches'}
               </span>
             </h3>
@@ -366,7 +366,7 @@ export function StageReviewTable({
             <button
               type="button"
               onClick={handlePushUnmatched}
-              className="min-h-[44px] px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+              className="min-h-[44px] px-4 py-2 rounded-lg bg-primary hover:bg-amber-600 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
             >
               <span>Proceed to Stage {nextStageNum}</span>
               <ArrowRight className="w-4 h-4" />
@@ -438,8 +438,10 @@ export function StageReviewTable({
                         <span
                           className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold border ${
                             stage === 1
-                              ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800'
-                              : 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800'
+                              ? pair.matchBadge.type === 'exact'
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
+                                : 'bg-amber-50 text-amber-900 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
+                              : 'bg-amber-50 text-amber-900 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
                           }`}
                         >
                           <StageIcon className="w-3 h-3 shrink-0" aria-hidden="true" />
@@ -486,15 +488,21 @@ export function StageReviewTable({
                     <td className="py-3.5 px-3 align-top">
                       <div className="flex flex-col gap-1">
                         {delta === 0 ? (
-                          <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded text-[11px] w-fit">
+                          <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 px-2 py-0.5 rounded text-[11px] w-fit">
                             ₹0 (Exact)
                           </span>
                         ) : delta < 0 ? (
-                          <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded text-[11px] w-fit">
+                          <span
+                            className={`inline-flex items-center gap-1 font-semibold px-2 py-0.5 rounded text-[11px] w-fit border ${
+                              stage === 2
+                                ? 'text-amber-900 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800'
+                                : 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800'
+                            }`}
+                          >
                             -{formatInr(Math.abs(delta))} (Cheaper)
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded text-[11px] w-fit">
+                          <span className="inline-flex items-center gap-1 font-semibold text-amber-900 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 px-2 py-0.5 rounded text-[11px] w-fit">
                             +{formatInr(delta)} (Higher)
                           </span>
                         )}
@@ -586,7 +594,7 @@ export function StageReviewTable({
             <button
               type="button"
               onClick={handleConfirmStage}
-              className="min-h-[44px] px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold inline-flex items-center gap-2 transition-colors cursor-pointer shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              className="min-h-[44px] px-5 py-2 rounded-lg bg-primary hover:bg-amber-600 text-white text-xs font-semibold inline-flex items-center gap-2 transition-colors cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
             >
               <span>Confirm Stage Matches & Proceed to Next Stage</span>
               <ArrowRight className="w-4 h-4" />

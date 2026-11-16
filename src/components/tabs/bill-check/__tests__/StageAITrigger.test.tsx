@@ -72,6 +72,10 @@ describe('StageAITrigger', () => {
 
     expect(html).toContain('Stage 3 · Surveyor-Controlled');
     expect(html).toContain('Targeted AI Semantic Matching');
+    expect(html).toContain('bg-amber-50/70');
+    expect(html).toContain('border-amber-300');
+    expect(html).toContain('bg-amber-100');
+    expect(html).toContain('text-primary');
     expect(html).toContain('Remaining Items');
     expect(html).toContain('Bill Lines');
     expect(html).toContain('Ask AI to Match Remaining Items');

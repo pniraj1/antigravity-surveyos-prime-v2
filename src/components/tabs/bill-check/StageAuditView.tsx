@@ -151,13 +151,13 @@ export function StageAuditView({
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-border">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+          <div className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center shrink-0 shadow-xs">
             <ShieldAlert className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
             <h2 className="text-base font-bold text-foreground flex items-center gap-2">
               <span>Stage 4: Disallowed &amp; Tally Audit</span>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300">
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300/60">
                 Final Review
               </span>
             </h2>
@@ -171,41 +171,41 @@ export function StageAuditView({
       {/* SECTION 1: Disallowed Items Billed by Workshop */}
       <section
         aria-labelledby="disallowed-billed-heading"
-        className="flex flex-col gap-3 rounded-xl border border-purple-200 dark:border-purple-900/60 bg-purple-50/40 dark:bg-purple-950/20 p-4"
+        className="flex flex-col gap-3 rounded-xl border border-red-200 dark:border-red-900/60 bg-red-50/40 dark:bg-red-950/20 p-4"
       >
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <Ban className="w-4 h-4 text-purple-600 dark:text-purple-400" aria-hidden="true" />
+            <Ban className="w-4 h-4 text-red-600 dark:text-red-400" aria-hidden="true" />
             <h3 id="disallowed-billed-heading" className="text-sm font-bold text-foreground">
               Disallowed Items Billed by Workshop
             </h3>
-            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 dark:bg-purple-900/60 dark:text-purple-200">
+            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-200 border border-red-300">
               {matrix.disallowedBilled.length} {matrix.disallowedBilled.length === 1 ? 'item' : 'items'}
             </span>
           </div>
-          <span className="text-xs font-semibold text-purple-700 dark:text-purple-300">
+          <span className="text-xs font-semibold text-red-800 dark:text-red-300">
             Strict ₹0 Insurer Liability Enforced
           </span>
         </div>
 
         {matrix.disallowedBilled.length === 0 ? (
-          <div className="py-4 px-3 bg-white/60 dark:bg-slate-900/40 border border-dashed border-purple-200 dark:border-purple-800 rounded-lg text-center text-xs text-muted-foreground">
+          <div className="py-4 px-3 bg-white/60 dark:bg-slate-900/40 border border-dashed border-red-200 dark:border-red-800 rounded-lg text-center text-xs text-muted-foreground">
             No disallowed items were billed by the workshop. Zero survey divergence.
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-purple-200/80 dark:border-purple-900/50 bg-white dark:bg-slate-900/80">
+          <div className="overflow-x-auto rounded-lg border border-red-200/80 dark:border-red-900/50 bg-white dark:bg-slate-900/80">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-purple-100/50 dark:bg-purple-950/40 text-purple-900 dark:text-purple-200 border-b border-purple-200/60 dark:border-purple-900/60 font-semibold">
+                <tr className="bg-red-100/60 dark:bg-red-950/40 text-red-950 dark:text-red-200 border-b border-red-200/80 dark:border-red-900/60 font-semibold">
                   <th className="py-2.5 px-3">Item Particulars</th>
                   <th className="py-2.5 px-3">Workshop Claimed</th>
                   <th className="py-2.5 px-3">Insurer Liability</th>
                   <th className="py-2.5 px-3">Auto Audit Remark</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-purple-100 dark:divide-purple-900/30">
+              <tbody className="divide-y divide-red-100 dark:divide-red-900/30">
                 {matrix.disallowedBilled.map((item, idx) => (
-                  <tr key={item.row.id || idx} className="hover:bg-purple-50/50 dark:hover:bg-purple-950/30">
+                  <tr key={item.row.id || idx} className="hover:bg-red-50/50 dark:hover:bg-red-950/30">
                     <td className="py-2.5 px-3 font-medium text-foreground">
                       <div>{item.row.particulars}</div>
                       {item.row.partNumber && (
@@ -218,7 +218,7 @@ export function StageAuditView({
                       {formatInr(item.billedTaxable)}
                     </td>
                     <td className="py-2.5 px-3">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300 border border-red-300 dark:border-red-800">
                         ₹0 Liability
                       </span>
                     </td>
@@ -311,28 +311,28 @@ export function StageAuditView({
         )}
       </section>
 
-      {/* SECTION 3: Extra Bill Items Tray */}
+      {/* SECTION 3: Extra Bill Items Tray (Amber) */}
       <section
         aria-labelledby="extra-items-heading"
-        className="flex flex-col gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20 p-4"
+        className="flex flex-col gap-3 rounded-xl border border-amber-300 dark:border-amber-900/60 bg-amber-50/40 dark:bg-amber-950/20 p-4"
       >
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <FileText className="w-4 h-4 text-slate-600 dark:text-slate-400" aria-hidden="true" />
+            <FileText className="w-4 h-4 text-amber-600 dark:text-amber-400" aria-hidden="true" />
             <h3 id="extra-items-heading" className="text-sm font-bold text-foreground">
               Extra Bill Items (Leftover Invoice Lines)
             </h3>
-            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-900 dark:bg-amber-900/60 dark:text-amber-200 border border-amber-300">
               {extraItems.length} {extraItems.length === 1 ? 'line' : 'lines'}
             </span>
           </div>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-xs text-amber-800 dark:text-amber-300 font-medium">
             Billed lines not matched to initial assessment
           </span>
         </div>
 
         {extraItems.length === 0 ? (
-          <div className="py-4 px-3 bg-white/60 dark:bg-slate-900/40 border border-dashed border-border rounded-lg text-center text-xs text-muted-foreground">
+          <div className="py-4 px-3 bg-white/60 dark:bg-slate-900/40 border border-dashed border-amber-200 dark:border-amber-800 rounded-lg text-center text-xs text-muted-foreground">
             All invoice lines have been reconciled. Zero leftover lines.
           </div>
         ) : (
@@ -340,7 +340,7 @@ export function StageAuditView({
             {extraItems.map((extra) => (
               <div
                 key={extra.id}
-                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-2xs"
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/50 rounded-lg shadow-2xs"
               >
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-bold text-foreground truncate">
@@ -348,7 +348,7 @@ export function StageAuditView({
                   </div>
                   <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
                     {extra.partNumber && (
-                      <span className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.2 rounded">
+                      <span className="font-mono bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 px-1 py-0.2 rounded border border-amber-200 dark:border-amber-800">
                         {extra.partNumber}
                       </span>
                     )}
@@ -362,7 +362,7 @@ export function StageAuditView({
                   <button
                     type="button"
                     onClick={() => handlePromote(extra.id)}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200 dark:border-blue-800 transition-colors"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold text-amber-900 dark:text-amber-100 bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/60 dark:hover:bg-amber-800 border border-amber-300 dark:border-amber-700 transition-colors"
                   >
                     <Plus className="w-3.5 h-3.5" aria-hidden="true" />
                     <span>+ Add as Supplementary</span>
@@ -496,10 +496,10 @@ export function StageAuditView({
         <button
           type="button"
           onClick={handleComplete}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-sm transition-colors ml-auto"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold text-white bg-primary hover:bg-amber-600 active:bg-amber-700 shadow-xs transition-colors ml-auto cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
         >
-          <Grid className="w-4 h-4" aria-hidden="true" />
-          <span>Complete Tally &amp; Show Full Grid</span>
+          <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
+          <span>Apply to Assessment Grid &amp; Finish</span>
         </button>
       </div>
     </div>

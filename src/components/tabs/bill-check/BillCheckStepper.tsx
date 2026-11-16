@@ -179,14 +179,14 @@ export function BillCheckStepper({
             const isConfirmed = st.confirmed;
             const Icon = st.icon;
 
-            let buttonStyle = 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100 hover:text-slate-900 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-700/80';
-            let badgeStyle = 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300';
-            let iconStyle = 'text-slate-500 dark:text-slate-400';
+            let buttonStyle = 'bg-white text-slate-700 border-slate-200 hover:bg-amber-50/50 hover:text-amber-900 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-700/80';
+            let badgeStyle = 'bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-200';
+            let iconStyle = 'text-amber-600 dark:text-amber-400';
 
             if (isActive) {
-              // Design System: Blue for active
-              buttonStyle = 'bg-blue-600 text-white border-blue-600 shadow-sm ring-1 ring-blue-700 dark:bg-blue-600 dark:text-white dark:border-blue-600';
-              badgeStyle = 'bg-blue-700/80 text-blue-100 dark:bg-blue-700/90 dark:text-blue-50';
+              // Design System: Brand Orange / Amber for active
+              buttonStyle = 'bg-primary text-white border-primary shadow-xs ring-1 ring-amber-600 dark:bg-amber-600 dark:text-white dark:border-amber-600';
+              badgeStyle = 'bg-white/20 text-white font-bold';
               iconStyle = 'text-white';
             } else if (isConfirmed) {
               // Design System: Emerald for confirmed/clean
@@ -203,7 +203,7 @@ export function BillCheckStepper({
                 aria-selected={isActive}
                 aria-controls={`tally-stage-panel-${st.id}`}
                 onClick={() => handleStageSelect(st.id)}
-                className={`min-h-[44px] px-3.5 py-2 rounded-lg border text-xs font-semibold inline-flex items-center gap-2 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 select-none ${buttonStyle}`}
+                className={`min-h-[44px] px-3.5 py-2 rounded-lg border text-xs font-semibold inline-flex items-center gap-2 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 select-none ${buttonStyle}`}
               >
                 <Icon className={`w-4 h-4 shrink-0 ${iconStyle}`} aria-hidden="true" />
                 <span className="whitespace-nowrap">
@@ -229,10 +229,10 @@ export function BillCheckStepper({
             aria-pressed={isGridActive}
             aria-label="Toggle Full Grid View"
             onClick={() => handleStageSelect(isGridActive ? 1 : 'grid')}
-            className={`min-h-[44px] px-3.5 py-2 rounded-lg border text-xs font-semibold inline-flex items-center gap-2 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 select-none ${
+            className={`min-h-[44px] px-3.5 py-2 rounded-lg border text-xs font-semibold inline-flex items-center gap-2 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 select-none ${
               isGridActive
-                ? 'bg-blue-600 text-white border-blue-600 shadow-sm ring-1 ring-blue-700 dark:bg-blue-600 dark:text-white'
-                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100 hover:text-slate-900 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-700/80'
+                ? 'bg-primary text-white border-primary shadow-xs ring-1 ring-amber-600 dark:bg-amber-600 dark:text-white'
+                : 'bg-white text-slate-700 border-slate-200 hover:bg-amber-50/50 hover:text-amber-900 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-700/80'
             }`}
           >
             <List

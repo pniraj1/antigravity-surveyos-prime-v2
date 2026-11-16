@@ -183,7 +183,7 @@ Return ONLY a JSON object:
 }
 Return ONLY the JSON. No explanation, no markdown, no backticks.`,
 
-  'final-bill': `You are an expert at reading Indian FINAL WORKSHOP BILLS (Invoices/Tax Invoices). Extract ALL final billed line items from ALL pages.
+  'final-bill': `You are an expert at reading Indian workshop documents: FINAL BILLS, TAX INVOICES and REPAIR ESTIMATES. Extract ALL line items from ALL pages.
 
 CRITICAL RULES:
 1. Extract EVERY SINGLE line item from ALL pages. Do NOT stop early. Multi-page bills may have 50-80+ items.
@@ -193,13 +193,12 @@ CRITICAL RULES:
    - labour_items: Labour/service (SAC 9987) — "REPLACE", "R & R", "REMOVE", "FITMENT CHARGES", "DIAGNOSIS", "CUTTING", "WELDING", "GAS CHARGES".
    - painting_items: Paint jobs (SAC 9987) — "PAINTING", "SOLID COLOUR", "METALLIC COLOUR", "TOUCH UP".
 4. AMOUNTS — extract BOTH per line (separate columns on the invoice):
-   - "taxable_amount": TAXABLE VALUE / BASE AMOUNT before GST (Qty × Unit Price). This is the NET amount and is the PRIMARY anchor for matching against the estimate.
-   - "cgst_amount": CGST for this line (if printed).
+   - "taxable_amount": TAXABLE VALUE / BASE AMOUNT before GST (Qty × Unit Price).   - "cgst_amount": CGST for this line (if printed).
    - "sgst_amount": SGST for this line (if printed).
    - "total_amount": FINAL amount INCLUDING GST (last column, gross).
    - "gst_percent": TOTAL GST rate for this line — add ALL components: CGST rate + SGST rate + IGST rate. Example: CGST 9% + SGST 9% = 18, not 9. Never write just one component's rate.
    If only one amount column exists, put it in "total_amount" and set "taxable_amount" to total_amount / (1 + gst_percent/100).
-5. "part_number": extract for spare_parts ALWAYS. Also extract for labour/paint if the bill prints a code/SAC-ref in a part-number column (some workshops do this).
+5. "part_number": copy it EXACTLY as printed, character for character — same letters, digits, dashes and spaces. Never correct, complete or guess it; use "" if none is printed. Extract it for spare_parts ALWAYS, and for labour/paint when the document prints a code in a part-number or labour-code column.
 6. "hsn_sac": 4-8 digit HSN/SAC code per line.
 7. "category" on spare_parts: glass (windshield/window/mirror glass), plastic (bumper/grille/cladding/garnish/cap/air duct/skid plate/fender liner), metal (everything else).
 8. DO NOT DUPLICATE ITEMS: If an item has only ONE price, place it in ONLY ONE category (spare_parts OR labour_items OR painting_items). ONLY split a line item if it explicitly has TWO separate price columns (e.g. a Part Price column AND a Labour Price column). If you DO split it, you MUST append " (Part)" and " (Labour)" to their descriptions respectively.

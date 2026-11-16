@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
+import { toast } from 'sonner';
 
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
@@ -20,13 +21,11 @@ import { DocumentEvidenceViewer } from '@/components/evidence/DocumentEvidenceVi
 import { DocumentReviewSheet } from '@/components/documents/DocumentReviewSheet';
 import { useEstimateModePrompt } from '@/hooks/useEstimateModePrompt';
 import { useBillCheckPrintGate } from '@/hooks/useBillCheckPrintGate';
+import { BillCheckUploadDialog } from '@/components/dialogs/BillCheckUploadDialog';
+import { ReconciliationWizardDialog } from '@/components/dialogs/ReconciliationWizardDialog';
 
 import { BillCheckHeader } from './bill-check/BillCheckHeader';
 import { BillCheckGrid } from './bill-check/BillCheckGrid';
-import { BillCheckStepper } from './bill-check/BillCheckStepper';
-import { StageReviewTable } from './bill-check/StageReviewTable';
-import { StageAITrigger } from './bill-check/StageAITrigger';
-import { StageAuditView } from './bill-check/StageAuditView';
 import { isFromBill, rowsLostOnSwitch } from '@/lib/reports/bill-check-mode';
 import { ExtraBillItemsPanel } from './bill-check/ExtraBillItemsPanel';
 import { BillCheckSummaryPanel } from './bill-check/BillCheckSummaryPanel';
@@ -49,11 +48,13 @@ export function BillCheckTab() {
   const updateBillCheck     = useClaimStore(s => s.updateBillCheck);
   const updateFeeBill       = useClaimStore(s => s.updateFeeBill);
   const setBillCheckUpload  = useClaimStore(s => s.setBillCheckUpload);
-  const activeTallyStage    = useClaimStore(s => s.activeTallyStage);
+  const isReconcileWizardOpen = useClaimStore(s => s.isReconcileWizardOpen);
+  const setReconcileWizardOpen = useClaimStore(s => s.setReconcileWizardOpen);
   const { profile } = useProfileStore();
 
   const [showEvidence, setShowEvidence] = useState(false);
   const [showSummary, setShowSummary] = useState(true);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [reviewFile, setReviewFile] = useState<{ file: File; mode: 'replace' | 'continue'; phone: boolean } | null>(null);
 
   const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview, smartFix, reviewProgress } = useAIExtraction();
@@ -166,11 +167,19 @@ export function BillCheckTab() {
     setBillCheckUpload(kind);
   };
 
+  const handleConfirmApply = () => {
+    confirmApply();
+    // Open reconciliation cockpit wizard right after extraction confirmation
+    setReconcileWizardOpen(true);
+  };
+
   const isInvoiceVerified =
     Boolean(bc.billNo?.trim()) &&
     Boolean(bc.billDate?.trim()) &&
     Boolean(bc.billTotal && bc.billTotal > 0) &&
     bc.verifiedBySurveyor === true;
+
+  const matchedCount = allRows.filter(r => Boolean(r.refMatch || r.refSrNo)).length;
 
   return (
     <div className="flex flex-col h-[calc(100dvh-140px)] p-3 lg:p-4 max-w-[1700px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -193,14 +202,12 @@ export function BillCheckTab() {
         upload={upload}
         onUploadChange={handleUploadChange}
         onPrint={requestPrint}
+        onOpenUploadDialog={() => setUploadDialogOpen(true)}
+        onOpenReconcileWizard={() => setReconcileWizardOpen(true)}
+        reconcileCount={matchedCount}
       />
 
-      {/* 4-Stage Progressive Tally Stepper Bar */}
-      <div className="my-2.5 shrink-0">
-        <BillCheckStepper />
-      </div>
-
-      {/* Split Workspace */}
+      {/* Split Workspace - The Main Grid is Always Present and Stable */}
       <div className="flex-1 min-h-0 bg-background rounded-xl border border-border overflow-hidden">
         <PanelGroup orientation="horizontal">
           {/* Main Bill Check Content */}
@@ -208,51 +215,41 @@ export function BillCheckTab() {
             <div className="h-full overflow-y-auto p-4">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 <div className={showSummary ? 'lg:col-span-8 xl:col-span-9' : 'lg:col-span-12'}>
-                  {activeTallyStage === 1 || activeTallyStage === 2 ? (
-                    <StageReviewTable stage={activeTallyStage} />
-                  ) : activeTallyStage === 3 ? (
-                    <StageAITrigger />
-                  ) : activeTallyStage === 4 ? (
-                    <StageAuditView onPrint={requestPrint} />
-                  ) : (
-                    <>
-                      <BillCheckAttentionBanner
-                        flags={flags}
-                        reconciliation={reconciliation}
-                        onConfirmAllBelow={confirmAllBelow}
-                        onKeepAllAbove={keepAllAbove}
-                      />
+                  <BillCheckAttentionBanner
+                    flags={flags}
+                    reconciliation={reconciliation}
+                    onConfirmAllBelow={confirmAllBelow}
+                    onKeepAllAbove={keepAllAbove}
+                  />
 
-                      <div className="mt-4">
-                        <BillCheckGrid
-                          allRows={allRows}
-                          allowedRows={allowedRows}
-                          summary={summary}
-                          serials={serials}
-                          updateAssessmentRow={updateAssessmentRow}
-                          deleteAssessmentRow={deleteAssessmentRow}
-                          deleteAssessmentRows={deleteAssessmentRows}
-                          claimId={currentClaim.id}
-                          fmt={fmt}
-                          ageMonths={ageMonths}
-                          claim={currentClaim}
-                        />
-                      </div>
+                  <div className="mt-4">
+                    <BillCheckGrid
+                      allRows={allRows}
+                      allowedRows={allowedRows}
+                      summary={summary}
+                      serials={serials}
+                      updateAssessmentRow={updateAssessmentRow}
+                      deleteAssessmentRow={deleteAssessmentRow}
+                      deleteAssessmentRows={deleteAssessmentRows}
+                      claimId={currentClaim.id}
+                      fmt={fmt}
+                      ageMonths={ageMonths}
+                      claim={currentClaim}
+                    />
+                  </div>
 
-                      <div className="mt-6">
-                        <ExtraBillItemsPanel
-                          extraBillItems={extraBillItems}
-                          assessmentRows={allRows}
-                          onDelete={deleteExtraBillItem}
-                          onClearAll={clearExtraBillItems}
-                          onLink={linkExtraBillItem}
-                          onPromote={promoteExtraBillItem}
-                          canPromote={!isFromBill(currentClaim)}
-                          fmt={fmt}
-                        />
-                      </div>
-                    </>
-                  )}
+                  <div className="mt-6">
+                    <ExtraBillItemsPanel
+                      extraBillItems={extraBillItems}
+                      assessmentRows={allRows}
+                      onDelete={deleteExtraBillItem}
+                      onClearAll={clearExtraBillItems}
+                      onLink={linkExtraBillItem}
+                      onPromote={promoteExtraBillItem}
+                      canPromote={!isFromBill(currentClaim)}
+                      fmt={fmt}
+                    />
+                  </div>
                 </div>
 
                 {showSummary && (
@@ -297,6 +294,30 @@ export function BillCheckTab() {
         </PanelGroup>
       </div>
 
+      {/* Dialog 1: Document Upload & Kind Selector */}
+      <BillCheckUploadDialog
+        isOpen={uploadDialogOpen}
+        onClose={() => setUploadDialogOpen(false)}
+        onConfirm={(file, kind) => {
+          setUploadDialogOpen(false);
+          if (kind !== upload) handleUploadChange(kind);
+          void processBillFile(file, false);
+        }}
+        defaultKind={upload}
+        isProcessing={isProcessing}
+      />
+
+      {/* Dialog 2: 4-Stage Reconciliation Modal Wizard */}
+      <ReconciliationWizardDialog
+        isOpen={isReconcileWizardOpen}
+        onClose={() => setReconcileWizardOpen(false)}
+        onApplyFinish={() => {
+          setReconcileWizardOpen(false);
+          toast.success('Reconciliation completed and applied to assessment grid!');
+        }}
+        onPrint={requestPrint}
+      />
+
       {reviewFile && (
         <DocumentReviewSheet
           open
@@ -314,7 +335,7 @@ export function BillCheckTab() {
       <AIReviewDialog
         isOpen={!!reviewData}
         onClose={cancelReview}
-        onConfirm={confirmApply}
+        onConfirm={handleConfirmApply}
         title={reviewData?.key || ''}
         data={reviewData?.data}
         findings={reviewData?.findings ?? []}

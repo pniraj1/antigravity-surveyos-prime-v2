@@ -55,11 +55,11 @@ describe('BillCheckStepper', () => {
     expect(html).toContain('Show Full Grid');
   });
 
-  it('applies Blue design system to the active stage and Slate to default stages', () => {
+  it('applies Brand Orange design system to the active stage and Slate to default stages', () => {
     const html = renderToStaticMarkup(<BillCheckStepper activeStage={1} />);
 
-    // Stage 1 is active -> blue class
-    expect(html).toContain('bg-blue-600 text-white');
+    // Stage 1 is active -> primary orange class
+    expect(html).toContain('bg-primary text-white');
     // Default stages have slate styles
     expect(html).toContain('text-slate-700');
   });

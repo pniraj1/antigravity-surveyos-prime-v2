@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Upload, PanelRightOpen, PanelRightClose, CheckCircle2, AlertTriangle, Receipt } from 'lucide-react';
+import { Upload, PanelRightOpen, PanelRightClose, CheckCircle2, AlertTriangle, Receipt, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SaveProgressButton } from '@/components/sync/SaveProgressButton';
 import { UsePhoneFiles } from '@/components/documents/UsePhoneFiles';
@@ -39,6 +39,12 @@ interface Props {
   onUploadChange?: (kind: 'final-bill' | 'estimate') => void;
   /** Runs the bill-check print gate (invoice, flags, policy) for that format. */
   onPrint?: (format: 'standard' | 'uiic') => void;
+  /** Opens the document kind & upload dialog. */
+  onOpenUploadDialog?: () => void;
+  /** Opens the 4-stage reconciliation cockpit modal. */
+  onOpenReconcileWizard?: () => void;
+  /** Count of matched rows or candidates for the cockpit button. */
+  reconcileCount?: number;
 }
 
 export function BillCheckHeader({
@@ -55,6 +61,9 @@ export function BillCheckHeader({
   upload = 'final-bill',
   onUploadChange = () => {},
   onPrint = () => {},
+  onOpenUploadDialog,
+  onOpenReconcileWizard,
+  reconcileCount = 0,
 }: Props) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2.5 mb-2.5 shrink-0 bg-card border border-border px-3 py-2 rounded-xl shadow-xs">
@@ -109,33 +118,62 @@ export function BillCheckHeader({
               aria-pressed={upload === c.kind}
               disabled={isProcessing}
               onClick={() => upload !== c.kind && onUploadChange(c.kind)}
-              className={`h-8 px-2.5 text-xs ${upload === c.kind ? 'bg-primary/20 text-primary border-primary/30' : ''}`}
+              className={`h-8 px-2.5 text-xs ${upload === c.kind ? 'bg-primary/20 text-primary border-primary/40 font-semibold' : ''}`}
             >
               {c.label}
             </Button>
           ))}
 
-          {/* Upload Bill Button */}
-          <div className="relative">
-            <input
-              type="file"
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-              accept="image/*,application/pdf"
-              onChange={onFileUpload}
-              disabled={isProcessing}
-              title={upload === 'estimate' ? 'Upload the estimate' : 'Upload Final Workshop Bill'}
-            />
+          {/* Upload Bill / Document Button */}
+          {onOpenUploadDialog ? (
             <Button
+              onClick={onOpenUploadDialog}
               variant="outline"
               size="sm"
-              className="gap-1.5 h-8 px-2.5 text-xs"
-              tabIndex={-1}
+              className="gap-1.5 h-8 px-2.5 text-xs bg-primary text-white hover:bg-amber-600 hover:text-white border-primary shadow-xs cursor-pointer font-medium"
               disabled={isProcessing}
+              title={upload === 'estimate' ? 'Upload the estimate' : 'Upload Final Workshop Bill'}
+              aria-label={upload === 'estimate' ? 'Upload Document: Estimate' : 'Upload Document: Final Bill'}
             >
               <Upload size={14} />
               {upload === 'estimate' ? 'Upload Estimate' : 'Upload Bill'}
             </Button>
-          </div>
+          ) : (
+            <div className="relative">
+              <input
+                type="file"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                accept="image/*,application/pdf"
+                onChange={onFileUpload}
+                disabled={isProcessing}
+                title={upload === 'estimate' ? 'Upload the estimate' : 'Upload Final Workshop Bill'}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 h-8 px-2.5 text-xs bg-primary text-white hover:bg-amber-600 hover:text-white border-primary shadow-xs cursor-pointer font-medium"
+                tabIndex={-1}
+                disabled={isProcessing}
+              >
+                <Upload size={14} />
+                {upload === 'estimate' ? 'Upload Estimate' : 'Upload Bill'}
+              </Button>
+            </div>
+          )}
+
+          {/* 4-Stage Reconciliation Cockpit Trigger */}
+          {onOpenReconcileWizard && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onOpenReconcileWizard}
+              className="h-8 px-3 text-xs rounded-full border border-amber-400/80 bg-amber-50 hover:bg-amber-100 text-amber-900 font-semibold flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              title="Open 4-Stage Reconciliation Cockpit"
+            >
+              <Sparkles size={13} className="text-primary" />
+              Reconciliation Cockpit{typeof reconcileCount === 'number' ? ` (${reconcileCount})` : ''}
+            </Button>
+          )}
 
           {/* Use Phone Files */}
           <UsePhoneFiles

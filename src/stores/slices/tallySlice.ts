@@ -6,15 +6,19 @@ export type TallyStage = 1 | 2 | 3 | 4 | 'grid';
 
 export interface TallySlice {
   activeTallyStage: TallyStage;
+  isReconcileWizardOpen: boolean;
   setTallyStage: (stage: TallyStage) => void;
+  setReconcileWizardOpen: (open: boolean) => void;
   markRemainingAllowedAsNotInBill: () => void;
 }
 
 type WithClaim = { currentClaim: ClaimData | null };
 
 export const createTallySlice: StateCreator<any, any, any, TallySlice> = (set) => ({
-  activeTallyStage: 1,
+  activeTallyStage: 'grid',
+  isReconcileWizardOpen: false,
   setTallyStage: (stage) => set({ activeTallyStage: stage }),
+  setReconcileWizardOpen: (open) => set({ isReconcileWizardOpen: open }),
   markRemainingAllowedAsNotInBill: () => {
     set((state: WithClaim) => {
       if (!state.currentClaim?.assessmentRows) return {};

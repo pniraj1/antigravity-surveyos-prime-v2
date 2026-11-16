@@ -55,7 +55,7 @@ describe('StageAuditView', () => {
     });
   });
 
-  it('renders Section 1: Disallowed Items Billed by Workshop with purple badge, ₹0 liability, and remark', () => {
+  it('renders Section 1: Disallowed Items Billed by Workshop with red badge, ₹0 liability, and remark', () => {
     const rows = [
       makeRow('r1', 'PN-SUSP', 'SUSPENSION ARM', 0, {
         allowed: false,
@@ -71,6 +71,8 @@ describe('StageAuditView', () => {
     expect(html).toContain('PN-SUSP');
     expect(html).toContain('₹800');
     expect(html).toContain('₹0 Liability');
+    expect(html).toContain('border-red-300');
+    expect(html).toContain('bg-red-100');
     expect(html).toContain('Workshop claimed ₹800; disallowed at survey.');
   });
 
@@ -103,6 +105,8 @@ describe('StageAuditView', () => {
     const html = renderToStaticMarkup(<StageAuditView extraBillItems={extras} />);
 
     expect(html).toContain('Extra Bill Items (Leftover Invoice Lines)');
+    expect(html).toContain('border-amber-300');
+    expect(html).toContain('bg-amber-100');
     expect(html).toContain('WIPER BLADE SET');
     expect(html).toContain('Taxable: ₹600');
     expect(html).toContain('+ Add as Supplementary');
@@ -146,10 +150,10 @@ describe('StageAuditView', () => {
     expect(html).toContain('Reconciliation Gap: ₹3200.00');
   });
 
-  it('renders bottom actions for Print and Complete Tally', () => {
+  it('renders bottom actions for Print and Apply to Assessment Grid & Finish', () => {
     const html = renderToStaticMarkup(<StageAuditView />);
 
     expect(html).toContain('Print Bill Check Report');
-    expect(html).toContain('Complete Tally &amp; Show Full Grid');
+    expect(html).toContain('Apply to Assessment Grid &amp; Finish');
   });
 });

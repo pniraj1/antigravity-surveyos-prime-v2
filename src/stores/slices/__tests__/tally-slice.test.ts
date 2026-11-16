@@ -27,9 +27,18 @@ describe('tallySlice', () => {
     });
   });
 
-  describe('activeTallyStage', () => {
-    it('defaults to stage 1', () => {
-      expect(useClaimStore.getState().activeTallyStage).toBe(1);
+  describe('activeTallyStage and wizard state', () => {
+    it('defaults to grid and wizard closed', () => {
+      expect(useClaimStore.getState().activeTallyStage).toBe('grid');
+      expect(useClaimStore.getState().isReconcileWizardOpen).toBe(false);
+    });
+
+    it('toggles wizard open state', () => {
+      useClaimStore.getState().setReconcileWizardOpen(true);
+      expect(useClaimStore.getState().isReconcileWizardOpen).toBe(true);
+
+      useClaimStore.getState().setReconcileWizardOpen(false);
+      expect(useClaimStore.getState().isReconcileWizardOpen).toBe(false);
     });
 
     it('updates active tally stage to 1, 2, 3, 4, or grid', () => {

@@ -112,6 +112,22 @@ describe('StageReviewTable', () => {
       expect(html).toContain('₹0 (Exact)');
     });
 
+    it('renders normalized part number match with Normalized Part No. badge', () => {
+      const rows = [
+        makeRow('r1', '52119-0K-930', 'FRONT BUMPER', 4200),
+      ];
+      const extras = [
+        makeExtra('e1', '521190K930', 'BUMPER FRONT', 4150),
+      ];
+
+      const html = renderToStaticMarkup(
+        <StageReviewTable stage={1} rows={rows} extraBillItems={extras} />
+      );
+
+      expect(html).toContain('Normalized Part No.');
+      expect(html).toContain('border-amber-300');
+    });
+
     it('renders empty state when no Part Number matches exist', () => {
       const rows = [makeRow('r1', '', 'UNNUMBERED PART', 1000)];
       const extras = [makeExtra('e1', '', 'WORKSHOP LABOUR', 1000)];
@@ -145,9 +161,27 @@ describe('StageReviewTable', () => {
       // Semantic Reason badge
       expect(html).toContain('Synonym match');
 
-      // Price Delta: 3950 - 3800 = +150 (Higher)
+      // Price Delta: 3950 - 3800 = +150 (Higher) with orange/amber styling
       expect(html).toContain('+₹150');
       expect(html).toContain('Higher');
+      expect(html).toContain('border-amber-300');
+    });
+
+    it('renders negative delta with orange price delta badge in Stage 2', () => {
+      const rows = [
+        makeRow('r1', '', 'ORVM ASSY RH', 4000),
+      ];
+      const extras = [
+        makeExtra('e1', '', 'REAR VIEW MIRROR RH', 3800),
+      ];
+
+      const html = renderToStaticMarkup(
+        <StageReviewTable stage={2} rows={rows} extraBillItems={extras} />
+      );
+
+      expect(html).toContain('-₹200');
+      expect(html).toContain('Cheaper');
+      expect(html).toContain('border-amber-300');
     });
   });
 
