@@ -19,3 +19,10 @@ Not deployed. Not pushed. Impact on SurveyOS Scan: none (no doc types, folder la
 1. Case 1 and Case 2: column order and labels.
 2. The "Allowed only" toggle (on by default; off shows disallowed items).
 3. Keyboard moves and paste in the grid.
+
+## Final review fix wave (0f585b87, 36d761ca)
+- Delete Selected acts only on rows on screen; selection clears when Allowed only or the needs-a-ref filter changes; the confirm shows the true count.
+- Column picker shows the case labels (Bill/Estimated (taxable) in Case 2).
+- Attention banner adds "Turn off Allowed only to see them." to the rejected-items line.
+vitest 3281 pass, tsc 0, build OK. Not deployed.
+Follow-ups: the Delete Selected (N) button label can overcount after other row changes (the confirm is correct); "Remove zero amount parts" also acts on hidden rows (pre-existing).
