@@ -1,6 +1,9 @@
 'use client';
 
 import type { DeductionCategory } from '@/lib/constants/deduction-categories';
+import type { AssessmentRow } from '@/types';
+import { useClaimStore } from '@/stores/claim-store';
+import { toast } from 'sonner';
 
 // Shared by AssessmentGrid (the orchestrator) and AssessmentSectionTable (one
 // per section). Lives in its own module so the two components do not have to
@@ -102,4 +105,51 @@ export function imt23ColumnShown(
 export function insertRowAt<T>(list: readonly T[], item: T, index: number): T[] {
   const i = Math.min(Math.max(index, 0), list.length);
   return [...list.slice(0, i), item, ...list.slice(i)];
+}
+
+/** Particulars as compared for duplicates: case and spacing ignored. */
+export const normParticulars = (p?: string): string => p?.replace(/\s+/g, ' ').trim().toLowerCase() ?? '';
+
+/** Particulars that appear on more than one row (normalised). */
+export function duplicateParticularsOf(rows: readonly AssessmentRow[]): Set<string> {
+  const seen = new Set<string>();
+  const dupes = new Set<string>();
+  for (const r of rows) {
+    const n = normParticulars(r.particulars);
+    if (!n) continue;
+    if (seen.has(n)) dupes.add(n); else seen.add(n);
+  }
+  return dupes;
+}
+
+/** Row background, the same in the Assessment and Bill Check grids. */
+export function rowTintClass(row: AssessmentRow, isDuplicate: boolean, isTicked: boolean): string {
+  return [
+    'hover:bg-accent/30 transition-colors',
+    isTicked && 'bg-slate-500/5',
+    !row.allowed && 'bg-muted/40 text-muted-foreground',
+    isDuplicate && 'bg-orange-500/10',
+    row.isDisposal && row.allowed && 'bg-amber-500/5',
+    row.imt23 && row.allowed && 'bg-primary/5',
+  ].filter(Boolean).join(' ');
+}
+
+/** Deletes a row at once and offers Undo, which puts it back at its old place. */
+export function deleteRowWithUndo(id: string): void {
+  const { currentClaim, deleteAssessmentRow, updateClaim } = useClaimStore.getState();
+  const before = currentClaim?.assessmentRows ?? [];
+  const index = before.findIndex(r => r.id === id);
+  if (index < 0) return;
+  const removed = before[index];
+  deleteAssessmentRow(id);
+  toast(`Deleted "${removed.particulars || 'row'}"`, {
+    duration: 6000,
+    action: {
+      label: 'Undo',
+      onClick: () => {
+        const now = useClaimStore.getState().currentClaim?.assessmentRows ?? [];
+        if (!now.some(r => r.id === id)) updateClaim({ assessmentRows: insertRowAt(now, removed, index) });
+      },
+    },
+  });
 }

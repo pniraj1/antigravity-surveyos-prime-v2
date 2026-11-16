@@ -39,6 +39,7 @@ import {
   loadVisibility,
   saveVisibility,
   imt23ColumnShown,
+  duplicateParticularsOf,
   type OptionalColumn,
 } from './assessment-grid-config';
 
@@ -332,20 +333,7 @@ export function AssessmentGrid({ footer }: { footer?: React.ReactNode } = {}) {
     currentClaim?.accident.dateAndTime ?? null,
   );
 
-  // Find duplicate particulars
-  const duplicateParticulars = new Set<string>();
-  const seenParticulars = new Set<string>();
-  
-  assessmentRows.forEach(row => {
-    if (row.particulars?.trim()) {
-      const normalized = row.particulars.replace(/\s+/g, ' ').trim().toLowerCase();
-      if (seenParticulars.has(normalized)) {
-        duplicateParticulars.add(normalized);
-      } else {
-        seenParticulars.add(normalized);
-      }
-    }
-  });
+  const duplicateParticulars = useMemo(() => duplicateParticularsOf(assessmentRows), [assessmentRows]);
 
   const summary = useMemo(
     () => calculateAssessmentSummary(

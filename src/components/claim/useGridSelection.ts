@@ -99,12 +99,11 @@ export function useGridSelection(rows: AssessmentRow[]) {
     return clampRangeToSection(rows, cellSelection.anchorRowId, cellSelection.focusRowId).has(rowId);
   }, [cellSelection, rows]);
 
-  const handleCellMouseDown = useCallback((e: React.MouseEvent<HTMLTableSectionElement>) => {
-    const td = (e.target as HTMLElement).closest('td');
-    if (!td) return;
-    const columnKey = (td as HTMLElement).dataset.columnKey;
-    const tr = td.closest('tr');
-    const rowId = (tr as HTMLElement | null)?.dataset.rowId;
+  /** Any cell marked data-column-key inside a row marked data-row-id (table or div grid). */
+  const handleCellMouseDown = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    const cell = (e.target as HTMLElement).closest<HTMLElement>('[data-column-key]');
+    const columnKey = cell?.dataset.columnKey;
+    const rowId = cell?.closest<HTMLElement>('[data-row-id]')?.dataset.rowId;
     if (!rowId || !columnKey) return;
 
     if (e.shiftKey && cellSelection && cellSelection.columnKey === columnKey) {

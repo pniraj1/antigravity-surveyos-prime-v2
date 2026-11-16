@@ -15,7 +15,8 @@ import { billCheckAssessed } from '@/lib/reports/bill-check-projection';
 import {
   sectionSubtotals, billedTotals, SECTION_ORDER, type BilledTotals,
 } from '@/lib/calculations/section-subtotals';
-import { sectionTickState } from '@/components/claim/useGridSelection';
+import { sectionTickState, useGridSelection, clampRangeToSection } from '@/components/claim/useGridSelection';
+import { duplicateParticularsOf, normParticulars, rowTintClass, deleteRowWithUndo } from '@/components/claim/assessment-grid-config';
 import {
   OptionalColumn, OPTIONAL_COLUMNS, DEFAULT_VISIBLE, COL_WIDTHS,
   loadVisibility, saveVisibility, statusLabel, type BillStatus,
@@ -64,7 +65,6 @@ export function BillCheckGrid({
   summary,
   serials,
   updateAssessmentRow,
-  deleteAssessmentRow,
   deleteAssessmentRows,
   claimId,
   fmt,
@@ -86,7 +86,6 @@ export function BillCheckGrid({
     minWidth: 180,
     maxWidth: 750,
   });
-  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [visible, setVisible] = useState<Record<OptionalColumn, boolean>>(DEFAULT_VISIBLE);
   const [pendingAllowance, setPendingAllowance] = useState<{ id: string; assessed: number; proposed: number } | null>(null);
   const [openFlag, setOpenFlag] = useState<string | null>(null);
@@ -129,6 +128,27 @@ export function BillCheckGrid({
     return { pool, onScreen };
   };
 
+  // The Assessment grid's selection, over the rows this grid shows (same order).
+  const onScreen = screenRows().onScreen;
+  const selection = useGridSelection(onScreen);
+  const { selected, cellSelection, setCellSelection } = selection;
+  const duplicates = useMemo(() => duplicateParticularsOf(allRows), [allRows]);
+  /**
+   * Rows of the selected cells, top to bottom: one column, one section, as in Assessment.
+   * With `at`, only when that box is inside the selection (Tab or Shift+→ may have left it).
+   */
+  const selRows = (at?: HTMLElement): AssessmentRow[] => {
+    if (!cellSelection) return [];
+    const ids = clampRangeToSection(onScreen, cellSelection.anchorRowId, cellSelection.focusRowId);
+    if (at && (at.dataset.bcCol !== cellSelection.columnKey || !ids.has(at.dataset.bcRow ?? ''))) return [];
+    return onScreen.filter(r => ids.has(r.id));
+  };
+  /** data-sel marks a selected cell; the grid draws the blue outline from it. */
+  const cs = (rowId: string, col: string) => selection.isCellSelected(rowId, col) || undefined;
+  /** What a box shows, read from the screen so copy and fill use the figure the surveyor sees. */
+  const shownValue = (root: HTMLElement, rowId: string, col: string) =>
+    root.querySelector<HTMLInputElement>(`[data-bc-row="${CSS.escape(rowId)}"][data-bc-col="${col}"]`)?.value ?? '';
+
   const FILL_COLS: readonly string[] = ['gst', 'disposalPercent', 'billAllowed', 'depOverride', 'billedTaxable', 'billRemarks'];
   const ARROWS: readonly string[] = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
 
@@ -139,6 +159,7 @@ export function BillCheckGrid({
    */
   const handleGridKeys = (e: KeyboardEvent<HTMLElement>) => {
     const t = e.target as HTMLElement;
+    if (e.key === 'Escape') setCellSelection(null);
     if (!t.dataset?.bcRow) return;
     const els = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('[data-bc-row][data-bc-col]'))
       .filter(el => !(el as HTMLInputElement).disabled);
@@ -146,8 +167,15 @@ export function BillCheckGrid({
     const here = { row: t.dataset.bcRow, col: t.dataset.bcCol! };
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
       e.preventDefault();
+      const rows = selRows(t);
+      if (rows.length >= 2) { // fill the selection with its top cell, as in Assessment
+        const col = cellSelection!.columnKey;
+        const top = shownValue(e.currentTarget, rows[0].id, col);
+        fillColumn(col, rows.slice(1).map(() => top), rows[1].id);
+        return;
+      }
       const above = moveTarget(cells, here, 'ArrowUp');
-      if (above !== null) fillColumn(t, [(els[above] as HTMLInputElement).value ?? '']);
+      if (above !== null) fillColumn(here.col, [(els[above] as HTMLInputElement).value ?? ''], here.row);
       return;
     }
     const isTextBox = t instanceof HTMLInputElement && t.type === 'text';
@@ -162,6 +190,20 @@ export function BillCheckGrid({
     const next = els[to];
     next.focus();
     if (next instanceof HTMLInputElement && next.type === 'text') next.select();
+    if (key !== 'ArrowUp' && key !== 'ArrowDown') return;
+    const nextRow = next.dataset.bcRow!;
+    // Shift extends the selection down the column; a plain move starts it afresh.
+    setCellSelection(prev => e.shiftKey
+      ? (prev && prev.columnKey === here.col ? { ...prev, focusRowId: nextRow } : { columnKey: here.col, anchorRowId: here.row, focusRowId: nextRow })
+      : { columnKey: here.col, anchorRowId: nextRow, focusRowId: nextRow });
+  };
+
+  /** Ctrl+C on two or more selected cells copies them one per line, for Excel. */
+  const handleCopy = (e: ClipboardEvent<HTMLElement>) => {
+    const rows = selRows(e.target as HTMLElement);
+    if (rows.length < 2) return;
+    e.clipboardData.setData('text/plain', rows.map(r => shownValue(e.currentTarget, r.id, cellSelection!.columnKey)).join('\n'));
+    e.preventDefault();
   };
 
   /** A column pasted from Excel into any editable column but Ref No (that has its own paste). */
@@ -169,18 +211,25 @@ export function BillCheckGrid({
     const t = e.target as HTMLElement;
     const col = t.dataset?.bcCol;
     if (e.defaultPrevented || !col || !FILL_COLS.includes(col)) return;
-    const values = columnValues(e.clipboardData.getData('text'));
-    if (!values) return;
+    const text = e.clipboardData.getData('text');
+    const values = columnValues(text);
+    if (!values) {
+      // One value over a selection fills every selected cell, as in Assessment.
+      const rows = selRows(t);
+      if (rows.length < 2) return;
+      e.preventDefault();
+      fillColumn(col, rows.map(() => text.trim()), rows[0].id);
+      return;
+    }
     e.preventDefault();
-    fillColumn(t, values);
+    fillColumn(col, values, t.dataset.bcRow!);
   };
 
-  /** Writes values down the column from box `t`, through the same lock rules as a paste. */
-  const fillColumn = (t: HTMLElement, values: string[]) => {
-    const col = t.dataset.bcCol;
-    if (!col || !FILL_COLS.includes(col)) return;
-    t.blur(); // FormulaNumericInput only syncs from the store while not focused
-    const plan = planColumnFill(col as FillColumn, values, screenRows().onScreen, t.dataset.bcRow!, {
+  /** Writes values down `col` from row `startRowId`, through the same lock rules as a paste. */
+  const fillColumn = (col: string, values: string[], startRowId: string) => {
+    if (!FILL_COLS.includes(col)) return;
+    (document.activeElement as HTMLElement | null)?.blur(); // FormulaNumericInput only syncs from the store while not focused
+    const plan = planColumnFill(col as FillColumn, values, onScreen, startRowId, {
       fromBill,
       autoDepRate: r => depRateFor({ ...r, depOverride: undefined }),
     });
@@ -293,37 +342,16 @@ export function BillCheckGrid({
   };
   const gridCols = buildCols();
 
-  const toggleSelect = (id: string) => {
-    setSelected(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  };
-  /**
-   * Ticks or clears one section without disturbing the others.
-   *
-   * This used to return `new Set(ids)`, replacing the whole selection. That was
-   * harmless while the only caller passed every row, but with a tick box per
-   * section it would silently drop a Parts selection the moment Labour was
-   * ticked — and the next Delete Selected would act on the wrong rows.
-   */
-  const toggleSelectAll = (ids: string[]) => {
-    setSelected(prev => {
-      const next = new Set(prev);
-      const allOn = ids.length > 0 && ids.every(id => next.has(id));
-      for (const id of ids) {
-        if (allOn) next.delete(id); else next.add(id);
-      }
-      return next;
-    });
-  };
   const handleBulkDelete = () => {
     if (selected.size === 0) return;
     if (!confirm(`Delete ${selected.size} selected item${selected.size === 1 ? '' : 's'}?\n\n${ALSO_REMOVES}\n\nIf the workshop simply did not bill it, set it to "Not in Bill" instead.`)) return;
     deleteAssessmentRows(Array.from(selected));
-    setSelected(new Set());
+    selection.clearSelection();
   };
+  /** Deletes at once with Undo, as in Assessment (it is the same row there). */
   const handleDeleteRow = (id: string) => {
-    if (!confirm(`Delete this row?\n\n${ALSO_REMOVES}\n\nIf the workshop simply did not bill it, set it to "Not in Bill" instead.`)) return;
-    deleteAssessmentRow(id);
-    setSelected(prev => { const n = new Set(prev); n.delete(id); return n; });
+    deleteRowWithUndo(id);
+    if (selected.has(id)) selection.toggleSelect(id);
   };
 
   const subtotals = sectionSubtotals(summary);
@@ -345,7 +373,7 @@ export function BillCheckGrid({
             type="checkbox"
             checked={tick === 'all'}
             ref={el => { if (el) el.indeterminate = tick === 'some'; }}
-            onChange={() => toggleSelectAll(sectionIds)}
+            onChange={() => selection.toggleSectionSelectAll(sectionIds)}
             className="h-3.5 w-3.5 cursor-pointer accent-[var(--color-status-danger)]"
             title="Select every row in this section"
           />
@@ -465,7 +493,7 @@ export function BillCheckGrid({
 
   return (
     <>
-    <div className="rounded-2xl overflow-hidden bg-card border border-border" onKeyDown={handleGridKeys} onPaste={handleColumnPaste}>
+    <div className="rounded-2xl overflow-hidden bg-card border border-border [&_[data-sel]]:ring-2 [&_[data-sel]]:ring-blue-400 [&_[data-sel]]:ring-inset" onKeyDown={handleGridKeys} onPaste={handleColumnPaste} onCopy={handleCopy} onMouseDown={selection.handleCellMouseDown}>
       {/* Grid header / toolbar */}
       <div className="px-4 py-3 flex items-start justify-between gap-4" style={{ borderBottom: '1px solid var(--color-neutral-100)', background: 'var(--color-neutral-50)' }}>
         <div>
@@ -579,6 +607,7 @@ export function BillCheckGrid({
 
           {displayedRows.map((row, idx) => {
             const isDisallowed = !row.allowed;
+            const isDup = duplicates.has(normParticulars(row.particulars));
             const effectiveStatus: BillStatus = isDisallowed ? 'not-allowed' : (row.billStatus || 'pending');
             const st = statusLabel(effectiveStatus);
             return [
@@ -593,19 +622,19 @@ export function BillCheckGrid({
               <div
                 key={row.id}
                 id={`bc-row-${row.id}`}
-                className="px-2 py-1.5 grid gap-2 items-center"
+                data-row-id={row.id}
+                className={`px-2 py-1.5 grid gap-2 items-center ${rowTintClass(row, isDup, selected.has(row.id))}`}
                 style={{
                   gridTemplateColumns: gridCols,
                   borderBottom: '1px solid var(--color-neutral-100)',
-                  background: isDisallowed ? 'var(--color-neutral-100)' : 'transparent',
                   opacity: isDisallowed ? 0.75 : 1,
                 }}
               >
-                <div className="flex items-center justify-center">
+                <div className={`flex items-center justify-center self-stretch ${isDup ? 'border-l-4 border-orange-500' : ''}`}>
                   <input
                     type="checkbox"
                     checked={selected.has(row.id)}
-                    onChange={() => toggleSelect(row.id)}
+                    onChange={() => selection.toggleSelect(row.id)}
                     className="h-3.5 w-3.5 cursor-pointer accent-[var(--color-status-danger)]"
                   />
                 </div>
@@ -648,6 +677,8 @@ export function BillCheckGrid({
                     <FormulaNumericInput
                       data-bc-row={row.id}
                       data-bc-col="gst"
+                      data-column-key="gst"
+                      data-sel={cs(row.id, 'gst')}
                       integerOnly
                       value={row.isDisposal ? 0 : (row.gst ?? 18)}
                       onChange={(val) => {
@@ -684,6 +715,8 @@ export function BillCheckGrid({
                       <FormulaNumericInput
                         data-bc-row={row.id}
                         data-bc-col="disposalPercent"
+                        data-column-key="disposalPercent"
+                        data-sel={cs(row.id, 'disposalPercent')}
                         value={row.disposalPercent ?? 50}
                         onChange={(val) => updateAssessmentRow(row.id, { disposalPercent: Math.min(100, Math.max(0, val)) })}
                         className="h-6 w-10 text-[11px] text-center px-0 font-medium bg-background"
@@ -698,6 +731,8 @@ export function BillCheckGrid({
                 <AllowanceInput
                   data-bc-row={row.id}
                   data-bc-col="billAllowed"
+                  data-column-key="billAllowed"
+                  data-sel={cs(row.id, 'billAllowed')}
                   value={row.billAllowed ?? row.assessed ?? 0}
                   disabled={isDisallowed}
                   highlighted={row.billAllowed !== undefined}
@@ -712,6 +747,8 @@ export function BillCheckGrid({
                     <DecimalInput
                       data-bc-row={row.id}
                       data-bc-col="depOverride"
+                      data-column-key="depOverride"
+                      data-sel={cs(row.id, 'depOverride')}
                       min={0}
                       max={100}
                       step={1}
@@ -753,6 +790,8 @@ export function BillCheckGrid({
                   <DecimalInput
                     data-bc-row={row.id}
                     data-bc-col="billedTaxable"
+                    data-column-key="billedTaxable"
+                    data-sel={cs(row.id, 'billedTaxable')}
                     value={row.billedTaxable ?? ''}
                     onChange={e => {
                       const raw = e.target.value.trim();
@@ -785,6 +824,8 @@ export function BillCheckGrid({
                   <select
                     data-bc-row={row.id}
                     data-bc-col="billStatus"
+                    data-column-key="billStatus"
+                    data-sel={cs(row.id, 'billStatus')}
                     value={row.billStatus || 'pending'}
                     onChange={e => {
                       const s = e.target.value as BillStatus;
@@ -818,6 +859,8 @@ export function BillCheckGrid({
                     <input
                       data-bc-row={row.id}
                       data-bc-col="refSrNo"
+                      data-column-key="refSrNo"
+                      data-sel={cs(row.id, 'refSrNo')}
                       type="text"
                       value={row.refSrNo ?? ''}
                       placeholder="—"
@@ -846,6 +889,8 @@ export function BillCheckGrid({
                   <input
                     data-bc-row={row.id}
                     data-bc-col="billRemarks"
+                    data-column-key="billRemarks"
+                    data-sel={cs(row.id, 'billRemarks')}
                     value={row.billRemarks || ''}
                     onChange={e => updateAssessmentRow(row.id, { billRemarks: e.target.value })}
                     placeholder="Notes…"
@@ -934,6 +979,19 @@ export function BillCheckGrid({
           {totalsRow('TOTAL', billedTotals(allowedRows, fromBill), true)}
         </div>
       </div>
+      {(() => {
+        // Excel's status bar, as in Assessment: Sum and Count of two or more selected figures.
+        const rows = selRows();
+        const col = cellSelection?.columnKey;
+        if (rows.length < 2 || (col !== 'billAllowed' && col !== 'billedTaxable')) return null;
+        const sum = rows.reduce((t, r) => t + (col === 'billAllowed' ? (r.billAllowed ?? r.assessed ?? 0) : (r.billedTaxable ?? 0)), 0);
+        return (
+          <div className="border-t border-border bg-muted/50 px-4 py-1 text-right text-[11px] text-muted-foreground">
+            Sum <span className="font-semibold text-foreground">{sum.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
+            {' · '}Count <span className="font-semibold text-foreground">{rows.length}</span>
+          </div>
+        );
+      })()}
     </div>
 
     {pendingAllowance && (

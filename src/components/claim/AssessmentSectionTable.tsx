@@ -10,7 +10,6 @@ import { formatCurrency, shouldStartSupplementaryBand } from '@/lib/calculations
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Trash2, PlusCircle, PackageX, FileSearch, GripVertical, Wrench, Check, X } from 'lucide-react';
-import { toast } from 'sonner';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
@@ -22,7 +21,7 @@ import type { PartType, AssessmentRow as AssessmentRowType, AssessmentSection } 
 import type { DeductionCategory } from '@/lib/constants/deduction-categories';
 import type { SectionSubtotal } from '@/lib/calculations/section-subtotals';
 import type { useGridSelection } from './useGridSelection';
-import { CATEGORY_TAGS, insertRowAt, type OptionalColumn } from './assessment-grid-config';
+import { CATEGORY_TAGS, deleteRowWithUndo, normParticulars, rowTintClass, type OptionalColumn } from './assessment-grid-config';
 import { estimateShortRows } from '@/lib/calculations/estimate-floor';
 
 /** Owner rule: an estimate below the assessed amount is shown red and holds printing. */
@@ -111,7 +110,6 @@ export function AssessmentSectionTable({
   const {
     currentClaim,
     updateAssessmentRow,
-    deleteAssessmentRow,
     toggleRowAllowed,
     moveRowToSection,
     addAssessmentRowToSection,
@@ -130,24 +128,7 @@ export function AssessmentSectionTable({
     return map;
   }, [distinctEstimateIds]);
 
-  /** Deletes at once and offers Undo, which puts the row back at its old place. */
-  const deleteWithUndo = (id: string) => {
-    const before = useClaimStore.getState().currentClaim?.assessmentRows ?? [];
-    const index = before.findIndex(r => r.id === id);
-    if (index < 0) return;
-    const removed = before[index];
-    deleteAssessmentRow(id);
-    toast(`Deleted "${removed.particulars || 'row'}"`, {
-      duration: 6000,
-      action: {
-        label: 'Undo',
-        onClick: () => {
-          const now = useClaimStore.getState().currentClaim?.assessmentRows ?? [];
-          if (!now.some(r => r.id === id)) updateClaim({ assessmentRows: insertRowAt(now, removed, index) });
-        },
-      },
-    });
-  };
+  const deleteWithUndo = deleteRowWithUndo;
 
   const sectionRowIds = rows.map(r => r.id);
   const totalCols = 9 + visibleCount;
@@ -323,7 +304,7 @@ export function AssessmentSectionTable({
                   });
                 };
 
-                const normalizedParticulars = row.particulars?.replace(/\s+/g, ' ').trim().toLowerCase();
+                const normalizedParticulars = normParticulars(row.particulars);
                 const isDuplicate = normalizedParticulars ? duplicateParticulars.has(normalizedParticulars) : false;
                 const rowAccentClass =
                   distinctEstimateIds.length >= 2 && row.estimateId && estimateColorMap[row.estimateId]
@@ -345,7 +326,7 @@ export function AssessmentSectionTable({
                   <SortableRow
                     key={row.id}
                     id={row.id}
-                    className={`hover:bg-accent/30 transition-colors ${rowAccentClass} ${selection.selected.has(row.id) ? 'bg-slate-500/5' : ''} ${!row.allowed ? 'bg-muted/40 text-muted-foreground' : ''} ${isDuplicate ? 'bg-orange-500/10' : ''} ${row.isDisposal && row.allowed ? 'bg-amber-500/5' : ''} ${row.imt23 && row.allowed ? 'bg-primary/5' : ''}`}
+                    className={`${rowTintClass(row, isDuplicate, selection.selected.has(row.id))} ${rowAccentClass}`}
                   >
                     {/* Select checkbox — always on */}
                     <td className={`px-2 py-1.5 text-center ${isDuplicate ? 'border-l-4 border-orange-500' : ''}`}>
