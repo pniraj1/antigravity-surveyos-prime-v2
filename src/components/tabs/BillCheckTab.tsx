@@ -205,17 +205,19 @@ export function BillCheckTab() {
         <PanelGroup orientation="horizontal">
           {/* Main Bill Check Content */}
           <Panel defaultSize={showEvidence ? 60 : 100} minSize={30}>
-            <div className="h-full overflow-y-auto p-4">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                <div className={showSummary ? 'lg:col-span-8 xl:col-span-9' : 'lg:col-span-12'}>
+            <div className="h-full p-4">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full min-h-0">
+                <div className={`flex flex-col h-full min-h-0 ${showSummary ? 'lg:col-span-8 xl:col-span-9' : 'lg:col-span-12'}`}>
+                  <div className="shrink-0">
                   <BillCheckAttentionBanner
                     flags={flags}
                     reconciliation={reconciliation}
                     onConfirmAllBelow={confirmAllBelow}
                     onKeepAllAbove={keepAllAbove}
                   />
+                  </div>
 
-                  <div className="mt-4">
+                  <div className="mt-4 flex-1 min-h-0">
                     <BillCheckGrid
                       allRows={allRows}
                       allowedRows={allowedRows}
@@ -228,10 +230,7 @@ export function BillCheckTab() {
                       fmt={fmt}
                       ageMonths={ageMonths}
                       claim={currentClaim}
-                    />
-                  </div>
-
-                  <div className="mt-6">
+                      after={
                     <ExtraBillItemsPanel
                       extraBillItems={extraBillItems}
                       assessmentRows={allRows}
@@ -242,11 +241,13 @@ export function BillCheckTab() {
                       canPromote={!isFromBill(currentClaim)}
                       fmt={fmt}
                     />
+                      }
+                    />
                   </div>
                 </div>
 
                 {showSummary && (
-                  <div className="lg:col-span-4 xl:col-span-3">
+                  <div className="lg:col-span-4 xl:col-span-3 overflow-y-auto h-full">
                     <BillCheckSummaryPanel
                       bc={bc}
                       onBillCheckChange={updateBillCheck}

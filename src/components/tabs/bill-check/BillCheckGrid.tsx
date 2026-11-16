@@ -57,6 +57,8 @@ interface Props {
   ageMonths: number;
   /** The claim in scope — carries the paint-material-depreciation settings. */
   claim: ClaimData;
+  /** Rendered inside the scroll box after the last row, pinned left so it stays put when scrolling sideways. */
+  after?: React.ReactNode;
 }
 
 export function BillCheckGrid({
@@ -70,6 +72,7 @@ export function BillCheckGrid({
   fmt,
   ageMonths,
   claim,
+  after,
 }: Props) {
   // Same rate the report computes, so the grid and the PDF cannot disagree.
   const depRateFor = (row: AssessmentRow) => rowDepRate(row, ageMonths, claim);
@@ -493,7 +496,7 @@ export function BillCheckGrid({
 
   return (
     <>
-    <div className="rounded-2xl overflow-hidden bg-card border border-border [&_[data-sel]]:ring-2 [&_[data-sel]]:ring-blue-400 [&_[data-sel]]:ring-inset" onKeyDown={handleGridKeys} onPaste={handleColumnPaste} onCopy={handleCopy} onMouseDown={selection.handleCellMouseDown}>
+    <div className="flex flex-col h-full min-h-0 rounded-2xl overflow-hidden bg-card border border-border [&_[data-sel]]:ring-2 [&_[data-sel]]:ring-blue-400 [&_[data-sel]]:ring-inset" onKeyDown={handleGridKeys} onPaste={handleColumnPaste} onCopy={handleCopy} onMouseDown={selection.handleCellMouseDown}>
       {/* Grid header / toolbar */}
       <div className="px-4 py-3 flex items-start justify-between gap-4" style={{ borderBottom: '1px solid var(--color-neutral-100)', background: 'var(--color-neutral-50)' }}>
         <div>
@@ -560,7 +563,7 @@ export function BillCheckGrid({
         </div>
       </div>
 
-      <div style={{ overflow: 'auto', maxHeight: 'calc(100dvh - 240px)', scrollPaddingTop: 44 }}>
+      <div className="flex-1 min-h-0 overflow-auto" style={{ scrollPaddingTop: 44 }}>
         <div style={{ width: 'max-content', minWidth: '100%' }}>{/* every row as wide as its columns, so frozen columns hold all the way right */}
           {/*
             Grouped Parts / Labour / Painting, mirroring the Assessment tab and
@@ -978,6 +981,7 @@ export function BillCheckGrid({
 
           {totalsRow('TOTAL', billedTotals(allowedRows, fromBill), true)}
         </div>
+        {after && <div className="sticky left-0 p-4">{after}</div>}
       </div>
       {(() => {
         // Excel's status bar, as in Assessment: Sum and Count of two or more selected figures.

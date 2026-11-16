@@ -137,7 +137,7 @@ describe('BillCheckGrid Editability Markup', () => {
     expect(html).toContain('value="50"');
   });
 
-  const render = (claim: ClaimData) =>
+  const render = (claim: ClaimData, after?: React.ReactNode) =>
     renderToStaticMarkup(
       <BillCheckGrid
         allRows={[baseRow]}
@@ -151,6 +151,7 @@ describe('BillCheckGrid Editability Markup', () => {
         fmt={n => String(n)}
         ageMonths={12}
         claim={claim}
+        after={after}
       />
     );
   const LOCK = 'title="Billed at the bill&#x27;s own figure (this claim is made from the bill)."';
@@ -173,8 +174,19 @@ describe('BillCheckGrid Editability Markup', () => {
 
   it('is one scroll box with sticky section headings', () => {
     const html = render(mockClaim);
-    expect(html).toMatch(/overflow:auto;max-height:calc\(100dvh - 240px\)/);
+    expect(html).not.toContain('calc(100dvh - 240px)');
+    expect(html).toContain('flex-1 min-h-0 overflow-auto');
     expect(html).toMatch(/position:sticky;top:0;z-index:10/);
     expect(html).toMatch(/scroll-padding-top:44px/);
+  });
+
+  it('puts the extras inside the scroll box, after the rows, pinned left', () => {
+    const html = render(mockClaim, <div>EXTRAS</div>);
+    const box = html.indexOf('flex-1 min-h-0 overflow-auto');
+    const pinned = html.indexOf('<div class="sticky left-0 p-4">', box);
+    const extras = html.indexOf('EXTRAS');
+    expect(box).toBeGreaterThan(-1);
+    expect(pinned).toBeGreaterThan(html.indexOf('Front Bumper'));
+    expect(extras).toBeGreaterThan(pinned);
   });
 });
