@@ -26,7 +26,7 @@ import { DocumentReviewSheet } from '@/components/documents/DocumentReviewSheet'
 import type { EstimateApplyMode } from '@/stores/slices/aiDataSlice';
 import { saveDocuments } from '@/lib/documents/sink';
 import { DocumentKindDialog } from '@/components/dialogs/DocumentKindDialog';
-import { assessmentSwitch, assessmentUploadDocType, asksDocumentKind, docTypeForAnswer, otherKind, shouldApplyUndo } from '@/lib/documents/upload-doc-type';
+import { assessmentSwitch, assessmentUploadDocType, asksDocumentKind, docTypeForAnswer, otherKind, shouldApplyUndo, uploadModeAfterSwitch } from '@/lib/documents/upload-doc-type';
 import { isFromBill } from '@/lib/reports/bill-check-mode';
 import { UsePhoneFiles } from '@/components/documents/UsePhoneFiles';
 import type { ClaimDocument, DocType } from '@/types/documents';
@@ -77,7 +77,7 @@ export function AssessmentTab() {
     triggerExtraction('estimate', file, undefined, undefined, mode);
     const docType = answer ? docTypeForAnswer(answer) : assessmentUploadDocType(claim);
     // A claim with rows switches through the store action (clears what the old mode held).
-    const sw = answer && claim?.assessmentRows.length ? assessmentSwitch(claim, answer) : null;
+    const sw = answer && claim ? assessmentSwitch(claim, answer) : null;
     // The old document's header is not the new one's: leave bill no./date/total blank.
     if (sw) useClaimStore.getState().setBillCheckUpload(sw.upload, { copyHeader: false });
     else if (answer && claimId && !claim?.assessmentRows.length) {
@@ -117,19 +117,21 @@ export function AssessmentTab() {
     // The question only collects the answer; it is recorded when reading starts,
     // so cancelling anything below leaves the next upload asking again.
     let answer: Kind | null = null;
+    let switching = false;
     if (asksDocumentKind(useClaimStore.getState().currentClaim)) {
       answer = await new Promise<Kind | null>((resolve) => setKindAsk({ resolve }));
       setKindAsk(null);
       if (answer === null) return;
       // Switching a claim that already has rows loses figures: confirm before anything starts.
       const claim = useClaimStore.getState().currentClaim;
-      const prompt = claim?.assessmentRows.length ? assessmentSwitch(claim, answer)?.prompt : null;
+      const prompt = claim ? assessmentSwitch(claim, answer)?.prompt : null;
       if (prompt && !window.confirm(prompt)) return;
+      switching = !!prompt;
     }
     // Asked BEFORE extraction: a wrong file, or a surveyor who changes their
     // mind, then costs nothing. Resolves straight to 'replace' on an empty
-    // sheet — nothing to lose, so nothing to ask.
-    const mode = await confirmEstimateMode(file.name);
+    // sheet — nothing to lose, so nothing to ask. A switch always replaces (F3).
+    const mode = await uploadModeAfterSwitch(switching, () => confirmEstimateMode(file.name));
     if (mode === null) return;
 
     if (await needsReview([file])) {

@@ -63,3 +63,18 @@ describe('assessmentSwitch', () => {
     expect(assessmentSwitch(empty, 'final-bill')).toBeNull();
   });
 });
+
+import { uploadModeAfterSwitch } from '../upload-doc-type';
+
+describe('uploadModeAfterSwitch (F3)', () => {
+  it('a real switch replaces without asking continue/replace', async () => {
+    let asked = 0;
+    const ask = async () => { asked++; return 'continue' as const; };
+    expect(await uploadModeAfterSwitch(true, ask)).toBe('replace');
+    expect(asked).toBe(0);
+  });
+  it('no switch asks as before', async () => {
+    expect(await uploadModeAfterSwitch(false, async () => 'continue')).toBe('continue');
+    expect(await uploadModeAfterSwitch(false, async () => null)).toBeNull();
+  });
+});

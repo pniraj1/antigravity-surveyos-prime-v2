@@ -1,4 +1,5 @@
 import type { ClaimData } from '@/types';
+import type { EstimateApplyMode } from '@/stores/slices/aiDataSlice';
 import { isFromBill } from '@/lib/reports/bill-check-mode';
 
 type Kind = 'estimate' | 'final-bill';
@@ -47,4 +48,12 @@ export function assessmentSwitch(claim: ClaimData, answer: Kind): { upload: Kind
     upload: otherKind(answer),
     prompt: `Make this claim from ${doc}? The new document will replace the current rows, and item numbers and billed amounts matched so far will be cleared.`,
   };
+}
+
+/** A real base-document switch always replaces the rows (its confirm said so): never ask continue/append. */
+export function uploadModeAfterSwitch(
+  switching: boolean,
+  ask: () => Promise<EstimateApplyMode | null>,
+): Promise<EstimateApplyMode | null> {
+  return switching ? Promise.resolve('replace') : ask();
 }
