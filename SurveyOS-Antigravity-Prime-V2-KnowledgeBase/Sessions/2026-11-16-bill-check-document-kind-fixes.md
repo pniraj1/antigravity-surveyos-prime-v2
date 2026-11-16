@@ -40,3 +40,6 @@ Final review (740fe2ed..3d39dcd8) asked for 7 fixes before deploy; all done, re-
 3. Reconciliation Cockpit look (restyle d0b632d2) on a normal claim and on a from-bill claim (Estimate wording, amber colours).
 4. Assessment: upload on a claim with rows → question preselected; switching asks first and replaces rows; bill header stays blank.
 Known, deferred: Bill Check switches mode before its replace/continue prompt (cancel leaves it switched); print-gate "Not in bill" rows not re-matched; Stage 2 word stemming.
+
+## Deployed 2026-11-16
+Hosting deployed to motorsurveyos-in (surveyos-v2-antigravity-in) from main @ 581ad696; live chunks verified byte-identical to the build on surveyos.in and motorsurveyos-in.web.app. Not pushed to GitHub. Owner visual checks above still to do on the live site.
