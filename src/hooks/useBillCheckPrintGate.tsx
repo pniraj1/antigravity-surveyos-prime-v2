@@ -18,12 +18,12 @@ import type { AssessmentRow, EstimateHeads } from '@/types/assessment';
 import type { SurveyorProfile } from '@/types/vehicle';
 
 /**
- * Rows the one-tap "Not in Bill" may close. A row carrying a sure ref shares a
- * billed line with a sibling (repeated part) — it is in the bill, so it stays.
+ * Rows the one-tap "Not in Bill" may close. A row with any bill line number
+ * (sure or typed) is on the bill, so it stays.
  */
 export function rowsToMarkNotInBill(rows: AssessmentRow[], fromBill = false): AssessmentRow[] {
   if (fromBill) return [];
-  return rows.filter((r) => r.allowed && (!r.billStatus || r.billStatus === 'pending') && !(r.refStatus === 'clean' && r.refSrNo != null));
+  return rows.filter((r) => r.allowed && (!r.billStatus || r.billStatus === 'pending') && r.refSrNo == null);
 }
 
 export function useBillCheckPrintGate() {

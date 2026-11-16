@@ -54,6 +54,15 @@ describe('rowsToMarkNotInBill', () => {
     expect(rowsToMarkNotInBill(rows as never).map(r => r.id)).toEqual(['none']);
   });
 
+  it('skips a pending row with a typed (manual) ref but marks one with no ref (F2)', () => {
+    const base = { particulars: 'X', estimated: 1, assessed: 1, partType: 'metal', gst: 18, section: 'parts', allowed: true, isDisposal: false, disposalPercent: 50 } as const;
+    const rows = [
+      { ...base, id: 'typed', billStatus: 'pending', refSrNo: '12', refStatus: 'manual' },
+      { ...base, id: 'none' },
+    ];
+    expect(rowsToMarkNotInBill(rows as never).map(r => r.id)).toEqual(['none']);
+  });
+
   it('marks nothing in a claim built from the bill', () => {
     const base = { particulars: 'X', estimated: 1, assessed: 1, partType: 'metal', gst: 18, section: 'parts', allowed: true, isDisposal: false, disposalPercent: 50 } as const;
     const rows = [{ ...base, id: 'p', billStatus: 'pending' }];
