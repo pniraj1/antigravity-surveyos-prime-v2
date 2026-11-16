@@ -18,7 +18,7 @@ import {
 import { sectionTickState, useGridSelection, clampRangeToSection } from '@/components/claim/useGridSelection';
 import { duplicateParticularsOf, normParticulars, rowTintClass, deleteRowWithUndo } from '@/components/claim/assessment-grid-config';
 import {
-  OptionalColumn, OPTIONAL_COLUMNS, DEFAULT_VISIBLE, COL_WIDTHS,
+  OptionalColumn, OPTIONAL_COLUMNS, type ColumnMeta, DEFAULT_VISIBLE, COL_WIDTHS,
   loadVisibility, saveVisibility, statusLabel, type BillStatus,
 } from './config';
 import { GRID_COLUMNS } from '@/components/claim/grid-columns';
@@ -54,6 +54,21 @@ export function billCheckRowsShown(
 }
 
 /** Billed figures a section footer shows. Allowed rows only, whatever the view. */
+/** Selected ids that are on screen: Delete Selected must never reach rows a filter hides. */
+export function deletableSelection(selected: ReadonlySet<string>, shownIds: ReadonlySet<string>): string[] {
+  return Array.from(selected).filter(id => shownIds.has(id));
+}
+
+/** Column picker entries; the two price columns carry the same case labels as the headers. */
+export function pickerColumns(
+  columns: readonly ColumnMeta[], labels: { base: string; amount: string },
+): ColumnMeta[] {
+  return columns.map(c =>
+    c.key === 'unitPrice' ? { ...c, label: `${labels.base === 'Billed' ? 'Bill' : labels.base} (taxable)` }
+    : c.key === 'billedTaxable' ? { ...c, label: `${labels.amount} (taxable)` }
+    : c);
+}
+
 export function sectionFooterTotals(
   rows: AssessmentRow[], section: AssessmentSection, allowedOnly: boolean, fromBill: boolean,
 ): BilledTotals {
@@ -385,9 +400,10 @@ export function BillCheckGrid({
   const gridCols = buildCols();
 
   const handleBulkDelete = () => {
-    if (selected.size === 0) return;
-    if (!confirm(`Delete ${selected.size} selected item${selected.size === 1 ? '' : 's'}?\n\n${ALSO_REMOVES}\n\nIf the workshop simply did not bill it, set it to "Not in Bill" instead.`)) return;
-    deleteAssessmentRows(Array.from(selected));
+    const ids = deletableSelection(selected, new Set(onScreen.map(r => r.id)));
+    if (ids.length === 0) return;
+    if (!confirm(`Delete ${ids.length} selected item${ids.length === 1 ? '' : 's'}?\n\n${ALSO_REMOVES}\n\nIf the workshop simply did not bill it, set it to "Not in Bill" instead.`)) return;
+    deleteAssessmentRows(ids);
     selection.clearSelection();
   };
   /** Deletes at once with Undo, as in Assessment (it is the same row there). */
@@ -574,7 +590,7 @@ export function BillCheckGrid({
             </button>
           )}
           <button
-            onClick={() => setAllowedOnly(!allowedOnly)}
+            onClick={() => { selection.clearSelection(); setAllowedOnly(!allowedOnly); }}
             aria-pressed={allowedOnly}
             className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all border ${
               allowedOnly
@@ -587,7 +603,7 @@ export function BillCheckGrid({
           </button>
           {(uncertainCount > 0 || filterUncertain) && (
             <button
-              onClick={() => setFilterUncertain(!filterUncertain)}
+              onClick={() => { selection.clearSelection(); setFilterUncertain(!filterUncertain); }}
               className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all border ${
                 filterUncertain
                   ? 'bg-amber-600 text-white border-amber-600'
@@ -607,7 +623,7 @@ export function BillCheckGrid({
             </div>
           )}
           <ColumnPicker
-            columns={OPTIONAL_COLUMNS}
+            columns={pickerColumns(OPTIONAL_COLUMNS, labels)}
             visible={visible}
             count={visibleCount}
             onToggle={toggleColumn}
