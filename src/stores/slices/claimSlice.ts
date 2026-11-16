@@ -59,7 +59,8 @@ export interface ClaimSlice {
   updateFeeBill: (updates: Partial<ClaimData['feeBill']>) => void;
   updateBillCheck: (updates: Partial<ClaimData['billCheck']>) => void;
   /** Bill Check uploads the final bill ('final-bill') or the estimate ('estimate', from-bill mode). */
-  setBillCheckUpload: (kind: 'final-bill' | 'estimate') => void;
+  /** `copyHeader` (default true): fill an empty bill no./date/total from the estimate read. */
+  setBillCheckUpload: (kind: 'final-bill' | 'estimate', opts?: { copyHeader?: boolean }) => void;
   updateReportSettings: (updates: Partial<ReportSettings>) => void;
   addPhoto: (
     dataUrl: string,
@@ -438,7 +439,7 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
     }));
   },
 
-  setBillCheckUpload: (kind) => {
+  setBillCheckUpload: (kind, opts) => {
     set((state: ClaimSlice) => {
       const c = state.currentClaim;
       if (!c) return {};
@@ -458,7 +459,7 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
       });
       const { estimateHeads: _heads, ...billCheck } = {
         ...c.billCheck,
-        ...(kind === 'estimate' ? billHeaderFromEstimate(c) : {}),
+        ...(kind === 'estimate' && opts?.copyHeader !== false ? billHeaderFromEstimate(c) : {}),
         baseDocument: kind === 'estimate' ? ('final-bill' as const) : ('estimate' as const),
         // A damaged claim's header was the estimate's: the surveyor confirms it again.
         ...(kind === 'estimate' && !wasFromBill ? { verifiedBySurveyor: false } : {}),

@@ -183,6 +183,22 @@ describe('setBillCheckUpload', () => {
     expect(store.getState().currentClaim!.billCheck.verifiedBySurveyor).toBe(false);
   });
 
+  it("'estimate' with copyHeader false leaves the bill header blank (F1)", () => {
+    const store = seed([row()]);
+    store.setState({ currentClaim: { ...store.getState().currentClaim!, extractedData: { estimate: { bill_number: 'B-7', estimate_date: '01/01/2026', gross_amount: 99999 } } } });
+    store.getState().setBillCheckUpload('estimate', { copyHeader: false });
+    const bc = store.getState().currentClaim!.billCheck;
+    expect([bc.billNo, bc.billDate, bc.billTotal]).toEqual(['', '', 0]);
+    expect(bc.baseDocument).toBe('final-bill');
+  });
+
+  it("'estimate' by default still copies the estimate header (F1)", () => {
+    const store = seed([row()]);
+    store.setState({ currentClaim: { ...store.getState().currentClaim!, extractedData: { estimate: { bill_number: 'B-7', gross_amount: 99999 } } } });
+    store.getState().setBillCheckUpload('estimate');
+    expect(store.getState().currentClaim!.billCheck.billTotal).toBe(99999);
+  });
+
   it("'estimate' again on a from-bill claim keeps its refs", () => {
     const store = seed([row({ refSrNo: '7' })]);
     store.getState().updateBillCheck({ baseDocument: 'final-bill' });

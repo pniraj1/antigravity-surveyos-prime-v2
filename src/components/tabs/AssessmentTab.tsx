@@ -78,7 +78,8 @@ export function AssessmentTab() {
     const docType = answer ? docTypeForAnswer(answer) : assessmentUploadDocType(claim);
     // A claim with rows switches through the store action (clears what the old mode held).
     const sw = answer && claim?.assessmentRows.length ? assessmentSwitch(claim, answer) : null;
-    if (sw) useClaimStore.getState().setBillCheckUpload(sw.upload);
+    // The old document's header is not the new one's: leave bill no./date/total blank.
+    if (sw) useClaimStore.getState().setBillCheckUpload(sw.upload, { copyHeader: false });
     else if (answer && claimId && !claim?.assessmentRows.length) {
       toast(answer === 'final-bill' ? 'Read as the final bill — the claim is made from the bill.' : 'Read as the estimate.', {
         duration: 8000,
