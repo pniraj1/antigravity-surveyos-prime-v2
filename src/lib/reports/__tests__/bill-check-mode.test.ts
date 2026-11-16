@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fromBillSelfBillUpdates, finalBillReadBlocked, estimateHeads, estimateTotals, needsEstimateHeads, billHeaderFromEstimate, isFromBill, rowsLostOnSwitch, selfBilled, selfBillUpdates } from '../bill-check-mode';
+import { fromBillSelfBillUpdates, finalBillReadBlocked, estimateHeads, estimateTotals, needsEstimateHeads, billHeaderFromEstimate, isFromBill, rowsLostOnSwitch, selfBilled, selfBillUpdates, switchPrompt } from '../bill-check-mode';
 import type { ClaimData } from '@/types';
 import type { AssessmentRow } from '@/types/assessment';
 
@@ -83,6 +83,20 @@ describe('rowsLostOnSwitch', () => {
       expect(needsEstimateHeads(fb([], x, estimateHeads(fb([], x))))).toBe(false);
     });
   });
+});
+
+describe('switchPrompt', () => {
+  const mk = (rows: AssessmentRow[], extras: unknown[] = [], baseDocument: 'estimate' | 'final-bill' = 'estimate') =>
+    ({ assessmentRows: rows, extraBillItems: extras, billCheck: { baseDocument } }) as unknown as ClaimData;
+  it('null for an empty claim', () => expect(switchPrompt(mk([]), 'estimate')).toBeNull());
+  it('null when kind is already the claim mode', () => {
+    expect(switchPrompt(mk([row({ refSrNo: 1 })], [{}]), 'final-bill')).toBeNull();
+    expect(switchPrompt(mk([row()], [{}], 'final-bill'), 'estimate')).toBeNull();
+  });
+  it('extra bill items: Switch to Estimate text', () =>
+    expect(switchPrompt(mk([], [{}]), 'estimate')).toMatch(/^Switch to Estimate\?/));
+  it('names the number of rows lost', () =>
+    expect(switchPrompt(mk([row({ billedTaxable: 1 }), row({ billedAmount: 2 })]), 'estimate')).toContain('on 2 items'));
 });
 
 describe('fromBillSelfBillUpdates (I1)', () => {

@@ -56,6 +56,21 @@ export function rowsLostOnSwitch(claim: ClaimData, kind: 'final-bill' | 'estimat
   ).length;
 }
 
+/** The confirm text for switching the upload kind, or null when nothing is lost or kind is already the mode. */
+export function switchPrompt(claim: ClaimData, kind: 'final-bill' | 'estimate'): string | null {
+  if (kind === (isFromBill(claim) ? 'estimate' : 'final-bill')) return null;
+  const losing = rowsLostOnSwitch(claim, kind);
+  if (losing === 0 && !(claim.extraBillItems?.length)) return null;
+  if (losing === 0) {
+    return kind === 'final-bill'
+      ? 'Switch to Final bill? The estimate lines read so far will be cleared.'
+      : 'Switch to Estimate? The bill lines read so far will be cleared.';
+  }
+  return kind === 'final-bill'
+    ? `Switch to Final bill? The estimate numbers and billed amounts on ${losing} items will be cleared, because a final bill will now be read for them.`
+    : `Switch to Estimate? The bill item numbers and billed amounts on ${losing} items will be replaced by the bill's own figures, and the bill lines read so far will be cleared.`;
+}
+
 /** Bill no. / date / total from the Estimate-tab read, only where the field is empty. */
 export function billHeaderFromEstimate(claim: ClaimData): Partial<BillCheckDetails> {
   const est = claim.extractedData?.estimate;

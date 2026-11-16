@@ -26,7 +26,7 @@ import { ReconciliationWizardDialog } from '@/components/dialogs/ReconciliationW
 
 import { BillCheckHeader } from './bill-check/BillCheckHeader';
 import { BillCheckGrid } from './bill-check/BillCheckGrid';
-import { isFromBill, rowsLostOnSwitch } from '@/lib/reports/bill-check-mode';
+import { isFromBill, switchPrompt } from '@/lib/reports/bill-check-mode';
 import { ExtraBillItemsPanel } from './bill-check/ExtraBillItemsPanel';
 import { BillCheckSummaryPanel } from './bill-check/BillCheckSummaryPanel';
 import { BillCheckAttentionBanner } from './bill-check/BillCheckAttentionBanner';
@@ -55,7 +55,7 @@ export function BillCheckTab() {
   const [showEvidence, setShowEvidence] = useState(false);
   const [showSummary, setShowSummary] = useState(true);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const [reviewFile, setReviewFile] = useState<{ file: File; mode: 'replace' | 'continue'; phone: boolean } | null>(null);
+  const [reviewFile, setReviewFile] = useState<{ file: File; mode: 'replace' | 'continue'; phone: boolean; kind: 'final-bill' | 'estimate' } | null>(null);
 
   const { isProcessing, progress, reviewData, triggerExtraction, confirmApply, cancelReview, smartFix, reviewProgress } = useAIExtraction();
   const { confirmBillMode, estimateModeDialog } = useEstimateModePrompt();
@@ -130,8 +130,8 @@ export function BillCheckTab() {
   };
 
   /** Files the upload in the claim's documents (and Drive); phone files are already there. */
-  const fileUpload = async (file: File) => {
-    const docType = billCheckUploadDocType(upload);
+  const fileUpload = async (file: File, kind: 'final-bill' | 'estimate') => {
+    const docType = billCheckUploadDocType(kind);
     void saveDocuments(docType, [{ blob: file, name: file.name }], 'upload');
     if (profile.autoUploadDrive === false || !(await confirmSaveToCloud(file.name))) return;
     const ext = file.name.split('.').pop() ?? 'bin';
@@ -140,31 +140,24 @@ export function BillCheckTab() {
   };
 
   /** The one place extraction starts: file the upload (not phone files), then read it. */
-  const startBill = (file: File, mode: 'replace' | 'continue', phone: boolean) => {
-    if (!phone) void fileUpload(file);
+  const startBill = (file: File, mode: 'replace' | 'continue', phone: boolean, kind: 'final-bill' | 'estimate' = upload) => {
+    if (!phone) void fileUpload(file, kind);
     triggerExtraction('final-bill', file, undefined, undefined, mode);
   };
 
-  const processBillFile = async (file: File, phone = true) => {
-    const mode = await confirmBillMode(file.name, upload === 'estimate' ? 'estimate' : 'bill');
+  const processBillFile = async (file: File, phone = true, kind: 'final-bill' | 'estimate' = upload) => {
+    const mode = await confirmBillMode(file.name, kind === 'estimate' ? 'estimate' : 'bill');
     if (!mode) return;
-    if (await needsReview([file])) setReviewFile({ file, mode, phone });
-    else startBill(file, mode, phone);
+    if (await needsReview([file])) setReviewFile({ file, mode, phone, kind });
+    else startBill(file, mode, phone, kind);
   };
 
-  const handleUploadChange = (kind: 'final-bill' | 'estimate') => {
-    const losing = rowsLostOnSwitch(currentClaim, kind);
-    if (losing > 0 || extraBillItems.length > 0) {
-      const ok = window.confirm(losing === 0
-        ? (kind === 'final-bill'
-          ? 'Switch to Final bill? The estimate lines read so far will be cleared.'
-          : 'Switch to Estimate? The bill lines read so far will be cleared.')
-        : kind === 'final-bill'
-        ? `Switch to Final bill? The estimate numbers and billed amounts on ${losing} items will be cleared, because a final bill will now be read for them.`
-        : `Switch to Estimate? The bill item numbers and billed amounts on ${losing} items will be replaced by the bill's own figures, and the bill lines read so far will be cleared.`);
-      if (!ok) return;
-    }
+  /** False when the surveyor cancels the switch. */
+  const handleUploadChange = (kind: 'final-bill' | 'estimate'): boolean => {
+    const text = switchPrompt(currentClaim, kind);
+    if (text && !window.confirm(text)) return false;
     setBillCheckUpload(kind);
+    return true;
   };
 
   const handleConfirmApply = () => {
@@ -300,8 +293,8 @@ export function BillCheckTab() {
         onClose={() => setUploadDialogOpen(false)}
         onConfirm={(file, kind) => {
           setUploadDialogOpen(false);
-          if (kind !== upload) handleUploadChange(kind);
-          void processBillFile(file, false);
+          if (kind !== upload && !handleUploadChange(kind)) return;
+          void processBillFile(file, false, kind);
         }}
         defaultKind={upload}
         isProcessing={isProcessing}
@@ -325,9 +318,9 @@ export function BillCheckTab() {
           files={[reviewFile.file]}
           onCancel={() => setReviewFile(null)}
           onConfirm={(_all, forAI) => {
-            const { mode, phone } = reviewFile;
+            const { mode, phone, kind } = reviewFile;
             setReviewFile(null);
-            if (forAI[0]) startBill(forAI[0], mode, phone);
+            if (forAI[0]) startBill(forAI[0], mode, phone, kind);
           }}
         />
       )}
