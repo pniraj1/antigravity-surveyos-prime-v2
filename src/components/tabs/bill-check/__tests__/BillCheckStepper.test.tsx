@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { BillCheckStepper } from '../BillCheckStepper';
 import { useClaimStore } from '@/stores/claim-store';
 import type { AssessmentRow, ExtraBillItem, ClaimData } from '@/types';
+import { selfBilled } from '@/lib/reports/bill-check-mode';
 
 const makeRow = (id: string, pn: string, particulars: string, assessed = 1000, allowed = true): AssessmentRow => ({
   id,
@@ -130,5 +131,16 @@ describe('BillCheckStepper', () => {
 
     // Show Full Grid button should be active with blue style
     expect(html).toContain('aria-pressed="true"');
+  });
+
+  it('counts a self-billed labour row in Stage 2 on a from-bill claim', () => {
+    useClaimStore.setState({
+      currentClaim: { id: 'c', billCheck: { baseDocument: 'final-bill' }, assessmentRows: [], extraBillItems: [] } as unknown as ClaimData,
+    });
+    const base = { ...makeRow('l1', '', 'FRONT BUMPER R/R', 1000), section: 'labour' as const };
+    const labourRow = { ...base, ...selfBilled(base) };
+    const line = { ...makeExtra('e1', '', 'R&R FRONT BUMPER', 1000), section: 'labour' as const };
+    const html = renderToStaticMarkup(<BillCheckStepper rows={[labourRow]} extraBillItems={[line]} />);
+    expect(html).toContain('aria-label="1 items in Name &amp; Price"');
   });
 });

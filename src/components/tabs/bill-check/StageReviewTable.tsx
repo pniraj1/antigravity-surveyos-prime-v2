@@ -7,6 +7,8 @@ import type { AssessmentRow, ExtraBillItem, BillItem } from '@/types/assessment'
 import { normPart } from '@/lib/reports/bill-match-score';
 import { matchStage1PartNumbers } from '@/lib/tally/stage1-part-number';
 import { matchStage2NameAndCost } from '@/lib/tally/stage2-name-cost';
+import { isTallyCandidate } from '@/lib/tally/candidate';
+import { isFromBill } from '@/lib/reports/bill-check-mode';
 import { isPartNumberMatched, isSemanticMatched } from './BillCheckStepper';
 
 export interface ReviewPair {
@@ -28,6 +30,19 @@ export interface ReviewPair {
   };
   priceDelta: number; // billItem.taxableAmount - (row.assessed || row.estimated || 0)
   isVerified: boolean;
+}
+
+/** Row payload for keeping a pair that has no refMatch or linkable line. From-bill rows are already self-billed, so link by refSrNo only. */
+export function keepUpdates(pair: ReviewPair, fromBill: boolean): Partial<AssessmentRow> {
+  if (fromBill) {
+    return { refSrNo: pair.billItem.srNo, estimateAmount: pair.billItem.taxableAmount, billVerified: true };
+  }
+  return {
+    billVerified: true,
+    billStatus: 'in-bill',
+    billedTaxable: pair.billItem.taxableAmount,
+    billedAmount: pair.billItem.totalAmount,
+  };
 }
 
 export interface StageReviewTableProps {
@@ -77,6 +92,7 @@ export function StageReviewTable({
   const storeStage = useClaimStore((s) => s.activeTallyStage);
   const setStoreTallyStage = useClaimStore((s) => s.setTallyStage);
   const currentClaim = useClaimStore((s) => s.currentClaim);
+  const fromBill = isFromBill(currentClaim);
   const updateAssessmentRow = useClaimStore((s) => s.updateAssessmentRow);
   const unlinkBillMatch = useClaimStore((s) => s.unlinkBillMatch);
   const linkExtraBillItem = useClaimStore((s) => s.linkExtraBillItem);
@@ -131,7 +147,7 @@ export function StageReviewTable({
 
       // 2. Candidate matches from matchStage1PartNumbers
       const unmatchedRows = rows.filter(
-        (r) => !handledRowIds.has(r.id) && !r.refMatch && r.allowed && r.billStatus !== 'not-in-bill' && r.billedTaxable === undefined
+        (r) => !handledRowIds.has(r.id) && isTallyCandidate(r, fromBill)
       );
       const s1Result = matchStage1PartNumbers(unmatchedRows, billLines);
 
@@ -196,7 +212,7 @@ export function StageReviewTable({
 
       // 2. Candidate matches from matchStage2NameAndCost
       const unmatchedRows = rows.filter(
-        (r) => !handledRowIds.has(r.id) && !r.refMatch && r.allowed && r.billStatus !== 'not-in-bill' && r.billedTaxable === undefined
+        (r) => !handledRowIds.has(r.id) && isTallyCandidate(r, fromBill)
       );
       // Consume any S1 matches first so S2 doesn't duplicate them
       const s1Res = matchStage1PartNumbers(unmatchedRows, billLines);
@@ -247,12 +263,7 @@ export function StageReviewTable({
       linkExtraBillItem(pair.billItem.extraId, pair.row.id);
       updateAssessmentRow(pair.row.id, { billVerified: true, billStatus: 'in-bill' });
     } else {
-      updateAssessmentRow(pair.row.id, {
-        billVerified: true,
-        billStatus: 'in-bill',
-        billedTaxable: pair.billItem.taxableAmount,
-        billedAmount: pair.billItem.totalAmount,
-      });
+      updateAssessmentRow(pair.row.id, keepUpdates(pair, fromBill));
     }
   };
 

@@ -1,6 +1,7 @@
 import type { StateCreator } from 'zustand';
 import type { AssessmentRow } from '@/types/assessment';
 import type { ClaimData } from '@/types';
+import { isFromBill } from '@/lib/reports/bill-check-mode';
 
 export type TallyStage = 1 | 2 | 3 | 4 | 'grid';
 
@@ -21,7 +22,7 @@ export const createTallySlice: StateCreator<any, any, any, TallySlice> = (set) =
   setReconcileWizardOpen: (open) => set({ isReconcileWizardOpen: open }),
   markRemainingAllowedAsNotInBill: () => {
     set((state: WithClaim) => {
-      if (!state.currentClaim?.assessmentRows) return {};
+      if (!state.currentClaim?.assessmentRows || isFromBill(state.currentClaim)) return {};
       return {
         currentClaim: {
           ...state.currentClaim,

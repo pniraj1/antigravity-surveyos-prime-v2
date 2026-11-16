@@ -9,6 +9,8 @@ import { normPart } from '@/lib/reports/bill-match-score';
 import { matchStage1PartNumbers } from '@/lib/tally/stage1-part-number';
 import { matchStage2NameAndCost } from '@/lib/tally/stage2-name-cost';
 import { segregateStage4Tally } from '@/lib/tally/stage4-tally-matrix';
+import { isTallyCandidate } from '@/lib/tally/candidate';
+import { isFromBill } from '@/lib/reports/bill-check-mode';
 
 export interface BillCheckStepperProps {
   activeStage?: TallyStage;
@@ -83,9 +85,8 @@ export function BillCheckStepper({
     const existingS1 = rows.filter((r) => isPartNumberMatched(r));
     const s1Verified = existingS1.filter((r) => r.billVerified === true).length;
 
-    const unmatchedRows = rows.filter(
-      (r) => !r.refMatch && r.allowed && r.billStatus !== 'not-in-bill' && r.billedTaxable === undefined
-    );
+    const fromBill = isFromBill(currentClaim);
+    const unmatchedRows = rows.filter((r) => isTallyCandidate(r, fromBill));
     const billLines = extraItems.map((e, idx) => extraToBillItem(e, idx));
 
     const s1Result = matchStage1PartNumbers(unmatchedRows, billLines);

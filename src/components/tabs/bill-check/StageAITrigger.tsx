@@ -12,6 +12,8 @@ import {
   Check,
 } from 'lucide-react';
 import { useClaimStore } from '@/stores/claim-store';
+import { isTallyCandidate } from '@/lib/tally/candidate';
+import { isFromBill } from '@/lib/reports/bill-check-mode';
 import type { AssessmentRow, ExtraBillItem } from '@/types/assessment';
 import {
   buildStage3AIPrompt,
@@ -54,9 +56,8 @@ export function StageAITrigger({
   const extraItems = propExtraBillItems ?? currentClaim?.extraBillItems ?? [];
 
   // Filter remaining unmatched rows
-  const remainingRows = rows.filter(
-    (r) => r.allowed && !r.refMatch && r.billStatus !== 'not-in-bill' && r.billedTaxable === undefined
-  );
+  const fromBill = isFromBill(currentClaim);
+  const remainingRows = rows.filter((r) => isTallyCandidate(r, fromBill));
   const remainingLines = extraItems;
 
   const [activeProposals, setActiveProposals] = useState<AIProposal[]>(propProposals ?? []);

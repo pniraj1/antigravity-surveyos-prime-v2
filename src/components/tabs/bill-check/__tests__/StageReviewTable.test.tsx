@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { StageReviewTable, type ReviewPair } from '../StageReviewTable';
+import { StageReviewTable, keepUpdates, type ReviewPair } from '../StageReviewTable';
 import { useClaimStore } from '@/stores/claim-store';
 import type { AssessmentRow, ExtraBillItem, ClaimData } from '@/types';
 
@@ -312,6 +312,27 @@ describe('StageReviewTable', () => {
       expect(html).toContain('Unlink');
       expect(html).toContain('Not billed');
       expect(html).toContain('Keep all');
+    });
+  });
+});
+
+describe('keepUpdates', () => {
+  const pair = {
+    row: makeRow('r1', 'P1', 'FRONT BUMPER'),
+    billItem: { srNo: 7, description: 'FRONT BUMPER', taxableAmount: 900, totalAmount: 1062 },
+    stage: 2, matchBadge: { text: 'x', type: 'semantic' }, priceDelta: 0, isVerified: false,
+  } as ReviewPair;
+
+  it('from-bill links by refSrNo and leaves billed figures alone', () => {
+    const u = keepUpdates(pair, true);
+    expect(u).toEqual({ refSrNo: 7, estimateAmount: 900, billVerified: true });
+    expect(u).not.toHaveProperty('billedTaxable');
+    expect(u).not.toHaveProperty('billedAmount');
+    expect(u).not.toHaveProperty('billStatus');
+  });
+  it('normal claims write the billed figures', () => {
+    expect(keepUpdates(pair, false)).toEqual({
+      billVerified: true, billStatus: 'in-bill', billedTaxable: 900, billedAmount: 1062,
     });
   });
 });

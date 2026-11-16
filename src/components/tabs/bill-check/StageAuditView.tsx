@@ -16,6 +16,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { useClaimStore } from '@/stores/claim-store';
+import { isFromBill } from '@/lib/reports/bill-check-mode';
 import type { AssessmentRow, ExtraBillItem, BillItem } from '@/types/assessment';
 import { segregateStage4Tally } from '@/lib/tally/stage4-tally-matrix';
 import { reconcileInvoice } from '@/lib/reports/bill-check-flags';
@@ -85,9 +86,10 @@ export function StageAuditView({
     return reconcileInvoice(rows, invoiceTotal);
   }, [rows, invoiceTotal]);
 
-  const remainingAllowedUnmarked = rows.filter(
-    (r) => r.allowed && r.billedTaxable === undefined
-  );
+  // Savings only exist on normal claims; from-bill rows are all self-billed.
+  const remainingAllowedUnmarked = isFromBill(currentClaim)
+    ? []
+    : rows.filter((r) => r.allowed && r.billedTaxable === undefined);
 
   const handleMarkSavings = () => {
     if (onMarkSavings) {
