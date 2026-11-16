@@ -1,3 +1,11 @@
+## Done (not deployed): Bill Check / Assessment document-kind fixes, Issues 1-5 (2026-11-16, Claude Code)
+- **Status:** built on `main`, NOT pushed, NOT deployed. Not deployed - owner holding. Spec: `Specs/2026-11-16-bill-check-document-kind-report.md`.
+- Issue 3 `07008b88` (unmatched/labour rows reach Stages 1-3 on from-bill claims); Issue 2 `d1af624d` (upload dialog Cancel + files under chosen kind); Issue 1 `fee88f50` (cockpit wording/colours follow document); Issue 4 `67ca0865` (Assessment asks Bill/Estimate every upload, headings follow); Issue 5 `409373fc` + `40bf3ef9` (one scroll box, extras pinned left, shown on empty grid).
+- Also undeployed from today: `d0b632d2` (cockpit restyle + OS dark-mode leak fix). `740fe2ed` (React #310 crash fix) IS deployed.
+- Deferred by owner: rows marked "Not in bill" by printing are not re-added to matching; Stage 2 word stemming.
+- **Owner still to check by eye (no browser for agents):** Bill Check sideways scroll + pinned extras; narrow-screen summary panel; cockpit look. Then decide deploy.
+- Verification: vitest 3231 passed (357 files, 1 skipped); tsc 0 errors; build ok. Impact on SurveyOS Scan: none (drift tests: 537 run, 0 failures).
+
 ## Done: Bill Check Orange-Themed Upload Dialog & Modal Reconciliation Wizard (2026-11-16, Antigravity) — DEPLOYED
 - **Status:** Deployed to `https://surveyos.in` and `https://motorsurveyos-in.web.app` (Firebase project `surveyos-v2-antigravity-in`, target `motorsurveyos-in`). Live chunks verified with `curl.exe`.
 - **Surgical Header Refactor:** Removed redundant `[Final bill]` and `[Estimate]` toggle buttons from `BillCheckHeader.tsx`. The document type is now selected exclusively within the accessible `BillCheckUploadDialog`, presenting a single clean `[Upload Document]` button on the tab.

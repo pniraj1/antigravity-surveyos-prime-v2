@@ -1,3 +1,11 @@
+## 2026-11-16 (Claude Code) - Bill Check / Assessment document-kind fixes (NOT deployed - owner holding)
+- fix(bill-check) `07008b88`: `isTallyCandidate` lets unmatched/labour rows reach Stages 1-3 on from-bill claims; Keep keeps the bill figure.
+- fix(bill-check) `d1af624d`: upload dialog honours Cancel and files under the chosen kind.
+- fix(bill-check) `fee88f50`: cockpit wording/colours follow the uploaded document; from-bill estimate-lower-than-assessed = amber; Mark-All hidden; Stage 3 prompt says "repair estimate".
+- feat(assessment) `67ca0865`: asks Bill/Estimate on every upload (preselected, warns before switching a claim with rows); "Upload Document" button; "Billed(taxable amount)" headings on from-bill claims.
+- fix(bill-check) `409373fc`, `40bf3ef9`: single scroll box so sideways scrollbar stays visible; Extra Bill Items inside it, pinned left, still shown on an empty grid.
+- verification: vitest 3231 passed; tsc clean; build ok. Not browser-tested. Not pushed. Impact on SurveyOS Scan: none (drift tests: 537 tests, 0 failures).
+
 ## 2026-11-16 (Antigravity) — Bill Check: Orange-Themed Upload Dialog & Modal Reconciliation Wizard (DEPLOYED)
 - refactor(bill-check): surgically removed redundant in-header `[Final bill]` and `[Estimate]` toggle buttons from `BillCheckHeader.tsx`. Document disambiguation happens cleanly within `BillCheckUploadDialog`, presenting a single clean Brand Orange `[Upload Document]` button. Live deployment chunk verified.
 - feat(bill-check): overhauled the Bill Check user experience following a comprehensive UI/UX audit and Google Chrome Modern Web Guidance:

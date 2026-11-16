@@ -23,6 +23,8 @@ Gemini's Reconciliation Cockpit (`src/lib/tally/*`, `src/components/tabs/bill-ch
 
 ## Issue 1: the cockpit always says "Workshop bill", even when you uploaded the estimate
 
+> **BUILT 2026-11-16** in `fee88f50` (on `main`, not deployed - owner holding).
+
 **Owner report:** after choosing *Estimate* in the upload dialog, column 3 of the Reconciliation tab still says workshop bill / bill item number.
 
 **Root cause:** the wording is hard-coded and the mode is never checked.
@@ -54,6 +56,8 @@ Use it in the five cockpit files above, and in `BillCheckGrid.tsx:102` so there 
 
 ## Issue 2: two bugs in the Bill Check upload dialog (found while tracing Issue 1)
 
+> **BUILT 2026-11-16** in `d1af624d` (on `main`, not deployed - owner holding).
+
 `src/components/tabs/BillCheckTab.tsx:301-304`:
 ```ts
 onConfirm={(file, kind) => {
@@ -69,6 +73,8 @@ onConfirm={(file, kind) => {
 ---
 
 ## Issue 3: labour (and anything not matched at read time) never reaches Stage 2 / Stage 3 on claims made from the bill
+
+> **BUILT 2026-11-16** in `07008b88` (on `main`, not deployed - owner holding).
 
 **Owner report:** "it didn't check for labour". Stage 2 and Stage 3 both showed **0**.
 
@@ -109,6 +115,8 @@ Use it in all six places.
 
 ## Issue 4: the Assessment tab should ask "bill or estimate?" on every upload, and its headings should follow
 
+> **BUILT 2026-11-16** in `67ca0865` (on `main`, not deployed - owner holding).
+
 **What happens today:**
 - The question is asked **only on a claim's first upload** (`asksDocumentKind` in `src/lib/documents/upload-doc-type.ts:15`: no rows and no `baseDocument` yet). Every later upload is silently treated as the earlier choice. Changing it later is only possible through the 8-second Undo toast or the Bill Check dialog.
 - The button always reads **"Upload Estimate"** (`AssessmentTab.tsx:198-202`).
@@ -131,6 +139,8 @@ Use it in all six places.
 ---
 
 ## Issue 5: Bill Check grid: the sideways scrollbar is only reachable by scrolling right to the bottom
+
+> **BUILT 2026-11-16** in `409373fc, 40bf3ef9` (on `main`, not deployed - owner holding).
 
 **Owner report:** on Bill Check you have to scroll all the way down before you can scroll right. On the Assessment grid you don't.
 
