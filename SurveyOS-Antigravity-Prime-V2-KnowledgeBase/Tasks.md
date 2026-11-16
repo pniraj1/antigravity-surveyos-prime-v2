@@ -1,3 +1,9 @@
+## Done (not deployed): Bill Check column order and allowed-only view (2026-11-16, Claude Code)
+- **Status:** built on `main`, NOT pushed, NOT deployed. Spec: `docs/superpowers/specs/2026-11-16-bill-check-columns-design.md`. Session: `Sessions/2026-11-16-bill-check-columns.md`.
+- Commits `83292612` (allowed rows only by default, "Allowed only" toggle), `ce6767af` (counts follow shown rows), `521fd622` (footer totals via `sectionFooterTotals`), `ea296fb8` (one column order in both cases: base | Assessed | uploaded | item no.; Case 2 "Bill (taxable)" / "Estimated (taxable)" / "Est. Item No."; old locked "Billed Taxable" column removed).
+- **Owner still to check by eye (no browser for agents):** both cases' column order and labels; the "Allowed only" toggle; keyboard moves and paste in the grid.
+- Verification: vitest 3277 passed (360 files, 1 skipped); tsc 0 errors; build ok. Impact on SurveyOS Scan: none (no doc types, folder layout, manifest or spot/valuation labels touched).
+
 ## Done (not deployed): Cockpit Stage 3 / Stage 4 rework (2026-11-16, Claude Code)
 - **Status:** built on `main`, NOT pushed, NOT deployed. Plan: `docs/superpowers/plans/2026-11-16-cockpit-stage3-stage4.md` (owner's answers 2026-11-16).
 - Task 1 `db9556cf`: Stage 3 "Ask AI" shows two lists side by side before AI is asked (assessment rows left; remaining uploaded lines right, "Workshop bill lines" / "Estimate lines"); proposal cards say "Assessment" / "<doc> line"; cockpit dialog bigger (max-w-[1600px], h-[94vh]); instruction box now one line.

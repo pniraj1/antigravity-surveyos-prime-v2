@@ -1,3 +1,10 @@
+## 2026-11-16 (Claude Code) - Bill Check column order and allowed-only view (NOT deployed)
+- feat(bill-check) `83292612`: grid shows allowed rows only by default; "Allowed only" toggle (on each time; off shows disallowed items the workshop billed).
+- fix(bill-check) `ce6767af`: counts follow the rows shown in the allowed-only view.
+- fix(bill-check) `521fd622`: footer totals via tested `sectionFooterTotals`; totals unchanged.
+- feat(bill-check) `ea296fb8`: one column order in both cases: base | Assessed | uploaded amount | its item no. | Status | GST | Disposal | Dep% | Net | Price+GST | Remarks. Case 1 "Estimate (taxable)" / "Billed (taxable)" / "Bill Item No."; Case 2 "Bill (taxable)" / "Estimated (taxable)" / "Est. Item No."; old locked "Billed Taxable" column removed; Case 2 footer shows bill total under base and estimate total under uploaded.
+- verification: vitest 3277 passed (360 files, 1 skipped); tsc clean; build ok. Not browser-tested. Not pushed. Impact on SurveyOS Scan: none.
+
 ## 2026-11-16 (Claude Code) - Cockpit Stage 3 / Stage 4 rework (NOT deployed)
 - feat(bill-check) `db9556cf`: Stage 3 shows assessment rows and remaining uploaded lines side by side before AI is asked; cards say "Assessment" / "<doc> line"; dialog bigger; one-line instruction box.
 - feat(bill-check) `7db85bad`: Stage 4 opens on assessed rows not linked (Link to, Not in bill / Not in estimate, typed ref), then uploaded lines not linked; disallowed, not-in-bill and seal in a collapsed Summary.
