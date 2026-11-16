@@ -23,6 +23,8 @@ import { useBillCheckPrintGate } from '@/hooks/useBillCheckPrintGate';
 
 import { BillCheckHeader } from './bill-check/BillCheckHeader';
 import { BillCheckGrid } from './bill-check/BillCheckGrid';
+import { BillCheckStepper } from './bill-check/BillCheckStepper';
+import { StageReviewTable } from './bill-check/StageReviewTable';
 import { isFromBill, rowsLostOnSwitch } from '@/lib/reports/bill-check-mode';
 import { ExtraBillItemsPanel } from './bill-check/ExtraBillItemsPanel';
 import { BillCheckSummaryPanel } from './bill-check/BillCheckSummaryPanel';
@@ -45,6 +47,7 @@ export function BillCheckTab() {
   const updateBillCheck     = useClaimStore(s => s.updateBillCheck);
   const updateFeeBill       = useClaimStore(s => s.updateFeeBill);
   const setBillCheckUpload  = useClaimStore(s => s.setBillCheckUpload);
+  const activeTallyStage    = useClaimStore(s => s.activeTallyStage);
   const { profile } = useProfileStore();
 
   const [showEvidence, setShowEvidence] = useState(false);
@@ -190,6 +193,11 @@ export function BillCheckTab() {
         onPrint={requestPrint}
       />
 
+      {/* 4-Stage Progressive Tally Stepper Bar */}
+      <div className="my-2.5 shrink-0">
+        <BillCheckStepper />
+      </div>
+
       {/* Split Workspace */}
       <div className="flex-1 min-h-0 bg-background rounded-xl border border-border overflow-hidden">
         <PanelGroup orientation="horizontal">
@@ -198,41 +206,47 @@ export function BillCheckTab() {
             <div className="h-full overflow-y-auto p-4">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 <div className={showSummary ? 'lg:col-span-8 xl:col-span-9' : 'lg:col-span-12'}>
-                  <BillCheckAttentionBanner
-                    flags={flags}
-                    reconciliation={reconciliation}
-                    onConfirmAllBelow={confirmAllBelow}
-                    onKeepAllAbove={keepAllAbove}
-                  />
+                  {(activeTallyStage === 1 || activeTallyStage === 2) ? (
+                    <StageReviewTable stage={activeTallyStage} />
+                  ) : (
+                    <>
+                      <BillCheckAttentionBanner
+                        flags={flags}
+                        reconciliation={reconciliation}
+                        onConfirmAllBelow={confirmAllBelow}
+                        onKeepAllAbove={keepAllAbove}
+                      />
 
-                  <div className="mt-4">
-                    <BillCheckGrid
-                      allRows={allRows}
-                      allowedRows={allowedRows}
-                      summary={summary}
-                      serials={serials}
-                      updateAssessmentRow={updateAssessmentRow}
-                      deleteAssessmentRow={deleteAssessmentRow}
-                      deleteAssessmentRows={deleteAssessmentRows}
-                      claimId={currentClaim.id}
-                      fmt={fmt}
-                      ageMonths={ageMonths}
-                      claim={currentClaim}
-                    />
-                  </div>
+                      <div className="mt-4">
+                        <BillCheckGrid
+                          allRows={allRows}
+                          allowedRows={allowedRows}
+                          summary={summary}
+                          serials={serials}
+                          updateAssessmentRow={updateAssessmentRow}
+                          deleteAssessmentRow={deleteAssessmentRow}
+                          deleteAssessmentRows={deleteAssessmentRows}
+                          claimId={currentClaim.id}
+                          fmt={fmt}
+                          ageMonths={ageMonths}
+                          claim={currentClaim}
+                        />
+                      </div>
 
-                  <div className="mt-6">
-                    <ExtraBillItemsPanel
-                      extraBillItems={extraBillItems}
-                      assessmentRows={allRows}
-                      onDelete={deleteExtraBillItem}
-                      onClearAll={clearExtraBillItems}
-                      onLink={linkExtraBillItem}
-                      onPromote={promoteExtraBillItem}
-                      canPromote={!isFromBill(currentClaim)}
-                      fmt={fmt}
-                    />
-                  </div>
+                      <div className="mt-6">
+                        <ExtraBillItemsPanel
+                          extraBillItems={extraBillItems}
+                          assessmentRows={allRows}
+                          onDelete={deleteExtraBillItem}
+                          onClearAll={clearExtraBillItems}
+                          onLink={linkExtraBillItem}
+                          onPromote={promoteExtraBillItem}
+                          canPromote={!isFromBill(currentClaim)}
+                          fmt={fmt}
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {showSummary && (
