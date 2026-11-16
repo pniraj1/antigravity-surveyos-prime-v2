@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useClaimStore } from '@/stores/claim-store';
+import { rowsToMarkNotInBill } from '../useBillCheckPrintGate';
 
 describe('useBillCheckPrintGate logic', () => {
   beforeEach(() => {
@@ -44,8 +45,7 @@ describe('useBillCheckPrintGate logic', () => {
 });
 
 describe('rowsToMarkNotInBill', () => {
-  it('skips a pending row that carries a sure ref (it shares a billed line)', async () => {
-    const { rowsToMarkNotInBill } = await import('../useBillCheckPrintGate');
+  it('skips a pending row that carries a sure ref (it shares a billed line)', () => {
     const base = { particulars: 'X', estimated: 1, assessed: 1, partType: 'metal', gst: 18, section: 'parts', allowed: true, isDisposal: false, disposalPercent: 50 } as const;
     const rows = [
       { ...base, id: 'shared', billStatus: 'pending', refSrNo: 260, refStatus: 'clean' },
@@ -54,8 +54,7 @@ describe('rowsToMarkNotInBill', () => {
     expect(rowsToMarkNotInBill(rows as never).map(r => r.id)).toEqual(['none']);
   });
 
-  it('marks nothing in a claim built from the bill', async () => {
-    const { rowsToMarkNotInBill } = await import('../useBillCheckPrintGate');
+  it('marks nothing in a claim built from the bill', () => {
     const base = { particulars: 'X', estimated: 1, assessed: 1, partType: 'metal', gst: 18, section: 'parts', allowed: true, isDisposal: false, disposalPercent: 50 } as const;
     const rows = [{ ...base, id: 'p', billStatus: 'pending' }];
     expect(rowsToMarkNotInBill(rows as never, true)).toEqual([]);

@@ -25,6 +25,8 @@ import { BillCheckHeader } from './bill-check/BillCheckHeader';
 import { BillCheckGrid } from './bill-check/BillCheckGrid';
 import { BillCheckStepper } from './bill-check/BillCheckStepper';
 import { StageReviewTable } from './bill-check/StageReviewTable';
+import { StageAITrigger } from './bill-check/StageAITrigger';
+import { StageAuditView } from './bill-check/StageAuditView';
 import { isFromBill, rowsLostOnSwitch } from '@/lib/reports/bill-check-mode';
 import { ExtraBillItemsPanel } from './bill-check/ExtraBillItemsPanel';
 import { BillCheckSummaryPanel } from './bill-check/BillCheckSummaryPanel';
@@ -206,8 +208,12 @@ export function BillCheckTab() {
             <div className="h-full overflow-y-auto p-4">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 <div className={showSummary ? 'lg:col-span-8 xl:col-span-9' : 'lg:col-span-12'}>
-                  {(activeTallyStage === 1 || activeTallyStage === 2) ? (
+                  {activeTallyStage === 1 || activeTallyStage === 2 ? (
                     <StageReviewTable stage={activeTallyStage} />
+                  ) : activeTallyStage === 3 ? (
+                    <StageAITrigger />
+                  ) : activeTallyStage === 4 ? (
+                    <StageAuditView onPrint={requestPrint} />
                   ) : (
                     <>
                       <BillCheckAttentionBanner
