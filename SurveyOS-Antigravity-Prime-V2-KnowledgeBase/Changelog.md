@@ -1,4 +1,4 @@
-## 2026-11-16 (Antigravity) — Bill Check: Orange-Themed Upload Dialog & Modal Reconciliation Wizard
+## 2026-11-16 (Antigravity) — Bill Check: Orange-Themed Upload Dialog & Modal Reconciliation Wizard (DEPLOYED)
 - feat(bill-check): overhauled the Bill Check user experience following a comprehensive UI/UX audit and Google Chrome Modern Web Guidance:
   - Document Upload Disambiguation (`BillCheckUploadDialog.tsx`): Clicking `[Upload Document]` opens a dedicated modal dialogue box prompting whether the uploaded file is a "Final Workshop Bill / Tax Invoice (Recommended)" or a "Repair Estimate / Quotation", with integrated drag-and-drop dropzone.
   - Dedicated Modal Wizard (`ReconciliationWizardDialog.tsx`): Relocated the 4-stage reconciliation workflow out of the tab body into a focused full-screen modal wizard dialog with accessible ARIA semantics (`role="dialog"`, `aria-modal="true"`, `aria-labelledby`, `Escape` key handling).
