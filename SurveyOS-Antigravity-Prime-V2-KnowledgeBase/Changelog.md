@@ -1,3 +1,8 @@
+## 2026-11-16 (Claude Code) — Bill Check: same cell selection as Assessment (deployed 2026-11-16)
+- feat(bill-check): reuses `useGridSelection` (now works on div grids): click / Shift+click / Shift+↑↓ select within a column; Esc clears; Ctrl+C copies; Ctrl+D fills the selection; one value pasted over a selection fills it; Sum/Count bar (Allowed, Billed). Row delete is now instant with Undo (shared `deleteRowWithUndo`); duplicate edge and row tints shared (`rowTintClass`).
+- open (owner to decide): Bill Check edits of Particulars/Part No/Qty/Estimate, Allow toggle, type dropdown, smart remarks, price history, IMT-23, estimate switcher, estimate-low red. Row drag left out (serials).
+- verification: tsc clean; suite 3133/3133; sonnet review (2 fixes: copy guard, stale selection). Live chunk checked on both sites. Not browser-tested by Claude. Not pushed. Commit 304547f3. Prime ↔ Scan: none.
+
 ## 2026-11-16 (Claude Code) — Both grids: Excel keys, no number stepping, one look (deployed 2026-11-16)
 - feat(grids): number boxes in Assessment, Bill Check and their totals no longer step with arrows / mouse wheel (`DecimalInput`, text box + number keypad, keeps "12." while typing). Plain ↑/↓ and Enter move a row in text boxes (dropdowns, Particulars keep native keys). Ctrl+D copies the cell above (Bill Check new, Assessment single cell). Formulas in Bill Check Allowed + Disposal %. Sum/Count bar for an Assessment selection. Sr + Particulars frozen when scrolling sideways. Shared `ColumnPicker`; Bill Check spacing/headings match Assessment.
 - dropped as risky (owner agreed): grid-wide Ctrl+Z, multi-column block select, sort, find & replace, fill-handle drag, column reorder, Delete clears cells, Particulars autocomplete.
