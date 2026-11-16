@@ -16,3 +16,10 @@ Not deployed. Not pushed. Impact on SurveyOS Scan: none (no doc types, folder la
 2. The two Stage 3 lists.
 3. Stage 4 controls on a normal claim.
 4. Stage 4 controls on a claim built from the bill.
+
+## Final review fix wave (1415d954, 5d31fef5)
+- "Not in estimate" rows now stay listed in the Summary's "Billed Items Not in Estimate" list (they had vanished).
+- Print screen's one-tap "Not in Bill" no longer zeroes rows that carry a typed ref (a ref means the row is on the bill).
+- Link to menu shows the taxable amount, same as Stage 3.
+vitest 3263 pass, tsc 0, build OK. Not deployed.
+Follow-up: on a normal claim, a row with a typed ref but no billed amount still blocks printing until its billed amount/status is set in the grid; the print dialog does not explain this yet.
