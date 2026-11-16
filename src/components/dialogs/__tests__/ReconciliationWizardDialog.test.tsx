@@ -46,7 +46,8 @@ describe('ReconciliationWizardDialog', () => {
     expect(html).toContain('Reconciliation Cockpit');
     expect(html).toContain('Bill #INV-101');
     expect(html).toContain('of 4');
-    expect(html).toContain('Next Stage');
+    // Stages 1–2 move on from the table's own bar, so the footer has no second Next button.
+    expect(html).not.toContain('Next Stage');
   });
 
   it('complies with Google Chrome Modern Web Guidance for modal dialogs', () => {

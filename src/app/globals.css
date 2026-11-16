@@ -2,6 +2,10 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* Light-only app: `dark:` utilities apply only under a `.dark` class (never set),
+   not the OS prefers-color-scheme default — that leaked half a dark theme in. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ═══════════════════════════════════════════════════════════
    Motor SurveyOS V2 — "Executive Platinum" Design System
    Palette: Deep Navy + Platinum White + Racing Gold

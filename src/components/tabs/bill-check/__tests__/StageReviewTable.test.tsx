@@ -69,25 +69,53 @@ describe('StageReviewTable', () => {
 
       // Assessment Row
       expect(html).toContain('FRONT BUMPER');
-      expect(html).toContain('PN: 52119-0K930');
+      expect(html).toContain('52119-0K930');
       expect(html).toContain('₹4,200');
 
       // Bill Item
       expect(html).toContain('BUMPER FRONT');
-      expect(html).toContain('Bill #11');
+      expect(html).toContain('#11');
       expect(html).toContain('₹4,150');
 
-      // Part Number Badge
-      expect(html).toContain('Exact Part No.');
+      // Same part number on both sides: printed once, not repeated on the bill side.
+      expect(html.split('52119-0K930').length - 1).toBe(1);
 
-      // Price Delta: 4150 - 4200 = -50 (Cheaper)
-      expect(html).toContain('-₹50');
-      expect(html).toContain('Cheaper');
+      // Price difference: 4150 - 4200 = -50, a plain green number
+      expect(html).toContain('−₹50');
+      expect(html).toContain('text-emerald-700');
 
-      // Action buttons
-      expect(html).toContain('Keep');
+      // Quiet actions, no per-row Keep
       expect(html).toContain('Unlink');
-      expect(html).toContain('Not Billed');
+      expect(html).toContain('Not billed');
+      expect(html).not.toContain('>Keep<');
+      expect(html).toContain('1</span> to review');
+    });
+
+    it('folds exact matches (same part number and price) away from the review list', () => {
+      const rows = [makeRow('r1', 'PN-1', 'WIPER BLADE', 598), makeRow('r2', 'PN-2', 'BELT', 713)];
+      const extras = [makeExtra('e1', 'PN-1', 'WIPER BLADE', 598), makeExtra('e2', 'PN-2', 'BELT', 700)];
+
+      const html = renderToStaticMarkup(<StageReviewTable stage={1} rows={rows} extraBillItems={extras} />);
+
+      expect(html).toContain('1</span> to review');
+      expect(html).toContain('1 exact match — same part number and price');
+      expect(html).toContain('<details');
+    });
+
+    it('offers a Parts / Labour / Paint filter when sections are mixed', () => {
+      const rows = [
+        makeRow('r1', 'PN-1', 'WIPER BLADE', 598),
+        makeRow('r2', 'LAB-7', 'BUMPER R/R', 500, { section: 'labour' }),
+      ];
+      const extras = [
+        makeExtra('e1', 'PN-1', 'WIPER BLADE', 598),
+        { ...makeExtra('e2', 'LAB-7', 'BUMPER R/R', 500), section: 'labour' as const },
+      ];
+
+      const html = renderToStaticMarkup(<StageReviewTable stage={1} rows={rows} extraBillItems={extras} />);
+
+      expect(html).toContain('aria-label="Filter by section"');
+      expect(html).toContain('labour 1</button>');
     });
 
     it('renders Verified badge when pair has already been verified', () => {
@@ -108,11 +136,11 @@ describe('StageReviewTable', () => {
         <StageReviewTable stage={1} rows={rows} extraBillItems={[]} />
       );
 
-      expect(html).toContain('Verified');
-      expect(html).toContain('₹0 (Exact)');
+      expect(html).toContain('Kept');
+      expect(html).toContain('1 exact match');
     });
 
-    it('renders normalized part number match with Normalized Part No. badge', () => {
+    it('shows the bill part number when it is written differently', () => {
       const rows = [
         makeRow('r1', '52119-0K-930', 'FRONT BUMPER', 4200),
       ];
@@ -124,8 +152,8 @@ describe('StageReviewTable', () => {
         <StageReviewTable stage={1} rows={rows} extraBillItems={extras} />
       );
 
-      expect(html).toContain('Normalized Part No.');
-      expect(html).toContain('border-amber-300');
+      expect(html).toContain('52119-0K-930');
+      expect(html).toContain('521190K930');
     });
 
     it('renders empty state when no Part Number matches exist', () => {
@@ -154,17 +182,16 @@ describe('StageReviewTable', () => {
         <StageReviewTable stage={2} rows={rows} extraBillItems={extras} />
       );
 
-      expect(html).toContain('Stage 2: Name &amp; Price');
+      expect(html).toContain('Stage 2 Review: Name &amp; Price');
       expect(html).toContain('ORVM ASSY RH');
       expect(html).toContain('REAR VIEW MIRROR RH');
 
-      // Semantic Reason badge
+      // Why it matched, as plain text
       expect(html).toContain('Synonym match');
 
-      // Price Delta: 3950 - 3800 = +150 (Higher) with orange/amber styling
+      // Price difference: 3950 - 3800 = +150, amber
       expect(html).toContain('+₹150');
-      expect(html).toContain('Higher');
-      expect(html).toContain('border-amber-300');
+      expect(html).toContain('text-amber-700');
     });
 
     it('renders negative delta with orange price delta badge in Stage 2', () => {
@@ -179,9 +206,8 @@ describe('StageReviewTable', () => {
         <StageReviewTable stage={2} rows={rows} extraBillItems={extras} />
       );
 
-      expect(html).toContain('-₹200');
-      expect(html).toContain('Cheaper');
-      expect(html).toContain('border-amber-300');
+      expect(html).toContain('−₹200');
+      expect(html).toContain('Bill is cheaper than assessed');
     });
   });
 
@@ -208,9 +234,9 @@ describe('StageReviewTable', () => {
         <StageReviewTable stage={1} pairs={pairs} />
       );
 
-      expect(html).toContain('Confirm Stage Matches &amp; Proceed to Next Stage');
-      expect(html).toContain('Push Unmatched to Stage 2');
-      expect(html).toContain('1 unconfirmed match');
+      expect(html).toContain('Keep all 1 and go to Stage 2');
+      expect(html).toContain('Skip to Stage 2');
+      expect(html).toContain('sticky bottom-0');
     });
 
     it('displays full confirmation status when all pairs are verified', () => {
@@ -235,7 +261,7 @@ describe('StageReviewTable', () => {
         <StageReviewTable stage={1} pairs={pairs} />
       );
 
-      expect(html).toContain('All 1 Stage 1 pairs confirmed!');
+      expect(html).toContain('1 kept');
     });
 
     it('renders empty state for Stage 2 when no matches exist', () => {
@@ -283,10 +309,9 @@ describe('StageReviewTable', () => {
         />
       );
 
-      expect(html).toContain('Keep');
       expect(html).toContain('Unlink');
-      expect(html).toContain('Not Billed');
-      expect(html).toContain('Confirm Stage Matches &amp; Proceed to Next Stage');
+      expect(html).toContain('Not billed');
+      expect(html).toContain('Keep all');
     });
   });
 });

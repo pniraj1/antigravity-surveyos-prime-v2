@@ -157,11 +157,8 @@ export function ReconciliationWizardDialog({
         {/* Modal Scrollable Body */}
         <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 bg-background">
           {stageNum === 1 || stageNum === 2 ? (
-            <StageReviewTable
-              stage={stageNum}
-              onConfirmStage={handleNextStage}
-              onPushUnmatched={handleNextStage}
-            />
+            // The table's own bar keeps matches and moves on; overriding it skipped the keep.
+            <StageReviewTable stage={stageNum} />
           ) : stageNum === 3 ? (
             <StageAITrigger onProceedToStage4={() => setTallyStage(4)} />
           ) : (
@@ -198,7 +195,7 @@ export function ReconciliationWizardDialog({
               </Button>
             )}
 
-            {stageNum < 4 ? (
+            {stageNum === 1 || stageNum === 2 ? null : stageNum < 4 ? (
               <>
                 <Button
                   variant="ghost"
