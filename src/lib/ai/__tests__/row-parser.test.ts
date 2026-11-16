@@ -606,3 +606,79 @@ describe('learned layout (stacked two-table bill the built-in rules do not know)
     expect(parseEstimate([page], [{ ...layout[0], words: layout[0].words.map(w => ({ ...w, x: w.x + 50 })) }]).ok).toBe(false);
   });
 });
+
+// BharatBenz (Prabal) estimate: MRP-inclusive parts, then a LABOUR table on the same page
+// whose rows already include 18% GST, each rounded to the rupee.
+describe('tax-included estimate with a labour table under the parts total', () => {
+  const amt = (right: number, s: string): [number, string] => [right - s.length * 5, s];
+  const head = (y: number) => line(y, [[10, 'Sr'], [25, 'No'], [60, 'Part'], [85, 'No'], [140, 'Description'], [260, 'Qty'], [300, 'MRP'], [360, 'MRP'], [390, 'Total']]);
+  const part = (y: number, sr: number, desc: string, total: string) =>
+    line(y, [[10, String(sr)], [60, 'A40040' + sr], [140, desc], [262, '1'], amt(330, total), amt(420, total)]);
+  const labour = (y: number, sr: number, desc: string, total: string) =>
+    line(y, [[10, String(sr)], [60, '4311' + sr], [140, desc], amt(420, total)]);
+  // bases 120, 220 … 820 at 18% print 142, 260 … 968: rows add to 4,440, the footer's 3,760 + 18% is 4,437
+  const labourTotals = ['142', '260', '378', '496', '614', '732', '850', '968'];
+  const doc = () => [
+    ...line(720, [[10, 'PARTS']]),
+    ...head(710),
+    ...part(690, 1, 'WHEEL NUT', '1,000'),
+    ...part(675, 2, 'VENT LINE', '590'),
+    ...line(660, [[260, 'Total'], [290, 'Parts'], [320, 'Amt'], amt(420, '1590')]),
+    ...line(600, [[10, 'LABOUR']]),
+    ...head(590),
+    ...labourTotals.flatMap((t, i) => labour(570 - i * 12, i + 1, 'REMOVE REFIT ' + (i + 1), t)),
+    ...line(460, [[60, 'Total'], amt(330, '3,760'), amt(420, '4,437')]),
+    ...line(445, [[60, 'Final'], [90, 'Amount'], amt(420, '6027')]),
+  ];
+  const reason = (o: ReturnType<typeof parseEstimate>) => (o.ok ? '' : o.reason);
+
+  it('the last parts row does not take in the parts total printed under it', () => {
+    const rows = rowsOf(readRows([doc()]));
+    expect(rows[1].cells.total_amount).toBe('590');
+  });
+
+  it('reads both sections: rows include tax, shown by the labour footer adding 18% to its base', () => {
+    const o = parseEstimate([doc()]);
+    expect(reason(o)).toBe('');
+    if (!o.ok) return;
+    expect(o.data.spare_parts.map(r => r.total_amount)).toEqual([1000, 590]);
+    expect(o.data.labour_items).toHaveLength(8);
+    expect(o.data.labour_items[0]).toMatchObject({ sr_no: 1, total_amount: 142 });
+    expect(o.data.labour_items[0].taxable_amount).toBeUndefined();
+  });
+
+  it('labour rows off the footer by more than rounding still decline', () => {
+    const bad = doc().map(t => (t.s === '968' ? { ...t, s: '998' } : t));
+    expect(parseEstimate([bad]).ok).toBe(false);
+  });
+
+  it('without a footer that shows tax being added, tax-free rows still decline', () => {
+    const noTaxShown = doc().map(t => (t.s === '3,760' ? { ...t, s: '4,437' } : t));
+    expect(reason(parseEstimate([noTaxShown]))).toContain('tax');
+  });
+});
+
+// BharatBenz prints descriptions starting under the Part No heading: "A4004014172 LU WHEEL" | "NUT / M22X2.5X33"
+describe('part number cell with description words', () => {
+  const amt = (right: number, s: string): [number, string] => [right - s.length * 5, s];
+  const head = line(700, [[10, 'Srl'], [60, 'Part'], [85, 'No'], [200, 'Description'], [320, 'Qty'], [380, 'Taxable'], [440, 'Tax%']]);
+  const row = (y: number, sr: number, pnWords: string[], desc: string, taxable: string) =>
+    line(y, [[10, String(sr)], ...pnWords.map((w, i): [number, string] => [60 + i * 40, w]), [200, desc], [322, '1'], amt(415, taxable), amt(460, '18')]);
+  const parse = (rows: PdfToken[]) => {
+    const o = parseEstimate([[...head, ...rows, ...line(600, [[60, 'Grand'], [100, 'Total'], amt(460, '354')])]]);
+    if (!o.ok) throw new Error(o.reason);
+    return o.data.spare_parts;
+  };
+
+  it('moves plain words beside a single code into the description', () => {
+    const [a, b] = parse([...row(680, 1, ['A4004014172', 'LU', 'WHEEL'], 'NUT', '100.00'), ...row(670, 2, ['Reverse', '58508097'], 'CAMERA', '200.00')]);
+    expect(a).toMatchObject({ part_number: 'A4004014172', description: 'LU WHEEL NUT' });
+    expect(b).toMatchObject({ part_number: '58508097', description: 'Reverse CAMERA' });
+  });
+
+  it('leaves a spaced part number and a number with several digit pieces alone', () => {
+    const [a, b] = parse([...row(680, 1, ['A', '0009892603'], 'SEAL', '100.00'), ...row(670, 2, ['N913023', 'M6'], 'NUT', '200.00')]);
+    expect(a.part_number).toBe('A 0009892603');
+    expect(b).toMatchObject({ part_number: 'N913023 M6', description: 'NUT' });
+  });
+});
