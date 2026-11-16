@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { StageAuditView, notInDocUpdates, typedRefUpdates } from '../StageAuditView';
+import { StageAuditView, notInDocUpdates, typedRefUpdates, NOT_IN_ESTIMATE } from '../StageAuditView';
 import { useClaimStore } from '@/stores/claim-store';
 import type { AssessmentRow, ExtraBillItem, ClaimData } from '@/types';
 
@@ -228,6 +228,28 @@ describe('StageAuditView unlinked assessed rows', () => {
     expect(fb).not.toHaveProperty('billStatus');
     expect(typedRefUpdates('  12 ')).toEqual({ refSrNo: '12', refStatus: 'manual' });
     expect(typedRefUpdates('   ').refSrNo).toBeUndefined();
+  });
+
+  it('from-bill row marked Not in estimate stays in the Summary list, not in unlinked rows (F1)', () => {
+    const rows = [makeRow('r1', 'PN1', 'TAIL LAMP', 1000, { billedTaxable: 1200, ...notInDocUpdates(true) })];
+    Object.assign(useClaimStore.getInitialState(), {
+      currentClaim: { id: 'c', assessmentRows: rows, extraBillItems: [], billCheck: { baseDocument: 'final-bill' } } as unknown as ClaimData,
+    });
+    expect(NOT_IN_ESTIMATE).toBe('Not in estimate');
+    const html = renderToStaticMarkup(<StageAuditView />);
+    const first = html.slice(html.indexOf('<section'), html.indexOf('</section>'));
+    expect(first).not.toContain('TAIL LAMP');
+    const d = html.slice(html.indexOf('<details'), html.indexOf('</details>'));
+    expect(d).toContain('TAIL LAMP');
+    expect(d).not.toContain('Every billed item was found in the estimate.');
+  });
+  it('Link to option shows taxable amount (M1)', () => {
+    const rows = [makeRow('r1', 'PN-W', 'WIPER BLADE', 500)];
+    Object.assign(useClaimStore.getInitialState(), {
+      currentClaim: { id: 'c', assessmentRows: rows, extraBillItems: [makeExtra('e1', 'PN-X', 'WIPER ASSY', 1000)], billCheck: {} } as unknown as ClaimData,
+    });
+    const html = renderToStaticMarkup(<StageAuditView />);
+    expect(html).toContain('#11 WIPER ASSY (₹1,000)');
   });
 
   it('first section lists only unlinked rows with Link to, Not in bill and a ref input', () => {

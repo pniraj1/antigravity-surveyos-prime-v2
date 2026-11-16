@@ -36,10 +36,13 @@ export interface StageAuditViewProps {
   className?: string;
 }
 
+/** What a from-bill row's ref holds once the surveyor marks it as not in the estimate. */
+export const NOT_IN_ESTIMATE = 'Not in estimate';
+
 /** Patch for "this row is not in the uploaded document". From-bill never touches the bill figure. */
 export function notInDocUpdates(fromBill: boolean): Partial<AssessmentRow> {
   return fromBill
-    ? { refSrNo: 'Not in estimate', refStatus: 'manual' }
+    ? { refSrNo: NOT_IN_ESTIMATE, refStatus: 'manual' }
     : { billStatus: 'not-in-bill', billedTaxable: 0, billedAmount: 0 };
 }
 
@@ -108,7 +111,7 @@ export function StageAuditView({
     : rows.filter((r) => r.allowed && r.billedTaxable === undefined && r.refSrNo == null);
   // From-bill: bill rows no estimate line was linked to or priced for.
   const notInEstimate = fromBill
-    ? rows.filter((r) => r.allowed && r.refSrNo == null && r.estimateAmount == null)
+    ? rows.filter((r) => r.allowed && r.estimateAmount == null && (r.refSrNo == null || r.refSrNo === NOT_IN_ESTIMATE))
     : [];
 
   const unlinked = rows.filter((r) => isTallyCandidate(r, fromBill));
@@ -193,7 +196,7 @@ export function StageAuditView({
         </div>
       </div>
 
-      {/* Unlinked assessed rows: the surveyor settles each one here. */}
+      {/* SECTION 1: Unlinked assessed rows: the surveyor settles each one here. */}
       <section
         aria-labelledby="unlinked-heading"
         className="flex flex-col gap-2 rounded-xl border border-amber-300 bg-amber-50/40 p-4"
@@ -241,7 +244,7 @@ export function StageAuditView({
                   <option value="" disabled>Link to ▾</option>
                   {extraItems.map((x) => (
                     <option key={x.id} value={x.id}>
-                      #{x.srNo ?? '—'} {x.description} ({formatInr(x.amount)})
+                      #{x.srNo ?? '—'} {x.description} ({formatInr(x.taxableAmount || x.amount)})
                     </option>
                   ))}
                 </select>
@@ -269,7 +272,7 @@ export function StageAuditView({
         )}
       </section>
 
-      {/* SECTION 3: Extra Bill Items Tray (Amber) */}
+      {/* SECTION 2: Uploaded lines — Extra Bill Items Tray (Amber) */}
       <section
         aria-labelledby="extra-items-heading"
         className="flex flex-col gap-3 rounded-xl border border-amber-300 dark:border-amber-900/60 bg-amber-50/40 dark:bg-amber-950/20 p-4"
@@ -371,7 +374,7 @@ export function StageAuditView({
           Summary — disallowed, {fromBill ? 'not in estimate' : 'savings'} and reconciliation seal
         </summary>
         <div className="flex flex-col gap-6 p-4">
-      {/* SECTION 1: Disallowed Items Billed by Workshop */}
+      {/* SUMMARY: Disallowed Items Billed by Workshop */}
       <section
         aria-labelledby="disallowed-billed-heading"
         className="flex flex-col gap-3 rounded-xl border border-red-200 dark:border-red-900/60 bg-red-50/40 dark:bg-red-950/20 p-4"
@@ -436,7 +439,7 @@ export function StageAuditView({
         )}
       </section>
 
-      {/* SECTION 2: Insurer Savings */}
+      {/* SUMMARY: Insurer Savings */}
       <section
         aria-labelledby="insurer-savings-heading"
         className="flex flex-col gap-3 rounded-xl border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/50 dark:bg-emerald-950/20 p-4"
@@ -545,7 +548,7 @@ export function StageAuditView({
         )}
       </section>
 
-      {/* SECTION 4: Final Reconciliation Seal */}
+      {/* SUMMARY: Final Reconciliation Seal */}
       <section
         aria-labelledby="seal-heading"
         className="flex flex-col gap-3 rounded-xl border border-border bg-slate-50/70 dark:bg-slate-900/50 p-4"
