@@ -23,19 +23,13 @@ const render = (upload: 'final-bill' | 'estimate') =>
     />,
   );
 
-describe('BillCheckHeader upload choice', () => {
-  it('estimate: Upload Estimate and both choice labels', () => {
-    const html = render('estimate');
-    expect(html).toContain('Upload Estimate');
-    expect(html).toContain('Final bill');
-    expect(html).toContain('>Estimate<');
-    expect(html).toContain('title="Upload the estimate"');
-  });
-
-  it('final-bill: keeps Upload Bill', () => {
+describe('BillCheckHeader upload button & clean header', () => {
+  it('renders Upload Document and omits in-header final bill / estimate toggle buttons', () => {
     const html = render('final-bill');
-    expect(html).toContain('Upload Bill');
-    expect(html).not.toContain('Upload Estimate');
+    expect(html).toContain('Upload Document');
+    // Header no longer renders duplicate 'Final bill' or 'Estimate' toggle buttons
+    expect(html).not.toContain('>Final bill<');
+    expect(html).not.toContain('>Estimate<');
   });
 
   it('renders Upload button that connects to onOpenUploadDialog without overlay input', () => {
@@ -51,8 +45,8 @@ describe('BillCheckHeader upload choice', () => {
         onOpenUploadDialog={openUpload}
       />
     );
-    expect(html).toContain('Upload Bill');
-    expect(html).toContain('aria-label="Upload Document: Final Bill"');
+    expect(html).toContain('Upload Document');
+    expect(html).toContain('aria-label="Upload Document"');
     // When onOpenUploadDialog is provided, input overlay should not trap clicks
     expect(html).not.toContain('opacity-0 cursor-pointer z-10');
   });

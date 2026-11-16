@@ -11,10 +11,6 @@ import { PrintMenu } from '@/components/tabs/report/PrintMenu';
 
 const INVOICE_TYPES: readonly DocType[] = ['invoice'];
 const ESTIMATE_TYPES: readonly DocType[] = ['estimate'];
-const CHOICES = [
-  { kind: 'final-bill', label: 'Final bill' },
-  { kind: 'estimate', label: 'Estimate' },
-] as const;
 
 interface BcSummary {
   grandTotalBilled: number;
@@ -109,22 +105,7 @@ export function BillCheckHeader({
         </div>
 
         <div className="flex items-center gap-1.5">
-          {/* Which document this upload is */}
-          {CHOICES.map(c => (
-            <Button
-              key={c.kind}
-              variant={upload === c.kind ? 'secondary' : 'outline'}
-              size="sm"
-              aria-pressed={upload === c.kind}
-              disabled={isProcessing}
-              onClick={() => upload !== c.kind && onUploadChange(c.kind)}
-              className={`h-8 px-2.5 text-xs ${upload === c.kind ? 'bg-primary/20 text-primary border-primary/40 font-semibold' : ''}`}
-            >
-              {c.label}
-            </Button>
-          ))}
-
-          {/* Upload Bill / Document Button */}
+          {/* Upload Document Button */}
           {onOpenUploadDialog ? (
             <Button
               onClick={onOpenUploadDialog}
@@ -132,11 +113,11 @@ export function BillCheckHeader({
               size="sm"
               className="gap-1.5 h-8 px-2.5 text-xs bg-primary text-white hover:bg-amber-600 hover:text-white border-primary shadow-xs cursor-pointer font-medium"
               disabled={isProcessing}
-              title={upload === 'estimate' ? 'Upload the estimate' : 'Upload Final Workshop Bill'}
-              aria-label={upload === 'estimate' ? 'Upload Document: Estimate' : 'Upload Document: Final Bill'}
+              title="Upload Document (Final Bill or Estimate)"
+              aria-label="Upload Document"
             >
               <Upload size={14} />
-              {upload === 'estimate' ? 'Upload Estimate' : 'Upload Bill'}
+              Upload Document
             </Button>
           ) : (
             <div className="relative">
@@ -146,7 +127,7 @@ export function BillCheckHeader({
                 accept="image/*,application/pdf"
                 onChange={onFileUpload}
                 disabled={isProcessing}
-                title={upload === 'estimate' ? 'Upload the estimate' : 'Upload Final Workshop Bill'}
+                title="Upload Document"
               />
               <Button
                 variant="outline"
@@ -156,7 +137,7 @@ export function BillCheckHeader({
                 disabled={isProcessing}
               >
                 <Upload size={14} />
-                {upload === 'estimate' ? 'Upload Estimate' : 'Upload Bill'}
+                Upload Document
               </Button>
             </div>
           )}
