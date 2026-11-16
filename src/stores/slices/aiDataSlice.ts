@@ -185,7 +185,7 @@ function formatFuel(f: string): string {
 
 // ─── Bill item type ───────────────────────────────────────────────────────────
 
-interface BillItem {
+export interface BillItem {
   idx: number;
   srNo?: number | string;
   description: string;

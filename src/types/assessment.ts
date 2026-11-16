@@ -12,6 +12,19 @@ export type AssessmentSection = 'parts' | 'labour' | 'paint';
 
 export type BillStatus = 'in-bill' | 'not-in-bill' | 'pending' | 'not-allowed';
 
+export interface BillItem {
+  idx: number;
+  srNo?: number | string;
+  description: string;
+  partNumber: string;
+  taxableAmount: number;
+  totalAmount: number;
+  gstPercent: number;
+  section: 'parts' | 'labour' | 'paint';
+  category?: string;
+  raw: any;
+}
+
 export interface ExtraBillItem {
   id: string;
   description: string;
