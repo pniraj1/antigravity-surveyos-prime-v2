@@ -1,3 +1,12 @@
+## 2026-11-16 (Antigravity) — Bill Check: Surveyor-Controlled Progressive Tallying Cockpit (4-stage workflow)
+- feat(tally): built 4-stage progressive tallying engine & UI in Bill Check tab (`docs/plans/2026-11-16-surveyor-controlled-tallying-cockpit.md`). Replaces the single-pass auto-link and bottom red error box with an authoritative, surveyor-driven workflow:
+  - Stage 1 (`stage1-part-number.ts`): Part Numbers only. Matches exact and normalized part numbers, displays price difference, enables single-click Unlink.
+  - Stage 2 (`stage2-name-cost.ts`): Automotive Name & Cost. Normalizes terminology (`ORVM`, `W/S`, `LH`/`RH`, `Bonnet`/`Hood`), enforces strict directional lock (LH never matches RH), filters out >40% price divergences.
+  - Stage 3 (`stage3-ai-matcher.ts`, `StageAITrigger.tsx`): Surveyor-Triggered AI. Runs on remaining unmatched items ONLY when surveyor clicks button. Displays plain-English reasons with Accept/Reject controls.
+  - Stage 4 (`stage4-tally-matrix.ts`, `StageAuditView.tsx`): Disallowed & Savings Tally. Isolates workshop-billed disallowed parts with enforced ₹0 liability and audit remark; provides one-click `Mark All Remaining Allowed as Not in Bill (Saving)`; reconciles invoice with ₹0 gap seal.
+  - UI (`BillCheckStepper.tsx`, `StageReviewTable.tsx`, `tallySlice.ts`): Clean top stepper with live counts, stage filtering, and standard grid toggle.
+- verification: tsc clean; vitest 3,178/3,178 tests passed (including 45 new tally/stage tests); Prime ↔ Scan impact: none.
+
 ## 2026-11-16 (Claude Code) — Bill Check: same cell selection as Assessment (deployed 2026-11-16)
 - feat(bill-check): reuses `useGridSelection` (now works on div grids): click / Shift+click / Shift+↑↓ select within a column; Esc clears; Ctrl+C copies; Ctrl+D fills the selection; one value pasted over a selection fills it; Sum/Count bar (Allowed, Billed). Row delete is now instant with Undo (shared `deleteRowWithUndo`); duplicate edge and row tints shared (`rowTintClass`).
 - open (owner to decide): Bill Check edits of Particulars/Part No/Qty/Estimate, Allow toggle, type dropdown, smart remarks, price history, IMT-23, estimate switcher, estimate-low red. Row drag left out (serials).
