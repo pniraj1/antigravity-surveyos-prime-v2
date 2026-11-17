@@ -1,20 +1,23 @@
-## 2026-11-17 (Claude Code) - Bill Check: Final bill / Estimate switch restored (NOT committed, NOT deployed)
+## 2026-11-17 (Claude Code) - Deploy of main at f2a0452b
+- Pushed `main` and deployed hosting (both sites on surveyos-v2-antigravity-in; surveyos.in checked live, release 16:08) from a clean worktree of HEAD, so the owner's uncommitted edits (about 25 files: rupee 2-decimals, insured report, bill-check) were NOT shipped. This release also put the previously undeployed cockpit Stage 3/4 and Bill Check column-order commits live. Not browser-tested by the agent.
+
+## 2026-11-17 (Claude Code) - Bill Check: Final bill / Estimate switch restored (DEPLOYED 2026-11-17)
 - fix(bill-check): wrong document answered in Assessment (estimate that was really a bill, or the reverse) had no way back without a new upload. The `[Final bill] [Estimate]` buttons removed in `9393a6e6` are back in `BillCheckHeader` (tooltips say which document the claim is made from). They switch in place, no re-read, with the existing confirm (`switchPrompt`); assessed amounts and allowed flags are kept. Known gap: the file already saved stays filed under its first type. Impact on SurveyOS Scan: none.
 
-## 2026-11-17 (Claude Code) - UIIC spot dates, AI model pick everywhere, "done by" note (NOT committed, NOT deployed)
+## 2026-11-17 (Claude Code) - UIIC spot dates, AI model pick everywhere, "done by" note (DEPLOYED 2026-11-17)
 - fix(uiic): the UIIC final report's "SPOT SURVEY DETAILS" column printed the final survey's dates, because the store mirrors `accident.dateOfSurvey/appointmentDate` and `claim.reportDate` into `spotDetails.*`. The column now reads new `reinspection.spotAppointmentDate/spotSurveyDate/spotReportDate`, asked in the UIIC "Before printing" dialog (blank allowed). Store sync untouched.
 - fix(ai): `callAIGateway` with no session (rephrase cause, bill-check AI match, insured report, bank statement) now honours the surveyor's provider/model pick (default session via `newSession`).
 - feat(ai): small "done by <model>" note: `lastUsedModelLabel()` in `service.ts`; shown beside Undo after rephrase, in the extraction review ("Read by ..."), and as a toast detail for bill match, insured report, bank statement, estimate re-read.
 - verification: vitest 3297 passed (365 files, 1 skipped); tsc clean. Not browser-tested. Impact on SurveyOS Scan: none (`spotDetails.*` paths, labels and manifest untouched).
 
-## 2026-11-16 (Claude Code) - Bill Check column order and allowed-only view (NOT deployed)
+## 2026-11-16 (Claude Code) - Bill Check column order and allowed-only view (DEPLOYED 2026-11-17)
 - feat(bill-check) `83292612`: grid shows allowed rows only by default; "Allowed only" toggle (on each time; off shows disallowed items the workshop billed).
 - fix(bill-check) `ce6767af`: counts follow the rows shown in the allowed-only view.
 - fix(bill-check) `521fd622`: footer totals via tested `sectionFooterTotals`; totals unchanged.
 - feat(bill-check) `ea296fb8`: one column order in both cases: base | Assessed | uploaded amount | its item no. | Status | GST | Disposal | Dep% | Net | Price+GST | Remarks. Case 1 "Estimate (taxable)" / "Billed (taxable)" / "Bill Item No."; Case 2 "Bill (taxable)" / "Estimated (taxable)" / "Est. Item No."; old locked "Billed Taxable" column removed; Case 2 footer shows bill total under base and estimate total under uploaded.
 - verification: vitest 3277 passed (360 files, 1 skipped); tsc clean; build ok. Not browser-tested. Not pushed. Impact on SurveyOS Scan: none.
 
-## 2026-11-16 (Claude Code) - Cockpit Stage 3 / Stage 4 rework (NOT deployed)
+## 2026-11-16 (Claude Code) - Cockpit Stage 3 / Stage 4 rework (DEPLOYED 2026-11-17)
 - feat(bill-check) `db9556cf`: Stage 3 shows assessment rows and remaining uploaded lines side by side before AI is asked; cards say "Assessment" / "<doc> line"; dialog bigger; one-line instruction box.
 - feat(bill-check) `7db85bad`: Stage 4 opens on assessed rows not linked (Link to, Not in bill / Not in estimate, typed ref), then uploaded lines not linked; disallowed, not-in-bill and seal in a collapsed Summary.
 - verification: vitest 3260 passed; tsc clean; build ok. Not browser-tested. Not pushed. Impact on SurveyOS Scan: none (no doc types, folder layout or manifest touched).

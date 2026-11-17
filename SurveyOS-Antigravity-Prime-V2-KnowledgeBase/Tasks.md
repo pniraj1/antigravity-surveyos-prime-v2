@@ -1,5 +1,5 @@
-## Done (not deployed): UIIC spot dates + AI model pick + "done by" note (2026-11-17, Claude Code)
-- **Status:** edited on `main`, NOT committed, NOT deployed. Session: `Sessions/2026-11-17-uiic-spot-dates-ai-model-note.md`.
+## Done (DEPLOYED 2026-11-17): UIIC spot dates + AI model pick + "done by" note (2026-11-17, Claude Code)
+- **Status:** committed and deployed from `main` (f2a0452b). Session: `Sessions/2026-11-17-uiic-spot-dates-ai-model-note.md`.
 - **Owner still to check by eye (no browser for agents):** UIIC final print, with the three new spot-date fields filled and blank; rephrase cause (small "by <model>" beside Undo); extraction review ("Read by ..."); toasts on bill-check AI match, insured report, bank statement.
 - Open idea (not built): check whether the standard (non-UIIC) report shows the same mirrored spot dates.
 
