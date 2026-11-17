@@ -11,6 +11,11 @@ import { PrintMenu } from '@/components/tabs/report/PrintMenu';
 
 const INVOICE_TYPES: readonly DocType[] = ['invoice'];
 const ESTIMATE_TYPES: readonly DocType[] = ['estimate'];
+// The way back when Assessment was answered with the wrong document: switches in place, no re-read.
+const CHOICES = [
+  { kind: 'final-bill', label: 'Final bill', title: 'Claim made from the estimate; this tab reads the final bill' },
+  { kind: 'estimate', label: 'Estimate', title: 'Claim made from the final bill; this tab reads the estimate' },
+] as const;
 
 interface BcSummary {
   grandTotalBilled: number;
@@ -105,6 +110,21 @@ export function BillCheckHeader({
         </div>
 
         <div className="flex items-center gap-1.5">
+          {CHOICES.map(c => (
+            <Button
+              key={c.kind}
+              variant={upload === c.kind ? 'secondary' : 'outline'}
+              size="sm"
+              aria-pressed={upload === c.kind}
+              title={c.title}
+              disabled={isProcessing}
+              onClick={() => upload !== c.kind && onUploadChange(c.kind)}
+              className={`h-8 px-2.5 text-xs ${upload === c.kind ? 'bg-primary/20 text-primary border-primary/40 font-semibold' : ''}`}
+            >
+              {c.label}
+            </Button>
+          ))}
+
           {/* Upload Document Button */}
           {onOpenUploadDialog ? (
             <Button

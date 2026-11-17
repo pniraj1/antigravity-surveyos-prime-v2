@@ -1,3 +1,6 @@
+## 2026-11-17 (Claude Code) - Bill Check: Final bill / Estimate switch restored (NOT committed, NOT deployed)
+- fix(bill-check): wrong document answered in Assessment (estimate that was really a bill, or the reverse) had no way back without a new upload. The `[Final bill] [Estimate]` buttons removed in `9393a6e6` are back in `BillCheckHeader` (tooltips say which document the claim is made from). They switch in place, no re-read, with the existing confirm (`switchPrompt`); assessed amounts and allowed flags are kept. Known gap: the file already saved stays filed under its first type. Impact on SurveyOS Scan: none.
+
 ## 2026-11-17 (Claude Code) - UIIC spot dates, AI model pick everywhere, "done by" note (NOT committed, NOT deployed)
 - fix(uiic): the UIIC final report's "SPOT SURVEY DETAILS" column printed the final survey's dates, because the store mirrors `accident.dateOfSurvey/appointmentDate` and `claim.reportDate` into `spotDetails.*`. The column now reads new `reinspection.spotAppointmentDate/spotSurveyDate/spotReportDate`, asked in the UIIC "Before printing" dialog (blank allowed). Store sync untouched.
 - fix(ai): `callAIGateway` with no session (rephrase cause, bill-check AI match, insured report, bank statement) now honours the surveyor's provider/model pick (default session via `newSession`).

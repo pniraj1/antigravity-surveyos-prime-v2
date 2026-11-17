@@ -24,12 +24,15 @@ const render = (upload: 'final-bill' | 'estimate') =>
   );
 
 describe('BillCheckHeader upload button & clean header', () => {
-  it('renders Upload Document and omits in-header final bill / estimate toggle buttons', () => {
+  it('renders Upload Document plus the Final bill / Estimate switch, marking the current kind', () => {
     const html = render('final-bill');
     expect(html).toContain('Upload Document');
-    // Header no longer renders duplicate 'Final bill' or 'Estimate' toggle buttons
-    expect(html).not.toContain('>Final bill<');
-    expect(html).not.toContain('>Estimate<');
+    expect(html).toContain('>Final bill<');
+    expect(html).toContain('>Estimate<');
+    // the way back when Assessment was answered with the wrong document
+    expect(html).toMatch(/aria-pressed="true"[^>]*>Final bill</);
+    expect(html).toMatch(/aria-pressed="false"[^>]*>Estimate</);
+    expect(render('estimate')).toMatch(/aria-pressed="true"[^>]*>Estimate</);
   });
 
   it('renders Upload button that connects to onOpenUploadDialog without overlay input', () => {
