@@ -19,6 +19,9 @@ const INPUT = 'w-full px-3 py-2 rounded-lg border border-border outline-none tex
 const LABEL = 'text-[10px] font-medium uppercase tracking-widest text-muted-foreground block mb-1.5';
 
 const DATE_FIELDS = [
+  { key: 'spotAppointmentDate', label: 'Spot survey appointment date' },
+  { key: 'spotSurveyDate', label: 'Spot survey date' },
+  { key: 'spotReportDate', label: 'Spot survey report date' },
   { key: 'riAppointmentDate', label: 'Reinspection appointment date' },
   { key: 'repairAuthDate', label: 'Repair Authorisation Date' },
   { key: 'estCompletionDate', label: 'Est. Repair Completion Date' },

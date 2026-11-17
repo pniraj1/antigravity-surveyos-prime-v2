@@ -201,9 +201,9 @@ ${getSurveyorHeader(profile)}
 <tr><td style="padding:2px 3px;color:#333;">FINANCIER INTEREST</td><td style="padding:2px 3px;">${g(p.hpaWith || v.hypothecation || v.rcEndorsement) || 'NIL'}</td></tr>
 <tr><td style="padding:2px 3px;color:#333;">Insured Contact Details</td><td style="padding:2px 3px;">${g(p.insuredMobile)}</td></tr>
 </table></td><td style="${td}vertical-align:top;"><table style="width:100%;border-collapse:collapse;font-size:7pt;">
-<tr><td style="padding:2px 3px;color:#333;width:50%;">Spot Survey Appointment Date</td><td style="padding:2px 3px;">${fd(sd.allotmentDate)}</td></tr>
-<tr><td style="padding:2px 3px;color:#333;">Spot Survey Date</td><td style="padding:2px 3px;">${fd(sd.surveyDatetime)}</td></tr>
-<tr><td style="padding:2px 3px;color:#333;">Spot Survey Report Date</td><td style="padding:2px 3px;">${fd(sd.reportDate)}</td></tr>
+<tr><td style="padding:2px 3px;color:#333;width:50%;">Spot Survey Appointment Date</td><td style="padding:2px 3px;">${fd(ri.spotAppointmentDate)}</td></tr>
+<tr><td style="padding:2px 3px;color:#333;">Spot Survey Date</td><td style="padding:2px 3px;">${fd(ri.spotSurveyDate)}</td></tr>
+<tr><td style="padding:2px 3px;color:#333;">Spot Survey Report Date</td><td style="padding:2px 3px;">${fd(ri.spotReportDate)}</td></tr>
 <tr><td style="padding:2px 3px;color:#333;">TPPI / TPPD</td><td style="padding:2px 3px;">${g(a.thirdPartyDetails) || 'NIL'}</td></tr>
 </table></td></tr>
 <tr><td style="${td}" colspan="2"><b>CAUSE OF ACCIDENT/ DETAILS OF DAMAGES</b><br/><span style="font-size:7pt;">${g(a.causeOfAccident) || '—'}</span></td></tr></table>

@@ -316,6 +316,10 @@ export interface ReinspectionDetails {
   /** Where the re-inspection was done. Blank = same as accident.placeOfSurvey. */
   placeOfSurvey?: string;
   riAppointmentDate?: string;
+  /** UIIC "Spot Survey Details" dates. Asked at print time; spotDetails.* mirrors the final survey so can't be used. */
+  spotAppointmentDate?: string;
+  spotSurveyDate?: string;
+  spotReportDate?: string;
   repairsAsAssessed?: 'YES' | 'NO' | 'PARTIAL';
   repairAuthDate?: string;
   estCompletionDate?: string;
