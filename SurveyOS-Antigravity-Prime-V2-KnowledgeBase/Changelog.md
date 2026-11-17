@@ -1,3 +1,9 @@
+## 2026-11-17 (Claude Code) - UIIC spot dates, AI model pick everywhere, "done by" note (NOT committed, NOT deployed)
+- fix(uiic): the UIIC final report's "SPOT SURVEY DETAILS" column printed the final survey's dates, because the store mirrors `accident.dateOfSurvey/appointmentDate` and `claim.reportDate` into `spotDetails.*`. The column now reads new `reinspection.spotAppointmentDate/spotSurveyDate/spotReportDate`, asked in the UIIC "Before printing" dialog (blank allowed). Store sync untouched.
+- fix(ai): `callAIGateway` with no session (rephrase cause, bill-check AI match, insured report, bank statement) now honours the surveyor's provider/model pick (default session via `newSession`).
+- feat(ai): small "done by <model>" note: `lastUsedModelLabel()` in `service.ts`; shown beside Undo after rephrase, in the extraction review ("Read by ..."), and as a toast detail for bill match, insured report, bank statement, estimate re-read.
+- verification: vitest 3297 passed (365 files, 1 skipped); tsc clean. Not browser-tested. Impact on SurveyOS Scan: none (`spotDetails.*` paths, labels and manifest untouched).
+
 ## 2026-11-16 (Claude Code) - Bill Check column order and allowed-only view (NOT deployed)
 - feat(bill-check) `83292612`: grid shows allowed rows only by default; "Allowed only" toggle (on each time; off shows disallowed items the workshop billed).
 - fix(bill-check) `ce6767af`: counts follow the rows shown in the allowed-only view.
