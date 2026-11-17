@@ -1,4 +1,4 @@
-## 2026-11-17 (Claude Code) - Final bill / Estimate switch audit + 2 fixes (NOT committed, NOT deployed)
+## 2026-11-17 (Claude Code) - Final bill / Estimate switch audit + 2 fixes (DEPLOYED 2026-11-17, `a7dc1ea8`, not pushed)
 - audit: `src/stores/slices/__tests__/bill-check-switch-audit.test.ts` (26 checks) covers state, titles and both Bill Check reports for the switch in both directions.
 - fix(bill-check): switching mode now drops a custom `billCheck.refColumnTitle` (only when the mode really changes), so the reference column heading is never the other document's.
 - fix(uiic): Bill Check report summary prints a dash under "Estimated" on a from-bill claim until estimate heads are confirmed; before, the bill's own figures sat under that heading.
