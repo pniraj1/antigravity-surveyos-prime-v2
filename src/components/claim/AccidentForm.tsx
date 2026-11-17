@@ -5,6 +5,7 @@ import { Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { useClaimStore } from '@/stores/claim-store';
 import { rephraseCause } from '@/lib/ai/rephrase-cause';
+import { lastUsedModelLabel } from '@/lib/ai/service';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,6 +17,7 @@ export function AccidentDetailsForm() {
   // Text before the last AI rephrase; any manual edit drops the Undo.
   const [beforeRephrase, setBeforeRephrase] = useState<string | null>(null);
   const [rephrasing, setRephrasing] = useState(false);
+  const [rephrasedBy, setRephrasedBy] = useState('');
 
   if (!currentClaim) return null;
   const a = currentClaim?.accident || {} as any;
@@ -27,6 +29,7 @@ export function AccidentDetailsForm() {
       const out = await rephraseCause(original);
       updateAccident({ causeOfAccident: out });
       setBeforeRephrase(original);
+      setRephrasedBy(lastUsedModelLabel());
     } catch (err: unknown) {
       toast.error(`Rephrase failed: ${err instanceof Error ? err.message : 'unknown error'}`);
     } finally {
@@ -87,6 +90,9 @@ export function AccidentDetailsForm() {
         <div className="flex items-center justify-between gap-2">
           <Label htmlFor="a-cause">Cause and Nature of Accident</Label>
           <div className="flex items-center gap-3 text-xs">
+            {beforeRephrase !== null && rephrasedBy && (
+              <span className="text-muted-foreground">by {rephrasedBy}</span>
+            )}
             {beforeRephrase !== null && (
               <button
                 type="button"

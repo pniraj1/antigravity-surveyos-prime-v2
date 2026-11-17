@@ -21,7 +21,7 @@ import {
   type CandidateRow,
   type CandidateLine,
 } from '@/lib/tally/stage3-ai-matcher';
-import { callAIGateway } from '@/lib/ai/service';
+import { callAIGateway, lastUsedModelLabel } from '@/lib/ai/service';
 import { toast } from 'sonner';
 
 export interface StageAITriggerProps {
@@ -105,7 +105,7 @@ export function StageAITrigger({
       if (parsed.length === 0) {
         toast.info('AI did not identify additional confident matches for remaining items.');
       } else {
-        toast.success(`AI suggested ${parsed.length} item match ${parsed.length === 1 ? 'proposal' : 'proposals'}.`);
+        toast.success(`AI suggested ${parsed.length} item match ${parsed.length === 1 ? 'proposal' : 'proposals'}.`, { description: `by ${lastUsedModelLabel()}` });
       }
     } catch (err: any) {
       console.error('Failed to query Stage 3 AI matcher:', err);

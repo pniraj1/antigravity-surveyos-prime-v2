@@ -6,7 +6,7 @@ const callAiProxy = vi.hoisted(() => vi.fn());
 vi.mock('@/lib/firebase/functions', () => ({ callAiProxy }));
 vi.mock('@/lib/firebase/config', () => ({ getFirebaseApp: () => ({}), db: {} }));
 
-import { callAIGateway, newSession, AllProvidersBusyError, OfflineError, CURRENT_MODELS, _resetNoThinkingForTests } from '../service';
+import { callAIGateway, newSession, AllProvidersBusyError, OfflineError, CURRENT_MODELS, _resetNoThinkingForTests, lastUsedModelLabel } from '../service';
 import { useProfileStore } from '@/stores/profile-store';
 import { useAIConfigStore } from '@/stores/ai-config-store';
 import { useProbesStore } from '@/stores/probes-store';
@@ -383,6 +383,19 @@ describe('surveyor override — specific model', () => {
     const s = newSession('t'); s.pagesTotal = 1;
     await callAIGateway('p', ['img'], 'json', 'heavy', s);     // heavy would normally lead with Flash
     expect(modelOf(spy.mock.calls[0])).toBe('gemini-3.1-flash-lite');
+  });
+  it('a call with no session (rephrase, bill match, insured report) honours the pick too', async () => {
+    useProfileStore.getState().updateProfile({ preferredAI: 'gemini', preferredModel: 'gemini-3.1-flash-lite' } as never);
+    const spy = vi.spyOn(global, 'fetch').mockResolvedValue(ok());
+    await callAIGateway('p', [], 'text', 'text');
+    expect(modelOf(spy.mock.calls[0])).toBe('gemini-3.1-flash-lite');
+  });
+  it('lastUsedModelLabel names the model that answered, not the one that was busy', async () => {
+    useProfileStore.getState().updateProfile({ preferredAI: 'gemini', preferredModel: 'gemini-3.1-flash-lite' } as never);
+    vi.spyOn(global, 'fetch').mockResolvedValueOnce(fail(503, 'busy')).mockResolvedValue(ok());
+    await callAIGateway('p', [], 'text', 'text');
+    expect(lastUsedModelLabel()).toMatch(/^Gemini /);
+    expect(lastUsedModelLabel()).not.toMatch(/3\.1-flash-lite/);
   });
   it('picked model busy → next model in the normal order', async () => {
     useProfileStore.getState().updateProfile({ preferredAI: 'gemini', preferredModel: 'gemini-3.1-flash-lite' } as never);

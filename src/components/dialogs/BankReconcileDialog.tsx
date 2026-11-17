@@ -4,6 +4,8 @@ import React, { useState, useRef } from 'react';
 import { getClaim, saveClaim } from '@/lib/storage/indexeddb';
 import { useClaimStore } from '@/stores/claim-store';
 import { extractBankStatement, BankTransaction } from '@/lib/ai/bank-statement-extractor';
+import { lastUsedModelLabel } from '@/lib/ai/service';
+import { toast } from 'sonner';
 import {
   X, Upload, Loader2, CheckCircle, AlertCircle, BanknoteIcon, FileText, RefreshCw,
 } from 'lucide-react';
@@ -41,6 +43,7 @@ export function BankReconcileDialog({ onClose }: Props) {
     setUnmatched([]);
     try {
       const transactions = await extractBankStatement(file);
+      toast.info('Statement read', { description: `by ${lastUsedModelLabel()}` });
       if (!transactions.length) {
         setErrorMsg('No credit transactions found in the statement.');
         setStatus('error');

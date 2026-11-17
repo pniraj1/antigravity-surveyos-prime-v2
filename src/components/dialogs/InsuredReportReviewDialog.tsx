@@ -15,6 +15,7 @@ import type {
 import { generateInsuredReport } from '@/lib/ai/insured-report';
 import { InsuredSummaryDocument } from '@/components/pdf/InsuredSummaryDocument';
 import { fileToImages } from '@/lib/ai/processor';
+import { lastUsedModelLabel } from '@/lib/ai/service';
 
 interface Props {
   claim: ClaimData;
@@ -129,6 +130,7 @@ export function InsuredReportReviewDialog({
       });
       setDraft(generated);
       setActiveTab('financial');
+      toast.success('Report drafted', { description: `by ${lastUsedModelLabel()}` });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
       toast.error(`Failed to generate report: ${msg}`);

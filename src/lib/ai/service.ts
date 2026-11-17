@@ -308,6 +308,11 @@ const PROVIDER_LABELS: Record<string, string> = {
   ollama: 'Ollama Cloud',
 };
 
+// ponytail: module-level, so two calls in flight at once can swap labels; read it right after your own await.
+let lastUsed = '';
+/** "Gemini gemini-3.5-flash-lite" — the model that answered the most recent AI call, for a small "done by" note in the UI. */
+export function lastUsedModelLabel(): string { return lastUsed; }
+
 // ─── Fallback loop ────────────────────────────────────────────────────────────
 
 export interface GatewaySession {
@@ -437,6 +442,7 @@ async function callWithFallback(
           if (res.finish === 'STOP' || res.finish === 'OTHER') {
             health.recordCall(entry.model.id, 'ok');
             if (session) session.lastGood = { provider: entry.provider, model: entry.model.id };
+            lastUsed = label;
             return res.text;
           }
           health.recordCall(entry.model.id, 'other');
@@ -556,6 +562,7 @@ export async function callAIGateway(
   if (_testOverride) {
     const p = buildOverrideProvider(_testOverride);
     const res = await callWithKey(p, p.keys[0], prompt, images, responseFormat, { timeoutMs: JOB_TIMEOUT_MS[job], thinkingOff: true });
+    lastUsed = `${PROVIDER_LABELS[p.name] ?? p.name} ${p.model}`;
     return res.text;
   }
   const profile = getProfileFromStorage();
@@ -566,7 +573,8 @@ export async function callAIGateway(
     pool = [{ provider: master.name as ProviderId, proxied: PROXIED.has(master.name as ProviderId), keys: master.keys,
       model: { id: master.model, label: master.model, note: '', ctxWindow: null, vision: true, imageCap: master.maxImages ?? null } }];
   }
-  return callWithFallback(job, prompt, images, responseFormat, session, signal, pool);
+  // A caller with no session (rephrase, bill match, insured report, bank statement) still honours the surveyor's provider/model pick.
+  return callWithFallback(job, prompt, images, responseFormat, session ?? newSession(`adhoc-${job}-${Date.now()}`), signal, pool);
 }
 
 

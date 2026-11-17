@@ -737,6 +737,7 @@ export async function extractDocument(
     }
 
     // Return high-res view images to caller so they can be stored in sessionStorage
+    noteModel();   // some chunk paths never noted theirs; the last answer always counts
     return { data: finalResult && { ...finalResult, _models: [...usedModels] }, images: viewImages, findings, issues: pageIssues, source: 'ai' as const };
   });
 }

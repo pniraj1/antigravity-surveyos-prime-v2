@@ -125,6 +125,7 @@ export function FixEstimateDialog({ open, onClose }: FixEstimateDialogProps) {
         sheetToEstimateData(sheet), forceDocMode, controller.signal,
       );
       if (controller.signal.aborted) return;
+      toast.info('Estimate re-read', { description: `by ${(data?._models ?? []).join(', ') || 'AI'}` });
       const next = planEstimateFix(sheet, buildEstimateRows(stripPageTags(data), source, 1), source);
       setPlan(next);
       setMissingIds(next.missing.map((m) => m.id)); // missing rows ticked by default

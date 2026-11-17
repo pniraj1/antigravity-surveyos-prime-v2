@@ -204,6 +204,9 @@ export function AIReviewDialog({ isOpen, onClose, onConfirm, onReScan, title, da
                 {source === 'parser' && (
                   <p className="mt-2 text-[11px] text-muted-foreground">Read from the PDF text — totals match</p>
                 )}
+                {source !== 'parser' && Array.isArray(data?._models) && data._models.length > 0 && (
+                  <p className="mt-2 text-[11px] text-muted-foreground">Read by {data._models.join(', ')}</p>
+                )}
 
                 <p className="mt-2.5 text-[11px] leading-relaxed text-muted-foreground">
                   Confirm the item count and gross total against the last page of the bill.
