@@ -1,3 +1,26 @@
+## 2026-11-17 (Claude Code) - Final bill / Estimate switch audit + 2 fixes (NOT committed, NOT deployed)
+- audit: `src/stores/slices/__tests__/bill-check-switch-audit.test.ts` (26 checks) covers state, titles and both Bill Check reports for the switch in both directions.
+- fix(bill-check): switching mode now drops a custom `billCheck.refColumnTitle` (only when the mode really changes), so the reference column heading is never the other document's.
+- fix(uiic): Bill Check report summary prints a dash under "Estimated" on a from-bill claim until estimate heads are confirmed; before, the bill's own figures sat under that heading.
+- known, unchanged: the document already saved keeps its first filing type; Standard Final report's "Estimated (before GST)" column on from-bill claims not changed (value not verified).
+- verification: vitest 3323 passed; tsc clean. Impact on SurveyOS Scan: none.
+
+## 2026-11-17 (Antigravity) — Knowledge Base Synchronization & Understand-Anything Integration
+- feat(knowledge): integrated `Understand-Anything` (`Egonex-AI/Understand-Anything`) to convert both the codebase and knowledge vault into interactive visual knowledge graphs.
+  - Linked and built `@understand-anything/core` with Tree-Sitter parsers for Antigravity (`install.ps1 antigravity`).
+  - Standardized `SurveyOS-Antigravity-Prime-V2-KnowledgeBase` into a full Karpathy-pattern LLM Wiki with `index.md` (content catalog with wikilinks across 9 categories) and `log.md` (chronological operations timeline).
+  - Executed deterministic knowledge base scan (`parse-knowledge-base.py` and `merge-knowledge-graph.py`), generating `SurveyOS-Antigravity-Prime-V2-KnowledgeBase/.ua/knowledge-graph.json` with 172 nodes, 105 edges, 10 layers, and 9 tour steps.
+  - Executed full AST codebase extraction via `extract-import-map.mjs` (2,670 import edges across 763 files), Louvain community clustering (`compute-batches.mjs`), and `merge-batch-graphs.py` across 1,319 files, generating `.ua/knowledge-graph.json` with 3,385 nodes, 4,945 edges, 10 architectural layers, and 7 guided tour steps.
+- docs(architecture): fully updated `Architecture/Codebase_Architecture_Map.md` to reflect all recent architecture and logic changes up to 2026-11-17:
+  - 4-Stage Progressive Tally Engine (`src/lib/tally/`): Stage 1 Part Numbers, Stage 2 Semantic Automotive Matcher, Stage 3 Surveyor-Triggered AI Matching, Stage 4 Disallowed Isolation with ₹0 liability & insurer savings.
+  - Accessible Modal Dialog Architecture (`BillCheckUploadDialog.tsx`, `ReconciliationWizardDialog.tsx`) and Brand Orange theme compliance.
+  - Bill Check Grid column order and "Allowed only" toggle (`BillCheckGrid.tsx`).
+  - UIIC spot survey date isolation (`reinspection.spot*`) in `uiic-final-builder.ts`.
+  - Universal AI model selection in `callAIGateway` with session defaults and `lastUsedModelLabel()` feedback.
+  - 2-decimal rupee financial precision in calculation utilities and assessment summaries.
+- docs(handover): updated `HANDOVER.md` Section 6 status to 2026-11-17, and updated `Architecture/Overview.md`.
+- verification: tsc clean (0 errors); vitest passing; Prime ↔ Scan coupling: none.
+
 ## 2026-11-17 (Claude Code) - Deploy of main at f2a0452b
 - Pushed `main` and deployed hosting (both sites on surveyos-v2-antigravity-in; surveyos.in checked live, release 16:08) from a clean worktree of HEAD, so the owner's uncommitted edits (about 25 files: rupee 2-decimals, insured report, bill-check) were NOT shipped. This release also put the previously undeployed cockpit Stage 3/4 and Bill Check column-order commits live. Not browser-tested by the agent.
 

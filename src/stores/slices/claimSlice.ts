@@ -457,13 +457,16 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
           ? { ...rest, billedTaxable: undefined, billedAmount: undefined, billStatus: 'pending' as const }
           : rest;
       });
-      const { estimateHeads: _heads, ...billCheck } = {
+      // A title typed for the other document's column would now sit over the wrong numbers.
+      const modeChanges = (kind === 'estimate') !== wasFromBill;
+      const { estimateHeads: _heads, refColumnTitle, ...rest } = {
         ...c.billCheck,
         ...(kind === 'estimate' && opts?.copyHeader !== false ? billHeaderFromEstimate(c) : {}),
         baseDocument: kind === 'estimate' ? ('final-bill' as const) : ('estimate' as const),
         // A damaged claim's header was the estimate's: the surveyor confirms it again.
         ...(kind === 'estimate' && !wasFromBill ? { verifiedBySurveyor: false } : {}),
       };
+      const billCheck = !modeChanges && refColumnTitle !== undefined ? { ...rest, refColumnTitle } : rest;
       return {
         currentClaim: { ...c, assessmentRows, billCheck, extraBillItems: [], updatedAt: new Date().toISOString() },
         isDirty: true,
