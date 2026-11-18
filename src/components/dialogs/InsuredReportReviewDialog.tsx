@@ -360,16 +360,16 @@ export function InsuredReportReviewDialog({
                   ].filter(r => r.value > 0).map((row, i) => (
                     <div key={i} className="flex justify-between py-2.5 text-sm border-b border-neutral-100">
                       <span className="text-muted-foreground">{row.label}</span>
-                      <span>{row.prefix}₹{row.value.toLocaleString('en-IN')}</span>
+                      <span>{row.prefix}₹{row.value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                   ))}
                   <div className="flex justify-between py-3 text-sm font-medium border-t-2 mt-2 border-neutral-900">
                     <span>Insurance company will pay</span>
-                    <span>₹{draft.financialSummary.insurerPays.toLocaleString('en-IN')}</span>
+                    <span>₹{draft.financialSummary.insurerPays.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex justify-between py-3 text-sm font-medium rounded-xl px-3 bg-status-warning-tint">
                     <span>Your share (payable to garage)</span>
-                    <span className="text-status-danger">₹{draft.financialSummary.insuredPays.toLocaleString('en-IN')}</span>
+                    <span className="text-status-danger">₹{draft.financialSummary.insuredPays.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   <p className="text-xs mt-3 text-muted-foreground">This tab is read-only — figures are computed from claim data.</p>
                 </div>
@@ -409,8 +409,8 @@ export function InsuredReportReviewDialog({
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-medium">{item.partDescription}</span>
                         <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                          <span>Billed (taxable): ₹{item.billedAmount.toLocaleString('en-IN')}</span>
-                          <span>Assessed: ₹{item.surveyorAmount.toLocaleString('en-IN')}</span>
+                          <span>Billed (taxable): ₹{item.billedAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          <span>Assessed: ₹{item.surveyorAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                           {item.isFlagged && <span className="text-status-warning">⚠ Needs context</span>}
                         </div>
                       </div>

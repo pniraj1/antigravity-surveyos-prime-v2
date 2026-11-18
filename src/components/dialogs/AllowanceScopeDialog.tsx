@@ -12,7 +12,7 @@ interface AllowanceScopeDialogProps {
   onCancel: () => void;
 }
 
-const INR = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
+const INR = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /**
  * Asked when an Assessed edit in Bill Check diverges from the assessed figure.

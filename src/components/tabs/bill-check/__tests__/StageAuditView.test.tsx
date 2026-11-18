@@ -222,10 +222,7 @@ describe('StageAuditView unlinked assessed rows', () => {
   it('notInDocUpdates / typedRefUpdates return the exact patches', () => {
     expect(notInDocUpdates(false)).toEqual({ billStatus: 'not-in-bill', billedTaxable: 0, billedAmount: 0 });
     const fb = notInDocUpdates(true);
-    expect(fb).toEqual({ refSrNo: 'Not in estimate', refStatus: 'manual' });
-    expect(fb).not.toHaveProperty('billedTaxable');
-    expect(fb).not.toHaveProperty('billedAmount');
-    expect(fb).not.toHaveProperty('billStatus');
+    expect(fb).toEqual({ refSrNo: 'Not in estimate', refStatus: 'manual', billStatus: 'not-in-bill', billedTaxable: 0, billedAmount: 0 });
     expect(typedRefUpdates('  12 ')).toEqual({ refSrNo: '12', refStatus: 'manual' });
     expect(typedRefUpdates('   ').refSrNo).toBeUndefined();
   });
@@ -249,7 +246,7 @@ describe('StageAuditView unlinked assessed rows', () => {
       currentClaim: { id: 'c', assessmentRows: rows, extraBillItems: [makeExtra('e1', 'PN-X', 'WIPER ASSY', 1000)], billCheck: {} } as unknown as ClaimData,
     });
     const html = renderToStaticMarkup(<StageAuditView />);
-    expect(html).toContain('#11 WIPER ASSY (₹1,000)');
+    expect(html).toContain('#11 WIPER ASSY (₹1,000.00)');
   });
 
   it('first section lists only unlinked rows with Link to, Not in bill and a ref input', () => {

@@ -39,10 +39,10 @@ export interface StageAuditViewProps {
 /** What a from-bill row's ref holds once the surveyor marks it as not in the estimate. */
 export const NOT_IN_ESTIMATE = 'Not in estimate';
 
-/** Patch for "this row is not in the uploaded document". From-bill never touches the bill figure. */
+/** Patch for "this row is not in the uploaded document". From-bill: carries no liability until the surveyor picks In Estimate. */
 export function notInDocUpdates(fromBill: boolean): Partial<AssessmentRow> {
   return fromBill
-    ? { refSrNo: NOT_IN_ESTIMATE, refStatus: 'manual' }
+    ? { refSrNo: NOT_IN_ESTIMATE, refStatus: 'manual', billStatus: 'not-in-bill', billedTaxable: 0, billedAmount: 0 }
     : { billStatus: 'not-in-bill', billedTaxable: 0, billedAmount: 0 };
 }
 
@@ -53,7 +53,7 @@ export function typedRefUpdates(text: string): Partial<AssessmentRow> {
 }
 
 function formatInr(val: number): string {
-  return '₹' + Math.round(val).toLocaleString('en-IN');
+  return '₹' + val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 export function StageAuditView({
@@ -263,7 +263,10 @@ export function StageAuditView({
                   onBlur={(e) => {
                     if (e.target.value.trim()) updateAssessmentRow(r.id, typedRefUpdates(e.target.value));
                   }}
-                  onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                  onKeyDown={(e) => {
+                    if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+                    if (e.key === 'Enter') e.currentTarget.blur();
+                  }}
                   className="w-24 px-1.5 py-1 rounded text-xs border border-border bg-background"
                 />
               </div>

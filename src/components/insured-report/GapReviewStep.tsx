@@ -72,8 +72,8 @@ export function GapReviewStep({ flaggedItems, onComplete }: GapReviewStepProps) 
             <div className="flex items-start justify-between gap-4">
               <span className="font-medium text-sm">{item.partDescription}</span>
               <span className="text-xs text-muted-foreground whitespace-nowrap">
-                ₹{item.billedAmount.toLocaleString('en-IN')} billed →{' '}
-                ₹{item.surveyorAmount.toLocaleString('en-IN')} assessed
+                ₹{item.billedAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} billed →{' '}
+                ₹{item.surveyorAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} assessed
               </span>
             </div>
 

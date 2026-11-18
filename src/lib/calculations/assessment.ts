@@ -249,7 +249,8 @@ export function calculateBillCheckSummary(
     const { assessedNet, liability } = computeRowLiability(effectiveRow, depRate);
 
     assessedBaseSum += effAssessed;
-    assessedGrandTotal += assessedNet;
+    // Not in bill carries no liability, as the UIIC report already treats it.
+    if (effectiveRow.billStatus !== 'not-in-bill') assessedGrandTotal += assessedNet;
     billedBaseSum += effectiveRow.billStatus === 'not-in-bill' ? 0 : (effectiveRow.billedTaxable ?? effAssessed);
 
     if (effectiveRow.billStatus === 'not-in-bill') {

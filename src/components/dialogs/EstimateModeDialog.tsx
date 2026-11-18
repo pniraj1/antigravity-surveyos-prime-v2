@@ -19,7 +19,7 @@ interface EstimateModeDialogProps {
   onCancel: () => void;
 }
 
-const INR = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
+const INR = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /**
  * Asked BEFORE the document is read, so a wrong file costs nothing.

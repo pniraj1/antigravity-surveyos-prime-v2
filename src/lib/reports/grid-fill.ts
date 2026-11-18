@@ -5,6 +5,7 @@
 
 import type { AssessmentRow } from '@/types/assessment';
 import { parseClipboardValue } from '@/lib/utils/grid-paste';
+import { withGst } from '@/lib/calculations/utils';
 import type { RowUpdate } from './ref-paste';
 
 export type FillColumn = 'gst' | 'disposalPercent' | 'billAllowed' | 'depOverride' | 'billedTaxable' | 'billRemarks';
@@ -12,11 +13,12 @@ export interface CellRef { row: string; col: string }
 export type MoveKey = 'ArrowUp' | 'ArrowDown' | 'ArrowLeft' | 'ArrowRight';
 
 /** Index in `cells` (editable cells in screen order) to move to, or null to stay. */
-export function moveTarget(cells: CellRef[], current: CellRef, key: MoveKey): number | null {
+export function moveTarget(cells: CellRef[], current: CellRef, key: MoveKey, wrap = false): number | null {
   const i = cells.findIndex(c => c.row === current.row && c.col === current.col);
   if (i < 0) return null;
   if (key === 'ArrowLeft' || key === 'ArrowRight') {
     const j = i + (key === 'ArrowRight' ? 1 : -1);
+    if (wrap) return (j >= 0 && j < cells.length) ? j : null;
     return cells[j]?.row === current.row ? j : null;
   }
   const step = key === 'ArrowDown' ? 1 : -1;
@@ -38,7 +40,7 @@ export interface FillPlan { apply: RowUpdate[]; undo: RowUpdate[]; filled: numbe
 interface FillCtx { fromBill: boolean; autoDepRate: (row: AssessmentRow) => number }
 
 const clamp = (n: number, lo: number, hi = Infinity): number => Math.min(hi, Math.max(lo, n));
-const withTax = (taxable: number, gst: number): number => Math.round(taxable * (1 + gst / 100));
+const withTax = withGst;
 
 /** What this value writes to this row, or null when the box is locked or the value unreadable. */
 function updatesFor(

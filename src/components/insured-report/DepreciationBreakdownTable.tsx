@@ -28,7 +28,7 @@ export function DepreciationBreakdownTable({ breakdown, total }: DepreciationBre
         </div>
         <div className="flex items-center gap-3">
           <span className="text-sm font-medium text-destructive">
-            − ₹{total.toLocaleString('en-IN')}
+            − ₹{total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
           <button
             type="button"
@@ -54,10 +54,10 @@ export function DepreciationBreakdownTable({ breakdown, total }: DepreciationBre
             {breakdown.map((row, i) => (
               <tr key={i} className="border-t">
                 <td className="p-2">{row.particulars}</td>
-                <td className="p-2 text-right">₹{row.billed.toLocaleString('en-IN')}</td>
-                <td className="p-2 text-right">₹{row.assessed.toLocaleString('en-IN')}</td>
+                <td className="p-2 text-right">₹{row.billed.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td className="p-2 text-right">₹{row.assessed.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 <td className="p-2 text-right text-destructive">
-                  ₹{row.deductionAmount.toLocaleString('en-IN')}
+                  ₹{row.deductionAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
               </tr>
             ))}

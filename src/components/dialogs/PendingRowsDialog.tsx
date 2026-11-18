@@ -52,7 +52,7 @@ export function PendingRowsDialog({
             <li key={r.id} className="flex justify-between gap-3 px-3 py-2 rounded-lg bg-neutral-50">
               <span className="truncate text-foreground">{r.particulars}</span>
               <span className="flex-shrink-0 text-muted-foreground">
-                ₹{r.assessed.toLocaleString('en-IN')}
+                ₹{r.assessed.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </li>
           ))}

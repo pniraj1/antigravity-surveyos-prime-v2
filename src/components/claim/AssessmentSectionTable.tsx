@@ -374,12 +374,11 @@ export function AssessmentSectionTable({
                           value={row.particulars}
                           onChange={(e) => updateAssessmentRow(row.id, { particulars: e.target.value })}
                           onKeyDown={(e) => {
-                            // Enter would insert a newline that follows the item
-                            // into every report, where it has nowhere to go.
-                            // Commit and leave the cell instead, as the Input did.
+                            if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+                            // Enter would insert a newline that follows the item into every report.
+                            // Prevent newline and let grid navigation move down to the row below.
                             if (e.key === 'Enter' && !e.shiftKey) {
                               e.preventDefault();
-                              e.currentTarget.blur();
                             }
                           }}
                           rows={1}

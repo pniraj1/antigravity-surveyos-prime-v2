@@ -255,6 +255,10 @@
    SCROLLBAR — Platinum style
    ═══════════════════════════════════════════════════════════ */
 @layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #C3C9D4 transparent;
+  }
   ::-webkit-scrollbar {
     width: 5px;
     height: 5px;
@@ -318,7 +322,9 @@
    TRANSITIONS
    ═══════════════════════════════════════════════════════════ */
 @layer base {
-  * {
+  button,
+  [role="button"],
+  a {
     transition-property: color, background-color, border-color, opacity, box-shadow, transform;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     transition-duration: 150ms;

@@ -156,9 +156,9 @@ describe('BillCheckGrid Editability Markup', () => {
     );
   const LOCK = 'title="Billed at the bill&#x27;s own figure (this claim is made from the bill)."';
 
-  it('locks the billed box and status in a claim made from the bill', () => {
+  it('locks the billed box (not the status) in a claim made from the bill', () => {
     const html = render({ ...mockClaim, billCheck: { baseDocument: 'final-bill' } } as unknown as ClaimData);
-    expect(html.split(LOCK).length - 1).toBe(2);
+    expect(html.split(LOCK).length - 1).toBe(1);
   });
 
   it('leaves them editable in a normal claim', () => {

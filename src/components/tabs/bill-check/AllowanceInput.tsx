@@ -52,6 +52,7 @@ export function AllowanceInput({ value, disabled, highlighted, error, title, onC
       onChange={e => setDraft(e.target.value)}
       onBlur={commit}
       onKeyDown={e => {
+        if (e.nativeEvent.isComposing || e.keyCode === 229) return;
         if (e.key === 'Enter') e.currentTarget.blur();
         if (e.key === 'Escape') { setDraft(null); e.currentTarget.blur(); }
       }}

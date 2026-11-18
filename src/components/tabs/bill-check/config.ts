@@ -79,4 +79,14 @@ export function statusLabel(s: BillStatus) {
   }
 }
 
-export const fmt = (n: number) => `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+/** The status dropdown. From-bill claims check the estimate, so the wording follows. */
+export function statusOptions(fromBill: boolean): { value: BillStatus; label: string }[] {
+  const doc = fromBill ? 'Estimate' : 'Bill';
+  return [
+    { value: 'pending', label: 'Pending' },
+    { value: 'in-bill', label: `In ${doc} ✓` },
+    { value: 'not-in-bill', label: `Not in ${doc} ✗` },
+  ];
+}
+
+export const fmt = (n: number) => `₹${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;

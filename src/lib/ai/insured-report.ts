@@ -113,7 +113,7 @@ export function buildPreClassifiedExplanations(
         } else if (row.deductionCategory === 'salvage') {
           explanation.aiExplanation =
             `${row.particulars} was replaced. The salvage / scrap value of the old part ` +
-            `(₹${row.assessed.toLocaleString('en-IN')}) has been deducted from the payable amount.`;
+            `(₹${row.assessed.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) has been deducted from the payable amount.`;
         }
         // depreciation: aiExplanation stays '' — financial tab breakdown handles it
         autoClassified.push(explanation);
@@ -170,7 +170,7 @@ export function buildPreClassifiedExplanations(
         surveyorRemarks: row.remarks ?? '',
         aiExplanation:
           `${row.particulars} was replaced. The salvage / scrap value of the old part ` +
-          `(₹${row.assessed.toLocaleString('en-IN')}) has been deducted from the payable amount.`,
+          `(₹${row.assessed.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) has been deducted from the payable amount.`,
         deductionCategory: 'salvage' as DeductionCategory,
         surveyorAmount: row.assessed,
         billedAmount: billed,
@@ -187,8 +187,8 @@ export function buildPreClassifiedExplanations(
 // Never leave aiExplanation blank. Reference actual ₹ amounts so the insured
 // understands exactly what was adjusted, even without a documented reason.
 function buildHonestFallback(row: InsuredReportLineExplanation): string {
-  const billed = row.billedAmount.toLocaleString('en-IN');
-  const assessed = row.surveyorAmount.toLocaleString('en-IN');
+  const billed = row.billedAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const assessed = row.surveyorAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   if (row.surveyorAmount === row.billedAmount) {
     return `${row.partDescription} was assessed and no adjustment was required.`;
   }
@@ -474,17 +474,17 @@ export async function runGenerateNarrative({
     const { policyContext } = policyAnalysis;
     const deductionLines: string[] = [];
     if (financialSummary.depreciationTotal > 0)
-      deductionLines.push(`Depreciation on parts: ₹${financialSummary.depreciationTotal.toLocaleString('en-IN')}`);
+      deductionLines.push(`Depreciation on parts: ₹${financialSummary.depreciationTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
     if (policyContext.compulsoryExcess > 0)
-      deductionLines.push(`Compulsory excess: ₹${policyContext.compulsoryExcess.toLocaleString('en-IN')}`);
+      deductionLines.push(`Compulsory excess: ₹${policyContext.compulsoryExcess.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
     if (policyContext.voluntaryExcess > 0)
-      deductionLines.push(`Voluntary excess: ₹${policyContext.voluntaryExcess.toLocaleString('en-IN')}`);
+      deductionLines.push(`Voluntary excess: ₹${policyContext.voluntaryExcess.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
     if (financialSummary.consumablesTotal > 0)
-      deductionLines.push(`Consumables excluded: ₹${financialSummary.consumablesTotal.toLocaleString('en-IN')}`);
+      deductionLines.push(`Consumables excluded: ₹${financialSummary.consumablesTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
     if (financialSummary.notCoveredTotal > 0)
-      deductionLines.push(`Items not covered: ₹${financialSummary.notCoveredTotal.toLocaleString('en-IN')}`);
+      deductionLines.push(`Items not covered: ₹${financialSummary.notCoveredTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
     if (financialSummary.salvageTotal > 0)
-      deductionLines.push(`Disposal/salvage: ₹${financialSummary.salvageTotal.toLocaleString('en-IN')}`);
+      deductionLines.push(`Disposal/salvage: ₹${financialSummary.salvageTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
 
     const categoryGroups: Record<string, string[]> = {};
     for (const e of mergedExplanations) {
@@ -796,19 +796,19 @@ export async function generateInsuredReport({
     const deductionLines: string[] = [];
 
     if (financialSummary.depreciationTotal > 0)
-      deductionLines.push(`Depreciation on parts: ₹${financialSummary.depreciationTotal.toLocaleString('en-IN')}`);
+      deductionLines.push(`Depreciation on parts: ₹${financialSummary.depreciationTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
     if (policyContext.compulsoryExcess > 0)
-      deductionLines.push(`Compulsory excess: ₹${policyContext.compulsoryExcess.toLocaleString('en-IN')}`);
+      deductionLines.push(`Compulsory excess: ₹${policyContext.compulsoryExcess.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
     if (policyContext.voluntaryExcess > 0)
-      deductionLines.push(`Voluntary excess: ₹${policyContext.voluntaryExcess.toLocaleString('en-IN')}`);
+      deductionLines.push(`Voluntary excess: ₹${policyContext.voluntaryExcess.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
     if (financialSummary.consumablesTotal > 0)
-      deductionLines.push(`Consumables (oil, sealants, nuts, bolts etc.): ₹${financialSummary.consumablesTotal.toLocaleString('en-IN')} — excluded under standard policy terms`);
+      deductionLines.push(`Consumables (oil, sealants, nuts, bolts etc.): ₹${financialSummary.consumablesTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} — excluded under standard policy terms`);
     if (financialSummary.notCoveredTotal > 0)
-      deductionLines.push(`Items not covered by policy: ₹${financialSummary.notCoveredTotal.toLocaleString('en-IN')}`);
+      deductionLines.push(`Items not covered by policy: ₹${financialSummary.notCoveredTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
     if (financialSummary.negotiatedSavings > 0)
-      deductionLines.push(`Labour/painting rates negotiated with garage: ₹${financialSummary.negotiatedSavings.toLocaleString('en-IN')}`);
+      deductionLines.push(`Labour/painting rates negotiated with garage: ₹${financialSummary.negotiatedSavings.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
     if (financialSummary.salvageTotal > 0)
-      deductionLines.push(`Salvage value of replaced parts: ₹${financialSummary.salvageTotal.toLocaleString('en-IN')}`);
+      deductionLines.push(`Salvage value of replaced parts: ₹${financialSummary.salvageTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
 
     // ── Group ALL line items by deduction category ────────────────────────
     // Replaces the old "3 notable items" slice. The narrative AI now receives

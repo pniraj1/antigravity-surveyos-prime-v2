@@ -521,9 +521,9 @@ export function InsuredReportTab() {
                   </div>
                   <div className="text-right shrink-0 ml-4">
                     <span className="text-[11px] font-mono" style={{ color: 'var(--color-status-danger)' }}>
-                      Billed ₹{row.billed.toLocaleString('en-IN')}
+                      Billed ₹{row.billed.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       {row.assessed !== row.billed && (
-                        <> &rarr; Assessed ₹{row.assessed.toLocaleString('en-IN')}</>
+                        <> &rarr; Assessed ₹{row.assessed.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>
                       )}
                     </span>
                   </div>
@@ -683,7 +683,7 @@ export function InsuredReportTab() {
                 ].filter(r => r.value > 0).map((row, i) => (
                   <div key={i} className="flex justify-between py-2.5 text-sm border-b border-[var(--color-neutral-100)]">
                     <span className="text-muted-foreground">{row.label}</span>
-                    <span className="font-medium">{row.prefix}₹{row.value.toLocaleString('en-IN')}</span>
+                    <span className="font-medium">{row.prefix}₹{row.value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                 ))}
                 {draft.financialSummary.depreciationTotal > 0 && (
@@ -696,11 +696,11 @@ export function InsuredReportTab() {
                 )}
                 <div className="flex justify-between pt-4 pb-2 text-sm font-medium border-t-2 border-foreground">
                   <span>Insurance company will pay</span>
-                  <span>₹{draft.financialSummary.insurerPays.toLocaleString('en-IN')}</span>
+                  <span>₹{draft.financialSummary.insurerPays.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between py-3 text-sm font-medium rounded-xl px-3 mt-2 bg-[var(--color-status-warning-tint)]">
                   <span>Your share (payable to garage)</span>
-                  <span style={{ color: 'var(--color-status-danger)' }}>₹{draft.financialSummary.insuredPays.toLocaleString('en-IN')}</span>
+                  <span style={{ color: 'var(--color-status-danger)' }}>₹{draft.financialSummary.insuredPays.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 <p className="text-xs pt-2 text-muted-foreground">Figures are computed from claim assessment data.</p>
               </div>
@@ -790,8 +790,8 @@ export function InsuredReportTab() {
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-medium">{item.partDescription}</span>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        <span>Billed: ₹{item.billedAmount.toLocaleString('en-IN')}</span>
-                        <span>Assessed: ₹{item.surveyorAmount.toLocaleString('en-IN')}</span>
+                        <span>Billed: ₹{item.billedAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        <span>Assessed: ₹{item.surveyorAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         {item.isFlagged && <span style={{ color: 'var(--color-status-warning)' }}>⚠ Needs context</span>}
                       </div>
                     </div>

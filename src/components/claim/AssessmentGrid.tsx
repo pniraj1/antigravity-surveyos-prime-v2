@@ -146,17 +146,18 @@ export function AssessmentGrid({ footer }: { footer?: React.ReactNode } = {}) {
       return;
     }
 
-    // In a text box plain ↑/↓ and Enter move a row, like Excel. Dropdowns and
-    // the Particulars box keep plain arrows; Shift+arrows work everywhere.
+    // In a text box or textarea plain ↑/↓ and Enter move a row, like Excel.
+    // Tab and Shift+Tab move across columns. Dropdowns and Particulars support arrows.
     const el = e.target as HTMLElement;
-    const plain = !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey
-      && el instanceof HTMLInputElement && el.type === 'text';
-    const key = plain && e.key === 'Enter' ? 'ArrowDown' : e.key;
-    if (!e.shiftKey && !(plain && (key === 'ArrowUp' || key === 'ArrowDown'))) return;
+    const isText = (el instanceof HTMLInputElement && el.type === 'text') || el instanceof HTMLTextAreaElement;
+    const isTab = e.key === 'Tab';
+    const plain = !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && isText;
+    const key = plain && e.key === 'Enter' ? 'ArrowDown' : (isTab ? (e.shiftKey ? 'ArrowLeft' : 'ArrowRight') : e.key);
+    if (!e.shiftKey && !(plain && (key === 'ArrowUp' || key === 'ArrowDown')) && !isTab) return;
 
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key)) {
       const target = e.target as HTMLElement;
-      if (target.tagName !== 'INPUT' && target.tagName !== 'SELECT') return;
+      if (target.tagName !== 'INPUT' && target.tagName !== 'SELECT' && target.tagName !== 'TEXTAREA') return;
 
       const td = target.closest('td');
       const tr = td?.closest('tr');
@@ -176,24 +177,37 @@ export function AssessmentGrid({ footer }: { footer?: React.ReactNode } = {}) {
 
       if (key === 'ArrowRight') {
         for (let i = colIndex + 1; i < tds.length; i++) {
-          const input = tds[i].querySelector('input:not([disabled]), select:not([disabled])') as HTMLElement;
+          const input = tds[i].querySelector('input:not([disabled]):not([type="checkbox"]), textarea:not([disabled]), select:not([disabled])') as HTMLElement;
           if (input) { nextInput = input; break; }
+        }
+        if (!nextInput && isTab && rowIndex < trs.length - 1) {
+          const nextTr = trs[rowIndex + 1] as HTMLElement;
+          nextInput = nextTr.querySelector('input:not([disabled]):not([type="checkbox"]), textarea:not([disabled]), select:not([disabled])') as HTMLElement;
+          nextRowId = nextTr.dataset.rowId ?? null;
         }
       } else if (key === 'ArrowLeft') {
         for (let i = colIndex - 1; i >= 0; i--) {
-          const input = tds[i].querySelector('input:not([disabled]), select:not([disabled])') as HTMLElement;
+          const input = tds[i].querySelector('input:not([disabled]):not([type="checkbox"]), textarea:not([disabled]), select:not([disabled])') as HTMLElement;
           if (input) { nextInput = input; break; }
+        }
+        if (!nextInput && isTab && rowIndex > 0) {
+          const prevTr = trs[rowIndex - 1] as HTMLElement;
+          const prevInputs = prevTr.querySelectorAll('input:not([disabled]):not([type="checkbox"]), textarea:not([disabled]), select:not([disabled])');
+          if (prevInputs.length > 0) {
+            nextInput = prevInputs[prevInputs.length - 1] as HTMLElement;
+            nextRowId = prevTr.dataset.rowId ?? null;
+          }
         }
       } else if (key === 'ArrowDown') {
         if (rowIndex < trs.length - 1) {
           const nextTr = trs[rowIndex + 1] as HTMLElement;
-          nextInput = nextTr.children[colIndex]?.querySelector('input:not([disabled]), select:not([disabled])') as HTMLElement;
+          nextInput = nextTr.children[colIndex]?.querySelector('input:not([disabled]), textarea:not([disabled]), select:not([disabled])') as HTMLElement;
           nextRowId = nextTr.dataset.rowId ?? null;
         }
       } else if (key === 'ArrowUp') {
         if (rowIndex > 0) {
           const prevTr = trs[rowIndex - 1] as HTMLElement;
-          nextInput = prevTr.children[colIndex]?.querySelector('input:not([disabled]), select:not([disabled])') as HTMLElement;
+          nextInput = prevTr.children[colIndex]?.querySelector('input:not([disabled]), textarea:not([disabled]), select:not([disabled])') as HTMLElement;
           nextRowId = prevTr.dataset.rowId ?? null;
         }
       }
@@ -201,6 +215,8 @@ export function AssessmentGrid({ footer }: { footer?: React.ReactNode } = {}) {
       if (nextInput) {
         nextInput.focus();
         if (nextInput instanceof HTMLInputElement && nextInput.type !== 'checkbox') {
+          nextInput.select();
+        } else if (nextInput instanceof HTMLTextAreaElement) {
           nextInput.select();
         }
         // Extend cell selection on Shift+Up/Down
@@ -317,8 +333,8 @@ export function AssessmentGrid({ footer }: { footer?: React.ReactNode } = {}) {
   const [showOicExport, setShowOicExport] = useState(false);
   const { width: particularsWidth, resizeHandleProps: particularsResizeHandleProps } = useColumnResize({
     storageKey: 'surveyos_assessment_particulars_width',
-    defaultWidth: 350,
-    minWidth: 180,
+    defaultWidth: 240,
+    minWidth: 160,
     maxWidth: 750,
   });
   // Normalised, not raw: persisted claims can hold 'Nil Depreciation' or odd

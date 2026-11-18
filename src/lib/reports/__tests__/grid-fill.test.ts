@@ -30,6 +30,12 @@ describe('moveTarget', () => {
     expect(moveTarget(cells, cells[0], 'ArrowUp')).toBeNull();
     expect(moveTarget(cells, cells[4], 'ArrowDown')).toBeNull();
   });
+  it('wraps across rows when wrap is true (Tab navigation)', () => {
+    expect(moveTarget(cells, cells[1], 'ArrowRight', true)).toBe(2);
+    expect(moveTarget(cells, cells[2], 'ArrowLeft', true)).toBe(1);
+    expect(moveTarget(cells, cells[4], 'ArrowRight', true)).toBeNull();
+    expect(moveTarget(cells, cells[0], 'ArrowLeft', true)).toBeNull();
+  });
 });
 
 describe('columnValues', () => {

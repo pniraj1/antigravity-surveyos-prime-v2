@@ -20,7 +20,11 @@ export function DecimalInput({ as: Comp = 'input', value, onChange, onFocus, onB
       type="text"
       inputMode="decimal"
       value={draft ?? value ?? ''}
-      onFocus={(e: React.FocusEvent<HTMLInputElement>) => { setDraft(String(value ?? '')); onFocus?.(e); }}
+      onFocus={(e: React.FocusEvent<HTMLInputElement>) => {
+        setDraft(String(value ?? ''));
+        e.currentTarget.select();
+        onFocus?.(e);
+      }}
       onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setDraft(e.target.value); onChange?.(e); }}
       onBlur={(e: React.FocusEvent<HTMLInputElement>) => { setDraft(null); onBlur?.(e); }}
     />

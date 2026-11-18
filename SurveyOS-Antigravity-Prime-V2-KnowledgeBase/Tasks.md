@@ -1,3 +1,23 @@
+## Done: Claim Details Quick Jumper & DL "Authorised to Drive" Default (2026-11-18, Antigravity)
+- **Status:** Complete. Executed via `superpowers:writing-plans` and `superpowers:subagent-driven-development`. Session: `Sessions/2026-11-18-claim-details-unfilled-jumper-and-authorised-dl.md`.
+- **Delivered Capabilities:**
+  1. **"Authorised to Drive" Default to "YES" (DriverForm):**
+     - Initialized `createBlankClaim` driver model default to `authorisedToDrive: 'YES'` in `src/types/claim.ts`.
+     - In `DriverForm.tsx`, removed `<option value="">—</option>`, leaving only binary Yes/No options.
+     - Added mount hook that defaults older claims with empty `authorisedToDrive` to `'YES'` seamlessly.
+  2. **Unfilled Fields Scanner (`src/lib/claims/unfilled-fields.ts`):**
+     - Built modular `getUnfilledFields` helper with comprehensive unit tests (`unfilled-fields.test.ts`).
+     - Detects empty text inputs, textareas, and unselected selects.
+     - Safely ignores disabled/readonly/hidden/file inputs and distinguishes explicit "Not applicable" options.
+  3. **Claim Details Quick Jumper & Keyboard Navigation (`DetailsTab.tsx`):**
+     - Header button with live counter badge (`[ ⚠️ Unfilled (X) ]` or `[ ✓ All Filled ]`).
+     - Clicking or pressing <kbd>Alt</kbd>+<kbd>J</kbd> smoothly scrolls, focuses, selects, and pulses the next unfilled field.
+     - Single-slot sonner toast feedback (`Field: <Label> (X of Y)`).
+- **Verification:**
+  - TypeScript: `npx tsc --noEmit` 0 errors.
+  - Unit tests: 175 passing tests across 33 test files (100% green).
+  - Scan Coupler: 0 impact (isolated Prime web client improvements).
+
 ## Done: Assistant Lifecycle, Acceptance Flow & Pre-Authorized Seats (2026-11-18, Antigravity) — DEPLOYED
 - **Status:** Complete. Deployed Firestore security rules and Next.js hosting to production (`surveyos-v2-antigravity-in`). Session: `Sessions/2026-11-18-assistant-lifecycle-acceptance-and-hosting-deploy.md`.
 - **Delivered Capabilities:**

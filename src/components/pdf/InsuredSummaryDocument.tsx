@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
 });
 
 function fmt(n: number): string {
-  return `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+  return `₹${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function categoryLabel(cat: string | undefined, allowed: boolean): string {

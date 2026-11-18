@@ -5,7 +5,7 @@ import type { BillFlag } from '@/lib/reports/bill-check-flags';
 import { scorePair, sideConflicts } from '@/lib/reports/bill-match-score';
 import type { AssessmentRow, ExtraBillItem } from '@/types';
 
-const INR = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
+const INR = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const rs = (n: number) => `₹${INR.format(n)}`;
 
 /**

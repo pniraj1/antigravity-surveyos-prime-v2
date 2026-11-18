@@ -318,7 +318,7 @@ export function createBlankClaim(
       verificationStatus: 'verified',
       invalidRemarks: '',
       badgeNumber: '',
-      authorisedToDrive: '',
+      authorisedToDrive: 'YES',
       verificationDate: '',
       hazardousEndorsement: '',
       hazardousEndorsementNote: '',

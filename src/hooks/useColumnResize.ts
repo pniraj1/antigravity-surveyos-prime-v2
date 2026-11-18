@@ -15,8 +15,8 @@ export function clampColumnWidth(value: number, min: number, max: number): numbe
 
 export function useColumnResize({
   storageKey,
-  defaultWidth = 350,
-  minWidth = 180,
+  defaultWidth = 240,
+  minWidth = 160,
   maxWidth = 750,
 }: ColumnResizeOptions) {
   const [width, setWidth] = useState<number>(defaultWidth);

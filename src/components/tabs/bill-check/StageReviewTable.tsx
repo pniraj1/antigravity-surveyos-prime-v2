@@ -84,7 +84,7 @@ function extraToBillItem(e: ExtraBillItem, idx: number): BillItem {
 }
 
 function formatInr(val: number): string {
-  return '₹' + Math.round(val).toLocaleString('en-IN');
+  return '₹' + val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 export function StageReviewTable({

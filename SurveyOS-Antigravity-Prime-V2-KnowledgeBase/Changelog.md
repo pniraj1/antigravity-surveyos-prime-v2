@@ -1,3 +1,10 @@
+## 2026-11-18 (Antigravity) — Claim Details Quick Jumper & DL "Authorised to Drive" Default
+- feat(claim-details): implemented unfilled fields Quick Jumper in `DetailsTab.tsx` with live remaining count badge, smooth scrolling, focus, pulse outline, single-slot sonner toast feedback, and <kbd>Alt</kbd>+<kbd>J</kbd> shortcut.
+- feat(claim-driver): defaulted DL "Authorised to Drive" to `'YES'` in `createBlankClaim` (`src/types/claim.ts`), removed the empty `"—"` option in `DriverForm.tsx`, and added an automatic migration hook for legacy claims with blank driver values.
+- feat(lib-claims): created `src/lib/claims/unfilled-fields.ts` pure DOM scanner utility with comprehensive JSDOM test coverage (`unfilled-fields.test.ts`), safely ignoring disabled, readonly, hidden, file inputs and exempting "Not applicable" select options.
+- test: added `DriverAuthorisedToDrive.test.tsx` and `DetailsTabQuickJumper.test.tsx`.
+- verification: `tsc --noEmit` 0 errors; all 175 tests across claim, tabs, and claim utilities pass; zero impact on SurveyOS Scan.
+
 ## 2026-11-18 (Antigravity) — Assistant Lifecycle, Acceptance Flow & Pre-Authorized Seats (DEPLOYED RULES & HOSTING)
 - feat(team): added `TeamInvitationDialog.tsx` modal component for invited assistant surveyors. Displays firm name and IRDAI licence, with explicit **[Accept & Join Firm Workspace]** and **[Decline & Continue Solo]** actions.
 - feat(onboarding): updated `OnboardingGate.tsx` to completely suppress `SetupDialog` and dashboard tour for team members (`isTeamMember`), preventing assistants from being prompted to enter IRDAI license and personal bank details.

@@ -68,7 +68,7 @@ export function ReconciliationWizardDialog({
   const bc = currentClaim?.billCheck;
   const billLabel = bc?.billNo ? `Bill #${bc.billNo}` : uploadLabels(currentClaim).doc === 'Estimate' ? 'Estimate' : 'Workshop Bill';
   const billTotalFormatted = bc?.billTotal
-    ? `₹${Math.round(bc.billTotal).toLocaleString('en-IN')}`
+    ? `₹${bc.billTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     : null;
 
   const handleNextStage = () => {

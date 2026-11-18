@@ -78,9 +78,14 @@ export function FormulaNumericInput({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return;
     if (e.key === 'Enter') {
       commitValue(editValue);
-      e.currentTarget.blur();
+      onKeyDown?.(e);
+      if (!e.defaultPrevented) {
+        e.currentTarget.blur();
+      }
+      return;
     } else if (e.key === 'Escape') {
       setEditValue(value !== undefined && value !== null ? String(value) : '');
       e.currentTarget.blur();

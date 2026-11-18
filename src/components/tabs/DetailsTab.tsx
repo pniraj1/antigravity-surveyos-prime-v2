@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { AssignmentForm } from '@/components/claim/AssignmentForm';
 import { PolicyDetailsForm } from '@/components/claim/PolicyForm';
 import { VehicleDetailsForm } from '@/components/claim/VehicleForm';
@@ -21,13 +21,14 @@ import type { DocType } from '@/types/documents';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import type { VehicleType } from '@/types';
-import { Sparkles, Loader2, Hash, Wand2, PanelRightOpen, PanelRightClose } from 'lucide-react';
+import { Sparkles, Loader2, Hash, Wand2, PanelRightOpen, PanelRightClose, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { SpotTab } from '@/components/tabs/SpotTab';
 import { InlineEvidencePanel } from '@/components/evidence/InlineEvidencePanel';
 import { EvidencePanelSlot } from '@/components/evidence/EvidencePanelSlot';
 import { useEvidencePanel } from '@/hooks/useEvidencePanel';
+import { getUnfilledFields } from '@/lib/claims/unfilled-fields';
 
 const VEHICLE_TYPES: { id: VehicleType; label: string }[] = [
   { id: 'private', label: 'Private' },
@@ -62,6 +63,123 @@ export function DetailsTab() {
   const panel = useEvidencePanel(STORAGE_KEY_PANEL, 380);
   const { panelOpen, togglePanel, containerRef } = panel;
   const [reviewSheet, setReviewSheet] = useState<{ key: string; label: string; file: File } | null>(null);
+
+  const formAreaRef = useRef<HTMLDivElement>(null);
+  const [unfilledCount, setUnfilledCount] = useState<number | null>(null);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const refreshUnfilledCount = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    if (refreshTimerRef.current) {
+      clearTimeout(refreshTimerRef.current);
+    }
+    refreshTimerRef.current = setTimeout(() => {
+      if (formAreaRef.current) {
+        const fields = getUnfilledFields(formAreaRef.current);
+        setUnfilledCount(fields.length);
+      }
+    }, 150);
+  }, []);
+
+  const handleContainerInput = useCallback(() => {
+    refreshUnfilledCount();
+  }, [refreshUnfilledCount]);
+
+  useEffect(() => {
+    refreshUnfilledCount();
+    return () => {
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+      }
+    };
+  }, [currentClaim, refreshUnfilledCount]);
+
+  const jumpToNextUnfilled = useCallback(() => {
+    const unfilled = getUnfilledFields(formAreaRef.current);
+    setUnfilledCount(unfilled.length);
+
+    if (unfilled.length === 0) {
+      toast.success('All fields in Claim Details are filled!', { id: 'unfilled-jump' });
+      return;
+    }
+
+    const activeEl = typeof document !== 'undefined' ? document.activeElement : null;
+    let targetIndex = 0;
+    const currentIndex = activeEl ? unfilled.indexOf(activeEl as any) : -1;
+
+    if (currentIndex !== -1) {
+      targetIndex = (currentIndex + 1) % unfilled.length;
+    } else if (activeEl && formAreaRef.current?.contains(activeEl)) {
+      const found = unfilled.findIndex(
+        el => Boolean(activeEl.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING)
+      );
+      targetIndex = found !== -1 ? found : 0;
+    } else {
+      targetIndex = 0;
+    }
+
+    const target = unfilled[targetIndex];
+    if (!target) return;
+
+    target.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    target.focus?.({ preventScroll: true });
+    if ('select' in target && typeof (target as HTMLInputElement).select === 'function') {
+      (target as HTMLInputElement).select();
+    }
+
+    const highlightClasses = ['ring-2', 'ring-primary', 'ring-offset-2', 'transition-all'];
+    target.classList.add(...highlightClasses);
+    setTimeout(() => {
+      target.classList.remove(...highlightClasses);
+    }, 1600);
+
+    // Resolve field label
+    let label = '';
+    if (target.id) {
+      try {
+        const escapedId = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(target.id) : target.id;
+        const labelEl =
+          formAreaRef.current?.querySelector(`label[for="${escapedId}"]`) ||
+          document.querySelector(`label[for="${escapedId}"]`);
+        if (labelEl) {
+          label = labelEl.textContent?.trim() || '';
+        }
+      } catch {
+        // Fallback gracefully if selector fails
+      }
+    }
+    if (!label) {
+      const parentLabel = target.closest('label');
+      if (parentLabel) {
+        label = parentLabel.textContent?.trim() || '';
+      }
+    }
+    if (!label) {
+      label = target.getAttribute('aria-label') || '';
+    }
+    if (!label && 'placeholder' in target && (target as HTMLInputElement).placeholder) {
+      label = (target as HTMLInputElement).placeholder.trim();
+    }
+    if (label) {
+      label = label.replace(/\s+/g, ' ').slice(0, 40);
+    }
+
+    const message = `${label ? `Field: ${label}` : 'Unfilled field'} (${targetIndex + 1} of ${unfilled.length})`;
+    toast.info(message, { id: 'unfilled-jump', duration: 1800 });
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 'j' || e.key === 'J' || e.code === 'KeyJ')) {
+        e.preventDefault();
+        jumpToNextUnfilled();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [jumpToNextUnfilled]);
 
   if (!currentClaim) return null;
 
@@ -156,6 +274,8 @@ export function DetailsTab() {
 
       {/* ── LEFT: Form area ─────────────────────────────────────────────────── */}
       <div
+        ref={formAreaRef}
+        onInput={handleContainerInput}
         style={{ flex: 1, minWidth: 0, overflowY: 'auto' }}
         className="@container px-4 pt-4 pb-10 md:px-8 md:pt-6 animate-in fade-in slide-in-from-bottom-2 duration-300"
       >
@@ -169,15 +289,42 @@ export function DetailsTab() {
                 One section per document, dates on the right. Changes save automatically offline.
               </p>
             </div>
-            <Button
-              variant="outline"
-              onClick={togglePanel}
-              className="gap-2 shadow-sm shrink-0"
-              title={panelOpen ? 'Hide Evidence Viewer' : 'Show Evidence Viewer'}
-            >
-              {panelOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
-              Evidence
-            </Button>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={jumpToNextUnfilled}
+                className="gap-2 shadow-sm shrink-0"
+                aria-keyshortcuts="Alt+J"
+                title={`Jump to next unfilled field (Alt+J) — ${unfilledCount ?? 0} remaining`}
+              >
+                {unfilledCount === 0 ? (
+                  <>
+                    <CheckCircle2 size={16} className="text-emerald-500" />
+                    <span>All Filled</span>
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle size={16} className="text-amber-500" />
+                    <span>Unfilled</span>
+                    {typeof unfilledCount === 'number' && unfilledCount > 0 && (
+                      <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                        {unfilledCount}
+                      </span>
+                    )}
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={togglePanel}
+                className="gap-2 shadow-sm shrink-0"
+                title={panelOpen ? 'Hide Evidence Viewer' : 'Show Evidence Viewer'}
+              >
+                {panelOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
+                Evidence
+              </Button>
+            </div>
           </div>
 
           {/* Report Number */}

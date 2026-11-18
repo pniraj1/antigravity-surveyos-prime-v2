@@ -107,7 +107,9 @@ export function buildStandardFinalSurveyHTML(
   // ── Calculations ───────────────────────────────────────────────────────────
   let metal = 0, plastic = 0, glass = 0, fiberglass = 0, disposalNet = 0, labOnlyBase = 0, paintOnlyBase = 0;
 
-  rows.filter(r => r.section === 'parts').forEach(r => {
+  // A not-in-bill row prints but carries no liability, so the sums skip it.
+  const calcRows = isBillCheck ? rows.map(r => r.billStatus === 'not-in-bill' ? { ...r, allowed: false } : r) : rows;
+  calcRows.filter(r => r.section === 'parts').forEach(r => {
     if (r.allowed === false) return;
     const dep = rowDepRate(r, ageMonths, claim);
     const { isDisposal, netBeforeGst } = computeRowNet(r, dep);
@@ -124,10 +126,10 @@ export function buildStandardFinalSurveyHTML(
   // Dep-aware: labour/paint carry a surveyor's depOverride and paint carries the
   // automatic GR-9 rate. Net of the endorsement — the "Less endorsement 23" line
   // beneath the subtotal explains the step down from the gross rows.
-  rows.filter(r => r.section === 'labour').forEach(r => {
+  calcRows.filter(r => r.section === 'labour').forEach(r => {
     if (r.allowed !== false) labOnlyBase += computeRowNet(r, rowDepRate(r, ageMonths, claim)).netBeforeGst;
   });
-  rows.filter(r => r.section === 'paint').forEach(r => {
+  calcRows.filter(r => r.section === 'paint').forEach(r => {
     if (r.allowed !== false) paintOnlyBase += computeRowNet(r, rowDepRate(r, ageMonths, claim)).netBeforeGst;
   });
 
@@ -151,7 +153,7 @@ export function buildStandardFinalSurveyHTML(
   // Computed from this builder's own ageMonths so the summary block and the
   // material rows beneath it can never disagree.
   const summary = calculateAssessmentSummary(
-    rows,
+    calcRows,
     ageMonths,
     depType,
     salvageFigure,

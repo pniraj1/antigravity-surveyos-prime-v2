@@ -225,7 +225,11 @@ export function SmartRemarksCell({ row, autoDepRate, onUpdate }: SmartRemarksCel
                       ref={inputRef}
                       value={customText}
                       onChange={e => setCustomText(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') submitCustom(); if (e.key === 'Escape') { setCustomMode(false); } }}
+                      onKeyDown={e => {
+                        if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+                        if (e.key === 'Enter') submitCustom();
+                        if (e.key === 'Escape') { setCustomMode(false); }
+                      }}
                       className="flex-1 h-6 px-2 text-[11px] rounded border border-gray-300 focus:outline-none focus:ring-1 focus:ring-primary"
                       placeholder="Type remark..."
                     />

@@ -76,40 +76,37 @@
 - **Verify** without logging in: `grep -rl "<new UI text>" out/_next/static/chunks/`, then curl that chunk from the live site and grep the same text. "Deploy complete!" alone has lied before.
 - Deploy only when the owner asks. The public pre-sign-in redesign in `design/landing-v2/` must **never** be deployed without explicit approval.
 
-## 6. Status (2026-10-31)
+## 6. Status (2026-11-17)
 
 ### Just Shipped & Verified:
-1. **Zero-Login Sandbox & Anonymous BYOK Cloud Function Proxy (2026-10-30):**
-   - Deployed to `asia-south1` (`aiProxy`, `nvidiaProxy`) and hosting (`surveyos-v2-antigravity-in.web.app`, `motorsurveyos-in--sandbox-izvlcn5z.web.app`).
-   - `src/lib/sandbox.ts` runs silent `signInAnonymously(auth)` in the background on sandbox mount; gives valid Firebase ID token without Google login popups.
-   - Bypassed GIS OAuth and cloud sync in sandbox mode to eliminate `Error 400: origin_mismatch`.
-   - Updated `functions/index.js`: anonymous callers using BYOK (Bring Your Own Key) are exempted from paid subscription checks for Ollama (`gemma4:31b`) and NVIDIA NIM.
-   - Owner verified live with Ollama `gemma4:31b` without any `Session expired` or `origin_mismatch` errors.
-2. **Multi-Estimate Mode, Start Gap Detection & In-Flight Auto-Split (2026-10-30):**
-   - Added "Another estimate (Estimate 2, 3...)" mode in `EstimateModeDialog.tsx` and `aiDataSlice.ts` (`applyEstimate`): keeps existing rows, retains printed serial numbers (1..N), tags with `estimateId` (e.g. `Quote 2`), and enables multi-quotation switching via `EstimateViewSwitcher`.
-   - Added start-of-document gap detection (`gapsIn` in `src/lib/ai/row-check.ts` flags serials `1..present[0].sr-1`).
-   - Implemented in-flight auto-split in `src/lib/ai/processor.ts`: multi-page chunks failing JSON parse split into 1-page calls automatically.
-3. **Claim & Spot Field Unification (2026-10-30):**
-   - Deployed to production `https://motorsurveyos-in.web.app`.
-   - Bi-directional store sync: Weights (`registeredLoadWeight`/`grossWeight`/`unladenWeight` ↔ `gvw`/`ulw`/`loadCapacity`), Goods (`spotDetails.loadDesc` ↔ `vehicle.natureOfGoods`/`detailsOfGoodsCarried`), HPA (`policy.hpaWith` ↔ `vehicle.hypothecation`/`rcEndorsement`), and Odometer (`vehicle.odometer` ↔ `valuationDetails.odometer`).
-   - Consolidated duplicate inputs in `AtAccidentForm.tsx` to single authoritative "Load at Accident (KG)" and "Nature / Description of Goods". Cross-fallbacks in all report builders.
-4. **Scan Fee Bill Notes, Mobile Rate Memory & Draft Sync (2026-10-30):**
-   - Handover contract `prime-notes-import.md` updated with 16 `feeBill.*` paths.
-   - Android Scan app: `FeeBillFields.kt`, `FeeRatesStore.kt` (SharedPreferences rate memory), `FeeBillNotes.kt` screen with live calculation cards, and `SHARED_SYNC_MAP` SQLite cross-section draft sync in `NotesViewModel.kt`.
-   - Prime side: `src/lib/scan-import/notes.ts` parses fee bill notes and backfills date/time into Spot, Final, and Valuation.
-5. **Browser Storage Exhaustion Fix & IndexedDB Cleaner (2026-10-29):**
-   - Photo canvas compression switched from PNG to JPEG 0.85 (~40KB, 95% payload reduction).
-   - IndexedDB prune utilities and `StorageCleanerSection.tsx` in Profile tab.
-6. **Survey Date & Time Consolidation (2026-10-28):**
-   - Unified `datetime-local` input across Spot and Final claims; bi-directional store sync; report cross-fallbacks.
-7. **Bill Check Reference Serials (2026-10-27):**
-   - `refSrNo`, `refStatus`, `BillCheckGrid` with 400-line review filter, 13-column UIIC report and Standard Report column 9.
+1. **Deploy of main at f2a0452b to Production (2026-11-17):**
+   - Deployed hosting (`surveyos-v2-antigravity-in`, site `motorsurveyos-in`, custom domain `https://surveyos.in`). Live chunks verified with `curl.exe`.
+2. **UIIC Spot Survey Dates, Universal AI Model Pick & "Done by" Note (DEPLOYED 2026-11-17):**
+   - UIIC final report spot survey column now reads `reinspection.spotAppointmentDate/spotSurveyDate/spotReportDate` asked in UIIC "Before printing" dialog (no longer mirrors final survey dates into the spot column).
+   - `callAIGateway` defaults a session for sessionless callers (rephrase cause, bill-check AI match, insured report, bank statement), honouring the surveyor's active model pick.
+   - `lastUsedModelLabel()` feedback added beside Undo after rephrase, in extraction review ("Read by ..."), and as toast detail.
+3. **Bill Check: Final Bill / Estimate Switch Restored (DEPLOYED 2026-11-17):**
+   - `[Final bill]` and `[Estimate]` toggle buttons restored in `BillCheckHeader.tsx` with tooltips. Switches document kind in place without re-read, preserving assessed amounts and allowed flags.
+4. **Bill Check Column Order & Allowed-Only View (DEPLOYED 2026-11-17):**
+   - Unified column order across Case 1 (Claim from Estimate) and Case 2 (Claim from Bill): base | Assessed | uploaded | item no. | Status | GST | Disposal | Dep% | Net | Price+GST | Remarks.
+   - Allowed rows only shown by default with "Allowed only" toggle; counts and footer totals follow visible rows via `sectionFooterTotals`.
+5. **Bill Check Progressive Tallying Cockpit & Reconciliation Wizard (DEPLOYED 2026-11-16 / 2026-11-17):**
+   - 4-Stage Progressive Tally Engine (`src/lib/tally/`): Stage 1 Part Numbers, Stage 2 Semantic Automotive Matcher, Stage 3 Surveyor-Triggered AI Matching, Stage 4 Disallowed Isolation with ₹0 liability & insurer savings.
+   - Accessible Modal Dialog Architecture (`BillCheckUploadDialog.tsx`, `ReconciliationWizardDialog.tsx`).
+   - 100% Brand Orange Theme (`#F59E0B`, `amber-500`) compliance. Main spreadsheet workspace (`BillCheckGrid.tsx`) remains permanently mounted.
+6. **Assessment & Grid Usability (DEPLOYED 2026-11-14 / 2026-11-16):**
+   - `DecimalInput` without arrow/wheel stepping, retains decimal precision.
+   - Shared cell selection (`useGridSelection`) with copy/paste and fill capabilities across Assessment and Bill Check.
+7. **BharatBenz Digital DMS Invoices (DEPLOYED 2026-11-14):**
+   - Deterministic parsing via `row-parser.ts` handles 13-page BharatBenz invoices with 0 row AI token calls.
+8. **Comprehensive Codebase Architecture Map (2026-11-14 / 2026-11-17):**
+   - Published permanent authoritative map to `Architecture/Codebase_Architecture_Map.md`.
+9. **Zero-Login Sandbox & Anonymous BYOK Cloud Function Proxy (2026-10-30):**
+   - Deployed to `asia-south1` and hosting; silent `signInAnonymously(auth)` in sandbox mode for BYOK Ollama and NVIDIA NIM.
 
 ### In Progress / Next Up:
 - **Auto-Split Multi-Page Row Ordering Bug (Active Investigation):**
-  - **Context:** When the owner ran Ollama `gemma4:31b` on the first 2 pages of Pawar Brothers' merged estimate PDF in the sandbox, auto-split triggered as expected upon token overflow (`"trying to read it individually"`).
-  - **Symptom:** In the assessment sheet, Page 2's line items appeared before Page 1's line items.
-  - **Next Step:** Inspect `processor.ts` (`mergeAIResults`), `aiDataSlice.ts` (`buildEstimateRows`), and `ai-pages.ts`. Sort rows by printed `srNo` (ascending) so sequential items `1, 2, 3...` always render in ascending document order regardless of chunk resolution order or section splitting.
+  - Order sequential items `1, 2, 3...` ascending in `processor.ts` / `aiDataSlice.ts`.
 - **Claim Document Kit:** Phases 3–5 pending.
 - **Portal Fill Extension v0.4.0:** Phase 0 (live portal checks from India, no VPN).
 

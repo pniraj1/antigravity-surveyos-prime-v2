@@ -100,13 +100,18 @@ export function formatCurrency(value: number): string {
   return '₹ ' + value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
+/** Taxable amount plus GST, kept to the paisa (never the whole rupee). */
+export function withGst(taxable: number, gstPercent: number): number {
+  return Math.round(taxable * (1 + gstPercent / 100) * 100) / 100;
+}
+
 /**
  * Short currency format without decimals.
  * Legacy: fmt2() shorthand
  */
 export function formatCurrencyShort(value: string | number): string {
   const num = typeof value === 'string' ? parseFloat(value) || 0 : value;
-  return '₹' + num.toLocaleString('en-IN');
+  return '₹' + num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 // parseDateToISO was removed: it had no callers, and it returned its input

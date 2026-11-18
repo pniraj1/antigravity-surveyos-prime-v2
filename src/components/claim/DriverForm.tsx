@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useClaimStore } from '@/stores/claim-store';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,8 +16,15 @@ export function DriverDetailsForm({ scan, usePhone }: { scan?: React.ReactNode; 
   const { currentClaim, updateDriver } = useClaimStore();
   const { triggerField, hasEvidence } = useFieldEvidence();
 
+  const d = currentClaim?.driver;
+
+  useEffect(() => {
+    if (d && !d.authorisedToDrive) {
+      updateDriver({ authorisedToDrive: 'YES' });
+    }
+  }, [d?.authorisedToDrive, updateDriver]);
+
   if (!currentClaim) return null;
-  const d = currentClaim.driver;
 
   const action = (scan || usePhone) ? (
     <div className="flex items-center gap-2">
@@ -275,10 +283,9 @@ export function DriverDetailsForm({ scan, usePhone }: { scan?: React.ReactNode; 
         <select
           id="d-authorised"
           className={selectCls}
-          value={d?.authorisedToDrive || ''}
+          value={d?.authorisedToDrive || 'YES'}
           onChange={(e) => updateDriver({ authorisedToDrive: e.target.value })}
         >
-          <option value="">—</option>
           <option value="YES">Yes</option>
           <option value="NO">No</option>
         </select>

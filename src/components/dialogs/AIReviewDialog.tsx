@@ -271,6 +271,7 @@ export function AIReviewDialog({ isOpen, onClose, onConfirm, onReScan, title, da
                     value={feedback}
                     onChange={(e) => setFeedback(e.target.value)}
                     onKeyDown={(e) => {
+                      if (e.nativeEvent.isComposing || e.keyCode === 229) return;
                       if (e.key === 'Enter' && !e.shiftKey && feedback.trim() && onReScan && !smartFixProgress) {
                         e.preventDefault();
                         onReScan(feedback);

@@ -357,6 +357,7 @@ export function NewClaimDialog() {
                 value={vehicleNo}
                 onChange={(e) => setVehicleNo(e.target.value)}
                 onKeyDown={(e) => {
+                  if (e.nativeEvent.isComposing || e.keyCode === 229) return;
                   if (e.key === 'Enter' && !isCreateDisabled) handleCreate();
                 }}
               />

@@ -32,7 +32,7 @@ export interface BillFlag {
   detail: string;
 }
 
-const INR = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
+const INR = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const rs = (n: number) => `₹${INR.format(n)}`;
 
 /**

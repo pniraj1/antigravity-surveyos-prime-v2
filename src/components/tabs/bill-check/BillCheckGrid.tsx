@@ -8,7 +8,7 @@ import { useEvidenceStore } from '@/components/evidence/DocumentEvidenceViewer';
 import { useClaimStore } from '@/stores/claim-store';
 import type { AssessmentRow, AssessmentSummary, ClaimData } from '@/types';
 import type { ExtraBillItem, AssessmentSection } from '@/types/assessment';
-import { shouldStartSupplementaryBand } from '@/lib/calculations/utils';
+import { shouldStartSupplementaryBand, withGst } from '@/lib/calculations/utils';
 import { computeRowNet } from '@/lib/calculations';
 import { rowDepRate } from '@/lib/calculations/row-dep-rate';
 import { billCheckAssessed } from '@/lib/reports/bill-check-projection';
@@ -19,14 +19,14 @@ import { sectionTickState, useGridSelection, clampRangeToSection } from '@/compo
 import { duplicateParticularsOf, normParticulars, rowTintClass, deleteRowWithUndo } from '@/components/claim/assessment-grid-config';
 import {
   OptionalColumn, OPTIONAL_COLUMNS, type ColumnMeta, DEFAULT_VISIBLE, COL_WIDTHS,
-  loadVisibility, saveVisibility, statusLabel, type BillStatus,
+  loadVisibility, saveVisibility, statusLabel, statusOptions, type BillStatus,
 } from './config';
 import { GRID_COLUMNS } from '@/components/claim/grid-columns';
 import { AllowanceScopeDialog } from '@/components/dialogs/AllowanceScopeDialog';
 import { AllowanceInput } from './AllowanceInput';
 import { FormulaNumericInput } from '@/components/claim/FormulaNumericInput';
 import { billCheckFlags, type BillFlag } from '@/lib/reports/bill-check-flags';
-import { isFromBill, uploadLabels } from '@/lib/reports/bill-check-mode';
+import { isFromBill, uploadLabels, selfBilled } from '@/lib/reports/bill-check-mode';
 
 const FROM_BILL_LOCK = "Billed at the bill's own figure (this claim is made from the bill).";
 import { BillCheckFlagMark, BillCheckFlagDetail, BillCheckMatchDetail } from './BillCheckFlagRow';
@@ -140,8 +140,8 @@ export function BillCheckGrid({
     ({ ...row, assessed: billCheckAssessed(row) });
   const { width: particularsWidth, resizeHandleProps: particularsResizeHandleProps } = useColumnResize({
     storageKey: 'surveyos_billcheck_particulars_width',
-    defaultWidth: 350,
-    minWidth: 180,
+    defaultWidth: 240,
+    minWidth: 160,
     maxWidth: 750,
   });
   const [visible, setVisible] = useState<Record<OptionalColumn, boolean>>(DEFAULT_VISIBLE);
@@ -237,14 +237,16 @@ export function BillCheckGrid({
       if (above !== null) fillColumn(here.col, [(els[above] as HTMLInputElement).value ?? ''], here.row);
       return;
     }
-    const isTextBox = t instanceof HTMLInputElement && t.type === 'text';
+    const isTextBox = (t instanceof HTMLInputElement && t.type === 'text') || t instanceof HTMLTextAreaElement;
+    const isTab = e.key === 'Tab';
     const plain = !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && isTextBox;
     const key = e.key === 'Enter' && plain ? 'ArrowDown'
+      : isTab ? (e.shiftKey ? 'ArrowLeft' : 'ArrowRight')
       : (e.shiftKey && ARROWS.includes(e.key)) || (plain && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) ? e.key
       : null;
     if (!key) return;
     e.preventDefault(); // never let Shift+arrow change a select, even at the edges
-    const to = moveTarget(cells, here, key as MoveKey);
+    const to = moveTarget(cells, here, key as MoveKey, isTab);
     if (to === null) return;
     const next = els[to];
     next.focus();
@@ -781,7 +783,7 @@ export function BillCheckGrid({
                       }
                       const tax = Number(raw);
                       if (!Number.isFinite(tax)) return;
-                      updateAssessmentRow(row.id, { billedTaxable: tax, billedAmount: Math.round(tax * (1 + gstPct / 100)) });
+                      updateAssessmentRow(row.id, { billedTaxable: tax, billedAmount: withGst(tax, gstPct) });
                     }}
                     disabled={isDisallowed || row.billStatus === 'not-in-bill'}
                     className="px-2 py-1 rounded-lg text-sm text-right border outline-none w-full border-border text-foreground"
@@ -837,13 +839,17 @@ export function BillCheckGrid({
                     onChange={e => {
                       const s = e.target.value as BillStatus;
                       const gstPct = row.gst ?? 18;
-                      if (s === 'in-bill') {
+                      if (s === 'in-bill' && fromBill) {
+                        // From-bill: In Estimate bills the row at its own figure. This is
+                        // also how the surveyor overrides a Not in Estimate.
+                        updateAssessmentRow(row.id, selfBilled(row));
+                      } else if (s === 'in-bill') {
                         // "Billed as assessed." assessed is pre-GST, so it is the
                         // taxable basis; billedAmount is the incl-GST display figure.
                         updateAssessmentRow(row.id, {
                           billStatus: s,
                           billedTaxable: row.assessed,
-                          billedAmount: Math.round(row.assessed * (1 + gstPct / 100)),
+                          billedAmount: withGst(row.assessed, gstPct),
                         });
                       } else if (s === 'not-in-bill') {
                         updateAssessmentRow(row.id, { billStatus: s, billedTaxable: 0, billedAmount: 0 });
@@ -851,14 +857,12 @@ export function BillCheckGrid({
                         updateAssessmentRow(row.id, { billStatus: s });
                       }
                     }}
-                    disabled={fromBill}
-                    title={fromBill ? FROM_BILL_LOCK : undefined}
+                    title={fromBill && row.refSrNo === 'Not in estimate' && row.billStatus === 'in-bill'
+                      ? 'Not in the estimate, but allowed by the surveyor' : undefined}
                     className="px-2 py-1 rounded-lg text-[11px] font-medium border outline-none w-full border-border"
-                    style={{ background: fromBill ? 'var(--color-neutral-100)' : st.bg, color: st.color }}
+                    style={{ background: st.bg, color: st.color }}
                   >
-                    <option value="pending">Pending</option>
-                    <option value="in-bill">In Bill ✓</option>
-                    <option value="not-in-bill">Not in Bill ✗</option>
+                    {statusOptions(fromBill).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
                 )}
                 {visible.gst           && (
@@ -874,7 +878,7 @@ export function BillCheckGrid({
                         const gst = Math.max(0, val);
                         const updates: Partial<AssessmentRow> = { gst };
                         if (row.billedTaxable !== undefined) {
-                          updates.billedAmount = Math.round(row.billedTaxable * (1 + gst / 100));
+                          updates.billedAmount = withGst(row.billedTaxable, gst);
                         }
                         updateAssessmentRow(row.id, updates);
                       }}

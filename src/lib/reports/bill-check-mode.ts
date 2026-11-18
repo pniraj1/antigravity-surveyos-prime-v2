@@ -1,5 +1,6 @@
 import type { ClaimData } from '@/types';
 import type { AssessmentRow, BillCheckDetails, EstimateHeads, ExtraBillItem } from '@/types/assessment';
+import { withGst } from '@/lib/calculations/utils';
 import type { RowUpdate } from './ref-paste';
 
 export type { RowUpdate } from './ref-paste';
@@ -28,16 +29,18 @@ export function uploadLabels(claim: { billCheck?: { baseDocument?: string } } | 
 export function selfBilled(row: AssessmentRow): Pick<AssessmentRow, 'billedTaxable' | 'billedAmount' | 'billStatus'> {
   return {
     billedTaxable: row.estimated,
-    billedAmount: Math.round(row.estimated * (1 + (row.gst ?? 18) / 100)),
+    billedAmount: withGst(row.estimated, row.gst ?? 18),
     billStatus: 'in-bill',
   };
 }
 
 /** Allowed rows whose billed figures are not their own figures yet. */
-export function selfBillUpdates(rows: AssessmentRow[]): RowUpdate[] {
+export function selfBillUpdates(rows: AssessmentRow[], keepNotIn = false): RowUpdate[] {
   const out: RowUpdate[] = [];
   for (const row of rows) {
     if (!row.allowed) continue;
+    // The surveyor's Not in Estimate stands until they pick In Estimate again.
+    if (keepNotIn && row.billStatus === 'not-in-bill') continue;
     const own = selfBilled(row);
     if (row.billedTaxable === own.billedTaxable && row.billedAmount === own.billedAmount && row.billStatus === own.billStatus) continue;
     out.push({ id: row.id, updates: own });
@@ -47,7 +50,7 @@ export function selfBillUpdates(rows: AssessmentRow[]): RowUpdate[] {
 
 /** From-bill claims: billed is always the row's own figure, so a changed estimated re-bills it. */
 export function fromBillSelfBillUpdates(claim: ClaimData): RowUpdate[] {
-  return isFromBill(claim) ? selfBillUpdates(claim.assessmentRows) : [];
+  return isFromBill(claim) ? selfBillUpdates(claim.assessmentRows, true) : [];
 }
 
 /** A Final Bill read that did not start in Bill Check must not become the estimate of a from-bill claim. */

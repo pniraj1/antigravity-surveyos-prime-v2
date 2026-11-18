@@ -168,7 +168,7 @@ export function useBillCheckPrintGate() {
     if (!claim) return;
     const fromBill = isFromBill(claim);
     if (fromBill) {
-      selfBillUpdates(claim.assessmentRows || []).forEach((u) => updateAssessmentRow(u.id, u.updates));
+      selfBillUpdates(claim.assessmentRows || [], true).forEach((u) => updateAssessmentRow(u.id, u.updates));
     }
     rowsToMarkNotInBill(claim.assessmentRows || [], fromBill).forEach((r) =>
       updateAssessmentRow(r.id, { billStatus: 'not-in-bill', billedTaxable: 0, billedAmount: 0 })
