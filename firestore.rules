@@ -103,6 +103,28 @@ service cloud.firestore {
       allow read: if isAdmin();
     }
 
+    // Team directory — maps an assistant's email to the senior surveyor's firmOwnerUid.
+    // Allows an assistant to find their firm's workspace on login.
+    match /team_members/{email} {
+      allow read: if isSignedIn() && (
+        isAdmin() ||
+        (request.auth.token.email != null && request.auth.token.email.lower() == email.lower()) ||
+        (resource != null && resource.data.firmOwnerUid == request.auth.uid)
+      );
+      allow create: if isAdmin() || (
+        isSignedIn() && request.resource.data.firmOwnerUid == request.auth.uid
+      );
+      allow update: if isAdmin() || (
+        isSignedIn() && (
+          (resource != null && resource.data.firmOwnerUid == request.auth.uid) ||
+          request.resource.data.firmOwnerUid == request.auth.uid
+        )
+      );
+      allow delete: if isAdmin() || (
+        isSignedIn() && resource != null && resource.data.firmOwnerUid == request.auth.uid
+      );
+    }
+
     // User-specific data — each user accesses only their own data
     match /users/{userId} {
       // 1. Profile — protected so users can't grant themselves admin OR paid access.

@@ -1,3 +1,18 @@
+## 2026-11-18 (Antigravity) — Assistant Lifecycle, Acceptance Flow & Pre-Authorized Seats (DEPLOYED RULES & HOSTING)
+- feat(team): added `TeamInvitationDialog.tsx` modal component for invited assistant surveyors. Displays firm name and IRDAI licence, with explicit **[Accept & Join Firm Workspace]** and **[Decline & Continue Solo]** actions.
+- feat(onboarding): updated `OnboardingGate.tsx` to completely suppress `SetupDialog` and dashboard tour for team members (`isTeamMember`), preventing assistants from being prompted to enter IRDAI license and personal bank details.
+- feat(admin): updated `useAdminData.ts` to enrich pending signups in `newSignups` with firm affiliation from `team_members` in parallel, and updated `ApprovalQueueTab.tsx` to prominently display `🏢 Assistant under [Firm Name] (Licence: [Licence])`.
+- fix(security): deployed official `match /team_members/{email}` rules to Firebase production with target `firestore` (Job ID: `1794981652692`).
+- fix(db): seeded canonical active team record for `patilviraj03@gmail.com` under Vikram Patil (`pvnMbsYZAVf9HW5Fer62TqKsakj2`), immediately resolving firm claims.
+- deploy(hosting): built Next.js 16 production export (25 static pages) and deployed to Firebase Hosting site `surveyos-v2-antigravity-in` (Job ID: `1794984559401`, 100% success).
+- verification: `tsc --noEmit` 0 errors; vitest 3323 passed; Scan unit tests (`gradlew :app:testDebugUnitTest`) 28 tasks passed; live deploy confirmed 100%.
+
+## 2026-11-17 (Antigravity) — Fix Team Workspace Resolution & Claims Sync for Assistants (DEPLOYED RULES)
+- fix(security): added missing `match /team_members/{email}` rules in `firestore.rules`. Previously, `team_members` writes and reads were rejected with `PERMISSION_DENIED`, causing assistant logins to fall back to an empty solo workspace instead of the firm owner's workspace. Deployed to production via Firebase MCP.
+- fix(team): updated `TeamManagementSection.tsx` to immediately sync `teamEmails` and `hideEarningsFromTeam` into `users/{effectiveOwnerUid}/profile/current` on add/remove/toggle, ensuring `isTeamMember(ownerUid)` security checks in `firestore.rules` pass immediately without debounce lag.
+- fix(sync): updated `useClaimsLoader.ts` to depend on `activeWorkspaceUid` and listen to `surveyos_claims_updated` custom window event dispatched by `pullClaimsFromCloud` in `sync.ts` and `saveClaim` in `indexeddb.ts`, eliminating the same-tab blank dashboard race condition on first login.
+- verification: `firebase_validate_security_rules` 100% OK; `firebase_deploy` (only: firestore:rules) Job ID `1794939356506` completed 100%; `tsc --noEmit` clean; vitest 3323 passed; Scan unit tests (`gradlew :app:testDebugUnitTest`) 28 tasks up-to-date and passed.
+
 ## 2026-11-17 (Claude Code) - Final bill / Estimate switch audit + 2 fixes (DEPLOYED 2026-11-17, `a7dc1ea8`, not pushed)
 - audit: `src/stores/slices/__tests__/bill-check-switch-audit.test.ts` (26 checks) covers state, titles and both Bill Check reports for the switch in both directions.
 - fix(bill-check): switching mode now drops a custom `billCheck.refColumnTitle` (only when the mode really changes), so the reference column heading is never the other document's.

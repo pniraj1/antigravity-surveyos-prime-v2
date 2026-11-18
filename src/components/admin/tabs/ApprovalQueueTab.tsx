@@ -59,6 +59,19 @@ function SignupRow({
             <div className="text-xs text-muted-foreground/80 font-mono mt-0.5 flex items-center gap-1.5">
               <IdCard size={12} className="shrink-0" /> {signup.uid}
             </div>
+            {signup.isTeamMember && signup.firmName && (
+              <div
+                className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-md text-xs font-medium"
+                style={{
+                  background: 'rgba(99,102,241,0.08)',
+                  color: '#4f46e5',
+                  border: '1px solid rgba(99,102,241,0.25)',
+                }}
+              >
+                🏢 Assistant under {signup.firmName}
+                {signup.firmLicence ? ` (Licence: ${signup.firmLicence})` : ''}
+              </div>
+            )}
           </div>
         </div>
       </td>

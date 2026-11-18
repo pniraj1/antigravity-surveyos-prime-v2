@@ -165,7 +165,7 @@ export function TeamManagementSection({
       notifyTeamUpdate(result.updatedEmails);
     }
 
-    // Sync to team_members/{email} collection
+    // Sync to team_members/{email} collection and immediate profile sync
     try {
       if (effectiveOwnerUid && db) {
         const memberRef = doc(db, 'team_members', normalized);
@@ -175,8 +175,17 @@ export function TeamManagementSection({
           firmLicence: effectiveProfile?.irdaiLicence || (effectiveProfile as any)?.licenceNumber || '',
           hideEarnings: !!effectiveProfile?.hideEarningsFromTeam,
           ownerEmail: effectiveProfile?.email || ownerEmail || '',
+          assistantEmail: normalized,
+          status: 'invited',
+          invitedAt: new Date().toISOString(),
           addedAt: new Date().toISOString(),
-        });
+        }, { merge: true });
+
+        // Also sync profile's teamEmails directly in Firestore so isTeamMember() in security rules passes immediately
+        if (result.updatedEmails) {
+          const profileRef = doc(db, 'users', effectiveOwnerUid, 'profile', 'current');
+          await setDoc(profileRef, { teamEmails: result.updatedEmails }, { merge: true });
+        }
       }
     } catch (err) {
       logger.error('[TeamManagementSection] Failed to sync team member in cloud (non-fatal):', err);
@@ -188,11 +197,16 @@ export function TeamManagementSection({
     const updated = teamEmails.filter((e) => e.toLowerCase() !== normalized);
     notifyTeamUpdate(updated);
 
-    // Remove from team_members collection
+    // Remove from team_members collection and update profile
     try {
       if (db) {
         const memberRef = doc(db, 'team_members', normalized);
         await deleteDoc(memberRef);
+
+        if (effectiveOwnerUid) {
+          const profileRef = doc(db, 'users', effectiveOwnerUid, 'profile', 'current');
+          await setDoc(profileRef, { teamEmails: updated }, { merge: true });
+        }
       }
     } catch (err) {
       logger.error('[TeamManagementSection] Failed to delete team member from cloud (non-fatal):', err);
@@ -210,6 +224,10 @@ export function TeamManagementSection({
               return setDoc(ref, { hideEarnings: val }, { merge: true });
             })
           );
+        }
+        if (effectiveOwnerUid && db) {
+          const profileRef = doc(db, 'users', effectiveOwnerUid, 'profile', 'current');
+          await setDoc(profileRef, { hideEarningsFromTeam: val }, { merge: true });
         }
       } catch (err) {
         logger.error('[TeamManagementSection] Failed to sync hideEarnings to team_members:', err);

@@ -409,6 +409,9 @@ export async function saveClaim(
     const channel = new BroadcastChannel('surveyos_claims_sync');
     channel.postMessage('CLAIMS_UPDATED');
     channel.close();
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('surveyos_claims_updated'));
+    }
   } catch {
     // BroadcastChannel unavailable in some environments — ignore
   }

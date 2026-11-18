@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { canShowOnboarding, shouldShowWelcome } from '@/lib/onboarding/rules';
 import { profilePrefill } from '@/lib/onboarding/setup';
 import { shouldStartDashboardTour, startDashboardTour } from '@/lib/onboarding/dashboard-tour';
+import { TeamInvitationDialog } from '@/components/team/TeamInvitationDialog';
 
 // Lazy: SetupDialog pulls in ProfileTab code, which stays out of the main bundle.
 const SetupDialog = dynamic(() => import('./SetupDialog').then((m) => ({ default: m.SetupDialog })), {
@@ -18,6 +19,7 @@ export function OnboardingGate() {
   const profile = useProfileStore((s) => s.profile);
   const updateProfile = useProfileStore((s) => s.updateProfile);
   const displayName = useAuthStore((s) => s.user?.displayName);
+  const isTeamMember = useAuthStore((s) => s.isTeamMember);
   const loginSyncDone = useUIStore((s) => s.loginSyncDone);
   const setupStep = useUIStore((s) => s.setupStep);
   const setSetupStep = useUIStore((s) => s.setSetupStep);
@@ -36,14 +38,18 @@ export function OnboardingGate() {
   }, [profile, loginSyncDone, displayName, updateProfile]);
 
   useEffect(() => {
+    // Team members (assistants) inherit the firm profile — never show SetupDialog.
+    if (isTeamMember) return;
     if (opened.current || setupStep !== null || newClaimOpen) return;
     if (shouldShowWelcome(profile, loginSyncDone)) {
       opened.current = true;
       setSetupStep(0);
     }
-  }, [profile, loginSyncDone, setupStep, setSetupStep, newClaimOpen]);
+  }, [isTeamMember, profile, loginSyncDone, setupStep, setSetupStep, newClaimOpen]);
 
   useEffect(() => {
+    // Assistants don't need the solo-user dashboard tour.
+    if (isTeamMember) return;
     if (tourStarted.current || opened.current || setupStep !== null || newClaimOpen) return;
     if (shouldStartDashboardTour(profile, loginSyncDone, setupStep, activeTab)) {
       tourStarted.current = true;
@@ -52,7 +58,12 @@ export function OnboardingGate() {
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [profile, loginSyncDone, setupStep, newClaimOpen, activeTab]);
+  }, [isTeamMember, profile, loginSyncDone, setupStep, newClaimOpen, activeTab]);
 
-  return setupStep !== null ? <SetupDialog /> : null;
+  return (
+    <>
+      {setupStep !== null ? <SetupDialog /> : null}
+      <TeamInvitationDialog />
+    </>
+  );
 }

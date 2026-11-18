@@ -5,6 +5,8 @@ import {
   collectionGroup,
   collection,
   getDocs,
+  getDoc,
+  doc,
   query,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
@@ -102,13 +104,13 @@ export function useAdminData(isAuthorized: boolean): UseAdminDataReturn {
     const activeMap = mapOverride ?? surveyorMap;
     try {
       const snap = await getDocs(collection(db, 'newSignups'));
-      const results: NewSignup[] = [];
+      const rawResults: NewSignup[] = [];
       snap.forEach((docSnap) => {
         const data = docSnap.data();
         const uid = docSnap.id;
         // Enrich with authoritative profile data (already in memory)
         const profile = activeMap.get(uid);
-        results.push({
+        rawResults.push({
           uid,
           email: data.email || '',
           displayName: data.displayName || data.name || '',
@@ -128,6 +130,46 @@ export function useAdminData(isAuthorized: boolean): UseAdminDataReturn {
           profileState: profile?.state || '',
         });
       });
+
+      // ── Team attribution ───────────────────────────────────────────
+      // For each signup that has an email, check team_members/{email} in
+      // parallel to avoid N sequential Firestore reads.
+      const teamChecks = await Promise.all(
+        rawResults.map(async (signup) => {
+          if (!signup.email) return null;
+          try {
+            const memberSnap = await getDoc(doc(db, 'team_members', signup.email.trim().toLowerCase()));
+            if (memberSnap.exists()) {
+              const md = memberSnap.data();
+              if (md?.firmOwnerUid) {
+                return {
+                  uid: signup.uid,
+                  isTeamMember: true as const,
+                  firmOwnerUid: md.firmOwnerUid as string,
+                  firmName: (md.firmName as string) || '',
+                  firmLicence: (md.firmLicence as string) || '',
+                };
+              }
+            }
+          } catch {
+            // Non-critical — skip enrichment for this entry on error
+          }
+          return null;
+        })
+      );
+
+      // Merge team attribution back into results
+      const teamMap = new Map(
+        teamChecks
+          .filter((t): t is NonNullable<typeof t> => t !== null)
+          .map((t) => [t.uid, t])
+      );
+
+      const results: NewSignup[] = rawResults.map((signup) => {
+        const team = teamMap.get(signup.uid);
+        return team ? { ...signup, ...team } : signup;
+      });
+
       results.sort((a, b) => (b.signedUpAt?.seconds ?? 0) - (a.signedUpAt?.seconds ?? 0));
       setSignups(results);
     } catch (error) {

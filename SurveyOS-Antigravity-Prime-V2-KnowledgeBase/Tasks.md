@@ -1,3 +1,43 @@
+## Done: Assistant Lifecycle, Acceptance Flow & Pre-Authorized Seats (2026-11-18, Antigravity) — DEPLOYED
+- **Status:** Complete. Deployed Firestore security rules and Next.js hosting to production (`surveyos-v2-antigravity-in`). Session: `Sessions/2026-11-18-assistant-lifecycle-acceptance-and-hosting-deploy.md`.
+- **Delivered Capabilities:**
+  1. **Pre-Authorized Seat Model (ADR-1):** Senior surveyors with allocated `maxTeamSeats` can add assistants directly without blocking on manual admin approvals. The `team_members/{email}` security rules were officially deployed to Cloud Firestore.
+  2. **Assistant Invitation Acceptance Modal (Task 3):** Built `src/components/team/TeamInvitationDialog.tsx`. When an invited assistant signs in, they are greeted by an invitation dialog detailing the firm name and licence, with explicit **[Accept & Join Firm Workspace]** or **[Decline & Continue Solo]** buttons.
+  3. **Suppression of Independent Profile Setup (Task 4):** Updated `src/components/onboarding/OnboardingGate.tsx` so that team members are never shown `SetupDialog` or the solo dashboard tour. They inherit the senior surveyor's IRDAI license and firm details on all generated reports.
+  4. **Admin Approval Queue Attribution (Task 5):** Updated `src/components/admin/hooks/useAdminData.ts` to enrich pending signups in parallel with their team affiliation from `team_members`. `ApprovalQueueTab.tsx` now prominently renders: `🏢 Assistant under [Firm Name] (Licence: [Firm Licence])`.
+  5. **Verified Assistant Seeding:** Seeded `team_members/patilviraj03@gmail.com` with `status: 'active'` under Vikram Patil (`pvnMbsYZAVf9HW5Fer62TqKsakj2`), resolving his workspace and 100 claims immediately.
+- **Verification:**
+  - `firebase_validate_security_rules`: OK (syntax valid).
+  - `firebase_deploy` (only: `firestore`): 100% success (Job ID: `1794981652692`).
+  - `firebase_deploy` (only: `hosting`): 100% success (Job ID: `1794984559401`).
+  - Unit tests: 3,323 vitest tests passed (366 files passed, 1 skipped).
+  - TypeScript: `npx tsc --noEmit` 0 errors.
+  - SurveyOS Scan unit tests: `./gradlew :app:testDebugUnitTest` 28 tasks passed (0 failures).
+
+## Done: Fix Team Workspace Resolution & Claims Sync for Assistants (2026-11-17, Antigravity) — DEPLOYED
+- **Status:** Complete. Deployed Firestore rules to production (`surveyos-v2-antigravity-in`). Session: `Sessions/2026-11-17-fix-team-workspace-and-claims-sync.md`.
+- **Root Causes Fixed:**
+  1. **Missing `team_members` rule in `firestore.rules`:** When an assistant was added, writing to `team_members/{email}` failed with `PERMISSION_DENIED`, and reading on login failed similarly. This forced `workspace-resolver.ts` to fall back to `workspaceUid = user.uid, isTeamMember = false`, treating assistants as new solo surveyors and blocking them at `SubscriptionGuard`.
+  2. **Security Rules deployed:** Added `match /team_members/{email}` allowing members to read their affiliation mapping, owners to manage their team mappings, and admins full access.
+  3. **Immediate profile `teamEmails` sync:** `TeamManagementSection.tsx` now immediately sets `teamEmails` and `hideEarningsFromTeam` in `users/{ownerUid}/profile/current` with `{ merge: true }`, ensuring `isTeamMember(ownerUid)` security checks in `firestore.rules` pass immediately without waiting for debounced background profile sync.
+  4. **Claims loader reactivity:** Added `activeWorkspaceUid` to `useClaimsLoader` dependency array and added a `surveyos_claims_updated` window event listener so claims pulled upon initial login instantly render on the dashboard in the same tab.
+- **Verification:**
+  - `firebase_validate_security_rules`: OK (syntax valid).
+  - `firebase_deploy` (only: `firestore:rules`): 100% success (Job ID: `1794939356506`).
+  - Unit tests: 13 passed in team workspace auth & management; `3,323` vitest tests passed; `tsc --noEmit` 0 errors.
+  - SurveyOS Scan unit tests: `./gradlew :app:testDebugUnitTest` 28 tasks passed (0 failures).
+
+## Done: Knowledge Base Synchronization & Understand-Anything Integration (2026-11-17, Antigravity)
+- **Status:** Complete. Session: `Sessions/2026-11-17-understand-anything-knowledge-sync.md`.
+- **Understand-Anything Integration:**
+  - Installed and configured `Understand-Anything` (`Egonex-AI/Understand-Anything`) with `@understand-anything/core` built with Tree-Sitter native parsers for Antigravity.
+  - Formatted `SurveyOS-Antigravity-Prime-V2-KnowledgeBase` into a full Karpathy-pattern LLM Wiki with central catalog `index.md` and chronological operations log `log.md`.
+  - Executed deterministic knowledge graph extraction via `parse-knowledge-base.py` and `merge-knowledge-graph.py` to assemble the knowledge vault graph (172 nodes, 105 edges, 10 layers, 9 tour steps).
+  - Executed full deterministic AST & Tree-Sitter code parsing via `extract-import-map.mjs`, `compute-batches.mjs`, `extract-structure.mjs`, and `merge-batch-graphs.py` across 1,319 files (940 code files), generating `.ua/knowledge-graph.json` (3,385 nodes, 4,945 edges, 10 architectural layers, 7 guided tour steps).
+- **Authoritative Architecture Knowledge Up to Date:**
+  - Updated `Architecture/Codebase_Architecture_Map.md` to reflect all recent developments through 2026-11-17: 4-stage progressive tally engine (`src/lib/tally/`), modal dialog architecture (`BillCheckUploadDialog`, `ReconciliationWizardDialog`), column order and allowed-only view (`BillCheckGrid`), UIIC spot survey date isolation (`reinspection.spot*`), universal AI model selection in `callAIGateway`, and 2-decimal rupee precision.
+  - Updated `Architecture/Overview.md` and `HANDOVER.md` (bringing Section 6 status up to 2026-11-17).
+
 ## Done (DEPLOYED 2026-11-17): UIIC spot dates + AI model pick + "done by" note (2026-11-17, Claude Code)
 - **Status:** committed and deployed from `main` (f2a0452b). Session: `Sessions/2026-11-17-uiic-spot-dates-ai-model-note.md`.
 - **Owner still to check by eye (no browser for agents):** UIIC final print, with the three new spot-date fields filled and blank; rephrase cause (small "by <model>" beside Undo); extraction review ("Read by ..."); toasts on bill-check AI match, insured report, bank statement.

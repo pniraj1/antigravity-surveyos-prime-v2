@@ -396,6 +396,10 @@ export async function pullClaimsFromCloud(uid: string, sinceTimestamp: string | 
   channel.postMessage('CLAIMS_UPDATED');
   channel.close();
 
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('surveyos_claims_updated'));
+  }
+
   return remoteClaims;
 }
 

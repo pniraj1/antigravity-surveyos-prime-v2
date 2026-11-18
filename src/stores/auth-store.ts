@@ -17,6 +17,7 @@ export interface TeamAffiliation {
   firmLicence: string;
   hideEarnings: boolean;
   ownerEmail: string;
+  status?: 'invited' | 'active' | 'declined';
 }
 
 export interface ViewAsSurveyor {
@@ -41,6 +42,7 @@ interface AuthState {
   setLoading: (loading: boolean) => void;
   setSessionConflict: (conflict: SessionConflict | null) => void;
   setWorkspace: (workspaceUid: string | null, isTeamMember: boolean, affiliation?: TeamAffiliation | null) => void;
+  setTeamAffiliationStatus: (status: 'invited' | 'active' | 'declined') => void;
   setViewAsSurveyor: (surveyor: ViewAsSurveyor | null) => void;
 }
 
@@ -69,6 +71,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     isTeamMember,
     teamAffiliation: affiliation ?? null,
   }),
+
+  setTeamAffiliationStatus: (status) => set((state) => ({
+    teamAffiliation: state.teamAffiliation ? { ...state.teamAffiliation, status } : null,
+  })),
 
   setViewAsSurveyor: (surveyor) => set((state) => ({
     viewAsSurveyor: surveyor,

@@ -54,6 +54,11 @@ export interface NewSignup {
   accessRequestSubmitted: boolean;
   profileCity: string;
   profileState: string;
+  // Team attribution — set when this signup belongs to an assistant surveyor
+  isTeamMember?: boolean;
+  firmOwnerUid?: string;
+  firmName?: string;
+  firmLicence?: string;
 }
 
 export type AdminTab = 'surveyors' | 'signups' | 'payments' | 'dev-notes' | 'ai-models' | 'fee-schedule' | 'announcements';

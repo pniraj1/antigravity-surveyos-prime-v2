@@ -40,7 +40,7 @@ export async function resolveWorkspace(
 
     if (snap.exists()) {
       const data = snap.data() as TeamAffiliation;
-      if (data?.firmOwnerUid) {
+      if (data?.firmOwnerUid && data?.status !== 'declined') {
         return {
           workspaceUid: data.firmOwnerUid,
           isTeamMember: true,

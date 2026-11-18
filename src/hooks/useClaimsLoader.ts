@@ -8,6 +8,7 @@ import { claimSurveyDate } from '@/lib/claims/survey-date';
 export function useClaimsLoader() {
   const { setClaimsList } = useClaimStore();
   const user = useAuthStore(s => s.user);
+  const activeWorkspaceUid = useAuthStore(s => s.activeWorkspaceUid);
 
   useEffect(() => {
     // Wait until Firebase auth completes and initUserDB(uid) has been called.
@@ -67,7 +68,20 @@ export function useClaimsLoader() {
         load();
       }
     };
+
+    // Also listen for same-tab updates (e.g. cloud pull completion)
+    const handleClaimsUpdated = () => {
+      load();
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('surveyos_claims_updated', handleClaimsUpdated);
+    }
     
-    return () => channel.close();
-  }, [setClaimsList, user]);
+    return () => {
+      channel.close();
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('surveyos_claims_updated', handleClaimsUpdated);
+      }
+    };
+  }, [setClaimsList, user, activeWorkspaceUid]);
 }
