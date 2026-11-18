@@ -2,6 +2,7 @@
 
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
+import { toast } from 'sonner';
 
 import { triggerSpotFeeBillPrint, buildSpotFeeBillHTML } from '@/lib/reports/spot-fee-bill-builder';
 import { ReportPreviewPanel } from '@/components/shared/ReportPreviewPanel';
@@ -33,7 +34,10 @@ function FeeBillPreview({ claim, profile }: { claim: any; profile: any }) {
       html={html}
       title="Surveyor Fee Bill — Live Preview"
       printLabel="Print PDF — Fee Bill"
-      onPrint={() => triggerSpotFeeBillPrint(claim, profile)}
+      onPrint={() => {
+        toast.success('Fee Bill prepared — filing HTML to claim documents.');
+        triggerSpotFeeBillPrint(claim, profile);
+      }}
       wordFilename={`${claim?.vehicle?.registrationNumber || 'Claim'}-Fee-Bill`}
       footerLeft={footerFromProfile(profile)}
     />
@@ -167,6 +171,7 @@ export function FeesTab() {
             <FromPhoneButton />
             <button
               onClick={() => {
+                toast.success('Fee Bill prepared — filing HTML to claim documents.');
                 triggerSpotFeeBillPrint(currentClaim, profile!);
               }}
               className="flex items-center gap-2 px-5 py-2.5 rounded-full font-medium text-xs transition-all shadow-lg hover:scale-105 active:scale-95"

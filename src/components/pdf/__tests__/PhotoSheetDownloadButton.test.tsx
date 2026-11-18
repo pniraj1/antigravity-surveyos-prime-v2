@@ -10,6 +10,15 @@ import {
 import { createBlankClaim } from '@/types/claim';
 import { saveReportToClaimFolder } from '@/lib/reports/auto-file-report';
 import type { SplitPdfResult, SplitPart } from '@/lib/pdf/split-pdf';
+import { toast } from 'sonner';
+
+vi.mock('sonner', () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+  },
+}));
 
 let mockRenderProps: {
   blob: Blob | null;
@@ -234,6 +243,9 @@ describe('PhotoSheetDownloadButton', () => {
         mockBlob,
         'damagePhotos'
       );
+      expect(toast.success).toHaveBeenCalledWith(
+        'Downloaded Part 1: MH-12-AB-1234-Photo-Sheet-Part1.pdf'
+      );
     });
 
     it('handles triggerBlobDownload gracefully when window or document is undefined', () => {
@@ -241,19 +253,55 @@ describe('PhotoSheetDownloadButton', () => {
       expect(() => triggerBlobDownload(new Blob(['test']), 'test.pdf')).not.toThrow();
     });
 
-    it('calls saveReportToClaimFolder when single PDF save is triggered', async () => {
+    it('calls saveReportToClaimFolder and triggers download when single PDF save is triggered', async () => {
       const claim = createBlankClaim('final', 'private');
       claim.vehicle.registrationNumber = 'MH-12-AB-1234';
       const testBlob = new Blob(['unsplit pdf content'], { type: 'application/pdf' });
 
+      const mockAnchor = {
+        href: '',
+        download: '',
+        click: vi.fn(),
+      };
+      const appendChildSpy = vi.fn();
+      const removeChildSpy = vi.fn();
+
+      globalThis.document = {
+        createElement: vi.fn().mockImplementation((tag: string) => {
+          if (tag === 'a') return mockAnchor;
+          return {};
+        }),
+        body: {
+          appendChild: appendChildSpy,
+          removeChild: removeChildSpy,
+        },
+      } as any;
+
+      const createObjectURLSpy = vi.fn().mockReturnValue('blob:http://localhost/test-single-uuid');
+      const revokeObjectURLSpy = vi.fn();
+
+      globalThis.URL.createObjectURL = createObjectURLSpy;
+      globalThis.URL.revokeObjectURL = revokeObjectURLSpy;
+
       const saved = await saveSinglePdf(claim, 'MH-12-AB-1234-Photo-Sheet.pdf', testBlob);
       expect(saved).toBe(true);
+
+      expect(createObjectURLSpy).toHaveBeenCalledWith(testBlob);
+      expect(mockAnchor.download).toBe('MH-12-AB-1234-Photo-Sheet.pdf');
+      expect(mockAnchor.href).toBe('blob:http://localhost/test-single-uuid');
+      expect(appendChildSpy).toHaveBeenCalledWith(mockAnchor);
+      expect(mockAnchor.click).toHaveBeenCalled();
+      expect(removeChildSpy).toHaveBeenCalledWith(mockAnchor);
+      expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:http://localhost/test-single-uuid');
 
       expect(saveReportToClaimFolder).toHaveBeenCalledWith(
         claim,
         'MH-12-AB-1234-Photo-Sheet.pdf',
         testBlob,
         'damagePhotos'
+      );
+      expect(toast.success).toHaveBeenCalledWith(
+        'Photo Sheet downloaded: MH-12-AB-1234-Photo-Sheet.pdf'
       );
     });
 

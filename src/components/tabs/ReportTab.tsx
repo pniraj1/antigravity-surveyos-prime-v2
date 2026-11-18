@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { isNarrowViewport } from '@/lib/navigation/viewport';
 
 import { markOnboarding } from '@/lib/onboarding/rules';
@@ -30,6 +30,7 @@ import { buildValuationReportHTML, buildValuationPrintDocument, triggerValuation
 import { downloadAsWord } from '@/lib/reports/word-export';
 import { footerFromProfile } from '@/lib/reports/print-shell';
 import { preambleFromClaim } from '@/lib/reports/final-survey-preamble';
+import { ReportPageSheet, splitReportHtml, estimatePageCount } from './report/ReportPageSheet';
 import DOMPurify from 'dompurify';
 
 function sanitizeReport(html: string): string {
@@ -193,6 +194,52 @@ export function ReportTab() {
     }
   }, [activeReport, format, currentClaim, profile]);
 
+  // Split HTML into multi-page sections by explicit page-breaks
+  const sections = useMemo(() => {
+    if (activeReport === 'spot') return [''];
+    return splitReportHtml(reportHtml);
+  }, [activeReport, reportHtml]);
+
+  const initialEstimatedCounts = useMemo(() => {
+    if (activeReport === 'spot') return [2];
+    return sections.map(s => estimatePageCount(s));
+  }, [activeReport, sections]);
+
+  const [sheetPageCounts, setSheetPageCounts] = useState<number[]>(initialEstimatedCounts);
+
+  useEffect(() => {
+    setSheetPageCounts(initialEstimatedCounts);
+  }, [initialEstimatedCounts]);
+
+  const handlePageCountChange = useCallback((sheetIndex: number, count: number) => {
+    setSheetPageCounts(prev => {
+      if (prev[sheetIndex] === count) return prev;
+      const next = [...prev];
+      next[sheetIndex] = count;
+      return next;
+    });
+  }, []);
+
+  const effectivePageCounts = sheetPageCounts.length === sections.length
+    ? sheetPageCounts
+    : initialEstimatedCounts;
+
+  const totalPages = useMemo(() => {
+    return effectivePageCounts.reduce((sum, c) => sum + Math.max(1, c), 0);
+  }, [effectivePageCounts]);
+
+  const startPages = useMemo(() => {
+    const starts: number[] = [];
+    let current = 1;
+    for (const count of effectivePageCounts) {
+      starts.push(current);
+      current += Math.max(1, count);
+    }
+    return starts;
+  }, [effectivePageCounts]);
+
+  const totalHeightMm = totalPages * 297 + (sections.length - 1) * 32;
+
   return (
     <div className="p-3 md:p-6 lg:p-8 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300 h-full flex flex-col">
       {currentClaim.surveyType === 'final' && <PolicyCheckStrip />}
@@ -208,6 +255,13 @@ export function ReportTab() {
             <h2 className="text-2xl font-medium tracking-tight text-foreground" style={{ letterSpacing: '-0.02em' }}>
               Report Center
             </h2>
+            <span
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700 shadow-sm"
+              data-testid="total-pages-badge"
+              title="Total physical A4 pages"
+            >
+              📄 {totalPages} A4 Pages
+            </span>
             {currentClaim.surveyType === 'final' && (
               <div className="hidden sm:flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground border-l border-border pl-3">
                 <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70">Jump to:</span>
@@ -359,50 +413,62 @@ export function ReportTab() {
       <Card
         className="flex-1 overflow-hidden shadow-lg border-border"
       >
-        <CardContent className="p-0 w-full h-[calc(100dvh-340px)] min-h-[520px]" style={{ background: 'var(--color-neutral-600)' }}>
-          <div className="w-full h-full overflow-auto py-8">
+        <div className="bg-neutral-800 text-neutral-200 px-4 py-2 border-b border-neutral-700 flex items-center justify-between text-xs select-none">
+          <div className="flex items-center gap-2">
+            <FileText size={14} className="text-neutral-400" />
+            <span className="font-medium text-neutral-200">A4 Document Preview</span>
+            <span className="px-2.5 py-0.5 rounded-full bg-neutral-700 text-neutral-200 font-semibold text-[11px] border border-neutral-600">
+              📄 {totalPages} A4 Pages
+            </span>
+          </div>
+          <div className="flex items-center gap-3 text-neutral-400 text-[11px]">
+            <span>Scale: {Math.round(zoom * 100)}%</span>
+            <span>•</span>
+            <span>A4 (210 × 297 mm)</span>
+          </div>
+        </div>
+        <CardContent className="p-0 w-full h-[calc(100dvh-340px)] min-h-[520px]" style={{ background: '#525659' }}>
+          <div className="w-full h-full overflow-auto py-8 px-2 md:px-4">
             {/* Block + mx-auto, not flex centring: a centred flex child wider than
                 its box overflows to the left, where scrolling can't reach. */}
             <div className="mx-auto" style={{ width: `calc(210mm * ${zoom})`, overflowX: isNarrowViewport() ? 'clip' : undefined }}>
               <div 
-                className="bg-white shadow-2xl relative"
                 style={{ 
-                  width: '210mm', 
-                  minHeight: '297mm', 
-                  padding: '10mm 12mm', 
-                  fontFamily: "'Barlow', 'Helvetica', Arial, sans-serif",
-                  fontSize: '7.8pt',
-                  color: '#000',
-                  boxSizing: 'border-box',
+                  width: '210mm',
                   transform: `scale(${zoom})`,
                   transformOrigin: 'top left',
-                  marginBottom: `calc(297mm * ${zoom - 1})`
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '32px',
+                  alignItems: 'center',
+                  marginBottom: `calc(${totalHeightMm}mm * ${zoom - 1})`
                 }}
               >
-                {/* Draft Watermark */}
-                {(!currentClaim?.isCompleted) && (
-                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden z-50">
-                    <div
-                      style={{
-                        transform: 'rotate(-45deg)',
-                        fontSize: '140px',
-                        color: 'var(--color-status-danger)',
-                        opacity: 0.06,
-                        fontWeight: 900,
-                        letterSpacing: '0.1em',
-                        whiteSpace: 'nowrap',
-                        userSelect: 'none'
-                      }}
-                    >
-                      DRAFT
-                    </div>
-                  </div>
-                )}
-                
                 {activeReport === 'spot' ? (
-                  <SpotPrintReport claim={currentClaim} profile={profile!} />
+                  <ReportPageSheet
+                    key="spot-preview-sheet"
+                    sheetIndex={0}
+                    startPage={1}
+                    totalPages={totalPages}
+                    isDraft={!currentClaim?.isCompleted}
+                    initialPageCount={effectivePageCounts[0] || 2}
+                    onPageCountChange={handlePageCountChange}
+                  >
+                    <SpotPrintReport claim={currentClaim} profile={profile!} />
+                  </ReportPageSheet>
                 ) : (
-                  <div dangerouslySetInnerHTML={{ __html: sanitizeReport(reportHtml) }} />
+                  sections.map((secHtml, idx) => (
+                    <ReportPageSheet
+                      key={`page-sheet-${idx}`}
+                      sheetIndex={idx}
+                      startPage={startPages[idx] || 1}
+                      totalPages={totalPages}
+                      isDraft={!currentClaim?.isCompleted}
+                      htmlContent={secHtml}
+                      initialPageCount={effectivePageCounts[idx]}
+                      onPageCountChange={handlePageCountChange}
+                    />
+                  ))
                 )}
               </div>
             </div>

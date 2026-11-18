@@ -13,6 +13,16 @@ import { saveDocuments } from '@/lib/documents/sink';
 import { useClaimStore } from '@/stores/claim-store';
 
 /**
+ * Sanitizes vehicle registration numbers for use in filesystem filenames.
+ * Strips whitespace, uppercases, and replaces illegal Windows characters (/\:*?"<>|) with underscores.
+ * If empty/missing/whitespace, returns ''.
+ */
+export function sanitizeRegNo(no?: string): string {
+  if (!no || !no.trim()) return '';
+  return no.trim().toUpperCase().replace(/\s+/g, '').replace(/[/\\:*?"<>|]/g, '_');
+}
+
+/**
  * Sanitizes report numbers for use in filesystem filenames.
  * Replaces illegal Windows characters (/\:*?"<>|) with underscores.
  */
@@ -25,28 +35,33 @@ function cleanExtension(ext = 'html'): string {
   return ext.replace(/^\.+/, '') || 'html';
 }
 
+function filePrefix(claim: Partial<ClaimData>): string {
+  const reg = sanitizeRegNo(claim.vehicle?.registrationNumber);
+  return reg ? `${reg}_` : '';
+}
+
 export function finalSurveyFileName(claim: Partial<ClaimData>, ext = 'html'): string {
-  return `Final_Survey_Report_${sanitizeReportNo(claim.reportNo)}.${cleanExtension(ext)}`;
+  return `${filePrefix(claim)}Final_Survey_Report_${sanitizeReportNo(claim.reportNo)}.${cleanExtension(ext)}`;
 }
 
 export function reinspectionFileName(claim: Partial<ClaimData>, ext = 'html'): string {
-  return `Reinspection_Report_${sanitizeReportNo(claim.reportNo || claim.reinspection?.refNo)}.${cleanExtension(ext)}`;
+  return `${filePrefix(claim)}Reinspection_Report_${sanitizeReportNo(claim.reportNo || claim.reinspection?.refNo)}.${cleanExtension(ext)}`;
 }
 
 export function uiicFinalFileName(claim: Partial<ClaimData>, ext = 'html'): string {
-  return `UIIC_Final_Survey_Report_${sanitizeReportNo(claim.reportNo)}.${cleanExtension(ext)}`;
+  return `${filePrefix(claim)}UIIC_Final_Survey_Report_${sanitizeReportNo(claim.reportNo)}.${cleanExtension(ext)}`;
 }
 
 export function spotFeeBillFileName(claim: Partial<ClaimData>, ext = 'html'): string {
-  return `Spot_Fee_Bill_${sanitizeReportNo(claim.reportNo)}.${cleanExtension(ext)}`;
+  return `${filePrefix(claim)}Spot_Fee_Bill_${sanitizeReportNo(claim.reportNo)}.${cleanExtension(ext)}`;
 }
 
 export function valuationFileName(claim: Partial<ClaimData>, ext = 'html'): string {
-  return `Valuation_Report_${sanitizeReportNo(claim.reportNo)}.${cleanExtension(ext)}`;
+  return `${filePrefix(claim)}Valuation_Report_${sanitizeReportNo(claim.reportNo)}.${cleanExtension(ext)}`;
 }
 
 export function billCheckFileName(claim: Partial<ClaimData>, ext = 'html'): string {
-  return `Bill_Check_${sanitizeReportNo(claim.reportNo)}.${cleanExtension(ext)}`;
+  return `${filePrefix(claim)}Bill_Check_${sanitizeReportNo(claim.reportNo)}.${cleanExtension(ext)}`;
 }
 
 /**

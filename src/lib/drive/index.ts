@@ -9,6 +9,7 @@ import { isSandbox } from '@/lib/sandbox';
 import type { ClaimData } from '@/types';
 import { toast } from 'sonner';
 import { partitionPhotos } from '@/lib/photos/document-annexure';
+import { sanitizeRegNo } from '@/lib/reports/auto-file-report';
 import { notifyDriveQueueChanged } from './queue-events';
 import {
   addToDriveQueue,
@@ -680,7 +681,8 @@ export async function backupClaimToDrive(claim: ClaimData): Promise<'ok' | 'skip
 
 async function performClaimBackup(claim: ClaimData): Promise<'ok' | 'error'> {
   try {
-    const label = claim.reportNo?.trim() || claim.id;
+    const regNo = sanitizeRegNo(claim.vehicle?.registrationNumber);
+    const label = regNo || claim.reportNo?.trim() || claim.id;
     const folderId = await getOrCreateClaimFolder(claim.id, label);
 
     const q = `name='${CLAIM_BACKUP_FILE_NAME}' and '${folderId}' in parents and trashed=false`;

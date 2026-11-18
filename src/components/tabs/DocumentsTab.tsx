@@ -532,6 +532,50 @@ export function DocumentsTab() {
         </div>
       </div>
 
+      {/* ── Sticky Bottom Reconciliation Action Dock ──────── */}
+      {conflicts.length > 0 && !isProcessing && (
+        <div
+          data-testid="recon-conflict-dock"
+          role="region"
+          aria-label="Data reconciliation alert"
+          className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center justify-between gap-4 bg-neutral-900/95 text-white border border-amber-500/40 shadow-2xl backdrop-blur-md px-5 py-3 rounded-2xl max-w-[95vw] sm:max-w-xl"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+              <AlertTriangle size={18} className="text-amber-400 animate-pulse" aria-hidden="true" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-white leading-tight truncate">
+                {conflicts.length} {conflicts.length === 1 ? 'Data Conflict' : 'Data Conflicts'} Detected
+              </div>
+              <div className="text-xs text-neutral-300 truncate">
+                Values differ across scanned documents
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsReconOpen(true)}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-amber-500 hover:bg-amber-400 text-neutral-950 transition-all shadow-md active:scale-95 flex-shrink-0 cursor-pointer"
+          >
+            Review & Reconcile &rarr;
+          </button>
+        </div>
+      )}
+
+      {conflicts.length === 0 && scannedCount > 1 && !isProcessing && (
+        <div data-testid="recon-compact-dock" className="fixed bottom-20 md:bottom-6 right-6 z-40">
+          <button
+            type="button"
+            onClick={() => setIsReconOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-medium bg-neutral-900/95 text-white hover:bg-neutral-800 border border-neutral-700/80 shadow-2xl backdrop-blur-md transition-all active:scale-95 cursor-pointer"
+          >
+            <span aria-hidden="true">🔄</span>
+            <span>Reconciliation Hub ({scannedCount} docs scanned)</span>
+          </button>
+        </div>
+      )}
+
       {/* AI Review Dialog */}
       <AIReviewDialog
         isOpen={!!reviewData}

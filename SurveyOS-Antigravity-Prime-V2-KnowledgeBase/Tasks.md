@@ -1,3 +1,31 @@
+## Done: Documents Tab Reconciliation Dock, Vehicle-First Naming, Transparent Auto-Save & PDF Page Breaks (2026-11-18, Antigravity)
+- **Status:** Complete. Executed via `superpowers:writing-plans` and `superpowers:subagent-driven-development`.
+- **Implementation Plan:** `docs/plans/2026-11-18-documents-recon-naming-and-pdf-pagebreaks.md`
+- **Session:** `Sessions/2026-11-18-documents-recon-dock-naming-and-pdf-pagebreaks.md`
+- **Delivered Capabilities:**
+  1. **Documents Tab Sticky Reconciliation Dock (`DocumentsTab.tsx`):**
+     - Bottom floating action dock (`fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-40`) that stays visible during document uploads down the card grid.
+     - Surfaces conflicts dynamically with an animated amber warning badge (`[ ⚠️ {X} Data Conflicts Detected ]`) and a direct `[ Review & Reconcile → ]` CTA opening `ReconciliationDialog`.
+     - Compact floating pill when no conflicts but multiple scanned documents exist.
+  2. **Vehicle-First Folder & Deliverable File Naming (`auto-file-report.ts`, `drive/index.ts`):**
+     - Exported `sanitizeRegNo` utility handling whitespace stripping, capitalization, and filename sanitization.
+     - Prepend `${regNo}_` across all report file naming helpers (`finalSurveyFileName`, `reinspectionFileName`, `uiicFinalFileName`, `spotFeeBillFileName`, `valuationFileName`, `billCheckFileName`).
+     - Updated `performClaimBackup` in `drive/index.ts` so Google Drive folders are named with vehicle registration number primarily (`${regNo}_${claimId.slice(-6)}`).
+  3. **Transparent PDF Auto-Save & Direct Storage Prompt (`PhotoSheetDownloadButton.tsx`, `print-followup.ts`, `FeesTab.tsx`):**
+     - Single-part photo sheet download now directly triggers `triggerBlobDownload` ensuring browser file download to local Downloads folder alongside folder filing.
+     - Direct toast feedback on downloads and fee bill HTML preparation.
+     - Transparent post-print prompt: `"Save printed PDF to vehicle folder (${regNo})"` with clear action `"Select & Store in Folder"`.
+  4. **Multi-Page A4 Physical Page Breaks & Guides in Previews (`ReportTab.tsx`, `ReportPageSheet.tsx`):**
+     - Modular `ReportPageSheet.tsx` adhering to A4 dimensions (`210mm x 297mm`, margin gaps, shadow, `#525659` dark viewer canvas).
+     - Splits multi-section reports by explicit print page breaks (`page-break-before: always`).
+     - Overflowing continuous reports dynamically render visible A4 cut lines (`─── ✂️ Page Break (End of Page X) ────── [ Page Y Starts Below ↓ ] ───`) at every 297mm multiple via `ResizeObserver`.
+     - Page counter badges (`Page X of Y`, `📄 X A4 Pages`) and repeated DRAFT watermarks.
+- **Verification:**
+  - `npx tsc --noEmit`: 0 errors.
+  - Vitest: 373 test files passed, 3,370 tests passed (100% green).
+  - Next.js build: 25/25 static pages generated successfully.
+  - Scan Coupler: 0 impact (isolated to Prime V2 web client).
+
 ## Done: Claim Details Quick Jumper & DL "Authorised to Drive" Default (2026-11-18, Antigravity)
 - **Status:** Complete. Executed via `superpowers:writing-plans` and `superpowers:subagent-driven-development`. Session: `Sessions/2026-11-18-claim-details-unfilled-jumper-and-authorised-dl.md`.
 - **Delivered Capabilities:**

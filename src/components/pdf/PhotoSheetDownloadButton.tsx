@@ -26,6 +26,7 @@ import { useProfileStore } from '@/stores/profile-store';
 import { SharePdfButton } from './SharePdfButton';
 import { saveReportToClaimFolder } from '@/lib/reports/auto-file-report';
 import { splitPdfBySize, type SplitPdfResult, type SplitPart } from '@/lib/pdf/split-pdf';
+import { toast } from 'sonner';
 
 interface Props {
   claim: ClaimData;
@@ -59,6 +60,7 @@ export async function downloadPart(
   const partFileName = `${regNum}-Photo-Sheet-Part${part.partNumber}.pdf`;
   triggerBlobDownload(part.blob, partFileName);
   await saveReportToClaimFolder(claim, partFileName, part.blob, 'damagePhotos');
+  toast.success(`Downloaded Part ${part.partNumber}: ${partFileName}`);
   return partFileName;
 }
 
@@ -68,7 +70,10 @@ export async function saveSinglePdf(
   blob: Blob | null
 ): Promise<boolean> {
   if (!blob) return false;
-  return saveReportToClaimFolder(claim, fileName, blob, 'damagePhotos');
+  triggerBlobDownload(blob, fileName);
+  const result = await saveReportToClaimFolder(claim, fileName, blob, 'damagePhotos');
+  toast.success(`Photo Sheet downloaded: ${fileName}`);
+  return result;
 }
 
 interface ContentProps {
@@ -210,8 +215,11 @@ export function PhotoSheetDownloadContent({
   return (
     <span className="flex flex-wrap items-center gap-2">
       <button
+        type="button"
         disabled={loading}
-        onClick={() => {
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
           void saveSinglePdf(claim, defaultFileName, blob);
         }}
         className={`flex items-center gap-2 px-5 py-2.5 rounded-md font-semibold text-sm transition-all shadow-sm ${

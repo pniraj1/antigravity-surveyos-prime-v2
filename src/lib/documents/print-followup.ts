@@ -13,6 +13,7 @@ import { getClaimFolderHandle } from '@/lib/storage/claim-folder-store';
 import { useClaimStore } from '@/stores/claim-store';
 import { saveDocuments } from './sink';
 import { getClaimDirHandle } from './folder';
+import { sanitizeRegNo } from '@/lib/reports/auto-file-report';
 
 async function pickPdf(label: string, startIn: FileSystemDirectoryHandle | null): Promise<File | null> {
   if (typeof window === 'undefined' || !window.showOpenFilePicker) return null;
@@ -33,20 +34,28 @@ export async function promptForPrintedPdf(type: DocType): Promise<void> {
   if (typeof window === 'undefined' || !window.showOpenFilePicker) return;
   // The prompt belongs to the claim that was printed, not whatever claim is
   // open when the surveyor eventually clicks it.
-  const claimId = useClaimStore.getState().currentClaim?.id;
+  const claim = useClaimStore.getState().currentClaim;
+  const claimId = claim?.id;
   if (!claimId) return;
+  const label = DOC_TYPE_LABEL[type];
   const hasRoot = await getStoredRootHandle().catch(() => null);
   const hasClaimFolder = await getClaimFolderHandle(claimId).catch(() => null);
-  if (!hasRoot && !hasClaimFolder) return;
+  if (!hasRoot && !hasClaimFolder) {
+    toast.info(`Printed ${label}`, {
+      description: 'Connect a claim folder under Documents to auto-file PDF copies directly to your PC.',
+      duration: 5000,
+    });
+    return;
+  }
 
-  const label = DOC_TYPE_LABEL[type];
+  const regNo = sanitizeRegNo(claim?.vehicle?.registrationNumber);
   const id = `print-pdf-${type}-${claimId}`;
-  toast(`Saved the ${label} as a PDF?`, {
-    description: 'Save it into the claim folder, then file it here so the list holds the copy you sent.',
+  toast(`Save printed PDF to vehicle folder${regNo ? ` (${regNo})` : ''}`, {
+    description: "Downloaded or saved the PDF from Chrome's print window? Select it here to file it directly into this vehicle's claim documents.",
     duration: 6000,
     id,
     action: {
-      label: 'File the PDF',
+      label: 'Select & Store in Folder',
       onClick: () => {
         if (useClaimStore.getState().currentClaim?.id !== claimId) {
           toast.dismiss(id);
@@ -57,15 +66,20 @@ export async function promptForPrintedPdf(type: DocType): Promise<void> {
         // AbortError, which is the surveyor changing their mind, not an error.
         // getClaimDirHandle can throw (no folder / permission denied) — that
         // degrades to opening the picker without startIn, not losing it.
-        void getClaimDirHandle(useClaimStore.getState().currentClaim!)
+        return getClaimDirHandle(useClaimStore.getState().currentClaim!)
           .catch(() => null)
           .then((dir) => pickPdf(label, dir))
           // A surveyor-picked file is still recorded as 'generated': it is the
           // report we generated, only carried back to us through Chrome's print
           // dialog, so it is filed exactly as the report it replaces would be.
-          .then((file) => (file && file.type === 'application/pdf'
-            ? saveDocuments(type, [{ blob: file, name: file.name }], 'generated')
-            : null))
+          .then(async (file) => {
+            if (file && file.type === 'application/pdf') {
+              const saved = await saveDocuments(type, [{ blob: file, name: file.name }], 'generated');
+              toast.success(`${label} PDF successfully filed into claim documents!`);
+              return saved;
+            }
+            return null;
+          })
           .then((saved) => { if (saved) toast.dismiss(id); })
           .catch((e: unknown) => {
             if ((e as { name?: string })?.name !== 'AbortError') {
