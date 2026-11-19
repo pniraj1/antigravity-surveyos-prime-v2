@@ -6,6 +6,8 @@ import { detectCTL } from '@/lib/calculations/assessment';
 import { getVehicleAgeMonths } from '@/lib/calculations/depreciation';
 import { AlertCircle, CheckCircle2, MessageSquare, Info } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatCurrency } from '@/lib/calculations/utils';
+import type { MissingItem } from '@/types/claim';
 
 export function TotalLossForm() {
   const currentClaim = useClaimStore(s => s.currentClaim);
@@ -41,6 +43,7 @@ export function TotalLossForm() {
         salvageWithoutRC: 0,
         towingExpenses: 0,
         workshopRent: 0,
+        missingItems: [],
         remarks: 'NOTE: Since the assessed repair cost is substantial relative to the IDV, the settlement comparison is provided above for the insurer\'s final decision.'
       } : undefined
     });
@@ -55,12 +58,18 @@ export function TotalLossForm() {
           salvageWithoutRC: 0,
           towingExpenses: 0,
           workshopRent: 0,
+          missingItems: [],
           remarks: ''
         }),
         [key]: val
       }
     });
   };
+
+  const missingItems: MissingItem[] = currentClaim.totalLossDetails?.missingItems ?? [];
+  const setMissing = (next: MissingItem[]) => updateTLDetails('missingItems', next);
+  const patchMissing = (id: string, patch: Partial<MissingItem>) =>
+    setMissing(missingItems.map(m => (m.id === id ? { ...m, ...patch } : m)));
 
   return (
     <div className="space-y-6">
@@ -162,6 +171,49 @@ export function TotalLossForm() {
                     </div>
                   </div>
                 ))}
+              </div>
+
+              {/* Missing items */}
+              <div className="space-y-3 pt-4 border-t border-gray-100">
+                <label className="text-[10px] font-medium uppercase tracking-widest text-gray-500 ml-1">Missing items</label>
+                {missingItems.map(m => (
+                  <div key={m.id} className="flex gap-2 items-center">
+                    <input
+                      type="text"
+                      value={m.description}
+                      onChange={(e) => patchMissing(m.id, { description: e.target.value })}
+                      placeholder="Description"
+                      aria-label="Missing item description"
+                      className="flex-1 px-3 py-2 rounded-xl border-2 border-gray-100 text-sm"
+                    />
+                    <input
+                      type="number"
+                      value={m.amount || ''}
+                      onChange={(e) => patchMissing(m.id, { amount: parseFloat(e.target.value) || 0 })}
+                      placeholder="0"
+                      aria-label="Missing item amount"
+                      className="w-32 px-3 py-2 rounded-xl border-2 border-gray-100 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setMissing(missingItems.filter(x => x.id !== m.id))}
+                      aria-label="Remove missing item"
+                      className="px-2 text-red-600"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setMissing([...missingItems, { id: crypto.randomUUID(), description: '', amount: 0 }])}
+                  className="text-xs font-medium text-[var(--color-status-success)]"
+                >
+                  + Add missing item
+                </button>
+                <p className="text-xs font-medium text-gray-500">
+                  Total: {formatCurrency(missingItems.reduce((s, m) => s + (m.amount || 0), 0))}
+                </p>
               </div>
 
               {/* Remarks Field */}

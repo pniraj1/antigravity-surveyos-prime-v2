@@ -112,6 +112,7 @@ export function AssessmentSectionTable({
     currentClaim,
     updateAssessmentRow,
     toggleRowAllowed,
+    toggleRowKeptOpen,
     moveRowToSection,
     addAssessmentRowToSection,
     updateClaim,
@@ -631,7 +632,9 @@ export function AssessmentSectionTable({
                     </td>
                     {visible.priceWithGst && (
                       <td className="px-2 py-1.5 text-right text-xs font-medium tabular-nums">
-                        {row.allowed ? formatCurrency(priceWithGst) : '₹0.00'}
+                        {row.allowed ? formatCurrency(priceWithGst)
+                          : row.keptOpen ? <span className="text-amber-700">{formatCurrency((row.estimated ?? 0) * (1 + (row.gst ?? 0) / 100))}</span>
+                          : '₹0.00'}
                       </td>
                     )}
                     {/* Allow — always on, beside the money it decides. A round ✓ / ✕ icon,
@@ -650,6 +653,19 @@ export function AssessmentSectionTable({
                         }`}
                       >
                         {row.allowed ? <Check size={14} strokeWidth={3} /> : <X size={14} strokeWidth={3} />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => toggleRowKeptOpen(row.id)}
+                        aria-pressed={!!row.keptOpen}
+                        title="Kept open — decide after dismantling"
+                        className={`ml-1 inline-flex items-center justify-center h-6 px-1 rounded border text-[9px] font-medium transition-colors cursor-pointer ${
+                          row.keptOpen
+                            ? 'border-amber-600 bg-amber-500 text-white'
+                            : 'border-input bg-transparent text-muted-foreground hover:bg-amber-500/10'
+                        }`}
+                      >
+                        K.O.
                       </button>
                     </td>
 

@@ -127,7 +127,8 @@ export function rowTintClass(row: AssessmentRow, isDuplicate: boolean, isTicked:
   return [
     'hover:bg-accent/30 transition-colors',
     isTicked && 'bg-slate-500/5',
-    !row.allowed && 'bg-muted/40 text-muted-foreground',
+    !row.allowed && !row.keptOpen && 'bg-muted/40 text-muted-foreground',
+    row.keptOpen && 'bg-amber-500/10',
     isDuplicate && 'bg-orange-500/10',
     row.isDisposal && row.allowed && 'bg-amber-500/5',
     row.imt23 && row.allowed && 'bg-primary/5',
