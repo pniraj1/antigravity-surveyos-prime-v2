@@ -6,6 +6,7 @@ import { useProfileStore } from '@/stores/profile-store';
 import { usePrintGate } from '@/hooks/usePrintGate';
 import { rowsNeedingRemark } from '@/lib/reports/bill-check-projection';
 import { isFromBill, selfBillUpdates, fromBillSelfBillUpdates, estimateHeads, estimateTotals, needsEstimateHeads } from '@/lib/reports/bill-check-mode';
+import { keptOpenRows } from '@/lib/calculations/kept-open';
 import { billCheckFlags } from '@/lib/reports/bill-check-flags';
 import { triggerUIICBillCheckPrint } from '@/lib/reports/uiic-final-builder';
 import { triggerStandardPrint } from '@/lib/reports/standard-report-builder';
@@ -24,6 +25,12 @@ import type { SurveyorProfile } from '@/types/vehicle';
 export function rowsToMarkNotInBill(rows: AssessmentRow[], fromBill = false): AssessmentRow[] {
   if (fromBill) return [];
   return rows.filter((r) => r.allowed && (!r.billStatus || r.billStatus === 'pending') && r.refSrNo == null);
+}
+
+/** Printing is held while any row is K.O.; K.O. is decided only in the Assessment tab. */
+export function keptOpenBlock(rows: AssessmentRow[]): { blocked: boolean; particulars: string[] } {
+  const ko = keptOpenRows(rows);
+  return { blocked: ko.length > 0, particulars: ko.map((r) => r.particulars) };
 }
 
 export function useBillCheckPrintGate() {
@@ -60,6 +67,7 @@ export function useBillCheckPrintGate() {
     if (stored) for (const { id, updates } of fromBillSelfBillUpdates(stored)) updateAssessmentRow(id, updates);
     const claim = useClaimStore.getState().currentClaim ?? currentClaim;
     if (!claim) return;
+    if (keptOpenBlock(claim.assessmentRows || []).blocked) return; // banner in BillCheckTab explains
     setTargetFormat(format);
 
     const bc = claim.billCheck || { billNo: '', billDate: '', billTotal: 0 };

@@ -20,7 +20,7 @@ import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import { DocumentEvidenceViewer } from '@/components/evidence/DocumentEvidenceViewer';
 import { DocumentReviewSheet } from '@/components/documents/DocumentReviewSheet';
 import { useEstimateModePrompt } from '@/hooks/useEstimateModePrompt';
-import { useBillCheckPrintGate } from '@/hooks/useBillCheckPrintGate';
+import { keptOpenBlock, useBillCheckPrintGate } from '@/hooks/useBillCheckPrintGate';
 import { BillCheckUploadDialog } from '@/components/dialogs/BillCheckUploadDialog';
 import { ReconciliationWizardDialog } from '@/components/dialogs/ReconciliationWizardDialog';
 
@@ -172,12 +172,29 @@ export function BillCheckTab() {
     Boolean(bc.billTotal && bc.billTotal > 0) &&
     bc.verifiedBySurveyor === true;
 
+  const koBlock = keptOpenBlock(allRows);
   const matchedCount = allRows.filter(r => Boolean(r.refMatch || r.refSrNo)).length;
 
   return (
     <div className="flex flex-col h-[calc(100dvh-140px)] p-3 lg:p-4 max-w-[1700px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
       {estimateModeDialog}
       {printDialogs}
+
+      {koBlock.blocked && (
+        <div className="mb-2 flex items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          <div>
+            <p>These parts are still kept open. Decide them in the Assessment tab before printing the Bill Check.</p>
+            <p className="text-xs">{koBlock.particulars.join(', ')}</p>
+          </div>
+          <button
+            type="button"
+            className="shrink-0 rounded-md border border-amber-400 px-3 py-1 font-medium hover:bg-amber-100"
+            onClick={() => useUIStore.getState().setActiveTab('assessment')}
+          >
+            Go to Assessment
+          </button>
+        </div>
+      )}
 
       {/* Lean Header Toolbar */}
       <BillCheckHeader
