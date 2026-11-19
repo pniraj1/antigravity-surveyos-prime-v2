@@ -110,16 +110,16 @@ export function SenderManagerModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="sender-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
+      <div className="w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl border border-border bg-white shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-neutral-900">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-white">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center text-amber-500">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center text-amber-600">
               <ShieldCheck className="w-4 h-4" />
             </div>
             <div>
@@ -138,7 +138,7 @@ export function SenderManagerModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-neutral-800 transition-colors"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-neutral-100 transition-colors"
             title="Close dialog"
           >
             <X className="w-4 h-4" />
@@ -150,9 +150,9 @@ export function SenderManagerModal({
           {/* Add New Sender Form */}
           <form
             onSubmit={handleAdd}
-            className="rounded-xl border border-border/80 bg-neutral-900/50 p-4 space-y-3"
+            className="rounded-xl border border-border bg-neutral-50 p-4 space-y-3"
           >
-            <div className="text-xs font-semibold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+            <div className="text-xs font-semibold uppercase tracking-wider text-amber-700 flex items-center gap-1.5">
               <Plus className="w-3.5 h-3.5" />
               <span>Add New Sender</span>
             </div>
@@ -167,7 +167,7 @@ export function SenderManagerModal({
                   placeholder="e.g. payments@insurance.com"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
-                  className="w-full text-xs bg-neutral-800 border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-amber-500"
+                  className="w-full text-xs bg-white border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-amber-500 shadow-2xs"
                   required
                 />
               </div>
@@ -181,7 +181,7 @@ export function SenderManagerModal({
                   placeholder="e.g. HDFC ERGO General Insurance"
                   value={newInsurer}
                   onChange={(e) => setNewInsurer(e.target.value)}
-                  className="w-full text-xs bg-neutral-800 border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-amber-500"
+                  className="w-full text-xs bg-white border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-amber-500 shadow-2xs"
                   required
                 />
               </div>
@@ -196,7 +196,7 @@ export function SenderManagerModal({
                 placeholder="e.g. Payment, Advice, NEFT, Surveyor"
                 value={newKeywords}
                 onChange={(e) => setNewKeywords(e.target.value)}
-                className="w-full text-xs bg-neutral-800 border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-amber-500"
+                className="w-full text-xs bg-white border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-amber-500 shadow-2xs"
               />
             </div>
 
@@ -220,7 +220,7 @@ export function SenderManagerModal({
               <button
                 type="button"
                 onClick={handleReset}
-                className="inline-flex items-center gap-1 text-[11px] text-amber-500 hover:underline"
+                className="inline-flex items-center gap-1 text-[11px] text-amber-600 hover:underline"
               >
                 <RotateCcw className="w-3 h-3" />
                 <span>Reset to Defaults</span>
@@ -231,7 +231,7 @@ export function SenderManagerModal({
               {senders.map((s) => (
                 <div
                   key={s.email}
-                  className="flex items-center justify-between p-3 rounded-lg border border-border bg-neutral-900/30 text-xs hover:border-border/80 transition-colors"
+                  className="flex items-center justify-between p-3 rounded-lg border border-border bg-white text-xs hover:border-amber-400/50 shadow-2xs transition-colors"
                 >
                   <div className="flex items-start gap-2.5">
                     <Mail className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
@@ -247,7 +247,7 @@ export function SenderManagerModal({
                           {s.subjectKeywords.map((kw, i) => (
                             <span
                               key={i}
-                              className="px-1.5 py-0.2 text-[9px] rounded bg-neutral-800 text-neutral-400"
+                              className="px-1.5 py-0.2 text-[9px] rounded bg-neutral-100 text-neutral-600"
                             >
                               {kw}
                             </span>
@@ -260,7 +260,7 @@ export function SenderManagerModal({
                   <button
                     type="button"
                     onClick={() => handleRemove(s.email)}
-                    className="p-1.5 rounded text-muted-foreground hover:text-red-400 hover:bg-neutral-800 transition-colors shrink-0"
+                    className="p-1.5 rounded text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-colors shrink-0"
                     title={`Remove ${s.email}`}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -272,11 +272,11 @@ export function SenderManagerModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end px-6 py-3.5 border-t border-border bg-neutral-900/50">
+        <div className="flex items-center justify-end px-6 py-3.5 border-t border-border bg-neutral-50">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-1.5 text-xs font-medium rounded-lg border border-border bg-neutral-800 hover:bg-neutral-700 text-foreground transition-colors"
+            className="px-4 py-1.5 text-xs font-medium rounded-lg border border-border bg-white hover:bg-neutral-100 text-foreground transition-colors shadow-2xs"
           >
             Done
           </button>

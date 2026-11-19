@@ -136,7 +136,7 @@ export function PaymentMatchQueue({
             <button
               type="button"
               onClick={onClearQueue}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg text-muted-foreground hover:text-foreground hover:bg-neutral-800 transition-colors"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg text-muted-foreground hover:text-foreground hover:bg-neutral-100 transition-colors"
               title="Clear all advice items in queue"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -154,7 +154,7 @@ export function PaymentMatchQueue({
             <button
               type="button"
               onClick={toggleSelectAll}
-              className="text-amber-500 hover:underline cursor-pointer"
+              className="text-amber-600 font-medium hover:underline cursor-pointer"
             >
               {selectedIds.size === matchedItems.length ? 'Deselect All' : 'Select All'}
             </button>
@@ -168,10 +168,10 @@ export function PaymentMatchQueue({
               return (
                 <div
                   key={item.id}
-                  className={`rounded-lg border p-3.5 transition-colors ${
+                  className={`rounded-xl border p-3.5 transition-colors shadow-xs ${
                     isChecked
-                      ? 'border-amber-500/40 bg-neutral-900/60'
-                      : 'border-border bg-neutral-900/20'
+                      ? 'border-amber-400 bg-amber-50/40'
+                      : 'border-border bg-white'
                   }`}
                 >
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -180,7 +180,7 @@ export function PaymentMatchQueue({
                         type="checkbox"
                         checked={isChecked}
                         onChange={() => toggleSelect(item.id)}
-                        className="mt-1 rounded border-border text-amber-500 focus:ring-amber-500 h-4 w-4 bg-neutral-800 cursor-pointer"
+                        className="mt-1 rounded border-border text-amber-500 focus:ring-amber-500 h-4 w-4 bg-white cursor-pointer"
                       />
                       <div>
                         <div className="flex items-center flex-wrap gap-2">
@@ -189,19 +189,19 @@ export function PaymentMatchQueue({
                           </span>
                           {/* Confidence Badge */}
                           {item.confidence === 'exact_claim_no' && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full bg-emerald-950/60 text-emerald-400 border border-emerald-800/40">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                               <CheckCircle className="w-3 h-3" />
                               <span>Exact Claim No</span>
                             </span>
                           )}
                           {item.confidence === 'exact_vehicle_no' && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full bg-blue-950/60 text-blue-400 border border-blue-800/40">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full bg-blue-50 text-blue-700 border border-blue-200">
                               <Car className="w-3 h-3" />
                               <span>Exact Vehicle Reg</span>
                             </span>
                           )}
                           {item.confidence === 'manual' && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full bg-purple-950/60 text-purple-400 border border-purple-800/40">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full bg-purple-50 text-purple-700 border border-purple-200">
                               <span>Manually Assigned</span>
                             </span>
                           )}
@@ -258,7 +258,7 @@ export function PaymentMatchQueue({
                         <button
                           type="button"
                           onClick={() => onDismissMatch(item.id)}
-                          className="p-1 rounded text-muted-foreground hover:text-red-400 hover:bg-neutral-800 transition-colors"
+                          className="p-1 rounded text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors"
                           title="Dismiss item from match queue"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -276,7 +276,7 @@ export function PaymentMatchQueue({
       {/* Unmatched Items Section */}
       {unmatchedItems.length > 0 && (
         <div className="space-y-2.5 pt-2 border-t border-border/60">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-400">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-700">
             <AlertCircle className="w-3.5 h-3.5" />
             <span>Unmatched Items ({unmatchedItems.length}) — Manual Claim Assignment Required</span>
           </div>
@@ -288,7 +288,7 @@ export function PaymentMatchQueue({
               return (
                 <div
                   key={item.id}
-                  className="rounded-lg border border-neutral-700/60 bg-neutral-900/30 p-3 text-xs"
+                  className="rounded-xl border border-border bg-white p-3.5 text-xs shadow-xs"
                 >
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                     <div>
@@ -296,7 +296,7 @@ export function PaymentMatchQueue({
                         <span className="font-semibold text-foreground">
                           {advice.vehicleNumber || 'No Vehicle Specified'}
                         </span>
-                        <span className="px-1.5 py-0.5 text-[10px] rounded bg-neutral-800 text-muted-foreground font-mono">
+                        <span className="px-1.5 py-0.5 text-[10px] rounded bg-neutral-100 text-neutral-600 font-mono">
                           Claim: {advice.claimNumber || 'None'}
                         </span>
                         <span className="font-mono text-[10px] text-muted-foreground">
@@ -313,7 +313,7 @@ export function PaymentMatchQueue({
                     <div className="flex items-center gap-2">
                       <select
                         aria-label="Assign to claim"
-                        className="text-xs bg-neutral-800 border border-border rounded px-2.5 py-1.5 text-foreground focus:outline-none focus:border-amber-500 max-w-xs"
+                        className="text-xs bg-white border border-border rounded-lg px-2.5 py-1.5 text-foreground focus:outline-none focus:border-amber-500 max-w-xs"
                         defaultValue=""
                         onChange={(e) => {
                           const val = e.target.value;
@@ -337,7 +337,7 @@ export function PaymentMatchQueue({
                         <button
                           type="button"
                           onClick={() => onDismissMatch(item.id)}
-                          className="p-1.5 rounded text-muted-foreground hover:text-red-400 hover:bg-neutral-800 transition-colors"
+                          className="p-1.5 rounded text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors"
                           title="Dismiss item"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

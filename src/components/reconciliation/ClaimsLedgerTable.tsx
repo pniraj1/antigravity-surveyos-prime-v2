@@ -160,19 +160,19 @@ export function ClaimsLedgerTable({
               placeholder="Search vehicle, claim, insurer..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="text-xs bg-neutral-900 border border-border rounded-lg pl-8 pr-3 py-1.5 w-52 sm:w-64 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-amber-500"
+              className="text-xs bg-white border border-border rounded-lg pl-8 pr-3 py-1.5 w-52 sm:w-64 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-amber-500 shadow-2xs"
             />
           </div>
 
           {/* Filter Tabs */}
-          <div className="inline-flex items-center rounded-lg bg-neutral-900 p-1 border border-border text-xs">
+          <div className="inline-flex items-center rounded-lg bg-neutral-100 p-1 border border-border text-xs">
             <button
               type="button"
               onClick={() => setFilterTab('all')}
               className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
                 filterTab === 'all'
-                  ? 'bg-amber-500 text-white'
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'bg-amber-500 text-white shadow-2xs'
+                  : 'text-neutral-600 hover:text-foreground'
               }`}
             >
               All ({counts.all})
@@ -182,8 +182,8 @@ export function ClaimsLedgerTable({
               onClick={() => setFilterTab('unpaid')}
               className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
                 filterTab === 'unpaid'
-                  ? 'bg-amber-500 text-white'
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'bg-amber-500 text-white shadow-2xs'
+                  : 'text-neutral-600 hover:text-foreground'
               }`}
             >
               Unpaid ({counts.unpaid})
@@ -193,8 +193,8 @@ export function ClaimsLedgerTable({
               onClick={() => setFilterTab('paid')}
               className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
                 filterTab === 'paid'
-                  ? 'bg-amber-500 text-white'
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'bg-amber-500 text-white shadow-2xs'
+                  : 'text-neutral-600 hover:text-foreground'
               }`}
             >
               Paid ({counts.paid})
@@ -204,10 +204,10 @@ export function ClaimsLedgerTable({
       </div>
 
       {/* Ledger Table */}
-      <div className="overflow-x-auto rounded-lg border border-border">
+      <div className="overflow-x-auto rounded-xl border border-border bg-white shadow-xs">
         <table className="w-full text-left text-xs border-collapse">
           <thead>
-            <tr className="bg-neutral-900/80 text-muted-foreground border-b border-border">
+            <tr className="bg-neutral-50 text-neutral-600 border-b border-border">
               <th className="py-2.5 px-3 font-medium">Status</th>
               <th className="py-2.5 px-3 font-medium">Vehicle Reg No</th>
               <th className="py-2.5 px-3 font-medium">Claim No &amp; Insurer</th>
@@ -241,17 +241,17 @@ export function ClaimsLedgerTable({
                 return (
                   <tr
                     key={claim.id}
-                    className="hover:bg-neutral-900/40 transition-colors"
+                    className="hover:bg-neutral-50/80 transition-colors"
                   >
                     {/* Status Pill */}
                     <td className="py-3 px-3">
                       {isPaid ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-950/60 text-emerald-400 border border-emerald-800/40">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                           <CheckCircle className="w-3 h-3" />
                           <span>Paid</span>
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-950/60 text-amber-400 border border-amber-800/40">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
                           <Clock className="w-3 h-3" />
                           <span>Unpaid</span>
                         </span>
@@ -293,10 +293,10 @@ export function ClaimsLedgerTable({
                       <div
                         className={`text-[11px] font-medium ${
                           ageing.isOverdue
-                            ? 'text-red-400'
+                            ? 'text-red-600'
                             : isPaid
-                            ? 'text-emerald-400'
-                            : 'text-amber-400'
+                            ? 'text-emerald-700'
+                            : 'text-amber-700'
                         }`}
                       >
                         {ageing.label}
@@ -311,7 +311,7 @@ export function ClaimsLedgerTable({
                     {/* Received Amount */}
                     <td className="py-3 px-3 text-right">
                       {isPaid || receivedAmount > 0 ? (
-                        <span className="font-semibold text-emerald-400">
+                        <span className="font-semibold text-emerald-700">
                           ₹{formatINR(receivedAmount)}
                         </span>
                       ) : (
@@ -322,7 +322,7 @@ export function ClaimsLedgerTable({
                     {/* TDS */}
                     <td className="py-3 px-3 text-right">
                       {claim.tdsDeducted && claim.tdsDeducted > 0 ? (
-                        <span className="text-blue-400">₹{formatINR(claim.tdsDeducted)}</span>
+                        <span className="text-blue-700 font-medium">₹{formatINR(claim.tdsDeducted)}</span>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
@@ -341,8 +341,8 @@ export function ClaimsLedgerTable({
                         disabled={togglingId === claim.id}
                         className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium transition-colors ${
                           isPaid
-                            ? 'border border-neutral-700 bg-neutral-800 text-muted-foreground hover:text-red-400 hover:border-red-500/40'
-                            : 'bg-amber-500/20 text-amber-400 border border-amber-500/40 hover:bg-amber-500 hover:text-white'
+                            ? 'border border-border bg-white text-neutral-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200'
+                            : 'bg-amber-50 text-amber-700 border border-amber-300 hover:bg-amber-500 hover:text-white'
                         }`}
                         title={isPaid ? 'Revert to Unpaid' : 'Mark as Paid'}
                       >

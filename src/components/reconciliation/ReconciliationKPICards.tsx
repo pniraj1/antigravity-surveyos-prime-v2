@@ -76,7 +76,7 @@ export function ReconciliationKPICards({
             type="button"
             onClick={onUploadClick}
             disabled={isProcessingFile}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border border-border bg-card hover:bg-neutral-800 text-foreground transition-colors shadow-sm"
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border border-border bg-white hover:bg-neutral-50 text-foreground transition-colors shadow-sm"
             title="Upload payment advice PDF, text file, bank statement, or image"
           >
             {isProcessingFile ? (
@@ -91,7 +91,7 @@ export function ReconciliationKPICards({
           <button
             type="button"
             onClick={onOpenSenders}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border border-border bg-card hover:bg-neutral-800 text-muted-foreground hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border border-border bg-white hover:bg-neutral-50 text-muted-foreground hover:text-foreground transition-colors shadow-sm"
             title="Configure verified insurer sender email addresses"
           >
             <Settings2 className="w-3.5 h-3.5" />
@@ -103,12 +103,12 @@ export function ReconciliationKPICards({
       {/* 4 Summary Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         {/* Card 1: Total Billed */}
-        <div className="rounded-xl border border-border bg-card p-4 transition-all hover:border-amber-500/30">
+        <div className="rounded-xl border border-border bg-white p-4 shadow-sm transition-all hover:border-amber-500/40">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Total Billed
             </span>
-            <div className="w-8 h-8 rounded-lg bg-neutral-800 flex items-center justify-center text-amber-500">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-600">
               <Banknote className="w-4 h-4" />
             </div>
           </div>
@@ -123,17 +123,17 @@ export function ReconciliationKPICards({
         </div>
 
         {/* Card 2: Received in Bank */}
-        <div className="rounded-xl border border-border bg-card p-4 transition-all hover:border-emerald-500/30">
+        <div className="rounded-xl border border-border bg-white p-4 shadow-sm transition-all hover:border-emerald-500/40">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Received in Bank
             </span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-950/40 flex items-center justify-center text-emerald-400">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
               <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2.5">
-            <div className="text-xl font-bold tracking-tight text-emerald-400">
+            <div className="text-xl font-bold tracking-tight text-emerald-700">
               ₹{formatINR(totalReceived)}
             </div>
             <p className="text-[11px] text-muted-foreground mt-0.5">
@@ -143,17 +143,17 @@ export function ReconciliationKPICards({
         </div>
 
         {/* Card 3: Pending Outstanding */}
-        <div className="rounded-xl border border-border bg-card p-4 transition-all hover:border-amber-500/30">
+        <div className="rounded-xl border border-border bg-white p-4 shadow-sm transition-all hover:border-amber-500/40">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Pending Outstanding
             </span>
-            <div className="w-8 h-8 rounded-lg bg-amber-950/40 flex items-center justify-center text-amber-400">
+            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
               <Clock className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2.5">
-            <div className="text-xl font-bold tracking-tight text-amber-400">
+            <div className="text-xl font-bold tracking-tight text-amber-700">
               ₹{formatINR(pendingAmount)}
             </div>
             <p className="text-[11px] text-muted-foreground mt-0.5">
@@ -163,17 +163,17 @@ export function ReconciliationKPICards({
         </div>
 
         {/* Card 4: TDS Deducted */}
-        <div className="rounded-xl border border-border bg-card p-4 transition-all hover:border-blue-500/30">
+        <div className="rounded-xl border border-border bg-white p-4 shadow-sm transition-all hover:border-blue-500/40">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
               TDS Deducted
             </span>
-            <div className="w-8 h-8 rounded-lg bg-blue-950/40 flex items-center justify-center text-blue-400">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
               <FileSpreadsheet className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2.5">
-            <div className="text-xl font-bold tracking-tight text-blue-400">
+            <div className="text-xl font-bold tracking-tight text-blue-700">
               ₹{formatINR(totalTds)}
             </div>
             <p className="text-[11px] text-muted-foreground mt-0.5">
