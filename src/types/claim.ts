@@ -171,6 +171,8 @@ export interface ClaimData {
    * Defaults to false / undefined on older claims.
    */
   isTotalLoss?: boolean;
+  /** Cash loss settlement (no repair bills, no GST). Undefined = off. `notionalPercent` null = not entered yet. */
+  cashLoss?: { enabled: boolean; notionalPercent: number | null };
   /**
    * Only populated when the surveyor has enabled Total Loss mode.
    * The 4 values feed the UIIC 4-way liability comparison table.
