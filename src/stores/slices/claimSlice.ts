@@ -42,6 +42,13 @@ export interface ClaimSlice {
     gDriveFolderId: string | null;
     /** Any uploaded document or extracted data; drives the onboarding checklist. */
     hasDocuments: boolean;
+    claimNo?: string;
+    billDate?: string;
+    paymentStatus?: 'unpaid' | 'paid' | 'partial';
+    amountReceived?: number;
+    tdsDeducted?: number;
+    utrNumber?: string;
+    paymentDate?: string;
   }[];
 
   newClaim: (surveyType: SurveyType, vehicleType: VehicleType) => void;

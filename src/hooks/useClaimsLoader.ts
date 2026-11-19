@@ -50,6 +50,13 @@ export function useClaimsLoader() {
             hasDocuments:
               Object.keys(c.documents ?? {}).length > 0 ||
               Object.keys(c.extractedData ?? {}).length > 0,
+            claimNo: c.policy?.claimNumber || '',
+            billDate: c.feeBill?.billDate || '',
+            paymentStatus: c.feeBill?.paymentStatus || (c.feeBill?.feePaid ? 'paid' : 'unpaid'),
+            amountReceived: c.feeBill?.amountReceived,
+            tdsDeducted: c.feeBill?.tdsDeducted,
+            utrNumber: c.feeBill?.utrNumber,
+            paymentDate: c.feeBill?.paymentDate,
           };
         });
 
