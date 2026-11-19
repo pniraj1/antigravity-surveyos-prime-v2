@@ -31,6 +31,8 @@ import { buildSerialMap } from '@/lib/calculations/serial-numbers';
 import { shouldStartSupplementaryBand } from '@/lib/calculations/utils';
 import { keptOpenTotal, liabilityComparison } from '@/lib/calculations/kept-open';
 import { renderLiabilityComparison } from './liability-comparison-html';
+import { cashLossBasis, type CashLossBasis } from '@/lib/calculations/cash-loss';
+import { renderCashLossTable } from './cash-loss-html';
 import { buildPrintShell, footerFromProfile, openPrintWindow } from './print-shell';
 import { saveDocuments } from '@/lib/documents/sink';
 import { promptForPrintedPdf } from '@/lib/documents/print-followup';
@@ -70,12 +72,14 @@ import { getHtmlScale } from './report-style-utils';
 function uiicComparisonHtml(
   claim: ClaimData, td: string, labelFont: string,
   b: { gross: number; tow: number; salvage: number; excess: number; keptOpen: number },
+  cash?: CashLossBasis | null,
 ): string {
   const tl = claim.totalLossDetails;
   if (!claim.isTotalLoss || !tl) return '';
   return renderLiabilityComparison(liabilityComparison({
     idv: parseFloat(String(claim.policy?.idv || '0').replace(/,/g, '')) || 0,
     excess: b.excess, repairGrandInclGst: b.gross, repairTowing: b.tow, repairSalvage: b.salvage, keptOpen: b.keptOpen,
+    cash: cash && cash.percent !== null ? { gross: cash.gross, percent: cash.percent, notional: cash.notional, net: cash.net } : undefined,
     tl: { ...tl, salvageWithRC: tl.salvageWithRC || 0, salvageWithoutRC: tl.salvageWithoutRC || 0, towingExpenses: tl.towingExpenses || 0, workshopRent: tl.workshopRent || 0 },
   }), {
     td, labelFont, headerBg: '#006838',
@@ -194,7 +198,8 @@ export function buildUIICFinalHTML(claim: ClaimData, profile: SurveyorProfile | 
   const autoPaintBasis = APT
     .filter(r => r.allowed !== false && r.depOverride == null)
     .reduce((s, r) => s + effectiveAssessed(r), 0);
-  const payableByInsurer = net;
+  const cash = cashLossBasis(claim, ageMonths);
+  const payableByInsurer = cash ? cash.net : net;
 
   // ── PAGE 1: Policy / Claim / Vehicle / Survey / Reinspection details ────────
   const p1 = `
@@ -494,7 +499,7 @@ ${/* The parts line: its money column foots the SPARE PARTS rows above. The
 ${/* Gross, not Net: these carry GST and nothing has been deducted yet. */ ''}
 <tr><td colspan="10" style="${td}font-weight:700;">GROSS TOTAL</td><td style="${td}text-align:right;font-weight:700;">${fa(labourAgg.amount)}</td><td style="${td}text-align:right;font-weight:700;">${fa(paintAgg.amount)}</td></tr>
 </tbody></table>
-${rows.some(r => r.imt23) ? `<div style="font-size:6.5pt;color:#555;line-height:1.5;margin-top:4px;text-align:justify;">${imt23FootnoteText('Rows carrying a "Less Imt 23" line are covered under Endorsement IMT-23.')}</div>` : ''}${uiicComparisonHtml(claim, td, scale.labelFont, { gross: pT + lT, tow, salvage, excess: volExcess + compExcess, keptOpen: keptOpenTotal(rows) })}`;
+${rows.some(r => r.imt23) ? `<div style="font-size:6.5pt;color:#555;line-height:1.5;margin-top:4px;text-align:justify;">${imt23FootnoteText('Rows carrying a "Less Imt 23" line are covered under Endorsement IMT-23.')}</div>` : ''}${cash ? renderCashLossTable(cash, { td, tdr: td + 'text-align:right;', headBg: '#006838' }) : ''}${uiicComparisonHtml(claim, td, scale.labelFont, { gross: pT + lT, tow, salvage, excess: volExcess + compExcess, keptOpen: keptOpenTotal(rows) }, cash)}`;
 
   // ── PAGE 5: GST Summary + Signatures ────────────────────────────────────────
   const p5 = `<div style="page-break-before:always;"></div>
@@ -513,11 +518,11 @@ ${partsAgg.bands.map((b, i) => `<tr><td style="${td}text-align:center;">${i + 1}
 ${serviceAgg.bands.map((b, i) => `<tr><td style="${td}text-align:center;">${i + 1}</td><td style="${td}">${codeCell(b, 'Labour')}</td><td style="${td}text-align:right;">${fa(b.base)}</td><td style="${td}text-align:right;">${fa(b.cgst)}</td><td style="${td}text-align:right;">${fa(b.sgst)}</td><td style="${td}text-align:right;font-weight:700;">${fa(b.amount)}</td></tr>`).join('') || `<tr><td style="${td}" colspan="6">No labour or painting</td></tr>`}
 <tr style="font-weight:700;"><td style="${td}" colspan="2">GRAND TOTAL</td><td style="${td}text-align:right;">${fa(labBase)}</td><td style="${td}text-align:right;">${fa(lC)}</td><td style="${td}text-align:right;">${fa(lS)}</td><td style="${td}text-align:right;">${fa(lT)}</td></tr></table>
 <div style="display:flex;justify-content:space-between;margin-top:14px;font-size:7.5pt;">
-<div style="width:45%;"><div>I / We hereby authorize repairs for Rs. <b>${fa(net)}</b></div><div style="margin-top:30px;">Date:</div><div style="margin-top:40px;border-top:0.5pt solid #000;padding-top:3px;">Signature (...Surveyor &amp; Loss Assessor)</div></div>
+<div style="width:45%;">${cash ? '' : `<div>I / We hereby authorize repairs for Rs. <b>${fa(net)}</b></div>`}<div style="margin-top:30px;">Date:</div><div style="margin-top:40px;border-top:0.5pt solid #000;padding-top:3px;">Signature (...Surveyor &amp; Loss Assessor)</div></div>
 <div style="width:45%;text-align:right;"><div>I agree with the assessment of the surveyor. Repair will be complete by _______ (date).</div><div style="margin-top:30px;">Date:</div><div style="margin-top:40px;border-top:0.5pt solid #000;padding-top:3px;">Signature of authorised official of workshop</div></div></div>
 ${getSigBlock(profile)}
 <div style="text-align:center;font-weight:700;font-size:8pt;border-top:1pt solid #000;padding-top:4px;margin-top:12px;">FOR SERVICE HUB USE</div>
-<div style="font-size:7pt;line-height:1.6;margin-top:3px;">Claim documents are in order. Liability under the policy is confirmed. Bill check and reinspection is carried out. The loss assessment is in order and claim is recommended for Rs. ${fa(net)}</div>
+<div style="font-size:7pt;line-height:1.6;margin-top:3px;">Claim documents are in order. Liability under the policy is confirmed. Bill check and reinspection is carried out. The loss assessment is in order and claim is recommended for Rs. ${fa(payableByInsurer)}</div>
 <div style="font-size:7pt;">NOTE:- UIIC BILL CHECK REPORT AS PER ASSESSMENT SHEET.</div>
 <div style="display:flex;justify-content:space-between;margin-top:16px;font-size:7pt;"><div>Signature of Claims Personnel<br/>Date</div><div>Signature of Claims Officer<br/>Date:</div><div>Signature of Claims Officer approving claim<br/>Date:</div></div>
 <div style="text-align:center; font-family:serif; font-weight:bold; font-size:9pt; margin-top:14px;">${nm}</div>
