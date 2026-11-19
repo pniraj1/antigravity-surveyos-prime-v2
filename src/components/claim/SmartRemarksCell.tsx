@@ -13,6 +13,7 @@ type RowContext =
   | 'depreciation-only'
   | 'fully-approved'
   | 'amount-reduced'
+  | 'kept-open'
   | 'disallowed'
   | 'disposal'
   | 'amount-increased'
@@ -24,6 +25,7 @@ const CONTEXT_CATEGORIES: Record<RowContext, DeductionCategory[]> = {
   'amount-reduced': ['negotiated', 'overpricing', 'partial-repair'],
   // 'safe' (no damage found) is a manual surveyor judgment — shown in disallowed context
   disallowed: ['not-covered', 'previous-damage', 'wear-and-tear', 'consumable', 'safe'],
+  'kept-open': [],
   disposal: ['salvage'],
   'amount-increased': ['negotiated'],
   default: ['negotiated', 'not-covered', 'overpricing'],
@@ -46,6 +48,7 @@ const REMARK_PRESETS: Record<RowContext, string[]> = {
     'Duplicate entry',
     'Betterment / upgrade not covered',
   ],
+  'kept-open': ['Kept open pending dismantling'],
   disposal: ['Used / second-hand parts — no GST'],
   'amount-increased': [
     'Actual cost higher than estimate',
@@ -58,6 +61,7 @@ function detectRowContext(
   row: AssessmentRow,
   autoDepRate: number,
 ): RowContext {
+  if (row.keptOpen) return 'kept-open';
   if (!row.allowed || row.action === 'disallow') return 'disallowed';
   if (row.isDisposal) return 'disposal';
   if (row.assessed < row.estimated) return 'amount-reduced';

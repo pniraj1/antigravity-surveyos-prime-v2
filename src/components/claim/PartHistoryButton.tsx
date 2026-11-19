@@ -133,7 +133,7 @@ export function PartHistoryButton({ row }: PartHistoryButtonProps) {
                     <td className="py-1 pr-2 truncate max-w-[130px]">{e.workshop || '—'}</td>
                     <td className="py-1 text-right tabular-nums">{formatCurrency(e.estimated)}</td>
                     <td className="py-1 text-right tabular-nums font-semibold">
-                      {e.disallowed ? <span className="text-muted-foreground font-normal">Disallowed</span> : formatCurrency(e.assessed)}
+                      {e.keptOpen ? <span className="text-muted-foreground font-normal">Kept open</span> : e.disallowed ? <span className="text-muted-foreground font-normal">Disallowed</span> : formatCurrency(e.assessed)}
                     </td>
                   </tr>
                 ))}

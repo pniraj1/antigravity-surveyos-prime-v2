@@ -491,6 +491,7 @@ STEP 1 — Classify the item:
 STEP 2 — Apply policy rules:
   - If CONSUMABLE and consumables are excluded → deductionCategory = "consumable".
   - If PART and zeroDep = false → depreciation applies → deductionCategory = "depreciation".
+  - If keptOpen = true → say the part is kept open and will be decided after dismantling; give no amount. Do NOT use "not-covered".
   - If action = "disallow" or allowed = false → deductionCategory = "not-covered".
   - If billedAmount > assessed for LABOUR/PAINT → deductionCategory = "negotiated".
   - If isDisposal = true → deductionCategory = "salvage".

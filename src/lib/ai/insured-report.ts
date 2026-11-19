@@ -46,6 +46,7 @@ export function getBlockingRows(
   zeroDep: boolean,
 ): Array<{ id: string; particulars: string; billed: number; assessed: number; reason: string }> {
   return (claim.assessmentRows ?? []).filter(row => {
+    if (row.keptOpen) return false; // undecided, not disallowed
     const hasRemark = (row.remarks ?? '').trim().length > 0;
     if (hasRemark) return false; // A remark always satisfies the gate
     const billed = row.billedTaxable ?? row.estimated;
@@ -309,7 +310,7 @@ export async function runAssessmentAnalysis({
   const relevantRows = (claim.assessmentRows ?? []).filter(
     r =>
       !preClassifiedIds.has(r.id) &&
-      (!r.allowed || r.action === 'disallow' || (r.billedTaxable ?? r.estimated) > r.assessed),
+      (r.keptOpen || !r.allowed || r.action === 'disallow' || (r.billedTaxable ?? r.estimated) > r.assessed),
   );
 
   const accidentContext = [claim.accident?.causeOfAccident, claim.accident?.placeOfAccident]
@@ -323,7 +324,8 @@ export async function runAssessmentAnalysis({
     estimated: r.estimated,
     assessed: r.assessed,
     billedAmount: r.billedTaxable ?? r.estimated,
-    allowed: r.allowed,
+    allowed: r.keptOpen ? true : r.allowed,
+    ...(r.keptOpen ? { keptOpen: true } : {}),
     action: r.action ?? '',
     remarks: r.remarks ?? '',
     billRemarks: r.billRemarks ?? '',
@@ -655,7 +657,7 @@ export async function generateInsuredReport({
   // Pre-classified rows are excluded — already handled above.
   const relevantRows = (claim.assessmentRows ?? []).filter(
     r => !preClassifiedIds.has(r.id) && (
-      !r.allowed || r.action === 'disallow' || r.isDisposal ||
+      r.keptOpen || !r.allowed || r.action === 'disallow' || r.isDisposal ||
       ((r.billedTaxable ?? r.estimated) > r.assessed) ||
       (r.section === 'parts' && r.allowed && r.estimated > r.assessed)
     )
@@ -674,7 +676,8 @@ export async function generateInsuredReport({
     estimated: r.estimated,
     assessed: r.assessed,
     billedAmount: r.billedTaxable ?? r.estimated,
-    allowed: r.allowed,
+    allowed: r.keptOpen ? true : r.allowed,
+    ...(r.keptOpen ? { keptOpen: true } : {}),
     action: r.action ?? '',
     remarks: r.remarks ?? '',
     billRemarks: r.billRemarks ?? '',

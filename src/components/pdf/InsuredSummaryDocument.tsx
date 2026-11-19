@@ -60,7 +60,8 @@ function fmt(n: number): string {
   return `₹${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function categoryLabel(cat: string | undefined, allowed: boolean): string {
+export function categoryLabel(cat: string | undefined, allowed: boolean, keptOpen?: boolean): string {
+  if (keptOpen) return 'Kept open, to be decided after dismantling';
   if (!allowed) return 'Not covered';
   const map: Record<string, string> = {
     approved: 'Approved in full',
@@ -333,9 +334,9 @@ export function InsuredSummaryDocument({
           return (
             <View key={i} style={styles.tableRow}>
               <Text style={styles.colPart}>{row.particulars}</Text>
-              <Text style={styles.colBilled}>{fmt(billed)}</Text>
-              <Text style={styles.colAssessed}>{fmt(row.assessed)}</Text>
-              <Text style={styles.colStatus}>{categoryLabel(cat, row.allowed)}</Text>
+              <Text style={styles.colBilled}>{row.keptOpen ? '—' : fmt(billed)}</Text>
+              <Text style={styles.colAssessed}>{row.keptOpen ? '—' : fmt(row.assessed)}</Text>
+              <Text style={styles.colStatus}>{categoryLabel(cat, row.allowed, row.keptOpen)}</Text>
             </View>
           );
         })}

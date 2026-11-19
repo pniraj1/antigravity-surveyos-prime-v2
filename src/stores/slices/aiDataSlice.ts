@@ -702,7 +702,7 @@ export function applyFinalBill(
         billedTaxable: billedTax,
         billedAmount: billedAmt,
         billStatus: 'not-allowed' as const,
-        billRemarks: row.billRemarks || 'Workshop billed for a disallowed item',
+        billRemarks: row.billRemarks || (row.keptOpen ? 'Billed while still kept open — decide in Assessment' : 'Workshop billed for a disallowed item'),
         refSrNo: refSr,
         refStatus,
         refMatch,

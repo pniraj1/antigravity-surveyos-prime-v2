@@ -23,7 +23,8 @@ export function computeInsuredFinancialSummary(
   ageMonths: number,
 ): InsuredReportFinancialSummary {
   const fb = claim.feeBill;
-  const rows = claim.assessmentRows;
+  // K.O. rows are undecided: in no total, no list.
+  const rows = claim.assessmentRows.filter((r) => !r.keptOpen);
 
   // ─── Garage Estimate ────────────────────────────────────
   // Use actual bill total when bill-check is done; otherwise

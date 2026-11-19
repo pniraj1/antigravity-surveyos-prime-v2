@@ -107,10 +107,11 @@ function descriptionFor(r: AssessmentRow, depType: DepreciationType): NiaDescrip
  * so the insurer sees what was claimed.
  */
 export function niaAssessmentRows(
-  rows: AssessmentRow[],
+  allRows: AssessmentRow[],
   ageMonths: number,
   depType: DepreciationType,
 ): NiaAssessmentRow[] {
+  const rows = allRows.filter((r) => !r.keptOpen); // undecided: not for the portal
   const depRateFor = (r: AssessmentRow) =>
     r.depOverride != null
       ? r.depOverride

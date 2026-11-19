@@ -13,6 +13,7 @@ export interface PartHistoryEntry {
   estimated: number;
   assessed: number;
   disallowed: boolean;
+  keptOpen?: boolean;
 }
 
 // ponytail: small hand-picked list, add abbreviations as surveyors hit misses.
@@ -70,7 +71,8 @@ export function partHistory(claims: ClaimData[], current: ClaimData, target: Ass
         particulars: r.particulars,
         estimated: r.estimated,
         assessed: r.assessed,
-        disallowed: !r.allowed,
+        disallowed: !r.allowed && !r.keptOpen,
+        ...(r.keptOpen ? { keptOpen: true } : {}),
       });
     }
   }

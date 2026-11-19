@@ -74,4 +74,18 @@ describe('computeInsuredFinancialSummary', () => {
     const fromBreakdown = summary.depreciationBreakdown.reduce((acc, r) => acc + r.deductionAmount, 0);
     expect(summary.depreciationTotal).toBe(fromBreakdown);
   });
+
+  test('insured summary: K.O. row is not in the disallowed list and contributes 0 to every total', () => {
+    const withKo = {
+      ...mockClaim,
+      assessmentRows: [
+        ...mockClaim.assessmentRows,
+        { id: 'k1', section: 'parts', particulars: 'Door', estimated: 9000, assessed: 0,
+          billedTaxable: 9000, gst: 18, allowed: false, keptOpen: true, action: 'allow', isDisposal: false },
+      ],
+    } as unknown as ClaimData;
+    const a = computeInsuredFinancialSummary(mockClaim, 36);
+    const b = computeInsuredFinancialSummary(withKo, 36);
+    expect(b).toEqual(a);
+  });
 });
