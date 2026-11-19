@@ -1,5 +1,5 @@
-## Done: Payment Reconciliation & Received Fees Cockpit (2026-11-19, Antigravity)
-- **Status:** Complete on `main` (b8b88b4e, 8c47d51d, c43ddece, 01f7a004, 593bf2e9, b88cd20b, 17506a12). Not deployed, not browser-tested.
+## Done: Payment Reconciliation & Received Fees Cockpit (2026-11-19, Antigravity) — DEPLOYED TO PRODUCTION
+- **Status:** Complete on `main` and deployed to production (`https://surveyos.in`, Firebase site `motorsurveyos-in`, commit b321d46a). Live chunks verified via `curl.exe`.
 - **Implementation Plan:** `docs/plans/2026-11-19-payment-reconciliation-tab.md`
 - **Session:** `Sessions/2026-11-19-payment-reconciliation-cockpit.md`
 - **Delivered:**
