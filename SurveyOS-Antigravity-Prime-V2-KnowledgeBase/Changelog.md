@@ -1,3 +1,10 @@
+## 2026-11-19 (Claude Code) — K.O. parts and liability comparison
+- feat(assessment): K.O. (kept open) mark on rows, stored as `allowed: false` + `keptOpen: true`; `keptOpenRows`/`keptOpenTotal`/`liabilityComparison` in `src/lib/calculations/kept-open.ts`.
+- feat(report): Repair Basis build-up, K.O. row and missing items in the liability comparison: standard Final/Bill Check, UIIC Final (new table after Details of Assessment), UIIC Bill Check.
+- feat(report): insured report shows K.O. status only; NIA export excludes K.O. rows.
+- feat(bill-check): printing held while any part is K.O.; amber banner with a button to the Assessment tab.
+- verification: vitest and `tsc --noEmit` clean at the last code commit; not deployed, not browser-tested. SurveyOS Scan impact: none (assessment rows are not a coupling point).
+
 ## 2026-11-18 (Antigravity) — Documents Recon Dock, Vehicle-First Naming, Transparent Auto-Save & PDF Page Breaks
 - feat(documents): added sticky floating Reconciliation Action Dock at the bottom of the viewport in `DocumentsTab.tsx` (`fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-40`). Prominently surfaces data conflicts across scanned documents with animated amber alert badge and single-click `[ Review & Reconcile → ]` opening `ReconciliationDialog`. Added compact floating pill when no conflicts but multiple scanned docs exist. Keeps top banner while eliminating the scroll disconnect.
 - feat(naming): implemented vehicle-first deliverable and Drive folder naming. Added and exported `sanitizeRegNo` in `src/lib/reports/auto-file-report.ts`. Updated `finalSurveyFileName`, `reinspectionFileName`, `uiicFinalFileName`, `spotFeeBillFileName`, `valuationFileName`, and `billCheckFileName` to prepend `${regNo}_`. Updated `performClaimBackup` in `src/lib/drive/index.ts` to name Google Drive backup folders primarily by vehicle registration number (`${regNo}_${claimId.slice(-6)}`).

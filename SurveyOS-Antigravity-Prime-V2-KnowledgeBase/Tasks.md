@@ -1,3 +1,12 @@
+## Done: Kept-open (K.O.) parts and liability comparison (2026-11-19, Claude Code)
+- **Status:** Complete on `main` (ab3bc6e7, dac68a7c, 92a1b458, 915331ed, d291b629, 4a3d8b67, 0dc45720). Not deployed, not browser-tested. Session: `Sessions/2026-11-19-kept-open-parts.md`.
+- **Delivered:**
+  1. K.O. mark on assessment rows (`allowed: false` + `keptOpen: true`), toggle in the assessment grid.
+  2. Liability comparison shows the Repair Basis build-up, a K.O. row and missing items (Total Loss form): standard Final and Bill Check, new table in UIIC Final after Details of Assessment, and UIIC Bill Check.
+  3. Insured report shows K.O. status only (no amounts). NIA export excludes K.O. rows.
+  4. Bill Check holds printing while any row is K.O.; amber banner links to the Assessment tab (K.O. is decided only there).
+- **SurveyOS Scan impact: none (assessment rows are not a coupling point).**
+
 ## Done: Documents Tab Reconciliation Dock, Vehicle-First Naming, Transparent Auto-Save & PDF Page Breaks (2026-11-18, Antigravity)
 - **Status:** Complete. Executed via `superpowers:writing-plans` and `superpowers:subagent-driven-development`.
 - **Implementation Plan:** `docs/plans/2026-11-18-documents-recon-naming-and-pdf-pagebreaks.md`
