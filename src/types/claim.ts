@@ -24,6 +24,9 @@ import { DEFAULT_DOCUMENT_ANNEXURE_OPTIONS } from '@/lib/photos/document-annexur
  */
 export type FontScale = 'compact' | 'standard' | 'large-print';
 
+/** An item missing from the vehicle at inspection (total loss), deducted from IDV. */
+export interface MissingItem { id: string; description: string; amount: number }
+
 export interface ReportSettings {
   fontScale: FontScale;
 }
@@ -177,6 +180,8 @@ export interface ClaimData {
     salvageWithoutRC: number;
     towingExpenses: number;
     workshopRent: number;
+    /** Items missing from the vehicle, deducted from IDV in the comparison. */
+    missingItems?: MissingItem[];
     remarks: string;
   };
 

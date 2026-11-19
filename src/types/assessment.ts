@@ -104,6 +104,8 @@ export interface AssessmentRow {
   gst: number; // percentage, default 18
   section: AssessmentSection;
   allowed: boolean;
+  /** Kept open (K.O.): part left out of this assessment, claimed separately. Implies allowed === false. */
+  keptOpen?: boolean;
   /** Surveyor action: REPLACE / REPAIR / DISALLOW */
   action?: 'replace' | 'repair' | 'disallow' | '';
   /** Surveyor remarks for this line item */

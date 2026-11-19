@@ -24,6 +24,7 @@ export interface AssessmentSlice {
   unlinkBillMatch: (rowId: string) => void;
   promoteExtraBillItem: (extraId: string) => void;
   toggleRowAllowed: (id: string) => void;
+  toggleRowKeptOpen: (id: string) => void;
   addSpotDamageRow: (component?: string, damage?: string) => void;
   updateSpotDamageRow: (id: string, updates: Partial<SpotDamageRow>) => void;
   deleteSpotDamageRow: (id: string) => void;
@@ -97,6 +98,8 @@ export const createAssessmentSlice: StateCreator<any, any, any, AssessmentSlice>
             if ('allowed' in updates && updatedRow.allowed) {
               updatedRow.assessed = updatedRow.estimated;
             }
+            // keptOpen ⇒ not allowed: any change to `allowed` clears K.O.
+            if ('allowed' in updates) updatedRow.keptOpen = false;
 
             return updatedRow;
           }),
@@ -378,8 +381,28 @@ export const createAssessmentSlice: StateCreator<any, any, any, AssessmentSlice>
             return {
               ...r,
               allowed,
+              keptOpen: false,
               ...(allowed && { assessed: r.estimated }),
             };
+          }),
+          updatedAt: new Date().toISOString(),
+        },
+        isDirty: true,
+      };
+    });
+  },
+
+  toggleRowKeptOpen: (id) => {
+    set((state: WithClaim) => {
+      if (!state.currentClaim) return {};
+      return {
+        currentClaim: {
+          ...state.currentClaim,
+          assessmentRows: state.currentClaim.assessmentRows.map((r) => {
+            if (r.id !== id) return r;
+            return r.keptOpen
+              ? { ...r, allowed: true, keptOpen: false, assessed: r.estimated }
+              : { ...r, allowed: false, keptOpen: true };
           }),
           updatedAt: new Date().toISOString(),
         },
