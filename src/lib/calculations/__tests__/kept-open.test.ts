@@ -40,3 +40,13 @@ describe('liabilityComparison', () => {
     expect(liabilityComparison(input({ missingItems: undefined })).missing).toBe(0);
   });
 });
+
+describe('liabilityComparison missing items', () => {
+  test('negative and NaN amounts never raise the TL base', () => {
+    const c = liabilityComparison(input({ missingItems: [
+      { id: 'a', description: 'x', amount: -5000 }, { id: 'b', description: 'y', amount: NaN }, { id: 'c', description: 'z', amount: 1000 },
+    ] }));
+    expect(c.missing).toBe(1000);
+    expect(c.totalLoss).toBe(500000 - 2000 - 1000 + 3000);
+  });
+});

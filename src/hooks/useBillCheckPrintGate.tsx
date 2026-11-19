@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
+import { toast } from 'sonner';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { usePrintGate } from '@/hooks/usePrintGate';
@@ -67,7 +68,11 @@ export function useBillCheckPrintGate() {
     if (stored) for (const { id, updates } of fromBillSelfBillUpdates(stored)) updateAssessmentRow(id, updates);
     const claim = useClaimStore.getState().currentClaim ?? currentClaim;
     if (!claim) return;
-    if (keptOpenBlock(claim.assessmentRows || []).blocked) return; // banner in BillCheckTab explains
+    const hold = keptOpenBlock(claim.assessmentRows || []);
+    if (hold.blocked) {
+      toast.error(`Printing is held while parts are kept open: ${hold.particulars.join(', ')}. Decide them in the Assessment tab.`);
+      return;
+    }
     setTargetFormat(format);
 
     const bc = claim.billCheck || { billNo: '', billDate: '', billTotal: 0 };

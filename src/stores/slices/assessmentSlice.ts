@@ -402,7 +402,7 @@ export const createAssessmentSlice: StateCreator<any, any, any, AssessmentSlice>
             if (r.id !== id) return r;
             return r.keptOpen
               ? { ...r, allowed: true, keptOpen: false, assessed: r.estimated }
-              : { ...r, allowed: false, keptOpen: true };
+              : { ...r, allowed: false, keptOpen: true, action: undefined };
           }),
           updatedAt: new Date().toISOString(),
         },

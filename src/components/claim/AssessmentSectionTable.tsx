@@ -383,7 +383,7 @@ export function AssessmentSectionTable({
                             }
                           }}
                           rows={1}
-                          className={`min-h-7 py-1 px-2 text-xs font-semibold leading-snug bg-transparent border-transparent hover:border-input focus:bg-background resize-none${row.allowed ? '' : ' line-through text-muted-foreground'}`}
+                          className={`min-h-7 py-1 px-2 text-xs font-semibold leading-snug bg-transparent border-transparent hover:border-input focus:bg-background resize-none${row.allowed || row.keptOpen ? '' : ' line-through text-muted-foreground'}`}
                           placeholder="Item Description"
                           title={row.particulars}
                         />

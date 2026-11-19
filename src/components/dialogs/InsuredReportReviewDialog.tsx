@@ -401,7 +401,7 @@ export function InsuredReportReviewDialog({
                   {draft.lineExplanations.length === 0 && (
                     <p className="text-sm text-center py-8 text-muted-foreground">No adjusted items to review.</p>
                   )}
-                  {draft.lineExplanations.map(item => (
+                  {draft.lineExplanations.filter(e => !claim.assessmentRows?.some(r => r.id === e.assessmentRowId && r.keptOpen)).map(item => (
                     <div
                       key={item.assessmentRowId}
                       className={`rounded-xl p-4 border ${item.isFlagged ? 'border-status-warning bg-status-warning-tint' : 'border-border bg-card'}`}

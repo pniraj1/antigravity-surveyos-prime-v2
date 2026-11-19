@@ -93,7 +93,10 @@ export function InsuredSummaryDocument({
   surveyorName = '',
   surveyorLicence = '',
 }: Props) {
-  const { financialSummary: fs, policyMappings, lineExplanations } = draft;
+  const { financialSummary: fs, policyMappings } = draft;
+  // K.O. parts are status only: never in a deduction block, never with an amount
+  const koIds = new Set((claim.assessmentRows ?? []).filter(r => r.keptOpen).map(r => r.id));
+  const lineExplanations = draft.lineExplanations.filter(e => !koIds.has(e.assessmentRowId));
 
   const negotiatedItems = lineExplanations.filter(e => e.deductionCategory === 'negotiated');
   const overpricingItems = lineExplanations.filter(e => e.deductionCategory === 'overpricing');

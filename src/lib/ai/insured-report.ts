@@ -87,6 +87,7 @@ export function buildPreClassifiedExplanations(
   const taggedRows: InsuredReportLineExplanation[] = [];
 
   for (const row of claim.assessmentRows ?? []) {
+    if (row.keptOpen) continue; // status only: never explained, never an amount
     const billed = row.billedTaxable ?? row.estimated;
     const delta = Math.abs(billed - row.assessed);
 
@@ -309,8 +310,8 @@ export async function runAssessmentAnalysis({
 
   const relevantRows = (claim.assessmentRows ?? []).filter(
     r =>
-      !preClassifiedIds.has(r.id) &&
-      (r.keptOpen || !r.allowed || r.action === 'disallow' || (r.billedTaxable ?? r.estimated) > r.assessed),
+      !r.keptOpen && !preClassifiedIds.has(r.id) &&
+      (!r.allowed || r.action === 'disallow' || (r.billedTaxable ?? r.estimated) > r.assessed),
   );
 
   const accidentContext = [claim.accident?.causeOfAccident, claim.accident?.placeOfAccident]
@@ -656,8 +657,8 @@ export async function generateInsuredReport({
   // ── Surgical selection: only send rows that actually need explaining ───────
   // Pre-classified rows are excluded — already handled above.
   const relevantRows = (claim.assessmentRows ?? []).filter(
-    r => !preClassifiedIds.has(r.id) && (
-      r.keptOpen || !r.allowed || r.action === 'disallow' || r.isDisposal ||
+    r => !r.keptOpen && !preClassifiedIds.has(r.id) && (
+      !r.allowed || r.action === 'disallow' || r.isDisposal ||
       ((r.billedTaxable ?? r.estimated) > r.assessed) ||
       (r.section === 'parts' && r.allowed && r.estimated > r.assessed)
     )

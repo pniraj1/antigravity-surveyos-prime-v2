@@ -188,6 +188,7 @@ export function TotalLossForm() {
                     />
                     <input
                       type="number"
+                      min={0}
                       value={m.amount || ''}
                       onChange={(e) => patchMissing(m.id, { amount: parseFloat(e.target.value) || 0 })}
                       placeholder="0"

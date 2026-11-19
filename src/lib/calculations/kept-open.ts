@@ -26,7 +26,7 @@ export interface LiabilityComparison {
 
 export function liabilityComparison(i: ComparisonInput): LiabilityComparison {
   const { tl } = i;
-  const missing = (tl.missingItems ?? []).reduce((s, m) => s + m.amount, 0);
+  const missing = (tl.missingItems ?? []).reduce((s, m) => s + Math.max(0, m.amount || 0), 0);
   const base = Math.max(0, i.idv - i.excess - missing);
   const addl = tl.towingExpenses + tl.workshopRent;
   return {

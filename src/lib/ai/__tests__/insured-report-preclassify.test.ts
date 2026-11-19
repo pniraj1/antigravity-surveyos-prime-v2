@@ -64,4 +64,12 @@ describe('buildPreClassifiedExplanations', () => {
     expect(entry).toBeDefined();
     expect(entry!.deductionCategory).toBe('approved');
   });
+
+  test('K.O. row is never pre-classified, even with deductionCategory or isDisposal', () => {
+    const claim = { assessmentRows: [
+      { ...baseRow, id: 'k1', allowed: false, keptOpen: true, deductionCategory: 'salvage' },
+      { ...baseRow, id: 'k2', allowed: false, keptOpen: true, isDisposal: true },
+    ] } as any;
+    expect(allRows(claim)).toHaveLength(0);
+  });
 });

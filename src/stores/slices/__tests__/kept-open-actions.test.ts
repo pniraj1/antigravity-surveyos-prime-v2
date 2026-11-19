@@ -31,6 +31,12 @@ function harness(r: AssessmentRow) {
 }
 
 describe('kept open (K.O.)', () => {
+  test('marking K.O. clears a lingering disallow action', () => {
+    const h = harness({ ...row(), action: 'disallow' } as AssessmentRow);
+    h.slice.toggleRowKeptOpen('r1');
+    expect(h.row().action).toBeUndefined();
+  });
+
   test('toggleRowKeptOpen on an allowed row → allowed false, keptOpen true', () => {
     const h = harness(row());
     h.slice.toggleRowKeptOpen('r1');
