@@ -29,6 +29,8 @@ import { aggregateGst } from '@/lib/calculations/gst-bands';
 import { getCompulsoryExcess, calculateAssessmentSummary } from '@/lib/calculations/assessment';
 import { buildSerialMap } from '@/lib/calculations/serial-numbers';
 import { shouldStartSupplementaryBand } from '@/lib/calculations/utils';
+import { keptOpenTotal, liabilityComparison } from '@/lib/calculations/kept-open';
+import { renderLiabilityComparison } from './liability-comparison-html';
 import { buildPrintShell, footerFromProfile, openPrintWindow } from './print-shell';
 import { saveDocuments } from '@/lib/documents/sink';
 import { promptForPrintedPdf } from '@/lib/documents/print-followup';
@@ -63,6 +65,24 @@ function g(v: string | number | null | undefined): string {
 
 import { numberToWords, getVehicleAgeMonths, getSurveyorHeader, getSigBlock, escapeHtml } from './report-utils';
 import { getHtmlScale } from './report-style-utils';
+
+/** UIIC's green "Comparison of Insurer's Liability" table; `gross` is parts + labour + paint (excl. towing). */
+function uiicComparisonHtml(
+  claim: ClaimData, td: string, labelFont: string,
+  b: { gross: number; tow: number; salvage: number; excess: number; keptOpen: number },
+): string {
+  const tl = claim.totalLossDetails;
+  if (!claim.isTotalLoss || !tl) return '';
+  return renderLiabilityComparison(liabilityComparison({
+    idv: parseFloat(String(claim.policy?.idv || '0').replace(/,/g, '')) || 0,
+    excess: b.excess, repairGrandInclGst: b.gross, repairTowing: b.tow, repairSalvage: b.salvage, keptOpen: b.keptOpen,
+    tl: { ...tl, salvageWithRC: tl.salvageWithRC || 0, salvageWithoutRC: tl.salvageWithoutRC || 0, towingExpenses: tl.towingExpenses || 0, workshopRent: tl.workshopRent || 0 },
+  }), {
+    td, labelFont, headerBg: '#006838',
+    title: "COMPARISON OF INSURER'S LIABILITY (TOTAL LOSS ASSESSMENT)",
+    remarks: tl.remarks || 'Since the repair cost is significant relative to the IDV, the Insurer may opt for the most economical settlement mode as per the above comparison.',
+  });
+}
 
 // ─── Main UIIC Final HTML builder ─────────────────────────────────────────────
 
@@ -358,6 +378,7 @@ ${getSurveyorHeader(profile)}
   // `Less Imt 23` line beneath carrying the insured's halved share in the
   // Part List column. Every downstream figure on the row already comes from
   // computeRowNet's default, which halves — so this line is purely visible.
+  const naLabel = (r: AssessmentRow) => r.keptOpen ? '<span style="color:#b45309;font-weight:700;">Kept Open</span>' : 'Not Allowed';
   const imt23RowLine = (r: AssessmentRow, isNA: boolean) =>
     r.imt23 && !isNA && r.assessed
       ? `<tr><td colspan="4" style="${td}font-weight:700;">Less Imt 23</td><td style="${td}text-align:right;font-weight:700;">${fa(r.assessed / 2)}</td><td colspan="7" style="${td}"></td></tr>`
@@ -371,9 +392,9 @@ ${getSurveyorHeader(profile)}
     const wg = isNA ? 0 : isDisposal ? netBeforeGst : afterDep * (1 + (r.gst || 0) / 100);
     // The flag lives in the row's own money column, as it does for labour and
     // paint — each section books to one column and flags in the same one.
-    const wgLabel = isNA ? 'Not Allowed' : isDisposal ? `${fa(netBeforeGst)} DISP` : fa(wg);
+    const wgLabel = isNA ? (r.keptOpen ? 'Kept Open' : 'Not Allowed') : isDisposal ? `${fa(netBeforeGst)} DISP` : fa(wg);
     const wgStyle = isNA
-      ? `${td}text-align:center;color:#a00;font-weight:700;font-size:6.5pt;white-space:nowrap;`
+      ? `${td}text-align:center;color:${r.keptOpen ? '#b45309' : '#a00'};font-weight:700;font-size:6.5pt;white-space:nowrap;`
       : isDisposal ? `${td}text-align:right;color:#b45309;font-weight:600;` : `${td}text-align:right;`;
     const gstLabel = isNA ? '' : isDisposal ? '0' : String(r.gst ?? 0);
     const pt = r.partType === 'metal' ? 'Metal' : r.partType === 'glass' ? 'Glass' : r.partType === 'fiberglass' ? 'Fibre Glass' : 'Plastic/Rubber';
@@ -405,7 +426,7 @@ ${getSurveyorHeader(profile)}
 
     const depAmt = isNA ? '' : fa(effectiveAssessed(r) - afterDep);
 
-    return bandHtml + `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${escapeHtml(r.particulars)}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : serviceDepLabel(r, dep)}</td><td style="${td}text-align:right;">${depAmt}</td><td style="${td}"></td><td style="${td}text-align:center;">${isNA ? '' : String(r.gst ?? 0)}</td><td style="${td}"></td><td style="${td}text-align:right;">${isNA ? 'Not Allowed' : fa(withGst)}</td><td style="${td}"></td></tr>` + imt23RowLine(r, isNA);
+    return bandHtml + `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${escapeHtml(r.particulars)}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${isNA ? '' : serviceDepLabel(r, dep)}</td><td style="${td}text-align:right;">${depAmt}</td><td style="${td}"></td><td style="${td}text-align:center;">${isNA ? '' : String(r.gst ?? 0)}</td><td style="${td}"></td><td style="${td}text-align:right;">${isNA ? naLabel(r) : fa(withGst)}</td><td style="${td}"></td></tr>` + imt23RowLine(r, isNA);
   }).join('');
 
   // Disallowed paint is listed and tagged, exactly as parts and labour are.
@@ -431,7 +452,7 @@ ${getSurveyorHeader(profile)}
     const depAmt = isNA || tookAutoRate ? '' : fa(effectiveAssessed(r) - afterDep);
     const depCell = isNA || tookAutoRate ? '' : serviceDepLabel(r, dep);
 
-    return bandHtml + `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${escapeHtml(r.particulars)}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Paint</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${depCell}</td><td style="${td}text-align:right;">${depAmt}</td><td style="${td}"></td><td style="${td}text-align:center;">${isNA ? '' : String(r.gst ?? 0)}</td><td style="${td}"></td><td style="${td}"></td><td style="${td}text-align:right;">${isNA ? 'Not Allowed' : fa(withGst)}</td></tr>`;
+    return bandHtml + `<tr><td style="${td}text-align:center;">${serials.get(r.id) ?? 0}</td><td style="${td}">${escapeHtml(r.particulars)}</td><td style="${td}text-align:center;">Labour</td><td style="${td}text-align:center;">Paint</td><td style="${td}text-align:right;">${isNA ? '' : fa(r.assessed)}</td><td style="${td}text-align:center;">${depCell}</td><td style="${td}text-align:right;">${depAmt}</td><td style="${td}"></td><td style="${td}text-align:center;">${isNA ? '' : String(r.gst ?? 0)}</td><td style="${td}"></td><td style="${td}"></td><td style="${td}text-align:right;">${isNA ? naLabel(r) : fa(withGst)}</td></tr>`;
   }).join('');
 
   const p3 = `<div style="page-break-before:always;"></div>
@@ -473,7 +494,7 @@ ${/* The parts line: its money column foots the SPARE PARTS rows above. The
 ${/* Gross, not Net: these carry GST and nothing has been deducted yet. */ ''}
 <tr><td colspan="10" style="${td}font-weight:700;">GROSS TOTAL</td><td style="${td}text-align:right;font-weight:700;">${fa(labourAgg.amount)}</td><td style="${td}text-align:right;font-weight:700;">${fa(paintAgg.amount)}</td></tr>
 </tbody></table>
-${rows.some(r => r.imt23) ? `<div style="font-size:6.5pt;color:#555;line-height:1.5;margin-top:4px;text-align:justify;">${imt23FootnoteText('Rows carrying a "Less Imt 23" line are covered under Endorsement IMT-23.')}</div>` : ''}`;
+${rows.some(r => r.imt23) ? `<div style="font-size:6.5pt;color:#555;line-height:1.5;margin-top:4px;text-align:justify;">${imt23FootnoteText('Rows carrying a "Less Imt 23" line are covered under Endorsement IMT-23.')}</div>` : ''}${uiicComparisonHtml(claim, td, scale.labelFont, { gross: pT + lT, tow, salvage, excess: volExcess + compExcess, keptOpen: keptOpenTotal(rows) })}`;
 
   // ── PAGE 5: GST Summary + Signatures ────────────────────────────────────────
   const p5 = `<div style="page-break-before:always;"></div>
@@ -795,77 +816,7 @@ ${getSurveyorHeader(profile)}
 <div style="font-weight:700;font-size:9pt;text-align:right;margin-bottom:2px;">${nm}</div>
 <div style="text-align:center;font-weight:700;font-size:9.5pt;border:1pt solid #000;padding:4px;margin-bottom:4px;background:#f0f0f0;">UIIC BILL CHECK REPORT — MOTOR SURVEY (FINAL)</div>
 
-${claim.isTotalLoss && claim.totalLossDetails ? (() => {
-  const idv = parseFloat(String(claim.policy?.idv || '0').replace(/,/g, '')) || 0;
-  const totalExcess = compExcess + volExcess;
-  const tlLiability = Math.max(0, idv - totalExcess);
-  const netWithRC = Math.max(0, tlLiability - (claim.totalLossDetails.salvageWithRC || 0));
-  const netWithoutRC = Math.max(0, tlLiability - (claim.totalLossDetails.salvageWithoutRC || 0));
-  const repairBasis = net;
-
-  return `
-    <div style="margin-top:10px; margin-bottom:15px; border:1pt solid #006838; border-radius:4px; overflow:hidden;">
-      <div style="background:#006838; color:#fff; font-weight:900; font-size:8pt; padding:6px; text-align:center; letter-spacing:1px;">
-        COMPARISON OF INSURER'S LIABILITY (TOTAL LOSS ASSESSMENT)
-      </div>
-      <table style="width:100%; border-collapse:collapse; font-size:7.5pt;">
-        <thead>
-          <tr style="background:#f9fafb;">
-            <th style="${th}text-align:left;color:#006838;">DESCRIPTION</th>
-            <th style="${th}width:18%;text-align:right;">REPAIR BASIS</th>
-            <th style="${th}width:18%;text-align:right;">TOTAL LOSS</th>
-            <th style="${th}width:18%;text-align:right;">NET LOSS (W/RC)</th>
-            <th style="${th}width:18%;text-align:right;">NET LOSS (W/O RC)</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td style="${td}font-weight:700;">Insured Declared Value (IDV)</td>
-            <td style="${td}text-align:right;color:#666;">-</td>
-            <td style="${td}text-align:right;font-weight:700;">${fa(idv)}</td>
-            <td style="${td}text-align:right;font-weight:700;">${fa(idv)}</td>
-            <td style="${td}text-align:right;font-weight:700;">${fa(idv)}</td>
-          </tr>
-          <tr>
-            <td style="${td}color:#666;">Less: Compulsory/Vol. Excess</td>
-            <td style="${td}text-align:right;color:#666;">-</td>
-            <td style="${td}text-align:right;color:#b91c1c;">- ${fa(totalExcess)}</td>
-            <td style="${td}text-align:right;color:#b91c1c;">- ${fa(totalExcess)}</td>
-            <td style="${td}text-align:right;color:#b91c1c;">- ${fa(totalExcess)}</td>
-          </tr>
-          <tr>
-            <td style="${td}color:#666;">Less: Salvage Value</td>
-            <td style="${td}text-align:right;color:#666;">-</td>
-            <td style="${td}text-align:right;color:#666;">-</td>
-            <td style="${td}text-align:right;color:#b91c1c;">- ${fa(claim.totalLossDetails.salvageWithRC)}</td>
-            <td style="${td}text-align:right;color:#b91c1c;">- ${fa(claim.totalLossDetails.salvageWithoutRC)}</td>
-          </tr>
-          <tr>
-            <td style="${td}color:#666;">Add: Towing / Workshop Expenses</td>
-            <td style="${td}text-align:right;color:#666;">-</td>
-            <td style="${td}text-align:right;color:#065f46;">+ ${fa((claim.totalLossDetails.towingExpenses || 0) + (claim.totalLossDetails.workshopRent || 0))}</td>
-            <td style="${td}text-align:right;color:#065f46;">+ ${fa((claim.totalLossDetails.towingExpenses || 0) + (claim.totalLossDetails.workshopRent || 0))}</td>
-            <td style="${td}text-align:right;color:#065f46;">+ ${fa((claim.totalLossDetails.towingExpenses || 0) + (claim.totalLossDetails.workshopRent || 0))}</td>
-          </tr>
-          <tr style="background:#f0fdf4;">
-            <td style="${td}font-weight:900;color:#006838;font-size:8pt;">NET PAYABLE LIABILITY</td>
-            <td style="${td}text-align:right;font-weight:900;font-size:8pt;border-top:1pt solid #006838;">₹ ${fa(repairBasis)}</td>
-            <td style="${td}text-align:right;font-weight:900;font-size:8pt;border-top:1pt solid #006838;">₹ ${fa(tlLiability + (claim.totalLossDetails.towingExpenses || 0) + (claim.totalLossDetails.workshopRent || 0))}</td>
-            <td style="${td}text-align:right;font-weight:900;font-size:8pt;border-top:1pt solid #006838;background:#dcfce7;">₹ ${fa(netWithRC + (claim.totalLossDetails.towingExpenses || 0) + (claim.totalLossDetails.workshopRent || 0))}</td>
-            <td style="${td}text-align:right;font-weight:900;font-size:8pt;border-top:1pt solid #006838;">₹ ${fa(netWithoutRC + (claim.totalLossDetails.towingExpenses || 0) + (claim.totalLossDetails.workshopRent || 0))}</td>
-          </tr>
-        </tbody>
-      </table>
-      <div style="padding:8px; font-size:7pt; color:#444; border-top:1pt dashed #006838; background:rgba(0,104,56,0.02); line-height:1.4;">
-        <div style="color:#006838; font-weight:900; margin-bottom:3px; font-size:6.5pt; text-transform:uppercase; letter-spacing:0.5px;">Surveyor's Observation / Recommendation:</div>
-        ${claim.totalLossDetails.remarks || `Since the repair cost is significant relative to the IDV, the Insurer may opt for the most economical settlement mode as per the above comparison.`} 
-        <div style="margin-top:4px; font-style:italic; font-size:6.5pt; color:#666;">
-          * Expenses for towing (₹${fa(claim.totalLossDetails.towingExpenses)}) and workshop storage (₹${fa(claim.totalLossDetails.workshopRent)}) are added to TL/Net estimates if applicable.
-        </div>
-      </div>
-    </div>
-  `;
-})() : ''}
+${uiicComparisonHtml(claim, td, '7pt', { gross: pT + lT, tow, salvage, excess: compExcess + volExcess, keptOpen: 0 })}
 <table style="${ts}"><tr><td style="${tdl}width:25%;">Report Number:</td><td style="${tdb}width:25%;">${g(claim.reportNo)}</td><td style="${tdl}width:25%;">Report Date:</td><td style="${tdb}">${fd(bc?.billCheckDate || claim.reportDate)}</td></tr>
 <tr><td style="${tdl}">Bill / Invoice No.:</td><td style="${tdb}">${g(bc?.billNo)}</td><td style="${tdl}">Bill / Invoice Date:</td><td style="${tdb}">${fd(bc?.billDate)}</td></tr></table>
 
