@@ -17,15 +17,20 @@ export function renderLiabilityComparison(c: LiabilityComparison, o: Opts): stri
   const sum = `border-top:1pt solid ${bg};`;
   const net = (v: number) => `<td style="${r}${sum}">₹ ${fa(v)}</td>`;
   const addl = c.addl;
+  const k = c.cash;
+  // 5th column only when cash loss is on; every cell helper below is a no-op otherwise.
+  const x = (cell: string) => (k ? cell : '');
   const rows = [
-    row('Assessed repair cost (incl. GST)', val(c.repair.grand) + na + na + na),
-    row('Insured Declared Value (IDV)', na + val(c.idv) + val(c.idv) + val(c.idv)),
-    row('Less: Policy Excess (Comp/Vol)', neg(c.repair.excess) + neg(c.excess) + neg(c.excess) + neg(c.excess)),
-    row('Less: Salvage Value', neg(c.repair.salvage) + na + neg(c.salvageWithRC) + neg(c.salvageWithoutRC)),
-    c.missing > 0 ? row('Less: Missing items', na + neg(c.missing) + neg(c.missing) + neg(c.missing)) : '',
-    row('Add: Towing / Addl. Expenses', pos(c.repair.towing) + pos(addl) + pos(addl) + pos(addl)),
-    c.repair.keptOpen > 0 ? row('Add: K.O. parts (as per estimate)', pos(c.repair.keptOpen) + na + na + na) : '',
-    `<tr style="background:#f8fafc;font-weight:700;"><td style="${td}color:${bg};${sum}">NET PAYABLE LIABILITY</td>${net(c.repair.net)}${net(c.totalLoss)}${net(c.netWithRC)}${net(c.netWithoutRC)}</tr>`,
+    row('Assessed repair cost (incl. GST)', val(c.repair.grand) + na + na + na + x(na)),
+    row('Insured Declared Value (IDV)', na + val(c.idv) + val(c.idv) + val(c.idv) + x(na)),
+    k ? row('Cash loss gross (before GST, after salvage &amp; towing)', na + na + na + na + val(k.gross)) : '',
+    k ? row(`Less: Notional deduction @ ${k.percent}%`, na + na + na + na + neg(k.notional)) : '',
+    row('Less: Policy Excess (Comp/Vol)', neg(c.repair.excess) + neg(c.excess) + neg(c.excess) + neg(c.excess) + x(neg(c.excess))),
+    row('Less: Salvage Value', neg(c.repair.salvage) + na + neg(c.salvageWithRC) + neg(c.salvageWithoutRC) + x(na)),
+    c.missing > 0 ? row('Less: Missing items', na + neg(c.missing) + neg(c.missing) + neg(c.missing) + x(na)) : '',
+    row('Add: Towing / Addl. Expenses', pos(c.repair.towing) + pos(addl) + pos(addl) + pos(addl) + x(na)),
+    c.repair.keptOpen > 0 ? row('Add: K.O. parts (as per estimate)', pos(c.repair.keptOpen) + na + na + na + x(na)) : '',
+    `<tr style="background:#f8fafc;font-weight:700;"><td style="${td}color:${bg};${sum}">NET PAYABLE LIABILITY</td>${net(c.repair.net)}${net(c.totalLoss)}${net(c.netWithRC)}${net(c.netWithoutRC)}${k ? net(k.net) : ''}</tr>`,
   ].join('');
 
   return `
@@ -41,6 +46,7 @@ export function renderLiabilityComparison(c: LiabilityComparison, o: Opts): stri
             <th style="${td}width:18%;text-align:right;">Total Loss</th>
             <th style="${td}width:18%;text-align:right;">Net Loss (W/RC)</th>
             <th style="${td}width:18%;text-align:right;">Net Loss (W/O RC)</th>
+            ${k ? `<th style="${td}width:18%;text-align:right;">Cash Loss</th>` : ''}
           </tr>
         </thead>
         <tbody>

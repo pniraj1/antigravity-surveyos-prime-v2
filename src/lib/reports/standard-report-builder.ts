@@ -25,6 +25,8 @@ import { imt23Totals, imt23FootnoteText } from '@/lib/calculations/imt23-totals'
 import { getCompulsoryExcess, calculateAssessmentSummary } from '@/lib/calculations/assessment';
 import { keptOpenTotal, liabilityComparison } from '@/lib/calculations/kept-open';
 import { renderLiabilityComparison } from './liability-comparison-html';
+import { cashLossBasis } from '@/lib/calculations/cash-loss';
+import { renderCashLossTable } from './cash-loss-html';
 import { shouldStartSupplementaryBand } from '@/lib/calculations/utils';
 import { buildSerialMap } from '@/lib/calculations/serial-numbers';
 import { buildPrintShell, footerFromProfile, openPrintWindow } from './print-shell';
@@ -177,6 +179,7 @@ export function buildStandardFinalSurveyHTML(
   const compExcess = getCompulsoryExcess(claim.feeBill);
   const excess = volExcess + compExcess;
   const net = Math.max(0, grand + towing - salvage - excess);
+  const cash = isBillCheck ? null : cashLossBasis(claim, ageMonths);
 
   // The engine already derives every one of these. This file used to compute
   // its own, filtered by `allowed`, and the two drifted — the builder printed
@@ -793,7 +796,7 @@ ${isBillCheck ? '' : '\n' + causeSectionHtml}
 
 <p style="font-size:${scale.cellFont};line-height:1.5;text-align:justify;margin:4px 0;color:#000;">${isBillCheck
   ? billCheckPreambleFromClaim(claim, net)
-  : ((claim.reportPreamble && claim.reportPreamble.trim()) ? claim.reportPreamble : preambleFromClaim(claim, estimateTotalInclGst(rows), net))}</p>
+  : ((claim.reportPreamble && claim.reportPreamble.trim()) ? claim.reportPreamble : preambleFromClaim(claim, estimateTotalInclGst(rows), net) + (cash && cash.percent !== null ? ` The claim is recommended for settlement on cash loss basis at the insured's request, with a notional deduction of ${cash.percent}% for non-submission of bills.` : ''))}</p>
 <div style="font-weight:700;font-size:7pt;background:#0d1b2a;color:#fff;padding:2px 4px;margin-bottom:2px;">8. ASSESSMENT SUMMARY</div>
 <table style="${ts}">
   <thead>
@@ -887,12 +890,13 @@ ${isBillCheck ? '' : '\n' + causeSectionHtml}
     </tr>` : ''}
   </tbody>
 </table>
-
+${cash ? renderCashLossTable(cash, { td, tdr, headBg: '#0d1b2a' }) : ''}
 ${claim.isTotalLoss && claim.totalLossDetails ? renderLiabilityComparison(liabilityComparison({
   idv: parseFloat(String(claim.policy?.idv || '0').replace(/,/g, '')) || 0,
   excess,
   repairGrandInclGst: grand, repairTowing: towing, repairSalvage: salvage,
   keptOpen: isBillCheck ? 0 : keptOpenTotal(rows),
+  cash: cash && cash.percent !== null ? { gross: cash.gross, percent: cash.percent, notional: cash.notional, net: cash.net } : undefined,
   tl: { ...claim.totalLossDetails, salvageWithRC: claim.totalLossDetails.salvageWithRC || 0, salvageWithoutRC: claim.totalLossDetails.salvageWithoutRC || 0, towingExpenses: claim.totalLossDetails.towingExpenses || 0, workshopRent: claim.totalLossDetails.workshopRent || 0 },
 }), {
   td, labelFont: scale.labelFont, headerBg: '#0d1b2a',

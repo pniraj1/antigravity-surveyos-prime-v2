@@ -10,10 +10,13 @@ export function keptOpenTotal(rows: AssessmentRow[]): number {
   return keptOpenRows(rows).reduce((s, r) => s + r.estimated * (1 + (r.gst ?? 0) / 100), 0);
 }
 
+export interface CashComparison { gross: number; percent: number; notional: number; net: number }
+
 export interface ComparisonInput {
   idv: number; excess: number;
   repairGrandInclGst: number; repairTowing: number; repairSalvage: number;
   keptOpen: number;
+  cash?: CashComparison;
   tl: { salvageWithRC: number; salvageWithoutRC: number; towingExpenses: number; workshopRent: number; missingItems?: MissingItem[] };
 }
 
@@ -22,6 +25,7 @@ export interface LiabilityComparison {
   idv: number; excess: number; missing: number; addl: number;
   salvageWithRC: number; salvageWithoutRC: number;
   totalLoss: number; netWithRC: number; netWithoutRC: number;
+  cash?: CashComparison;
 }
 
 export function liabilityComparison(i: ComparisonInput): LiabilityComparison {
@@ -39,5 +43,6 @@ export function liabilityComparison(i: ComparisonInput): LiabilityComparison {
     totalLoss: base + addl,
     netWithRC: Math.max(0, base - tl.salvageWithRC) + addl,
     netWithoutRC: Math.max(0, base - tl.salvageWithoutRC) + addl,
+    cash: i.cash,
   };
 }
