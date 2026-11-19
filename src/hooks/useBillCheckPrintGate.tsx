@@ -34,6 +34,17 @@ export function keptOpenBlock(rows: AssessmentRow[]): { blocked: boolean; partic
   return { blocked: ko.length > 0, particulars: ko.map((r) => r.particulars) };
 }
 
+export const CASH_LOSS_NO_BILL_CHECK = 'This claim is settled on cash loss basis — no bill check';
+
+/** Why Bill Check print/export must wait. Empty = may proceed. */
+export function billCheckHoldReasons(claim: ClaimData): string[] {
+  const out: string[] = [];
+  if (claim.cashLoss?.enabled) out.push(CASH_LOSS_NO_BILL_CHECK);
+  const ko = keptOpenBlock(claim.assessmentRows || []);
+  if (ko.blocked) out.push(`Held while parts are kept open: ${ko.particulars.join(', ')}. Decide them in the Assessment tab.`);
+  return out;
+}
+
 export function useBillCheckPrintGate() {
   const currentClaim = useClaimStore((s) => s.currentClaim);
   const updateAssessmentRow = useClaimStore((s) => s.updateAssessmentRow);
@@ -68,9 +79,9 @@ export function useBillCheckPrintGate() {
     if (stored) for (const { id, updates } of fromBillSelfBillUpdates(stored)) updateAssessmentRow(id, updates);
     const claim = useClaimStore.getState().currentClaim ?? currentClaim;
     if (!claim) return;
-    const hold = keptOpenBlock(claim.assessmentRows || []);
-    if (hold.blocked) {
-      toast.error(`Printing is held while parts are kept open: ${hold.particulars.join(', ')}. Decide them in the Assessment tab.`);
+    const holds = billCheckHoldReasons(claim);
+    if (holds.length) {
+      toast.error(holds.join(' '));
       return;
     }
     setTargetFormat(format);

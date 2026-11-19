@@ -6,6 +6,7 @@ import { detectCTL } from '@/lib/calculations/assessment';
 import { getVehicleAgeMonths } from '@/lib/calculations/depreciation';
 import { AlertCircle, CheckCircle2, MessageSquare, Info } from 'lucide-react';
 import { toast } from 'sonner';
+import { cashLossBasis } from '@/lib/calculations/cash-loss';
 import { formatCurrency } from '@/lib/calculations/utils';
 import type { MissingItem } from '@/types/claim';
 
@@ -66,6 +67,10 @@ export function TotalLossForm() {
     });
   };
 
+  const cash = currentClaim.cashLoss ?? { enabled: false, notionalPercent: null };
+  const setCash = (patch: Partial<typeof cash>) => updateClaim({ cashLoss: { ...cash, ...patch } });
+  const cashBasis = cashLossBasis(currentClaim, ageMonths);
+
   const missingItems: MissingItem[] = currentClaim.totalLossDetails?.missingItems ?? [];
   const setMissing = (next: MissingItem[]) => updateTLDetails('missingItems', next);
   const patchMissing = (id: string, patch: Partial<MissingItem>) =>
@@ -79,12 +84,48 @@ export function TotalLossForm() {
           <AlertCircle size={18} />
         </div>
         <div>
-          <h3 className="text-lg font-medium tracking-tight">Total Loss Settlement</h3>
+          <h3 className="text-lg font-medium tracking-tight">Settlement basis</h3>
           <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">CTL Threshold & 4-Way Comparison</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6">
+        {/* Cash Loss */}
+        <div className="p-6 rounded-2xl border-2 border-gray-100 space-y-4">
+          <label className="flex items-center gap-3 text-sm font-medium cursor-pointer">
+            <input
+              type="checkbox"
+              role="switch"
+              checked={cash.enabled}
+              onChange={(e) => setCash({ enabled: e.target.checked })}
+            />
+            Cash Loss
+          </label>
+          {cash.enabled && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <label htmlFor="cash-notional" className="text-[10px] font-medium uppercase tracking-widest text-gray-500">
+                  Notional deduction %
+                </label>
+                <input
+                  id="cash-notional"
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={cash.notionalPercent ?? ''}
+                  onChange={(e) => setCash({ notionalPercent: e.target.value === '' ? null : parseFloat(e.target.value) })}
+                  className="w-28 px-3 py-2 rounded-xl border-2 border-gray-100 text-sm"
+                />
+              </div>
+              {cashBasis && (
+                <p className="text-xs font-medium text-gray-600">
+                  Gross {formatCurrency(cashBasis.gross)} · Net {formatCurrency(cashBasis.net)}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* CTL Suggestion Banner */}
         {ctlStatus.isCTL && !isTL && (
           <div className="flex items-center justify-between p-5 rounded-2xl animate-in zoom-in-95 duration-300 shadow-sm"

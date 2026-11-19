@@ -20,7 +20,7 @@ import { AIReviewDialog } from '@/components/dialogs/AIReviewDialog';
 import { DocumentEvidenceViewer } from '@/components/evidence/DocumentEvidenceViewer';
 import { DocumentReviewSheet } from '@/components/documents/DocumentReviewSheet';
 import { useEstimateModePrompt } from '@/hooks/useEstimateModePrompt';
-import { keptOpenBlock, useBillCheckPrintGate } from '@/hooks/useBillCheckPrintGate';
+import { keptOpenBlock, useBillCheckPrintGate, CASH_LOSS_NO_BILL_CHECK } from '@/hooks/useBillCheckPrintGate';
 import { BillCheckUploadDialog } from '@/components/dialogs/BillCheckUploadDialog';
 import { ReconciliationWizardDialog } from '@/components/dialogs/ReconciliationWizardDialog';
 
@@ -174,6 +174,10 @@ export function BillCheckTab() {
 
   const koBlock = keptOpenBlock(allRows);
   const matchedCount = allRows.filter(r => Boolean(r.refMatch || r.refSrNo)).length;
+
+  if (currentClaim.cashLoss?.enabled) {
+    return <div className="p-6 text-sm text-muted-foreground">{CASH_LOSS_NO_BILL_CHECK}</div>;
+  }
 
   return (
     <div className="flex flex-col h-[calc(100dvh-140px)] p-3 lg:p-4 max-w-[1700px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300">

@@ -657,9 +657,10 @@ export function AssessmentSectionTable({
                       <button
                         type="button"
                         onClick={() => toggleRowKeptOpen(row.id)}
+                        disabled={!!currentClaim?.cashLoss?.enabled}
                         aria-pressed={!!row.keptOpen}
-                        title="Kept open — decide after dismantling"
-                        className={`ml-1 inline-flex items-center justify-center h-6 px-1 rounded border text-[9px] font-medium transition-colors cursor-pointer ${
+                        title={currentClaim?.cashLoss?.enabled ? 'Not available on cash loss claims' : 'Kept open — decide after dismantling'}
+                        className={`ml-1 inline-flex items-center justify-center h-6 px-1 rounded border text-[9px] font-medium transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
                           row.keptOpen
                             ? 'border-amber-600 bg-amber-500 text-white'
                             : 'border-input bg-transparent text-muted-foreground hover:bg-amber-500/10'

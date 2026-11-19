@@ -9,7 +9,7 @@ import { downloadAsWord } from '@/lib/reports/word-export';
 import { footerFromProfile } from '@/lib/reports/print-shell';
 import { buildStandardFinalSurveyHTML } from '@/lib/reports/standard-report-builder';
 import { buildUIICBillCheckHTML } from '@/lib/reports/uiic-final-builder';
-import { useBillCheckPrintGate, keptOpenBlock } from '@/hooks/useBillCheckPrintGate';
+import { useBillCheckPrintGate, billCheckHoldReasons } from '@/hooks/useBillCheckPrintGate';
 
 const FORMATS = [
   {
@@ -56,9 +56,9 @@ export function BillCheckActions({
   const { requestPrint, dialogs } = useBillCheckPrintGate();
 
   const handleExportWord = async () => {
-    const hold = keptOpenBlock(claim?.assessmentRows || []);
-    if (hold.blocked) {
-      toast.error(`Export is held while parts are kept open: ${hold.particulars.join(', ')}. Decide them in the Assessment tab.`);
+    const holds = billCheckHoldReasons(claim);
+    if (holds.length) {
+      toast.error(holds.join(' '));
       return;
     }
     setIsExportingWord(true);
