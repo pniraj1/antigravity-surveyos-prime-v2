@@ -13,7 +13,8 @@ export type DocType =
   | 'niaAssessmentExcel' | 'oicAssessmentExcel' | 'insuredSummary'
   | 'workApproval' | 'deliveryOrder' | 'other'
   | 'aadhaar' | 'pan' | 'ckyc' | 'kycOther' | 'claimIntimation'
-  | 'dischargeVoucher' | 'csr' | 'investigationReport' | 'rcBack' | 'dlBack';
+  | 'dischargeVoucher' | 'csr' | 'investigationReport' | 'rcBack' | 'dlBack'
+  | 'cashLossConsent';
 
 export type PhotoTag = 'front' | 'rear' | 'left' | 'right' | 'chassis' | 'odometer' | 'spot' | 'damage';
 
@@ -110,6 +111,7 @@ export const DOC_TYPE_LABEL: Record<DocType, string> = {
   investigationReport: 'Investigation Report',
   rcBack: 'RC Book Back',
   dlBack: 'Driving Licence Back',
+  cashLossConsent: 'Cash Loss Consent of Insured',
 };
 
 /** Types that hold many files in a subfolder; everything else is one file per claim. */

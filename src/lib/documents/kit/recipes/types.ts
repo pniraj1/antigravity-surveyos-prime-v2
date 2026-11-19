@@ -9,6 +9,8 @@ export interface RecipeBox {
   /** Merge boxes: types that must be present for the box to count as filled. */
   mergeMandatory?: DocType[];
   formats: string[];
+  /** Checklist-only: asked for, but never built into the portal upload set and never blocks Build. */
+  internal?: true;
 }
 
 export interface Recipe {

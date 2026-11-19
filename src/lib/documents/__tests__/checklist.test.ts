@@ -5,6 +5,7 @@ import type { ClaimDocument, DocType, PageLabel } from '@/types/documents';
 import { recipeFor, RECIPES } from '../kit/recipes';
 import type { Recipe } from '../kit/recipes';
 import { checklist, missingMessage } from '../kit/checklist';
+import { canBuild } from '../kit/panel';
 
 const DEV = 'PC1';
 const confirmed = (type: DocType, over: Partial<PageLabel> = {}): PageLabel => ({ type, by: 'text', confirmed: true, ...over });
@@ -206,5 +207,20 @@ describe('missingMessage', () => {
       .toBe('Claim CL/77: please send the following documents: RC Book.');
     expect(missingMessage({ ...c, policy: { ...c.policy, claimNumber: '' }, vehicle: { ...c.vehicle, registrationNumber: '' } }, states))
       .toBe('Claim: please send the following documents: RC Book.');
+  });
+});
+
+describe('cash loss consent', () => {
+  const consentState = (enabled: boolean) => {
+    const c = claim([]);
+    return run({ ...c, cashLoss: { enabled, notionalPercent: 30 } }).find((s) => s.box.id === 'cashLossConsent');
+  };
+  it('is a required box only when cash loss is on, and never blocks Build', () => {
+    expect(consentState(false)).toBeUndefined();
+    expect(consentState(true)).toMatchObject({ status: 'missing', box: { mandatory: true } });
+    expect(missingMessage(claim([], {}), [consentState(true)!])).toContain('Cash Loss Consent of Insured');
+    expect(canBuild([consentState(true)!])).toBe(false); // nothing to build, but not because of the consent box
+    const ready = run(claim([doc('d1', 'rc', { 1: confirmed('rc') })]));
+    expect(canBuild([...ready, consentState(true)!])).toBe(canBuild(ready));
   });
 });

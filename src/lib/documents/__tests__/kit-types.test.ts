@@ -12,14 +12,14 @@ const ALL_TYPES: DocType[] = [
   'niaAssessmentExcel', 'oicAssessmentExcel', 'insuredSummary',
   'workApproval', 'deliveryOrder', 'other',
   'aadhaar', 'pan', 'ckyc', 'kycOther', 'claimIntimation',
-  'dischargeVoucher', 'csr', 'investigationReport', 'rcBack', 'dlBack',
+  'dischargeVoucher', 'csr', 'investigationReport', 'rcBack', 'dlBack', 'cashLossConsent',
 ];
 
 describe('kit types', () => {
   it('every DocType has a label', () => {
-    expect(ALL_TYPES).toHaveLength(40);
+    expect(ALL_TYPES).toHaveLength(41);
     for (const t of ALL_TYPES) expect(DOC_TYPE_LABEL[t]).toBeTruthy();
-    expect(Object.keys(DOC_TYPE_LABEL)).toHaveLength(40);
+    expect(Object.keys(DOC_TYPE_LABEL)).toHaveLength(41);
   });
 
   it('docTypeFromRelPath recognises common words', () => {

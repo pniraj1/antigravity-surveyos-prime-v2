@@ -3,6 +3,8 @@ import React from 'react';
 import { Page, Text, View, Document, StyleSheet } from '@react-pdf/renderer';
 import type { ClaimData } from '@/types/claim';
 import type { InsuredReportDraft } from '@/types/insured-report';
+import { cashLossBasis } from '@/lib/calculations/cash-loss';
+import { getVehicleAgeMonths } from '@/lib/calculations/depreciation';
 
 const C = {
   navy: '#0D1B2A',
@@ -58,6 +60,18 @@ const styles = StyleSheet.create({
 
 function fmt(n: number): string {
   return `₹${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+/** The one line telling the insured the claim is settled on cash loss; null when it is not. */
+export function cashLossLine(claim: ClaimData): string | null {
+  const ageMonths = getVehicleAgeMonths(
+    claim.vehicle.dateOfRegistration || null,
+    claim.vehicle.yearOfManufacture ? Number(claim.vehicle.yearOfManufacture) : null,
+    claim.accident.dateAndTime || null,
+  );
+  const cash = cashLossBasis(claim, ageMonths);
+  if (!cash) return null;
+  return `Settled on cash loss basis at your request; a notional deduction of ${cash.percent}% (${fmt(cash.notional)}) applies as repair bills are not submitted.`;
 }
 
 export function categoryLabel(cat: string | undefined, allowed: boolean, keptOpen?: boolean): string {
@@ -175,6 +189,8 @@ export function InsuredSummaryDocument({
             <Text style={styles.summaryHlAmount}>{fmt(fs.insuredPays)}</Text>
           </View>
         </View>
+
+        {cashLossLine(claim) && <Text style={styles.deductionText}>{cashLossLine(claim)}</Text>}
 
         {/* Block 3: Why is there a difference? */}
         {(fs.depreciationTotal > 0 || fs.imt23Total > 0 || fs.excessTotal > 0 || fs.consumablesTotal > 0 ||

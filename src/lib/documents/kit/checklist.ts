@@ -8,6 +8,7 @@ import { DOC_TYPE_LABEL } from '@/types/documents';
 import { claimDocuments, onThisDevice } from '../index-ops';
 import type { IdentityResult } from './identity';
 import type { Recipe, RecipeBox } from './recipes';
+import { single } from './recipes/types';
 
 export type BoxStatus = 'ready' | 'check' | 'missing' | 'empty' | 'notNeeded';
 
@@ -53,11 +54,14 @@ function wholeFiles(docs: ClaimDocument[], type: DocType): { word: Part[]; html:
   };
 }
 
+const CASH_LOSS_CONSENT_BOX: RecipeBox = { ...single('cashLossConsent', 'Cash Loss Consent of Insured', true), internal: true };
+
 export function checklist(recipe: Recipe, claim: ClaimData, opts: ChecklistOpts): BoxState[] {
   const docs = claimDocuments(claim).filter((d) => onThisDevice(d, opts.device));
   const skipped = new Set(claim.notNeededBoxes?.[`${recipe.portal}-${recipe.flow}`] ?? []);
 
-  return recipe.boxes.map((box) => {
+  const boxes = claim.cashLoss?.enabled ? [...recipe.boxes, CASH_LOSS_CONSENT_BOX] : recipe.boxes;
+  return boxes.map((box) => {
     if (skipped.has(box.id)) return { box, status: 'notNeeded', parts: [], missingTypes: [], reasons: [], alternatives: 0 };
     return box.combine === 'merge' ? mergeBox(box, docs, opts) : singleBox(box, docs, opts);
   });

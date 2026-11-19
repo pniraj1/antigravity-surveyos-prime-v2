@@ -36,7 +36,7 @@ export function countsLine(states: BoxState[]): string {
 
 /** Build is allowed when no mandatory box is missing and at least one box has something to build. */
 export const canBuild = (states: BoxState[]): boolean =>
-  !states.some((s) => s.status === 'missing' && s.box.mandatory) && buildable(states).length > 0;
+  !states.some((s) => s.status === 'missing' && s.box.mandatory && !s.box.internal) && buildable(states).length > 0;
 
 export const formatSize = (bytes: number): string =>
   bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;

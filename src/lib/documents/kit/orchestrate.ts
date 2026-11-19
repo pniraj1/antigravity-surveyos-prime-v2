@@ -162,7 +162,7 @@ export function overrideLabel(claim: ClaimData, docId: string, page: number, now
 
 /** Boxes that Build makes a file for: ready or check, with something other than the HTML stand-in to build from. */
 export const buildable = (states: BoxState[]): BoxState[] =>
-  states.filter((s) => (s.status === 'ready' || s.status === 'check') && planBox(s).length > 0);
+  states.filter((s) => !s.box.internal && (s.status === 'ready' || s.status === 'check') && planBox(s).length > 0);
 
 export type BoxError = { boxId: string; reason: string };
 export type BuiltBox = { boxId: string; state: BoxState; plan: BoxPlan; blob: Blob; name: string; pages: number };
