@@ -6,6 +6,9 @@
 
 import type { DeductionCategory } from '@/lib/constants/deduction-categories';
 import type { PhotoTag } from './documents';
+import type { PaymentStatus } from './payment-reconciliation';
+
+export type { PaymentStatus } from './payment-reconciliation';
 
 export type PartType = 'metal' | 'plastic' | 'glass' | 'fiberglass' | 'labour' | 'paint';
 export type AssessmentSection = 'parts' | 'labour' | 'paint';
@@ -366,6 +369,18 @@ export interface FeeBill {
   towingCharges?: number;
   /** Whether the surveyor fee has been received from the insurer */
   feePaid: boolean;
+  /** Payment status from reconciliation or manual entry */
+  paymentStatus?: PaymentStatus;
+  /** Actual amount received credited to bank account */
+  amountReceived?: number;
+  /** Tax Deducted at Source (TDS) u/s 194J */
+  tdsDeducted?: number;
+  /** Date when payment was credited */
+  paymentDate?: string;
+  /** Unique Transaction Reference (UTR) / NEFT / RTGS number */
+  utrNumber?: string;
+  /** Name/reference of the payment advice source document */
+  paymentAdviceSource?: string;
 }
 
 // ─── PHOTO SHEET ────────────────────────────────────────
