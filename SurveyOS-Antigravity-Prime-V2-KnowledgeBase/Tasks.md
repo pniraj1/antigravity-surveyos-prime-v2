@@ -1,3 +1,21 @@
+## Done: Payment Reconciliation & Received Fees Cockpit (2026-11-19, Antigravity)
+- **Status:** Complete on `main` (b8b88b4e, 8c47d51d, c43ddece, 01f7a004, 593bf2e9, b88cd20b, 17506a12). Not deployed, not browser-tested.
+- **Implementation Plan:** `docs/plans/2026-11-19-payment-reconciliation-tab.md`
+- **Session:** `Sessions/2026-11-19-payment-reconciliation-cockpit.md`
+- **Delivered:**
+  1. **Data Model:** `PaymentStatus`, `PaymentAdvice`, `PaymentMatchResult`, and expanded `FeeBill` fields (`paymentStatus`, `amountReceived`, `tdsDeducted`, `paymentDate`, `utrNumber`, `paymentAdviceSource`).
+  2. **Strict Matching Engine (`src/lib/reconciliation/matcher.ts`):** Enforces strict Claim No / Vehicle Reg No matching. Zero blind amount-only matching.
+  3. **Surveyor Verified Sender Store (`src/lib/reconciliation/sample-store.ts`):** Pre-seeded with 7 Indian insurer and bank CMS remittance senders, customizable with browser storage.
+  4. **Gemini Multimodal Extractor (`src/lib/ai/payment-advice-extractor.ts`):** Parses text and PDF/image payment advices with auto 10% TDS calculation (u/s 194J).
+  5. **Client-Side Gmail Fetcher (`src/lib/reconciliation/gmail-fetcher.ts`):** Scoped queries for payment advices with zero server storage.
+  6. **3-Zone Financial Cockpit (`PaymentReconciliationTab.tsx`):**
+     - Top KPI strip (Total Billed, Received in Bank, Pending Outstanding, TDS Withheld).
+     - Matching Queue with 1-click `[ Confirm & Settle ]` and unmatched tray.
+     - Master Claims Fee Ledger with live search, filters, and overdue ageing badges.
+     - Verified Senders manager modal.
+  7. **Navigation & Security:** Sidebar entry under `MAIN` (`requiresClaim: false`), guarded by `shouldHideFees` for assistants.
+- **SurveyOS Scan impact: none (isolated to Prime V2 web client financial tracking).**
+
 ## Done: Cash loss settlement basis (2026-11-19, Claude Code)
 - **Status:** Complete on `main` (76d8d97b, 026c4183, 3c196107, 55336853 + insured report/consent commit). Not deployed, not browser-tested. Session: `Sessions/2026-11-19-cash-loss-basis.md`.
 - **Delivered:** switch + surveyor notional % on the Assessment tab "Settlement basis" panel; 8A table in Standard and UIIC Final; Cash Loss column in the Total Loss comparison; UIIC Amount Payable = cash net; Bill Check held; fee bill and portals unchanged; `cashLossConsent` doc type; insured report line.
