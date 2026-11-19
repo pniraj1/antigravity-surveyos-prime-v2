@@ -8,6 +8,7 @@ import { getConflictFields } from '@/lib/ai/reconciliation';
 import { isNavItemVisible } from '@/lib/navigation/visible-nav';
 import {
   LayoutDashboard,
+  Banknote,
   FileText,
   ScanSearch,
   ClipboardList,
@@ -60,6 +61,13 @@ export function shouldHideFees(isTeamMember: boolean, hideEarnings: boolean | un
 
 export const NAV_ITEMS: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={17} />, group: 'main' },
+  {
+    id: 'payment-reconciliation',
+    label: 'Payment Reconciliation',
+    icon: <Banknote size={17} />,
+    group: 'main',
+    requiresClaim: false,
+  },
   { id: 'documents', label: 'Documents', icon: <FileText size={17} />, group: 'claim', requiresClaim: true },
   { id: 'review', label: 'AI Review', icon: <ScanSearch size={17} />, group: 'claim', requiresClaim: true },
   { id: 'details', label: 'Claim Details', icon: <ClipboardList size={17} />, group: 'claim', requiresClaim: true },
@@ -290,7 +298,7 @@ export function Sidebar() {
           {groups.map((group) => {
             const items = NAV_ITEMS.filter((item) => {
               if (item.group !== group) return false;
-              if (item.id === 'fees' && shouldHideFees(isTeamMember, hideEarnings)) return false;
+              if ((item.id === 'fees' || item.id === 'payment-reconciliation') && shouldHideFees(isTeamMember, hideEarnings)) return false;
               return isNavItemVisible(item.id, currentClaim?.surveyType);
             });
 

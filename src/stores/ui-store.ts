@@ -9,6 +9,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 
 export type AppTab =
   | 'dashboard'
+  | 'payment-reconciliation'
   | 'documents'
   | 'review'
   | 'details'

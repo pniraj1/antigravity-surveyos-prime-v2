@@ -72,10 +72,11 @@ const RecoveredClaimsView = dynamicImport(() => import('@/components/tabs/Recove
 const ReinspectionTab  = dynamicImport(() => import('@/components/tabs/ReinspectionTab').then(m  => ({ default: m.ReinspectionTab  })), { ssr: false });
 const ValuationTab        = dynamicImport(() => import('@/components/tabs/ValuationTab').then(m        => ({ default: m.ValuationTab        })), { ssr: false });
 const InsuredReportTab    = dynamicImport(() => import('@/components/tabs/InsuredReportTab').then(m    => ({ default: m.InsuredReportTab    })), { ssr: false });
+const PaymentReconciliationTab = dynamicImport(() => import('@/components/tabs/PaymentReconciliationTab').then(m => ({ default: m.PaymentReconciliationTab })), { ssr: false });
 
 // ─── Dashboard Tab Content ──────────────────────────────
 export function DashboardContent({ initialShowArchived = false }: { initialShowArchived?: boolean } = {}) {
-  const { setNewClaimDialogOpen, setClaimsListOpen, isClaimsListOpen } = useUIStore();
+  const { setNewClaimDialogOpen, setClaimsListOpen, isClaimsListOpen, setActiveTab } = useUIStore();
   const storeClaimsList = useClaimStore((s) => s.claimsList);
   const claimsList = (typeof useClaimStore?.getState === 'function' ? useClaimStore.getState().claimsList : null) ?? storeClaimsList ?? [];
   const auth = useAuthStore();
@@ -270,7 +271,7 @@ export function DashboardContent({ initialShowArchived = false }: { initialShowA
                   Export annual summary
                 </button>
                 <button
-                  onClick={() => setShowReconcile(true)}
+                  onClick={() => setActiveTab('payment-reconciliation')}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all bg-[var(--color-status-warning-tint)] text-[var(--color-status-warning)] border border-[var(--color-status-warning)]/30 hover:opacity-90"
                 >
                   Reconcile bank statement
@@ -686,6 +687,22 @@ export function TabPlaceholder({ tab }: { tab: string }) {
   // Admin-only: guard against URL-based access for non-admin users
   if (tab === 'insured-report')  return profile.isAdmin ? <InsuredReportTab /> : null;
   if (tab === 'bill-check')      return <BillCheckTab />;
+  if (tab === 'payment-reconciliation') {
+    if (shouldHideFees(isTeamMember, hideEarnings)) {
+      return (
+        <div className="flex flex-col items-center justify-center p-16 text-center">
+          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center mb-4">
+            <Lock size={24} />
+          </div>
+          <h3 className="text-base font-medium text-foreground">Access Restricted</h3>
+          <p className="text-xs text-muted-foreground max-w-sm mt-1.5 leading-relaxed">
+            Payment reconciliation and fee tracking are restricted to the primary surveyor.
+          </p>
+        </div>
+      );
+    }
+    return <PaymentReconciliationTab />;
+  }
   if (tab === 'fees') {
     if (shouldHideFees(isTeamMember, hideEarnings)) {
       return (

@@ -79,6 +79,12 @@ export const TAB_HELP: Record<AppTab, TabHelpInfo> = {
     tip: 'Start a new claim or pick up saved work. Track your progress with the Getting Started checklist.',
     isClaimTab: false,
   },
+  'payment-reconciliation': {
+    title: 'Payment Reconciliation',
+    what: 'Reconcile insurance survey fee payments, bank statements, and TDS deductions.',
+    tip: 'Upload bank statements or insurer payout advices to automatically match payments against outstanding fee bills.',
+    isClaimTab: false,
+  },
   profile: {
     title: 'Profile',
     what: 'Your surveyor credentials, IRDAI licence, signature, stamp, bank particulars, and AI key.',
