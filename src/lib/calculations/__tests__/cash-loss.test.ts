@@ -27,6 +27,19 @@ const sampleRows = [
   row({ assessed: 1600, partType: 'glass' }),
 ];
 
+describe('cashLossBasis rounding and floor', () => {
+  test('33.33% rounds notional to paise and nets from the rounded figure', () => {
+    const b = cashLossBasis(claimOf([row({ assessed: 1000.01, section: 'labour', partType: 'labour' })], { enabled: true, notionalPercent: 33.33 }, { salvageValue: 0, compulsoryExcess: 0 }), 0)!;
+    expect(b.notional).toBe(Math.round(b.gross * 33.33) / 100);
+    expect(b.net).toBeCloseTo(b.gross - b.notional, 10);
+  });
+  test('salvage above gross gives zero notional, never negative', () => {
+    const b = cashLossBasis(claimOf([row({ assessed: 100 })], { enabled: true, notionalPercent: 30 }, { salvageValue: 5000 }), 0)!;
+    expect(b.gross).toBeLessThan(0);
+    expect(b.notional).toBe(0);
+  });
+});
+
 describe('cashLossBasis', () => {
   test('sample: gross 105000.50, notional 31500.15, net 72500.35', () => {
     const b = cashLossBasis(claimOf(sampleRows), 0)!;

@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { buildUIICFinalHTML } from '../uiic-final-builder';
 import { buildStandardFinalHTML } from '../standard-report-builder';
+import { numberToWords } from '../report-utils';
 import { nonKoClaim } from './non-ko-claim';
 import type { ClaimData } from '@/types';
 import type { AssessmentRow } from '@/types/assessment';
@@ -47,6 +48,11 @@ describe('cash loss in UIIC Final', () => {
     expect(h).not.toContain('authorize repairs');
     expect(h).toMatch(/recommended for Rs. 72500.35/);
     expect(html({ ...sample(), cashLoss: undefined } as ClaimData)).toContain('authorize repairs');
+  });
+
+  test('in words matches the cash net, not the repair net', () => {
+    const h = html(sample({ cashLoss: { enabled: true, notionalPercent: 50 } }));
+    expect(h).toContain(`In words: RUPEES ${numberToWords(51500.25)} ONLY`);
   });
 
   test('UIIC 8A gross equals standard 8A gross', () => {

@@ -526,7 +526,7 @@ ${getSigBlock(profile)}
 <div style="font-size:7pt;">NOTE:- UIIC BILL CHECK REPORT AS PER ASSESSMENT SHEET.</div>
 <div style="display:flex;justify-content:space-between;margin-top:16px;font-size:7pt;"><div>Signature of Claims Personnel<br/>Date</div><div>Signature of Claims Officer<br/>Date:</div><div>Signature of Claims Officer approving claim<br/>Date:</div></div>
 <div style="text-align:center; font-family:serif; font-weight:bold; font-size:9pt; margin-top:14px;">${nm}</div>
-<div style="font-size:6.5pt;color:#666;margin-top:4px;border-top:0.4pt solid #ccc;padding-top:2px;">In words: RUPEES ${numberToWords(net)} ONLY</div>`;
+<div style="font-size:6.5pt;color:#666;margin-top:4px;border-top:0.4pt solid #ccc;padding-top:2px;">In words: RUPEES ${numberToWords(payableByInsurer)} ONLY</div>`;
 
   return p1 + p2 + p3 + p5;
 }

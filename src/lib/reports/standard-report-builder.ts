@@ -16,7 +16,7 @@ import type { SurveyorProfile } from '@/types/vehicle';
 
 import { formatDateDMY, formatDateTimeDMY, formatSurveyDateTime, fa, numberToWords, getVehicleAgeMonths, getSurveyorHeader, getSigBlock, escapeHtml } from './report-utils';
 import { getHtmlScale } from './report-style-utils';
-import { preambleFromClaim, estimateTotalInclGst, billCheckPreambleFromClaim } from './final-survey-preamble';
+import { preambleFromClaim, estimateTotalInclGst, billCheckPreambleFromClaim, cashLossPreambleSentence } from './final-survey-preamble';
 import { projectForBillCheck, resolveBillSalvage } from './bill-check-projection';
 import { computeRowNet, effectiveAssessed } from '@/lib/calculations/row-net';
 import { toDepreciationType, paintMaterialRate } from '@/lib/calculations/depreciation';
@@ -796,7 +796,7 @@ ${isBillCheck ? '' : '\n' + causeSectionHtml}
 
 <p style="font-size:${scale.cellFont};line-height:1.5;text-align:justify;margin:4px 0;color:#000;">${isBillCheck
   ? billCheckPreambleFromClaim(claim, net)
-  : ((claim.reportPreamble && claim.reportPreamble.trim()) ? claim.reportPreamble : preambleFromClaim(claim, estimateTotalInclGst(rows), net) + (cash && cash.percent !== null ? ` The claim is recommended for settlement on cash loss basis at the insured's request, with a notional deduction of ${cash.percent}% for non-submission of bills.` : ''))}</p>
+  : ((claim.reportPreamble && claim.reportPreamble.trim()) ? claim.reportPreamble : preambleFromClaim(claim, estimateTotalInclGst(rows), net) + (cash && cash.percent !== null ? cashLossPreambleSentence(cash.percent) : ''))}</p>
 <div style="font-weight:700;font-size:7pt;background:#0d1b2a;color:#fff;padding:2px 4px;margin-bottom:2px;">8. ASSESSMENT SUMMARY</div>
 <table style="${ts}">
   <thead>

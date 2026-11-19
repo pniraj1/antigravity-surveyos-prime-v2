@@ -70,7 +70,7 @@ export function cashLossLine(claim: ClaimData): string | null {
     claim.accident.dateAndTime || null,
   );
   const cash = cashLossBasis(claim, ageMonths);
-  if (!cash) return null;
+  if (!cash || cash.percent === null) return null;
   return `Settled on cash loss basis at your request; a notional deduction of ${cash.percent}% (${fmt(cash.notional)}) applies as repair bills are not submitted.`;
 }
 

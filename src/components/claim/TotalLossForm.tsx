@@ -119,7 +119,8 @@ export function TotalLossForm() {
               </div>
               {cashBasis && (
                 <p className="text-xs font-medium text-gray-600">
-                  Gross {formatCurrency(cashBasis.gross)} · Net {formatCurrency(cashBasis.net)}
+                  Gross {formatCurrency(cashBasis.gross)} · Net {cashBasis.percent === null ? '—' : formatCurrency(cashBasis.net)}
+                  {cashBasis.percent === null && ' · Enter 0–100'}
                 </p>
               )}
             </div>

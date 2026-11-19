@@ -16,6 +16,9 @@ describe('insured report cash loss line', () => {
       'Settled on cash loss basis at your request; a notional deduction of 30% (₹3,000.00) applies as repair bills are not submitted.',
     );
   });
+  test('on but percent missing: no line', () => {
+    expect(cashLossLine(claimOf({ enabled: true, notionalPercent: null }))).toBeNull();
+  });
   test('off: no line', () => {
     expect(cashLossLine(claimOf({ enabled: false, notionalPercent: 30 }))).toBeNull();
     expect(cashLossLine(claimOf(undefined))).toBeNull();

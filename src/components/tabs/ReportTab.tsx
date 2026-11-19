@@ -29,7 +29,8 @@ import { buildUIICFinalHTML, buildUIICBillCheckHTML } from '@/lib/reports/uiic-f
 import { buildValuationReportHTML, buildValuationPrintDocument, triggerValuationPrint } from '@/lib/reports/valuation-report-builder';
 import { downloadAsWord } from '@/lib/reports/word-export';
 import { footerFromProfile } from '@/lib/reports/print-shell';
-import { preambleFromClaim } from '@/lib/reports/final-survey-preamble';
+import { preambleFromClaim, cashLossPreambleSentence } from '@/lib/reports/final-survey-preamble';
+import { cashLossBasis } from '@/lib/calculations/cash-loss';
 import { ReportPageSheet, splitReportHtml, estimatePageCount } from './report/ReportPageSheet';
 import DOMPurify from 'dompurify';
 
@@ -137,6 +138,7 @@ export function ReportTab() {
     currentClaim?.vehicle?.yearOfManufacture ? Number(currentClaim.vehicle.yearOfManufacture) : null,
     currentClaim?.accident?.dateAndTime || null,
   );
+  const cashBasis = currentClaim ? cashLossBasis(currentClaim, ageMonths) : null;
   const fb = currentClaim?.feeBill || {};
   const summary = calculateAssessmentSummary(
     currentClaim?.assessmentRows || [],
@@ -167,7 +169,7 @@ export function ReportTab() {
     currentClaim,
     safeSummary.totalEstimated,
     safeSummary.netAssessedLoss,
-  );
+  ) + (cashBasis && cashBasis.percent !== null ? cashLossPreambleSentence(cashBasis.percent) : '');
   const preambleValue = (currentClaim.reportPreamble && currentClaim.reportPreamble.trim())
     ? currentClaim.reportPreamble
     : defaultPreamble;

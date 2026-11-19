@@ -7,6 +7,7 @@ import { policyCheckStatus } from '@/lib/policy/policy-check';
 import { estimateShortRows, overBilledRows } from '@/lib/calculations/estimate-floor';
 import { toast } from 'sonner';
 import { cashLossHold } from '@/lib/calculations/cash-loss';
+import { billCheckHoldReasons } from '@/hooks/useBillCheckPrintGate';
 import { EstimateShortDialog, type RowIssueSet } from '@/components/dialogs/EstimateShortDialog';
 
 export type GatedReport = 'final' | 'uiic-final' | 'bill-check' | 'uiic-bill-check';
@@ -36,7 +37,9 @@ export function usePrintGate(): {
   const gate = useCallback((report: GatedReport, run: () => void, printLabel?: string) => {
     const claim = useClaimStore.getState().currentClaim;
     // Cash loss: Final print and Word export wait for the % and any K.O. decisions.
-    const hold = claim && (report === 'final' || report === 'uiic-final') ? cashLossHold(claim) : [];
+    const hold = !claim ? []
+      : report === 'final' || report === 'uiic-final' ? cashLossHold(claim)
+      : billCheckHoldReasons(claim);
     if (hold.length > 0) { toast.error(hold.join(' · ')); return; }
     // Owner rules: Assessment estimate >= assessed; Bill Check allowed <= billed.
     const rows = claim?.assessmentRows ?? [];

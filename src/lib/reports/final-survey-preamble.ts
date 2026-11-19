@@ -61,6 +61,11 @@ export function preambleFromClaim(
   });
 }
 
+/** The sentence added to the Final preamble when the claim is settled on cash loss. */
+export function cashLossPreambleSentence(percent: number): string {
+  return ` The claim is recommended for settlement on cash loss basis at the insured's request, with a notional deduction of ${percent}% for non-submission of bills.`;
+}
+
 export interface BillCheckPreambleInputs {
   appointingOffice?: string;
   insurerName?: string;

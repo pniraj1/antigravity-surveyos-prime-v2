@@ -31,7 +31,7 @@ export function cashLossBasis(claim: ClaimData, ageMonths: number): CashLossBasi
   const excess = (claim.feeBill?.voluntaryExcess ?? 0) + getCompulsoryExcess(claim.feeBill);
   const gross = labour + towing + parts.metal + parts.plastic + parts.glass + parts.fiberglass - salvage;
   const percent = validPercent(claim.cashLoss.notionalPercent) ? claim.cashLoss.notionalPercent : null;
-  const notional = percent === null ? 0 : (gross * percent) / 100;
+  const notional = percent === null ? 0 : Math.max(0, Math.round(gross * percent) / 100);
   return { labour, towing, parts, salvage, gross, percent, notional, excess, net: Math.max(0, gross - notional - excess) };
 }
 
