@@ -1,3 +1,8 @@
+## Done: Cash loss settlement basis (2026-11-19, Claude Code)
+- **Status:** Complete on `main` (76d8d97b, 026c4183, 3c196107, 55336853 + insured report/consent commit). Not deployed, not browser-tested. Session: `Sessions/2026-11-19-cash-loss-basis.md`.
+- **Delivered:** switch + surveyor notional % on the Assessment tab "Settlement basis" panel; 8A table in Standard and UIIC Final; Cash Loss column in the Total Loss comparison; UIIC Amount Payable = cash net; Bill Check held; fee bill and portals unchanged; `cashLossConsent` doc type; insured report line.
+- **SurveyOS Scan impact: new doc type mirrored** (`handover/prime-cash-loss-doc-type.md`).
+
 ## Done: Kept-open (K.O.) parts and liability comparison (2026-11-19, Claude Code)
 - **Status:** Complete on `main` (ab3bc6e7, dac68a7c, 92a1b458, 915331ed, d291b629, 4a3d8b67, 0dc45720). Not deployed, not browser-tested. Session: `Sessions/2026-11-19-kept-open-parts.md`.
 - **Delivered:**

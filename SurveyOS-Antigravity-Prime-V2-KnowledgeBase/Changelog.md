@@ -1,3 +1,11 @@
+## 2026-11-19 (Claude Code) — Cash loss settlement basis
+- feat(assessment): "Settlement basis" panel on the Assessment tab: cash loss switch and surveyor notional % (`claim.cashLoss`); figures from `cashLossBasis` in `src/lib/calculations/cash-loss.ts`.
+- feat(report): 8A table in the standard Final and UIIC Final; Cash Loss column in the Total Loss comparison; UIIC Amount Payable = cash net. Bill Check held while cash loss is on; fee bill and portals unchanged.
+- feat(insured-report): one line on the insured report giving the notional % and amount.
+- feat(documents): doc type `cashLossConsent` ("Cash Loss Consent of Insured"), a required checklist box only when cash loss is on; never built into the portal upload set, never blocks Build.
+- commits: 76d8d97b, 026c4183, 3c196107, 55336853 and the insured report/consent commit. Not deployed, not browser-tested.
+- SurveyOS Scan impact: new doc type mirrored (`DocType.CASH_LOSS_CONSENT`); handover note `docs/handover/prime-cash-loss-doc-type.md`.
+
 ## 2026-11-19 (Claude Code) — K.O. parts and liability comparison
 - feat(assessment): K.O. (kept open) mark on rows, stored as `allowed: false` + `keptOpen: true`; `keptOpenRows`/`keptOpenTotal`/`liabilityComparison` in `src/lib/calculations/kept-open.ts`.
 - feat(report): Repair Basis build-up, K.O. row and missing items in the liability comparison: standard Final/Bill Check, UIIC Final (new table after Details of Assessment), UIIC Bill Check.
