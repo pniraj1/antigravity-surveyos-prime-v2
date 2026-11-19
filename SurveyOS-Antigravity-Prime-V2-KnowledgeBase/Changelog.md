@@ -1,12 +1,13 @@
 ## 2026-11-20 (Antigravity) — Payment Reconciliation & Received Fees Cockpit (DEPLOYED TO PRODUCTION)
-- deploy: built with `npm run build` (25/25 static pages) and deployed to Firebase Hosting (`surveyos-v2-antigravity-in`, site `motorsurveyos-in`, custom domain `https://surveyos.in`). Live chunk `03pm3hfp_czbz.js` verified with `curl.exe`.
+- fix(reconciliation): eliminated all rogue dark-mode classes (`bg-neutral-900`, `bg-neutral-800`, `bg-emerald-950`, `bg-amber-950`, `bg-blue-950`, and dark-mode text colors) across `ReconciliationKPICards.tsx`, `PaymentMatchQueue.tsx`, `ClaimsLedgerTable.tsx`, and `SenderManagerModal.tsx`. Restored clean light-mode cards (`bg-white`), light header strips (`bg-neutral-50`, `bg-neutral-100`), white search inputs, and high-contrast status pills matching Prime V2's Executive Platinum theme.
+- deploy: built with `npm run build` (25/25 static pages) and deployed to Firebase Hosting (`surveyos-v2-antigravity-in`, site `motorsurveyos-in`, custom domain `https://surveyos.in`). Live chunk `14w2fuu31d3w7.js` verified with `curl.exe`.
 - feat(reconciliation): implemented 3-zone visual Payment Reconciliation cockpit and master fee ledger in `src/components/tabs/PaymentReconciliationTab.tsx`. Surfaces real-time KPI metrics (Total Billed, Received in Bank, Pending Outstanding, TDS Withheld for Form 26AS), matching queue with 1-click settlement, and responsive master claims table with ageing alerts.
 - feat(reconciliation): implemented strict identifier-first matching engine in `src/lib/reconciliation/matcher.ts`. Strictly matches on normalized Claim Number or Vehicle Registration Number. Enforces domain rule: zero blind amount-only matching.
 - feat(reconciliation): added verified insurer sender store (`src/lib/reconciliation/sample-store.ts`) pre-seeded with 7 Indian insurer and CMS senders, customizable with browser persistence.
 - feat(reconciliation): added client-side Gmail scoped fetcher (`src/lib/reconciliation/gmail-fetcher.ts`) using surveyor's active OAuth token for surgical payment advice search.
 - feat(reconciliation): added Gemini multimodal payment advice extractor (`src/lib/ai/payment-advice-extractor.ts`) for text, image, and PDF remittance advice vouchers with automatic 10% TDS deduction calculation (u/s 194J).
 - feat(navigation): added `Payment Reconciliation` to main sidebar (`requiresClaim: false`), registered in `ui-store.ts`, updated Dashboard reconcile CTA, and enforced `shouldHideFees` assistant privacy guard.
-- commits: b8b88b4e, 8c47d51d, c43ddece, 01f7a004, 593bf2e9, b88cd20b, 17506a12, b321d46a.
+- commits: b8b88b4e, 8c47d51d, c43ddece, 01f7a004, 593bf2e9, b88cd20b, 17506a12, b321d46a, d6daaf7f.
 - verification: vitest 52/52 passed, `tsc --noEmit` 0 errors, Next.js build 25/25 static pages generated. SurveyOS Scan impact: none.
 
 ## 2026-11-19 (Claude Code) — Cash loss settlement basis
