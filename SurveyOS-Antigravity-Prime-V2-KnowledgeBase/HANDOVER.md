@@ -1,8 +1,9 @@
 # HANDOVER — read this before any work on Prime or Scan
 
-> Last updated 2026-11-16 by Antigravity, handing back to Claude Code.
+> Last updated 2026-11-20 by Antigravity, handing back to Claude Code.
 >
-> 🚨 **PRIMARY HANDOVER FILE:** See [`HANDOVER_2026_11_16_CLAUDE.md`](HANDOVER_2026_11_16_CLAUDE.md) for the complete Bill Check progressive tallying cockpit, Brand Orange theme overhaul, modal dialog architecture, and production deployment.
+> 🚨 **PRIMARY HANDOVER FILE:** See [`HANDOVER_2026_11_20_TO_CLAUDE.md`](HANDOVER_2026_11_20_TO_CLAUDE.md) for the Phone Scan & Claim Storage developments, live production deployment, and the systematic debugging findings for vehicle folder creation & RC source selection.
+> Older major handovers: [`HANDOVER_2026_11_16_CLAUDE.md`](HANDOVER_2026_11_16_CLAUDE.md).
 >
 > This file condenses everything learned across development sessions between Claude Code and Antigravity.
 >
