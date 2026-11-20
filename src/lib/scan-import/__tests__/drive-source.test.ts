@@ -126,6 +126,30 @@ describe('importFromDrive', () => {
     expect(r).toMatchObject({ result: { status: 'done', added: 1 }, moveFailed: 1 });
   });
 
+  it('reportsDownloadProgress', async () => {
+    state.nodes = [
+      file('m', '_surveyos-scan.json', 'F', manifest('MH12AB1234', [{ path: 'RC.pdf', data: 'rc' }, { path: 'DL.pdf', data: 'dl' }])),
+      file('r', 'RC.pdf', 'F', 'rc'), file('d', 'DL.pdf', 'F', 'dl'),
+    ];
+    const calls: Array<[number, number]> = [];
+    await importFromDrive({ confirmVehicle: yes, onProgress: (d, t) => calls.push([d, t]) });
+    expect(calls).toEqual([[0, 2], [1, 2], [2, 2]]);
+  });
+
+  it('claimSwitchedDuringDownloadWritesNothing', async () => {
+    state.nodes = [
+      file('m', '_surveyos-scan.json', 'F', manifest('MH12AB1234', [{ path: 'RC.pdf', data: 'rc' }, { path: 'DL.pdf', data: 'dl' }])),
+      file('r', 'RC.pdf', 'F', 'rc'), file('d', 'DL.pdf', 'F', 'dl'),
+    ];
+    const r = await importFromDrive({
+      confirmVehicle: yes,
+      onProgress: (d) => { if (d === 1) state.claim = { ...state.claim!, id: 'c2' } as ClaimData; },
+    });
+    expect(r).toEqual({ result: { status: 'claim-changed', added: 0 }, moveFailed: 0, mismatched: [] });
+    expect(state.imported).toBeNull();
+    expect(state.moves).toEqual([]);
+  });
+
   it('noScanFolderSaysSo', async () => {
     state.scanFolder = null;
     await expect(importFromDrive({ confirmVehicle: yes })).rejects.toThrow('No Drive folder');

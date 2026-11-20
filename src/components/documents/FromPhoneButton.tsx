@@ -25,6 +25,7 @@ import { sameVehicle } from '@/lib/scan-import/manifest';
 import { fetchNotesFromScanFolder, type ScanDriveFolderItem } from '@/lib/scan-import/drive-notes';
 import { loadDriveIndex, saveDriveIndex } from '@/lib/drive';
 import { importScanFiles, type ImportOptions, type ImportResult } from '@/lib/scan-import/import';
+import { getStoredRootHandle } from '@/lib/local-sync/directory-handle';
 import { importFromDrive } from '@/lib/scan-import/drive-source';
 import { PhoneFolderPickerDialog } from './PhoneFolderPickerDialog';
 import { PhoneNotesDialog } from './PhoneNotesDialog';
@@ -230,7 +231,10 @@ export function FromPhoneButton({
       }
       setBusy(true);
       try {
-        const { result, moveFailed, mismatched } = await importFromDrive(scanAsks, folderId);
+        const { result, moveFailed, mismatched } = await importFromDrive({
+          ...scanAsks,
+          onProgress: (d, t) => toast.loading(`Bringing phone files: ${d} of ${t}`, { id: 'phone-download' }),
+        }, folderId);
         reportScans(result, claim.id, true, notesFound);
 
         if (mismatched.length) {
@@ -251,6 +255,7 @@ export function FromPhoneButton({
       } catch (scanErr) {
         toast.error(msg(scanErr));
       } finally {
+        toast.dismiss('phone-download');
         setBusy(false);
       }
     },
@@ -342,7 +347,7 @@ export function FromPhoneButton({
           return;
         }
 
-        const existingHandle = await getClaimFolderHandle(claim.id);
+        const existingHandle = (await getClaimFolderHandle(claim.id)) ?? (await getStoredRootHandle());
         if (!existingHandle) {
           pendingDriveFolderIdRef.current = folder.id;
           if (onNeedsFolder) {

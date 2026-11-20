@@ -5,6 +5,7 @@ import { useClaimStore } from '@/stores/claim-store';
 import { useUIStore } from '@/stores/ui-store';
 import * as claimFolderStore from '@/lib/storage/claim-folder-store';
 import { importFromDrive } from '@/lib/scan-import/drive-source';
+import * as directoryHandle from '@/lib/local-sync/directory-handle';
 import { FromPhoneButton, scanResultMessage } from '../FromPhoneButton';
 
 vi.mock('sonner', () => ({
@@ -13,6 +14,8 @@ vi.mock('sonner', () => ({
     error: vi.fn(),
     warning: vi.fn(),
     info: vi.fn(),
+    loading: vi.fn(),
+    dismiss: vi.fn(),
   },
 }));
 
@@ -39,6 +42,10 @@ vi.mock('@/lib/storage/claim-folder-store', () => ({
   isLocalFolderSupported: vi.fn().mockReturnValue(true),
   getClaimFolderHandle: vi.fn().mockResolvedValue(null),
   pickClaimFolder: vi.fn(),
+}));
+
+vi.mock('@/lib/local-sync/directory-handle', () => ({
+  getStoredRootHandle: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock('@/lib/scan-import/drive-source', () => ({
@@ -211,6 +218,17 @@ describe('FromPhoneButton', () => {
 
     expect(importFromDrive).toHaveBeenCalledWith(expect.anything(), 'drive-folder-existing');
     expect(actions.getPendingDriveFolderId()).toBeNull();
+  });
+
+  it('older root folder needs no claim folder prompt', async () => {
+    vi.mocked(claimFolderStore.getClaimFolderHandle).mockResolvedValueOnce(null);
+    vi.mocked(directoryHandle.getStoredRootHandle).mockResolvedValueOnce({} as any);
+    const onNeedsFolder = vi.fn();
+    let actions: any = null;
+    renderToStaticMarkup(<FromPhoneButton onNeedsFolder={onNeedsFolder} getAction={(a) => { actions = a; }} />);
+    await actions.handleSelectFolder({ id: 'drive-folder-root', name: 'MH02CB1234 - NIA', vehicle: 'MH02CB1234' });
+    expect(importFromDrive).toHaveBeenCalledWith(expect.anything(), 'drive-folder-root');
+    expect(onNeedsFolder).not.toHaveBeenCalled();
   });
 });
 

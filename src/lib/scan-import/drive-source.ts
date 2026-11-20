@@ -85,6 +85,8 @@ async function readManifest(id: string): Promise<{ blob: Blob; manifest: ScanMan
 export interface DriveImportOptions extends Omit<ImportOptions, 'driveFileIds'> {
   /** Several phone claims on Drive match an unlinked claim's vehicle: the surveyor picks one (null cancels). */
   choose?: (folders: Array<{ id: string; name: string }>) => Promise<string | null>;
+  /** Download progress: (0, total) before the first file, then after each one. `total` = files still to download. */
+  onProgress?: (done: number, total: number) => void;
 }
 
 /**
@@ -164,12 +166,18 @@ export async function importFromDrive(opts: DriveImportOptions, explicitFolderId
   const driveFileIds = new Map<string, string>();
   const mismatched: string[] = [];
   const shaOf = new Map(manifest.files.map((f) => [f.path, f.sha256]));
-  for (const p of plan.present.filter((x) => !known.has(x.id))) {
+  const claimChanged = { result: { status: 'claim-changed', added: 0 }, moveFailed: 0, mismatched: [] } as DriveImport;
+  const sameClaim = () => useClaimStore.getState().currentClaim?.id === claim.id;
+  const todo = plan.present.filter((x) => !known.has(x.id));
+  opts.onProgress?.(0, todo.length);
+  for (const [i, p] of todo.entries()) {
+    if (!sameClaim()) return claimChanged;
     const blob = await download(p.id);
-    if ((await sha256(blob)) !== shaOf.get(p.path)) { mismatched.push(p.path); continue; }
-    files.set(p.path, blob);
-    driveFileIds.set(p.path, p.id);
+    if ((await sha256(blob)) !== shaOf.get(p.path)) mismatched.push(p.path);
+    else { files.set(p.path, blob); driveFileIds.set(p.path, p.id); }
+    opts.onProgress?.(i + 1, todo.length);
   }
+  if (!sameClaim()) return claimChanged;
 
   const result = await importScanFiles(files, { ...opts, driveFileIds });
   if (result.status !== 'done') return { result, moveFailed: 0, mismatched };
