@@ -18,6 +18,11 @@ export interface GmailPaymentMessageSummary {
   attachments: GmailAttachmentInfo[];
 }
 
+export interface GmailMessageHeaderSummary {
+  id: string;
+  threadId?: string;
+}
+
 export const PAYMENT_SUBJECT_KEYWORDS =
   '(subject:payment OR subject:disbursement OR subject:remittance OR subject:fee OR subject:bill OR subject:advice)';
 
@@ -217,13 +222,14 @@ function parseGmailMessage(msgData: GmailMessageResponse): GmailPaymentMessageSu
 }
 
 /**
- * Fetches recent payment emails from Gmail API using surveyor's OAuth token.
+ * Quickly fetches the list of matching Gmail message references (id & threadId)
+ * without downloading full message payloads or attachments.
  */
-export async function fetchRecentPaymentEmails(
+export async function listGmailMessageIds(
   accessToken: string,
   query: string,
-  maxResults = 10
-): Promise<GmailPaymentMessageSummary[]> {
+  maxResults = 25
+): Promise<GmailMessageHeaderSummary[]> {
   if (!accessToken) {
     throw new Error('Gmail access token is required');
   }
@@ -267,39 +273,80 @@ export async function fetchRecentPaymentEmails(
     return [];
   }
 
-  const summaries = await Promise.all(
-    messages.map(async (msgRef) => {
-      const msgUrl = `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msgRef.id}?format=full`;
-      let msgResponse: Response;
-      try {
-        msgResponse = await fetch(msgUrl, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            Accept: 'application/json',
-          },
-        });
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : 'Network error';
-        throw new Error(`Gmail network request failed: ${message}`);
-      }
+  return messages
+    .filter((m): m is { id: string; threadId?: string } => Boolean(m && typeof m.id === 'string' && m.id.length > 0))
+    .map((m) => ({
+      id: m.id,
+      ...(m.threadId ? { threadId: m.threadId } : {}),
+    }));
+}
 
-      if (msgResponse.status === 401) {
-        throw new Error('Gmail access token expired or invalid');
-      }
-      if (msgResponse.status === 403) {
-        const errorMsg = await parseGmailErrorResponse(msgResponse);
-        throw new Error(errorMsg);
-      }
-      if (!msgResponse.ok) {
-        throw new Error(`Gmail API error: ${msgResponse.status} ${msgResponse.statusText}`);
-      }
+/**
+ * Fetches and parses a single Gmail message by its ID, including body snippet and attachment info.
+ */
+export async function fetchPaymentEmailDetailsById(
+  accessToken: string,
+  messageId: string
+): Promise<GmailPaymentMessageSummary> {
+  if (!accessToken) {
+    throw new Error('Gmail access token is required');
+  }
+  if (!messageId) {
+    throw new Error('Gmail message ID is required');
+  }
 
-      const msgData: GmailMessageResponse = await msgResponse.json();
-      return parseGmailMessage(msgData);
-    })
+  const msgUrl = `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(messageId)}?format=full`;
+  let msgResponse: Response;
+  try {
+    msgResponse = await fetch(msgUrl, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/json',
+      },
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Network error';
+    throw new Error(`Gmail network request failed: ${message}`);
+  }
+
+  if (msgResponse.status === 401) {
+    throw new Error('Gmail access token expired or invalid');
+  }
+  if (msgResponse.status === 403) {
+    const errorMsg = await parseGmailErrorResponse(msgResponse);
+    throw new Error(errorMsg);
+  }
+  if (!msgResponse.ok) {
+    throw new Error(`Gmail API error: ${msgResponse.status} ${msgResponse.statusText}`);
+  }
+
+  let msgData: GmailMessageResponse;
+  try {
+    msgData = await msgResponse.json();
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Invalid JSON';
+    throw new Error(`Failed to parse Gmail message response: ${message}`);
+  }
+
+  return parseGmailMessage(msgData);
+}
+
+/**
+ * Fetches recent payment emails from Gmail API using surveyor's OAuth token.
+ */
+export async function fetchRecentPaymentEmails(
+  accessToken: string,
+  query: string,
+  maxResults = 25
+): Promise<GmailPaymentMessageSummary[]> {
+  const messageRefs = await listGmailMessageIds(accessToken, query, maxResults);
+  if (messageRefs.length === 0) {
+    return [];
+  }
+
+  return Promise.all(
+    messageRefs.map((msgRef) => fetchPaymentEmailDetailsById(accessToken, msgRef.id))
   );
-
-  return summaries;
 }
 
 /**
