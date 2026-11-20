@@ -5,6 +5,14 @@ import { useClaimStore } from '@/stores/claim-store';
 import { getStoredRootHandle } from '@/lib/local-sync/directory-handle';
 import { getClaimFolderHandle } from '@/lib/storage/claim-folder-store';
 import { saveDocuments } from '../sink';
+import { uploadFileToDrive } from '@/lib/drive';
+import { useUIStore } from '@/stores/ui-store';
+
+vi.mock('@/lib/drive', () => ({ uploadFileToDrive: vi.fn().mockResolvedValue(undefined) }));
+
+vi.mock('@/stores/ui-store', () => ({
+  useUIStore: { getState: vi.fn(() => ({ isDriveConnected: false })) },
+}));
 
 vi.mock('sonner', () => {
   const toastFn = vi.fn();
@@ -155,5 +163,30 @@ describe('print-followup (promptForPrintedPdf)', () => {
     );
     // Verify prompt toast was dismissed
     expect(toast.dismiss).toHaveBeenCalledWith('print-pdf-surveyReport-claim-123');
+  });
+
+  async function pickAndFile() {
+    const claim = { id: 'claim-123', vehicle: { registrationNumber: 'MH-12-AB-1234' } };
+    (useClaimStore.getState as any).mockReturnValue({ currentClaim: claim });
+    (getStoredRootHandle as any).mockResolvedValue({} as any);
+    const file = new File(['pdf'], 'chrome-print.pdf', { type: 'application/pdf' });
+    (globalThis.window.showOpenFilePicker as any).mockResolvedValue([{ getFile: vi.fn().mockResolvedValue(file) }]);
+    await promptForPrintedPdf('surveyReport', 'MH12AB1234_Final_Survey_Report_1.pdf');
+    await (toast as any).mock.calls[0][1].action.onClick();
+    return file;
+  }
+
+  it('filed PDF is mirrored to Drive', async () => {
+    (useUIStore.getState as any).mockReturnValue({ isDriveConnected: true });
+    const file = await pickAndFile();
+    expect(uploadFileToDrive).toHaveBeenCalledWith(
+      'claim-123', 'MH12AB1234_Final_Survey_Report_1.pdf', file, 'MH-12-AB-1234', { replace: true }
+    );
+  });
+
+  it('filed PDF is not sent to Drive when Drive is not connected', async () => {
+    (useUIStore.getState as any).mockReturnValue({ isDriveConnected: false });
+    await pickAndFile();
+    expect(uploadFileToDrive).not.toHaveBeenCalled();
   });
 });

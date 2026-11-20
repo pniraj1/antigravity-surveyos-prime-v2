@@ -80,7 +80,8 @@ export async function saveReportToClaimFolder(
         claim.id,
         fileName,
         blob,
-        claim.vehicle?.registrationNumber || claim.id
+        claim.vehicle?.registrationNumber || claim.id,
+        { replace: true }
       ).catch((err) => {
         console.warn(`[AutoFileReport] Drive mirror failed for ${fileName}:`, err);
       });

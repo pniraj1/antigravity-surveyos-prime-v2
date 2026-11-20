@@ -11,6 +11,8 @@ import { DOC_TYPE_LABEL } from '@/types/documents';
 import { getStoredRootHandle } from '@/lib/local-sync/directory-handle';
 import { getClaimFolderHandle } from '@/lib/storage/claim-folder-store';
 import { useClaimStore } from '@/stores/claim-store';
+import { useUIStore } from '@/stores/ui-store';
+import { uploadFileToDrive } from '@/lib/drive';
 import { saveDocuments } from './sink';
 import { getClaimDirHandle } from './folder';
 import { sanitizeRegNo } from '@/lib/reports/auto-file-report';
@@ -75,6 +77,10 @@ export async function promptForPrintedPdf(type: DocType, fileName: string): Prom
           .then(async (file) => {
             if (file && file.type === 'application/pdf') {
               const saved = await saveDocuments(type, [{ blob: file, name: fileName, keepName: true }], 'generated');
+              if (useUIStore.getState().isDriveConnected) {
+                void uploadFileToDrive(claimId, fileName, file, regNo || claimId, { replace: true })
+                  .catch((err) => console.warn(`[PrintFollowup] Drive mirror failed for ${fileName}:`, err));
+              }
               toast.success(`${label} PDF successfully filed into claim documents!`);
               return saved;
             }

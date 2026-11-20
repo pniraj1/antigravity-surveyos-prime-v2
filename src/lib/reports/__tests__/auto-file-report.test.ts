@@ -222,14 +222,21 @@ describe('saveReportToClaimFolder', () => {
   it('calls uploadFileToDrive with vehicle registration when isDriveConnected is true', async () => {
     vi.mocked(useUIStore.getState).mockReturnValue({ isDriveConnected: true } as any);
     expect(await saveReportToClaimFolder(claim, name, blob, 'surveyReport')).toBe(true);
-    expect(uploadFileToDrive).toHaveBeenCalledWith('claim-123', name, blob, 'MH 12 AB 1234');
+    expect(uploadFileToDrive).toHaveBeenCalledWith('claim-123', name, blob, 'MH 12 AB 1234', { replace: true });
+  });
+
+  it('isolates Drive upload failure so local write and saveDocuments still succeed', async () => {
+    vi.mocked(useUIStore.getState).mockReturnValue({ isDriveConnected: true } as any);
+    vi.mocked(uploadFileToDrive).mockRejectedValueOnce(new Error('Drive down'));
+    expect(await saveReportToClaimFolder(claim, name, blob, 'surveyReport')).toBe(true);
+    expect(saveDocuments).toHaveBeenCalled();
   });
 
   it('calls uploadFileToDrive falling back to claim.id when vehicle registration is missing', async () => {
     vi.mocked(useUIStore.getState).mockReturnValue({ isDriveConnected: true } as any);
     const claimNoVehicle = { id: 'claim-999', reportNo: '2026/02' } as ClaimData;
     expect(await saveReportToClaimFolder(claimNoVehicle, 'R_2.html', blob, 'surveyReport')).toBe(true);
-    expect(uploadFileToDrive).toHaveBeenCalledWith('claim-999', 'R_2.html', blob, 'claim-999');
+    expect(uploadFileToDrive).toHaveBeenCalledWith('claim-999', 'R_2.html', blob, 'claim-999', { replace: true });
   });
 
   it('does not call uploadFileToDrive when isDriveConnected is false', async () => {

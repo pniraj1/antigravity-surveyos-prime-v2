@@ -409,7 +409,8 @@ export async function uploadFileToDrive(
   claimId: string,
   fileName: string,
   blob: Blob,
-  claimLabel: string = claimId
+  claimLabel: string = claimId,
+  opts: { replace?: boolean } = {}
 ): Promise<void> {
   if (isSandbox()) return;
   const isLinked = useUIStore.getState().isDriveConnected;
@@ -429,14 +430,26 @@ export async function uploadFileToDrive(
 
   try {
     const folderId = await getOrCreateClaimFolder(claimId, claimLabel);
-    const metadata = { name: fileName, parents: [folderId] };
+    // Replace = overwrite the first same-name file's content in place (PATCH, never delete).
+    let existingId: string | undefined;
+    if (opts.replace) {
+      const esc = fileName.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      const q = `name='${esc}' and '${folderId}' in parents and trashed=false`;
+      const found = await driveRequest(
+        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id)&spaces=drive`
+      );
+      existingId = ((await found.json()).files ?? [])[0]?.id;
+    }
+    const metadata = existingId ? {} : { name: fileName, parents: [folderId] };
     const form = new FormData();
     form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
     form.append('file', blob);
 
     await driveRequest(
-      'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
-      { method: 'POST', body: form }
+      existingId
+        ? `https://www.googleapis.com/upload/drive/v3/files/${encodeURIComponent(existingId)}?uploadType=multipart`
+        : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+      { method: existingId ? 'PATCH' : 'POST', body: form }
     );
     toast.success(`"${fileName}" uploaded to Drive.`, { duration: 2500 });
   } catch (e: any) {
