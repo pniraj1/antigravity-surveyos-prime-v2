@@ -75,3 +75,11 @@ describe('recipients / istNow', () => {
   });
   it('IST offset', () => expect(istNow(Date.UTC(2026, 10, 1, 0, 0, 0))).toBe('2026-11-01T05:30:00+05:30'));
 });
+
+describe('Prime-made types', () => {
+  it('are never asked for', () => {
+    const keys = dialogDocs(claim()).map((d) => d.key);
+    expect(keys).not.toContain('photoSheet');
+    expect(keys).not.toContain('valuationReport');
+  });
+});

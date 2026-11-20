@@ -17,9 +17,9 @@ const ALL_TYPES: DocType[] = [
 
 describe('kit types', () => {
   it('every DocType has a label', () => {
-    expect(ALL_TYPES).toHaveLength(41);
+    expect(ALL_TYPES).toHaveLength(43);
     for (const t of ALL_TYPES) expect(DOC_TYPE_LABEL[t]).toBeTruthy();
-    expect(Object.keys(DOC_TYPE_LABEL)).toHaveLength(41);
+    expect(Object.keys(DOC_TYPE_LABEL)).toHaveLength(43);
   });
 
   it('docTypeFromRelPath recognises common words', () => {

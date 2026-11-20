@@ -23,7 +23,7 @@ const roleOf = (key: string) => defaultRecipient(parseKey(key).base as DocType);
 
 /** Types Prime produces itself (Scan's Slots.kt lists them); never asked of anyone. */
 const PRIME_MADE = new Set<DocType>([
-  'surveyReport', 'billCheckReport', 'feeBill', 'reinspectionReport', 'niaAssessmentExcel', 'insuredSummary',
+  'surveyReport', 'billCheckReport', 'feeBill', 'reinspectionReport', 'niaAssessmentExcel', 'insuredSummary', 'photoSheet', 'valuationReport',
 ]);
 
 /**

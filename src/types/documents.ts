@@ -14,7 +14,7 @@ export type DocType =
   | 'workApproval' | 'deliveryOrder' | 'other'
   | 'aadhaar' | 'pan' | 'ckyc' | 'kycOther' | 'claimIntimation'
   | 'dischargeVoucher' | 'csr' | 'investigationReport' | 'rcBack' | 'dlBack'
-  | 'cashLossConsent';
+  | 'cashLossConsent' | 'photoSheet' | 'valuationReport';
 
 export type PhotoTag = 'front' | 'rear' | 'left' | 'right' | 'chassis' | 'odometer' | 'spot' | 'damage';
 
@@ -112,6 +112,8 @@ export const DOC_TYPE_LABEL: Record<DocType, string> = {
   rcBack: 'RC Book Back',
   dlBack: 'Driving Licence Back',
   cashLossConsent: 'Cash Loss Consent of Insured',
+  photoSheet: 'Photo Sheet',
+  valuationReport: 'Valuation Report',
 };
 
 /** Types that hold many files in a subfolder; everything else is one file per claim. */
