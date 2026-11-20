@@ -1,3 +1,28 @@
+## Done: Configurable Scan Scope & Smart Skip Reconciliation (2026-11-20, Antigravity) — DEPLOYED TO PRODUCTION
+- **Status:** Complete on `main` and deployed to production (`https://surveyos.in`, Firebase site `motorsurveyos-in`). Live deployed chunk `0eh7yts6y.4-b.js` verified with `curl.exe`.
+- **Implementation Plan:** `docs/plans/2026-11-20-configurable-scan-and-smart-skip-reconciliation.md`
+- **Session:** `Sessions/2026-11-20-configurable-scan-and-smart-skip.md`
+- **Delivered:**
+  1. **Persistent Reconciliation IndexedDB Cache (`src/lib/reconciliation/advice-cache.ts`):**
+     - Stores processed email records (`processed-emails`) with status (`settled`, `dismissed`, `unmatched`).
+     - Caches extracted payment vouchers (`cached-advices`) indexed by `sourceMessageId`.
+     - Skips previously settled and dismissed emails completely on subsequent scans to avoid redundant AI calls and re-downloading files.
+  2. **Two-Stage Message ID Listing (`listGmailMessageIds` in `gmail-fetcher.ts`):**
+     - Performs lightweight reference listing (`id`, `threadId`) prior to payload fetches, allowing instant pre-filtering against local IndexedDB in milliseconds.
+  3. **Smart Reconciliation Sync Engine (`smart-sync-service.ts`):**
+     - Deduplicates against settled/dismissed records, reuses cached unmatched advices, downloads and parses only newly arrived payment vouchers.
+     - Automatically runs instant local matching (`checkCachedAdvicesAgainstClaims`) with 0 network calls when new claims are created/active.
+     - Supports real-time progress callbacks and immediate cancellation via `AbortSignal`.
+  4. **Scan Scope Selector (`ScanScopeSelector.tsx`):**
+     - Quick presets: "Last 15 days (10 emails)", "Last 30 days (25 emails)" [Default], "Last 60 days (50 emails)", "Last 90 days (100 emails)".
+     - Custom Scope modal allowing surveyor to set custom days back (1-180) and max email limits (5-100), with localStorage persistence.
+  5. **Live Scan Progress & Cancellation Modal (`ScanProgressModal.tsx`):**
+     - Live progress percentage bar, current step count, and dynamic phase feedback.
+     - Real-time stats pills: Found, Skipped (Settled), Cache Reused, AI Parsed.
+     - Immediate `[ Cancel Scan ]` button to halt processing at any time.
+     - Secondary `[ ⚡ Force Full Rescan ]` button to bypass cache and re-read all messages when desired.
+- **SurveyOS Scan impact: none (isolated to Prime V2 web client financial tracking).**
+
 ## Done: Real-World Insurer Formats, ZIP Attachment Parsing & Fee Shortfall/Disallowance Tracking (2026-11-20, Antigravity) — DEPLOYED TO PRODUCTION
 - **Status:** Complete on `main` and deployed to production (`https://surveyos.in`, Firebase site `motorsurveyos-in`). Live deployed chunk `0cckjupkn0y0f.js` verified with `curl.exe`.
 - **Session:** `Sessions/2026-11-20-gemini-payment-reconciliation-zip-shortfall.md`
