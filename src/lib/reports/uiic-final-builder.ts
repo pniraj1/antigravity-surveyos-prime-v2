@@ -36,7 +36,7 @@ import { renderCashLossTable } from './cash-loss-html';
 import { buildPrintShell, footerFromProfile, openPrintWindow } from './print-shell';
 import { saveDocuments } from '@/lib/documents/sink';
 import { promptForPrintedPdf } from '@/lib/documents/print-followup';
-import { saveReportToClaimFolder, uiicFinalFileName } from './auto-file-report';
+import { saveReportToClaimFolder, uiicFinalFileName, billCheckFileName } from './auto-file-report';
 import { formatSurveyDateTime } from './report-utils';
 import { resolveBillSalvage } from './bill-check-projection';
 
@@ -549,7 +549,7 @@ export function triggerUIICFinalPrint(claim: ClaimData, profile: SurveyorProfile
   const fileName = uiicFinalFileName(claim, 'html');
   void saveReportToClaimFolder(claim, fileName, new Blob([html], { type: 'text/html' }), 'surveyReport');
   openPrintWindow(html);
-  void promptForPrintedPdf('surveyReport');
+  void promptForPrintedPdf('surveyReport', fileName.replace(/\.html$/, '.pdf'));
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1114,5 +1114,5 @@ export function triggerUIICBillCheckPrint(claim: ClaimData, profile: SurveyorPro
   const html = buildUIICBillCheckPrintDocument(claim, profile);
   void saveDocuments('billCheckReport', [{ blob: new Blob([html], { type: 'text/html' }), name: 'Bill Check Report.html' }], 'generated');
   openPrintWindow(html);
-  void promptForPrintedPdf('billCheckReport');
+  void promptForPrintedPdf('billCheckReport', billCheckFileName(claim, 'pdf'));
 }

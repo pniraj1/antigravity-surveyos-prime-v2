@@ -86,6 +86,18 @@ describe('oldNameFor', () => {
   });
 });
 
+describe('docTypeFromRelPath vehicle-first names', () => {
+  it('vehicle-first Prime-made names are recognised', () => {
+    expect(docTypeFromRelPath('MH12AB1234_Final_Survey_Report_1.pdf')).toBe('surveyReport');
+    expect(docTypeFromRelPath('MH12AB1234_UIIC_Final_Survey_Report_1.pdf')).toBe('surveyReport');
+    expect(docTypeFromRelPath('MH12AB1234_Bill_Check_Report_1.pdf')).toBe('billCheckReport');
+    expect(docTypeFromRelPath('MH12AB1234-Photo-Sheet.pdf')).toBe('photoSheet');
+    expect(docTypeFromRelPath('MH12AB1234_Spot_Fee_Bill_1.html')).toBe('feeBill');
+    expect(docTypeFromRelPath('Holiday trip.pdf')).toBe('other');
+    expect(docTypeFromRelPath('RC Book 2.pdf')).toBe('rc');
+  });
+});
+
 describe('docTypeFromRelPath', () => {
   it('reads a top-level file from its own name', () => {
     expect(docTypeFromRelPath('RC Book.pdf')).toBe('rc');

@@ -55,12 +55,14 @@ export function addDeviceTo(claim: ClaimData, id: string, label: string): ClaimD
  * Same-type entries on this device that a new write of `type` may rename to
  * "(old)": only files named the way SurveyOS names that type ("Policy Schedule",
  * "Policy Schedule 2", any extension, top level). A surveyor's own `Policy.pdf`
- * is never renamed (originals are read-only).
+ * is never renamed (originals are read-only). Files Prime generated itself
+ * (`source === 'generated'`) are replaceable under any name.
  */
 export function replaceableEntries(existing: ClaimDocument[], type: DocType, device: string): ClaimDocument[] {
   const label = DOC_TYPE_LABEL[type].toLowerCase();
   return existing.filter((d) => {
     if (d.type !== type || !onThisDevice(d, device) || d.relPath.includes('/')) return false;
+    if (d.source === 'generated') return true; // Prime-made: a newer one replaces it whatever it is called
     const stem = d.relPath.replace(/\.[^.]+$/, '').replace(/ \d+$/, '').toLowerCase();
     return stem === label;
   });

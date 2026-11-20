@@ -82,6 +82,11 @@ describe('replaceableEntries', () => {
     const got = replaceableEntries([pol('Policy Schedule.pdf'), pol('Policy Schedule 2.pdf'), pol('Policy.pdf'), doc({ relPath: 'RC Book.pdf' })], 'policy', 'Office PC');
     expect(got.map((d) => d.relPath)).toEqual(['Policy Schedule.pdf', 'Policy Schedule 2.pdf']);
   });
+  it('a newer Prime-made file replaces the older one under another name', () => {
+    const e = (source: ClaimDocument['source']) => doc({ id: 'x', type: 'surveyReport', relPath: 'MH12AB1234_Final_Survey_Report_DRAFT.html', source, devices: ['Office PC'] });
+    expect(replaceableEntries([e('generated')], 'surveyReport', 'Office PC').map((d) => d.id)).toEqual(['x']);
+    expect(replaceableEntries([e('upload')], 'surveyReport', 'Office PC')).toEqual([]);
+  });
   it('replaceableEntries ignores other devices', () => {
     expect(replaceableEntries([pol('Policy Schedule.pdf', ['Laptop'])], 'policy', 'Office PC')).toEqual([]);
   });

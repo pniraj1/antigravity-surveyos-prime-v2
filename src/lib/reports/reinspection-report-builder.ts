@@ -191,5 +191,5 @@ export function triggerReinspectionPrint(claim: ClaimData, profile: SurveyorProf
   const fileName = reinspectionFileName(claim, 'html');
   void saveReportToClaimFolder(claim, fileName, new Blob([html], { type: 'text/html' }), 'reinspectionReport');
   openPrintWindow(html, { features: 'width=900,height=1200', closeAfter: true });
-  void promptForPrintedPdf('reinspectionReport');
+  void promptForPrintedPdf('reinspectionReport', fileName.replace(/\.html$/, '.pdf'));
 }

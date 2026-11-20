@@ -55,11 +55,13 @@ export function triggerBlobDownload(blob: Blob, fileName: string) {
 export async function downloadPart(
   claim: ClaimData,
   regNum: string,
-  part: SplitPart
+  part: SplitPart,
+  whole: Blob
 ): Promise<string> {
   const partFileName = `${regNum}-Photo-Sheet-Part${part.partNumber}.pdf`;
   triggerBlobDownload(part.blob, partFileName);
-  await saveReportToClaimFolder(claim, partFileName, part.blob, 'damagePhotos');
+  // The folder keeps the whole sheet (one file); the parts are only for sending.
+  await saveReportToClaimFolder(claim, `${regNum}-Photo-Sheet.pdf`, whole, 'photoSheet');
   toast.success(`Downloaded Part ${part.partNumber}: ${partFileName}`);
   return partFileName;
 }
@@ -71,7 +73,7 @@ export async function saveSinglePdf(
 ): Promise<boolean> {
   if (!blob) return false;
   triggerBlobDownload(blob, fileName);
-  const result = await saveReportToClaimFolder(claim, fileName, blob, 'damagePhotos');
+  const result = await saveReportToClaimFolder(claim, fileName, blob, 'photoSheet');
   toast.success(`Photo Sheet downloaded: ${fileName}`);
   return result;
 }
@@ -197,7 +199,7 @@ export function PhotoSheetDownloadContent({
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  void downloadPart(claim, regNum, p);
+                  if (blob) void downloadPart(claim, regNum, p, blob); // parts only exist once the whole sheet does
                 }}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-md font-semibold text-sm transition-all shadow-sm bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow"
               >

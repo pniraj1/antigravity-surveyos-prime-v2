@@ -14,12 +14,20 @@ import { pageCountOf } from './kit/page-text';
 import { getAllClaims } from '@/lib/storage/indexeddb';
 import { getClaimFolderHandle, verifyHandlePermission, getClaimFolderPath } from '@/lib/storage/claim-folder-store';
 import { sha256Hex } from './kit/build';
+import { sanitizeSegment } from '@/lib/local-sync/nomenclature';
 
 export class NoFolderError extends Error { constructor() { super('No claim folder is connected.'); } }
 export class PermissionDeniedError extends Error { constructor() { super('Folder access was not granted.'); } }
 export class NotOnThisDeviceError extends Error { constructor(where: string[]) { super(`This file is on ${where.join(', ') || 'another device'}.`); } }
 
-export interface FolderInput { blob: Blob; name?: string; /** Recorded on the document: the file is already on Drive. */ driveFileId?: string }
+export interface FolderInput {
+  blob: Blob;
+  name?: string;
+  /** Single-file types, one file: write at the top level under `name` exactly (Windows-safe) instead of the label name. */
+  keepName?: boolean;
+  /** Recorded on the document: the file is already on Drive. */
+  driveFileId?: string;
+}
 
 async function root(): Promise<FileSystemDirectoryHandle> {
   const handle = await getStoredRootHandle();
@@ -174,6 +182,10 @@ export async function writeDocuments(
 
   const inputs = files.map((f) => ({ mime: f.blob.type, name: f.name }));
   let relPaths = relPathsFor(type, inputs, existing);
+  // A Prime-made file keeps its vehicle-first name (single-file types only).
+  if (!MULTI_FILE_TYPES.has(type) && files.length === 1 && files[0].keepName && files[0].name) {
+    relPaths = [sanitizeSegment(files[0].name, relPaths[0])];
+  }
   // 0. Multi-file types skip past whatever is already there.
   //    Single-file types silently replace any existing or stranger file on disk.
   if (MULTI_FILE_TYPES.has(type)) {

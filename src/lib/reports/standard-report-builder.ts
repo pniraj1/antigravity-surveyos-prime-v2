@@ -1011,7 +1011,7 @@ export function triggerStandardPrint(
   const fileName = mode === 'bill-check' ? billCheckFileName(claim, 'html') : finalSurveyFileName(claim, 'html');
   void saveReportToClaimFolder(claim, fileName, new Blob([html], { type: 'text/html' }), type);
   openPrintWindow(html);
-  void promptForPrintedPdf(type);
+  void promptForPrintedPdf(type, fileName.replace(/\.html$/, '.pdf'));
 }
 
 // ─── Convenience Builder Functions (Parity with UIIC builder) ─────────────────

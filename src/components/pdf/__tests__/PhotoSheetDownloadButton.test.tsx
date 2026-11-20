@@ -192,6 +192,7 @@ describe('PhotoSheetDownloadButton', () => {
       claim.vehicle.registrationNumber = 'MH-12-AB-1234';
 
       const mockBlob = new Blob(['part 1 pdf bytes'], { type: 'application/pdf' });
+      const whole = new Blob(['whole sheet'], { type: 'application/pdf' });
       const part: SplitPart = {
         partNumber: 1,
         totalParts: 2,
@@ -226,7 +227,7 @@ describe('PhotoSheetDownloadButton', () => {
       globalThis.URL.createObjectURL = createObjectURLSpy;
       globalThis.URL.revokeObjectURL = revokeObjectURLSpy;
 
-      const partFileName = await downloadPart(claim, 'MH-12-AB-1234', part);
+      const partFileName = await downloadPart(claim, 'MH-12-AB-1234', part, whole);
 
       expect(partFileName).toBe('MH-12-AB-1234-Photo-Sheet-Part1.pdf');
       expect(createObjectURLSpy).toHaveBeenCalledWith(mockBlob);
@@ -239,9 +240,9 @@ describe('PhotoSheetDownloadButton', () => {
 
       expect(saveReportToClaimFolder).toHaveBeenCalledWith(
         claim,
-        'MH-12-AB-1234-Photo-Sheet-Part1.pdf',
-        mockBlob,
-        'damagePhotos'
+        'MH-12-AB-1234-Photo-Sheet.pdf',
+        whole,
+        'photoSheet'
       );
       expect(toast.success).toHaveBeenCalledWith(
         'Downloaded Part 1: MH-12-AB-1234-Photo-Sheet-Part1.pdf'
@@ -298,7 +299,7 @@ describe('PhotoSheetDownloadButton', () => {
         claim,
         'MH-12-AB-1234-Photo-Sheet.pdf',
         testBlob,
-        'damagePhotos'
+        'photoSheet'
       );
       expect(toast.success).toHaveBeenCalledWith(
         'Photo Sheet downloaded: MH-12-AB-1234-Photo-Sheet.pdf'

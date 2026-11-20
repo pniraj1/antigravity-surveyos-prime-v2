@@ -55,7 +55,7 @@ describe('print-followup (promptForPrintedPdf)', () => {
     (getStoredRootHandle as any).mockResolvedValue(null);
     (getClaimFolderHandle as any).mockResolvedValue(null);
 
-    await promptForPrintedPdf('surveyReport');
+    await promptForPrintedPdf('surveyReport', 'MH12AB1234_Final_Survey_Report_1.pdf');
 
     expect(toast.info).toHaveBeenCalledWith(
       'Printed Final Survey Report',
@@ -77,7 +77,7 @@ describe('print-followup (promptForPrintedPdf)', () => {
     (getStoredRootHandle as any).mockResolvedValue({} as any);
     (getClaimFolderHandle as any).mockResolvedValue(null);
 
-    await promptForPrintedPdf('surveyReport');
+    await promptForPrintedPdf('surveyReport', 'MH12AB1234_Final_Survey_Report_1.pdf');
 
     expect(toast).toHaveBeenCalledWith(
       'Save printed PDF to vehicle folder (MH12_AB1234)',
@@ -102,7 +102,7 @@ describe('print-followup (promptForPrintedPdf)', () => {
     (getStoredRootHandle as any).mockResolvedValue(null);
     (getClaimFolderHandle as any).mockResolvedValue({} as any);
 
-    await promptForPrintedPdf('feeBill');
+    await promptForPrintedPdf('feeBill', 'MH12AB1234_Spot_Fee_Bill_1.pdf');
 
     expect(toast).toHaveBeenCalledWith(
       'Save printed PDF to vehicle folder',
@@ -115,7 +115,7 @@ describe('print-followup (promptForPrintedPdf)', () => {
     );
   });
 
-  it('handles picking a PDF file: saves document and shows success toast', async () => {
+  it('picked PDF is filed under the vehicle-first name and shows success toast', async () => {
     const claim = {
       id: 'claim-123',
       vehicle: { registrationNumber: 'MH-12-AB-1234' },
@@ -125,7 +125,7 @@ describe('print-followup (promptForPrintedPdf)', () => {
     });
     (getStoredRootHandle as any).mockResolvedValue({} as any);
 
-    const mockFile = new File(['mock pdf content'], 'MH12AB1234_Final_Survey_Report.pdf', {
+    const mockFile = new File(['mock pdf content'], 'chrome-print.pdf', {
       type: 'application/pdf',
     });
     const mockFileHandle = {
@@ -133,7 +133,7 @@ describe('print-followup (promptForPrintedPdf)', () => {
     };
     (globalThis.window.showOpenFilePicker as any).mockResolvedValue([mockFileHandle]);
 
-    await promptForPrintedPdf('surveyReport');
+    await promptForPrintedPdf('surveyReport', 'MH12AB1234_Final_Survey_Report_1.pdf');
 
     // Get the toast call action onClick
     const toastCallArgs = (toast as any).mock.calls[0];
@@ -146,7 +146,7 @@ describe('print-followup (promptForPrintedPdf)', () => {
     // Verify saveDocuments was called
     expect(saveDocuments).toHaveBeenCalledWith(
       'surveyReport',
-      [{ blob: mockFile, name: mockFile.name }],
+      [{ blob: mockFile, name: 'MH12AB1234_Final_Survey_Report_1.pdf', keepName: true }],
       'generated'
     );
     // Verify toast.success was shown

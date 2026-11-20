@@ -27,10 +27,10 @@ async function pickPdf(label: string, startIn: FileSystemDirectoryHandle | null)
 }
 
 /**
- * Shown after the print window opens. Silent when no claim folder is
+ * Shown after the print window opens. `fileName` is the vehicle-first .pdf name the picked file is filed under. Silent when no claim folder is
  * connected or the browser has no file picker — printing is unchanged there.
  */
-export async function promptForPrintedPdf(type: DocType): Promise<void> {
+export async function promptForPrintedPdf(type: DocType, fileName: string): Promise<void> {
   if (typeof window === 'undefined' || !window.showOpenFilePicker) return;
   // The prompt belongs to the claim that was printed, not whatever claim is
   // open when the surveyor eventually clicks it.
@@ -74,7 +74,7 @@ export async function promptForPrintedPdf(type: DocType): Promise<void> {
           // dialog, so it is filed exactly as the report it replaces would be.
           .then(async (file) => {
             if (file && file.type === 'application/pdf') {
-              const saved = await saveDocuments(type, [{ blob: file, name: file.name }], 'generated');
+              const saved = await saveDocuments(type, [{ blob: file, name: fileName, keepName: true }], 'generated');
               toast.success(`${label} PDF successfully filed into claim documents!`);
               return saved;
             }

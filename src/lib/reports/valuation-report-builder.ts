@@ -184,5 +184,5 @@ export function triggerValuationPrint(claim: ClaimData, profile: SurveyorProfile
   const fileName = valuationFileName(claim, 'html');
   void saveReportToClaimFolder(claim, fileName, new Blob([html], { type: 'text/html' }), 'valuationReport');
   openPrintWindow(html);
-  void promptForPrintedPdf('valuationReport');
+  void promptForPrintedPdf('valuationReport', fileName.replace(/\.html$/, '.pdf'));
 }

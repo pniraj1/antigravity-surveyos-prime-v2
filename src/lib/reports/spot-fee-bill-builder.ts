@@ -228,5 +228,5 @@ export function triggerSpotFeeBillPrint(
   const fileName = spotFeeBillFileName(claim, 'html');
   void saveReportToClaimFolder(claim, fileName, new Blob([html], { type: 'text/html' }), 'feeBill');
   openPrintWindow(html);
-  void promptForPrintedPdf('feeBill');
+  void promptForPrintedPdf('feeBill', fileName.replace(/\.html$/, '.pdf'));
 }

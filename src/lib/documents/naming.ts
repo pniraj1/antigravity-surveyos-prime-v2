@@ -89,6 +89,8 @@ const ALIASES: Array<[DocType, string[]]> = [
   ['damagePhotos', ['final photos', 'damage photos']],
 ];
 
+const PRIME_MADE_ORDER: DocType[] = ['surveyReport', 'billCheckReport', 'feeBill', 'reinspectionReport', 'valuationReport', 'photoSheet'];
+
 /** Label or alias → type, built once. Labels are unique by construction. */
 const TYPE_BY_LABEL = new Map<string, DocType>([
   ...ALIASES.flatMap(([type, words]) => words.map((w): [string, DocType] => [w, type])),
@@ -105,7 +107,11 @@ export function docTypeFromRelPath(relPath: string): DocType {
   const parts = relPath.split('/');
   if (parts.length > 1) return TYPE_BY_LABEL.get(parts[0].toLowerCase().trim()) ?? 'other';
   const stem = parts[0].replace(/\.[^.]+$/, '').replace(/\s+\d+$/, '').toLowerCase().trim();
-  return TYPE_BY_LABEL.get(stem) ?? 'other';
+  const exact = TYPE_BY_LABEL.get(stem);
+  if (exact) return exact;
+  // Prime-made, vehicle-first names: "MH12AB1234_Final_Survey_Report_1", "MH12AB1234-Photo-Sheet".
+  const words = stem.replace(/[_-]+/g, ' ');
+  return PRIME_MADE_ORDER.find((t) => words.includes(DOC_TYPE_LABEL[t].toLowerCase())) ?? 'other';
 }
 
 /** A portal box label as a Windows-safe file stem: "Front/Rear/Side Photograph" -> "Front-Rear-Side Photograph". */

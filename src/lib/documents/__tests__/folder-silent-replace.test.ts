@@ -123,6 +123,18 @@ describe('Claim Folder Deduplication & Silent Auto-Replace', () => {
     mockFolderStore.handles.set('claim-1', claimDir);
   });
 
+  describe('keepName', () => {
+    it('keepName writes under the given name', async () => {
+      const name = 'MH12AB1234_Final_Survey_Report_1.html';
+      const { written } = await writeDocuments(
+        mockClaim('claim-1'), 'surveyReport',
+        [{ blob: new Blob(['<html/>'], { type: 'text/html' }), name, keepName: true }], 'generated',
+      );
+      expect(written[0].relPath).toBe(name);
+      expect(claimDir._allFilePaths()).toEqual([name]);
+    });
+  });
+
   describe('Single-file slot silent replacement', () => {
     it('replaces existing RC Book.pdf silently without creating RC Book (old).pdf', async () => {
       const initialClaim = mockClaim('claim-1');
