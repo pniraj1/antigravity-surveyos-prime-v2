@@ -8,6 +8,7 @@ import type { ClaimDocument, DocType } from '@/types/documents';
 import { DOC_TYPE_LABEL, MULTI_FILE_TYPES } from '@/types/documents';
 import { useClaimStore } from '@/stores/claim-store';
 import { getStoredRootHandle } from '@/lib/local-sync/directory-handle';
+import { getClaimFolderHandle } from '@/lib/storage/claim-folder-store';
 import { saveDocuments } from '@/lib/documents/sink';
 import { readDocument } from '@/lib/documents/folder';
 import { claimDocuments } from '@/lib/documents/index-ops';
@@ -102,11 +103,12 @@ export async function importScanFiles(
   if (!sameVehicle(manifest.vehicle, claimVehicle) && !(await confirmVehicle(manifest.vehicle, claimVehicle))) {
     return { status: 'cancelled' };
   }
-  const rootHandle = await getStoredRootHandle();
-  if (!rootHandle) return { status: 'needs-folder', notes: manifest.notes ?? null };
+  // The claim's own folder first (the sink writes there), else the older one-root-folder setup.
+  const folder = (await getClaimFolderHandle(claim.id)) ?? (await getStoredRootHandle());
+  if (!folder) return { status: 'needs-folder', notes: manifest.notes ?? null };
   // requestPermission needs a click, which is long gone after reading the zip: ask the caller to send the
   // surveyor to "Allow access" instead of letting every type's write fail with its own toast.
-  if (rootHandle.queryPermission && (await rootHandle.queryPermission({ mode: 'readwrite' })) !== 'granted') {
+  if (folder.queryPermission && (await folder.queryPermission({ mode: 'readwrite' })) !== 'granted') {
     return { status: 'needs-permission', notes: manifest.notes ?? null };
   }
 

@@ -185,6 +185,18 @@ describe('importFromDrive', () => {
     });
   });
 
+  it('files without the manifest yet: the phone is still sending, nothing is imported', async () => {
+    // Scan uploads the manifest last, so these files may be half-sent.
+    state.nodes = [
+      file('b', '_surveyos-backup.json', 'F', JSON.stringify({ app: 'surveyos-scan-backup', v: 1, notes: {} })),
+      file('t', 'Spot Notes.txt', 'F', 'notes'),
+      file('r', 'RC.pdf', 'F', 'half'),
+    ];
+    await expect(importFromDrive({ confirmVehicle: yes })).rejects.toThrow(/still sending/);
+    expect(state.imported).toBeNull();
+    expect(state.moves).toEqual([]);
+  });
+
   it('imports directly from explicitFolderId without scanning', async () => {
     state.scanFolder = null; // scanning would throw "No Drive folder"
     state.nodes = [

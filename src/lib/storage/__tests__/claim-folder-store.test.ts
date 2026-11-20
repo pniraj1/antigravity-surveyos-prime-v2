@@ -59,6 +59,9 @@ vi.mock('idb', () => ({
   ),
 }));
 
+const store = vi.hoisted(() => ({ claim: null as unknown }));
+vi.mock('@/stores/claim-store', () => ({ useClaimStore: { getState: () => ({ currentClaim: store.claim }) } }));
+
 import {
   isLocalFolderSupported,
   setClaimFolderHandle,
@@ -264,6 +267,33 @@ describe('claim-folder-store', () => {
       expect(stored).toBe(mockHandle);
       const storedPath = await getClaimFolderPath('claim-123');
       expect(storedPath).toBe('MySurveyFolder');
+    });
+
+    it('picking a general folder (D:\\Claims) creates the vehicle folder inside it and keeps that', async () => {
+      store.claim = { id: 'claim-v', vehicle: { registrationNumber: 'MH 12 AB 1234' }, policy: { insurerName: 'The New India Assurance Co. Ltd.' }, documentsFolder: 'Claims' };
+      const vehicle = createMockHandle('MH 12 AB 1234 - NIA');
+      const picked = { ...createMockHandle('Claims'), getDirectoryHandle: vi.fn(async () => vehicle) } as unknown as FileSystemDirectoryHandle;
+      vi.stubGlobal('window', { showDirectoryPicker: vi.fn(async () => picked) });
+
+      const result = await pickClaimFolder('claim-v');
+
+      // a stale documentsFolder ("Claims") must not become the subfolder name
+      expect(picked.getDirectoryHandle).toHaveBeenCalledWith(expect.stringMatching(/^MH 12 AB 1234/), { create: true });
+      expect(result).toEqual({ handle: vehicle, folderPath: 'MH 12 AB 1234 - NIA' });
+      expect(await getClaimFolderHandle('claim-v')).toBe(vehicle);
+      store.claim = null;
+    });
+
+    it('picking the vehicle folder itself uses it as is', async () => {
+      store.claim = { id: 'claim-w', vehicle: { registrationNumber: 'MH 12 AB 1234' } };
+      const picked = { ...createMockHandle('MH12AB1234 - NIA'), getDirectoryHandle: vi.fn() } as unknown as FileSystemDirectoryHandle;
+      vi.stubGlobal('window', { showDirectoryPicker: vi.fn(async () => picked) });
+
+      const result = await pickClaimFolder('claim-w');
+
+      expect(picked.getDirectoryHandle).not.toHaveBeenCalled();
+      expect(result.handle).toBe(picked);
+      store.claim = null;
     });
 
     it('propagates cancellation AbortError from showDirectoryPicker', async () => {

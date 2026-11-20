@@ -1,3 +1,10 @@
+## 2026-11-20 (Claude Code) — Phone scans now save into the vehicle folder
+- fix(scan-import): `importScanFiles` checked only the old one-root folder, so with a per-claim folder every phone import stopped at "needs-folder": nothing downloaded, no folder made. It now uses the claim's own folder first (`getClaimFolderHandle`), the root folder second.
+- fix(storage): `pickClaimFolder` makes the vehicle folder (`MH 12 AB 1234 - NIA`) inside a general pick such as `D:\Claims`, so claims never land loose together. A picked folder whose name has the vehicle number is used as is. Fixes all three pickers (prompt dialog, header button, storage popover).
+- fix(scan-import): files on Drive without `_surveyos-scan.json` (Scan uploads it last) now say "The phone is still sending files to Drive" instead of "No phone files"; nothing half-sent is imported. Handover step 1c (invent a manifest) not built, by owner's choice.
+- RC/DL/Policy/Estimate source: no new dialog. Once a phone import works, the existing "From phone — click to read" card line and "Use phone files" buttons read from the vehicle folder. Handover step 4 not built (ponytail, owner's choice).
+- test: vitest 401 files / 3,627 tests passing; `tsc --noEmit` clean. SurveyOS Scan impact: none (manifest, folder layout and naming unchanged).
+
 ## 2026-11-20 (Antigravity) — Phone Scan & Claim Storage Workflow (DEPLOYED TO PRODUCTION)
 - deploy: built with `npm run build` (25/25 static pages) and deployed to Firebase Hosting (`surveyos-v2-antigravity-in`, site `motorsurveyos-in`, custom domain `https://surveyos.in`). Live chunk `05htj_w4kba-j.js` verified via `curl.exe` with HTTP 200.
 - feat(reports): auto-file all deliverables (Final Survey Report, UIIC Final, Reinspection Report, Valuation Report, Spot Fee Bill, Bill Check, Photo Sheet, NIA Excel) into the connected vehicle folder (`saveReportToClaimFolder` in `src/lib/reports/auto-file-report.ts`) with background Google Drive mirror and Executive Platinum toast feedback. (commit `f8d32cd8`)

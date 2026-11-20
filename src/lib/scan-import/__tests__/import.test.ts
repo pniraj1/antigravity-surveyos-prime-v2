@@ -15,12 +15,15 @@ const state = vi.hoisted(() => ({
   failType: '' as string,
   perm: '' as string, // '' = handle without queryPermission (older implementations)
   driveIds: [] as Array<string | undefined>,
+  claimFolder: '' as string, // '' = no per-claim folder; else that folder's permission state
 }));
 
 vi.mock('@/stores/claim-store', () => ({ useClaimStore: { getState: () => ({ currentClaim: state.claim,
   updateClaim: (u: Partial<ClaimData>) => { state.claim = { ...state.claim!, ...u }; } }) } }));
 vi.mock('@/lib/local-sync/directory-handle', () => ({ getStoredRootHandle: async () =>
   (state.folder ? (state.perm ? { queryPermission: async () => state.perm } : {}) : null) }));
+vi.mock('@/lib/storage/claim-folder-store', () => ({ getClaimFolderHandle: async () =>
+  (state.claimFolder ? { queryPermission: async () => state.claimFolder } : null) }));
 vi.mock('@/lib/documents/folder', () => ({
   readDocument: async (_c: ClaimData, d: ClaimDocument) => state.bytes.get(d.id)!,
 }));
@@ -71,6 +74,7 @@ beforeEach(() => {
   state.failType = '';
   state.perm = '';
   state.driveIds = [];
+  state.claimFolder = '';
 });
 const manifestEntry = (folder: string, vehicle: string, files: Array<{ path: string; type: string; data: string }>): FixtureEntry[] => [
   ...files.map((f) => ({ name: `${folder}/${f.path}`, data: f.data })),
@@ -93,6 +97,16 @@ describe('importScanZip', () => {
     const r = await importScanFiles(await (await import('../zip')).readZip(zip), { confirmVehicle: yes });
     expect(r.status).toBe('needs-folder');
     expect((r as { notes: any }).notes.spot['vehicle.odometer']).toBe('45210');
+  });
+
+  it('a per-claim folder alone is enough (no old global folder)', async () => {
+    state.folder = false;
+    state.claimFolder = 'granted';
+    expect(await importScanZip(scanZip([{ path: 'RC Book.pdf', type: 'rc', data: 'rc' }]), { confirmVehicle: yes }))
+      .toMatchObject({ status: 'done', added: 1 });
+    state.claimFolder = 'prompt';
+    expect(await importScanZip(scanZip([{ path: 'RC Book.pdf', type: 'rc', data: 'rc2' }]), { confirmVehicle: yes }))
+      .toMatchObject({ status: 'needs-permission' });
   });
 
   it('permissionNotGrantedWritesNothing', async () => {

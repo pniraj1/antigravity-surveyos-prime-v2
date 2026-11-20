@@ -1,3 +1,8 @@
+## Done: Phone scans save into the vehicle folder (2026-11-20, Claude Code)
+- **Session:** `Sessions/2026-11-20-phone-scan-folder-fix.md`
+- Root cause: `src/lib/scan-import/import.ts` gate read only the old root folder; per-claim folders always got "needs-folder". Fixed, plus vehicle subfolder on pick (`claim-folder-store.ts`) and a "phone still sending" message (`drive-source.ts`).
+- Not done: phone check on a real claim (owner). Open idea: show pending uploads + "Send now" in Scan (separate task).
+
 ## Done: Phone Scan & Claim Storage Workflow (2026-11-20, Antigravity) — DEPLOYED TO PRODUCTION
 - **Status:** Complete on `main` and deployed to production (`https://surveyos.in`, Firebase site `motorsurveyos-in`, commit `1b88897f`). Live deployment verified via `curl.exe` (chunk `05htj_w4kba-j.js` HTTP 200). Full test suite 100% green (401 files, 3,623 tests).
 - **Implementation Plan:** `docs/plans/2026-11-20-phone-scan-and-claim-storage-workflow.md`

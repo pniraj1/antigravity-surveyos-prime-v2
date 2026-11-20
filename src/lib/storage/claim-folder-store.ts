@@ -21,6 +21,8 @@
 // ═══════════════════════════════════════════════════════════
 
 import { openDB, type IDBPDatabase } from 'idb';
+import { useClaimStore } from '@/stores/claim-store';
+import { folderNameFor } from '@/lib/documents/naming';
 
 export const DB_NAME = 'surveyos-local-sync';
 export const DB_VERSION = 2;
@@ -191,6 +193,22 @@ export async function verifyHandlePermission(
   }
 }
 
+const plate = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+/**
+ * The vehicle's own folder for the picked one. A surveyor often picks a general folder (D:\Claims, Documents):
+ * using it as is would put every claim's files loose in it together, so the vehicle folder is created inside.
+ * A picked folder whose name already has the vehicle number is the vehicle folder.
+ * ponytail: only the open claim's vehicle number is known here; no number (or another claim) keeps the pick as is.
+ */
+async function vehicleFolderIn(picked: FileSystemDirectoryHandle, claimId: string): Promise<FileSystemDirectoryHandle> {
+  const claim = useClaimStore.getState().currentClaim;
+  const reg = plate(claim?.id === claimId ? claim.vehicle?.registrationNumber ?? '' : '');
+  if (!claim || !reg || plate(picked.name).includes(reg)) return picked;
+  // documentsFolder can hold an earlier pick's name ("Claims"): the vehicle folder is named afresh.
+  return picked.getDirectoryHandle(folderNameFor({ ...claim, documentsFolder: undefined }), { create: true });
+}
+
 /**
  * Prompts the user to pick a folder for the given claim via `showDirectoryPicker`,
  * persists the handle and folder name in IndexedDB, and returns them.
@@ -207,7 +225,8 @@ export async function pickClaimFolder(
     throw new Error('This browser cannot open a local folder. Use desktop Chrome or Edge.');
   }
 
-  const handle = await window.showDirectoryPicker!({ mode: 'readwrite' });
+  const picked = await window.showDirectoryPicker!({ mode: 'readwrite' });
+  const handle = await vehicleFolderIn(picked, trimmedId);
   const folderPath = handle?.name || 'Selected Folder';
 
   await setClaimFolderHandle(trimmedId, handle, folderPath);

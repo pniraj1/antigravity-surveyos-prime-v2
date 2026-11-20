@@ -129,6 +129,11 @@ export async function importFromDrive(opts: DriveImportOptions, explicitFolderId
   const listed = await listTree(folderId);
   const manifestFile = listed.find((l) => l.name === MANIFEST_NAME);
   if (!manifestFile) {
+    // Scan uploads the manifest last: export files without it are still arriving (a PDF may be cut off). Wait, never guess.
+    const sending = listed.filter((l) => !l.name.startsWith('_') && !/\.txt$/i.test(l.name));
+    if (sending.length) {
+      throw new Error(`The phone is still sending files to Drive (${sending.length} so far). Keep SurveyOS Scan open until it finishes, then click From Phone again.`);
+    }
     const backupFile = listed.find((l) => l.name === '_surveyos-backup.json');
     if (backupFile) {
       const backupBlob = await download(backupFile.id);
