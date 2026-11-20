@@ -13,6 +13,7 @@ import { fingerprintOf, reconcileKnown } from './kit/fingerprint';
 import { pageCountOf } from './kit/page-text';
 import { getAllClaims } from '@/lib/storage/indexeddb';
 import { getClaimFolderHandle, verifyHandlePermission, getClaimFolderPath } from '@/lib/storage/claim-folder-store';
+import { sha256Hex } from './kit/build';
 
 export class NoFolderError extends Error { constructor() { super('No claim folder is connected.'); } }
 export class PermissionDeniedError extends Error { constructor() { super('Folder access was not granted.'); } }
@@ -126,6 +127,51 @@ export async function writeDocuments(
   const folder = claimDir.name;
   const device = await getDeviceLabel();
   const existing = claimDocuments(claim);
+
+  // Content-hash deduplication for multi-file types (e.g. damagePhotos, spotPhotos)
+  if (MULTI_FILE_TYPES.has(type)) {
+    const existingTypeDocs = existing.filter((d) => d.type === type);
+    const existingDocHashes = new Map<string, string>();
+    const seenBatchHashes = new Set<string>();
+    const freshFiles: FolderInput[] = [];
+
+    for (const f of files) {
+      const incomingHash = await sha256Hex(f.blob);
+      if (seenBatchHashes.has(incomingHash)) {
+        continue;
+      }
+      seenBatchHashes.add(incomingHash);
+
+      let alreadyExists = false;
+      const candidateDocs = existingTypeDocs.filter((d) => d.size === f.blob.size);
+      for (const doc of candidateDocs) {
+        let docHash = existingDocHashes.get(doc.id);
+        if (!docHash) {
+          try {
+            const existingFile = await readDocument(claim, doc);
+            docHash = await sha256Hex(existingFile);
+            existingDocHashes.set(doc.id, docHash);
+          } catch {
+            // Unreadable existing file on disk; skip checking this doc
+          }
+        }
+        if (docHash === incomingHash) {
+          alreadyExists = true;
+          break;
+        }
+      }
+
+      if (!alreadyExists) {
+        freshFiles.push(f);
+      }
+    }
+
+    if (freshFiles.length === 0) {
+      return { claim, written: [] };
+    }
+    files = freshFiles;
+  }
+
   const inputs = files.map((f) => ({ mime: f.blob.type, name: f.name }));
   let relPaths = relPathsFor(type, inputs, existing);
   // 0. Multi-file types skip past whatever is already there.
