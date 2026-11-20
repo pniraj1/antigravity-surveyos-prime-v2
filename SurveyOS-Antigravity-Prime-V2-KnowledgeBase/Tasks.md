@@ -1,5 +1,5 @@
 ## Done: Payment Reconciliation & Received Fees Cockpit (2026-11-19, Antigravity) — DEPLOYED TO PRODUCTION
-- **Status:** Complete on `main` and deployed to production (`https://surveyos.in`, Firebase site `motorsurveyos-in`, commit b321d46a). Live chunks verified via `curl.exe`.
+- **Status:** Complete on `main` and deployed to production (`https://surveyos.in`, Firebase site `motorsurveyos-in`, commit 2db3f503). Live deployment verified.
 - **Implementation Plan:** `docs/plans/2026-11-19-payment-reconciliation-tab.md`
 - **Session:** `Sessions/2026-11-19-payment-reconciliation-cockpit.md`
 - **Delivered:**
@@ -7,13 +7,14 @@
   2. **Strict Matching Engine (`src/lib/reconciliation/matcher.ts`):** Enforces strict Claim No / Vehicle Reg No matching. Zero blind amount-only matching.
   3. **Surveyor Verified Sender Store (`src/lib/reconciliation/sample-store.ts`):** Pre-seeded with 7 Indian insurer and bank CMS remittance senders, customizable with browser storage.
   4. **Gemini Multimodal Extractor (`src/lib/ai/payment-advice-extractor.ts`):** Parses text and PDF/image payment advices with auto 10% TDS calculation (u/s 194J).
-  5. **Client-Side Gmail Fetcher (`src/lib/reconciliation/gmail-fetcher.ts`):** Scoped queries for payment advices with zero server storage.
-  6. **3-Zone Financial Cockpit (`PaymentReconciliationTab.tsx`):**
+  5. **Client-Side Gmail Fetcher & Dedicated Auth (`src/lib/reconciliation/gmail-fetcher.ts`, `gmail-auth.ts`):** Dedicated OAuth token client with `https://www.googleapis.com/auth/gmail.readonly` scope decoupled from Drive, detailed error parsing (handling GCP disabled APIs and insufficient scopes).
+  6. **Paste Email Quick Ingestion Modal (`src/components/reconciliation/PasteAdviceModal.tsx`):** Zero-friction text paste with sample template and instant AI extraction/matching with zero Google API requirements.
+  7. **3-Zone Financial Cockpit (`PaymentReconciliationTab.tsx`):**
      - Top KPI strip (Total Billed, Received in Bank, Pending Outstanding, TDS Withheld).
      - Matching Queue with 1-click `[ Confirm & Settle ]` and unmatched tray.
      - Master Claims Fee Ledger with live search, filters, and overdue ageing badges.
      - Verified Senders manager modal.
-  7. **Navigation & Security:** Sidebar entry under `MAIN` (`requiresClaim: false`), guarded by `shouldHideFees` for assistants.
+  8. **Navigation & Security:** Sidebar entry under `MAIN` (`requiresClaim: false`), guarded by `shouldHideFees` for assistants.
 - **SurveyOS Scan impact: none (isolated to Prime V2 web client financial tracking).**
 
 ## Done: Cash loss settlement basis (2026-11-19, Claude Code)

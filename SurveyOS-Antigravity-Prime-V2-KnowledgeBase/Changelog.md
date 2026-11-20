@@ -1,3 +1,10 @@
+## 2026-11-20 (Antigravity) — Scoped Gmail OAuth Client, Actionable 403 Diagnosis, and Paste Email Ingestion (DEPLOYED)
+- fix(reconciliation): resolved root cause of `Gmail Check Failed: Gmail API permission denied or insufficient scope`. Decoupled Gmail OAuth from Google Drive tokens into dedicated `src/lib/reconciliation/gmail-auth.ts`, properly requesting `https://www.googleapis.com/auth/gmail.readonly` and storing separate `surveyos_gmail_token`.
+- feat(reconciliation): added actionable diagnosis for Google Cloud 403 error responses (`parseGmailErrorResponse` in `gmail-fetcher.ts`), detecting when Gmail API is disabled in GCP Console and guiding the user to enable it.
+- feat(reconciliation): added zero-friction `[ 📋 Paste Email ]` modal (`src/components/reconciliation/PasteAdviceModal.tsx`) with light-mode UI, sample remittance template, and instant Gemini AI extraction & claim matching that works 100% offline without any Google API setup.
+- deploy: built with `npm run build` (25/25 static pages) and deployed to Firebase Hosting (`surveyos-v2-antigravity-in`, site `motorsurveyos-in`, custom domain `https://surveyos.in`, commit `2db3f503`). Verified live HTTP 200 via `curl.exe`.
+- commits: 2db3f503.
+
 ## 2026-11-20 (Antigravity) — Payment Reconciliation & Received Fees Cockpit (DEPLOYED TO PRODUCTION)
 - fix(reconciliation): eliminated all rogue dark-mode classes (`bg-neutral-900`, `bg-neutral-800`, `bg-emerald-950`, `bg-amber-950`, `bg-blue-950`, and dark-mode text colors) across `ReconciliationKPICards.tsx`, `PaymentMatchQueue.tsx`, `ClaimsLedgerTable.tsx`, and `SenderManagerModal.tsx`. Restored clean light-mode cards (`bg-white`), light header strips (`bg-neutral-50`, `bg-neutral-100`), white search inputs, and high-contrast status pills matching Prime V2's Executive Platinum theme.
 - deploy: built with `npm run build` (25/25 static pages) and deployed to Firebase Hosting (`surveyos-v2-antigravity-in`, site `motorsurveyos-in`, custom domain `https://surveyos.in`). Live chunk `14w2fuu31d3w7.js` verified with `curl.exe`.
