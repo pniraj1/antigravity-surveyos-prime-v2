@@ -120,10 +120,10 @@ export interface DriveImport {
 }
 
 /** Imports the open claim's phone scans from Scan's Drive folder, as a zip import would, then moves the files into Prime. */
-export async function importFromDrive(opts: DriveImportOptions): Promise<DriveImport> {
+export async function importFromDrive(opts: DriveImportOptions, explicitFolderId?: string): Promise<DriveImport> {
   const claim = useClaimStore.getState().currentClaim;
   if (!claim) throw new Error('Open the claim first, then bring its phone scans.');
-  const folderId = await scanFolderFor(claim, opts.choose);
+  const folderId = explicitFolderId || (await scanFolderFor(claim, opts.choose));
   if (!folderId) return { result: { status: 'cancelled' }, moveFailed: 0, mismatched: [] };
 
   const listed = await listTree(folderId);

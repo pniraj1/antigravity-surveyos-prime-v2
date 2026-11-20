@@ -184,4 +184,15 @@ describe('importFromDrive', () => {
       },
     });
   });
+
+  it('imports directly from explicitFolderId without scanning', async () => {
+    state.scanFolder = null; // scanning would throw "No Drive folder"
+    state.nodes = [
+      file('m', '_surveyos-scan.json', 'explicit-id', manifest('MH12AB1234', [{ path: 'RC.pdf', data: 'rc' }])),
+      file('r', 'RC.pdf', 'explicit-id', 'rc'),
+    ];
+    const r = await importFromDrive({ confirmVehicle: yes }, 'explicit-id');
+    expect(r.result.status).toBe('done');
+    expect(state.moves).toEqual([['r', 'P', 'explicit-id']]);
+  });
 });

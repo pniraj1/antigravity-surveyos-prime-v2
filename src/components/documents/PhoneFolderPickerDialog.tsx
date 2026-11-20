@@ -5,7 +5,7 @@ import { Cloud, Folder, FolderX, Laptop, Loader2, Sparkles } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useUIStore } from '@/stores/ui-store';
 import { linkGoogleDrive } from '@/lib/drive';
-import { listScanDriveFolders, type ScanDriveFolderItem } from '@/lib/scan-import/drive-notes';
+import { listScanDriveFolders, formatSyncTime, type ScanDriveFolderItem } from '@/lib/scan-import/drive-notes';
 import { sameVehicle } from '@/lib/scan-import/manifest';
 
 interface Props {
@@ -70,22 +70,6 @@ export function PhoneFolderPickerDialog({
   const matchingFolders = folders.filter((f) => sameVehicle(f.vehicle, currentVehicle));
   const otherFolders = folders.filter((f) => !sameVehicle(f.vehicle, currentVehicle));
 
-  const formatDate = (iso?: string) => {
-    if (!iso) return '';
-    try {
-      const d = new Date(iso);
-      return d.toLocaleDateString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return '';
-    }
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col p-6">
@@ -96,7 +80,7 @@ export function PhoneFolderPickerDialog({
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
             {isDriveConnected
-              ? `Connected as ${driveEmail || 'Google Drive'} · Select the claim folder to import notes from:`
+              ? `Connected as ${driveEmail || 'Google Drive'} · Select your vehicle scan folder:`
               : 'Google Drive is not linked in this session. Link your account or choose a file from your computer.'}
           </DialogDescription>
         </DialogHeader>
@@ -132,7 +116,7 @@ export function PhoneFolderPickerDialog({
               className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] rounded-xl border border-border bg-card hover:bg-muted text-xs font-medium text-foreground transition-all"
             >
               <Laptop size={16} className="text-muted-foreground" />
-              Choose .zip file from this computer
+              Choose from computer (.zip)
             </button>
           </div>
         )}
@@ -159,7 +143,7 @@ export function PhoneFolderPickerDialog({
                 <div className="space-y-1">
                   <div className="text-sm font-medium text-foreground">No Phone Scans Found</div>
                   <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                    No folders found in <span className="font-mono">SurveyOS/Phone Scans/</span>. On your phone app, enable <strong>Settings › Drive backup › Text only</strong>.
+                    No folders found in <span className="font-mono">SurveyOS/Phone Scans/</span>. On your phone app, enable <strong>Settings › Drive backup › Text only</strong> or <strong>Full</strong>.
                   </p>
                 </div>
                 <button
@@ -168,7 +152,7 @@ export function PhoneFolderPickerDialog({
                   className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-xl border border-border bg-card hover:bg-muted text-xs font-medium"
                 >
                   <Laptop size={14} />
-                  Choose exported .zip instead
+                  Choose from computer (.zip)
                 </button>
               </div>
             )}
@@ -195,12 +179,13 @@ export function PhoneFolderPickerDialog({
                               {f.name}
                             </div>
                             <div className="text-[11px] text-muted-foreground">
-                              {formatDate(f.modifiedTime)}
+                              Last backed up: {formatSyncTime(f.modifiedTime)}
+                              {f.fileCount !== undefined ? ` · ${f.fileCount} file${f.fileCount === 1 ? '' : 's'}` : ''}
                             </div>
                           </div>
                         </div>
                         <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-600 text-white shrink-0">
-                          Matches
+                          Matches this claim
                         </span>
                       </button>
                     ))}
@@ -226,7 +211,8 @@ export function PhoneFolderPickerDialog({
                               {f.name}
                             </div>
                             <div className="text-[11px] text-muted-foreground">
-                              {formatDate(f.modifiedTime)}
+                              Last backed up: {formatSyncTime(f.modifiedTime)}
+                              {f.fileCount !== undefined ? ` · ${f.fileCount} file${f.fileCount === 1 ? '' : 's'}` : ''}
                             </div>
                           </div>
                         </div>
@@ -246,7 +232,7 @@ export function PhoneFolderPickerDialog({
             className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground underline underline-offset-4"
           >
             <Laptop size={14} />
-            Pick .zip from computer
+            Pick from computer (.zip)
           </button>
           <button
             type="button"

@@ -62,22 +62,21 @@ describe('FromPhoneButton', () => {
     expect(html).not.toContain('Phone Scans &amp; Photos');
   });
 
-  it('initialOpen shows the source dialog with the computer zip option', () => {
+  it('initialOpen directly opens PhoneFolderPickerDialog without intermediate 3-option modal', () => {
     const html = renderToStaticMarkup(<FromPhoneButton initialOpen />);
-    expect(html).toContain('From this Computer (.zip)');
-    expect(html).toContain('Choose the zip SurveyOS Scan shared');
+    expect(html).toContain('Select Phone Scan Folder');
+    expect(html).not.toContain('Choose the zip SurveyOS Scan shared');
+    expect(html).not.toContain('From this Computer (.zip)');
+    expect(html).toContain('Pick from computer (.zip)');
   });
 
-  it('still offers the computer zip when local folders are unsupported', () => {
+  it('allows computer file pick via fallback in folder picker dialog and file input', () => {
     vi.mocked(claimFolderStore.isLocalFolderSupported).mockReturnValue(false);
-    // Static render reads the store's initial state, not setState; link Drive there (restored below).
-    const initial = useUIStore.getInitialState();
-    const was = initial.isDriveConnected;
-    initial.isDriveConnected = true;
     const html = renderToStaticMarkup(<FromPhoneButton initialOpen />);
-    expect(html).toContain('From this Computer (.zip)');
-    initial.isDriveConnected = was;
-    expect(html).toContain('Notes from a Google Drive folder');
+    expect(html).toContain('Select Phone Scan Folder');
+    expect(html).toContain('Pick from computer (.zip)');
+    expect(html).toContain('type="file"');
+    expect(html).toContain('accept=".zip"');
   });
 
   it('respects disabled state when no claim is loaded', () => {
