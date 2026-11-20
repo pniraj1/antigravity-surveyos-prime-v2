@@ -12,7 +12,7 @@ const ALL_TYPES: DocType[] = [
   'niaAssessmentExcel', 'oicAssessmentExcel', 'insuredSummary',
   'workApproval', 'deliveryOrder', 'other',
   'aadhaar', 'pan', 'ckyc', 'kycOther', 'claimIntimation',
-  'dischargeVoucher', 'csr', 'investigationReport', 'rcBack', 'dlBack', 'cashLossConsent',
+  'dischargeVoucher', 'csr', 'investigationReport', 'rcBack', 'dlBack', 'cashLossConsent', 'photoSheet', 'valuationReport',
 ];
 
 describe('kit types', () => {
