@@ -1,3 +1,12 @@
+## 2026-11-20 (Antigravity) — Phone Scan & Claim Storage Workflow (COMMITTED)
+- feat(reports): auto-file all deliverables (Final Survey Report, UIIC Final, Reinspection Report, Valuation Report, Spot Fee Bill, Bill Check, Photo Sheet, NIA Excel) into the connected vehicle folder (`saveReportToClaimFolder` in `src/lib/reports/auto-file-report.ts`) with background Google Drive mirror and Executive Platinum toast feedback. (commit `f8d32cd8`)
+- feat(storage): implement Choice 2 per-claim local PC folder selection gate in `ClaimFolderPromptDialog.tsx` and `claim-folder-store.ts`, prompting surveyor to assign their preferred directory per vehicle (`MH 12 AB 1234`) and auto-resuming pending phone scan imports upon selection. (commit `07a25e3f`)
+- feat(documents): completely eliminate the confusing 3-option modal from `FromPhoneButton.tsx`, directly opening the surveyor-friendly `PhoneFolderPickerDialog` with direct folder import support (`explicitFolderId` in `drive-source.ts`). (commit `54866ce4`)
+- fix(scan-import): harden Drive scan folder inspection error handling in `drive-notes.ts`, filter subfolders from item counts, and bound relative time calculations against clock drift. (commit `48bd115d`)
+- feat(scan-import): enrich Google Drive phone scan folders with live relative timestamps ("5 mins ago", "Today at 3:15 PM"), item counts (photos, documents, field notes readiness), and eliminate all raw `.json` / manifest jargon from `PhoneFolderPickerDialog.tsx`. (commit `7ff6cb21`)
+- fix(documents): enforce SHA-256 content deduplication on multi-file photo saves (`damagePhotos`, `spotPhotos`) in `src/lib/documents/folder.ts`, preventing duplicate numbered files (`Damage Photos 2.jpg`) for identical photo bytes. (commit `9662ee31`)
+- test: vitest 401/401 test suites passing, 3,623/3,623 unit and integration tests passing (100%); `tsc --noEmit` 0 errors. SurveyOS Scan drift: verified 0 drift.
+
 ## 2026-11-20 (Antigravity) — SurveyOS Scan Field Usability, Continuous Camera, Swipe & Sync Fixes
 - feat(capture): added continuous field camera capture in `PhotoCapture.kt` and `ClaimScreen.kt` for site inspections; automatically re-launches camera on `RESULT_OK` until surveyor backs out.
 - feat(claim): added direct auto-save for targeted scans in `ClaimScreen.kt`, eliminating redundant "Save as Policy" confirmation screen.

@@ -1,3 +1,29 @@
+## Done: Phone Scan & Claim Storage Workflow (2026-11-20, Antigravity) — COMMITTED
+- **Status:** Complete on `main` (commits `9662ee31`, `7ff6cb21`, `48bd115d`, `54866ce4`, `07a25e3f`, `f8d32cd8`). Full test suite 100% green (401 files, 3,623 tests).
+- **Implementation Plan:** `docs/plans/2026-11-20-phone-scan-and-claim-storage-workflow.md`
+- **Session:** `Sessions/2026-11-20-phone-scan-and-claim-storage-workflow.md`
+- **Delivered:**
+  1. **SHA-256 Photo Content Deduplication (`src/lib/documents/folder.ts`):**
+     - Computes SHA-256 digest on incoming multi-file photo uploads (`damagePhotos`, `spotPhotos`).
+     - Checks against existing documents and folder hashes to prevent duplicate photo numbering (`Damage Photos 2.jpg`) for identical bytes.
+  2. **Drive Folder Inspection & Timestamps (`src/lib/scan-import/drive-notes.ts`, `PhoneFolderPickerDialog.tsx`):**
+     - Enriched scan folder listings with live backup timestamps ("5 mins ago", "Today at 3:15 PM"), photo and document counts, and field notes readiness.
+     - Hardened error handling so folders with partial/in-progress sync are still listed and selectable without throwing errors.
+     - Zero technical jargon: completely removed `.json`, manifests, and raw hash references from the UI.
+  3. **Streamlined "From Phone" Button (`src/components/documents/FromPhoneButton.tsx`):**
+     - Completely eliminated the confusing 3-option modal ("Sync from Google Drive Folder", "Pick .zip from Google Drive", "Pick .zip from this computer").
+     - Clicking "From Phone" directly opens the surveyor-friendly phone scan selector.
+     - Supports direct folder import via `explicitFolderId` in `drive-source.ts`.
+  4. **Per-Claim Local Folder Selection Gate (Choice 2) (`ClaimFolderPromptDialog.tsx`, `claim-folder-store.ts`):**
+     - Prompts the surveyor to choose their local folder for that specific vehicle (`MH 12 AB 1234`).
+     - Stores the directory handle in IndexedDB (`claim-handles` store) and syncs `claim.documentsFolder`.
+     - Automatically resumes pending phone scan imports upon folder selection with zero repeat clicks.
+  5. **Auto-Filing of Deliverables into Vehicle Folder & Drive (`src/lib/reports/auto-file-report.ts`):**
+     - Automatically saves all generated reports (Final Survey Report, UIIC Final, Reinspection, Valuation, Spot Fee Bill, Bill Check, Photo Sheet, Excel) directly into the vehicle's connected PC folder.
+     - Non-blocking mirror to Google Drive when linked.
+     - Executive Platinum notification toast: `Saved [Report.pdf] to vehicle folder: [Folder Name]`.
+- **SurveyOS Scan impact: Verified zero drift. No Android code changes, doc types, or manifest schemas altered.**
+
 ## Done: SurveyOS Scan Field Usability, Continuous Camera, Swipe & Sync Fixes (2026-11-20, Antigravity) — PLAY STORE BUNDLE GENERATED
 - **Status:** Complete on `main` in `SurveyOS Scan` (commits `5db82f8`, `b3c4491`, `0597ec8`, `ad8d111`, `228bc46`, `312ee59`, `b4c40b6`). Production release bundle `app-release.aab` generated (v1.8, code 10).
 - **AAB Location:** `SurveyOS Scan/app/build/outputs/bundle/release/app-release.aab` (11.7 MB).
