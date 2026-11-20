@@ -1,3 +1,12 @@
+## 2026-11-20 (Antigravity) — SurveyOS Scan Field Usability, Continuous Camera, Swipe & Sync Fixes
+- feat(capture): added continuous field camera capture in `PhotoCapture.kt` and `ClaimScreen.kt` for site inspections; automatically re-launches camera on `RESULT_OK` until surveyor backs out.
+- feat(claim): added direct auto-save for targeted scans in `ClaimScreen.kt`, eliminating redundant "Save as Policy" confirmation screen.
+- feat(photos): implemented full-screen horizontal swipe navigation and `X of Y` counter pill in `PhotoViewer.kt` using Jetpack Compose `HorizontalPager`.
+- feat(claim): synchronized top photo stage filter chips (Spot, Final, RI) with camera capture destination `ClaimVisit.kind` in `ClaimScreen.kt`.
+- fix(drive): fixed `TextSync._state` staying `null` on up-to-date passes, persisted `last_sync_at` across restarts, and displayed `Last synced: [time]` in `DriveBackupSection.kt` and `HomeScreen.kt`.
+- feat(settings): restructured uniform `SettingsScreen.kt` into 6 Material 3 `SettingsCard` containers with vector category icons, and moved licences text to a dialog.
+- test: `SurveyOS Scan` `./gradlew :app:testDebugUnitTest :app:assembleDebug` passed 100% (46/46 tasks); `SurveyOS Prime V2` `npx vitest run` passed (3,593/3,593 tests); `tsc --noEmit` clean. Prime ↔ Scan drift: 0.
+
 ## 2026-11-20 (Antigravity) — Deterministic Zero-AI Remittance Parsers (DEPLOYED TO PRODUCTION)
 - feat(reconciliation): implemented deterministic zero-AI regex parsers in `src/lib/reconciliation/deterministic-parsers.ts` for Axis Bank CMS (`Straight2axis@axis.bank.in`), UIIC automated emails (`policy.noreply@service.uiic.co.in`), and New India Assurance tabular notices (`NIAHO@newindia.co.in`). Runs in <1ms with 0 token consumption.
 - feat(reconciliation): wired deterministic short-circuit and digital PDF text-layer extraction (`pageTexts`) in `src/lib/ai/payment-advice-extractor.ts`. Bypasses image rendering and AI calls for digital PDF and text remittances.

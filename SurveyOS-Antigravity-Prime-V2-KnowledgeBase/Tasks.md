@@ -1,3 +1,25 @@
+## Done: SurveyOS Scan Field Usability, Continuous Camera, Swipe & Sync Fixes (2026-11-20, Antigravity)
+- **Status:** Complete on `main` in `SurveyOS Scan` (commits `5db82f8`, `b3c4491`, `0597ec8`, `ad8d111`, `228bc46`, `312ee59`).
+- **Plan:** `docs/plans/2026-11-20-field-usability-and-sync-fixes.md` in `SurveyOS Scan`.
+- **Session:** `Sessions/2026-11-20-scan-field-usability-and-sync-fixes.md`
+- **Delivered:**
+  1. **Continuous Field Camera Capture (`PhotoCapture.kt`, `ClaimScreen.kt`):**
+     - Auto-reopens camera after each accepted photo on site until surveyor presses Back/Cancel.
+  2. **Direct Auto-Save on Targeted Scans (`ClaimScreen.kt`):**
+     - Auto-saves targeted document scans (Policy, RC, DL) directly, removing the redundant "Save as Policy" confirmation screen.
+  3. **Photo Viewer Horizontal Swiping & Counter (`PhotoViewer.kt`, `ClaimScreen.kt`):**
+     - Integrated Compose `HorizontalPager` with `X of Y` counter pill and active photo control binding.
+  4. **Two-Way Photo Stage & Filter Sync (`ClaimScreen.kt`):**
+     - Tapping Spot / Final / RI filter chips immediately directs new captures to that category.
+  5. **Drive Sync State & "Last Synced" Persistence Fix (`TextSync.kt`, `DriveBackupSection.kt`, `HomeScreen.kt`):**
+     - Fixed null state bug, persisted timestamp, and added visible `Last synced: [time]` in Settings and on Home.
+  6. **Settings Screen Card Containers & Category Icons (`SettingsScreen.kt`):**
+     - Replaced flat uniform text dump with 6 Material 3 cards with vector icons and dialog-based licences.
+  7. **Verification:**
+     - Scan: `./gradlew :app:testDebugUnitTest :app:assembleDebug` 100% green.
+     - Prime: `npx vitest run` 3,593/3,593 tests passed.
+- **Prime ↔ Scan impact: Verified zero drift. No doc types or manifest schemas altered.**
+
 ## Done: Deterministic Zero-AI Remittance Parsers (2026-11-20, Antigravity) — DEPLOYED TO PRODUCTION
 - **Status:** Complete on `main` and deployed to production (`https://surveyos.in`, Firebase site `motorsurveyos-in`). Live chunk `0v-20a_~7jmx-.js` verified with `curl.exe`.
 - **Session:** `Sessions/2026-11-20-deterministic-zero-ai-parsers.md`
