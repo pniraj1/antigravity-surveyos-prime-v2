@@ -50,6 +50,14 @@ vi.mock('@/lib/drive', () => ({
   getDriveToken: vi.fn().mockReturnValue('mock-drive-token'),
 }));
 
+// Mock Gmail auth
+vi.mock('@/lib/reconciliation/gmail-auth', () => ({
+  getStoredGmailToken: vi.fn().mockReturnValue('mock-gmail-token'),
+  requestGmailToken: vi.fn().mockResolvedValue('mock-gmail-token'),
+  clearGmailToken: vi.fn(),
+  isGmailConnected: vi.fn().mockReturnValue(true),
+}));
+
 // Sample claims data for testing
 const mockClaimsList: any[] = [
   {
@@ -287,6 +295,8 @@ describe('Payment Reconciliation Tab & Cockpit Components', () => {
       expect(html).toContain('2,250');
       expect(html).toContain('Pending Outstanding');
       expect(html).toContain('3,000'); // 1800 + 1200
+      expect(html).toContain('Paste Email');
+      expect(html).toContain('Check Gmail');
 
       // Zone 3
       expect(html).toContain('Claims Fee Ledger');

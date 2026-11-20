@@ -24,6 +24,8 @@ export interface PaymentAdvice {
   createdAt?: string;
 }
 
+export type ExtractedPaymentAdvice = PaymentAdvice;
+
 export type MatchConfidence = 'exact_claim_no' | 'exact_vehicle_no' | 'manual';
 
 export interface PaymentMatchResult {

@@ -10,6 +10,7 @@ import {
   Upload,
   Settings2,
   Loader2,
+  ClipboardPaste,
 } from 'lucide-react';
 
 export interface ReconciliationKPICardsProps {
@@ -20,6 +21,7 @@ export interface ReconciliationKPICardsProps {
   totalTds: number;
   onCheckGmail: () => void;
   onUploadClick: () => void;
+  onPasteEmailClick?: () => void;
   onOpenSenders: () => void;
   isCheckingGmail?: boolean;
   isProcessingFile?: boolean;
@@ -37,6 +39,7 @@ export function ReconciliationKPICards({
   totalTds,
   onCheckGmail,
   onUploadClick,
+  onPasteEmailClick,
   onOpenSenders,
   isCheckingGmail = false,
   isProcessingFile = false,
@@ -70,6 +73,19 @@ export function ReconciliationKPICards({
             )}
             <span>Check Gmail</span>
           </button>
+
+          {/* Paste Email Button */}
+          {onPasteEmailClick && (
+            <button
+              type="button"
+              onClick={onPasteEmailClick}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border border-amber-200 bg-amber-50/50 hover:bg-amber-100/60 text-amber-900 transition-colors shadow-xs"
+              title="Paste email text directly from insurer payment intimation"
+            >
+              <ClipboardPaste className="w-3.5 h-3.5 text-amber-600" />
+              <span>Paste Email</span>
+            </button>
+          )}
 
           {/* Drop Advice / File Upload Button */}
           <button

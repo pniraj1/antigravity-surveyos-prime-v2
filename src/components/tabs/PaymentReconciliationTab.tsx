@@ -5,7 +5,11 @@ import { useClaimStore } from '@/stores/claim-store';
 import { useUIStore } from '@/stores/ui-store';
 import { getClaim, saveClaim } from '@/lib/storage/indexeddb';
 import { calculateFeeSummary } from '@/lib/calculations/fees';
-import { getDriveToken } from '@/lib/drive';
+import {
+  getStoredGmailToken,
+  requestGmailToken,
+  clearGmailToken,
+} from '@/lib/reconciliation/gmail-auth';
 import {
   extractPaymentAdviceFromFile,
   extractPaymentAdviceFromText,
@@ -16,11 +20,12 @@ import {
   buildGmailSearchQuery,
   fetchRecentPaymentEmails,
 } from '@/lib/reconciliation/gmail-fetcher';
-import type { PaymentMatchResult } from '@/types/payment-reconciliation';
+import type { PaymentMatchResult, ExtractedPaymentAdvice } from '@/types/payment-reconciliation';
 import { ReconciliationKPICards } from '@/components/reconciliation/ReconciliationKPICards';
 import { PaymentMatchQueue } from '@/components/reconciliation/PaymentMatchQueue';
 import { ClaimsLedgerTable } from '@/components/reconciliation/ClaimsLedgerTable';
 import { SenderManagerModal } from '@/components/reconciliation/SenderManagerModal';
+import { PasteAdviceModal } from '@/components/reconciliation/PasteAdviceModal';
 import { toast } from 'sonner';
 import { UploadCloud } from 'lucide-react';
 
@@ -43,6 +48,7 @@ export function PaymentReconciliationTab() {
   const [isProcessingFile, setIsProcessingFile] = useState(false);
   const [isSettling, setIsSettling] = useState(false);
   const [isSenderModalOpen, setIsSenderModalOpen] = useState(false);
+  const [isPasteModalOpen, setIsPasteModalOpen] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
 
   // Active claims subset for calculation and ledger
@@ -88,6 +94,39 @@ export function PaymentReconciliationTab() {
     };
   }, [activeClaims]);
 
+  // Reusable advice application & matching
+  const applyExtractedAdvice = useCallback(
+    (advice: ExtractedPaymentAdvice) => {
+      if (!advice || !advice.claims || advice.claims.length === 0) return [];
+
+      const matchTargets = activeClaims.map((c) => ({
+        id: c.id,
+        claimNo: c.claimNo,
+        vehicleNo: c.vehicleNo,
+        feeTotal: c.feeTotal,
+        reportNo: c.reportNo,
+        feePaid: c.feePaid,
+      }));
+
+      const newMatches = matchPaymentAdvicesToClaims(
+        advice.claims,
+        matchTargets,
+        advice.utrNumber,
+        advice.paymentDate,
+        advice.insurerName
+      );
+
+      setMatches((prev) => {
+        const existingIds = new Set(prev.map((m) => m.id));
+        const additions = newMatches.filter((m) => !existingIds.has(m.id));
+        return [...prev, ...additions];
+      });
+
+      return newMatches;
+    },
+    [activeClaims]
+  );
+
   // File parsing & matching helper
   const processUploadedFile = useCallback(
     async (file: File) => {
@@ -108,31 +147,7 @@ export function PaymentReconciliationTab() {
           return;
         }
 
-        // Map claimsList to match targets
-        const matchTargets = activeClaims.map((c) => ({
-          id: c.id,
-          claimNo: c.claimNo,
-          vehicleNo: c.vehicleNo,
-          feeTotal: c.feeTotal,
-          reportNo: c.reportNo,
-          feePaid: c.feePaid,
-        }));
-
-        const newMatches = matchPaymentAdvicesToClaims(
-          advice.claims,
-          matchTargets,
-          advice.utrNumber,
-          advice.paymentDate,
-          advice.insurerName
-        );
-
-        setMatches((prev) => {
-          // Merge avoiding identical IDs
-          const existingIds = new Set(prev.map((m) => m.id));
-          const additions = newMatches.filter((m) => !existingIds.has(m.id));
-          return [...prev, ...additions];
-        });
-
+        const newMatches = applyExtractedAdvice(advice);
         const matchedCount = newMatches.filter((m) => m.status === 'matched').length;
         toast.success(
           `Extracted ${newMatches.length} payment line item(s) (${matchedCount} matched)`
@@ -144,7 +159,7 @@ export function PaymentReconciliationTab() {
         setIsProcessingFile(false);
       }
     },
-    [activeClaims]
+    [applyExtractedAdvice]
   );
 
   // File Input Handler
@@ -183,13 +198,18 @@ export function PaymentReconciliationTab() {
 
   // Check Gmail for payment emails
   const handleCheckGmail = async () => {
-    const token = getDriveToken();
+    let token = getStoredGmailToken();
     if (!token) {
-      toast.error('Google Workspace is not connected', {
-        description:
-          'Please link your Google account in the Save Status bar or Cloud Vault tab to search Gmail.',
-      });
-      return;
+      toast.info('Connecting to Gmail to search remittance emails...');
+      try {
+        token = await requestGmailToken();
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Google authentication cancelled';
+        toast.error(`Gmail Connection: ${msg}`, {
+          description: 'You can also use "Paste Email" or "Drop Advice" without any Google setup.',
+        });
+        return;
+      }
     }
 
     setIsCheckingGmail(true);
@@ -248,7 +268,18 @@ export function PaymentReconciliationTab() {
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Gmail search failed';
-      toast.error(`Gmail Check Failed: ${msg}`);
+      if (
+        msg.toLowerCase().includes('permission') ||
+        msg.toLowerCase().includes('scope') ||
+        msg.toLowerCase().includes('expired') ||
+        msg.toLowerCase().includes('invalid')
+      ) {
+        clearGmailToken();
+      }
+      toast.error(`Gmail Check Failed: ${msg}`, {
+        description: 'You can use "Paste Email" to paste the remittance text directly.',
+        duration: 8000,
+      });
     } finally {
       setIsCheckingGmail(false);
     }
@@ -487,6 +518,7 @@ export function PaymentReconciliationTab() {
         totalTds={kpis.totalTds}
         onCheckGmail={handleCheckGmail}
         onUploadClick={() => fileInputRef.current?.click()}
+        onPasteEmailClick={() => setIsPasteModalOpen(true)}
         onOpenSenders={() => setIsSenderModalOpen(true)}
         isCheckingGmail={isCheckingGmail}
         isProcessingFile={isProcessingFile}
@@ -514,6 +546,13 @@ export function PaymentReconciliationTab() {
       <SenderManagerModal
         isOpen={isSenderModalOpen}
         onClose={() => setIsSenderModalOpen(false)}
+      />
+
+      {/* Paste Payment Advice / Intimation Modal */}
+      <PasteAdviceModal
+        isOpen={isPasteModalOpen}
+        onClose={() => setIsPasteModalOpen(false)}
+        onAdviceExtracted={applyExtractedAdvice}
       />
     </div>
   );

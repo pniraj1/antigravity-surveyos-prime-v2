@@ -25,6 +25,32 @@ export const DEFAULT_INSURER_KEYWORDS =
   '(insurance OR insurer OR surveyor OR "payment advice")';
 
 /**
+ * Parses Google Gmail API error responses to provide actionable diagnostic error messages.
+ */
+export async function parseGmailErrorResponse(
+  response: Response,
+  defaultMessage = 'Gmail API permission denied or insufficient scope'
+): Promise<string> {
+  try {
+    const errorJson = await response.json();
+    const rawMsg = errorJson?.error?.message;
+    if (typeof rawMsg === 'string' && rawMsg.trim().length > 0) {
+      const lower = rawMsg.toLowerCase();
+      if (lower.includes('disabled') || lower.includes('not been used')) {
+        return 'Gmail API is disabled in your Google Cloud Console project. Please enable Gmail API in Google Cloud Console, or use "Paste Email" / "Drop Advice".';
+      }
+      if (lower.includes('insufficient') || lower.includes('scope')) {
+        return 'Gmail API permission denied or insufficient scope. Please re-authenticate to grant Gmail access.';
+      }
+      return `Gmail API error: ${rawMsg}`;
+    }
+  } catch {
+    /* ignore json parsing failures */
+  }
+  return defaultMessage;
+}
+
+/**
  * Builds targeted Gmail search query for surveyor payment advices.
  * Extracts non-empty sender emails, or falls back to standard insurer keywords.
  */
@@ -221,7 +247,8 @@ export async function fetchRecentPaymentEmails(
     throw new Error('Gmail access token expired or invalid');
   }
   if (listResponse.status === 403) {
-    throw new Error('Gmail API permission denied or insufficient scope');
+    const errorMsg = await parseGmailErrorResponse(listResponse);
+    throw new Error(errorMsg);
   }
   if (!listResponse.ok) {
     throw new Error(`Gmail API error: ${listResponse.status} ${listResponse.statusText}`);
@@ -260,7 +287,8 @@ export async function fetchRecentPaymentEmails(
         throw new Error('Gmail access token expired or invalid');
       }
       if (msgResponse.status === 403) {
-        throw new Error('Gmail API permission denied or insufficient scope');
+        const errorMsg = await parseGmailErrorResponse(msgResponse);
+        throw new Error(errorMsg);
       }
       if (!msgResponse.ok) {
         throw new Error(`Gmail API error: ${msgResponse.status} ${msgResponse.statusText}`);
@@ -308,7 +336,8 @@ export async function fetchGmailAttachmentBlob(
     throw new Error('Gmail access token expired or invalid');
   }
   if (response.status === 403) {
-    throw new Error('Gmail API permission denied or insufficient scope');
+    const errorMsg = await parseGmailErrorResponse(response);
+    throw new Error(errorMsg);
   }
   if (!response.ok) {
     throw new Error(`Failed to fetch attachment: ${response.status} ${response.statusText}`);

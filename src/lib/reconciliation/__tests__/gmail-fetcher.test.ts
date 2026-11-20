@@ -182,14 +182,35 @@ describe('Gmail Scoped Fetcher', () => {
       ).rejects.toThrow('Gmail access token expired or invalid');
     });
 
-    it('throws descriptive error on 403 Forbidden', async () => {
+    it('throws descriptive error on 403 Forbidden with plain response', async () => {
       globalThis.fetch = vi.fn().mockResolvedValue(
         new Response('Forbidden', { status: 403, statusText: 'Forbidden' })
       );
 
       await expect(
         fetchRecentPaymentEmails('unscoped-token', 'subject:payment')
-      ).rejects.toThrow('Gmail API permission denied or insufficient scope');
+      ).rejects.toThrow(/Gmail API permission denied or insufficient scope/);
+    });
+
+    it('throws actionable guidance when Gmail API is disabled in Google Cloud Console', async () => {
+      const gcpDisabledJson = {
+        error: {
+          code: 403,
+          message: 'Gmail API has not been used in project 123456 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/gmail.googleapis.com/overview then retry.',
+          status: 'PERMISSION_DENIED',
+        },
+      };
+
+      globalThis.fetch = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify(gcpDisabledJson), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+
+      await expect(
+        fetchRecentPaymentEmails('valid-token', 'subject:payment')
+      ).rejects.toThrow(/Gmail API is disabled in your Google Cloud Console project/i);
     });
 
     it('handles network failure gracefully with descriptive error', async () => {
