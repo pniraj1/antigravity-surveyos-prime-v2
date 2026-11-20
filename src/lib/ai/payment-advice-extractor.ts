@@ -8,6 +8,8 @@ import type { PaymentAdvice, PaymentAdviceClaimItem } from '@/types/payment-reco
 import { callAIGateway } from './service';
 import { fileToImages } from './processor';
 import { readZip } from '@/lib/scan-import/zip';
+import { pageTexts } from '@/lib/documents/kit/page-text';
+import { parseDeterministicAdvice } from '@/lib/reconciliation/deterministic-parsers';
 
 export const PAYMENT_ADVICE_PROMPT = `You are an expert Indian motor insurance survey remittance and payment advice parser.
 Analyze the provided payment advice document or email text and extract structured payment details.
@@ -190,13 +192,23 @@ export function parseAdviceJSON(raw: string, source: string = 'unknown'): Paymen
 
 /**
  * Extracts payment advice details from raw text (e.g. copied email body).
+ * Prioritizes 0-latency deterministic regex parsers before falling back to AI.
  */
 export async function extractPaymentAdviceFromText(text: string, source: string = 'email-body'): Promise<PaymentAdvice | null> {
   if (!text || !text.trim()) return null;
 
+  // 1. Deterministic fast path (<5ms, 0 AI tokens)
+  const deterministic = parseDeterministicAdvice(text, source);
+  if (deterministic) return deterministic;
+
+  // 2. Quick heuristic: if text does NOT contain any financial keyword, skip AI immediately
+  if (!/(rs\.?|inr|₹|disbursed|credited|paid|payment|neft|rtgs|cms|advice|settlement|utr|amount|remit)/i.test(text)) {
+    return null;
+  }
+
   try {
     const prompt = `${PAYMENT_ADVICE_PROMPT}\n\nPayment Advice Content / Email Text:\n${text}`;
-    const raw = await callAIGateway(prompt, [], 'json', 'heavy');
+    const raw = await callAIGateway(prompt, [], 'json', 'text');
     return parseAdviceJSON(raw, source);
   } catch (error) {
     console.error('Failed to extract payment advice from text:', error);
@@ -206,6 +218,7 @@ export async function extractPaymentAdviceFromText(text: string, source: string 
 
 /**
  * Extracts payment advice details from an uploaded file (.txt, image, or PDF).
+ * Avoids vision AI when digital text layers can be parsed directly.
  */
 export async function extractPaymentAdviceFromFile(file: File): Promise<PaymentAdvice | null> {
   if (!file) return null;
@@ -224,6 +237,17 @@ export async function extractPaymentAdviceFromFile(file: File): Promise<PaymentA
         const entryExt = entryName.split('.').pop()?.toLowerCase();
         if (entryExt === 'pdf') {
           const pdfFile = new File([entryBlob], entryName, { type: 'application/pdf' });
+          const pages = await pageTexts(pdfFile);
+          if (pages && pages.length > 0) {
+            const text = pages.join('\n').trim();
+            if (text) {
+              const advice = parseDeterministicAdvice(text, entryName) || (await extractPaymentAdviceFromText(text, entryName));
+              if (advice && advice.claims && advice.claims.length > 0) {
+                return advice;
+              }
+            }
+          }
+          // Scanned PDF fallback
           const advice = await extractPaymentAdviceFromFile(pdfFile);
           if (advice && advice.claims && advice.claims.length > 0) {
             return advice;
@@ -241,13 +265,27 @@ export async function extractPaymentAdviceFromFile(file: File): Promise<PaymentA
     }
   }
 
+  // Standalone PDF files: check text layer first before rendering images
+  if (ext === 'pdf' || file.type === 'application/pdf') {
+    const pages = await pageTexts(file);
+    if (pages && pages.length > 0) {
+      const text = pages.join('\n').trim();
+      if (text) {
+        const advice = parseDeterministicAdvice(text, file.name);
+        if (advice && advice.claims && advice.claims.length > 0) {
+          return advice;
+        }
+      }
+    }
+  }
+
   try {
     const { apiImages } = await fileToImages(file);
     if (!apiImages || apiImages.length === 0) return null;
 
-    // Send up to 3 pages to callAIGateway
+    // Send up to 3 pages to callAIGateway with 'light' tier
     const pages = apiImages.slice(0, 3);
-    const raw = await callAIGateway(PAYMENT_ADVICE_PROMPT, pages, 'json', 'heavy');
+    const raw = await callAIGateway(PAYMENT_ADVICE_PROMPT, pages, 'json', 'light');
     return parseAdviceJSON(raw, file.name);
   } catch (error) {
     console.error('Failed to extract payment advice from file:', error);

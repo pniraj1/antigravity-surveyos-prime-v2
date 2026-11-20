@@ -177,8 +177,45 @@ describe('Payment Advice Extractor', () => {
     const file = new File(['%PDF-1.4...'], 'advice.pdf', { type: 'application/pdf' });
     const result = await extractPaymentAdviceFromFile(file);
     expect(fileToImages).toHaveBeenCalledWith(file);
-    expect(callAIGateway).toHaveBeenCalledWith(PAYMENT_ADVICE_PROMPT, expect.any(Array), 'json', 'heavy');
+    expect(callAIGateway).toHaveBeenCalledWith(PAYMENT_ADVICE_PROMPT, expect.any(Array), 'json', 'light');
     expect(result?.insurerName).toBe('HDFC ERGO');
     expect(result?.utrNumber).toBe('HDFC9900');
+  });
+
+  it('bypasses callAIGateway completely when text matches deterministic parser (UIIC)', async () => {
+    const uiicText = `For the claim 2310023126C050058001 on policy number: 2310023125P117257182, vehicle number: MH 18 BZ 2552, insured name: Vikram Patil and Survey report no. REP-99 your payment has been disbursed at Rs. 5468/-( gross=6076, TDS=608, GST TDS=0 )`;
+
+    const result = await extractPaymentAdviceFromText(uiicText, 'uiic.eml');
+    expect(callAIGateway).not.toHaveBeenCalled();
+    expect(result).not.toBeNull();
+    expect(result?.insurerName).toBe('United India Insurance Company Limited');
+    expect(result?.claims[0].claimNumber).toBe('2310023126C050058001');
+    expect(result?.claims[0].netPaid).toBe(5468);
+  });
+
+  it('skips AI gateway immediately when text lacks any financial keywords', async () => {
+    const nonFinancialText = 'Hello world, please find the meeting agenda attached for tomorrow morning.';
+
+    const result = await extractPaymentAdviceFromText(nonFinancialText, 'agenda.txt');
+    expect(callAIGateway).not.toHaveBeenCalled();
+    expect(result).toBeNull();
+  });
+
+  it('uses "text" tier when falling back to AI for text advice', async () => {
+    (callAIGateway as any).mockResolvedValueOnce(
+      JSON.stringify({
+        insurerName: 'Custom Insurer',
+        paymentDate: '2026-11-20',
+        utrNumber: 'CUST123',
+        totalAmount: 1000,
+        totalTds: 100,
+        netPaid: 900,
+        claims: [{ claimNumber: 'CLM-1', grossFee: 1000, netPaid: 900 }],
+      })
+    );
+
+    const result = await extractPaymentAdviceFromText('Non-templated remittance advice: payment paid Rs 900 UTR CUST123', 'custom.txt');
+    expect(callAIGateway).toHaveBeenCalledWith(expect.any(String), [], 'json', 'text');
+    expect(result?.insurerName).toBe('Custom Insurer');
   });
 });

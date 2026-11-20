@@ -1,3 +1,9 @@
+## 2026-11-20 (Antigravity) — Deterministic Zero-AI Remittance Parsers (COMPLETE ON MAIN)
+- feat(reconciliation): implemented deterministic zero-AI regex parsers in `src/lib/reconciliation/deterministic-parsers.ts` for Axis Bank CMS (`Straight2axis@axis.bank.in`), UIIC automated emails (`policy.noreply@service.uiic.co.in`), and New India Assurance tabular notices (`NIAHO@newindia.co.in`). Runs in <1ms with 0 token consumption.
+- feat(reconciliation): wired deterministic short-circuit and digital PDF text-layer extraction (`pageTexts`) in `src/lib/ai/payment-advice-extractor.ts`. Bypasses image rendering and AI calls for digital PDF and text remittances.
+- feat(reconciliation): added non-financial text heuristic guard and downgraded fallback AI tiers from `'heavy'` to `'text'` (for text advice) and `'light'` (for scanned photo PDF advice).
+- test: added unit tests in `src/lib/reconciliation/__tests__/deterministic-parsers.test.ts` (12 tests) and updated `src/lib/ai/__tests__/payment-advice-extractor.test.ts` (12 tests). All 92 reconciliation tests pass. SurveyOS Scan impact: none.
+
 ## 2026-11-20 (Antigravity) — Configurable Scan Scope & Smart Skip Reconciliation (DEPLOYED TO PRODUCTION)
 - feat(reconciliation): implemented persistent IndexedDB deduplication and cache engine in `src/lib/reconciliation/advice-cache.ts` (`surveyos-reconciliation` database with `processed-emails` and `cached-advices` stores). Skips settled and dismissed emails on subsequent scans, and reuses cached payment voucher extractions to eliminate redundant Gemini AI calls.
 - feat(reconciliation): added lightweight two-stage message ID listing (`listGmailMessageIds` in `gmail-fetcher.ts`), enabling instant pre-filtering of 25 to 100 email references against local IndexedDB in milliseconds before downloading full message payloads.

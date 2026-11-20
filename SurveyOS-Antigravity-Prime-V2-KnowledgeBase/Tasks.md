@@ -1,3 +1,17 @@
+## Done: Deterministic Zero-AI Remittance Parsers (2026-11-20, Antigravity) — COMPLETE ON MAIN
+- **Status:** Complete on `main`.
+- **Session:** `Sessions/2026-11-20-deterministic-zero-ai-parsers.md`
+- **Delivered:**
+  1. **Deterministic Parser Engine (`src/lib/reconciliation/deterministic-parsers.ts`):**
+     - Pure regex / text parsers for Axis Bank CMS PDF text (`parseAxisBankCmsPdfText`), UIIC automated emails (`parseUiicEmailText`), and New India Assurance tabular notices (`parseNiaEmailText`).
+     - Composite router `parseDeterministicAdvice` executing in <1ms with 0 AI API latency and 0 token cost.
+  2. **Short-Circuit & Tier Downgrades (`src/lib/ai/payment-advice-extractor.ts`):**
+     - Prioritizes deterministic extraction on text and digital PDFs (both standalone and inside ZIP files via `pageTexts`).
+     - Financial keyword heuristic immediately short-circuits non-financial text without invoking AI.
+     - Downgraded text fallback to `'text'` tier and scanned image fallback to `'light'` tier.
+  3. **Verification:** 24/24 vitest tests passing across targeted test suites; 92/92 reconciliation tests passing; `tsc --noEmit` 0 errors.
+- **SurveyOS Scan impact: none (isolated to Prime V2 web client financial tracking).**
+
 ## Done: Configurable Scan Scope & Smart Skip Reconciliation (2026-11-20, Antigravity) — DEPLOYED TO PRODUCTION
 - **Status:** Complete on `main` and deployed to production (`https://surveyos.in`, Firebase site `motorsurveyos-in`). Live deployed chunk `0eh7yts6y.4-b.js` verified with `curl.exe`.
 - **Implementation Plan:** `docs/plans/2026-11-20-configurable-scan-and-smart-skip-reconciliation.md`
