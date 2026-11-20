@@ -1,4 +1,5 @@
-## 2026-11-20 (Antigravity) — Phone Scan & Claim Storage Workflow (COMMITTED)
+## 2026-11-20 (Antigravity) — Phone Scan & Claim Storage Workflow (DEPLOYED TO PRODUCTION)
+- deploy: built with `npm run build` (25/25 static pages) and deployed to Firebase Hosting (`surveyos-v2-antigravity-in`, site `motorsurveyos-in`, custom domain `https://surveyos.in`). Live chunk `05htj_w4kba-j.js` verified via `curl.exe` with HTTP 200.
 - feat(reports): auto-file all deliverables (Final Survey Report, UIIC Final, Reinspection Report, Valuation Report, Spot Fee Bill, Bill Check, Photo Sheet, NIA Excel) into the connected vehicle folder (`saveReportToClaimFolder` in `src/lib/reports/auto-file-report.ts`) with background Google Drive mirror and Executive Platinum toast feedback. (commit `f8d32cd8`)
 - feat(storage): implement Choice 2 per-claim local PC folder selection gate in `ClaimFolderPromptDialog.tsx` and `claim-folder-store.ts`, prompting surveyor to assign their preferred directory per vehicle (`MH 12 AB 1234`) and auto-resuming pending phone scan imports upon selection. (commit `07a25e3f`)
 - feat(documents): completely eliminate the confusing 3-option modal from `FromPhoneButton.tsx`, directly opening the surveyor-friendly `PhoneFolderPickerDialog` with direct folder import support (`explicitFolderId` in `drive-source.ts`). (commit `54866ce4`)

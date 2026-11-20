@@ -1,5 +1,5 @@
-## Done: Phone Scan & Claim Storage Workflow (2026-11-20, Antigravity) — COMMITTED
-- **Status:** Complete on `main` (commits `9662ee31`, `7ff6cb21`, `48bd115d`, `54866ce4`, `07a25e3f`, `f8d32cd8`). Full test suite 100% green (401 files, 3,623 tests).
+## Done: Phone Scan & Claim Storage Workflow (2026-11-20, Antigravity) — DEPLOYED TO PRODUCTION
+- **Status:** Complete on `main` and deployed to production (`https://surveyos.in`, Firebase site `motorsurveyos-in`, commit `1b88897f`). Live deployment verified via `curl.exe` (chunk `05htj_w4kba-j.js` HTTP 200). Full test suite 100% green (401 files, 3,623 tests).
 - **Implementation Plan:** `docs/plans/2026-11-20-phone-scan-and-claim-storage-workflow.md`
 - **Session:** `Sessions/2026-11-20-phone-scan-and-claim-storage-workflow.md`
 - **Delivered:**

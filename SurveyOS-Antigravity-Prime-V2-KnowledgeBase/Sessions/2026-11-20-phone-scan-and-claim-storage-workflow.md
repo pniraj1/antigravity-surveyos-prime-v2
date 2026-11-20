@@ -76,3 +76,12 @@
   - Full test suite: 401 test files passed, 3,610 tests passed (100% pass rate).
 - **SurveyOS Scan Android Drift:**
   - Checked `SurveyOS Scan/` git status: clean working tree, 0 modified files, 0 schema changes, 0 drift.
+
+---
+
+## 3. Production Deployment
+- Built with `npm run build`: 25/25 static routes compiled cleanly with 0 TypeScript errors.
+- Deployed to Firebase Hosting: `npx firebase deploy --only hosting:motorsurveyos-in --project surveyos-v2-antigravity-in`.
+- Production Domain: `https://surveyos.in` (Firebase site: `motorsurveyos-in`).
+- Verification: Verified live HTTP 200 and live script chunk `05htj_w4kba-j.js` (Last-Modified Fri, 20 Nov 2026 16:47:40 GMT) via `curl.exe`.
+
