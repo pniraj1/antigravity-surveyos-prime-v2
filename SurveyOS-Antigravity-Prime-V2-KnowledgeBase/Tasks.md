@@ -1,5 +1,5 @@
-## Done: Deterministic Zero-AI Remittance Parsers (2026-11-20, Antigravity) — COMPLETE ON MAIN
-- **Status:** Complete on `main`.
+## Done: Deterministic Zero-AI Remittance Parsers (2026-11-20, Antigravity) — DEPLOYED TO PRODUCTION
+- **Status:** Complete on `main` and deployed to production (`https://surveyos.in`, Firebase site `motorsurveyos-in`). Live chunk `0v-20a_~7jmx-.js` verified with `curl.exe`.
 - **Session:** `Sessions/2026-11-20-deterministic-zero-ai-parsers.md`
 - **Delivered:**
   1. **Deterministic Parser Engine (`src/lib/reconciliation/deterministic-parsers.ts`):**
@@ -9,7 +9,7 @@
      - Prioritizes deterministic extraction on text and digital PDFs (both standalone and inside ZIP files via `pageTexts`).
      - Financial keyword heuristic immediately short-circuits non-financial text without invoking AI.
      - Downgraded text fallback to `'text'` tier and scanned image fallback to `'light'` tier.
-  3. **Verification:** 24/24 vitest tests passing across targeted test suites; 92/92 reconciliation tests passing; `tsc --noEmit` 0 errors.
+  3. **Verification:** 147/147 vitest tests passing across full suite; `tsc --noEmit` 0 errors.
 - **SurveyOS Scan impact: none (isolated to Prime V2 web client financial tracking).**
 
 ## Done: Configurable Scan Scope & Smart Skip Reconciliation (2026-11-20, Antigravity) — DEPLOYED TO PRODUCTION
