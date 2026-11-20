@@ -16,17 +16,29 @@ import {
 } from '@/lib/ai/payment-advice-extractor';
 import { matchPaymentAdvicesToClaims } from '@/lib/reconciliation/matcher';
 import { loadSavedSenders } from '@/lib/reconciliation/sample-store';
-import {
-  buildGmailSearchQuery,
-  fetchRecentPaymentEmails,
-  fetchGmailAttachmentBlob,
-} from '@/lib/reconciliation/gmail-fetcher';
 import type { PaymentMatchResult, ExtractedPaymentAdvice } from '@/types/payment-reconciliation';
 import { ReconciliationKPICards } from '@/components/reconciliation/ReconciliationKPICards';
 import { PaymentMatchQueue } from '@/components/reconciliation/PaymentMatchQueue';
 import { ClaimsLedgerTable } from '@/components/reconciliation/ClaimsLedgerTable';
 import { SenderManagerModal } from '@/components/reconciliation/SenderManagerModal';
 import { PasteAdviceModal } from '@/components/reconciliation/PasteAdviceModal';
+import {
+  ScanScopeSelector,
+  getSavedScanScope,
+  saveScanScope,
+  type ScanScope,
+} from '@/components/reconciliation/ScanScopeSelector';
+import { ScanProgressModal } from '@/components/reconciliation/ScanProgressModal';
+import {
+  runSmartReconciliationSync,
+  checkCachedAdvicesAgainstClaims,
+  type SyncProgressUpdate,
+  type SmartSyncResult,
+} from '@/lib/reconciliation/smart-sync-service';
+import {
+  markEmailSettled,
+  clearReconciliationCache,
+} from '@/lib/reconciliation/advice-cache';
 import { toast } from 'sonner';
 import { UploadCloud } from 'lucide-react';
 
@@ -51,6 +63,37 @@ export function PaymentReconciliationTab() {
   const [isSenderModalOpen, setIsSenderModalOpen] = useState(false);
   const [isPasteModalOpen, setIsPasteModalOpen] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+
+  // Scan Scope & Smart Sync States
+  const [scanScope, setScanScope] = useState<ScanScope>(() => getSavedScanScope());
+  const [syncProgress, setSyncProgress] = useState<SyncProgressUpdate | null>(null);
+  const [syncResult, setSyncResult] = useState<SmartSyncResult | null>(null);
+  const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Handle scan scope change (preset or custom)
+  const handleScopeChange = useCallback((scope: ScanScope) => {
+    setScanScope(scope);
+    saveScanScope(scope);
+  }, []);
+
+  // Cancel ongoing scan
+  const handleCancelScan = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    setSyncProgress((prev) => ({
+      phase: 'cancelled',
+      current: prev?.current ?? 0,
+      total: prev?.total ?? 0,
+      message: 'Scan cancelled by surveyor.',
+    }));
+  }, []);
+
+  // Close scan progress modal
+  const handleCloseProgressModal = useCallback(() => {
+    setIsProgressModalOpen(false);
+  }, []);
 
   // Active claims subset for calculation and ledger
   const activeClaims = useMemo(() => {
@@ -99,6 +142,44 @@ export function PaymentReconciliationTab() {
       pendingCount,
       totalTds,
       totalDisallowed,
+    };
+  }, [activeClaims]);
+
+  // Instant Cache Match: Evaluates active claims against previously cached unmatched vouchers in IndexedDB
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function runLocalMatch() {
+      try {
+        const matchTargets = activeClaims.map((c) => ({
+          id: c.id,
+          claimNo: c.claimNo,
+          vehicleNo: c.vehicleNo,
+          feeTotal: c.feeTotal,
+          reportNo: c.reportNo,
+          feePaid: c.feePaid,
+        }));
+
+        const localMatches = await checkCachedAdvicesAgainstClaims(matchTargets);
+        if (!isCancelled && localMatches && localMatches.length > 0) {
+          setMatches((prev) => {
+            const existingIds = new Set(prev.map((m) => m.id));
+            const additions = localMatches.filter((m) => !existingIds.has(m.id));
+            if (additions.length === 0) return prev;
+            return [...prev, ...additions];
+          });
+        }
+      } catch (err) {
+        console.warn('Instant cache match check failed:', err);
+      }
+    }
+
+    if (activeClaims.length > 0) {
+      runLocalMatch();
+    }
+
+    return () => {
+      isCancelled = true;
     };
   }, [activeClaims]);
 
@@ -204,134 +285,109 @@ export function PaymentReconciliationTab() {
     }
   };
 
-  // Check Gmail for payment emails
-  const handleCheckGmail = async () => {
-    let token = getStoredGmailToken();
-    if (!token) {
-      toast.info('Connecting to Gmail to search remittance emails...');
+  // Check Gmail for payment emails with Smart Sync engine
+  const handleCheckGmail = useCallback(
+    async (forceRescan = false) => {
+      let token = getStoredGmailToken();
+      if (!token) {
+        toast.info('Connecting to Gmail to search remittance emails...');
+        try {
+          token = await requestGmailToken();
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : 'Google authentication cancelled';
+          toast.error(`Gmail Connection: ${msg}`, {
+            description: 'You can also use "Paste Email" or "Drop Advice" without any Google setup.',
+          });
+          return;
+        }
+      }
+
+      setIsCheckingGmail(true);
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
+      setSyncProgress(null);
+      setSyncResult(null);
+      setIsProgressModalOpen(true);
+
       try {
-        token = await requestGmailToken();
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Google authentication cancelled';
-        toast.error(`Gmail Connection: ${msg}`, {
-          description: 'You can also use "Paste Email" or "Drop Advice" without any Google setup.',
-        });
-        return;
-      }
-    }
-
-    setIsCheckingGmail(true);
-    try {
-      const senders = loadSavedSenders();
-      const query = buildGmailSearchQuery(senders, 30);
-      toast.info('Searching Gmail for insurer payment advices...');
-
-      const emails = await fetchRecentPaymentEmails(token, query, 5);
-      if (!emails || emails.length === 0) {
-        toast.info('No payment advice emails found in the last 30 days');
-        return;
-      }
-
-      toast.info(`Found ${emails.length} potential payment email(s). Extracting details...`);
-
-      let totalExtracted = 0;
-      const matchTargets = activeClaims.map((c) => ({
-        id: c.id,
-        claimNo: c.claimNo,
-        vehicleNo: c.vehicleNo,
-        feeTotal: c.feeTotal,
-        reportNo: c.reportNo,
-        feePaid: c.feePaid,
-      }));
-
-      const collectedMatches: PaymentMatchResult[] = [];
-
-      for (const email of emails) {
-        let extractedFromAttachments = false;
-
-        // 1. Process attachments (PDF or ZIP containing PDF, e.g. Axis Bank CMS payment advice)
-        if (email.attachments && email.attachments.length > 0) {
-          for (const att of email.attachments) {
-            const filename = (att.filename || '').toLowerCase();
-            const isPdf = filename.endsWith('.pdf') || att.mimeType === 'application/pdf';
-            const isZip = filename.endsWith('.zip') || att.mimeType.includes('zip');
-
-            if (isPdf || isZip) {
-              try {
-                const blob = await fetchGmailAttachmentBlob(token, email.id, att.attachmentId);
-                if (blob) {
-                  const attFile = new File([blob], att.filename, {
-                    type: isPdf ? 'application/pdf' : 'application/zip',
-                  });
-                  const advice = await extractPaymentAdviceFromFile(attFile);
-                  if (advice && advice.claims && advice.claims.length > 0) {
-                    totalExtracted += advice.claims.length;
-                    const adviceMatches = matchPaymentAdvicesToClaims(
-                      advice.claims,
-                      matchTargets,
-                      advice.utrNumber,
-                      advice.paymentDate,
-                      advice.insurerName || email.from
-                    );
-                    collectedMatches.push(...adviceMatches);
-                    extractedFromAttachments = true;
-                  }
-                }
-              } catch (attErr) {
-                console.warn(`Failed to process attachment ${att.filename}:`, attErr);
-              }
-            }
+        if (forceRescan) {
+          try {
+            await clearReconciliationCache();
+          } catch (cacheErr) {
+            console.warn('Failed to clear cache on force rescan:', cacheErr);
           }
         }
 
-        // 2. If no advice was extracted from attachments, fallback to email body text
-        if (!extractedFromAttachments) {
-          const textContent = email.bodyText || email.snippet;
-          if (!textContent) continue;
+        const senders = loadSavedSenders();
+        const matchTargets = activeClaims.map((c) => ({
+          id: c.id,
+          claimNo: c.claimNo,
+          vehicleNo: c.vehicleNo,
+          feeTotal: c.feeTotal,
+          reportNo: c.reportNo,
+          feePaid: c.feePaid,
+        }));
 
-          const advice = await extractPaymentAdviceFromText(textContent, `Gmail: ${email.subject}`);
-          if (advice && advice.claims && advice.claims.length > 0) {
-            totalExtracted += advice.claims.length;
-            const adviceMatches = matchPaymentAdvicesToClaims(
-              advice.claims,
-              matchTargets,
-              advice.utrNumber,
-              advice.paymentDate,
-              advice.insurerName || email.from
+        const result = await runSmartReconciliationSync({
+          accessToken: token,
+          senders,
+          activeClaims: matchTargets,
+          daysBack: scanScope.daysBack,
+          maxResults: scanScope.maxResults,
+          forceRescan,
+          signal: controller.signal,
+          onProgress: (p) => setSyncProgress(p),
+        });
+
+        setSyncResult(result);
+
+        if (result.matches && result.matches.length > 0) {
+          setMatches((prev) => {
+            const existingIds = new Set(prev.map((m) => m.id));
+            const additions = result.matches.filter((m) => !existingIds.has(m.id));
+            return [...prev, ...additions];
+          });
+        }
+
+        if (!result.cancelled) {
+          const matchedCount = result.stats?.matchesCount ?? result.matches.length;
+          const skippedCount = result.stats?.skippedSettled ?? 0;
+          if (matchedCount > 0 || skippedCount > 0) {
+            toast.success(
+              `Scan complete: ${matchedCount} matching claim${matchedCount === 1 ? '' : 's'} found${
+                skippedCount > 0 ? `, ${skippedCount} settled skipped` : ''
+              }`
             );
-            collectedMatches.push(...adviceMatches);
+          } else if (result.stats?.totalFound === 0) {
+            toast.info(`No payment advice emails found in the last ${scanScope.daysBack} days`);
+          } else {
+            toast.info('No structured remittance data could be parsed from the payment emails');
           }
         }
-      }
-
-      if (collectedMatches.length > 0) {
-        setMatches((prev) => {
-          const existingIds = new Set(prev.map((m) => m.id));
-          const additions = collectedMatches.filter((m) => !existingIds.has(m.id));
-          return [...prev, ...additions];
+      } catch (err: unknown) {
+        if (controller.signal.aborted) {
+          return;
+        }
+        const msg = err instanceof Error ? err.message : 'Gmail search failed';
+        if (
+          msg.toLowerCase().includes('permission') ||
+          msg.toLowerCase().includes('scope') ||
+          msg.toLowerCase().includes('expired') ||
+          msg.toLowerCase().includes('invalid')
+        ) {
+          clearGmailToken();
+        }
+        toast.error(`Gmail Check Failed: ${msg}`, {
+          description: 'You can use "Paste Email" to paste the remittance text directly.',
+          duration: 8000,
         });
-        toast.success(`Processed ${totalExtracted} payment remittance item(s) from Gmail`);
-      } else {
-        toast.info('No structured remittance data could be parsed from the payment emails');
+      } finally {
+        setIsCheckingGmail(false);
       }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Gmail search failed';
-      if (
-        msg.toLowerCase().includes('permission') ||
-        msg.toLowerCase().includes('scope') ||
-        msg.toLowerCase().includes('expired') ||
-        msg.toLowerCase().includes('invalid')
-      ) {
-        clearGmailToken();
-      }
-      toast.error(`Gmail Check Failed: ${msg}`, {
-        description: 'You can use "Paste Email" to paste the remittance text directly.',
-        duration: 8000,
-      });
-    } finally {
-      setIsCheckingGmail(false);
-    }
-  };
+    },
+    [activeClaims, scanScope]
+  );
 
   // Manual claim assignment for unmatched advice items
   const handleAssignManualClaim = (matchId: string, claimId: string) => {
@@ -401,6 +457,14 @@ export function PaymentReconciliationTab() {
             await saveClaim(updatedClaim);
             settledClaimIds.add(item.matchedClaimId);
             settledCount++;
+
+            try {
+              const emailId =
+                (item as { sourceMessageId?: string; id: string }).sourceMessageId || item.id;
+              await markEmailSettled(emailId, fullClaim.id, item.utrNumber);
+            } catch (cacheErr) {
+              console.warn('Failed to mark email as settled in cache:', cacheErr);
+            }
           }
         } catch (itemErr) {
           console.error(`Failed to settle claim ${item.matchedClaimId}:`, itemErr);
@@ -580,7 +644,15 @@ export function PaymentReconciliationTab() {
         pendingCount={kpis.pendingCount}
         totalTds={kpis.totalTds}
         totalDisallowed={kpis.totalDisallowed}
-        onCheckGmail={handleCheckGmail}
+        onCheckGmail={() => handleCheckGmail(false)}
+        onForceRescan={() => handleCheckGmail(true)}
+        scanScopeSelector={
+          <ScanScopeSelector
+            currentScope={scanScope}
+            onChangeScope={handleScopeChange}
+            disabled={isCheckingGmail}
+          />
+        }
         onUploadClick={() => fileInputRef.current?.click()}
         onPasteEmailClick={() => setIsPasteModalOpen(true)}
         onOpenSenders={() => setIsSenderModalOpen(true)}
@@ -617,6 +689,15 @@ export function PaymentReconciliationTab() {
         isOpen={isPasteModalOpen}
         onClose={() => setIsPasteModalOpen(false)}
         onAdviceExtracted={applyExtractedAdvice}
+      />
+
+      {/* Scan Progress Modal */}
+      <ScanProgressModal
+        isOpen={isProgressModalOpen}
+        progress={syncProgress}
+        result={syncResult}
+        onCancel={handleCancelScan}
+        onClose={handleCloseProgressModal}
       />
     </div>
   );

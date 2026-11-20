@@ -11,6 +11,7 @@ import {
   Settings2,
   Loader2,
   ClipboardPaste,
+  RotateCw,
 } from 'lucide-react';
 
 export interface ReconciliationKPICardsProps {
@@ -21,6 +22,8 @@ export interface ReconciliationKPICardsProps {
   totalTds: number;
   totalDisallowed?: number;
   onCheckGmail: () => void;
+  onForceRescan?: () => void;
+  scanScopeSelector?: React.ReactNode;
   onUploadClick: () => void;
   onPasteEmailClick?: () => void;
   onOpenSenders: () => void;
@@ -40,6 +43,8 @@ export function ReconciliationKPICards({
   totalTds,
   totalDisallowed = 0,
   onCheckGmail,
+  onForceRescan,
+  scanScopeSelector,
   onUploadClick,
   onPasteEmailClick,
   onOpenSenders,
@@ -60,21 +65,41 @@ export function ReconciliationKPICards({
         </div>
 
         <div className="flex items-center flex-wrap gap-2">
-          {/* Check Gmail Button */}
-          <button
-            type="button"
-            onClick={onCheckGmail}
-            disabled={isCheckingGmail}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg text-white bg-amber-500 hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-            title="Scan connected Gmail account for insurer payment advices"
-          >
-            {isCheckingGmail ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Mail className="w-3.5 h-3.5" />
+          {/* Scan Scope Selector */}
+          {scanScopeSelector}
+
+          {/* Check Gmail Button Group with Force Full Rescan */}
+          <div className="inline-flex items-center rounded-lg shadow-sm">
+            <button
+              type="button"
+              onClick={onCheckGmail}
+              disabled={isCheckingGmail}
+              className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-white bg-amber-500 hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
+                onForceRescan ? 'rounded-l-lg border-r border-amber-600/30' : 'rounded-lg'
+              }`}
+              title="Scan connected Gmail account for insurer payment advices"
+            >
+              {isCheckingGmail ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Mail className="w-3.5 h-3.5" />
+              )}
+              <span>Check Gmail</span>
+            </button>
+
+            {onForceRescan && (
+              <button
+                type="button"
+                onClick={onForceRescan}
+                disabled={isCheckingGmail}
+                className="inline-flex items-center px-2 py-2 text-xs font-medium rounded-r-lg text-white bg-amber-500 hover:bg-amber-600 border-l border-amber-400/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="Force Full Rescan (ignores cache and scans all emails in scope)"
+                aria-label="Force Full Rescan"
+              >
+                <RotateCw className="w-3.5 h-3.5" />
+              </button>
             )}
-            <span>Check Gmail</span>
-          </button>
+          </div>
 
           {/* Paste Email Button */}
           {onPasteEmailClick && (

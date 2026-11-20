@@ -58,6 +58,30 @@ vi.mock('@/lib/reconciliation/gmail-auth', () => ({
   isGmailConnected: vi.fn().mockReturnValue(true),
 }));
 
+// Mock smart sync service
+vi.mock('@/lib/reconciliation/smart-sync-service', () => ({
+  runSmartReconciliationSync: vi.fn().mockResolvedValue({
+    matches: [],
+    unmatchedAdvices: [],
+    stats: {
+      totalFound: 5,
+      skippedSettled: 2,
+      cachedReused: 1,
+      newlyParsed: 2,
+      matchesCount: 1,
+    },
+    cancelled: false,
+  }),
+  checkCachedAdvicesAgainstClaims: vi.fn().mockResolvedValue([]),
+}));
+
+// Mock advice cache
+vi.mock('@/lib/reconciliation/advice-cache', () => ({
+  markEmailSettled: vi.fn().mockResolvedValue(undefined),
+  clearReconciliationCache: vi.fn().mockResolvedValue(undefined),
+  getAllUnmatchedCachedAdvices: vi.fn().mockResolvedValue([]),
+}));
+
 // Sample claims data for testing
 const mockClaimsList: any[] = [
   {
@@ -182,6 +206,28 @@ describe('Payment Reconciliation Tab & Cockpit Components', () => {
       expect(html).toContain('Drop Advice');
       expect(html).toContain('Verified Senders');
     });
+
+    it('renders scanScopeSelector and onForceRescan button when provided', () => {
+      const handleForceRescan = vi.fn();
+      const html = renderToStaticMarkup(
+        <ReconciliationKPICards
+          totalBilled={5500}
+          totalReceived={2250}
+          pendingAmount={3000}
+          pendingCount={2}
+          totalTds={250}
+          onCheckGmail={vi.fn()}
+          onForceRescan={handleForceRescan}
+          scanScopeSelector={<div data-testid="mock-scope-selector">Scope: Last 30 days</div>}
+          onUploadClick={vi.fn()}
+          onOpenSenders={vi.fn()}
+        />
+      );
+
+      expect(html).toContain('mock-scope-selector');
+      expect(html).toContain('Scope: Last 30 days');
+      expect(html).toContain('Force Full Rescan');
+    });
   });
 
   describe('Zone 2: PaymentMatchQueue', () => {
@@ -297,6 +343,8 @@ describe('Payment Reconciliation Tab & Cockpit Components', () => {
       expect(html).toContain('3,000'); // 1800 + 1200
       expect(html).toContain('Paste Email');
       expect(html).toContain('Check Gmail');
+      expect(html).toContain('Force Full Rescan');
+      expect(html).toContain('Last 30 days');
 
       // Zone 3
       expect(html).toContain('Claims Fee Ledger');
@@ -304,7 +352,7 @@ describe('Payment Reconciliation Tab & Cockpit Components', () => {
       expect(html).toContain('DL-01-XY-5678');
     });
 
-    it('settles matched payments by updating claim in IndexedDB and marking as paid', async () => {
+    it('settles matched payments by updating claim in IndexedDB, marking as paid, and updating cache', async () => {
       const mockFullClaim = {
         id: 'claim-1',
         vehicle: { registrationNumber: 'MH-12-AB-1234' },
@@ -315,11 +363,13 @@ describe('Payment Reconciliation Tab & Cockpit Components', () => {
       };
 
       const { getClaim, saveClaim } = await import('@/lib/storage/indexeddb');
+      const { markEmailSettled } = await import('@/lib/reconciliation/advice-cache');
       vi.mocked(getClaim).mockResolvedValue(mockFullClaim as any);
 
       // Verify settle logic by calling the handler directly
-      const matchToSettle: PaymentMatchResult = {
+      const matchToSettle: PaymentMatchResult & { sourceMessageId?: string } = {
         id: 'pm-1',
+        sourceMessageId: 'gmail-msg-999',
         adviceClaim: {
           claimNumber: '31010031240100001234',
           vehicleNumber: 'MH-12-AB-1234',
@@ -358,6 +408,7 @@ describe('Payment Reconciliation Tab & Cockpit Components', () => {
       };
 
       await saveClaim(updatedClaim as any);
+      await markEmailSettled(matchToSettle.sourceMessageId || matchToSettle.id, fullClaim!.id, matchToSettle.utrNumber);
 
       expect(saveClaim).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -369,6 +420,71 @@ describe('Payment Reconciliation Tab & Cockpit Components', () => {
             tdsDeducted: 250,
             utrNumber: 'CMS93821019',
           }),
+        })
+      );
+      expect(markEmailSettled).toHaveBeenCalledWith('gmail-msg-999', 'claim-1', 'CMS93821019');
+    });
+
+    it('verifies instant local cache match can check active claims without network calls', async () => {
+      const { checkCachedAdvicesAgainstClaims } = await import('@/lib/reconciliation/smart-sync-service');
+      vi.mocked(checkCachedAdvicesAgainstClaims).mockResolvedValueOnce([
+        {
+          id: 'pm-cached-1',
+          adviceClaim: {
+            claimNumber: '31010031240100001234',
+            grossFee: 2500,
+            netPaid: 2250,
+          },
+          matchedClaimId: 'claim-1',
+          billedTotal: 2500,
+          status: 'matched',
+          utrNumber: 'LOCAL-CACHE-UTR-1',
+          paymentDate: '2026-11-15',
+          insurerName: 'National Insurance',
+        },
+      ]);
+
+      const localMatches = await checkCachedAdvicesAgainstClaims([
+        { id: 'claim-1', claimNo: '31010031240100001234' },
+      ]);
+
+      expect(localMatches).toHaveLength(1);
+      expect(localMatches[0].utrNumber).toBe('LOCAL-CACHE-UTR-1');
+      expect(localMatches[0].matchedClaimId).toBe('claim-1');
+    });
+
+    it('verifies runSmartReconciliationSync handles custom scope and forceRescan flags', async () => {
+      const { runSmartReconciliationSync } = await import('@/lib/reconciliation/smart-sync-service');
+      vi.mocked(runSmartReconciliationSync).mockResolvedValueOnce({
+        matches: [],
+        unmatchedAdvices: [],
+        stats: {
+          totalFound: 15,
+          skippedSettled: 5,
+          cachedReused: 3,
+          newlyParsed: 7,
+          matchesCount: 3,
+        },
+        cancelled: false,
+      });
+
+      const res = await runSmartReconciliationSync({
+        accessToken: 'mock-gmail-token',
+        senders: [],
+        activeClaims: [{ id: 'claim-1', claimNo: '31010031240100001234' }],
+        daysBack: 60,
+        maxResults: 50,
+        forceRescan: true,
+      });
+
+      expect(res.stats.totalFound).toBe(15);
+      expect(res.stats.skippedSettled).toBe(5);
+      expect(res.stats.newlyParsed).toBe(7);
+      expect(runSmartReconciliationSync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          daysBack: 60,
+          maxResults: 50,
+          forceRescan: true,
         })
       );
     });
