@@ -51,3 +51,27 @@ export interface InsurerSenderConfig {
   subjectKeywords?: string[];
   lastUsed?: string;
 }
+
+export type EmailProcessingStatus = 'settled' | 'dismissed' | 'unmatched';
+
+export interface ProcessedEmailRecord {
+  messageId: string;
+  subject: string;
+  from: string;
+  date: string;
+  status: EmailProcessingStatus;
+  matchedClaimId?: string;
+  utrNumber?: string;
+  processedAt: string;
+}
+
+export interface CachedPaymentAdviceRecord {
+  id: string; // usually messageId or advice UTR
+  sourceMessageId: string;
+  claims: PaymentAdviceClaimItem[];
+  utrNumber?: string;
+  paymentDate?: string;
+  insurerName?: string;
+  extractedAt: string;
+}
+
