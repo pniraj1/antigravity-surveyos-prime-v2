@@ -175,7 +175,7 @@ describe('drive-notes-inspection', () => {
       });
     });
 
-    it('returns null when Drive request fails', async () => {
+    it('returns null when Drive request fails or throws', async () => {
       vi.mocked(driveRequest).mockResolvedValueOnce({
         ok: false,
         status: 404,
@@ -183,6 +183,28 @@ describe('drive-notes-inspection', () => {
 
       const details = await fetchScanFolderDetails('missing-folder');
       expect(details).toBeNull();
+
+      vi.mocked(driveRequest).mockRejectedValueOnce(new Error('Drive API error 404: Not Found'));
+      const detailsThrown = await fetchScanFolderDetails('missing-folder-2');
+      expect(detailsThrown).toBeNull();
+    });
+
+    it('excludes subfolders from fileCount', async () => {
+      vi.mocked(driveRequest).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          files: [
+            { id: 'sub-1', name: 'Final Photos', mimeType: 'application/vnd.google-apps.folder' },
+            { id: 'p-1', name: 'front.webp', mimeType: 'image/webp' },
+            { id: 'p-2', name: 'rear.heic', mimeType: 'image/heic' },
+          ],
+        }),
+      } as any);
+
+      const details = await fetchScanFolderDetails('folder-with-sub');
+      expect(details).not.toBeNull();
+      expect(details?.fileCount).toBe(2);
+      expect(details?.photoCount).toBe(2);
     });
   });
 
@@ -224,12 +246,22 @@ describe('drive-notes-inspection', () => {
       expect(formatSyncTime(yesterday, now)).toBe('Yesterday at 2:30 PM');
     });
 
-    it('returns date and time for older dates', () => {
+    it('returns date and time for older dates and previous years', () => {
       const localBase = new Date(2026, 10, 20, 10, 0, 0);
       const now = localBase.getTime();
       const older = new Date(2026, 10, 15, 11, 45, 0).toISOString();
 
       expect(formatSyncTime(older, now)).toBe('15 Nov at 11:45 AM');
+
+      const lastYear = new Date(2025, 10, 15, 11, 45, 0).toISOString();
+      expect(formatSyncTime(lastYear, now)).toBe('15 Nov 2025 at 11:45 AM');
+    });
+
+    it('does not return Just now for dates far in the future', () => {
+      const localBase = new Date(2026, 10, 20, 10, 0, 0);
+      const now = localBase.getTime();
+      const futureHours = new Date(2026, 10, 20, 15, 0, 0).toISOString();
+      expect(formatSyncTime(futureHours, now)).toBe('Today at 3:00 PM');
     });
   });
 });

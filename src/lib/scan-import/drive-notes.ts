@@ -139,60 +139,67 @@ export async function fetchNotesFromScanFolder(folderId: string): Promise<Normal
  * surveyor-relevant counts (photos, docs, total files), presence of notes, and last modified timestamp.
  */
 export async function fetchScanFolderDetails(folderId: string): Promise<ScanFolderDetails | null> {
-  const qs = new URLSearchParams({
-    q: `'${folderId}' in parents and trashed=false`,
-    fields: 'files(id,name,mimeType,size,modifiedTime,createdTime)',
-    spaces: 'drive',
-    orderBy: 'modifiedTime desc',
-    pageSize: '1000',
-  });
+  try {
+    const qs = new URLSearchParams({
+      q: `'${folderId}' in parents and trashed=false`,
+      fields: 'files(id,name,mimeType,size,modifiedTime,createdTime)',
+      spaces: 'drive',
+      orderBy: 'modifiedTime desc',
+      pageSize: '1000',
+    });
 
-  const res = await driveRequest(`${API}?${qs}`);
-  if (!res.ok) return null;
-  const data = await res.json();
-  const files = (data.files ?? []) as DriveFolderFile[];
+    const res = await driveRequest(`${API}?${qs}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const files = (data.files ?? []) as DriveFolderFile[];
 
-  const hasNotes = files.some(
-    (f) =>
-      f.name === '_surveyos-backup.json' ||
-      f.name === '_surveyos-scan.json' ||
-      f.name.toLowerCase().endsWith('.txt')
-  );
+    const hasNotes = files.some(
+      (f) =>
+        f.name === '_surveyos-backup.json' ||
+        f.name === '_surveyos-scan.json' ||
+        f.name.toLowerCase().endsWith('.txt')
+    );
 
-  const photoCount = files.filter(
-    (f) =>
-      /\.(jpe?g|png)$/i.test(f.name) ||
-      (f.mimeType && f.mimeType.startsWith('image/'))
-  ).length;
+    const photoCount = files.filter(
+      (f) =>
+        /\.(jpe?g|png|webp|heic)$/i.test(f.name) ||
+        (f.mimeType && f.mimeType.startsWith('image/'))
+    ).length;
 
-  const docCount = files.filter(
-    (f) =>
-      /\.pdf$/i.test(f.name) ||
-      f.mimeType === 'application/pdf'
-  ).length;
+    const docCount = files.filter(
+      (f) =>
+        /\.pdf$/i.test(f.name) ||
+        f.mimeType === 'application/pdf'
+    ).length;
 
-  const fileCount = files.filter(
-    (f) => !f.name.startsWith('.') && f.name !== '_surveyos-status.json'
-  ).length;
+    const fileCount = files.filter(
+      (f) =>
+        !f.name.startsWith('.') &&
+        f.name !== '_surveyos-status.json' &&
+        f.mimeType !== 'application/vnd.google-apps.folder'
+    ).length;
 
-  let lastModified: string | undefined;
-  for (const f of files) {
-    if (f.modifiedTime) {
-      if (!lastModified || new Date(f.modifiedTime).getTime() > new Date(lastModified).getTime()) {
-        lastModified = f.modifiedTime;
+    let lastModified: string | undefined;
+    for (const f of files) {
+      if (f.modifiedTime && !f.name.startsWith('.')) {
+        if (!lastModified || new Date(f.modifiedTime).getTime() > new Date(lastModified).getTime()) {
+          lastModified = f.modifiedTime;
+        }
       }
     }
-  }
 
-  return {
-    folderId,
-    fileCount,
-    photoCount,
-    docCount,
-    hasNotes,
-    lastModified,
-    files,
-  };
+    return {
+      folderId,
+      fileCount,
+      photoCount,
+      docCount,
+      hasNotes,
+      lastModified,
+      files,
+    };
+  } catch {
+    return null;
+  }
 }
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -217,11 +224,12 @@ export function formatSyncTime(iso?: string, now: number = Date.now()): string {
   if (isNaN(d.getTime())) return 'Never';
 
   const diffMs = now - d.getTime();
-  if (diffMs < 60 * 1000) {
+  // Tolerate small future clock drift (-60s to +60s)
+  if (diffMs >= -60 * 1000 && diffMs < 60 * 1000) {
     return 'Just now';
   }
 
-  if (diffMs < 60 * 60 * 1000) {
+  if (diffMs >= 60 * 1000 && diffMs < 60 * 60 * 1000) {
     const mins = Math.max(1, Math.floor(diffMs / (60 * 1000)));
     return `${mins} min${mins === 1 ? '' : 's'} ago`;
   }
