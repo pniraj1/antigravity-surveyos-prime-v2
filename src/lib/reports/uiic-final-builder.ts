@@ -34,7 +34,6 @@ import { renderLiabilityComparison } from './liability-comparison-html';
 import { cashLossBasis, type CashLossBasis } from '@/lib/calculations/cash-loss';
 import { renderCashLossTable } from './cash-loss-html';
 import { buildPrintShell, footerFromProfile, openPrintWindow } from './print-shell';
-import { saveDocuments } from '@/lib/documents/sink';
 import { promptForPrintedPdf } from '@/lib/documents/print-followup';
 import { saveReportToClaimFolder, uiicFinalFileName, billCheckFileName } from './auto-file-report';
 import { formatSurveyDateTime } from './report-utils';
@@ -1112,7 +1111,7 @@ export function buildUIICBillCheckPrintDocument(claim: ClaimData, profile: Surve
 
 export function triggerUIICBillCheckPrint(claim: ClaimData, profile: SurveyorProfile | null): void {
   const html = buildUIICBillCheckPrintDocument(claim, profile);
-  void saveDocuments('billCheckReport', [{ blob: new Blob([html], { type: 'text/html' }), name: 'Bill Check Report.html' }], 'generated');
+  void saveReportToClaimFolder(claim, billCheckFileName(claim, 'html'), new Blob([html], { type: 'text/html' }), 'billCheckReport');
   openPrintWindow(html);
   void promptForPrintedPdf('billCheckReport', billCheckFileName(claim, 'pdf'));
 }
