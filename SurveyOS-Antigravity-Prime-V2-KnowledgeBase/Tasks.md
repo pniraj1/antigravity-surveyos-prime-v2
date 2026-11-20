@@ -1,3 +1,9 @@
+## Done: Report filing, Drive backup, phone download (2026-11-21, Claude Code) — NOT DEPLOYED
+- **Plan:** `docs/plans/2026-11-20-report-filing-backup-and-phone-download.md` · **Session:** `Sessions/2026-11-21-report-filing-backup-phone-download.md`
+- Commits on main `2ccc3691..f09fe510` (Prime), `2d9ad28` (Scan). Tests green, Scan drift green.
+- Open: deploy (owner go-ahead); owner check on a real claim (print report twice, photo sheet, From Phone on a big claim); old duplicate files already in vehicle folders left alone.
+- Follow-ups parked: size pre-check before hashing a file already at the target (cloud placeholder folders); identical re-import from another source drops the old entry's device marks.
+
 ## Done: Phone scans save into the vehicle folder (2026-11-20, Claude Code)
 - **Session:** `Sessions/2026-11-20-phone-scan-folder-fix.md`
 - Root cause: `src/lib/scan-import/import.ts` gate read only the old root folder; per-claim folders always got "needs-folder". Fixed, plus vehicle subfolder on pick (`claim-folder-store.ts`) and a "phone still sending" message (`drive-source.ts`).
