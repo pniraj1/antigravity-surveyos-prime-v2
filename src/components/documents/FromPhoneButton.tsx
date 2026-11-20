@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Loader2, Smartphone } from 'lucide-react';
 import {
@@ -12,7 +12,11 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { useClaimStore } from '@/stores/claim-store';
-import { isLocalFolderSupported } from '@/lib/storage/claim-folder-store';
+import {
+  isLocalFolderSupported,
+  getClaimFolderHandle,
+} from '@/lib/storage/claim-folder-store';
+import { ClaimFolderPromptDialog } from '@/components/layout/ClaimFolderPromptDialog';
 import { planNotes, isEmptyNotesPlan, type NotesPlan } from '@/lib/scan-import/notes';
 import { readZip } from '@/lib/scan-import/zip';
 import { backupOnlyNotes } from '@/lib/scan-import/backup-notes';
@@ -31,7 +35,14 @@ export interface FromPhoneButtonProps {
   className?: string;
   disabled?: boolean;
   initialOpen?: boolean;
-  getAction?: (actions: { open: () => void; close: () => void }) => void;
+  getAction?: (actions: {
+    open: () => void;
+    close: () => void;
+    handleSelectFolder?: (folder: ScanDriveFolderItem) => Promise<void>;
+    resumePendingImport?: (claimId?: string) => void;
+    getPendingDriveFolderId?: () => string | null;
+    isNeedsFolderOpen?: () => boolean;
+  }) => void;
 }
 
 interface VehicleMismatchAsk {
@@ -108,6 +119,26 @@ export function FromPhoneButton({
   const claimVehicle = currentClaim?.vehicle?.registrationNumber ?? '';
   const localFolderSupported = isLocalFolderSupported();
   const isDisabled = disabled || !currentClaim || busy;
+
+  // Needs local folder dialog state & pending Drive import
+  const [needsFolderOpen, _setNeedsFolderOpen] = useState(false);
+  const needsFolderOpenRef = useRef(false);
+  const setNeedsFolderOpen = useCallback((open: boolean) => {
+    needsFolderOpenRef.current = open;
+    _setNeedsFolderOpen(open);
+  }, []);
+
+  const pendingDriveFolderIdRef = useRef<string | null>(null);
+  const prevClaimIdRef = useRef<string | null>(null);
+
+  // Clear pending drive folder when claim changes
+  useEffect(() => {
+    if (currentClaim?.id !== prevClaimIdRef.current) {
+      prevClaimIdRef.current = currentClaim?.id ?? null;
+      pendingDriveFolderIdRef.current = null;
+      setNeedsFolderOpen(false);
+    }
+  }, [currentClaim?.id, setNeedsFolderOpen]);
 
   // Handle Phone Notes logic
   const processNotesPayload = useCallback((normalized: NormalizedNotesPayload, scanClaimId?: string) => {
@@ -189,6 +220,75 @@ export function FromPhoneButton({
     }
   };
 
+  const runDriveImport = useCallback(
+    async (folderId: string, notesFound = false) => {
+      const claim = useClaimStore.getState().currentClaim;
+      if (!claim) return;
+      if (useClaimStore.getState().currentClaim?.id !== claim.id) {
+        toast.warning('Claim changed during import. Please select the folder again.');
+        return;
+      }
+      setBusy(true);
+      try {
+        const { result, moveFailed, mismatched } = await importFromDrive(scanAsks, folderId);
+        reportScans(result, claim.id, true, notesFound);
+
+        if (mismatched.length) {
+          toast.warning(
+            `Not imported yet (still uploading from phone?): ${mismatched.join(', ')}. Try again shortly.`,
+            { duration: 8000 }
+          );
+        }
+        if (result.status === 'done' && result.kept?.length) {
+          toast.warning(result.kept.join('. '), { duration: 8000 });
+        }
+        if (moveFailed) {
+          toast.warning(
+            "Saved. Some files couldn't be moved on Drive — tap From Phone again later.",
+            { duration: 8000 }
+          );
+        }
+      } catch (scanErr) {
+        toast.error(msg(scanErr));
+      } finally {
+        setBusy(false);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [onAllowAccess, onNeedsFolder]
+  );
+
+  const resumePendingImport = useCallback(
+    (claimId?: string) => {
+      const pendingFolderId = pendingDriveFolderIdRef.current;
+      if (!pendingFolderId) return;
+
+      const claim = useClaimStore.getState().currentClaim;
+      if (!claim) return;
+      if (claimId && claimId !== claim.id) return;
+
+      pendingDriveFolderIdRef.current = null;
+      void runDriveImport(pendingFolderId, false);
+    },
+    [runDriveImport]
+  );
+
+  // Listen for claim folder update to resume pending Drive import
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleClaimFolderUpdated = (e: Event) => {
+      const customEvent = e as CustomEvent<{ claimId?: string }>;
+      const updatedClaimId = customEvent.detail?.claimId;
+      resumePendingImport(updatedClaimId);
+    };
+
+    window.addEventListener('surveyos:claim-folder-updated', handleClaimFolderUpdated);
+    return () => {
+      window.removeEventListener('surveyos:claim-folder-updated', handleClaimFolderUpdated);
+    };
+  }, [resumePendingImport]);
+
   // Unified folder selection handler
   const handleSelectFolder = async (folder: ScanDriveFolderItem) => {
     setFolderPickerOpen(false);
@@ -241,28 +341,19 @@ export function FromPhoneButton({
           toast.warning('Claim changed during import. Please select the folder again.');
           return;
         }
-        try {
-          const { result, moveFailed, mismatched } = await importFromDrive(scanAsks, folder.id);
-          reportScans(result, claim.id, true, notesFound);
 
-          if (mismatched.length) {
-            toast.warning(
-              `Not imported yet (still uploading from phone?): ${mismatched.join(', ')}. Try again shortly.`,
-              { duration: 8000 }
-            );
+        const existingHandle = await getClaimFolderHandle(claim.id);
+        if (!existingHandle) {
+          pendingDriveFolderIdRef.current = folder.id;
+          if (onNeedsFolder) {
+            onNeedsFolder();
+          } else {
+            setNeedsFolderOpen(true);
           }
-          if (result.status === 'done' && result.kept?.length) {
-            toast.warning(result.kept.join('. '), { duration: 8000 });
-          }
-          if (moveFailed) {
-            toast.warning(
-              "Saved. Some files couldn't be moved on Drive — tap From Phone again later.",
-              { duration: 8000 }
-            );
-          }
-        } catch (scanErr) {
-          toast.error(msg(scanErr));
+          return;
         }
+
+        await runDriveImport(folder.id, notesFound);
       } else if (!notesFound) {
         toast.info('No notes or documents found in this Drive folder.');
       }
@@ -311,6 +402,10 @@ export function FromPhoneButton({
     getAction({
       open: handleOpen,
       close: () => setFolderPickerOpen(false),
+      handleSelectFolder,
+      resumePendingImport,
+      getPendingDriveFolderId: () => pendingDriveFolderIdRef.current,
+      isNeedsFolderOpen: () => needsFolderOpenRef.current,
     });
   }
 
@@ -349,6 +444,19 @@ export function FromPhoneButton({
         onPickComputerFile={() => scansFileRef.current?.click()}
         currentVehicle={claimVehicle}
       />
+
+      {/* Fallback ClaimFolderPromptDialog when onNeedsFolder is not provided */}
+      {!onNeedsFolder && (
+        <ClaimFolderPromptDialog
+          isOpen={needsFolderOpen}
+          onClose={() => setNeedsFolderOpen(false)}
+          claimId={currentClaim?.id}
+          registrationNumber={claimVehicle}
+          onAllocated={(_handle) => {
+            resumePendingImport(currentClaim?.id);
+          }}
+        />
+      )}
 
       {/* Phone Notes Vehicle Mismatch Confirmation */}
       {notesVehicleAsk && (

@@ -4,6 +4,7 @@ import React from 'react';
 import { useClaimStore } from '@/stores/claim-store';
 import { useUIStore } from '@/stores/ui-store';
 import * as claimFolderStore from '@/lib/storage/claim-folder-store';
+import { importFromDrive } from '@/lib/scan-import/drive-source';
 import { FromPhoneButton, scanResultMessage } from '../FromPhoneButton';
 
 vi.mock('sonner', () => ({
@@ -36,6 +37,22 @@ vi.mock('@/lib/drive', () => ({
 
 vi.mock('@/lib/storage/claim-folder-store', () => ({
   isLocalFolderSupported: vi.fn().mockReturnValue(true),
+  getClaimFolderHandle: vi.fn().mockResolvedValue(null),
+  pickClaimFolder: vi.fn(),
+}));
+
+vi.mock('@/lib/scan-import/drive-source', () => ({
+  importFromDrive: vi.fn().mockResolvedValue({
+    result: { status: 'done', added: 2, skipped: 0, failed: 0, contactsFilled: 0 },
+    moveFailed: 0,
+    mismatched: [],
+  }),
+}));
+
+vi.mock('@/lib/scan-import/drive-notes', () => ({
+  fetchNotesFromScanFolder: vi.fn().mockResolvedValue(null),
+  listScanDriveFolders: vi.fn().mockResolvedValue([]),
+  formatSyncTime: vi.fn().mockReturnValue('Just now'),
 }));
 
 describe('FromPhoneButton', () => {
@@ -96,6 +113,104 @@ describe('FromPhoneButton', () => {
     expect(typeof actions.open).toBe('function');
     expect(typeof actions.close).toBe('function');
     expect(() => actions.open()).not.toThrow();
+  });
+
+  it('when getClaimFolderHandle returns null and onNeedsFolder is provided, calls onNeedsFolder and records pending Drive folder', async () => {
+    vi.mocked(claimFolderStore.getClaimFolderHandle).mockResolvedValueOnce(null);
+    const onNeedsFolder = vi.fn();
+    let actions: any = null;
+
+    renderToStaticMarkup(
+      <FromPhoneButton
+        onNeedsFolder={onNeedsFolder}
+        getAction={(a) => { actions = a; }}
+      />
+    );
+
+    const mockFolder = {
+      id: 'drive-folder-1',
+      name: 'MH02CB1234 - NIA',
+      vehicle: 'MH02CB1234',
+    };
+
+    await actions.handleSelectFolder(mockFolder);
+
+    expect(claimFolderStore.getClaimFolderHandle).toHaveBeenCalledWith('claim-123');
+    expect(onNeedsFolder).toHaveBeenCalledTimes(1);
+    expect(actions.getPendingDriveFolderId()).toBe('drive-folder-1');
+    expect(importFromDrive).not.toHaveBeenCalled();
+  });
+
+  it('when getClaimFolderHandle returns null and onNeedsFolder is omitted, triggers prompt dialog (needsFolderOpen)', async () => {
+    vi.mocked(claimFolderStore.getClaimFolderHandle).mockResolvedValueOnce(null);
+    let actions: any = null;
+
+    renderToStaticMarkup(
+      <FromPhoneButton
+        getAction={(a) => { actions = a; }}
+      />
+    );
+
+    const mockFolder = {
+      id: 'drive-folder-2',
+      name: 'MH02CB1234 - NIA',
+      vehicle: 'MH02CB1234',
+    };
+
+    await actions.handleSelectFolder(mockFolder);
+
+    expect(claimFolderStore.getClaimFolderHandle).toHaveBeenCalledWith('claim-123');
+    expect(actions.isNeedsFolderOpen()).toBe(true);
+    expect(actions.getPendingDriveFolderId()).toBe('drive-folder-2');
+    expect(importFromDrive).not.toHaveBeenCalled();
+  });
+
+  it('resumes pending drive import when folder is allocated', async () => {
+    vi.mocked(claimFolderStore.getClaimFolderHandle).mockResolvedValueOnce(null);
+    let actions: any = null;
+
+    renderToStaticMarkup(
+      <FromPhoneButton
+        getAction={(a) => { actions = a; }}
+      />
+    );
+
+    const mockFolder = {
+      id: 'drive-folder-3',
+      name: 'MH02CB1234 - NIA',
+      vehicle: 'MH02CB1234',
+    };
+
+    await actions.handleSelectFolder(mockFolder);
+    expect(actions.getPendingDriveFolderId()).toBe('drive-folder-3');
+
+    // Surveyor connects folder, auto-resuming import
+    actions.resumePendingImport('claim-123');
+
+    expect(actions.getPendingDriveFolderId()).toBeNull();
+    expect(importFromDrive).toHaveBeenCalledWith(expect.anything(), 'drive-folder-3');
+  });
+
+  it('when getClaimFolderHandle returns an existing handle, immediately imports from Drive', async () => {
+    vi.mocked(claimFolderStore.getClaimFolderHandle).mockResolvedValueOnce({} as any);
+    let actions: any = null;
+
+    renderToStaticMarkup(
+      <FromPhoneButton
+        getAction={(a) => { actions = a; }}
+      />
+    );
+
+    const mockFolder = {
+      id: 'drive-folder-existing',
+      name: 'MH02CB1234 - NIA',
+      vehicle: 'MH02CB1234',
+    };
+
+    await actions.handleSelectFolder(mockFolder);
+
+    expect(importFromDrive).toHaveBeenCalledWith(expect.anything(), 'drive-folder-existing');
+    expect(actions.getPendingDriveFolderId()).toBeNull();
   });
 });
 

@@ -15,7 +15,6 @@ vi.mock('sonner', () => ({
 
 import {
   ClaimFolderPromptDialog,
-  type ClaimFolderPromptDialogProps,
 } from '../ClaimFolderPromptDialog';
 import { pickClaimFolder } from '@/lib/storage/claim-folder-store';
 import { useClaimStore } from '@/stores/claim-store';
@@ -122,7 +121,8 @@ describe('ClaimFolderPromptDialog Component', () => {
       await capturedActions!.handlePickFolder();
 
       expect(pickClaimFolder).toHaveBeenCalledWith('claim-xyz-789');
-      expect(toast.success).toHaveBeenCalledWith('Claim folder connected: MH04EF5678');
+      expect(toast.success).toHaveBeenCalledWith('Vehicle folder connected: MH04EF5678');
+      expect(useClaimStore.getState().currentClaim?.documentsFolder).toBe('MH04EF5678');
       expect(dispatchEventSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'surveyos:claim-folder-updated',
@@ -131,6 +131,34 @@ describe('ClaimFolderPromptDialog Component', () => {
       );
       expect(onAllocated).toHaveBeenCalledWith(mockHandle);
       expect(onClose).toHaveBeenCalled();
+    });
+
+    it('updates currentClaim.documentsFolder in useClaimStore on successful folder pick', async () => {
+      const mockHandle = createMockHandle('MH04EF5678');
+      vi.mocked(pickClaimFolder).mockResolvedValueOnce({
+        handle: mockHandle,
+        folderPath: 'MH04EF5678',
+      });
+
+      let capturedActions: {
+        handlePickFolder: () => Promise<void>;
+        handleSkip: () => void;
+      } | null = null;
+
+      renderToStaticMarkup(
+        <ClaimFolderPromptDialog
+          isOpen={true}
+          onClose={vi.fn()}
+          claimId="claim-xyz-789"
+          registrationNumber="MH04EF5678"
+          getAction={(actions) => {
+            capturedActions = actions;
+          }}
+        />
+      );
+
+      await capturedActions!.handlePickFolder();
+      expect(useClaimStore.getState().currentClaim?.documentsFolder).toBe('MH04EF5678');
     });
 
     it('silently ignores user cancellation (AbortError)', async () => {

@@ -54,7 +54,11 @@ export function ClaimFolderPromptDialog({
     try {
       setLoading(true);
       const result = await pickClaimFolder(activeClaimId);
-      toast.success(`Claim folder connected: ${result.folderPath}`);
+      const current = useClaimStore.getState().currentClaim;
+      if (current && current.id === activeClaimId) {
+        useClaimStore.getState().updateClaim({ documentsFolder: result.folderPath });
+      }
+      toast.success(`Vehicle folder connected: ${result.folderPath}`);
       if (typeof window !== 'undefined') {
         window.dispatchEvent(
           new CustomEvent('surveyos:claim-folder-updated', {
@@ -85,7 +89,6 @@ export function ClaimFolderPromptDialog({
   if (!isOpen) return null;
 
   const regNo = registrationNumber?.trim();
-  const targetLabel = regNo || 'this claim';
 
   return (
     <div
