@@ -241,17 +241,33 @@ export function PaymentMatchQueue({
                         <div className="text-sm font-bold text-foreground">
                           ₹{formatINR(advice.netPaid)}
                           <span className="text-[10px] font-normal text-muted-foreground ml-1">
-                            Net
+                            Net Credit
                           </span>
                         </div>
                         <div className="text-[11px] text-muted-foreground">
-                          Gross: ₹{formatINR(advice.grossFee)}
+                          Gross: ₹{formatINR(advice.grossFee || (advice.netPaid + (advice.tdsAmount || 0)))}
                           {advice.tdsAmount ? (
-                            <span className="text-blue-400 ml-1">
+                            <span className="text-blue-700 font-medium ml-1">
                               (TDS: ₹{formatINR(advice.tdsAmount)})
                             </span>
                           ) : null}
                         </div>
+                        {/* Comparison with Billed Total */}
+                        {item.billedTotal > 0 && (
+                          <div className="mt-1">
+                            {item.billedTotal > (advice.netPaid + (advice.tdsAmount || 0)) ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-300">
+                                <AlertCircle className="w-3 h-3 text-amber-600 shrink-0" />
+                                <span>Shortfall: -₹{formatINR(item.billedTotal - (advice.netPaid + (advice.tdsAmount || 0)))}</span>
+                                <span className="text-neutral-500 font-normal">(Billed ₹{formatINR(item.billedTotal)})</span>
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                ✓ Matches Billed ₹{formatINR(item.billedTotal)}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       {onDismissMatch && (

@@ -375,6 +375,8 @@ export interface FeeBill {
   amountReceived?: number;
   /** Tax Deducted at Source (TDS) u/s 194J */
   tdsDeducted?: number;
+  /** Disallowed / deducted amount by the insurer (difference from billed) */
+  disallowedAmount?: number;
   /** Date when payment was credited */
   paymentDate?: string;
   /** Unique Transaction Reference (UTR) / NEFT / RTGS number */

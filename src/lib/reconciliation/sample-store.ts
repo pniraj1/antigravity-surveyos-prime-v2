@@ -4,6 +4,21 @@ export const STORAGE_KEY = 'surveyos_payment_senders';
 
 export const DEFAULT_INSURER_SENDERS: InsurerSenderConfig[] = [
   {
+    email: 'NIAHO@newindia.co.in',
+    insurerName: 'The New India Assurance',
+    subjectKeywords: ['Payment', 'Released', 'NEFT', 'Invoice'],
+  },
+  {
+    email: 'policy.noreply@service.uiic.co.in',
+    insurerName: 'United India Insurance',
+    subjectKeywords: ['payment', 'disbursed', 'claim', 'settlement'],
+  },
+  {
+    email: 'Straight2axis@axis.bank.in',
+    insurerName: 'Axis Bank CMS (UIIC / OIC Remittances)',
+    subjectKeywords: ['Payment Advice', 'NEFT', 'UNITED INDIA', 'ORIENTAL'],
+  },
+  {
     email: 'payments@newindia.co.in',
     insurerName: 'The New India Assurance',
     subjectKeywords: ['Payment', 'Advice', 'Surveyor', 'NEFT'],

@@ -1,3 +1,22 @@
+## Done: Real-World Insurer Formats, ZIP Attachment Parsing & Fee Shortfall/Disallowance Tracking (2026-11-20, Antigravity) — DEPLOYED TO PRODUCTION
+- **Status:** Complete on `main` and deployed to production (`https://surveyos.in`, Firebase site `motorsurveyos-in`). Live deployed chunk `0cckjupkn0y0f.js` verified with `curl.exe`.
+- **Session:** `Sessions/2026-11-20-gemini-payment-reconciliation-zip-shortfall.md`
+- **Delivered:**
+  1. **In-Memory ZIP Archive Extraction (`extractPaymentAdviceFromFile` in `payment-advice-extractor.ts` & `PaymentReconciliationTab.tsx`):**
+     - Seamlessly unpacks nested `.zip` archives (e.g. Axis Bank CMS payment vouchers `CN...zip` -> `CN...pdf`) in browser memory without third-party services using `readZip`.
+     - Extracts payment advice data directly from enclosed PDFs and text files, resolving the issue where email body only held generic transaction text while claim & vehicle numbers were inside the zipped PDF.
+  2. **Real-World Indian Insurer Formats:**
+     - United India Insurance (`policy.noreply@service.uiic.co.in`): parsed text patterns (`disbursed at Rs. 5468/-( gross=6076, TDS=608, GST TDS=0 )`, Claim, Policy, Vehicle `MH 18 BZ 2552`, Report No).
+     - New India Assurance (`NIAHO@newindia.co.in`): parsed tabular layout with negative TDS rows (`AMOUNT: 1570.00`, vehicle registration `MH-39-J-6873`, and TDS deduction `-157.00`).
+     - Axis Bank CMS Advice (`Straight2axis@axis.bank.in`): parsed `Enrichment:` header blocks containing vehicle numbers and claim numbers for UIIC & Oriental remittances.
+  3. **Fee Shortfall & Disallowance Tracking:**
+     - Added `disallowedAmount` to `FeeBill` and `PaymentAdviceClaimItem`; added `shortfall` and `disallowed` to `PaymentMatchResult`.
+     - Enhanced `matcher.ts` to calculate shortfall whenever `billedTotal > (netPaid + tds)`.
+     - Matching queue displays net bank credit, gross, TDS, and highlights shortfall: `⚠️ Shortfall: -₹{shortfall} (Billed ₹{billedTotal})`.
+     - Claims ledger marks claims settled with shortfalls as `[ ⚠️ Partial / Deducted ]` and displays `-₹{shortfall} ded.` under Billed Amount.
+     - Top KPI strip calculates and surfaces `totalDisallowed` alongside a dedicated Fee Disallowance banner.
+- **SurveyOS Scan impact: none (isolated to Prime V2 web client financial tracking).**
+
 ## Done: Payment Reconciliation & Received Fees Cockpit (2026-11-19, Antigravity) — DEPLOYED TO PRODUCTION
 - **Status:** Complete on `main` and deployed to production (`https://surveyos.in`, Firebase site `motorsurveyos-in`, commit 2db3f503). Live deployment verified.
 - **Implementation Plan:** `docs/plans/2026-11-19-payment-reconciliation-tab.md`

@@ -79,18 +79,28 @@ export function matchPaymentAdvicesToClaims(
     const stableId = `pm_${utrNumber || 'advice'}_${index}_${normAdviceClaim || normAdviceVehicle || index}`;
 
     if (matchedClaim) {
+      const billed = matchedClaim.feeTotal ?? 0;
+      const gross = item.grossFee ?? 0;
+      const net = item.netPaid ?? 0;
+      const tds = item.tdsAmount ?? 0;
+      const totalCreditedOrAccounted = gross > 0 ? gross : (net + tds);
+      const disallowed = (billed > 0 && totalCreditedOrAccounted < billed) ? (billed - totalCreditedOrAccounted) : 0;
+      const shortfall = (billed > 0 && (net + tds) < billed) ? (billed - (net + tds)) : 0;
+
       return {
         id: stableId,
         adviceClaim: item,
         matchedClaimId: matchedClaim.id,
         vehicleNo: matchedClaim.vehicleNo || item.vehicleNumber || '',
         reportNo: matchedClaim.reportNo,
-        billedTotal: matchedClaim.feeTotal ?? 0,
+        billedTotal: billed,
         status: 'matched',
         confidence,
         utrNumber,
         paymentDate,
         insurerName,
+        shortfall,
+        disallowed,
       };
     }
 

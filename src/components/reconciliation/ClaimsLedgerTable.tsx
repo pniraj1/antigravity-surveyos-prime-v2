@@ -30,6 +30,7 @@ export interface LedgerClaimItem {
   paymentStatus?: 'unpaid' | 'paid' | 'partial';
   amountReceived?: number;
   tdsDeducted?: number;
+  disallowedAmount?: number;
   utrNumber?: string;
   paymentDate?: string;
 }
@@ -237,6 +238,13 @@ export function ClaimsLedgerTable({
                     : isPaid
                     ? billedAmount
                     : 0;
+                const isShortfall =
+                  isPaid &&
+                  billedAmount > 0 &&
+                  receivedAmount + (claim.tdsDeducted || 0) < billedAmount;
+                const shortfallAmount = isShortfall
+                  ? billedAmount - (receivedAmount + (claim.tdsDeducted || 0))
+                  : 0;
 
                 return (
                   <tr
@@ -246,10 +254,20 @@ export function ClaimsLedgerTable({
                     {/* Status Pill */}
                     <td className="py-3 px-3">
                       {isPaid ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          <CheckCircle className="w-3 h-3" />
-                          <span>Paid</span>
-                        </span>
+                        isShortfall ? (
+                          <span
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-900 border border-amber-300"
+                            title={`Shortfall of ₹${formatINR(shortfallAmount)} from billed amount`}
+                          >
+                            <AlertTriangle className="w-3 h-3 text-amber-600" />
+                            <span>Partial / Deducted</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <CheckCircle className="w-3 h-3" />
+                            <span>Fully Paid</span>
+                          </span>
+                        )
                       ) : (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
                           <Clock className="w-3 h-3" />
@@ -304,16 +322,24 @@ export function ClaimsLedgerTable({
                     </td>
 
                     {/* Billed Amount */}
-                    <td className="py-3 px-3 text-right font-medium text-foreground">
-                      ₹{formatINR(billedAmount)}
+                    <td className="py-3 px-3 text-right">
+                      <div className="font-medium text-foreground">₹{formatINR(billedAmount)}</div>
+                      {isShortfall && (
+                        <div className="text-[10px] font-medium text-amber-700">
+                          -₹{formatINR(shortfallAmount)} ded.
+                        </div>
+                      )}
                     </td>
 
                     {/* Received Amount */}
                     <td className="py-3 px-3 text-right">
                       {isPaid || receivedAmount > 0 ? (
-                        <span className="font-semibold text-emerald-700">
-                          ₹{formatINR(receivedAmount)}
-                        </span>
+                        <div>
+                          <span className="font-semibold text-emerald-700">
+                            ₹{formatINR(receivedAmount)}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground ml-1">Net</span>
+                        </div>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}

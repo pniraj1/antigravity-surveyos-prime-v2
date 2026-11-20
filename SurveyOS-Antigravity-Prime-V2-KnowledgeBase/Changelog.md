@@ -1,3 +1,18 @@
+## 2026-11-20 (Antigravity) — Real-World Insurer Formats, ZIP Attachment Parsing & Fee Shortfall/Disallowance Tracking (DEPLOYED)
+- feat(reconciliation): implemented automatic in-memory ZIP archive unpacking using `readZip` in `src/lib/ai/payment-advice-extractor.ts` and `PaymentReconciliationTab.tsx`. Unpacks CMS bank zip files (such as Axis Bank `Straight2axis@axis.bank.in` `.zip` files containing `CN...pdf`) and extracts detailed claim vouchers directly in browser memory.
+- feat(reconciliation): added explicit parsing instructions and patterns for major Indian motor insurer payment notifications:
+  - United India Insurance (`policy.noreply@service.uiic.co.in`): text pattern `disbursed at Rs. X/-( gross=Y, TDS=Z )` with claim, policy, vehicle number, and surveyor report number.
+  - New India Assurance (`NIAHO@newindia.co.in`): table layout with separate line items, vehicle numbers, and negative TDS rows.
+  - Axis Bank CMS Advice: vehicle registration and claim number parsing from `Enrichment:` header blocks.
+- feat(reconciliation): implemented fee shortfall and insurer disallowance tracking across data models and UI:
+  - Added `disallowedAmount` to `FeeBill` and `PaymentAdviceClaimItem`; added `shortfall` and `disallowed` to `PaymentMatchResult`.
+  - Updated `matcher.ts` to compute exact shortfall when `billedTotal > (netPaid + tds)`.
+  - Highlighted shortfall in `PaymentMatchQueue.tsx`: `⚠️ Shortfall: -₹{shortfall} (Billed ₹{billedTotal})`.
+  - Added `[ ⚠️ Partial / Deducted ]` status badge and `-₹{shortfall} ded.` indicator in `ClaimsLedgerTable.tsx`.
+  - Added `totalDisallowed` KPI metric and disallowance alert banner in `ReconciliationKPICards.tsx`.
+- deploy: built with `npm run build` (25/25 static pages) and deployed to Firebase Hosting (`surveyos-v2-antigravity-in`, site `motorsurveyos-in`, custom domain `https://surveyos.in`). Verified live chunk `0cckjupkn0y0f.js` via `curl.exe`.
+- test: vitest 54/54 tests passing; `tsc --noEmit` clean. SurveyOS Scan impact: none.
+
 ## 2026-11-20 (Antigravity) — Scoped Gmail OAuth Client, Actionable 403 Diagnosis, and Paste Email Ingestion (DEPLOYED)
 - fix(reconciliation): resolved root cause of `Gmail Check Failed: Gmail API permission denied or insufficient scope`. Decoupled Gmail OAuth from Google Drive tokens into dedicated `src/lib/reconciliation/gmail-auth.ts`, properly requesting `https://www.googleapis.com/auth/gmail.readonly` and storing separate `surveyos_gmail_token`.
 - feat(reconciliation): added actionable diagnosis for Google Cloud 403 error responses (`parseGmailErrorResponse` in `gmail-fetcher.ts`), detecting when Gmail API is disabled in GCP Console and guiding the user to enable it.

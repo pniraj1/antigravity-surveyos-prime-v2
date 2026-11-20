@@ -8,6 +8,7 @@ export interface PaymentAdviceClaimItem {
   conveyance?: number;
   tdsAmount?: number;
   netPaid: number;
+  disallowedAmount?: number;
   remarks?: string;
 }
 
@@ -40,6 +41,8 @@ export interface PaymentMatchResult {
   utrNumber: string;
   paymentDate: string;
   insurerName: string;
+  shortfall?: number;
+  disallowed?: number;
 }
 
 export interface InsurerSenderConfig {

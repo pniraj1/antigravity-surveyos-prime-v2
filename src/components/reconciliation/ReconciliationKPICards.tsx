@@ -19,6 +19,7 @@ export interface ReconciliationKPICardsProps {
   pendingAmount: number;
   pendingCount: number;
   totalTds: number;
+  totalDisallowed?: number;
   onCheckGmail: () => void;
   onUploadClick: () => void;
   onPasteEmailClick?: () => void;
@@ -37,6 +38,7 @@ export function ReconciliationKPICards({
   pendingAmount,
   pendingCount,
   totalTds,
+  totalDisallowed = 0,
   onCheckGmail,
   onUploadClick,
   onPasteEmailClick,
@@ -129,8 +131,16 @@ export function ReconciliationKPICards({
             </div>
           </div>
           <div className="mt-2.5">
-            <div className="text-xl font-bold tracking-tight text-foreground">
-              ₹{formatINR(totalBilled)}
+            <div className="text-xl font-bold tracking-tight text-foreground flex items-center justify-between">
+              <span>₹{formatINR(totalBilled)}</span>
+              {totalDisallowed > 0 && (
+                <span
+                  className="text-[10px] font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200"
+                  title="Total deductions / disallowances made by insurers on settled claims"
+                >
+                  -₹{formatINR(totalDisallowed)} disall.
+                </span>
+              )}
             </div>
             <p className="text-[11px] text-muted-foreground mt-0.5">
               Gross professional &amp; travel fees
@@ -198,6 +208,19 @@ export function ReconciliationKPICards({
           </div>
         </div>
       </div>
+
+      {/* Disallowance Alert Strip if any claims were underpaid/deducted */}
+      {totalDisallowed > 0 && (
+        <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-200 text-xs text-amber-900 flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold">Fee Disallowance Notice:</span>
+            <span>
+              Insurers have deducted / disallowed a total of{' '}
+              <strong className="font-bold">₹{formatINR(totalDisallowed)}</strong> from your billed fee amounts across settled claims.
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

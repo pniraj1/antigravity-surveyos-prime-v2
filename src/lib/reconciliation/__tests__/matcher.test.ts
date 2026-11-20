@@ -109,4 +109,25 @@ describe('Payment Matcher', () => {
     const matches = matchPaymentAdvicesToClaims([], [], 'CMS123', '2026-11-15', 'New India');
     expect(matches).toEqual([]);
   });
+
+  it('correctly calculates shortfall and disallowance when payment is lesser than billed', () => {
+    const claims = [
+      { id: 'c1', claimNo: '16080231260190000009', vehicleNo: 'MH-39-J-6873', feeTotal: 2500, reportNo: 'R-01' },
+    ];
+    // Insurer approved gross 1,570 with 157 TDS and 1,413 net paid
+    const item: PaymentAdviceClaimItem = {
+      claimNumber: '16080231260190000009',
+      vehicleNumber: 'MH-39-J-6873',
+      grossFee: 1570,
+      netPaid: 1413,
+      tdsAmount: 157,
+    };
+
+    const matches = matchPaymentAdvicesToClaims([item], claims as any, 'AXIS999', '2026-11-19', 'New India Assurance');
+    expect(matches.length).toBe(1);
+    expect(matches[0].status).toBe('matched');
+    expect(matches[0].billedTotal).toBe(2500);
+    expect(matches[0].shortfall).toBe(930); // 2500 - (1413 + 157)
+    expect(matches[0].disallowed).toBe(930); // 2500 - 1570
+  });
 });

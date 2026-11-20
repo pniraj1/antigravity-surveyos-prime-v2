@@ -7,10 +7,43 @@
 import type { PaymentAdvice, PaymentAdviceClaimItem } from '@/types/payment-reconciliation';
 import { callAIGateway } from './service';
 import { fileToImages } from './processor';
+import { readZip } from '@/lib/scan-import/zip';
 
 export const PAYMENT_ADVICE_PROMPT = `You are an expert Indian motor insurance survey remittance and payment advice parser.
 Analyze the provided payment advice document or email text and extract structured payment details.
-Payment advices are sent by Indian insurance companies (e.g. New India Assurance, United India Insurance, National Insurance, Oriental Insurance, ICICI Lombard, HDFC ERGO, Bajaj Allianz, Tata AIG, SBI General, Digit, etc.) to disburse surveyor fees.
+Payment advices are sent by Indian insurance companies (New India Assurance, United India Insurance, Oriental Insurance, National Insurance, ICICI Lombard, HDFC ERGO, Bajaj Allianz, Tata AIG, SBI General, Digit, etc.) or their CMS banks (Axis Bank, HDFC Bank, ICICI Bank, SBI CMS) to disburse surveyor fees.
+
+CRITICAL PARSING RULES & REAL-WORLD FORMATS:
+1. United India Insurance (UIIC) automated emails:
+   - Text structure: "For the claim {claimNo} on policy number: {policyNo}, vehicle number: {vehicleNo}, insured name: {name} and Survey report no. {reportNo} your payment has been disbursed at Rs. {net}/-( gross={gross}, TDS={tds}, GST TDS=0 )"
+   - Extract:
+     * claimNumber: exact claim number (e.g. 2310023126C050058001)
+     * vehicleNumber: exact vehicle registration number (e.g. MH 18 BZ 2552)
+     * policyNumber: policy number if present (e.g. 2310023125P117257182)
+     * grossFee: gross amount before TDS (e.g. 6076)
+     * tdsAmount: TDS amount deducted (e.g. 608)
+     * netPaid: actual disbursed amount (e.g. 5468)
+     * insurerName: "United India Insurance Company Limited"
+2. New India Assurance (NIA) tabular emails:
+   - Text structure: A table with headers:
+     "INVOICE NUMBER | POLICY NUMBER | CLAIM NUMBER | AMOUNT | CLAIM DETAILS (Vehicle Number) | DESCRIPTION"
+   - The first row contains the gross fee (e.g. 1,570.00), Claim Number (e.g. 16080231260190000009), Vehicle Number (e.g. MH-39-J-6873), and Policy Number.
+   - Subsequent rows with negative amounts (e.g. -157.00) and descriptions like "OF-TDS-CM..." represent TDS deducted!
+   - The "TOTAL:" row (e.g. 1,413.00) is the netPaid amount.
+   - Extract: grossFee: 1570, tdsAmount: 157, netPaid: 1413, claimNumber: 16080231260190000009, vehicleNumber: MH-39-J-6873.
+3. Bank CMS Payment Advices (Axis Bank / HDFC / ICICI / SBI CMS):
+   - In Axis Bank CMS advices (e.g. Straight2axis@axis.bank.in), ALWAYS check the "Enrichment:" block at the top of the advice!
+   - In the "Enrichment:" section:
+     * Vehicle registration number appears (e.g. GJ20AH3438).
+     * Claim number appears directly below "Claim#" (e.g. 2310843126C050010001).
+   - In the details table:
+     * "Company Name": Full insurer name (e.g. "UNITED INDIA INSURANCE COMPANY LIMITED" or "THE ORIENTAL INSURANCE COMPANY LIMITED").
+     * "UTR Number": UTR / Transaction reference (e.g. AXISCN1526257496).
+     * "Net Amount" or "Amount": The net amount credited (e.g. 4743.00).
+4. TDS Deduction Rule:
+   - In India, insurance companies deduct 10% (or 2%) TDS under Section 194J on professional surveyor fees.
+   - If grossFee is known and netPaid is known (grossFee > netPaid), the difference is usually TDS (or disallowance).
+   - If grossFee and tdsAmount are specified (e.g. gross=6076, TDS=608), netPaid is exactly grossFee - tdsAmount (e.g. 5468).
 
 Extract:
 1. "insurerName": Full name of the insurance company.
@@ -20,8 +53,8 @@ Extract:
 5. "totalTds": Total TDS amount deducted (usually 10% under Section 194J) (number).
 6. "netPaid": Net amount credited/disbursed to surveyor's bank account (number).
 7. "claims": Array of individual claim entries found in the advice. For each claim:
-   - "claimNumber": Claim number / reference number (e.g. 310100/31/24/01/00001234 or UIIC/2026/01).
-   - "vehicleNumber": Vehicle registration number (e.g. MH-12-AB-1234).
+   - "claimNumber": Claim number / reference number.
+   - "vehicleNumber": Vehicle registration number (e.g. MH-12-AB-1234, GJ20AH3438).
    - "policyNumber": Policy number if present.
    - "grossFee": Survey fee / professional fee (number).
    - "conveyance": Conveyance / photo charges / out of pocket expense (number, optional).
@@ -181,6 +214,31 @@ export async function extractPaymentAdviceFromFile(file: File): Promise<PaymentA
   if (ext === 'txt' || file.type === 'text/plain') {
     const text = await file.text();
     return extractPaymentAdviceFromText(text, file.name);
+  }
+
+  // Handle ZIP archives containing PDFs or text advices (e.g. Axis Bank CMS remittances)
+  if (ext === 'zip' || file.type.includes('zip')) {
+    try {
+      const filesMap = await readZip(file);
+      for (const [entryName, entryBlob] of filesMap.entries()) {
+        const entryExt = entryName.split('.').pop()?.toLowerCase();
+        if (entryExt === 'pdf') {
+          const pdfFile = new File([entryBlob], entryName, { type: 'application/pdf' });
+          const advice = await extractPaymentAdviceFromFile(pdfFile);
+          if (advice && advice.claims && advice.claims.length > 0) {
+            return advice;
+          }
+        } else if (entryExt === 'txt' || entryExt === 'csv') {
+          const text = await entryBlob.text();
+          const advice = await extractPaymentAdviceFromText(text, entryName);
+          if (advice && advice.claims && advice.claims.length > 0) {
+            return advice;
+          }
+        }
+      }
+    } catch (zipErr) {
+      console.warn('Failed to unzip payment archive:', zipErr);
+    }
   }
 
   try {

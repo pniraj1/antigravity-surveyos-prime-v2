@@ -19,6 +19,7 @@ import { loadSavedSenders } from '@/lib/reconciliation/sample-store';
 import {
   buildGmailSearchQuery,
   fetchRecentPaymentEmails,
+  fetchGmailAttachmentBlob,
 } from '@/lib/reconciliation/gmail-fetcher';
 import type { PaymentMatchResult, ExtractedPaymentAdvice } from '@/types/payment-reconciliation';
 import { ReconciliationKPICards } from '@/components/reconciliation/ReconciliationKPICards';
@@ -63,6 +64,7 @@ export function PaymentReconciliationTab() {
     let pendingAmount = 0;
     let pendingCount = 0;
     let totalTds = 0;
+    let totalDisallowed = 0;
 
     for (const claim of activeClaims) {
       const billed = claim.feeTotal || 0;
@@ -75,6 +77,11 @@ export function PaymentReconciliationTab() {
             ? claim.amountReceived
             : billed;
         totalReceived += rec;
+
+        const tds = claim.tdsDeducted || 0;
+        if (billed > 0 && rec + tds < billed) {
+          totalDisallowed += (billed - (rec + tds));
+        }
       } else {
         pendingAmount += billed;
         pendingCount++;
@@ -91,6 +98,7 @@ export function PaymentReconciliationTab() {
       pendingAmount,
       pendingCount,
       totalTds,
+      totalDisallowed,
     };
   }, [activeClaims]);
 
@@ -239,20 +247,60 @@ export function PaymentReconciliationTab() {
       const collectedMatches: PaymentMatchResult[] = [];
 
       for (const email of emails) {
-        const textContent = email.bodyText || email.snippet;
-        if (!textContent) continue;
+        let extractedFromAttachments = false;
 
-        const advice = await extractPaymentAdviceFromText(textContent, `Gmail: ${email.subject}`);
-        if (advice && advice.claims && advice.claims.length > 0) {
-          totalExtracted += advice.claims.length;
-          const adviceMatches = matchPaymentAdvicesToClaims(
-            advice.claims,
-            matchTargets,
-            advice.utrNumber,
-            advice.paymentDate,
-            advice.insurerName || email.from
-          );
-          collectedMatches.push(...adviceMatches);
+        // 1. Process attachments (PDF or ZIP containing PDF, e.g. Axis Bank CMS payment advice)
+        if (email.attachments && email.attachments.length > 0) {
+          for (const att of email.attachments) {
+            const filename = (att.filename || '').toLowerCase();
+            const isPdf = filename.endsWith('.pdf') || att.mimeType === 'application/pdf';
+            const isZip = filename.endsWith('.zip') || att.mimeType.includes('zip');
+
+            if (isPdf || isZip) {
+              try {
+                const blob = await fetchGmailAttachmentBlob(token, email.id, att.attachmentId);
+                if (blob) {
+                  const attFile = new File([blob], att.filename, {
+                    type: isPdf ? 'application/pdf' : 'application/zip',
+                  });
+                  const advice = await extractPaymentAdviceFromFile(attFile);
+                  if (advice && advice.claims && advice.claims.length > 0) {
+                    totalExtracted += advice.claims.length;
+                    const adviceMatches = matchPaymentAdvicesToClaims(
+                      advice.claims,
+                      matchTargets,
+                      advice.utrNumber,
+                      advice.paymentDate,
+                      advice.insurerName || email.from
+                    );
+                    collectedMatches.push(...adviceMatches);
+                    extractedFromAttachments = true;
+                  }
+                }
+              } catch (attErr) {
+                console.warn(`Failed to process attachment ${att.filename}:`, attErr);
+              }
+            }
+          }
+        }
+
+        // 2. If no advice was extracted from attachments, fallback to email body text
+        if (!extractedFromAttachments) {
+          const textContent = email.bodyText || email.snippet;
+          if (!textContent) continue;
+
+          const advice = await extractPaymentAdviceFromText(textContent, `Gmail: ${email.subject}`);
+          if (advice && advice.claims && advice.claims.length > 0) {
+            totalExtracted += advice.claims.length;
+            const adviceMatches = matchPaymentAdvicesToClaims(
+              advice.claims,
+              matchTargets,
+              advice.utrNumber,
+              advice.paymentDate,
+              advice.insurerName || email.from
+            );
+            collectedMatches.push(...adviceMatches);
+          }
         }
       }
 
@@ -328,14 +376,22 @@ export function PaymentReconciliationTab() {
               item.adviceClaim.tdsAmount ??
               (item.adviceClaim.grossFee ? Math.max(0, item.adviceClaim.grossFee - netPaid) : 0);
 
+            const gross = item.adviceClaim.grossFee || (netPaid + tds);
+            const billed = item.billedTotal || 0;
+            const isShortfall = billed > 0 && (netPaid + tds) < billed;
+            const disallowed = isShortfall
+              ? (gross < billed ? billed - gross : billed - (netPaid + tds))
+              : 0;
+
             const updatedClaim = {
               ...fullClaim,
               feeBill: {
                 ...fullClaim.feeBill,
                 feePaid: true,
-                paymentStatus: 'paid' as const,
+                paymentStatus: isShortfall ? ('partial' as const) : ('paid' as const),
                 amountReceived: netPaid,
                 tdsDeducted: tds,
+                disallowedAmount: disallowed,
                 utrNumber: item.utrNumber || fullClaim.feeBill?.utrNumber || '',
                 paymentDate: item.paymentDate || new Date().toISOString().split('T')[0],
                 paymentAdviceSource: item.insurerName || 'Payment Advice',
@@ -358,12 +414,19 @@ export function PaymentReconciliationTab() {
             const matchingItem = selectedMatches.find((m) => m.matchedClaimId === c.id);
             const net = matchingItem?.adviceClaim.netPaid || c.feeTotal;
             const tds = matchingItem?.adviceClaim.tdsAmount || 0;
+            const billed = c.feeTotal || 0;
+            const isShortfall = billed > 0 && (net + tds) < billed;
+            const disallowed = isShortfall
+              ? Math.max(0, billed - (matchingItem?.adviceClaim.grossFee || (net + tds)))
+              : 0;
+
             return {
               ...c,
               feePaid: true,
-              paymentStatus: 'paid' as const,
+              paymentStatus: isShortfall ? ('partial' as const) : ('paid' as const),
               amountReceived: net,
               tdsDeducted: tds,
+              disallowedAmount: disallowed,
               utrNumber: matchingItem?.utrNumber || c.utrNumber,
               paymentDate: matchingItem?.paymentDate || c.paymentDate,
             };
@@ -496,7 +559,7 @@ export function PaymentReconciliationTab() {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".pdf,.txt,.csv,image/*"
+        accept=".pdf,.txt,.csv,.zip,image/*"
         onChange={handleFileInputChange}
         className="hidden"
       />
@@ -505,7 +568,7 @@ export function PaymentReconciliationTab() {
       {isDraggingOver && (
         <div className="p-4 rounded-xl border-2 border-dashed border-amber-500 bg-amber-500/10 text-center text-amber-500 font-medium text-xs flex items-center justify-center gap-2">
           <UploadCloud className="w-4 h-4 animate-bounce" />
-          <span>Drop payment advice PDF, text file, bank statement, or image here to parse</span>
+          <span>Drop payment advice PDF, ZIP archive, text file, bank statement, or image here to parse</span>
         </div>
       )}
 
@@ -516,6 +579,7 @@ export function PaymentReconciliationTab() {
         pendingAmount={kpis.pendingAmount}
         pendingCount={kpis.pendingCount}
         totalTds={kpis.totalTds}
+        totalDisallowed={kpis.totalDisallowed}
         onCheckGmail={handleCheckGmail}
         onUploadClick={() => fileInputRef.current?.click()}
         onPasteEmailClick={() => setIsPasteModalOpen(true)}
