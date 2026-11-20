@@ -430,13 +430,13 @@ export async function uploadFileToDrive(
 
   try {
     const folderId = await getOrCreateClaimFolder(claimId, claimLabel);
-    // Replace = overwrite the first same-name file's content in place (PATCH, never delete).
+    // Replace = overwrite the newest same-name file's content in place (PATCH, never delete).
     let existingId: string | undefined;
     if (opts.replace) {
       const esc = fileName.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
       const q = `name='${esc}' and '${folderId}' in parents and trashed=false`;
       const found = await driveRequest(
-        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id)&spaces=drive`
+        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id)&orderBy=${encodeURIComponent('modifiedTime desc')}&spaces=drive`
       );
       existingId = ((await found.json()).files ?? [])[0]?.id;
     }

@@ -136,6 +136,13 @@ describe('importFromDrive', () => {
     expect(calls).toEqual([[0, 2], [1, 2], [2, 2]]);
   });
 
+  it('nothingToDownloadReportsNoProgress', async () => {
+    state.nodes = [file('m', '_surveyos-scan.json', 'F', manifest('MH12AB1234', []))];
+    const calls: Array<[number, number]> = [];
+    await importFromDrive({ confirmVehicle: yes, onProgress: (d, t) => calls.push([d, t]) });
+    expect(calls).toEqual([]);
+  });
+
   it('claimSwitchedDuringDownloadWritesNothing', async () => {
     state.nodes = [
       file('m', '_surveyos-scan.json', 'F', manifest('MH12AB1234', [{ path: 'RC.pdf', data: 'rc' }, { path: 'DL.pdf', data: 'dl' }])),

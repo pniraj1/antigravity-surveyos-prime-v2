@@ -189,4 +189,12 @@ describe('print-followup (promptForPrintedPdf)', () => {
     await pickAndFile();
     expect(uploadFileToDrive).not.toHaveBeenCalled();
   });
+
+  it('nothing filed: no success toast and no Drive mirror', async () => {
+    (useUIStore.getState as any).mockReturnValue({ isDriveConnected: true });
+    (saveDocuments as any).mockResolvedValueOnce([]);
+    await pickAndFile();
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(uploadFileToDrive).not.toHaveBeenCalled();
+  });
 });

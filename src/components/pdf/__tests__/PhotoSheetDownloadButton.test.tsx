@@ -58,6 +58,7 @@ vi.mock('@/stores/profile-store', () => ({
 
 vi.mock('@/lib/reports/auto-file-report', () => ({
   saveReportToClaimFolder: vi.fn().mockResolvedValue(true),
+  sanitizeRegNo: (no?: string) => (no ?? '').trim().toUpperCase().replace(/\s+/g, ''),
 }));
 
 describe('PhotoSheetDownloadButton', () => {
@@ -101,7 +102,7 @@ describe('PhotoSheetDownloadButton', () => {
 
   it('renders multiple part buttons when PDF is > 1.95MB (or isSplit is true)', () => {
     const claim = createBlankClaim('final', 'private');
-    claim.vehicle.registrationNumber = 'MH-12-AB-1234';
+    claim.vehicle.registrationNumber = 'MH 12 AB 1234';
 
     const part1Blob = new Blob(['part 1 content'], { type: 'application/pdf' });
     const part2Blob = new Blob(['part 2 content'], { type: 'application/pdf' });
@@ -142,8 +143,8 @@ describe('PhotoSheetDownloadButton', () => {
     expect(html).toContain('Download Part 2 (Pages 5–8 · 1.2 MB)');
 
     // Verify Share button rendered for each part
-    expect(html).toContain('data-testid="share-MH-12-AB-1234-Photo-Sheet-Part1.pdf"');
-    expect(html).toContain('data-testid="share-MH-12-AB-1234-Photo-Sheet-Part2.pdf"');
+    expect(html).toContain('data-testid="share-MH12AB1234-Photo-Sheet-Part1.pdf"');
+    expect(html).toContain('data-testid="share-MH12AB1234-Photo-Sheet-Part2.pdf"');
   });
 
   it('renders preparing state while loading is true', () => {

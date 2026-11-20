@@ -24,7 +24,7 @@ import type { PhotoSheetOptions } from '@/types/assessment';
 import { DownloadCloud, Loader2 } from 'lucide-react';
 import { useProfileStore } from '@/stores/profile-store';
 import { SharePdfButton } from './SharePdfButton';
-import { saveReportToClaimFolder } from '@/lib/reports/auto-file-report';
+import { saveReportToClaimFolder, sanitizeRegNo } from '@/lib/reports/auto-file-report';
 import { splitPdfBySize, type SplitPdfResult, type SplitPart } from '@/lib/pdf/split-pdf';
 import { toast } from 'sonner';
 
@@ -240,7 +240,7 @@ export function PhotoSheetDownloadContent({
 
 export function PhotoSheetDownloadButton({ claim, options, splitResult }: Props) {
   const surveyorName = useProfileStore((s) => s.profile.name);
-  const regNum = claim?.vehicle?.registrationNumber || 'DRAFT';
+  const regNum = sanitizeRegNo(claim?.vehicle?.registrationNumber) || 'DRAFT';
   const fileName = `${regNum}-Photo-Sheet.pdf`;
 
   return (

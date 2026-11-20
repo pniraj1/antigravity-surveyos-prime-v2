@@ -169,7 +169,7 @@ export async function importFromDrive(opts: DriveImportOptions, explicitFolderId
   const claimChanged = { result: { status: 'claim-changed', added: 0 }, moveFailed: 0, mismatched: [] } as DriveImport;
   const sameClaim = () => useClaimStore.getState().currentClaim?.id === claim.id;
   const todo = plan.present.filter((x) => !known.has(x.id));
-  opts.onProgress?.(0, todo.length);
+  if (todo.length > 0) opts.onProgress?.(0, todo.length); // no "0 of 0" flash
   for (const [i, p] of todo.entries()) {
     if (!sameClaim()) return claimChanged;
     const blob = await download(p.id);

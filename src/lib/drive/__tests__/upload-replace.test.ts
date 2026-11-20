@@ -92,6 +92,7 @@ describe('uploadFileToDrive replace', () => {
     const search = decodeURIComponent(String(fetchFn.mock.calls[0][0]));
     expect(search).toContain("name='MH12_Final_Survey_Report_O\\'N.pdf'");
     expect(search).toContain("'FOLDER' in parents");
+    expect(search).toContain('orderBy=modifiedTime desc');
   });
 
   it('without opts it never searches', async () => {
