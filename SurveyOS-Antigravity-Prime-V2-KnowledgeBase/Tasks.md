@@ -1,5 +1,6 @@
-## Done: SurveyOS Scan Field Usability, Continuous Camera, Swipe & Sync Fixes (2026-11-20, Antigravity)
-- **Status:** Complete on `main` in `SurveyOS Scan` (commits `5db82f8`, `b3c4491`, `0597ec8`, `ad8d111`, `228bc46`, `312ee59`).
+## Done: SurveyOS Scan Field Usability, Continuous Camera, Swipe & Sync Fixes (2026-11-20, Antigravity) — PLAY STORE BUNDLE GENERATED
+- **Status:** Complete on `main` in `SurveyOS Scan` (commits `5db82f8`, `b3c4491`, `0597ec8`, `ad8d111`, `228bc46`, `312ee59`, `b4c40b6`). Production release bundle `app-release.aab` generated (v1.8, code 10).
+- **AAB Location:** `SurveyOS Scan/app/build/outputs/bundle/release/app-release.aab` (11.7 MB).
 - **Plan:** `docs/plans/2026-11-20-field-usability-and-sync-fixes.md` in `SurveyOS Scan`.
 - **Session:** `Sessions/2026-11-20-scan-field-usability-and-sync-fixes.md`
 - **Delivered:**
