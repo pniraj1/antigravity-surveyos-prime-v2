@@ -15,6 +15,9 @@ import {
 import { getClaimFolderHandle, verifyHandlePermission } from '@/lib/storage/claim-folder-store';
 import { saveDocuments } from '@/lib/documents/sink';
 import { useClaimStore } from '@/stores/claim-store';
+import { useUIStore } from '@/stores/ui-store';
+import { uploadFileToDrive } from '@/lib/drive';
+import { toast } from 'sonner';
 
 vi.mock('@/lib/storage/claim-folder-store', () => ({
   getClaimFolderHandle: vi.fn(),
@@ -30,6 +33,27 @@ vi.mock('@/stores/claim-store', () => ({
     getState: vi.fn(() => ({
       currentClaim: null,
     })),
+  },
+}));
+
+vi.mock('@/stores/ui-store', () => ({
+  useUIStore: {
+    getState: vi.fn(() => ({
+      isDriveConnected: false,
+    })),
+  },
+}));
+
+vi.mock('@/lib/drive', () => ({
+  uploadFileToDrive: vi.fn(async () => {}),
+}));
+
+vi.mock('sonner', () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+    warning: vi.fn(),
+    info: vi.fn(),
   },
 }));
 
@@ -168,14 +192,21 @@ describe('auto-file-report naming helpers', () => {
 });
 
 describe('saveReportToClaimFolder', () => {
-  const claim = { id: 'claim-123', reportNo: '2026/01' } as ClaimData;
+  const claim = {
+    id: 'claim-123',
+    reportNo: '2026/01',
+    vehicle: { registrationNumber: 'MH 12 AB 1234' },
+  } as ClaimData;
   const blob = new Blob(['<html>test</html>'], { type: 'text/html' });
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useUIStore.getState).mockReturnValue({
+      isDriveConnected: false,
+    } as any);
   });
 
-  it('writes file directly to claim directory handle and calls saveDocuments', async () => {
+  it('writes file directly to claim directory handle, triggers toast, and calls saveDocuments', async () => {
     const mockWritable = {
       write: vi.fn(async () => {}),
       close: vi.fn(async () => {}),
@@ -184,6 +215,7 @@ describe('saveReportToClaimFolder', () => {
       createWritable: vi.fn(async () => mockWritable),
     };
     const mockDirHandle = {
+      name: 'MH12AB1234 - NIA',
       getFileHandle: vi.fn(async () => mockFileHandle),
     };
 
@@ -199,6 +231,75 @@ describe('saveReportToClaimFolder', () => {
     expect(mockFileHandle.createWritable).toHaveBeenCalled();
     expect(mockWritable.write).toHaveBeenCalledWith(blob);
     expect(mockWritable.close).toHaveBeenCalled();
+    expect(toast.success).toHaveBeenCalledWith(
+      'Saved Final_Survey_Report_2026_01.html to vehicle folder: MH12AB1234 - NIA'
+    );
+    expect(saveDocuments).toHaveBeenCalledWith(
+      'surveyReport',
+      [{ blob, name: 'Final_Survey_Report_2026_01.html' }],
+      'generated',
+      'claim-123'
+    );
+  });
+
+  it('calls uploadFileToDrive with vehicle registration when isDriveConnected is true', async () => {
+    vi.mocked(useUIStore.getState).mockReturnValue({
+      isDriveConnected: true,
+    } as any);
+
+    const success = await saveReportToClaimFolder(claim, 'Final_Survey_Report_2026_01.html', blob, 'surveyReport');
+
+    expect(success).toBe(true);
+    expect(uploadFileToDrive).toHaveBeenCalledWith(
+      'claim-123',
+      'Final_Survey_Report_2026_01.html',
+      blob,
+      'MH 12 AB 1234'
+    );
+  });
+
+  it('calls uploadFileToDrive falling back to claim.id when vehicle registration is missing', async () => {
+    vi.mocked(useUIStore.getState).mockReturnValue({
+      isDriveConnected: true,
+    } as any);
+
+    const claimNoVehicle = { id: 'claim-999', reportNo: '2026/02' } as ClaimData;
+    const success = await saveReportToClaimFolder(claimNoVehicle, 'Final_Survey_Report_2026_02.html', blob, 'surveyReport');
+
+    expect(success).toBe(true);
+    expect(uploadFileToDrive).toHaveBeenCalledWith(
+      'claim-999',
+      'Final_Survey_Report_2026_02.html',
+      blob,
+      'claim-999'
+    );
+  });
+
+  it('does not call uploadFileToDrive when isDriveConnected is false', async () => {
+    vi.mocked(useUIStore.getState).mockReturnValue({
+      isDriveConnected: false,
+    } as any);
+
+    const success = await saveReportToClaimFolder(claim, 'Final_Survey_Report_2026_01.html', blob, 'surveyReport');
+
+    expect(success).toBe(true);
+    expect(uploadFileToDrive).not.toHaveBeenCalled();
+  });
+
+  it('does not write to directory handle or show toast when permission is not granted', async () => {
+    const mockDirHandle = {
+      name: 'MH12AB1234 - NIA',
+      getFileHandle: vi.fn(),
+    };
+
+    vi.mocked(getClaimFolderHandle).mockResolvedValue(mockDirHandle as any);
+    vi.mocked(verifyHandlePermission).mockResolvedValue(false);
+
+    const success = await saveReportToClaimFolder(claim, 'Final_Survey_Report_2026_01.html', blob, 'surveyReport');
+
+    expect(success).toBe(true);
+    expect(mockDirHandle.getFileHandle).not.toHaveBeenCalled();
+    expect(toast.success).not.toHaveBeenCalled();
     expect(saveDocuments).toHaveBeenCalledWith(
       'surveyReport',
       [{ blob, name: 'Final_Survey_Report_2026_01.html' }],
@@ -209,6 +310,7 @@ describe('saveReportToClaimFolder', () => {
 
   it('handles write failure gracefully without throwing and returns false', async () => {
     const mockDirHandle = {
+      name: 'MH12AB1234 - NIA',
       getFileHandle: vi.fn(async () => {
         throw new Error('Disk full');
       }),
@@ -240,6 +342,9 @@ describe('saveGeneratedReportToClaimFolder', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useUIStore.getState).mockReturnValue({
+      isDriveConnected: false,
+    } as any);
   });
 
   it('delegates to saveReportToClaimFolder when currentClaim matches claimId', async () => {
@@ -256,6 +361,7 @@ describe('saveGeneratedReportToClaimFolder', () => {
       createWritable: vi.fn(async () => mockWritable),
     };
     const mockDirHandle = {
+      name: 'MH12AB1234 - NIA',
       getFileHandle: vi.fn(async () => mockFileHandle),
     };
     vi.mocked(getClaimFolderHandle).mockResolvedValue(mockDirHandle as any);
@@ -270,6 +376,9 @@ describe('saveGeneratedReportToClaimFolder', () => {
 
     expect(res).toBe(true);
     expect(mockDirHandle.getFileHandle).toHaveBeenCalledWith('Final_Survey_Report_2026_01.html', { create: true });
+    expect(toast.success).toHaveBeenCalledWith(
+      'Saved Final_Survey_Report_2026_01.html to vehicle folder: MH12AB1234 - NIA'
+    );
     expect(saveDocuments).toHaveBeenCalledWith(
       'surveyReport',
       [{ blob, name: 'Final_Survey_Report_2026_01.html' }],
@@ -278,7 +387,7 @@ describe('saveGeneratedReportToClaimFolder', () => {
     );
   });
 
-  it('writes directly using getClaimFolderHandle when currentClaim does not match claimId', async () => {
+  it('writes directly and triggers toast using getClaimFolderHandle when currentClaim does not match claimId', async () => {
     vi.mocked(useClaimStore.getState).mockReturnValue({
       currentClaim: { id: 'different-claim' },
     } as any);
@@ -291,6 +400,7 @@ describe('saveGeneratedReportToClaimFolder', () => {
       createWritable: vi.fn(async () => mockWritable),
     };
     const mockDirHandle = {
+      name: 'Folder-Other',
       getFileHandle: vi.fn(async () => mockFileHandle),
     };
     vi.mocked(getClaimFolderHandle).mockResolvedValue(mockDirHandle as any);
@@ -308,5 +418,73 @@ describe('saveGeneratedReportToClaimFolder', () => {
     expect(mockDirHandle.getFileHandle).toHaveBeenCalledWith('Final_Survey_Report_2026_01.html', { create: true });
     expect(mockWritable.write).toHaveBeenCalledWith(blob);
     expect(mockWritable.close).toHaveBeenCalled();
+    expect(toast.success).toHaveBeenCalledWith('Saved Final_Survey_Report_2026_01.html to vehicle folder: Folder-Other');
+  });
+
+  it('mirrors to Google Drive when isDriveConnected is true and writing directly by claimId', async () => {
+    vi.mocked(useClaimStore.getState).mockReturnValue({
+      currentClaim: null,
+    } as any);
+    vi.mocked(useUIStore.getState).mockReturnValue({
+      isDriveConnected: true,
+    } as any);
+    vi.mocked(getClaimFolderHandle).mockResolvedValue(null);
+
+    const res = await saveGeneratedReportToClaimFolder(
+      'claim-other',
+      'Final_Survey_Report_2026_01.html',
+      blob,
+      'surveyReport'
+    );
+
+    expect(res).toBe(true);
+    expect(uploadFileToDrive).toHaveBeenCalledWith(
+      'claim-other',
+      'Final_Survey_Report_2026_01.html',
+      blob,
+      'claim-other'
+    );
+  });
+
+  it('does not mirror to Google Drive when isDriveConnected is false and writing directly by claimId', async () => {
+    vi.mocked(useClaimStore.getState).mockReturnValue({
+      currentClaim: null,
+    } as any);
+    vi.mocked(useUIStore.getState).mockReturnValue({
+      isDriveConnected: false,
+    } as any);
+
+    const res = await saveGeneratedReportToClaimFolder(
+      'claim-other',
+      'Final_Survey_Report_2026_01.html',
+      blob,
+      'surveyReport'
+    );
+
+    expect(res).toBe(true);
+    expect(uploadFileToDrive).not.toHaveBeenCalled();
+  });
+
+  it('isolates Drive upload failure so local file write and saveDocuments still succeed', async () => {
+    const claim = { id: 'claim-123', reportNo: '2026/01' } as ClaimData;
+    vi.mocked(useUIStore.getState).mockReturnValue({
+      isDriveConnected: true,
+    } as any);
+    vi.mocked(uploadFileToDrive).mockRejectedValueOnce(new Error('Network offline'));
+
+    const res = await saveReportToClaimFolder(
+      claim,
+      'Final_Survey_Report_2026_01.html',
+      blob,
+      'surveyReport'
+    );
+
+    expect(res).toBe(true);
+    expect(saveDocuments).toHaveBeenCalled();
+  });
+
+  it('returns false when claim or claimId is missing', async () => {
+    expect(await saveReportToClaimFolder({} as any, 'file.html', blob)).toBe(false);
+    expect(await saveGeneratedReportToClaimFolder('', 'file.html', blob)).toBe(false);
   });
 });

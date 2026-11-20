@@ -11,6 +11,9 @@ import type { DocType } from '@/types/documents';
 import { getClaimFolderHandle, verifyHandlePermission } from '@/lib/storage/claim-folder-store';
 import { saveDocuments } from '@/lib/documents/sink';
 import { useClaimStore } from '@/stores/claim-store';
+import { useUIStore } from '@/stores/ui-store';
+import { uploadFileToDrive } from '@/lib/drive';
+import { toast } from 'sonner';
 
 /**
  * Sanitizes vehicle registration numbers for use in filesystem filenames.
@@ -84,7 +87,18 @@ export async function saveReportToClaimFolder(
         const w = await fh.createWritable();
         await w.write(blob);
         await w.close();
+        toast.success(`Saved ${fileName} to vehicle folder: ${handle.name || 'claim folder'}`);
       }
+    }
+    if (useUIStore.getState().isDriveConnected) {
+      void uploadFileToDrive(
+        claim.id,
+        fileName,
+        blob,
+        claim.vehicle?.registrationNumber || claim.id
+      ).catch((err) => {
+        console.warn(`[AutoFileReport] Drive mirror failed for ${fileName}:`, err);
+      });
     }
     await saveDocuments(docType, [{ blob, name: fileName }], 'generated', claim.id);
     return true;
@@ -119,7 +133,13 @@ export async function saveGeneratedReportToClaimFolder(
         const w = await fh.createWritable();
         await w.write(blob);
         await w.close();
+        toast.success(`Saved ${fileName} to vehicle folder: ${handle.name || 'claim folder'}`);
       }
+    }
+    if (useUIStore.getState().isDriveConnected) {
+      void uploadFileToDrive(claimId, fileName, blob, claimId).catch((err) => {
+        console.warn(`[AutoFileReport] Drive mirror failed for ${fileName}:`, err);
+      });
     }
     return true;
   } catch (err) {
