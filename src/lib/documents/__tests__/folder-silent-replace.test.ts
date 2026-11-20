@@ -133,6 +133,39 @@ describe('Claim Folder Deduplication & Silent Auto-Replace', () => {
       expect(written[0].relPath).toBe(name);
       expect(claimDir._allFilePaths()).toEqual([name]);
     });
+
+    const html = (s: string) => new Blob([s], { type: 'text/html' });
+    const NAME = 'MH12AB1234_Final_Survey_Report_1.html';
+    const putOnDisk = async (name: string, blob: Blob) => {
+      const w = await (await claimDir.getFileHandle(name, { create: true })).createWritable();
+      await w.write(blob); await w.close();
+    };
+    const index = (c: ClaimData) => claimDocuments(c).map((d) => `${d.type}:${d.relPath}:${d.source}`);
+
+    it('same-size regenerated report replaces the content on disk', async () => {
+      const r1 = await writeDocuments(mockClaim(), 'surveyReport', [{ blob: html('<p>1250</p>'), name: NAME, keepName: true }], 'generated');
+      const r2 = await writeDocuments(r1.claim, 'surveyReport', [{ blob: html('<p>1350</p>'), name: NAME, keepName: true }], 'generated');
+      expect(await claimDir._getFile(NAME)!.text()).toBe('<p>1350</p>');
+      expect(index(r2.claim)).toEqual([`surveyReport:${NAME}:generated`]);
+    });
+
+    it('a legacy other-typed file at the target becomes the report entry', async () => {
+      // Old code: the sink filed "Final Survey Report.html" and also wrote NAME directly; a scan adopted NAME as `other`.
+      const r0 = await writeDocuments(mockClaim(), 'surveyReport', [{ blob: html('<p>x</p>'), name: NAME }], 'generated');
+      await putOnDisk(NAME, html('<p>x</p>'));
+      const c = { ...r0.claim, documents: { ...r0.claim.documents, adopt1: { id: 'adopt1', type: 'other', relPath: NAME, mime: 'text/html', size: 8, addedAt: '2026-01-01', source: 'upload', adopted: true, devices: ['This PC'] } } } as unknown as ClaimData;
+      const r = await writeDocuments(c, 'surveyReport', [{ blob: html('<p>x</p>'), name: NAME, keepName: true }], 'generated');
+      expect(index(r.claim)).toEqual([`surveyReport:${NAME}:generated`]);
+      expect(claimDir._allFilePaths()).toEqual([NAME]);
+    });
+
+    it('an upload entry at the target is replaced, one entry remains', async () => {
+      await putOnDisk(NAME, html('<p>x</p>'));
+      const c = { ...mockClaim(), documents: { adopt1: { id: 'adopt1', type: 'surveyReport', relPath: NAME, mime: 'text/html', size: 8, addedAt: '2026-01-01', source: 'upload', adopted: true, devices: ['This PC'] } } } as unknown as ClaimData;
+      const r = await writeDocuments(c, 'surveyReport', [{ blob: html('<p>longer</p>'), name: NAME, keepName: true }], 'generated');
+      expect(index(r.claim)).toEqual([`surveyReport:${NAME}:generated`]);
+      expect(await claimDir._getFile(NAME)!.text()).toBe('<p>longer</p>');
+    });
   });
 
   describe('Single-file slot silent replacement', () => {

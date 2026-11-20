@@ -110,8 +110,10 @@ export function docTypeFromRelPath(relPath: string): DocType {
   const exact = TYPE_BY_LABEL.get(stem);
   if (exact) return exact;
   // Prime-made, vehicle-first names: "MH12AB1234_Final_Survey_Report_1", "MH12AB1234-Photo-Sheet".
-  const words = stem.replace(/[_-]+/g, ' ');
-  return PRIME_MADE_ORDER.find((t) => words.includes(DOC_TYPE_LABEL[t].toLowerCase())) ?? 'other';
+  // Only names with `_`/`-` separators qualify, and the label must sit on word boundaries.
+  if (!/[_-]/.test(stem)) return 'other';
+  const words = ` ${stem.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ')} `;
+  return PRIME_MADE_ORDER.find((t) => words.includes(` ${DOC_TYPE_LABEL[t].toLowerCase()} `)) ?? 'other';
 }
 
 /** A portal box label as a Windows-safe file stem: "Front/Rear/Side Photograph" -> "Front-Rear-Side Photograph". */

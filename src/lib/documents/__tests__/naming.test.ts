@@ -95,6 +95,15 @@ describe('docTypeFromRelPath vehicle-first names', () => {
     expect(docTypeFromRelPath('MH12AB1234_Spot_Fee_Bill_1.html')).toBe('feeBill');
     expect(docTypeFromRelPath('Holiday trip.pdf')).toBe('other');
     expect(docTypeFromRelPath('RC Book 2.pdf')).toBe('rc');
+    expect(docTypeFromRelPath('MH12AB1234_Reinspection_Report_1.pdf')).toBe('reinspectionReport');
+    expect(docTypeFromRelPath('MH12AB1234_Valuation_Report_1.html')).toBe('valuationReport');
+  });
+
+  it("a surveyor's own file that only contains a label is not Prime-made", () => {
+    expect(docTypeFromRelPath('Towing Fee Bill.pdf')).toBe('other');
+    expect(docTypeFromRelPath('Coffee bill.pdf')).toBe('other');
+    expect(docTypeFromRelPath('Garage photo sheet.pdf')).toBe('other');
+    expect(docTypeFromRelPath('Revaluation report.pdf')).toBe('other');
   });
 });
 

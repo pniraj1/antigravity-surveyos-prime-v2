@@ -52,10 +52,11 @@ export function addDeviceTo(claim: ClaimData, id: string, label: string): ClaimD
 }
 
 /**
- * Same-type entries on this device that a new write of `type` may rename to
- * "(old)": only files named the way SurveyOS names that type ("Policy Schedule",
- * "Policy Schedule 2", any extension, top level). A surveyor's own `Policy.pdf`
- * is never renamed (originals are read-only). Files Prime generated itself
+ * Same-type entries on this device that a new write of `type` replaces (removed
+ * from the index, file deleted unless it is the write's own target): only files
+ * named the way SurveyOS names that type ("Policy Schedule", "Policy Schedule 2",
+ * any extension, top level). A surveyor's own `Policy.pdf` is never replaced
+ * (originals are read-only). Files Prime generated itself
  * (`source === 'generated'`) are replaceable under any name.
  */
 export function replaceableEntries(existing: ClaimDocument[], type: DocType, device: string): ClaimDocument[] {

@@ -70,15 +70,23 @@ async function exists(claimDir: FileSystemDirectoryHandle, relPath: string): Pro
   } catch { return false; }
 }
 
-/** File size in bytes if file exists on disk, or null if missing. */
-async function getFileSize(claimDir: FileSystemDirectoryHandle, relPath: string): Promise<number | null> {
+/** SHA-256 of the file at relPath, or null if missing/unreadable. */
+async function diskHash(claimDir: FileSystemDirectoryHandle, relPath: string): Promise<string | null> {
   try {
     const parts = relPath.split('/');
     const dir = await dirFor(claimDir, parts.slice(0, -1), false);
-    const fh = await dir.getFileHandle(parts[parts.length - 1]);
-    const file = await fh.getFile();
-    return file.size;
+    return await sha256Hex(await (await dir.getFileHandle(parts[parts.length - 1])).getFile());
   } catch { return null; }
+}
+
+/**
+ * Entries a single-file write at `target` takes over: the type's replaceable
+ * entries plus any entry on this device already at `target`, whatever its type
+ * or source — that file is being overwritten.
+ */
+function replacedBy(existing: ClaimDocument[], type: DocType, device: string, target: string): ClaimDocument[] {
+  const atTarget = existing.filter((d) => d.relPath === target && onThisDevice(d, device));
+  return [...new Map([...replaceableEntries(existing, type, device), ...atTarget].map((d) => [d.id, d])).values()];
 }
 
 /** Best-effort cleanup of a partial/orphaned file — never throws. */
@@ -199,48 +207,33 @@ export async function writeDocuments(
     }
   }
 
-  // Deduplication check: if exact same file exists on disk, skip redundant write
+  // Deduplication check: identical bytes already at the target skip the write.
   if (!MULTI_FILE_TYPES.has(type) && files.length === 1) {
     const target = relPaths[0];
-    const diskSize = await getFileSize(claimDir, target);
-    if (diskSize !== null && diskSize === files[0].blob.size) {
-      const existingDoc = existing.find((d) => d.relPath === target && d.type === type)
-        ?? existing.find((d) => d.relPath === target);
-      if (existingDoc) {
-        const replaced = replaceableEntries(existing, type, device).filter((d) => d.id !== existingDoc.id);
-        let nextClaim = replaced.reduce((c, d) => removeDocument(c, d.id), claim);
-        for (const old of replaced) {
-          if (old.relPath !== target) {
-            await removeQuiet(claimDir, old.relPath);
-          }
-        }
-        nextClaim = addDeviceTo(nextClaim, existingDoc.id, device);
-        const currentDoc = nextClaim.documents?.[existingDoc.id] ?? existingDoc;
-        return { claim: { ...nextClaim, documentsFolder: folder }, written: [currentDoc] };
-      } else {
-        const doc: ClaimDocument = {
-          id: newDocId(),
-          type,
-          relPath: target,
-          mime: files[0].blob.type || 'application/octet-stream',
-          size: files[0].blob.size,
-          addedAt: new Date().toISOString(),
-          source,
-          devices: [device],
-          ...(files[0].driveFileId && { driveFileId: files[0].driveFileId }),
-        };
-        const replaced = replaceableEntries(existing, type, device);
-        let nextClaim = replaced.reduce((c, d) => removeDocument(c, d.id), claim);
-        for (const old of replaced) {
-          if (old.relPath !== target) {
-            await removeQuiet(claimDir, old.relPath);
-          }
-        }
-        return {
-          claim: addDocuments({ ...nextClaim, documentsFolder: folder }, [doc]),
-          written: [doc],
-        };
+    const onDisk = await diskHash(claimDir, target);
+    if (onDisk !== null && onDisk === await sha256Hex(files[0].blob)) {
+      const keep = existing.find((d) => d.relPath === target && d.type === type && d.source === source);
+      const replaced = replacedBy(existing, type, device, target).filter((d) => d.id !== keep?.id);
+      let nextClaim = replaced.reduce<ClaimData>((c, d) => removeDocument(c, d.id), { ...claim, documentsFolder: folder });
+      for (const old of replaced) {
+        if (old.relPath !== target) await removeQuiet(claimDir, old.relPath);
       }
+      if (keep) {
+        nextClaim = addDeviceTo(nextClaim, keep.id, device);
+        return { claim: nextClaim, written: [nextClaim.documents?.[keep.id] ?? keep] };
+      }
+      const doc: ClaimDocument = {
+        id: newDocId(),
+        type,
+        relPath: target,
+        mime: files[0].blob.type || 'application/octet-stream',
+        size: files[0].blob.size,
+        addedAt: new Date().toISOString(),
+        source,
+        devices: [device],
+        ...(files[0].driveFileId && { driveFileId: files[0].driveFileId }),
+      };
+      return { claim: addDocuments(nextClaim, [doc]), written: [doc] };
     }
   }
 
@@ -258,13 +251,13 @@ export async function writeDocuments(
     throw err;
   }
 
-  // 2. Single-file types: replaceable entries are removed from the index.
+  // 2. Single-file types: replaceable entries, and any entry at the target path, are removed from the index.
   //    Old files with a different relative path/extension (e.g. replacing report.html
   //    with report.pdf) are marked for discard. Target file is silently replaced in step 3.
   let next: ClaimData = { ...claim, documentsFolder: folder };
   const discard: string[] = [];
   if (!MULTI_FILE_TYPES.has(type)) {
-    const replaced = replaceableEntries(existing, type, device);
+    const replaced = replacedBy(existing, type, device, relPaths[0]);
     next = replaced.reduce((c, d) => removeDocument(c, d.id), next);
     for (const old of replaced) {
       if (old.relPath !== relPaths[0]) {
