@@ -1,3 +1,10 @@
+## 2026-11-21 (Claude Code) — Parser-miss samples: keep declined digital bills for review (NOT DEPLOYED)
+- feat(parser): when the row parser declines a genuinely digital estimate or final bill (every page has a text layer), the PDF is written to Firestore `parserSamples/{sha256}`, with pieces in `parserSampleChunks` (≤900,000 bytes each, ≤8,000,000 bytes per file). Scanned/image PDFs and forced Text mode on a scan are never sent. Silent to the surveyor; failures are swallowed. Re-sending the same file is denied (create-only).
+- rules: create by active/trial accounts only; pieces must arrive in the same batch as their sample; admin read and delete only; no updates.
+- admin: Dev Notes → "Bills the parser couldn't read" card. Download asks for a save location first, then saves, and deletes the sample and its pieces only after a confirmed save.
+- Commits `38bda1cf`, `ea14609f`, `06eeb1bc`, `82ac0a9b`, `83e9acbb`, `d93022ba`. Files: `src/lib/ai/parser-sample.ts`, `src/lib/ai/parser-first.ts`, `src/lib/ai/processor.ts`, `firestore.rules`, `src/components/admin/ParserSamplesCard.tsx`, `src/components/admin/tabs/DevNotesTab.tsx`.
+- Not deployed. TTL not on. Open DPDP item: silent collection with no notice to the surveyor; Terms/Privacy line not added. SurveyOS Scan impact: none.
+
 ## 2026-11-21 (Claude Code) — Photos from Drive now saved to the vehicle folder (DEPLOYED TO PRODUCTION)
 - fix(photos): the Photos tab "Check Google Drive" button and the new-photos-on-Drive banner added photos to the claim only, never to the PC folder (surveyor complaint "only documents reach the folder"). `downloadDrivePhotos` now also saves damage photos through the sink into `Damage Photos/`; photos already in the folder (same Drive file id, e.g. from From Phone) and document photos (`doc_` names) are not written. No folder yet → the folder window asks.
 - Not changed (owner's call): From Phone still skips photos the phone has sent but not yet listed in its manifest; Prime's "Damage Photos" vs Scan's "Final Photos" folder name.
