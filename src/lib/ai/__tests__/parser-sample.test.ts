@@ -54,7 +54,7 @@ describe('parser-sample', () => {
   });
   it('skips non-pdf and oversized files', async () => {
     await sendParserSample(o(new File(['x'], 'a.png', { type: 'image/png' })));
-    await sendParserSample(o(pdf(8_000_001)));
+    await sendParserSample(o(pdf(6_000_001)));
     expect(commit).not.toHaveBeenCalled();
   });
   it('skips when signed out', async () => {

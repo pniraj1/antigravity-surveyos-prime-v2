@@ -2,7 +2,7 @@ import { Bytes, Timestamp, collection, doc, getDocs, orderBy, query, writeBatch 
 import { auth, db } from '@/lib/firebase/config';
 
 export const CHUNK_BYTES = 900_000;
-export const MAX_SAMPLE_BYTES = 8_000_000;
+export const MAX_SAMPLE_BYTES = 6_000_000;
 export const RETENTION_DAYS = 15;
 export const SAMPLES = 'parserSamples';
 export const CHUNKS = 'parserSampleChunks';

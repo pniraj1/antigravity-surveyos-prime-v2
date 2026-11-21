@@ -102,7 +102,7 @@ service cloud.firestore {
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.keys().hasOnly(['uid','docType','fileName','reason','pages','size','chunks','createdAt','expireAt'])
         && request.resource.data.docType in ['estimate', 'final-bill']
-        && request.resource.data['size'] <= 8000000   // bracket form: `.size` reads like the map's size() method
+        && request.resource.data['size'] <= 6000000   // bracket form: `.size` reads like the map's size() method
         && request.resource.data.chunks is int && request.resource.data.chunks >= 1 && request.resource.data.chunks <= 9
         && request.resource.data.fileName is string && request.resource.data.fileName.size() <= 300
         && request.resource.data.reason is string && request.resource.data.reason.size() <= 500

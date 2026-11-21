@@ -1,7 +1,7 @@
 ## Done, NOT deployed: Parser-miss samples (2026-11-21, Claude Code)
 - **Session:** `Sessions/2026-11-21-parser-miss-samples.md` · **Plan:** `docs/superpowers/plans/2026-11-21-parser-miss-samples.md`
 - Built on main (`38bda1cf`..`d93022ba`). The row parser declines a digital bill, the PDF is silently kept in Firestore `parserSamples`. Dev Notes card downloads and then deletes.
-- Owner steps pending: (1) deploy `firestore.rules` and hosting to `surveyos-v2-antigravity-in` (never bare `firebase deploy`); (2) turn on TTL for `parserSamples` and `parserSampleChunks` on `expireAt` (gcloud commands in the session log); (3) decline one real digital PDF and download it from Dev Notes. Nothing auto-expires until TTL is on.
+- Owner steps pending: (1) deploy `firestore.rules` FIRST, then hosting, to `surveyos-v2-antigravity-in` (never bare `firebase deploy`); (2) turn on TTL for `parserSamples` and `parserSampleChunks` on `expireAt` (gcloud commands in the session log); (3) decline one real digital PDF and download it from Dev Notes. Nothing auto-expires until TTL is on (then deletes run ~24 h after `expireAt`, sample and pieces separately). Size cap is 6 MB per file (Firestore 10 MiB request limit, base64 on the wire). Team members send only if their own profile is active/trial.
 - Open DPDP item: collection is silent, the surveyor sees no notice. A Terms/Privacy line was offered and not added (owner's call).
 - Prime ↔ Scan coupling: none.
 
