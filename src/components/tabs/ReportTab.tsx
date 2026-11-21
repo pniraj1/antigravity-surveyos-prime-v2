@@ -23,6 +23,7 @@ import { ReportSectionGuide } from '@/components/onboarding/ReportSectionGuide';
 // Every report here renders from its HTML builder below. The @react-pdf
 // documents this tab used to host were unreachable and have been removed.
 import { useReactToPrint } from 'react-to-print';
+import { recordPrinted } from '@/lib/claims/printed';
 import { SpotPrintReport } from '@/components/print/SpotPrintReport';
 import { buildStandardFinalSurveyHTML } from '@/lib/reports/standard-report-builder';
 import { buildUIICFinalHTML, buildUIICBillCheckHTML } from '@/lib/reports/uiic-final-builder';
@@ -95,6 +96,10 @@ export function ReportTab() {
   const handlePrint = useReactToPrint({
     contentRef,
     documentTitle: `Spot-Survey-Report-${currentClaim?.vehicle?.registrationNumber || 'Draft'}`,
+    onAfterPrint: () => {
+      const open = useClaimStore.getState().currentClaim;
+      if (open) recordPrinted(open.id, 'spotReport');
+    },
   });
 
   function handleInsuredApproved(stage: InsuredReportStage, draft: InsuredReportDraft) {

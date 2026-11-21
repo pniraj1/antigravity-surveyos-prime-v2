@@ -10,6 +10,7 @@ import type { DocType } from '@/types/documents';
 import { saveDocuments } from '@/lib/documents/sink';
 import { useUIStore } from '@/stores/ui-store';
 import { uploadFileToDrive } from '@/lib/drive';
+import { recordPrinted } from '@/lib/claims/printed';
 
 /**
  * Sanitizes vehicle registration numbers for use in filesystem filenames.
@@ -74,6 +75,7 @@ export async function saveReportToClaimFolder(
   docType: DocType = 'surveyReport'
 ): Promise<boolean> {
   if (!claim?.id) return false;
+  recordPrinted(claim.id, docType);
   try {
     if (useUIStore.getState().isDriveConnected) {
       void uploadFileToDrive(

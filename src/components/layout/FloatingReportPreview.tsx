@@ -13,6 +13,7 @@ import { calculateAssessmentSummary, getCompulsoryExcess } from '@/lib/calculati
 import { getVehicleAgeMonths } from '@/lib/calculations/depreciation';
 import { SpotPrintReport } from '@/components/print/SpotPrintReport';
 import { useReactToPrint } from 'react-to-print';
+import { recordPrinted } from '@/lib/claims/printed';
 import { usePrintGate } from '@/hooks/usePrintGate';
 import { FileText, Printer, X, GripHorizontal } from 'lucide-react';
 
@@ -174,6 +175,10 @@ export function FloatingReportPreview({ defaultOpen = false }: { defaultOpen?: b
   const handleSpotPrint = useReactToPrint({
     contentRef: spotPrintRef,
     documentTitle: `Spot-Report-${currentClaim?.vehicle?.registrationNumber ?? 'Draft'}`,
+    onAfterPrint: () => {
+      const open = useClaimStore.getState().currentClaim;
+      if (open) recordPrinted(open.id, 'spotReport');
+    },
   });
 
   const handleHtmlPrint = useCallback(() => {
