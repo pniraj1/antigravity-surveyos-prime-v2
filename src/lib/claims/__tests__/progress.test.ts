@@ -40,7 +40,7 @@ describe('claimProgress', () => {
     expect(claimProgress(na).steps[0].status).toBe('done');
   });
 
-  it('final waiting for bill: estimate document + printedAt.surveyReport → next.id === bill, since === estimate addedAt', () => {
+  it('final waiting for bill: estimate document + printedAt.surveyReport → next.id === bill, since === surveyReport print time', () => {
     const c: ClaimData = {
       ...allVerified(createBlankClaim('final')),
       documents: { e: doc('estimate', '2026-11-01T10:00:00Z') },
