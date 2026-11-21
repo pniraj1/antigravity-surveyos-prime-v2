@@ -4,7 +4,7 @@ import type { ClaimDocument, DocType } from '@/types/documents';
 import { FIELD_KEY_TO_DOC_TYPE } from '@/types/documents';
 import { claimDocuments } from '@/lib/documents/index-ops';
 
-/** DocType → card id; the inverse of FIELD_KEY_TO_DOC_TYPE without `other` (auth, load-challan). */
+/** DocType → card id; the inverse of FIELD_KEY_TO_DOC_TYPE without `other`; auth and load-challan are matched by file name in phoneFileFor. */
 export const CARD_DOC_TYPES: Readonly<Partial<Record<DocType, string>>> = Object.fromEntries(
   Object.entries(FIELD_KEY_TO_DOC_TYPE)
     // 'final-bill': the Documents-tab card was removed (D13), so phone bills go to Phone files
@@ -16,11 +16,22 @@ export function cardIdFor(type: DocType): string | null {
   return CARD_DOC_TYPES[type] ?? null;
 }
 
-/** The newest `'scan'` document of the card's type, or null. */
+/** Cards whose type is `other`: a phone file lands on one when its file name (no folder, no extension) matches. */
+export const OTHER_CARD_NAMES: Readonly<Record<string, RegExp>> = {
+  auth: /auth/i,
+  'load-challan': /load\s*challan|challan|consignment|bilty|e-?way\s*bill|\blr\b/i,
+};
+
+/** The newest `'scan'` document of the card's type (or, for `other` cards, named like it), or null. */
 export function phoneFileFor(claim: Pick<ClaimData, 'documents'>, cardId: string): ClaimDocument | null {
   const type = FIELD_KEY_TO_DOC_TYPE[cardId];
-  if (!type || type === 'other') return null;
-  const hits = claimDocuments(claim).filter((d) => d.type === type && d.source === 'scan');
+  if (!type) return null;
+  const name = type === 'other' ? OTHER_CARD_NAMES[cardId] : null;
+  if (type === 'other' && !name) return null;
+  const hits = claimDocuments(claim).filter(
+    (d) => d.type === type && d.source === 'scan'
+      && (!name || name.test((d.relPath.split('/').pop() ?? '').replace(/\.[^.]*$/, ''))),
+  );
   return hits[hits.length - 1] ?? null; // claimDocuments sorts oldest first
 }
 
