@@ -77,6 +77,19 @@ describe('claimProgress', () => {
     expect(p.total).toBe(8);
   });
 
+  it('only legacy isCompleted set → next is null', () => {
+    expect(claimProgress({ ...createBlankClaim('final'), isCompleted: true }).next).toBeNull();
+  });
+
+  it('docs needs all seven ids: a partial object with only rc does not pass', () => {
+    const partial = { ...createBlankClaim('final'), documentVerification: { rc: { status: 'YES', detail: '' } } } as unknown as ClaimData;
+    expect(claimProgress(partial).steps[0].status).toBe('waiting');
+  });
+
+  it("fee step belongs to the 'fees' tab", () => {
+    expect(claimProgress(createBlankClaim('final')).steps.find((s) => s.id === 'fee')?.tab).toBe('fees');
+  });
+
   it('completedAt set → next is null', () => {
     const c = { ...createBlankClaim('final'), completedAt: '2026-11-20T00:00:00Z' };
     expect(claimProgress(c).next).toBeNull();

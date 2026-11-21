@@ -34,6 +34,7 @@ import { preambleFromClaim, cashLossPreambleSentence } from '@/lib/reports/final
 import { cashLossBasis } from '@/lib/calculations/cash-loss';
 import { ReportPageSheet, splitReportHtml, estimatePageCount } from './report/ReportPageSheet';
 import DOMPurify from 'dompurify';
+import { isClaimCompleted } from '@/lib/claims/progress';
 
 function sanitizeReport(html: string): string {
   if (!html || typeof window === 'undefined') return html;
@@ -457,7 +458,7 @@ export function ReportTab() {
                     sheetIndex={0}
                     startPage={1}
                     totalPages={totalPages}
-                    isDraft={!currentClaim?.isCompleted}
+                    isDraft={!(currentClaim && isClaimCompleted(currentClaim))}
                     initialPageCount={effectivePageCounts[0] || 2}
                     onPageCountChange={handlePageCountChange}
                   >
@@ -470,7 +471,7 @@ export function ReportTab() {
                       sheetIndex={idx}
                       startPage={startPages[idx] || 1}
                       totalPages={totalPages}
-                      isDraft={!currentClaim?.isCompleted}
+                      isDraft={!(currentClaim && isClaimCompleted(currentClaim))}
                       htmlContent={secHtml}
                       initialPageCount={effectivePageCounts[idx]}
                       onPageCountChange={handlePageCountChange}

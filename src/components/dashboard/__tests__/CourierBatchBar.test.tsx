@@ -64,6 +64,14 @@ describe('CourierBatchBar', () => {
     expect(onDone).toHaveBeenCalled();
   });
 
+  it('disables Mark couriered when the date is invalid', () => {
+    render(['a']);
+    const input = container.querySelector('input[type=date]') as HTMLInputElement;
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+    act(() => { setter.call(input, ''); input.dispatchEvent(new Event('input', { bubbles: true })); });
+    expect((container.querySelector('button') as HTMLButtonElement).disabled).toBe(true);
+  });
+
   it('keeps selection and shows an error on failure', async () => {
     applyToClaims.mockRejectedValue(new Error('x'));
     render(['a']);

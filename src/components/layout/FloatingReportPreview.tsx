@@ -14,12 +14,24 @@ import { getVehicleAgeMonths } from '@/lib/calculations/depreciation';
 import { SpotPrintReport } from '@/components/print/SpotPrintReport';
 import { useReactToPrint } from 'react-to-print';
 import { recordPrinted } from '@/lib/claims/printed';
+import type { PrintedKind } from '@/types/claim';
 import { usePrintGate } from '@/hooks/usePrintGate';
 import { FileText, Printer, X, GripHorizontal } from 'lucide-react';
 
 type ReportFormat = 'standard' | 'uiic' | 'std-bill' | 'uiic-bill' | 'spot' | 'fee-bill' | 'valuation';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Which printed-log entry a floating-preview format records. Spot is recorded by its own print handler. */
+export function printKindFor(format: ReportFormat): PrintedKind | null {
+  switch (format) {
+    case 'standard': case 'uiic': return 'surveyReport';
+    case 'std-bill': case 'uiic-bill': return 'billCheckReport';
+    case 'fee-bill': return 'feeBill';
+    case 'valuation': return 'valuationReport';
+    default: return null;
+  }
+}
 
 function safePos() {
   if (typeof window === 'undefined') return { x: 200, y: 100 };
@@ -195,6 +207,8 @@ export function FloatingReportPreview({ defaultOpen = false }: { defaultOpen?: b
         : null;
       const win = window.open('', '_blank');
       if (!win) return;
+      const printedKind = printKindFor(format);
+      if (latest && printedKind) recordPrinted(latest.id, printedKind);
       win.document.write(fresh === null ? sanitizedHtml : sanitizeReport(fresh));
       win.document.close();
       win.focus();

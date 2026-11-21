@@ -17,15 +17,20 @@ const printed = (id: string, label: string, tab: AppTab, kind: PrintedKind): Ste
   id, label, tab, eval: (c) => flag(!!c.printedAt?.[kind], c.printedAt?.[kind]),
 });
 
+/** True for claims completed through the old dashboard toggle (isCompleted) or the header (completedAt). */
+export const isClaimCompleted = (c: Pick<ClaimData, 'completedAt' | 'isCompleted'>): boolean =>
+  !!c.completedAt || !!c.isCompleted;
+
+const DOC_IDS = ['rc', 'dl', 'permit', 'loadChallan', 'fitness', 'fireReport', 'fir'] as const;
 const docs: StepDef = {
   id: 'docs', label: 'Documents verified', tab: 'details',
-  eval: (c) => flag(!!c.documentVerification && Object.values(c.documentVerification).every((v) => v.status === 'YES' || v.status === 'N.A.')),
+  eval: (c) => flag(DOC_IDS.every((k) => { const s = c.documentVerification?.[k]?.status; return s === 'YES' || s === 'N.A.'; })),
 };
 const photoSheet = printed('photoSheet', 'Photo sheet printed', 'photos', 'photoSheet');
 const feeBill = printed('feeBill', 'Fee bill printed', 'fees', 'feeBill');
 const couriered: StepDef = { id: 'couriered', label: 'Couriered', tab: null, eval: (c) => flag(!!c.courieredAt, c.courieredAt) };
 const portal: StepDef = { id: 'portal', label: 'Uploaded to portal', tab: null, eval: (c) => flag(!!c.portalUploadedAt, c.portalUploadedAt) };
-const fee: StepDef = { id: 'fee', label: 'Fee received', tab: null, eval: (c) => flag(!!c.feeBill?.feePaid, c.feeBill?.paymentDate) };
+const fee: StepDef = { id: 'fee', label: 'Fee received', tab: 'fees', eval: (c) => flag(!!c.feeBill?.feePaid, c.feeBill?.paymentDate) };
 const tail = [couriered, portal, fee];
 
 const STEPS: Record<SurveyType, StepDef[]> = {
@@ -107,7 +112,7 @@ export function claimProgress(claim: ClaimData): ClaimProgress {
     steps,
     done: doneSteps.length,
     total: real.length,
-    next: claim.completedAt ? null : (steps.find((s) => s.status === 'waiting') ?? null),
+    next: isClaimCompleted(claim) ? null : (steps.find((s) => s.status === 'waiting') ?? null),
     since: doneSteps.filter((s) => s.at).pop()?.at,
   };
 }

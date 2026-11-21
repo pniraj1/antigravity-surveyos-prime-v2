@@ -51,7 +51,7 @@ function changedKeys(before: ClaimData, after: ClaimData): Partial<ClaimData> {
   return out as Partial<ClaimData>;
 }
 
-/** Applies `fn` to each stored claim, saves it, and broadcasts once. Returns the count saved. */
+/** Applies `fn` to each stored claim, saves it (saveClaim broadcasts per save). Returns the count saved. */
 export async function applyToClaims(ids: string[], fn: (c: ClaimData) => ClaimData): Promise<number> {
   const now = new Date().toISOString();
   let saved = 0;
@@ -65,11 +65,6 @@ export async function applyToClaims(ids: string[], fn: (c: ClaimData) => ClaimDa
     const { currentClaim, updateClaim } = useClaimStore.getState();
     if (currentClaim?.id === id) updateClaim(changedKeys(full, next));
     saved++;
-  }
-  if (saved > 0) {
-    const ch = new BroadcastChannel('surveyos_claims_sync');
-    ch.postMessage('CLAIMS_UPDATED');
-    ch.close();
   }
   return saved;
 }

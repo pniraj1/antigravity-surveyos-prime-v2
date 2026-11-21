@@ -58,6 +58,8 @@ import { GettingStartedCard } from '@/components/onboarding/GettingStartedCard';
 import { OnboardingGate } from '@/components/onboarding/OnboardingGate';
 import { TabTip } from '@/components/onboarding/TabTip';
 import { HelpDialog } from '@/components/onboarding/HelpDialog';
+import { isClaimCompleted } from '@/lib/claims/progress';
+import { applyToClaims } from '@/lib/claims/dispatch';
 import { completionPatch } from '@/lib/drive/scan-status';
 import { setCompletedInScan } from '@/lib/drive/scan-status-sync';
 
@@ -406,8 +408,8 @@ export function DashboardContent({ initialShowArchived = false }: { initialShowA
                 </button>
               </div>
             ) : (
-              <div>
-                {!viewAsSurveyor && <CourierBatchBar ids={selectedIds} onDone={() => setSelectedIds([])} />}
+              <div className="overflow-x-auto"><div className="min-w-[960px]">
+                {!viewAsSurveyor && <CourierBatchBar ids={selectedIds.filter((id) => displayClaims.some((c) => c.id === id))} onDone={() => setSelectedIds([])} />}
                 <div className="px-6 py-3 grid grid-cols-[28px_1.5fr_1.6fr_2fr_100px_100px_110px_110px_60px] gap-4 text-[10px] font-medium uppercase tracking-[0.15em] items-center border-b border-border text-[var(--color-neutral-400)] bg-[var(--color-neutral-50)]">
                   <span />
                   <span>Report No.</span>
@@ -495,15 +497,18 @@ export function DashboardContent({ initialShowArchived = false }: { initialShowA
                         <button
                           onClick={async (e) => {
                             e.stopPropagation();
-                            const fullClaim = await getClaim(claim.id);
-                            if (fullClaim) {
-                              const done = !!fullClaim.completedAt || !!fullClaim.isCompleted;
-                              const at = new Date().toISOString();
-                              await saveClaim({ ...fullClaim, ...completionPatch(!done, at) });
-                              void setCompletedInScan(fullClaim, !done, at);
-                              const channel = new BroadcastChannel('surveyos_claims_sync');
-                              channel.postMessage('CLAIMS_UPDATED');
-                              channel.close();
+                            const at = new Date().toISOString();
+                            let target = false;
+                            try {
+                              // applyToClaims mirrors the change into an open claim, so its autosave can't undo it.
+                              const n = await applyToClaims([claim.id], (c) => {
+                                target = !isClaimCompleted(c);
+                                return { ...c, ...completionPatch(target, at) };
+                              });
+                              const saved = n > 0 ? await getClaim(claim.id) : undefined;
+                              if (saved) void setCompletedInScan(saved, target, at);
+                            } catch {
+                              toast.error("Couldn't update the claim — try again.");
                             }
                           }}
                           className={`p-1.5 rounded-lg transition-colors ${claim.isCompleted ? 'bg-[var(--color-status-success-tint)] text-[var(--color-status-success)]' : 'text-[var(--color-neutral-400)] hover:bg-[var(--color-neutral-100)] hover:text-[var(--color-status-success)]'}`}
@@ -564,7 +569,7 @@ export function DashboardContent({ initialShowArchived = false }: { initialShowA
                     </div>
                   ))}
                 </div>
-              </div>
+              </div></div>
             )}
           </div>
         </div>

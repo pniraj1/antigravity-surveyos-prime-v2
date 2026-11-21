@@ -45,19 +45,18 @@ describe('dispatch helpers', () => {
     expect(s.total).toBe(11);
     expect(s.nextTab).toBe('details');
   });
-  it('applyToClaims saves every id and broadcasts once', async () => {
+  it('applyToClaims saves every id (saveClaim broadcasts itself)', async () => {
     const a = createBlankClaim('final'); const b = createBlankClaim('final');
     store.set(a.id, a); store.set(b.id, b);
     const n = await applyToClaims([a.id, b.id, 'missing'], (c) => withCourieredAt(c, '2026-11-02'));
     expect(n).toBe(2);
     expect(saveClaim).toHaveBeenCalledTimes(2);
     expect((store.get(a.id) as { courieredAt: string }).courieredAt).toBe('2026-11-02');
-    expect(post).toHaveBeenCalledTimes(1);
-    expect(post).toHaveBeenCalledWith('CLAIMS_UPDATED');
-  });
-  it('applyToClaims returns 0 and does not broadcast when no id is found', async () => {
-    expect(await applyToClaims(['nope'], (c) => c)).toBe(0);
     expect(post).not.toHaveBeenCalled();
+  });
+  it('applyToClaims returns 0 and saves nothing when no id is found', async () => {
+    expect(await applyToClaims(['nope'], (c) => c)).toBe(0);
+    expect(saveClaim).not.toHaveBeenCalled();
   });
   it('applyToClaims removes a field on the open claim and keeps its unsaved edits', async () => {
     const stored = { ...createBlankClaim('final'), courieredAt: '2026-11-01' };

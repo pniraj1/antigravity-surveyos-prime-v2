@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { setCompletedInScan } from '@/lib/drive/scan-status-sync';
 import { completionPatch } from '@/lib/drive/scan-status';
+import { isClaimCompleted } from '@/lib/claims/progress';
 import { ClaimFolderButton } from '@/components/layout/ClaimFolderButton';
 import { StorageSafetyPopover } from '@/components/layout/StorageSafetyPopover';
 
@@ -157,7 +158,7 @@ export function ClaimHeader() {
 
   if (!currentClaim) return null;
 
-  const completed = !!currentClaim.completedAt;
+  const completed = isClaimCompleted(currentClaim);
   const toggleCompleted = () => {
     const at = new Date().toISOString();
     updateClaim(completionPatch(!completed, at));

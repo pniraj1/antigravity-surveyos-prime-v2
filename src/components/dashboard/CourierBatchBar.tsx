@@ -14,9 +14,10 @@ export function CourierBatchBar({ ids, onDone }: { ids: string[]; onDone: () => 
   const [date, setDate] = useState(localToday);
   const [busy, setBusy] = useState(false);
   if (ids.length === 0) return null;
+  const validDate = /^\d{4}-\d{2}-\d{2}$/.test(date);
 
   const run = async () => {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || busy) return;
+    if (!validDate || busy) return;
     setBusy(true);
     try {
       const saved = await applyToClaims(ids, (c) => withCourieredAt(c, date));
@@ -41,7 +42,7 @@ export function CourierBatchBar({ ids, onDone }: { ids: string[]; onDone: () => 
       />
       <button
         type="button"
-        disabled={busy}
+        disabled={busy || !validDate}
         onClick={run}
         className="px-3 py-1 rounded-lg font-medium bg-[var(--color-neutral-900)] text-primary disabled:opacity-50"
       >
