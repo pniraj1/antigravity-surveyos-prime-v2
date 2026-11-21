@@ -93,6 +93,31 @@ service cloud.firestore {
       allow read, delete: if isAdmin();
     }
 
+    // Parser-miss samples: a declined digital estimate/bill, kept ≤15 days for parser work.
+    // Surveyors create only (re-sending the same file = update = denied, which de-duplicates it). Admin reads and deletes.
+    // ponytail: any signed-in user can create; TTL bounds the cost. Add a per-uid daily cap if abused.
+    match /parserSamples/{id} {
+      allow create: if isSignedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid','docType','fileName','reason','pages','size','chunks','createdAt','expireAt'])
+        && request.resource.data.docType in ['estimate', 'final-bill']
+        && request.resource.data['size'] <= 8000000   // bracket form: `.size` reads like the map's size() method
+        && request.resource.data.expireAt is timestamp
+        && request.resource.data.expireAt <= request.time + duration.value(16, 'd');
+      allow read, delete: if isAdmin();
+
+      match /parserSampleChunks/{i} {
+        allow create: if isSignedIn()
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['i','uid','data','expireAt'])
+          && request.resource.data.data is bytes
+          && request.resource.data.data.size() <= 900000
+          && request.resource.data.expireAt is timestamp
+          && request.resource.data.expireAt <= request.time + duration.value(16, 'd');
+        allow read, delete: if isAdmin();
+      }
+    }
+
     // Collection Group query support for Admin Panel
     match /{path=**}/profile/{docId} {
       allow read, write: if isAdmin();
