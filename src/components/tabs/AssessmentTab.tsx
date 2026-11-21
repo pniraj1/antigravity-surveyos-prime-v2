@@ -146,7 +146,7 @@ export function AssessmentTab() {
   if (!currentClaim) return null;
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-140px)] p-3 lg:p-4 max-w-[1700px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div className="flex flex-col h-[calc(100dvh-140px)] p-3 lg:p-4 max-w-[1700px] mx-auto">
       {estimateModeDialog}
       {kindAsk && <DocumentKindDialog current={currentClaim.billCheck?.baseDocument ? (isFromBill(currentClaim) ? 'final-bill' : 'estimate') : undefined} onChoose={(k) => kindAsk.resolve(k)} onCancel={() => kindAsk.resolve(null)} />}
       {gateDialog}

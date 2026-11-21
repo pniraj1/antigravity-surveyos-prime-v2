@@ -474,7 +474,7 @@ export function BillCheckGrid({
             title="Click to rename reference column"
           >
             <span>{refColTitle}</span>
-            <span className="opacity-0 group-hover:opacity-100 text-[10px] text-primary">✎</span>
+            <span className="[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 text-[10px] text-primary">✎</span>
           </span>
         )}
         <span>Status</span>
@@ -556,7 +556,7 @@ export function BillCheckGrid({
 
   return (
     <>
-    <div className="flex flex-col h-full min-h-0 rounded-2xl overflow-hidden bg-card border border-border [&_[data-sel]]:ring-2 [&_[data-sel]]:ring-blue-400 [&_[data-sel]]:ring-inset" onKeyDown={handleGridKeys} onPaste={handleColumnPaste} onCopy={handleCopy} onMouseDown={selection.handleCellMouseDown}>
+    <div className="flex flex-col h-full min-h-0 rounded-2xl overflow-hidden tabular-nums bg-card border border-border [&_[data-sel]]:ring-2 [&_[data-sel]]:ring-blue-400 [&_[data-sel]]:ring-inset" onKeyDown={handleGridKeys} onPaste={handleColumnPaste} onCopy={handleCopy} onMouseDown={selection.handleCellMouseDown}>
       {/* Grid header / toolbar */}
       <div className="px-4 py-3 flex items-start justify-between gap-4" style={{ borderBottom: '1px solid var(--color-neutral-100)', background: 'var(--color-neutral-50)' }}>
         <div>

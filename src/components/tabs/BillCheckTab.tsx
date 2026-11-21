@@ -180,7 +180,7 @@ export function BillCheckTab() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-140px)] p-3 lg:p-4 max-w-[1700px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div className="flex flex-col h-[calc(100dvh-140px)] p-3 lg:p-4 max-w-[1700px] mx-auto">
       {estimateModeDialog}
       {printDialogs}
 

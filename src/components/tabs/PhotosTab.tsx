@@ -209,7 +209,7 @@ export function PhotosTab() {
   const canRestoreFromDrive = !hasPhotos;
 
   return (
-    <div className="p-6 lg:p-8 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div className="p-6 lg:p-8 max-w-7xl mx-auto">
       {/* ── Toolbar ── */}
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

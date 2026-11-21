@@ -249,7 +249,7 @@ export function ReportTab() {
   const totalHeightMm = totalPages * 297 + (sections.length - 1) * 32;
 
   return (
-    <div className="p-3 md:p-6 lg:p-8 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300 h-full flex flex-col">
+    <div className="p-3 md:p-6 lg:p-8 max-w-7xl mx-auto h-full flex flex-col">
       {currentClaim.surveyType === 'final' && <PolicyCheckStrip />}
 
       <ProfileGapBanner />

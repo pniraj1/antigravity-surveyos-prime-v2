@@ -205,7 +205,7 @@ export function Sidebar() {
       <aside
         className={`
           fixed top-0 left-0 z-50 h-full flex flex-col
-          transition-all duration-300 ease-in-out
+          transition-[transform,width] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]
           bg-white border-r border-[var(--color-neutral-200)]
           ${sidebarCollapsed ? 'w-[64px]' : 'w-[258px]'}
           ${sidebarMobileOpen ? 'translate-x-0' : '-translate-x-full'}

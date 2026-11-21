@@ -155,7 +155,7 @@ export function TotalLossForm() {
         )}
 
         {/* TL Control Panel */}
-        <div className={`p-8 rounded-[2rem] transition-all duration-500 border-2 ${isTL ? 'bg-white shadow-2xl scale-[1.01]' : 'bg-gray-50/50 border-gray-100 opacity-60'}`}
+        <div className={`p-8 rounded-[2rem] transition-[background-color,box-shadow,opacity,transform] duration-200 border-2 ${isTL ? 'bg-white shadow-2xl scale-[1.01]' : 'bg-gray-50/50 border-gray-100 opacity-60'}`}
              style={{ borderColor: isTL ? 'var(--color-status-success)' : 'transparent' }}>
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-4">

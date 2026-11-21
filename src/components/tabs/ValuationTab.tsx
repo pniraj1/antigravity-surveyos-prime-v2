@@ -79,7 +79,7 @@ export function ValuationTab() {
   }
 
   return (
-    <div className="space-y-8 border-t pt-8 animate-in fade-in duration-300">
+    <div className="space-y-8 border-t pt-8">
       <div className="flex justify-between items-end">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-primary">Valuation / Break-in Inspection</h2>

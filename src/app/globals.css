@@ -252,6 +252,45 @@
 }
 
 /* ═══════════════════════════════════════════════════════════
+   PHONE FEEL — unlayered on purpose so it beats Tailwind's
+   text-xs / text-sm on inputs (iOS zooms into any input under 16px).
+   ═══════════════════════════════════════════════════════════ */
+html {
+  -webkit-tap-highlight-color: transparent; /* no grey flash on tap */
+  overscroll-behavior-y: none;              /* no pull-to-refresh mid-form */
+}
+button,
+a,
+[role="button"] {
+  touch-action: manipulation;               /* no double-tap-zoom wait */
+}
+/* Digits all one width, so rupee columns line up and don't wobble when values change. */
+table,
+input[inputmode="decimal"],
+input[inputmode="numeric"],
+input[type="number"] {
+  font-variant-numeric: tabular-nums;
+}
+@media (pointer: coarse) {
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
+/* Reduced motion: drop slides/zooms, keep spinners so loading still reads as loading. */
+@media (prefers-reduced-motion: reduce) {
+  *:not(.animate-spin),
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
    SCROLLBAR — Platinum style
    ═══════════════════════════════════════════════════════════ */
 @layer base {
@@ -313,9 +352,11 @@
   box-shadow: 0 1px 3px rgba(13, 27, 42, 0.04), 0 4px 16px rgba(13, 27, 42, 0.06);
   transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
-.card-premium:hover {
-  box-shadow: 0 4px 24px rgba(13, 27, 42, 0.1);
-  transform: translateY(-1px);
+@media (hover: hover) and (pointer: fine) {
+  .card-premium:hover {
+    box-shadow: 0 4px 24px rgba(13, 27, 42, 0.1);
+    transform: translateY(-1px);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════

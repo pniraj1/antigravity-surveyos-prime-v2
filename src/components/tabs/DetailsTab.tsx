@@ -277,7 +277,7 @@ export function DetailsTab() {
         ref={formAreaRef}
         onInput={handleContainerInput}
         style={{ flex: 1, minWidth: 0, overflowY: 'auto' }}
-        className="@container px-4 pt-4 pb-10 md:px-8 md:pt-6 animate-in fade-in slide-in-from-bottom-2 duration-300"
+        className="@container px-4 pt-4 pb-10 md:px-8 md:pt-6"
       >
         <div className="w-full max-w-[1400px] mx-auto space-y-6">
 
