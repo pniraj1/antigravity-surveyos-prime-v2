@@ -1,3 +1,7 @@
+## Done: Drive photos saved to the vehicle folder (2026-11-21, Claude Code)
+- `src/lib/photos/download-drive-photos.ts` saves damage photos via the sink. Not deployed yet.
+- Open: From Phone silently skips photos not yet in the phone's manifest (say "still sending N"); "Damage Photos" vs "Final Photos" naming.
+
 ## Done: One folder window for every claim (2026-11-21, Claude Code) — DEPLOYED
 - New Claim → Create opens the one folder window; From Phone / any save with no folder asks boldly and waits; Skip = red "NOT saved". Deleted claims drop their folder record.
 - Not done: owner check on a real claim. Old one-root-folder setups still save without asking (into root/<vehicle>).

@@ -1,3 +1,8 @@
+## 2026-11-21 (Claude Code) — Photos from Drive now saved to the vehicle folder
+- fix(photos): the Photos tab "Check Google Drive" button and the new-photos-on-Drive banner added photos to the claim only, never to the PC folder (surveyor complaint "only documents reach the folder"). `downloadDrivePhotos` now also saves damage photos through the sink into `Damage Photos/`; photos already in the folder (same Drive file id, e.g. from From Phone) and document photos (`doc_` names) are not written. No folder yet → the folder window asks.
+- Not changed (owner's call): From Phone still skips photos the phone has sent but not yet listed in its manifest; Prime's "Damage Photos" vs Scan's "Final Photos" folder name.
+- test: vitest 405 files / 3,643 tests passing; `tsc --noEmit` clean. SurveyOS Scan impact: none.
+
 ## 2026-11-21 (Claude Code) — One folder window for every claim (DEPLOYED TO PRODUCTION)
 - fix(storage): one way to set a claim's folder. The New Claim window's own "Claim Local Folder" picker (saved the pick as is, no vehicle folder) is removed; Create now opens the one folder window (`ClaimFolderPromptHost`, mounted once in Dashboard, opened by `askForClaimFolder`). From Phone and the Documents tab use the same window instead of their own copies.
 - fix(documents): a save with no claim folder is no longer silent. The sink keeps it in memory, opens the folder window, and writes it once a folder is chosen; Skip shows a red "NOT saved to your PC" (once per claim, then on each save, never re-asking). Phone/Firefox unchanged.
