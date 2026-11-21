@@ -15,6 +15,7 @@ vi.mock('firebase/firestore', () => ({
   Timestamp: { fromDate: (d: Date) => ({ date: d }) },
 }));
 
+import { allPagesDigital } from '../parser-first';
 import { splitBytes, joinBytes, expiryFrom, sendParserSample, SAMPLES } from '../parser-sample';
 
 const pdf = (n: number) => new File([new Uint8Array(n)], 'a.pdf', { type: 'application/pdf' });
@@ -56,6 +57,8 @@ describe('parser-sample', () => {
     expect(Object.keys(sampleData).sort()).toEqual(
       ['chunks', 'createdAt', 'docType', 'expireAt', 'fileName', 'pages', 'reason', 'size', 'uid'],
     );
+    expect(set.mock.calls[0][1].expireAt).toBe(sampleData.expireAt);
+    expect(set.mock.calls[1][1].expireAt).toBe(sampleData.expireAt);
     expect(set.mock.calls[0][1]).toMatchObject({ i: 0, uid: 'u1' });
     expect(set.mock.calls[1][1]).toMatchObject({ i: 1, uid: 'u1' });
     const sampleCall = doc.mock.calls.find(c => c[1] === SAMPLES && c.length === 3);
@@ -64,5 +67,14 @@ describe('parser-sample', () => {
   it('swallows a rejected write', async () => {
     commit.mockRejectedValueOnce(new Error('permission-denied'));
     await expect(sendParserSample(o(pdf(10)))).resolves.toBeUndefined();
+  });
+});
+
+describe('allPagesDigital', () => {
+  it('is true only when every page is text', () => {
+    expect(allPagesDigital(['text', 'text'])).toBe(true);
+    expect(allPagesDigital(['text', 'vision'])).toBe(false);
+    expect(allPagesDigital(['vision'])).toBe(false);
+    expect(allPagesDigital([])).toBe(false);
   });
 });

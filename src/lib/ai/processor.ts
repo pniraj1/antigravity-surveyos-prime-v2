@@ -20,7 +20,7 @@ import { planChunks } from './group-pages';
 import { limitsFor, PAGE_LIMITS } from './page-limits';
 import { profilePages, pageRuns, chunkRuns } from './page-runs';
 import { tokensFromItems, type PdfToken } from './row-parser';
-import { parserEligible, readHeader, parseFirst, checkFields } from './parser-first';
+import { parserEligible, readHeader, parseFirst, checkFields, allPagesDigital } from './parser-first';
 
 /**
  * Extracts text content from a PDF page (if it has a text layer).
@@ -409,7 +409,7 @@ export async function extractDocument(
       }
       console.log(`[Parser] declined: ${parsed.reason}`);
       // digital only: a forced Text mode on a scanned PDF must not send
-      if (modes.length > 0 && pageProfiles.length === totalPages && modes.every(m => m === 'text')) {
+      if (allPagesDigital(modes)) {
         void import('./parser-sample').then(m => m.sendParserSample({ file: files[0], docType: key, reason: parsed.reason, pages: totalPages })).catch(() => {});
       }
     }

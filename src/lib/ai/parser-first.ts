@@ -101,3 +101,8 @@ export async function readHeader(
     return blank;
   }
 }
+
+/** True only when every page has a text layer (genuinely digital). */
+export function allPagesDigital(modes: readonly string[]): boolean {
+  return modes.length > 0 && modes.every(m => m === 'text');
+}
