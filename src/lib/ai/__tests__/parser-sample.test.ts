@@ -37,6 +37,11 @@ beforeEach(() => {
   getDocs.mockReset();
   doc.mockClear();
   auth.currentUser = { uid: 'u1' };
+  const store = new Map<string, string>();
+  vi.stubGlobal('localStorage', {
+    getItem: (k: string) => store.get(k) ?? null,
+    setItem: (k: string, v: string) => { store.set(k, v); },
+  });
 });
 
 afterEach(() => { vi.unstubAllGlobals(); });
@@ -86,6 +91,20 @@ describe('parser-sample', () => {
   it('swallows a rejected write', async () => {
     commit.mockRejectedValueOnce(new Error('permission-denied'));
     await expect(sendParserSample(o(pdf(10)))).resolves.toBeUndefined();
+    expect(localStorage.getItem('surveyos.parserSamplesSent')).toBeNull();
+  });
+  it('remembers a sent file and skips it next time', async () => {
+    await sendParserSample(o(pdf(10)));
+    expect(commit).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(localStorage.getItem('surveyos.parserSamplesSent')!)).toHaveLength(1);
+    await sendParserSample(o(pdf(10)));
+    expect(commit).toHaveBeenCalledTimes(1);
+  });
+  it('still sends when storage is blocked', async () => {
+    const blocked = () => { throw new Error('blocked'); };
+    vi.stubGlobal('localStorage', { getItem: blocked, setItem: blocked });
+    await sendParserSample(o(pdf(10)));
+    expect(commit).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -6,6 +6,19 @@ export const MAX_SAMPLE_BYTES = 6_000_000;
 export const RETENTION_DAYS = 15;
 export const SAMPLES = 'parserSamples';
 export const CHUNKS = 'parserSampleChunks';
+const SENT_KEY = 'surveyos.parserSamplesSent';
+const SENT_MAX = 200;
+
+function readSent(): string[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(SENT_KEY) ?? '[]');
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+  } catch { return []; }
+}
+
+function rememberSent(id: string): void {
+  try { localStorage.setItem(SENT_KEY, JSON.stringify([...readSent().filter(x => x !== id), id].slice(-SENT_MAX))); } catch { /* storage blocked: proceed */ }
+}
 
 export interface ParserSampleMeta {
   uid: string;
@@ -45,6 +58,7 @@ export async function sendParserSample(o: { file: File; docType: string; reason:
     if (!uid || o.file.type !== 'application/pdf' || o.file.size > MAX_SAMPLE_BYTES) return;
     const bytes = new Uint8Array(await o.file.arrayBuffer());
     const id = hex(await globalThis.crypto.subtle.digest('SHA-256', bytes));
+    if (readSent().includes(id)) return;
     const parts = splitBytes(bytes);
     const now = new Date();
     const expireAt = Timestamp.fromDate(expiryFrom(now));
@@ -58,6 +72,7 @@ export async function sendParserSample(o: { file: File; docType: string; reason:
     };
     batch.set(doc(db, SAMPLES, id), meta);
     await batch.commit();
+    rememberSent(id);
   } catch { /* ponytail: silent by owner decision */ }
 }
 
