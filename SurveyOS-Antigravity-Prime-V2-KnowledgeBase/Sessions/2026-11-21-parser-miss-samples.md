@@ -2,7 +2,7 @@
 
 Owner asked for a way to learn from bills the row parser cannot read. The parser now keeps a copy of a declined digital bill so the owner can look at it from Dev Notes.
 
-## What was built (on main, not deployed)
+## What was built (on main; DEPLOYED 2026-11-21 — rules then hosting, live chunk checked on both sites; pushed)
 - **Sender:** `src/lib/ai/parser-sample.ts`. When the row parser declines a digital estimate or final bill, the PDF goes to Firestore `parserSamples/{sha256}`. Its bytes are split into `parserSampleChunks` pieces (≤900,000 bytes each, ≤6,000,000 bytes per file; lowered from 8 MB after final review because of Firestore's 10 MiB request limit, bytes go over the wire as base64). Metadata: uid, docType, fileName, reason, pages, size, chunks, createdAt, expireAt. No claim id, no insurer.
 - **Digital-only guard:** `src/lib/ai/parser-first.ts` (`allPagesDigital`). Every page must have a detected text layer. Scanned or image PDFs, and forced Text mode on a scan, are never sent.
 - **Hook:** `src/lib/ai/processor.ts`.
@@ -21,7 +21,7 @@ Tests: `src/lib/ai/__tests__/parser-sample.test.ts`, `src/components/admin/__tes
 - Plan: `docs/superpowers/plans/2026-11-21-parser-miss-samples.md`.
 
 ## What's unfinished (owner steps)
-- [ ] Deploy `firestore.rules` FIRST, then hosting, to `surveyos-v2-antigravity-in`. Never run a bare `firebase deploy`.
+- [x] Deploy `firestore.rules` FIRST, then hosting, to `surveyos-v2-antigravity-in` (done 2026-11-21).
 - [ ] Turn on TTL so nothing is kept forever:
   - `gcloud firestore fields ttls update expireAt --collection-group=parserSamples --enable-ttl --project=surveyos-v2-antigravity-in`
   - `gcloud firestore fields ttls update expireAt --collection-group=parserSampleChunks --enable-ttl --project=surveyos-v2-antigravity-in`
