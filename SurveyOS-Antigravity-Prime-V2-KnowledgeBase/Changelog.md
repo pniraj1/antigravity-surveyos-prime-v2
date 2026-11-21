@@ -1,4 +1,4 @@
-## 2026-11-21 (Claude Code) — Photos from Drive now saved to the vehicle folder
+## 2026-11-21 (Claude Code) — Photos from Drive now saved to the vehicle folder (DEPLOYED TO PRODUCTION)
 - fix(photos): the Photos tab "Check Google Drive" button and the new-photos-on-Drive banner added photos to the claim only, never to the PC folder (surveyor complaint "only documents reach the folder"). `downloadDrivePhotos` now also saves damage photos through the sink into `Damage Photos/`; photos already in the folder (same Drive file id, e.g. from From Phone) and document photos (`doc_` names) are not written. No folder yet → the folder window asks.
 - Not changed (owner's call): From Phone still skips photos the phone has sent but not yet listed in its manifest; Prime's "Damage Photos" vs Scan's "Final Photos" folder name.
 - test: vitest 405 files / 3,643 tests passing; `tsc --noEmit` clean. SurveyOS Scan impact: none.
