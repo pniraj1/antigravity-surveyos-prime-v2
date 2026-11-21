@@ -33,7 +33,7 @@ import {
   Lock,
 } from 'lucide-react';
 
-import { StageBadge } from '@/components/ui/StageBadge';
+import { ClaimRowProgress } from '@/components/dashboard/ClaimRowProgress';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { BankReconcileDialog } from '@/components/dialogs/BankReconcileDialog';
 import { IRDAISummaryDialog } from '@/components/dialogs/IRDAISummaryDialog';
@@ -403,9 +403,9 @@ export function DashboardContent({ initialShowArchived = false }: { initialShowA
               </div>
             ) : (
               <div>
-                <div className="px-6 py-3 grid grid-cols-[1.5fr_1fr_2fr_100px_100px_110px_110px_60px] gap-4 text-[10px] font-medium uppercase tracking-[0.15em] items-center border-b border-border text-[var(--color-neutral-400)] bg-[var(--color-neutral-50)]">
+                <div className="px-6 py-3 grid grid-cols-[1.5fr_1.6fr_2fr_100px_100px_110px_110px_60px] gap-4 text-[10px] font-medium uppercase tracking-[0.15em] items-center border-b border-border text-[var(--color-neutral-400)] bg-[var(--color-neutral-50)]">
                   <span>Report No.</span>
-                  <span>Stage</span>
+                  <span>Progress</span>
                   <span>Vehicle & Parties</span>
                   <span>Status</span>
                   <span>Fee</span>
@@ -418,7 +418,7 @@ export function DashboardContent({ initialShowArchived = false }: { initialShowA
                     <div
                       key={claim.id}
                       onClick={() => void openClaim(claim.id)}
-                      className="px-6 py-4 grid grid-cols-[1.5fr_1fr_2fr_100px_100px_110px_110px_60px] gap-4 items-center cursor-pointer border-b border-[var(--color-neutral-100)] transition-colors hover:bg-[var(--color-neutral-50)]"
+                      className="px-6 py-4 grid grid-cols-[1.5fr_1.6fr_2fr_100px_100px_110px_110px_60px] gap-4 items-center cursor-pointer border-b border-[var(--color-neutral-100)] transition-colors hover:bg-[var(--color-neutral-50)]"
                     >
                       <div className="flex items-center gap-1.5 min-w-0">
                         <span className="text-sm font-medium truncate text-[var(--color-neutral-900)]">
@@ -430,9 +430,7 @@ export function DashboardContent({ initialShowArchived = false }: { initialShowA
                           </span>
                         )}
                       </div>
-                      <div>
-                        <StageBadge stage={claim.stage} />
-                      </div>
+                      <ClaimRowProgress claim={claim} readOnly={!!viewAsSurveyor} />
                       <div className="flex flex-col truncate">
                         <span className="text-sm font-medium uppercase text-[var(--color-neutral-900)]">{claim.vehicleNo || 'Unknown'}</span>
                         <div className="flex gap-2 text-[10px] text-muted-foreground truncate opacity-80 mt-0.5">
