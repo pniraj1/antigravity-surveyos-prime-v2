@@ -1,3 +1,9 @@
+## Done: Parser reads Tata-style split amounts (2026-11-21, Claude Code) — DEPLOYED
+- **Session:** `Sessions/2026-11-21-parser-split-amounts.md` · Commit `dbedb54f` on main, hosting deployed 2026-11-21.
+- `repairNumbers` in `src/lib/ai/row-parser.ts` joins `265.2`/`5` and `13,76`/`4.41`. `Estimate for parser.pdf` now parses with zero AI calls.
+- Open: owner re-upload of that estimate on the live site; more digital estimates from other makers/insurers would widen the corpus check (only 29 PDFs checked). No `firestore.rules` change in this deploy.
+- Prime ↔ Scan coupling: none.
+
 ## Done, NOT deployed: Parser-miss samples (2026-11-21, Claude Code)
 - **Session:** `Sessions/2026-11-21-parser-miss-samples.md` · **Plan:** `docs/superpowers/plans/2026-11-21-parser-miss-samples.md`
 - Built on main (`38bda1cf`..`d93022ba`). The row parser declines a digital bill, the PDF is silently kept in Firestore `parserSamples`. Dev Notes card downloads and then deletes.
