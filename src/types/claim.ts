@@ -12,7 +12,10 @@ import type { AssessmentRow, SpotDamageRow, SpotSurveyDetails, ReinspectionDetai
 import { DEFAULT_REINSPECTION_REMARKS } from './assessment';
 import type { SurveyType } from './report';
 import type { InsuredReportDraft, InsuredReportStages } from '@/types/insured-report';
-import type { ClaimDocument, UploadSet } from './documents';
+import type { ClaimDocument, DocType, UploadSet } from './documents';
+
+/** Report kinds whose print time is recorded for claim progress. */
+export type PrintedKind = DocType | 'spotReport';
 import { DEFAULT_DOCUMENT_ANNEXURE_OPTIONS } from '@/lib/photos/document-annexure';
 
 // ─── Report Settings ───────────────────────────────────
@@ -233,6 +236,16 @@ export interface ClaimData {
   completedAt?: string;
   /** ISO time of the last Mark completed / Reopen (Scan's status file `statusAt`). */
   statusChangedAt?: string;
+  /** Claim progress: ISO time each report was last printed (recorded by the print buttons). */
+  printedAt?: Partial<Record<PrintedKind, string>>;
+  /** Claim progress: ISO time the surveyor marked the papers couriered. */
+  courieredAt?: string;
+  /** Claim progress: ISO time the surveyor marked the files uploaded to the insurer portal. */
+  portalUploadedAt?: string;
+  /** Claim progress: surveyor says a reinspection is needed (makes that step count). */
+  reinspectionNeeded?: boolean;
+  /** Claim progress: free-text reason the claim is on hold. */
+  heldNote?: string;
   /** ISO time this claim's Drive folders were moved to the Drive trash (Settings > Drive cleanup). The claim stays in Prime. */
   driveTrashedAt?: string;
   /** Last imported Scan chase state (contacts, slot states, ask log). */

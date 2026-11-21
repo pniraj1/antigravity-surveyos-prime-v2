@@ -1,0 +1,94 @@
+import { describe, it, expect } from 'vitest';
+import { createBlankClaim, type ClaimData } from '@/types/claim';
+import type { ClaimDocument } from '@/types/documents';
+import { claimProgress, tabMarks } from '../progress';
+
+const doc = (type: ClaimDocument['type'], addedAt: string): ClaimDocument => ({
+  id: `${type}-1`, type, relPath: `${type}.pdf`, mime: 'application/pdf', size: 1, addedAt, source: 'upload', devices: [],
+});
+const ids = (c: ClaimData) => claimProgress(c).steps.map((s) => s.id);
+const allVerified = (c: ClaimData): ClaimData => ({
+  ...c,
+  documentVerification: Object.fromEntries(
+    Object.entries(c.documentVerification).map(([k, v]) => [k, { ...v, status: 'YES' }]),
+  ) as ClaimData['documentVerification'],
+});
+
+describe('claimProgress', () => {
+  it('blank final claim: next is docs, done 0, total 11 (reinspection optional, portalReady na), no throw with documents undefined', () => {
+    const c = createBlankClaim('final');
+    expect(c.documents).toBeUndefined();
+    const p = claimProgress(c);
+    expect(p.next?.id).toBe('docs');
+    expect(p.done).toBe(0);
+    expect(p.total).toBe(11);
+    expect(p.steps.find((s) => s.id === 'reinspection')?.status).toBe('optional');
+    expect(p.steps.find((s) => s.id === 'portalReady')?.status).toBe('na');
+  });
+
+  it("blank checklist values '' do not count; all YES/N.A. makes docs done", () => {
+    const c = createBlankClaim('final');
+    const blank = {
+      ...c,
+      documentVerification: Object.fromEntries(
+        Object.entries(c.documentVerification).map(([k, v]) => [k, { ...v, status: '' }]),
+      ) as unknown as ClaimData['documentVerification'],
+    };
+    expect(claimProgress(blank).steps[0].status).toBe('waiting');
+    expect(claimProgress(allVerified(c)).steps[0].status).toBe('done');
+    const na = { ...c, documentVerification: { ...allVerified(c).documentVerification, fir: { status: 'N.A.', detail: '' } } } as ClaimData;
+    expect(claimProgress(na).steps[0].status).toBe('done');
+  });
+
+  it('final waiting for bill: estimate document + printedAt.surveyReport → next.id === bill, since === estimate addedAt', () => {
+    const c: ClaimData = {
+      ...allVerified(createBlankClaim('final')),
+      documents: { e: doc('estimate', '2026-11-01T10:00:00Z') },
+      printedAt: { surveyReport: '2026-11-02T10:00:00Z' },
+    };
+    const p = claimProgress(c);
+    expect(p.next?.id).toBe('bill');
+    expect(p.since).toBe('2026-11-02T10:00:00Z');
+  });
+
+  it('reinspection is optional unless reinspectionNeeded; needed and unprinted → waiting', () => {
+    const c = createBlankClaim('final');
+    const st = (x: ClaimData) => claimProgress(x).steps.find((s) => s.id === 'reinspection')?.status;
+    expect(st(c)).toBe('optional');
+    expect(st({ ...c, reinspectionNeeded: true })).toBe('waiting');
+    expect(st({ ...c, reinspectionNeeded: true, printedAt: { reinspectionReport: 'x' } })).toBe('done');
+  });
+
+  it('portalReady is na without uploadSet', () => {
+    const p = claimProgress(createBlankClaim('final'));
+    expect(p.steps.find((s) => s.id === 'portalReady')?.status).toBe('na');
+  });
+
+  it('spot claim never contains estimate/bill steps; total 9', () => {
+    const c = createBlankClaim('spot');
+    expect(ids(c)).not.toContain('estimate');
+    expect(ids(c)).not.toContain('bill');
+    expect(claimProgress(c).total).toBe(9);
+  });
+
+  it('valuation claim starts at inspection; total 8', () => {
+    const p = claimProgress(createBlankClaim('valuation'));
+    expect(p.next?.id).toBe('inspection');
+    expect(p.total).toBe(8);
+  });
+
+  it('completedAt set → next is null', () => {
+    const c = { ...createBlankClaim('final'), completedAt: '2026-11-20T00:00:00Z' };
+    expect(claimProgress(c).next).toBeNull();
+  });
+
+  it("tabMarks: next tab marked 'next', fully done tab 'done'", () => {
+    const c = allVerified(createBlankClaim('final'));
+    const marks = tabMarks(claimProgress(c));
+    expect(marks.documents).toBe('next');
+    const p = claimProgress({ ...c, printedAt: { surveyReport: 'a', billCheckReport: 'b' }, documents: { e: doc('estimate', 'z') } });
+    // reports tab: surveyPrinted + billCheckPrinted done
+    expect(tabMarks(p).reports).toBe('done');
+    expect(tabMarks(p).details).toBe('done');
+  });
+});
