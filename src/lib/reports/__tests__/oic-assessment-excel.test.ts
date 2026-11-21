@@ -28,6 +28,36 @@ function row(overrides: Partial<AssessmentRow> = {}): AssessmentRow {
 // 100 months old => 40% metal depreciation under the IRDAI scale.
 const AGE = 100;
 
+describe('oicAssessmentRows — disposal parts', () => {
+  // The report depreciates first, then applies the disposal %. The Excel must
+  // carry that net at 0% so OIC does not depreciate it a second time.
+  test('an aged metal disposal part goes in depreciated, then at its disposal %', () => {
+    const [r] = oicAssessmentRows(
+      [row({ assessed: 10000, partType: 'metal', isDisposal: true, disposalPercent: 50 })],
+      AGE, 'standard', 'INV-01',
+    );
+    expect(r.itemAmount).toBe(3000); // 10000 x 60% x 50%, not 10000 x 50%
+    expect(r.depreciationRate).toBe(0);
+    expect(r.gstRate).toBe(0);
+  });
+
+  test('a hand-set rate on a disposal part is honoured', () => {
+    const [r] = oicAssessmentRows(
+      [row({ assessed: 10000, isDisposal: true, disposalPercent: 50, depOverride: 25 })],
+      AGE, 'standard', 'INV-01',
+    );
+    expect(r.itemAmount).toBe(3750);
+  });
+
+  test('on a nil-depreciation policy a disposal part is only the disposal %', () => {
+    const [r] = oicAssessmentRows(
+      [row({ assessed: 10000, partType: 'metal', isDisposal: true, disposalPercent: 50 })],
+      AGE, 'nil', 'INV-01',
+    );
+    expect(r.itemAmount).toBe(5000);
+  });
+});
+
 describe('oicAssessmentRows — parts & labour', () => {
   test('a metal part goes in with Metallic Parts and pre-depreciation assessed amount', () => {
     const rows = oicAssessmentRows([row({ assessed: 10000, partType: 'metal' })], AGE, 'standard', 'INV-01');

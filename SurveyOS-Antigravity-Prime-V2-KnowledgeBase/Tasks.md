@@ -1,3 +1,6 @@
+## Done: OIC Excel disposal parts (2026-11-21, Claude Code) — NOT DEPLOYED
+- Disposal parts now depreciated before the disposal %, matching the report. Next: deploy with the UIIC fixes. Open: NIC portal (owner to say what it takes).
+
 ## Done: Claim progress (2026-11-21, Claude Code) — BUILT ON MAIN, NOT DEPLOYED, NOT BROWSER-TESTED, NOT PUSHED
 - **Session:** `Sessions/2026-11-21-claim-progress.md` · **Spec:** `docs/superpowers/specs/2026-11-21-claim-progress-design.md` · Commits `711e0b27`..`23becae0` on main.
 - One "completed" flag (header and dashboard both set completedAt + isCompleted, synced to Scan); per-survey-type step table; print records `printedAt`; dashboard row progress / courier date / portal tick; batch courier date; sidebar tab marks, waiting line, hold note; "Reinspection needed" tick; Next button.

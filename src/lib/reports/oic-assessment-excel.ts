@@ -196,7 +196,6 @@ export function oicAssessmentRows(
   const depRateFor = (r: AssessmentRow): number => {
     if (depType === 'nil') return 0;
     if (r.section === 'labour') return 0;
-    if (r.isDisposal) return 0;
     if (r.depOverride != null) return r.depOverride;
     return getDepreciationRate(r.partType, ageMonths, depType);
   };
@@ -214,7 +213,10 @@ export function oicAssessmentRows(
     const gstRate = isDisposal ? 0 : r.gst ?? 18;
 
     const bc = billCheckRow(r);
-    const assessed = isDisposal ? computeRowNet(bc, depRate).netBeforeGst : effectiveAssessed(bc);
+    // Disposal: depreciate at the row's real rate, then apply the disposal %,
+    // as the report does. The Excel then carries it at 0% (depRate above) so
+    // OIC does not depreciate it twice.
+    const assessed = isDisposal ? computeRowNet(bc, depRateFor(r)).netBeforeGst : effectiveAssessed(bc);
 
     itemRows.push({
       invoiceNumber: invNo,
