@@ -7,6 +7,7 @@ vi.mock('@/lib/drive', () => ({ uploadFileToDrive: vi.fn() }));
 import { withPrinted, recordPrinted } from '../printed';
 import { useClaimStore } from '@/stores/claim-store';
 import { saveReportToClaimFolder } from '@/lib/reports/auto-file-report';
+import { saveDocuments } from '@/lib/documents/sink';
 
 const claim = (extra: Partial<ClaimData> = {}) => ({ id: 'c1', ...extra }) as ClaimData;
 
@@ -40,5 +41,19 @@ describe('saveReportToClaimFolder', () => {
     useClaimStore.setState({ currentClaim: claim() });
     await saveReportToClaimFolder(claim(), 'f.html', new Blob(['x']), 'surveyReport');
     expect(useClaimStore.getState().currentClaim?.printedAt?.surveyReport).toBeTruthy();
+  });
+
+  it('records printedAt even when saveDocuments throws (pins ordering)', async () => {
+    vi.mocked(saveDocuments).mockRejectedValueOnce(new Error('boom'));
+    useClaimStore.setState({ currentClaim: claim() });
+    const ok = await saveReportToClaimFolder(claim(), 'f.html', new Blob(['x']), 'surveyReport');
+    expect(ok).toBe(false);
+    expect(useClaimStore.getState().currentClaim?.printedAt?.surveyReport).toBeTruthy();
+  });
+
+  it('records nothing when the claim has no id', async () => {
+    useClaimStore.setState({ currentClaim: claim() });
+    await saveReportToClaimFolder({} as ClaimData, 'f.html', new Blob(['x']), 'surveyReport');
+    expect(useClaimStore.getState().currentClaim?.printedAt).toBeUndefined();
   });
 });
