@@ -22,7 +22,7 @@ Tests: `src/lib/ai/__tests__/parser-sample.test.ts`, `src/components/admin/__tes
 
 ## What's unfinished (owner steps)
 - [x] Deploy `firestore.rules` FIRST, then hosting, to `surveyos-v2-antigravity-in` (done 2026-11-21).
-- [ ] Turn on TTL so nothing is kept forever:
+- [x] Turn on TTL so nothing is kept forever. DONE 2026-11-21 via `fieldOverrides` (`ttl: true`, `expireAt` not indexed) in `firestore.indexes.json`, deployed with `firebase deploy --only firestore:indexes --project surveyos-v2-antigravity-in`. Keep those overrides in the file, because a later indexes deploy without them would remove TTL. Equivalent gcloud commands:
   - `gcloud firestore fields ttls update expireAt --collection-group=parserSamples --enable-ttl --project=surveyos-v2-antigravity-in`
   - `gcloud firestore fields ttls update expireAt --collection-group=parserSampleChunks --enable-ttl --project=surveyos-v2-antigravity-in`
   - Until TTL is on, nothing auto-expires. Once on, deletes typically run within ~24 h after `expireAt`, and the sample and its pieces are removed separately.

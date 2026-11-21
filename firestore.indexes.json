@@ -9,5 +9,8 @@
       ]
     }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    { "collectionGroup": "parserSamples", "fieldPath": "expireAt", "ttl": true, "indexes": [] },
+    { "collectionGroup": "parserSampleChunks", "fieldPath": "expireAt", "ttl": true, "indexes": [] }
+  ]
 }

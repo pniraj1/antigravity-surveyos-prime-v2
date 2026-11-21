@@ -4,10 +4,10 @@
 - Open: owner re-upload of that estimate on the live site; more digital estimates from other makers/insurers would widen the corpus check (only 29 PDFs checked). No `firestore.rules` change in this deploy.
 - Prime ↔ Scan coupling: none.
 
-## Done, DEPLOYED 2026-11-21 (rules + hosting, pushed): Parser-miss samples (2026-11-21, Claude Code) — TTL NOT on yet
+## Done, DEPLOYED 2026-11-21 (rules + hosting, pushed): Parser-miss samples (2026-11-21, Claude Code) — TTL ON 2026-11-21
 - **Session:** `Sessions/2026-11-21-parser-miss-samples.md` · **Plan:** `docs/superpowers/plans/2026-11-21-parser-miss-samples.md`
 - Built on main (`38bda1cf`..`d93022ba`). The row parser declines a digital bill, the PDF is silently kept in Firestore `parserSamples`. Dev Notes card downloads and then deletes.
-- Owner steps pending: (1) DONE 2026-11-21 — rules then hosting deployed to `surveyos-v2-antigravity-in`, card string confirmed in the live chunk on motorsurveyos-in.web.app and surveyos.in; pushed to origin/main; (2) turn on TTL for `parserSamples` and `parserSampleChunks` on `expireAt` (gcloud commands in the session log); (3) decline one real digital PDF and download it from Dev Notes. Nothing auto-expires until TTL is on (then deletes run ~24 h after `expireAt`, sample and pieces separately). Size cap is 6 MB per file (Firestore 10 MiB request limit, base64 on the wire). Team members send only if their own profile is active/trial.
+- Owner steps pending: (1) DONE 2026-11-21 — rules then hosting deployed to `surveyos-v2-antigravity-in`, card string confirmed in the live chunk on motorsurveyos-in.web.app and surveyos.in; pushed to origin/main; (2) DONE 2026-11-21 — TTL on `expireAt` for `parserSamples` and `parserSampleChunks`, set as `fieldOverrides` in `firestore.indexes.json` (deployed with `firebase deploy --only firestore:indexes`; gcloud is not installed); (3) decline one real digital PDF and download it from Dev Notes. Nothing auto-expires until TTL is on (then deletes run ~24 h after `expireAt`, sample and pieces separately). Size cap is 6 MB per file (Firestore 10 MiB request limit, base64 on the wire). Team members send only if their own profile is active/trial.
 - Open DPDP item: collection is silent, the surveyor sees no notice. A Terms/Privacy line was offered and not added (owner's call).
 - Prime ↔ Scan coupling: none.
 
