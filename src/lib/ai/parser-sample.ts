@@ -1,4 +1,4 @@
-import { Bytes, Timestamp, doc, writeBatch } from 'firebase/firestore';
+import { Bytes, Timestamp, collection, doc, getDocs, orderBy, query, writeBatch } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/config';
 
 export const CHUNK_BYTES = 900_000;
@@ -53,10 +53,63 @@ export async function sendParserSample(o: { file: File; docType: string; reason:
       batch.set(doc(db, SAMPLES, id, CHUNKS, String(i)), { i, uid, data: Bytes.fromUint8Array(part), expireAt });
     });
     const meta: ParserSampleMeta = {
-      uid, docType: o.docType, fileName: o.file.name, reason: o.reason, pages: o.pages,
+      uid, docType: o.docType, fileName: o.file.name.slice(0, 300), reason: o.reason.slice(0, 500), pages: o.pages,
       size: bytes.length, chunks: parts.length, createdAt: Timestamp.fromDate(now), expireAt,
     };
     batch.set(doc(db, SAMPLES, id), meta);
     await batch.commit();
   } catch { /* ponytail: silent by owner decision */ }
+}
+
+export async function listParserSamples(): Promise<(ParserSampleMeta & { id: string })[]> {
+  const snap = await getDocs(query(collection(db, SAMPLES), orderBy('createdAt', 'desc')));
+  return snap.docs.map(d => ({ id: d.id, ...(d.data() as ParserSampleMeta) }));
+}
+
+export async function loadParserSample(id: string): Promise<Blob> {
+  const snap = await getDocs(collection(db, SAMPLES, id, CHUNKS));
+  const parts = snap.docs
+    .map(d => d.data() as { i: number; data: Bytes })
+    .sort((a, b) => a.i - b.i)
+    .map(p => p.data.toUint8Array());
+  return new Blob([joinBytes(parts) as BlobPart], { type: 'application/pdf' });
+}
+
+/** One batch: every piece plus the sample doc, so no orphan piece can block a re-send. */
+export async function deleteParserSample(id: string, chunks: number): Promise<void> {
+  const batch = writeBatch(db);
+  for (let i = 0; i < chunks; i++) batch.delete(doc(db, SAMPLES, id, CHUNKS, String(i)));
+  batch.delete(doc(db, SAMPLES, id));
+  await batch.commit();
+}
+
+interface SavePickerWindow {
+  showSaveFilePicker?: (o: {
+    suggestedName: string;
+    types: { description: string; accept: Record<string, string[]> }[];
+  }) => Promise<{ createWritable: () => Promise<{ write: (b: Blob) => Promise<void>; close: () => Promise<void> }> }>;
+}
+
+/** True only when the file was saved. False on cancel; other errors are rethrown so the caller does not delete. */
+export async function saveBlob(blob: Blob, name: string): Promise<boolean> {
+  const picker = (window as unknown as SavePickerWindow).showSaveFilePicker;
+  if (picker) {
+    try {
+      const handle = await picker({ suggestedName: name, types: [{ description: 'PDF', accept: { 'application/pdf': ['.pdf'] } }] });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return true;
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') return false;
+      throw e;
+    }
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
+  return window.confirm('Did the file save? OK deletes it from the server.');
 }

@@ -64,6 +64,12 @@ describe('parser-sample', () => {
     const sampleCall = doc.mock.calls.find(c => c[1] === SAMPLES && c.length === 3);
     expect(sampleCall?.[2]).toMatch(/^[0-9a-f]{64}$/);
   });
+  it('truncates reason to 500 and fileName to 300 chars', async () => {
+    await sendParserSample({ file: new File([new Uint8Array(5)], 'n'.repeat(400) + '.pdf', { type: 'application/pdf' }), docType: 'estimate', reason: 'r'.repeat(600), pages: 1 });
+    const sampleData = set.mock.calls[1][1];
+    expect(sampleData.reason).toHaveLength(500);
+    expect(sampleData.fileName).toHaveLength(300);
+  });
   it('swallows a rejected write', async () => {
     commit.mockRejectedValueOnce(new Error('permission-denied'));
     await expect(sendParserSample(o(pdf(10)))).resolves.toBeUndefined();

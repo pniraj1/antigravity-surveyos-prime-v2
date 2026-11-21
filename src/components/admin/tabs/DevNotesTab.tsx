@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { AlertTriangle, Cpu, RefreshCcw, BookOpen, Database, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ParserSamplesCard } from '../ParserSamplesCard';
 import { rebuildBramhaIndex, type BramhaIndexResult } from '@/lib/firebase/functions';
 
 function BramhaIndexCard() {
@@ -87,6 +88,8 @@ export function DevNotesTab() {
     <div className="space-y-6 max-w-3xl">
 
       <BramhaIndexCard />
+
+      <ParserSamplesCard />
 
       {/* AI Model Management */}
       <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
