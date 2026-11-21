@@ -408,6 +408,10 @@ export async function extractDocument(
         return { data: { ...data, _models: ['row-parser'] }, images: viewImages, findings, issues: checked.issues, source: 'parser' as const };
       }
       console.log(`[Parser] declined: ${parsed.reason}`);
+      // digital only: a forced Text mode on a scanned PDF must not send
+      if (modes.length > 0 && pageProfiles.length === totalPages && modes.every(m => m === 'text')) {
+        void import('./parser-sample').then(m => m.sendParserSample({ file: files[0], docType: key, reason: parsed.reason, pages: totalPages })).catch(() => {});
+      }
     }
 
     // Text: 1 page per call (avoids 413 on dense documents) unless the bench sets
