@@ -1,3 +1,9 @@
+## Done: Claim progress (2026-11-21, Claude Code) — BUILT ON MAIN, NOT DEPLOYED, NOT BROWSER-TESTED, NOT PUSHED
+- **Session:** `Sessions/2026-11-21-claim-progress.md` · **Spec:** `docs/superpowers/specs/2026-11-21-claim-progress-design.md` · Commits `711e0b27`..`23becae0` on main.
+- One "completed" flag (header and dashboard both set completedAt + isCompleted, synced to Scan); per-survey-type step table; print records `printedAt`; dashboard row progress / courier date / portal tick; batch courier date; sidebar tab marks, waiting line, hold note; "Reinspection needed" tick; Next button.
+- Open: owner live check of dashboard and sidebar after deploy. Deferred minors listed in the session log.
+- Prime ↔ Scan coupling: none (Scan unit tests green).
+
 ## Done: UIIC portal figures, page-1 Depreciation, amount in words (2026-11-21, Claude Code) — NOT COMMITTED / NOT DEPLOYED
 - Portal parts boxes now post-IMT-23; surveyor-set-rate rows go to Nil at net. Page-1 Depreciation no longer counts disposal rows. Amount in words rounds to paise first.
 - Next: owner commit + deploy; re-open MH40BG5830 UIIC summary and check boxes read about 401133 / 246649 / 0 / 204000.
