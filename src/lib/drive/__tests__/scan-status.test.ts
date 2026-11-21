@@ -164,10 +164,10 @@ describe('Prime side', () => {
 
 describe('completion on the claim', () => {
   it('Mark completed stamps completedAt and statusChangedAt', () =>
-    expect(completionPatch(true, 'T')).toEqual({ completedAt: 'T', statusChangedAt: 'T' }));
+    expect(completionPatch(true, 'T')).toEqual({ completedAt: 'T', statusChangedAt: 'T', isCompleted: true }));
   it('Reopen clears completedAt and driveTrashedAt', () => {
     const p = completionPatch(false, 'T');
-    expect(p).toEqual({ completedAt: undefined, statusChangedAt: 'T', driveTrashedAt: undefined });
+    expect(p).toEqual({ completedAt: undefined, statusChangedAt: 'T', driveTrashedAt: undefined, isCompleted: false });
     expect('driveTrashedAt' in p).toBe(true);
   });
 });

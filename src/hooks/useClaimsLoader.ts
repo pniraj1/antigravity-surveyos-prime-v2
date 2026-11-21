@@ -42,7 +42,7 @@ export function useClaimsLoader() {
             insurerName: c.policy?.insurerName || '',
             insuredName: c.policy?.insuredName || '',
             stage,
-            isCompleted: c.isCompleted || false,
+            isCompleted: c.isCompleted || !!c.completedAt,
             feePaid: c.feeBill?.feePaid || false,
             feeTotal: c.feeBill ? calculateFeeSummary(c.feeBill).grandTotal : 0,
             isActive: c.isActive !== false,

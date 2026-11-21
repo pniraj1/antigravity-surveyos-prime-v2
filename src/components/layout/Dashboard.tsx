@@ -56,6 +56,8 @@ import { GettingStartedCard } from '@/components/onboarding/GettingStartedCard';
 import { OnboardingGate } from '@/components/onboarding/OnboardingGate';
 import { TabTip } from '@/components/onboarding/TabTip';
 import { HelpDialog } from '@/components/onboarding/HelpDialog';
+import { completionPatch } from '@/lib/drive/scan-status';
+import { setCompletedInScan } from '@/lib/drive/scan-status-sync';
 
 // Dynamically import ALL tabs with ssr:false — they all use browser-only APIs:
 const DetailsTab    = dynamicImport(() => import('@/components/tabs/DetailsTab').then(m    => ({ default: m.DetailsTab    })), { ssr: false });
@@ -482,7 +484,10 @@ export function DashboardContent({ initialShowArchived = false }: { initialShowA
                             e.stopPropagation();
                             const fullClaim = await getClaim(claim.id);
                             if (fullClaim) {
-                              await saveClaim({ ...fullClaim, isCompleted: !fullClaim.isCompleted });
+                              const done = !!fullClaim.completedAt || !!fullClaim.isCompleted;
+                              const at = new Date().toISOString();
+                              await saveClaim({ ...fullClaim, ...completionPatch(!done, at) });
+                              void setCompletedInScan(fullClaim, !done, at);
                               const channel = new BroadcastChannel('surveyos_claims_sync');
                               channel.postMessage('CLAIMS_UPDATED');
                               channel.close();

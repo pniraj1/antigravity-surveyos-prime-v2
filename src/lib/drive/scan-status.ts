@@ -146,8 +146,8 @@ export function withCompletion(remote: Status | null, scanClaimId: string, compl
 /** The claim fields Mark completed / Reopen sets. Reopen also clears `driveTrashedAt` so a later cleanup lists it again. */
 export function completionPatch(completed: boolean, nowIso: string): Partial<ClaimData> {
   return completed
-    ? { completedAt: nowIso, statusChangedAt: nowIso }
-    : { completedAt: undefined, statusChangedAt: nowIso, driveTrashedAt: undefined };
+    ? { completedAt: nowIso, statusChangedAt: nowIso, isCompleted: true }
+    : { completedAt: undefined, statusChangedAt: nowIso, driveTrashedAt: undefined, isCompleted: false };
 }
 
 /**
