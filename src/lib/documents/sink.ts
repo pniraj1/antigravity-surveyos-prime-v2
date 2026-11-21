@@ -1,14 +1,17 @@
 // src/lib/documents/sink.ts
 /**
  * The one call every "a file was born" site makes. Folder + store in one go.
- * No folder connected → quiet no-op: the browser download / Drive upload the
- * caller already does is unchanged (spec D6, D7).
+ * No folder connected → the claim's folder window opens and the save waits for it
+ * (Skip → a loud "NOT saved to your PC"). The caller's browser download / Drive
+ * upload is unchanged (spec D6, D7).
  */
 import { toast } from 'sonner';
 import type { ClaimDocument, DocType } from '@/types/documents';
 import { useClaimStore } from '@/stores/claim-store';
 import { getStoredRootHandle } from '@/lib/local-sync/directory-handle';
-import { getClaimFolderHandle } from '@/lib/storage/claim-folder-store';
+import {
+  getClaimFolderHandle, isLocalFolderSupported, askForClaimFolder, FOLDER_UPDATED_EVENT, FOLDER_SKIPPED_EVENT,
+} from '@/lib/storage/claim-folder-store';
 import { writeDocuments, PermissionDeniedError, type FolderInput } from './folder';
 import { DOC_TYPE_LABEL } from '@/types/documents';
 import { markReceivedInScan } from '@/lib/drive/scan-status-sync';
@@ -28,6 +31,45 @@ export function saveDocuments(
   return run;
 }
 
+interface WaitingSave { type: DocType; files: FolderInput[]; source: ClaimDocument['source'] }
+
+// Saves made before the claim had a folder, by claim id. Memory only (never IndexedDB): cleared when the folder
+// is chosen (written then) or skipped. ponytail: a page reload while the window is open drops them, as today.
+const waiting = new Map<string, WaitingSave[]>();
+// Claims whose folder window was skipped this session: warned on each save, not asked again.
+const skipped = new Set<string>();
+
+const notSaved = (claimId: string, types: DocType[]) =>
+  toast.error(`${[...new Set(types)].map((t) => DOC_TYPE_LABEL[t]).join(', ')} NOT saved to your PC: this claim has no folder. Click the folder button at the top to choose one.`,
+    { id: `no-folder-${claimId}`, duration: 8000 });
+
+function waitForFolder(claimId: string, save: WaitingSave): void {
+  if (!isLocalFolderSupported()) return; // phone / Firefox: no PC folder here; the Drive copy the caller makes stands
+  if (skipped.has(claimId)) { notSaved(claimId, [save.type]); return; }
+  const list = waiting.get(claimId);
+  if (list) { list.push(save); return; } // the window is already asking
+  waiting.set(claimId, [save]);
+  askForClaimFolder(claimId);
+}
+
+const claimIdOf = (e: Event) => (e as CustomEvent<{ claimId?: string }>).detail?.claimId ?? '';
+if (typeof window !== 'undefined') {
+  window.addEventListener(FOLDER_UPDATED_EVENT, (e) => {
+    const id = claimIdOf(e);
+    skipped.delete(id);
+    const list = waiting.get(id) ?? [];
+    waiting.delete(id);
+    for (const s of list) void saveDocuments(s.type, s.files, s.source, id); // the sink re-checks the claim is still open
+  });
+  window.addEventListener(FOLDER_SKIPPED_EVENT, (e) => {
+    const id = claimIdOf(e);
+    skipped.add(id);
+    const list = waiting.get(id);
+    waiting.delete(id);
+    if (list) notSaved(id, list.map((s) => s.type));
+  });
+}
+
 async function doSave(
   type: DocType,
   files: FolderInput[],
@@ -39,7 +81,10 @@ async function doSave(
   if (claimId && claim.id !== claimId) return [];
   const hasPerClaimFolder = !!(await getClaimFolderHandle(claim.id));
   const hasRootFolder = !!(await getStoredRootHandle());
-  if (!hasPerClaimFolder && !hasRootFolder) return [];
+  if (!hasPerClaimFolder && !hasRootFolder) {
+    waitForFolder(claim.id, { type, files, source });
+    return [];
+  }
   try {
     const { claim: next, written } = await writeDocuments(claim, type, files, source);
     if (useClaimStore.getState().currentClaim?.id !== claim.id) {

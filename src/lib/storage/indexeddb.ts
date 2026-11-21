@@ -434,6 +434,15 @@ export async function getAllClaims(): Promise<ClaimData[]> {
  * record a tombstone so the cloud deletion can be synced later and so
  * the next pull doesn't resurrect the claim.
  */
+/**
+ * A deleted claim's PC-folder record goes with it, so `claim-handles` never fills with dead claims.
+ * Dynamic import: claim-folder-store reads the claim store, which imports this file. Best effort, never throws.
+ * ponytail: no startup sweep: the claims DB is per signed-in user, the folder DB is per browser.
+ */
+function forgetClaimFolder(id: string): void {
+  void import('./claim-folder-store').then((m) => m.removeClaimFolderHandle(id)).catch(() => {});
+}
+
 export async function deleteClaim(id: string): Promise<void> {
   const db = await getDB();
   const tx = db.transaction(['claims', 'tombstones', 'pushTracking'], 'readwrite');
@@ -442,6 +451,7 @@ export async function deleteClaim(id: string): Promise<void> {
   // Clean up push tracking for the deleted claim
   await tx.objectStore('pushTracking').delete(id);
   await tx.done;
+  forgetClaimFolder(id);
 }
 
 // ─── Tombstones ──────────────────────────────────────────────────────────────
@@ -483,6 +493,7 @@ const defaultRemoteDeletionDeps: RemoteDeletionDeps = {
     await tx.objectStore('claims').delete(id);
     await tx.objectStore('pushTracking').delete(id);
     await tx.done;
+    forgetClaimFolder(id);
   },
 };
 

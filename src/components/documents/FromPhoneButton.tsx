@@ -15,8 +15,9 @@ import { useClaimStore } from '@/stores/claim-store';
 import {
   isLocalFolderSupported,
   getClaimFolderHandle,
+  askForClaimFolder,
+  FOLDER_SKIPPED_EVENT,
 } from '@/lib/storage/claim-folder-store';
-import { ClaimFolderPromptDialog } from '@/components/layout/ClaimFolderPromptDialog';
 import { planNotes, isEmptyNotesPlan, type NotesPlan } from '@/lib/scan-import/notes';
 import { readZip } from '@/lib/scan-import/zip';
 import { backupOnlyNotes } from '@/lib/scan-import/backup-notes';
@@ -31,7 +32,6 @@ import { PhoneFolderPickerDialog } from './PhoneFolderPickerDialog';
 import { PhoneNotesDialog } from './PhoneNotesDialog';
 
 export interface FromPhoneButtonProps {
-  onNeedsFolder?: () => void;
   onAllowAccess?: () => void;
   className?: string;
   disabled?: boolean;
@@ -42,7 +42,6 @@ export interface FromPhoneButtonProps {
     handleSelectFolder?: (folder: ScanDriveFolderItem) => Promise<void>;
     resumePendingImport?: (claimId?: string) => void;
     getPendingDriveFolderId?: () => string | null;
-    isNeedsFolderOpen?: () => boolean;
   }) => void;
 }
 
@@ -68,14 +67,14 @@ export function scanResultMessage(r: ImportResult, fromDrive = false): ScanMessa
       return {
         kind: 'info',
         text: folder
-          ? 'Documents and photos were not saved: link the claim folder on the Documents tab (desktop Chrome).'
+          ? 'Documents and photos were not saved yet: choose the claim folder in the window, then bring the phone scans again.'
           : 'Documents and photos were not saved: click Allow access on the folder line on the Documents tab.',
       };
     }
     return {
       kind: 'error',
       text: folder
-        ? 'Connect the claim folder first, then bring the phone scans again.'
+        ? 'Choose the claim folder in the window, then bring the phone scans again.'
         : 'Click Allow access on the folder line, then bring the phone scans again.',
     };
   }
@@ -94,7 +93,6 @@ export function scanResultMessage(r: ImportResult, fromDrive = false): ScanMessa
 const msg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 export function FromPhoneButton({
-  onNeedsFolder,
   onAllowAccess,
   className = '',
   disabled = false,
@@ -121,14 +119,7 @@ export function FromPhoneButton({
   const localFolderSupported = isLocalFolderSupported();
   const isDisabled = disabled || !currentClaim || busy;
 
-  // Needs local folder dialog state & pending Drive import
-  const [needsFolderOpen, _setNeedsFolderOpen] = useState(false);
-  const needsFolderOpenRef = useRef(false);
-  const setNeedsFolderOpen = useCallback((open: boolean) => {
-    needsFolderOpenRef.current = open;
-    _setNeedsFolderOpen(open);
-  }, []);
-
+  // A Drive import waiting for the claim's folder (asked through the one folder window)
   const pendingDriveFolderIdRef = useRef<string | null>(null);
   const prevClaimIdRef = useRef<string | null>(null);
 
@@ -137,9 +128,8 @@ export function FromPhoneButton({
     if (currentClaim?.id !== prevClaimIdRef.current) {
       prevClaimIdRef.current = currentClaim?.id ?? null;
       pendingDriveFolderIdRef.current = null;
-      setNeedsFolderOpen(false);
     }
-  }, [currentClaim?.id, setNeedsFolderOpen]);
+  }, [currentClaim?.id]);
 
   // Handle Phone Notes logic
   const processNotesPayload = useCallback((normalized: NormalizedNotesPayload, scanClaimId?: string) => {
@@ -215,7 +205,7 @@ export function FromPhoneButton({
         toast[m.kind](m.text);
       }
     }
-    if (r.status === 'needs-folder' && !r.notes) onNeedsFolder?.();
+    if (r.status === 'needs-folder' && claimId) askForClaimFolder(claimId);
     if (!alreadyHandledNotes && (r.status === 'done' || r.status === 'needs-folder' || r.status === 'needs-permission')) {
       showNotesFromScanZip(r.notes, claimId);
     }
@@ -260,7 +250,7 @@ export function FromPhoneButton({
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [onAllowAccess, onNeedsFolder]
+    [onAllowAccess]
   );
 
   const resumePendingImport = useCallback(
@@ -288,9 +278,19 @@ export function FromPhoneButton({
       resumePendingImport(updatedClaimId);
     };
 
+    // Skipped the folder window: nothing came from the phone, said out loud.
+    const handleSkipped = (e: Event) => {
+      const skippedId = (e as CustomEvent<{ claimId?: string }>).detail?.claimId;
+      if (!pendingDriveFolderIdRef.current || skippedId !== useClaimStore.getState().currentClaim?.id) return;
+      pendingDriveFolderIdRef.current = null;
+      toast.error('Phone files NOT downloaded: this claim has no folder. Click From Phone again and choose a folder.', { duration: 8000 });
+    };
+
     window.addEventListener('surveyos:claim-folder-updated', handleClaimFolderUpdated);
+    window.addEventListener(FOLDER_SKIPPED_EVENT, handleSkipped);
     return () => {
       window.removeEventListener('surveyos:claim-folder-updated', handleClaimFolderUpdated);
+      window.removeEventListener(FOLDER_SKIPPED_EVENT, handleSkipped);
     };
   }, [resumePendingImport]);
 
@@ -350,11 +350,7 @@ export function FromPhoneButton({
         const existingHandle = (await getClaimFolderHandle(claim.id)) ?? (await getStoredRootHandle());
         if (!existingHandle) {
           pendingDriveFolderIdRef.current = folder.id;
-          if (onNeedsFolder) {
-            onNeedsFolder();
-          } else {
-            setNeedsFolderOpen(true);
-          }
+          askForClaimFolder(claim.id);
           return;
         }
 
@@ -410,7 +406,6 @@ export function FromPhoneButton({
       handleSelectFolder,
       resumePendingImport,
       getPendingDriveFolderId: () => pendingDriveFolderIdRef.current,
-      isNeedsFolderOpen: () => needsFolderOpenRef.current,
     });
   }
 
@@ -449,19 +444,6 @@ export function FromPhoneButton({
         onPickComputerFile={() => scansFileRef.current?.click()}
         currentVehicle={claimVehicle}
       />
-
-      {/* Fallback ClaimFolderPromptDialog when onNeedsFolder is not provided */}
-      {!onNeedsFolder && (
-        <ClaimFolderPromptDialog
-          isOpen={needsFolderOpen}
-          onClose={() => setNeedsFolderOpen(false)}
-          claimId={currentClaim?.id}
-          registrationNumber={claimVehicle}
-          onAllocated={(_handle) => {
-            resumePendingImport(currentClaim?.id);
-          }}
-        />
-      )}
 
       {/* Phone Notes Vehicle Mismatch Confirmation */}
       {notesVehicleAsk && (

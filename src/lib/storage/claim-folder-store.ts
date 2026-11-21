@@ -193,6 +193,26 @@ export async function verifyHandlePermission(
   }
 }
 
+/** Fired with `{ claimId }` when a claim's folder is chosen (any picker), and when the surveyor skips choosing one. */
+export const FOLDER_UPDATED_EVENT = 'surveyos:claim-folder-updated';
+export const FOLDER_SKIPPED_EVENT = 'surveyos:claim-folder-skipped';
+const ASK_FOLDER_EVENT = 'surveyos:ask-claim-folder';
+
+/** Opens the one "choose this claim's folder" window (ClaimFolderPromptHost). No-op where folders are not supported. */
+export function askForClaimFolder(claimId: string): void {
+  if (isLocalFolderSupported()) window.dispatchEvent(new CustomEvent(ASK_FOLDER_EVENT, { detail: { claimId } }));
+}
+
+/** For the host: calls `onAsk(claimId)` on every ask; returns the unsubscribe. */
+export function onAskForClaimFolder(onAsk: (claimId: string) => void): () => void {
+  const listener = (e: Event) => {
+    const id = (e as CustomEvent<{ claimId?: string }>).detail?.claimId;
+    if (id) onAsk(id);
+  };
+  window.addEventListener(ASK_FOLDER_EVENT, listener);
+  return () => window.removeEventListener(ASK_FOLDER_EVENT, listener);
+}
+
 const plate = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, '');
 
 /**

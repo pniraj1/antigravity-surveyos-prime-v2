@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Folder, FolderCheck, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { pickClaimFolder } from '@/lib/storage/claim-folder-store';
+import { pickClaimFolder, onAskForClaimFolder, FOLDER_SKIPPED_EVENT } from '@/lib/storage/claim-folder-store';
 import { useClaimStore } from '@/stores/claim-store';
 
 export interface ClaimFolderPromptDialogProps {
@@ -131,6 +131,9 @@ export function ClaimFolderPromptDialog({
                 to auto-save phone scans, RC/DL uploads, photo sheets, and
                 generated PDF reports.
               </p>
+              <p className="text-xs sm:text-sm font-semibold text-foreground mt-2 leading-relaxed">
+                Pick your main claims folder (for example D:\Claims). Prime makes the vehicle folder inside it.
+              </p>
             </div>
           </div>
           <button
@@ -176,10 +179,44 @@ export function ClaimFolderPromptDialog({
             disabled={loading}
             className="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer text-center"
           >
-            Skip for now
+            Skip (files not saved to PC)
           </button>
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * The one place the folder window lives: mounted once (Dashboard), opened by `askForClaimFolder(claimId)` from
+ * New Claim, From Phone and any save that has nowhere to go. Closing without a folder tells the waiting saves "skipped".
+ */
+export function ClaimFolderPromptHost() {
+  const [askedFor, setAskedFor] = useState<string | null>(null);
+  const chosen = React.useRef(false);
+  const claim = useClaimStore((s) => s.currentClaim);
+
+  useEffect(() => onAskForClaimFolder((id) => { chosen.current = false; setAskedFor(id); }), []);
+
+  const close = React.useCallback(() => {
+    if (askedFor && !chosen.current) {
+      window.dispatchEvent(new CustomEvent(FOLDER_SKIPPED_EVENT, { detail: { claimId: askedFor } }));
+    }
+    setAskedFor(null);
+  }, [askedFor]);
+
+  // Another claim opened while asking: this claim's ask is skipped, never answered for the wrong vehicle.
+  useEffect(() => {
+    if (askedFor && claim?.id !== askedFor) close();
+  }, [claim?.id, askedFor, close]);
+
+  return (
+    <ClaimFolderPromptDialog
+      isOpen={!!askedFor && claim?.id === askedFor}
+      onClose={close}
+      claimId={askedFor ?? undefined}
+      registrationNumber={claim?.vehicle?.registrationNumber}
+      onAllocated={() => { chosen.current = true; }}
+    />
   );
 }

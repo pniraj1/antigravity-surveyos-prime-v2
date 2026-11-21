@@ -69,7 +69,7 @@ describe('ClaimFolderPromptDialog Component', () => {
       expect(html).toContain('Where should this claim&#x27;s files be kept?');
       expect(html).toContain('MH04EF5678');
       expect(html).toContain('Select Folder for this Claim');
-      expect(html).toContain('Skip for now');
+      expect(html).toContain('Skip (files not saved to PC)');
     });
 
     it('falls back to "this claim" when registrationNumber is not provided', () => {

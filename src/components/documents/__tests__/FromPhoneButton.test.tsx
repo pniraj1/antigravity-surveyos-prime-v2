@@ -42,6 +42,8 @@ vi.mock('@/lib/storage/claim-folder-store', () => ({
   isLocalFolderSupported: vi.fn().mockReturnValue(true),
   getClaimFolderHandle: vi.fn().mockResolvedValue(null),
   pickClaimFolder: vi.fn(),
+  askForClaimFolder: vi.fn(),
+  FOLDER_SKIPPED_EVENT: 'surveyos:claim-folder-skipped',
 }));
 
 vi.mock('@/lib/local-sync/directory-handle', () => ({
@@ -122,52 +124,16 @@ describe('FromPhoneButton', () => {
     expect(() => actions.open()).not.toThrow();
   });
 
-  it('when getClaimFolderHandle returns null and onNeedsFolder is provided, calls onNeedsFolder and records pending Drive folder', async () => {
+  it('no claim folder: asks through the one folder window and keeps the Drive folder waiting', async () => {
     vi.mocked(claimFolderStore.getClaimFolderHandle).mockResolvedValueOnce(null);
-    const onNeedsFolder = vi.fn();
+    vi.mocked(claimFolderStore.askForClaimFolder).mockClear();
     let actions: any = null;
 
-    renderToStaticMarkup(
-      <FromPhoneButton
-        onNeedsFolder={onNeedsFolder}
-        getAction={(a) => { actions = a; }}
-      />
-    );
-
-    const mockFolder = {
-      id: 'drive-folder-1',
-      name: 'MH02CB1234 - NIA',
-      vehicle: 'MH02CB1234',
-    };
-
-    await actions.handleSelectFolder(mockFolder);
+    renderToStaticMarkup(<FromPhoneButton getAction={(a) => { actions = a; }} />);
+    await actions.handleSelectFolder({ id: 'drive-folder-2', name: 'MH02CB1234 - NIA', vehicle: 'MH02CB1234' });
 
     expect(claimFolderStore.getClaimFolderHandle).toHaveBeenCalledWith('claim-123');
-    expect(onNeedsFolder).toHaveBeenCalledTimes(1);
-    expect(actions.getPendingDriveFolderId()).toBe('drive-folder-1');
-    expect(importFromDrive).not.toHaveBeenCalled();
-  });
-
-  it('when getClaimFolderHandle returns null and onNeedsFolder is omitted, triggers prompt dialog (needsFolderOpen)', async () => {
-    vi.mocked(claimFolderStore.getClaimFolderHandle).mockResolvedValueOnce(null);
-    let actions: any = null;
-
-    renderToStaticMarkup(
-      <FromPhoneButton
-        getAction={(a) => { actions = a; }}
-      />
-    );
-
-    const mockFolder = {
-      id: 'drive-folder-2',
-      name: 'MH02CB1234 - NIA',
-      vehicle: 'MH02CB1234',
-    };
-
-    await actions.handleSelectFolder(mockFolder);
-
-    expect(claimFolderStore.getClaimFolderHandle).toHaveBeenCalledWith('claim-123');
-    expect(actions.isNeedsFolderOpen()).toBe(true);
+    expect(claimFolderStore.askForClaimFolder).toHaveBeenCalledWith('claim-123');
     expect(actions.getPendingDriveFolderId()).toBe('drive-folder-2');
     expect(importFromDrive).not.toHaveBeenCalled();
   });
@@ -223,12 +189,12 @@ describe('FromPhoneButton', () => {
   it('older root folder needs no claim folder prompt', async () => {
     vi.mocked(claimFolderStore.getClaimFolderHandle).mockResolvedValueOnce(null);
     vi.mocked(directoryHandle.getStoredRootHandle).mockResolvedValueOnce({} as any);
-    const onNeedsFolder = vi.fn();
+    vi.mocked(claimFolderStore.askForClaimFolder).mockClear();
     let actions: any = null;
-    renderToStaticMarkup(<FromPhoneButton onNeedsFolder={onNeedsFolder} getAction={(a) => { actions = a; }} />);
+    renderToStaticMarkup(<FromPhoneButton getAction={(a) => { actions = a; }} />);
     await actions.handleSelectFolder({ id: 'drive-folder-root', name: 'MH02CB1234 - NIA', vehicle: 'MH02CB1234' });
     expect(importFromDrive).toHaveBeenCalledWith(expect.anything(), 'drive-folder-root');
-    expect(onNeedsFolder).not.toHaveBeenCalled();
+    expect(claimFolderStore.askForClaimFolder).not.toHaveBeenCalled();
   });
 });
 
@@ -236,7 +202,7 @@ describe('scanResultMessage', () => {
   it('needs-folder with notes says notes came in', () => {
     expect(scanResultMessage({ status: 'needs-folder', notes: { spot: {} } })).toEqual({
       kind: 'info',
-      text: 'Documents and photos were not saved: link the claim folder on the Documents tab (desktop Chrome).',
+      text: 'Documents and photos were not saved yet: choose the claim folder in the window, then bring the phone scans again.',
     });
   });
   it('needs-permission with notes says to click Allow access', () => {

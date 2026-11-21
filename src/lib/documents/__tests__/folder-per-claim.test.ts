@@ -11,6 +11,10 @@ const mockLocalSync = vi.hoisted(() => ({
 }));
 
 vi.mock('@/lib/storage/claim-folder-store', () => ({
+  isLocalFolderSupported: () => false, // node: no folder window here (sink-folder-wait.test covers it)
+  askForClaimFolder: vi.fn(),
+  FOLDER_UPDATED_EVENT: 'surveyos:claim-folder-updated',
+  FOLDER_SKIPPED_EVENT: 'surveyos:claim-folder-skipped',
   getClaimFolderHandle: vi.fn(async (id: string) => mockFolderStore.handles.get(id) ?? null),
   getClaimFolderPath: vi.fn(async (id: string) => mockFolderStore.paths.get(id) ?? null),
   verifyHandlePermission: vi.fn(async (handle: any) => {

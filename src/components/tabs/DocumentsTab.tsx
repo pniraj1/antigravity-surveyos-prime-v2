@@ -23,7 +23,6 @@ import {
   verifyHandlePermission,
 } from '@/lib/storage/claim-folder-store';
 import { getStoredRootHandle, ensureReadWrite } from '@/lib/local-sync/directory-handle';
-import { ClaimFolderPromptDialog } from '@/components/layout/ClaimFolderPromptDialog';
 import { PhoneFilesList } from '@/components/documents/PhoneFilesList';
 import { FromPhoneButton } from '@/components/documents/FromPhoneButton';
 import { AskForDocumentsButton } from '@/components/documents/AskForDocumentsDialog';
@@ -80,7 +79,6 @@ export function DocumentsTab() {
   const { profile, updateProfile } = useProfileStore();
   const aiProvider = profile.aiProvider ?? 'gemini';
   const [isReconOpen, setIsReconOpen] = useState(false);
-  const [folderPromptOpen, setFolderPromptOpen] = useState(false);
   const [autoFilledFields, setAutoFilledFields] = useState<ReconciliationField[]>([]);
   const prevClaimIdRef = useRef<string | null>(null);
   const [syncPicker, setSyncPicker] = useState<{ key: string; label: string } | null>(null);
@@ -350,10 +348,7 @@ export function DocumentsTab() {
       {/* ── Document Groups ──────────────────────────────── */}
       <div className="px-6 lg:px-12 py-8 max-w-5xl mx-auto space-y-10">
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <FromPhoneButton
-            onNeedsFolder={() => setFolderPromptOpen(true)}
-            onAllowAccess={handleAllowAccess}
-          />
+          <FromPhoneButton onAllowAccess={handleAllowAccess} />
           <AskForDocumentsButton />
         </div>
         {DOC_GROUPS.map((group) => (
@@ -647,12 +642,6 @@ export function DocumentsTab() {
       )}
 
       {/* Claim folder selection prompt */}
-      <ClaimFolderPromptDialog
-        isOpen={folderPromptOpen}
-        onClose={() => setFolderPromptOpen(false)}
-        claimId={currentClaim.id}
-        registrationNumber={currentClaim.vehicle?.registrationNumber}
-      />
     </div>
   );
 }

@@ -38,6 +38,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { BankReconcileDialog } from '@/components/dialogs/BankReconcileDialog';
 import { IRDAISummaryDialog } from '@/components/dialogs/IRDAISummaryDialog';
 import { NewClaimDialog } from '@/components/dialogs/NewClaimDialog';
+import { ClaimFolderPromptHost } from '@/components/layout/ClaimFolderPromptDialog';
 import { ErrorBoundary } from '@/components/layout/ErrorBoundary';
 import { Sidebar, MobileMenuButton, shouldHideFees } from '@/components/layout/sidebar';
 import { FloatingReportPreview } from '@/components/layout/FloatingReportPreview';
@@ -768,6 +769,7 @@ export default function Dashboard() {
 
       {/* Global Modals */}
       <NewClaimDialog />
+      <ClaimFolderPromptHost />
       <HelpDialog />
       <ErrorBoundary fallback={<></>}><OnboardingGate /></ErrorBoundary>
 

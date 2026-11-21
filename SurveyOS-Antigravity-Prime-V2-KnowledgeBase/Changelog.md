@@ -1,3 +1,9 @@
+## 2026-11-21 (Claude Code) — One folder window for every claim
+- fix(storage): one way to set a claim's folder. The New Claim window's own "Claim Local Folder" picker (saved the pick as is, no vehicle folder) is removed; Create now opens the one folder window (`ClaimFolderPromptHost`, mounted once in Dashboard, opened by `askForClaimFolder`). From Phone and the Documents tab use the same window instead of their own copies.
+- fix(documents): a save with no claim folder is no longer silent. The sink keeps it in memory, opens the folder window, and writes it once a folder is chosen; Skip shows a red "NOT saved to your PC" (once per claim, then on each save, never re-asking). Phone/Firefox unchanged.
+- fix(storage): deleting a claim (here or from another device) also deletes its `claim-handles` record, so IndexedDB does not fill with dead claims. Waiting saves are memory-only.
+- test: vitest 404 files / 3,642 tests passing; `tsc --noEmit` clean. SurveyOS Scan impact: none.
+
 ## 2026-11-21 (Claude Code) — Reports filed once, Drive keeps one copy, phone download progress (DEPLOYED)
 - deploy: `e6d189b1` built and deployed to `motorsurveyos-in` (`surveyos-v2-antigravity-in`); live chunk `0uxh_zv550zuy.js` HTTP 200 on surveyos.in, contains the new progress text.
 - fix(documents): each report and the photo sheet are filed ONCE in the vehicle folder, under the vehicle-first name (`MH12AB1234_Final_Survey_Report_1.pdf`, `MH12AB1234-Photo-Sheet.pdf`), through the one folder writer (`FolderInput.keepName`). The direct second write in `auto-file-report.ts` is gone. The printed PDF still replaces its HTML; a reprint (DRAFT → FIN-001, or a same-size correction) replaces the old file; an old vehicle-first file left by the previous code is taken over, not duplicated. (`d546d86f`, `4f0ed039`, `2f134c36`)

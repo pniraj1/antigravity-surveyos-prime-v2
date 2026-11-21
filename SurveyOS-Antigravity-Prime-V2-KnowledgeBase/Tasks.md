@@ -1,3 +1,7 @@
+## Done: One folder window for every claim (2026-11-21, Claude Code)
+- New Claim → Create opens the one folder window; From Phone / any save with no folder asks boldly and waits; Skip = red "NOT saved". Deleted claims drop their folder record.
+- Not done: owner check on a real claim. Old one-root-folder setups still save without asking (into root/<vehicle>).
+
 ## Done: Report filing, Drive backup, phone download (2026-11-21, Claude Code) — DEPLOYED 2026-11-21 (live chunk 0uxh_zv550zuy.js)
 - **Plan:** `docs/plans/2026-11-20-report-filing-backup-and-phone-download.md` · **Session:** `Sessions/2026-11-21-report-filing-backup-phone-download.md`
 - Commits on main `2ccc3691..f09fe510` (Prime), `2d9ad28` (Scan). Tests green, Scan drift green.
