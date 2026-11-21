@@ -1,0 +1,2 @@
+file 'C:/Users/Manasi/OneDrive/Desktop/Antigravity Surveyor V6 fixed/SurveyOS-Prime-V2/recordings/main_with_audio.mp4'
+file 'C:/Users/Manasi/OneDrive/Desktop/Antigravity Surveyor V6 fixed/SurveyOS-Prime-V2/recordings/outro_card.mp4'
