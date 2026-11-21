@@ -1,4 +1,4 @@
-## 2026-11-21 (Claude Code) — One folder window for every claim
+## 2026-11-21 (Claude Code) — One folder window for every claim (DEPLOYED TO PRODUCTION)
 - fix(storage): one way to set a claim's folder. The New Claim window's own "Claim Local Folder" picker (saved the pick as is, no vehicle folder) is removed; Create now opens the one folder window (`ClaimFolderPromptHost`, mounted once in Dashboard, opened by `askForClaimFolder`). From Phone and the Documents tab use the same window instead of their own copies.
 - fix(documents): a save with no claim folder is no longer silent. The sink keeps it in memory, opens the folder window, and writes it once a folder is chosen; Skip shows a red "NOT saved to your PC" (once per claim, then on each save, never re-asking). Phone/Firefox unchanged.
 - fix(storage): deleting a claim (here or from another device) also deletes its `claim-handles` record, so IndexedDB does not fill with dead claims. Waiting saves are memory-only.

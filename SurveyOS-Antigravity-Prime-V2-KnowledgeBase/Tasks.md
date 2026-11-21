@@ -1,4 +1,4 @@
-## Done: One folder window for every claim (2026-11-21, Claude Code)
+## Done: One folder window for every claim (2026-11-21, Claude Code) — DEPLOYED
 - New Claim → Create opens the one folder window; From Phone / any save with no folder asks boldly and waits; Skip = red "NOT saved". Deleted claims drop their folder record.
 - Not done: owner check on a real claim. Old one-root-folder setups still save without asking (into root/<vehicle>).
 
