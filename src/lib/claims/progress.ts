@@ -19,13 +19,13 @@ const printed = (id: string, label: string, tab: AppTab, kind: PrintedKind): Ste
 
 const docs: StepDef = {
   id: 'docs', label: 'Documents verified', tab: 'details',
-  eval: (c) => flag(Object.values(c.documentVerification).every((v) => v.status === 'YES' || v.status === 'N.A.')),
+  eval: (c) => flag(!!c.documentVerification && Object.values(c.documentVerification).every((v) => v.status === 'YES' || v.status === 'N.A.')),
 };
 const photoSheet = printed('photoSheet', 'Photo sheet printed', 'photos', 'photoSheet');
 const feeBill = printed('feeBill', 'Fee bill printed', 'fees', 'feeBill');
 const couriered: StepDef = { id: 'couriered', label: 'Couriered', tab: null, eval: (c) => flag(!!c.courieredAt, c.courieredAt) };
 const portal: StepDef = { id: 'portal', label: 'Uploaded to portal', tab: null, eval: (c) => flag(!!c.portalUploadedAt, c.portalUploadedAt) };
-const fee: StepDef = { id: 'fee', label: 'Fee received', tab: null, eval: (c) => flag(c.feeBill.feePaid, c.feeBill.paymentDate) };
+const fee: StepDef = { id: 'fee', label: 'Fee received', tab: null, eval: (c) => flag(!!c.feeBill?.feePaid, c.feeBill?.paymentDate) };
 const tail = [couriered, portal, fee];
 
 const STEPS: Record<SurveyType, StepDef[]> = {
@@ -35,7 +35,7 @@ const STEPS: Record<SurveyType, StepDef[]> = {
       id: 'estimate', label: 'Estimate received', tab: 'documents',
       eval: (c) => {
         const at = docsOf(c, 'estimate').map((d) => d.addedAt);
-        return flag(at.length > 0 || c.assessmentRows.length > 0, earliest(at));
+        return flag(at.length > 0 || (c.assessmentRows?.length ?? 0) > 0, earliest(at));
       },
     },
     printed('surveyPrinted', 'Survey report printed', 'reports', 'surveyReport'),
@@ -43,12 +43,12 @@ const STEPS: Record<SurveyType, StepDef[]> = {
       id: 'bill', label: 'Bill received', tab: 'bill-check',
       eval: (c) => {
         const at = docsOf(c, 'invoice').map((d) => d.addedAt);
-        return flag(at.length > 0 || c.billCheck.billTotal > 0, earliest(at));
+        return flag(at.length > 0 || (c.billCheck?.billTotal ?? 0) > 0, earliest(at));
       },
     },
     {
       id: 'billChecked', label: 'Bill checked', tab: 'bill-check',
-      eval: (c) => flag(!!c.billCheck.verifiedBySurveyor, c.billCheck.verifiedAt),
+      eval: (c) => flag(!!c.billCheck?.verifiedBySurveyor, c.billCheck?.verifiedAt),
     },
     {
       id: 'reinspection', label: 'Reinspection', tab: 'reinspection',
@@ -64,7 +64,7 @@ const STEPS: Record<SurveyType, StepDef[]> = {
       id: 'portalReady', label: 'Portal files ready', tab: 'documents',
       eval: (c) => {
         if (!c.uploadSet) return { status: 'na' };
-        const boxes = Object.values(c.uploadSet.boxes).filter((b) => b.written !== false);
+        const boxes = Object.values(c.uploadSet.boxes ?? {}).filter((b) => b.written !== false);
         const ok = boxes.length > 0 && boxes.every((b) => b.reviewedAt && !b.stale);
         const at = boxes.map((b) => b.reviewedAt ?? '').sort().pop() || undefined;
         return flag(ok, at);
@@ -74,10 +74,10 @@ const STEPS: Record<SurveyType, StepDef[]> = {
   ],
   spot: [
     docs,
-    { id: 'spotFindings', label: 'Spot findings', tab: 'details', eval: (c) => flag(c.spotDamageRows.length > 0) },
+    { id: 'spotFindings', label: 'Spot findings', tab: 'details', eval: (c) => flag((c.spotDamageRows?.length ?? 0) > 0) },
     {
       id: 'spotPhotos', label: 'Spot photos', tab: 'photos',
-      eval: (c) => flag(c.photos.some((p) => p.tag === 'spot') || docsOf(c, 'spotPhotos').length > 0),
+      eval: (c) => flag((c.photos ?? []).some((p) => p.tag === 'spot') || docsOf(c, 'spotPhotos').length > 0),
     },
     printed('spotPrinted', 'Spot report printed', 'reports', 'spotReport'),
     photoSheet,
@@ -87,9 +87,9 @@ const STEPS: Record<SurveyType, StepDef[]> = {
   valuation: [
     {
       id: 'inspection', label: 'Inspection recorded', tab: 'valuation',
-      eval: (c) => flag(!!c.valuationDetails.inspectionDate),
+      eval: (c) => flag(!!c.valuationDetails?.inspectionDate),
     },
-    { id: 'valPhotos', label: 'Photos', tab: 'photos', eval: (c) => flag(c.photos.some((p) => p.kind !== 'document')) },
+    { id: 'valPhotos', label: 'Photos', tab: 'photos', eval: (c) => flag((c.photos ?? []).some((p) => p.kind !== 'document')) },
     printed('valPrinted', 'Valuation report printed', 'reports', 'valuationReport'),
     photoSheet,
     feeBill,
@@ -100,7 +100,7 @@ const STEPS: Record<SurveyType, StepDef[]> = {
 const counted = (s: StepResult) => s.status !== 'optional' && s.status !== 'na';
 
 export function claimProgress(claim: ClaimData): ClaimProgress {
-  const steps: StepResult[] = STEPS[claim.surveyType].map(({ id, label, tab, eval: ev }) => ({ id, label, tab, ...ev(claim) }));
+  const steps: StepResult[] = (STEPS[claim.surveyType] ?? STEPS.final).map(({ id, label, tab, eval: ev }) => ({ id, label, tab, ...ev(claim) }));
   const real = steps.filter(counted);
   const doneSteps = steps.filter((s) => s.status === 'done');
   return {

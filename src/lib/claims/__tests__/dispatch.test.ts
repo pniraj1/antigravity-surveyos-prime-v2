@@ -11,6 +11,7 @@ const post = vi.fn();
 const close = vi.fn();
 vi.stubGlobal('BroadcastChannel', class { postMessage = post; close = close; });
 
+import { useClaimStore } from '@/stores/claim-store';
 import { withCourieredAt, withPortalUploaded, withHeldNote, progressSummary, applyToClaims } from '../dispatch';
 
 describe('dispatch helpers', () => {
@@ -53,5 +54,19 @@ describe('dispatch helpers', () => {
     expect((store.get(a.id) as { courieredAt: string }).courieredAt).toBe('2026-11-02');
     expect(post).toHaveBeenCalledTimes(1);
     expect(post).toHaveBeenCalledWith('CLAIMS_UPDATED');
+  });
+  it('applyToClaims returns 0 and does not broadcast when no id is found', async () => {
+    expect(await applyToClaims(['nope'], (c) => c)).toBe(0);
+    expect(post).not.toHaveBeenCalled();
+  });
+  it('applyToClaims removes a field on the open claim and keeps its unsaved edits', async () => {
+    const stored = { ...createBlankClaim('final'), courieredAt: '2026-11-01' };
+    store.set(stored.id, stored);
+    useClaimStore.setState({ currentClaim: { ...stored, reportNo: 'UNSAVED' } });
+    await applyToClaims([stored.id], (c) => withCourieredAt(c, ''));
+    const cur = useClaimStore.getState().currentClaim!;
+    expect(cur.courieredAt).toBeUndefined();
+    expect(cur.reportNo).toBe('UNSAVED');
+    useClaimStore.setState({ currentClaim: null });
   });
 });

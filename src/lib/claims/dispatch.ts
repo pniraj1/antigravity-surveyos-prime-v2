@@ -40,18 +40,30 @@ export function progressSummary(claim: ClaimData): ProgressSummary {
   };
 }
 
+/** Keys whose value differs between `before` and `after`; removed keys map to explicit undefined. */
+function changedKeys(before: ClaimData, after: ClaimData): Partial<ClaimData> {
+  const out: Record<string, unknown> = {};
+  const b = before as unknown as Record<string, unknown>;
+  const a = after as unknown as Record<string, unknown>;
+  for (const k of new Set([...Object.keys(b), ...Object.keys(a)])) {
+    if (b[k] !== a[k]) out[k] = a[k];
+  }
+  return out as Partial<ClaimData>;
+}
+
 /** Applies `fn` to each stored claim, saves it, and broadcasts once. Returns the count saved. */
 export async function applyToClaims(ids: string[], fn: (c: ClaimData) => ClaimData): Promise<number> {
   const now = new Date().toISOString();
-  const open = useClaimStore.getState().currentClaim;
   let saved = 0;
   for (const id of ids) {
     const full = await getClaim(id);
     if (!full) continue;
     const next = { ...fn(full), updatedAt: now };
     await saveClaim(next);
-    // Keep an open claim in step so it can't later overwrite the stored change.
-    if (open?.id === id) useClaimStore.getState().updateClaim(next);
+    // Mirror only the changed fields into an open claim, so it can't later overwrite the stored
+    // change and its unsaved edits survive. Removed fields go as explicit undefined.
+    const { currentClaim, updateClaim } = useClaimStore.getState();
+    if (currentClaim?.id === id) updateClaim(changedKeys(full, next));
     saved++;
   }
   if (saved > 0) {

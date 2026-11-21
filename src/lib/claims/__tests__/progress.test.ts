@@ -125,3 +125,14 @@ describe('claimProgress', () => {
     expect(marks.reinspection).toBeUndefined();
   });
 });
+
+describe('claimProgress tolerance', () => {
+  it('a bare { id, surveyType } claim does not throw and waits on docs', () => {
+    const p = claimProgress({ id: 'x', surveyType: 'final' } as unknown as ClaimData);
+    expect(p.next?.id).toBe('docs');
+  });
+  it('an unknown surveyType falls back to the final list', () => {
+    const p = claimProgress({ id: 'x' } as unknown as ClaimData);
+    expect(p.next?.id).toBe('docs');
+  });
+});
