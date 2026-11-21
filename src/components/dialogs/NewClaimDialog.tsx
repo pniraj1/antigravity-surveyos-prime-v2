@@ -3,7 +3,6 @@
 import { useUIStore } from '@/stores/ui-store';
 import { useClaimStore } from '@/stores/claim-store';
 import { useProfileStore } from '@/stores/profile-store';
-import { getOrCreateClaimFolder } from '@/lib/drive';
 import { getAllClaims, getClaim, saveClaim } from '@/lib/storage/indexeddb';
 import { normalizeVehicleNumber } from '@/lib/utils/vehicle';
 import { claimLandingTab } from '@/lib/claims/landing-tab';
@@ -276,10 +275,7 @@ export function NewClaimDialog() {
     const currentClaimId = useClaimStore.getState().currentClaimId;
     if (currentClaimId) {
       askForClaimFolder(currentClaimId); // the one folder window, right after Create
-      const label = vehicleNo.toUpperCase();
-      getOrCreateClaimFolder(currentClaimId, label).catch(e =>
-        console.warn('[Drive] Folder creation skipped:', e.message)
-      );
+      // No Drive folder here: it's picked on first need, so a phone-scanned claim uses the phone's folder (spec 2026-11-21).
     }
 
     setVehicleNo('');

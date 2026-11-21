@@ -6,6 +6,7 @@
 import { driveRequest } from '@/lib/drive';
 import { phoneScansFolder } from '@/lib/drive/scan-status-sync';
 import { normalizeScanNotes, type NormalizedNotesPayload } from './normalizer';
+import { sameVehicle } from './manifest';
 
 const API = 'https://www.googleapis.com/drive/v3/files';
 
@@ -43,8 +44,9 @@ export interface ScanFolderDetails {
  * Only Phone Scans: the SurveyOS root holds Prime's own claim folders (`REG_xxxxxx`, see getOrCreateClaimFolder),
  * which are not phone scans and have no notes; listing them gave the picker's duplicate rows.
  */
-export async function listScanDriveFolders(): Promise<ScanDriveFolderItem[]> {
-  const parentId = await phoneScansFolder().catch(() => null);
+export async function listScanDriveFolders(strict = false): Promise<ScanDriveFolderItem[]> {
+  // strict: a Drive error throws instead of looking like "no phone folders" (a caller about to make a folder must not guess)
+  const parentId = await phoneScansFolder().catch((e) => { if (strict) throw e; return null; });
   if (!parentId) return [];
   const qs = new URLSearchParams({
     q: `'${parentId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
@@ -54,7 +56,10 @@ export async function listScanDriveFolders(): Promise<ScanDriveFolderItem[]> {
     pageSize: '1000', // ponytail: Drive's max page; add nextPageToken paging past 1000 claims
   });
   const res = await driveRequest(`${API}?${qs}`);
-  if (!res.ok) return [];
+  if (!res.ok) {
+    if (strict) throw new Error(`Drive API error ${res.status} listing Phone Scans`);
+    return [];
+  }
   const data = await res.json();
   const files = (data.files ?? []) as Array<{ id: string; name: string; modifiedTime?: string; appProperties?: Record<string, string> }>;
   return files.map((f) => ({
@@ -65,6 +70,21 @@ export async function listScanDriveFolders(): Promise<ScanDriveFolderItem[]> {
     modifiedTime: f.modifiedTime,
     scanClaimId: f.appProperties?.claimId,
   }));
+}
+
+/**
+ * The one phone folder for this vehicle that no other claim already uses as its Drive folder, else null
+ * (none, or several such as two insurers: the surveyor picks). One Drive folder per claim, spec 2026-11-21.
+ * [index] is the Drive index (claim id → folder id). Throws when Drive can't be read, so the caller never takes a failure for "none".
+ */
+export async function onePhoneFolderFor(
+  vehicle: string,
+  claimId: string,
+  index: Record<string, string>,
+): Promise<ScanDriveFolderItem | null> {
+  const usedByOthers = new Set(Object.entries(index).filter(([id]) => id !== claimId).map(([, folder]) => folder));
+  const hits = (await listScanDriveFolders(true)).filter((f) => sameVehicle(f.vehicle, vehicle) && !usedByOthers.has(f.id));
+  return hits.length === 1 ? hits[0] : null;
 }
 
 /** Downloads and normalizes notes from a specific Scan claim folder on Drive. */

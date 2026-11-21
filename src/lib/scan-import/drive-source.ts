@@ -188,6 +188,8 @@ export async function importFromDrive(opts: DriveImportOptions, explicitFolderId
   if (toMove.length) {
     try {
       const to = await getOrCreateClaimFolder(claim.id, claim.vehicle?.registrationNumber || claim.id);
+      // The phone folder is the claim's home folder: the files are already home, and Scan's subfolders stay as they are.
+      if (to === folderId) return { result, moveFailed: 0, mismatched };
       for (const id of toMove) {
         try { await moveFile(id, to, parentOf.get(id) ?? folderId); } catch { moveFailed++; }
       }

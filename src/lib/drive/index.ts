@@ -331,15 +331,28 @@ export async function saveDriveIndex(index: Record<string, string>): Promise<voi
 
 // ─── Claim Folder ─────────────────────────────────────────────────────────────
 
+const claimFolderInFlight = new Map<string, Promise<string>>();
+
 /**
- * Get or create a Drive folder for a claim.
+ * Get or create a Drive folder for a claim: its one home folder (spec 2026-11-21-one-drive-folder-per-claim).
+ * Order: the folder already saved for it, else the vehicle's one phone folder, else a new folder.
  * Returns the folder ID and stores it in the index and localStorage.
+ * Calls for the same claim at the same moment share one lookup, so they never make two folders.
+ * ponytail: per tab; two devices at the same instant can still make two (rare, both stay usable).
  */
 export async function getOrCreateClaimFolder(claimId: string, label: string): Promise<string> {
-  // Check localStorage cache first for speed
-  const cacheKey = `surveyos_drive_folder_${claimId}`;
-  const cached = localStorage.getItem(cacheKey);
+  const cached = localStorage.getItem(`surveyos_drive_folder_${claimId}`);
   if (cached) return cached;
+  let pending = claimFolderInFlight.get(claimId);
+  if (!pending) {
+    pending = findOrMakeClaimFolder(claimId, label).finally(() => claimFolderInFlight.delete(claimId));
+    claimFolderInFlight.set(claimId, pending);
+  }
+  return pending;
+}
+
+async function findOrMakeClaimFolder(claimId: string, label: string): Promise<string> {
+  const cacheKey = `surveyos_drive_folder_${claimId}`;
 
   let index: Record<string, string> = {};
   let indexLoaded = false;
@@ -356,8 +369,9 @@ export async function getOrCreateClaimFolder(claimId: string, label: string): Pr
   }
 
   // Check if claim already has a linked gDriveFolderId (e.g. chosen from Phone Scans or manually bound)
+  let claim: ClaimData | undefined;
   try {
-    const claim = await getClaim(claimId);
+    claim = await getClaim(claimId);
     if (claim?.gDriveFolderId) {
       if (indexLoaded) {
         index[claimId] = claim.gDriveFolderId;
@@ -370,10 +384,18 @@ export async function getOrCreateClaimFolder(claimId: string, label: string): Pr
     // non-critical
   }
 
-  // Create new folder
-  const rootId = await getRootFolder();
-  const folderName = `${label}_${claimId.slice(-6)}`;
-  const folderId = await createFolder(folderName, rootId);
+  // The vehicle's one phone folder, when there is exactly one: never a second folder for a scanned claim.
+  // Only with the index loaded: without it Prime can't tell whether another claim already uses that folder.
+  const { useClaimStore } = await import('@/stores/claim-store');
+  const open = useClaimStore.getState().currentClaim;
+  const vehicle = (open?.id === claimId ? open : claim)?.vehicle?.registrationNumber || label;
+  // A Drive error here throws (the upload is queued and retried) rather than making a folder that may be a double.
+  const phone = indexLoaded
+    ? await (await import('@/lib/scan-import/drive-notes')).onePhoneFolderFor(vehicle, claimId, index)
+    : null;
+
+  const folderId = phone?.id ?? (await createFolder(`${label}_${claimId.slice(-6)}`, await getRootFolder()));
+  const link: Partial<ClaimData> = { gDriveFolderId: folderId, ...(phone?.scanClaimId ? { scanClaimId: phone.scanClaimId } : {}) };
 
   // Update Drive index (only if safely loaded) + localStorage cache
   if (indexLoaded) {
@@ -382,11 +404,15 @@ export async function getOrCreateClaimFolder(claimId: string, label: string): Pr
   }
   localStorage.setItem(cacheKey, folderId);
 
-  // Persist folder ID back to the claim in IndexedDB so the sync indicator works
+  // Persist folder ID back to the claim so the sync indicator works (the open claim through the store, or its autosave would drop it)
   try {
-    const claim = await getClaim(claimId);
-    if (claim) {
-      await saveClaim({ ...claim, gDriveFolderId: folderId });
+    if (useClaimStore.getState().currentClaim?.id === claimId) {
+      useClaimStore.getState().updateClaim(link);
+      return folderId;
+    }
+    const saved = await getClaim(claimId);
+    if (saved) {
+      await saveClaim({ ...saved, ...link });
       const channel = new BroadcastChannel('surveyos_claims_sync');
       channel.postMessage('CLAIMS_UPDATED');
       channel.close();

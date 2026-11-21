@@ -37,7 +37,32 @@ vi.mock('@/lib/storage/indexeddb', () => ({
   getAllDriveBackedAt: vi.fn().mockResolvedValue(new Map()),
 }));
 
+const phone = vi.hoisted(() => ({ folder: null as null | { id: string; scanClaimId?: string }, asked: [] as string[], fail: false }));
+vi.mock('@/lib/scan-import/drive-notes', () => ({
+  onePhoneFolderFor: async (vehicle: string) => { phone.asked.push(vehicle); if (phone.fail) throw new Error('Drive API error 503'); return phone.folder; },
+}));
+const store = vi.hoisted(() => ({ claim: null as any, updates: [] as any[] }));
+vi.mock('@/stores/claim-store', () => ({
+  useClaimStore: { getState: () => ({ currentClaim: store.claim, updateClaim: (u: any) => store.updates.push(u) }) },
+}));
+
 import { saveDriveIndex, getOrCreateClaimFolder } from '../index';
+
+/** A Drive with an index ('claim-abc' only) that creates folders new-1, new-2, ... on POST. */
+function fakeDrive() {
+  let n = 0;
+  const fetchMock = vi.fn().mockImplementation(async (url: string, opts?: any) => {
+    const u = String(url);
+    if (u.includes('/files/index-file-1?alt=media')) return { ok: true, status: 200, json: async () => ({ 'claim-abc': 'folder-abc' }) };
+    if (opts?.method === 'PATCH') return { ok: true, status: 200, json: async () => ({ id: 'index-file-1' }) };
+    if (opts?.method === 'POST') { await new Promise((r) => setTimeout(r, 5)); return { ok: true, status: 200, json: async () => ({ id: `new-${++n}` }) }; }
+    if (u.includes('surveyos_index.json')) return { ok: true, status: 200, json: async () => ({ files: [{ id: 'index-file-1' }] }) };
+    return { ok: true, status: 200, json: async () => ({ files: [{ id: 'root-1' }] }) };
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  const posts = () => fetchMock.mock.calls.filter((c: any[]) => c[1]?.method === 'POST' && !String(c[0]).includes('upload'));
+  return { posts };
+}
 
 describe('saveDriveIndex and getOrCreateClaimFolder hygiene', () => {
   beforeEach(() => {
@@ -46,6 +71,11 @@ describe('saveDriveIndex and getOrCreateClaimFolder hygiene', () => {
     memStorage.setItem('surveyos_drive_token_expiry', String(Date.now() + 3600 * 1000));
     memStorage.setItem('surveyos_drive_root', 'root-1');
     vi.clearAllMocks();
+    phone.folder = null;
+    phone.asked = [];
+    phone.fail = false;
+    store.claim = null;
+    store.updates = [];
   });
 
   describe('saveDriveIndex empty map safety guard', () => {
@@ -257,6 +287,44 @@ describe('saveDriveIndex and getOrCreateClaimFolder hygiene', () => {
         call[1]?.method === 'POST' && !String(call[0]).includes('multipart')
       );
       expect(postCalls.length).toBe(0);
+    });
+  });
+
+  describe('one Drive folder per claim (spec 2026-11-21)', () => {
+    it("uses the vehicle's one phone folder instead of making a new one, and links the open claim to it", async () => {
+      const { posts } = fakeDrive();
+      phone.folder = { id: 'phone-folder', scanClaimId: 'scan-1' };
+      store.claim = { id: 'claim-new', vehicle: { registrationNumber: 'MH18CE7818' } };
+
+      expect(await getOrCreateClaimFolder('claim-new', 'MH18CE7818')).toBe('phone-folder');
+      expect(posts()).toHaveLength(0);
+      expect(phone.asked).toEqual(['MH18CE7818']);
+      expect(memStorage.getItem('surveyos_drive_folder_claim-new')).toBe('phone-folder');
+      expect(store.updates).toContainEqual({ gDriveFolderId: 'phone-folder', scanClaimId: 'scan-1' });
+    });
+
+    it('no phone folder: makes its own, as before', async () => {
+      const { posts } = fakeDrive();
+      expect(await getOrCreateClaimFolder('claim-new', 'MH18CE7818')).toBe('new-1');
+      expect(posts()).toHaveLength(1);
+    });
+
+    it("Drive error while looking for the phone folder: makes no folder (the save is retried later)", async () => {
+      const { posts } = fakeDrive();
+      phone.fail = true;
+      await expect(getOrCreateClaimFolder('claim-new', 'MH18CE7818')).rejects.toThrow('503');
+      expect(posts()).toHaveLength(0);
+      expect(memStorage.getItem('surveyos_drive_folder_claim-new')).toBeNull();
+    });
+
+    it('two saves at the same moment share one new folder', async () => {
+      const { posts } = fakeDrive();
+      const [a, b] = await Promise.all([
+        getOrCreateClaimFolder('claim-race', 'MH18CE7818'),
+        getOrCreateClaimFolder('claim-race', 'MH18CE7818'),
+      ]);
+      expect([a, b]).toEqual(['new-1', 'new-1']);
+      expect(posts()).toHaveLength(1);
     });
   });
 });

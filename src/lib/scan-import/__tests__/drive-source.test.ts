@@ -12,6 +12,7 @@ const state = vi.hoisted(() => ({
   nodes: [] as Node[],
   scanFolder: 'F' as string | null,
   moves: [] as Array<[string, string, string]>,
+  home: 'P',
   failMove: '' as string,
   imported: null as null | { files: Map<string, Blob>; driveFileIds: ReadonlyMap<string, string> },
 }));
@@ -22,7 +23,7 @@ vi.mock('@/lib/drive/scan-status-sync', () => ({
   phoneScansFolder: async () => 'PS',
 }));
 vi.mock('@/lib/drive', () => ({
-  getOrCreateClaimFolder: async () => 'P',
+  getOrCreateClaimFolder: async () => state.home,
   moveFile: async (id: string, to: string, from: string) => {
     if (id === state.failMove) throw new Error('Drive API error 500');
     state.moves.push([id, to, from]);
@@ -60,6 +61,7 @@ beforeEach(() => {
   state.claim = { id: 'c1', scanClaimId: 'S1', vehicle: { registrationNumber: 'MH12AB1234' } } as unknown as ClaimData;
   state.scanFolder = 'F';
   state.moves = [];
+  state.home = 'P';
   state.failMove = '';
   state.imported = null;
   state.nodes = [];
@@ -237,5 +239,16 @@ describe('importFromDrive', () => {
     const r = await importFromDrive({ confirmVehicle: yes }, 'explicit-id');
     expect(r.result.status).toBe('done');
     expect(state.moves).toEqual([['r', 'P', 'explicit-id']]);
+  });
+
+  it('phone folder is the claim home: imports, moves nothing (subfolders stay as Scan made them)', async () => {
+    state.home = 'explicit-id';
+    state.nodes = [
+      file('m', '_surveyos-scan.json', 'explicit-id', manifest('MH12AB1234', [{ path: 'RC.pdf', data: 'rc' }])),
+      file('r', 'RC.pdf', 'explicit-id', 'rc'),
+    ];
+    const r = await importFromDrive({ confirmVehicle: yes }, 'explicit-id');
+    expect(r).toMatchObject({ result: { status: 'done', added: 1 }, moveFailed: 0 });
+    expect(state.moves).toEqual([]);
   });
 });

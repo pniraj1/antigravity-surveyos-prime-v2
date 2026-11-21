@@ -23,8 +23,8 @@ import { readZip } from '@/lib/scan-import/zip';
 import { backupOnlyNotes } from '@/lib/scan-import/backup-notes';
 import type { NormalizedNotesPayload } from '@/lib/scan-import/normalizer';
 import { sameVehicle } from '@/lib/scan-import/manifest';
-import { fetchNotesFromScanFolder, type ScanDriveFolderItem } from '@/lib/scan-import/drive-notes';
-import { loadDriveIndex, saveDriveIndex } from '@/lib/drive';
+import { fetchNotesFromScanFolder, onePhoneFolderFor, type ScanDriveFolderItem } from '@/lib/scan-import/drive-notes';
+import { loadDriveIndexStrict, saveDriveIndex } from '@/lib/drive';
 import { importScanFiles, type ImportOptions, type ImportResult } from '@/lib/scan-import/import';
 import { getStoredRootHandle } from '@/lib/local-sync/directory-handle';
 import { importFromDrive } from '@/lib/scan-import/drive-source';
@@ -306,27 +306,26 @@ export function FromPhoneButton({
     }
 
     try {
-      // 1. Link the claim to the Drive folder
+      // 1. One Drive folder per claim (spec 2026-11-21): the picked folder becomes the claim's home only when it has none yet.
+      //    Otherwise it only feeds the home folder: the import brings its files in and moves them there.
+      const cacheKey = `surveyos_drive_folder_${claim.id}`;
+      const index = await loadDriveIndexStrict().catch(() => null); // null: unknown, so never written back
+      let home = claim.gDriveFolderId || index?.[claim.id] || null;
+      try { home ||= localStorage.getItem(cacheKey); } catch {}
+      const becomesHome = !home || home === folder.id;
+
       useClaimStore.getState().updateClaim({
-        gDriveFolderId: folder.id,
+        ...(becomesHome ? { gDriveFolderId: folder.id } : {}),
         scanClaimId: folder.scanClaimId || claim.scanClaimId,
       });
 
       // 2. Update localStorage and saveDriveIndex
-      try {
-        localStorage.setItem(`surveyos_drive_folder_${claim.id}`, folder.id);
-      } catch {}
+      if (becomesHome) {
+        try { localStorage.setItem(cacheKey, folder.id); } catch {}
+        if (index && index[claim.id] !== folder.id) saveDriveIndex({ ...index, [claim.id]: folder.id }).catch(() => {});
+      }
 
-      loadDriveIndex()
-        .then((index) => {
-          if (index[claim.id] !== folder.id) {
-            index[claim.id] = folder.id;
-            return saveDriveIndex(index);
-          }
-        })
-        .catch(() => {});
-
-      toast.success(`Linked claim to Drive folder: ${folder.name}`);
+      toast.success(becomesHome ? `Linked claim to Drive folder: ${folder.name}` : `Bringing files from ${folder.name} into this claim's Drive folder`);
 
       // 3. Checks and loads notes if present via fetchNotesFromScanFolder
       let notesFound = false;
@@ -390,12 +389,20 @@ export function FromPhoneButton({
     if (f) void runScansZipBlob(f);
   };
 
-  const handleOpen = () => {
-    if (!currentClaim) {
+  const handleOpen = async () => {
+    const claim = useClaimStore.getState().currentClaim;
+    if (!claim) {
       toast.error('Open a claim first before bringing items from phone.');
       return;
     }
-    setFolderPickerOpen(true);
+    // Exactly one phone folder for this vehicle: use it, no picker. None, several, or Drive unreachable: the picker.
+    setBusy(true);
+    const one = await loadDriveIndexStrict()
+      .then((index) => onePhoneFolderFor(claim.vehicle?.registrationNumber ?? '', claim.id, index))
+      .catch(() => null);
+    setBusy(false);
+    if (one) void handleSelectFolder(one);
+    else setFolderPickerOpen(true);
   };
 
   // Expose action callbacks for unit tests

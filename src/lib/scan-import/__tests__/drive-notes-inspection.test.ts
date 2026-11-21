@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   listScanDriveFolders,
+  onePhoneFolderFor,
   fetchScanFolderDetails,
   formatSyncTime,
 } from '../drive-notes';
@@ -74,6 +75,45 @@ describe('drive-notes-inspection', () => {
     }) as any);
 
     expect((await listScanDriveFolders()).map((f) => f.id)).toEqual(['scan']);
+  });
+
+  describe('onePhoneFolderFor (one Drive folder per claim)', () => {
+    const phoneFolders = (names: Array<[string, string]>) => {
+      vi.mocked(phoneScansFolder).mockResolvedValue('phone-scans-id');
+      vi.mocked(driveRequest).mockResolvedValue({
+        ok: true,
+        json: async () => ({ files: names.map(([id, name]) => ({ id, name, appProperties: { claimId: `s-${id}` } })) }),
+      } as any);
+    };
+
+    it('returns the one phone folder for this vehicle, ignoring spaces and case', async () => {
+      phoneFolders([['a', 'MH18CE7818 - NIA'], ['b', 'KA01AB1111 - UIIC']]);
+      expect(await onePhoneFolderFor('mh 18 ce 7818', 'c1', {})).toMatchObject({ id: 'a', scanClaimId: 's-a' });
+    });
+
+    it('two phone folders for the vehicle: null, the surveyor picks', async () => {
+      phoneFolders([['a', 'MH18CE7818 - NIA'], ['b', 'MH18CE7818 - UIIC']]);
+      expect(await onePhoneFolderFor('MH18CE7818', 'c1', {})).toBeNull();
+    });
+
+    it("skips a folder that is another claim's home; keeps this claim's own", async () => {
+      phoneFolders([['a', 'MH18CE7818 - NIA'], ['b', 'MH18CE7818 - NIA - 2']]);
+      expect((await onePhoneFolderFor('MH18CE7818', 'c1', { c2: 'a' }))?.id).toBe('b');
+      expect((await onePhoneFolderFor('MH18CE7818', 'c1', { c1: 'a', c2: 'b' }))?.id).toBe('a');
+    });
+
+    it('Drive error throws instead of looking like "no phone folder"', async () => {
+      vi.mocked(phoneScansFolder).mockResolvedValue('phone-scans-id');
+      vi.mocked(driveRequest).mockResolvedValue({ ok: false, status: 503 } as any);
+      await expect(onePhoneFolderFor('MH18CE7818', 'c1', {})).rejects.toThrow('503');
+      expect(await listScanDriveFolders()).toEqual([]); // the picker's list still just shows nothing
+    });
+
+    it('no vehicle number, or no match: null', async () => {
+      phoneFolders([['a', 'MH18CE7818 - NIA']]);
+      expect(await onePhoneFolderFor('', 'c1', {})).toBeNull();
+      expect(await onePhoneFolderFor('KA01AB1111', 'c1', {})).toBeNull();
+    });
   });
 
   describe('fetchScanFolderDetails', () => {

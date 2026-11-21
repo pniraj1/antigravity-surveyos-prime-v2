@@ -5,6 +5,8 @@ import { useClaimStore } from '@/stores/claim-store';
 import { useUIStore } from '@/stores/ui-store';
 import * as claimFolderStore from '@/lib/storage/claim-folder-store';
 import { importFromDrive } from '@/lib/scan-import/drive-source';
+import { onePhoneFolderFor } from '@/lib/scan-import/drive-notes';
+import { saveDriveIndex } from '@/lib/drive';
 import * as directoryHandle from '@/lib/local-sync/directory-handle';
 import { FromPhoneButton, scanResultMessage } from '../FromPhoneButton';
 
@@ -34,6 +36,7 @@ vi.mock('@/components/ui/dialog', () => {
 
 vi.mock('@/lib/drive', () => ({
   loadDriveIndex: vi.fn().mockResolvedValue({}),
+  loadDriveIndexStrict: vi.fn().mockResolvedValue({}),
   saveDriveIndex: vi.fn().mockResolvedValue(undefined),
   linkGoogleDrive: vi.fn().mockResolvedValue(true),
 }));
@@ -61,6 +64,7 @@ vi.mock('@/lib/scan-import/drive-source', () => ({
 vi.mock('@/lib/scan-import/drive-notes', () => ({
   fetchNotesFromScanFolder: vi.fn().mockResolvedValue(null),
   listScanDriveFolders: vi.fn().mockResolvedValue([]),
+  onePhoneFolderFor: vi.fn().mockResolvedValue(null),
   formatSyncTime: vi.fn().mockReturnValue('Just now'),
 }));
 
@@ -195,6 +199,36 @@ describe('FromPhoneButton', () => {
     await actions.handleSelectFolder({ id: 'drive-folder-root', name: 'MH02CB1234 - NIA', vehicle: 'MH02CB1234' });
     expect(importFromDrive).toHaveBeenCalledWith(expect.anything(), 'drive-folder-root');
     expect(claimFolderStore.askForClaimFolder).not.toHaveBeenCalled();
+  });
+});
+
+describe('FromPhoneButton: one Drive folder per claim (spec 2026-11-21)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(claimFolderStore.getClaimFolderHandle).mockResolvedValue({} as any);
+  });
+
+  it('From Phone with one phone folder for the vehicle: imports it straight away, no picker', async () => {
+    useClaimStore.setState({ currentClaim: { id: 'claim-123', vehicle: { registrationNumber: 'MH02CB1234' } } as any });
+    vi.mocked(onePhoneFolderFor).mockResolvedValueOnce({ id: 'phone-1', name: 'MH02CB1234 - NIA', vehicle: 'MH02CB1234', scanClaimId: 's1' });
+    let actions: any = null;
+    renderToStaticMarkup(<FromPhoneButton getAction={(a) => { actions = a; }} />);
+    await actions.open();
+    await vi.waitFor(() => expect(importFromDrive).toHaveBeenCalledWith(expect.anything(), 'phone-1'));
+    expect(onePhoneFolderFor).toHaveBeenCalledWith('MH02CB1234', 'claim-123', {});
+    expect(useClaimStore.getState().currentClaim?.gDriveFolderId).toBe('phone-1');
+  });
+
+  it('a picked phone folder never replaces a home folder the claim already has', async () => {
+    useClaimStore.setState({ currentClaim: { id: 'claim-123', gDriveFolderId: 'prime-home', vehicle: { registrationNumber: 'MH02CB1234' } } as any });
+    let actions: any = null;
+    renderToStaticMarkup(<FromPhoneButton getAction={(a) => { actions = a; }} />);
+    await actions.handleSelectFolder({ id: 'phone-2', name: 'MH02CB1234 - NIA', vehicle: 'MH02CB1234', scanClaimId: 's2' });
+    const c = useClaimStore.getState().currentClaim!;
+    expect(c.gDriveFolderId).toBe('prime-home');
+    expect(c.scanClaimId).toBe('s2');
+    expect(saveDriveIndex).not.toHaveBeenCalled();
+    expect(importFromDrive).toHaveBeenCalledWith(expect.anything(), 'phone-2'); // files come in and move home
   });
 });
 
