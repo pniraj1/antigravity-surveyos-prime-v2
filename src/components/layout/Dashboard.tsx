@@ -42,6 +42,7 @@ import { NewClaimDialog } from '@/components/dialogs/NewClaimDialog';
 import { ClaimFolderPromptHost } from '@/components/layout/ClaimFolderPromptDialog';
 import { ErrorBoundary } from '@/components/layout/ErrorBoundary';
 import { Sidebar, MobileMenuButton, shouldHideFees } from '@/components/layout/sidebar';
+import { NextTabButton } from '@/components/layout/NextTabButton';
 import { FloatingReportPreview } from '@/components/layout/FloatingReportPreview';
 import { ClaimHeader } from '@/components/layout/ClaimHeader';
 import { NewDrivePhotosBanner } from '@/components/layout/NewDrivePhotosBanner';
@@ -778,7 +779,7 @@ export default function Dashboard() {
         <ClaimPresenceBanner />
         <TabTip />
         <ErrorBoundary key={activeTab}>
-          {activeTab === 'dashboard' ? <DashboardContent /> : <TabPlaceholder tab={activeTab} />}
+          {activeTab === 'dashboard' ? <DashboardContent /> : <><TabPlaceholder tab={activeTab} /><NextTabButton /></>}
         </ErrorBoundary>
       </main>
 
