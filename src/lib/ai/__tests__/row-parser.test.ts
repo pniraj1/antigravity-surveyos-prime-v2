@@ -471,6 +471,16 @@ describe('parseEstimate', () => {
     expect(whole.map(r => r.cells.total_amount)).toEqual(['496.0', '992.0']);
   });
 
+  it('joins "265.2"/"5" and "13,76"/"4.41" stacked at the same x, but not a lone "496.0" or a qty "1.5"', () => {
+    const head = line(700, [[10, 'Srl'], [60, 'Description'], [200, 'Qty.'], [300, 'Total']]);
+    const a = rowsOf(readRows([[...head, ...line(603, [[10, '1'], [300, '265.2']]), ...line(596, [[300, '5']])]]));
+    expect(a[0].cells.total_amount).toBe('265.25');
+    const b = rowsOf(readRows([[...head, ...line(603, [[10, '1'], [300, '13,76']]), ...line(596, [[300, '4.41']])]]));
+    expect(b[0].cells.total_amount).toBe('13,764.41');
+    const c = rowsOf(readRows([[...head, ...line(603, [[10, '1'], [200, '1.5'], [300, '496.0']]), ...line(583, [[10, '2'], [200, '1'], [300, '2']])]]));
+    expect(c.map(r => [r.cells.quantity, r.cells.total_amount])).toEqual([['1.5', '496.0'], ['1', '2']]);
+  });
+
   describe('Volkswagen Group: unnumbered estimate table with Type column', () => {
     const vwHead = (y = 700) => line(y, [
       [10, 'Type'], [50, 'Description'], [160, 'HSN\\SAC'], [230, 'Category'], [280, 'Qty'], [320, 'Unit Price'], [390, 'Amount'],

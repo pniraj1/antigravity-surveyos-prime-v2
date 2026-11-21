@@ -58,11 +58,14 @@ function repairNumbers(toks: PdfToken[]): PdfToken[] {
   for (const t of sorted) {
     if (used.has(t)) continue;
     let cur = t;
-    while (/^[\d,]*\d[.,]$|^(\d{1,3}(,\d{2,3})+|\d{4,})\.\d$/.test(cur.s)) {   // "8,845." / "76", and Tata's "2,916.9" / "5" (one stray digit only: "496.0" and a qty "1.5" are whole)
+    while (/^[\d,]*\d[.,]$|^(\d{1,3}(,\d{2,3})+|\d{4,})\.\d$|^\d{1,3}\.\d$|^\d{1,3}(,\d{2})*,\d{2}$/.test(cur.s)) {   // "8,845." / "76", and Tata's "2,916.9" / "5" (one stray digit only: "496.0" and a qty "1.5" are whole)
       const top = cur;
-      const tail = /\.\d$/.test(top.s) ? /^\d$/ : /^[\d,.]+$/;
-      const below = sorted.find(b => !used.has(b) && b !== top && tail.test(b.s) && top.y - b.y > 0 && top.y - b.y < 14
-        && b.x < top.x + top.w + 2 && b.x + b.w > top.x - 2);
+      const cut = /,\d{2}$/.test(top.s);   // "13,76" / "4.41": a comma group of two digits is never a whole number
+      const tail = cut ? /^\d(\.\d{1,2})?$/ : /\.\d$/.test(top.s) ? /^\d$/ : /^[\d,.]+$/;
+      // a short "265.2" is split only by a digit tucked right under it (same x, wrap-line gap): a qty "1.5" or "496.0" has none
+      const short = cut || /^\d{1,3}\.\d$/.test(top.s);
+      const below = sorted.find(b => !used.has(b) && b !== top && tail.test(b.s) && top.y - b.y > 0 && top.y - b.y < (short ? 10 : 14)
+        && b.x < top.x + top.w + 2 && b.x + b.w > top.x - 2 && (!short || Math.abs(b.x - top.x) <= 1.5));
       if (!below) break;
       used.add(below);
       cur = { s: cur.s + below.s, x: cur.x, y: cur.y, w: Math.max(cur.w, below.w) };
