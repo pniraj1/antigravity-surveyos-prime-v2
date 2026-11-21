@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 
 import { ClaimRowProgress } from '@/components/dashboard/ClaimRowProgress';
+import { CourierBatchBar } from '@/components/dashboard/CourierBatchBar';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { BankReconcileDialog } from '@/components/dialogs/BankReconcileDialog';
 import { IRDAISummaryDialog } from '@/components/dialogs/IRDAISummaryDialog';
@@ -145,6 +146,8 @@ export function DashboardContent({ initialShowArchived = false }: { initialShowA
 
   const [showArchived, setShowArchived] = useState(initialShowArchived);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  useEffect(() => { setSelectedIds([]); }, [showArchived, searchQuery]);
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   const [showReconcile, setShowReconcile] = useState(false);
   const [showIRDAI, setShowIRDAI] = useState(false);
@@ -403,7 +406,9 @@ export function DashboardContent({ initialShowArchived = false }: { initialShowA
               </div>
             ) : (
               <div>
-                <div className="px-6 py-3 grid grid-cols-[1.5fr_1.6fr_2fr_100px_100px_110px_110px_60px] gap-4 text-[10px] font-medium uppercase tracking-[0.15em] items-center border-b border-border text-[var(--color-neutral-400)] bg-[var(--color-neutral-50)]">
+                {!viewAsSurveyor && <CourierBatchBar ids={selectedIds} onDone={() => setSelectedIds([])} />}
+                <div className="px-6 py-3 grid grid-cols-[28px_1.5fr_1.6fr_2fr_100px_100px_110px_110px_60px] gap-4 text-[10px] font-medium uppercase tracking-[0.15em] items-center border-b border-border text-[var(--color-neutral-400)] bg-[var(--color-neutral-50)]">
+                  <span />
                   <span>Report No.</span>
                   <span>Progress</span>
                   <span>Vehicle & Parties</span>
@@ -418,8 +423,17 @@ export function DashboardContent({ initialShowArchived = false }: { initialShowA
                     <div
                       key={claim.id}
                       onClick={() => void openClaim(claim.id)}
-                      className="px-6 py-4 grid grid-cols-[1.5fr_1.6fr_2fr_100px_100px_110px_110px_60px] gap-4 items-center cursor-pointer border-b border-[var(--color-neutral-100)] transition-colors hover:bg-[var(--color-neutral-50)]"
+                      className="px-6 py-4 grid grid-cols-[28px_1.5fr_1.6fr_2fr_100px_100px_110px_110px_60px] gap-4 items-center cursor-pointer border-b border-[var(--color-neutral-100)] transition-colors hover:bg-[var(--color-neutral-50)]"
                     >
+                      {viewAsSurveyor ? <span /> : (
+                        <input
+                          type="checkbox"
+                          aria-label="Select claim"
+                          checked={selectedIds.includes(claim.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => setSelectedIds((ids) => e.target.checked ? [...ids, claim.id] : ids.filter((i) => i !== claim.id))}
+                        />
+                      )}
                       <div className="flex items-center gap-1.5 min-w-0">
                         <span className="text-sm font-medium truncate text-[var(--color-neutral-900)]">
                           {claim.reportNo || 'Draft'}
