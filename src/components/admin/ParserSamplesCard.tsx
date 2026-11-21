@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { FileWarning, Download, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  listParserSamples, loadParserSample, deleteParserSample, saveBlob, type ParserSampleMeta,
+  listParserSamples, loadParserSample, deleteParserSample, openSaveTarget, saveToTarget, type ParserSampleMeta,
 } from '@/lib/ai/parser-sample';
 
 type Row = ParserSampleMeta & { id: string };
@@ -14,25 +14,31 @@ const msg = (e: unknown, fallback: string) => (e instanceof Error ? e.message : 
 
 export function ParserSamplesCard() {
   const [rows, setRows] = useState<Row[] | null>(null);
+  const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
 
   useEffect(() => {
     listParserSamples().then(setRows).catch((e: unknown) => {
       toast.error(msg(e, 'Could not load unread bills'));
+      setFailed(true);
       setRows([]);
     });
   }, []);
 
   const download = async (r: Row) => {
     setBusy(r.id);
+    const name = r.fileName || `parser-sample-${r.id.slice(0, 8)}.pdf`;
+    let saved = false;
     try {
-      const blob = await loadParserSample(r.id);
-      const saved = await saveBlob(blob, r.fileName || `parser-sample-${r.id.slice(0, 8)}.pdf`);
+      const target = await openSaveTarget(name); // first await: keeps the click's user activation
+      if (!target) return;
+      const blob = await loadParserSample(r.id, r.chunks, r.size);
+      saved = await saveToTarget(target, blob, name);
       if (!saved) return;
       await deleteParserSample(r.id, r.chunks);
       setRows(cur => (cur ?? []).filter(x => x.id !== r.id));
     } catch (e: unknown) {
-      toast.error(msg(e, 'Download failed'));
+      toast.error(saved ? "Saved, but couldn't delete it from the server." : msg(e, 'Download failed'));
     } finally {
       setBusy(null);
     }
@@ -50,6 +56,8 @@ export function ParserSamplesCard() {
         </p>
         {rows === null ? (
           <Loader2 size={14} className="animate-spin" />
+        ) : failed ? (
+          <p className="text-xs">Couldn&apos;t load samples.</p>
         ) : rows.length === 0 ? (
           <p className="text-xs">No unread bills right now.</p>
         ) : (

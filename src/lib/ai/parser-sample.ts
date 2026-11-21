@@ -66,13 +66,18 @@ export async function listParserSamples(): Promise<(ParserSampleMeta & { id: str
   return snap.docs.map(d => ({ id: d.id, ...(d.data() as ParserSampleMeta) }));
 }
 
-export async function loadParserSample(id: string): Promise<Blob> {
+/** Reads the pieces in numeric order. Throws when the piece count or total size differs from the sample doc. */
+export async function loadParserSample(id: string, chunks: number, size: number): Promise<Blob> {
   const snap = await getDocs(collection(db, SAMPLES, id, CHUNKS));
   const parts = snap.docs
     .map(d => d.data() as { i: number; data: Bytes })
     .sort((a, b) => a.i - b.i)
     .map(p => p.data.toUint8Array());
-  return new Blob([joinBytes(parts) as BlobPart], { type: 'application/pdf' });
+  const bytes = joinBytes(parts);
+  if (parts.length !== chunks || bytes.length !== size) {
+    throw new Error('This sample is incomplete on the server, so it was not downloaded or deleted.');
+  }
+  return new Blob([bytes as BlobPart], { type: 'application/pdf' });
 }
 
 /** One batch: every piece plus the sample doc, so no orphan piece can block a re-send. */
@@ -83,33 +88,44 @@ export async function deleteParserSample(id: string, chunks: number): Promise<vo
   await batch.commit();
 }
 
+interface FileHandleLike {
+  createWritable: () => Promise<{ write: (b: Blob) => Promise<void>; close: () => Promise<void> }>;
+}
 interface SavePickerWindow {
   showSaveFilePicker?: (o: {
     suggestedName: string;
     types: { description: string; accept: Record<string, string[]> }[];
-  }) => Promise<{ createWritable: () => Promise<{ write: (b: Blob) => Promise<void>; close: () => Promise<void> }> }>;
+  }) => Promise<FileHandleLike>;
+}
+export type SaveTarget = FileHandleLike | 'fallback';
+
+/** Call straight from the click, before any slow await, so the picker still has user activation. Null = cancelled. */
+export async function openSaveTarget(name: string): Promise<SaveTarget | null> {
+  const picker = (window as unknown as SavePickerWindow).showSaveFilePicker;
+  if (!picker) return 'fallback';
+  try {
+    return await picker({ suggestedName: name, types: [{ description: 'PDF', accept: { 'application/pdf': ['.pdf'] } }] });
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') return null;
+    throw e;
+  }
 }
 
-/** True only when the file was saved. False on cancel; other errors are rethrown so the caller does not delete. */
-export async function saveBlob(blob: Blob, name: string): Promise<boolean> {
-  const picker = (window as unknown as SavePickerWindow).showSaveFilePicker;
-  if (picker) {
-    try {
-      const handle = await picker({ suggestedName: name, types: [{ description: 'PDF', accept: { 'application/pdf': ['.pdf'] } }] });
-      const writable = await handle.createWritable();
-      await writable.write(blob);
-      await writable.close();
-      return true;
-    } catch (e) {
-      if (e instanceof DOMException && e.name === 'AbortError') return false;
-      throw e;
-    }
+/** True only when the file was saved (picker: after close(); fallback: the user confirms). Errors are rethrown so the caller does not delete. */
+export async function saveToTarget(target: SaveTarget, blob: Blob, name: string): Promise<boolean> {
+  if (target !== 'fallback') {
+    const writable = await target.createWritable();
+    await writable.write(blob);
+    await writable.close();
+    return true;
   }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   a.download = name;
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
   return window.confirm('Did the file save? OK deletes it from the server.');
 }
