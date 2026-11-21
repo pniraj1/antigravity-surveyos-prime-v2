@@ -61,6 +61,21 @@ describe('drive-notes-inspection', () => {
     });
   });
 
+  it("never lists Prime's own claim folders from the SurveyOS root (REG_xxxxxx)", async () => {
+    vi.mocked(phoneScansFolder).mockResolvedValue('phone-scans-id');
+    vi.mocked(getRootFolder).mockResolvedValue('surveyos-root-id');
+    vi.mocked(driveRequest).mockImplementation(async (url: string) => ({
+      ok: true,
+      json: async () => ({
+        files: url.includes('phone-scans-id')
+          ? [{ id: 'scan', name: 'PB22Z5731 - NIA', appProperties: { claimId: 'c1' } }]
+          : [{ id: 'prime', name: 'PB22Z5731_xshh1z' }, { id: 'prime2', name: 'PB22Z5731_xshh1z' }],
+      }),
+    }) as any);
+
+    expect((await listScanDriveFolders()).map((f) => f.id)).toEqual(['scan']);
+  });
+
   describe('fetchScanFolderDetails', () => {
     it('queries Drive for files in folder and calculates counts, notes, and lastModified', async () => {
       vi.mocked(driveRequest).mockResolvedValueOnce({

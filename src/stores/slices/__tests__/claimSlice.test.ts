@@ -206,3 +206,17 @@ describe('setBillCheckUpload', () => {
     expect(store.getState().currentClaim!.assessmentRows[0].refSrNo).toBe('7');
   });
 });
+
+describe('updateClaim', () => {
+  // Phone notes (applyNotes) send whole sections; spotDetails was silently dropped (83753194).
+  it('keeps a spotDetails section passed in, like every other section', () => {
+    const store = makeStore();
+    const blank = createBlankClaim();
+    store.setState({ currentClaim: blank });
+    store.getState().updateClaim({
+      spotDetails: { ...blank.spotDetails, comments: 'Hit divider', repairWorkshop: 'Shree Motors', loadOrigin: 'Pune', enclosures: 'RC, DL' },
+    });
+    const sd = store.getState().currentClaim!.spotDetails;
+    expect(sd).toMatchObject({ comments: 'Hit divider', repairWorkshop: 'Shree Motors', loadOrigin: 'Pune', enclosures: 'RC, DL' });
+  });
+});

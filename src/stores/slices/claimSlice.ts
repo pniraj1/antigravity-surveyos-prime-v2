@@ -157,7 +157,7 @@ export const createClaimSlice: StateCreator<any, any, any, ClaimSlice> = (set) =
   updateClaim: (updates) => {
     set((state: ClaimSlice) => {
       if (!state.currentClaim) return { currentClaim: null };
-      const updatedSpotDetails = { ...state.currentClaim.spotDetails };
+      const updatedSpotDetails = { ...(updates.spotDetails ?? state.currentClaim.spotDetails) };
       if ('reportDate' in updates && updates.reportDate !== undefined) {
         updatedSpotDetails.reportDate = updates.reportDate ?? '';
       }
