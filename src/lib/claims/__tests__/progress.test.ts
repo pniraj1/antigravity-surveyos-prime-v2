@@ -91,4 +91,37 @@ describe('claimProgress', () => {
     expect(tabMarks(p).reports).toBe('done');
     expect(tabMarks(p).details).toBe('done');
   });
+
+  it('estimate at is the earliest addedAt; assessmentRows and billTotal fallbacks; spot photo tag; billChecked at', () => {
+    const f = allVerified(createBlankClaim('final'));
+    const at = (c: ClaimData, id: string) => claimProgress(c).steps.find((s) => s.id === id);
+    const two = { ...f, documents: { b: doc('estimate', '2026-11-05T00:00:00Z'), a: doc('estimate', '2026-11-01T00:00:00Z') } };
+    expect(at(two, 'estimate')?.at).toBe('2026-11-01T00:00:00Z');
+    const rows = { ...f, assessmentRows: [{}] as unknown as ClaimData['assessmentRows'] };
+    expect(at(rows, 'estimate')?.status).toBe('done');
+    expect(at({ ...f, billCheck: { ...f.billCheck, billTotal: 500 } }, 'bill')?.status).toBe('done');
+    const checked = { ...f, billCheck: { ...f.billCheck, verifiedBySurveyor: true, verifiedAt: '2026-11-09T00:00:00Z' } };
+    expect(at(checked, 'billChecked')?.at).toBe('2026-11-09T00:00:00Z');
+    const spot = createBlankClaim('spot');
+    const tagged = { ...spot, photos: [{ tag: 'spot' }] as unknown as ClaimData['photos'] };
+    expect(claimProgress(tagged).steps.find((s) => s.id === 'spotPhotos')?.status).toBe('done');
+  });
+
+  it('portalReady: ignores unwritten boxes, needs a written box, stale waits', () => {
+    const f = createBlankClaim('final');
+    const box = (o: object) => ({ name: 'n', size: 1, pages: 1, sha256: 'x', sources: [], ...o });
+    const withBoxes = (boxes: Record<string, object>): ClaimData =>
+      ({ ...f, uploadSet: { boxes: Object.fromEntries(Object.entries(boxes).map(([k, v]) => [k, box(v)])) } as unknown as ClaimData['uploadSet'] });
+    const pr = (c: ClaimData) => claimProgress(c).steps.find((s) => s.id === 'portalReady');
+    expect(pr(withBoxes({}))?.status).toBe('waiting');
+    const ok = withBoxes({ a: { reviewedAt: '2026-11-03T00:00:00Z' }, b: { written: false } });
+    expect(pr(ok)?.status).toBe('done');
+    expect(pr(ok)?.at).toBe('2026-11-03T00:00:00Z');
+    expect(pr(withBoxes({ a: { reviewedAt: 'z' }, c: { reviewedAt: 'z', stale: true } }))?.status).toBe('waiting');
+  });
+
+  it('tabMarks: a tab with only optional/na steps gets no mark', () => {
+    const marks = tabMarks(claimProgress(createBlankClaim('final')));
+    expect(marks.reinspection).toBeUndefined();
+  });
 });

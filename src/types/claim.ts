@@ -13,10 +13,10 @@ import { DEFAULT_REINSPECTION_REMARKS } from './assessment';
 import type { SurveyType } from './report';
 import type { InsuredReportDraft, InsuredReportStages } from '@/types/insured-report';
 import type { ClaimDocument, DocType, UploadSet } from './documents';
+import { DEFAULT_DOCUMENT_ANNEXURE_OPTIONS } from '@/lib/photos/document-annexure';
 
 /** Report kinds whose print time is recorded for claim progress. */
 export type PrintedKind = DocType | 'spotReport';
-import { DEFAULT_DOCUMENT_ANNEXURE_OPTIONS } from '@/lib/photos/document-annexure';
 
 // ─── Report Settings ───────────────────────────────────
 /**

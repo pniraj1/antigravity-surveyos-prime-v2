@@ -65,7 +65,7 @@ const STEPS: Record<SurveyType, StepDef[]> = {
       eval: (c) => {
         if (!c.uploadSet) return { status: 'na' };
         const boxes = Object.values(c.uploadSet.boxes).filter((b) => b.written !== false);
-        const ok = boxes.every((b) => b.reviewedAt && !b.stale);
+        const ok = boxes.length > 0 && boxes.every((b) => b.reviewedAt && !b.stale);
         const at = boxes.map((b) => b.reviewedAt ?? '').sort().pop() || undefined;
         return flag(ok, at);
       },
@@ -117,7 +117,10 @@ export function tabMarks(p: ClaimProgress): Partial<Record<AppTab, 'done' | 'nex
   const tabs = new Set(p.steps.map((s) => s.tab).filter((t): t is AppTab => t !== null));
   for (const tab of tabs) {
     if (p.next?.tab === tab) marks[tab] = 'next';
-    else if (p.steps.filter((s) => s.tab === tab).every((s) => s.status !== 'waiting')) marks[tab] = 'done';
+    else {
+      const own = p.steps.filter((s) => s.tab === tab);
+      if (own.some((s) => s.status === 'done') && !own.some((s) => s.status === 'waiting')) marks[tab] = 'done';
+    }
   }
   return marks;
 }
