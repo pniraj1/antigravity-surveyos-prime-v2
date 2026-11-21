@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Motor SurveyOS">
+  <!-- DIRECTION B — THE CHASSIS PLATE
+       The riveted VIN plate a surveyor photographs on every single
+       survey. The monogram M is drawn as a stroked path, not type, so
+       the mark is resolution- and font-independent (a logo must never
+       depend on a font being present).
+       Proportion is deliberately wide (58×38) — a plate that is too
+       square stops reading as a plate. -->
+  <g fill="none" stroke="currentColor">
+    <!-- plate body -->
+    <rect x="3.2" y="13.2" width="57.6" height="37.6" rx="2.4" stroke-width="2.8"/>
+    <!-- stamped M — geometric, single stroke, matched weight -->
+    <path d="M20 42.2 V24 L32 35.4 L44 24 V42.2"
+          stroke-width="4.6" stroke-linecap="square" stroke-linejoin="miter"/>
+  </g>
+  <!-- rivets: solid, because a rivet is a filled object and an outlined
+       one reads as a hole -->
+  <g fill="currentColor">
+    <circle cx="10.4" cy="32" r="2.5"/>
+    <circle cx="53.6" cy="32" r="2.5"/>
+  </g>
+</svg>

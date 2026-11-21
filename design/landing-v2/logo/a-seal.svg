@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Motor SurveyOS">
+  <!-- DIRECTION A — THE VERIFICATION SEAL
+       A chamfered octagon (cut square, not a regular octagon: the
+       regular one reads as a government rubber stamp, the cut square
+       reads as a die-struck seal). Double rule, because every official
+       Indian seal has one and its absence is felt.
+       Colour is applied by the host via currentColor. -->
+  <g fill="none" stroke="currentColor" stroke-linejoin="miter">
+    <!-- outer die -->
+    <path d="M18 3 H46 L61 18 V46 L46 61 H18 L3 46 V18 Z" stroke-width="3"/>
+    <!-- inner rule -->
+    <path d="M19.6 8.5 H44.4 L55.5 19.6 V44.4 L44.4 55.5 H19.6 L8.5 44.4 V19.6 Z" stroke-width="1.4"/>
+    <!-- the check: struck through the middle, weight matched to the outer die -->
+    <path d="M19 33.2 L27.8 42 L45.4 21.6" stroke-width="5.6"
+          stroke-linecap="square" stroke-linejoin="miter"/>
+  </g>
+</svg>

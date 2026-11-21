@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Motor SurveyOS">
+  <!-- DIRECTION C — THE FORM FIELD
+       A bracketed entry with its baseline rule: the boxed field on a
+       survey form, where a value gets written and then signed for.
+       Brackets are open (no top/bottom join) so the mark breathes at
+       16px, where a closed box fills in and turns into a blob. -->
+  <g fill="none" stroke="currentColor" stroke-width="3.6"
+     stroke-linecap="square" stroke-linejoin="miter">
+    <!-- left bracket -->
+    <path d="M19 8 H8 V56 H19"/>
+    <!-- right bracket -->
+    <path d="M45 8 H56 V56 H45"/>
+    <!-- stamped M, sitting on the field line -->
+    <path d="M21.5 40 V22.4 L32 32.6 L42.5 22.4 V40" stroke-width="4.2"/>
+  </g>
+  <!-- the field line: filled, because a ruled line on a form is printed
+       solid and a stroked one would render lighter at small sizes -->
+  <rect x="21.5" y="45.4" width="21" height="3.1" fill="currentColor"/>
+</svg>

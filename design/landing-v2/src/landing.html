@@ -1,0 +1,867 @@
+<title>Motor SurveyOS — Surveying is the assessment. The rest is just typing.</title>
+<style>
+@font-face{font-family:"IBM Plex Sans";font-weight:400;font-style:normal;font-display:swap;
+  src:url(__FONT:sans400__) format("woff2")}
+@font-face{font-family:"IBM Plex Sans";font-weight:600;font-style:normal;font-display:swap;
+  src:url(__FONT:sans600__) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-weight:500;font-style:normal;font-display:swap;
+  src:url(__FONT:mono500__) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-weight:600;font-style:normal;font-display:swap;
+  src:url(__FONT:mono600__) format("woff2")}
+
+__TOKENS__
+__COMPONENTS__
+
+/* ═══════════════════════════════════════════════════════════════════
+   PAGE — only what the components layer does not already provide.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── HERO ─────────────────────────────────────────────────────────── */
+.hero{ position:relative; overflow:hidden; padding-top:var(--s-16) }
+.hero::after{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background:radial-gradient(1100px 620px at 76% 32%, rgba(255,255,255,.085), transparent 62%);
+}
+.hero__grid{
+  position:relative; z-index:var(--z-raised);
+  display:grid; grid-template-columns:1.04fr .96fr; gap:var(--s-12); align-items:end;
+}
+@media(max-width:960px){ .hero__grid{ grid-template-columns:1fr; gap:var(--s-10) } }
+.hero__copy{ padding-bottom:var(--s-24) }
+@media(max-width:960px){ .hero__copy{ padding-bottom:0 } }
+.hero .display{ margin-bottom:var(--s-6) }
+.hero .lead{ max-width:42ch; margin-bottom:var(--s-8) }
+.hero__trust{
+  display:flex; flex-wrap:wrap; gap:var(--s-2) var(--s-4);
+  font-family:var(--font-data); font-size:var(--t-label);
+  letter-spacing:.1em; text-transform:uppercase; color:var(--text-muted);
+  margin:var(--s-6) 0 0;
+}
+
+/* the report, lit, cropped off the bottom edge */
+.hero__doc{ position:relative; align-self:end }
+.hero__shot{
+  position:relative; max-height:34rem; overflow:hidden;
+  border-top:1px solid rgba(255,255,255,.16);
+  filter:drop-shadow(0 34px 70px rgba(0,0,0,.62));
+}
+.hero__shot::after{
+  content:""; position:absolute; inset:auto 0 0 0; height:7.5rem;
+  background:linear-gradient(to bottom, transparent, var(--ink-800));
+}
+/* annotation pins — the reason a still image beats a video here */
+.pin{
+  position:absolute; z-index:2; display:flex; align-items:center; gap:var(--s-2);
+  opacity:0; transform:translateY(7px);
+}
+.js .pin.is-in{
+  opacity:1; transform:none;
+  transition:opacity var(--d-slow) var(--ease-out), transform var(--d-slow) var(--ease-out);
+}
+html:not(.js) .pin{ opacity:1; transform:none }
+.pin i{
+  width:22px; height:22px; flex:0 0 22px; border-radius:50%;
+  background:var(--oxide-300); color:var(--ink-900);
+  font-family:var(--font-data); font-style:normal; font-size:11px; font-weight:700;
+  display:grid; place-items:center;
+}
+.pin b{
+  font-family:var(--font-data); font-weight:var(--w-semibold);
+  font-size:var(--t-micro); letter-spacing:.09em; text-transform:uppercase;
+  background:rgba(14,22,32,.94); border:1px solid var(--ink-400);
+  color:var(--on-ink-50); padding:6px 10px; white-space:nowrap;
+}
+@media(max-width:520px){ .pin b{ font-size:9px; padding:5px 8px } }
+
+/* ── PANELS (extraction, recon, claims, docs) ─────────────────────── */
+.panel{ border:1px solid var(--line); background:var(--bg-card) }
+.on-ink .panel{ border-color:var(--ink-500); background:var(--ink-700) }
+.panel__bar{
+  display:flex; justify-content:space-between; align-items:center; gap:var(--s-3);
+  flex-wrap:wrap; padding:var(--s-3) var(--s-4); border-bottom:1px solid var(--line);
+  font-family:var(--font-data); font-size:var(--t-micro);
+  letter-spacing:var(--tr-micro); text-transform:uppercase; color:var(--text-muted);
+}
+.on-ink .panel__bar{ border-color:var(--ink-500) }
+
+/* extraction */
+.frow{
+  display:grid; grid-template-columns:9.5rem 1fr; gap:var(--s-4);
+  padding:var(--s-3) var(--s-4); border-bottom:1px solid var(--line); align-items:baseline;
+}
+.frow:last-child{ border-bottom:0 }
+@media(max-width:540px){ .frow{ grid-template-columns:1fr; gap:2px } }
+.fkey{
+  font-family:var(--font-data); font-size:var(--t-micro);
+  letter-spacing:var(--tr-label); text-transform:uppercase; color:var(--text-muted);
+}
+.fval{
+  font-family:var(--font-data); font-size:var(--t-body-sm);
+  font-variant-numeric:tabular-nums; color:var(--text-strong);
+  min-height:1.5em; word-break:break-all;
+}
+.caret{
+  display:inline-block; width:8px; height:1em; background:var(--accent);
+  vertical-align:-2px; animation:caret 1s steps(2) infinite;
+}
+@keyframes caret{ 50%{ opacity:0 } }
+
+/* reconciliation */
+.rrow{
+  display:grid; grid-template-columns:8.5rem 1fr 1fr 7.5rem;
+  border-bottom:1px solid var(--ink-500); align-items:center;
+}
+.rrow:last-child{ border-bottom:0 }
+.rrow > *{ padding:var(--s-4) }
+@media(max-width:760px){
+  .rrow{ grid-template-columns:1fr 1fr }
+  .rrow .rkey{ grid-column:1/-1; border-bottom:1px solid var(--ink-500) }
+  .rrow .rend{ grid-column:1/-1; border-top:1px solid var(--ink-500); text-align:left }
+}
+.rkey{
+  font-family:var(--font-data); font-size:var(--t-micro);
+  letter-spacing:var(--tr-label); text-transform:uppercase; color:var(--on-ink-400);
+}
+.rval{
+  font-family:var(--font-data); font-size:var(--t-body-sm); color:var(--on-ink-50);
+  font-variant-numeric:tabular-nums; word-break:break-all;
+}
+.rval small{
+  display:block; font-size:var(--t-micro); letter-spacing:var(--tr-label);
+  text-transform:uppercase; color:var(--on-ink-400); margin-bottom:4px; word-break:normal;
+}
+.rval u{ text-decoration:none; color:var(--oxide-300); font-weight:700 }
+.rend{ text-align:right }
+
+/* pending-documents panel */
+.doc-line{
+  display:grid; grid-template-columns:1fr auto; gap:var(--s-4); align-items:center;
+  padding:var(--s-3) var(--s-4); border-bottom:1px solid var(--line);
+}
+.doc-line:last-child{ border-bottom:0 }
+.doc-line b{
+  display:block; font-family:var(--font-data); font-size:var(--t-body-sm);
+  font-weight:var(--w-medium); color:var(--text-strong);
+}
+.doc-line span{ font-size:var(--t-caption); color:var(--text-muted) }
+
+/* the claim file, on a phone */
+.phone{
+  width:min(17rem,100%); margin-inline:auto;
+  border:1px solid var(--line); background:var(--bg-card); box-shadow:var(--lift-doc);
+}
+.on-ink .phone{ border-color:var(--ink-400); background:var(--ink-700); box-shadow:var(--lift-doc-ink) }
+.phone__top{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:var(--s-3) var(--s-4); border-bottom:1px solid var(--line);
+  font-family:var(--font-data); font-size:var(--t-micro);
+  letter-spacing:var(--tr-micro); text-transform:uppercase; color:var(--text-muted);
+}
+.on-ink .phone__top{ border-color:var(--ink-500); color:var(--on-ink-400) }
+.claim{ padding:var(--s-3) var(--s-4); border-bottom:1px solid var(--line) }
+.on-ink .claim{ border-color:var(--ink-500) }
+.claim:last-child{ border-bottom:0 }
+.claim b{
+  display:block; font-family:var(--font-data); font-size:var(--t-body-sm);
+  color:var(--text-strong); margin-bottom:2px;
+}
+.on-ink .claim b{ color:var(--on-ink-50) }
+.claim span{ font-size:var(--t-caption); color:var(--text-muted) }
+.on-ink .claim span{ color:var(--on-ink-400) }
+
+/* ── FOUNDER / ENDING ─────────────────────────────────────────────── */
+.ending{ max-width:54rem; margin-inline:auto }
+.ending p{ font-size:var(--t-lead); line-height:1.62; max-width:58ch; margin-bottom:var(--s-5) }
+.ending__sig{
+  font-family:var(--font-data); font-size:var(--t-caption); letter-spacing:.05em;
+  color:var(--text-muted); border-top:1px solid var(--line);
+  padding-top:var(--s-4); margin-top:var(--s-8); max-width:58ch;
+}
+.ending__ded{
+  font-family:var(--font-display); font-weight:var(--w-semibold);
+  font-size:clamp(1rem,.9rem+.6vw,1.15rem); line-height:1.5; letter-spacing:-.015em;
+  color:var(--text-strong); border-left:3px solid var(--accent);
+  padding-left:var(--s-5); margin:var(--s-6) 0 0; max-width:46ch;
+}
+
+/* ── misc ─────────────────────────────────────────────────────────── */
+.center{ text-align:center }
+.stack-lg > * + *{ margin-top:var(--s-8) }
+.anchor-note{
+  font-family:var(--font-display); font-weight:var(--w-semibold);
+  font-size:var(--t-h3); letter-spacing:var(--tr-h3); line-height:1.4;
+  color:var(--text-strong); border-left:2px solid var(--accent);
+  padding-left:var(--s-5); margin:var(--s-8) 0 0; max-width:48ch;
+}
+</style>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<nav class="nav">
+  <div class="nav__in">
+    <a class="nav__brand" href="#top" aria-label="Motor SurveyOS — home">
+      __SVG:mark-duo__
+      <span class="nav__name">Motor SurveyOS</span>
+    </a>
+    <div class="nav__links">
+      <a class="nav__link" href="#work">How it works</a>
+      <a class="nav__link" href="#covers">What it covers</a>
+      <a class="nav__link" href="#price">Pricing</a>
+      <a class="btn btn--primary" href="#try">Try it — no account</a>
+    </div>
+    <button class="nav__toggle" type="button" id="navBtn"
+            aria-expanded="false" aria-controls="navSheet" aria-label="Open menu">
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+        <g stroke="currentColor" stroke-width="1.8"><path d="M1 4h16"/><path d="M1 9h16"/><path d="M1 14h16"/></g>
+      </svg>
+    </button>
+  </div>
+  <div class="nav__sheet" id="navSheet" data-open="false">
+    <a class="nav__link" href="#work">How it works</a>
+    <a class="nav__link" href="#covers">What it covers</a>
+    <a class="nav__link" href="#price">Pricing</a>
+    <a class="nav__link" href="#why">Why this exists</a>
+    <a class="btn btn--primary" href="#try" style="margin-top:var(--s-5)">Try it — no account</a>
+  </div>
+</nav>
+
+<main id="main">
+
+  <!-- ══ HERO ═══════════════════════════════════════════════════════ -->
+  <header class="hero on-ink" id="top">
+    <div class="wrap">
+      <div class="hero__grid">
+        <div class="hero__copy">
+          <p class="eyebrow">For IRDAI-licensed motor surveyors</p>
+          <h1 class="display">Surveying is the assessment.<br>The rest is just typing.</h1>
+          <p class="lead">
+            Reads the documents so you do not retype them. Chases the papers you are
+            missing. Keeps the whole claim file on your phone. What is left is the part
+            only a surveyor can do.
+          </p>
+          <div class="btn-row">
+            <a class="btn btn--primary" href="#try">Open it — no account needed</a>
+            <a class="btn btn--ghost" href="#report">See a finished report</a>
+          </div>
+          <p class="hero__trust">
+            <span>No card</span><span>·</span>
+            <span>Data stays in India</span><span>·</span>
+            <span>Built by a practising surveyor</span>
+          </p>
+        </div>
+
+        <div class="hero__doc">
+          <div class="hero__shot" id="report">
+            <img src="__IMG:report-final__" width="680" height="1009" fetchpriority="high"
+                 alt="A completed final survey report — vehicle and policy particulars, the
+                      per-part assessment with depreciation applied, and the assessed total
+                      above the surveyor's licence number.">
+          </div>
+          <span class="pin" style="left:-.5rem; top:14%"><i>1</i><b>Read from the RC</b></span>
+          <span class="pin" style="right:-.4rem; top:40%"><i>2</i><b>Computed, not typed</b></span>
+          <span class="pin" style="left:2%; top:62%"><i>3</i><b>Mismatch flagged</b></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="strip" style="position:relative;z-index:2;margin-top:var(--s-12)">
+      <div class="strip__grid">
+        <div class="strip__cell"><b>Built by a surveyor</b>
+          <span>Not by a software company that read about the job.</span></div>
+        <div class="strip__cell"><b>Licence verified</b>
+          <span>Every account checked by a human against your IRDAI details.</span></div>
+        <div class="strip__cell"><b>Stored in India</b>
+          <span>Google Cloud, Mumbai. Photographs never reach us at all.</span></div>
+        <div class="strip__cell"><b>On every device</b>
+          <span>On your phone at the garage, not one desktop at home.</span></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ══ 01 · INTAKE ════════════════════════════════════════════════ -->
+  <section class="act" id="work">
+    <div class="wrap">
+      <div class="split reveal">
+        <div>
+          <p class="eyebrow">01 — Intake</p>
+          <h2 class="h2">Stop typing<br>the RC book.</h2>
+          <p class="lead">
+            Point it at a registration certificate, a driving licence or a policy
+            schedule. The fields arrive filled in, each one carrying a link back to the
+            line it came from.
+          </p>
+          <p class="kicker">Roughly two hours of a final report is transcription.
+            This is that part.</p>
+        </div>
+
+        <div class="panel" id="extract">
+          <div class="panel__bar">
+            <span>Registration certificate — reading</span>
+            <span id="exCount">0 / 6</span>
+          </div>
+          <div class="frow"><span class="fkey">Registration no.</span>
+            <span class="fval" data-v="MH 12 QR 4471"></span></div>
+          <div class="frow"><span class="fkey">Chassis no.</span>
+            <span class="fval" data-v="MA3EYD32S00123456"></span></div>
+          <div class="frow"><span class="fkey">Engine no.</span>
+            <span class="fval" data-v="K12MN1148291"></span></div>
+          <div class="frow"><span class="fkey">Make / model</span>
+            <span class="fval" data-v="Maruti Suzuki Swift VXi"></span></div>
+          <div class="frow"><span class="fkey">Registered</span>
+            <span class="fval" data-v="14 / 03 / 2022"></span></div>
+          <div class="frow"><span class="fkey">Owner</span>
+            <span class="fval" data-v="S. R. Kulkarni"></span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ 02 · COLLECTION ════════════════════════════════════════════ -->
+  <section class="act act--alt act--ruled">
+    <div class="wrap">
+      <div class="split split--flip reveal">
+        <div class="panel">
+          <div class="panel__bar"><span>Pending documents — all open claims</span>
+            <span>4 outstanding</span></div>
+          <div class="doc-line">
+            <span><b>Driving licence</b><span>2026/MTR/04417 · S. R. Kulkarni · asked 3 days ago</span></span>
+            <span class="tag tag--flag">Waiting</span></div>
+          <div class="doc-line">
+            <span><b>Repair estimate</b><span>2026/MTR/04417 · Sai Motors · asked yesterday</span></span>
+            <span class="tag tag--flag">Waiting</span></div>
+          <div class="doc-line">
+            <span><b>Policy schedule</b><span>2026/MTR/04392 · received this morning</span></span>
+            <span class="tag">Received</span></div>
+          <div class="doc-line">
+            <span><b>Registration certificate</b><span>2026/MTR/04392 · received</span></span>
+            <span class="tag">Received</span></div>
+        </div>
+        <div>
+          <p class="eyebrow">02 — Collection</p>
+          <h2 class="h2">Stop running behind<br>the papers.</h2>
+          <p class="lead">
+            Half a survey is waiting on somebody else. The insured has the licence, the
+            workshop has the estimate, the insurer wants the whole file. SurveyOS Sync
+            lets them send a document to a Telegram bot, and it lands in the claim ready
+            to attach.
+          </p>
+          <p class="kicker">Every pending document across every open claim, on one
+            screen. Chase all of them in one tap, or stop chasing.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ 03 · RECONCILIATION — THE PEAK ═════════════════════════════ -->
+  <section class="act on-ink">
+    <div class="wrap">
+      <div class="reveal" style="margin-bottom:var(--s-10)">
+        <p class="eyebrow">03 — Reconciliation</p>
+        <h2 class="h2">It catches the mismatch<br>before the insurer does.</h2>
+        <p class="lead" style="max-width:54ch">
+          Every document says the same things in a different layout. When two of them
+          disagree, that is a query three weeks later — and your name is on the report.
+        </p>
+      </div>
+
+      <div class="panel reveal" id="recon">
+        <div class="rrow">
+          <span class="rkey">Chassis no.</span>
+          <span class="rval"><small>Registration cert.</small>MA3EYD32S00<u>123456</u></span>
+          <span class="rval"><small>Policy schedule</small>MA3EYD32S00<u>123458</u></span>
+          <span class="rend"><span class="tag tag--flag tag--drop" id="stamp">Mismatch</span></span>
+        </div>
+        <div class="rrow">
+          <span class="rkey">Engine no.</span>
+          <span class="rval"><small>Registration cert.</small>K12MN1148291</span>
+          <span class="rval"><small>Policy schedule</small>K12MN1148291</span>
+          <span class="rend"><span class="tag">Agrees</span></span>
+        </div>
+        <div class="rrow">
+          <span class="rkey">Insured name</span>
+          <span class="rval"><small>Registration cert.</small>S. R. Kulkarni</span>
+          <span class="rval"><small>Policy schedule</small>Sunil R Kulkarni</span>
+          <span class="rend"><span class="tag">Same person</span></span>
+        </div>
+        <div class="rrow">
+          <span class="rkey">Policy period</span>
+          <span class="rval"><small>Policy schedule</small>02/04/25 – 01/04/26</span>
+          <span class="rval"><small>Date of accident</small>17/07/2025</span>
+          <span class="rend"><span class="tag">In force</span></span>
+        </div>
+      </div>
+
+      <p class="kicker reveal">Two digits. That is the whole difference between a clean
+        file and a reopened one.</p>
+    </div>
+  </section>
+
+  <!-- ══ 04 · ANYWHERE ══════════════════════════════════════════════ -->
+  <section class="act">
+    <div class="wrap">
+      <div class="split reveal">
+        <div>
+          <p class="eyebrow">04 — Anywhere</p>
+          <h2 class="h2">The claim file is on<br>your phone. All of it.</h2>
+          <p class="lead">
+            Two hundred kilometres in a day, and then the report starts at ten at night —
+            because the file only exists on one desktop at home. Standing at the garage
+            the next morning, it may as well not exist at all.
+          </p>
+          <p class="kicker">Every claim, every photograph, every figure, on whatever you
+            are holding. It syncs when the signal comes back, and it works when it
+            does not.</p>
+        </div>
+        <div class="phone">
+          <div class="phone__top"><span>My claims</span><span>Synced 2 min ago</span></div>
+          <div class="claim"><b>2026/MTR/04417</b><span>MH 12 QR 4471 · Swift VXi · assessment open</span></div>
+          <div class="claim"><b>2026/MTR/04392</b><span>MH 14 BQ 8823 · Ertiga · awaiting estimate</span></div>
+          <div class="claim"><b>2026/MTR/04381</b><span>MH 12 LS 2107 · Nexon · report signed</span></div>
+          <div class="claim"><b>2026/MTR/04366</b><span>MH 12 DJ 5590 · Alto · spot done, offline</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ 05 · ASSESSMENT ════════════════════════════════════════════ -->
+  <section class="act act--alt act--ruled">
+    <div class="wrap">
+      <div class="split split--flip reveal">
+        <div class="shot">
+          <div class="shot__cap">Assessment — estimate against assessed, per part</div>
+          <img src="__IMG:report-assessment__" width="900" height="633" loading="lazy"
+               alt="The assessment grid: each damaged part on its own row with the workshop
+                    estimate, the depreciation rate applied, and the assessed value, totalled
+                    at the foot.">
+        </div>
+        <div>
+          <p class="eyebrow">05 — Assessment</p>
+          <h2 class="h2">The figures<br>cannot disagree.</h2>
+          <p class="lead">
+            Depreciation, material splits and GST are computed per row. The final report,
+            the fee bill and the summary all read from the same numbers.
+          </p>
+          <p class="kicker">You review every figure and put your licence to it.
+            The software does not decide.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ 06 · SCOPE ═════════════════════════════════════════════════ -->
+  <section class="act" id="covers">
+    <div class="wrap">
+      <div class="reveal">
+        <p class="eyebrow">06 — Scope</p>
+        <h2 class="h2">One claim file,<br>start to signed.</h2>
+        <p class="lead" style="max-width:56ch">
+          Not a document reader with a report bolted on. The whole survey — including the
+          parts other tools leave you to rebuild in a spreadsheet.
+        </p>
+      </div>
+
+      <div class="shot reveal" style="margin:var(--s-8) 0">
+        <div class="shot__cap">The claim workspace</div>
+        <img src="__IMG:dashboard-mockup__" width="1000" height="558" loading="lazy"
+             alt="The claim workspace: the list of open claims beside the tabbed survey
+                  workflow for the selected claim.">
+      </div>
+
+      <div class="tiles reveal">
+        <div class="tile"><b>Details</b><span>Claim, policy, vehicle</span></div>
+        <div class="tile"><b>Photos</b><span>Capture, compress, map</span></div>
+        <div class="tile"><b>Assessment</b><span>Per-part, depreciated</span></div>
+        <div class="tile"><b>Bill Check</b><span>Invoice against estimate</span></div>
+        <div class="tile"><b>Valuation</b><span>Vehicle valuation report</span></div>
+        <div class="tile"><b>Documents</b><span>Intake and reading</span></div>
+        <div class="tile"><b>Reinspection</b><span>Post-repair</span></div>
+        <div class="tile"><b>Spot</b><span>Spot survey report</span></div>
+        <div class="tile"><b>Fees</b><span>Your schedule, your bill</span></div>
+        <div class="tile"><b>Report</b><span>PDF · Word · Excel · print</span></div>
+        <div class="tile"><b>Cloud Vault</b><span>Your own Google Drive</span></div>
+        <div class="tile"><b>Offline</b><span>Works with no signal</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ 07 · ON SITE ═══════════════════════════════════════════════ -->
+  <section class="act act--alt act--ruled">
+    <div class="wrap">
+      <div class="split reveal">
+        <div>
+          <p class="eyebrow">07 — On site</p>
+          <h2 class="h2">Spot report,<br>before you leave.</h2>
+          <p class="lead">
+            Capture the damage, list the affected parts, and the spot report assembles
+            itself — driver particulars, licence check, accident details, damage schedule.
+          </p>
+          <p class="kicker">A basement parking with no signal does not stop a survey.
+            It stores on the device and syncs when the connection comes back.</p>
+        </div>
+        <div class="shot">
+          <div class="shot__cap">Spot survey report</div>
+          <img src="__IMG:report-spot-hero__" width="880" height="522" loading="lazy"
+               alt="A spot survey report produced at the site: driver and accident
+                    particulars above the schedule of visible damage.">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ 08 · CHECK OUR WORK ════════════════════════════════════════ -->
+  <section class="act" id="try">
+    <div class="wrap">
+      <div class="reveal" style="margin-bottom:var(--s-8)">
+        <p class="eyebrow">Check our work</p>
+        <h2 class="h2">The depreciation engine,<br>running right here.</h2>
+        <p class="lead" style="max-width:56ch">
+          Not a video of it. The engine itself, in your browser, with no account. Change
+          the part and the age — check the slabs against what you already know is right.
+        </p>
+      </div>
+
+      <div class="panel reveal">
+        <div class="panel__bar"><span>Assessment — single part</span>
+          <span>Runs on your device</span></div>
+        <div style="padding:var(--s-5) var(--s-4)">
+          <div class="field-row" style="margin-bottom:var(--s-6)">
+            <div class="field">
+              <label for="part">Part</label>
+              <select id="part">
+                <option value="metal">Bonnet — sheet metal</option>
+                <option value="plastic">Bumper — plastic</option>
+                <option value="rubber">Tyre — rubber</option>
+                <option value="glass">Windscreen — glass</option>
+                <option value="fibre">Fender — fibreglass</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="age">Vehicle age</label>
+              <select id="age">
+                <option value="0">Under 6 months</option>
+                <option value="1">6 months – 1 year</option>
+                <option value="2" selected>1 – 2 years</option>
+                <option value="3">2 – 3 years</option>
+                <option value="4">3 – 4 years</option>
+                <option value="5">4 – 5 years</option>
+                <option value="6">5 – 10 years</option>
+                <option value="7">Over 10 years</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="est">Estimate ₹</label>
+              <input id="est" type="number" value="18500" min="0" step="100" inputmode="numeric">
+            </div>
+          </div>
+
+          <div class="tbl-scroll">
+            <table class="tbl">
+              <caption class="sr-only">Assessed value for a single part after depreciation and GST</caption>
+              <thead><tr><th scope="col">Head</th><th scope="col" class="num">Rate</th>
+                <th scope="col" class="num">Amount ₹</th></tr></thead>
+              <tbody>
+                <tr><td>Estimate value</td><td class="num figure">—</td>
+                  <td class="num figure" id="rEst">—</td></tr>
+                <tr><td>Less: depreciation</td><td class="num figure" id="rRate">—</td>
+                  <td class="num figure" id="rDep">—</td></tr>
+                <tr><td>Assessed, net of depreciation</td><td class="num figure">—</td>
+                  <td class="num figure" id="rNet">—</td></tr>
+                <tr><td>GST on parts</td><td class="num figure">18%</td>
+                  <td class="num figure" id="rGst">—</td></tr>
+                <tr class="is-total"><td>Payable</td><td class="num"></td>
+                  <td class="num figure" id="rTot">—</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="kicker" id="rWhy" aria-live="polite"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ 09 · PRICING ═══════════════════════════════════════════════ -->
+  <section class="act on-ink" id="price">
+    <div class="wrap">
+      <div class="reveal" style="margin-bottom:var(--s-8)">
+        <p class="eyebrow">Pricing</p>
+        <h2 class="h2">One survey fee covers<br>about three months.</h2>
+        <p class="lead" style="max-width:52ch">
+          14 days free, no card. 28 days if you come in on another surveyor's referral
+          code.
+        </p>
+      </div>
+
+      <div class="plans reveal">
+        <div class="plan">
+          <div class="plan__label"><span>Monthly</span></div>
+          <div class="plan__amt">₹799</div>
+          <div class="plan__per">per month</div>
+          <a class="btn btn--ghost" href="#try">Start free trial</a>
+        </div>
+        <div class="plan">
+          <div class="plan__label"><span>3 months</span><em>Save ₹198</em></div>
+          <div class="plan__amt">₹2,199</div>
+          <div class="plan__per">for 3 months</div>
+          <a class="btn btn--ghost" href="#try">Start free trial</a>
+        </div>
+        <div class="plan plan--best">
+          <div class="plan__label"><span>12 months</span><em>2 months free</em></div>
+          <div class="plan__amt">₹7,990</div>
+          <div class="plan__per">for 12 months</div>
+          <a class="btn btn--primary" href="#try">Start free trial</a>
+        </div>
+      </div>
+
+      <p class="anchor-note reveal">Refer a surveyor and you both gain: they get 14 extra
+        trial days, you get 30 days added when their first payment clears. No cap.</p>
+    </div>
+  </section>
+
+  <!-- ══ 10 · WHY THIS EXISTS — THE ENDING ══════════════════════════ -->
+  <section class="act" id="why" style="padding-block:var(--s-24)">
+    <div class="wrap">
+      <div class="ending reveal">
+        <p class="eyebrow">Why this exists</p>
+        <h2 class="h2">I watched my father<br>type until midnight.</h2>
+        <p>
+          He has been a motor surveyor for most of my life. I have watched him drive two
+          hundred kilometres in a day, come home, eat, and then start the report at ten at
+          night. The report lived on one desktop computer. If he needed it at a garage the
+          next morning, it may as well not have existed.
+        </p>
+        <p>
+          I am a surveyor too. So is my brother. Between the three of us we have typed the
+          same chassis number into the same form more times than I can count.
+        </p>
+        <p>
+          None of that is surveying. Surveying is looking at a damaged vehicle, deciding
+          what it will honestly cost to put right, and putting your licence to that number.
+          Everything else is admin that grew around the job.
+        </p>
+        <p>
+          Motor SurveyOS exists to take the admin away. Documents are read so nobody
+          retypes them. The claim file is on your phone, not on a desktop at home. What is
+          left is the part that needs a surveyor — and that part stays yours. The software
+          extracts, reconciles and flags. It does not decide. Your name and your licence
+          are on the report, so the judgement has to be too.
+        </p>
+        <p class="ending__sig">Niraj Patil · B.E. Mechanical · MBA, HTW Berlin ·
+          practising surveyor, Pune</p>
+        <p class="ending__ded">For Vikram Patil and Viraj Patil — and for every surveyor
+          in India still typing at eleven at night.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ CLOSE ══════════════════════════════════════════════════════ -->
+  <section class="act on-ink">
+    <div class="wrap">
+      <h2 class="h2" style="max-width:18ch">Do a real survey in it. Decide after.</h2>
+      <p class="lead" style="max-width:48ch">
+        No account, no card. Everything stays on your device until you want the report
+        out.
+      </p>
+      <div class="btn-row">
+        <a class="btn btn--primary" href="#top">Open Motor SurveyOS</a>
+        <a class="btn btn--ghost" href="#report">See a finished report</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer__links">
+      <a href="#covers">Features</a><a href="#price">Pricing</a><a href="#why">About</a>
+      <a href="#top">FAQ</a><a href="#top">Contact</a><a href="#top">Privacy</a>
+      <a href="#top">Terms</a><a href="#top">Refunds</a><a href="#try">Accuracy</a>
+    </div>
+    <div class="footer__note">© 2026 Motor SurveyOS · Built by a surveyor, in Pune</div>
+  </div>
+</footer>
+
+<script>
+document.documentElement.classList.add('js');
+(function(){
+  'use strict';
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ── nav sheet ─────────────────────────────────────────────────── */
+  var navBtn = document.getElementById('navBtn'),
+      sheet  = document.getElementById('navSheet');
+  function closeSheet(){
+    sheet.dataset.open = 'false';
+    navBtn.setAttribute('aria-expanded','false');
+    navBtn.setAttribute('aria-label','Open menu');
+  }
+  navBtn.addEventListener('click', function(){
+    var open = sheet.dataset.open === 'true';
+    if(open){ closeSheet(); return; }
+    sheet.dataset.open = 'true';
+    navBtn.setAttribute('aria-expanded','true');
+    navBtn.setAttribute('aria-label','Close menu');
+  });
+  sheet.addEventListener('click', function(e){ if(e.target.closest('a')) closeSheet(); });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape' && sheet.dataset.open === 'true'){ closeSheet(); navBtn.focus(); }
+  });
+
+  /* ── reveal: enter once, then stop watching ──────────────────────
+     `isIntersecting` alone is not enough. A jump — an anchor link from
+     the nav, browser scroll restoration on reload, Ctrl+End — lands the
+     viewport past elements that never got a frame in view, and those
+     would sit at opacity 0 until the reader happened to scroll back up.
+     Anything already above the viewport has, as far as the reader is
+     concerned, been passed: reveal it immediately.                     */
+  function hasPassed(entry){
+    return entry.isIntersecting || entry.boundingClientRect.top < 0;
+  }
+  var revealables = document.querySelectorAll('.reveal');
+  if(reduce || !('IntersectionObserver' in window)){
+    revealables.forEach(function(el){ el.classList.add('is-in'); });
+  } else {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if(hasPassed(en)){ en.target.classList.add('is-in'); io.unobserve(en.target); }
+      });
+    },{ threshold:.15, rootMargin:'0px 0px -40px 0px' });
+    revealables.forEach(function(el){ io.observe(el); });
+
+    /* Catch-up sweep. IntersectionObserver only fires on a threshold
+       CROSSING, so an instant jump — clicking "Pricing" in the nav, End,
+       scroll restoration — moves an element from "below, ratio 0" to
+       "above, ratio 0" without ever crossing, and no callback runs. Those
+       blocks would sit invisible until the reader scrolled back over them.
+
+       This is not the scroll-linked choreography banned in tokens.css:
+       it does bounded work inside one rAF, holds no per-frame state, and
+       unregisters itself the moment every block has revealed. */
+    var pending = false;
+    function sweep(){
+      var left = document.querySelectorAll('.reveal:not(.is-in)');
+      if(!left.length){ window.removeEventListener('scroll', onScroll); return; }
+      var fold = window.innerHeight - 40;
+      Array.prototype.forEach.call(left, function(el){
+        if(el.getBoundingClientRect().top < fold){
+          el.classList.add('is-in');
+          io.unobserve(el);
+        }
+      });
+    }
+    function onScroll(){
+      if(pending) return;
+      pending = true;
+      requestAnimationFrame(function(){ pending = false; sweep(); });
+    }
+    window.addEventListener('scroll', onScroll, { passive:true });
+  }
+
+  /* ── hero annotation pins ──────────────────────────────────────── */
+  var pins = document.querySelectorAll('.pin');
+  if(reduce){ pins.forEach(function(p){ p.classList.add('is-in'); }); }
+  else{
+    pins.forEach(function(p,i){
+      setTimeout(function(){ p.classList.add('is-in'); }, 800 + i*280);
+    });
+  }
+
+  /* ── extraction: type each field in turn ───────────────────────── */
+  var panel  = document.getElementById('extract'),
+      fields = [].slice.call(panel.querySelectorAll('.fval')),
+      count  = document.getElementById('exCount');
+
+  function fillAll(){
+    fields.forEach(function(f){ f.textContent = f.dataset.v; });
+    count.textContent = fields.length + ' / ' + fields.length;
+  }
+  function typeAll(){
+    var i = 0;
+    (function next(){
+      if(i >= fields.length){ count.textContent = fields.length + ' / ' + fields.length; return; }
+      var el = fields[i], text = el.dataset.v, c = 0;
+      var caret = document.createElement('span'); caret.className = 'caret';
+      el.textContent = ''; el.appendChild(caret);
+      var timer = setInterval(function(){
+        c++;
+        el.textContent = text.slice(0, c);
+        if(c < text.length){ el.appendChild(caret); }
+        else{
+          clearInterval(timer); i++;
+          count.textContent = i + ' / ' + fields.length;
+          setTimeout(next, 190);
+        }
+      }, 26);
+    })();
+  }
+  if(reduce || !('IntersectionObserver' in window)){ fillAll(); }
+  else{
+    var exIO = new IntersectionObserver(function(es){
+      es.forEach(function(e){
+        if(!hasPassed(e)) return;
+        exIO.disconnect();
+        /* Scrolled past without watching it? Then the animation has no
+           audience — fill the fields and skip the performance. */
+        if(e.isIntersecting){ typeAll(); } else { fillAll(); }
+      });
+    },{ threshold:.4 });
+    exIO.observe(panel);
+  }
+
+  /* ── the stamp lands ───────────────────────────────────────────── */
+  var stamp = document.getElementById('stamp'),
+      recon = document.getElementById('recon');
+  if(reduce || !('IntersectionObserver' in window)){ stamp.classList.add('is-in'); }
+  else{
+    var rIO = new IntersectionObserver(function(es){
+      es.forEach(function(e){
+        if(!hasPassed(e)) return;
+        rIO.disconnect();
+        /* Same rule as the extraction: if the reader has already gone
+           past it, land the stamp without the pause. */
+        setTimeout(function(){ stamp.classList.add('is-in'); }, e.isIntersecting ? 420 : 0);
+      });
+    },{ threshold:.45 });
+    rIO.observe(recon);
+  }
+
+  /* ── depreciation engine ───────────────────────────────────────────
+     Illustrative slabs for this static build. When this ports into the
+     app, it MUST import the real engine from src/lib/calculations/ so
+     the marketing page and the product can never disagree — the whole
+     point of this section is that the figures are checkable.          */
+  var METAL = [0,5,10,15,25,35,40,50];
+  var AGES  = ['under 6 months','6 months to 1 year','1 to 2 years','2 to 3 years',
+               '3 to 4 years','4 to 5 years','5 to 10 years','over 10 years'];
+
+  function slab(part, age){
+    if(part === 'glass')   return { rate:0,  why:'Glass carries nil depreciation.' };
+    if(part === 'plastic' || part === 'rubber')
+      return { rate:50, why:'Plastic, rubber, nylon, tyres, tubes and batteries are fixed at 50%.' };
+    if(part === 'fibre')   return { rate:30, why:'Fibreglass components are fixed at 30%.' };
+    return { rate:METAL[age], why:'Sheet metal follows the age slab — ' + AGES[age] + '.' };
+  }
+  function inr(n){ return '₹' + Math.round(n).toLocaleString('en-IN'); }
+
+  var partEl = document.getElementById('part'),
+      ageEl  = document.getElementById('age'),
+      estEl  = document.getElementById('est');
+
+  function recompute(){
+    var est = Math.max(0, Number(estEl.value) || 0);
+    var s   = slab(partEl.value, Number(ageEl.value));
+    var dep = est * s.rate / 100, net = est - dep, gst = net * 0.18;
+    document.getElementById('rEst').textContent  = inr(est);
+    document.getElementById('rRate').textContent = s.rate + '%';
+    document.getElementById('rDep').textContent  = '−' + inr(dep);
+    document.getElementById('rNet').textContent  = inr(net);
+    document.getElementById('rGst').textContent  = inr(gst);
+    document.getElementById('rTot').textContent  = inr(net + gst);
+    document.getElementById('rWhy').textContent  = s.why;
+  }
+  [partEl, ageEl, estEl].forEach(function(el){
+    el.addEventListener('input', recompute);
+    el.addEventListener('change', recompute);
+  });
+  recompute();
+})();
+</script>

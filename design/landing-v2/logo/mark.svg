@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Motor SurveyOS">
+  <!-- MOTOR SURVEYOS — PRIMARY MARK  (Direction C, chosen 03 Aug 2026)
+       A bracketed form entry with its ruled baseline: the boxed field on a
+       survey form, where a value is written and then signed for.
+
+       Brackets are open — no top or bottom join — so the mark keeps air at
+       16px, where a closed box fills in and turns into a blob.
+       Monotone: inherits currentColor. Use on ink or paper unchanged. -->
+  <g fill="none" stroke="currentColor" stroke-width="3.6"
+     stroke-linecap="square" stroke-linejoin="miter">
+    <path d="M19 8 H8 V56 H19"/>
+    <path d="M45 8 H56 V56 H45"/>
+    <path d="M21.5 40 V22.4 L32 32.6 L42.5 22.4 V40" stroke-width="4.2"/>
+  </g>
+  <rect x="21.5" y="45.4" width="21" height="3.1" fill="currentColor"/>
+</svg>

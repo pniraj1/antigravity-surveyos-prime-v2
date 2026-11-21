@@ -1,0 +1,334 @@
+/* ═══════════════════════════════════════════════════════════════════
+   MOTOR SURVEYOS — PUBLIC SITE DESIGN SYSTEM  ·  Rev. B  ·  Phase 1
+   ───────────────────────────────────────────────────────────────────
+   Single source of truth for the pre-sign-in site. The authenticated
+   app keeps its own "Executive Platinum" tokens in src/app/globals.css
+   and is untouched by this file.
+
+   Naming: --{category}-{role}. Never reference a raw hex outside this
+   file. If a value is needed that isn't here, it belongs here first.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── 1 · TYPEFACES ────────────────────────────────────────────────
+   IBM Plex superfamily. SIL Open Font Licence — free, self-hosted,
+   no CDN, no CSP problem, no runtime cost.
+
+   Chosen because it is one metrically-harmonious family covering
+   every voice this site needs: Mono for the document/data voice,
+   Sans for prose and UI, and Sans Devanagari if Hindi is added later.
+   It was drawn for a technology company selling to institutions,
+   which is exactly the register an IRDAI surveyor reads in.
+
+   PRODUCTION: load via next/font/local or next/font/google — both
+   self-host at build time, which works under output:'export'.
+   Never <link> to fonts.googleapis.com: it is a third-party request
+   on the critical path and a privacy disclosure we don't need.
+   ───────────────────────────────────────────────────────────────── */
+:root{
+  --font-display: "IBM Plex Mono", ui-monospace, SFMono-Regular, "Cascadia Mono", Menlo, Consolas, monospace;
+  --font-body:    "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-data:    "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* ── 2 · RAW PALETTE ──────────────────────────────────────────────
+   Two grounds, not one. The site alternates ink and paper acts —
+   that rhythm is most of the visual pleasure and it costs nothing.
+
+   The neutrals are hue-biased on purpose: inks lean navy (210°),
+   papers lean warm (55°). A pure grey reads as unconsidered.
+   ───────────────────────────────────────────────────────────────── */
+:root{
+  /* Ink ramp — the dark ground */
+  --ink-900:#0A1119;   /* deepest — footer, close */
+  --ink-800:#0E1620;   /* hero ground, dark acts */
+  --ink-700:#16202C;   /* raised surface on dark (cards, strips) */
+  --ink-600:#1D2937;   /* highlighted surface (recommended plan) */
+  --ink-500:#26313D;   /* hairline on dark */
+  --ink-400:#3A4653;   /* border on dark, secondary button */
+
+  /* Paper ramp — the light ground */
+  --paper-50:#FAFAF7;  /* raised card on paper */
+  --paper-100:#F6F6F2; /* alternate act */
+  --paper-200:#EBEBE5; /* default page ground */
+  --paper-300:#DEDED4; /* pressed / inset */
+  --paper-400:#D2D2C8; /* hairline on paper */
+
+  /* Type on paper */
+  /* Type on paper — every value below carries its measured contrast
+     against --paper-200 (#EBEBE5), the default ground. Captions and
+     labels are SMALL type, so they are held to 4.5:1, not the 3:1
+     large-text allowance. The obvious mid-grey (#7E8894) measured
+     3.01:1 and was rejected for exactly that reason. */
+  --on-paper-900:#111A24;  /* headings   14.66:1  AAA */
+  --on-paper-700:#42505E;  /* emphasis    7.44:1  AAA */
+  --on-paper-600:#4E5A67;  /* body        5.88:1  AA  */
+  --on-paper-400:#5F6874;  /* captions    4.72:1  AA  */
+
+  /* Type on ink — measured against --ink-800 (#0E1620) */
+  --on-ink-50:#EDEDE7;     /* headings   15.48:1  AAA */
+  --on-ink-200:#9DA9B5;    /* body        7.60:1  AAA */
+  --on-ink-400:#7B8794;    /* captions    4.97:1  AA  */
+
+  /* Accent — oxide red. The rubber-stamp colour on every official
+     Indian document, and the colour a flagged discrepancy earns.
+     Deliberately NOT the primary action colour: it is reserved for
+     the mark, the flag, and the one "recommended" ring. If it starts
+     appearing on ordinary buttons, it has stopped meaning anything.
+
+     --oxide-500 is the darkest step that still reads as oxide rather
+     than maroon while clearing 4.5:1 on paper. The prettier #C0452F
+     measured 4.25:1 — close enough to be tempting, which is why it is
+     written down here as rejected.
+
+     ── TWO HARD RULES. Oxide reads as attestation (the seal on an
+        official document) or as deficit (money lost). Which one it
+        becomes is decided entirely by surface area and adjacency:
+
+     1. NEVER WITHIN A FIGURE, OR TOUCHING ONE. Every rupee amount,
+        percentage and total is --text-strong, without exception —
+        including negative rows. Depreciation already carries a minus
+        sign; colouring it oxide turns correct arithmetic into bad
+        news. Oxide may mark the FLAG beside a value. It may never
+        colour the value.
+
+     2. NEVER AS A FILL LARGER THAN A TAG. No oxide buttons, no oxide
+        panels, no oxide section grounds. Permitted surfaces: the
+        logo's field-rule, a 1–2px rule, a tag border, a short
+        underline, and --oxide-tint at 10% behind inline emphasis.
+        Beyond that it stops being a seal and starts being an alarm.
+
+     Actions are ink (--action-bg). If oxide ever appears on an
+     ordinary button, both rules have already been broken. */
+  --oxide-600:#9B331F;   /* pressed / hover on paper        6.08:1 */
+  --oxide-500:#B03C26;   /* on paper                        4.98:1 */
+  --oxide-300:#E2705A;   /* on ink                          5.80:1 */
+  --oxide-tint:rgba(176,60,38,.10);
+
+  /* Semantic — agreement / verification. Green is never decorative
+     here; it only ever means "these two documents agree". */
+  --verify-600:#155238;
+  --verify-500:#1C6344;  /* on paper */
+  --verify-300:#5FB78C;  /* on ink */
+  --verify-tint:rgba(28,99,68,.10);
+}
+
+/* ── 3 · SEMANTIC TOKENS ──────────────────────────────────────────
+   Components style through these, never through the raw ramps.
+   Swapping a ground = redefining this block, nothing else.
+   ───────────────────────────────────────────────────────────────── */
+:root{
+  --bg:            var(--paper-200);
+  --bg-alt:        var(--paper-100);
+  --bg-raised:     var(--paper-50);
+  --bg-card:       #FFFFFF;
+  --bg-inverse:    var(--ink-800);
+
+  --text:          var(--on-paper-600);
+  --text-strong:   var(--on-paper-900);
+  --text-muted:    var(--on-paper-400);
+
+  --line:          var(--paper-400);
+  --line-strong:   var(--on-paper-900);
+
+  --accent:        var(--oxide-500);
+  --accent-tint:   var(--oxide-tint);
+  --positive:      var(--verify-500);
+
+  --action-bg:     var(--on-paper-900);
+  --action-fg:     var(--paper-50);
+  --focus-ring:    var(--oxide-500);
+}
+
+/* Sections that sit on the ink ground opt in with .on-ink. This is a
+   scoped token override, not a separate stylesheet — every component
+   inside it re-resolves automatically with zero component-level
+   knowledge of which act it is in. */
+.on-ink{
+  --bg:            var(--ink-800);
+  --bg-alt:        var(--ink-700);
+  --bg-raised:     var(--ink-700);
+  --bg-card:       var(--ink-700);
+
+  --text:          var(--on-ink-200);
+  --text-strong:   var(--on-ink-50);
+  --text-muted:    var(--on-ink-400);
+
+  --line:          var(--ink-500);
+  --line-strong:   var(--ink-400);
+
+  --accent:        var(--oxide-300);
+  --accent-tint:   rgba(226,112,90,.14);
+  --positive:      var(--verify-300);
+
+  --action-bg:     var(--on-ink-50);
+  --action-fg:     var(--ink-800);
+  --focus-ring:    var(--oxide-300);
+
+  background:var(--bg);
+  color:var(--text);
+}
+
+/* ── 4 · DARK MODE ────────────────────────────────────────────────
+   The viewer's OS preference, overridable by the host's theme toggle.
+   Dark mode is NOT "the ink act everywhere" — the paper acts become
+   a soft charcoal so the ink/paper rhythm survives the inversion.
+   Losing that rhythm is the usual way a two-ground design dies in
+   dark mode.
+   ───────────────────────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:          #12181F;
+    --bg-alt:      #161D25;
+    --bg-raised:   #1A222B;
+    --bg-card:     #1A222B;
+    --text:        #A6B0BB;
+    --text-strong: #E8E9E4;
+    --text-muted:  #78838F;
+    --line:        #28323C;
+    --line-strong: #3A4653;
+    --accent:      var(--oxide-300);
+    --accent-tint: rgba(226,112,90,.14);
+    --positive:    var(--verify-300);
+    --action-bg:   #E8E9E4;
+    --action-fg:   #12181F;
+    --focus-ring:  var(--oxide-300);
+  }
+  /* On the true-black acts, push deeper so they still read as a
+     distinct act against the already-dark page. */
+  .on-ink{ --bg:var(--ink-900); --bg-alt:var(--ink-800); }
+}
+:root[data-theme="dark"]{
+  --bg:#12181F; --bg-alt:#161D25; --bg-raised:#1A222B; --bg-card:#1A222B;
+  --text:#A6B0BB; --text-strong:#E8E9E4; --text-muted:#78838F;
+  --line:#28323C; --line-strong:#3A4653;
+  --accent:var(--oxide-300); --accent-tint:rgba(226,112,90,.14);
+  --positive:var(--verify-300);
+  --action-bg:#E8E9E4; --action-fg:#12181F; --focus-ring:var(--oxide-300);
+}
+:root[data-theme="dark"] .on-ink{ --bg:var(--ink-900); --bg-alt:var(--ink-800); }
+
+:root[data-theme="light"]{
+  --bg:var(--paper-200); --bg-alt:var(--paper-100); --bg-raised:var(--paper-50);
+  --bg-card:#FFFFFF;
+  --text:var(--on-paper-600); --text-strong:var(--on-paper-900); --text-muted:var(--on-paper-400);
+  --line:var(--paper-400); --line-strong:var(--on-paper-900);
+  --accent:var(--oxide-500); --accent-tint:var(--oxide-tint); --positive:var(--verify-500);
+  --action-bg:var(--on-paper-900); --action-fg:var(--paper-50); --focus-ring:var(--oxide-500);
+}
+:root[data-theme="light"] .on-ink{ --bg:var(--ink-800); --bg-alt:var(--ink-700); }
+
+/* ── 5 · TYPE SCALE ───────────────────────────────────────────────
+   Fluid across the whole range — no breakpoint jumps in type size.
+   Tracking tightens as size grows (optical compensation): display
+   sizes need negative tracking to stop looking loose, labels need
+   generous positive tracking to stop looking cramped in caps.
+   ───────────────────────────────────────────────────────────────── */
+:root{
+  --t-display:  clamp(2.375rem, 1.15rem + 5.2vw, 4.75rem);  /*  38 → 76 */
+  --t-h2:       clamp(1.75rem,  1.02rem + 3.1vw, 3.125rem); /*  28 → 50 */
+  --t-h3:       clamp(1.375rem, 1.12rem + 1.1vw, 1.75rem);  /*  22 → 28 */
+  --t-lead:     clamp(1.0625rem,.96rem + .48vw, 1.3125rem); /*  17 → 21 */
+  --t-body:     1.0625rem;                                   /*  17     */
+  --t-body-sm:  0.9375rem;                                   /*  15     */
+  --t-caption:  0.8125rem;                                   /*  13     */
+  --t-label:    0.6875rem;                                   /*  11     */
+  --t-micro:    0.59375rem;                                  /*  9.5    */
+
+  --lh-display: 1.02;
+  --lh-h2:      1.08;
+  --lh-h3:      1.22;
+  --lh-lead:    1.5;
+  --lh-body:    1.6;
+  --lh-tight:   1.4;
+
+  --tr-display: -.045em;
+  --tr-h2:      -.035em;
+  --tr-h3:      -.02em;
+  --tr-body:     0em;
+  --tr-label:    .14em;
+  --tr-micro:    .17em;
+
+  --w-regular:  400;
+  --w-medium:   500;
+  --w-semibold: 600;   /* the heaviest weight on the site. 900 is banned:
+                          ultra-black at small sizes is the single most
+                          recognisable AI-landing-page tell. */
+}
+
+/* ── 6 · SPACING ──────────────────────────────────────────────────
+   4px base. Only these steps exist — an arbitrary 27px anywhere is
+   a bug, not a decision.
+   ───────────────────────────────────────────────────────────────── */
+:root{
+  --s-1:.25rem; --s-2:.5rem;  --s-3:.75rem; --s-4:1rem;    --s-5:1.25rem;
+  --s-6:1.5rem; --s-8:2rem;   --s-10:2.5rem;--s-12:3rem;   --s-16:4rem;
+  --s-20:5rem;  --s-24:6rem;  --s-32:8rem;
+
+  --act-y:      clamp(4rem, 2.4rem + 5vw, 6rem);   /* section rhythm  64 → 96 */
+  --container:  72.5rem;                            /* 1160px */
+  --gutter:     clamp(1.25rem, .55rem + 2.2vw, 2rem);
+  --measure:    60ch;    /* prose max — 60–66ch is the readable band */
+  --measure-sm: 52ch;    /* lead paragraphs sit shorter than body */
+}
+
+/* ── 7 · MOTION ───────────────────────────────────────────────────
+   Three rules, and they are not negotiable:
+
+   1. Motion must teach. If deleting it loses no information, delete
+      it. That is the whole test.
+   2. Nothing loops. An element that moves forever is asking for
+      attention it hasn't earned, and it burns battery on the mid-
+      range Android this audience actually carries.
+   3. Nothing is scroll-linked. Scroll-driven choreography breaks
+      Ctrl+F, breaks the scrollbar as a progress signal, and stutters
+      the moment the main thread is busy. Enter-once, then done.
+   ───────────────────────────────────────────────────────────────── */
+:root{
+  --ease-out:    cubic-bezier(.22,.61,.36,1);      /* default entrance */
+  --ease-in-out: cubic-bezier(.65,.05,.36,1);      /* state changes    */
+  --ease-stamp:  cubic-bezier(.2,.9,.3,1.25);      /* overshoot — the stamp landing only */
+
+  --d-instant:  90ms;    /* hover colour, focus ring        */
+  --d-quick:   180ms;    /* buttons, links, small toggles   */
+  --d-base:    320ms;    /* section reveals                 */
+  --d-slow:    560ms;    /* hero annotation pins            */
+  --d-char:     26ms;    /* per character, extraction typing */
+}
+
+/* ── 8 · ELEVATION ────────────────────────────────────────────────
+   On paper: hairlines, not shadows. A drop shadow on a flat card is
+   decoration; a 1px rule is structure, and structure is the thesis.
+   Shadows are permitted for exactly one thing — a product shot or
+   document that is meant to read as a physical object lifted off
+   the ground.
+   ───────────────────────────────────────────────────────────────── */
+:root{
+  --lift-doc:     0 18px 44px rgba(17,26,36,.10);
+  --lift-doc-ink: 0 34px 70px rgba(0,0,0,.62);
+  --radius:       0;      /* the document has square corners. So do we. */
+  --radius-mark:  2px;    /* the sole exception: the logo plate rivets  */
+}
+
+/* ── 9 · Z-INDEX ──────────────────────────────────────────────────
+   A named scale. Never write a bare z-index in a component.
+   ───────────────────────────────────────────────────────────────── */
+:root{
+  --z-base:0; --z-raised:10; --z-sticky:20; --z-nav:60; --z-overlay:80; --z-modal:100;
+}
+
+/* ── 10 · REDUCED MOTION ──────────────────────────────────────────
+   Not a courtesy. Vestibular disorders are common, and a person who
+   has asked their OS to stop moving things has already told us what
+   they need. Every animated element must have a correct static
+   resting state — which means .in classes are applied immediately
+   rather than animations merely being shortened.
+   ───────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce){
+  :root{ --d-instant:1ms; --d-quick:1ms; --d-base:1ms; --d-slow:1ms; --d-char:0ms; }
+  *,*::before,*::after{
+    animation-duration:1ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:1ms !important;
+    scroll-behavior:auto !important;
+  }
+}
