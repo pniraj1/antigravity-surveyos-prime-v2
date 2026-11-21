@@ -42,6 +42,8 @@ import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { claimProgress, tabMarks } from '@/lib/claims/progress';
+import { SidebarClaimProgress } from './SidebarClaimProgress';
 
 export interface NavItem {
   id: AppTab;
@@ -127,6 +129,7 @@ export function Sidebar() {
 
   const hasClaim = !!currentClaim;
   const conflictsCount = currentClaim ? getConflictFields(currentClaim).length : 0;
+  const marks = currentClaim ? tabMarks(claimProgress(currentClaim)) : {};
   const groups = ['main', 'claim', 'output', 'settings'] as const;
 
   const handleTabChange = (targetTab: AppTab) => {
@@ -290,6 +293,7 @@ export function Sidebar() {
             <div className="text-sm font-medium truncate mt-0.5 pl-1 text-[var(--color-neutral-900)]">
               {currentClaim.vehicle.registrationNumber || currentClaim.reportNo || 'New claim'}
             </div>
+            <SidebarClaimProgress claim={currentClaim} />
           </div>
         )}
 
@@ -368,13 +372,15 @@ export function Sidebar() {
                                 {conflictsCount}
                               </span>
                             )}
-                            {item.id === 'bill-check' && currentClaim?.billCheck?.verifiedBySurveyor && (
+                            {marks[item.id] === 'done' && (
+                              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">✓</span>
+                            )}
+                            {marks[item.id] === 'next' && (
                               <span
-                                className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400"
-                                title="Invoice verified by surveyor"
-                              >
-                                ✓
-                              </span>
+                                title="Next step"
+                                className="h-2 w-2 rounded-full"
+                                style={{ background: 'var(--color-status-warning)' }}
+                              />
                             )}
                           </div>
                         )}

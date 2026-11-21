@@ -9,6 +9,12 @@ export type ClaimsListItem = ClaimSlice['claimsList'][number];
 
 const validDate = (v: string) => v === '' || (/^\d{4}-\d{2}-\d{2}$/.test(v) && Number(v.slice(0, 4)) >= 2000);
 
+/** '5 Nov' from an ISO timestamp or a date-only 'YYYY-MM-DD' (parsed as local). */
+export const sinceLabel = (since?: string): string =>
+  since
+    ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(since) ? `${since}T00:00` : since).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+    : '';
+
 const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
 /** Dashboard row cell: next-step label, courier date and portal tick. */
@@ -31,9 +37,7 @@ export function ClaimRowProgress({ claim, readOnly }: { claim: ClaimsListItem; r
     });
   };
 
-  const since = progress?.since
-    ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(progress.since) ? `${progress.since}T00:00` : progress.since).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
-    : '';
+  const since = sinceLabel(progress?.since);
 
   return (
     <div className="flex flex-col gap-1 min-w-0 text-[11px]">

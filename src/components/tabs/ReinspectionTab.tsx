@@ -77,6 +77,14 @@ export function ReinspectionTab() {
       </div>
 
       <div className="px-6 lg:px-12 py-8 max-w-5xl mx-auto space-y-6">
+        <label className="flex items-center gap-2 text-sm font-medium">
+          <input
+            type="checkbox"
+            checked={!!currentClaim.reinspectionNeeded}
+            onChange={(e) => updateClaim({ reinspectionNeeded: e.target.checked || undefined })}
+          />
+          Reinspection needed for this claim
+        </label>
 
         {/* ── Claim Reference (two-way with Policy / Vehicle tabs) ── */}
         <div className="p-6 rounded-2xl bg-card border border-border shadow-sm">
