@@ -151,6 +151,25 @@ describe('UIIC report — IMT-23 headline Depreciation figures (basis-consistent
   });
 });
 
+describe('UIIC report — page-1 Depreciation leaves disposal parts out', () => {
+  // MH40BG5830: four disposal rows at 0%* added their whole 2,48,000 to the
+  // page-1 Depreciation figure. A 0% disposal row takes no depreciation.
+  const page1Dep = (html: string) =>
+    html.match(/Depreciation<\/td>\s*<td[^>]*text-align:right;">([\d,.]+)</)?.[1];
+  const c = () => claimWith([
+    row({ depOverride: 50 }),
+    row({ assessed: 1000, partType: 'metal', depOverride: 0, isDisposal: true, disposalPercent: 80 }),
+  ]);
+
+  it('final report: 150.00, not 1,150.00', () => {
+    expect(page1Dep(build(c()))).toBe('150.00');
+  });
+
+  it('bill-check report: 150.00, not 1,150.00', () => {
+    expect(page1Dep(buildUIICBillCheckHTML(c(), null))).toBe('150.00');
+  });
+});
+
 describe('UIIC bill check — IMT-23 explanation on the page', () => {
   const FOOTNOTE_PHRASE = 'Theft of these items is excluded under all circumstances';
 

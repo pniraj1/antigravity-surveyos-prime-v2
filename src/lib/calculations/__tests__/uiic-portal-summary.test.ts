@@ -90,6 +90,42 @@ describe('uiicPortalSummary — disposal parts', () => {
   });
 });
 
+describe('uiicPortalSummary — IMT-23 and surveyor-set depreciation', () => {
+  // MH40BG5830 (MOTOR/929/2026): the portal rejected the parts boxes because
+  // they carried the full price of IMT-23 rows the report had halved.
+  test('an IMT-23 row goes in at its halved, post-endorsement price', () => {
+    const s = uiicPortalSummary(
+      [
+        row({ assessed: 3040.68, partType: 'metal', imt23: true }),
+        row({ assessed: 2963.56, partType: 'plastic', imt23: true }),
+      ],
+      100,
+      'standard',
+    );
+    expect(s.parts.ageBasedDep).toBe(1520);
+    expect(s.parts.dep50).toBe(1482);
+  });
+
+  test('an IMT-23 row on a nil policy is halved too', () => {
+    const s = uiicPortalSummary([row({ assessed: 10000, imt23: true })], 100, 'nil');
+    expect(s.parts.nilDep).toBe(5000);
+  });
+
+  test('a metal row the surveyor set to 0% goes to nilDep, not the age-based box', () => {
+    // The portal would take 40% off anything in ageBasedDep.
+    const s = uiicPortalSummary([row({ assessed: 8500, partType: 'metal', depOverride: 0 })], 100, 'standard');
+    expect(s.parts.nilDep).toBe(8500);
+    expect(s.parts.ageBasedDep).toBe(0);
+  });
+
+  test('any other surveyor-set rate goes to nilDep at its depreciated value', () => {
+    // No portal box applies 25%, so enter the net and let the portal keep 100%.
+    const s = uiicPortalSummary([row({ assessed: 10000, partType: 'metal', depOverride: 25 })], 100, 'standard');
+    expect(s.parts.nilDep).toBe(7500);
+    expect(s.parts.ageBasedDep).toBe(0);
+  });
+});
+
 describe('uiicPortalSummary — nil depreciation policy', () => {
   test('puts the whole parts amount into nilDep', () => {
     // R5

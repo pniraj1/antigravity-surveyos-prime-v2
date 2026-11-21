@@ -34,7 +34,9 @@ export function numberToWords(num: number): string {
     return convert(Math.floor(n / 10000000)) + ' CRORE' + (n % 10000000 ? ' ' + convert(n % 10000000) : '');
   }
 
-  return convert(Math.floor(num));
+  // Round to paise first: 639999.9999999 is 640000.00 on the page, so it must
+  // read as 640000 too. Paise are then dropped, never rounded up.
+  return convert(Math.floor(Math.round(num * 100) / 100));
 }
 
 /**

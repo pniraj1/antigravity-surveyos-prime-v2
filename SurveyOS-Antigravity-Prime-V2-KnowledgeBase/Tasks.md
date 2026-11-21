@@ -1,3 +1,7 @@
+## Done: UIIC portal figures, page-1 Depreciation, amount in words (2026-11-21, Claude Code) — NOT COMMITTED / NOT DEPLOYED
+- Portal parts boxes now post-IMT-23; surveyor-set-rate rows go to Nil at net. Page-1 Depreciation no longer counts disposal rows. Amount in words rounds to paise first.
+- Next: owner commit + deploy; re-open MH40BG5830 UIIC summary and check boxes read about 401133 / 246649 / 0 / 204000.
+
 ## Done: Parser reads Tata-style split amounts (2026-11-21, Claude Code) — DEPLOYED
 - **Session:** `Sessions/2026-11-21-parser-split-amounts.md` · Commit `dbedb54f` on main, hosting deployed 2026-11-21.
 - `repairNumbers` in `src/lib/ai/row-parser.ts` joins `265.2`/`5` and `13,76`/`4.41`. `Estimate for parser.pdf` now parses with zero AI calls.

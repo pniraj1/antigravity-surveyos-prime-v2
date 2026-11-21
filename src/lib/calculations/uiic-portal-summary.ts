@@ -7,7 +7,7 @@
 import type { AssessmentRow } from '@/types/assessment';
 import type { DepreciationType } from '@/types';
 import { getDepreciationRate } from './depreciation';
-import { computeRowNet } from './row-net';
+import { computeRowNet, effectiveAssessed } from './row-net';
 import { aggregateGst } from './gst-bands';
 
 /** One row of the portal's GST table: a rate and its taxable amount. */
@@ -96,26 +96,31 @@ export function uiicPortalSummary(
     // Disposal first, and before the nil-depreciation policy. Both send the row
     // to nilDep, but only this branch keeps the disposal percentage — testing
     // the policy first would enter the full price of a used part.
-    if (r.isDisposal) {
+    // A surveyor-set rate (the report's "0%*") is not the rate the portal's box
+    // for that material would apply, so enter the net and let nilDep keep 100%.
+    if (r.isDisposal || r.depOverride != null) {
       nilDep += netOf(r);
       continue;
     }
+    // Post-IMT-23: the portal has no endorsement field, so the halving must
+    // already be in the figure it depreciates.
+    const amount = effectiveAssessed(r);
     if (depType === 'nil') {
-      nilDep += r.assessed;
+      nilDep += amount;
       continue;
     }
     switch (r.partType) {
       case 'metal':
-        ageBasedDep += r.assessed;
+        ageBasedDep += amount;
         break;
       case 'plastic':
-        dep50 += r.assessed;
+        dep50 += amount;
         break;
       case 'fiberglass':
-        dep30 += r.assessed;
+        dep30 += amount;
         break;
       default:
-        nilDep += r.assessed;
+        nilDep += amount;
     }
   }
 
