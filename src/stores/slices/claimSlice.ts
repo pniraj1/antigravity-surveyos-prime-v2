@@ -17,6 +17,7 @@ import { ignoreDrivePhotos } from '@/lib/photos/ignored-drive-photos';
 import { resolveAnnexureOptions } from '@/lib/photos/document-annexure';
 import { repairAssessmentRow, resolveExcessFields } from '@/lib/calculations/assessment';
 import type { PhotoTag } from '@/types/documents';
+import type { ProgressSummary } from '@/lib/claims/dispatch';
 import { isFromBill, selfBillUpdates, billHeaderFromEstimate } from '@/lib/reports/bill-check-mode';
 
 export interface ClaimSlice {
@@ -49,6 +50,10 @@ export interface ClaimSlice {
     tdsDeducted?: number;
     utrNumber?: string;
     paymentDate?: string;
+    progress?: ProgressSummary;
+    courieredAt?: string;
+    portalUploadedAt?: string;
+    heldNote?: string;
   }[];
 
   newClaim: (surveyType: SurveyType, vehicleType: VehicleType) => void;

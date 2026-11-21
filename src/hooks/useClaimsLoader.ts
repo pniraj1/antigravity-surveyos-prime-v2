@@ -3,6 +3,7 @@ import { useClaimStore } from '@/stores/claim-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { getAllClaims } from '@/lib/storage/indexeddb';
 import { calculateFeeSummary } from '@/lib/calculations/fees';
+import { progressSummary } from '@/lib/claims/dispatch';
 import { claimSurveyDate } from '@/lib/claims/survey-date';
 
 export function useClaimsLoader() {
@@ -57,6 +58,10 @@ export function useClaimsLoader() {
             tdsDeducted: c.feeBill?.tdsDeducted,
             utrNumber: c.feeBill?.utrNumber,
             paymentDate: c.feeBill?.paymentDate,
+            progress: progressSummary(c),
+            courieredAt: c.courieredAt,
+            portalUploadedAt: c.portalUploadedAt,
+            heldNote: c.heldNote,
           };
         });
 
